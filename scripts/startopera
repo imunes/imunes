@@ -1,0 +1,64 @@
+#! /bin/sh
+
+if [ $# -ne 1 ]
+then
+    echo "Usage: $0 hostname_of_X_app_client"
+    exit 1
+fi
+
+ifconfig ngeth1 > /dev/null 2>&1
+if [ $? -eq 0 ]
+then
+    echo "Only one Opera instance is allowed."
+    exit 2
+fi 
+
+himage $1 hostname > /dev/null 2>&1
+if [ $? -ne 0 ]
+then
+    echo "Error! "
+    echo "Please check that Experiment with node $1 is running"
+    exit 2
+fi
+
+######
+# Create virtual ethernet connection between "default" and "remote" hosta
+#
+remote=$1
+eth_remote=ngeth0
+IP_eth_remote="10.255.255.2"
+
+eth_default=ngeth1
+IP_eth_default="10.255.255.1"
+
+######
+# One ethernet interface is for $remote
+ngctl mkpeer eiface ether ether > /dev/null 2>&1
+ngctl mkpeer eiface ether ether > /dev/null 2>&1
+ngctl connect ngeth0: ngeth1: ether ether > /dev/null 2>&1
+
+ifconfig ngeth0 vnet `himage -j $remote` > /dev/null 2>&1
+himage $remote ifconfig $eth_remote link 40:a:b:c:d:01 > /dev/null 2>&1
+himage $remote ifconfig $eth_remote $IP_eth_remote/24 > /dev/null 2>&1
+
+######
+# the other is for "default"
+ifconfig $eth_default link 40:a:b:c:d:02 > /dev/null 2>&1
+ifconfig $eth_default $IP_eth_default/24 > /dev/null 2>&1
+
+######
+# Allow remote host to access X
+xhost +$IP_eth_remote > /dev/null 2>&1
+
+######
+# Call Opera on $remote
+#
+himage $remote opera -display ${IP_eth_default}:0
+
+sleep 1
+
+ifconfig ngeth0 -vnet `himage -j $remote` > /dev/null 2>&1
+ngctl shutdown ngeth0: > /dev/null 2>&1
+ngctl shutdown ngeth1: > /dev/null 2>&1
+xhost -$IP_eth_remote > /dev/null 2>&1
+

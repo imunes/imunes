@@ -1,0 +1,62 @@
+************************************************************************
+IMUNES - an Integrated Multiprotocol Network Emulator / Simulator
+************************************************************************
+
+Overview
+========
+
+IMUNES GUI is a simple Tcl/Tk based management console, allowing for
+specification and management of virtual network topologies. The emulation
+execution engine itself operates within the operating system kernel.
+
+
+System requirements
+===================
+  
+    1) Operating system
+ 
+    IMUNES works on top of the FreeBSD 8 (or higher) kernel that is
+    compiled with the VIMAGE option included. A sample kernel kernel
+    config file is as follows:
+	include GENERIC
+	options VIMAGE
+	options MROUTING
+
+    To compile the VIMAGE enabled kernel you must have a copy of the
+    FreeBSD kernel and create the config file with the above mentioned
+    lines.
+	$ vi sys/amd64/conf/VIMAGE #for 64bit machines
+	$ vi sys/i386/conf/VIMAGE #for 32bit machines
+
+    Then you need to compile and install the kernel and reboot.
+	$ config VIMAGE
+	$ cd ../compile/VIMAGE
+	$ make depend; make
+	$ make install
+	$ reboot
+  
+    2) FreeBSD packages 
+  
+    The following packages have to be installed for IMUNES to work:
+        tcl86.tbz
+        tk86.tbz
+        tcllib.tbz
+        wireshark.tbz
+        ImageMagick.tbz
+
+    3) Filesystem for virtual nodes
+
+    For the topologies to work a template filesystem must be created.
+    This is done by issuing the make vroot command:
+	$ make vroot
+
+    The filesystem is by default created in /var/imunes/vroot.
+
+Installation
+============
+
+To install the IMUNES GUI just run make install script.
+	$ make install
+
+For additional information visit our web site:
+	http://www.imunes.net/

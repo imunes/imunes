@@ -1,0 +1,37 @@
+#! /bin/sh
+
+#####
+# Clean everything:
+# 1. Terminate all running experiments.
+# 2. Clean remaining ZFS mounts.
+# 3. Clean remaining uninonfs mounts.
+# 4. Remove attach files.
+##
+
+attach_root="/var/run/imunes"
+mounts_root="/var/imunes"
+
+eids=`himage -l`
+for e in $eids; do
+    echo "Cleaning experiment with eid $e."
+    imunes -b -e $e
+done
+
+mounts=`zfs list | grep -o "i..... " | uniq`
+for mount in $mounts; do
+    echo "Destroying zfs mount vroot/$mount."
+    zfs destroy -R vroot/$mount
+done
+
+cd $mounts_root
+mounts=`ls | grep -v vroot`
+for mount in $mounts; do
+    echo "Destroying unionfs mount $mounts_root/$mount."
+    rm -fr $mount
+done
+
+cd $attach_root
+for dir in `ls`; do
+    echo "Removing attach directory $attach_root/$dir."
+    rm -fr $dir
+done

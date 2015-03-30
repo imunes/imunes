@@ -1,0 +1,219 @@
+#!/usr/local/bin/tclsh8.6
+package require cmdline
+
+catch {exec id -u} uid
+if { $uid != "0" } {
+    puts stderr "Error: vlink must be executed with root privileges."
+    exit
+}
+
+set options {
+    {bw.arg	"" "set link bandwidth (bps)"}
+    {BER.arg	"" "set link BER (1/value)"}
+    {dly.arg	"" "set link delay (us)"}
+    {dup.arg	"" "set link duplicate (%)"}
+    {r		"set link settings to default values"}
+    {e.arg	"" "specify experiment ID"}
+    {eid.arg	"" "specify experiment ID"}
+}
+
+set usage "\[options\] link_name\[@eid\]
+options:"
+
+set check 0
+
+catch {array set params [::cmdline::getoptions argv $options $usage]} err
+if { $err != "" } {
+    puts stderr "Usage:"
+    puts stderr $err
+    exit
+}
+
+if { $argc == 0 } {
+    puts stderr "Usage:"
+    puts stderr [::cmdline::usage $options $usage]
+    exit
+}
+
+set link1 [lindex [split [lindex $argv 0] "@"] 0]
+if { $link1 == "" } {
+    puts stderr "No link was specified."
+    puts stderr "Usage:"
+    puts stderr [::cmdline::usage $options $usage]
+    exit
+}
+
+if { $params(eid) != "" } {
+    set eid1 $params(eid)
+} else {
+    set eid1 $params(e)
+}
+set eid2 [lindex [split [lindex $argv 0] "@"] 1]
+
+set eid ""
+if { $eid1 != "" && $eid2 != "" } {
+    puts stderr "Only one eid option should be used."
+    puts stderr "Usage:"
+    puts stderr [::cmdline::usage $options $usage]
+    exit
+} else {
+    if { $eid1 != "" } {
+	set eid $eid1
+    }
+    if { $eid2 != "" } {
+	set eid $eid2
+    }
+}
+
+if {$params(bw) == 0} {
+    set bandwidth -1
+} else {
+    set bandwidth $params(bw)
+}
+
+if {$params(dly) == 0} {
+    set delay -1
+} else {
+    set delay $params(dly)
+}
+
+if {$params(BER) == 0} {
+    set BER -1
+} else {
+    set BER $params(BER)
+}
+
+if {$params(dup) == 0} {
+    set dup -1
+} else {
+    set dup $params(dup)
+}
+
+if { $params(r) } {
+    set bandwidth -1
+    set delay -1
+    set BER -1
+    set dup -1
+    incr check    
+}
+
+
+append config "{ "
+if { $bandwidth != "" } {
+    append config "bandwidth=" $bandwidth " "
+    incr check    
+}
+if { $delay != "" } {
+    append config "delay=" $delay " "
+    incr check    
+}
+if { $dup != "" && $BER != "" } {
+    append config "upstream={ duplicate=" $dup " BER=" $BER " } "
+    append config "downstream={ duplicate=" $dup " BER=" $BER " } "
+    incr check    
+} elseif { $dup != "" } {
+    append config "upstream={ duplicate=" $dup " } "
+    append config "downstream={ duplicate=" $dup " } "
+    incr check    
+} elseif { $BER != ""} {
+    append config "upstream={ BER=" $BER " } "
+    append config "downstream={ BER=" $BER " } "
+    incr check    
+}
+append config "}"
+
+if { $check == 0 } {
+    puts stderr "No link options were specified."
+    puts stderr "Usage:"
+    puts stderr [::cmdline::usage $options $usage]
+    exit
+}
+
+
+set nodes [split $link1 "-"]
+set node0 [lindex $nodes 0]
+set node1 [lindex $nodes 1]
+
+set output [exec jls -h name host.hostname]
+set output [split $output "\n"]
+
+set eid_list ""
+set n0 ""
+set n1 ""
+if { $eid == "" } {
+    foreach line $output {
+	set sline [lindex [split $line] 0]
+	if {[string match "i*" $sline] == 1} {
+	    lappend eid_list [lindex [split $sline "."] 0]
+	    if {[string match "*$node0*" $line] == 1} {
+		lappend n0 [lindex [split $sline "."] 1]
+	    }
+	    if {[string match "*$node1*" $line] == 1} {
+		lappend n1 [lindex [split $sline "."] 1]
+	    }
+	}
+    }
+} else {
+    foreach line $output {
+	set sline [lindex [split $line] 0]
+	if {[string match "*$eid*" $sline] == 1} {
+	    lappend eid_list [lindex [split $sline "."] 0]
+	    if {[string match "*$node0*" $line] == 1} {
+		lappend n0 [lindex [split $sline "."] 1]
+	    }
+	    if {[string match "*$node1*" $line] == 1} {
+		lappend n1 [lindex [split $sline "."] 1]
+	    }
+	}
+    }
+}
+
+set eid_list [lsort -unique $eid_list]
+set counter [llength $eid_list]
+
+switch $counter {
+    0 {
+	if { $eid == "" } {
+	    puts stderr "Error: cannot find running experiments."
+	} else {
+	    puts stderr "Error: cannot find running experiments with eid $eid."
+	}
+	exit
+    }
+    1 {
+	if { [llength $n0] > 1 || [llength $n1] > 1 } {
+	    puts stderr "The node name/identifier is not unique in the experiment ($eid)."
+	    puts stderr "To avoid this, don't assign node names like n0, n1, ..."
+	    exit
+	}
+
+	set l1 "$n0-$n1"
+	set l2 "$n1-$n0"
+
+	set output [exec jexec $eid_list ngctl l]
+	set output [split $output "\n"]
+	set link ""
+	foreach line $output {
+	    set line [lindex [split $line " "] 3]
+	    if {[string match $l1 [string trim $line]] == 1} {
+		set link $l1
+	    }
+	    if {[string match $l2 [string trim $line]] == 1} {
+		set link $l2
+	    }
+	}
+	if { $link == ""} {
+	    puts stderr "Error: specified link (between nodes $node0 and $node1) doesn't exist."
+	    exit
+	}
+	exec jexec $eid_list ngctl msg $link: setcfg $config
+    }
+    default {
+	puts stderr "Error: There are multiple experiments running."
+	puts "Choose one of the following experiment ID's using the '-e' \
+	or '-eid' option:"
+	foreach e $eid_list {
+	    puts $e
+	}
+    }
+}

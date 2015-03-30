@@ -1,0 +1,60 @@
+#!/bin/sh
+#
+# Copyright 2004-2013 University of Zagreb.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL AUTHOR OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
+#
+# This work was supported in part by Croatian Ministry of Science
+# and Technology through the research contract #IP-2003-143.
+#
+
+# $Id: imunes 110 2014-09-29 14:20:56Z denis $
+
+
+SHELL=/bin/sh
+export SHELL
+
+ROOTDIR="."
+LIBDIR=""
+
+imunes=$ROOTDIR/$LIBDIR/imunes.tcl
+
+batch_flag=0
+
+for i; do
+	if [ "$i" = "-b" ] || [ "$i" = "-batch" ] || [ "$i" = "-u" ] || [ "$i" = "-i" ]; then
+		batch_flag=1
+	fi
+	if [ "$i" = "-v" ] || [ "$i" = "-version" ]; then
+		version_line=`grep '^\#\ \$\I\d\: .*$' $ROOTDIR/$LIBDIR/*.tcl | sort -n -k4 | tail -1`
+		version_number=`echo "$version_line" | cut -d" " -f4`
+		last_changed=`echo "$version_line" | cut -d" " -f5`
+		echo "IMUNES version $version_number, last change: $last_changed"
+		exit 0
+	fi
+done
+
+if [ $batch_flag -eq 1 ]; then
+	exec tclsh8.6 $imunes $*
+else
+	exec wish8.6 $imunes -- $*
+fi

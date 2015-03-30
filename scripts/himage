@@ -1,0 +1,83 @@
+#! /bin/sh 
+
+command=`basename $0`
+
+help() {
+cat <<__END__
+
+Command $command can be used as an interface to the command jexec/jls
+for virtual images. Hostname is used instead of jail name.
+Hostname can be in the form: hostname or hostname@eid.
+
+Usage:
+  $command vi_hostname command
+  $command -v vi_hostname  ---> vimage name      (eid.nodename)
+  $command -n vi_hostname  ---> vimage node name (nodename)
+  $command -e vi_hostname  ---> vimage eid name  (eid)
+  $command -j vi_hostname  ---> vimage jail id   (jid)
+  $command -d vi_hostname  ---> vimage path
+  $command -l              ---> running experiments eids 
+__END__
+}
+
+vi_name() {
+  expid=`echo $1 | awk -F@ '{print $2}'`
+  if test "a$expid" != "a"; then
+    host=`echo $1 | cut -d@ -f1`
+  else
+    host=$1
+    expid=""
+  fi
+
+  n=`jls | awk -v h=$host -v e=$expid '$3 == h && $4 ~ e {print $1}' | wc -l`
+  if test $n -gt 1; then
+        echo "Error: $1 is not a unique name." >&2
+        echo "It is used (at least) for nodes:" >&2
+        jls | grep $1  >&2
+        exit 1
+  fi
+  if test $n -eq 0; then
+    echo Error: cannot find node named $1 >&2
+    exit 2
+  fi
+  jls | awk -v h=$host -v e=$expid '$3 == h && $4 ~ e {print $1}'
+}
+
+if test $# -eq 0; then
+    help
+elif test $1 = "-h"; then
+    help
+elif test $1 = "-l"; then
+    jls name path | grep "imunes" | cut -d . -f 1 | sort | uniq
+elif test $1 = "-j"; then
+    vi_name $2
+elif test $1 = "-v"; then
+    image_name=`vi_name $2`
+    test $? -ne 0 && exit 2
+    jls -h -j $image_name name | tail -n +2
+elif test $1 = "-e"; then
+    image_name=`vi_name $2`
+    test $? -ne 0 && exit 2
+    jls -h -j $image_name name | tail -n +2 | awk -F"." '{n=NF-1; print $n}'
+elif test $1 = "-n"; then
+    image_name=`vi_name $2`
+    test $? -ne 0 && exit 2
+    jls -h -j $image_name name | tail -n +2 | awk -F"." '{print $NF}'
+elif test $1 = "-d"; then
+    image_name=`vi_name $2`
+    test $? -ne 0 && exit 2
+    jls -h -j $image_name path | tail -n +2 
+elif test `expr a$1 : "a-.*"` = "0"; then
+    image_name=`vi_name $1`
+    test $? -ne 0 && exit 2
+    shift 1
+    if test -z "$*"; then
+	exec jexec $image_name csh
+    fi
+    exec jexec $image_name "$@"
+else
+    echo $command: illegal option -- $1
+    help
+    exit 2
+fi
+
