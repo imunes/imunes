@@ -111,7 +111,7 @@ uninstall:
 	for file in imunes $(notdir $(TOOLS)); do \
 		rm -f $(BINDIR)/$${file}; \
 	done ;
-	
+
 vroot:
 	sh scripts/prepare_vroot.sh
 
@@ -123,6 +123,10 @@ vroot_m:
 
 vroot_m_zfs:
 	sh scripts/prepare_vroot.sh zfs mini
+
+remove_vroot:
+	chflags -R noschg /var/imunes/vroot
+	rm -fr /var/imunes/vroot
 
 tarball:
 	rm -f ../$(TARBALL_DIR).tar.gz
