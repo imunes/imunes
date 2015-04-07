@@ -22,8 +22,8 @@ GUIFILES =	$(wildcard gui/*.tcl)
 NODESFILES =	$(wildcard nodes/*.tcl)
 RUNTIMEFILES =	$(wildcard runtime/*.tcl)
 
-VROOT =	$(wildcard scripts/prepare*)
-TOOLS =	$(wildcard scripts/[^prepare]*)
+VROOT =	$(wildcard scripts/*.sh) 
+TOOLS =	$(wildcard scripts/*[^.sh])
 
 NODE_ICONS = frswitch.gif hub.gif lanswitch.gif rj45.gif cloud.gif host.gif \
 	ipfirewall.gif pc.gif router.gif click_l2.gif click_l3.gif
@@ -47,6 +47,7 @@ all: install
 
 install: uninstall
 	mkdir -p $(IMUNESDIR)
+	cp $(BASEFILES) $(IMUNESDIR)
 	mkdir -p $(BINDIR)
 
 	sed -e "s,set LIBDIR \"\",set LIBDIR $(LIBDIR)," \
@@ -61,7 +62,8 @@ install: uninstall
 
 	cp $(TOOLS) $(BINDIR)
 
-	for file in $(notdir TOOLS); do \
+	mkdir -p $(SCRIPTSDIR)
+	for file in $(notdir $(TOOLS)); do \
 		chmod 755 $(BINDIR)/$${file}; \
 	done ;
 
@@ -84,9 +86,6 @@ install: uninstall
 	mkdir -p $(RUNTIMEDIR)
 	cp $(RUNTIMEFILES) $(RUNTIMEDIR)
 
-	mkdir -p $(SCRIPTSDIR)
-	cp $(SCRIPTSFILES) $(SCRIPTSDIR)
-
 	mkdir -p $(ICONSDIR)
 	for file in $(ICONS); do \
 		cp icons/$${file} $(ICONSDIR); \
@@ -108,9 +107,9 @@ install: uninstall
 	done ;
 
 uninstall:
-	rm -r $(IMUNESDIR)
-	for file in $(notdir TOOLS); do \
-		rm $(BINDIR)/$${file}; \
+	rm -rf $(IMUNESDIR)
+	for file in imunes $(notdir $(TOOLS)); do \
+		rm -f $(BINDIR)/$${file}; \
 	done ;
 	
 vroot:

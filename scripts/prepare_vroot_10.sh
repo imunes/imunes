@@ -229,7 +229,7 @@ if [ -f $VROOT_MASTER/usr/local/sbin/xorp_rtrmgr ]; then
 fi
 
 cd $IMUNESDIR
-cp $ROOTDIR/$LIBDIR/quaggaboot.sh $VROOT_MASTER/usr/local/bin
+cp $ROOTDIR/$LIBDIR/scripts/quaggaboot.sh $VROOT_MASTER/usr/local/bin
 chmod 755 $VROOT_MASTER/usr/local/bin/quaggaboot.sh
 
 rm $VROOT_MASTER/etc/resolv.conf

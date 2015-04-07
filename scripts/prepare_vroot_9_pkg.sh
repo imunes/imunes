@@ -202,7 +202,7 @@ log "OUT" "Installing packages done."
 
 if [ $mini -eq 0 ]; then
     log "OUT" "Installing additional tools..."
-    sh $IMUNESDIR/install_click.sh $VROOT_MASTER >> $LOG 2>&1
+    sh $IMUNESDIR/scripts/install_click.sh $VROOT_MASTER >> $LOG 2>&1
     log "OUT" "Installing additional tools done."
 fi
 
@@ -229,7 +229,7 @@ if [ -f $VROOT_MASTER/usr/local/sbin/xorp_rtrmgr ]; then
 fi
 
 cd $IMUNESDIR
-cp $ROOTDIR/$LIBDIR/quaggaboot.sh $VROOT_MASTER/usr/local/bin
+cp $ROOTDIR/$LIBDIR/scripts/quaggaboot.sh $VROOT_MASTER/usr/local/bin
 chmod 755 $VROOT_MASTER/usr/local/bin/quaggaboot.sh
 
 rm $VROOT_MASTER/etc/resolv.conf
