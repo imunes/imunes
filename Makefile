@@ -1,7 +1,12 @@
 PREFIX = /usr/local
 LIBDIR = lib/imunes
 IMUNESDIR = $(PREFIX)/$(LIBDIR)
+CONFIGDIR = $(IMUNESDIR)/config
+GUIDIR = $(IMUNESDIR)/gui
 ICONSDIR = $(IMUNESDIR)/icons
+NODESDIR = $(IMUNESDIR)/nodes
+RUNTIMEDIR = $(IMUNESDIR)/runtime
+SCRIPTSDIR = $(IMUNESDIR)/scripts
 NORMAL_ICONSDIR = $(ICONSDIR)/normal
 SMALL_ICONSDIR = $(ICONSDIR)/small
 TINY_ICONSDIR = $(ICONSDIR)/tiny
@@ -11,23 +16,14 @@ IMUNESVER = 1.0
 TARBALL_DIR = imunes_$(IMUNESDATE)
 RELEASE_DIR = imunes-$(IMUNESVER)
 
-FILES =	gui/topogen.tcl gui/help.tcl gui/mouse.tcl gui/editor.tcl \
-	gui/initgui.tcl gui/canvas.tcl gui/widgets.tcl gui/copypaste.tcl \
-	gui/debug.tcl gui/theme.tcl gui/nodecfgGUI.tcl gui/drawing.tcl \
-	gui/linkcfgGUI.tcl config/ipv6.tcl config/ipv4.tcl config/ipsec.tcl \
-	config/linkcfg.tcl config/annotationscfg.tcl config/nodecfg.tcl \
-	config/mac.tcl nodes/quagga.tcl nodes/rj45.tcl nodes/pc.tcl \
-	nodes/ipfirewall.tcl nodes/localnodes.tcl nodes/genericrouter.tcl \
-	nodes/static.tcl nodes/click_l3.tcl nodes/lanswitch.tcl nodes/xorp.tcl \
-	nodes/click_l2.tcl nodes/host.tcl nodes/hub.tcl nodes/annotations.tcl \
-	runtime/cfgparse.tcl runtime/eventsched.tcl runtime/filemgmt.tcl \
-	runtime/exec.tcl README
+BASEFILES =	COPYRIGHT README
+CONFIGFILES =	$(wildcard config/*.tcl)
+GUIFILES =	$(wildcard gui/*.tcl)
+NODESFILES =	$(wildcard nodes/*.tcl)
+RUNTIMEFILES =	$(wildcard runtime/*.tcl)
 
-BINARIES = scripts/himage scripts/cleanupAll scripts/hcp scripts/vlink \
-	   scripts/pkg_add_imunes scripts/startxcmd
-
-VROOT = scripts/prepare_vroot.sh scripts/prepare_vroot_8.sh \
-	scripts/prepare_vroot_9.sh scripts/quaggaboot.sh
+VROOT =	$(wildcard scripts/prepare*)
+TOOLS =	$(wildcard scripts/[^prepare]*)
 
 NODE_ICONS = frswitch.gif hub.gif lanswitch.gif rj45.gif cloud.gif host.gif \
 	ipfirewall.gif pc.gif router.gif click_l2.gif click_l3.gif
@@ -46,11 +42,10 @@ info:
 	@echo	"To install the files needed to execute experiments use: make vroot"
 	@echo	"To install everything: make all"
 	@echo	"To make tarball: make tarball"
-	@echo   "$(FILES2)"
 
 all: install
 
-install:
+install: uninstall
 	mkdir -p $(IMUNESDIR)
 	mkdir -p $(BINDIR)
 
@@ -64,11 +59,11 @@ install:
 	    imunes > $(BINDIR)/imunes
 	chmod 755 $(BINDIR)/imunes
 
-	cp $(BINARIES) $(BINDIR)
+	cp $(TOOLS) $(BINDIR)
 
-	for file in $(BINARIES); do \
+	for file in $(notdir TOOLS); do \
 		chmod 755 $(BINDIR)/$${file}; \
-	done ;	
+	done ;
 
 	for file in $(VROOT); do \
 	    sed -e "s,LIBDIR=\"\",LIBDIR=$(LIBDIR)," \
@@ -77,7 +72,20 @@ install:
 	    chmod 755 $(IMUNESDIR)/$${file}; \
 	done ;
 
-	cp $(FILES) $(IMUNESDIR)
+	mkdir -p $(CONFIGDIR)
+	cp $(CONFIGFILES) $(CONFIGDIR)
+
+	mkdir -p $(GUIDIR)
+	cp $(GUIFILES) $(GUIDIR)
+
+	mkdir -p $(NODESDIR)
+	cp $(NODESFILES) $(NODESDIR)
+
+	mkdir -p $(RUNTIMEDIR)
+	cp $(RUNTIMEFILES) $(RUNTIMEDIR)
+
+	mkdir -p $(SCRIPTSDIR)
+	cp $(SCRIPTSFILES) $(SCRIPTSDIR)
 
 	mkdir -p $(ICONSDIR)
 	for file in $(ICONS); do \
@@ -98,18 +106,24 @@ install:
 	for file in $(TINY_ICONS); do \
 		cp icons/tiny/$${file} $(TINY_ICONSDIR); \
 	done ;
+
+uninstall:
+	rm -r $(IMUNESDIR)
+	for file in $(notdir TOOLS); do \
+		rm $(BINDIR)/$${file}; \
+	done ;
 	
 vroot:
-	sh prepare_vroot.sh
+	sh scripts/prepare_vroot.sh
 
 vroot_zfs:
-	sh prepare_vroot.sh zfs
+	sh scripts/prepare_vroot.sh zfs
 
 vroot_m:
-	sh prepare_vroot.sh mini
+	sh scripts/prepare_vroot.sh mini
 
 vroot_m_zfs:
-	sh prepare_vroot.sh zfs mini
+	sh scripts/prepare_vroot.sh zfs mini
 
 tarball:
 	rm -f ../$(TARBALL_DIR).tar.gz
