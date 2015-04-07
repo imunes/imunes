@@ -49,7 +49,7 @@ fi
 
 PACKAGES_MINIMAL="quagga bash mrouted iftop"
 PACKAGES="$PACKAGES_MINIMAL netperf lsof elinks isc-dhcp42-server nmap \
-lighttpd akpop3d cone links nano postfix xorp firefox wireshark"
+lighttpd akpop3d cone links nano postfix xorp firefox wireshark gnome-themes-standard"
 
 LOG="$WORKDIR/log"
 
