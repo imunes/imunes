@@ -125,9 +125,11 @@ bind . <F6> {
 
     source "$ROOTDIR/$LIBDIR/runtime/cfgparse.tcl"
     source "$ROOTDIR/$LIBDIR/runtime/eventsched.tcl"
+    source "$ROOTDIR/$LIBDIR/runtime/exec.tcl"
     source "$ROOTDIR/$LIBDIR/runtime/filemgmt.tcl"
 
     source "$ROOTDIR/$LIBDIR/config/annotationscfg.tcl"
+    source "$ROOTDIR/$LIBDIR/config/ipsec.tcl"
     source "$ROOTDIR/$LIBDIR/config/ipv4.tcl"
     source "$ROOTDIR/$LIBDIR/config/ipv6.tcl"
     source "$ROOTDIR/$LIBDIR/config/linkcfg.tcl"
