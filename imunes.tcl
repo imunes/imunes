@@ -311,7 +311,7 @@ source "$ROOTDIR/$LIBDIR/runtime/filemgmt.tcl"
 
 # Configuration libraries
 source "$ROOTDIR/$LIBDIR/config/annotationscfg.tcl"
-#source "$ROOTDIR/$LIBDIR/config/ipsec.tcl"
+source "$ROOTDIR/$LIBDIR/config/ipsec.tcl"
 source "$ROOTDIR/$LIBDIR/config/ipv4.tcl"
 source "$ROOTDIR/$LIBDIR/config/ipv6.tcl"
 source "$ROOTDIR/$LIBDIR/config/linkcfg.tcl"
