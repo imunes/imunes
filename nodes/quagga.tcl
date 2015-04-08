@@ -98,13 +98,17 @@ proc $MODULE.cfggen { node } {
 
     foreach ifc [allIfcList $node] {
 	lappend cfg "interface $ifc"
-	set addr [getIfcIPv4addr $node $ifc]
-	if { $addr != "" } {
-	    lappend cfg " ip address $addr"
+	set addrs [getIfcIPv4addrs $node $ifc]
+	foreach addr $addrs {
+	    if { $addr != "" } {
+		lappend cfg " ip address $addr"
+	    }
 	}
-	set addr [getIfcIPv6addr $node $ifc]
-	if { $addr != "" } {
-	    lappend cfg " ipv6 address $addr"
+	set addrs [getIfcIPv6addrs $node $ifc]
+	foreach addr $addrs {
+	    if { $addr != "" } {
+		lappend cfg " ipv6 address $addr"
+	    }
 	}
 	if { [getIfcOperState $node $ifc] == "down" } {
 	    lappend cfg " shutdown"
