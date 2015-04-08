@@ -2668,9 +2668,15 @@ proc isNodeRouter { node } {
 proc nodeCfggenIfconfigIPv4 { node } {
     set cfg {}
     foreach ifc [allIfcList $node] {
+	set first 1
 	foreach addr [getIfcIPv4addrs $node $ifc] {
 	    if { $addr != "" } {
-		lappend cfg "ifconfig $ifc inet $addr"
+		if { $first } {
+		    lappend cfg "ifconfig $ifc inet $addr"
+		    set first 0
+		} else {
+		    lappend cfg "ifconfig $ifc inet add $addr"
+		}
 	    }
 	}
     }
@@ -2693,9 +2699,14 @@ proc nodeCfggenIfconfigIPv4 { node } {
 proc nodeCfggenIfconfigIPv6 { node } {
     set cfg {}
     foreach ifc [allIfcList $node] {
+	set first 1
 	foreach addr [getIfcIPv6addrs $node $ifc] {
 	    if { $addr != "" } { 
-		lappend cfg "ifconfig $ifc inet6 $addr"
+		if { $first } {
+		    lappend cfg "ifconfig $ifc inet6 $addr"
+		} else {
+		    lappend cfg "ifconfig $ifc inet6 add $addr"
+		}
 	    }
 	}
     }
@@ -2737,7 +2748,7 @@ proc nodeCfggenRouteIPv4 { node } {
 proc nodeCfggenRouteIPv6 { node } {
     set cfg {}
     foreach statrte [getStatIPv6routes $node] {
-	lappend cfg "route -q add -inet $statrte"
+	lappend cfg "route -q add -inet6 $statrte"
     }
     return $cfg
 }
