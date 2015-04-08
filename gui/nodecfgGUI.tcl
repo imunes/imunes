@@ -1114,11 +1114,15 @@ proc configGUI_ifcIPv4Address { wi node ifc } {
     global guielements
     lappend guielements "configGUI_ifcIPv4Address $ifc"
     ttk::frame $wi.if$ifc.ipv4 -borderwidth 2
-    ttk::label $wi.if$ifc.ipv4.txt -text "IPv4 address " -anchor w
-    ttk::entry $wi.if$ifc.ipv4.addr -width 30 \
+    ttk::label $wi.if$ifc.ipv4.txt -text "IPv4 addresses " -anchor w
+    ttk::entry $wi.if$ifc.ipv4.addr -width 45 \
 	-validate focus -invalidcommand "focusAndFlash %W"
-    $wi.if$ifc.ipv4.addr insert 0 [getIfcIPv4addr $node $ifc]
-    $wi.if$ifc.ipv4.addr configure -validatecommand {checkIPv4Net %P}
+    set addrs ""
+    foreach addr [getIfcIPv4addrs $node $ifc] {
+	append addrs "$addr" "; "
+    }
+    $wi.if$ifc.ipv4.addr insert 0 $addrs
+    $wi.if$ifc.ipv4.addr configure -validatecommand {checkIPv4Nets %P}
     pack $wi.if$ifc.ipv4.txt $wi.if$ifc.ipv4.addr -side left
     pack $wi.if$ifc.ipv4 -anchor w -padx 10
 }
@@ -1139,11 +1143,15 @@ proc configGUI_ifcIPv6Address { wi node ifc } {
     global guielements
     lappend guielements "configGUI_ifcIPv6Address $ifc"
     ttk::frame $wi.if$ifc.ipv6 -borderwidth 2
-    ttk::label $wi.if$ifc.ipv6.txt -text "IPv6 address " -anchor w
-    ttk::entry $wi.if$ifc.ipv6.addr -width 30 \
+    ttk::label $wi.if$ifc.ipv6.txt -text "IPv6 addresses " -anchor w
+    ttk::entry $wi.if$ifc.ipv6.addr -width 45 \
 	-validate focus -invalidcommand "focusAndFlash %W"
-    $wi.if$ifc.ipv6.addr insert 0 [getIfcIPv6addr $node $ifc]
-    $wi.if$ifc.ipv6.addr configure -validatecommand {checkIPv6Net %P}
+    set addrs ""
+    foreach addr [getIfcIPv6addrs $node $ifc] {
+	append addrs "$addr" "; "
+    }
+    $wi.if$ifc.ipv6.addr insert 0 $addrs
+    $wi.if$ifc.ipv6.addr configure -validatecommand {checkIPv6Nets %P}
     pack $wi.if$ifc.ipv6.txt $wi.if$ifc.ipv6.addr -side left
     pack $wi.if$ifc.ipv6 -anchor w -padx 10
 }
@@ -1786,16 +1794,18 @@ proc configGUI_ifcMACAddressApply { wi node ifc } {
 #   * ifc -- interface name
 #****
 proc configGUI_ifcIPv4AddressApply { wi node ifc } {
-global changed apply
-    set ipaddr [$wi.if$ifc.ipv4.addr get]
-    if { [checkIPv4Net $ipaddr] == 0 } {
-	return
+    global changed apply
+    set ipaddrs [formatIPaddrList [$wi.if$ifc.ipv4.addr get]]
+    foreach ipaddr $ipaddrs {
+	if { [checkIPv4Net $ipaddr] == 0 } {
+	    return
+	}
     }
-    set oldipaddr [getIfcIPv4addr $node $ifc]
-    if { $ipaddr != $oldipaddr } {
+    set oldipaddrs [getIfcIPv4addrs $node $ifc]
+    if { $ipaddrs != $oldipaddrs } {
 	if {$apply == 1} {
-	    setIfcIPv4addr $node $ifc $ipaddr
-	 }
+	    setIfcIPv4addrs $node $ifc $ipaddrs
+	}
 	set changed 1
     }		
 }
@@ -1815,17 +1825,19 @@ global changed apply
 #****
 proc configGUI_ifcIPv6AddressApply { wi node ifc } {
     global changed apply
-    set ipaddr [$wi.if$ifc.ipv6.addr get]
-    if { [checkIPv6Net $ipaddr] == 0 } {
-	return
+    set ipaddrs [formatIPaddrList [$wi.if$ifc.ipv6.addr get]]
+    foreach ipaddr $ipaddrs {
+	if { [checkIPv6Net $ipaddr] == 0 } {
+	    return
+	}
     }
-    set oldipaddr [getIfcIPv6addr $node $ifc]
-    if { $ipaddr != $oldipaddr } {
-	  if {$apply == 1} {
-	      setIfcIPv6addr $node $ifc $ipaddr
-	  }
-	  set changed 1
-    }
+    set oldipaddrs [getIfcIPv6addrs $node $ifc]
+    if { $ipaddrs != $oldipaddrs } {
+	if {$apply == 1} {
+	    setIfcIPv6addrs $node $ifc $ipaddrs
+	}
+	set changed 1
+    }		
 }
 
 #****f* nodecfgGUI.tcl/configGUI_ifcDirectionApply
@@ -2525,4 +2537,28 @@ proc createNewConfiguration { wi node } {
 	createTab $node $cfgName
 	$wi.options.e delete 0 end
     }
+}
+
+#****f* nodecfgGUI.tcl/formatIPaddrList
+# NAME
+#   formatIPaddrList -- change the IP address list format
+# SYNOPSIS
+#   formatIPaddrList $addrList
+# FUNCTION
+#   Change the IP address list format from the one displayed in the GUI to a
+#   list format that is used internally.
+# INPUTS
+#   * addrList -- address list in GUI format
+# RESULT
+#   * value -- address list in internal format.
+#****
+proc formatIPaddrList { addrList } {
+    set newList {}
+    foreach addr [split $addrList ";"] {
+	set ipaddr [string trim $addr]
+	if { $ipaddr != "" } {
+	    lappend newList $ipaddr
+	}
+    }
+    return $newList
 }

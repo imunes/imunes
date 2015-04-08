@@ -995,9 +995,31 @@ proc setIfcMACaddr { node ifc addr } {
 
 #****f* nodecfg.tcl/getIfcIPv4addr
 # NAME
-#   getIfcIPv4addr -- get interface IPv4 address.
+#   getIfcIPv4addr -- get interface first IPv4 address.
 # SYNOPSIS
 #   set addr [getIfcIPv4addr $node $ifc]
+# FUNCTION
+#   Returns the first IPv4 address assigned to the specified interface.
+# INPUTS
+#   * node -- node id
+#   * ifc -- interface name.
+# RESULT
+#   * addr -- first IPv4 address on the interface
+#    
+#****
+proc getIfcIPv4addr { node ifc } {
+    foreach line [netconfFetchSection $node "interface $ifc"] {
+	if { [lrange $line 0 1] == "ip address" } {
+	    return [lindex $line 2]
+	}
+    }
+}
+
+#****f* nodecfg.tcl/getIfcIPv4addrs
+# NAME
+#   getIfcIPv4addrs -- get interface IPv4 addresses.
+# SYNOPSIS
+#   set addrs [getIfcIPv4addrs $node $ifc]
 # FUNCTION
 #   Returns the list of IPv4 addresses assigned to the specified interface.
 # INPUTS
@@ -1007,7 +1029,7 @@ proc setIfcMACaddr { node ifc addr } {
 #   * addrList -- A list of all the IPv4 addresses assigned to the specified
 #     interface.
 #****
-proc getIfcIPv4addr { node ifc } {
+proc getIfcIPv4addrs { node ifc } {
     set addrlist {}
     foreach line [netconfFetchSection $node "interface $ifc"] {
 	if { [lrange $line 0 1] == "ip address" } {
@@ -1062,6 +1084,35 @@ proc setIfcIPv4addr { node ifc addr } {
     netconfInsertSection $node $ifcfg
 }
 
+#****f* nodecfg.tcl/setIfcIPv4addrs
+# NAME
+#   setIfcIPv4addrs -- set interface IPv4 addresses.
+# SYNOPSIS
+#   setIfcIPv4addrs $node $ifc $addrs
+# FUNCTION
+#   Sets new IPv4 address(es) on an interface. The correctness of the IP
+#   address format is not checked / enforced.
+# INPUTS
+#   * node -- the node id of the node whose interface's IPv4 address is set.
+#   * ifc -- interface name.
+#   * addrs -- new IPv4 addresses.
+#****
+proc setIfcIPv4addrs { node ifc addrs } {
+    set ifcfg [list "interface $ifc"]
+    foreach line [netconfFetchSection $node "interface $ifc"] {
+	if { [lrange $line 0 1] != "ip address" } {
+	    lappend ifcfg $line
+	}
+    }
+    foreach addr $addrs {
+	if { $addr != "" } {
+	    set addr [string trim $addr]
+	    lappend ifcfg " ip address $addr"
+	}
+    }
+    netconfInsertSection $node $ifcfg
+}
+
 #****f* nodecfg.tcl/setLogIfcType
 # NAME
 #   setLogIfcType -- set logical interface type
@@ -1089,9 +1140,31 @@ proc setLogIfcType { node ifc type } {
 
 #****f* nodecfg.tcl/getIfcIPv6addr
 # NAME
-#   getIfcIPv6addr -- get interface IPv6 address.
+#   getIfcIPv6addr -- get interface first IPv6 address.
 # SYNOPSIS
 #   set addr [getIfcIPv6addr $node $ifc]
+# FUNCTION
+#   Returns the first IPv6 address assigned to the specified interface.
+# INPUTS
+#   * node -- node id
+#   * ifc -- interface name.
+# RESULT
+#   * addr -- first IPv6 address on the interface
+#    
+#****
+proc getIfcIPv6addr { node ifc } {
+    foreach line [netconfFetchSection $node "interface $ifc"] {
+	if { [lrange $line 0 1] == "ipv6 address" } {
+	    return [lindex $line 2]
+	}
+    }
+}
+
+#****f* nodecfg.tcl/getIfcIPv6addrs
+# NAME
+#   getIfcIPv6addrs -- get interface IPv6 addresses.
+# SYNOPSIS
+#   set addrs [getIfcIPv6addrs $node $ifc]
 # FUNCTION
 #   Returns the list of IPv6 addresses assigned to the specified interface.
 # INPUTS
@@ -1101,7 +1174,7 @@ proc setLogIfcType { node ifc type } {
 #   * addrList -- A list of all the IPv6 addresses assigned to the specified
 #     interface.
 #****
-proc getIfcIPv6addr { node ifc } {
+proc getIfcIPv6addrs { node ifc } {
     set addrlist {}
     foreach line [netconfFetchSection $node "interface $ifc"] {
 	if { [lrange $line 0 1] == "ipv6 address" } {
@@ -1133,6 +1206,35 @@ proc setIfcIPv6addr { node ifc addr } {
     }
     if { $addr != "" } {
 	lappend ifcfg " ipv6 address $addr"
+    }
+    netconfInsertSection $node $ifcfg
+}
+
+#****f* nodecfg.tcl/setIfcIPv6addrs
+# NAME
+#   setIfcIPv6addrs -- set interface IPv6 addresses.
+# SYNOPSIS
+#   setIfcIPv6addrs $node $ifc $addrs
+# FUNCTION
+#   Sets new IPv6 address(es) on an interface. The correctness of the IP
+#   address format is not checked / enforced.
+# INPUTS
+#   * node -- the node id of the node whose interface's IPv6 address is set.
+#   * ifc -- interface name.
+#   * addrs -- new IPv6 addresses.
+#****
+proc setIfcIPv6addrs { node ifc addrs } {
+    set ifcfg [list "interface $ifc"]
+    foreach line [netconfFetchSection $node "interface $ifc"] {
+	if { [lrange $line 0 1] != "ipv6 address" } {
+	    lappend ifcfg $line
+	}
+    }
+    foreach addr $addrs {
+	if { $addr != "" } {
+	    set addr [string trim $addr]
+	    lappend ifcfg " ipv6 address $addr"
+	}
     }
     netconfInsertSection $node $ifcfg
 }
@@ -2548,4 +2650,94 @@ proc isNodeRouter { node } {
 	return 1
     }
     return 0
+}
+
+#****f* nodecfg.tcl/nodeCfggenIfconfigIPv4
+# NAME
+#   nodeCfggenIfconfigIPv4 -- generate ifconfig IPv4 configuration
+# SYNOPSIS
+#   nodeCfggenIfconfigIPv4 $node
+# FUNCTION
+#   Generate ifconfig configuration for all IPv4 addresses on all node
+#   interfaces.
+# INPUTS
+#   * node -- node to generate configuration for
+# RESULT
+#   * value -- ifconfig IPv4 configuration script
+#****
+proc nodeCfggenIfconfigIPv4 { node } {
+    set cfg {}
+    foreach ifc [allIfcList $node] {
+	foreach addr [getIfcIPv4addrs $node $ifc] {
+	    if { $addr != "" } {
+		lappend cfg "ifconfig $ifc inet $addr"
+	    }
+	}
+    }
+    return $cfg
+}
+
+#****f* nodecfg.tcl/nodeCfggenIfconfigIPv6
+# NAME
+#   nodeCfggenIfconfigIPv6 -- generate ifconfig IPv6 configuration
+# SYNOPSIS
+#   nodeCfggenIfconfigIPv6 $node
+# FUNCTION
+#   Generate ifconfig configuration for all IPv6 addresses on all node
+#   interfaces.
+# INPUTS
+#   * node -- node to generate configuration for
+# RESULT
+#   * value -- ifconfig IPv6 configuration script
+#****
+proc nodeCfggenIfconfigIPv6 { node } {
+    set cfg {}
+    foreach ifc [allIfcList $node] {
+	foreach addr [getIfcIPv6addrs $node $ifc] {
+	    if { $addr != "" } { 
+		lappend cfg "ifconfig $ifc inet6 $addr"
+	    }
+	}
+    }
+    return $cfg
+}
+
+#****f* nodecfg.tcl/nodeCfggenRouteIPv4
+# NAME
+#   nodeCfggenRouteIPv4 -- generate ifconfig IPv4 configuration
+# SYNOPSIS
+#   nodeCfggenRouteIPv4 $node
+# FUNCTION
+#   Generate IPv4 route configuration on all node interfaces.
+# INPUTS
+#   * node -- node to generate configuration for
+# RESULT
+#   * value -- route IPv4 configuration script
+#****
+proc nodeCfggenRouteIPv4 { node } {
+    set cfg {}
+    foreach statrte [getStatIPv4routes $node] {
+	lappend cfg "route -q add -inet $statrte"
+    }
+    return $cfg
+}
+
+#****f* nodecfg.tcl/nodeCfggenRouteIPv6
+# NAME
+#   nodeCfggenRouteIPv6 -- generate ifconfig IPv6 configuration
+# SYNOPSIS
+#   nodeCfggenRouteIPv6 $node
+# FUNCTION
+#   Generate IPv6 route configuration on all node interfaces.
+# INPUTS
+#   * node -- node to generate configuration for
+# RESULT
+#   * value -- route IPv6 configuration script
+#****
+proc nodeCfggenRouteIPv6 { node } {
+    set cfg {}
+    foreach statrte [getStatIPv6routes $node] {
+	lappend cfg "route -q add -inet $statrte"
+    }
+    return $cfg
 }

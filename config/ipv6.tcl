@@ -347,3 +347,27 @@ proc checkIPv6Net { str } {
     }
     return [checkIntRange $net 0 128]
 }
+
+#****f* ipv6.tcl/checkIPv6Nets
+# NAME
+#   checkIPv6Nets -- check the IPv6 networks
+# SYNOPSIS
+#   set valid [checkIPv6Nets $str]
+# FUNCTION
+#   Checks if the provided string is a valid IPv6 networks. 
+# INPUTS
+#   * str -- string to be evaluated. Valid IPv6 networks are writen in form
+#     a.b.c.d; e.f.g.h 
+# RESULT
+#   * valid -- function returns 0 if the input string is not in the form
+#     of a valid IP network, 1 otherwise
+#****
+proc checkIPv6Nets { str } {
+    foreach net [split $str ";"] {
+	set net [string trim $net]
+	if { ![checkIPv6Net $net] } {
+	    return 0
+	}
+    }
+    return 1
+}
