@@ -13,7 +13,6 @@ if [ "$1" == "" ]; then
     exit
 fi
 
-LDFLAGS=""
 if [ "`uname -r | cut -d'-' -f1`" = "10.1" ]; then
     export LDFLAGS="-L/usr/lib -lexecinfo"
 fi
