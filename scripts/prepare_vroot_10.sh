@@ -3,7 +3,7 @@
 . scripts/prepare_vroot_functions.sh
 
 PACKAGES="$PACKAGES_MINIMAL $PACKAGES_COMMON isc-dhcp43-server thunderbird \
-xorp firefox wireshark gnome-themes-standard"
+xorp firefox wireshark gnome-themes-standard bind99"
 
 checkArgs $*
 
