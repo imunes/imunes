@@ -39,22 +39,38 @@ LIBDIR=""
 imunes=$ROOTDIR/$LIBDIR/imunes.tcl
 
 batch_flag=0
+prepare_flag=0
+force_flag=0
 
 for i; do
-	if [ "$i" = "-b" ] || [ "$i" = "-batch" ] || [ "$i" = "-u" ] || [ "$i" = "-i" ]; then
-		batch_flag=1
-	fi
-	if [ "$i" = "-v" ] || [ "$i" = "-version" ]; then
-		version_line=`grep '^\#\ \$\I\d\: .*$' $ROOTDIR/$LIBDIR/*.tcl | sort -n -k4 | tail -1`
-		version_number=`echo "$version_line" | cut -d" " -f4`
-		last_changed=`echo "$version_line" | cut -d" " -f5`
-		echo "IMUNES version $version_number, last change: $last_changed"
-		exit 0
-	fi
+    if [ "$i" = "-f" ]; then
+	force_flag=1
+    fi
+    if [ "$i" = "-p" ]; then
+	prepare_flag=1
+    fi
+    if [ "$i" = "-b" ] || [ "$i" = "-batch" ] || [ "$i" = "-u" ] || [ "$i" = "-i" ]; then
+	batch_flag=1
+    fi
+    if [ "$i" = "-v" ] || [ "$i" = "-version" ]; then
+	version_line=`grep '^\#\ \$\I\d\: .*$' $ROOTDIR/$LIBDIR/*.tcl | sort -n -k4 | tail -1`
+	version_number=`echo "$version_line" | cut -d" " -f4`
+	last_changed=`echo "$version_line" | cut -d" " -f5`
+	echo "IMUNES version $version_number, last change: $last_changed"
+	exit 0
+    fi
 done
 
+if [ $prepare_flag -eq 1 ]; then
+    if [ $force_flag -eq 1 ]; then
+	make remove_vroot
+    fi
+    sh scripts/prepare_vroot.sh
+    exit 0
+fi
+
 if [ $batch_flag -eq 1 ]; then
-	exec tclsh8.6 $imunes $*
+    exec tclsh8.6 $imunes $*
 else
-	exec wish8.6 $imunes -- $*
+    exec wish8.6 $imunes -- $*
 fi

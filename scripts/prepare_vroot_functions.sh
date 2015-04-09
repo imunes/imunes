@@ -146,7 +146,8 @@ prepareUnionfs () {
     vroot_present=`ls -A $VROOT_MASTER`
     if [ "$vroot_present" ]; then
 	log "ERR" "ERROR: $VROOT_MASTER is already populated.\nTo remove it \
-run:\n	# make remove_vroot"
+run:\n	# make remove_vroot\n \
+or:\n	# imunes -f -p"
 	exit 2
     fi
 }
