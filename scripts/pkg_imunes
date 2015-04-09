@@ -1,0 +1,47 @@
+#!/bin/sh
+# Wrapper script for the pkg tool in FreeBSD >9.3
+
+if [ `id -u` -ne  0 ]; then
+    echo "You must be root to run this script."
+    exit 1
+fi
+
+# variable definition
+zfs_snapshot="vroot/vroot@clean"
+union_mount="/var/imunes/vroot"
+
+# check for virtual root filesystem templates
+union=`ls -A $union_mount 2>/dev/null`
+zfs=`zfs list | grep "vroot/vroot"`
+
+# prefer unionfs mount
+if [ "$union" ]; then 
+    VROOT="$union_mount"
+    zfs=""
+elif [ "$zfs" ]; then 
+    VROOT="/vroot/vroot"
+else 
+    echo "We couldn't detect any of the standard virtual node filesystems."
+    echo "Please run the following to instantiate the filesystem:"
+    echo "  # imunes -p"
+    exit 1
+fi
+
+# copy resolv.conf to access remote repo
+cp /etc/resolv.conf $VROOT/etc
+
+# wrap pkg and add the vroot filesystem chroot
+pkg -c $VROOT $*
+if [ $? -ne 0 ]; then
+    # unset zfs var because the command was unsuccessful
+    zfs=""
+fi
+
+# remove copied resolv.conf
+rm $VROOT/etc/resolv.conf
+
+# if the command was successful refresh the zfs snapshot
+if [ "$zfs" ]; then
+    zfs destroy  "$snapshot"
+    zfs snapshot "$snapshot"
+fi
