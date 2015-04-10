@@ -300,42 +300,32 @@ if { $ROOTDIR == "." } {
 }
 
 # Runtime libriaries
-source "$ROOTDIR/$LIBDIR/runtime/exec.tcl"
+foreach file [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
+    source $file
+}
 if { $initMode == 1 } {
     prepareDevfs
     exit
 }
-source "$ROOTDIR/$LIBDIR/runtime/cfgparse.tcl"
-source "$ROOTDIR/$LIBDIR/runtime/eventsched.tcl"
-source "$ROOTDIR/$LIBDIR/runtime/filemgmt.tcl"
 
 # Configuration libraries
-source "$ROOTDIR/$LIBDIR/config/annotationscfg.tcl"
-source "$ROOTDIR/$LIBDIR/config/ipsec.tcl"
-source "$ROOTDIR/$LIBDIR/config/ipv4.tcl"
-source "$ROOTDIR/$LIBDIR/config/ipv6.tcl"
-source "$ROOTDIR/$LIBDIR/config/linkcfg.tcl"
-source "$ROOTDIR/$LIBDIR/config/mac.tcl"
-source "$ROOTDIR/$LIBDIR/config/nodecfg.tcl"
+foreach file [glob -directory $ROOTDIR/$LIBDIR/config *.tcl] {
+    source $file
+}
 
 # The following files need to be sourced in this particular order. If not
 # the placement of the toolbar icons will be altered.
-source "$ROOTDIR/$LIBDIR/nodes/hub.tcl"
-source "$ROOTDIR/$LIBDIR/nodes/lanswitch.tcl"
-source "$ROOTDIR/$LIBDIR/nodes/click_l2.tcl"
-source "$ROOTDIR/$LIBDIR/nodes/rj45.tcl"
-source "$ROOTDIR/$LIBDIR/nodes/genericrouter.tcl"
-source "$ROOTDIR/$LIBDIR/nodes/click_l3.tcl"
-source "$ROOTDIR/$LIBDIR/nodes/host.tcl"
-source "$ROOTDIR/$LIBDIR/nodes/pc.tcl"
-#source "$ROOTDIR/$LIBDIR/nodes/ipfirewall.tcl"
+# L2 nodes
+foreach file "hub lanswitch click_l2 rj45" {
+    source "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
+}
+# L3 nodes
+foreach file "genericrouter quagga xorp static click_l3 host pc" {
+    source "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
+}
+# additional nodes
 source "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
 source "$ROOTDIR/$LIBDIR/nodes/annotations.tcl"
-
-# Router models
-source "$ROOTDIR/$LIBDIR/nodes/quagga.tcl"
-source "$ROOTDIR/$LIBDIR/nodes/xorp.tcl"
-source "$ROOTDIR/$LIBDIR/nodes/static.tcl"
 
 #
 # Global variables are initialized here
@@ -406,24 +396,15 @@ if { [string match -nocase "*imagemagick*" $imInfo] != 1} {
 #
 readConfigFile
 
-
 #
 # Initialization should be complete now, so let's start doing something...
 #
 
 if {$execMode == "interactive"} {
-    source "$ROOTDIR/$LIBDIR/gui/canvas.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/copypaste.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/drawing.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/editor.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/help.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/theme.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/initgui.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/linkcfgGUI.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/mouse.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/nodecfgGUI.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/topogen.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/widgets.tcl"
+    foreach file "canvas copypaste drawing editor help theme initgui linkcfgGUI \
+	mouse nodecfgGUI topogen widgets" {
+	source "$ROOTDIR/$LIBDIR/gui/$file.tcl"
+    }
     if { $debug == 1 } {
 	source "$ROOTDIR/$LIBDIR/gui/debug.tcl"
     }
