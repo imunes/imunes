@@ -41,7 +41,7 @@ set devfs_number 46837
 #   set result [nexec $args]
 # FUNCTION
 #   Executes the string given in args variable. The sting is not executed if
-#   IMUNES is running in editor only mode. 
+#   IMUNES is running in editor only mode.
 # INPUTS
 #   * args -- the string that should be executed.
 # RESULT
@@ -79,11 +79,11 @@ proc allSnapshotsAvailable {} {
 	    return 1
 	} else {
 	    if {$execMode == "batch"} {
-		puts "The root filesystem for virtual nodes ($vroot) is missing. 
+		puts "The root filesystem for virtual nodes ($vroot) is missing.
 Run 'make' or 'make vroot' to create the root filesystem."
 	    } else {
 		tk_dialog .dialog1 "IMUNES error" \
-		"The root filesystem for virtual nodes ($vroot) is missing. 
+		"The root filesystem for virtual nodes ($vroot) is missing.
 Run 'make' or 'make vroot' to create the root filesystem." \
 		info 0 Dismiss
 	    }
@@ -138,7 +138,7 @@ Run 'make' or 'make vroot' to create the main ZFS snapshot." \
 #   can be set only to edit or exec.
 #   When changing the mode to exec all the emulation interfaces are checked
 #   (if they are nonexistent the message is displayed, and mode is not
-#   changed), all the required buttons are disabled (except the 
+#   changed), all the required buttons are disabled (except the
 #   simulation/Terminate button, that is enabled) and procedure deployCfg is #   called.
 #   The mode can not be changed to exec if imunes operates only in editor mode
 #   (editor_only variable is set).
@@ -198,7 +198,7 @@ proc setOperMode { mode } {
 		}
 	    }
     }
-    
+
     foreach b { link link_layer net_layer } {
 	if { "$mode" == "exec" } {
 	    .panwin.f1.left.$b configure -state disabled
@@ -269,9 +269,215 @@ proc setOperMode { mode } {
     .panwin.f1.c config -cursor left_ptr
 }
 
+#****f* exec.tcl/checkForApplications
+# NAME
+#   checkForApplications -- check whether applications exist
+# SYNOPSIS
+#   checkForApplications $node $app_list
+# FUNCTION
+#   Checks whether a list of applications exist on the virtual node by using
+#   the which command.
+# INPUTS
+#   * node -- virtual node id
+#   * app_list -- list of applications
+# RESULT
+#   * returns 0 if the application exists, otherwise it returns 1.
+#****
+proc checkForApplications { node app_list } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    foreach app $app_list {
+	set exists [ catch { exec jexec $eid.$node which $app } err ]
+	if { $exists } {
+	    return 1
+	}
+    }
+    return 0
+}
+
+#****f* exec.tcl/startWiresharkOnNodeIfc
+# NAME
+#   startWiresharkOnNodeIfc -- start wireshark on an interface
+# SYNOPSIS
+#   startWiresharkOnNodeIfc $node $ifc
+# FUNCTION
+#   Start Wireshark on a virtual node on the specified interface.
+# INPUTS
+#   * node -- virtual node id
+#   * ifc -- virtual node interface
+#****
+proc startWiresharkOnNodeIfc { node ifc } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    if {[file exists /usr/local/bin/startxcmd] == 1 && \
+	[checkForApplications $node "wireshark"] == 0} {
+	exec startxcmd [getNodeName $node]@$eid wireshark -ki $ifc > /dev/null 2>&1 &
+    } else {
+	exec jexec $eid.$node tcpdump -s 0 -U -w - -i $ifc 2>/dev/null |\
+	    wireshark -o "gui.window_title:$ifc@[getNodeName $node] ($eid)" -k -i - &
+    }
+}
+
+#****f* exec.tcl/startXappOnNode
+# NAME
+#   startXappOnNode -- start X application in a virtual node
+# SYNOPSIS
+#   startXappOnNode $node $app
+# FUNCTION
+#   Start X application on virtual node
+# INPUTS
+#   * node -- virtual node id
+#   * app -- application to start
+#****
+proc startXappOnNode { node app } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    eval exec startxcmd [getNodeName $node]@$eid $app > /dev/null 2>&1 &
+}
+
+#****f* exec.tcl/startTcpdumpOnNodeIfc
+# NAME
+#   startTcpdumpOnNodeIfc -- start tcpdump on an interface
+# SYNOPSIS
+#   startTcpdumpOnNodeIfc $node $ifc
+# FUNCTION
+#   Start tcpdump in xterm on a virtual node on the specified interface.
+# INPUTS
+#   * node -- virtual node id
+#   * ifc -- virtual node interface
+#****
+proc startTcpdumpOnNodeIfc { node ifc } {
+    if {[checkForApplications $node "tcpdump"] == 0} {
+	spawnShell $node "tcpdump -ni $ifc"
+    }
+}
+
+#****f* exec.tcl/existingShells
+# NAME
+#   existingShells -- check which shells exist in a node
+# SYNOPSIS
+#   existingShells $shells $node
+# FUNCTION
+#   This procedure checks which of the provided shells are available
+#   in a running node.
+# INPUTS
+#   * shells -- list of shells.
+#   * node -- node id of the node for which the check is performed.
+#****
+proc existingShells { shells node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set cmd "jexec $eid.$node which $shells"
+
+    set err [catch {eval exec $cmd} res]
+    if  { $err } {
+	return ""
+    }
+
+    return $res
+}
+
+#****f* exec.tcl/spawnShell
+# NAME
+#   spawnShell -- spawn shell
+# SYNOPSIS
+#   spawnShell $node $cmd
+# FUNCTION
+#   This procedure spawns a new shell for a specified node.
+#   The shell is specified in cmd parameter.
+# INPUTS
+#   * node -- node id of the node for which the shell is spawned.
+#   * cmd -- the path to the shell.
+#****
+proc spawnShell { node cmd } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set node_id $eid\.$node
+
+    nexec xterm -sb -rightbar \
+	-T "IMUNES: [getNodeName $node] (console) [lindex [split $cmd /] end]" \
+	-e "jexec $node_id $cmd" &
+}
+
+#****f* exec.tcl/spawnShellExec
+# NAME
+#   spawnShellExec -- spawn shell in exec mode on double click
+# SYNOPSIS
+#   spawnShellExec
+# FUNCTION
+#   This procedure spawns a new shell on a selected and current
+#   node.
+#****
+proc spawnShellExec {} {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    global gui_unix
+
+    set node [lindex [.panwin.f1.c gettags {node && current}] 1]
+    if { $node == "" } {
+	set node [lindex [.panwin.f1.c gettags {nodelabel && current}] 1]
+	if { $node == "" } {
+	    return
+	}
+    }
+    if { [[typemodel $node].virtlayer] != "VIMAGE" } {
+	nodeConfigGUI .panwin.f1.c $node
+    } else {
+	set cmd [lindex [existingShells [[typemodel $node].shellcmds] $node] 0]
+	if { $cmd == "" } {
+	    return
+	}
+	spawnShell $node $cmd
+    }
+}
+
+#****f* exec.tcl/fetchNodeConfiguration
+# NAME
+#   fetchNodeConfiguration -- fetches current node configuration
+# SYNOPSIS
+#   fetchNodeConfiguration
+# FUNCTION
+#   This procedure is called when the button3.menu.sett->Fetch Node
+#   Configurations button is pressed. It is used to update the selected nodes
+#   configurations from the running experiment settings.
+#****
+proc fetchNodeConfiguration {} {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set ip6Set 0
+    set ip4Set 0
+
+    foreach node [selectedNodes] {
+	catch {exec jexec $eid.$node ifconfig} full
+	set lines [split $full "\n"]
+
+	foreach line $lines {
+	    if {[regexp {^([[:alnum:]]+):.*mtu ([^$]+)$} $line \
+		 -> ifc mtuvalue]} {
+		setIfcMTU $node $ifc $mtuvalue
+		set ip6Set 0
+		set ip4Set 0
+	    } elseif {[regexp {^\tether ([^ ]+)} $line -> macaddr]} {
+		setIfcMACaddr $node $ifc $macaddr
+	    } elseif {[regexp {^\tinet6 (?!fe80:)([^ ]+) } $line -> ip6addr]} {
+		if {$ip6Set == 0} {
+		    setIfcIPv6addr $node $ifc $ip6addr
+		    set ip6Set 1
+		}
+	    } elseif {[regexp {^\tinet ([^ ]+) netmask ([^ ]+) } $line \
+		 -> ip4addr netmask]} {
+		if {$ip4Set == 0} {
+		    set length [ip::maskToLength $netmask]
+		    setIfcIPv4addr $node $ifc $ip4addr/$length
+		    set ip4Set 1
+		}
+	    }
+	}
+    }
+    redrawAll
+}
+
+
 #****f* exec.tcl/checkExternalInterfaces
 # NAME
-#   checkExternalInterfaces -- check external interfaces in the topology 
+#   checkExternalInterfaces -- check external interfaces in the topology
 # SYNOPSIS
 #   checkExternalInterfaces
 # FUNCTION
@@ -344,9 +550,9 @@ created.\nVLAN $vlan is already in use. \n($err)"
 proc createExperimentFiles { eid } {
     upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
     upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-    global currentFileBatch execMode    
+    global currentFileBatch execMode
     file mkdir /var/run/imunes/$eid
-    
+
     set fileName "/var/run/imunes/$eid/timestamp"
     set fileId [open $fileName w]
     puts $fileId [clock format [clock seconds]]
@@ -358,17 +564,17 @@ proc createExperimentFiles { eid } {
     close $fileId
 
     if { $execMode == "interactive" } {
-	if { $currentFile != "" } { 
+	if { $currentFile != "" } {
 	    set fileName "/var/run/imunes/$eid/name"
 	    set fileId [open $fileName w]
-	    puts $fileId [file tail $currentFile]  
+	    puts $fileId [file tail $currentFile]
 	    close $fileId
 	}
     } elseif { $execMode == "batch" } {
-	if { $currentFileBatch != "" } { 
+	if { $currentFileBatch != "" } {
 	    set fileName "/var/run/imunes/$eid/name"
 	    set fileId [open $fileName w]
-	    puts $fileId [file tail $currentFileBatch]  
+	    puts $fileId [file tail $currentFileBatch]
 	    close $fileId
 	}
     }
@@ -503,7 +709,7 @@ proc fetchExperimentFolders {} {
     set exp_list ""
     set exp_files [glob -nocomplain -directory /var/run/imunes -type d *]
     if {$exp_files != ""} {
-	foreach file $exp_files {                     
+	foreach file $exp_files {          
 	    lappend exp_list [file tail $file]
 	}
     }
@@ -574,7 +780,7 @@ proc getExperimentNameFromFile { eid } {
 	set name [string trim [read $fileId]]
 	close $fileId
     }
-    return $name 
+    return $name
 }
 
 #****f* exec.tcl/getExperimentConfigurationFromFile
@@ -596,7 +802,7 @@ proc getExperimentConfigurationFromFile { eid } {
     if {[file exists $pathToFile]} {
 	set file $pathToFile
     }
-    return $file       
+    return $file
 }
 
 #****f* exec.tcl/statline
@@ -665,7 +871,7 @@ proc createIfc { eid type hook } {
     return [lindex $nglist 1]
 }
 
-#****f* exec.tcl/l3node.instantiate 
+#****f* exec.tcl/l3node.instantiate
 # NAME
 #   l3node.instantiate -- layer 3 node instantiate
 # SYNOPSIS
@@ -685,7 +891,7 @@ proc l3node.instantiate { eid node } {
     upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
 
     set node_id "$eid\.$node"
-    
+
     # Prepare a copy-on-write filesystem root
     if {$vroot_unionfs} {
 	# UNIONFS
@@ -815,14 +1021,14 @@ proc l3node.nghook { eid node ifc } {
     }
 }
 
-#****f* exec.tcl/l3node.start 
+#****f* exec.tcl/l3node.start
 # NAME
-#   l3node.start -- layer 3 node start 
+#   l3node.start -- layer 3 node start
 # SYNOPSIS
 #   l3node.start $eid $node
 # FUNCTION
 #   Starts a new layer 3 node (pc, host or router). The node can be started if
-#   it is instantiated. 
+#   it is instantiated.
 #   Simulates the booting proces of a node, starts all the services and
 #   assignes the ip addresses to the interfaces.
 # INPUTS
@@ -831,7 +1037,7 @@ proc l3node.nghook { eid node ifc } {
 #****
 proc l3node.start { eid node } {
     global viewcustomid vroot_unionfs
-    
+
     set node_id "$eid\.$node"
 
     if {$vroot_unionfs} {
@@ -860,7 +1066,7 @@ proc l3node.start { eid node } {
 	foreach line $bootcfg {
 	    puts $fileId $line
 	}
-	close $fileId     
+	close $fileId
     } else {
 	set bootcmd ""
 	set bootcfg ""
@@ -872,7 +1078,7 @@ proc l3node.start { eid node } {
     foreach line $bootcfg_def {
 	puts $fileId $line
     }
-    close $fileId     
+    close $fileId
 
     if { $bootcmd == "" || $bootcfg =="" } {
 	catch "exec jexec $node_id $bootcmd_def boot.conf >& $node_dir/out.log &"
@@ -882,13 +1088,13 @@ proc l3node.start { eid node } {
 
 }
 
-#****f* exec.tcl/l3node.shutdown 
+#****f* exec.tcl/l3node.shutdown
 # NAME
-#   l3node.shutdown -- layer 3 node shutdown 
+#   l3node.shutdown -- layer 3 node shutdown
 # SYNOPSIS
 #   l3node.shutdown $eid $node
 # FUNCTION
-#   Shutdowns a layer 3 node (pc, host or router).   
+#   Shutdowns a layer 3 node (pc, host or router).
 #   Simulates the shutdown proces of a node, kills all the services and
 #   deletes ip addresses of all interfaces.
 # INPUTS
@@ -910,15 +1116,15 @@ proc l3node.shutdown { eid node } {
     }
 }
 
-#****f* exec.tcl/l3node.destroy 
+#****f* exec.tcl/l3node.destroy
 # NAME
-#   l3node.destroy -- layer 3 node destroy 
+#   l3node.destroy -- layer 3 node destroy
 # SYNOPSIS
 #   l3node.destroy $eid $node
 # FUNCTION
-#   Destroys a layer 3 node (pc, host or router).   
+#   Destroys a layer 3 node (pc, host or router).
 #   Destroys all the interfaces of the node by sending a shutdown message to
-#   netgraph nodes and on the end destroys the vimage itself. 
+#   netgraph nodes and on the end destroys the vimage itself.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id
@@ -1097,7 +1303,7 @@ proc deployCfg {} {
 	pack $w.msg
 	update
 	ttk::progressbar $w.p -orient horizontal -length 250 \
-	-mode determinate -maximum $count -value $startedCount 
+	-mode determinate -maximum $count -value $startedCount
 	pack $w.p
 	update
     }
@@ -1118,7 +1324,7 @@ proc deployCfg {} {
 		statline "Creating node $name"
 		$w.p configure -value $startedCount
 		update
-	    } 
+	    }
 	    displayBatchProgress $step $allNodes
 	    [typemodel $node].instantiate $eid $node
 	    pipesExec ""
@@ -1267,7 +1473,7 @@ proc deployCfg {} {
 # SYNOPSIS
 #   terminateAllNodes
 # FUNCTION
-#  
+#
 #****
 proc terminateAllNodes { eid } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
@@ -1294,15 +1500,15 @@ proc terminateAllNodes { eid } {
     }
 
     set t_start [clock milliseconds]
-    
+
     # XXX - pipeline everything to make it faster.
     # Termination is done in the following order:
-    # 1. call shutdown on all ng nodes because of the packgen node. 
+    # 1. call shutdown on all ng nodes because of the packgen node.
     # 2. call shutdown on all virtual nodes.
     # 3. remove all links to prevent packets flowing into the interfaces.
     # 4. destroy all netgraph nodes.
     # 5. destroy all ngeth interfaces from vimage nodes.
-    # 6. destroy all vimage nodes. 
+    # 6. destroy all vimage nodes.
 
     # divide nodes into two lists
     set ngraphs ""
@@ -1672,9 +1878,9 @@ proc vimageCleanup { eid } {
     pipesClose
 
     statline ""
-  
-    # remeber all vlan interfaces in the experiment to destroy them later 
-    set vlanlist "" 
+
+    # remeber all vlan interfaces in the experiment to destroy them later
+    set vlanlist ""
     catch {exec jexec $eid ifconfig -l} ifclist
     foreach ifc $ifclist {
 	if { [string match "*.*" $ifc]} {
@@ -1684,7 +1890,7 @@ proc vimageCleanup { eid } {
 
     if {$vroot_unionfs} {
 	# UNIONFS
-	exec jail -r $eid 
+	exec jail -r $eid
 	exec rm -fr $VROOT_BASE/$eid &
     } else {
 	# ZFS
@@ -1703,7 +1909,7 @@ proc vimageCleanup { eid } {
 		set zfsCount [lindex [split $output] 0]
 		$w.p configure -value $zfsCount
 		update
-		after 200 
+		after 200
 	    }
 	}
     }
@@ -1743,15 +1949,15 @@ proc timeoutPatch { eid vimages } {
 
     set timeoutNeeded 0
     foreach vimage $vimages {
-	if { [catch {exec jexec $eid.$vimage netstat -an -f inet | fgrep "WAIT"} odg] == 0} { 
+	if { [catch {exec jexec $eid.$vimage netstat -an -f inet | fgrep "WAIT"} odg] == 0} {
 	    set timeoutNeeded 1
 	    break
 	}
-    }    
+    }
 
     if { $timeoutNeeded == 0 } {
 	return
-    } 
+    }
 
     if { $execMode == "batch" } {
         puts "We must wait for TIME_WAIT expiration on virtual nodes (up to 60 sec). "
@@ -1763,7 +1969,7 @@ proc timeoutPatch { eid vimages } {
         wm transient $w .
         wm title $w "Please wait ..."
         message $w.msg -justify left -aspect 1200 \
-         -text "We must wait for TIME_WAIT expiration on virtual nodes (up to 60 sec). 
+         -text "We must wait for TIME_WAIT expiration on virtual nodes (up to 60 sec).
 Please don't try killing the process.
 (countdown on status line)"
        pack $w.msg
@@ -1772,7 +1978,7 @@ Please don't try killing the process.
         pack $w.p
         update
         grab $w
-    } 
+    }
 
     while { $vrti == 1 } {
         set vrti 0
@@ -1781,7 +1987,7 @@ Please don't try killing the process.
             while { [catch {exec jexec $eid.$vimage netstat -an -f inet | fgrep "WAIT"} odg] == 0} {
                 set vrti 1
                 # puts "vimage $vimage: \n$odg\n"
-                after 1000 
+                after 1000
                 set sec [expr $sec - 1]
                 if { $execMode == "batch" } {
                     puts -nonewline "."
@@ -1806,8 +2012,8 @@ Please don't try killing the process.
 # SYNOPSIS
 #   execSetIfcQDisc $eid $node $ifc $qdisc
 # FUNCTION
-#   Sets the queuing discipline during the simulation. 
-#   New queuing discipline is defined in qdisc parameter. 
+#   Sets the queuing discipline during the simulation.
+#   New queuing discipline is defined in qdisc parameter.
 #   Queueing discipline can be set to fifo, wfq or drr.
 # INPUTS
 #   eid -- experiment id
@@ -1843,8 +2049,8 @@ proc execSetIfcQDisc { eid node ifc qdisc } {
 # SYNOPSIS
 #   execSetIfcQDrop $eid $node $ifc $qdrop
 # FUNCTION
-#   Sets the queue dropping policy during the simulation. 
-#   New queue dropping policy is defined in qdrop parameter. 
+#   Sets the queue dropping policy during the simulation.
+#   New queue dropping policy is defined in qdrop parameter.
 #   Queue dropping policy can be set to drop-head or drop-tail.
 # INPUTS
 #   eid -- experiment id
@@ -1880,8 +2086,8 @@ proc execSetIfcQDrop { eid node ifc qdrop } {
 # SYNOPSIS
 #   execSetIfcQDrop $eid $node $ifc $qlen
 # FUNCTION
-#   Sets the queue length during the simulation. 
-#   New queue length is defined in qlen parameter. 
+#   Sets the queue length during the simulation.
+#   New queue length is defined in qlen parameter.
 # INPUTS
 #   eid -- experiment id
 #   node -- node id
@@ -1914,7 +2120,7 @@ proc execSetIfcQLen { eid node ifc qlen } {
 # SYNOPSIS
 #   execSetLinkParams $eid $link
 # FUNCTION
-#   Sets the link parameters during the simulation.  
+#   Sets the link parameters during the simulation.
 #   All the parameters are set at the same time.
 # INPUTS
 #   eid -- experiment id
@@ -1951,11 +2157,11 @@ proc execSetLinkParams { eid link } {
 
 #****f* exec.tcl/execSetLinkJitter
 # NAME
-#   execSetLinkJitter -- in exec mode set link jitter 
+#   execSetLinkJitter -- in exec mode set link jitter
 # SYNOPSIS
 #   execSetLinkJitter $eid $link
 # FUNCTION
-#   Sets the link jitter parameters during the simulation. 
+#   Sets the link jitter parameters during the simulation.
 #   All the parameters are set at the same time.
 # INPUTS
 #   eid -- experiment id
@@ -1987,7 +2193,7 @@ proc execSetLinkJitter { eid link } {
     }
 
     set exec_pipe [open "| jexec $eid ngctl -f -" r+]
-    
+
     if {$jitter_up != ""} {
 	puts $exec_pipe "msg $lname: setcfg {upstream={jitmode=-1}}"
 	foreach val $jitter_up {
@@ -2015,7 +2221,7 @@ proc execSetLinkJitter { eid link } {
 # SYNOPSIS
 #   execResetLinkJitter $eid $link
 # FUNCTION
-#   Resets the link jitter parameters to defaults during the simulation. 
+#   Resets the link jitter parameters to defaults during the simulation.
 #   All the parameters are set at the same time.
 # INPUTS
 #   * eid -- experiment id

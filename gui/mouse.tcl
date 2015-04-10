@@ -724,14 +724,14 @@ proc button3node { c x y } {
 	    -menu .button3menu.shell -state disabled
     }
 
-    .button3menu.ethereal delete 0 end
+    .button3menu.wireshark delete 0 end
     .button3menu.tcpdump delete 0 end
     if {$oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIMAGE"} {
 	#
 	# Wireshark
 	#
 	.button3menu add cascade -label "Wireshark" \
-	    -menu .button3menu.ethereal
+	    -menu .button3menu.wireshark
 	foreach ifc [ifcList $node] {
 	    set label "$ifc"
 	    if { [getIfcIPv4addr $node $ifc] != "" } {
@@ -740,14 +740,8 @@ proc button3node { c x y } {
 	    if { [getIfcIPv6addr $node $ifc] != "" } {
 		set label "$label ([getIfcIPv6addr $node $ifc])"
 	    }
-	    set wireshark [ catch { exec jexec $eid.$node which wireshark } ] 
-	    if {[file exists /usr/local/bin/startxcmd] == 1 && $wireshark == 0} {
-		.button3menu.ethereal add command -label $label \
-		    -command "nexec startxcmd [getNodeName $node]@$eid wireshark -ki $ifc &"
-	    } else {
-		.button3menu.ethereal add command -label $label \
-		    -command "startethereal $node $ifc"
-	    }
+	    .button3menu.wireshark add command -label $label \
+		-command "startWiresharkOnNodeIfc $node $ifc"
 	}
 	#
 	# tcpdump
@@ -762,26 +756,23 @@ proc button3node { c x y } {
 	    if { [getIfcIPv6addr $node $ifc] != "" } {
 		set label "$label ([getIfcIPv6addr $node $ifc])"
 	    }
-	    set tcpdump [ catch { exec jexec $eid.$node which tcpdump } ] 
-	    if {$tcpdump == 0} {
-		.button3menu.tcpdump add command -label $label \
-		    -command "spawnShell $node \"tcpdump -ni $ifc\""
-	    }
+	    .button3menu.tcpdump add command -label $label \
+		-command "startTcpdumpOnNodeIfc $node $ifc"
 	}
 	#
 	# Firefox
 	#
-	set firefox [ catch { exec jexec $eid.$node which firefox } ] 
-	if {[file exists /usr/local/bin/startxcmd] == 1 && $firefox == 0 } {
+	if {[file exists /usr/local/bin/startxcmd] == 1 && \
+	    [checkForApplications $node "firefox"] == 0} {
 	    .button3menu add command -label "Web Browser" \
-		-command "nexec startxcmd [getNodeName $node]@$eid firefox -no-remote about:blank &"
+		-command "startXappOnNode $node \"firefox -no-remote -setDefaultBrowser about:blank\""
 	} else {
 	    .button3menu add command -label "Web Browser" \
 		-state disabled
 	}
     } else {
 	.button3menu add cascade -label "Wireshark" \
-	    -menu .button3menu.ethereal -state disabled
+	    -menu .button3menu.wireshark -state disabled
 	.button3menu add command -label "Web Browser" \
 	    -state disabled
     }
@@ -804,101 +795,6 @@ proc button3node { c x y } {
     set x [winfo pointerx .]
     set y [winfo pointery .]
     tk_popup .button3menu $x $y
-}
-
-#****f* editor.tcl/existingShells
-# NAME
-#   existingShells -- check which shells exist in a node
-# SYNOPSIS
-#   existingShells $shells $node
-# FUNCTION
-#   This procedure checks which of the provided shells are available
-#   in a running node. 
-# INPUTS
-#   * shells -- list of shells.
-#   * node -- node id of the node for which the check is performed.
-#****
-proc existingShells { shells node } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    set cmd "jexec $eid.$node which $shells"
-
-    catch {eval exec $cmd} res
-
-    return $res
-}
-
-#****f* editor.tcl/spawnShell
-# NAME
-#   spawnShell -- spawn shell
-# SYNOPSIS
-#   spawnShell $node $cmd
-# FUNCTION
-#   This procedure spawns a new shell for a specified node.
-#   The shell is specified in cmd parameter.
-# INPUTS
-#   * node -- node id of the node for which the shell is spawned.
-#   * cmd -- the path to the shell.
-#****
-proc spawnShell { node cmd } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-    global gui_unix
-
-    set node_id $eid\.$node
-
-    nexec xterm -sb -rightbar \
-	-T "IMUNES: [getNodeName $node] (console) [lindex [split $cmd /] end]" \
-	-e "jexec $node_id $cmd" &
-}
-
-#****f* editor.tcl/spawnShellExec
-# NAME
-#   spawnShellExec -- spawn shell in exec mode on double click 
-# SYNOPSIS
-#   spawnShellExec $cmd
-# FUNCTION
-#   This procedure spawns a new shell on a selected and current
-#   node. 
-#****
-proc spawnShellExec {} {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-    global gui_unix
-
-    set node [lindex [.panwin.f1.c gettags {node && current}] 1]
-    if { $node == "" } {
-	set node [lindex [.panwin.f1.c gettags {nodelabel && current}] 1]
-	if { $node == "" } {
-	    return
-	}
-    }
-    if { [[typemodel $node].virtlayer] != "VIMAGE" } {
-	nodeConfigGUI .panwin.f1.c $node
-    } else {
-	set cmd [lindex [existingShells [[typemodel $node].shellcmds] $node] 0]
-	if { $cmd == "" } {
-	    return
-	}
-	spawnShell $node $cmd 
-    }
-}
-
-#****f* editor.tcl/startethereal
-# NAME
-#   startethereal -- start ethereal
-# SYNOPSIS
-#   startethereal $node $iface
-# FUNCTION
-#   This procedure starts ethereal for the specified node
-#   and the specified interface.
-# INPUTS
-#   * node -- node id
-#   * iface -- interface name
-#****
-proc startethereal { node iface } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    set interface "$iface@$eid\.$node"
-    nexec jexec $eid.$node tcpdump -s 0 -U -w - -i $iface 2>/dev/null | wireshark -o "gui.window_title:$iface@[getNodeName $node] ($eid)" -k -i - &
 }
 
 #****f* editor.tcl/button1
@@ -1571,51 +1467,6 @@ proc button1-release { c x y } {
     }
     update
     updateUndoLog
-}
-
-#****f* editor.tcl/fetchNodeConfiguration 
-# NAME
-#   fetchNodeConfiguration -- fetches current node configuration 
-# SYNOPSIS
-#   fetchNodeConfiguration
-# FUNCTION
-#   This procedure is called when the button3.menu.sett->Fetch Node
-#   Configurations button is pressed. It is used to update the selected nodes
-#   configurations from the running experiment settings.
-#****
-proc fetchNodeConfiguration {} {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-    set ip6Set 0
-    set ip4Set 0
-
-    foreach node [selectedNodes] {
-	catch {exec jexec $eid.$node ifconfig} full
-	set lines [split $full "\n"]
-
-	foreach line $lines {
-	    if {[regexp {^([[:alnum:]]+):.*mtu ([^$]+)$} $line \
-		 -> ifc mtuvalue]} {
-		setIfcMTU $node $ifc $mtuvalue
-		set ip6Set 0
-		set ip4Set 0
-	    } elseif {[regexp {^\tether ([^ ]+)} $line -> macaddr]} {
-		setIfcMACaddr $node $ifc $macaddr
-	    } elseif {[regexp {^\tinet6 (?!fe80:)([^ ]+) } $line -> ip6addr]} {
-		if {$ip6Set == 0} {
-		    setIfcIPv6addr $node $ifc $ip6addr
-		    set ip6Set 1
-		}
-	    } elseif {[regexp {^\tinet ([^ ]+) netmask ([^ ]+) } $line \
-		 -> ip4addr netmask]} {
-		if {$ip4Set == 0} {
-		    set length [ip::maskToLength $netmask]
-		    setIfcIPv4addr $node $ifc $ip4addr/$length
-		    set ip4Set 1
-		}
-	    }
-	}
-    }
-    redrawAll
 }
 
 #****f* editor.tcl/button3background
