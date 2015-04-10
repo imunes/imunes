@@ -521,3 +521,27 @@ proc checkIPv4Net { str } {
     }
     return [checkIntRange $net 0 32]
 }
+
+#****f* ipv4.tcl/checkIPv4Nets
+# NAME
+#   checkIPv4Nets -- check the IPv4 networks
+# SYNOPSIS
+#   set valid [checkIPv4Nets $str]
+# FUNCTION
+#   Checks if the provided string is a valid IPv4 networks. 
+# INPUTS
+#   * str -- string to be evaluated. Valid IPv4 networks are writen in form
+#     a.b.c.d; e.f.g.h 
+# RESULT
+#   * valid -- function returns 0 if the input string is not in the form
+#     of a valid IP network, 1 otherwise
+#****
+proc checkIPv4Nets { str } {
+    foreach net [split $str ";"] {
+	set net [string trim $net]
+	if { ![checkIPv4Net $net] } {
+	    return 0
+	}
+    }
+    return 1
+}

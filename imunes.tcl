@@ -311,7 +311,7 @@ source "$ROOTDIR/$LIBDIR/runtime/filemgmt.tcl"
 
 # Configuration libraries
 source "$ROOTDIR/$LIBDIR/config/annotationscfg.tcl"
-#source "$ROOTDIR/$LIBDIR/config/ipsec.tcl"
+source "$ROOTDIR/$LIBDIR/config/ipsec.tcl"
 source "$ROOTDIR/$LIBDIR/config/ipv4.tcl"
 source "$ROOTDIR/$LIBDIR/config/ipv6.tcl"
 source "$ROOTDIR/$LIBDIR/config/linkcfg.tcl"
@@ -414,9 +414,6 @@ readConfigFile
 if {$execMode == "interactive"} {
     source "$ROOTDIR/$LIBDIR/gui/canvas.tcl"
     source "$ROOTDIR/$LIBDIR/gui/copypaste.tcl"
-    if { $debug == 1 } {
-	source "$ROOTDIR/$LIBDIR/gui/debug.tcl"
-    }
     source "$ROOTDIR/$LIBDIR/gui/drawing.tcl"
     source "$ROOTDIR/$LIBDIR/gui/editor.tcl"
     source "$ROOTDIR/$LIBDIR/gui/help.tcl"
@@ -427,6 +424,10 @@ if {$execMode == "interactive"} {
     source "$ROOTDIR/$LIBDIR/gui/nodecfgGUI.tcl"
     source "$ROOTDIR/$LIBDIR/gui/topogen.tcl"
     source "$ROOTDIR/$LIBDIR/gui/widgets.tcl"
+    if { $debug == 1 } {
+	source "$ROOTDIR/$LIBDIR/gui/debug.tcl"
+    }
+
     newProject
     if { $argv != "" && [file exists $argv] } {
 	set ::cf::[set curcfg]::currentFile $argv

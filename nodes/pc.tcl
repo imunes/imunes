@@ -251,28 +251,13 @@ proc $MODULE.virtlayer {} {
 #   * congif -- generated configuration 
 #****
 proc $MODULE.cfggen { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
     set cfg {}
-
-    foreach ifc [allIfcList $node] {
-	set addr [getIfcIPv4addr $node $ifc]
-	if { $addr != "" } {
-	    lappend cfg "ifconfig $ifc inet $addr"
-	}
-	set addr [getIfcIPv6addr $node $ifc]
-	if { $addr != "" } {
-	    lappend cfg "ifconfig $ifc inet6 $addr"
-	}
-    }
+    set cfg [concat $cfg [nodeCfggenIfconfigIPv4 $node]]
+    set cfg [concat $cfg [nodeCfggenIfconfigIPv6 $node]]
     lappend cfg ""
 
-    foreach statrte [getStatIPv4routes $node] {
-	lappend cfg "route -q add -inet $statrte"
-    }
-    foreach statrte [getStatIPv6routes $node] {
-	lappend cfg "route -q add -inet6 $statrte"
-    }
+    set cfg [concat $cfg [nodeCfggenRouteIPv4 $node]]
+    set cfg [concat $cfg [nodeCfggenRouteIPv6 $node]]
 
     return $cfg
 }

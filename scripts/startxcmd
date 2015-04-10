@@ -80,6 +80,20 @@ fi
 chmod 1777 $tmpdir
 chmod 1777 $xdir
 
+sockexists=0
+for i in `seq 1 30`; do
+    if test -S $xsocket ; then
+	    sockexists=1
+	    break
+    fi
+    sleep 0.1
+done
+
+if test $sockexists -eq 0 ; then
+    echo "startxcmd failed to start, please try again. If the problem persists, file a bug report."
+    exit 1
+fi
+
 # Unix domain socket (xsocket) has changed?
 # (if Xorg is started after Experiment and then exp. is resumed in GUI ...)
 #
@@ -146,20 +160,5 @@ himage $remote dbus-uuidgen --ensure
 ######
 # Call X client application on $remote
 #
-
-sockexists=0
-for i in `seq 1 10`; do
-    if test -S $remotexsocket ; then
-	sockexists=1
-	break
-    fi
-    sleep 0.1
-done
-
-if test $sockexists -eq 0 ; then
-    echo "startxcmd failed to start, please try again. If the problem persists, file a bug report."
-    exit 1
-fi
-
-exec himage $remote env DISPLAY=:0.0 "$@"
+exec himage $remote env DISPLAY=:0.0 NO_AT_BRIDGE=1 "$@"
 

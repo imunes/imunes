@@ -18,26 +18,31 @@ fi
 ROOTDIR="."
 LIBDIR=""
 
-RELEASE=`uname -r`
+### Set varibles and fetch base manpages and lib files ###
+RELEASE=`uname -r | cut -d "-" -f 1`-RELEASE
+#RELEASE=9.2-RELEASE
 ARCH=`uname -m`
 IMUNESDIR=`pwd`
 
 cd ~
 HOMEDIR=`pwd`
 
-# unionfs settings
 PREPAREDIR="vroot_prepare"
 WORKDIR=/tmp/$PREPAREDIR
 
-# ZFS settings
 VROOT_DIR=/var/imunes
 VROOT_SIZE=1G
 VROOT_FILE="imunes_vroot"
 #VROOT_DEST=$VROOT_DIR/$VROOT_FILE$VROOT_SIZE
 VROOT_DEST=$VROOT_DIR/$VROOT_FILE
-DISTSERVER="ftp://ftp.at.freebsd.org"
-RELEASE_DIR="/pub/FreeBSD/releases/$ARCH/$RELEASE"
 
+DISTSERVER="ftp://ftp.de.freebsd.org/"
+RELEASE_DIR="pub/FreeBSD/releases/$ARCH/$RELEASE"
+if [ "$RELEASE" = "9.2-RELEASE" ]; then
+    export PACKAGESITE=$DISTSERVER/pub/FreeBSD/ports/$ARCH/packages-9.2-release/Latest/
+else
+    export PACKAGESITE=$DISTSERVER/pub/FreeBSD/ports/$ARCH/packages-9-stable/Latest/
+fi
 FETCH_CMD="fetch"
 
 export BATCH="yes"
@@ -49,7 +54,7 @@ fi
 
 PACKAGES_MINIMAL="quagga bash mrouted iftop"
 PACKAGES="$PACKAGES_MINIMAL netperf lsof elinks isc-dhcp42-server nmap \
-lighttpd akpop3d cone links nano postfix xorp firefox wireshark"
+lighttpd akpop3d cone links nano postfix xorp-devel firefox wireshark"
 
 LOG="$WORKDIR/log"
 
@@ -152,20 +157,18 @@ done
 
 cp /etc/resolv.conf $VROOT_MASTER/etc
 
-chroot $VROOT_MASTER /bin/sh -c 'env ASSUME_ALWAYS_YES=YES pkg bootstrap' >> $LOG 2>&1
-
 mkdir -p $WORKDIR/packages
 mkdir -p $VROOT_MASTER/$WORKDIR/packages
-export PKG_CACHEDIR=$WORKDIR/packages
+export PKGDIR=$WORKDIR/packages
 
 cd $WORKDIR/packages
 missing=""
 notmissing=""
 INCOMPLETE=0
 for file in ${PKGS}; do
-    if [ ! -f $file.txz ]; then
+    if [ ! -f $file.tbz ]; then
 	INCOMPLETE=1
-	missing="$file $missing" # XXX
+	missing="$file $missing"
     else
 	notmissing="$file $notmissing"
     fi
@@ -181,18 +184,18 @@ err_list=""
 log "OUT" "Installing packages..."
 if [ $offline -eq 0 ] && [ $INCOMPLETE == 1 ]; then
     for pkg in ${missing}; do
-	pkg -c $VROOT_MASTER install -fy $pkg >> $LOG 2>&1
+	pkg_add -rFK $pkg -C $VROOT_MASTER >> $LOG 2>&1
 	if [ $? -ne 0 ]; then
 	    err_list="$pkg $err_list"
 	fi
     done
-    cp -R $VROOT_MASTER/$WORKDIR/packages/* $WORKDIR/packages/
+    cp $VROOT_MASTER/$WORKDIR/packages/* $WORKDIR/packages/
 fi
 
-cp -R $WORKDIR/packages/* $VROOT_MASTER/$WORKDIR/packages/
-cp -R $VROOT_MASTER/$WORKDIR/packages/* $VROOT_MASTER/
+cp $WORKDIR/packages/* $VROOT_MASTER/$WORKDIR/packages/
+cp $VROOT_MASTER/$WORKDIR/packages/* $VROOT_MASTER/
 for pkg in ${notmissing}; do
-    pkg -c $VROOT_MASTER install -f $WORKDIR/packages/$pkg.txz >> $LOG 2>&1 
+    pkg_add -F $WORKDIR/packages/$pkg.tbz -C $VROOT_MASTER >> $LOG 2>&1 
     if [ $? -ne 0 ]; then
 	err_list="$pkg $err_list"
     fi
@@ -202,7 +205,7 @@ log "OUT" "Installing packages done."
 
 if [ $mini -eq 0 ]; then
     log "OUT" "Installing additional tools..."
-    sh $IMUNESDIR/install_click.sh $VROOT_MASTER >> $LOG 2>&1
+    sh $IMUNESDIR/scripts/install_click.sh $VROOT_MASTER >> $LOG 2>&1
     log "OUT" "Installing additional tools done."
 fi
 
@@ -211,7 +214,7 @@ if [ "$err_list" != "" ]; then
 fi
 
 rm -fr $VROOT_MASTER/tmp/*
-rm -fr $VROOT_MASTER/*.txz
+rm -fr $VROOT_MASTER/*.tbz
 
 if [ -d "$VROOT_MASTER/usr/local/etc/quagga/" ]; then
     cd $VROOT_MASTER/usr/local/etc/quagga/
@@ -229,7 +232,7 @@ if [ -f $VROOT_MASTER/usr/local/sbin/xorp_rtrmgr ]; then
 fi
 
 cd $IMUNESDIR
-cp $ROOTDIR/$LIBDIR/quaggaboot.sh $VROOT_MASTER/usr/local/bin
+cp $ROOTDIR/$LIBDIR/scripts/quaggaboot.sh $VROOT_MASTER/usr/local/bin
 chmod 755 $VROOT_MASTER/usr/local/bin/quaggaboot.sh
 
 rm $VROOT_MASTER/etc/resolv.conf
@@ -237,7 +240,6 @@ rm $VROOT_MASTER/etc/resolv.conf
 # Avoid Wireshark 'run as root is dangerous' dialog
 mkdir $VROOT_MASTER/root/.wireshark/
 echo "privs.warn_if_elevated: FALSE" > $VROOT_MASTER/root/.wireshark/recent_common
-
 
 if [ $zfs -eq 1 ]; then
     ### Take zfs snapshot ###

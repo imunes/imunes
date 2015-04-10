@@ -1116,6 +1116,7 @@ menu .button3menu.connect -tearoff 0
 menu .button3menu.moveto -tearoff 0
 menu .button3menu.shell -tearoff 0
 menu .button3menu.ethereal -tearoff 0
+menu .button3menu.tcpdump -tearoff 0
 menu .button3menu.canvases -tearoff 0
 menu .button3menu.icon -tearoff 0
 menu .button3menu.sett -tearoff 0

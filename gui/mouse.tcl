@@ -725,8 +725,8 @@ proc button3node { c x y } {
     }
 
     .button3menu.ethereal delete 0 end
+    .button3menu.tcpdump delete 0 end
     if {$oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIMAGE"} {
-	global debug
 	#
 	# Wireshark
 	#
@@ -749,6 +749,28 @@ proc button3node { c x y } {
 		    -command "startethereal $node $ifc"
 	    }
 	}
+	#
+	# tcpdump
+	#
+	.button3menu add cascade -label "tcpdump" \
+	    -menu .button3menu.tcpdump
+	foreach ifc [ifcList $node] {
+	    set label "$ifc"
+	    if { [getIfcIPv4addr $node $ifc] != "" } {
+		set label "$label ([getIfcIPv4addr $node $ifc])"
+	    }
+	    if { [getIfcIPv6addr $node $ifc] != "" } {
+		set label "$label ([getIfcIPv6addr $node $ifc])"
+	    }
+	    set tcpdump [ catch { exec jexec $eid.$node which tcpdump } ] 
+	    if {$tcpdump == 0} {
+		.button3menu.tcpdump add command -label $label \
+		    -command "spawnShell $node \"tcpdump -ni $ifc\""
+	    }
+	}
+	#
+	# Firefox
+	#
 	set firefox [ catch { exec jexec $eid.$node which firefox } ] 
 	if {[file exists /usr/local/bin/startxcmd] == 1 && $firefox == 0 } {
 	    .button3menu add command -label "Web Browser" \
@@ -826,7 +848,7 @@ proc spawnShell { node cmd } {
 
     nexec xterm -sb -rightbar \
 	-T "IMUNES: [getNodeName $node] (console) [lindex [split $cmd /] end]" \
-	-e "jexec $node_id script -q /dev/null $cmd" &
+	-e "jexec $node_id $cmd" &
 }
 
 #****f* editor.tcl/spawnShellExec
