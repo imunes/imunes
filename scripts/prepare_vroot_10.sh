@@ -47,10 +47,7 @@ configXorp
 
 wiresharkDialog
 
-rm -fr $VROOT_MASTER/tmp/*
-rm -fr $VROOT_MASTER/*.txz
-
-rm $VROOT_MASTER/etc/resolv.conf
+cleanUnnecessary
 
 log "OUT" "Installation successfully finished. Check the log for more \
 information: $LOG"

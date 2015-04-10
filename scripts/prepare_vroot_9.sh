@@ -47,10 +47,7 @@ configXorp
 
 wiresharkDialog
 
-rm -fr $VROOT_MASTER/tmp/*
-rm -fr $VROOT_MASTER/*.txz
-
-rm $VROOT_MASTER/etc/resolv.conf
+cleanUnnecessary
 
 if [ $zfs -eq 1 ]; then
     takeZfsSnapshot

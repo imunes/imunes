@@ -188,7 +188,7 @@ preparePackages () {
     for file in ${PKGS}; do
 	if [ ! -f $file.txz ]; then
 	    INCOMPLETE=1
-	    missing="$file $missing" # XXX
+	    missing="$file $missing"
 	else
 	    notmissing="$file $notmissing"
 	fi
@@ -221,7 +221,7 @@ _EOF_
 	ls $file*.txz > /dev/null 2>&1
 	if [ $? -ne 0 ]; then
 	    INCOMPLETE=1
-	    missing="$file $missing" # XXX
+	    missing="$file $missing"
 	else
 	    notmissing="$file $notmissing"
 	fi
@@ -338,3 +338,10 @@ takeZfsSnapshot () {
     log "OUT" "done."
 }
 
+cleanUnnecessary () {
+    rm -fr $VROOT_MASTER/tmp/*
+    #rm -fr $VROOT_MASTER/*.txz
+
+    rm $VROOT_MASTER/etc/pkg/imunes.conf
+    rm $VROOT_MASTER/etc/resolv.conf
+}
