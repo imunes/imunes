@@ -269,6 +269,26 @@ proc setOperMode { mode } {
     .panwin.f1.c config -cursor left_ptr
 }
 
+#****f* exec.tcl/execCmdNode
+# NAME
+#   execCmdNode -- execute command on virtual node
+# SYNOPSIS
+#   execCmdNode $node $cmd
+# FUNCTION
+#   Executes a command on a virtual node and returns the output.
+# INPUTS
+#   * node -- virtual node id
+#   * cmd -- command to execute
+# RESULT
+#   * returns the execution output
+#****
+proc execCmdNode { node cmd } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    catch {eval [concat "nexec jexec " $eid.$node $cmd] } output
+    return $output
+}
+
 #****f* exec.tcl/checkForApplications
 # NAME
 #   checkForApplications -- check whether applications exist
