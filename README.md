@@ -44,7 +44,7 @@ Then you need to compile and install the kernel and reboot.
 
 ### FreeBSD packages
 
-First we need to install the packages needed for IMUNES. To do
+First we need to install the packages required for IMUNES. To do
 this execute the following command (on FreeBSD 10.1):
 
     # pkg install tk86 ImageMagick tcllib wireshark socat git gmake
