@@ -1634,7 +1634,7 @@ proc terminateAllNodes { eid } {
 	# UNIONFS
 	catch "exec jexec $eid kill -9 -1 2> /dev/null"
 	exec jail -r $eid
-	exec rm -fr $VROOT_BASE/$eid &
+	catch "exec rm -fr $VROOT_BASE/$eid &"
     } else {
 	# ZFS
 	if {$execMode == "batch"} {
