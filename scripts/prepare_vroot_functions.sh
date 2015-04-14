@@ -49,7 +49,7 @@ VROOT_FILE="imunes_vroot"
 VROOT_DEST=$VROOT_DIR/$VROOT_FILE
 
 # packages for installation
-PACKAGES_MINIMAL="quagga bash mrouted iftop"
+PACKAGES_MINIMAL="pkg quagga bash mrouted iftop"
 PACKAGES_COMMON="netperf lsof elinks nmap lighttpd akpop3d links nano postfix" # isc-dhcp42-server
 
 ##########################
@@ -172,7 +172,9 @@ it.\nScript aborted."
 	fi
     done
 
-    cp /etc/resolv.conf $VROOT_MASTER/etc
+    if [ $offline -eq 0 ]; then
+	cp /etc/resolv.conf $VROOT_MASTER/etc
+    fi
 }
 
 # prepare packages for pkg_add
@@ -202,18 +204,9 @@ be installed:\n $missing"
 
 # prepare packages for pkg install
 preparePackagesPkg () {
-cat >> $VROOT_MASTER/etc/pkg/imunes.conf <<_EOF_                                                                                                                                                                                             
-imunes: {
-    url: "file:///tmp/vroot_prepare",
-    enabled: yes
-}
-_EOF_
-
     mkdir -p $WORKDIR/packages
-    mkdir -p $VROOT_MASTER/$WORKDIR/packages
-    export PKG_CACHEDIR=$WORKDIR/packages
-
     cd $WORKDIR/packages
+
     missing=""
     notmissing=""
     INCOMPLETE=0
@@ -231,12 +224,41 @@ _EOF_
 	log "OUT" "These packages are missing from $WORKDIR/packages and will not \
 be installed:\n $missing"
     fi
+
+    if [ $INCOMPLETE -eq 0 ]; then
+	offline=1
+	log "OUT" "All packages are in $WORKDIR/packages and will \
+be installed from the local repository imunes."
+    fi
+
+    if [ $offline -eq 1 ]; then
+	mkdir -p $VROOT_MASTER/$WORKDIR/packages
+
+	mount -t nullfs $WORKDIR $VROOT_MASTER/$WORKDIR
+	ln -s packages $VROOT_MASTER/$WORKDIR/All
+	ln -s packages $VROOT_MASTER/$WORKDIR/Latest
+	mkdir -p $VROOT_MASTER/usr/local/etc/pkg/repos/
+
+	pkg=`ls pkg*txz 2> /dev/null | head -n1`
+	if [ "$pkg" != "" ]; then
+	    ln -fs $pkg pkg.txz
+	fi
+
+	echo "FreeBSD: { enabled: no }" > $VROOT_MASTER/usr/local/etc/pkg/repos/FreeBSD.conf
+
+cat >> $VROOT_MASTER/usr/local/etc/pkg/repos/imunes.conf <<_EOF_
+imunes: {
+    url: "file:///tmp/vroot_prepare",
+    enabled: yes
+}
+_EOF_
+
+    fi
 }
 
 # install packages with pkg_add
 installPackages () {
     err_list=""
-
     log "OUT" "Installing packages..."
     if [ $offline -eq 0 ] && [ $INCOMPLETE -eq 1 ]; then
 	for pkg in ${missing}; do
@@ -266,26 +288,34 @@ installPackages () {
 
 # install packages with pkg install
 installPackagesPkg () {
-    err_list=""
-    pkg -c $VROOT_MASTER update -r FreeBSD >> $LOG 2>&1
+    export PKG_CACHEDIR=$WORKDIR/packages
 
     log "OUT" "Installing packages..."
-    if [ $offline -eq 0 ] && [ $INCOMPLETE -eq 1 ]; then
-	for pkg in ${missing}; do
+
+    err_list=""
+    if [ $offline -eq 0 ]; then
+	pkg -c $VROOT_MASTER update -r FreeBSD >> $LOG 2>&1
+	for pkg in ${PKGS}; do
 	    pkg -c $VROOT_MASTER install -fyUr FreeBSD $pkg >> $LOG 2>&1
 	    if [ $? -ne 0 ]; then
 		err_list="$pkg $err_list"
 	    fi
 	done
-	cp -R $VROOT_MASTER/$WORKDIR/packages/* $WORKDIR/packages/
-    fi
 
-    mount -t nullfs $WORKDIR $VROOT_MASTER/$WORKDIR
-    ln -s packages $VROOT_MASTER/$WORKDIR/All
-    unset PKG_CACHEDIR
-    pkg -c $VROOT_MASTER install -yr imunes ${notmissing} >> $LOG 2>&1
-    unlink $VROOT_MASTER/$WORKDIR/All
-    umount $VROOT_MASTER/$WORKDIR
+	cp $VROOT_MASTER/$WORKDIR/packages/* $WORKDIR/packages/
+    else
+	pkg -c $VROOT_MASTER update -r imunes >> $LOG 2>&1
+	for pkg in ${PKGS}; do
+	    pkg -c $VROOT_MASTER install -fyUr imunes $pkg >> $LOG 2>&1
+	    if [ $? -ne 0 ]; then
+		err_list="$pkg $err_list"
+	    fi
+	done
+
+	unlink $VROOT_MASTER/$WORKDIR/All
+	unlink $VROOT_MASTER/$WORKDIR/Latest
+	umount $VROOT_MASTER/$WORKDIR
+    fi
 
     log "OUT" "Installing packages done."
 
@@ -340,8 +370,8 @@ takeZfsSnapshot () {
 
 cleanUnnecessary () {
     rm -fr $VROOT_MASTER/tmp/*
-    #rm -fr $VROOT_MASTER/*.txz
 
-    rm $VROOT_MASTER/etc/pkg/imunes.conf
-    rm $VROOT_MASTER/etc/resolv.conf
+    rm -f $VROOT_MASTER/etc/resolv.conf
+
+    rm -f $VROOT_MASTER/usr/local/etc/pkg/repos
 }
