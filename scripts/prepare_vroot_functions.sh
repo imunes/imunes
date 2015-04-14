@@ -373,5 +373,5 @@ cleanUnnecessary () {
 
     rm -f $VROOT_MASTER/etc/resolv.conf
 
-    rm -f $VROOT_MASTER/usr/local/etc/pkg/repos
+    rm -rf $VROOT_MASTER/usr/local/etc/pkg/repos
 }
