@@ -49,7 +49,7 @@ for i; do
     if [ "$i" = "-p" ]; then
 	prepare_flag=1
     fi
-    if [ "$i" = "-b" ] || [ "$i" = "-batch" ] || [ "$i" = "-u" ] || [ "$i" = "-i" ]; then
+    if [ "$i" = "-b" ] || [ "$i" = "-batch" ] || [ "$i" = "-i" ]; then
 	batch_flag=1
     fi
     if [ "$i" = "-v" ] || [ "$i" = "-version" ]; then
@@ -65,7 +65,7 @@ if [ $prepare_flag -eq 1 ]; then
     if [ $force_flag -eq 1 ]; then
 	make remove_vroot
     fi
-    sh scripts/prepare_vroot.sh
+    sh $ROOTDIR/$LIBDIR/scripts/prepare_vroot.sh
     exit 0
 fi
 
