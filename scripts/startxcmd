@@ -30,43 +30,6 @@ then
     exit 2
 fi
 
-if test "X${DISPLAY%:*}" == "Xlocalhost"
-then
-    # running over ssh 
-    xsocket="/var/run/X11.`himage -e $remote`"
-    port=$((6000+display))
-    pgrep -f "[s]ocat.*unix-listen:${xsocket},fork.*TCP:localhost:$port" > /dev/null 2>&1
-    if test $? -eq 1
-    then
-        rm -f $xsocket
-        socat unix-listen:${xsocket},fork TCP:localhost:$port &
-    fi
-else
-    xsocket="/var/run/X11.0.`himage -e $remote`"
-    if test `stat /tmp | cut -d" " -f1` -eq `stat /var/imunes | cut -d" " -f1`
-    then
-        # if /tmp and /var/imunes are on the same file system 
-        # we can hard link to /tmp/.X11-unix/X0
-        if test -S $xsocket
-        then
-            if test ! $xsocket -ef /tmp/.X11-unix/X0
-            then
-                rm -f $xsocket
-                ln /tmp/.X11-unix/X0 $xsocket 
-            fi
-        else
-            ln /tmp/.X11-unix/X0 $xsocket 
-        fi
-    else
-        pgrep -f "[s]ocat unix-listen:${xsocket},fork unix:/tmp/.X11-unix/X0" > /dev/null 2>&1
-        if test $? -eq 1
-        then
-            rm -f $xsocket
-            socat unix-listen:${xsocket},fork unix:/tmp/.X11-unix/X0 &
-        fi
-    fi
-fi
-
 dir=`himage -d $remote`
 tmpdir=${dir}/tmp
 xdir=${tmpdir}/.X11-unix
@@ -80,11 +43,29 @@ fi
 chmod 1777 $tmpdir
 chmod 1777 $xdir
 
+xsocket="`himage -d $remote`/tmp/.X11-unix/X0"
+
+if test "X${DISPLAY%:*}" == "Xlocalhost"
+then
+    # running over ssh 
+    port=$((6000+display))
+    socat_args="unix-listen:${xsocket},fork TCP:localhost:$port"
+else
+    socat_args="unix-listen:${xsocket},fork unix:/tmp/.X11-unix/X0"
+fi
+
+pgrep -f "[s]ocat $socat_args" > /dev/null 2>&1
+if test $? -eq 1
+then
+    rm -f $xsocket
+    socat $socat_args &
+fi
+
 sockexists=0
 for i in `seq 1 30`; do
     if test -S $xsocket ; then
-	    sockexists=1
-	    break
+        sockexists=1
+        break
     fi
     sleep 0.1
 done
@@ -92,20 +73,6 @@ done
 if test $sockexists -eq 0 ; then
     echo "startxcmd failed to start, please try again. If the problem persists, file a bug report."
     exit 1
-fi
-
-# Unix domain socket (xsocket) has changed?
-# (if Xorg is started after Experiment and then exp. is resumed in GUI ...)
-#
-if test -S $remotexsocket
-then
-    if test ! $xsocket -ef $remotexsocket
-    then
-        rm -f $remotexsocket
-        ln -f $xsocket $remotexsocket
-    fi
-else
-    ln -f $xsocket $remotexsocket
 fi
 
 touch ${dir}/root/.Xauthority
@@ -116,45 +83,8 @@ cookie=`xauth list | awk '/'"$host"'\/unix:'"$display"'/ {print $3}'`
 xauth -f ${dir}/root/.Xauthority add "$node/unix:0.0" . $cookie
 
 #####
-# ICE
-#
-
-icedir="/tmp/.ICE-unix"
-icesock=`ls -t /tmp/.ICE-unix/* | head -1`
-
-if test -S $icesock
-then
-    if test ! -d ${dir}${icedir}
-    then
-       mkdir -p ${dir}${icedir}
-    fi
-    chmod 1777 ${dir}${icedir}
-
-    # ICE socket has changed?
-    if test -S ${dir}${icesock}
-    then
-        if test ! $icesock -ef ${dir}${icesock}
-        then
-            rm -f ${dir}${icesock}
-            ln -f ${icesock} ${dir}${icesock}
-        fi
-    else
-        ln -f ${icesock} ${dir}${icesock}
-    fi
-    iceCookie=`iceauth list | grep "^ICE.*$icesock" | awk '{print $5}'`
-    xsmpCookie=`iceauth list | grep "^XSMP.*$icesock" | awk '{print $5}'`
-    iceauth=${dir}/root/.ICEauthority
-    rm -f $iceauth
-    touch $iceauth
-    chmod 600 $iceauth
-    iceauth -f $iceauth add ICE "" local/${node}:${icesock} MIT-MAGIC-COOKIE-1 $iceCookie
-    iceauth -f $iceauth add XSMP "" local/${node}:${icesock} MIT-MAGIC-COOKIE-1 $xsmpCookie
-fi
-
-#####
 # Fix dbus before starting application
 #
-
 himage $remote dbus-uuidgen --ensure
 
 ######
