@@ -2,7 +2,7 @@
 
 . scripts/prepare_vroot_functions.sh
 
-PACKAGES="$PACKAGES_MINIMAL $PACKAGES_COMMON isc-dhcp43-server thunderbird \
+PACKAGES="$PACKAGES_MINIMAL $PACKAGES_COMMON isc-dhcp43-server sylpheed \
 xorp firefox wireshark gnome-themes-standard bind99"
 
 checkArgs $*
@@ -30,12 +30,8 @@ fi
 prepareUnionfs
 populateFs
 
-if [ $offline -eq 0 ]; then
-    cp /etc/resolv.conf $VROOT_MASTER/etc
-    chroot $VROOT_MASTER /bin/sh -c 'env ASSUME_ALWAYS_YES=YES pkg bootstrap' >> $LOG 2>&1
-fi
-
 preparePackagesPkg
+chroot $VROOT_MASTER /bin/sh -c 'env ASSUME_ALWAYS_YES=YES pkg bootstrap' >> $LOG 2>&1
 installPackagesPkg
 
 if [ $mini -eq 0 ]; then

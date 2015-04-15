@@ -53,7 +53,6 @@ set options {
     {b		"batch mode on"}
     {batch	"batch mode on"}
     {d.secret	"debug mode on"}
-    {u		"update IMUNES"}
     {i		"setup devfs rules for virtual nodes"}
     {v		"print IMUNES version"}
     {version	"print IMUNES version"}
@@ -73,159 +72,6 @@ if { $err != "" } {
 set fileName [lindex $argv 0]
 if { ! [ string match "*.imn" $fileName ] && $fileName != "" } {
     puts stderr "File '$fileName' is not an IMUNES .imn file"
-    exit
-}
-
-proc updateIMUNES {} {
-    package require http
-    global execMode
-    set url "http://www.imunes.tel.fer.hr/dl/update"
-    set token [::http::geturl $url]
-    set data [::http::data $token]
-    ::http::cleanup $token          
-
-    set newv [lindex $data 0]
-    set ndate [lindex $data 1]
-    set url [lindex $data 2]
-    set sha [lindex $data 3]
-    set updateFolder "/tmp/imunes_[string range $sha 0 10]"
-    file delete -force $updateFolder
-    file mkdir $updateFolder
-
-    catch {exec imunes -v} curd
-    set curv [string trim [lindex $curd 2] ,]
-    set cdate [string trim [lindex $curd end] ,]
-
-    if { $curv < $newv } {
-	set message "Current version: $curv ($cdate)\nNew version: $newv ($ndate)\nDownload and install new version?"
-	if {$execMode == "batch"} {
-	    puts -nonewline "$message (Y/n) "
-	    flush stdout
-	    set answer [gets stdin]
-	} else {
-	    set answer [tk_dialog .dialog1 "IMUNES update" "$message" \
-	    questhead 0 Yes No]
-	}
-
-	if { $answer == 0 || $answer == "y" || $answer == "Y" || $answer == "" } {
-	    set count 4
-	    set startedCount 0
-	    if {$execMode != "batch"} {
-		set w .startup
-		catch {destroy $w}
-		toplevel $w -takefocus 1
-		wm transient $w .
-		wm title $w "Updating IMUNES..."
-		message $w.msg -justify left -aspect 1200 \
-		    -text "Downloading the latest tarball..."
-		pack $w.msg
-		update
-		ttk::progressbar $w.p -orient horizontal -length 250 \
-		-mode determinate -maximum $count -value $startedCount 
-		pack $w.p
-		update
-	    } else {
-		puts -nonewline "Installing"
-		flush stdout
-	    }
-	    package require tar
-	    package require sha256
-	    set dwFile "$updateFolder/imunes.tar.gz"
-	    set tarFile "$updateFolder/imunes.tar"
-
-	    http::geturl $url -channel [open $dwFile w]
-	    if {$execMode != "batch"} {
-		incr startedCount
-		$w.p configure -value $startedCount
-		$w.msg configure -text "Calculating checksum..."
-		update
-	    } else {
-		puts -nonewline "."
-		flush stdout
-	    }
-
-	    set dwsha [ ::sha2::sha256 -hex -file $dwFile ]
-	    if { $dwsha != $sha } {
-		if {$execMode == "batch"} {
-		    puts ""
-		    puts "Download corrupt, try again."
-		} else {
-		    catch {destroy $w}
-		    tk_dialog .dialog1 "IMUNES update" \
-		    "Download corrupt, try again." \
-		    info 0 Dismiss
-		}
-		return
-	    }
-
-	    if {$execMode != "batch"} {
-		incr startedCount
-		$w.p configure -value $startedCount
-		$w.msg configure -text "Extracting archive..."
-		update
-	    } else {
-		puts -nonewline "."
-		flush stdout
-	    }
-	    set targz [open $dwFile rb]
-	    zlib push gunzip $targz
-	    set tar [open $tarFile wb+]
-	    puts $tar [read $targz]
-	    close $targz
-	    close $tar
-	    set rootFolder [lindex [::tar::stat $tarFile] 0]
-	    ::tar::untar $tarFile -dir $updateFolder
-
-	    if {$execMode != "batch"} {
-		incr startedcount
-		$w.p configure -value $startedCount
-		$w.msg configure -text "Installing IMUNES..."
-		update
-	    } else {
-		puts -nonewline "."
-		flush stdout
-	    }
-	    catch { exec make install -C $updateFolder/$rootFolder } err
-
-	    if {$execMode != "batch"} {
-		incr startedCount
-		$w.p configure -value $startedCount
-		$w.msg configure -text "Update complete."
-		update
-	    } else {
-		puts -nonewline "."
-		flush stdout
-	    }
-
-	    if {$execMode == "batch"} {
-		puts ""
-		puts "IMUNES updated successfully."
-	    } else {
-		catch {destroy $w}
-		tk_dialog .dialog1 "IMUNES update" \
-		"Update completed successfully. Please restart IMUNES." \
-		info 0 Dismiss
-	    }
-	}
-    } else {
-	if {$execMode == "batch"} {
-	    puts "The newest IMUNES already installed."
-	} else {
-	    tk_dialog .dialog1 "IMUNES update" \
-	    "The newest IMUNES already installed." \
-	    info 0 Dismiss
-	}
-    }
-}
-
-if { $params(u) } {
-    set execMode batch
-    catch {exec id -u} uid
-    if { $uid != "0" } {
-	puts "Error: To update, run IMUNES with root permissions."
-	exit
-    }
-    updateIMUNES
     exit
 }
 
@@ -300,42 +146,32 @@ if { $ROOTDIR == "." } {
 }
 
 # Runtime libriaries
-source "$ROOTDIR/$LIBDIR/runtime/exec.tcl"
+foreach file [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
+    source $file
+}
 if { $initMode == 1 } {
     prepareDevfs
     exit
 }
-source "$ROOTDIR/$LIBDIR/runtime/cfgparse.tcl"
-source "$ROOTDIR/$LIBDIR/runtime/eventsched.tcl"
-source "$ROOTDIR/$LIBDIR/runtime/filemgmt.tcl"
 
 # Configuration libraries
-source "$ROOTDIR/$LIBDIR/config/annotationscfg.tcl"
-source "$ROOTDIR/$LIBDIR/config/ipsec.tcl"
-source "$ROOTDIR/$LIBDIR/config/ipv4.tcl"
-source "$ROOTDIR/$LIBDIR/config/ipv6.tcl"
-source "$ROOTDIR/$LIBDIR/config/linkcfg.tcl"
-source "$ROOTDIR/$LIBDIR/config/mac.tcl"
-source "$ROOTDIR/$LIBDIR/config/nodecfg.tcl"
+foreach file [glob -directory $ROOTDIR/$LIBDIR/config *.tcl] {
+    source $file
+}
 
 # The following files need to be sourced in this particular order. If not
 # the placement of the toolbar icons will be altered.
-source "$ROOTDIR/$LIBDIR/nodes/hub.tcl"
-source "$ROOTDIR/$LIBDIR/nodes/lanswitch.tcl"
-source "$ROOTDIR/$LIBDIR/nodes/click_l2.tcl"
-source "$ROOTDIR/$LIBDIR/nodes/rj45.tcl"
-source "$ROOTDIR/$LIBDIR/nodes/genericrouter.tcl"
-source "$ROOTDIR/$LIBDIR/nodes/click_l3.tcl"
-source "$ROOTDIR/$LIBDIR/nodes/host.tcl"
-source "$ROOTDIR/$LIBDIR/nodes/pc.tcl"
-#source "$ROOTDIR/$LIBDIR/nodes/ipfirewall.tcl"
+# L2 nodes
+foreach file "hub lanswitch click_l2 rj45" {
+    source "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
+}
+# L3 nodes
+foreach file "genericrouter quagga xorp static click_l3 host pc" {
+    source "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
+}
+# additional nodes
 source "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
 source "$ROOTDIR/$LIBDIR/nodes/annotations.tcl"
-
-# Router models
-source "$ROOTDIR/$LIBDIR/nodes/quagga.tcl"
-source "$ROOTDIR/$LIBDIR/nodes/xorp.tcl"
-source "$ROOTDIR/$LIBDIR/nodes/static.tcl"
 
 #
 # Global variables are initialized here
@@ -406,24 +242,15 @@ if { [string match -nocase "*imagemagick*" $imInfo] != 1} {
 #
 readConfigFile
 
-
 #
 # Initialization should be complete now, so let's start doing something...
 #
 
 if {$execMode == "interactive"} {
-    source "$ROOTDIR/$LIBDIR/gui/canvas.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/copypaste.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/drawing.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/editor.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/help.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/theme.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/initgui.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/linkcfgGUI.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/mouse.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/nodecfgGUI.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/topogen.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/widgets.tcl"
+    foreach file "canvas copypaste drawing editor help theme initgui linkcfgGUI \
+	mouse nodecfgGUI topogen widgets" {
+	source "$ROOTDIR/$LIBDIR/gui/$file.tcl"
+    }
     if { $debug == 1 } {
 	source "$ROOTDIR/$LIBDIR/gui/debug.tcl"
     }

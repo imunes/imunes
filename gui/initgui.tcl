@@ -852,20 +852,6 @@ menu .menubar.experiment -tearoff 0
 # Help
 #
 menu .menubar.help -tearoff 0
-.menubar.help add command -label "Check for updates" -command {
-    catch {exec id -u} uid
-    if { $uid != "0" } {
-	if {$execMode == "batch"} {
-	    puts "Error: To update IMUNES, run it with root privilages."
-	} else {
-	    tk_dialog .dialog1 "IMUNES error" \
-	    "Error: To update IMUNES, run it with root privilages." \
-	    info 0 Dismiss
-	}
-    } else {
-	updateIMUNES
-    }
-}
 .menubar.help add command -label "About" -command {
     toplevel .about
     text .about.text -bg white -height 40 -wrap word -setgrid 1 \
@@ -1115,7 +1101,7 @@ menu .button3menu -tearoff 0
 menu .button3menu.connect -tearoff 0
 menu .button3menu.moveto -tearoff 0
 menu .button3menu.shell -tearoff 0
-menu .button3menu.ethereal -tearoff 0
+menu .button3menu.wireshark -tearoff 0
 menu .button3menu.tcpdump -tearoff 0
 menu .button3menu.canvases -tearoff 0
 menu .button3menu.icon -tearoff 0

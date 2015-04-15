@@ -41,12 +41,9 @@ proc showCfg { c node } {
     set x [expr [lindex $coords 0] + 30]
     set y [expr [lindex $coords 1] + 30]
     #Execute command on selected node and save the command output
-    set nodeId "$eid.$node"
-    set cmd [concat "nexec jexec " $nodeId $showCfg]
-    #set label [eval $cmd]
-    catch {eval $cmd} label
+    set output [execCmdNode $node $showCfg]
     set title "$node# $showCfg\n"
-    append title $label
+    append title $output
     #Call showCfgPopup
     showCfgPopup $c $node $title $x $y    	
 }
