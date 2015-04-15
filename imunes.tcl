@@ -237,9 +237,12 @@ if { [string match -nocase "*imagemagick*" $imInfo] != 1} {
     set hasIM false
 }
 
+set runtimeDir "/var/run/imunes"
+
 #
 # Read config files, the first one found: .imunesrc, $HOME/.imunesrc
 #
+# XXX
 readConfigFile
 
 #
@@ -294,8 +297,8 @@ if {$execMode == "interactive"} {
 	    createExperimentFilesFromBatch
 	}
     } else {
-	set configFile "/var/run/imunes/$eid_base/config.imn"
-	set ngmapFile "/var/run/imunes/$eid_base/ngnodemap"
+	set configFile "$runtimeDir/$eid_base/config.imn"
+	set ngmapFile "$runtimeDir/$eid_base/ngnodemap"
 	if { [file exists $configFile] && [file exists $ngmapFile] \
 	    && $regular_termination } {
 	    set fileId [open $configFile r]

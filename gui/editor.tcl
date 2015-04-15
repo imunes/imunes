@@ -950,7 +950,7 @@ proc refreshTopologyTree {} {
 #   Creates a popup dialog box to attach to experiment.
 #****
 proc attachToExperimentPopup {} {
-    global selectedExperiment
+    global selectedExperiment runtimeDir
     set  ateDialog .attachToExperimentDialog
     catch {destroy $ateDialog}
     toplevel $ateDialog
@@ -1007,19 +1007,19 @@ proc attachToExperimentPopup {} {
 	$tree insert {} end -id $exp -text [list $exp "-" [getExperimentNameFromFile $exp]] -values [list $timestamp] \
 	          -tags "$exp"
 	$tree tag bind $exp <1> \
-	  "updateScreenshotPreview $prevcan /var/run/imunes/$exp/screenshot.png 
+	  "updateScreenshotPreview $prevcan $runtimeDir/$exp/screenshot.png 
 	   set selectedExperiment $exp"
     }
     
     foreach exp [getResumableExperiments] {
 	$tree tag bind $exp <Key-Up> \
 	"if {![string equal {} [$tree prev $exp]]} {
-	    updateScreenshotPreview $prevcan /var/run/imunes/[$tree prev $exp]/screenshot.png
+	    updateScreenshotPreview $prevcan $runtimeDir/[$tree prev $exp]/screenshot.png
 	    set selectedExperiment [$tree prev $exp]
 	}"
 	$tree tag bind $exp <Key-Down> \
 	"if {![string equal {} [$tree next $exp]]} {
-	    updateScreenshotPreview $prevcan /var/run/imunes/[$tree next $exp]/screenshot.png
+	    updateScreenshotPreview $prevcan $runtimeDir/[$tree next $exp]/screenshot.png
 	    set selectedExperiment [$tree next $exp]
 	}"
     }
@@ -1030,7 +1030,7 @@ proc attachToExperimentPopup {} {
     set selectedExperiment $first
 
     if {$selectedExperiment != ""} {
-	updateScreenshotPreview $prevcan /var/run/imunes/$selectedExperiment/screenshot.png
+	updateScreenshotPreview $prevcan $runtimeDir/$selectedExperiment/screenshot.png
     }
     
     ttk::frame $wi.buttons
@@ -1079,7 +1079,8 @@ proc updateScreenshotPreview { pc image } {
 #   * exp -- experiment id
 #****
 proc resumeSelectedExperiment { exp } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid    
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    global runtimeDir
     set curr_eid $eid
     if {$curr_eid == $exp} {
 	return
@@ -1094,7 +1095,7 @@ proc resumeSelectedExperiment { exp } {
     set currentFile [getExperimentConfigurationFromFile $exp]
     openFile
 
-    set ngmapFile "/var/run/imunes/$exp/ngnodemap"
+    set ngmapFile "$runtimeDir/$exp/ngnodemap"
     set fileId [open $ngmapFile r]
     array set ngnodemap [gets $fileId]
     close $fileId
