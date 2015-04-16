@@ -707,11 +707,14 @@ proc l3node.instantiate { eid node } {
     pipesExec "mount -t devfs devfs $VROOT_RUNTIME_DEV" "hold"
     pipesExec "devfs -m $VROOT_RUNTIME_DEV ruleset $devfs_number" "hold"
     pipesExec "devfs -m $VROOT_RUNTIME_DEV rule applyset" "hold"
-    # XXX - CONTINUE FROM HERE
-
+    # XXX
+    
+    # XXX - createNodeContainer
     pipesExec "jail -c name=$node_id path=$VROOT_RUNTIME securelevel=1 \
       host.hostname=[getNodeName $node] vnet persist" "hold"
+    # XXX
 
+    # XXX - createNodePhysIfcs node
     # Create a vimage
     # Create "physical" network interfaces
     foreach ifc [ifcList $node] {
@@ -750,7 +753,9 @@ proc l3node.instantiate { eid node } {
 	    }
 	}
     }
+    # XXX
 
+    # XXX - createNodeLogIfcs node
     # Create logical network interfaces
     foreach ifc [logIfcList $node] {
 	switch -exact [getLogIfcType $node $ifc] {
@@ -769,9 +774,12 @@ proc l3node.instantiate { eid node } {
 	    }
 	}
     }
-
+    # XXX
+    
+    # XXX - configureICMPoptions node
     pipesExec "jexec $node_id sysctl net.inet.icmp.bmcastecho=1" "hold"
     pipesExec "jexec $node_id sysctl net.inet.icmp.icmplim=0" "hold"
+    # XXX
 }
 
 #****f* exec.tcl/l3node.start
@@ -793,12 +801,7 @@ proc l3node.start { eid node } {
 
     set node_id "$eid\.$node"
 
-    if {$vroot_unionfs} {
-	set node_dir /var/imunes/$eid/$node
-    } else {
-	set node_dir /vroot/$eid/$node
-    }
-
+    # XXX - startIfcsNode node
     set cmds ""
     foreach ifc [allIfcList $node] {
 	set mtu [getIfcMTU $node $ifc]
@@ -809,6 +812,14 @@ proc l3node.start { eid node } {
 	}
     }
     exec sh << $cmds &
+    # XXX
+
+    # XXX - copyConfToNode node
+    if {$vroot_unionfs} {
+	set node_dir /var/imunes/$eid/$node
+    } else {
+	set node_dir /vroot/$eid/$node
+    }
 
     if { [getCustomEnabled $node] == true } {
 	set selected [getCustomConfigSelected $node]
@@ -832,13 +843,16 @@ proc l3node.start { eid node } {
 	puts $fileId $line
     }
     close $fileId
+    # XXX
 
+    # XXX - startConfOnNode node
+    # here check for getCustomEnabled == true
     if { $bootcmd == "" || $bootcfg =="" } {
 	catch "exec jexec $node_id $bootcmd_def boot.conf >& $node_dir/out.log &"
     } else {
 	catch "exec jexec $node_id $bootcmd custom.conf >& $node_dir/out.log &"
     }
-
+    # XXX
 }
 
 #****f* exec.tcl/l3node.shutdown
@@ -856,9 +870,12 @@ proc l3node.start { eid node } {
 #****
 proc l3node.shutdown { eid node } {
     set node_id "$eid\.$node"
+    # XXX - killProcs node
     catch "exec pkill -f wireshark.*$node.*\\($eid\\)"
     catch "exec jexec $node_id kill -9 -1 2> /dev/null"
     catch "exec jexec $node_id tcpdrop -a 2> /dev/null"
+    # XXX
+    # XXX - removeIfcIPaddrs node
     foreach ifc [ifcList $node] {
 	foreach ipv4 [getIfcIPv4addr $node $ifc] {
 	    catch "exec jexec $node_id ifconfig $ifc $ipv4 -alias"
@@ -867,6 +884,7 @@ proc l3node.shutdown { eid node } {
 	    catch "exec jexec $node_id ifconfig $ifc inet6 $ipv6 -alias"
 	}
     }
+    # XXX
 }
 
 #****f* exec.tcl/l3node.destroy
@@ -887,11 +905,17 @@ proc l3node.destroy { eid node } {
     global vroot_linprocfs
 
     set node_id $eid.$node
+    # XXX - destroyVirtIfcs node
     # Destroy any virtual interfaces (tun, vlan, gif, ..) before removing the
     # jail. This is to avoid possible kernel panics.
     pipesExec "for iface in `jexec $node_id ifconfig -l`; do jexec $node_id ifconfig \$iface destroy; done" "hold"
+    # XXX
 
+    # XXX - removeNodeContainer node
     pipesExec "jail -r $node_id" "hold"
+    # XXX
+
+    # XXX - removeNodeFS node
     if {$vroot_unionfs} {
 	set VROOTDIR /var/imunes
     } else {
@@ -911,6 +935,7 @@ proc l3node.destroy { eid node } {
     if {$vroot_linprocfs} {
 	pipesExec "umount -f $VROOT_RUNTIME/compat/linux/proc" "hold"
     }
+    # XXX
 
     pipesExec ""
 }
@@ -955,6 +980,7 @@ proc deployCfg {} {
 
     set t_start [clock milliseconds]
 
+    # XXX - loadKernelModules
     catch {exec kldload nullfs}
     catch {exec kldload unionfs}
 
@@ -971,7 +997,9 @@ proc deployCfg {} {
 	    $module.prepareSystem
 	}
     }
+    # XXX
 
+    # XXX - prepareVirtualFS
     if {$vroot_unionfs} {
 	# UNIONFS - anything to do here?
     } else {
@@ -988,11 +1016,14 @@ proc deployCfg {} {
         }
 	exec zfs create vroot/$eid
     }
+    # XXX
 
     prepareDevfs
 
+    # XXX - createExperimentContainer
     # Create top-level vimage
     exec jail -c name=$eid vnet children.max=[llength $node_list] persist
+    # XXX
 
     set nodeCount [llength $node_list]
     set linkCount [llength $link_list]
@@ -1080,11 +1111,8 @@ proc deployCfg {} {
 	    update
 	}
 
+	# XXX - createLinkBetween lnode1 lnode2
 	set lname $lnode1-$lnode2
-	set bandwidth [expr [getLinkBandwidth $link] + 0]
-	set delay [expr [getLinkDelay $link] + 0]
-	set ber [expr [getLinkBER $link] + 0]
-	set dup [expr [getLinkDup $link] + 0]
 
 	set peer1 \
 	    [lindex [[typemodel $lnode1].nghook $eid $lnode1 $ifname1] 0]
@@ -1105,7 +1133,13 @@ proc deployCfg {} {
 
 	# Ethernet frame has a 14-byte header - this is a temp. hack!!!
 	set cmds "$cmds\n msg $lname: setcfg {header_offset=14}"
+	# XXX
 
+	# XXX - configureLinkBetween lnode1 lnode2 id
+	set bandwidth [expr [getLinkBandwidth $link] + 0]
+	set delay [expr [getLinkDelay $link] + 0]
+	set ber [expr [getLinkBER $link] + 0]
+	set dup [expr [getLinkDup $link] + 0]
 	# Link parameters
 	set cmds "$cmds\n msg $lname: setcfg {bandwidth=$bandwidth delay=$delay upstream={BER=$ber duplicate=$dup} downstream={BER=$ber duplicate=$dup}}"
 
@@ -1140,6 +1174,7 @@ proc deployCfg {} {
 	    execSetLinkJitter $eid $link
 	}
     }
+    # XXX
 
     statline ""
     statline "Configuring nodes..."
@@ -1171,7 +1206,6 @@ proc deployCfg {} {
 	destroy $w
     }
 }
-
 
 #****f* exec.tcl/terminateAllNodes
 # NAME
@@ -1250,7 +1284,9 @@ proc terminateAllNodes { eid } {
         set lnode2 [lindex [linkPeers $link] 1]
 #	statline "Shutting down link $link ($lnode1-$lnode2)"
 	displayBatchProgress $i [ llength $link_list ]
+	# XXX - destroyLinkBetween lnode1 lnode2
 	pipesExec "jexec $eid ngctl msg $lnode1-$lnode2: shutdown"
+	# XXX
         if {$execMode != "batch"} {
             $w.p step -1
         }
@@ -1258,6 +1294,7 @@ proc terminateAllNodes { eid } {
     pipesClose
     statline ""
 
+    # XXX - destroyNetgraphNodes ngraphs
     # destroying netgraph nodes
     if { $ngraphs != "" } {
 	statline "Shutting down netgraph nodes..."
@@ -1273,7 +1310,9 @@ proc terminateAllNodes { eid } {
 	}
 	statline ""
     }
+    # XXX
 
+    # XXX - destroyVirtNodeIfcs vimages
     # destroying virtual interfaces
     statline "Destroying virtual interfaces..."
     set i 0
@@ -1287,6 +1326,7 @@ proc terminateAllNodes { eid } {
 	displayBatchProgress $i [ llength $vimages ]
     }
     pipesClose
+    # XXX
     statline ""
 
     # timeout patch
@@ -1308,6 +1348,7 @@ proc terminateAllNodes { eid } {
     pipesClose
     statline ""
 
+    # XXX - removeExperimentContainer
     # Remove the main vimage which contained all other nodes, hopefully we
     # cleaned everything.
     if {$vroot_unionfs} {
@@ -1342,6 +1383,7 @@ proc terminateAllNodes { eid } {
 	    }
 	}
     }
+    # XXX
 
     if {$execMode != "batch"} {
 	destroy $w
@@ -1411,222 +1453,4 @@ proc pipesClose { } {
 	read $inst_pipes($i)
 	catch {close $inst_pipes($i)}
     }
-}
-
-#****f* exec.tcl/vimageCleanup
-# NAME
-#   vimageCleanup -- vimage cleanup
-# SYNOPSIS
-#   vimageCleanup
-# FUNCTION
-#   Called in special circumstances only. If cleans all the imunes objects
-#   from the kernel (vimages and netgraph nodes).
-#****
-proc vimageCleanup { eid } {
-    global .c
-    global execMode
-    global vroot_unionfs vroot_linprocfs
-
-    #check whether a jail with eid actually exists
-    if {[catch {exec jls -v | grep "$eid *ACTIVE"}]} {
-	statline "Experiment with eid $eid doesn't exist."
-	return
-    }
-
-    if {$execMode != "batch"} {
-	upvar 0 ::cf::[set ::curcfg]::node_list node_list
-	set nodeCount [llength $node_list]
-	set count [expr {$nodeCount}]
-	set w .termWait
-	catch {destroy $w}
-	toplevel $w -takefocus 1
-	wm transient $w .
-	wm title $w "Terminating experiment ..."
-	message $w.msg -justify left -aspect 1200 \
-	-text "Deleting virtual nodes and links."
-	pack $w.msg
-	ttk::progressbar $w.p -orient horizontal -length 250 \
-	-mode determinate -maximum $count -value $count
-	pack $w.p
-	update
-    }
-
-    statline "Terminating experiment with experiment id: $eid."
-
-    set t_start [clock milliseconds]
-    if {[catch {exec jexec $eid jls -v | fgrep ACTIVE | cut -c9-32} res] \
-	!= 0 } {
-	set res ""
-    }
-    set vimages [join $res]
-    set defindex [lsearch $vimages .]
-    set vimages [lreplace $vimages $defindex $defindex]
-
-    if { [lindex [split [exec uname -r] "-"] 0] < 9.0 } {
-	# Kill all processes in all vimages
-	statline "Terminating processes..."
-
-	set step 0
-	set allVimages [ llength $vimages ]
-	foreach node $vimages {
-	    if {$execMode != "batch"} {
-		statline "Terminating processes in vimage $node"
-	    }
-	    incr step
-	    displayBatchProgress $step $allVimages
-
-	    [typemodel $node].shutdown $eid $node
-	}
-
-	statline ""
-	timeoutPatch $eid $vimages
-    }
-
-    statline "Shutting down netgraph nodes..."
-
-    pipesCreate
-
-    # Detach / destroy / reassign interfaces pipe, eiface, iface, bridge
-    set i 0
-    catch "exec sh -c {jexec $eid ngctl t | grep eiface | awk '{print \$2}'}" maxi
-    set res [catch "exec jexec $eid ngctl l"]
-    while { $res } {
-	#This should never, ever happen.
-	if { $i > $maxi } {
-	    statline ""
-	#    statline "Couldn't terminate all ngeth interfaces. Skipping..."
-	    break
-	}
-	if {[expr {$i%240} == 0]} {
-	    if { $execMode == "batch" } {
-		puts -nonewline "."
-		flush stdout
-	    }
-	    set res [catch "exec jexec $eid ngctl l"]
-	}
-
-	# Attempt to kill hubs & bridges
-	set ngnode "n$i"
-	if { $ngnode ni $vimages } {
-	    pipesExec "jexec $eid ngctl shutdown $ngnode" "hold"
-	}
-	# Attempt to kill ngeth interfaces
-	set ngnode "ngeth$i"
-	pipesExec "jexec $eid ngctl shutdown $ngnode:" "hold"
-	incr i
-
-	pipesExec ""
-    }
-    pipesClose
-
-    catch "exec jexec $eid ngctl l | tail -n +2 | grep -v socket" output
-
-    set ngnodes [split $output "
-"]
-
-    pipesCreate
-    set allNgnodes [llength $ngnodes]
-    set step 0
-    foreach ngline $ngnodes {
-	incr step
-	if { $execMode != "batch" } {
-	    statline "Shutting down netgraph node $ngline"
-	}
-	displayBatchProgress $step $allNgnodes
-	set ngnode [lindex [eval list $ngline] 1]
-
-	pipesExec "jexec $eid ngctl shutdown $ngnode:"
-    }
-    pipesClose
-
-    statline ""
-
-    # Shut down all vimages
-    if {$vroot_unionfs} {
-	set VROOT_BASE /var/imunes
-    } else {
-	set VROOT_BASE /vroot
-    }
-
-    statline "Shutting down vimages..."
-
-    set step 0
-    set steps [expr {[llength $vimages]} ]
-
-    pipesCreate
-    foreach node $vimages {
-	if {$execMode != "batch"} {
-	    statline "Shutting down vimage $node"
-	    $w.p step -1
-	}
-
-	incr step
-	displayBatchProgress $step $steps
-
-	pipesExec "jexec $eid.$node kill -9 -1 2> /dev/null" "hold"
-	pipesExec "jexec $eid.$node tcpdrop -a 2> /dev/null" "hold"
-	pipesExec "for iface in `jexec $eid.$node ifconfig -l`; do jexec $eid.$node ifconfig \$iface destroy; done" "hold"
-
-	set VROOT_RUNTIME $VROOT_BASE/$eid/$node
-	set VROOT_RUNTIME_DEV $VROOT_RUNTIME/dev
-	pipesExec "umount -f $VROOT_RUNTIME_DEV" "hold"
-	if {$vroot_unionfs} {
-	    # 1st: unionfs RW overlay
-	    pipesExec "umount -f $VROOT_RUNTIME" "hold"
-	    # 2nd: nullfs RO loopback
-	    pipesExec "umount -f $VROOT_RUNTIME" "hold"
-	}
-	if {$vroot_linprocfs} {
-	    pipesExec "umount -f $VROOT_RUNTIME/compat/linux/proc" "hold"
-	}
-	pipesExec ""
-    }
-    pipesClose
-
-    statline ""
-
-    # remeber all vlan interfaces in the experiment to destroy them later
-    set vlanlist ""
-    catch {exec jexec $eid ifconfig -l} ifclist
-    foreach ifc $ifclist {
-	if { [string match "*.*" $ifc]} {
-	    lappend vlanlist $ifc
-	}
-    }
-
-    if {$vroot_unionfs} {
-	# UNIONFS
-	exec jail -r $eid
-	exec rm -fr $VROOT_BASE/$eid &
-    } else {
-	# ZFS
-	if {$execMode == "batch"} {
-	    exec jail -r $eid
-	    exec zfs destroy -fr vroot/$eid
-	} else {
-	    exec jail -r $eid &
-	    exec zfs destroy -fr vroot/$eid &
-	
-	    catch {exec zfs list | grep -c "$eid"} output
-	    set zfsCount [lindex [split $output] 0]
-
-	    while {$zfsCount != 0} {
-		catch {exec zfs list | grep -c "$eid/"} output
-		set zfsCount [lindex [split $output] 0]
-		$w.p configure -value $zfsCount
-		update
-		after 200
-	    }
-	}
-    }
-
-    foreach ifc $vlanlist {
-	catch {exec ifconfig $ifc destroy}
-    }
-
-    if {$execMode != "batch"} {
-	destroy $w
-    }
-
-    statline "Cleanup completed in [expr ([clock milliseconds] - $t_start)/1000.0] seconds."
 }
