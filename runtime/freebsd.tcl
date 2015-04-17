@@ -1329,7 +1329,10 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
 }
 
 proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
     global linkJitterConfiguration
+
+    set lname $lnode1-$lnode2
 
     set bandwidth [expr [getLinkBandwidth $link] + 0]
     set delay [expr [getLinkDelay $link] + 0]
