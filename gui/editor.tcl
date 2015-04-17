@@ -1068,43 +1068,6 @@ proc updateScreenshotPreview { pc image } {
     }
 }
 
-#****f* editor.tcl/resumeSelectedExperiment
-# NAME
-#   resumeSelectedExperiment -- resume selected experiment
-# SYNOPSIS
-#   resumeSelectedExperiment $exp
-# FUNCTION
-#   Resumes selected experiment.
-# INPUTS
-#   * exp -- experiment id
-#****
-proc resumeSelectedExperiment { exp } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-    global runtimeDir
-    set curr_eid $eid
-    if {$curr_eid == $exp} {
-	return
-    }
-    newProject
-
-    upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
-    upvar 0 ::cf::[set ::curcfg]::cfgDeployed cfgDeployed
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-    
-    set currentFile [getExperimentConfigurationFromFile $exp]
-    openFile
-
-    set ngmapFile "$runtimeDir/$exp/ngnodemap"
-    set fileId [open $ngmapFile r]
-    array set ngnodemap [gets $fileId]
-    close $fileId
-
-    set eid $exp
-    set cfgDeployed true
-    setOperMode exec
-}
-
 #****f* editor.tcl/setActiveTool
 # NAME
 #   setActiveTool -- set active tool
