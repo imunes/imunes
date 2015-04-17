@@ -719,8 +719,6 @@ proc l3node.instantiate { eid node } {
 #   * node -- node id
 #****
 proc l3node.start { eid node } {
-    #upvar 0 ::cf::[set ::curcfg]::eid eid
-
     # XXX - startIfcsNode node
     startIfcsNode $node
     # XXX
@@ -744,14 +742,12 @@ proc l3node.start { eid node } {
 #   * node -- node id
 #****
 proc l3node.shutdown { eid node } {
-    #upvar 0 ::cf::[set ::curcfg]::eid eid
-
     # XXX - killProcs node
     killExtProcess "wireshark.*$node.*\\($eid\\)"
-    killAllNodeProcesses $node
+    killAllNodeProcesses $eid $node
     # XXX
     # XXX - removeIfcIPaddrs node
-    removeNodeIfcIPaddrs $node
+    removeNodeIfcIPaddrs $eid $node
     # XXX
 }
 
@@ -769,18 +765,16 @@ proc l3node.shutdown { eid node } {
 #   * node -- node id
 #****
 proc l3node.destroy { eid node } {
-    #upvar 0 ::cf::[set ::curcfg]::eid eid
-
     # XXX - destroyVirtIfcs node
-    destroyNodeVirtIfcs $node
+    destroyNodeVirtIfcs $eid $node
     # XXX
 
     # XXX - removeNodeContainer node
-    removeNodeContainer $node
+    removeNodeContainer $eid $node
     # XXX
 
     # XXX - removeNodeFS node
-    removeNodeFS $node
+    removeNodeFS $eid $node
     # XXX
 
     pipesExec ""
@@ -977,6 +971,7 @@ proc terminateAllNodes { eid } {
     global execMode
     global vroot_unionfs vroot_linprocfs
 
+    set w ""
     #preparing counters for GUI
     if {$execMode != "batch"} {
 	set count [expr {[llength $node_list]+[llength $link_list]}]
@@ -1040,7 +1035,7 @@ proc terminateAllNodes { eid } {
 #	statline "Shutting down link $link ($lnode1-$lnode2)"
 	displayBatchProgress $i [ llength $link_list ]
 	# XXX - destroyLinkBetween lnode1 lnode2
-	destroyLinkBetween $lnode1 $lnode2
+	destroyLinkBetween $eid $lnode1 $lnode2
 	# XXX
         if {$execMode != "batch"} {
             $w.p step -1
@@ -1050,11 +1045,11 @@ proc terminateAllNodes { eid } {
     statline ""
 
     # XXX - destroyNetgraphNodes ngraphs
-    destroyNetgraphNodes $ngraphs $w
+    destroyNetgraphNodes $eid $ngraphs $w
     # XXX
 
     # XXX - destroyVirtNodeIfcs vimages
-    destroyVirtNodeIfcs $vimages
+    destroyVirtNodeIfcs $eid $vimages
     # XXX
     statline ""
 
@@ -1078,7 +1073,7 @@ proc terminateAllNodes { eid } {
     statline ""
 
     # XXX - removeExperimentContainer
-    removeExperimentContainer $w
+    removeExperimentContainer $eid $w
     # XXX
 
     if {$execMode != "batch"} {

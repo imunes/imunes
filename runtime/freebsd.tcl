@@ -59,7 +59,7 @@ proc startWiresharkOnNodeIfc { node ifc } {
 
     if {[file exists /usr/local/bin/startxcmd] == 1 && \
 	[checkForApplications $node "wireshark"] == 0} {
-	exec startxcmd [getNodeName $node]@$eid wireshark -ki $ifc > /dev/null 2>\&1 &
+	startXappOnNode $node "wireshark -ki $ifc"
     } else {
 	exec jexec $eid.$node tcpdump -s 0 -U -w - -i $ifc 2>/dev/null |\
 	    wireshark -o "gui.window_title:$ifc@[getNodeName $node] ($eid)" -k -i - &
@@ -79,8 +79,14 @@ proc startWiresharkOnNodeIfc { node ifc } {
 #****
 proc startXappOnNode { node app } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
+    global debug
 
-    eval exec startxcmd [getNodeName $node]@$eid $app > /dev/null 2>&1 &
+    set logfile "/dev/null"
+    if {$debug} {
+	set logfile "/tmp/startxcmd_$eid\_$node.log"
+    }
+
+    eval exec startxcmd [getNodeName $node]@$eid $app > $logfile 2>> $logfile &
 }
 
 #****f* freebsd.tcl/startTcpdumpOnNodeIfc
@@ -1018,8 +1024,8 @@ proc createNodeContainer { node } {
 #   * node -- node id
 #****
 proc createNodePhysIfcs { node } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
+    upvar 0 ::cf::[set ::curcfg]::eid eid
     global ifc_dad_disable
 
     set node_id "$eid.$node"
@@ -1136,18 +1142,14 @@ proc runConfOnNode { node } {
     catch "exec jexec $node_id $bootcmd $confFile >& $node_dir/out.log &"
 }
 
-proc killAllNodeProcesses { node } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
+proc killAllNodeProcesses { eid node } {
     set node_id "$eid.$node"
 
     catch "exec jexec $node_id kill -9 -1 2> /dev/null"
     catch "exec jexec $node_id tcpdrop -a 2> /dev/null"
 }
 
-proc removeNodeIfcIPaddrs { node } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
+proc removeNodeIfcIPaddrs { eid node } {
     set node_id "$eid.$node"
 
     foreach ifc [ifcList $node] {
@@ -1160,9 +1162,7 @@ proc removeNodeIfcIPaddrs { node } {
     }
 }
 
-proc destroyNodeVirtIfcs { node } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
+proc destroyNodeVirtIfcs { eid node } {
     set node_id $eid.$node
 
     # Destroy any virtual interfaces (tun, vlan, gif, ..) before removing the
@@ -1170,16 +1170,13 @@ proc destroyNodeVirtIfcs { node } {
     pipesExec "for iface in `jexec $node_id ifconfig -l`; do jexec $node_id ifconfig \$iface destroy; done" "hold"
 }
 
-proc removeNodeContainer { node } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
+proc removeNodeContainer { eid node } {
     set node_id $eid.$node
 
     pipesExec "jail -r $node_id" "hold"
 }
 
-proc removeNodeFS { node } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
+proc removeNodeFS { eid node } {
     global vroot_unionfs vroot_linprocfs
 
     set node_id $eid.$node
@@ -1315,7 +1312,6 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     # Ethernet frame has a 14-byte header - this is a temp. hack!!!
     set cmds "$cmds\n msg $lname: setcfg {header_offset=14}"
     exec jexec $eid ngctl -f - << $cmds
-    # XXX
 }
 
 proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
@@ -1362,14 +1358,11 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     }
 }
 
-proc destroyLinkBetween { lnode1 lnode2 } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
+proc destroyLinkBetween { eid lnode1 lnode2 } {
     pipesExec "jexec $eid ngctl msg $lnode1-$lnode2: shutdown"
 }
 
-proc destroyNetgraphNodes { ngraphs widget } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
+proc destroyNetgraphNodes { eid ngraphs widget } {
     global execMode
 
     # destroying netgraph nodes
@@ -1389,9 +1382,8 @@ proc destroyNetgraphNodes { ngraphs widget } {
     }
 }
 
-proc destroyVirtNodeIfcs { vimages } {
+proc destroyVirtNodeIfcs { eid vimages } {
     upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-    upvar 0 ::cf::[set ::curcfg]::eid eid
 
     # destroying virtual interfaces
     statline "Destroying virtual interfaces..."
@@ -1400,7 +1392,7 @@ proc destroyVirtNodeIfcs { vimages } {
     foreach node $vimages {
 	incr i
 	foreach ifc [ifcList $node] {
-	    set ngnode $ngnodemap($ifc@$eid\.$node)
+	    set ngnode $ngnodemap($ifc@$eid.$node)
 	    pipesExec "jexec $eid ngctl shutdown $ngnode:"
 	}
 	displayBatchProgress $i [ llength $vimages ]
@@ -1408,8 +1400,7 @@ proc destroyVirtNodeIfcs { vimages } {
     pipesClose
 }
 
-proc removeExperimentContainer { widget } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
+proc removeExperimentContainer { eid widget } {
     global vroot_unionfs execMode
 
     set VROOT_BASE [getVrootDir]
