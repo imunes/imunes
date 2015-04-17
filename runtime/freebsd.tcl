@@ -1048,7 +1048,7 @@ proc createNodePhysIfcs { node } {
 		pipesExec "jexec $node_id ifconfig $ifc link $ether" "hold"
 		set ngnodemap($ifc@$node_id) $ifid
 	    }
-#	    ser {
+	    ser {
 #		set ifnum [string range $ifc 3 end]
 #		set ifid [createIfc $eid iface inet]
 #		pipesExec "jexec $eid ngctl mkpeer $ifid: cisco inet inet" "hold"
@@ -1058,7 +1058,7 @@ proc createNodePhysIfcs { node } {
 #		pipesExec "jexec $eid ifconfig $ifid vnet $node" "hold"
 #		pipesExec "jexec $node_id ifconfig $ifid name $ifc" "hold"
 #		set ngnodemap(hdlc$ifnum@$node_id) hdlc$ifnum\@$node"
-#	    }
+	    }
 	}
     }
 }
