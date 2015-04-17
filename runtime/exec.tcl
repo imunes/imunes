@@ -747,7 +747,7 @@ proc l3node.shutdown { eid node } {
     #upvar 0 ::cf::[set ::curcfg]::eid eid
 
     # XXX - killProcs node
-    killExtProcess $node "wireshark.*$node.*\\($eid\\)"
+    killExtProcess "wireshark.*$node.*\\($eid\\)"
     killAllNodeProcesses $node
     # XXX
     # XXX - removeIfcIPaddrs node
