@@ -1125,25 +1125,15 @@ proc runConfOnNode { node } {
 
 	set bootcmd [getCustomConfigCommand $node $selected]
 	set bootcfg [getCustomConfig $node $selected]
-	foreach line $bootcfg {
-	    writeDataToFile $node_dir/custom.conf $line
-	}
+	set confFile "custom.conf"
     } else {
-	set bootcmd ""
-	set bootcfg ""
+	set bootcfg [[typemodel $node].cfggen $node]
+	set bootcmd [[typemodel $node].bootcmd $node]
+	set confFile "boot.conf"
     }
 
-    set bootcfg_def [[typemodel $node].cfggen $node]
-    set bootcmd_def [[typemodel $node].bootcmd $node]
-    foreach line $bootcfg_def {
-	writeDataToFile $node_dir/boot.conf $line
-    }
-
-    if { [getCustomEnabled $node] == true } {
-	catch "exec jexec $node_id $bootcmd_def boot.conf >& $node_dir/out.log &"
-    } else {
-	catch "exec jexec $node_id $bootcmd custom.conf >& $node_dir/out.log &"
-    }
+    writeDataToFile $node_dir/$confFile [join $bootcfg "\n"]
+    catch "exec jexec $node_id $bootcmd $confFile >& $node_dir/out.log &"
 }
 
 proc killAllNodeProcesses { node } {
