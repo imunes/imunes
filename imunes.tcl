@@ -151,10 +151,10 @@ foreach file [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
     source $file
 }
 set os [platform::identify]
-if { [string match -nocase "*linux*" $os] != 1 } {
+if { [string match -nocase "*linux*" $os] == 1 } {
     source $ROOTDIR/$LIBDIR/runtime/linux.tcl
 }
-if { [string match -nocase "*freebsd*" $os] != 1 } {
+if { [string match -nocase "*freebsd*" $os] == 1 } {
     source $ROOTDIR/$LIBDIR/runtime/freebsd.tcl
 }
 
