@@ -98,10 +98,11 @@ proc setOperMode { mode } {
     if { !$cfgDeployed } {
 	    if { $mode == "exec" } { ;# let's try something, sockets should be opened
 		set os [platform::identify]
-		if { [string match -nocase "*freebsd*" $os] != 1 } {
+		if { [string match -nocase "*linux*" $os] != 1 &&
+            [string match -nocase "*freebsd*" $os] != 1 } {
 		    after idle {.dialog1.msg configure -wraplength 4i}
 		    tk_dialog .dialog1 "IMUNES error" \
-			"Error: To execute experiment, run IMUNES on FreeBSD." \
+			"Error: To execute experiment, run IMUNES on FreeBSD or Linux." \
 		    info 0 Dismiss
 		    return
 		}
@@ -253,7 +254,7 @@ proc fetchNodeConfiguration {} {
 	# XXX - proc getRunningNodeIfcList
 	set lines [getRunningNodeIfcList $node]
 	# XXX
-	
+
 	# XXX - here we parse ifconfig output, maybe require virtual nodes on
 	# linux to have ifconfig, or create different parsing procedures for ip
 	# and ifconfig that will have the same output
@@ -368,7 +369,7 @@ proc resumeSelectedExperiment { exp } {
     upvar 0 ::cf::[set ::curcfg]::cfgDeployed cfgDeployed
     upvar 0 ::cf::[set ::curcfg]::eid eid
     upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-    
+
     set currentFile [getExperimentConfigurationFromFile $exp]
     openFile
 
@@ -394,11 +395,11 @@ proc createExperimentFiles { eid } {
     global currentFileBatch execMode runtimeDir
     set basedir "$runtimeDir/$eid"
     file mkdir $basedir
-    
+
     # XXX - writeDataToFile path data
     writeDataToFile $basedir/timestamp [clock format [clock seconds]]
     # XXX
-    
+
     # XXX - proc dumpNgnodesToFile - with writeDataToFile
     dumpNgnodesToFile $basedir/ngnodemap
     # XXX
@@ -524,7 +525,7 @@ proc fetchExperimentFolders {} {
     set exp_list ""
     set exp_files [glob -nocomplain -directory $runtimeDir -type d *]
     if {$exp_files != ""} {
-	foreach file $exp_files {          
+	foreach file $exp_files {
 	    lappend exp_list [file tail $file]
 	}
     }
@@ -546,7 +547,7 @@ proc getResumableExperiments {} {
     set exp_folders [fetchExperimentFolders]
     foreach exp [fetchRunningExperiments] {
 	if {$exp in $exp_folders} {
-	    lappend exp_list $exp 	
+	    lappend exp_list $exp
 	}
     }
     return $exp_list
@@ -686,7 +687,7 @@ proc l3node.instantiate { eid node } {
     # XXX - prepareFilesystemForNode
     prepareFilesystemForNode $node
     # XXX
-    
+
     # XXX - createNodeContainer
     createNodeContainer $node
     # XXX

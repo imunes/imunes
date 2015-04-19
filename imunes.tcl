@@ -37,15 +37,16 @@
 #    external files and initializes global variables.
 #
 #	imunes [-b] [-e experiment_id] [filename]
-#    
+#
 #    When starting the program in batch mode the option -b must be
-#    specified. 
-#    
-#    When starting the program with defined filename, configuration for 
+#    specified.
+#
+#    When starting the program with defined filename, configuration for
 #    file "filename" is loaded to imunes.
 #****
 package require cmdline
 package require ip
+package require platform
 
 set options {
     {e.arg	"" "specify experiment ID"}
@@ -111,7 +112,7 @@ if { $params(e) != "" || $params(eid) != "" } {
     }
 }
 
-# 
+#
 # Include procedure definitions from external files. There must be
 # some better way to accomplish the same goal, but that's how we do it
 # for the moment.
@@ -124,7 +125,7 @@ if { $params(e) != "" || $params(eid) != "" } {
 # NAME
 #    ROOTDIR
 # FUNCTION
-#    The location of imunes library files. The ROOTDIR and LIBDIR variables 
+#    The location of imunes library files. The ROOTDIR and LIBDIR variables
 #    will be automatically set to the proper value by the installation script.
 #*****
 
@@ -132,7 +133,7 @@ if { $params(e) != "" || $params(eid) != "" } {
 # NAME
 #    LIBDIR
 # FUNCTION
-#    The location of imunes library files. The ROOTDIR and LIBDIR variables 
+#    The location of imunes library files. The ROOTDIR and LIBDIR variables
 #    will be automatically set to the proper value by the installation script.
 #*****
 
@@ -149,6 +150,14 @@ if { $ROOTDIR == "." } {
 foreach file [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
     source $file
 }
+set os [platform::identify]
+if { [string match -nocase "*linux*" $os] != 1 } {
+    source $ROOTDIR/$LIBDIR/runtime/linux.tcl
+}
+if { [string match -nocase "*freebsd*" $os] != 1 } {
+    source $ROOTDIR/$LIBDIR/runtime/freebsd.tcl
+}
+
 if { $initMode == 1 } {
     prepareDevfs
     exit
@@ -181,7 +190,7 @@ source "$ROOTDIR/$LIBDIR/nodes/annotations.tcl"
 # NAME
 #    prefs
 # FUNCTION
-#    Contains the list of preferences. When starting a program 
+#    Contains the list of preferences. When starting a program
 #    this list is empty.
 #*****
 
@@ -209,7 +218,7 @@ set editor_only false
 # NAME
 #    gui_unix
 # FUNCTION
-#    false: IMUNES GUI is on MS Windows, 
+#    false: IMUNES GUI is on MS Windows,
 #    true: GUI is on FreeBSD / Linux / ...
 #    Used in spawnShell to start xterm or command.com with NetCat
 #*****
@@ -272,7 +281,7 @@ if {$execMode == "interactive"} {
     if {$argv != ""} {
 	if { ![file exists $argv] } {
 	    puts "Error: file '$argv' doesn't exist"
-	    exit 
+	    exit
 	}
 	global currentFileBatch
 	set currentFileBatch $argv

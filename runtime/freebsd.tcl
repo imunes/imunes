@@ -199,7 +199,7 @@ proc createIfc { eid type hook } {
 # SYNOPSIS
 #   allSnapshotsAvailable
 # FUNCTION
-#   Procedure that checks wheter all node ZFS snapshots are available on the
+#   Procedure that checks whether all node ZFS snapshots are available on the
 #   current system.
 #****
 proc allSnapshotsAvailable {} {
