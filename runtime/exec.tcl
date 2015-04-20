@@ -1084,23 +1084,6 @@ proc terminateAllNodes { eid } {
     statline "Cleanup completed in [expr ([clock milliseconds] - $t_start)/1000.0] seconds."
 }
 
-#****f* exec.tcl/pipesCreate
-# NAME
-#   pipesCreate -- pipes create
-# SYNOPSIS
-#   pipesCreate
-# FUNCTION
-#   Create pipes for parallel execution to the shell.
-#****
-proc pipesCreate { } {
-    global inst_pipes last_inst_pipe
-
-    set ncpus [lindex [exec sysctl kern.smp.cpus] 1]
-    for {set i 0} {$i < $ncpus} {incr i} {
-	set inst_pipes($i) [open "| sh" r+]
-    }
-    set last_inst_pipe 0
-}
 
 #****f* exec.tcl/pipesExec
 # NAME
