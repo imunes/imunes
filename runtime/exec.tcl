@@ -725,7 +725,8 @@ proc l3node.start { eid node } {
     # XXX
 
     # XXX - runConfOnNode node
-    runConfOnNode $node
+    # FIXME: make this run on Linux
+    # runConfOnNode $node
     # XXX
 }
 
@@ -804,18 +805,18 @@ proc deployCfg {} {
 
     set running_eids [getResumableExperiments]
     if {$execMode != "batch"} {
-	set eid ${eid_base}[string range $::curcfg 1 end]
-	while { $eid in $running_eids } {
-	    set eid_base i[format %04x [expr {[pid] + [expr { round( rand()*10000 ) }]}]]
-	    set eid ${eid_base}[string range $::curcfg 1 end]
-	}
+    set eid ${eid_base}[string range $::curcfg 1 end]
+    while { $eid in $running_eids } {
+        set eid_base i[format %04x [expr {[pid] + [expr { round( rand()*10000 ) }]}]]
+        set eid ${eid_base}[string range $::curcfg 1 end]
+    }
     } else {
-	set eid $eid_base
-	while { $eid in $running_eids } {
-	    puts -nonewline "Experiment ID $eid_base already in use, trying "
-	    set eid i[format %04x [expr {[pid] + [expr { round( rand()*10000 ) }]}]]
-	    puts "$eid."
-	}
+    set eid $eid_base
+    while { $eid in $running_eids } {
+        puts -nonewline "Experiment ID $eid_base already in use, trying "
+        set eid i[format %04x [expr {[pid] + [expr { round( rand()*10000 ) }]}]]
+        puts "$eid."
+    }
     }
 
     set t_start [clock milliseconds]
@@ -839,19 +840,19 @@ proc deployCfg {} {
     set count [expr {$nodeCount + $linkCount}]
     set startedCount 0
     if {$execMode != "batch"} {
-	set w .startup
-	catch {destroy $w}
-	toplevel $w -takefocus 1
-	wm transient $w .
-	wm title $w "Starting experiment..."
-	message $w.msg -justify left -aspect 1200 \
-	    -text "Starting up virtual nodes and links."
-	pack $w.msg
-	update
-	ttk::progressbar $w.p -orient horizontal -length 250 \
-	-mode determinate -maximum $count -value $startedCount
-	pack $w.p
-	update
+    set w .startup
+    catch {destroy $w}
+    toplevel $w -takefocus 1
+    wm transient $w .
+    wm title $w "Starting experiment..."
+    message $w.msg -justify left -aspect 1200 \
+        -text "Starting up virtual nodes and links."
+    pack $w.msg
+    update
+    ttk::progressbar $w.p -orient horizontal -length 250 \
+    -mode determinate -maximum $count -value $startedCount
+    pack $w.p
+    update
     }
 
     statline "Creating nodes..."
@@ -861,21 +862,21 @@ proc deployCfg {} {
     pipesCreate
 
     foreach node $node_list {
-	incr step
-	set node_id "$eid\.$node"
-	set type [nodeType $node]
-	set name [getNodeName $node]
-	if {$type != "pseudo"} {
-	    if {$execMode != "batch"} {
-		statline "Creating node $name"
-		$w.p configure -value $startedCount
-		update
-	    }
-	    displayBatchProgress $step $allNodes
-	    [typemodel $node].instantiate $eid $node
-	    pipesExec ""
-	    incr startedCount
-	}
+    incr step
+    set node_id "$eid\.$node"
+    set type [nodeType $node]
+    set name [getNodeName $node]
+    if {$type != "pseudo"} {
+        if {$execMode != "batch"} {
+        statline "Creating node $name"
+        $w.p configure -value $startedCount
+        update
+        }
+        displayBatchProgress $step $allNodes
+        [typemodel $node].instantiate $eid $node
+        pipesExec ""
+        incr startedCount
+    }
     }
 
     statline ""
@@ -885,75 +886,72 @@ proc deployCfg {} {
     set step 0
     set allLinks [ llength $link_list ]
     for {set pending_links $link_list} {$pending_links != ""} {} {
-	set link [lindex $pending_links 0]
-	set i [lsearch -exact $pending_links $link]
-	set pending_links [lreplace $pending_links $i $i]
+    set link [lindex $pending_links 0]
+    set i [lsearch -exact $pending_links $link]
+    set pending_links [lreplace $pending_links $i $i]
 
-	set lnode1 [lindex [linkPeers $link] 0]
-	set lnode2 [lindex [linkPeers $link] 1]
-	set ifname1 [ifcByPeer $lnode1 $lnode2]
-	set ifname2 [ifcByPeer $lnode2 $lnode1]
+    set lnode1 [lindex [linkPeers $link] 0]
+    set lnode2 [lindex [linkPeers $link] 1]
+    set ifname1 [ifcByPeer $lnode1 $lnode2]
+    set ifname2 [ifcByPeer $lnode2 $lnode1]
 
-	if { [getLinkMirror $link] != "" } {
-	    set mirror_link [getLinkMirror $link]
-	    set i [lsearch -exact $pending_links $mirror_link]
-	    set pending_links [lreplace $pending_links $i $i]
+    if { [getLinkMirror $link] != "" } {
+        set mirror_link [getLinkMirror $link]
+        set i [lsearch -exact $pending_links $mirror_link]
+        set pending_links [lreplace $pending_links $i $i]
 
-	    if {$execMode != "batch"} {
-		statline "Creating link $link/$mirror_link"
-	    }
+        if {$execMode != "batch"} {
+        statline "Creating link $link/$mirror_link"
+        }
 
-	    set p_lnode2 $lnode2
-	    set lnode2 [lindex [linkPeers $mirror_link] 0]
-	    set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
-	} else {
-	    if {$execMode != "batch"} {
-		statline "Creating link $link"
-	    }
-	}
-	incr step
-	displayBatchProgress $step $allLinks
+        set p_lnode2 $lnode2
+        set lnode2 [lindex [linkPeers $mirror_link] 0]
+        set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
+    } else {
+        if {$execMode != "batch"} {
+        statline "Creating link $link"
+        }
+    }
+    incr step
+    displayBatchProgress $step $allLinks
 
-	incr startedCount
-	if {$execMode != "batch"} {
-	    $w.p configure -value $startedCount
-	    update
-	}
-
+    incr startedCount
+    if {$execMode != "batch"} {
+        $w.p configure -value $startedCount
+        update
+    }
 	# XXX - createLinkBetween lnode1 lnode2
 	createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
 	configureLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
 	# XXX
     }
-
     statline ""
     statline "Configuring nodes..."
 
     set step 0
     foreach node $node_list {
-	upvar 0 ::cf::[set ::curcfg]::$node $node
-	set type [nodeType $node]
-	if {$type == "pseudo"} {
-	    continue
-	}
-	if {$execMode != "batch"} {
-	    statline "Configuring node [getNodeName $node]"
-	}
-	incr step
-	displayBatchProgress $step $allNodes
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+    set type [nodeType $node]
+    if {$type == "pseudo"} {
+        continue
+    }
+    if {$execMode != "batch"} {
+        statline "Configuring node [getNodeName $node]"
+    }
+    incr step
+    displayBatchProgress $step $allNodes
 
-	if {[info procs [typemodel $node].start] != ""} {
-	    [typemodel $node].start $eid $node
-	}
+    if {[info procs [typemodel $node].start] != ""} {
+        [typemodel $node].start $eid $node
+    }
     }
     statline ""
-
     statline "Network topology instantiated in [expr ([clock milliseconds] - $t_start)/1000.0] seconds ($allNodes nodes and $allLinks links)."
 
     statline "Experiment ID = $eid"
     global execMode
     if {$execMode != "batch"} {
-	destroy $w
+    destroy $w
     }
 }
 
