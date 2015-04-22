@@ -1443,7 +1443,7 @@ proc removeExperimentContainer { eid widget } {
 # FUNCTION
 #   Create pipes for parallel execution to the shell.
 #****
-proc pipesCreate { } {
+proc pipesCreate {} {
     global inst_pipes last_inst_pipe
 
     set ncpus [lindex [exec sysctl kern.smp.cpus] 1]

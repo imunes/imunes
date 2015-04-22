@@ -35,8 +35,8 @@ proc animateCursor {} {
 #   split links and links connecting nodes on different canvases.
 # INPUTS
 #   * link_id -- the link id
-#   * atomic -- defines if the remove was atomic action or a part 
-#     of a composed, non-atomic action (relevant for updating log 
+#   * atomic -- defines if the remove was atomic action or a part
+#     of a composed, non-atomic action (relevant for updating log
 #     for undo).
 #****
 proc removeGUILink { link atomic } {
@@ -97,7 +97,7 @@ proc removeGUINode { node } {
 # SYNOPSIS
 #   splitGUILink $link
 # FUNCTION
-#   Splits the link and draws new links and new pseudo nodes 
+#   Splits the link and draws new links and new pseudo nodes
 #   on the canvas.
 # INPUTS
 #   * link -- link id
@@ -142,7 +142,7 @@ proc splitGUILink { link } {
 
 #****f* editor.tcl/selectNode
 # NAME
-#   selectNode -- select node 
+#   selectNode -- select node
 # SYNOPSIS
 #   selectNode $c $obj
 # FUNCTION
@@ -299,11 +299,11 @@ proc selectAdjacent {} {
 
 #****f* editor.tcl/button3link
 # NAME
-#   button3link 
+#   button3link
 # SYNOPSIS
 #   button3link $c $x $y
 # FUNCTION
-#   This procedure is called when a right mouse button is 
+#   This procedure is called when a right mouse button is
 #   clicked on the canvas. If there is a link on the place of
 #   mouse click this procedure creates and configures a popup
 #   menu. The options in the menu are:
@@ -340,7 +340,7 @@ proc button3link { c x y } {
 	-command "linkConfigGUI $c $link"
 
     #
-    # Clear link configuration 
+    # Clear link configuration
     #
     .button3menu add command -label "Clear all settings" \
 	-command "linkResetConfig $link"
@@ -400,7 +400,7 @@ proc button3link { c x y } {
 
 #****f* editor.tcl/movetoCanvas
 # NAME
-#   movetoCanvas -- move to canvas 
+#   movetoCanvas -- move to canvas
 # SYNOPSIS
 #   movetoCanvas $canvas
 # FUNCTION
@@ -475,7 +475,7 @@ proc mergeGUINode { node } {
 # SYNOPSIS
 #   button3node $c $x $y
 # FUNCTION
-#   This procedure is called when a right mouse button is 
+#   This procedure is called when a right mouse button is
 #   clicked on the canvas. If there is a node on the place of
 #   mouse click this procedure creates and configures a popup
 #   menu. The options in the menu are:
@@ -487,11 +487,11 @@ proc mergeGUINode { node } {
 #   that have mirror nodes on the same canvas (Pseudo nodes
 #   created by splitting a link).
 #   * Delete -- delete the node
-#   * Shell window -- specifies the shell window to open in 
-#   exec mode. This option is available only to nodes on a 
+#   * Shell window -- specifies the shell window to open in
+#   exec mode. This option is available only to nodes on a
 #   network layer
-#   * Wireshark -- opens a Wireshark program for the specified 
-#   node and the specified interface. This option is available 
+#   * Wireshark -- opens a Wireshark program for the specified
+#   node and the specified interface. This option is available
 #   only for network layer nodes in exec mode.
 # INPUTS
 #   * c -- tk canvas
@@ -543,10 +543,10 @@ proc button3node { c x y } {
 	.button3menu add command -label "Configure" \
 	    -command "nodeConfigGUI $c $node" -state disabled
     }
-    
+
     #
     # Node icon preferences
-    #   
+    #
     .button3menu.sett delete 0 end
     if { [nodeType $node] != "pseudo" } {
 	.button3menu add cascade -label "Settings" \
@@ -565,11 +565,11 @@ proc button3node { c x y } {
     } else {
         .button3menu.sett add command -label "Fetch Node Configurations" \
 	    -state disabled
-    } 
+    }
 
     #
     # Node icon preferences
-    #   
+    #
     .button3menu.icon delete 0 end
     if { [nodeType $node] != "pseudo" } {
 	.button3menu add cascade -label "Node icon" \
@@ -641,10 +641,10 @@ proc button3node { c x y } {
 	    -state disabled
     } else {
 	.button3menu add command -label "IPv4 autorenumber" \
-	    -command { 
+	    -command {
 		global IPv4autoAssign
 		set IPv4autoAssign 1
-		changeAddressRange 
+		changeAddressRange
 		set IPv4autoAssign 0
 	    }
     }
@@ -660,7 +660,7 @@ proc button3node { c x y } {
 	    -command {
 		global IPv6autoAssign
 		set IPv6autoAssign 1
-		changeAddressRange6 
+		changeAddressRange6
 		set IPv6autoAssign 0
 	    }
     }
@@ -781,12 +781,12 @@ proc button3node { c x y } {
 	.button3menu add command -label Start \
 	    -command "[typemodel $node].start $eid $node"
 	.button3menu add command -label Stop \
-	    -command "[typemodel $node].shutdown $eid $node" 
+	    -command "[typemodel $node].shutdown $eid $node"
     } else {
 	.button3menu add command -label Start \
 	    -command "[typemodel $node].start $eid $node" -state disabled
 	.button3menu add command -label Stop \
-	    -command "[typemodel $node].shutdown $eid $node" -state disabled 
+	    -command "[typemodel $node].shutdown $eid $node" -state disabled
     }
 
     #
@@ -803,9 +803,9 @@ proc button3node { c x y } {
 # SYNOPSIS
 #   button1 $c $x $y $button
 # FUNCTION
-#   This procedure is called when a left mouse button is 
+#   This procedure is called when a left mouse button is
 #   clicked on the canvas. This procedure selects a new
-#   node or creates a new node, depending on the selected 
+#   node or creates a new node, depending on the selected
 #   tool.
 # INPUTS
 #   * c -- tk canvas
@@ -860,8 +860,8 @@ proc button1 { c x y button } {
 	set t1 [$c gettags current]
 	set o1 [lindex $t1 1]
 	set type1 [nodeType $o1]
-    
-	if {$type1== "oval" || $type1== "rectangle"} { 
+
+	if {$type1== "oval" || $type1== "rectangle"} {
 	    set resizeobj $o1
 	    set bbox1 [$c bbox $o1]
 	    set x1 [lindex $bbox1 0]
@@ -879,22 +879,22 @@ proc button1 { c x y button } {
 	    if { $y > [expr $y2-($y2-$y1)/8.0]} { set d 1 }
 
 	    if {$l==1} {
-		if {$u==1} { 
+		if {$u==1} {
 		    set resizemode lu
-		} elseif {$d==1} { 
+		} elseif {$d==1} {
 		    set resizemode ld
-		} else { 
+		} else {
 		    set resizemode l
-		} 
+		}
 	    } elseif {$r==1} {
-		if {$u==1} { 
+		if {$u==1} {
 		    set resizemode ru
-		} elseif {$d==1} { 
+		} elseif {$d==1} {
 		    set resizemode rd
-		} else { 
+		} else {
 		    set resizemode r
-		} 
-	    } elseif {$u==1} { 
+		}
+	    } elseif {$u==1} {
 		set resizemode u
 	    } elseif {$d==1} {
 		set resizemode d
@@ -975,11 +975,11 @@ proc button1 { c x y button } {
 # NAME
 #   button1-motion -- button1 moved
 # SYNOPSIS
-#   button1-motion $c $x $y 
+#   button1-motion $c $x $y
 # FUNCTION
-#   This procedure is called when a left mouse button is 
-#   pressed and the mouse is moved around the canvas. 
-#   This procedure creates new select box, moves the 
+#   This procedure is called when a left mouse button is
+#   pressed and the mouse is moved around the canvas.
+#   This procedure creates new select box, moves the
 #   selected nodes or draws a new link.
 # INPUTS
 #   * c -- tk canvas
@@ -1003,7 +1003,7 @@ proc button1-motion { c x y } {
 	set changed 1
 	set lastX $x
 	set lastY $y
-    } elseif { $activetool == "select" && 
+    } elseif { $activetool == "select" &&
 	( $curobj == $selectbox || $curtype == "background" ||
 	$curtype == "grid" || ($curobj ni [$c find withtag "selected"] &&
 	$curtype != "selectmark")) } {
@@ -1064,9 +1064,9 @@ proc button1-motion { c x y } {
 	    $c raise $newfree "oval || rectangle || background || link || linklabel || interface"
 	} else {
 	    xpos $newfree $x $y 2 blue
-	}		
+	}
     } elseif { $curtype == "selectmark" } {
-	foreach o [$c find withtag "selected"] { 
+	foreach o [$c find withtag "selected"] {
 	    set node [lindex [$c gettags $o] 1]
 	    set tagovi [$c gettags $o]
 	    set koord [getNodeCoords $node]
@@ -1153,10 +1153,10 @@ proc button1-motion { c x y } {
 # NAME
 #   button1-release -- button1 released
 # SYNOPSIS
-#   button1-release $c $x $y 
+#   button1-release $c $x $y
 # FUNCTION
-#   This procedure is called when a left mouse button is 
-#   released. 
+#   This procedure is called when a left mouse button is
+#   released.
 #   The result of this function depends on the actions
 #   during the button1-motion procedure.
 # INPUTS
@@ -1180,7 +1180,7 @@ proc button1-release { c x y } {
     set redrawNeeded 0
 
     set outofbounds 0
-	
+
     set x [$c canvasx $x]
     set y [$c canvasy $y]
 
@@ -1214,7 +1214,7 @@ proc button1-release { c x y } {
 	}
     } elseif {$activetool == "rectangle" || $activetool == "oval" \
 	|| $activetool == "text" || $activetool =="freeform"} {
-	popupAnnotationDialog $c 0 "false" 
+	popupAnnotationDialog $c 0 "false"
     }
 
     if { $changed == 1 } {
@@ -1231,7 +1231,7 @@ proc button1-release { c x y } {
 	    set coords [$c coords $img]
 	    set x [expr {[lindex $coords 0] / $zoom}]
 	    set y [expr {[lindex $coords 1] / $zoom}]
-	    
+
 	    # only nodes are snapped to grid, annotations are not
 	    if { $autorearrange_enabled == 0 && \
 		[$c find withtag "node && $node"] != "" } {
@@ -1258,7 +1258,7 @@ proc button1-release { c x y } {
 	    # only nodes (annotations can not) can set the regular flag
 #	    if {$x < 0 || $y < 0 || $x > $sizex || $y > $sizey} {
 #		set regular false
-#	    } 
+#	    }
 	    if { [lindex [$c gettags $node] 0] == "oval"} {
 		set coordinates [$c coords [lindex [$c gettags $node] 1]]
 		set x1 [expr {[lindex $coordinates 0] / $zoom}]
@@ -1321,8 +1321,8 @@ proc button1-release { c x y } {
 		set y1 [expr {[lindex $bbox 1] / $zoom}]
 		set x2 [expr {[lindex $bbox 2] / $zoom}]
 		set y2 [expr {[lindex $bbox 3] / $zoom}]
-		set shiftx 0	
-		set shifty 0	
+		set shiftx 0
+		set shifty 0
 
 		if {$x1<0} {
 		    set shiftx -$x1
@@ -1413,7 +1413,7 @@ proc button1-release { c x y } {
 	$c dtag link need_redraw
 
     # $changed!=1
-    } elseif {$activetool == "select" } { 
+    } elseif {$activetool == "select" } {
 	if {$selectbox == ""} {
 	    set x1 $x
 	    set y1 $y
@@ -1494,14 +1494,14 @@ proc button3background { c x y } {
     .button3menu add checkbutton -label "Show background" \
     -underline 5 -variable showBkgImage \
     -command { redrawAll }
-    
+
     .button3menu add separator
     #
     # Change canvas background
     #
     .button3menu add command -label "Change background" \
 	    -command "changeBkgPopup"
-	    
+
     #
     # Remove canvas background
     #
@@ -1513,10 +1513,10 @@ proc button3background { c x y } {
 		      redrawAll;
 		      set changed 1;
 		      updateUndoLog"
-	    
-    
+
+
     .button3menu.canvases delete 0 end
-    
+
     set m .button3menu.canvases
 
     set mode normal
@@ -1575,19 +1575,19 @@ proc setDefaultIcon {} {
 # SYNOPSIS
 #   nodeEnter $c
 # FUNCTION
-#   This procedure prints the node id, node name and 
+#   This procedure prints the node id, node name and
 #   node model (if exists), as well as all the interfaces
-#   of the node in the status line. 
+#   of the node in the status line.
 #   Information is presented for the node above which is
-#   the mouse pointer.  
+#   the mouse pointer.
 # INPUTS
 #   * c -- tk canvas
 #****
 proc nodeEnter { c } {
     global activetool
-    
+
     set node [lindex [$c gettags current] 1]
-    set err [catch {nodeType $node} error] 
+    set err [catch {nodeType $node} error]
     if { $err != 0 } {
 	return
     }
@@ -1620,7 +1620,7 @@ proc nodeEnter { c } {
 #   This procedure prints the link id, link bandwidth
 #   and link delay in the status line.
 #   Information is presented for the link above which is
-#   the mouse pointer.  
+#   the mouse pointer.
 # INPUTS
 #   * c -- tk canvas
 #****
@@ -1650,7 +1650,7 @@ proc anyLeave {c} {
     global activetool
 
     .bottom.textbox config -text ""
-    
+
     $c delete -withtag showCfgPopup
     $c delete -withtag route
 }
@@ -1661,13 +1661,13 @@ proc anyLeave {c} {
 # SYNOPSIS
 #   deleteSelection
 # FUNCTION
-#   By calling this procedure all the selected nodes in imunes will 
+#   By calling this procedure all the selected nodes in imunes will
 #   be deleted.
 #****
 proc deleteSelection {} {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     global changed
-    global background 
+    global background
     global viewid
     catch {unset viewid}
     .panwin.f1.c config -cursor watch; update
@@ -1700,9 +1700,9 @@ proc removeIPv4nodes {} {
     set nodelist [selectedNodes]
 
     foreach node $nodelist {
-	setStatIPv4routes $node "" 
+	setStatIPv4routes $node ""
 	foreach ifc [ifcList $node] {
-	    setIfcIPv4addr $node $ifc "" 
+	    setIfcIPv4addr $node $ifc ""
 	}
     }
     redrawAll
@@ -1723,9 +1723,9 @@ proc removeIPv6nodes {} {
     set nodelist [selectedNodes]
 
     foreach node $nodelist {
-	setStatIPv6routes $node "" 
+	setStatIPv6routes $node ""
 	foreach ifc [ifcList $node] {
-	    setIfcIPv6addr $node $ifc "" 
+	    setIfcIPv6addr $node $ifc ""
 	}
     }
     redrawAll
@@ -1826,14 +1826,14 @@ proc changeAddressRange {} {
     #brisanje adresa selektiranih cvorova prije nove dodjele tako da ne bi
     #utjecalo na detekciju postojecih podmreza
     foreach el $autorenumber_ifcs {
-	set node [lindex $el 0] 
+	set node [lindex $el 0]
 	set ifc [lindex $el 1]
 	setIfcIPv4addr $node $ifc ""
     }
 
     #dodijeljivanje adresa suceljima koja nisu spojena na link_layer cvorove
     foreach el $autorenumber_ifcs {
-	set node [lindex $el 0] 
+	set node [lindex $el 0]
 	set ifc [lindex $el 1]
 	set peer [peerByIfc $node $ifc]
 	if { [lsearch $autorenumber_nodes $node] < [lsearch $autorenumber_nodes $peer] } {
@@ -1846,13 +1846,13 @@ proc changeAddressRange {} {
 
     set autorenumber 0
     set changeAddressRange 0
-    
+
     foreach node $selected_nodes {
 	foreach ifc [ifcList $node] {
 	    autoIPv4defaultroute $node $ifc
 	}
     }
-    
+
     redrawAll
     updateUndoLog
 }
@@ -1950,14 +1950,14 @@ proc changeAddressRange6 {} {
     #brisanje adresa selektiranih cvorova prije nove dodjele tako da ne bi
     #utjecalo na detekciju postojecih podmreza
     foreach el $autorenumber_ifcs {
-	set node [lindex $el 0] 
+	set node [lindex $el 0]
 	set ifc [lindex $el 1]
 	setIfcIPv6addr $node $ifc ""
     }
 
     #dodijeljivanje adresa suceljima koja nisu spojena na link_layer cvorove
     foreach el $autorenumber_ifcs {
-	set node [lindex $el 0] 
+	set node [lindex $el 0]
 	set ifc [lindex $el 1]
 	set peer [peerByIfc $node $ifc]
 	if { [lsearch $autorenumber_nodes $node] < [lsearch $autorenumber_nodes $peer] } {
@@ -1970,13 +1970,13 @@ proc changeAddressRange6 {} {
 
     set autorenumber 0
     set changeAddressRange6 0
-    
+
     foreach node $selected_nodes {
 	foreach ifc [ifcList $node] {
 	    autoIPv6defaultroute $node $ifc
 	}
     }
-    
+
     redrawAll
     updateUndoLog
 }
@@ -1987,7 +1987,7 @@ proc changeAddressRange6 {} {
 # SYNOPSIS
 #  double1onGrid $c $x $y
 # FUNCTION
-#  As grid is layered above annotations this procedure is used to find 
+#  As grid is layered above annotations this procedure is used to find
 #  annotation object closest to cursor.
 # INPUTS
 #   * c -- tk canvas
@@ -2002,7 +2002,7 @@ proc double1onGrid { c x y } {
 	return
     }
     # Is this really necessary?
-    set coords [getNodeCoords $node] 
+    set coords [getNodeCoords $node]
     set x1 [lindex $coords 0]
     set y1 [lindex $coords 1]
     set x2 [lindex $coords 2]
