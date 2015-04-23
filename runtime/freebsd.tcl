@@ -80,6 +80,10 @@ proc startWiresharkOnNodeIfc { node ifc } {
 proc startXappOnNode { node app } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global debug
+    if {[file exists /usr/local/bin/socat] != 1 } {
+	puts "To run X applications on the node, install socat on your host."
+	return
+    }
 
     set logfile "/dev/null"
     if {$debug} {
@@ -463,6 +467,8 @@ proc execSetIfcQLen { eid node ifc qlen } {
 #   link -- link id
 #****
 proc execSetLinkParams { eid link } {
+    global debug
+
     set lnode1 [lindex [linkPeers $link] 0]
     set lnode2 [lindex [linkPeers $link] 1]
     set lname $lnode1-$lnode2
@@ -485,10 +491,13 @@ proc execSetLinkParams { eid link } {
 	set dup -1
     }
 
-    exec jexec $eid ngctl msg $lname: setcfg \
+    catch {exec jexec $eid ngctl msg $lname: setcfg \
 	"{ bandwidth=$bandwidth delay=$delay \
 	upstream={ BER=$ber duplicate=$dup } \
-	downstream={ BER=$ber duplicate=$dup } }"
+	downstream={ BER=$ber duplicate=$dup } }"} err
+    if { $debug && $err != "" } {
+	puts $err
+    }
 }
 
 #****f* freebsd.tcl/execSetLinkJitter
@@ -1289,6 +1298,7 @@ proc createExperimentContainer {} {
 proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
     upvar 0 ::cf::[set ::curcfg]::eid eid
+    global debug
 
     set lname $lnode1-$lnode2
 
@@ -1311,12 +1321,15 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
 
     # Ethernet frame has a 14-byte header - this is a temp. hack!!!
     set cmds "$cmds\n msg $lname: setcfg {header_offset=14}"
-    exec jexec $eid ngctl -f - << $cmds
+    catch {exec jexec $eid ngctl -f - << $cmds} err
+    if { $debug && $err != "" } {
+	puts $err
+    }
 }
 
 proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
-    global linkJitterConfiguration
+    global linkJitterConfiguration debug
 
     set lname $lnode1-$lnode2
 
@@ -1327,7 +1340,10 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     # Link parameters
     set cmds "msg $lname: setcfg {bandwidth=$bandwidth delay=$delay upstream={BER=$ber duplicate=$dup} downstream={BER=$ber duplicate=$dup}}"
 
-    exec jexec $eid ngctl -f - << $cmds
+    catch {exec jexec $eid ngctl -f - << $cmds} err
+    if { $debug && $err != "" } {
+	puts $err
+    }
 
     # Queues
     foreach node [list $lnode1 $lnode2] {
