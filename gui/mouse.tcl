@@ -732,7 +732,7 @@ proc button3node { c x y } {
 	#
 	.button3menu add cascade -label "Wireshark" \
 	    -menu .button3menu.wireshark
-	foreach ifc [ifcList $node] {
+	foreach ifc [allIfcList $node] {
 	    set label "$ifc"
 	    if { [getIfcIPv4addr $node $ifc] != "" } {
 		set label "$label ([getIfcIPv4addr $node $ifc])"
@@ -748,7 +748,7 @@ proc button3node { c x y } {
 	#
 	.button3menu add cascade -label "tcpdump" \
 	    -menu .button3menu.tcpdump
-	foreach ifc [ifcList $node] {
+	foreach ifc [allIfcList $node] {
 	    set label "$ifc"
 	    if { [getIfcIPv4addr $node $ifc] != "" } {
 		set label "$label ([getIfcIPv4addr $node $ifc])"
