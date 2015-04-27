@@ -34,7 +34,13 @@
 #   Cuts selected nodes.
 #****
 proc cutSelection {} {
+    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global cutNodes
+
+    if { $oper_mode == "exec" } {
+	return
+    }
+
     set cutNodes 1
     copySelection
     deleteSelection
@@ -106,12 +112,18 @@ proc copySelection {} {
 #   Pastes nodes from clipboard.
 #****
 proc paste {} {
+    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
     global sizex sizey
     global changed copypaste_list cutNodes copypaste_nodes
+
+    if { $oper_mode == "exec" } {
+	return
+    }
+
     set copypaste_list ""
 
     # Nothing to do if clipboard is empty
