@@ -1106,7 +1106,6 @@ proc l3node.start { eid node } {
     }
 
     foreach ifc [allIfcList $node] {
-	set mtu [getIfcMTU $node $ifc]
 	if {[getIfcOperState $node $ifc] == "down"} {
 	    set cmds "$cmds\njexec $node_id ifconfig $ifc down"
 	}
