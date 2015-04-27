@@ -1070,12 +1070,11 @@ proc l3node.start { eid node } {
     foreach ifc [allIfcList $node] {
 	set mtu [getIfcMTU $node $ifc]
 	if {[getIfcOperState $node $ifc] == "up"} {
-	    set cmds "$cmds\n jexec $node_id ifconfig $ifc mtu $mtu up"
+	    set cmds "$cmds\njexec $node_id ifconfig $ifc mtu $mtu up"
 	} else {
-	    set cmds "$cmds\n jexec $node_id ifconfig $ifc mtu $mtu"
+	    set cmds "$cmds\njexec $node_id ifconfig $ifc mtu $mtu"
 	}
     }
-    exec sh << $cmds &
 
     if { [getCustomEnabled $node] == true } {
 	set selected [getCustomConfigSelected $node]
@@ -1100,12 +1099,20 @@ proc l3node.start { eid node } {
     }
     close $fileId
 
-    if { $bootcmd == "" || $bootcfg =="" } {
-	catch "exec jexec $node_id $bootcmd_def boot.conf >& $node_dir/out.log &"
+    if { $bootcmd == "" || $bootcfg == "" } {
+	set cmds "$cmds\njexec $node_id $bootcmd_def boot.conf > $node_dir/out.log 2>&1"
     } else {
-	catch "exec jexec $node_id $bootcmd custom.conf >& $node_dir/out.log &"
+	set cmds "$cmds\njexec $node_id $bootcmd custom.conf > $node_dir/out.log 2>&1"
     }
 
+    foreach ifc [allIfcList $node] {
+	set mtu [getIfcMTU $node $ifc]
+	if {[getIfcOperState $node $ifc] == "down"} {
+	    set cmds "$cmds\njexec $node_id ifconfig $ifc down"
+	}
+    }
+
+    exec sh << $cmds &
 }
 
 #****f* exec.tcl/l3node.shutdown
@@ -1250,6 +1257,7 @@ proc deployCfg {} {
     global vroot_unionfs devfs_number
     global inst_pipes last_inst_pipe
     global execMode
+    global debug
 
     set running_eids [getResumableExperiments]
     if {$execMode != "batch"} {
@@ -1423,7 +1431,10 @@ proc deployCfg {} {
 	# Link parameters
 	set cmds "$cmds\n msg $lname: setcfg {bandwidth=$bandwidth delay=$delay upstream={BER=$ber duplicate=$dup} downstream={BER=$ber duplicate=$dup}}"
 
-	exec jexec $eid ngctl -f - << $cmds
+	catch {exec jexec $eid ngctl -f - << $cmds} err
+	if { $debug && $err != "" } {
+	    puts $err
+	}
 
 	# Queues
 	foreach node [list $lnode1 $lnode2] {
@@ -2147,6 +2158,8 @@ proc execSetIfcQLen { eid node ifc qlen } {
 #   link -- link id
 #****
 proc execSetLinkParams { eid link } {
+    global debug
+
     set lnode1 [lindex [linkPeers $link] 0]
     set lnode2 [lindex [linkPeers $link] 1]
     set lname $lnode1-$lnode2
@@ -2169,10 +2182,13 @@ proc execSetLinkParams { eid link } {
 	set dup -1
     }
 
-    exec jexec $eid ngctl msg $lname: setcfg \
+    catch {exec jexec $eid ngctl msg $lname: setcfg \
 	"{ bandwidth=$bandwidth delay=$delay \
 	upstream={ BER=$ber duplicate=$dup } \
-	downstream={ BER=$ber duplicate=$dup } }"
+	downstream={ BER=$ber duplicate=$dup } }"} err
+    if { $debug && $err != "" } {
+	puts $err
+    }
 }
 
 #****f* exec.tcl/execSetLinkJitter

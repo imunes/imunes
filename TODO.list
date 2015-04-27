@@ -1,13 +1,8 @@
 GUI:
 - fix interface names and address placement
-- add a node specific procedure that allows specifying that a node is a router
-  so that we don't have hardcoded nodetypes when setting default routes. Easier
-  creation of new router nodes (e.g. click).
-- create branches for student development.
 - integrate ipsec GUI implementation.
-- add multiple address support for IPv4 and IPv6.
 - add GIF interface to the logical interface menu
-- divide editor.tcl in multiple files. improve code organization.
+- add services to imunes (like ssh and inetd)
 
 annotations:
 - select annotation while and after resizing
@@ -19,5 +14,3 @@ annotations:
 - keyboard movement of annotations
 - improve color management
 - remove empty text annotations
-
-test
