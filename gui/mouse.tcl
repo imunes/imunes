@@ -1666,9 +1666,15 @@ proc anyLeave {c} {
 #****
 proc deleteSelection {} {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
+    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global changed
     global background 
     global viewid
+
+    if { $oper_mode == "exec" } {
+	return
+    }
+
     catch {unset viewid}
     .panwin.f1.c config -cursor watch; update
 
