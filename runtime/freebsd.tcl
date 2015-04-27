@@ -1124,7 +1124,7 @@ proc startIfcsNode { node } {
 	    set cmds "$cmds\n jexec $node_id ifconfig $ifc mtu $mtu"
 	}
     }
-    exec sh << $cmds &
+    exec sh << $cmds
 }
 
 proc runConfOnNode { node } {
@@ -1147,8 +1147,18 @@ proc runConfOnNode { node } {
 	set confFile "boot.conf"
     }
 
+    set cmds ""
+
     writeDataToFile $node_dir/$confFile [join $bootcfg "\n"]
-    catch "exec jexec $node_id $bootcmd $confFile >& $node_dir/out.log &"
+    set cmds "\njexec $node_id $bootcmd $confFile > $node_dir/out.log 2>&1"
+
+    foreach ifc [allIfcList $node] {
+	if {[getIfcOperState $node $ifc] == "down"} {
+	    set cmds "$cmds\njexec $node_id ifconfig $ifc down"
+	}
+    }
+
+    exec sh << $cmds &
 }
 
 proc killAllNodeProcesses { eid node } {
