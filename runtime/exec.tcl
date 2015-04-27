@@ -1070,12 +1070,11 @@ proc l3node.start { eid node } {
     foreach ifc [allIfcList $node] {
 	set mtu [getIfcMTU $node $ifc]
 	if {[getIfcOperState $node $ifc] == "up"} {
-	    set cmds "$cmds\n jexec $node_id ifconfig $ifc mtu $mtu up"
+	    set cmds "$cmds\njexec $node_id ifconfig $ifc mtu $mtu up"
 	} else {
-	    set cmds "$cmds\n jexec $node_id ifconfig $ifc mtu $mtu"
+	    set cmds "$cmds\njexec $node_id ifconfig $ifc mtu $mtu"
 	}
     }
-    exec sh << $cmds &
 
     if { [getCustomEnabled $node] == true } {
 	set selected [getCustomConfigSelected $node]
@@ -1100,12 +1099,20 @@ proc l3node.start { eid node } {
     }
     close $fileId
 
-    if { $bootcmd == "" || $bootcfg =="" } {
-	catch "exec jexec $node_id $bootcmd_def boot.conf >& $node_dir/out.log &"
+    if { $bootcmd == "" || $bootcfg == "" } {
+	set cmds "$cmds\njexec $node_id $bootcmd_def boot.conf > $node_dir/out.log 2>&1"
     } else {
-	catch "exec jexec $node_id $bootcmd custom.conf >& $node_dir/out.log &"
+	set cmds "$cmds\njexec $node_id $bootcmd custom.conf > $node_dir/out.log 2>&1"
     }
 
+    foreach ifc [allIfcList $node] {
+	set mtu [getIfcMTU $node $ifc]
+	if {[getIfcOperState $node $ifc] == "down"} {
+	    set cmds "$cmds\njexec $node_id ifconfig $ifc down"
+	}
+    }
+
+    exec sh << $cmds &
 }
 
 #****f* exec.tcl/l3node.shutdown
