@@ -63,7 +63,8 @@ done
 
 if [ $prepare_flag -eq 1 ]; then
     if [ $force_flag -eq 1 ]; then
-	make remove_vroot
+	chflags -R noschg /var/imunes/vroot
+	rm -fr /var/imunes/vroot
     fi
     sh $ROOTDIR/$LIBDIR/scripts/prepare_vroot.sh
     exit 0
