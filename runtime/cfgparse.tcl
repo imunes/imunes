@@ -250,7 +250,6 @@ proc loadCfg { cfg } {
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
     upvar 0 ::cf::[set ::curcfg]::annotation_list annotation_list
     upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     upvar 0 ::cf::[set ::curcfg]::zoom zoom
     upvar 0 ::cf::[set ::curcfg]::image_list image_list
     upvar 0 ::cf::[set ::curcfg]::IPv6UsedList IPv6UsedList
@@ -269,7 +268,6 @@ proc loadCfg { cfg } {
     set image_list {}
     set class ""
     set object ""
-    set eid ""
     foreach entry $cfg {
 	if {"$class" == ""} {
 	    set class $entry

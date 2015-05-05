@@ -1079,10 +1079,12 @@ proc updateScreenshotPreview { pc image } {
 #   * exp -- experiment id
 #****
 proc resumeSelectedExperiment { exp } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid    
-    set curr_eid $eid
-    if {$curr_eid == $exp} {
-	return
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    if {[info exists eid]} {
+	set curr_eid $eid
+	if {$curr_eid == $exp} {
+	    return
+	}
     }
     newProject
 
