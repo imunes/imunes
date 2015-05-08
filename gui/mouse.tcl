@@ -662,9 +662,9 @@ proc button3node { c x y } {
     if {$oper_mode == "exec" && [info procs [typemodel $node].start] != "" \
 	&& [info procs [typemodel $node].shutdown] != ""} {
 	.button3menu add command -label Start \
-	    -command "[typemodel $node].start $eid $node"
+	    -command "startNodeFromMenu $node"
 	.button3menu add command -label Stop \
-	    -command "[typemodel $node].shutdown $eid $node" 
+	    -command "stopNodeFromMenu $node" 
     } else {
 #	.button3menu add command -label Start \
 #	    -command "[typemodel $node].start $eid $node" -state disabled

@@ -728,6 +728,44 @@ proc l3node.start { eid node } {
     # XXX
 }
 
+#****f* exec.tcl/startNodeFromMenu
+# NAME
+#   startNodeFromMenu -- start node from button3menu
+# SYNOPSIS
+#   startNodeFromMenu $node
+# FUNCTION
+#   Invokes the [typmodel $node].start procedure, along with services startup.
+# INPUTS
+#   * node -- node id
+#****
+proc startNodeFromMenu { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    services start "NODEINST" $node
+    services start "LINKINST" $node
+    [typemodel $node].start $eid $node
+    services start "NODECONF" $node
+}
+
+#****f* exec.tcl/stopNodeFromMenu
+# NAME
+#   stopNodeFromMenu -- stop node from button3menu
+# SYNOPSIS
+#   stopNodeFromMenu $node
+# FUNCTION
+#   Invokes the [typmodel $node].shutdown procedure, along with services shutdown.
+# INPUTS
+#   * node -- node id
+#****
+proc stopNodeFromMenu { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    services stop "NODESTOP" $node
+    [typemodel $node].shutdown $eid $node
+    services stop "LINKDEST" $node
+    services stop "NODEDEST"
+}
+
 #****f* exec.tcl/l3node.shutdown
 # NAME
 #   l3node.shutdown -- layer 3 node shutdown
