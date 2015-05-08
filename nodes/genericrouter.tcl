@@ -269,6 +269,7 @@ proc $MODULE.configGUI { c node } {
     configGUI_addTree $ifctab $node
 
     configGUI_routingModel $configtab $node
+    configGUI_servicesConfig $configtab $node
     configGUI_staticRoutes $configtab $node
     configGUI_snapshots $configtab $node
     configGUI_customConfig $configtab $node
