@@ -673,6 +673,29 @@ proc button3node { c x y } {
     }
 
     #
+    # Services menu
+    #
+    .button3menu.services delete 0 end
+    if {$oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIMAGE"} {
+	global all_services_list
+	.button3menu add cascade -label "Services" \
+	    -menu .button3menu.services
+	foreach service $all_services_list {
+	    set m .button3menu.services.$service
+	    $m delete 0 end
+	    if { ! [winfo exists $m] } {
+		menu $m -tearoff 0
+	    }
+	    .button3menu.services add cascade -label $service \
+		-menu $m
+	    foreach action { "Start" "Stop" "Restart" } {
+		$m add command -label $action \
+		    -command "$service.[string tolower $action] $node"
+	    }
+	}
+    }
+
+    #
     # Node settings
     #   
     .button3menu.sett delete 0 end
