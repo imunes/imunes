@@ -682,9 +682,10 @@ proc button3node { c x y } {
 	    -menu .button3menu.services
 	foreach service $all_services_list {
 	    set m .button3menu.services.$service
-	    $m delete 0 end
 	    if { ! [winfo exists $m] } {
 		menu $m -tearoff 0
+	    } else {
+		$m delete 0 end
 	    }
 	    .button3menu.services add cascade -label $service \
 		-menu $m
