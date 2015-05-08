@@ -1481,6 +1481,49 @@ proc configGUI_routingModel { wi node } {
     pack $wi.routing -fill both
 }
 
+#****f* nodecfgGUI.tcl/configGUI_servicesConfig
+# NAME
+#   configGUI_servicesConfig -- configure GUI - services configuration
+# SYNOPSIS
+#   configGUI_servicesConfig $wi $node
+# FUNCTION
+#   Creating module for changing services started on node.
+# INPUTS
+#   * wi -- widget
+#   * node -- node id
+#****
+proc configGUI_servicesConfig { wi node } {
+    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
+    global guielements all_services_list
+    lappend guielements configGUI_servicesConfig
+    set w $wi.services
+    ttk::frame $w -relief groove -borderwidth 2 -padding 2
+    ttk::label $w.label -text "Services:" 
+    ttk::frame $w.list -padding 2
+
+    pack $w.label -side left -padx 2
+    pack $w.list -side left -padx 2
+
+    foreach srv $all_services_list {
+	global $srv\_enable
+	set $srv\_enable 0
+	if { $oper_mode == "edit" } {
+	    ttk::checkbutton $w.list.$srv -text "$srv" -variable $srv\_enable
+	} else {
+	    ttk::checkbutton $w.list.$srv -text "$srv" -variable $srv\_enable \
+		-state disabled
+	}
+	pack $w.list.$srv -side left -padx 6
+    }
+
+    foreach srv [getNodeServices $node] {
+	global $srv\_enable
+	set $srv\_enable 1
+    }
+
+    pack $w -fill both
+}
+
 #****f* nodecfgGUI.tcl/configGUI_cpuConfig
 # NAME
 #   configGUI_cpuConfig -- configure GUI - CPU configuration
@@ -2171,6 +2214,35 @@ proc configGUI_routingModelApply { wi node } {
             $wi.routing.protocols.ospf6 configure -state disabled
 	}
     set changed 1
+    } 
+}
+
+#****f* nodecfgGUI.tcl/configGUI_servicesConfigApply
+# NAME
+#   configGUI_servicesConfigApply -- configure GUI - services config apply
+# SYNOPSIS
+#   configGUI_servicesConfigApply $wi $node
+# FUNCTION
+#   Saves changes in the module with setvices.
+# INPUTS
+#   * wi -- widget
+#   * node -- node id
+#****
+proc configGUI_servicesConfigApply { wi node } {
+    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
+    global all_services_list
+    if { $oper_mode == "edit"} {
+	set serviceList ""
+	foreach srv $all_services_list {
+	    global $srv\_enable
+	    if { [set $srv\_enable] } {
+		lappend serviceList $srv
+	    }
+	}
+	if { [getNodeServices $node] != $serviceList } {
+	    setNodeServices $node $serviceList
+	    set changed 1
+	}
     } 
 }
 
