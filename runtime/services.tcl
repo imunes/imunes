@@ -86,12 +86,17 @@ proc regHooks { service hooks } {
 #   * action -- action to perform, can be start, stop or restart
 #   * hooks -- hooks for which the service is executed
 #****
-proc services { action hook } {
+proc services { action hook args } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     global services$hook
 
+    set iterlist $node_list
+    if { $args != "" } {
+	set iterlist $args
+    }
+
     set servlist [set services$hook]
-    foreach node $node_list {
+    foreach node $iterlist {
         set nodeserv [getNodeServices $node]
         foreach nserv $nodeserv {
             if { $nserv in $servlist } {
