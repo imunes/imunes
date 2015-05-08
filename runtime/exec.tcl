@@ -880,6 +880,9 @@ proc deployCfg {} {
     statline ""
     pipesClose
 
+    # Start services for the NODEINST hook
+    services start "NODEINST"
+
     statline "Creating links..."
     set step 0
     set allLinks [ llength $link_list ]
@@ -925,6 +928,9 @@ proc deployCfg {} {
 	# XXX
     }
 
+    # Start services for the LINKINST hook
+    services start "LINKINST"
+
     statline ""
     statline "Configuring nodes..."
 
@@ -947,12 +953,16 @@ proc deployCfg {} {
     }
     statline ""
 
+    # Start services for the NODECONF hook
+    services start "NODECONF"
+
     statline "Network topology instantiated in [expr ([clock milliseconds] - $t_start)/1000.0] seconds ($allNodes nodes and $allLinks links)."
 
-    statline "Experiment ID = $eid"
     global execMode
     if {$execMode != "batch"} {
 	destroy $w
+    } else {
+	puts "Experiment ID = $eid"
     }
 }
 
@@ -991,6 +1001,9 @@ proc terminateAllNodes { eid } {
 
     set t_start [clock milliseconds]
 
+    # Stop services on the NODESTOP hook
+    services stop "NODESTOP"
+
     # XXX - pipeline everything to make it faster.
     # Termination is done in the following order:
     # 1. call shutdown on all ng nodes because of the packgen node.
@@ -1024,6 +1037,9 @@ proc terminateAllNodes { eid } {
     }
     statline ""
 
+    # Stop services on the LINKDEST hook
+    services stop "LINKDEST"
+
     # destroying links
     statline "Destroying links..."
     pipesCreate
@@ -1056,6 +1072,9 @@ proc terminateAllNodes { eid } {
     # timeout patch
     timeoutPatch $eid $node_list
 
+    # Stop services on the NODEDEST hook
+    services stop "NODEDEST"
+
     # destroying vimages
     statline "Shutting down vimages..."
     pipesCreate
@@ -1081,6 +1100,28 @@ proc terminateAllNodes { eid } {
     }
 
     statline "Cleanup completed in [expr ([clock milliseconds] - $t_start)/1000.0] seconds."
+}
+
+#****f* exec.tcl/execCmdsNode
+# NAME
+#   execCmdsNode -- execute a set of commands on virtual node
+# SYNOPSIS
+#   execCmdsNode $node $cmds
+# FUNCTION
+#   Executes commands on a virtual node and returns the output.
+# INPUTS
+#   * node -- virtual node id
+#   * cmds -- list of commands to execute
+# RESULT
+#   * returns the execution output
+#****
+proc execCmdsNode { node cmds } {
+    set output ""
+    foreach cmd $cmds {
+        set result [execCmdNode $node $cmd]
+	append output "\n" $result
+    }
+    return $output
 }
 
 #****f* exec.tcl/pipesCreate

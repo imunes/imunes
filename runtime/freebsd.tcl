@@ -1,3 +1,39 @@
+#****f* freebsd.tcl/moveFileFromNode
+# NAME
+#   moveFileFromNode -- copy file from virtual node
+# SYNOPSIS
+#   moveFileFromNode $node $path $ext_path
+# FUNCTION
+#   Moves file from virtual node to a specified external path.
+# INPUTS
+#   * node -- virtual node id
+#   * path -- path to file in node
+#   * ext_path -- external path
+#****
+proc moveFileFromNode { node path ext_path } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set node_dir [getVrootDir]/$eid/$node
+    catch {exec mv $node_dir$path $ext_path}
+}
+
+#****f* freebsd.tcl/writeDataToNodeFile
+# NAME
+#   writeDataToNodeFile -- write data to virtual node
+# SYNOPSIS
+#   writeDataToNodeFile $node $path $data
+# FUNCTION
+#   Writes data to a file on the specified virtual node.
+# INPUTS
+#   * node -- virtual node id
+#   * path -- path to file in node
+#   * data -- data to write
+#****
+proc writeDataToNodeFile { node path data } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set node_dir [getVrootDir]/$eid/$node
+    writeDataToFile $node_dir/$path $data
+}
+
 #****f* freebsd.tcl/execCmdNode
 # NAME
 #   execCmdNode -- execute command on virtual node
@@ -1158,7 +1194,7 @@ proc runConfOnNode { node } {
 	}
     }
 
-    exec sh << $cmds &
+    exec sh << $cmds
 }
 
 proc killAllNodeProcesses { eid node } {
