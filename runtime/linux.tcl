@@ -82,8 +82,8 @@ proc prepareFilesystemForNode { node } {}
 proc createNodeContainer { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    pipesExec "docker run --cap-add=NET_ADMIN --net=none -h [getNodeName $node] \
-    --name $eid.$node phusion/baseimage /sbin/my_init > /dev/null &" "hold"
+    exec docker create --cap-add=NET_ADMIN --net=none -h [getNodeName $node] \
+        --name $eid.$node phusion/baseimage /sbin/my_init > /dev/null &
 }
 
 #****f* linux.tcl/createNodePhysIfcs
@@ -117,7 +117,38 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
 }
 
 proc startIfcsNode { node } {
-    # FIXME: implement in Linux
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set node_id "$eid.$node"
+    set cmds ""
+
+    # foreach ifc [allIfcList $node] {
+    # set mtu [getIfcMTU $node $ifc]
+    # if {[getIfcOperState $node $ifc] == "up"} {
+    #     set cmds "$cmds\n jexec $node_id ifconfig $ifc mtu $mtu up"
+    # } else {
+    #     set cmds "$cmds\n jexec $node_id ifconfig $ifc mtu $mtu"
+    # }
+    # }
+    # exec sh << $cmds &
+}
+
+proc runNode { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set node_id "$eid.$node"
+
+    set rc [catch {exec docker inspect --format '{{.Created}}' $node_id} status]
+    while { [string match 0 $rc] != 1 } {
+        set rc [catch {exec docker inspect --format '{{.Created}}' $node_id} status]
+    }
+
+    exec docker start $node_id > /dev/null &
+    catch {exec docker inspect --format '{{.State.ExitCode}}' $node_id} status
+    while { [string match '0' $status] != 1 } {
+        exec docker start $node_id > /dev/null &
+        catch {exec docker inspect --format '{{.State.ExitCode}}' $node_id} status
+    }
 }
 
 proc removeExperimentContainer { eid widget } {}
@@ -125,13 +156,13 @@ proc removeExperimentContainer { eid widget } {}
 proc removeNodeContainer { eid node } {
     set node_id $eid.$node
 
-    pipesExec "exec docker rm $eid.$node" "hold"
+    catch "exec docker rm $node_id" "hold"
 }
 
 proc killAllNodeProcesses { eid node } {
     set node_id "$eid.$node"
 
-    catch "exec docker stop $eid.$node"
+    catch "exec docker stop $node_id"
 }
 
 proc existingShells { shells node } {
@@ -181,7 +212,7 @@ proc spawnShell { node cmd } {
 #****
 proc startWiresharkOnNodeIfc { node ifc } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
-    puts $ifc
+
     if {[file exists /usr/local/bin/startxcmd] == 1 && \
     [checkForApplications $node "wireshark"] == 0} {
     startXappOnNode $node "wireshark -ki $ifc"
@@ -190,3 +221,5 @@ proc startWiresharkOnNodeIfc { node ifc } {
         wireshark -o "gui.window_title:$ifc@[getNodeName $node] ($eid)" -k -i - &
     }
 }
+
+proc destroyVirtNodeIfcs { eid vimages } {}

@@ -720,10 +720,10 @@ proc l3node.instantiate { eid node } {
 #   * node -- node id
 #****
 proc l3node.start { eid node } {
+    # XXX
+    runNode $node
     # XXX - startIfcsNode node
     startIfcsNode $node
-    # XXX
-
     # XXX - runConfOnNode node
     # FIXME: make this run on Linux
     # runConfOnNode $node

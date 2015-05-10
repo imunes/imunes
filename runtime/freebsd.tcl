@@ -1452,3 +1452,5 @@ proc pipesCreate {} {
     }
     set last_inst_pipe 0
 }
+
+proc runNode {} {}
