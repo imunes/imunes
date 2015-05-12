@@ -105,6 +105,9 @@ proc newProject {} {
     upvar 0 ::cf::[set ::curcfg]::stop_sched stop_sched
 
     loadCfg ""
+    if {! [info exists eid] } {
+	set eid ""
+    }
     set oper_mode edit
     .bottom.oper_mode configure -text "$oper_mode mode"
     set cfgDeployed false
