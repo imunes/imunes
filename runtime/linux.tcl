@@ -77,13 +77,21 @@ proc prepareVirtualFS {} {}
 # INPUTS
 #   * node -- node id
 #****
-proc prepareFilesystemForNode { node } {}
+proc prepareFilesystemForNode { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set VROOTDIR /var/imunes
+    set VROOT_RUNTIME $VROOTDIR/$eid/$node
+    set VROOT_OVERLAY $VROOTDIR/$eid/upper/$node
+    pipesExec "mkdir -p $VROOT_RUNTIME" "hold"
+    pipesExec "mkdir -p $VROOT_OVERLAY" "hold"
+}
 
 proc createNodeContainer { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    exec docker create --cap-add=NET_ADMIN --net=none -h [getNodeName $node] \
-        --name $eid.$node phusion/baseimage /sbin/my_init > /dev/null &
+    catch {exec docker create --cap-add=NET_ADMIN --net='none' -h [getNodeName $node] \
+        --name $eid.$node phusion/baseimage /sbin/my_init 2> /dev/null}
 }
 
 #****f* linux.tcl/createNodePhysIfcs
@@ -109,28 +117,29 @@ proc configureICMPoptions { node } {
 }
 
 proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
-    # FIXME: implement in Linux
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    # FIXME: max bridgename length is 15
+    exec ovs-vsctl add-br $eid.$link
 }
 
-proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
-    # FIXME: implement in Linux
-}
+proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {}
 
 proc startIfcsNode { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     set node_id "$eid.$node"
-    set cmds ""
 
-    # foreach ifc [allIfcList $node] {
-    # set mtu [getIfcMTU $node $ifc]
-    # if {[getIfcOperState $node $ifc] == "up"} {
-    #     set cmds "$cmds\n jexec $node_id ifconfig $ifc mtu $mtu up"
-    # } else {
-    #     set cmds "$cmds\n jexec $node_id ifconfig $ifc mtu $mtu"
-    # }
-    # }
-    # exec sh << $cmds &
+    foreach ifc [allIfcList $node] {
+        if { $ifc != "lo0" } {
+            set mtu [getIfcMTU $node $ifc]
+            if {[getIfcOperState $node $ifc] == "up"} {
+                set peer_node [logicalPeerByIfc $node $ifc]
+                set link [linkByPeers $node $peer_node]
+                exec pipework $eid.$link -i $ifc $node_id 0/0
+            }
+        }
+    }
 }
 
 proc runNode { node } {
@@ -223,3 +232,48 @@ proc startWiresharkOnNodeIfc { node ifc } {
 }
 
 proc destroyVirtNodeIfcs { eid vimages } {}
+
+proc runConfOnNode { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    global vroot_unionfs
+    global viewcustomid vroot_unionfs
+
+    set node_dir [getVrootDir]/$eid/$node
+    set node_id "$eid.$node"
+
+    if { [getCustomEnabled $node] == true } {
+    set selected [getCustomConfigSelected $node]
+
+    set bootcmd [getCustomConfigCommand $node $selected]
+    set bootcfg [getCustomConfig $node $selected]
+    set confFile "custom.conf"
+    } else {
+    set bootcfg [[typemodel $node].cfggen $node]
+    set bootcmd [[typemodel $node].bootcmd $node]
+    set confFile "boot.conf"
+    }
+
+    catch {exec docker inspect --format '{{.Id}}' $node_id} id
+    writeDataToFile $node_dir/$confFile [join $bootcfg "\n"]
+    # exec "cat $node_dir/$confFile | docker exec -i $node_id sh -c 'cat > $confFile'"
+    # exec docker exec -it $node_id bash -c 'cat > $confFile' < $node_dir/$confFile
+    # exec docker exec $node_id $bootcmd $confFile >& $node_dir/out.log &
+}
+
+proc destroyLinkBetween { eid lnode1 lnode2 } {
+    set lname [linkByPeers $lnode1 $lnode2]
+    pipesExec "exec ovs-vsctl del-br $eid.$lname"
+}
+
+proc removeNodeIfcIPaddrs { eid node } {
+    set node_id "$eid.$node"
+
+    foreach ifc [ifcList $node] {
+    foreach ipv4 [getIfcIPv4addr $node $ifc] {
+        catch "exec jexec $node_id ifconfig $ifc $ipv4 -alias"
+    }
+    foreach ipv6 [getIfcIPv6addr $node $ifc] {
+        catch "exec jexec $node_id ifconfig $ifc inet6 $ipv6 -alias"
+    }
+    }
+}
