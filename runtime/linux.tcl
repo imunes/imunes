@@ -226,7 +226,7 @@ proc startWiresharkOnNodeIfc { node ifc } {
     [checkForApplications $node "wireshark"] == 0} {
     startXappOnNode $node "wireshark -ki $ifc"
     } else {
-    exec jexec $eid.$node tcpdump -s 0 -U -w - -i $ifc 2>/dev/null |\
+    exec docker exec $eid.$node tcpdump -s 0 -U -w - -i $ifc 2>/dev/null |\
         wireshark -o "gui.window_title:$ifc@[getNodeName $node] ($eid)" -k -i - &
     }
 }
