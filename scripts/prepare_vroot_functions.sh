@@ -25,7 +25,7 @@ cd ~
 HOMEDIR=`pwd`
 
 # FreeBSD version and architecture
-RELEASE=`uname -r`
+RELEASE=`uname -r|sed s/STABLE/RELEASE/`
 RELEASE_NUM=`echo $RELEASE | cut -d'.' -f1`
 ARCH=`uname -m`
 
