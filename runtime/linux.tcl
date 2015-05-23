@@ -91,7 +91,7 @@ proc createNodeContainer { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     catch {exec docker create --cap-add=NET_ADMIN --net='none' -h [getNodeName $node] \
-        --name $eid.$node phusion/baseimage /sbin/my_init 2> /dev/null}
+        --name $eid.$node gcetusic/imunes /sbin/my_init 2> /dev/null}
 }
 
 #****f* linux.tcl/createNodePhysIfcs
