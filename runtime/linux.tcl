@@ -82,9 +82,7 @@ proc prepareFilesystemForNode { node } {
 
     set VROOTDIR /var/imunes
     set VROOT_RUNTIME $VROOTDIR/$eid/$node
-    set VROOT_OVERLAY $VROOTDIR/$eid/upper/$node
     pipesExec "mkdir -p $VROOT_RUNTIME" "hold"
-    pipesExec "mkdir -p $VROOT_OVERLAY" "hold"
 }
 
 proc createNodeContainer { node } {
@@ -208,7 +206,7 @@ proc spawnShell { node cmd } {
     nexec gnome-terminal -e "docker exec -it $node_id $cmd" &
 }
 
-#****f* freebsd.tcl/startWiresharkOnNodeIfc
+#****f* linux.tcl/startWiresharkOnNodeIfc
 # NAME
 #   startWiresharkOnNodeIfc -- start wireshark on an interface
 # SYNOPSIS
@@ -275,4 +273,11 @@ proc removeNodeIfcIPaddrs { eid node } {
         catch "exec jexec $node_id ifconfig $ifc inet6 $ipv6 -alias"
     }
     }
+}
+
+proc removeExperimentContainer { eid widget } {
+
+    set VROOT_BASE [getVrootDir]
+
+    catch "exec rm -fr $VROOT_BASE/$eid &"
 }
