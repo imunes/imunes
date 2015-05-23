@@ -255,9 +255,8 @@ proc runConfOnNode { node } {
 
     catch {exec docker inspect --format '{{.Id}}' $node_id} id
     writeDataToFile $node_dir/$confFile [join $bootcfg "\n"]
-    # exec "cat $node_dir/$confFile | docker exec -i $node_id sh -c 'cat > $confFile'"
-    # exec docker exec -it $node_id bash -c 'cat > $confFile' < $node_dir/$confFile
-    # exec docker exec $node_id $bootcmd $confFile >& $node_dir/out.log &
+    exec docker exec -i $node_id sh -c "cat > $confFile" < $node_dir/$confFile
+    exec docker exec $node_id $bootcmd $confFile >& $node_dir/out.log &
 }
 
 proc destroyLinkBetween { eid lnode1 lnode2 } {
