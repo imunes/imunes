@@ -93,7 +93,7 @@ proc $MODULE.confNewIfc { node ifc } {
 #****
 proc $MODULE.confNewNode { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
-    
+
     set nconfig [list \
 	"hostname $node" \
 	! ]
@@ -102,7 +102,7 @@ proc $MODULE.confNewNode { node } {
 
 #****f* lanswitch.tcl/lanswitch.icon
 # NAME
-#   lanswitch.icon -- 
+#   lanswitch.icon --
 # SYNOPSIS
 #   lanswitch.icon $size
 # FUNCTION
@@ -178,7 +178,7 @@ proc $MODULE.ifcName {} {
 # SYNOPSIS
 #   set layer [lanswitch.layer]
 # FUNCTION
-#   Returns the layer on which the lanswitch operates, i.e. returns LINK. 
+#   Returns the layer on which the lanswitch operates, i.e. returns LINK.
 # RESULT
 #   * layer -- set to LINK
 #****
@@ -192,8 +192,8 @@ proc $MODULE.layer {} {
 # SYNOPSIS
 #   set layer [lanswitch.virtlayer]
 # FUNCTION
-#   Returns the layer on which the lanswitch node is instantiated 
-#   i.e. returns NETGRAPH. 
+#   Returns the layer on which the lanswitch node is instantiated
+#   i.e. returns NETGRAPH.
 # RESULT
 #   * layer -- set to NETGRAPH
 #****
@@ -214,13 +214,7 @@ proc $MODULE.virtlayer {} {
 #   * node -- id of the node (type of the node is lanswitch)
 #****
 proc $MODULE.instantiate { eid node } {
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-
-    set t [exec printf "mkpeer bridge link0 link0\nmsg .link0 setpersistent\nshow ." | jexec $eid ngctl -f -]
-    set tlen [string length $t]
-    set id [string range $t [expr $tlen - 31] [expr $tlen - 24]]
-    catch {exec jexec $eid ngctl name \[$id\]: $node}
-    set ngnodemap($eid\.$node) $node
+    l2node.instantiate $eid $node
 }
 
 #****f* lanswitch.tcl/lanswitch.destroy
@@ -229,21 +223,21 @@ proc $MODULE.instantiate { eid node } {
 # SYNOPSIS
 #   lanswitch.destroy $eid $node
 # FUNCTION
-#   Destroys a lanswitch. Destroys the netgraph node that represents 
+#   Destroys a lanswitch. Destroys the netgraph node that represents
 #   the lanswitch by sending a shutdown message.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- id of the node (type of the node is lanswitch)
 #****
 proc $MODULE.destroy { eid node } {
-    catch { nexec jexec $eid ngctl msg $node: shutdown }
+    l2node.destroy $eid $node
 }
 
 #****f* lanswitch.tcl/lanswitch.nghook
 # NAME
 #   lanswitch.nghook -- nghook
 # SYNOPSIS
-#   set nghook [lanswitch.nghook $eid $node $ifc] 
+#   set nghook [lanswitch.nghook $eid $node $ifc]
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. Netgraph node name is in
@@ -252,7 +246,7 @@ proc $MODULE.destroy { eid node } {
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id
-#   * ifc -- interface name 
+#   * ifc -- interface name
 # RESULT
 #   * nghook -- the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).

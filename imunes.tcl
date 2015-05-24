@@ -150,18 +150,6 @@ if { $ROOTDIR == "." } {
 foreach file [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
     source $file
 }
-set os [platform::identify]
-if { [string match -nocase "*linux*" $os] == 1 } {
-    source $ROOTDIR/$LIBDIR/runtime/linux.tcl
-}
-if { [string match -nocase "*freebsd*" $os] == 1 } {
-    source $ROOTDIR/$LIBDIR/runtime/freebsd.tcl
-}
-
-if { $initMode == 1 } {
-    prepareDevfs
-    exit
-}
 
 # Configuration libraries
 foreach file [glob -directory $ROOTDIR/$LIBDIR/config *.tcl] {
@@ -181,6 +169,19 @@ foreach file "genericrouter quagga xorp static click_l3 host pc" {
 # additional nodes
 source "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
 source "$ROOTDIR/$LIBDIR/nodes/annotations.tcl"
+
+set os [platform::identify]
+if { [string match -nocase "*linux*" $os] == 1 } {
+    source $ROOTDIR/$LIBDIR/runtime/linux.tcl
+}
+if { [string match -nocase "*freebsd*" $os] == 1 } {
+    source $ROOTDIR/$LIBDIR/runtime/freebsd.tcl
+}
+
+if { $initMode == 1 } {
+    prepareDevfs
+    exit
+}
 
 #
 # Global variables are initialized here

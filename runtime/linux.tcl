@@ -276,8 +276,38 @@ proc removeNodeIfcIPaddrs { eid node } {
 }
 
 proc removeExperimentContainer { eid widget } {
-
     set VROOT_BASE [getVrootDir]
-
     catch "exec rm -fr $VROOT_BASE/$eid &"
+}
+
+proc lanswitch.virtlayer {} {
+    return OPENVSWITCH
+}
+
+proc createOpenvSwitchNode { eid node } {
+    exec ovs-vsctl add-br $eid.$node
+}
+
+proc destroyOpenvSwitchNode { eid node } {
+    exec ovs-vsctl del-br $eid.$node
+}
+
+proc destroyOpenvSwitchNodes { eid switches widget } {
+    global execMode
+
+    # destroying openvswitch nodes
+    if { $switches != "" } {
+    statline "Shutting down openvswitch nodes..."
+    set i 0
+    foreach node $switches {
+        incr i
+        # statline "Shutting down openvswitch node $node ([typemodel $node])"
+        [typemodel $node].destroy $eid $node
+        if {$execMode != "batch"} {
+        $widget.p step -1
+        }
+        displayBatchProgress $i [ llength $switches ]
+    }
+    statline ""
+    }
 }
