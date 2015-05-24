@@ -322,6 +322,8 @@ if {$execMode == "interactive"} {
 	    lappend cfg_list $curcfg
 	    namespace eval ::cf::[set curcfg] {}
 	    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
+	    upvar 0 ::cf::[set ::curcfg]::eid eid
+	    set eid $eid_base
 
 	    set fileId [open $ngmapFile r]
 	    array set ngnodemap [gets $fileId]

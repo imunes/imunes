@@ -1,3 +1,39 @@
+#****f* freebsd.tcl/moveFileFromNode
+# NAME
+#   moveFileFromNode -- copy file from virtual node
+# SYNOPSIS
+#   moveFileFromNode $node $path $ext_path
+# FUNCTION
+#   Moves file from virtual node to a specified external path.
+# INPUTS
+#   * node -- virtual node id
+#   * path -- path to file in node
+#   * ext_path -- external path
+#****
+proc moveFileFromNode { node path ext_path } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set node_dir [getVrootDir]/$eid/$node
+    catch {exec mv $node_dir$path $ext_path}
+}
+
+#****f* freebsd.tcl/writeDataToNodeFile
+# NAME
+#   writeDataToNodeFile -- write data to virtual node
+# SYNOPSIS
+#   writeDataToNodeFile $node $path $data
+# FUNCTION
+#   Writes data to a file on the specified virtual node.
+# INPUTS
+#   * node -- virtual node id
+#   * path -- path to file in node
+#   * data -- data to write
+#****
+proc writeDataToNodeFile { node path data } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set node_dir [getVrootDir]/$eid/$node
+    writeDataToFile $node_dir/$path $data
+}
+
 #****f* freebsd.tcl/execCmdNode
 # NAME
 #   execCmdNode -- execute command on virtual node
@@ -80,6 +116,10 @@ proc startWiresharkOnNodeIfc { node ifc } {
 proc startXappOnNode { node app } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global debug
+    if {[file exists /usr/local/bin/socat] != 1 } {
+	puts "To run X applications on the node, install socat on your host."
+	return
+    }
 
     set logfile "/dev/null"
     if {$debug} {
@@ -463,6 +503,8 @@ proc execSetIfcQLen { eid node ifc qlen } {
 #   link -- link id
 #****
 proc execSetLinkParams { eid link } {
+    global debug
+
     set lnode1 [lindex [linkPeers $link] 0]
     set lnode2 [lindex [linkPeers $link] 1]
     set lname $lnode1-$lnode2
@@ -485,10 +527,13 @@ proc execSetLinkParams { eid link } {
 	set dup -1
     }
 
-    exec jexec $eid ngctl msg $lname: setcfg \
+    catch {exec jexec $eid ngctl msg $lname: setcfg \
 	"{ bandwidth=$bandwidth delay=$delay \
 	upstream={ BER=$ber duplicate=$dup } \
-	downstream={ BER=$ber duplicate=$dup } }"
+	downstream={ BER=$ber duplicate=$dup } }"} err
+    if { $debug && $err != "" } {
+	puts $err
+    }
 }
 
 #****f* freebsd.tcl/execSetLinkJitter
@@ -1115,7 +1160,7 @@ proc startIfcsNode { node } {
 	    set cmds "$cmds\n jexec $node_id ifconfig $ifc mtu $mtu"
 	}
     }
-    exec sh << $cmds &
+    exec sh << $cmds
 }
 
 proc runConfOnNode { node } {
@@ -1138,8 +1183,18 @@ proc runConfOnNode { node } {
 	set confFile "boot.conf"
     }
 
+    set cmds ""
+
     writeDataToFile $node_dir/$confFile [join $bootcfg "\n"]
-    catch "exec jexec $node_id $bootcmd $confFile >& $node_dir/out.log &"
+    set cmds "\njexec $node_id $bootcmd $confFile > $node_dir/out.log 2>&1"
+
+    foreach ifc [allIfcList $node] {
+	if {[getIfcOperState $node $ifc] == "down"} {
+	    set cmds "$cmds\njexec $node_id ifconfig $ifc down"
+	}
+    }
+
+    exec sh << $cmds
 }
 
 proc killAllNodeProcesses { eid node } {
@@ -1289,6 +1344,7 @@ proc createExperimentContainer {} {
 proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
     upvar 0 ::cf::[set ::curcfg]::eid eid
+    global debug
 
     set lname $lnode1-$lnode2
 
@@ -1311,12 +1367,15 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
 
     # Ethernet frame has a 14-byte header - this is a temp. hack!!!
     set cmds "$cmds\n msg $lname: setcfg {header_offset=14}"
-    exec jexec $eid ngctl -f - << $cmds
+    catch {exec jexec $eid ngctl -f - << $cmds} err
+    if { $debug && $err != "" } {
+	puts $err
+    }
 }
 
 proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
-    global linkJitterConfiguration
+    global linkJitterConfiguration debug
 
     set lname $lnode1-$lnode2
 
@@ -1327,7 +1386,10 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     # Link parameters
     set cmds "msg $lname: setcfg {bandwidth=$bandwidth delay=$delay upstream={BER=$ber duplicate=$dup} downstream={BER=$ber duplicate=$dup}}"
 
-    exec jexec $eid ngctl -f - << $cmds
+    catch {exec jexec $eid ngctl -f - << $cmds} err
+    if { $debug && $err != "" } {
+	puts $err
+    }
 
     # Queues
     foreach node [list $lnode1 $lnode2] {

@@ -2619,6 +2619,46 @@ proc getEtherVlanTag { node } {
     }
 }
 
+#****f* nodecfg.tcl/getNodeServices
+# NAME
+#   getNodeServices -- get node active services.
+# SYNOPSIS
+#   set services [getNodeServices $node]
+# FUNCTION
+#   Returns node's selected services.
+# INPUTS
+#   * node -- node id
+# RESULT
+#   * services -- active services
+#****
+proc getNodeServices { node } {
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
+    return [lindex [lsearch -inline [set $node] "services *"] 1]
+}
+
+#****f* nodecfg.tcl/setNodeServices
+# NAME
+#   setNodeServices -- set node active services.
+# SYNOPSIS
+#   setNodeServices $node $services
+# FUNCTION
+#   Sets nodes selected services.
+# INPUTS
+#   * node -- node id
+#   * coords -- list of services
+#****
+proc setNodeServices { node services } {
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
+    set i [lsearch [set $node] "services *"]
+    if { $i >= 0 } {
+        set $node [lreplace [set $node] $i $i "services {$services}"]
+    } else {
+        set $node [linsert [set $node] end "services {$services}"]
+    }
+}
+
 #****f* nodecfg.tcl/registerRouterModule
 # NAME
 #   registerRouterModule -- register module

@@ -882,6 +882,9 @@ proc deployCfg {} {
     statline ""
     pipesClose
 
+    # Start services for the NODEINST hook
+    services start "NODEINST"
+
     statline "Creating links..."
     set step 0
     set allLinks [ llength $link_list ]
@@ -925,6 +928,10 @@ proc deployCfg {} {
 	configureLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
 	# XXX
     }
+
+    # Start services for the LINKINST hook
+    services start "LINKINST"
+
     statline ""
     statline "Configuring nodes..."
 
@@ -946,12 +953,17 @@ proc deployCfg {} {
     }
     }
     statline ""
+
+    # Start services for the NODECONF hook
+    services start "NODECONF"
+
     statline "Network topology instantiated in [expr ([clock milliseconds] - $t_start)/1000.0] seconds ($allNodes nodes and $allLinks links)."
 
-    statline "Experiment ID = $eid"
     global execMode
     if {$execMode != "batch"} {
-    destroy $w
+	destroy $w
+    } else {
+	puts "Experiment ID = $eid"
     }
 }
 
@@ -989,6 +1001,9 @@ proc terminateAllNodes { eid } {
     }
 
     set t_start [clock milliseconds]
+
+    # Stop services on the NODESTOP hook
+    services stop "NODESTOP"
 
     # XXX - pipeline everything to make it faster.
     # Termination is done in the following order:
@@ -1028,6 +1043,9 @@ proc terminateAllNodes { eid } {
     }
     statline ""
 
+    # Stop services on the LINKDEST hook
+    services stop "LINKDEST"
+
     # destroying links
     statline "Destroying links..."
     pipesCreate
@@ -1060,6 +1078,9 @@ proc terminateAllNodes { eid } {
     # timeout patch
     timeoutPatch $eid $node_list
 
+    # Stop services on the NODEDEST hook
+    services stop "NODEDEST"
+
     # destroying vimages
     statline "Shutting down vimages..."
     pipesCreate
@@ -1087,6 +1108,84 @@ proc terminateAllNodes { eid } {
     statline "Cleanup completed in [expr ([clock milliseconds] - $t_start)/1000.0] seconds."
 }
 
+#****f* exec.tcl/execCmdsNode
+# NAME
+#   execCmdsNode -- execute a set of commands on virtual node
+# SYNOPSIS
+#   execCmdsNode $node $cmds
+# FUNCTION
+#   Executes commands on a virtual node and returns the output.
+# INPUTS
+#   * node -- virtual node id
+#   * cmds -- list of commands to execute
+# RESULT
+#   * returns the execution output
+#****
+proc execCmdsNode { node cmds } {
+    set output ""
+    foreach cmd $cmds {
+        set result [execCmdNode $node $cmd]
+	append output "\n" $result
+    }
+    return $output
+}
+
+#****f* exec.tcl/startNodeFromMenu
+# NAME
+#   startNodeFromMenu -- start node from button3menu
+# SYNOPSIS
+#   startNodeFromMenu $node
+# FUNCTION
+#   Invokes the [typmodel $node].start procedure, along with services startup.
+# INPUTS
+#   * node -- node id
+#****
+proc startNodeFromMenu { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    services start "NODEINST" $node
+    services start "LINKINST" $node
+    [typemodel $node].start $eid $node
+    services start "NODECONF" $node
+}
+
+#****f* exec.tcl/stopNodeFromMenu
+# NAME
+#   stopNodeFromMenu -- stop node from button3menu
+# SYNOPSIS
+#   stopNodeFromMenu $node
+# FUNCTION
+#   Invokes the [typmodel $node].shutdown procedure, along with services shutdown.
+# INPUTS
+#   * node -- node id
+#****
+proc stopNodeFromMenu { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    services stop "NODESTOP" $node
+    [typemodel $node].shutdown $eid $node
+    services stop "LINKDEST" $node
+    services stop "NODEDEST"
+}
+
+
+#****f* exec.tcl/pipesCreate
+# NAME
+#   pipesCreate -- pipes create
+# SYNOPSIS
+#   pipesCreate
+# FUNCTION
+#   Create pipes for parallel execution to the shell.
+#****
+proc pipesCreate { } {
+    global inst_pipes last_inst_pipe
+
+    set ncpus [lindex [exec sysctl kern.smp.cpus] 1]
+    for {set i 0} {$i < $ncpus} {incr i} {
+	set inst_pipes($i) [open "| sh" r+]
+    }
+    set last_inst_pipe 0
+}
 
 #****f* exec.tcl/pipesExec
 # NAME

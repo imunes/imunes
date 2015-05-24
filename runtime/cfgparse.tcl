@@ -398,6 +398,9 @@ proc loadCfg { cfg } {
 			canvas {
 			    lappend $object "canvas $value"
 			}
+			services {
+			    lappend $object "services {$value}"
+			}
 			events {
 			    set cfg ""
 			    foreach zline [split $value {

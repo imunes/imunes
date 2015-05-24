@@ -547,49 +547,26 @@ proc button3node { c x y } {
     #
     # Node icon preferences
     #
-    .button3menu.sett delete 0 end
-    if { [nodeType $node] != "pseudo" } {
-	.button3menu add cascade -label "Settings" \
-	    -menu .button3menu.sett
-    } else {
-	.button3menu add cascade -label "Settings" \
-	    -menu .button3menu.sett -state disabled
-    }
-    .button3menu.sett add command -label "Remove IPv4 addresses" \
-	    -command "removeIPv4nodes"
-    .button3menu.sett add command -label "Remove IPv6 addresses" \
-	    -command "removeIPv6nodes"
-    if { $oper_mode == "exec" } {
-	.button3menu.sett add command -label "Fetch Node Configurations" \
-	    -command "fetchNodeConfiguration"
-    } else {
-        .button3menu.sett add command -label "Fetch Node Configurations" \
-	    -state disabled
-    }
-
-    #
-    # Node icon preferences
-    #
     .button3menu.icon delete 0 end
-    if { [nodeType $node] != "pseudo" } {
+    if { $oper_mode == "exec" || [nodeType $node] == "pseudo" } {
+#	.button3menu add cascade -label "Node icon" \
+#	    -menu .button3menu.icon -state disabled
+    } else {
 	.button3menu add cascade -label "Node icon" \
 	    -menu .button3menu.icon
-    } else {
-	.button3menu add cascade -label "Node icon" \
-	    -menu .button3menu.icon -state disabled
-    }
-    .button3menu.icon add command -label "Change node icons" \
+	.button3menu.icon add command -label "Change node icons" \
 	    -command "changeIconPopup"
-    .button3menu.icon add command -label "Set default icons" \
+	.button3menu.icon add command -label "Set default icons" \
 	    -command "setDefaultIcon"
+    }
 
     #
     # Create a new link - can be between different canvases
     #
     .button3menu.connect delete 0 end
     if { $oper_mode == "exec" || [nodeType $node] == "pseudo" } {
-	.button3menu add cascade -label "Create link to" \
-	    -menu .button3menu.connect -state disabled
+#	.button3menu add cascade -label "Create link to" \
+#	    -menu .button3menu.connect -state disabled
     } else {
 	.button3menu add cascade -label "Create link to" \
 	    -menu .button3menu.connect
@@ -633,12 +610,119 @@ proc button3node { c x y } {
 	}
     }
 
+    # Move to another canvas
+    #
+    .button3menu.moveto delete 0 end
+    if { $oper_mode == "exec" || [nodeType $node] == "pseudo" } {
+#	.button3menu add cascade -label "Move to" \
+#	    -menu .button3menu.moveto -state disabled
+    } else {
+	.button3menu add cascade -label "Move to" \
+	    -menu .button3menu.moveto
+	.button3menu.moveto add command -label "Canvas:" -state disabled
+	foreach canvas $canvas_list {
+	    if { $canvas != $curcanvas } {
+		.button3menu.moveto add command \
+		    -label [getCanvasName $canvas] \
+		    -command "movetoCanvas $canvas"
+	    } else {
+		.button3menu.moveto add command \
+		    -label [getCanvasName $canvas] -state disabled
+	    }
+	}
+    }
+
+    #
+    # Merge two pseudo nodes / links
+    #
+    if { $oper_mode != "exec" && [nodeType $node] == "pseudo" && \
+	[getNodeCanvas $mirror_node] == $curcanvas } {
+	.button3menu add command -label "Merge" \
+	    -command "mergeGUINode $node"
+    } else {
+#	.button3menu add command -label "Merge" -state disabled
+    }
+
+    #
+    # Delete selection
+    #
+    if { $oper_mode != "exec" } {
+	.button3menu add command -label "Delete" -command deleteSelection
+    } else {
+#	.button3menu add command -label "Delete" -state disabled
+    }
+
+    .button3menu add separator
+
+    #
+    # Start & stop node
+    #
+    if {$oper_mode == "exec" && [info procs [typemodel $node].start] != "" \
+	&& [info procs [typemodel $node].shutdown] != ""} {
+	.button3menu add command -label Start \
+	    -command "startNodeFromMenu $node"
+	.button3menu add command -label Stop \
+	    -command "stopNodeFromMenu $node"
+    } else {
+#	.button3menu add command -label Start \
+#	    -command "[typemodel $node].start $eid $node" -state disabled
+#	.button3menu add command -label Stop \
+#	    -command "[typemodel $node].shutdown $eid $node" -state disabled
+    }
+
+    #
+    # Services menu
+    #
+    .button3menu.services delete 0 end
+    if {$oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIMAGE"} {
+	global all_services_list
+	.button3menu add cascade -label "Services" \
+	    -menu .button3menu.services
+	foreach service $all_services_list {
+	    set m .button3menu.services.$service
+	    if { ! [winfo exists $m] } {
+		menu $m -tearoff 0
+	    } else {
+		$m delete 0 end
+	    }
+	    .button3menu.services add cascade -label $service \
+		-menu $m
+	    foreach action { "Start" "Stop" "Restart" } {
+		$m add command -label $action \
+		    -command "$service.[string tolower $action] $node"
+	    }
+	}
+    }
+
+    #
+    # Node settings
+    #
+    .button3menu.sett delete 0 end
+    if { [nodeType $node] != "pseudo" } {
+	.button3menu add cascade -label "Settings" \
+	    -menu .button3menu.sett
+    } else {
+	.button3menu add cascade -label "Settings" \
+	    -menu .button3menu.sett -state disabled
+    }
+    if { $oper_mode == "exec" } {
+	.button3menu.sett add command -label "Import Running Configuration" \
+	    -command "fetchNodeConfiguration"
+    } else {
+#        .button3menu.sett add command -label "Fetch Node Configurations" \
+#	    -state disabled
+	.button3menu.sett add command -label "Remove IPv4 addresses" \
+	    -command "removeIPv4nodes"
+        .button3menu.sett add command -label "Remove IPv6 addresses" \
+	    -command "removeIPv6nodes"
+    }
+
     #
     # IPv4 autorenumber
     #
     if { $oper_mode == "exec" || [[typemodel $node].layer] == "LINK" } {
-	.button3menu add command -label "IPv4 autorenumber" \
-	    -state disabled
+#	.button3menu add command -label "IPv4 autorenumber" \
+#	    -state disabled
     } else {
 	.button3menu add command -label "IPv4 autorenumber" \
 	    -command {
@@ -653,8 +737,8 @@ proc button3node { c x y } {
     # IPv6 autorenumber
     #
     if { $oper_mode == "exec" || [[typemodel $node].layer] == "LINK" } {
-	.button3menu add command -label "IPv6 autorenumber" \
-	    -state disabled
+#	.button3menu add command -label "IPv6 autorenumber" \
+#	    -state disabled
     } else {
 	.button3menu add command -label "IPv6 autorenumber" \
 	    -command {
@@ -665,54 +749,13 @@ proc button3node { c x y } {
 	    }
     }
 
-    #
-    # Move to another canvas
-    #
-    .button3menu.moveto delete 0 end
-    if { $oper_mode == "exec" || [nodeType $node] == "pseudo" } {
-	.button3menu add cascade -label "Move to" \
-	    -menu .button3menu.moveto -state disabled
-    } else {
-	.button3menu add cascade -label "Move to" \
-	    -menu .button3menu.moveto
-    }
-    .button3menu.moveto add command -label "Canvas:" -state disabled
-    foreach canvas $canvas_list {
-	if { $canvas != $curcanvas } {
-	    .button3menu.moveto add command \
-		-label [getCanvasName $canvas] \
-		-command "movetoCanvas $canvas"
-	} else {
-	    .button3menu.moveto add command \
-		-label [getCanvasName $canvas] -state disabled
-	}
-    }
-
-    #
-    # Merge two pseudo nodes / links
-    #
-    if { $oper_mode != "exec" && [nodeType $node] == "pseudo" && \
-	[getNodeCanvas $mirror_node] == $curcanvas } {
-	.button3menu add command -label "Merge" \
-	    -command "mergeGUINode $node"
-    } else {
-	.button3menu add command -label "Merge" -state disabled
-    }
-
-    #
-    # Delete selection
-    #
-    if { $oper_mode != "exec" } {
-	.button3menu add command -label "Delete" -command deleteSelection
-    } else {
-	.button3menu add command -label "Delete" -state disabled
-    }
 
     #
     # Shell selection
     #
     .button3menu.shell delete 0 end
     if {$oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIMAGE"} {
+	.button3menu add separator
 	.button3menu add cascade -label "Shell window" \
 	    -menu .button3menu.shell
 	foreach cmd [existingShells [[typemodel $node].shellcmds] $node] {
@@ -720,8 +763,8 @@ proc button3node { c x y } {
 		-command "spawnShell $node $cmd"
 	}
     } else {
-	.button3menu add cascade -label "Shell window" \
-	    -menu .button3menu.shell -state disabled
+#	.button3menu add cascade -label "Shell window" \
+#	    -menu .button3menu.shell -state disabled
     }
 
     .button3menu.wireshark delete 0 end
@@ -732,32 +775,40 @@ proc button3node { c x y } {
 	#
 	.button3menu add cascade -label "Wireshark" \
 	    -menu .button3menu.wireshark
-	foreach ifc [ifcList $node] {
-	    set label "$ifc"
-	    if { [getIfcIPv4addr $node $ifc] != "" } {
-		set label "$label ([getIfcIPv4addr $node $ifc])"
+	if { [llength [allIfcList $node]] == 0 } {
+	    .button3menu.wireshark add command -label "No interfaces available."
+	} else {
+	    foreach ifc [allIfcList $node] {
+		set label "$ifc"
+		if { [getIfcIPv4addr $node $ifc] != "" } {
+		    set label "$label ([getIfcIPv4addr $node $ifc])"
+		}
+		if { [getIfcIPv6addr $node $ifc] != "" } {
+		    set label "$label ([getIfcIPv6addr $node $ifc])"
+		}
+		.button3menu.wireshark add command -label $label \
+		    -command "startWiresharkOnNodeIfc $node $ifc"
 	    }
-	    if { [getIfcIPv6addr $node $ifc] != "" } {
-		set label "$label ([getIfcIPv6addr $node $ifc])"
-	    }
-	    .button3menu.wireshark add command -label $label \
-		-command "startWiresharkOnNodeIfc $node $ifc"
 	}
 	#
 	# tcpdump
 	#
 	.button3menu add cascade -label "tcpdump" \
 	    -menu .button3menu.tcpdump
-	foreach ifc [ifcList $node] {
-	    set label "$ifc"
-	    if { [getIfcIPv4addr $node $ifc] != "" } {
-		set label "$label ([getIfcIPv4addr $node $ifc])"
+	if { [llength [allIfcList $node]] == 0 } {
+	    .button3menu.tcpdump add command -label "No interfaces available."
+	} else {
+	    foreach ifc [allIfcList $node] {
+		set label "$ifc"
+		if { [getIfcIPv4addr $node $ifc] != "" } {
+		    set label "$label ([getIfcIPv4addr $node $ifc])"
+		}
+		if { [getIfcIPv6addr $node $ifc] != "" } {
+		    set label "$label ([getIfcIPv6addr $node $ifc])"
+		}
+		.button3menu.tcpdump add command -label $label \
+		    -command "startTcpdumpOnNodeIfc $node $ifc"
 	    }
-	    if { [getIfcIPv6addr $node $ifc] != "" } {
-		set label "$label ([getIfcIPv6addr $node $ifc])"
-	    }
-	    .button3menu.tcpdump add command -label $label \
-		-command "startTcpdumpOnNodeIfc $node $ifc"
 	}
 	#
 	# Firefox
@@ -771,22 +822,10 @@ proc button3node { c x y } {
 		-state disabled
 	}
     } else {
-	.button3menu add cascade -label "Wireshark" \
-	    -menu .button3menu.wireshark -state disabled
-	.button3menu add command -label "Web Browser" \
-	    -state disabled
-    }
-    if {$oper_mode == "exec" && [info procs [typemodel $node].start] != "" \
-	&& [info procs [typemodel $node].shutdown] != ""} {
-	.button3menu add command -label Start \
-	    -command "[typemodel $node].start $eid $node"
-	.button3menu add command -label Stop \
-	    -command "[typemodel $node].shutdown $eid $node"
-    } else {
-	.button3menu add command -label Start \
-	    -command "[typemodel $node].start $eid $node" -state disabled
-	.button3menu add command -label Stop \
-	    -command "[typemodel $node].shutdown $eid $node" -state disabled
+#	.button3menu add cascade -label "Wireshark" \
+#	    -menu .button3menu.wireshark -state disabled
+#	.button3menu add command -label "Web Browser" \
+#	    -state disabled
     }
 
     #
