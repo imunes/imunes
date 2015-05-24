@@ -119,10 +119,11 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
 
     # FIXME: max bridgename length is 15
     if { [[typemodel $lnode1].virtlayer] == "OPENVSWITCH" && \
-        [[typemodel $lnode2].virtlayer] == "OPENVSWITCH"} {
+        [[typemodel $lnode2].virtlayer] == "OPENVSWITCH" } {
         exec ovs-vsctl add-port $eid.$lnode1 $eid.$lnode1.$ifname1 -- set interface $eid.$lnode1.$ifname1 type=patch options:peer=$eid.$lnode2.$ifname2
         exec ovs-vsctl add-port $eid.$lnode2 $eid.$lnode2.$ifname2 -- set interface $eid.$lnode2.$ifname2 type=patch options:peer=$eid.$lnode1.$ifname1
-    } else {
+    } elseif { [[typemodel $lnode1].virtlayer] == "OPENVSWITCH" && \
+        [[typemodel $lnode2].virtlayer] == "OPENVSWITCH" } {
         exec ovs-vsctl add-br $eid.$link
     }
 }
