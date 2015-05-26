@@ -1543,3 +1543,7 @@ proc l2node.instantiate { eid node } {
 proc l2node.destroy { eid node } {
     catch { nexec jexec $eid ngctl msg $node: shutdown }
 }
+
+proc getCpuCount {} {
+    return [lindex [exec sysctl kern.smp.cpus] 1]
+}

@@ -1174,7 +1174,7 @@ proc stopNodeFromMenu { node } {
 proc pipesCreate { } {
     global inst_pipes last_inst_pipe
 
-    set ncpus [lindex [exec sysctl kern.smp.cpus] 1]
+    set ncpus [getCpuCount]
     for {set i 0} {$i < $ncpus} {incr i} {
 	set inst_pipes($i) [open "| sh" r+]
     }
