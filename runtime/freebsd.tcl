@@ -1496,3 +1496,50 @@ proc removeExperimentContainer { eid widget } {
 	}
     }
 }
+
+
+#****f* freebsd.tcl/l2node.instantiate
+# NAME
+#   l2node.instantiate -- instantiate
+# SYNOPSIS
+#   l2node.instantiate $eid $node
+# FUNCTION
+#   Procedure l2node.instantiate creates a new netgraph node of the appropriate type.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- id of the node (type of the node is either lanswitch or hub)
+#****
+proc l2node.instantiate { eid node } {
+    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
+
+    switch -exact [nodeType $node] {
+	lanswitch {
+	    set ngtype bridge
+	}
+	hub {
+	    set ngtype hub
+	}
+    }
+
+    set t [exec printf "mkpeer $ngtype link0 link0\nmsg .link0 setpersistent\nshow ." | jexec $eid ngctl -f -]
+    set tlen [string length $t]
+    set id [string range $t [expr $tlen - 31] [expr $tlen - 24]]
+    catch {exec jexec $eid ngctl name \[$id\]: $node}
+    set ngnodemap($eid\.$node) $node
+}
+
+#****f* freebsd.tcl/l2node.destroy
+# NAME
+#   l2node.destroy -- destroy
+# SYNOPSIS
+#   l2node.destroy $eid $node
+# FUNCTION
+#   Destroys a l2node (netgraph) node by sending a shutdown
+#   message.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- id of the node
+#****
+proc l2node.destroy { eid node } {
+    catch { nexec jexec $eid ngctl msg $node: shutdown }
+}
