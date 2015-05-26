@@ -1186,7 +1186,12 @@ proc runConfOnNode { node } {
     set cmds ""
 
     writeDataToFile $node_dir/$confFile [join $bootcfg "\n"]
-    set cmds "\njexec $node_id $bootcmd $confFile > $node_dir/out.log 2>&1"
+    if {[nodeType $node] in "click_l2 click_l3"} {
+	# click has no daemon mode, run in backgorund
+	set cmds "\njexec $node_id $bootcmd $confFile > $node_dir/out.log 2>&1 &"
+    } else {
+	set cmds "\njexec $node_id $bootcmd $confFile > $node_dir/out.log 2>&1"
+    }
 
     foreach ifc [allIfcList $node] {
 	if {[getIfcOperState $node $ifc] == "down"} {
