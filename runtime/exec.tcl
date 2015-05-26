@@ -335,7 +335,7 @@ proc checkExternalInterfaces {} {
 	    }
 	    if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
 		# XXX - proc getHostIfcVlanExists
-		if { getHostIfcVlanExists $node $name } {
+		if { [getHostIfcVlanExists $node $name] } {
 		    return 1
 		}
 		# XXX
