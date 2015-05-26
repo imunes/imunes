@@ -1055,7 +1055,7 @@ proc createNodeContainer { node } {
     set node_dir [getVrootDir]/$eid/$node
 
     pipesExec "jail -c name=$eid.$node path=$node_dir securelevel=1 \
-	host.hostname=[getNodeName $node] vnet persist" "hold"
+	host.hostname=\"[getNodeName $node]\" vnet persist" "hold"
 }
 
 #****f* freebsd.tcl/createNodePhysIfcs
