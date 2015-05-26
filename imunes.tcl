@@ -46,6 +46,7 @@
 #****
 package require cmdline
 package require ip
+package require platform
 
 set options {
     {e.arg	"" "specify experiment ID"}
@@ -149,9 +150,25 @@ if { $ROOTDIR == "." } {
 foreach file [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
     source $file
 }
-if { $initMode == 1 } {
-    prepareDevfs
-    exit
+
+# Set default L2 node list
+set l2nodes "hub lanswitch click_l2 rj45"
+# Set default L3 node list
+set l3nodes "genericrouter quagga xorp static click_l3 host pc"
+
+set os [platform::identify]
+if { [string match -nocase "*linux*" $os] == 1 } {
+    # Limit default nodes on linux
+    set l2nodes "hub lanswitch rj45"
+    set l3nodes "genericrouter quagga static host pc"
+    source $ROOTDIR/$LIBDIR/runtime/linux.tcl
+}
+if { [string match -nocase "*freebsd*" $os] == 1 } {
+    source $ROOTDIR/$LIBDIR/runtime/freebsd.tcl
+    if { $initMode == 1 } {
+	prepareDevfs
+	exit
+    }
 }
 
 # Configuration libraries
@@ -162,11 +179,11 @@ foreach file [glob -directory $ROOTDIR/$LIBDIR/config *.tcl] {
 # The following files need to be sourced in this particular order. If not
 # the placement of the toolbar icons will be altered.
 # L2 nodes
-foreach file "hub lanswitch click_l2 rj45" {
+foreach file $l2nodes {
     source "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
 }
 # L3 nodes
-foreach file "genericrouter quagga xorp static click_l3 host pc" {
+foreach file $l3nodes {
     source "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
 }
 # additional nodes
@@ -220,7 +237,6 @@ if { $tcl_platform(platform) == "unix" } {
     set gui_unix false
 }
 
-package require platform
 set winOS false
 if {[string match -nocase "*win*" [platform::identify]] == 1} {
     set winOS true
