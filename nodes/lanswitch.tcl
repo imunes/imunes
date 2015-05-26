@@ -214,13 +214,7 @@ proc $MODULE.virtlayer {} {
 #   * node -- id of the node (type of the node is lanswitch)
 #****
 proc $MODULE.instantiate { eid node } {
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-
-    set t [exec printf "mkpeer bridge link0 link0\nmsg .link0 setpersistent\nshow ." | jexec $eid ngctl -f -]
-    set tlen [string length $t]
-    set id [string range $t [expr $tlen - 31] [expr $tlen - 24]]
-    catch {exec jexec $eid ngctl name \[$id\]: $node}
-    set ngnodemap($eid\.$node) $node
+    l2node.instantiate $eid $node
 }
 
 #****f* lanswitch.tcl/lanswitch.destroy
@@ -236,7 +230,7 @@ proc $MODULE.instantiate { eid node } {
 #   * node -- id of the node (type of the node is lanswitch)
 #****
 proc $MODULE.destroy { eid node } {
-    catch { nexec jexec $eid ngctl msg $node: shutdown }
+    l2node.destroy $eid $node
 }
 
 #****f* lanswitch.tcl/lanswitch.nghook
