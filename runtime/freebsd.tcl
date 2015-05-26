@@ -1186,8 +1186,9 @@ proc runConfOnNode { node } {
     set cmds ""
 
     writeDataToFile $node_dir/$confFile [join $bootcfg "\n"]
-    if {[nodeType $node] in "click_l2 click_l3"} {
+    if {[typemodel $node] in "click_l2 click_l3 router.xorp"} {
 	# click has no daemon mode, run in backgorund
+	# xorp in daemon mode is too slow, run in background
 	set cmds "\njexec $node_id $bootcmd $confFile > $node_dir/out.log 2>&1 &"
     } else {
 	set cmds "\njexec $node_id $bootcmd $confFile > $node_dir/out.log 2>&1"
@@ -1551,4 +1552,35 @@ proc l2node.destroy { eid node } {
 
 proc getCpuCount {} {
     return [lindex [exec sysctl kern.smp.cpus] 1]
+}
+
+proc captureExtIfc { eid node } {
+    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
+
+    set ifname [getNodeName $node]
+    if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
+	exec ifconfig $ifname create
+    }
+    set ngifname [string map {. _} $ifname]
+    set ngnodemap($ifname) $ngifname
+    nexec ifconfig $ifname vnet $eid
+    nexec jexec $eid ifconfig $ifname up promisc
+}
+
+proc releaseExtIfc { eid node } {
+    set ifname [getNodeName $node]
+    nexec ifconfig $ifname -vnet $eid
+    nexec ifconfig $ifname up -promisc
+    if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
+	exec ifconfig $ifname destroy
+    }
+}
+
+proc enableIPforwarding { eid node } {
+    pipesExec "jexec $eid\.$node sysctl net.inet.ip.forwarding=1" "hold"
+    pipesExec "jexec $eid\.$node sysctl net.inet6.ip6.forwarding=1" "hold"
+}
+
+proc configDefaultLoIfc { eid node } {
+    pipesExec "jexec $eid\.$node ifconfig lo0 127.0.0.1/24" "hold"
 }
