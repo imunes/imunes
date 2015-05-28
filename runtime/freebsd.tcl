@@ -1584,3 +1584,11 @@ proc enableIPforwarding { eid node } {
 proc configDefaultLoIfc { eid node } {
     pipesExec "jexec $eid\.$node ifconfig lo0 127.0.0.1/24" "hold"
 }
+
+proc getExtIfcs { } {
+    catch { exec ifconfig -l } ifcs
+    foreach ignore "lo* ipfw* tun*" {
+	set ifcs [ lsearch -all -inline -not $ifcs $ignore ]
+    }
+    return "$ifcs"
+}

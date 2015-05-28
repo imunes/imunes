@@ -965,8 +965,11 @@ proc configGUI_nodeName { wi node label } {
     lappend guielements configGUI_nodeName
     ttk::frame $wi.name -borderwidth 6
     ttk::label $wi.name.txt -text $label
-    ttk::entry $wi.name.nodename -width 14 -validate focus
-    $wi.name.nodename insert 0 [lindex [split [getNodeName $node] .] 0]
+    ttk::combobox $wi.name.nodename -width 14 -textvariable extIfc$node
+    set ifcs [getExtIfcs]
+    set current [lindex [split [getNodeName $node] .] 0 ]
+    $wi.name.nodename configure -values [concat UNASSIGNED $ifcs]
+    $wi.name.nodename set $current
     pack $wi.name.txt -side left -anchor e -expand 1 -padx 4 -pady 4
     pack $wi.name.nodename -side left -anchor w -expand 1 -padx 4 -pady 4
     pack $wi.name -fill both
