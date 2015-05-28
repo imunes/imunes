@@ -922,10 +922,8 @@ proc deployCfg {} {
 	    update
 	}
 
-	# XXX - createLinkBetween lnode1 lnode2
-	createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
+	createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2
 	configureLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
-	# XXX
     }
 
     # Start services for the LINKINST hook

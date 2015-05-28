@@ -1503,7 +1503,7 @@ proc createExperimentContainer {} {
 # NAME
 #   createLinkBetween -- create link between
 # SYNOPSIS
-#   createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
+#   createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2
 # FUNCTION
 #   Creates link between two given nodes.
 # INPUTS
@@ -1511,7 +1511,6 @@ proc createExperimentContainer {} {
 #   * lnode2 -- node id of the second node
 #   * iname1 -- interface name on the first node
 #   * iname2 -- interface name on the second node
-#   * link -- link name
 #****
 proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
     upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
