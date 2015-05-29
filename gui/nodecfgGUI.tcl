@@ -1678,7 +1678,11 @@ proc configGUI_nodeNameApply { wi node } {
     global changed badentry showTree
     
     set name [string trim [$wi.name.nodename get]]
-    if {$name != [getNodeName $node]} {
+    if { [regexp {^[0-9A-Za-z][0-9A-Za-z-]*$} $name ] == 0 } {
+	tk_dialog .dialog1 "IMUNES warning" \
+	    "Hostname should contain only letters, digits, and -, and should not start with - (hyphen)." \
+	    info 0 Dismiss
+    } elseif {$name != [getNodeName $node]} {
         setNodeName $node $name
         if { $showTree == 1 } {
 	    refreshTopologyTree
