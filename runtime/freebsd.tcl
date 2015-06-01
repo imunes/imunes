@@ -1235,6 +1235,7 @@ proc runConfOnNode { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global vroot_unionfs
     global viewcustomid vroot_unionfs
+    global execMode
 
     set node_dir [getVrootDir]/$eid/$node
     set node_id "$eid.$node"
@@ -1268,7 +1269,48 @@ proc runConfOnNode { node } {
 	}
     }
 
+    if { $execMode != "batch" } {
+	generateHostsFile $node
+    }
+
     exec sh << $cmds
+}
+
+#****f* freebsd.tcl/generateHostsFile
+# NAME
+#   generateHostsFile -- generate hosts file
+# SYNOPSIS
+#   generateHostsFile $node
+# FUNCTION
+#   Generates /etc/hosts file on the given node containing all the nodes in the
+#   topology.
+# INPUTS
+#   * node -- node id
+#****
+proc generateHostsFile { node } {
+    upvar 0 ::cf::[set ::curcfg]::node_list node_list
+    upvar 0 ::cf::[set ::curcfg]::etchosts etchosts
+    global hostsAutoAssign
+
+    if { $hostsAutoAssign == 1 } {
+	if { [[typemodel $node].virtlayer] == "VIMAGE" } {
+	    if { $etchosts == "" } {
+		foreach iter $node_list {
+		    if { [[typemodel $iter].virtlayer] == "VIMAGE" } {
+			foreach ifc [ifcList $iter] {
+			    if { $ifc != "" } {
+				set ipv4 [lindex [split [getIfcIPv4addr $iter $ifc] "/"] 0]
+				set ifname [getNodeName $iter]
+				set etchosts "$etchosts$ipv4    $ifname\n"
+				break
+			    }
+			}
+		    }
+		}
+	    }
+	    writeDataToNodeFile $node /etc/hosts $etchosts
+	}
+    }
 }
 
 #****f* freebsd.tcl/killAllNodeProcesses
