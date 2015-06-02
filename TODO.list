@@ -9,7 +9,6 @@ annotations:
 - layering of annotations
 - sometimes a rectangle can't be created.
 - undoing resets annotation border color.
-- border width can't be zero.
 - copy/paste annotations
 - keyboard movement of annotations
 - improve color management
