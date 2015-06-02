@@ -1,0 +1,120 @@
+
+NAME
+
+ng_rfee -- a dynamically programmable switch matrix
+
+
+DESCRIPTION
+
+ng_rfee is a dynamically programmable switch matrix netgraph node with
+embedded traffic shaping capabilities, aimed primarily at supporting
+emulation of MANET environments.
+
+A fundamental identifier of objects connected to ng_rfee hooks is a
+small integer number called endpoint identifier (EPID).  EPIDs typically
+correspond to virtual nodes in a MANET experiment running on top of
+ng_rfee switching matrix, and must be unique.
+
+
+HOOKS
+
+This node type currently supports a single hook type:
+
+    linkNNN
+	Transmits and receives raw frames, typically to and from locally
+	connected ng_eiface nodes assigned to virtual nodes.  Each frame
+	received on a link hook will be delivered to other link hooks in
+	accordance with the distribution list configured on the inbound link
+	hook.  In practice, the distribution list may range from being void,
+	i.e. resulting in all received frames being silently discarded,
+	or contain up to MAX_LINK_EPIDS (currently 2048) individual EPIDs
+	associated with hooks to each of which an identical copy of the
+	received frame will be delivered.  Link hooks can be configured
+	to enforce transmit bandwidth emulation, inter-frame delays with
+	random jitter, and probabilistic retransmission of frames.  Moreover,
+	independent propagation delays and bit error rates can be associated
+	with each individual EPID included in the distribution list.
+	Propagation delays and probabilistic packet discards based on BER
+	are enforced on outbound link hooks.  The configuration of link hooks,
+	in particular the list of destination EPIDs and associated propagation
+	delays and BERs, may be changed dynamically at any point in time.
+
+
+CONTROL MESSAGES
+
+This node type supports the generic control messages, plus the following:
+
+        NGM_RFEE_SETLINKCFG, NGM_RFEE_GETLINKCFG
+
+The internal link configuration message format is still subject to change.
+Therefore, currently the recommended method for configuring ng_rfee nodes
+is using ASCII form messages (see below).
+
+
+ASCII FORM CONTROL MESSAGES
+
+This node type supports the generic control messages, plus the following:
+	
+	setlinkcfg, getlinkcfg
+
+
+SHUTDOWN
+
+This node disconnects all link hooks and shuts down upon receipt of a
+NGM_SHUTDOWN control message.
+
+
+EXAMPLES
+
+# Create two local virtual nodes
+jail -c name=n100 vnet persist
+jail -c name=n101 vnet persist
+jexec n100 ifconfig lo0 localhost
+jexec n101 ifconfig lo0 localhost
+
+# Create & configure two ng_eiface nodes and assign them to jails
+ngctl mkpeer eiface ether ether
+ngctl mkpeer eiface ether ether
+ifconfig ngeth0 ether 2:0:0:0:0:0
+ifconfig ngeth1 ether 2:0:0:0:0:1
+ifconfig ngeth0 vnet n100
+ifconfig ngeth1 vnet n101
+jexec n100 ifconfig ngeth0 name eth0
+jexec n101 ifconfig ngeth1 name eth0
+jexec n100 ifconfig eth0 10.0.0.101/24
+jexec n101 ifconfig eth0 10.0.0.102/24
+
+# Create a ng_rfee node
+ngctl mkpeer rfee link0 link0
+
+# Connect ng_eiface nodes to ng_rfee node
+ngctl connect rfee: ngeth0: link0 ether
+ngctl connect rfee: ngeth1: link1 ether
+
+# Per node TX params: local EPID (mandatory), bw, qlen, jitter, dup
+# Per destination params: target EPID (mandatory), delay, per, ber
+
+# Configure an asymettric path between virtual nodes n100 and n101
+# n100 resides on hook link0:
+#	- always transmits at 54 MBps
+#	- transmit queue limited to 20 packets
+#	- avgerage TX inter-frame delay is 1.5 ms
+#	- 4% of all packets are retransmitted
+# n101 resides on hook link1:
+#	- infinite transmit bandwidth
+#	- no TX interframe delays
+#	- no packet retransmissions
+# n100 -> n101 path properties:
+#	- delay 0.5 ms
+#	- BER 2E-6 
+# n101 -> n100 path properties:
+#	- no delay
+#	- no BER
+ngctl msg rfee: setlinkcfg link0 100:jit1.5:dup4:bw54000000:qlen20 101:ber2E-6:dly0.5
+ngctl msg rfee: setlinkcfg link1 101 100
+
+
+SEE ALSO
+
+netgraph(4), ng_eiface(4), ng_ksocket(4), ng_bridge(4), ng_hub(4), ngctl(8),
+jail(8), jexec(8)
