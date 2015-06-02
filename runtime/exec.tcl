@@ -336,7 +336,7 @@ proc checkExternalInterfaces {} {
 	    }
 	    if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
 		# XXX - proc getHostIfcVlanExists
-		if { getHostIfcVlanExists $node $name } {
+		if { [getHostIfcVlanExists $node $name] } {
 		    return 1
 		}
 		# XXX
@@ -918,15 +918,8 @@ proc deployCfg {} {
     incr step
     displayBatchProgress $step $allLinks
 
-    incr startedCount
-    if {$execMode != "batch"} {
-        $w.p configure -value $startedCount
-        update
-    }
-	# XXX - createLinkBetween lnode1 lnode2
-	createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
+	createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2
 	configureLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
-	# XXX
     }
 
     # Start services for the LINKINST hook
@@ -1180,7 +1173,7 @@ proc stopNodeFromMenu { node } {
 proc pipesCreate { } {
     global inst_pipes last_inst_pipe
 
-    set ncpus [lindex [exec sysctl kern.smp.cpus] 1]
+    set ncpus [getCpuCount]
     for {set i 0} {$i < $ncpus} {incr i} {
 	set inst_pipes($i) [open "| sh" r+]
     }

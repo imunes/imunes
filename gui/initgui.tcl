@@ -141,6 +141,7 @@ set showZFSsnapshots 0
 
 set IPv4autoAssign 1
 set IPv6autoAssign 1
+set hostsAutoAssign 0
 
 set showTree 0
 
@@ -432,6 +433,8 @@ menu .menubar.tools -tearoff 0
     -variable IPv4autoAssign
 .menubar.tools add checkbutton -label "IPv6 auto-assign addresses/routes"  \
     -variable IPv6autoAssign
+.menubar.tools add checkbutton -label "Auto-generate /etc/hosts file"  \
+    -variable hostsAutoAssign
 .menubar.tools add separator
 .menubar.tools add command -label "Randomize MAC bytes" -underline 10 \
     -command randomizeMACbytes

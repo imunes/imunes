@@ -623,7 +623,7 @@ proc execResetLinkJitter { eid link } {
 # SYNOPSIS
 #   l3node.nghook $eid $node $ifc
 # FUNCTION
-#   Returns the netgraph node name and the hook name for a given experiment
+#   Returns the netgraph node name and the hook name for the given experiment
 #   id, node id, and interface name.
 # INPUTS
 #   * eid -- experiment id
@@ -651,7 +651,7 @@ proc l3node.nghook { eid node ifc } {
 # SYNOPSIS
 #   vimageCleanup
 # FUNCTION
-#   Called in special circumstances only. If cleans all the imunes objects
+#   Called in special circumstances only. It cleans all the imunes objects
 #   from the kernel (vimages and netgraph nodes).
 #****
 proc vimageCleanup { eid } {
@@ -863,8 +863,6 @@ proc vimageCleanup { eid } {
     statline "Cleanup completed in [expr ([clock milliseconds] - $t_start)/1000.0] seconds."
 }
 
-# XXX denis
-
 #****f* freebsd.tcl/killProcess
 # NAME
 #   killProcess -- kill processes with the given regex
@@ -961,7 +959,16 @@ proc getHostIfcVlanExists { node name } {
     }
 }
 
-# helper func
+#****f* freebsd.tcl/getVrootDir
+# NAME
+#   getVrootDir -- get virtual root directory
+# SYNOPSIS
+#   getVrootDir
+# FUNCTION
+#   Helper function that returns virtual root directory.
+# RESULT
+#   * vroot_dir -- virtual root directory
+#****
 proc getVrootDir {} {
     global vroot_unionfs
 
@@ -988,6 +995,17 @@ proc dumpNgnodesToFile { path } {
     writeDataToFile $path [array get ngnodemap]
 }
 
+#****f* freebsd.tcl/readNgnodesFromFile
+# NAME
+#   readNgnodesFromFile -- read ngnodes list from file
+# SYNOPSIS
+#   readNgnodesFromFile $eid
+# FUNCTION
+#   Sets the global array ngnodemap to the content of the running config file
+#   for the given eid.
+# INPUTS
+#   * exp -- experiment id
+#****
 proc readNgnodesFromFile { exp } {
     upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
     global runtimeDir
@@ -1049,13 +1067,23 @@ proc prepareFilesystemForNode { node } {
     pipesExec "devfs -m $VROOT_RUNTIME_DEV rule applyset" "hold"
 }
 
+#****f* freebsd.tcl/createNodeContainer
+# NAME
+#   createNodeContainer -- create a node container
+# SYNOPSIS
+#   createNodeContainer $node
+# FUNCTION
+#   Creates a jail (container) for the given node.
+# INPUTS
+#   * node -- node id
+#****
 proc createNodeContainer { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     set node_dir [getVrootDir]/$eid/$node
 
     pipesExec "jail -c name=$eid.$node path=$node_dir securelevel=1 \
-	host.hostname=[getNodeName $node] vnet persist" "hold"
+	host.hostname=\"[getNodeName $node]\" vnet persist" "hold"
 }
 
 #****f* freebsd.tcl/createNodePhysIfcs
@@ -1114,6 +1142,16 @@ proc createNodePhysIfcs { node } {
     }
 }
 
+#****f* freebsd.tcl/createNodeLogIfcs
+# NAME
+#   createNodeLogIfcs -- create node logical interfaces
+# SYNOPSIS
+#   createNodeLogIfcs $node
+# FUNCTION
+#   Creates logical interfaces for the given node.
+# INPUTS
+#   * node -- node id
+#****
 proc createNodeLogIfcs { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
@@ -1138,6 +1176,16 @@ proc createNodeLogIfcs { node } {
     }
 }
 
+#****f* freebsd.tcl/configureICMPoptions
+# NAME
+#   configureICMPoptions -- configure ICMP options
+# SYNOPSIS
+#   configureICMPoptions $node
+# FUNCTION
+#  Configures the necessary ICMP sysctls in the given node.
+# INPUTS
+#   * node -- node id
+#****
 proc configureICMPoptions { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
@@ -1147,6 +1195,16 @@ proc configureICMPoptions { node } {
     pipesExec "jexec $node_id sysctl net.inet.icmp.icmplim=0" "hold"
 }
 
+#****f* freebsd.tcl/startIfcsNode
+# NAME
+#   startIfcsNode -- start interfaces on node
+# SYNOPSIS
+#   startIfcsNode $node
+# FUNCTION
+#  Starts all interfaces on the given node.
+# INPUTS
+#   * node -- node id
+#****
 proc startIfcsNode { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
@@ -1163,10 +1221,21 @@ proc startIfcsNode { node } {
     exec sh << $cmds
 }
 
+#****f* freebsd.tcl/runConfOnNode
+# NAME
+#   runConfOnNode -- run configuration script on node
+# SYNOPSIS
+#   runConfOnNode $node
+# FUNCTION
+#   Run startup configuration file on the given node.
+# INPUTS
+#   * node -- node id
+#****
 proc runConfOnNode { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global vroot_unionfs
     global viewcustomid vroot_unionfs
+    global execMode
 
     set node_dir [getVrootDir]/$eid/$node
     set node_id "$eid.$node"
@@ -1186,7 +1255,13 @@ proc runConfOnNode { node } {
     set cmds ""
 
     writeDataToFile $node_dir/$confFile [join $bootcfg "\n"]
-    set cmds "\njexec $node_id $bootcmd $confFile > $node_dir/out.log 2>&1"
+    if {[typemodel $node] in "click_l2 click_l3 router.xorp"} {
+	# click has no daemon mode, run in backgorund
+	# xorp in daemon mode is too slow, run in background
+	set cmds "\njexec $node_id $bootcmd $confFile > $node_dir/out.log 2>&1 &"
+    } else {
+	set cmds "\njexec $node_id $bootcmd $confFile > $node_dir/out.log 2>&1"
+    }
 
     foreach ifc [allIfcList $node] {
 	if {[getIfcOperState $node $ifc] == "down"} {
@@ -1194,9 +1269,61 @@ proc runConfOnNode { node } {
 	}
     }
 
+    if { $execMode != "batch" } {
+	generateHostsFile $node
+    }
+
     exec sh << $cmds
 }
 
+#****f* freebsd.tcl/generateHostsFile
+# NAME
+#   generateHostsFile -- generate hosts file
+# SYNOPSIS
+#   generateHostsFile $node
+# FUNCTION
+#   Generates /etc/hosts file on the given node containing all the nodes in the
+#   topology.
+# INPUTS
+#   * node -- node id
+#****
+proc generateHostsFile { node } {
+    upvar 0 ::cf::[set ::curcfg]::node_list node_list
+    upvar 0 ::cf::[set ::curcfg]::etchosts etchosts
+    global hostsAutoAssign
+
+    if { $hostsAutoAssign == 1 } {
+	if { [[typemodel $node].virtlayer] == "VIMAGE" } {
+	    if { $etchosts == "" } {
+		foreach iter $node_list {
+		    if { [[typemodel $iter].virtlayer] == "VIMAGE" } {
+			foreach ifc [ifcList $iter] {
+			    if { $ifc != "" } {
+				set ipv4 [lindex [split [getIfcIPv4addr $iter $ifc] "/"] 0]
+				set ifname [getNodeName $iter]
+				set etchosts "$etchosts$ipv4    $ifname\n"
+				break
+			    }
+			}
+		    }
+		}
+	    }
+	    writeDataToNodeFile $node /etc/hosts $etchosts
+	}
+    }
+}
+
+#****f* freebsd.tcl/killAllNodeProcesses
+# NAME
+#   killAllNodeProcesses -- kill all node processes
+# SYNOPSIS
+#   killAllNodeProcesses $eid $node
+# FUNCTION
+#   Kills all processes in the given node.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
 proc killAllNodeProcesses { eid node } {
     set node_id "$eid.$node"
 
@@ -1204,6 +1331,17 @@ proc killAllNodeProcesses { eid node } {
     catch "exec jexec $node_id tcpdrop -a 2> /dev/null"
 }
 
+#****f* freebsd.tcl/removeNodeIfcIPaddrs
+# NAME
+#   removeNodeIfcIPaddrs -- remove node iterfaces' IP addresses
+# SYNOPSIS
+#   removeNodeIfcIPaddrs $eid $node
+# FUNCTION
+#   Remove all IPv4 and IPv6 addresses from interfaces on the given node.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
 proc removeNodeIfcIPaddrs { eid node } {
     set node_id "$eid.$node"
 
@@ -1217,20 +1355,52 @@ proc removeNodeIfcIPaddrs { eid node } {
     }
 }
 
+#****f* freebsd.tcl/destroyNodeVirtIfcs
+# NAME
+#   destroyNodeVirtIfcs -- destroy node virtual interfaces
+# SYNOPSIS
+#   destroyNodeVirtIfcs $eid $node
+# FUNCTION
+#   Destroy any virtual interfaces (tun, vlan, gif, ..) before removing the #
+#   jail. This is to avoid possible kernel panics.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
 proc destroyNodeVirtIfcs { eid node } {
     set node_id $eid.$node
 
-    # Destroy any virtual interfaces (tun, vlan, gif, ..) before removing the
-    # jail. This is to avoid possible kernel panics.
     pipesExec "for iface in `jexec $node_id ifconfig -l`; do jexec $node_id ifconfig \$iface destroy; done" "hold"
 }
 
+#****f* freebsd.tcl/removeNodeContainer
+# NAME
+#   removeNodeContainer -- remove node container
+# SYNOPSIS
+#   removeNodeContainer $eid $node
+# FUNCTION
+#   Removes the jail (container) of the given node.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
 proc removeNodeContainer { eid node } {
     set node_id $eid.$node
 
     pipesExec "jail -r $node_id" "hold"
 }
 
+#****f* freebsd.tcl/removeNodeFS
+# NAME
+#   removeNodeFS -- remove node filesystem
+# SYNOPSIS
+#   removeNodeFS $eid $node
+# FUNCTION
+#   Removes the filesystem of the given node.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
 proc removeNodeFS { eid node } {
     global vroot_unionfs vroot_linprocfs
 
@@ -1253,6 +1423,14 @@ proc removeNodeFS { eid node } {
     }
 }
 
+#****f* freebsd.tcl/loadKernelModules
+# NAME
+#   loadKernelModules -- load kernel modules
+# SYNOPSIS
+#   loadKernelModules
+# FUNCTION
+#   Load necessary kernel modules.
+#****
 proc loadKernelModules {} {
     global all_modules_list
 
@@ -1274,6 +1452,14 @@ proc loadKernelModules {} {
     }
 }
 
+#****f* freebsd.tcl/prepareVirtualFS
+# NAME
+#   prepareVirtualFS -- prepare virtual filesystem
+# SYNOPSIS
+#   prepareVirtualFS
+# FUNCTION
+#   Prepares all necessary files for the virtual filesystem.
+#****
 proc prepareVirtualFS {} {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global vroot_unionfs
@@ -1285,7 +1471,14 @@ proc prepareVirtualFS {} {
     }
 }
 
-# XXX - comment procedure
+#****f* freebsd.tcl/prepareDevfs
+# NAME
+#   prepareDevfs -- prepare dev filesystem
+# SYNOPSIS
+#   prepareDevfs
+# FUNCTION
+#   Prepares devfs rules necessary for virtual nodes.
+#****
 proc prepareDevfs {} {
     global devfs_number
 
@@ -1332,6 +1525,14 @@ proc prepareDevfs {} {
     }
 }
 
+#****f* freebsd.tcl/createExperimentContainer
+# NAME
+#   createExperimentContainer -- create experiment container
+# SYNOPSIS
+#   createExperimentContainer
+# FUNCTION
+#   Creates a root jail (container) for the current experiment.
+#****
 proc createExperimentContainer {} {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::eid eid
@@ -1340,8 +1541,20 @@ proc createExperimentContainer {} {
     exec jail -c name=$eid vnet children.max=[llength $node_list] persist
 }
 
-# XXX - createLinkBetween lnode1 lnode2
-proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
+#****f* freebsd.tcl/createLinkBetween
+# NAME
+#   createLinkBetween -- create link between
+# SYNOPSIS
+#   createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2
+# FUNCTION
+#   Creates link between two given nodes.
+# INPUTS
+#   * lnode1 -- node id of the first node
+#   * lnode2 -- node id of the second node
+#   * iname1 -- interface name on the first node
+#   * iname2 -- interface name on the second node
+#****
+proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
     upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global debug
@@ -1373,6 +1586,20 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     }
 }
 
+#****f* freebsd.tcl/configureLinkBetween
+# NAME
+#   configureLinkBetween -- configure link between
+# SYNOPSIS
+#   configureLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
+# FUNCTION
+#   Configures link between two given nodes.
+# INPUTS
+#   * lnode1 -- node id of the first node
+#   * lnode2 -- node id of the second node
+#   * iname1 -- interface name on the first node
+#   * iname2 -- interface name on the second node
+#   * link -- link name
+#****
 proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global linkJitterConfiguration debug
@@ -1420,10 +1647,34 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     }
 }
 
+#****f* freebsd.tcl/destroyLinkBetween
+# NAME
+#   destroyLinkBetween -- destroy link between
+# SYNOPSIS
+#   destroyLinkBetween $eid $lnode1 $lnode2
+# FUNCTION
+#   Destroys link between two given nodes.
+# INPUTS
+#   * eid -- experiment id
+#   * lnode1 -- node id of the first node
+#   * lnode2 -- node id of the second node
+#****
 proc destroyLinkBetween { eid lnode1 lnode2 } {
     pipesExec "jexec $eid ngctl msg $lnode1-$lnode2: shutdown"
 }
 
+#****f* freebsd.tcl/destroyNetgraphNodes
+# NAME
+#   destroyNetgraphNodes -- destroy netgraph nodes
+# SYNOPSIS
+#   destroyNetgraphNodes $eid $ngraphs $widget
+# FUNCTION
+#   Destroys all netgraph nodes.
+# INPUTS
+#   * eid -- experiment id
+#   * ngraphs -- list of ngraphs nodes
+#   * widget -- status widget
+#****
 proc destroyNetgraphNodes { eid ngraphs widget } {
     global execMode
 
@@ -1444,6 +1695,17 @@ proc destroyNetgraphNodes { eid ngraphs widget } {
     }
 }
 
+#****f* freebsd.tcl/destroyVirtNodeIfcs
+# NAME
+#   destroyVirtNodeIfcs -- destroy virtual node interfaces
+# SYNOPSIS
+#   destroyVirtNodeIfcs $eid $vimages
+# FUNCTION
+#   Destroys all virtual node interfaces.
+# INPUTS
+#   * eid -- experiment id
+#   * vimages -- list of virtual nodes
+#****
 proc destroyVirtNodeIfcs { eid vimages } {
     upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
 
@@ -1462,6 +1724,17 @@ proc destroyVirtNodeIfcs { eid vimages } {
     pipesClose
 }
 
+#****f* freebsd.tcl/removeExperimentContainer
+# NAME
+#   removeExperimentContainer -- remove experiment container
+# SYNOPSIS
+#   removeExperimentContainer $eid $widget
+# FUNCTION
+#   Removes the root jail of the given experiment.
+# INPUTS
+#   * eid -- experiment id
+#   * widget -- status widget
+#****
 proc removeExperimentContainer { eid widget } {
     global vroot_unionfs execMode
 
@@ -1497,40 +1770,157 @@ proc removeExperimentContainer { eid widget } {
     }
 }
 
-#****f* freebsd.tcl/pipesCreate
+
+#****f* freebsd.tcl/l2node.instantiate
 # NAME
-#   pipesCreate -- pipes create
+#   l2node.instantiate -- instantiate
 # SYNOPSIS
-#   pipesCreate
+#   l2node.instantiate $eid $node
 # FUNCTION
-#   Create pipes for parallel execution to the shell.
+#   Procedure l2node.instantiate creates a new netgraph node of the appropriate type.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- id of the node (type of the node is either lanswitch or hub)
 #****
-proc pipesCreate {} {
-    global inst_pipes last_inst_pipe
-
-    set ncpus [lindex [exec sysctl kern.smp.cpus] 1]
-    for {set i 0} {$i < $ncpus} {incr i} {
-    set inst_pipes($i) [open "| sh" r+]
-    }
-    set last_inst_pipe 0
-}
-
-proc runNode {} {}
-
-proc lanswitch.virtlayer {} {
-    return NETGRAPH
-}
-
-proc createNetgraphNode { eid node } {
+proc l2node.instantiate { eid node } {
     upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
 
-    set t [exec printf "mkpeer bridge link0 link0\nmsg .link0 setpersistent\nshow ." | jexec $eid ngctl -f -]
+    switch -exact [nodeType $node] {
+	lanswitch {
+	    set ngtype bridge
+	}
+	hub {
+	    set ngtype hub
+	}
+    }
+
+    set t [exec printf "mkpeer $ngtype link0 link0\nmsg .link0 setpersistent\nshow ." | jexec $eid ngctl -f -]
     set tlen [string length $t]
     set id [string range $t [expr $tlen - 31] [expr $tlen - 24]]
     catch {exec jexec $eid ngctl name \[$id\]: $node}
     set ngnodemap($eid\.$node) $node
 }
 
-proc destroyNetgraphNode { eid node } {
+#****f* freebsd.tcl/l2node.destroy
+# NAME
+#   l2node.destroy -- destroy
+# SYNOPSIS
+#   l2node.destroy $eid $node
+# FUNCTION
+#   Destroys a l2node (netgraph) node by sending a shutdown
+#   message.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- id of the node
+#****
+proc l2node.destroy { eid node } {
     catch { nexec jexec $eid ngctl msg $node: shutdown }
+}
+
+#****f* freebsd.tcl/getCpuCount
+# NAME
+#   getCpuCount -- get CPU count
+# SYNOPSIS
+#   getCpuCount
+# FUNCTION
+#   Gets a CPU count of the host machine.
+# RESULT
+#   * cpucount - CPU count
+#****
+proc getCpuCount {} {
+    return [lindex [exec sysctl kern.smp.cpus] 1]
+}
+
+#****f* freebsd.tcl/captureExtIfc
+# NAME
+#   captureExtIfc -- capture external interfaces
+# SYNOPSIS
+#   captureExtIfc $eid $node
+# FUNCTION
+#   Captures the external interfaces given by the given rj45 node.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
+proc captureExtIfc { eid node } {
+    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
+
+    set ifname [getNodeName $node]
+    if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
+	exec ifconfig $ifname create
+    }
+    set ngifname [string map {. _} $ifname]
+    set ngnodemap($ifname) $ngifname
+    nexec ifconfig $ifname vnet $eid
+    nexec jexec $eid ifconfig $ifname up promisc
+}
+
+#****f* freebsd.tcl/releaseExtIfc
+# NAME
+#   releaseExtIfc -- release external interfaces
+# SYNOPSIS
+#   releaseExtIfc $eid $node
+# FUNCTION
+#   Releases the external interfaces captured by the given rj45 node.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
+proc releaseExtIfc { eid node } {
+    set ifname [getNodeName $node]
+    nexec ifconfig $ifname -vnet $eid
+    nexec ifconfig $ifname up -promisc
+    if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
+	exec ifconfig $ifname destroy
+    }
+}
+
+#****f* freebsd.tcl/enableIPforwarding
+# NAME
+#   enableIPforwarding -- enable IP forwarding
+# SYNOPSIS
+#   enableIPforwarding $eid $node
+# FUNCTION
+#   Enables IPv4 and IPv6 forwarding on the given node.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
+proc enableIPforwarding { eid node } {
+    pipesExec "jexec $eid\.$node sysctl net.inet.ip.forwarding=1" "hold"
+    pipesExec "jexec $eid\.$node sysctl net.inet6.ip6.forwarding=1" "hold"
+}
+
+#****f* freebsd.tcl/configDefaultLoIfc
+# NAME
+#   configDefaultLoIfc -- configure default logical interface
+# SYNOPSIS
+#   configDefaultLoIfc $eid $node
+# FUNCTION
+#   Configures the default logical interface address for the given node.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
+proc configDefaultLoIfc { eid node } {
+    pipesExec "jexec $eid\.$node ifconfig lo0 127.0.0.1/24" "hold"
+}
+
+#****f* freebsd.tcl/getExtIfcs
+# NAME
+#   getExtIfcs -- get external interfaces
+# SYNOPSIS
+#   getExtIfcs
+# FUNCTION
+#   Returns the list of all available external interfaces except those defined
+#   in the ignore loop.
+# RESULT
+#   * ifsc - list of interfaces
+#****
+proc getExtIfcs { } {
+    catch { exec ifconfig -l } ifcs
+    foreach ignore "lo* ipfw* tun*" {
+	set ifcs [ lsearch -all -inline -not $ifcs $ignore ]
+    }
+    return "$ifcs"
 }

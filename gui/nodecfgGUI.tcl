@@ -965,8 +965,16 @@ proc configGUI_nodeName { wi node label } {
     lappend guielements configGUI_nodeName
     ttk::frame $wi.name -borderwidth 6
     ttk::label $wi.name.txt -text $label
-    ttk::entry $wi.name.nodename -width 14 -validate focus
-    $wi.name.nodename insert 0 [lindex [split [getNodeName $node] .] 0]
+
+    if { [typemodel $node] == "rj45" } {
+	ttk::combobox $wi.name.nodename -width 14 -textvariable extIfc$node
+	set ifcs [getExtIfcs]
+	$wi.name.nodename configure -values [concat UNASSIGNED $ifcs]
+	$wi.name.nodename set [lindex [split [getNodeName $node] .] 0 ]
+    } else {
+	ttk::entry $wi.name.nodename -width 14 -validate focus
+	$wi.name.nodename insert 0 [lindex [split [getNodeName $node] .] 0]
+    }
     pack $wi.name.txt -side left -anchor e -expand 1 -padx 4 -pady 4
     pack $wi.name.nodename -side left -anchor w -expand 1 -padx 4 -pady 4
     pack $wi.name -fill both
@@ -1670,7 +1678,11 @@ proc configGUI_nodeNameApply { wi node } {
     global changed badentry showTree
     
     set name [string trim [$wi.name.nodename get]]
-    if {$name != [getNodeName $node]} {
+    if { [regexp {^[0-9A-Za-z][0-9A-Za-z-]*$} $name ] == 0 } {
+	tk_dialog .dialog1 "IMUNES warning" \
+	    "Hostname should contain only letters, digits, and -, and should not start with - (hyphen)." \
+	    info 0 Dismiss
+    } elseif {$name != [getNodeName $node]} {
         setNodeName $node $name
         if { $showTree == 1 } {
 	    refreshTopologyTree
