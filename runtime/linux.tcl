@@ -36,24 +36,6 @@ proc getHostIfcList {} {
 
 proc createExperimentContainer {} {}
 
-#****f* linux.tcl/pipesCreate
-# NAME
-#   pipesCreate -- pipes create
-# SYNOPSIS
-#   pipesCreate
-# FUNCTION
-#   Create pipes for parallel execution to the shell.
-#****
-proc pipesCreate {} {
-    global inst_pipes last_inst_pipe
-
-    set ncpus [exec grep -c processor /proc/cpuinfo]
-    for {set i 0} {$i < $ncpus} {incr i} {
-    set inst_pipes($i) [open "| sh" r+]
-    }
-    set last_inst_pipe 0
-}
-
 proc loadKernelModules {} {
     global all_modules_list
 
@@ -88,8 +70,16 @@ proc prepareFilesystemForNode { node } {
 proc createNodeContainer { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    catch {exec docker create --cap-add=NET_ADMIN --net='none' -h [getNodeName $node] \
-        --name $eid.$node gcetusic/imunes /sbin/my_init 2> /dev/null}
+    set node_id "$eid.$node"
+
+    catch {exec docker run --cap-add=NET_ADMIN --net='none' -h [getNodeName $node] \
+        --name $node_id gcetusic/imunes /sbin/my_init > /dev/null &}
+
+    set status ""
+    while { [string match 'true' $status] != 1 } {
+        catch {exec docker inspect --format '{{.State.Running}}' $node_id} status
+    }
+
 }
 
 #****f* linux.tcl/createNodePhysIfcs
@@ -114,16 +104,18 @@ proc configureICMPoptions { node } {
     # FIXME: implement in Linux
 }
 
-proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
+proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
+    set link [linkByPeers $lnode1 $lnode2]
+
     # FIXME: max bridgename length is 15
-    if { [[typemodel $lnode1].virtlayer] == "OPENVSWITCH" && \
-        [[typemodel $lnode2].virtlayer] == "OPENVSWITCH" } {
+    if { [[typemodel $lnode1].virtlayer] == "NETGRAPH" && \
+        [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
         exec ovs-vsctl add-port $eid.$lnode1 $eid.$lnode1.$ifname1 -- set interface $eid.$lnode1.$ifname1 type=patch options:peer=$eid.$lnode2.$ifname2
         exec ovs-vsctl add-port $eid.$lnode2 $eid.$lnode2.$ifname2 -- set interface $eid.$lnode2.$ifname2 type=patch options:peer=$eid.$lnode1.$ifname1
-    } elseif { [[typemodel $lnode1].virtlayer] == "OPENVSWITCH" && \
-        [[typemodel $lnode2].virtlayer] == "OPENVSWITCH" } {
+    } elseif { [[typemodel $lnode1].virtlayer] == "VIMAGE" && \
+        [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
         exec ovs-vsctl add-br $eid.$link
     }
 }
@@ -149,24 +141,6 @@ proc startIfcsNode { node } {
                 }
             }
         }
-    }
-}
-
-proc runNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    set node_id "$eid.$node"
-
-    set rc [catch {exec docker inspect --format '{{.Created}}' $node_id} status]
-    while { [string match 0 $rc] != 1 } {
-        set rc [catch {exec docker inspect --format '{{.Created}}' $node_id} status]
-    }
-
-    exec docker start $node_id > /dev/null &
-    catch {exec docker inspect --format '{{.State.ExitCode}}' $node_id} status
-    while { [string match '0' $status] != 1 } {
-        exec docker start $node_id > /dev/null &
-        catch {exec docker inspect --format '{{.State.ExitCode}}' $node_id} status
     }
 }
 
@@ -292,24 +266,20 @@ proc removeExperimentContainer { eid widget } {
     catch "exec rm -fr $VROOT_BASE/$eid &"
 }
 
-proc lanswitch.virtlayer {} {
-    return OPENVSWITCH
-}
-
-proc createOpenvSwitchNode { eid node } {
+proc createNetgraphNode { eid node } {
     exec ovs-vsctl add-br $eid.$node
 }
 
-proc destroyOpenvSwitchNode { eid node } {
+proc destroyNetgraphNode { eid node } {
     exec ovs-vsctl del-br $eid.$node
 }
 
-proc destroyOpenvSwitchNodes { eid switches widget } {
+proc destroyNetgraphNodes { eid switches widget } {
     global execMode
 
     # destroying openvswitch nodes
     if { $switches != "" } {
-    statline "Shutting down openvswitch nodes..."
+    statline "Shutting down netgraph nodes..."
     set i 0
     foreach node $switches {
         incr i
@@ -322,4 +292,48 @@ proc destroyOpenvSwitchNodes { eid switches widget } {
     }
     statline ""
     }
+}
+
+#****f* linux.tcl/getCpuCount
+# NAME
+#   getCpuCount -- get CPU count
+# SYNOPSIS
+#   getCpuCount
+# FUNCTION
+#   Gets a CPU count of the host machine.
+# RESULT
+#   * cpucount - CPU count
+#****
+proc getCpuCount {} {
+    return [lindex [exec grep -c processor /proc/cpuinfo] 0]
+}
+
+#****f* linux.tcl/l2node.instantiate
+# NAME
+#   l2node.instantiate -- instantiate
+# SYNOPSIS
+#   l2node.instantiate $eid $node
+# FUNCTION
+#   Procedure l2node.instantiate creates a new netgraph node of the appropriate type.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- id of the node (type of the node is either lanswitch or hub)
+#****
+proc l2node.instantiate { eid node } {
+    createNetgraphNode $eid $node
+}
+
+#****f* linux.tcl/l2node.destroy
+# NAME
+#   l2node.destroy -- destroy
+# SYNOPSIS
+#   l2node.destroy $eid $node
+# FUNCTION
+#   Destroys a l2 node.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- id of the node
+#****
+proc l2node.destroy { eid node } {
+    destroyNetgraphNode $eid $node
 }

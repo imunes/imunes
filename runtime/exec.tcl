@@ -721,8 +721,6 @@ proc l3node.instantiate { eid node } {
 #   * node -- node id
 #****
 proc l3node.start { eid node } {
-    # XXX
-    runNode $node
     # XXX - startIfcsNode node
     startIfcsNode $node
     # XXX - runConfOnNode node
@@ -1015,9 +1013,6 @@ proc terminateAllNodes { eid } {
     if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
         lappend ngraphs $node
     }
-    if { [[typemodel $node].virtlayer] == "OPENVSWITCH" } {
-        lappend switches $node
-    }
     if { [[typemodel $node].virtlayer] == "VIMAGE" } {
         lappend vimages $node
     }
@@ -1061,8 +1056,6 @@ proc terminateAllNodes { eid } {
 
     # XXX - destroyNetgraphNodes ngraphs
     destroyNetgraphNodes $eid $ngraphs $w
-    # XXX - destroyOpenvSwitchNodes switches
-    destroyOpenvSwitchNodes $eid $switches $w
     # XXX - destroyVirtNodeIfcs vimages
     destroyVirtNodeIfcs $eid $vimages
     # XXX
@@ -1222,23 +1215,5 @@ proc pipesClose { } {
 	# A dummy read, just to flush the output from the command pipeline
 	read $inst_pipes($i)
 	catch {close $inst_pipes($i)}
-    }
-}
-
-proc l2node.instantiate { eid node } {
-    if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
-        createNetgraphNode $eid $node
-    }
-    if { [[typemodel $node].virtlayer] == "OPENVSWITCH" } {
-        createOpenvSwitchNode $eid $node
-    }
-}
-
-proc l2node.destroy { eid node } {
-    if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
-        destroyNetgraphNode $eid $node
-    }
-    if { [[typemodel $node].virtlayer] == "OPENVSWITCH" } {
-        destroyOpenvSwitchNode $eid $node
     }
 }
