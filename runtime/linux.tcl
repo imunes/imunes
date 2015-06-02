@@ -1,3 +1,174 @@
+#****f* linux.tcl/execCmdNode
+# NAME
+#   execCmdNode -- execute command on virtual node
+# SYNOPSIS
+#   execCmdNode $node $cmd
+# FUNCTION
+#   Executes a command on a virtual node and returns the output.
+# INPUTS
+#   * node -- virtual node id
+#   * cmd -- command to execute
+# RESULT
+#   * returns the execution output
+#****
+proc execCmdNode { node cmd } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    catch {eval [concat "nexec docker exec " $eid.$node $cmd] } output
+    return $output
+}
+
+#****f* linux.tcl/checkForApplications
+# NAME
+#   checkForApplications -- check whether applications exist
+# SYNOPSIS
+#   checkForApplications $node $app_list
+# FUNCTION
+#   Checks whether a list of applications exist on the virtual node by using
+#   the which command.
+# INPUTS
+#   * node -- virtual node id
+#   * app_list -- list of applications
+# RESULT
+#   * returns 0 if the application exists, otherwise it returns 1.
+#****
+proc checkForApplications { node app_list } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    foreach app $app_list {
+    set exists [ catch { exec docker exec $eid.$node which $app } err ]
+    if { $exists } {
+        return 1
+    }
+    }
+    return 0
+}
+
+#****f* linux.tcl/startWiresharkOnNodeIfc
+# NAME
+#   startWiresharkOnNodeIfc -- start wireshark on an interface
+# SYNOPSIS
+#   startWiresharkOnNodeIfc $node $ifc
+# FUNCTION
+#   Start Wireshark on a virtual node on the specified interface.
+# INPUTS
+#   * node -- virtual node id
+#   * ifc -- virtual node interface
+#****
+proc startWiresharkOnNodeIfc { node ifc } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    if {[file exists /usr/local/bin/startxcmd] == 1 && \
+    [checkForApplications $node "wireshark"] == 0} {
+    startXappOnNode $node "wireshark -ki $ifc"
+    } else {
+    exec docker exec $eid.$node tcpdump -s 0 -U -w - -i $ifc 2>/dev/null |\
+        wireshark -o "gui.window_title:$ifc@[getNodeName $node] ($eid)" -k -i - &
+    }
+}
+
+#****f* linux.tcl/startXappOnNode
+# NAME
+#   startXappOnNode -- start X application in a virtual node
+# SYNOPSIS
+#   startXappOnNode $node $app
+# FUNCTION
+#   Start X application on virtual node
+# INPUTS
+#   * node -- virtual node id
+#   * app -- application to start
+#****
+proc startXappOnNode { node app } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    global debug
+    if {[file exists /usr/local/bin/socat] != 1 } {
+    puts "To run X applications on the node, install socat on your host."
+    return
+    }
+
+    set logfile "/dev/null"
+    if {$debug} {
+    set logfile "/tmp/startxcmd_$eid\_$node.log"
+    }
+
+    eval exec startxcmd [getNodeName $node]@$eid $app > $logfile 2>> $logfile &
+}
+
+#****f* linux.tcl/startTcpdumpOnNodeIfc
+# NAME
+#   startTcpdumpOnNodeIfc -- start tcpdump on an interface
+# SYNOPSIS
+#   startTcpdumpOnNodeIfc $node $ifc
+# FUNCTION
+#   Start tcpdump in xterm on a virtual node on the specified interface.
+# INPUTS
+#   * node -- virtual node id
+#   * ifc -- virtual node interface
+#****
+proc startTcpdumpOnNodeIfc { node ifc } {
+    if {[checkForApplications $node "tcpdump"] == 0} {
+    spawnShell $node "tcpdump -ni $ifc"
+    }
+}
+
+#****f* linux.tcl/existingShells
+# NAME
+#   existingShells -- check which shells exist in a node
+# SYNOPSIS
+#   existingShells $shells $node
+# FUNCTION
+#   This procedure checks which of the provided shells are available
+#   in a running node.
+# INPUTS
+#   * shells -- list of shells.
+#   * node -- node id of the node for which the check is performed.
+#****
+proc existingShells { shells node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set existing []
+    foreach shell $shells {
+        set cmd "docker exec $eid.$node which $shell"
+        set err [catch {eval exec $cmd} res]
+        if  {!$err} {
+            lappend existing $res
+        }
+    }
+    return $existing
+}
+
+#****f* linux.tcl/spawnShell
+# NAME
+#   spawnShell -- spawn shell
+# SYNOPSIS
+#   spawnShell $node $cmd
+# FUNCTION
+#   This procedure spawns a new shell for a specified node.
+#   The shell is specified in cmd parameter.
+# INPUTS
+#   * node -- node id of the node for which the shell is spawned.
+#   * cmd -- the path to the shell.
+#****
+proc spawnShell { node cmd } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set node_id $eid\.$node
+    # FIXME: set terminal name
+    nexec gnome-terminal -e "docker exec -it $node_id $cmd" &
+}
+
+#****f* linux.tcl/fetchRunningExperiments
+# NAME
+#   fetchRunningExperiments -- fetch running experiments
+# SYNOPSIS
+#   fetchRunningExperiments
+# FUNCTION
+#   Returns IDs of all running experiments as a list.
+# RESULT
+#   * exp_list -- experiment id list
+#****
+proc fetchRunningExperiments {} {}
+    # FIXME: make this work in Linux
+
 #****f* linux.tcl/allSnapshotsAvailable
 # NAME
 #   allSnapshotsAvailable -- all snapshots available
@@ -156,63 +327,6 @@ proc killAllNodeProcesses { eid node } {
     set node_id "$eid.$node"
 
     catch "exec docker stop $node_id"
-}
-
-proc existingShells { shells node } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    set existing []
-    foreach shell $shells {
-        set cmd "docker exec $eid.$node which $shell"
-        set err [catch {eval exec $cmd} res]
-        if  {!$err} {
-            lappend existing $res
-        }
-    }
-    return $existing
-}
-
-#****f* linux.tcl/spawnShell
-# NAME
-#   spawnShell -- spawn shell
-# SYNOPSIS
-#   spawnShell $node $cmd
-# FUNCTION
-#   This procedure spawns a new shell for a specified node.
-#   The shell is specified in cmd parameter.
-# INPUTS
-#   * node -- node id of the node for which the shell is spawned.
-#   * cmd -- the path to the shell.
-#****
-proc spawnShell { node cmd } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    set node_id $eid\.$node
-
-    nexec gnome-terminal -e "docker exec -it $node_id $cmd" &
-}
-
-#****f* linux.tcl/startWiresharkOnNodeIfc
-# NAME
-#   startWiresharkOnNodeIfc -- start wireshark on an interface
-# SYNOPSIS
-#   startWiresharkOnNodeIfc $node $ifc
-# FUNCTION
-#   Start Wireshark on a virtual node on the specified interface.
-# INPUTS
-#   * node -- virtual node id
-#   * ifc -- virtual node interface
-#****
-proc startWiresharkOnNodeIfc { node ifc } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    if {[file exists /usr/local/bin/startxcmd] == 1 && \
-    [checkForApplications $node "wireshark"] == 0} {
-    startXappOnNode $node "wireshark -ki $ifc"
-    } else {
-    exec docker exec $eid.$node tcpdump -s 0 -U -w - -i $ifc 2>/dev/null |\
-        wireshark -o "gui.window_title:$ifc@[getNodeName $node] ($eid)" -k -i - &
-    }
 }
 
 proc destroyVirtNodeIfcs { eid vimages } {}
