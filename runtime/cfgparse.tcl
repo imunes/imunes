@@ -586,6 +586,9 @@ proc loadCfg { cfg } {
 			width {
 			    lappend $object "width $value"
 			}
+			bordercolor {
+			    lappend $object "bordercolor $value"
+			}
 		    }
 		} elseif {"$class" == "image"} {
 		    upvar 0 ::cf::[set ::curcfg]::$object $object

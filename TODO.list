@@ -8,7 +8,6 @@ annotations:
 - select annotation while and after resizing
 - layering of annotations
 - sometimes a rectangle can't be created.
-- undoing resets annotation border color.
 - copy/paste annotations
 - keyboard movement of annotations
 - improve color management
