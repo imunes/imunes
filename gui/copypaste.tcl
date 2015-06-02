@@ -57,7 +57,7 @@ proc cutSelection {} {
 proc copySelection {} {
     global curcfg
 	
-    if {[string equal [selectedRealNodes] {}]} {
+    if {[string equal [selectedNodes] {}]} {
       return
     }
 
@@ -65,6 +65,16 @@ proc copySelection {} {
     namespace eval ::cf::clipboard {}
     upvar 0 ::cf::clipboard::node_list node_list
     upvar 0 ::cf::clipboard::link_list link_list
+    upvar 0 ::cf::clipboard::annotation_list annotation_list
+
+    set annotation_list {}
+    
+    foreach annotation [selectedNodes] {
+	if { $annotation ni [selectedRealNodes] } {
+	    lappend annotation_list $annotation
+	    set ::cf::clipboard::$annotation [set ::cf::[set ::curcfg]::$annotation]
+	}
+    }
 
     # Copy selected nodes and interconnecting links to the clipboard
     set node_list [selectedRealNodes]
@@ -115,6 +125,7 @@ proc paste {} {
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
+    upvar 0 ::cf::[set ::curcfg]::annotation_list annotation_list
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
     global sizex sizey
@@ -125,6 +136,18 @@ proc paste {} {
     }
 
     set copypaste_list ""
+
+    # Paste annotations from the clipboard and rename them on the fly
+    foreach annotation_orig [set ::cf::clipboard::annotation_list] {
+	set annotation_copy [newObjectId annotation]
+	set annotation_map($annotation_orig) $annotation_copy
+	upvar 0 ::cf::[set ::curcfg]::$annotation_copy $annotation_copy
+	set $annotation_copy [set ::cf::clipboard::$annotation_orig]
+	lappend annotation_list $annotation_copy
+	setNodeCanvas $annotation_copy $curcanvas
+	drawAnnotation $annotation_copy
+    }
+    raiseAll .panwin.f1.c
 
     # Nothing to do if clipboard is empty
     if {[set ::cf::clipboard::node_list] == {}} {
