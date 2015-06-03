@@ -243,7 +243,7 @@ proc createNodeContainer { node } {
 
     set node_id "$eid.$node"
 
-    catch {exec docker run --cap-add=NET_ADMIN --net='none' -h [getNodeName $node] \
+    catch {exec docker run --cap-add=ALL --net='none' -h [getNodeName $node] \
         --name $node_id gcetusic/imunes /sbin/my_init > /dev/null &}
 
     set status ""
@@ -450,4 +450,35 @@ proc l2node.instantiate { eid node } {
 #****
 proc l2node.destroy { eid node } {
     destroyNetgraphNode $eid $node
+}
+
+#****f* linux.tcl/enableIPforwarding
+# NAME
+#   enableIPforwarding -- enable IP forwarding
+# SYNOPSIS
+#   enableIPforwarding $eid $node
+# FUNCTION
+#   Enables IPv4 and IPv6 forwarding on the given node.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
+proc enableIPforwarding { eid node } {
+    pipesExec "docker exec $eid\.$node sysctl net.ipv6.conf.all.forwarding=1" "hold"
+    pipesExec "docker exec $eid\.$node sysctl net.ipv4.conf.all.forwarding=1" "hold"
+}
+
+#****f* linux.tcl/configDefaultLoIfc
+# NAME
+#   configDefaultLoIfc -- configure default logical interface
+# SYNOPSIS
+#   configDefaultLoIfc $eid $node
+# FUNCTION
+#   Configures the default logical interface address for the given node.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
+proc configDefaultLoIfc { eid node } {
+    pipesExec "docker exec $eid\.$node ifconfig lo 127.0.0.1/24" "hold"
 }
