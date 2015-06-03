@@ -199,7 +199,7 @@ proc getHostIfcList {} {
     # fetch interface list from the system
     set extifcs [exec ls /sys/class/net]
     # exclude loopback interface
-    set ilo [lsearch $extifcs lo0]
+    set ilo [lsearch $extifcs lo]
     set extifcs [lreplace $extifcs $ilo $ilo]
 
     return $extifcs
@@ -481,4 +481,23 @@ proc enableIPforwarding { eid node } {
 #****
 proc configDefaultLoIfc { eid node } {
     pipesExec "docker exec $eid\.$node ifconfig lo 127.0.0.1/24" "hold"
+}
+
+#****f* linux.tcl/getExtIfcs
+# NAME
+#   getExtIfcs -- get external interfaces
+# SYNOPSIS
+#   getExtIfcs
+# FUNCTION
+#   Returns the list of all available external interfaces except those defined
+#   in the ignore loop.
+# RESULT
+#   * ifsc - list of interfaces
+#****
+proc getExtIfcs { } {
+    catch { exec ls /sys/class/net } ifcs
+    foreach ignore "lo* ipfw* tun*" {
+    set ifcs [ lsearch -all -inline -not $ifcs $ignore ]
+    }
+    return "$ifcs"
 }
