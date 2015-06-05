@@ -2768,7 +2768,7 @@ proc nodeCfggenIfconfigIPv6 { node } {
 proc nodeCfggenRouteIPv4 { node } {
     set cfg {}
     foreach statrte [getStatIPv4routes $node] {
-	lappend cfg "route -q add -inet $statrte"
+	lappend cfg [getIPv4RouteCmd $statrte]
     }
     return $cfg
 }
@@ -2788,7 +2788,7 @@ proc nodeCfggenRouteIPv4 { node } {
 proc nodeCfggenRouteIPv6 { node } {
     set cfg {}
     foreach statrte [getStatIPv6routes $node] {
-	lappend cfg "route -q add -inet6 $statrte"
+	lappend cfg [getIPv6RouteCmd $statrte]
     }
     return $cfg
 }

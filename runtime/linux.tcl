@@ -302,13 +302,25 @@ proc startIfcsNode { node } {
         if { $ifc != "lo0" } {
             set mtu [getIfcMTU $node $ifc]
             if {[getIfcOperState $node $ifc] == "up"} {
-                set peerNode [logicalPeerByIfc $node $ifc]
-                if { [[typemodel $peerNode].layer] == "LINK" } {
-                    exec pipework $eid.$peerNode -i $ifc $node_id 0/0
-                }
-                if { [[typemodel $peerNode].layer] == "NETWORK" } {
-                    set link [linkByPeers $node $peerNode]
-                    exec pipework $eid.$link -i $ifc $node_id 0/0
+                if {[nodeType $node] != "rj45"} {
+                    set peerNode [logicalPeerByIfc $node $ifc]
+                    if { [[typemodel $peerNode].layer] == "LINK" } {
+                        if {[nodeType $peerNode] == "rj45"} {
+                            set nodeNs [string trim [getNodeNamespace $node] "'"]
+                            set ifname [getNodeName $peerNode]
+                            catch {exec ln -s /proc/$nodeNs/ns/net /var/run/netns/$nodeNs}
+                            exec ip link add link $ifname $eid.$node.$ifc type macvlan mode private
+                            exec ip link set netns $nodeNs $eid.$node.$ifc
+                            exec docker exec $node_id ip link set $eid.$node.$ifc up
+                            # exec ip netns exec $nodeNs ip link set dev $eid.$node.$ifc name $ifc
+                        } else {
+                            exec pipework $eid.$peerNode -i $ifc $node_id 0/0
+                        }
+                    }
+                    if { [[typemodel $peerNode].layer] == "NETWORK" } {
+                        set link [linkByPeers $node $peerNode]
+                        exec pipework $eid.$link -i $ifc $node_id 0/0
+                    }
                 }
             }
         }
@@ -500,4 +512,73 @@ proc getExtIfcs { } {
     set ifcs [ lsearch -all -inline -not $ifcs $ignore ]
     }
     return "$ifcs"
+}
+
+#****f* linux.tcl/captureExtIfc
+# NAME
+#   captureExtIfc -- capture external interfaces
+# SYNOPSIS
+#   captureExtIfc $eid $node
+# FUNCTION
+#   Captures the external interfaces given by the given rj45 node.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
+proc captureExtIfc { eid node } {
+    set ifname [getNodeName $node]
+    if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
+    # exec ip link add $eid link $eid.$ifname type macvlan mode private
+    }
+
+    # nexec ifconfig $ifname vnet $eid
+    # nexec jexec $eid ifconfig $ifname up promisc
+}
+
+#****f* linux.tcl/releaseExtIfc
+# NAME
+#   releaseExtIfc -- release external interfaces
+# SYNOPSIS
+#   releaseExtIfc $eid $node
+# FUNCTION
+#   Releases the external interfaces captured by the given rj45 node.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
+proc releaseExtIfc { eid node } {
+    set ifname [getNodeName $node]
+    if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
+    exec ip link del $eid.$ifname
+    }
+}
+
+proc getNodeNamespace { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set node_id "$eid.$node"
+    catch {exec docker inspect -f '{{.State.Pid}}' $node_id} ns
+    return $ns
+}
+
+proc getIPv4RouteCmd { statrte } {
+    set route [lindex $statrte 0]
+    set addr [lindex $statrte 1]
+    if {$route == "0.0.0.0/0"} {
+        set cmd "ip route add $route via $addr"
+    } else {
+        set cmd "ip route add default via $addr"
+    }
+    return $cmd
+}
+
+proc getIPv6RouteCmd { statrte } {
+    set route [lindex $statrte 0]
+    set addr [lindex $statrte 1]
+    if {$route == "::/0"} {
+        set cmd "ip -6 route add $route via $addr"
+    } else {
+        set cmd "ip -6 route add default via $addr"
+    }
+    return $cmd
 }

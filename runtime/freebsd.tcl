@@ -1924,3 +1924,11 @@ proc getExtIfcs { } {
     }
     return "$ifcs"
 }
+
+proc getIPv4RouteCmd { statrte } {
+    return "route -q add -inet $statrte"
+}
+
+proc getIPv6RouteCmd { statrte } {
+    return "route -q add -inet6 $statrte"
+}
