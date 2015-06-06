@@ -992,7 +992,6 @@ proc newLink { lnode1 lnode2 } {
     set link [newObjectId link]
     upvar 0 ::cf::[set ::curcfg]::$link $link
     set $link {}
-
     set ifname1 [newIfc [chooseIfName $lnode1 $lnode2] $lnode1]
     lappend $lnode1 "interface-peer {$ifname1 $lnode2}"
     set ifname2 [newIfc [chooseIfName $lnode2 $lnode1] $lnode2]

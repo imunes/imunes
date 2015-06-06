@@ -36,9 +36,9 @@ proc checkForApplications { node app_list } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     foreach app $app_list {
     set exists [ catch { exec docker exec $eid.$node which $app } err ]
-    if { $exists } {
-        return 1
-    }
+        if { $exists } {
+            return 1
+        }
     }
     return 0
 }
@@ -59,9 +59,9 @@ proc startWiresharkOnNodeIfc { node ifc } {
 
     if {[file exists /usr/local/bin/startxcmd] == 1 && \
     [checkForApplications $node "wireshark"] == 0} {
-    startXappOnNode $node "wireshark -ki $ifc"
+        startXappOnNode $node "wireshark -ki $ifc"
     } else {
-    exec docker exec $eid.$node tcpdump -s 0 -U -w - -i $ifc 2>/dev/null |\
+        exec docker exec $eid.$node tcpdump -s 0 -U -w - -i $ifc 2>/dev/null |\
         wireshark -o "gui.window_title:$ifc@[getNodeName $node] ($eid)" -k -i - &
     }
 }
@@ -81,13 +81,13 @@ proc startXappOnNode { node app } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global debug
     if {[file exists /usr/local/bin/socat] != 1 } {
-    puts "To run X applications on the node, install socat on your host."
-    return
+        puts "To run X applications on the node, install socat on your host."
+        return
     }
 
     set logfile "/dev/null"
     if {$debug} {
-    set logfile "/tmp/startxcmd_$eid\_$node.log"
+        set logfile "/tmp/startxcmd_$eid\_$node.log"
     }
 
     eval exec startxcmd [getNodeName $node]@$eid $app > $logfile 2>> $logfile &
@@ -106,7 +106,7 @@ proc startXappOnNode { node app } {
 #****
 proc startTcpdumpOnNodeIfc { node ifc } {
     if {[checkForApplications $node "tcpdump"] == 0} {
-    spawnShell $node "tcpdump -ni $ifc"
+        spawnShell $node "tcpdump -ni $ifc"
     }
 }
 
@@ -212,9 +212,9 @@ proc loadKernelModules {} {
 
     # FIXME: prepareSystem isn't the same on Linux
     foreach module $all_modules_list {
-    if {[info procs $module.prepareSystem] == "$module.prepareSystem"} {
-        $module.prepareSystem
-    }
+        if {[info procs $module.prepareSystem] == "$module.prepareSystem"} {
+            $module.prepareSystem
+        }
     }
 }
 
@@ -244,7 +244,7 @@ proc createNodeContainer { node } {
     set node_id "$eid.$node"
 
     catch {exec docker run --cap-add=ALL --net='none' -h [getNodeName $node] \
-        --name $node_id gcetusic/imunes /sbin/my_init > /dev/null &}
+        --name $node_id gcetusic/imunes /sbin/my_init 2> /dev/null &}
 
     set status ""
     while { [string match 'true' $status] != 1 } {
@@ -352,15 +352,15 @@ proc runConfOnNode { node } {
     set node_id "$eid.$node"
 
     if { [getCustomEnabled $node] == true } {
-    set selected [getCustomConfigSelected $node]
+        set selected [getCustomConfigSelected $node]
 
-    set bootcmd [getCustomConfigCommand $node $selected]
-    set bootcfg [getCustomConfig $node $selected]
-    set confFile "custom.conf"
+        set bootcmd [getCustomConfigCommand $node $selected]
+        set bootcfg [getCustomConfig $node $selected]
+        set confFile "custom.conf"
     } else {
-    set bootcfg [[typemodel $node].cfggen $node]
-    set bootcmd [[typemodel $node].bootcmd $node]
-    set confFile "boot.conf"
+        set bootcfg [[typemodel $node].cfggen $node]
+        set bootcmd [[typemodel $node].bootcmd $node]
+        set confFile "boot.conf"
     }
 
     catch {exec docker inspect --format '{{.Id}}' $node_id} id
@@ -378,12 +378,12 @@ proc removeNodeIfcIPaddrs { eid node } {
     set node_id "$eid.$node"
 
     foreach ifc [ifcList $node] {
-    foreach ipv4 [getIfcIPv4addr $node $ifc] {
-        catch "exec jexec $node_id ifconfig $ifc $ipv4 -alias"
-    }
-    foreach ipv6 [getIfcIPv6addr $node $ifc] {
-        catch "exec jexec $node_id ifconfig $ifc inet6 $ipv6 -alias"
-    }
+        foreach ipv4 [getIfcIPv4addr $node $ifc] {
+            catch "exec jexec $node_id ifconfig $ifc $ipv4 -alias"
+        }
+        foreach ipv6 [getIfcIPv6addr $node $ifc] {
+            catch "exec jexec $node_id ifconfig $ifc inet6 $ipv6 -alias"
+        }
     }
 }
 
@@ -405,18 +405,18 @@ proc destroyNetgraphNodes { eid switches widget } {
 
     # destroying openvswitch nodes
     if { $switches != "" } {
-    statline "Shutting down netgraph nodes..."
-    set i 0
-    foreach node $switches {
-        incr i
-        # statline "Shutting down openvswitch node $node ([typemodel $node])"
-        [typemodel $node].destroy $eid $node
-        if {$execMode != "batch"} {
-        $widget.p step -1
+        statline "Shutting down netgraph nodes..."
+        set i 0
+        foreach node $switches {
+            incr i
+            # statline "Shutting down openvswitch node $node ([typemodel $node])"
+            [typemodel $node].destroy $eid $node
+            if {$execMode != "batch"} {
+                $widget.p step -1
+            }
+            displayBatchProgress $i [ llength $switches ]
         }
-        displayBatchProgress $i [ llength $switches ]
-    }
-    statline ""
+        statline ""
     }
 }
 
@@ -509,7 +509,7 @@ proc configDefaultLoIfc { eid node } {
 proc getExtIfcs { } {
     catch { exec ls /sys/class/net } ifcs
     foreach ignore "lo* ipfw* tun*" {
-    set ifcs [ lsearch -all -inline -not $ifcs $ignore ]
+        set ifcs [ lsearch -all -inline -not $ifcs $ignore ]
     }
     return "$ifcs"
 }
@@ -549,7 +549,7 @@ proc captureExtIfc { eid node } {
 proc releaseExtIfc { eid node } {
     set ifname [getNodeName $node]
     if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
-    exec ip link del $eid.$ifname
+        exec ip link del $eid.$ifname
     }
 }
 
