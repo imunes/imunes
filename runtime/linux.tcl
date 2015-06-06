@@ -306,13 +306,7 @@ proc startIfcsNode { node } {
                     set peerNode [logicalPeerByIfc $node $ifc]
                     if { [[typemodel $peerNode].layer] == "LINK" } {
                         if {[nodeType $peerNode] == "rj45"} {
-                            set nodeNs [string trim [getNodeNamespace $node] "'"]
-                            set ifname [getNodeName $peerNode]
-                            catch {exec ln -s /proc/$nodeNs/ns/net /var/run/netns/$nodeNs}
-                            exec ip link add link $ifname $eid.$node.$ifc type macvlan mode private
-                            exec ip link set netns $nodeNs $eid.$node.$ifc
-                            exec docker exec $node_id ip link set $eid.$node.$ifc up
-                            # exec ip netns exec $nodeNs ip link set dev $eid.$node.$ifc name $ifc
+                            connectExtIfc $node $ifc $peerNode
                         } else {
                             exec pipework $eid.$peerNode -i $ifc $node_id 0/0
                         }
@@ -341,7 +335,12 @@ proc killAllNodeProcesses { eid node } {
     catch "exec docker stop $node_id"
 }
 
-proc destroyVirtNodeIfcs { eid vimages } {}
+proc destroyVirtNodeIfcs { eid vimages } {
+    foreach node $vimages {
+        set nodeNs [getNodeNamespace $node]
+        catch {exec rm -rf /var/run/netns/$nodeNs}
+    }
+}
 
 proc runConfOnNode { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
@@ -581,4 +580,17 @@ proc getIPv6RouteCmd { statrte } {
         set cmd "ip -6 route add default via $addr"
     }
     return $cmd
+}
+
+proc connectExtIfc { node ifc peerNode } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set node_id "$eid.$node"
+
+    set nodeNs [string trim [getNodeNamespace $node] "'"]
+    set ifname [getNodeName $peerNode]
+    catch {exec ln -s /proc/$nodeNs/ns/net /var/run/netns/$nodeNs}
+    exec ip link add link $ifname $ifc type macvlan mode private
+    exec ip link set netns $nodeNs $ifc
+    exec docker exec $node_id ip link set $ifc up
 }
