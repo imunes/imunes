@@ -85,19 +85,19 @@ set debug 0
 set execMode interactive
 if { $params(b) || $params(batch)} {
     if { $params(e) == "" && $params(eid) == "" && $fileName == "" } {
-	puts stderr "Usage:"
-	puts stderr $usage
-	exit
+        puts stderr "Usage:"
+        puts stderr $usage
+        exit
     }
     catch {exec id -u} uid
     if { $uid != "0" } {
-	puts "Error: To execute experiment, run IMUNES with root permissions."
-	exit
+        puts "Error: To execute experiment, run IMUNES with root permissions."
+        exit
     }
     set execMode batch
 } else {
     if { $params(d) } {
-	set debug 1
+        set debug 1
     }
 }
 
@@ -105,10 +105,10 @@ set eid_base i[format %04x [expr {[pid] + [expr { round( rand()*10000 ) }]}]]
 if { $params(e) != "" || $params(eid) != "" } {
     set eid_base $params(e)
     if { $params(eid) != "" } {
-	set eid_base $params(eid)
+        set eid_base $params(eid)
     }
     if { $params(b) || $params(batch) } {
-	    puts "Using experiment ID '$eid_base'."
+        puts "Using experiment ID '$eid_base'."
     }
 }
 
@@ -166,8 +166,8 @@ if { [string match -nocase "*linux*" $os] == 1 } {
 if { [string match -nocase "*freebsd*" $os] == 1 } {
     source $ROOTDIR/$LIBDIR/runtime/freebsd.tcl
     if { $initMode == 1 } {
-	prepareDevfs
-	exit
+        prepareDevfs
+        exit
     }
 }
 
@@ -280,17 +280,17 @@ readConfigFile
 
 if {$execMode == "interactive"} {
     foreach file "canvas copypaste drawing editor help theme initgui linkcfgGUI \
-	mouse nodecfgGUI topogen widgets" {
-	source "$ROOTDIR/$LIBDIR/gui/$file.tcl"
+        mouse nodecfgGUI topogen widgets" {
+        source "$ROOTDIR/$LIBDIR/gui/$file.tcl"
     }
     if { $debug == 1 } {
-	source "$ROOTDIR/$LIBDIR/gui/debug.tcl"
+        source "$ROOTDIR/$LIBDIR/gui/debug.tcl"
     }
 
     newProject
     if { $argv != "" && [file exists $argv] } {
-	set ::cf::[set curcfg]::currentFile $argv
-	openFile
+        set ::cf::[set curcfg]::currentFile $argv
+        openFile
     }
     updateProjectMenu
     # Fire up the animation loop
@@ -299,62 +299,62 @@ if {$execMode == "interactive"} {
 #     evsched
 } else {
     if {$argv != ""} {
-	if { ![file exists $argv] } {
-	    puts "Error: file '$argv' doesn't exist"
-	    exit
-	}
-	global currentFileBatch
-	set currentFileBatch $argv
-	set fileId [open $argv r]
-	set cfg ""
-	foreach entry [read $fileId] {
-	    lappend cfg $entry
-	}
-	close $fileId
+        if { ![file exists $argv] } {
+            puts "Error: file '$argv' doesn't exist"
+            exit
+        }
+        global currentFileBatch
+        set currentFileBatch $argv
+        set fileId [open $argv r]
+        set cfg ""
+        foreach entry [read $fileId] {
+            lappend cfg $entry
+        }
+        close $fileId
 
-	set curcfg [newObjectId cfg]
-	lappend cfg_list $curcfg
-	namespace eval ::cf::[set curcfg] {}
+        set curcfg [newObjectId cfg]
+        lappend cfg_list $curcfg
+        namespace eval ::cf::[set curcfg] {}
 
-	loadCfg $cfg
+        loadCfg $cfg
 
-	if { [checkExternalInterfaces] } {
-	    return
-	}
-	if { [allSnapshotsAvailable] == 1 } {
-	    deployCfg
-	    createExperimentFilesFromBatch
-	}
+        if { [checkExternalInterfaces] } {
+            return
+        }
+        if { [allSnapshotsAvailable] == 1 } {
+            deployCfg
+            createExperimentFilesFromBatch
+        }
     } else {
-	set configFile "$runtimeDir/$eid_base/config.imn"
-	set ngmapFile "$runtimeDir/$eid_base/ngnodemap"
-	if { [file exists $configFile] && [file exists $ngmapFile] \
-	    && $regular_termination } {
-	    set fileId [open $configFile r]
-	    set cfg ""
-	    foreach entry [read $fileId] {
-		lappend cfg $entry
-	    }
-	    close $fileId
+        set configFile "$runtimeDir/$eid_base/config.imn"
+        set ngmapFile "$runtimeDir/$eid_base/ngnodemap"
+        if { [file exists $configFile] && [file exists $ngmapFile] \
+            && $regular_termination } {
+            set fileId [open $configFile r]
+            set cfg ""
+            foreach entry [read $fileId] {
+                lappend cfg $entry
+            }
+            close $fileId
 
-	    set curcfg [newObjectId cfg]
-	    lappend cfg_list $curcfg
-	    namespace eval ::cf::[set curcfg] {}
-	    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-	    upvar 0 ::cf::[set ::curcfg]::eid eid
-	    set eid $eid_base
+            set curcfg [newObjectId cfg]
+            lappend cfg_list $curcfg
+            namespace eval ::cf::[set curcfg] {}
+            upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
+            upvar 0 ::cf::[set ::curcfg]::eid eid
+            set eid $eid_base
 
-	    set fileId [open $ngmapFile r]
-	    array set ngnodemap [gets $fileId]
-	    close $fileId
+            set fileId [open $ngmapFile r]
+            array set ngnodemap [gets $fileId]
+            close $fileId
 
-	    loadCfg $cfg
+            loadCfg $cfg
 
-	    terminateAllNodes $eid_base
-	} else {
-	    vimageCleanup $eid_base
-	}
+            terminateAllNodes $eid_base
+        } else {
+            vimageCleanup $eid_base
+        }
 
-	deleteExperimentFiles $eid_base
+        deleteExperimentFiles $eid_base
     }
 }

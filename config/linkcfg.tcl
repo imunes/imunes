@@ -108,10 +108,10 @@ proc linkByPeers { node1 node2 } {
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
 
     foreach link $link_list {
-	set peers [linkPeers $link]
-	if { $peers == "$node1 $node2" || $peers == "$node2 $node1" } {
-	    return $link
-	}
+        set peers [linkPeers $link]
+        if { $peers == "$node1 $node2" || $peers == "$node2 $node1" } {
+            return $link
+        }
     }
 }
 
@@ -135,35 +135,35 @@ proc removeLink { link } {
 
     set pnodes [linkPeers $link]
     foreach node $pnodes {
-	upvar 0 ::cf::[set ::curcfg]::$node $node
+        upvar 0 ::cf::[set ::curcfg]::$node $node
 
-	set i [lsearch $pnodes $node]
-	set peer [lreplace $pnodes $i $i]
-	set ifc [ifcByPeer $node $peer]
-	set index [lsearch -exact $IPv4UsedList [getIfcIPv4addr $node $ifc]]
-	set IPv4UsedList [lreplace $IPv4UsedList $index $index]
-	set index [lsearch -exact $IPv6UsedList [getIfcIPv6addr $node $ifc]]
-	set IPv6UsedList [lreplace $IPv6UsedList $index $index]
-	set index [lsearch -exact $MACUsedList [getIfcMACaddr $node $ifc]]
-	set MACUsedList [lreplace $MACUsedList $index $index]
-	netconfClearSection $node "interface $ifc"
-	set i [lsearch [set $node] "interface-peer {$ifc $peer}"]
-	set $node [lreplace [set $node] $i $i]
-	if { [[typemodel $node].layer] == "NETWORK" } {
-	    set ifcs [ifcList $node]
-	    foreach iface $ifcs {
-		autoIPv4defaultroute $node $iface
-	    }
-	}
-	foreach lifc [logIfcList $node] {
-	    switch -exact [getLogIfcType $node $lifc] {
-		vlan {
-		    if {[getIfcVlanDev $node $lifc] == $ifc} {
-			netconfClearSection $node "interface $lifc"
-		    }
-		}
-	    }
-	}
+        set i [lsearch $pnodes $node]
+        set peer [lreplace $pnodes $i $i]
+        set ifc [ifcByPeer $node $peer]
+        set index [lsearch -exact $IPv4UsedList [getIfcIPv4addr $node $ifc]]
+        set IPv4UsedList [lreplace $IPv4UsedList $index $index]
+        set index [lsearch -exact $IPv6UsedList [getIfcIPv6addr $node $ifc]]
+        set IPv6UsedList [lreplace $IPv6UsedList $index $index]
+        set index [lsearch -exact $MACUsedList [getIfcMACaddr $node $ifc]]
+        set MACUsedList [lreplace $MACUsedList $index $index]
+        netconfClearSection $node "interface $ifc"
+        set i [lsearch [set $node] "interface-peer {$ifc $peer}"]
+        set $node [lreplace [set $node] $i $i]
+        if { [[typemodel $node].layer] == "NETWORK" } {
+            set ifcs [ifcList $node]
+            foreach iface $ifcs {
+                autoIPv4defaultroute $node $iface
+            }
+        }
+        foreach lifc [logIfcList $node] {
+            switch -exact [getLogIfcType $node $lifc] {
+                vlan {
+                    if {[getIfcVlanDev $node $lifc] == $ifc} {
+                        netconfClearSection $node "interface $lifc"
+                    }
+                }
+            }
+        }
     }
     set i [lsearch -exact $link_list $link]
     set link_list [lreplace $link_list $i $i]
@@ -208,19 +208,19 @@ proc getLinkBandwidthString { link } {
     set bandstr ""
     set bandwidth [getLinkBandwidth $link]
     if { $bandwidth > 0 } {
-	if { $bandwidth >= 660000000 } {
-	    set bandstr "[format %.2f [expr {$bandwidth / 1000000000.0}]] Gbps"
-	} elseif { $bandwidth >= 99000000 } {
-	    set bandstr "[format %d [expr {$bandwidth / 1000000}]] Mbps"
-	} elseif { $bandwidth >= 9900000 } {
-	    set bandstr "[format %.2f [expr {$bandwidth / 1000000.0}]] Mbps"
-	} elseif { $bandwidth >= 990000 } {
-	    set bandstr "[format %d [expr {$bandwidth / 1000}]] Kbps"
-	} elseif { $bandwidth >= 9900 } {
-	    set bandstr "[format %.2f [expr {$bandwidth / 1000.0}]] Kbps"
-	} else {
-	    set bandstr "$bandwidth bps"
-	}
+        if { $bandwidth >= 660000000 } {
+            set bandstr "[format %.2f [expr {$bandwidth / 1000000000.0}]] Gbps"
+        } elseif { $bandwidth >= 99000000 } {
+            set bandstr "[format %d [expr {$bandwidth / 1000000}]] Mbps"
+        } elseif { $bandwidth >= 9900000 } {
+            set bandstr "[format %.2f [expr {$bandwidth / 1000000.0}]] Mbps"
+        } elseif { $bandwidth >= 990000 } {
+            set bandstr "[format %d [expr {$bandwidth / 1000}]] Kbps"
+        } elseif { $bandwidth >= 9900 } {
+            set bandstr "[format %.2f [expr {$bandwidth / 1000.0}]] Kbps"
+        } else {
+            set bandstr "$bandwidth bps"
+        }
     }
     return $bandstr
 }
@@ -241,9 +241,9 @@ proc setLinkBandwidth { link value } {
 
     set i [lsearch [set $link] "bandwidth *"]
     if { $value <= 0 } {
-	set $link [lreplace [set $link] $i $i]
+        set $link [lreplace [set $link] $i $i]
     } else {
-	set $link [lreplace [set $link] $i $i "bandwidth $value"]
+        set $link [lreplace [set $link] $i $i "bandwidth $value"]
     }
 }
 
@@ -269,9 +269,9 @@ proc getLinkColor { link } {
 
     set entry [lsearch -inline [set $link] "color *"]
     if { $entry == "" } {
-	return $defLinkColor
+        return $defLinkColor
     } else {
-	return [lindex $entry 1]
+        return [lindex $entry 1]
     }
 }
 
@@ -309,9 +309,9 @@ proc getLinkWidth { link } {
 
     set entry [lsearch -inline [set $link] "width *"]
     if { $entry == "" } {
-	return $defLinkWidth
+        return $defLinkWidth
     } else {
-	return [lindex $entry 1]
+        return [lindex $entry 1]
     }
 }
 
@@ -371,15 +371,15 @@ proc getLinkDelayString { link } {
 
     set delay [getLinkDelay $link]
     if { "$delay" != "" } {
-	if { $delay >= 10000 } {
-	    set delstr "[expr {$delay / 1000}] ms"
-	} elseif { $delay >= 1000 } {
-	    set delstr "[format "%.3f" [expr {$delay * .001}]] ms"
-	} else {
-	    set delstr "$delay us"
-	}
+        if { $delay >= 10000 } {
+            set delstr "[expr {$delay / 1000}] ms"
+        } elseif { $delay >= 1000 } {
+            set delstr "[format "%.3f" [expr {$delay * .001}]] ms"
+        } else {
+            set delstr "$delay us"
+        }
     } else {
-	set delstr ""
+        set delstr ""
     }
     return $delstr
 }
@@ -400,9 +400,9 @@ proc setLinkDelay { link value } {
 
     set i [lsearch [set $link] "delay *"]
     if { $value <= 0 } {
-	set $link [lreplace [set $link] $i $i]
+        set $link [lreplace [set $link] $i $i]
     } else {
-	set $link [lreplace [set $link] $i $i "delay $value"]
+        set $link [lreplace [set $link] $i $i "delay $value"]
     }
 }
 
@@ -440,9 +440,9 @@ proc setLinkJitterUpstream { link values } {
 
     set i [lsearch [set $link] "jitter-upstream *"]
     if { $values == "" } {
-	set $link [lreplace [set $link] $i $i]
+        set $link [lreplace [set $link] $i $i]
     } else {
-	set $link [lreplace [set $link] $i $i "jitter-upstream {$values}"]
+        set $link [lreplace [set $link] $i $i "jitter-upstream {$values}"]
     }
 }
 
@@ -480,9 +480,9 @@ proc setLinkJitterModeUpstream { link value } {
 
     set i [lsearch [set $link] "jitter-upstream-mode *"]
     if { $value == "" } {
-	set $link [lreplace [set $link] $i $i]
+        set $link [lreplace [set $link] $i $i]
     } else {
-	set $link [lreplace [set $link] $i $i "jitter-upstream-mode $value"]
+        set $link [lreplace [set $link] $i $i "jitter-upstream-mode $value"]
     }
 }
 
@@ -520,9 +520,9 @@ proc setLinkJitterHoldUpstream { link value } {
 
     set i [lsearch [set $link] "jitter-upstream-hold *"]
     if { $value == "" } {
-	set $link [lreplace [set $link] $i $i]
+        set $link [lreplace [set $link] $i $i]
     } else {
-	set $link [lreplace [set $link] $i $i "jitter-upstream-hold $value"]
+        set $link [lreplace [set $link] $i $i "jitter-upstream-hold $value"]
     }
 }
 
@@ -561,9 +561,9 @@ proc setLinkJitterDownstream { link values } {
 
     set i [lsearch [set $link] "jitter-downstream *"]
     if { $values == "" } {
-	set $link [lreplace [set $link] $i $i]
+        set $link [lreplace [set $link] $i $i]
     } else {
-	set $link [lreplace [set $link] $i $i "jitter-downstream {$values}"]
+        set $link [lreplace [set $link] $i $i "jitter-downstream {$values}"]
     }
 }
 
@@ -601,9 +601,9 @@ proc setLinkJitterModeDownstream { link value } {
 
     set i [lsearch [set $link] "jitter-downstream-mode *"]
     if { $value  == "" } {
-	set $link [lreplace [set $link] $i $i]
+        set $link [lreplace [set $link] $i $i]
     } else {
-	set $link [lreplace [set $link] $i $i "jitter-downstream-mode $value"]
+        set $link [lreplace [set $link] $i $i "jitter-downstream-mode $value"]
     }
 }
 
@@ -641,9 +641,9 @@ proc setLinkJitterHoldDownstream { link value } {
 
     set i [lsearch [set $link] "jitter-downstream-hold *"]
     if { $value == "" } {
-	set $link [lreplace [set $link] $i $i]
+        set $link [lreplace [set $link] $i $i]
     } else {
-	set $link [lreplace [set $link] $i $i "jitter-downstream-hold $value"]
+        set $link [lreplace [set $link] $i $i "jitter-downstream-hold $value"]
     }
 }
 
@@ -682,9 +682,9 @@ proc setLinkBER { link value } {
 
     set i [lsearch [set $link] "ber *"]
     if { $value <= 0 } {
-	set $link [lreplace [set $link] $i $i]
+        set $link [lreplace [set $link] $i $i]
     } else {
-	set $link [lreplace [set $link] $i $i "ber $value"]
+        set $link [lreplace [set $link] $i $i "ber $value"]
     }
 }
 
@@ -723,9 +723,9 @@ proc setLinkDup { link value } {
 
     set i [lsearch [set $link] "duplicate *"]
     if { $value <= 0 || $value > 50 } {
-	set $link [lreplace [set $link] $i $i]
+        set $link [lreplace [set $link] $i $i]
     } else {
-	set $link [lreplace [set $link] $i $i "duplicate $value"]
+        set $link [lreplace [set $link] $i $i "duplicate $value"]
     }
 }
 
@@ -747,8 +747,8 @@ proc linkResetConfig { link } {
     setLinkDelay $link ""
     setLinkDup $link ""
     if { $oper_mode == "exec" } {
-	upvar 0 ::cf::[set ::curcfg]::eid eid
-	execSetLinkParams $eid $link
+        upvar 0 ::cf::[set ::curcfg]::eid eid
+        execSetLinkParams $eid $link
     }
     redrawAll
 }
@@ -793,9 +793,9 @@ proc setLinkMirror { link value } {
 
     set i [lsearch [set $link] "mirror *"]
     if { $value == "" } {
-	set $link [lreplace [set $link] $i $i]
+        set $link [lreplace [set $link] $i $i]
     } else {
-	set $link [lreplace [set $link] $i $i "mirror $value"]
+        set $link [lreplace [set $link] $i $i "mirror $value"]
     }
 }
 
@@ -841,10 +841,10 @@ proc splitLink { link nodetype } {
 
     set i [lsearch [set $orig_node1] "interface-peer {* $orig_node2}"]
     set $orig_node1 [lreplace [set $orig_node1] $i $i \
-			"interface-peer {$ifc1 $new_node1}"]
+            "interface-peer {$ifc1 $new_node1}"]
     set i [lsearch [set $orig_node2] "interface-peer {* $orig_node1}"]
     set $orig_node2 [lreplace [set $orig_node2] $i $i \
-			"interface-peer {$ifc2 $new_node2}"]
+            "interface-peer {$ifc2 $new_node2}"]
 
     lappend $new_link1 "nodes {$orig_node1 $new_node1}"
     lappend $new_link2 "nodes {$orig_node2 $new_node2}"
@@ -854,11 +854,11 @@ proc splitLink { link nodetype } {
     setNodeCoords $new_node1 [getNodeCoords $orig_node2]
     setNodeCoords $new_node2 [getNodeCoords $orig_node1]
     if { $nodetype != "pseudo" } {
-	setNodeLabelCoords $new_node1 [getNodeLabelCoords $orig_node2]
-	setNodeLabelCoords $new_node2 [getNodeLabelCoords $orig_node1]
+        setNodeLabelCoords $new_node1 [getNodeLabelCoords $orig_node2]
+        setNodeLabelCoords $new_node2 [getNodeLabelCoords $orig_node1]
     } else {
-	setNodeLabelCoords $new_node1 [getNodeCoords $orig_node2]
-	setNodeLabelCoords $new_node2 [getNodeCoords $orig_node1]
+        setNodeLabelCoords $new_node1 [getNodeCoords $orig_node2]
+        setNodeLabelCoords $new_node2 [getNodeCoords $orig_node1]
     }
     lappend $new_node1 "interface-peer {0 $orig_node1}"
     lappend $new_node2 "interface-peer {0 $orig_node2}"
@@ -896,8 +896,8 @@ proc mergeLink { link } {
 
     set mirror_link [getLinkMirror $link]
     if { $mirror_link == "" } {
-	puts "XXX mergeLink called for non-pseudo link!!!"
-	return
+        puts "XXX mergeLink called for non-pseudo link!!!"
+        return
     }
     set link1_peers [linkPeers $link]
     set link2_peers [linkPeers $mirror_link]
@@ -914,10 +914,10 @@ proc mergeLink { link } {
     set ifc2 [ifcByPeer $orig_node2 $pseudo_node2]
     set i [lsearch [set $orig_node1] "interface-peer {* $pseudo_node1}"]
     set $orig_node1 [lreplace [set $orig_node1] $i $i \
-			"interface-peer {$ifc1 $orig_node2}"]
+            "interface-peer {$ifc1 $orig_node2}"]
     set i [lsearch [set $orig_node2] "interface-peer {* $pseudo_node2}"]
     set $orig_node2 [lreplace [set $orig_node2] $i $i \
-			"interface-peer {$ifc2 $orig_node1}"]
+            "interface-peer {$ifc2 $orig_node1}"]
 
     set $new_link {}
     lappend $new_link "nodes {$orig_node1 $orig_node2}"
@@ -979,14 +979,14 @@ proc newLink { lnode1 lnode2 } {
     global defEthBandwidth defSerBandwidth defSerDelay
 
     foreach node "$lnode1 $lnode2" {
-	if {[info procs [nodeType $node].maxLinks] != "" } {
-	    if { [ numOfLinks $node ] == [[nodeType $node].maxLinks] } {
-		tk_dialog .dialog1 "IMUNES warning" \
-		   "Warning: Maximum links connected to the node $node" \
-		   info 0 Dismiss
-		return
-	    }
-	}
+        if {[info procs [nodeType $node].maxLinks] != "" } {
+            if { [ numOfLinks $node ] == [[nodeType $node].maxLinks] } {
+                tk_dialog .dialog1 "IMUNES warning" \
+                   "Warning: Maximum links connected to the node $node" \
+                   info 0 Dismiss
+                return
+            }
+        }
     }
 
     set link [newObjectId link]
@@ -999,32 +999,32 @@ proc newLink { lnode1 lnode2 } {
 
     lappend $link "nodes {$lnode1 $lnode2}"
     if { ([nodeType $lnode1] == "lanswitch" || \
-	[nodeType $lnode2] == "lanswitch" || \
-	[string first eth "$ifname1 $ifname2"] != -1) && \
-	[nodeType $lnode1] != "rj45" && \
-	[nodeType $lnode2] != "rj45" } {
-	lappend $link "bandwidth $defEthBandwidth"
+        [nodeType $lnode2] == "lanswitch" || \
+        [string first eth "$ifname1 $ifname2"] != -1) && \
+        [nodeType $lnode1] != "rj45" && \
+        [nodeType $lnode2] != "rj45" } {
+        lappend $link "bandwidth $defEthBandwidth"
     } elseif { [string first ser "$ifname1 $ifname2"] != -1 } {
-	lappend $link "bandwidth $defSerBandwidth"
-	lappend $link "delay $defSerDelay"
+        lappend $link "bandwidth $defSerBandwidth"
+        lappend $link "delay $defSerDelay"
     }
 
     lappend link_list $link
 
     if {[isNodeRouter $lnode1]} {
-	if {[info procs [nodeType $lnode1].confNewIfc] != ""} {
-	    [nodeType $lnode1].confNewIfc $lnode1 $ifname1
-	}
-	if {[info procs [nodeType $lnode2].confNewIfc] != ""} {
-	    [nodeType $lnode2].confNewIfc $lnode2 $ifname2
-	}
+        if {[info procs [nodeType $lnode1].confNewIfc] != ""} {
+            [nodeType $lnode1].confNewIfc $lnode1 $ifname1
+        }
+        if {[info procs [nodeType $lnode2].confNewIfc] != ""} {
+            [nodeType $lnode2].confNewIfc $lnode2 $ifname2
+        }
     } else {
-	if {[info procs [nodeType $lnode2].confNewIfc] != ""} {
-	    [nodeType $lnode2].confNewIfc $lnode2 $ifname2
-	}
-	if {[info procs [nodeType $lnode1].confNewIfc] != ""} {
-	    [nodeType $lnode1].confNewIfc $lnode1 $ifname1
-	}
+        if {[info procs [nodeType $lnode2].confNewIfc] != ""} {
+            [nodeType $lnode2].confNewIfc $lnode2 $ifname2
+        }
+        if {[info procs [nodeType $lnode1].confNewIfc] != ""} {
+            [nodeType $lnode1].confNewIfc $lnode1 $ifname1
+        }
     }
 
     return $link
@@ -1048,15 +1048,15 @@ proc linkByIfc { node ifc } {
 
     set peer [peerByIfc $node $ifc]
     foreach link $link_list {
-	set endpoints [linkPeers $link]
-	if { $endpoints == "$node $peer" } {
-	    set dir downstream
-	    break
-	}
-	if { $endpoints == "$peer $node" } {
-	    set dir upstream
-	    break
-	}
+        set endpoints [linkPeers $link]
+        if { $endpoints == "$node $peer" } {
+            set dir downstream
+            break
+        }
+        if { $endpoints == "$peer $node" } {
+            set dir upstream
+            break
+        }
     }
 
     return [list $link $dir]
