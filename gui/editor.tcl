@@ -58,19 +58,19 @@ proc updateUndoLog {} {
     global changed showTree
 
     if { $changed } {
-	global t_undolog
-	set t_undolog ""
-	dumpCfg string t_undolog
-	incr undolevel
-	if { $undolevel == 1 } {
-	    .menubar.edit entryconfigure "Undo" -state normal
-	}
-	set undolog($undolevel) $t_undolog
-	set redolevel $undolevel
-	set changed 0
-	if { $showTree } {
-	    refreshTopologyTree
-	}
+        global t_undolog
+        set t_undolog ""
+        dumpCfg string t_undolog
+        incr undolevel
+        if { $undolevel == 1 } {
+            .menubar.edit entryconfigure "Undo" -state normal
+        }
+        set undolog($undolevel) $t_undolog
+        set redolevel $undolevel
+        set changed 0
+        if { $showTree } {
+            refreshTopologyTree
+        }
     }
 }
 
@@ -118,16 +118,16 @@ proc redo {} {
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
 
     if {$oper_mode == "edit" && $redolevel > $undolevel} {
-	incr undolevel
-	if { $undolevel == 1 } {
-	    .menubar.edit entryconfigure "Undo" -state normal
-	}
-	if {$redolevel <= $undolevel} {
-	    .menubar.edit entryconfigure "Redo" -state disabled
-	}
-	.panwin.f1.c config -cursor watch
-	loadCfg $undolog($undolevel)
-	switchCanvas none
+        incr undolevel
+        if { $undolevel == 1 } {
+            .menubar.edit entryconfigure "Undo" -state normal
+        }
+        if {$redolevel <= $undolevel} {
+            .menubar.edit entryconfigure "Redo" -state disabled
+        }
+        .panwin.f1.c config -cursor watch
+        loadCfg $undolog($undolevel)
+        switchCanvas none
     }
 }
 
@@ -149,11 +149,11 @@ proc redo {} {
 #****
 proc chooseIfName { lnode1 lnode2 } {
     if { [nodeType $lnode1] == "frswitch" } {
-		return f
+        return f
     } elseif { [nodeType $lnode2] == "rj45" } {
         return $lnode1.ethx
     } else {
-		return [[nodeType $lnode1].ifcName]
+        return [[nodeType $lnode1].ifcName]
     }
 }
 
@@ -175,12 +175,12 @@ proc chooseIfName { lnode1 lnode2 } {
 proc listLANnodes { l2node l2peers } {
     lappend l2peers $l2node
     foreach ifc [ifcList $l2node] {
-	set peer [logicalPeerByIfc $l2node $ifc]
-	if {[[typemodel $peer].layer] == "LINK" &&  [nodeType $peer] != "rj45"} {
-	    if { [lsearch $l2peers $peer] == -1 } {
-		set l2peers [listLANnodes $peer $l2peers]
-	    }
-	}
+        set peer [logicalPeerByIfc $l2node $ifc]
+        if {[[typemodel $peer].layer] == "LINK" &&  [nodeType $peer] != "rj45"} {
+            if { [lsearch $l2peers $peer] == -1 } {
+                set l2peers [listLANnodes $peer $l2peers]
+            }
+        }
     }
     return $l2peers
 }
@@ -217,17 +217,17 @@ proc pseudo.layer {} {
 #****
 proc checkIntRange { str low high } {
     if { $str == "" } {
-	return 1
+        return 1
     }
     set str [string trimleft $str 0]
     if { $str == "" } {
-	set str 0
+        set str 0
     }
     if { ![string is integer $str] } {
-	return 0
+        return 0
     }
     if { $str < $low || $str > $high } {
-	return 0
+        return 0
     }
     return 1
 }
@@ -253,21 +253,21 @@ proc focusAndFlash {W {count 9}} {
     set bg white
 
     if { $badentry == -1 } {
-	return
+        return
     } else {
-	set badentry 1
+        set badentry 1
     }
     focus -force $W
     if {$count<1} {
-	$W configure -foreground $fg -background $bg
-	set badentry 0
+        $W configure -foreground $fg -background $bg
+        set badentry 0
     } else {
-	if {$count%2} {
-	    $W configure -foreground $bg -background $fg
-	} else {
-	    $W configure -foreground $fg -background $bg
-	}
-	after 200 [list focusAndFlash $W [expr {$count - 1}]]
+        if {$count%2} {
+            $W configure -foreground $bg -background $fg
+        } else {
+            $W configure -foreground $fg -background $bg
+        }
+        after 200 [list focusAndFlash $W [expr {$count - 1}]]
     }
 }
 
@@ -291,12 +291,12 @@ proc setZoom { x y } {
     toplevel $w -takefocus 1
 
     if { $x == 0 && $y == 0 } {
-	set screen [wm maxsize .]
-	set x [expr {[lindex $screen 0] / 2}]
-	set y [expr {[lindex $screen 1] / 2}]
+        set screen [wm maxsize .]
+        set x [expr {[lindex $screen 0] / 2}]
+        set y [expr {[lindex $screen 1] / 2}]
     } else {
-	set x [expr {$x + 10}]
-	set y [expr {$y - 90}]
+        set x [expr {$x + 10}]
+        set y [expr {$y - 90}]
     }
     wm geometry $w +$x+$y
     wm title $w "Set zoom %"
@@ -341,8 +341,8 @@ proc setZoomApply { w } {
 
     set newzoom [expr [$w.setzoom.e1 get] / 100.0]
     if { $newzoom != $zoom } {
-	set zoom $newzoom
-	redrawAll
+        set zoom $newzoom
+        redrawAll
     }
     destroy $w
 }
@@ -365,7 +365,7 @@ proc selectZoom { x y } {
 
     set values {}
     foreach z $zoom_stops {
-	lappend values [expr {int($z*100)}]
+        lappend values [expr {int($z*100)}]
     }
 
     set w .entry1
@@ -373,12 +373,12 @@ proc selectZoom { x y } {
     toplevel $w -takefocus 1
 
     if { $x == 0 && $y == 0 } {
-	set screen [wm maxsize .]
-	set x [expr {[lindex $screen 0] / 2}]
-	set y [expr {[lindex $screen 1] / 2}]
+        set screen [wm maxsize .]
+        set x [expr {[lindex $screen 0] / 2}]
+        set y [expr {[lindex $screen 1] / 2}]
     } else {
-	set x [expr {$x + 10}]
-	set y [expr {$y - 90}]
+        set x [expr {$x + 10}]
+        set y [expr {$y - 90}]
     }
     wm geometry $w +$x+$y
     wm title $w "Select zoom %"
@@ -424,25 +424,25 @@ proc selectZoomApply { w } {
     set tempzoom [$w.selectzoom.e1 get]
 
     if {!$hasIM} {
-	global zoom_stops
-	set values {}
-	foreach z $zoom_stops {
-	    lappend values [expr {int($z*100)}]
-	}
-	if { $tempzoom > 400 || $tempzoom < 10 } {
-	    set tempzoom 100
-	}
-	if { [lsearch $values $tempzoom] == -1 } {
-	    set tempzoom [expr int($tempzoom/10)*10]
-	}
+        global zoom_stops
+        set values {}
+        foreach z $zoom_stops {
+            lappend values [expr {int($z*100)}]
+        }
+        if { $tempzoom > 400 || $tempzoom < 10 } {
+            set tempzoom 100
+        }
+        if { [lsearch $values $tempzoom] == -1 } {
+            set tempzoom [expr int($tempzoom/10)*10]
+        }
     }
 
     set newzoom [ expr $tempzoom / 100.0]
     if { $newzoom != $zoom } {
-	set zoom $newzoom
-	redrawAll
-	set changed 1
-	updateUndoLog
+        set zoom $newzoom
+        redrawAll
+        set changed 1
+        updateUndoLog
     }
     destroy $w
 }
@@ -475,56 +475,56 @@ proc routerDefaultsApply { wi } {
     set empty {}
 
     if { $selected_node_list != $empty } {
-	foreach node $selected_node_list {
-	    if { $oper_mode == "edit" && [nodeType $node] == "router" } {
-		setNodeModel $node $router_model
-		set router_ConfigModel $router_model
-		if { $router_ConfigModel != "static" } {
-		    set ripEnable [lindex $rdconfig 0]
-		    set ripngEnable [lindex $rdconfig 1]
-		    set ospfEnable [lindex $rdconfig 2]
-		    set ospf6Enable [lindex $rdconfig 3]
-		    setNodeProtocolRip $node $ripEnable
-		    setNodeProtocolRipng $node $ripngEnable
-		    setNodeProtocolOspfv2 $node $ospfEnable
-		    setNodeProtocolOspfv3 $node $ospf6Enable
-		} else {
-		    $wi.nbook.nf1.protocols.rip configure -state disabled
-		    $wi.nbook.nf1.protocols.ripng configure -state disabled
-		    $wi.nbook.nf1.protocols.ospf configure -state disabled
-		    $wi.nbook.nf1.protocols.ospf6 configure -state disabled
-		}
-		set changed 1
-	    }
-	}
+        foreach node $selected_node_list {
+            if { $oper_mode == "edit" && [nodeType $node] == "router" } {
+                setNodeModel $node $router_model
+                set router_ConfigModel $router_model
+                if { $router_ConfigModel != "static" } {
+                    set ripEnable [lindex $rdconfig 0]
+                    set ripngEnable [lindex $rdconfig 1]
+                    set ospfEnable [lindex $rdconfig 2]
+                    set ospf6Enable [lindex $rdconfig 3]
+                    setNodeProtocolRip $node $ripEnable
+                    setNodeProtocolRipng $node $ripngEnable
+                    setNodeProtocolOspfv2 $node $ospfEnable
+                    setNodeProtocolOspfv3 $node $ospf6Enable
+                } else {
+                    $wi.nbook.nf1.protocols.rip configure -state disabled
+                    $wi.nbook.nf1.protocols.ripng configure -state disabled
+                    $wi.nbook.nf1.protocols.ospf configure -state disabled
+                    $wi.nbook.nf1.protocols.ospf6 configure -state disabled
+                }
+                set changed 1
+            }
+        }
     } else {
-	foreach node $node_list {
-	    if { $oper_mode == "edit" && [nodeType $node] == "router"} {
-		setNodeModel $node $router_model
-		set router_ConfigModel $router_model
-		if { $router_ConfigModel != "static" } {
-		    set ripEnable [lindex $rdconfig 0]
-		    set ripngEnable [lindex $rdconfig 1]
-		    set ospfEnable [lindex $rdconfig 2]
-		    set ospf6Enable [lindex $rdconfig 3]
-		    setNodeProtocolRip $node  $ripEnable
-		    setNodeProtocolRipng $node $ripngEnable
-		    setNodeProtocolOspfv2 $node $ospfEnable
-		    setNodeProtocolOspfv3 $node $ospf6Enable
-		} else {
-		    $wi.nbook.nf1.protocols.rip configure -state disabled
-		    $wi.nbook.nf1.protocols.ripng configure -state disabled
-		    $wi.nbook.nf1.protocols.ospf configure -state disabled
-		    $wi.nbook.nf1.protocols.ospf6 configure -state disabled
-		}
-		set changed 1
-	    }
-	}
+        foreach node $node_list {
+            if { $oper_mode == "edit" && [nodeType $node] == "router"} {
+                setNodeModel $node $router_model
+                set router_ConfigModel $router_model
+                if { $router_ConfigModel != "static" } {
+                    set ripEnable [lindex $rdconfig 0]
+                    set ripngEnable [lindex $rdconfig 1]
+                    set ospfEnable [lindex $rdconfig 2]
+                    set ospf6Enable [lindex $rdconfig 3]
+                    setNodeProtocolRip $node  $ripEnable
+                    setNodeProtocolRipng $node $ripngEnable
+                    setNodeProtocolOspfv2 $node $ospfEnable
+                    setNodeProtocolOspfv3 $node $ospf6Enable
+                } else {
+                    $wi.nbook.nf1.protocols.rip configure -state disabled
+                    $wi.nbook.nf1.protocols.ripng configure -state disabled
+                    $wi.nbook.nf1.protocols.ospf configure -state disabled
+                    $wi.nbook.nf1.protocols.ospf6 configure -state disabled
+                }
+                set changed 1
+            }
+        }
     }
 
     if { $changed == 1 } {
-	redrawAll
-	updateUndoLog
+        redrawAll
+        updateUndoLog
     }
     destroy $wi
 }
@@ -546,9 +546,9 @@ proc setCustomIcon { node iconName } {
 
     set i [lsearch [set $node] "customIcon *"]
     if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i "customIcon $iconName"]
+        set $node [lreplace [set $node] $i $i "customIcon $iconName"]
     } else {
-	set $node [linsert [set $node] end "customIcon $iconName"]
+        set $node [linsert [set $node] end "customIcon $iconName"]
     }
 }
 
@@ -583,7 +583,7 @@ proc removeCustomIcon { node } {
 
     set i [lsearch [set $node] "customIcon *"]
     if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i]
+        set $node [lreplace [set $node] $i $i]
     }
 }
 
@@ -600,13 +600,13 @@ proc getMostDistantNodeCoordinates {} {
     set x 0
     set y 0
     foreach node $node_list {
-	set coords [getNodeCoords $node]
-	if {[lindex $coords 0] > $x} {
-	    set x [lindex $coords 0]
-	}
-	if {[lindex $coords 1] > $y} {
-	    set y [lindex $coords 1]
-	}
+        set coords [getNodeCoords $node]
+        if {[lindex $coords 0] > $x} {
+            set x [lindex $coords 0]
+        }
+        if {[lindex $coords 1] > $y} {
+            set y [lindex $coords 1]
+        }
     }
     set x [expr $x + 25]
     set y [expr $y + 30]
@@ -635,86 +635,85 @@ proc topologyElementsTree {} {
     }
 
     if { $showTree } {
-	.panwin add $f
-	ttk::frame $f.treegrid
-	ttk::treeview $f.tree -selectmode browse \
-	    -xscrollcommand "$f.hscroll set"\
-	    -yscrollcommand "$f.vscroll set"
-	ttk::scrollbar $f.hscroll -orient horizontal -command "$f.tree xview"
-	ttk::scrollbar $f.vscroll -orient vertical -command "$f.tree yview"
+        .panwin add $f
+        ttk::frame $f.treegrid
+        ttk::treeview $f.tree -selectmode browse \
+            -xscrollcommand "$f.hscroll set"\
+            -yscrollcommand "$f.vscroll set"
+        ttk::scrollbar $f.hscroll -orient horizontal -command "$f.tree xview"
+        ttk::scrollbar $f.vscroll -orient vertical -command "$f.tree yview"
 
-	focus $f.tree
+        focus $f.tree
 
-	pack $f.treegrid -side right -fill y
-	grid $f.tree $f.vscroll -in $f.treegrid -sticky nsew
+        pack $f.treegrid -side right -fill y
+        grid $f.tree $f.vscroll -in $f.treegrid -sticky nsew
         grid $f.hscroll -in $f.treegrid -sticky nsew
-	grid columnconfig $f.treegrid 0 -weight 1
-	grid rowconfigure $f.treegrid 0 -weight 1
+        grid columnconfig $f.treegrid 0 -weight 1
+        grid rowconfigure $f.treegrid 0 -weight 1
 
-	#stvaranje columna
-	$f.tree configure -columns { state MAC IPv4 IPv6 canvas }
-	$f.tree column #0 -width 200 -stretch 0
-	$f.tree column state -width 60 -anchor center -stretch 0
+        #stvaranje columna
+        $f.tree configure -columns { state MAC IPv4 IPv6 canvas }
+        $f.tree column #0 -width 200 -stretch 0
+        $f.tree column state -width 60 -anchor center -stretch 0
         $f.tree column MAC -width 120 -anchor center -stretch 0
-	$f.tree column IPv4 -width 100 -anchor center -stretch 0
-	$f.tree column IPv6 -width 100 -anchor center -stretch 0
-	$f.tree column canvas -width 60 -anchor center -stretch 0
-	$f.tree heading #0 -text "(Expand All)"
-	$f.tree heading state -text "State"
+        $f.tree column IPv4 -width 100 -anchor center -stretch 0
+        $f.tree column IPv6 -width 100 -anchor center -stretch 0
+        $f.tree column canvas -width 60 -anchor center -stretch 0
+        $f.tree heading #0 -text "(Expand All)"
+        $f.tree heading state -text "State"
         $f.tree heading MAC -text "MAC address"
-	$f.tree heading IPv4 -text "IPv4 address"
-	$f.tree heading IPv6 -text "IPv6 address"
-	$f.tree heading canvas -text "Canvas"
+        $f.tree heading IPv4 -text "IPv4 address"
+        $f.tree heading IPv6 -text "IPv6 address"
+        $f.tree heading canvas -text "Canvas"
 
 
-	#punjenje stabla podacima o cvorovima
+        #punjenje stabla podacima o cvorovima
         global nodetags
-	set nodetags ""
-	$f.tree insert {} end -id nodes -text "Nodes" -open true -tags nodes
-	$f.tree focus nodes
-	$f.tree selection set nodes
-	foreach node [lsort -dictionary $node_list] {
-	    set type [nodeType $node]
-	    if { $type != "pseudo" } {
-		$f.tree insert nodes end -id $node -text "[getNodeName $node]" -open false -tags $node
-		lappend nodetags $node
-		$f.tree set $node canvas [getCanvasName [getNodeCanvas $node]]
-		foreach ifc [lsort -dictionary [ifcList $node]] {
-		    $f.tree insert $node end -id $node$ifc -text "$ifc" -tags $node$ifc
-		    $f.tree set $node$ifc state [getIfcOperState $node $ifc]
-		    $f.tree set $node$ifc IPv4 [getIfcIPv4addr $node $ifc]
-		    $f.tree set $node$ifc IPv6 [getIfcIPv6addr $node $ifc]
+        set nodetags ""
+        $f.tree insert {} end -id nodes -text "Nodes" -open true -tags nodes
+        $f.tree focus nodes
+        $f.tree selection set nodes
+        foreach node [lsort -dictionary $node_list] {
+            set type [nodeType $node]
+            if { $type != "pseudo" } {
+                $f.tree insert nodes end -id $node -text "[getNodeName $node]" -open false -tags $node
+                lappend nodetags $node
+                $f.tree set $node canvas [getCanvasName [getNodeCanvas $node]]
+                foreach ifc [lsort -dictionary [ifcList $node]] {
+                    $f.tree insert $node end -id $node$ifc -text "$ifc" -tags $node$ifc
+                    $f.tree set $node$ifc state [getIfcOperState $node $ifc]
+                    $f.tree set $node$ifc IPv4 [getIfcIPv4addr $node $ifc]
+                    $f.tree set $node$ifc IPv6 [getIfcIPv6addr $node $ifc]
                     $f.tree set $node$ifc MAC [getIfcMACaddr $node $ifc]
-		}
-	    }
-	}
+                }
+            }
+        }
 
-	#punjenje stabla podacima o linkovima
-	global linktags
-	set linktags ""
-	$f.tree insert {} end -id links -text "Links" -open false -tags links
-	foreach link [lsort -dictionary $link_list] {
-	    set n0 [lindex [linkPeers $link] 0]
-	    set n1 [lindex [linkPeers $link] 1]
-	    set name0 [getNodeName $n0]
-	    set name1 [getNodeName $n1]
-	    $f.tree insert links end -id $link -text "From $name0 to $name1" -tags $link
-	    lappend linktags $link
-	}
+        #punjenje stabla podacima o linkovima
+        global linktags
+        set linktags ""
+        $f.tree insert {} end -id links -text "Links" -open false -tags links
+        foreach link [lsort -dictionary $link_list] {
+            set n0 [lindex [linkPeers $link] 0]
+            set n1 [lindex [linkPeers $link] 1]
+            set name0 [getNodeName $n0]
+            set name1 [getNodeName $n1]
+            $f.tree insert links end -id $link -text "From $name0 to $name1" -tags $link
+            lappend linktags $link
+        }
 
-	global expandtree
-	set expandtree 0
-	$f.tree heading #0 -command \
-	    "expandOrCollapseTree"
+        global expandtree
+        set expandtree 0
+        $f.tree heading #0 -command \
+            "expandOrCollapseTree"
 
-	bindEventsToTree
-
+        bindEventsToTree
     } else {
-	destroy $f.treegrid
-	destroy $f.tree $f.vscroll
-	destroy $f.tree $f.hscroll
-	destroy $f.buttons
-	destroy $f.tree
+        destroy $f.treegrid
+        destroy $f.tree $f.vscroll
+        destroy $f.tree $f.hscroll
+        destroy $f.buttons
+        destroy $f.tree
     }
 }
 
@@ -729,23 +728,23 @@ proc topologyElementsTree {} {
 proc expandOrCollapseTree {} {
     global expandtree
     if { $expandtree == 0 } {
-	set expandtree 1
-	set f .panwin.f2
-	$f.tree heading #0 -text "(Collapse All)"
-	$f.tree item nodes -open true
-	$f.tree item links -open true
-	foreach node [$f.tree children nodes] {
-	    $f.tree item $node -open true
-	}
+        set expandtree 1
+        set f .panwin.f2
+        $f.tree heading #0 -text "(Collapse All)"
+        $f.tree item nodes -open true
+        $f.tree item links -open true
+        foreach node [$f.tree children nodes] {
+            $f.tree item $node -open true
+        }
     } else {
-	set expandtree 0
-	set f .panwin.f2
-	$f.tree heading #0 -text "(Expand All)"
-	$f.tree item nodes -open false
-	$f.tree item links -open false
-	foreach node [$f.tree children nodes] {
-	    $f.tree item $node -open false
-	}
+        set expandtree 0
+        set f .panwin.f2
+        $f.tree heading #0 -text "(Expand All)"
+        $f.tree item nodes -open false
+        $f.tree item links -open false
+        foreach node [$f.tree children nodes] {
+            $f.tree item $node -open false
+        }
     }
 }
 
@@ -762,81 +761,81 @@ proc bindEventsToTree {} {
     global nodetags linktags
     set f .panwin.f2
     $f.tree tag bind nodes <Key-Down> \
-	"if {[llength $nodetags] != 0} {
-	    selectNodeFromTree [lindex $nodetags 0]
-	}"
+        "if {[llength $nodetags] != 0} {
+            selectNodeFromTree [lindex $nodetags 0]
+        }"
 
     $f.tree tag bind links <Key-Up> \
-	"if {[llength $nodetags] != 0} {
-	    selectNodeFromTree [lindex $nodetags end]
-	}"
+        "if {[llength $nodetags] != 0} {
+            selectNodeFromTree [lindex $nodetags end]
+        }"
 
     $f.tree tag bind links <Key-Down> \
-	"if {[llength $linktags] != 0} {
-	    selectLinkPeersFromTree [lindex $linktags 0]
-	}"
+        "if {[llength $linktags] != 0} {
+            selectLinkPeersFromTree [lindex $linktags 0]
+        }"
 
     $f.tree tag bind nodes <1> \
-	  ".panwin.f1.c dtag node selected; \
-	    .panwin.f1.c delete -withtags selectmark"
+          ".panwin.f1.c dtag node selected; \
+            .panwin.f1.c delete -withtags selectmark"
 
     $f.tree tag bind links <1> \
-	  ".panwin.f1.c dtag node selected; \
-	    .panwin.f1.c delete -withtags selectmark"
+          ".panwin.f1.c dtag node selected; \
+            .panwin.f1.c delete -withtags selectmark"
 
     foreach n $nodetags {
-	set type [nodeType $n]
-	global selectedIfc
-	$f.tree tag bind $n <1> \
-	      "selectNodeFromTree $n"
-	$f.tree tag bind $n <Key-Up> \
-	    "if {![string equal {} [$f.tree prev $n]]} {
-		selectNodeFromTree [$f.tree prev $n]
-	    } else {
-		.panwin.f1.c dtag node selected
-		.panwin.f1.c delete -withtags selectmark
-	    }"
-	$f.tree tag bind $n <Key-Down> \
-	    "if {![string equal {} [$f.tree next $n]]} {
-		selectNodeFromTree [$f.tree next $n]
-	    } else {
-		.panwin.f1.c dtag node selected
-		.panwin.f1.c delete -withtags selectmark
-	    }"
-	$f.tree tag bind $n <Double-1> \
-	    "$type.configGUI .panwin.f1.c $n"
-	$f.tree tag bind $n <Key-Return> \
-	    "$type.configGUI .panwin.f1.c $n"
-	foreach ifc [lsort -dictionary [ifcList $n]] {
-	    $f.tree tag bind $n$ifc <Double-1> \
-		"set selectedIfc $ifc; \
-		  $type.configGUI .panwin.f1.c $n; \
-		  set selectedIfc \"\""
-	    $f.tree tag bind $n$ifc <Key-Return> \
-		"set selectedIfc $ifc; \
-		  $type.configGUI .panwin.f1.c $n; \
-		  set selectedIfc \"\""
-	}
+        set type [nodeType $n]
+        global selectedIfc
+        $f.tree tag bind $n <1> \
+              "selectNodeFromTree $n"
+        $f.tree tag bind $n <Key-Up> \
+            "if {![string equal {} [$f.tree prev $n]]} {
+                selectNodeFromTree [$f.tree prev $n]
+            } else {
+                .panwin.f1.c dtag node selected
+                .panwin.f1.c delete -withtags selectmark
+            }"
+        $f.tree tag bind $n <Key-Down> \
+            "if {![string equal {} [$f.tree next $n]]} {
+                selectNodeFromTree [$f.tree next $n]
+            } else {
+                .panwin.f1.c dtag node selected
+                .panwin.f1.c delete -withtags selectmark
+            }"
+        $f.tree tag bind $n <Double-1> \
+            "$type.configGUI .panwin.f1.c $n"
+        $f.tree tag bind $n <Key-Return> \
+            "$type.configGUI .panwin.f1.c $n"
+        foreach ifc [lsort -dictionary [ifcList $n]] {
+            $f.tree tag bind $n$ifc <Double-1> \
+                "set selectedIfc $ifc; \
+                  $type.configGUI .panwin.f1.c $n; \
+                  set selectedIfc \"\""
+            $f.tree tag bind $n$ifc <Key-Return> \
+                "set selectedIfc $ifc; \
+                  $type.configGUI .panwin.f1.c $n; \
+                  set selectedIfc \"\""
+        }
     }
 
     foreach l $linktags {
-	$f.tree tag bind $l <1> \
-	    "selectLinkPeersFromTree $l"
-	$f.tree tag bind $l <Key-Up> \
-	    "if {![string equal {} [$f.tree prev $l]]} {
-		selectLinkPeersFromTree [$f.tree prev $l]
-	    } else {
-		.panwin.f1.c dtag node selected
-		.panwin.f1.c delete -withtags selectmark
-	    }"
-	$f.tree tag bind $l <Key-Down> \
-	    "if {![string equal {} [$f.tree next $l]]} {
-		selectLinkPeersFromTree [$f.tree next $l]
-	    }"
-	$f.tree tag bind $l <Double-1> \
-	    "link.configGUI .panwin.f1.c $l"
-	$f.tree tag bind $l <Key-Return> \
-	    "link.configGUI .panwin.f1.c $l"
+        $f.tree tag bind $l <1> \
+            "selectLinkPeersFromTree $l"
+        $f.tree tag bind $l <Key-Up> \
+            "if {![string equal {} [$f.tree prev $l]]} {
+                selectLinkPeersFromTree [$f.tree prev $l]
+            } else {
+                .panwin.f1.c dtag node selected
+                .panwin.f1.c delete -withtags selectmark
+            }"
+        $f.tree tag bind $l <Key-Down> \
+            "if {![string equal {} [$f.tree next $l]]} {
+                selectLinkPeersFromTree [$f.tree next $l]
+            }"
+        $f.tree tag bind $l <Double-1> \
+            "link.configGUI .panwin.f1.c $l"
+        $f.tree tag bind $l <Key-Return> \
+            "link.configGUI .panwin.f1.c $l"
     }
 }
 
@@ -906,38 +905,38 @@ proc refreshTopologyTree {} {
     set nodetags ""
     $f.tree insert {} end -id nodes -text "Nodes" -open true -tags nodes
     foreach node [lsort -dictionary $node_list] {
-	set type [nodeType $node]
-	if { $type != "pseudo" } {
-	    $f.tree insert nodes end -id $node -text "[getNodeName $node]" -tags $node
-	    lappend nodetags $node
-	    $f.tree set $node canvas [getCanvasName [getNodeCanvas $node]]
-	    foreach ifc [lsort -dictionary [ifcList $node]] {
-		    $f.tree insert $node end -id $node$ifc -text "$ifc" -tags $node$ifc
-		    $f.tree set $node$ifc state [getIfcOperState $node $ifc]
-		    $f.tree set $node$ifc IPv4 [getIfcIPv4addr $node $ifc]
-		    $f.tree set $node$ifc IPv6 [getIfcIPv6addr $node $ifc]
-                    $f.tree set $node$ifc MAC [getIfcMACaddr $node $ifc]
-	    }
-	}
+        set type [nodeType $node]
+        if { $type != "pseudo" } {
+            $f.tree insert nodes end -id $node -text "[getNodeName $node]" -tags $node
+            lappend nodetags $node
+            $f.tree set $node canvas [getCanvasName [getNodeCanvas $node]]
+            foreach ifc [lsort -dictionary [ifcList $node]] {
+                $f.tree insert $node end -id $node$ifc -text "$ifc" -tags $node$ifc
+                $f.tree set $node$ifc state [getIfcOperState $node $ifc]
+                $f.tree set $node$ifc IPv4 [getIfcIPv4addr $node $ifc]
+                $f.tree set $node$ifc IPv6 [getIfcIPv6addr $node $ifc]
+                        $f.tree set $node$ifc MAC [getIfcMACaddr $node $ifc]
+            }
+        }
     }
 
     set linktags ""
     $f.tree insert {} end -id links -text "Links" -open false -tags links
     foreach link [lsort -dictionary $link_list] {
-	set n0 [lindex [linkPeers $link] 0]
-	set n1 [lindex [linkPeers $link] 1]
-	set name0 [getNodeName $n0]
-	set name1 [getNodeName $n1]
-	$f.tree insert links end -id $link -text "From $name0 to $name1" -tags $link
-	lappend linktags $link
+        set n0 [lindex [linkPeers $link] 0]
+        set n1 [lindex [linkPeers $link] 1]
+        set name0 [getNodeName $n0]
+        set name1 [getNodeName $n1]
+        $f.tree insert links end -id $link -text "From $name0 to $name1" -tags $link
+        lappend linktags $link
     }
 
     if { [$f.tree exists $selected] } {
-	$f.tree focus $selected
-	$f.tree selection set $selected
+        $f.tree focus $selected
+        $f.tree selection set $selected
     } else {
-	$f.tree focus nodes
-	$f.tree selection set nodes
+        $f.tree focus nodes
+        $f.tree selection set nodes
     }
 
     bindEventsToTree
@@ -974,7 +973,7 @@ proc attachToExperimentPopup {} {
 
     #right pane definition
     set prevcan [canvas $wi.expChooser.right.pc -bd 0 -relief sunken -highlightthickness 0 \
-    		-width 300 -height 210 -background white]
+            -width 300 -height 210 -background white]
     pack $prevcan -anchor center
     $prevcan create text 150 105 -text "(Preview)" -tags "preview"
 
@@ -987,7 +986,7 @@ proc attachToExperimentPopup {} {
 
     set tree $wi.expChooser.left.tree
     ttk::treeview $tree -columns "type" -height 5 -selectmode browse \
-    	-xscrollcommand "$wi.expChooser.left.hscroll set"\
+        -xscrollcommand "$wi.expChooser.left.hscroll set"\
         -yscrollcommand "$wi.expChooser.left.vscroll set"
     ttk::scrollbar $wi.expChooser.left.hscroll -orient horizontal -command "$wi.expChooser.left.tree xview"
     ttk::scrollbar $wi.expChooser.left.vscroll -orient vertical -command "$wi.expChooser.left.tree yview"
@@ -1005,25 +1004,25 @@ proc attachToExperimentPopup {} {
     focus $tree
 
     foreach exp [getResumableExperiments] {
-	set timestamp [getExperimentTimestampFromFile $exp]
-	$tree insert {} end -id $exp -text [list $exp "-" [getExperimentNameFromFile $exp]] -values [list $timestamp] \
-	          -tags "$exp"
-	$tree tag bind $exp <1> \
-	  "updateScreenshotPreview $prevcan $runtimeDir/$exp/screenshot.png
-	   set selectedExperiment $exp"
+        set timestamp [getExperimentTimestampFromFile $exp]
+        $tree insert {} end -id $exp -text [list $exp "-" [getExperimentNameFromFile $exp]] -values [list $timestamp] \
+                  -tags "$exp"
+        $tree tag bind $exp <1> \
+          "updateScreenshotPreview $prevcan $runtimeDir/$exp/screenshot.png
+           set selectedExperiment $exp"
     }
 
     foreach exp [getResumableExperiments] {
-	$tree tag bind $exp <Key-Up> \
-	"if {![string equal {} [$tree prev $exp]]} {
-	    updateScreenshotPreview $prevcan $runtimeDir/[$tree prev $exp]/screenshot.png
-	    set selectedExperiment [$tree prev $exp]
-	}"
-	$tree tag bind $exp <Key-Down> \
-	"if {![string equal {} [$tree next $exp]]} {
-	    updateScreenshotPreview $prevcan $runtimeDir/[$tree next $exp]/screenshot.png
-	    set selectedExperiment [$tree next $exp]
-	}"
+        $tree tag bind $exp <Key-Up> \
+        "if {![string equal {} [$tree prev $exp]]} {
+            updateScreenshotPreview $prevcan $runtimeDir/[$tree prev $exp]/screenshot.png
+            set selectedExperiment [$tree prev $exp]
+        }"
+        $tree tag bind $exp <Key-Down> \
+        "if {![string equal {} [$tree next $exp]]} {
+            updateScreenshotPreview $prevcan $runtimeDir/[$tree next $exp]/screenshot.png
+            set selectedExperiment [$tree next $exp]
+        }"
     }
 
     set first [lindex [getResumableExperiments] 0]
@@ -1032,15 +1031,15 @@ proc attachToExperimentPopup {} {
     set selectedExperiment $first
 
     if {$selectedExperiment != ""} {
-	updateScreenshotPreview $prevcan $runtimeDir/$selectedExperiment/screenshot.png
+        updateScreenshotPreview $prevcan $runtimeDir/$selectedExperiment/screenshot.png
     }
 
     ttk::frame $wi.buttons
     pack $wi.buttons -side bottom -fill x -pady 2m
     ttk::button $wi.buttons.resume -text "Resume selected experiment" -command {
-	global selectedExperiment
-	resumeSelectedExperiment $selectedExperiment
-	destroy .attachToExperimentDialog
+        global selectedExperiment
+        resumeSelectedExperiment $selectedExperiment
+        destroy .attachToExperimentDialog
     }
     ttk::button $wi.buttons.cancel -text "Cancel" -command "destroy $ateDialog"
     pack $wi.buttons.cancel $wi.buttons.resume -side right -expand 1
@@ -1063,10 +1062,10 @@ proc attachToExperimentPopup {} {
 proc updateScreenshotPreview { pc image } {
     $pc delete "preview"
     if {[file exists $image]} {
-	image create photo screenshot -file $image
-	$pc create image 150 105 -image screenshot -tags "preview"
+        image create photo screenshot -file $image
+        $pc create image 150 105 -image screenshot -tags "preview"
     } else {
-	$pc create text 150 100 -text "No screenshot available." -tags "preview"
+        $pc create text 150 100 -text "No screenshot available." -tags "preview"
     }
 }
 
@@ -1086,38 +1085,38 @@ proc setActiveTool { tool } {
     set ungrouped {select link rectangle oval freeform text}
 
     if { $activetool in $ungrouped } {
-	$mf.left.$activetool state !selected
+        $mf.left.$activetool state !selected
     } elseif { [$activetool.layer] == "LINK" } {
-	$mf.left.link_layer state !selected
+        $mf.left.link_layer state !selected
     } elseif { [$activetool.layer] == "NETWORK" } {
-	$mf.left.net_layer state !selected
+        $mf.left.net_layer state !selected
     }
 
     if { $tool in $ungrouped } {
-	$mf.left.$tool state selected
+        $mf.left.$tool state selected
     } elseif { [$tool.layer] == "LINK" } {
-	set image [image create photo -file [$tool.icon toolbar]]
-	set arrowimage [image create photo -file "$ROOTDIR/$LIBDIR/icons/tiny/l2.gif"]
-	$image copy $arrowimage -from 29 30 40 40 -to 29 30 40 40 -compositingrule overlay
-	$mf.left.link_layer configure -image $image
-	$mf.left.link_layer state selected
+        set image [image create photo -file [$tool.icon toolbar]]
+        set arrowimage [image create photo -file "$ROOTDIR/$LIBDIR/icons/tiny/l2.gif"]
+        $image copy $arrowimage -from 29 30 40 40 -to 29 30 40 40 -compositingrule overlay
+        $mf.left.link_layer configure -image $image
+        $mf.left.link_layer state selected
     } elseif { [$tool.layer] == "NETWORK" } {
-	set image [image create photo -file [$tool.icon toolbar]]
-	set arrowimage [image create photo -file "$ROOTDIR/$LIBDIR/icons/tiny/l3.gif"]
-	$image copy $arrowimage -from 29 30 40 40 -to 29 30 40 40 -compositingrule overlay
-	$mf.left.net_layer configure -image $image
-	$mf.left.net_layer state selected
+        set image [image create photo -file [$tool.icon toolbar]]
+        set arrowimage [image create photo -file "$ROOTDIR/$LIBDIR/icons/tiny/l3.gif"]
+        $image copy $arrowimage -from 29 30 40 40 -to 29 30 40 40 -compositingrule overlay
+        $mf.left.net_layer configure -image $image
+        $mf.left.net_layer state selected
     }
 
     set activetool $tool
 
     if { $tool in {"router" "pc" "host"} } {
-	set state normal
+    set state normal
     } else {
-	set state disabled
+        set state disabled
     }
 
     for { set i 0 } { $i <= [.menubar.t_g index last] } { incr i } {
-	.menubar.t_g entryconfigure $i -state $state
+        .menubar.t_g entryconfigure $i -state $state
     }
 }

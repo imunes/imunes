@@ -71,8 +71,8 @@ proc $MODULE.confNewNode { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
     set nconfig [list \
-	"hostname UNASSIGNED" \
-	! ]
+        "hostname UNASSIGNED" \
+        ! ]
     lappend $node "network-config [list $nconfig]"
 }
 
@@ -91,15 +91,15 @@ proc $MODULE.confNewNode { node } {
 proc $MODULE.icon { size } {
     global ROOTDIR LIBDIR
     switch $size {
-      normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/rj45.gif
-      }
-      small {
-	return $ROOTDIR/$LIBDIR/icons/small/rj45.gif
-      }
-      toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/rj45.gif
-      }
+        normal {
+            return $ROOTDIR/$LIBDIR/icons/normal/rj45.gif
+        }
+        small {
+            return $ROOTDIR/$LIBDIR/icons/small/rj45.gif
+        }
+        toolbar {
+            return $ROOTDIR/$LIBDIR/icons/tiny/rj45.gif
+        }
     }
 }
 

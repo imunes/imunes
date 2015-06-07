@@ -77,8 +77,8 @@ proc $MODULE.confNewNode { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
     set nconfig [list \
-	"hostname $node" \
-	! ]
+        "hostname $node" \
+        ! ]
     lappend $node "network-config [list $nconfig]"
 
     setLogIfcType $node lo0 lo
@@ -101,15 +101,15 @@ proc $MODULE.confNewNode { node } {
 proc $MODULE.icon { size } {
     global ROOTDIR LIBDIR
     switch $size {
-      normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/pc.gif
-      }
-      small {
-	return $ROOTDIR/$LIBDIR/icons/small/pc.gif
-      }
-      toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/pc.gif
-      }
+        normal {
+            return $ROOTDIR/$LIBDIR/icons/normal/pc.gif
+        }
+        small {
+            return $ROOTDIR/$LIBDIR/icons/small/pc.gif
+        }
+        toolbar {
+            return $ROOTDIR/$LIBDIR/icons/tiny/pc.gif
+        }
     }
 }
 
@@ -144,13 +144,13 @@ proc $MODULE.notebookDimensions { wi } {
     set w 507
 
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
-	== "Configuration" } {
-	set w 507
+        == "Configuration" } {
+        set w 507
     }
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
-	== "Interfaces" } {
-	set h 370
-	set w 507
+        == "Interfaces" } {
+        set h 370
+        set w 507
     }
 
     return [list $h $w]
@@ -170,9 +170,9 @@ proc $MODULE.calcDxDy {} {
     upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global showIfIPaddrs showIfIPv6addrs
     if { $showIfIPaddrs || $showIfIPv6addrs } {
-	set x [expr {1.1 / $zoom}]
+        set x [expr {1.1 / $zoom}]
     } else {
-	set x [expr {1.4 / $zoom}]
+        set x [expr {1.4 / $zoom}]
     }
     set y [expr {1.5 / $zoom}]
     return [list $x $y]
@@ -409,7 +409,7 @@ proc $MODULE.configGUI { c node } {
     set ifctab [lindex $tabs 1]
 
     set treecolumns {"OperState State" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
-	    "MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop"}
+        "MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop"}
     configGUI_addTree $ifctab $node
 
     configGUI_servicesConfig $configtab $node

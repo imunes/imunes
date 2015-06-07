@@ -69,15 +69,15 @@ proc $MODULE.prepareSystem {} {
 #****
 proc $MODULE.confNewIfc { node ifc } {
     foreach l2node [listLANnodes $node ""] {
-	foreach ifc [ifcList $l2node] {
-	    set peer [peerByIfc $l2node $ifc]
-	    if { ! [isNodeRouter $peer] &&
-		[[typemodel $peer].layer] == "NETWORK" } {
-		set ifname [ifcByPeer $peer $l2node]
-		autoIPv4defaultroute $peer $ifname
-		autoIPv6defaultroute $peer $ifname
-	    }
-	}
+        foreach ifc [ifcList $l2node] {
+            set peer [peerByIfc $l2node $ifc]
+            if { ! [isNodeRouter $peer] &&
+                [[typemodel $peer].layer] == "NETWORK" } {
+                set ifname [ifcByPeer $peer $l2node]
+                autoIPv4defaultroute $peer $ifname
+                autoIPv6defaultroute $peer $ifname
+            }
+        }
     }
 }
 
@@ -95,8 +95,8 @@ proc $MODULE.confNewNode { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
     set nconfig [list \
-	"hostname $node" \
-	! ]
+        "hostname $node" \
+        ! ]
     lappend $node "network-config [list $nconfig]"
 }
 
@@ -115,15 +115,15 @@ proc $MODULE.confNewNode { node } {
 proc $MODULE.icon {size} {
     global ROOTDIR LIBDIR
     switch $size {
-      normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/lanswitch.gif
-      }
-      small {
-	return $ROOTDIR/$LIBDIR/icons/small/lanswitch.gif
-      }
-      toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/lanswitch.gif
-      }
+        normal {
+            return $ROOTDIR/$LIBDIR/icons/normal/lanswitch.gif
+        }
+        small {
+            return $ROOTDIR/$LIBDIR/icons/small/lanswitch.gif
+        }
+        toolbar {
+            return $ROOTDIR/$LIBDIR/icons/tiny/lanswitch.gif
+        }
     }
 }
 
