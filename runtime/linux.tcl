@@ -268,7 +268,7 @@ proc createNodePhysIfcs { node } {
 
     foreach ifc [allIfcList $node] {
         if {[nodeType $node] == "rj45"} {
-            set nodeNs [string trim [getNodeNamespace $node] "'"]
+            set nodeNs [getNodeNamespace $node]
             set ifname [getNodeName $peerNode]
             catch {exec ln -s /proc/$nodeNs/ns/net /var/run/netns/$nodeNs}
             exec ip link add link $ifname $ifc type macvlan mode private
@@ -296,6 +296,8 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
         if { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
             if { [nodeType $lnode1] != "rj45" } {
                 exec pipework $eid.$lnode1 -i $ifname2 $eid.$lnode2 0/0
+            } else {
+                connectExtIfc $lnode2 $ifname2 $lnode1
             }
         }
     } elseif { [[typemodel $lnode1].virtlayer] == "VIMAGE" } {
@@ -555,6 +557,7 @@ proc getNodeNamespace { node } {
 
     set node_id "$eid.$node"
     catch {exec docker inspect -f '{{.State.Pid}}' $node_id} ns
+    set ns [string trim $ns "'"]
     return $ns
 }
 
@@ -583,6 +586,12 @@ proc getIPv6RouteCmd { statrte } {
 proc connectExtIfc { node ifc peerNode } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
+    set node_id "$eid.$node"
+
+    set nodeNs [getNodeNamespace $node]
+    set ifname [getNodeName $peerNode]
+    catch {exec ln -s /proc/$nodeNs/ns/net /var/run/netns/$nodeNs}
+    exec ip link add link $ifname $ifc type macvlan mode private
     exec ip link set netns $nodeNs $ifc
     exec docker exec $node_id ip link set $ifc up
 }
