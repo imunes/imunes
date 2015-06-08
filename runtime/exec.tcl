@@ -860,21 +860,21 @@ proc deployCfg {} {
     pipesCreate
 
     foreach node $node_list {
-    incr step
-    set node_id "$eid\.$node"
-    set type [nodeType $node]
-    set name [getNodeName $node]
-    if {$type != "pseudo"} {
-        if {$execMode != "batch"} {
-        statline "Creating node $name"
-        $w.p configure -value $startedCount
-        update
+        incr step
+        set node_id "$eid\.$node"
+        set type [nodeType $node]
+        set name [getNodeName $node]
+        if {$type != "pseudo"} {
+            if {$execMode != "batch"} {
+            statline "Creating node $name"
+            $w.p configure -value $startedCount
+            update
+            }
+            displayBatchProgress $step $allNodes
+            [typemodel $node].instantiate $eid $node
+            pipesExec ""
+            incr startedCount
         }
-        displayBatchProgress $step $allNodes
-        [typemodel $node].instantiate $eid $node
-        pipesExec ""
-        incr startedCount
-    }
     }
 
     statline ""

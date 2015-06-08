@@ -139,7 +139,6 @@ proc redo {} {
 # FUNCTION
 #   Choose interface name. The name can be:
 #   * eth -- for interface connecting pc, host and router
-#   * ethx -- for interface connecting rj45
 #   * e -- for interface connecting hub and lanswitch
 #   * f -- for interface connecting frswitch
 # INPUTS
@@ -151,7 +150,7 @@ proc chooseIfName { lnode1 lnode2 } {
     if { [nodeType $lnode1] == "frswitch" } {
         return f
     } elseif { [nodeType $lnode2] == "rj45" } {
-        return $lnode1.ethx
+        return $lnode1.[[nodeType $lnode1].ifcName]
     } else {
         return [[nodeType $lnode1].ifcName]
     }
