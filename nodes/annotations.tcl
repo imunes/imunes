@@ -517,9 +517,14 @@ proc drawRect { rectangle } {
     # rounded-rectangle radius
     if { $rad == "" } { set rad 25 }
 
-    set newrect [roundRect .panwin.f1.c $x1 $y1 $x2 $y2 $rad \
-	-fill $color -outline $bordercolor -width $width \
-	-tags "rectangle $rectangle"]
+    if { $width == 0 } {
+	set newrect [roundRect .panwin.f1.c $x1 $y1 $x2 $y2 $rad \
+	    -fill $color -tags "rectangle $rectangle"]
+    } else {
+	set newrect [roundRect .panwin.f1.c $x1 $y1 $x2 $y2 $rad \
+	    -fill $color -outline $bordercolor -width $width \
+	    -tags "rectangle $rectangle"]
+    }
     .panwin.f1.c raise $newrect background
 }
 

@@ -6,11 +6,8 @@ GUI:
 
 annotations:
 - select annotation while and after resizing
-- layering of annotations
+- layering of annotations - not trivial, because redrawAll clears all annotations and redraws them in the same order they were created.
 - sometimes a rectangle can't be created.
-- undoing resets annotation border color.
-- border width can't be zero.
-- copy/paste annotations
 - keyboard movement of annotations
 - improve color management
 - remove empty text annotations

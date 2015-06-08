@@ -7,6 +7,7 @@ if { $uid != "0" } {
     exit
 }
 
+# define possible call arguments
 set options {
     {bw.arg	"" "set link bandwidth (bps)"}
     {BER.arg	"" "set link BER (1/value)"}
@@ -22,6 +23,7 @@ options:"
 
 set check 0
 
+# parse arguments
 catch {array set params [::cmdline::getoptions argv $options $usage]} err
 if { $err != "" } {
     puts stderr "Usage:"
@@ -50,6 +52,7 @@ if { $params(eid) != "" } {
 }
 set eid2 [lindex [split [lindex $argv 0] "@"] 1]
 
+# detect multiple eid usage
 set eid ""
 if { $eid1 != "" && $eid2 != "" } {
     puts stderr "Only one eid option should be used."
@@ -97,7 +100,7 @@ if { $params(r) } {
     incr check    
 }
 
-
+# build the config that should be applied
 append config "{ "
 if { $bandwidth != "" } {
     append config "bandwidth=" $bandwidth " "
@@ -130,10 +133,12 @@ if { $check == 0 } {
 }
 
 
+# start parsing for nodes
 set nodes [split $link1 "-"]
 set node0 [lindex $nodes 0]
 set node1 [lindex $nodes 1]
 
+# search for l3 nodes as link endpoints
 set output [exec jls -h name host.hostname]
 set output [split $output "\n"]
 
@@ -145,10 +150,10 @@ if { $eid == "" } {
 	set sline [lindex [split $line] 0]
 	if {[string match "i*" $sline] == 1} {
 	    lappend eid_list [lindex [split $sline "."] 0]
-	    if {[string match "*$node0*" $line] == 1} {
+	    if {[string match "*$node0 *" $line] == 1} {
 		lappend n0 [lindex [split $sline "."] 1]
 	    }
-	    if {[string match "*$node1*" $line] == 1} {
+	    if {[string match "*$node1 *" $line] == 1} {
 		lappend n1 [lindex [split $sline "."] 1]
 	    }
 	}
@@ -158,16 +163,17 @@ if { $eid == "" } {
 	set sline [lindex [split $line] 0]
 	if {[string match "*$eid*" $sline] == 1} {
 	    lappend eid_list [lindex [split $sline "."] 0]
-	    if {[string match "*$node0*" $line] == 1} {
+	    if {[string match "*$node0 *" $line] == 1} {
 		lappend n0 [lindex [split $sline "."] 1]
 	    }
-	    if {[string match "*$node1*" $line] == 1} {
+	    if {[string match "*$node1 *" $line] == 1} {
 		lappend n1 [lindex [split $sline "."] 1]
 	    }
 	}
     }
 }
 
+# see how many experiments we've found with specified l3 nodes
 set eid_list [lsort -unique $eid_list]
 set counter [llength $eid_list]
 
@@ -181,8 +187,24 @@ switch $counter {
 	exit
     }
     1 {
+	if { [llength $n0] == 0 } {
+	    catch { exec tail -r /var/run/imunes/$eid_list/config.imn | sed -n -e "/hostname $node0\$/,\$p" | grep -m1 "node" | awk "{print \$2}" } n0
+	    if { [llength $n0] != 1 } {
+		puts stderr "Node $node0 does not exist in the experiment ($eid_list)."
+		exit
+	    }
+	}
+
+	if { [llength $n1] == 0 } {
+	    catch { exec tail -r /var/run/imunes/$eid_list/config.imn | sed -n -e "/hostname $node1\$/,\$p" | grep -m1 "node" | awk "{print \$2}" } n1
+	    if { [llength $n1] != 1 } {
+		puts stderr "Node $node1 does not exist in the experiment ($eid_list)."
+		exit
+	    }
+	}
+
 	if { [llength $n0] > 1 || [llength $n1] > 1 } {
-	    puts stderr "The node name/identifier is not unique in the experiment ($eid)."
+	    puts stderr "The node name/identifier is not unique in the experiment ($eid_list)."
 	    puts stderr "To avoid this, don't assign node names like n0, n1, ..."
 	    exit
 	}
@@ -190,21 +212,15 @@ switch $counter {
 	set l1 "$n0-$n1"
 	set l2 "$n1-$n0"
 
-	set output [exec jexec $eid_list ngctl l]
-	set output [split $output "\n"]
-	set link ""
-	foreach line $output {
-	    set line [lindex [split $line " "] 3]
-	    if {[string match $l1 [string trim $line]] == 1} {
-		set link $l1
-	    }
-	    if {[string match $l2 [string trim $line]] == 1} {
+	if {[catch {exec jexec $eid_list ngctl msg $l1: getcfg}]} {
+	    if {[catch {exec jexec $eid_list ngctl msg $l2: getcfg}]} {
+		puts stderr "Error: specified link (between nodes $node0 and $node1) doesn't exist."
+		exit
+	    } else {
 		set link $l2
 	    }
-	}
-	if { $link == ""} {
-	    puts stderr "Error: specified link (between nodes $node0 and $node1) doesn't exist."
-	    exit
+	} else {
+	    set link $l1
 	}
 	exec jexec $eid_list ngctl msg $link: setcfg $config
     }

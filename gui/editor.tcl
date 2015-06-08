@@ -197,6 +197,20 @@ proc listLANnodes { l2node l2peers } {
 proc pseudo.layer {} {
 }
 
+#****f* editor.tcl/pseudo.virtlayer
+# NAME
+#   pseudo.virtlayer -- pseudo virtlayer
+# SYNOPSIS
+#   set virtlayer [pseudo.virtlayer]
+# FUNCTION
+#   Returns the virtlayer on which the pseudo node operates
+#   i.e. returns no layer.
+# RESULT
+#   * virtlayer -- returns an empty string
+#****
+proc pseudo.virtlayer {} {
+}
+
 #****f* editor.tcl/checkIntRange 
 # NAME
 #   checkIntRange -- check integer range
