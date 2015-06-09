@@ -348,7 +348,7 @@ proc runConfOnNode { node } {
 
 proc destroyLinkBetween { eid lnode1 lnode2 } {
     set lname [linkByPeers $lnode1 $lnode2]
-    pipesExec "exec ovs-vsctl del-br $eid.$lname"
+    catch {exec ovs-vsctl del-br $eid.$lname}
 }
 
 proc removeNodeIfcIPaddrs { eid node } {}

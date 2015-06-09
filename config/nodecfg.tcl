@@ -2711,10 +2711,12 @@ proc nodeCfggenIfconfigIPv4 { node } {
         foreach addr [getIfcIPv4addrs $node $ifc] {
             if { $addr != "" } {
                 if { $first } {
-                    lappend cfg "ifconfig $ifc inet $addr"
+                    lappend cfg [getIPv4AddrCmd $ifc $addr]
+                    # lappend cfg "ifconfig $ifc inet $addr"
                     set first 0
                 } else {
-                    lappend cfg "ifconfig $ifc inet add $addr"
+                    lappend cfg [getIPv4AddrCmd $ifc $addr]
+                    # lappend cfg "ifconfig $ifc inet add $addr"
                 }
             }
         }
@@ -2742,9 +2744,11 @@ proc nodeCfggenIfconfigIPv6 { node } {
         foreach addr [getIfcIPv6addrs $node $ifc] {
             if { $addr != "" } {
                 if { $first } {
-                    lappend cfg "ifconfig $ifc inet6 $addr"
+                    lappend cfg [getIPv6AddrCmd $ifc $addr]
+                    # lappend cfg "ifconfig $ifc inet6 $addr"
                 } else {
-                    lappend cfg "ifconfig $ifc inet6 add $addr"
+                    lappend cfg [getIPv6AddrCmd $ifc $addr]
+                    # lappend cfg "ifconfig $ifc inet6 add $addr"
                 }
             }
         }
