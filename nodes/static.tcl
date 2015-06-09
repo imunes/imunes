@@ -94,8 +94,8 @@ proc $MODULE.virtlayer {} {
 #****
 proc $MODULE.cfggen { node } {
     set cfg {}
-    set cfg [concat $cfg [nodeCfggenIfconfigIPv4 $node]]
-    set cfg [concat $cfg [nodeCfggenIfconfigIPv6 $node]]
+    set cfg [concat $cfg [nodeCfggenIfcIPv4 $node]]
+    set cfg [concat $cfg [nodeCfggenIfcIPv6 $node]]
     lappend cfg ""
 
     set cfg [concat $cfg [nodeCfggenRouteIPv4 $node]]
