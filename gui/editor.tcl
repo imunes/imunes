@@ -149,8 +149,6 @@ proc redo {} {
 proc chooseIfName { lnode1 lnode2 } {
     if { [nodeType $lnode1] == "frswitch" } {
         return f
-    } elseif { [nodeType $lnode2] == "rj45" } {
-        return $lnode1.[[nodeType $lnode1].ifcName]
     } else {
         return [[nodeType $lnode1].ifcName]
     }

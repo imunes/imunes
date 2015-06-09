@@ -263,18 +263,7 @@ proc createNodeContainer { node } {
 # INPUTS
 #   * node -- node id
 #****
-proc createNodePhysIfcs { node } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    foreach ifc [allIfcList $node] {
-        if {[nodeType $node] == "rj45"} {
-            set nodeNs [getNodeNamespace $node]
-            set ifname [getNodeName $peerNode]
-            catch {exec ln -s /proc/$nodeNs/ns/net /var/run/netns/$nodeNs}
-            exec ip link add link $ifname $ifc type macvlan mode private
-        }
-    }
-}
+proc createNodePhysIfcs { node } {}
 
 proc createNodeLogIfcs { node } {}
 
@@ -289,16 +278,14 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
     if { [[typemodel $lnode1].virtlayer] == "NETGRAPH" } {
         if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
             if { [nodeType $lnode2] != "rj45" } {
-                exec ovs-vsctl add-port $eid.$lnode1 $eid.$lnode1.$ifname1 -- set interface $eid.$lnode1.$ifname1 type=patch options:peer=$eid.$lnode2.$ifname2
-                exec ovs-vsctl add-port $eid.$lnode2 $eid.$lnode2.$ifname2 -- set interface $eid.$lnode2.$ifname2 type=patch options:peer=$eid.$lnode1.$ifname1
+                exec ovs-vsctl add-port $eid.$lnode1 $eid.$lnode1.$ifname1 -- \
+                    set interface $eid.$lnode1.$ifname1 type=patch options:peer=$eid.$lnode2.$ifname2
+                exec ovs-vsctl add-port $eid.$lnode2 $eid.$lnode2.$ifname2 -- \
+                    set interface $eid.$lnode2.$ifname2 type=patch options:peer=$eid.$lnode1.$ifname1
             }
         }
         if { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
-            if { [nodeType $lnode1] != "rj45" } {
-                exec pipework $eid.$lnode1 -i $ifname2 $eid.$lnode2 0/0
-            } else {
-                connectExtIfc $lnode2 $ifname2 $lnode1
-            }
+            exec pipework $eid.$lnode1 -i $ifname2 $eid.$lnode2 0/0
         }
     } elseif { [[typemodel $lnode1].virtlayer] == "VIMAGE" } {
         if  { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
@@ -308,11 +295,7 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
             exec pipework $eid.$link -i $ifname2 $eid.$lnode2 0/0
         }
         if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
-            if {[nodeType $lnode2] != "rj45"} {
-                exec pipework $eid.$lnode2 -i $ifname1 $eid.$lnode1 0/0
-            } else {
-                connectExtIfc $lnode1 $ifname1 $lnode2
-            }
+            exec pipework $eid.$lnode2 -i $ifname1 $eid.$lnode1 0/0
         }
     }
 }
@@ -326,7 +309,7 @@ proc removeExperimentContainer { eid widget } {}
 proc removeNodeContainer { eid node } {
     set node_id $eid.$node
 
-    catch "exec docker rm $node_id" "hold"
+    exec docker rm $node_id
 }
 
 proc killAllNodeProcesses { eid node } {
@@ -335,12 +318,7 @@ proc killAllNodeProcesses { eid node } {
     catch "exec docker stop $node_id"
 }
 
-proc destroyVirtNodeIfcs { eid vimages } {
-    foreach node $vimages {
-        set nodeNs [getNodeNamespace $node]
-        catch {exec rm -rf /var/run/netns/$nodeNs}
-    }
-}
+proc destroyVirtNodeIfcs { eid vimages } {}
 
 proc runConfOnNode { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
@@ -373,18 +351,7 @@ proc destroyLinkBetween { eid lnode1 lnode2 } {
     pipesExec "exec ovs-vsctl del-br $eid.$lname"
 }
 
-proc removeNodeIfcIPaddrs { eid node } {
-    set node_id "$eid.$node"
-
-    foreach ifc [ifcList $node] {
-        foreach ipv4 [getIfcIPv4addr $node $ifc] {
-            catch "exec jexec $node_id ifconfig $ifc $ipv4 -alias"
-        }
-        foreach ipv6 [getIfcIPv6addr $node $ifc] {
-            catch "exec jexec $node_id ifconfig $ifc inet6 $ipv6 -alias"
-        }
-    }
-}
+proc removeNodeIfcIPaddrs { eid node } {}
 
 proc removeExperimentContainer { eid widget } {
     set VROOT_BASE [getVrootDir]
@@ -526,12 +493,8 @@ proc getExtIfcs { } {
 #****
 proc captureExtIfc { eid node } {
     set ifname [getNodeName $node]
-    if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
-    # exec ip link add $eid link $eid.$ifname type macvlan mode private
-    }
-
-    # nexec ifconfig $ifname vnet $eid
-    # nexec jexec $eid ifconfig $ifname up promisc
+    createNetgraphNode $eid $node
+    exec ovs-vsctl add-port $eid.$node $ifname
 }
 
 #****f* linux.tcl/releaseExtIfc
@@ -546,10 +509,7 @@ proc captureExtIfc { eid node } {
 #   * node -- node id
 #****
 proc releaseExtIfc { eid node } {
-    set ifname [getNodeName $node]
-    if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
-        exec ip link del $eid.$ifname
-    }
+    destroyNetgraphNode $eid $node
 }
 
 proc getNodeNamespace { node } {
@@ -583,15 +543,25 @@ proc getIPv6RouteCmd { statrte } {
     return $cmd
 }
 
-proc connectExtIfc { node ifc peerNode } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
+proc getIPv4AddrCmd { ifc addr } {
+    return "ip addr add $addr dev $ifc"
+}
 
-    set node_id "$eid.$node"
+proc getIPv6AddrCmd { ifc addr } {
+    return "ip -6 addr add $addr dev $ifc"
+}
 
-    set nodeNs [getNodeNamespace $node]
-    set ifname [getNodeName $peerNode]
-    catch {exec ln -s /proc/$nodeNs/ns/net /var/run/netns/$nodeNs}
-    exec ip link add link $ifname $ifc type macvlan mode private
-    exec ip link set netns $nodeNs $ifc
-    exec docker exec $node_id ip link set $ifc up
+#****f* linux.tcl/configDefaultLoIfc
+# NAME
+#   configDefaultLoIfc -- configure default logical interface
+# SYNOPSIS
+#   configDefaultLoIfc $eid $node
+# FUNCTION
+#   Configures the default logical interface address for the given node.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
+proc configDefaultLoIfc { eid node } {
+    pipesExec "docker exec $eid\.$node ifconfig lo 127.0.0.1/24" "hold"
 }
