@@ -71,10 +71,10 @@ proc execCmdNode { node cmd } {
 proc checkForApplications { node app_list } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     foreach app $app_list {
-	set exists [ catch { exec jexec $eid.$node which $app } err ]
-	if { $exists } {
-	    return 1
-	}
+        set exists [ catch { exec jexec $eid.$node which $app } err ]
+        if { $exists } {
+            return 1
+        }
     }
     return 0
 }
@@ -94,11 +94,11 @@ proc startWiresharkOnNodeIfc { node ifc } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     if {[file exists /usr/local/bin/startxcmd] == 1 && \
-	[checkForApplications $node "wireshark"] == 0} {
-	startXappOnNode $node "wireshark -ki $ifc"
+        [checkForApplications $node "wireshark"] == 0} {
+        startXappOnNode $node "wireshark -ki $ifc"
     } else {
-	exec jexec $eid.$node tcpdump -s 0 -U -w - -i $ifc 2>/dev/null |\
-	    wireshark -o "gui.window_title:$ifc@[getNodeName $node] ($eid)" -k -i - &
+        exec jexec $eid.$node tcpdump -s 0 -U -w - -i $ifc 2>/dev/null |\
+        wireshark -o "gui.window_title:$ifc@[getNodeName $node] ($eid)" -k -i - &
     }
 }
 
@@ -117,13 +117,13 @@ proc startXappOnNode { node app } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global debug
     if {[file exists /usr/local/bin/socat] != 1 } {
-	puts "To run X applications on the node, install socat on your host."
-	return
+        puts "To run X applications on the node, install socat on your host."
+        return
     }
 
     set logfile "/dev/null"
     if {$debug} {
-	set logfile "/tmp/startxcmd_$eid\_$node.log"
+        set logfile "/tmp/startxcmd_$eid\_$node.log"
     }
 
     eval exec startxcmd [getNodeName $node]@$eid $app > $logfile 2>> $logfile &
@@ -142,7 +142,7 @@ proc startXappOnNode { node app } {
 #****
 proc startTcpdumpOnNodeIfc { node ifc } {
     if {[checkForApplications $node "tcpdump"] == 0} {
-	spawnShell $node "tcpdump -ni $ifc"
+        spawnShell $node "tcpdump -ni $ifc"
     }
 }
 
@@ -165,7 +165,7 @@ proc existingShells { shells node } {
 
     set err [catch {eval exec $cmd} res]
     if  { $err } {
-	return ""
+        return ""
     }
 
     return $res
@@ -189,8 +189,8 @@ proc spawnShell { node cmd } {
     set node_id $eid\.$node
 
     nexec xterm -sb -rightbar \
-	-T "IMUNES: [getNodeName $node] (console) [lindex [split $cmd /] end]" \
-	-e "jexec $node_id $cmd" &
+    -T "IMUNES: [getNodeName $node] (console) [lindex [split $cmd /] end]" \
+    -e "jexec $node_id $cmd" &
 }
 
 #****f* freebsd.tcl/fetchRunningExperiments
@@ -205,8 +205,7 @@ proc spawnShell { node cmd } {
 #****
 proc fetchRunningExperiments {} {
     catch {exec jls -n name | cut -d "=" -f 2 | cut -d "." -f 1 | sort | uniq} exp_list
-    set exp_list [split $exp_list "
-"]
+    set exp_list [split $exp_list ""]
     return $exp_list
 }
 
@@ -239,7 +238,7 @@ proc createIfc { eid type hook } {
 # SYNOPSIS
 #   allSnapshotsAvailable
 # FUNCTION
-#   Procedure that checks wheter all node ZFS snapshots are available on the
+#   Procedure that checks whether all node ZFS snapshots are available on the
 #   current system.
 #****
 proc allSnapshotsAvailable {} {
@@ -248,55 +247,54 @@ proc allSnapshotsAvailable {} {
     set vroot "/var/imunes/vroot"
 
     if {$vroot_unionfs} {
-	if { [file exist $vroot] } {
-	    return 1
-	} else {
-	    if {$execMode == "batch"} {
-		puts "The root filesystem for virtual nodes ($vroot) is missing.
+        if { [file exist $vroot] } {
+           return 1
+        } else {
+            if {$execMode == "batch"} {
+                puts "The root filesystem for virtual nodes ($vroot) is missing.
 Run 'make' or 'make vroot' to create the root filesystem."
-	    } else {
-		tk_dialog .dialog1 "IMUNES error" \
-		"The root filesystem for virtual nodes ($vroot) is missing.
+            } else {
+                tk_dialog .dialog1 "IMUNES error" \
+        "The root filesystem for virtual nodes ($vroot) is missing.
 Run 'make' or 'make vroot' to create the root filesystem." \
-		info 0 Dismiss
-	    }
-	    return 0
-	}
+        info 0 Dismiss
+            }
+        return 0
+        }
     }
 
     catch { exec zfs list -t snapshot | awk {{print $1}} | sed "1 d" } out
-    set snapshotList [ split $out {
-}]
+    set snapshotList [ split $out {}]
     foreach node $node_list {
-	set snapshot [getNodeSnapshot $node]
-	if { $snapshot == "" } {
-	    set snapshot "vroot/vroot@clean"
-	}
-	if { [llength [lsearch -inline $snapshotList $snapshot]] == 0} {
-	    if {$execMode == "batch"} {
-		if { $snapshot == "vroot/vroot@clean" } {
-		    puts "The main snapshot for virtual nodes is missing.
-Run 'make' or 'make vroot' to create the main ZFS snapshot."
-		} else {
-		    puts "Error: ZFS snapshot image \"$snapshot\" for node \"$node\" is missing."
-		}
-		return 0
-	    } else {
-		after idle {.dialog1.msg configure -wraplength 6i}
-		if { $snapshot == "vroot/vroot@clean" } {
-		    tk_dialog .dialog1 "IMUNES error" \
-		    "The main snapshot for virtual nodes is missing.
-Run 'make' or 'make vroot' to create the main ZFS snapshot." \
-		    info 0 Dismiss
-		    return 0
-		} else {
-		    tk_dialog .dialog1 "IMUNES error" \
-		    "Error: ZFS snapshot image \"$snapshot\" for node \"$node\" is missing." \
-		    info 0 Dismiss
-		    return 0
-		}
-	    }
-	}
+        set snapshot [getNodeSnapshot $node]
+        if { $snapshot == "" } {
+            set snapshot "vroot/vroot@clean"
+        }
+        if { [llength [lsearch -inline $snapshotList $snapshot]] == 0} {
+            if {$execMode == "batch"} {
+                if { $snapshot == "vroot/vroot@clean" } {
+                    puts "The main snapshot for virtual nodes is missing.
+                Run 'make' or 'make vroot' to create the main ZFS snapshot."
+                } else {
+                    puts "Error: ZFS snapshot image \"$snapshot\" for node \"$node\" is missing."
+                }
+                return 0
+            } else {
+                after idle {.dialog1.msg configure -wraplength 6i}
+                if { $snapshot == "vroot/vroot@clean" } {
+                    tk_dialog .dialog1 "IMUNES error" \
+                    "The main snapshot for virtual nodes is missing.
+                Run 'make' or 'make vroot' to create the main ZFS snapshot." \
+                    info 0 Dismiss
+                    return 0
+                } else {
+                tk_dialog .dialog1 "IMUNES error" \
+                "Error: ZFS snapshot image \"$snapshot\" for node \"$node\" is missing." \
+                info 0 Dismiss
+                return 0
+                }
+            }
+        }
     }
     return 1
 }
@@ -320,19 +318,19 @@ proc timeoutPatch { eid vimages } {
     set sec 60
 
     if { [lindex [split [exec uname -r] "-"] 0] >= 9.0 } {
-	return
+        return
     }
 
     set timeoutNeeded 0
     foreach vimage $vimages {
-	if { [catch {exec jexec $eid.$vimage netstat -an -f inet | fgrep "WAIT"} odg] == 0} {
-	    set timeoutNeeded 1
-	    break
-	}
+        if { [catch {exec jexec $eid.$vimage netstat -an -f inet | fgrep "WAIT"} odg] == 0} {
+            set timeoutNeeded 1
+            break
+        }
     }
 
     if { $timeoutNeeded == 0 } {
-	return
+        return
     }
 
     if { $execMode == "batch" } {
@@ -349,8 +347,8 @@ proc timeoutPatch { eid vimages } {
 Please don't try killing the process.
 (countdown on status line)"
        pack $w.msg
-	ttk::progressbar $w.p -orient horizontal -length 350 \
-	-mode determinate -maximum $sec -value $sec
+        ttk::progressbar $w.p -orient horizontal -length 350 \
+        -mode determinate -maximum $sec -value $sec
         pack $w.p
         update
         grab $w
@@ -370,7 +368,7 @@ Please don't try killing the process.
                     flush stdout
                 } else {
                     statline "~ $sec seconds ..."
-		    $w.p step -1
+                    $w.p step -1
                     update
                 }
             }
@@ -404,18 +402,18 @@ proc execSetIfcQDisc { eid node ifc qdisc } {
     set lnode1 [lindex $peers 0]
     set lnode2 [lindex $peers 1]
     if { [nodeType $lnode2] == "pseudo" } {
-	set mirror_link [getLinkMirror [lindex $target 0]]
-	set lnode2 [lindex [linkPeers $mirror_link] 0]
+        set mirror_link [getLinkMirror [lindex $target 0]]
+        set lnode2 [lindex [linkPeers $mirror_link] 0]
     }
     switch -exact $qdisc {
-	FIFO { set qdisc fifo }
-	WFQ { set qdisc wfq }
-	DRR { set qdisc drr }
+        FIFO { set qdisc fifo }
+        WFQ { set qdisc wfq }
+        DRR { set qdisc drr }
     }
     set ngnode "$lnode1-$lnode2"
     if { [catch { exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ $qdisc=1 } }" }] } {
-	set ngnode "$lnode2-$lnode1"
-	exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ $qdisc=1 } }"
+        set ngnode "$lnode2-$lnode1"
+        exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ $qdisc=1 } }"
     }
 }
 
@@ -441,18 +439,18 @@ proc execSetIfcQDrop { eid node ifc qdrop } {
     set lnode1 [lindex $peers 0]
     set lnode2 [lindex $peers 1]
     if { [nodeType $lnode2] == "pseudo" } {
-	set mirror_link [getLinkMirror [lindex $target 0]]
-	set lnode2 [lindex [linkPeers $mirror_link] 0]
+        set mirror_link [getLinkMirror [lindex $target 0]]
+        set lnode2 [lindex [linkPeers $mirror_link] 0]
     }
     switch -exact $qdrop {
-	drop-head { set qdrop drophead }
-	drop-tail { set qdrop droptail }
+        drop-head { set qdrop drophead }
+        drop-tail { set qdrop droptail }
     }
     set ngnode "$lnode1-$lnode2"
     if { [catch { exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ $qdrop=1 } }" }] } {
-	# XXX dir should be reversed!
-	set ngnode "$lnode2-$lnode1"
-	exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ $qdrop=1 } }"
+        # XXX dir should be reversed!
+        set ngnode "$lnode2-$lnode1"
+        exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ $qdrop=1 } }"
     }
 }
 
@@ -477,16 +475,16 @@ proc execSetIfcQLen { eid node ifc qlen } {
     set lnode1 [lindex $peers 0]
     set lnode2 [lindex $peers 1]
     if { [nodeType $lnode2] == "pseudo" } {
-	set mirror_link [getLinkMirror [lindex $target 0]]
-	set lnode2 [lindex [linkPeers $mirror_link] 0]
+        set mirror_link [getLinkMirror [lindex $target 0]]
+        set lnode2 [lindex [linkPeers $mirror_link] 0]
     }
     set ngnode "$lnode1-$lnode2"
     if { $qlen == 0 } {
-	set qlen -1
+        set qlen -1
     }
     if { [catch { exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ queuelen=$qlen } }" }] } {
-	set ngnode "$lnode2-$lnode1"
-	exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ queuelen=$qlen } }"
+        set ngnode "$lnode2-$lnode1"
+        exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ queuelen=$qlen } }"
     }
 }
 
@@ -515,24 +513,24 @@ proc execSetLinkParams { eid link } {
     set dup [expr [getLinkDup $link] + 0]
 
     if { $bandwidth == 0 } {
-	set bandwidth -1
+        set bandwidth -1
     }
     if { $delay == 0 } {
-	set delay -1
+        set delay -1
     }
     if { $ber == 0 } {
-	set ber -1
+        set ber -1
     }
     if { $dup == 0 } {
-	set dup -1
+        set dup -1
     }
 
     catch {exec jexec $eid ngctl msg $lname: setcfg \
-	"{ bandwidth=$bandwidth delay=$delay \
-	upstream={ BER=$ber duplicate=$dup } \
-	downstream={ BER=$ber duplicate=$dup } }"} err
+        "{ bandwidth=$bandwidth delay=$delay \
+        upstream={ BER=$ber duplicate=$dup } \
+        downstream={ BER=$ber duplicate=$dup } }"} err
     if { $debug && $err != "" } {
-	puts $err
+        puts $err
     }
 }
 
@@ -562,35 +560,35 @@ proc execSetLinkJitter { eid link } {
     set jitter_hold_down [expr [getLinkJitterHoldDownstream $link] + 0]
 
     if {$jitter_mode_up in {"sequential" ""}} {
-	set jit_mode_up 1
+        set jit_mode_up 1
     } else {
-	set jit_mode_up 2
+        set jit_mode_up 2
     }
 
     if {$jitter_mode_down in {"sequential" ""}} {
-	set jit_mode_down 1
+        set jit_mode_down 1
     } else {
-	set jit_mode_down 2
+        set jit_mode_down 2
     }
 
     set exec_pipe [open "| jexec $eid ngctl -f -" r+]
 
     if {$jitter_up != ""} {
-	puts $exec_pipe "msg $lname: setcfg {upstream={jitmode=-1}}"
-	foreach val $jitter_up {
-	    puts $exec_pipe "msg $lname: setcfg {upstream={addjitter=[expr round($val*1000)]}}"
-	}
-	puts $exec_pipe "msg $lname: setcfg {upstream={jitmode=$jit_mode_up}}"
-	puts $exec_pipe "msg $lname: setcfg {upstream={jithold=[expr round($jitter_hold_up*1000)]}}"
+        puts $exec_pipe "msg $lname: setcfg {upstream={jitmode=-1}}"
+        foreach val $jitter_up {
+            puts $exec_pipe "msg $lname: setcfg {upstream={addjitter=[expr round($val*1000)]}}"
+        }
+        puts $exec_pipe "msg $lname: setcfg {upstream={jitmode=$jit_mode_up}}"
+        puts $exec_pipe "msg $lname: setcfg {upstream={jithold=[expr round($jitter_hold_up*1000)]}}"
     }
 
     if {$jitter_down != ""} {
-	puts $exec_pipe "msg $lname: setcfg {downstream={jitmode=-1}}"
-	foreach val $jitter_down {
-	    puts $exec_pipe "msg $lname: setcfg {downstream={addjitter=[expr round($val*1000)]}}"
-	}
-	puts $exec_pipe "msg $lname: setcfg {downstream={jitmode=$jit_mode_down}}"
-	puts $exec_pipe "msg $lname: setcfg {downstream={jithold=[expr round($jitter_hold_down*1000)]}}"
+        puts $exec_pipe "msg $lname: setcfg {downstream={jitmode=-1}}"
+        foreach val $jitter_down {
+            puts $exec_pipe "msg $lname: setcfg {downstream={addjitter=[expr round($val*1000)]}}"
+        }
+        puts $exec_pipe "msg $lname: setcfg {downstream={jitmode=$jit_mode_down}}"
+        puts $exec_pipe "msg $lname: setcfg {downstream={jithold=[expr round($jitter_hold_down*1000)]}}"
     }
 
     close $exec_pipe
@@ -614,7 +612,7 @@ proc execResetLinkJitter { eid link } {
     set lname $lnode1-$lnode2
 
     exec jexec $eid ngctl msg $lname: setcfg \
-	"{upstream={jitmode=-1} downstream={jitmode=-1}}"
+        "{upstream={jitmode=-1} downstream={jitmode=-1}}"
 }
 
 #****f* freebsd.tcl/l3node.nghook
@@ -636,12 +634,12 @@ proc l3node.nghook { eid node ifc } {
     set ifnum [string range $ifc 3 end]
     set node_id "$eid\.$node"
     switch -exact [string range $ifc 0 2] {
-	eth {
-	    return [list $ifc@$node_id ether]
-	}
-	ser {
-	    return [list hdlc$ifnum@$node_id downstream]
-	}
+        eth {
+            return [list $ifc@$node_id ether]
+        }
+        ser {
+            return [list hdlc$ifnum@$node_id downstream]
+        }
     }
 }
 
@@ -661,57 +659,57 @@ proc vimageCleanup { eid } {
 
     #check whether a jail with eid actually exists
     if {[catch {exec jls -v | grep "$eid *ACTIVE"}]} {
-	statline "Experiment with eid $eid doesn't exist."
-	return
+        statline "Experiment with eid $eid doesn't exist."
+        return
     }
 
     if {$execMode != "batch"} {
-	upvar 0 ::cf::[set ::curcfg]::node_list node_list
-	set nodeCount [llength $node_list]
-	set count [expr {$nodeCount}]
-	set w .termWait
-	catch {destroy $w}
-	toplevel $w -takefocus 1
-	wm transient $w .
-	wm title $w "Terminating experiment ..."
-	message $w.msg -justify left -aspect 1200 \
-	-text "Deleting virtual nodes and links."
-	pack $w.msg
-	ttk::progressbar $w.p -orient horizontal -length 250 \
-	-mode determinate -maximum $count -value $count
-	pack $w.p
-	update
+        upvar 0 ::cf::[set ::curcfg]::node_list node_list
+        set nodeCount [llength $node_list]
+        set count [expr {$nodeCount}]
+        set w .termWait
+        catch {destroy $w}
+        toplevel $w -takefocus 1
+        wm transient $w .
+        wm title $w "Terminating experiment ..."
+        message $w.msg -justify left -aspect 1200 \
+        -text "Deleting virtual nodes and links."
+        pack $w.msg
+        ttk::progressbar $w.p -orient horizontal -length 250 \
+        -mode determinate -maximum $count -value $count
+        pack $w.p
+        update
     }
 
     statline "Terminating experiment with experiment id: $eid."
 
     set t_start [clock milliseconds]
     if {[catch {exec jexec $eid jls -v | fgrep ACTIVE | cut -c9-32} res] \
-	!= 0 } {
-	set res ""
+        != 0 } {
+        set res ""
     }
     set vimages [join $res]
     set defindex [lsearch $vimages .]
     set vimages [lreplace $vimages $defindex $defindex]
 
     if { [lindex [split [exec uname -r] "-"] 0] < 9.0 } {
-	# Kill all processes in all vimages
-	statline "Terminating processes..."
+        # Kill all processes in all vimages
+        statline "Terminating processes..."
 
-	set step 0
-	set allVimages [ llength $vimages ]
-	foreach node $vimages {
-	    if {$execMode != "batch"} {
-		statline "Terminating processes in vimage $node"
-	    }
-	    incr step
-	    displayBatchProgress $step $allVimages
+        set step 0
+        set allVimages [ llength $vimages ]
+        foreach node $vimages {
+            if {$execMode != "batch"} {
+                statline "Terminating processes in vimage $node"
+            }
+            incr step
+            displayBatchProgress $step $allVimages
 
-	    [typemodel $node].shutdown $eid $node
-	}
+            [typemodel $node].shutdown $eid $node
+        }
 
-	statline ""
-	timeoutPatch $eid $vimages
+        statline ""
+        timeoutPatch $eid $vimages
     }
 
     statline "Shutting down netgraph nodes..."
@@ -723,31 +721,31 @@ proc vimageCleanup { eid } {
     catch "exec sh -c {jexec $eid ngctl t | grep eiface | awk '{print \$2}'}" maxi
     set res [catch "exec jexec $eid ngctl l"]
     while { $res } {
-	#This should never, ever happen.
-	if { $i > $maxi } {
-	    statline ""
-	#    statline "Couldn't terminate all ngeth interfaces. Skipping..."
-	    break
-	}
-	if {[expr {$i%240} == 0]} {
-	    if { $execMode == "batch" } {
-		puts -nonewline "."
-		flush stdout
-	    }
-	    set res [catch "exec jexec $eid ngctl l"]
-	}
+        #This should never, ever happen.
+        if { $i > $maxi } {
+            statline ""
+        #    statline "Couldn't terminate all ngeth interfaces. Skipping..."
+            break
+        }
+        if {[expr {$i%240} == 0]} {
+            if { $execMode == "batch" } {
+                puts -nonewline "."
+                flush stdout
+            }
+            set res [catch "exec jexec $eid ngctl l"]
+        }
 
-	# Attempt to kill hubs & bridges
-	set ngnode "n$i"
-	if { $ngnode ni $vimages } {
-	    pipesExec "jexec $eid ngctl shutdown $ngnode" "hold"
-	}
-	# Attempt to kill ngeth interfaces
-	set ngnode "ngeth$i"
-	pipesExec "jexec $eid ngctl shutdown $ngnode:" "hold"
-	incr i
+        # Attempt to kill hubs & bridges
+        set ngnode "n$i"
+        if { $ngnode ni $vimages } {
+            pipesExec "jexec $eid ngctl shutdown $ngnode" "hold"
+        }
+        # Attempt to kill ngeth interfaces
+        set ngnode "ngeth$i"
+        pipesExec "jexec $eid ngctl shutdown $ngnode:" "hold"
+        incr i
 
-	pipesExec ""
+        pipesExec ""
     }
     pipesClose
 
@@ -760,14 +758,14 @@ proc vimageCleanup { eid } {
     set allNgnodes [llength $ngnodes]
     set step 0
     foreach ngline $ngnodes {
-	incr step
-	if { $execMode != "batch" } {
-	    statline "Shutting down netgraph node $ngline"
-	}
-	displayBatchProgress $step $allNgnodes
-	set ngnode [lindex [eval list $ngline] 1]
+        incr step
+        if { $execMode != "batch" } {
+            statline "Shutting down netgraph node $ngline"
+        }
+        displayBatchProgress $step $allNgnodes
+        set ngnode [lindex [eval list $ngline] 1]
 
-	pipesExec "jexec $eid ngctl shutdown $ngnode:"
+        pipesExec "jexec $eid ngctl shutdown $ngnode:"
     }
     pipesClose
 
@@ -775,9 +773,9 @@ proc vimageCleanup { eid } {
 
     # Shut down all vimages
     if {$vroot_unionfs} {
-	set VROOT_BASE /var/imunes
+        set VROOT_BASE /var/imunes
     } else {
-	set VROOT_BASE /vroot
+        set VROOT_BASE /vroot
     }
 
     statline "Shutting down vimages..."
@@ -787,31 +785,31 @@ proc vimageCleanup { eid } {
 
     pipesCreate
     foreach node $vimages {
-	if {$execMode != "batch"} {
-	    statline "Shutting down vimage $node"
-	    $w.p step -1
-	}
+        if {$execMode != "batch"} {
+            statline "Shutting down vimage $node"
+            $w.p step -1
+        }
 
-	incr step
-	displayBatchProgress $step $steps
+        incr step
+        displayBatchProgress $step $steps
 
-	pipesExec "jexec $eid.$node kill -9 -1 2> /dev/null" "hold"
-	pipesExec "jexec $eid.$node tcpdrop -a 2> /dev/null" "hold"
-	pipesExec "for iface in `jexec $eid.$node ifconfig -l`; do jexec $eid.$node ifconfig \$iface destroy; done" "hold"
+        pipesExec "jexec $eid.$node kill -9 -1 2> /dev/null" "hold"
+        pipesExec "jexec $eid.$node tcpdrop -a 2> /dev/null" "hold"
+        pipesExec "for iface in `jexec $eid.$node ifconfig -l`; do jexec $eid.$node ifconfig \$iface destroy; done" "hold"
 
-	set VROOT_RUNTIME $VROOT_BASE/$eid/$node
-	set VROOT_RUNTIME_DEV $VROOT_RUNTIME/dev
-	pipesExec "umount -f $VROOT_RUNTIME_DEV" "hold"
-	if {$vroot_unionfs} {
-	    # 1st: unionfs RW overlay
-	    pipesExec "umount -f $VROOT_RUNTIME" "hold"
-	    # 2nd: nullfs RO loopback
-	    pipesExec "umount -f $VROOT_RUNTIME" "hold"
-	}
-	if {$vroot_linprocfs} {
-	    pipesExec "umount -f $VROOT_RUNTIME/compat/linux/proc" "hold"
-	}
-	pipesExec ""
+        set VROOT_RUNTIME $VROOT_BASE/$eid/$node
+        set VROOT_RUNTIME_DEV $VROOT_RUNTIME/dev
+        pipesExec "umount -f $VROOT_RUNTIME_DEV" "hold"
+        if {$vroot_unionfs} {
+            # 1st: unionfs RW overlay
+            pipesExec "umount -f $VROOT_RUNTIME" "hold"
+            # 2nd: nullfs RO loopback
+            pipesExec "umount -f $VROOT_RUNTIME" "hold"
+        }
+        if {$vroot_linprocfs} {
+            pipesExec "umount -f $VROOT_RUNTIME/compat/linux/proc" "hold"
+        }
+        pipesExec ""
     }
     pipesClose
 
@@ -821,43 +819,43 @@ proc vimageCleanup { eid } {
     set vlanlist ""
     catch {exec jexec $eid ifconfig -l} ifclist
     foreach ifc $ifclist {
-	if { [string match "*.*" $ifc]} {
-	    lappend vlanlist $ifc
-	}
+        if { [string match "*.*" $ifc]} {
+            lappend vlanlist $ifc
+        }
     }
 
     if {$vroot_unionfs} {
-	# UNIONFS
-	exec jail -r $eid
-	exec rm -fr $VROOT_BASE/$eid &
-    } else {
-	# ZFS
-	if {$execMode == "batch"} {
-	    exec jail -r $eid
-	    exec zfs destroy -fr vroot/$eid
-	} else {
-	    exec jail -r $eid &
-	    exec zfs destroy -fr vroot/$eid &
+        # UNIONFS
+        exec jail -r $eid
+        exec rm -fr $VROOT_BASE/$eid &
+        } else {
+        # ZFS
+        if {$execMode == "batch"} {
+            exec jail -r $eid
+            exec zfs destroy -fr vroot/$eid
+        } else {
+            exec jail -r $eid &
+            exec zfs destroy -fr vroot/$eid &
 
-	    catch {exec zfs list | grep -c "$eid"} output
-	    set zfsCount [lindex [split $output] 0]
+            catch {exec zfs list | grep -c "$eid"} output
+            set zfsCount [lindex [split $output] 0]
 
-	    while {$zfsCount != 0} {
-		catch {exec zfs list | grep -c "$eid/"} output
-		set zfsCount [lindex [split $output] 0]
-		$w.p configure -value $zfsCount
-		update
-		after 200
-	    }
-	}
+            while {$zfsCount != 0} {
+                catch {exec zfs list | grep -c "$eid/"} output
+                set zfsCount [lindex [split $output] 0]
+                $w.p configure -value $zfsCount
+                update
+                after 200
+            }
+        }
     }
 
     foreach ifc $vlanlist {
-	catch {exec ifconfig $ifc destroy}
+        catch {exec ifconfig $ifc destroy}
     }
 
     if {$execMode != "batch"} {
-	destroy $w
+        destroy $w
     }
 
     statline "Cleanup completed in [expr ([clock milliseconds] - $t_start)/1000.0] seconds."
@@ -942,20 +940,20 @@ proc getHostIfcVlanExists { node name } {
     set vlan [lindex [split [getNodeName $node] .] 1]
     # if the VLAN is available then it can be created
     if { [catch {exec ifconfig $ifname create} err] } {
-	set msg "Error: external interface $name can't be\
-	    created.\nVLAN $vlan is already in use. \n($err)"
-	if { $execMode == "batch" } {
-	    puts $msg
-	} else {
-	    after idle {.dialog1.msg configure -wraplength 4i}
-	    tk_dialog .dialog1 "IMUNES error" $msg \
-		info 0 Dismiss
-	}
-	return 1
+        set msg "Error: external interface $name can't be\
+            created.\nVLAN $vlan is already in use. \n($err)"
+        if { $execMode == "batch" } {
+            puts $msg
+        } else {
+            after idle {.dialog1.msg configure -wraplength 4i}
+            tk_dialog .dialog1 "IMUNES error" $msg \
+            info 0 Dismiss
+        }
+        return 1
     } else {
-	# destroy it, if it was created
-	catch {exec ifconfig $ifname destroy}
-	return 0
+        # destroy it, if it was created
+        catch {exec ifconfig $ifname destroy}
+        return 0
     }
 }
 
@@ -973,9 +971,9 @@ proc getVrootDir {} {
     global vroot_unionfs
 
     if {$vroot_unionfs} {
-	return "/var/imunes"
+        return "/var/imunes"
     } else {
-	return "/vroot"
+        return "/vroot"
     }
 }
 
@@ -1010,9 +1008,9 @@ proc readNgnodesFromFile { exp } {
     upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
     global runtimeDir
 
-#    set fileId [open  r]
-#    array set ngnodemap [gets $fileId]
-#    close $fileId
+    # set fileId [open  r]
+    # array set ngnodemap [gets $fileId]
+    # close $fileId
     array set ngnodemap [readDataFromFile $runtimeDir/$exp/ngnodemap]
 }
 
@@ -1032,33 +1030,33 @@ proc prepareFilesystemForNode { node } {
 
     # Prepare a copy-on-write filesystem root
     if {$vroot_unionfs} {
-	# UNIONFS
-	set VROOTDIR /var/imunes
-	set VROOT_RUNTIME $VROOTDIR/$eid/$node
-	set VROOT_OVERLAY $VROOTDIR/$eid/upper/$node
-	set VROOT_RUNTIME_DEV $VROOT_RUNTIME/dev
-	pipesExec "mkdir -p $VROOT_RUNTIME" "hold"
-	pipesExec "mkdir -p $VROOT_OVERLAY" "hold"
-	pipesExec "mount_nullfs -o ro $VROOTDIR/vroot $VROOT_RUNTIME" "hold"
-	pipesExec "mount_unionfs -o noatime $VROOT_OVERLAY $VROOT_RUNTIME" "hold"
+        # UNIONFS
+        set VROOTDIR /var/imunes
+        set VROOT_RUNTIME $VROOTDIR/$eid/$node
+        set VROOT_OVERLAY $VROOTDIR/$eid/upper/$node
+        set VROOT_RUNTIME_DEV $VROOT_RUNTIME/dev
+        pipesExec "mkdir -p $VROOT_RUNTIME" "hold"
+        pipesExec "mkdir -p $VROOT_OVERLAY" "hold"
+        pipesExec "mount_nullfs -o ro $VROOTDIR/vroot $VROOT_RUNTIME" "hold"
+        pipesExec "mount_unionfs -o noatime $VROOT_OVERLAY $VROOT_RUNTIME" "hold"
     } else {
-	# ZFS
-	set VROOT_ZFS vroot/$eid/$node
-	set VROOT_RUNTIME /$VROOT_ZFS
-	set VROOT_RUNTIME_DEV $VROOT_RUNTIME/dev
+        # ZFS
+        set VROOT_ZFS vroot/$eid/$node
+        set VROOT_RUNTIME /$VROOT_ZFS
+        set VROOT_RUNTIME_DEV $VROOT_RUNTIME/dev
 
-	set snapshot [getNodeSnapshot $node]
-	if {$snapshot == ""} {
-	    set snapshot "vroot/vroot@clean"
-	}
-	pipesExec "zfs clone $snapshot $VROOT_ZFS" "hold"
+        set snapshot [getNodeSnapshot $node]
+        if {$snapshot == ""} {
+            set snapshot "vroot/vroot@clean"
+        }
+        pipesExec "zfs clone $snapshot $VROOT_ZFS" "hold"
     }
 
     if {$vroot_linprocfs} {
-	pipesExec "mount -t linprocfs linprocfs $VROOT_RUNTIME/compat/linux/proc" "hold"
-	#HACK - linux_sun_jdk16 - java hack, won't work if proc isn't accessed
-	#before execution, so we need to cd to it.
-	pipesExec "cd $VROOT_RUNTIME/compat/linux/proc" "hold"
+        pipesExec "mount -t linprocfs linprocfs $VROOT_RUNTIME/compat/linux/proc" "hold"
+        #HACK - linux_sun_jdk16 - java hack, won't work if proc isn't accessed
+        #before execution, so we need to cd to it.
+        pipesExec "cd $VROOT_RUNTIME/compat/linux/proc" "hold"
     }
 
     # Mount and configure a restricted /dev
@@ -1083,7 +1081,7 @@ proc createNodeContainer { node } {
     set node_dir [getVrootDir]/$eid/$node
 
     pipesExec "jail -c name=$eid.$node path=$node_dir securelevel=1 \
-	host.hostname=\"[getNodeName $node]\" vnet persist" "hold"
+        host.hostname=\"[getNodeName $node]\" vnet persist" "hold"
 }
 
 #****f* freebsd.tcl/createNodePhysIfcs
@@ -1105,40 +1103,40 @@ proc createNodePhysIfcs { node } {
     # Create a vimage
     # Create "physical" network interfaces
     foreach ifc [ifcList $node] {
-	switch -exact [string range $ifc 0 2] {
-	    eth {
-		set ifid [createIfc $eid eiface ether]
-		pipesExec "jexec $eid ifconfig $ifid vnet $node" "hold"
-		pipesExec "jexec $node_id ifconfig $ifid name $ifc" "hold"
+        switch -exact [string range $ifc 0 2] {
+            eth {
+                set ifid [createIfc $eid eiface ether]
+                pipesExec "jexec $eid ifconfig $ifid vnet $node" "hold"
+                pipesExec "jexec $node_id ifconfig $ifid name $ifc" "hold"
 
-		# XXX ng renaming is automatic in FBSD 8.4 and 9.2, remove this!
-		pipesExec "jexec $node_id ngctl name [set ifid]: $ifc" "hold"
+                # XXX ng renaming is automatic in FBSD 8.4 and 9.2, remove this!
+                pipesExec "jexec $node_id ngctl name [set ifid]: $ifc" "hold"
 
-#		set peer [peerByIfc $node $ifc]
-		set ether [getIfcMACaddr $node $ifc]
+                # set peer [peerByIfc $node $ifc]
+                set ether [getIfcMACaddr $node $ifc]
                 if {$ether == ""} {
                     autoMACaddr $node $ifc
                 }
                 set ether [getIfcMACaddr $node $ifc]
-		global ifc_dad_disable
-		if {$ifc_dad_disable} {
-		    pipesExec "jexec $node_id sysctl net.inet6.ip6.dad_count=0" "hold"
-		}
-		pipesExec "jexec $node_id ifconfig $ifc link $ether" "hold"
-		set ngnodemap($ifc@$node_id) $ifid
-	    }
-	    ser {
-#		set ifnum [string range $ifc 3 end]
-#		set ifid [createIfc $eid iface inet]
-#		pipesExec "jexec $eid ngctl mkpeer $ifid: cisco inet inet" "hold"
-#		pipesExec "jexec $eid ngctl connect $ifid: $ifid:inet inet6 inet6" "hold"
-#		pipesExec "jexec $eid ngctl msg $ifid: broadcast" "hold"
-#		pipesExec "jexec $eid ngctl name $ifid:inet hdlc$ifnum\@$node" "hold"
-#		pipesExec "jexec $eid ifconfig $ifid vnet $node" "hold"
-#		pipesExec "jexec $node_id ifconfig $ifid name $ifc" "hold"
-#		set ngnodemap(hdlc$ifnum@$node_id) hdlc$ifnum\@$node"
-	    }
-	}
+                global ifc_dad_disable
+                if {$ifc_dad_disable} {
+                    pipesExec "jexec $node_id sysctl net.inet6.ip6.dad_count=0" "hold"
+                }
+                pipesExec "jexec $node_id ifconfig $ifc link $ether" "hold"
+                set ngnodemap($ifc@$node_id) $ifid
+            }
+            ser {
+            #		set ifnum [string range $ifc 3 end]
+            #		set ifid [createIfc $eid iface inet]
+            #		pipesExec "jexec $eid ngctl mkpeer $ifid: cisco inet inet" "hold"
+            #		pipesExec "jexec $eid ngctl connect $ifid: $ifid:inet inet6 inet6" "hold"
+            #		pipesExec "jexec $eid ngctl msg $ifid: broadcast" "hold"
+            #		pipesExec "jexec $eid ngctl name $ifid:inet hdlc$ifnum\@$node" "hold"
+            #		pipesExec "jexec $eid ifconfig $ifid vnet $node" "hold"
+            #		pipesExec "jexec $node_id ifconfig $ifid name $ifc" "hold"
+            #		set ngnodemap(hdlc$ifnum@$node_id) hdlc$ifnum\@$node"
+            }
+        }
     }
 }
 
@@ -1158,21 +1156,21 @@ proc createNodeLogIfcs { node } {
     set node_id "$eid.$node"
 
     foreach ifc [logIfcList $node] {
-	switch -exact [getLogIfcType $node $ifc] {
-	    vlan {
-		set tag [getIfcVlanTag $node $ifc]
-		set dev [getIfcVlanDev $node $ifc]
-		if {$tag != "" && $dev != ""} {
-		    pipesExec "jexec $node_id ifconfig $ifc create" "hold"
-		    pipesExec "jexec $node_id ifconfig $ifc vlan $tag vlandev $dev" "hold"
-		}
-	    }
-	    lo {
-		if {$ifc != "lo0"} {
-		    pipesExec "jexec $node_id ifconfig $ifc create" "hold"
-		}
-	    }
-	}
+        switch -exact [getLogIfcType $node $ifc] {
+            vlan {
+                set tag [getIfcVlanTag $node $ifc]
+                set dev [getIfcVlanDev $node $ifc]
+                if {$tag != "" && $dev != ""} {
+                    pipesExec "jexec $node_id ifconfig $ifc create" "hold"
+                    pipesExec "jexec $node_id ifconfig $ifc vlan $tag vlandev $dev" "hold"
+                }
+            }
+            lo {
+                if {$ifc != "lo0"} {
+                    pipesExec "jexec $node_id ifconfig $ifc create" "hold"
+                }
+            }
+        }
     }
 }
 
@@ -1182,7 +1180,7 @@ proc createNodeLogIfcs { node } {
 # SYNOPSIS
 #   configureICMPoptions $node
 # FUNCTION
-#  Configures the necessary ICMP sysctls in the given node. 
+#  Configures the necessary ICMP sysctls in the given node.
 # INPUTS
 #   * node -- node id
 #****
@@ -1211,12 +1209,12 @@ proc startIfcsNode { node } {
     set node_id "$eid.$node"
     set cmds ""
     foreach ifc [allIfcList $node] {
-	set mtu [getIfcMTU $node $ifc]
-	if {[getIfcOperState $node $ifc] == "up"} {
-	    set cmds "$cmds\n jexec $node_id ifconfig $ifc mtu $mtu up"
-	} else {
-	    set cmds "$cmds\n jexec $node_id ifconfig $ifc mtu $mtu"
-	}
+        set mtu [getIfcMTU $node $ifc]
+        if {[getIfcOperState $node $ifc] == "up"} {
+            set cmds "$cmds\n jexec $node_id ifconfig $ifc mtu $mtu up"
+        } else {
+            set cmds "$cmds\n jexec $node_id ifconfig $ifc mtu $mtu"
+        }
     }
     exec sh << $cmds
 }
@@ -1241,36 +1239,36 @@ proc runConfOnNode { node } {
     set node_id "$eid.$node"
 
     if { [getCustomEnabled $node] == true } {
-	set selected [getCustomConfigSelected $node]
+        set selected [getCustomConfigSelected $node]
 
-	set bootcmd [getCustomConfigCommand $node $selected]
-	set bootcfg [getCustomConfig $node $selected]
-	set confFile "custom.conf"
+        set bootcmd [getCustomConfigCommand $node $selected]
+        set bootcfg [getCustomConfig $node $selected]
+        set confFile "custom.conf"
     } else {
-	set bootcfg [[typemodel $node].cfggen $node]
-	set bootcmd [[typemodel $node].bootcmd $node]
-	set confFile "boot.conf"
+        set bootcfg [[typemodel $node].cfggen $node]
+        set bootcmd [[typemodel $node].bootcmd $node]
+        set confFile "boot.conf"
     }
 
     set cmds ""
 
     writeDataToFile $node_dir/$confFile [join $bootcfg "\n"]
     if {[typemodel $node] in "click_l2 click_l3 router.xorp"} {
-	# click has no daemon mode, run in backgorund
-	# xorp in daemon mode is too slow, run in background
-	set cmds "\njexec $node_id $bootcmd $confFile > $node_dir/out.log 2>&1 &"
+    # click has no daemon mode, run in backgorund
+    # xorp in daemon mode is too slow, run in background
+        set cmds "\njexec $node_id $bootcmd $confFile > $node_dir/out.log 2>&1 &"
     } else {
-	set cmds "\njexec $node_id $bootcmd $confFile > $node_dir/out.log 2>&1"
+        set cmds "\njexec $node_id $bootcmd $confFile > $node_dir/out.log 2>&1"
     }
 
     foreach ifc [allIfcList $node] {
-	if {[getIfcOperState $node $ifc] == "down"} {
-	    set cmds "$cmds\njexec $node_id ifconfig $ifc down"
-	}
+        if {[getIfcOperState $node $ifc] == "down"} {
+            set cmds "$cmds\njexec $node_id ifconfig $ifc down"
+        }
     }
 
     if { $execMode != "batch" } {
-	generateHostsFile $node
+        generateHostsFile $node
     }
 
     exec sh << $cmds
@@ -1293,23 +1291,23 @@ proc generateHostsFile { node } {
     global hostsAutoAssign
 
     if { $hostsAutoAssign == 1 } {
-	if { [[typemodel $node].virtlayer] == "VIMAGE" } {
-	    if { $etchosts == "" } {
-		foreach iter $node_list {
-		    if { [[typemodel $iter].virtlayer] == "VIMAGE" } {
-			foreach ifc [ifcList $iter] {
-			    if { $ifc != "" } {
-				set ipv4 [lindex [split [getIfcIPv4addr $iter $ifc] "/"] 0]
-				set ifname [getNodeName $iter]
-				set etchosts "$etchosts$ipv4    $ifname\n"
-				break
-			    }
-			}
-		    }
-		}
-	    }
-	    writeDataToNodeFile $node /etc/hosts $etchosts
-	}
+        if { [[typemodel $node].virtlayer] == "VIMAGE" } {
+            if { $etchosts == "" } {
+                foreach iter $node_list {
+                    if { [[typemodel $iter].virtlayer] == "VIMAGE" } {
+                        foreach ifc [ifcList $iter] {
+                            if { $ifc != "" } {
+                                set ipv4 [lindex [split [getIfcIPv4addr $iter $ifc] "/"] 0]
+                                set ifname [getNodeName $iter]
+                                set etchosts "$etchosts$ipv4    $ifname\n"
+                                break
+                            }
+                        }
+                    }
+                }
+            }
+            writeDataToNodeFile $node /etc/hosts $etchosts
+        }
     }
 }
 
@@ -1346,12 +1344,12 @@ proc removeNodeIfcIPaddrs { eid node } {
     set node_id "$eid.$node"
 
     foreach ifc [ifcList $node] {
-	foreach ipv4 [getIfcIPv4addr $node $ifc] {
-	    catch "exec jexec $node_id ifconfig $ifc $ipv4 -alias"
-	}
-	foreach ipv6 [getIfcIPv6addr $node $ifc] {
-	    catch "exec jexec $node_id ifconfig $ifc inet6 $ipv6 -alias"
-	}
+        foreach ipv4 [getIfcIPv4addr $node $ifc] {
+            catch "exec jexec $node_id ifconfig $ifc $ipv4 -alias"
+        }
+        foreach ipv6 [getIfcIPv6addr $node $ifc] {
+            catch "exec jexec $node_id ifconfig $ifc inet6 $ipv6 -alias"
+        }
     }
 }
 
@@ -1411,15 +1409,15 @@ proc removeNodeFS { eid node } {
     set VROOT_RUNTIME_DEV $VROOT_RUNTIME/dev
     pipesExec "umount -f $VROOT_RUNTIME_DEV" "hold"
     if {$vroot_unionfs} {
-	# 1st: unionfs RW overlay
-	pipesExec "umount -f $VROOT_RUNTIME" "hold"
-	# 2nd: nullfs RO loopback
-	pipesExec "umount -f $VROOT_RUNTIME" "hold"
-	pipesExec "rmdir $VROOT_RUNTIME" "hold"
+        # 1st: unionfs RW overlay
+        pipesExec "umount -f $VROOT_RUNTIME" "hold"
+        # 2nd: nullfs RO loopback
+        pipesExec "umount -f $VROOT_RUNTIME" "hold"
+        pipesExec "rmdir $VROOT_RUNTIME" "hold"
     }
 
     if {$vroot_linprocfs} {
-	pipesExec "umount -f $VROOT_RUNTIME/compat/linux/proc" "hold"
+        pipesExec "umount -f $VROOT_RUNTIME/compat/linux/proc" "hold"
     }
 }
 
@@ -1446,9 +1444,9 @@ proc loadKernelModules {} {
 #   catch {exec kldload ng_cisco}
 
     foreach module $all_modules_list {
-	if {[info procs $module.prepareSystem] == "$module.prepareSystem"} {
-	    $module.prepareSystem
-	}
+        if {[info procs $module.prepareSystem] == "$module.prepareSystem"} {
+            $module.prepareSystem
+        }
     }
 }
 
@@ -1465,9 +1463,9 @@ proc prepareVirtualFS {} {
     global vroot_unionfs
 
     if {$vroot_unionfs} {
-	# UNIONFS - anything to do here?
+        # UNIONFS - anything to do here?
     } else {
-	exec zfs create vroot/$eid
+        exec zfs create vroot/$eid
     }
 }
 
@@ -1484,44 +1482,44 @@ proc prepareDevfs {} {
 
     catch {exec devfs rule showsets} devcheck
     if { $devfs_number ni $devcheck } {
-	# Prepare a devfs ruleset for L3 vnodes
-	exec devfs ruleset $devfs_number
-	exec devfs rule delset
-	exec devfs rule add hide
-	exec devfs rule add path null unhide
-	exec devfs rule add path zero unhide
-	exec devfs rule add path random unhide
-	exec devfs rule add path urandom unhide
-	exec devfs rule add path crypto unhide
-	exec devfs rule add path ptyp* unhide
-	exec devfs rule add path ptyq* unhide
-	exec devfs rule add path ptyr* unhide
-	exec devfs rule add path ptys* unhide
-	exec devfs rule add path ptyp* unhide
-	exec devfs rule add path ptyq* unhide
-	exec devfs rule add path ptyr* unhide
-	exec devfs rule add path ptys* unhide
-	exec devfs rule add path ttyp* unhide
-	exec devfs rule add path ttyq* unhide
-	exec devfs rule add path ttyr* unhide
-	exec devfs rule add path ttys* unhide
-	exec devfs rule add path ttyp* unhide
-	exec devfs rule add path ttyq* unhide
-	exec devfs rule add path ttyr* unhide
-	exec devfs rule add path ttys* unhide
-	exec devfs rule add path ptmx unhide
-	exec devfs rule add path pts unhide
-	exec devfs rule add path pts/* unhide
-	exec devfs rule add path fd unhide
-	exec devfs rule add path fd/* unhide
-	exec devfs rule add path stdin unhide
-	exec devfs rule add path stdout unhide
-	exec devfs rule add path stderr unhide
-	exec devfs rule add path mem unhide
-	exec devfs rule add path kmem unhide
-	exec devfs rule add path bpf* unhide
-	exec devfs rule add path tun* unhide
-	exec devfs ruleset 0
+        # Prepare a devfs ruleset for L3 vnodes
+        exec devfs ruleset $devfs_number
+        exec devfs rule delset
+        exec devfs rule add hide
+        exec devfs rule add path null unhide
+        exec devfs rule add path zero unhide
+        exec devfs rule add path random unhide
+        exec devfs rule add path urandom unhide
+        exec devfs rule add path crypto unhide
+        exec devfs rule add path ptyp* unhide
+        exec devfs rule add path ptyq* unhide
+        exec devfs rule add path ptyr* unhide
+        exec devfs rule add path ptys* unhide
+        exec devfs rule add path ptyp* unhide
+        exec devfs rule add path ptyq* unhide
+        exec devfs rule add path ptyr* unhide
+        exec devfs rule add path ptys* unhide
+        exec devfs rule add path ttyp* unhide
+        exec devfs rule add path ttyq* unhide
+        exec devfs rule add path ttyr* unhide
+        exec devfs rule add path ttys* unhide
+        exec devfs rule add path ttyp* unhide
+        exec devfs rule add path ttyq* unhide
+        exec devfs rule add path ttyr* unhide
+        exec devfs rule add path ttys* unhide
+        exec devfs rule add path ptmx unhide
+        exec devfs rule add path pts unhide
+        exec devfs rule add path pts/* unhide
+        exec devfs rule add path fd unhide
+        exec devfs rule add path fd/* unhide
+        exec devfs rule add path stdin unhide
+        exec devfs rule add path stdout unhide
+        exec devfs rule add path stderr unhide
+        exec devfs rule add path mem unhide
+        exec devfs rule add path kmem unhide
+        exec devfs rule add path bpf* unhide
+        exec devfs rule add path tun* unhide
+        exec devfs ruleset 0
     }
 }
 
@@ -1562,15 +1560,15 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
     set lname $lnode1-$lnode2
 
     set peer1 \
-	[lindex [[typemodel $lnode1].nghook $eid $lnode1 $ifname1] 0]
+        [lindex [[typemodel $lnode1].nghook $eid $lnode1 $ifname1] 0]
     set peer2 \
-	[lindex [[typemodel $lnode2].nghook $eid $lnode2 $ifname2] 0]
+        [lindex [[typemodel $lnode2].nghook $eid $lnode2 $ifname2] 0]
     set ngpeer1 $ngnodemap($peer1)
     set ngpeer2 $ngnodemap($peer2)
     set nghook1 \
-	[lindex [[typemodel $lnode1].nghook $eid $lnode1 $ifname1] 1]
+        [lindex [[typemodel $lnode1].nghook $eid $lnode1 $ifname1] 1]
     set nghook2 \
-	[lindex [[typemodel $lnode2].nghook $eid $lnode2 $ifname2] 1]
+        [lindex [[typemodel $lnode2].nghook $eid $lnode2 $ifname2] 1]
 
     set cmds ""
 
@@ -1582,7 +1580,7 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
     set cmds "$cmds\n msg $lname: setcfg {header_offset=14}"
     catch {exec jexec $eid ngctl -f - << $cmds} err
     if { $debug && $err != "" } {
-	puts $err
+        puts $err
     }
 }
 
@@ -1615,35 +1613,35 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
 
     catch {exec jexec $eid ngctl -f - << $cmds} err
     if { $debug && $err != "" } {
-	puts $err
+        puts $err
     }
 
     # Queues
     foreach node [list $lnode1 $lnode2] {
-	if {$node == $lnode1} {
-	    set ifc $ifname1
-	} else {
-	    set ifc $ifname2
-	}
+        if {$node == $lnode1} {
+            set ifc $ifname1
+        } else {
+            set ifc $ifname2
+        }
 
-	if {[nodeType $lnode1] != "rj45" && [nodeType $lnode2] != "rj45"} {
-	    set qdisc [getIfcQDisc $node $ifc]
-	    if {$qdisc ne "FIFO"} {
-		execSetIfcQDisc $eid $node $ifc $qdisc
-	    }
-	    set qdrop [getIfcQDrop $node $ifc]
-	    if {$qdrop ne "drop-tail"} {
-		execSetIfcQDrop $eid $node $ifc $qdrop
-	    }
-	    set qlen [getIfcQLen $node $ifc]
-	    if {$qlen ne 50} {
-		execSetIfcQLen $eid $node $ifc $qlen
-	    }
-	}
+        if {[nodeType $lnode1] != "rj45" && [nodeType $lnode2] != "rj45"} {
+            set qdisc [getIfcQDisc $node $ifc]
+            if {$qdisc ne "FIFO"} {
+                execSetIfcQDisc $eid $node $ifc $qdisc
+            }
+            set qdrop [getIfcQDrop $node $ifc]
+            if {$qdrop ne "drop-tail"} {
+                execSetIfcQDrop $eid $node $ifc $qdrop
+            }
+            set qlen [getIfcQLen $node $ifc]
+            if {$qlen ne 50} {
+                execSetIfcQLen $eid $node $ifc $qlen
+            }
+        }
     }
 
     if  { $linkJitterConfiguration } {
-	execSetLinkJitter $eid $link
+        execSetLinkJitter $eid $link
     }
 }
 
@@ -1680,18 +1678,18 @@ proc destroyNetgraphNodes { eid ngraphs widget } {
 
     # destroying netgraph nodes
     if { $ngraphs != "" } {
-	statline "Shutting down netgraph nodes..."
-	set i 0
-	foreach node $ngraphs {
-	    incr i
-	    # statline "Shutting down netgraph node $node ([typemodel $node])"
-	    [typemodel $node].destroy $eid $node
-	    if {$execMode != "batch"} {
-		$widget.p step -1
-	    }
-	    displayBatchProgress $i [ llength $ngraphs ]
-	}
-	statline ""
+        statline "Shutting down netgraph nodes..."
+        set i 0
+        foreach node $ngraphs {
+            incr i
+            # statline "Shutting down netgraph node $node ([typemodel $node])"
+            [typemodel $node].destroy $eid $node
+            if {$execMode != "batch"} {
+                $widget.p step -1
+            }
+            displayBatchProgress $i [ llength $ngraphs ]
+        }
+        statline ""
     }
 }
 
@@ -1714,12 +1712,12 @@ proc destroyVirtNodeIfcs { eid vimages } {
     set i 0
     pipesCreate
     foreach node $vimages {
-	incr i
-	foreach ifc [ifcList $node] {
-	    set ngnode $ngnodemap($ifc@$eid.$node)
-	    pipesExec "jexec $eid ngctl shutdown $ngnode:"
-	}
-	displayBatchProgress $i [ llength $vimages ]
+        incr i
+        foreach ifc [ifcList $node] {
+            set ngnode $ngnodemap($ifc@$eid.$node)
+            pipesExec "jexec $eid ngctl shutdown $ngnode:"
+        }
+        displayBatchProgress $i [ llength $vimages ]
     }
     pipesClose
 }
@@ -1743,30 +1741,30 @@ proc removeExperimentContainer { eid widget } {
     # Remove the main vimage which contained all other nodes, hopefully we
     # cleaned everything.
     if {$vroot_unionfs} {
-	# UNIONFS
-	catch "exec jexec $eid kill -9 -1 2> /dev/null"
-	exec jail -r $eid
-	catch "exec rm -fr $VROOT_BASE/$eid &"
+        # UNIONFS
+        catch "exec jexec $eid kill -9 -1 2> /dev/null"
+        exec jail -r $eid
+        catch "exec rm -fr $VROOT_BASE/$eid &"
     } else {
 	# ZFS
-	if {$execMode == "batch"} {
-	    exec jail -r $eid
-	    exec zfs destroy -fr vroot/$eid
-	} else {
-	    exec jail -r $eid &
-	    exec zfs destroy -fr vroot/$eid &
+        if {$execMode == "batch"} {
+            exec jail -r $eid
+            exec zfs destroy -fr vroot/$eid
+        } else {
+            exec jail -r $eid &
+            exec zfs destroy -fr vroot/$eid &
 
-	    catch {exec zfs list | grep -c "$eid"} output
-	    set zfsCount [lindex [split $output] 0]
+            catch {exec zfs list | grep -c "$eid"} output
+            set zfsCount [lindex [split $output] 0]
 
-	    while {$zfsCount != 0} {
-		catch {exec zfs list | grep -c "$eid/"} output
-		set zfsCount [lindex [split $output] 0]
-		$widget.p configure -value $zfsCount
-		update
-		after 200
-	    }
-	}
+            while {$zfsCount != 0} {
+                catch {exec zfs list | grep -c "$eid/"} output
+                set zfsCount [lindex [split $output] 0]
+                $widget.p configure -value $zfsCount
+                update
+                after 200
+            }
+        }
     }
 }
 
@@ -1786,12 +1784,12 @@ proc l2node.instantiate { eid node } {
     upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
 
     switch -exact [nodeType $node] {
-	lanswitch {
-	    set ngtype bridge
-	}
-	hub {
-	    set ngtype hub
-	}
+        lanswitch {
+            set ngtype bridge
+        }
+        hub {
+            set ngtype hub
+        }
     }
 
     set t [exec printf "mkpeer $ngtype link0 link0\nmsg .link0 setpersistent\nshow ." | jexec $eid ngctl -f -]
@@ -1847,7 +1845,7 @@ proc captureExtIfc { eid node } {
 
     set ifname [getNodeName $node]
     if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
-	exec ifconfig $ifname create
+        exec ifconfig $ifname create
     }
     set ngifname [string map {. _} $ifname]
     set ngnodemap($ifname) $ngifname
@@ -1871,7 +1869,7 @@ proc releaseExtIfc { eid node } {
     nexec ifconfig $ifname -vnet $eid
     nexec ifconfig $ifname up -promisc
     if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
-	exec ifconfig $ifname destroy
+        exec ifconfig $ifname destroy
     }
 }
 
@@ -1920,21 +1918,29 @@ proc configDefaultLoIfc { eid node } {
 proc getExtIfcs { } {
     catch { exec ifconfig -l } ifcs
     foreach ignore "lo* ipfw* tun*" {
-	set ifcs [ lsearch -all -inline -not $ifcs $ignore ]
+        set ifcs [ lsearch -all -inline -not $ifcs $ignore ]
     }
     return "$ifcs"
 }
 
+proc getIPv4RouteCmd { statrte } {
+    return "route -q add -inet $statrte"
+}
+
+proc getIPv6RouteCmd { statrte } {
+    return "route -q add -inet6 $statrte"
+}
+
 proc getIPv4IfcCmd { ifc addr primary } {
     if { $primary } {
-	return "ifconfig $ifc inet $addr"
+	   return "ifconfig $ifc inet $addr"
     }
     return "ifconfig $ifc inet add $addr"
 }
 
 proc getIPv6IfcCmd { ifc addr primary } {
     if { $primary } {
-	return "ifconfig $ifc inet6 $addr"
+	   return "ifconfig $ifc inet6 $addr"
     }
     return "ifconfig $ifc inet6 add $addr"
 }

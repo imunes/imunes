@@ -51,10 +51,10 @@ proc nexec { args } {
     global editor_only
 
     if { $editor_only } {
-	tk_messageBox -title "Editor only" \
-	    -message "Running in editor only mode." \
-	    -type ok
-	return
+        tk_messageBox -title "Editor only" \
+            -message "Running in editor only mode." \
+            -type ok
+        return
     }
 
     eval exec $args
@@ -90,115 +90,116 @@ proc setOperMode { mode } {
     global all_modules_list editor_only execMode
 
     if {$mode == "exec" && $node_list == ""} {
-	statline "Empty topologies can't be executed."
-	.panwin.f1.c config -cursor left_ptr
-	return
+        statline "Empty topologies can't be executed."
+        .panwin.f1.c config -cursor left_ptr
+        return
     }
 
     if { !$cfgDeployed } {
-	    if { $mode == "exec" } { ;# let's try something, sockets should be opened
-		set os [platform::identify]
-		if { [string match -nocase "*freebsd*" $os] != 1 } {
-		    after idle {.dialog1.msg configure -wraplength 4i}
-		    tk_dialog .dialog1 "IMUNES error" \
-			"Error: To execute experiment, run IMUNES on FreeBSD." \
-		    info 0 Dismiss
-		    return
-		}
-		catch {exec id -u} uid
-		if { $uid != "0" } {
-		    after idle {.dialog1.msg configure -wraplength 4i}
-		    tk_dialog .dialog1 "IMUNES error" \
-			"Error: To execute experiment, run IMUNES with root permissions." \
-		    info 0 Dismiss
-		    return
-		}
-		if { $editor_only } { ;# if set in exec or open_exec_sockets
-		    .menubar.experiment entryconfigure "Execute" -state disabled
-		    return
-		}
-	    }
+        if { $mode == "exec" } { ;# let's try something, sockets should be opened
+            set os [platform::identify]
+            if { [string match -nocase "*linux*" $os] != 1 &&
+                [string match -nocase "*freebsd*" $os] != 1 } {
+                after idle {.dialog1.msg configure -wraplength 4i}
+                tk_dialog .dialog1 "IMUNES error" \
+                    "Error: To execute experiment, run IMUNES on FreeBSD or Linux." \
+                info 0 Dismiss
+                return
+            }
+            catch {exec id -u} uid
+            if { $uid != "0" } {
+                after idle {.dialog1.msg configure -wraplength 4i}
+                tk_dialog .dialog1 "IMUNES error" \
+                    "Error: To execute experiment, run IMUNES with root permissions." \
+                info 0 Dismiss
+                return
+            }
+            if { $editor_only } { ;# if set in exec or open_exec_sockets
+                .menubar.experiment entryconfigure "Execute" -state disabled
+                return
+            }
+        }
 
-	    if { [allSnapshotsAvailable] == 0 } {
-		return
-	    }
+        if { [allSnapshotsAvailable] == 0 } {
+            return
+        }
 
-	    # Verify that links to external interfaces are properly configured
-	    if { $mode == "exec" } {
-		if { [checkExternalInterfaces] } {
-		    return
-		}
-	    }
+        # Verify that links to external interfaces are properly configured
+        if { $mode == "exec" } {
+            if { [checkExternalInterfaces] } {
+                return
+            }
+        }
     }
 
     foreach b { link link_layer net_layer } {
-	if { "$mode" == "exec" } {
-	    .panwin.f1.left.$b configure -state disabled
-	} else {
-	    .panwin.f1.left.$b configure -state normal
-	}
+        if { "$mode" == "exec" } {
+            .panwin.f1.left.$b configure -state disabled
+        } else {
+            .panwin.f1.left.$b configure -state normal
+        }
     }
     .bottom.oper_mode configure -text "$mode mode"
     setActiveTool select
     #.panwin.f1.left.select configure -state active
     if { "$mode" == "exec" && [exec id -u] == 0} {
-	global autorearrange_enabled
-	set autorearrange_enabled 0
-	.menubar.tools entryconfigure "Auto rearrange all" -state disabled
-	.menubar.tools entryconfigure "Auto rearrange selected" -state disabled
-	.menubar.experiment entryconfigure "Execute" -state disabled
-	.menubar.experiment entryconfigure "Terminate" -state normal
-	.menubar.experiment entryconfigure "Restart" -state normal
-	.menubar.edit entryconfigure "Undo" -state disabled
-	.menubar.edit entryconfigure "Redo" -state disabled
-	.menubar.tools entryconfigure "Routing protocol defaults" -state disabled
-	.panwin.f1.c bind node <Double-1> "spawnShellExec"
-	.panwin.f1.c bind nodelabel <Double-1> "spawnShellExec"
-	set oper_mode exec
-	if {!$cfgDeployed} {
-	    deployCfg
-	    set cfgDeployed true
-	    createExperimentFiles $eid
-	}
-	.bottom.experiment_id configure -text "Experiment ID = $eid"
+        global autorearrange_enabled
+        set autorearrange_enabled 0
+        .menubar.tools entryconfigure "Auto rearrange all" -state disabled
+        .menubar.tools entryconfigure "Auto rearrange selected" -state disabled
+        .menubar.experiment entryconfigure "Execute" -state disabled
+        .menubar.experiment entryconfigure "Terminate" -state normal
+        .menubar.experiment entryconfigure "Restart" -state normal
+        .menubar.edit entryconfigure "Undo" -state disabled
+        .menubar.edit entryconfigure "Redo" -state disabled
+        .menubar.tools entryconfigure "Routing protocol defaults" -state disabled
+        .panwin.f1.c bind node <Double-1> "spawnShellExec"
+        .panwin.f1.c bind nodelabel <Double-1> "spawnShellExec"
+        set oper_mode exec
+        if {!$cfgDeployed} {
+            deployCfg
+            set cfgDeployed true
+            createExperimentFiles $eid
+        }
+        .bottom.experiment_id configure -text "Experiment ID = $eid"
     } else {
-	if {$oper_mode != "edit"} {
-	    global regular_termination
-	    if { $regular_termination } {
-		terminateAllNodes $eid
-	    } else {
-		vimageCleanup $eid
-	    }
-	    # XXX - killProcess regex
-	    killExtProcess "socat.*$eid"
-	    # XXX
-	    set cfgDeployed false
-	    deleteExperimentFiles $eid
-	    .menubar.tools entryconfigure "Auto rearrange all" -state normal
-	    .menubar.tools entryconfigure "Auto rearrange selected" -state normal
-	    .menubar.tools entryconfigure "Routing protocol defaults" -state normal
-	}
-	if { $editor_only } {
-	    .menubar.experiment entryconfigure "Execute" -state disabled
- 	} else {
-	    .menubar.experiment entryconfigure "Execute" -state normal
-	}
-	.menubar.experiment entryconfigure "Terminate" -state disabled
-	.menubar.experiment entryconfigure "Restart" -state disabled
-	if { $undolevel > 0 } {
-	    .menubar.edit entryconfigure "Undo" -state normal
-	} else {
-	    .menubar.edit entryconfigure "Undo" -state disabled
-	}
-	if { $redolevel > $undolevel } {
-	    .menubar.edit entryconfigure "Redo" -state normal
-	} else {
-	    .menubar.edit entryconfigure "Redo" -state disabled
-	}
-	.panwin.f1.c bind node <Double-1> "nodeConfigGUI .panwin.f1.c {}"
-	.panwin.f1.c bind nodelabel <Double-1> "nodeConfigGUI .panwin.f1.c {}"
-	set oper_mode edit
-	.bottom.experiment_id configure -text ""
+        if {$oper_mode != "edit"} {
+            global regular_termination
+            if { $regular_termination } {
+                terminateAllNodes $eid
+            } else {
+                vimageCleanup $eid
+            }
+            # XXX - killProcess regex
+            killExtProcess "socat.*$eid"
+            # XXX
+            set cfgDeployed false
+            deleteExperimentFiles $eid
+            .menubar.tools entryconfigure "Auto rearrange all" -state normal
+            .menubar.tools entryconfigure "Auto rearrange selected" -state normal
+            .menubar.tools entryconfigure "Routing protocol defaults" -state normal
+        }
+        if { $editor_only } {
+            .menubar.experiment entryconfigure "Execute" -state disabled
+        } else {
+            .menubar.experiment entryconfigure "Execute" -state normal
+        }
+        .menubar.experiment entryconfigure "Terminate" -state disabled
+        .menubar.experiment entryconfigure "Restart" -state disabled
+        if { $undolevel > 0 } {
+            .menubar.edit entryconfigure "Undo" -state normal
+        } else {
+            .menubar.edit entryconfigure "Undo" -state disabled
+        }
+        if { $redolevel > $undolevel } {
+            .menubar.edit entryconfigure "Redo" -state normal
+        } else {
+            .menubar.edit entryconfigure "Redo" -state disabled
+        }
+        .panwin.f1.c bind node <Double-1> "nodeConfigGUI .panwin.f1.c {}"
+        .panwin.f1.c bind nodelabel <Double-1> "nodeConfigGUI .panwin.f1.c {}"
+        set oper_mode edit
+        .bottom.experiment_id configure -text ""
     }
     .panwin.f1.c config -cursor left_ptr
 }
@@ -218,19 +219,19 @@ proc spawnShellExec {} {
 
     set node [lindex [.panwin.f1.c gettags {node && current}] 1]
     if { $node == "" } {
-	set node [lindex [.panwin.f1.c gettags {nodelabel && current}] 1]
-	if { $node == "" } {
-	    return
-	}
+        set node [lindex [.panwin.f1.c gettags {nodelabel && current}] 1]
+        if { $node == "" } {
+            return
+        }
     }
     if { [[typemodel $node].virtlayer] != "VIMAGE" } {
-	nodeConfigGUI .panwin.f1.c $node
+        nodeConfigGUI .panwin.f1.c $node
     } else {
-	set cmd [lindex [existingShells [[typemodel $node].shellcmds] $node] 0]
-	if { $cmd == "" } {
-	    return
-	}
-	spawnShell $node $cmd
+        set cmd [lindex [existingShells [[typemodel $node].shellcmds] $node] 0]
+        if { $cmd == "" } {
+            return
+        }
+        spawnShell $node $cmd
     }
 }
 
@@ -250,35 +251,35 @@ proc fetchNodeConfiguration {} {
     set ip4Set 0
 
     foreach node [selectedNodes] {
-	# XXX - proc getRunningNodeIfcList
-	set lines [getRunningNodeIfcList $node]
-	# XXX
-	
-	# XXX - here we parse ifconfig output, maybe require virtual nodes on
-	# linux to have ifconfig, or create different parsing procedures for ip
-	# and ifconfig that will have the same output
-	foreach line $lines {
-	    if {[regexp {^([[:alnum:]]+):.*mtu ([^$]+)$} $line \
-		 -> ifc mtuvalue]} {
-		setIfcMTU $node $ifc $mtuvalue
-		set ip6Set 0
-		set ip4Set 0
-	    } elseif {[regexp {^\tether ([^ ]+)} $line -> macaddr]} {
-		setIfcMACaddr $node $ifc $macaddr
-	    } elseif {[regexp {^\tinet6 (?!fe80:)([^ ]+) } $line -> ip6addr]} {
-		if {$ip6Set == 0} {
-		    setIfcIPv6addr $node $ifc $ip6addr
-		    set ip6Set 1
-		}
-	    } elseif {[regexp {^\tinet ([^ ]+) netmask ([^ ]+) } $line \
-		 -> ip4addr netmask]} {
-		if {$ip4Set == 0} {
-		    set length [ip::maskToLength $netmask]
-		    setIfcIPv4addr $node $ifc $ip4addr/$length
-		    set ip4Set 1
-		}
-	    }
-	}
+        # XXX - proc getRunningNodeIfcList
+        set lines [getRunningNodeIfcList $node]
+        # XXX
+
+        # XXX - here we parse ifconfig output, maybe require virtual nodes on
+        # linux to have ifconfig, or create different parsing procedures for ip
+        # and ifconfig that will have the same output
+        foreach line $lines {
+            if {[regexp {^([[:alnum:]]+):.*mtu ([^$]+)$} $line \
+                 -> ifc mtuvalue]} {
+                setIfcMTU $node $ifc $mtuvalue
+                set ip6Set 0
+                set ip4Set 0
+            } elseif {[regexp {^\tether ([^ ]+)} $line -> macaddr]} {
+                setIfcMACaddr $node $ifc $macaddr
+                } elseif {[regexp {^\tinet6 (?!fe80:)([^ ]+) } $line -> ip6addr]} {
+                    if {$ip6Set == 0} {
+                        setIfcIPv6addr $node $ifc $ip6addr
+                        set ip6Set 1
+                    }
+                } elseif {[regexp {^\tinet ([^ ]+) netmask ([^ ]+) } $line \
+                 -> ip4addr netmask]} {
+                if {$ip4Set == 0} {
+                    set length [ip::maskToLength $netmask]
+                    setIfcIPv4addr $node $ifc $ip4addr/$length
+                    set ip4Set 1
+                }
+            }
+        }
     }
     redrawAll
 }
@@ -318,29 +319,29 @@ proc checkExternalInterfaces {} {
     # XXX
 
     foreach node $node_list {
-	if { [nodeType $node] == "rj45" } {
-	    # check if the interface exists
-	    set name [lindex [split [getNodeName $node] .] 0]
-	    set i [lsearch $extifcs $name]
-	    if { $i < 0 } {
-		set msg "Error: external interface $name non-existant."
-		if { $execMode == "batch" } {
-		    puts $msg
-		} else {
-		    after idle {.dialog1.msg configure -wraplength 4i}
-			tk_dialog .dialog1 "IMUNES error" $msg \
-			info 0 Dismiss
-		}
-		return 1
-	    }
-	    if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
-		# XXX - proc getHostIfcVlanExists
-		if { [getHostIfcVlanExists $node $name] } {
-		    return 1
-		}
-		# XXX
-	    }
-	}
+        if { [nodeType $node] == "rj45" } {
+            # check if the interface exists
+            set name [lindex [split [getNodeName $node] .] 0]
+            set i [lsearch $extifcs $name]
+            if { $i < 0 } {
+                set msg "Error: external interface $name non-existant."
+                if { $execMode == "batch" } {
+                    puts $msg
+                } else {
+                    after idle {.dialog1.msg configure -wraplength 4i}
+                    tk_dialog .dialog1 "IMUNES error" $msg \
+                    info 0 Dismiss
+                }
+                return 1
+            }
+            if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
+                # XXX - proc getHostIfcVlanExists
+                if { [getHostIfcVlanExists $node $name] } {
+                    return 1
+                }
+                # XXX
+            }
+        }
     }
     return 0
 }
@@ -360,7 +361,7 @@ proc resumeSelectedExperiment { exp } {
     global runtimeDir
     set curr_eid $eid
     if {$curr_eid == $exp} {
-	return
+        return
     }
     newProject
 
@@ -368,7 +369,7 @@ proc resumeSelectedExperiment { exp } {
     upvar 0 ::cf::[set ::curcfg]::cfgDeployed cfgDeployed
     upvar 0 ::cf::[set ::curcfg]::eid eid
     upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-    
+
     set currentFile [getExperimentConfigurationFromFile $exp]
     openFile
 
@@ -394,30 +395,30 @@ proc createExperimentFiles { eid } {
     global currentFileBatch execMode runtimeDir
     set basedir "$runtimeDir/$eid"
     file mkdir $basedir
-    
+
     # XXX - writeDataToFile path data
     writeDataToFile $basedir/timestamp [clock format [clock seconds]]
     # XXX
-    
+
     # XXX - proc dumpNgnodesToFile - with writeDataToFile
     dumpNgnodesToFile $basedir/ngnodemap
     # XXX
 
     if { $execMode == "interactive" } {
-	if { $currentFile != "" } {
-	    writeDataToFile $basedir/name [file tail $currentFile]
-	}
+        if { $currentFile != "" } {
+            writeDataToFile $basedir/name [file tail $currentFile]
+        }
     } else {
-	if { $currentFileBatch != "" } {
-	    writeDataToFile $basedir/name [file tail $currentFileBatch]
-	}
+        if { $currentFileBatch != "" } {
+            writeDataToFile $basedir/name [file tail $currentFileBatch]
+        }
     }
 
     if { $execMode == "interactive" } {
-	saveRunningConfigurationInteractive $eid
-	createExperimentScreenshot $eid
+        saveRunningConfigurationInteractive $eid
+        createExperimentScreenshot $eid
     } else {
-	saveRunningConfigurationBatch $eid
+        saveRunningConfigurationBatch $eid
     }
 }
 
@@ -472,11 +473,11 @@ proc createExperimentScreenshot { eid } {
     global runtimeDir
     set fileName "$runtimeDir/$eid/screenshot.png"
     set error [catch {eval image create photo screenshot -format window \
-	-data .panwin.f1.c} err]
+        -data .panwin.f1.c} err]
     if { ($error == 0) } {
-	screenshot write $fileName -format png
-	catch {exec convert $fileName -resize 300x210\! $fileName\2}
-	catch {exec mv $fileName\2 $fileName}
+        screenshot write $fileName -format png
+        catch {exec convert $fileName -resize 300x210\! $fileName\2}
+        catch {exec mv $fileName\2 $fileName}
     }
 }
 
@@ -524,9 +525,9 @@ proc fetchExperimentFolders {} {
     set exp_list ""
     set exp_files [glob -nocomplain -directory $runtimeDir -type d *]
     if {$exp_files != ""} {
-	foreach file $exp_files {          
-	    lappend exp_list [file tail $file]
-	}
+        foreach file $exp_files {
+            lappend exp_list [file tail $file]
+        }
     }
     return $exp_list
 }
@@ -545,9 +546,9 @@ proc getResumableExperiments {} {
     set exp_list ""
     set exp_folders [fetchExperimentFolders]
     foreach exp [fetchRunningExperiments] {
-	if {$exp in $exp_folders} {
-	    lappend exp_list $exp 	
-	}
+        if {$exp in $exp_folders} {
+            lappend exp_list $exp
+        }
     }
     return $exp_list
 }
@@ -569,9 +570,9 @@ proc getExperimentTimestampFromFile { eid } {
     set pathToFile "$runtimeDir/$eid/timestamp"
     set timestamp ""
     if {[file exists $pathToFile]} {
-	set fileId [open $pathToFile r]
-	set timestamp [string trim [read $fileId]]
-	close $fileId
+        set fileId [open $pathToFile r]
+        set timestamp [string trim [read $fileId]]
+        close $fileId
     }
     return $timestamp
 }
@@ -593,9 +594,9 @@ proc getExperimentNameFromFile { eid } {
     set pathToFile "$runtimeDir/$eid/name"
     set name ""
     if {[file exists $pathToFile]} {
-	# XXX - readDataFromFile path
-	set name [readDataFromFile $pathToFile]
-	# XXX
+        # XXX - readDataFromFile path
+        set name [readDataFromFile $pathToFile]
+        # XXX
     }
     return $name
 }
@@ -618,7 +619,7 @@ proc getExperimentConfigurationFromFile { eid } {
     set pathToFile "$runtimeDir/$eid/config.imn"
     set file ""
     if {[file exists $pathToFile]} {
-	set file $pathToFile
+        set file $pathToFile
     }
     return $file
 }
@@ -638,11 +639,11 @@ proc statline { line } {
     global execMode
 
     if {$execMode == "batch"} {
-	puts $line
-	flush stdout
+        puts $line
+        flush stdout
     } else {
-	.bottom.textbox config -text "$line"
-	animateCursor
+        .bottom.textbox config -text "$line"
+        animateCursor
     }
 }
 
@@ -660,9 +661,9 @@ proc statline { line } {
 proc displayBatchProgress { prgs tot } {
     global execMode
     if {$execMode == "batch"} {
-	puts -nonewline "\r                                                "
-	puts -nonewline [format "\r%.1f" "[expr {100.0 * $prgs/$tot}]"]%
-	flush stdout
+        puts -nonewline "\r                                                "
+        puts -nonewline [format "\r%.1f" "[expr {100.0 * $prgs/$tot}]"]%
+        flush stdout
     }
 }
 
@@ -686,7 +687,7 @@ proc l3node.instantiate { eid node } {
     # XXX - prepareFilesystemForNode
     prepareFilesystemForNode $node
     # XXX
-    
+
     # XXX - createNodeContainer
     createNodeContainer $node
     # XXX
@@ -703,6 +704,7 @@ proc l3node.instantiate { eid node } {
     configureICMPoptions $node
     # XXX
 }
+
 
 #****f* exec.tcl/l3node.start
 # NAME
@@ -721,8 +723,6 @@ proc l3node.instantiate { eid node } {
 proc l3node.start { eid node } {
     # XXX - startIfcsNode node
     startIfcsNode $node
-    # XXX
-
     # XXX - runConfOnNode node
     runConfOnNode $node
     # XXX
@@ -803,18 +803,18 @@ proc deployCfg {} {
 
     set running_eids [getResumableExperiments]
     if {$execMode != "batch"} {
-	set eid ${eid_base}[string range $::curcfg 1 end]
-	while { $eid in $running_eids } {
-	    set eid_base i[format %04x [expr {[pid] + [expr { round( rand()*10000 ) }]}]]
-	    set eid ${eid_base}[string range $::curcfg 1 end]
-	}
+    set eid ${eid_base}[string range $::curcfg 1 end]
+    while { $eid in $running_eids } {
+        set eid_base i[format %04x [expr {[pid] + [expr { round( rand()*10000 ) }]}]]
+        set eid ${eid_base}[string range $::curcfg 1 end]
+    }
     } else {
-	set eid $eid_base
-	while { $eid in $running_eids } {
-	    puts -nonewline "Experiment ID $eid_base already in use, trying "
-	    set eid i[format %04x [expr {[pid] + [expr { round( rand()*10000 ) }]}]]
-	    puts "$eid."
-	}
+    set eid $eid_base
+    while { $eid in $running_eids } {
+        puts -nonewline "Experiment ID $eid_base already in use, trying "
+        set eid i[format %04x [expr {[pid] + [expr { round( rand()*10000 ) }]}]]
+        puts "$eid."
+    }
     }
 
     set t_start [clock milliseconds]
@@ -838,19 +838,19 @@ proc deployCfg {} {
     set count [expr {$nodeCount + $linkCount}]
     set startedCount 0
     if {$execMode != "batch"} {
-	set w .startup
-	catch {destroy $w}
-	toplevel $w -takefocus 1
-	wm transient $w .
-	wm title $w "Starting experiment..."
-	message $w.msg -justify left -aspect 1200 \
-	    -text "Starting up virtual nodes and links."
-	pack $w.msg
-	update
-	ttk::progressbar $w.p -orient horizontal -length 250 \
-	-mode determinate -maximum $count -value $startedCount
-	pack $w.p
-	update
+    set w .startup
+    catch {destroy $w}
+    toplevel $w -takefocus 1
+    wm transient $w .
+    wm title $w "Starting experiment..."
+    message $w.msg -justify left -aspect 1200 \
+        -text "Starting up virtual nodes and links."
+    pack $w.msg
+    update
+    ttk::progressbar $w.p -orient horizontal -length 250 \
+    -mode determinate -maximum $count -value $startedCount
+    pack $w.p
+    update
     }
 
     statline "Creating nodes..."
@@ -860,21 +860,21 @@ proc deployCfg {} {
     pipesCreate
 
     foreach node $node_list {
-	incr step
-	set node_id "$eid\.$node"
-	set type [nodeType $node]
-	set name [getNodeName $node]
-	if {$type != "pseudo"} {
-	    if {$execMode != "batch"} {
-		statline "Creating node $name"
-		$w.p configure -value $startedCount
-		update
-	    }
-	    displayBatchProgress $step $allNodes
-	    [typemodel $node].instantiate $eid $node
-	    pipesExec ""
-	    incr startedCount
-	}
+        incr step
+        set node_id "$eid\.$node"
+        set type [nodeType $node]
+        set name [getNodeName $node]
+        if {$type != "pseudo"} {
+            if {$execMode != "batch"} {
+            statline "Creating node $name"
+            $w.p configure -value $startedCount
+            update
+            }
+            displayBatchProgress $step $allNodes
+            [typemodel $node].instantiate $eid $node
+            pipesExec ""
+            incr startedCount
+        }
     }
 
     statline ""
@@ -887,43 +887,37 @@ proc deployCfg {} {
     set step 0
     set allLinks [ llength $link_list ]
     for {set pending_links $link_list} {$pending_links != ""} {} {
-	set link [lindex $pending_links 0]
-	set i [lsearch -exact $pending_links $link]
-	set pending_links [lreplace $pending_links $i $i]
+        set link [lindex $pending_links 0]
+        set i [lsearch -exact $pending_links $link]
+        set pending_links [lreplace $pending_links $i $i]
 
-	set lnode1 [lindex [linkPeers $link] 0]
-	set lnode2 [lindex [linkPeers $link] 1]
-	set ifname1 [ifcByPeer $lnode1 $lnode2]
-	set ifname2 [ifcByPeer $lnode2 $lnode1]
+        set lnode1 [lindex [linkPeers $link] 0]
+        set lnode2 [lindex [linkPeers $link] 1]
+        set ifname1 [ifcByPeer $lnode1 $lnode2]
+        set ifname2 [ifcByPeer $lnode2 $lnode1]
 
-	if { [getLinkMirror $link] != "" } {
-	    set mirror_link [getLinkMirror $link]
-	    set i [lsearch -exact $pending_links $mirror_link]
-	    set pending_links [lreplace $pending_links $i $i]
+        if { [getLinkMirror $link] != "" } {
+            set mirror_link [getLinkMirror $link]
+            set i [lsearch -exact $pending_links $mirror_link]
+            set pending_links [lreplace $pending_links $i $i]
 
-	    if {$execMode != "batch"} {
-		statline "Creating link $link/$mirror_link"
-	    }
+            if {$execMode != "batch"} {
+                statline "Creating link $link/$mirror_link"
+            }
 
-	    set p_lnode2 $lnode2
-	    set lnode2 [lindex [linkPeers $mirror_link] 0]
-	    set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
-	} else {
-	    if {$execMode != "batch"} {
-		statline "Creating link $link"
-	    }
-	}
-	incr step
-	displayBatchProgress $step $allLinks
+            set p_lnode2 $lnode2
+            set lnode2 [lindex [linkPeers $mirror_link] 0]
+            set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
+        } else {
+            if {$execMode != "batch"} {
+                statline "Creating link $link"
+            }
+        }
+        incr step
+        displayBatchProgress $step $allLinks
 
-	incr startedCount
-	if {$execMode != "batch"} {
-	    $w.p configure -value $startedCount
-	    update
-	}
-
-	createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2
-	configureLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
+        createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2
+        configureLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
     }
 
     # Start services for the LINKINST hook
@@ -934,20 +928,20 @@ proc deployCfg {} {
 
     set step 0
     foreach node $node_list {
-	upvar 0 ::cf::[set ::curcfg]::$node $node
-	set type [nodeType $node]
-	if {$type == "pseudo"} {
-	    continue
-	}
-	if {$execMode != "batch"} {
-	    statline "Configuring node [getNodeName $node]"
-	}
-	incr step
-	displayBatchProgress $step $allNodes
+        upvar 0 ::cf::[set ::curcfg]::$node $node
+        set type [nodeType $node]
+        if {$type == "pseudo"} {
+            continue
+        }
+        if {$execMode != "batch"} {
+            statline "Configuring node [getNodeName $node]"
+        }
+        incr step
+        displayBatchProgress $step $allNodes
 
-	if {[info procs [typemodel $node].start] != ""} {
-	    [typemodel $node].start $eid $node
-	}
+        if {[info procs [typemodel $node].start] != ""} {
+            [typemodel $node].start $eid $node
+        }
     }
     statline ""
 
@@ -958,9 +952,9 @@ proc deployCfg {} {
 
     global execMode
     if {$execMode != "batch"} {
-	destroy $w
+        destroy $w
     } else {
-	puts "Experiment ID = $eid"
+        puts "Experiment ID = $eid"
     }
 }
 
@@ -982,19 +976,19 @@ proc terminateAllNodes { eid } {
     set w ""
     #preparing counters for GUI
     if {$execMode != "batch"} {
-	set count [expr {[llength $node_list]+[llength $link_list]}]
-	set w .termWait
-	catch {destroy $w}
-	toplevel $w -takefocus 1
-	wm transient $w .
-	wm title $w "Terminating experiment ..."
-	message $w.msg -justify left -aspect 1200 \
-	    -text "Deleting virtual nodes and links."
-	pack $w.msg
-	ttk::progressbar $w.p -orient horizontal -length 250 \
-	    -mode determinate -maximum $count -value $count
-	pack $w.p
-	update
+        set count [expr {[llength $node_list]+[llength $link_list]}]
+        set w .termWait
+        catch {destroy $w}
+        toplevel $w -takefocus 1
+        wm transient $w .
+        wm title $w "Terminating experiment ..."
+        message $w.msg -justify left -aspect 1200 \
+            -text "Deleting virtual nodes and links."
+        pack $w.msg
+        ttk::progressbar $w.p -orient horizontal -length 250 \
+            -mode determinate -maximum $count -value $count
+        pack $w.p
+        update
     }
 
     set t_start [clock milliseconds]
@@ -1014,24 +1008,26 @@ proc terminateAllNodes { eid } {
     # divide nodes into two lists
     set ngraphs ""
     set vimages ""
+    set switches ""
     foreach node $node_list {
-	if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
-	    lappend ngraphs $node
-	} elseif { [[typemodel $node].virtlayer] == "VIMAGE" } {
-	    lappend vimages $node
-	}
+    if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
+        lappend ngraphs $node
+    }
+    if { [[typemodel $node].virtlayer] == "VIMAGE" } {
+        lappend vimages $node
+    }
     }
 
     statline "Stopping ngraphs and vimages..."
     foreach node [ concat $ngraphs $vimages ] {
-	incr step
-	if { [info procs [typemodel $node].shutdown] != "" } {
-#	    statline "Stopping [string tolower [[typemodel $node].virtlayer]] node $node ([typemodel $node])"
-	    displayBatchProgress $step [ llength [ concat $ngraphs $vimages ] ]
-	    [typemodel $node].shutdown $eid $node
-	} else {
-	    #puts "$node [typemodel $node] doesn't have a shutdown procedure"
-	}
+        incr step
+        if { [info procs [typemodel $node].shutdown] != "" } {
+        #   statline "Stopping [string tolower [[typemodel $node].virtlayer]] node $node ([typemodel $node])"
+            displayBatchProgress $step [ llength [ concat $ngraphs $vimages ] ]
+            [typemodel $node].shutdown $eid $node
+        } else {
+            #puts "$node [typemodel $node] doesn't have a shutdown procedure"
+        }
     }
     statline ""
 
@@ -1043,14 +1039,14 @@ proc terminateAllNodes { eid } {
     pipesCreate
     set i 0
     foreach link $link_list {
-	incr i
+        incr i
         set lnode1 [lindex [linkPeers $link] 0]
         set lnode2 [lindex [linkPeers $link] 1]
-#	statline "Shutting down link $link ($lnode1-$lnode2)"
-	displayBatchProgress $i [ llength $link_list ]
-	# XXX - destroyLinkBetween lnode1 lnode2
-	destroyLinkBetween $eid $lnode1 $lnode2
-	# XXX
+        # statline "Shutting down link $link ($lnode1-$lnode2)"
+        displayBatchProgress $i [ llength $link_list ]
+        # XXX - destroyLinkBetween lnode1 lnode2
+        destroyLinkBetween $eid $lnode1 $lnode2
+        # XXX
         if {$execMode != "batch"} {
             $w.p step -1
         }
@@ -1060,8 +1056,6 @@ proc terminateAllNodes { eid } {
 
     # XXX - destroyNetgraphNodes ngraphs
     destroyNetgraphNodes $eid $ngraphs $w
-    # XXX
-
     # XXX - destroyVirtNodeIfcs vimages
     destroyVirtNodeIfcs $eid $vimages
     # XXX
@@ -1079,12 +1073,12 @@ proc terminateAllNodes { eid } {
     set i 0
     foreach node $vimages {
 #	statline "Shutting down vimage $node ([typemodel $node])"
-	incr i
-	[typemodel $node].destroy $eid $node
+        incr i
+        [typemodel $node].destroy $eid $node
         if {$execMode != "batch"} {
             $w.p step -1
         }
-	displayBatchProgress $i [ llength $vimages ]
+        displayBatchProgress $i [ llength $vimages ]
     }
     pipesClose
     statline ""
@@ -1094,7 +1088,7 @@ proc terminateAllNodes { eid } {
     # XXX
 
     if {$execMode != "batch"} {
-	destroy $w
+        destroy $w
     }
 
     statline "Cleanup completed in [expr ([clock milliseconds] - $t_start)/1000.0] seconds."
@@ -1117,7 +1111,7 @@ proc execCmdsNode { node cmds } {
     set output ""
     foreach cmd $cmds {
         set result [execCmdNode $node $cmd]
-	append output "\n" $result
+        append output "\n" $result
     }
     return $output
 }
@@ -1174,7 +1168,7 @@ proc pipesCreate { } {
 
     set ncpus [getCpuCount]
     for {set i 0} {$i < $ncpus} {incr i} {
-	set inst_pipes($i) [open "| sh" r+]
+        set inst_pipes($i) [open "| sh" r+]
     }
     set last_inst_pipe 0
 }
@@ -1198,10 +1192,10 @@ proc pipesExec { line args } {
 
     flush $pipe
     if { $args != "hold" } {
-	incr last_inst_pipe
+        incr last_inst_pipe
     }
     if {$last_inst_pipe >= [llength [array names inst_pipes]]} {
-	set last_inst_pipe 0
+        set last_inst_pipe 0
     }
 }
 
@@ -1217,9 +1211,9 @@ proc pipesClose { } {
     global inst_pipes last_inst_pipe
 
     foreach i [array names inst_pipes] {
-	close $inst_pipes($i) w
-	# A dummy read, just to flush the output from the command pipeline
-	read $inst_pipes($i)
-	catch {close $inst_pipes($i)}
+        close $inst_pipes($i) w
+        # A dummy read, just to flush the output from the command pipeline
+        read $inst_pipes($i)
+        catch {close $inst_pipes($i)}
     }
 }

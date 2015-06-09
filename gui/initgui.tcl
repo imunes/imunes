@@ -46,33 +46,33 @@
 #    global variables
 # FUNCTION
 #    GUI-related global varibles
-# 
+#
 #    * newlink -- helps when creating a new link. If there is no
 #      link currently created, this value is set to an empty string.
 #    * selectbox -- the value of the box representing all the selected items
 #    * selected -- containes the list of node_id's of all selected nodes.
-#    * newCanvas -- 
+#    * newCanvas --
 #
-#    * animatephase -- starting dashoffset. With this value the effect of 
-#      rotating line around selected itme is achived. 
+#    * animatephase -- starting dashoffset. With this value the effect of
+#      rotating line around selected itme is achived.
 #    * undolevel -- control variable for undo.
 #    * redolevel -- control variable for redo.
 #    * undolog -- control variable for saving all the past configurations.
-#    * changed -- control variable for indicating that there something changed 
+#    * changed -- control variable for indicating that there something changed
 #      in active configuration.
 #    * badentry -- control variable indicating that there has been a bad entry
 #      in the text box.
 #    * cursorstate -- control variable for animating cursor.
 #    * clock_seconds -- control variable for animating cursor.
-#    * oper_mode -- control variable reresenting operating mode, possible 
+#    * oper_mode -- control variable reresenting operating mode, possible
 #      values are edit and exec.
-#    * grid -- control variable representing grid distance. All new 
-#      elements on the 
+#    * grid -- control variable representing grid distance. All new
+#      elements on the
 #      canvas are snaped to grid. Default value is 24.
 #    * sizex -- X size of the canvas.
 #    * sizey -- Y size of the canvas.
 #    * curcanvas -- the value of the current canvas.
-#    * autorearrange_enabled -- control variable indicating is 
+#    * autorearrange_enabled -- control variable indicating is
 #      autorearrange enabled.
 #
 #    * defLinkColor -- defines the default link color
@@ -86,7 +86,7 @@
 #    * showNodeLabels -- control variable for showing node labels
 #    * showLinkLabels -- control variable for showing link labels
 #
-#    * supp_router_models -- supproted router models, currently xorp quagga 
+#    * supp_router_models -- supproted router models, currently xorp quagga
 #      and static.
 #    * def_router_model -- default router model
 #****
@@ -112,7 +112,7 @@ set resizemode false
 #
 # Initialize a few variables to default values
 #
-set defLinkColor Red 
+set defLinkColor Red
 set defFillColor Gray
 set defLinkWidth 2
 set defEthBandwidth 0
@@ -177,7 +177,7 @@ set iconsrcfile [lindex [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] 0
 #interface selected in the topology tree
 set selectedIfc ""
 
-# Packets required for GUI 
+# Packets required for GUI
 #package require Img
 
 #
@@ -186,6 +186,7 @@ set selectedIfc ""
 
 wm minsize . 640 410
 wm geometry . 1016x716-20+0
+wm attributes . -topmost
 
 set icon16 [image create photo -file $ROOTDIR/$LIBDIR/icons/imunes_icon16.gif]
 set icon32 [image create photo -file $ROOTDIR/$LIBDIR/icons/imunes_icon32.gif]
@@ -200,7 +201,7 @@ ttk::frame .panwin.f2 -width 200
 .panwin add .panwin.f2 -weight 0
 .panwin forget .panwin.f2
 pack .panwin -fill both -expand 1
-pack propagate .panwin.f2 0	
+pack propagate .panwin.f2 0
 
 set mf .panwin.f1
 
@@ -251,11 +252,11 @@ bind . <Control-s> "fileSaveDialogBox"
     wm resizable $w 0 0
     wm title $w "Printing options"
     wm iconname $w "Printing options"
-   
+
     #dodan glavni frame "printframe"
     ttk::frame $w.printframe
     pack $w.printframe -fill both -expand 1
- 
+
     ttk::label $w.printframe.msg -wraplength 5i -justify left -text "Print command:"
     pack $w.printframe.msg -side top
 
@@ -270,7 +271,7 @@ bind . <Control-s> "fileSaveDialogBox"
     pack $w.printframe.e1 -side top -pady 5 -padx 10 -fill x
 }
 
-set printFileType ps 
+set printFileType ps
 
 .menubar.file add command -label "Print To File" -underline 9 \
   -command {
@@ -282,11 +283,11 @@ set printFileType ps
     wm resizable $w 0 0
     wm title $w "Printing options"
     wm iconname $w "Printing options"
-   
+
     #dodan glavni frame "printframe"
     ttk::frame $w.printframe
     pack $w.printframe -fill both -expand 1
- 
+
     ttk::label $w.printframe.msg -wraplength 5i -justify left -text "File:"
 
     ttk::frame $w.printframe.ftype
@@ -294,27 +295,27 @@ set printFileType ps
     -variable printFileType -value ps -state enabled
     ttk::radiobutton $w.printframe.ftype.pdf -text "PDF" \
     -variable printFileType -value pdf -state enabled
-    
+
     ttk::frame $w.printframe.path
 
     if {$winOS} {
-	$w.printframe.pdf configure -state disabled
+        $w.printframe.pdf configure -state disabled
     } else {
       catch {exec ps2pdf} msg
       if { [string match *ps2pdfwr* $msg] != 1 } {
-	  $w.printframe.pdf configure -state disabled
+          $w.printframe.pdf configure -state disabled
       }
     }
 
     pack $w.printframe.msg -side top -fill x -padx 5
 
     ttk::button $w.printframe.path.browse -text "Browse" -width 8 \
-	-command {
-	    global printFileType
-	    set printdest [tk_getSaveFile -initialfile print \
-	      -defaultextension .$printFileType]
-	    $w.printframe.path.e1 insert 0 $printdest
-	}
+        -command {
+            global printFileType
+            set printdest [tk_getSaveFile -initialfile print \
+              -defaultextension .$printFileType]
+            $w.printframe.path.e1 insert 0 $printdest
+        }
 
     ttk::frame $w.printframe.buttons
     pack $w.printframe.buttons -side bottom -fill x -pady 2m
@@ -362,7 +363,7 @@ bind . <Control-a> selectAllObjects
 .menubar.edit add command -label "Select adjacent" \
     -accelerator "Ctrl+D" -underline 7 -command selectAdjacent
 bind . <Control-d> selectAdjacent
-	
+
 #
 # Canvas
 #
@@ -380,17 +381,17 @@ menu .menubar.canvas -tearoff 0
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
 
     if { [llength $canvas_list] == 1 } {
-	 return
+        return
     }
     foreach obj [.panwin.f1.c find withtag node] {
-	selectNode .panwin.f1.c $obj
+        selectNode .panwin.f1.c $obj
     }
     deleteSelection
     set i [lsearch $canvas_list $curcanvas]
     set canvas_list [lreplace $canvas_list $i $i]
     set curcanvas [lindex $canvas_list $i]
     if { $curcanvas == "" } {
-	set curcanvas [lindex $canvas_list end]
+        set curcanvas [lindex $canvas_list end]
     }
     switchCanvas none
     set changed 1
@@ -454,11 +455,11 @@ menu .menubar.tools -tearoff 0
 
     ttk::label $w.ipv4frame.msg -text "IPv4 address range:"
     pack $w.ipv4frame.msg -side top
-	
+
     ttk::entry $w.ipv4frame.e1 -width 27 -validate focus -invalidcommand "focusAndFlash %W"
     $w.ipv4frame.e1 insert 0 $ipv4
     pack $w.ipv4frame.e1 -side top -pady 5 -padx 10 -fill x
-    
+
     $w.ipv4frame.e1 configure -invalidcommand {checkIPv4Net %P}
 
     ttk::frame $w.ipv4frame.buttons
@@ -488,11 +489,11 @@ menu .menubar.tools -tearoff 0
 
     ttk::label $w.ipv6frame.msg -text "IPv6 address range:"
     pack $w.ipv6frame.msg -side top
-	
+
     ttk::entry $w.ipv6frame.e1 -width 27 -validate focus -invalidcommand "focusAndFlash %W"
     $w.ipv6frame.e1 insert 0 $ipv6
     pack $w.ipv6frame.e1 -side top -pady 5 -padx 10 -fill x
-    
+
     $w.ipv6frame.e1 configure -invalidcommand {checkIPv6Net %P}
 
     ttk::frame $w.ipv6frame.buttons
@@ -508,7 +509,7 @@ menu .menubar.tools -tearoff 0
 }
 .menubar.tools add command -label "Routing protocol defaults" -underline 0 -command {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode	
+    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global router_model supp_router_models routerDefaultsModel
     global routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable
 
@@ -518,7 +519,7 @@ menu .menubar.tools -tearoff 0
     wm transient $wi .
     wm resizable $wi 0 0
     wm title $wi "Router Defaults"
-	grab $wi
+    grab $wi
 
     #dodan glavni frame "routerframe"
     ttk::frame $wi.routerframe
@@ -528,60 +529,60 @@ menu .menubar.tools -tearoff 0
     ttk::labelframe $wi.routerframe.protocols -text "Protocols:"
 
     ttk::checkbutton $wi.routerframe.protocols.rip -text "rip" -variable routerRipEnable
-    ttk::checkbutton $wi.routerframe.protocols.ripng -text "ripng" -variable routerRipngEnable 
+    ttk::checkbutton $wi.routerframe.protocols.ripng -text "ripng" -variable routerRipngEnable
     ttk::checkbutton $wi.routerframe.protocols.ospf -text "ospfv2" -variable routerOspfEnable
-    ttk::checkbutton $wi.routerframe.protocols.ospf6 -text "ospfv3" -variable routerOspf6Enable  	              
+    ttk::checkbutton $wi.routerframe.protocols.ospf6 -text "ospfv3" -variable routerOspf6Enable
     ttk::radiobutton $wi.routerframe.model.quagga -text quagga -variable router_model \
-	-value quagga -command {
-	$wi.routerframe.protocols.rip configure -state normal
-	$wi.routerframe.protocols.ripng configure -state normal
-	$wi.routerframe.protocols.ospf configure -state normal
-	$wi.routerframe.protocols.ospf6 configure -state normal
+        -value quagga -command {
+        $wi.routerframe.protocols.rip configure -state normal
+        $wi.routerframe.protocols.ripng configure -state normal
+        $wi.routerframe.protocols.ospf configure -state normal
+        $wi.routerframe.protocols.ospf6 configure -state normal
     }
     ttk::radiobutton $wi.routerframe.model.xorp -text xorp -variable router_model \
-	-value xorp -command {
-	$wi.routerframe.protocols.rip configure -state normal
-	$wi.routerframe.protocols.ripng configure -state normal
-	$wi.routerframe.protocols.ospf configure -state normal
-	$wi.routerframe.protocols.ospf6 configure -state normal
+        -value xorp -command {
+        $wi.routerframe.protocols.rip configure -state normal
+        $wi.routerframe.protocols.ripng configure -state normal
+        $wi.routerframe.protocols.ospf configure -state normal
+        $wi.routerframe.protocols.ospf6 configure -state normal
     }
     ttk::radiobutton $wi.routerframe.model.static -text static -variable router_model \
-	-value static -command {
-	$wi.routerframe.protocols.rip configure -state disabled
-	$wi.routerframe.protocols.ripng configure -state disabled
-	$wi.routerframe.protocols.ospf configure -state disabled
-	$wi.routerframe.protocols.ospf6 configure -state disabled
+        -value static -command {
+        $wi.routerframe.protocols.rip configure -state disabled
+        $wi.routerframe.protocols.ripng configure -state disabled
+        $wi.routerframe.protocols.ospf configure -state disabled
+        $wi.routerframe.protocols.ospf6 configure -state disabled
     }
     if { $router_model == "static" || $oper_mode != "edit" } {
-	$wi.routerframe.protocols.rip configure -state disabled
-	$wi.routerframe.protocols.ripng configure -state disabled
-	$wi.routerframe.protocols.ospf configure -state disabled
-	$wi.routerframe.protocols.ospf6 configure -state disabled   	     
-    }	 
+        $wi.routerframe.protocols.rip configure -state disabled
+        $wi.routerframe.protocols.ripng configure -state disabled
+        $wi.routerframe.protocols.ospf configure -state disabled
+        $wi.routerframe.protocols.ospf6 configure -state disabled
+    }
     if { $oper_mode != "edit" } {
-	$wi.routerframe.model.quagga configure -state disabled
-	$wi.routerframe.model.xorp configure -state disabled
-	$wi.routerframe.model.static configure -state disabled
-    }	 
+        $wi.routerframe.model.quagga configure -state disabled
+        $wi.routerframe.model.xorp configure -state disabled
+        $wi.routerframe.model.static configure -state disabled
+    }
 
     ttk::frame $wi.routerframe.buttons
     ttk::button $wi.routerframe.buttons.b1 -text "Apply" -command { routerDefaultsApply $wi }
     ttk::button $wi.routerframe.buttons.b2 -text "Cancel" -command {
-	set router_model $routerDefaultsModel
-	set routerRipEnable [lindex $rdconfig 0]
-	set routerRipngEnable [lindex $rdconfig 1]
-	set routerOspfEnable [lindex $rdconfig 2]
-	set routerOspf6Enable [lindex $rdconfig 3]
-	destroy $wi	        
+        set router_model $routerDefaultsModel
+        set routerRipEnable [lindex $rdconfig 0]
+        set routerRipngEnable [lindex $rdconfig 1]
+        set routerOspfEnable [lindex $rdconfig 2]
+        set routerOspf6Enable [lindex $rdconfig 3]
+        destroy $wi
     }
-	 
+
     pack $wi.routerframe.model -side top -fill x -pady 5
     #pack $wi.routerframe.model.label -side left -padx 0 -pady 0
     pack $wi.routerframe.model.quagga $wi.routerframe.model.xorp $wi.routerframe.model.static \
-	-side left -expand 1 
+        -side left -expand 1
     pack $wi.routerframe.protocols -side top -pady 5
     pack $wi.routerframe.protocols.rip $wi.routerframe.protocols.ripng \
-	$wi.routerframe.protocols.ospf $wi.routerframe.protocols.ospf6 -side left
+        $wi.routerframe.protocols.ospf $wi.routerframe.protocols.ospf6 -side left
     pack $wi.routerframe.buttons -side bottom -fill x  -pady 2
     pack $wi.routerframe.buttons.b1 -side left -expand 1 -anchor e -padx 2
     pack $wi.routerframe.buttons.b2 -side right -expand 1 -anchor w -padx 2
@@ -598,14 +599,14 @@ menu .menubar.tools -tearoff 0
 #    wm resizable $ns2imdialog 0 0
 #    wm title $ns2imdialog "ns2imunes converter"
 #
-#    ttk::frame $ns2imdialog.ns2convframe 
-#    pack $ns2imdialog.ns2convframe -fill both -expand 1    
+#    ttk::frame $ns2imdialog.ns2convframe
+#    pack $ns2imdialog.ns2convframe -fill both -expand 1
 #
 #    set f1 [ttk::frame $ns2imdialog.ns2convframe.entry1]
 #    set f2 [ttk::frame $ns2imdialog.ns2convframe.buttons]
-#    
+#
 #    ttk::label $f1.l -text "ns2 file:"
-#    
+#
 #    #entry $f1.e -width 25 -textvariable ns2srcfile
 #    ttk::entry $f1.e -width 25 -textvariable ns2srcfile
 #    ttk::button $f1.b -text "Browse" -width 8 \
@@ -614,13 +615,13 @@ menu .menubar.tools -tearoff 0
 #		-initialfile $ns2srcfile]
 #	    $f1.e delete 0 end
 #	    $f1.e insert 0 "$srcfile"
-#    }    
+#    }
 #    ttk::button $f2.b1 -text "OK" -command {
 #	ns2im $srcfile
 #	destroy $ns2imdialog
 #    }
 #    ttk::button $f2.b2 -text "Cancel" -command { destroy $ns2imdialog}
-#    
+#
 #    pack $f1.b $f1.e -side right
 #    pack $f1.l -side right -fill x -expand 1
 #    pack $f2.b1 -side left -expand 1 -anchor e
@@ -636,11 +637,11 @@ menu .menubar.view -tearoff 0
 
 set m .menubar.view.iconsize
 menu $m -tearoff 0
-.menubar.view add cascade -label "Icon size" -menu $m -underline 5 
+.menubar.view add cascade -label "Icon size" -menu $m -underline 5
     $m add radiobutton -label "Small" -variable iconSize \
-	-value small -command { updateIconSize; redrawAll }
+        -value small -command { updateIconSize; redrawAll }
     $m add radiobutton -label "Normal" -variable iconSize \
-	-value normal -command { updateIconSize; redrawAll }
+        -value normal -command { updateIconSize; redrawAll }
 
 .menubar.view add separator
 
@@ -656,47 +657,47 @@ menu $m -tearoff 0
 .menubar.view add checkbutton -label "Show Node Labels" \
     -underline 5 -variable showNodeLabels -command {
     foreach object [.panwin.f1.c find withtag nodelabel] {
-	if { $showNodeLabels } {
-	    .panwin.f1.c itemconfigure $object -state normal
-	} else {
-	    .panwin.f1.c itemconfigure $object -state hidden
-	}
+        if { $showNodeLabels } {
+            .panwin.f1.c itemconfigure $object -state normal
+        } else {
+            .panwin.f1.c itemconfigure $object -state hidden
+        }
     }
 }
 .menubar.view add checkbutton -label "Show Link Labels" \
     -underline 5 -variable showLinkLabels -command {
     foreach object [.panwin.f1.c find withtag linklabel] {
-	if { $showLinkLabels } {
-	    .panwin.f1.c itemconfigure $object -state normal
-	} else {
-	    .panwin.f1.c itemconfigure $object -state hidden
-	}
+        if { $showLinkLabels } {
+            .panwin.f1.c itemconfigure $object -state normal
+        } else {
+            .panwin.f1.c itemconfigure $object -state hidden
+        }
     }
 }
 
 .menubar.view add command -label "Show All" \
     -underline 5 -command {
-	set showIfNames 1
-	set showIfIPaddrs 1
-	set showIfIPv6addrs 1
-	set showNodeLabels 1
-	set showLinkLabels 1
-	redrawAllLinks
-	foreach object [.panwin.f1.c find withtag linklabel] {
-	    .panwin.f1.c itemconfigure $object -state normal
-	}
+        set showIfNames 1
+        set showIfIPaddrs 1
+        set showIfIPv6addrs 1
+        set showNodeLabels 1
+        set showLinkLabels 1
+        redrawAllLinks
+        foreach object [.panwin.f1.c find withtag linklabel] {
+            .panwin.f1.c itemconfigure $object -state normal
+        }
     }
 .menubar.view add command -label "Show None" \
     -underline 6 -command {
-	set showIfNames 0
-	set showIfIPaddrs 0
-	set showIfIPv6addrs 0
-	set showNodeLabels 0
-	set showLinkLabels 0
-	redrawAllLinks
-	foreach object [.panwin.f1.c find withtag linklabel] {
-	    .panwin.f1.c itemconfigure $object -state hidden
-	}
+        set showIfNames 0
+        set showIfIPaddrs 0
+        set showIfIPv6addrs 0
+        set showNodeLabels 0
+        set showLinkLabels 0
+        redrawAllLinks
+        foreach object [.panwin.f1.c find withtag linklabel] {
+            .panwin.f1.c itemconfigure $object -state hidden
+        }
     }
 
 .menubar.view add separator
@@ -736,17 +737,17 @@ bind . "-" "zoom down"
 set m .menubar.view.themes
 menu $m -tearoff 0
 set currentTheme imunes
-.menubar.view add cascade -label "Themes" -menu $m 
+.menubar.view add cascade -label "Themes" -menu $m
     $m add radiobutton -label "alt" -variable currentTheme \
-	-value alt -command "ttk::style theme use alt"
+        -value alt -command "ttk::style theme use alt"
     $m add radiobutton -label "classic" -variable currentTheme\
-	-value classic -command "ttk::style theme use classic"
+        -value classic -command "ttk::style theme use classic"
     $m add radiobutton -label "default" -variable currentTheme\
-	-value default -command "ttk::style theme use default"
+        -value default -command "ttk::style theme use default"
     $m add radiobutton -label "clam" -variable currentTheme\
-	-value clam -command "ttk::style theme use clam"
+        -value clam -command "ttk::style theme use clam"
     $m add radiobutton -label "imunes" -variable currentTheme\
-	-value imunes -command "ttk::style theme use imunes"
+        -value imunes -command "ttk::style theme use imunes"
 
 
 #
@@ -777,12 +778,12 @@ set widgetlist { \
 
 foreach widget $widgetlist {
     .menubar.widgets add radiobutton -label [lindex $widget 0] \
-	-variable showConfig -underline 0 -value [lindex $widget 1]
+        -variable showConfig -underline 0 -value [lindex $widget 1]
 }
 
 .menubar.widgets add command -label "Custom..." \
     -underline 0 -command {
-    global showConfig   
+    global showConfig
     set w .entry1
     catch {destroy $w}
     toplevel $w
@@ -790,10 +791,10 @@ foreach widget $widgetlist {
     wm resizable $w 0 0
     wm title $w "Custom widget"
     wm iconname $w "Custom widget"
-   
+
     ttk::frame $w.custom
     pack $w.custom -fill both -expand 1
- 
+
     ttk::label $w.custom.label -wraplength 5i -justify left -text "Custom command:"
     pack $w.custom.label -side top
 
@@ -831,25 +832,25 @@ if {0} {
 #
 menu .menubar.events -tearoff  0
 .menubar.events add command -label "Start scheduling" -underline 0 \
-	-state normal -command "startEventScheduling"
+    -state normal -command "startEventScheduling"
 .menubar.events add command -label "Stop scheduling" -underline 1 \
-	-state disabled -command "stopEventScheduling" 
-.menubar.events add separator	
+    -state disabled -command "stopEventScheduling"
+.menubar.events add separator
 .menubar.events add command -label "Event editor" -underline 0 \
-	-command "elementsEventsEditor"
+    -command "elementsEventsEditor"
 #
 # Experiment
 #
 menu .menubar.experiment -tearoff 0
 .menubar.experiment add command -label "Execute" -underline 0 \
-	-command "setOperMode exec"
+    -command "setOperMode exec"
 .menubar.experiment add command -label "Terminate" -underline 0 \
-	-command "setOperMode edit" -state disabled
+    -command "setOperMode edit" -state disabled
 .menubar.experiment add command -label "Restart" -underline 0 \
-	-command "setOperMode edit; setOperMode exec" -state disabled
-.menubar.experiment add separator	
+    -command "setOperMode edit; setOperMode exec" -state disabled
+.menubar.experiment add separator
 .menubar.experiment add command -label "Attach to experiment" -underline 0 \
-	-command "attachToExperimentPopup" 
+    -command "attachToExperimentPopup"
 
 #
 # Help
@@ -858,11 +859,11 @@ menu .menubar.help -tearoff 0
 .menubar.help add command -label "About" -command {
     toplevel .about
     text .about.text -bg white -height 40 -wrap word -setgrid 1 \
-	-highlightthickness 0 -pady 2 -padx 3
+        -highlightthickness 0 -pady 2 -padx 3
     pack .about.text -expand yes -fill both
     .about.text insert 1.0 "$copyright"
     after 100 {
-	grab .about
+        grab .about
     }
 }
 
@@ -876,19 +877,19 @@ pack $mf.left -side left -fill y
 foreach b {select link} {
 
     set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$b.gif]
- 
-   ttk::button $mf.left.$b \
-	-image $image -style Toolbutton \
-	-command "setActiveTool $b"
+
+    ttk::button $mf.left.$b \
+        -image $image -style Toolbutton \
+        -command "setActiveTool $b"
     pack $mf.left.$b -side top
 
     # hover status line
     set msg ""
-    if { $b == "select" } { 
-	set msg "Select tool" 
+    if { $b == "select" } {
+        set msg "Select tool"
     } elseif { $b == "link"  } {
-	set msg "Create link"
-    } 
+        set msg "Create link"
+    }
 
     bind $mf.left.$b <Any-Enter> ".bottom.textbox config -text {$msg}"
     bind $mf.left.$b <Any-Leave> ".bottom.textbox config -text {}"
@@ -900,13 +901,13 @@ foreach b $all_modules_list {
     set image [image create photo -file [$b.icon toolbar]]
 
     if { [$b.layer] == "LINK" } {
-	$mf.left.link_nodes add command -image $image -hidemargin 1 \
-	    -compound left -label [string range [$b.toolbarIconDescr] 8 end] \
-	    -command "setActiveTool $b"
+        $mf.left.link_nodes add command -image $image -hidemargin 1 \
+            -compound left -label [string range [$b.toolbarIconDescr] 8 end] \
+            -command "setActiveTool $b"
     } elseif { [$b.layer] == "NETWORK" } {
-	$mf.left.net_nodes add command -image $image -hidemargin 1 \
-	    -compound left -label [string range [$b.toolbarIconDescr] 8 end] \
-	    -command "setActiveTool $b"
+        $mf.left.net_nodes add command -image $image -hidemargin 1 \
+            -compound left -label [string range [$b.toolbarIconDescr] 8 end] \
+            -command "setActiveTool $b"
     }
 }
 
@@ -928,17 +929,17 @@ foreach b {rectangle oval freeform text} {
     set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$b.gif]
 
     ttk::button $mf.left.$b \
-	-image $image -style Toolbutton \
-	-command "setActiveTool $b"
+        -image $image -style Toolbutton \
+        -command "setActiveTool $b"
 
     pack $mf.left.$b -side bottom
     # hover status line
     switch -exact -- $b {
-	rectangle { set msg "Add a Rectangle" }
-	oval { set msg "Add an Oval" }
-	freeform { set msg "Add a Freeform" }
-	text { set msg "Add a Textbox" }
-	default { set msg "" }
+        rectangle { set msg "Add a Rectangle" }
+        oval { set msg "Add an Oval" }
+        freeform { set msg "Add a Freeform" }
+        text { set msg "Add a Textbox" }
+        default { set msg "" }
     }
     bind $mf.left.$b <Any-Enter> ".bottom.textbox config -text {$msg}"
     bind $mf.left.$b <Any-Leave> ".bottom.textbox config -text {}"
@@ -956,20 +957,20 @@ ttk::frame $mf.grid
 ttk::frame $mf.hframe
 ttk::frame $mf.vframe
 set c [canvas $mf.c -bd 0 -relief sunken -highlightthickness 0\
-	-background gray \
-	-xscrollcommand "$mf.hframe.scroll set" \
-	-yscrollcommand "$mf.vframe.scroll set"]
+    -background gray \
+    -xscrollcommand "$mf.hframe.scroll set" \
+    -yscrollcommand "$mf.vframe.scroll set"]
 
 canvas $mf.hframe.t -width 160 -height 18 -bd 0 -highlightthickness 0 \
-	-background #d9d9d9 \
-	-xscrollcommand "$mf.hframe.ts set"
+    -background #d9d9d9 \
+    -xscrollcommand "$mf.hframe.ts set"
 bind $mf.hframe.t <1> {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
 
     set canvas [lindex [$mf.hframe.t gettags current] 1]
     if { $canvas != "" && $canvas != $curcanvas } {
-	set curcanvas $canvas
-	switchCanvas none
+        set curcanvas $canvas
+        switchCanvas none
     }
 }
 bind $mf.hframe.t <Double-1> {
@@ -977,17 +978,17 @@ bind $mf.hframe.t <Double-1> {
 
     set canvas [lindex [$mf.hframe.t gettags current] 1]
     if { $canvas != "" } {
-	if { $canvas != $curcanvas } {
-	    set curcanvas $canvas
-	    switchCanvas none
-	} else {
-	    renameCanvasPopup
-	}
+        if { $canvas != $curcanvas } {
+            set curcanvas $canvas
+            switchCanvas none
+        } else {
+            renameCanvasPopup
+        }
     } else {
-	newCanvas ""
-	switchCanvas last
-	set changed 1
-	updateUndoLog
+        newCanvas ""
+        switchCanvas last
+        set changed 1
+        updateUndoLog
     }
 }
 #scrollbar $mf.hframe.scroll -orient horiz -command "$c xview" \
@@ -998,7 +999,7 @@ bind $mf.hframe.t <Double-1> {
 #	-bd 1 -width 14
 
 ttk::scrollbar $mf.hframe.scroll -orient horiz -command "$c xview"
-ttk::scrollbar $mf.vframe.scroll -command "$c yview" 
+ttk::scrollbar $mf.vframe.scroll -command "$c yview"
 ttk::scrollbar $mf.hframe.ts -orient horiz -command ".panwin.f1.hframe.t xview"
 pack $mf.hframe.ts -side left -padx 0 -pady 0
 pack $mf.hframe.t -side left -padx 0 -pady 0 -fill both -expand true
@@ -1008,11 +1009,11 @@ pack $mf.grid -expand yes -fill both -padx 1 -pady 1
 grid rowconfig $mf.grid 0 -weight 1 -minsize 0
 grid columnconfig $mf.grid 0 -weight 1 -minsize 0
 grid $mf.c -in $mf.grid -row 0 -column 0 \
-	-rowspan 1 -columnspan 1 -sticky news
+    -rowspan 1 -columnspan 1 -sticky news
 grid $mf.vframe -in $mf.grid -row 0 -column 1 \
-	-rowspan 1 -columnspan 1 -sticky news
+    -rowspan 1 -columnspan 1 -sticky news
 grid $mf.hframe -in $mf.grid -row 1 -column 0 \
-	-rowspan 1 -columnspan 1 -sticky news
+    -rowspan 1 -columnspan 1 -sticky news
 
 ttk::frame .bottom
 pack .bottom -side bottom -fill x
@@ -1122,4 +1123,4 @@ bind . <Control-i> {
     redrawAll
 }
 
-focus -force . 
+focus -force .

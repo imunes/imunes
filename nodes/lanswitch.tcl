@@ -69,15 +69,15 @@ proc $MODULE.prepareSystem {} {
 #****
 proc $MODULE.confNewIfc { node ifc } {
     foreach l2node [listLANnodes $node ""] {
-	foreach ifc [ifcList $l2node] {
-	    set peer [peerByIfc $l2node $ifc]
-	    if { ! [isNodeRouter $peer] &&
-		[[typemodel $peer].layer] == "NETWORK" } {
-		set ifname [ifcByPeer $peer $l2node]
-		autoIPv4defaultroute $peer $ifname
-		autoIPv6defaultroute $peer $ifname
-	    }
-	}
+        foreach ifc [ifcList $l2node] {
+            set peer [peerByIfc $l2node $ifc]
+            if { ! [isNodeRouter $peer] &&
+                [[typemodel $peer].layer] == "NETWORK" } {
+                set ifname [ifcByPeer $peer $l2node]
+                autoIPv4defaultroute $peer $ifname
+                autoIPv6defaultroute $peer $ifname
+            }
+        }
     }
 }
 
@@ -93,16 +93,16 @@ proc $MODULE.confNewIfc { node ifc } {
 #****
 proc $MODULE.confNewNode { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
-    
+
     set nconfig [list \
-	"hostname $node" \
-	! ]
+        "hostname $node" \
+        ! ]
     lappend $node "network-config [list $nconfig]"
 }
 
 #****f* lanswitch.tcl/lanswitch.icon
 # NAME
-#   lanswitch.icon -- 
+#   lanswitch.icon --
 # SYNOPSIS
 #   lanswitch.icon $size
 # FUNCTION
@@ -115,15 +115,15 @@ proc $MODULE.confNewNode { node } {
 proc $MODULE.icon {size} {
     global ROOTDIR LIBDIR
     switch $size {
-      normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/lanswitch.gif
-      }
-      small {
-	return $ROOTDIR/$LIBDIR/icons/small/lanswitch.gif
-      }
-      toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/lanswitch.gif
-      }
+        normal {
+            return $ROOTDIR/$LIBDIR/icons/normal/lanswitch.gif
+        }
+        small {
+            return $ROOTDIR/$LIBDIR/icons/small/lanswitch.gif
+        }
+        toolbar {
+            return $ROOTDIR/$LIBDIR/icons/tiny/lanswitch.gif
+        }
     }
 }
 
@@ -178,7 +178,7 @@ proc $MODULE.ifcName {} {
 # SYNOPSIS
 #   set layer [lanswitch.layer]
 # FUNCTION
-#   Returns the layer on which the lanswitch operates, i.e. returns LINK. 
+#   Returns the layer on which the lanswitch operates, i.e. returns LINK.
 # RESULT
 #   * layer -- set to LINK
 #****
@@ -192,8 +192,8 @@ proc $MODULE.layer {} {
 # SYNOPSIS
 #   set layer [lanswitch.virtlayer]
 # FUNCTION
-#   Returns the layer on which the lanswitch node is instantiated 
-#   i.e. returns NETGRAPH. 
+#   Returns the layer on which the lanswitch node is instantiated
+#   i.e. returns NETGRAPH.
 # RESULT
 #   * layer -- set to NETGRAPH
 #****
@@ -223,7 +223,7 @@ proc $MODULE.instantiate { eid node } {
 # SYNOPSIS
 #   lanswitch.destroy $eid $node
 # FUNCTION
-#   Destroys a lanswitch. Destroys the netgraph node that represents 
+#   Destroys a lanswitch. Destroys the netgraph node that represents
 #   the lanswitch by sending a shutdown message.
 # INPUTS
 #   * eid -- experiment id
@@ -237,7 +237,7 @@ proc $MODULE.destroy { eid node } {
 # NAME
 #   lanswitch.nghook -- nghook
 # SYNOPSIS
-#   set nghook [lanswitch.nghook $eid $node $ifc] 
+#   set nghook [lanswitch.nghook $eid $node $ifc]
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. Netgraph node name is in
@@ -246,7 +246,7 @@ proc $MODULE.destroy { eid node } {
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id
-#   * ifc -- interface name 
+#   * ifc -- interface name
 # RESULT
 #   * nghook -- the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).

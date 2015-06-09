@@ -156,7 +156,7 @@ or:\n	# imunes -f -p"
 populateFs () {
     cd $WORKDIR
 
-    for file in $BASE_FILES; do 
+    for file in $BASE_FILES; do
 	if [ -f "$file.txz" ]; then
 	    log "OUT" "Unpacking $file..."
 	    tar -xf $file.txz -C $VROOT_MASTER
@@ -273,7 +273,7 @@ installPackages () {
     cp -R $WORKDIR/packages/* $VROOT_MASTER/$WORKDIR/packages/
     cp -R $VROOT_MASTER/$WORKDIR/packages/* $VROOT_MASTER/
     for pkg in ${notmissing}; do
-	pkg_add -F $WORKDIR/packages/$pkg.tbz -C $VROOT_MASTER >> $LOG 2>&1 
+	pkg_add -F $WORKDIR/packages/$pkg.tbz -C $VROOT_MASTER >> $LOG 2>&1
 	if [ $? -ne 0 ]; then
 	    err_list="$pkg $err_list"
 	fi

@@ -14,7 +14,7 @@
 # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
 # ARE DISCLAIMED.  IN NO EVENT SHALL AUTHOR OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# FOR ANY DIRECT, INDIRECfaT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
 # DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
 # OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
 # HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
@@ -33,7 +33,7 @@
 # NAME
 #  nodecfg.tcl -- file used for manipultaion with nodes in IMUNES
 # FUNCTION
-#  This module is used to define all the actions used for configuring 
+#  This module is used to define all the actions used for configuring
 #  nodes in IMUNES. The definition of nodes is presented in NOTES
 #  section.
 #
@@ -206,7 +206,7 @@
 #	Returns id of the logical node on the other side of the interface.
 #
 # ifcByPeer { local_node_id peer_node_id }
-#	Returns the name of the interface connected to the specified peer 
+#	Returns the name of the interface connected to the specified peer
 #       if the peer is on the same canvas, otherwise returns an empty string.
 #
 # ifcByLogicalPeer { local_node_id peer_node_id }
@@ -220,11 +220,11 @@
 #	configured, otherwise returns false.
 #
 # removeNode { node_id }
-#	Removes the specified node as well as all the links that bind 
+#	Removes the specified node as well as all the links that bind
 #       that node to any other node.
 #
 # newIfc { ifc_type node_id }
-#	Returns the first available name for a new interface of the 
+#	Returns the first available name for a new interface of the
 #       specified type.
 #
 # All of the above functions are independent to any Tk objects. This means
@@ -232,7 +232,7 @@
 # GUI any updating of related Tk objects (such as text labels etc.) will
 # have to be implemented by additional Tk code.
 #
-# Additionally, an alternative configuration can be specified in 
+# Additionally, an alternative configuration can be specified in
 # "custom-config" section.
 #
 # getCustomEnabled { node }
@@ -257,12 +257,12 @@
 
 #****f* nodecfg.tcl/typemodel
 # NAME
-#   typemodel -- find node's type and routing model 
+#   typemodel -- find node's type and routing model
 # SYNOPSIS
 #   set typemod [typemodel $node]
 # FUNCTION
 #   For input node this procedure returns the node's type and routing model
-#   (if exists) 
+#   (if exists)
 # INPUTS
 #   * node -- node id
 # RESULT
@@ -272,55 +272,55 @@ proc typemodel { node } {
     set type [nodeType $node]
     set model [getNodeModel $node]
     if { $model != {} } {
-	return $type.$model
+        return $type.$model
     } else {
-	return $type
+        return $type
     }
 }
 
 #****f* nodecfg.tcl/getCustomEnabled
 # NAME
-#   getCustomEnabled -- get custom configuration enabled state 
+#   getCustomEnabled -- get custom configuration enabled state
 # SYNOPSIS
 #   set enabled [getCustomEnabled $node]
 # FUNCTION
 #   For input node this procedure returns true if custom configuration is
-#   enabled for the specified node. 
+#   enabled for the specified node.
 # INPUTS
 #   * node -- node id
 # RESULT
-#   * enabled -- returns true if custom configuration is enabled 
+#   * enabled -- returns true if custom configuration is enabled
 #****
 proc getCustomEnabled { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
     if { [lindex [lsearch -inline [set $node] "custom-enabled *"] 1] == true } {
-	return true
+        return true
     } else {
-	return false
+        return false
     }
 }
 
 #****f* nodecfg.tcl/setCustomEnabled
 # NAME
-#   setCustomEnabled -- set custom configuration enabled state 
+#   setCustomEnabled -- set custom configuration enabled state
 # SYNOPSIS
 #   setCustomEnabled $node $enabled
 # FUNCTION
 #   For input node this procedure enables or disables custom configuration.
 # INPUTS
 #   * node -- node id
-#   * enabled -- true if enabling custom configuration, false if disabling 
+#   * enabled -- true if enabling custom configuration, false if disabling
 #****
 proc setCustomEnabled { node enabled } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
     set i [lsearch [set $node] "custom-enabled *"]
     if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i]
+        set $node [lreplace [set $node] $i $i]
     }
     if { $enabled == true } {
-	lappend $node [list custom-enabled $enabled]
+        lappend $node [list custom-enabled $enabled]
     }
 }
 
@@ -356,14 +356,14 @@ proc setCustomConfigSelected { node conf } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
     set i [lsearch [set $node] "custom-selected *"]
     if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i]
+        set $node [lreplace [set $node] $i $i]
     }
     lappend $node [list custom-selected $conf]
 }
 
 #****f* nodecfg.tcl/getCustomConfig
 # NAME
-#   getCustomConfig -- get custom configuration 
+#   getCustomConfig -- get custom configuration
 # SYNOPSIS
 #   getCustomConfig $node $id
 # FUNCTION
@@ -373,7 +373,7 @@ proc setCustomConfigSelected { node conf } {
 #   * node -- node id
 #   * id -- configuration id
 # RESULT
-#   * customConfig -- returns custom configuration  
+#   * customConfig -- returns custom configuration
 #****
 proc getCustomConfig { node id } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
@@ -388,7 +388,7 @@ proc getCustomConfig { node id } {
 
 #****f* nodecfg.tcl/setCustomConfig
 # NAME
-#   setCustomConfig -- set custom configuration 
+#   setCustomConfig -- set custom configuration
 # SYNOPSIS
 #   setCustomConfig $node $id $cmd $config
 # FUNCTION
@@ -398,44 +398,43 @@ proc getCustomConfig { node id } {
 #   * node -- node id
 #   * id -- custom-config id
 #   * cmd -- custom command
-#   * config -- custom configuration section  
+#   * config -- custom configuration section
 #****
 proc setCustomConfig { node id cmd config } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
     if {$id in [getCustomConfigIDs $node] } {
-	removeCustomConfig $node $id
+        removeCustomConfig $node $id
     }
     set customCfg [list custom-config-id $id]
     set customCfg2 [list custom-command $cmd config]
     set cfg ""
-    foreach zline [split $config {
-}] {
-	if { [string index "$zline" 0] == "	" } {
-	    set zline [string replace "$zline" 0 0]
-	}
-	lappend cfg $zline
+    foreach zline [split $config {}] {
+        if { [string index "$zline" 0] == "	" } {
+            set zline [string replace "$zline" 0 0]
+        }
+        lappend cfg $zline
     }
     lappend customCfg2 $cfg
 
     lappend customCfg $customCfg2
-    
+
     if {[lsearch [set $node] "custom-configs *"] != -1} {
-	set customCfgsList [lsearch -inline [set $node] "custom-configs *"]
-	set customCfgs [lindex $customCfgsList 1]
-	lappend customCfgs $customCfg
-	set customCfgsList [lreplace $customCfgsList 1 1 $customCfgs]
-	set idx1 [lsearch [set $node] "custom-configs *"]
-	set $node [lreplace [set $node] $idx1 $idx1 $customCfgsList]
+        set customCfgsList [lsearch -inline [set $node] "custom-configs *"]
+        set customCfgs [lindex $customCfgsList 1]
+        lappend customCfgs $customCfg
+        set customCfgsList [lreplace $customCfgsList 1 1 $customCfgs]
+        set idx1 [lsearch [set $node] "custom-configs *"]
+        set $node [lreplace [set $node] $idx1 $idx1 $customCfgsList]
     } else {
-	set customCfgsList [list custom-configs]
-	lappend customCfgsList [list $customCfg]
-	set $node [linsert [set $node] end $customCfgsList]
+        set customCfgsList [list custom-configs]
+        lappend customCfgsList [list $customCfg]
+        set $node [linsert [set $node] end $customCfgsList]
     }
 }
 
 #****f* nodecfg.tcl/removeCustomConfig
 # NAME
-#   removeCustomConfig -- remove custom configuration 
+#   removeCustomConfig -- remove custom configuration
 # SYNOPSIS
 #   removeCustomConfig $node $id
 # FUNCTION
@@ -476,7 +475,7 @@ proc getCustomConfigCommand { node id } {
     set customCfg [lsearch -inline [lindex $customCfgsList 1] "custom-config-id $id *"]
     set customCmd [lsearch [lindex $customCfg 2] "custom-command*"]
     set customCmd [lindex [lindex $customCfg 2] $customCmd+1]
-    
+
     return $customCmd
 }
 
@@ -498,14 +497,14 @@ proc getCustomConfigIDs { node } {
     set customCfg [lsearch -all -inline [lindex $customCfgsList 1] "custom-config-id *"]
     set IDs {}
     foreach x $customCfg {
-	lappend IDs [lindex $x 1]
+        lappend IDs [lindex $x 1]
     }
     return $IDs
 }
 
 #****f* nodecfg.tcl/netconfFetchSection
 # NAME
-#   netconfFetchSection -- fetch the network configuration section 
+#   netconfFetchSection -- fetch the network configuration section
 # SYNOPSIS
 #   set section [netconfFetchSection $node $sectionhead]
 # FUNCTION
@@ -514,7 +513,7 @@ proc getCustomConfigIDs { node } {
 #   sign.
 # INPUTS
 #   * node -- node id
-#   * sectionhead -- represents the first line of the section in 
+#   * sectionhead -- represents the first line of the section in
 #     network-config part of the configuration file
 # RESULT
 #   * section -- returns a part of the configuration file between sectionhead
@@ -527,16 +526,16 @@ proc netconfFetchSection { node sectionhead } {
     set section {}
     set netconf [lindex [lsearch -inline [set $node] "network-config *"] 1]
     foreach line $netconf {
-	if { $cfgmode == "section" } {
-	    if { "$line" == "!" } {
-		return $section
-	    }
-	    lappend section "$line"
-	    continue
-	}
-	if { "$line" == "$sectionhead" } {
-	    set cfgmode section
-	}
+        if { $cfgmode == "section" } {
+            if { "$line" == "!" } {
+                return $section
+            }
+            lappend section "$line"
+            continue
+        }
+        if { "$line" == "$sectionhead" } {
+            set cfgmode section
+        }
     }
 }
 
@@ -561,16 +560,16 @@ proc netconfClearSection { node sectionhead } {
     set lnum_beg -1
     set lnum_end 0
     foreach line $netconf {
-	if { $lnum_beg == -1 && "$line" == "$sectionhead" } {
-	    set lnum_beg $lnum_end
-	}
-	if { $lnum_beg > -1 && "$line" == "!" } {
-	    set netconf [lreplace $netconf $lnum_beg $lnum_end]
-	    set $node [lreplace [set $node] $i $i \
-		[list network-config $netconf]]
-	    return
-	}
-	incr lnum_end
+        if { $lnum_beg == -1 && "$line" == "$sectionhead" } {
+            set lnum_beg $lnum_end
+        }
+        if { $lnum_beg > -1 && "$line" == "!" } {
+            set netconf [lreplace $netconf $lnum_beg $lnum_end]
+            set $node [lreplace [set $node] $i $i \
+                [list network-config $netconf]]
+            return
+        }
+        incr lnum_end
     }
 }
 
@@ -598,21 +597,21 @@ proc netconfInsertSection { node section } {
     set netconf [lindex [lindex [set $node] $i] 1]
     set lnum_beg end
     if { "[lindex $sectionhead 0]" == "interface" } {
-	set lnum [lsearch $netconf "hostname *"]
-	if { $lnum >= 0 } {
-	    set lnum_beg [expr $lnum + 2]
-	}
+        set lnum [lsearch $netconf "hostname *"]
+        if { $lnum >= 0 } {
+            set lnum_beg [expr $lnum + 2]
+        }
     } elseif { "[lindex $sectionhead 0]" == "hostname" } {
-	set lnum_beg 0
+        set lnum_beg 0
     }
     if { "[lindex $section end]" != "!" } {
-	lappend section "!"
+        lappend section "!"
     }
     foreach line $section {
-	set netconf [linsert $netconf $lnum_beg $line]
-	if { $lnum_beg != "end" } {
-	    incr lnum_beg
-	}
+        set netconf [linsert $netconf $lnum_beg $line]
+        if { $lnum_beg != "end" } {
+            incr lnum_beg
+        }
     }
     set $node [lreplace [set $node] $i $i [list network-config $netconf]]
 }
@@ -634,9 +633,9 @@ proc netconfInsertSection { node section } {
 #****
 proc getIfcOperState { node ifc } {
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] == "shutdown" } {
-	    return "down"
-	}
+        if { [lindex $line 0] == "shutdown" } {
+            return "down"
+        }
     }
     return "up"
 }
@@ -658,13 +657,13 @@ proc getIfcOperState { node ifc } {
 proc setIfcOperState { node ifc state } {
     set ifcfg [list "interface $ifc"]
     if { $state == "down" } {
-	lappend ifcfg " shutdown"
+        lappend ifcfg " shutdown"
     }
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] != "shutdown" && \
-	    [lrange $line 0 1] != "no shutdown" } {
-	    lappend ifcfg $line
-	}
+        if { [lindex $line 0] != "shutdown" && \
+            [lrange $line 0 1] != "no shutdown" } {
+            lappend ifcfg $line
+        }
     }
     netconfInsertSection $node $ifcfg
 }
@@ -675,7 +674,7 @@ proc setIfcOperState { node ifc state } {
 # SYNOPSIS
 #   set direction [getIfcDirect $node $ifc]
 # FUNCTION
-#   Returns the direction of the specified interface. It can be set to 
+#   Returns the direction of the specified interface. It can be set to
 #   "internal" or "external".
 # INPUTS
 #   * node -- represents the node id of the node whose interface's queuing
@@ -687,9 +686,9 @@ proc setIfcOperState { node ifc state } {
 #****
 proc getIfcDirect { node ifc } {
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] == "external" } {
-	    return external
-	}
+        if { [lindex $line 0] == "external" } {
+            return external
+        }
     }
     return internal
 }
@@ -711,16 +710,16 @@ proc getIfcDirect { node ifc } {
 proc setIfcDirect { node ifc direct } {
     set ifcfg [list "interface $ifc"]
     if { $direct == "external" } {
-	lappend ifcfg " external"
+        lappend ifcfg " external"
 
     }
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] != "external" && \
-	    [lindex $line 0] != "internal" } {
-	    lappend ifcfg $line
-	}
+        if { [lindex $line 0] != "external" && \
+            [lindex $line 0] != "internal" } {
+            lappend ifcfg $line
+        }
     }
-    netconfInsertSection $node $ifcfg    
+    netconfInsertSection $node $ifcfg
 }
 
 #****f* nodecfg.tcl/getIfcQDisc
@@ -741,12 +740,12 @@ proc setIfcDirect { node ifc direct } {
 #****
 proc getIfcQDisc { node ifc } {
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] == "fair-queue" } {
-	    return WFQ
-	}
-	if { [lindex $line 0] == "drr-queue" } {
-	    return DRR
-	}
+        if { [lindex $line 0] == "fair-queue" } {
+            return WFQ
+        }
+        if { [lindex $line 0] == "drr-queue" } {
+            return DRR
+        }
     }
     return FIFO
 }
@@ -757,7 +756,7 @@ proc getIfcQDisc { node ifc } {
 # SYNOPSIS
 #   setIfcQDisc $node $ifc $qdisc
 # FUNCTION
-#   Sets the new queuing discipline for the interface. Implicit default is 
+#   Sets the new queuing discipline for the interface. Implicit default is
 #   FIFO.
 # INPUTS
 #   * node -- represents the node id of the node whose interface's queuing
@@ -769,16 +768,16 @@ proc getIfcQDisc { node ifc } {
 proc setIfcQDisc { node ifc qdisc } {
     set ifcfg [list "interface $ifc"]
     if { $qdisc == "WFQ" } {
-	lappend ifcfg " fair-queue"
+        lappend ifcfg " fair-queue"
     }
     if { $qdisc == "DRR" } {
-	lappend ifcfg " drr-queue"
+        lappend ifcfg " drr-queue"
     }
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] != "fair-queue" && \
-	    [lindex $line 0] != "drr-queue" } {
-	    lappend ifcfg $line
-	}
+        if { [lindex $line 0] != "fair-queue" && \
+            [lindex $line 0] != "drr-queue" } {
+            lappend ifcfg $line
+        }
     }
     netconfInsertSection $node $ifcfg
 }
@@ -801,9 +800,9 @@ proc setIfcQDisc { node ifc qdisc } {
 #****
 proc getIfcQDrop { node ifc } {
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] == "drop-head" } {
-	    return drop-head
-	}
+        if { [lindex $line 0] == "drop-head" } {
+            return drop-head
+        }
     }
     return drop-tail
 }
@@ -825,14 +824,14 @@ proc getIfcQDrop { node ifc } {
 proc setIfcQDrop { node ifc qdrop } {
     set ifcfg [list "interface $ifc"]
     if { $qdrop == "drop-head" } {
-	lappend ifcfg " drop-head"
+        lappend ifcfg " drop-head"
 
     }
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] != "drop-head" && \
-	    [lindex $line 0] != "drop-tail" } {
-	    lappend ifcfg $line
-	}
+        if { [lindex $line 0] != "drop-head" && \
+            [lindex $line 0] != "drop-tail" } {
+            lappend ifcfg $line
+        }
     }
     netconfInsertSection $node $ifcfg
 }
@@ -853,9 +852,9 @@ proc setIfcQDrop { node ifc qdrop } {
 #****
 proc getIfcQLen { node ifc } {
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] == "queue-len" } {
-	    return [lindex $line 1]
-	}
+        if { [lindex $line 0] == "queue-len" } {
+            return [lindex $line 1]
+        }
     }
     return 50
 }
@@ -876,12 +875,12 @@ proc getIfcQLen { node ifc } {
 proc setIfcQLen { node ifc len } {
     set ifcfg [list "interface $ifc"]
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] != "queue-len" } {
-	    lappend ifcfg $line
-	}
+        if { [lindex $line 0] != "queue-len" } {
+            lappend ifcfg $line
+        }
     }
     if { $len > 5 && $len != 50 } {
-	lappend ifcfg " queue-len $len"
+        lappend ifcfg " queue-len $len"
     }
     netconfInsertSection $node $ifcfg
 }
@@ -902,14 +901,14 @@ proc setIfcQLen { node ifc len } {
 #****
 proc getIfcMTU { node ifc } {
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] == "mtu" } {
-	    return [lindex $line 1]
-	}
+        if { [lindex $line 0] == "mtu" } {
+            return [lindex $line 1]
+        }
     }
     # Return defaults
     switch -exact [string range $ifc 0 1] {
-	lo { return 16384 }
-	se { return 2044 }
+        lo { return 16384 }
+        se { return 2044 }
     }
     return 1500
 }
@@ -929,17 +928,17 @@ proc getIfcMTU { node ifc } {
 proc setIfcMTU { node ifc mtu } {
     set ifcfg [list "interface $ifc"]
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] != "mtu" } {
-	    lappend ifcfg $line
-	}
+        if { [lindex $line 0] != "mtu" } {
+            lappend ifcfg $line
+        }
     }
-#    switch -exact [string range $ifc 0 2] {
-#	eth { set limit 1500 }
-#	ser { set limit 2044 }
+#   switch -exact [string range $ifc 0 2] {
+#   eth { set limit 1500 }
+#   ser { set limit 2044 }
 #    }
     set limit 9018
     if { $mtu >= 256 && $mtu <= $limit } {
-	lappend ifcfg " mtu $mtu"
+        lappend ifcfg " mtu $mtu"
     }
     netconfInsertSection $node $ifcfg
 }
@@ -960,9 +959,9 @@ proc setIfcMTU { node ifc mtu } {
 proc getIfcMACaddr { node ifc } {
     set addr ""
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lrange $line 0 1] == "mac address" } {
-	    set addr [lindex $line 2]
-	}
+        if { [lrange $line 0 1] == "mac address" } {
+            set addr [lindex $line 2]
+        }
     }
     return $addr
 }
@@ -983,12 +982,12 @@ proc getIfcMACaddr { node ifc } {
 proc setIfcMACaddr { node ifc addr } {
     set ifcfg [list "interface $ifc"]
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lrange $line 0 1] != "mac address" } {
-	    lappend ifcfg $line
-	}
+        if { [lrange $line 0 1] != "mac address" } {
+            lappend ifcfg $line
+        }
     }
     if { $addr != "" } {
-	lappend ifcfg " mac address $addr"
+        lappend ifcfg " mac address $addr"
     }
     netconfInsertSection $node $ifcfg
 }
@@ -1005,13 +1004,13 @@ proc setIfcMACaddr { node ifc addr } {
 #   * ifc -- interface name.
 # RESULT
 #   * addr -- first IPv4 address on the interface
-#    
+#
 #****
 proc getIfcIPv4addr { node ifc } {
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lrange $line 0 1] == "ip address" } {
-	    return [lindex $line 2]
-	}
+        if { [lrange $line 0 1] == "ip address" } {
+            return [lindex $line 2]
+        }
     }
 }
 
@@ -1032,9 +1031,9 @@ proc getIfcIPv4addr { node ifc } {
 proc getIfcIPv4addrs { node ifc } {
     set addrlist {}
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lrange $line 0 1] == "ip address" } {
-	    lappend addrlist [lindex $line 2]
-	}
+        if { [lrange $line 0 1] == "ip address" } {
+            lappend addrlist [lindex $line 2]
+        }
     }
     return $addrlist
 }
@@ -1052,9 +1051,9 @@ proc getIfcIPv4addrs { node ifc } {
 #****
 proc getLogIfcType { node ifc } {
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] == "type" } {
-	    return [lindex $line 1]
-	}
+        if { [lindex $line 0] == "type" } {
+            return [lindex $line 1]
+        }
     }
 }
 
@@ -1074,12 +1073,12 @@ proc getLogIfcType { node ifc } {
 proc setIfcIPv4addr { node ifc addr } {
     set ifcfg [list "interface $ifc"]
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lrange $line 0 1] != "ip address" } {
-	    lappend ifcfg $line
-	}
+        if { [lrange $line 0 1] != "ip address" } {
+            lappend ifcfg $line
+        }
     }
     if { $addr != "" } {
-	lappend ifcfg " ip address $addr"
+        lappend ifcfg " ip address $addr"
     }
     netconfInsertSection $node $ifcfg
 }
@@ -1100,15 +1099,15 @@ proc setIfcIPv4addr { node ifc addr } {
 proc setIfcIPv4addrs { node ifc addrs } {
     set ifcfg [list "interface $ifc"]
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lrange $line 0 1] != "ip address" } {
-	    lappend ifcfg $line
-	}
+        if { [lrange $line 0 1] != "ip address" } {
+            lappend ifcfg $line
+        }
     }
     foreach addr $addrs {
-	if { $addr != "" } {
-	    set addr [string trim $addr]
-	    lappend ifcfg " ip address $addr"
-	}
+        if { $addr != "" } {
+            set addr [string trim $addr]
+            lappend ifcfg " ip address $addr"
+        }
     }
     netconfInsertSection $node $ifcfg
 }
@@ -1128,12 +1127,12 @@ proc setIfcIPv4addrs { node ifc addrs } {
 proc setLogIfcType { node ifc type } {
     set ifcfg [list "interface $ifc"]
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] != "type" } {
-	    lappend ifcfg $line
-	}
+        if { [lindex $line 0] != "type" } {
+            lappend ifcfg $line
+        }
     }
     if { $type != "" } {
-	lappend ifcfg " type $type"
+        lappend ifcfg " type $type"
     }
     netconfInsertSection $node $ifcfg
 }
@@ -1150,13 +1149,13 @@ proc setLogIfcType { node ifc type } {
 #   * ifc -- interface name.
 # RESULT
 #   * addr -- first IPv6 address on the interface
-#    
+#
 #****
 proc getIfcIPv6addr { node ifc } {
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lrange $line 0 1] == "ipv6 address" } {
-	    return [lindex $line 2]
-	}
+        if { [lrange $line 0 1] == "ipv6 address" } {
+            return [lindex $line 2]
+        }
     }
 }
 
@@ -1177,9 +1176,9 @@ proc getIfcIPv6addr { node ifc } {
 proc getIfcIPv6addrs { node ifc } {
     set addrlist {}
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lrange $line 0 1] == "ipv6 address" } {
-	    lappend addrlist [lindex $line 2]
-	}
+        if { [lrange $line 0 1] == "ipv6 address" } {
+            lappend addrlist [lindex $line 2]
+        }
     }
     return $addrlist
 }
@@ -1200,12 +1199,12 @@ proc getIfcIPv6addrs { node ifc } {
 proc setIfcIPv6addr { node ifc addr } {
     set ifcfg [list "interface $ifc"]
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lrange $line 0 1] != "ipv6 address" } {
-	    lappend ifcfg $line
-	}
+        if { [lrange $line 0 1] != "ipv6 address" } {
+            lappend ifcfg $line
+        }
     }
     if { $addr != "" } {
-	lappend ifcfg " ipv6 address $addr"
+        lappend ifcfg " ipv6 address $addr"
     }
     netconfInsertSection $node $ifcfg
 }
@@ -1226,15 +1225,15 @@ proc setIfcIPv6addr { node ifc addr } {
 proc setIfcIPv6addrs { node ifc addrs } {
     set ifcfg [list "interface $ifc"]
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lrange $line 0 1] != "ipv6 address" } {
-	    lappend ifcfg $line
-	}
+        if { [lrange $line 0 1] != "ipv6 address" } {
+            lappend ifcfg $line
+        }
     }
     foreach addr $addrs {
-	if { $addr != "" } {
-	    set addr [string trim $addr]
-	    lappend ifcfg " ipv6 address $addr"
-	}
+        if { $addr != "" } {
+            set addr [string trim $addr]
+            lappend ifcfg " ipv6 address $addr"
+        }
     }
     netconfInsertSection $node $ifcfg
 }
@@ -1257,7 +1256,7 @@ proc setIfcIPv6addrs { node ifc addrs } {
 #****
 proc getIfcLinkLocalIPv6addr { node ifc } {
     if { [isIfcLogical $node $ifc] } {
-	return ""
+        return ""
     }
 
     set mac [getIfcMACaddr $node $ifc]
@@ -1275,11 +1274,11 @@ proc getIfcLinkLocalIPv6addr { node ifc } {
     set i 0
     lappend final fe80::
     foreach b $bytes {
-	lappend final $b
-	if { [expr $i%2] == 1 && $i < 7 } {
-	    lappend final :
-	}
-	incr i
+        lappend final $b
+        if { [expr $i%2] == 1 && $i < 7 } {
+            lappend final :
+        }
+        incr i
     }
     lappend final /64
     return [ip::normalize [join $final ""]]
@@ -1304,7 +1303,7 @@ proc getStatIPv4routes { node } {
     set routes {}
     set netconf [lindex [lsearch -inline [set $node] "network-config *"] 1]
     foreach entry [lsearch -all -inline $netconf "ip route *"] {
-	lappend routes [lrange $entry 2 end]
+        lappend routes [lrange $entry 2 end]
     }
     return $routes
 }
@@ -1325,7 +1324,7 @@ proc setStatIPv4routes { node routes } {
     netconfClearSection $node "ip route [lindex [getStatIPv4routes $node] 0]"
     set section {}
     foreach route $routes {
-	lappend section "ip route $route"
+        lappend section "ip route $route"
     }
     netconfInsertSection $node $section
 }
@@ -1349,7 +1348,7 @@ proc getStatIPv6routes { node } {
     set routes {}
     set netconf [lindex [lsearch -inline [set $node] "network-config *"] 1]
     foreach entry [lsearch -all -inline $netconf "ipv6 route *"] {
-	lappend routes [lrange $entry 2 end]
+        lappend routes [lrange $entry 2 end]
     }
     return $routes
 }
@@ -1370,7 +1369,7 @@ proc setStatIPv6routes { node routes } {
     netconfClearSection $node "ipv6 route [lindex [getStatIPv6routes $node] 0]"
     set section {}
     foreach route $routes {
-	lappend section "ipv6 route $route"
+        lappend section "ipv6 route $route"
     }
     netconfInsertSection $node $section
 }
@@ -1434,7 +1433,7 @@ proc nodeType { node } {
 # SYNOPSIS
 #   set model [getNodeModel $node]
 # FUNCTION
-#   Returns node's optional routing model. Currently supported models are 
+#   Returns node's optional routing model. Currently supported models are
 #   quagga, xorp and static and only nodes of type router have a defined model.
 # INPUTS
 #   * node -- node id
@@ -1464,9 +1463,9 @@ proc setNodeModel { node model } {
 
     set i [lsearch [set $node] "model *"]
     if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i "model $model"]
+        set $node [lreplace [set $node] $i $i "model $model"]
     } else {
-	set $node [linsert [set $node] 1 "model $model"]
+        set $node [linsert [set $node] 1 "model $model"]
     }
 }
 
@@ -1504,20 +1503,20 @@ proc setNodeSnapshot { node snapshot } {
 
     set i [lsearch [set $node] "snapshot *"]
     if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i "snapshot $snapshot"]
+        set $node [lreplace [set $node] $i $i "snapshot $snapshot"]
     } else {
-	set $node [linsert [set $node] 1 "snapshot $snapshot"]
+        set $node [linsert [set $node] 1 "snapshot $snapshot"]
     }
 }
 
 #****f* nodecfg.tcl/getStpEnabled
 # NAME
-#   getStpEnabled -- get STP enabled state 
+#   getStpEnabled -- get STP enabled state
 # SYNOPSIS
 #   set enabled [getStpEnabled $node]
 # FUNCTION
 #   For input node this procedure returns true if STP is enabled
-#   for the specified node. 
+#   for the specified node.
 # INPUTS
 #   * node -- node id
 # RESULT
@@ -1528,26 +1527,26 @@ proc getStpEnabled { node } {
 
     set netconf [lindex [lsearch -inline [set $node] "network-config *"] 1]
     if { [lrange [lsearch -inline $netconf "stp-enabled *"] 1 end] == true } {
-	return true
+        return true
     }
     return false
 }
 
 #****f* nodecfg.tcl/setStpEnabled
 # NAME
-#   setStpEnabled -- set STP enabled state 
+#   setStpEnabled -- set STP enabled state
 # SYNOPSIS
 #   setStpEnabled $node $enabled
 # FUNCTION
 #   For input node this procedure enables or disables STP.
 # INPUTS
 #   * node -- node id
-#   * enabled -- true if enabling STP, false if disabling 
+#   * enabled -- true if enabling STP, false if disabling
 #****
 proc setStpEnabled { node enabled } {
     netconfClearSection $node "stp-enabled true"
     if { $enabled == true } {
-	netconfInsertSection $node [list "stp-enabled $enabled"]
+        netconfInsertSection $node [list "stp-enabled $enabled"]
     }
 }
 
@@ -1585,9 +1584,9 @@ proc setNodeCoords { node coords } {
 
     set i [lsearch [set $node] "iconcoords *"]
     if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i "iconcoords {$coords}"]
+        set $node [lreplace [set $node] $i $i "iconcoords {$coords}"]
     } else {
-	set $node [linsert [set $node] end "iconcoords {$coords}"]
+        set $node [linsert [set $node] end "iconcoords {$coords}"]
     }
 }
 
@@ -1625,9 +1624,9 @@ proc setNodeLabelCoords { node coords } {
 
     set i [lsearch [set $node] "labelcoords *"]
     if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i "labelcoords {$coords}"]
+        set $node [lreplace [set $node] $i $i "labelcoords {$coords}"]
     } else {
-	set $node [linsert [set $node] end "labelcoords {$coords}"]
+        set $node [linsert [set $node] end "labelcoords {$coords}"]
     }
 }
 
@@ -1665,15 +1664,15 @@ proc setNodeCPUConf { node param_list } {
 
     set i [lsearch [set $node] "cpu *"]
     if { $i >= 0 } {
-	if { $param_list != "{}" } {
-	    set $node [lreplace [set $node] $i $i "cpu $param_list"]
-	} else {
-	    set $node [lreplace [set $node] $i $i]
-	}
+        if { $param_list != "{}" } {
+            set $node [lreplace [set $node] $i $i "cpu $param_list"]
+        } else {
+            set $node [lreplace [set $node] $i $i]
+        }
     } else {
-	if { $param_list != "{}" } {
-	    set $node [linsert [set $node] 1 "cpu $param_list"]
-	}
+        if { $param_list != "{}" } {
+            set $node [linsert [set $node] 1 "cpu $param_list"]
+        }
     }
 }
 
@@ -1694,7 +1693,7 @@ proc ifcList { node } {
 
     set interfaces ""
     foreach entry [lsearch -all -inline [set $node] "interface-peer *"] {
-	lappend interfaces [lindex [lindex $entry 1] 0]
+        lappend interfaces [lindex [lindex $entry 1] 0]
     }
     return $interfaces
 }
@@ -1717,12 +1716,12 @@ proc logIfcList { node } {
     set interfaces ""
     set netconf [lindex [lsearch -inline [set $node] "network-config *"] 1]
     foreach line $netconf {
-	if { "interface" in $line } {
-	    set ifc [lindex $line 1]
-	    if {$ifc ni [ifcList $node]} {
-		lappend interfaces $ifc 
-	    }
-	}
+        if { "interface" in $line } {
+            set ifc [lindex $line 1]
+            if {$ifc ni [ifcList $node]} {
+                lappend interfaces $ifc
+            }
+        }
     }
     return $interfaces
 }
@@ -1742,7 +1741,7 @@ proc logIfcList { node } {
 #****
 proc isIfcLogical { node ifc } {
     if { $ifc in [logIfcList $node] } {
-	return true
+        return true
     }
     return false
 }
@@ -1765,7 +1764,7 @@ proc allIfcList { node } {
     set interfaces [concat [ifcList $node] [logIfcList $node]]
     set lo0_pos [lsearch $interfaces lo0]
     if { $lo0_pos != -1 } {
-	set interfaces "lo0 [lreplace $interfaces $lo0_pos $lo0_pos]"
+        set interfaces "lo0 [lreplace $interfaces $lo0_pos $lo0_pos]"
     }
     return $interfaces
 }
@@ -1814,12 +1813,12 @@ proc logicalPeerByIfc { node ifc } {
 
     set peer [peerByIfc $node $ifc]
     if { [nodeType $peer] != "pseudo" } {
-	return $peer
+        return $peer
 
     } else {
-	set mirror_node [getNodeMirror $peer]
-	set mirror_ifc [ifcList $mirror_node]
-	return [peerByIfc $mirror_node $mirror_ifc]
+        set mirror_node [getNodeMirror $peer]
+        set mirror_ifc [ifcList $mirror_node]
+        return [peerByIfc $mirror_node $mirror_ifc]
     }
 }
 
@@ -1865,21 +1864,21 @@ proc ifcByLogicalPeer { node peer } {
 
     set ifc [ifcByPeer $node $peer]
     if { $ifc == "" } {
-	#
-	# Must search through pseudo peers
-	#
-	foreach ifc [ifcList $node] {
-	    set t_peer [peerByIfc $node $ifc]
-	    if { [nodeType $t_peer] == "pseudo" } {
-		set mirror [getNodeMirror $t_peer]
-		if { [peerByIfc $mirror [ifcList $mirror]] == $peer } {
-		    return $ifc
-		}
-	    }
-	}
-	return ""
+        #
+        # Must search through pseudo peers
+        #
+        foreach ifc [ifcList $node] {
+            set t_peer [peerByIfc $node $ifc]
+            if { [nodeType $t_peer] == "pseudo" } {
+                set mirror [getNodeMirror $t_peer]
+                if { [peerByIfc $mirror [ifcList $mirror]] == $peer } {
+                    return $ifc
+                }
+            }
+        }
+        return ""
     } else {
-	return $ifc    
+        return $ifc
     }
 }
 
@@ -1899,9 +1898,9 @@ proc ifcByLogicalPeer { node peer } {
 #****
 proc hasIPv4Addr { node } {
     foreach ifc [ifcList $node] {
-	if { [getIfcIPv4addr $node $ifc] != "" } {
-	    return true
-	}
+        if { [getIfcIPv4addr $node $ifc] != "" } {
+            return true
+        }
     }
     return false
 }
@@ -1922,9 +1921,9 @@ proc hasIPv4Addr { node } {
 #****
 proc hasIPv6Addr { node } {
     foreach ifc [ifcList $node] {
-	if { [getIfcIPv6addr $node $ifc] != "" } {
-	    return true
-	}
+        if { [getIfcIPv6addr $node $ifc] != "" } {
+            return true
+        }
     }
     return false
 }
@@ -1945,13 +1944,13 @@ proc removeNode { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
     if { [getCustomIcon $node] != "" } {
-	removeImageReference [getCustomIcon $node] $node
+        removeImageReference [getCustomIcon $node] $node
     }
 
     foreach ifc [ifcList $node] {
-	set peer [peerByIfc $node $ifc]
-	set link [linkByPeers $node $peer]
-	removeLink $link
+        set peer [peerByIfc $node $ifc]
+        set link [linkByPeers $node $peer]
+        removeLink $link
     }
     set i [lsearch -exact $node_list $node]
     set node_list [lreplace $node_list $i $i]
@@ -1991,9 +1990,9 @@ proc setNodeCanvas { node canvas } {
 
     set i [lsearch [set $node] "canvas *"]
     if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i "canvas $canvas"]
+        set $node [lreplace [set $node] $i $i "canvas $canvas"]
     } else {
-	set $node [linsert [set $node] end "canvas $canvas"]
+        set $node [linsert [set $node] end "canvas $canvas"]
     }
 }
 
@@ -2050,7 +2049,7 @@ proc newNode { type } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     global viewid
     catch {unset viewid}
-	
+
     set node [newObjectId node]
     upvar 0 ::cf::[set ::curcfg]::$node $node
     set $node {}
@@ -2058,9 +2057,9 @@ proc newNode { type } {
     lappend node_list $node
 
     if {[info procs $type.confNewNode] == "$type.confNewNode"} {
-	$type.confNewNode $node
+        $type.confNewNode $node
     }
-    
+
     return $node
 }
 
@@ -2106,9 +2105,9 @@ proc setNodeMirror { node value } {
 
     set i [lsearch [set $node] "mirror *"]
     if { $value == "" } {
-	set $node [lreplace [set $node] $i $i]
+        set $node [lreplace [set $node] $i $i]
     } else {
-	set $node [linsert [set $node] end "mirror $value"]
+        set $node [linsert [set $node] end "mirror $value"]
     }
 }
 
@@ -2120,18 +2119,18 @@ proc setNodeMirror { node value } {
 # FUNCTION
 #   Checks if node's current protocol is rip.
 # INPUTS
-#   * node -- node id 
+#   * node -- node id
 # RESULT
 #   * check -- 1 if it is rip, otherwise 0
 #****
 proc getNodeProtocolRip { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node    
-	   
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
     if { [netconfFetchSection $node "router rip"] != "" } {
-	return 1;
-    } else {	
-	return 0;
-    }	    
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
 #****f* nodecfg.tcl/getNodeProtocolRipng
@@ -2147,13 +2146,13 @@ proc getNodeProtocolRip { node } {
 #   * check -- 1 if it is ripng, otherwise 0
 #****
 proc getNodeProtocolRipng { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node    
-	   
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
     if { [netconfFetchSection $node "router ripng"] != "" } {
-	return 1;
-    } else {	
-	return 0;
-    }	    
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
 #****f* nodecfg.tcl/getNodeProtocolOspfv2
@@ -2168,14 +2167,14 @@ proc getNodeProtocolRipng { node } {
 # RESULT
 #   * check -- 1 if it is ospfv2, otherwise 0
 #****
-proc getNodeProtocolOspfv2 { node } { 
+proc getNodeProtocolOspfv2 { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
-    if { [netconfFetchSection $node "router ospf"] != ""} {	
-	return 1;
-    } else {	
-	return 0;
-    }	
+    if { [netconfFetchSection $node "router ospf"] != ""} {
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
 #****f* nodecfg.tcl/getNodeProtocolOspfv3
@@ -2190,14 +2189,14 @@ proc getNodeProtocolOspfv2 { node } {
 # RESULT
 #   * check -- 1 if it is ospfv3, otherwise 0
 #****
-proc getNodeProtocolOspfv3 { node } { 
+proc getNodeProtocolOspfv3 { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
-    if { [netconfFetchSection $node "router ospf6"] != ""} {	
-	return 1;
-    } else {	
-	return 0;
-    }	
+    if { [netconfFetchSection $node "router ospf6"] != ""} {
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
 #****f* nodecfg.tcl/setNodeProtocolRip
@@ -2209,21 +2208,21 @@ proc getNodeProtocolOspfv3 { node } {
 #   Sets node's protocol to rip.
 # INPUTS
 #   * node -- node id
-#   * ripEnable -- 1 if enabling rip, 0 if disabling 
+#   * ripEnable -- 1 if enabling rip, 0 if disabling
 #****
 proc setNodeProtocolRip { node ripEnable } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node    
-	   
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
     if { $ripEnable == 1 } {
-	netconfInsertSection $node [list "router rip" \
-		" redistribute static" \
-		" redistribute connected" \
-		" redistribute ospf" \
-		" network 0.0.0.0/0" \
-		! ]
-    } else {	
-	netconfClearSection $node "router rip"	
-    }	    
+        netconfInsertSection $node [list "router rip" \
+            " redistribute static" \
+            " redistribute connected" \
+            " redistribute ospf" \
+            " network 0.0.0.0/0" \
+            ! ]
+    } else {
+        netconfClearSection $node "router rip"
+    }
 }
 
 #****f* nodecfg.tcl/setNodeProtocolRipng
@@ -2235,21 +2234,21 @@ proc setNodeProtocolRip { node ripEnable } {
 #   Sets node's protocol to ripng.
 # INPUTS
 #   * node -- node id
-#   * ripngEnable -- 1 if enabling ripng, 0 if disabling 
+#   * ripngEnable -- 1 if enabling ripng, 0 if disabling
 #****
 proc setNodeProtocolRipng { node ripngEnable } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node    
-	   
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
     if { $ripngEnable == 1 } {
-	netconfInsertSection $node [list "router ripng" \
-		" redistribute static" \
-		" redistribute connected" \
-		" redistribute ospf6" \
-		" network ::/0" \
-		! ]
-    } else {	
- 	netconfClearSection $node "router ripng"	
-    }	    
+        netconfInsertSection $node [list "router ripng" \
+        " redistribute static" \
+        " redistribute connected" \
+        " redistribute ospf6" \
+        " network ::/0" \
+        ! ]
+    } else {
+        netconfClearSection $node "router ripng"
+    }
 }
 
 #****f* nodecfg.tcl/setNodeProtocolOspfv2
@@ -2263,18 +2262,18 @@ proc setNodeProtocolRipng { node ripngEnable } {
 #   * node -- node id
 #   * ospfEnable -- 1 if enabling ospf, 0 if disabling
 #****
-proc setNodeProtocolOspfv2 { node ospfEnable } { 
+proc setNodeProtocolOspfv2 { node ospfEnable } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
     if { $ospfEnable == 1 } {
-	netconfInsertSection $node [list "router ospf" \
-		" redistribute static" \
-		" redistribute connected" \
-		" redistribute rip" \
-		" network 0.0.0.0/0 area 0.0.0.0" \
-		! ]
+        netconfInsertSection $node [list "router ospf" \
+            " redistribute static" \
+            " redistribute connected" \
+            " redistribute rip" \
+            " network 0.0.0.0/0 area 0.0.0.0" \
+            ! ]
     } else {
-	netconfClearSection $node "router ospf"
+        netconfClearSection $node "router ospf"
     }
 }
 
@@ -2289,24 +2288,24 @@ proc setNodeProtocolOspfv2 { node ospfEnable } {
 #   * node -- node id
 #   * ospf6Enable -- 1 if enabling ospf6, 0 if disabling
 #****
-proc setNodeProtocolOspfv3 { node ospf6Enable } { 
+proc setNodeProtocolOspfv3 { node ospf6Enable } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
     set n [string trimleft $node "n"]
 
     if { $ospf6Enable == 1 } {
-	netconfInsertSection $node [list "router ospf6" \
-		" router-id 0.0.0.$n" \
-		" redistribute static" \
-		" redistribute connected" \
-		" redistribute ripng" \
-		! ]
+        netconfInsertSection $node [list "router ospf6" \
+            " router-id 0.0.0.$n" \
+            " redistribute static" \
+            " redistribute connected" \
+            " redistribute ripng" \
+            ! ]
 # Possible new line:
-#		" area 0.0.0.0 range ::/0" \
-# Old line:		
-#		" network ::/0 area 0.0.0.0" \
+#       " area 0.0.0.0 range ::/0" \
+# Old line:
+#       " network ::/0 area 0.0.0.0" \
     } else {
-	netconfClearSection $node "router ospf6"
+        netconfClearSection $node "router ospf6"
     }
 }
 
@@ -2326,41 +2325,41 @@ proc setNodeType { node newtype } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
     global ripEnable ripngEnable ospfEnable ospf6Enable changeAddressRange \
      changeAddressRange6
-    
+
     set oldtype [nodeType $node]
     if { [lsearch "rj45 hub lanswitch" $newtype] >= 0 } {
-	return
+        return
     }
     if { [lsearch "rj45 hub lanswitch" $oldtype] >= 0 } {
-	return
+        return
     }
     if { $oldtype == "router" && [lsearch "pc host" $newtype] >= 0 } {
-	setType $node $newtype
-	set i [lsearch [set $node] "model *"]
-	set $node [lreplace [set $node] $i $i]
-	setNodeName $node $newtype[string range $node 1 end]
-	setNodeProtocolRip $node 0
-	setNodeProtocolRipng $node 0
-	setNodeProtocolOspfv2 $node 0
-	setNodeProtocolOspfv3 $node 0
-	set interfaces [ifcList $node]
-	foreach ifc $interfaces {
-	    set changeAddressRange 0
-	    set changeAddressRange6 0
-	    autoIPv4addr $node $ifc
-	    autoIPv6addr $node $ifc
-	}
+        setType $node $newtype
+        set i [lsearch [set $node] "model *"]
+        set $node [lreplace [set $node] $i $i]
+        setNodeName $node $newtype[string range $node 1 end]
+        setNodeProtocolRip $node 0
+        setNodeProtocolRipng $node 0
+        setNodeProtocolOspfv2 $node 0
+        setNodeProtocolOspfv3 $node 0
+        set interfaces [ifcList $node]
+        foreach ifc $interfaces {
+            set changeAddressRange 0
+            set changeAddressRange6 0
+            autoIPv4addr $node $ifc
+            autoIPv6addr $node $ifc
+        }
     } elseif { [lsearch "host pc" $oldtype] >= 0 \
-	    && $newtype == "router" } {
-	setType $node $newtype
-	setNodeModel $node "quagga"
-	setNodeName $node $newtype[string range $node 1 end]
-	netconfClearSection $node "ip route *"
-	netconfClearSection $node "ipv6 route *"
-	setNodeProtocolRip $node $ripEnable
-	setNodeProtocolRipng $node $ripngEnable
-	setNodeProtocolOspfv2 $node $ospfEnable 
-	setNodeProtocolOspfv3 $node $ospf6Enable 
+            && $newtype == "router" } {
+        setType $node $newtype
+        setNodeModel $node "quagga"
+        setNodeName $node $newtype[string range $node 1 end]
+        netconfClearSection $node "ip route *"
+        netconfClearSection $node "ipv6 route *"
+        setNodeProtocolRip $node $ripEnable
+        setNodeProtocolRipng $node $ripngEnable
+        setNodeProtocolOspfv2 $node $ospfEnable
+        setNodeProtocolOspfv3 $node $ospf6Enable
     }
 }
 
@@ -2380,9 +2379,9 @@ proc setType { node type } {
 
     set i [lsearch [set $node] "type *"]
     if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i "type $type"]
+        set $node [lreplace [set $node] $i $i "type $type"]
     } else {
-	set $node [linsert [set $node] 1 "type $type"]
+        set $node [linsert [set $node] 1 "type $type"]
     }
 }
 
@@ -2402,9 +2401,9 @@ proc setCloudParts { node nr_parts } {
 
     set i [lsearch [set $node] "num_parts *"]
     if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i "num_parts $nr_parts"]
+        set $node [lreplace [set $node] $i $i "num_parts $nr_parts"]
     } else {
-	set $node [linsert [set $node] end "num_parts $nr_parts"];
+        set $node [linsert [set $node] end "num_parts $nr_parts"];
     }
 }
 
@@ -2457,9 +2456,9 @@ proc registerModule { module } {
 #****
 proc getIfcVlanDev { node ifc } {
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] == "vlan-dev" } {
-	    return [lindex $line 1]
-	}
+        if { [lindex $line 0] == "vlan-dev" } {
+            return [lindex $line 1]
+        }
     }
 }
 
@@ -2478,12 +2477,12 @@ proc getIfcVlanDev { node ifc } {
 proc setIfcVlanDev { node ifc dev } {
     set ifcfg [list "interface $ifc"]
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] != "vlan-dev" } {
-	    lappend ifcfg $line
-	}
+        if { [lindex $line 0] != "vlan-dev" } {
+            lappend ifcfg $line
+        }
     }
     if { $dev in [ifcList $node] } {
-	lappend ifcfg " vlan-dev $dev"
+        lappend ifcfg " vlan-dev $dev"
     }
     netconfInsertSection $node $ifcfg
 }
@@ -2503,9 +2502,9 @@ proc setIfcVlanDev { node ifc dev } {
 #****
 proc getIfcVlanTag { node ifc } {
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] == "vlan-tag" } {
-	    return [lindex $line 1]
-	}
+        if { [lindex $line 0] == "vlan-tag" } {
+            return [lindex $line 1]
+        }
     }
 }
 
@@ -2524,12 +2523,12 @@ proc getIfcVlanTag { node ifc } {
 proc setIfcVlanTag { node ifc tag } {
     set ifcfg [list "interface $ifc"]
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] != "vlan-tag" } {
-	    lappend ifcfg $line
-	}
+        if { [lindex $line 0] != "vlan-tag" } {
+            lappend ifcfg $line
+        }
     }
     if { $tag >= 1 && $tag <= 4094 } {
-	lappend ifcfg " vlan-tag $tag"
+        lappend ifcfg " vlan-tag $tag"
     }
     netconfInsertSection $node $ifcfg
 }
@@ -2549,9 +2548,9 @@ proc setEtherVlanEnabled { node value } {
     set vlancfg [list "vlan"]
     lappend vlancfg " enabled $value"
     foreach line [netconfFetchSection $node "vlan"] {
-	if { [lindex $line 0] != "enabled" } {
-	    lappend vlancfg $line
-	}
+        if { [lindex $line 0] != "enabled" } {
+            lappend vlancfg $line
+        }
     }
     netconfInsertSection $node $vlancfg
 }
@@ -2570,9 +2569,9 @@ proc setEtherVlanEnabled { node value } {
 #****
 proc getEtherVlanEnabled { node } {
     foreach line [netconfFetchSection $node "vlan"] {
-	if { [lindex $line 0] == "enabled" } {
-	    return [lindex $line 1]
-	}
+        if { [lindex $line 0] == "enabled" } {
+            return [lindex $line 1]
+        }
     }
     return 0
 }
@@ -2591,9 +2590,9 @@ proc getEtherVlanEnabled { node } {
 proc setEtherVlanTag { node value } {
     set vlancfg [list "vlan"]
     foreach line [netconfFetchSection $node "vlan"] {
-	if { [lindex $line 0] != "tag" } {
-	    lappend vlancfg $line
-	}
+        if { [lindex $line 0] != "tag" } {
+            lappend vlancfg $line
+        }
     }
     lappend vlancfg " tag $value"
     netconfInsertSection $node $vlancfg
@@ -2613,9 +2612,9 @@ proc setEtherVlanTag { node value } {
 #****
 proc getEtherVlanTag { node } {
     foreach line [netconfFetchSection $node "vlan"] {
-	if { [lindex $line 0] == "tag" } {
-	    return [lindex $line 1]
-	}
+        if { [lindex $line 0] == "tag" } {
+            return [lindex $line 1]
+        }
     }
 }
 
@@ -2687,7 +2686,7 @@ proc registerRouterModule { module } {
 proc isNodeRouter { node } {
     global router_modules_list
     if { [nodeType $node] in $router_modules_list } {
-	return 1
+        return 1
     }
     return 0
 }
@@ -2708,17 +2707,17 @@ proc isNodeRouter { node } {
 proc nodeCfggenIfcIPv4 { node } {
     set cfg {}
     foreach ifc [allIfcList $node] {
-	set primary 1
-	foreach addr [getIfcIPv4addrs $node $ifc] {
-	    if { $addr != "" } {
-		if { $primary } {
-		    lappend cfg [getIPv4IfcCmd $ifc $addr $primary]
-		    set primary 0
-		} else {
-		    lappend cfg [getIPv4IfcCmd $ifc $addr $primary]
-		}
-	    }
-	}
+        set primary 1
+        foreach addr [getIfcIPv4addrs $node $ifc] {
+            if { $addr != "" } {
+                if { $primary } {
+                    lappend cfg [getIPv4IfcCmd $ifc $addr $primary]
+                    set primary 0
+                } else {
+                    lappend cfg [getIPv4IfcCmd $ifc $addr $primary]
+                }
+            }
+        }
     }
     return $cfg
 }
@@ -2739,17 +2738,17 @@ proc nodeCfggenIfcIPv4 { node } {
 proc nodeCfggenIfcIPv6 { node } {
     set cfg {}
     foreach ifc [allIfcList $node] {
-	set primary 1
-	foreach addr [getIfcIPv6addrs $node $ifc] {
-	    if { $addr != "" } { 
-		if { $primary } {
-		    lappend cfg [getIPv6IfcCmd $ifc $addr $primary]
-		    set primary 0
-		} else {
-		    lappend cfg [getIPv6IfcCmd $ifc $addr $primary]
-		}
-	    }
-	}
+        set primary 1
+        foreach addr [getIfcIPv6addrs $node $ifc] {
+            if { $addr != "" } {
+                if { $primary } {
+                    lappend cfg [getIPv6IfcCmd $ifc $addr $primary]
+                    set primary 0
+                } else {
+                    lappend cfg [getIPv6IfcCmd $ifc $addr $primary]
+                }
+            }
+        }
     }
     return $cfg
 }
@@ -2769,7 +2768,7 @@ proc nodeCfggenIfcIPv6 { node } {
 proc nodeCfggenRouteIPv4 { node } {
     set cfg {}
     foreach statrte [getStatIPv4routes $node] {
-	lappend cfg "route -q add -inet $statrte"
+        lappend cfg [getIPv4RouteCmd $statrte]
     }
     return $cfg
 }
@@ -2789,7 +2788,7 @@ proc nodeCfggenRouteIPv4 { node } {
 proc nodeCfggenRouteIPv6 { node } {
     set cfg {}
     foreach statrte [getStatIPv6routes $node] {
-	lappend cfg "route -q add -inet6 $statrte"
+        lappend cfg [getIPv6RouteCmd $statrte]
     }
     return $cfg
 }
