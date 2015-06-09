@@ -152,8 +152,11 @@ proc spawnShell { node cmd } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     set node_id $eid\.$node
-    # FIXME: set terminal name
-    nexec gnome-terminal -e "docker exec -it $node_id $cmd" &
+
+    # FIXME make this modular
+    nexec xterm -sb -rightbar \
+    -T "IMUNES: [getNodeName $node] (console) [lindex [split $cmd /] end]" \
+    -e "docker exec -it $node_id $cmd" &
 }
 
 #****f* linux.tcl/fetchRunningExperiments
@@ -182,7 +185,6 @@ proc allSnapshotsAvailable {} {
     return 1
 }
 
-# XXX - comment procedure
 proc prepareDevfs {} {}
 
 #****f* linux.tcl/getHostIfcList
@@ -274,7 +276,6 @@ proc configureICMPoptions { node } {
 proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    # FIXME: max bridgename length is 15
     if { [[typemodel $lnode1].virtlayer] == "NETGRAPH" } {
         if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
             exec ovs-vsctl add-port $eid.$lnode1 $eid.$lnode1.$ifname1 -- \
