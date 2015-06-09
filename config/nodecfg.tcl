@@ -2691,32 +2691,30 @@ proc isNodeRouter { node } {
     return 0
 }
 
-#****f* nodecfg.tcl/nodeCfggenIfconfigIPv4
+#****f* nodecfg.tcl/nodeCfggenIfcIPv4
 # NAME
-#   nodeCfggenIfconfigIPv4 -- generate ifconfig IPv4 configuration
+#   nodeCfggenIfcIPv4 -- generate interface IPv4 configuration
 # SYNOPSIS
-#   nodeCfggenIfconfigIPv4 $node
+#   nodeCfggenIfcIPv4 $node
 # FUNCTION
-#   Generate ifconfig configuration for all IPv4 addresses on all node
+#   Generate configuration for all IPv4 addresses on all node
 #   interfaces.
 # INPUTS
 #   * node -- node to generate configuration for
 # RESULT
-#   * value -- ifconfig IPv4 configuration script
+#   * value -- interface IPv4 configuration script
 #****
-proc nodeCfggenIfconfigIPv4 { node } {
+proc nodeCfggenIfcIPv4 { node } {
     set cfg {}
     foreach ifc [allIfcList $node] {
-        set first 1
+        set primary 1
         foreach addr [getIfcIPv4addrs $node $ifc] {
             if { $addr != "" } {
-                if { $first } {
-                    lappend cfg [getIPv4AddrCmd $ifc $addr]
-                    # lappend cfg "ifconfig $ifc inet $addr"
-                    set first 0
+                if { $primary } {
+                    lappend cfg [getIPv4IfcCmd $ifc $addr $primary]
+                    set primary 0
                 } else {
-                    lappend cfg [getIPv4AddrCmd $ifc $addr]
-                    # lappend cfg "ifconfig $ifc inet add $addr"
+                    lappend cfg [getIPv4IfcCmd $ifc $addr $primary]
                 }
             }
         }
@@ -2724,31 +2722,30 @@ proc nodeCfggenIfconfigIPv4 { node } {
     return $cfg
 }
 
-#****f* nodecfg.tcl/nodeCfggenIfconfigIPv6
+#****f* nodecfg.tcl/nodeCfggenIfcIPv6
 # NAME
-#   nodeCfggenIfconfigIPv6 -- generate ifconfig IPv6 configuration
+#   nodeCfggenIfcIPv6 -- generate interface IPv6 configuration
 # SYNOPSIS
-#   nodeCfggenIfconfigIPv6 $node
+#   nodeCfggenIfcIPv6 $node
 # FUNCTION
-#   Generate ifconfig configuration for all IPv6 addresses on all node
+#   Generate configuration for all IPv6 addresses on all node
 #   interfaces.
 # INPUTS
 #   * node -- node to generate configuration for
 # RESULT
-#   * value -- ifconfig IPv6 configuration script
+#   * value -- interface IPv6 configuration script
 #****
-proc nodeCfggenIfconfigIPv6 { node } {
+proc nodeCfggenIfcIPv6 { node } {
     set cfg {}
     foreach ifc [allIfcList $node] {
-        set first 1
+        set primary 1
         foreach addr [getIfcIPv6addrs $node $ifc] {
             if { $addr != "" } {
-                if { $first } {
-                    lappend cfg [getIPv6AddrCmd $ifc $addr]
-                    # lappend cfg "ifconfig $ifc inet6 $addr"
+                if { $primary } {
+                    lappend cfg [getIPv6IfcCmd $ifc $addr $primary]
+                    set primary 0
                 } else {
-                    lappend cfg [getIPv6AddrCmd $ifc $addr]
-                    # lappend cfg "ifconfig $ifc inet6 add $addr"
+                    lappend cfg [getIPv6IfcCmd $ifc $addr $primary]
                 }
             }
         }

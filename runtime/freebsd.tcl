@@ -1930,3 +1930,17 @@ proc getIPv4RouteCmd { statrte } {
 proc getIPv6RouteCmd { statrte } {
     return "route -q add -inet6 $statrte"
 }
+
+proc getIPv4IfcCmd { ifc addr primary } {
+    if { $primary } {
+	   return "ifconfig $ifc inet $addr"
+    }
+    return "ifconfig $ifc inet add $addr"
+}
+
+proc getIPv6IfcCmd { ifc addr primary } {
+    if { $primary } {
+	   return "ifconfig $ifc inet6 $addr"
+    }
+    return "ifconfig $ifc inet6 add $addr"
+}

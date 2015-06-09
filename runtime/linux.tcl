@@ -543,11 +543,11 @@ proc getIPv6RouteCmd { statrte } {
     return $cmd
 }
 
-proc getIPv4AddrCmd { ifc addr } {
+proc getIPv4IfcCmd { ifc addr primary } {
     return "ip addr add $addr dev $ifc"
 }
 
-proc getIPv6AddrCmd { ifc addr } {
+proc getIPv6IfcCmd { ifc addr primary } {
     return "ip -6 addr add $addr dev $ifc"
 }
 
