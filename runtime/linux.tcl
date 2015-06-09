@@ -277,12 +277,10 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
     # FIXME: max bridgename length is 15
     if { [[typemodel $lnode1].virtlayer] == "NETGRAPH" } {
         if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
-            if { [nodeType $lnode2] != "rj45" } {
-                exec ovs-vsctl add-port $eid.$lnode1 $eid.$lnode1.$ifname1 -- \
-                    set interface $eid.$lnode1.$ifname1 type=patch options:peer=$eid.$lnode2.$ifname2
-                exec ovs-vsctl add-port $eid.$lnode2 $eid.$lnode2.$ifname2 -- \
-                    set interface $eid.$lnode2.$ifname2 type=patch options:peer=$eid.$lnode1.$ifname1
-            }
+            exec ovs-vsctl add-port $eid.$lnode1 $eid.$lnode1.$ifname1 -- \
+                set interface $eid.$lnode1.$ifname1 type=patch options:peer=$eid.$lnode2.$ifname2
+            exec ovs-vsctl add-port $eid.$lnode2 $eid.$lnode2.$ifname2 -- \
+                set interface $eid.$lnode2.$ifname2 type=patch options:peer=$eid.$lnode1.$ifname1
         }
         if { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
             exec pipework $eid.$lnode1 -i $ifname2 $eid.$lnode2 0/0
