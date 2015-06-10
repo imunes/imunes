@@ -550,17 +550,3 @@ proc getIPv6IfcCmd { ifc addr primary } {
     return "ip -6 addr add $addr dev $ifc"
 }
 
-#****f* linux.tcl/configDefaultLoIfc
-# NAME
-#   configDefaultLoIfc -- configure default logical interface
-# SYNOPSIS
-#   configDefaultLoIfc $eid $node
-# FUNCTION
-#   Configures the default logical interface address for the given node.
-# INPUTS
-#   * eid -- experiment id
-#   * node -- node id
-#****
-proc configDefaultLoIfc { eid node } {
-    pipesExec "docker exec $eid\.$node ifconfig lo 127.0.0.1/24" "hold"
-}
