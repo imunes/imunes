@@ -1938,3 +1938,11 @@ proc getIPv6IfcCmd { ifc addr primary } {
     }
     return "ifconfig $ifc inet6 add $addr"
 }
+
+proc getIPv4RouteCmd { statrte } {
+    return "route -q add -inet $statrte"
+}
+
+proc getIPv6RouteCmd { statrte } {
+    return "route -q add -inet6 $statrte"
+}

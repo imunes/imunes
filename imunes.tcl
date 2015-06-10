@@ -159,8 +159,8 @@ set l3nodes "genericrouter quagga xorp static click_l3 host pc"
 set os [platform::identify]
 if { [string match -nocase "*linux*" $os] == 1 } {
     # Limit default nodes on linux
-    set l2nodes "hub lanswitch rj45"
-    set l3nodes "genericrouter quagga static host pc"
+    set l2nodes "lanswitch rj45"
+    set l3nodes "genericrouter quagga static pc"
     source $ROOTDIR/$LIBDIR/runtime/linux.tcl
 }
 if { [string match -nocase "*freebsd*" $os] == 1 } {

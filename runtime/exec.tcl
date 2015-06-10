@@ -98,10 +98,11 @@ proc setOperMode { mode } {
     if { !$cfgDeployed } {
 	    if { $mode == "exec" } { ;# let's try something, sockets should be opened
 		set os [platform::identify]
-		if { [string match -nocase "*freebsd*" $os] != 1 } {
+		if { [string match -nocase "*linux*" $os] != 1 &&
+		    [string match -nocase "*freebsd*" $os] != 1 } {
 		    after idle {.dialog1.msg configure -wraplength 4i}
 		    tk_dialog .dialog1 "IMUNES error" \
-			"Error: To execute experiment, run IMUNES on FreeBSD." \
+			"Error: To execute experiment, run IMUNES on FreeBSD or Linux." \
 		    info 0 Dismiss
 		    return
 		}

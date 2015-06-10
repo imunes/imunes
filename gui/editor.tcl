@@ -137,7 +137,7 @@ proc redo {} {
 # SYNOPSIS
 #   set ifcName [chooseIfName $lnode1 $lnode2]
 # FUNCTION
-#   Choose intreface name. The name can be:
+#   Choose interface name. The name can be:
 #   * eth -- for interface connecting pc, host and router  
 #   * e -- for interface connecting hub and lanswitch
 #   * f -- for interface connecting frswitch
