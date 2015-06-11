@@ -273,8 +273,23 @@ proc createNodePhysIfcs { node } {}
 
 proc createNodeLogIfcs { node } {}
 
+#****f* linux.tcl/configureICMPoptions
+# NAME
+#   configureICMPoptions -- configure ICMP options
+# SYNOPSIS
+#   configureICMPoptions $node
+# FUNCTION
+#  Configures the necessary ICMP sysctls in the given node.
+# INPUTS
+#   * node -- node id
+#****
 proc configureICMPoptions { node } {
-    # FIXME: implement in Linux
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set node_id "$eid.$node"
+
+    pipesExec "docker exec $node_id sysctl net.ipv4.icmp_echo_ignore_broadcasts=1" "hold"
+    pipesExec "docker exec $node_id sysctl net.ipv4.icmp_ratelimit=0" "hold"
 }
 
 proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
