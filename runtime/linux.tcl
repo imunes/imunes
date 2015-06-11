@@ -351,7 +351,32 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 
 proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {}
 
-proc startIfcsNode { node } {}
+#****f* linux.tcl/startIfcsNode
+# NAME
+#   startIfcsNode -- start interfaces on node
+# SYNOPSIS
+#   startIfcsNode $node
+# FUNCTION
+#  Starts all interfaces on the given node.
+# INPUTS
+#   * node -- node id
+#****
+proc startIfcsNode { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set node_id "$eid.$node"
+    set cmds ""
+    foreach ifc [allIfcList $node] {
+        # FIXME: should also work for loopback
+        if {$ifc != "lo0"} {
+            set mtu [getIfcMTU $node $ifc]
+            if {[getIfcOperState $node $ifc] == "up"} {
+                set cmds "$cmds\n docker exec $node_id ip link set dev $ifc mtu $mtu"
+            }
+        }
+    }
+    exec sh << $cmds
+}
 
 proc removeExperimentContainer { eid widget } {}
 
