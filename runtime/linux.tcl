@@ -249,8 +249,8 @@ proc createNodeContainer { node } {
 
     set node_id "$eid.$node"
 
-    catch {exec docker run --cap-add=ALL --net='none' -h [getNodeName $node] \
-        --name $node_id $VROOT_MASTER 2> /dev/null &}
+    catch {exec docker run --privileged --cap-add=ALL --net='none' -h [getNodeName $node] \
+        --name $node_id $VROOT_MASTER sleep 10000000000000 2> /dev/null &}
 
     set status ""
     while { [string match 'true' $status] != 1 } {
@@ -318,7 +318,7 @@ proc removeNodeContainer { eid node } {
 proc killAllNodeProcesses { eid node } {
     set node_id "$eid.$node"
 
-    catch "exec docker stop $node_id"
+    catch "exec docker kill $node_id"
 }
 
 proc destroyVirtNodeIfcs { eid vimages } {}
