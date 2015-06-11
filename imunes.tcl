@@ -155,12 +155,15 @@ foreach file [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
 set l2nodes "hub lanswitch click_l2 rj45"
 # Set default L3 node list
 set l3nodes "genericrouter quagga xorp static click_l3 host pc"
+# Set default supported router models
+set supp_router_models "xorp quagga static"
 
 set os [platform::identify]
 if { [string match -nocase "*linux*" $os] == 1 } {
     # Limit default nodes on linux
     set l2nodes "lanswitch rj45"
     set l3nodes "genericrouter quagga static pc"
+    set supp_router_models "quagga static"
     source $ROOTDIR/$LIBDIR/runtime/linux.tcl
 }
 if { [string match -nocase "*freebsd*" $os] == 1 } {

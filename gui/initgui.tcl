@@ -154,7 +154,6 @@ set canvasBkgMode "original"
 set alignCanvasBkg "center"
 set bgsrcfile ""
 
-set supp_router_models "xorp quagga static"
 set def_router_model quagga
 
 set model quagga
@@ -518,55 +517,63 @@ menu .menubar.tools -tearoff 0
     wm transient $wi .
     wm resizable $wi 0 0
     wm title $wi "Router Defaults"
-	grab $wi
+    grab $wi
 
     #dodan glavni frame "routerframe"
     ttk::frame $wi.routerframe
     pack $wi.routerframe -fill both -expand 1
 
-    ttk::labelframe $wi.routerframe.model -text "Model:"
-    ttk::labelframe $wi.routerframe.protocols -text "Protocols:"
+    set w $wi.routerframe
 
-    ttk::checkbutton $wi.routerframe.protocols.rip -text "rip" -variable routerRipEnable
-    ttk::checkbutton $wi.routerframe.protocols.ripng -text "ripng" -variable routerRipngEnable 
-    ttk::checkbutton $wi.routerframe.protocols.ospf -text "ospfv2" -variable routerOspfEnable
-    ttk::checkbutton $wi.routerframe.protocols.ospf6 -text "ospfv3" -variable routerOspf6Enable  	              
-    ttk::radiobutton $wi.routerframe.model.quagga -text quagga -variable router_model \
+    ttk::labelframe $w.model -text "Model:"
+    ttk::labelframe $w.protocols -text "Protocols:"
+
+    ttk::checkbutton $w.protocols.rip -text "rip" -variable routerRipEnable
+    ttk::checkbutton $w.protocols.ripng -text "ripng" -variable routerRipngEnable
+    ttk::checkbutton $w.protocols.ospf -text "ospfv2" -variable routerOspfEnable
+    ttk::checkbutton $w.protocols.ospf6 -text "ospfv3" -variable routerOspf6Enable
+
+    ttk::radiobutton $w.model.quagga -text quagga -variable router_model \
 	-value quagga -command {
-	$wi.routerframe.protocols.rip configure -state normal
-	$wi.routerframe.protocols.ripng configure -state normal
-	$wi.routerframe.protocols.ospf configure -state normal
-	$wi.routerframe.protocols.ospf6 configure -state normal
+	$w.protocols.rip configure -state normal
+	$w.protocols.ripng configure -state normal
+	$w.protocols.ospf configure -state normal
+	$w.protocols.ospf6 configure -state normal
     }
-    ttk::radiobutton $wi.routerframe.model.xorp -text xorp -variable router_model \
+    ttk::radiobutton $w.model.xorp -text xorp -variable router_model \
 	-value xorp -command {
-	$wi.routerframe.protocols.rip configure -state normal
-	$wi.routerframe.protocols.ripng configure -state normal
-	$wi.routerframe.protocols.ospf configure -state normal
-	$wi.routerframe.protocols.ospf6 configure -state normal
+	$w.protocols.rip configure -state normal
+	$w.protocols.ripng configure -state normal
+	$w.protocols.ospf configure -state normal
+	$w.protocols.ospf6 configure -state normal
     }
-    ttk::radiobutton $wi.routerframe.model.static -text static -variable router_model \
+    ttk::radiobutton $w.model.static -text static -variable router_model \
 	-value static -command {
-	$wi.routerframe.protocols.rip configure -state disabled
-	$wi.routerframe.protocols.ripng configure -state disabled
-	$wi.routerframe.protocols.ospf configure -state disabled
-	$wi.routerframe.protocols.ospf6 configure -state disabled
+	$w.protocols.rip configure -state disabled
+	$w.protocols.ripng configure -state disabled
+	$w.protocols.ospf configure -state disabled
+	$w.protocols.ospf6 configure -state disabled
     }
+
     if { $router_model == "static" || $oper_mode != "edit" } {
-	$wi.routerframe.protocols.rip configure -state disabled
-	$wi.routerframe.protocols.ripng configure -state disabled
-	$wi.routerframe.protocols.ospf configure -state disabled
-	$wi.routerframe.protocols.ospf6 configure -state disabled   	     
-    }	 
-    if { $oper_mode != "edit" } {
-	$wi.routerframe.model.quagga configure -state disabled
-	$wi.routerframe.model.xorp configure -state disabled
-	$wi.routerframe.model.static configure -state disabled
+	$w.protocols.rip configure -state disabled
+	$w.protocols.ripng configure -state disabled
+	$w.protocols.ospf configure -state disabled
+	$w.protocols.ospf6 configure -state disabled
     }	 
 
-    ttk::frame $wi.routerframe.buttons
-    ttk::button $wi.routerframe.buttons.b1 -text "Apply" -command { routerDefaultsApply $wi }
-    ttk::button $wi.routerframe.buttons.b2 -text "Cancel" -command {
+    if { $oper_mode != "edit" } {
+	$w.model.quagga configure -state disabled
+	$w.model.xorp configure -state disabled
+	$w.model.static configure -state disabled
+    }
+    if {"xorp" ni $supp_router_models} {
+	$w.model.xorp configure -state disabled
+    }
+
+    ttk::frame $w.buttons
+    ttk::button $w.buttons.b1 -text "Apply" -command { routerDefaultsApply $wi }
+    ttk::button $w.buttons.b2 -text "Cancel" -command {
 	set router_model $routerDefaultsModel
 	set routerRipEnable [lindex $rdconfig 0]
 	set routerRipngEnable [lindex $rdconfig 1]
@@ -575,16 +582,15 @@ menu .menubar.tools -tearoff 0
 	destroy $wi	        
     }
 	 
-    pack $wi.routerframe.model -side top -fill x -pady 5
-    #pack $wi.routerframe.model.label -side left -padx 0 -pady 0
-    pack $wi.routerframe.model.quagga $wi.routerframe.model.xorp $wi.routerframe.model.static \
+    pack $w.model -side top -fill x -pady 5
+    pack $w.model.quagga $w.model.xorp $w.model.static \
 	-side left -expand 1 
-    pack $wi.routerframe.protocols -side top -pady 5
-    pack $wi.routerframe.protocols.rip $wi.routerframe.protocols.ripng \
-	$wi.routerframe.protocols.ospf $wi.routerframe.protocols.ospf6 -side left
-    pack $wi.routerframe.buttons -side bottom -fill x  -pady 2
-    pack $wi.routerframe.buttons.b1 -side left -expand 1 -anchor e -padx 2
-    pack $wi.routerframe.buttons.b2 -side right -expand 1 -anchor w -padx 2
+    pack $w.protocols -side top -pady 5
+    pack $w.protocols.rip $w.protocols.ripng \
+	$w.protocols.ospf $w.protocols.ospf6 -side left
+    pack $w.buttons -side bottom -fill x  -pady 2
+    pack $w.buttons.b1 -side left -expand 1 -anchor e -padx 2
+    pack $w.buttons.b2 -side right -expand 1 -anchor w -padx 2
 }
 #.menubar.tools add separator
 #.menubar.tools add command -label "ns2imunes converter" \

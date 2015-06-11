@@ -1425,9 +1425,9 @@ proc configGUI_stp { wi node } {
 #****
 proc configGUI_routingModel { wi node } {
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    global ripEnable ripngEnable ospfEnable ospf6Enable
-    global router_ConfigModel guielements 
-    lappend guielements configGUI_routingModel    
+    global ripEnable ripngEnable ospfEnable ospf6Enable supp_router_models
+    global router_ConfigModel guielements
+    lappend guielements configGUI_routingModel
     ttk::frame $wi.routing -relief groove -borderwidth 2 -padding 2
     ttk::frame $wi.routing.model -padding 2
     ttk::label $wi.routing.model.label -text "Model:" 
@@ -1435,7 +1435,7 @@ proc configGUI_routingModel { wi node } {
     ttk::label $wi.routing.protocols.label -text "Protocols:"
 
     ttk::checkbutton $wi.routing.protocols.rip -text "rip" -variable ripEnable
-    ttk::checkbutton $wi.routing.protocols.ripng -text "ripng" -variable ripngEnable 
+    ttk::checkbutton $wi.routing.protocols.ripng -text "ripng" -variable ripngEnable
     ttk::checkbutton $wi.routing.protocols.ospf -text "ospfv2" -variable ospfEnable
     ttk::checkbutton $wi.routing.protocols.ospf6 -text "ospfv3" -variable ospf6Enable
     ttk::radiobutton $wi.routing.model.quagga -text quagga \
@@ -1468,16 +1468,19 @@ proc configGUI_routingModel { wi node } {
 	$wi.routing.protocols.ripng configure -state disabled
  	$wi.routing.protocols.ospf configure -state disabled
  	$wi.routing.protocols.ospf6 configure -state disabled
-    }  
-     if { $oper_mode != "edit" } {
- 	$wi.routing.model.quagga configure -state disabled
- 	$wi.routing.model.xorp configure -state disabled
- 	$wi.routing.model.static configure -state disabled
- 	$wi.routing.protocols.rip configure -state disabled
- 	$wi.routing.protocols.ripng configure -state disabled
- 	$wi.routing.protocols.ospf configure -state disabled
- 	$wi.routing.protocols.ospf6 configure -state disabled
-     }	   	
+    }
+    if { $oper_mode != "edit" } {
+	$wi.routing.model.quagga configure -state disabled
+	$wi.routing.model.xorp configure -state disabled
+	$wi.routing.model.static configure -state disabled
+	$wi.routing.protocols.rip configure -state disabled
+	$wi.routing.protocols.ripng configure -state disabled
+	$wi.routing.protocols.ospf configure -state disabled
+	$wi.routing.protocols.ospf6 configure -state disabled
+    }
+    if {"xorp" ni $supp_router_models} {
+	$w.model.xorp configure -state disabled
+    }
     pack $wi.routing.model.label -side left -padx 2
     pack $wi.routing.model.quagga $wi.routing.model.xorp $wi.routing.model.static \
         -side left -padx 6
