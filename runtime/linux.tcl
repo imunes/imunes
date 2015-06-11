@@ -358,7 +358,7 @@ proc removeExperimentContainer { eid widget } {
 }
 
 proc createNetgraphNode { eid node } {
-    exec ovs-vsctl add-br $eid.$node
+    catch {exec ovs-vsctl add-br $eid.$node}
 }
 
 proc destroyNetgraphNode { eid node } {
@@ -493,7 +493,7 @@ proc getExtIfcs { } {
 proc captureExtIfc { eid node } {
     set ifname [getNodeName $node]
     createNetgraphNode $eid $node
-    exec ovs-vsctl add-port $eid.$node $ifname
+    catch {exec ovs-vsctl add-port $eid.$node $ifname}
 }
 
 #****f* linux.tcl/releaseExtIfc
