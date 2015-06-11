@@ -1,3 +1,5 @@
+set VROOT_MASTER "imunes/vroot:base"
+
 #****f* linux.tcl/execCmdNode
 # NAME
 #   execCmdNode -- execute command on virtual node
@@ -240,13 +242,15 @@ proc prepareFilesystemForNode { node } {
     pipesExec "mkdir -p $VROOT_RUNTIME" "hold"
 }
 
+#XXX-comment
 proc createNodeContainer { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
+    global VROOT_MASTER
 
     set node_id "$eid.$node"
 
     catch {exec docker run --cap-add=ALL --net='none' -h [getNodeName $node] \
-        --name $node_id gcetusic/imunes 2> /dev/null &}
+        --name $node_id $VROOT_MASTER 2> /dev/null &}
 
     set status ""
     while { [string match 'true' $status] != 1 } {
