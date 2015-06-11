@@ -392,6 +392,7 @@ proc runConfOnNode { node } {
     writeDataToFile $node_dir/$confFile [join $bootcfg "\n"]
     exec docker exec -i $node_id sh -c "cat > $confFile" < $node_dir/$confFile
     exec docker exec $node_id $bootcmd $confFile >& $node_dir/out.log &
+    exec docker exec -i $node_id sh -c "cat > out.log" < $node_dir/out.log
 
     foreach ifc [allIfcList $node] {
         if {[getIfcOperState $node $ifc] == "down"} {
