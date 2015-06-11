@@ -395,7 +395,7 @@ proc runConfOnNode { node } {
 
     foreach ifc [allIfcList $node] {
         if {[getIfcOperState $node $ifc] == "down"} {
-            exec docker exec $node_id ifconfig $ifc down
+            exec docker exec $node_id ip link set dev $ifc down
         }
     }
 }
