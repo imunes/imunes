@@ -280,6 +280,18 @@ proc configureICMPoptions { node } {
 proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
+    set ether1 [getIfcMACaddr $lnode1 $ifname1]
+    if {$ether1 == ""} {
+        autoMACaddr $lnode1 $ifname1
+    }
+    set ether1 [getIfcMACaddr $lnode1 $ifname1]
+
+    set ether2 [getIfcMACaddr $lnode2 $ifname2]
+    if {$ether2 == ""} {
+        autoMACaddr $lnode2 $ifname2
+    }
+    set ether2 [getIfcMACaddr $lnode2 $ifname2]
+
     if { [[typemodel $lnode1].virtlayer] == "NETGRAPH" } {
         if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
             exec ovs-vsctl add-port $eid.$lnode1 $eid.$lnode1.$ifname1 -- \
@@ -288,17 +300,17 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
                 set interface $eid.$lnode2.$ifname2 type=patch options:peer=$eid.$lnode1.$ifname1
         }
         if { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
-            exec pipework $eid.$lnode1 -i $ifname2 $eid.$lnode2 0/0
+            exec pipework $eid.$lnode1 -i $ifname2 $eid.$lnode2 0/0 $ether2
         }
     } elseif { [[typemodel $lnode1].virtlayer] == "VIMAGE" } {
         if  { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
             set link [linkByPeers $lnode1 $lnode2]
             exec ovs-vsctl add-br $eid.$link
-            exec pipework $eid.$link -i $ifname1 $eid.$lnode1 0/0
-            exec pipework $eid.$link -i $ifname2 $eid.$lnode2 0/0
+            exec pipework $eid.$link -i $ifname1 $eid.$lnode1 0/0 $ether1
+            exec pipework $eid.$link -i $ifname2 $eid.$lnode2 0/0 $ether2
         }
         if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
-            exec pipework $eid.$lnode2 -i $ifname1 $eid.$lnode1 0/0
+            exec pipework $eid.$lnode2 -i $ifname1 $eid.$lnode1 0/0 $ether1
         }
     }
 }
