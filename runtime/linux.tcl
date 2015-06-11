@@ -246,7 +246,7 @@ proc createNodeContainer { node } {
     set node_id "$eid.$node"
 
     catch {exec docker run --cap-add=ALL --net='none' -h [getNodeName $node] \
-        --name $node_id gcetusic/imunes /sbin/my_init 2> /dev/null &}
+        --name $node_id gcetusic/imunes 2> /dev/null &}
 
     set status ""
     while { [string match 'true' $status] != 1 } {
