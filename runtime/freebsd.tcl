@@ -1300,8 +1300,10 @@ proc generateHostsFile { node } {
 			foreach ifc [ifcList $iter] {
 			    if { $ifc != "" } {
 				set ipv4 [lindex [split [getIfcIPv4addr $iter $ifc] "/"] 0]
+				set ipv6 [lindex [split [getIfcIPv6addr $iter $ifc] "/"] 0]
 				set ifname [getNodeName $iter]
-				set etchosts "$etchosts$ipv4    $ifname\n"
+				set etchosts "$etchosts$ipv4	$ifname\n"
+				set etchosts "$etchosts$ipv6	$ifname\n"
 				break
 			    }
 			}
