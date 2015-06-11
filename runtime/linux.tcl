@@ -1,5 +1,24 @@
 set VROOT_MASTER "imunes/vroot:base"
 
+#****f* linux.tcl/writeDataToNodeFile
+# NAME
+#   writeDataToNodeFile -- write data to virtual node
+# SYNOPSIS
+#   writeDataToNodeFile $node $path $data
+# FUNCTION
+#   Writes data to a file on the specified virtual node.
+# INPUTS
+#   * node -- virtual node id
+#   * path -- path to file in node
+#   * data -- data to write
+#****
+proc writeDataToNodeFile { node path data } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set node_dir [getVrootDir]/$eid/$node
+    writeDataToFile $node_dir/$path $data
+    exec docker exec -i $node_id sh -c "cat > $path" < $node_dir/$path
+}
+
 #****f* linux.tcl/execCmdNode
 # NAME
 #   execCmdNode -- execute command on virtual node
