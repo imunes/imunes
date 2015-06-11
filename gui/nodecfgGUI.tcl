@@ -1429,33 +1429,34 @@ proc configGUI_routingModel { wi node } {
     global router_ConfigModel guielements
     lappend guielements configGUI_routingModel
     ttk::frame $wi.routing -relief groove -borderwidth 2 -padding 2
-    ttk::frame $wi.routing.model -padding 2
-    ttk::label $wi.routing.model.label -text "Model:" 
-    ttk::frame $wi.routing.protocols -padding 2
-    ttk::label $wi.routing.protocols.label -text "Protocols:"
+    set w $wi.routing
+    ttk::frame $w.model -padding 2
+    ttk::label $w.model.label -text "Model:" 
+    ttk::frame $w.protocols -padding 2
+    ttk::label $w.protocols.label -text "Protocols:"
 
-    ttk::checkbutton $wi.routing.protocols.rip -text "rip" -variable ripEnable
-    ttk::checkbutton $wi.routing.protocols.ripng -text "ripng" -variable ripngEnable
-    ttk::checkbutton $wi.routing.protocols.ospf -text "ospfv2" -variable ospfEnable
-    ttk::checkbutton $wi.routing.protocols.ospf6 -text "ospfv3" -variable ospf6Enable
-    ttk::radiobutton $wi.routing.model.quagga -text quagga \
+    ttk::checkbutton $w.protocols.rip -text "rip" -variable ripEnable
+    ttk::checkbutton $w.protocols.ripng -text "ripng" -variable ripngEnable
+    ttk::checkbutton $w.protocols.ospf -text "ospfv2" -variable ospfEnable
+    ttk::checkbutton $w.protocols.ospf6 -text "ospfv3" -variable ospf6Enable
+    ttk::radiobutton $w.model.quagga -text quagga \
 	-variable router_ConfigModel -value quagga -command \
-	"$wi.routing.protocols.rip configure -state normal;
-	 $wi.routing.protocols.ripng configure -state normal;
-	 $wi.routing.protocols.ospf configure -state normal;
-	 $wi.routing.protocols.ospf6 configure -state normal"
-    ttk::radiobutton $wi.routing.model.xorp -text xorp \
+	"$w.protocols.rip configure -state normal;
+	 $w.protocols.ripng configure -state normal;
+	 $w.protocols.ospf configure -state normal;
+	 $w.protocols.ospf6 configure -state normal"
+    ttk::radiobutton $w.model.xorp -text xorp \
 	-variable router_ConfigModel -value xorp -command \
-	"$wi.routing.protocols.rip configure -state normal;
-	 $wi.routing.protocols.ripng configure -state normal;
-	 $wi.routing.protocols.ospf configure -state normal;
-	 $wi.routing.protocols.ospf6 configure -state normal"
-    ttk::radiobutton $wi.routing.model.static -text static \
+	"$w.protocols.rip configure -state normal;
+	 $w.protocols.ripng configure -state normal;
+	 $w.protocols.ospf configure -state normal;
+	 $w.protocols.ospf6 configure -state normal"
+    ttk::radiobutton $w.model.static -text static \
 	-variable router_ConfigModel -value static -command \
-	"$wi.routing.protocols.rip configure -state disabled;
-	 $wi.routing.protocols.ripng configure -state disabled;
-	 $wi.routing.protocols.ospf configure -state disabled;
-	 $wi.routing.protocols.ospf6 configure -state disabled"
+	"$w.protocols.rip configure -state disabled;
+	 $w.protocols.ripng configure -state disabled;
+	 $w.protocols.ospf configure -state disabled;
+	 $w.protocols.ospf6 configure -state disabled"
 	
     set router_ConfigModel [getNodeModel $node]
     if { $router_ConfigModel != "static" } {
@@ -1464,32 +1465,32 @@ proc configGUI_routingModel { wi node } {
 	set ospfEnable [getNodeProtocolOspfv2 $node]
 	set ospf6Enable [getNodeProtocolOspfv3 $node]
     } else {
-        $wi.routing.protocols.rip configure -state disabled
-	$wi.routing.protocols.ripng configure -state disabled
- 	$wi.routing.protocols.ospf configure -state disabled
- 	$wi.routing.protocols.ospf6 configure -state disabled
+        $w.protocols.rip configure -state disabled
+	$w.protocols.ripng configure -state disabled
+ 	$w.protocols.ospf configure -state disabled
+ 	$w.protocols.ospf6 configure -state disabled
     }
     if { $oper_mode != "edit" } {
-	$wi.routing.model.quagga configure -state disabled
-	$wi.routing.model.xorp configure -state disabled
-	$wi.routing.model.static configure -state disabled
-	$wi.routing.protocols.rip configure -state disabled
-	$wi.routing.protocols.ripng configure -state disabled
-	$wi.routing.protocols.ospf configure -state disabled
-	$wi.routing.protocols.ospf6 configure -state disabled
+	$w.model.quagga configure -state disabled
+	$w.model.xorp configure -state disabled
+	$w.model.static configure -state disabled
+	$w.protocols.rip configure -state disabled
+	$w.protocols.ripng configure -state disabled
+	$w.protocols.ospf configure -state disabled
+	$w.protocols.ospf6 configure -state disabled
     }
     if {"xorp" ni $supp_router_models} {
 	$w.model.xorp configure -state disabled
     }
-    pack $wi.routing.model.label -side left -padx 2
-    pack $wi.routing.model.quagga $wi.routing.model.xorp $wi.routing.model.static \
+    pack $w.model.label -side left -padx 2
+    pack $w.model.quagga $w.model.xorp $w.model.static \
         -side left -padx 6
-    pack $wi.routing.model -fill both -expand 1
-    pack $wi.routing.protocols.label -side left -padx 2
-    pack $wi.routing.protocols.rip $wi.routing.protocols.ripng \
-	$wi.routing.protocols.ospf $wi.routing.protocols.ospf6 -side left -padx 6
-    pack $wi.routing.protocols -fill both -expand 1
-    pack $wi.routing -fill both
+    pack $w.model -fill both -expand 1
+    pack $w.protocols.label -side left -padx 2
+    pack $w.protocols.rip $w.protocols.ripng \
+	$w.protocols.ospf $w.protocols.ospf6 -side left -padx 6
+    pack $w.protocols -fill both -expand 1
+    pack $w -fill both
 }
 
 #****f* nodecfgGUI.tcl/configGUI_servicesConfig
