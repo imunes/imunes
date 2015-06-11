@@ -352,8 +352,7 @@ proc destroyVirtNodeIfcs { eid vimages } {}
 
 proc runConfOnNode { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
-    global vroot_unionfs
-    global viewcustomid vroot_unionfs
+    global execMode
 
     set node_dir [getVrootDir]/$eid/$node
     set node_id "$eid.$node"
@@ -374,6 +373,12 @@ proc runConfOnNode { node } {
     writeDataToFile $node_dir/$confFile [join $bootcfg "\n"]
     exec docker exec -i $node_id sh -c "cat > $confFile" < $node_dir/$confFile
     exec docker exec $node_id $bootcmd $confFile >& $node_dir/out.log &
+
+    foreach ifc [allIfcList $node] {
+        if {[getIfcOperState $node $ifc] == "down"} {
+            exec docker exec $node_id ifconfig $ifc down
+        }
+    }
 }
 
 proc destroyLinkBetween { eid lnode1 lnode2 } {
@@ -581,3 +586,23 @@ proc getIPv6IfcCmd { ifc addr primary } {
     return "ip -6 addr add $addr dev $ifc"
 }
 
+#****f* linux.tcl/getRunningNodeIfcList
+# NAME
+#   getRunningNodeIfcList -- get interfaces list from the node
+# SYNOPSIS
+#   getRunningNodeIfcList $node
+# FUNCTION
+#   Returns the list of all network interfaces for the given node.
+# INPUTS
+#   * node -- node id
+# RESULT
+#   * list -- list in the form of {netgraph_node_name hook}
+#****
+proc getRunningNodeIfcList { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    catch {exec docker exec $eid.$node ifconfig} full
+    set lines [split $full "\n"]
+
+    return $lines
+}
