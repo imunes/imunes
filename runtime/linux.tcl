@@ -1,5 +1,27 @@
 set VROOT_MASTER "imunes/vroot:base"
 
+#****f* linux.tcl/writeDataToNodeFile
+# NAME
+#   writeDataToNodeFile -- write data to virtual node
+# SYNOPSIS
+#   writeDataToNodeFile $node $path $data
+# FUNCTION
+#   Writes data to a file on the specified virtual node.
+# INPUTS
+#   * node -- virtual node id
+#   * path -- path to file in node
+#   * data -- data to write
+#****
+proc writeDataToNodeFile { node path data } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set node_id "$eid.$node"
+    set node_dir [getVrootDir]/$eid/$node
+
+    writeDataToFile $node_dir/$path $data
+    exec docker exec -i $node_id sh -c "cat > $path" < $node_dir/$path
+}
+
 #****f* linux.tcl/execCmdNode
 # NAME
 #   execCmdNode -- execute command on virtual node
@@ -273,12 +295,39 @@ proc createNodePhysIfcs { node } {}
 
 proc createNodeLogIfcs { node } {}
 
+#****f* linux.tcl/configureICMPoptions
+# NAME
+#   configureICMPoptions -- configure ICMP options
+# SYNOPSIS
+#   configureICMPoptions $node
+# FUNCTION
+#  Configures the necessary ICMP sysctls in the given node.
+# INPUTS
+#   * node -- node id
+#****
 proc configureICMPoptions { node } {
-    # FIXME: implement in Linux
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set node_id "$eid.$node"
+
+    pipesExec "docker exec $node_id sysctl net.ipv4.icmp_echo_ignore_broadcasts=1" "hold"
+    pipesExec "docker exec $node_id sysctl net.ipv4.icmp_ratelimit=0" "hold"
 }
 
 proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set ether1 [getIfcMACaddr $lnode1 $ifname1]
+    if {$ether1 == ""} {
+        autoMACaddr $lnode1 $ifname1
+    }
+    set ether1 [getIfcMACaddr $lnode1 $ifname1]
+
+    set ether2 [getIfcMACaddr $lnode2 $ifname2]
+    if {$ether2 == ""} {
+        autoMACaddr $lnode2 $ifname2
+    }
+    set ether2 [getIfcMACaddr $lnode2 $ifname2]
 
     if { [[typemodel $lnode1].virtlayer] == "NETGRAPH" } {
         if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
@@ -288,24 +337,49 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
                 set interface $eid.$lnode2.$ifname2 type=patch options:peer=$eid.$lnode1.$ifname1
         }
         if { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
-            exec pipework $eid.$lnode1 -i $ifname2 $eid.$lnode2 0/0
+            exec pipework $eid.$lnode1 -i $ifname2 $eid.$lnode2 0/0 $ether2
         }
     } elseif { [[typemodel $lnode1].virtlayer] == "VIMAGE" } {
         if  { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
             set link [linkByPeers $lnode1 $lnode2]
             exec ovs-vsctl add-br $eid.$link
-            exec pipework $eid.$link -i $ifname1 $eid.$lnode1 0/0
-            exec pipework $eid.$link -i $ifname2 $eid.$lnode2 0/0
+            exec pipework $eid.$link -i $ifname1 $eid.$lnode1 0/0 $ether1
+            exec pipework $eid.$link -i $ifname2 $eid.$lnode2 0/0 $ether2
         }
         if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
-            exec pipework $eid.$lnode2 -i $ifname1 $eid.$lnode1 0/0
+            exec pipework $eid.$lnode2 -i $ifname1 $eid.$lnode1 0/0 $ether1
         }
     }
 }
 
 proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {}
 
-proc startIfcsNode { node } {}
+#****f* linux.tcl/startIfcsNode
+# NAME
+#   startIfcsNode -- start interfaces on node
+# SYNOPSIS
+#   startIfcsNode $node
+# FUNCTION
+#  Starts all interfaces on the given node.
+# INPUTS
+#   * node -- node id
+#****
+proc startIfcsNode { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set node_id "$eid.$node"
+    set cmds ""
+    foreach ifc [allIfcList $node] {
+        # FIXME: should also work for loopback
+        if {$ifc != "lo0"} {
+            set mtu [getIfcMTU $node $ifc]
+            if {[getIfcOperState $node $ifc] == "up"} {
+                set cmds "$cmds\n docker exec $node_id ip link set dev $ifc mtu $mtu"
+            }
+        }
+    }
+    exec sh << $cmds
+}
 
 proc removeExperimentContainer { eid widget } {}
 
@@ -325,8 +399,7 @@ proc destroyVirtNodeIfcs { eid vimages } {}
 
 proc runConfOnNode { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
-    global vroot_unionfs
-    global viewcustomid vroot_unionfs
+    global execMode
 
     set node_dir [getVrootDir]/$eid/$node
     set node_id "$eid.$node"
@@ -347,6 +420,13 @@ proc runConfOnNode { node } {
     writeDataToFile $node_dir/$confFile [join $bootcfg "\n"]
     exec docker exec -i $node_id sh -c "cat > $confFile" < $node_dir/$confFile
     exec docker exec $node_id $bootcmd $confFile >& $node_dir/out.log &
+    exec docker exec -i $node_id sh -c "cat > out.log" < $node_dir/out.log
+
+    foreach ifc [allIfcList $node] {
+        if {[getIfcOperState $node $ifc] == "down"} {
+            exec docker exec $node_id ip link set dev $ifc down
+        }
+    }
 }
 
 proc destroyLinkBetween { eid lnode1 lnode2 } {
@@ -554,3 +634,23 @@ proc getIPv6IfcCmd { ifc addr primary } {
     return "ip -6 addr add $addr dev $ifc"
 }
 
+#****f* linux.tcl/getRunningNodeIfcList
+# NAME
+#   getRunningNodeIfcList -- get interfaces list from the node
+# SYNOPSIS
+#   getRunningNodeIfcList $node
+# FUNCTION
+#   Returns the list of all network interfaces for the given node.
+# INPUTS
+#   * node -- node id
+# RESULT
+#   * list -- list in the form of {netgraph_node_name hook}
+#****
+proc getRunningNodeIfcList { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    catch {exec docker exec $eid.$node ifconfig} full
+    set lines [split $full "\n"]
+
+    return $lines
+}

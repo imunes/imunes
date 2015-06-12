@@ -46,33 +46,33 @@
 #    global variables
 # FUNCTION
 #    GUI-related global varibles
-# 
+#
 #    * newlink -- helps when creating a new link. If there is no
 #      link currently created, this value is set to an empty string.
 #    * selectbox -- the value of the box representing all the selected items
 #    * selected -- containes the list of node_id's of all selected nodes.
-#    * newCanvas -- 
+#    * newCanvas --
 #
-#    * animatephase -- starting dashoffset. With this value the effect of 
-#      rotating line around selected itme is achived. 
+#    * animatephase -- starting dashoffset. With this value the effect of
+#      rotating line around selected itme is achived.
 #    * undolevel -- control variable for undo.
 #    * redolevel -- control variable for redo.
 #    * undolog -- control variable for saving all the past configurations.
-#    * changed -- control variable for indicating that there something changed 
+#    * changed -- control variable for indicating that there something changed
 #      in active configuration.
 #    * badentry -- control variable indicating that there has been a bad entry
 #      in the text box.
 #    * cursorstate -- control variable for animating cursor.
 #    * clock_seconds -- control variable for animating cursor.
-#    * oper_mode -- control variable reresenting operating mode, possible 
+#    * oper_mode -- control variable reresenting operating mode, possible
 #      values are edit and exec.
-#    * grid -- control variable representing grid distance. All new 
-#      elements on the 
+#    * grid -- control variable representing grid distance. All new
+#      elements on the
 #      canvas are snaped to grid. Default value is 24.
 #    * sizex -- X size of the canvas.
 #    * sizey -- Y size of the canvas.
 #    * curcanvas -- the value of the current canvas.
-#    * autorearrange_enabled -- control variable indicating is 
+#    * autorearrange_enabled -- control variable indicating is
 #      autorearrange enabled.
 #
 #    * defLinkColor -- defines the default link color
@@ -86,7 +86,7 @@
 #    * showNodeLabels -- control variable for showing node labels
 #    * showLinkLabels -- control variable for showing link labels
 #
-#    * supp_router_models -- supproted router models, currently xorp quagga 
+#    * supp_router_models -- supproted router models, currently xorp quagga
 #      and static.
 #    * def_router_model -- default router model
 #****
@@ -112,7 +112,7 @@ set resizemode false
 #
 # Initialize a few variables to default values
 #
-set defLinkColor Red 
+set defLinkColor Red
 set defFillColor Gray
 set defLinkWidth 2
 set defEthBandwidth 0
@@ -176,7 +176,7 @@ set iconsrcfile [lindex [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] 0
 #interface selected in the topology tree
 set selectedIfc ""
 
-# Packets required for GUI 
+# Packets required for GUI
 #package require Img
 
 #
@@ -199,7 +199,7 @@ ttk::frame .panwin.f2 -width 200
 .panwin add .panwin.f2 -weight 0
 .panwin forget .panwin.f2
 pack .panwin -fill both -expand 1
-pack propagate .panwin.f2 0	
+pack propagate .panwin.f2 0
 
 set mf .panwin.f1
 
@@ -250,11 +250,11 @@ bind . <Control-s> "fileSaveDialogBox"
     wm resizable $w 0 0
     wm title $w "Printing options"
     wm iconname $w "Printing options"
-   
+
     #dodan glavni frame "printframe"
     ttk::frame $w.printframe
     pack $w.printframe -fill both -expand 1
- 
+
     ttk::label $w.printframe.msg -wraplength 5i -justify left -text "Print command:"
     pack $w.printframe.msg -side top
 
@@ -269,7 +269,7 @@ bind . <Control-s> "fileSaveDialogBox"
     pack $w.printframe.e1 -side top -pady 5 -padx 10 -fill x
 }
 
-set printFileType ps 
+set printFileType ps
 
 .menubar.file add command -label "Print To File" -underline 9 \
   -command {
@@ -281,11 +281,11 @@ set printFileType ps
     wm resizable $w 0 0
     wm title $w "Printing options"
     wm iconname $w "Printing options"
-   
+
     #dodan glavni frame "printframe"
     ttk::frame $w.printframe
     pack $w.printframe -fill both -expand 1
- 
+
     ttk::label $w.printframe.msg -wraplength 5i -justify left -text "File:"
 
     ttk::frame $w.printframe.ftype
@@ -293,7 +293,7 @@ set printFileType ps
     -variable printFileType -value ps -state enabled
     ttk::radiobutton $w.printframe.ftype.pdf -text "PDF" \
     -variable printFileType -value pdf -state enabled
-    
+
     ttk::frame $w.printframe.path
 
     if {$winOS} {
@@ -361,7 +361,7 @@ bind . <Control-a> selectAllObjects
 .menubar.edit add command -label "Select adjacent" \
     -accelerator "Ctrl+D" -underline 7 -command selectAdjacent
 bind . <Control-d> selectAdjacent
-	
+
 #
 # Canvas
 #
@@ -453,11 +453,11 @@ menu .menubar.tools -tearoff 0
 
     ttk::label $w.ipv4frame.msg -text "IPv4 address range:"
     pack $w.ipv4frame.msg -side top
-	
+
     ttk::entry $w.ipv4frame.e1 -width 27 -validate focus -invalidcommand "focusAndFlash %W"
     $w.ipv4frame.e1 insert 0 $ipv4
     pack $w.ipv4frame.e1 -side top -pady 5 -padx 10 -fill x
-    
+
     $w.ipv4frame.e1 configure -invalidcommand {checkIPv4Net %P}
 
     ttk::frame $w.ipv4frame.buttons
@@ -487,11 +487,11 @@ menu .menubar.tools -tearoff 0
 
     ttk::label $w.ipv6frame.msg -text "IPv6 address range:"
     pack $w.ipv6frame.msg -side top
-	
+
     ttk::entry $w.ipv6frame.e1 -width 27 -validate focus -invalidcommand "focusAndFlash %W"
     $w.ipv6frame.e1 insert 0 $ipv6
     pack $w.ipv6frame.e1 -side top -pady 5 -padx 10 -fill x
-    
+
     $w.ipv6frame.e1 configure -invalidcommand {checkIPv6Net %P}
 
     ttk::frame $w.ipv6frame.buttons
@@ -507,7 +507,7 @@ menu .menubar.tools -tearoff 0
 }
 .menubar.tools add command -label "Routing protocol defaults" -underline 0 -command {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode	
+    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global router_model supp_router_models routerDefaultsModel
     global routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable
 
@@ -560,7 +560,7 @@ menu .menubar.tools -tearoff 0
 	$w.protocols.ripng configure -state disabled
 	$w.protocols.ospf configure -state disabled
 	$w.protocols.ospf6 configure -state disabled
-    }	 
+    }
 
     if { $oper_mode != "edit" } {
 	$w.model.quagga configure -state disabled
@@ -579,12 +579,12 @@ menu .menubar.tools -tearoff 0
 	set routerRipngEnable [lindex $rdconfig 1]
 	set routerOspfEnable [lindex $rdconfig 2]
 	set routerOspf6Enable [lindex $rdconfig 3]
-	destroy $wi	        
+	destroy $wi
     }
-	 
+
     pack $w.model -side top -fill x -pady 5
     pack $w.model.quagga $w.model.xorp $w.model.static \
-	-side left -expand 1 
+	-side left -expand 1
     pack $w.protocols -side top -pady 5
     pack $w.protocols.rip $w.protocols.ripng \
 	$w.protocols.ospf $w.protocols.ospf6 -side left
@@ -604,14 +604,14 @@ menu .menubar.tools -tearoff 0
 #    wm resizable $ns2imdialog 0 0
 #    wm title $ns2imdialog "ns2imunes converter"
 #
-#    ttk::frame $ns2imdialog.ns2convframe 
-#    pack $ns2imdialog.ns2convframe -fill both -expand 1    
+#    ttk::frame $ns2imdialog.ns2convframe
+#    pack $ns2imdialog.ns2convframe -fill both -expand 1
 #
 #    set f1 [ttk::frame $ns2imdialog.ns2convframe.entry1]
 #    set f2 [ttk::frame $ns2imdialog.ns2convframe.buttons]
-#    
+#
 #    ttk::label $f1.l -text "ns2 file:"
-#    
+#
 #    #entry $f1.e -width 25 -textvariable ns2srcfile
 #    ttk::entry $f1.e -width 25 -textvariable ns2srcfile
 #    ttk::button $f1.b -text "Browse" -width 8 \
@@ -620,13 +620,13 @@ menu .menubar.tools -tearoff 0
 #		-initialfile $ns2srcfile]
 #	    $f1.e delete 0 end
 #	    $f1.e insert 0 "$srcfile"
-#    }    
+#    }
 #    ttk::button $f2.b1 -text "OK" -command {
 #	ns2im $srcfile
 #	destroy $ns2imdialog
 #    }
 #    ttk::button $f2.b2 -text "Cancel" -command { destroy $ns2imdialog}
-#    
+#
 #    pack $f1.b $f1.e -side right
 #    pack $f1.l -side right -fill x -expand 1
 #    pack $f2.b1 -side left -expand 1 -anchor e
@@ -642,7 +642,7 @@ menu .menubar.view -tearoff 0
 
 set m .menubar.view.iconsize
 menu $m -tearoff 0
-.menubar.view add cascade -label "Icon size" -menu $m -underline 5 
+.menubar.view add cascade -label "Icon size" -menu $m -underline 5
     $m add radiobutton -label "Small" -variable iconSize \
 	-value small -command { updateIconSize; redrawAll }
     $m add radiobutton -label "Normal" -variable iconSize \
@@ -742,7 +742,7 @@ bind . "-" "zoom down"
 set m .menubar.view.themes
 menu $m -tearoff 0
 set currentTheme imunes
-.menubar.view add cascade -label "Themes" -menu $m 
+.menubar.view add cascade -label "Themes" -menu $m
     $m add radiobutton -label "alt" -variable currentTheme \
 	-value alt -command "ttk::style theme use alt"
     $m add radiobutton -label "classic" -variable currentTheme\
@@ -769,13 +769,13 @@ set lastObservedNode ""
 
 set widgetlist { \
     { "ifconfig" "ifconfig" } \
-    { "IPv4 Routing table" "netstat -rnf inet" } \
-    { "IPv6 Routing table" "netstat -rnf inet6" } \
+    { "IPv4 Routing table" "netstat -4 -rn" } \
+    { "IPv6 Routing table" "netstat -6 -rn" } \
     { "RIP routes info" "vtysh -c \"show ip rip\"" } \
     { "RIPng routes info" "vtysh -c \"show ipv6 ripng\"" } \
     { "Process list" "ps ax" } \
-    { "IPv4 sockets" "netstat -anf inet" } \
-    { "IPv6 sockets" "netstat -anf inet6" } \
+    { "IPv4 sockets" "netstat -4 -an" } \
+    { "IPv6 sockets" "netstat -6 -an" } \
     { "View startup script" "cat boot.conf" } \
     { "View startup log" "cat out.log" } \
     { "List files" "ls" } \
@@ -788,7 +788,7 @@ foreach widget $widgetlist {
 
 .menubar.widgets add command -label "Custom..." \
     -underline 0 -command {
-    global showConfig   
+    global showConfig
     set w .entry1
     catch {destroy $w}
     toplevel $w
@@ -796,10 +796,10 @@ foreach widget $widgetlist {
     wm resizable $w 0 0
     wm title $w "Custom widget"
     wm iconname $w "Custom widget"
-   
+
     ttk::frame $w.custom
     pack $w.custom -fill both -expand 1
- 
+
     ttk::label $w.custom.label -wraplength 5i -justify left -text "Custom command:"
     pack $w.custom.label -side top
 
@@ -882,7 +882,7 @@ pack $mf.left -side left -fill y
 foreach b {select link} {
 
     set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$b.gif]
- 
+
    ttk::button $mf.left.$b \
 	-image $image -style Toolbutton \
 	-command "setActiveTool $b"
