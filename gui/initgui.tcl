@@ -186,9 +186,17 @@ set selectedIfc ""
 wm minsize . 640 410
 wm geometry . 1016x716-20+0
 
-set icon16 [image create photo -file $ROOTDIR/$LIBDIR/icons/imunes_icon16.gif]
-set icon32 [image create photo -file $ROOTDIR/$LIBDIR/icons/imunes_icon32.gif]
-wm iconphoto . -default $icon32 $icon16
+set iconlist ""
+foreach size "256 128 64" {
+    set path "$ROOTDIR/$LIBDIR/icons/imunes_icon$size.png"
+    if {[file exists $path]} {
+	set icon$size [image create photo -file $path]
+	append iconlist "\$icon$size "
+    }
+}
+if { $iconlist != "" } {
+    eval wm iconphoto . -default $iconlist
+}
 
 ttk::style theme use imunes
 
