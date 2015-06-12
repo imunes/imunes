@@ -2613,7 +2613,10 @@ proc deleteConfig { wi node } {
 #****
 proc createNewConfiguration { wi node } {
     set cfgName [string trim [$wi.options.e get]]
-    if {"$wi.nb.$cfgName" in [$wi.nb tabs] || $cfgName == ""}  {
+    if { $cfgName == "" } {
+	set cfgName "default"
+    }
+    if {"$wi.nb.$cfgName" in [$wi.nb tabs]}  {
 	return
     }
     set cfgName [string tolower $cfgName 0 0]
