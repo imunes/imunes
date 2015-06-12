@@ -386,13 +386,14 @@ proc removeExperimentContainer { eid widget } {}
 proc removeNodeContainer { eid node } {
     set node_id $eid.$node
 
-    exec docker rm $node_id
+    catch "exec docker kill $node_id"
+    catch "exec docker rm $node_id"
 }
 
 proc killAllNodeProcesses { eid node } {
     set node_id "$eid.$node"
 
-    catch "exec docker kill $node_id"
+    catch "exec docker exec $node_id killall5 -9"
 }
 
 proc destroyVirtNodeIfcs { eid vimages } {}
@@ -434,7 +435,23 @@ proc destroyLinkBetween { eid lnode1 lnode2 } {
     catch {exec ovs-vsctl del-br $eid.$lname}
 }
 
-proc removeNodeIfcIPaddrs { eid node } {}
+#****f* linux.tcl/removeNodeIfcIPaddrs
+# NAME
+#   removeNodeIfcIPaddrs -- remove node iterfaces' IP addresses
+# SYNOPSIS
+#   removeNodeIfcIPaddrs $eid $node
+# FUNCTION
+#   Remove all IPv4 and IPv6 addresses from interfaces on the given node.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
+proc removeNodeIfcIPaddrs { eid node } {
+    set node_id "$eid.$node"
+    foreach ifc [allIfcList $node] {
+        catch "exec docker exec $node_id ip addr flush dev $ifc"
+    }
+}
 
 proc removeExperimentContainer { eid widget } {
     set VROOT_BASE [getVrootDir]
