@@ -337,7 +337,12 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
                 set interface $eid.$lnode2.$ifname2 type=patch options:peer=$eid.$lnode1.$ifname1
         }
         if { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
-            exec pipework $eid.$lnode1 -i $ifname2 $eid.$lnode2 0/0 $ether2
+            if {[nodeType $lnode1] == "rj45"} {
+                set extIfcName [getNodeName $lnode1]
+                exec pipework $eid.$extIfcName -i $ifname2 $eid.$lnode2 0/0 $ether2
+            } else {
+                exec pipework $eid.$lnode1 -i $ifname2 $eid.$lnode2 0/0 $ether2
+            }
         }
     } elseif { [[typemodel $lnode1].virtlayer] == "VIMAGE" } {
         if  { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
@@ -347,7 +352,12 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
             exec pipework $eid.$link -i $ifname2 $eid.$lnode2 0/0 $ether2
         }
         if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
-            exec pipework $eid.$lnode2 -i $ifname1 $eid.$lnode1 0/0 $ether1
+            if {[nodeType $lnode2] == "rj45"} {
+                set extIfcName [getNodeName $lnode2]
+                exec pipework $eid.$extIfcName -i $ifname1 $eid.$lnode1 0/0 $ether1
+            } else {
+                exec pipework $eid.$lnode2 -i $ifname1 $eid.$lnode1 0/0 $ether1
+            }
         }
     }
 }
@@ -593,8 +603,8 @@ proc getExtIfcs { } {
 #****
 proc captureExtIfc { eid node } {
     set ifname [getNodeName $node]
-    createNetgraphNode $eid $node
-    catch {exec ovs-vsctl add-port $eid.$node $ifname}
+    createNetgraphNode $eid $ifname
+    catch {exec ovs-vsctl add-port $eid.$ifname $ifname}
 }
 
 #****f* linux.tcl/releaseExtIfc
@@ -609,7 +619,8 @@ proc captureExtIfc { eid node } {
 #   * node -- node id
 #****
 proc releaseExtIfc { eid node } {
-    destroyNetgraphNode $eid $node
+    set ifname [getNodeName $node]
+    catch "destroyNetgraphNode $eid $ifname"
 }
 
 proc getNodeNamespace { node } {
