@@ -318,7 +318,7 @@ proc $MODULE.bootcmd { node } {
 #   * shells -- default shells for the router.xorp
 #****
 proc $MODULE.shellcmds {} {
-    return "csh xorpsh bash sh tcsh"
+    return "csh bash xorpsh sh tcsh"
 }
 
 #****f* xorp.tcl/router.xorp.instantiate

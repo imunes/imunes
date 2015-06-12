@@ -177,7 +177,7 @@ proc $MODULE.bootcmd { node } {
 #   * shells -- default shells for the router.quagga
 #****
 proc $MODULE.shellcmds {} {
-    return "csh vtysh bash sh tcsh"
+    return "csh bash vtysh sh tcsh"
 }
 
 #****f* quagga.tcl/router.quagga.instantiate
