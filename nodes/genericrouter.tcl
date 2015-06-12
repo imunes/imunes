@@ -95,7 +95,7 @@ proc $MODULE.confNewNode { node } {
     }
 
     set nconfig [list \
-	"hostname $node" \
+	"hostname [getNewNodeNameType router router]" \
 	! ]
     lappend $node "network-config [list $nconfig]"
     
