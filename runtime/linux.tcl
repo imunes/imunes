@@ -177,9 +177,14 @@ proc spawnShell { node cmd } {
 
     set node_id $eid\.$node
 
+    # vtysh needs to have a pager defined
+    if { $cmd == "/usr/bin/vtysh" } {
+	set cmd "bash -c 'VTYSH_PAGER=more /usr/bin/vtysh'"
+    }
+
     # FIXME make this modular
     nexec xterm -sb -rightbar \
-    -T "IMUNES: [getNodeName $node] (console) [lindex [split $cmd /] end]" \
+    -T "IMUNES: [getNodeName $node] (console) [string trim [lindex [split $cmd /] end] ']" \
     -e "docker exec -it $node_id $cmd" &
 }
 
