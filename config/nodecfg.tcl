@@ -2760,7 +2760,7 @@ proc nodeCfggenIfcIPv6 { node } {
 # SYNOPSIS
 #   nodeCfggenRouteIPv4 $node
 # FUNCTION
-#   Generate IPv4 route configuration on all node interfaces.
+#   Generate IPv4 route configuration.
 # INPUTS
 #   * node -- node to generate configuration for
 # RESULT
@@ -2780,7 +2780,7 @@ proc nodeCfggenRouteIPv4 { node } {
 # SYNOPSIS
 #   nodeCfggenRouteIPv6 $node
 # FUNCTION
-#   Generate IPv6 route configuration on all node interfaces.
+#   Generate IPv6 route configuration.
 # INPUTS
 #   * node -- node to generate configuration for
 # RESULT
@@ -2792,4 +2792,63 @@ proc nodeCfggenRouteIPv6 { node } {
 	lappend cfg [getIPv6RouteCmd $statrte]
     }
     return $cfg
+}
+
+#****f* nodecfg.tcl/getAllNodesType
+# NAME
+#   getAllNodesType -- get list of all nodes of a certain type
+# SYNOPSIS
+#   getAllNodesType $type
+# FUNCTION
+#   Passes through the list of all nodes and returns a list of nodes of the
+#   specified type.
+# INPUTS
+#   * type -- node type
+# RESULT
+#   * list -- list of all nodes of the type
+#****
+proc getAllNodesType { type } {
+    upvar 0 ::cf::[set ::curcfg]::node_list node_list
+    set type_list ""
+    foreach node $node_list {
+	if { [string match "$type*" [typemodel $node]] } {
+	    lappend type_list $node
+	}
+    }
+    return $type_list
+}
+
+#****f* nodecfg.tcl/getNewNodeNameType
+# NAME
+#   getNewNodeNameType -- get a new node name for a certain type
+# SYNOPSIS
+#   getNewNodeNameType $type $namebase
+# FUNCTION
+#   Returns a new node name for the type and namebase, e.g. pc0 for pc.
+# INPUTS
+#   * type -- node type
+#   * namebase -- base for the node name
+# RESULT
+#   * name -- new node name to be assigned
+#****
+proc getNewNodeNameType { type namebase } {
+    upvar 0 ::cf::[set ::curcfg]::num$type num$type
+
+    #if the variable pcnodes isn't set we need to check through all the nodes
+    #to assign a non duplicate name
+    if {! [info exists num$type] } {
+	set num$type 0
+	foreach n [getAllNodesType $type] {
+	    set name [getNodeName $n]
+	    if {[string match "$namebase*" $name]} {
+		set rest [string trimleft $name $namebase]
+		if { [string is integer $rest] && $rest > [set num$type] } {
+		    set num$type $rest
+		}
+	    }
+	}
+    }
+
+    incr num$type
+    return $namebase[set num$type]
 }
