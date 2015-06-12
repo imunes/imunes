@@ -14,7 +14,10 @@ set VROOT_MASTER "imunes/vroot:base"
 #****
 proc writeDataToNodeFile { node path data } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set node_id "$eid.$node"
     set node_dir [getVrootDir]/$eid/$node
+
     writeDataToFile $node_dir/$path $data
     exec docker exec -i $node_id sh -c "cat > $path" < $node_dir/$path
 }
