@@ -347,7 +347,6 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
     } elseif { [[typemodel $lnode1].virtlayer] == "VIMAGE" } {
         if  { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
             set link [linkByPeers $lnode1 $lnode2]
-            exec ovs-vsctl add-br $eid.$link
             pipework $link $ifname1 $lnode1 $ether1
             pipework $link $ifname2 $lnode2 $ether2
         }
@@ -384,6 +383,8 @@ proc startIfcsNode { node } {
         if {$ifc != "lo0"} {
             set mtu [getIfcMTU $node $ifc]
             if {[getIfcOperState $node $ifc] == "up"} {
+                set cmds "$cmds\n docker exec $node_id ip link set dev $ifc up mtu $mtu"
+            } else {
                 set cmds "$cmds\n docker exec $node_id ip link set dev $ifc mtu $mtu"
             }
         }
@@ -688,8 +689,7 @@ proc getNodeNamespace { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     set node_id "$eid.$node"
-    catch {exec docker inspect -f '{{.State.Pid}}' $node_id} ns
-    set ns [string trim $ns "'"]
+    catch {exec docker inspect -f "{{.State.Pid}}" $node_id} ns
     return $ns
 }
 
@@ -719,7 +719,6 @@ proc pipework { bridge ifc node mac } {
     exec ip link set "$guestIfc" netns "$nodeNs"
     exec ip netns exec "$nodeNs" ip link set "$guestIfc" name "$ifc"
     exec ip netns exec "$nodeNs" ip link set dev "$ifc" address "$mac"
-    exec ip netns exec "$nodeNs" ip link set "$ifc" up
 
     # remove nodeNs to avoid `ip netns` catching it
     exec rm -f "/var/run/netns/$nodeNs"
