@@ -687,9 +687,8 @@ proc hub.start { eid node } {
     set node_id "$eid.$node"
     catch {exec ovs-vsctl list-ports $node_id} ports
     foreach port $ports {
-        catch {exec ovs-vsctl -- set bridge $node_id mirrors=@m \
+        catch {exec ovs-vsctl -- add bridge $node_id mirrors @m \
         -- --id=@p get port $port \
-        -- --id=@m create mirror name=$node_id.$port \
-        select-all=true output-port=@p}
+        -- --id=@m create mirror name=$port select-all=true output-port=@p}
     }
 }
