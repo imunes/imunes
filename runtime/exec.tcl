@@ -98,6 +98,14 @@ proc setOperMode { mode } {
     if { !$cfgDeployed } {
 	    if { $mode == "exec" } { ;# let's try something, sockets should be opened
 		set os [platform::identify]
+		set err [checkSysPrerequisites]
+		if { $err != "" } {
+		    after idle {.dialog1.msg configure -wraplength 4i}
+		    tk_dialog .dialog1 "IMUNES error" \
+			"$err" \
+			info 0 Dismiss
+		    return
+		}
 		if { [string match -nocase "*linux*" $os] != 1 &&
 		    [string match -nocase "*freebsd*" $os] != 1 } {
 		    after idle {.dialog1.msg configure -wraplength 4i}

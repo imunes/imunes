@@ -174,6 +174,14 @@ if { [string match -nocase "*freebsd*" $os] == 1 } {
     }
 }
 
+if { $execMode == "batch" } {
+    set err [checkSysPrerequisites]
+    if { $err != "" } {
+	puts $err
+	exit
+    }
+}
+
 # Configuration libraries
 foreach file [glob -directory $ROOTDIR/$LIBDIR/config *.tcl] {
     source $file

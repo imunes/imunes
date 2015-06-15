@@ -1948,3 +1948,6 @@ proc getIPv4RouteCmd { statrte } {
 proc getIPv6RouteCmd { statrte } {
     return "route -q add -inet6 $statrte"
 }
+
+proc checkSysPrerequisites {} {
+}

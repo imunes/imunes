@@ -723,3 +723,24 @@ proc pipework { bridge ifc node mac } {
     # remove nodeNs to avoid `ip netns` catching it
     exec rm -f "/var/run/netns/$nodeNs"
 }
+
+proc checkSysPrerequisites {} {
+    set msg ""
+    if { [catch {exec docker ps } err] } {
+	set msg "Cannot start experiment. Is docker installed and running?\n"
+    }
+
+    if { [catch {exec pgrep ovs-vswitchd } err ] } {
+	set msg "Cannot start experiment. Is ovs-vswitchd installed and running?\n"
+    }
+
+    if { [catch {exec xterm -version}] } {
+	set msg "Cannot start experiment. Is xterm installed?\n"
+    }
+
+    if { $msg != "" } {
+	return "$msg\IMUNES needs docker and ovs-vswitchd services running and xterm installed."
+    }
+
+    return ""
+}
