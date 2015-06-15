@@ -1,0 +1,44 @@
+#! /bin/sh
+
+#####
+# Clean everything:
+# 1. Terminate all running experiments.
+# 2. Remove all remaining docker nodes (imunes nodes).
+# 3. Remove all openvswitch bridges (imunes links).
+# 4. Remove virtual node and attach files.
+##
+
+attach_root="/var/run/imunes"
+mounts_root="/var/imunes"
+
+eids=`himage -l | awk '{print $1}'`
+for e in $eids; do
+    echo "Cleaning experiment with eid $e."
+    imunes -b -e $e
+done
+
+dockers=`docker ps -a | tail -n +2 | grep "imunes" | awk '{print $1}' `
+for id in $dockers; do
+    echo "Destroying docker $id."
+    docker kill $id > /dev/null
+    docker rm $id > /dev/null
+done
+
+bridges=`ovs-vsctl list-br`
+for id in $bridges; do
+    ovs-vsctl del-br $id
+    echo "Destroying openvswitch bridge $id."
+done
+
+cd $mounts_root
+mounts=`ls | grep -v vroot`
+for mount in $mounts; do
+    echo "Destroying imunes files $mounts_root/$mount."
+    rm -fr $mount
+done
+
+cd $attach_root
+for dir in `ls`; do
+    echo "Removing attach directory $attach_root/$dir."
+    rm -fr $dir
+done

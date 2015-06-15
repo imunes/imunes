@@ -64,8 +64,9 @@ install: uninstall
 	cp $(TOOLS) $(BINDIR)
 ifeq ($(UNAME_S), Linux)
 	mv $(BINDIR)/himage.linux $(BINDIR)/himage
+	mv $(BINDIR)/cleanupAll.linux $(BINDIR)/cleanupAll
 else
-	rm $(BINDIR)/himage.linux
+	rm $(BINDIR)/himage.linux $(BINDIR)/cleanupAll.linux
 endif
 
 	mkdir -p $(SCRIPTSDIR)
