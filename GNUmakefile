@@ -22,7 +22,7 @@ GUIFILES =	$(wildcard gui/*.tcl)
 NODESFILES =	$(wildcard nodes/*.tcl)
 RUNTIMEFILES =	$(wildcard runtime/*.tcl)
 
-VROOT =	$(wildcard scripts/*.sh) 
+VROOT =	$(wildcard scripts/*.sh)
 TOOLS =	$(filter-out $(VROOT), $(wildcard scripts/*))
 
 NODE_ICONS = frswitch.gif hub.gif lanswitch.gif rj45.gif cloud.gif host.gif \
@@ -34,7 +34,7 @@ SMALL_ICONS = $(NODE_ICONS)
 
 TINY_ICONS = $(NODE_ICONS) link.gif select.gif l2.gif l3.gif freeform.gif \
 		oval.gif rectangle.gif text.gif
-		  
+
 ICONS = imunes_icon32.gif imunes_icon16.gif
 
 info:
@@ -96,10 +96,10 @@ install: uninstall
 		cp icons/normal/$${file} $(NORMAL_ICONSDIR); \
 	done ;
 
-	mkdir -p $(SMALL_ICONSDIR)	
+	mkdir -p $(SMALL_ICONSDIR)
 	for file in $(SMALL_ICONS); do \
 		cp icons/small/$${file} $(SMALL_ICONSDIR); \
-	done ;	
+	done ;
 
 	mkdir -p $(TINY_ICONSDIR)
 	for file in $(TINY_ICONS); do \
@@ -148,14 +148,14 @@ tarball:
 	for file in $(SMALL_ICONS); do \
 		cp icons/small/$${file} ../$(TARBALL_DIR)/icons/small; \
 	done ;
-	
+
 	mkdir -p ../$(TARBALL_DIR)/icons/tiny
 	for file in $(TINY_ICONS); do \
 		cp icons/tiny/$${file} ../$(TARBALL_DIR)/icons/tiny; \
 	done ;
 
 	cd .. && tar czfv $(TARBALL_DIR).tar.gz $(TARBALL_DIR)
-	rm -r ../$(TARBALL_DIR) 
+	rm -r ../$(TARBALL_DIR)
 
 release:
 	rm -f ../$(RELEASE_DIR).tar.gz
@@ -177,11 +177,11 @@ release:
 	for file in $(SMALL_ICONS); do \
 		cp icons/small/$${file} ../$(RELEASE_DIR)/icons/small; \
 	done ;
-	
+
 	mkdir -p ../$(RELEASE_DIR)/icons/tiny
 	for file in $(TINY_ICONS); do \
 		cp icons/tiny/$${file} ../$(RELEASE_DIR)/icons/tiny; \
 	done ;
 
 	cd .. && tar czfv $(RELEASE_DIR).tar.gz $(RELEASE_DIR)
-	rm -r ../$(RELEASE_DIR) 
+	rm -r ../$(RELEASE_DIR)

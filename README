@@ -12,9 +12,9 @@ execution engine itself operates within the operating system kernel.
 
 System requirements
 ===================
-  
+
     1) Operating system
- 
+
     IMUNES works on top of the FreeBSD 8 (or higher) kernel that is
     compiled with the VIMAGE option included. A sample kernel kernel
     config file is as follows:
@@ -34,9 +34,9 @@ System requirements
 	$ make depend; make
 	$ make install
 	$ reboot
-  
-    2) FreeBSD packages 
-  
+
+    2) FreeBSD packages
+
     The following packages have to be installed for IMUNES to work:
         tcl86.tbz
         tk86.tbz
