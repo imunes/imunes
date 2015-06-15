@@ -1,4 +1,4 @@
-set VROOT_MASTER "imunes/vroot:base"
+set VROOT_MASTER "docker.io/imunes/vroot:base"
 
 #****f* linux.tcl/writeDataToNodeFile
 # NAME
