@@ -15,6 +15,7 @@ IMUNESDATE = `date +"%Y%m%d"`
 IMUNESVER = 1.0
 TARBALL_DIR = imunes_$(IMUNESDATE)
 RELEASE_DIR = imunes-$(IMUNESVER)
+UNAME_S = $(shell uname -s)
 
 BASEFILES =	COPYRIGHT README
 CONFIGFILES =	$(wildcard config/*.tcl)
@@ -61,6 +62,11 @@ install: uninstall
 	chmod 755 $(BINDIR)/imunes
 
 	cp $(TOOLS) $(BINDIR)
+ifeq ($(UNAME_S), Linux)
+	mv $(BINDIR)/himage.linux $(BINDIR)/himage
+else
+	rm $(BINDIR)/himage.linux
+endif
 
 	mkdir -p $(SCRIPTSDIR)
 	for file in $(notdir $(TOOLS)); do \
