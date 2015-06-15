@@ -272,7 +272,7 @@ proc createNodeContainer { node } {
     set node_id "$eid.$node"
 
     catch {exec docker run --privileged --cap-add=ALL --net='none' -h [getNodeName $node] \
-        --name $node_id $VROOT_MASTER perl -e sleep 2> /dev/null &}
+        --name $node_id $VROOT_MASTER 2> /dev/null &}
 
     set status ""
     while { [string match 'true' $status] != 1 } {
@@ -337,17 +337,26 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
                 set interface $eid.$lnode2.$ifname2 type=patch options:peer=$eid.$lnode1.$ifname1
         }
         if { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
-            exec pipework $eid.$lnode1 -i $ifname2 $eid.$lnode2 0/0 $ether2
+            if {[nodeType $lnode1] == "rj45"} {
+                set extIfcName [getNodeName $lnode1]
+                pipework $extIfcName $ifname2 $lnode2 $ether2
+            } else {
+                pipework $lnode1 $ifname2 $lnode2 $ether2
+            }
         }
     } elseif { [[typemodel $lnode1].virtlayer] == "VIMAGE" } {
         if  { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
             set link [linkByPeers $lnode1 $lnode2]
-            exec ovs-vsctl add-br $eid.$link
-            exec pipework $eid.$link -i $ifname1 $eid.$lnode1 0/0 $ether1
-            exec pipework $eid.$link -i $ifname2 $eid.$lnode2 0/0 $ether2
+            pipework $link $ifname1 $lnode1 $ether1
+            pipework $link $ifname2 $lnode2 $ether2
         }
         if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
-            exec pipework $eid.$lnode2 -i $ifname1 $eid.$lnode1 0/0 $ether1
+            if {[nodeType $lnode2] == "rj45"} {
+                set extIfcName [getNodeName $lnode2]
+                pipework $extIfcName $ifname1 $lnode1 $ether1
+            } else {
+                pipework $lnode2 $ifname1 $lnode1 $ether1
+            }
         }
     }
 }
@@ -374,6 +383,8 @@ proc startIfcsNode { node } {
         if {$ifc != "lo0"} {
             set mtu [getIfcMTU $node $ifc]
             if {[getIfcOperState $node $ifc] == "up"} {
+                set cmds "$cmds\n docker exec $node_id ip link set dev $ifc up mtu $mtu"
+            } else {
                 set cmds "$cmds\n docker exec $node_id ip link set dev $ifc mtu $mtu"
             }
         }
@@ -593,8 +604,8 @@ proc getExtIfcs { } {
 #****
 proc captureExtIfc { eid node } {
     set ifname [getNodeName $node]
-    createNetgraphNode $eid $node
-    catch {exec ovs-vsctl add-port $eid.$node $ifname}
+    createNetgraphNode $eid $ifname
+    catch {exec ovs-vsctl add-port $eid.$ifname $ifname}
 }
 
 #****f* linux.tcl/releaseExtIfc
@@ -609,16 +620,8 @@ proc captureExtIfc { eid node } {
 #   * node -- node id
 #****
 proc releaseExtIfc { eid node } {
-    destroyNetgraphNode $eid $node
-}
-
-proc getNodeNamespace { node } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    set node_id "$eid.$node"
-    catch {exec docker inspect -f '{{.State.Pid}}' $node_id} ns
-    set ns [string trim $ns "'"]
-    return $ns
+    set ifname [getNodeName $node]
+    catch "destroyNetgraphNode $eid $ifname"
 }
 
 proc getIPv4RouteCmd { statrte } {
@@ -670,4 +673,53 @@ proc getRunningNodeIfcList { node } {
     set lines [split $full "\n"]
 
     return $lines
+}
+
+proc hub.start { eid node } {
+    set node_id "$eid.$node"
+    catch {exec ovs-vsctl list-ports $node_id} ports
+    foreach port $ports {
+        catch {exec ovs-vsctl -- add bridge $node_id mirrors @m \
+        -- --id=@p get port $port \
+        -- --id=@m create mirror name=$port select-all=true output-port=@p}
+    }
+}
+
+proc getNodeNamespace { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set node_id "$eid.$node"
+    catch {exec docker inspect -f "{{.State.Pid}}" $node_id} ns
+    return $ns
+}
+
+proc pipework { bridge ifc node mac } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    # prepare namespace files
+    set nodeNs [getNodeNamespace $node]
+    exec mkdir -p /var/run/netns
+    exec rm -f "/var/run/netns/$nodeNs"
+    exec ln -s "/proc/$nodeNs/ns/net" "/var/run/netns/$nodeNs"
+
+    # create bridge
+    catch "exec ovs-vsctl add-br $eid.$bridge"
+
+    # generate interface names
+    set hostIfc "v${ifc}pl${nodeNs}"
+    set guestIfc "v${ifc}pg${nodeNs}"
+
+    # create veth pair
+    exec ip link add name "$hostIfc" type veth peer name "$guestIfc"
+    # add host side of veth pair to bridge
+    exec ovs-vsctl add-port "$eid.$bridge" "$hostIfc"
+    exec ip link set "$hostIfc" up
+
+    # move guest side of veth pair to node namespace
+    exec ip link set "$guestIfc" netns "$nodeNs"
+    exec ip netns exec "$nodeNs" ip link set "$guestIfc" name "$ifc"
+    exec ip netns exec "$nodeNs" ip link set dev "$ifc" address "$mac"
+
+    # remove nodeNs to avoid `ip netns` catching it
+    exec rm -f "/var/run/netns/$nodeNs"
 }
