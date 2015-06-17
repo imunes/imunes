@@ -36,7 +36,7 @@ SMALL_ICONS = $(NODE_ICONS)
 TINY_ICONS = $(NODE_ICONS) link.gif select.gif l2.gif l3.gif freeform.gif \
 		oval.gif rectangle.gif text.gif
 
-ICONS = imunes_icon32.gif imunes_icon16.gif
+ICONS = $(wildcard icons/imunes_icon*)
 
 info:
 	@echo 	"To install the IMUNES GUI use: make install"
@@ -95,7 +95,7 @@ endif
 
 	mkdir -p $(ICONSDIR)
 	for file in $(ICONS); do \
-		cp icons/$${file} $(ICONSDIR); \
+		cp $${file} $(ICONSDIR); \
 	done ;
 
 	mkdir -p $(NORMAL_ICONSDIR)
