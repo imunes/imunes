@@ -33,11 +33,11 @@
 # NAME
 #  linkcfg.tcl -- file used for manipultaion with links in IMUNES
 # FUNCTION
-#  This module is used to define all the actions used for configuring 
-#  links in IMUNES. 
+#  This module is used to define all the actions used for configuring
+#  links in IMUNES.
 #
 # NOTES
-# 
+#
 # linkPeers { link }
 #	Returns nodes of link endpoints
 #
@@ -51,7 +51,7 @@
 #	... in bits per second
 #
 # getLinkBandwidthString { link }
-#	... as string 
+#	... as string
 #
 # getLinkDelay { link }
 #	... in microseconds
@@ -121,8 +121,8 @@ proc linkByPeers { node1 node2 } {
 # SYNOPSIS
 #   removeLink $link
 # FUNCTION
-#   Removes the link and related entries in peering node's configs. 
-#   Updates the default route for peer nodes. 
+#   Removes the link and related entries in peering node's configs.
+#   Updates the default route for peer nodes.
 # INPUTS
 #   * link -- link id
 #****
@@ -140,12 +140,12 @@ proc removeLink { link } {
 	set i [lsearch $pnodes $node]
 	set peer [lreplace $pnodes $i $i]
 	set ifc [ifcByPeer $node $peer]
-	set index [lsearch -exact $IPv4UsedList [getIfcIPv4addr $node $ifc]] 
-	set IPv4UsedList [lreplace $IPv4UsedList $index $index] 
-	set index [lsearch -exact $IPv6UsedList [getIfcIPv6addr $node $ifc]] 
-	set IPv6UsedList [lreplace $IPv6UsedList $index $index] 
-	set index [lsearch -exact $MACUsedList [getIfcMACaddr $node $ifc]] 
-	set MACUsedList [lreplace $MACUsedList $index $index] 
+	set index [lsearch -exact $IPv4UsedList [getIfcIPv4addr $node $ifc]]
+	set IPv4UsedList [lreplace $IPv4UsedList $index $index]
+	set index [lsearch -exact $IPv6UsedList [getIfcIPv6addr $node $ifc]]
+	set IPv6UsedList [lreplace $IPv6UsedList $index $index]
+	set index [lsearch -exact $MACUsedList [getIfcMACaddr $node $ifc]]
+	set MACUsedList [lreplace $MACUsedList $index $index]
 	netconfClearSection $node "interface $ifc"
 	set i [lsearch [set $node] "interface-peer {$ifc $peer}"]
 	set $node [lreplace [set $node] $i $i]
@@ -159,7 +159,7 @@ proc removeLink { link } {
 	    switch -exact [getLogIfcType $node $lifc] {
 		vlan {
 		    if {[getIfcVlanDev $node $lifc] == $ifc} {
-			netconfClearSection $node "interface $lifc"		
+			netconfClearSection $node "interface $lifc"
 		    }
 		}
 	    }
@@ -281,7 +281,7 @@ proc getLinkColor { link } {
 # SYNOPSIS
 #   setLinkColor $link $value
 # FUNCTION
-#   Sets the color of the link. 
+#   Sets the color of the link.
 # INPUTS
 #   * link -- link id
 #   * value -- link color
@@ -690,7 +690,7 @@ proc setLinkBER { link value } {
 
 #****f* linkcfg.tcl/getLinkDup
 # NAME
-#   getLinkDup -- get link packet duplicate value 
+#   getLinkDup -- get link packet duplicate value
 # SYNOPSIS
 #   set duplicate [getLinkDup $link]
 # FUNCTION
@@ -709,7 +709,7 @@ proc getLinkDup { link } {
 
 #****f* linkcfg.tcl/setLinkDup
 # NAME
-#   setLinkDup -- set link packet duplicate value 
+#   setLinkDup -- set link packet duplicate value
 # SYNOPSIS
 #   setLinkDup $link $value
 # FUNCTION
@@ -731,7 +731,7 @@ proc setLinkDup { link value } {
 
 #****f* linkcfg.tcl/linkResetConfig
 # NAME
-#   linkResetConfig -- reset link configuration 
+#   linkResetConfig -- reset link configuration
 # SYNOPSIS
 #   linkResetConfig $link
 # FUNCTION
@@ -742,10 +742,10 @@ proc setLinkDup { link value } {
 proc linkResetConfig { link } {
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
 
-    setLinkBandwidth $link "" 
-    setLinkBER $link "" 
-    setLinkDelay $link "" 
-    setLinkDup $link "" 
+    setLinkBandwidth $link ""
+    setLinkBER $link ""
+    setLinkDelay $link ""
+    setLinkDup $link ""
     if { $oper_mode == "exec" } {
 	upvar 0 ::cf::[set ::curcfg]::eid eid
 	execSetLinkParams $eid $link
@@ -755,7 +755,7 @@ proc linkResetConfig { link } {
 
 #****f* linkcfg.tcl/getLinkMirror
 # NAME
-#   getLinkMirror -- get link's mirror link 
+#   getLinkMirror -- get link's mirror link
 # SYNOPSIS
 #   set mirror_link_id [getLinkMirror $link]
 # FUNCTION
@@ -776,7 +776,7 @@ proc getLinkMirror { link } {
 
 #****f* linkcfg.tcl/setLinkMirror
 # NAME
-#   setLinkMirror -- set link's mirror link 
+#   setLinkMirror -- set link's mirror link
 # SYNOPSIS
 #   setLinkMirror $link $mirror_link_id
 # FUNCTION
@@ -809,7 +809,7 @@ proc setLinkMirror { link value } {
 #   link.
 # INPUTS
 #   * link -- link id
-#   * nodetype -- type of the new nodes connecting split links. 
+#   * nodetype -- type of the new nodes connecting split links.
 #     Usual value is pseudo.
 # RESULT
 #   * nodes -- list of node ids of new nodes.
@@ -988,7 +988,7 @@ proc newLink { lnode1 lnode2 } {
 	    }
 	}
     }
-    
+
     set link [newObjectId link]
     upvar 0 ::cf::[set ::curcfg]::$link $link
     set $link {}
@@ -1027,7 +1027,7 @@ proc newLink { lnode1 lnode2 } {
 	    [nodeType $lnode1].confNewIfc $lnode1 $ifname1
 	}
     }
-    
+
     return $link
 }
 
@@ -1039,7 +1039,7 @@ proc newLink { lnode1 lnode2 } {
 # FUNCTION
 #   Returns the link id of the link connecting the node's interface.
 # INPUTS
-#   * node -- node id 
+#   * node -- node id
 #   * ifc -- interface
 # RESULT
 #   * link -- link id.

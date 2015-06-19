@@ -262,6 +262,7 @@ proc prepareFilesystemForNode { node } {
     set VROOTDIR /var/imunes
     set VROOT_RUNTIME $VROOTDIR/$eid/$node
     pipesExec "mkdir -p $VROOT_RUNTIME" "hold"
+    pipesExec "mkdir -p /var/run/netns" "hold"
 }
 
 #XXX-comment
@@ -339,23 +340,39 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
         if { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
             if {[nodeType $lnode1] == "rj45"} {
                 set extIfcName [getNodeName $lnode1]
-                pipework $extIfcName $ifname2 $lnode2 $ether2
+                addNodeIfcToBridge $extIfcName $ifname2 $lnode2 $ether2
             } else {
-                pipework $lnode1 $ifname2 $lnode2 $ether2
+                addNodeIfcToBridge $lnode1 $ifname2 $lnode2 $ether2
             }
         }
     } elseif { [[typemodel $lnode1].virtlayer] == "VIMAGE" } {
         if  { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
-            set link [linkByPeers $lnode1 $lnode2]
-            pipework $link $ifname1 $lnode1 $ether1
-            pipework $link $ifname2 $lnode2 $ether2
+            # prepare namespace files
+            set lnode1Ns [createNetNs $lnode1]
+            set lnode2Ns [createNetNs $lnode2]
+            # generate temporary interface names
+            set hostIfc1 "v${ifname1}pn${lnode1Ns}"
+            set hostIfc2 "v${ifname2}pn${lnode2Ns}"
+            # create veth pair
+            exec ip link add name "$hostIfc1" type veth peer name "$hostIfc2"
+            # move veth pair sides to node namespaces
+            setIfcNetNs $lnode1 $hostIfc1 $ifname1
+            setIfcNetNs $lnode2 $hostIfc2 $ifname2
+            # set mac addresses of node ifcs
+            exec ip netns exec "$lnode1Ns" ip link set dev "$ifname1" \
+                address "$ether1"
+            exec ip netns exec "$lnode2Ns" ip link set dev "$ifname2" \
+                address "$ether2"
+            # remove nodeNs to avoid `ip netns` catching it
+            exec rm -f "/var/run/netns/$lnode1Ns"
+            exec rm -f "/var/run/netns/$lnode2Ns"
         }
         if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
             if {[nodeType $lnode2] == "rj45"} {
                 set extIfcName [getNodeName $lnode2]
-                pipework $extIfcName $ifname1 $lnode1 $ether1
+                addNodeIfcToBridge $extIfcName $ifname1 $lnode1 $ether1
             } else {
-                pipework $lnode2 $ifname1 $lnode1 $ether1
+                addNodeIfcToBridge $lnode2 $ifname1 $lnode1 $ether1
             }
         }
     }
@@ -693,15 +710,10 @@ proc getNodeNamespace { node } {
     return $ns
 }
 
-proc pipework { bridge ifc node mac } {
+proc addNodeIfcToBridge { bridge ifc node mac } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    # prepare namespace files
-    set nodeNs [getNodeNamespace $node]
-    exec mkdir -p /var/run/netns
-    exec rm -f "/var/run/netns/$nodeNs"
-    exec ln -s "/proc/$nodeNs/ns/net" "/var/run/netns/$nodeNs"
-
+    set nodeNs [createNetNs $node]
     # create bridge
     catch "exec ovs-vsctl add-br $eid.$bridge"
 
@@ -716,8 +728,8 @@ proc pipework { bridge ifc node mac } {
     exec ip link set "$hostIfc" up
 
     # move guest side of veth pair to node namespace
-    exec ip link set "$guestIfc" netns "$nodeNs"
-    exec ip netns exec "$nodeNs" ip link set "$guestIfc" name "$ifc"
+    setIfcNetNs $node $guestIfc $ifc
+    # set mac address
     exec ip netns exec "$nodeNs" ip link set dev "$ifc" address "$mac"
 
     # remove nodeNs to avoid `ip netns` catching it
@@ -743,4 +755,17 @@ proc checkSysPrerequisites {} {
     }
 
     return ""
+}
+
+proc createNetNs { node } {
+    set nodeNs [getNodeNamespace $node]
+    exec rm -f "/var/run/netns/$nodeNs"
+    exec ln -s "/proc/$nodeNs/ns/net" "/var/run/netns/$nodeNs"
+    return $nodeNs
+}
+
+proc setIfcNetNs { node oldIfc newIfc } {
+    set nodeNs [getNodeNamespace $node]
+    exec ip link set "$oldIfc" netns "$nodeNs"
+    exec ip netns exec "$nodeNs" ip link set "$oldIfc" name "$newIfc"
 }
