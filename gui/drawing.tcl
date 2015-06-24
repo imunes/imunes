@@ -195,6 +195,9 @@ proc drawLink { link } {
     set nodes [linkPeers $link]
     set lnode1 [lindex $nodes 0]
     set lnode2 [lindex $nodes 1]
+    if {[nodeType $lnode1] == "wlan" || [nodeType $lnode2] == "wlan"} {
+	return
+    }
     set lwidth [getLinkWidth $link]
     if { [getLinkMirror $link] != "" } {
 	set newlink [.panwin.f1.c create line 0 0 0 0 \
@@ -431,12 +434,19 @@ proc redrawAllLinks {} {
 #****
 proc redrawLink { link } {
     set limages [.panwin.f1.c find withtag "link && $link"]
+    if {$limages == ""} {
+	return
+    }
     set limage1 [lindex $limages 0]
     set limage2 [lindex $limages 1]
     set tags [.panwin.f1.c gettags $limage1]
     set link [lindex $tags 1]
     set lnode1 [lindex $tags 2]
     set lnode2 [lindex $tags 3]
+
+    if {[nodeType $lnode1] == "wlan" || [nodeType $lnode2] == "wlan"} {
+	return
+    }
 
     set coords1 [.panwin.f1.c coords "node && $lnode1"]
     set coords2 [.panwin.f1.c coords "node && $lnode2"]
