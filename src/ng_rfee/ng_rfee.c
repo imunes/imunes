@@ -210,8 +210,6 @@ ng_rfee_constructor(node_p node)
 	ng_callout_init(&np->queue_timer);
 	ng_callout(&np->queue_timer, node, NULL, 1, ng_rfee_dequeue, NULL, 0);
 
-	ng_name_node(node, "rfee");	/* XXX fix this */
-
 	return (0);
 }
 
