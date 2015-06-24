@@ -1420,6 +1420,15 @@ proc deployCfg {} {
 
 	set cmds ""
 
+	# Special-case WLAN nodes: no need for ng_pipe there
+	if {[nodeType $lnode1] == "wlan" || [nodeType $lnode2] == "wlan"} {
+	    catch {exec jexec $eid ngctl connect $ngpeer1: $ngpeer2: $nghook1 $nghook2} err
+	    if { $debug && $err != "" } {
+		puts $err
+	    }
+	    continue
+	}
+
 	set cmds "$cmds\n mkpeer $ngpeer1: pipe $nghook1 upper"
 	set cmds "$cmds\n name $ngpeer1:$nghook1 $lname"
 	set cmds "$cmds\n connect $lname: $ngpeer2: lower $nghook2"
