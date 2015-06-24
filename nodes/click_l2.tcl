@@ -187,8 +187,8 @@ proc $MODULE.calcDxDy {} {
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifcName {} {
-    return eth
+proc $MODULE.ifcName {l r} {
+    return [l3IfcName $l $r]
 }
 
 #****f* click_l2.tcl/click_l2.layer

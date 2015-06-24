@@ -80,7 +80,7 @@ proc $MODULE.calcDxDy {} {
     return [list $x $y]
 }
 
-proc $MODULE.ifcName {} {
+proc $MODULE.ifcName {l r} {
     return e
 }
 
