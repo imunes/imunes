@@ -744,6 +744,8 @@ ng_rfee_linkcfg_parse(const struct ng_parse_type *type, const char *s, int *off,
 					if (s[i] != '-' || i >= last)
 						return (EINVAL);
 					i++;
+					if (s[i] == '0')
+						i++;
 					if (!isdigit(s[i]) || s[i] == '0' ||
 					    i >= last)
 						return (EINVAL);
