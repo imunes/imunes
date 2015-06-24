@@ -147,7 +147,12 @@ proc drawNode { node } {
 	set labelstr1 [getNodeName $node];
 #	set labelstr2 [getNodePartition $node];
 #	set l [format "%s\n%s" $labelstr1 $labelstr2];
-	set l [format "%s" $labelstr1];
+	set l $labelstr1;
+	foreach ifc [ifcList $node] {
+	    if {[string trim $ifc 0123456789] == "wlan"} {
+		set l [format "%s %s" $l [getIfcIPv4addr $node $ifc]]
+	    }
+	}
 	set label [.panwin.f1.c create text $x $y -fill blue \
 	    -text "$l" \
 	    -tags "nodelabel $node"]
