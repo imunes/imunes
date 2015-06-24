@@ -106,9 +106,9 @@ proc $MODULE.start { eid node } {
     upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
 
     set ngid $ngnodemap($eid\.$node)
-    set peer_epids ""
+    set wlan_epids ""
     foreach ifc [ifcList $node] {
-	lappend peer_epids [string range [logicalPeerByIfc $node $ifc] 1 end]
+	lappend wlan_epids [string range [logicalPeerByIfc $node $ifc] 1 end]
     }
 
     foreach ifc [ifcList $node] {
@@ -118,7 +118,24 @@ proc $MODULE.start { eid node } {
 	set tx_jitter 1.5
 	set tx_duplicate 5
 	set tx_qlen 20
-	exec jexec $eid ngctl msg [set ngid]: setlinkcfg $local_linkname $local_epid:jit$tx_jitter:dup$tx_duplicate:bw$tx_bandwidth $peer_epids
+
+	set visible_epids ""
+	set local_x [lindex [getNodeCoords n$local_epid] 0]
+	set local_y [lindex [getNodeCoords n$local_epid] 1]
+	foreach epid $wlan_epids {
+	    if {$epid == $local_epid} {
+		continue;
+	    }
+	    set x [lindex [getNodeCoords n$epid] 0]
+	    set y [lindex [getNodeCoords n$epid] 1]
+	    set d [expr sqrt(($local_x - $x) ** 2 + ($local_y - $y) ** 2)]
+	    if {$d > 450} {
+		continue
+	    }
+	    lappend visible_epids $epid
+	}
+
+	exec jexec $eid ngctl msg [set ngid]: setlinkcfg $local_linkname $local_epid:jit$tx_jitter:dup$tx_duplicate:bw$tx_bandwidth $visible_epids
     }
 }
 
