@@ -967,6 +967,7 @@ proc rearrange { mode } {
 	set tagmatch "node"
     }
     set otime [clock clicks -milliseconds]
+    set idlems 1
     while { $autorearrange_enabled } {
 	set ntime [clock clicks -milliseconds]
 	if { $otime == $ntime } {
@@ -1105,6 +1106,11 @@ proc rearrange { mode } {
 	}
 	.panwin.f1.c dtag link need_redraw
 	update
+	set idlems [expr int($idlems + (33 - $dt * 1000) / 2)]
+	if { $idlems < 1 } {
+	    set idlems 1
+	}
+	after $idlems
     }
     .menubar.tools entryconfigure "Auto rearrange all" -state normal
     .menubar.tools entryconfigure "Auto rearrange selected" -state normal
