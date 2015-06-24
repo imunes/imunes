@@ -124,15 +124,16 @@ proc $MODULE.start { eid node } {
 	set local_y [lindex [getNodeCoords n$local_epid] 1]
 	foreach epid $wlan_epids {
 	    if {$epid == $local_epid} {
-		continue;
+		continue
 	    }
 	    set x [lindex [getNodeCoords n$epid] 0]
 	    set y [lindex [getNodeCoords n$epid] 1]
 	    set d [expr sqrt(($local_x - $x) ** 2 + ($local_y - $y) ** 2)]
-	    if {$d > 450} {
+	    set ber [format %1.0E [expr 1 - 0.99999999 / (1 + ($d / 500) ** 30)]]
+	    if {$ber == "1E+00"} {
 		continue
 	    }
-	    lappend visible_epids $epid
+	    lappend visible_epids $epid:ber$ber
 	}
 
 	exec jexec $eid ngctl msg [set ngid]: setlinkcfg $local_linkname $local_epid:jit$tx_jitter:dup$tx_duplicate:bw$tx_bandwidth $visible_epids
