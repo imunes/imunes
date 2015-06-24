@@ -954,7 +954,8 @@ proc l3node.instantiate { eid node } {
     # Create a vimage
     # Create "physical" network interfaces
     foreach ifc [ifcList $node] {
-	switch -exact [string range $ifc 0 2] {
+	switch -exact [string trim $ifc 0123456789] {
+	    wlan -
 	    eth {
 		set ifid [createIfc $eid eiface ether]
 		pipesExec "jexec $eid ifconfig $ifid vnet $node" "hold"
@@ -1031,7 +1032,8 @@ proc l3node.instantiate { eid node } {
 proc l3node.nghook { eid node ifc } {
     set ifnum [string range $ifc 3 end]
     set node_id "$eid\.$node"
-    switch -exact [string range $ifc 0 2] {
+    switch -exact [string trim $ifc 0123456789] {
+	wlan -
 	eth {
 	    return [list $ifc@$node_id ether]
 	}
