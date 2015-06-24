@@ -1056,11 +1056,15 @@ proc rearrange { mode } {
 	    foreach link $link_list {
 		set nodes [linkPeers $link]
 		if { [getNodeCanvas [lindex $nodes 0]] != $curcanvas ||
-		    [getNodeCanvas [lindex $nodes 1]] != $curcanvas ||
-		    [getLinkMirror $link] != "" } {
+		  [getNodeCanvas [lindex $nodes 1]] != $curcanvas ||
+		  [getLinkMirror $link] != "" } {
 		    continue
 		}
 		set peers [linkPeers $link]
+		if {[nodeType [lindex $peers 0]] == "wlan" ||
+		  [nodeType [lindex $peers 1]] == "wlan"} {
+		    continue
+		}
 		set coords0 [getNodeCoords [lindex $peers 0]]
 		set coords1 [getNodeCoords [lindex $peers 1]]
 		set o_x \
