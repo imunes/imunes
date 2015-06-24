@@ -162,7 +162,7 @@ foreach file [glob -directory $ROOTDIR/$LIBDIR/config *.tcl] {
 # The following files need to be sourced in this particular order. If not
 # the placement of the toolbar icons will be altered.
 # L2 nodes
-foreach file "hub lanswitch click_l2 rj45" {
+foreach file "hub lanswitch wlan click_l2 rj45" {
     source "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
 }
 # L3 nodes
