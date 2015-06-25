@@ -253,11 +253,11 @@ proc allSnapshotsAvailable {} {
 	} else {
 	    if {$execMode == "batch"} {
 		puts "The root filesystem for virtual nodes ($vroot) is missing.
-Run 'make' or 'make vroot' to create the root filesystem."
+Run 'imunes -p' to create the root filesystem."
 	    } else {
 		tk_dialog .dialog1 "IMUNES error" \
 		"The root filesystem for virtual nodes ($vroot) is missing.
-Run 'make' or 'make vroot' to create the root filesystem." \
+Run 'imunes -p' to create the root filesystem." \
 		info 0 Dismiss
 	    }
 	    return 0
