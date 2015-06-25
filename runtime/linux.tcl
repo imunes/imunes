@@ -206,7 +206,27 @@ proc fetchRunningExperiments {} {}
 #   current system.
 #****
 proc allSnapshotsAvailable {} {
-    return 1
+    global VROOT_MASTER execMode
+    catch {exec docker images} images
+
+    if {"imunes/vroot" in $images} {
+	return 1
+    } else {
+	if {$execMode == "batch"} {
+	    puts "Docker template for virtual nodes:
+    $VROOT_MASTER
+is missing.
+Run 'imunes -p' to pull the template."
+	} else {
+	    tk_dialog .dialog1 "IMUNES error" \
+	    "Docker template for virtual nodes:
+    $VROOT_MASTER
+is missing.
+Run 'imunes -p' to pull the template." \
+	    info 0 Dismiss
+	}
+	return 0
+    }
 }
 
 proc prepareDevfs {} {}
