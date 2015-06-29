@@ -37,15 +37,16 @@
 #    external files and initializes global variables.
 #
 #	imunes [-b] [-e experiment_id] [filename]
-#    
+#
 #    When starting the program in batch mode the option -b must be
-#    specified. 
-#    
-#    When starting the program with defined filename, configuration for 
+#    specified.
+#
+#    When starting the program with defined filename, configuration for
 #    file "filename" is loaded to imunes.
 #****
 package require cmdline
 package require ip
+package require platform
 
 set options {
     {e.arg	"" "specify experiment ID"}
@@ -111,7 +112,7 @@ if { $params(e) != "" || $params(eid) != "" } {
     }
 }
 
-# 
+#
 # Include procedure definitions from external files. There must be
 # some better way to accomplish the same goal, but that's how we do it
 # for the moment.
@@ -124,7 +125,7 @@ if { $params(e) != "" || $params(eid) != "" } {
 # NAME
 #    ROOTDIR
 # FUNCTION
-#    The location of imunes library files. The ROOTDIR and LIBDIR variables 
+#    The location of imunes library files. The ROOTDIR and LIBDIR variables
 #    will be automatically set to the proper value by the installation script.
 #*****
 
@@ -132,7 +133,7 @@ if { $params(e) != "" || $params(eid) != "" } {
 # NAME
 #    LIBDIR
 # FUNCTION
-#    The location of imunes library files. The ROOTDIR and LIBDIR variables 
+#    The location of imunes library files. The ROOTDIR and LIBDIR variables
 #    will be automatically set to the proper value by the installation script.
 #*****
 
@@ -149,9 +150,36 @@ if { $ROOTDIR == "." } {
 foreach file [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
     source $file
 }
-if { $initMode == 1 } {
-    prepareDevfs
-    exit
+
+# Set default L2 node list
+set l2nodes "hub lanswitch click_l2 rj45"
+# Set default L3 node list
+set l3nodes "genericrouter quagga xorp static click_l3 host pc"
+# Set default supported router models
+set supp_router_models "xorp quagga static"
+
+set os [platform::identify]
+if { [string match -nocase "*linux*" $os] == 1 } {
+    # Limit default nodes on linux
+    set l2nodes "lanswitch rj45"
+    set l3nodes "genericrouter quagga static pc"
+    set supp_router_models "quagga static"
+    source $ROOTDIR/$LIBDIR/runtime/linux.tcl
+}
+if { [string match -nocase "*freebsd*" $os] == 1 } {
+    source $ROOTDIR/$LIBDIR/runtime/freebsd.tcl
+    if { $initMode == 1 } {
+	prepareDevfs
+	exit
+    }
+}
+
+if { $execMode == "batch" } {
+    set err [checkSysPrerequisites]
+    if { $err != "" } {
+	puts $err
+	exit
+    }
 }
 
 # Configuration libraries
@@ -162,11 +190,11 @@ foreach file [glob -directory $ROOTDIR/$LIBDIR/config *.tcl] {
 # The following files need to be sourced in this particular order. If not
 # the placement of the toolbar icons will be altered.
 # L2 nodes
-foreach file "hub lanswitch click_l2 rj45" {
+foreach file $l2nodes {
     source "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
 }
 # L3 nodes
-foreach file "genericrouter quagga xorp static click_l3 host pc" {
+foreach file $l3nodes {
     source "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
 }
 # additional nodes
@@ -181,7 +209,7 @@ source "$ROOTDIR/$LIBDIR/nodes/annotations.tcl"
 # NAME
 #    prefs
 # FUNCTION
-#    Contains the list of preferences. When starting a program 
+#    Contains the list of preferences. When starting a program
 #    this list is empty.
 #*****
 
@@ -209,7 +237,7 @@ set editor_only false
 # NAME
 #    gui_unix
 # FUNCTION
-#    false: IMUNES GUI is on MS Windows, 
+#    false: IMUNES GUI is on MS Windows,
 #    true: GUI is on FreeBSD / Linux / ...
 #    Used in spawnShell to start xterm or command.com with NetCat
 #*****
@@ -220,7 +248,6 @@ if { $tcl_platform(platform) == "unix" } {
     set gui_unix false
 }
 
-package require platform
 set winOS false
 if {[string match -nocase "*win*" [platform::identify]] == 1} {
     set winOS true
@@ -237,9 +264,12 @@ if { [string match -nocase "*imagemagick*" $imInfo] != 1} {
     set hasIM false
 }
 
+set runtimeDir "/var/run/imunes"
+
 #
 # Read config files, the first one found: .imunesrc, $HOME/.imunesrc
 #
+# XXX
 readConfigFile
 
 #
@@ -269,7 +299,7 @@ if {$execMode == "interactive"} {
     if {$argv != ""} {
 	if { ![file exists $argv] } {
 	    puts "Error: file '$argv' doesn't exist"
-	    exit 
+	    exit
 	}
 	global currentFileBatch
 	set currentFileBatch $argv
@@ -294,8 +324,8 @@ if {$execMode == "interactive"} {
 	    createExperimentFilesFromBatch
 	}
     } else {
-	set configFile "/var/run/imunes/$eid_base/config.imn"
-	set ngmapFile "/var/run/imunes/$eid_base/ngnodemap"
+	set configFile "$runtimeDir/$eid_base/config.imn"
+	set ngmapFile "$runtimeDir/$eid_base/ngnodemap"
 	if { [file exists $configFile] && [file exists $ngmapFile] \
 	    && $regular_termination } {
 	    set fileId [open $configFile r]
@@ -309,6 +339,8 @@ if {$execMode == "interactive"} {
 	    lappend cfg_list $curcfg
 	    namespace eval ::cf::[set curcfg] {}
 	    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
+	    upvar 0 ::cf::[set ::curcfg]::eid eid
+	    set eid $eid_base
 
 	    set fileId [open $ngmapFile r]
 	    array set ngnodemap [gets $fileId]

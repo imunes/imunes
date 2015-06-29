@@ -177,7 +177,7 @@ proc $MODULE.bootcmd { node } {
 #   * shells -- default shells for the router.quagga
 #****
 proc $MODULE.shellcmds {} {
-    return "csh vtysh bash sh tcsh"
+    return "csh bash vtysh sh tcsh"
 }
 
 #****f* quagga.tcl/router.quagga.instantiate
@@ -197,11 +197,9 @@ proc $MODULE.shellcmds {} {
 proc $MODULE.instantiate { eid node } {
     global inst_pipes last_inst_pipe
 
-    set node_id "$eid\.$node"
     l3node.instantiate $eid $node
 
-    pipesExec "jexec $node_id sysctl net.inet.ip.forwarding=1" "hold"
-    pipesExec "jexec $node_id sysctl net.inet6.ip6.forwarding=1" "hold"
+    enableIPforwarding $eid $node
 }
 
 #****f* quagga.tcl/router.quagga.start

@@ -965,8 +965,16 @@ proc configGUI_nodeName { wi node label } {
     lappend guielements configGUI_nodeName
     ttk::frame $wi.name -borderwidth 6
     ttk::label $wi.name.txt -text $label
-    ttk::entry $wi.name.nodename -width 14 -validate focus
-    $wi.name.nodename insert 0 [lindex [split [getNodeName $node] .] 0]
+
+    if { [typemodel $node] == "rj45" } {
+	ttk::combobox $wi.name.nodename -width 14 -textvariable extIfc$node
+	set ifcs [getExtIfcs]
+	$wi.name.nodename configure -values [concat UNASSIGNED $ifcs]
+	$wi.name.nodename set [lindex [split [getNodeName $node] .] 0 ]
+    } else {
+	ttk::entry $wi.name.nodename -width 14 -validate focus
+	$wi.name.nodename insert 0 [lindex [split [getNodeName $node] .] 0]
+    }
     pack $wi.name.txt -side left -anchor e -expand 1 -padx 4 -pady 4
     pack $wi.name.nodename -side left -anchor w -expand 1 -padx 4 -pady 4
     pack $wi.name -fill both
@@ -1417,37 +1425,38 @@ proc configGUI_stp { wi node } {
 #****
 proc configGUI_routingModel { wi node } {
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    global ripEnable ripngEnable ospfEnable ospf6Enable
-    global router_ConfigModel guielements 
-    lappend guielements configGUI_routingModel    
+    global ripEnable ripngEnable ospfEnable ospf6Enable supp_router_models
+    global router_ConfigModel guielements
+    lappend guielements configGUI_routingModel
     ttk::frame $wi.routing -relief groove -borderwidth 2 -padding 2
-    ttk::frame $wi.routing.model -padding 2
-    ttk::label $wi.routing.model.label -text "Model:" 
-    ttk::frame $wi.routing.protocols -padding 2
-    ttk::label $wi.routing.protocols.label -text "Protocols:"
+    set w $wi.routing
+    ttk::frame $w.model -padding 2
+    ttk::label $w.model.label -text "Model:" 
+    ttk::frame $w.protocols -padding 2
+    ttk::label $w.protocols.label -text "Protocols:"
 
-    ttk::checkbutton $wi.routing.protocols.rip -text "rip" -variable ripEnable
-    ttk::checkbutton $wi.routing.protocols.ripng -text "ripng" -variable ripngEnable 
-    ttk::checkbutton $wi.routing.protocols.ospf -text "ospfv2" -variable ospfEnable
-    ttk::checkbutton $wi.routing.protocols.ospf6 -text "ospfv3" -variable ospf6Enable
-    ttk::radiobutton $wi.routing.model.quagga -text quagga \
+    ttk::checkbutton $w.protocols.rip -text "rip" -variable ripEnable
+    ttk::checkbutton $w.protocols.ripng -text "ripng" -variable ripngEnable
+    ttk::checkbutton $w.protocols.ospf -text "ospfv2" -variable ospfEnable
+    ttk::checkbutton $w.protocols.ospf6 -text "ospfv3" -variable ospf6Enable
+    ttk::radiobutton $w.model.quagga -text quagga \
 	-variable router_ConfigModel -value quagga -command \
-	"$wi.routing.protocols.rip configure -state normal;
-	 $wi.routing.protocols.ripng configure -state normal;
-	 $wi.routing.protocols.ospf configure -state normal;
-	 $wi.routing.protocols.ospf6 configure -state normal"
-    ttk::radiobutton $wi.routing.model.xorp -text xorp \
+	"$w.protocols.rip configure -state normal;
+	 $w.protocols.ripng configure -state normal;
+	 $w.protocols.ospf configure -state normal;
+	 $w.protocols.ospf6 configure -state normal"
+    ttk::radiobutton $w.model.xorp -text xorp \
 	-variable router_ConfigModel -value xorp -command \
-	"$wi.routing.protocols.rip configure -state normal;
-	 $wi.routing.protocols.ripng configure -state normal;
-	 $wi.routing.protocols.ospf configure -state normal;
-	 $wi.routing.protocols.ospf6 configure -state normal"
-    ttk::radiobutton $wi.routing.model.static -text static \
+	"$w.protocols.rip configure -state normal;
+	 $w.protocols.ripng configure -state normal;
+	 $w.protocols.ospf configure -state normal;
+	 $w.protocols.ospf6 configure -state normal"
+    ttk::radiobutton $w.model.static -text static \
 	-variable router_ConfigModel -value static -command \
-	"$wi.routing.protocols.rip configure -state disabled;
-	 $wi.routing.protocols.ripng configure -state disabled;
-	 $wi.routing.protocols.ospf configure -state disabled;
-	 $wi.routing.protocols.ospf6 configure -state disabled"
+	"$w.protocols.rip configure -state disabled;
+	 $w.protocols.ripng configure -state disabled;
+	 $w.protocols.ospf configure -state disabled;
+	 $w.protocols.ospf6 configure -state disabled"
 	
     set router_ConfigModel [getNodeModel $node]
     if { $router_ConfigModel != "static" } {
@@ -1456,29 +1465,75 @@ proc configGUI_routingModel { wi node } {
 	set ospfEnable [getNodeProtocolOspfv2 $node]
 	set ospf6Enable [getNodeProtocolOspfv3 $node]
     } else {
-        $wi.routing.protocols.rip configure -state disabled
-	$wi.routing.protocols.ripng configure -state disabled
- 	$wi.routing.protocols.ospf configure -state disabled
- 	$wi.routing.protocols.ospf6 configure -state disabled
-    }  
-     if { $oper_mode != "edit" } {
- 	$wi.routing.model.quagga configure -state disabled
- 	$wi.routing.model.xorp configure -state disabled
- 	$wi.routing.model.static configure -state disabled
- 	$wi.routing.protocols.rip configure -state disabled
- 	$wi.routing.protocols.ripng configure -state disabled
- 	$wi.routing.protocols.ospf configure -state disabled
- 	$wi.routing.protocols.ospf6 configure -state disabled
-     }	   	
-    pack $wi.routing.model.label -side left -padx 2
-    pack $wi.routing.model.quagga $wi.routing.model.xorp $wi.routing.model.static \
+        $w.protocols.rip configure -state disabled
+	$w.protocols.ripng configure -state disabled
+ 	$w.protocols.ospf configure -state disabled
+ 	$w.protocols.ospf6 configure -state disabled
+    }
+    if { $oper_mode != "edit" } {
+	$w.model.quagga configure -state disabled
+	$w.model.xorp configure -state disabled
+	$w.model.static configure -state disabled
+	$w.protocols.rip configure -state disabled
+	$w.protocols.ripng configure -state disabled
+	$w.protocols.ospf configure -state disabled
+	$w.protocols.ospf6 configure -state disabled
+    }
+    if {"xorp" ni $supp_router_models} {
+	$w.model.xorp configure -state disabled
+    }
+    pack $w.model.label -side left -padx 2
+    pack $w.model.quagga $w.model.xorp $w.model.static \
         -side left -padx 6
-    pack $wi.routing.model -fill both -expand 1
-    pack $wi.routing.protocols.label -side left -padx 2
-    pack $wi.routing.protocols.rip $wi.routing.protocols.ripng \
-	$wi.routing.protocols.ospf $wi.routing.protocols.ospf6 -side left -padx 6
-    pack $wi.routing.protocols -fill both -expand 1
-    pack $wi.routing -fill both
+    pack $w.model -fill both -expand 1
+    pack $w.protocols.label -side left -padx 2
+    pack $w.protocols.rip $w.protocols.ripng \
+	$w.protocols.ospf $w.protocols.ospf6 -side left -padx 6
+    pack $w.protocols -fill both -expand 1
+    pack $w -fill both
+}
+
+#****f* nodecfgGUI.tcl/configGUI_servicesConfig
+# NAME
+#   configGUI_servicesConfig -- configure GUI - services configuration
+# SYNOPSIS
+#   configGUI_servicesConfig $wi $node
+# FUNCTION
+#   Creating module for changing services started on node.
+# INPUTS
+#   * wi -- widget
+#   * node -- node id
+#****
+proc configGUI_servicesConfig { wi node } {
+    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
+    global guielements all_services_list
+    lappend guielements configGUI_servicesConfig
+    set w $wi.services
+    ttk::frame $w -relief groove -borderwidth 2 -padding 2
+    ttk::label $w.label -text "Services:" 
+    ttk::frame $w.list -padding 2
+
+    pack $w.label -side left -padx 2
+    pack $w.list -side left -padx 2
+
+    foreach srv $all_services_list {
+	global $srv\_enable
+	set $srv\_enable 0
+	if { $oper_mode == "edit" } {
+	    ttk::checkbutton $w.list.$srv -text "$srv" -variable $srv\_enable
+	} else {
+	    ttk::checkbutton $w.list.$srv -text "$srv" -variable $srv\_enable \
+		-state disabled
+	}
+	pack $w.list.$srv -side left -padx 6
+    }
+
+    foreach srv [getNodeServices $node] {
+	global $srv\_enable
+	set $srv\_enable 1
+    }
+
+    pack $w -fill both
 }
 
 #****f* nodecfgGUI.tcl/configGUI_cpuConfig
@@ -1627,7 +1682,11 @@ proc configGUI_nodeNameApply { wi node } {
     global changed badentry showTree
     
     set name [string trim [$wi.name.nodename get]]
-    if {$name != [getNodeName $node]} {
+    if { [regexp {^[0-9A-Za-z][0-9A-Za-z-]*$} $name ] == 0 } {
+	tk_dialog .dialog1 "IMUNES warning" \
+	    "Hostname should contain only letters, digits, and -, and should not start with - (hyphen)." \
+	    info 0 Dismiss
+    } elseif {$name != [getNodeName $node]} {
         setNodeName $node $name
         if { $showTree == 1 } {
 	    refreshTopologyTree
@@ -2174,6 +2233,35 @@ proc configGUI_routingModelApply { wi node } {
     } 
 }
 
+#****f* nodecfgGUI.tcl/configGUI_servicesConfigApply
+# NAME
+#   configGUI_servicesConfigApply -- configure GUI - services config apply
+# SYNOPSIS
+#   configGUI_servicesConfigApply $wi $node
+# FUNCTION
+#   Saves changes in the module with setvices.
+# INPUTS
+#   * wi -- widget
+#   * node -- node id
+#****
+proc configGUI_servicesConfigApply { wi node } {
+    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
+    global all_services_list
+    if { $oper_mode == "edit"} {
+	set serviceList ""
+	foreach srv $all_services_list {
+	    global $srv\_enable
+	    if { [set $srv\_enable] } {
+		lappend serviceList $srv
+	    }
+	}
+	if { [getNodeServices $node] != $serviceList } {
+	    setNodeServices $node $serviceList
+	    set changed 1
+	}
+    } 
+}
+
 #****f* nodecfgGUI.tcl/configGUI_cpuConfigApply
 # NAME
 #   configGUI_cpuConfigApply -- configure GUI - CPU configuration apply
@@ -2525,7 +2613,10 @@ proc deleteConfig { wi node } {
 #****
 proc createNewConfiguration { wi node } {
     set cfgName [string trim [$wi.options.e get]]
-    if {"$wi.nb.$cfgName" in [$wi.nb tabs] || $cfgName == ""}  {
+    if { $cfgName == "" } {
+	set cfgName "default"
+    }
+    if {"$wi.nb.$cfgName" in [$wi.nb tabs]}  {
 	return
     }
     set cfgName [string tolower $cfgName 0 0]

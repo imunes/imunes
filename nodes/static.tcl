@@ -94,8 +94,8 @@ proc $MODULE.virtlayer {} {
 #****
 proc $MODULE.cfggen { node } {
     set cfg {}
-    set cfg [concat $cfg [nodeCfggenIfconfigIPv4 $node]]
-    set cfg [concat $cfg [nodeCfggenIfconfigIPv6 $node]]
+    set cfg [concat $cfg [nodeCfggenIfcIPv4 $node]]
+    set cfg [concat $cfg [nodeCfggenIfcIPv6 $node]]
     lappend cfg ""
 
     set cfg [concat $cfg [nodeCfggenRouteIPv4 $node]]
@@ -157,11 +157,9 @@ proc $MODULE.shellcmds {} {
 proc $MODULE.instantiate { eid node } {
     global inst_pipes last_inst_pipe
 
-    set node_id "$eid\.$node"
     l3node.instantiate $eid $node
 
-    pipesExec "jexec $node_id sysctl net.inet.ip.forwarding=1" "hold"
-    pipesExec "jexec $node_id sysctl net.inet6.ip6.forwarding=1" "hold"
+    enableIPforwarding $eid $node
 }
 
 #****f* static.tcl/router.static.start

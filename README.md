@@ -9,11 +9,11 @@ execution engine itself operates within the operating system kernel.
 System requirements
 -------------------
 
-### Operating system
+### Operating system (FreeBSD)
 
-IMUNES works on top of the FreeBSD 8 (or higher) kernel that is
-compiled with the VIMAGE option included. A sample kernel kernel
-config file is as follows:
+When IMUNES is used on top of FreeBSD 8 (or higher) it requires a kernel
+that is compiled with the VIMAGE option included. A sample kernel config file
+is as follows:
 
     include GENERIC
     nooptions FLOWTABLE
@@ -21,7 +21,7 @@ config file is as follows:
     options VNET_DEBUG
     options KDB
     options DDB
-    
+
     options IPSEC
     device  crypto
     options IPSEC_DEBUG
@@ -42,20 +42,53 @@ Then you need to compile and install the kernel and reboot.
     # make install
     # reboot
 
+### Operating system (Linux)
+
+When IMUNES is used on top of Linux a 3.10 Linux kernel is the
+minimum requirement.
+
 ### FreeBSD packages
 
 First we need to install the packages required for IMUNES. To do
 this execute the following command (on FreeBSD 10.1):
 
     # pkg install tk86 ImageMagick tcllib wireshark socat git gmake
-    
+
+### Linux packages
+
+First we need to install the packages required for IMUNES:
+
+    tcl (version 8.6 or greater)
+    tk (version 8.6 or greater)
+    tcllib
+    wireshark (with GUI)
+    ImageMagick
+    Docker
+    OpenvSwitch
+    xterm
+
+#### Fedora 21
+    # yum install openvswitch docker-io xterm wireshark-gnome ImageMagick tcl tcllib tk
+
+#### Performance
+
+For best performance please run Docker with either Aufs or Overlay storage
+driver. Depending on your kernel version and distribution, Docker will
+automatically select its storage driver based on what is available and what
+the particular default setup for your distribution is. Aufs is not part of
+vanilla kernel but some distributions package it in their modified kernel and
+Overlay is only available from kernel version 3.18. Worst case scenario:
+Docker will use the *extremely* slow devicemapper available everywhere.
+Please view either Docker or distro docs on how to set this up for your
+particular Linux distribution.
+
 ### Installing IMUNES
 
 Checkout the last fresh IMUNES source through the public github
 repository:
 
     # git clone https://github.com/imunes/imunes.git
-    
+
 Now we need to install IMUNES and populate the virtual file system
 with predefined and required data. To install imunes on the system
 execute (as root):
@@ -70,13 +103,11 @@ This is done by issuing the following command (as root):
 
     # imunes -p
 
-The filesystem is by default created in /var/imunes/vroot.
-
 Now the IMUNES GUI can be ran just by typing the imunes command
 in the terminal:
 
     # imunes
-    
+
 To execute experiments, run it as root.
 
 For additional information visit our web site:

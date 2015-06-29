@@ -255,6 +255,7 @@ proc loadCfg { cfg } {
     upvar 0 ::cf::[set ::curcfg]::IPv6UsedList IPv6UsedList
     upvar 0 ::cf::[set ::curcfg]::IPv4UsedList IPv4UsedList
     upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
+    upvar 0 ::cf::[set ::curcfg]::etchosts etchosts
     global showIfNames showNodeLabels showLinkLabels
     global showIfIPaddrs showIfIPv6addrs
     global showBkgImage showGrid showAnnotations
@@ -266,6 +267,7 @@ proc loadCfg { cfg } {
     set annotation_list {}
     set canvas_list {}
     set image_list {}
+    set etchosts ""
     set class ""
     set object ""
     foreach entry $cfg {
@@ -395,6 +397,9 @@ proc loadCfg { cfg } {
 			}
 			canvas {
 			    lappend $object "canvas $value"
+			}
+			services {
+			    lappend $object "services {$value}"
 			}
 			events {
 			    set cfg ""

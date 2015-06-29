@@ -188,16 +188,7 @@ proc $MODULE.virtlayer {} {
 #   * node -- node id (type of the node is rj45)
 #****
 proc $MODULE.instantiate { eid node } {
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-
-    set ifname [getNodeName $node]
-    if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
-	exec ifconfig $ifname create
-    }
-    set ngifname [string map {. _} $ifname]
-    set ngnodemap($ifname) $ngifname
-    nexec ifconfig $ifname vnet $eid
-    nexec jexec $eid ifconfig $ifname up promisc
+    captureExtIfc $eid $node
 }
 
 #****f* rj45.tcl/rj45.destroy
@@ -212,12 +203,7 @@ proc $MODULE.instantiate { eid node } {
 #   * node -- node id (type of the node is rj45)
 #****
 proc $MODULE.destroy { eid node } {
-    set ifname [getNodeName $node]
-    nexec ifconfig $ifname -vnet $eid
-    nexec ifconfig $ifname up -promisc
-    if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
-	exec ifconfig $ifname destroy
-    }
+    releaseExtIfc $eid $node
 }
 
 #****f* rj45.tcl/rj45.nghook

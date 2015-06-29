@@ -2619,6 +2619,46 @@ proc getEtherVlanTag { node } {
     }
 }
 
+#****f* nodecfg.tcl/getNodeServices
+# NAME
+#   getNodeServices -- get node active services.
+# SYNOPSIS
+#   set services [getNodeServices $node]
+# FUNCTION
+#   Returns node's selected services.
+# INPUTS
+#   * node -- node id
+# RESULT
+#   * services -- active services
+#****
+proc getNodeServices { node } {
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
+    return [lindex [lsearch -inline [set $node] "services *"] 1]
+}
+
+#****f* nodecfg.tcl/setNodeServices
+# NAME
+#   setNodeServices -- set node active services.
+# SYNOPSIS
+#   setNodeServices $node $services
+# FUNCTION
+#   Sets nodes selected services.
+# INPUTS
+#   * node -- node id
+#   * coords -- list of services
+#****
+proc setNodeServices { node services } {
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
+    set i [lsearch [set $node] "services *"]
+    if { $i >= 0 } {
+        set $node [lreplace [set $node] $i $i "services {$services}"]
+    } else {
+        set $node [linsert [set $node] end "services {$services}"]
+    }
+}
+
 #****f* nodecfg.tcl/registerRouterModule
 # NAME
 #   registerRouterModule -- register module
@@ -2652,30 +2692,30 @@ proc isNodeRouter { node } {
     return 0
 }
 
-#****f* nodecfg.tcl/nodeCfggenIfconfigIPv4
+#****f* nodecfg.tcl/nodeCfggenIfcIPv4
 # NAME
-#   nodeCfggenIfconfigIPv4 -- generate ifconfig IPv4 configuration
+#   nodeCfggenIfcIPv4 -- generate interface IPv4 configuration
 # SYNOPSIS
-#   nodeCfggenIfconfigIPv4 $node
+#   nodeCfggenIfcIPv4 $node
 # FUNCTION
-#   Generate ifconfig configuration for all IPv4 addresses on all node
+#   Generate configuration for all IPv4 addresses on all node
 #   interfaces.
 # INPUTS
 #   * node -- node to generate configuration for
 # RESULT
-#   * value -- ifconfig IPv4 configuration script
+#   * value -- interface IPv4 configuration script
 #****
-proc nodeCfggenIfconfigIPv4 { node } {
+proc nodeCfggenIfcIPv4 { node } {
     set cfg {}
     foreach ifc [allIfcList $node] {
-	set first 1
+	set primary 1
 	foreach addr [getIfcIPv4addrs $node $ifc] {
 	    if { $addr != "" } {
-		if { $first } {
-		    lappend cfg "ifconfig $ifc inet $addr"
-		    set first 0
+		if { $primary } {
+		    lappend cfg [getIPv4IfcCmd $ifc $addr $primary]
+		    set primary 0
 		} else {
-		    lappend cfg "ifconfig $ifc inet add $addr"
+		    lappend cfg [getIPv4IfcCmd $ifc $addr $primary]
 		}
 	    }
 	}
@@ -2683,29 +2723,30 @@ proc nodeCfggenIfconfigIPv4 { node } {
     return $cfg
 }
 
-#****f* nodecfg.tcl/nodeCfggenIfconfigIPv6
+#****f* nodecfg.tcl/nodeCfggenIfcIPv6
 # NAME
-#   nodeCfggenIfconfigIPv6 -- generate ifconfig IPv6 configuration
+#   nodeCfggenIfcIPv6 -- generate interface IPv6 configuration
 # SYNOPSIS
-#   nodeCfggenIfconfigIPv6 $node
+#   nodeCfggenIfcIPv6 $node
 # FUNCTION
-#   Generate ifconfig configuration for all IPv6 addresses on all node
+#   Generate configuration for all IPv6 addresses on all node
 #   interfaces.
 # INPUTS
 #   * node -- node to generate configuration for
 # RESULT
-#   * value -- ifconfig IPv6 configuration script
+#   * value -- interface IPv6 configuration script
 #****
-proc nodeCfggenIfconfigIPv6 { node } {
+proc nodeCfggenIfcIPv6 { node } {
     set cfg {}
     foreach ifc [allIfcList $node] {
-	set first 1
+	set primary 1
 	foreach addr [getIfcIPv6addrs $node $ifc] {
 	    if { $addr != "" } { 
-		if { $first } {
-		    lappend cfg "ifconfig $ifc inet6 $addr"
+		if { $primary } {
+		    lappend cfg [getIPv6IfcCmd $ifc $addr $primary]
+		    set primary 0
 		} else {
-		    lappend cfg "ifconfig $ifc inet6 add $addr"
+		    lappend cfg [getIPv6IfcCmd $ifc $addr $primary]
 		}
 	    }
 	}
@@ -2719,7 +2760,7 @@ proc nodeCfggenIfconfigIPv6 { node } {
 # SYNOPSIS
 #   nodeCfggenRouteIPv4 $node
 # FUNCTION
-#   Generate IPv4 route configuration on all node interfaces.
+#   Generate IPv4 route configuration.
 # INPUTS
 #   * node -- node to generate configuration for
 # RESULT
@@ -2728,7 +2769,7 @@ proc nodeCfggenIfconfigIPv6 { node } {
 proc nodeCfggenRouteIPv4 { node } {
     set cfg {}
     foreach statrte [getStatIPv4routes $node] {
-	lappend cfg "route -q add -inet $statrte"
+	lappend cfg [getIPv4RouteCmd $statrte]
     }
     return $cfg
 }
@@ -2739,7 +2780,7 @@ proc nodeCfggenRouteIPv4 { node } {
 # SYNOPSIS
 #   nodeCfggenRouteIPv6 $node
 # FUNCTION
-#   Generate IPv6 route configuration on all node interfaces.
+#   Generate IPv6 route configuration.
 # INPUTS
 #   * node -- node to generate configuration for
 # RESULT
@@ -2748,7 +2789,66 @@ proc nodeCfggenRouteIPv4 { node } {
 proc nodeCfggenRouteIPv6 { node } {
     set cfg {}
     foreach statrte [getStatIPv6routes $node] {
-	lappend cfg "route -q add -inet6 $statrte"
+	lappend cfg [getIPv6RouteCmd $statrte]
     }
     return $cfg
+}
+
+#****f* nodecfg.tcl/getAllNodesType
+# NAME
+#   getAllNodesType -- get list of all nodes of a certain type
+# SYNOPSIS
+#   getAllNodesType $type
+# FUNCTION
+#   Passes through the list of all nodes and returns a list of nodes of the
+#   specified type.
+# INPUTS
+#   * type -- node type
+# RESULT
+#   * list -- list of all nodes of the type
+#****
+proc getAllNodesType { type } {
+    upvar 0 ::cf::[set ::curcfg]::node_list node_list
+    set type_list ""
+    foreach node $node_list {
+	if { [string match "$type*" [typemodel $node]] } {
+	    lappend type_list $node
+	}
+    }
+    return $type_list
+}
+
+#****f* nodecfg.tcl/getNewNodeNameType
+# NAME
+#   getNewNodeNameType -- get a new node name for a certain type
+# SYNOPSIS
+#   getNewNodeNameType $type $namebase
+# FUNCTION
+#   Returns a new node name for the type and namebase, e.g. pc0 for pc.
+# INPUTS
+#   * type -- node type
+#   * namebase -- base for the node name
+# RESULT
+#   * name -- new node name to be assigned
+#****
+proc getNewNodeNameType { type namebase } {
+    upvar 0 ::cf::[set ::curcfg]::num$type num$type
+
+    #if the variable pcnodes isn't set we need to check through all the nodes
+    #to assign a non duplicate name
+    if {! [info exists num$type] } {
+	set num$type 0
+	foreach n [getAllNodesType $type] {
+	    set name [getNodeName $n]
+	    if {[string match "$namebase*" $name]} {
+		set rest [string trimleft $name $namebase]
+		if { [string is integer $rest] && $rest > [set num$type] } {
+		    set num$type $rest
+		}
+	    }
+	}
+    }
+
+    incr num$type
+    return $namebase[set num$type]
 }

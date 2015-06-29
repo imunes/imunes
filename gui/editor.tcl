@@ -137,7 +137,7 @@ proc redo {} {
 # SYNOPSIS
 #   set ifcName [chooseIfName $lnode1 $lnode2]
 # FUNCTION
-#   Choose intreface name. The name can be:
+#   Choose interface name. The name can be:
 #   * eth -- for interface connecting pc, host and router  
 #   * e -- for interface connecting hub and lanswitch
 #   * f -- for interface connecting frswitch
@@ -964,7 +964,7 @@ proc refreshTopologyTree {} {
 #   Creates a popup dialog box to attach to experiment.
 #****
 proc attachToExperimentPopup {} {
-    global selectedExperiment
+    global selectedExperiment runtimeDir
     set  ateDialog .attachToExperimentDialog
     catch {destroy $ateDialog}
     toplevel $ateDialog
@@ -1021,19 +1021,19 @@ proc attachToExperimentPopup {} {
 	$tree insert {} end -id $exp -text [list $exp "-" [getExperimentNameFromFile $exp]] -values [list $timestamp] \
 	          -tags "$exp"
 	$tree tag bind $exp <1> \
-	  "updateScreenshotPreview $prevcan /var/run/imunes/$exp/screenshot.png 
+	  "updateScreenshotPreview $prevcan $runtimeDir/$exp/screenshot.png 
 	   set selectedExperiment $exp"
     }
     
     foreach exp [getResumableExperiments] {
 	$tree tag bind $exp <Key-Up> \
 	"if {![string equal {} [$tree prev $exp]]} {
-	    updateScreenshotPreview $prevcan /var/run/imunes/[$tree prev $exp]/screenshot.png
+	    updateScreenshotPreview $prevcan $runtimeDir/[$tree prev $exp]/screenshot.png
 	    set selectedExperiment [$tree prev $exp]
 	}"
 	$tree tag bind $exp <Key-Down> \
 	"if {![string equal {} [$tree next $exp]]} {
-	    updateScreenshotPreview $prevcan /var/run/imunes/[$tree next $exp]/screenshot.png
+	    updateScreenshotPreview $prevcan $runtimeDir/[$tree next $exp]/screenshot.png
 	    set selectedExperiment [$tree next $exp]
 	}"
     }
@@ -1044,7 +1044,7 @@ proc attachToExperimentPopup {} {
     set selectedExperiment $first
 
     if {$selectedExperiment != ""} {
-	updateScreenshotPreview $prevcan /var/run/imunes/$selectedExperiment/screenshot.png
+	updateScreenshotPreview $prevcan $runtimeDir/$selectedExperiment/screenshot.png
     }
     
     ttk::frame $wi.buttons
@@ -1080,44 +1080,6 @@ proc updateScreenshotPreview { pc image } {
     } else {
 	$pc create text 150 100 -text "No screenshot available." -tags "preview"
     }
-}
-
-#****f* editor.tcl/resumeSelectedExperiment
-# NAME
-#   resumeSelectedExperiment -- resume selected experiment
-# SYNOPSIS
-#   resumeSelectedExperiment $exp
-# FUNCTION
-#   Resumes selected experiment.
-# INPUTS
-#   * exp -- experiment id
-#****
-proc resumeSelectedExperiment { exp } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-    if {[info exists eid]} {
-	set curr_eid $eid
-	if {$curr_eid == $exp} {
-	    return
-	}
-    }
-    newProject
-
-    upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
-    upvar 0 ::cf::[set ::curcfg]::cfgDeployed cfgDeployed
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-    
-    set currentFile [getExperimentConfigurationFromFile $exp]
-    openFile
-
-    set ngmapFile "/var/run/imunes/$exp/ngnodemap"
-    set fileId [open $ngmapFile r]
-    array set ngnodemap [gets $fileId]
-    close $fileId
-
-    set eid $exp
-    set cfgDeployed true
-    setOperMode exec
 }
 
 #****f* editor.tcl/setActiveTool
