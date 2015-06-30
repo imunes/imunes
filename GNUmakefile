@@ -15,6 +15,7 @@ IMUNESDATE = `date +"%Y%m%d"`
 IMUNESVER = 1.0
 TARBALL_DIR = imunes_$(IMUNESDATE)
 RELEASE_DIR = imunes-$(IMUNESVER)
+UNAME_S = $(shell uname -s)
 
 BASEFILES =	COPYRIGHT README
 CONFIGFILES =	$(wildcard config/*.tcl)
@@ -105,6 +106,10 @@ install: uninstall
 	for file in $(TINY_ICONS); do \
 		cp icons/tiny/$${file} $(TINY_ICONSDIR); \
 	done ;
+
+ifeq ($(UNAME_S), FreeBSD)
+	sh scripts/install_ng_modules.sh
+endif
 
 uninstall:
 	rm -rf $(IMUNESDIR)
