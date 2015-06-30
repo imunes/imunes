@@ -5,9 +5,9 @@ LIBDIR=""
 DOCKER_TEMPLATE="docker.io/imunes/vroot:base"
 
 VER=`uname -r | cut -d "." -f 1`
-OS=`uname -o`
+OS=`uname -s`
 
-if [ "$OS" == "GNU/Linux" ]
+if [ "$OS" = "Linux" ]
 then
     docker pull $DOCKER_TEMPLATE
 else
