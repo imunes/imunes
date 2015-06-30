@@ -28,7 +28,6 @@
 
 # $Id: imunes.tcl 149 2015-03-27 15:50:14Z valter $
 
-
 #****h* imunes/imunes.tcl
 # NAME
 #    imunes.tcl
@@ -44,6 +43,11 @@
 #    When starting the program with defined filename, configuration for 
 #    file "filename" is loaded to imunes.
 #****
+set baseTitle IMUNES
+set version "1.1"
+set date "2015-06-30"
+set additions ""
+
 package require cmdline
 package require ip
 
@@ -172,6 +176,11 @@ foreach file "genericrouter quagga xorp static click_l3 host pc" {
 # additional nodes
 source "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
 source "$ROOTDIR/$LIBDIR/nodes/annotations.tcl"
+
+if { $params(v) || $params(version)} {
+    puts "IMUNES version $version$additions ($date)"
+    exit
+}
 
 #
 # Global variables are initialized here
