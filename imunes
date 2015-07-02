@@ -90,7 +90,7 @@ else
 
     xerr=`echo "exit" | wish8.6 2>&1`;
     if [ "$xerr" != "" ]; then
-        echo "Problems with X:"
+        echo "Cannot start imunes, problems with X:"
         echo "$xerr"
         exit 1
     fi
