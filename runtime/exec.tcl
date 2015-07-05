@@ -258,7 +258,6 @@ proc fetchNodeConfiguration {} {
 
     foreach node [selectedNodes] {
 	set lines [getRunningNodeIfcList $node]
-	
 	# XXX - here we parse ifconfig output, maybe require virtual nodes on
 	# linux to have ifconfig, or create different parsing procedures for ip
 	# and ifconfig that will have the same output
@@ -369,7 +368,7 @@ proc resumeSelectedExperiment { exp } {
     upvar 0 ::cf::[set ::curcfg]::cfgDeployed cfgDeployed
     upvar 0 ::cf::[set ::curcfg]::eid eid
     upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-    
+
     set currentFile [getExperimentConfigurationFromFile $exp]
     openFile
 
@@ -521,7 +520,7 @@ proc fetchExperimentFolders {} {
     set exp_list ""
     set exp_files [glob -nocomplain -directory $runtimeDir -type d *]
     if {$exp_files != ""} {
-	foreach file $exp_files {          
+	foreach file $exp_files {
 	    lappend exp_list [file tail $file]
 	}
     }
@@ -543,7 +542,7 @@ proc getResumableExperiments {} {
     set exp_folders [fetchExperimentFolders]
     foreach exp [fetchRunningExperiments] {
 	if {$exp in $exp_folders} {
-	    lappend exp_list $exp 	
+	    lappend exp_list $exp
 	}
     }
     return $exp_list

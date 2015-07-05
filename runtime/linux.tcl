@@ -1,4 +1,4 @@
-set VROOT_MASTER "docker.io/imunes/vroot:base"
+set VROOT_MASTER "gcetusic/imunes:latest"
 
 #****f* linux.tcl/writeDataToNodeFile
 # NAME
@@ -256,7 +256,7 @@ proc createExperimentContainer {} {}
 proc loadKernelModules {} {
     global all_modules_list
 
-    # FIXME: prepareSystem isn't the same on Linux
+    exec modprobe sch_netem
     foreach module $all_modules_list {
         if {[info procs $module.prepareSystem] == "$module.prepareSystem"} {
             $module.prepareSystem
@@ -350,20 +350,27 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
     }
     set ether2 [getIfcMACaddr $lnode2 $ifname2]
 
+    if {[nodeType $lnode1] == "rj45"} {
+        set lname1 [getNodeName $lnode1]
+    } else {
+        set lname1 $lnode1
+    }
+
+    if {[nodeType $lnode2] == "rj45"} {
+        set lname2 [getNodeName $lnode2]
+    } else {
+        set lname2 $lnode2
+    }
+
     if { [[typemodel $lnode1].virtlayer] == "NETGRAPH" } {
         if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
-            exec ovs-vsctl add-port $eid.$lnode1 $eid.$lnode1.$ifname1 -- \
-                set interface $eid.$lnode1.$ifname1 type=patch options:peer=$eid.$lnode2.$ifname2
-            exec ovs-vsctl add-port $eid.$lnode2 $eid.$lnode2.$ifname2 -- \
-                set interface $eid.$lnode2.$ifname2 type=patch options:peer=$eid.$lnode1.$ifname1
+            exec ovs-vsctl add-port $eid.$lname1 $eid.$lname1.$ifname1 -- \
+                set interface $eid.$lname1.$ifname1 type=patch options:peer=$eid.$lname2.$ifname2
+            exec ovs-vsctl add-port $eid.$lname2 $eid.$lname2.$ifname2 -- \
+                set interface $eid.$lname2.$ifname2 type=patch options:peer=$eid.$lname1.$ifname1
         }
         if { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
-            if {[nodeType $lnode1] == "rj45"} {
-                set extIfcName [getNodeName $lnode1]
-                addNodeIfcToBridge $extIfcName $ifname2 $lnode2 $ether2
-            } else {
-                addNodeIfcToBridge $lnode1 $ifname2 $lnode2 $ether2
-            }
+            addNodeIfcToBridge $lname1 $ifname1 $lnode2 $ifname2 $ether2
         }
     } elseif { [[typemodel $lnode1].virtlayer] == "VIMAGE" } {
         if  { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
@@ -388,17 +395,36 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
             exec rm -f "/var/run/netns/$lnode2Ns"
         }
         if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
-            if {[nodeType $lnode2] == "rj45"} {
-                set extIfcName [getNodeName $lnode2]
-                addNodeIfcToBridge $extIfcName $ifname1 $lnode1 $ether1
-            } else {
-                addNodeIfcToBridge $lnode2 $ifname1 $lnode1 $ether1
-            }
+            addNodeIfcToBridge $lname2 $ifname2 $lnode1 $ifname1 $ether1
         }
     }
 }
 
-proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {}
+proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    execSetLinkParams $eid $link
+
+    # if {[nodeType $lnode1] != "rj45" && [nodeType $lnode2] != "rj45"} {
+    #     set qdisc [getIfcQDisc $lnode1 $ifname1]
+    #     if {$qdisc ne "FIFO"} {
+    #         execSetIfcQDisc $eid $lnode1 $ifname2 $qdisc
+    #     }
+
+    #     set qdisc [getIfcQDisc $lnode2 $ifname2]
+    #     if {$qdisc ne "FIFO"} {
+    #         execSetIfcQDisc $eid $lnode2 $ifname2 $qdisc
+    #     }
+        # set qdrop [getIfcQDrop $node $ifc]
+        # if {$qdrop ne "drop-tail"} {
+        #     execSetIfcQDrop $eid $node $ifc $qdrop
+        # }
+        # set qlen [getIfcQLen $node $ifc]
+        # if {$qlen ne 50} {
+        #     execSetIfcQLen $eid $node $ifc $qlen
+        # }
+    # }
+}
 
 #****f* linux.tcl/startIfcsNode
 # NAME
@@ -730,7 +756,7 @@ proc getNodeNamespace { node } {
     return $ns
 }
 
-proc addNodeIfcToBridge { bridge ifc node mac } {
+proc addNodeIfcToBridge { bridge brifc node ifc mac } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     set nodeNs [createNetNs $node]
@@ -739,12 +765,14 @@ proc addNodeIfcToBridge { bridge ifc node mac } {
 
     # generate interface names
     set hostIfc "v${ifc}pl${nodeNs}"
+    set hostIfc "$eid.$bridge.$brifc"
     set guestIfc "v${ifc}pg${nodeNs}"
 
     # create veth pair
     exec ip link add name "$hostIfc" type veth peer name "$guestIfc"
     # add host side of veth pair to bridge
     exec ovs-vsctl add-port "$eid.$bridge" "$hostIfc"
+
     exec ip link set "$hostIfc" up
 
     # move guest side of veth pair to node namespace
@@ -788,4 +816,116 @@ proc setIfcNetNs { node oldIfc newIfc } {
     set nodeNs [getNodeNamespace $node]
     exec ip link set "$oldIfc" netns "$nodeNs"
     exec ip netns exec "$nodeNs" ip link set "$oldIfc" name "$newIfc"
+}
+
+#****f* linux.tcl/execSetIfcQDisc
+# NAME
+#   execSetIfcQDisc -- in exec mode set interface queuing discipline
+# SYNOPSIS
+#   execSetIfcQDisc $eid $node $ifc $qdisc
+# FUNCTION
+#   Sets the queuing discipline during the simulation.
+#   New queuing discipline is defined in qdisc parameter.
+#   Queueing discipline can be set to fifo, wfq or drr.
+# INPUTS
+#   eid -- experiment id
+#   node -- node id
+#   ifc -- interface name
+#   qdisc -- queuing discipline
+#****
+proc execSetIfcQDisc { eid node ifc qdisc } {
+    set target [linkByIfc $node $ifc]
+    set peers [linkPeers [lindex $target 0]]
+    set dir [lindex $target 1]
+    set lnode1 [lindex $peers 0]
+    set lnode2 [lindex $peers 1]
+    if { [nodeType $lnode2] == "pseudo" } {
+        set mirror_link [getLinkMirror [lindex $target 0]]
+        set lnode2 [lindex [linkPeers $mirror_link] 0]
+    }
+    switch -exact $qdisc {
+        FIFO { set qdisc fifo_fast }
+        WFQ { set qdisc wfq }
+        DRR { set qdisc drr }
+    }
+    exec docker exec $eid.$node tc qdisc add dev $ifc root $qdisc
+}
+
+#****f* linux.tcl/execSetLinkParams
+# NAME
+#   execSetLinkParams -- in exec mode set link parameters
+# SYNOPSIS
+#   execSetLinkParams $eid $link
+# FUNCTION
+#   Sets the link parameters during the simulation.
+#   All the parameters are set at the same time.
+# INPUTS
+#   eid -- experiment id
+#   link -- link id
+#****
+proc execSetLinkParams { eid link } {
+    global debug
+
+    set lnode1 [lindex [linkPeers $link] 0]
+    set lnode2 [lindex [linkPeers $link] 1]
+    set ifname1 [ifcByLogicalPeer $lnode1 $lnode2]
+    set ifname2 [ifcByLogicalPeer $lnode2 $lnode1]
+
+    set bandwidth [expr [getLinkBandwidth $link] + 0]
+    set delay [expr [getLinkDelay $link] + 0]
+    set ber [expr [getLinkBER $link] + 0]
+    set dup [expr [getLinkDup $link] + 0]
+
+    if {[nodeType $lnode1] == "rj45"} {
+        set lname1 [getNodeName $lnode1]
+    } else {
+        set lname1 $lnode1
+    }
+
+    if {[nodeType $lnode2] == "rj45"} {
+        set lname2 [getNodeName $lnode2]
+    } else {
+        set lname2 $lnode2
+    }
+
+    # bandwidth
+    if {$bandwidth > 0} {
+        if { [[typemodel $lnode1].virtlayer] == "NETGRAPH" } {
+            set rate [expr $bandwidth / 1000]
+
+            exec ovs-vsctl set interface $eid.$lname1.$ifname1 \
+                ingress_policing_rate=$rate
+            exec ovs-vsctl set interface $eid.$lname1.$ifname1 \
+                ingress_policing_burst=100
+        }
+
+        if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
+            set rate [expr $bandwidth / 1000]
+
+            exec ovs-vsctl set interface $eid.$lname2.$ifname2 \
+                ingress_policing_rate=$rate
+            exec ovs-vsctl set interface $eid.$lname2.$ifname2 \
+                ingress_policing_burst=100
+        }
+
+        if { [[typemodel $lnode1].virtlayer] == "VIMAGE" } {
+            catch {exec docker exec $eid.$lnode1 tc qdisc del dev $ifname1 root}
+            exec docker exec $eid.$lnode1 tc qdisc add dev $ifname1 \
+                root handle 1:0 tbf rate ${bandwidth}bit latency 50ms burst 1540
+
+            set vdelay [expr $delay / 1000]
+            exec docker exec $eid.$lnode1 tc qdisc add dev $ifname1 \
+                parent 1:0 handle 20: netem delay ${vdelay}ms
+        }
+
+        if { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
+            catch {exec docker exec $eid.$lnode2 tc qdisc del dev $ifname2 root}
+            exec docker exec $eid.$lnode2 tc qdisc add dev $ifname2 \
+                root handle 1:0 tbf rate ${bandwidth}bit latency 50ms burst 1540
+
+            set vdelay [expr $delay / 1000]
+            exec docker exec $eid.$lnode2 tc qdisc add dev $ifname2 \
+                parent 1:0 handle 20: netem delay ${vdelay}ms
+        }
+    }
 }
