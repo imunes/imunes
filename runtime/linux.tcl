@@ -888,9 +888,8 @@ proc execSetLinkParams { eid link } {
         set lname2 $lnode2
     }
 
-    # bandwidth
-    if {$bandwidth > 0} {
-        if { [[typemodel $lnode1].virtlayer] == "NETGRAPH" } {
+    if { [[typemodel $lnode1].virtlayer] == "NETGRAPH" } {
+        if {$bandwidth > 0} {
             set rate [expr $bandwidth / 1000]
 
             exec ovs-vsctl set interface $eid.$lname1.$ifname1 \
@@ -899,7 +898,14 @@ proc execSetLinkParams { eid link } {
                 ingress_policing_burst=100
         }
 
-        if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
+        catch {exec tc qdisc del dev $eid.lnode1.ifname1 root}
+        set vdelay [expr $delay / 1000]
+        catch {exec tc qdisc add dev $eid.$lname1.$ifname1 root \
+            handle 1:0 netem delay ${vdelay}ms}
+    }
+
+    if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
+        if {$bandwidth > 0} {
             set rate [expr $bandwidth / 1000]
 
             exec ovs-vsctl set interface $eid.$lname2.$ifname2 \
@@ -908,24 +914,35 @@ proc execSetLinkParams { eid link } {
                 ingress_policing_burst=100
         }
 
-        if { [[typemodel $lnode1].virtlayer] == "VIMAGE" } {
-            catch {exec docker exec $eid.$lnode1 tc qdisc del dev $ifname1 root}
-            exec docker exec $eid.$lnode1 tc qdisc add dev $ifname1 \
-                root handle 1:0 tbf rate ${bandwidth}bit latency 50ms burst 1540
+        catch {exec tc qdisc del dev $eid.lnode2.ifname2 root}
+        set vdelay [expr $delay / 1000]
+        catch {exec tc qdisc add dev $eid.$lname2.$ifname2 root \
+            handle 1:0 netem delay ${vdelay}ms}
+    }
 
-            set vdelay [expr $delay / 1000]
-            exec docker exec $eid.$lnode1 tc qdisc add dev $ifname1 \
-                parent 1:0 handle 20: netem delay ${vdelay}ms
+    if { [[typemodel $lnode1].virtlayer] == "VIMAGE" } {
+        catch {exec docker exec $eid.$lnode1 tc qdisc del dev $ifname1 root}
+
+        set vdelay [expr $delay / 1000]
+        exec docker exec $eid.$lnode1 tc qdisc add dev $ifname1 root \
+            handle 1:0 netem delay ${vdelay}ms
+
+        if {$bandwidth > 0} {
+            exec docker exec $eid.$lnode1 tc qdisc add dev $ifname1 parent 1:1 \
+                handle 10: tbf rate ${bandwidth}bit latency 50ms burst 1540
         }
+    }
 
-        if { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
-            catch {exec docker exec $eid.$lnode2 tc qdisc del dev $ifname2 root}
-            exec docker exec $eid.$lnode2 tc qdisc add dev $ifname2 \
-                root handle 1:0 tbf rate ${bandwidth}bit latency 50ms burst 1540
+    if { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
+        catch {exec docker exec $eid.$lnode2 tc qdisc del dev $ifname2 root}
 
-            set vdelay [expr $delay / 1000]
-            exec docker exec $eid.$lnode2 tc qdisc add dev $ifname2 \
-                parent 1:0 handle 20: netem delay ${vdelay}ms
+        set vdelay [expr $delay / 1000]
+        exec docker exec $eid.$lnode2 tc qdisc add dev $ifname2 root \
+            handle 1:0 netem delay ${vdelay}ms
+
+        if {$bandwidth > 0} {
+            exec docker exec $eid.$lnode2 tc qdisc add dev $ifname2 parent 1:1 \
+                handle 10: tbf rate ${bandwidth}bit latency 50ms burst 1540
         }
     }
 }
