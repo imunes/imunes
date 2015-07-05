@@ -410,6 +410,7 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
+    # FIXME: merge this with execSet* commands
     execSetLinkParams $eid $link
 
     # if {[nodeType $lnode1] != "rj45" && [nodeType $lnode2] != "rj45"} {
@@ -422,14 +423,14 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     #     if {$qdisc ne "FIFO"} {
     #         execSetIfcQDisc $eid $lnode2 $ifname2 $qdisc
     #     }
-        # set qdrop [getIfcQDrop $node $ifc]
-        # if {$qdrop ne "drop-tail"} {
-        #     execSetIfcQDrop $eid $node $ifc $qdrop
-        # }
-        # set qlen [getIfcQLen $node $ifc]
-        # if {$qlen ne 50} {
-        #     execSetIfcQLen $eid $node $ifc $qlen
-        # }
+    #     set qdrop [getIfcQDrop $node $ifc]
+    #     if {$qdrop ne "drop-tail"} {
+    #         execSetIfcQDrop $eid $node $ifc $qdrop
+    #     }
+    #     set qlen [getIfcQLen $node $ifc]
+    #     if {$qlen ne 50} {
+    #         execSetIfcQLen $eid $node $ifc $qlen
+    #     }
     # }
 }
 
