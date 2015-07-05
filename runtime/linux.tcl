@@ -766,13 +766,13 @@ proc addNodeIfcToBridge { bridge brifc node ifc mac } {
     # generate interface names
     set hostIfc "v${ifc}pl${nodeNs}"
     set hostIfc "$eid.$bridge.$brifc"
-    set guestIfc "v${ifc}pg${nodeNs}"
-
+    set hostIfc "$eid.$node.$ifc"
     # create veth pair
     exec ip link add name "$hostIfc" type veth peer name "$guestIfc"
     # add host side of veth pair to bridge
     exec ovs-vsctl add-port "$eid.$bridge" "$hostIfc"
 
+    # set interface of bridge up
     exec ip link set "$hostIfc" up
 
     # move guest side of veth pair to node namespace
