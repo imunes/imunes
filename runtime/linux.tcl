@@ -902,18 +902,18 @@ proc execSetLinkParams { eid link } {
 
         set vdelay [expr $delay / 1000]
         exec tc qdisc add dev $eid.$lname1.$ifname1 root \
-            handle 1:0 netem delay ${vdelay}ms
+            handle 1: netem delay ${vdelay}ms
 
-        exec tc qdisc add dev $eid.$lname1.$ifname1 parent 1:1 \
-            handle 10: netem duplicate ${dup}%
+        exec tc qdisc add dev $eid.$lname1.$ifname1 parent 1: \
+            handle 2: netem duplicate ${dup}%
 
         set corrupt [expr (1 / double($ber)) * 100]
-        exec tc qdisc add dev $eid.$lname1.$ifname1 parent 10:1 \
-            handle 20: netem corrupt ${corrupt}%
+        exec tc qdisc add dev $eid.$lname1.$ifname1 parent 2: \
+            handle 3: netem corrupt ${corrupt}%
 
         if {$bandwidth > 0} {
-            exec tc qdisc add dev $eid.$lname1.$ifname1 parent 20:1 \
-                handle 30: tbf rate ${bandwidth}bit latency 50ms burst 1540
+            exec tc qdisc add dev $eid.$lname1.$ifname1 parent 3: \
+                handle 4: tbf rate ${bandwidth}bit latency 50ms burst 1540
         }
     }
 
@@ -922,18 +922,18 @@ proc execSetLinkParams { eid link } {
 
         set vdelay [expr $delay / 1000]
         exec tc qdisc add dev $eid.$lname2.$ifname2 root \
-            handle 1:0 netem delay ${vdelay}ms
+            handle 1: netem delay ${vdelay}ms
 
-        exec tc qdisc add dev $eid.$lname2.$ifname2 parent 1:1 \
-            handle 10: netem duplicate ${dup}%
+        exec tc qdisc add dev $eid.$lname2.$ifname2 parent 1: \
+            handle 2: netem duplicate ${dup}%
 
         set corrupt [expr (1 / double($ber)) * 100]
-        exec tc qdisc add dev $eid.$lname2.$ifname2 parent 10:1 \
-            handle 20: netem corrupt ${corrupt}%
+        exec tc qdisc add dev $eid.$lname2.$ifname2 parent 2: \
+            handle 3: netem corrupt ${corrupt}%
 
         if {$bandwidth > 0} {
-            exec tc qdisc add dev $eid.$lname2.$ifname2 parent 20:1 \
-                handle 30: tbf rate ${bandwidth}bit latency 50ms burst 1540
+            exec tc qdisc add dev $eid.$lname2.$ifname2 parent 3: \
+                handle 4: tbf rate ${bandwidth}bit latency 50ms burst 1540
         }
     }
 
@@ -942,18 +942,18 @@ proc execSetLinkParams { eid link } {
 
         set vdelay [expr $delay / 1000]
         exec docker exec $eid.$lnode1 tc qdisc add dev $ifname1 root \
-            handle 1:0 netem delay ${vdelay}ms
+            handle 1: netem delay ${vdelay}ms
 
-        exec docker exec $eid.$lnode1 tc qdisc add dev $ifname1 parent 1:1 \
-            handle 10: netem duplicate ${dup}%
+        exec docker exec $eid.$lnode1 tc qdisc add dev $ifname1 parent 1: \
+            handle 2: netem duplicate ${dup}%
 
         set corrupt [expr (1 / double($ber)) * 100]
-        exec docker exec $eid.$lnode1 tc qdisc add dev $ifname1 parent 10:1 \
-            handle 20: netem corrupt ${corrupt}%
+        exec docker exec $eid.$lnode1 tc qdisc add dev $ifname1 parent 2: \
+            handle 3: netem corrupt ${corrupt}%
 
         if {$bandwidth > 0} {
-            exec docker exec $eid.$lnode1 tc qdisc add dev $ifname1 parent 20:1 \
-                handle 30: tbf rate ${bandwidth}bit latency 50ms burst 1540
+            exec docker exec $eid.$lnode1 tc qdisc add dev $ifname1 parent 3: \
+                handle 4: tbf rate ${bandwidth}bit latency 100ms burst 10kb
         }
 
     }
@@ -963,18 +963,18 @@ proc execSetLinkParams { eid link } {
 
         set vdelay [expr $delay / 1000]
         exec docker exec $eid.$lnode2 tc qdisc add dev $ifname2 root \
-            handle 1:0 netem delay ${vdelay}ms
+            handle 1: netem delay ${vdelay}ms
 
-        exec docker exec $eid.$lnode2 tc qdisc add dev $ifname2 parent 1:1 \
-            handle 10: netem duplicate ${dup}%
+        exec docker exec $eid.$lnode2 tc qdisc add dev $ifname2 parent 1: \
+            handle 2: netem duplicate ${dup}%
 
         set corrupt [expr (1 / double($ber)) * 100]
-        exec docker exec $eid.$lnode2 tc qdisc add dev $ifname2 parent 10:1 \
-            handle 20: netem corrupt ${corrupt}%
+        exec docker exec $eid.$lnode2 tc qdisc add dev $ifname2 parent 2: \
+            handle 3: netem corrupt ${corrupt}%
 
         if {$bandwidth > 0} {
-            exec docker exec $eid.$lnode2 tc qdisc add dev $ifname2 parent 20:1 \
-                handle 30: tbf rate ${bandwidth}bit latency 50ms burst 1540
+            exec docker exec $eid.$lnode2 tc qdisc add dev $ifname2 parent 3: \
+                handle 4: tbf rate ${bandwidth}bit latency 50ms burst 1540
         }
     }
 }
