@@ -364,10 +364,17 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 
     if { [[typemodel $lnode1].virtlayer] == "NETGRAPH" } {
         if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
-            exec ovs-vsctl add-port $eid.$lname1 $eid.$lname1.$ifname1 -- \
-                set interface $eid.$lname1.$ifname1 type=patch options:peer=$eid.$lname2.$ifname2
-            exec ovs-vsctl add-port $eid.$lname2 $eid.$lname2.$ifname2 -- \
-                set interface $eid.$lname2.$ifname2 type=patch options:peer=$eid.$lname1.$ifname1
+            # generate interface names
+            set hostIfc1 "$eid.$lnode1.$ifname1"
+            set hostIfc2 "$eid.$lnode2.$ifname2"
+            # create veth pair
+            catch {exec ip link add name "$hostIfc1" type veth peer name "$hostIfc2"}
+            # add veth interfaces to bridges
+            exec ovs-vsctl add-port $eid.$lname1 $hostIfc1
+            exec ovs-vsctl add-port $eid.$lname2 $hostIfc2
+            # set bridge interfaces up
+            exec ip link set dev $hostIfc1 up
+            exec ip link set dev $hostIfc2 up
         }
         if { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
             addNodeIfcToBridge $lname1 $ifname1 $lnode2 $ifname2 $ether2
@@ -505,8 +512,11 @@ proc runConfOnNode { node } {
 }
 
 proc destroyLinkBetween { eid lnode1 lnode2 } {
-    set lname [linkByPeers $lnode1 $lnode2]
-    catch {exec ovs-vsctl del-br $eid.$lname}
+    set ifname1 [ifcByLogicalPeer $lnode1 $lnode2]
+    set ifname2 [ifcByLogicalPeer $lnode2 $lnode1]
+
+    catch {exec ip link del dev $eid.$lnode1.$ifname1}
+    catch {exec ip link del dev $eid.$lnode2.$ifname2}
 }
 
 #****f* linux.tcl/removeNodeIfcIPaddrs
