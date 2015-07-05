@@ -913,7 +913,7 @@ proc execSetLinkParams { eid link } {
 
         if {$bandwidth > 0} {
             exec tc qdisc add dev $eid.$lname1.$ifname1 parent 3: \
-                handle 4: tbf rate ${bandwidth}bit latency 50ms burst 1540
+                handle 4: tbf rate ${bandwidth}bit latency 200ms burst 1540
         }
     }
 
@@ -933,7 +933,7 @@ proc execSetLinkParams { eid link } {
 
         if {$bandwidth > 0} {
             exec tc qdisc add dev $eid.$lname2.$ifname2 parent 3: \
-                handle 4: tbf rate ${bandwidth}bit latency 50ms burst 1540
+                handle 4: tbf rate ${bandwidth}bit latency 200ms burst 1540
         }
     }
 
@@ -953,7 +953,7 @@ proc execSetLinkParams { eid link } {
 
         if {$bandwidth > 0} {
             exec docker exec $eid.$lnode1 tc qdisc add dev $ifname1 parent 3: \
-                handle 4: tbf rate ${bandwidth}bit latency 100ms burst 10kb
+                handle 4: tbf rate ${bandwidth}bit latency 200ms burst 1540
         }
 
     }
@@ -974,7 +974,7 @@ proc execSetLinkParams { eid link } {
 
         if {$bandwidth > 0} {
             exec docker exec $eid.$lnode2 tc qdisc add dev $ifname2 parent 3: \
-                handle 4: tbf rate ${bandwidth}bit latency 50ms burst 1540
+                handle 4: tbf rate ${bandwidth}bit latency 200ms burst 1540
         }
     }
 }
