@@ -256,7 +256,6 @@ proc createExperimentContainer {} {}
 proc loadKernelModules {} {
     global all_modules_list
 
-    exec modprobe sch_netem
     foreach module $all_modules_list {
         if {[info procs $module.prepareSystem] == "$module.prepareSystem"} {
             $module.prepareSystem
