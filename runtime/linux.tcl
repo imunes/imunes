@@ -1,4 +1,4 @@
-set VROOT_MASTER "docker.io/imunes/vroot:base"
+set VROOT_MASTER "gcetusic/imunes:latest"
 
 #****f* linux.tcl/writeDataToNodeFile
 # NAME
@@ -256,7 +256,6 @@ proc createExperimentContainer {} {}
 proc loadKernelModules {} {
     global all_modules_list
 
-    # FIXME: prepareSystem isn't the same on Linux
     foreach module $all_modules_list {
         if {[info procs $module.prepareSystem] == "$module.prepareSystem"} {
             $module.prepareSystem
@@ -350,20 +349,34 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
     }
     set ether2 [getIfcMACaddr $lnode2 $ifname2]
 
+    if {[nodeType $lnode1] == "rj45"} {
+        set lname1 [getNodeName $lnode1]
+    } else {
+        set lname1 $lnode1
+    }
+
+    if {[nodeType $lnode2] == "rj45"} {
+        set lname2 [getNodeName $lnode2]
+    } else {
+        set lname2 $lnode2
+    }
+
     if { [[typemodel $lnode1].virtlayer] == "NETGRAPH" } {
         if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
-            exec ovs-vsctl add-port $eid.$lnode1 $eid.$lnode1.$ifname1 -- \
-                set interface $eid.$lnode1.$ifname1 type=patch options:peer=$eid.$lnode2.$ifname2
-            exec ovs-vsctl add-port $eid.$lnode2 $eid.$lnode2.$ifname2 -- \
-                set interface $eid.$lnode2.$ifname2 type=patch options:peer=$eid.$lnode1.$ifname1
+            # generate interface names
+            set hostIfc1 "$eid.$lnode1.$ifname1"
+            set hostIfc2 "$eid.$lnode2.$ifname2"
+            # create veth pair
+            catch {exec ip link add name "$hostIfc1" type veth peer name "$hostIfc2"}
+            # add veth interfaces to bridges
+            exec ovs-vsctl add-port $eid.$lname1 $hostIfc1
+            exec ovs-vsctl add-port $eid.$lname2 $hostIfc2
+            # set bridge interfaces up
+            exec ip link set dev $hostIfc1 up
+            exec ip link set dev $hostIfc2 up
         }
         if { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
-            if {[nodeType $lnode1] == "rj45"} {
-                set extIfcName [getNodeName $lnode1]
-                addNodeIfcToBridge $extIfcName $ifname2 $lnode2 $ether2
-            } else {
-                addNodeIfcToBridge $lnode1 $ifname2 $lnode2 $ether2
-            }
+            addNodeIfcToBridge $lname1 $ifname1 $lnode2 $ifname2 $ether2
         }
     } elseif { [[typemodel $lnode1].virtlayer] == "VIMAGE" } {
         if  { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
@@ -388,17 +401,37 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
             exec rm -f "/var/run/netns/$lnode2Ns"
         }
         if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
-            if {[nodeType $lnode2] == "rj45"} {
-                set extIfcName [getNodeName $lnode2]
-                addNodeIfcToBridge $extIfcName $ifname1 $lnode1 $ether1
-            } else {
-                addNodeIfcToBridge $lnode2 $ifname1 $lnode1 $ether1
-            }
+            addNodeIfcToBridge $lname2 $ifname2 $lnode1 $ifname1 $ether1
         }
     }
 }
 
-proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {}
+proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    # FIXME: merge this with execSet* commands
+    execSetLinkParams $eid $link
+
+    # if {[nodeType $lnode1] != "rj45" && [nodeType $lnode2] != "rj45"} {
+    #     set qdisc [getIfcQDisc $lnode1 $ifname1]
+    #     if {$qdisc ne "FIFO"} {
+    #         execSetIfcQDisc $eid $lnode1 $ifname2 $qdisc
+    #     }
+
+    #     set qdisc [getIfcQDisc $lnode2 $ifname2]
+    #     if {$qdisc ne "FIFO"} {
+    #         execSetIfcQDisc $eid $lnode2 $ifname2 $qdisc
+    #     }
+    #     set qdrop [getIfcQDrop $node $ifc]
+    #     if {$qdrop ne "drop-tail"} {
+    #         execSetIfcQDrop $eid $node $ifc $qdrop
+    #     }
+    #     set qlen [getIfcQLen $node $ifc]
+    #     if {$qlen ne 50} {
+    #         execSetIfcQLen $eid $node $ifc $qlen
+    #     }
+    # }
+}
 
 #****f* linux.tcl/startIfcsNode
 # NAME
@@ -479,8 +512,11 @@ proc runConfOnNode { node } {
 }
 
 proc destroyLinkBetween { eid lnode1 lnode2 } {
-    set lname [linkByPeers $lnode1 $lnode2]
-    catch {exec ovs-vsctl del-br $eid.$lname}
+    set ifname1 [ifcByLogicalPeer $lnode1 $lnode2]
+    set ifname2 [ifcByLogicalPeer $lnode2 $lnode1]
+
+    catch {exec ip link del dev $eid.$lnode1.$ifname1}
+    catch {exec ip link del dev $eid.$lnode2.$ifname2}
 }
 
 #****f* linux.tcl/removeNodeIfcIPaddrs
@@ -730,7 +766,7 @@ proc getNodeNamespace { node } {
     return $ns
 }
 
-proc addNodeIfcToBridge { bridge ifc node mac } {
+proc addNodeIfcToBridge { bridge brifc node ifc mac } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     set nodeNs [createNetNs $node]
@@ -738,13 +774,14 @@ proc addNodeIfcToBridge { bridge ifc node mac } {
     catch "exec ovs-vsctl add-br $eid.$bridge"
 
     # generate interface names
-    set hostIfc "v${ifc}pl${nodeNs}"
-    set guestIfc "v${ifc}pg${nodeNs}"
+    set hostIfc "$eid.$bridge.$brifc"
+    set guestIfc "$eid.$node.$ifc"
 
     # create veth pair
     exec ip link add name "$hostIfc" type veth peer name "$guestIfc"
     # add host side of veth pair to bridge
     exec ovs-vsctl add-port "$eid.$bridge" "$hostIfc"
+
     exec ip link set "$hostIfc" up
 
     # move guest side of veth pair to node namespace
@@ -788,4 +825,156 @@ proc setIfcNetNs { node oldIfc newIfc } {
     set nodeNs [getNodeNamespace $node]
     exec ip link set "$oldIfc" netns "$nodeNs"
     exec ip netns exec "$nodeNs" ip link set "$oldIfc" name "$newIfc"
+}
+
+#****f* linux.tcl/execSetIfcQDisc
+# NAME
+#   execSetIfcQDisc -- in exec mode set interface queuing discipline
+# SYNOPSIS
+#   execSetIfcQDisc $eid $node $ifc $qdisc
+# FUNCTION
+#   Sets the queuing discipline during the simulation.
+#   New queuing discipline is defined in qdisc parameter.
+#   Queueing discipline can be set to fifo, wfq or drr.
+# INPUTS
+#   eid -- experiment id
+#   node -- node id
+#   ifc -- interface name
+#   qdisc -- queuing discipline
+#****
+proc execSetIfcQDisc { eid node ifc qdisc } {
+    set target [linkByIfc $node $ifc]
+    set peers [linkPeers [lindex $target 0]]
+    set dir [lindex $target 1]
+    set lnode1 [lindex $peers 0]
+    set lnode2 [lindex $peers 1]
+    if { [nodeType $lnode2] == "pseudo" } {
+        set mirror_link [getLinkMirror [lindex $target 0]]
+        set lnode2 [lindex [linkPeers $mirror_link] 0]
+    }
+    switch -exact $qdisc {
+        FIFO { set qdisc fifo_fast }
+        WFQ { set qdisc wfq }
+        DRR { set qdisc drr }
+    }
+    exec docker exec $eid.$node tc qdisc add dev $ifc root $qdisc
+}
+
+#****f* linux.tcl/execSetLinkParams
+# NAME
+#   execSetLinkParams -- in exec mode set link parameters
+# SYNOPSIS
+#   execSetLinkParams $eid $link
+# FUNCTION
+#   Sets the link parameters during the simulation.
+#   All the parameters are set at the same time.
+# INPUTS
+#   eid -- experiment id
+#   link -- link id
+#****
+proc execSetLinkParams { eid link } {
+    global debug
+
+    set lnode1 [lindex [linkPeers $link] 0]
+    set lnode2 [lindex [linkPeers $link] 1]
+    set ifname1 [ifcByLogicalPeer $lnode1 $lnode2]
+    set ifname2 [ifcByLogicalPeer $lnode2 $lnode1]
+
+    set bandwidth [expr [getLinkBandwidth $link] + 0]
+    set delay [expr [getLinkDelay $link] + 0]
+    set ber [expr [getLinkBER $link] + 0]
+    set dup [expr [getLinkDup $link] + 0]
+
+    if {[nodeType $lnode1] == "rj45"} {
+        set lname1 [getNodeName $lnode1]
+    } else {
+        set lname1 $lnode1
+    }
+
+    if {[nodeType $lnode2] == "rj45"} {
+        set lname2 [getNodeName $lnode2]
+    } else {
+        set lname2 $lnode2
+    }
+
+    if { [[typemodel $lnode1].virtlayer] == "NETGRAPH" } {
+        catch {exec tc qdisc del dev $eid.$lname1.$ifname1 root}
+
+        set vdelay [expr $delay / 1000]
+        exec tc qdisc add dev $eid.$lname1.$ifname1 root \
+            handle 1: netem delay ${vdelay}ms
+
+        exec tc qdisc add dev $eid.$lname1.$ifname1 parent 1: \
+            handle 2: netem duplicate ${dup}%
+
+        set corrupt [expr (1 / double($ber)) * 100]
+        exec tc qdisc add dev $eid.$lname1.$ifname1 parent 2: \
+            handle 3: netem corrupt ${corrupt}%
+
+        if {$bandwidth > 0} {
+            exec tc qdisc add dev $eid.$lname1.$ifname1 parent 3: \
+                handle 4: tbf rate ${bandwidth}bit limit 10mb burst 1540
+        }
+    }
+
+    if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
+        catch {exec tc qdisc del dev $eid.$lname2.$ifname2 root}
+
+        set vdelay [expr $delay / 1000]
+        exec tc qdisc add dev $eid.$lname2.$ifname2 root \
+            handle 1: netem delay ${vdelay}ms
+
+        exec tc qdisc add dev $eid.$lname2.$ifname2 parent 1: \
+            handle 2: netem duplicate ${dup}%
+
+        set corrupt [expr (1 / double($ber)) * 100]
+        exec tc qdisc add dev $eid.$lname2.$ifname2 parent 2: \
+            handle 3: netem corrupt ${corrupt}%
+
+        if {$bandwidth > 0} {
+            exec tc qdisc add dev $eid.$lname2.$ifname2 parent 3: \
+                handle 4: tbf rate ${bandwidth}bit limit 10mb burst 1540
+        }
+    }
+
+    if { [[typemodel $lnode1].virtlayer] == "VIMAGE" } {
+        catch {exec docker exec $eid.$lnode1 tc qdisc del dev $ifname1 root}
+
+        set vdelay [expr $delay / 1000]
+        exec docker exec $eid.$lnode1 tc qdisc add dev $ifname1 root \
+            handle 1: netem delay ${vdelay}ms
+
+        exec docker exec $eid.$lnode1 tc qdisc add dev $ifname1 parent 1: \
+            handle 2: netem duplicate ${dup}%
+
+        set corrupt [expr (1 / double($ber)) * 100]
+        exec docker exec $eid.$lnode1 tc qdisc add dev $ifname1 parent 2: \
+            handle 3: netem corrupt ${corrupt}%
+
+        if {$bandwidth > 0} {
+            exec docker exec $eid.$lnode1 tc qdisc add dev $ifname1 parent 3: \
+                handle 4: tbf rate ${bandwidth}bit limit 10mb burst 1540
+        }
+
+    }
+
+    if { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
+        catch {exec docker exec $eid.$lnode2 tc qdisc del dev $ifname2 root}
+
+        set vdelay [expr $delay / 1000]
+        exec docker exec $eid.$lnode2 tc qdisc add dev $ifname2 root \
+            handle 1: netem delay ${vdelay}ms
+
+        exec docker exec $eid.$lnode2 tc qdisc add dev $ifname2 parent 1: \
+            handle 2: netem duplicate ${dup}%
+
+        set corrupt [expr (1 / double($ber)) * 100]
+        exec docker exec $eid.$lnode2 tc qdisc add dev $ifname2 parent 2: \
+            handle 3: netem corrupt ${corrupt}%
+
+        if {$bandwidth > 0} {
+            exec docker exec $eid.$lnode2 tc qdisc add dev $ifname2 parent 3: \
+                handle 4: tbf rate ${bandwidth}bit limit 10mb burst 1540
+        }
+    }
 }
