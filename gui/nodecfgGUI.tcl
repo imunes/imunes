@@ -2653,3 +2653,42 @@ proc formatIPaddrList { addrList } {
     }
     return $newList
 }
+
+#################
+#****f* nodecfgGUI.tcl/configGUI_ipsec
+# NAME
+#   configGUI_ipsecui -- configure GUI - GUI for IPsec tab
+# SYNOPSIS
+#   configGUI_ipsecui $tab $node
+# FUNCTION
+#   Creating GUI for IPsec configuration tab
+# INPUTS
+#   * tab -- tab widget where GUI will be placed
+#   * node -- node id
+#****
+proc configGUI_ipsec { tab node } {
+    $tab configure -padding "5 5 5 5"
+
+    ttk::label $tab.headingLabel -text "List of IPsec connections"
+    ttk::treeview $tab.tree -columns "Peers_IP_address" -yscrollcommand "$tab.scrollbar set"
+    ttk::scrollbar $tab.scrollbar -command "$tab.tree yview" -orient vertical
+    grid $tab.headingLabel -column 0 -row 0 -padx 5 -pady 5
+    grid $tab.tree -column 0 -row 1 -rowspan 2
+    grid $tab.scrollbar -column 1 -row 1 -rowspan 2 -sticky ns
+    $tab.tree heading #0 -text "Connection name"
+    $tab.tree column #0 -anchor center -width 195
+    $tab.tree heading Peers_IP_address -text "Peers IP address"
+    $tab.tree column Peers_IP_address -anchor center -width 195
+
+    #refreshIPsecTree $node $tab
+
+    set tree_widget $tab.tree
+    ttk::frame $tab.button_container
+    ttk::button $tab.button_container.add_button -text "Add" -command "addIPsecConnWindow $node $tab"
+    ttk::button $tab.button_container.modify_button -text "Modify" -command "modIPsecConnWindow $node $tab"
+    ttk::button $tab.button_container.delete_button -text "Delete" -command "deleteIPsecConnection $node $tab "
+    grid $tab.button_container -column 2 -row 1 -rowspan 2 -padx {8 0}
+    grid $tab.button_container.add_button -column 0 -row 0 -pady 5 -padx 5
+    grid $tab.button_container.modify_button -column 0 -row 1 -pady 5 -padx 5
+    grid $tab.button_container.delete_button -column 0 -row 2 -pady 5 -padx 5
+}
