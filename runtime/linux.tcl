@@ -1,4 +1,4 @@
-set VROOT_MASTER "gcetusic/imunes:latest"
+set VROOT_MASTER "imunes/vroot:base"
 
 #****f* linux.tcl/writeDataToNodeFile
 # NAME
