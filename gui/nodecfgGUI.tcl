@@ -2692,3 +2692,368 @@ proc configGUI_ipsec { tab node } {
     grid $tab.button_container.modify_button -column 0 -row 1 -pady 5 -padx 5
     grid $tab.button_container.delete_button -column 0 -row 2 -pady 5 -padx 5
 }
+
+proc addIPsecConnWindow { node tab } {
+    set mainFrame .d.mIPsecFrame
+    set connParamsLframe $mainFrame.conn_params_lframe
+    set espOptionsLframe $mainFrame.esp_options_lframe
+    set ikeSALframe $mainFrame.ike_sa_lframe
+
+    createIPsecGUI $node $mainFrame $connParamsLframe $espOptionsLframe $ikeSALframe "Add"
+    $mainFrame.buttons_container.apply configure -command "addIPsecConn $node $tab"
+
+    setDefaultsForIPsec $node $connParamsLframe $espOptionsLframe
+}
+
+proc createIPsecGUI { node mainFrame connParamsLframe espOptionsLframe ikeSALframe indicator } {
+    tk::toplevel .d
+    wm title .d "$indicator IPsec connection"
+    grab .d
+
+    ttk::frame $mainFrame -padding 4
+    grid $mainFrame -column 0 -row 0 -sticky nwes
+    grid columnconfigure .d 0 -weight 1
+    grid rowconfigure .d 0 -weight 1
+
+#    setCurrentNode $node
+
+    ttk::frame $mainFrame.con_name_container
+    ttk::label $mainFrame.con_name_container.con_name -text "Connection name:"
+    ttk::entry $mainFrame.con_name_container.conn_name_entry -width 14 -textvariable connection_name
+    grid $mainFrame.con_name_container -column 0 -row 0 -columnspan 2
+    grid $mainFrame.con_name_container.con_name -column 0 -row 0 -pady 5 -padx 5 -sticky e
+    grid $mainFrame.con_name_container.conn_name_entry -column 1 -row 0 -pady 5 -padx 5
+
+    # First label frame (Connection parameters)
+    ttk::labelframe $connParamsLframe -text "Connection parameters"
+    grid $connParamsLframe -column 0 -row 1 -sticky n -padx 5 -pady 5
+
+    ttk::frame $connParamsLframe.authby_container
+    ttk::label $connParamsLframe.authby_container.authby_type -text "Authentication type:"
+    ttk::radiobutton $connParamsLframe.authby_container.cert -text "Certificates" -variable authby -value cert \
+	-command "showCertificates $connParamsLframe"
+    ttk::radiobutton $connParamsLframe.authby_container.secret -text "Shared key" -variable authby -value psk \
+	-command "hideCertificates $connParamsLframe"
+
+    grid $connParamsLframe.authby_container -column 0 -row 0 -pady 5 -padx 5 -columnspan 3
+    grid $connParamsLframe.authby_container.authby_type -column 0 -row 0 -pady 5 -padx 5
+    grid $connParamsLframe.authby_container.cert -column 1 -row 0 -pady 5 -padx 5 -sticky w
+    grid $connParamsLframe.authby_container.secret -column 2 -row 0 -pady 5 -padx 5 -sticky w
+
+    ttk::label $connParamsLframe.local_id -text "Local name/id:"
+    ttk::entry $connParamsLframe.local_id_entry -width 15 -textvariable local_name
+    grid $connParamsLframe.local_id -column 0 -row 1 -pady 5 -padx 5 -sticky e
+    grid $connParamsLframe.local_id_entry -column 1 -row 1 -pady 5 -padx 5 -sticky w -columnspan 2
+
+    ttk::label $connParamsLframe.local_ip -text "Local IP address:"
+    ttk::combobox $connParamsLframe.local_ip_entry -width 14 -textvariable local_ip_address -state readonly
+    grid $connParamsLframe.local_ip -column 0 -row 2 -pady 5 -padx 5 -sticky e
+    grid $connParamsLframe.local_ip_entry -column 1 -row 2 -pady 5 -padx 5 -sticky w
+
+    ttk::label $connParamsLframe.local_sub -text "Local subnet:"
+    ttk::combobox $connParamsLframe.local_sub_entry -width 14 -textvariable local_subnet -state readonly
+    grid $connParamsLframe.local_sub -column 0 -row 3 -pady 5 -padx 5 -sticky e
+    grid $connParamsLframe.local_sub_entry -column 1 -row 3 -pady 5 -padx 5 -sticky w
+
+    ttk::label $connParamsLframe.peer_name -text "Specify his name:"
+    ttk::entry $connParamsLframe.peer_id -width 15 -textvariable peers_id
+    grid $connParamsLframe.peer_name -column 0 -row 4 -pady 5 -padx 5 -sticky e
+    grid $connParamsLframe.peer_id -column 1 -row 4 -pady 5 -padx 5 -sticky w -columnspan 2
+
+    ttk::label $connParamsLframe.peer_ip -text "Peers IP address:"
+    ttk::combobox $connParamsLframe.peer_name_entry -width 14 -textvariable peers_name -state readonly
+    ttk::combobox $connParamsLframe.peer_ip_entry -width 25 -textvariable peers_ip -state readonly
+    grid $connParamsLframe.peer_ip -column 0 -row 5 -pady 5 -padx 5 -sticky e
+    grid $connParamsLframe.peer_name_entry -column 1 -row 5 -pady 5 -padx 5 -sticky w
+    grid $connParamsLframe.peer_ip_entry -column 2 -row 5 -pady 5 -padx 4 -sticky w
+
+    ttk::label $connParamsLframe.peer_sub -text "Peers subnet:"
+    ttk::combobox $connParamsLframe.peer_sub_entry -width 14 -textvariable peers_subnet -state readonly
+    grid $connParamsLframe.peer_sub -column 0 -row 6 -pady 5 -padx 5 -sticky e
+    grid $connParamsLframe.peer_sub_entry -column 1 -row 6 -pady 5 -padx 5 -sticky w
+
+    ttk::frame $connParamsLframe.local_cert_container
+    ttk::label $connParamsLframe.local_cert_container.local_cert -text "Local certificate file:"
+    ttk::entry $connParamsLframe.local_cert_container.local_cert_entry -width 14 -textvariable local_cert_file
+    ttk::button $connParamsLframe.local_cert_container.cert_chooser -text "Open" \
+	-command "chooseFile cert"
+    ttk::entry $connParamsLframe.local_cert_container.local_cert_directory -width 20 -textvariable local_cert_dir -state readonly
+    grid $connParamsLframe.local_cert_container -column 0 -row 7 -columnspan 3 -sticky w
+    grid $connParamsLframe.local_cert_container.local_cert -column 0 -row 0 -pady 5 -padx {11 5} -sticky e
+    grid $connParamsLframe.local_cert_container.local_cert_entry -column 1 -row 0 -pady 5 -padx 5 -sticky w
+    grid $connParamsLframe.local_cert_container.cert_chooser -column 2 -row 0
+    grid $connParamsLframe.local_cert_container.local_cert_directory -column 3 -row 0 -pady 5 -padx 5 -sticky w
+
+    ttk::frame $connParamsLframe.private_file_container
+    ttk::label $connParamsLframe.private_file_container.secret -text "Private key file: "
+    ttk::entry $connParamsLframe.private_file_container.secret_entry -width 14 -textvariable secret_file
+    ttk::button $connParamsLframe.private_file_container.private_chooser -text "Open" \
+	-command "chooseFile private"
+    ttk::entry $connParamsLframe.private_file_container.secret_directory -width 22 -textvariable secret_dir -state readonly
+    grid $connParamsLframe.private_file_container -column 0 -row 8 -columnspan 3 -sticky w
+    grid $connParamsLframe.private_file_container.secret -column 0 -row 0 -pady 5 -padx {43 0} -sticky e
+    grid $connParamsLframe.private_file_container.secret_entry -column 1 -row 0 -pady 5 -padx 5 -sticky w
+    grid $connParamsLframe.private_file_container.private_chooser -column 2 -row 0
+    grid $connParamsLframe.private_file_container.secret_directory -column 3 -row 0 -pady 5 -padx 5 -sticky w
+
+    ttk::checkbutton $connParamsLframe.check_button -text "Start connection after executing experiment" -variable start_connection -onvalue 1 -offvalue 0
+    grid $connParamsLframe.check_button -column 0 -row 9 -pady 5 -padx 5 -columnspan 2
+
+    # hidden
+    ttk::label $connParamsLframe.shared_key -text "Shared key:"
+    ttk::entry $connParamsLframe.shared_key_entry -width 14 -textvariable psk_key
+
+    # Second label frame (Authentication/Encryption)
+    ttk::labelframe $espOptionsLframe -text "ESP options"
+    grid $espOptionsLframe -column 1 -row 1 -sticky wens -padx 5 -pady 5
+
+    ttk::frame $espOptionsLframe.method_container
+    ttk::radiobutton $espOptionsLframe.method_container.ah -text "ESP Authentication only" -variable method -value ah \
+	-command "showNullEncryption $espOptionsLframe"
+    ttk::radiobutton $espOptionsLframe.method_container.esp -text "Full ESP" -variable method -value esp \
+	-command "showFullEncryption $espOptionsLframe"
+    grid $espOptionsLframe.method_container -column 0 -row 0 -sticky w
+    grid $espOptionsLframe.method_container.ah -column 0 -row 0 -pady 5 -padx 5 -sticky w
+    grid $espOptionsLframe.method_container.esp -column 1 -row 0 -pady 5 -padx 5 -sticky w
+
+    ttk::frame $espOptionsLframe.type_container
+    ttk::label $espOptionsLframe.type_container.conn-type -text "Connection type:"
+    ttk::radiobutton $espOptionsLframe.type_container.tunnel -text "Tunnel" -variable type -value tunnel
+    ttk::radiobutton $espOptionsLframe.type_container.transport -text "Transport" -variable type -value transport
+    grid $espOptionsLframe.type_container -column 0 -row 1 -pady 5 -padx 5 -columnspan 2 -sticky w
+    grid $espOptionsLframe.type_container.conn-type  -column 0 -row 0 -pady 5 -padx 5
+    grid $espOptionsLframe.type_container.tunnel -column 1 -row 0 -pady 5 -padx 5
+    grid $espOptionsLframe.type_container.transport -column 2 -row 0 -padx 5 -pady 5
+
+    ttk::frame $espOptionsLframe.esp_container
+    ttk::label $espOptionsLframe.esp_container.esp_suit -text "Encryption algorithm:"
+    ttk::combobox $espOptionsLframe.esp_container.esp_combo -textvariable esp_suits -state readonly
+    $espOptionsLframe.esp_container.esp_combo configure -values [list "3des" cast128 blowfish128 blowfish192 blowfish256 aes128 aes192 aes256]
+    grid $espOptionsLframe.esp_container.esp_suit -column 0 -row 0 -pady 5 -padx 5 -sticky e
+    grid $espOptionsLframe.esp_container.esp_combo -column 1 -row 0 -pady 5 -padx 5
+
+    ttk::entry $espOptionsLframe.esp_container.null_encryption -width 7 -state readonly -textvariable no_encryption
+
+    ttk::label $espOptionsLframe.esp_container.ah_suit -text "Integrity check algorithm:"
+    ttk::combobox $espOptionsLframe.esp_container.ah_combo -textvariable ah_suits -state readonly
+    grid $espOptionsLframe.esp_container.ah_suit -column 0 -row 1 -pady 5 -padx 5 -sticky e
+    grid $espOptionsLframe.esp_container.ah_combo -column 1 -row 1 -pady 5 -padx 5
+    $espOptionsLframe.esp_container.ah_combo configure -values [list md5 sha1 sha256 sha384 sha512]
+
+    ttk::label $espOptionsLframe.esp_container.modp_suit -text "Modulo prime groups:"
+    ttk::combobox $espOptionsLframe.esp_container.modp_combo -textvariable modp_suits -state readonly
+    grid $espOptionsLframe.esp_container.modp_suit -column 0 -row 2 -pady 5 -padx 5 -sticky e
+    grid $espOptionsLframe.esp_container.modp_combo -column 1 -row 2 -pady 5 -padx 5
+    $espOptionsLframe.esp_container.modp_combo configure -values [list modp768 modp1024 modp1536 modp2048 modp3072 modp4096 modp6144 modp8192]
+
+    ttk::button $espOptionsLframe.advance_button_esp -width 20 -text "Advanced options" \
+	-command "showESPAdvancedOptions $node $espOptionsLframe"
+    grid $espOptionsLframe.advance_button_esp -column 0 -row 2 -padx 105 -pady 5
+
+    # Third label frame (security association establishment)
+    ttk::labelframe $ikeSALframe -text "IKEv2 SA Establishment"
+    grid $ikeSALframe -column 0 -row 2 -columnspan 2
+
+    ttk::frame $ikeSALframe.ike_container
+    ttk::label $ikeSALframe.ike_container.conn_instance -text "Connection instance duration:"
+    ttk::spinbox $ikeSALframe.ike_container.conn_instance_entry -from 1 -to 1000 -textvariable instance_duration
+    ttk::combobox $ikeSALframe.ike_container.connection_duration_combo -width 7 -textvariable conn_time -state readonly
+    grid $ikeSALframe.ike_container.conn_instance -column 0 -row 0 -pady 5 -padx 5 -sticky e
+    grid $ikeSALframe.ike_container.conn_instance -column 0 -row 0 -pady 5 -padx 5 -sticky e
+    grid $ikeSALframe.ike_container.conn_instance_entry -column 1 -row 0 -pady 5 -padx 5
+    grid $ikeSALframe.ike_container.connection_duration_combo -column 2 -row 0 -pady 5 -padx 5 -sticky w
+    $ikeSALframe.ike_container.connection_duration_combo configure -values [list seconds minutes hours days]
+
+    ttk::label $ikeSALframe.ike_container.keying_channel -text "Keying channel duration:"
+    ttk::spinbox $ikeSALframe.ike_container.keying_channel_entry -from 1 -to 1000 -textvariable keying_duration
+    ttk::combobox $ikeSALframe.ike_container.keying_duration_combo -width 7 -textvariable keying_time -state readonly
+    grid $ikeSALframe.ike_container.keying_channel -column 0 -row 1 -pady 5 -padx 5 -sticky e
+    grid $ikeSALframe.ike_container.keying_channel_entry -column 1 -row 1 -pady 5 -padx 5
+    grid $ikeSALframe.ike_container.keying_duration_combo -column 2 -row 1 -pady 5 -padx 5 -sticky w
+    $ikeSALframe.ike_container.keying_duration_combo configure -values [list seconds minutes hours days]
+
+    ttk::label $ikeSALframe.ike_container.neg_attempts -text "Connection negotiation attempts:"
+    ttk::spinbox $ikeSALframe.ike_container.neg_attempts_entry -from 1 -to 1000 -textvariable negotiation_attempts
+    grid $ikeSALframe.ike_container.neg_attempts -column 0 -row 2 -pady 5 -padx 5 -sticky e
+    grid $ikeSALframe.ike_container.neg_attempts_entry -column 1 -row 2 -pady 5 -padx 5
+
+    ttk::label $ikeSALframe.ike_container.how_long -text "Rekeying margin time:"
+    ttk::spinbox $ikeSALframe.ike_container.how_long_entry -from 1 -to 100 -textvariable how_long_before
+    ttk::combobox $ikeSALframe.ike_container.how_long_combo -width 7 -textvariable how_long_time -state readonly
+    grid $ikeSALframe.ike_container.how_long -column 0 -row 3 -sticky e -pady 5 -padx 5
+    grid $ikeSALframe.ike_container.how_long_entry -column 1 -row 3 -pady 5 -padx 5
+    grid $ikeSALframe.ike_container.how_long_combo -column 2 -row 3 -pady 5 -padx 5 -sticky w
+    $ikeSALframe.ike_container.how_long_combo configure -values [list seconds minutes hours days]
+
+    ttk::label $ikeSALframe.ike_container.ike_esp -text "IKE encryption algorithm"
+    ttk::combobox $ikeSALframe.ike_container.ike_esp_combo -width 15 -textvariable ike_encr -state readonly
+    grid $ikeSALframe.ike_container.ike_esp -column 0 -row 4 -pady 5 -padx 5 -sticky e
+    grid $ikeSALframe.ike_container.ike_esp_combo -column 1 -row 4 -pady 5 -padx 5
+    $ikeSALframe.ike_container.ike_esp_combo configure -values [list "3des" cast128 blowfish128 blowfish192 blowfish256 aes128 aes192 aes256]
+
+    ttk::label $ikeSALframe.ike_container.ike_ah -text "IKE integrity check"
+    ttk::combobox $ikeSALframe.ike_container.ike_ah_combo -width 15 -textvariable ike_auth -state readonly
+    grid $ikeSALframe.ike_container.ike_ah -column 0 -row 5 -pady 5 -padx 5 -sticky e
+    grid $ikeSALframe.ike_container.ike_ah_combo -column 1 -row 5 -pady 5 -padx 5
+    $ikeSALframe.ike_container.ike_ah_combo configure -values [list md5 sha1 sha256 sha384 sha512]
+
+    ttk::label $ikeSALframe.ike_container.ike_modp -text "IKE modulo prime groups"
+    ttk::combobox $ikeSALframe.ike_container.ike_modp_combo -width 15 -textvariable ike_modp -state readonly
+    grid $ikeSALframe.ike_container.ike_modp -column 0 -row 6 -pady 5 -padx 5 -sticky e
+    grid $ikeSALframe.ike_container.ike_modp_combo -column 1 -row 6 -pady 5 -padx 5
+    $ikeSALframe.ike_container.ike_modp_combo configure -values [list modp768 modp1024 modp1536 modp2048 modp3072 modp4096 modp6144 modp8192]
+
+    ttk::button $ikeSALframe.advance_button_ike -width 20 -text "Advanced options" -command "showIKEAdvancedOptions $node $ikeSALframe"
+    grid $ikeSALframe.advance_button_ike -column 0 -row 0 -padx 180 -pady 5
+
+    # Buttons container
+    ttk::frame $mainFrame.buttons_container
+    grid $mainFrame.buttons_container -column 0 -row 3 -columnspan 2
+    ttk::button $mainFrame.buttons_container.apply -text "$indicator"
+    grid $mainFrame.buttons_container.apply -column 0 -row 0 -padx 5 -pady 5
+    ttk::button $mainFrame.buttons_container.cancel -text "Cancel" -command {destroy .d}
+    grid $mainFrame.buttons_container.cancel -column 1 -row 0 -padx 5 -pady 5
+
+#    if { [ winfo exists .d ] } {
+#	bind $connParamsLframe.local_ip_entry <<ComboboxSelected>> \
+#	    "updatePeerCombobox $connParamsLframe ; \
+#	    selectLocalSubnet"
+#	bind $connParamsLframe.local_sub_entry <<ComboboxSelected>> \
+#	    "updatePeerCombobox $connParamsLframe ; \
+#	    selectLocalSubnet"
+#	bind $connParamsLframe.peer_name_entry <<ComboboxSelected>> \
+#	    "updatePeerCombobox $connParamsLframe ; \
+#	    selectPeerSubnet"
+#	bind $connParamsLframe.peer_ip_entry <<ComboboxSelected>> \
+#	    "updatePeerCombobox $connParamsLframe ; \
+#	    selectPeerSubnet"
+#    }
+
+    #valter - ovdje dodati double click event - vidi initGUI ili ifctree
+}
+
+#****f* nodecfgGUI.tcl/setDefaultsForIPsec
+# NAME
+#   setDefaultsForIPsec -- populates input fields in IPsec GUI with defaults
+# SYNOPSIS
+#   setDefaultsForIPsec $node
+# FUNCTION
+#   When adding new IPsec connection, populates input fields with default values for IPsec configuration
+# INPUTS
+#   node - node id
+#****
+proc setDefaultsForIPsec { node connParamsLframe espOptionsLframe } {
+    global version connection_name instance_duration keying_duration negotiation_attempts
+    global conn_time keying_time how_long_time local_cert_dir secret_dir authby psk_key
+    global how_long_before ike_encr ike_auth ike_modp peers_ip peers_name peers_id start_connection
+    global peers_subnet local_cert_file local_name local_ip_address local_subnet type method esp_suits
+    global ah_suits modp_suits secret_file no_encryption
+
+    set connection_name "home"
+    set version ikev2
+    set authby cert
+    set instance_duration "1"
+    set conn_time hours
+    set keying_duration "3"
+    set keying_time hours
+    set negotiation_attempts "3"
+    set how_long_before "9"
+    set how_long_time minutes
+    set start_connection 0
+    set ike_encr "aes128"
+    set ike_auth "sha1"
+    set ike_modp "modp2048"
+    set secret_file [getNodeIPsecItem $node "local_key_file"]
+    set peers_id ""
+    set psk_key ""
+    set no_encryption "null"
+    set local_cert_dir "/usr/local/etc/ipsec.d/certs"
+    set secret_dir "/usr/local/etc/ipsec.d/private"
+    $espOptionsLframe.esp_container.null_encryption configure -state readonly
+
+    set nodes [getListOfOtherNodes $node]
+    $connParamsLframe.peer_name_entry configure -values $nodes
+    set peers_name [lindex $nodes 0]
+
+    set local_cert_file [getNodeIPsecItem $node "local_cert_file"]
+    set local_name [getNodeName $node]
+
+    set localIPs [getLocalIpAddress $node]
+    $connParamsLframe.local_ip_entry configure -values $localIPs
+    set local_ip_address [lindex $localIPs 0]
+
+    if { $peers_name != ""} {
+	set peerIPs [getIPAddressForPeer $peers_name $local_ip_address]
+	if { [llength $peerIPs] != 0 } {
+	    $connParamsLframe.peer_ip_entry configure -values $peerIPs
+	    set peers_ip [lindex $peerIPs 0]
+	} else {
+	    tk_messageBox -message "Peer does not have any IP addresses!" -title "Error" -icon error -type ok
+	    destroy .d
+	    return
+	}
+    } else {
+	tk_messageBox -message "Peer does not have any interfaces!" -title "Error" -icon error -type ok
+	destroy .d
+	return
+    }
+
+    set localSubs [getSubnetsFromIPs $localIPs]
+    $connParamsLframe.local_sub_entry configure -values $localSubs
+    set local_subnet [lindex $localSubs 0]
+
+    set peersSubs [getSubnetsFromIPs $peerIPs]
+    $connParamsLframe.peer_sub_entry configure -values $peersSubs
+    set peers_subnet [lindex $peersSubs 0]
+
+    set type tunnel
+    set method esp
+    set esp_suits aes128
+    set ah_suits sha1
+    set modp_suits modp2048
+
+    selectSubnetEntry local $connParamsLframe
+    selectSubnetEntry peer $connParamsLframe
+}
+
+#****f* nodecfgGUI.tcl/selectSubnetEntry
+# NAME
+#   selectSubnetEntry -- populates dropdown list for subnet selection
+# SYNOPSIS
+#   selectSubnetEntry $mode
+# FUNCTION
+#   According to local IP address, populates dropdown list for subnet selection
+# INPUTS
+#   mode - indicates wheter to populate local subnet selection, or peer's subnet selection
+#****
+proc selectSubnetEntry { mode connParamsLframe } {
+    if { $mode == "local" } {
+	global local_ip_address local_subnet
+	set ip $local_ip_address
+	set subnet $local_subnet
+	set values [$connParamsLframe.local_sub_entry cget -values]
+    } else {
+	global peers_ip peers_subnet
+	set ip $peers_ip
+#	set subnet $local_subnet
+	set subnet $peers_subnet
+	set values [$connParamsLframe.peer_sub_entry cget -values]
+    }
+
+    set ipver [::ip::version $ip]
+    set subnet_from_ip [::ip::prefix $ip]
+    if { $ipver == 6 } {
+	set subnet_from_ip [ip::contract $subnet_from_ip]
+    }
+    foreach item $values {
+	if { [::ip::version $item] == $ipver && [string first $subnet_from_ip $item] == -1 } {
+	    set out_subnet $item
+	}
+    }
+
+    if { $mode == "local" } {
+	set local_subnet $out_subnet
+    } else {
+	set peers_subnet $out_subnet
+    }
+}

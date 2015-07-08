@@ -1254,3 +1254,155 @@ proc checkSharedSecret { str } {
     }
     return 0
 }
+
+###################################
+
+#****f* ipsec.tcl/getNodeIPsec
+# NAME
+#   getNodeIPsec -- retreives IPsec configuration for selected node
+# SYNOPSIS
+#   getNodeIPsec $node
+# FUNCTION
+#   Retreives all IPsec connections for current node
+# INPUTS
+#   node - node id
+#****
+proc getNodeIPsec { node } {
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
+    return [lindex [lsearch -inline [set $node] "ipsec-config *"] 1]
+}
+
+#****f* ipsec.tcl/getNodeIPsecItem
+# NAME
+#   getNodeIPsecItem -- get node IPsec item
+# SYNOPSIS
+#   getNodeIPsecItem $node $item
+# FUNCTION
+#   Retreives an item from IPsec configuration of given node
+# INPUTS
+#   node - node id
+proc getNodeIPsecItem { node item } {
+    set cfg [getNodeIPsec $node]
+    if { [llength $cfg] > 0 } {
+	if { [lsearch $cfg "$item *"] != -1 } {
+	    return [lindex [lsearch -inline $cfg "$item *"] 1]
+	}
+    }
+    return ""
+}
+
+#****f* ipsec.tcl/getListOfOtherNodes
+# NAME
+#   getListOfOtherNodes -- retreives list of all nodes
+# SYNOPSIS
+#   getListOfOtherNodes $node
+# FUNCTION
+#   Retreives list of all nodes created in current topology
+# INPUTS
+#   node - node id
+#****
+proc getListOfOtherNodes { node } {
+    upvar 0 ::cf::[set ::curcfg]::node_list node_list
+
+    set idx [lsearch -exact $node_list $node ]
+    set listOfNodes [lreplace $node_list $idx $idx]
+
+    return $listOfNodes
+}
+
+#****f* ipsec.tcl/getLocalIpAddress
+# NAME
+#   getLocalIpAddress -- retreives local IP addresses for current node
+# SYNOPSIS
+#   getLocalIpAddress $node
+# FUNCTION
+#   Retreives all local addresses (IPv4 and IPv6) for current node
+# INPUTS
+#   node - node id
+#****
+proc getLocalIpAddress { node } {
+    set listOfInterfaces [ifcList $node]
+    foreach logifc [logIfcList $node] {
+	if { [string match "vlan*" $logifc]} {
+	    lappend listOfInterfaces $logifc
+	}
+    }
+    set listOfIP4s ""
+    set listOfIP6s ""
+    foreach item $listOfInterfaces {
+	set ifcIP [getIfcIPv4addr $node $item]
+	if { $ifcIP != "" } {
+	    lappend listOfIP4s $ifcIP
+	}
+	set ifcIP [getIfcIPv6addr $node $item]
+	if { $ifcIP != "" } {
+	    lappend listOfIP6s $ifcIP
+	}
+    }
+
+    return [concat $listOfIP4s $listOfIP6s]
+}
+
+#****f* ipsec.tcl/getIPAddressForPeer
+# NAME
+#   getIPAddressForPeer -- retreives list of IP addresses for peer
+# SYNOPSIS
+#   getIPAddressForPeer $node
+# FUNCTION
+#   Refreshes list of IP addresses for peer's dropdown selection list
+# INPUTS
+#   node - node id
+#****
+proc getIPAddressForPeer { node curIP } {
+    set listOfInterfaces [ifcList $node]
+    foreach logifc [logIfcList $node] {
+	if { [string match "vlan*" $logifc]} {
+	    lappend listOfInterfaces $logifc
+	}
+    }
+
+    set listOfIPs ""
+    if { [ ::ip::version $curIP ] == 4 } {
+	foreach item $listOfInterfaces {
+	    set ifcIP [getIfcIPv4addr $node $item]
+	    if { $ifcIP != "" } {
+		lappend listOfIPs $ifcIP
+	    }
+	}
+    } else {
+	foreach item $listOfInterfaces {
+	    set ifcIP [getIfcIPv6addr $node $item]
+	    if { $ifcIP != "" } {
+		lappend listOfIPs $ifcIP
+	    }
+	}
+    }
+
+    return $listOfIPs
+}
+
+#****f* ipsec.tcl/getLocalSubnets
+# NAME
+#   getLocalSubnets -- creates and retreives local subnets
+# SYNOPSIS
+#   getLocalSubnets $listOfIPs
+# FUNCTION
+#   Creates and retreives local subnets from given list of IP addresses
+# INPUTS
+#   listOfIPs - list of IP addresses
+#****
+proc getSubnetsFromIPs { listOfIPs } {
+    set total_string ""
+    set total_list ""
+    foreach item $listOfIPs {
+	set total_string [ip::prefix $item]
+	if { [::ip::version $item ] == 6 } {
+	    set total_string [ip::contract $total_string]
+	}
+	append total_string "/"
+	append total_string [::ip::mask $item]
+	lappend total_list $total_string
+    }
+    return $total_list
+}
