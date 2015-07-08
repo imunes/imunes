@@ -41,7 +41,7 @@ vi_name() {
     echo Error: cannot find node named $1 >&2
     exit 2
   fi
-  echo "$dockerps" | awk -v h=$host -v e=$expid '$1 == h && $3 ~ e {print $2}' | cut -c1-12
+  echo "$dockerps" | awk -v h=$host -v e=$expid '$1 == h && $3 ~ e {print $2}'
 }
 
 if test $# -eq 0; then
