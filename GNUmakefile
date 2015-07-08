@@ -63,6 +63,7 @@ install: uninstall
 
 	cp $(TOOLS) $(BINDIR)
 ifeq ($(UNAME_S), Linux)
+	mv $(BINDIR)/hcp.linux $(BINDIR)/hcp
 	mv $(BINDIR)/himage.linux $(BINDIR)/himage
 	mv $(BINDIR)/cleanupAll.linux $(BINDIR)/cleanupAll
 else
