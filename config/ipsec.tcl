@@ -1321,7 +1321,7 @@ proc getListOfOtherNodes { node } {
 # INPUTS
 #   node - node id
 #****
-proc getLocalIpAddress { node } {
+proc getAllIpAddresses { node } {
     set listOfInterfaces [ifcList $node]
     foreach logifc [logIfcList $node] {
 	if { [string match "vlan*" $logifc]} {

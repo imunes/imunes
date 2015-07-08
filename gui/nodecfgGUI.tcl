@@ -2914,22 +2914,70 @@ proc createIPsecGUI { node mainFrame connParamsLframe espOptionsLframe ikeSALfra
     ttk::button $mainFrame.buttons_container.cancel -text "Cancel" -command {destroy .d}
     grid $mainFrame.buttons_container.cancel -column 1 -row 0 -padx 5 -pady 5
 
-#    if { [ winfo exists .d ] } {
-#	bind $connParamsLframe.local_ip_entry <<ComboboxSelected>> \
-#	    "updatePeerCombobox $connParamsLframe ; \
-#	    selectLocalSubnet"
-#	bind $connParamsLframe.local_sub_entry <<ComboboxSelected>> \
-#	    "updatePeerCombobox $connParamsLframe ; \
-#	    selectLocalSubnet"
-#	bind $connParamsLframe.peer_name_entry <<ComboboxSelected>> \
-#	    "updatePeerCombobox $connParamsLframe ; \
-#	    selectPeerSubnet"
-#	bind $connParamsLframe.peer_ip_entry <<ComboboxSelected>> \
-#	    "updatePeerCombobox $connParamsLframe ; \
-#	    selectPeerSubnet"
-#    }
+    if { [ winfo exists .d ] } {
+	bind $connParamsLframe.local_ip_entry <<ComboboxSelected>> \
+	    "updateLocalSubnetCombobox $connParamsLframe; \
+	    updatePeerCombobox $connParamsLframe"
+	bind $connParamsLframe.local_sub_entry <<ComboboxSelected>> \
+	    "updatePeerSubnetCombobox $connParamsLframe"
+	bind $connParamsLframe.peer_name_entry <<ComboboxSelected>> \
+	    "updatePeerCombobox $connParamsLframe"
+	bind $connParamsLframe.peer_ip_entry <<ComboboxSelected>> \
+	    "updatePeerSubnetCombobox $connParamsLframe"
+    }
 
     #valter - ovdje dodati double click event - vidi initGUI ili ifctree
+}
+
+# XXX
+proc updatePeerCombobox { connParamsLframe } {
+    global peers_name local_ip_address local_subnet peers_ip peers_subnet
+
+    set peerIPs [getIPAddressForPeer $peers_name $local_ip_address]
+    $connParamsLframe.peer_ip_entry configure -values $peerIPs
+    if { [lsearch $peerIPs $peers_ip] == -1 } {
+	set peers_ip [lindex $peerIPs 0]
+    }
+
+    set peersSubIPs [getIPAddressForPeer $peers_name $local_subnet]
+    set peersSubs [getSubnetsFromIPs $peersSubIPs]
+    $connParamsLframe.peer_sub_entry configure -values $peersSubs
+    updatePeerSubnetCombobox $connParamsLframe
+}
+
+# XXX
+proc updateLocalSubnetCombobox { connParamsLframe } {
+    global local_ip_address local_subnet
+
+    set IPs [$connParamsLframe.local_ip_entry cget -values]
+
+    set idx [lsearch -exact $IPs $local_ip_address ]
+    set IPs [lreplace $IPs $idx $idx]
+    set subnets [getSubnetsFromIPs $IPs]
+
+    if { $subnets != "" } {
+	$connParamsLframe.local_sub_entry configure -values $subnets
+	set local_subnet [lindex $subnets 0]
+	updatePeerSubnetCombobox $connParamsLframe
+    }
+}
+
+# XXX
+proc updatePeerSubnetCombobox { connParamsLframe } {
+    global local_ip_address local_subnet peers_name peers_ip peers_subnet
+
+    set subnetVersion [::ip::version $local_subnet]
+
+    set peerIPs ""
+    set allPeerIPs [getAllIpAddresses $peers_name]
+    foreach ip $allPeerIPs {
+	if { $subnetVersion == [::ip::version $ip] && $peers_ip != $ip} {
+	    lappend peerIPs $ip
+	}
+    }
+    set subnets [getSubnetsFromIPs $peerIPs]
+    $connParamsLframe.peer_sub_entry configure -values $subnets
+    set peers_subnet [lindex $subnets 0]
 }
 
 #****f* nodecfgGUI.tcl/setDefaultsForIPsec
@@ -2978,7 +3026,7 @@ proc setDefaultsForIPsec { node connParamsLframe espOptionsLframe } {
     set local_cert_file [getNodeIPsecItem $node "local_cert_file"]
     set local_name [getNodeName $node]
 
-    set localIPs [getLocalIpAddress $node]
+    set localIPs [getAllIpAddresses $node]
     $connParamsLframe.local_ip_entry configure -values $localIPs
     set local_ip_address [lindex $localIPs 0]
 
@@ -2998,62 +3046,12 @@ proc setDefaultsForIPsec { node connParamsLframe espOptionsLframe } {
 	return
     }
 
-    set localSubs [getSubnetsFromIPs $localIPs]
-    $connParamsLframe.local_sub_entry configure -values $localSubs
-    set local_subnet [lindex $localSubs 0]
-
-    set peersSubs [getSubnetsFromIPs $peerIPs]
-    $connParamsLframe.peer_sub_entry configure -values $peersSubs
-    set peers_subnet [lindex $peersSubs 0]
+    updateLocalSubnetCombobox $connParamsLframe 
+    updatePeerCombobox $connParamsLframe 
 
     set type tunnel
     set method esp
     set esp_suits aes128
     set ah_suits sha1
     set modp_suits modp2048
-
-    selectSubnetEntry local $connParamsLframe
-    selectSubnetEntry peer $connParamsLframe
-}
-
-#****f* nodecfgGUI.tcl/selectSubnetEntry
-# NAME
-#   selectSubnetEntry -- populates dropdown list for subnet selection
-# SYNOPSIS
-#   selectSubnetEntry $mode
-# FUNCTION
-#   According to local IP address, populates dropdown list for subnet selection
-# INPUTS
-#   mode - indicates wheter to populate local subnet selection, or peer's subnet selection
-#****
-proc selectSubnetEntry { mode connParamsLframe } {
-    if { $mode == "local" } {
-	global local_ip_address local_subnet
-	set ip $local_ip_address
-	set subnet $local_subnet
-	set values [$connParamsLframe.local_sub_entry cget -values]
-    } else {
-	global peers_ip peers_subnet
-	set ip $peers_ip
-#	set subnet $local_subnet
-	set subnet $peers_subnet
-	set values [$connParamsLframe.peer_sub_entry cget -values]
-    }
-
-    set ipver [::ip::version $ip]
-    set subnet_from_ip [::ip::prefix $ip]
-    if { $ipver == 6 } {
-	set subnet_from_ip [ip::contract $subnet_from_ip]
-    }
-    foreach item $values {
-	if { [::ip::version $item] == $ipver && [string first $subnet_from_ip $item] == -1 } {
-	    set out_subnet $item
-	}
-    }
-
-    if { $mode == "local" } {
-	set local_subnet $out_subnet
-    } else {
-	set peers_subnet $out_subnet
-    }
 }
