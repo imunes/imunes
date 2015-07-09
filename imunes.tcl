@@ -162,7 +162,7 @@ set os [platform::identify]
 if { [string match -nocase "*linux*" $os] == 1 } {
     # Limit default nodes on linux
     set l2nodes "lanswitch rj45"
-    set l3nodes "genericrouter quagga static pc"
+    set l3nodes "genericrouter quagga static pc host"
     set supp_router_models "quagga static"
     source $ROOTDIR/$LIBDIR/runtime/linux.tcl
 }
