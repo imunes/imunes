@@ -193,8 +193,12 @@ proc spawnShell { node cmd } {
 # RESULT
 #   * exp_list -- experiment id list
 #****
-proc fetchRunningExperiments {} {}
-    # FIXME: make this work in Linux
+proc fetchRunningExperiments {} {
+    catch {exec himage -l | cut -d " " -f 1} exp_list
+    set exp_list [split $exp_list "
+"]
+    return $exp_list
+}
 
 #****f* linux.tcl/allSnapshotsAvailable
 # NAME
