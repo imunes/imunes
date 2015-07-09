@@ -358,9 +358,11 @@ proc checkExternalInterfaces {} {
 proc resumeSelectedExperiment { exp } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global runtimeDir
-    set curr_eid $eid
-    if {$curr_eid == $exp} {
-	return
+    if {[info exists eid]} {
+	set curr_eid $eid
+	if {$curr_eid == $exp} {
+	    return
+	}
     }
     newProject
 
