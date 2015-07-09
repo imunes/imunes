@@ -1,5 +1,7 @@
 #! /bin/sh 
 
+set -e
+
 command=`basename $0`
 basedir="/var/lib/docker"
 
@@ -47,14 +49,20 @@ getViStoLoc() {
 
 # getCopyDirection(arg1 arg2)
 # detect copy direction: 1) from host to vi, 2) from vi to host, 3) vi to vi
+# also check with himage if the vi exists.
 getCopyDirection() {
     if  ! contains "$1" ":" && contains "$2" ":"; then
+	himage -v `getCpNodeName $2`
 	echo toVi
     fi
     if  contains "$1" ":" && ! contains "$2" ":"; then
+	himage -v `getCpNodeName $1`
+	echo toVi
 	echo fromVi
     fi
     if  contains "$1" ":" && contains "$2" ":"; then
+	himage -v `getCpNodeName $1`
+	himage -v `getCpNodeName $2`
 	echo betweenVi
     fi
 }
@@ -66,8 +74,8 @@ getCpNodeName() {
 }
 
 # getCpNode(arg)
-# get vi node for docker from argument, split by : and use himage
-getCpNode() {
+# get vi node id for docker from argument, split by : and use himage
+getCpNodeId() {
     name=`getCpNodeName $1`
     echo `himage -v $name`
 }
@@ -79,15 +87,26 @@ getCpLoc() {
 }
 
 # copyToVi (path1 path2)
-# copy from host to vi using cp
+# copy from host to vi using cp from docker
 copyToVi () {
-    cp -r $1 $2
+    node=`getCpNodeId $2`
+    loc=`getCpLoc $2`
+    # create tmpdir inside vi
+    tmpdir=`docker exec $node mktemp -d`
+    # get external link to tmpdir
+    docktmpdir="`getViStoLoc $2`$tmpdir"
+    # copy file to external link
+    cp -r "$1" "$docktmpdir"
+    # copy file using docker
+    docker exec $node cp "$tmpdir/`basename $1`" "/$loc"
+    # rm tempdir from node
+    docker exec $node rm -fr $tmpdir
 }
 
 # copyFromVi (docker_path path)
 # copy from docker vi to node using docker-cp
 copyFromVi () {
-    docker cp $1 $2
+    docker cp `getCpNodeId $1`:`getCpLoc $1` $2
 }
 
 if test $# -lt 2; then
@@ -97,13 +116,14 @@ fi
 
 direction=`getCopyDirection "$@"`
 case $direction in
-	toVi)
-	    copyToVi $1 `getViStoLoc $2`/`getCpLoc $2`/;;
-	fromVi)
-	    copyFromVi `getCpNode $1`:`getCpLoc $1` $2;;
-	betweenVi)
-	    tmpdir=`mktemp -d`
-	    copyFromVi `getCpNode $1`:`getCpLoc $1` $tmpdir
-	    copyToVi $tmpdir/`getCpLoc $1` `getViStoLoc $2`/`getCpLoc $2`
-	    rm -fr $tmpdir;;
+    toVi)
+	copyToVi $1 $2;;
+    fromVi)
+	copyFromVi $1 $2;;
+    betweenVi)
+	tmpdir=$(mktemp -d)
+	copyFromVi $1 $tmpdir
+	cpLoc=`getCpLoc $1`
+	copyToVi $tmpdir/`basename $cpLoc` $2
+	rm -fr $tmpdir ;;
 esac
