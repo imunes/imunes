@@ -2747,8 +2747,6 @@ proc putIPsecConnectionInTree { node tab indicator } {
 	set changed "yes"
     }
 
-    #valter empty check list
-    #valter-ovako raditi SVE provjere za prazna polja
     set emptyCheckList { \
 	    {connection_name "Please specify connection name!"} \
 	    {ike_encr "Please specify IKE encryption algorithm!"} \
@@ -2776,8 +2774,6 @@ proc putIPsecConnectionInTree { node tab indicator } {
 		    tk_messageBox -message [lindex $item 1] -title "Error" -icon error -type ok
 		    return
 		}
-	    } else {
-		continue
 	    }
 	} elseif { [set [lindex $item 0]] == "" } {
 	    tk_messageBox -message [lindex $item 1] -title "Error" -icon error -type ok
@@ -2785,7 +2781,9 @@ proc putIPsecConnectionInTree { node tab indicator } {
 	}
     }
 
-    set check [checkIfPeerStartsSameConnection $peers_name $trimmed_ip $local_subnet $local_name]
+    # XXX FIX
+#    set check [checkIfPeerStartsSameConnection $peers_name $trimmed_ip $local_subnet $local_name]
+    set check 0
     if { $check == 1 && $start_connection == 1 } {
 	tk_messageBox -message "Peer is configured to start the same connection!" -title "Error" -icon error -type ok
 	return
@@ -2897,8 +2895,8 @@ proc putIPsecConnectionInTree { node tab indicator } {
 
     set total_list ""
 
-    set has_local_cert [getNodeIPsecLocalCert $node]
-    set has_local_key_file [getNodeIPsecPrivateKeyFile $node]
+    set has_local_cert [getNodeIPsecItem $node "local_cert"]
+    set has_local_key_file [getNodeIPsecItem $node "local_key_file"]
 
     if { $has_local_cert == "" && $authby == "cert" && $local_cert_file != "" && $secret_file != ""\
         && $has_local_key_file == ""} {
