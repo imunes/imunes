@@ -368,8 +368,8 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
     if { [[typemodel $lnode1].virtlayer] == "NETGRAPH" } {
         if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
             # generate interface names
-            set hostIfc1 "$eid.$lnode1.$ifname1"
-            set hostIfc2 "$eid.$lnode2.$ifname2"
+            set hostIfc1 "$eid.$lname1.$ifname1"
+            set hostIfc2 "$eid.$lname2.$ifname2"
             # create veth pair
             catch {exec ip link add name "$hostIfc1" type veth peer name "$hostIfc2"}
             # add veth interfaces to bridges
