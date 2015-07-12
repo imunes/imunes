@@ -509,8 +509,11 @@ proc runConfOnNode { node } {
     exec docker exec -i $node_id sh -c "cat > out.log" < $node_dir/out.log
 
     foreach ifc [allIfcList $node] {
-        if {[getIfcOperState $node $ifc] == "down"} {
-            exec docker exec $node_id ip link set dev $ifc down
+        # FIXME: should also work for loopback
+        if {$ifc != "lo0"} {
+            if {[getIfcOperState $node $ifc] == "down"} {
+                exec docker exec $node_id ip link set dev $ifc down
+            }
         }
     }
 }
