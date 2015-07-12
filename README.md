@@ -74,6 +74,8 @@ Note: on some distributions the netem module `sch_netem` required for link confi
 #### Fedora 22
     # yum install openvswitch docker-io xterm wireshark-gnome ImageMagick tcl tcllib tk kernel-modules-extra
 
+#### Debian 8
+    # apt-get install openvswitch-switch docker.io xterm wireshark ImageMagick tcl tcllib tk user-mode-linux
 
 #### Performance
 

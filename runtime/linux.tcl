@@ -509,18 +509,18 @@ proc runConfOnNode { node } {
     exec docker exec -i $node_id sh -c "cat > out.log" < $node_dir/out.log
 
     foreach ifc [allIfcList $node] {
-        if {[getIfcOperState $node $ifc] == "down"} {
-            exec docker exec $node_id ip link set dev $ifc down
+        # FIXME: should also work for loopback
+        if {$ifc != "lo0"} {
+            if {[getIfcOperState $node $ifc] == "down"} {
+                exec docker exec $node_id ip link set dev $ifc down
+            }
         }
     }
 }
 
 proc destroyLinkBetween { eid lnode1 lnode2 } {
     set ifname1 [ifcByLogicalPeer $lnode1 $lnode2]
-    set ifname2 [ifcByLogicalPeer $lnode2 $lnode1]
-
     catch {exec ip link del dev $eid.$lnode1.$ifname1}
-    catch {exec ip link del dev $eid.$lnode2.$ifname2}
 }
 
 #****f* linux.tcl/removeNodeIfcIPaddrs
@@ -537,7 +537,10 @@ proc destroyLinkBetween { eid lnode1 lnode2 } {
 proc removeNodeIfcIPaddrs { eid node } {
     set node_id "$eid.$node"
     foreach ifc [allIfcList $node] {
-        catch "exec docker exec $node_id ip addr flush dev $ifc"
+        # FIXME: make this work for loopback
+        if {$ifc != "lo0"} {
+            catch "exec docker exec $node_id ip addr flush dev $ifc"
+        }
     }
 }
 
