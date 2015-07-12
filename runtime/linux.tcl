@@ -517,10 +517,8 @@ proc runConfOnNode { node } {
 
 proc destroyLinkBetween { eid lnode1 lnode2 } {
     set ifname1 [ifcByLogicalPeer $lnode1 $lnode2]
-    set ifname2 [ifcByLogicalPeer $lnode2 $lnode1]
 
     catch {exec ip link del dev $eid.$lnode1.$ifname1}
-    catch {exec ip link del dev $eid.$lnode2.$ifname2}
 }
 
 #****f* linux.tcl/removeNodeIfcIPaddrs
