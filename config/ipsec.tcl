@@ -1280,9 +1280,7 @@ proc setNodeIPsec { node newValue } {
     
     if { $ipsecCfgIndex != -1 } {
 	set $node [lreplace [set $node] $ipsecCfgIndex $ipsecCfgIndex "ipsec-config {$newValue}"]
-	set $node [list [set $node] "{ipsec-config {$newValue}}"]
     } else {
-#	set $node [list [set $node] "{ipsec-config {$newValue}}"]
 	set $node [linsert [set $node] end "ipsec-config {$newValue}"]
     }
 }
@@ -1322,7 +1320,7 @@ proc setNodeIPsecItem { node item newValue } {
     if { $itemIndex != -1 } {
 	set newIpsecCfg [lreplace $ipsecCfg $itemIndex $itemIndex "$item {$newValue}"]
     } else {
-	set newIpsecCfg "$item {$newValue}"
+	set newIpsecCfg [linsert $ipsecCfg end "$item {$newValue}"]
     }
 
     setNodeIPsec $node $newIpsecCfg
@@ -1356,7 +1354,7 @@ proc setNodeIPsecElement { node item element newValue } {
     if { $elementIndex != -1 } {
 	set newItemCfg [lreplace $itemCfg $elementIndex $elementIndex "{$element} {$newValue}"]
     } else {
-	set newItemCfg "{$element} {$newValue}"
+	set newItemCfg [linsert $itemCfg end "{$element} {$newValue}"]
     }
 
     setNodeIPsecItem $node $item $newItemCfg
@@ -1376,12 +1374,28 @@ proc setNodeIPsecSetting { node item element setting newValue } {
 
     set settingIndex [lsearch $elementCfg "$setting=*"]
     if { $newValue == "" } {
-	set newElementCfg [lreplace $elementCfg $settingIndex $settingIndex]
+	if { $settingIndex != -1 } {
+	    set newElementCfg [lreplace $elementCfg $settingIndex $settingIndex]
+	} else {
+	    return
+	}
     } else {
-	set newElementCfg [lreplace $elementCfg $settingIndex $settingIndex "$setting=$newValue"]
+	if { $settingIndex != -1 } {
+	    set newElementCfg [lreplace $elementCfg $settingIndex $settingIndex "$setting=$newValue"]
+	} else {
+	    set newElementCfg [linsert $elementCfg end "$setting=$newValue"] 
+	}
     }
 
     setNodeIPsecElement $node $item $element $newElementCfg
+}
+
+proc createEmptyIPsecCfg { node } {
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
+    setNodeIPsec $node ""
+    setNodeIPsecItem $node "configuration" ""
+    setNodeIPsecElement $node "configuration" "config setup" ""
 }
 
 proc getNodeIPsecConnList { node } {

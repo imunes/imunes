@@ -2817,7 +2817,6 @@ proc putIPsecConnectionInTree { node tab indicator } {
 	    {how_long_before "Margin time for negotiation attempts cannot be negative!"} \
 	    {negotiation_attempts "Negotiation attempts number cannot be negative!"} \
 	}
-    #foreach
 
     foreach item $netNegCheckList {
 	if { [set [lindex $item 0]] < 0 } {
@@ -2920,90 +2919,73 @@ proc putIPsecConnectionInTree { node tab indicator } {
 
     # XXX
     if { $indicator == "add" } {
-	setNodeIPsec $node "configuration {config setup {}} {conn $connection_name {}}"
-#	setNodeIPsecItem $node "configuration" "config setup"
-	puts [getNodeIPsec $node]
-#	puts [getNodeIPsecItem $node "configuration"]
+	createEmptyIPsecCfg $node
 	setNodeIPsecElement $node "configuration" "conn $connection_name" ""
     } else {
 	setNodeIPsecElement $node "configuration" "conn $old_conn_name" "conn $connection_name"
     }
-    return
-#    setNodeIPsecConnKeyDur $node $connection_name $total_keying_duration
     if { $total_keying_duration != "3h" } {
-        setNodeIPsecSetting $node $connection_name "ikelifetime" $total_keying_duration
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "ikelifetime" "$total_keying_duration"
     } else {
 	setNodeIPsecSetting $node "configuration" "conn $connection_name" "ikelifetime" ""
-#        deleteNodeIPsecSetting $node $connection_name "ikelifetime"
     }
-#    setNodeIPsecConnInstanceDur $node $connection_name $total_instance_duration
     if { $total_instance_duration != "1h" } {
-        setNodeIPsecSetting $node $connection_name "keylife" $total_instance_duration
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "keylife" "$total_instance_duration"
     } else {
-        deleteNodeIPsecSetting $node $connection_name "keylife"
+	setNodeIPsecSetting $node "configuration" "conn $connection_name" "keylife" ""
     }
-#    setNodeIPsecConnMarginTime $node $connection_name $total_margintime
     if { $total_margintime != "9m" } {
-        setNodeIPsecSetting $node $connection_name "rekeymargin" $total_margintime
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "rekeymargin" "$total_margintime"
     } else {
-        deleteNodeIPsecSetting $node $connection_name "rekeymargin"
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "rekeymargin" ""
     }
-#    setNodeIPsecConnNegAttempts $node $connection_name $negotiation_attempts
     if { $negotiation_attempts != "3" } {
-        setNodeIPsecSetting $node $connection_name "keyingtries" $negotiation_attempts
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "keyingtries" "$negotiation_attempts"
     } else {
-        deleteNodeIPsecSetting $node $connection_name "keyingtries"
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "keyingtries" ""
     }
-#    setNodeIPsecConnIke $node $connection_name $ike_encr $ike_auth $ike_modp
     if { $ike_encr != "aes128" || $ike_auth != "sha1" || $ike_modp != "modp2048"} {
-        setNodeIPsecSetting $node $connection_name "ike" "$ike_encr-$ike_auth-$ike_modp"
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "ike" "$ike_encr-$ike_auth-$ike_modp"
     } else {
-        deleteNodeIPsecSetting $node $connection_name "ike"
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "ike" ""
     }
-#    setNodeIPsecConnEsp $node $connection_name $final_esp_encryption $ah_suits $modp_suits
     if { $final_esp_encryption != "aes128" || $ah_suits != "sha1" || $modp_suits != "modp2048" } {
-        setNodeIPsecSetting $node $connection_name "esp" "$final_esp_encryption-$ah_suits-$modp_suits"
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "esp" "$final_esp_encryption-$ah_suits-$modp_suits"
     } else {
-        deleteNodeIPsecSetting $node $connection_name "esp"
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "esp" ""
     }
-#    setNodeIPsecConnType $node $connection_name $type
     if { $type != "tunnel"} {
-        setNodeIPsecSetting $node $connection_name "type" $type
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "type" "$type"
     } else {
-        deleteNodeIPsecSetting $node $connection_name "type"
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "type" ""
     }
-#    setNodeIPsecConnLocalIp $node $connection_name $real_ip_local
-    setNodeIPsecSetting $node $connection_name "left" $real_ip_local
-#    setNodeIPsecConnLocalSubnet $node $connection_name $local_subnet
-    setNodeIPsecSetting $node $connection_name "leftsubnet" $local_subnet
-#    setNodeIPsecConnPeerIP $node $connection_name $real_ip_peer
-    setNodeIPsecSetting $node $connection_name "right" $real_ip_peer
-#    setNodeIPsecConnPeerSubnet $node $connection_name $peers_subnet
-    setNodeIPsecSetting $node $connection_name "rightsubnet" $peers_subnet
-#    setNodeIPsecConnPeerName $node $connection_name $peers_name
-    setNodeIPsecSetting $node $connection_name "peersname" $peers_name
+
+    setNodeIPsecSetting $node "configuration" "conn $connection_name" "left" "$real_ip_local"
+    setNodeIPsecSetting $node "configuration" "conn $connection_name" "leftsubnet" "$local_subnet"
+    setNodeIPsecSetting $node "configuration" "conn $connection_name" "right" "$real_ip_peer"
+    setNodeIPsecSetting $node "configuration" "conn $connection_name" "rightsubnet" "$peers_subnet"
+    setNodeIPsecSetting $node "configuration" "conn $connection_name" "peersname" "$peers_name"
 
     if { $authby == "cert" } {
-#       setNodeIPsecConnLocalName $node $connection_name $local_name
-        setNodeIPsecSetting $node $connection_name "leftid" $local_name
-#       setNodeIPsecConnPeerId $node $connection_name $peers_id
-        setNodeIPsecSetting $node $connection_name "rightid" $peers_id
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "leftid" "$local_name"
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "rightid" "$peers_id"
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "authby" ""
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "sharedkey" ""
 
-        checkAndClearSharedKeyAndAuthbySecret $node $connection_name
+#        checkAndClearSharedKeyAndAuthbySecret $node $connection_name
     } else {
-#       setNodeIPsecAuthbySecret $node $connection_name
-        setNodeIPsecSetting $node $connection_name "authby" "secret"
-#       setNodeIPsecConnPSK $node $connection_name $psk_key
-        setNodeIPsecSetting $node $connection_name "sharedkey" $psk_key
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "authby" "secret"
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "sharedkey" "$psk_key"
 
-        checkAndClearCertificatesAndIds $node $connection_name
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "leftid" ""
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "rightid" ""
+#        checkAndClearCertificatesAndIds $node $connection_name
     }
 
-#    setNodeIPsecConnStartConn $node $connection_name $start_connection
     if { $start_connection == 1 } {
-        setNodeIPsecSetting $node $connection_name "auto" "start"
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "auto" "start"
     } else {
-        setNodeIPsecSetting $node $connection_name "auto" "add"
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "auto" "add"
     }
 
     if { $indicator == "add"} {
