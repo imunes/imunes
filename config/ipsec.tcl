@@ -1447,7 +1447,12 @@ proc getListOfOtherNodes { node } {
     set idx [lsearch -exact $node_list $node ]
     set listOfNodes [lreplace $node_list $idx $idx]
 
-    return $listOfNodes
+    set listOfNames ""
+    foreach node $listOfNodes {
+	lappend listOfNames "[getNodeName $node] - $node"
+    }
+
+    return $listOfNames
 }
 
 #****f* ipsec.tcl/getLocalIpAddress
@@ -1544,4 +1549,30 @@ proc getSubnetsFromIPs { listOfIPs } {
 	lappend total_list $total_string
     }
     return $total_list
+}
+
+proc checkIfPeerStartsSameConnection { peer local_ip local_subnet local_id } {
+    set connList [getNodeIPsecConnList $peer]
+
+    foreach conn $connList {
+	set auto [getNodeIPsecSetting $peer "configuration" "conn $conn" "auto"]
+	if { "$auto" == "start" } {
+	    set right [getNodeIPsecSetting $peer "configuration" "conn $conn" "right"]
+	    if { "$right" == "$local_ip"} {
+		set rightsubnet [getNodeIPsecSetting $peer "configuration" "conn $conn" "rightsubnet"]
+		if { "$rightsubnet" == "$local_subnet"} {
+		    set rightid [getNodeIPsecSetting $peer "configuration" "conn $conn" "rightid"]
+		    if { $rightid == "" || $local_id == "" } {
+			return 1
+		    } else {
+			if { "$rightid" == "$local_id"} {
+			    return 1
+			}
+		    }
+		}
+	    }
+	}
+    }
+
+    return 0
 }

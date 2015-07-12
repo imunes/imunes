@@ -2744,6 +2744,8 @@ proc putIPsecConnectionInTree { node tab indicator } {
     set changed "no"
     set trimmed_ip [lindex [split $local_ip_address /] 0]
 
+    set peers_node [lindex $peers_name 2]
+
     if { $old_conn_name != $connection_name } {
 	set changed "yes"
     }
@@ -2782,9 +2784,7 @@ proc putIPsecConnectionInTree { node tab indicator } {
 	}
     }
 
-    # XXX FIX
-#    set check [checkIfPeerStartsSameConnection $peers_name $trimmed_ip $local_subnet $local_name]
-    set check 0
+    set check [checkIfPeerStartsSameConnection $peers_node $trimmed_ip $local_subnet $local_name]
     if { $check == 1 && $start_connection == 1 } {
 	tk_messageBox -message "Peer is configured to start the same connection!" -title "Error" -icon error -type ok
 	return
@@ -2807,10 +2807,6 @@ proc putIPsecConnectionInTree { node tab indicator } {
 
     }
 
-    #valter za svaki parametar treba napraviti get i set
-    # getNodeIPsecConnParam i setNodeIPsecConnParam
-
-    #valter - sve negative checkove raditi ovako
     set netNegCheckList { \
 	    {instance_duration "Connection instance duration cannot be negative!"} \
 	    {keying_duration "Keying channel duration cannot be negative!"} \
@@ -2917,9 +2913,10 @@ proc putIPsecConnectionInTree { node tab indicator } {
         }
     }
 
-    # XXX
     if { $indicator == "add" } {
-	createEmptyIPsecCfg $node
+	if { [getNodeIPsec $node] == "" } {
+	    createEmptyIPsecCfg $node
+	}
 	setNodeIPsecElement $node "configuration" "conn $connection_name" ""
     } else {
 	setNodeIPsecElement $node "configuration" "conn $old_conn_name" "conn $connection_name"
@@ -2964,14 +2961,14 @@ proc putIPsecConnectionInTree { node tab indicator } {
     setNodeIPsecSetting $node "configuration" "conn $connection_name" "leftsubnet" "$local_subnet"
     setNodeIPsecSetting $node "configuration" "conn $connection_name" "right" "$real_ip_peer"
     setNodeIPsecSetting $node "configuration" "conn $connection_name" "rightsubnet" "$peers_subnet"
-    setNodeIPsecSetting $node "configuration" "conn $connection_name" "peersname" "$peers_name"
+    setNodeIPsecSetting $node "configuration" "conn $connection_name" "peersname" "[lindex $peers_name 0]"
 
     if { $authby == "cert" } {
         setNodeIPsecSetting $node "configuration" "conn $connection_name" "leftid" "$local_name"
         setNodeIPsecSetting $node "configuration" "conn $connection_name" "rightid" "$peers_id"
+
         setNodeIPsecSetting $node "configuration" "conn $connection_name" "authby" ""
         setNodeIPsecSetting $node "configuration" "conn $connection_name" "sharedkey" ""
-
 #        checkAndClearSharedKeyAndAuthbySecret $node $connection_name
     } else {
         setNodeIPsecSetting $node "configuration" "conn $connection_name" "authby" "secret"
@@ -2998,7 +2995,6 @@ proc putIPsecConnectionInTree { node tab indicator } {
     set old_conn_name ""
     destroy .d
 }
-
 
 proc createIPsecGUI { node mainFrame connParamsLframe espOptionsLframe ikeSALframe indicator } {
     tk::toplevel .d
@@ -3227,14 +3223,15 @@ proc createIPsecGUI { node mainFrame connParamsLframe espOptionsLframe ikeSALfra
 # XXX
 proc updatePeerCombobox { connParamsLframe } {
     global peers_name local_ip_address local_subnet peers_ip peers_subnet
+    set peers_node [lindex $peers_name 2]
 
-    set peerIPs [getIPAddressForPeer $peers_name $local_ip_address]
+    set peerIPs [getIPAddressForPeer $peers_node $local_ip_address]
     $connParamsLframe.peer_ip_entry configure -values $peerIPs
     if { [lsearch $peerIPs $peers_ip] == -1 } {
 	set peers_ip [lindex $peerIPs 0]
     }
 
-    set peersSubIPs [getIPAddressForPeer $peers_name $local_subnet]
+    set peersSubIPs [getIPAddressForPeer $peers_node $local_subnet]
     set peersSubs [getSubnetsFromIPs $peersSubIPs]
     $connParamsLframe.peer_sub_entry configure -values $peersSubs
     updatePeerSubnetCombobox $connParamsLframe
@@ -3260,11 +3257,12 @@ proc updateLocalSubnetCombobox { connParamsLframe } {
 # XXX
 proc updatePeerSubnetCombobox { connParamsLframe } {
     global local_ip_address local_subnet peers_name peers_ip peers_subnet
+    set peers_node [lindex $peers_name 2]
 
     set subnetVersion [::ip::version $local_subnet]
 
     set peerIPs ""
-    set allPeerIPs [getAllIpAddresses $peers_name]
+    set allPeerIPs [getAllIpAddresses $peers_node]
     foreach ip $allPeerIPs {
 	if { $subnetVersion == [::ip::version $ip] && $peers_ip != $ip} {
 	    lappend peerIPs $ip
@@ -3317,6 +3315,7 @@ proc setDefaultsForIPsec { node connParamsLframe espOptionsLframe } {
     set nodes [getListOfOtherNodes $node]
     $connParamsLframe.peer_name_entry configure -values $nodes
     set peers_name [lindex $nodes 0]
+    set peers_node [lindex $peers_name 2]
 
     set local_cert_file [getNodeIPsecItem $node "local_cert_file"]
     set local_name [getNodeName $node]
@@ -3326,7 +3325,7 @@ proc setDefaultsForIPsec { node connParamsLframe espOptionsLframe } {
     set local_ip_address [lindex $localIPs 0]
 
     if { $peers_name != ""} {
-	set peerIPs [getIPAddressForPeer $peers_name $local_ip_address]
+	set peerIPs [getIPAddressForPeer $peers_node $local_ip_address]
 	if { [llength $peerIPs] != 0 } {
 	    $connParamsLframe.peer_ip_entry configure -values $peerIPs
 	    set peers_ip [lindex $peerIPs 0]
