@@ -520,7 +520,6 @@ proc runConfOnNode { node } {
 
 proc destroyLinkBetween { eid lnode1 lnode2 } {
     set ifname1 [ifcByLogicalPeer $lnode1 $lnode2]
-
     catch {exec ip link del dev $eid.$lnode1.$ifname1}
 }
 
@@ -538,7 +537,10 @@ proc destroyLinkBetween { eid lnode1 lnode2 } {
 proc removeNodeIfcIPaddrs { eid node } {
     set node_id "$eid.$node"
     foreach ifc [allIfcList $node] {
-        catch "exec docker exec $node_id ip addr flush dev $ifc"
+        # FIXME: make this work for loopback
+        if {$ifc != "lo0"} {
+            catch "exec docker exec $node_id ip addr flush dev $ifc"
+        }
     }
 }
 
