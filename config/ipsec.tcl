@@ -1277,7 +1277,14 @@ proc setNodeIPsec { node newValue } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
     set ipsecCfgIndex [lsearch -index 0 [set $node] "ipsec-config"]
-    set $node [lreplace [set $node] $ipsecCfgIndex $ipsecCfgIndex "ipsec-config {$newValue}"]
+    
+    if { $ipsecCfgIndex != -1 } {
+	set $node [lreplace [set $node] $ipsecCfgIndex $ipsecCfgIndex "ipsec-config {$newValue}"]
+	set $node [list [set $node] "{ipsec-config {$newValue}}"]
+    } else {
+#	set $node [list [set $node] "{ipsec-config {$newValue}}"]
+	set $node [linsert [set $node] end "ipsec-config {$newValue}"]
+    }
 }
 
 #****f* ipsec.tcl/getNodeIPsecItem
@@ -1312,7 +1319,11 @@ proc setNodeIPsecItem { node item newValue } {
     set ipsecCfg [getNodeIPsec $node]
 
     set itemIndex [lsearch -index 0 $ipsecCfg $item]
-    set newIpsecCfg [lreplace $ipsecCfg $itemIndex $itemIndex "$item {$newValue}"]
+    if { $itemIndex != -1 } {
+	set newIpsecCfg [lreplace $ipsecCfg $itemIndex $itemIndex "$item {$newValue}"]
+    } else {
+	set newIpsecCfg "$item {$newValue}"
+    }
 
     setNodeIPsec $node $newIpsecCfg
 }
@@ -1342,7 +1353,11 @@ proc setNodeIPsecElement { node item element newValue } {
     set itemCfg [getNodeIPsecItem $node $item]
 
     set elementIndex [lsearch -index 0 $itemCfg $element]
-    set newItemCfg [lreplace $itemCfg $elementIndex $elementIndex "{$element} {$newValue}"]
+    if { $elementIndex != -1 } {
+	set newItemCfg [lreplace $itemCfg $elementIndex $elementIndex "{$element} {$newValue}"]
+    } else {
+	set newItemCfg "{$element} {$newValue}"
+    }
 
     setNodeIPsecItem $node $item $newItemCfg
 }
@@ -1360,7 +1375,11 @@ proc setNodeIPsecSetting { node item element setting newValue } {
     set elementCfg [getNodeIPsecElement $node $item $element]
 
     set settingIndex [lsearch $elementCfg "$setting=*"]
-    set newElementCfg [lreplace $elementCfg $settingIndex $settingIndex "$setting=$newValue"]
+    if { $newValue == "" } {
+	set newElementCfg [lreplace $elementCfg $settingIndex $settingIndex]
+    } else {
+	set newElementCfg [lreplace $elementCfg $settingIndex $settingIndex "$setting=$newValue"]
+    }
 
     setNodeIPsecElement $node $item $element $newElementCfg
 }

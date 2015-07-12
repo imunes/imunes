@@ -25,6 +25,7 @@
 
 # $Id: nodecfgGUI.tcl 149 2015-03-27 15:50:14Z valter $
 
+set old_conn_name ""
 
 #****f* nodecfgGUI.tcl/nodeConfigGUI
 # NAME
@@ -2900,35 +2901,40 @@ proc putIPsecConnectionInTree { node tab indicator } {
 
     if { $has_local_cert == "" && $authby == "cert" && $local_cert_file != "" && $secret_file != ""\
         && $has_local_key_file == ""} {
-        setNodeIPsecLocalCert $node $local_cert_file
-        setNodeIPsecPrivateKeyFile $node $secret_file
+        setNodeIPsecItem $node "local_cert" $local_cert_file
+        setNodeIPsecItem $node "local_key_file" $secret_file
     } else {
         if { $has_local_cert != $local_cert_file && $authby == "cert"} {
             set change [tk_messageBox -type "yesno" -message "Existing local cert file is different than current, proceed and replace?" -icon question -title "Cert file"]
             if { $change == "yes" } {
-                setNodeIPsecLocalCert $node $local_cert_file
+		setNodeIPsecItem $node "local_cert" $local_cert_file
             }
         }
         if { $has_local_key_file != $secret_file && $authby == "cert"} {
-            set change [tk_messageBox -type "yesno" -message "Existing local cert file is different than current, proceed and replace?" -icon question -title "Cert file"]
+            set change [tk_messageBox -type "yesno" -message "Existing local cert file is different than current, proceed and replace?" -icon question -title "Secret file"]
             if { $change == "yes" } {
-                setNodeIPsecPrivateKeyFile $node $secret_file
+		setNodeIPsecItem $node "local_key_file" $secret_file
             }
         }
     }
 
     # XXX
-#    setNodeIPsecConnName $node $connection_name $indicator $changed $old_conn_name
     if { $indicator == "add" } {
-        setNodeIPsecSetting $node $connection_name "conn" $connection_name
+	setNodeIPsec $node "configuration {config setup {}} {conn $connection_name {}}"
+#	setNodeIPsecItem $node "configuration" "config setup"
+	puts [getNodeIPsec $node]
+#	puts [getNodeIPsecItem $node "configuration"]
+	setNodeIPsecElement $node "configuration" "conn $connection_name" ""
     } else {
-        setNodeIPsecSetting $node $old_conn_name "conn" $connection_name
+	setNodeIPsecElement $node "configuration" "conn $old_conn_name" "conn $connection_name"
     }
+    return
 #    setNodeIPsecConnKeyDur $node $connection_name $total_keying_duration
     if { $total_keying_duration != "3h" } {
         setNodeIPsecSetting $node $connection_name "ikelifetime" $total_keying_duration
     } else {
-        deleteNodeIPsecSetting $node $connection_name "ikelifetime"
+	setNodeIPsecSetting $node "configuration" "conn $connection_name" "ikelifetime" ""
+#        deleteNodeIPsecSetting $node $connection_name "ikelifetime"
     }
 #    setNodeIPsecConnInstanceDur $node $connection_name $total_instance_duration
     if { $total_instance_duration != "1h" } {
