@@ -1360,6 +1360,19 @@ proc setNodeIPsecElement { node item element newValue } {
     setNodeIPsecItem $node $item $newItemCfg
 }
 
+proc delNodIPsecElement { node item element } {
+    set itemCfg [getNodeIPsecItem $node $item]
+
+    set elementIndex [lsearch -index 0 $itemCfg $element]
+    if { $elementIndex != -1 } {
+	set newItemCfg [lreplace $itemCfg $elementIndex $elementIndex]
+    } else {
+	return
+    }
+
+    setNodeIPsecItem $node $item $newItemCfg
+}
+
 proc getNodeIPsecSetting { node item element setting } {
     set elementCfg [getNodeIPsecElement $node $item $element]
 
@@ -1524,6 +1537,18 @@ proc getIPAddressForPeer { node curIP } {
     }
 
     return $listOfIPs
+}
+
+proc getNodeFromHostname { hostname } {
+    upvar 0 ::cf::[set ::curcfg]::node_list node_list
+
+    foreach node $node_list {
+	if { $hostname == [getNodeName $node] } {
+	    return $node
+	}
+    }
+
+    return ""
 }
 
 #****f* ipsec.tcl/getLocalSubnets

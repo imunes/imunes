@@ -2681,7 +2681,7 @@ proc configGUI_ipsec { tab node } {
     $tab.tree heading Peers_IP_address -text "Peers IP address"
     $tab.tree column Peers_IP_address -anchor center -width 195
 
-    #refreshIPsecTree $node $tab
+    refreshIPsecTree $node $tab
 
     set tree_widget $tab.tree
     ttk::frame $tab.button_container
@@ -2746,33 +2746,33 @@ proc putIPsecConnectionInTree { node tab indicator } {
 
     set peers_node [lindex $peers_name 2]
 
-    if { $old_conn_name != $connection_name } {
-	set changed "yes"
-    }
+#    if { $old_conn_name != $connection_name } {
+#	set changed "yes"
+#    }
 
     set emptyCheckList { \
-	    {connection_name "Please specify connection name!"} \
-	    {ike_encr "Please specify IKE encryption algorithm!"} \
-	    {ike_auth "Please specify IKE integrity check algorithm!"} \
-	    {ike_modp "Please specify IKE modulo prime groups!"} \
-	    {peers_ip "Please specify peer's IP address!"} \
-	    {peers_name "Peer's name cannot be empty!"} \
-	    {peers_subnet "Please specify peer's subnet!"} \
-	    {local_ip_address "Please specify your IP address!"} \
-	    {local_subnet "Please specify your local subnet!"} \
-	    {esp_suits "Please specify ESP encryption algorithm!"} \
-	    {ah_suits "Please specify ESP integrity check algorithm!"} \
-	    {modp_suits "Please specify ESP modulo prime groups!"} \
-	    {peers_id "Please specify peer's unique name\n(e.g. @sun.strongswan.org)!"} \
-	    {secret_file "Please specify the file that contains private key!"} \
-	    {local_cert_file "Please specify your local certificate file"} \
-	    {local_name "Please specify local name/id!"} \
-	}
+	{connection_name "Please specify connection name!"} \
+	{ike_encr "Please specify IKE encryption algorithm!"} \
+	{ike_auth "Please specify IKE integrity check algorithm!"} \
+	{ike_modp "Please specify IKE modulo prime groups!"} \
+	{peers_ip "Please specify peer's IP address!"} \
+	{peers_name "Peer's name cannot be empty!"} \
+	{peers_subnet "Please specify peer's subnet!"} \
+	{local_ip_address "Please specify your IP address!"} \
+	{local_subnet "Please specify your local subnet!"} \
+	{esp_suits "Please specify ESP encryption algorithm!"} \
+	{ah_suits "Please specify ESP integrity check algorithm!"} \
+	{modp_suits "Please specify ESP modulo prime groups!"} \
+	{peers_id "Please specify peer's unique name\n(e.g. @sun.strongswan.org)!"} \
+	{secret_file "Please specify the file that contains private key!"} \
+	{local_cert_file "Please specify your local certificate file"} \
+	{local_name "Please specify local name/id!"} \
+    }
 
     foreach item $emptyCheckList {
 	if { ([lindex $item 0] == "peers_id" || [lindex $item 0] == "secret_file" \
 	    || [lindex $item 0] == "local_cert_file" || [lindex $item 0] == "local_name") } {
-	    if { $authby == "cert" } {
+	    if { $authby != "secret" } {
 		if { [set [lindex $item 0]] == "" } {
 		    tk_messageBox -message [lindex $item 1] -title "Error" -icon error -type ok
 		    return
@@ -2804,7 +2804,6 @@ proc putIPsecConnectionInTree { node tab indicator } {
 		return
 	    }
 	}
-
     }
 
     set netNegCheckList { \
@@ -2867,7 +2866,7 @@ proc putIPsecConnectionInTree { node tab indicator } {
         return
     }
 
-    if { $psk_key == "" && $authby == "psk" } {
+    if { $psk_key == "" && $authby == "secret" } {
         tk_messageBox -message "Please specify shared key!" -title "Error" -icon error -type ok
         return
     }
@@ -2894,18 +2893,18 @@ proc putIPsecConnectionInTree { node tab indicator } {
     set has_local_cert [getNodeIPsecItem $node "local_cert"]
     set has_local_key_file [getNodeIPsecItem $node "local_key_file"]
 
-    if { $has_local_cert == "" && $authby == "cert" && $local_cert_file != "" && $secret_file != ""\
+    if { $has_local_cert == "" && $authby != "secret" && $local_cert_file != "" && $secret_file != ""\
         && $has_local_key_file == ""} {
         setNodeIPsecItem $node "local_cert" $local_cert_file
         setNodeIPsecItem $node "local_key_file" $secret_file
     } else {
-        if { $has_local_cert != $local_cert_file && $authby == "cert"} {
+        if { $has_local_cert != $local_cert_file && $authby != "secret"} {
             set change [tk_messageBox -type "yesno" -message "Existing local cert file is different than current, proceed and replace?" -icon question -title "Cert file"]
             if { $change == "yes" } {
 		setNodeIPsecItem $node "local_cert" $local_cert_file
             }
         }
-        if { $has_local_key_file != $secret_file && $authby == "cert"} {
+        if { $has_local_key_file != $secret_file && $authby != "secret"} {
             set change [tk_messageBox -type "yesno" -message "Existing local cert file is different than current, proceed and replace?" -icon question -title "Secret file"]
             if { $change == "yes" } {
 		setNodeIPsecItem $node "local_key_file" $secret_file
@@ -2917,10 +2916,10 @@ proc putIPsecConnectionInTree { node tab indicator } {
 	if { [getNodeIPsec $node] == "" } {
 	    createEmptyIPsecCfg $node
 	}
-	setNodeIPsecElement $node "configuration" "conn $connection_name" ""
     } else {
-	setNodeIPsecElement $node "configuration" "conn $old_conn_name" "conn $connection_name"
+	delNodIPsecElement $node "configuration" "conn $old_conn_name"
     }
+    setNodeIPsecElement $node "configuration" "conn $connection_name" ""
     if { $total_keying_duration != "3h" } {
         setNodeIPsecSetting $node "configuration" "conn $connection_name" "ikelifetime" "$total_keying_duration"
     } else {
@@ -2963,20 +2962,20 @@ proc putIPsecConnectionInTree { node tab indicator } {
     setNodeIPsecSetting $node "configuration" "conn $connection_name" "rightsubnet" "$peers_subnet"
     setNodeIPsecSetting $node "configuration" "conn $connection_name" "peersname" "[lindex $peers_name 0]"
 
-    if { $authby == "cert" } {
-        setNodeIPsecSetting $node "configuration" "conn $connection_name" "leftid" "$local_name"
-        setNodeIPsecSetting $node "configuration" "conn $connection_name" "rightid" "$peers_id"
-
-        setNodeIPsecSetting $node "configuration" "conn $connection_name" "authby" ""
-        setNodeIPsecSetting $node "configuration" "conn $connection_name" "sharedkey" ""
-#        checkAndClearSharedKeyAndAuthbySecret $node $connection_name
-    } else {
+    if { $authby == "secret" } {
         setNodeIPsecSetting $node "configuration" "conn $connection_name" "authby" "secret"
         setNodeIPsecSetting $node "configuration" "conn $connection_name" "sharedkey" "$psk_key"
 
         setNodeIPsecSetting $node "configuration" "conn $connection_name" "leftid" ""
         setNodeIPsecSetting $node "configuration" "conn $connection_name" "rightid" ""
 #        checkAndClearCertificatesAndIds $node $connection_name
+    } else {
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "leftid" "$local_name"
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "rightid" "$peers_id"
+
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "authby" ""
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "sharedkey" ""
+#        checkAndClearSharedKeyAndAuthbySecret $node $connection_name
     }
 
     if { $start_connection == 1 } {
@@ -2994,6 +2993,28 @@ proc putIPsecConnectionInTree { node tab indicator } {
 
     set old_conn_name ""
     destroy .d
+}
+
+#****f* nodecfgGUI.tcl/refreshIPsecTree
+# NAME
+#   refreshIPsecTree -- refreshes IPsec tree
+# SYNOPSIS
+#   refreshIPsecTree $node $tab
+# FUNCTION
+#   Refreshes tree widget that contains list of IPsec connections 
+# INPUTS
+#   node - node id
+#   tab - IPsec GUI tab widget
+#****
+proc refreshIPsecTree { node tab } {
+    $tab.tree delete [$tab.tree children {}]
+    foreach item [ getNodeIPsecConnList $node ] {
+	set peerIp [ getNodeIPsecSetting $node "configuration" "conn $item" "right" ]
+	if { $peerIp != "" } {
+	    $tab.tree insert {} end -id $item -text "$item"
+	    $tab.tree set $item Peers_IP_address "$peerIp"
+	}
+    }
 }
 
 proc createIPsecGUI { node mainFrame connParamsLframe espOptionsLframe ikeSALframe indicator } {
@@ -3023,7 +3044,7 @@ proc createIPsecGUI { node mainFrame connParamsLframe espOptionsLframe ikeSALfra
     ttk::label $connParamsLframe.authby_container.authby_type -text "Authentication type:"
     ttk::radiobutton $connParamsLframe.authby_container.cert -text "Certificates" -variable authby -value cert \
 	-command "showCertificates $connParamsLframe"
-    ttk::radiobutton $connParamsLframe.authby_container.secret -text "Shared key" -variable authby -value psk \
+    ttk::radiobutton $connParamsLframe.authby_container.secret -text "Shared key" -variable authby -value secret \
 	-command "hideCertificates $connParamsLframe"
 
     grid $connParamsLframe.authby_container -column 0 -row 0 -pady 5 -padx 5 -columnspan 3
@@ -3348,6 +3369,168 @@ proc setDefaultsForIPsec { node connParamsLframe espOptionsLframe } {
     set esp_suits aes128
     set ah_suits sha1
     set modp_suits modp2048
+}
+
+#****f* nodecfgGUI.tcl/populateValuesForUpdate
+# NAME
+#   populateValuesForUpdate -- configure GUI - populates input fields in IPsec GUI with existing data
+# SYNOPSIS
+#   populateValuesForUpdate $node $tab
+# FUNCTION
+#   When modifying existing connection, populates input fields with data of selected IPsec connection
+# INPUTS
+#   tab - tab widget that represents IPsec connection part od node config GUI
+#   node - current node for which the procedure is invoked
+#****
+proc populateValuesForUpdate { node tab connParamsLframe espOptionsLframe } {
+    global version connection_name instance_duration keying_duration negotiation_attempts
+    global conn_time keying_time how_long_time authby psk_key local_cert_dir secret_dir
+    global how_long_before ike_encr ike_auth ike_modp peers_ip peers_name peers_id start_connection
+    global peers_subnet local_cert_file local_name local_ip_address local_subnet type method esp_suits
+    global ah_suits modp_suits secret_file no_encryption old_conn_name
+
+    set selected [$tab.tree focus]
+    if { $selected != "" } {
+	set connection_name $selected
+	set version "ikev2"
+
+	set local_cert_file [getNodeIPsecSetting $node "configuration" "conn $selected" "local_cert"]
+	set secret_file [getNodeIPsecSetting $node "configuration" "conn $selected" "local_key_file"]
+
+	set var_list { \
+	    {type "type" "tunnel" } \
+	    {local_ip_address "left" ""} \
+	    {local_subnet "leftsubnet" ""} \
+	    {peers_ip "right" ""} \
+	    {peers_subnet "rightsubnet" ""} \
+	    {peers_name "peersname" ""} \
+	    {peers_id "rightid" ""} \
+	    {psk_key "sharedkey" ""} \
+	    {local_name "leftid" ""} \
+	    {keying_duration "ikelifetime" "3h"} \
+	    {instance_duration "keylife" "1h"} \
+	    {how_long_before "rekeymargin" "9m"} \
+	    {negotiation_attempts "keyingtries" "3"} \
+	    {ike_from_cfg "ike" "aes128-sha1-modp2048"} \
+	    {esp_from_cfg "esp" "aes128-sha1-modp2048"} \
+	}
+
+	foreach var $var_list {
+	    set [lindex $var 0] [getNodeIPsecSetting $node "configuration" "conn $selected" [lindex $var 1]]
+	    if { [set [lindex $var 0]] == "" } {
+		set [lindex $var 0] [lindex $var 2]
+	    }
+	}
+
+	set timeList { \
+		{s "seconds"} {m "minutes"} \
+		{h "hours"} {d "days"}
+	}
+	foreach item $timeList {
+	    if { [string index $instance_duration end] == [lindex $item 0] } {
+		set conn_time [lindex $item 1]
+	    }
+	    if { [string index $keying_duration end] == [lindex $item 0] } {
+		set keying_time [lindex $item 1]
+	    }
+	    if { [string index $how_long_before end] == [lindex $item 0] } {
+		set how_long_time [lindex $item 1]
+	    }
+	}
+
+	foreach item { instance_duration keying_duration how_long_before } {
+	    set $item [string trimright [set $item] smhd]
+	}
+
+	foreach item { encr auth modp } {
+	    set ike_$item [getIkeParam $ike_from_cfg $item]
+	}
+
+	foreach item { esp ah modp } {
+	    set $item\_suits [getEspParam $esp_from_cfg $item]
+	}
+
+	if { $esp_suits == "null" } {
+	    set method ah
+	    showNullEncryption $espOptionsLframe
+	} else {
+	    set method esp
+	    showFullEncryption $espOptionsLframe
+	}
+
+	set auto [getNodeIPsecSetting $node "configuration" "conn $selected" "auto"]
+	if { $auto == "start" } {
+	    set start_connection 1
+	} else {
+	    set start_connection 0
+	}
+
+	set authby [getNodeIPsecSetting $node "configuration" "conn $selected" "authby"]
+	if { $authby == "secret" } {
+	    hideCertificates $connParamsLframe
+	} else {
+	    showCertificates $connParamsLframe
+	}
+
+	set nodes [getListOfOtherNodes $node]
+	$connParamsLframe.peer_name_entry configure -values $nodes
+
+	set localIPs [getAllIpAddresses $node]
+	$connParamsLframe.local_ip_entry configure -values $localIPs
+
+	if { $peers_name != ""} {
+	    set peers_node [getNodeFromHostname $peers_name]
+	    set peers_name "$peers_name - $peers_node"
+	    set peerIPs [getIPAddressForPeer $peers_node $local_ip_address]
+	    $connParamsLframe.peer_ip_entry configure -values $peerIPs
+	} else {
+	    tk_messageBox -message "Peer does not have any interfaces!" -title "Error" -icon error -type ok
+	    destroy .d
+	    return
+	}
+
+	updateLocalSubnetCombobox $connParamsLframe 
+	updatePeerCombobox $connParamsLframe 
+
+	set local_cert_dir "/usr/local/etc/ipsec.d/certs"
+	set secret_dir "/usr/local/etc/ipsec.d/private"
+
+	set old_conn_name $connection_name
+    } else {
+	tk_messageBox -message "Please select item to modify!" -title "Error" -icon error -type ok
+	destroy .d
+	return
+    }
+}
+
+# XXX
+proc getEspParam { espCfg param } {
+    switch -- $param {
+        esp {
+            return [lindex [split $espCfg -] 0]
+        }
+        ah {
+            return [lindex [split $espCfg -] 1]
+        }
+        modp {
+            return [lindex [split $espCfg -] 2]
+        }
+    }
+}
+
+# XXX
+proc getIkeParam { ikeCfg param } {
+    switch -- $param {
+        encr {
+            return [lindex [split $ikeCfg -] 0]
+        }
+        auth {
+            return [lindex [split $ikeCfg -] 1]
+        }
+        modp {
+            return [lindex [split $ikeCfg -] 2]
+        }
+    }
 }
 
 #****f* nodecfgGUI.tcl/showCertificates
