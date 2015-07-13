@@ -1277,11 +1277,21 @@ proc setNodeIPsec { node newValue } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
     set ipsecCfgIndex [lsearch -index 0 [set $node] "ipsec-config"]
-    
+
     if { $ipsecCfgIndex != -1 } {
 	set $node [lreplace [set $node] $ipsecCfgIndex $ipsecCfgIndex "ipsec-config {$newValue}"]
     } else {
 	set $node [linsert [set $node] end "ipsec-config {$newValue}"]
+    }
+}
+
+proc delNodIPsec { node } {
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
+    set ipsecCfgIndex [lsearch -index 0 [set $node] "ipsec-config"]
+
+    if { $ipsecCfgIndex != -1 } {
+	set $node [lreplace [set $node] $ipsecCfgIndex $ipsecCfgIndex]
     }
 }
 
@@ -1371,6 +1381,10 @@ proc delNodIPsecElement { node item element } {
     }
 
     setNodeIPsecItem $node $item $newItemCfg
+
+    if { [getNodeIPsecConnList $node] == "" } {
+	delNodIPsec $node
+    }
 }
 
 proc getNodeIPsecSetting { node item element setting } {

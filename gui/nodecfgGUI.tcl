@@ -2718,6 +2718,15 @@ proc modIPsecConnWindow { node tab } {
     populateValuesForUpdate $node $tab $connParamsLframe $espOptionsLframe
 }
 
+proc deleteIPsecConnection { node tab } {
+    global $tab.tree
+    set connection_name [$tab.tree focus]
+
+    delNodIPsecElement $node "configuration" "conn $connection_name"
+
+    refreshIPsecTree $node $tab
+}
+
 #****f* nodecfgGUI.tcl/putIPsecConnectionInTree
 # NAME
 #   putIPsecConnectionInTree -- configure GUI - performs data validation and adds (or modifies) connection
