@@ -1204,6 +1204,8 @@ proc l3node.ipsecInit { eid node } {
 	puts $fileId "# /etc/ipsec.conf - strongSwan IPsec configuration file"
 	puts -nonewline $fileId "\n"
     } else {
+	exec rm -fr /tmp/imunes_$node_id\_ipsec.conf
+	exec rm -fr /tmp/imunes_$node_id\_ipsec.secrets
 	return
     }
 
@@ -1252,7 +1254,6 @@ proc l3node.ipsecInit { eid node } {
 	puts $fileId2 ": RSA $trimmed_local_key"
     }
 
-#    setNodeIPsecSetting $node "configuration" "conn %default" "keyexchange" ""
     delNodeIPsecElement $node "configuration" "conn %default"
 
     close $fileId
@@ -1263,6 +1264,8 @@ proc l3node.ipsecInit { eid node } {
 #    pipesExec "$cmds\nmv /tmp/imunes_$node_id\_ipsec.secrets $node_dir/usr/local/etc/ipsec.secrets" ""
     catch {exec hcp /tmp/imunes_$node_id\_ipsec.secrets $hostname@$eid:/etc/ipsec.secrets}
 
+    exec rm -fr /tmp/imunes_$node_id\_ipsec.conf
+    exec rm -fr /tmp/imunes_$node_id\_ipsec.secrets
 }
 
 #****f* exec.tcl/l3node.ipsecStart

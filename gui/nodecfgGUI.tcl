@@ -2722,7 +2722,7 @@ proc deleteIPsecConnection { node tab } {
     global $tab.tree
     set connection_name [$tab.tree focus]
 
-    delNodIPsecElement $node "configuration" "conn $connection_name"
+    delNodeIPsecElement $node "configuration" "conn $connection_name"
 
     refreshIPsecTree $node $tab
 }
@@ -2921,12 +2921,11 @@ proc putIPsecConnectionInTree { node tab indicator } {
         }
     }
 
-    if { $indicator == "add" } {
-	if { [getNodeIPsec $node] == "" } {
-	    createEmptyIPsecCfg $node
-	}
-    } else {
-	delNodIPsecElement $node "configuration" "conn $old_conn_name"
+    if { $indicator == "modify" } {
+	delNodeIPsecElement $node "configuration" "conn $old_conn_name"
+    }
+    if { [getNodeIPsec $node] == "" } {
+	createEmptyIPsecCfg $node
     }
     setNodeIPsecElement $node "configuration" "conn $connection_name" ""
     if { $total_keying_duration != "3h" } {
@@ -3502,14 +3501,30 @@ proc populateValuesForUpdate { node tab connParamsLframe espOptionsLframe } {
 	set nodes [getListOfOtherNodes $node]
 	$connParamsLframe.peer_name_entry configure -values $nodes
 
+	set local_ip_address [getNodeIPsecSetting $node "configuration" "conn $selected" "left"]
 	set localIPs [getAllIpAddresses $node]
 	$connParamsLframe.local_ip_entry configure -values $localIPs
+	foreach localIp $localIPs {
+	    if { $local_ip_address == [lindex [split $localIp /] 0]} {
+		set local_ip_address $localIp
+		break
+	    }
+	}
 
 	if { $peers_name != ""} {
 	    set peers_node [getNodeFromHostname $peers_name]
 	    set peers_name "$peers_name - $peers_node"
 	    set peerIPs [getIPAddressForPeer $peers_node $local_ip_address]
 	    $connParamsLframe.peer_ip_entry configure -values $peerIPs
+	    if { [llength $peerIPs] != 0 } {
+		set peers_ip [getNodeIPsecSetting $node "configuration" "conn $selected" "right"]
+		foreach peerIp $peerIPs {
+		    if { $peers_ip == [lindex [split $peerIp /] 0]} {
+			set peers_ip $peerIp
+			break
+		    }
+		}
+	    }
 	} else {
 	    tk_messageBox -message "Peer does not have any interfaces!" -title "Error" -icon error -type ok
 	    destroy .d
@@ -3518,6 +3533,9 @@ proc populateValuesForUpdate { node tab connParamsLframe espOptionsLframe } {
 
 	updateLocalSubnetCombobox $connParamsLframe 
 	updatePeerCombobox $connParamsLframe 
+
+	set local_subnet [getNodeIPsecSetting $node "configuration" "conn $selected" "leftsubnet"]
+	set peers_subnet [getNodeIPsecSetting $node "configuration" "conn $selected" "rightsubnet"]
 
 	set local_cert_dir "/usr/local/etc/ipsec.d/certs"
 	set secret_dir "/usr/local/etc/ipsec.d/private"
