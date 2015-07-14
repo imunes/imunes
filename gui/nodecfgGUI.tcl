@@ -3342,30 +3342,48 @@ proc setDefaultsForIPsec { node connParamsLframe espOptionsLframe } {
     set secret_dir "/usr/local/etc/ipsec.d/private"
     $espOptionsLframe.esp_container.null_encryption configure -state readonly
 
-    set nodes [getListOfOtherNodes $node]
-    $connParamsLframe.peer_name_entry configure -values $nodes
-    set peers_name [lindex $nodes 0]
-    set peers_node [lindex $peers_name 2]
-
     set local_cert_file [getNodeIPsecItem $node "local_cert_file"]
     set local_name [getNodeName $node]
+
+    set nodes [getListOfOtherNodes $node]
+    $connParamsLframe.peer_name_entry configure -values $nodes
 
     set localIPs [getAllIpAddresses $node]
     $connParamsLframe.local_ip_entry configure -values $localIPs
     set local_ip_address [lindex $localIPs 0]
 
-    if { $peers_name != ""} {
-	set peerIPs [getIPAddressForPeer $peers_node $local_ip_address]
-	if { [llength $peerIPs] != 0 } {
-	    $connParamsLframe.peer_ip_entry configure -values $peerIPs
-	    set peers_ip [lindex $peerIPs 0]
+    set peerHasAddr 0
+    set peerHasIfc 0
+    foreach cnode $nodes {
+	puts "cnode: $cnode"
+	set peers_name $cnode
+	set peers_node [lindex $peers_name 2]
+
+	if { $peers_name != ""} {
+	    set peerHasIfc 1
+	    set peerIPs [getIPAddressForPeer $peers_node $local_ip_address]
+	    if { [llength $peerIPs] != 0 } {
+		$connParamsLframe.peer_ip_entry configure -values $peerIPs
+		set peers_ip [lindex $peerIPs 0]
+		set peerHasAddr 1
+		break
+	    } else {
+		set peerHasAddr 0
+		continue
+	    }
 	} else {
-	    tk_messageBox -message "Peer does not have any IP addresses!" -title "Error" -icon error -type ok
-	    destroy .d
-	    return
+	    set peerHasIfc 0
 	}
-    } else {
-	tk_messageBox -message "Peer does not have any interfaces!" -title "Error" -icon error -type ok
+    }
+
+    if { ! $peerHasIfc } {
+	tk_messageBox -message "Peers do not have any interfaces!" -title "Error" -icon error -type ok
+	destroy .d
+	return
+    }
+
+    if { ! $peerHasAddr } {
+	tk_messageBox -message "Peers do not have any IP addresses!" -title "Error" -icon error -type ok
 	destroy .d
 	return
     }
