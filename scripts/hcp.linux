@@ -52,17 +52,17 @@ getViStoLoc() {
 # also check with himage if the vi exists.
 getCopyDirection() {
     if  ! contains "$1" ":" && contains "$2" ":"; then
-	himage -v `getCpNodeName $2`
+	himage -v `getCpNodeName $2` > /dev/null
 	echo toVi
     fi
     if  contains "$1" ":" && ! contains "$2" ":"; then
-	himage -v `getCpNodeName $1`
+	himage -v `getCpNodeName $1` > /dev/null
 	echo toVi
 	echo fromVi
     fi
     if  contains "$1" ":" && contains "$2" ":"; then
-	himage -v `getCpNodeName $1`
-	himage -v `getCpNodeName $2`
+	himage -v `getCpNodeName $1` > /dev/null
+	himage -v `getCpNodeName $2` > /dev/null
 	echo betweenVi
     fi
 }
