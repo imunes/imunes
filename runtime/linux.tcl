@@ -332,10 +332,10 @@ proc createNodeLogIfcs { node } {}
 proc configureICMPoptions { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    set node_id "$eid.$node"
-
-    pipesExec "docker exec $node_id sysctl net.ipv4.icmp_echo_ignore_broadcasts=1" "hold"
-    pipesExec "docker exec $node_id sysctl net.ipv4.icmp_ratelimit=0" "hold"
+    set nodeNs [createNetNs $node]
+    pipesExec "ip netns exec $nodeNs sysctl net.ipv4.icmp_echo_ignore_broadcasts=1" "hold"
+    pipesExec "ip netns exec $nodeNs sysctl net.ipv4.icmp_ratelimit=0" "hold"
+    exec rm -rf /var/run/netns/$nodeNs
 }
 
 proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
@@ -453,17 +453,19 @@ proc startIfcsNode { node } {
     set node_id "$eid.$node"
     set cmds ""
     foreach ifc [allIfcList $node] {
+        set nodeNs [createNetNs $node]
         # FIXME: should also work for loopback
         if {$ifc != "lo0"} {
             set mtu [getIfcMTU $node $ifc]
             if {[getIfcOperState $node $ifc] == "up"} {
-                set cmds "$cmds\n docker exec $node_id ip link set dev $ifc up mtu $mtu"
+                set cmds "$cmds\n ip netns exec $nodeNs ip link set dev $ifc up mtu $mtu"
             } else {
-                set cmds "$cmds\n docker exec $node_id ip link set dev $ifc mtu $mtu"
+                set cmds "$cmds\n ip netns exec $nodeNs ip link set dev $ifc mtu $mtu"
             }
         }
     }
     exec sh << $cmds
+    exec rm -f "/var/run/netns/$nodeNs"
 }
 
 proc removeExperimentContainer { eid widget } {}
@@ -502,20 +504,22 @@ proc runConfOnNode { node } {
         set confFile "boot.conf"
     }
 
+    set nodeNs [createNetNs $node]
     catch {exec docker inspect --format '{{.Id}}' $node_id} id
     writeDataToFile $node_dir/$confFile [join $bootcfg "\n"]
     exec docker exec -i $node_id sh -c "cat > $confFile" < $node_dir/$confFile
-    exec docker exec $node_id $bootcmd $confFile >& $node_dir/out.log &
+    exec ip netns exec $nodeNs $bootcmd $confFile >& $node_dir/out.log &
     exec docker exec -i $node_id sh -c "cat > out.log" < $node_dir/out.log
 
     foreach ifc [allIfcList $node] {
         # FIXME: should also work for loopback
         if {$ifc != "lo0"} {
             if {[getIfcOperState $node $ifc] == "down"} {
-                exec docker exec $node_id ip link set dev $ifc down
+                exec ip netns exec $node ip link set dev $ifc down
             }
         }
     }
+    exec rm -rf /var/run/netns/$nodeNs
 }
 
 proc destroyLinkBetween { eid lnode1 lnode2 } {
@@ -633,8 +637,10 @@ proc l2node.destroy { eid node } {
 #   * node -- node id
 #****
 proc enableIPforwarding { eid node } {
-    pipesExec "docker exec $eid\.$node sysctl net.ipv6.conf.all.forwarding=1" "hold"
-    pipesExec "docker exec $eid\.$node sysctl net.ipv4.conf.all.forwarding=1" "hold"
+    set nodeNs [createNetNs $node]
+    pipesExec "ip netns exec $nodeNs sysctl net.ipv6.conf.all.forwarding=1" "hold"
+    pipesExec "ip netns exec $nodeNs sysctl net.ipv4.conf.all.forwarding=1" "hold"
+    exec rm -rf /var/run/netns/$nodeNs
 }
 
 #****f* linux.tcl/configDefaultLoIfc
@@ -945,43 +951,46 @@ proc execSetLinkParams { eid link } {
     }
 
     if { [[typemodel $lnode1].virtlayer] == "VIMAGE" } {
-        catch {exec docker exec $eid.$lnode1 tc qdisc del dev $ifname1 root}
+        set nodeNs [createNetNs $lnode1]
+        catch {exec ip netns exec $nodeNs tc qdisc del dev $ifname1 root}
 
         set vdelay [expr $delay / 1000]
-        exec docker exec $eid.$lnode1 tc qdisc add dev $ifname1 root \
+        exec ip netns exec $nodeNs tc qdisc add dev $ifname1 root \
             handle 1: netem delay ${vdelay}ms
 
-        exec docker exec $eid.$lnode1 tc qdisc add dev $ifname1 parent 1: \
+        exec ip netns exec $nodeNs tc qdisc add dev $ifname1 parent 1: \
             handle 2: netem duplicate ${dup}%
 
         set corrupt [expr (1 / double($ber)) * 100]
-        exec docker exec $eid.$lnode1 tc qdisc add dev $ifname1 parent 2: \
+        exec ip netns exec $nodeNs tc qdisc add dev $ifname1 parent 2: \
             handle 3: netem corrupt ${corrupt}%
 
         if {$bandwidth > 0} {
-            exec docker exec $eid.$lnode1 tc qdisc add dev $ifname1 parent 3: \
+            exec ip netns exec $nodeNs tc qdisc add dev $ifname1 parent 3: \
                 handle 4: tbf rate ${bandwidth}bit limit 10mb burst 1540
         }
-
+        exec rm -rf /var/run/netns/$nodeNs
     }
 
     if { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
-        catch {exec docker exec $eid.$lnode2 tc qdisc del dev $ifname2 root}
+        set nodeNs [createNetNs $lnode2]
+        catch {exec ip netns exec $nodeNs tc qdisc del dev $ifname2 root}
 
         set vdelay [expr $delay / 1000]
-        exec docker exec $eid.$lnode2 tc qdisc add dev $ifname2 root \
+        exec ip netns exec $nodeNs tc qdisc add dev $ifname2 root \
             handle 1: netem delay ${vdelay}ms
 
-        exec docker exec $eid.$lnode2 tc qdisc add dev $ifname2 parent 1: \
+        exec ip netns exec $nodeNs tc qdisc add dev $ifname2 parent 1: \
             handle 2: netem duplicate ${dup}%
 
         set corrupt [expr (1 / double($ber)) * 100]
-        exec docker exec $eid.$lnode2 tc qdisc add dev $ifname2 parent 2: \
+        exec ip netns exec $nodeNs tc qdisc add dev $ifname2 parent 2: \
             handle 3: netem corrupt ${corrupt}%
 
         if {$bandwidth > 0} {
-            exec docker exec $eid.$lnode2 tc qdisc add dev $ifname2 parent 3: \
+            exec ip netns exec $nodeNs tc qdisc add dev $ifname2 parent 3: \
                 handle 4: tbf rate ${bandwidth}bit limit 10mb burst 1540
         }
+        exec rm -rf /var/run/netns/$nodeNs
     }
 }
