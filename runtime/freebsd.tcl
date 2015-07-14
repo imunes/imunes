@@ -1951,3 +1951,15 @@ proc getIPv6RouteCmd { statrte } {
 
 proc checkSysPrerequisites {} {
 }
+
+#****f* freebsd.tcl/startIPsecOnNode
+# NAME
+#   startIPsecOnNode -- start ipsec on node
+# SYNOPSIS
+#   startIPsecOnNode $eid $node
+# FUNCTION
+#   Starts strongswan ipsec daemons on the given node.
+#****
+proc startIPsecOnNode { eid node } {
+    catch "exec jexec $eid\.$node ipsec start"
+}

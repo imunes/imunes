@@ -1336,6 +1336,17 @@ proc setNodeIPsecItem { node item newValue } {
     setNodeIPsec $node $newIpsecCfg
 }
 
+proc delNodeIPsecItem { node item } {
+    set ipsecCfg [getNodeIPsec $node]
+
+    set itemIndex [lsearch -index 0 $ipsecCfg $item]
+    if { $itemIndex != -1 } {
+	set newIpsecCfg [lreplace $ipsecCfg $itemIndex $itemIndex]
+    }
+
+    setNodeIPsec $node $newIpsecCfg
+}
+
 #****f* ipsec.tcl/getNodeIPsecElement
 # NAME
 #   getNodeIPsecElement -- get node IPsec element item
@@ -1370,7 +1381,7 @@ proc setNodeIPsecElement { node item element newValue } {
     setNodeIPsecItem $node $item $newItemCfg
 }
 
-proc delNodIPsecElement { node item element } {
+proc delNodeIPsecElement { node item element } {
     set itemCfg [getNodeIPsecItem $node $item]
 
     set elementIndex [lsearch -index 0 $itemCfg $element]
@@ -1614,4 +1625,58 @@ proc checkIfPeerStartsSameConnection { peer local_ip local_subnet local_id } {
     }
 
     return 0
+}
+
+#****f* ipsec.tcl/prepareNodeConfiguration
+# NAME
+#   prepareNodeConfiguration -- inserts extra values in IPsec connection configuration
+# SYNOPSIS
+#   prepareNodeConfiguration $node
+# FUNCTION
+#   Inserts extra values in IPsec connection configuration before it is written to ipsec.conf
+# INPUTS
+#   node - node id
+#****
+proc prepareNodeConfiguration { node } {
+    set ipsecCfg [getNodeIPsec $node]
+    set cfg [getNodeIPsecItem $node "configuration"]
+    set connList [getNodeIPsecConnList $node]
+
+    set new_cfg ""
+    set help_item ""
+    if { [llength $cfg] > 0 } {
+	foreach item $cfg {
+	    set elementCfg [lindex $cfg 0]
+	    foreach element $elementCfg {
+		puts $element
+
+		puts "ITEM: $item"
+		if { [llength $item] > 2 } {
+		    set help_item $item
+
+		    if { [lsearch $item "keyexchange=*"] == -1} {
+			set help_item [linsert $help_item 2 "keyexchange=ikev2"]
+		    } 
+		    if { [lsearch $item "leftfirewall=*"] == -1} {
+			set help_item [linsert $help_item 5 "leftfirewall=no"]
+		    } 
+
+		    if { [lsearch $cfg "local_cert *"] != -1 && [lsearch $item "authby=secret"] == -1 } {
+			set local_cert_file [lindex [lsearch -inline $cfg "local_cert *"] 1]
+			if { [string first "/" $local_cert_file] != -1 } {
+			    set for_file [lindex [split $local_cert_file /] end]
+			} else {
+			    set for_file $local_cert_file
+			}
+			set help_item [linsert $help_item 3 "leftcert=$for_file"]
+		    }	
+		    lappend new_cfg $help_item
+
+		} else {
+		    lappend new_cfg $item
+		}
+	    }
+	}
+    }
+    return $new_cfg
 }

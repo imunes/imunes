@@ -1167,3 +1167,119 @@ proc pipesClose { } {
 	catch {close $inst_pipes($i)}
     }
 }
+
+#****f* exec.tcl/l3node.ipsecInit
+# NAME
+#   l3node.ipsecInit -- IPsec initialization
+# SYNOPSIS
+#   l3node.ipsecInit $eid $node
+# FUNCTION
+#   Creates ipsec.conf and ipsec.secrets files from IPsec configuration of given node
+#   and copies certificates to desired folders (if there are any certificates)
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
+proc l3node.ipsecInit { eid node } {
+    set node_id "$eid\.$node"
+
+    set cmds ""
+
+    set ipsecret_file ""
+    set psk_key ""
+    set local_cert_file ""
+
+    set peers_ip ""
+
+#    set node_dir [getVrootDir]/$eid/$node
+
+    #ne zvati genericki jer ne znam sta to radi
+    set fileId [open /tmp/imunes_$node_id\_ipsec.conf w]
+    set fileId2 [open /tmp/imunes_$node_id\_ipsec.secrets w]
+
+#    set config_content [prepareNodeConfiguration $node]
+    set config_content [getNodeIPsec $node]
+    if { $config_content != "" } {
+	setNodeIPsecSetting $node "configuration" "conn %default" "keyexchange" "ikev2"
+	puts $fileId "# /etc/ipsec.conf - strongSwan IPsec configuration file"
+	puts -nonewline $fileId "\n"
+    } else {
+	return
+    }
+
+    set config_content [getNodeIPsecItem $node "configuration"]
+    set hostname [getNodeName $node]
+
+    foreach item $config_content {
+	set element [lindex $item 0]
+	set settings [lindex $item 1]
+	puts $fileId "$element"
+	set hasKey 0
+	set hasRight 0
+	foreach setting $settings {
+	    if { [string match "peersname=*" $setting] } {
+		continue
+	    }
+	    if { [string match "sharedkey=*" $setting] } {
+		set hasKey 1
+		set psk_key [lindex [split $setting =] 1]
+		continue
+	    }
+	    if { [string match "right=*" $setting] } {
+		set hasRight 1
+		set right [lindex [split $setting =] 1]
+	    }
+	    puts $fileId "        $setting"
+	}
+	if { $hasKey && $hasRight } {
+	    puts $fileId2 "$right : PSK $psk_key"
+	}
+    }
+
+    set local_cert [getNodeIPsecItem $node "local_cert"]
+    if { $local_cert != "" } {
+	set trimmed_local_cert [lindex [split $local_cert /] end]
+#	pipesExec "$cmds\ncp $local_cert $node_dir/usr/local/etc/ipsec.d/certs/$trimmed_local_cert" "hold"
+	catch {exec hcp $local_cert $hostname@$eid:/etc/ipsec.d/certs/$trimmed_local_cert}
+    }
+
+    set ipsecret_file [getNodeIPsecItem $node "local_key_file"]
+    if { $ipsecret_file != "" } {
+	puts $fileId2 "# /etc/ipsec.secrets - strongSwan IPsec secrets file\n"
+	set trimmed_local_key [lindex [split $ipsecret_file /] end]
+#	pipesExec "$cmds\ncp $ipsecret_file $node_dir/usr/local/etc/ipsec.d/private/$trimmed_local_key" "hold"
+	catch {exec hcp $ipsecret_file $hostname@$eid:/etc/ipsec.d/private/$trimmed_local_key}
+	puts $fileId2 ": RSA $trimmed_local_key"
+    }
+
+#    setNodeIPsecSetting $node "configuration" "conn %default" "keyexchange" ""
+    delNodeIPsecElement $node "configuration" "conn %default"
+
+    close $fileId
+    close $fileId2
+
+#    pipesExec "$cmds\nmv /tmp/imunes_$node_id\_ipsec.conf $node_dir/usr/local/etc/ipsec.conf" "hold"
+    catch {exec hcp /tmp/imunes_$node_id\_ipsec.conf $hostname@$eid:/etc/ipsec.conf}
+#    pipesExec "$cmds\nmv /tmp/imunes_$node_id\_ipsec.secrets $node_dir/usr/local/etc/ipsec.secrets" ""
+    catch {exec hcp /tmp/imunes_$node_id\_ipsec.secrets $hostname@$eid:/etc/ipsec.secrets}
+
+}
+
+#****f* exec.tcl/l3node.ipsecStart
+# NAME
+#   l3node.ipsecStart -- IPsec launch
+# SYNOPSIS
+#   l3node.ipsecStart $eid $node
+# FUNCTION
+#   Starts Strongswan daemon
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
+proc l3node.ipsecStart { eid node } {
+    set config_content [getNodeIPsec $node]
+
+    if { [llength $config_content] > 0 } {
+	startIPsecOnNode $eid $node
+    }
+}
