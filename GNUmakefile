@@ -62,6 +62,9 @@ install: uninstall
 	chmod 755 $(BINDIR)/imunes
 
 	cp $(TOOLS) $(BINDIR)
+	for file in $(notdir $(TOOLS)); do \
+		chmod 755 $(BINDIR)/$${file}; \
+	done ;
 ifeq ($(UNAME_S), Linux)
 	mv $(BINDIR)/hcp.linux $(BINDIR)/hcp
 	mv $(BINDIR)/himage.linux $(BINDIR)/himage
@@ -71,9 +74,6 @@ else
 endif
 
 	mkdir -p $(SCRIPTSDIR)
-	for file in $(notdir $(TOOLS)); do \
-		chmod 755 $(BINDIR)/$${file}; \
-	done ;
 
 	for file in $(VROOT); do \
 	    sed -e "s,LIBDIR=\"\",LIBDIR=$(LIBDIR)," \
