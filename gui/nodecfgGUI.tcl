@@ -3354,7 +3354,6 @@ proc setDefaultsForIPsec { node connParamsLframe espOptionsLframe } {
     set peerHasAddr 0
     set peerHasIfc 0
     foreach cnode $nodes {
-	puts "cnode: $cnode"
 	set peers_name $cnode
 	set peers_node [lindex $peers_name 2]
 

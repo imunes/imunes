@@ -990,3 +990,25 @@ proc execSetLinkParams { eid link } {
 proc startIPsecOnNode { eid node } {
     catch {exec docker exec $eid\.$node ipsec start} err
 }
+
+proc ipsecFilesToNode { eid node local_cert ipsecret_file } {
+    set node_id "$eid\.$node"
+    set hostname [getNodeName $node]
+
+    if { $local_cert != "" } {
+	set trimmed_local_cert [lindex [split $local_cert /] end]
+	catch {exec hcp $local_cert $hostname@$eid:/etc/ipsec.d/certs/$trimmed_local_cert}
+    }
+
+    if { $ipsecret_file != "" } {
+	set fileId2 [open /tmp/imunes_$node_id\_ipsec.secrets w]
+	puts $fileId2 "# /etc/ipsec.secrets - strongSwan IPsec secrets file\n"
+	set trimmed_local_key [lindex [split $ipsecret_file /] end]
+	catch {exec hcp $ipsecret_file $hostname@$eid:/etc/ipsec.d/private/$trimmed_local_key}
+	puts $fileId2 ": RSA $trimmed_local_key"
+	close $fileId2
+    }
+
+    catch {exec hcp /tmp/imunes_$node_id\_ipsec.conf $hostname@$eid:/etc/ipsec.conf}
+    catch {exec hcp /tmp/imunes_$node_id\_ipsec.secrets $hostname@$eid:/etc/ipsec.secrets}
+}

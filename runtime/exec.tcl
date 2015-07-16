@@ -1183,21 +1183,10 @@ proc pipesClose { } {
 proc l3node.ipsecInit { eid node } {
     set node_id "$eid\.$node"
 
-    set cmds ""
-
-    set ipsecret_file ""
-    set psk_key ""
-    set local_cert_file ""
-
-    set peers_ip ""
-
-#    set node_dir [getVrootDir]/$eid/$node
-
     #ne zvati genericki jer ne znam sta to radi
     set fileId [open /tmp/imunes_$node_id\_ipsec.conf w]
     set fileId2 [open /tmp/imunes_$node_id\_ipsec.secrets w]
 
-#    set config_content [prepareNodeConfiguration $node]
     set config_content [getNodeIPsec $node]
     if { $config_content != "" } {
 	setNodeIPsecSetting $node "configuration" "conn %default" "keyexchange" "ikev2"
@@ -1210,7 +1199,6 @@ proc l3node.ipsecInit { eid node } {
     }
 
     set config_content [getNodeIPsecItem $node "configuration"]
-    set hostname [getNodeName $node]
 
     foreach item $config_content {
 	set element [lindex $item 0]
@@ -1238,31 +1226,14 @@ proc l3node.ipsecInit { eid node } {
 	}
     }
 
-    set local_cert [getNodeIPsecItem $node "local_cert"]
-    if { $local_cert != "" } {
-	set trimmed_local_cert [lindex [split $local_cert /] end]
-#	pipesExec "$cmds\ncp $local_cert $node_dir/usr/local/etc/ipsec.d/certs/$trimmed_local_cert" "hold"
-	catch {exec hcp $local_cert $hostname@$eid:/etc/ipsec.d/certs/$trimmed_local_cert}
-    }
-
-    set ipsecret_file [getNodeIPsecItem $node "local_key_file"]
-    if { $ipsecret_file != "" } {
-	puts $fileId2 "# /etc/ipsec.secrets - strongSwan IPsec secrets file\n"
-	set trimmed_local_key [lindex [split $ipsecret_file /] end]
-#	pipesExec "$cmds\ncp $ipsecret_file $node_dir/usr/local/etc/ipsec.d/private/$trimmed_local_key" "hold"
-	catch {exec hcp $ipsecret_file $hostname@$eid:/etc/ipsec.d/private/$trimmed_local_key}
-	puts $fileId2 ": RSA $trimmed_local_key"
-    }
-
     delNodeIPsecElement $node "configuration" "conn %default"
 
     close $fileId
     close $fileId2
 
-#    pipesExec "$cmds\nmv /tmp/imunes_$node_id\_ipsec.conf $node_dir/usr/local/etc/ipsec.conf" "hold"
-    catch {exec hcp /tmp/imunes_$node_id\_ipsec.conf $hostname@$eid:/etc/ipsec.conf}
-#    pipesExec "$cmds\nmv /tmp/imunes_$node_id\_ipsec.secrets $node_dir/usr/local/etc/ipsec.secrets" ""
-    catch {exec hcp /tmp/imunes_$node_id\_ipsec.secrets $hostname@$eid:/etc/ipsec.secrets}
+    set local_cert [getNodeIPsecItem $node "local_cert"]
+    set ipsecret_file [getNodeIPsecItem $node "local_key_file"]
+    ipsecFilesToNode $eid $node $local_cert $ipsecret_file
 
     exec rm -fr /tmp/imunes_$node_id\_ipsec.conf
     exec rm -fr /tmp/imunes_$node_id\_ipsec.secrets
