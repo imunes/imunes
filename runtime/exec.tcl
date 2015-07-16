@@ -1007,7 +1007,6 @@ proc terminateAllNodes { eid } {
     destroyNetgraphNodes $eid $ngraphs $w
 
     destroyVirtNodeIfcs $eid $vimages
-    statline ""
 
     # timeout patch
     timeoutPatch $eid $node_list

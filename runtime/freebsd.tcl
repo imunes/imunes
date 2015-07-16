@@ -1724,6 +1724,7 @@ proc destroyVirtNodeIfcs { eid vimages } {
 	displayBatchProgress $i [ llength $vimages ]
     }
     pipesClose
+    statline ""
 }
 
 #****f* freebsd.tcl/removeExperimentContainer
