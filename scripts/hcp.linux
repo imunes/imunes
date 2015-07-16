@@ -13,7 +13,7 @@ Hostname is used instead of virtual images filesystem mount point.
 
 Usage:
 
-    $command [regular_cp_options] [vi_hostname]:filename [vi_hostname]:filename
+    $command [vi_hostname]:filename [vi_hostname]:filename
 
 If vi_hostname is a unique virtual image hostname on the system then
 it is replaced with appropriate mount point and regular "cp" is called.
@@ -51,20 +51,33 @@ getViStoLoc() {
 # detect copy direction: 1) from host to vi, 2) from vi to host, 3) vi to vi
 # also check with himage if the vi exists.
 getCopyDirection() {
-    if  ! contains "$1" ":" && contains "$2" ":"; then
-	himage -v `getCpNodeName $2` > /dev/null
-	echo toVi
-    fi
-    if  contains "$1" ":" && ! contains "$2" ":"; then
-	himage -v `getCpNodeName $1` > /dev/null
-	echo toVi
-	echo fromVi
-    fi
-    if  contains "$1" ":" && contains "$2" ":"; then
+    # "betweenVi" if there are only 2 args, both in Vi
+    if  test $# -eq 2 && contains "$1" ":" && contains "$2" ":"; then
 	himage -v `getCpNodeName $1` > /dev/null
 	himage -v `getCpNodeName $2` > /dev/null
 	echo betweenVi
+        return
     fi
+    # "toVi" if only the last one is in virtual image 
+    if  contains "${@: -1}" ":"; then
+        for argn in ${@:0:$#}; do
+            if  contains "$argn" ":"; then
+                echo "Only the last arg can be in virtual image" > /dev/tty
+                exit 2
+            fi
+        done
+	himage -v `getCpNodeName ${@: -1}` > /dev/null
+	echo toVi
+        return
+    fi
+    # "fromVi" if the first arg is in virtual image and the second is not
+    if  test $# -eq 2 && contains "$1" ":" && ! contains "$2" ":"; then
+	himage -v `getCpNodeName $1` > /dev/null
+	echo fromVi
+        return
+    fi
+    help > /dev/tty
+    exit 2
 }
 
 # getCpNodeName(arg)
@@ -89,17 +102,20 @@ getCpLoc() {
 # copyToVi (path1 path2)
 # copy from host to vi using cp from docker
 copyToVi () {
-    node=`getCpNodeId $2`
-    loc=`getCpLoc $2`
+    node=`getCpNodeId ${@: -1}`
+    loc=`getCpLoc ${@: -1}`
     # create tmpdir inside vi
     tmpdir=`docker exec $node mktemp -d`
     # get external link to tmpdir
-    docktmpdir="`getViStoLoc $2`$tmpdir"
+    docktmpdir="`getViStoLoc ${@: -1}`$tmpdir"
     # copy file to external link
-    cp -r "$1" "$docktmpdir"
+    n=`expr $# - 1`
     # copy file using docker
-    docker exec $node cp "$tmpdir/`basename $1`" "/$loc"
-    # rm tempdir from node
+    for f in ${@:1:$n} 
+    do
+        cp -r $f $docktmpdir
+        docker exec $node cp -r "$tmpdir/`basename $f`" "/$loc"
+    done
     docker exec $node rm -fr $tmpdir
 }
 
@@ -117,9 +133,9 @@ fi
 direction=`getCopyDirection "$@"`
 case $direction in
     toVi)
-	copyToVi $1 $2;;
+	copyToVi "$@";;
     fromVi)
-	copyFromVi $1 $2;;
+	copyFromVi "$@";;
     betweenVi)
 	tmpdir=$(mktemp -d)
 	copyFromVi $1 $tmpdir
@@ -127,3 +143,4 @@ case $direction in
 	copyToVi $tmpdir/`basename $cpLoc` $2
 	rm -fr $tmpdir ;;
 esac
+

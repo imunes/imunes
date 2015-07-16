@@ -11,6 +11,7 @@ Hostname can be in the form: hostname or hostname@eid.
 
 Usage:
   $command vi_hostname command
+  $command -b vi_hostname command  ---> run in detached mode (background)
   $command -v vi_hostname  ---> docker full name (eid.nodename)
   $command -n vi_hostname  ---> docker node name (nodename)
   $command -e vi_hostname  ---> experiment eid name (eid)
@@ -22,6 +23,7 @@ __END__
 
 vi_name() {
   if test "`docker ps -aq`" = ""; then
+      echo Error: cannot find node named $1 >&2
       exit 2
   fi
   dockerps=`docker ps -aq | xargs docker inspect -f '{{range $p, $conf := .}} {{if eq $p "Name"}} {{$conf}} {{end}} {{if eq $p "Id"}} {{$conf}} {{end}} {{if eq $p "Config"}} {{$conf.Hostname}} {{end}} {{end}}'`
@@ -68,6 +70,17 @@ elif test $1 = "-n"; then
     image_name=`vi_name $2`
     test $? -ne 0 && exit 2
     docker inspect -f '{{.Name}}' $image_name | cut -d"." -f2
+elif test $1 = "-b"; then
+    image_name=`vi_name $2`
+    test $? -ne 0 && exit 2
+    shift 2
+    if test -n "$*"; then
+        exec docker exec -d $image_name "$@"
+    else
+        echo $command: command is missing 
+        help
+        exit 2
+    fi
 elif test `expr a$1 : "a-.*"` = "0"; then
     image_name=`vi_name $1`
     test $? -ne 0 && exit 2
