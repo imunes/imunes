@@ -490,6 +490,9 @@ proc runConfOnNode { node } {
     set node_dir [getVrootDir]/$eid/$node
     set node_id "$eid.$node"
 
+    catch {exec docker exec $node_id umount /etc/resolv.conf}
+    catch {exec docker exec $node_id umount /etc/hosts}
+
     if { [getCustomEnabled $node] == true } {
         set selected [getCustomConfigSelected $node]
 
@@ -502,7 +505,6 @@ proc runConfOnNode { node } {
         set confFile "boot.conf"
     }
 
-    catch {exec docker inspect --format '{{.Id}}' $node_id} id
     writeDataToFile $node_dir/$confFile [join $bootcfg "\n"]
     exec docker exec -i $node_id sh -c "cat > $confFile" < $node_dir/$confFile
     exec docker exec $node_id $bootcmd $confFile >& $node_dir/out.log &
