@@ -15,8 +15,9 @@ Usage:
   $command -v vi_hostname  ---> docker full name (eid.nodename)
   $command -n vi_hostname  ---> docker node name (nodename)
   $command -e vi_hostname  ---> experiment eid name (eid)
-  $command -d vi_hostname  ---> docker container id
+  $command -i vi_hostname  ---> docker container id
   $command -l              ---> running experiments eids with node names
+  $command -d              ---> dummy flag (used only on FreeBSD)
 __END__
 }
 
@@ -50,13 +51,15 @@ if test $# -eq 0; then
     help
 elif test $1 = "-h"; then
     help
+elif test $1 = "-d"; then # dummy flag
+    exit 0
 elif test $1 = "-l"; then
     explist=`docker ps -a | grep "imunes" | awk '{print $NF}' | cut -d . -f 1 | sort | uniq`
     for exp in $explist; do
 	node_ids=`docker ps -a | grep "imunes" | grep "$exp" | awk '{print $NF}' | paste -s -d" " -`
 	echo "$exp (`docker inspect -f "{{.Config.Hostname}}" $node_ids | paste -s -d" " -`)"
     done
-elif test $1 = "-d"; then
+elif test $1 = "-i"; then
     vi_name $2
 elif test $1 = "-v"; then
     image_name=`vi_name $2`
