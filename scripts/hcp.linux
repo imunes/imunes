@@ -38,7 +38,7 @@ contains() {
 getViStoLoc() {
     driver=`docker info 2>&1 | grep "Storage Driver:" | cut -d: -f2 | tr -d " "`
     name=`getCpNodeName $1`
-    dockerid=`himage -d $name`
+    dockerid=`himage -i $name`
     case $driver in
 	aufs) echo $basedir/aufs/diff/$dockerid;;
 	btrfs) echo $basedir/btrfs/subvolumes/$dockerid;;
