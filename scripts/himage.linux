@@ -12,6 +12,7 @@ Hostname can be in the form: hostname or hostname@eid.
 Usage:
   $command vi_hostname command
   $command -b vi_hostname command  ---> run in detached mode (background)
+  $command -nt vi_hostname command ---> run without pseudo-tty (no-tty)
   $command -v vi_hostname  ---> docker full name (eid.nodename)
   $command -n vi_hostname  ---> docker node name (nodename)
   $command -e vi_hostname  ---> experiment eid name (eid)
@@ -69,6 +70,17 @@ elif test $1 = "-e"; then
     image_name=`vi_name $2`
     test $? -ne 0 && exit 2
     docker inspect -f '{{.Name}}' $image_name | tr -d "/" | cut -d"." -f1
+elif test $1 = "-nt"; then
+    image_name=`vi_name $2`
+    test $? -ne 0 && exit 2
+    shift 2
+    if test -n "$*"; then
+        exec docker exec -i $image_name "$@"
+    else
+        echo $command: command is missing 
+        help
+        exit 2
+    fi
 elif test $1 = "-n"; then
     image_name=`vi_name $2`
     test $? -ne 0 && exit 2
