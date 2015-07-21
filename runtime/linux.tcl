@@ -637,6 +637,8 @@ proc l2node.destroy { eid node } {
 proc enableIPforwarding { eid node } {
     pipesExec "docker exec $eid\.$node sysctl net.ipv6.conf.all.forwarding=1" "hold"
     pipesExec "docker exec $eid\.$node sysctl net.ipv4.conf.all.forwarding=1" "hold"
+    pipesExec "docker exec $eid\.$node sysctl net.ipv4.conf.default.rp_filter=0" "hold"
+    pipesExec "docker exec $eid\.$node sysctl net.ipv4.conf.all.rp_filter=0" "hold"
 }
 
 #****f* linux.tcl/configDefaultLoIfc
