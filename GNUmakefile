@@ -36,7 +36,7 @@ SMALL_ICONS = $(NODE_ICONS)
 TINY_ICONS = $(NODE_ICONS) link.gif select.gif l2.gif l3.gif freeform.gif \
 		oval.gif rectangle.gif text.gif
 
-ICONS = $(wildcard icons/imunes_icon*)
+ICONS = $(wildcard icons/imunes_*)
 
 info:
 	@echo 	"To install the IMUNES GUI use: make install"
