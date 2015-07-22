@@ -49,7 +49,7 @@ vi_name() {
 }
 
 # dummy flags
-if test $1 = "-b" || test $1 = "-nt"; then
+if test $1 = "-b" || test $1 = "-nt"; then
     shift 1
 fi
 
