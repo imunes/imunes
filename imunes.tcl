@@ -146,6 +146,43 @@ if { $ROOTDIR == "." } {
     set BINDIR "bin"
 }
 
+set imunesVersion "Unknown"
+set imunesCommit ""
+set imunesChangedDate ""
+set imunesAdditions ""
+
+set verfile [open "$ROOTDIR/$LIBDIR/VERSION" r]
+set data [read $verfile]
+foreach line [split $data "\n"] {
+    if {[string match "VERSION:*" $line]} {
+	set imunesVersion [string range $line [expr [string first ":" $line] + 2] end]
+    }
+    if {[string match "Commit:*" $line]} {
+	set imunesCommit [string range $line [expr [string first ":" $line] + 2] end]
+    }
+    if {[string match "Last changed:*" $line]} {
+	set imunesChangedDate [string range $line [expr [string first ":" $line] + 2] end]
+    }
+}
+
+if { [string match "*Format*" $imunesCommit] } {
+    set imunesChangedDate ""
+    set imunesLastYear ""
+} else {
+    set imunesVersion "$imunesVersion (git: $imunesCommit)"
+    set imunesLastYear [lindex [split $imunesChangedDate "-"] 0]
+    set imunesChangedDate "Last changed: $imunesChangedDate"
+}
+
+if { $params(v) || $params(version)} {
+    puts "IMUNES $imunesVersion $imunesAdditions"
+    if { $imunesChangedDate != "" } {
+	puts "$imunesChangedDate"
+    }
+    exit
+}
+
+
 # Runtime libriaries
 foreach file [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
     source $file

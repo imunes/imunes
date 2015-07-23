@@ -870,7 +870,6 @@ menu .menubar.experiment -tearoff 0
 #
 menu .menubar.help -tearoff 0
 .menubar.help add command -label "About" -command {
-    global ROOTDIR LIBDIR
     toplevel .about
     wm title .about "About IMUNES"
     wm minsize .about 454 255
@@ -886,41 +885,13 @@ menu .menubar.help -tearoff 0
     ttk::label $mainFrame.logoLabel
     $mainFrame.logoLabel configure -image $image
 
-    set version "Unknown"
-    set commit ""
-    set changedDate ""
-
-    set verfile [open "$ROOTDIR/$LIBDIR/VERSION" r]
-    set data [read $verfile]
-    foreach line [split $data "\n"] {
-	if {[string match "VERSION:*" $line]} {
-	    set version [string range $line [expr [string first ":" $line] + 2] end]
-	}
-	if {[string match "Commit:*" $line]} {
-	    set commit [string range $line [expr [string first ":" $line] + 2] end]
-	}
-	if {[string match "Last changed:*" $line]} {
-	    set changedDate [string range $line [expr [string first ":" $line] + 2] end]
-	}
-    }
-
-    set imunesVer "$version (git: $commit)"
-    set lastChanged "Last changed: $changedDate"
-    set lastYear [lindex [split $changedDate "-"] 0]
-
-    if { [string match "*Format*" $commit] } {
-	set imunesVer "$version"
-	set lastChanged ""
-	set lastYear ""
-    }
-
     ttk::label $mainFrame.imunesLabel -text "IMUNES" -font "-size 12 -weight bold"
-    ttk::label $mainFrame.imunesVersion -text $imunesVer -font "-size 10 -weight bold"
-    ttk::label $mainFrame.lastChanged -text $lastChanged
+    ttk::label $mainFrame.imunesVersion -text $imunesVersion -font "-size 10 -weight bold"
+    ttk::label $mainFrame.lastChanged -text $imunesChangedDate
     ttk::label $mainFrame.imunesDesc -text "Integrated Multiprotocol Network Emulator/Simulator."
     ttk::label $mainFrame.homepage -text "http://www.imunes.net/" -font "-underline 1 -size 10"
     ttk::label $mainFrame.github -text "http://github.com/imunes/imunes" -font "-underline 1 -size 10"
-    ttk::label $mainFrame.copyright -text "Copyright (c) University of Zagreb 2004 - $lastYear" -font "-size 8"
+    ttk::label $mainFrame.copyright -text "Copyright (c) University of Zagreb 2004 - $imunesLastYear" -font "-size 8"
 
     grid $mainFrame.logoLabel -column 0 -row 0 -pady {10 5} -padx 5
     grid $mainFrame.imunesLabel -column 0 -row 1 -pady 5 -padx 5
