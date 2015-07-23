@@ -900,13 +900,13 @@ menu .menubar.help -tearoff 0
     grid $mainFrame.github -column 0 -row 5 -pady 1 -padx 5
     grid $mainFrame.copyright -column 0 -row 6 -pady {20 10} -padx 5
 
-    bind $mainFrame.homepage <1> { catch {exec xdg-open [%W cget -text] > /dev/null 2> /dev/null &} }
+    bind $mainFrame.homepage <1> { launchBrowser [%W cget -text] }
     bind $mainFrame.homepage <Enter> "%W configure -foreground blue; \
 	$mainFrame config -cursor hand1"
     bind $mainFrame.homepage <Leave> "%W configure -foreground black; \
 	$mainFrame config -cursor arrow"
 
-    bind $mainFrame.github <1> { catch {exec xdg-open [%W cget -text] > /dev/null 2> /dev/null &} }
+    bind $mainFrame.github <1> { launchBrowser [%W cget -text] }
     bind $mainFrame.github <Enter> "%W configure -foreground blue; \
 	$mainFrame config -cursor hand1"
     bind $mainFrame.github <Leave> "%W configure -foreground black; \
