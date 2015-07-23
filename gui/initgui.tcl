@@ -904,11 +904,19 @@ menu .menubar.help -tearoff 0
 	}
     }
 
+    set imunesVer "$version (git: $commit)"
+    set lastChanged "Last changed: $changedDate"
     set lastYear [lindex [split $changedDate "-"] 0]
 
+    if { [string match "*Format*" $commit] } {
+	set imunesVer "$version"
+	set lastChanged ""
+	set lastYear ""
+    }
+
     ttk::label $mainFrame.imunesLabel -text "IMUNES" -font "-size 12 -weight bold"
-    ttk::label $mainFrame.imunesVersion -text "$version (git: $commit)" -font "-size 10 -weight bold"
-    ttk::label $mainFrame.lastChanged -text "Last changed: $changedDate"
+    ttk::label $mainFrame.imunesVersion -text $imunesVer -font "-size 10 -weight bold"
+    ttk::label $mainFrame.lastChanged -text $lastChanged
     ttk::label $mainFrame.imunesDesc -text "Integrated Multiprotocol Network Emulator/Simulator."
     ttk::label $mainFrame.homepage -text "http://www.imunes.net/" -font "-underline 1 -size 10"
     ttk::label $mainFrame.github -text "http://github.com/imunes/imunes" -font "-underline 1 -size 10"
