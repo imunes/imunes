@@ -1146,15 +1146,11 @@ proc launchBrowser {url} {
 	set command [list xdg-open]
     }
 
-    if {"SUDO_USER" in [array names env]} {
-	exec su - $env(SUDO_USER) /bin/sh -c "$command $url" &
+    if {$tcl_platform(platform) eq "windows"} {
+	catch {exec {*}$command $url}
+    } elseif {"SUDO_USER" in [array names env]} {
+	catch {exec su - $env(SUDO_USER) /bin/sh -c "$command $url" > /dev/null 2> /dev/null &} 
     } else {
-	exec {*}$command $url &
-    }
-}
-
-proc _launchBrowser {url} {
-    if [catch {launchBrowser $url} err] {
-        tk_messageBox -icon error -message "error '$err'"
+	catch {exec {*}$command $url > /dev/null 2> /dev/null &}
     }
 }
