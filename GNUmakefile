@@ -16,6 +16,7 @@ IMUNESVER = 1.0
 TARBALL_DIR = imunes_$(IMUNESDATE)
 RELEASE_DIR = imunes-$(IMUNESVER)
 UNAME_S = $(shell uname -s)
+VROOT_EXISTS = $(shell [ -d /var/imunes/vroot ] && echo 1 || echo 0 )
 
 BASEFILES =	COPYRIGHT README VERSION
 CONFIGFILES =	$(wildcard config/*.tcl)
@@ -134,8 +135,12 @@ vroot_m_zfs:
 	sh scripts/prepare_vroot.sh zfs mini
 
 remove_vroot:
+ifeq ($(VROOT_EXISTS), 1)
 	chflags -R noschg /var/imunes/vroot
 	rm -fr /var/imunes/vroot
+else
+	@echo   "/var/imunes/vroot does not exist, exiting..."
+endif
 
 tarball:
 	rm -f ../$(TARBALL_DIR).tar.gz
