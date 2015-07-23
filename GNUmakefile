@@ -17,7 +17,7 @@ TARBALL_DIR = imunes_$(IMUNESDATE)
 RELEASE_DIR = imunes-$(IMUNESVER)
 UNAME_S = $(shell uname -s)
 
-BASEFILES =	COPYRIGHT README
+BASEFILES =	COPYRIGHT README VERSION
 CONFIGFILES =	$(wildcard config/*.tcl)
 GUIFILES =	$(wildcard gui/*.tcl)
 NODESFILES =	$(wildcard nodes/*.tcl)
@@ -49,6 +49,7 @@ all: install
 install: uninstall
 	mkdir -p $(IMUNESDIR)
 	cp $(BASEFILES) $(IMUNESDIR)
+	sh scripts/update_version.sh
 	mkdir -p $(BINDIR)
 
 	sed -e "s,set LIBDIR \"\",set LIBDIR $(LIBDIR)," \
