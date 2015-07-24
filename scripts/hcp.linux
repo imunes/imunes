@@ -1,4 +1,4 @@
-#! /bin/sh 
+#!/bin/bash
 
 set -e
 
@@ -122,7 +122,25 @@ copyToVi () {
 # copyFromVi (docker_path path)
 # copy from docker vi to node using docker-cp
 copyFromVi () {
-    docker cp `getCpNodeId $1`:`getCpLoc $1` $2
+    # test if file is regular or directory
+    stat=$(docker exec `getCpNodeId $1` stat --printf="%F\n" `getCpLoc $1`)
+    if contains "$stat" "directory"; then
+	# it's a directory, copy to tmpdir, move to final location, rm tmpdir
+	tmpdir=`mktemp -d`
+	docker cp `getCpNodeId $1`:`getCpLoc $1` $tmpdir
+	mv $tmpdir/$(basename `getCpLoc $1`) $2
+	rm -fr $tmpdir
+    else
+	# it's a file, copy to stdout, untar and redirect to destination
+	# test if destination is dir or file
+	if [ -d $2 ]; then
+	    # if it's a dir append the basename
+	    docker cp `getCpNodeId $1`:`getCpLoc $1` - | tar xfO - > $2/$(basename `getCpLoc $1`)
+	else
+	    # if it's a file or it doesn't exist redirect to it
+	    docker cp `getCpNodeId $1`:`getCpLoc $1` - | tar xfO - > $2
+	fi
+    fi
 }
 
 if test $# -lt 2; then
