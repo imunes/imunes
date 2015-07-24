@@ -193,8 +193,12 @@ proc spawnShell { node cmd } {
 # RESULT
 #   * exp_list -- experiment id list
 #****
-proc fetchRunningExperiments {} {}
-    # FIXME: make this work in Linux
+proc fetchRunningExperiments {} {
+    catch {exec himage -l | cut -d " " -f 1} exp_list
+    set exp_list [split $exp_list "
+"]
+    return $exp_list
+}
 
 #****f* linux.tcl/allSnapshotsAvailable
 # NAME
@@ -364,8 +368,8 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
     if { [[typemodel $lnode1].virtlayer] == "NETGRAPH" } {
         if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
             # generate interface names
-            set hostIfc1 "$eid.$lnode1.$ifname1"
-            set hostIfc2 "$eid.$lnode2.$ifname2"
+            set hostIfc1 "$eid.$lname1.$ifname1"
+            set hostIfc2 "$eid.$lname2.$ifname2"
             # create veth pair
             catch {exec ip link add name "$hostIfc1" type veth peer name "$hostIfc2"}
             # add veth interfaces to bridges
@@ -486,6 +490,9 @@ proc runConfOnNode { node } {
     set node_dir [getVrootDir]/$eid/$node
     set node_id "$eid.$node"
 
+    catch {exec docker exec $node_id umount /etc/resolv.conf}
+    catch {exec docker exec $node_id umount /etc/hosts}
+
     if { [getCustomEnabled $node] == true } {
         set selected [getCustomConfigSelected $node]
 
@@ -498,25 +505,24 @@ proc runConfOnNode { node } {
         set confFile "boot.conf"
     }
 
-    catch {exec docker inspect --format '{{.Id}}' $node_id} id
     writeDataToFile $node_dir/$confFile [join $bootcfg "\n"]
     exec docker exec -i $node_id sh -c "cat > $confFile" < $node_dir/$confFile
     exec docker exec $node_id $bootcmd $confFile >& $node_dir/out.log &
     exec docker exec -i $node_id sh -c "cat > out.log" < $node_dir/out.log
 
     foreach ifc [allIfcList $node] {
-        if {[getIfcOperState $node $ifc] == "down"} {
-            exec docker exec $node_id ip link set dev $ifc down
+        # FIXME: should also work for loopback
+        if {$ifc != "lo0"} {
+            if {[getIfcOperState $node $ifc] == "down"} {
+                exec docker exec $node_id ip link set dev $ifc down
+            }
         }
     }
 }
 
 proc destroyLinkBetween { eid lnode1 lnode2 } {
     set ifname1 [ifcByLogicalPeer $lnode1 $lnode2]
-    set ifname2 [ifcByLogicalPeer $lnode2 $lnode1]
-
     catch {exec ip link del dev $eid.$lnode1.$ifname1}
-    catch {exec ip link del dev $eid.$lnode2.$ifname2}
 }
 
 #****f* linux.tcl/removeNodeIfcIPaddrs
@@ -533,7 +539,10 @@ proc destroyLinkBetween { eid lnode1 lnode2 } {
 proc removeNodeIfcIPaddrs { eid node } {
     set node_id "$eid.$node"
     foreach ifc [allIfcList $node] {
-        catch "exec docker exec $node_id ip addr flush dev $ifc"
+        # FIXME: make this work for loopback
+        if {$ifc != "lo0"} {
+            catch "exec docker exec $node_id ip addr flush dev $ifc"
+        }
     }
 }
 
@@ -628,6 +637,8 @@ proc l2node.destroy { eid node } {
 proc enableIPforwarding { eid node } {
     pipesExec "docker exec $eid\.$node sysctl net.ipv6.conf.all.forwarding=1" "hold"
     pipesExec "docker exec $eid\.$node sysctl net.ipv4.conf.all.forwarding=1" "hold"
+    pipesExec "docker exec $eid\.$node sysctl net.ipv4.conf.default.rp_filter=0" "hold"
+    pipesExec "docker exec $eid\.$node sysctl net.ipv4.conf.all.rp_filter=0" "hold"
 }
 
 #****f* linux.tcl/configDefaultLoIfc
@@ -1011,4 +1022,24 @@ proc ipsecFilesToNode { eid node local_cert ipsecret_file } {
 
     catch {exec hcp /tmp/imunes_$node_id\_ipsec.conf $hostname@$eid:/etc/ipsec.conf}
     catch {exec hcp /tmp/imunes_$node_id\_ipsec.secrets $hostname@$eid:/etc/ipsec.secrets}
+}
+
+proc sshServiceStartCmds {} {
+    lappend cmds "dpkg-reconfigure openssh-server"
+    lappend cmds "service ssh start"
+    return $cmds
+}
+
+proc sshServiceStopCmds {} {
+    return "service ssh stop"
+}
+
+proc inetdServiceRestartCmds {} {
+    return "service openbsd-inetd restart"
+}
+
+proc moveFileFromNode { node path ext_path } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    catch {exec hcp [getNodeName $node]@$eid:$path $ext_path}
+    catch {exec docker exec $eid.$node rm -fr $path}
 }

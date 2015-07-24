@@ -16,8 +16,9 @@ IMUNESVER = 1.0
 TARBALL_DIR = imunes_$(IMUNESDATE)
 RELEASE_DIR = imunes-$(IMUNESVER)
 UNAME_S = $(shell uname -s)
+VROOT_EXISTS = $(shell [ -d /var/imunes/vroot ] && echo 1 || echo 0 )
 
-BASEFILES =	COPYRIGHT README
+BASEFILES =	COPYRIGHT README VERSION
 CONFIGFILES =	$(wildcard config/*.tcl)
 GUIFILES =	$(wildcard gui/*.tcl)
 NODESFILES =	$(wildcard nodes/*.tcl)
@@ -36,7 +37,7 @@ SMALL_ICONS = $(NODE_ICONS)
 TINY_ICONS = $(NODE_ICONS) link.gif select.gif l2.gif l3.gif freeform.gif \
 		oval.gif rectangle.gif text.gif
 
-ICONS = $(wildcard icons/imunes_icon*)
+ICONS = $(wildcard icons/imunes_*)
 
 info:
 	@echo 	"To install the IMUNES GUI use: make install"
@@ -49,6 +50,7 @@ all: install
 install: uninstall
 	mkdir -p $(IMUNESDIR)
 	cp $(BASEFILES) $(IMUNESDIR)
+	sh scripts/update_version.sh
 	mkdir -p $(BINDIR)
 
 	sed -e "s,set LIBDIR \"\",set LIBDIR $(LIBDIR)," \
@@ -62,7 +64,11 @@ install: uninstall
 	chmod 755 $(BINDIR)/imunes
 
 	cp $(TOOLS) $(BINDIR)
+	for file in $(notdir $(TOOLS)); do \
+		chmod 755 $(BINDIR)/$${file}; \
+	done ;
 ifeq ($(UNAME_S), Linux)
+	mv $(BINDIR)/hcp.linux $(BINDIR)/hcp
 	mv $(BINDIR)/himage.linux $(BINDIR)/himage
 	mv $(BINDIR)/cleanupAll.linux $(BINDIR)/cleanupAll
 else
@@ -70,9 +76,6 @@ else
 endif
 
 	mkdir -p $(SCRIPTSDIR)
-	for file in $(notdir $(TOOLS)); do \
-		chmod 755 $(BINDIR)/$${file}; \
-	done ;
 
 	for file in $(VROOT); do \
 	    sed -e "s,LIBDIR=\"\",LIBDIR=$(LIBDIR)," \
@@ -132,8 +135,12 @@ vroot_m_zfs:
 	sh scripts/prepare_vroot.sh zfs mini
 
 remove_vroot:
+ifeq ($(VROOT_EXISTS), 1)
 	chflags -R noschg /var/imunes/vroot
 	rm -fr /var/imunes/vroot
+else
+	@echo   "/var/imunes/vroot does not exist, exiting..."
+endif
 
 tarball:
 	rm -f ../$(TARBALL_DIR).tar.gz

@@ -1724,6 +1724,7 @@ proc destroyVirtNodeIfcs { eid vimages } {
 	displayBatchProgress $i [ llength $vimages ]
     }
     pipesClose
+    statline ""
 }
 
 #****f* freebsd.tcl/removeExperimentContainer
@@ -1984,4 +1985,16 @@ proc ipsecFilesToNode { eid node local_cert ipsecret_file } {
 
     catch {exec hcp /tmp/imunes_$node_id\_ipsec.conf $hostname@$eid:/usr/local/etc/ipsec.conf}
     catch {exec hcp /tmp/imunes_$node_id\_ipsec.secrets $hostname@$eid:/usr/local/etc/ipsec.secrets}
+}
+
+proc sshServiceStartCmds {} {
+    return "service sshd onestart"
+}
+
+proc sshServiceStopCmds {} {
+    return "service sshd onestop"
+}
+
+proc inetdServiceRestartCmds {} {
+    return "service inetd onerestart"
 }

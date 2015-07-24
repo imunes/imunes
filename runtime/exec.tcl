@@ -95,49 +95,43 @@ proc setOperMode { mode } {
 	return
     }
 
-    if { !$cfgDeployed } {
-	    if { $mode == "exec" } { ;# let's try something, sockets should be opened
-		set os [platform::identify]
-		set err [checkSysPrerequisites]
-		if { $err != "" } {
-		    after idle {.dialog1.msg configure -wraplength 4i}
-		    tk_dialog .dialog1 "IMUNES error" \
-			"$err" \
-			info 0 Dismiss
-		    return
-		}
-		if { [string match -nocase "*linux*" $os] != 1 &&
-		    [string match -nocase "*freebsd*" $os] != 1 } {
-		    after idle {.dialog1.msg configure -wraplength 4i}
-		    tk_dialog .dialog1 "IMUNES error" \
-			"Error: To execute experiment, run IMUNES on FreeBSD or Linux." \
-		    info 0 Dismiss
-		    return
-		}
-		catch {exec id -u} uid
-		if { $uid != "0" } {
-		    after idle {.dialog1.msg configure -wraplength 4i}
-		    tk_dialog .dialog1 "IMUNES error" \
-			"Error: To execute experiment, run IMUNES with root permissions." \
-		    info 0 Dismiss
-		    return
-		}
-		if { $editor_only } { ;# if set in exec or open_exec_sockets
-		    .menubar.experiment entryconfigure "Execute" -state disabled
-		    return
-		}
-	    }
-
-	    if { [allSnapshotsAvailable] == 0 } {
-		return
-	    }
-
-	    # Verify that links to external interfaces are properly configured
-	    if { $mode == "exec" } {
-		if { [checkExternalInterfaces] } {
-		    return
-		}
-	    }
+    if { !$cfgDeployed && $mode == "exec" } {
+	set os [platform::identify]
+	set err [checkSysPrerequisites]
+	if { $err != "" } {
+	    after idle {.dialog1.msg configure -wraplength 4i}
+	    tk_dialog .dialog1 "IMUNES error" \
+		"$err" \
+		info 0 Dismiss
+	    return
+	}
+	if { [string match -nocase "*linux*" $os] != 1 &&
+	    [string match -nocase "*freebsd*" $os] != 1 } {
+	    after idle {.dialog1.msg configure -wraplength 4i}
+	    tk_dialog .dialog1 "IMUNES error" \
+		"Error: To execute experiment, run IMUNES on FreeBSD or Linux." \
+	    info 0 Dismiss
+	    return
+	}
+	catch {exec id -u} uid
+	if { $uid != "0" } {
+	    after idle {.dialog1.msg configure -wraplength 4i}
+	    tk_dialog .dialog1 "IMUNES error" \
+		"Error: To execute experiment, run IMUNES with root permissions." \
+	    info 0 Dismiss
+	    return
+	}
+	if { $editor_only } { ;# if set in exec or open_exec_sockets
+	    .menubar.experiment entryconfigure "Execute" -state disabled
+	    return
+	}
+	if { [allSnapshotsAvailable] == 0 } {
+	    return
+	}
+	# Verify that links to external interfaces are properly configured
+	if { [checkExternalInterfaces] } {
+	    return
+	}
     }
 
     foreach b { link link_layer net_layer } {
@@ -358,9 +352,11 @@ proc checkExternalInterfaces {} {
 proc resumeSelectedExperiment { exp } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global runtimeDir
-    set curr_eid $eid
-    if {$curr_eid == $exp} {
-	return
+    if {[info exists eid]} {
+	set curr_eid $eid
+	if {$curr_eid == $exp} {
+	    return
+	}
     }
     newProject
 
@@ -1011,7 +1007,6 @@ proc terminateAllNodes { eid } {
     destroyNetgraphNodes $eid $ngraphs $w
 
     destroyVirtNodeIfcs $eid $vimages
-    statline ""
 
     # timeout patch
     timeoutPatch $eid $node_list

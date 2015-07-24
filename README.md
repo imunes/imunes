@@ -67,8 +67,15 @@ First we need to install the packages required for IMUNES:
     OpenvSwitch
     xterm
 
-#### Fedora 21
-    # yum install openvswitch docker-io xterm wireshark-gnome ImageMagick tcl tcllib tk
+Note: on some distributions the netem module `sch_netem` required for link configuration is only available by installing additional kernel packages. Please check the availability of the module:
+
+    # modinfo sch_netem
+
+#### Fedora 22
+    # yum install openvswitch docker-io xterm wireshark-gnome ImageMagick tcl tcllib tk kernel-modules-extra
+
+#### Debian 8
+    # apt-get install openvswitch-switch docker.io xterm wireshark ImageMagick tcl tcllib tk user-mode-linux
 
 #### Performance
 

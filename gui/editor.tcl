@@ -1133,3 +1133,24 @@ proc setActiveTool { tool } {
 	.menubar.t_g entryconfigure $i -state $state
     }
 }
+
+proc launchBrowser {url} {
+    global tcl_platform env
+
+    if {$tcl_platform(platform) eq "windows"} {
+	set command [list {*}[auto_execok start] {}]
+	set url [string map {& ^&} $url]
+    } elseif {$tcl_platform(os) eq "Darwin"} {
+	set command [list open]
+    } else {
+	set command [list xdg-open]
+    }
+
+    if {$tcl_platform(platform) eq "windows"} {
+	catch {exec {*}$command $url}
+    } elseif {"SUDO_USER" in [array names env]} {
+	catch {exec su - $env(SUDO_USER) /bin/sh -c "$command $url" > /dev/null 2> /dev/null &} 
+    } else {
+	catch {exec {*}$command $url > /dev/null 2> /dev/null &}
+    }
+}

@@ -16,8 +16,11 @@ Usage:
   $command -n vi_hostname  ---> vimage node name (nodename)
   $command -e vi_hostname  ---> vimage eid name  (eid)
   $command -j vi_hostname  ---> vimage jail id   (jid)
+  $command -i vi_hostname  ---> vimage jail id   (jid)
   $command -d vi_hostname  ---> vimage path
   $command -l              ---> running experiments eids with node names
+  $command -b              ---> dummy flag (used only on Linux)
+  $command -nt             ---> dummy flag (used only on Linux)
 __END__
 }
 
@@ -45,6 +48,11 @@ vi_name() {
   jls jid name host.hostname | awk -v h=$host -v e=$expid '$3 == h && $2 ~ e {print $1}'
 }
 
+# dummy flags
+if test $1 = "-b" || test $1 = "-nt"; then
+    shift 1
+fi
+
 if test $# -eq 0; then
     help
 elif test $1 = "-h"; then
@@ -54,7 +62,7 @@ elif test $1 = "-l"; then
     for exp in $explist; do
 	echo "$exp (`jls host.hostname path | grep "imunes/$exp" | cut -d" " -f1 |  paste -s -d" " -`)"
     done
-elif test $1 = "-j"; then
+elif test $1 = "-j" || test $1 = "-i"; then
     vi_name $2
 elif test $1 = "-v"; then
     image_name=`vi_name $2`
