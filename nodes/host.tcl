@@ -80,7 +80,7 @@ proc $MODULE.confNewNode { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
     
     set nconfig [list \
-	"hostname $node" \
+	"hostname [getNewNodeNameType host host]" \
 	! ]
     lappend $node "network-config [list $nconfig]"
 
@@ -256,8 +256,8 @@ proc $MODULE.virtlayer {} {
 #****
 proc $MODULE.cfggen { node } {
     set cfg {}
-    set cfg [concat $cfg [nodeCfggenIfconfigIPv4 $node]]
-    set cfg [concat $cfg [nodeCfggenIfconfigIPv6 $node]]
+    set cfg [concat $cfg [nodeCfggenIfcIPv4 $node]]
+    set cfg [concat $cfg [nodeCfggenIfcIPv6 $node]]
     lappend cfg ""
 
     set cfg [concat $cfg [nodeCfggenRouteIPv4 $node]]
@@ -432,6 +432,7 @@ proc $MODULE.configGUI { c node } {
 	    "MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop"}
     configGUI_addTree $ifctab $node
 
+    configGUI_servicesConfig $configtab $node
     configGUI_staticRoutes $configtab $node
     configGUI_snapshots $configtab $node
     configGUI_customConfig $configtab $node

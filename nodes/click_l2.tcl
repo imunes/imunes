@@ -80,8 +80,8 @@ proc $MODULE.confNewNode { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
     set nconfig [list \
-	    "hostname $node" \
-	    ! ]
+	"hostname [getNewNodeNameType click_l2 cswitch]" \
+	! ]
     lappend $node "network-config [list $nconfig]"
 }
 

@@ -16,14 +16,15 @@ IMUNESVER = 1.0
 TARBALL_DIR = imunes_$(IMUNESDATE)
 RELEASE_DIR = imunes-$(IMUNESVER)
 UNAME_S = $(shell uname -s)
+VROOT_EXISTS = $(shell [ -d /var/imunes/vroot ] && echo 1 || echo 0 )
 
-BASEFILES =	COPYRIGHT README
+BASEFILES =	COPYRIGHT README VERSION
 CONFIGFILES =	$(wildcard config/*.tcl)
 GUIFILES =	$(wildcard gui/*.tcl)
 NODESFILES =	$(wildcard nodes/*.tcl)
 RUNTIMEFILES =	$(wildcard runtime/*.tcl)
 
-VROOT =	$(wildcard scripts/*.sh) 
+VROOT =	$(wildcard scripts/*.sh)
 TOOLS =	$(filter-out $(VROOT), $(wildcard scripts/*))
 
 NODE_ICONS = frswitch.gif hub.gif lanswitch.gif rj45.gif cloud.gif host.gif \
@@ -35,8 +36,8 @@ SMALL_ICONS = $(NODE_ICONS)
 
 TINY_ICONS = $(NODE_ICONS) link.gif select.gif l2.gif l3.gif freeform.gif \
 		oval.gif rectangle.gif text.gif
-		  
-ICONS = imunes_icon32.gif imunes_icon16.gif
+
+ICONS = $(wildcard icons/imunes_*)
 
 info:
 	@echo 	"To install the IMUNES GUI use: make install"
@@ -49,6 +50,7 @@ all: install
 install: uninstall
 	mkdir -p $(IMUNESDIR)
 	cp $(BASEFILES) $(IMUNESDIR)
+	sh scripts/update_version.sh
 	mkdir -p $(BINDIR)
 
 	sed -e "s,set LIBDIR \"\",set LIBDIR $(LIBDIR)," \
@@ -62,11 +64,18 @@ install: uninstall
 	chmod 755 $(BINDIR)/imunes
 
 	cp $(TOOLS) $(BINDIR)
-
-	mkdir -p $(SCRIPTSDIR)
 	for file in $(notdir $(TOOLS)); do \
 		chmod 755 $(BINDIR)/$${file}; \
 	done ;
+ifeq ($(UNAME_S), Linux)
+	mv $(BINDIR)/hcp.linux $(BINDIR)/hcp
+	mv $(BINDIR)/himage.linux $(BINDIR)/himage
+	mv $(BINDIR)/cleanupAll.linux $(BINDIR)/cleanupAll
+else
+	rm $(BINDIR)/himage.linux $(BINDIR)/cleanupAll.linux
+endif
+
+	mkdir -p $(SCRIPTSDIR)
 
 	for file in $(VROOT); do \
 	    sed -e "s,LIBDIR=\"\",LIBDIR=$(LIBDIR)," \
@@ -89,7 +98,7 @@ install: uninstall
 
 	mkdir -p $(ICONSDIR)
 	for file in $(ICONS); do \
-		cp icons/$${file} $(ICONSDIR); \
+		cp $${file} $(ICONSDIR); \
 	done ;
 
 	mkdir -p $(NORMAL_ICONSDIR)
@@ -97,10 +106,10 @@ install: uninstall
 		cp icons/normal/$${file} $(NORMAL_ICONSDIR); \
 	done ;
 
-	mkdir -p $(SMALL_ICONSDIR)	
+	mkdir -p $(SMALL_ICONSDIR)
 	for file in $(SMALL_ICONS); do \
 		cp icons/small/$${file} $(SMALL_ICONSDIR); \
-	done ;	
+	done ;
 
 	mkdir -p $(TINY_ICONSDIR)
 	for file in $(TINY_ICONS); do \
@@ -130,8 +139,12 @@ vroot_m_zfs:
 	sh scripts/prepare_vroot.sh zfs mini
 
 remove_vroot:
+ifeq ($(VROOT_EXISTS), 1)
 	chflags -R noschg /var/imunes/vroot
 	rm -fr /var/imunes/vroot
+else
+	@echo   "/var/imunes/vroot does not exist, exiting..."
+endif
 
 tarball:
 	rm -f ../$(TARBALL_DIR).tar.gz
@@ -153,14 +166,14 @@ tarball:
 	for file in $(SMALL_ICONS); do \
 		cp icons/small/$${file} ../$(TARBALL_DIR)/icons/small; \
 	done ;
-	
+
 	mkdir -p ../$(TARBALL_DIR)/icons/tiny
 	for file in $(TINY_ICONS); do \
 		cp icons/tiny/$${file} ../$(TARBALL_DIR)/icons/tiny; \
 	done ;
 
 	cd .. && tar czfv $(TARBALL_DIR).tar.gz $(TARBALL_DIR)
-	rm -r ../$(TARBALL_DIR) 
+	rm -r ../$(TARBALL_DIR)
 
 release:
 	rm -f ../$(RELEASE_DIR).tar.gz
@@ -182,11 +195,11 @@ release:
 	for file in $(SMALL_ICONS); do \
 		cp icons/small/$${file} ../$(RELEASE_DIR)/icons/small; \
 	done ;
-	
+
 	mkdir -p ../$(RELEASE_DIR)/icons/tiny
 	for file in $(TINY_ICONS); do \
 		cp icons/tiny/$${file} ../$(RELEASE_DIR)/icons/tiny; \
 	done ;
 
 	cd .. && tar czfv $(RELEASE_DIR).tar.gz $(RELEASE_DIR)
-	rm -r ../$(RELEASE_DIR) 
+	rm -r ../$(RELEASE_DIR)

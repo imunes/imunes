@@ -980,7 +980,7 @@ proc refreshTopologyTree {} {
 #   Creates a popup dialog box to attach to experiment.
 #****
 proc attachToExperimentPopup {} {
-    global selectedExperiment
+    global selectedExperiment runtimeDir
     set  ateDialog .attachToExperimentDialog
     catch {destroy $ateDialog}
     toplevel $ateDialog
@@ -1037,19 +1037,19 @@ proc attachToExperimentPopup {} {
 	$tree insert {} end -id $exp -text [list $exp "-" [getExperimentNameFromFile $exp]] -values [list $timestamp] \
 	          -tags "$exp"
 	$tree tag bind $exp <1> \
-	  "updateScreenshotPreview $prevcan /var/run/imunes/$exp/screenshot.png 
+	  "updateScreenshotPreview $prevcan $runtimeDir/$exp/screenshot.png 
 	   set selectedExperiment $exp"
     }
     
     foreach exp [getResumableExperiments] {
 	$tree tag bind $exp <Key-Up> \
 	"if {![string equal {} [$tree prev $exp]]} {
-	    updateScreenshotPreview $prevcan /var/run/imunes/[$tree prev $exp]/screenshot.png
+	    updateScreenshotPreview $prevcan $runtimeDir/[$tree prev $exp]/screenshot.png
 	    set selectedExperiment [$tree prev $exp]
 	}"
 	$tree tag bind $exp <Key-Down> \
 	"if {![string equal {} [$tree next $exp]]} {
-	    updateScreenshotPreview $prevcan /var/run/imunes/[$tree next $exp]/screenshot.png
+	    updateScreenshotPreview $prevcan $runtimeDir/[$tree next $exp]/screenshot.png
 	    set selectedExperiment [$tree next $exp]
 	}"
     }
@@ -1060,7 +1060,7 @@ proc attachToExperimentPopup {} {
     set selectedExperiment $first
 
     if {$selectedExperiment != ""} {
-	updateScreenshotPreview $prevcan /var/run/imunes/$selectedExperiment/screenshot.png
+	updateScreenshotPreview $prevcan $runtimeDir/$selectedExperiment/screenshot.png
     }
     
     ttk::frame $wi.buttons
@@ -1096,44 +1096,6 @@ proc updateScreenshotPreview { pc image } {
     } else {
 	$pc create text 150 100 -text "No screenshot available." -tags "preview"
     }
-}
-
-#****f* editor.tcl/resumeSelectedExperiment
-# NAME
-#   resumeSelectedExperiment -- resume selected experiment
-# SYNOPSIS
-#   resumeSelectedExperiment $exp
-# FUNCTION
-#   Resumes selected experiment.
-# INPUTS
-#   * exp -- experiment id
-#****
-proc resumeSelectedExperiment { exp } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-    if {[info exists eid]} {
-	set curr_eid $eid
-	if {$curr_eid == $exp} {
-	    return
-	}
-    }
-    newProject
-
-    upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
-    upvar 0 ::cf::[set ::curcfg]::cfgDeployed cfgDeployed
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-    
-    set currentFile [getExperimentConfigurationFromFile $exp]
-    openFile
-
-    set ngmapFile "/var/run/imunes/$exp/ngnodemap"
-    set fileId [open $ngmapFile r]
-    array set ngnodemap [gets $fileId]
-    close $fileId
-
-    set eid $exp
-    set cfgDeployed true
-    setOperMode exec
 }
 
 #****f* editor.tcl/setActiveTool
@@ -1185,5 +1147,26 @@ proc setActiveTool { tool } {
 
     for { set i 0 } { $i <= [.menubar.t_g index last] } { incr i } {
 	.menubar.t_g entryconfigure $i -state $state
+    }
+}
+
+proc launchBrowser {url} {
+    global tcl_platform env
+
+    if {$tcl_platform(platform) eq "windows"} {
+	set command [list {*}[auto_execok start] {}]
+	set url [string map {& ^&} $url]
+    } elseif {$tcl_platform(os) eq "Darwin"} {
+	set command [list open]
+    } else {
+	set command [list xdg-open]
+    }
+
+    if {$tcl_platform(platform) eq "windows"} {
+	catch {exec {*}$command $url}
+    } elseif {"SUDO_USER" in [array names env]} {
+	catch {exec su - $env(SUDO_USER) /bin/sh -c "$command $url" > /dev/null 2> /dev/null &} 
+    } else {
+	catch {exec {*}$command $url > /dev/null 2> /dev/null &}
     }
 }

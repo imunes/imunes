@@ -127,6 +127,7 @@ bind . <F6> {
     source "$ROOTDIR/$LIBDIR/runtime/eventsched.tcl"
     source "$ROOTDIR/$LIBDIR/runtime/exec.tcl"
     source "$ROOTDIR/$LIBDIR/runtime/filemgmt.tcl"
+    source "$ROOTDIR/$LIBDIR/runtime/services.tcl"
 
     source "$ROOTDIR/$LIBDIR/config/annotationscfg.tcl"
     source "$ROOTDIR/$LIBDIR/config/ipsec.tcl"

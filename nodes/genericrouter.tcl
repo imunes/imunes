@@ -95,7 +95,7 @@ proc $MODULE.confNewNode { node } {
     }
 
     set nconfig [list \
-	"hostname $node" \
+	"hostname [getNewNodeNameType router router]" \
 	! ]
     lappend $node "network-config [list $nconfig]"
     
@@ -173,6 +173,11 @@ proc $MODULE.notebookDimensions { wi } {
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
 	== "Interfaces" } {
 	set h 370
+	set w 507
+    }
+    if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
+	== "IPsec" } {
+	set h 320
 	set w 507
     }
 
@@ -253,25 +258,28 @@ proc $MODULE.IPAddrRange {} {
 #****
 proc $MODULE.configGUI { c node } {
     global wi
-    global guielements treecolumns
+    global guielements treecolumns ipsecEnable
     set guielements {}
 
     configGUI_createConfigPopupWin $c
     wm title $wi "router configuration"
     configGUI_nodeName $wi $node "Node name:"
 
-    set tabs [configGUI_addNotebook $wi $node {"Configuration" "Interfaces"}]
+    set tabs [configGUI_addNotebook $wi $node {"Configuration" "Interfaces" "IPsec"}]
     set configtab [lindex $tabs 0]
     set ifctab [lindex $tabs 1]
+    set ipsectab [lindex $tabs 2]
 
     set treecolumns {"OperState State" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
 	    "MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop" }
     configGUI_addTree $ifctab $node
 
     configGUI_routingModel $configtab $node
+    configGUI_servicesConfig $configtab $node
     configGUI_staticRoutes $configtab $node
     configGUI_snapshots $configtab $node
     configGUI_customConfig $configtab $node
+    configGUI_ipsec $ipsectab $node
 
     configGUI_buttonsACNode $wi $node
 }

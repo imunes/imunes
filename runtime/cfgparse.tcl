@@ -106,6 +106,25 @@ proc dumpCfg { method dest } {
 		    dumpputs $method $dest "	$line"
 		}
 		dumpputs $method $dest "    \}"
+	    } elseif { "[lindex $element 0]" == "ipsec-config" } {
+		dumpputs $method $dest "    ipsec-config \{"
+		foreach line [lindex $element 1] {
+		    set header [lindex $line 0]
+		    if { $header == "local_cert" || $header == "local_key_file" } {
+			dumpputs $method $dest "        $line"
+		    } elseif { $header == "configuration" } {
+			dumpputs $method $dest "        configuration \{"
+			foreach confline [lindex $line 1] {
+			    set item [lindex $confline 0]
+			    dumpputs $method $dest "            $item"
+			    foreach element [lindex $confline 1] {
+				dumpputs $method $dest "                $element"
+			    }
+			}
+			dumpputs $method $dest "        \}"
+		    }
+		}
+		dumpputs $method $dest "    \}"
 	    } elseif { "[lindex $element 0]" == "custom-config" } {
 		dumpputs $method $dest "    custom-config \{"
 		foreach line [lindex $element 1] {
@@ -255,6 +274,7 @@ proc loadCfg { cfg } {
     upvar 0 ::cf::[set ::curcfg]::IPv6UsedList IPv6UsedList
     upvar 0 ::cf::[set ::curcfg]::IPv4UsedList IPv4UsedList
     upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
+    upvar 0 ::cf::[set ::curcfg]::etchosts etchosts
     global showIfNames showNodeLabels showLinkLabels
     global showIfIPaddrs showIfIPv6addrs
     global showBkgImage showGrid showAnnotations
@@ -266,6 +286,7 @@ proc loadCfg { cfg } {
     set annotation_list {}
     set canvas_list {}
     set image_list {}
+    set etchosts ""
     set class ""
     set object ""
     foreach entry $cfg {
@@ -339,6 +360,57 @@ proc loadCfg { cfg } {
 			    set cfg [lrange $cfg 1 [expr {[llength $cfg] - 2}]]
 			    lappend $object "network-config {$cfg}"
 			}
+			ipsec-config {
+			    set cfg ""
+			    set conf_indicator 0
+			    set cset_indicator 0
+			    set conn_indicator 0
+			    set conf_list ""
+			    set conn_list ""
+			    set cset_list ""
+			    set conn_name ""
+			    foreach zline [split $value {
+}] {
+				set zline [string trimleft "$zline"]
+				if { [string first "local_cert" $zline] != -1 || [string first "local_key_file" $zline] != -1 } {
+				    lappend cfg $zline
+				} elseif { [string first "configuration" $zline] != -1 } {
+				    set conf_indicator 1
+				} elseif { [string first "\}" $zline] != -1 } {
+				    set conf_indicator 0
+				    set cset_indicator 0
+				    if { $conn_indicator } {
+					lappend conf_list "{$conn_name} {$conn_list}"
+				    }
+				    lappend cfg "configuration {$conf_list}"
+				} elseif { $conf_indicator } {
+				    if { [string first "config setup" $zline] != -1 } {
+					set conn_indicator 0
+					set cset_indicator 1
+				    } elseif { $cset_indicator } {
+					if { [string first "conn" $zline] != -1 } {
+					    set cset_indicator 0
+					    lappend conf_list "{config setup} {$cset_list}"
+					} else {
+					    lappend cset_list $zline
+					}
+				    }
+
+				    if { [string first "conn" $zline] != -1 } {
+					if { $conn_indicator } {
+					    lappend conf_list "{$conn_name} {$conn_list}"
+					} else {
+					    set conn_indicator 1
+					}
+					set conn_name "$zline"
+					set conn_list ""
+				    } elseif { $conn_indicator } {
+					lappend conn_list $zline
+				    }
+				}
+			    }
+			    lappend $object "ipsec-config {$cfg}"
+			}
 			custom-enabled {
 			    lappend $object "custom-enabled $value"
 			}
@@ -395,6 +467,9 @@ proc loadCfg { cfg } {
 			}
 			canvas {
 			    lappend $object "canvas $value"
+			}
+			services {
+			    lappend $object "services {$value}"
 			}
 			events {
 			    set cfg ""

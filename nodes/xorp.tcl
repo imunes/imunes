@@ -183,6 +183,7 @@ proc $MODULE.cfggen { node } {
 		lappend cfg "	interface $ifc {"
 		lappend cfg "	    vif $ifc {"
 		lappend cfg "		address $addr {"
+		lappend cfg "		    disable: false"
 		lappend cfg "		}"
 		lappend cfg "	    }"
 		lappend cfg "	}"
@@ -317,7 +318,7 @@ proc $MODULE.bootcmd { node } {
 #   * shells -- default shells for the router.xorp
 #****
 proc $MODULE.shellcmds {} {
-    return "csh xorpsh bash sh tcsh"
+    return "csh bash xorpsh sh tcsh"
 }
 
 #****f* xorp.tcl/router.xorp.instantiate
@@ -335,14 +336,11 @@ proc $MODULE.shellcmds {} {
 #   * node - node id (type of the node is router and routing model is xorp)
 #****
 proc $MODULE.instantiate { eid node } {
-    global inst_pipes last_inst_pipe
- 
-    set node_id "$eid\.$node"
     l3node.instantiate $eid $node
     
-    pipesExec "jexec $node_id sysctl net.inet.ip.forwarding=1" "hold"
-    pipesExec "jexec $node_id sysctl net.inet6.ip6.forwarding=1" "hold"
-    pipesExec "jexec $node_id ifconfig lo0 127.0.0.1" "hold"
+    enableIPforwarding $eid $node
+
+    configDefaultLoIfc $eid $node
 }
 
 #****f* xorp.tcl/router.xorp.start
