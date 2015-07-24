@@ -1254,3 +1254,429 @@ proc checkSharedSecret { str } {
     }
     return 0
 }
+
+###################################
+
+#****f* ipsec.tcl/getNodeIPsec
+# NAME
+#   getNodeIPsec -- retreives IPsec configuration for selected node
+# SYNOPSIS
+#   getNodeIPsec $node
+# FUNCTION
+#   Retreives all IPsec connections for current node
+# INPUTS
+#   node - node id
+#****
+proc getNodeIPsec { node } {
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
+    return [lindex [lsearch -inline [set $node] "ipsec-config *"] 1]
+}
+
+proc setNodeIPsec { node newValue } {
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
+    set ipsecCfgIndex [lsearch -index 0 [set $node] "ipsec-config"]
+
+    if { $ipsecCfgIndex != -1 } {
+	set $node [lreplace [set $node] $ipsecCfgIndex $ipsecCfgIndex "ipsec-config {$newValue}"]
+    } else {
+	set $node [linsert [set $node] end "ipsec-config {$newValue}"]
+    }
+}
+
+proc delNodIPsec { node } {
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
+    set ipsecCfgIndex [lsearch -index 0 [set $node] "ipsec-config"]
+
+    if { $ipsecCfgIndex != -1 } {
+	set $node [lreplace [set $node] $ipsecCfgIndex $ipsecCfgIndex]
+    }
+}
+
+#****f* ipsec.tcl/getNodeIPsecItem
+# NAME
+#   getNodeIPsecItem -- get node IPsec item
+# SYNOPSIS
+#   getNodeIPsecItem $node $item
+# FUNCTION
+#   Retreives an item from IPsec configuration of given node
+# INPUTS
+#   node - node id
+#   item - search item
+proc getNodeIPsecItem { node item } {
+    set cfg [getNodeIPsec $node]
+    if { [lsearch $cfg "$item *"] != -1 } {
+	return [lindex [lsearch -inline $cfg "$item *"] 1]
+    }
+    return ""
+}
+
+#****f* ipsec.tcl/setNodeIPsecItem
+# NAME
+#   setNodeIPsecItem -- set node IPsec item
+# SYNOPSIS
+#   setNodeIPsecItem $node $item
+# FUNCTION
+#   Sets an item from IPsec configuration of given node
+# INPUTS
+#   node - node id
+#   item - search item
+proc setNodeIPsecItem { node item newValue } {
+    set ipsecCfg [getNodeIPsec $node]
+
+    set itemIndex [lsearch -index 0 $ipsecCfg $item]
+    if { $itemIndex != -1 } {
+	set newIpsecCfg [lreplace $ipsecCfg $itemIndex $itemIndex "$item {$newValue}"]
+    } else {
+	set newIpsecCfg [linsert $ipsecCfg end "$item {$newValue}"]
+    }
+
+    setNodeIPsec $node $newIpsecCfg
+}
+
+proc delNodeIPsecItem { node item } {
+    set ipsecCfg [getNodeIPsec $node]
+
+    set itemIndex [lsearch -index 0 $ipsecCfg $item]
+    if { $itemIndex != -1 } {
+	set newIpsecCfg [lreplace $ipsecCfg $itemIndex $itemIndex]
+    }
+
+    setNodeIPsec $node $newIpsecCfg
+}
+
+#****f* ipsec.tcl/getNodeIPsecElement
+# NAME
+#   getNodeIPsecElement -- get node IPsec element item
+# SYNOPSIS
+#   getNodeIPsecElement $node $item
+# FUNCTION
+#   Retreives an element from IPsec configuration of given node from the
+#   given item.
+# INPUTS
+#   node - node id
+#   item - search item
+#   element  - search element
+proc getNodeIPsecElement { node item element } {
+    set itemCfg [getNodeIPsecItem $node $item]
+
+    if { [lsearch $itemCfg "{$element} *"] != -1 } {
+	return [lindex [lsearch -inline $itemCfg "{$element} *"] 1]
+    }
+    return ""
+}
+
+proc setNodeIPsecElement { node item element newValue } {
+    set itemCfg [getNodeIPsecItem $node $item]
+
+    set elementIndex [lsearch -index 0 $itemCfg $element]
+    if { $elementIndex != -1 } {
+	set newItemCfg [lreplace $itemCfg $elementIndex $elementIndex "{$element} {$newValue}"]
+    } else {
+	set newItemCfg [linsert $itemCfg end "{$element} {$newValue}"]
+    }
+
+    setNodeIPsecItem $node $item $newItemCfg
+}
+
+proc delNodeIPsecElement { node item element } {
+    set itemCfg [getNodeIPsecItem $node $item]
+
+    set elementIndex [lsearch -index 0 $itemCfg $element]
+    if { $elementIndex != -1 } {
+	set newItemCfg [lreplace $itemCfg $elementIndex $elementIndex]
+    } else {
+	return
+    }
+
+    setNodeIPsecItem $node $item $newItemCfg
+
+    if { [getNodeIPsecConnList $node] == "" } {
+	delNodIPsec $node
+    }
+}
+
+proc getNodeIPsecSetting { node item element setting } {
+    set elementCfg [getNodeIPsecElement $node $item $element]
+
+    if { [lsearch $elementCfg "$setting=*"] != -1 } {
+	return [lindex [split [lsearch -inline $elementCfg "$setting=*"] =] 1]
+    }
+    return ""
+}
+
+proc setNodeIPsecSetting { node item element setting newValue } {
+    set elementCfg [getNodeIPsecElement $node $item $element]
+
+    set settingIndex [lsearch $elementCfg "$setting=*"]
+    if { $newValue == "" } {
+	if { $settingIndex != -1 } {
+	    set newElementCfg [lreplace $elementCfg $settingIndex $settingIndex]
+	} else {
+	    return
+	}
+    } else {
+	if { $settingIndex != -1 } {
+	    set newElementCfg [lreplace $elementCfg $settingIndex $settingIndex "$setting=$newValue"]
+	} else {
+	    set newElementCfg [linsert $elementCfg end "$setting=$newValue"] 
+	}
+    }
+
+    setNodeIPsecElement $node $item $element $newElementCfg
+}
+
+proc createEmptyIPsecCfg { node } {
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
+    setNodeIPsec $node ""
+    setNodeIPsecItem $node "configuration" ""
+    setNodeIPsecElement $node "configuration" "config setup" ""
+}
+
+proc getNodeIPsecConnList { node } {
+    set cfg [getNodeIPsecItem $node "configuration"]
+    set indices [lsearch -index 0 -all $cfg "conn *"]
+
+    set connList ""
+    if { $indices != -1 } {
+	foreach ind $indices {
+	    lappend connList [lindex [lindex [lindex $cfg $ind] 0] 1]
+	}
+    }
+
+    return $connList
+}
+
+#****f* ipsec.tcl/nodeIPsecConnExists
+# NAME
+#   nodeIPsecConnExists -- checks if connection already exists
+# SYNOPSIS
+#   nodeIPsecConnExists $node $connection_name
+# FUNCTION
+#   Checks if given connection already exists in IPsec configuration of given node
+# INPUTS
+#   node - node id
+#   connection_name - name of IPsec connection
+#****
+proc nodeIPsecConnExists { node connection_name } {
+    set connList [getNodeIPsecConnList $node]
+    if { [ lsearch $connList $connection_name ] != -1 } {
+        return 1
+    }
+    return 0
+}
+
+#****f* ipsec.tcl/getListOfOtherNodes
+# NAME
+#   getListOfOtherNodes -- retreives list of all nodes
+# SYNOPSIS
+#   getListOfOtherNodes $node
+# FUNCTION
+#   Retreives list of all nodes created in current topology
+# INPUTS
+#   node - node id
+#****
+proc getListOfOtherNodes { node } {
+    upvar 0 ::cf::[set ::curcfg]::node_list node_list
+
+    set idx [lsearch -exact $node_list $node ]
+    set listOfNodes [lreplace $node_list $idx $idx]
+
+    set listOfNames ""
+    foreach node $listOfNodes {
+	lappend listOfNames "[getNodeName $node] - $node"
+    }
+
+    return $listOfNames
+}
+
+#****f* ipsec.tcl/getLocalIpAddress
+# NAME
+#   getLocalIpAddress -- retreives local IP addresses for current node
+# SYNOPSIS
+#   getLocalIpAddress $node
+# FUNCTION
+#   Retreives all local addresses (IPv4 and IPv6) for current node
+# INPUTS
+#   node - node id
+#****
+proc getAllIpAddresses { node } {
+    set listOfInterfaces [ifcList $node]
+    foreach logifc [logIfcList $node] {
+	if { [string match "vlan*" $logifc]} {
+	    lappend listOfInterfaces $logifc
+	}
+    }
+    set listOfIP4s ""
+    set listOfIP6s ""
+    foreach item $listOfInterfaces {
+	set ifcIP [getIfcIPv4addr $node $item]
+	if { $ifcIP != "" } {
+	    lappend listOfIP4s $ifcIP
+	}
+	set ifcIP [getIfcIPv6addr $node $item]
+	if { $ifcIP != "" } {
+	    lappend listOfIP6s $ifcIP
+	}
+    }
+
+    return [concat $listOfIP4s $listOfIP6s]
+}
+
+#****f* ipsec.tcl/getIPAddressForPeer
+# NAME
+#   getIPAddressForPeer -- retreives list of IP addresses for peer
+# SYNOPSIS
+#   getIPAddressForPeer $node
+# FUNCTION
+#   Refreshes list of IP addresses for peer's dropdown selection list
+# INPUTS
+#   node - node id
+#****
+proc getIPAddressForPeer { node curIP } {
+    set listOfInterfaces [ifcList $node]
+    foreach logifc [logIfcList $node] {
+	if { [string match "vlan*" $logifc]} {
+	    lappend listOfInterfaces $logifc
+	}
+    }
+
+    set listOfIPs ""
+    if { [ ::ip::version $curIP ] == 4 } {
+	foreach item $listOfInterfaces {
+	    set ifcIP [getIfcIPv4addr $node $item]
+	    if { $ifcIP != "" } {
+		lappend listOfIPs $ifcIP
+	    }
+	}
+    } else {
+	foreach item $listOfInterfaces {
+	    set ifcIP [getIfcIPv6addr $node $item]
+	    if { $ifcIP != "" } {
+		lappend listOfIPs $ifcIP
+	    }
+	}
+    }
+
+    return $listOfIPs
+}
+
+proc getNodeFromHostname { hostname } {
+    upvar 0 ::cf::[set ::curcfg]::node_list node_list
+
+    foreach node $node_list {
+	if { $hostname == [getNodeName $node] } {
+	    return $node
+	}
+    }
+
+    return ""
+}
+
+#****f* ipsec.tcl/getLocalSubnets
+# NAME
+#   getLocalSubnets -- creates and retreives local subnets
+# SYNOPSIS
+#   getLocalSubnets $listOfIPs
+# FUNCTION
+#   Creates and retreives local subnets from given list of IP addresses
+# INPUTS
+#   listOfIPs - list of IP addresses
+#****
+proc getSubnetsFromIPs { listOfIPs } {
+    set total_string ""
+    set total_list ""
+    foreach item $listOfIPs {
+	set total_string [ip::prefix $item]
+	if { [::ip::version $item ] == 6 } {
+	    set total_string [ip::contract $total_string]
+	}
+	append total_string "/"
+	append total_string [::ip::mask $item]
+	lappend total_list $total_string
+    }
+    return $total_list
+}
+
+proc checkIfPeerStartsSameConnection { peer local_ip local_subnet local_id } {
+    set connList [getNodeIPsecConnList $peer]
+
+    foreach conn $connList {
+	set auto [getNodeIPsecSetting $peer "configuration" "conn $conn" "auto"]
+	if { "$auto" == "start" } {
+	    set right [getNodeIPsecSetting $peer "configuration" "conn $conn" "right"]
+	    if { "$right" == "$local_ip"} {
+		set rightsubnet [getNodeIPsecSetting $peer "configuration" "conn $conn" "rightsubnet"]
+		if { "$rightsubnet" == "$local_subnet"} {
+		    set rightid [getNodeIPsecSetting $peer "configuration" "conn $conn" "rightid"]
+		    if { $rightid == "" || $local_id == "" } {
+			return 1
+		    } else {
+			if { "$rightid" == "$local_id"} {
+			    return 1
+			}
+		    }
+		}
+	    }
+	}
+    }
+
+    return 0
+}
+
+#****f* ipsec.tcl/prepareNodeConfiguration
+# NAME
+#   prepareNodeConfiguration -- inserts extra values in IPsec connection configuration
+# SYNOPSIS
+#   prepareNodeConfiguration $node
+# FUNCTION
+#   Inserts extra values in IPsec connection configuration before it is written to ipsec.conf
+# INPUTS
+#   node - node id
+#****
+proc prepareNodeConfiguration { node } {
+    set ipsecCfg [getNodeIPsec $node]
+    set cfg [getNodeIPsecItem $node "configuration"]
+    set connList [getNodeIPsecConnList $node]
+
+    set new_cfg ""
+    set help_item ""
+    if { [llength $cfg] > 0 } {
+	foreach item $cfg {
+	    set elementCfg [lindex $cfg 0]
+	    foreach element $elementCfg {
+		puts $element
+
+		puts "ITEM: $item"
+		if { [llength $item] > 2 } {
+		    set help_item $item
+
+		    if { [lsearch $item "keyexchange=*"] == -1} {
+			set help_item [linsert $help_item 2 "keyexchange=ikev2"]
+		    } 
+		    if { [lsearch $item "leftfirewall=*"] == -1} {
+			set help_item [linsert $help_item 5 "leftfirewall=no"]
+		    } 
+
+		    if { [lsearch $cfg "local_cert *"] != -1 && [lsearch $item "authby=secret"] == -1 } {
+			set local_cert_file [lindex [lsearch -inline $cfg "local_cert *"] 1]
+			if { [string first "/" $local_cert_file] != -1 } {
+			    set for_file [lindex [split $local_cert_file /] end]
+			} else {
+			    set for_file $local_cert_file
+			}
+			set help_item [linsert $help_item 3 "leftcert=$for_file"]
+		    }	
+		    lappend new_cfg $help_item
+
+		} else {
+		    lappend new_cfg $item
+		}
+	    }
+	}
+    }
+    return $new_cfg
+}
