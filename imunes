@@ -65,7 +65,40 @@ if [ $prepare_flag -eq 1 ]; then
 fi
 
 if [ $batch_flag -eq 1 ]; then
+    which tclsh8.6 2>&1 > /dev/null
+    if [ $? -ne 0 ]; then
+        echo "To run IMUNES, the package tclsh8.6 is required."
+        exit 1
+    fi
+
+    if [ "`echo "package require ip" | tclsh8.6 2>&1`" != "" ]; then
+        echo "To run IMUNES, the package tcllib is required."
+        exit 1
+    fi
     exec tclsh8.6 $imunes $*
 else
+    if [ "$DISPLAY" == "" ]; then
+        echo "To run IMUNES GUI, run IMUNES in X environment."
+        exit 1
+    fi
+
+    which wish8.6 2>&1 > /dev/null
+    if [ $? -ne 0 ]; then
+        echo "To run IMUNES, the package wish8.6 is required."
+        exit 1
+    fi
+
+    xerr=`echo "exit" | wish8.6 2>&1`;
+    if [ "$xerr" != "" ]; then
+        echo "Cannot start imunes, problems with X:"
+        echo "$xerr"
+        exit 1
+    fi
+
+    if [ "`echo "package require ip; exit" | wish8.6 2>&1`" != "" ]; then
+        echo "To run IMUNES, the package tcllib is required."
+        exit 1
+    fi
+
     exec wish8.6 $imunes -- $*
 fi

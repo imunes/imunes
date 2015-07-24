@@ -105,6 +105,9 @@ proc newProject {} {
     upvar 0 ::cf::[set ::curcfg]::stop_sched stop_sched
 
     loadCfg ""
+    if {! [info exists eid] } {
+	set eid ""
+    }
     set oper_mode edit
     .bottom.oper_mode configure -text "$oper_mode mode"
     set cfgDeployed false
@@ -181,12 +184,12 @@ proc switchProject {} {
 #   * fname -- title
 #****
 proc setWmTitle { fname } {
-    global curcfg
+    global curcfg baseTitle version additions
 
     if { $fname == "" } {
 	set fname "untitled[string range $curcfg 1 end]"
     }
-    wm title . "IMUNES - $fname"
+    wm title . "$baseTitle v$version$additions - $fname"
 }
 
 #****f* filemgmt.tcl/openFile

@@ -116,6 +116,10 @@ endif
 		cp icons/tiny/$${file} $(TINY_ICONSDIR); \
 	done ;
 
+ifeq ($(UNAME_S), FreeBSD)
+	sh scripts/install_ng_modules.sh
+endif
+
 uninstall:
 	rm -rf $(IMUNESDIR)
 	for file in imunes $(notdir $(TOOLS)); do \

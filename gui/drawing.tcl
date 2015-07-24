@@ -147,7 +147,12 @@ proc drawNode { node } {
 	set labelstr1 [getNodeName $node];
 #	set labelstr2 [getNodePartition $node];
 #	set l [format "%s\n%s" $labelstr1 $labelstr2];
-	set l [format "%s" $labelstr1];
+	set l $labelstr1;
+	foreach ifc [ifcList $node] {
+	    if {[string trim $ifc 0123456789] == "wlan"} {
+		set l [format "%s %s" $l [getIfcIPv4addr $node $ifc]]
+	    }
+	}
 	set label [.panwin.f1.c create text $x $y -fill blue \
 	    -text "$l" \
 	    -tags "nodelabel $node"]
@@ -195,6 +200,9 @@ proc drawLink { link } {
     set nodes [linkPeers $link]
     set lnode1 [lindex $nodes 0]
     set lnode2 [lindex $nodes 1]
+    if {[nodeType $lnode1] == "wlan" || [nodeType $lnode2] == "wlan"} {
+	return
+    }
     set lwidth [getLinkWidth $link]
     if { [getLinkMirror $link] != "" } {
 	set newlink [.panwin.f1.c create line 0 0 0 0 \
@@ -431,12 +439,19 @@ proc redrawAllLinks {} {
 #****
 proc redrawLink { link } {
     set limages [.panwin.f1.c find withtag "link && $link"]
+    if {$limages == ""} {
+	return
+    }
     set limage1 [lindex $limages 0]
     set limage2 [lindex $limages 1]
     set tags [.panwin.f1.c gettags $limage1]
     set link [lindex $tags 1]
     set lnode1 [lindex $tags 2]
     set lnode2 [lindex $tags 3]
+
+    if {[nodeType $lnode1] == "wlan" || [nodeType $lnode2] == "wlan"} {
+	return
+    }
 
     set coords1 [.panwin.f1.c coords "node && $lnode1"]
     set coords2 [.panwin.f1.c coords "node && $lnode2"]
@@ -967,6 +982,7 @@ proc rearrange { mode } {
 	set tagmatch "node"
     }
     set otime [clock clicks -milliseconds]
+    set idlems 1
     while { $autorearrange_enabled } {
 	set ntime [clock clicks -milliseconds]
 	if { $otime == $ntime } {
@@ -1045,11 +1061,15 @@ proc rearrange { mode } {
 	    foreach link $link_list {
 		set nodes [linkPeers $link]
 		if { [getNodeCanvas [lindex $nodes 0]] != $curcanvas ||
-		    [getNodeCanvas [lindex $nodes 1]] != $curcanvas ||
-		    [getLinkMirror $link] != "" } {
+		  [getNodeCanvas [lindex $nodes 1]] != $curcanvas ||
+		  [getLinkMirror $link] != "" } {
 		    continue
 		}
 		set peers [linkPeers $link]
+		if {[nodeType [lindex $peers 0]] == "wlan" ||
+		  [nodeType [lindex $peers 1]] == "wlan"} {
+		    continue
+		}
 		set coords0 [getNodeCoords [lindex $peers 0]]
 		set coords1 [getNodeCoords [lindex $peers 1]]
 		set o_x \
@@ -1105,6 +1125,11 @@ proc rearrange { mode } {
 	}
 	.panwin.f1.c dtag link need_redraw
 	update
+	set idlems [expr int($idlems + (33 - $dt * 1000) / 2)]
+	if { $idlems < 1 } {
+	    set idlems 1
+	}
+	after $idlems
     }
     .menubar.tools entryconfigure "Auto rearrange all" -state normal
     .menubar.tools entryconfigure "Auto rearrange selected" -state normal

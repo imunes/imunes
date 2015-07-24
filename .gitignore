@@ -1,0 +1,7 @@
+src/ng_*/@
+src/ng_*/export_syms
+src/ng_*/machine
+src/ng_*/*.ko
+src/ng_*/*.o
+src/ng_*/x86
+*.swp

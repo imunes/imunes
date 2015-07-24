@@ -623,7 +623,7 @@ proc execResetLinkJitter { eid link } {
 # SYNOPSIS
 #   l3node.nghook $eid $node $ifc
 # FUNCTION
-#   Returns the netgraph node name and the hook name for the given experiment
+#   Returns the netgraph node name and the hook name for a given experiment
 #   id, node id, and interface name.
 # INPUTS
 #   * eid -- experiment id
@@ -635,7 +635,8 @@ proc execResetLinkJitter { eid link } {
 proc l3node.nghook { eid node ifc } {
     set ifnum [string range $ifc 3 end]
     set node_id "$eid\.$node"
-    switch -exact [string range $ifc 0 2] {
+    switch -exact [string trim $ifc 0123456789] {
+	wlan -
 	eth {
 	    return [list $ifc@$node_id ether]
 	}
@@ -1575,6 +1576,15 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 	[lindex [[typemodel $lnode2].nghook $eid $lnode2 $ifname2] 1]
 
     set cmds ""
+
+    # Special-case WLAN nodes: no need for ng_pipe there
+    if {[nodeType $lnode1] == "wlan" || [nodeType $lnode2] == "wlan"} {
+	catch {exec jexec $eid ngctl connect $ngpeer1: $ngpeer2: $nghook1 $nghook2} err
+	if { $debug && $err != "" } {
+	    puts $err
+	}
+	return
+    }
 
     set cmds "$cmds\n mkpeer $ngpeer1: pipe $nghook1 upper"
     set cmds "$cmds\n name $ngpeer1:$nghook1 $lname"
