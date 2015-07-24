@@ -105,18 +105,18 @@ copyToVi () {
     node=`getCpNodeId ${@: -1}`
     loc=`getCpLoc ${@: -1}`
     # create tmpdir inside vi
-    tmpdir=`docker exec $node mktemp -d`
-    # get external link to tmpdir
-    docktmpdir="`getViStoLoc ${@: -1}`$tmpdir"
+    tmpdirD=`docker exec $node mktemp -d`
+    # get external link to tmpdirD
+    docktmpdir="`getViStoLoc ${@: -1}`$tmpdirD"
     # copy file to external link
     n=`expr $# - 1`
     # copy file using docker
     for f in ${@:1:$n} 
     do
         cp -r $f $docktmpdir
-        docker exec $node cp -r "$tmpdir/`basename $f`" "/$loc"
+        docker exec $node cp -r "$tmpdirD/`basename $f`" "/$loc"
     done
-    docker exec $node rm -fr $tmpdir
+    docker exec $node rm -fr $tmpdirD
 }
 
 # copyFromVi (docker_path path)
@@ -126,10 +126,10 @@ copyFromVi () {
     stat=$(docker exec `getCpNodeId $1` stat --printf="%F\n" `getCpLoc $1`)
     if contains "$stat" "directory"; then
 	# it's a directory, copy to tmpdir, move to final location, rm tmpdir
-	tmpdir=`mktemp -d`
-	docker cp `getCpNodeId $1`:`getCpLoc $1` $tmpdir
-	mv $tmpdir/$(basename `getCpLoc $1`) $2
-	rm -fr $tmpdir
+	tmpdirL=`mktemp -d`
+	docker cp `getCpNodeId $1`:`getCpLoc $1` $tmpdirL
+	mv $tmpdirL/$(basename `getCpLoc $1`) $2
+	rm -fr $tmpdirL
     else
 	# it's a file, copy to stdout, untar and redirect to destination
 	# test if destination is dir or file
