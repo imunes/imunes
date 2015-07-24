@@ -989,3 +989,23 @@ proc execSetLinkParams { eid link } {
         }
     }
 }
+
+proc sshServiceStartCmds {} {
+    lappend cmds "dpkg-reconfigure openssh-server"
+    lappend cmds "service ssh start"
+    return $cmds
+}
+
+proc sshServiceStopCmds {} {
+    return "service ssh stop"
+}
+
+proc inetdServiceRestartCmds {} {
+    return "service openbsd-inetd restart"
+}
+
+proc moveFileFromNode { node path ext_path } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    catch {exec hcp [getNodeName $node]@$eid:$path $ext_path}
+    catch {exec docker exec $eid.$node rm -fr $path}
+}

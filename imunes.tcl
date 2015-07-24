@@ -182,6 +182,7 @@ if { $params(v) || $params(version)} {
     exit
 }
 
+set os [platform::identify]
 
 # Runtime libriaries
 foreach file [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
@@ -195,7 +196,6 @@ set l3nodes "genericrouter quagga xorp static click_l3 host pc"
 # Set default supported router models
 set supp_router_models "xorp quagga static"
 
-set os [platform::identify]
 if { [string match -nocase "*linux*" $os] == 1 } {
     # Limit default nodes on linux
     set l2nodes "lanswitch rj45"

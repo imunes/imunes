@@ -1952,3 +1952,15 @@ proc getIPv6RouteCmd { statrte } {
 
 proc checkSysPrerequisites {} {
 }
+
+proc sshServiceStartCmds {} {
+    return "service sshd onestart"
+}
+
+proc sshServiceStopCmds {} {
+    return "service sshd onestop"
+}
+
+proc inetdServiceRestartCmds {} {
+    return "service inetd onerestart"
+}
