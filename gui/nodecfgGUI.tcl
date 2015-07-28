@@ -25,6 +25,7 @@
 
 # $Id: nodecfgGUI.tcl 149 2015-03-27 15:50:14Z valter $
 
+set old_conn_name ""
 
 #****f* nodecfgGUI.tcl/nodeConfigGUI
 # NAME
@@ -2652,4 +2653,1126 @@ proc formatIPaddrList { addrList } {
 	}
     }
     return $newList
+}
+
+#################
+#****f* nodecfgGUI.tcl/configGUI_ipsec
+# NAME
+#   configGUI_ipsecui -- configure GUI - GUI for IPsec tab
+# SYNOPSIS
+#   configGUI_ipsecui $tab $node
+# FUNCTION
+#   Creating GUI for IPsec configuration tab
+# INPUTS
+#   * tab -- tab widget where GUI will be placed
+#   * node -- node id
+#****
+proc configGUI_ipsec { tab node } {
+    $tab configure -padding "5 5 5 5"
+
+    ttk::label $tab.headingLabel -text "List of IPsec connections"
+    ttk::treeview $tab.tree -columns "Peers_IP_address" -yscrollcommand "$tab.scrollbar set"
+    ttk::scrollbar $tab.scrollbar -command "$tab.tree yview" -orient vertical
+    grid $tab.headingLabel -column 0 -row 0 -padx 5 -pady 5
+    grid $tab.tree -column 0 -row 1 -rowspan 2
+    grid $tab.scrollbar -column 1 -row 1 -rowspan 2 -sticky ns
+    $tab.tree heading #0 -text "Connection name"
+    $tab.tree column #0 -anchor center -width 195
+    $tab.tree heading Peers_IP_address -text "Peers IP address"
+    $tab.tree column Peers_IP_address -anchor center -width 195
+
+    refreshIPsecTree $node $tab
+
+    set tree_widget $tab.tree
+    ttk::frame $tab.button_container
+    ttk::button $tab.button_container.add_button -text "Add" -command "addIPsecConnWindow $node $tab"
+    ttk::button $tab.button_container.modify_button -text "Modify" -command "modIPsecConnWindow $node $tab"
+    ttk::button $tab.button_container.delete_button -text "Delete" -command "deleteIPsecConnection $node $tab "
+    grid $tab.button_container -column 2 -row 1 -rowspan 2 -padx {8 0}
+    grid $tab.button_container.add_button -column 0 -row 0 -pady 5 -padx 5
+    grid $tab.button_container.modify_button -column 0 -row 1 -pady 5 -padx 5
+    grid $tab.button_container.delete_button -column 0 -row 2 -pady 5 -padx 5
+}
+
+proc addIPsecConnWindow { node tab } {
+    set mainFrame .d.mIPsecFrame
+    set connParamsLframe $mainFrame.conn_params_lframe
+    set espOptionsLframe $mainFrame.esp_options_lframe
+    set ikeSALframe $mainFrame.ike_sa_lframe
+
+    createIPsecGUI $node $mainFrame $connParamsLframe $espOptionsLframe $ikeSALframe "Add"
+    $mainFrame.buttons_container.apply configure -command "putIPsecConnectionInTree $node $tab add"
+
+    setDefaultsForIPsec $node $connParamsLframe $espOptionsLframe
+}
+
+proc modIPsecConnWindow { node tab } {
+    set mainFrame .d.mIPsecFrame
+    set connParamsLframe $mainFrame.conn_params_lframe
+    set espOptionsLframe $mainFrame.esp_options_lframe
+    set ikeSALframe $mainFrame.ike_sa_lframe
+
+    createIPsecGUI $node $mainFrame $connParamsLframe $espOptionsLframe $ikeSALframe "Modify"
+    $mainFrame.buttons_container.apply configure -command "putIPsecConnectionInTree $node $tab modify"
+
+    populateValuesForUpdate $node $tab $connParamsLframe $espOptionsLframe
+}
+
+proc deleteIPsecConnection { node tab } {
+    global $tab.tree
+    set connection_name [$tab.tree focus]
+
+    delNodeIPsecElement $node "configuration" "conn $connection_name"
+
+    refreshIPsecTree $node $tab
+}
+
+#****f* nodecfgGUI.tcl/putIPsecConnectionInTree
+# NAME
+#   putIPsecConnectionInTree -- configure GUI - performs data validation and adds (or modifies) connection
+# SYNOPSIS
+#   putIPsecConnectionInTree $tab $node $indicator
+# FUNCTION
+#   Performs data input validation and adds (or modifies) connection to list of all IPsec connections for node
+# INPUTS
+#   tab - tab widget that represents IPsec connection part od node config GUI
+#   node - current node for which the procedure is invoked
+#   indicator - variable that indicates wheter to add connection, or to modify it
+#****
+proc putIPsecConnectionInTree { node tab indicator } {
+    global version instance_duration keying_duration negotiation_attempts
+    global how_long_before ike_encr ike_auth ike_modp peers_ip peers_name peers_id start_connection
+    global peers_subnet local_cert_file type method esp_suits authby psk_key
+    global ah_suits modp_suits connection_name local_name local_ip_address local_subnet
+    global tree_widget conn_time keying_time how_long_time
+    global no_encryption secret_file old_conn_name
+
+    set cert_exists 0
+
+    set total_value ""
+    set changed "no"
+    set trimmed_ip [lindex [split $local_ip_address /] 0]
+
+    set peers_node [lindex $peers_name 2]
+
+#    if { $old_conn_name != $connection_name } {
+#	set changed "yes"
+#    }
+
+    set emptyCheckList { \
+	{connection_name "Please specify connection name!"} \
+	{ike_encr "Please specify IKE encryption algorithm!"} \
+	{ike_auth "Please specify IKE integrity check algorithm!"} \
+	{ike_modp "Please specify IKE modulo prime groups!"} \
+	{peers_ip "Please specify peer's IP address!"} \
+	{peers_name "Peer's name cannot be empty!"} \
+	{peers_subnet "Please specify peer's subnet!"} \
+	{local_ip_address "Please specify your IP address!"} \
+	{local_subnet "Please specify your local subnet!"} \
+	{esp_suits "Please specify ESP encryption algorithm!"} \
+	{ah_suits "Please specify ESP integrity check algorithm!"} \
+	{modp_suits "Please specify ESP modulo prime groups!"} \
+	{peers_id "Please specify peer's unique name\n(e.g. @sun.strongswan.org)!"} \
+	{secret_file "Please specify the file that contains private key!"} \
+	{local_cert_file "Please specify your local certificate file"} \
+	{local_name "Please specify local name/id!"} \
+    }
+
+    foreach item $emptyCheckList {
+	if { ([lindex $item 0] == "peers_id" || [lindex $item 0] == "secret_file" \
+	    || [lindex $item 0] == "local_cert_file" || [lindex $item 0] == "local_name") } {
+	    if { $authby != "secret" } {
+		if { [set [lindex $item 0]] == "" } {
+		    tk_messageBox -message [lindex $item 1] -title "Error" -icon error -type ok
+		    return
+		}
+	    }
+	} elseif { [set [lindex $item 0]] == "" } {
+	    tk_messageBox -message [lindex $item 1] -title "Error" -icon error -type ok
+	    return
+	}
+    }
+
+    set check [checkIfPeerStartsSameConnection $peers_node $trimmed_ip $local_subnet $local_name]
+    if { $check == 1 && $start_connection == 1 } {
+	tk_messageBox -message "Peer is configured to start the same connection!" -title "Error" -icon error -type ok
+	return
+    }
+
+    set cfg [getNodeIPsec $node]
+
+    if { $indicator == "add"} {
+	if { [nodeIPsecConnExists $node $connection_name] == 1 } {
+	    tk_messageBox -message "Connection named '$connection_name' already exists" -title "Error" -icon error -type ok
+	    return
+	}
+    } else {
+	if { $changed == "yes"} {
+	    if { [nodeIPsecConnExists $node $connection_name] == 1 } {
+		tk_messageBox -message "Connection named '$connection_name' already exists" -title "Error" -icon error -type ok
+		return
+	    }
+	}
+    }
+
+    set netNegCheckList { \
+	    {instance_duration "Connection instance duration cannot be negative!"} \
+	    {keying_duration "Keying channel duration cannot be negative!"} \
+	    {how_long_before "Margin time for negotiation attempts cannot be negative!"} \
+	    {negotiation_attempts "Negotiation attempts number cannot be negative!"} \
+	}
+
+    foreach item $netNegCheckList {
+	if { [set [lindex $item 0]] < 0 } {
+	    tk_messageBox -message [lindex $item 1] -title "Error" -icon error -type ok
+	    return
+	}
+    }
+
+    set timeCheckList {seconds minutes hours days}
+    #validating connection instance_duration
+    foreach item $timeCheckList {
+	if { $item == "seconds" && $conn_time == "seconds" && ![string is integer -strict $instance_duration] } {
+	    tk_messageBox -message "If in seconds, connection instance duration must be an integer!" -title "Error" -icon error -type ok
+	    return
+	} else {
+	    if { $conn_time == $item && ![string is integer -strict $instance_duration] && ![string is double -strict $instance_duration]} {
+		tk_messageBox -message "If in $item, connection instance duration must be an integer or double!" -title "Error" -icon error -type ok
+		return
+	    }
+	}
+    }
+
+    #validating keying channel duration
+    foreach item $timeCheckList {
+        if { $item == "seconds" && $keying_time == "seconds" && ![string is integer -strict $keying_duration] } {
+            tk_messageBox -message "If in seconds, keying duration must be an integer!" -title "Error" -icon error -type ok
+            return
+        } else {
+            if { $keying_time == $item && ![string is integer -strict $keying_duration] && ![string is double -strict $keying_duration]} {
+                tk_messageBox -message "If in $item, keying duration must be an integer or double!" -title "Error" -icon error -type ok
+                return
+            }
+        }
+    }
+
+    #validating margintime values
+    foreach item $timeCheckList {
+        if { $item == "seconds" && $how_long_time == "seconds" && ![string is integer -strict $how_long_before] } {
+            tk_messageBox -message "If in seconds, margin time for negotiation attempts must be an integer!" -title "Error" -icon error -type ok
+            return
+        } else {
+            if { $how_long_time == $item && ![string is integer -strict $how_long_before] && ![string is double -strict $how_long_before] } {
+                tk_messageBox -message "If in $item, margin time for negotiation attempts must be an integer or double!" -title "Error" -icon error -type ok
+                return
+            }
+        }
+    }
+
+    #validating keyintgries (negotiation attempts)
+    if { ![string is integer -strict $negotiation_attempts] || $negotiation_attempts < 0 } {
+        tk_messageBox -message "Number of negotiation attempts cannot be negative and must be an integer!" -title "Error" -icon error -type ok
+        return
+    }
+
+    if { $psk_key == "" && $authby == "secret" } {
+        tk_messageBox -message "Please specify shared key!" -title "Error" -icon error -type ok
+        return
+    }
+
+    set total_instance_duration "$instance_duration[string index $conn_time 0]"
+    set total_keying_duration "$keying_duration[string index $keying_time 0]"
+    set total_margintime "$how_long_before[string index $how_long_time 0]"
+
+
+    set final_esp_encryption ""
+    if { [string equal $method "ah"] } {
+        set final_esp_encryption "null"
+    } elseif { [string equal $method "esp"] } {
+        set final_esp_encryption "$esp_suits"
+    } else {
+        set final_esp_encryption ""
+    }
+
+    set real_ip_local [lindex [split $local_ip_address /] 0]
+    set real_ip_peer [lindex [split $peers_ip /] 0]
+
+    set total_list ""
+
+    set has_local_cert [getNodeIPsecItem $node "local_cert"]
+    set has_local_key_file [getNodeIPsecItem $node "local_key_file"]
+
+    if { $has_local_cert == "" && $authby != "secret" && $local_cert_file != "" && $secret_file != ""\
+        && $has_local_key_file == ""} {
+        setNodeIPsecItem $node "local_cert" $local_cert_file
+        setNodeIPsecItem $node "local_key_file" $secret_file
+    } else {
+        if { $has_local_cert != $local_cert_file && $authby != "secret"} {
+            set change [tk_messageBox -type "yesno" -message "Existing local cert file is different than current, proceed and replace?" -icon question -title "Cert file"]
+            if { $change == "yes" } {
+		setNodeIPsecItem $node "local_cert" $local_cert_file
+            }
+        }
+        if { $has_local_key_file != $secret_file && $authby != "secret"} {
+            set change [tk_messageBox -type "yesno" -message "Existing local cert file is different than current, proceed and replace?" -icon question -title "Secret file"]
+            if { $change == "yes" } {
+		setNodeIPsecItem $node "local_key_file" $secret_file
+            }
+        }
+    }
+
+    if { $indicator == "modify" } {
+	delNodeIPsecElement $node "configuration" "conn $old_conn_name"
+    }
+    if { [getNodeIPsec $node] == "" } {
+	createEmptyIPsecCfg $node
+    }
+    setNodeIPsecElement $node "configuration" "conn $connection_name" ""
+    if { $total_keying_duration != "3h" } {
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "ikelifetime" "$total_keying_duration"
+    } else {
+	setNodeIPsecSetting $node "configuration" "conn $connection_name" "ikelifetime" ""
+    }
+    if { $total_instance_duration != "1h" } {
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "keylife" "$total_instance_duration"
+    } else {
+	setNodeIPsecSetting $node "configuration" "conn $connection_name" "keylife" ""
+    }
+    if { $total_margintime != "9m" } {
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "rekeymargin" "$total_margintime"
+    } else {
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "rekeymargin" ""
+    }
+    if { $negotiation_attempts != "3" } {
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "keyingtries" "$negotiation_attempts"
+    } else {
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "keyingtries" ""
+    }
+    if { $ike_encr != "aes128" || $ike_auth != "sha1" || $ike_modp != "modp2048"} {
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "ike" "$ike_encr-$ike_auth-$ike_modp"
+    } else {
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "ike" ""
+    }
+    if { $final_esp_encryption != "aes128" || $ah_suits != "sha1" || $modp_suits != "modp2048" } {
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "esp" "$final_esp_encryption-$ah_suits-$modp_suits"
+    } else {
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "esp" ""
+    }
+    if { $type != "tunnel"} {
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "type" "$type"
+    } else {
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "type" ""
+    }
+
+    setNodeIPsecSetting $node "configuration" "conn $connection_name" "left" "$real_ip_local"
+    setNodeIPsecSetting $node "configuration" "conn $connection_name" "leftsubnet" "$local_subnet"
+    setNodeIPsecSetting $node "configuration" "conn $connection_name" "right" "$real_ip_peer"
+    setNodeIPsecSetting $node "configuration" "conn $connection_name" "rightsubnet" "$peers_subnet"
+    setNodeIPsecSetting $node "configuration" "conn $connection_name" "peersname" "[lindex $peers_name 0]"
+
+    if { $authby == "secret" } {
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "authby" "secret"
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "sharedkey" "$psk_key"
+
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "leftid" ""
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "rightid" ""
+#        checkAndClearCertificatesAndIds $node $connection_name
+    } else {
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "leftid" "$local_name"
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "rightid" "$peers_id"
+
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "authby" ""
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "sharedkey" ""
+#        checkAndClearSharedKeyAndAuthbySecret $node $connection_name
+    }
+
+    if { $start_connection == 1 } {
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "auto" "start"
+    } else {
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "auto" "add"
+    }
+
+    if { $indicator == "add"} {
+        $tab.tree insert {} end -id $connection_name -text "$connection_name"
+        $tab.tree set $connection_name Peers_IP_address "$real_ip_peer"
+    } else {
+        refreshIPsecTree $node $tab
+    }
+
+    set old_conn_name ""
+    destroy .d
+}
+
+#****f* nodecfgGUI.tcl/refreshIPsecTree
+# NAME
+#   refreshIPsecTree -- refreshes IPsec tree
+# SYNOPSIS
+#   refreshIPsecTree $node $tab
+# FUNCTION
+#   Refreshes tree widget that contains list of IPsec connections 
+# INPUTS
+#   node - node id
+#   tab - IPsec GUI tab widget
+#****
+proc refreshIPsecTree { node tab } {
+    $tab.tree delete [$tab.tree children {}]
+    foreach item [ getNodeIPsecConnList $node ] {
+	set peerIp [ getNodeIPsecSetting $node "configuration" "conn $item" "right" ]
+	if { $peerIp != "" } {
+	    $tab.tree insert {} end -id $item -text "$item"
+	    $tab.tree set $item Peers_IP_address "$peerIp"
+	}
+    }
+}
+
+proc createIPsecGUI { node mainFrame connParamsLframe espOptionsLframe ikeSALframe indicator } {
+    tk::toplevel .d
+    wm title .d "$indicator IPsec connection"
+    grab .d
+
+    ttk::frame $mainFrame -padding 4
+    grid $mainFrame -column 0 -row 0 -sticky nwes
+    grid columnconfigure .d 0 -weight 1
+    grid rowconfigure .d 0 -weight 1
+
+#    setCurrentNode $node
+
+    ttk::frame $mainFrame.con_name_container
+    ttk::label $mainFrame.con_name_container.con_name -text "Connection name:"
+    ttk::entry $mainFrame.con_name_container.conn_name_entry -width 14 -textvariable connection_name
+    grid $mainFrame.con_name_container -column 0 -row 0 -columnspan 2
+    grid $mainFrame.con_name_container.con_name -column 0 -row 0 -pady 5 -padx 5 -sticky e
+    grid $mainFrame.con_name_container.conn_name_entry -column 1 -row 0 -pady 5 -padx 5
+
+    # First label frame (Connection parameters)
+    ttk::labelframe $connParamsLframe -text "Connection parameters"
+    grid $connParamsLframe -column 0 -row 1 -sticky n -padx 5 -pady 5
+
+    ttk::frame $connParamsLframe.authby_container
+    ttk::label $connParamsLframe.authby_container.authby_type -text "Authentication type:"
+    ttk::radiobutton $connParamsLframe.authby_container.cert -text "Certificates" -variable authby -value cert \
+	-command "showCertificates $connParamsLframe"
+    ttk::radiobutton $connParamsLframe.authby_container.secret -text "Shared key" -variable authby -value secret \
+	-command "hideCertificates $connParamsLframe"
+
+    grid $connParamsLframe.authby_container -column 0 -row 0 -pady 5 -padx 5 -columnspan 3
+    grid $connParamsLframe.authby_container.authby_type -column 0 -row 0 -pady 5 -padx 5
+    grid $connParamsLframe.authby_container.cert -column 1 -row 0 -pady 5 -padx 5 -sticky w
+    grid $connParamsLframe.authby_container.secret -column 2 -row 0 -pady 5 -padx 5 -sticky w
+
+    ttk::label $connParamsLframe.local_id -text "Local name/id:"
+    ttk::entry $connParamsLframe.local_id_entry -width 15 -textvariable local_name
+    grid $connParamsLframe.local_id -column 0 -row 1 -pady 5 -padx 5 -sticky e
+    grid $connParamsLframe.local_id_entry -column 1 -row 1 -pady 5 -padx 5 -sticky w -columnspan 2
+
+    ttk::label $connParamsLframe.local_ip -text "Local IP address:"
+    ttk::combobox $connParamsLframe.local_ip_entry -width 14 -textvariable local_ip_address -state readonly
+    grid $connParamsLframe.local_ip -column 0 -row 2 -pady 5 -padx 5 -sticky e
+    grid $connParamsLframe.local_ip_entry -column 1 -row 2 -pady 5 -padx 5 -sticky w
+
+    ttk::label $connParamsLframe.local_sub -text "Local subnet:"
+    ttk::combobox $connParamsLframe.local_sub_entry -width 14 -textvariable local_subnet -state readonly
+    grid $connParamsLframe.local_sub -column 0 -row 3 -pady 5 -padx 5 -sticky e
+    grid $connParamsLframe.local_sub_entry -column 1 -row 3 -pady 5 -padx 5 -sticky w
+
+    ttk::label $connParamsLframe.peer_name -text "Specify his name:"
+    ttk::entry $connParamsLframe.peer_id -width 15 -textvariable peers_id
+    grid $connParamsLframe.peer_name -column 0 -row 4 -pady 5 -padx 5 -sticky e
+    grid $connParamsLframe.peer_id -column 1 -row 4 -pady 5 -padx 5 -sticky w -columnspan 2
+
+    ttk::label $connParamsLframe.peer_ip -text "Peers IP address:"
+    ttk::combobox $connParamsLframe.peer_name_entry -width 14 -textvariable peers_name -state readonly
+    ttk::combobox $connParamsLframe.peer_ip_entry -width 25 -textvariable peers_ip -state readonly
+    grid $connParamsLframe.peer_ip -column 0 -row 5 -pady 5 -padx 5 -sticky e
+    grid $connParamsLframe.peer_name_entry -column 1 -row 5 -pady 5 -padx 5 -sticky w
+    grid $connParamsLframe.peer_ip_entry -column 2 -row 5 -pady 5 -padx 4 -sticky w
+
+    ttk::label $connParamsLframe.peer_sub -text "Peers subnet:"
+    ttk::combobox $connParamsLframe.peer_sub_entry -width 14 -textvariable peers_subnet -state readonly
+    grid $connParamsLframe.peer_sub -column 0 -row 6 -pady 5 -padx 5 -sticky e
+    grid $connParamsLframe.peer_sub_entry -column 1 -row 6 -pady 5 -padx 5 -sticky w
+
+    ttk::frame $connParamsLframe.local_cert_container
+    ttk::label $connParamsLframe.local_cert_container.local_cert -text "Local certificate file:"
+    ttk::entry $connParamsLframe.local_cert_container.local_cert_entry -width 14 -textvariable local_cert_file
+    ttk::button $connParamsLframe.local_cert_container.cert_chooser -text "Open" \
+	-command "chooseFile cert"
+    ttk::entry $connParamsLframe.local_cert_container.local_cert_directory -width 20 -textvariable local_cert_dir -state readonly
+    grid $connParamsLframe.local_cert_container -column 0 -row 7 -columnspan 3 -sticky w
+    grid $connParamsLframe.local_cert_container.local_cert -column 0 -row 0 -pady 5 -padx {11 5} -sticky e
+    grid $connParamsLframe.local_cert_container.local_cert_entry -column 1 -row 0 -pady 5 -padx 5 -sticky w
+    grid $connParamsLframe.local_cert_container.cert_chooser -column 2 -row 0
+    grid $connParamsLframe.local_cert_container.local_cert_directory -column 3 -row 0 -pady 5 -padx 5 -sticky w
+
+    ttk::frame $connParamsLframe.private_file_container
+    ttk::label $connParamsLframe.private_file_container.secret -text "Private key file: "
+    ttk::entry $connParamsLframe.private_file_container.secret_entry -width 14 -textvariable secret_file
+    ttk::button $connParamsLframe.private_file_container.private_chooser -text "Open" \
+	-command "chooseFile private"
+    ttk::entry $connParamsLframe.private_file_container.secret_directory -width 22 -textvariable secret_dir -state readonly
+    grid $connParamsLframe.private_file_container -column 0 -row 8 -columnspan 3 -sticky w
+    grid $connParamsLframe.private_file_container.secret -column 0 -row 0 -pady 5 -padx {43 0} -sticky e
+    grid $connParamsLframe.private_file_container.secret_entry -column 1 -row 0 -pady 5 -padx 5 -sticky w
+    grid $connParamsLframe.private_file_container.private_chooser -column 2 -row 0
+    grid $connParamsLframe.private_file_container.secret_directory -column 3 -row 0 -pady 5 -padx 5 -sticky w
+
+    ttk::checkbutton $connParamsLframe.check_button -text "Start connection after executing experiment" -variable start_connection -onvalue 1 -offvalue 0
+    grid $connParamsLframe.check_button -column 0 -row 9 -pady 5 -padx 5 -columnspan 2
+
+    # hidden
+    ttk::label $connParamsLframe.shared_key -text "Shared key:"
+    ttk::entry $connParamsLframe.shared_key_entry -width 14 -textvariable psk_key
+
+    # Second label frame (Authentication/Encryption)
+    ttk::labelframe $espOptionsLframe -text "ESP options"
+    grid $espOptionsLframe -column 1 -row 1 -sticky wens -padx 5 -pady 5
+
+    ttk::frame $espOptionsLframe.method_container
+    ttk::radiobutton $espOptionsLframe.method_container.ah -text "ESP Authentication only" -variable method -value ah \
+	-command "showNullEncryption $espOptionsLframe"
+    ttk::radiobutton $espOptionsLframe.method_container.esp -text "Full ESP" -variable method -value esp \
+	-command "showFullEncryption $espOptionsLframe"
+    grid $espOptionsLframe.method_container -column 0 -row 0 -sticky w
+    grid $espOptionsLframe.method_container.ah -column 0 -row 0 -pady 5 -padx 5 -sticky w
+    grid $espOptionsLframe.method_container.esp -column 1 -row 0 -pady 5 -padx 5 -sticky w
+
+    ttk::frame $espOptionsLframe.type_container
+    ttk::label $espOptionsLframe.type_container.conn-type -text "Connection type:"
+    ttk::radiobutton $espOptionsLframe.type_container.tunnel -text "Tunnel" -variable type -value tunnel
+    ttk::radiobutton $espOptionsLframe.type_container.transport -text "Transport" -variable type -value transport
+    grid $espOptionsLframe.type_container -column 0 -row 1 -pady 5 -padx 5 -columnspan 2 -sticky w
+    grid $espOptionsLframe.type_container.conn-type  -column 0 -row 0 -pady 5 -padx 5
+    grid $espOptionsLframe.type_container.tunnel -column 1 -row 0 -pady 5 -padx 5
+    grid $espOptionsLframe.type_container.transport -column 2 -row 0 -padx 5 -pady 5
+
+    ttk::frame $espOptionsLframe.esp_container
+    ttk::label $espOptionsLframe.esp_container.esp_suit -text "Encryption algorithm:"
+    ttk::combobox $espOptionsLframe.esp_container.esp_combo -textvariable esp_suits -state readonly
+    $espOptionsLframe.esp_container.esp_combo configure -values [list "3des" cast128 blowfish128 blowfish192 blowfish256 aes128 aes192 aes256]
+    grid $espOptionsLframe.esp_container.esp_suit -column 0 -row 0 -pady 5 -padx 5 -sticky e
+    grid $espOptionsLframe.esp_container.esp_combo -column 1 -row 0 -pady 5 -padx 5
+
+    ttk::entry $espOptionsLframe.esp_container.null_encryption -width 7 -state readonly -textvariable no_encryption
+
+    ttk::label $espOptionsLframe.esp_container.ah_suit -text "Integrity check algorithm:"
+    ttk::combobox $espOptionsLframe.esp_container.ah_combo -textvariable ah_suits -state readonly
+    grid $espOptionsLframe.esp_container.ah_suit -column 0 -row 1 -pady 5 -padx 5 -sticky e
+    grid $espOptionsLframe.esp_container.ah_combo -column 1 -row 1 -pady 5 -padx 5
+    $espOptionsLframe.esp_container.ah_combo configure -values [list md5 sha1 sha256 sha384 sha512]
+
+    ttk::label $espOptionsLframe.esp_container.modp_suit -text "Modulo prime groups:"
+    ttk::combobox $espOptionsLframe.esp_container.modp_combo -textvariable modp_suits -state readonly
+    grid $espOptionsLframe.esp_container.modp_suit -column 0 -row 2 -pady 5 -padx 5 -sticky e
+    grid $espOptionsLframe.esp_container.modp_combo -column 1 -row 2 -pady 5 -padx 5
+    $espOptionsLframe.esp_container.modp_combo configure -values [list modp768 modp1024 modp1536 modp2048 modp3072 modp4096 modp6144 modp8192]
+
+    ttk::button $espOptionsLframe.advance_button_esp -width 20 -text "Advanced options" \
+	-command "showESPAdvancedOptions $node $espOptionsLframe"
+    grid $espOptionsLframe.advance_button_esp -column 0 -row 2 -padx 105 -pady 5
+
+    # Third label frame (security association establishment)
+    ttk::labelframe $ikeSALframe -text "IKEv2 SA Establishment"
+    grid $ikeSALframe -column 0 -row 2 -columnspan 2
+
+    ttk::frame $ikeSALframe.ike_container
+    ttk::label $ikeSALframe.ike_container.conn_instance -text "Connection instance duration:"
+    ttk::spinbox $ikeSALframe.ike_container.conn_instance_entry -from 1 -to 1000 -textvariable instance_duration
+    ttk::combobox $ikeSALframe.ike_container.connection_duration_combo -width 7 -textvariable conn_time -state readonly
+    grid $ikeSALframe.ike_container.conn_instance -column 0 -row 0 -pady 5 -padx 5 -sticky e
+    grid $ikeSALframe.ike_container.conn_instance -column 0 -row 0 -pady 5 -padx 5 -sticky e
+    grid $ikeSALframe.ike_container.conn_instance_entry -column 1 -row 0 -pady 5 -padx 5
+    grid $ikeSALframe.ike_container.connection_duration_combo -column 2 -row 0 -pady 5 -padx 5 -sticky w
+    $ikeSALframe.ike_container.connection_duration_combo configure -values [list seconds minutes hours days]
+
+    ttk::label $ikeSALframe.ike_container.keying_channel -text "Keying channel duration:"
+    ttk::spinbox $ikeSALframe.ike_container.keying_channel_entry -from 1 -to 1000 -textvariable keying_duration
+    ttk::combobox $ikeSALframe.ike_container.keying_duration_combo -width 7 -textvariable keying_time -state readonly
+    grid $ikeSALframe.ike_container.keying_channel -column 0 -row 1 -pady 5 -padx 5 -sticky e
+    grid $ikeSALframe.ike_container.keying_channel_entry -column 1 -row 1 -pady 5 -padx 5
+    grid $ikeSALframe.ike_container.keying_duration_combo -column 2 -row 1 -pady 5 -padx 5 -sticky w
+    $ikeSALframe.ike_container.keying_duration_combo configure -values [list seconds minutes hours days]
+
+    ttk::label $ikeSALframe.ike_container.neg_attempts -text "Connection negotiation attempts:"
+    ttk::spinbox $ikeSALframe.ike_container.neg_attempts_entry -from 1 -to 1000 -textvariable negotiation_attempts
+    grid $ikeSALframe.ike_container.neg_attempts -column 0 -row 2 -pady 5 -padx 5 -sticky e
+    grid $ikeSALframe.ike_container.neg_attempts_entry -column 1 -row 2 -pady 5 -padx 5
+
+    ttk::label $ikeSALframe.ike_container.how_long -text "Rekeying margin time:"
+    ttk::spinbox $ikeSALframe.ike_container.how_long_entry -from 1 -to 100 -textvariable how_long_before
+    ttk::combobox $ikeSALframe.ike_container.how_long_combo -width 7 -textvariable how_long_time -state readonly
+    grid $ikeSALframe.ike_container.how_long -column 0 -row 3 -sticky e -pady 5 -padx 5
+    grid $ikeSALframe.ike_container.how_long_entry -column 1 -row 3 -pady 5 -padx 5
+    grid $ikeSALframe.ike_container.how_long_combo -column 2 -row 3 -pady 5 -padx 5 -sticky w
+    $ikeSALframe.ike_container.how_long_combo configure -values [list seconds minutes hours days]
+
+    ttk::label $ikeSALframe.ike_container.ike_esp -text "IKE encryption algorithm"
+    ttk::combobox $ikeSALframe.ike_container.ike_esp_combo -width 15 -textvariable ike_encr -state readonly
+    grid $ikeSALframe.ike_container.ike_esp -column 0 -row 4 -pady 5 -padx 5 -sticky e
+    grid $ikeSALframe.ike_container.ike_esp_combo -column 1 -row 4 -pady 5 -padx 5
+    $ikeSALframe.ike_container.ike_esp_combo configure -values [list "3des" cast128 blowfish128 blowfish192 blowfish256 aes128 aes192 aes256]
+
+    ttk::label $ikeSALframe.ike_container.ike_ah -text "IKE integrity check"
+    ttk::combobox $ikeSALframe.ike_container.ike_ah_combo -width 15 -textvariable ike_auth -state readonly
+    grid $ikeSALframe.ike_container.ike_ah -column 0 -row 5 -pady 5 -padx 5 -sticky e
+    grid $ikeSALframe.ike_container.ike_ah_combo -column 1 -row 5 -pady 5 -padx 5
+    $ikeSALframe.ike_container.ike_ah_combo configure -values [list md5 sha1 sha256 sha384 sha512]
+
+    ttk::label $ikeSALframe.ike_container.ike_modp -text "IKE modulo prime groups"
+    ttk::combobox $ikeSALframe.ike_container.ike_modp_combo -width 15 -textvariable ike_modp -state readonly
+    grid $ikeSALframe.ike_container.ike_modp -column 0 -row 6 -pady 5 -padx 5 -sticky e
+    grid $ikeSALframe.ike_container.ike_modp_combo -column 1 -row 6 -pady 5 -padx 5
+    $ikeSALframe.ike_container.ike_modp_combo configure -values [list modp768 modp1024 modp1536 modp2048 modp3072 modp4096 modp6144 modp8192]
+
+    ttk::button $ikeSALframe.advance_button_ike -width 20 -text "Advanced options" -command "showIKEAdvancedOptions $node $ikeSALframe"
+    grid $ikeSALframe.advance_button_ike -column 0 -row 0 -padx 180 -pady 5
+
+    # Buttons container
+    ttk::frame $mainFrame.buttons_container
+    grid $mainFrame.buttons_container -column 0 -row 3 -columnspan 2
+    ttk::button $mainFrame.buttons_container.apply -text "$indicator"
+    grid $mainFrame.buttons_container.apply -column 0 -row 0 -padx 5 -pady 5
+    ttk::button $mainFrame.buttons_container.cancel -text "Cancel" -command {destroy .d}
+    grid $mainFrame.buttons_container.cancel -column 1 -row 0 -padx 5 -pady 5
+
+    if { [ winfo exists .d ] } {
+	bind $connParamsLframe.local_ip_entry <<ComboboxSelected>> \
+	    "updateLocalSubnetCombobox $connParamsLframe; \
+	    updatePeerCombobox $connParamsLframe"
+	bind $connParamsLframe.local_sub_entry <<ComboboxSelected>> \
+	    "updatePeerSubnetCombobox $connParamsLframe"
+	bind $connParamsLframe.peer_name_entry <<ComboboxSelected>> \
+	    "updatePeerCombobox $connParamsLframe"
+	bind $connParamsLframe.peer_ip_entry <<ComboboxSelected>> \
+	    "updatePeerSubnetCombobox $connParamsLframe"
+    }
+
+    #valter - ovdje dodati double click event - vidi initGUI ili ifctree
+}
+
+# XXX
+proc updatePeerCombobox { connParamsLframe } {
+    global peers_name local_ip_address local_subnet peers_ip peers_subnet
+    set peers_node [lindex $peers_name 2]
+
+    set peerIPs [getIPAddressForPeer $peers_node $local_ip_address]
+    $connParamsLframe.peer_ip_entry configure -values $peerIPs
+    if { [lsearch $peerIPs $peers_ip] == -1 } {
+	set peers_ip [lindex $peerIPs 0]
+    }
+
+    set peersSubIPs [getIPAddressForPeer $peers_node $local_subnet]
+    set peersSubs [getSubnetsFromIPs $peersSubIPs]
+    $connParamsLframe.peer_sub_entry configure -values $peersSubs
+    updatePeerSubnetCombobox $connParamsLframe
+}
+
+# XXX
+proc updateLocalSubnetCombobox { connParamsLframe } {
+    global local_ip_address local_subnet
+
+    set IPs [$connParamsLframe.local_ip_entry cget -values]
+
+    set idx [lsearch -exact $IPs $local_ip_address ]
+    set IPs [lreplace $IPs $idx $idx]
+    set subnets [getSubnetsFromIPs $IPs]
+
+    if { $subnets != "" } {
+	$connParamsLframe.local_sub_entry configure -values $subnets
+	set local_subnet [lindex $subnets 0]
+	updatePeerSubnetCombobox $connParamsLframe
+    }
+}
+
+# XXX
+proc updatePeerSubnetCombobox { connParamsLframe } {
+    global local_ip_address local_subnet peers_name peers_ip peers_subnet
+    set peers_node [lindex $peers_name 2]
+
+    set subnetVersion [::ip::version $local_subnet]
+
+    set peerIPs ""
+    set allPeerIPs [getAllIpAddresses $peers_node]
+    foreach ip $allPeerIPs {
+	if { $subnetVersion == [::ip::version $ip] && $peers_ip != $ip} {
+	    lappend peerIPs $ip
+	}
+    }
+    set subnets [getSubnetsFromIPs $peerIPs]
+    $connParamsLframe.peer_sub_entry configure -values $subnets
+    set peers_subnet [lindex $subnets 0]
+}
+
+#****f* nodecfgGUI.tcl/setDefaultsForIPsec
+# NAME
+#   setDefaultsForIPsec -- populates input fields in IPsec GUI with defaults
+# SYNOPSIS
+#   setDefaultsForIPsec $node
+# FUNCTION
+#   When adding new IPsec connection, populates input fields with default values for IPsec configuration
+# INPUTS
+#   node - node id
+#****
+proc setDefaultsForIPsec { node connParamsLframe espOptionsLframe } {
+    global version connection_name instance_duration keying_duration negotiation_attempts
+    global conn_time keying_time how_long_time local_cert_dir secret_dir authby psk_key
+    global how_long_before ike_encr ike_auth ike_modp peers_ip peers_name peers_id start_connection
+    global peers_subnet local_cert_file local_name local_ip_address local_subnet type method esp_suits
+    global ah_suits modp_suits secret_file no_encryption
+
+    set connection_name "home"
+    set version ikev2
+    set authby cert
+    set instance_duration "1"
+    set conn_time hours
+    set keying_duration "3"
+    set keying_time hours
+    set negotiation_attempts "3"
+    set how_long_before "9"
+    set how_long_time minutes
+    set start_connection 0
+    set ike_encr "aes128"
+    set ike_auth "sha1"
+    set ike_modp "modp2048"
+    set secret_file [getNodeIPsecItem $node "local_key_file"]
+    set peers_id ""
+    set psk_key ""
+    set no_encryption "null"
+    set local_cert_dir "/usr/local/etc/ipsec.d/certs"
+    set secret_dir "/usr/local/etc/ipsec.d/private"
+    $espOptionsLframe.esp_container.null_encryption configure -state readonly
+
+    set local_cert_file [getNodeIPsecItem $node "local_cert_file"]
+    set local_name [getNodeName $node]
+
+    set nodes [getListOfOtherNodes $node]
+    $connParamsLframe.peer_name_entry configure -values $nodes
+
+    set localIPs [getAllIpAddresses $node]
+    $connParamsLframe.local_ip_entry configure -values $localIPs
+    set local_ip_address [lindex $localIPs 0]
+
+    set peerHasAddr 0
+    set peerHasIfc 0
+    foreach cnode $nodes {
+	set peers_name $cnode
+	set peers_node [lindex $peers_name 2]
+
+	if { $peers_name != ""} {
+	    set peerHasIfc 1
+	    set peerIPs [getIPAddressForPeer $peers_node $local_ip_address]
+	    if { [llength $peerIPs] != 0 } {
+		$connParamsLframe.peer_ip_entry configure -values $peerIPs
+		set peers_ip [lindex $peerIPs 0]
+		set peerHasAddr 1
+		break
+	    } else {
+		set peerHasAddr 0
+		continue
+	    }
+	} else {
+	    set peerHasIfc 0
+	}
+    }
+
+    if { ! $peerHasIfc } {
+	tk_messageBox -message "Peers do not have any interfaces!" -title "Error" -icon error -type ok
+	destroy .d
+	return
+    }
+
+    if { ! $peerHasAddr } {
+	tk_messageBox -message "Peers do not have any IP addresses!" -title "Error" -icon error -type ok
+	destroy .d
+	return
+    }
+
+    updateLocalSubnetCombobox $connParamsLframe 
+    updatePeerCombobox $connParamsLframe 
+
+    set type tunnel
+    set method esp
+    set esp_suits aes128
+    set ah_suits sha1
+    set modp_suits modp2048
+}
+
+#****f* nodecfgGUI.tcl/populateValuesForUpdate
+# NAME
+#   populateValuesForUpdate -- configure GUI - populates input fields in IPsec GUI with existing data
+# SYNOPSIS
+#   populateValuesForUpdate $node $tab
+# FUNCTION
+#   When modifying existing connection, populates input fields with data of selected IPsec connection
+# INPUTS
+#   tab - tab widget that represents IPsec connection part od node config GUI
+#   node - current node for which the procedure is invoked
+#****
+proc populateValuesForUpdate { node tab connParamsLframe espOptionsLframe } {
+    global version connection_name instance_duration keying_duration negotiation_attempts
+    global conn_time keying_time how_long_time authby psk_key local_cert_dir secret_dir
+    global how_long_before ike_encr ike_auth ike_modp peers_ip peers_name peers_id start_connection
+    global peers_subnet local_cert_file local_name local_ip_address local_subnet type method esp_suits
+    global ah_suits modp_suits secret_file no_encryption old_conn_name
+
+    set selected [$tab.tree focus]
+    if { $selected != "" } {
+	set connection_name $selected
+	set version "ikev2"
+
+	set local_cert_file [getNodeIPsecSetting $node "configuration" "conn $selected" "local_cert"]
+	set secret_file [getNodeIPsecSetting $node "configuration" "conn $selected" "local_key_file"]
+
+	set var_list { \
+	    {type "type" "tunnel" } \
+	    {local_ip_address "left" ""} \
+	    {local_subnet "leftsubnet" ""} \
+	    {peers_ip "right" ""} \
+	    {peers_subnet "rightsubnet" ""} \
+	    {peers_name "peersname" ""} \
+	    {peers_id "rightid" ""} \
+	    {psk_key "sharedkey" ""} \
+	    {local_name "leftid" ""} \
+	    {keying_duration "ikelifetime" "3h"} \
+	    {instance_duration "keylife" "1h"} \
+	    {how_long_before "rekeymargin" "9m"} \
+	    {negotiation_attempts "keyingtries" "3"} \
+	    {ike_from_cfg "ike" "aes128-sha1-modp2048"} \
+	    {esp_from_cfg "esp" "aes128-sha1-modp2048"} \
+	}
+
+	foreach var $var_list {
+	    set [lindex $var 0] [getNodeIPsecSetting $node "configuration" "conn $selected" [lindex $var 1]]
+	    if { [set [lindex $var 0]] == "" } {
+		set [lindex $var 0] [lindex $var 2]
+	    }
+	}
+
+	set timeList { \
+		{s "seconds"} {m "minutes"} \
+		{h "hours"} {d "days"}
+	}
+	foreach item $timeList {
+	    if { [string index $instance_duration end] == [lindex $item 0] } {
+		set conn_time [lindex $item 1]
+	    }
+	    if { [string index $keying_duration end] == [lindex $item 0] } {
+		set keying_time [lindex $item 1]
+	    }
+	    if { [string index $how_long_before end] == [lindex $item 0] } {
+		set how_long_time [lindex $item 1]
+	    }
+	}
+
+	foreach item { instance_duration keying_duration how_long_before } {
+	    set $item [string trimright [set $item] smhd]
+	}
+
+	foreach item { encr auth modp } {
+	    set ike_$item [getIkeParam $ike_from_cfg $item]
+	}
+
+	foreach item { esp ah modp } {
+	    set $item\_suits [getEspParam $esp_from_cfg $item]
+	}
+
+	if { $esp_suits == "null" } {
+	    set method ah
+	    showNullEncryption $espOptionsLframe
+	} else {
+	    set method esp
+	    showFullEncryption $espOptionsLframe
+	}
+
+	set auto [getNodeIPsecSetting $node "configuration" "conn $selected" "auto"]
+	if { $auto == "start" } {
+	    set start_connection 1
+	} else {
+	    set start_connection 0
+	}
+
+	set authby [getNodeIPsecSetting $node "configuration" "conn $selected" "authby"]
+	if { $authby == "secret" } {
+	    hideCertificates $connParamsLframe
+	} else {
+	    showCertificates $connParamsLframe
+	}
+
+	set nodes [getListOfOtherNodes $node]
+	$connParamsLframe.peer_name_entry configure -values $nodes
+
+	set local_ip_address [getNodeIPsecSetting $node "configuration" "conn $selected" "left"]
+	set localIPs [getAllIpAddresses $node]
+	$connParamsLframe.local_ip_entry configure -values $localIPs
+	foreach localIp $localIPs {
+	    if { $local_ip_address == [lindex [split $localIp /] 0]} {
+		set local_ip_address $localIp
+		break
+	    }
+	}
+
+	if { $peers_name != ""} {
+	    set peers_node [getNodeFromHostname $peers_name]
+	    set peers_name "$peers_name - $peers_node"
+	    set peerIPs [getIPAddressForPeer $peers_node $local_ip_address]
+	    $connParamsLframe.peer_ip_entry configure -values $peerIPs
+	    if { [llength $peerIPs] != 0 } {
+		set peers_ip [getNodeIPsecSetting $node "configuration" "conn $selected" "right"]
+		foreach peerIp $peerIPs {
+		    if { $peers_ip == [lindex [split $peerIp /] 0]} {
+			set peers_ip $peerIp
+			break
+		    }
+		}
+	    }
+	} else {
+	    tk_messageBox -message "Peer does not have any interfaces!" -title "Error" -icon error -type ok
+	    destroy .d
+	    return
+	}
+
+	updateLocalSubnetCombobox $connParamsLframe 
+	updatePeerCombobox $connParamsLframe 
+
+	set local_subnet [getNodeIPsecSetting $node "configuration" "conn $selected" "leftsubnet"]
+	set peers_subnet [getNodeIPsecSetting $node "configuration" "conn $selected" "rightsubnet"]
+
+	set local_cert_dir "/usr/local/etc/ipsec.d/certs"
+	set secret_dir "/usr/local/etc/ipsec.d/private"
+
+	set old_conn_name $connection_name
+    } else {
+	tk_messageBox -message "Please select item to modify!" -title "Error" -icon error -type ok
+	destroy .d
+	return
+    }
+}
+
+# XXX
+proc getEspParam { espCfg param } {
+    switch -- $param {
+        esp {
+            return [lindex [split $espCfg -] 0]
+        }
+        ah {
+            return [lindex [split $espCfg -] 1]
+        }
+        modp {
+            return [lindex [split $espCfg -] 2]
+        }
+    }
+}
+
+# XXX
+proc getIkeParam { ikeCfg param } {
+    switch -- $param {
+        encr {
+            return [lindex [split $ikeCfg -] 0]
+        }
+        auth {
+            return [lindex [split $ikeCfg -] 1]
+        }
+        modp {
+            return [lindex [split $ikeCfg -] 2]
+        }
+    }
+}
+
+#****f* nodecfgGUI.tcl/showCertificates
+# NAME
+#   showCertificates -- show certificates
+# SYNOPSIS
+#   showCertificates
+# FUNCTION
+#   If user selects certificate authentication, this function displays
+#   corresponding fields in the IPsec connection frame.
+#****
+proc showCertificates { lFrame } {
+    grid forget $lFrame.shared_key
+    grid forget $lFrame.shared_key_entry
+
+    grid $lFrame.local_id -column 0 -row 1 -pady 5 -padx 5 -sticky e
+    grid $lFrame.local_id_entry -column 1 -row 1 -pady 5 -padx 5 -sticky w
+
+    grid $lFrame.local_ip -column 0 -row 2 -pady 5 -padx 5 -sticky e
+    grid $lFrame.local_ip_entry -column 1 -row 2 -pady 5 -padx 5 -sticky w
+
+    grid $lFrame.local_sub -column 0 -row 3 -pady 5 -padx 5 -sticky e
+    grid $lFrame.local_sub_entry -column 1 -row 3 -pady 5 -padx 5 -sticky w
+
+    grid $lFrame.peer_name -column 0 -row 4 -pady 5 -padx 5 -sticky e
+    grid $lFrame.peer_id -column 1 -row 4 -pady 5 -padx 5 -sticky w
+
+    grid $lFrame.peer_ip -column 0 -row 5 -pady 5 -padx 5 -sticky e
+    grid $lFrame.peer_name_entry -column 1 -row 5 -pady 5 -padx 5 -sticky w
+    grid $lFrame.peer_ip_entry -column 2 -row 5 -pady 5 -padx 2 -sticky w
+
+    grid $lFrame.peer_sub -column 0 -row 6 -pady 5 -padx 5 -sticky e
+    grid $lFrame.peer_sub_entry -column 1 -row 6 -pady 5 -padx 5 -sticky w
+
+    grid $lFrame.local_cert_container -column 0 -row 7 -columnspan 3 -sticky w
+
+    grid $lFrame.private_file_container -column 0 -row 8 -columnspan 3 -sticky w
+
+    grid $lFrame.check_button -column 0 -row 9 -pady 5 -padx 5 -columnspan 2
+}
+
+#****f* nodecfgGUI.tcl/hideCertificates
+# NAME
+#   hideCertificates -- hide certificates
+# SYNOPSIS
+#   hideCertificates
+# FUNCTION
+#   If user selects pre shared key authentication, this function hides
+#   corresponding fields in the IPsec connection frame.
+#****
+proc hideCertificates { lFrame } {
+    set var_list { local_id local_id_entry peer_name peer_id local_cert_container private_file_container }
+
+    foreach var $var_list {
+	grid forget $lFrame.$var
+    }
+
+    grid $lFrame.local_ip -column 0 -row 1 -pady 5 -padx 5 -sticky e
+    grid $lFrame.local_ip_entry -column 1 -row 1 -pady 5 -padx 5 -sticky w
+
+    grid $lFrame.local_sub -column 0 -row 2 -pady 5 -padx 5 -sticky e
+    grid $lFrame.local_sub_entry -column 1 -row 2 -pady 5 -padx 5 -sticky w
+
+    grid $lFrame.peer_ip -column 0 -row 3 -pady 5 -padx 5 -sticky e
+    grid $lFrame.peer_name_entry -column 1 -row 3 -pady 5 -padx 5 -sticky w
+    grid $lFrame.peer_ip_entry -column 2 -row 3 -pady 5 -padx 5 -sticky w
+
+    grid $lFrame.peer_sub -column 0 -row 4 -pady 5 -padx 5 -sticky e
+    grid $lFrame.peer_sub_entry -column 1 -row 4 -pady 5 -padx 5 -sticky w
+
+    grid $lFrame.shared_key -column 0 -row 5 -pady 5 -padx 5 -sticky e
+    grid $lFrame.shared_key_entry -column 1 -row 5 -pady 5 -padx 5 -sticky w
+
+    grid $lFrame.check_button -column 0 -row 6 -pady 5 -padx 5 -columnspan 2
+}
+
+#****f* nodecfgGUI.tcl/chooseFile
+# NAME
+#   chooseFile -- opens modal window for selecting file
+# SYNOPSIS
+#   chooseFile $mode
+# FUNCTION
+#   Opens modal window for selecting local certificate or key file
+# INPUTS
+#   mode - indicates wheter to open local certificate or local key file
+#****
+proc chooseFile { mode } {
+    global local_cert_file secret_file
+    if { $mode == "cert" } {
+	set local_cert_file [tk_getOpenFile]
+    } else {
+	set secret_file [tk_getOpenFile]
+    }
+}
+
+#****f* nodecfgGUI.tcl/showNullEncryption
+# NAME
+#   showNullEncryption -- displays field with null value
+# SYNOPSIS
+#   showNullEncryption
+# FUNCTION
+#   Displays special field with null value when ESP Authentication only is selected
+# INPUTS
+#
+#****
+proc showNullEncryption { lFrame } {
+    global esp_suits no_encryption
+    if { $esp_suits != "null" } {
+	set esp_suits "null"
+    }
+    set no_encryption "null"
+    grid forget $lFrame.esp_container.esp_combo
+
+    grid $lFrame.esp_container.null_encryption -column 1 -row 0 -pady 5 -padx 5 -sticky w
+}
+
+#****f* nodecfgGUI.tcl/showFullEncryption
+# NAME
+#   showFullEncryption -- displays dropdown list for selecting encryption algorithm
+# SYNOPSIS
+#   showFullEncryption
+# FUNCTION
+#   Displays dropdown list for selecting encryption algorithm when Full ESP is selected
+# INPUTS
+#
+#****
+proc showFullEncryption { lFrame } {
+    global esp_suits
+    if { $esp_suits == "null" } {
+	set esp_suits "aes128"
+    }
+    grid forget $lFrame.esp_container.null_encryption
+
+    grid $lFrame.esp_container.esp_combo -column 1 -row 0 -pady 5 -padx 5
+}
+
+#****f* nodecfgGUI.tcl/hideESPAdvancedOptions
+# NAME
+#   hideESPAdvancedOptions -- hides advanced options in ESP label frame
+# SYNOPSIS
+#   hideESPAdvancedOptions $node
+# FUNCTION
+#   Hides advanced options in ESP options label frame in IPsec GUI
+# INPUTS
+#   node - node id
+#****
+proc hideESPAdvancedOptions { node lFrame } {
+    grid forget $lFrame.esp_container
+    $lFrame.advance_button_esp configure -text "Advanced options"
+    $lFrame.advance_button_esp configure -command "showESPAdvancedOptions $node $lFrame"
+}
+
+#****f* nodecfgGUI.tcl/showESPAdvancedOptions
+# NAME
+#   showESPAdvancedOptions -- displays advanced options in ESP label frame
+# SYNOPSIS
+#   showESPAdvancedOptions $node
+# FUNCTION
+#   Displays advanced options in ESP options label frame in IPsec GUI
+# INPUTS
+#   node - node id
+#****
+proc showESPAdvancedOptions { node lFrame } {
+    grid $lFrame.esp_container -column 0 -row 3
+    $lFrame.advance_button_esp configure -text "Hide advanced options"
+    $lFrame.advance_button_esp configure -command "hideESPAdvancedOptions $node $lFrame"
+}
+
+#****f* nodecfgGUI.tcl/hideIKEAdvancedOptions
+# NAME
+#   hideIKEAdvancedOptions -- hide IKE advanced options
+# SYNOPSIS
+#   hideIKEAdvancedOptions $node
+# FUNCTION
+#   Hides advanced options in IKEv2 Establishment label frame in IPsec GUI.
+# INPUTS
+#   node - node id
+#   lFrame - labelframe to hide
+#****
+proc hideIKEAdvancedOptions { node lFrame } {
+    grid forget $lFrame.ike_container
+    $lFrame.advance_button_ike configure -text "Advanced options"
+    $lFrame.advance_button_ike configure -command "showIKEAdvancedOptions $node $lFrame"
+}
+
+#****f* nodecfgGUI.tcl/showIKEAdvancedOptions
+# NAME
+#   showIKEAdvancedOptions -- show IKE advanced options
+# SYNOPSIS
+#   showIKEAdvancedOptions $node
+# FUNCTION
+#   Displays advanced options in IKEv2 Establishment label frame in IPsec GUI.
+# INPUTS
+#   node - node id
+#   lFrame - labelframe to show
+#****
+proc showIKEAdvancedOptions { node lFrame } {
+    grid $lFrame.ike_container -column 0 -row 1 -padx 0 -pady { 5 10 }
+    $lFrame.advance_button_ike configure -text "Hide advanced options"
+    $lFrame.advance_button_ike configure -command "hideIKEAdvancedOptions $node $lFrame"
 }

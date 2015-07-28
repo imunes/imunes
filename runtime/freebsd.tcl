@@ -623,7 +623,7 @@ proc execResetLinkJitter { eid link } {
 # SYNOPSIS
 #   l3node.nghook $eid $node $ifc
 # FUNCTION
-#   Returns the netgraph node name and the hook name for the given experiment
+#   Returns the netgraph node name and the hook name for a given experiment
 #   id, node id, and interface name.
 # INPUTS
 #   * eid -- experiment id
@@ -635,7 +635,8 @@ proc execResetLinkJitter { eid link } {
 proc l3node.nghook { eid node ifc } {
     set ifnum [string range $ifc 3 end]
     set node_id "$eid\.$node"
-    switch -exact [string range $ifc 0 2] {
+    switch -exact [string trim $ifc 0123456789] {
+	wlan -
 	eth {
 	    return [list $ifc@$node_id ether]
 	}
@@ -1576,6 +1577,15 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 
     set cmds ""
 
+    # Special-case WLAN nodes: no need for ng_pipe there
+    if {[nodeType $lnode1] == "wlan" || [nodeType $lnode2] == "wlan"} {
+	catch {exec jexec $eid ngctl connect $ngpeer1: $ngpeer2: $nghook1 $nghook2} err
+	if { $debug && $err != "" } {
+	    puts $err
+	}
+	return
+    }
+
     set cmds "$cmds\n mkpeer $ngpeer1: pipe $nghook1 upper"
     set cmds "$cmds\n name $ngpeer1:$nghook1 $lname"
     set cmds "$cmds\n connect $lname: $ngpeer2: lower $nghook2"
@@ -1724,6 +1734,7 @@ proc destroyVirtNodeIfcs { eid vimages } {
 	displayBatchProgress $i [ llength $vimages ]
     }
     pipesClose
+    statline ""
 }
 
 #****f* freebsd.tcl/removeExperimentContainer
@@ -1950,4 +1961,50 @@ proc getIPv6RouteCmd { statrte } {
 }
 
 proc checkSysPrerequisites {} {
+}
+
+#****f* freebsd.tcl/startIPsecOnNode
+# NAME
+#   startIPsecOnNode -- start ipsec on node
+# SYNOPSIS
+#   startIPsecOnNode $eid $node
+# FUNCTION
+#   Starts strongswan ipsec daemons on the given node.
+#****
+proc startIPsecOnNode { eid node } {
+    catch "exec jexec $eid\.$node ipsec start"
+}
+
+proc ipsecFilesToNode { eid node local_cert ipsecret_file } {
+    set node_id "$eid\.$node"
+    set hostname [getNodeName $node]
+
+    if { $local_cert != "" } {
+	set trimmed_local_cert [lindex [split $local_cert /] end]
+	catch {exec hcp $local_cert $hostname@$eid:/usr/local/etc/ipsec.d/certs/$trimmed_local_cert}
+    }
+
+    if { $ipsecret_file != "" } {
+	set fileId2 [open /tmp/imunes_$node_id\_ipsec.secrets w]
+	puts $fileId2 "# /etc/ipsec.secrets - strongSwan IPsec secrets file\n"
+	set trimmed_local_key [lindex [split $ipsecret_file /] end]
+	catch {exec hcp $ipsecret_file $hostname@$eid:/usr/local/etc/ipsec.d/private/$trimmed_local_key}
+	puts $fileId2 ": RSA $trimmed_local_key"
+	close $fileId2
+    }
+
+    catch {exec hcp /tmp/imunes_$node_id\_ipsec.conf $hostname@$eid:/usr/local/etc/ipsec.conf}
+    catch {exec hcp /tmp/imunes_$node_id\_ipsec.secrets $hostname@$eid:/usr/local/etc/ipsec.secrets}
+}
+
+proc sshServiceStartCmds {} {
+    return "service sshd onestart"
+}
+
+proc sshServiceStopCmds {} {
+    return "service sshd onestop"
+}
+
+proc inetdServiceRestartCmds {} {
+    return "service inetd onerestart"
 }

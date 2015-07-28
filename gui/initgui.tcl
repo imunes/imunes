@@ -871,13 +871,48 @@ menu .menubar.experiment -tearoff 0
 menu .menubar.help -tearoff 0
 .menubar.help add command -label "About" -command {
     toplevel .about
-    text .about.text -bg white -height 40 -wrap word -setgrid 1 \
-	-highlightthickness 0 -pady 2 -padx 3
-    pack .about.text -expand yes -fill both
-    .about.text insert 1.0 "$copyright"
-    after 100 {
-	grab .about
-    }
+    wm title .about "About IMUNES"
+    wm minsize .about 454 255
+
+    set mainFrame .about.main
+
+    ttk::frame $mainFrame -padding 4
+    grid $mainFrame -column 0 -row 0 -sticky n
+    grid columnconfigure .about 0 -weight 1
+    grid rowconfigure .about 0 -weight 1
+
+    set image [image create photo -file $ROOTDIR/$LIBDIR/icons/imunes_logo128.png]
+    ttk::label $mainFrame.logoLabel
+    $mainFrame.logoLabel configure -image $image
+
+    ttk::label $mainFrame.imunesLabel -text "IMUNES" -font "-size 12 -weight bold"
+    ttk::label $mainFrame.imunesVersion -text $imunesVersion -font "-size 10 -weight bold"
+    ttk::label $mainFrame.lastChanged -text $imunesChangedDate
+    ttk::label $mainFrame.imunesDesc -text "Integrated Multiprotocol Network Emulator/Simulator."
+    ttk::label $mainFrame.homepage -text "http://www.imunes.net/" -font "-underline 1 -size 10"
+    ttk::label $mainFrame.github -text "http://github.com/imunes/imunes" -font "-underline 1 -size 10"
+    ttk::label $mainFrame.copyright -text "Copyright (c) University of Zagreb 2004 - $imunesLastYear" -font "-size 8"
+
+    grid $mainFrame.logoLabel -column 0 -row 0 -pady {10 5} -padx 5
+    grid $mainFrame.imunesLabel -column 0 -row 1 -pady 5 -padx 5
+    grid $mainFrame.imunesVersion -column 0 -row 2 -pady {5 1} -padx 5
+    grid $mainFrame.lastChanged -column 0 -row 3 -pady {1 5} -padx 5
+    grid $mainFrame.imunesDesc -column 0 -row 4 -pady {5 10} -padx 5
+    grid $mainFrame.homepage -column 0 -row 5 -pady 1 -padx 5
+    grid $mainFrame.github -column 0 -row 6 -pady 1 -padx 5
+    grid $mainFrame.copyright -column 0 -row 7 -pady {20 10} -padx 5
+
+    bind $mainFrame.homepage <1> { launchBrowser [%W cget -text] }
+    bind $mainFrame.homepage <Enter> "%W configure -foreground blue; \
+	$mainFrame config -cursor hand1"
+    bind $mainFrame.homepage <Leave> "%W configure -foreground black; \
+	$mainFrame config -cursor arrow"
+
+    bind $mainFrame.github <1> { launchBrowser [%W cget -text] }
+    bind $mainFrame.github <Enter> "%W configure -foreground blue; \
+	$mainFrame config -cursor hand1"
+    bind $mainFrame.github <Leave> "%W configure -foreground black; \
+	$mainFrame config -cursor arrow"
 }
 
 
@@ -1095,7 +1130,6 @@ bind $c <Control-Button-1> "button1 $c %x %y ctrl"
 bind $c <B1-Motion> "button1-motion $c %x %y"
 bind $c <B1-ButtonRelease> "button1-release $c %x %y"
 bind . <Delete> deleteSelection
-bind .menubar <Destroy> {setOperMode edit}
 
 # Scrolling and panning support
 bind $c <2> "$c scan mark %x %y"

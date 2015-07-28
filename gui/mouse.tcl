@@ -45,6 +45,10 @@ proc removeGUILink { link atomic } {
     set nodes [linkPeers $link]
     set node1 [lindex $nodes 0]
     set node2 [lindex $nodes 1]
+    if {[nodeType $node1] == "wlan" || [nodeType $node2] == "wlan"} {
+	removeLink $link
+	return
+    }
     if { [nodeType $node1] == "pseudo" } {
 	removeLink [getLinkMirror $link]
 	removeLink $link
@@ -82,8 +86,12 @@ proc removeGUINode { node } {
     set type [nodeType $node]
     foreach ifc [ifcList $node] {
 	set peer [peerByIfc $node $ifc]
-	set link [lindex [.panwin.f1.c gettags "link && $node && $peer"] 1]
+	set link [linkByPeers $node $peer]
+	set mirror [getLinkMirror $link]
 	removeGUILink $link non-atomic
+	if {$mirror != ""} {
+	    removeGUILink $mirror non-atomic
+	}
     }
     if { $type != "pseudo" } {
 	removeNode $node
@@ -1707,9 +1715,15 @@ proc anyLeave {c} {
 #****
 proc deleteSelection {} {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
+    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global changed
     global background 
     global viewid
+
+    if { $oper_mode == "exec" } {
+	return
+    }
+
     catch {unset viewid}
     .panwin.f1.c config -cursor watch; update
 

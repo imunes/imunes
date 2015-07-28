@@ -1,4 +1,4 @@
-USEGNU=gmake $*
+USEGNU=gmake --no-print-directory $*
 info:
 	@$(USEGNU)
 .DEFAULT:

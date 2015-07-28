@@ -28,7 +28,6 @@
 
 # $Id: imunes.tcl 149 2015-03-27 15:50:14Z valter $
 
-
 #****h* imunes/imunes.tcl
 # NAME
 #    imunes.tcl
@@ -44,6 +43,11 @@
 #    When starting the program with defined filename, configuration for
 #    file "filename" is loaded to imunes.
 #****
+set baseTitle IMUNES
+set version "1.1"
+set date "2015-06-30"
+set additions ""
+
 package require cmdline
 package require ip
 package require platform
@@ -146,6 +150,44 @@ if { $ROOTDIR == "." } {
     set BINDIR "bin"
 }
 
+set imunesVersion "Unknown"
+set imunesCommit ""
+set imunesChangedDate ""
+set imunesAdditions ""
+
+set verfile [open "$ROOTDIR/$LIBDIR/VERSION" r]
+set data [read $verfile]
+foreach line [split $data "\n"] {
+    if {[string match "VERSION:*" $line]} {
+	set imunesVersion [string range $line [expr [string first ":" $line] + 2] end]
+    }
+    if {[string match "Commit:*" $line]} {
+	set imunesCommit [string range $line [expr [string first ":" $line] + 2] end]
+    }
+    if {[string match "Last changed:*" $line]} {
+	set imunesChangedDate [string range $line [expr [string first ":" $line] + 2] end]
+    }
+}
+
+if { [string match "*Format*" $imunesCommit] } {
+    set imunesChangedDate ""
+    set imunesLastYear ""
+} else {
+    set imunesVersion "$imunesVersion (git: $imunesCommit)"
+    set imunesLastYear [lindex [split $imunesChangedDate "-"] 0]
+    set imunesChangedDate "Last changed: $imunesChangedDate"
+}
+
+if { $params(v) || $params(version)} {
+    puts "IMUNES $imunesVersion $imunesAdditions"
+    if { $imunesChangedDate != "" } {
+	puts "$imunesChangedDate"
+    }
+    exit
+}
+
+set os [platform::identify]
+
 # Runtime libriaries
 foreach file [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
     source $file
@@ -158,11 +200,10 @@ set l3nodes "genericrouter quagga xorp static click_l3 host pc"
 # Set default supported router models
 set supp_router_models "xorp quagga static"
 
-set os [platform::identify]
 if { [string match -nocase "*linux*" $os] == 1 } {
     # Limit default nodes on linux
     set l2nodes "lanswitch rj45"
-    set l3nodes "genericrouter quagga static pc"
+    set l3nodes "genericrouter quagga static pc host"
     set supp_router_models "quagga static"
     source $ROOTDIR/$LIBDIR/runtime/linux.tcl
 }
@@ -200,6 +241,11 @@ foreach file $l3nodes {
 # additional nodes
 source "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
 source "$ROOTDIR/$LIBDIR/nodes/annotations.tcl"
+
+if { $params(v) || $params(version)} {
+    puts "IMUNES version $version$additions ($date)"
+    exit
+}
 
 #
 # Global variables are initialized here

@@ -115,16 +115,12 @@ set service ssh
 regHooks $service {NODECONF NODESTOP}
 
 proc $service.start { node } {
-    lappend cmds "service sshd onestart"
-    
-    set output [execCmdsNode $node $cmds]
+    set output [execCmdsNode $node [sshServiceStartCmds]]
     writeDataToNodeFile $node "ssh_service.log" $output
 }
 
 proc $service.stop { node } {
-    lappend cmds "service sshd onestop"
-    
-    set output [execCmdsNode $node $cmds]
+    set output [execCmdsNode $node [sshServiceStopCmds]]
     writeDataToNodeFile $node "ssh_service.log" $output
 }
 
@@ -141,12 +137,19 @@ proc $service.restart { node } {
 #
 set service tcpdump
 # register for hooks and globally
-regHooks $service {NODEINST NODESTOP}
+if { [string match -nocase "*linux*" $os] == 1 } {
+    regHooks $service {LINKINST NODESTOP}
+} else {
+    regHooks $service {NODEINST NODESTOP}
+}
 
 proc $service.start { node } {
     foreach ifc [allIfcList $node] {
+	if { [string match "lo*" $ifc] } {
+	    continue
+	}
 	lappend cmds "ifconfig $ifc up"
-	lappend cmds "nohup tcpdump -Uni $ifc -w /tmp/$ifc.pcap > /dev/null &"
+	lappend cmds "nohup tcpdump -Uni $ifc -w /tmp/$ifc.pcap > /dev/null 2> /dev/null &"
     }
     
     set output [execCmdsNode $node $cmds]
@@ -164,6 +167,9 @@ proc $service.stop { node } {
     set ext_dir /tmp/$eid/
     file mkdir $ext_dir
     foreach ifc [allIfcList $node] {
+	if { [string match "lo*" $ifc] } {
+	    continue
+	}
 	moveFileFromNode $node /tmp/$ifc.pcap $ext_dir/$node\_$ifc.pcap
     }
 }
@@ -180,7 +186,7 @@ proc $service.restart { node } {
 #
 proc inetd.start { service node } {
     lappend cmds "sed -i -e \"s/#$service/$service/\" /etc/inetd.conf"
-    lappend cmds "service inetd onerestart"
+    lappend cmds [inetdServiceRestartCmds]
 
     set output [execCmdsNode $node $cmds]
     writeDataToNodeFile $node "$service\_start.log" $output
@@ -188,7 +194,7 @@ proc inetd.start { service node } {
 
 proc inetd.stop { service node } {
     lappend cmds "sed -i -e \"s/$service/#$service/\" /etc/inetd.conf"
-    lappend cmds "service inetd onerestart"
+    lappend cmds [inetdServiceRestartCmds]
 
     set output [execCmdsNode $node $cmds]
     writeDataToNodeFile $node "$service\_stop.log" $output

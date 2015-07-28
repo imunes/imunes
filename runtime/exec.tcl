@@ -95,49 +95,43 @@ proc setOperMode { mode } {
 	return
     }
 
-    if { !$cfgDeployed } {
-	    if { $mode == "exec" } { ;# let's try something, sockets should be opened
-		set os [platform::identify]
-		set err [checkSysPrerequisites]
-		if { $err != "" } {
-		    after idle {.dialog1.msg configure -wraplength 4i}
-		    tk_dialog .dialog1 "IMUNES error" \
-			"$err" \
-			info 0 Dismiss
-		    return
-		}
-		if { [string match -nocase "*linux*" $os] != 1 &&
-		    [string match -nocase "*freebsd*" $os] != 1 } {
-		    after idle {.dialog1.msg configure -wraplength 4i}
-		    tk_dialog .dialog1 "IMUNES error" \
-			"Error: To execute experiment, run IMUNES on FreeBSD or Linux." \
-		    info 0 Dismiss
-		    return
-		}
-		catch {exec id -u} uid
-		if { $uid != "0" } {
-		    after idle {.dialog1.msg configure -wraplength 4i}
-		    tk_dialog .dialog1 "IMUNES error" \
-			"Error: To execute experiment, run IMUNES with root permissions." \
-		    info 0 Dismiss
-		    return
-		}
-		if { $editor_only } { ;# if set in exec or open_exec_sockets
-		    .menubar.experiment entryconfigure "Execute" -state disabled
-		    return
-		}
-	    }
-
-	    if { [allSnapshotsAvailable] == 0 } {
-		return
-	    }
-
-	    # Verify that links to external interfaces are properly configured
-	    if { $mode == "exec" } {
-		if { [checkExternalInterfaces] } {
-		    return
-		}
-	    }
+    if { !$cfgDeployed && $mode == "exec" } {
+	set os [platform::identify]
+	set err [checkSysPrerequisites]
+	if { $err != "" } {
+	    after idle {.dialog1.msg configure -wraplength 4i}
+	    tk_dialog .dialog1 "IMUNES error" \
+		"$err" \
+		info 0 Dismiss
+	    return
+	}
+	if { [string match -nocase "*linux*" $os] != 1 &&
+	    [string match -nocase "*freebsd*" $os] != 1 } {
+	    after idle {.dialog1.msg configure -wraplength 4i}
+	    tk_dialog .dialog1 "IMUNES error" \
+		"Error: To execute experiment, run IMUNES on FreeBSD or Linux." \
+	    info 0 Dismiss
+	    return
+	}
+	catch {exec id -u} uid
+	if { $uid != "0" } {
+	    after idle {.dialog1.msg configure -wraplength 4i}
+	    tk_dialog .dialog1 "IMUNES error" \
+		"Error: To execute experiment, run IMUNES with root permissions." \
+	    info 0 Dismiss
+	    return
+	}
+	if { $editor_only } { ;# if set in exec or open_exec_sockets
+	    .menubar.experiment entryconfigure "Execute" -state disabled
+	    return
+	}
+	if { [allSnapshotsAvailable] == 0 } {
+	    return
+	}
+	# Verify that links to external interfaces are properly configured
+	if { [checkExternalInterfaces] } {
+	    return
+	}
     }
 
     foreach b { link link_layer net_layer } {
@@ -178,9 +172,7 @@ proc setOperMode { mode } {
 	    } else {
 		vimageCleanup $eid
 	    }
-	    # XXX - killProcess regex
 	    killExtProcess "socat.*$eid"
-	    # XXX
 	    set cfgDeployed false
 	    deleteExperimentFiles $eid
 	    .menubar.tools entryconfigure "Auto rearrange all" -state normal
@@ -259,10 +251,7 @@ proc fetchNodeConfiguration {} {
     set ip4Set 0
 
     foreach node [selectedNodes] {
-	# XXX - proc getRunningNodeIfcList
 	set lines [getRunningNodeIfcList $node]
-	# XXX
-	
 	# XXX - here we parse ifconfig output, maybe require virtual nodes on
 	# linux to have ifconfig, or create different parsing procedures for ip
 	# and ifconfig that will have the same output
@@ -322,9 +311,7 @@ proc checkExternalInterfaces {} {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     global execMode
 
-    # XXX - proc getHostIfcList
     set extifcs [getHostIfcList]
-    # XXX
 
     foreach node $node_list {
 	if { [nodeType $node] == "rj45" } {
@@ -343,11 +330,9 @@ proc checkExternalInterfaces {} {
 		return 1
 	    }
 	    if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
-		# XXX - proc getHostIfcVlanExists
 		if { [getHostIfcVlanExists $node $name] } {
 		    return 1
 		}
-		# XXX
 	    }
 	}
     }
@@ -367,9 +352,11 @@ proc checkExternalInterfaces {} {
 proc resumeSelectedExperiment { exp } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global runtimeDir
-    set curr_eid $eid
-    if {$curr_eid == $exp} {
-	return
+    if {[info exists eid]} {
+	set curr_eid $eid
+	if {$curr_eid == $exp} {
+	    return
+	}
     }
     newProject
 
@@ -377,7 +364,7 @@ proc resumeSelectedExperiment { exp } {
     upvar 0 ::cf::[set ::curcfg]::cfgDeployed cfgDeployed
     upvar 0 ::cf::[set ::curcfg]::eid eid
     upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-    
+
     set currentFile [getExperimentConfigurationFromFile $exp]
     openFile
 
@@ -404,13 +391,9 @@ proc createExperimentFiles { eid } {
     set basedir "$runtimeDir/$eid"
     file mkdir $basedir
     
-    # XXX - writeDataToFile path data
     writeDataToFile $basedir/timestamp [clock format [clock seconds]]
-    # XXX
     
-    # XXX - proc dumpNgnodesToFile - with writeDataToFile
     dumpNgnodesToFile $basedir/ngnodemap
-    # XXX
 
     if { $execMode == "interactive" } {
 	if { $currentFile != "" } {
@@ -533,7 +516,7 @@ proc fetchExperimentFolders {} {
     set exp_list ""
     set exp_files [glob -nocomplain -directory $runtimeDir -type d *]
     if {$exp_files != ""} {
-	foreach file $exp_files {          
+	foreach file $exp_files {
 	    lappend exp_list [file tail $file]
 	}
     }
@@ -555,7 +538,7 @@ proc getResumableExperiments {} {
     set exp_folders [fetchExperimentFolders]
     foreach exp [fetchRunningExperiments] {
 	if {$exp in $exp_folders} {
-	    lappend exp_list $exp 	
+	    lappend exp_list $exp
 	}
     }
     return $exp_list
@@ -602,9 +585,7 @@ proc getExperimentNameFromFile { eid } {
     set pathToFile "$runtimeDir/$eid/name"
     set name ""
     if {[file exists $pathToFile]} {
-	# XXX - readDataFromFile path
 	set name [readDataFromFile $pathToFile]
-	# XXX
     }
     return $name
 }
@@ -690,27 +671,11 @@ proc displayBatchProgress { prgs tot } {
 #   * node -- node id
 #****
 proc l3node.instantiate { eid node } {
-    #global vroot_unionfs vroot_linprocfs devfs_number
-
-    # XXX - prepareFilesystemForNode
     prepareFilesystemForNode $node
-    # XXX
-    
-    # XXX - createNodeContainer
     createNodeContainer $node
-    # XXX
-
-    # XXX - createNodePhysIfcs node
     createNodePhysIfcs $node
-    # XXX
-
-    # XXX - createNodeLogIfcs node
     createNodeLogIfcs $node
-    # XXX
-
-    # XXX - configureICMPoptions node
     configureICMPoptions $node
-    # XXX
 }
 
 #****f* exec.tcl/l3node.start
@@ -728,13 +693,8 @@ proc l3node.instantiate { eid node } {
 #   * node -- node id
 #****
 proc l3node.start { eid node } {
-    # XXX - startIfcsNode node
     startIfcsNode $node
-    # XXX
-
-    # XXX - runConfOnNode node
     runConfOnNode $node
-    # XXX
 }
 
 #****f* exec.tcl/l3node.shutdown
@@ -751,13 +711,9 @@ proc l3node.start { eid node } {
 #   * node -- node id
 #****
 proc l3node.shutdown { eid node } {
-    # XXX - killProcs node
     killExtProcess "wireshark.*$node.*\\($eid\\)"
     killAllNodeProcesses $eid $node
-    # XXX
-    # XXX - removeIfcIPaddrs node
     removeNodeIfcIPaddrs $eid $node
-    # XXX
 }
 
 #****f* exec.tcl/l3node.destroy
@@ -774,18 +730,9 @@ proc l3node.shutdown { eid node } {
 #   * node -- node id
 #****
 proc l3node.destroy { eid node } {
-    # XXX - destroyVirtIfcs node
     destroyNodeVirtIfcs $eid $node
-    # XXX
-
-    # XXX - removeNodeContainer node
     removeNodeContainer $eid $node
-    # XXX
-
-    # XXX - removeNodeFS node
     removeNodeFS $eid $node
-    # XXX
-
     pipesExec ""
 }
 
@@ -809,6 +756,7 @@ proc deployCfg {} {
     global vroot_unionfs devfs_number
     global inst_pipes last_inst_pipe
     global execMode
+    global debug
 
     set running_eids [getResumableExperiments]
     if {$execMode != "batch"} {
@@ -828,19 +776,11 @@ proc deployCfg {} {
 
     set t_start [clock milliseconds]
 
-    # XXX - loadKernelModules
     loadKernelModules
-    # XXX
-
-    # XXX - prepareVirtualFS
     prepareVirtualFS
-    # XXX
-
     prepareDevfs
 
-    # XXX - createExperimentContainer
     createExperimentContainer
-    # XXX
 
     set nodeCount [llength $node_list]
     set linkCount [llength $link_list]
@@ -1011,7 +951,6 @@ proc terminateAllNodes { eid } {
     # Stop services on the NODESTOP hook
     services stop "NODESTOP"
 
-    # XXX - pipeline everything to make it faster.
     # Termination is done in the following order:
     # 1. call shutdown on all ng nodes because of the packgen node.
     # 2. call shutdown on all virtual nodes.
@@ -1057,9 +996,7 @@ proc terminateAllNodes { eid } {
         set lnode2 [lindex [linkPeers $link] 1]
 #	statline "Shutting down link $link ($lnode1-$lnode2)"
 	displayBatchProgress $i [ llength $link_list ]
-	# XXX - destroyLinkBetween lnode1 lnode2
 	destroyLinkBetween $eid $lnode1 $lnode2
-	# XXX
         if {$execMode != "batch"} {
             $w.p step -1
         }
@@ -1067,14 +1004,9 @@ proc terminateAllNodes { eid } {
     pipesClose
     statline ""
 
-    # XXX - destroyNetgraphNodes ngraphs
     destroyNetgraphNodes $eid $ngraphs $w
-    # XXX
 
-    # XXX - destroyVirtNodeIfcs vimages
     destroyVirtNodeIfcs $eid $vimages
-    # XXX
-    statline ""
 
     # timeout patch
     timeoutPatch $eid $node_list
@@ -1098,9 +1030,7 @@ proc terminateAllNodes { eid } {
     pipesClose
     statline ""
 
-    # XXX - removeExperimentContainer
     removeExperimentContainer $eid $w
-    # XXX
 
     if {$execMode != "batch"} {
 	destroy $w
@@ -1230,5 +1160,95 @@ proc pipesClose { } {
 	# A dummy read, just to flush the output from the command pipeline
 	read $inst_pipes($i)
 	catch {close $inst_pipes($i)}
+    }
+}
+
+#****f* exec.tcl/l3node.ipsecInit
+# NAME
+#   l3node.ipsecInit -- IPsec initialization
+# SYNOPSIS
+#   l3node.ipsecInit $eid $node
+# FUNCTION
+#   Creates ipsec.conf and ipsec.secrets files from IPsec configuration of given node
+#   and copies certificates to desired folders (if there are any certificates)
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
+proc l3node.ipsecInit { eid node } {
+    set node_id "$eid\.$node"
+
+    #ne zvati genericki jer ne znam sta to radi
+    set fileId [open /tmp/imunes_$node_id\_ipsec.conf w]
+    set fileId2 [open /tmp/imunes_$node_id\_ipsec.secrets w]
+
+    set config_content [getNodeIPsec $node]
+    if { $config_content != "" } {
+	setNodeIPsecSetting $node "configuration" "conn %default" "keyexchange" "ikev2"
+	puts $fileId "# /etc/ipsec.conf - strongSwan IPsec configuration file"
+	puts -nonewline $fileId "\n"
+    } else {
+	exec rm -fr /tmp/imunes_$node_id\_ipsec.conf
+	exec rm -fr /tmp/imunes_$node_id\_ipsec.secrets
+	return
+    }
+
+    set config_content [getNodeIPsecItem $node "configuration"]
+
+    foreach item $config_content {
+	set element [lindex $item 0]
+	set settings [lindex $item 1]
+	puts $fileId "$element"
+	set hasKey 0
+	set hasRight 0
+	foreach setting $settings {
+	    if { [string match "peersname=*" $setting] } {
+		continue
+	    }
+	    if { [string match "sharedkey=*" $setting] } {
+		set hasKey 1
+		set psk_key [lindex [split $setting =] 1]
+		continue
+	    }
+	    if { [string match "right=*" $setting] } {
+		set hasRight 1
+		set right [lindex [split $setting =] 1]
+	    }
+	    puts $fileId "        $setting"
+	}
+	if { $hasKey && $hasRight } {
+	    puts $fileId2 "$right : PSK $psk_key"
+	}
+    }
+
+    delNodeIPsecElement $node "configuration" "conn %default"
+
+    close $fileId
+    close $fileId2
+
+    set local_cert [getNodeIPsecItem $node "local_cert"]
+    set ipsecret_file [getNodeIPsecItem $node "local_key_file"]
+    ipsecFilesToNode $eid $node $local_cert $ipsecret_file
+
+    exec rm -fr /tmp/imunes_$node_id\_ipsec.conf
+    exec rm -fr /tmp/imunes_$node_id\_ipsec.secrets
+}
+
+#****f* exec.tcl/l3node.ipsecStart
+# NAME
+#   l3node.ipsecStart -- IPsec launch
+# SYNOPSIS
+#   l3node.ipsecStart $eid $node
+# FUNCTION
+#   Starts Strongswan daemon
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
+proc l3node.ipsecStart { eid node } {
+    set config_content [getNodeIPsec $node]
+
+    if { [llength $config_content] > 0 } {
+	startIPsecOnNode $eid $node
     }
 }

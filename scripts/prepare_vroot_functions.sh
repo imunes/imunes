@@ -25,7 +25,7 @@ cd ~
 HOMEDIR=`pwd`
 
 # FreeBSD version and architecture
-RELEASE=`uname -r`
+RELEASE=`uname -r|sed s/STABLE/RELEASE/`
 RELEASE_NUM=`echo $RELEASE | cut -d'.' -f1`
 ARCH=`uname -m`
 
@@ -50,7 +50,8 @@ VROOT_DEST=$VROOT_DIR/$VROOT_FILE
 
 # packages for installation
 PACKAGES_MINIMAL="pkg quagga bash mrouted iftop"
-PACKAGES_COMMON="netperf lsof elinks nmap lighttpd akpop3d links nano postfix" # isc-dhcp42-server
+PACKAGES_COMMON="netperf lsof elinks nmap lighttpd akpop3d links nano postfix \
+   dsniff scapy p0f nmap ettercap tcpreplay hping" # isc-dhcp42-server
 
 ##########################
 

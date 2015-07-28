@@ -11,12 +11,16 @@ Hostname can be in the form: hostname or hostname@eid.
 
 Usage:
   $command vi_hostname command
+  $command -m vi_hostname command (execute command in experiment master jail)
   $command -v vi_hostname  ---> vimage name      (eid.nodename)
   $command -n vi_hostname  ---> vimage node name (nodename)
   $command -e vi_hostname  ---> vimage eid name  (eid)
   $command -j vi_hostname  ---> vimage jail id   (jid)
+  $command -i vi_hostname  ---> vimage jail id   (jid)
   $command -d vi_hostname  ---> vimage path
-  $command -l              ---> running experiments eids 
+  $command -l              ---> running experiments eids with node names
+  $command -b              ---> dummy flag (used only on Linux)
+  $command -nt             ---> dummy flag (used only on Linux)
 __END__
 }
 
@@ -29,44 +33,62 @@ vi_name() {
     expid=""
   fi
 
-  n=`jls | awk -v h=$host -v e=$expid '$3 == h && $4 ~ e {print $1}' | wc -l`
+  n=`jls jid name host.hostname | awk -v h=$host -v e=$expid '$3 == h && $2 ~ e {print $1}' | wc -l`
   if test $n -gt 1; then
         echo "Error: $1 is not a unique name." >&2
         echo "It is used (at least) for nodes:" >&2
-        jls | grep $1  >&2
+	echo -e "JID\tName    \tHostname" >&2
+        jls -h jid name host.hostname | tr " " "\t" | awk -v h=$host '$3 == h {print}' >&2
         exit 1
   fi
   if test $n -eq 0; then
     echo Error: cannot find node named $1 >&2
     exit 2
   fi
-  jls | awk -v h=$host -v e=$expid '$3 == h && $4 ~ e {print $1}'
+  jls jid name host.hostname | awk -v h=$host -v e=$expid '$3 == h && $2 ~ e {print $1}'
 }
+
+# dummy flags
+if test $1 = "-b" || test $1 = "-nt"; then
+    shift 1
+fi
 
 if test $# -eq 0; then
     help
 elif test $1 = "-h"; then
     help
 elif test $1 = "-l"; then
-    jls name path | grep "imunes" | cut -d . -f 1 | sort | uniq
-elif test $1 = "-j"; then
+    explist=`jls name path | grep "imunes" | cut -d . -f 1 | sort | uniq`
+    for exp in $explist; do
+	echo "$exp (`jls host.hostname path | grep "imunes/$exp" | cut -d" " -f1 |  paste -s -d" " -`)"
+    done
+elif test $1 = "-j" || test $1 = "-i"; then
     vi_name $2
 elif test $1 = "-v"; then
     image_name=`vi_name $2`
     test $? -ne 0 && exit 2
-    jls -h -j $image_name name | tail -n +2
+    jls -j $image_name name
 elif test $1 = "-e"; then
     image_name=`vi_name $2`
     test $? -ne 0 && exit 2
-    jls -h -j $image_name name | tail -n +2 | awk -F"." '{n=NF-1; print $n}'
+    jls -j $image_name name | awk -F"." '{n=NF-1; print $n}'
 elif test $1 = "-n"; then
     image_name=`vi_name $2`
     test $? -ne 0 && exit 2
-    jls -h -j $image_name name | tail -n +2 | awk -F"." '{print $NF}'
+    jls -j $image_name name | awk -F"." '{print $NF}'
 elif test $1 = "-d"; then
     image_name=`vi_name $2`
     test $? -ne 0 && exit 2
-    jls -h -j $image_name path | tail -n +2 
+    jls -j $image_name path
+elif test $1 = "-m"; then
+    image_name=`vi_name $2`
+    test $? -ne 0 && exit 2
+    shift 2
+    parent=`jls -j $image_name parent`
+    if test -z "$*"; then
+	exec jexec $parent csh
+    fi
+    exec jexec $parent "$@"
 elif test `expr a$1 : "a-.*"` = "0"; then
     image_name=`vi_name $1`
     test $? -ne 0 && exit 2

@@ -168,7 +168,7 @@ proc $MODULE.calcDxDy {} {
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifcName {} {
+proc $MODULE.ifcName {l r} {
     return e
 }
 

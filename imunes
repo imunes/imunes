@@ -52,25 +52,53 @@ for i; do
     if [ "$i" = "-b" ] || [ "$i" = "-batch" ] || [ "$i" = "-i" ]; then
 	batch_flag=1
     fi
-    if [ "$i" = "-v" ] || [ "$i" = "-version" ]; then
-	version_line=`grep '^\#\ \$\I\d\: .*$' $ROOTDIR/$LIBDIR/*.tcl | sort -n -k4 | tail -1`
-	version_number=`echo "$version_line" | cut -d" " -f4`
-	last_changed=`echo "$version_line" | cut -d" " -f5`
-	echo "IMUNES version $version_number, last change: $last_changed"
-	exit 0
-    fi
 done
 
 if [ $prepare_flag -eq 1 ]; then
     if [ $force_flag -eq 1 ]; then
-	make remove_vroot
+	chflags -R noschg /var/imunes/vroot
+	rm -fr /var/imunes/vroot
     fi
-    sh $ROOTDIR/$LIBDIR/scripts/prepare_vroot.sh
+    cd $ROOTDIR/$LIBDIR
+    sh scripts/prepare_vroot.sh
     exit 0
 fi
 
 if [ $batch_flag -eq 1 ]; then
+    which tclsh8.6 2>&1 > /dev/null
+    if [ $? -ne 0 ]; then
+        echo "To run IMUNES, the package tclsh8.6 is required."
+        exit 1
+    fi
+
+    if [ "`echo "package require ip" | tclsh8.6 2>&1`" != "" ]; then
+        echo "To run IMUNES, the package tcllib is required."
+        exit 1
+    fi
     exec tclsh8.6 $imunes $*
 else
+    if [ "$DISPLAY" == "" ]; then
+        echo "To run IMUNES GUI, run IMUNES in X environment."
+        exit 1
+    fi
+
+    which wish8.6 2>&1 > /dev/null
+    if [ $? -ne 0 ]; then
+        echo "To run IMUNES, the package wish8.6 is required."
+        exit 1
+    fi
+
+    xerr=`echo "exit" | wish8.6 2>&1`;
+    if [ "$xerr" != "" ]; then
+        echo "Cannot start imunes, problems with X:"
+        echo "$xerr"
+        exit 1
+    fi
+
+    if [ "`echo "package require ip; exit" | wish8.6 2>&1`" != "" ]; then
+        echo "To run IMUNES, the package tcllib is required."
+        exit 1
+    fi
+
     exec wish8.6 $imunes -- $*
 fi

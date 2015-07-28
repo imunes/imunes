@@ -11,7 +11,7 @@
 attach_root="/var/run/imunes"
 mounts_root="/var/imunes"
 
-eids=`himage -l`
+eids=`himage -l | awk '{print $1}'`
 for e in $eids; do
     echo "Cleaning experiment with eid $e."
     imunes -b -e $e
@@ -27,7 +27,7 @@ cd $mounts_root
 mounts=`ls | grep -v vroot`
 for mount in $mounts; do
     echo "Destroying unionfs mount $mounts_root/$mount."
-    rm -fr $mount
+    rm -fr $mount 2> /dev/null
 done
 
 cd $attach_root

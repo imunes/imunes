@@ -1,0 +1,164 @@
+#!/bin/bash
+
+set -e
+
+command=`basename $0`
+basedir="/var/lib/docker"
+
+help() {
+cat <<__END__
+
+Command $command can be used to copy files to/from virtual images. 
+Hostname is used instead of virtual images filesystem mount point.
+
+Usage:
+
+    $command [vi_hostname]:filename [vi_hostname]:filename
+
+If vi_hostname is a unique virtual image hostname on the system then
+it is replaced with appropriate mount point and regular "cp" is called.
+Hostname can be in the form: hostname or hostname@eid.
+__END__
+}
+
+# contains(string, substring)
+contains() {
+    string="$1"
+    substring="$2"
+    if test "${string#*$substring}" != "$string"; then
+	return 0    # $substring is in $string
+    else
+	return 1    # $substring is not in $string
+    fi
+}
+
+# getViStoLoc(vi_hostname:)
+# get vi storage location from hcp argument based on current driver
+# used for copying to vi
+getViStoLoc() {
+    driver=`docker info 2>&1 | grep "Storage Driver:" | cut -d: -f2 | tr -d " "`
+    name=`getCpNodeName $1`
+    dockerid=`himage -i $name`
+    case $driver in
+	aufs) echo $basedir/aufs/diff/$dockerid;;
+	btrfs) echo $basedir/btrfs/subvolumes/$dockerid;;
+	devicemapper) echo $basedir/devicemapper/mnt/$dockerid;;
+	overlay) echo $basedir/overlay/$dockerid/upper;;
+    esac
+}
+
+# getCopyDirection(arg1 arg2)
+# detect copy direction: 1) from host to vi, 2) from vi to host, 3) vi to vi
+# also check with himage if the vi exists.
+getCopyDirection() {
+    # "betweenVi" if there are only 2 args, both in Vi
+    if  test $# -eq 2 && contains "$1" ":" && contains "$2" ":"; then
+	himage -v `getCpNodeName $1` > /dev/null
+	himage -v `getCpNodeName $2` > /dev/null
+	echo betweenVi
+        return
+    fi
+    # "toVi" if only the last one is in virtual image 
+    if  contains "${@: -1}" ":"; then
+        for argn in ${@:0:$#}; do
+            if  contains "$argn" ":"; then
+                echo "Only the last arg can be in virtual image" > /dev/tty
+                exit 2
+            fi
+        done
+	himage -v `getCpNodeName ${@: -1}` > /dev/null
+	echo toVi
+        return
+    fi
+    # "fromVi" if the first arg is in virtual image and the second is not
+    if  test $# -eq 2 && contains "$1" ":" && ! contains "$2" ":"; then
+	himage -v `getCpNodeName $1` > /dev/null
+	echo fromVi
+        return
+    fi
+    help > /dev/tty
+    exit 2
+}
+
+# getCpNodeName(arg)
+# get vi name for copy from argument, split by :
+getCpNodeName() {
+    echo `echo $1 | cut -d: -f1`
+}
+
+# getCpNode(arg)
+# get vi node id for docker from argument, split by : and use himage
+getCpNodeId() {
+    name=`getCpNodeName $1`
+    echo `himage -v $name`
+}
+
+# getCpLoc(arg)
+# get copy location from argument, split by :
+getCpLoc() {
+    echo `echo $1 | cut -d: -f2`
+}
+
+# copyToVi (path1 path2)
+# copy from host to vi using cp from docker
+copyToVi () {
+    node=`getCpNodeId ${@: -1}`
+    loc=`getCpLoc ${@: -1}`
+    # create tmpdir inside vi
+    tmpdirD=`docker exec $node mktemp -d`
+    # get external link to tmpdirD
+    docktmpdir="`getViStoLoc ${@: -1}`$tmpdirD"
+    # copy file to external link
+    n=`expr $# - 1`
+    # copy file using docker
+    for f in ${@:1:$n} 
+    do
+        cp -r $f $docktmpdir
+        docker exec $node cp -r "$tmpdirD/`basename $f`" "/$loc"
+    done
+    docker exec $node rm -fr $tmpdirD
+}
+
+# copyFromVi (docker_path path)
+# copy from docker vi to node using docker-cp
+copyFromVi () {
+    # test if file is regular or directory
+    stat=$(docker exec `getCpNodeId $1` stat --printf="%F\n" `getCpLoc $1`)
+    if contains "$stat" "directory"; then
+	# it's a directory, copy to tmpdir, move to final location, rm tmpdir
+	tmpdirL=`mktemp -d`
+	docker cp `getCpNodeId $1`:`getCpLoc $1` $tmpdirL
+	mv $tmpdirL/$(basename `getCpLoc $1`) $2
+	rm -fr $tmpdirL
+    else
+	# it's a file, copy to stdout, untar and redirect to destination
+	# test if destination is dir or file
+	if [ -d $2 ]; then
+	    # if it's a dir append the basename
+	    docker cp `getCpNodeId $1`:`getCpLoc $1` - | tar xfO - > $2/$(basename `getCpLoc $1`)
+	else
+	    # if it's a file or it doesn't exist redirect to it
+	    docker cp `getCpNodeId $1`:`getCpLoc $1` - | tar xfO - > $2
+	fi
+    fi
+}
+
+if test $# -lt 2; then
+    help >&2
+    exit 1
+fi
+
+direction=`getCopyDirection "$@"`
+case $direction in
+    toVi)
+	copyToVi "$@";;
+    fromVi)
+	copyFromVi "$@";;
+    betweenVi)
+	tmpdir=$(mktemp -d)
+	copyFromVi $1 $tmpdir
+	cpLoc=`getCpLoc $1`
+	copyToVi $tmpdir/`basename $cpLoc` $2
+	rm -fr $tmpdir ;;
+esac
+

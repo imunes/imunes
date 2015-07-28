@@ -135,23 +135,39 @@ proc redo {} {
 # NAME
 #   chooseIfName -- choose interface name
 # SYNOPSIS
-#   set ifcName [chooseIfName $lnode1 $lnode2]
+#   set ifcName [chooseIfName $local_node $remote_node]
 # FUNCTION
-#   Choose interface name. The name can be:
-#   * eth -- for interface connecting pc, host and router  
-#   * e -- for interface connecting hub and lanswitch
-#   * f -- for interface connecting frswitch
+#   Choose a node-specific interface base name.
 # INPUTS
-#   * link_id -- link id
+#   * lnode -- id of a "local" node
+#   * rnode -- id of a "remote" node
 # RESULT
 #   * ifcName -- the name of the interface
 #****
-proc chooseIfName { lnode1 lnode2 } {
+proc chooseIfName {lnode rnode} {
 
-    if { [nodeType $lnode1] == "frswitch" } {
-		return f
+    return [[nodeType $lnode].ifcName $lnode $rnode]
+}
+
+#****f* editor.tcl/l3IfcName
+# NAME
+#   l3IfcName -- default interface name picker for l3 nodes
+# SYNOPSIS
+#   set ifcName [l3IfcName $local_node $remote_node]
+# FUNCTION
+#   Pick a default interface base name for a L3 node.
+# INPUTS
+#   * lnode -- id of a "local" node
+#   * rnode -- id of a "remote" node
+# RESULT
+#   * ifcName -- the name of the interface
+#****
+proc l3IfcName {lnode rnode} {
+
+    if {[nodeType $rnode] == "wlan"} {
+	return "wlan"
     } else {
-		return [[nodeType $lnode1].ifcName]
+	return "eth"
     }
 }
 
@@ -195,6 +211,20 @@ proc listLANnodes { l2node l2peers } {
 #   * layer -- returns an empty string
 #****
 proc pseudo.layer {} {
+}
+
+#****f* editor.tcl/pseudo.virtlayer
+# NAME
+#   pseudo.virtlayer -- pseudo virtlayer
+# SYNOPSIS
+#   set virtlayer [pseudo.virtlayer]
+# FUNCTION
+#   Returns the virtlayer on which the pseudo node operates
+#   i.e. returns no layer.
+# RESULT
+#   * virtlayer -- returns an empty string
+#****
+proc pseudo.virtlayer {} {
 }
 
 #****f* editor.tcl/checkIntRange 
@@ -1117,5 +1147,26 @@ proc setActiveTool { tool } {
 
     for { set i 0 } { $i <= [.menubar.t_g index last] } { incr i } {
 	.menubar.t_g entryconfigure $i -state $state
+    }
+}
+
+proc launchBrowser {url} {
+    global tcl_platform env
+
+    if {$tcl_platform(platform) eq "windows"} {
+	set command [list {*}[auto_execok start] {}]
+	set url [string map {& ^&} $url]
+    } elseif {$tcl_platform(os) eq "Darwin"} {
+	set command [list open]
+    } else {
+	set command [list xdg-open]
+    }
+
+    if {$tcl_platform(platform) eq "windows"} {
+	catch {exec {*}$command $url}
+    } elseif {"SUDO_USER" in [array names env]} {
+	catch {exec su - $env(SUDO_USER) /bin/sh -c "$command $url" > /dev/null 2> /dev/null &} 
+    } else {
+	catch {exec {*}$command $url > /dev/null 2> /dev/null &}
     }
 }
