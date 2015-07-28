@@ -2,7 +2,7 @@
 
 ROOTDIR="."
 LIBDIR=""
-DOCKER_TEMPLATE="docker.io/imunes/vroot:base"
+DOCKER_TEMPLATE="imunes/vroot:base"
 
 VER=`uname -r | cut -d "." -f 1`
 OS=`uname -s`
@@ -13,4 +13,3 @@ then
 else
     sh $ROOTDIR/$LIBDIR/scripts/prepare_vroot_$VER\.sh $*
 fi
-
