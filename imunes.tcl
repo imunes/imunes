@@ -43,10 +43,6 @@
 #    When starting the program with defined filename, configuration for
 #    file "filename" is loaded to imunes.
 #****
-set baseTitle IMUNES
-set version "1.1"
-set date "2015-06-30"
-set additions ""
 
 package require cmdline
 package require ip
@@ -150,6 +146,7 @@ if { $ROOTDIR == "." } {
     set BINDIR "bin"
 }
 
+set baseTitle "IMUNES"
 set imunesVersion "Unknown"
 set imunesCommit ""
 set imunesChangedDate ""
@@ -179,7 +176,7 @@ if { [string match "*Format*" $imunesCommit] } {
 }
 
 if { $params(v) || $params(version)} {
-    puts "IMUNES $imunesVersion $imunesAdditions"
+    puts "IMUNES $imunesVersion$imunesAdditions"
     if { $imunesChangedDate != "" } {
 	puts "$imunesChangedDate"
     }
@@ -241,11 +238,6 @@ foreach file $l3nodes {
 # additional nodes
 source "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
 source "$ROOTDIR/$LIBDIR/nodes/annotations.tcl"
-
-if { $params(v) || $params(version)} {
-    puts "IMUNES version $version$additions ($date)"
-    exit
-}
 
 #
 # Global variables are initialized here

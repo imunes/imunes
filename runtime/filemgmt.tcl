@@ -184,12 +184,12 @@ proc switchProject {} {
 #   * fname -- title
 #****
 proc setWmTitle { fname } {
-    global curcfg baseTitle version additions
+    global curcfg baseTitle imunesVersion imunesAdditions
 
     if { $fname == "" } {
 	set fname "untitled[string range $curcfg 1 end]"
     }
-    wm title . "$baseTitle v$version$additions - $fname"
+    wm title . "$baseTitle v$imunesVersion$imunesAdditions - $fname"
 }
 
 #****f* filemgmt.tcl/openFile
