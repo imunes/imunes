@@ -291,12 +291,15 @@ proc prepareFilesystemForNode { node } {
 #XXX-comment
 proc createNodeContainer { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
-    global VROOT_MASTER
+    global VROOT_MASTER debug
 
     set node_id "$eid.$node"
 
-    catch {exec docker run --privileged --cap-add=ALL --net='none' -h [getNodeName $node] \
-        --name $node_id $VROOT_MASTER 2> /dev/null &}
+    catch {exec docker run -d --privileged --cap-add=ALL --net='none' -h [getNodeName $node] \
+        --name $node_id $VROOT_MASTER } err
+    if { $debug } {
+	puts "'exec docker run' ($node_id) caught:\n$err"
+    }
 
     set status ""
     while { [string match 'true' $status] != 1 } {
