@@ -214,22 +214,22 @@ proc allSnapshotsAvailable {} {
     catch {exec docker images} images
 
     if {"imunes/vroot" in $images} {
-	return 1
+        return 1
     } else {
-	if {$execMode == "batch"} {
-	    puts "Docker template for virtual nodes:
+        if {$execMode == "batch"} {
+            puts "Docker template for virtual nodes:
     $VROOT_MASTER
 is missing.
 Run 'imunes -p' to pull the template."
-	} else {
-	    tk_dialog .dialog1 "IMUNES error" \
-	    "Docker template for virtual nodes:
+        } else {
+            tk_dialog .dialog1 "IMUNES error" \
+        "Docker template for virtual nodes:
     $VROOT_MASTER
 is missing.
 Run 'imunes -p' to pull the template." \
-	    info 0 Dismiss
-	}
-	return 0
+            info 0 Dismiss
+        }
+        return 0
     }
 }
 
@@ -298,7 +298,7 @@ proc createNodeContainer { node } {
     catch {exec docker run -d --privileged --cap-add=ALL --net='none' -h [getNodeName $node] \
         --name $node_id $VROOT_MASTER } err
     if { $debug } {
-	puts "'exec docker run' ($node_id) caught:\n$err"
+        puts "'exec docker run' ($node_id) caught:\n$err"
     }
 
     set status ""
@@ -813,19 +813,19 @@ proc addNodeIfcToBridge { bridge brifc node ifc mac } {
 proc checkSysPrerequisites {} {
     set msg ""
     if { [catch {exec docker ps } err] } {
-	set msg "Cannot start experiment. Is docker installed and running?\n"
+        set msg "Cannot start experiment. Is docker installed and running?\n"
     }
 
     if { [catch {exec pgrep ovs-vswitchd } err ] } {
-	set msg "Cannot start experiment. Is ovs-vswitchd installed and running?\n"
+        set msg "Cannot start experiment. Is ovs-vswitchd installed and running?\n"
     }
 
     if { [catch {exec xterm -version}] } {
-	set msg "Cannot start experiment. Is xterm installed?\n"
+        set msg "Cannot start experiment. Is xterm installed?\n"
     }
 
     if { $msg != "" } {
-	return "$msg\IMUNES needs docker and ovs-vswitchd services running and xterm installed."
+        return "$msg\IMUNES needs docker and ovs-vswitchd services running and xterm installed."
     }
 
     return ""
@@ -1015,17 +1015,17 @@ proc ipsecFilesToNode { eid node local_cert ipsecret_file } {
     set hostname [getNodeName $node]
 
     if { $local_cert != "" } {
-	set trimmed_local_cert [lindex [split $local_cert /] end]
-	catch {exec hcp $local_cert $hostname@$eid:/etc/ipsec.d/certs/$trimmed_local_cert}
+        set trimmed_local_cert [lindex [split $local_cert /] end]
+        catch {exec hcp $local_cert $hostname@$eid:/etc/ipsec.d/certs/$trimmed_local_cert}
     }
 
     if { $ipsecret_file != "" } {
-	set fileId2 [open /tmp/imunes_$node_id\_ipsec.secrets w]
-	puts $fileId2 "# /etc/ipsec.secrets - strongSwan IPsec secrets file\n"
-	set trimmed_local_key [lindex [split $ipsecret_file /] end]
-	catch {exec hcp $ipsecret_file $hostname@$eid:/etc/ipsec.d/private/$trimmed_local_key}
-	puts $fileId2 ": RSA $trimmed_local_key"
-	close $fileId2
+        set fileId2 [open /tmp/imunes_$node_id\_ipsec.secrets w]
+        puts $fileId2 "# /etc/ipsec.secrets - strongSwan IPsec secrets file\n"
+        set trimmed_local_key [lindex [split $ipsecret_file /] end]
+        catch {exec hcp $ipsecret_file $hostname@$eid:/etc/ipsec.d/private/$trimmed_local_key}
+        puts $fileId2 ": RSA $trimmed_local_key"
+        close $fileId2
     }
 
     catch {exec hcp /tmp/imunes_$node_id\_ipsec.conf $hostname@$eid:/etc/ipsec.conf}
