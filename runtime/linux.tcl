@@ -817,12 +817,17 @@ proc checkSysPrerequisites {} {
         set msg "Cannot start experiment. Is ovs-vswitchd installed and running?\n"
     }
 
+    if { [catch {exec nsenter --version}] } {
+        set msg "Cannot start experiment. Is nsenter installed?\n"
+    }
+
     if { [catch {exec xterm -version}] } {
         set msg "Cannot start experiment. Is xterm installed?\n"
     }
 
     if { $msg != "" } {
-        return "$msg\IMUNES needs docker and ovs-vswitchd services running and xterm installed."
+        return "$msg\IMUNES needs docker and ovs-vswitchd services running and\
+xterm and nsenter installed."
     }
 
     return ""
