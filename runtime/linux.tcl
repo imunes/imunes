@@ -337,8 +337,9 @@ proc configureICMPoptions { node } {
 
     set node_id "$eid.$node"
 
-    pipesExec "docker exec $node_id sysctl net.ipv4.icmp_echo_ignore_broadcasts=1" "hold"
-    pipesExec "docker exec $node_id sysctl net.ipv4.icmp_ratelimit=0" "hold"
+    set nodeNs [getNodeNamespace $node]
+    pipesExec "nsenter --net=/proc/$nodeNs/ns/net sysctl net.ipv4.icmp_echo_ignore_broadcasts=1" "hold"
+    pipesExec "nsenter --net=/proc/$nodeNs/ns/net sysctl net.ipv4.icmp_ratelimit=0" "hold"
 }
 
 proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
@@ -399,9 +400,9 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
             setIfcNetNs $lnode1 $hostIfc1 $ifname1
             setIfcNetNs $lnode2 $hostIfc2 $ifname2
             # set mac addresses of node ifcs
-            exec ip netns exec "$lnode1Ns" ip link set dev "$ifname1" \
+            exec nsenter --net=/proc/$lnode1Ns/ns/net ip link set dev "$ifname1" \
                 address "$ether1"
-            exec ip netns exec "$lnode2Ns" ip link set dev "$ifname2" \
+            exec nsenter --net=/proc/$lnode2Ns/ns/net ip link set dev "$ifname2" \
                 address "$ether2"
             # remove nodeNs to avoid `ip netns` catching it
             exec rm -f "/var/run/netns/$lnode1Ns"
@@ -453,16 +454,16 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
 proc startIfcsNode { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    set node_id "$eid.$node"
     set cmds ""
+    set nodeNs [getNodeNamespace $node]
     foreach ifc [allIfcList $node] {
         # FIXME: should also work for loopback
         if {$ifc != "lo0"} {
             set mtu [getIfcMTU $node $ifc]
             if {[getIfcOperState $node $ifc] == "up"} {
-                set cmds "$cmds\n docker exec $node_id ip link set dev $ifc up mtu $mtu"
+                set cmds "$cmds\n nsenter --net=/proc/$nodeNs/ns/net ip link set dev $ifc up mtu $mtu"
             } else {
-                set cmds "$cmds\n docker exec $node_id ip link set dev $ifc mtu $mtu"
+                set cmds "$cmds\n nsenter --net=/proc/$nodeNs/ns/net ip link set dev $ifc mtu $mtu"
             }
         }
     }
@@ -513,11 +514,12 @@ proc runConfOnNode { node } {
     exec docker exec $node_id $bootcmd $confFile >& $node_dir/out.log &
     exec docker exec -i $node_id sh -c "cat > out.log" < $node_dir/out.log
 
+    set nodeNs [getNodeNamespace $node]
     foreach ifc [allIfcList $node] {
         # FIXME: should also work for loopback
         if {$ifc != "lo0"} {
             if {[getIfcOperState $node $ifc] == "down"} {
-                exec docker exec $node_id ip link set dev $ifc down
+                exec nsenter --net=/proc/$nodeNs/ns/net ip link set dev $ifc down
             }
         }
     }
@@ -638,10 +640,11 @@ proc l2node.destroy { eid node } {
 #   * node -- node id
 #****
 proc enableIPforwarding { eid node } {
-    pipesExec "docker exec $eid\.$node sysctl net.ipv6.conf.all.forwarding=1" "hold"
-    pipesExec "docker exec $eid\.$node sysctl net.ipv4.conf.all.forwarding=1" "hold"
-    pipesExec "docker exec $eid\.$node sysctl net.ipv4.conf.default.rp_filter=0" "hold"
-    pipesExec "docker exec $eid\.$node sysctl net.ipv4.conf.all.rp_filter=0" "hold"
+    set nodeNs [getNodeNamespace $node]
+    pipesExec "nsenter --net=/proc/$nodeNs/ns/net sysctl net.ipv6.conf.all.forwarding=1" "hold"
+    pipesExec "nsenter --net=/proc/$nodeNs/ns/net sysctl net.ipv4.conf.all.forwarding=1" "hold"
+    pipesExec "nsenter --net=/proc/$nodeNs/ns/net sysctl net.ipv4.conf.default.rp_filter=0" "hold"
+    pipesExec "nsenter --net=/proc/$nodeNs/ns/net sysctl net.ipv4.conf.all.rp_filter=0" "hold"
 }
 
 #****f* linux.tcl/configDefaultLoIfc
@@ -952,42 +955,44 @@ proc execSetLinkParams { eid link } {
     }
 
     if { [[typemodel $lnode1].virtlayer] == "VIMAGE" } {
-        catch {exec docker exec $eid.$lnode1 tc qdisc del dev $ifname1 root}
+        set lnode1Ns [getNodeNamespace $lnode1]
+        catch {exec nsenter --net=/proc/$lnode1Ns/ns/net tc qdisc del dev $ifname1 root}
 
         set vdelay [expr $delay / 1000]
-        exec docker exec $eid.$lnode1 tc qdisc add dev $ifname1 root \
+        exec nsenter --net=/proc/$lnode1Ns/ns/net tc qdisc add dev $ifname1 root \
             handle 1: netem delay ${vdelay}ms
 
-        exec docker exec $eid.$lnode1 tc qdisc add dev $ifname1 parent 1: \
+        exec nsenter --net=/proc/$lnode1Ns/ns/net tc qdisc add dev $ifname1 parent 1: \
             handle 2: netem duplicate ${dup}%
 
         set corrupt [expr (1 / double($ber)) * 100]
-        exec docker exec $eid.$lnode1 tc qdisc add dev $ifname1 parent 2: \
+        exec nsenter --net=/proc/$lnode1Ns/ns/net tc qdisc add dev $ifname1 parent 2: \
             handle 3: netem corrupt ${corrupt}%
 
         if {$bandwidth > 0} {
-            exec docker exec $eid.$lnode1 tc qdisc add dev $ifname1 parent 3: \
+            exec nsenter --net=/proc/$lnode1Ns/ns/net tc qdisc add dev $ifname1 parent 3: \
                 handle 4: tbf rate ${bandwidth}bit limit 10mb burst 1540
         }
 
     }
 
     if { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
-        catch {exec docker exec $eid.$lnode2 tc qdisc del dev $ifname2 root}
+        set lnode2Ns [getNodeNamespace $lnode2]
+        catch {exec nsenter --net=/proc/$lnode2Ns/ns/net tc qdisc del dev $ifname2 root}
 
         set vdelay [expr $delay / 1000]
-        exec docker exec $eid.$lnode2 tc qdisc add dev $ifname2 root \
+        exec nsenter --net=/proc/$lnode2Ns/ns/net tc qdisc add dev $ifname2 root \
             handle 1: netem delay ${vdelay}ms
 
-        exec docker exec $eid.$lnode2 tc qdisc add dev $ifname2 parent 1: \
+        exec nsenter --net=/proc/$lnode2Ns/ns/net tc qdisc add dev $ifname2 parent 1: \
             handle 2: netem duplicate ${dup}%
 
         set corrupt [expr (1 / double($ber)) * 100]
-        exec docker exec $eid.$lnode2 tc qdisc add dev $ifname2 parent 2: \
+        exec nsenter --net=/proc/$lnode2Ns/ns/net tc qdisc add dev $ifname2 parent 2: \
             handle 3: netem corrupt ${corrupt}%
 
         if {$bandwidth > 0} {
-            exec docker exec $eid.$lnode2 tc qdisc add dev $ifname2 parent 3: \
+            exec nsenter --net=/proc/$lnode2Ns/ns/net tc qdisc add dev $ifname2 parent 3: \
                 handle 4: tbf rate ${bandwidth}bit limit 10mb burst 1540
         }
     }
