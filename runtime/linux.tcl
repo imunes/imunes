@@ -492,8 +492,8 @@ proc runConfOnNode { node } {
     set node_dir [getVrootDir]/$eid/$node
     set node_id "$eid.$node"
 
-    catch {exec docker exec $node_id umount /etc/resolv.conf}
-    catch {exec docker exec $node_id umount /etc/hosts}
+    set nodeNs [getNodeNamespace $node]
+    exec nsenter -m -u -n -i -p -t $nodeNs umount /etc/resolv.conf /etc/hosts
 
     if { [getCustomEnabled $node] == true } {
         set selected [getCustomConfigSelected $node]
