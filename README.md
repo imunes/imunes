@@ -65,7 +65,7 @@ First we need to install the packages required for IMUNES:
     ImageMagick
     Docker (version 1.4 or greater)
     OpenvSwitch
-    nsenter (part of the util-linux package 2.23+)
+    nsenter (part of the util-linux package since version 2.23 and later)
     xterm
 
 Note: on some distributions the netem module `sch_netem` required for link configuration is only available by installing additional kernel packages. Please check the availability of the module:
