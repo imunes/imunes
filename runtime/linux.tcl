@@ -402,9 +402,9 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
                 address "$ether1"
             exec nsenter -n -t $lnode2Ns ip link set dev "$ifname2" \
                 address "$ether2"
-            # remove nodeNs to avoid `ip netns` catching it
-            exec rm -f "/var/run/netns/$lnode1Ns"
-            exec rm -f "/var/run/netns/$lnode2Ns"
+            # delete net namespace reference files
+            exec ip netns del $lnode1Ns
+            exec ip netns del $lnode2Ns
         }
         if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
             addNodeIfcToBridge $lname2 $ifname2 $lnode1 $ifname1 $ether1
@@ -803,8 +803,8 @@ proc addNodeIfcToBridge { bridge brifc node ifc mac } {
     setIfcNetNs $node $guestIfc $ifc
     # set mac address
     exec nsenter -n -t $nodeNs ip link set dev "$ifc" address "$mac"
-    # remove nodeNs to avoid `ip netns` catching it
-    exec rm -f "/var/run/netns/$nodeNs"
+    # delete net namespace reference file
+    exec ip netns del $nodeNs
 }
 
 proc checkSysPrerequisites {} {
