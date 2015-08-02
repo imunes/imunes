@@ -879,6 +879,54 @@ proc execSetIfcQDisc { eid node ifc qdisc } {
     exec docker exec $eid.$node tc qdisc add dev $ifc root $qdisc
 }
 
+
+proc configureIfcLinkParams { eid node ifname bandwidth delay ber dup } {
+    if {[nodeType $node] == "rj45"} {
+        set lname [getNodeName $node]
+    } else {
+        set lname $node
+    }
+    if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
+        catch {exec tc qdisc del dev $eid.$lname.$ifname root}
+
+        set vdelay [expr $delay / 1000]
+        exec tc qdisc add dev $eid.$lname.$ifname root \
+            handle 1: netem delay ${vdelay}ms
+
+        exec tc qdisc add dev $eid.$lname.$ifname parent 1: \
+            handle 2: netem duplicate ${dup}%
+
+        set corrupt [expr (1 / double($ber)) * 100]
+        exec tc qdisc add dev $eid.$lname.$ifname parent 2: \
+            handle 3: netem corrupt ${corrupt}%
+
+        if {$bandwidth > 0} {
+            exec tc qdisc add dev $eid.$lname.$ifname parent 3: \
+                handle 4: tbf rate ${bandwidth}bit limit 10mb burst 1540
+        }
+    }
+    if { [[typemodel $node].virtlayer] == "VIMAGE" } {
+        set nodeNs [getNodeNamespace $node]
+        catch {exec nsenter -n -t $nodeNs tc qdisc del dev $ifname root}
+
+        set vdelay [expr $delay / 1000]
+        exec nsenter -n -t $nodeNs tc qdisc add dev $ifname root \
+            handle 1: netem delay ${vdelay}ms
+
+        exec nsenter -n -t $nodeNs tc qdisc add dev $ifname parent 1: \
+            handle 2: netem duplicate ${dup}%
+
+        set corrupt [expr (1 / double($ber)) * 100]
+        exec nsenter -n -t $nodeNs tc qdisc add dev $ifname parent 2: \
+            handle 3: netem corrupt ${corrupt}%
+
+        if {$bandwidth > 0} {
+            exec nsenter -n -t $nodeNs tc qdisc add dev $ifname parent 3: \
+                handle 4: tbf rate ${bandwidth}bit limit 10mb burst 1540
+        }
+
+    }
+}
 #****f* linux.tcl/execSetLinkParams
 # NAME
 #   execSetLinkParams -- in exec mode set link parameters
@@ -904,100 +952,8 @@ proc execSetLinkParams { eid link } {
     set ber [expr [getLinkBER $link] + 0]
     set dup [expr [getLinkDup $link] + 0]
 
-    if {[nodeType $lnode1] == "rj45"} {
-        set lname1 [getNodeName $lnode1]
-    } else {
-        set lname1 $lnode1
-    }
-
-    if {[nodeType $lnode2] == "rj45"} {
-        set lname2 [getNodeName $lnode2]
-    } else {
-        set lname2 $lnode2
-    }
-
-    if { [[typemodel $lnode1].virtlayer] == "NETGRAPH" } {
-        catch {exec tc qdisc del dev $eid.$lname1.$ifname1 root}
-
-        set vdelay [expr $delay / 1000]
-        exec tc qdisc add dev $eid.$lname1.$ifname1 root \
-            handle 1: netem delay ${vdelay}ms
-
-        exec tc qdisc add dev $eid.$lname1.$ifname1 parent 1: \
-            handle 2: netem duplicate ${dup}%
-
-        set corrupt [expr (1 / double($ber)) * 100]
-        exec tc qdisc add dev $eid.$lname1.$ifname1 parent 2: \
-            handle 3: netem corrupt ${corrupt}%
-
-        if {$bandwidth > 0} {
-            exec tc qdisc add dev $eid.$lname1.$ifname1 parent 3: \
-                handle 4: tbf rate ${bandwidth}bit limit 10mb burst 1540
-        }
-    }
-
-    if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
-        catch {exec tc qdisc del dev $eid.$lname2.$ifname2 root}
-
-        set vdelay [expr $delay / 1000]
-        exec tc qdisc add dev $eid.$lname2.$ifname2 root \
-            handle 1: netem delay ${vdelay}ms
-
-        exec tc qdisc add dev $eid.$lname2.$ifname2 parent 1: \
-            handle 2: netem duplicate ${dup}%
-
-        set corrupt [expr (1 / double($ber)) * 100]
-        exec tc qdisc add dev $eid.$lname2.$ifname2 parent 2: \
-            handle 3: netem corrupt ${corrupt}%
-
-        if {$bandwidth > 0} {
-            exec tc qdisc add dev $eid.$lname2.$ifname2 parent 3: \
-                handle 4: tbf rate ${bandwidth}bit limit 10mb burst 1540
-        }
-    }
-
-    if { [[typemodel $lnode1].virtlayer] == "VIMAGE" } {
-        set lnode1Ns [getNodeNamespace $lnode1]
-        catch {exec nsenter -n -t $lnode1Ns tc qdisc del dev $ifname1 root}
-
-        set vdelay [expr $delay / 1000]
-        exec nsenter -n -t $lnode1Ns tc qdisc add dev $ifname1 root \
-            handle 1: netem delay ${vdelay}ms
-
-        exec nsenter -n -t $lnode1Ns tc qdisc add dev $ifname1 parent 1: \
-            handle 2: netem duplicate ${dup}%
-
-        set corrupt [expr (1 / double($ber)) * 100]
-        exec nsenter -n -t $lnode1Ns tc qdisc add dev $ifname1 parent 2: \
-            handle 3: netem corrupt ${corrupt}%
-
-        if {$bandwidth > 0} {
-            exec nsenter -n -t $lnode1Ns tc qdisc add dev $ifname1 parent 3: \
-                handle 4: tbf rate ${bandwidth}bit limit 10mb burst 1540
-        }
-
-    }
-
-    if { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
-        set lnode2Ns [getNodeNamespace $lnode2]
-        catch {exec nsenter -n -t $lnode2Ns tc qdisc del dev $ifname2 root}
-
-        set vdelay [expr $delay / 1000]
-        exec nsenter -n -t $lnode2Ns tc qdisc add dev $ifname2 root \
-            handle 1: netem delay ${vdelay}ms
-
-        exec nsenter -n -t $lnode2Ns tc qdisc add dev $ifname2 parent 1: \
-            handle 2: netem duplicate ${dup}%
-
-        set corrupt [expr (1 / double($ber)) * 100]
-        exec nsenter -n -t $lnode2Ns tc qdisc add dev $ifname2 parent 2: \
-            handle 3: netem corrupt ${corrupt}%
-
-        if {$bandwidth > 0} {
-            exec nsenter -n -t $lnode2Ns tc qdisc add dev $ifname2 parent 3: \
-                handle 4: tbf rate ${bandwidth}bit limit 10mb burst 1540
-        }
-    }
+    configureIfcLinkParams $eid $lnode1 $ifname1 $bandwidth $delay $ber $dup
+    configureIfcLinkParams $eid $lnode2 $ifname2 $bandwidth $delay $ber $dup
 }
 
 #****f* linux.tcl/startIPsecOnNode
