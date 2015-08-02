@@ -80,8 +80,8 @@ proc $MODULE.confNewNode { node } {
 	"hostname [getNewNodeNameType pc pc]" \
 	! ]
     lappend $node "network-config [list $nconfig]"
-    
-    setLogIfcType $node lo0 lo 
+
+    setLogIfcType $node lo0 lo
     setIfcIPv4addr $node lo0 "127.0.0.1/24"
     setIfcIPv6addr $node lo0 "::1/128"
 }
@@ -142,7 +142,7 @@ proc $MODULE.toolbarIconDescr {} {
 proc $MODULE.notebookDimensions { wi } {
     set h 210
     set w 507
-    
+
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
 	== "Configuration" } {
 	set w 507
@@ -153,7 +153,7 @@ proc $MODULE.notebookDimensions { wi } {
 	set w 507
     }
 
-    return [list $h $w] 
+    return [list $h $w]
 }
 
 #****f* pc.tcl/pc.calcDxDy
@@ -212,7 +212,7 @@ proc $MODULE.IPAddrRange {} {
 # SYNOPSIS
 #   set layer [pc.layer]
 # FUNCTION
-#   Returns the layer on which the pc communicates, i.e. returns NETWORK. 
+#   Returns the layer on which the pc communicates, i.e. returns NETWORK.
 # RESULT
 #   * layer -- set to NETWORK
 #****
@@ -226,7 +226,7 @@ proc $MODULE.layer {} {
 # SYNOPSIS
 #   set layer [pc.virtlayer]
 # FUNCTION
-#   Returns the layer on which the pc is instantiated i.e. returns VIMAGE. 
+#   Returns the layer on which the pc is instantiated i.e. returns VIMAGE.
 # RESULT
 #   * layer -- set to VIMAGE
 #****
@@ -248,7 +248,7 @@ proc $MODULE.virtlayer {} {
 # INPUTS
 #   * node -- node id (type of the node is pc)
 # RESULT
-#   * congif -- generated configuration 
+#   * congif -- generated configuration
 #****
 proc $MODULE.cfggen { node } {
     set cfg {}
@@ -274,7 +274,7 @@ proc $MODULE.cfggen { node } {
 # INPUTS
 #   * node -- node id (type of the node is pc)
 # RESULT
-#   * appl -- application that reads the configuration (/bin/sh) 
+#   * appl -- application that reads the configuration (/bin/sh)
 #****
 proc $MODULE.bootcmd { node } {
     return "/bin/sh"
@@ -304,7 +304,7 @@ proc $MODULE.shellcmds {} {
 #   Procedure instantiate creates a new virtaul node
 #   for a given node in imunes.
 #   Procedure pc.instantiate cretaes a new virtual node with
-#   all the interfaces and CPU parameters as defined in imunes. 
+#   all the interfaces and CPU parameters as defined in imunes.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id (type of the node is pc)
@@ -335,7 +335,7 @@ proc $MODULE.start { eid node } {
 # SYNOPSIS
 #   pc.shutdown $eid $node
 # FUNCTION
-#   Shutdowns a pc. Simulates the shutdown proces of a pc, 
+#   Shutdowns a pc. Simulates the shutdown proces of a pc,
 #   by calling the l3node.shutdown procedure.
 # INPUTS
 #   * eid -- experiment id
@@ -351,8 +351,8 @@ proc $MODULE.shutdown { eid node } {
 # SYNOPSIS
 #   pc.destroy $eid $node
 # FUNCTION
-#   Destroys a pc. Destroys all the interfaces of the pc 
-#   and the vimage itself by calling l3node.destroy procedure. 
+#   Destroys a pc. Destroys all the interfaces of the pc
+#   and the vimage itself by calling l3node.destroy procedure.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id (type of the node is pc)
@@ -365,7 +365,7 @@ proc $MODULE.destroy { eid node } {
 # NAME
 #   pc.nghook -- nghook
 # SYNOPSIS
-#   pc.nghook $eid $node $ifc 
+#   pc.nghook $eid $node $ifc
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. This procedure calls

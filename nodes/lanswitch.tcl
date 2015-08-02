@@ -93,7 +93,7 @@ proc $MODULE.confNewIfc { node ifc } {
 #****
 proc $MODULE.confNewNode { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
-    
+
     set nconfig [list \
 	"hostname [getNewNodeNameType lanswitch switch]" \
 	! ]
@@ -102,7 +102,7 @@ proc $MODULE.confNewNode { node } {
 
 #****f* lanswitch.tcl/lanswitch.icon
 # NAME
-#   lanswitch.icon -- 
+#   lanswitch.icon --
 # SYNOPSIS
 #   lanswitch.icon $size
 # FUNCTION
@@ -178,7 +178,7 @@ proc $MODULE.ifcName {l r} {
 # SYNOPSIS
 #   set layer [lanswitch.layer]
 # FUNCTION
-#   Returns the layer on which the lanswitch operates, i.e. returns LINK. 
+#   Returns the layer on which the lanswitch operates, i.e. returns LINK.
 # RESULT
 #   * layer -- set to LINK
 #****
@@ -192,13 +192,13 @@ proc $MODULE.layer {} {
 # SYNOPSIS
 #   set layer [lanswitch.virtlayer]
 # FUNCTION
-#   Returns the layer on which the lanswitch node is instantiated 
-#   i.e. returns NETGRAPH. 
+#   Returns the layer on which the lanswitch node is instantiated
+#   i.e. returns KERNEL.
 # RESULT
-#   * layer -- set to NETGRAPH
+#   * layer -- set to KERNEL
 #****
 proc $MODULE.virtlayer {} {
-    return NETGRAPH
+    return KERNEL
 }
 
 #****f* lanswitch.tcl/lanswitch.instantiate
@@ -207,8 +207,8 @@ proc $MODULE.virtlayer {} {
 # SYNOPSIS
 #   lanswitch.instantiate $eid $node
 # FUNCTION
-#   Procedure lanswitch.instantiate creates a new netgraph node of the type
-#   bridge. The name of the netgraph node is in the form of exprimentId_nodeId.
+#   Procedure lanswitch.instantiate creates a new kernel node of the type
+#   bridge. The name of the kernel node is in the form of exprimentId_nodeId.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- id of the node (type of the node is lanswitch)
@@ -223,7 +223,7 @@ proc $MODULE.instantiate { eid node } {
 # SYNOPSIS
 #   lanswitch.destroy $eid $node
 # FUNCTION
-#   Destroys a lanswitch. Destroys the netgraph node that represents 
+#   Destroys a lanswitch. Destroys the kernel node that represents
 #   the lanswitch by sending a shutdown message.
 # INPUTS
 #   * eid -- experiment id
@@ -237,7 +237,7 @@ proc $MODULE.destroy { eid node } {
 # NAME
 #   lanswitch.nghook -- nghook
 # SYNOPSIS
-#   set nghook [lanswitch.nghook $eid $node $ifc] 
+#   set nghook [lanswitch.nghook $eid $node $ifc]
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. Netgraph node name is in
@@ -246,7 +246,7 @@ proc $MODULE.destroy { eid node } {
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id
-#   * ifc -- interface name 
+#   * ifc -- interface name
 # RESULT
 #   * nghook -- the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).

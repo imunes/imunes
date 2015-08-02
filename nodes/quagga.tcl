@@ -31,7 +31,7 @@
 
 #****h* imunes/quagga.tcl
 # NAME
-#  router.quagga.tcl -- defines specific procedures for router 
+#  router.quagga.tcl -- defines specific procedures for router
 #  using quagga routing model
 # FUNCTION
 #  This module defines all the specific procedures for a router
@@ -51,7 +51,7 @@ set MODULE router.quagga
 #   set layer [router.quagga.layer]
 # FUNCTION
 #   Returns the layer on which the router using quagga model
-#   operates, i.e. returns NETWORK. 
+#   operates, i.e. returns NETWORK.
 # RESULT
 #   * layer -- set to NETWORK
 #****
@@ -66,7 +66,7 @@ proc $MODULE.layer {} {
 #   set layer [router.quagga.virtlayer]
 # FUNCTION
 #   Returns the layer on which the router using model quagga is instantiated,
-#   i.e. returns VIMAGE. 
+#   i.e. returns VIMAGE.
 # RESULT
 #   * layer -- set to VIMAGE
 #****
@@ -89,7 +89,7 @@ proc $MODULE.virtlayer {} {
 # INPUTS
 #   * node - node id (type of the node is router and routing model is quagga)
 # RESULT
-#   * congif -- generated configuration 
+#   * congif -- generated configuration
 #****
 proc $MODULE.cfggen { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
@@ -158,7 +158,7 @@ proc $MODULE.cfggen { node } {
 # INPUTS
 #   * node - node id (type of the node is router and routing model is quagga)
 # RESULT
-#   * appl -- application that reads the configuration (quaggaboot.sh) 
+#   * appl -- application that reads the configuration (quaggaboot.sh)
 #****
 proc $MODULE.bootcmd { node } {
 
@@ -172,7 +172,7 @@ proc $MODULE.bootcmd { node } {
 #   set shells [router.quagga.shellcmds]
 # FUNCTION
 #   Procedure shellcmds returns the shells that can be opened
-#   as a default shell for the system. 
+#   as a default shell for the system.
 # RESULT
 #   * shells -- default shells for the router.quagga
 #****
@@ -186,7 +186,7 @@ proc $MODULE.shellcmds {} {
 # SYNOPSIS
 #   router.quagga.instantiate $eid $node
 # FUNCTION
-#   Creates a new virtual node for a given node in imunes. 
+#   Creates a new virtual node for a given node in imunes.
 #   Procedure router.quagga.instantiate cretaes a new virtual node with all
 #   the interfaces and CPU parameters as defined in imunes. It sets the
 #   net.inet.ip.forwarding and net.inet6.ip6.forwarding kernel variables to 1.
@@ -210,8 +210,8 @@ proc $MODULE.instantiate { eid node } {
 # SYNOPSIS
 #   router.quagga.start $eid $node
 # FUNCTION
-#   Starts a new router.quagga. The node can be started if it is instantiated. 
-#   Simulates the booting proces of a router.quagga, by calling l3node.start 
+#   Starts a new router.quagga. The node can be started if it is instantiated.
+#   Simulates the booting proces of a router.quagga, by calling l3node.start
 #   procedure.
 # INPUTS
 #   * eid - experiment id
@@ -245,8 +245,8 @@ proc $MODULE.shutdown { eid node } {
 # SYNOPSIS
 #   router.quagga.destroy $eid $node
 # FUNCTION
-#   Destroys a router.quagga. Destroys all the interfaces of the router.quagga 
-#   and the vimage itself by calling l3node.destroy procedure. 
+#   Destroys a router.quagga. Destroys all the interfaces of the router.quagga
+#   and the vimage itself by calling l3node.destroy procedure.
 # INPUTS
 #   * eid - experiment id
 #   * node - node id (type of the node is router.quagga)
@@ -259,7 +259,7 @@ proc $MODULE.destroy { eid node } {
 # NAME
 #   router.quagga.nghook -- nghook
 # SYNOPSIS
-#   router.quagga.nghook $eid $node $ifc 
+#   router.quagga.nghook $eid $node $ifc
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. This procedure calls

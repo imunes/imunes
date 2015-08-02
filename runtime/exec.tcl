@@ -390,9 +390,9 @@ proc createExperimentFiles { eid } {
     global currentFileBatch execMode runtimeDir
     set basedir "$runtimeDir/$eid"
     file mkdir $basedir
-    
+
     writeDataToFile $basedir/timestamp [clock format [clock seconds]]
-    
+
     dumpNgnodesToFile $basedir/ngnodemap
 
     if { $execMode == "interactive" } {
@@ -663,7 +663,7 @@ proc displayBatchProgress { prgs tot } {
 #   l3node.instantiate $eid $node
 # FUNCTION
 #   Instantiates the specified node. This means that it creates a new vimage
-#   node, all the required interfaces (for serial interface a new netgraph
+#   node, all the required interfaces (for serial interface a new kernel
 #   interface of type iface; for ethernet of type eiface, using createIfc
 #   procedure) including loopback interface, and sets kernel variables.
 # INPUTS
@@ -724,7 +724,7 @@ proc l3node.shutdown { eid node } {
 # FUNCTION
 #   Destroys a layer 3 node (pc, host or router).
 #   Destroys all the interfaces of the node by sending a shutdown message to
-#   netgraph nodes and on the end destroys the vimage itself.
+#   kernel nodes and on the end destroys the vimage itself.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id
@@ -955,7 +955,7 @@ proc terminateAllNodes { eid } {
     # 1. call shutdown on all ng nodes because of the packgen node.
     # 2. call shutdown on all virtual nodes.
     # 3. remove all links to prevent packets flowing into the interfaces.
-    # 4. destroy all netgraph nodes.
+    # 4. destroy all kernel nodes.
     # 5. destroy all ngeth interfaces from vimage nodes.
     # 6. destroy all vimage nodes.
 
@@ -963,7 +963,7 @@ proc terminateAllNodes { eid } {
     set ngraphs ""
     set vimages ""
     foreach node $node_list {
-	if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
+	if { [[typemodel $node].virtlayer] == "KERNEL" } {
 	    lappend ngraphs $node
 	} elseif { [[typemodel $node].virtlayer] == "VIMAGE" } {
 	    lappend vimages $node
@@ -1004,7 +1004,7 @@ proc terminateAllNodes { eid } {
     pipesClose
     statline ""
 
-    destroyNetgraphNodes $eid $ngraphs $w
+    destroyKernelNodes $eid $ngraphs $w
 
     destroyVirtNodeIfcs $eid $vimages
 

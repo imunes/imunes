@@ -68,7 +68,7 @@ proc $MODULE.prepareSystem {} {
 #****
 proc $MODULE.confNewNode { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
-    
+
     set nconfig [list \
 	"hostname UNASSIGNED" \
 	! ]
@@ -153,7 +153,7 @@ proc $MODULE.ifcName {l r} {
 # SYNOPSIS
 #   set layer [rj45.layer]
 # FUNCTION
-#   Returns the layer on which the rj45 operates, i.e. returns LINK. 
+#   Returns the layer on which the rj45 operates, i.e. returns LINK.
 # RESULT
 #   * layer -- set to LINK
 #****
@@ -168,12 +168,12 @@ proc $MODULE.layer {} {
 #   set layer [rj45.virtlayer]
 # FUNCTION
 #   Returns the layer on which the rj45 node is instantiated,
-#   i.e. returns NETGRAPH. 
+#   i.e. returns KERNEL.
 # RESULT
-#   * layer -- set to NETGRAPH 
+#   * layer -- set to KERNEL
 #****
 proc $MODULE.virtlayer {} {
-    return NETGRAPH
+    return KERNEL
 }
 
 #****f* rj45.tcl/rj45.instantiate
@@ -197,7 +197,7 @@ proc $MODULE.instantiate { eid node } {
 # SYNOPSIS
 #   rj45.destroy $eid $node
 # FUNCTION
-#   Destroys an rj45 emulation interface. 
+#   Destroys an rj45 emulation interface.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id (type of the node is rj45)
@@ -210,14 +210,14 @@ proc $MODULE.destroy { eid node } {
 # NAME
 #   rj45.nghook
 # SYNOPSIS
-#   rj45.nghook $eid $node $ifc 
+#   rj45.nghook $eid $node $ifc
 # FUNCTION
 #   Returns the id of the netgraph node and the netgraph hook name. In this
 #   case netgraph node name correspondes to the name of the physical interface.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id
-#   * ifc -- interface name 
+#   * ifc -- interface name
 # RESULT
 #   * nghook -- the list containing netgraph node name and
 #     the netraph hook name (in this case: lower).

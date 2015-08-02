@@ -31,7 +31,7 @@
 
 #****h* imunes/xorp.tcl
 # NAME
-#  router.xorp.tcl -- defines specific procedures for routers 
+#  router.xorp.tcl -- defines specific procedures for routers
 #  using xorp routing model
 # FUNCTION
 #  This module defines all the specific procedures for a router
@@ -51,7 +51,7 @@ set MODULE router.xorp
 #   set layer [router.xorp.layer]
 # FUNCTION
 #   Returns the layer on which the router using xorp model
-#   operates, i.e. returns NETWORK. 
+#   operates, i.e. returns NETWORK.
 # RESULT
 #   * layer -- set to NETWORK
 #****
@@ -66,7 +66,7 @@ proc $MODULE.layer {} {
 #   set layer [router.xorp.virtlayer]
 # FUNCTION
 #   Returns the layer on which the router using model xorp
-#   is instantiated, i.e. returns VIMAGE. 
+#   is instantiated, i.e. returns VIMAGE.
 # RESULT
 #   * layer -- set to VIMAGE
 #****
@@ -90,7 +90,7 @@ proc $MODULE.virtlayer {} {
 #   * node - node id (type of the node is router
 #     and the routing model is xorp)
 # RESULT
-#   * congif -- generated configuration 
+#   * congif -- generated configuration
 #****
 proc $MODULE.cfggen { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
@@ -202,7 +202,7 @@ proc $MODULE.cfggen { node } {
 	}
 	lappend cfg "	area 0.0.0.0 {"
 	foreach ifc [ifcList $node] {
-	    set addr "[lindex [split [getIfcIPv4addr $node $ifc] /] 0]"	
+	    set addr "[lindex [split [getIfcIPv4addr $node $ifc] /] 0]"
 	    if { $addr != "" } {
 		lappend cfg "	    interface $ifc {"
 		lappend cfg "	        vif $ifc {"
@@ -300,7 +300,7 @@ proc $MODULE.cfggen { node } {
 # INPUTS
 #   * node - node id (type of the node is router and routing model is xorp)
 # RESULT
-#   * appl -- application that reads the configuration (xorp_rtrmgr) 
+#   * appl -- application that reads the configuration (xorp_rtrmgr)
 #****
 proc $MODULE.bootcmd { node } {
     return "/usr/local/bin/xorp_rtrmgr -b"
@@ -313,7 +313,7 @@ proc $MODULE.bootcmd { node } {
 #   set shells [router.xorp.shellcmds]
 # FUNCTION
 #   Procedure shellcmds returns the shells that can be opened
-#   as a default shell for the system. 
+#   as a default shell for the system.
 # RESULT
 #   * shells -- default shells for the router.xorp
 #****
@@ -327,7 +327,7 @@ proc $MODULE.shellcmds {} {
 # SYNOPSIS
 #   router.xorp.instantiate $eid $node
 # FUNCTION
-#   Procedure instantiate creates a new virtaul node for a given node. 
+#   Procedure instantiate creates a new virtaul node for a given node.
 #   Procedure router.xorp.instantiate cretaes a new virtual node with all the
 #   interfaces and CPU parameters as defined in imunes. It sets the
 #   net.inet.ip.forwarding and net.inet6.ip6.forwarding kernel variables to 1.
@@ -337,7 +337,7 @@ proc $MODULE.shellcmds {} {
 #****
 proc $MODULE.instantiate { eid node } {
     l3node.instantiate $eid $node
-    
+
     enableIPforwarding $eid $node
 
     configDefaultLoIfc $eid $node
@@ -349,8 +349,8 @@ proc $MODULE.instantiate { eid node } {
 # SYNOPSIS
 #   router.xorp.start $eid $node
 # FUNCTION
-#   Starts a new router.xorp. The node can be started if it is instantiated. 
-#   Simulates the booting proces of a router.xorp, by calling l3node.start 
+#   Starts a new router.xorp. The node can be started if it is instantiated.
+#   Simulates the booting proces of a router.xorp, by calling l3node.start
 #   procedure.
 # INPUTS
 #   * eid - experiment id
@@ -366,7 +366,7 @@ proc $MODULE.start { eid node } {
 # SYNOPSIS
 #   router.xorp.shutdown $eid $node
 # FUNCTION
-#   Shutdowns a router.xorp. Simulates the shutdown proces of a router.xorp, 
+#   Shutdowns a router.xorp. Simulates the shutdown proces of a router.xorp,
 #   by calling the l3node.shutdown procedure.
 # INPUTS
 #   * eid - experiment id
@@ -382,8 +382,8 @@ proc $MODULE.shutdown { eid node } {
 # SYNOPSIS
 #   router.xorp.destroy $eid $node
 # FUNCTION
-#   Destroys a router.xorp. Destroys all the interfaces of the router.xorp 
-#   and the vimage itself by calling l3node.destroy procedure. 
+#   Destroys a router.xorp. Destroys all the interfaces of the router.xorp
+#   and the vimage itself by calling l3node.destroy procedure.
 # INPUTS
 #   * eid - experiment id
 #   * node - node id (type of the node is router.xorp)
@@ -396,7 +396,7 @@ proc $MODULE.destroy { eid node } {
 # NAME
 #   router.xorp.nghook -- nghook
 # SYNOPSIS
-#   router.xorp.nghook $eid $node $ifc 
+#   router.xorp.nghook $eid $node $ifc
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. This procedure calls

@@ -93,7 +93,7 @@ proc $MODULE.confNewIfc { node ifc } {
 #****
 proc $MODULE.confNewNode { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
-    
+
     set nconfig [list \
 	"hostname [getNewNodeNameType hub hub]" \
 	! ]
@@ -113,7 +113,7 @@ proc $MODULE.confNewNode { node } {
 #   * path -- path to icon
 #****
 proc $MODULE.icon { size } {
-    global ROOTDIR LIBDIR 
+    global ROOTDIR LIBDIR
     switch $size {
       normal {
 	return $ROOTDIR/$LIBDIR/icons/normal/hub.gif
@@ -178,7 +178,7 @@ proc $MODULE.ifcName {l r} {
 # SYNOPSIS
 #   set layer [hub.layer]
 # FUNCTION
-#   Returns the layer on which the hub operates, i.e. returns LINK. 
+#   Returns the layer on which the hub operates, i.e. returns LINK.
 # RESULT
 #   * layer -- set to LINK
 #****
@@ -188,16 +188,16 @@ proc $MODULE.layer {} {
 
 #****f* hub.tcl/hub.virtlayer
 # NAME
-#   hub.virtlayer -- virtual layer  
+#   hub.virtlayer -- virtual layer
 # SYNOPSIS
 #   set layer [hub.virtlayer]
 # FUNCTION
-#   Returns the layer on which the hub is instantiated, i.e. returns NETGRAPH. 
+#   Returns the layer on which the hub is instantiated, i.e. returns KERNEL.
 # RESULT
-#   * layer -- set to NETGRAPH
+#   * layer -- set to KERNEL
 #****
 proc $MODULE.virtlayer {} {
-    return NETGRAPH
+    return KERNEL
 }
 
 #****f* hub.tcl/hub.instantiate
@@ -206,8 +206,8 @@ proc $MODULE.virtlayer {} {
 # SYNOPSIS
 #   hub.instantiate $eid $node
 # FUNCTION
-#   Procedure hub.instantiate creates a new netgraph node of the type hub.
-#   The name of the netgraph node is in form of exprimentId_nodeId.
+#   Procedure hub.instantiate creates a new kernel node of the type hub.
+#   The name of the kernel node is in form of exprimentId_nodeId.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- id of the node (type of the node is hub)
@@ -222,7 +222,7 @@ proc $MODULE.instantiate { eid node } {
 # SYNOPSIS
 #   hub.destroy $eid $node
 # FUNCTION
-#   Destroys a hub. Destroys the netgraph node that represents
+#   Destroys a hub. Destroys the kernel node that represents
 #   the hub by sending a shutdown message.
 # INPUTS
 #   * eid -- experiment id
@@ -230,13 +230,13 @@ proc $MODULE.instantiate { eid node } {
 #****
 proc $MODULE.destroy { eid node } {
     l2node.destroy $eid $node
-} 
+}
 
 #****f* hub.tcl/hub.nghook
 # NAME
 #   hub.nghook
 # SYNOPSIS
-#   hub.nghook $eid $node $ifc 
+#   hub.nghook $eid $node $ifc
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. Netgraph node name is in
@@ -245,7 +245,7 @@ proc $MODULE.destroy { eid node } {
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id
-#   * ifc -- interface name 
+#   * ifc -- interface name
 # RESULT
 #   * nghook -- the list containing netgraph node id and the 
 #     netgraph hook (ngNode ngHook).

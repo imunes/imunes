@@ -47,7 +47,7 @@ proc $MODULE.confNewIfc { node ifc } {
 
 proc $MODULE.confNewNode { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
-    
+
     set nconfig [list \
 	"hostname $node" \
 	! ]
@@ -89,7 +89,7 @@ proc $MODULE.layer {} {
 }
 
 proc $MODULE.virtlayer {} {
-    return NETGRAPH
+    return KERNEL
 }
 
 proc $MODULE.instantiate { eid node } {

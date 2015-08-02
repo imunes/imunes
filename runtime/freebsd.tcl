@@ -653,7 +653,7 @@ proc l3node.nghook { eid node ifc } {
 #   vimageCleanup
 # FUNCTION
 #   Called in special circumstances only. It cleans all the imunes objects
-#   from the kernel (vimages and netgraph nodes).
+#   from the kernel (vimages and kernel nodes).
 #****
 proc vimageCleanup { eid } {
     global .c
@@ -715,7 +715,7 @@ proc vimageCleanup { eid } {
 	timeoutPatch $eid $vimages
     }
 
-    statline "Shutting down netgraph nodes..."
+    statline "Shutting down kernel nodes..."
 
     pipesCreate
 
@@ -763,7 +763,7 @@ proc vimageCleanup { eid } {
     foreach ngline $ngnodes {
 	incr step
 	if { $execMode != "batch" } {
-	    statline "Shutting down netgraph node $ngline"
+	    statline "Shutting down kernel node $ngline"
 	}
 	displayBatchProgress $step $allNgnodes
 	set ngnode [lindex [eval list $ngline] 1]
@@ -1183,7 +1183,7 @@ proc createNodeLogIfcs { node } {
 # SYNOPSIS
 #   configureICMPoptions $node
 # FUNCTION
-#  Configures the necessary ICMP sysctls in the given node. 
+#  Configures the necessary ICMP sysctls in the given node.
 # INPUTS
 #   * node -- node id
 #****
@@ -1675,28 +1675,28 @@ proc destroyLinkBetween { eid lnode1 lnode2 } {
     pipesExec "jexec $eid ngctl msg $lnode1-$lnode2: shutdown"
 }
 
-#****f* freebsd.tcl/destroyNetgraphNodes
+#****f* freebsd.tcl/destroyKernelNodes
 # NAME
-#   destroyNetgraphNodes -- destroy netgraph nodes
+#   destroyKernelNodes -- destroy kernel nodes
 # SYNOPSIS
-#   destroyNetgraphNodes $eid $ngraphs $widget
+#   destroyKernelNodes $eid $ngraphs $widget
 # FUNCTION
-#   Destroys all netgraph nodes.
+#   Destroys all kernel nodes.
 # INPUTS
 #   * eid -- experiment id
 #   * ngraphs -- list of ngraphs nodes
 #   * widget -- status widget
 #****
-proc destroyNetgraphNodes { eid ngraphs widget } {
+proc destroyKernelNodes { eid ngraphs widget } {
     global execMode
 
-    # destroying netgraph nodes
+    # destroying kernel nodes
     if { $ngraphs != "" } {
-	statline "Shutting down netgraph nodes..."
+	statline "Shutting down kernel nodes..."
 	set i 0
 	foreach node $ngraphs {
 	    incr i
-	    # statline "Shutting down netgraph node $node ([typemodel $node])"
+	    # statline "Shutting down kernel node $node ([typemodel $node])"
 	    [typemodel $node].destroy $eid $node
 	    if {$execMode != "batch"} {
 		$widget.p step -1
@@ -1790,7 +1790,7 @@ proc removeExperimentContainer { eid widget } {
 # SYNOPSIS
 #   l2node.instantiate $eid $node
 # FUNCTION
-#   Procedure l2node.instantiate creates a new netgraph node of the appropriate type.
+#   Procedure l2node.instantiate creates a new kernel node of the appropriate type.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- id of the node (type of the node is either lanswitch or hub)
@@ -1820,7 +1820,7 @@ proc l2node.instantiate { eid node } {
 # SYNOPSIS
 #   l2node.destroy $eid $node
 # FUNCTION
-#   Destroys a l2node (netgraph) node by sending a shutdown
+#   Destroys a l2node (kernel) node by sending a shutdown
 #   message.
 # INPUTS
 #   * eid -- experiment id

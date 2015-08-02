@@ -367,8 +367,8 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
         set lname2 $lnode2
     }
 
-    if { [[typemodel $lnode1].virtlayer] == "NETGRAPH" } {
-        if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
+    if { [[typemodel $lnode1].virtlayer] == "KERNEL" } {
+        if { [[typemodel $lnode2].virtlayer] == "KERNEL" } {
             # generate interface names
             set hostIfc1 "$eid.$lname1.$ifname1"
             set hostIfc2 "$eid.$lname2.$ifname2"
@@ -406,7 +406,7 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
             exec ip netns del $lnode1Ns
             exec ip netns del $lnode2Ns
         }
-        if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
+        if { [[typemodel $lnode2].virtlayer] == "KERNEL" } {
             addNodeIfcToBridge $lname2 $ifname2 $lnode1 $ifname1 $ether1
         }
     }
@@ -554,20 +554,20 @@ proc removeExperimentContainer { eid widget } {
     catch "exec rm -fr $VROOT_BASE/$eid &"
 }
 
-proc createNetgraphNode { eid node } {
+proc createKernelNode { eid node } {
     catch {exec ovs-vsctl add-br $eid.$node}
 }
 
-proc destroyNetgraphNode { eid node } {
+proc destroyKernelNode { eid node } {
     exec ovs-vsctl del-br $eid.$node
 }
 
-proc destroyNetgraphNodes { eid switches widget } {
+proc destroyKernelNodes { eid switches widget } {
     global execMode
 
     # destroying openvswitch nodes
     if { $switches != "" } {
-        statline "Shutting down netgraph nodes..."
+        statline "Shutting down kernel nodes..."
         set i 0
         foreach node $switches {
             incr i
@@ -602,13 +602,13 @@ proc getCpuCount {} {
 # SYNOPSIS
 #   l2node.instantiate $eid $node
 # FUNCTION
-#   Procedure l2node.instantiate creates a new netgraph node of the appropriate type.
+#   Procedure l2node.instantiate creates a new kernel node of the appropriate type.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- id of the node (type of the node is either lanswitch or hub)
 #****
 proc l2node.instantiate { eid node } {
-    createNetgraphNode $eid $node
+    createKernelNode $eid $node
 }
 
 #****f* linux.tcl/l2node.destroy
@@ -623,7 +623,7 @@ proc l2node.instantiate { eid node } {
 #   * node -- id of the node
 #****
 proc l2node.destroy { eid node } {
-    destroyNetgraphNode $eid $node
+    destroyKernelNode $eid $node
 }
 
 #****f* linux.tcl/enableIPforwarding
@@ -692,7 +692,7 @@ proc getExtIfcs { } {
 #****
 proc captureExtIfc { eid node } {
     set ifname [getNodeName $node]
-    createNetgraphNode $eid $ifname
+    createKernelNode $eid $ifname
     catch {exec ovs-vsctl add-port $eid.$ifname $ifname}
 }
 
@@ -709,7 +709,7 @@ proc captureExtIfc { eid node } {
 #****
 proc releaseExtIfc { eid node } {
     set ifname [getNodeName $node]
-    catch "destroyNetgraphNode $eid $ifname"
+    catch "destroyKernelNode $eid $ifname"
 }
 
 proc getIPv4RouteCmd { statrte } {
@@ -752,7 +752,7 @@ proc getIPv6IfcCmd { ifc addr primary } {
 # INPUTS
 #   * node -- node id
 # RESULT
-#   * list -- list in the form of {netgraph_node_name hook}
+#   * list -- list in the form of {kernel_node_name hook}
 #****
 proc getRunningNodeIfcList { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
@@ -886,7 +886,7 @@ proc configureIfcLinkParams { eid node ifname bandwidth delay ber dup } {
     } else {
         set lname $node
     }
-    if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
+    if { [[typemodel $node].virtlayer] == "KERNEL" } {
         catch {exec tc qdisc del dev $eid.$lname.$ifname root}
 
         set vdelay [expr $delay / 1000]
