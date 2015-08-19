@@ -4,6 +4,9 @@
 # virtual node template. The template is fetched form:
 # http://imunes.net/dl/click.tar.gz
 
+export MFLAGS=""
+export MAKEFLAGS=""
+
 click="click.tar.gz"
 workdir="/tmp/vroot_prepare/tools"
 
@@ -13,7 +16,9 @@ if [ "$1" == "" ]; then
     exit
 fi
 
-if [ "`uname -r | cut -d'-' -f1`" = "10.1" ]; then
+VERSION=`uname -r | cut -d'-' -f1 | cut -d'.' -f1`
+
+if [ $VERSION -ge 10 ]; then
     export LDFLAGS="-L/usr/lib -lexecinfo"
 fi
 
