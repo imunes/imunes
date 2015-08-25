@@ -75,7 +75,14 @@ Note: on some distributions the netem module `sch_netem` required for link confi
 #### Fedora 22
     # yum install openvswitch docker-io xterm wireshark-gnome ImageMagick tcl tcllib tk kernel-modules-extra util-linux
 
+#### Debian testing
+    # apt-get install openvswitch-switch docker.io xterm wireshark ImageMagick tcl tcllib tk user-mode-linux util-linux
+
 #### Debian 8
+    ### add jessie-backports to your sources.list and update
+    # echo "deb http://http.debian.net/debian jessie-backports main" >> /etc/apt/sources.list
+    # apt-get update
+    ### install packages
     # apt-get install openvswitch-switch docker.io xterm wireshark ImageMagick tcl tcllib tk user-mode-linux util-linux
 
 #### Performance
