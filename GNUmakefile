@@ -71,8 +71,9 @@ ifeq ($(UNAME_S), Linux)
 	mv $(BINDIR)/hcp.linux $(BINDIR)/hcp
 	mv $(BINDIR)/himage.linux $(BINDIR)/himage
 	mv $(BINDIR)/cleanupAll.linux $(BINDIR)/cleanupAll
+	mv $(BINDIR)/startxcmd.linux $(BINDIR)/startxcmd
 else
-	rm $(BINDIR)/himage.linux $(BINDIR)/cleanupAll.linux
+	rm $(BINDIR)/himage.linux $(BINDIR)/cleanupAll.linux $(BINDIR)/startxcmd.linux
 endif
 
 	mkdir -p $(SCRIPTSDIR)
