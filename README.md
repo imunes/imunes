@@ -88,6 +88,10 @@ Note: on some distributions the netem module `sch_netem` required for link confi
     # apt-get install openvswitch-switch docker.io xterm wireshark \
         ImageMagick tcl tcllib tk user-mode-linux util-linux
         
+#### Ubuntu 15.04
+    # apt-get install openvswitch-switch docker.io xterm wireshark \
+        make ImageMagick tk tcllib user-mode-linux util-linux
+        
 #### Ubuntu 14.04 LTS
     ### install needed packages
     # apt-get install openvswitch-switch xterm wireshark make \
@@ -97,13 +101,6 @@ Note: on some distributions the netem module `sch_netem` required for link confi
     # service docker start
     ### fetch remote nsenter which is not part of util-linux in ubuntu 14.04
     # sudo docker run -v /usr/local/bin:/target jpetazzo/nsenter
-
-#### Ubuntu 15.04
-    ### install needed packages
-    # apt-get install openvswitch-switch docker.io xterm wireshark \
-        make ImageMagick tk tcllib user-mode-linux util-linux
-    # service docker start
-    # service openvswitch-switch start
 
 #### Performance
 
