@@ -24,11 +24,11 @@ __END__
 
 
 vi_name() {
-  if test "`docker ps -aq`" = ""; then
+  if test "`docker ps -q`" = ""; then
       echo Error: cannot find node named $1 >&2
       exit 2
   fi
-  dockerps=`docker ps -aq | xargs docker inspect -f '{{range $p, $conf := .}} {{if eq $p "Name"}} {{$conf}} {{end}} {{if eq $p "Id"}} {{$conf}} {{end}} {{if eq $p "Config"}} {{$conf.Hostname}} {{end}} {{end}}'`
+  dockerps=`docker ps -q | xargs docker inspect -f '{{range $p, $conf := .}} {{if eq $p "Name"}} {{$conf}} {{end}} {{if eq $p "Id"}} {{$conf}} {{end}} {{if eq $p "Config"}} {{$conf.Hostname}} {{end}} {{end}}'`
   host=`echo $1 | cut -d@ -f1`
   if [ -n "`echo $1 | grep "@"`" ]; then
       expid=`echo $1 | cut -d@ -f2`
