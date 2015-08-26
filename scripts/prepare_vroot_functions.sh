@@ -27,7 +27,14 @@ HOMEDIR=`pwd`
 # FreeBSD version and architecture
 RELEASE=`uname -r|sed s/STABLE/RELEASE/`
 RELEASE_NUM=`echo $RELEASE | cut -d'.' -f1`
+RELEASE_VER=`echo $RELEASE | cut -d'.' -f2 | cut -d'-' -f1`
 ARCH=`uname -m`
+REPO=latest
+
+echo "10.2-RELEASE" | grep -q $RELEASE
+if [ $? -eq 0 ]; then
+    REPO="release_$RELEASE_VER"
+fi
 
 # unionfs settings
 PREPAREDIR="vroot_prepare"
@@ -60,7 +67,7 @@ DISTSERVER="ftp://ftp.at.freebsd.org"
 RELEASE_DIR="/pub/FreeBSD/releases/$ARCH/$RELEASE"
 
 # pkg repository
-PKGREPO="http://pkg.freebsd.org/freebsd:$RELEASE_NUM:x86:32/latest/"
+PKGREPO="http://pkg.freebsd.org/freebsd:$RELEASE_NUM:x86:32/$REPO"
 REPOFILES="meta.txz packagesite.txz"
 export PKG_CACHEDIR=$WORKDIR/packages
 
@@ -69,7 +76,7 @@ export PKG_CACHEDIR=$WORKDIR/packages
 BASE_FILES="base"
 if [ "$ARCH" = "amd64" ]; then
     BASE_FILES="$BASE_FILES lib32"
-    PKGREPO="http://pkg.freebsd.org/freebsd:$RELEASE_NUM:x86:64/latest/"
+    PKGREPO="http://pkg.freebsd.org/freebsd:$RELEASE_NUM:x86:64/$REPO"
 fi
 
 ##########################
@@ -232,24 +239,31 @@ be installed:\n $missing"
 be installed from the local repository imunes."
     fi
 
+    mkdir -p $VROOT_MASTER/usr/local/etc/pkg/repos/
+    echo "FreeBSD: { enabled: no }" > $VROOT_MASTER/usr/local/etc/pkg/repos/FreeBSD.conf
     if [ $offline -eq 1 ]; then
 	mkdir -p $VROOT_MASTER/$WORKDIR/packages
 
 	mount -t nullfs $WORKDIR $VROOT_MASTER/$WORKDIR
 	ln -s packages $VROOT_MASTER/$WORKDIR/All
 	ln -s packages $VROOT_MASTER/$WORKDIR/Latest
-	mkdir -p $VROOT_MASTER/usr/local/etc/pkg/repos/
 
 	pkg=`ls pkg*txz 2> /dev/null | head -n1`
 	if [ "$pkg" != "" ]; then
 	    ln -fs $pkg pkg.txz
 	fi
 
-	echo "FreeBSD: { enabled: no }" > $VROOT_MASTER/usr/local/etc/pkg/repos/FreeBSD.conf
-
 cat >> $VROOT_MASTER/usr/local/etc/pkg/repos/imunes.conf <<_EOF_
 imunes: {
     url: "file:///tmp/vroot_prepare",
+    enabled: yes
+}
+_EOF_
+
+    else
+cat >> $VROOT_MASTER/usr/local/etc/pkg/repos/release.conf <<_EOF_
+release: {
+    url: "$PKGREPO",
     enabled: yes
 }
 _EOF_
@@ -295,9 +309,9 @@ installPackagesPkg () {
 
     err_list=""
     if [ $offline -eq 0 ]; then
-	pkg -c $VROOT_MASTER update -r FreeBSD >> $LOG 2>&1
+	pkg -c $VROOT_MASTER update -r release >> $LOG 2>&1
 	for pkg in ${PKGS}; do
-	    pkg -c $VROOT_MASTER install -fyUr FreeBSD $pkg >> $LOG 2>&1
+	    pkg -c $VROOT_MASTER install -fyUr release $pkg >> $LOG 2>&1
 	    if [ $? -ne 0 ]; then
 		err_list="$pkg $err_list"
 	    fi

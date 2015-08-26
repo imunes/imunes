@@ -30,15 +30,21 @@ is as follows:
 To compile the VIMAGE enabled kernel you must have a copy of the
 FreeBSD kernel and create the config file with the above mentioned
 lines.
-
-    # vi /usr/src/sys/amd64/conf/VIMAGE #for 64bit machines
-    # vi /usr/src/sys/i386/conf/VIMAGE #for 32bit machines
+    
+    # cd /usr/src/sys/amd64/conf/ #for 64bit machines
+    # cd /usr/src/sys/i386/conf/  #for 32bit machines
+    # vi VIMAGE
 
 Then you need to compile and install the kernel and reboot.
 
     # config VIMAGE
     # cd ../compile/VIMAGE
-    # make depend; make
+    
+    ### standard compilation (single thread)
+    # make depend && make
+    ### concurrent compliation (e.g. 4 threads)
+    # make -j4 depend && make -j4
+    
     # make install
     # reboot
 
@@ -50,7 +56,7 @@ minimum requirement.
 ### FreeBSD packages
 
 First we need to install the packages required for IMUNES. To do
-this execute the following command (on FreeBSD 10.1):
+this execute the following command (on FreeBSD 9.3 and higher):
 
     # pkg install tk86 ImageMagick tcllib wireshark socat git gmake
 
@@ -73,10 +79,34 @@ Note: on some distributions the netem module `sch_netem` required for link confi
     # modinfo sch_netem
 
 #### Fedora 22
-    # yum install openvswitch docker-io xterm wireshark-gnome ImageMagick tcl tcllib tk kernel-modules-extra util-linux
+    # yum install openvswitch docker-io xterm wireshark-gnome \
+        ImageMagick tcl tcllib tk kernel-modules-extra util-linux
+
+#### Debian testing
+    # apt-get install openvswitch-switch docker.io xterm wireshark \
+        ImageMagick tk tcllib user-mode-linux util-linux
 
 #### Debian 8
-    # apt-get install openvswitch-switch docker.io xterm wireshark ImageMagick tcl tcllib tk user-mode-linux util-linux
+    ### add jessie-backports to your sources.list and update
+    # echo "deb http://http.debian.net/debian jessie-backports main" >> /etc/apt/sources.list
+    # apt-get update
+    ### install packages
+    # apt-get install openvswitch-switch docker.io xterm wireshark \
+        ImageMagick tcl tcllib tk user-mode-linux util-linux
+        
+#### Ubuntu 15.04
+    # apt-get install openvswitch-switch docker.io xterm wireshark \
+        make ImageMagick tk tcllib user-mode-linux util-linux
+        
+#### Ubuntu 14.04 LTS
+    ### install needed packages
+    # apt-get install openvswitch-switch xterm wireshark make \
+        ImageMagick tk tcllib user-mode-linux util-linux
+    ### install new version of docker and start it
+    # wget -qO- https://get.docker.com/ | sh
+    # service docker start
+    ### fetch remote nsenter which is not part of util-linux in ubuntu 14.04
+    # sudo docker run -v /usr/local/bin:/target jpetazzo/nsenter
 
 #### Performance
 
@@ -89,6 +119,16 @@ Overlay is only available from kernel version 3.18. Worst case scenario:
 Docker will use the *extremely* slow devicemapper available everywhere.
 Please view either Docker or distro docs on how to set this up for your
 particular Linux distribution.
+
+##### Enabling overlayfs (kernel 3.18 and higher)
+    Debian testing, Ubuntu 14.04 LTS, Ubuntu 15.04:
+    # echo 'DOCKER_OPTS="-s overlay"' >> /etc/default/docker
+    # service docker restart
+    
+    Check status with docker info:
+    # docker info | grep Storage
+    Storage Driver: overlay
+
 
 ### Installing IMUNES
 

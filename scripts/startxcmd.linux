@@ -1,0 +1,69 @@
+#! /bin/sh
+
+if [ $# -lt 2 ]
+then
+    echo "Usage: $0 hostname_of_X_app_client command ..."
+    exit 1
+fi
+
+host=`hostname`
+
+display=${DISPLAY#*:} # localhost:10.0 --> 10.0
+display=${display%.*} # 10.0 --> 10
+
+if test -z "$display"
+then
+    echo "If you are running locally:"
+    echo "  a) X server must be started and"
+    echo "  b) env variable DISPLAY must be set."
+    echo "If you are connected using ssh: "
+    echo "  a) X11Forwarding must be enabled"
+    echo "  b) and used (ssh -X ... or ssh -Y ...)"
+    exit 2
+fi
+
+remote=$1
+node=`echo $1 | cut -d'@' -f1`
+shift 1   # "$@" is now a remote command with arguments
+
+himage $remote true 
+if [ $? -ne 0 ]
+then
+    exit 2
+fi
+
+if [ -z "$XAUTHORITY" ]; then
+    TTY=`tty`
+    user=`stat -c %U $TTY`
+    dir=`awk -F: '/^'"$user"'/{print $6}' /etc/passwd`
+    XAUTHORITY=$dir/.Xauthority
+fi
+
+temp=`mktemp`
+cp $XAUTHORITY $temp
+cookie=`xauth -f $XAUTHORITY list | awk '/'"$host"'\/unix:'"$display"'/ {print $3}'`
+
+if test "X${DISPLAY%:*}" == "Xlocalhost"
+then
+    # running over ssh: socat connects /tmp/.X11-unix/X10 with localhost:6010
+    port=$((6000+display))
+    socat_args="unix-listen:/tmp/.X11-unix/X${display},fork TCP:localhost:${port}"
+    pgrep -f "[s]ocat $socat_args" > /dev/null 2>&1 
+    if test $? -eq 1
+    then
+        socat $socat_args &
+    fi
+    xauth -f $temp add "${node}/unix:${display}" . $cookie
+    DISPLAY=:${display}
+else
+    xauth -f $temp add "${node}/unix:${display}.0" . $cookie
+fi
+
+hcp $temp $remote:/root/.Xauthority
+rm $temp
+
+######
+# Call X client application on $remote
+#
+exec himage $remote env DISPLAY=$DISPLAY "$@"
+

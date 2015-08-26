@@ -189,7 +189,7 @@ proc setWmTitle { fname } {
     if { $fname == "" } {
 	set fname "untitled[string range $curcfg 1 end]"
     }
-    wm title . "$baseTitle v$imunesVersion$imunesAdditions - $fname"
+    wm title . "$baseTitle - $fname"
 }
 
 #****f* filemgmt.tcl/openFile

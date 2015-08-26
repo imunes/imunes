@@ -6,6 +6,7 @@
 # 2. Remove all remaining docker nodes (imunes nodes).
 # 3. Remove all openvswitch bridges (imunes links).
 # 4. Remove virtual node and attach files.
+# 5. Kill socat connecting /tmp/.X11-unix/Xnn with localhost:60nn.
 ##
 
 attach_root="/var/run/imunes"
@@ -30,15 +31,21 @@ for id in $bridges; do
     echo "Destroying openvswitch bridge $id."
 done
 
+if test -d $mounts_root; then
 cd $mounts_root
-mounts=`ls | grep -v vroot`
-for mount in $mounts; do
-    echo "Destroying imunes files $mounts_root/$mount."
-    rm -fr $mount
-done
+    mounts=`ls | grep -v vroot`
+    for mount in $mounts; do
+	echo "Destroying imunes files $mounts_root/$mount."
+	rm -fr $mount
+    done
+fi
 
-cd $attach_root
-for dir in `ls`; do
-    echo "Removing attach directory $attach_root/$dir."
-    rm -fr $dir
-done
+if test -d $attach_root; then
+    cd $attach_root
+    for dir in `ls`; do
+	echo "Removing attach directory $attach_root/$dir."
+	rm -fr $dir
+    done
+fi
+
+pkill -f "socat unix-listen:/tmp/.X11-unix/X"
