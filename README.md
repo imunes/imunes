@@ -73,6 +73,7 @@ First we need to install the packages required for IMUNES:
     OpenvSwitch
     nsenter (part of the util-linux package since version 2.23 and later)
     xterm
+    make (used for installation)
 
 Note: on some distributions the netem module `sch_netem` required for link configuration is only available by installing additional kernel packages. Please check the availability of the module:
 
@@ -84,7 +85,7 @@ Note: on some distributions the netem module `sch_netem` required for link confi
 
 #### Debian testing
     # apt-get install openvswitch-switch docker.io xterm wireshark \
-        ImageMagick tk tcllib util-linux
+        ImageMagick tk tcllib util-linux make
 
 #### Debian 8
     ### add jessie-backports to your sources.list and update
@@ -93,7 +94,7 @@ Note: on some distributions the netem module `sch_netem` required for link confi
     
     ### install packages
     # apt-get install openvswitch-switch docker.io xterm wireshark \
-        ImageMagick tcl tcllib tk util-linux
+        ImageMagick tcl tcllib tk util-linux make
 
 #### Fedora 22
     # dnf install openvswitch docker-io xterm wireshark-gnome \
