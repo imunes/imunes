@@ -213,7 +213,7 @@ proc allSnapshotsAvailable {} {
     global VROOT_MASTER execMode
     catch {exec docker images} images
 
-    if {"imunes/vroot" in $images} {
+    if {[lsearch $images "imunes/vroot"] != -1} {
         return 1
     } else {
         if {$execMode == "batch"} {
