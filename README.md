@@ -50,7 +50,7 @@ minimum requirement.
 ### FreeBSD packages
 
 First we need to install the packages required for IMUNES. To do
-this execute the following command (on FreeBSD 10.1):
+this execute the following command (on FreeBSD 9.3 and higher):
 
     # pkg install tk86 ImageMagick tcllib wireshark socat git gmake
 
@@ -73,17 +73,37 @@ Note: on some distributions the netem module `sch_netem` required for link confi
     # modinfo sch_netem
 
 #### Fedora 22
-    # yum install openvswitch docker-io xterm wireshark-gnome ImageMagick tcl tcllib tk kernel-modules-extra util-linux
+    # yum install openvswitch docker-io xterm wireshark-gnome \
+        ImageMagick tcl tcllib tk kernel-modules-extra util-linux
 
 #### Debian testing
-    # apt-get install openvswitch-switch docker.io xterm wireshark ImageMagick tcl tcllib tk user-mode-linux util-linux
+    # apt-get install openvswitch-switch docker.io xterm wireshark \
+        ImageMagick tk tcllib user-mode-linux util-linux
 
 #### Debian 8
     ### add jessie-backports to your sources.list and update
     # echo "deb http://http.debian.net/debian jessie-backports main" >> /etc/apt/sources.list
     # apt-get update
     ### install packages
-    # apt-get install openvswitch-switch docker.io xterm wireshark ImageMagick tcl tcllib tk user-mode-linux util-linux
+    # apt-get install openvswitch-switch docker.io xterm wireshark \
+        ImageMagick tcl tcllib tk user-mode-linux util-linux
+        
+#### Ubuntu 14.04 LTS
+    ### install needed packages
+    # apt-get install openvswitch-switch xterm wireshark make \
+        ImageMagick tk tcllib user-mode-linux util-linux
+    ### install new version of docker and start it
+    # wget -qO- https://get.docker.com/ | sh
+    # service docker start
+    ### fetch remote nsenter which is not part of util-linux in ubuntu 14.04
+    # sudo docker run -v /usr/local/bin:/target jpetazzo/nsenter
+
+#### Ubuntu 15.04
+    ### install needed packages
+    # apt-get install openvswitch-switch docker.io xterm wireshark \
+        make ImageMagick tk tcllib user-mode-linux util-linux
+    # service docker start
+    # service openvswitch-switch start
 
 #### Performance
 
