@@ -77,17 +77,10 @@ First we need to install the packages required for IMUNES:
 Note: on some distributions the netem module `sch_netem` required for link configuration is only available by installing additional kernel packages. Please check the availability of the module:
 
     # modinfo sch_netem
-
-#### Fedora 22
-    # dnf install openvswitch docker-io xterm wireshark-gnome \
-        ImageMagick tcl tcllib tk kernel-modules-extra util-linux
-        
-    ### add /usr/local/bin to root PATH variable to execute imunes as root
-    # echo 'PATH=$PATH:/usr/local/bin' >> /root/.bashrc
     
-    ### add /usr/local/bin to sudo secure_path for executing sudo imunes
-    # visudo
-    Defaults    secure_path = /sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin
+#### Arch
+    # pacman -S tk tcllib wireshark-gtk imagemagick docker \
+        make openvswitch xterm
 
 #### Debian testing
     # apt-get install openvswitch-switch docker.io xterm wireshark \
@@ -101,7 +94,18 @@ Note: on some distributions the netem module `sch_netem` required for link confi
     ### install packages
     # apt-get install openvswitch-switch docker.io xterm wireshark \
         ImageMagick tcl tcllib tk util-linux
+
+#### Fedora 22
+    # dnf install openvswitch docker-io xterm wireshark-gnome \
+        ImageMagick tcl tcllib tk kernel-modules-extra util-linux
         
+    ### add /usr/local/bin to root PATH variable to execute imunes as root
+    # echo 'PATH=$PATH:/usr/local/bin' >> /root/.bashrc
+    
+    ### add /usr/local/bin to sudo secure_path for executing sudo imunes
+    # visudo
+    Defaults    secure_path = /sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin
+
 #### Ubuntu 15.04
     # apt-get install openvswitch-switch docker.io xterm wireshark \
         make ImageMagick tk tcllib user-mode-linux util-linux
@@ -147,6 +151,19 @@ particular Linux distribution.
     Debian testing, Ubuntu 14.04 LTS, Ubuntu 15.04:
     # echo 'DOCKER_OPTS="-s overlay"' >> /etc/default/docker
     # service docker restart
+    
+    Fedora 22
+    # echo 'DOCKER_STORAGE_OPTIONS="-s overlay"' >> /etc/sysconfig/docker-storage
+    # systemctl restart docker
+    
+    Arch:
+    # cp /usr/lib/systemd/system/docker.service /etc/systemd/system/docker.service
+    ### add overlay to ExecStart
+    ExecStart=/usr/bin/docker daemon -s overlay -H fd://
+    ### reload systemd files and restart docker.service
+    # systemctl daemon-reload
+    # systemctl restart docker
+    
     
     Check status with docker info:
     # docker info | grep Storage
