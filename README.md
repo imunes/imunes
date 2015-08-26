@@ -30,9 +30,10 @@ is as follows:
 To compile the VIMAGE enabled kernel you must have a copy of the
 FreeBSD kernel and create the config file with the above mentioned
 lines.
-
-    # vi /usr/src/sys/amd64/conf/VIMAGE #for 64bit machines
-    # vi /usr/src/sys/i386/conf/VIMAGE #for 32bit machines
+    
+    # cd /usr/src/sys/amd64/conf/ #for 64bit machines
+    # cd /usr/src/sys/i386/conf/  #for 32bit machines
+    # vi VIMAGE
 
 Then you need to compile and install the kernel and reboot.
 
