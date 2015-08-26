@@ -120,6 +120,16 @@ Docker will use the *extremely* slow devicemapper available everywhere.
 Please view either Docker or distro docs on how to set this up for your
 particular Linux distribution.
 
+##### Enabling overlayfs (kernel 3.18 and higher)
+    Debian testing, Ubuntu 14.04 LTS, Ubuntu 15.04:
+    # echo 'DOCKER_OPTS="-s overlay"' >> /etc/default/docker
+    # service docker restart
+    
+    Check status with docker info:
+    # docker info | grep Storage
+    Storage Driver: overlay
+
+
 ### Installing IMUNES
 
 Checkout the last fresh IMUNES source through the public github
