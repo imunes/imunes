@@ -39,7 +39,12 @@ Then you need to compile and install the kernel and reboot.
 
     # config VIMAGE
     # cd ../compile/VIMAGE
-    # make depend; make
+    
+    ### standard compilation (single thread)
+    # make depend && make
+    ### concurrent compliation (e.g. 4 threads)
+    # make -j4 depend && make -j4
+    
     # make install
     # reboot
 
