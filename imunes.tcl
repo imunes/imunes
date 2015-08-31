@@ -187,7 +187,9 @@ set os [platform::identify]
 
 # Runtime libriaries
 foreach file [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
-    source $file
+    if { [string match -nocase "*linux.tcl" $file] != 1 } {
+	source $file
+    }
 }
 
 # Set default L2 node list
