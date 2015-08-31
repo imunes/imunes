@@ -73,10 +73,28 @@ First we need to install the packages required for IMUNES:
     OpenvSwitch
     nsenter (part of the util-linux package since version 2.23 and later)
     xterm
+    make (used for installation)
 
 Note: on some distributions the netem module `sch_netem` required for link configuration is only available by installing additional kernel packages. Please check the availability of the module:
 
     # modinfo sch_netem
+    
+#### Arch
+    # pacman -S tk tcllib wireshark-gtk imagemagick docker \
+        make openvswitch xterm
+
+#### Debian testing
+    # apt-get install openvswitch-switch docker.io xterm wireshark \
+        ImageMagick tk tcllib util-linux make
+
+#### Debian 8
+    ### add jessie-backports to your sources.list and update
+    # echo "deb http://http.debian.net/debian jessie-backports main" >> /etc/apt/sources.list
+    # apt-get update
+    
+    ### install packages
+    # apt-get install openvswitch-switch docker.io xterm wireshark \
+        ImageMagick tcl tcllib tk util-linux make
 
 #### Fedora 22
     # dnf install openvswitch docker-io xterm wireshark-gnome \
@@ -89,19 +107,6 @@ Note: on some distributions the netem module `sch_netem` required for link confi
     # visudo
     Defaults    secure_path = /sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin
 
-#### Debian testing
-    # apt-get install openvswitch-switch docker.io xterm wireshark \
-        ImageMagick tk tcllib util-linux
-
-#### Debian 8
-    ### add jessie-backports to your sources.list and update
-    # echo "deb http://http.debian.net/debian jessie-backports main" >> /etc/apt/sources.list
-    # apt-get update
-    
-    ### install packages
-    # apt-get install openvswitch-switch docker.io xterm wireshark \
-        ImageMagick tcl tcllib tk util-linux
-        
 #### Ubuntu 15.04
     # apt-get install openvswitch-switch docker.io xterm wireshark \
         make ImageMagick tk tcllib user-mode-linux util-linux
@@ -147,6 +152,19 @@ particular Linux distribution.
     Debian testing, Ubuntu 14.04 LTS, Ubuntu 15.04:
     # echo 'DOCKER_OPTS="-s overlay"' >> /etc/default/docker
     # service docker restart
+    
+    Fedora 22
+    # echo 'DOCKER_STORAGE_OPTIONS="-s overlay"' >> /etc/sysconfig/docker-storage
+    # systemctl restart docker
+    
+    Arch:
+    # cp /usr/lib/systemd/system/docker.service /etc/systemd/system/docker.service
+    ### add overlay to ExecStart
+    ExecStart=/usr/bin/docker daemon -s overlay -H fd://
+    ### reload systemd files and restart docker.service
+    # systemctl daemon-reload
+    # systemctl restart docker
+    
     
     Check status with docker info:
     # docker info | grep Storage

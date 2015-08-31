@@ -164,6 +164,9 @@ foreach line [split $data "\n"] {
     if {[string match "Last changed:*" $line]} {
 	set imunesChangedDate [string range $line [expr [string first ":" $line] + 2] end]
     }
+    if {[string match "Additions:*" $line]} {
+	set imunesAdditions [string range $line [expr [string first ":" $line] + 2] end]
+    }
 }
 
 if { [string match "*Format*" $imunesCommit] } {
@@ -176,9 +179,12 @@ if { [string match "*Format*" $imunesCommit] } {
 }
 
 if { $params(v) || $params(version)} {
-    puts "IMUNES $imunesVersion$imunesAdditions"
+    puts "IMUNES $imunesVersion"
     if { $imunesChangedDate != "" } {
 	puts "$imunesChangedDate"
+    }
+    if { $imunesAdditions != "" } {
+	puts "Additions: $imunesAdditions"
     }
     exit
 }

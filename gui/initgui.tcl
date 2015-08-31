@@ -888,8 +888,9 @@ menu .menubar.help -tearoff 0
     ttk::label $mainFrame.imunesLabel -text "IMUNES" -font "-size 12 -weight bold"
     ttk::label $mainFrame.imunesVersion -text $imunesVersion -font "-size 10 -weight bold"
     ttk::label $mainFrame.lastChanged -text $imunesChangedDate
+    ttk::label $mainFrame.imunesAdditions -text "$imunesAdditions" -font "-size 10 -weight bold"
     ttk::label $mainFrame.imunesDesc -text "Integrated Multiprotocol Network Emulator/Simulator."
-    ttk::label $mainFrame.homepage -text "http://www.imunes.net/" -font "-underline 1 -size 10"
+    ttk::label $mainFrame.homepage -text "http://imunes.net/" -font "-underline 1 -size 10"
     ttk::label $mainFrame.github -text "http://github.com/imunes/imunes" -font "-underline 1 -size 10"
     ttk::label $mainFrame.copyright -text "Copyright (c) University of Zagreb 2004 - $imunesLastYear" -font "-size 8"
 
@@ -897,10 +898,13 @@ menu .menubar.help -tearoff 0
     grid $mainFrame.imunesLabel -column 0 -row 1 -pady 5 -padx 5
     grid $mainFrame.imunesVersion -column 0 -row 2 -pady {5 1} -padx 5
     grid $mainFrame.lastChanged -column 0 -row 3 -pady {1 5} -padx 5
-    grid $mainFrame.imunesDesc -column 0 -row 4 -pady {5 10} -padx 5
-    grid $mainFrame.homepage -column 0 -row 5 -pady 1 -padx 5
-    grid $mainFrame.github -column 0 -row 6 -pady 1 -padx 5
-    grid $mainFrame.copyright -column 0 -row 7 -pady {20 10} -padx 5
+    if { $imunesAdditions != ""} {
+	grid $mainFrame.imunesAdditions -column 0 -row 4 -pady {0 1} -padx 5
+    }
+    grid $mainFrame.imunesDesc -column 0 -row 5 -pady {5 10} -padx 5
+    grid $mainFrame.homepage -column 0 -row 6 -pady 1 -padx 5
+    grid $mainFrame.github -column 0 -row 7 -pady 1 -padx 5
+    grid $mainFrame.copyright -column 0 -row 8 -pady {20 10} -padx 5
 
     bind $mainFrame.homepage <1> { launchBrowser [%W cget -text] }
     bind $mainFrame.homepage <Enter> "%W configure -foreground blue; \
