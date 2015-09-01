@@ -68,7 +68,6 @@ RELEASE_DIR="/pub/FreeBSD/releases/$ARCH/$RELEASE"
 
 # pkg repository
 PKGREPO="http://pkg.freebsd.org/freebsd:$RELEASE_NUM:x86:32/$REPO"
-REPOFILES="meta.txz packagesite.txz"
 export PKG_CACHEDIR=$WORKDIR/packages
 
 #export PACKAGESITE=$DISTSERVER/$RELEASE_DIR/packages/Latest/
@@ -117,12 +116,6 @@ fetchBaseOnline () {
 	    $file | awk '{print $4}'`" ]; then
 	    log "ERR" "Checksum problem with $file.\nScript aborted."
 	    exit 1
-	fi
-    done
-
-    for file in $REPOFILES; do
-	if [ ! -f $file ]; then
-	    $FETCH_CMD $PKGREPO/$file
 	fi
     done
 }
@@ -245,17 +238,10 @@ be installed from the local repository imunes."
 	mkdir -p $VROOT_MASTER/$WORKDIR/packages
 
 	mount -t nullfs $WORKDIR $VROOT_MASTER/$WORKDIR
-	ln -s packages $VROOT_MASTER/$WORKDIR/All
-	ln -s packages $VROOT_MASTER/$WORKDIR/Latest
-
-	pkg=`ls pkg*txz 2> /dev/null | head -n1`
-	if [ "$pkg" != "" ]; then
-	    ln -fs $pkg pkg.txz
-	fi
 
 cat >> $VROOT_MASTER/usr/local/etc/pkg/repos/imunes.conf <<_EOF_
 imunes: {
-    url: "file:///tmp/vroot_prepare",
+    url: "file:///tmp/vroot_prepare/packages",
     enabled: yes
 }
 _EOF_
@@ -318,6 +304,7 @@ installPackagesPkg () {
 	done
 
 	cp $VROOT_MASTER/$WORKDIR/packages/* $WORKDIR/packages/
+	pkg repo $WORKDIR/packages/
     else
 	pkg -c $VROOT_MASTER update -r imunes >> $LOG 2>&1
 	for pkg in ${PKGS}; do
@@ -327,8 +314,6 @@ installPackagesPkg () {
 	    fi
 	done
 
-	unlink $VROOT_MASTER/$WORKDIR/All
-	unlink $VROOT_MASTER/$WORKDIR/Latest
 	umount $VROOT_MASTER/$WORKDIR
     fi
 
