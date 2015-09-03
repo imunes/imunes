@@ -63,7 +63,7 @@ PACKAGES_COMMON="netperf lsof elinks nmap lighttpd akpop3d links nano postfix \
 ##########################
 
 # package management
-DISTSERVER="ftp://ftp.at.freebsd.org"
+DISTSERVER="ftp://ftp.freebsd.org"
 RELEASE_DIR="/pub/FreeBSD/releases/$ARCH/$RELEASE"
 
 # pkg repository
