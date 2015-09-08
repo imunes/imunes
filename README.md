@@ -9,7 +9,7 @@ execution engine itself operates within the operating system kernel.
 System requirements
 -------------------
 
-### Operating system (FreeBSD)
+## Operating system (FreeBSD)
 
 When IMUNES is used on top of FreeBSD 8 (or higher) it requires a kernel
 that is compiled with the VIMAGE option included. A sample kernel config file
@@ -47,18 +47,18 @@ Then you need to compile and install the kernel and reboot.
     
     # make install
     # reboot
-
-### Operating system (Linux)
-
-When IMUNES is used on top of Linux a 3.10 Linux kernel is the
-minimum requirement.
-
+    
 ### FreeBSD packages
 
 First we need to install the packages required for IMUNES. To do
 this execute the following command (on FreeBSD 9.3 and higher):
 
     # pkg install tk86 ImageMagick tcllib wireshark socat git gmake
+
+## Operating system (Linux)
+
+When IMUNES is used on top of Linux a 3.10 Linux kernel is the
+minimum requirement.
 
 ### Linux packages
 
@@ -73,27 +73,40 @@ First we need to install the packages required for IMUNES:
     OpenvSwitch
     nsenter (part of the util-linux package since version 2.23 and later)
     xterm
+    make (used for installation)
 
 Note: on some distributions the netem module `sch_netem` required for link configuration is only available by installing additional kernel packages. Please check the availability of the module:
 
     # modinfo sch_netem
-
-#### Fedora 22
-    # yum install openvswitch docker-io xterm wireshark-gnome \
-        ImageMagick tcl tcllib tk kernel-modules-extra util-linux
+    
+#### Arch
+    # pacman -S tk tcllib wireshark-gtk imagemagick docker \
+        make openvswitch xterm
 
 #### Debian testing
     # apt-get install openvswitch-switch docker.io xterm wireshark \
-        ImageMagick tk tcllib user-mode-linux util-linux
+        ImageMagick tk tcllib util-linux make
 
 #### Debian 8
     ### add jessie-backports to your sources.list and update
     # echo "deb http://http.debian.net/debian jessie-backports main" >> /etc/apt/sources.list
     # apt-get update
+    
     ### install packages
     # apt-get install openvswitch-switch docker.io xterm wireshark \
-        ImageMagick tcl tcllib tk user-mode-linux util-linux
+        ImageMagick tcl tcllib tk util-linux make
+
+#### Fedora 22
+    # dnf install openvswitch docker-io xterm wireshark-gnome \
+        ImageMagick tcl tcllib tk kernel-modules-extra util-linux
         
+    ### add /usr/local/bin to root PATH variable to execute imunes as root
+    # echo 'PATH=$PATH:/usr/local/bin' >> /root/.bashrc
+    
+    ### add /usr/local/bin to sudo secure_path for executing sudo imunes
+    # visudo
+    Defaults    secure_path = /sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin
+
 #### Ubuntu 15.04
     # apt-get install openvswitch-switch docker.io xterm wireshark \
         make ImageMagick tk tcllib user-mode-linux util-linux
@@ -102,11 +115,26 @@ Note: on some distributions the netem module `sch_netem` required for link confi
     ### install needed packages
     # apt-get install openvswitch-switch xterm wireshark make \
         ImageMagick tk tcllib user-mode-linux util-linux
+        
     ### install new version of docker and start it
     # wget -qO- https://get.docker.com/ | sh
     # service docker start
+    
     ### fetch remote nsenter which is not part of util-linux in ubuntu 14.04
     # sudo docker run -v /usr/local/bin:/target jpetazzo/nsenter
+    
+#### OpenSUSE 13.2
+    ### add repo with openvswitch
+    # zypper addrepo http://download.opensuse.org/repositories/network/openSUSE_13.2/network.repo
+    # zypper refresh
+    
+    ### install packages
+    # zypper install openvswitch-switch xterm wireshark docker \
+        make ImageMagick tk tcllib uml-utilities util-linux
+        
+    ### add /usr/local/bin to sudo secure_path for executing sudo imunes
+    # visudo
+    Defaults secure_path="/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/bin"
 
 #### Performance
 
@@ -125,10 +153,22 @@ particular Linux distribution.
     # echo 'DOCKER_OPTS="-s overlay"' >> /etc/default/docker
     # service docker restart
     
+    Fedora 22
+    # echo 'DOCKER_STORAGE_OPTIONS="-s overlay"' >> /etc/sysconfig/docker-storage
+    # systemctl restart docker
+    
+    Arch:
+    # cp /usr/lib/systemd/system/docker.service /etc/systemd/system/docker.service
+    ### add overlay to ExecStart
+    ExecStart=/usr/bin/docker daemon -s overlay -H fd://
+    ### reload systemd files and restart docker.service
+    # systemctl daemon-reload
+    # systemctl restart docker
+    
+    
     Check status with docker info:
     # docker info | grep Storage
     Storage Driver: overlay
-
 
 ### Installing IMUNES
 
@@ -142,7 +182,7 @@ with predefined and required data. To install imunes on the system
 execute (as root):
 
     # cd imunes
-    # gmake install
+    # make install
 
 ### Filesystem for virtual nodes
 
@@ -159,4 +199,4 @@ in the terminal:
 To execute experiments, run it as root.
 
 For additional information visit our web site:
-        http://www.imunes.net/
+        http://imunes.net/
