@@ -172,10 +172,6 @@ it.\nScript aborted."
 	    exit 1
 	fi
     done
-
-    if [ $offline -eq 0 ]; then
-	cp /etc/resolv.conf $VROOT_MASTER/etc
-    fi
 }
 
 # prepare packages for pkg_add
@@ -247,7 +243,10 @@ imunes: {
 _EOF_
 
     else
-cat >> $VROOT_MASTER/usr/local/etc/pkg/repos/release.conf <<_EOF_
+	if test -f /etc/resolv.conf; then
+	    cp /etc/resolv.conf $VROOT_MASTER/etc
+	fi
+	cat >> $VROOT_MASTER/usr/local/etc/pkg/repos/release.conf <<_EOF_
 release: {
     url: "$PKGREPO",
     enabled: yes
@@ -303,7 +302,11 @@ installPackagesPkg () {
 	    fi
 	done
 
-	cp $VROOT_MASTER/$WORKDIR/packages/* $WORKDIR/packages/
+	for file in `find $VROOT_MASTER/$WORKDIR/packages/ -maxdepth 1 -type l`; do
+	    unlink $file
+	done
+
+	cp -R $VROOT_MASTER/$WORKDIR/packages/* $WORKDIR/packages/
 	pkg repo $WORKDIR/packages/
     else
 	pkg -c $VROOT_MASTER update -r imunes >> $LOG 2>&1
