@@ -59,7 +59,6 @@ proc checkForExternalApps { app_list } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     foreach app $app_list {
 	set status [ catch { exec which $app } err ]
-	puts "$app $status"
 	if { $status } {
 	    return 1
 	}
