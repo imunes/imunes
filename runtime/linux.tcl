@@ -336,9 +336,17 @@ proc createNodeLogIfcs { node } {}
 proc configureICMPoptions { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    set nodeNs [getNodeNamespace $node]
-    pipesExec "nsenter -m -u -n -i -p -t $nodeNs sysctl net.ipv4.icmp_echo_ignore_broadcasts=1" "hold"
-    pipesExec "nsenter -m -u -n -i -p -t $nodeNs sysctl net.ipv4.icmp_ratelimit=0" "hold"
+    array set sysctl_icmp {
+	net.ipv4.icmp_ratelimit			0
+	net.ipv4.icmp_echo_ignore_broadcasts	1
+    }
+
+    foreach {name val} [array get sysctl_icmp] {
+	lappend cmd "sysctl $name=$val"
+    }
+    set cmds [join $cmd "; "]
+
+    pipesExec "docker exec $eid.$node sh -c \'$cmds\'" "hold"
 }
 
 proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
