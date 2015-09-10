@@ -638,11 +638,19 @@ proc l2node.destroy { eid node } {
 #   * node -- node id
 #****
 proc enableIPforwarding { eid node } {
-    set nodeNs [getNodeNamespace $node]
-    pipesExec "nsenter -m -u -n -i -p -t $nodeNs sysctl net.ipv6.conf.all.forwarding=1" "hold"
-    pipesExec "nsenter -m -u -n -i -p -t $nodeNs sysctl net.ipv4.conf.all.forwarding=1" "hold"
-    pipesExec "nsenter -m -u -n -i -p -t $nodeNs sysctl net.ipv4.conf.default.rp_filter=0" "hold"
-    pipesExec "nsenter -m -u -n -i -p -t $nodeNs sysctl net.ipv4.conf.all.rp_filter=0" "hold"
+    array set sysctl_ipfwd {
+	net.ipv6.conf.all.forwarding	1
+	net.ipv4.conf.all.forwarding	1
+    	net.ipv4.conf.default.rp_filter	0
+   	net.ipv4.conf.all.rp_filter	0
+    }
+
+    foreach {name val} [array get sysctl_ipfwd] {
+	lappend cmd "sysctl $name=$val"
+    }
+    set cmds [join $cmd "; "]
+
+    pipesExec "docker exec $eid.$node sh -c \'$cmds\'" "hold"
 }
 
 #****f* linux.tcl/configDefaultLoIfc
