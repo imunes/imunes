@@ -823,7 +823,7 @@ proc button3node { c x y } {
 	#
 	# Firefox
 	#
-	if {[file exists /usr/local/bin/startxcmd] == 1 && \
+	if {[checkForExternalApps "startxcmd"] == 0 && \
 	    [checkForApplications $node "firefox"] == 0} {
 	    .button3menu add command -label "Web Browser" \
 		-command "startXappOnNode $node \"firefox -no-remote -setDefaultBrowser about:blank\""
