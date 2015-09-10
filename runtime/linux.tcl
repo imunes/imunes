@@ -641,8 +641,8 @@ proc enableIPforwarding { eid node } {
     array set sysctl_ipfwd {
 	net.ipv6.conf.all.forwarding	1
 	net.ipv4.conf.all.forwarding	1
-    	net.ipv4.conf.default.rp_filter	0
-   	net.ipv4.conf.all.rp_filter	0
+	net.ipv4.conf.default.rp_filter	0
+	net.ipv4.conf.all.rp_filter	0
     }
 
     foreach {name val} [array get sysctl_ipfwd] {
