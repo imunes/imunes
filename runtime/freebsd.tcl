@@ -66,7 +66,7 @@ proc execCmdNode { node cmd } {
 # INPUTS
 #   * app_list -- list of applications
 # RESULT
-#   * returns 0 if the applications exists, otherwise it returns 1.
+#   * returns 0 if the applications exist, otherwise it returns 1.
 #****
 proc checkForExternalApps { app_list } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
@@ -91,7 +91,7 @@ proc checkForExternalApps { app_list } {
 #   * node -- virtual node id
 #   * app_list -- list of applications
 # RESULT
-#   * returns 0 if the applications exists, otherwise it returns 1.
+#   * returns 0 if the applications exist, otherwise it returns 1.
 #****
 proc checkForApplications { node app_list } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
