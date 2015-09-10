@@ -42,6 +42,31 @@ proc execCmdNode { node cmd } {
     return $output
 }
 
+#****f* linux.tcl/checkForExternalApps
+# NAME
+#   checkForExternalApps -- check whether external applications exist
+# SYNOPSIS
+#   checkForExternalApps $app_list
+# FUNCTION
+#   Checks whether a list of applications exist on the machine running IMUNES
+#   by using the which command.
+# INPUTS
+#   * app_list -- list of applications
+# RESULT
+#   * returns 0 if the applications exist, otherwise it returns 1.
+#****
+proc checkForExternalApps { app_list } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    foreach app $app_list {
+	set status [ catch { exec which $app } err ]
+	puts "$app $status"
+	if { $status } {
+	    return 1
+	}
+    }
+    return 0
+}
+
 #****f* linux.tcl/checkForApplications
 # NAME
 #   checkForApplications -- check whether applications exist
@@ -54,13 +79,13 @@ proc execCmdNode { node cmd } {
 #   * node -- virtual node id
 #   * app_list -- list of applications
 # RESULT
-#   * returns 0 if the application exists, otherwise it returns 1.
+#   * returns 0 if the applications exist, otherwise it returns 1.
 #****
 proc checkForApplications { node app_list } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     foreach app $app_list {
-    set exists [ catch { exec docker exec $eid.$node which $app } err ]
-        if { $exists } {
+    set status [ catch { exec docker exec $eid.$node which $app } err ]
+        if { $status } {
             return 1
         }
     }
@@ -81,7 +106,7 @@ proc checkForApplications { node app_list } {
 proc startWiresharkOnNodeIfc { node ifc } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    if {[file exists /usr/local/bin/startxcmd] == 1 && \
+    if {[checkForExternalApps "startxcmd"] == 0 && \
     [checkForApplications $node "wireshark"] == 0} {
         startXappOnNode $node "wireshark -ki $ifc"
     } else {
@@ -104,7 +129,7 @@ proc startWiresharkOnNodeIfc { node ifc } {
 proc startXappOnNode { node app } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global debug
-    if {[file exists /usr/local/bin/socat] != 1 } {
+    if {[checkForExternalApps "socat"] != 0 } {
         puts "To run X applications on the node, install socat on your host."
         return
     }
