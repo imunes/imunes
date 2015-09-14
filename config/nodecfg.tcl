@@ -2442,6 +2442,22 @@ proc registerModule { module } {
     lappend all_modules_list $module
 }
 
+#****f* nodecfg.tcl/deregisterModule
+# NAME
+#   deregisterModule -- deregister module
+# SYNOPSIS
+#   deregisterModule $module
+# FUNCTION
+#   Removes a module from all_modules_list.
+# INPUTS
+#   * module -- module to remove
+#****
+proc deregisterModule { module } {
+    global all_modules_list
+    set ind [lsearch $all_modules_list $module]
+    set all_modules_list [lreplace $all_modules_list $ind $ind]
+}
+
 #****f* nodecfg.tcl/getIfcVlanDev
 # NAME
 #   getIfcVlanDev -- get interface vlan-dev
