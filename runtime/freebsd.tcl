@@ -1302,45 +1302,6 @@ proc runConfOnNode { node } {
     exec sh << $cmds
 }
 
-#****f* freebsd.tcl/generateHostsFile
-# NAME
-#   generateHostsFile -- generate hosts file
-# SYNOPSIS
-#   generateHostsFile $node
-# FUNCTION
-#   Generates /etc/hosts file on the given node containing all the nodes in the
-#   topology.
-# INPUTS
-#   * node -- node id
-#****
-proc generateHostsFile { node } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::etchosts etchosts
-    global hostsAutoAssign
-
-    if { $hostsAutoAssign == 1 } {
-	if { [[typemodel $node].virtlayer] == "VIMAGE" } {
-	    if { $etchosts == "" } {
-		foreach iter $node_list {
-		    if { [[typemodel $iter].virtlayer] == "VIMAGE" } {
-			foreach ifc [ifcList $iter] {
-			    if { $ifc != "" } {
-				set ipv4 [lindex [split [getIfcIPv4addr $iter $ifc] "/"] 0]
-				set ipv6 [lindex [split [getIfcIPv6addr $iter $ifc] "/"] 0]
-				set ifname [getNodeName $iter]
-				set etchosts "$etchosts$ipv4	$ifname\n"
-				set etchosts "$etchosts$ipv6	$ifname\n"
-				break
-			    }
-			}
-		    }
-		}
-	    }
-	    writeDataToNodeFile $node /etc/hosts $etchosts
-	}
-    }
-}
-
 #****f* freebsd.tcl/killAllNodeProcesses
 # NAME
 #   killAllNodeProcesses -- kill all node processes

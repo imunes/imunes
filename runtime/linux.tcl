@@ -553,6 +553,10 @@ proc runConfOnNode { node } {
             }
         }
     }
+
+    if { $execMode != "batch" } {
+	generateHostsFile $node
+    }
 }
 
 proc destroyLinkBetween { eid lnode1 lnode2 } {
