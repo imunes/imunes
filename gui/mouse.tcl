@@ -837,7 +837,7 @@ proc button3node { c x y } {
 	if {[checkForExternalApps "startxcmd"] == 0 && \
 	    [checkForApplications $node "sylpheed"] == 0} {
 	    .button3menu add command -label "Mail client" \
-		-command "startXappOnNode $node \"sylpheed\""
+		-command "startXappOnNode $node \"G_FILENAME_ENCODING=UTF-8 sylpheed\""
 	} else {
 	    .button3menu add command -label "Mail client" \
 		-state disabled
