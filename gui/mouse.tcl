@@ -831,6 +831,17 @@ proc button3node { c x y } {
 	    .button3menu add command -label "Web Browser" \
 		-state disabled
 	}
+	#
+	# Sylpheed mail client
+	#
+	if {[checkForExternalApps "startxcmd"] == 0 && \
+	    [checkForApplications $node "sylpheed"] == 0} {
+	    .button3menu add command -label "Mail client" \
+		-command "startXappOnNode $node \"sylpheed\""
+	} else {
+	    .button3menu add command -label "Mail client" \
+		-state disabled
+	}
     } else {
 #	.button3menu add cascade -label "Wireshark" \
 #	    -menu .button3menu.wireshark -state disabled
