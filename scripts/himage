@@ -48,6 +48,11 @@ vi_name() {
   jls jid name host.hostname | awk -v h=$host -v e=$expid '$3 == h && $2 ~ e {print $1}'
 }
 
+if [ `id -u` -ne  0 ]; then
+    echo "You must be root to run this script."
+    exit 1
+fi
+
 # dummy flags
 if test $1 = "-b" || test $1 = "-nt"; then
     shift 1
@@ -60,7 +65,12 @@ elif test $1 = "-h"; then
 elif test $1 = "-l"; then
     explist=`jls name path | grep "imunes" | cut -d . -f 1 | sort | uniq`
     for exp in $explist; do
-	echo "$exp (`jls host.hostname path | grep "imunes/$exp" | cut -d" " -f1 |  paste -s -d" " -`)"
+	if test -r /var/run/imunes/$exp/; then
+	    node_ids=`grep network-config -A 3 /var/run/imunes/$exp/config.imn | grep hostname | awk '{print $2}' | paste -s -d" " -`
+	    echo "$exp ($node_ids)"
+	else
+	    echo "$exp (`jls host.hostname path | grep "imunes/$exp" | cut -d" " -f1 |  paste -s -d" " -`)"
+	fi
     done
 elif test $1 = "-j" || test $1 = "-i"; then
     vi_name $2

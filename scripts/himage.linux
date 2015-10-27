@@ -48,6 +48,11 @@ vi_name() {
   echo "$dockerps" | awk -v h=$host -v e=$expid '$1 == h && $3 ~ e {print $2}'
 }
 
+if [ `id -u` -ne  0 ]; then
+    echo "You must be root to run this script."
+    exit 1
+fi
+
 if test $# -eq 0; then
     help
 elif test $1 = "-h"; then
@@ -57,8 +62,13 @@ elif test $1 = "-d"; then # dummy flag
 elif test $1 = "-l"; then
     explist=`docker ps -a | grep "imunes" | awk '{print $NF}' | cut -d . -f 1 | sort | uniq`
     for exp in $explist; do
-	node_ids=`docker ps -a | grep "imunes" | grep "$exp" | awk '{print $NF}' | paste -s -d" " -`
-	echo "$exp (`docker inspect -f "{{.Config.Hostname}}" $node_ids | paste -s -d" " -`)"
+	if test -r /var/run/imunes/$exp/; then
+	    node_ids=`grep network-config -A 3 /var/run/imunes/$exp/config.imn | grep hostname | awk '{print $2}' | paste -s -d" " -`
+	    echo "$exp ($node_ids)"
+	else
+	    node_ids=`docker ps -a | grep "imunes" | grep "$exp" | awk '{print $NF}' | paste -s -d" " -`
+	    echo "$exp (`docker inspect -f "{{.Config.Hostname}}" $node_ids | paste -s -d" " -`)"
+	fi
     done
 elif test $1 = "-i"; then
     vi_name $2
