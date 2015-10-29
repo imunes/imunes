@@ -60,13 +60,13 @@ elif test $1 = "-h"; then
 elif test $1 = "-d"; then # dummy flag
     exit 0
 elif test $1 = "-l"; then
-    explist=`docker ps -a | grep "imunes" | awk '{print $NF}' | cut -d . -f 1 | sort | uniq`
+    explist=`docker ps -a | grep "imunes" | grep -v " Dead " | awk '{print $NF}' | cut -d . -f 1 | sort | uniq`
     for exp in $explist; do
 	if test -r /var/run/imunes/$exp/; then
 	    node_ids=`grep network-config -A 3 /var/run/imunes/$exp/config.imn | grep hostname | awk '{print $2}' | paste -s -d" " -`
 	    echo "$exp ($node_ids)"
 	else
-	    node_ids=`docker ps -a | grep "imunes" | grep "$exp" | awk '{print $NF}' | paste -s -d" " -`
+	    node_ids=`docker ps -a | grep "imunes" | grep -v " Dead " | grep "$exp" | awk '{print $NF}' | paste -s -d" " -`
 	    echo "$exp (`docker inspect -f "{{.Config.Hostname}}" $node_ids | paste -s -d" " -`)"
 	fi
     done
