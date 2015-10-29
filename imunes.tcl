@@ -211,6 +211,10 @@ if { [string match -nocase "*linux*" $os] == 1 } {
     set l3nodes "genericrouter quagga static pc host"
     set supp_router_models "quagga static"
     source $ROOTDIR/$LIBDIR/runtime/linux.tcl
+    if { $initMode == 1 } {
+	#puts "INFO: devfs preparation is done only on FreeBSD."
+	exit
+    }
 }
 if { [string match -nocase "*freebsd*" $os] == 1 } {
     source $ROOTDIR/$LIBDIR/runtime/freebsd.tcl
