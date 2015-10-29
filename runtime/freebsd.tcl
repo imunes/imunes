@@ -1984,13 +1984,13 @@ proc ipsecFilesToNode { eid node local_cert ipsecret_file } {
 }
 
 proc sshServiceStartCmds {} {
-    return "service sshd onestart"
+    return {"service sshd onestart"}
 }
 
 proc sshServiceStopCmds {} {
-    return "service sshd onestop"
+    return {"service sshd onestop"}
 }
 
 proc inetdServiceRestartCmds {} {
-    return "service inetd onerestart"
+    return {"service inetd onerestart"}
 }

@@ -1041,11 +1041,11 @@ proc sshServiceStartCmds {} {
 }
 
 proc sshServiceStopCmds {} {
-    return "service ssh stop"
+    return {"service ssh stop"}
 }
 
 proc inetdServiceRestartCmds {} {
-    return "service openbsd-inetd restart"
+    return {"service openbsd-inetd restart"}
 }
 
 proc moveFileFromNode { node path ext_path } {
