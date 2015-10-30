@@ -1045,7 +1045,7 @@ proc sshServiceStopCmds {} {
 }
 
 proc inetdServiceRestartCmds {} {
-    return {"service openbsd-inetd restart"}
+    return "service openbsd-inetd restart"
 }
 
 proc moveFileFromNode { node path ext_path } {

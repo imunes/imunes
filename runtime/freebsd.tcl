@@ -1995,5 +1995,5 @@ proc sshServiceStopCmds {} {
 }
 
 proc inetdServiceRestartCmds {} {
-    return {"service inetd onerestart"}
+    return "service inetd onerestart"
 }
