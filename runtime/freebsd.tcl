@@ -1219,6 +1219,9 @@ proc configureICMPoptions { node } {
 
     pipesExec "jexec $node_id sysctl net.inet.icmp.bmcastecho=1" "hold"
     pipesExec "jexec $node_id sysctl net.inet.icmp.icmplim=0" "hold"
+
+    # Enable more fragments per packet for IPv4
+    pipesExec "jexec $node_id sysctl net.inet.ip.maxfragsperpacket=64000" "hold"
 }
 
 #****f* freebsd.tcl/startIfcsNode
