@@ -930,46 +930,51 @@ proc configureIfcLinkParams { eid node ifname bandwidth delay ber dup } {
     } else {
         set lname $node
     }
+
+    # average packet size in the Internet is 576 bytes
+    # XXX: maybe migrate to PER (packet error rate), on FreeBSD we calculate
+    # BER with the magic number 576 and on Linux we take the value directly
+    if { $ber != 0 } {
+	set loss [expr (1 / double($ber)) * 576 * 8 * 100]
+	if { $loss > 100 } {
+	    set loss 100
+	}
+    } else {
+	set loss 0
+    }
+
     if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
         catch {exec tc qdisc del dev $eid.$lname.$ifname root}
 
-        set vdelay [expr $delay / 1000]
-        exec tc qdisc add dev $eid.$lname.$ifname root \
-            handle 1: netem delay ${vdelay}ms
-
-        exec tc qdisc add dev $eid.$lname.$ifname parent 1: \
-            handle 2: netem duplicate ${dup}%
-
-        set corrupt [expr (1 / double($ber)) * 100]
-        exec tc qdisc add dev $eid.$lname.$ifname parent 2: \
-            handle 3: netem corrupt ${corrupt}%
-
-        if {$bandwidth > 0} {
-            exec tc qdisc add dev $eid.$lname.$ifname parent 3: \
-                handle 4: tbf rate ${bandwidth}bit limit 10mb burst 1540
-        }
+	# XXX: currently we have loss, but we can easily have
+	# corrupt, add a tickbox to GUI, default behaviour
+	# should be loss because we don't do corrupt on FreeBSD
+	# set confstring "netem corrupt ${loss}%"
+	# corrupt ${loss}%
+	exec tc qdisc add dev $eid.$lname.$ifname root netem \
+	    rate ${bandwidth}bit \
+	    loss random ${loss}% \
+	    delay ${delay}us \
+	    duplicate ${dup}%
     }
     if { [[typemodel $node].virtlayer] == "VIMAGE" } {
         set nodeNs [getNodeNamespace $node]
         catch {exec nsenter -n -t $nodeNs tc qdisc del dev $ifname root}
 
-        set vdelay [expr $delay / 1000]
-        exec nsenter -n -t $nodeNs tc qdisc add dev $ifname root \
-            handle 1: netem delay ${vdelay}ms
-
-        exec nsenter -n -t $nodeNs tc qdisc add dev $ifname parent 1: \
-            handle 2: netem duplicate ${dup}%
-
-        set corrupt [expr (1 / double($ber)) * 100]
-        exec nsenter -n -t $nodeNs tc qdisc add dev $ifname parent 2: \
-            handle 3: netem corrupt ${corrupt}%
-
-        if {$bandwidth > 0} {
-            exec nsenter -n -t $nodeNs tc qdisc add dev $ifname parent 3: \
-                handle 4: tbf rate ${bandwidth}bit limit 10mb burst 1540
-        }
+	# XXX: same as the above
+	exec nsenter -n -t $nodeNs tc qdisc add dev $ifname root netem \
+	    rate ${bandwidth}bit \
+	    loss random ${loss}% \
+	    delay ${delay}us \
+	    duplicate ${dup}%
 
     }
+
+    # XXX: Now on Linux we don't care about queue lengths and we don't limit
+    # maximum data and burst size.
+    # in the future we can use something like this: (based on the qlen
+    # parameter)
+    # set confstring "tbf rate ${bandwidth}bit limit 10mb burst 1540"
 }
 #****f* linux.tcl/execSetLinkParams
 # NAME
