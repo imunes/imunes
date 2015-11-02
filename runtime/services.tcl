@@ -170,7 +170,7 @@ proc $service.stop { node } {
 	if { [string match "lo*" $ifc] } {
 	    continue
 	}
-	moveFileFromNode $node /tmp/$ifc.pcap $ext_dir/$node\_$ifc.pcap
+	moveFileFromNode $node /tmp/$ifc.pcap $ext_dir/[getNodeName $node]\_$node\_$ifc.pcap
     }
 }
 

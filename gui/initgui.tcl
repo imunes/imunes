@@ -134,7 +134,7 @@ set defTextColor #000000
 
 set showIfNames 1
 set showIfIPaddrs 1
-set showIfIPv6addrs 0
+set showIfIPv6addrs 1
 set showNodeLabels 1
 set showLinkLabels 1
 set showZFSsnapshots 0

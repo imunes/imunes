@@ -1046,7 +1046,7 @@ proc sshServiceStartCmds {} {
 }
 
 proc sshServiceStopCmds {} {
-    return "service ssh stop"
+    return {"service ssh stop"}
 }
 
 proc inetdServiceRestartCmds {} {

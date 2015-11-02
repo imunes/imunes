@@ -1219,6 +1219,9 @@ proc configureICMPoptions { node } {
 
     pipesExec "jexec $node_id sysctl net.inet.icmp.bmcastecho=1" "hold"
     pipesExec "jexec $node_id sysctl net.inet.icmp.icmplim=0" "hold"
+
+    # Enable more fragments per packet for IPv4
+    pipesExec "jexec $node_id sysctl net.inet.ip.maxfragsperpacket=64000" "hold"
 }
 
 #****f* freebsd.tcl/startIfcsNode
@@ -1984,11 +1987,11 @@ proc ipsecFilesToNode { eid node local_cert ipsecret_file } {
 }
 
 proc sshServiceStartCmds {} {
-    return "service sshd onestart"
+    return {"service sshd onestart"}
 }
 
 proc sshServiceStopCmds {} {
-    return "service sshd onestop"
+    return {"service sshd onestop"}
 }
 
 proc inetdServiceRestartCmds {} {

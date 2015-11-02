@@ -48,7 +48,7 @@ proc randomizeMACbytes {} {
     return
 }
 
-#****f* nodecfg.tcl/autoMACaddr 
+#****f* mac.tcl/autoMACaddr
 # NAME
 #   autoMACaddr -- automaticaly assign an MAC address
 # SYNOPSIS
@@ -70,8 +70,6 @@ proc autoMACaddr { node ifc } {
 	return
     }
 
-    set mac_byte4 0
-    set mac_byte5 0
     set mac_byte6 0
     set macaddr [MACaddrAddZeros 42:00:aa:[format %x $mac_byte4]:[format %x $mac_byte5]:[format %x $mac_byte6]]
     while { $macaddr in $MACUsedList } {
@@ -96,9 +94,9 @@ proc autoMACaddr { node ifc } {
     setIfcMACaddr $node $ifc $macaddr
 }
 
-#****f* nodecfg.tcl/MACaddrAddZeros 
+#****f* mac.tcl/MACaddrAddZeros
 # NAME
-#   autoMACaddr -- automaticaly assign an MAC address
+#   MACaddrAddZeros -- automaticaly assign an MAC address
 # SYNOPSIS
 #   set addr [MACaddrAddZeros $node $ifc] 
 # FUNCTION
@@ -134,7 +132,7 @@ proc MACaddrAddZeros { str } {
     return $newstr
 }
 
-#****f* nodecfg.tcl/checkMACAddr 
+#****f* mac.tcl/checkMACAddr
 # NAME
 #   checkMACAddr -- check the MAC address 
 # SYNOPSIS
