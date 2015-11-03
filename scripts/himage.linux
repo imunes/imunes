@@ -113,7 +113,11 @@ elif test `expr a$1 : "a-.*"` = "0"; then
     if test -z "$*"; then
 	exec docker exec -it $image_name /bin/bash
     fi
-    exec docker exec -it $image_name "$@"
+    if [ -t 0 ]; then
+	exec docker exec -it $image_name "$@"
+    else
+	exec docker exec -i $image_name "$@"
+    fi
 else
     echo $command: illegal option -- $1
     help
