@@ -925,6 +925,8 @@ proc execSetIfcQDisc { eid node ifc qdisc } {
 
 
 proc configureIfcLinkParams { eid node ifname bandwidth delay ber dup } {
+    global debug
+
     if {[nodeType $node] == "rj45"} {
         set lname [getNodeName $node]
     } else {
@@ -951,11 +953,19 @@ proc configureIfcLinkParams { eid node ifname bandwidth delay ber dup } {
 	# should be loss because we don't do corrupt on FreeBSD
 	# set confstring "netem corrupt ${loss}%"
 	# corrupt ${loss}%
-	exec tc qdisc add dev $eid.$lname.$ifname root netem \
+	catch { exec tc qdisc add dev $eid.$lname.$ifname root netem \
 	    rate ${bandwidth}bit \
 	    loss random ${loss}% \
 	    delay ${delay}us \
-	    duplicate ${dup}%
+	    duplicate ${dup}% } err
+
+	if { $debug && $err != "" } {
+	    puts stderr "tc ERROR: $eid.$lname.$ifname, $err"
+	    puts stderr "gui settings: bw $bandwidth loss $loss delay $delay dup $dup"
+	    catch { exec tc qdisc show dev $eid.$lname.$ifname } status
+	    puts stderr $status
+	}
+
     }
     if { [[typemodel $node].virtlayer] == "VIMAGE" } {
         set nodeNs [getNodeNamespace $node]
