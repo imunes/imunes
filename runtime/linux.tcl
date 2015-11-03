@@ -595,7 +595,7 @@ proc createNetgraphNode { eid node } {
 }
 
 proc destroyNetgraphNode { eid node } {
-    exec ovs-vsctl del-br $eid.$node
+    catch {exec ovs-vsctl del-br $eid.$node}
 }
 
 proc destroyNetgraphNodes { eid switches widget } {
