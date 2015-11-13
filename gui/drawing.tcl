@@ -492,6 +492,26 @@ proc redrawLink { link } {
     updateIfcLabel $lnode2 $lnode1
 }
 
+#****f* drawing.tcl/connectWithNode
+# NAME
+#   connectWithNode -- connect with a node
+# SYNOPSIS
+#   connectWithNode $nodes $node
+# FUNCTION
+#   This procedure calls newGUILink procedure to connect all given nodes with
+#   the one node.
+# INPUTS
+#   * nodes -- list of all node ids to connect
+#   * node -- node id of the node to connect to
+#****
+proc connectWithNode { nodes node } {
+    foreach n $nodes {
+	if { $n != $node } {
+	    newGUILink $n $node
+	}
+    }
+}
+
 #****f* editor.tcl/newGUILink
 # NAME
 #   newGUILink -- new GUI link

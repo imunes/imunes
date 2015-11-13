@@ -552,7 +552,6 @@ proc button3node { c x y } {
 	    -command "nodeConfigGUI $c $node" -state disabled
     }
     
-
     #
     # Node icon preferences
     #   
@@ -606,12 +605,12 @@ proc button3node { c x y } {
     }
     foreach peer_node $node_list {
 	set canvas [getNodeCanvas $peer_node]
-	if { $node != $peer_node && [nodeType $node] != "rj45" &&
+	if { [nodeType $node] != "rj45" &&
 	    [lsearch {pseudo rj45} [nodeType $peer_node]] < 0 &&
 	    [ifcByLogicalPeer $node $peer_node] == "" } {
 	    .button3menu.connect.$canvas add command \
 		-label [getNodeName $peer_node] \
-		-command "newGUILink $node $peer_node"
+		-command "connectWithNode \"[selectedNodes]\" $peer_node"
 	} elseif { [nodeType $peer_node] != "pseudo" } {
 	    .button3menu.connect.$canvas add command \
 		-label [getNodeName $peer_node] \
