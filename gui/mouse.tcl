@@ -1083,7 +1083,7 @@ proc button1-motion { c x y } {
     } elseif { $activetool == "select" && 
 	( $curobj == $selectbox || $curtype == "background" ||
 	$curtype == "grid" || ($curobj ni [$c find withtag "selected"] &&
-	$curtype != "selectmark")) } {
+	$curtype != "selectmark") && [nodeType [lindex [$c gettags $curobj] 1]] != "pseudo")  } {
 	#forming the selectbox and resizing
 	if {$selectbox == ""} {
 	    set err [catch {
