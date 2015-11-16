@@ -2868,3 +2868,66 @@ proc getNewNodeNameType { type namebase } {
     incr num$type
     return $namebase[set num$type]
 }
+
+#****f* nodecfg.tcl/transformNodes
+# NAME
+#   transformNode -- transform nodes
+# SYNOPSIS
+#   getNewNodeNameType $type $namebase
+# FUNCTION
+#   Returns a new node name for the type and namebase, e.g. pc0 for pc.
+# INPUTS
+#   * type -- node type
+#   * namebase -- base for the node name
+# RESULT
+#   * name -- new node name to be assigned
+#****
+proc transformNodes { nodes type } {
+    foreach node $nodes {
+	if { [[typemodel $node].layer] == "NETWORK" } {
+	    upvar 0 ::cf::[set ::curcfg]::$node nodecfg
+	    global changed
+
+	    if { $type == "pc" || $type == "host" } {
+		# replace type
+		set typeIndex [lsearch $nodecfg "type *"]
+		set nodecfg [lreplace $nodecfg $typeIndex $typeIndex "type $type" ]
+		# if router, remove model
+		set modelIndex [lsearch $nodecfg "model *"]
+		set nodecfg [lreplace $nodecfg $modelIndex $modelIndex]
+
+		# add default routes
+		foreach iface [ifcList $node] {
+		    autoIPv4defaultroute $node $iface
+		    autoIPv6defaultroute $node $iface
+		}
+
+		# delete router stuff in netconf
+		foreach model "rip ripng ospf ospf6" {
+		    netconfClearSection $node "router $model"
+		}
+
+		set changed 1
+	    } elseif { [nodeType $node] != "router" && $type == "router" } {
+		# replace type
+		set typeIndex [lsearch $nodecfg "type *"]
+		set nodecfg [lreplace $nodecfg $typeIndex $typeIndex "type $type"]
+
+		# set router model and default protocols
+		setNodeModel $node "quagga"
+		setNodeProtocolRip $node 1
+		setNodeProtocolRipng $node 1
+		# clear default static routes
+		netconfClearSection $node "ip route [lindex [getStatIPv4routes $node] 0]"
+		netconfClearSection $node "ipv6 route [lindex [getStatIPv6routes $node] 0]"
+
+		set changed 1
+	    }
+	}
+    }
+
+    if { $changed == 1 } {
+	redrawAll
+	updateUndoLog
+    }
+}

@@ -553,6 +553,24 @@ proc button3node { c x y } {
     }
     
     #
+    # Transform
+    #
+    .button3menu.transform delete 0 end
+    if { $oper_mode == "exec" || [nodeType $node] == "pseudo" || [[typemodel $node].layer] != "NETWORK" } {
+#	.button3menu add cascade -label "Transform to" \
+#	    -menu .button3menu.transform -state disabled
+    } else {
+	.button3menu add cascade -label "Transform to" \
+	    -menu .button3menu.transform
+	.button3menu.transform add command -label "Router" \
+	    -command "transformNodes \"[selectedRealNodes]\" router"
+	.button3menu.transform add command -label "PC" \
+	    -command "transformNodes \"[selectedRealNodes]\" pc"
+	.button3menu.transform add command -label "Host" \
+	    -command "transformNodes \"[selectedRealNodes]\" host"
+    }
+
+    #
     # Node icon preferences
     #   
     .button3menu.icon delete 0 end
@@ -610,7 +628,7 @@ proc button3node { c x y } {
 	    [ifcByLogicalPeer $node $peer_node] == "" } {
 	    .button3menu.connect.$canvas add command \
 		-label [getNodeName $peer_node] \
-		-command "connectWithNode \"[selectedNodes]\" $peer_node"
+		-command "connectWithNode \"[selectedRealNodes]\" $peer_node"
 	} elseif { [nodeType $peer_node] != "pseudo" } {
 	    .button3menu.connect.$canvas add command \
 		-label [getNodeName $peer_node] \

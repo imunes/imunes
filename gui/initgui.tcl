@@ -1160,6 +1160,7 @@ menu .button3menu.wireshark -tearoff 0
 menu .button3menu.tcpdump -tearoff 0
 menu .button3menu.canvases -tearoff 0
 menu .button3menu.icon -tearoff 0
+menu .button3menu.transform -tearoff 0
 menu .button3menu.sett -tearoff 0
 menu .button3menu.services -tearoff 0
 
