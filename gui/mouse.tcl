@@ -605,8 +605,8 @@ proc button3node { c x y } {
 	-label "Chain" -command "P \[selectedRealNodes\]"
     .button3menu.connect.selected add command \
 	-label "Star" \
-	-command "Kb \[lindex \[selectedRealNodes\] 0\] \
-	\[lrange \[selectedNodes\] 1 end\]"
+	-command "Kb $node \[lsearch -all -inline -not -exact \
+	\[selectedRealNodes\] $node\]"
     .button3menu.connect.selected add command \
 	-label "Cycle" -command "C \[selectedRealNodes\]"
     .button3menu.connect.selected add command \
