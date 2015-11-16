@@ -69,7 +69,7 @@ First we need to install the packages required for IMUNES:
     tcllib
     wireshark (with GUI)
     ImageMagick
-    Docker (version 1.4 or greater)
+    Docker (version 1.6 or greater)
     OpenvSwitch
     nsenter (part of the util-linux package since version 2.23 and later)
     xterm
