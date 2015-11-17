@@ -2931,3 +2931,31 @@ proc transformNodes { nodes type } {
 	updateUndoLog
     }
 }
+
+#****f* nodecfg.tcl/pseudo.layer
+# NAME
+#   pseudo.layer -- pseudo layer
+# SYNOPSIS
+#   set layer [pseudo.layer]
+# FUNCTION
+#   Returns the layer on which the pseudo node operates
+#   i.e. returns no layer.
+# RESULT
+#   * layer -- returns an empty string
+#****
+proc pseudo.layer {} {
+}
+
+#****f* nodecfg.tcl/pseudo.virtlayer
+# NAME
+#   pseudo.virtlayer -- pseudo virtlayer
+# SYNOPSIS
+#   set virtlayer [pseudo.virtlayer]
+# FUNCTION
+#   Returns the virtlayer on which the pseudo node operates
+#   i.e. returns no layer.
+# RESULT
+#   * virtlayer -- returns an empty string
+#****
+proc pseudo.virtlayer {} {
+}
