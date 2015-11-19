@@ -785,7 +785,7 @@ proc deployCfg {} {
 
     set nodeCount [llength $node_list]
     set linkCount [llength $link_list]
-    set count [expr {$nodeCount + $linkCount}]
+    set count [expr {2*$nodeCount + $linkCount}]
     set startedCount 0
     if {$execMode != "batch"} {
 	set w .startup
@@ -886,6 +886,13 @@ proc deployCfg {} {
     foreach node $node_list {
 	upvar 0 ::cf::[set ::curcfg]::$node $node
 	set type [nodeType $node]
+
+	incr startedCount
+	if {$execMode != "batch"} {
+	    $w.p configure -value $startedCount
+	    update
+	}
+
 	if {$type == "pseudo"} {
 	    continue
 	}
@@ -932,7 +939,8 @@ proc terminateAllNodes { eid } {
     set w ""
     #preparing counters for GUI
     if {$execMode != "batch"} {
-	set count [expr {[llength $node_list]+[llength $link_list]}]
+	set count [expr {2*[llength $node_list]+[llength $link_list]}]
+	set startedCount $count
 	set w .termWait
 	catch {destroy $w}
 	toplevel $w -takefocus 1
@@ -942,7 +950,7 @@ proc terminateAllNodes { eid } {
 	    -text "Deleting virtual nodes and links."
 	pack $w.msg
 	ttk::progressbar $w.p -orient horizontal -length 250 \
-	    -mode determinate -maximum $count -value $count
+	    -mode determinate -maximum $count -value $startedCount
 	pack $w.p
 	update
     }
@@ -981,6 +989,12 @@ proc terminateAllNodes { eid } {
 	} else {
 	    #puts "$node [typemodel $node] doesn't have a shutdown procedure"
 	}
+
+	incr startedCount -1
+	if {$execMode != "batch"} {
+	    $w.p configure -value $startedCount
+	    update
+	}
     }
     statline ""
 
@@ -998,9 +1012,12 @@ proc terminateAllNodes { eid } {
 #	statline "Shutting down link $link ($lnode1-$lnode2)"
 	displayBatchProgress $i [ llength $link_list ]
 	destroyLinkBetween $eid $lnode1 $lnode2
-        if {$execMode != "batch"} {
-            $w.p step -1
-        }
+
+	incr startedCount -1
+	if {$execMode != "batch"} {
+	    $w.p configure -value $startedCount
+	    update
+	}
     }
     pipesClose
     statline ""
@@ -1023,10 +1040,13 @@ proc terminateAllNodes { eid } {
 #	statline "Shutting down vimage $node ([typemodel $node])"
 	incr i
 	[typemodel $node].destroy $eid $node
-        if {$execMode != "batch"} {
-            $w.p step -1
-        }
 	displayBatchProgress $i [ llength $vimages ]
+
+	incr startedCount -1
+	if {$execMode != "batch"} {
+	    $w.p configure -value $startedCount
+	    update
+	}
     }
     pipesClose
     statline ""
