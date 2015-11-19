@@ -808,22 +808,25 @@ proc deployCfg {} {
     set allNodes [ llength $node_list ]
 
     pipesCreate
+    set pseudo_links 0
 
     foreach node $node_list {
 	incr step
 	set node_id "$eid\.$node"
 	set type [nodeType $node]
 	set name [getNodeName $node]
+	incr startedCount
+	if {$execMode != "batch"} {
+	    statline "Creating node $name"
+	    $w.p configure -value $startedCount
+	    update
+	}
+	displayBatchProgress $step $allNodes
 	if {$type != "pseudo"} {
-	    if {$execMode != "batch"} {
-		statline "Creating node $name"
-		$w.p configure -value $startedCount
-		update
-	    }
-	    displayBatchProgress $step $allNodes
 	    [typemodel $node].instantiate $eid $node
 	    pipesExec ""
-	    incr startedCount
+	} else {
+	    incr pseudo_links
 	}
     }
 
@@ -835,7 +838,7 @@ proc deployCfg {} {
 
     statline "Creating links..."
     set step 0
-    set allLinks [ llength $link_list ]
+    set allLinks [expr ([ llength $link_list ] - $pseudo_links/2)]
     for {set pending_links $link_list} {$pending_links != ""} {} {
 	set link [lindex $pending_links 0]
 	set i [lsearch -exact $pending_links $link]
@@ -893,17 +896,17 @@ proc deployCfg {} {
 	    update
 	}
 
-	if {$type == "pseudo"} {
-	    continue
-	}
-	if {$execMode != "batch"} {
-	    statline "Configuring node [getNodeName $node]"
-	}
 	incr step
 	displayBatchProgress $step $allNodes
 
-	if {[info procs [typemodel $node].start] != ""} {
-	    [typemodel $node].start $eid $node
+	if {$type != "pseudo"} {
+	    if {$execMode != "batch"} {
+		statline "Configuring node [getNodeName $node]"
+	    }
+
+	    if {[info procs [typemodel $node].start] != ""} {
+		[typemodel $node].start $eid $node
+	    }
 	}
     }
     statline ""
