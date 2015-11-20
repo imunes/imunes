@@ -95,6 +95,7 @@ proc dumpCfg { method dest } {
     global showIfIPaddrs showIfIPv6addrs
     global showBkgImage showGrid showAnnotations
     global iconSize
+    global hostsAutoAssign
 
     foreach node $node_list {
 	upvar 0 ::cf::[set ::curcfg]::$node lnode
@@ -229,6 +230,10 @@ proc dumpCfg { method dest } {
 	dumpputs $method $dest "    annotations no"
     } else {
 	dumpputs $method $dest "    annotations yes" }
+    if {$hostsAutoAssign == 0} {
+	dumpputs $method $dest "    hostsAutoAssign no"
+    } else {
+	dumpputs $method $dest "    hostsAutoAssign yes" }
     if {$showGrid == 0} {
 	dumpputs $method $dest "    grid no"
     } else {
@@ -279,6 +284,7 @@ proc loadCfg { cfg } {
     global showIfIPaddrs showIfIPv6addrs
     global showBkgImage showGrid showAnnotations
     global iconSize
+    global hostsAutoAssign
 
     # Cleanup first
     set node_list {}
@@ -614,6 +620,13 @@ proc loadCfg { cfg } {
 				set showGrid 0
 			    } elseif { $value == "yes" } {
 				set showGrid 1
+			    }
+			}
+			hostsAutoAssign {
+			    if { $value == "no" } {
+				set hostsAutoAssign 0
+			    } elseif { $value == "yes" } {
+				set hostsAutoAssign 1
 			    }
 			}
 			zoom {

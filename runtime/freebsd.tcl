@@ -1298,9 +1298,7 @@ proc runConfOnNode { node } {
 	}
     }
 
-    if { $execMode != "batch" } {
-	generateHostsFile $node
-    }
+    generateHostsFile $node
 
     exec sh << $cmds
 }
