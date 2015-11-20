@@ -913,6 +913,7 @@ proc deployCfg {} {
     statline ""
 
     # Start services for the NODECONF hook
+    statline "Starting services..."
     services start "NODECONF"
 
     statline "Network topology instantiated in [expr ([clock milliseconds] - $t_start)/1000.0] seconds ($allNodes nodes and $allLinks links)."
