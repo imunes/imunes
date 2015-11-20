@@ -1080,6 +1080,8 @@ proc button1-motion { c x y } {
 	set changed 1
 	set lastX $x
 	set lastY $y
+    } elseif { $activetool == "select" && $curobj == "" && $curtype == "" } {
+	return
     } elseif { $activetool == "select" && 
 	( $curobj == $selectbox || $curtype == "background" ||
 	$curtype == "grid" || ($curobj ni [$c find withtag "selected"] &&
