@@ -33,6 +33,7 @@ set vroot_linprocfs 0
 set ifc_dad_disable 0
 set regular_termination 1
 set devfs_number 46837
+set hostsAutoAssign 0
 
 #****f* exec.tcl/nexec
 # NAME
