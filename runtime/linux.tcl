@@ -109,8 +109,23 @@ proc startWiresharkOnNodeIfc { node ifc } {
     [checkForApplications $node "wireshark"] == 0} {
         startXappOnNode $node "wireshark -ki $ifc"
     } else {
-        exec docker exec $eid.$node tcpdump -s 0 -U -w - -i $ifc 2>/dev/null |\
-        wireshark -o "gui.window_title:$ifc@[getNodeName $node] ($eid)" -k -i - &
+	set wiresharkComm ""
+	foreach wireshark "wireshark wireshark-gtk wireshark-qt" {
+	    if {[checkForExternalApps $wireshark] == 0} {
+		set wiresharkComm $wireshark
+		break
+	    }
+	}
+
+	if { $wiresharkComm != "" } {
+	    exec docker exec $eid.$node tcpdump -s 0 -U -w - -i $ifc 2>/dev/null |\
+	    $wiresharkComm -o "gui.window_title:$ifc@[getNodeName $node] ($eid)" -k -i - &
+	} else {
+            tk_dialog .dialog1 "IMUNES error" \
+	"IMUNES could not find an installation of Wireshark.\
+	If you have Wireshark installed, submit a bug report." \
+            info 0 Dismiss
+	}
     }
 }
 
