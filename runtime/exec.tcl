@@ -713,7 +713,7 @@ proc l3node.start { eid node } {
 #   * node -- node id
 #****
 proc l3node.shutdown { eid node } {
-    killExtProcess "wireshark.*$node.*\\($eid\\)"
+    killExtProcess "wireshark.*[getNodeName $node].*\\($eid\\)"
     killAllNodeProcesses $eid $node
     removeNodeIfcIPaddrs $eid $node
 }
