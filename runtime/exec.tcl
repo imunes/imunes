@@ -396,6 +396,7 @@ proc createExperimentFiles { eid } {
     writeDataToFile $basedir/timestamp [clock format [clock seconds]]
     
     dumpNgnodesToFile $basedir/ngnodemap
+    dumpLinksToFile $basedir/links
 
     if { $execMode == "interactive" } {
 	if { $currentFile != "" } {
@@ -413,6 +414,50 @@ proc createExperimentFiles { eid } {
     } else {
 	saveRunningConfigurationBatch $eid
     }
+}
+
+#****f* exec.tcl/dumpLinksToFile
+# NAME
+#   dumpLinksToFile -- dump formatted link list to file
+# SYNOPSIS
+#   dumpLinksToFile $path
+# FUNCTION
+#   Saves the list of all links to $path.
+# INPUTS
+#   * path -- absolute path of the file
+#****
+proc dumpLinksToFile { path } {
+    upvar 0 ::cf::[set ::curcfg]::link_list link_list
+
+    set data ""
+
+    foreach link $link_list {
+	set lnode1 [lindex [linkPeers $link] 0]
+	set lnode2 [lindex [linkPeers $link] 1]
+	set ifname1 [ifcByPeer $lnode1 $lnode2]
+	set ifname2 [ifcByPeer $lnode2 $lnode1]
+
+	if { [getLinkMirror $link] != "" } {
+	    set mirror_link [getLinkMirror $link]
+
+	    set p_lnode2 $lnode2
+	    set lnode2 [lindex [linkPeers $mirror_link] 0]
+	    set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
+	}
+
+	set name1 [getNodeName $lnode1]
+	set name2 [getNodeName $lnode2]
+
+	set linkname "$name1-$name2"
+
+	set line "$linkname {$lnode1-$lnode2 {{$lnode1 $ifname1}{$lnode2 $ifname2}} $link}\n"
+
+	set data "$data$line"
+    }
+
+    set data [string trimright $data "\n"]
+
+    writeDataToFile $path $data
 }
 
 #****f* exec.tcl/saveRunningConfigurationInteractive
