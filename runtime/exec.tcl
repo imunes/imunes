@@ -450,7 +450,7 @@ proc dumpLinksToFile { path } {
 
 	set linkname "$name1-$name2"
 
-	set line "$linkname {$lnode1-$lnode2 {{$lnode1 $ifname1}{$lnode2 $ifname2}} $link}\n"
+	set line "$linkname {$lnode1-$lnode2 {{$lnode1 $ifname1} {$lnode2 $ifname2}} $link}\n"
 
 	set data "$data$line"
     }
