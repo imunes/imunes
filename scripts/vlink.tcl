@@ -137,7 +137,16 @@ proc getLinuxLinkStatus { nodename eid ldata } {
 
 # get link settings into an ordered list on FreeBSD
 proc getFreeBSDLinkStatus { eid ldata } {
-    catch {exec jexec $eid ngctl msg $lname: getcfg $config} settings
+    catch {exec jexec $eid ngctl msg $ldata: getcfg} settings
+    set settings [lindex [lindex [split $settings "\n"] 1] 1]
+    set linkStatus ""
+    foreach varname { bandwidth delay BER duplicate } {
+	set index [lsearch $settings "$varname=*"]
+	if { $index != -1 } {
+	    lappend linkStatus "$varname [lindex [split [lindex $settings $index] "="] end]"
+	}
+    }
+    return $linkStatus
 }
 
 # print current link settings to terminal
@@ -206,19 +215,37 @@ proc applyLinkSettingsLinux { bandwidth ber delay dup nodename eid ldata } {
 proc applyLinkSettingsFreeBSD { bandwidth ber delay dup eid lname } {
     # build the config that should be applied
     append config "{ "
-    if { $bandwidth != "" } {
+    if { $bandwidth != -1 } {
+	if { $bandwidth == 0 } {
+	    set bandwidth -1
+	}
 	append config "bandwidth=" $bandwidth " "
     }
-    if { $delay != "" } {
+    if { $delay != -1 } {
+	if { $delay == 0 } {
+	    set delay -1
+	}
 	append config "delay=" $delay " "
     }
-    if { $dup != "" && $ber != "" } {
+    if { $dup != -1 && $ber != -1 } {
+	if { $dup == 0 } {
+	    set dup -1
+	}
+	if { $ber == 0 } {
+	    set ber -1
+	}
 	append config "upstream={ duplicate=" $dup " BER=" $ber " }"
 	append config "downstream={ duplicate=" $dup " BER=" $ber " }"
-    } elseif { $dup != "" } {
+    } elseif { $dup != -1 } {
+	if { $dup == 0 } {
+	    set dup -1
+	}
 	append config "upstream={ duplicate=" $dup " }"
 	append config "downstream={ duplicate=" $dup " }"
-    } elseif { $ber != ""} {
+    } elseif { $ber != -1} {
+	if { $ber == 0 } {
+	    set ber -1
+	}
 	append config "upstream={ BER=" $ber " }"
 	append config "downstream={ BER=" $ber " }"
     }
