@@ -3776,3 +3776,893 @@ proc showIKEAdvancedOptions { node lFrame } {
     $lFrame.advance_button_ike configure -text "Hide advanced options"
     $lFrame.advance_button_ike configure -command "hideIKEAdvancedOptions $node $lFrame"
 }
+
+
+proc configGUI_ifcBridgeAttributes { wi node ifc } {
+    global guielements
+    lappend guielements "configGUI_ifcBridgeAttributes $ifc"
+    global brguielements
+    lappend brguielements "configGUI_ifcBridgeAttributes $ifc"
+
+    ttk::frame $wi.if$ifc.bridge -borderwidth 2
+
+    global ifcBridgeDiscover$ifc
+    set ifcBridgeDiscover$ifc [getBridgeIfcDiscover $node $ifc]
+    ttk::checkbutton $wi.if$ifc.bridge.discover -text "discover" \
+	-variable ifcBridgeDiscover$ifc
+    
+    global ifcBridgeLearn$ifc
+    set ifcBridgeLearn$ifc [getBridgeIfcLearn $node $ifc]
+    ttk::checkbutton $wi.if$ifc.bridge.learn -text "learn" \
+	-variable ifcBridgeLearn$ifc
+    
+    global ifcBridgeSticky$ifc
+    set ifcBridgeSticky$ifc [getBridgeIfcSticky $node $ifc]
+    ttk::checkbutton $wi.if$ifc.bridge.sticky -text "sticky" \
+	-variable ifcBridgeSticky$ifc
+    
+    global ifcBridgePrivate$ifc
+    set ifcBridgePrivate$ifc [getBridgeIfcPrivate $node $ifc]
+    ttk::checkbutton $wi.if$ifc.bridge.private -text "private" \
+	-variable ifcBridgePrivate$ifc
+    
+    global ifcBridgeSnoop$ifc
+    set ifcBridgeSnoop$ifc [getBridgeIfcSnoop $node $ifc]
+    ttk::checkbutton $wi.if$ifc.bridge.snoop -text "snoop" \
+	-variable ifcBridgeSnoop$ifc -command "snoopDisable $wi $ifc" 
+    
+    global ifcBridgeStp$ifc
+    set ifcBridgeStp$ifc [getBridgeIfcStp $node $ifc]
+    ttk::checkbutton $wi.if$ifc.bridge.stp -text "stp" \
+	-variable ifcBridgeStp$ifc
+    
+    global ifcBridgeEdge$ifc
+    set ifcBridgeEdge$ifc [getBridgeIfcEdge $node $ifc]
+    ttk::checkbutton $wi.if$ifc.bridge.edge -text "edge" \
+	-variable ifcBridgeEdge$ifc
+    
+    global ifcBridgeAutoedge$ifc
+    set ifcBridgeAutoedge$ifc [getBridgeIfcAutoedge $node $ifc]
+    ttk::checkbutton $wi.if$ifc.bridge.autoedge -text "autoedge" \
+	-variable ifcBridgeAutoedge$ifc
+    
+    global ifcBridgePtp$ifc
+    set ifcBridgePtp$ifc [getBridgeIfcPtp $node $ifc]
+    ttk::checkbutton $wi.if$ifc.bridge.ptp -text "ptp" \
+	-variable ifcBridgePtp$ifc
+    
+    global ifcBridgeAutoptp$ifc
+    set ifcBridgeAutoptp$ifc [getBridgeIfcAutoptp $node $ifc]
+    ttk::checkbutton $wi.if$ifc.bridge.autoptp -text "autoptp" \
+	-variable ifcBridgeAutoptp$ifc
+    
+    ttk::frame $wi.if$ifc.bridge.priority -padding 0
+    ttk::label $wi.if$ifc.bridge.priority.label -text "Priority:" \
+	-anchor w
+    ttk::spinbox $wi.if$ifc.bridge.priority.box -width 3 \
+	-from 0 -to 240 -increment 10 \
+	-validatecommand {checkIntRange %P 0 240} \
+	-invalidcommand "focusAndFlash %W" 
+    set bridgeIfcPriority [getBridgeIfcPriority $node $ifc]
+    $wi.if$ifc.bridge.priority.box insert 0 $bridgeIfcPriority
+    pack $wi.if$ifc.bridge.priority.label -side left -anchor w -expand 1 -fill x
+    pack $wi.if$ifc.bridge.priority.box -side left -anchor e
+
+    ttk::frame $wi.if$ifc.bridge.pathcost -padding 0
+    ttk::label $wi.if$ifc.bridge.pathcost.label -text "Path cost:" -anchor w
+    ttk::spinbox $wi.if$ifc.bridge.pathcost.box -width 9 \
+	-from 0 -to 200000000 -increment 100 \
+	-validatecommand {checkIntRange %P 0 200000000} \
+	-invalidcommand "focusAndFlash %W" 
+    set bridgeIfcPathcost [getBridgeIfcPathcost $node $ifc]
+    $wi.if$ifc.bridge.pathcost.box insert 0 $bridgeIfcPathcost
+    pack $wi.if$ifc.bridge.pathcost.label -side left -anchor w -expand 1 -fill x
+    pack $wi.if$ifc.bridge.pathcost.box -side left -anchor e
+    
+    ttk::frame $wi.if$ifc.bridge.maxaddr -padding 0
+    ttk::label $wi.if$ifc.bridge.maxaddr.label -text "Max addresses:" -anchor w
+    ttk::spinbox $wi.if$ifc.bridge.maxaddr.box -width 5 \
+	-from 0 -to 10000 -increment 10 \
+	-validatecommand {checkIntRange %P 0 10000} \
+	-invalidcommand "focusAndFlash %W" 
+    set bridgeIfcMaxaddr [getBridgeIfcMaxaddr $node $ifc]
+    $wi.if$ifc.bridge.maxaddr.box insert 0 $bridgeIfcMaxaddr
+    pack $wi.if$ifc.bridge.maxaddr.label -side left -anchor w -expand 1 -fill x
+    pack $wi.if$ifc.bridge.maxaddr.box -side left -anchor e
+    
+    pack $wi.if$ifc.bridge -anchor w -padx 10
+
+    grid $wi.if$ifc.bridge.priority -in $wi.if$ifc.bridge \
+	-column 0 -row 2 -columnspan 3 -sticky ew -pady 5 
+    grid $wi.if$ifc.bridge.maxaddr -in $wi.if$ifc.bridge \
+	-column 0 -row 3 -columnspan 3 -sticky ew -pady 0
+    grid $wi.if$ifc.bridge.pathcost -in $wi.if$ifc.bridge \
+	-column 0 -row 4 -columnspan 3 -sticky ew -pady 5
+
+    grid $wi.if$ifc.bridge.snoop -in $wi.if$ifc.bridge \
+	-column 0 -row 1 -sticky nsew -padx 0
+    grid $wi.if$ifc.bridge.stp -in $wi.if$ifc.bridge \
+	-column 0 -row 0 -sticky nsew -padx 0
+    grid $wi.if$ifc.bridge.discover -in $wi.if$ifc.bridge \
+	-column 1 -row 0 -sticky nsew -padx 0
+    grid $wi.if$ifc.bridge.learn -in $wi.if$ifc.bridge \
+	-column 1 -row 1 -sticky nsew -padx 0
+    grid $wi.if$ifc.bridge.sticky -in $wi.if$ifc.bridge \
+	-column 2 -row 0 -sticky nsew -padx 5
+    grid $wi.if$ifc.bridge.private -in $wi.if$ifc.bridge \
+	-column 2 -row 1 -sticky nsew -padx 5
+    grid $wi.if$ifc.bridge.edge -in $wi.if$ifc.bridge \
+	-column 3 -row 0 -sticky nsew -padx 5
+    grid $wi.if$ifc.bridge.autoedge -in $wi.if$ifc.bridge \
+	-column 3 -row 1 -sticky nsew -padx 5
+    grid $wi.if$ifc.bridge.ptp -in $wi.if$ifc.bridge \
+	-column 4 -row 0 -sticky nsew -padx 0
+    grid $wi.if$ifc.bridge.autoptp -in $wi.if$ifc.bridge \
+	-column 4 -row 1 -sticky nsew -padx 0
+
+    snoopDisable $wi $ifc
+}
+
+proc snoopDisable { wi ifc } {
+	if { $ifc == "" } {
+	    return
+	}
+	global ifcBridgeSnoop$ifc
+	if { [set ifcBridgeSnoop$ifc] == 1 } {
+	    $wi.if$ifc.bridge.discover configure -state disabled
+	    $wi.if$ifc.bridge.sticky configure -state disabled
+	    $wi.if$ifc.bridge.learn configure -state disabled
+	    $wi.if$ifc.bridge.edge configure -state disabled
+	    $wi.if$ifc.bridge.autoedge configure -state disabled
+	    $wi.if$ifc.bridge.ptp configure -state disabled
+	    $wi.if$ifc.bridge.autoptp configure -state disabled
+	    $wi.if$ifc.bridge.stp configure -state disabled
+	    $wi.if$ifc.bridge.private configure -state disabled
+	    $wi.if$ifc.bridge.priority.box configure -state disabled
+	    $wi.if$ifc.bridge.maxaddr.box configure -state disabled
+	    $wi.if$ifc.bridge.pathcost.box configure -state disabled
+	} else {
+	    $wi.if$ifc.bridge.discover configure -state normal
+	    $wi.if$ifc.bridge.sticky configure -state normal
+	    $wi.if$ifc.bridge.learn configure -state normal
+	    $wi.if$ifc.bridge.edge configure -state normal
+	    $wi.if$ifc.bridge.autoedge configure -state normal
+	    $wi.if$ifc.bridge.ptp configure -state normal
+	    $wi.if$ifc.bridge.autoptp configure -state normal
+	    $wi.if$ifc.bridge.stp configure -state normal
+	    $wi.if$ifc.bridge.private configure -state normal
+	    $wi.if$ifc.bridge.priority.box configure -state normal
+	    $wi.if$ifc.bridge.maxaddr.box configure -state normal
+	    $wi.if$ifc.bridge.pathcost.box configure -state normal
+	}
+}
+
+proc configGUI_ifcBridgeAttributesApply { wi node ifc } {
+    global changed apply
+
+    global ifcBridgeSnoop$ifc
+    set ifcBridgeSnoop [set ifcBridgeSnoop$ifc]
+    set oldIfcBridgeSnoop [getBridgeIfcSnoop $node $ifc]
+    if { $ifcBridgeSnoop != $oldIfcBridgeSnoop } {
+	if { $apply == 1 } {
+	    setBridgeIfcSnoop $node $ifc $ifcBridgeSnoop
+	}
+	set changed 1 
+    }
+
+    if { $ifcBridgeSnoop == 1} {
+	return
+    }
+
+    global ifcBridgeDiscover$ifc
+    set ifcBridgeDiscover [set ifcBridgeDiscover$ifc]
+    set oldIfcBridgeDiscover [getBridgeIfcDiscover $node $ifc]
+    if { $ifcBridgeDiscover != $oldIfcBridgeDiscover } {
+	if { $apply == 1 } {
+	    setBridgeIfcDiscover $node $ifc $ifcBridgeDiscover
+	}
+	set changed 1 
+    }
+    
+    global ifcBridgeLearn$ifc
+    set ifcBridgeLearn [set ifcBridgeLearn$ifc]
+    set oldIfcBridgeLearn [getBridgeIfcLearn $node $ifc]
+    if { $ifcBridgeLearn != $oldIfcBridgeLearn } {
+	if { $apply == 1 } {
+	    setBridgeIfcLearn $node $ifc $ifcBridgeLearn
+	}
+	set changed 1 
+    }
+    
+    global ifcBridgeSticky$ifc
+    set ifcBridgeSticky [set ifcBridgeSticky$ifc]
+    set oldIfcBridgeSticky [getBridgeIfcSticky $node $ifc]
+    if { $ifcBridgeSticky != $oldIfcBridgeSticky } {
+	if { $apply == 1 } {
+	    setBridgeIfcSticky $node $ifc $ifcBridgeSticky
+	}
+	set changed 1 
+    }
+    
+    global ifcBridgePrivate$ifc
+    set ifcBridgePrivate [set ifcBridgePrivate$ifc]
+    set oldIfcBridgePrivate [getBridgeIfcPrivate $node $ifc]
+    if { $ifcBridgePrivate != $oldIfcBridgePrivate } {
+	if { $apply == 1 } {
+	    setBridgeIfcPrivate $node $ifc $ifcBridgePrivate
+	}
+	set changed 1 
+    }
+    
+    global ifcBridgeStp$ifc
+    set ifcBridgeStp [set ifcBridgeStp$ifc]
+    set oldIfcBridgeStp [getBridgeIfcStp $node $ifc]
+    if { $ifcBridgeStp != $oldIfcBridgeStp } {
+	if { $apply == 1 } {
+	    setBridgeIfcStp $node $ifc $ifcBridgeStp
+	}
+	set changed 1 
+    }
+    
+    global ifcBridgeEdge$ifc
+    set ifcBridgeEdge [set ifcBridgeEdge$ifc]
+    set oldIfcBridgeEdge [getBridgeIfcEdge $node $ifc]
+    if { $ifcBridgeEdge != $oldIfcBridgeEdge } {
+	if { $apply == 1 } {
+	    setBridgeIfcEdge $node $ifc $ifcBridgeEdge
+	}
+	set changed 1 
+    }
+    
+    global ifcBridgeAutoedge$ifc
+    set ifcBridgeAutoedge [set ifcBridgeAutoedge$ifc]
+    set oldIfcBridgeAutoedge [getBridgeIfcAutoedge $node $ifc]
+    if { $ifcBridgeAutoedge != $oldIfcBridgeAutoedge } {
+	if { $apply == 1 } {
+	    setBridgeIfcAutoedge $node $ifc $ifcBridgeAutoedge
+	}
+	set changed 1 
+    }
+    
+    global ifcBridgePtp$ifc
+    set ifcBridgePtp [set ifcBridgePtp$ifc]
+    set oldIfcBridgePtp [getBridgeIfcPtp $node $ifc]
+    if { $ifcBridgePtp != $oldIfcBridgePtp } {
+	if { $apply == 1 } {
+	    setBridgeIfcPtp $node $ifc $ifcBridgePtp
+	}
+	set changed 1 
+    }
+    
+    global ifcBridgeAutoptp$ifc
+    set ifcBridgeAutoptp [set ifcBridgeAutoptp$ifc]
+    set oldIfcBridgeAutoptp [getBridgeIfcAutoptp $node $ifc]
+    if { $ifcBridgeAutoptp != $oldIfcBridgeAutoptp } {
+	if { $apply == 1 } {
+	    setBridgeIfcAutoptp $node $ifc $ifcBridgeAutoptp
+	}
+	set changed 1 
+    }
+    
+    set ifcBridgePriority [$wi.if$ifc.bridge.priority.box get]
+    set oldIfcBridgePriority [getBridgeIfcPriority $node $ifc]
+    if { $ifcBridgePriority != $oldIfcBridgePriority } {
+	if { $apply == 1 } {
+	    setBridgeIfcPriority $node $ifc $ifcBridgePriority
+	}
+	set changed 1 
+    }
+    
+    set ifcBridgePathcost [$wi.if$ifc.bridge.pathcost.box get]
+    set oldIfcBridgePathcost [getBridgeIfcPathcost $node $ifc]
+    if { $ifcBridgePathcost != $oldIfcBridgePathcost } {
+	if { $apply == 1 } {
+	    setBridgeIfcPathcost $node $ifc $ifcBridgePathcost
+	}
+	set changed 1 
+    }
+    
+    set ifcBridgeMaxaddr [$wi.if$ifc.bridge.maxaddr.box get]
+    set oldIfcBridgeMaxaddr [getBridgeIfcMaxaddr $node $ifc]
+    if { $ifcBridgeMaxaddr != $oldIfcBridgeMaxaddr } {
+	if { $apply == 1 } {
+	    setBridgeIfcMaxaddr $node $ifc $ifcBridgeMaxaddr
+	}
+	set changed 1 
+    }
+}
+
+set bridgeProtocol rstp
+set brguielements {}
+
+proc configGUI_bridgeConfig { wi node } {
+    global guielements
+    lappend guielements configGUI_bridgeConfig 
+    
+    global bridgeProtocol
+    ttk::frame $wi.bridge -relief groove -borderwidth 2 -padding 2
+
+    set bridgeProtocol [getBridgeProtocol $node bridge0]
+
+    ttk::frame $wi.bridge.protocols -padding 2
+    ttk::label $wi.bridge.protocols.label -text "Protocol:"
+    ttk::radiobutton $wi.bridge.protocols.rstp -text "rstp" \
+	-variable bridgeProtocol -value rstp \
+	-command "$wi.bridge.hellotime.box configure -state disabled"
+    ttk::radiobutton $wi.bridge.protocols.stp -text "stp" \
+	-variable bridgeProtocol -value stp \
+	-command "$wi.bridge.hellotime.box configure -state normal"
+
+    ttk::frame $wi.bridge.priority -padding 2
+    ttk::label $wi.bridge.priority.label -text "Priority:"
+    ttk::spinbox $wi.bridge.priority.box -width 6 \
+	-from 0 -to 61440 -increment 4096 \
+	-validatecommand {checkIntRange %P 0 61440} \
+	-invalidcommand "focusAndFlash %W"
+    set bridgePriority [getBridgePriority $node bridge0]
+    if { $bridgePriority != "" } {
+	$wi.bridge.priority.box insert 0 $bridgePriority
+    } else {
+	$wi.bridge.priority.box insert 0 32768 
+    }
+
+    ttk::frame $wi.bridge.maxage -padding 2
+    ttk::label $wi.bridge.maxage.label -text "Max age:"
+    ttk::spinbox $wi.bridge.maxage.box -width 2 \
+	-from 6 -to 40 -increment 2 \
+	-validatecommand {checkIntRange %P 6 40} \
+	-invalidcommand "focusAndFlash %W"
+    set bridgeMaxAge [getBridgeMaxAge $node bridge0]
+    if { $bridgeMaxAge != "" } {
+	$wi.bridge.maxage.box insert 0 $bridgeMaxAge
+    } else {
+	$wi.bridge.maxage.box insert 0 20 
+    }
+    
+    ttk::frame $wi.bridge.fwddelay -padding 2
+    ttk::label $wi.bridge.fwddelay.label -text "Forwarding delay:"
+    ttk::spinbox $wi.bridge.fwddelay.box -width 2 \
+	-from 4 -to 30 -increment 1 \
+	-validatecommand {checkIntRange %P 4 30} \
+	-invalidcommand "focusAndFlash %W"
+    set bridgeFwdDelay [getBridgeFwdDelay $node bridge0]
+    set bridgeMaxAge [getBridgeMaxAge $node bridge0]
+    if { $bridgeFwdDelay != "" } {
+	$wi.bridge.fwddelay.box insert 0 $bridgeFwdDelay
+    } else {
+	$wi.bridge.fwddelay.box insert 0 20 
+    }
+
+    ttk::frame $wi.bridge.holdcnt -padding 2
+    ttk::label $wi.bridge.holdcnt.label -text "Hold count:"
+    ttk::spinbox $wi.bridge.holdcnt.box -width 2 \
+	-from 1 -to 10 -increment 1 \
+	-validatecommand {checkIntRange %P 1 10} \
+	-invalidcommand "focusAndFlash %W"
+    set bridgeHoldCnt [getBridgeHoldCount $node bridge0]
+    if { $bridgeHoldCnt != "" } {
+	$wi.bridge.holdcnt.box insert 0 $bridgeHoldCnt
+    } else {
+	$wi.bridge.holdcnt.box insert 0 20 
+    }
+
+    ttk::frame $wi.bridge.hellotime -padding 2
+    ttk::label $wi.bridge.hellotime.label -text "Hello time:"
+    ttk::spinbox $wi.bridge.hellotime.box -width 2 \
+	-from 1 -to 2 -increment 1 \
+	-validatecommand {checkIntRange %P 1 2} \
+	-invalidcommand "focusAndFlash %W"
+    set bridgeHelloTime [getBridgeHelloTime $node bridge0]
+    if { $bridgeHelloTime != "" } {
+	$wi.bridge.hellotime.box insert 0 $bridgeHelloTime
+    } else {
+	$wi.bridge.hellotime.box insert 0 20 
+    }
+    
+    ttk::frame $wi.bridge.timeout -padding 2
+    ttk::label $wi.bridge.timeout.label -text "Address timeout:     "
+    ttk::spinbox $wi.bridge.timeout.box -width 4 \
+	-from 0 -to 3600 -increment 20 \
+	-validatecommand {checkIntRange %P 0 3600} \
+	-invalidcommand "focusAndFlash %W"
+    set bridgeTimeout [getBridgeTimeout $node bridge0]
+    if { $bridgeTimeout != "" } {
+	$wi.bridge.timeout.box insert 0 $bridgeTimeout
+    } else {
+	$wi.bridge.timeout.box insert 0 20 
+    }
+    
+    ttk::frame $wi.bridge.maxaddr -padding 2
+    ttk::label $wi.bridge.maxaddr.label -text "Max addresses:     "
+    ttk::spinbox $wi.bridge.maxaddr.box -width 4 \
+	-from 0 -to 10000 -increment 10 \
+	-validatecommand {checkIntRange %P 0 10000} \
+	-invalidcommand "focusAndFlash %W"
+    set bridgeMaxAddr [getBridgeMaxAddr $node bridge0]
+    if { $bridgeMaxAddr != "" } {
+	$wi.bridge.maxaddr.box insert 0 $bridgeMaxAddr
+    } else {
+	$wi.bridge.maxaddr.box insert 0 20 
+    }
+   
+    if {$bridgeProtocol != "stp"} {
+	$wi.bridge.hellotime.box configure -state disabled
+    }
+
+    pack $wi.bridge.protocols.label -side left -anchor w -expand 1 -fill x
+    pack $wi.bridge.protocols.rstp $wi.bridge.protocols.stp -side left -anchor e
+
+    pack $wi.bridge.priority.label -side left -anchor w -expand 1 -fill x
+    pack $wi.bridge.priority.box -side left -anchor e
+
+    pack $wi.bridge.holdcnt.label -side left -anchor w -expand 1 -fill x
+    pack $wi.bridge.holdcnt.box -side left -anchor e
+    
+    pack $wi.bridge.maxaddr.label -side left -anchor w -expand 1 -fill x
+    pack $wi.bridge.maxaddr.box -side left -anchor e
+    
+    pack $wi.bridge.maxage.label -side left -anchor w -expand 1 -fill x
+    pack $wi.bridge.maxage.box -side left -anchor e
+    
+    pack $wi.bridge.fwddelay.label -side left -anchor w -expand 1 -fill x
+    pack $wi.bridge.fwddelay.box -side left -anchor e
+    
+    pack $wi.bridge.hellotime.label -side left -anchor w -expand 1 -fill x
+    pack $wi.bridge.hellotime.box -side left -anchor e
+    
+    pack $wi.bridge.timeout.label -side left -anchor w -expand 1 -fill x
+    pack $wi.bridge.timeout.box -side left -anchor e
+    
+    pack $wi.bridge -fill both
+    grid $wi.bridge.protocols -in $wi.bridge -column 0 -row 0 -sticky nsew
+    grid $wi.bridge.priority -in $wi.bridge -column 0 -row 1 -sticky nsew
+    grid $wi.bridge.holdcnt -in $wi.bridge -column 0 -row 2 -sticky nsew
+    grid $wi.bridge.maxaddr -in $wi.bridge -column 0 -row 3 -sticky nsew
+    
+    grid $wi.bridge.maxage -in $wi.bridge -column 1 -row 0 -sticky nsew \
+	-padx 10
+    grid $wi.bridge.fwddelay -in $wi.bridge -column 1 -row 1 -sticky nsew \
+	-padx 10
+    grid $wi.bridge.hellotime -in $wi.bridge -column 1 -row 2 -sticky nsew \
+	-padx 10
+    grid $wi.bridge.timeout -in $wi.bridge -column 1 -row 3 -sticky nsew \
+	-padx 10
+}
+
+proc configGUI_bridgeConfigApply { wi node } {
+    global changed
+
+    global bridgeProtocol
+    set oldProtocol [getBridgeProtocol $node bridge0]
+    if { $oldProtocol != $bridgeProtocol } {
+	setBridgeProtocol $node bridge0 $bridgeProtocol
+	set changed 1
+    }
+
+    set newPriority [$wi.bridge.priority.box get]
+    set oldPriority [getBridgePriority $node bridge0]
+    if { $oldPriority != $newPriority } {
+	setBridgePriority $node bridge0 $newPriority
+	set changed 1
+    }
+
+    set newHoldCount [$wi.bridge.holdcnt.box get]
+    set oldHoldCount [getBridgeHoldCount $node bridge0]
+    if { $oldHoldCount != $newHoldCount } {
+	setBridgeHoldCount $node bridge0 $newHoldCount
+	set changed 1
+    }
+
+    set newMaxAge [$wi.bridge.maxage.box get]
+    set oldMaxAge [getBridgeMaxAge $node bridge0]
+    if { $oldMaxAge != $newMaxAge } {
+	setBridgeMaxAge $node bridge0 $newMaxAge
+	set changed 1
+    }
+    
+    set newFwdDelay [$wi.bridge.fwddelay.box get]
+    set oldFwdDelay [getBridgeFwdDelay $node bridge0]
+    if { $oldFwdDelay != $newFwdDelay } {
+	setBridgeFwdDelay $node bridge0 $newFwdDelay
+	set changed 1
+    }
+
+    set newHelloTime [$wi.bridge.hellotime.box get]
+    set oldHelloTime [getBridgeHelloTime $node bridge0]
+    if { $oldHelloTime != $newHelloTime } {
+	setBridgeHelloTime $node bridge0 $newHelloTime
+	set changed 1
+    }
+    
+    set newMaxAddr [$wi.bridge.maxaddr.box get]
+    set oldMaxAddr [getBridgeMaxAddr $node bridge0]
+    if { $oldMaxAddr != $newMaxAddr } {
+	setBridgeMaxAddr $node bridge0 $newMaxAddr
+	set changed 1
+    }
+
+    set newTimeout [$wi.bridge.timeout.box get]
+    set oldTimeout [getBridgeTimeout $node bridge0]
+    if { $oldTimeout != $newTimeout } {
+	setBridgeTimeout $node bridge0 $newTimeout
+	set changed 1
+    }
+}
+
+#****f* nodecfgGUI.tcl/configGUI_addTree
+# NAME
+#   configGUI_addTree
+# SYNOPSIS
+#   configGUI_addTree $wi $node
+# FUNCTION
+#   Creates ttk::treeview widget with interface names and
+#   their other parameters.
+# INPUTS
+#   * wi - widget
+#   * node - node id
+#****
+proc configGUI_addBridgeTree { wi node } {
+    global brtreecolumns cancel
+    #
+    #cancel - indicates if the user has clicked on Cancel in the popup window 
+    #	      about saving changes on the previously selected interface in the
+    #	      list of interfaces, 1 for yes, 0 otherwise
+    #
+    set cancel 0
+
+    ttk::frame $wi.panwin.f1.grid
+    ttk::treeview $wi.panwin.f1.tree -height 5 -selectmode browse \
+	-xscrollcommand "$wi.panwin.f1.hscroll set"\
+	-yscrollcommand "$wi.panwin.f1.vscroll set"
+    ttk::scrollbar $wi.panwin.f1.hscroll -orient horizontal \
+	-command "$wi.panwin.f1.tree xview"
+    ttk::scrollbar $wi.panwin.f1.vscroll -orient vertical \
+	-command "$wi.panwin.f1.tree yview"
+    focus $wi.panwin.f1.tree
+
+    set column_ids ""
+    foreach column $brtreecolumns {
+	lappend columns_ids [lindex $column 0]
+    }
+    
+    #Creating columns    
+    $wi.panwin.f1.tree configure -columns $columns_ids
+
+    $wi.panwin.f1.tree column #0 -width 72 -minwidth 70 -stretch 0
+    foreach column $brtreecolumns {
+	if { [lindex $column 0] in {"Stp" "Ptp"} } {
+	    $wi.panwin.f1.tree column [lindex $column 0] -width 40 -minwidth 2 \
+		-anchor center -stretch 0
+	} elseif { [lindex $column 0] in {"Edge"} } {
+            $wi.panwin.f1.tree column [lindex $column 0] -width 45 -minwidth 2 \
+		-anchor center -stretch 0
+	} elseif { [lindex $column 0] in {"Snoop" "Learn" "Sticky"} } {
+            $wi.panwin.f1.tree column [lindex $column 0] -width 50 -minwidth 2 \
+		-anchor center -stretch 0
+	} elseif { [lindex $column 0] in {"Priority" "Private"} } {
+            $wi.panwin.f1.tree column [lindex $column 0] -width 60 -minwidth 2 \
+		-anchor center -stretch 0
+	} elseif { [lindex $column 0] in {"Discover" "Autoptp"} } {
+            $wi.panwin.f1.tree column [lindex $column 0] -width 70 -minwidth 2 \
+		-anchor center -stretch 0
+        } else {
+	    $wi.panwin.f1.tree column [lindex $column 0] -width 75 -minwidth 2 \
+		-anchor center -stretch 0
+	}
+	$wi.panwin.f1.tree heading [lindex $column 0] \
+	    -text [join [lrange $column 1 end]]
+    }
+
+    $wi.panwin.f1.tree heading #0 \
+	-command "if { [lsearch [pack slaves .popup] .popup.nbook] != -1 } {
+		      .popup.nbook configure -width 845
+		  }"
+    $wi.panwin.f1.tree heading #0 -text "(Expand)"
+
+    #Creating new items
+    $wi.panwin.f1.tree insert {} end -id interfaces -text "Bridge" -open true \
+	-tags interfaces
+    $wi.panwin.f1.tree focus interfaces
+    $wi.panwin.f1.tree selection set interfaces
+
+    foreach ifc [lsort -dictionary [ifcList $node]] {
+	$wi.panwin.f1.tree insert interfaces end -id $ifc -text "$ifc" \
+	    -tags $ifc
+	foreach column $brtreecolumns {
+	    $wi.panwin.f1.tree set $ifc [lindex $column 0] \
+		[getBridgeIfc[lindex $column 0] $node $ifc]
+	}
+	foreach column $brtreecolumns {
+	    if {[lindex $column 0] ni {"Pathcost" "Maxaddr" "Priority"}} {
+		set setting [getBridgeIfc[lindex $column 0] $node $ifc]
+		if {$setting == 0} {
+		    $wi.panwin.f1.tree set $ifc [lindex $column 0] "-"
+		}
+		if {$setting == 1} {
+		    $wi.panwin.f1.tree set $ifc [lindex $column 0] "+"
+		}
+	    }
+	    if {[getBridgeIfcSnoop $node $ifc] == 1 && \
+		[lindex $column 0] != "Snoop"} {
+		$wi.panwin.f1.tree set $ifc [lindex $column 0] "-"
+	    }
+	}
+    }
+    
+    #Setting focus and selection on the first interface in the list or on the
+    #interface selected in the topology tree and calling procedure
+    #configGUI_showIfcInfo with that interfaces as the second argument
+    global selectedIfc
+    if {[ifcList $node] != "" && $selectedIfc == ""} {
+	$wi.panwin.f1.tree focus [lindex [lsort -ascii [ifcList $node]] 0]
+	$wi.panwin.f1.tree selection set \
+	    [lindex [lsort -ascii [ifcList $node]] 0]
+	set cancel 0
+	configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node \
+	    [lindex [lsort -ascii [ifcList $node]] 0]
+    }
+    if {[ifcList $node] != "" && $selectedIfc != ""} {
+	$wi.panwin.f1.tree focus $selectedIfc
+	$wi.panwin.f1.tree selection set $selectedIfc
+	set cancel 0
+	configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node $selectedIfc
+    }    
+    
+    #binding for tag interfaces
+    $wi.panwin.f1.tree tag bind interfaces <1> \
+	    "configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node \"\""
+    $wi.panwin.f1.tree tag bind interfaces <Key-Down> \
+	    "if {[llength [ifcList $node]] != 0} {
+		configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node \
+		    [lindex [lsort -ascii [ifcList $node]] 0]
+	    }"
+	    
+    #binding for tags $ifc
+    foreach ifc [lsort -dictionary [ifcList $node]] {
+	$wi.panwin.f1.tree tag bind $ifc <1> \
+	  "$wi.panwin.f1.tree focus $ifc
+	   $wi.panwin.f1.tree selection set $ifc
+           configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node $ifc"
+	#pathname prev item:
+	#Returns the identifier of item's previous sibling, or {} if item is the
+	#first child of its parent. Ako sucelje $ifc nije prvo dijete svog
+	#roditelja onda je zadnji argument procedure #configGUI_showIfcInfo
+	#jednak prethodnom djetetu (prethodno sucelje). Inace se radi o itemu
+	#Interfaces pa je zadnji argument procedure configGUI_showIfcInfo
+	#jednak "" i u tom slucaju se iz donjeg panea brise frame s
+	#informacijama o prethodnom sucelju.
+	$wi.panwin.f1.tree tag bind $ifc <Key-Up> \
+	    "if {![string equal {} [$wi.panwin.f1.tree prev $ifc]]} {
+		configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node \
+		    [$wi.panwin.f1.tree prev $ifc]
+	    } else {
+		configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node \"\" 
+	    }"
+	#pathname next item:
+	#Returns the identifier of item's next sibling, or {} if item is the
+	#last child of its parent. Ako sucelje $ifc nije zadnje dijete svog
+	#roditelja onda je zadnji argument procedure configGUI_showIfcInfo
+	#jednak iducem djetetu (iduce sucelje). Inace se ne poziva procedura
+	#configGUI_showIfcInfo.
+	$wi.panwin.f1.tree tag bind $ifc <Key-Down> \
+	    "if {![string equal {} [$wi.panwin.f1.tree next $ifc]]} {
+		configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node \
+		    [$wi.panwin.f1.tree next $ifc]
+	    }"
+    }
+    
+    pack $wi.panwin.f1.grid -fill both -expand 1
+    grid $wi.panwin.f1.tree $wi.panwin.f1.vscroll -in $wi.panwin.f1.grid \
+	-sticky nsew
+    grid  $wi.panwin.f1.hscroll -in $wi.panwin.f1.grid -sticky nsew
+    grid columnconfig $wi.panwin.f1.grid 0 -weight 1
+    grid rowconfigure $wi.panwin.f1.grid 0 -weight 1
+}
+
+
+#****f* nodecfgGUI.tcl/configGUI_refreshBridgeIfcsTree
+# NAME
+#   configGUI_refreshBridgeIfcsTree
+# SYNOPSIS
+#   configGUI_refreshBridgeIfcsTree $wi $node
+# FUNCTION
+#   Refreshes the tree with the list of interfaces.
+# INPUTS
+#   * wi - widget
+#   * node - node id
+#****
+proc configGUI_refreshBridgeIfcsTree { wi node } {
+    global brtreecolumns
+    foreach ifc [lsort -dictionary [ifcList $node]] {
+        foreach column $brtreecolumns {
+	    $wi set $ifc [lindex $column 0] [getBridgeIfc[lindex $column 0] \
+		$node $ifc]
+	}
+	foreach column $brtreecolumns {
+	    if {[lindex $column 0] ni {"Pathcost" "Maxaddr" "Priority"}} {
+		set setting [getBridgeIfc[lindex $column 0] $node $ifc]
+		if {$setting == 0} {
+		    $wi set $ifc [lindex $column 0] "-"
+		}
+		if {$setting == 1} {
+		    $wi set $ifc [lindex $column 0] "+"
+		}
+	    }
+	    if {[getBridgeIfcSnoop $node $ifc] == 1 && \
+		[lindex $column 0] != "Snoop"} {
+		$wi set $ifc [lindex $column 0] "-"
+	    }
+	}
+    }
+}
+
+
+#****f* nodecfgGUI.tcl/configGUI_showIfcInfo
+# NAME
+#   configGUI_showIfcInfo
+# SYNOPSIS
+#   configGUI_showIfcInfo $wi $phase $node $ifc
+# FUNCTION
+#   Shows parameters of the interface selected in the 
+#   list of interfaces. Parameters are shown below that list.
+# INPUTS
+#   * wi - widget
+#   * phase - This pocedure is invoked in two diffenet phases 
+#     to enable validation of the entry that was the last made. 
+#     When calling this function always use the phase parameter 
+#     set to 0.
+#   * node - node id
+#   * ifc - interface id
+#****
+proc configGUI_showBridgeIfcInfo { wi phase node ifc } {
+    global guielements brguielements 
+    global changed apply cancel badentry
+    #
+    #shownifcframe - frame that is currently shown below the list o interfaces
+    #
+    set shownifcframe [pack slaves $wi]
+    #
+    #shownifc - interface whose parameters are shown in shownifcframe
+    #
+    set shownifc [string trim [lindex [split $shownifcframe .] end] if]
+    
+    #if there is already some frame shown below the list of interfaces and
+    #parameters shown in that frame are not parameters of selected interface
+    if {$shownifcframe != "" && $ifc != $shownifc } {	
+        if { $phase == 0 } {
+	    set badentry 0
+	    if { $ifc != "" } {
+		after 100 "configGUI_showBridgeIfcInfo $wi 1 $node $ifc"
+	    } else {
+		after 100 "configGUI_showBridgeIfcInfo $wi 1 $node \"\""
+	    }
+	    return
+	} elseif { $badentry } {
+	    [string trimright $wi .f2].f1.tree selection set $shownifc
+	    [string trimright $wi .f2].f1.tree focus $shownifc
+	    $wi config -cursor left_ptr
+	    return
+	}   
+
+	foreach guielement $brguielements {
+            #calling "apply" procedures to check if some parameters of
+	    #previously selected interface have been changed
+            if { [llength $guielement] == 2 } {
+		[lindex $guielement 0]\Apply $wi $node [lindex $guielement 1]
+	    }
+	}    
+
+	#creating popup window with warning about unsaved changes
+	if { $changed == 1 && $apply == 0 } {
+ 	    configGUI_saveBridgeChangesPopup $wi $node $shownifc
+	}
+	
+	#if user didn't select Cancel in the popup about saving changes on
+	#previously selected interface.
+	if { $cancel == 0 } {
+	    foreach guielement $brguielements {
+		set ind [lsearch $brguielements $guielement]
+		#delete corresponding elements from thi list guielements
+		if {[lsearch $guielement $shownifc] != -1} {
+		    set brguielements [lreplace $brguielements $ind $ind]
+		}
+	    }
+	    foreach guielement $guielements {
+		set ind [lsearch $guielements $guielement]
+		#delete corresponding elements from thi list guielements
+		if {[lsearch $guielement $shownifc] != -1} {
+		    set guielements [lreplace $guielements $ind $ind]
+		}
+	    }
+	    #delete frame that is already shown below the list of interfaces
+	    #(shownifcframe)
+	    destroy $shownifcframe
+	
+        #if user selected Cancel the in popup about saving changes on previously
+	#selected interface, set focus and selection on that interface whose
+	#parameters are already shown below the list of interfaces
+	} else {
+	     [string trimright $wi .f2].f1.tree selection set $shownifc
+	     [string trimright $wi .f2].f1.tree focus $shownifc
+	}
+    }
+    
+    #if user didn't select Cancel in the popup about saving changes on 
+    #previously selected interface
+    if { $cancel == 0 } {
+	set type [nodeType $node]
+        #creating new frame below the list of interfaces and adding modules with
+	#parameters of selected interface
+	if {$ifc != "" && $ifc != $shownifc} {
+	    configGUI_ifcBridgeMainFrame $wi $node $ifc
+	    $type.configBridgeInterfacesGUI $wi $node $ifc
+	}
+    }
+}
+
+
+#****f* nodecfgGUI.tcl/configGUI_saveChangesPopup
+# NAME
+#   configGUI_saveChangesPopup
+# SYNOPSIS
+#   configGUI_saveChangesPopup $wi $node $ifc
+# FUNCTION
+#   Creates a popup window with the warning about
+#   unsaved changes on previously selected interface.
+# INPUTS
+#   * wi - widget
+#   * node - node id
+#   * ifc - interface id
+#****
+proc configGUI_saveBridgeChangesPopup { wi node ifc } {
+    global guielements brguielements brtreecolumns apply cancel changed
+    set answer [tk_messageBox \
+	-message "Do you want to save changes on interface $ifc?" \
+        -icon question -type yesnocancel \
+        -detail "Select \"Yes\" to save changes before choosing another interface"]
+    
+    switch -- $answer {
+        #save changes
+	yes {
+	    set apply 1
+	    set cancel 0
+	    foreach guielement $brguielements {
+		if { [llength $guielement] == 2 } {
+		    [lindex $guielement 0]\Apply $wi $node [lindex $guielement 1]
+		}
+	    }
+	    #nbook - da li prozor sadrzi notebook
+	    set nbook [lsearch [pack slaves .popup] .popup.nbook]
+	    if { $changed == 1 } {
+                if { $nbook != -1 && $brtreecolumns != "" } {
+		    configGUI_refreshBridgeIfcsTree \
+			.popup.nbook.nfBridge.panwin.f1.tree $node
+		} elseif { $nbook == -1 && $brtreecolumns != "" } {
+		    configGUI_refreshBridgeIfcsTree .popup.panwin.f1.tree $node
+		}
+	        redrawAll
+	        updateUndoLog
+            }
+	}
+        #discard changes
+	no {
+	    set cancel 0
+	}
+        #get back on editing that interface
+        cancel {
+	    set cancel 1
+	}
+    }
+}
+
+proc configGUI_ifcBridgeMainFrame { wi node ifc } {
+    global apply changed
+    set apply 0
+    set changed 0
+    ttk::frame $wi.if$ifc -relief groove -borderwidth 2 -padding 4
+    ttk::frame $wi.if$ifc.label -borderwidth 2 
+    ttk::label $wi.if$ifc.label.txt -text "Bridge interface $ifc:"
+    pack $wi.if$ifc.label.txt -side left -anchor w
+    pack $wi.if$ifc.label -anchor w
+    pack $wi.if$ifc -anchor w -fill both -expand 1
+}
