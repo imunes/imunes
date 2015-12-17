@@ -48,7 +48,7 @@ info:
 
 all: install
 
-install: uninstall
+install: uninstall netgraph
 	mkdir -p $(IMUNESDIR)
 	cp $(BASEFILES) $(IMUNESDIR)
 	sh scripts/update_version.sh
@@ -118,15 +118,16 @@ endif
 		cp icons/tiny/$${file} $(TINY_ICONSDIR); \
 	done ;
 
-ifeq ($(UNAME_S), FreeBSD)
-	sh scripts/install_ng_modules.sh
-endif
-
 uninstall:
 	rm -rf $(IMUNESDIR)
 	for file in imunes $(notdir $(TOOLS)); do \
 		rm -f $(BINDIR)/$${file}; \
 	done ;
+
+netgraph:
+ifeq ($(UNAME_S), FreeBSD)
+	sh scripts/install_ng_modules.sh
+endif
 
 vroot:
 	sh scripts/prepare_vroot.sh
