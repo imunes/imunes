@@ -5986,3 +5986,203 @@ proc configGUI_packetConfigDelete { } {
 	return $prev
     }
 }
+
+## nat64
+## custom GUI procedures
+proc configGUI_routingProtocols { wi node } {
+    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
+    global ripEnable ripngEnable ospfEnable ospf6Enable
+    global guielements 
+    lappend guielements configGUI_routingModel    
+    ttk::frame $wi.routing -relief groove -borderwidth 2 -padding 2
+    ttk::frame $wi.routing.protocols -padding 2
+    ttk::label $wi.routing.protocols.label -text "Protocols:"
+
+    ttk::checkbutton $wi.routing.protocols.rip -text "rip" -variable ripEnable
+    ttk::checkbutton $wi.routing.protocols.ripng -text "ripng" -variable ripngEnable 
+    ttk::checkbutton $wi.routing.protocols.ospf -text "ospfv2" -variable ospfEnable
+    ttk::checkbutton $wi.routing.protocols.ospf6 -text "ospfv3" -variable ospf6Enable
+	
+    set ripEnable [getNodeProtocolRip $node]
+    set ripngEnable [getNodeProtocolRipng $node]
+    set ospfEnable [getNodeProtocolOspfv2 $node]
+    set ospf6Enable [getNodeProtocolOspfv3 $node]
+    if { $oper_mode != "edit" } {
+	$wi.routing.protocols.rip configure -state disabled
+	$wi.routing.protocols.ripng configure -state disabled
+	$wi.routing.protocols.ospf configure -state disabled
+	$wi.routing.protocols.ospf6 configure -state disabled
+    }	   	
+    pack $wi.routing.protocols.label -side left -padx 2
+    pack $wi.routing.protocols.rip $wi.routing.protocols.ripng \
+	$wi.routing.protocols.ospf $wi.routing.protocols.ospf6 -side left -padx 6
+    pack $wi.routing.protocols -fill both -expand 1
+    pack $wi.routing -fill both
+}
+
+proc configGUI_routingModelApply { wi node } {
+    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
+    global ripEnable ripngEnable ospfEnable ospf6Enable
+    if { $oper_mode == "edit"} {
+	setNodeProtocolRip $node $ripEnable
+	setNodeProtocolRipng $node $ripngEnable
+	setNodeProtocolOspfv2 $node $ospfEnable
+	setNodeProtocolOspfv3 $node $ospf6Enable
+	foreach proto { rip ripng ospf ospf6 bgp } {
+	    set protocfg [netconfFetchSection $node "router $proto"]
+	    if { $protocfg != "" } {
+		set protocfg [linsert $protocfg 0 "router $proto"]
+		set protocfg [linsert $protocfg end "!"]
+		set protocfg [linsert $protocfg [lsearch $protocfg " network *"] " redistribute kernel" ]
+		netconfClearSection $node "router $proto"
+		netconfInsertSection $node $protocfg
+	    }
+	}
+	set changed 1
+    } 
+}
+
+proc configGUI_nat64Config { wi node } {
+    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
+    global guielements 
+    lappend guielements configGUI_nat64Config
+
+
+#    ttk::frame $wi.tunconf -relief groove -borderwidth 2 -padding 2
+#    ttk::label $wi.tunconf.label -text "tun interface:"
+#    ttk::label $wi.tunconf.4label -text "IPv4 address:"
+#    ttk::entry $wi.tunconf.4addr -width 30 -validate focus \
+#     -invalidcommand "focusAndFlash %W"
+#    $wi.tunconf.4addr configure -validatecommand {checkIPv4Addr %P}
+#    $wi.tunconf.4addr insert 0 [getTunIPv4Addr $node]
+#    ttk::label $wi.tunconf.6label -text "IPv6 address:"
+#    ttk::entry $wi.tunconf.6addr -width 30 -validate focus \
+#     -invalidcommand "focusAndFlash %W"
+#    $wi.tunconf.6addr configure -validatecommand {checkIPv6Addr %P}
+#    $wi.tunconf.6addr insert 0 [getTunIPv6Addr $node]
+#    grid $wi.tunconf.label -in $wi.tunconf \
+#	-column 0 -row 0 -sticky ew -pady 5
+#    grid $wi.tunconf.4label -in $wi.tunconf \
+#	-column 0 -row 1 -sticky ew -pady 5
+#    grid $wi.tunconf.4addr -in $wi.tunconf \
+#	-column 1 -row 1 -sticky ew -pady 5
+#    grid $wi.tunconf.6label -in $wi.tunconf \
+#	-column 0 -row 2 -sticky ew -pady 5
+#    grid $wi.tunconf.6addr -in $wi.tunconf \
+#	-column 1 -row 2 -sticky ew -pady 5
+   
+    
+    ttk::frame $wi.taygaconf -relief groove -borderwidth 2 -padding 2
+    ttk::label $wi.taygaconf.label -text "tayga.conf:"
+#    ttk::label $wi.taygaconf.4label -text "IPv4 address:"
+#    ttk::entry $wi.taygaconf.4addr -width 30 -validate focus \
+#     -invalidcommand "focusAndFlash %W"
+#    $wi.taygaconf.4addr configure -validatecommand {checkIPv4Addr %P}
+#    $wi.taygaconf.4addr insert 0 [getTaygaIPv4Addr $node]
+    ttk::label $wi.taygaconf.plabel -text "IPv6 translation prefix:"
+    ttk::entry $wi.taygaconf.paddr -width 30 -validate focus \
+     -invalidcommand "focusAndFlash %W"
+    $wi.taygaconf.paddr configure -validatecommand {checkIPv6Net %P}
+    $wi.taygaconf.paddr insert 0 [getTaygaIPv6Prefix $node]
+    ttk::label $wi.taygaconf.dlabel -text "IPv4 dynamic pool:"
+    ttk::entry $wi.taygaconf.daddr -width 30 -validate focus \
+     -invalidcommand "focusAndFlash %W"
+    $wi.taygaconf.daddr configure -validatecommand {checkIPv4Net %P}
+    $wi.taygaconf.daddr insert 0 [getTaygaIPv4DynPool $node]
+    grid $wi.taygaconf.label -in $wi.taygaconf \
+	-column 0 -row 0 -sticky ew -pady 5
+    grid $wi.taygaconf.dlabel -in $wi.taygaconf \
+	-column 0 -row 1 -sticky ew -pady 5 -padx 5
+    grid $wi.taygaconf.daddr -in $wi.taygaconf \
+	-column 1 -row 1 -sticky ew -pady 5 -padx 5
+    grid $wi.taygaconf.plabel -in $wi.taygaconf \
+	-column 0 -row 2 -sticky ew -pady 5 -padx 5
+    grid $wi.taygaconf.paddr -in $wi.taygaconf \
+	-column 1 -row 2 -sticky ew -pady 5 -padx 5
+#    grid $wi.taygaconf.4label -in $wi.taygaconf \
+#	-column 0 -row 3 -sticky ew -pady 5
+#    grid $wi.taygaconf.4addr -in $wi.taygaconf \
+#	-column 1 -row 3 -sticky ew -pady 5
+    
+    
+    ttk::frame $wi.mapconf -relief groove -borderwidth 2 -padding 2
+    ttk::label $wi.mapconf.label -text "Fixed mappings:"
+    text $wi.mapconf.mappings -bg white -width 42 -height 7
+    set mps [getTaygaMappings $node]
+    foreach map $mps {
+	$wi.mapconf.mappings insert end "$map
+"
+    }
+    pack $wi.mapconf.label -anchor w -pady 2
+    pack $wi.mapconf.mappings -fill both -expand 1 -padx 4
+    
+    # if adding back tunconf, add it to pack
+    pack $wi.taygaconf $wi.mapconf -anchor w -fill x
+}
+
+proc configGUI_nat64ConfigApply { wi node } {
+    global changed
+
+#    set newTun4addr [$wi.tunconf.4addr get]
+#    set oldTun4addr [getTunIPv4Addr $node]
+#    if { $oldTun4addr != $newTun4addr } {
+#	setTunIPv4Addr $node $newTun4addr
+#	set changed 1
+#    }
+#    
+#    set newTun6addr [$wi.tunconf.6addr get]
+#    set oldTun6addr [getTunIPv6Addr $node]
+#    if { $oldTun6addr != $newTun6addr } {
+#	setTunIPv6Addr $node $newTun6addr
+#	set changed 1
+#    }
+#
+#    set newTayga4addr [$wi.taygaconf.4addr get]
+#    set oldTayga4addr [getTaygaIPv4Addr $node]
+#    if { $oldTayga4addr != $newTayga4addr } {
+#	setTaygaIPv4Addr $node $newTayga4addr
+#	set changed 1
+#    }
+
+    set newTayga6pAddr [$wi.taygaconf.paddr get]
+    set oldTayga6pAddr [getTaygaIPv6Prefix $node]
+    if { $oldTayga6pAddr != $newTayga6pAddr } {
+	setTaygaIPv6Prefix $node $newTayga6pAddr
+	set changed 1
+    }
+
+    set newTayga4dAddr [$wi.taygaconf.daddr get]
+    set oldTayga4dAddr [getTaygaIPv4DynPool $node]
+    if { $oldTayga4dAddr != $newTayga4dAddr } {
+	setTaygaIPv4DynPool $node $newTayga4dAddr
+	set changed 1
+    }
+    
+    set oldTaygaMappings [lsort [getTaygaMappings $node]]
+    set newTaygaMappings {}
+    set i 1
+    while { 1 } {
+        set text [$wi.mapconf.mappings get $i.0 $i.end]
+        set entry [lrange [split [string trim $text]] 0 2]
+	if { $entry == "" } {
+	    break
+	}
+	set addr4 [lindex $entry 0]
+	set addr6 [lindex $entry 1]
+	if { [checkIPv4Addr $addr4] == 1 } {
+	    if { [checkIPv6Addr $addr6] == 1 } {
+		lappend newTaygaMappings [string trim "$addr4 $addr6"]
+	    } else {
+		break
+	    }
+	} else {
+	    break 
+	}
+	incr i
+    }
+    set newTaygaMappings [lsort -unique $newTaygaMappings]
+    if { $oldTaygaMappings != $newTaygaMappings } {
+	setTaygaMappings $node $newTaygaMappings
+	set changed 1
+    }
+}
