@@ -5415,3 +5415,574 @@ proc actionDataState { actionValue } {
 	}
     }
 }
+
+## packgen
+proc configGUI_addNotebookPackgen { wi node } {
+    ttk::notebook $wi.nbook -height 200
+    pack $wi.nbook -fill both -expand 1
+    pack propagate $wi.nbook 0
+
+    ttk::frame $wi.nbook.nfConfiguration
+    $wi.nbook add $wi.nbook.nfConfiguration -text Configuration 
+    configGUI_addPackgenPanedWin $wi.nbook.nfConfiguration
+
+    bind $wi.nbook <<NotebookTabChanged>> \
+	"notebookSize $wi $node"
+#    vraca popis tabova
+    
+    set tabs [$wi.nbook tabs]
+    return $tabs
+}
+
+proc configGUI_packetRate { wi node } {
+    set wi $wi.panwin.f1
+
+    ttk::frame $wi.packetRate
+    ttk::label $wi.packetRate.label -text "Packet rate (pps):"
+    ttk::spinbox $wi.packetRate.box -width 10 \
+	-from 100 -to 1000000 -increment 100 \
+	-validatecommand {checkIntRange %P 1 1000000} \
+	-invalidcommand "focusAndFlash %W"
+    
+    $wi.packetRate.box insert 0 [getPackgenPacketRate $node] 
+
+    grid $wi.packetRate.label -in $wi.packetRate -row 0 -column 0
+    grid $wi.packetRate.box -in $wi.packetRate -row 0 -column 1
+    pack $wi.packetRate -fill both -expand 1 -padx 4 -pady 10
+}
+
+proc configGUI_packetRateApply { } {
+    global curnode
+    set wi .popup.nbook.nfConfiguration.panwin.f1
+
+    set newPacketRate [$wi.packetRate.box get]
+    set oldPacketRate [getPackgenPacketRate $curnode]
+    if { $newPacketRate != $oldPacketRate } {
+	setPackgenPacketRate $curnode $newPacketRate
+    }
+}
+
+proc configGUI_addPackgenPanedWin { wi } {
+    ttk::panedwindow $wi.panwin -orient vertical
+    ttk::frame $wi.panwin.f1
+    ttk::frame $wi.panwin.f2
+    ttk::frame $wi.panwin.f2.buttons
+
+    ttk::button $wi.panwin.f2.buttons.addpac -text "Add new packet" \
+	-command {
+	    global changed
+	    set sel [configGUI_packetConfigApply 1 0]
+	    if { $changed == 1 } {
+		configGUI_refreshPacketsTree
+		if { $sel != "" } {
+		    set wi .popup.nbook.nfConfiguration
+		    $wi.panwin.f1.tree focus $sel
+		    $wi.panwin.f1.tree selection set $sel
+		    global curnode
+		    configGUI_showPacketInfo $wi.panwin.f2 0 $curnode $sel
+		}
+		set changed 0
+	    }
+	}
+    ttk::button $wi.panwin.f2.buttons.duppac -text "Duplicate packet" \
+	-command {
+	    global changed
+	    set sel [configGUI_packetConfigApply 1 1]
+	    if { $changed == 1 } {
+		configGUI_refreshPacketsTree
+		if { $sel != "" } {
+		    set wi .popup.nbook.nfConfiguration
+		    $wi.panwin.f1.tree focus $sel
+		    $wi.panwin.f1.tree selection set $sel
+		    global curnode
+		    configGUI_showPacketInfo $wi.panwin.f2 0 $curnode $sel
+		}
+		set changed 0
+	    }
+	}
+    ttk::button $wi.panwin.f2.buttons.savpac -text "Save packet" \
+	-command {
+	    set sel [configGUI_packetConfigApply 0 0]
+	    if { $changed == 1 } {
+		configGUI_refreshPacketsTree
+		if { $sel != "" } {
+		    set wi .popup.nbook.nfConfiguration
+		    $wi.panwin.f1.tree focus $sel
+		    $wi.panwin.f1.tree selection set $sel 
+		    global curnode
+		    configGUI_showPacketInfo $wi.panwin.f2 0 $curnode $sel
+		}
+		set changed 0
+	    }
+	}
+
+    ttk::button $wi.panwin.f2.buttons.delpac -text "Delete packet" \
+	-command {
+	    set sel [configGUI_packetConfigDelete]
+	    configGUI_refreshPacketsTree
+	    set wi .popup.nbook.nfConfiguration
+	    if { $sel != "" } {
+		$wi.panwin.f1.tree focus $sel
+		$wi.panwin.f1.tree selection set $sel 
+		global curnode
+		configGUI_showPacketInfo $wi.panwin.f2 0 $curnode $sel
+	    } else {
+		configGUI_showPacketInfo $wi.panwin.f2 0 $curnode ""
+	    }
+	}
+
+    grid $wi.panwin.f2 -sticky nsew  
+    grid $wi.panwin.f2.buttons -column 0
+
+    grid $wi.panwin.f2.buttons.addpac -ipadx 15 -padx 10 -pady 10 -sticky ew
+    grid $wi.panwin.f2.buttons.duppac -ipadx 15 -padx 10 -pady 10 -sticky ew
+    grid $wi.panwin.f2.buttons.savpac -ipadx 15 -padx 10 -pady 10 -sticky ew
+    grid $wi.panwin.f2.buttons.delpac -ipadx 15 -padx 10 -pady 10 -sticky ew
+
+    $wi.panwin add $wi.panwin.f1 -weight 5
+    $wi.panwin add $wi.panwin.f2 -weight 0
+    pack $wi.panwin -fill both -expand 1
+}
+
+proc configGUI_buttonsACPackgenNode { wi node } {
+    global badentry close guielements
+    set close 0
+    ttk::frame $wi.bottom
+    ttk::frame $wi.bottom.buttons -borderwidth 6
+    ttk::button $wi.bottom.buttons.apply -text "Apply" -command \
+        {
+	    configGUI_packetRateApply
+	    set sel [configGUI_packetConfigApply 0 0]
+	    if { $changed == 1 } {
+		configGUI_refreshPacketsTree
+		if { $sel != "" } {
+		    set wi .popup.nbook.nfConfiguration
+		    $wi.panwin.f1.tree focus $sel
+		    $wi.panwin.f1.tree selection set $sel 
+		    global curnode
+		    configGUI_showPacketInfo $wi.panwin.f2 0 $curnode $sel
+		}
+		set changed 0
+	    }
+	}
+    ttk::button $wi.bottom.buttons.applyclose -text "Apply and Close" -command \
+        "configGUI_packetRateApply; configGUI_packetConfigApply 0 0;set badentry -1;destroy $wi"
+    ttk::button $wi.bottom.buttons.cancel -text "Cancel" -command \
+        "set badentry -1; destroy $wi"
+    pack $wi.bottom.buttons.apply $wi.bottom.buttons.applyclose \
+        $wi.bottom.buttons.cancel -side left -padx 2
+    pack $wi.bottom.buttons -pady 2 -expand 1
+    pack $wi.bottom -fill both -side bottom
+    bind $wi <Key-Escape> "set badentry -1; destroy $wi"
+}
+
+set selectedPackgenPacket ""
+
+proc configGUI_addTreePackgen { wi node } {
+    global packgentreecolumns cancel
+    #
+    #cancel - indicates if the user has clicked on Cancel in the popup window about
+    #         saving changes on the previously selected interface in the list of interfaces,
+    #         1 for yes, 0 otherwise
+    #
+    set cancel 0
+
+    ttk::frame $wi.panwin.f1.grid
+    ttk::treeview $wi.panwin.f1.tree -height 8 -selectmode browse \
+	-xscrollcommand "$wi.panwin.f1.hscroll set"\
+	-yscrollcommand "$wi.panwin.f1.vscroll set"
+    ttk::scrollbar $wi.panwin.f1.hscroll -orient horizontal -command "$wi.panwin.f1.tree xview"
+    ttk::scrollbar $wi.panwin.f1.vscroll -orient vertical -command "$wi.panwin.f1.tree yview"
+    focus $wi.panwin.f1.tree
+
+    set ifc [string trimleft $wi ".popup.nbook.nf"]
+
+    set column_ids ""
+    foreach column $packgentreecolumns {
+	lappend columns_ids [lindex $column 0]
+    }
+    
+    #Creating columns    
+    $wi.panwin.f1.tree configure -columns $columns_ids
+
+    $wi.panwin.f1.tree column #0 -width 60 -minwidth 70 -stretch 0
+    foreach column $packgentreecolumns {
+	$wi.panwin.f1.tree column [lindex $column 0] -width 574 -minwidth 2 -anchor center -stretch 0
+	$wi.panwin.f1.tree heading [lindex $column 0] -text [join [lrange $column 1 end]]
+    }
+
+    $wi.panwin.f1.tree heading #0 -text "ID"
+
+    #Creating new items
+
+    foreach packet [lsort -integer [packgenPackets $node]] {
+	$wi.panwin.f1.tree insert {} end -id $packet -text "$packet" -tags $packet
+	foreach column $packgentreecolumns {
+	    $wi.panwin.f1.tree set $packet [lindex $column 0] [getPackgenPacket[lindex $column 0] $node $packet]
+	}
+    }
+    
+    #Setting focus and selection on the first interface in the list or on the interface
+    #selected in the topology tree and calling procedure configGUI_showIfcInfo with that 
+    #interfaces as the second argument
+    global selectedPackgenPacket
+    if {[llength [packgenPackets $node]] != 0 && $selectedPackgenPacket == ""} {
+	set sorted [lsort -integer [packgenPackets $node]]
+	if { $sorted != "" } {
+	    $wi.panwin.f1.tree focus [lindex $sorted 0]
+	    $wi.panwin.f1.tree selection set [lindex $sorted 0]
+	    set cancel 0
+	    configGUI_showPacketInfo $wi.panwin.f2 0 $node [lindex $sorted 0]
+	}
+    }
+    #binding for tags $ifc
+    foreach packet [lsort -integer [packgenPackets $node]] {
+	$wi.panwin.f1.tree tag bind $packet <1> \
+	  "$wi.panwin.f1.tree focus $packet
+	   $wi.panwin.f1.tree selection set $packet
+           configGUI_showPacketInfo $wi.panwin.f2 0 $node $packet"
+	$wi.panwin.f1.tree tag bind $packet <Key-Up> \
+	    "if {![string equal {} [$wi.panwin.f1.tree prev $packet]]} {
+		configGUI_showPacketInfo $wi.panwin.f2 0 $node [$wi.panwin.f1.tree prev $packet]
+	    }"
+	$wi.panwin.f1.tree tag bind $packet <Key-Down> \
+	    "if {![string equal {} [$wi.panwin.f1.tree next $packet]]} {
+		configGUI_showPacketInfo $wi.panwin.f2 0 $node [$wi.panwin.f1.tree next $packet]
+	     }"
+    }
+    
+    pack $wi.panwin.f1.grid -fill both -expand 1
+    grid $wi.panwin.f1.tree $wi.panwin.f1.vscroll -in $wi.panwin.f1.grid -sticky nsew
+    grid $wi.panwin.f1.hscroll -in $wi.panwin.f1.grid -sticky nsew
+    grid columnconfig $wi.panwin.f1.grid 0 -weight 1
+    grid rowconfigure $wi.panwin.f1.grid 0 -weight 1
+}
+
+proc configGUI_refreshPacketsTree { } {
+    global packgentreecolumns curnode
+    set node $curnode
+    set tab [.popup.nbook tab current -text]
+    set packet [.popup.nbook.nf$tab.panwin.f1.tree selection]
+    set wi .popup.nbook.nf$tab
+    $wi.panwin.f1.tree delete [$wi.panwin.f1.tree children {}] 
+    foreach pac [lsort -integer [packgenPackets $node]] {
+	$wi.panwin.f1.tree insert {} end -id $pac -text "$pac" -tags $pac
+	foreach column $packgentreecolumns {
+	    $wi.panwin.f1.tree set $pac [lindex $column 0] [getPackgenPacket[lindex $column 0] $node $pac]
+	}
+    }
+    foreach pac [lsort -integer [packgenPackets $node]] {
+	$wi.panwin.f1.tree tag bind $pac <1> \
+	  "$wi.panwin.f1.tree focus $pac
+	   $wi.panwin.f1.tree selection set $pac
+           configGUI_showPacketInfo $wi.panwin.f2 0 $node $pac"
+	$wi.panwin.f1.tree tag bind $pac <Key-Up> \
+	    "if {![string equal {} [$wi.panwin.f1.tree prev $pac]]} {
+		configGUI_showPacketInfo $wi.panwin.f2 0 $node [$wi.panwin.f1.tree prev $pac]
+	    }"
+	$wi.panwin.f1.tree tag bind $pac <Key-Down> \
+	    "if {![string equal {} [$wi.panwin.f1.tree next $pac]]} {
+		configGUI_showPacketInfo $wi.panwin.f2 0 $node [$wi.panwin.f1.tree next $pac]
+	     }"
+    }
+    set sorted [lsort -integer [packgenPackets $node]]
+    set first [lindex $sorted 0]
+    if { $first != "" } {
+	$wi.panwin.f1.tree focus $first 
+	$wi.panwin.f1.tree selection set $first 
+    }
+}
+
+proc configGUI_showPacketInfo { wi phase node pac } {
+    global packgenguielements 
+    global changed apply cancel badentry
+    #
+    #shownruleframe - frame that is currently shown below the list o interfaces
+    #
+    set shownpacframe [grid slaves $wi]
+    set i [lsearch $shownpacframe "*buttons*"]
+    if { $i != -1 } {
+	set shownpacframe [lreplace $shownpacframe $i $i]
+    }   
+    #
+    #shownrule - interface whose parameters are shown in shownruleframe
+    #
+    set shownpac [string trim [lindex [split $shownpacframe .] end] if]
+    
+    #if there is already some frame shown below the list of interfaces and
+    #parameters shown in that frame are not parameters of selected interface
+    if {$shownpacframe != "" && $pac != $shownpac } {	
+        if { $phase == 0 } {
+	    set badentry 0
+	    if { $pac != "" } {
+		after 100 "configGUI_showPacketInfo $wi 1 $node $pac"
+	    } else {
+		after 100 "configGUI_showPacketInfo $wi 1 $node \"\""
+	    }
+	    return
+	} elseif { $badentry } {
+	    [string trimright $wi .f2].f1.tree selection set $shownpac
+	    [string trimright $wi .f2].f1.tree focus $shownpac
+	    $wi config -cursor left_ptr
+	    return
+	}   
+
+	foreach guielement $packgenguielements {
+            #calling "apply" procedures to check if some parameters of previously 
+	    #selected interface have been changed
+            if { [llength $guielement] == 0 } {
+		[lindex $guielement 0]\Apply 0 
+	    }
+	}    
+
+	#creating popup window with warning about unsaved changes
+	if { $changed == 1 && $apply == 0 } {
+ 	    configGUI_saveChangesPopup $wi $node $shownpac
+	}
+	
+	#if user didn't select Cancel in the popup about saving changes on previously selected interface
+	if { $cancel == 0 } {
+	    foreach guielement $packgenguielements {
+		set ind [lsearch $packgenguielements $guielement]
+		#delete corresponding elements from thi list packgenguielements
+		if {[lsearch $guielement $shownpac] != -1} {
+		    set packgenguielements [lreplace $packgenguielements $ind $ind]
+		}
+	    }
+	    #delete frame that is already shown below the list of interfaces (shownruleframe)
+	    destroy $shownpacframe
+	
+        #if user selected Cancel the in popup about saving changes on previously selected interface, 
+	#set focus and selection on that interface whose parameters are already shown
+	#below the list of interfaces
+	} else {
+	     [string trimright $wi .f2].f1.tree selection set $shownpac
+	     [string trimright $wi .f2].f1.tree focus $shownpac
+	}
+    }
+    
+    #if user didn't select Cancel in the popup about saving changes on previously selected interface
+    if { $cancel == 0 } {
+	set type [nodeType $node]
+        #creating new frame below the list of interfaces and adding modules with 
+	#parameters of selected interface
+	if {$pac != "" && $pac != $shownpac} {
+	    configGUI_packetMainFrame $wi $node $pac
+	    $type.configPacketsGUI $wi $node $pac
+	}
+    }
+}
+
+proc configGUI_savePackgenChangesPopup { wi node pac } {
+    global packgenguielements packgentreecolumns apply cancel changed
+    set answer [tk_messageBox -message "Do you want to save changes of packet $pac?" \
+        -icon question -type yesnocancel \
+        -detail "Select \"Yes\" to save changes before choosing another rule."]
+    
+    switch -- $answer {
+        #save changes
+	yes {
+	    set apply 1
+	    set cancel 0
+	    foreach packgenguielement $guielements {
+		if { [llength $guielement] == 2 } {
+		    [lindex $guielement 0]\Apply $wi $node [lrange $guielement 1 end]
+		}
+	    }
+	    #nbook - da li prozor sadrzi notebook
+	    if { $changed == 1 } {
+                if { $packgentreecolumns != "" } {
+		    configGUI_refreshPacketsTree
+		}
+	        updateUndoLog
+            }
+	}
+        #discard changes
+	no {
+	    set cancel 0
+	}
+        #get back on editing that interface
+        cancel {
+	    set cancel 1
+	}
+    }
+}
+
+proc configGUI_packetMainFrame { wi node pac } {
+    global apply changed
+    set apply 0
+    set changed 0
+    ttk::frame $wi.if$pac -relief groove -borderwidth 2 -padding 4
+    ttk::frame $wi.if$pac.label -borderwidth 2 
+    ttk::label $wi.if$pac.label.txt -text "Packet $pac:"
+    
+    grid $wi.if$pac -sticky nsw -column 1 -row 0 -columnspan 10
+}
+
+proc configGUI_packetConfig { wi node pac } {
+    global packgenguielements
+    global curnode
+    
+    lappend packgenguielements "configGUI_packetConfig $pac"
+    ttk::frame $wi.if$pac.rconfig -borderwidth 2
+    ttk::label $wi.if$pac.rconfig.rntxt -text "Packet ID: " -anchor w
+    ttk::entry $wi.if$pac.rconfig.rnval -width 4 \
+	-validate focus -invalidcommand "focusAndFlash %W"
+    $wi.if$pac.rconfig.rnval configure -validatecommand {checkRuleNum %P}
+    $wi.if$pac.rconfig.rnval insert 0 $pac
+
+    ttk::label $wi.if$pac.rconfig.ptxt -text "Packet data: " -anchor w
+    text $wi.if$pac.rconfig.pval -width 48 -height 8 -font "Courier 10"
+
+    set pdata [getPackgenPacketData $node $pac]
+    set text ""
+    for {set byte [string range $pdata 0 1]; set i 0} {$byte != ""} {} {
+	incr i
+	if {$i == 16} {
+	    set i 0
+	    set text "[set text]$byte\n"
+	} else {
+	    set text "[set text]$byte "
+	}
+	set pdata [string range $pdata 2 end]
+	set byte [string range $pdata 0 1]
+    }
+    $wi.if$pac.rconfig.pval insert end $text
+
+    grid $wi.if$pac.rconfig -sticky nsew -rowspan 5
+
+    grid $wi.if$pac.rconfig.rntxt -in $wi.if$pac.rconfig -column 0 -row 0 \
+	-sticky nsew -pady 2
+    grid $wi.if$pac.rconfig.rnval -in $wi.if$pac.rconfig -column 1 -row 0 \
+	-sticky nsw -pady 2
+    grid $wi.if$pac.rconfig.ptxt -in $wi.if$pac.rconfig -column 0 -row 1 \
+	-sticky nw -pady 2
+    grid $wi.if$pac.rconfig.pval -in $wi.if$pac.rconfig -column 1 -row 1 \
+	-sticky nsew -pady 2
+}
+
+proc configGUI_packetConfigApply { add dup } {
+    global changed apply curnode
+
+    set pacNumChanged 0
+
+    set pac [.popup.nbook.nfConfiguration.panwin.f1.tree selection]
+    set wi .popup.nbook.nfConfiguration.panwin.f2
+
+    if { $pac == "" } {
+	if { $add != 0 && $dup == 0} {
+	    set new_pac "10:"
+	    addPackgenPacket $curnode 10 $new_pac
+	    set changed 1
+	    return 10
+	} else {
+	    return ""
+	}
+    }
+    
+    set pacnum [$wi.if$pac.rconfig.rnval get]
+    set text [$wi.if$pac.rconfig.pval get 1.0 end]
+
+    set old_pacnum $pac
+    
+    if { [checkRuleNum $pacnum] != 1 } {
+	tk_dialog .dialog1 "IMUNES warning" \
+	    "Packet ID irregular." \
+	info 0 Dismiss
+	return
+    }
+
+    set pdata ""
+    foreach line [split $text "\n"] {
+	set line [string map {":" " " "." " "} [string trim $line]]
+
+	# Attempt to detect & preprocess lines pasted from Wireshark 
+	if {[string is xdigit [string range $line 0 3]] &&
+	  [string range $line 4 5] eq "  "} {
+	    if {[string range $line 29 30] eq "  "} {
+		set line [string replace $line 29 29]
+	    }
+	    set line [string range $line 6 end]
+	}
+	foreach byte [split $line " "] {
+	    if {$byte == "" || ![string is xdigit $byte]} {
+		break
+	    }
+	    set pdata "[set pdata]$byte"
+	}
+    }
+
+# XXX fixme!
+if {0} {
+    if { [checkPacketData $pdata] != 1 } {
+	tk_dialog .dialog1 "IMUNES warning" \
+	    "Packet data irregular." \
+	info 0 Dismiss
+	return
+    }
+}
+
+    if { $pacnum != $old_pacnum } {
+	set pacNumChanged 1
+    } else {
+	if { $add != 0 } {
+	    set l [lsort -integer [packgenPackets $curnode]]
+	    set pacnum [expr {[lindex $l end] + 10}]
+	    if { $dup == 0 } {
+		set pdata ""
+	    } else {
+		if { [llength $l] == 0 } {
+		    return
+		}
+	    }
+	}
+    }
+    if { $pacNumChanged == 1 } {
+	set l [packgenPackets $curnode]
+	set i [lsearch $l $old_pacnum]
+	set l [lreplace $l $i $i]
+	if { $pacnum in $l} {
+	    tk_dialog .dialog1 "IMUNES warning" \
+		"Packet ID already exists." \
+	    info 0 Dismiss
+	    return
+	}
+    }
+    
+#    set pdata [string map { ":" " " "." " " } $pdata]
+#    
+#    $wi.if$pac.rconfig.pval delete 1.0 end 
+#    $wi.if$pac.rconfig.pval insert end $pdata
+    
+    set old_packet [getPackgenPacket $curnode $old_pacnum]
+    set new_packet "$pacnum:$pdata"
+
+    if { $new_packet != $old_packet } {
+	set changed 1
+#	if { $apply == 1} {
+	    if { $add == 0 } {
+		removePackgenPacket $curnode $old_pacnum
+		addPackgenPacket $curnode $pacnum $new_packet
+		return $pacnum
+	    } else {
+		addPackgenPacket $curnode $pacnum $new_packet
+		return $pacnum
+	    }
+#	}
+    }
+}
+
+proc configGUI_packetConfigDelete { } {
+    global curnode
+
+    set pac [.popup.nbook.nfConfiguration.panwin.f1.tree selection]
+
+    removePackgenPacket $curnode $pac
+    set next [.popup.nbook.nfConfiguration.panwin.f1.tree next $pac]
+    set prev [.popup.nbook.nfConfiguration.panwin.f1.tree prev $pac]
+    if { $next != "" } {
+	return $next
+    } else {
+	return $prev
+    }
+}
