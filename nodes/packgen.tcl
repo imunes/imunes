@@ -172,7 +172,7 @@ proc $MODULE.start { eid node } {
 
     # Bypass ng_pipe module for rj45 peers
     set peer [peerByIfc $node [lindex [ifcList $node] 0]]
-    if {[nodeType $peer] == "rj45"} {
+    if { $peer != "" && [nodeType $peer] == "rj45"} {
 	set peerngid $ngnodemap([getNodeName $peer])
 	exec jexec $eid ngctl rmhook $ngid: output
 	exec jexec $eid ngctl rmhook $peerngid: lower
@@ -309,3 +309,16 @@ proc $MODULE.configPacketsGUI { wi node pac } {
     configGUI_packetConfig $wi $node $pac
 }
 
+#****f* rj45.tcl/rj45.maxLinks
+# NAME
+#   rj45.maxLinks -- maximum number of links
+# SYNOPSIS
+#   rj45.maxLinks
+# FUNCTION
+#   Returns rj45 maximum number of links.
+# RESULT
+#   * maximum number of links.
+#****
+proc $MODULE.maxLinks {} {
+    return 1
+}
