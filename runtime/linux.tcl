@@ -345,6 +345,11 @@ proc createNodeContainer { node } {
     if { $debug } {
         puts "'exec docker run' ($node_id) caught:\n$err"
     }
+    if { [getNodeDockerAttach $node] } {
+	catch "exec docker exec $node_id ip l set eth0 down"
+	catch "exec docker exec $node_id ip l set eth0 name ext0"
+	catch "exec docker exec $node_id ip l set ext0 up"
+    }
 
     set status ""
     while { [string match 'true' $status] != 1 } {
