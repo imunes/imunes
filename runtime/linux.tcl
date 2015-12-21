@@ -335,7 +335,7 @@ proc createNodeContainer { node } {
     set node_id "$eid.$node"
 
     set network "'none'"
-    if { [getDockerAttach $node] } {
+    if { [getNodeDockerAttach $node] } {
 	set network "'bridge'"
     }
 
