@@ -2659,10 +2659,10 @@ proc getNodeServices { node } {
 # SYNOPSIS
 #   setNodeServices $node $services
 # FUNCTION
-#   Sets nodes selected services.
+#   Sets node selected services.
 # INPUTS
 #   * node -- node id
-#   * coords -- list of services
+#   * services -- list of services
 #****
 proc setNodeServices { node services } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
@@ -2672,6 +2672,51 @@ proc setNodeServices { node services } {
         set $node [lreplace [set $node] $i $i "services {$services}"]
     } else {
         set $node [linsert [set $node] end "services {$services}"]
+    }
+}
+
+#****f* nodecfg.tcl/getNodeDockerAttach
+# NAME
+#   getNodeDockerAttach -- get node docker ext ifc attach.
+# SYNOPSIS
+#   set value [getNodeDockerAttach $node]
+# FUNCTION
+#   Returns node docker ext ifc attach setting.
+# INPUTS
+#   * node -- node id
+# RESULT
+#   * status -- attach enabled
+#****
+proc getNodeDockerAttach { node } {
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
+    if { [lindex [lsearch -inline [set $node] "docker-attach *"] 1] == true } {
+	return true
+    } else {
+	return false
+    }
+}
+
+#****f* nodecfg.tcl/setNodeDockerAttach
+# NAME
+#   setNodeDockerAttach -- set node docker ext ifc attach.
+# SYNOPSIS
+#   setNodeDockerAttach $node $enabled
+# FUNCTION
+#   Sets node docker ext ifc attach status.
+# INPUTS
+#   * node -- node id
+#   * enabled -- attach status
+#****
+proc setNodeDockerAttach { node enabled } {
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
+    set i [lsearch [set $node] "docker-attach *"]
+    if { $i >= 0 } {
+	set $node [lreplace [set $node] $i $i]
+    }
+    if { $enabled == true } {
+	lappend $node [list docker-attach $enabled]
     }
 }
 

@@ -1537,6 +1537,46 @@ proc configGUI_servicesConfig { wi node } {
     pack $w -fill both
 }
 
+#****f* nodecfgGUI.tcl/configGUI_attachDockerToExt
+# NAME
+#   configGUI_attachDockerToExt -- configure GUI - attach external docker ifc
+# SYNOPSIS
+#   configGUI_attachDockerToExt $wi $node
+# FUNCTION
+#   Creating module for attaching external docker interface to virtual nodes on
+#   Linux.
+# INPUTS
+#   * wi -- widget
+#   * node -- node id
+#****
+proc configGUI_attachDockerToExt { wi node } {
+    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
+    global guielements docker_enable os
+    lappend guielements configGUI_attachDockerToExt
+
+    if { [string match -nocase "*linux*" $os] != 1 } {
+	return
+    }
+
+    set docker_enable [string map {true 1 false 0} [getNodeDockerAttach $node]]
+
+    set w $wi.docker
+    ttk::frame $w -relief groove -borderwidth 2 -padding 2
+    ttk::label $w.label -text "Attach external docker interface:" 
+
+    pack $w.label -side left -padx 2
+
+    if { $oper_mode == "edit" } {
+	ttk::checkbutton $w.chkbox -text "enabled" -variable docker_enable
+    } else {
+	ttk::checkbutton $w.chkbox -text "enabled" -variable docker_enable \
+	    -state disabled
+    }
+    pack $w.chkbox -side left -padx 7
+
+    pack $w -fill both
+}
+
 #****f* nodecfgGUI.tcl/configGUI_cpuConfig
 # NAME
 #   configGUI_cpuConfig -- configure GUI - CPU configuration
@@ -2240,7 +2280,7 @@ proc configGUI_routingModelApply { wi node } {
 # SYNOPSIS
 #   configGUI_servicesConfigApply $wi $node
 # FUNCTION
-#   Saves changes in the module with setvices.
+#   Saves changes in the module with services.
 # INPUTS
 #   * wi -- widget
 #   * node -- node id
@@ -2261,6 +2301,29 @@ proc configGUI_servicesConfigApply { wi node } {
 	    set changed 1
 	}
     } 
+}
+
+#****f* nodecfgGUI.tcl/configGUI_attachDockerToExtApply
+# NAME
+#   configGUI_attachDockerToExtApply -- configure GUI - attach docker ifc apply
+# SYNOPSIS
+#   configGUI_attachDockerToExtApply $wi $node
+# FUNCTION
+#   Saves changes in the module with attach docker to ext ifc
+# INPUTS
+#   * wi -- widget
+#   * node -- node id
+#****
+proc configGUI_attachDockerToExtApply { wi node } {
+    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
+    global docker_enable
+    set docker_enable_str [string map {0 false 1 true} $docker_enable]
+    if { $oper_mode == "edit"} {
+	if { [getNodeDockerAttach $node] != $docker_enable_str } {
+	    setNodeDockerAttach $node $docker_enable_str
+	    set changed 1
+	}
+    }
 }
 
 #****f* nodecfgGUI.tcl/configGUI_cpuConfigApply
