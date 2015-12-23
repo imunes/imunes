@@ -164,6 +164,9 @@ proc chooseIfName {lnode rnode} {
 #****
 proc l3IfcName {lnode rnode} {
 
+    if {[nodeType $lnode] == "ext"} {
+	return "ext"
+    }
     if {[nodeType $rnode] == "wlan"} {
 	return "wlan"
     } else {

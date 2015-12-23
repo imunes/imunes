@@ -662,6 +662,7 @@ proc l3node.nghook { eid node ifc } {
     set node_id "$eid\.$node"
     switch -exact [string trim $ifc 0123456789] {
 	wlan -
+	ext -
 	eth {
 	    return [list $ifc@$node_id ether]
 	}
@@ -1153,6 +1154,23 @@ proc createNodePhysIfcs { node } {
 		pipesExec "jexec $node_id ifconfig $ifc link $ether" "hold"
 		set ngnodemap($ifc@$node_id) $ifid
 	    }
+	    ext {
+		set ifid [createIfc $eid eiface ether]
+		set outifc "$eid-$node"
+		pipesExec "ifconfig $ifid -vnet $eid" "hold"
+		pipesExec "ifconfig $ifid name $outifc" "hold"
+
+		# XXX ng renaming is automatic in FBSD 8.4 and 9.2, remove this!
+		pipesExec "ngctl name [set ifid]: $outifc" "hold"
+
+		set ether [getIfcMACaddr $node $ifc]
+                if {$ether == ""} {
+                    autoMACaddr $node $ifc
+                }
+                set ether [getIfcMACaddr $node $ifc]
+		pipesExec "ifconfig $outifc link $ether" "hold"
+		set ngnodemap($ifc@$node_id) $ifid
+	    }
 	    ser {
 #		set ifnum [string range $ifc 3 end]
 #		set ifid [createIfc $eid iface inet]
@@ -1248,6 +1266,38 @@ proc startIfcsNode { node } {
 	}
     }
     exec sh << $cmds
+}
+
+proc startExternalIfc { eid node } {
+    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
+
+    set cmds ""
+    set node_id "$eid.$node"
+    set ifc [lindex [ifcList $node] 0]
+    set outifc "$eid-$node"
+
+    set ether [getIfcMACaddr $node $ifc]
+    if {$ether == ""} {
+	autoMACaddr $node $ifc
+    }
+    set ether [getIfcMACaddr $node $ifc]
+    set cmds "ifconfig $outifc link $ether"
+
+    set ipv4 [getIfcIPv4addr $node $ifc]
+    if {$ipv4 == ""} {
+	autoIPv4addr $node $ifc
+    }
+    set ipv4 [getIfcIPv4addr $node $ifc]
+    set cmds "$cmds\n ifconfig $outifc $ipv4"
+
+    set ipv6 [getIfcIPv6addr $node $ifc]
+    if {$ipv6 == ""} {
+	autoIPv6addr $node $ifc
+    }
+    set ipv6 [getIfcIPv6addr $node $ifc]
+    set cmds "$cmds\n ifconfig $outifc inet6 $ipv6"
+
+    exec sh << $cmds &
 }
 
 #****f* freebsd.tcl/runConfOnNode

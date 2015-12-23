@@ -147,6 +147,7 @@ bind . <F6> {
     source "$ROOTDIR/$LIBDIR/nodes/pc.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/annotations.tcl"
+    source "$ROOTDIR/$LIBDIR/nodes/ext.tcl"
 
     source "$ROOTDIR/$LIBDIR/nodes/quagga.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/xorp.tcl"
