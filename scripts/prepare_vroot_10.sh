@@ -35,7 +35,9 @@ chroot $VROOT_MASTER /bin/sh -c 'env ASSUME_ALWAYS_YES=YES pkg bootstrap' >> $LO
 installPackagesPkg
 
 if [ $mini -eq 0 ]; then
-    installAdditionalTools install_click.sh
+    log "OUT" "Installing additional tools..."
+    sh $IMUNESDIR/scripts/install_usr_tools.sh >> $LOG 2>&1
+    log "OUT" "Installing additional tools done."
 fi
 
 configQuagga

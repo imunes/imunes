@@ -28,7 +28,8 @@ VROOT =	$(wildcard scripts/*.sh)
 TOOLS =	$(filter-out $(VROOT), $(wildcard scripts/*))
 
 NODE_ICONS = frswitch.gif hub.gif lanswitch.gif rj45.gif cloud.gif host.gif \
-	ipfirewall.gif pc.gif router.gif click_l2.gif click_l3.gif
+	ipfirewall.gif pc.gif router.gif click_l2.gif click_l3.gif \
+	stpswitch.gif filter.gif packgen.gif nat64.gif
 
 NORMAL_ICONS = $(NODE_ICONS)
 
@@ -47,7 +48,7 @@ info:
 
 all: install
 
-install: uninstall
+install: uninstall netgraph
 	mkdir -p $(IMUNESDIR)
 	cp $(BASEFILES) $(IMUNESDIR)
 	sh scripts/update_version.sh
@@ -117,15 +118,16 @@ endif
 		cp icons/tiny/$${file} $(TINY_ICONSDIR); \
 	done ;
 
-ifeq ($(UNAME_S), FreeBSD)
-	sh scripts/install_ng_modules.sh
-endif
-
 uninstall:
 	rm -rf $(IMUNESDIR)
 	for file in imunes $(notdir $(TOOLS)); do \
 		rm -f $(BINDIR)/$${file}; \
 	done ;
+
+netgraph:
+ifeq ($(UNAME_S), FreeBSD)
+	sh scripts/install_ng_modules.sh
+endif
 
 vroot:
 	sh scripts/prepare_vroot.sh
@@ -138,6 +140,13 @@ vroot_m:
 
 vroot_m_zfs:
 	sh scripts/prepare_vroot.sh zfs mini
+
+vroot_usr:
+ifeq ($(VROOT_EXISTS), 1)
+	sh scripts/install_usr_tools.sh
+else
+	@echo   "/var/imunes/vroot does not exist, exiting..."
+endif
 
 remove_vroot:
 ifeq ($(VROOT_EXISTS), 1)
