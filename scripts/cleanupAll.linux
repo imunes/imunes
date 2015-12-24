@@ -22,12 +22,12 @@ dockers=`docker ps -a | tail -n +2 | grep "imunes" | awk '{print $1}' `
 for id in $dockers; do
     echo "Destroying docker $id."
     docker kill $id > /dev/null
-    docker rm $id > /dev/null
+    docker rm -f $id > /dev/null
 done
 
 bridges=`ovs-vsctl list-br`
 for id in $bridges; do
-    ovs-vsctl del-br $id
+    ovs-vsctl -t 1 del-br $id > /dev/null
     echo "Destroying openvswitch bridge $id."
 done
 
