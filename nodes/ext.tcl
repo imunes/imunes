@@ -23,12 +23,12 @@
 # SUCH DAMAGE.
 #
 
-# $Id: pc.tcl 63 2013-10-03 12:17:50Z valter $
+# $Id: ext.tcl 63 2013-10-03 12:17:50Z valter $
 
 
-#****h* imunes/pc.tcl
+#****h* imunes/ext.tcl
 # NAME
-#  pc.tcl -- defines pc specific procedures
+#  ext.tcl -- defines pc specific procedures
 # FUNCTION
 #  This module is used to define all the pc specific procedures.
 # NOTES
@@ -41,11 +41,11 @@ set MODULE ext
 
 registerModule $MODULE
 
-#****f* pc.tcl/pc.confNewIfc
+#****f* ext.tcl/ext.confNewIfc
 # NAME
-#   pc.confNewIfc -- configure new interface
+#   ext.confNewIfc -- configure new interface
 # SYNOPSIS
-#   pc.confNewIfc $node $ifc
+#   ext.confNewIfc $node $ifc
 # FUNCTION
 #   Configures new interface for the specified node.
 # INPUTS
@@ -64,11 +64,11 @@ proc $MODULE.confNewIfc { node ifc } {
     autoIPv6defaultroute $node $ifc
 }
 
-#****f* pc.tcl/pc.confNewNode
+#****f* ext.tcl/ext.confNewNode
 # NAME
-#   pc.confNewNode -- configure new node
+#   ext.confNewNode -- configure new node
 # SYNOPSIS
-#   pc.confNewNode $node
+#   ext.confNewNode $node
 # FUNCTION
 #   Configures new node with the specified id.
 # INPUTS
@@ -87,11 +87,11 @@ proc $MODULE.confNewNode { node } {
     #setIfcIPv6addr $node lo0 "::1/128"
 }
 
-#****f* pc.tcl/pc.icon
+#****f* ext.tcl/ext.icon
 # NAME
-#   pc.icon -- icon
+#   ext.icon -- icon
 # SYNOPSIS
-#   pc.icon $size
+#   ext.icon $size
 # FUNCTION
 #   Returns path to node icon, depending on the specified size.
 # INPUTS
@@ -103,22 +103,22 @@ proc $MODULE.icon { size } {
     global ROOTDIR LIBDIR
     switch $size {
       normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/pc.gif
+	return $ROOTDIR/$LIBDIR/icons/normal/ext.gif
       }
       small {
-	return $ROOTDIR/$LIBDIR/icons/small/pc.gif
+	return $ROOTDIR/$LIBDIR/icons/small/ext.gif
       }
       toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/pc.gif
+	return $ROOTDIR/$LIBDIR/icons/tiny/ext.gif
       }
     }
 }
 
-#****f* pc.tcl/pc.toolbarIconDescr
+#****f* ext.tcl/ext.toolbarIconDescr
 # NAME
-#   pc.toolbarIconDescr -- toolbar icon description
+#   ext.toolbarIconDescr -- toolbar icon description
 # SYNOPSIS
-#   pc.toolbarIconDescr
+#   ext.toolbarIconDescr
 # FUNCTION
 #   Returns this module's toolbar icon description.
 # RESULT
@@ -128,11 +128,11 @@ proc $MODULE.toolbarIconDescr {} {
     return "Add new External interface"
 }
 
-#****f* pc.tcl/pc.notebookDimensions
+#****f* ext.tcl/ext.notebookDimensions
 # NAME
-#   pc.notebookDimensions -- notebook dimensions
+#   ext.notebookDimensions -- notebook dimensions
 # SYNOPSIS
-#   pc.notebookDimensions $wi
+#   ext.notebookDimensions $wi
 # FUNCTION
 #   Returns the specified notebook height and width.
 # INPUTS
@@ -157,11 +157,11 @@ proc $MODULE.notebookDimensions { wi } {
     return [list $h $w] 
 }
 
-#****f* pc.tcl/pc.calcDxDy
+#****f* ext.tcl/ext.calcDxDy
 # NAME
-#   pc.calcDxDy -- calculate dx and dy
+#   ext.calcDxDy -- calculate dx and dy
 # SYNOPSIS
-#   pc.calcDxDy
+#   ext.calcDxDy
 # FUNCTION
 #   Calculates distances for nodelabels.
 # RESULT
@@ -179,11 +179,11 @@ proc $MODULE.calcDxDy {} {
     return [list $x $y]
 }
 
-#****f* pc.tcl/pc.ifcName
+#****f* ext.tcl/ext.ifcName
 # NAME
-#   pc.ifcName -- interface name
+#   ext.ifcName -- interface name
 # SYNOPSIS
-#   pc.ifcName
+#   ext.ifcName
 # FUNCTION
 #   Returns pc interface name prefix.
 # RESULT
@@ -193,11 +193,11 @@ proc $MODULE.ifcName {l r} {
     return [l3IfcName $l $r]
 }
 
-#****f* pc.tcl/pc.IPAddrRange
+#****f* ext.tcl/ext.IPAddrRange
 # NAME
-#   pc.IPAddrRange -- IP address range
+#   ext.IPAddrRange -- IP address range
 # SYNOPSIS
-#   pc.IPAddrRange
+#   ext.IPAddrRange
 # FUNCTION
 #   Returns pc IP address range
 # RESULT
@@ -207,11 +207,11 @@ proc $MODULE.IPAddrRange {} {
     return 20
 }
 
-#****f* pc.tcl/pc.layer
+#****f* ext.tcl/ext.layer
 # NAME
-#   pc.layer -- layer
+#   ext.layer -- layer
 # SYNOPSIS
-#   set layer [pc.layer]
+#   set layer [ext.layer]
 # FUNCTION
 #   Returns the layer on which the pc communicates, i.e. returns NETWORK. 
 # RESULT
@@ -221,11 +221,11 @@ proc $MODULE.layer {} {
     return NETWORK
 }
 
-#****f* pc.tcl/pc.virtlayer
+#****f* ext.tcl/ext.virtlayer
 # NAME
-#   pc.virtlayer -- virtual layer
+#   ext.virtlayer -- virtual layer
 # SYNOPSIS
-#   set layer [pc.virtlayer]
+#   set layer [ext.virtlayer]
 # FUNCTION
 #   Returns the layer on which the pc is instantiated i.e. returns VIMAGE. 
 # RESULT
@@ -235,57 +235,11 @@ proc $MODULE.virtlayer {} {
     return VIMAGE
 }
 
-#****f* pc.tcl/pc.cfggen
+#****f* ext.tcl/ext.shellcmds
 # NAME
-#   pc.cfggen -- configuration generator
+#   ext.shellcmds -- shell commands
 # SYNOPSIS
-#   set config [pc.cfggen $node]
-# FUNCTION
-#   Returns the generated configuration. This configuration represents
-#   the configuration loaded on the booting time of the virtual nodes
-#   and it is closly related to the procedure pc.bootcmd.
-#   For each interface in the interface list of the node, ip address is
-#   configured and each static route from the simulator is added.
-# INPUTS
-#   * node -- node id (type of the node is pc)
-# RESULT
-#   * congif -- generated configuration 
-#****
-proc $MODULE.cfggen { node } {
-    set cfg {}
-    set cfg [concat $cfg [nodeCfggenIfcIPv4 $node]]
-    set cfg [concat $cfg [nodeCfggenIfcIPv6 $node]]
-    #lappend cfg ""
-
-    #set cfg [concat $cfg [nodeCfggenRouteIPv4 $node]]
-    #set cfg [concat $cfg [nodeCfggenRouteIPv6 $node]]
-
-    return $cfg
-}
-
-#****f* pc.tcl/pc.bootcmd
-# NAME
-#   pc.bootcmd -- boot command
-# SYNOPSIS
-#   set appl [pc.bootcmd $node]
-# FUNCTION
-#   Procedure bootcmd returns the application that reads and employes the
-#   configuration generated in pc.cfggen.
-#   In this case (procedure pc.bootcmd) specific application is /bin/sh
-# INPUTS
-#   * node -- node id (type of the node is pc)
-# RESULT
-#   * appl -- application that reads the configuration (/bin/sh) 
-#****
-#proc $MODULE.bootcmd { node } {
-    #return "/bin/sh"
-#}
-
-#****f* pc.tcl/pc.shellcmds
-# NAME
-#   pc.shellcmds -- shell commands
-# SYNOPSIS
-#   set shells [pc.shellcmds]
+#   set shells [ext.shellcmds]
 # FUNCTION
 #   Procedure shellcmds returns the shells that can be opened
 #   as a default shell for the system.
@@ -296,15 +250,15 @@ proc $MODULE.shellcmds {} {
     return
 }
 
-#****f* pc.tcl/pc.instantiate
+#****f* ext.tcl/ext.instantiate
 # NAME
-#   pc.instantiate -- instantiate
+#   ext.instantiate -- instantiate
 # SYNOPSIS
-#   pc.instantiate $eid $node
+#   ext.instantiate $eid $node
 # FUNCTION
 #   Procedure instantiate creates a new virtaul node
 #   for a given node in imunes.
-#   Procedure pc.instantiate cretaes a new virtual node with
+#   Procedure ext.instantiate cretaes a new virtual node with
 #   all the interfaces and CPU parameters as defined in imunes. 
 # INPUTS
 #   * eid -- experiment id
@@ -314,13 +268,13 @@ proc $MODULE.instantiate { eid node } {
     createNodePhysIfcs $node
 }
 
-#****f* pc.tcl/pc.start
+#****f* ext.tcl/ext.start
 # NAME
-#   pc.start -- start
+#   ext.start -- start
 # SYNOPSIS
-#   pc.start $eid $node
+#   ext.start $eid $node
 # FUNCTION
-#   Starts a new pc. The node can be started if it is instantiated.
+#   Starts a new ext. The node can be started if it is instantiated.
 #   Simulates the booting proces of a pc, by calling l3node.start procedure.
 # INPUTS
 #   * eid -- experiment id
@@ -330,13 +284,13 @@ proc $MODULE.start { eid node } {
     startExternalIfc $eid $node
 }
 
-#****f* pc.tcl/pc.shutdown
+#****f* ext.tcl/ext.shutdown
 # NAME
-#   pc.shutdown -- shutdown
+#   ext.shutdown -- shutdown
 # SYNOPSIS
-#   pc.shutdown $eid $node
+#   ext.shutdown $eid $node
 # FUNCTION
-#   Shutdowns a pc. Simulates the shutdown proces of a pc, 
+#   Shutdowns a ext. Simulates the shutdown proces of a pc, 
 #   by calling the l3node.shutdown procedure.
 # INPUTS
 #   * eid -- experiment id
@@ -346,13 +300,13 @@ proc $MODULE.shutdown { eid node } {
     l3node.shutdown $eid $node
 }
 
-#****f* pc.tcl/pc.destroy
+#****f* ext.tcl/ext.destroy
 # NAME
-#   pc.destroy -- destroy
+#   ext.destroy -- destroy
 # SYNOPSIS
-#   pc.destroy $eid $node
+#   ext.destroy $eid $node
 # FUNCTION
-#   Destroys a pc. Destroys all the interfaces of the pc 
+#   Destroys a ext. Destroys all the interfaces of the pc 
 #   and the vimage itself by calling l3node.destroy procedure. 
 # INPUTS
 #   * eid -- experiment id
@@ -362,11 +316,11 @@ proc $MODULE.destroy { eid node } {
     l3node.destroy $eid $node
 }
 
-#****f* pc.tcl/pc.nghook
+#****f* ext.tcl/ext.nghook
 # NAME
-#   pc.nghook -- nghook
+#   ext.nghook -- nghook
 # SYNOPSIS
-#   pc.nghook $eid $node $ifc 
+#   ext.nghook $eid $node $ifc 
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. This procedure calls
@@ -383,11 +337,11 @@ proc $MODULE.nghook { eid node ifc } {
     return [l3node.nghook $eid $node $ifc]
 }
 
-#****f* pc.tcl/pc.configGUI
+#****f* ext.tcl/ext.configGUI
 # NAME
-#   pc.configGUI -- configuration GUI
+#   ext.configGUI -- configuration GUI
 # SYNOPSIS
-#   pc.configGUI $c $node
+#   ext.configGUI $c $node
 # FUNCTION
 #   Defines the structure of the pc configuration window by calling
 #   procedures for creating and organising the window, as well as
@@ -405,36 +359,10 @@ proc $MODULE.configGUI { c node } {
     configGUI_createConfigPopupWin $c
     wm title $wi "ext configuration"
     configGUI_nodeName $wi $node "Node name:"
-    configGUI_ifcEssentials $wi $node $ifc
-    #configGUI_ifcQueueConfig $wi $node $ifc
-    configGUI_ifcMACAddress $wi $node $ifc
-    configGUI_ifcIPv4Address $wi $node $ifc
-    configGUI_ifcIPv6Address $wi $node $ifc
+
+    configGUI_externalIfcs $wi $node
+
     configGUI_buttonsACNode $wi $node
-}
-
-#****f* pc.tcl/pc.configInterfacesGUI
-# NAME
-#   pc.configInterfacesGUI -- configuration of interfaces GUI
-# SYNOPSIS
-#   pc.configInterfacesGUI $wi $node $ifc
-# FUNCTION
-#   Defines which modules for changing interfaces parameters are contained in
-#   the pc configuration window. It is done by calling procedures for adding
-#   certain modules to the window.
-# INPUTS
-#   * wi -- widget
-#   * node -- node id
-#   * ifc -- interface name
-#****
-proc $MODULE.configInterfacesGUI { wi node ifc } {
-    global guielements
-
-    configGUI_ifcEssentials $wi $node $ifc
-    #configGUI_ifcQueueConfig $wi $node $ifc
-    configGUI_ifcMACAddress $wi $node $ifc
-    configGUI_ifcIPv4Address $wi $node $ifc
-    configGUI_ifcIPv6Address $wi $node $ifc
 }
 
 #****f* ext.tcl/ext.maxLinks

@@ -1662,6 +1662,51 @@ proc configGUI_ifcVlanConfig { wi node ifc } {
 	-sticky w -padx 3
 }
 
+#****f* nodecfgGUI.tcl/configGUI_externalIfcs
+# NAME
+#   configGUI_externalIfcs -- configure GUI - vlan for rj45 nodes
+# SYNOPSIS
+#   configGUI_externalIfcs $wi $node
+# FUNCTION
+#   Creating module for assigning vlan to rj45 nodes.
+# INPUTS
+#   * wi -- widget
+#   * node -- node id
+#****
+proc configGUI_externalIfcs { wi node } {
+    global guielements vlanEnable
+    lappend guielements configGUI_externalIfcs
+    set ifc [lindex [split [ifcList $node] .] 0]
+
+    ttk::frame $wi.if$ifc -borderwidth 2 -relief groove
+    ttk::frame $wi.if$ifc.mac
+    ttk::frame $wi.if$ifc.ipv4
+    ttk::frame $wi.if$ifc.ipv6
+
+    ttk::label $wi.if$ifc.labelName -text "Interface $ifc"
+    ttk::label $wi.if$ifc.labelMAC -text "MAC address:" -width 11
+    ttk::entry $wi.if$ifc.mac.addr -width 24 -validate focus
+    $wi.if$ifc.mac.addr insert 0 [getIfcMACaddr $node $ifc]
+    ttk::label $wi.if$ifc.labelIPv4 -text "IPv4 address:" -width 11
+    ttk::entry $wi.if$ifc.ipv4.addr -width 24 -validate focus
+    $wi.if$ifc.ipv4.addr insert 0 [getIfcIPv4addr $node $ifc]
+    ttk::label $wi.if$ifc.labelIPv6 -text "IPv6 address:" -width 11
+    ttk::entry $wi.if$ifc.ipv6.addr -width 24 -validate focus
+    $wi.if$ifc.ipv6.addr insert 0 [getIfcIPv6addr $node $ifc]
+
+    pack $wi.if$ifc -expand 1 -padx 1 -pady 1
+    grid $wi.if$ifc.labelName -in $wi.if$ifc -columnspan 2 -row 0 -pady 4 -padx 4
+    grid $wi.if$ifc.labelMAC -in $wi.if$ifc -column 0 -row 1 -pady 4 -padx 4
+    grid $wi.if$ifc.mac -in $wi.if$ifc -column 1 -row 1 -pady 4 -padx 4
+    grid $wi.if$ifc.mac.addr -in $wi.if$ifc.mac -column 0 -row 0
+    grid $wi.if$ifc.labelIPv4 -in $wi.if$ifc -column 0 -row 2 -pady 4 -padx 4
+    grid $wi.if$ifc.ipv4 -in $wi.if$ifc -column 1 -row 2 -pady 4 -padx 4
+    grid $wi.if$ifc.ipv4.addr -in $wi.if$ifc.ipv4 -column 0 -row 0
+    grid $wi.if$ifc.labelIPv6 -in $wi.if$ifc -column 0 -row 3 -pady 4 -padx 4
+    grid $wi.if$ifc.ipv6 -in $wi.if$ifc -column 1 -row 3 -pady 4 -padx 4
+    grid $wi.if$ifc.ipv6.addr -in $wi.if$ifc.ipv6 -column 0 -row 0
+}
+
 ###############"Apply" procedures################
 #names of these procedures are formed as follows:
 #name of the procedure that creates the module + "Apply" suffix
@@ -2343,6 +2388,26 @@ proc configGUI_ifcVlanConfigApply { wi node ifc } {
 	}
 	set changed 1
     }
+}
+
+#****f* nodecfgGUI.tcl/configGUI_externalIfcsApply
+# NAME
+#   configGUI_externalIfcsApply -- configure GUI - external interface
+#      configuration apply
+# SYNOPSIS
+#   configGUI_externalIfcsApply $wi $node $ifc
+# FUNCTION
+#   Saves changes in the module with Vlan configuration parameters.
+# INPUTS
+#   * wi -- widget
+#   * node -- node id
+#   * ifc -- interface name
+#****
+proc configGUI_externalIfcsApply { wi node } {
+    set ifc [lindex [ifcList $node] 0]
+    configGUI_ifcMACAddressApply $wi $node $ifc
+    configGUI_ifcIPv4AddressApply $wi $node $ifc
+    configGUI_ifcIPv6AddressApply $wi $node $ifc
 }
 
 #############Custom startup configuration#############
