@@ -109,19 +109,19 @@ proc allSnapshotsAvailable {} {
 }
 
 proc logCaller {} {
-    set r [catch {info level [expr [info level] - 1]} e]
-    set r2 [catch {info level [expr [info level] - 2]} e2]
-    if {$r} {
-        puts "Called directly by the interpreter (e.g.: .tcl on the partyline)."
-    } {
-        puts "Called by ${e} ${e2}."
+    for {set i 1} {$i < [info level ] } {incr i} {
+        puts -nonewline " -> [info level $i]"
     }
+    puts ""
 }
+
+
 
 bind . <F6> {
     global all_modules_list router_module_list
     set all_modules_list {}
     set router_modules_list {}
+}
 
     source "$ROOTDIR/$LIBDIR/runtime/cfgparse.tcl"
     source "$ROOTDIR/$LIBDIR/runtime/eventsched.tcl"
