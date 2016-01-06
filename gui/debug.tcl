@@ -115,13 +115,10 @@ proc logCaller {} {
     puts ""
 }
 
-
-
 bind . <F6> {
     global all_modules_list router_module_list
     set all_modules_list {}
     set router_modules_list {}
-}
 
     source "$ROOTDIR/$LIBDIR/runtime/cfgparse.tcl"
     source "$ROOTDIR/$LIBDIR/runtime/eventsched.tcl"
