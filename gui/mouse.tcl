@@ -514,6 +514,8 @@ proc button3node { c x y } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     set node [lindex [$c gettags {node && current}] 1]
+    set type [nodeType $node]
+
     if { $node == "" } {
 	set node [lindex [$c gettags {nodelabel && current}] 1]
 	if { $node == "" } {
@@ -533,7 +535,7 @@ proc button3node { c x y } {
     #
     # Select adjacent
     #
-    if { [nodeType $node] != "pseudo" } {
+    if { $type != "pseudo" } {
 	.button3menu add command -label "Select adjacent" \
 	    -command "selectAdjacent"
     } else {
@@ -544,7 +546,7 @@ proc button3node { c x y } {
     #
     # Configure node
     #
-    if { [nodeType $node] != "pseudo" } {
+    if { $type != "pseudo" } {
 	.button3menu add command -label "Configure" \
 	    -command "nodeConfigGUI $c $node"
     } else {
@@ -556,7 +558,7 @@ proc button3node { c x y } {
     # Transform
     #
     .button3menu.transform delete 0 end
-    if { $oper_mode == "exec" || [nodeType $node] == "pseudo" || [[typemodel $node].layer] != "NETWORK" } {
+    if { $oper_mode == "exec" || $type == "pseudo" || $type == "ext" || [[typemodel $node].layer] != "NETWORK" } {
 #	.button3menu add cascade -label "Transform to" \
 #	    -menu .button3menu.transform -state disabled
     } else {
@@ -574,7 +576,7 @@ proc button3node { c x y } {
     # Node icon preferences
     #   
     .button3menu.icon delete 0 end
-    if { $oper_mode == "exec" || [nodeType $node] == "pseudo" } {
+    if { $oper_mode == "exec" || $type == "pseudo" } {
 #	.button3menu add cascade -label "Node icon" \
 #	    -menu .button3menu.icon -state disabled
     } else {
@@ -590,7 +592,7 @@ proc button3node { c x y } {
     # Create a new link - can be between different canvases
     #
     .button3menu.connect delete 0 end
-    if { $oper_mode == "exec" || [nodeType $node] == "pseudo" } {
+    if { $oper_mode == "exec" || $type == "pseudo" } {
 #	.button3menu add cascade -label "Create link to" \
 #	    -menu .button3menu.connect -state disabled
     } else {
@@ -623,7 +625,7 @@ proc button3node { c x y } {
     }
     foreach peer_node $node_list {
 	set canvas [getNodeCanvas $peer_node]
-	if { [nodeType $node] != "rj45" &&
+	if { $type != "rj45" &&
 	    [lsearch {pseudo rj45} [nodeType $peer_node]] < 0 &&
 	    [ifcByLogicalPeer $node $peer_node] == "" } {
 	    .button3menu.connect.$canvas add command \
@@ -640,7 +642,7 @@ proc button3node { c x y } {
     # Move to another canvas
     #
     .button3menu.moveto delete 0 end
-    if { $oper_mode == "exec" || [nodeType $node] == "pseudo" } {
+    if { $oper_mode == "exec" || $type == "pseudo" } {
 #	.button3menu add cascade -label "Move to" \
 #	    -menu .button3menu.moveto -state disabled
     } else {
@@ -662,7 +664,7 @@ proc button3node { c x y } {
     #
     # Merge two pseudo nodes / links
     #
-    if { $oper_mode != "exec" && [nodeType $node] == "pseudo" && \
+    if { $oper_mode != "exec" && $type == "pseudo" && \
 	[getNodeCanvas $mirror_node] == $curcanvas } {
 	.button3menu add command -label "Merge" \
 	    -command "mergeGUINode $node"
@@ -701,7 +703,7 @@ proc button3node { c x y } {
     # Services menu
     #
     .button3menu.services delete 0 end
-    if {$oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIMAGE"} {
+    if {$oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIMAGE" && $type != "ext"} {
 	global all_services_list
 	.button3menu add cascade -label "Services" \
 	    -menu .button3menu.services
@@ -725,9 +727,14 @@ proc button3node { c x y } {
     # Node settings
     #   
     .button3menu.sett delete 0 end
-    if { [nodeType $node] != "pseudo" } {
+    if { $type != "pseudo" } {
+	if { $type == "ext" && $oper_mode == "exec" } {
 	.button3menu add cascade -label "Settings" \
-	    -menu .button3menu.sett
+	    -menu .button3menu.sett -state disabled
+	} else {
+	    .button3menu add cascade -label "Settings" \
+		-menu .button3menu.sett
+	}
     } else {
 	.button3menu add cascade -label "Settings" \
 	    -menu .button3menu.sett -state disabled
@@ -781,7 +788,7 @@ proc button3node { c x y } {
     # Shell selection
     #
     .button3menu.shell delete 0 end
-    if {$oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIMAGE"} {
+    if {$type != "ext" && $oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIMAGE"} {
 	.button3menu add separator
 	.button3menu add cascade -label "Shell window" \
 	    -menu .button3menu.shell
@@ -796,7 +803,31 @@ proc button3node { c x y } {
 
     .button3menu.wireshark delete 0 end
     .button3menu.tcpdump delete 0 end
-    if {$oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIMAGE"} {
+    if {$oper_mode == "exec" && $type == "ext" } {
+	.button3menu add separator
+	#
+	# Wireshark
+	#
+        set wiresharkComm ""
+        foreach wireshark "wireshark wireshark-gtk wireshark-qt" {
+            if {[checkForExternalApps $wireshark] == 0} {
+                set wiresharkComm $wireshark
+                break
+            }
+        }
+        if { $wiresharkComm != "" } {
+	    .button3menu add command -label "Wireshark" \
+		-command "captureOnExtIfc $node $wiresharkComm"
+	}
+
+	#
+	# tcpdump
+	#
+	if {[checkForExternalApps "tcpdump"] == 0} {
+	    .button3menu add command -label "tcpdump" \
+		-command "captureOnExtIfc $node tcpdump"
+	}
+    } elseif {$oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIMAGE"} {
 	#
 	# Wireshark
 	#

@@ -60,8 +60,6 @@ proc $MODULE.confNewIfc { node ifc } {
     autoIPv6addr $node $ifc
     randomizeMACbytes
     autoMACaddr $node $ifc
-    autoIPv4defaultroute $node $ifc
-    autoIPv6defaultroute $node $ifc
 }
 
 #****f* ext.tcl/ext.confNewNode
@@ -81,10 +79,6 @@ proc $MODULE.confNewNode { node } {
 	"hostname [getNewNodeNameType ext ext]" \
 	! ]
     lappend $node "network-config [list $nconfig]"
-    
-    #setLogIfcType $node lo0 lo 
-    #setIfcIPv4addr $node lo0 "127.0.0.1/24"
-    #setIfcIPv6addr $node lo0 "::1/128"
 }
 
 #****f* ext.tcl/ext.icon
@@ -126,35 +120,6 @@ proc $MODULE.icon { size } {
 #****
 proc $MODULE.toolbarIconDescr {} {
     return "Add new External interface"
-}
-
-#****f* ext.tcl/ext.notebookDimensions
-# NAME
-#   ext.notebookDimensions -- notebook dimensions
-# SYNOPSIS
-#   ext.notebookDimensions $wi
-# FUNCTION
-#   Returns the specified notebook height and width.
-# INPUTS
-#   * wi -- widget
-# RESULT
-#   * size -- notebook size as {height width}
-#****
-proc $MODULE.notebookDimensions { wi } {
-    set h 210
-    set w 507
-    
-    #if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
-	#== "Configuration" } {
-	#set w 507
-    #}
-    if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
-	== "Interfaces" } {
-	set h 370
-	set w 507
-    }
-
-    return [list $h $w] 
 }
 
 #****f* ext.tcl/ext.calcDxDy
@@ -247,7 +212,6 @@ proc $MODULE.virtlayer {} {
 #   * shells -- default shells for the pc node
 #****
 proc $MODULE.shellcmds {} {
-    return
 }
 
 #****f* ext.tcl/ext.instantiate
@@ -297,7 +261,9 @@ proc $MODULE.start { eid node } {
 #   * node -- node id (type of the node is pc)
 #****
 proc $MODULE.shutdown { eid node } {
-    l3node.shutdown $eid $node
+    killExtProcess "wireshark.*[getNodeName $node].*\\($eid\\)"
+    killExtProcess "xterm -T Capturing $eid-$node -e tcpdump -ni $eid-$node"
+    stopExternalIfc $eid $node
 }
 
 #****f* ext.tcl/ext.destroy
@@ -313,7 +279,6 @@ proc $MODULE.shutdown { eid node } {
 #   * node -- node id (type of the node is pc)
 #****
 proc $MODULE.destroy { eid node } {
-    l3node.destroy $eid $node
 }
 
 #****f* ext.tcl/ext.nghook

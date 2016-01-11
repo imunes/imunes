@@ -127,6 +127,26 @@ proc startWiresharkOnNodeIfc { node ifc } {
     }
 }
 
+#****f* freebsd.tcl/startWiresharkOnExtIfc
+# NAME
+#   startWiresharkOnExtIfc -- start wireshark on an interface
+# SYNOPSIS
+#   startWiresharkOnExtIfc $node $ifc
+# FUNCTION
+#   Start Wireshark on a virtual node on the specified interface.
+# INPUTS
+#   * node -- virtual node id
+#   * ifc -- virtual node interface
+#****
+proc captureOnExtIfc { node command } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    if { $command == "tcpdump" } {
+	exec xterm -T "Capturing $eid-$node" -e "tcpdump -ni $eid-$node" 2> /dev/null &
+    } else {
+	exec $command -o "gui.window_title:[getNodeName $node] ($eid)" -k -i $eid-$node 2> /dev/null &
+    }
+}
 #****f* freebsd.tcl/startXappOnNode
 # NAME
 #   startXappOnNode -- start X application in a virtual node
@@ -1272,7 +1292,6 @@ proc startExternalIfc { eid node } {
     upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
 
     set cmds ""
-    set node_id "$eid.$node"
     set ifc [lindex [ifcList $node] 0]
     set outifc "$eid-$node"
 
@@ -1297,7 +1316,13 @@ proc startExternalIfc { eid node } {
     set ipv6 [getIfcIPv6addr $node $ifc]
     set cmds "$cmds\n ifconfig $outifc inet6 $ipv6"
 
+    set cmds "$cmds\n ifconfig $outifc up"
+
     exec sh << $cmds &
+}
+
+proc stopExternalIfc { eid node } {
+    exec ifconfig $eid-$node down
 }
 
 #****f* freebsd.tcl/runConfOnNode
