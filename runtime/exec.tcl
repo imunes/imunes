@@ -26,7 +26,8 @@
 # and Technology through the research contract #IP-2003-143.
 #
 
-# $Id: exec.tcl 147 2015-03-27 14:37:19Z denis $
+global vroot_unionfs vroot_linprocfs ifc_dad_disable regular_termination \
+    devfs_number hostsAutoAssign
 
 set vroot_unionfs 1
 set vroot_linprocfs 0
@@ -89,7 +90,7 @@ proc setOperMode { mode } {
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     upvar 0 ::cf::[set ::curcfg]::cfgDeployed cfgDeployed
     upvar 0 ::cf::[set ::curcfg]::eid eid
-    global all_modules_list editor_only execMode
+    global all_modules_list editor_only execMode isOSfreebsd isOSlinux
 
     if {$mode == "exec" && $node_list == ""} {
 	statline "Empty topologies can't be executed."
@@ -98,7 +99,6 @@ proc setOperMode { mode } {
     }
 
     if { !$cfgDeployed && $mode == "exec" } {
-	set os [platform::identify]
 	set err [checkSysPrerequisites]
 	if { $err != "" } {
 	    after idle {.dialog1.msg configure -wraplength 4i}
@@ -107,8 +107,7 @@ proc setOperMode { mode } {
 		info 0 Dismiss
 	    return
 	}
-	if { [string match -nocase "*linux*" $os] != 1 &&
-	    [string match -nocase "*freebsd*" $os] != 1 } {
+	if { !$isOSlinux && !$isOSfreebsd } {
 	    after idle {.dialog1.msg configure -wraplength 4i}
 	    tk_dialog .dialog1 "IMUNES error" \
 		"Error: To execute experiment, run IMUNES on FreeBSD or Linux." \
