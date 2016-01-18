@@ -216,7 +216,6 @@ proc setOperMode { mode } {
 #****
 proc spawnShellExec {} {
     upvar 0 ::cf::[set ::curcfg]::eid eid
-    global gui_unix
 
     set node [lindex [.panwin.f1.c gettags {node && current}] 1]
     if { $node == "" } {
