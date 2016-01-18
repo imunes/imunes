@@ -26,9 +26,6 @@
 # and Technology through the research contract #IP-2003-143.
 #
 
-# $Id: filemgmt.tcl 75 2013-11-28 10:27:17Z denis $
-
-
 ##****h* imunes/filemgmt.tcl
 # NAME
 #  filemgmt.tcl -- file used for manipulation with files
@@ -70,6 +67,7 @@
 #   - opens dialog box for saving a file under new name  
 #****
 
+global currentFile
 set currentFile ""
 
 set fileTypes {

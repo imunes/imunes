@@ -30,4 +30,5 @@
 # be sourced-in from this file.
 #
 
+global linkJitterConfiguration
 set linkJitterConfiguration 0

@@ -23,9 +23,14 @@
 # SUCH DAMAGE.
 #
 
-# $Id: nodecfgGUI.tcl 149 2015-03-27 15:50:14Z valter $
+global old_conn_name bridgeProtocol brguielements selectedFilterRule \
+    selectedPackgenPacket
 
 set old_conn_name ""
+set bridgeProtocol rstp
+set brguielements {}
+set selectedFilterRule ""
+set selectedPackgenPacket ""
 
 #****f* nodecfgGUI.tcl/nodeConfigGUI
 # NAME
@@ -4136,9 +4141,6 @@ proc configGUI_ifcBridgeAttributesApply { wi node ifc } {
     }
 }
 
-set bridgeProtocol rstp
-set brguielements {}
-
 proc configGUI_bridgeConfig { wi node } {
     global guielements
     lappend guielements configGUI_bridgeConfig 
@@ -4871,8 +4873,6 @@ proc configGUI_applyFilterNode { } {
     }
     redrawAll
 }
-
-set selectedFilterRule ""
 
 proc configGUI_addTreeFilter { wi node } {
     global filtertreecolumns cancel
@@ -5638,8 +5638,6 @@ proc configGUI_buttonsACPackgenNode { wi node } {
     pack $wi.bottom -fill both -side bottom
     bind $wi <Key-Escape> "set badentry -1; destroy $wi"
 }
-
-set selectedPackgenPacket ""
 
 proc configGUI_addTreePackgen { wi node } {
     global packgentreecolumns cancel
