@@ -101,7 +101,9 @@ set options {
     {batch	"Turn on batch mode"}
     {d.secret	"Turn on debug mode"}
     {p		"Prepare virtual root file system"}
+    {prepare	"Prepare virtual root file system"}
     {f		"Force virtual root preparation (delete existing vroot)"}
+    {force	"Force virtual root preparation (delete existing vroot)"}
     {i		"Setup devfs rules for virtual nodes (Only on FreeBSD)"}
     {v		"Print IMUNES version"}
     {version	"Print IMUNES version"}

@@ -106,11 +106,11 @@ proc parseCmdArgs { options usage } {
 	set printVersion 1
     }
 
-    if { $params(p) } {
+    if { $params(p) || $params(prepare) } {
 	set prepareFlag 1
     }
 
-    if { $params(f) } {
+    if { $params(f) || $params(force) } {
 	set forceFlag 1
     }
 }
