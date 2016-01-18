@@ -245,7 +245,7 @@ readConfigFile
 #
 
 if {$execMode == "interactive"} {
-    safePackageRequire Tk
+    safePackageRequire Tk "To run the IMUNES GUI, Tk must be installed."
     foreach file "canvas copypaste drawing editor help theme linkcfgGUI \
 	mouse nodecfgGUI widgets" {
 	safeSourceFile "$ROOTDIR/$LIBDIR/gui/$file.tcl"

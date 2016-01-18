@@ -30,13 +30,15 @@ Options:
     return $usage
 }
 
-proc safePackageRequire { plist } {
+proc safePackageRequire { plist args } {
     foreach p $plist {
 	try {
 	    package require $p
 	} on error { result options } {
-	    puts stderr "Error loading package $p:"
-	    puts stderr $result
+	    puts stderr "Error loading package $p: $result"
+	    if { [llength $args] } {
+		puts stderr [lindex $args 0]
+	    }
 	    exit 1
 	}
     }
@@ -48,8 +50,7 @@ proc safeSourceFile { file } {
     try {
 	source $file
     } on error { result options } {
-	puts stderr "Error sourcing file $file:"
-	puts stderr $result
+	puts stderr "Error sourcing file $file: $result"
 	exit 1
     }
 }
