@@ -56,7 +56,8 @@ proc safeSourceFile { file } {
 }
 
 proc parseCmdArgs { options usage } {
-    global initMode execMode eid_base debug argv printVersion
+    global initMode execMode eid_base debug argv
+    global printVersion prepareFlag forceFlag
 
     catch {array set params [::cmdline::getoptions argv $options $usage]} err
     if { $err != "" || $params(h) } {
@@ -103,6 +104,14 @@ proc parseCmdArgs { options usage } {
 
     if { $params(v) || $params(version)} {
 	set printVersion 1
+    }
+
+    if { $params(p) } {
+	set prepareFlag 1
+    }
+
+    if { $params(f) } {
+	set forceFlag 1
     }
 }
 
@@ -166,4 +175,21 @@ proc setPlatformVariables {} {
 	    set isOSwin true
 	}
     } 
+}
+
+proc prepareVroot {} {
+    global ROOTDIR LIBDIR
+    global isOSfreebsd isOSlinux prepareFlag forceFlag
+
+    if { $isOSfreebsd && $forceFlag } {
+	exec >@stdout chflags -R noschg /var/imunes/vroot
+	exec >@stdout rm -fr /var/imunes/vroot
+    }
+
+    if { $isOSlinux && $forceFlag } {
+	exec >@stdout docker rmi imunes/vroot
+    }
+
+    cd $ROOTDIR/$LIBDIR
+    exec >@stdout sh scripts/prepare_vroot.sh
 }

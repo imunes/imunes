@@ -91,6 +91,8 @@ set execMode interactive
 set debug 0
 set eid_base i[format %04x [expr {[pid] + [expr { round( rand()*10000 ) }]}]]
 set printVersion 0
+set prepareFlag 0
+set forceFlag 0
 
 set options {
     {e.arg	"" "Specify experiment ID"}
@@ -98,6 +100,8 @@ set options {
     {b		"Turn on batch mode"}
     {batch	"Turn on batch mode"}
     {d.secret	"Turn on debug mode"}
+    {p		"Prepare virtual root file system"}
+    {f		"Force virtual root preparation (delete existing vroot)"}
     {i		"Setup devfs rules for virtual nodes (Only on FreeBSD)"}
     {v		"Print IMUNES version"}
     {version	"Print IMUNES version"}
@@ -124,6 +128,11 @@ set isOSlinux false
 set isOSwin false
 
 setPlatformVariables
+
+if { $prepareFlag } {
+    prepareVroot
+    exit
+}
 
 # Runtime libriaries
 foreach file [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
