@@ -68,8 +68,6 @@ proc dumpputs { method dest string } {
     }
 }
 
-package require base64
-
 #****f* nodecfg.tcl/dumpCfg
 # NAME
 #   dumpCfg -- puts the current configuraton to a file or a string 
