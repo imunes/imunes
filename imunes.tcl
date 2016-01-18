@@ -26,8 +26,6 @@
 # and Technology through the research contract #IP-2003-143.
 #
 
-# $Id: imunes.tcl 149 2015-03-27 15:50:14Z valter $
-
 #****h* imunes/imunes.tcl
 # NAME
 #    imunes.tcl
@@ -43,74 +41,6 @@
 #    When starting the program with defined filename, configuration for
 #    file "filename" is loaded to imunes.
 #****
-
-package require cmdline
-package require ip
-package require platform
-
-set options {
-    {e.arg	"" "specify experiment ID"}
-    {eid.arg	"" "specify experiment ID"}
-    {b		"batch mode on"}
-    {batch	"batch mode on"}
-    {d.secret	"debug mode on"}
-    {i		"setup devfs rules for virtual nodes"}
-    {v		"print IMUNES version"}
-    {version	"print IMUNES version"}
-}
-
-set usage "\[-e | -eid eid\] topology.imn - Starting IMUNES GUI
-imunes -b \[-e | -eid eid\] topology.imn - Starting experiment (batch)
-imunes -b -e | -eid eid - Terminating experiment (batch)"
-
-catch {array set params [::cmdline::getoptions argv $options $usage]} err
-if { $err != "" } {
-    puts stderr "Usage:"
-    puts stderr $err
-    exit
-}
-
-set fileName [lindex $argv 0]
-if { ! [ string match "*.imn" $fileName ] && $fileName != "" } {
-    puts stderr "File '$fileName' is not an IMUNES .imn file"
-    exit
-}
-
-set initMode 0
-if { $params(i) } {
-    set initMode 1
-}
-
-set debug 0
-set execMode interactive
-if { $params(b) || $params(batch)} {
-    if { $params(e) == "" && $params(eid) == "" && $fileName == "" } {
-	puts stderr "Usage:"
-	puts stderr $usage
-	exit
-    }
-    catch {exec id -u} uid
-    if { $uid != "0" } {
-	puts "Error: To execute experiment, run IMUNES with root permissions."
-	exit
-    }
-    set execMode batch
-} else {
-    if { $params(d) } {
-	set debug 1
-    }
-}
-
-set eid_base i[format %04x [expr {[pid] + [expr { round( rand()*10000 ) }]}]]
-if { $params(e) != "" || $params(eid) != "" } {
-    set eid_base $params(e)
-    if { $params(eid) != "" } {
-	set eid_base $params(eid)
-    }
-    if { $params(b) || $params(batch) } {
-	    puts "Using experiment ID '$eid_base'."
-    }
-}
 
 #
 # Include procedure definitions from external files. There must be
@@ -146,55 +76,59 @@ if { $ROOTDIR == "." } {
     set BINDIR "bin"
 }
 
+try {
+    source "$ROOTDIR/$LIBDIR/helpers.tcl"
+} on error { result options } {
+    puts stderr "Could not find file helpers.tcl in $ROOTDIR/$LIBDIR:"
+    puts stderr $result
+    exit 1
+}
+
+safePackageRequire [list cmdline platform ip base64]
+
+set initMode 0
+set execMode interactive
+set debug 0
+set eid_base i[format %04x [expr {[pid] + [expr { round( rand()*10000 ) }]}]]
+set printVersion 0
+
+set options {
+    {e.arg	"" "Specify experiment ID"}
+    {eid.arg	"" "Specify experiment ID"}
+    {b		"Turn on batch mode"}
+    {batch	"Turn on batch mode"}
+    {d.secret	"Turn on debug mode"}
+    {i		"Setup devfs rules for virtual nodes (Only on FreeBSD)"}
+    {v		"Print IMUNES version"}
+    {version	"Print IMUNES version"}
+    {h		"Print this message"}
+}
+
+set usage [getPrettyUsage $options]
+parseCmdArgs $options $usage
+
 set baseTitle "IMUNES"
 set imunesVersion "Unknown"
-set imunesCommit ""
 set imunesChangedDate ""
+set imunesLastYear ""
 set imunesAdditions ""
 
-set verfile [open "$ROOTDIR/$LIBDIR/VERSION" r]
-set data [read $verfile]
-foreach line [split $data "\n"] {
-    if {[string match "VERSION:*" $line]} {
-	set imunesVersion [string range $line [expr [string first ":" $line] + 2] end]
-    }
-    if {[string match "Commit:*" $line]} {
-	set imunesCommit [string range $line [expr [string first ":" $line] + 2] end]
-    }
-    if {[string match "Last changed:*" $line]} {
-	set imunesChangedDate [string range $line [expr [string first ":" $line] + 2] end]
-    }
-    if {[string match "Additions:*" $line]} {
-	set imunesAdditions [string range $line [expr [string first ":" $line] + 2] end]
-    }
-}
-
-if { [string match "*Format*" $imunesCommit] } {
-    set imunesChangedDate ""
-    set imunesLastYear ""
-} else {
-    set imunesVersion "$imunesVersion (git: $imunesCommit)"
-    set imunesLastYear [lindex [split $imunesChangedDate "-"] 0]
-    set imunesChangedDate "Last changed: $imunesChangedDate"
-}
-
-if { $params(v) || $params(version)} {
-    puts "IMUNES $imunesVersion"
-    if { $imunesChangedDate != "" } {
-	puts "$imunesChangedDate"
-    }
-    if { $imunesAdditions != "" } {
-	puts "Additions: $imunesAdditions"
-    }
+fetchImunesVersion
+if { $printVersion } {
+    printImunesVersion
     exit
 }
 
-set os [platform::identify]
+set isOSfreebsd false
+set isOSlinux false
+set isOSwin false
+
+setPlatformVariables
 
 # Runtime libriaries
 foreach file [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
     if { [string match -nocase "*linux.tcl" $file] != 1 } {
-	source $file
+	safeSourceFile $file
     }
 }
 
@@ -205,19 +139,19 @@ set l3nodes "genericrouter quagga xorp static click_l3 host pc"
 # Set default supported router models
 set supp_router_models "xorp quagga static"
 
-if { [string match -nocase "*linux*" $os] == 1 } {
+if { $isOSlinux } {
     # Limit default nodes on linux
     set l2nodes "lanswitch rj45"
     set l3nodes "genericrouter quagga static pc host"
     set supp_router_models "quagga static"
-    source $ROOTDIR/$LIBDIR/runtime/linux.tcl
+    safeSourceFile $ROOTDIR/$LIBDIR/runtime/linux.tcl
     if { $initMode == 1 } {
 	#puts "INFO: devfs preparation is done only on FreeBSD."
 	exit
     }
 }
-if { [string match -nocase "*freebsd*" $os] == 1 } {
-    source $ROOTDIR/$LIBDIR/runtime/freebsd.tcl
+if { $isOSfreebsd } {
+    safeSourceFile $ROOTDIR/$LIBDIR/runtime/freebsd.tcl
     if { $initMode == 1 } {
 	prepareDevfs
 	exit
@@ -234,22 +168,22 @@ if { $execMode == "batch" } {
 
 # Configuration libraries
 foreach file [glob -directory $ROOTDIR/$LIBDIR/config *.tcl] {
-    source $file
+    safeSourceFile $file
 }
 
 # The following files need to be sourced in this particular order. If not
 # the placement of the toolbar icons will be altered.
 # L2 nodes
 foreach file $l2nodes {
-    source "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
+    safeSourceFile "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
 }
 # L3 nodes
 foreach file $l3nodes {
-    source "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
+    safeSourceFile "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
 }
 # additional nodes
-source "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
-source "$ROOTDIR/$LIBDIR/nodes/annotations.tcl"
+safeSourceFile "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
+safeSourceFile "$ROOTDIR/$LIBDIR/nodes/annotations.tcl"
 
 #
 # Global variables are initialized here
@@ -280,30 +214,14 @@ set curcfg ""
 # FUNCTION
 #    IMUNES GUI can be used in editor-only mode.i
 #    This variable can be modified in .imunesrc.
-
 set editor_only false
 
-#****v* imunes.tcl/gui_unix
-# NAME
-#    gui_unix
-# FUNCTION
-#    false: IMUNES GUI is on MS Windows,
-#    true: GUI is on FreeBSD / Linux / ...
-#    Used in spawnShell to start xterm or command.com with NetCat
-#*****
-
-if { $tcl_platform(platform) == "unix" } {
-    set gui_unix true
-} else {
-    set gui_unix false
-}
-
 set winOS false
-if {[string match -nocase "*win*" [platform::identify]] == 1} {
+if { $isOSwin } {
     set winOS true
 }
 
-if {!$winOS} {
+if { !$isOSwin } {
     catch {exec convert -version | head -1 | cut -d " " -f 1,2,3} imInfo
 } else {
     set imInfo $env(PATH)
@@ -327,13 +245,16 @@ readConfigFile
 #
 
 if {$execMode == "interactive"} {
-    foreach file "canvas copypaste drawing editor help theme initgui linkcfgGUI \
-	mouse nodecfgGUI topogen widgets" {
-	source "$ROOTDIR/$LIBDIR/gui/$file.tcl"
+    safePackageRequire Tk
+    foreach file "canvas copypaste drawing editor help theme linkcfgGUI \
+	mouse nodecfgGUI widgets" {
+	safeSourceFile "$ROOTDIR/$LIBDIR/gui/$file.tcl"
     }
     if { $debug == 1 } {
-	source "$ROOTDIR/$LIBDIR/gui/debug.tcl"
+	safeSourceFile "$ROOTDIR/$LIBDIR/gui/debug.tcl"
     }
+    source "$ROOTDIR/$LIBDIR/gui/initgui.tcl"
+    source "$ROOTDIR/$LIBDIR/gui/topogen.tcl"
 
     newProject
     if { $argv != "" && [file exists $argv] } {

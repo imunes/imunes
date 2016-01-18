@@ -58,6 +58,8 @@ install: uninstall netgraph
 	    -e "s,set ROOTDIR \".\",set ROOTDIR $(PREFIX)," \
 	    imunes.tcl > $(IMUNESDIR)/imunes.tcl
 
+	cp helpers.tcl $(IMUNESDIR)
+
 	sed -e "s,LIBDIR=\"\",LIBDIR=$(LIBDIR)," \
 	    -e "s,ROOTDIR=\".\",ROOTDIR=$(PREFIX)," \
 	    -e "s,BINDIR=\".\",BINDIR=$(BINDIR)," \
