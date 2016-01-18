@@ -1,3 +1,4 @@
+global VROOT_MASTER
 set VROOT_MASTER "imunes/vroot"
 
 #****f* linux.tcl/writeDataToNodeFile

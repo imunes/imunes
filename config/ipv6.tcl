@@ -26,13 +26,11 @@
 # and Technology through the research contract #IP-2003-143.
 #
 
-# $Id: ipv6.tcl 129 2015-02-13 11:14:44Z valter $
-
-
 #****h* imunes/ipv6.tcl
 # NAME
 #   ipv6.tcl -- file for handeling IPv6
 #****
+global ipv6 changeAddrRange6
 
 set ipv6 fc00::/64
 set changeAddrRange6 0
