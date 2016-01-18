@@ -1948,6 +1948,10 @@ proc getIPv6RouteCmd { statrte } {
 }
 
 proc checkSysPrerequisites {} {
+
+    # XXX
+    # check for all comands that we use:
+    # jail, jexec, jls, ngctl
 }
 
 #****f* freebsd.tcl/startIPsecOnNode
