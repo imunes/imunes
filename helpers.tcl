@@ -61,13 +61,13 @@ proc parseCmdArgs { options usage } {
     catch {array set params [::cmdline::getoptions argv $options $usage]} err
     if { $err != "" || $params(h) } {
 	puts stderr $usage
-	exit
+	exit 1
     }
 
     set fileName [lindex $argv 0]
     if { ! [ string match "*.imn" $fileName ] && $fileName != "" } {
 	puts stderr "File '$fileName' is not an IMUNES .imn file"
-	exit
+	exit 1
     }
 
     if { $params(i) } {
@@ -77,12 +77,12 @@ proc parseCmdArgs { options usage } {
     if { $params(b) || $params(batch)} {
 	if { $params(e) == "" && $params(eid) == "" && $fileName == "" } {
 	    puts stderr $usage
-	    exit
+	    exit 1
 	}
 	catch {exec id -u} uid
 	if { $uid != "0" } {
 	    puts "Error: To execute experiment, run IMUNES with root permissions."
-	    exit
+	    exit 1
 	}
 	set execMode batch
     } else {
