@@ -72,7 +72,8 @@ proc nexec { args } {
 #   When changing the mode to exec all the emulation interfaces are checked
 #   (if they are nonexistent the message is displayed, and mode is not
 #   changed), all the required buttons are disabled (except the
-#   simulation/Terminate button, that is enabled) and procedure deployCfg is #   called.
+#   simulation/Terminate button, that is enabled) and procedure deployCfg is
+#   called.
 #   The mode can not be changed to exec if imunes operates only in editor mode
 #   (editor_only variable is set).
 #   When changing the mode to edit, all required buttons are enabled (except
@@ -122,7 +123,7 @@ proc setOperMode { mode } {
 	    info 0 Dismiss
 	    return
 	}
-	if { $editor_only } { ;# if set in exec or open_exec_sockets
+	if { $editor_only } {
 	    .menubar.experiment entryconfigure "Execute" -state disabled
 	    return
 	}
