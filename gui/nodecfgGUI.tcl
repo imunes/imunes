@@ -73,7 +73,7 @@ proc nodeConfigGUI { c node } {
 #   * c -- tk canvas
 #****
 proc configGUI_createConfigPopupWin { c } {
-    global wi
+    global wi debug
     set wi .popup
     catch {destroy $wi}
     toplevel $wi
@@ -87,7 +87,9 @@ proc configGUI_createConfigPopupWin { c } {
     #u slucaju greske nece se moci vidjeti detalji niti zatvoriti prozor upozorenjem na gresku
     #u tom je slucaju potrebno zakomentirati naredbu grab
     after 100 {
-	grab $wi
+	if { !$debug } {
+	    grab $wi
+	}
     }
 }
 
@@ -1360,8 +1362,7 @@ proc configGUI_snapshots { wi node } {
 	return
     }
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    set os [platform::identify]
-    global guielements snapshot snapshotList
+    global guielements snapshot snapshotList isOSfreebsd
     lappend guielements configGUI_snapshots
     
     ttk::frame $wi.snapshot -borderwidth 2 -relief groove -padding 4 
@@ -1377,7 +1378,7 @@ proc configGUI_snapshots { wi node } {
     ttk::combobox $wi.snapshot.text -width 25 -state readonly -textvariable snapshot
     $wi.snapshot.text configure -values $snapshotList
     
-    if { $oper_mode != "edit" || [string match -nocase "*freebsd*" $os] != 1 } {
+    if { $oper_mode != "edit" || !$isOSfreebsd } {
     	$wi.snapshot.text configure -state disabled
     }
     
@@ -1551,10 +1552,10 @@ proc configGUI_servicesConfig { wi node } {
 #****
 proc configGUI_attachDockerToExt { wi node } {
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    global guielements docker_enable os
+    global guielements docker_enable isOSlinux
     lappend guielements configGUI_attachDockerToExt
 
-    if { [string match -nocase "*linux*" $os] != 1 } {
+    if { !$isOSlinux } {
 	return
     }
 
@@ -2204,10 +2205,9 @@ proc configGUI_customConfigApply { wi node } {
 #****
 proc configGUI_snapshotsApply { wi node } {
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    set os [platform::identify]
-    global changed snapshot snapshotList
-    if { [string match -nocase "*freebsd*" $os] == 1 && \
-	[llength [lsearch -inline $snapshotList $snapshot]] == 0} {
+    global changed snapshot snapshotList isOSfreebsd
+    if { [llength [lsearch -inline $snapshotList $snapshot]] == 0 &&
+	$isOSfreebsd } {
     	after idle {.dialog1.msg configure -wraplength 4i}
 	tk_dialog .dialog1 "IMUNES error" \
 	"Error: ZFS snapshot image \"$snapshot\" for node \"$node\" is missing." \
