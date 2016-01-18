@@ -250,11 +250,11 @@ if {$execMode == "interactive"} {
 	mouse nodecfgGUI widgets" {
 	safeSourceFile "$ROOTDIR/$LIBDIR/gui/$file.tcl"
     }
-    if { $debug == 1 } {
-	safeSourceFile "$ROOTDIR/$LIBDIR/gui/debug.tcl"
-    }
     source "$ROOTDIR/$LIBDIR/gui/initgui.tcl"
     source "$ROOTDIR/$LIBDIR/gui/topogen.tcl"
+    if { $debug == 1 } {
+	source "$ROOTDIR/$LIBDIR/gui/debug.tcl"
+    }
 
     newProject
     if { $argv != "" && [file exists $argv] } {
