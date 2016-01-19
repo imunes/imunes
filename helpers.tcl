@@ -190,6 +190,8 @@ proc prepareVroot {} {
 	catch {exec >@stdout docker rmi -f imunes/vroot}
     }
 
+    set curdir [pwd]
     cd $ROOTDIR/$LIBDIR
     catch {exec >@stdout sh scripts/prepare_vroot.sh}
+    cd $curdir
 }
