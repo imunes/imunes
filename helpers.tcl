@@ -182,14 +182,14 @@ proc prepareVroot {} {
     global isOSfreebsd isOSlinux prepareFlag forceFlag
 
     if { $isOSfreebsd && $forceFlag } {
-	exec >@stdout chflags -R noschg /var/imunes/vroot
-	exec >@stdout rm -fr /var/imunes/vroot
+	catch {exec >@stdout chflags -R noschg /var/imunes/vroot}
+	catch {exec >@stdout rm -fr /var/imunes/vroot}
     }
 
     if { $isOSlinux && $forceFlag } {
-	exec >@stdout docker rmi imunes/vroot
+	catch {exec >@stdout docker rmi -f imunes/vroot}
     }
 
     cd $ROOTDIR/$LIBDIR
-    exec >@stdout sh scripts/prepare_vroot.sh
+    catch {exec >@stdout sh scripts/prepare_vroot.sh}
 }
