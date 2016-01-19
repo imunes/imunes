@@ -67,7 +67,7 @@
 #   - opens dialog box for saving a file under new name  
 #****
 
-global currentFile
+global currentFile fileTypes
 set currentFile ""
 
 set fileTypes {
