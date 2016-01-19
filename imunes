@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright 2004-2013 University of Zagreb.
+# Copyright 2004-2016 University of Zagreb.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -27,79 +27,20 @@
 # and Technology through the research contract #IP-2003-143.
 #
 
-# $Id: imunes 110 2014-09-29 14:20:56Z denis $
-
-
-SHELL=/bin/sh
-export SHELL
-
 ROOTDIR="."
 LIBDIR=""
 
 imunes=$ROOTDIR/$LIBDIR/imunes.tcl
 
-batch_flag=0
-prepare_flag=0
-force_flag=0
-
-for i; do
-    if [ "$i" = "-f" ]; then
-	force_flag=1
-    fi
-    if [ "$i" = "-p" ]; then
-	prepare_flag=1
-    fi
-    if [ "$i" = "-b" ] || [ "$i" = "-batch" ] || [ "$i" = "-i" ] \
-	|| [ "$i" = "-v" ] || [ "$i" = "-version" ]; then
-	batch_flag=1
-    fi
-done
-
-if [ $prepare_flag -eq 1 ]; then
-    if [ $force_flag -eq 1 ]; then
-	chflags -R noschg /var/imunes/vroot
-	rm -fr /var/imunes/vroot
-    fi
-    cd $ROOTDIR/$LIBDIR
-    sh scripts/prepare_vroot.sh
-    exit 0
+which tclsh8.6 2>&1 > /dev/null
+if [ $? -ne 0 ]; then
+    echo "To run IMUNES, tclsh8.6 is required."
+    exit 1
+fi
+echo "exit [ catch {package require ip}]" | tclsh8.6 1>&2 /dev/null
+if [ $? -ne 0 ]; then
+    echo "To run IMUNES, tcllib is required."
+    exit 1
 fi
 
-if [ $batch_flag -eq 1 ]; then
-    which tclsh8.6 2>&1 > /dev/null
-    if [ $? -ne 0 ]; then
-        echo "To run IMUNES, the package tclsh8.6 is required."
-        exit 1
-    fi
-
-    if [ "`echo "package require ip" | tclsh8.6 2>&1`" != "" ]; then
-        echo "To run IMUNES, the package tcllib is required."
-        exit 1
-    fi
-    exec tclsh8.6 $imunes $*
-else
-    if [ -z "$DISPLAY" ]; then
-        echo "To run IMUNES GUI, run IMUNES in X environment."
-        exit 1
-    fi
-
-    which wish8.6 2>&1 > /dev/null
-    if [ $? -ne 0 ]; then
-        echo "To run IMUNES, the package wish8.6 is required."
-        exit 1
-    fi
-
-    xerr=`echo "exit" | wish8.6 2>&1`;
-    if [ -n "$xerr" ]; then
-        echo "Cannot start imunes, problems with X:"
-        echo "$xerr"
-        exit 1
-    fi
-
-    if [ -n "`echo 'package require ip; exit' | wish8.6 2>&1`" ]; then
-        echo "To run IMUNES, the package tcllib is required."
-        exit 1
-    fi
-
-    exec wish8.6 $imunes -- $*
-fi
+exec tclsh8.6 $imunes $*

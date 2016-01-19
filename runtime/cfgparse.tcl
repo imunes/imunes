@@ -68,8 +68,6 @@ proc dumpputs { method dest string } {
     }
 }
 
-package require base64
-
 #****f* nodecfg.tcl/dumpCfg
 # NAME
 #   dumpCfg -- puts the current configuraton to a file or a string 
@@ -476,6 +474,9 @@ proc loadCfg { cfg } {
 			}
 			services {
 			    lappend $object "services {$value}"
+			}
+			docker-attach {
+			    lappend $object "docker-attach $value"
 			}
 			events {
 			    set cfg ""

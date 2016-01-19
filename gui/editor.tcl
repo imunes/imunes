@@ -26,12 +26,6 @@
 # and Technology through the research contract #IP-2003-143.
 #
 
-# $Id: editor.tcl 147 2015-03-27 14:37:19Z denis $
-
-source $ROOTDIR/$LIBDIR/gui/mouse.tcl
-source $ROOTDIR/$LIBDIR/gui/drawing.tcl
-source $ROOTDIR/$LIBDIR/gui/widgets.tcl
-
 #****h* imunes/editor.tcl
 # NAME
 #  editor.tcl -- file used for defining functions that can be used in

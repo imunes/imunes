@@ -1,3 +1,4 @@
+global VROOT_MASTER
 set VROOT_MASTER "imunes/vroot"
 
 #****f* linux.tcl/writeDataToNodeFile
@@ -334,11 +335,21 @@ proc createNodeContainer { node } {
 
     set node_id "$eid.$node"
 
-    catch {exec docker run -d --privileged --cap-add=ALL --net='none' -h [getNodeName $node] \
+    set network "'none'"
+    if { [getNodeDockerAttach $node] } {
+	set network "'bridge'"
+    }
+
+    catch {exec docker run -d --privileged --cap-add=ALL --net=$network -h [getNodeName $node] \
         -v /tmp/.X11-unix:/tmp/.X11-unix \
         --name $node_id $VROOT_MASTER } err
     if { $debug } {
         puts "'exec docker run' ($node_id) caught:\n$err"
+    }
+    if { [getNodeDockerAttach $node] } {
+	catch "exec docker exec $node_id ip l set eth0 down"
+	catch "exec docker exec $node_id ip l set eth0 name ext0"
+	catch "exec docker exec $node_id ip l set ext0 up"
     }
 
     set status ""

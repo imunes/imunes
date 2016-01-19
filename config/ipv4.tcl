@@ -26,12 +26,11 @@
 # and Technology through the research contract #IP-2003-143.
 #
 
-# $Id: ipv4.tcl 129 2015-02-13 11:14:44Z valter $
-
 #****h* imunes/ipv4.tcl
 # NAME
 #   ipv4.tcl -- file for handling IPv4
 #****
+global ipv4 numbits control changeAddrRange
 
 set ipv4 10.0.0.0/24
 set numbits [lindex [split $ipv4 /] 1]

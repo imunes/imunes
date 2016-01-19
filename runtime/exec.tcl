@@ -26,7 +26,8 @@
 # and Technology through the research contract #IP-2003-143.
 #
 
-# $Id: exec.tcl 147 2015-03-27 14:37:19Z denis $
+global vroot_unionfs vroot_linprocfs ifc_dad_disable regular_termination \
+    devfs_number hostsAutoAssign
 
 set vroot_unionfs 1
 set vroot_linprocfs 0
@@ -72,7 +73,8 @@ proc nexec { args } {
 #   When changing the mode to exec all the emulation interfaces are checked
 #   (if they are nonexistent the message is displayed, and mode is not
 #   changed), all the required buttons are disabled (except the
-#   simulation/Terminate button, that is enabled) and procedure deployCfg is #   called.
+#   simulation/Terminate button, that is enabled) and procedure deployCfg is
+#   called.
 #   The mode can not be changed to exec if imunes operates only in editor mode
 #   (editor_only variable is set).
 #   When changing the mode to edit, all required buttons are enabled (except
@@ -88,7 +90,7 @@ proc setOperMode { mode } {
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     upvar 0 ::cf::[set ::curcfg]::cfgDeployed cfgDeployed
     upvar 0 ::cf::[set ::curcfg]::eid eid
-    global all_modules_list editor_only execMode
+    global all_modules_list editor_only execMode isOSfreebsd isOSlinux
 
     if {$mode == "exec" && $node_list == ""} {
 	statline "Empty topologies can't be executed."
@@ -97,7 +99,6 @@ proc setOperMode { mode } {
     }
 
     if { !$cfgDeployed && $mode == "exec" } {
-	set os [platform::identify]
 	set err [checkSysPrerequisites]
 	if { $err != "" } {
 	    after idle {.dialog1.msg configure -wraplength 4i}
@@ -106,8 +107,7 @@ proc setOperMode { mode } {
 		info 0 Dismiss
 	    return
 	}
-	if { [string match -nocase "*linux*" $os] != 1 &&
-	    [string match -nocase "*freebsd*" $os] != 1 } {
+	if { !$isOSlinux && !$isOSfreebsd } {
 	    after idle {.dialog1.msg configure -wraplength 4i}
 	    tk_dialog .dialog1 "IMUNES error" \
 		"Error: To execute experiment, run IMUNES on FreeBSD or Linux." \
@@ -122,7 +122,7 @@ proc setOperMode { mode } {
 	    info 0 Dismiss
 	    return
 	}
-	if { $editor_only } { ;# if set in exec or open_exec_sockets
+	if { $editor_only } {
 	    .menubar.experiment entryconfigure "Execute" -state disabled
 	    return
 	}
@@ -216,7 +216,6 @@ proc setOperMode { mode } {
 #****
 proc spawnShellExec {} {
     upvar 0 ::cf::[set ::curcfg]::eid eid
-    global gui_unix
 
     set node [lindex [.panwin.f1.c gettags {node && current}] 1]
     if { $node == "" } {

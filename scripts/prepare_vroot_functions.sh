@@ -280,6 +280,7 @@ installPackages () {
     done
 
     log "OUT" "Installing packages done."
+    cd $IMUNESDIR
 
     if [ "$err_list" != "" ]; then
 	log "OUT" "There were errors installing these packages:\n $err_list"
@@ -321,18 +322,11 @@ installPackagesPkg () {
     fi
 
     log "OUT" "Installing packages done."
+    cd $IMUNESDIR
 
     if [ "$err_list" != "" ]; then
 	log "OUT" "There were errors installing these packages:\n $err_list"
     fi
-}
-
-installAdditionalTools () {
-    log "OUT" "Installing additional tools..."
-    for tool in $*; do
-	sh $IMUNESDIR/scripts/$tool $VROOT_MASTER >> $LOG 2>&1
-    done
-    log "OUT" "Installing additional tools done."
 }
 
 configQuagga () {

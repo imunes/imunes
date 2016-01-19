@@ -24,8 +24,7 @@
 #
 #
 
-# $Id: mac.tcl 124 2014-12-15 14:02:25Z denis $
-
+global mac_byte4 mac_byte5 mac_byte6
 
 set mac_byte4 0
 set mac_byte5 0

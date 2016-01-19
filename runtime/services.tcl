@@ -137,7 +137,7 @@ proc $service.restart { node } {
 #
 set service tcpdump
 # register for hooks and globally
-if { [string match -nocase "*linux*" $os] == 1 } {
+if { $isOSlinux } {
     regHooks $service {LINKINST NODESTOP}
 } else {
     regHooks $service {NODEINST NODESTOP}
