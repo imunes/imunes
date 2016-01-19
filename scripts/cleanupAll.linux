@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 
 #####
 # Clean everything:
@@ -49,3 +49,4 @@ if test -d $attach_root; then
 fi
 
 pkill -f "socat unix-listen:/tmp/.X11-unix/X"
+exit 0
