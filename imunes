@@ -37,8 +37,8 @@ if [ $? -ne 0 ]; then
     echo "To run IMUNES, tclsh8.6 is required."
     exit 1
 fi
-
-if [ "`echo "package require ip" | tclsh8.6 2>&1`" != "" ]; then
+echo "exit [ catch {package require ip}]" | tclsh8.6 1>&2 /dev/null
+if [ $? -ne 0 ]; then
     echo "To run IMUNES, tcllib is required."
     exit 1
 fi
