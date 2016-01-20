@@ -863,7 +863,7 @@ proc addNodeIfcToBridge { bridge brifc node ifc mac } {
     # create veth pair
     exec ip link add name "$hostIfc" type veth peer name "$guestIfc"
     # add host side of veth pair to bridge
-    exec ovs-vsctl add-port "$eid.$bridge" "$hostIfc"
+    catch "exec ovs-vsctl add-port $eid.$bridge $hostIfc"
 
     exec ip link set "$hostIfc" up
 
@@ -1091,4 +1091,69 @@ proc moveFileFromNode { node path ext_path } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     catch {exec hcp [getNodeName $node]@$eid:$path $ext_path}
     catch {exec docker exec $eid.$node rm -fr $path}
+}
+
+proc extInstantiate { node } {
+}
+
+proc startExternalIfc { eid node } {
+    set cmds ""
+    set ifc [lindex [ifcList $node] 0]
+    set outifc "$eid.$node"
+
+    set ether [getIfcMACaddr $node $ifc]
+    if {$ether == ""} {
+       autoMACaddr $node $ifc
+    }
+    set ether [getIfcMACaddr $node $ifc]
+    set cmds "ip l set $outifc address $ether"
+
+    set cmds "$cmds\n ip a flush dev $outifc"
+
+    set ipv4 [getIfcIPv4addr $node $ifc]
+    if {$ipv4 == ""} {
+       autoIPv4addr $node $ifc
+    }
+    set ipv4 [getIfcIPv4addr $node $ifc]
+    set cmds "$cmds\n ip a add $ipv4 dev $outifc"
+
+    set ipv6 [getIfcIPv6addr $node $ifc]
+    if {$ipv6 == ""} {
+       autoIPv6addr $node $ifc
+    }
+    set ipv6 [getIfcIPv6addr $node $ifc]
+    set cmds "$cmds\n ip a add $ipv6 dev $outifc"
+
+    set cmds "$cmds\n ip l set $outifc up"
+
+    exec sh << $cmds &
+}
+
+proc stopExternalIfc { eid node } {
+    exec ip l set $eid.$node down
+}
+
+proc destroyExtInterface { eid node } {
+    destroyNetgraphNode $eid $node
+}
+
+#****f* linux.tcl/captureOnExtIfc
+# NAME
+#   captureOnExtIfc -- start wireshark on an interface
+# SYNOPSIS
+#   captureOnExtIfc $node $command
+# FUNCTION
+#   Start tcpdump or Wireshark on the specified external interface.
+# INPUTS
+#   * node -- node id
+#   * command -- tcpdump or wireshark
+#****
+proc captureOnExtIfc { node command } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    if { $command == "tcpdump" } {
+	exec xterm -T "Capturing $eid-$node" -e "tcpdump -ni $eid.$node" 2> /dev/null &
+    } else {
+	exec $command -o "gui.window_title:[getNodeName $node] ($eid)" -k -i $eid.$node 2> /dev/null &
+    }
 }
