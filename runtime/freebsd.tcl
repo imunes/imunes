@@ -127,16 +127,16 @@ proc startWiresharkOnNodeIfc { node ifc } {
     }
 }
 
-#****f* freebsd.tcl/startWiresharkOnExtIfc
+#****f* freebsd.tcl/captureOnExtIfc
 # NAME
-#   startWiresharkOnExtIfc -- start wireshark on an interface
+#   captureOnExtIfc -- start wireshark on an interface
 # SYNOPSIS
-#   startWiresharkOnExtIfc $node $ifc
+#   captureOnExtIfc $node $command
 # FUNCTION
-#   Start Wireshark on a virtual node on the specified interface.
+#   Start tcpdump or Wireshark on the specified external interface.
 # INPUTS
-#   * node -- virtual node id
-#   * ifc -- virtual node interface
+#   * node -- node id
+#   * command -- tcpdump or wireshark
 #****
 proc captureOnExtIfc { node command } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
