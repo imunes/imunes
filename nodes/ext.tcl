@@ -192,12 +192,12 @@ proc $MODULE.layer {} {
 # SYNOPSIS
 #   set layer [ext.virtlayer]
 # FUNCTION
-#   Returns the layer on which the pc is instantiated i.e. returns VIMAGE. 
+#   Returns the layer on which the pc is instantiated i.e. returns NETGRAPH.
 # RESULT
-#   * layer -- set to VIMAGE
+#   * layer -- set to NETGRAPH
 #****
 proc $MODULE.virtlayer {} {
-    return VIMAGE
+    return NETGRAPH
 }
 
 #****f* ext.tcl/ext.shellcmds
@@ -229,7 +229,7 @@ proc $MODULE.shellcmds {} {
 #   * node -- node id (type of the node is pc)
 #****
 proc $MODULE.instantiate { eid node } {
-    createNodePhysIfcs $node
+    extInstantiate $node
 }
 
 #****f* ext.tcl/ext.start
@@ -279,6 +279,7 @@ proc $MODULE.shutdown { eid node } {
 #   * node -- node id (type of the node is pc)
 #****
 proc $MODULE.destroy { eid node } {
+    destroyNetgraphNode $eid $node
 }
 
 #****f* ext.tcl/ext.nghook

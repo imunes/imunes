@@ -65,7 +65,7 @@ proc autoMACaddr { node ifc } {
     upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
     global mac_byte4 mac_byte5 mac_byte6
 
-    if { [[typemodel $node].virtlayer] != "VIMAGE" } {
+    if { [nodeType $node] != "ext" && [[typemodel $node].virtlayer] != "VIMAGE" } {
 	return
     }
 
