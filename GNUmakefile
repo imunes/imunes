@@ -7,6 +7,7 @@ ICONSDIR = $(IMUNESDIR)/icons
 NODESDIR = $(IMUNESDIR)/nodes
 RUNTIMEDIR = $(IMUNESDIR)/runtime
 SCRIPTSDIR = $(IMUNESDIR)/scripts
+PATCHESDIR = $(IMUNESDIR)/src/patches
 NORMAL_ICONSDIR = $(ICONSDIR)/normal
 SMALL_ICONSDIR = $(ICONSDIR)/small
 TINY_ICONSDIR = $(ICONSDIR)/tiny
@@ -23,6 +24,7 @@ CONFIGFILES =	$(wildcard config/*.tcl)
 GUIFILES =	$(wildcard gui/*.tcl)
 NODESFILES =	$(wildcard nodes/*.tcl)
 RUNTIMEFILES =	$(wildcard runtime/*.tcl)
+PATCHESFILES =	$(wildcard src/patches/*)
 
 VROOT =	$(wildcard scripts/*.sh)
 TOOLS =	$(filter-out $(VROOT), $(wildcard scripts/*))
@@ -99,6 +101,9 @@ endif
 
 	mkdir -p $(RUNTIMEDIR)
 	cp $(RUNTIMEFILES) $(RUNTIMEDIR)
+
+	mkdir -p $(PATCHESDIR)
+	cp $(PATCHESFILES) $(PATCHESDIR)
 
 	mkdir -p $(ICONSDIR)
 	for file in $(ICONS); do \
