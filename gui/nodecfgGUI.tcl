@@ -1556,13 +1556,15 @@ proc configGUI_servicesConfig { wi node } {
 #   * node -- node id
 #****
 proc configGUI_attachDockerToExt { wi node } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    global guielements docker_enable isOSlinux
-    lappend guielements configGUI_attachDockerToExt
+    global isOSlinux
 
     if { !$isOSlinux } {
 	return
     }
+
+    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
+    global guielements docker_enable
+    lappend guielements configGUI_attachDockerToExt
 
     set docker_enable [string map {true 1 false 0} [getNodeDockerAttach $node]]
 
