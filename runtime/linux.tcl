@@ -426,48 +426,53 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
         set lname2 $lnode2
     }
 
-    if { [[typemodel $lnode1].virtlayer] == "NETGRAPH" } {
-        if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
-            # generate interface names
-            set hostIfc1 "$eid.$lname1.$ifname1"
-            set hostIfc2 "$eid.$lname2.$ifname2"
-            # create veth pair
-            catch {exec ip link add name "$hostIfc1" type veth peer name "$hostIfc2"}
-            # add veth interfaces to bridges
-            exec ovs-vsctl add-port $eid.$lname1 $hostIfc1
-            exec ovs-vsctl add-port $eid.$lname2 $hostIfc2
-            # set bridge interfaces up
-            exec ip link set dev $hostIfc1 up
-            exec ip link set dev $hostIfc2 up
-        }
-        if { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
-            addNodeIfcToBridge $lname1 $ifname1 $lnode2 $ifname2 $ether2
-        }
-    } elseif { [[typemodel $lnode1].virtlayer] == "VIMAGE" } {
-        if  { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
-            # prepare namespace files
-            set lnode1Ns [createNetNs $lnode1]
-            set lnode2Ns [createNetNs $lnode2]
-            # generate temporary interface names
-            set hostIfc1 "v${ifname1}pn${lnode1Ns}"
-            set hostIfc2 "v${ifname2}pn${lnode2Ns}"
-            # create veth pair
-            exec ip link add name "$hostIfc1" type veth peer name "$hostIfc2"
-            # move veth pair sides to node namespaces
-            setIfcNetNs $lnode1 $hostIfc1 $ifname1
-            setIfcNetNs $lnode2 $hostIfc2 $ifname2
-            # set mac addresses of node ifcs
-            exec nsenter -n -t $lnode1Ns ip link set dev "$ifname1" \
-                address "$ether1"
-            exec nsenter -n -t $lnode2Ns ip link set dev "$ifname2" \
-                address "$ether2"
-            # delete net namespace reference files
-            exec ip netns del $lnode1Ns
-            exec ip netns del $lnode2Ns
-        }
-        if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
-            addNodeIfcToBridge $lname2 $ifname2 $lnode1 $ifname1 $ether1
-        }
+    switch -exact "[[typemodel $lnode1].virtlayer]-[[typemodel $lnode2].virtlayer]" {
+	NETGRAPH-NETGRAPH {
+	    if { [nodeType $lnode1] == "ext" } {
+		catch "exec ovs-vsctl add-br $eid.$lnode1"
+	    }
+	    if { [nodeType $lnode2] == "ext" } {
+		catch "exec ovs-vsctl add-br $eid.$lnode2"
+	    }
+	    # generate interface names
+	    set hostIfc1 "$eid.$lname1.$ifname1"
+	    set hostIfc2 "$eid.$lname2.$ifname2"
+	    # create veth pair
+	    catch {exec ip link add name "$hostIfc1" type veth peer name "$hostIfc2"}
+	    # add veth interfaces to bridges
+	    catch "exec ovs-vsctl add-port $eid.$lname1 $hostIfc1"
+	    catch "exec ovs-vsctl add-port $eid.$lname2 $hostIfc2"
+	    # set bridge interfaces up
+	    exec ip link set dev $hostIfc1 up
+	    exec ip link set dev $hostIfc2 up
+	}
+	VIMAGE-VIMAGE {
+	    # prepare namespace files
+	    set lnode1Ns [createNetNs $lnode1]
+	    set lnode2Ns [createNetNs $lnode2]
+	    # generate temporary interface names
+	    set hostIfc1 "v${ifname1}pn${lnode1Ns}"
+	    set hostIfc2 "v${ifname2}pn${lnode2Ns}"
+	    # create veth pair
+	    exec ip link add name "$hostIfc1" type veth peer name "$hostIfc2"
+	    # move veth pair sides to node namespaces
+	    setIfcNetNs $lnode1 $hostIfc1 $ifname1
+	    setIfcNetNs $lnode2 $hostIfc2 $ifname2
+	    # set mac addresses of node ifcs
+	    exec nsenter -n -t $lnode1Ns ip link set dev "$ifname1" \
+		address "$ether1"
+	    exec nsenter -n -t $lnode2Ns ip link set dev "$ifname2" \
+		address "$ether2"
+	    # delete net namespace reference files
+	    exec ip netns del $lnode1Ns
+	    exec ip netns del $lnode2Ns
+	}
+	NETGRAPH-VIMAGE {
+	    addNodeIfcToBridge $lname1 $ifname1 $lnode2 $ifname2 $ether2
+	}
+	VIMAGE-NETGRAPH {
+	    addNodeIfcToBridge $lname2 $ifname2 $lnode1 $ifname1 $ether1
+	}
     }
 }
 
