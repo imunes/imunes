@@ -1072,6 +1072,7 @@ proc terminateAllNodes { eid } {
     statline ""
 
     destroyNetgraphNodes $eid $ngraphs $w
+    incr startedCount [expr -[llength $ngraphs]]
 
     destroyVirtNodeIfcs $eid $vimages
 
