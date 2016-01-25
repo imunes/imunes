@@ -229,7 +229,10 @@ proc $MODULE.shellcmds {} {
 #   * node -- node id (type of the node is pc)
 #****
 proc $MODULE.instantiate { eid node } {
-    extInstantiate $node
+    set ifc [lindex [ifcList $node] 0]
+    if { "$ifc" != "" } {
+	extInstantiate $node
+    }
 }
 
 #****f* ext.tcl/ext.start
@@ -245,7 +248,10 @@ proc $MODULE.instantiate { eid node } {
 #   * node -- node id (type of the node is pc)
 #****
 proc $MODULE.start { eid node } {
-    startExternalIfc $eid $node
+    set ifc [lindex [ifcList $node] 0]
+    if { "$ifc" != "" } {
+	startExternalIfc $eid $node
+    }
 }
 
 #****f* ext.tcl/ext.shutdown
@@ -261,9 +267,12 @@ proc $MODULE.start { eid node } {
 #   * node -- node id (type of the node is pc)
 #****
 proc $MODULE.shutdown { eid node } {
-    killExtProcess "wireshark.*[getNodeName $node].*\\($eid\\)"
-    killExtProcess "xterm -T Capturing $eid-$node -e tcpdump -ni $eid-$node"
-    stopExternalIfc $eid $node
+    set ifc [lindex [ifcList $node] 0]
+    if { "$ifc" != "" } {
+	killExtProcess "wireshark.*[getNodeName $node].*\\($eid\\)"
+	killExtProcess "xterm -T Capturing $eid-$node -e tcpdump -ni $eid-$node"
+	stopExternalIfc $eid $node
+    }
 }
 
 #****f* ext.tcl/ext.destroy
@@ -279,7 +288,10 @@ proc $MODULE.shutdown { eid node } {
 #   * node -- node id (type of the node is pc)
 #****
 proc $MODULE.destroy { eid node } {
-    destroyNetgraphNode $eid $node
+    set ifc [lindex [ifcList $node] 0]
+    if { "$ifc" != "" } {
+	destroyNetgraphNode $eid $node
+    }
 }
 
 #****f* ext.tcl/ext.nghook
@@ -317,6 +329,11 @@ proc $MODULE.nghook { eid node ifc } {
 #   * node -- node id
 #****
 proc $MODULE.configGUI { c node } {
+    set ifc [lindex [ifcList $node] 0]
+    if { "$ifc" == "" } {
+	return
+    }
+
     global wi
     global guielements treecolumns
     set guielements {}

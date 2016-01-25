@@ -139,6 +139,11 @@ proc startWiresharkOnNodeIfc { node ifc } {
 #   * command -- tcpdump or wireshark
 #****
 proc captureOnExtIfc { node command } {
+    set ifc [lindex [ifcList $node] 0]
+    if { "$ifc" == "" } {
+	return
+    }
+
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     if { $command == "tcpdump" } {
