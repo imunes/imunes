@@ -1771,12 +1771,16 @@ proc configGUI_externalIfcs { wi node } {
 #   * node -- node id
 #****
 proc configGUI_nodeNameApply { wi node } {
-    global changed badentry showTree
+    global changed badentry showTree eid_base isOSlinux
     
     set name [string trim [$wi.name.nodename get]]
     if { [regexp {^[0-9A-Za-z][0-9A-Za-z-]*$} $name ] == 0 } {
 	tk_dialog .dialog1 "IMUNES warning" \
 	    "Hostname should contain only letters, digits, and -, and should not start with - (hyphen)." \
+	    info 0 Dismiss
+    } elseif { $isOSlinux && [nodeType $node] == "rj45" && [string length "$eid_base-$name.0"] > 15 } {
+	tk_dialog .dialog1 "IMUNES warning" \
+	    "Brigde name too long." \
 	    info 0 Dismiss
     } elseif {$name != [getNodeName $node]} {
         setNodeName $node $name
