@@ -1094,49 +1094,17 @@ proc moveFileFromNode { node path ext_path } {
 }
 
 # XXX NAT64 procedures
-proc startNat64node { eid node } {
-    global nat64ifc_$eid.$node
-
+proc createStartTunIfc { eid node } {
+    # create and start tun interface and return its name
     exec docker exec -i $eid.$node ip tuntap add mode tun
     catch "exec docker exec $eid.$node ip l | grep tun | tail -n1 | cut -d: -f2" tun
     set tun [string trim $tun]
+    exec docker exec -i $eid.$node ip l set $tun up
 
-    set nat64ifc_$eid.$node $tun
-    exec docker exec -i $eid.$node ip l set tun0 up
+    return $tun
+}
 
-    router.quagga.start $eid $node
-
-    set datadir "/var/db/tayga"
-
+proc prepareTaygaConf { eid node data datadir } {
     exec docker exec -i $eid.$node mkdir -p $datadir
-
-    set tayga4addr [lindex [split [getTaygaIPv4DynPool $node] "/"] 0]
-    set tayga4pool [getTaygaIPv4DynPool $node]
-    set tayga6prefix [getTaygaIPv6Prefix $node]
-
-    set tayga_conf "/etc/tayga.conf"
-
-    set fd "tun-device\t$tun\n"
-    set fd "$fd ipv4-addr\t$tayga4addr\n"
-    set fd "$fd dynamic-pool\t$tayga4pool\n"
-    set fd "$fd prefix\t\t$tayga6prefix\n"
-    set fd "$fd data-dir\t$datadir\n"
-    set fd "$fd\n"
-    foreach map [getTaygaMappings $node] {
-	set fd "$fd map\t\t$map\n"
-    }
-
-    writeDataToNodeFile $node $tayga_conf $fd
-
-    # XXX
-    # Even though this routes should be added here, we add them in the
-    # router.quagga.start procedure which invokes nat64.cfggen where we define
-    # them with:
-    # lappend cfg "ip route $tayga4pool $tun"
-    # lappend cfg "ipv6 route $tayga6prefix $tun"
-    # This is done in order for quagga to redistribute these routes.
-    # exec docker exec $eid.$node ip route add $tayga4pool dev $tun
-    # exec docker exec $eid.$node ip route add $tayga6prefix dev $tun
-
-    exec docker exec -i $eid.$node tayga
+    writeDataToNodeFile $node "/etc/tayga.conf" $data
 }
