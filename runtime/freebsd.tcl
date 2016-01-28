@@ -2074,3 +2074,51 @@ proc sshServiceStopCmds {} {
 proc inetdServiceRestartCmds {} {
     return "service inetd onerestart"
 }
+
+# XXX NAT64 procedures
+proc startNat64node { eid node } {
+    global nat64ifc_$eid.$node
+
+    catch {exec jexec $eid.$node ifconfig tun create} tun
+    set nat64ifc_$eid.$node $tun
+    exec jexec $eid.$node ifconfig $tun up
+
+    router.quagga.start $eid $node
+
+    set datadir "/var/db/tayga"
+
+    exec jexec $eid.$node mkdir -p $datadir
+
+    set tayga4addr [lindex [split [getTaygaIPv4DynPool $node] "/"] 0]
+    set tayga4pool [getTaygaIPv4DynPool $node]
+    set tayga6prefix [getTaygaIPv6Prefix $node]
+
+    set node_dir /var/imunes/$eid/$node
+    set fd [open $node_dir/usr/local/etc/tayga.conf w]
+
+    puts $fd "tun-device\t$tun"
+    puts $fd "ipv4-addr\t$tayga4addr"
+    puts $fd "dynamic-pool\t$tayga4pool"
+    puts $fd "prefix\t\t$tayga6prefix"
+    puts $fd "data-dir\t$datadir"
+    puts $fd ""
+    foreach map [getTaygaMappings $node] {
+	puts $fd "map\t\t$map"
+    }
+    close $fd
+
+#    exec jexec $eid.$node ifconfig $tun inet [getTunIPv4Addr $node] $tayga4addr
+#    exec jexec $eid.$node ifconfig $tun inet6 [getTunIPv6Addr $node]
+
+    # XXX
+    # Even though this routes should be added here, we add them in the
+    # router.quagga.start procedure which invokes nat64.cfggen where we define
+    # them with:
+    # lappend cfg "ip route $tayga4pool $tun"
+    # lappend cfg "ipv6 route $tayga6prefix $tun"
+    # This is done in order for quagga to redistribute these routes.
+    # exec jexec $eid.$node route -n add -inet $tayga4pool -interface $tun
+    # exec jexec $eid.$node route -n add -inet6 $tayga6prefix -interface $tun
+
+    exec jexec $eid.$node tayga
+}
