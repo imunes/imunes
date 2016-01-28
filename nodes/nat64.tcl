@@ -213,13 +213,11 @@ proc $MODULE.start { eid node } {
 
 proc $MODULE.shutdown { eid node } {
     router.quagga.shutdown $eid $node
-    exec jexec $eid.$node rm -rf /var/db/tayga
+    taygaShutdown $eid $node
 }
 
 proc $MODULE.destroy { eid node } {
-    global nat64ifc_$eid.$node
-
-    catch {exec jexec $eid.$node ifconfig [set nat64ifc_$eid.$node] destroy}
+    taygaDestroy $eid $node
     router.quagga.destroy $eid $node
 }
 

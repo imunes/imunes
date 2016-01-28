@@ -1108,3 +1108,13 @@ proc prepareTaygaConf { eid node data datadir } {
     exec docker exec -i $eid.$node mkdir -p $datadir
     writeDataToNodeFile $node "/etc/tayga.conf" $data
 }
+
+proc taygaShutdown { eid node } {
+    catch "exec docker exec $eid.$node killall5 -9 tayga"
+    exec docker exec $eid.$node rm -rf /var/db/tayga
+}
+
+proc taygaDestroy { eid node } {
+    global nat64ifc_$eid.$node
+    catch {exec docker exec $eid.$node ip l delete [set nat64ifc_$eid.$node]}
+}
