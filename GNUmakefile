@@ -53,7 +53,7 @@ all: install
 install: uninstall netgraph
 	mkdir -p $(IMUNESDIR)
 	cp $(BASEFILES) $(IMUNESDIR)
-	sh scripts/update_version.sh
+	ROOTDIR=$(PREFIX) sh scripts/update_version.sh
 	mkdir -p $(BINDIR)
 
 	sed -e "s,set LIBDIR \"\",set LIBDIR $(LIBDIR)," \

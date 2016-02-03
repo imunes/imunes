@@ -1,7 +1,10 @@
 #!/bin/sh
 
-ROOTDIR="/usr/local"
+if test -z "$ROOTDIR"; then
+    ROOTDIR="/usr/local"
+fi
 LIBDIR="lib/imunes"
+
 ver_file="$ROOTDIR/$LIBDIR/VERSION"
 
 # check whether this is a git repository
