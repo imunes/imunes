@@ -1,0 +1,24 @@
+## arg 1:  the new package version
+post_install() {
+    echo ""
+    echo -e "*********************************************************************************"
+    echo -e "For the topologies to work, a template filesystem must be created."
+    echo -e "This template will now be downloaded and installed."
+    echo -e "To update this template at any time later, run:"
+    echo -e "\t# imunes -p"
+    echo ""
+    echo -e "To completely reinstall this template from scratch, run:"
+    echo -e "\t# imunes -f -p"
+    echo ""
+    echo -e "Downloading the template. Please wait..."
+    echo ""
+    imunes -p
+    echo ""
+    echo -e "*********************************************************************************"
+    echo ""
+}
+
+## arg 1:  the new package version
+post_upgrade() {
+    post_install
+}
