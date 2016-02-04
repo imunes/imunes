@@ -78,7 +78,7 @@ ifeq ($(UNAME_S), Linux)
 	mv $(BINDIR)/cleanupAll.linux $(BINDIR)/cleanupAll
 	mv $(BINDIR)/startxcmd.linux $(BINDIR)/startxcmd
 else
-	rm $(BINDIR)/himage.linux $(BINDIR)/cleanupAll.linux $(BINDIR)/startxcmd.linux
+	rm $(BINDIR)/himage.linux $(BINDIR)/cleanupAll.linux $(BINDIR)/startxcmd.linux $(BINDIR)/hcp.linux
 endif
 
 	mkdir -p $(SCRIPTSDIR)
