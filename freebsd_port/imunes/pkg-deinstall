@@ -1,0 +1,12 @@
+if test "$2" = "DEINSTALL"; then
+    echo "Running cleanupAll"
+    cleanupAll
+    filesystem=/var/imunes/vroot
+    if test -d $filesystem; then
+	echo "Removing virtual filesystem $filesystem..."
+	echo "chflags -R noschg $filesystem"
+	chflags -R noschg $filesystem
+	echo "rm -fr $filesystem"
+	rm -fr $filesystem
+    fi
+fi

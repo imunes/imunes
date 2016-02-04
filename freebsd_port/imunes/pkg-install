@@ -1,0 +1,10 @@
+if test "$2" = "POST-INSTALL"; then
+    filesystem=/var/imunes/vroot
+    if test -d $filesystem; then
+	echo "Virtual filesystem $filesystem already exists, not overwritting..."
+	echo "To overwrite it manually, run:"
+	echo " # imunes -f -p"
+    else
+	imunes -p
+    fi
+fi
