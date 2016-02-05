@@ -1052,25 +1052,28 @@ proc startIPsecOnNode { eid node } {
 }
 
 proc ipsecFilesToNode { eid node local_cert ipsecret_file } {
-    set node_id "$eid\.$node"
-    set hostname [getNodeName $node]
+    global ipsecConf ipsecSecrets
 
     if { $local_cert != "" } {
-        set trimmed_local_cert [lindex [split $local_cert /] end]
-        catch {exec hcp $local_cert $hostname@$eid:/etc/ipsec.d/certs/$trimmed_local_cert}
+	set trimmed_local_cert [lindex [split $local_cert /] end]
+	set fileId [open $trimmed_local_cert "r"]
+	set trimmed_local_cert_data [read $fileId]
+	writeDataToNodeFile $node /etc/ipsec.d/certs/$trimmed_local_cert $trimmed_local_cert_data
+	close $fileId
     }
 
     if { $ipsecret_file != "" } {
-        set fileId2 [open /tmp/imunes_$node_id\_ipsec.secrets w]
-        puts $fileId2 "# /etc/ipsec.secrets - strongSwan IPsec secrets file\n"
-        set trimmed_local_key [lindex [split $ipsecret_file /] end]
-        catch {exec hcp $ipsecret_file $hostname@$eid:/etc/ipsec.d/private/$trimmed_local_key}
-        puts $fileId2 ": RSA $trimmed_local_key"
-        close $fileId2
+	set trimmed_local_key [lindex [split $ipsecret_file /] end]
+	set fileId [open $trimmed_local_key "r"]
+	set trimmed_local_key_data "# /etc/ipsec.secrets - strongSwan IPsec secrets file\n"
+	set trimmed_local_key_data "$trimmed_local_key_data[read $fileId]\n"
+	set trimmed_local_key_data "$trimmed_local_key_data: RSA $trimmed_local_key"
+	writeDataToNodeFile $node /etc/ipsec.d/private/$trimmed_local_key $trimmed_local_key_data
+	close $fileId
     }
 
-    catch {exec hcp /tmp/imunes_$node_id\_ipsec.conf $hostname@$eid:/etc/ipsec.conf}
-    catch {exec hcp /tmp/imunes_$node_id\_ipsec.secrets $hostname@$eid:/etc/ipsec.secrets}
+    writeDataToNodeFile $node /etc/ipsec.conf $ipsecConf
+    writeDataToNodeFile $node /etc/ipsec.secrets $ipsecSecrets
 }
 
 proc sshServiceStartCmds {} {

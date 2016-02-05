@@ -1245,21 +1245,17 @@ proc pipesClose { } {
 #   * eid -- experiment id
 #   * node -- node id
 #****
+set ipsecConf ""
+set ipsecSecrets ""
 proc l3node.ipsecInit { eid node } {
     set node_id "$eid\.$node"
-
-    #ne zvati genericki jer ne znam sta to radi
-    set fileId [open /tmp/imunes_$node_id\_ipsec.conf w]
-    set fileId2 [open /tmp/imunes_$node_id\_ipsec.secrets w]
+    global ipsecConf ipsecSecrets
 
     set config_content [getNodeIPsec $node]
     if { $config_content != "" } {
 	setNodeIPsecSetting $node "configuration" "conn %default" "keyexchange" "ikev2"
-	puts $fileId "# /etc/ipsec.conf - strongSwan IPsec configuration file"
-	puts -nonewline $fileId "\n"
+	set ipsecConf "# /etc/ipsec.conf - strongSwan IPsec configuration file\n"
     } else {
-	exec rm -fr /tmp/imunes_$node_id\_ipsec.conf
-	exec rm -fr /tmp/imunes_$node_id\_ipsec.secrets
 	return
     }
 
@@ -1268,7 +1264,7 @@ proc l3node.ipsecInit { eid node } {
     foreach item $config_content {
 	set element [lindex $item 0]
 	set settings [lindex $item 1]
-	puts $fileId "$element"
+	set ipsecConf "$ipsecConf$element\n"
 	set hasKey 0
 	set hasRight 0
 	foreach setting $settings {
@@ -1284,24 +1280,18 @@ proc l3node.ipsecInit { eid node } {
 		set hasRight 1
 		set right [lindex [split $setting =] 1]
 	    }
-	    puts $fileId "        $setting"
+	    set ipsecConf "$ipsecConf        $setting\n"
 	}
 	if { $hasKey && $hasRight } {
-	    puts $fileId2 "$right : PSK $psk_key"
+	    set ipsecSecrets "$right : PSK $psk_key"
 	}
     }
 
     delNodeIPsecElement $node "configuration" "conn %default"
 
-    close $fileId
-    close $fileId2
-
     set local_cert [getNodeIPsecItem $node "local_cert"]
     set ipsecret_file [getNodeIPsecItem $node "local_key_file"]
     ipsecFilesToNode $eid $node $local_cert $ipsecret_file
-
-    exec rm -fr /tmp/imunes_$node_id\_ipsec.conf
-    exec rm -fr /tmp/imunes_$node_id\_ipsec.secrets
 }
 
 #****f* exec.tcl/l3node.ipsecStart
