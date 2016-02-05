@@ -1039,7 +1039,7 @@ proc execSetLinkParams { eid link } {
     configureIfcLinkParams $eid $lnode2 $ifname2 $bandwidth $delay $ber $dup
 }
 
-proc ipsecFilesToNode { eid node local_cert ipsecret_file } {
+proc ipsecFilesToNode { node local_cert ipsecret_file } {
     global ipsecConf ipsecSecrets
 
     if { $local_cert != "" } {
