@@ -1237,18 +1237,16 @@ proc pipesClose { } {
 # NAME
 #   l3node.ipsecInit -- IPsec initialization
 # SYNOPSIS
-#   l3node.ipsecInit $eid $node
+#   l3node.ipsecInit $node
 # FUNCTION
 #   Creates ipsec.conf and ipsec.secrets files from IPsec configuration of given node
 #   and copies certificates to desired folders (if there are any certificates)
 # INPUTS
-#   * eid -- experiment id
 #   * node -- node id
 #****
 set ipsecConf ""
 set ipsecSecrets ""
-proc l3node.ipsecInit { eid node } {
-    set node_id "$eid\.$node"
+proc l3node.ipsecInit { node } {
     global ipsecConf ipsecSecrets
 
     set config_content [getNodeIPsec $node]
@@ -1291,26 +1289,7 @@ proc l3node.ipsecInit { eid node } {
 
     set local_cert [getNodeIPsecItem $node "local_cert"]
     set ipsecret_file [getNodeIPsecItem $node "local_key_file"]
-    ipsecFilesToNode $eid $node $local_cert $ipsecret_file
-}
-
-#****f* exec.tcl/l3node.ipsecStart
-# NAME
-#   l3node.ipsecStart -- IPsec launch
-# SYNOPSIS
-#   l3node.ipsecStart $eid $node
-# FUNCTION
-#   Starts Strongswan daemon
-# INPUTS
-#   * eid -- experiment id
-#   * node -- node id
-#****
-proc l3node.ipsecStart { eid node } {
-    set config_content [getNodeIPsec $node]
-
-    if { [llength $config_content] > 0 } {
-	startIPsecOnNode $eid $node
-    }
+    ipsecFilesToNode $node $local_cert $ipsecret_file
 }
 
 #****f* exec.tcl/generateHostsFile

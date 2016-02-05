@@ -245,3 +245,24 @@ proc $service.restart { node } {
     inetd.start telnet $node
 }
 ######################################################################
+
+######################################################################
+#
+# ipsec service
+#
+set service ipsec
+regHooks $service {NODECONF NODESTOP}
+
+proc $service.start { node } {
+    l3node.ipsecInit $node
+    execCmdNode $node "ipsec start"
+}
+
+proc $service.stop { node } {
+    execCmdNode $node "ipsec stop"
+}
+
+proc $service.restart { node } {
+    execCmdNode $node "ipsec restart"
+}
+######################################################################

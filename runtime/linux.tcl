@@ -1039,18 +1039,6 @@ proc execSetLinkParams { eid link } {
     configureIfcLinkParams $eid $lnode2 $ifname2 $bandwidth $delay $ber $dup
 }
 
-#****f* linux.tcl/startIPsecOnNode
-# NAME
-#   startIPsecOnNode -- start ipsec on node
-# SYNOPSIS
-#   startIPsecOnNode $eid $node
-# FUNCTION
-#   Starts strongswan ipsec daemons on the given node.
-#****
-proc startIPsecOnNode { eid node } {
-    catch {exec docker exec $eid\.$node ipsec start} err
-}
-
 proc ipsecFilesToNode { eid node local_cert ipsecret_file } {
     global ipsecConf ipsecSecrets
 

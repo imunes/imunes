@@ -2029,19 +2029,7 @@ proc checkSysPrerequisites {} {
     # jail, jexec, jls, ngctl
 }
 
-#****f* freebsd.tcl/startIPsecOnNode
-# NAME
-#   startIPsecOnNode -- start ipsec on node
-# SYNOPSIS
-#   startIPsecOnNode $eid $node
-# FUNCTION
-#   Starts strongswan ipsec daemons on the given node.
-#****
-proc startIPsecOnNode { eid node } {
-    catch "exec jexec $eid\.$node ipsec start"
-}
-
-proc ipsecFilesToNode { eid node local_cert ipsecret_file } {
+proc ipsecFilesToNode { node local_cert ipsecret_file } {
     global ipsecConf ipsecSecrets
 
     if { $local_cert != "" } {

@@ -160,8 +160,6 @@ proc $MODULE.instantiate { eid node } {
     l3node.instantiate $eid $node
 
     enableIPforwarding $eid $node
-
-    l3node.ipsecInit $eid $node
 }
 
 #****f* static.tcl/router.static.start
@@ -179,8 +177,6 @@ proc $MODULE.instantiate { eid node } {
 #****
 proc $MODULE.start { eid node } {
     l3node.start $eid $node
-
-    l3node.ipsecStart $eid $node
 }
 
 #****f* static.tcl/router.static.shutdown
