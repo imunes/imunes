@@ -27,8 +27,9 @@
 #
 
 global vroot_unionfs vroot_linprocfs ifc_dad_disable regular_termination \
-    devfs_number hostsAutoAssign
+    devfs_number hostsAutoAssign linkJitterConfiguration
 
+set linkJitterConfiguration 0
 set vroot_unionfs 1
 set vroot_linprocfs 0
 set ifc_dad_disable 0
