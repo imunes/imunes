@@ -127,18 +127,23 @@ proc startWiresharkOnNodeIfc { node ifc } {
     }
 }
 
-#****f* freebsd.tcl/startWiresharkOnExtIfc
+#****f* freebsd.tcl/captureOnExtIfc
 # NAME
-#   startWiresharkOnExtIfc -- start wireshark on an interface
+#   captureOnExtIfc -- start wireshark on an interface
 # SYNOPSIS
-#   startWiresharkOnExtIfc $node $ifc
+#   captureOnExtIfc $node $command
 # FUNCTION
-#   Start Wireshark on a virtual node on the specified interface.
+#   Start tcpdump or Wireshark on the specified external interface.
 # INPUTS
-#   * node -- virtual node id
-#   * ifc -- virtual node interface
+#   * node -- node id
+#   * command -- tcpdump or wireshark
 #****
 proc captureOnExtIfc { node command } {
+    set ifc [lindex [ifcList $node] 0]
+    if { "$ifc" == "" } {
+	return
+    }
+
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     if { $command == "tcpdump" } {
@@ -921,7 +926,7 @@ proc vimageCleanup { eid } {
 #   * regex -- regularl expression of the processes
 #****
 proc killExtProcess { regex } {
-    catch "exec pkill -f $regex"
+    catch "exec pkill -f \"$regex\""
 }
 
 #****f* freebsd.tcl/getRunningNodeIfcList
@@ -1286,43 +1291,6 @@ proc startIfcsNode { node } {
 	}
     }
     exec sh << $cmds
-}
-
-proc startExternalIfc { eid node } {
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-
-    set cmds ""
-    set ifc [lindex [ifcList $node] 0]
-    set outifc "$eid-$node"
-
-    set ether [getIfcMACaddr $node $ifc]
-    if {$ether == ""} {
-	autoMACaddr $node $ifc
-    }
-    set ether [getIfcMACaddr $node $ifc]
-    set cmds "ifconfig $outifc link $ether"
-
-    set ipv4 [getIfcIPv4addr $node $ifc]
-    if {$ipv4 == ""} {
-	autoIPv4addr $node $ifc
-    }
-    set ipv4 [getIfcIPv4addr $node $ifc]
-    set cmds "$cmds\n ifconfig $outifc $ipv4"
-
-    set ipv6 [getIfcIPv6addr $node $ifc]
-    if {$ipv6 == ""} {
-	autoIPv6addr $node $ifc
-    }
-    set ipv6 [getIfcIPv6addr $node $ifc]
-    set cmds "$cmds\n ifconfig $outifc inet6 $ipv6"
-
-    set cmds "$cmds\n ifconfig $outifc up"
-
-    exec sh << $cmds &
-}
-
-proc stopExternalIfc { eid node } {
-    exec ifconfig $eid-$node down
 }
 
 #****f* freebsd.tcl/runConfOnNode
@@ -1737,6 +1705,10 @@ proc destroyLinkBetween { eid lnode1 lnode2 } {
     pipesExec "jexec $eid ngctl msg $lnode1-$lnode2: shutdown"
 }
 
+#dummy procedure
+proc destroyNetgraphNode { eid node } {
+}
+
 #****f* freebsd.tcl/destroyNetgraphNodes
 # NAME
 #   destroyNetgraphNodes -- destroy netgraph nodes
@@ -2088,4 +2060,37 @@ proc taygaShutdown { eid node } {
 proc taygaDestroy { eid node } {
     global nat64ifc_$eid.$node
     catch {exec jexec $eid.$node ifconfig [set nat64ifc_$eid.$node] destroy}
+}
+
+# XXX External connection procedures
+proc extInstantiate { node } {
+    createNodePhysIfcs $node
+}
+
+proc startExternalIfc { eid node } {
+    set cmds ""
+    set ifc [lindex [ifcList $node] 0]
+    set outifc "$eid-$node"
+
+    set ipv4 [getIfcIPv4addr $node $ifc]
+    if {$ipv4 == ""} {
+	autoIPv4addr $node $ifc
+    }
+    set ipv4 [getIfcIPv4addr $node $ifc]
+    set cmds "ifconfig $outifc $ipv4"
+
+    set ipv6 [getIfcIPv6addr $node $ifc]
+    if {$ipv6 == ""} {
+	autoIPv6addr $node $ifc
+    }
+    set ipv6 [getIfcIPv6addr $node $ifc]
+    set cmds "$cmds\n ifconfig $outifc inet6 $ipv6"
+
+    set cmds "$cmds\n ifconfig $outifc up"
+
+    exec sh << $cmds &
+}
+
+proc stopExternalIfc { eid node } {
+    exec ifconfig $eid-$node down
 }

@@ -426,48 +426,53 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
         set lname2 $lnode2
     }
 
-    if { [[typemodel $lnode1].virtlayer] == "NETGRAPH" } {
-        if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
-            # generate interface names
-            set hostIfc1 "$eid.$lname1.$ifname1"
-            set hostIfc2 "$eid.$lname2.$ifname2"
-            # create veth pair
-            catch {exec ip link add name "$hostIfc1" type veth peer name "$hostIfc2"}
-            # add veth interfaces to bridges
-            exec ovs-vsctl add-port $eid.$lname1 $hostIfc1
-            exec ovs-vsctl add-port $eid.$lname2 $hostIfc2
-            # set bridge interfaces up
-            exec ip link set dev $hostIfc1 up
-            exec ip link set dev $hostIfc2 up
-        }
-        if { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
-            addNodeIfcToBridge $lname1 $ifname1 $lnode2 $ifname2 $ether2
-        }
-    } elseif { [[typemodel $lnode1].virtlayer] == "VIMAGE" } {
-        if  { [[typemodel $lnode2].virtlayer] == "VIMAGE" } {
-            # prepare namespace files
-            set lnode1Ns [createNetNs $lnode1]
-            set lnode2Ns [createNetNs $lnode2]
-            # generate temporary interface names
-            set hostIfc1 "v${ifname1}pn${lnode1Ns}"
-            set hostIfc2 "v${ifname2}pn${lnode2Ns}"
-            # create veth pair
-            exec ip link add name "$hostIfc1" type veth peer name "$hostIfc2"
-            # move veth pair sides to node namespaces
-            setIfcNetNs $lnode1 $hostIfc1 $ifname1
-            setIfcNetNs $lnode2 $hostIfc2 $ifname2
-            # set mac addresses of node ifcs
-            exec nsenter -n -t $lnode1Ns ip link set dev "$ifname1" \
-                address "$ether1"
-            exec nsenter -n -t $lnode2Ns ip link set dev "$ifname2" \
-                address "$ether2"
-            # delete net namespace reference files
-            exec ip netns del $lnode1Ns
-            exec ip netns del $lnode2Ns
-        }
-        if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
-            addNodeIfcToBridge $lname2 $ifname2 $lnode1 $ifname1 $ether1
-        }
+    switch -exact "[[typemodel $lnode1].virtlayer]-[[typemodel $lnode2].virtlayer]" {
+	NETGRAPH-NETGRAPH {
+	    if { [nodeType $lnode1] == "ext" } {
+		catch "exec ovs-vsctl add-br $eid-$lnode1"
+	    }
+	    if { [nodeType $lnode2] == "ext" } {
+		catch "exec ovs-vsctl add-br $eid-$lnode2"
+	    }
+	    # generate interface names
+	    set hostIfc1 "$eid-$lname1-$ifname1"
+	    set hostIfc2 "$eid-$lname2-$ifname2"
+	    # create veth pair
+	    catch {exec ip link add name "$hostIfc1" type veth peer name "$hostIfc2"}
+	    # add veth interfaces to bridges
+	    catch "exec ovs-vsctl add-port $eid-$lname1 $hostIfc1"
+	    catch "exec ovs-vsctl add-port $eid-$lname2 $hostIfc2"
+	    # set bridge interfaces up
+	    exec ip link set dev $hostIfc1 up
+	    exec ip link set dev $hostIfc2 up
+	}
+	VIMAGE-VIMAGE {
+	    # prepare namespace files
+	    set lnode1Ns [createNetNs $lnode1]
+	    set lnode2Ns [createNetNs $lnode2]
+	    # generate temporary interface names
+	    set hostIfc1 "v${ifname1}pn${lnode1Ns}"
+	    set hostIfc2 "v${ifname2}pn${lnode2Ns}"
+	    # create veth pair
+	    exec ip link add name "$hostIfc1" type veth peer name "$hostIfc2"
+	    # move veth pair sides to node namespaces
+	    setIfcNetNs $lnode1 $hostIfc1 $ifname1
+	    setIfcNetNs $lnode2 $hostIfc2 $ifname2
+	    # set mac addresses of node ifcs
+	    exec nsenter -n -t $lnode1Ns ip link set dev "$ifname1" \
+		address "$ether1"
+	    exec nsenter -n -t $lnode2Ns ip link set dev "$ifname2" \
+		address "$ether2"
+	    # delete net namespace reference files
+	    exec ip netns del $lnode1Ns
+	    exec ip netns del $lnode2Ns
+	}
+	NETGRAPH-VIMAGE {
+	    addNodeIfcToBridge $lname1 $ifname1 $lnode2 $ifname2 $ether2
+	}
+	VIMAGE-NETGRAPH {
+	    addNodeIfcToBridge $lname2 $ifname2 $lnode1 $ifname1 $ether1
+	}
     }
 }
 
@@ -585,7 +590,7 @@ proc runConfOnNode { node } {
 
 proc destroyLinkBetween { eid lnode1 lnode2 } {
     set ifname1 [ifcByLogicalPeer $lnode1 $lnode2]
-    catch {exec ip link del dev $eid.$lnode1.$ifname1}
+    catch {exec ip link del dev $eid-$lnode1-$ifname1}
 }
 
 #****f* linux.tcl/removeNodeIfcIPaddrs
@@ -615,11 +620,11 @@ proc removeExperimentContainer { eid widget } {
 }
 
 proc createNetgraphNode { eid node } {
-    catch {exec ovs-vsctl add-br $eid.$node}
+    catch {exec ovs-vsctl add-br $eid-$node}
 }
 
 proc destroyNetgraphNode { eid node } {
-    catch {exec ovs-vsctl del-br $eid.$node}
+    catch {exec ovs-vsctl del-br $eid-$node}
 }
 
 proc destroyNetgraphNodes { eid switches widget } {
@@ -761,7 +766,7 @@ proc getExtIfcs { } {
 proc captureExtIfc { eid node } {
     set ifname [getNodeName $node]
     createNetgraphNode $eid $ifname
-    catch {exec ovs-vsctl add-port $eid.$ifname $ifname}
+    catch {exec ovs-vsctl add-port $eid-$ifname $ifname}
 }
 
 #****f* linux.tcl/releaseExtIfc
@@ -832,7 +837,7 @@ proc getRunningNodeIfcList { node } {
 }
 
 proc hub.start { eid node } {
-    set node_id "$eid.$node"
+    set node_id "$eid-$node"
     catch {exec ovs-vsctl list-ports $node_id} ports
     foreach port $ports {
         catch {exec ovs-vsctl -- add bridge $node_id mirrors @m \
@@ -854,16 +859,16 @@ proc addNodeIfcToBridge { bridge brifc node ifc mac } {
 
     set nodeNs [createNetNs $node]
     # create bridge
-    catch "exec ovs-vsctl add-br $eid.$bridge"
+    catch "exec ovs-vsctl add-br $eid-$bridge"
 
     # generate interface names
-    set hostIfc "$eid.$bridge.$brifc"
-    set guestIfc "$eid.$node.$ifc"
+    set hostIfc "$eid-$bridge-$brifc"
+    set guestIfc "$eid-$node-$ifc"
 
     # create veth pair
     exec ip link add name "$hostIfc" type veth peer name "$guestIfc"
     # add host side of veth pair to bridge
-    exec ovs-vsctl add-port "$eid.$bridge" "$hostIfc"
+    catch "exec ovs-vsctl add-port $eid-$bridge $hostIfc"
 
     exec ip link set "$hostIfc" up
 
@@ -970,23 +975,23 @@ proc configureIfcLinkParams { eid node ifname bandwidth delay ber dup } {
     }
 
     if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
-        catch {exec tc qdisc del dev $eid.$lname.$ifname root}
+        catch {exec tc qdisc del dev $eid-$lname-$ifname root}
 
 	# XXX: currently we have loss, but we can easily have
 	# corrupt, add a tickbox to GUI, default behaviour
 	# should be loss because we don't do corrupt on FreeBSD
 	# set confstring "netem corrupt ${loss}%"
 	# corrupt ${loss}%
-	catch { exec tc qdisc add dev $eid.$lname.$ifname root netem \
+	catch { exec tc qdisc add dev $eid-$lname-$ifname root netem \
 	    rate ${bandwidth}bit \
 	    loss random ${loss}% \
 	    delay ${delay}us \
 	    duplicate ${dup}% } err
 
 	if { $debug && $err != "" } {
-	    puts stderr "tc ERROR: $eid.$lname.$ifname, $err"
+	    puts stderr "tc ERROR: $eid-$lname-$ifname, $err"
 	    puts stderr "gui settings: bw $bandwidth loss $loss delay $delay dup $dup"
-	    catch { exec tc qdisc show dev $eid.$lname.$ifname } status
+	    catch { exec tc qdisc show dev $eid-$lname-$ifname } status
 	    puts stderr $status
 	}
 
@@ -1108,4 +1113,49 @@ proc taygaShutdown { eid node } {
 proc taygaDestroy { eid node } {
     global nat64ifc_$eid.$node
     catch {exec docker exec $eid.$node ip l delete [set nat64ifc_$eid.$node]}
+}
+
+# XXX External connection procedures
+proc extInstantiate { node } {
+}
+
+proc startExternalIfc { eid node } {
+    set cmds ""
+    set ifc [lindex [ifcList $node] 0]
+    set outifc "$eid-$node"
+
+    set ether [getIfcMACaddr $node $ifc]
+    if {$ether == ""} {
+       autoMACaddr $node $ifc
+    }
+    set ether [getIfcMACaddr $node $ifc]
+    set cmds "ip l set $outifc address $ether"
+
+    set cmds "$cmds\n ip a flush dev $outifc"
+
+    set ipv4 [getIfcIPv4addr $node $ifc]
+    if {$ipv4 == ""} {
+       autoIPv4addr $node $ifc
+    }
+    set ipv4 [getIfcIPv4addr $node $ifc]
+    set cmds "$cmds\n ip a add $ipv4 dev $outifc"
+
+    set ipv6 [getIfcIPv6addr $node $ifc]
+    if {$ipv6 == ""} {
+       autoIPv6addr $node $ifc
+    }
+    set ipv6 [getIfcIPv6addr $node $ifc]
+    set cmds "$cmds\n ip a add $ipv6 dev $outifc"
+
+    set cmds "$cmds\n ip l set $outifc up"
+
+    exec sh << $cmds &
+}
+
+proc  stopExternalIfc { eid node } {
+    exec ip l set $eid-$node down
+}
+
+proc destroyExtInterface { eid node } {
+    destroyNetgraphNode $eid $node
 }
