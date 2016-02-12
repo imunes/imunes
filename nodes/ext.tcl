@@ -119,7 +119,7 @@ proc $MODULE.icon { size } {
 #   * descr -- string describing the toolbar icon
 #****
 proc $MODULE.toolbarIconDescr {} {
-    return "Add new External interface"
+    return "Add new External connection"
 }
 
 #****f* ext.tcl/ext.calcDxDy
