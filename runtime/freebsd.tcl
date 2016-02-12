@@ -2065,3 +2065,27 @@ proc sshServiceStopCmds {} {
 proc inetdServiceRestartCmds {} {
     return "service inetd onerestart"
 }
+
+# XXX NAT64 procedures
+proc createStartTunIfc { eid node } {
+    # create and start tun interface and return its name
+    catch {exec jexec $eid.$node ifconfig tun create} tun
+    exec jexec $eid.$node ifconfig $tun up
+
+    return $tun
+}
+
+proc prepareTaygaConf { eid node data datadir } {
+    exec jexec $eid.$node mkdir -p $datadir
+    writeDataToNodeFile $node "/usr/local/etc/tayga.conf" $data
+}
+
+proc taygaShutdown { eid node } {
+    catch "exec jexec $eid.$node killall -9 tayga"
+    exec jexec $eid.$node rm -rf /var/db/tayga
+}
+
+proc taygaDestroy { eid node } {
+    global nat64ifc_$eid.$node
+    catch {exec jexec $eid.$node ifconfig [set nat64ifc_$eid.$node] destroy}
+}

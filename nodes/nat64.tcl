@@ -171,36 +171,28 @@ proc $MODULE.instantiate { eid node } {
 proc $MODULE.start { eid node } {
     global nat64ifc_$eid.$node
 
-    catch {exec jexec $eid.$node ifconfig tun create} tun 
+    set tun [createStartTunIfc $eid $node]
     set nat64ifc_$eid.$node $tun
-    exec jexec $eid.$node ifconfig $tun up
 
     router.quagga.start $eid $node
 
     set datadir "/var/db/tayga"
-    
-    exec jexec $eid.$node mkdir -p $datadir 
 
     set tayga4addr [lindex [split [getTaygaIPv4DynPool $node] "/"] 0]
     set tayga4pool [getTaygaIPv4DynPool $node]
     set tayga6prefix [getTaygaIPv6Prefix $node]
-    
-    set node_dir /var/imunes/$eid/$node
-    set fd [open $node_dir/usr/local/etc/tayga.conf w]
 
-    puts $fd "tun-device\t$tun"
-    puts $fd "ipv4-addr\t$tayga4addr"
-    puts $fd "dynamic-pool\t$tayga4pool"
-    puts $fd "prefix\t\t$tayga6prefix"
-    puts $fd "data-dir\t$datadir"
-    puts $fd ""
+    set fd "tun-device\t$tun\n"
+    set fd "$fd ipv4-addr\t$tayga4addr\n"
+    set fd "$fd dynamic-pool\t$tayga4pool\n"
+    set fd "$fd prefix\t\t$tayga6prefix\n"
+    set fd "$fd data-dir\t$datadir\n"
+    set fd "$fd\n"
     foreach map [getTaygaMappings $node] {
-	puts $fd "map\t\t$map"
+	set fd "$fd map\t\t$map\n"
     }
-    close $fd
-    
-#    exec jexec $eid.$node ifconfig $tun inet [getTunIPv4Addr $node] $tayga4addr 
-#    exec jexec $eid.$node ifconfig $tun inet6 [getTunIPv6Addr $node]
+
+    prepareTaygaConf $eid $node $fd $datadir
 
     # XXX
     # Even though this routes should be added here, we add them in the
@@ -209,21 +201,23 @@ proc $MODULE.start { eid node } {
     # lappend cfg "ip route $tayga4pool $tun"
     # lappend cfg "ipv6 route $tayga6prefix $tun"
     # This is done in order for quagga to redistribute these routes.
+    # FreeBSD:
     # exec jexec $eid.$node route -n add -inet $tayga4pool -interface $tun
-    # exec jexec $eid.$node route -n add -inet6 $tayga6prefix -interface $tun 
+    # exec jexec $eid.$node route -n add -inet6 $tayga6prefix -interface $tun
+    # Linux:
+    # exec docker exec $eid.$node ip route add $tayga4pool dev $tun
+    # exec docker exec $eid.$node ip route add $tayga6prefix dev $tun
 
-    exec jexec $eid.$node tayga
+    execCmdNode $node tayga
 }
 
 proc $MODULE.shutdown { eid node } {
     router.quagga.shutdown $eid $node
-    exec jexec $eid.$node rm -rf /var/db/tayga
+    taygaShutdown $eid $node
 }
 
 proc $MODULE.destroy { eid node } {
-    global nat64ifc_$eid.$node
-
-    catch {exec jexec $eid.$node ifconfig [set nat64ifc_$eid.$node] destroy}
+    taygaDestroy $eid $node
     router.quagga.destroy $eid $node
 }
 
@@ -251,6 +245,8 @@ proc $MODULE.configGUI { c node } {
     configGUI_addTree $ifctab $node
 
     configGUI_routingProtocols $configtab $node
+    configGUI_attachDockerToExt $configtab $node
+    configGUI_servicesConfig $configtab $node
     configGUI_staticRoutes $configtab $node
     configGUI_snapshots $configtab $node
     configGUI_customConfig $configtab $node
