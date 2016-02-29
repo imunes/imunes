@@ -1,36 +1,34 @@
-# Maintainer  : denis
-# Contributor : Denis Salopek <denis dot sale at gmail dot com>
+# Maintainer: Robin Nehls <aur@manol.is>
 
-_name=imunes
-_branch=master
-
-pkgname=$_name-git
-pkgver=v2.1.0.r58.28639cc
+pkgname=imunes-git
+pkgver=v2.1.0.84.g82b01f1
 pkgrel=1
-
-pkgdesc='Integrated Multiprotocol Network Emulator/Simulator'
+pkgdesc="Integrated Multiprotocol Network Emulator/Simulator"
+arch=('i686' 'x86_64')
 url="http://imunes.net/"
-arch=('x86_64')
 license=('BSD')
-install=$pkgname.install
-
-depends=('xterm' 'tk' 'tcllib' 'imagemagick' 'docker' 'openvswitch')
-makedepends=('git' 'make')
-optdepends=('wireshark-gtk: for pretty pcap viewing')
-
-provides=("$_name")
-conflicts=("$_name")
-source=("$pkgname::git+http://github.com/imunes/$_name.git")
-sha512sums=(SKIP)
+depends=('tk' 'tcllib' 'wireshark-gtk' 'imagemagick' 'docker' 'openvswitch' 'xterm')
+makedepends=('make')
+provides=('imunes')
+source=('git+https://github.com/imunes/imunes.git'
+        '0001-PKGBUILD-compat.patch')
+sha1sums=('SKIP'
+          '4d68f7f685222a23bb7d54d5cff78aa2da628135')
+_gitname=imunes
 
 pkgver() {
-    cd "$srcdir/$pkgname"
-    printf "%s" "$(git describe --long | sed 's/\([^-]*-\)g/r\1/;s/-/./g')"
+  cd $_gitname
+  echo $(git describe --always | sed 's/-/./g')
+}
+
+prepare() {
+  cd $_gitname
+  patch -p1 -i $srcdir/0001-PKGBUILD-compat.patch
 }
 
 package() {
-  cd $srcdir/$pkgname
-
-  make install PREFIX=$pkgdir/usr/local
-  find . -type f -iname '*' | xargs sed -i'' 's/''$pkgdir''//g'
+  cd $_gitname
+  make PREFIX=${pkgdir}/usr REALPREFIX=/usr install
 }
+
+# vim:set ts=2 sw=2 et:
