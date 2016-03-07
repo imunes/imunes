@@ -1776,9 +1776,9 @@ proc configGUI_nodeNameApply { wi node } {
     global changed badentry showTree eid_base isOSlinux
     
     set name [string trim [$wi.name.nodename get]]
-    if { [regexp {^[0-9A-Za-z][0-9A-Za-z-]*$} $name ] == 0 } {
+    if { [regexp {^[A-Za-z_][0-9A-Za-z_-]*$} $name ] == 0 } {
 	tk_dialog .dialog1 "IMUNES warning" \
-	    "Hostname should contain only letters, digits, and -, and should not start with - (hyphen)." \
+	    "Hostname should contain only letters, digits, _, and -, and should not start with - (hyphen)." \
 	    info 0 Dismiss
     } elseif { $isOSlinux && [nodeType $node] == "rj45" && [string length "$eid_base-$name.0"] > 15 } {
 	tk_dialog .dialog1 "IMUNES warning" \
