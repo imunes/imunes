@@ -463,8 +463,16 @@ proc redrawLink { link } {
     .panwin.f1.c coords $limage1 $x1 $y1 $x2 $y2
     .panwin.f1.c coords $limage2 $x1 $y1 $x2 $y2
 
-    set lx [expr {0.5 * ($x1 + $x2)}]
-    set ly [expr {0.5 * ($y1 + $y2)}]
+    if { [nodeType $lnode1] == "pseudo" } {
+	set lx [expr {0.25 * ($x2 - $x1) + $x1}]
+	set ly [expr {0.25 * ($y2 - $y1) + $y1}]
+    } elseif { [nodeType $lnode2] == "pseudo" } {
+	set lx [expr {0.75 * ($x2 - $x1) + $x1}]
+	set ly [expr {0.75 * ($y2 - $y1) + $y1}]
+    } else {
+	set lx [expr {0.5 * ($x1 + $x2)}]
+	set ly [expr {0.5 * ($y1 + $y2)}]
+    }
     .panwin.f1.c coords "linklabel && $link" $lx $ly
 
     set nx [expr {sqrt (($x1 - $x2) * ($x1 - $x2) + \
