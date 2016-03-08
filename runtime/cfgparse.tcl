@@ -200,6 +200,8 @@ proc dumpCfg { method dest } {
     }
 
     dumpputs $method $dest "option show \{"
+
+    # XXX - this needs to be refactored.
     if {$showIfNames == 0} { 
 	dumpputs $method $dest "    interface_names no" 
     } else {
