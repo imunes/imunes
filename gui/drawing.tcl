@@ -286,6 +286,9 @@ proc calcAngle { link } {
 proc calcDxDy { node } {
     upvar 0 ::cf::[set ::curcfg]::zoom zoom
 
+    set x 0
+    set y 0
+
     if { [nodeType $node] == "frswitch" } {
 	set x [expr {1.8 / $zoom}]
 	set y [expr {1.8 / $zoom}]
