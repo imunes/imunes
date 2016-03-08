@@ -49,6 +49,7 @@ proc updateUndoLog {} {
     upvar 0 ::cf::[set ::curcfg]::undolevel undolevel
     upvar 0 ::cf::[set ::curcfg]::redolevel redolevel
     upvar 0 ::cf::[set ::curcfg]::undolog undolog
+    upvar 0 ::cf::[set ::curcfg]::etchosts etchosts
     global changed showTree
 
     if { $changed } {
@@ -62,6 +63,9 @@ proc updateUndoLog {} {
 	set undolog($undolevel) $t_undolog
 	set redolevel $undolevel
 	set changed 0
+	# When some changes are made in the topology, new /etc/hosts files
+	# should be generated.
+	set etchosts ""
 	if { $showTree } {
 	    refreshTopologyTree
 	}
