@@ -1015,6 +1015,7 @@ proc configureIfcLinkParams { eid node ifname bandwidth delay ber dup } {
     # parameter)
     # set confstring "tbf rate ${bandwidth}bit limit 10mb burst 1540"
 }
+
 #****f* linux.tcl/execSetLinkParams
 # NAME
 #   execSetLinkParams -- in exec mode set link parameters
@@ -1034,6 +1035,19 @@ proc execSetLinkParams { eid link } {
     set lnode2 [lindex [linkPeers $link] 1]
     set ifname1 [ifcByLogicalPeer $lnode1 $lnode2]
     set ifname2 [ifcByLogicalPeer $lnode2 $lnode1]
+
+    if { [getLinkMirror $link] != "" } {
+	set mirror_link [getLinkMirror $link]
+	if { [nodeType $lnode1] == "pseudo" } {
+	    set p_lnode1 $lnode1
+	    set lnode1 [lindex [linkPeers $mirror_link] 0]
+	    set ifname1 [ifcByPeer $lnode1 [getNodeMirror $p_lnode1]]
+	} else {
+	    set p_lnode2 $lnode2
+	    set lnode2 [lindex [linkPeers $mirror_link] 0]
+	    set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
+	}
+    }
 
     set bandwidth [expr [getLinkBandwidth $link] + 0]
     set delay [expr [getLinkDelay $link] + 0]
