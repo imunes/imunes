@@ -285,9 +285,14 @@ proc calcAngle { link } {
 #****
 proc calcDxDy { node } {
     upvar 0 ::cf::[set ::curcfg]::zoom zoom
+    upvar dx x
+    upvar dy y
 
-    set x 0
-    set y 0
+    if { $zoom > 1.0 } {
+	set x 1
+	set y 1
+	return
+    }
 
     if { [nodeType $node] == "frswitch" } {
 	set x [expr {1.8 / $zoom}]
@@ -297,13 +302,6 @@ proc calcDxDy { node } {
 	set x [lindex [[nodeType $node].calcDxDy] 0]
 	set y [lindex [[nodeType $node].calcDxDy] 1]
     }
-
-    if { $zoom > 1.0 } {
-	set x 1
-	set y 1
-    }
-
-    return [list $x $y]
 }
 
 #****f* editor.tcl/updateIfcLabel
@@ -489,15 +487,13 @@ proc redrawLink { link } {
 	set ny 1
     }
     
-    set dx [lindex [calcDxDy $lnode1] 0]
-    set dy [lindex [calcDxDy $lnode1] 0]
+    calcDxDy $lnode1
     set lx [expr {($x1 * ($nx * $dx - 1) + $x2) / $nx / $dx}]
     set ly [expr {($y1 * ($ny * $dy - 1) + $y2) / $ny / $dy}]
     .panwin.f1.c coords "interface && $lnode1 && $link" $lx $ly
     updateIfcLabel $lnode1 $lnode2
 
-    set dx [lindex [calcDxDy $lnode2] 0]
-    set dy [lindex [calcDxDy $lnode2] 0]
+    calcDxDy $lnode2
     set lx [expr {($x1 + $x2 * ($nx * $dx - 1)) / $nx / $dx}]
     set ly [expr {($y1 + $y2 * ($ny * $dy - 1)) / $ny / $dy}]
     .panwin.f1.c coords "interface && $lnode2 && $link" $lx $ly
