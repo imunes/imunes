@@ -557,6 +557,16 @@ proc execSetLinkParams { eid link } {
 
     set lnode1 [lindex [linkPeers $link] 0]
     set lnode2 [lindex [linkPeers $link] 1]
+
+    if { [getLinkMirror $link] != "" } {
+	set mirror_link [getLinkMirror $link]
+	if { [nodeType $lnode1] == "pseudo" } {
+	    set lnode1 [lindex [linkPeers $mirror_link] 0]
+	} else {
+	    set lnode2 [lindex [linkPeers $mirror_link] 0]
+	}
+    }
+
     set lname $lnode1-$lnode2
 
     set bandwidth [expr [getLinkBandwidth $link] + 0]
