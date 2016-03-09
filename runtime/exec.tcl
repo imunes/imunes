@@ -100,14 +100,6 @@ proc setOperMode { mode } {
     }
 
     if { !$cfgDeployed && $mode == "exec" } {
-	set err [checkSysPrerequisites]
-	if { $err != "" } {
-	    after idle {.dialog1.msg configure -wraplength 4i}
-	    tk_dialog .dialog1 "IMUNES error" \
-		"$err" \
-		info 0 Dismiss
-	    return
-	}
 	if { !$isOSlinux && !$isOSfreebsd } {
 	    after idle {.dialog1.msg configure -wraplength 4i}
 	    tk_dialog .dialog1 "IMUNES error" \
@@ -121,6 +113,14 @@ proc setOperMode { mode } {
 	    tk_dialog .dialog1 "IMUNES error" \
 		"Error: To execute experiment, run IMUNES with root permissions." \
 	    info 0 Dismiss
+	    return
+	}
+	set err [checkSysPrerequisites]
+	if { $err != "" } {
+	    after idle {.dialog1.msg configure -wraplength 4i}
+	    tk_dialog .dialog1 "IMUNES error" \
+		"$err" \
+		info 0 Dismiss
 	    return
 	}
 	if { $editor_only } {

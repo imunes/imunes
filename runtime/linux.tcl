@@ -883,23 +883,23 @@ proc addNodeIfcToBridge { bridge brifc node ifc mac } {
 proc checkSysPrerequisites {} {
     set msg ""
     if { [catch {exec docker ps } err] } {
-        set msg "Cannot start experiment. Is docker installed and running?\n"
+        set msg "Cannot start experiment. Is docker installed and running (check the output of 'docker ps')?\n"
     }
 
     if { [catch {exec pgrep ovs-vswitchd } err ] } {
-        set msg "Cannot start experiment. Is ovs-vswitchd installed and running?\n"
+        set msg "Cannot start experiment. Is ovs-vswitchd installed and running (check the output of 'pgrep ovs-vswitchd')?\n"
     }
 
     if { [catch {exec nsenter --version}] } {
-        set msg "Cannot start experiment. Is nsenter installed?\n"
+        set msg "Cannot start experiment. Is nsenter installed (check the output of 'nsenter --version')?\n"
     }
 
     if { [catch {exec xterm -version}] } {
-        set msg "Cannot start experiment. Is xterm installed?\n"
+        set msg "Cannot start experiment. Is xterm installed (check the output of 'xterm -version')?\n"
     }
 
     if { $msg != "" } {
-        return "$msg\IMUNES needs docker and ovs-vswitchd services running and\
+        return "$msg\nIMUNES needs docker and ovs-vswitchd services running and\
 xterm and nsenter installed."
     }
 
