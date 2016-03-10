@@ -47,7 +47,7 @@ getViStoLoc() {
     case $driver in
 	aufs) echo $basedir/aufs/diff/$dockerid;;
 	btrfs) echo $basedir/btrfs/subvolumes/$dockerid;;
-	overlay) echo $basedir/overlay/$dockerid/upper;;
+	overlay) docker inspect $dockerid | grep UpperDir | awk '{print $2}' | cut -d'"' -f2;;
     esac
 }
 
