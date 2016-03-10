@@ -1137,6 +1137,7 @@ proc configGUI_ifcIPv4Address { wi node ifc } {
     foreach addr [getIfcIPv4addrs $node $ifc] {
 	append addrs "$addr" "; "
     }
+    set addrs [string trim $addrs "; "]
     $wi.if$ifc.ipv4.addr insert 0 $addrs
     $wi.if$ifc.ipv4.addr configure -validatecommand {checkIPv4Nets %P}
     pack $wi.if$ifc.ipv4.txt $wi.if$ifc.ipv4.addr -side left
@@ -1166,6 +1167,7 @@ proc configGUI_ifcIPv6Address { wi node ifc } {
     foreach addr [getIfcIPv6addrs $node $ifc] {
 	append addrs "$addr" "; "
     }
+    set addrs [string trim $addrs "; "]
     $wi.if$ifc.ipv6.addr insert 0 $addrs
     $wi.if$ifc.ipv6.addr configure -validatecommand {checkIPv6Nets %P}
     pack $wi.if$ifc.ipv6.txt $wi.if$ifc.ipv6.addr -side left
