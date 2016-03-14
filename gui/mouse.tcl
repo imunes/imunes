@@ -1033,9 +1033,8 @@ proc button1 { c x y button } {
 	    setNodeCoords $node "[expr {$x / $zoom}] [expr {$y / $zoom}]"
 	    # To calculate label distance we take into account the normal icon
 	    # height
-	    set tempimg [image create photo -file [$activetool.icon normal]]
-	    set dy [expr [image height $tempimg]/2 + 16]
-	    image delete $tempimg
+	    global $activetool\_iconheight
+	    set dy [expr [set $activetool\_iconheight]/2 + 11]
 	    setNodeLabelCoords $node "[expr {$x / $zoom}] \
 		[expr {$y / $zoom + $dy}]"
 	    drawNode $node
