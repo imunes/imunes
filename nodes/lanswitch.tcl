@@ -141,23 +141,6 @@ proc $MODULE.toolbarIconDescr {} {
     return "Add new LAN switch"
 }
 
-#****f* lanswitch.tcl/lanswitch.calcDxDy
-# NAME
-#   lanswitch.calcDxDy -- calculate dx and dy
-# SYNOPSIS
-#   lanswitch.calcDxDy
-# FUNCTION
-#   Calculates distances for nodelabels.
-# RESULT
-#   * label distance as a list {x y}
-#****
-proc $MODULE.calcDxDy {} {
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
-    set x [expr {1.5 / $zoom}]
-    set y [expr {2.6 / $zoom}]
-    return [list $x $y]
-}
-
 #****f* lanswitch.tcl/lanswitch.ifcName
 # NAME
 #   lanswitch.ifcName -- interface name

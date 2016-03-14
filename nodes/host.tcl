@@ -159,28 +159,6 @@ proc $MODULE.notebookDimensions { wi } {
     return [list $h $w] 
 }
 
-#****f* host.tcl/host.calcDxDy
-# NAME
-#   host.calcDxDy -- calculate dx and dy
-# SYNOPSIS
-#   host.calcDxDy
-# FUNCTION
-#   Calculates distances for nodelabels.
-# RESULT
-#   * label distance as a list {x y}
-#****
-proc $MODULE.calcDxDy {} {
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
-    global showIfIPaddrs showIfIPv6addrs
-    if { $showIfIPaddrs || $showIfIPv6addrs } {
-	set x [expr {1 / $zoom}]
-    } else {
-	set x [expr {1.5 / $zoom}]
-    }
-    set y [expr {1.5 / $zoom}]
-    return [list $x $y]
-}
-
 #****f* host.tcl/host.ifcName
 # NAME
 #   host.ifcName -- interface name

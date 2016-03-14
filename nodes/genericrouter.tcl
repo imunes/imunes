@@ -184,23 +184,6 @@ proc $MODULE.notebookDimensions { wi } {
     return [list $h $w] 
 }
 
-#****f* genericrouter.tcl/router.calcDxDy
-# NAME
-#   router.calcDxDy -- calculate dx and dy
-# SYNOPSIS
-#   router.calcDxDy
-# FUNCTION
-#   Calculates distances for nodelabels.
-# RESULT
-#   * label distance as a list {x y}
-#****
-proc $MODULE.calcDxDy {} {
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
-    set x [expr {1 / $zoom}]
-    set y [expr {2 / $zoom}]
-    return [list $x $y]
-}
-
 #****f* genericrouter.tcl/router.ifcName
 # NAME
 #   router.ifcName -- interface name

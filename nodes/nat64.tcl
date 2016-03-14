@@ -109,11 +109,6 @@ proc $MODULE.notebookDimensions { wi } {
     return [list $h $w] 
 }
 
-
-proc $MODULE.calcDxDy {} {
-    return [router.calcDxDy]
-}
-
 proc $MODULE.ifcName {l r} {
     return [l3IfcName $l $r]
 }

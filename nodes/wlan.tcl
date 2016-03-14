@@ -73,13 +73,6 @@ proc $MODULE.toolbarIconDescr {} {
     return "Add new WLAN domain"
 }
 
-proc $MODULE.calcDxDy {} {
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
-    set x [expr {1.5 / $zoom}]
-    set y [expr {2.6 / $zoom}]
-    return [list $x $y]
-}
-
 proc $MODULE.ifcName {l r} {
     return e
 }

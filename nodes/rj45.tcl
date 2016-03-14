@@ -116,23 +116,6 @@ proc $MODULE.toolbarIconDescr {} {
     return "Add new External interface"
 }
 
-#****f* rj45.tcl/rj45.calcDxDy
-# NAME
-#   rj45.calcDxDy -- calculate dx and dy
-# SYNOPSIS
-#   rj45.calcDxDy
-# FUNCTION
-#   Calculates distances for nodelabels.
-# RESULT
-#   * label distance as a list {x y}
-#****
-proc $MODULE.calcDxDy {} {
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
-    set x [expr {1 / $zoom}]
-    set y [expr {1 / $zoom}]
-    return [list $x $y]
-}
-
 #****f* rj45.tcl/rj45.ifcName
 # NAME
 #   rj45.ifcName -- interface name

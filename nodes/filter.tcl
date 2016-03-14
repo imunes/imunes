@@ -83,14 +83,6 @@ proc $MODULE.notebookDimensions { wi } {
     return [list $h $w] 
 }
 
-
-proc $MODULE.calcDxDy {} {
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
-    set x [expr {1.4 / $zoom}]
-    set y [expr {1.5 / $zoom}]
-    return [list $x $y]
-}
-
 proc $MODULE.ifcName {l r} {
     return e
 }
