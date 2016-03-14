@@ -997,12 +997,14 @@ foreach b {rectangle oval freeform text} {
     bind $mf.left.$b <Any-Leave> ".bottom.textbox config -text {}"
 }
 
-
 foreach b $all_modules_list {
-    global iconSize
     set $b [image create photo -file [$b.icon normal]]
+    set $b\_iconwidth [image width [set $b]]
+    set $b\_iconheight [image height [set $b]]
 }
 set pseudo [image create photo]
+set pseudo_iconwidth 0
+set pseudo_iconheight 0
 
 . configure -background #808080
 ttk::frame $mf.grid
