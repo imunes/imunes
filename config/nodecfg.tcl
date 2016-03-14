@@ -1917,7 +1917,7 @@ proc hasIPv4Addr { node } {
 
 #****f* nodecfg.tcl/hasIPv6Addr
 # NAME
-#   hasIPv4Addr -- has IPv6 address.
+#   hasIPv6Addr -- has IPv6 address.
 # SYNOPSIS
 #   set check [hasIPv6Addr $node]
 # FUNCTION
