@@ -234,28 +234,23 @@ proc drawLink { link } {
     .panwin.f1.c raise interface "link || linklabel || background"
 }
 
-#****f* editor.tcl/calcAngle
+#****f* editor.tcl/calcAnglePoints
 # NAME
-#   calcAngle -- calculate link angle
+#   calcAnglePoints -- calculate angle between two points
 # SYNOPSIS
-#   calcAngle $link
+#   calcAnglePoints $link
 # FUNCTION
 #   Calculates the angle of the link that connects 2 nodes.
 #   Used to calculate the rotation angle of link and interface labels.
 # INPUTS
 #   * link -- link which rotation angle needs to be calculated.
 #****
-proc calcAngle { link } {
+proc calcAnglePoints { x1 y1 x2 y2 } {
     upvar 0 ::cf::[set ::curcfg]::zoom zoom
-    set nodes [linkPeers $link]
-    set lnode1 [lindex $nodes 0]
-    set lnode2 [lindex $nodes 1]
-    set coords [getNodeCoords $lnode1]
-    set x1 [expr {[lindex $coords 0]*$zoom}]
-    set y1 [expr {[lindex $coords 1]*$zoom}]
-    set coords [getNodeCoords $lnode2]
-    set x2 [expr {[lindex $coords 0]*$zoom}]
-    set y2 [expr {[lindex $coords 1]*$zoom}]
+    set x1 [expr $x1*$zoom]
+    set y1 [expr $y1*$zoom]
+    set x2 [expr $x2*$zoom]
+    set y2 [expr $y2*$zoom]
     if { [expr $x2 - $x1] == 0 } {
 	set arad 0
     } else {
@@ -266,42 +261,24 @@ proc calcAngle { link } {
 	set ang [expr {$ang+360}]
     }
     set ang [expr {360-$ang}]
-    if {$ang > 255 && $ang < 320 || $ang > 40 && $ang < 105} {
+    if {$ang > 255 && $ang < 320 || $ang > 40 && $ang < 105 || $ang == 360} {
 	set ang 0
     }
     return $ang
 }
 
-#****f* editor.tcl/calcDxDy
-# NAME
-#   calcDxDy -- calculate dx and dy
-# SYNOPSIS
-#   calcDxDy $node
-# FUNCTION
-#   Calculates dx and dy variables of the calling function.
-# INPUTS
-#   * node -- node id of a node whose dx and dy coordinates are 
-#   calculated
-#****
-proc calcDxDy { node } {
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
-    upvar dx x
-    upvar dy y
+proc calcAngle { link } {
+    set nodes [linkPeers $link]
+    set lnode1 [lindex $nodes 0]
+    set lnode2 [lindex $nodes 1]
+    set coords [getNodeCoords $lnode1]
+    set x1 [expr {[lindex $coords 0]}]
+    set y1 [expr {[lindex $coords 1]}]
+    set coords [getNodeCoords $lnode2]
+    set x2 [expr {[lindex $coords 0]}]
+    set y2 [expr {[lindex $coords 1]}]
 
-    if { $zoom > 1.0 } {
-	set x 1
-	set y 1
-	return
-    }
-
-    if { [nodeType $node] == "frswitch" } {
-	set x [expr {1.8 / $zoom}]
-	set y [expr {1.8 / $zoom}]
-#    } elseif {[nodeType $node] == "pseudo"} {
-    } else {
-	set x [lindex [[nodeType $node].calcDxDy] 0]
-	set y [lindex [[nodeType $node].calcDxDy] 1]
-    }
+    return [calcAnglePoints $x1 $y1 $x2 $y2]
 }
 
 #****f* editor.tcl/updateIfcLabel
@@ -350,9 +327,8 @@ proc updateIfcLabel { lnode1 lnode2 } {
 	    set str "$str\r[set elem]"
 	}
     }
-    set ang [calcAngle $link]
     .panwin.f1.c itemconfigure "interface && $lnode1 && $link" \
-	-text $str -angle $ang
+	-text $str
 }
 
 #****f* editor.tcl/updateLinkLabel
@@ -475,29 +451,85 @@ proc redrawLink { link } {
     }
     .panwin.f1.c coords "linklabel && $link" $lx $ly
 
-    set nx [expr {sqrt (($x1 - $x2) * ($x1 - $x2) + \
-	($y1 - $y2) * ($y1 - $y2)) * 0.0125}]
-    if { $nx < 1 } {
-	set nx 1
+    if {[nodeType $lnode1] != "pseudo"} {
+	updateIfcLabelParams $link $lnode1 $lnode2 $x1 $y1 $x2 $y2
+	updateIfcLabel $lnode1 $lnode2
     }
 
-    set ny [expr {sqrt (($x1 - $x2) * ($x1 - $x2) + \
-	($y1 - $y2) * ($y1 - $y2)) * 0.010}]
-    if { $ny < 1 } {
-	set ny 1
+    if {[nodeType $lnode2] != "pseudo"} {
+	updateIfcLabelParams $link $lnode2 $lnode1 $x2 $y2 $x1 $y1
+	updateIfcLabel $lnode2 $lnode1
     }
-    
-    calcDxDy $lnode1
-    set lx [expr {($x1 * ($nx * $dx - 1) + $x2) / $nx / $dx}]
-    set ly [expr {($y1 * ($ny * $dy - 1) + $y2) / $ny / $dy}]
+}
+
+proc updateIfcLabelParams { link lnode1 lnode2 x1 y1 x2 y2 } {
+    global showIfIPaddrs showIfIPv6addrs showIfNames
+
+    set bbox [.panwin.f1.c bbox "node && $lnode1"]
+    set iconwidth [expr [lindex $bbox 2] - [lindex $bbox 0]]
+    set iconheight [expr [lindex $bbox 3] - [lindex $bbox 1]]
+
+    set ang [calcAnglePoints $x1 $y1 $x2 $y2]
+    set just center
+    set anchor center
+
+    set IP4 $showIfIPaddrs
+    if { [getIfcIPv4addr $lnode1 [ifcByPeer $lnode1 $lnode2]] == "" } {
+	set IP4 0
+    }
+    set IP6 $showIfIPv6addrs
+    if { [getIfcIPv4addr $lnode1 [ifcByPeer $lnode1 $lnode2]] == "" } {
+	set IP6 0
+    }
+    set add_height [expr 8*($showIfNames + $IP4 + $IP6)]
+
+    # these params could be called dy and dx, respectively
+    # additional height represents the ifnames, ipv4 and ipv6 addrs
+    set height [expr $iconheight/2 + $add_height]
+    # 5 pixels from icon
+    set width [expr $iconwidth/2 + 5]
+
+    if { $ang == 0 } {
+	if { $y1 == $y2 } {
+	    set just left
+	    set anchor w
+	    set lx [expr $x1 + $width]
+	    if { $x1 > $x2 } {
+		set just right
+		set anchor e
+		set lx [expr $x1 - $width]
+	    }
+	    set ly $y1
+	} else {
+	    set just center
+	    if { $y1 > $y2} {
+		set ly [expr $y1 - $height]
+		set a [expr ($x1-$x2)/($y2-$y1)]
+	    } else {
+		# when the ifc label is located beneath the icon, shift it by 16
+		# pixels because of the nodelabel
+		set ly [expr $y1 + $height + 16]
+		set a [expr ($x2-$x1)/($y2-$y1)]
+	    }
+	    set lx [expr $a*$height + $x1]
+	}
+    } else {
+	if { $x1 > $x2 } {
+	    set just right
+	    set anchor e
+	    set lx [expr $x1 - $width]
+	    set a [expr ($y2-$y1)/($x1-$x2)]
+	} else {
+	    set just left
+	    set anchor w
+	    set lx [expr $x1 + $width]
+	    set a [expr ($y2-$y1)/($x2-$x1)]
+	}
+	set ly [expr $a*$width + $y1]
+    }
     .panwin.f1.c coords "interface && $lnode1 && $link" $lx $ly
-    updateIfcLabel $lnode1 $lnode2
-
-    calcDxDy $lnode2
-    set lx [expr {($x1 + $x2 * ($nx * $dx - 1)) / $nx / $dx}]
-    set ly [expr {($y1 + $y2 * ($ny * $dy - 1)) / $ny / $dy}]
-    .panwin.f1.c coords "interface && $lnode2 && $link" $lx $ly
-    updateIfcLabel $lnode2 $lnode1
+    .panwin.f1.c itemconfigure "interface && $lnode1 && $link" -justify $just \
+	-anchor $anchor -angle $ang
 }
 
 #****f* drawing.tcl/connectWithNode
