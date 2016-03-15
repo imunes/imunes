@@ -478,7 +478,7 @@ proc updateIfcLabelParams { link lnode1 lnode2 x1 y1 x2 y2 } {
 	set IP4 0
     }
     set IP6 $showIfIPv6addrs
-    if { [getIfcIPv4addr $lnode1 [ifcByPeer $lnode1 $lnode2]] == "" } {
+    if { [getIfcIPv6addr $lnode1 [ifcByPeer $lnode1 $lnode2]] == "" } {
 	set IP6 0
     }
     set add_height [expr 8*($showIfNames + $IP4 + $IP6)]
