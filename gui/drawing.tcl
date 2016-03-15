@@ -261,7 +261,7 @@ proc calcAnglePoints { x1 y1 x2 y2 } {
 	set ang [expr {$ang+360}]
     }
     set ang [expr {360-$ang}]
-    if {$ang > 255 && $ang < 320 || $ang > 40 && $ang < 105 || $ang == 360} {
+    if {$ang > 225 && $ang < 315 || $ang > 45 && $ang < 135 || $ang == 360} {
 	set ang 0
     }
     return $ang
@@ -481,13 +481,13 @@ proc updateIfcLabelParams { link lnode1 lnode2 x1 y1 x2 y2 } {
     if { [getIfcIPv6addr $lnode1 [ifcByPeer $lnode1 $lnode2]] == "" } {
 	set IP6 0
     }
-    set add_height [expr 8*($showIfNames + $IP4 + $IP6)]
+    set add_height [expr 10*($showIfNames + $IP4 + $IP6)]
 
     # these params could be called dy and dx, respectively
     # additional height represents the ifnames, ipv4 and ipv6 addrs
     set height [expr $iconheight/2 + $add_height]
     # 5 pixels from icon
-    set width [expr $iconwidth/2 + 5]
+    set width [expr $iconwidth/2 + 10]
 
     if { $ang == 0 } {
 	if { $y1 == $y2 } {
@@ -504,12 +504,12 @@ proc updateIfcLabelParams { link lnode1 lnode2 x1 y1 x2 y2 } {
 	    set just center
 	    if { $y1 > $y2} {
 		set ly [expr $y1 - $height]
-		set a [expr ($x1-$x2)/($y2-$y1)]
+		set a [expr ($x1-$x2)/($y2-$y1)*2]
 	    } else {
 		# when the ifc label is located beneath the icon, shift it by 16
 		# pixels because of the nodelabel
-		set ly [expr $y1 + $height + 16]
-		set a [expr ($x2-$x1)/($y2-$y1)]
+		set ly [expr $y1 + $height + 10]
+		set a [expr ($x2-$x1)/($y2-$y1)*2]
 	    }
 	    set lx [expr $a*$height + $x1]
 	}
