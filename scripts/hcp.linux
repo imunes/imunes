@@ -117,8 +117,10 @@ copyToVi () {
     # copy file using docker
     for f in ${@:1:$n} 
     do
-        cp -r $f $docktmpdir
-        docker exec $node cp -r "$tmpdirD/`basename $f`" "/$loc"
+	if ! test "${f:0:1}" = "-"; then
+	    cp -r $f $docktmpdir
+	    docker exec $node cp -r "$tmpdirD/`basename $f`" "/$loc"
+	fi
     done
     docker exec $node rm -fr $tmpdirD
 }
