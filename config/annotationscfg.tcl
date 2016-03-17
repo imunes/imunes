@@ -196,7 +196,13 @@ proc getAnnotationFont { object } {
 proc setAnnotationCoords { target coords } {
     upvar 0 ::cf::[set ::curcfg]::$target $target
     set iconcoords "iconcoords"
-    lappend $iconcoords $coords
+
+    foreach c $coords {
+	set x [expr round($c)]
+	lappend roundcoords $x
+    }
+
+    lappend $iconcoords $roundcoords
     set i [lsearch [set $target] "iconcoords *"]
     if {$i>=0} {
 	set $target [lreplace [set $target] $i $i $iconcoords]

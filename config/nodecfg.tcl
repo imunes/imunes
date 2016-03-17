@@ -1628,15 +1628,16 @@ proc getNodeLabelCoords { node } {
 proc setNodeLabelCoords { node coords } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
-    set x [expr round([lindex $coords 0])]
-    set y [expr round([lindex $coords 1])]
-    set coords "$x $y"
+    foreach c $coords {
+	set x [expr round($c)]
+	lappend roundcoords $x
+    }
 
     set i [lsearch [set $node] "labelcoords *"]
     if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i "labelcoords {$coords}"]
+	set $node [lreplace [set $node] $i $i "labelcoords {$roundcoords}"]
     } else {
-	set $node [linsert [set $node] end "labelcoords {$coords}"]
+	set $node [linsert [set $node] end "labelcoords {$roundcoords}"]
     }
 }
 
