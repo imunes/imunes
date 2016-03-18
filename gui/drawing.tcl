@@ -157,7 +157,7 @@ proc drawNode { node } {
 	    -text "$l" \
 	    -tags "nodelabel $node"]
     } else {
-	set pnode [getNodeName $node]
+	set pnode [peerByIfc [getNodeMirror $node] 0]
 	set pcanvas [getNodeCanvas $pnode]
 	set ifc [ifcByPeer $pnode [getNodeMirror $node]]
 	if { $pcanvas != $curcanvas } {

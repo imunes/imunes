@@ -126,8 +126,6 @@ proc splitGUILink { link } {
     setLinkMirror $new_link2 $new_link1
     setNodeMirror $new_node1 $new_node2
     setNodeMirror $new_node2 $new_node1
-    setNodeName $new_node1 $orig_node2
-    setNodeName $new_node2 $orig_node1
 
     set x1 [lindex [getNodeCoords $orig_node1] 0]
     set y1 [lindex [getNodeCoords $orig_node1] 1]
