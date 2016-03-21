@@ -47,7 +47,7 @@ vi_name() {
 	echo Error: cannot find node named $1 >&2
 	exit 2
     else
-	echo "Node $host is not a jail." >&2
+	echo "Node $host is not a docker container." >&2
 	exit 3
     fi
   fi
@@ -55,7 +55,9 @@ vi_name() {
 }
 
 get_explist() {
-    explist=`docker ps | grep "imunes" | awk '{print $NF}' | cut -d . -f 1 | sort | uniq`
+    explist1=`docker ps | grep "imunes" | awk '{print $NF}' | cut -d . -f 1 | sort -u`
+    explist2=`ovs-vsctl list-br | cut -d- -f1 | sort -u`
+    explist=`echo $explist1 $explist2 | tr ' ' '\n' | sort -u`
     for exp in $explist; do
 	if test -r /var/run/imunes/$exp/; then
 	    node_ids=`grep network-config -A 3 /var/run/imunes/$exp/config.imn | grep hostname | awk '{print $2}' | paste -s -d" " -`
