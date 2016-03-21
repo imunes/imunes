@@ -235,12 +235,9 @@ proc spawnShell { node cmd } {
 #****
 proc fetchRunningExperiments {} {
     catch {exec himage -l | cut -d " " -f 1} exp_list
-    catch {exec ovs-vsctl list-br | cut -d- -f1 | uniq} exp_list2
     set exp_list [split $exp_list "
 "]
-    set exp_list2 [split $exp_list2 "
-"]
-    return "$exp_list $exp_list2"
+    return "$exp_list"
 }
 
 #****f* linux.tcl/allSnapshotsAvailable
