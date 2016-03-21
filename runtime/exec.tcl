@@ -430,8 +430,13 @@ proc dumpLinksToFile { path } {
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
 
     set data ""
+    set linkDelim ":"
+    set skipLinks ""
 
     foreach link $link_list {
+	if { $link in $skipLinks } {
+	    continue
+	}
 	set lnode1 [lindex [linkPeers $link] 0]
 	set lnode2 [lindex [linkPeers $link] 1]
 	set ifname1 [ifcByPeer $lnode1 $lnode2]
@@ -439,6 +444,7 @@ proc dumpLinksToFile { path } {
 
 	if { [getLinkMirror $link] != "" } {
 	    set mirror_link [getLinkMirror $link]
+	    lappend skipLinks $mirror_link
 
 	    set p_lnode2 $lnode2
 	    set lnode2 [lindex [linkPeers $mirror_link] 0]
@@ -448,10 +454,9 @@ proc dumpLinksToFile { path } {
 	set name1 [getNodeName $lnode1]
 	set name2 [getNodeName $lnode2]
 
-	set linkname "$name1-$name2"
+	set linkname "$name1$linkDelim$name2"
 
-	set line "$linkname {$lnode1-$lnode2 {{$lnode1 $ifname1} {$lnode2 $ifname2}} $link}\n"
-
+	set line "$link {$lnode1-$lnode2 {{$lnode1 $ifname1} {$lnode2 $ifname2}} $linkname}\n"
 	set data "$data$line"
     }
 

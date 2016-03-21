@@ -203,11 +203,11 @@ proc applyLinkSettingsLinux { bandwidth ber delay dup nodename eid ldata } {
     if { [isNodeInterface $ifname] } {
 	# this is a docker image
 	if { $cfg != "" } {
-	    eval "exec himage $node tc qdisc change dev $ifname root netem [join $cfg " "]"
+	    catch {eval "exec himage $node tc qdisc change dev $ifname root netem [join $cfg " "]"}
 	}
     } else {
 	# this is a switch (openvswitch)
-	eval "exec tc qdisc change dev $eid.$nodeid.$ifname root netem [join $cfg " "]"
+	catch {eval "exec tc qdisc change dev $eid.$nodeid.$ifname root netem [join $cfg " "]"}
     }
 }
 
@@ -349,11 +349,12 @@ if { $params(r) } {
     incr check    
 }
 
+set linkDelim ":"
 # start parsing for nodes
-set nodes [split $link1 "-"]
+set nodes [split $link1 $linkDelim]
 set node0 [lindex $nodes 0]
 set node1 [lindex $nodes 1]
-set link2 "$node1-$node0"
+set link2 "$node1$linkDelim$node0"
 
 # get running experiments
 set running_exps ""
@@ -377,11 +378,19 @@ if { $selected_eid != "" } {
 # get experiments containing link
 set containing_exps ""
 foreach eid $running_exps {
-    set f [open "/var/run/imunes/$eid/links" "r"]
-    set ldata [read $f]
-    close $f
+    try {
+	set f [open "/var/run/imunes/$eid/links" "r"]
+	set ldata [read $f]
+	close $f
+    } on error { result options } {
+	puts stderr "Could not open file \"/var/run/imunes/$eid/links\" for reading."
+	puts stderr $result
+	continue
+    }
 
-    set $eid [dict keys $ldata]
+    foreach k [dict keys $ldata] {
+	lappend $eid [lindex [dict get $ldata $k] end]
+    }
 
     if { $link1 in [set $eid] } {
 	lappend containing_exps $eid
@@ -426,7 +435,7 @@ if { $check == 0 && ! $params(s) } {
 # 1 output the appropriate error message.
 switch [llength $containing_exps] {
     0 {
-	puts stderr "Error: There are no running experiments with link $link1:"
+	puts stderr "Error: There are no running experiments with link \"$link1\":"
 	foreach eid $running_exps {
 	    puts stderr "$eid ([set $eid])"
 	}
@@ -439,10 +448,29 @@ switch [llength $containing_exps] {
 	set ldata [read $f]
 	close $f
 
-	# check the real link name (n0-n1 or n1-n0) to enable proper dict usage
+	# check the real link name (n0:n1 or n1:n0) to enable proper dict usage
 	set lname $link1
-	if { $link2 in [dict keys $ldata] } {
+	if { $link2 in [set $eid] } {
 	    set lname $link2
+	}
+
+	foreach lid [dict keys $ldata] {
+	    set cur_name [lindex [dict get $ldata $lid] end]
+	    if { $cur_name == $lname } {
+		lappend lids $lid
+	    }
+	}
+
+	switch [llength $lids] {
+	    1 {
+		set lid $lids
+	    }
+	    default {
+		puts stderr "There are more links/nodes with the same name in the same experiment."
+		puts stderr "    $eid ([set $eid])"
+		puts stderr "For using vlink all nodes should be named differently."
+		exit 1
+	    }
 	}
 
 	# detect os
@@ -450,7 +478,7 @@ switch [llength $containing_exps] {
 
 	switch -glob -nocase $os {
 	    "*freebsd*" {
-		set node_data [lindex [dict get $ldata $lname] 0]
+		set node_data [lindex [dict get $ldata $lid] 0]
 
 		if { $params(s) } {
 		    set curr_set [getFreeBSDLinkStatus $eid $node_data]
@@ -461,12 +489,12 @@ switch [llength $containing_exps] {
 		applyLinkSettingsFreeBSD $ban $BER $del $dup $eid $node_data
 	    }
 	    "*linux*" {
-		set nodes [split $lname "-"]
+		set nodes [split $lname $linkDelim]
 		set i 0
 		# on linux we must apply settings on both sides of the link
 		foreach node $nodes {
 		    # get data for linux links
-		    set node_data [lindex [lindex [dict get $ldata $lname] 1] $i]
+		    set node_data [lindex [lindex [dict get $ldata $lid] 1] $i]
 		    
 		    # get the current status
 		    set curr_set [getLinuxLinkStatus $node $eid $node_data]
