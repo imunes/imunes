@@ -24,13 +24,14 @@
 #
 
 global old_conn_name bridgeProtocol brguielements selectedFilterRule \
-    selectedPackgenPacket
+    selectedPackgenPacket router_ConfigModel
 
 set old_conn_name ""
 set bridgeProtocol rstp
 set brguielements {}
 set selectedFilterRule ""
 set selectedPackgenPacket ""
+set router_ConfigModel "quagga"
 
 #****f* nodecfgGUI.tcl/nodeConfigGUI
 # NAME
@@ -1466,7 +1467,7 @@ proc configGUI_routingModel { wi node } {
 	 $w.protocols.ripng configure -state disabled;
 	 $w.protocols.ospf configure -state disabled;
 	 $w.protocols.ospf6 configure -state disabled"
-	
+
     set router_ConfigModel [getNodeModel $node]
     if { $router_ConfigModel != "static" } {
         set ripEnable [getNodeProtocolRip $node]
@@ -2316,12 +2317,26 @@ proc configGUI_routingModelApply { wi node } {
     global router_ConfigModel
     global ripEnable ripngEnable ospfEnable ospf6Enable
     if { $oper_mode == "edit"} {
-        setNodeModel $node $router_ConfigModel	    
+	if { [nodeType $node] != "nat64" } {
+	    setNodeModel $node $router_ConfigModel
+	}
 	if { $router_ConfigModel != "static" } {
 	    setNodeProtocolRip $node $ripEnable
 	    setNodeProtocolRipng $node $ripngEnable
 	    setNodeProtocolOspfv2 $node $ospfEnable
 	    setNodeProtocolOspfv3 $node $ospf6Enable
+	    if { [nodeType $node] == "nat64" } {
+		foreach proto { rip ripng ospf ospf6 bgp } {
+		    set protocfg [netconfFetchSection $node "router $proto"]
+		    if { $protocfg != "" } {
+			set protocfg [linsert $protocfg 0 "router $proto"]
+			set protocfg [linsert $protocfg end "!"]
+			set protocfg [linsert $protocfg [lsearch $protocfg " network *"] " redistribute kernel" ]
+			netconfClearSection $node "router $proto"
+			netconfInsertSection $node $protocfg
+		    }
+		}
+	    }
 	} else {
 	    $wi.routing.protocols.rip configure -state disabled
 	    $wi.routing.protocols.ripng configure -state disabled
@@ -6152,28 +6167,6 @@ proc configGUI_routingProtocols { wi node } {
 	$wi.routing.protocols.ospf $wi.routing.protocols.ospf6 -side left -padx 6
     pack $wi.routing.protocols -fill both -expand 1
     pack $wi.routing -fill both
-}
-
-proc configGUI_routingModelApply { wi node } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    global ripEnable ripngEnable ospfEnable ospf6Enable
-    if { $oper_mode == "edit"} {
-	setNodeProtocolRip $node $ripEnable
-	setNodeProtocolRipng $node $ripngEnable
-	setNodeProtocolOspfv2 $node $ospfEnable
-	setNodeProtocolOspfv3 $node $ospf6Enable
-	foreach proto { rip ripng ospf ospf6 bgp } {
-	    set protocfg [netconfFetchSection $node "router $proto"]
-	    if { $protocfg != "" } {
-		set protocfg [linsert $protocfg 0 "router $proto"]
-		set protocfg [linsert $protocfg end "!"]
-		set protocfg [linsert $protocfg [lsearch $protocfg " network *"] " redistribute kernel" ]
-		netconfClearSection $node "router $proto"
-		netconfInsertSection $node $protocfg
-	    }
-	}
-	set changed 1
-    } 
 }
 
 proc configGUI_nat64Config { wi node } {
