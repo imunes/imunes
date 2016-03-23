@@ -45,7 +45,7 @@ proc $MODULE.confNewNode { node } {
     set ospf6Enable [lindex $rdconfig 3]	
     
     set nconfig [list \
-	"hostname $node" \
+	"hostname [getNewNodeNameType nat64 nat64-]" \
 	! ]
     lappend $node "network-config [list $nconfig]"
     
