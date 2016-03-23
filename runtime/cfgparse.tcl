@@ -285,6 +285,7 @@ proc loadCfg { cfg } {
     global showBkgImage showGrid showAnnotations
     global iconSize
     global hostsAutoAssign
+    global execMode all_modules_list
 
     # Cleanup first
     set node_list {}
@@ -720,6 +721,18 @@ proc loadCfg { cfg } {
     set IPv4UsedList ""
     set MACUsedList ""
     foreach node $node_list {
+	set nodeType [typemodel $node]
+	if { $nodeType ni $all_modules_list && ! [string match "router.*" $nodeType] } {
+	    set msg "Unknown node type: '$nodeType'."
+	    if { $execMode == "batch" } {
+		statline $msg
+	    } else {
+		tk_dialog .dialog1 "IMUNES warning" \
+		    "Error: $msg" \
+		info 0 Dismiss
+	    }
+	    exit
+	}
 	if { "lo0" ni [logIfcList $node] && \
 		[[typemodel $node].layer] == "NETWORK"} {
 	    setLogIfcType $node lo0 lo
