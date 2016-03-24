@@ -77,8 +77,9 @@ ifeq ($(UNAME_S), Linux)
 	mv $(BINDIR)/himage.linux $(BINDIR)/himage
 	mv $(BINDIR)/cleanupAll.linux $(BINDIR)/cleanupAll
 	mv $(BINDIR)/startxcmd.linux $(BINDIR)/startxcmd
+	rm $(BINDIR)/pkg_add_imunes $(BINDIR)/pkg_imunes
 else
-	rm $(BINDIR)/himage.linux $(BINDIR)/cleanupAll.linux $(BINDIR)/startxcmd.linux $(BINDIR)/hcp.linux
+	rm $(BINDIR)/himage.linux $(BINDIR)/cleanupAll.linux $(BINDIR)/startxcmd.linux $(BINDIR)/hcp.linux $(BINDIR)/apt-get_imunes
 endif
 
 	mkdir -p $(SCRIPTSDIR)
