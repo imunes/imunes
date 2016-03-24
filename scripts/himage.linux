@@ -64,7 +64,11 @@ get_explist() {
 	    if test $1 == "nodes"; then
 		data=`grep network-config -A 3 /var/run/imunes/$exp/config.imn | grep hostname | awk '{print $2}' | paste -s -d" " -`
 	    else
-		exp_name=`cat /var/run/imunes/$exp/name`
+		if test -r /var/run/imunes/$exp/name; then
+		    exp_name=`cat /var/run/imunes/$exp/name`
+		else
+		    exp_name="N/A"
+		fi
 		exp_timestamp=`cat /var/run/imunes/$exp/timestamp`
 		data="$exp_name - $exp_timestamp"
 	    fi
