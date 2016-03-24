@@ -17,7 +17,8 @@ Usage:
   $command -n vi_hostname  ---> docker node name (nodename)
   $command -e vi_hostname  ---> experiment eid name (eid)
   $command -i vi_hostname  ---> docker container id
-  $command -l              ---> running experiments eids with node names
+  $command -l              ---> running experiments eids with experiment data
+  $command -ln             ---> running experiments eids with node names
   $command -d              ---> dummy flag (used only on FreeBSD)
 __END__
 }
@@ -60,8 +61,14 @@ get_explist() {
     explist=`echo $explist1 $explist2 | tr ' ' '\n' | sort -u`
     for exp in $explist; do
 	if test -r /var/run/imunes/$exp/; then
-	    node_ids=`grep network-config -A 3 /var/run/imunes/$exp/config.imn | grep hostname | awk '{print $2}' | paste -s -d" " -`
-	    echo "$exp ($node_ids)"
+	    if test $1 == "nodes"; then
+		data=`grep network-config -A 3 /var/run/imunes/$exp/config.imn | grep hostname | awk '{print $2}' | paste -s -d" " -`
+	    else
+		exp_name=`cat /var/run/imunes/$exp/name`
+		exp_timestamp=`cat /var/run/imunes/$exp/timestamp`
+		data="$exp_name - $exp_timestamp"
+	    fi
+	    echo "$exp ($data)"
 	else
 	    node_ids=`docker ps | grep "imunes" | grep "$exp" | awk '{print $NF}' | paste -s -d" " -`
 	    echo "$exp (`docker inspect -f "{{.Config.Hostname}}" $node_ids | paste -s -d" " -`)"
@@ -81,7 +88,9 @@ elif test $1 = "-h"; then
 elif test $1 = "-d"; then # dummy flag
     exit 0
 elif test $1 = "-l"; then
-    get_explist
+    get_explist expdata
+elif test $1 = "-ln"; then
+    get_explist nodes
 elif test $1 = "-i"; then
     vi_name $2
 elif test $1 = "-v"; then
