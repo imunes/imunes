@@ -18,7 +18,8 @@ Usage:
   $command -j vi_hostname  ---> vimage jail id   (jid)
   $command -i vi_hostname  ---> vimage jail id   (jid)
   $command -d vi_hostname  ---> vimage path
-  $command -l              ---> running experiments eids with node names
+  $command -l              ---> running experiments eids with experiment data
+  $command -ln             ---> running experiments eids with node names
   $command -b              ---> dummy flag (used only on Linux)
   $command -nt             ---> dummy flag (used only on Linux)
 __END__
@@ -58,8 +59,18 @@ get_explist() {
     explist=`jls name path | grep "imunes" | cut -d . -f 1 | sort -u`
     for exp in $explist; do
 	if test -r /var/run/imunes/$exp/; then
-	    node_ids=`grep network-config -A 3 /var/run/imunes/$exp/config.imn | grep hostname | awk '{print $2}' | paste -s -d" " -`
-	    echo "$exp ($node_ids)"
+	    if test $1 == "nodes"; then
+		data=`grep network-config -A 3 /var/run/imunes/$exp/config.imn | grep hostname | awk '{print $2}' | paste -s -d" " -`
+	    else
+		if test -r /var/run/imunes/$exp/name; then
+		    exp_name=`cat /var/run/imunes/$exp/name`
+		else
+		    exp_name="N/A"
+		fi
+		exp_timestamp=`cat /var/run/imunes/$exp/timestamp`
+		data="$exp_name - $exp_timestamp"
+	    fi
+	    echo "$exp ($data)"
 	else
 	    # for older IMUNES versions
 	    echo "$exp (`jls host.hostname path | grep "imunes/$exp" | cut -d" " -f1 |  paste -s -d" " -`)"
@@ -82,7 +93,9 @@ if test $# -eq 0; then
 elif test $1 = "-h"; then
     help
 elif test $1 = "-l"; then
-    get_explist
+    get_explist expdata
+elif test $1 = "-ln"; then
+    get_explist nodes
 elif test $1 = "-j" || test $1 = "-i"; then
     vi_name $2
 elif test $1 = "-v"; then
