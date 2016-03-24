@@ -255,14 +255,17 @@ regHooks $service {NODECONF NODESTOP}
 
 proc $service.start { node } {
     l3node.ipsecInit $node
-    execCmdNode $node "ipsec start"
+    set output [execCmdNode $node "ipsec start"]
+    writeDataToNodeFile $node "ipsec_service.log" $output
 }
 
 proc $service.stop { node } {
-    execCmdNode $node "ipsec stop"
+    set output [execCmdNode $node "ipsec stop"]
+    writeDataToNodeFile $node "ipsec_service.log" $output
 }
 
 proc $service.restart { node } {
-    execCmdNode $node "ipsec restart"
+    set output [execCmdNode $node "ipsec restart"]
+    writeDataToNodeFile $node "ipsec_service.log" $output
 }
 ######################################################################
