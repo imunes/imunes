@@ -2875,12 +2875,16 @@ proc modIPsecConnWindow { node tab } {
 }
 
 proc deleteIPsecConnection { node tab } {
-    global $tab.tree
+    global $tab.tree ipsec_enable
     set connection_name [$tab.tree focus]
 
     delNodeIPsecElement $node "configuration" "conn $connection_name"
 
     refreshIPsecTree $node $tab
+
+    if { [$tab.tree children {}] == "" } {
+	set ipsec_enable 0
+    }
 }
 
 #****f* nodecfgGUI.tcl/putIPsecConnectionInTree
@@ -2901,7 +2905,7 @@ proc putIPsecConnectionInTree { node tab indicator } {
     global peers_subnet local_cert_file type method esp_suits authby psk_key
     global ah_suits modp_suits connection_name local_name local_ip_address local_subnet
     global tree_widget conn_time keying_time how_long_time
-    global no_encryption secret_file old_conn_name
+    global no_encryption secret_file old_conn_name ipsec_enable
 
     set cert_exists 0
 
@@ -3149,6 +3153,9 @@ proc putIPsecConnectionInTree { node tab indicator } {
     }
 
     if { $indicator == "add"} {
+	if { [$tab.tree children {}] == "" } {
+	    set ipsec_enable 1
+	}
         $tab.tree insert {} end -id $connection_name -text "$connection_name"
         $tab.tree set $connection_name Peers_IP_address "$real_ip_peer"
     } else {
