@@ -722,7 +722,8 @@ proc loadCfg { cfg } {
     set MACUsedList ""
     foreach node $node_list {
 	set nodeType [typemodel $node]
-	if { $nodeType ni $all_modules_list && ! [string match "router.*" $nodeType] } {
+	if { $nodeType ni [concat $all_modules_list "pseudo"] && \
+	    ! [string match "router.*" $nodeType] } {
 	    set msg "Unknown node type: '$nodeType'."
 	    if { $execMode == "batch" } {
 		statline $msg
