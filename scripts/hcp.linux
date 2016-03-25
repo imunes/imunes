@@ -108,6 +108,20 @@ getCpLoc() {
 copyToVi () {
     node=`getCpNodeId ${@: -1}`
     loc=`getCpLoc ${@: -1}`
+    driver=`docker info 2>&1 | grep "Storage Driver:" | cut -d: -f2 | tr -d " "`
+    if test "$driver" == "aufs"; then
+	if test "`docker --version | cut -d'.' -f2`" -ge 10; then
+	    n=`expr $# - 1`
+	    if test -z "$loc"; then
+		loc="/"
+	    fi
+	    for f in ${@:1:$n}
+	    do
+		docker cp $f $node:$loc
+	    done
+	    return
+	fi
+    fi
     # create tmpdir inside vi
     tmpdirD=`docker exec $node mktemp -d`
     # get external link to tmpdirD
