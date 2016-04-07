@@ -410,9 +410,6 @@ proc setCustomConfig { node id cmd config } {
     set cfg ""
     foreach zline [split $config {
 }] {
-	if { [string index "$zline" 0] == "	" } {
-	    set zline [string replace "$zline" 0 0]
-	}
 	lappend cfg $zline
     }
     lappend customCfg2 $cfg

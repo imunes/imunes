@@ -150,9 +150,7 @@ proc dumpCfg { method dest } {
 			    dumpputs $method $dest "            [lrange [lindex $line $x+2] 0 1]"
 			    dumpputs $method $dest "            [lindex [lindex $line $x+2] 2] \{"
 			    foreach l [lindex [lindex $line $x+2] 3] {
-				if { $l != {} } {
-				    dumpputs $method $dest "                $l"
-				}
+				dumpputs $method $dest "                $l"
 			    }
 			    dumpputs $method $dest "            \}"
 			    dumpputs $method $dest "        \}"
@@ -448,17 +446,17 @@ proc loadCfg { cfg } {
 				set empty 0
 				set config_split [split $config {
 }]
-				set line1 [lindex $config_split 1]
+				set config_split [lrange $config_split 1 end-1]
+				set line1 [lindex $config_split 0]
 				set empty [expr {[string length $line1]-\
 				    [string length [string trimleft $line1]]}]
+				set empty_str [string repeat " " $empty]
 				foreach zline $config_split {
-				    if { [string index "$zline" 0] == "	" } {
-					set zline [string replace "$zline" 0 0]
+				    while { [string range $zline 0 $empty-1] != "$empty_str" } {
+					set zline [regsub {\t} $zline "        "]
 				    }
 				    set zline [string range $zline $empty end]
-				    if { $zline != "" } {
-					lappend cfg $zline
-				    }
+				    lappend cfg $zline
 				}
 				set cfg_pconf [lreplace [lindex $value $x+2] 3 3 $cfg]
 				set cfg [lreplace [lrange $value $x $x+2] 2 2 $cfg_pconf]

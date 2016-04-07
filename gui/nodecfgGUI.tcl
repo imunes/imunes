@@ -2654,8 +2654,14 @@ proc createTab { node cfgID } {
     $w.confid_e insert 0 $cfgID
     $w.bootcmd_e insert 0 [getCustomConfigCommand $node $cfgID]
     set config [getCustomConfig $node $cfgID]
+    set x 0
+    set numOfLines [llength $config]
     foreach data $config {
-	$w.editor insert end "$data\n"
+	incr x
+	$w.editor insert end "$data"
+	if { $x != $numOfLines } {
+	    $w.editor insert end "\n"
+	}
     }
     
     grid $w.confid_l -row 0 -column 0 -in $w -sticky w -pady 3
