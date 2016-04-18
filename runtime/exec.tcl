@@ -160,15 +160,22 @@ proc setOperMode { mode } {
 	.panwin.f1.c bind node <Double-1> "spawnShellExec"
 	.panwin.f1.c bind nodelabel <Double-1> "spawnShellExec"
 	set oper_mode exec
+	wm protocol . WM_DELETE_WINDOW {
+	}
 	if {!$cfgDeployed} {
 	    deployCfg
 	    set cfgDeployed true
 	    createExperimentFiles $eid
 	}
+	wm protocol . WM_DELETE_WINDOW {
+	    exit
+	}
 	.bottom.experiment_id configure -text "Experiment ID = $eid"
     } else {
 	if {$oper_mode != "edit"} {
 	    global regular_termination
+	    wm protocol . WM_DELETE_WINDOW {
+	    }
 	    if { $regular_termination } {
 		terminateAllNodes $eid
 	    } else {
@@ -177,6 +184,9 @@ proc setOperMode { mode } {
 	    killExtProcess "socat.*$eid"
 	    set cfgDeployed false
 	    deleteExperimentFiles $eid
+	    wm protocol . WM_DELETE_WINDOW {
+		exit
+	    }
 	    .menubar.tools entryconfigure "Auto rearrange all" -state normal
 	    .menubar.tools entryconfigure "Auto rearrange selected" -state normal
 	    .menubar.tools entryconfigure "Routing protocol defaults" -state normal
@@ -880,6 +890,10 @@ proc deployCfg {} {
 	-mode determinate -maximum $count -value $startedCount
 	pack $w.p
 	update
+
+	grab $w
+	wm protocol $w WM_DELETE_WINDOW {
+	}
     }
 
     statline "Creating nodes..."
@@ -1036,6 +1050,10 @@ proc terminateAllNodes { eid } {
 	    -mode determinate -maximum $count -value $startedCount
 	pack $w.p
 	update
+
+	grab $w
+	wm protocol $w WM_DELETE_WINDOW {
+	}
     }
 
     set t_start [clock milliseconds]

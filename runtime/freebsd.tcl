@@ -743,6 +743,10 @@ proc vimageCleanup { eid } {
 	-mode determinate -maximum $count -value $count
 	pack $w.p
 	update
+
+	grab $w
+	wm protocol $w WM_DELETE_WINDOW {
+	}
     }
 
     statline "Terminating experiment with experiment id: $eid."

@@ -1292,7 +1292,13 @@ proc animate {} {
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global animatephase
 
-    .panwin.f1.c itemconfigure "selectmark || selectbox" -dashoffset $animatephase
+    catch {.panwin.f1.c itemconfigure "selectmark || selectbox" -dashoffset $animatephase} err
+    if { $err != "" } {
+	puts "IMUNES was closed unexpectedly before experiment termination was completed."
+	puts "Clean all running experiments with the 'cleanupAll' command."
+	return;
+    }
+
     incr animatephase 2
     if { $animatephase == 100 } {
 	set animatephase 0
