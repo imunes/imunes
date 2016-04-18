@@ -1545,7 +1545,12 @@ proc getIPAddressForPeer { node curIP } {
     }
 
     set listOfIPs ""
-    if { [ ::ip::version $curIP ] == 4 } {
+    if { $curIP == "" } {
+	set IPversion 4
+    } else {
+	set IPversion [ ::ip::version $curIP ] 
+    }
+    if { $IPversion == 4 } {
 	foreach item $listOfInterfaces {
 	    set ifcIP [getIfcIPv4addr $node $item]
 	    if { $ifcIP != "" } {

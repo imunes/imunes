@@ -3520,6 +3520,12 @@ proc setDefaultsForIPsec { node connParamsLframe espOptionsLframe } {
     $connParamsLframe.local_ip_entry configure -values $localIPs
     set local_ip_address [lindex $localIPs 0]
 
+    if { "[ifcList $node]" == "" } {
+	tk_messageBox -message "Selected node does not have any interfaces!" -title "Error" -icon error -type ok
+	destroy .d
+	return
+    }
+
     set peerHasAddr 0
     set peerHasIfc 0
     foreach cnode $nodes {
