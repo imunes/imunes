@@ -98,7 +98,12 @@ proc parseCmdArgs { options usage } {
 	    set eid_base $params(eid)
 	}
 	if { $params(b) || $params(batch) } {
-		puts "Using experiment ID '$eid_base'."
+	    puts "Using experiment ID '$eid_base'."
+	}
+
+	if { ! [regexp {^[[:alnum:]]+$} $eid_base] } {
+	    puts "Experiment ID should only consists of alphanumeric characters."
+	    exit 1
 	}
     }
 

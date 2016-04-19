@@ -34,7 +34,7 @@ vi_name() {
     expid=""
   fi
 
-  n=`jls jid name host.hostname | awk -v h=$host -v e=$expid '$3 == h && $2 ~ e {print $1}' | wc -l`
+  n=`jls jid name host.hostname | awk -v h=$host -v e=$expid'\\\.n[0-9]+$' '$3 == h && $2 ~ e {print $1}' | wc -l`
   if test $n -gt 1; then
         echo "Error: $1 is not a unique name." >&2
         echo "It is used (at least) for nodes:" >&2
@@ -52,7 +52,7 @@ vi_name() {
 	exit 3
     fi
   fi
-  jls jid name host.hostname | awk -v h=$host -v e=$expid '$3 == h && $2 ~ e {print $1}'
+  jls jid name host.hostname | awk -v h=$host -v e=$expid'\\\.n[0-9]+$' '$3 == h && $2 ~ e {print $1}'
 }
 
 get_explist() {
