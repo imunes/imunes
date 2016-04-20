@@ -157,13 +157,13 @@ proc autoIPv6addr { node iface } {
 	set peer_ip6addrs $peer_ip6addr
     }
 
-    set targetbyte [[nodeType $node].IPAddrRange]
+    set targetbyte [expr 0x[[nodeType $node].IPAddrRange]]
 
     if { $peer_ip6addrs != "" && $changeAddrRange6 == 0 } {
 	set ipaddr  [nextFreeIP6Addr [lindex $peer_ip6addrs 0] $targetbyte $peer_ip6addrs]
 	setIfcIPv6addr $node $iface $ipaddr
     } else {
-	setIfcIPv6addr $node $iface "[findFreeIPv6Net 64]$targetbyte/64"
+	setIfcIPv6addr $node $iface "[findFreeIPv6Net 64][format %x $targetbyte]/64"
 	lappend IPv6UsedList [ip::contract [ip::prefix [getIfcIPv6addr $node $iface]]]
     }
 }
@@ -189,11 +189,11 @@ proc nextFreeIP6Addr { addr start peers } {
     set ipnums [split $prefix :]
 
     set lastpart [expr [lindex $ipnums 7] + $start]
-    set ipnums [lreplace $ipnums 7 7 $lastpart]
+    set ipnums [lreplace $ipnums 7 7 [format %x $lastpart]]
     set ipaddr [ip::contract [join $ipnums :]]/$mask
     while { $ipaddr in $peers } {
 	set lastpart [expr $lastpart + 1 ]
-	set ipnums [lreplace $ipnums 7 7 $lastpart]
+	set ipnums [lreplace $ipnums 7 7 [format %x $lastpart]]
 	set ipaddr [ip::contract [join $ipnums :]]/$mask
     }
 
