@@ -1212,6 +1212,9 @@ proc switchCanvas { direction } {
     upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     global sizex sizey
+    if { $curcanvas ni $canvas_list } {
+	set direction prev
+    }
 
     set i [lsearch $canvas_list $curcanvas]
     switch -exact -- $direction {
