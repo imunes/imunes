@@ -182,6 +182,9 @@ proc selectNode { c obj } {
     } else {
 	set bbox [$c bbox "node && $node"]
     }
+    if { $bbox == "" } {
+	return
+    }
     set bx1 [expr {[lindex $bbox 0] - 2}]
     set by1 [expr {[lindex $bbox 1] - 2}]
     set bx2 [expr {[lindex $bbox 2] + 1}]
