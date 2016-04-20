@@ -38,6 +38,7 @@ proc $MODULE.confNewNode { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
     global ripEnable ripngEnable ospfEnable ospf6Enable
     global rdconfig
+    global nodeNamingBase
 
     set ripEnable [lindex $rdconfig 0]
     set ripngEnable [lindex $rdconfig 1]
@@ -45,7 +46,7 @@ proc $MODULE.confNewNode { node } {
     set ospf6Enable [lindex $rdconfig 3]	
     
     set nconfig [list \
-	"hostname [getNewNodeNameType nat64 nat64-]" \
+	"hostname [getNewNodeNameType nat64 $nodeNamingBase(nat64)]" \
 	! ]
     lappend $node "network-config [list $nconfig]"
     

@@ -176,6 +176,22 @@ set iconsrcfile [lindex [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] 0
 #interface selected in the topology tree
 set selectedIfc ""
 
+# bases for naming new nodes
+array set nodeNamingBase {
+    pc pc
+    click_l2 cswitch
+    click_l3 crouter
+    ext ext
+    filter filter
+    router router
+    host host
+    hub hub
+    lanswitch switch
+    nat64 nat64-
+    packgen packgen
+    stpswitch stpswitch
+}
+
 # Packets required for GUI
 #package require Img
 

@@ -81,6 +81,7 @@ proc $MODULE.confNewNode { node } {
     global ripEnable ripngEnable ospfEnable ospf6Enable
     global rdconfig router_model router_ConfigModel
     global def_router_model 
+    global nodeNamingBase
 
     set ripEnable [lindex $rdconfig 0]
     set ripngEnable [lindex $rdconfig 1]
@@ -95,7 +96,7 @@ proc $MODULE.confNewNode { node } {
     }
 
     set nconfig [list \
-	"hostname [getNewNodeNameType router router]" \
+	"hostname [getNewNodeNameType router $nodeNamingBase(router)]" \
 	! ]
     lappend $node "network-config [list $nconfig]"
     
