@@ -1950,6 +1950,7 @@ proc hasIPv6Addr { node } {
 proc removeNode { node } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::$node $node
+    global nodeNamingBase
 
     if { [getCustomIcon $node] != "" } {
 	removeImageReference [getCustomIcon $node] $node
@@ -1962,6 +1963,11 @@ proc removeNode { node } {
     }
     set i [lsearch -exact $node_list $node]
     set node_list [lreplace $node_list $i $i]
+
+    set node_type [nodeType $node]
+    if { $node_type in [array names nodeNamingBase] } {
+	recalculateNumType $node_type $nodeNamingBase($node_type)
+    }
 }
 
 #****f* nodecfg.tcl/getNodeCanvas
@@ -2905,20 +2911,26 @@ proc getNewNodeNameType { type namebase } {
     #if the variable pcnodes isn't set we need to check through all the nodes
     #to assign a non duplicate name
     if {! [info exists num$type] } {
-	set num$type 0
-	foreach n [getAllNodesType $type] {
-	    set name [getNodeName $n]
-	    if {[string match "$namebase*" $name]} {
-		set rest [string trimleft $name $namebase]
-		if { [string is integer $rest] && $rest > [set num$type] } {
-		    set num$type $rest
-		}
-	    }
-	}
+	recalculateNumType $type $namebase
     }
 
     incr num$type
     return $namebase[set num$type]
+}
+
+proc recalculateNumType { type namebase } {
+    upvar 0 ::cf::[set ::curcfg]::num$type num$type
+
+    set num$type 0
+    foreach n [getAllNodesType $type] {
+	set name [getNodeName $n]
+	if {[string match "$namebase*" $name]} {
+	    set rest [string trimleft $name $namebase]
+	    if { [string is integer $rest] && $rest > [set num$type] } {
+		set num$type $rest
+	    }
+	}
+    }
 }
 
 #****f* nodecfg.tcl/transformNodes

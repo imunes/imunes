@@ -93,9 +93,10 @@ proc $MODULE.confNewIfc { node ifc } {
 #****
 proc $MODULE.confNewNode { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
+    global nodeNamingBase
     
     set nconfig [list \
-	"hostname [getNewNodeNameType hub hub]" \
+	"hostname [getNewNodeNameType hub $nodeNamingBase(hub)]" \
 	! ]
     lappend $node "network-config [list $nconfig]"
 }

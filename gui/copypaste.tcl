@@ -130,6 +130,7 @@ proc paste {} {
     upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
     global sizex sizey
     global changed copypaste_list cutNodes copypaste_nodes
+    global nodeNamingBase
 
     if { $oper_mode == "exec" } {
 	return
@@ -162,7 +163,12 @@ proc paste {} {
 	set $node_copy [set ::cf::clipboard::$node_orig]
 	lappend node_list $node_copy
 	lappend copypaste_list $node_copy
-	setNodeName $node_copy $node_copy
+	set node_type [nodeType $node_orig]
+	if { $node_type in [array names nodeNamingBase] } {
+	    setNodeName $node_copy [getNewNodeNameType $node_type $nodeNamingBase($node_type)]
+	} else {
+	    setNodeName $node_copy $node_copy
+	}
 	setNodeCanvas $node_copy $curcanvas
     }
 
