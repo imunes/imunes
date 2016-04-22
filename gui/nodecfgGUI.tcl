@@ -1781,7 +1781,7 @@ proc configGUI_nodeNameApply { wi node } {
     set name [string trim [$wi.name.nodename get]]
     if { [regexp {^[A-Za-z_][0-9A-Za-z_-]*$} $name ] == 0 } {
 	tk_dialog .dialog1 "IMUNES warning" \
-	    "Hostname should contain only letters, digits, _, and -, and should not start with - (hyphen)." \
+	    "Hostname should contain only letters, digits, _, and -, and should not start with - (hyphen) or number." \
 	    info 0 Dismiss
     } elseif { $isOSlinux && [nodeType $node] == "rj45" && [string length "$eid_base-$name.0"] > 15 } {
 	tk_dialog .dialog1 "IMUNES warning" \
@@ -2959,10 +2959,12 @@ proc putIPsecConnectionInTree { node tab indicator } {
 	}
     }
 
-    set check [checkIfPeerStartsSameConnection $peers_node $trimmed_ip $local_subnet $local_name]
-    if { $check == 1 && $start_connection == 1 } {
-	tk_messageBox -message "Peer is configured to start the same connection!" -title "Error" -icon error -type ok
-	return
+    if { $peers_name != "%any"} {
+	set check [checkIfPeerStartsSameConnection $peers_node $trimmed_ip $local_subnet $local_name]
+	if { $check == 1 && $start_connection == 1 } {
+	    tk_messageBox -message "Peer is configured to start the same connection!" -title "Error" -icon error -type ok
+	    return
+	}
     }
 
     set cfg [getNodeIPsec $node]
@@ -3217,7 +3219,7 @@ proc createIPsecGUI { node mainFrame connParamsLframe espOptionsLframe ikeSALfra
     ttk::labelframe $connParamsLframe -text "Connection parameters"
     grid $connParamsLframe -column 0 -row 1 -sticky n -padx 5 -pady 5
 
-    ttk::frame $connParamsLframe.authby_container
+    ttk::frame $connParamsLframe.authby_container -padding {95 0}
     ttk::label $connParamsLframe.authby_container.authby_type -text "Authentication type:"
     ttk::radiobutton $connParamsLframe.authby_container.cert -text "Certificates" -variable authby -value cert \
 	-command "showCertificates $connParamsLframe"
@@ -3251,15 +3253,21 @@ proc createIPsecGUI { node mainFrame connParamsLframe espOptionsLframe ikeSALfra
 
     ttk::label $connParamsLframe.peer_ip -text "Peers IP address:"
     ttk::combobox $connParamsLframe.peer_name_entry -width 14 -textvariable peers_name -state readonly
-    ttk::combobox $connParamsLframe.peer_ip_entry -width 25 -textvariable peers_ip -state readonly
+    ttk::combobox $connParamsLframe.peer_ip_entry -width 24 -textvariable peers_ip -state readonly
+    ttk::entry $connParamsLframe.peer_ip_entry_text -width 26 -textvariable peers_ip
     grid $connParamsLframe.peer_ip -column 0 -row 5 -pady 5 -padx 5 -sticky e
     grid $connParamsLframe.peer_name_entry -column 1 -row 5 -pady 5 -padx 5 -sticky w
     grid $connParamsLframe.peer_ip_entry -column 2 -row 5 -pady 5 -padx 4 -sticky w
+    grid $connParamsLframe.peer_ip_entry_text -column 2 -row 5 -pady 5 -padx 4 -sticky w
+    grid remove $connParamsLframe.peer_ip_entry_text
 
     ttk::label $connParamsLframe.peer_sub -text "Peers subnet:"
     ttk::combobox $connParamsLframe.peer_sub_entry -width 14 -textvariable peers_subnet -state readonly
+    ttk::entry $connParamsLframe.peer_sub_entry_text -width 15 -textvariable peers_subnet
     grid $connParamsLframe.peer_sub -column 0 -row 6 -pady 5 -padx 5 -sticky e
     grid $connParamsLframe.peer_sub_entry -column 1 -row 6 -pady 5 -padx 5 -sticky w
+    grid $connParamsLframe.peer_sub_entry_text -column 1 -row 6 -pady 5 -padx 5 -sticky w
+    grid remove $connParamsLframe.peer_sub_entry_text
 
     ttk::frame $connParamsLframe.local_cert_container
     ttk::label $connParamsLframe.local_cert_container.local_cert -text "Local certificate file:"
@@ -3421,6 +3429,20 @@ proc createIPsecGUI { node mainFrame connParamsLframe espOptionsLframe ikeSALfra
 # XXX
 proc updatePeerCombobox { connParamsLframe } {
     global peers_name local_ip_address local_subnet peers_ip peers_subnet
+
+    if { $peers_name == "%any" } {
+	grid remove $connParamsLframe.peer_ip_entry
+	grid remove $connParamsLframe.peer_sub_entry
+	grid $connParamsLframe.peer_ip_entry_text
+	grid $connParamsLframe.peer_sub_entry_text
+	return
+    } else {
+	grid $connParamsLframe.peer_ip_entry
+	grid $connParamsLframe.peer_sub_entry
+	grid remove $connParamsLframe.peer_ip_entry_text
+	grid remove $connParamsLframe.peer_sub_entry_text
+    }
+
     set peers_node [lindex $peers_name 2]
 
     set peerIPs [getIPAddressForPeer $peers_node $local_ip_address]
@@ -3455,6 +3477,9 @@ proc updateLocalSubnetCombobox { connParamsLframe } {
 # XXX
 proc updatePeerSubnetCombobox { connParamsLframe } {
     global local_ip_address local_subnet peers_name peers_ip peers_subnet
+    if { $peers_name == "%any" } {
+	return
+    }
     set peers_node [lindex $peers_name 2]
 
     set subnetVersion [::ip::version $local_subnet]
@@ -3513,7 +3538,7 @@ proc setDefaultsForIPsec { node connParamsLframe espOptionsLframe } {
     set local_cert_file [getNodeIPsecItem $node "local_cert_file"]
     set local_name [getNodeName $node]
 
-    set nodes [getListOfOtherNodes $node]
+    set nodes [concat %any [getListOfOtherNodes $node]]
     $connParamsLframe.peer_name_entry configure -values $nodes
 
     set localIPs [getAllIpAddresses $node]
@@ -3530,6 +3555,9 @@ proc setDefaultsForIPsec { node connParamsLframe espOptionsLframe } {
     set peerHasIfc 0
     foreach cnode $nodes {
 	set peers_name $cnode
+	if { $cnode == "%any"} {
+	    continue
+	}
 	set peers_node [lindex $peers_name 2]
 
 	if { $peers_name != ""} {
@@ -3673,7 +3701,7 @@ proc populateValuesForUpdate { node tab connParamsLframe espOptionsLframe } {
 	}
 
 	set nodes [getListOfOtherNodes $node]
-	$connParamsLframe.peer_name_entry configure -values $nodes
+	$connParamsLframe.peer_name_entry configure -values [concat %any $nodes]
 
 	set local_ip_address [getNodeIPsecSetting $node "configuration" "conn $selected" "left"]
 	set localIPs [getAllIpAddresses $node]
@@ -3685,24 +3713,26 @@ proc populateValuesForUpdate { node tab connParamsLframe espOptionsLframe } {
 	    }
 	}
 
-	if { $peers_name != ""} {
-	    set peers_node [getNodeFromHostname $peers_name]
-	    set peers_name "$peers_name - $peers_node"
-	    set peerIPs [getIPAddressForPeer $peers_node $local_ip_address]
-	    $connParamsLframe.peer_ip_entry configure -values $peerIPs
-	    if { [llength $peerIPs] != 0 } {
-		set peers_ip [getNodeIPsecSetting $node "configuration" "conn $selected" "right"]
-		foreach peerIp $peerIPs {
-		    if { $peers_ip == [lindex [split $peerIp /] 0]} {
-			set peers_ip $peerIp
-			break
+	if { $peers_name != "%any" } {
+	    if { $peers_name != ""} {
+		set peers_node [getNodeFromHostname $peers_name]
+		set peers_name "$peers_name - $peers_node"
+		set peerIPs [getIPAddressForPeer $peers_node $local_ip_address]
+		$connParamsLframe.peer_ip_entry configure -values $peerIPs
+		if { [llength $peerIPs] != 0 } {
+		    set peers_ip [getNodeIPsecSetting $node "configuration" "conn $selected" "right"]
+		    foreach peerIp $peerIPs {
+			if { $peers_ip == [lindex [split $peerIp /] 0]} {
+			    set peers_ip $peerIp
+			    break
+			}
 		    }
 		}
+	    } else {
+		tk_messageBox -message "Peer does not have any interfaces!" -title "Error" -icon error -type ok
+		destroy .d
+		return
 	    }
-	} else {
-	    tk_messageBox -message "Peer does not have any interfaces!" -title "Error" -icon error -type ok
-	    destroy .d
-	    return
 	}
 
 	updateLocalSubnetCombobox $connParamsLframe 
@@ -3762,6 +3792,8 @@ proc getIkeParam { ikeCfg param } {
 #   corresponding fields in the IPsec connection frame.
 #****
 proc showCertificates { lFrame } {
+    global peers_name
+
     grid forget $lFrame.shared_key
     grid forget $lFrame.shared_key_entry
 
@@ -3783,6 +3815,15 @@ proc showCertificates { lFrame } {
 
     grid $lFrame.peer_sub -column 0 -row 6 -pady 5 -padx 5 -sticky e
     grid $lFrame.peer_sub_entry -column 1 -row 6 -pady 5 -padx 5 -sticky w
+    grid $lFrame.peer_ip_entry_text -column 2 -row 5 -pady 5 -padx 2 -sticky w
+    grid $lFrame.peer_sub_entry_text -column 1 -row 6 -pady 5 -padx 5 -sticky w
+    if { $peers_name == "%any" } {
+	grid remove $lFrame.peer_ip_entry
+	grid remove $lFrame.peer_sub_entry
+    } else {
+	grid remove $lFrame.peer_ip_entry_text
+	grid remove $lFrame.peer_sub_entry_text
+    }
 
     grid $lFrame.local_cert_container -column 0 -row 7 -columnspan 3 -sticky w
 
@@ -3801,6 +3842,7 @@ proc showCertificates { lFrame } {
 #   corresponding fields in the IPsec connection frame.
 #****
 proc hideCertificates { lFrame } {
+    global peers_name
     set var_list { local_id local_id_entry peer_name peer_id local_cert_container private_file_container }
 
     foreach var $var_list {
@@ -3819,6 +3861,15 @@ proc hideCertificates { lFrame } {
 
     grid $lFrame.peer_sub -column 0 -row 4 -pady 5 -padx 5 -sticky e
     grid $lFrame.peer_sub_entry -column 1 -row 4 -pady 5 -padx 5 -sticky w
+    grid $lFrame.peer_ip_entry_text -column 2 -row 3 -pady 5 -padx 5 -sticky w
+    grid $lFrame.peer_sub_entry_text -column 1 -row 4 -pady 5 -padx 5 -sticky w
+    if { $peers_name == "%any" } {
+	grid remove $lFrame.peer_ip_entry
+	grid remove $lFrame.peer_sub_entry
+    } else {
+	grid remove $lFrame.peer_ip_entry_text
+	grid remove $lFrame.peer_sub_entry_text
+    }
 
     grid $lFrame.shared_key -column 0 -row 5 -pady 5 -padx 5 -sticky e
     grid $lFrame.shared_key_entry -column 1 -row 5 -pady 5 -padx 5 -sticky w
