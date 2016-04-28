@@ -3190,8 +3190,9 @@ proc refreshIPsecTree { node tab } {
     foreach item [ getNodeIPsecConnList $node ] {
 	set peerIp [ getNodeIPsecSetting $node "configuration" "conn $item" "right" ]
 	if { $peerIp != "" } {
-	    $tab.tree insert {} end -id $item -text "$item"
+	    $tab.tree insert {} end -id $item -text "$item" -tags "$item"
 	    $tab.tree set $item Peers_IP_address "$peerIp"
+	    $tab.tree tag bind $item <Double-1> "modIPsecConnWindow $node $tab"
 	}
     }
 }
@@ -3199,7 +3200,7 @@ proc refreshIPsecTree { node tab } {
 proc createIPsecGUI { node mainFrame connParamsLframe espOptionsLframe ikeSALframe indicator } {
     tk::toplevel .d
     wm title .d "$indicator IPsec connection"
-    grab .d
+    after 100 "grab .d"
 
     ttk::frame $mainFrame -padding 4
     grid $mainFrame -column 0 -row 0 -sticky nwes
