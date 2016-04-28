@@ -2918,6 +2918,17 @@ proc getNewNodeNameType { type namebase } {
     return $namebase[set num$type]
 }
 
+#****f* nodecfg.tcl/recalculateNumType
+# NAME
+#   recalculateNumType -- recalculate number for type
+# SYNOPSIS
+#   recalculateNumType $type $namebase
+# FUNCTION
+#   Calculates largest number for the given type
+# INPUTS
+#   * type -- node type
+#   * namebase -- base for the node name
+#****
 proc recalculateNumType { type namebase } {
     upvar 0 ::cf::[set ::curcfg]::num$type num$type
 
@@ -2937,7 +2948,7 @@ proc recalculateNumType { type namebase } {
 # NAME
 #   transformNode -- transform nodes
 # SYNOPSIS
-#   getNewNodeNameType $type $namebase
+#   transformNodes $type $namebase
 # FUNCTION
 #   Returns a new node name for the type and namebase, e.g. pc0 for pc.
 # INPUTS
