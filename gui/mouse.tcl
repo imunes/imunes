@@ -515,7 +515,6 @@ proc button3node { c x y } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     set node [lindex [$c gettags {node && current}] 1]
-    set type [nodeType $node]
 
     if { $node == "" } {
 	set node [lindex [$c gettags {nodelabel && current}] 1]
@@ -523,6 +522,8 @@ proc button3node { c x y } {
 	    return
 	}
     }
+
+    set type [nodeType $node]
     set mirror_node [getNodeMirror $node]
 
     if { [$c gettags "node && $node && selected"] == "" } {
