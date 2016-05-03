@@ -109,7 +109,7 @@ proc dumpCfg { method dest } {
 		dumpputs $method $dest "    ipsec-config \{"
 		foreach line [lindex $element 1] {
 		    set header [lindex $line 0]
-		    if { $header == "local_cert" || $header == "local_key_file" } {
+		    if { $header == "local_cert" || $header == "local_key_file" || $header == "ipsec-logging"} {
 			dumpputs $method $dest "        $line"
 		    } elseif { $header == "configuration" } {
 			dumpputs $method $dest "        configuration \{"
@@ -379,6 +379,8 @@ proc loadCfg { cfg } {
 				set zline [string trimleft "$zline"]
 				if { [string first "local_cert" $zline] != -1 || [string first "local_key_file" $zline] != -1 } {
 				    lappend cfg $zline
+				} elseif { [string first "ipsec-logging" $zline] != -1 } {
+				    lappend cfg "$zline"
 				} elseif { [string first "configuration" $zline] != -1 } {
 				    set conf_indicator 1
 				} elseif { [string first "\}" $zline] != -1 } {

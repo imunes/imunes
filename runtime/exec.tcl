@@ -1301,7 +1301,7 @@ proc pipesClose { } {
 set ipsecConf ""
 set ipsecSecrets ""
 proc l3node.ipsecInit { node } {
-    global ipsecConf ipsecSecrets
+    global ipsecConf ipsecSecrets isOSfreebsd
 
     set config_content [getNodeIPsec $node]
     if { $config_content != "" } {
@@ -1344,6 +1344,26 @@ proc l3node.ipsecInit { node } {
     set local_cert [getNodeIPsecItem $node "local_cert"]
     set ipsecret_file [getNodeIPsecItem $node "local_key_file"]
     ipsecFilesToNode $node $local_cert $ipsecret_file
+
+    set ipsec_log_level [getNodeIPsecItem $node "ipsec-logging"]
+    if { $ipsec_log_level != "" } {
+	execCmdNode $node "touch /var/log/auth.log"
+	set charon "charon {\n\
+	\tsyslog {\n\
+	\t\tidentifier = IMUNES_IPSEC_$node\n\
+	\t\tauth {\n\
+	\t\t\tdefault = $ipsec_log_level\n\
+	\t\t}\n\
+	\t}\n\
+	}"
+
+	set prefix ""
+	if { $isOSfreebsd } {
+	    set prefix "/usr/local"
+	}
+	writeDataToNodeFile $node "$prefix/etc/strongswan.d/charon-logging.conf" $charon
+	execCmdNode $node "syslogd"
+    }
 }
 
 #****f* exec.tcl/generateHostsFile

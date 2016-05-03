@@ -923,6 +923,8 @@ proc configGUI_applyButtonNode { wi node phase } {
 	    }
 	} elseif { $guielement == "configGUI_nat64Config" } {
             $guielement\Apply [lindex [$wi.nbook tabs] 2] $node
+	} elseif { $guielement == "configGUI_ipsec" } {
+            $guielement\Apply [lindex [$wi.nbook tabs] 2] $node
         } else {  
 	    $guielement\Apply [lindex [$wi.nbook tabs] 0] $node
 	}
@@ -2817,6 +2819,25 @@ proc formatIPaddrList { addrList } {
     return $newList
 }
 
+proc setIPsecLogging { node tab } {
+    global ipsec_logging_on
+
+    if { $ipsec_logging_on } {
+	grid $tab.check_button -column 0 -row 3 -sticky ws -pady {0 0}
+	grid $tab.logLevelLabel -column 1 -row 3 -columnspan 1 -sticky es
+	grid $tab.logLevel -column 2 -row 3 -columnspan 3 -sticky es
+	set ipsec_logging [getNodeIPsecItem $node "ipsec-logging"]
+	if { $ipsec_logging == "" } {
+	    set ipsec_logging 1
+	}
+	$tab.logLevel set $ipsec_logging
+    } else {
+	grid $tab.check_button -column 0 -row 3 -sticky ws -pady {4 0}
+	grid remove $tab.logLevelLabel
+	grid remove $tab.logLevel
+    }
+}
+
 #################
 #****f* nodecfgGUI.tcl/configGUI_ipsec
 # NAME
@@ -2830,14 +2851,36 @@ proc formatIPaddrList { addrList } {
 #   * node -- node id
 #****
 proc configGUI_ipsec { tab node } {
+    global guielements ipsec_logging_on
+
+    lappend guielements configGUI_ipsec
+    set ipsec_logging [getNodeIPsecItem $node "ipsec-logging"]
+
+    if { $ipsec_logging == "" } {
+	set ipsec_logging_on 0
+    } else {
+	set ipsec_logging_on 1
+    }
+
     $tab configure -padding "5 5 5 5"
 
     ttk::label $tab.headingLabel -text "List of IPsec connections"
     ttk::treeview $tab.tree -columns "Peers_IP_address" -yscrollcommand "$tab.scrollbar set"
     ttk::scrollbar $tab.scrollbar -command "$tab.tree yview" -orient vertical
-    grid $tab.headingLabel -column 0 -row 0 -padx 5 -pady 5
-    grid $tab.tree -column 0 -row 1 -rowspan 2
-    grid $tab.scrollbar -column 1 -row 1 -rowspan 2 -sticky ns
+    ttk::checkbutton $tab.check_button -text "Enable logging" -variable ipsec_logging_on \
+	-onvalue 1 -offvalue 0 -command "setIPsecLogging $node $tab"
+    ttk::label $tab.logLevelLabel -text "Logging level:" -padding {0 1}
+
+    ttk::spinbox $tab.logLevel -width 5 \
+	-validate focus -invalidcommand "focusAndFlash %W"
+    $tab.logLevel configure \
+	-from -1 -to 4 -increment 1 \
+	-validatecommand {checkIntRange %P -1 4}
+    grid $tab.headingLabel -column 0 -row 0 -padx 5 -pady 5 -columnspan 4
+    grid $tab.tree -column 0 -row 1 -rowspan 2 -columnspan 3
+    grid $tab.scrollbar -column 4 -row 1 -rowspan 2 -sticky ns
+    setIPsecLogging $node $tab
+
     $tab.tree heading #0 -text "Connection name"
     $tab.tree column #0 -anchor center -width 195
     $tab.tree heading Peers_IP_address -text "Peers IP address"
@@ -2850,10 +2893,22 @@ proc configGUI_ipsec { tab node } {
     ttk::button $tab.button_container.add_button -text "Add" -command "addIPsecConnWindow $node $tab"
     ttk::button $tab.button_container.modify_button -text "Modify" -command "modIPsecConnWindow $node $tab"
     ttk::button $tab.button_container.delete_button -text "Delete" -command "deleteIPsecConnection $node $tab "
-    grid $tab.button_container -column 2 -row 1 -rowspan 2 -padx {8 0}
+    grid $tab.button_container -column 5 -row 1 -rowspan 2 -padx {8 0}
     grid $tab.button_container.add_button -column 0 -row 0 -pady 5 -padx 5
     grid $tab.button_container.modify_button -column 0 -row 1 -pady 5 -padx 5
     grid $tab.button_container.delete_button -column 0 -row 2 -pady 5 -padx 5
+}
+
+proc configGUI_ipsecApply { wi node } {
+    global ipsec_logging_on
+
+    if { $ipsec_logging_on } {
+	setNodeIPsecItem $node "ipsec-logging" [lindex [$wi.logLevel get] 0]
+    } else {
+	if { [getNodeIPsecItem $node "ipsec-logging"] != "" } {
+	    delNodeIPsecItem $node "ipsec-logging"
+	}
+    }
 }
 
 proc addIPsecConnWindow { node tab } {
@@ -3423,8 +3478,6 @@ proc createIPsecGUI { node mainFrame connParamsLframe espOptionsLframe ikeSALfra
 	bind $connParamsLframe.peer_ip_entry <<ComboboxSelected>> \
 	    "updatePeerSubnetCombobox $connParamsLframe"
     }
-
-    #valter - ovdje dodati double click event - vidi initGUI ili ifctree
 }
 
 # XXX
