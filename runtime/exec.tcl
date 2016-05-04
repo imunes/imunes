@@ -1347,11 +1347,12 @@ proc l3node.ipsecInit { node } {
 
     set ipsec_log_level [getNodeIPsecItem $node "ipsec-logging"]
     if { $ipsec_log_level != "" } {
-	execCmdNode $node "touch /var/log/auth.log"
+	execCmdNode $node "touch /tmp/charon.log"
 	set charon "charon {\n\
-	\tsyslog {\n\
-	\t\tidentifier = IMUNES_IPSEC_$node\n\
-	\t\tauth {\n\
+	\tfilelog {\n\
+	\t\t/tmp/charon.log {\n\
+	\t\t\tappend = yes\n\
+	\t\t\tflush_line = yes\n\
 	\t\t\tdefault = $ipsec_log_level\n\
 	\t\t}\n\
 	\t}\n\
@@ -1362,7 +1363,6 @@ proc l3node.ipsecInit { node } {
 	    set prefix "/usr/local"
 	}
 	writeDataToNodeFile $node "$prefix/etc/strongswan.d/charon-logging.conf" $charon
-	execCmdNode $node "syslogd"
     }
 }
 
