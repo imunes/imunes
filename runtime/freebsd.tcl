@@ -1909,6 +1909,7 @@ proc captureExtIfc { eid node } {
     set ifname [getNodeName $node]
     if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
 	exec ifconfig $ifname create
+	exec ifconfig [lindex [split $ifname .] 0] up promisc
     }
     set ngifname [string map {. _} $ifname]
     set ngnodemap($ifname) $ngifname
