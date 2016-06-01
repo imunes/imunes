@@ -1949,7 +1949,11 @@ proc releaseExtIfc { eid node } {
 #   * node -- node id
 #****
 proc enableIPforwarding { eid node } {
+    global ipFastForwarding
     pipesExec "jexec $eid\.$node sysctl net.inet.ip.forwarding=1" "hold"
+    if {$ipFastForwarding} {
+	pipesExec "jexec $eid\.$node sysctl net.inet.ip.fastforwarding=1" "hold"
+    }
     pipesExec "jexec $eid\.$node sysctl net.inet6.ip6.forwarding=1" "hold"
 }
 

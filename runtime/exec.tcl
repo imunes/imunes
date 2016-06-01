@@ -28,7 +28,7 @@
 
 global vroot_unionfs vroot_linprocfs ifc_dad_disable regular_termination \
     devfs_number hostsAutoAssign linkJitterConfiguration ipsecSecrets \
-    ipsecConf
+    ipsecConf ipFastForwarding
 
 set linkJitterConfiguration 0
 set vroot_unionfs 1
@@ -37,6 +37,7 @@ set ifc_dad_disable 0
 set regular_termination 1
 set devfs_number 46837
 set hostsAutoAssign 0
+set ipFastForwarding 0
 
 #****f* exec.tcl/nexec
 # NAME
