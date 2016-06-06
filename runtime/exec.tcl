@@ -1074,9 +1074,14 @@ proc terminateAllNodes { eid } {
     # divide nodes into two lists
     set ngraphs ""
     set vimages ""
+    set extifcs ""
     foreach node $node_list {
 	if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
-	    lappend ngraphs $node
+	    if { [typemodel $node] == "rj45" } {
+		lappend extifcs $node
+	    } else {
+		lappend ngraphs $node
+	    }
 	} elseif { [[typemodel $node].virtlayer] == "VIMAGE" } {
 	    lappend vimages $node
 	}
@@ -1103,6 +1108,9 @@ proc terminateAllNodes { eid } {
 
     # Stop services on the LINKDEST hook
     services stop "LINKDEST"
+
+    # release external interfaces
+    destroyNetgraphNodes $eid $extifcs $w
 
     # destroying links
     statline "Destroying links..."
