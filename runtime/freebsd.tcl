@@ -1930,10 +1930,10 @@ proc captureExtIfc { eid node } {
 #****
 proc releaseExtIfc { eid node } {
     set ifname [getNodeName $node]
-    nexec ifconfig $ifname -vnet $eid
-    nexec ifconfig $ifname up -promisc
+    catch {nexec ifconfig $ifname -vnet $eid}
+    catch {nexec ifconfig $ifname up -promisc}
     if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
-	exec ifconfig $ifname destroy
+	catch {exec ifconfig $ifname destroy}
     }
 }
 
