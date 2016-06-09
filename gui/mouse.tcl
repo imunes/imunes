@@ -159,6 +159,11 @@ proc splitGUILink { link } {
 #   * obj -- tk canvas object tag id
 #****
 proc selectNode { c obj } {
+    if { $obj == "none" } {
+	$c delete -withtags "selectmark"
+	return
+    }
+
     set node [lindex [$c gettags $obj] 1]
 
     if { $node == "" } {

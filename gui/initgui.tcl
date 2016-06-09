@@ -1164,7 +1164,7 @@ bind . <Down> "$mf.c yview scroll 1 units"
 bind . <Up> "$mf.c yview scroll -1 units"
 
 # Escape to Select mode
-bind . <Key-Escape> "setActiveTool select"
+bind . <Key-Escape> "setActiveTool select; selectNode $c none"
 bind . <F5> "redrawAll"
 
 #
