@@ -258,6 +258,13 @@ proc $MODULE.configGUI { c node } {
     set curnode $node
     set filterguielements {}
 
+    if { [ifcList $node] == "" } {
+	tk_dialog .dialog1 "IMUNES warning" \
+	    "This node has no interfaces." \
+	    info 0 Dismiss
+	return
+    }
+
     configGUI_createConfigPopupWin $c
     wm title $wi "filter configuration"
     configGUI_nodeName $wi $node "Node name:"
