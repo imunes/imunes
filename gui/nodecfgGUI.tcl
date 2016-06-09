@@ -5211,6 +5211,9 @@ proc configGUI_showFilterIfcRuleInfo { wi phase node ifc rule } {
     #
     #shownruleframe - frame that is currently shown below the list o interfaces
     #
+    if { $badentry == -1 } {
+	return
+    }
     set shownruleframe [grid slaves $wi]
     set i [lsearch $shownruleframe "*buttons*"]
     if { $i != -1 } {
