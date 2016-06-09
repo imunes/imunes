@@ -694,6 +694,9 @@ proc button3node { c x y } {
 	    -command "startNodeFromMenu $node"
 	.button3menu add command -label Stop \
 	    -command "stopNodeFromMenu $node" 
+	.button3menu add command -label Restart \
+	    -command "stopNodeFromMenu $node; \
+	     startNodeFromMenu $node" 
     } else {
 #	.button3menu add command -label Start \
 #	    -command "[typemodel $node].start $eid $node" -state disabled
