@@ -18,6 +18,8 @@ TARBALL_DIR = imunes_$(IMUNESDATE)
 RELEASE_DIR = imunes-$(IMUNESVER)
 UNAME_S = $(shell uname -s)
 VROOT_EXISTS = $(shell [ -d /var/imunes/vroot ] && echo 1 || echo 0 )
+SERVICEDIR=/usr/local/etc/rc.d
+STARTUPDIR=/var/imunes-service
 
 BASEFILES =	COPYRIGHT README VERSION
 CONFIGFILES =	$(wildcard config/*.tcl)
@@ -131,6 +133,8 @@ uninstall:
 	for file in imunes $(notdir $(TOOLS)); do \
 		rm -f $(BINDIR)/$${file}; \
 	done ;
+	rm -rf $(STARTUPDIR)
+	rm -rf $(SERVICEDIR)/imunes-service.sh
 
 netgraph:
 ifeq ($(UNAME_S), FreeBSD)
@@ -163,6 +167,25 @@ ifeq ($(VROOT_EXISTS), 1)
 else
 	@echo   "/var/imunes/vroot does not exist, exiting..."
 endif
+
+service:
+ifeq ($(UNAME_S), FreeBSD)
+	cp scripts/imunes-service.sh $(SERVICEDIR)
+	chmod 755 $(SERVICEDIR)/imunes-service.sh
+	mkdir -p $(STARTUPDIR)
+	@echo	""
+	@echo   "Created directory $(STARTUPDIR)"
+	@echo   "To start the experiment on boot, copy a topology to this folder."
+endif
+
+noservice:
+ifeq ($(UNAME_S), FreeBSD)
+	rm -rf $(SERVICEDIR)/imunes-service.sh
+	@echo	""
+	@echo   "Removed $(SERVICEDIR)/imunes-service.sh"
+	@echo 	"To remove startup topologies, remove $(STARTUPDIR)"
+endif
+
 
 tarball:
 	rm -f ../$(TARBALL_DIR).tar.gz
