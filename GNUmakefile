@@ -133,8 +133,8 @@ uninstall:
 	for file in imunes $(notdir $(TOOLS)); do \
 		rm -f $(BINDIR)/$${file}; \
 	done ;
-	rm -rf $(STARTUPDIR)
 	rm -rf $(SERVICEDIR)/imunes-service.sh
+	@echo 	"To remove startup topologies, remove $(STARTUPDIR)"
 
 netgraph:
 ifeq ($(UNAME_S), FreeBSD)
