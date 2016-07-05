@@ -51,7 +51,7 @@ then
     port=$((6000+display))
     socat_args="unix-listen:${xsocket},fork TCP:localhost:$port"
 else
-    socat_args="unix-listen:${xsocket},fork unix:/tmp/.X11-unix/X0"
+    socat_args="unix-listen:${xsocket},fork unix:/tmp/.X11-unix/X$display"
 fi
 
 pgrep -f "[s]ocat $socat_args" > /dev/null 2>&1
@@ -79,7 +79,7 @@ touch ${dir}/root/.Xauthority
 chmod 600 ${dir}/root/.Xauthority
 
 host=`hostname`
-cookie=`xauth list | awk '/'"$host"'\/unix:'"$display"'/ {print $3}'`
+cookie=`xauth list | awk '/'"$host"'\/unix:'"$display[ 	]"'/ {print $3}'`
 xauth -f ${dir}/root/.Xauthority add "$node/unix:0.0" . $cookie
 
 #####
