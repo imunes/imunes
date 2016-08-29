@@ -335,9 +335,9 @@ proc createNodeContainer { node } {
 
     set node_id "$eid.$node"
 
-    set network "'none'"
+    set network "none"
     if { [getNodeDockerAttach $node] } {
-	set network "'bridge'"
+	set network "bridge"
     }
 
     catch {exec docker run -d --privileged --cap-add=ALL --net=$network -h [getNodeName $node] \
