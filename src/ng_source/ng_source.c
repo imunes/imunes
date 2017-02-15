@@ -78,6 +78,10 @@ __FBSDID("$FreeBSD: releng/9.3/sys/netgraph/ng_source.c 220768 2011-04-18 09:12:
 #define NG_SOURCE_INTR_TICKS		1
 #define NG_SOURCE_DRIVER_IFQ_MAXLEN	(4*1024)
 
+#ifndef M_DONTWAIT
+#define M_DONTWAIT M_NOWAIT
+#endif
+
 #define	mtod_off(m,off,t)	((t)(mtod((m),caddr_t)+(off)))
 
 /* Per node info */

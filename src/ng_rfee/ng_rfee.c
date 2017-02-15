@@ -52,6 +52,10 @@
 
 MALLOC_DEFINE(M_NETGRAPH_RFEE, "ng_rfee", "ng_rfee");
 
+#ifndef M_DONTWAIT
+#define M_DONTWAIT M_NOWAIT
+#endif
+
 static uma_zone_t ngd_zone;	/* Stores descriptors of queued packets */
 
 static int ng_rfee_linkcfg_parse(const struct ng_parse_type *type,

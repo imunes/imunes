@@ -21,6 +21,10 @@
 #define	NG_PM_MAXRULES		128
 #define	NG_PM_MAXPATLEN		32
 
+#ifndef M_DONTWAIT
+#define M_DONTWAIT M_NOWAIT
+#endif
+
 MALLOC_DEFINE(M_NETGRAPH_PM, "ng_patmat", "ng_patmat");
 
 /* Netgraph methods */
