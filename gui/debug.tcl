@@ -109,13 +109,10 @@ proc allSnapshotsAvailable {} {
 }
 
 proc logCaller {} {
-    set r [catch {info level [expr [info level] - 1]} e]
-    set r2 [catch {info level [expr [info level] - 2]} e2]
-    if {$r} {
-        puts "Called directly by the interpreter (e.g.: .tcl on the partyline)."
-    } {
-        puts "Called by ${e} ${e2}."
+    for {set i 1} {$i < [info level ] } {incr i} {
+        puts -nonewline " -> [info level $i]"
     }
+    puts ""
 }
 
 bind . <F6> {
