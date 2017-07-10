@@ -332,7 +332,7 @@ installPackagesPkg () {
 configQuagga () {
     if [ -d "$VROOT_MASTER/usr/local/etc/quagga/" ]; then
 	cd $VROOT_MASTER/usr/local/etc/quagga/
-	touch zebra.conf ripd.conf ripngd.conf ospfd.conf ospf6d.conf bgpd.conf
+	touch zebra.conf ripd.conf ripngd.conf ospfd.conf ospf6d.conf bgpd.conf isisd.conf
 	ln -s /boot.conf Quagga.conf
     else
 	log "ERR" "Quagga not installed in \
