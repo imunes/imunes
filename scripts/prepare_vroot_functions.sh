@@ -98,6 +98,20 @@ checkArgs() {
 
 ##########################
 
+checkPkgVersion() {
+    vroot_pkg=`chroot $VROOT_DIR/vroot /bin/sh -c 'pkg info pkg' | head -n1`
+    real_pkg=`pkg info pkg | head -n1`
+    if [ "$vroot_pkg" = "$real_pkg" ]; then
+	return 0
+    fi
+    lower_version=`printf "$vroot_pkg\n$real_pkg" | sort -V | head -n1`
+    if [ "$lower_version" = "$real_pkg" ]; then
+	log "ERR" "Your pkg version is older than the virtual root one, please update it:"
+	log "ERR" "\t# pkg install pkg"
+	exit 1
+    fi
+}
+
 fetchBaseOnline () {
     if [ ! -f MANIFEST ]; then
 	$FETCH_CMD $DISTSERVER$RELEASE_DIR/MANIFEST

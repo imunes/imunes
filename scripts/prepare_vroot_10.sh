@@ -33,6 +33,7 @@ populateFs
 
 preparePackagesPkg
 chroot $VROOT_MASTER /bin/sh -c 'env ASSUME_ALWAYS_YES=YES pkg bootstrap' >> $LOG 2>&1
+checkPkgVersion
 installPackagesPkg
 
 if [ $mini -eq 0 ]; then
