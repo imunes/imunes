@@ -52,7 +52,7 @@ info:
 
 all: install
 
-install: uninstall netgraph
+install: uninstall netgraph vroot
 	mkdir -p $(IMUNESDIR)
 	cp $(BASEFILES) $(IMUNESDIR)
 	ROOTDIR=$(PREFIX) sh scripts/update_version.sh
