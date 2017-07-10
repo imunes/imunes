@@ -50,9 +50,9 @@ info:
 	@echo	"To install everything: make all"
 	@echo	"To make tarball: make tarball"
 
-all: install
+all: install vroot
 
-install: uninstall netgraph vroot
+install: uninstall netgraph
 	mkdir -p $(IMUNESDIR)
 	cp $(BASEFILES) $(IMUNESDIR)
 	ROOTDIR=$(PREFIX) sh scripts/update_version.sh
