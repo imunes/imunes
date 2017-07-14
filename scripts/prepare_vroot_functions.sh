@@ -67,7 +67,7 @@ DISTSERVER="ftp://ftp.freebsd.org"
 RELEASE_DIR="/pub/FreeBSD/releases/$ARCH/$RELEASE"
 
 # pkg repository
-PKGREPO="http://pkg.freebsd.org/freebsd:$RELEASE_NUM:x86:32/$REPO"
+PKGREPO="http://pkg.freebsd.org/FreeBSD:$RELEASE_NUM:i386/$REPO"
 export PKG_CACHEDIR=$WORKDIR/packages
 
 #export PACKAGESITE=$DISTSERVER/$RELEASE_DIR/packages/Latest/
@@ -75,7 +75,7 @@ export PKG_CACHEDIR=$WORKDIR/packages
 BASE_FILES="base"
 if [ "$ARCH" = "amd64" ]; then
     BASE_FILES="$BASE_FILES lib32"
-    PKGREPO="http://pkg.freebsd.org/freebsd:$RELEASE_NUM:x86:64/$REPO"
+    PKGREPO="http://pkg.freebsd.org/FreeBSD:$RELEASE_NUM:amd64/$REPO"
 fi
 
 ##########################
