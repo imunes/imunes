@@ -41,7 +41,7 @@ fi
 configQuagga
 configXorp
 
-wiresharkDialog
+wiresharkGUIfix
 
 cleanUnnecessary
 

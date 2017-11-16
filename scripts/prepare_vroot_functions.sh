@@ -366,10 +366,14 @@ configXorp () {
     fi
 }
 
-# Avoid Wireshark 'run as root is dangerous' dialog
-wiresharkDialog () {
+wiresharkGUIfix () {
+    # Avoid Wireshark 'run as root is dangerous' dialog
     mkdir $VROOT_MASTER/root/.wireshark/
     echo "privs.warn_if_elevated: FALSE" > $VROOT_MASTER/root/.wireshark/recent_common
+
+    # Make Wireshark's main upper and middle window panes bigger on first start
+    echo "gui.geometry_main_upper_pane: 135" > $VROOT_MASTER/root/.wireshark/recent
+    echo "gui.geometry_main_lower_pane: 200" >> $VROOT_MASTER/root/.wireshark/recent
 }
 
 ### Take zfs snapshot ###
