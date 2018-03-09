@@ -952,6 +952,24 @@ proc execSetIfcQDisc { eid node ifc qdisc } {
     exec docker exec $eid.$node tc qdisc add dev $ifc root $qdisc
 }
 
+proc getNetemConfigLine { bandwidth delay loss dup } {
+    array set netem {
+	bandwidth "rate Xbit"
+	loss      "loss random X%"
+	delay     "delay Xus"
+	dup       "duplicate X%"
+    }
+    set cmd ""
+
+    foreach { val ctemplate } [array get netem] {
+	if { [set $val] != 0 } {
+	    set confline "[lindex [split $ctemplate "X"] 0][set $val][lindex [split $ctemplate "X"] 1]"
+	    append cmd " $confline"
+	}
+    }
+
+    return $cmd
+}
 
 proc configureIfcLinkParams { eid node ifname bandwidth delay ber dup } {
     global debug
@@ -976,17 +994,15 @@ proc configureIfcLinkParams { eid node ifname bandwidth delay ber dup } {
 
     if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
         catch {exec tc qdisc del dev $eid-$lname-$ifname root}
-
 	# XXX: currently we have loss, but we can easily have
 	# corrupt, add a tickbox to GUI, default behaviour
 	# should be loss because we don't do corrupt on FreeBSD
 	# set confstring "netem corrupt ${loss}%"
 	# corrupt ${loss}%
-	catch { exec tc qdisc add dev $eid-$lname-$ifname root netem \
-	    rate ${bandwidth}bit \
-	    loss random ${loss}% \
-	    delay ${delay}us \
-	    duplicate ${dup}% } err
+	set cmd "tc qdisc add dev $eid-$lname-$ifname root netem"
+	catch {
+	    eval exec $cmd [getNetemConfigLine $bandwidth $delay $loss $dup]
+	} err
 
 	if { $debug && $err != "" } {
 	    puts stderr "tc ERROR: $eid-$lname-$ifname, $err"
@@ -994,19 +1010,14 @@ proc configureIfcLinkParams { eid node ifname bandwidth delay ber dup } {
 	    catch { exec tc qdisc show dev $eid-$lname-$ifname } status
 	    puts stderr $status
 	}
-
     }
     if { [[typemodel $node].virtlayer] == "VIMAGE" } {
         set nodeNs [getNodeNamespace $node]
         catch {exec nsenter -n -t $nodeNs tc qdisc del dev $ifname root}
 
 	# XXX: same as the above
-	exec nsenter -n -t $nodeNs tc qdisc add dev $ifname root netem \
-	    rate ${bandwidth}bit \
-	    loss random ${loss}% \
-	    delay ${delay}us \
-	    duplicate ${dup}%
-
+	set cmd "nsenter -n -t $nodeNs tc qdisc add dev $ifname root netem"
+	eval exec $cmd [getNetemConfigLine $bandwidth $delay $loss $dup]
     }
 
     # XXX: Now on Linux we don't care about queue lengths and we don't limit
