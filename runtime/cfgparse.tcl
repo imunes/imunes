@@ -737,7 +737,7 @@ proc loadCfg { cfg } {
 	if { "lo0" ni [logIfcList $node] && \
 		[[typemodel $node].layer] == "NETWORK"} {
 	    setLogIfcType $node lo0 lo
-	    setIfcIPv4addr $node lo0 "127.0.0.1/24"
+	    setIfcIPv4addr $node lo0 "127.0.0.1/8"
 	    setIfcIPv6addr $node lo0 "::1/128"
 	}
 	# Speeding up auto renumbering of MAC, IPv4 and IPv6 addresses by remembering

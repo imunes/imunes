@@ -67,7 +67,7 @@ proc $MODULE.confNewNode { node } {
     }
 
     setLogIfcType $node lo0 lo
-    setIfcIPv4addr $node lo0 "127.0.0.1/24"
+    setIfcIPv4addr $node lo0 "127.0.0.1/8"
     setIfcIPv6addr $node lo0 "::1/128"
 
     setTaygaIPv4DynPool $node "192.168.64.0/24"

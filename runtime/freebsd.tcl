@@ -1969,7 +1969,7 @@ proc enableIPforwarding { eid node } {
 #   * node -- node id
 #****
 proc configDefaultLoIfc { eid node } {
-    pipesExec "jexec $eid\.$node ifconfig lo0 127.0.0.1/24" "hold"
+    pipesExec "jexec $eid\.$node ifconfig lo0 127.0.0.1/8" "hold"
 }
 
 #****f* freebsd.tcl/getExtIfcs

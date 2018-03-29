@@ -519,15 +519,16 @@ proc startIfcsNode { node } {
     set cmds ""
     set nodeNs [getNodeNamespace $node]
     foreach ifc [allIfcList $node] {
-        # FIXME: should also work for loopback
-        if {$ifc != "lo0"} {
-            set mtu [getIfcMTU $node $ifc]
-            if {[getIfcOperState $node $ifc] == "up"} {
-                set cmds "$cmds\n nsenter -n -t $nodeNs ip link set dev $ifc up mtu $mtu"
-            } else {
-                set cmds "$cmds\n nsenter -n -t $nodeNs ip link set dev $ifc mtu $mtu"
-            }
-        }
+        if {$ifc == "lo0"} {
+	    set cmds "$cmds\n nsenter -n -t $nodeNs ip link set dev lo down"
+	    set cmds "$cmds\n nsenter -n -t $nodeNs ip link set dev lo name $ifc"
+	}
+	set mtu [getIfcMTU $node $ifc]
+	if {[getIfcOperState $node $ifc] == "up"} {
+	    set cmds "$cmds\n nsenter -n -t $nodeNs ip link set dev $ifc up mtu $mtu"
+	} else {
+	    set cmds "$cmds\n nsenter -n -t $nodeNs ip link set dev $ifc mtu $mtu"
+	}
     }
     exec sh << $cmds
 }
@@ -577,12 +578,9 @@ proc runConfOnNode { node } {
 
     set nodeNs [getNodeNamespace $node]
     foreach ifc [allIfcList $node] {
-        # FIXME: should also work for loopback
-        if {$ifc != "lo0"} {
-            if {[getIfcOperState $node $ifc] == "down"} {
-                exec nsenter -n -t $nodeNs ip link set dev $ifc down
-            }
-        }
+	if {[getIfcOperState $node $ifc] == "down"} {
+	    exec nsenter -n -t $nodeNs ip link set dev $ifc down
+	}
     }
 
     generateHostsFile $node
@@ -730,7 +728,7 @@ proc enableIPforwarding { eid node } {
 #   * node -- node id
 #****
 proc configDefaultLoIfc { eid node } {
-    pipesExec "docker exec $eid\.$node ifconfig lo 127.0.0.1/24" "hold"
+    pipesExec "docker exec $eid\.$node ifconfig lo0 127.0.0.1/8" "hold"
 }
 
 #****f* linux.tcl/getExtIfcs

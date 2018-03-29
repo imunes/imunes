@@ -94,7 +94,7 @@ proc $MODULE.confNewNode { node } {
     setBridgeTimeout $node bridge0 "240"
 
     setLogIfcType $node lo0 lo
-    setIfcIPv4addr $node lo0 "127.0.0.1/24"
+    setIfcIPv4addr $node lo0 "127.0.0.1/8"
     setIfcIPv6addr $node lo0 "::1/128"
 }
 
