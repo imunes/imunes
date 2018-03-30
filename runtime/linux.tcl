@@ -371,7 +371,13 @@ proc createNodeContainer { node } {
 #****
 proc createNodePhysIfcs { node } {}
 
-proc createNodeLogIfcs { node } {}
+proc createNodeLogIfcs { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set node_id "$eid.$node"
+
+    catch "exec docker exec $node_id ip link set dev lo down"
+    catch "exec docker exec $node_id ip link set dev lo name lo0"
+}
 
 #****f* linux.tcl/configureICMPoptions
 # NAME
@@ -519,15 +525,14 @@ proc startIfcsNode { node } {
     set cmds ""
     set nodeNs [getNodeNamespace $node]
     foreach ifc [allIfcList $node] {
-        if {$ifc == "lo0"} {
-	    set cmds "$cmds\n nsenter -n -t $nodeNs ip link set dev lo down"
-	    set cmds "$cmds\n nsenter -n -t $nodeNs ip link set dev lo name $ifc"
-	}
 	set mtu [getIfcMTU $node $ifc]
 	if {[getIfcOperState $node $ifc] == "up"} {
 	    set cmds "$cmds\n nsenter -n -t $nodeNs ip link set dev $ifc up mtu $mtu"
 	} else {
 	    set cmds "$cmds\n nsenter -n -t $nodeNs ip link set dev $ifc mtu $mtu"
+	}
+	if { $ifc == "lo0" } {
+	    set cmds "$cmds\n nsenter -n -t $nodeNs ip addr flush dev $ifc"
 	}
     }
     exec sh << $cmds
@@ -573,7 +578,8 @@ proc runConfOnNode { node } {
 
     writeDataToFile $node_dir/$confFile [join $bootcfg "\n"]
     exec docker exec -i $node_id sh -c "cat > $confFile" < $node_dir/$confFile
-    exec docker exec $node_id $bootcmd $confFile >& $node_dir/out.log
+    exec echo "LOG START" > $node_dir/out.log
+    exec docker exec $node_id $bootcmd $confFile >>& $node_dir/out.log
     exec docker exec -i $node_id sh -c "cat > out.log" < $node_dir/out.log
 
     set nodeNs [getNodeNamespace $node]
@@ -605,10 +611,7 @@ proc destroyLinkBetween { eid lnode1 lnode2 } {
 proc removeNodeIfcIPaddrs { eid node } {
     set node_id "$eid.$node"
     foreach ifc [allIfcList $node] {
-        # FIXME: make this work for loopback
-        if {$ifc != "lo0"} {
-            catch "exec docker exec $node_id ip addr flush dev $ifc"
-        }
+	catch "exec docker exec $node_id ip addr flush dev $ifc"
     }
 }
 
