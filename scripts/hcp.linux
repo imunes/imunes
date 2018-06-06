@@ -52,7 +52,7 @@ getViStoLoc() {
 	    fi
 	    echo $basedir/aufs/diff/$mount_dir;;
 	btrfs) echo $basedir/btrfs/subvolumes/$dockerid;;
-	overlay) docker inspect $dockerid | grep UpperDir | awk '{print $2}' | cut -d'"' -f2;;
+	overlay*) docker inspect $dockerid | grep UpperDir | awk '{print $2}' | cut -d'"' -f2;;
     esac
 }
 
