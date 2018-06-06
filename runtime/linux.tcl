@@ -372,11 +372,6 @@ proc createNodeContainer { node } {
 proc createNodePhysIfcs { node } {}
 
 proc createNodeLogIfcs { node } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-    set node_id "$eid.$node"
-
-    catch "exec docker exec $node_id ip link set dev lo down"
-    catch "exec docker exec $node_id ip link set dev lo name lo0"
 }
 
 #****f* linux.tcl/configureICMPoptions
@@ -526,13 +521,14 @@ proc startIfcsNode { node } {
     set nodeNs [getNodeNamespace $node]
     foreach ifc [allIfcList $node] {
 	set mtu [getIfcMTU $node $ifc]
-	if {[getIfcOperState $node $ifc] == "up"} {
-	    set cmds "$cmds\n nsenter -n -t $nodeNs ip link set dev $ifc up mtu $mtu"
-	} else {
-	    set cmds "$cmds\n nsenter -n -t $nodeNs ip link set dev $ifc mtu $mtu"
-	}
+	set tmpifc $ifc
 	if { $ifc == "lo0" } {
-	    set cmds "$cmds\n nsenter -n -t $nodeNs ip addr flush dev $ifc"
+	    set tmpifc lo
+	}
+	if {[getIfcOperState $node $ifc] == "up"} {
+	    set cmds "$cmds\n nsenter -n -t $nodeNs ip link set dev $tmpifc up mtu $mtu"
+	} else {
+	    set cmds "$cmds\n nsenter -n -t $nodeNs ip link set dev $tmpifc mtu $mtu"
 	}
     }
     exec sh << $cmds
@@ -742,7 +738,7 @@ proc enableIPforwarding { eid node } {
 #   * node -- node id
 #****
 proc configDefaultLoIfc { eid node } {
-    pipesExec "docker exec $eid\.$node ifconfig lo0 127.0.0.1/8" "hold"
+    pipesExec "docker exec $eid\.$node ifconfig lo 127.0.0.1/8" "hold"
 }
 
 #****f* linux.tcl/getExtIfcs

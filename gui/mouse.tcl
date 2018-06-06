@@ -513,6 +513,7 @@ proc mergeGUINode { node } {
 #   * y -- y coordinate for popup menu
 #****
 proc button3node { c x y } {
+    global isOSlinux
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
@@ -847,7 +848,13 @@ proc button3node { c x y } {
 	    .button3menu.wireshark add command -label "No interfaces available." 
 	} else {
 	    foreach ifc [allIfcList $node] {
-		set label "$ifc"
+		set tmpifc $ifc
+		if { $isOSlinux == true } {
+		    if { $ifc == "lo0" } {
+			set tmpifc lo
+		    }
+		}
+		set label "$tmpifc"
 		if { [getIfcIPv4addr $node $ifc] != "" } {
 		    set label "$label ([getIfcIPv4addr $node $ifc])"
 		}
@@ -855,7 +862,7 @@ proc button3node { c x y } {
 		    set label "$label ([getIfcIPv6addr $node $ifc])"
 		}
 		.button3menu.wireshark add command -label $label \
-		    -command "startWiresharkOnNodeIfc $node $ifc"
+		    -command "startWiresharkOnNodeIfc $node $tmpifc"
 	    }
 	}
 	#
@@ -867,7 +874,13 @@ proc button3node { c x y } {
 	    .button3menu.tcpdump add command -label "No interfaces available." 
 	} else {
 	    foreach ifc [allIfcList $node] {
-		set label "$ifc"
+		set tmpifc $ifc
+		if { $isOSlinux == true } {
+		    if { $ifc == "lo0" } {
+			set tmpifc lo
+		    }
+		}
+		set label "$tmpifc"
 		if { [getIfcIPv4addr $node $ifc] != "" } {
 		    set label "$label ([getIfcIPv4addr $node $ifc])"
 		}
@@ -875,7 +888,7 @@ proc button3node { c x y } {
 		    set label "$label ([getIfcIPv6addr $node $ifc])"
 		}
 		.button3menu.tcpdump add command -label $label \
-		    -command "startTcpdumpOnNodeIfc $node $ifc"
+		    -command "startTcpdumpOnNodeIfc $node $tmpifc"
 	    }
 	}
 	#
