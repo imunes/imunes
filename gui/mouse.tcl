@@ -849,7 +849,7 @@ proc button3node { c x y } {
 	} else {
 	    foreach ifc [allIfcList $node] {
 		set tmpifc $ifc
-		if { $isOSlinux == true } {
+		if { $isOSlinux } {
 		    if { $ifc == "lo0" } {
 			set tmpifc lo
 		    }
@@ -875,7 +875,7 @@ proc button3node { c x y } {
 	} else {
 	    foreach ifc [allIfcList $node] {
 		set tmpifc $ifc
-		if { $isOSlinux == true } {
+		if { $isOSlinux } {
 		    if { $ifc == "lo0" } {
 			set tmpifc lo
 		    }

@@ -572,7 +572,10 @@ proc runConfOnNode { node } {
         set confFile "boot.conf"
     }
 
-    writeDataToFile $node_dir/$confFile [join $bootcfg "\n"]
+    # change all occurrences of "dev lo0" to "dev lo"
+    regsub -all {dev lo0} $bootcfg {dev lo} bootcfg
+
+    writeDataToFile $node_dir/$confFile [join "{ip a flush dev lo} $bootcfg" "\n"]
     exec docker exec -i $node_id sh -c "cat > $confFile" < $node_dir/$confFile
     exec echo "LOG START" > $node_dir/out.log
     catch {exec docker exec $node_id $bootcmd $confFile >>& $node_dir/out.log} err
@@ -592,6 +595,10 @@ proc runConfOnNode { node } {
     set nodeNs [getNodeNamespace $node]
     foreach ifc [allIfcList $node] {
 	if {[getIfcOperState $node $ifc] == "down"} {
+	    set tmpifc $ifc
+	    if { $ifc == "lo0" } {
+		set ifc lo
+	    }
 	    exec nsenter -n -t $nodeNs ip link set dev $ifc down
 	}
     }
