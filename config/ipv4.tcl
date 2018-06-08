@@ -36,6 +36,7 @@ set ipv4 10.0.0.0/24
 set numbits [lindex [split $ipv4 /] 1]
 set control 0
 set changeAddrRange 0
+set changeAddressRange 0
 
 #****f* ipv4.tcl/IPv4AddrApply
 # NAME
