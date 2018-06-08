@@ -30,7 +30,7 @@
 # NAME
 #   ipv4.tcl -- file for handling IPv4
 #****
-global ipv4 numbits control changeAddrRange
+global ipv4 numbits control changeAddrRange changeAddressRange
 
 set ipv4 10.0.0.0/24
 set numbits [lindex [split $ipv4 /] 1]
