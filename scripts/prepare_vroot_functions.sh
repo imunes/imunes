@@ -31,7 +31,7 @@ RELEASE_VER=`echo $RELEASE | cut -d'.' -f2 | cut -d'-' -f1`
 ARCH=`uname -m`
 REPO=latest
 
-echo "10.2-RELEASE 11.1-RELEASE" | grep -q $RELEASE
+echo "10.2-RELEASE 11.1-RELEASE 11.2-RELEASE" | grep -q $RELEASE
 if [ $? -eq 0 ]; then
     REPO="release_$RELEASE_VER"
 fi
