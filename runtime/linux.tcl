@@ -803,11 +803,7 @@ proc releaseExtIfc { eid node } {
 proc getIPv4RouteCmd { statrte } {
     set route [lindex $statrte 0]
     set addr [lindex $statrte 1]
-    if {$route == "0.0.0.0/0"} {
-        set cmd "ip route add $route via $addr"
-    } else {
-        set cmd "ip route add default via $addr"
-    }
+    set cmd "ip route add $route via $addr"
     return $cmd
 }
 
