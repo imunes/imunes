@@ -63,12 +63,13 @@ proc showCfg { c node } {
 #   * y -- y coordinate
 #****
 proc showCfgPopup { c node title x y } {
+    global defaultFontSize
     #Therecan be shown only one popup at the time
     $c delete -withtag showCfgPopup
     #Show command output
     set popup [$c create text $x $y \
     			-text $title -tag "showCfgPopup" \
-			-font "clean" -justify left -anchor nw]
+			-font "Courier $imnDefaultFont" -justify left -anchor nw]
     #Create frame for the command output
     set box [$c bbox $popup]
     set x1 [expr {[lindex $box 0] - 5}]
@@ -146,11 +147,12 @@ proc showCfgPopup { c node title x y } {
 #   * y -- y coordinate
 #****
 proc deleteAndShowPopup { c title x y } {
+    global defaultFontSize
     $c delete -withtag showCfgPopup
     #Show command output
     set popup [$c create text $x $y \
     			-text $title -tag "showCfgPopup" \
-			-font "clean" -justify left -anchor nw]
+			-font "Courier $imnDefaultFont" -justify left -anchor nw]
     #Create frame for the command output
     set box [$c bbox $popup]
     set x1 [expr {[lindex $box 0] - 5}]

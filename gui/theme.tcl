@@ -30,7 +30,13 @@
 # Imunes theme
 #
 
+global defaultFontSize
+set defaultFontSize 9
+
 ttk::style theme create imunes -parent clam
+
+font create imnDefaultFont -family TkDefaultFont -size $defaultFontSize
+option add *font imnDefaultFont
 
 namespace eval ttk::theme::imunes {
     variable colors 
@@ -60,7 +66,7 @@ namespace eval ttk::theme::imunes {
 	    -selectbackground $colors(-selectbg) \
 	    -selectforeground $colors(-selectfg) \
 	    -selectborderwidth 0 \
-	    -font TkDefaultFont \
+	    -font imnDefaultFont \
 	    ;
 
 	ttk::style map "." \
