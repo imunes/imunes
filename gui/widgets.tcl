@@ -69,7 +69,7 @@ proc showCfgPopup { c node title x y } {
     #Show command output
     set popup [$c create text $x $y \
     			-text $title -tag "showCfgPopup" \
-			-font "Courier $imnDefaultFont" -justify left -anchor nw]
+			-font "Courier $defaultFontSize" -justify left -anchor nw]
     #Create frame for the command output
     set box [$c bbox $popup]
     set x1 [expr {[lindex $box 0] - 5}]
@@ -152,7 +152,7 @@ proc deleteAndShowPopup { c title x y } {
     #Show command output
     set popup [$c create text $x $y \
     			-text $title -tag "showCfgPopup" \
-			-font "Courier $imnDefaultFont" -justify left -anchor nw]
+			-font "Courier $defaultFontSize" -justify left -anchor nw]
     #Create frame for the command output
     set box [$c bbox $popup]
     set x1 [expr {[lindex $box 0] - 5}]
