@@ -583,11 +583,11 @@ proc runConfOnNode { node } {
 	if { $execMode != "batch" } {
 	    after idle {.dialog1.msg configure -wraplength 4i}
 	    tk_dialog .dialog1 "IMUNES warning" \
-		"There was a problem with configuring the node [getNodeName $node] ($node_id).\nCheck its /boot.conf and /out.log files." \
+		"There was a problem with configuring the node [getNodeName $node] ($node_id).\nCheck its /$confFile and /out.log files." \
 	    info 0 Dismiss
 	} else {
 	    puts "IMUNES warning"
-	    puts "\nThere was a problem with configuring the node [getNodeName $node] ($node_id).\nCheck its /boot.conf and /out.log files."
+	    puts "\nThere was a problem with configuring the node [getNodeName $node] ($node_id).\nCheck its /$confFile and /out.log files."
 	}
     }
     exec docker exec -i $node_id sh -c "cat > out.log" < $node_dir/out.log
