@@ -689,7 +689,9 @@ proc button3node { c x y } {
 #	.button3menu add command -label "Delete" -state disabled
     }
 
-    .button3menu add separator
+    if { $type != "pseudo" } {
+	.button3menu add separator
+    }
 
     #
     # Start & stop node
@@ -747,8 +749,8 @@ proc button3node { c x y } {
 		-menu .button3menu.sett
 	}
     } else {
-	.button3menu add cascade -label "Settings" \
-	    -menu .button3menu.sett -state disabled
+	#.button3menu add cascade -label "Settings" \
+	    #-menu .button3menu.sett -state disabled
     }
     if { $oper_mode == "exec" } {
 	.button3menu.sett add command -label "Import Running Configuration" \
@@ -765,7 +767,8 @@ proc button3node { c x y } {
     #
     # IPv4 autorenumber
     #
-    if { $oper_mode == "exec" || [[typemodel $node].layer] == "LINK" } {
+    if { $oper_mode == "exec" || [[typemodel $node].layer] == "LINK" \
+	|| $type == "pseudo" } {
 #	.button3menu add command -label "IPv4 autorenumber" \
 #	    -state disabled
     } else {
@@ -781,7 +784,8 @@ proc button3node { c x y } {
     #
     # IPv6 autorenumber
     #
-    if { $oper_mode == "exec" || [[typemodel $node].layer] == "LINK" } {
+    if { $oper_mode == "exec" || [[typemodel $node].layer] == "LINK" \
+	|| $type == "pseudo" } {
 #	.button3menu add command -label "IPv6 autorenumber" \
 #	    -state disabled
     } else {
