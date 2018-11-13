@@ -8,11 +8,6 @@ PACKAGES="$PACKAGES_MINIMAL $PACKAGES_COMMON isc-dhcp43-server isc-dhcp43-client
 
 checkArgs $*
 
-if [ $zfs -eq 1 ]; then
-    echo "ZFS not supported in 10.1"
-    exit 1
-fi
-
 # Start installation
 mkdir -p $WORKDIR
 cd $WORKDIR
