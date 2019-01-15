@@ -4,7 +4,7 @@
 
 PACKAGES_MINIMAL="$PACKAGES_MINIMAL bind913"
 PACKAGES="$PACKAGES_MINIMAL $PACKAGES_COMMON isc-dhcp44-server isc-dhcp44-client \
-    sylpheed xorp firefox wireshark gnome-themes-standard"
+    sylpheed xorp firefox wireshark gnome-themes-extra"
 
 checkArgs $*
 
