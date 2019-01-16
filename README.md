@@ -53,7 +53,7 @@ Then you need to compile and install the kernel and reboot.
 First we need to install the packages required for IMUNES. To do
 this execute the following command (on FreeBSD 9.3 and higher):
 
-    # pkg install tk86 ImageMagick tcllib wireshark socat git gmake
+    # pkg install tk86 ImageMagick6 tcllib wireshark socat git gmake
 
 ## Operating system (Linux)
 
