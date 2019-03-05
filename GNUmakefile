@@ -84,6 +84,8 @@ else
 	rm -f $(BINDIR)/himage.linux $(BINDIR)/cleanupAll.linux $(BINDIR)/startxcmd.linux $(BINDIR)/hcp.linux $(BINDIR)/apt-get_imunes
 endif
 
+	mv $(BINDIR)/vlink.tcl $(BINDIR)/vlink
+
 	mkdir -p $(SCRIPTSDIR)
 
 	for file in $(VROOT); do \
