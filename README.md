@@ -83,9 +83,15 @@ Note: on some distributions the netem module `sch_netem` required for link confi
     # pacman -S tk tcllib wireshark-gtk imagemagick docker \
         make openvswitch xterm
 
-#### Debian testing
-    # apt-get install openvswitch-switch docker.io xterm wireshark \
-        ImageMagick tk tcllib util-linux make
+#### Debian 9 and testing(buster)
+    (https://docs.docker.com/install/linux/docker-ce/debian/)[https://docs.docker.com/install/linux/docker-ce/debian/]
+    # apt-get update
+    # apt-get install apt-transport-https ca-certificates curl gnupg2 software-properties-common
+    # curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
+    # add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
+    # apt-get update
+    # apt-get install docker-ce openvswitch-switch xterm wireshark \
+        imagemagick tk tcllib util-linux make
 
 #### Debian 8
     ### add jessie-backports to your sources.list and update
@@ -106,6 +112,10 @@ Note: on some distributions the netem module `sch_netem` required for link confi
     ### add /usr/local/bin to sudo secure_path for executing sudo imunes
     # visudo
     Defaults    secure_path = /sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin
+
+#### Ubuntu 18.04 LTS (Mint 19, 19.1)
+    # apt install openvswitch-switch docker.io xterm wireshark \
+        make imagemagick tk tcllib util-linux
 
 #### Ubuntu 15.04
     # apt-get install openvswitch-switch docker.io xterm wireshark \
