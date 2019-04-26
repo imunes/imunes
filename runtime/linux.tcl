@@ -1,5 +1,7 @@
-global VROOT_MASTER
+global VROOT_MASTER ULIMIT_FILE ULIMIT_PROC
 set VROOT_MASTER "imunes/template"
+set ULIMIT_FILE "1024:16384"
+set ULIMIT_PROC "512:1024"
 
 #****f* linux.tcl/writeDataToNodeFile
 # NAME
@@ -346,7 +348,7 @@ proc prepareFilesystemForNode { node } {
 #****
 proc createNodeContainer { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
-    global VROOT_MASTER debug
+    global VROOT_MASTER ULIMIT_FILE ULIMIT_PROC debug
 
     set node_id "$eid.$node"
 
@@ -360,7 +362,7 @@ proc createNodeContainer { node } {
 	--name $node_id --hostname=[getNodeName $node] \
 	--volume /tmp/.X11-unix:/tmp/.X11-unix \
 	--sysctl net.ipv6.conf.all.disable_ipv6=0 \
-	--ulimit nofile=10240:10240 --ulimit nproc=65356:65536 \
+	--ulimit nofile=$ULIMIT_FILE --ulimit nproc=$ULIMIT_PROC \
 	$VROOT_MASTER } err
     if { $debug } {
         puts "'exec docker run' ($node_id) caught:\n$err"
