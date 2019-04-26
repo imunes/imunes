@@ -1,5 +1,5 @@
 global VROOT_MASTER
-set VROOT_MASTER "imunes/vroot"
+set VROOT_MASTER "imunes/template"
 
 #****f* linux.tcl/writeDataToNodeFile
 # NAME
@@ -251,9 +251,14 @@ proc fetchRunningExperiments {} {
 #****
 proc allSnapshotsAvailable {} {
     global VROOT_MASTER execMode
-    catch {exec docker images} images
+    set template $VROOT_MASTER
+    if {[string match "*:*" $template] != 1} {
+	append template ":latest"
+    }
 
-    if {[lsearch $images "*$VROOT_MASTER"] != -1} {
+    catch {exec docker images -q $template} images
+
+    if {[llength $images] > 0} {
         return 1
     } else {
         if {$execMode == "batch"} {
@@ -368,7 +373,6 @@ proc createNodeContainer { node } {
 
     set status ""
     while { [string match 'true' $status] != 1 } {
-        after 250
         catch {exec docker inspect --format '{{.State.Running}}' $node_id} status
     }
 }
