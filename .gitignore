@@ -5,3 +5,4 @@ src/ng_*/*.ko
 src/ng_*/*.o
 src/ng_*/x86
 *.swp
+*.imn

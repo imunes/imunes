@@ -328,7 +328,17 @@ proc prepareFilesystemForNode { node } {
     pipesExec "mkdir -p /var/run/netns" "hold"
 }
 
-#XXX-comment
+#****f* linux.tcl/createNodeContainer
+# NAME
+#   createNodeContainer -- creates a virtual node container
+# SYNOPSIS
+#   createNodeContainer $node
+# FUNCTION
+#   Creates a docker instance using the defined template and
+#   assigns the hostname. Waits for the node to be up.
+# INPUTS
+#   * node -- node id
+#****
 proc createNodeContainer { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global VROOT_MASTER debug
@@ -340,9 +350,13 @@ proc createNodeContainer { node } {
 	set network "bridge"
     }
 
-    catch {exec docker run -d --sysctl net.ipv6.conf.all.disable_ipv6=0 --privileged --cap-add=ALL --net=$network -h [getNodeName $node] \
-        -v /tmp/.X11-unix:/tmp/.X11-unix \
-        --name $node_id $VROOT_MASTER } err
+    catch { exec docker run --detach --init --tty \
+	--privileged --cap-add=ALL --net=$network \
+	--name $node_id --hostname=[getNodeName $node] \
+	--volume /tmp/.X11-unix:/tmp/.X11-unix \
+	--sysctl net.ipv6.conf.all.disable_ipv6=0 \
+	--ulimit nofile=10240:10240 --ulimit nproc=65356:65536 \
+	$VROOT_MASTER } err
     if { $debug } {
         puts "'exec docker run' ($node_id) caught:\n$err"
     }
@@ -354,9 +368,9 @@ proc createNodeContainer { node } {
 
     set status ""
     while { [string match 'true' $status] != 1 } {
+        after 250
         catch {exec docker inspect --format '{{.State.Running}}' $node_id} status
     }
-
 }
 
 #****f* linux.tcl/createNodePhysIfcs
@@ -371,8 +385,7 @@ proc createNodeContainer { node } {
 #****
 proc createNodePhysIfcs { node } {}
 
-proc createNodeLogIfcs { node } {
-}
+proc createNodeLogIfcs { node } {}
 
 #****f* linux.tcl/configureICMPoptions
 # NAME
