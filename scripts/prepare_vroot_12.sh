@@ -2,9 +2,9 @@
 
 . scripts/prepare_vroot_functions.sh
 
-PACKAGES_MINIMAL="$PACKAGES_MINIMAL bind99"
-PACKAGES="$PACKAGES_MINIMAL $PACKAGES_COMMON isc-dhcp43-server isc-dhcp43-client \
-    sylpheed xorp firefox wireshark gnome-themes-standard"
+PACKAGES_MINIMAL="$PACKAGES_MINIMAL bind913"
+PACKAGES="$PACKAGES_MINIMAL $PACKAGES_COMMON isc-dhcp44-server isc-dhcp44-client \
+    sylpheed xorp firefox wireshark gnome-themes-extra"
 
 checkArgs $*
 

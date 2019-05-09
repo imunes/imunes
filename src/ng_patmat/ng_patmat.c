@@ -27,6 +27,13 @@
 
 MALLOC_DEFINE(M_NETGRAPH_PM, "ng_patmat", "ng_patmat");
 
+#ifndef MALLOC
+#define MALLOC(space, cast, size, type, flags) \
+ ((space) = (cast)malloc((u_long)(size), (type), (flags)))
+#define FREE(addr, type) free((addr), (type))
+#endif
+
+
 /* Netgraph methods */
 static ng_constructor_t	ng_pm_constructor;
 static ng_rcvmsg_t	ng_pm_rcvmsg;

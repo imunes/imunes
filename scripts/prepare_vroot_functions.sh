@@ -26,14 +26,15 @@ HOMEDIR=`pwd`
 
 # FreeBSD version and architecture
 RELEASE=`uname -r|sed s/STABLE/RELEASE/|sed s/-p.*//`
+if [ "$TESTING" = "1" ]; then
+	RELEASE=`uname -r`
+fi
 RELEASE_NUM=`echo $RELEASE | cut -d'.' -f1`
 RELEASE_VER=`echo $RELEASE | cut -d'.' -f2 | cut -d'-' -f1`
 ARCH=`uname -m`
-REPO=latest
-
-echo "10.2-RELEASE 11.1-RELEASE 11.2-RELEASE" | grep -q $RELEASE
-if [ $? -eq 0 ]; then
-    REPO="release_$RELEASE_VER"
+REPO="release_$RELEASE_VER"
+if [ "$TESTING" = "1" ]; then
+	REPO="latest"
 fi
 
 # unionfs settings
@@ -49,28 +50,25 @@ export BATCH="yes"
 # log location
 LOG="$WORKDIR/log"
 
-# ZFS settings
 VROOT_DIR=/var/imunes
-VROOT_SIZE=1G
-VROOT_FILE="imunes_vroot"
-VROOT_DEST=$VROOT_DIR/$VROOT_FILE
 
 # packages for installation
 PACKAGES_MINIMAL="pkg quagga bash mrouted iftop"
 PACKAGES_COMMON="netperf lsof elinks nmap lighttpd akpop3d links nano postfix \
-   dsniff scapy p0f nmap ettercap tcpreplay hping strongswan" # isc-dhcp42-server
+   dsniff scapy p0f ettercap tcpreplay hping strongswan"
 
 ##########################
 
 # package management
 DISTSERVER="ftp://ftp.freebsd.org"
 RELEASE_DIR="/pub/FreeBSD/releases/$ARCH/$RELEASE"
+if [ "$TESTING" = "1" ]; then
+	RELEASE_DIR="/pub/FreeBSD/snapshots/$ARCH/$RELEASE"
+fi
 
 # pkg repository
 PKGREPO="http://pkg.freebsd.org/FreeBSD:$RELEASE_NUM:i386/$REPO"
 export PKG_CACHEDIR=$WORKDIR/packages
-
-#export PACKAGESITE=$DISTSERVER/$RELEASE_DIR/packages/Latest/
 
 BASE_FILES="base"
 if [ "$ARCH" = "amd64" ]; then
@@ -82,7 +80,6 @@ fi
 
 mini=0
 offline=0
-zfs=0
 checkArgs() {
     for arg in $*; do
 	case $arg in
@@ -90,8 +87,6 @@ checkArgs() {
 		mini=1;;
 	    "offline")
 		offline=1;;
-	    "zfs")
-		zfs=1;;
 	esac
     done
 }
@@ -134,27 +129,6 @@ fetchBaseOnline () {
     done
 }
 
-prepareZfs () {
-    ZPOOL=`zpool list | grep vroot | cut -d " " -f 1`
-### Create zpool and zfs on a file if there is no vroot pool###
-    if [ "$ZPOOL" != "vroot" ]; then
-	mkdir -p $VROOT_DIR
-	truncate -s $VROOT_SIZE $VROOT_DEST
-	zpool create -f vroot $VROOT_DEST
-    fi
-
-    ZFS=`zfs list | grep "vroot/vroot" | cut -d " " -f 1`
-    if [ "$ZFS" = "vroot/vroot" ]; then
-	log "ERR" "ERROR: zfs vroot/vroot already exists. Remove it so that \
-IMUNES can populate it.\nTo remove it run:\n    # zfs destroy -r \
-vroot/vroot"
-	exit 2
-    fi
-
-    zfs create vroot/vroot
-    VROOT_MASTER=/vroot/vroot
-}
-
 prepareUnionfs () {
     VROOT_MASTER=/var/imunes/vroot
     mkdir -p $VROOT_MASTER
@@ -186,31 +160,6 @@ it.\nScript aborted."
 	    exit 1
 	fi
     done
-}
-
-# prepare packages for pkg_add
-preparePackages () {
-    mkdir -p $WORKDIR/packages
-    mkdir -p $VROOT_MASTER/$WORKDIR/packages
-    export PKG_CACHEDIR=$WORKDIR/packages
-
-    cd $WORKDIR/packages
-    missing=""
-    notmissing=""
-    INCOMPLETE=0
-    for file in ${PKGS}; do
-	if [ ! -f $file.txz ]; then
-	    INCOMPLETE=1
-	    missing="$file $missing"
-	else
-	    notmissing="$file $notmissing"
-	fi
-    done
-
-    if [ $offline -eq 1 ] && [ $INCOMPLETE -eq 1 ]; then
-	log "OUT" "These packages are missing from $WORKDIR/packages and will not \
-be installed:\n $missing"
-    fi
 }
 
 # prepare packages for pkg install
@@ -267,37 +216,6 @@ release: {
 }
 _EOF_
 
-    fi
-}
-
-# install packages with pkg_add
-installPackages () {
-    err_list=""
-    log "OUT" "Installing packages..."
-    if [ $offline -eq 0 ] && [ $INCOMPLETE -eq 1 ]; then
-	for pkg in ${missing}; do
-	    pkg_add -rFK $pkg -C $VROOT_MASTER >> $LOG 2>&1
-	    if [ $? -ne 0 ]; then
-		err_list="$pkg $err_list"
-	    fi
-	done
-	cp -R $VROOT_MASTER/$WORKDIR/packages/* $WORKDIR/packages/
-    fi
-
-    cp -R $WORKDIR/packages/* $VROOT_MASTER/$WORKDIR/packages/
-    cp -R $VROOT_MASTER/$WORKDIR/packages/* $VROOT_MASTER/
-    for pkg in ${notmissing}; do
-	pkg_add -F $WORKDIR/packages/$pkg.tbz -C $VROOT_MASTER >> $LOG 2>&1 
-	if [ $? -ne 0 ]; then
-	    err_list="$pkg $err_list"
-	fi
-    done
-
-    log "OUT" "Installing packages done."
-    cd $IMUNESDIR
-
-    if [ "$err_list" != "" ]; then
-	log "OUT" "There were errors installing these packages:\n $err_list"
     fi
 }
 
@@ -374,13 +292,6 @@ wiresharkGUIfix () {
     # Make Wireshark's main upper and middle window panes bigger on first start
     echo "gui.geometry_main_upper_pane: 135" > $VROOT_MASTER/root/.wireshark/recent
     echo "gui.geometry_main_lower_pane: 200" >> $VROOT_MASTER/root/.wireshark/recent
-}
-
-### Take zfs snapshot ###
-takeZfsSnapshot () {
-    log "OUT" "Creating zfs snapshot..."
-    zfs snapshot vroot/vroot@clean
-    log "OUT" "done."
 }
 
 cleanUnnecessary () {
