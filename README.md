@@ -12,6 +12,7 @@ System requirements
 ## Operating system (FreeBSD)
 
 Note: Since FreeBSD 12.0, kernel option VIMAGE is already included in the kernel, so there is no need to recompile the kernel with it.
+
 Note: FreeBSD 12.0 RELEASE version had some instabilities, so we recommend installing IMUNES on FreeBSD-12.0-STABLE-20190418-r346338 or newer.
 
 When IMUNES is used on top of FreeBSD 8 (or higher) it requires a kernel
