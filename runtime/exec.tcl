@@ -278,9 +278,9 @@ proc fetchNodeConfiguration {} {
 		    set ip4Set 0
 		} elseif {[regexp {^\tether ([^ ]+)} $line -> macaddr]} {
 		    setIfcMACaddr $node $ifc $macaddr
-		} elseif {[regexp {^\tinet6 (?!fe80:)([^ ]+) } $line -> ip6addr]} {
+		} elseif {[regexp {^\tinet6 (?!fe80:)([^ ]+) prefixlen ([^ ]+)} $line -> ip6addr mask]} {
 		    if {$ip6Set == 0} {
-			setIfcIPv6addr $node $ifc $ip6addr
+			setIfcIPv6addr $node $ifc $ip6addr/$mask
 			set ip6Set 1
 		    }
 		} elseif {[regexp {^\tinet ([^ ]+) netmask ([^ ]+) } $line \

@@ -11,6 +11,10 @@ System requirements
 
 ## Operating system (FreeBSD)
 
+Note: Since FreeBSD 12.0, kernel option VIMAGE is already included in the kernel, so there is no need to recompile the kernel with it.
+
+Note: FreeBSD 12.0 RELEASE version had some instabilities, so we recommend installing IMUNES on FreeBSD-12.0-STABLE-20190418-r346338 or newer.
+
 When IMUNES is used on top of FreeBSD 8 (or higher) it requires a kernel
 that is compiled with the VIMAGE option included. A sample kernel config file
 is as follows:
@@ -25,7 +29,7 @@ is as follows:
     options IPSEC
     device  crypto
     options IPSEC_DEBUG
-    options IPSEC_NAT_T
+    #options IPSEC_NAT_T not needed for FreeBSD versions 11.2+
 
 To compile the VIMAGE enabled kernel you must have a copy of the
 FreeBSD kernel and create the config file with the above mentioned
@@ -53,7 +57,7 @@ Then you need to compile and install the kernel and reboot.
 First we need to install the packages required for IMUNES. To do
 this execute the following command (on FreeBSD 9.3 and higher):
 
-    # pkg install tk86 ImageMagick tcllib wireshark socat git gmake
+    # pkg install tk86 ImageMagick6 tcllib wireshark socat git gmake
 
 ## Operating system (Linux)
 

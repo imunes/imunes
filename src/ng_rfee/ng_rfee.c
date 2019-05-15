@@ -41,6 +41,7 @@
 #include <sys/ctype.h>
 #include <sys/kdb.h>
 #include <sys/kernel.h>
+#include <sys/malloc.h>
 #include <sys/mbuf.h>
 
 #include <netgraph/ng_message.h>
@@ -49,8 +50,14 @@
 #include <netgraph/ng_parse.h>
 
 #include "ng_rfee.h"
-
 MALLOC_DEFINE(M_NETGRAPH_RFEE, "ng_rfee", "ng_rfee");
+#ifndef MALLOC
+#define MALLOC(space, cast, size, type, flags) \
+ ((space) = (cast)malloc((u_long)(size), (type), (flags)))
+#define FREE(addr, type) free((addr), (type))
+#endif
+
+
 
 #ifndef M_DONTWAIT
 #define M_DONTWAIT M_NOWAIT
