@@ -85,6 +85,7 @@ else
 endif
 
 	mv $(BINDIR)/vlink.tcl $(BINDIR)/vlink
+
 	mkdir -p $(SCRIPTSDIR)
 
 	for file in $(VROOT); do \

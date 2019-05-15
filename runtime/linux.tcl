@@ -1,5 +1,7 @@
-global VROOT_MASTER
-set VROOT_MASTER "imunes/vroot"
+global VROOT_MASTER ULIMIT_FILE ULIMIT_PROC
+set VROOT_MASTER "imunes/template"
+set ULIMIT_FILE "1024:16384"
+set ULIMIT_PROC "512:1024"
 
 #****f* linux.tcl/writeDataToNodeFile
 # NAME
@@ -251,9 +253,14 @@ proc fetchRunningExperiments {} {
 #****
 proc allSnapshotsAvailable {} {
     global VROOT_MASTER execMode
-    catch {exec docker images} images
+    set template $VROOT_MASTER
+    if {[string match "*:*" $template] != 1} {
+	append template ":latest"
+    }
 
-    if {[lsearch $images "*$VROOT_MASTER"] != -1} {
+    catch {exec docker images -q $template} images
+
+    if {[llength $images] > 0} {
         return 1
     } else {
         if {$execMode == "batch"} {
@@ -328,10 +335,20 @@ proc prepareFilesystemForNode { node } {
     pipesExec "mkdir -p /var/run/netns" "hold"
 }
 
-#XXX-comment
+#****f* linux.tcl/createNodeContainer
+# NAME
+#   createNodeContainer -- creates a virtual node container
+# SYNOPSIS
+#   createNodeContainer $node
+# FUNCTION
+#   Creates a docker instance using the defined template and
+#   assigns the hostname. Waits for the node to be up.
+# INPUTS
+#   * node -- node id
+#****
 proc createNodeContainer { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
-    global VROOT_MASTER debug
+    global VROOT_MASTER ULIMIT_FILE ULIMIT_PROC debug
 
     set node_id "$eid.$node"
 
@@ -340,9 +357,13 @@ proc createNodeContainer { node } {
 	set network "bridge"
     }
 
-    catch {exec docker run -d --sysctl net.ipv6.conf.all.disable_ipv6=0 --privileged --cap-add=ALL --net=$network -h [getNodeName $node] \
-        -v /tmp/.X11-unix:/tmp/.X11-unix \
-        --name $node_id $VROOT_MASTER } err
+    catch { exec docker run --detach --init --tty \
+	--privileged --cap-add=ALL --net=$network \
+	--name $node_id --hostname=[getNodeName $node] \
+	--volume /tmp/.X11-unix:/tmp/.X11-unix \
+	--sysctl net.ipv6.conf.all.disable_ipv6=0 \
+	--ulimit nofile=$ULIMIT_FILE --ulimit nproc=$ULIMIT_PROC \
+	$VROOT_MASTER } err
     if { $debug } {
         puts "'exec docker run' ($node_id) caught:\n$err"
     }
@@ -356,7 +377,6 @@ proc createNodeContainer { node } {
     while { [string match 'true' $status] != 1 } {
         catch {exec docker inspect --format '{{.State.Running}}' $node_id} status
     }
-
 }
 
 #****f* linux.tcl/createNodePhysIfcs
@@ -371,8 +391,7 @@ proc createNodeContainer { node } {
 #****
 proc createNodePhysIfcs { node } {}
 
-proc createNodeLogIfcs { node } {
-}
+proc createNodeLogIfcs { node } {}
 
 #****f* linux.tcl/configureICMPoptions
 # NAME
