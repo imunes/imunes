@@ -2,7 +2,7 @@
 
 ROOTDIR="."
 LIBDIR=""
-DOCKER_TEMPLATE="imunes/vroot"
+DOCKER_TEMPLATE="imunes/template"
 
 VER=`uname -r | cut -d "." -f 1`
 OS=`uname -s`
