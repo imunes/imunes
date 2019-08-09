@@ -1,5 +1,5 @@
 ************************************************************************
-IMUNES - an Integrated Multiprotocol Network Emulator / Simulator
+## IMUNES - an Integrated Multiprotocol Network Emulator / Simulator
 ************************************************************************
 
 IMUNES GUI is a simple Tcl/Tk based management console, allowing for
@@ -211,6 +211,13 @@ in the terminal:
     # imunes
 
 To execute experiments, run it as root.
+
+### IMUNES wiki
+
+Visit our [wiki](https://github.com/imunes/imunes/wiki) for more:
+ - [IMUNES examples](https://github.com/imunes/imunes/wiki#imunes-examples)
+ - [Scripting IMUNES experiments](https://github.com/imunes/imunes/wiki#scripting-imunes-experiments)
+ - [Troubleshooting](https://github.com/imunes/imunes/wiki#troubleshooting)
 
 For additional information visit our web site:
         http://imunes.net/
