@@ -107,7 +107,7 @@ proc getLinuxLinkStatus { nodename eid ldata } {
     if { [isNodeInterface $ifname] } {
 	catch {exec himage $node tc qdisc show dev $ifname} settings
     } else {
-	catch {exec tc qdisc show dev $eid.$nodeid.$ifname} settings
+	catch {exec tc qdisc show dev $eid-$nodeid-$ifname} settings
     }
 
     foreach val {delay rate duplicate loss} {
@@ -207,7 +207,7 @@ proc applyLinkSettingsLinux { bandwidth ber delay dup nodename eid ldata } {
 	}
     } else {
 	# this is a switch (openvswitch)
-	catch {eval "exec tc qdisc change dev $eid.$nodeid.$ifname root netem [join $cfg " "]"}
+	catch {eval "exec tc qdisc change dev $eid-$nodeid-$ifname root netem [join $cfg " "]"}
     }
 }
 
