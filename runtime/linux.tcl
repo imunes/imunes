@@ -463,8 +463,17 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 	    catch "exec ovs-vsctl add-port $eid-$lname1 $hostIfc1"
 	    catch "exec ovs-vsctl add-port $eid-$lname2 $hostIfc2"
 	    # set bridge interfaces up
-	    exec ip link set dev $hostIfc1 up
-	    exec ip link set dev $hostIfc2 up
+	    if { [nodeType $lnode1] == "stpswitch" } {
+		setRSTPport $eid $lnode1 $hostIfc1
+	    } else {
+		exec ip link set dev $hostIfc1 up
+	    }
+
+	    if { [nodeType $lnode2] == "stpswitch" } {
+		setRSTPport $eid $lnode2 $hostIfc2
+	    } else {
+		exec ip link set dev $hostIfc2 up
+	    }
 	}
 	VIMAGE-VIMAGE {
 	    # prepare namespace files
@@ -801,6 +810,163 @@ proc captureExtIfc { eid node } {
     set ifname [getNodeName $node]
     createNetgraphNode $eid $ifname
     catch {exec ovs-vsctl add-port $eid-$ifname $ifname}
+}
+
+#****f* linux.tcl/makeRSTP
+# NAME
+#   makeRSTP
+# SYNOPSIS
+#   makeRSTP eid node
+# FUNCTION
+#   This configuration represents the configuration loaded on the booting time
+#   of the virtual nodes.
+# INPUTS
+#   * eid - experiment id of the node
+#   * node_id - id of the node (type of the node is lstpswitch)
+#****
+proc makeRSTP { eid node } {
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+    set bridgeName $eid-$node
+
+    catch {exec ovs-vsctl set Bridge $bridgeName rstp_enable=true}
+
+    set bridgeProtocol [getBridgeProtocol $node bridge0]
+    # XXX: maybe?
+    if { $bridgeProtocol == "rstp" } {
+	catch {exec ovs-vsctl set Bridge $bridgeName other_config:rstp-force-protocol-version=2}
+    } elseif { $bridgeProtocol == "stp" } {
+	catch {exec ovs-vsctl set Bridge $bridgeName other_config:rstp-force-protocol-version=0}
+    }
+
+    set bridgePriority [getBridgePriority $node bridge0]
+    if { $bridgePriority != "" } {
+	catch {exec ovs-vsctl set Bridge $bridgeName other_config:rstp-priority=$bridgePriority}
+    }
+
+    set bridgeMaxAge [getBridgeMaxAge $node bridge0]
+    if { $bridgeMaxAge != "" } {
+	catch {exec ovs-vsctl set Bridge $bridgeName other_config:rstp-max-age=$bridgeMaxAge}
+    }
+
+    set bridgeFwdDelay [getBridgeFwdDelay $node bridge0]
+    if { $bridgeFwdDelay != "" } {
+	catch {exec ovs-vsctl set Bridge $bridgeName other_config:rstp-forward-delay=$bridgeFwdDelay}
+    }
+
+    set bridgeHoldCnt [getBridgeHoldCount $node bridge0]
+    if { $bridgeHoldCnt != "" } {
+	catch {exec ovs-vsctl set Bridge $bridgeName other_config:rstp-transmit-hold-count=$bridgeHoldCnt}
+    }
+
+#    set bridgeHelloTime [getBridgeHelloTime $node bridge0]
+#    if { $bridgeHelloTime != "" && $bridgeProtocol == "stp" } {
+#	lappend cfg "ifconfig \$bridgeName hellotime $bridgeHelloTime"
+#    }
+
+#    set bridgeMaxAddr [getBridgeMaxAddr $node bridge0]
+#    if { $bridgeMaxAddr != "" } {
+#	lappend cfg "ifconfig \$bridgeName maxaddr $bridgeMaxAddr"
+#    }
+
+    set bridgeTimeout [getBridgeTimeout $node bridge0]
+    # XXX: maybe?
+    if { $bridgeTimeout != "" } {
+	catch {exec ovs-vsctl set Bridge $bridgeName other_config:rstp-ageing-time=$bridgeTimeout}
+    }
+}
+
+#****f* linux.tcl/setRSTPport
+# NAME
+#   setRSTPport
+# SYNOPSIS
+#   setRSTPport eid node ifc
+# FUNCTION
+#   Foreach interface in the interface list of the node every parameter is
+#   configured. This is done only after a link between RSTP switch and a node
+#   is created.
+# INPUTS
+#   * eid - experiment id of the node
+#   * node_id - id of the node (type of the node is lstpswitch)
+#****
+proc setRSTPport { eid node ifc } {
+    set ifcName $eid-$node-$ifc
+
+    if {[getIfcOperState $node $ifc] == "down"} {
+	catch {exec ip link set $ifcName down} err
+    } else {
+	catch {exec ip link set $ifcName up} err
+    }
+
+#    if {[getBridgeIfcSnoop $node $ifc] == "1"} {
+#        lappend cfg "ifconfig \$bridgeName span $ifc"
+#        lappend cfg ""
+#        continue
+#    }
+
+#    # XXX: maybe?
+#    if {[getBridgeIfcStp $node $ifc] == "1"} {
+#        catch {exec ovs-vsctl set Bridge $ifcName other_config:rstp-force-protocol-version=0}
+#    } else {
+#        catch {exec ovs-vsctl set Bridge $ifcName other_config:rstp-force-protocol-version=2}
+#    }
+
+#    if {[getBridgeIfcDiscover $node $ifc] == "1"} {
+#        lappend cfg "ifconfig \$bridgeName discover $ifc"
+#    } else {
+#        lappend cfg "ifconfig \$bridgeName -discover $ifc"
+#    }
+
+#    if {[getBridgeIfcLearn $node $ifc] == "1"} {
+#        lappend cfg "ifconfig \$bridgeName learn $ifc"
+#    } else {
+#        lappend cfg "ifconfig \$bridgeName -learn $ifc"
+#    }
+
+#    if {[getBridgeIfcSticky $node $ifc] == "1"} {
+#        lappend cfg "ifconfig \$bridgeName sticky $ifc"
+#    } else {
+#        lappend cfg "ifconfig \$bridgeName -sticky $ifc"
+#    }
+
+#    if {[getBridgeIfcPrivate $node $ifc] == "1"} {
+#        lappend cfg "ifconfig \$bridgeName private $ifc"
+#    } else {
+#        lappend cfg "ifconfig \$bridgeName -private $ifc"
+#    }
+
+    # XXX: maybe?
+    if {[getBridgeIfcEdge $node $ifc] == "1"} {
+	catch {exec ovs-vsctl set Port $ifcName other_config:rstp-port-admin-edge=true}
+    } else {
+	catch {exec ovs-vsctl set Port $ifcName other_config:rstp-port-admin-edge=false}
+    }
+
+    # XXX: maybe?
+    if {[getBridgeIfcAutoedge $node $ifc] == "1"} {
+	catch {exec ovs-vsctl set Port $ifcName other_config:rstp-port-auto-edge=true}
+    } else {
+	catch {exec ovs-vsctl set Port $ifcName other_config:rstp-port-auto-edge=false}
+    }
+
+    if {[getBridgeIfcPtp $node $ifc] == "1"} {
+	catch {exec ovs-vsctl set Port $ifcName other_config:rstp-admin-p2p-mac=1}
+    } else {
+	catch {exec ovs-vsctl set Port $ifcName other_config:rstp-admin-p2p-mac=0}
+    }
+
+#    # XXX: not implemented in ovswitch, defaults to not-p2p if enabled
+#    if {[getBridgeIfcAutoptp $node $ifc] == "1"} {
+#        catch {exec ovs-vsctl set Port $bridgeName other_config:rstp-admin-p2p-mac=2}
+#    }
+
+    set priority [getBridgeIfcPriority $node $ifc]
+    catch {exec ovs-vsctl set Port $ifcName other_config:rstp-port-priority=$priority}
+
+    set pathcost [getBridgeIfcPathcost $node $ifc]
+    catch {exec ovs-vsctl set Port eth0 other_config:rstp-path-cost=$pathcost}
+
+#    set maxaddr [getBridgeIfcMaxaddr $node $ifc]
+#    lappend cfg "ifconfig \$bridgeName ifmaxaddr $ifc $maxaddr"
 }
 
 #****f* linux.tcl/releaseExtIfc
