@@ -144,7 +144,7 @@ foreach file [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
 }
 
 # Set default L2 node list
-set l2nodes "hub lanswitch click_l2 rj45 stpswitch filter packgen ext"
+set l2nodes "hub lanswitch click_l2 rj45 stpswitch filter packgen ext wlan"
 # Set default L3 node list
 set l3nodes "genericrouter quagga xorp static click_l3 host pc nat64"
 # Set default supported router models

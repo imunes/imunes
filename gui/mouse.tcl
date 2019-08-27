@@ -1307,6 +1307,8 @@ proc button1-release { c x y } {
     upvar 0 ::cf::[set ::curcfg]::redolevel redolevel
     upvar 0 ::cf::[set ::curcfg]::undolog undolog
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global activetool newlink curobj grid
     global changed selectbox
     global lastX lastY sizex sizey
@@ -1363,6 +1365,7 @@ proc button1-release { c x y } {
 	set selected {}
 	foreach img [$c find withtag "selected"] {
 	    set node [lindex [$c gettags $img] 1]
+
 	    lappend selected $node
 	    set coords [$c coords $img]
 	    set x [expr {[lindex $coords 0] / $zoom}]
@@ -1522,6 +1525,22 @@ proc button1-release { c x y } {
 	    $c move "selectmark && $node" $dx $dy
 	    $c addtag need_redraw withtag "link && $node"
 	    set changed 1
+
+	    if { $oper_mode == "exec" } {
+		if { [typemodel $node] == "wlan" } {
+		    [typemodel $node].start $eid $node
+		} else {
+		    foreach ifc [ifcList $node] {
+			regsub -all {[0-9]} $ifc "" ifpref
+			switch -exact $ifpref {
+			    wlan {
+				set wlanNode [logicalPeerByIfc $node $ifc]
+				[typemodel $wlanNode].start $eid $wlanNode
+			    }
+			}
+		    }
+		}
+	    }
 	} ;# end of: foreach img selected
 
 	if {$outofbounds} {

@@ -693,7 +693,7 @@ proc execResetLinkJitter { eid link } {
 #   * list -- list in the form of {netgraph_node_name hook}
 #****
 proc l3node.nghook { eid node ifc } {
-    set ifnum [string range $ifc 3 end]
+    regsub -all {[^0-9]} $ifc "" ifnum
     set node_id "$eid\.$node"
     switch -exact [string trim $ifc 0123456789] {
 	wlan -
@@ -1171,7 +1171,9 @@ proc createNodePhysIfcs { node } {
     # Create a vimage
     # Create "physical" network interfaces
     foreach ifc [ifcList $node] {
-	switch -exact [string range $ifc 0 2] {
+	regsub -all {[0-9]} $ifc "" ifpref
+	switch -exact $ifpref {
+	    wlan -
 	    eth {
 		set ifid [createIfc $eid eiface ether]
 		pipesExec "jexec $eid ifconfig $ifid vnet $node" "hold"
