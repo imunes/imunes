@@ -388,6 +388,7 @@ foreach eid $running_exps {
 	continue
     }
 
+    set $eid ""
     foreach k [dict keys $ldata] {
 	lappend $eid [lindex [dict get $ldata $k] end]
     }
