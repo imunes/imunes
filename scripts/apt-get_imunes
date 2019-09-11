@@ -11,9 +11,9 @@ if test -z "$*"; then
     exit 2
 fi
 
-vroot="imunes/vroot"
+vroot="imunes/template"
 
-did=`docker run -d --net='bridge' $vroot`
+did=`docker run -d --net='bridge' --tty $vroot`
 docker exec $did apt-get update && docker exec -it $did apt-get "$@" && docker exec $did apt-get autoclean && docker exec $did apt-get autoremove && docker commit $did $vroot
 
 docker rm -f $did
