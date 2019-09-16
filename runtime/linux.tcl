@@ -597,7 +597,7 @@ proc runConfOnNode { node } {
     writeDataToFile $node_dir/$confFile [join "{ip a flush dev lo} $bootcfg" "\n"]
     exec docker exec -i $node_id sh -c "cat > $confFile" < $node_dir/$confFile
     exec echo "LOG START" > $node_dir/out.log
-    catch {exec docker exec $node_id $bootcmd $confFile >>& $node_dir/out.log} err
+    catch {exec docker exec --tty $node_id $bootcmd $confFile >>& $node_dir/out.log} err
     if { $err != "" } {
 	if { $execMode != "batch" } {
 	    after idle {.dialog1.msg configure -wraplength 4i}
