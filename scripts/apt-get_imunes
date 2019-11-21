@@ -12,8 +12,22 @@ if test -z "$*"; then
 fi
 
 vroot="imunes/template"
+ULIMITS="--ulimit nofile=10240:10240 --ulimit nproc=65356:65536"
 
-did=`docker run -d --net='bridge' --tty $vroot`
-docker exec $did apt-get update && docker exec -it $did apt-get "$@" && docker exec $did apt-get autoclean && docker exec $did apt-get autoremove && docker commit $did $vroot
+if test $1 = "-i"; then
+    vroot=$2
+    shift 2
+fi
 
+echo "Changing docker image '$vroot'."
+
+did=`docker run --detach --tty --net='bridge' $ULIMITS $vroot`
+docker exec $did apt-get update && \
+	docker exec -it $did apt-get "$@" && \
+	docker exec $did apt-get clean && \
+	docker exec $did apt-get autoclean && \
+	docker exec $did apt-get autoremove && \
+	docker commit $did $vroot
+
+docker kill $did
 docker rm -f $did
