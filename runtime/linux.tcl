@@ -611,9 +611,9 @@ proc runConfOnNode { node } {
     regsub -all {dev lo0} $bootcfg {dev lo} bootcfg
 
     writeDataToFile $node_dir/$confFile [join "{ip a flush dev lo} $bootcfg" "\n"]
-    exec docker exec -i $node_id sh -c "cat > $confFile" < $node_dir/$confFile
+    exec docker exec -i $node_id sh -c "cat > /$confFile" < $node_dir/$confFile
     exec echo "LOG START" > $node_dir/out.log
-    catch {exec docker exec --tty $node_id $bootcmd $confFile >>& $node_dir/out.log} err
+    catch {exec docker exec --tty $node_id $bootcmd /$confFile >>& $node_dir/out.log} err
     if { $err != "" } {
 	if { $execMode != "batch" } {
 	    after idle {.dialog1.msg configure -wraplength 4i}
@@ -625,7 +625,7 @@ proc runConfOnNode { node } {
 	    puts "\nThere was a problem with configuring the node [getNodeName $node] ($node_id).\nCheck its /$confFile and /out.log files."
 	}
     }
-    exec docker exec -i $node_id sh -c "cat > out.log" < $node_dir/out.log
+    exec docker exec -i $node_id sh -c "cat > /out.log" < $node_dir/out.log
 
     set nodeNs [getNodeNamespace $node]
     foreach ifc [allIfcList $node] {
