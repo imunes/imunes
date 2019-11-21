@@ -104,10 +104,6 @@ proc registerModule { module } {
     }
 }
 
-proc allSnapshotsAvailable {} {
-    return 1
-}
-
 proc logCaller {} {
     set r [catch {info level [expr [info level] - 1]} e]
     set r2 [catch {info level [expr [info level] - 2]} e2]

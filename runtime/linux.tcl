@@ -252,31 +252,43 @@ proc fetchRunningExperiments {} {
 #   current system.
 #****
 proc allSnapshotsAvailable {} {
+    upvar 0 ::cf::[set ::curcfg]::node_list node_list
     global VROOT_MASTER execMode
-    set template $VROOT_MASTER
-    if {[string match "*:*" $template] != 1} {
-	append template ":latest"
+
+    set snapshots $VROOT_MASTER
+    foreach node $node_list {
+	set img [getNodeDockerImage $node]
+	if {$img != ""} {
+	    lappend snapshots $img
+	}
     }
+    set snapshots [lsort -uniq $snapshots]
 
-    catch {exec docker images -q $template} images
+    foreach template $snapshots {
+	set search_template $template
+	if {[string match "*:*" $template] != 1} {
+	    append search_template ":latest"
+	}
 
-    if {[llength $images] > 0} {
-        return 1
-    } else {
-        if {$execMode == "batch"} {
-            puts "Docker template for virtual nodes:
-    $VROOT_MASTER
+	catch {exec docker images -q $search_template} images
+	if {[llength $images] > 0} {
+	    return 1
+	} else {
+	    if {$execMode == "batch"} {
+		puts "Docker image for some virtual nodes:
+    $template
 is missing.
-Run 'imunes -p' to pull the template."
-        } else {
-            tk_dialog .dialog1 "IMUNES error" \
-        "Docker template for virtual nodes:
-    $VROOT_MASTER
+Run 'docker pull $template' to pull the template."
+	    } else {
+		tk_dialog .dialog1 "IMUNES error" \
+	    "Docker image for some virtual nodes:
+    $template
 is missing.
-Run 'imunes -p' to pull the template." \
-            info 0 Dismiss
-        }
-        return 0
+Run 'docker pull $template' to pull the template." \
+		info 0 Dismiss
+	    }
+	    return 0
+	}
     }
 }
 
@@ -356,6 +368,10 @@ proc createNodeContainer { node } {
     if { [getNodeDockerAttach $node] } {
 	set network "bridge"
     }
+    set vroot [getNodeDockerImage $node]
+    if { $vroot == "" } {
+        set vroot $VROOT_MASTER
+    }
 
     catch { exec docker run --detach --init --tty \
 	--privileged --cap-add=ALL --net=$network \
@@ -363,7 +379,7 @@ proc createNodeContainer { node } {
 	--volume /tmp/.X11-unix:/tmp/.X11-unix \
 	--sysctl net.ipv6.conf.all.disable_ipv6=0 \
 	--ulimit nofile=$ULIMIT_FILE --ulimit nproc=$ULIMIT_PROC \
-	$VROOT_MASTER } err
+	$vroot } err
     if { $debug } {
         puts "'exec docker run' ($node_id) caught:\n$err"
     }

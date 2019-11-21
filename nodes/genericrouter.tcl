@@ -80,15 +80,15 @@ proc $MODULE.confNewNode { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
     global ripEnable ripngEnable ospfEnable ospf6Enable
     global rdconfig router_model router_ConfigModel
-    global def_router_model 
+    global def_router_model
     global nodeNamingBase
 
     set ripEnable [lindex $rdconfig 0]
     set ripngEnable [lindex $rdconfig 1]
     set ospfEnable [lindex $rdconfig 2]
-    set ospf6Enable [lindex $rdconfig 3]	
+    set ospf6Enable [lindex $rdconfig 3]
     set router_ConfigModel $router_model
-    
+
     if { $router_model != $def_router_model } {
 	lappend $node "model $router_model"
     } else {
@@ -99,11 +99,11 @@ proc $MODULE.confNewNode { node } {
 	"hostname [getNewNodeNameType router $nodeNamingBase(router)]" \
 	! ]
     lappend $node "network-config [list $nconfig]"
-    
+
     setNodeProtocolRip $node $ripEnable
     setNodeProtocolRipng $node $ripngEnable
-    setNodeProtocolOspfv2 $node $ospfEnable 
-    setNodeProtocolOspfv3 $node $ospf6Enable 
+    setNodeProtocolOspfv2 $node $ospfEnable
+    setNodeProtocolOspfv3 $node $ospf6Enable
 
     setLogIfcType $node lo0 lo
     setIfcIPv4addr $node lo0 "127.0.0.1/8"
@@ -166,9 +166,10 @@ proc $MODULE.toolbarIconDescr {} {
 proc $MODULE.notebookDimensions { wi } {
     set h 250
     set w 507
-    
+
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
 	== "Configuration" } {
+	set h 310
 	set w 507
     }
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
@@ -182,7 +183,7 @@ proc $MODULE.notebookDimensions { wi } {
 	set w 507
     }
 
-    return [list $h $w] 
+    return [list $h $w]
 }
 
 #****f* genericrouter.tcl/router.ifcName
@@ -205,7 +206,7 @@ proc $MODULE.ifcName {l r} {
 # SYNOPSIS
 #   set layer [router.layer]
 # FUNCTION
-#   Returns the layer on which the router operates, i.e. returns NETWORK. 
+#   Returns the layer on which the router operates, i.e. returns NETWORK.
 # RESULT
 #   * layer -- set to NETWORK
 #****
@@ -259,6 +260,7 @@ proc $MODULE.configGUI { c node } {
     configGUI_addTree $ifctab $node
 
     configGUI_routingModel $configtab $node
+    configGUI_dockerImage $configtab $node
     configGUI_attachDockerToExt $configtab $node
     configGUI_servicesConfig $configtab $node
     configGUI_staticRoutes $configtab $node

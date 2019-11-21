@@ -2688,6 +2688,47 @@ proc setNodeServices { node services } {
     }
 }
 
+#****f* nodecfg.tcl/getNodeDockerImage
+# NAME
+#   getNodeDockerImage -- get node docker image.
+# SYNOPSIS
+#   set value [getNodeDockerImage $node]
+# FUNCTION
+#   Returns node docker image setting.
+# INPUTS
+#   * node -- node id
+# RESULT
+#   * status -- docker image identifier
+#****
+proc getNodeDockerImage { node } {
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
+    return [lindex [lsearch -inline [set $node] "docker-image *"] 1]
+}
+
+#****f* nodecfg.tcl/setNodeDockerImage
+# NAME
+#   setNodeDockerImage -- set node docker image.
+# SYNOPSIS
+#   setNodeDockerImage $node $img
+# FUNCTION
+#   Sets node docker image.
+# INPUTS
+#   * node -- node id
+#   * img -- image identifier
+#****
+proc setNodeDockerImage { node img } {
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
+    set i [lsearch [set $node] "docker-image *"]
+    if { $i >= 0 } {
+	set $node [lreplace [set $node] $i $i]
+    }
+    if { $img != "" } {
+	lappend $node [list docker-image $img]
+    }
+}
+
 #****f* nodecfg.tcl/getNodeDockerAttach
 # NAME
 #   getNodeDockerAttach -- get node docker ext ifc attach.
