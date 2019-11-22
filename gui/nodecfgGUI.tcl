@@ -1823,10 +1823,6 @@ proc configGUI_nodeNameApply { wi node } {
 	tk_dialog .dialog1 "IMUNES warning" \
 	    "Hostname should contain only letters, digits, _, and -, and should not start with - (hyphen) or number." \
 	    info 0 Dismiss
-    } elseif { $isOSlinux && [nodeType $node] == "rj45" && [string length "$eid_base-$name.0"] > 15 } {
-	tk_dialog .dialog1 "IMUNES warning" \
-	    "Brigde name too long." \
-	    info 0 Dismiss
     } elseif {$name != [getNodeName $node]} {
         setNodeName $node $name
         if { $showTree == 1 } {

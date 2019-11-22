@@ -450,17 +450,8 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
     }
     set ether2 [getIfcMACaddr $lnode2 $ifname2]
 
-    if {[nodeType $lnode1] == "rj45"} {
-        set lname1 [getNodeName $lnode1]
-    } else {
-        set lname1 $lnode1
-    }
-
-    if {[nodeType $lnode2] == "rj45"} {
-        set lname2 [getNodeName $lnode2]
-    } else {
-        set lname2 $lnode2
-    }
+    set lname1 $lnode1
+    set lname2 $lnode2
 
     switch -exact "[[typemodel $lnode1].virtlayer]-[[typemodel $lnode2].virtlayer]" {
 	NETGRAPH-NETGRAPH {
@@ -815,8 +806,8 @@ proc getExtIfcs { } {
 #****
 proc captureExtIfc { eid node } {
     set ifname [getNodeName $node]
-    createNetgraphNode $eid $ifname
-    catch {exec ovs-vsctl add-port $eid-$ifname $ifname}
+    createNetgraphNode $eid $node
+    catch {exec ovs-vsctl add-port $eid-$node $ifname}
 }
 
 #****f* linux.tcl/releaseExtIfc
@@ -831,8 +822,7 @@ proc captureExtIfc { eid node } {
 #   * node -- node id
 #****
 proc releaseExtIfc { eid node } {
-    set ifname [getNodeName $node]
-    catch "destroyNetgraphNode $eid $ifname"
+    catch "destroyNetgraphNode $eid $node"
 }
 
 proc getIPv4RouteCmd { statrte } {
