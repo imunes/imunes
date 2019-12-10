@@ -89,7 +89,6 @@ safePackageRequire [list cmdline platform ip base64]
 set initMode 0
 set execMode interactive
 set debug 0
-set eid_base i[format %04x [expr {[pid] + [expr { round( rand()*10000 ) }]}]]
 set printVersion 0
 set prepareFlag 0
 set forceFlag 0
@@ -142,6 +141,8 @@ foreach file [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
 	safeSourceFile $file
     }
 }
+
+set eid_base [genExperimentId]
 
 # Set default L2 node list
 set l2nodes "hub lanswitch click_l2 rj45 stpswitch filter packgen ext"
