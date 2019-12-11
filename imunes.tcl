@@ -142,7 +142,9 @@ foreach file [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
     }
 }
 
-set eid_base [genExperimentId]
+if {! [info exists eid_base]} {
+    set eid_base [genExperimentId]
+}
 
 # Set default L2 node list
 set l2nodes "hub lanswitch click_l2 rj45 stpswitch filter packgen ext"
