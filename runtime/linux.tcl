@@ -263,6 +263,7 @@ proc allSnapshotsAvailable {} {
 	}
     }
     set snapshots [lsort -uniq $snapshots]
+    set missing 0
 
     foreach template $snapshots {
 	set search_template $template
@@ -272,24 +273,36 @@ proc allSnapshotsAvailable {} {
 
 	catch {exec docker images -q $search_template} images
 	if {[llength $images] > 0} {
-	    return 1
+	    continue
 	} else {
-	    if {$execMode == "batch"} {
-		puts "Docker image for some virtual nodes:
+	    # be nice to the user and see whether there is an image id matching
+	    if {[string length $template] == 12} {
+                catch {exec docker images -q} all_images
+		if {[lsearch $all_images $template] == -1} {
+		    incr missing
+		}
+	    } else {
+		incr missing
+	    }
+	    if {$missing} {
+                if {$execMode == "batch"} {
+                    puts "Docker image for some virtual nodes:
     $template
 is missing.
 Run 'docker pull $template' to pull the template."
-	    } else {
-		tk_dialog .dialog1 "IMUNES error" \
+	        } else {
+                   tk_dialog .dialog1 "IMUNES error" \
 	    "Docker image for some virtual nodes:
     $template
 is missing.
 Run 'docker pull $template' to pull the template." \
-		info 0 Dismiss
+                   info 0 Dismiss
+	        }
+	        return 0
 	    }
-	    return 0
 	}
     }
+    return 1
 }
 
 proc prepareDevfs {} {}
