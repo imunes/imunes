@@ -585,7 +585,7 @@ proc removeNodeContainer { eid node } {
 proc killAllNodeProcesses { eid node } {
     set node_id "$eid.$node"
 
-    catch "exec docker exec $node_id killall5 -9"
+    catch "exec docker exec $node_id killall5 -o 1 -9"
 }
 
 proc destroyVirtNodeIfcs { eid vimages } {}
