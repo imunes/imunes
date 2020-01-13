@@ -79,7 +79,7 @@ proc $MODULE.confNewIfc { node ifc } {
 proc $MODULE.confNewNode { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
     global nodeNamingBase
-    
+
     set nconfig [list \
 	"hostname [getNewNodeNameType host $nodeNamingBase(host)]" \
 	! ]
@@ -146,9 +146,10 @@ proc $MODULE.toolbarIconDescr {} {
 proc $MODULE.notebookDimensions { wi } {
     set h 210
     set w 507
-    
+
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
 	== "Configuration" } {
+	set h 270
 	set w 507
     }
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
@@ -157,7 +158,7 @@ proc $MODULE.notebookDimensions { wi } {
 	set w 507
     }
 
-    return [list $h $w] 
+    return [list $h $w]
 }
 
 #****f* host.tcl/host.ifcName
@@ -194,7 +195,7 @@ proc $MODULE.IPAddrRange {} {
 # SYNOPSIS
 #   set layer [host.layer]
 # FUNCTION
-#   Returns the layer on which the host operates i.e. returns NETWORK. 
+#   Returns the layer on which the host operates i.e. returns NETWORK.
 # RESULT
 #   * layer -- set to NETWORK
 #****
@@ -208,7 +209,7 @@ proc $MODULE.layer {} {
 # SYNOPSIS
 #   set layer [host.virtlayer]
 # FUNCTION
-#   Returns the layer on which the host is instantiated i.e. returns VIMAGE. 
+#   Returns the layer on which the host is instantiated i.e. returns VIMAGE.
 # RESULT
 #   * layer -- set to VIMAGE
 #****
@@ -231,7 +232,7 @@ proc $MODULE.virtlayer {} {
 # INPUTS
 #   * node -- node id (type of the node is host)
 # RESULT
-#   * congif -- generated configuration 
+#   * congif -- generated configuration
 #****
 proc $MODULE.cfggen { node } {
     set cfg {}
@@ -261,7 +262,7 @@ proc $MODULE.cfggen { node } {
 # INPUTS
 #   * node -- node id (type of the node is host)
 # RESULT
-#   * appl -- application that reads the configuration (/bin/sh) 
+#   * appl -- application that reads the configuration (/bin/sh)
 #****
 proc $MODULE.bootcmd { node } {
     return "/bin/sh"
@@ -274,7 +275,7 @@ proc $MODULE.bootcmd { node } {
 #   set shells [host.shellcmds]
 # FUNCTION
 #   Procedure shellcmds returns the shells that can be opened
-#   as a default shell for the system. 
+#   as a default shell for the system.
 # RESULT
 #   * shells -- default shells for the host
 #****
@@ -289,7 +290,7 @@ proc $MODULE.shellcmds {} {
 #   host.instantiate $eid $node
 # FUNCTION
 #   Procedure instantiate creates a new virtaul node
-#   for a given node in imunes. 
+#   for a given node in imunes.
 #   Procedure host.instantiate cretaes a new virtual node with
 #   all the interfaces and CPU parameters as defined in imunes.
 # INPUTS
@@ -324,7 +325,7 @@ proc $MODULE.start { eid node } {
 # SYNOPSIS
 #   host.shutdown $eid $node
 # FUNCTION
-#   Shutdowns a host. Simulates the shutdown proces of a host, 
+#   Shutdowns a host. Simulates the shutdown proces of a host,
 #   by calling the l3node.shutdown procedure.
 # INPUTS
 #   * eid -- experiment id
@@ -341,8 +342,8 @@ proc $MODULE.shutdown { eid node } {
 # SYNOPSIS
 #   host.destroy $eid $node
 # FUNCTION
-#   Destroys a host. Destroys all the interfaces of the host 
-#   and the vimage itself by calling l3node.destroy procedure. 
+#   Destroys a host. Destroys all the interfaces of the host
+#   and the vimage itself by calling l3node.destroy procedure.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id (type of the node is host)
@@ -356,7 +357,7 @@ proc $MODULE.destroy { eid node } {
 # NAME
 #   host.nghook -- nghook
 # SYNOPSIS
-#   host.nghook $eid $node $ifc 
+#   host.nghook $eid $node $ifc
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. This procedure calls
@@ -391,7 +392,7 @@ proc $MODULE.configGUI { c node } {
     #
     #guielements - the list of modules contained in the configuration window
     #              (each element represents the name of the procedure which creates
-    #               that module)  
+    #               that module)
     #
     #treecolumns - the list of columns in the interfaces tree (each element
     #              consists of the column id and the column name)
@@ -411,6 +412,7 @@ proc $MODULE.configGUI { c node } {
 	    "MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop"}
     configGUI_addTree $ifctab $node
 
+    configGUI_dockerImage $configtab $node
     configGUI_attachDockerToExt $configtab $node
     configGUI_servicesConfig $configtab $node
     configGUI_staticRoutes $configtab $node

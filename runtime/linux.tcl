@@ -252,32 +252,57 @@ proc fetchRunningExperiments {} {
 #   current system.
 #****
 proc allSnapshotsAvailable {} {
+    upvar 0 ::cf::[set ::curcfg]::node_list node_list
     global VROOT_MASTER execMode
-    set template $VROOT_MASTER
-    if {[string match "*:*" $template] != 1} {
-	append template ":latest"
-    }
 
-    catch {exec docker images -q $template} images
-
-    if {[llength $images] > 0} {
-        return 1
-    } else {
-        if {$execMode == "batch"} {
-            puts "Docker template for virtual nodes:
-    $VROOT_MASTER
-is missing.
-Run 'imunes -p' to pull the template."
-        } else {
-            tk_dialog .dialog1 "IMUNES error" \
-        "Docker template for virtual nodes:
-    $VROOT_MASTER
-is missing.
-Run 'imunes -p' to pull the template." \
-            info 0 Dismiss
-        }
-        return 0
+    set snapshots $VROOT_MASTER
+    foreach node $node_list {
+	set img [getNodeDockerImage $node]
+	if {$img != ""} {
+	    lappend snapshots $img
+	}
     }
+    set snapshots [lsort -uniq $snapshots]
+    set missing 0
+
+    foreach template $snapshots {
+	set search_template $template
+	if {[string match "*:*" $template] != 1} {
+	    append search_template ":latest"
+	}
+
+	catch {exec docker images -q $search_template} images
+	if {[llength $images] > 0} {
+	    continue
+	} else {
+	    # be nice to the user and see whether there is an image id matching
+	    if {[string length $template] == 12} {
+                catch {exec docker images -q} all_images
+		if {[lsearch $all_images $template] == -1} {
+		    incr missing
+		}
+	    } else {
+		incr missing
+	    }
+	    if {$missing} {
+                if {$execMode == "batch"} {
+                    puts "Docker image for some virtual nodes:
+    $template
+is missing.
+Run 'docker pull $template' to pull the template."
+	        } else {
+                   tk_dialog .dialog1 "IMUNES error" \
+	    "Docker image for some virtual nodes:
+    $template
+is missing.
+Run 'docker pull $template' to pull the template." \
+                   info 0 Dismiss
+	        }
+	        return 0
+	    }
+	}
+    }
+    return 1
 }
 
 proc prepareDevfs {} {}
@@ -356,6 +381,10 @@ proc createNodeContainer { node } {
     if { [getNodeDockerAttach $node] } {
 	set network "bridge"
     }
+    set vroot [getNodeDockerImage $node]
+    if { $vroot == "" } {
+        set vroot $VROOT_MASTER
+    }
 
     catch { exec docker run --detach --init --tty \
 	--privileged --cap-add=ALL --net=$network \
@@ -363,7 +392,7 @@ proc createNodeContainer { node } {
 	--volume /tmp/.X11-unix:/tmp/.X11-unix \
 	--sysctl net.ipv6.conf.all.disable_ipv6=0 \
 	--ulimit nofile=$ULIMIT_FILE --ulimit nproc=$ULIMIT_PROC \
-	$VROOT_MASTER } err
+	$vroot } err
     if { $debug } {
         puts "'exec docker run' ($node_id) caught:\n$err"
     }
@@ -434,17 +463,8 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
     }
     set ether2 [getIfcMACaddr $lnode2 $ifname2]
 
-    if {[nodeType $lnode1] == "rj45"} {
-        set lname1 [getNodeName $lnode1]
-    } else {
-        set lname1 $lnode1
-    }
-
-    if {[nodeType $lnode2] == "rj45"} {
-        set lname2 [getNodeName $lnode2]
-    } else {
-        set lname2 $lnode2
-    }
+    set lname1 $lnode1
+    set lname2 $lnode2
 
     switch -exact "[[typemodel $lnode1].virtlayer]-[[typemodel $lnode2].virtlayer]" {
 	NETGRAPH-NETGRAPH {
@@ -565,7 +585,7 @@ proc removeNodeContainer { eid node } {
 proc killAllNodeProcesses { eid node } {
     set node_id "$eid.$node"
 
-    catch "exec docker exec $node_id killall5 -9"
+    catch "exec docker exec $node_id killall5 -o 1 -9"
 }
 
 proc destroyVirtNodeIfcs { eid vimages } {}
@@ -595,9 +615,9 @@ proc runConfOnNode { node } {
     regsub -all {dev lo0} $bootcfg {dev lo} bootcfg
 
     writeDataToFile $node_dir/$confFile [join "{ip a flush dev lo} $bootcfg" "\n"]
-    exec docker exec -i $node_id sh -c "cat > $confFile" < $node_dir/$confFile
+    exec docker exec -i $node_id sh -c "cat > /$confFile" < $node_dir/$confFile
     exec echo "LOG START" > $node_dir/out.log
-    catch {exec docker exec --tty $node_id $bootcmd $confFile >>& $node_dir/out.log} err
+    catch {exec docker exec --tty $node_id $bootcmd /$confFile >>& $node_dir/out.log} err
     if { $err != "" } {
 	if { $execMode != "batch" } {
 	    after idle {.dialog1.msg configure -wraplength 4i}
@@ -609,7 +629,7 @@ proc runConfOnNode { node } {
 	    puts "\nThere was a problem with configuring the node [getNodeName $node] ($node_id).\nCheck its /$confFile and /out.log files."
 	}
     }
-    exec docker exec -i $node_id sh -c "cat > out.log" < $node_dir/out.log
+    exec docker exec -i $node_id sh -c "cat > /out.log" < $node_dir/out.log
 
     set nodeNs [getNodeNamespace $node]
     foreach ifc [allIfcList $node] {
@@ -799,8 +819,8 @@ proc getExtIfcs { } {
 #****
 proc captureExtIfc { eid node } {
     set ifname [getNodeName $node]
-    createNetgraphNode $eid $ifname
-    catch {exec ovs-vsctl add-port $eid-$ifname $ifname}
+    createNetgraphNode $eid $node
+    catch {exec ovs-vsctl add-port $eid-$node $ifname}
 }
 
 #****f* linux.tcl/releaseExtIfc
@@ -815,8 +835,7 @@ proc captureExtIfc { eid node } {
 #   * node -- node id
 #****
 proc releaseExtIfc { eid node } {
-    set ifname [getNodeName $node]
-    catch "destroyNetgraphNode $eid $ifname"
+    catch "destroyNetgraphNode $eid $node"
 }
 
 proc getIPv4RouteCmd { statrte } {

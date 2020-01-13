@@ -1336,8 +1336,8 @@ proc button1-release { c x y } {
 	# if there is an object beneath the cursor and an object was
 	# selected by the button1 procedure create a link between nodes
 	if {$destobj != "" && $curobj != "" && $destobj != $curobj} {
-	    set lnode1 [lindex [$c gettags $curobj] 1]
-	    set lnode2 [lindex [$c gettags $destobj] 1]
+	    set lnode1 [lindex [$c gettags $destobj] 1]
+	    set lnode2 [lindex [$c gettags $curobj] 1]
 	    if { [ifcByLogicalPeer $lnode1 $lnode2] == "" } {
 		set link [newLink $lnode1 $lnode2]
 		if { $link != "" } {
