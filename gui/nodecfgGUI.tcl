@@ -1949,6 +1949,7 @@ proc configGUI_ifcMACAddressApply { wi node ifc } {
     if { [checkMACAddr $macaddr] == 0 } {
 	return
     }
+    set dup 0
     if { $macaddr in $MACUsedList } {
 	foreach n $node_list {
 	    foreach i [ifcList $n] {
@@ -1959,12 +1960,10 @@ proc configGUI_ifcMACAddressApply { wi node ifc } {
 		}
 	    }
 	}
-    } else {
-	set dup 1
     }
     set oldmacaddr [getIfcMACaddr $node $ifc]
     if { $macaddr != $oldmacaddr } {
-        if { $apply == 1 && $dup != 1 && $macaddr != "" } {
+        if { $apply == 1 && $dup != 0 && $macaddr != "" } {
             tk_dialog .dialog1 "IMUNES warning" \
 	        "Provided MAC address already exists on node's [lindex $dup 0] interface [lindex $dup 1]" \
 	    info 0 Dismiss
