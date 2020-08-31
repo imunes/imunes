@@ -6,6 +6,11 @@ if test $RELEASE_VER -eq 3; then
     PACKAGES_MINIMAL="$PACKAGES_MINIMAL bind914"
     PACKAGES="$PACKAGES_MINIMAL $PACKAGES_COMMON isc-dhcp44-server isc-dhcp44-client \
 	sylpheed xorp firefox wireshark gnome-themes-extra"
+elif test $RELEASE_VER -eq 4; then
+    PACKAGES_MINIMAL="$PACKAGES_MINIMAL bind916"
+    PACKAGES="$PACKAGES_MINIMAL $PACKAGES_COMMON isc-dhcp44-server isc-dhcp44-client \
+	sylpheed xorp firefox wireshark gnome-themes-extra"
+    PACKAGES=`echo $PACKAGES | sed 's/scapy/py37-scapy/'`
 else
     PACKAGES_MINIMAL="$PACKAGES_MINIMAL bind99"
     PACKAGES="$PACKAGES_MINIMAL $PACKAGES_COMMON isc-dhcp43-server isc-dhcp43-client \
