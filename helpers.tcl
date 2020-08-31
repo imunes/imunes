@@ -187,6 +187,7 @@ proc prepareVroot {} {
     global isOSfreebsd isOSlinux prepareFlag forceFlag
 
     if { $isOSfreebsd && $forceFlag } {
+	catch {exec >@stdout umount /var/imunes/vroot/dev}
 	catch {exec >@stdout chflags -R noschg /var/imunes/vroot}
 	catch {exec >@stdout rm -fr /var/imunes/vroot}
     }

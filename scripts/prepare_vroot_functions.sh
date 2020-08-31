@@ -160,6 +160,8 @@ it.\nScript aborted."
 	    exit 1
 	fi
     done
+
+    mount -t devfs devfs $VROOT_MASTER/dev
 }
 
 # prepare packages for pkg install
@@ -295,6 +297,8 @@ wiresharkGUIfix () {
 }
 
 cleanUnnecessary () {
+    umount $VROOT_MASTER/dev
+
     rm -fr $VROOT_MASTER/tmp/*
 
     rm -f $VROOT_MASTER/etc/resolv.conf
