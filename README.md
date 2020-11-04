@@ -78,6 +78,8 @@ First we need to install the packages required for IMUNES:
     nsenter (part of the util-linux package since version 2.23 and later)
     xterm
     make (used for installation)
+    
+To run IMUNES experiments, you must run the Docker daemon and start the ovs-vswitchd service (starting these services depends on your Linux distribution).
 
 Note: on some distributions the netem module `sch_netem` required for link configuration is only available by installing additional kernel packages. Please check the availability of the module:
 
