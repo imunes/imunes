@@ -3,6 +3,7 @@ LIBDIR = lib/imunes
 IMUNESDIR = $(PREFIX)/$(LIBDIR)
 CONFIGDIR = $(IMUNESDIR)/config
 GUIDIR = $(IMUNESDIR)/gui
+GUIDIRMSGS = $(GUIDIR)/msgs
 ICONSDIR = $(IMUNESDIR)/icons
 NODESDIR = $(IMUNESDIR)/nodes
 RUNTIMEDIR = $(IMUNESDIR)/runtime
@@ -24,6 +25,7 @@ STARTUPDIR=/var/imunes-service
 BASEFILES =	COPYRIGHT README VERSION
 CONFIGFILES =	$(wildcard config/*.tcl)
 GUIFILES =	$(wildcard gui/*.tcl)
+GUIFILESMSGS =  $(wildcard gui/msgs/*.msg)
 NODESFILES =	$(wildcard nodes/*.tcl)
 RUNTIMEFILES =	$(wildcard runtime/*.tcl)
 PATCHESFILES =	$(wildcard src/patches/*)
@@ -100,6 +102,9 @@ endif
 
 	mkdir -p $(GUIDIR)
 	cp $(GUIFILES) $(GUIDIR)
+
+	mkdir -p $(GUIDIRMSGS)
+	cp $(GUIFILESMSGS) $(GUIDIRMSGS)
 
 	mkdir -p $(NODESDIR)
 	cp $(NODESFILES) $(NODESDIR)
