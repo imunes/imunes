@@ -91,6 +91,24 @@
 #    * def_router_model -- default router model
 #****
 
+package require Tcl
+package require Tk
+package require msgcat
+namespace import -force ::msgcat::mc
+namespace import -force ::msgcat::mcset
+namespace import -force ::msgcat::*
+
+set language [lindex [split [::msgcat::mclocale] {_}] 0]
+
+## FreeBSD 12.2
+if [file isfile "/usr/local/lib/imunes/gui/msgs/${language}.msg" ] {  
+	source "/usr/local/lib/imunes/gui/msgs/${language}.msg"
+	#puts "Existe el archivo: /usr/local/lib/imunes/gui/msgs/${language}.msg"
+	::msgcat::mclocale "$language"
+	::msgcat::mcload [file join [file dirname [info script]] msgs]
+} else {
+    puts "No existe el archivo en /usr/local/lib/imunes/gui/msgs/${language}.msg"
+}
 
 set newlink ""
 set selectbox ""
@@ -105,6 +123,7 @@ set grid 24
 set showGrid 1
 set autorearrange_enabled 0
 set activetool select
+set typeIdiom ""
 
 # resize Oval/Rectangle, "false" or direction: north/west/east/...
 set resizemode false
@@ -230,16 +249,17 @@ set mf .panwin.f1
 menu .menubar
 . configure -menu .menubar
 
-.menubar add cascade -label File -underline 0 -menu .menubar.file
-.menubar add cascade -label Edit -underline 0 -menu .menubar.edit
-.menubar add cascade -label Canvas -underline 0 -menu .menubar.canvas
-.menubar add cascade -label View -underline 0 -menu .menubar.view
-.menubar add cascade -label Tools -underline 0 -menu .menubar.tools
-.menubar add cascade -label TopoGen -underline 4 -menu .menubar.t_g
-.menubar add cascade -label Widgets -underline 0 -menu .menubar.widgets
-.menubar add cascade -label Events -underline 1 -menu .menubar.events
-.menubar add cascade -label Experiment -underline 1 -menu .menubar.experiment
-.menubar add cascade -label Help -underline 0 -menu .menubar.help
+.menubar add cascade -label [mc "File"] -underline 0 -menu .menubar.file
+.menubar add cascade -label [mc "Edit"] -underline 0 -menu .menubar.edit
+.menubar add cascade -label [mc "Canvas"] -underline 0 -menu .menubar.canvas
+.menubar add cascade -label [mc "View"] -underline 0 -menu .menubar.view
+.menubar add cascade -label [mc "Tools"] -underline 0 -menu .menubar.tools
+.menubar add cascade -label [mc "TopoGen"] -underline 4 -menu .menubar.t_g
+.menubar add cascade -label [mc "Widgets"] -underline 0 -menu .menubar.widgets
+.menubar add cascade -label [mc "Events"] -underline 1 -menu .menubar.events
+.menubar add cascade -label [mc "Experiment"] -underline 1 -menu .menubar.experiment
+.menubar add cascade -label [mc "Help"] -underline 0 -menu .menubar.help
+.menubar add cascade -label [mc "Idiom"] -underline 0 -menu .menubar.idiom
 
 
 #
@@ -247,45 +267,45 @@ menu .menubar
 #
 menu .menubar.file -tearoff 0
 
-.menubar.file add command -label New -underline 0 \
+.menubar.file add command -label [mc "New"] -underline 0 \
   -accelerator "Ctrl+N" -command { newProject }
 bind . <Control-n> "newProject"
 
-.menubar.file add command -label Open -underline 0 \
+.menubar.file add command -label [mc "Open"] -underline 0 \
   -accelerator "Ctrl+O" -command { fileOpenDialogBox }
 bind . <Control-o> "fileOpenDialogBox"
 
-.menubar.file add command -label Save -underline 0 \
+.menubar.file add command -label [mc "Save"] -underline 0 \
   -accelerator "Ctrl+S" -command { fileSaveDialogBox }
 bind . <Control-s> "fileSaveDialogBox"
 
-.menubar.file add command -label "Save As" -underline 5 \
+.menubar.file add command -label [mc "Save As"] -underline 5 \
   -command { fileSaveAsDialogBox }
 
-.menubar.file add command -label "Close" -underline 0 -command { closeFile }
+.menubar.file add command -label [mc "Close"] -underline 0 -command { closeFile }
 
 .menubar.file add separator
-.menubar.file add command -label "Print" -underline 0 \
+.menubar.file add command -label [mc "Print"] -underline 0 \
   -command {
     set w .entry1
     catch {destroy $w}
     toplevel $w
     wm transient $w .
     wm resizable $w 0 0
-    wm title $w "Printing options"
-    wm iconname $w "Printing options"
+    wm title $w [mc "Printing options"]
+    wm iconname $w [mc "Printing options"]
 
     #dodan glavni frame "printframe"
     ttk::frame $w.printframe
     pack $w.printframe -fill both -expand 1
 
-    ttk::label $w.printframe.msg -wraplength 5i -justify left -text "Print command:"
+    ttk::label $w.printframe.msg -wraplength 5i -justify left -text [mc "Print command:"]
     pack $w.printframe.msg -side top
 
     ttk::frame $w.printframe.buttons
     pack $w.printframe.buttons -side bottom -fill x -pady 2m
-    ttk::button $w.printframe.buttons.print -text Print -command "printCanvas $w"
-    ttk::button $w.printframe.buttons.cancel -text "Cancel" -command "destroy $w"
+    ttk::button $w.printframe.buttons.print -text [mc "Print"] -command "printCanvas $w"
+    ttk::button $w.printframe.buttons.cancel -text [mc "Cancel"] -command "destroy $w"
     pack $w.printframe.buttons.print $w.printframe.buttons.cancel -side left -expand 1
 
     ttk::entry $w.printframe.e1
@@ -295,7 +315,7 @@ bind . <Control-s> "fileSaveDialogBox"
 
 set printFileType ps
 
-.menubar.file add command -label "Print To File" -underline 9 \
+.menubar.file add command -label [mc "Print To File"] -underline 9 \
   -command {
     global winOS
     set w .entry1
@@ -303,14 +323,14 @@ set printFileType ps
     toplevel $w
     wm transient $w .
     wm resizable $w 0 0
-    wm title $w "Printing options"
-    wm iconname $w "Printing options"
+    wm title $w [mc "Printing options"]
+    wm iconname $w [mc "Printing options"]
 
     #dodan glavni frame "printframe"
     ttk::frame $w.printframe
     pack $w.printframe -fill both -expand 1
 
-    ttk::label $w.printframe.msg -wraplength 5i -justify left -text "File:"
+    ttk::label $w.printframe.msg -wraplength 5i -justify left -text [mc "File:"]
 
     ttk::frame $w.printframe.ftype
     ttk::radiobutton $w.printframe.ftype.ps -text "PostScript" \
@@ -331,7 +351,7 @@ set printFileType ps
 
     pack $w.printframe.msg -side top -fill x -padx 5
 
-    ttk::button $w.printframe.path.browse -text "Browse" -width 8 \
+    ttk::button $w.printframe.path.browse -text [mc "Browse"] -width 8 \
 	-command {
 	    global printFileType
 	    set printdest [tk_getSaveFile -initialfile print \
@@ -341,8 +361,8 @@ set printFileType ps
 
     ttk::frame $w.printframe.buttons
     pack $w.printframe.buttons -side bottom -fill x -pady 2m
-    ttk::button $w.printframe.buttons.print -text Print -command "printCanvasToFile $w $w.printframe.path.e1"
-    ttk::button $w.printframe.buttons.cancel -text "Cancel" -command "destroy $w"
+    ttk::button $w.printframe.buttons.print -text [mc "Print"] -command "printCanvasToFile $w $w.printframe.path.e1"
+    ttk::button $w.printframe.buttons.cancel -text [mc "Cancel"] -command "destroy $w"
     pack $w.printframe.buttons.print $w.printframe.buttons.cancel -side left -expand 1
 
     ttk::entry $w.printframe.path.e1
@@ -354,7 +374,7 @@ set printFileType ps
 }
 
 .menubar.file add separator
-.menubar.file add command -label Quit -underline 0 -command { exit }
+.menubar.file add command -label [mc "Quit"] -underline 0 -command { exit }
 .menubar.file add separator
 
 
@@ -369,20 +389,20 @@ bind . <Control-z> undo
     -accelerator "Ctrl+Y" -command redo -state disabled
 bind . <Control-y> redo
 .menubar.edit add separator
-.menubar.edit add command -label "Cut" -underline 0 \
+.menubar.edit add command -label [mc "Cut"] -underline 0 \
     -accelerator "Ctrl+X" -command cutSelection -state normal
 bind . <Control-x> cutSelection
-.menubar.edit add command -label "Copy" -underline 1 \
+.menubar.edit add command -label [mc "Copy"] -underline 1 \
     -accelerator "Ctrl+C" -command copySelection -state normal
 bind . <Control-c> copySelection
-.menubar.edit add command -label "Paste" -underline 0 \
+.menubar.edit add command -label [mc "Paste"] -underline 0 \
     -accelerator "Ctrl+V" -command paste -state normal
 bind . <Control-v> paste
 .menubar.edit add separator
-.menubar.edit add command -label "Select all" \
+.menubar.edit add command -label [mc "Select all"] \
     -accelerator "Ctrl+A" -underline 0 -command "selectAllObjects"
 bind . <Control-a> selectAllObjects
-.menubar.edit add command -label "Select adjacent" \
+.menubar.edit add command -label [mc "Select adjacent"] \
     -accelerator "Ctrl+D" -underline 7 -command selectAdjacent
 bind . <Control-d> selectAdjacent
 
@@ -390,15 +410,15 @@ bind . <Control-d> selectAdjacent
 # Canvas
 #
 menu .menubar.canvas -tearoff 0
-.menubar.canvas add command -label "New" -underline 0 -command {
+.menubar.canvas add command -label [mc "New"] -underline 0 -command {
     newCanvas ""
     switchCanvas last
     set changed 1
     updateUndoLog
 }
-.menubar.canvas add command -label "Rename" -underline 0 \
+.menubar.canvas add command -label [mc "Rename"] -underline 0 \
 -command { renameCanvasPopup }
-.menubar.canvas add command -label "Delete" -underline 0 -command {
+.menubar.canvas add command -label [mc "Delete"] -underline 0 -command {
     upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
 
@@ -420,21 +440,21 @@ menu .menubar.canvas -tearoff 0
     updateUndoLog
 }
 .menubar.canvas add separator
-.menubar.canvas add command -label "Resize" -underline 2 -command resizeCanvasPopup
-.menubar.canvas add command -label "Background image" -underline 0 \
+.menubar.canvas add command -label [mc "Resize"] -underline 2 -command resizeCanvasPopup
+.menubar.canvas add command -label [mc "Background image"] -underline 0 \
     -command changeBkgPopup
 
 .menubar.canvas add separator
-.menubar.canvas add command -label "Previous" -accelerator "PgUp" \
+.menubar.canvas add command -label [mc "Previous"] -accelerator "PgUp" \
     -command { switchCanvas prev }
 bind . <Prior> { switchCanvas prev }
-.menubar.canvas add command -label "Next" -accelerator "PgDown" \
+.menubar.canvas add command -label [mc "Next"] -accelerator "PgDown" \
     -command { switchCanvas next }
 bind . <Next> { switchCanvas next }
-.menubar.canvas add command -label "First" -accelerator "Home" \
+.menubar.canvas add command -label [mc "First"] -accelerator [mc "Home"] \
     -command { switchCanvas first }
 bind . <Home> { switchCanvas first }
-.menubar.canvas add command -label "Last" -accelerator "End" \
+.menubar.canvas add command -label [mc "Last"] -accelerator [mc "End"] \
     -command { switchCanvas last }
 bind . <End> { switchCanvas last }
 
@@ -448,34 +468,34 @@ menu .menubar.tools -tearoff 0
 .menubar.tools add command -label "Auto rearrange selected" -underline 15 \
     -command { rearrange selected }
 .menubar.tools add separator
-.menubar.tools add command -label "Align to grid" -underline 9 \
+.menubar.tools add command -label [mc "Align to grid"] -underline 9 \
     -command { align2grid }
 .menubar.tools add separator
-.menubar.tools add checkbutton -label "IPv4 auto-assign addresses/routes"  \
+.menubar.tools add checkbutton -label [mc "IPv4 auto-assign addresses/routes"]  \
     -variable IPv4autoAssign
-.menubar.tools add checkbutton -label "IPv6 auto-assign addresses/routes"  \
+.menubar.tools add checkbutton -label [mc "IPv6 auto-assign addresses/routes"]  \
     -variable IPv6autoAssign
-.menubar.tools add checkbutton -label "Auto-generate /etc/hosts file"  \
+.menubar.tools add checkbutton -label [mc "Auto-generate /etc/hosts file"]  \
     -variable hostsAutoAssign
 .menubar.tools add separator
-.menubar.tools add command -label "Randomize MAC bytes" -underline 10 \
+.menubar.tools add command -label [mc "Randomize MAC bytes"] -underline 10 \
     -command randomizeMACbytes
-.menubar.tools add command -label "IPv4 address pool" -underline 3 \
+.menubar.tools add command -label [mc "IPv4 address pool"] -underline 3 \
     -command {
     set w .entry1
     catch {destroy $w}
     toplevel $w
     wm transient $w .
     #wm resizable $w 0 0
-    wm title $w "IPv4 autonumbering address pool"
-    wm iconname $w "IPv4 address pool"
+    wm title $w [mc "IPv4 autonumbering address pool"]
+    wm iconname $w [mc "IPv4 address pool"]
     grab $w
 
     #dodan glavni frame "ipv4frame"
     ttk::frame $w.ipv4frame
     pack $w.ipv4frame -fill both -expand 1
 
-    ttk::label $w.ipv4frame.msg -text "IPv4 address range:"
+    ttk::label $w.ipv4frame.msg -text [mc "IPv4 address range:"]
     pack $w.ipv4frame.msg -side top
 
     ttk::entry $w.ipv4frame.e1 -width 27 -validate focus -invalidcommand "focusAndFlash %W"
@@ -486,8 +506,8 @@ menu .menubar.tools -tearoff 0
 
     ttk::frame $w.ipv4frame.buttons
     pack $w.ipv4frame.buttons -side bottom -fill x -pady 2m
-    ttk::button $w.ipv4frame.buttons.apply -text "Apply" -command "IPv4AddrApply $w"
-    ttk::button $w.ipv4frame.buttons.cancel -text "Cancel" -command "destroy $w"
+    ttk::button $w.ipv4frame.buttons.apply -text [mc "Apply"] -command "IPv4AddrApply $w"
+    ttk::button $w.ipv4frame.buttons.cancel -text [mc "Cancel"] -command "destroy $w"
 
     bind $w <Key-Return> "IPv4AddrApply $w"
     bind $w <Key-Escape> "destroy $w"
@@ -495,21 +515,21 @@ menu .menubar.tools -tearoff 0
     pack $w.ipv4frame.buttons.apply -side left -expand 1 -anchor e -padx 2
     pack $w.ipv4frame.buttons.cancel -side right -expand 1 -anchor w -padx 2
 }
-.menubar.tools add command -label "IPv6 address pool" -underline 3 \
+.menubar.tools add command -label [mc "IPv6 address pool"] -underline 3 \
     -command {
     set w .entry1
     catch {destroy $w}
     toplevel $w
     wm transient $w .
     #wm resizable $w 0 0
-    wm title $w "IPv6 autonumbering address pool"
-    wm iconname $w "IPv6 address pool"
+    wm title $w [mc "IPv6 autonumbering address pool"]
+    wm iconname $w [mc "IPv6 address pool"]
     grab $w
 
     ttk::frame $w.ipv6frame
     pack $w.ipv6frame -fill both -expand 1
 
-    ttk::label $w.ipv6frame.msg -text "IPv6 address range:"
+    ttk::label $w.ipv6frame.msg -text [mc "IPv6 address range:"]
     pack $w.ipv6frame.msg -side top
 
     ttk::entry $w.ipv6frame.e1 -width 27 -validate focus -invalidcommand "focusAndFlash %W"
@@ -520,8 +540,8 @@ menu .menubar.tools -tearoff 0
 
     ttk::frame $w.ipv6frame.buttons
     pack $w.ipv6frame.buttons -side bottom -fill x -pady 2m
-    ttk::button $w.ipv6frame.buttons.apply -text "Apply" -command "IPv6AddrApply $w"
-    ttk::button $w.ipv6frame.buttons.cancel -text "Cancel" -command "destroy $w"
+    ttk::button $w.ipv6frame.buttons.apply -text [mc "Apply"] -command "IPv6AddrApply $w"
+    ttk::button $w.ipv6frame.buttons.cancel -text [mc "Cancel"] -command "destroy $w"
 
     bind $w <Key-Return> "IPv6AddrApply $w"
     bind $w <Key-Escape> "destroy $w"
@@ -540,7 +560,7 @@ menu .menubar.tools -tearoff 0
     toplevel $wi
     wm transient $wi .
     wm resizable $wi 0 0
-    wm title $wi "Router Defaults"
+    wm title $wi [mc "Router Defaults"]
     grab $wi
 
     #dodan glavni frame "routerframe"
@@ -549,8 +569,8 @@ menu .menubar.tools -tearoff 0
 
     set w $wi.routerframe
 
-    ttk::labelframe $w.model -text "Model:"
-    ttk::labelframe $w.protocols -text "Protocols:"
+    ttk::labelframe $w.model -text [mc "Model:"]
+    ttk::labelframe $w.protocols -text [mc "Protocols:"]
 
     ttk::checkbutton $w.protocols.rip -text "rip" -variable routerRipEnable
     ttk::checkbutton $w.protocols.ripng -text "ripng" -variable routerRipngEnable
@@ -596,8 +616,8 @@ menu .menubar.tools -tearoff 0
     }
 
     ttk::frame $w.buttons
-    ttk::button $w.buttons.b1 -text "Apply" -command { routerDefaultsApply $wi }
-    ttk::button $w.buttons.b2 -text "Cancel" -command {
+    ttk::button $w.buttons.b1 -text [mc "Apply"] -command { routerDefaultsApply $wi }
+    ttk::button $w.buttons.b2 -text [mc "Cancel"] -command {
 	set router_model $routerDefaultsModel
 	set routerRipEnable [lindex $rdconfig 0]
 	set routerRipngEnable [lindex $rdconfig 1]
@@ -666,24 +686,24 @@ menu .menubar.view -tearoff 0
 
 set m .menubar.view.iconsize
 menu $m -tearoff 0
-.menubar.view add cascade -label "Icon size" -menu $m -underline 5
-    $m add radiobutton -label "Small" -variable iconSize \
+.menubar.view add cascade -label [mc "Icon size"] -menu $m -underline 5
+    $m add radiobutton -label [mc "Small"] -variable iconSize \
 	-value small -command { updateIconSize; redrawAll }
-    $m add radiobutton -label "Normal" -variable iconSize \
+    $m add radiobutton -label [mc "Normal"] -variable iconSize \
 	-value normal -command { updateIconSize; redrawAll }
 
 .menubar.view add separator
 
-.menubar.view add checkbutton -label "Show Interface Names" \
+.menubar.view add checkbutton -label [mc "Show Interface Names"] \
     -underline 5 -variable showIfNames \
     -command { redrawAllLinks }
-.menubar.view add checkbutton -label "Show IPv4 Addresses " \
+.menubar.view add checkbutton -label [mc "Show IPv4 Addresses"] \
     -underline 8 -variable showIfIPaddrs \
     -command { redrawAllLinks }
-.menubar.view add checkbutton -label "Show IPv6 Addresses " \
+.menubar.view add checkbutton -label [mc "Show IPv6 Addresses"] \
     -underline 8 -variable showIfIPv6addrs \
     -command { redrawAllLinks }
-.menubar.view add checkbutton -label "Show Node Labels" \
+.menubar.view add checkbutton -label [mc "Show Node Labels"] \
     -underline 5 -variable showNodeLabels -command {
     foreach object [.panwin.f1.c find withtag nodelabel] {
 	if { $showNodeLabels } {
@@ -693,7 +713,7 @@ menu $m -tearoff 0
 	}
     }
 }
-.menubar.view add checkbutton -label "Show Link Labels" \
+.menubar.view add checkbutton -label [mc "Show Link Labels"] \
     -underline 5 -variable showLinkLabels -command {
     foreach object [.panwin.f1.c find withtag linklabel] {
 	if { $showLinkLabels } {
@@ -704,7 +724,7 @@ menu $m -tearoff 0
     }
 }
 
-.menubar.view add command -label "Show All" \
+.menubar.view add command -label [mc "Show All"] \
     -underline 5 -command {
 	set showIfNames 1
 	set showIfIPaddrs 1
@@ -716,7 +736,7 @@ menu $m -tearoff 0
 	    .panwin.f1.c itemconfigure $object -state normal
 	}
     }
-.menubar.view add command -label "Show None" \
+.menubar.view add command -label [mc "Show None"] \
     -underline 6 -command {
 	set showIfNames 0
 	set showIfIPaddrs 0
@@ -735,28 +755,28 @@ menu $m -tearoff 0
 #    -variable showZFSsnapshots
 
 #.menubar.view add separator
-.menubar.view add checkbutton -label "Show Topology Tree" \
+.menubar.view add checkbutton -label [mc "Show Topology Tree"] \
     -variable showTree -underline 5 \
     -command { topologyElementsTree }
 
 .menubar.view add separator
 
-.menubar.view add checkbutton -label "Show Background Image" \
+.menubar.view add checkbutton -label [mc "Show Background Image"] \
     -underline 5 -variable showBkgImage \
     -command { redrawAll }
-.menubar.view add checkbutton -label "Show Annotations" \
+.menubar.view add checkbutton -label [mc "Show Annotations"] \
     -underline 8 -variable showAnnotations \
     -command { redrawAll }
-.menubar.view add checkbutton -label "Show Grid" \
+.menubar.view add checkbutton -label [mc "Show Grid"] \
     -underline 5 -variable showGrid \
     -command { redrawAll }
 
 
 .menubar.view add separator
-.menubar.view add command -label "Zoom In" -accelerator "+" \
+.menubar.view add command -label [mc "Zoom In"] -accelerator "+" \
     -command "zoom up"
 bind . "+" "zoom up"
-.menubar.view add command -label "Zoom Out" -accelerator "-" \
+.menubar.view add command -label [mc "Zoom Out"] -accelerator "-" \
      -command "zoom down"
 bind . "-" "zoom down"
 
@@ -766,7 +786,7 @@ bind . "-" "zoom down"
 set m .menubar.view.themes
 menu $m -tearoff 0
 set currentTheme imunes
-.menubar.view add cascade -label "Themes" -menu $m
+.menubar.view add cascade -label [mc "Themes"] -menu $m
     $m add radiobutton -label "alt" -variable currentTheme \
 	-value alt -command "ttk::style theme use alt"
     $m add radiobutton -label "classic" -variable currentTheme\
@@ -787,7 +807,7 @@ global showConfig
 set showConfig "None"
 global lastObservedNode
 set lastObservedNode ""
-.menubar.widgets add radiobutton -label "None" \
+.menubar.widgets add radiobutton -label [mc "None"] \
     -variable showConfig -underline 0 -value "None"
 .menubar.widgets add separator
 
@@ -800,6 +820,8 @@ set widgetlist { \
     { "Process list" "ps ax" } \
     { "IPv4 sockets" "netstat -4 -an" } \
     { "IPv6 sockets" "netstat -6 -an" } \
+    { "IPv4 sshd" "sockstat -4 -l | grep sshd" } \
+    { "IPv4 snmp" "sockstat -4 -l | grep snmpd" } \
     { "View startup script" "cat boot.conf" } \
     { "View startup log" "cat out.log" } \
     { "List files" "ls" } \
@@ -810,7 +832,7 @@ foreach widget $widgetlist {
 	-variable showConfig -underline 0 -value [lindex $widget 1]
 }
 
-.menubar.widgets add command -label "Custom..." \
+.menubar.widgets add command -label [mc "Custom..."] \
     -underline 0 -command {
     global showConfig
     set w .entry1
@@ -818,13 +840,13 @@ foreach widget $widgetlist {
     toplevel $w
     wm transient $w .
     wm resizable $w 0 0
-    wm title $w "Custom widget"
-    wm iconname $w "Custom widget"
+    wm title $w [mc "Custom widget"]
+    wm iconname $w [mc "Custom widget"]
 
     ttk::frame $w.custom
     pack $w.custom -fill both -expand 1
 
-    ttk::label $w.custom.label -wraplength 5i -justify left -text "Custom command:"
+    ttk::label $w.custom.label -wraplength 5i -justify left -text [mc "Custom command:"]
     pack $w.custom.label -side top
 
     ttk::frame $w.custom.buttons
@@ -835,7 +857,7 @@ foreach widget $widgetlist {
     	set showConfig [$w.custom.e1 get]
     	destroy $w
     }
-    ttk::button $w.custom.buttons.cancel -text "Cancel" -command "destroy $w"
+    ttk::button $w.custom.buttons.cancel -text [mc "Cancel"] -command "destroy $w"
     pack $w.custom.buttons.ok $w.custom.buttons.cancel -side left -expand 1
 
     set commands {"ifconfig" "ps ax" "netstat -rnf inet" "netstat -rn" "ls" \
@@ -852,7 +874,7 @@ foreach widget $widgetlist {
 
 if {0} {
 .menubar.widgets add separator
-.menubar.widgets add radiobutton -label "Route" \
+.menubar.widgets add radiobutton -label [mc "Route"] \
     -variable showConfig -underline 0 -value "route"
 }
 
@@ -865,7 +887,7 @@ menu .menubar.events -tearoff  0
 .menubar.events add command -label "Stop scheduling" -underline 1 \
 	-state disabled -command "stopEventScheduling" 
 .menubar.events add separator	
-.menubar.events add command -label "Event editor" -underline 0 \
+.menubar.events add command -label [mc "Event editor"] -underline 0 \
 	-command "elementsEventsEditor"
 #
 # Experiment
@@ -878,16 +900,16 @@ menu .menubar.experiment -tearoff 0
 .menubar.experiment add command -label "Restart" -underline 0 \
 	-command "setOperMode edit; setOperMode exec" -state disabled
 .menubar.experiment add separator	
-.menubar.experiment add command -label "Attach to experiment" -underline 0 \
+.menubar.experiment add command -label [mc "Attach to experiment"] -underline 0 \
 	-command "attachToExperimentPopup" 
 
 #
 # Help
 #
 menu .menubar.help -tearoff 0
-.menubar.help add command -label "About" -command {
+.menubar.help add command -label [mc "About"] -command {
     toplevel .about
-    wm title .about "About IMUNES"
+    wm title .about [mc "About IMUNES"]
     wm minsize .about 454 255
 
     set mainFrame .about.main
@@ -905,7 +927,7 @@ menu .menubar.help -tearoff 0
     ttk::label $mainFrame.imunesVersion -text $imunesVersion -font "-size 10 -weight bold"
     ttk::label $mainFrame.lastChanged -text $imunesChangedDate
     ttk::label $mainFrame.imunesAdditions -text "$imunesAdditions" -font "-size 10 -weight bold"
-    ttk::label $mainFrame.imunesDesc -text "Integrated Multiprotocol Network Emulator/Simulator."
+    ttk::label $mainFrame.imunesDesc -text [mc "Integrated Multiprotocol Network Emulator/Simulator."]
     ttk::label $mainFrame.homepage -text "http://imunes.net/" -font "-underline 1 -size 10"
     ttk::label $mainFrame.github -text "http://github.com/imunes/imunes" -font "-underline 1 -size 10"
     ttk::label $mainFrame.copyright -text "Copyright (c) University of Zagreb 2004 - $imunesLastYear" -font "-size 8"
@@ -935,6 +957,100 @@ menu .menubar.help -tearoff 0
 	$mainFrame config -cursor arrow"
 }
 
+###-------------------------------------------------------------------
+.menubar.help add command -label [mc "Translation Credit"] -command {
+	toplevel .translation
+    wm title .translation [mc "About Translation Credit"]
+    wm minsize .translation 300 300
+    set traductFrame .translation.credit
+    ttk::frame $traductFrame -padding 5 -relief groove
+	pack $traductFrame -fill both -expand 1
+	ttk::style configure TButton -width 10 -height 10 -font "serif 10"
+	ttk::label $traductFrame.textLabel0 -text "        Crédito de Traducción" -justify "center" -font "-size 12 -weight bold"
+	ttk::label $traductFrame.textLabel1 -text "Traducción realizada por:" -justify "left"
+	ttk::label $traductFrame.textLabel2 -text "Ing. Msc. José Manuel Romero Herrera" -justify "left"
+	ttk::label $traductFrame.textLabel3 -text "Prof. Asociado de la UPT-Aragua - VENEZUELA" -justify "left"
+	ttk::label $traductFrame.textLabel4 -text "email: panake2000@gmail.com" -justify "left"
+	ttk::label $traductFrame.textLabel5 -text "Idioma original: English" -justify "left"
+	ttk::label $traductFrame.textLabel6 -text "Idiomas Traducidos:" -justify "left" -font "-size 9 -weight bold"
+	ttk::label $traductFrame.textLabel7 -text "Nota1: * Se tradujo con la App de un navegador\nweb conocido, no se garantiza su fiabilidad" -justify "left"
+	ttk::label $traductFrame.textLabel8 -text "Nota2: * Se deja la estructura para que\npersonas del idioma Nativo corrijan los errores" -justify "left"
+	ttk::label $traductFrame.textLabel9 -text "Nota3: Servidor FreeBSD 12.2 totalmente\nen codificación UTF-8" -justify "left"
+	grid $traductFrame.textLabel0 -row 0 -columnspan 4 -pady 1 -padx 1 -sticky we
+	grid $traductFrame.textLabel1 -row 1 -columnspan 4 -pady 1 -padx 1 -sticky we
+	grid $traductFrame.textLabel2 -row 2 -columnspan 4 -pady 1 -padx 1 -sticky we
+	grid $traductFrame.textLabel3 -row 3 -columnspan 4 -pady 1 -padx 1 -sticky we
+	grid $traductFrame.textLabel4 -row 4 -columnspan 4 -pady 1 -padx 1 -sticky we
+	grid $traductFrame.textLabel5 -row 5 -columnspan 4 -pady 1 -padx 1 -sticky we
+	grid $traductFrame.textLabel6 -row 6 -columnspan 4 -pady 1 -padx 1 -sticky we
+
+	grid $traductFrame.textLabel7 -row 11 -columnspan 4 -pady 1 -padx 1 -sticky we
+	grid $traductFrame.textLabel8 -row 12 -columnspan 4 -pady 1 -padx 1 -sticky we
+	grid $traductFrame.textLabel9 -row 13 -columnspan 4 -pady 1 -padx 1 -sticky we
+
+	ttk::label $traductFrame.text1 -text "Spanish      " -font "-size 9 -weight bold" -background "#DFEE90" -width "15" -relief "groove"
+	grid $traductFrame.text1 -row 7 -column 0
+	ttk::label $traductFrame.text2 -text "*  German " -background "#FF8781" -width "15" -relief "groove"
+	grid $traductFrame.text2 -row 7 -column 1
+	ttk::label $traductFrame.text3 -text "* French       " -background "#FF8781" -width "15" -relief "groove"
+	grid $traductFrame.text3 -row 8 -column 0
+	ttk::label $traductFrame.text4 -text "*  Croata   " -background "#FF8781" -width "15" -relief "groove"
+	grid $traductFrame.text4 -row 8 -column 1
+	ttk::label $traductFrame.text5 -text "* Hungarian " -background "#FF8781" -width "15" -relief "groove"
+	grid $traductFrame.text5 -row 9 -column 0
+	ttk::label $traductFrame.text6 -text "* Italian    " -background "#FF8781" -width "15" -relief "groove"
+	grid $traductFrame.text6 -row 9 -column 1
+	ttk::label $traductFrame.text7 -text "* Portuguese" -background "#FF8781" -width "15" -relief "groove"
+	grid $traductFrame.text7 -row 10 -column 0
+	ttk::label $traductFrame.text8 -text "* Russian  " -background "#FF8781" -width "15" -relief "groove"
+	grid $traductFrame.text8 -row 10 -column 1
+
+	grid columnconfigure $traductFrame 0 -pad 3
+	grid columnconfigure $traductFrame 1 -pad 3
+	grid rowconfigure $traductFrame 0 -pad 3
+	grid rowconfigure $traductFrame 1 -pad 3
+	grid rowconfigure $traductFrame 2 -pad 3
+	grid rowconfigure $traductFrame 3 -pad 3
+	grid rowconfigure $traductFrame 4 -pad 3
+	grid rowconfigure $traductFrame 5 -pad 3
+	grid rowconfigure $traductFrame 6 -pad 3
+	grid rowconfigure $traductFrame 7 -pad 3
+	grid rowconfigure $traductFrame 8 -pad 3
+	grid rowconfigure $traductFrame 9 -pad 3
+	grid rowconfigure $traductFrame 10 -pad 3
+	grid rowconfigure $traductFrame 11 -pad 3
+	grid rowconfigure $traductFrame 12 -pad 3
+	grid rowconfigure $traductFrame 13 -pad 3
+
+}
+
+#
+# Language menu y submenu puesto por mi, no funciona aun falta programas la logica.
+#
+menu .menubar.idiom -tearoff 0
+
+set m .menubar.idiom.typeIdiom
+menu $m -tearoff 0
+.menubar.idiom add cascade -label [mc "Idiom"] -menu $m -underline 5
+    $m add radiobutton -label [mc "German"] -variable typeIdiom \
+	-value en -command { updateIdiom; }
+    $m add radiobutton -label [mc "English"] -variable typeIdiom \
+	-value en -command { updateIdiom; }
+	$m add radiobutton -label [mc "Spanish"] -variable typeIdiom \
+	-value en -command { updateIdiom; }
+	$m add radiobutton -label [mc "French"] -variable typeIdiom \
+	-value en -command { updateIdiom; }
+	$m add radiobutton -label [mc "Croata"] -variable typeIdiom \
+	-value en -command { updateIdiom; }
+	$m add radiobutton -label [mc "Hungarian"] -variable typeIdiom \
+	-value en -command { updateIdiom; }
+	$m add radiobutton -label [mc "Italian"] -variable typeIdiom \
+	-value en -command { updateIdiom; }
+	$m add radiobutton -label [mc "Portuguese"] -variable typeIdiom \
+	-value en -command { updateIdiom; }
+	$m add radiobutton -label [mc "Russian"] -variable typeIdiom \
+	-value en -command { updateIdiom; }
+###---------------------------------------------------------------------
 
 #
 # Left-side toolbar
@@ -1181,6 +1297,12 @@ menu .button3menu.icon -tearoff 0
 menu .button3menu.transform -tearoff 0
 menu .button3menu.sett -tearoff 0
 menu .button3menu.services -tearoff 0
+### SIGUIENTES MENUS COLOCADO POR MI
+menu .button3menu.apachectl -tearoff 0
+menu .button3menu.named -tearoff 0
+menu .button3menu.dhcpd -tearoff 0
+menu .button3menu.dhcrelay -tearoff 0
+menu .button3menu.sylpheed -tearoff 0
 
 menu .button3logifc -tearoff 0
 #
