@@ -350,7 +350,7 @@ proc button3link { c x y } {
     #
     # Configure link
     #
-    .button3menu add command -label "Configure" \
+    .button3menu add command -label [mc "Configure"] \
 	-command "linkConfigGUI $c $link"
 
     #
@@ -377,10 +377,10 @@ proc button3link { c x y } {
     # Delete link
     #
     if { $oper_mode != "exec" } {
-	.button3menu add command -label "Delete" \
+	.button3menu add command -label [mc "Delete"] \
 	    -command "removeGUILink $link atomic"
     } else {
-	.button3menu add command -label "Delete" \
+	.button3menu add command -label [mc "Delete"] \
 	    -state disabled
     }
 
@@ -544,10 +544,10 @@ proc button3node { c x y } {
     # Select adjacent
     #
     if { $type != "pseudo" } {
-	.button3menu add command -label "Select adjacent" \
+	.button3menu add command -label [mc "Select adjacent"] \
 	    -command "selectAdjacent"
     } else {
-	.button3menu add command -label "Select adjacent" \
+	.button3menu add command -label [mc "Select adjacent"] \
 	    -command "selectAdjacent" -state disabled
     }
 
@@ -555,10 +555,10 @@ proc button3node { c x y } {
     # Configure node
     #
     if { $type != "pseudo" } {
-	.button3menu add command -label "Configure" \
+	.button3menu add command -label [mc "Configure"] \
 	    -command "nodeConfigGUI $c $node"
     } else {
-	.button3menu add command -label "Configure" \
+	.button3menu add command -label [mc "Configure"] \
 	    -command "nodeConfigGUI $c $node" -state disabled
     }
     
@@ -570,13 +570,13 @@ proc button3node { c x y } {
 #	.button3menu add cascade -label "Transform to" \
 #	    -menu .button3menu.transform -state disabled
     } else {
-	.button3menu add cascade -label "Transform to" \
+	.button3menu add cascade -label [mc "Transform to"] \
 	    -menu .button3menu.transform
-	.button3menu.transform add command -label "Router" \
+	.button3menu.transform add command -label [mc "Router"] \
 	    -command "transformNodes \"[selectedRealNodes]\" router"
-	.button3menu.transform add command -label "PC" \
+	.button3menu.transform add command -label [mc "PC"] \
 	    -command "transformNodes \"[selectedRealNodes]\" pc"
-	.button3menu.transform add command -label "Host" \
+	.button3menu.transform add command -label [mc "Host"] \
 	    -command "transformNodes \"[selectedRealNodes]\" host"
     }
 
@@ -590,9 +590,9 @@ proc button3node { c x y } {
     } else {
 	.button3menu add cascade -label "Node icon" \
 	    -menu .button3menu.icon
-	.button3menu.icon add command -label "Change node icons" \
+	.button3menu.icon add command -label [mc "Change node icons"] \
 	    -command "changeIconPopup"
-	.button3menu.icon add command -label "Set default icons" \
+	.button3menu.icon add command -label [mc "Set default icons"] \
 	    -command "setDefaultIcon"
     }
 
@@ -604,12 +604,12 @@ proc button3node { c x y } {
 #	.button3menu add cascade -label "Create link to" \
 #	    -menu .button3menu.connect -state disabled
     } else {
-	.button3menu add cascade -label "Create link to" \
+	.button3menu add cascade -label [mc "Create link to"] \
 	    -menu .button3menu.connect
     }
     destroy .button3menu.connect.selected
     menu .button3menu.connect.selected -tearoff 0
-    .button3menu.connect add cascade -label "Selected" \
+    .button3menu.connect add cascade -label [mc "Selected"] \
 	-menu .button3menu.connect.selected
     .button3menu.connect.selected add command \
 	-label "Chain" -command "P \[selectedRealNodes\]"
@@ -654,9 +654,9 @@ proc button3node { c x y } {
 #	.button3menu add cascade -label "Move to" \
 #	    -menu .button3menu.moveto -state disabled
     } else {
-	.button3menu add cascade -label "Move to" \
+	.button3menu add cascade -label [mc "Move to"] \
 	    -menu .button3menu.moveto
-	.button3menu.moveto add command -label "Canvas:" -state disabled
+	.button3menu.moveto add command -label [mc "Canvas:"] -state disabled
 	foreach canvas $canvas_list {
 	    if { $canvas != $curcanvas } {
 		.button3menu.moveto add command \
@@ -684,9 +684,9 @@ proc button3node { c x y } {
     # Delete selection
     #
     if { $oper_mode != "exec" } {
-	.button3menu add command -label "Delete" -command deleteSelection
+	.button3menu add command -label [mc "Delete"] -command deleteSelection
     } else {
-#	.button3menu add command -label "Delete" -state disabled
+#	.button3menu add command -label [mc "Delete"] -state disabled
     }
 
     if { $type != "pseudo" } {
@@ -718,7 +718,7 @@ proc button3node { c x y } {
     .button3menu.services delete 0 end
     if {$oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIMAGE" && $type != "ext"} {
 	global all_services_list
-	.button3menu add cascade -label "Services" \
+	.button3menu add cascade -label [mc "Services"] \
 	    -menu .button3menu.services
 	foreach service $all_services_list {
 	    set m .button3menu.services.$service
@@ -742,10 +742,10 @@ proc button3node { c x y } {
     .button3menu.sett delete 0 end
     if { $type != "pseudo" } {
 	if { $type == "ext" && $oper_mode == "exec" } {
-	.button3menu add cascade -label "Settings" \
+	.button3menu add cascade -label [mc "Settings"] \
 	    -menu .button3menu.sett -state disabled
 	} else {
-	    .button3menu add cascade -label "Settings" \
+	    .button3menu add cascade -label [mc "Settings"] \
 		-menu .button3menu.sett
 	}
     } else {
@@ -753,14 +753,14 @@ proc button3node { c x y } {
 	    #-menu .button3menu.sett -state disabled
     }
     if { $oper_mode == "exec" } {
-	.button3menu.sett add command -label "Import Running Configuration" \
+	.button3menu.sett add command -label [mc "Import Running Configuration"] \
 	    -command "fetchNodeConfiguration"
     } else {
 #        .button3menu.sett add command -label "Fetch Node Configurations" \
 #	    -state disabled
-	.button3menu.sett add command -label "Remove IPv4 addresses" \
+	.button3menu.sett add command -label [mc "Remove IPv4 addresses"] \
 	    -command "removeIPv4nodes"
-        .button3menu.sett add command -label "Remove IPv6 addresses" \
+        .button3menu.sett add command -label [mc "Remove IPv6 addresses"] \
 	    -command "removeIPv6nodes"
     } 
 
@@ -772,7 +772,7 @@ proc button3node { c x y } {
 #	.button3menu add command -label "IPv4 autorenumber" \
 #	    -state disabled
     } else {
-	.button3menu add command -label "IPv4 autorenumber" \
+	.button3menu add command -label [mc "IPv4 autorenumber"] \
 	    -command { 
 		global IPv4autoAssign
 		set IPv4autoAssign 1
@@ -789,7 +789,7 @@ proc button3node { c x y } {
 #	.button3menu add command -label "IPv6 autorenumber" \
 #	    -state disabled
     } else {
-	.button3menu add command -label "IPv6 autorenumber" \
+	.button3menu add command -label [mc "IPv6 autorenumber"] \
 	    -command {
 		global IPv6autoAssign
 		set IPv6autoAssign 1
@@ -805,7 +805,7 @@ proc button3node { c x y } {
     .button3menu.shell delete 0 end
     if {$type != "ext" && $oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIMAGE"} {
 	.button3menu add separator
-	.button3menu add cascade -label "Shell window" \
+	.button3menu add cascade -label [mc "Shell window"] \
 	    -menu .button3menu.shell
 	foreach cmd [existingShells [[typemodel $node].shellcmds] $node] {
 	    .button3menu.shell add command -label "[lindex [split $cmd /] end]" \
@@ -1635,13 +1635,13 @@ proc button3background { c x y } {
     #
     # Change canvas background
     #
-    .button3menu add command -label "Change background" \
+    .button3menu add command -label [mc "Change background"] \
 	    -command "changeBkgPopup"
 	    
     #
     # Remove canvas background
     #
-    .button3menu add command -label "Remove background" \
+    .button3menu add command -label [mc "Remove background"] \
 	    -command "removeCanvasBkg $curcanvas;
 		      if {\"[getCanvasBkg $curcanvas]\" !=\"\"} {
 			  removeImageReference [getCanvasBkg $curcanvas] $curcanvas

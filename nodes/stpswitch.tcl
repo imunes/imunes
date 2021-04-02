@@ -498,8 +498,8 @@ proc $MODULE.configGUI { c node } {
     set brguielements {}
 
     configGUI_createConfigPopupWin $c
-    wm title $wi "stpswitch configuration"
-    configGUI_nodeName $wi $node "Node name:"
+    wm title $wi [mc "stpswitch configuration"]
+    configGUI_nodeName $wi $node [mc "Node name:"]
 
     set tabs [configGUI_addNotebook $wi $node {"Configuration" "Interfaces" \
     "Bridge"}]

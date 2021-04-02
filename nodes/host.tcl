@@ -401,8 +401,8 @@ proc $MODULE.configGUI { c node } {
     set guielements {}
 
     configGUI_createConfigPopupWin $c
-    wm title $wi "host configuration"
-    configGUI_nodeName $wi $node "Node name:"
+    wm title $wi [mc "host configuration"]
+    configGUI_nodeName $wi $node [mc "Node name:"]
 
     set tabs [configGUI_addNotebook $wi $node {"Configuration" "Interfaces"}]
     set configtab [lindex $tabs 0]

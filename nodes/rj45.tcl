@@ -230,8 +230,8 @@ proc $MODULE.configGUI { c node } {
     set treecolumns {}
 
     configGUI_createConfigPopupWin $c
-    wm title $wi "rj45 configuration"
-    configGUI_nodeName $wi $node "Physical interface:"
+    wm title $wi [mc "rj45 configuration"]
+    configGUI_nodeName $wi $node [mc "Physical interface:"]
     configGUI_etherVlan $wi $node
     configGUI_buttonsACNode $wi $node
 }

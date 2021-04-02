@@ -584,8 +584,8 @@ proc changeBkgPopup {} {
     toplevel $chbgdialog
     wm transient $chbgdialog .
     wm resizable $chbgdialog 0 0
-    wm title $chbgdialog "Change canvas background"
-    wm iconname $chbgdialog "Change canvas background"
+    wm title $chbgdialog [mc "Change canvas background"]
+    wm iconname $chbgdialog [mc "Change canvas background"]
 
     set wi [ttk::frame $chbgdialog.changebgframe]
     
@@ -607,14 +607,14 @@ proc changeBkgPopup {} {
     		-width 150 -height 150]
     pack $prevcanvas
     
-    ttk::label $wi.bgconf.right.l2 -text "Image:"
+    ttk::label $wi.bgconf.right.l2 -text [mc "Image:"]
     pack $wi.bgconf.right.l2
     
     #left pane definition
     #upper left frame with label
     ttk::frame $wi.bgconf.left.up
     pack $wi.bgconf.left.up -anchor w
-    ttk::label $wi.bgconf.left.up.l -text "Choose background file:"
+    ttk::label $wi.bgconf.left.up.l -text [mc "Choose background file:"]
     
     #center left frame with entry and button
     ttk::frame $wi.bgconf.left.center
@@ -625,7 +625,7 @@ proc changeBkgPopup {} {
     
     
     ttk::entry $wi.bgconf.left.center.left.e -width 35 -textvariable bkgFile
-    ttk::button $wi.bgconf.left.center.right.b -text "Browse" -width 8 \
+    ttk::button $wi.bgconf.left.center.right.b -text [mc "Browse"] -width 8 \
 	-command {
 	    set fType {
 		{{All Images} {.gif}  {}}
@@ -662,7 +662,7 @@ proc changeBkgPopup {} {
     ttk::frame $wi.bgconf.left.down
     pack $wi.bgconf.left.down -pady 5
     ttk::frame $wi.bgconf.left.down.r
-    ttk::label $wi.bgconf.left.down.r.l -text "Image alignment:"
+    ttk::label $wi.bgconf.left.down.r.l -text [mc "Image alignment:"]
     pack $wi.bgconf.left.down.r.l -anchor w
     
     ttk::frame $wi.bgconf.left.down.r.align -relief groove -borderwidth 2
@@ -708,19 +708,19 @@ proc changeBkgPopup {} {
     #lower left frame with options
     ttk::frame $wi.bgconf.left.down.l
     
-    ttk::radiobutton $wi.bgconf.left.down.l.original -text "Use original/cropped image" \
+    ttk::radiobutton $wi.bgconf.left.down.l.original -text [mc "Use original/cropped image"] \
     -variable canvasBkgMode -value original
     pack $wi.bgconf.left.down.l.original -anchor w
     
-    ttk::radiobutton $wi.bgconf.left.down.l.str_shr -text "Stretch/shrink image" \
+    ttk::radiobutton $wi.bgconf.left.down.l.str_shr -text [mc "Stretch/shrink image"] \
     -variable canvasBkgMode -value str_shr
     pack $wi.bgconf.left.down.l.str_shr -anchor w
     
-    ttk::radiobutton $wi.bgconf.left.down.l.adjust -text "Adjust canvas to image" \
+    ttk::radiobutton $wi.bgconf.left.down.l.adjust -text [mc "Adjust canvas to image"] \
     -variable canvasBkgMode -value adjustC2I 
     pack $wi.bgconf.left.down.l.adjust -anchor w
     
-    ttk::radiobutton $wi.bgconf.left.down.l.adjust2 -text "Adjust image to canvas" \
+    ttk::radiobutton $wi.bgconf.left.down.l.adjust2 -text [mc "Adjust image to canvas"] \
     -variable canvasBkgMode -value adjustI2C 
     pack $wi.bgconf.left.down.l.adjust2 -anchor w
     
@@ -751,12 +751,12 @@ proc changeBkgPopup {} {
     #lower frame that contains buttons
     ttk::frame $wi.buttons
     pack $wi.buttons -side bottom -fill x -pady 2m
-    ttk::button $wi.buttons.apply -text "Apply" -command {
+    ttk::button $wi.buttons.apply -text [mc "Apply"] -command {
 	    global canvasBkgMode cc chbgdialog
 	    popupBkgApply $chbgdialog $cc
     }
-    ttk::button $wi.buttons.cancel -text "Cancel" -command "destroy $chbgdialog"
-    ttk::button $wi.buttons.remove -text "Remove background" -command \
+    ttk::button $wi.buttons.cancel -text [mc "Cancel"] -command "destroy $chbgdialog"
+    ttk::button $wi.buttons.remove -text [mc "Remove background"] -command \
 	 "removeCanvasBkg $cc;
 	  if {\"[getCanvasBkg $cc]\" != \"\"} {
 	      removeImageReference [getCanvasBkg $cc] $cc
@@ -1106,8 +1106,8 @@ proc renameCanvasPopup {} {
 
     #update
     #grab $w
-    wm title $w "Canvas rename"
-    wm iconname $w "Canvas rename"
+    wm title $w [mc "Canvas rename"]
+    wm iconname $w [mc "Canvas rename"]
 
     #dodan glavni frame "renameframe"
     ttk::frame $w.renameframe
@@ -1118,8 +1118,8 @@ proc renameCanvasPopup {} {
 
     ttk::frame $w.renameframe.buttons
     pack $w.renameframe.buttons -side bottom -fill x -pady 2m
-    ttk::button $w.renameframe.buttons.print -text "Apply" -command "renameCanvasApply $w"
-    ttk::button $w.renameframe.buttons.cancel -text "Cancel" -command "destroy $w"
+    ttk::button $w.renameframe.buttons.print -text [mc "Apply"] -command "renameCanvasApply $w"
+    ttk::button $w.renameframe.buttons.cancel -text [mc "Cancel"] -command "destroy $w"
     pack $w.renameframe.buttons.print $w.renameframe.buttons.cancel -side left -expand 1
 
     bind $w <Key-Escape> "destroy $w"
@@ -1148,8 +1148,8 @@ proc resizeCanvasPopup {} {
     wm resizable $w 0 0
     #update
     #grab $w
-    wm title $w "Canvas resize"
-    wm iconname $w "Canvas resize"
+    wm title $w [mc "Canvas resize"]
+    wm iconname $w [mc "Canvas resize"]
 
     set minWidth [lindex [getMostDistantNodeCoordinates] 0]
     set minHeight [lindex [getMostDistantNodeCoordinates] 1]
@@ -1164,8 +1164,8 @@ proc resizeCanvasPopup {} {
 
     ttk::frame $w.resizeframe.buttons
     pack $w.resizeframe.buttons -side bottom -fill x -pady 2m
-    ttk::button $w.resizeframe.buttons.print -text "Apply" -command "resizeCanvasApply $w"
-    ttk::button $w.resizeframe.buttons.cancel -text "Cancel" -command "destroy $w"
+    ttk::button $w.resizeframe.buttons.print -text [mc "Apply"] -command "resizeCanvasApply $w"
+    ttk::button $w.resizeframe.buttons.cancel -text [mc "Cancel"] -command "destroy $w"
     pack $w.resizeframe.buttons.print $w.resizeframe.buttons.cancel -side left -expand 1
     bind $w <Key-Escape> "destroy $w"
     bind $w <Key-Return> "resizeCanvasApply $w"
