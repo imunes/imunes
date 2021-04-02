@@ -636,8 +636,8 @@ proc changeIconPopup {} {
     toplevel $chicondialog
     wm transient $chicondialog .
     wm resizable $chicondialog 0 0
-    wm title $chicondialog "Set custom icon"
-    wm iconname $chicondialog "Set custom icon"
+    wm title $chicondialog [mc "Set custom icon"]
+    wm iconname $chicondialog [mc "Set custom icon"]
 
     set wi [ttk::frame $chicondialog.changebgframe]
     
@@ -651,14 +651,14 @@ proc changeIconPopup {} {
     #right pane definition
     ttk::frame $wi.iconconf.right.spacer -height 20
     pack $wi.iconconf.right.spacer -fill both
-    ttk::label $wi.iconconf.right.l -text "Icon preview"
+    ttk::label $wi.iconconf.right.l -text [mc "Icon preview"]
     pack $wi.iconconf.right.l -anchor center
     
     set prevcan [canvas $wi.iconconf.right.pc -bd 0 -relief sunken -highlightthickness 0 \
     		-width 100 -height 100 -background white]
     pack $prevcan -anchor center
     
-    ttk::label $wi.iconconf.right.l2 -text "Size:"
+    ttk::label $wi.iconconf.right.l2 -text[mc "Size:"]
     pack $wi.iconconf.right.l2 -anchor center
     
     #left pane definition
@@ -682,7 +682,7 @@ proc changeIconPopup {} {
     grid columnconfig $wi.iconconf.left.up.grid 0 -weight 1
     grid rowconfigure $wi.iconconf.left.up.grid 0 -weight 1
     
-    $tree heading #0 -text "Image name"
+    $tree heading #0 -text [mc "Image name"]
     $tree column #0 -width 100 -minwidth 100 
     $tree heading type -text "Type" 
     $tree column type -width 90 -stretch 0 -minwidth 90
@@ -744,7 +744,7 @@ proc changeIconPopup {} {
     #center left frame with label
     ttk::frame $wi.iconconf.left.center
     pack $wi.iconconf.left.center -anchor w
-    ttk::label $wi.iconconf.left.center.l -text "Custom icon file:"
+    ttk::label $wi.iconconf.left.center.l -text [mc "Custom icon file:"]
     
     #down left frame with entry and button
     ttk::frame $wi.iconconf.left.down
@@ -756,7 +756,7 @@ proc changeIconPopup {} {
     
     
     ttk::entry $wi.iconconf.left.down.left.e -width 25 -textvariable iconFile
-    ttk::button $wi.iconconf.left.down.right.b -text "Browse" -width 8 \
+    ttk::button $wi.iconconf.left.down.right.b -text [mc "Browse"] -width 8 \
 	-command {
 	    set fType {
 		{{All Images} {.gif}  {}}
@@ -790,7 +790,7 @@ proc changeIconPopup {} {
 		    set iconsrcfile ""
 		    $wi.iconconf.left.down.left.e delete 0 end
 		    $wi.iconconf.left.down.left.e insert 0 "$iconsrcfile"
-		    $imgsize configure -text "Size:"
+		    $imgsize configure -text [mc "Size:"]
 		    tk_dialog .dialog1 "IMUNES error" \
 		    "Error: Icon dimensions can't be bigger than 100x100. This image is $image_w*$image_h." \
 		    info 0 Dismiss
@@ -820,11 +820,11 @@ proc changeIconPopup {} {
     #lower frame that contains buttons
     ttk::frame $wi.buttons
     pack $wi.buttons -side bottom -fill x -pady 2m
-    ttk::button $wi.buttons.apply -text "Apply" -command {
+    ttk::button $wi.buttons.apply -text [mc "Apply"] -command {
 	    popupIconApply $chicondialog $iconsrcfile
     }
-    ttk::button $wi.buttons.cancel -text "Cancel" -command "destroy $chicondialog"
-    ttk::button $wi.buttons.remove -text "Remove custom icon" -command \
+    ttk::button $wi.buttons.cancel -text [mc "Cancel"] -command "destroy $chicondialog"
+    ttk::button $wi.buttons.remove -text [mc "Remove custom icon"] -command \
 	 "destroy $chicondialog; setDefaultIcon"
     pack $wi.buttons.remove $wi.buttons.cancel $wi.buttons.apply -side right -expand 1
     
