@@ -259,8 +259,8 @@ proc $MODULE.configGUI { c node } {
     set guielements {}
 
     configGUI_createConfigPopupWin $c
-    wm title $wi "lanswitch configuration"
-    configGUI_nodeName $wi $node "Node name:"
+    wm title $wi [mc "lanswitch configuration"]
+    configGUI_nodeName $wi $node [mc "Node name:"]
 
     configGUI_addPanedWin $wi
     set treecolumns {"QLen Queue len" "QDisc Queue disc" "QDrop Queue drop"}
