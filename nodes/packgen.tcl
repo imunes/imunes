@@ -267,8 +267,8 @@ proc $MODULE.configGUI { c node } {
     set packgenguielements {}
 
     configGUI_createConfigPopupWin $c
-    wm title $wi "packet generator configuration"
-    configGUI_nodeName $wi $node "Node name:"
+    wm title $wi [mc "packet generator configuration"]
+    configGUI_nodeName $wi $node [mc "Node name:"]
 
     set tabs [configGUI_addNotebookPackgen $wi $node]
 
