@@ -1,7 +1,9 @@
-global VROOT_MASTER ULIMIT_FILE ULIMIT_PROC
+global VROOT_MASTER ULIMIT_FILE ULIMIT_PROC HOST_BRIDGE
 set VROOT_MASTER "imunes/template"
 set ULIMIT_FILE "1024:16384"
 set ULIMIT_PROC "512:1024"
+
+set HOST_BRIDGE lanswitch
 
 #****f* linux.tcl/writeDataToNodeFile
 # NAME
@@ -487,6 +489,7 @@ proc configureICMPoptions { node } {
 }
 
 proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
+    global HOST_BRIDGE
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     set ether1 [getIfcMACaddr $lnode1 $ifname1]
@@ -507,19 +510,19 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
     switch -exact "[[typemodel $lnode1].virtlayer]-[[typemodel $lnode2].virtlayer]" {
 	NETGRAPH-NETGRAPH {
 	    if { [nodeType $lnode1] in "ext extnat" } {
-		catch "exec ovs-vsctl add-br $eid-$lnode1"
+		createBridge $HOST_BRIDGE $eid-$lnode1
 	    }
 	    if { [nodeType $lnode2] in "ext extnat" } {
-		catch "exec ovs-vsctl add-br $eid-$lnode2"
+		createBridge $HOST_BRIDGE $eid-$lnode2
 	    }
 	    # generate interface names
 	    set hostIfc1 "$eid-$lname1-$ifname1"
 	    set hostIfc2 "$eid-$lname2-$ifname2"
 	    # create veth pair
-	    catch {exec ip link add name "$hostIfc1" type veth peer name "$hostIfc2"}
+	    createVethPair $hostIfc1 $hostIfc2
 	    # add veth interfaces to bridges
-	    catch "exec ovs-vsctl add-port $eid-$lname1 $hostIfc1"
-	    catch "exec ovs-vsctl add-port $eid-$lname2 $hostIfc2"
+	    addIfcToBridge $HOST_BRIDGE $hostIfc1 $eid-$lname1
+	    addIfcToBridge $HOST_BRIDGE $hostIfc2 $eid-$lname2
 	    # set bridge interfaces up
 	    exec ip link set dev $hostIfc1 up
 	    exec ip link set dev $hostIfc2 up
@@ -532,7 +535,7 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 	    set hostIfc1 "v${ifname1}pn${lnode1Ns}"
 	    set hostIfc2 "v${ifname2}pn${lnode2Ns}"
 	    # create veth pair
-	    exec ip link add name "$hostIfc1" type veth peer name "$hostIfc2"
+	    createVethPair $hostIfc1 $hostIfc2
 	    # move veth pair sides to node namespaces
 	    setIfcNetNs $lnode1 $hostIfc1 $ifname1
 	    setIfcNetNs $lnode2 $hostIfc2 $ifname2
@@ -714,14 +717,6 @@ proc removeExperimentContainer { eid widget } {
     catch "exec rm -fr $VROOT_BASE/$eid &"
 }
 
-proc createNetgraphNode { eid node } {
-    catch {exec ovs-vsctl add-br $eid-$node}
-}
-
-proc destroyNetgraphNode { eid node } {
-    catch {exec ovs-vsctl del-br $eid-$node}
-}
-
 proc destroyNetgraphNodes { eid switches widget } {
     global execMode
 
@@ -756,6 +751,19 @@ proc getCpuCount {} {
     return [lindex [exec grep -c processor /proc/cpuinfo] 0]
 }
 
+proc createBridge { type bridge } {
+    switch -exact $type {
+	lanswitch_ovs {
+	    catch {exec ovs-vsctl add-br $bridge}
+	}
+	lanswitch -
+	hub {
+	    catch {exec ip link add name $bridge type bridge}
+	    catch {exec ip link set $bridge up}
+	}
+    }
+}
+
 #****f* linux.tcl/l2node.instantiate
 # NAME
 #   l2node.instantiate -- instantiate
@@ -768,7 +776,26 @@ proc getCpuCount {} {
 #   * node -- id of the node (type of the node is either lanswitch or hub)
 #****
 proc l2node.instantiate { eid node } {
-    createNetgraphNode $eid $node
+    global HOST_BRIDGE
+
+    set type [nodeType $node]
+    if { $type == "lanswitch" } {
+	set type $HOST_BRIDGE
+    }
+
+    createBridge $type $eid-$node
+}
+
+proc destroyBridge { type bridge } {
+    switch -exact $type {
+	lanswitch_ovs {
+	    catch {exec ovs-vsctl del-br $bridge}
+	}
+	lanswitch -
+	hub {
+	    catch {exec ip link delete $bridge type bridge}
+	}
+    }
 }
 
 #****f* linux.tcl/l2node.destroy
@@ -783,7 +810,14 @@ proc l2node.instantiate { eid node } {
 #   * node -- id of the node
 #****
 proc l2node.destroy { eid node } {
-    destroyNetgraphNode $eid $node
+    global HOST_BRIDGE
+
+    set type [nodeType $node]
+    if { $type == "lanswitch" } {
+	set type $HOST_BRIDGE
+    }
+
+    destroyBridge $type $eid-$node
 }
 
 #****f* linux.tcl/enableIPforwarding
@@ -847,6 +881,18 @@ proc getExtIfcs { } {
     return "$ifcs"
 }
 
+proc addIfcToBridge { type ifname bridge } {
+    switch -exact $type {
+	lanswitch_ovs {
+	    catch {exec ovs-vsctl add-port $bridge $ifname}
+	}
+	lanswitch -
+	hub {
+	    catch {exec ip link set $ifname master $bridge}
+	}
+    }
+}
+
 #****f* linux.tcl/captureExtIfc
 # NAME
 #   captureExtIfc -- capture external interfaces
@@ -881,8 +927,8 @@ proc captureExtIfc { eid node } {
 	}
     }
 
-    createNetgraphNode $eid $node
-    catch {exec ovs-vsctl add-port $eid-$node $ifname}
+    createBridge $HOST_BRIDGE $eid-$node
+    addIfcToBridge $HOST_BRIDGE $ifname $eid-$node
 }
 
 #****f* linux.tcl/releaseExtIfc
@@ -897,13 +943,16 @@ proc captureExtIfc { eid node } {
 #   * node -- node id
 #****
 proc releaseExtIfc { eid node } {
+    global HOST_BRIDGE
+
     set ifname [getNodeName $node]
     set ifc [lindex [split [getNodeName $node] .] 0]
     set vlan [lindex [split [getNodeName $node] .] 1]
     if { $vlan != "" } {
 	catch "exec ip link del $ifname"
     }
-    catch "destroyNetgraphNode $eid $node"
+
+    catch "destroyBridge $HOST_BRIDGE $eid-$node"
 }
 
 proc getIPv4RouteCmd { statrte } {
@@ -949,16 +998,6 @@ proc getRunningNodeIfcList { node } {
     return $lines
 }
 
-proc hub.start { eid node } {
-    set node_id "$eid-$node"
-    catch {exec ovs-vsctl list-ports $node_id} ports
-    foreach port $ports {
-        catch {exec ovs-vsctl -- add bridge $node_id mirrors @m \
-        -- --id=@p get port $port \
-        -- --id=@m create mirror name=$port select-all=true output-port=@p}
-    }
-}
-
 proc getNodeNamespace { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
@@ -967,21 +1006,26 @@ proc getNodeNamespace { node } {
     return $ns
 }
 
+proc createVethPair { ifc1 ifc2 } {
+    catch {exec ip link add name "$ifc1" type veth peer name "$ifc2"}
+}
+
 proc addNodeIfcToBridge { bridge brifc node ifc mac } {
+    global HOST_BRIDGE
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     set nodeNs [createNetNs $node]
     # create bridge
-    catch "exec ovs-vsctl add-br $eid-$bridge"
+    createBridge $HOST_BRIDGE $eid-$bridge
 
     # generate interface names
     set hostIfc "$eid-$bridge-$brifc"
     set guestIfc "$eid-$node-$ifc"
 
     # create veth pair
-    exec ip link add name "$hostIfc" type veth peer name "$guestIfc"
+    createVethPair $hostIfc $guestIfc
     # add host side of veth pair to bridge
-    catch "exec ovs-vsctl add-port $eid-$bridge $hostIfc"
+    addIfcToBridge $HOST_BRIDGE $hostIfc $eid-$bridge
 
     exec ip link set "$hostIfc" up
 
@@ -994,13 +1038,17 @@ proc addNodeIfcToBridge { bridge brifc node ifc mac } {
 }
 
 proc checkSysPrerequisites {} {
+    global HOST_BRIDGE
+
     set msg ""
     if { [catch {exec docker ps } err] } {
         set msg "Cannot start experiment. Is docker installed and running (check the output of 'docker ps')?\n"
     }
 
-    if { [catch {exec pgrep ovs-vswitchd } err ] } {
-        set msg "Cannot start experiment. Is ovs-vswitchd installed and running (check the output of 'pgrep ovs-vswitchd')?\n"
+    if { $HOST_BRIDGE == "lanswitch_ovs" } {
+	if { [catch {exec pgrep ovs-vswitchd } err ] } {
+	    set msg "Cannot start experiment. Is ovs-vswitchd installed and running (check the output of 'pgrep ovs-vswitchd')?\n"
+	}
     }
 
     if { [catch {exec nsenter --version}] } {
@@ -1012,8 +1060,13 @@ proc checkSysPrerequisites {} {
     }
 
     if { $msg != "" } {
-        return "$msg\nIMUNES needs docker and ovs-vswitchd services running and\
+	if { $HOST_BRIDGE == "lanswitch_ovs" } {
+	    return "$msg\nIMUNES needs docker and ovs-vswitchd services running and\
 xterm and nsenter installed."
+	} else {
+	    return "$msg\nIMUNES needs docker service running and\
+xterm and nsenter installed."
+	}
     }
 
     return ""
@@ -1303,7 +1356,7 @@ proc startExternalIfc { eid node } {
     exec sh << $cmds &
 }
 
-proc  stopExternalIfc { eid node } {
+proc stopExternalIfc { eid node } {
     exec ip l set $eid-$node down
 }
 
