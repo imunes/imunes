@@ -59,6 +59,19 @@ this execute the following command (on FreeBSD 9.3 and higher):
 
     # pkg install tk86 ImageMagick6 tcllib wireshark socat git gmake
 
+### Dar soporte para imagenes e iconos .SVG a IMUNES
+
+https://wiki.tcl-lang.org/page/tksvg
+
+    # cd  /root
+    # git clone https://github.com/oehhar/tksvg.git
+    # cd tksvg
+    # ./configure --with-tcl=/usr/local/lib/tcl8.6 --with-tk=/usr/local/lib/tk8.6 --exec-prefix=/usr/local/lib/tksvg0.13
+    # make
+    # make install
+
+    NOTA: tksvg0.13 (sale de la versión del paquete tksvgs, si cambia la versión debe cambiar la linea al final, segun la versión)
+
 ## Operating system (Linux)
 
 When IMUNES is used on top of Linux a 3.10 Linux kernel is the
