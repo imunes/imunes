@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:v="http://vecta.io" width="40" height="45" viewBox="0 0 40 45">
+    <style>
+        <![CDATA[svg{stroke:#000;stroke-linecap:round;stroke-linejoin:round;fill:#fff;fill-rule:evenodd;font-family:Roboto;font-size:14px;text-anchor:middle}svg text{paint-order:stroke;white-space:pre}svg .Text\.cls{stroke:none}]]>
+    </style>
+    <defs>
+        <linearGradient id="L100001000100808080.grad" x1="100%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%"/>
+            <stop offset="100%" stop-color="#808080"/>
+        </linearGradient>
+        <linearGradient id="L001001000808080100.grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#808080"/>
+            <stop offset="100%"/>
+        </linearGradient>
+    </defs>
+    <g>
+        <g >
+            <g transform="translate(16.6173 13.2456)">
+                <path d="M 0.2477 0.1754 C 0.2477 0.0782 0.2405 0 0.1548 0 C 0.0691 0 0.0619 0.0782 0.0619 0.1754 L 0 2.6316 L 0.3096 2.6316 Z" stroke="none" fill="url(#L100001000100808080.grad)" stroke-width="1"/>
+            </g>
+            <g transform="translate(14.4501 11.8421)">
+                <path d="M 0.2477 0.1754 C 0.2477 0.0782 0.2405 0 0.1548 0 C 0.0691 0 0.062 0.0782 0.062 0.1754 L 0 2.6316 L 0.3096 2.6316 Z" stroke="none" fill="url(#L100001000100808080.grad)" stroke-width="1"/>
+            </g>
+            <g transform="translate(11.9771 13.9474)">
+                <path d="M 2.2003 0.0357 Q 2.093 -0.0357 1.9857 0.0357 L 0.0537 1.3202 Q -0.0537 1.3916 0.0537 1.463 L 3.059 3.4612 Q 3.1663 3.5326 3.2737 3.4612 L 5.2057 2.1767 Q 5.313 2.1053 5.2057 2.0339 L 2.2003 0.0357" stroke="none" fill="#eceff1" stroke-width="1"/>
+            </g>
+            <g transform="translate(15.1435 16.0526)">
+                <path d="M 0 1.3916 Q 0.0537 1.3916 0.1073 1.3559 L 2.0393 0.0713 Q 2.093 0.0357 2.093 0 L 2.093 0.7136 Q 2.093 0.7493 2.0393 0.785 L 0.1073 2.0696 Q 0.0537 2.1053 0 2.1053 Z" stroke="none" fill="#78909c" stroke-width="1"/>
+            </g>
+            <g transform="translate(11.9733 15.339)">
+                <path d="M 3.1701 2.1053 Q 3.1146 2.1065 3.059 2.0696 L 0.0537 0.0713 Q 0 0.0357 0 0 L 0 0.7136 Q 0 0.7493 0.0537 0.785 L 3.059 2.7833 Q 3.1146 2.8202 3.1701 2.8189 Z" stroke="none" fill="#b0bec5" stroke-width="1"/>
+            </g>
+            <g transform="translate(12.1995 15.6959)">
+                <path d="M 0 0 L 0 0.5352 L 0.2607 0.7136 L 0.2607 0.1784 Z" stroke="none" fill="#464646" stroke-width="1"/>
+            </g>
+            <g transform="translate(12.2783 15.8965)">
+                <path d="M 0.0032 0.0154 C 0.0127 -0.0031 0.0399 -0.0052 0.0642 0.0106 C 0.0886 0.0264 0.1006 0.054 0.091 0.0725 C 0.0816 0.0909 0.0544 0.0931 0.03 0.0773 C 0.0057 0.0614 -0.0062 0.0338 0.0032 0.0154 Z" stroke="none" stroke-width="1"/>
+            </g>
+            <g transform="translate(14.6068 17.3372)">
+                <path d="M 0 0 L 0 0.2141 L 0.046 0.3212 L 0.1533 0.3925 L 0.2147 0.339 L 0.2147 0.1427 Z" stroke="none" fill="#464646" stroke-width="1"/>
+            </g>
+            <g transform="translate(14.2848 17.1231)">
+                <path d="M 0 0 L 0 0.2141 L 0.046 0.3212 L 0.1533 0.3925 L 0.2147 0.339 L 0.2147 0.1427 Z" stroke="none" fill="#464646" stroke-width="1"/>
+            </g>
+            <g transform="translate(13.9628 16.9091)">
+                <path d="M 0 0 L 0 0.2141 L 0.046 0.3212 L 0.1533 0.3925 L 0.2147 0.339 L 0.2147 0.1427 Z" stroke="none" fill="#464646" stroke-width="1"/>
+            </g>
+            <g transform="translate(13.6408 16.6949)">
+                <path d="M 0 0 L 0 0.2141 L 0.046 0.3212 L 0.1533 0.3925 L 0.2147 0.339 L 0.2147 0.1427 Z" stroke="none" fill="#464646" stroke-width="1"/>
+            </g>
+            <g transform="translate(13.3188 16.4808)">
+                <path d="M 0 0 L 0 0.2141 L 0.046 0.3212 L 0.1533 0.3925 L 0.2147 0.339 L 0.2147 0.1427 Z" stroke="none" fill="#464646" stroke-width="1"/>
+            </g>
+            <g transform="translate(13.5548 14.8763)">
+                <path d="M 1.4502 0.1372 L 2.0501 0.0767 L 1.9669 0.4738 L 1.7947 0.3593 L 1.2779 0.6959 L 1.1117 0.5882 L 1.6225 0.245 Z M 0.3385 0.5587 L 0.9384 0.6193 L 0.8553 0.2222 L 0.683 0.3365 L 0.1663 0 L 0 0.1077 L 0.5108 0.451 Z M 0.6674 1.3437 L 0.0675 1.4043 L 0.1507 1.0072 L 0.3229 1.1216 L 0.8396 0.785 L 1.0059 0.8927 L 0.4951 1.236 Z M 1.8163 0.8967 L 1.2165 0.8361 L 1.2996 1.2332 L 1.4719 1.1188 L 1.9885 1.4554 L 2.1549 1.3477 L 1.6441 1.0044 Z" stroke="none" fill="#788f9b" stroke-width="1"/>
+            </g>
+            <g>
+                <path d="M 0 11.4108 L 20 0 L 40 11.4839 L 20 22.8947 Z" stroke="none" fill="#d9e0e3" stroke-width="1"/>
+            </g>
+            <g transform="translate(0 11.5155)">
+                <path d="M 20 33.4845 L 0 22.323 L 0 0 L 20 11.1615 Z" stroke="none" fill="#7696ad" stroke-width="1"/>
+            </g>
+            <g transform="translate(20 11.5511)">
+                <path d="M 20 0 L 20 22.2517 L 0 33.4488 L 0 11.1258 Z" stroke="none" fill="#5f839e" stroke-width="1"/>
+            </g>
+            <g transform="translate(1.6212 14.9639)">
+                <path d="M 15.4064 19.7554 L 0 12.1284 L 0.9433 0 L 16.3496 7.627 Z" stroke="none" fill="url(#L001001000808080100.grad)" stroke-width="1"/>
+            </g>
+            <g transform="translate(2.1053 14.2106)">
+                <path d="M 1e-13 1e-13 L 0 12.6316 M 15.4386 8.6842 L 15.4386 21.3157 M 0 12.6316 L 4.2105 15 M 11.2281 18.9473 L 15.4386 21.3157" fill="none" stroke-width="1"/>
+            </g>
+            <g transform="translate(7.8231 31.7178)">
+                <path d="M 1e-13 1e-13 L 4.0028 2.4384" stroke="url(#L001001000808080100.grad)" stroke-linecap="butt" fill="none" stroke-width="1"/>
+            </g>
+            <g transform="translate(6.3158 29.2105)">
+                <path d="M 1.4035 5.5263 L 5.614 7.8947 M 1e-13 1e-13 L 0 2.3684 M 7.0175 3.9473 L 7.0175 6.3157" fill="none" stroke-width="1"/>
+            </g>
+            <g transform="translate(6.3158 31.579)">
+                <path d="M 1e-13 1e-13 L 1.4035 0.7895" stroke-width="1"/>
+            </g>
+            <g transform="translate(7.7193 32.3684)">
+                <path d="M 4.2105 2.3684 L 5.6141 3.1579 M 1e-13 1e-13 L 0 2.3684 M 4.2105 2.3684 L 4.2105 4.7368" fill="none" stroke-width="1"/>
+            </g>
+            <g transform="translate(3.8597 15.3947)">
+                <path d="M 1e-13 1e-13 L 0 5.5263 M 1.7543 0.7895 L 1.7543 6.3158 M 3.5087 1.9737 L 3.5087 7.5 M 5.2631 2.7632 L 5.2631 8.2894 M 7.0175 3.9474 L 7.0175 9.4737 M 8.7719 4.7368 L 8.7719 10.2632 M 10.5263 5.9211 L 10.5263 11.4474 M 12.2807 6.7106 L 12.2807 12.2368" stroke="#ff8200" stroke-linecap="butt" fill="none" stroke-width="1"/>
+            </g>
+            <g transform="translate(2.1053 14.2106)">
+                <path d="M 1e-13 1e-13 L 15.4386 8.6842" fill="none" stroke-width="1"/>
+            </g>
+        </g>
+    </g>
+</svg>

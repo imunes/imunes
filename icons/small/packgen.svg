@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:v="http://vecta.io" width="40" height="43" viewBox="0 0 40 43">
+    <style>
+        <![CDATA[svg{stroke:#000;stroke-linecap:round;stroke-linejoin:round;fill:#fff;fill-rule:evenodd;font-family:Roboto;font-size:14px;text-anchor:middle}svg text{paint-order:stroke;white-space:pre}svg .Text\.cls{stroke:none}]]>
+    </style>
+    <defs>
+        <style>@import url("https://fonts.googleapis.com/css?family=Roboto:400,400i,700,700i");</style>
+        <radialGradient id="R845050505000096d510000387f.grad" cx="50%" cy="50%" r="84%" fx="50%" fy="50%">
+            <stop offset="0%" stop-color="#0096d5"/>
+            <stop offset="100%" stop-color="#00387f"/>
+        </radialGradient>
+    </defs>
+    <g transform="translate(0 0)">
+        <g >
+            <g transform="translate(10.6024 0)">
+                <path d="M 29.3976 20.2985 L 2.4097 0 L 0 2.2201 L 2.4097 40.5969 L 29.3976 20.2985 Z" stroke="none" fill="url(#R845050505000096d510000387f.grad)"/>
+            </g>
+            <g transform="translate(0 9.1978)">
+                <path d="M 11.8073 0 L 11.8073 2.2201 L 0 2.2201 L 0 0 L 11.8073 0 Z" stroke="none" fill="#0096d5"/>
+            </g>
+            <g transform="translate(11.0843 8.2462)">
+                <path d="M 0 2.8545 L 2.1687 0 Z" stroke="none" fill="#000000"/>
+            </g>
+            <g transform="translate(0 16.1753)">
+                <path d="M 11.8073 0 L 11.8073 2.2201 L 0 2.2201 L 0 0 L 11.8073 0 Z" stroke="none" fill="#0096d5"/>
+            </g>
+            <g transform="translate(11.0843 15.2239)">
+                <path d="M 0 2.8545 L 2.1687 0 Z" stroke="none" fill="#000000"/>
+            </g>
+            <g transform="translate(0 23.153)">
+                <path d="M 11.8073 0 L 11.8073 2.2201 L 0 2.2201 L 0 0 L 11.8073 0 Z" stroke="none" fill="#0096d5"/>
+            </g>
+            <g transform="translate(11.0843 22.2015)">
+                <path d="M 0 2.8545 L 2.1687 0 Z" stroke="none" fill="#000000"/>
+            </g>
+            <g transform="translate(0 30.1305)">
+                <path d="M 11.8073 0 L 11.8073 2.2201 L 0 2.2201 L 0 0 L 11.8073 0 Z" stroke="none" fill="#0096d5"/>
+            </g>
+            <g transform="translate(11.0843 29.1791)">
+                <path d="M 0 2.8545 L 2.1687 0 Z" stroke="none" fill="#000000"/>
+            </g>
+            <g transform="translate(10.7763 1.903)">
+                <path d="M 26.9879 20.2985 L 0 0 L 0 40.597 L 26.9879 20.2985 Z" stroke="none" fill="#0096d5"/>
+            </g>
+        </g>
+        <g class="Text.cls">
+            <rect x="0" y="0" width="40" height="42.5" fill="none" stroke="none"/>
+            <text fill="#ffffff" fill-opacity="1" font-size="7px" font-weight="bold">
+                <tspan x="20" y="19.36">PACK</tspan>
+                <tspan x="20" y="27.76">GEN</tspan>
+            </text>
+        </g>
+    </g>
+</svg>

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:v="http://vecta.io" width="40" height="37" viewBox="0 0 40 37">
+    <style>
+        <![CDATA[svg{stroke:#000;stroke-linecap:round;stroke-linejoin:round;fill:#fff;fill-rule:evenodd;font-family:Roboto;font-size:14px;text-anchor:middle}svg text{paint-order:stroke;white-space:pre}svg .Text\.cls{stroke:none}]]>
+    </style>
+    <defs>
+        <radialGradient id="R845050505000096d510000387f.grad" cx="50%" cy="50%" r="84%" fx="50%" fy="50%">
+            <stop offset="0%" stop-color="#0096d5"/>
+            <stop offset="100%" stop-color="#00387f"/>
+        </radialGradient>
+    </defs>
+    <g transform="translate(0 0)">
+        <g >
+            <g>
+                <g >
+                    <g transform="translate(0.1659 18.3918)">
+                        <path fill="#0096d5" d="M 29.7671 18.4276 L 29.7671 0 L 0 0 L 0 18.4276 L 29.7671 18.4276 Z M 8.6257 2.357 L 8.6257 13.0357 L 14.2244 13.0357 L 14.2244 15.1539 L 5.989 15.1539 L 5.989 2.357 L 8.6257 2.357 Z" stroke="none"/>
+                    </g>
+                    <g transform="translate(0.0753 0)">
+                        <path d="M 0 18.3052 L 12.0734 0 L 39.7588 0 L 29.7671 18.3052 L 0 18.3052 Z M 29.9752 36.9999 L 39.7588 16.7473 L 39.7588 0 L 29.9752 18.3052 L 29.9752 36.9999 Z" stroke="none" fill="url(#R845050505000096d510000387f.grad)"/>
+                    </g>
+                </g>
+            </g>
+            <g transform="translate(5.989 20.7488)">
+                <path fill="#e0e0e0" d="M 2.6367 0 L 2.6367 10.6787 L 8.2354 10.6787 L 8.2354 12.7969 L 0 12.7969 L 0 0 L 2.6367 0 Z" stroke-width="0.5" stroke="#ffffff"/>
+            </g>
+            <g transform="translate(15.2087 20.573)">
+                <path fill="#e0e0e0" d="M 9.0264 10.9248 L 9.0264 12.9727 L 0.2549 12.9727 L 0.2549 11.2324 L 4.3945 6.8203 Q 5.2471 5.8887 5.6558 5.1943 Q 6.0645 4.5 6.0645 3.876 Q 6.0645 3.0234 5.6338 2.5356 Q 5.2031 2.0479 4.4033 2.0479 Q 3.542 2.0479 3.0454 2.6411 Q 2.5488 3.2344 2.5488 4.2012 L 0 4.2012 Q 0 3.0322 0.5581 2.0654 Q 1.1162 1.0986 2.1357 0.5493 Q 3.1553 0 4.4473 0 Q 6.4248 0 7.519 0.9492 Q 8.6133 1.8984 8.6133 3.6299 Q 8.6133 4.5791 8.1211 5.5635 Q 7.6289 6.5479 6.4336 7.8574 L 3.5244 10.9248 L 9.0264 10.9248 Z" stroke-width="0.5" stroke="#ffffff"/>
+            </g>
+        </g>
+    </g>
+</svg>
