@@ -79,16 +79,20 @@ https://wiki.tcl-lang.org/page/tksvg
     /usr/local/lib/tksvg0.13/lib/
     /usr/local/lib/tksvg0.13/lib/tksvg0.13/libtksvg0.13.so
     /usr/local/lib/tksvg0.13/lib/tksvg0.13/pkgIndex.tcl
-    echo -e "\033[1;31m /usr/local/lib/tksvg0.13/libtksvg0.13.so\033[0m"
-    echo -e "\033[1;31m /usr/local/lib/tksvg0.13/pkgIndex.tcl\033[0m"
+    /usr/local/lib/tksvg0.13/libtksvg0.13.so
+    /usr/local/lib/tksvg0.13/pkgIndex.tcl
+
+    
+    Context	Enlace Relativo
+    En un archivo .md de la misma rama	/assets/images/electrocat.png
 
     Por alguna razón desconocida las líneas en rojo no se crean en algunas compilaciones por lo que la libreria no funciona.
 
-#Para corregir ese error ejecute
+# Para corregir ese error ejecute
 
     # cd /usr/local/lib/tksvg0.13
     # cp -rf libtksvg0.13.so ../../
-    # cp -rd pkgIndex.tcl ../../
+    # cp -rf pkgIndex.tcl ../../
 
 Esto resuelve el problema, cuando no se crea la estrucutura correcta del directorios y archivos durante la compilación.
 
