@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:v="http://vecta.io" width="53" height="37" viewBox="0 0 53 37">
+    <style>
+        <![CDATA[svg{stroke:#000;stroke-linecap:round;stroke-linejoin:round;fill:#fff;fill-rule:evenodd;font-family:Roboto;font-size:14px;text-anchor:middle}svg text{paint-order:stroke;white-space:pre}svg .Text\.cls{stroke:none}]]>
+    </style>
+    <defs>
+        <radialGradient id="R845050505000096d510000387f.grad" cx="50%" cy="50%" r="84%" fx="50%" fy="50%">
+            <stop offset="0%" stop-color="#0096d5"/>
+            <stop offset="100%" stop-color="#00387f"/>
+        </radialGradient>
+    </defs>
+    <g>
+        <g >
+            <g class="kvs5q8od5p2.lay" v:layer_name="TEXT">
+                <g >
+                    <g>
+                        <g >
+                            <g transform="translate(0.004 18.8601)">
+                                <path fill="#0096d5" d="M 39.4075 18 L 39.4075 0 L 0 0 L 0 18 L 39.4075 18 Z M 8.6031 9.459 Q 9.5014 9.0492 9.9409 8.37 Q 10.3809 7.69 10.3809 6.67 Q 10.3809 5.24 9.4209 4.45 Q 8.4609 3.67 6.7009 3.67 L 3.0033 3.6668 L 3.0033 13.6199 L 5.0541 13.6199 L 5.0541 9.9764 L 6.6879 9.9764 L 8.5541 13.6199 L 10.7553 13.6199 L 10.7553 13.5242 Z" stroke="none" fill-opacity="1"/>
+                            </g>
+                            <g transform="translate(0.0999 0)">
+                                <path d="M 0 18.2361 L 15.9836 0 L 52.6352 0 L 39.4075 18.2361 L 0 18.2361 Z M 39.6831 36.8602 L 52.6352 16.6841 L 52.6352 0 L 39.6831 18.2361 L 39.6831 36.8602 Z" stroke="none" fill="url(#R845050505000096d510000387f.grad)"/>
+                            </g>
+                            <g transform="translate(0 16.9147)">
+                                <path d="M 0 0 L 39.4075 0 L 39.4075 18.9917 L 0 18.9917 Z" stroke="none" fill="none"/>
+                            </g>
+                            <g transform="translate(6.0806 0.8601)">
+                                <path d="M 16.791 13.3334 L 15.8222 14.2223 L 4.5206 14.2223 L 3.2291 16 L 0 14.2223 L 6.458 11.5555 L 5.1665 13.3334 L 16.791 13.3334 Z M 25.8322 5.3333 L 24.8635 6.6667 L 13.5619 6.6667 L 12.2703 7.9999 L 9.0413 6.2222 L 15.4993 4 L 14.2077 5.3333 L 25.8322 5.3333 Z M 18.7284 10.6667 L 19.697 9.7778 L 31.3215 9.7778 L 32.2903 7.9999 L 35.5193 9.7778 L 29.3841 12.4444 L 30.3529 10.6667 L 18.7284 10.6667 Z M 24.8635 2.6666 L 25.8322 1.7777 L 37.1338 1.7777 L 38.4254 0 L 41.6544 2.2222 L 35.1964 4.4445 L 36.488 2.6666 L 24.8635 2.6666 Z" stroke="#ffffff" stroke-linejoin="miter" stroke-linecap="square" stroke-width="0.3935" fill="#e0e0e0"/>
+                            </g>
+                        </g>
+                    </g>
+                    <g transform="translate(0.7349 18.8601)" class="kvs5q8od5p2.lay" v:layer_name="TEXT">
+                        <rect x="0" y="0" width="38" height="17" stroke-width="0.5" stroke="#ffffff" fill="#0096d5" stroke-opacity="0"/>
+                    </g>
+                </g>
+            </g>
+            <g transform="translate(3.5807 22.6717)">
+                <path fill="#e0e0e0" d="M 5.1973 5.8066 L 6.9551 5.8066 Q 6.8555 7.1836 5.9385 7.9746 Q 5.0215 8.7656 3.5215 8.7656 Q 1.8809 8.7656 0.9404 7.6611 Q 0 6.5566 0 4.6289 L 0 4.1074 Q 0 2.877 0.4336 1.9395 Q 0.8672 1.002 1.6729 0.501 Q 2.4785 0 3.5449 0 Q 5.0215 0 5.9238 0.791 Q 6.8262 1.582 6.9668 3.0117 L 5.209 3.0117 Q 5.1445 2.1855 4.749 1.8135 Q 4.3535 1.4414 3.5449 1.4414 Q 2.666 1.4414 2.2295 2.0713 Q 1.793 2.7012 1.7813 4.0254 L 1.7813 4.6699 Q 1.7813 6.0527 2.2002 6.6914 Q 2.6191 7.3301 3.5215 7.3301 Q 4.3359 7.3301 4.7373 6.958 Q 5.1387 6.5859 5.1973 5.8066 Z" stroke-width="0.5" stroke="#ffffff"/>
+            </g>
+            <g transform="translate(11.69 22.7889)">
+                <path fill="#e0e0e0" d="M 1.7578 0 L 1.7578 7.1191 L 5.4902 7.1191 L 5.4902 8.5313 L 0 8.5313 L 0 0 L 1.7578 0 Z" stroke-width="0.5" stroke="#ffffff"/>
+            </g>
+            <g transform="translate(18.2994 22.7889)">
+                <path fill="#e0e0e0" d="M 1.7578 0 L 1.7578 8.5313 L 0 8.5313 L 0 0 L 1.7578 0 Z" stroke-width="0.5" stroke="#ffffff"/>
+            </g>
+            <g transform="translate(21.4284 22.6717)">
+                <path fill="#e0e0e0" d="M 5.1973 5.8066 L 6.9551 5.8066 Q 6.8555 7.1836 5.9385 7.9746 Q 5.0215 8.7656 3.5215 8.7656 Q 1.8809 8.7656 0.9404 7.6611 Q 0 6.5566 0 4.6289 L 0 4.1074 Q 0 2.877 0.4336 1.9395 Q 0.8672 1.002 1.6729 0.501 Q 2.4785 0 3.5449 0 Q 5.0215 0 5.9238 0.791 Q 6.8262 1.582 6.9668 3.0117 L 5.209 3.0117 Q 5.1445 2.1855 4.749 1.8135 Q 4.3535 1.4414 3.5449 1.4414 Q 2.666 1.4414 2.2295 2.0713 Q 1.793 2.7012 1.7813 4.0254 L 1.7813 4.6699 Q 1.7813 6.0527 2.2002 6.6914 Q 2.6191 7.3301 3.5215 7.3301 Q 4.3359 7.3301 4.7373 6.958 Q 5.1387 6.5859 5.1973 5.8066 Z" stroke-width="0.5" stroke="#ffffff"/>
+            </g>
+            <g transform="translate(29.5377 22.7889)">
+                <path fill="#e0e0e0" d="M 4.8633 8.5313 L 2.6719 5.1094 L 1.7578 6.0938 L 1.7578 8.5313 L 0 8.5313 L 0 0 L 1.7578 0 L 1.7578 3.8672 L 2.5313 2.8066 L 4.7051 0 L 6.8672 0 L 3.8379 3.791 L 6.9551 8.5313 L 4.8633 8.5313 Z" stroke-width="0.5" stroke="#ffffff"/>
+            </g>
+        </g>
+    </g>
+</svg>
