@@ -3,6 +3,8 @@ LIBDIR = lib/imunes
 IMUNESDIR = $(PREFIX)/$(LIBDIR)
 CONFIGDIR = $(IMUNESDIR)/config
 GUIDIR = $(IMUNESDIR)/gui
+GUIDIRMSGS = $(GUIDIR)/msgs
+GUIDIRAYU = $(GUIDIR)/ayuda
 ICONSDIR = $(IMUNESDIR)/icons
 NODESDIR = $(IMUNESDIR)/nodes
 RUNTIMEDIR = $(IMUNESDIR)/runtime
@@ -24,6 +26,8 @@ STARTUPDIR=/var/imunes-service
 BASEFILES =	COPYRIGHT README VERSION
 CONFIGFILES =	$(wildcard config/*.tcl)
 GUIFILES =	$(wildcard gui/*.tcl)
+GUIFILESTX =	$(wildcard gui/*.txt)
+GUIFILESMSGS =  $(wildcard gui/msgs/*.msg)
 NODESFILES =	$(wildcard nodes/*.tcl)
 RUNTIMEFILES =	$(wildcard runtime/*.tcl)
 PATCHESFILES =	$(wildcard src/patches/*)
@@ -31,16 +35,16 @@ PATCHESFILES =	$(wildcard src/patches/*)
 VROOT =	$(wildcard scripts/*.sh scripts/*.bash)
 TOOLS =	$(filter-out $(VROOT), $(wildcard scripts/*))
 
-NODE_ICONS = frswitch.gif hub.gif lanswitch.gif rj45.gif cloud.gif host.gif \
-	ipfirewall.gif pc.gif router.gif click_l2.gif click_l3.gif \
-	stpswitch.gif filter.gif packgen.gif nat64.gif ext.gif
+NODE_ICONS = frswitch.gif frswitch.svg hub.gif hub.svg lanswitch.gif lanswitch.svg rj45.gif rj45.svg cloud.gif cloud.svg host.gif host.svg \
+	ipfirewall.gif ipfirewall.svg pc.gif pc.svg router.gif router.svg click_l2.gif click_l2.svg click_l3.gif click_l3.svg \
+	stpswitch.gif stpswitch.svg filter.gif filter.svg packgen.gif packgen.svg nat64.gif nat64.svg ext.gif ext.svg
 
 NORMAL_ICONS = $(NODE_ICONS)
 
 SMALL_ICONS = $(NODE_ICONS)
 
-TINY_ICONS = $(NODE_ICONS) link.gif select.gif l2.gif l3.gif freeform.gif \
-		oval.gif rectangle.gif text.gif
+TINY_ICONS = $(NODE_ICONS) link.gif link.svg minizoomin.svg minizoomout.svg select.gif select.svg l2.gif l2.svg l3.gif l3.svg freeform.gif freeform.svg \
+		oval.gif oval.svg rectangle.gif rectangle.svg text.gif text.svg
 
 ICONS = $(wildcard icons/imunes_*)
 
@@ -100,6 +104,13 @@ endif
 
 	mkdir -p $(GUIDIR)
 	cp $(GUIFILES) $(GUIDIR)
+
+	cp $(GUIFILESTX) $(GUIDIR)
+
+	mkdir -p $(GUIDIRMSGS)
+	cp $(GUIFILESMSGS) $(GUIDIRMSGS)
+
+	mkdir -p $(GUIDIRAYU)
 
 	mkdir -p $(NODESDIR)
 	cp $(NODESFILES) $(NODESDIR)
