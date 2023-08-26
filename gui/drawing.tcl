@@ -123,6 +123,8 @@ proc drawNode { node } {
     set customIcon [getCustomIcon $node]
     if {[string match "*img*" $customIcon] == 0} {
 	global $type
+	#agregada por mi $zoom aqui
+	global $zoom
 	.panwin.f1.c create image $x $y -image [set $type] -tags "node $node"
     } else {
 	global iconSize
@@ -130,6 +132,9 @@ proc drawNode { node } {
 	    normal {
 		set icon_data [getImageData $customIcon]
 		image create photo img_$customIcon -data $icon_data
+		set height "[expr {40 * $zoom}]" 
+		set imageHeight [image height img_$customIcon]
+		img_$customIcon configure -format [list svg -scale [expr {double($height) / $imageHeight}]]
 		.panwin.f1.c create image $x $y -image img_$customIcon -tags "node $node"
 	    }
 	    small {
@@ -153,7 +158,10 @@ proc drawNode { node } {
 		set l [format "%s %s" $l [getIfcIPv4addr $node $ifc]]
 	    }
 	}
-	set label [.panwin.f1.c create text $x $y -fill blue \
+	set label [.panwin.f1.c create text $x $y -fill blue]
+	set zoomtext "[expr {int($zoom * 9)}]"
+	set sizetext "$zoomtext" 
+	set label [.panwin.f1.c create text $x $y -fill blue -font "-size $sizetext" \
 	    -text "$l" \
 	    -tags "nodelabel $node"]
     } else {
@@ -296,12 +304,15 @@ proc calcAngle { link } {
 #   interface. 
 #****
 proc updateIfcLabel { lnode1 lnode2 } {
+    upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global showIfNames showIfIPaddrs showIfIPv6addrs
 
     set link [lindex [.panwin.f1.c gettags "link && $lnode1 && $lnode2"] 1]
     set ifc [ifcByPeer $lnode1 $lnode2]
     set ifipv4addr [getIfcIPv4addr $lnode1 $ifc]
     set ifipv6addr [getIfcIPv6addr $lnode1 $ifc]
+    set zoomtext "[expr {int($zoom * 9)}]"
+    set sizetext "$zoomtext" 
     if { $ifc == 0 } {
 	set ifc ""
     }
@@ -329,6 +340,8 @@ proc updateIfcLabel { lnode1 lnode2 } {
     }
     .panwin.f1.c itemconfigure "interface && $lnode1 && $link" \
 	-text $str
+	.panwin.f1.c itemconfigure "interface && $lnode1 && $link" \
+		-fill black -text $str -font "-size $sizetext"
 }
 
 #****f* editor.tcl/updateLinkLabel
@@ -687,8 +700,7 @@ proc changeIconPopup {} {
     $tree heading type -text "Type" 
     $tree column type -width 90 -stretch 0 -minwidth 90
     focus $tree
-    
-    foreach file [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] {
+    foreach file [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.svg] {
 	set filename [lindex [split $file /] end]
 	$tree insert {} end -id $file -text $filename -values [list "library icon"] \
 	  -tags "$file"
@@ -707,8 +719,7 @@ proc changeIconPopup {} {
 	       set iconsrcfile $img"
 	}
     }
-    
-    foreach file [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] {
+    foreach file [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.svg] {
 	$tree tag bind $file <Key-Up> \
 	    "if {![string equal {} [$tree prev $file]]} {
 		updateIconPreview $prevcan $wi.iconconf.right.l2 [$tree prev $file]
@@ -720,8 +731,7 @@ proc changeIconPopup {} {
 		set iconsrcfile [$tree next $file]
 	     }"
     }
-    
-    set first [lindex [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] 0]
+    set first [lindex [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.svg] 0]
     $tree selection set $first
     $tree focus $first
         
@@ -933,10 +943,15 @@ proc updateCustomIconReferences {} {
 #   Updates icon size.
 #****
 proc updateIconSize {} {
+  upvar 0 ::cf::[set ::curcfg]::zoom zoom
   global all_modules_list
   foreach b $all_modules_list {
     global $b iconSize
-    set $b [image create photo -file [$b.icon $iconSize]]
+    #set $b [image create photo -file [$b.icon $iconSize]]
+    set $b [image create photo $b -file [$b.icon $iconSize] -format {svg -scaletoheight 40}]
+    set height "[expr {40 * $zoom}]"
+    set imageHeight [image height $b]
+    $b configure -format [list svg -scale [expr {double($height) / $imageHeight}]]
   }
 }
 
