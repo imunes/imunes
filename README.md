@@ -57,7 +57,7 @@ Then you need to compile and install the kernel and reboot.
 First we need to install the packages required for IMUNES. To do
 this execute the following command (on FreeBSD 9.3 and higher):
 
-    # pkg install tk86 ImageMagick6 tcllib wireshark socat git gmake
+    # pkg install tk86 ImageMagick7 tcllib wireshark socat git gmake
 
 ### Dar soporte para imagenes e iconos .SVG a IMUNES
 
@@ -71,6 +71,26 @@ https://wiki.tcl-lang.org/page/tksvg
     # make install
 
     NOTA: tksvg0.13 (sale de la versión del paquete tksvgs, si cambia la versión debe cambiar la linea al final, segun la versión)
+
+    La compilación crea el siguiente arbol de directorios y archivos.
+
+    /usr/local/lib/tksvg0.13
+    /usr/local/lib/tksvg0.13/bin/	(vacio)
+    /usr/local/lib/tksvg0.13/lib/
+    /usr/local/lib/tksvg0.13/lib/tksvg0.13/libtksvg0.13.so
+    /usr/local/lib/tksvg0.13/lib/tksvg0.13/pkgIndex.tcl
+    echo -e "\033[1;31m /usr/local/lib/tksvg0.13/libtksvg0.13.so\033[0m"
+    echo -e "\033[1;31m /usr/local/lib/tksvg0.13/pkgIndex.tcl\033[0m"
+
+    Por alguna razón desconocida las líneas en rojo no se crean en algunas compilaciones por lo que la libreria no funciona.
+
+#Para corregir ese error ejecute
+
+    # cd /usr/local/lib/tksvg0.13
+    # cp -rf libtksvg0.13.so ../../
+    # cp -rd pkgIndex.tcl ../../
+
+Esto resuelve el problema, cuando no se crea la estrucutura correcta del directorios y archivos durante la compilación.
 
 ## Operating system (Linux)
 
