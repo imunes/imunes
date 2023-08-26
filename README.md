@@ -74,7 +74,7 @@ https://wiki.tcl-lang.org/page/tksvg
           segun la versión)
 
     La compilación crea el siguiente arbol de directorios y archivos.
-    
+###  
     :::text
     Arbol de directorio dentro de /usr/local/lib/tksvg0.13
     
