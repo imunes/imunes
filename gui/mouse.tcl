@@ -897,17 +897,38 @@ proc button3node { c x y } {
 	}
 	#
 	# Firefox
-	#
+	# Chromium
 	if {[checkForExternalApps "startxcmd"] == 0 && \
-	    [checkForApplications $node "firefox"] == 0} {
-	    .button3menu add command -label "Web Browser" \
-		-command "startXappOnNode $node \"firefox -no-remote -setDefaultBrowser about:blank\""
+	    [checkForApplications $node "chrome"] == 0} {
+	    .button3menu add command -label "Chromium Browser" \
+		-command "startXappOnNode $node \"chrome %u --no-remote --setDefaultBrowser about:blank\""
 	} else {
 	    .button3menu add command -label "Web Browser" \
 		-state disabled
 	}
+	# Midori
+	#
+	if {[checkForExternalApps "startxcmd"] == 0 && \
+	    [checkForApplications $node "midori"] == 0} {
+	    .button3menu add command -label "Midori" \
+		-command "startXappOnNode $node \"midori\""
+	} else {
+	    .button3menu add command -label "Midori" \
+		-state disabled
+	}
+	# Netsurf
+	#
+	if {[checkForExternalApps "startxcmd"] == 0 && \
+	    [checkForApplications $node "netsurf-gtk"] == 0} {
+	    .button3menu add command -label "Netsurf" \
+		-command "startXappOnNode $node \"netsurf-gtk\""
+	} else {
+	    .button3menu add command -label "Netsurf" \
+	    -state disabled
+	}
+	#
 	###----------------------------------------------------------------------
-	# SAKURA (Propuesta de implementación)
+	# SAKURA (Propuesta de implementacion)
 	# Terminal Sakura (Se requiere instalar Sakura en imunes vroot)
 	#
 	if {[checkForExternalApps "startxcmd"] == 0 && \
@@ -932,7 +953,7 @@ proc button3node { c x y } {
 		-state disabled
 	}
 	###----------------------------------------------------------------------
-	# Propuesta de implementación
+	# Propuesta de implementacion
 	# Apache24-2 (Se requiere instalar apache24 en imunes vroot para que funcione)
 	.button3menu.apachectl delete 0 end
 	if {[checkForExternalApps "startxcmd"] == 0 && \
@@ -951,8 +972,8 @@ proc button3node { c x y } {
 		-state disabled
 	}
 	#
-	# Propuesta de implementación
-	# Servicio DNS bind named
+	# Propuesta de implementacion
+	# Servicio DNS bind916 o bind918 named. (Se requiere instalar bind916 o bind918 en imunes vroot para que funcione)
 	#
 	.button3menu.named delete 0 end
 	if {[checkForExternalApps "startxcmd"] == 0 && \
@@ -971,9 +992,9 @@ proc button3node { c x y } {
 		-state disabled
 	}
 	#
-	# Propuesta de implementación
-	# Servicio DHCPD 
-	#    
+	# Propuesta de implementacionn
+	# Servicio DHCPD (Requiere de la instalacion de isc-dhcp44-server isc-dhcp44-client isc-dhcp44-relay
+	# o isc-dhcp43-server isc-dhcp43-client isc-dhcp43-relay para versiones viejas de FreeBSD)
 	# dhcpd
 	#
 	.button3menu.dhcpd delete 0 end
@@ -993,7 +1014,7 @@ proc button3node { c x y } {
 		-state disabled
 	}
 	### *************************************************************** ###
-	### PROPUESTA DE IMPLEMENTACIÓN COMO SE PODRIA HACER UN AGENT DHCP RELAY.
+	### PROPUESTA DE IMPLEMENTACION COMO SE PODRIA HACER UN AGENT DHCP RELAY.
 	### Requiere el paquete dhcrelay instalado en imunes vroot
 	### Funciona manualmente, se requiere programar un widget o dialog modal para ingresar
 	### interfaces del equipo que hace de agent dhcp relay
