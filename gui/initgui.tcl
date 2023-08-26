@@ -247,6 +247,7 @@ if { $iconlist != "" } {
     eval wm iconphoto . -default $iconlist
 }
 
+# New Variables
 global themeselec
 global colorcanvas   
 global gridVert
