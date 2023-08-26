@@ -23,7 +23,7 @@
 # SUCH DAMAGE.
 #
 
-# $Id: click_l2.tcl 63 2013-10-03 12:17:50Z valter $
+# $Id: click_l2.tcl 63 2023-08-26 11:42 jromero17 $
 
 
 #****h* imunes/click_l2.tcl
@@ -102,13 +102,13 @@ proc $MODULE.icon { size } {
     global ROOTDIR LIBDIR
     switch $size {
 	normal {
-	    return $ROOTDIR/$LIBDIR/icons/normal/click_l2.gif
+	    return $ROOTDIR/$LIBDIR/icons/normal/click_l2.svg
 	}
 	small {
-	    return $ROOTDIR/$LIBDIR/icons/small/click_l2.gif
+	    return $ROOTDIR/$LIBDIR/icons/small/click_l2.svg
 	}
 	toolbar {
-	    return $ROOTDIR/$LIBDIR/icons/tiny/click_l2.gif
+	    return $ROOTDIR/$LIBDIR/icons/tiny/click_l2.svg
 	}
     }
 }

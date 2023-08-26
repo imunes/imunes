@@ -23,7 +23,7 @@
 # SUCH DAMAGE.
 #
 
-# $Id: genericrouter.tcl 130 2015-02-24 09:52:19Z valter $
+# $Id: genericrouter.tcl 130 2023-08-26 11:42 jromero17 $
 
 
 
@@ -126,13 +126,16 @@ proc $MODULE.icon { size } {
     global ROOTDIR LIBDIR
     switch $size {
       normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/router.gif
+	return $ROOTDIR/$LIBDIR/icons/normal/router.svg
+        #return $ROOTDIR/$LIBDIR/icons/normal/router.gif
       }
       small {
-	return $ROOTDIR/$LIBDIR/icons/small/router.gif
+	return $ROOTDIR/$LIBDIR/icons/small/router.svg
+        #return $ROOTDIR/$LIBDIR/icons/small/router.gif
       }
       toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/router.gif
+	return $ROOTDIR/$LIBDIR/icons/tiny/router.svg
+        #return $ROOTDIR/$LIBDIR/icons/tiny/router.gif
       }
     }
 }

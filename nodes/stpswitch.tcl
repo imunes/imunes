@@ -102,13 +102,13 @@ proc $MODULE.icon {size} {
     global ROOTDIR LIBDIR
     switch $size {
       normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/stpswitch.gif
+	return $ROOTDIR/$LIBDIR/icons/normal/stpswitch.svg
       }
       small {
-	return $ROOTDIR/$LIBDIR/icons/small/stpswitch.gif
+	return $ROOTDIR/$LIBDIR/icons/small/stpswitch.svg
       }
       toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/stpswitch.gif
+	return $ROOTDIR/$LIBDIR/icons/tiny/stpswitch.svg
       }
     }
 }
@@ -555,4 +555,3 @@ proc $MODULE.configBridgeInterfacesGUI { wi node ifc } {
 
     configGUI_ifcBridgeAttributes $wi $node $ifc
 }
-

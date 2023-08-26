@@ -26,7 +26,7 @@
 # and Technology through the research contract #IP-2003-143.
 #
 
-# $Id: hub.tcl 129 2015-02-13 11:14:44Z valter $
+# $Id: hub.tcl 129 2023-08-26 11:42 jromero17 $
 
 
 #****h* imunes/hub.tcl
@@ -117,13 +117,13 @@ proc $MODULE.icon { size } {
     global ROOTDIR LIBDIR 
     switch $size {
       normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/hub.gif
+	return $ROOTDIR/$LIBDIR/icons/normal/hub.svg
       }
       small {
-	return $ROOTDIR/$LIBDIR/icons/small/hub.gif
+	return $ROOTDIR/$LIBDIR/icons/small/hub.svg
       }
       toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/hub.gif
+	return $ROOTDIR/$LIBDIR/icons/tiny/hub.svg
       }
     }
 }
