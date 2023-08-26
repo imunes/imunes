@@ -80,7 +80,6 @@ https://wiki.tcl-lang.org/page/tksvg
     /usr/local/lib/tksvg0.13/lib/tksvg0.13/libtksvg0.13.so
     /usr/local/lib/tksvg0.13/lib/tksvg0.13/pkgIndex.tcl
     ``
-    `#0969DA`
     /usr/local/lib/tksvg0.13/libtksvg0.13.so
     /usr/local/lib/tksvg0.13/pkgIndex.tcl
     ``
