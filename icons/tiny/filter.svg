@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:v="http://vecta.io" width="41" height="41" viewBox="0 0 41 41">
+    <style>
+        <![CDATA[svg{stroke:#000;stroke-linecap:round;stroke-linejoin:round;fill:#fff;fill-rule:evenodd;font-family:Roboto;font-size:14px;text-anchor:middle}svg text{paint-order:stroke;white-space:pre}svg .Text\.cls{stroke:none}]]>
+    </style>
+    <defs>
+        <radialGradient id="R845050505000096d510000387f.grad" cx="50%" cy="50%" r="84%" fx="50%" fy="50%">
+            <stop offset="0%" stop-color="#0096d5"/>
+            <stop offset="100%" stop-color="#00387f"/>
+        </radialGradient>
+    </defs>
+    <g>
+        <g >
+            <g transform="translate(0.0004 6.7925)">
+                <path d="M 33.4904 33.2077 L 33.4904 0 L 0 0 L 0 33.2077 L 33.4904 33.2077 Z" stroke="none" stroke-linejoin="miter" stroke-opacity="0" fill="#0096d5" stroke-width="0.7878000000000001"/>
+            </g>
+            <g>
+                <path d="M 33.4904 6.7925 L 0 6.7925 L 8.5673 0 L 40.5 0 L 40.5 33.2077 L 33.4904 40.0001 L 33.4904 6.7925 Z" stroke="none" stroke-linejoin="miter" stroke-opacity="0" fill="url(#R845050505000096d510000387f.grad)" stroke-width="0.7878000000000001"/>
+            </g>
+            <g transform="translate(33.4904 0)">
+                <path d="M 0 6.7925 L 7.0096 0" stroke="none" stroke-linejoin="miter" stroke-linecap="square" stroke-opacity="0" fill="none" stroke-width="0.7878000000000001"/>
+            </g>
+            <g transform="translate(5.0624 14.2516)">
+                <path d="M 24.1442 19.6226 L 16.7452 19.6226 L 6.6202 0 L 0 0" stroke="#ffffff" stroke-linejoin="miter" stroke-linecap="square" fill="none" stroke-width="2.000000953674544"/>
+            </g>
+            <g transform="translate(5.0624 13.5851)">
+                <path d="M 24.1442 19.6226 L 16.7452 19.6226 L 6.6202 0 L 0 0" stroke="#ffffff" stroke-linejoin="miter" stroke-linecap="square" fill="none" stroke-width="2.000000953674544" stroke-opacity="1"/>
+            </g>
+            <g transform="translate(4.6732 14.2516)">
+                <path d="M 0 19.6226 L 7.0095 19.6226 L 17.1346 0 L 24.9231 0" stroke="#ffffff" stroke-linejoin="miter" stroke-linecap="square" fill="none" stroke-width="2"/>
+            </g>
+            <g transform="translate(4.6731 13.5851)">
+                <path d="M 0 19.6226 L 7.0096 19.6226 L 17.1347 0 L 24.9231 0" stroke="#ffffff" stroke-linejoin="miter" stroke-linecap="square" fill="none" stroke-width="2"/>
+            </g>
+            <g transform="translate(1.9472 10.189)">
+                <path d="M 24.9231 0 L 24.9231 6.7925 L 29.2067 3.3962 L 24.9231 0 Z M 24.9231 19.2454 L 24.9231 26.4152 L 29.2067 23.019 L 24.9231 19.2454 Z M 4.2837 7.1699 L 4.2837 0 L 0 3.3962 L 4.2837 7.1699 Z M 4.2837 26.4152 L 4.2837 19.6228 L 0 23.019 L 4.2837 26.4152 Z" stroke="#ffffff" stroke-linejoin="miter" fill="#e0e0e0" stroke-width="2" stroke-opacity="1"/>
+            </g>
+        </g>
+    </g>
+</svg>

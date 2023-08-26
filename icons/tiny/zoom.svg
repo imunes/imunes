@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:v="http://vecta.io" width="40" height="32" viewBox="0 0 40 32">
+    <style>
+        <![CDATA[svg{stroke:#000;stroke-linecap:round;stroke-linejoin:round;fill:#fff;fill-rule:evenodd;font-family:Roboto;font-size:14px;text-anchor:middle}svg text{paint-order:stroke;white-space:pre}svg .Text\.cls{stroke:none}]]>
+    </style>
+    <defs>
+        <linearGradient id="L001001000808080100100000000100.grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#808080" stop-opacity="1"/>
+            <stop offset="100%" stop-color="#000000" stop-opacity="1"/>
+        </linearGradient>
+    </defs>
+    <g transform="translate(1.5 1.4985)">
+        <g >
+            <g>
+                <path d="M 6.1266 10.0471 C 6.1038 10.3751 5.8922 10.6414 5.6295 10.6762 C 2.4482 11.1032 0 15.0339 0 19.8196 C 0 24.8899 2.8021 29 6.2592 29 L 30.1229 29 C 33.9209 29 37 24.6571 37 19.2972 C 37 14.162 34.172 9.9581 30.5941 9.6254 C 30.3203 9.5991 30.0983 9.3593 30.0452 9.0218 C 29.246 3.8711 25.5584 0 21.1985 0 C 18.3649 0 15.8409 1.6094 14.2018 4.1705 C 14.0415 4.4204 13.7726 4.5342 13.5358 4.4104 C 12.9049 4.0776 12.239 3.9175 11.4934 3.9175 C 8.6771 3.9175 6.3652 6.6148 6.1254 10.0533 Z" stroke="none" fill="#d0cfce" fill-rule="nonzero"/>
+            </g>
+            <g transform="translate(0 0.0015)">
+                <path d="M 6.1266 10.0455 C 6.1038 10.3736 5.8922 10.6398 5.6314 10.6746 C 2.4482 11.1017 0 15.0323 0 19.818 C 0 24.8883 2.8021 28.9985 6.2592 28.9985 L 30.1229 28.9985 C 33.9209 28.9985 37 24.6555 37 19.2956 C 37 14.1596 34.1714 9.9566 30.5916 9.6238 C 30.319 9.5975 30.0983 9.3577 30.0452 9.0203 C 29.246 3.8702 25.5584 0 21.1985 0 C 18.3643 0 15.8397 1.6109 14.1994 4.1728 C 14.0403 4.422 13.7677 4.5365 13.5395 4.4049 C 12.9081 4.0722 12.2402 3.9097 11.494 3.9097 C 8.6777 3.9097 6.3658 6.607 6.1254 10.0455 Z" stroke="url(#L001001000808080100100000000100.grad)" fill="none" stroke-width="3"/>
+            </g>
+        </g>
+    </g>
+</svg>
