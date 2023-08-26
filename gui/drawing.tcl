@@ -6,14 +6,26 @@
 # FUNCTION
 #   Redraws all the objects on the current canvas.
 #****
+
 proc redrawAll {} {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
     upvar 0 ::cf::[set ::curcfg]::annotation_list annotation_list
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     upvar 0 ::cf::[set ::curcfg]::zoom zoom
+    
+    global colorcanvas
+    global themeselec
+    global currentTheme
+    global currentThemenew
+    global gridVert
+    global gridHori
+    global gridIntVert
+    global gridIntHori    
+    
     global background sizex sizey grid
     global showBkgImage showAnnotations showGrid bkgImage
+
     .bottom.zoom config -text "zoom [expr {int($zoom * 100)}]%"
     set e_sizex [expr {int($sizex * $zoom)}]
     set e_sizey [expr {int($sizey * $zoom)}]
@@ -23,7 +35,6 @@ proc redrawAll {} {
 	[expr {$e_sizey + $border}]"
 
     .panwin.f1.c delete all
-
     set canvasBkgImage [getCanvasBkg $curcanvas]
     if { $showBkgImage == 1 && "$canvasBkgImage" != ""} {
 	set ret [backgroundImage .panwin.f1.c $canvasBkgImage]
@@ -36,7 +47,7 @@ proc redrawAll {} {
 	}
     } else {
 	set background [.panwin.f1.c create rectangle 0 0 $e_sizex $e_sizey \
-	    -fill white -tags "background"]
+	    -fill $colorcanvas -tags "background"]
     }
 
     if { $showAnnotations == 1 } {
@@ -55,10 +66,10 @@ proc redrawAll {} {
 	    if { [expr {$x % $e_grid2}] != 0 } {
 		if { $zoom > 0.5 } {
 		    .panwin.f1.c create line $x 1 $x $e_sizey \
-			-fill gray -dash {1 7} -tags "grid"
+			-fill $gridIntVert -dash {1 7} -tags "grid"
 		}
 	    } else {
-		.panwin.f1.c create line $x 1 $x $e_sizey -fill gray -dash {1 3} \
+		.panwin.f1.c create line $x 1 $x $e_sizey -fill $gridVert -dash {1 3} \
 		   -tags "grid"
 	    }
 	}
@@ -66,10 +77,10 @@ proc redrawAll {} {
 	    if { [expr {$y % $e_grid2}] != 0 } {
 		if { $zoom > 0.5 } {
 		    .panwin.f1.c create line 1 $y $e_sizex $y \
-			-fill gray -dash {1 7} -tags "grid"
+			-fill $gridIntHori -dash {1 7} -tags "grid"
 		}
 	    } else {
-		.panwin.f1.c create line 1 $y $e_sizex $y -fill gray -dash {1 3} \
+		.panwin.f1.c create line 1 $y $e_sizex $y -fill $gridHori -dash {1 3} \
 		    -tags "grid"
 	    }
 	}
@@ -115,6 +126,7 @@ proc drawNode { node } {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global showNodeLabels pseudo
+    global colorNameNode
 
     set type [nodeType $node]
     set coords [getNodeCoords $node]
@@ -123,6 +135,8 @@ proc drawNode { node } {
     set customIcon [getCustomIcon $node]
     if {[string match "*img*" $customIcon] == 0} {
 	global $type
+	#agregada por mi $zoom aqui
+	global $zoom
 	.panwin.f1.c create image $x $y -image [set $type] -tags "node $node"
     } else {
 	global iconSize
@@ -130,6 +144,9 @@ proc drawNode { node } {
 	    normal {
 		set icon_data [getImageData $customIcon]
 		image create photo img_$customIcon -data $icon_data
+		set height "[expr {40 * $zoom}]" 
+		set imageHeight [image height img_$customIcon]
+		img_$customIcon configure -format [list svg -scale [expr {double($height) / $imageHeight}]]
 		.panwin.f1.c create image $x $y -image img_$customIcon -tags "node $node"
 	    }
 	    small {
@@ -153,7 +170,10 @@ proc drawNode { node } {
 		set l [format "%s %s" $l [getIfcIPv4addr $node $ifc]]
 	    }
 	}
-	set label [.panwin.f1.c create text $x $y -fill blue \
+	#set label [.panwin.f1.c create text $x $y -fill $colorNameNode \
+	set zoomtext "[expr {int($zoom * 9)}]"
+	set sizetext "$zoomtext" 
+	set label [.panwin.f1.c create text $x $y -fill $colorNameNode -font "-size $sizetext" \
 	    -text "$l" \
 	    -tags "nodelabel $node"]
     } else {
@@ -162,8 +182,7 @@ proc drawNode { node } {
 	set ifc [ifcByPeer $pnode [getNodeMirror $node]]
 	if { $pcanvas != $curcanvas } {
 	    set label [.panwin.f1.c create text $x $y -fill blue \
-		-text "[getNodeName $pnode]:$ifc
-@[getCanvasName $pcanvas]" \
+		-text "[getNodeName $pnode]:$ifc@[getCanvasName $pcanvas]" \
 		-tags "nodelabel $node" -justify center]
 	} else {
 	    set label [.panwin.f1.c create text $x $y -fill blue \
@@ -207,7 +226,7 @@ proc drawLink { link } {
     if { [getLinkMirror $link] != "" } {
 	set newlink [.panwin.f1.c create line 0 0 0 0 \
 	    -fill [getLinkColor $link] -width $lwidth \
-	    -tags "link $link $lnode1 $lnode2" -arrow both]
+	    -tags "link $link $lnode1 $lnode2"]
     } else {
 	set newlink [.panwin.f1.c create line 0 0 0 0 \
 	    -fill [getLinkColor $link] -width $lwidth \
@@ -218,9 +237,10 @@ proc drawLink { link } {
     if { $invisible == 1 && [getLinkMirror $link] != "" } {
 	.panwin.f1.c itemconfigure $link -state hidden
     }
+    global colorBgLink
     .panwin.f1.c raise $newlink background
     set newlink [.panwin.f1.c create line 0 0 0 0 \
-	-fill white -width [expr {$lwidth + 4}] \
+	-fill $colorBgLink -width [expr {$lwidth + 1}] \
 	-tags "link $link $lnode1 $lnode2"]
     .panwin.f1.c raise $newlink background
 
@@ -296,39 +316,48 @@ proc calcAngle { link } {
 #   interface. 
 #****
 proc updateIfcLabel { lnode1 lnode2 } {
+    upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global showIfNames showIfIPaddrs showIfIPv6addrs
+    global themeselec
+    global currentTheme
+    global colorIPIfc
 
     set link [lindex [.panwin.f1.c gettags "link && $lnode1 && $lnode2"] 1]
     set ifc [ifcByPeer $lnode1 $lnode2]
     set ifipv4addr [getIfcIPv4addr $lnode1 $ifc]
     set ifipv6addr [getIfcIPv6addr $lnode1 $ifc]
+    set zoomtext "[expr {int($zoom * 9)}]"
+    set sizetext "$zoomtext" 
     if { $ifc == 0 } {
-	set ifc ""
+		set ifc ""
     }
     set labelstr ""
-    if { $showIfNames } {
-	lappend labelstr "$ifc"
+	if { $showIfNames } {
+		lappend labelstr "$ifc"
     }
     if { $showIfIPaddrs && $ifipv4addr != "" } {
-	lappend labelstr "$ifipv4addr"
+		lappend labelstr "$ifipv4addr"
     }
     if { $showIfIPv6addrs && $ifipv6addr != "" } {
-	lappend labelstr "$ifipv6addr"
+		lappend labelstr "$ifipv6addr"
     }
     if { [getIfcOperState $lnode1 $ifc] == "down" } {
-	set str "*"
+		set str "*"
     } else {
-	set str ""
+		set str ""
     }
     foreach elem $labelstr {
-	if {$str == "" || $str == "*"} {
-	    set str "$str[set elem]"
-	} else {
-	    set str "$str\r[set elem]"
-	}
+		if {$str == "" || $str == "*"} {
+			set str "$str[set elem]"
+		} else {
+			set str "$str\r[set elem]"
+		}
     }
-    .panwin.f1.c itemconfigure "interface && $lnode1 && $link" \
+    #.panwin.f1.c itemconfigure "interface && $lnode1 && $link" \
 	-text $str
+	###set $colorIPIfc black
+	.panwin.f1.c itemconfigure "interface && $lnode1 && $link" \
+		-fill $colorIPIfc -text $str -font "-size $sizetext"
 }
 
 #****f* editor.tcl/updateLinkLabel
@@ -658,7 +687,7 @@ proc changeIconPopup {} {
     		-width 100 -height 100 -background white]
     pack $prevcan -anchor center
     
-    ttk::label $wi.iconconf.right.l2 -text[mc "Size:"]
+    ttk::label $wi.iconconf.right.l2 -text [mc "Size:"]
     pack $wi.iconconf.right.l2 -anchor center
     
     #left pane definition
@@ -687,8 +716,7 @@ proc changeIconPopup {} {
     $tree heading type -text "Type" 
     $tree column type -width 90 -stretch 0 -minwidth 90
     focus $tree
-    
-    foreach file [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] {
+    foreach file [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.svg] {
 	set filename [lindex [split $file /] end]
 	$tree insert {} end -id $file -text $filename -values [list "library icon"] \
 	  -tags "$file"
@@ -707,8 +735,7 @@ proc changeIconPopup {} {
 	       set iconsrcfile $img"
 	}
     }
-    
-    foreach file [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] {
+    foreach file [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.svg] {
 	$tree tag bind $file <Key-Up> \
 	    "if {![string equal {} [$tree prev $file]]} {
 		updateIconPreview $prevcan $wi.iconconf.right.l2 [$tree prev $file]
@@ -720,8 +747,7 @@ proc changeIconPopup {} {
 		set iconsrcfile [$tree next $file]
 	     }"
     }
-    
-    set first [lindex [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] 0]
+    set first [lindex [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.svg] 0]
     $tree selection set $first
     $tree focus $first
         
@@ -761,8 +787,10 @@ proc changeIconPopup {} {
 	    set fType {
 		{{All Images} {.gif}  {}}
 		{{All Images} {.png}  {}}
+		{{All Images} {.svg}  {}}
 		{{Gif Images} {.gif}  {}}
-		{{PNG Images} {.png} {}}
+		{{PNG Images} {.png}  {}}
+		{{SVG Images} {.svg}  {}}
 	    }
 #		{{All Images} {.jpeg} {}}
 #		{{All Images} {.jpg}  {}}
@@ -811,8 +839,7 @@ proc changeIconPopup {} {
     pack $wi.iconconf.left.down.left.e -pady 6
     pack $wi.iconconf.left.down.right.b -pady 4
     pack $wi -fill both
-    
-    
+        
     #adding panes to paned window
     $wi.iconconf add $wi.iconconf.left
     $wi.iconconf add $wi.iconconf.right  
@@ -931,10 +958,15 @@ proc updateCustomIconReferences {} {
 #   Updates icon size.
 #****
 proc updateIconSize {} {
+  upvar 0 ::cf::[set ::curcfg]::zoom zoom
   global all_modules_list
   foreach b $all_modules_list {
     global $b iconSize
-    set $b [image create photo -file [$b.icon $iconSize]]
+    #set $b [image create photo -file [$b.icon $iconSize]]
+    set $b [image create photo $b -file [$b.icon $iconSize] -format {svg -scaletoheight 40}]
+    set height "[expr {40 * $zoom}]"
+    set imageHeight [image height $b]
+    $b configure -format [list svg -scale [expr {double($height) / $imageHeight}]]
   }
 }
 
@@ -1328,6 +1360,7 @@ proc zoom { dir } {
     upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global zoom_stops
     # set i [lsearch $stops $zoom]
+    # $dir configure -scrollregion [$dir bbox all]
     set minzoom [lindex $zoom_stops 0]
     set maxzoom [lindex $zoom_stops [expr [llength $zoom_stops] - 1]]
     switch -exact -- $dir {
