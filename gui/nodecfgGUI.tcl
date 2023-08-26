@@ -6162,7 +6162,7 @@ proc configGUI_packetConfig { wi node pac } {
     $wi.if$pac.rconfig.rnval insert 0 $pac
 
     ttk::label $wi.if$pac.rconfig.ptxt -text "Packet data: " -anchor w
-    text $wi.if$pac.rconfig.pval -width 48 -height 8 -font "Courier 10"
+    text $wi.if$pac.rconfig.pval -width 48 -height 8 -font "Courier 10 bold"
 
     set pdata [getPackgenPacketData $node $pac]
     set text ""
@@ -6418,8 +6418,7 @@ proc configGUI_nat64Config { wi node } {
     text $wi.mapconf.mappings -bg white -width 42 -height 7
     set mps [getTaygaMappings $node]
     foreach map $mps {
-	$wi.mapconf.mappings insert end "$map
-"
+	$wi.mapconf.mappings insert end "$map"
     }
     pack $wi.mapconf.label -anchor w -pady 2
     pack $wi.mapconf.mappings -fill both -expand 1 -padx 4
