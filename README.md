@@ -75,20 +75,33 @@ https://wiki.tcl-lang.org/page/tksvg
 
     La compilación crea el siguiente arbol de directorios y archivos.
 
-   ###/usr/local/lib/tksvg0.13
-   ###/usr/local/lib/tksvg0.13/bin/	(vacio)
-   ###/usr/local/lib/tksvg0.13/lib/
-   ###/usr/local/lib/tksvg0.13/lib/tksvg0.13/libtksvg0.13.so
-   ###/usr/local/lib/tksvg0.13/lib/tksvg0.13/pkgIndex.tcl
-   ###/usr/local/lib/tksvg0.13/libtksvg0.13.so
-   ###/usr/local/lib/tksvg0.13/pkgIndex.tcl
+   #### /usr/local/lib/tksvg0.13
+   #### /usr/local/lib/tksvg0.13/bin/	(vacio)
+   #### /usr/local/lib/tksvg0.13/lib/
+   #### /usr/local/lib/tksvg0.13/lib/tksvg0.13/libtksvg0.13.so
+   #### /usr/local/lib/tksvg0.13/lib/tksvg0.13/pkgIndex.tcl
+   #### /usr/local/lib/tksvg0.13/libtksvg0.13.so
+   #### /usr/local/lib/tksvg0.13/pkgIndex.tcl
+
+   ###Arbol de directorio dentro /usr/local/lib/tksvg0.13
+    /usr/local/lib/tksvg0.13
+    ├── bin
+    │     
+    ├── lib
+    │   ├── tksvg0.13
+    │       ├── libtksvg0.13.so
+    │       └── pkgIndex.tcl
+    ├── libtksvg0.13.so
+    └── pkgIndex.tcl
+    
+
    
 
     Por alguna razón desconocida las líneas en rojo no se crean en algunas compilaciones por lo que la libreria no funciona.
 
 ### Para corregir ese error ejecute
 
-    # cd /usr/local/lib/tksvg0.13
+    # cd /usr/local/lib/tksvg0.13/lib/tksvg0.13/
     # cp -rf libtksvg0.13.so ../../
     # cp -rf pkgIndex.tcl ../../
 
