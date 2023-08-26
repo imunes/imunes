@@ -70,7 +70,8 @@ https://wiki.tcl-lang.org/page/tksvg
     # make
     # make install
 
-    NOTA: tksvg0.13 (sale de la versión del paquete tksvgs, si cambia la versión debe cambiar la linea al final, segun la versión)
+    NOTA: tksvg0.13 (sale de la versión del paquete tksvgs, si cambia la versión debe cambiar la linea al final, 
+          segun la versión)
 
     La compilación crea el siguiente arbol de directorios y archivos.
 
