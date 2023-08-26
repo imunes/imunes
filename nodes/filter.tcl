@@ -62,13 +62,13 @@ proc $MODULE.icon {size} {
     global ROOTDIR LIBDIR
     switch $size {
       normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/filter.gif
+	return $ROOTDIR/$LIBDIR/icons/normal/filter.svg
       }
       small {
-	return $ROOTDIR/$LIBDIR/icons/small/filter.gif
+	return $ROOTDIR/$LIBDIR/icons/small/filter.svg
       }
       toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/filter.gif
+	return $ROOTDIR/$LIBDIR/icons/tiny/filter.svg
       }
     }
 }
