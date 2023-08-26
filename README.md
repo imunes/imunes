@@ -84,6 +84,7 @@ https://wiki.tcl-lang.org/page/tksvg
     /usr/local/lib/tksvg0.13/pkgIndex.tcl
 
    ###Arbol de directorio dentro /usr/local/lib/tksvg0.13
+
     :::text
     /usr/local/lib/tksvg0.13
     ├── bin
