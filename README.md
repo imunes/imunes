@@ -74,19 +74,9 @@ https://wiki.tcl-lang.org/page/tksvg
           segun la versión)
 
     La compilación crea el siguiente arbol de directorios y archivos.
-
-    /usr/local/lib/tksvg0.13
-    /usr/local/lib/tksvg0.13/bin/	(vacio)
-    /usr/local/lib/tksvg0.13/lib/
-    /usr/local/lib/tksvg0.13/lib/tksvg0.13/libtksvg0.13.so
-    /usr/local/lib/tksvg0.13/lib/tksvg0.13/pkgIndex.tcl
-    /usr/local/lib/tksvg0.13/libtksvg0.13.so
-    /usr/local/lib/tksvg0.13/pkgIndex.tcl
-
-   ###Arbol de directorio dentro /usr/local/lib/tksvg0.13
-
+    
     :::text
-    /usr/local/lib/tksvg0.13
+    Arbol de directorio dentro de /usr/local/lib/tksvg0.13
     
     tksvg0.13
     │
