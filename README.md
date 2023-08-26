@@ -101,7 +101,8 @@ https://wiki.tcl-lang.org/page/tksvg
     ├── libtksvg0.13.so
     └── pkgIndex.tcl
     
-    Por alguna razón desconocida las dos ultimas líneas no se crean en algunas compilaciones por lo que la libreria tksvg0.13 no funciona.
+    Por alguna razón desconocida las dos ultimas líneas no se crean en algunas compilaciones por lo 
+    que la libreria tksvg0.13 no funciona.
     
 ### Para corregir el error ejecute
     
