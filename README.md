@@ -87,6 +87,9 @@ https://wiki.tcl-lang.org/page/tksvg
 
     :::text
     /usr/local/lib/tksvg0.13
+    
+    tksvg0.13
+    │
     ├── bin
     │     
     ├── lib
@@ -98,13 +101,10 @@ https://wiki.tcl-lang.org/page/tksvg
     ├── libtksvg0.13.so
     └── pkgIndex.tcl
     
-
-   
-
-    Por alguna razón desconocida las líneas en rojo no se crean en algunas compilaciones por lo que la libreria no funciona.
-
+    Por alguna razón desconocida las dos ultimas líneas no se crean en algunas compilaciones por lo que la libreria tksvg0.13 no funciona.
+    
 ### Para corregir el error ejecute
-
+    
     # cd /usr/local/lib/tksvg0.13/lib/tksvg0.13/
     # cp -rf libtksvg0.13.so ../../
     # cp -rf pkgIndex.tcl ../../
