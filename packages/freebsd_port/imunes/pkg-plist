@@ -136,6 +136,7 @@ lib/imunes/scripts/prepare_vroot.sh
 lib/imunes/scripts/prepare_vroot_10.sh
 lib/imunes/scripts/prepare_vroot_8.sh
 lib/imunes/scripts/prepare_vroot_9.sh
+lib/imunes/scripts/prepare_vroot_13.sh
 lib/imunes/scripts/prepare_vroot_functions.sh
 lib/imunes/scripts/quaggaboot.sh
 lib/imunes/scripts/update_version.sh
