@@ -761,8 +761,10 @@ proc changeIconPopup {} {
 	    set fType {
 		{{All Images} {.gif}  {}}
 		{{All Images} {.png}  {}}
+		{{All Images} {.svg}  {}}
 		{{Gif Images} {.gif}  {}}
-		{{PNG Images} {.png} {}}
+		{{PNG Images} {.png}  {}}
+		{{SVG Images} {.svg}  {}}
 	    }
 #		{{All Images} {.jpeg} {}}
 #		{{All Images} {.jpg}  {}}

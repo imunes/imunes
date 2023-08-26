@@ -632,6 +632,7 @@ proc changeBkgPopup {} {
 		{{All Images} {.png}  {}}
 		{{Gif Images} {.gif}  {}}
 		{{PNG Images} {.png} {}}
+  		{{SVG Images} {.svg} {}}
 	    }
 #		{{All Images} {.jpeg} {}}
 #		{{All Images} {.jpg}  {}}
