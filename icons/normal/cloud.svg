@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:v="http://vecta.io" width="52" height="42" viewBox="0 0 52 42">
+    <style>
+        <![CDATA[svg{stroke:#000;stroke-linecap:round;stroke-linejoin:round;fill:#fff;fill-rule:evenodd;font-family:Roboto;font-size:14px;text-anchor:middle}svg text{paint-order:stroke;white-space:pre}svg .Text\.cls{stroke:none}]]>
+    </style>
+    <defs>
+        <linearGradient id="L001001000808080100100000000100.grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#808080" stop-opacity="1"/>
+            <stop offset="100%" stop-color="#000000" stop-opacity="1"/>
+        </linearGradient>
+    </defs>
+    <g transform="translate(1.5 1.498)">
+        <g >
+            <g>
+                <path d="M 8.1136 13.5116 C 8.0834 13.9527 7.8032 14.3108 7.4553 14.3576 C 3.2422 14.9319 0 20.218 0 26.6539 C 0 33.4726 3.7109 38.9999 8.2892 38.9999 L 39.8925 38.9999 C 44.9223 38.9999 49 33.1595 49 25.9514 C 49 19.0454 45.2548 13.3919 40.5165 12.9445 C 40.1539 12.9091 39.8599 12.5866 39.7896 12.1328 C 38.7312 5.2059 33.8476 0 28.0737 0 C 24.3211 0 20.9785 2.1644 18.8078 5.6086 C 18.5955 5.9447 18.2394 6.0977 17.9258 5.9312 C 17.0903 5.4837 16.2084 5.2683 15.221 5.2683 C 11.4913 5.2683 8.4296 8.8958 8.112 13.5199 Z" stroke="none" fill="#d0cfce" fill-rule="nonzero"/>
+            </g>
+            <g transform="translate(0 0.002)">
+                <path d="M 8.1136 13.5095 C 8.0834 13.9507 7.8032 14.3087 7.4578 14.3555 C 3.2422 14.9299 0 20.2159 0 26.6518 C 0 33.4705 3.7109 38.998 8.2892 38.998 L 39.8925 38.998 C 44.9223 38.998 49 33.1574 49 25.9493 C 49 19.0422 45.254 13.3899 40.5132 12.9424 C 40.1522 12.907 39.8599 12.5845 39.7896 12.1308 C 38.7312 5.2048 33.8476 0 28.0737 0 C 24.3203 0 20.9769 2.1664 18.8046 5.6117 C 18.5939 5.9468 18.2329 6.1008 17.9307 5.9239 C 17.0945 5.4764 16.21 5.2579 15.2218 5.2579 C 11.4921 5.2579 8.4304 8.8853 8.112 13.5095 Z" fill="none" stroke-width="3" stroke-dasharray="none" stroke="url(#L001001000808080100100000000100.grad)" stroke-opacity="1"/>
+            </g>
+        </g>
+    </g>
+</svg>
