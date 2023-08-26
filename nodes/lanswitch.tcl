@@ -117,13 +117,13 @@ proc $MODULE.icon {size} {
     global ROOTDIR LIBDIR
     switch $size {
       normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/lanswitch.gif
+	return $ROOTDIR/$LIBDIR/icons/normal/lanswitch.svg
       }
       small {
-	return $ROOTDIR/$LIBDIR/icons/small/lanswitch.gif
+	return $ROOTDIR/$LIBDIR/icons/small/lanswitch.svg
       }
       toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/lanswitch.gif
+	return $ROOTDIR/$LIBDIR/icons/tiny/lanswitch.svg
       }
     }
 }
