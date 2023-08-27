@@ -100,7 +100,7 @@ https://wiki.tcl-lang.org/page/tksvg
     # cp -rf libtksvg0.13.so ../../
     # cp -rf pkgIndex.tcl ../../
 
-Esto resuelve el problema, cuando no se crea la estrucutura correcta del directorios y archivos durante la compilación.
+Esto resuelve el problema, cuando no se crea la estructura correcta del directorio y archivos durante la compilación.
 
 ## Operating system (Linux)
 
