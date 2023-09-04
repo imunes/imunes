@@ -679,7 +679,7 @@ menu .menubar.tools -tearoff 0
     }
 
     pack $w.model -side top -fill x -pady 5
-    pack $w.model.quagga $w.model.xorp $w.model.frr $w.model.static \
+    pack $w.model.quagga $w.model.xorp $w.model.static \
 	-side left -expand 1
     pack $w.protocols -side top -pady 5
     pack $w.protocols.rip $w.protocols.ripng \
