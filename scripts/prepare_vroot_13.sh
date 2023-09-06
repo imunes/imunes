@@ -62,10 +62,6 @@ configApache24 () {
 	$VROOT_MASTER/usr/local/etc/apache24/\nScript aborted."
 	exit 1
     fi
-
-    cd $IMUNESDIR
-    cp $ROOTDIR/$LIBDIR/scripts/quaggaboot.sh $VROOT_MASTER/usr/local/bin
-    chmod 755 $VROOT_MASTER/usr/local/bin/quaggaboot.sh
 }
 
 cleanUnnecessary
