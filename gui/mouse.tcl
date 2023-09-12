@@ -897,13 +897,13 @@ proc button3node { c x y } {
 	}
 	#
 	# Firefox
-	# Chromium
+	# 
 	if {[checkForExternalApps "startxcmd"] == 0 && \
-	    [checkForApplications $node "chrome"] == 0} {
-	    .button3menu add command -label "Chromium Browser" \
-		-command "startXappOnNode $node \"chrome %u --no-remote --setDefaultBrowser about:blank\""
+	    [checkForApplications $node "firefox"] == 0} {
+	    .button3menu add command -label "Firefox" \
+		-command "startXappOnNode $node \"firefox -no-remote -setDefaultBrowser about:blank\""
 	} else {
-	    .button3menu add command -label "Web Browser" \
+	    .button3menu add command -label "Firefox" \
 		-state disabled
 	}
 	# Midori
@@ -916,30 +916,6 @@ proc button3node { c x y } {
 	    .button3menu add command -label "Midori" \
 		-state disabled
 	}
-	# Netsurf
-	#
-	if {[checkForExternalApps "startxcmd"] == 0 && \
-	    [checkForApplications $node "netsurf-gtk"] == 0} {
-	    .button3menu add command -label "Netsurf" \
-		-command "startXappOnNode $node \"netsurf-gtk\""
-	} else {
-	    .button3menu add command -label "Netsurf" \
-	    -state disabled
-	}
-	#
-	###----------------------------------------------------------------------
-	# SAKURA (Propuesta de implementacion)
-	# Terminal Sakura (Se requiere instalar Sakura en imunes vroot)
-	#
-	if {[checkForExternalApps "startxcmd"] == 0 && \
-	[checkForApplications $node "sakura"] == 0} {
-		.button3menu add command -label "Terminal Sakura" \
-		-command "startXappOnNode $node \"sakura \""
-	} else {
-		.button3menu add command -label "Terminal Sakura" \
-		-state disabled
-	}
-	###----------------------------------------------------------------------
 	#
 	#
 	# Sylpheed mail client
@@ -952,94 +928,6 @@ proc button3node { c x y } {
 	    .button3menu add command -label "Mail client" \
 		-state disabled
 	}
-	###----------------------------------------------------------------------
-	# Propuesta de implementacion
-	# Apache24-2 (Se requiere instalar apache24 en imunes vroot para que funcione)
-	.button3menu.apachectl delete 0 end
-	if {[checkForExternalApps "startxcmd"] == 0 && \
-	[checkForApplications $node "apachectl"] == 0} {
-		.button3menu add separator
-		.button3menu add cascade -label [mc "Server Web"] -menu \
-		.button3menu.apachectl
-		.button3menu.apachectl add command -label [mc "Start"] \
-			-command "startXappOnNode $node \"/usr/local/etc/rc.d/apache24 onestart \""
-		.button3menu.apachectl add command -label [mc "Stop"] \
-			-command "startXappOnNode $node \"/usr/local/etc/rc.d/apache24 onestop \""
-		.button3menu.apachectl add command -label [mc "Restart"] \
-			-command "startXappOnNode $node \"/usr/local/etc/rc.d/apache24 onerestart \""
-	} else {
-		.button3menu add command -label [mc "Server Web" \
-		-state disabled
-	}
-	#
-	# Propuesta de implementacion
-	# Servicio DNS bind916 o bind918 named. (Se requiere instalar bind916 o bind918 en imunes vroot para que funcione)
-	#
-	.button3menu.named delete 0 end
-	if {[checkForExternalApps "startxcmd"] == 0 && \
-		[checkForApplications $node "named"] == 0} {
-		.button3menu add separator
-		.button3menu add cascade -label [mc "Servidor DNS"] -menu \
-		.button3menu.named
-	.button3menu.named add command -label [mc "Start"] \
-		-command "startXappOnNode $node \"/usr/local/etc/rc.d/named onestart \""
-	.button3menu.named add command -label [mc "Stop"] \
-		-command "startXappOnNode $node \"/usr/local/etc/rc.d/named onestop \""
-	.button3menu.named add command -label [mc "Restart"] \
-		-command "startXappOnNode $node \"/usr/local/etc/rc.d/named onesrestart \""        
-	} else {
-		.button3menu add command -label [mc "Server DNS"] \
-		-state disabled
-	}
-	#
-	# Propuesta de implementacionn
-	# Servicio DHCPD (Requiere de la instalacion de isc-dhcp44-server isc-dhcp44-client isc-dhcp44-relay
-	# o isc-dhcp43-server isc-dhcp43-client isc-dhcp43-relay para versiones viejas de FreeBSD)
-	# dhcpd
-	#
-	.button3menu.dhcpd delete 0 end
-	if {[checkForExternalApps "startxcmd"] == 0 && \
-		[checkForApplications $node "dhcpd"] == 0} {
-		.button3menu add separator
-		.button3menu add cascade -label [mc "Servidor DHCP"] -menu \
-		.button3menu.dhcpd
-	.button3menu.dhcpd add command -label [mc "Start"] \
-		-command "startXappOnNode $node \"/usr/local/etc/rc.d/isc-dhcpd onestart \""
-	.button3menu.dhcpd add command -label [mc "Stop"] \
-		-command "startXappOnNode $node \"/usr/local/etc/rc.d/isc-dhcpd onestop \""
-	.button3menu.dhcpd add command -label [mc "Restart"] \
-		-command "startXappOnNode $node \"/usr/local/etc/rc.d/isc-dhcpd onesrestart \""        
-	} else {
-		.button3menu add command -label [mc "Server DHCP"] \
-		-state disabled
-	}
-	### *************************************************************** ###
-	### PROPUESTA DE IMPLEMENTACION COMO SE PODRIA HACER UN AGENT DHCP RELAY.
-	### Requiere el paquete dhcrelay instalado en imunes vroot
-	### Funciona manualmente, se requiere programar un widget o dialog modal para ingresar
-	### interfaces del equipo que hace de agent dhcp relay
-	### Equipo Router (Agent dhcrelay) con  2 interfaces eth0 y eth1. IP: 10.0.0.1 IP de servidor DHCPD
-
-	# dhcrelay (Agente dhcp relay). ¿Pueden programarlo ustedes? para implementar esto de dhcrelay
-	## CREAR UN WIDGET DONDE SEA POSIBLE SELECCIONAR LAS INTERFACES DEL EQUIPO QUE HACE DE RELAY (DHCRELAY)
-	###.button3menu.dhcrelay delete 0 end
-	###if {[checkForExternalApps "startxcmd"] == 0 && \
-	###    [checkForApplications $node "dhcrelay"] == 0} {
-	###    .button3menu add separator
-	###    .button3menu add cascade -label "Agente dhcp relay" -menu \
-	###    .button3menu.dhcrelay
-	###.button3menu.dhcrelay add command -label "Start" \
-	###    -command "startXappOnNode $node \"/usr/local/etc/rc.d/dhcrelay -i eth0 -i eth1 -d -a 10.0.0.1 onestart \""
-	###.button3menu.dhcrelay add command -label "Stop" \
-	###    -command "startXappOnNode $node \"/usr/local/etc/rc.d/dhcrelay i eth0 -i eth1 -d -a 10.0.0.1 onestop \""       
-	###} else {
-	###    .button3menu add command -label "Agente dhcp relay" \
-	###    -state disabled
-	###}
-	### *************************************************************** ###
-	
-	###----------------------------------------------------------------------
-	
     } else {
 #	.button3menu add cascade -label "Wireshark" \
 #	    -menu .button3menu.wireshark -state disabled
