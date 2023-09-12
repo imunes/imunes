@@ -101,7 +101,7 @@ namespace import -force ::msgcat::*
 
 #set language [lindex [split [::msgcat::mclocale] {_}] 0]
 
-set fp [open "$ROOTDIR/$LIBDIR/gui/setidioma.tcl" r]
+set fp [open "/usr/local/lib/imunes/gui/setidioma.tcl" r]
 set file_data [read $fp]
 puts "$file_data"
 close $fp
@@ -109,13 +109,13 @@ close $fp
 set language "$file_data"
 
 # FreeBSD 12.2, FreeBSD 13.0, FreeBSD-13.2
-if [file isfile "$ROOTDIR/$LIBDIR/gui/msgs/${language}.msg" ] {  
-	source "$ROOTDIR/$LIBDIR/gui/msgs/${language}.msg"
-	#puts "Existe el archivo: $ROOTDIR/$LIBDIR/gui/msgs/${language}.msg"
+if [file isfile "/usr/local/lib/imunes/gui/msgs/${language}.msg" ] {  
+	source "/usr/local/lib/imunes/gui/msgs/${language}.msg"
+	#puts "Existe el archivo: /usr/local/lib/imunes/gui/msgs/${language}.msg"
 	::msgcat::mclocale "$language"
 	::msgcat::mcload [file join [file dirname [info script]] msgs]
 } else {
-    puts "No file exist in $ROOTDIR/$LIBDIR/gui/msgs/${language}.msg"
+    puts "No file exist in /usr/local/lib/imunes/gui/msgs/${language}.msg"
 }
 
 set newlink ""
@@ -857,12 +857,12 @@ menu $m -tearoff 0
 	    global currentTheme
 	    global currentThemenew
 
-	    set fh [open "$ROOTDIR/$LIBDIR/gui/selectTheme.txt" w+]
+	    set fh [open "/usr/local/lib/imunes/gui/selectTheme.txt" w+]
 	    set currentThemenew [lindex [split $currentTheme {_}] 0]
 	    puts -nonewline $fh "$currentThemenew"
 	    close $fh
 
-	    set fh [open "$ROOTDIR/$LIBDIR/gui/selectTheme.txt" r]
+	    set fh [open "/usr/local/lib/imunes/gui/selectTheme.txt" r]
 	    set file_data [read $fh]
 	    puts $file_data
 	    close $fh
@@ -1218,12 +1218,12 @@ menu .menubar.idiomas
 	global idiomaprefix
 	global setIdioma
 
-	set fh [open "$ROOTDIR/$LIBDIR/gui/setidioma.tcl" w+]
+	set fh [open "/usr/local/lib/imunes/gui/setidioma.tcl" w+]
 	set setIdiomanew [lindex [split $setIdioma {_}] 0]
 	puts -nonewline $fh "$setIdiomanew"
 	close $fh
 
-	set fh [open "$ROOTDIR/$LIBDIR/gui/setidioma.tcl" r]
+	set fh [open "/usr/local/lib/imunes/gui/setidioma.tcl" r]
 	set file_data [read $fh]
 	puts $file_data
 	close $fh
@@ -1236,8 +1236,7 @@ menu .menubar.idiomas
 		puts [set -command redrawAll]
 	    }
 	    es {
-		#puts [set -command redrawAll]
-  		puts -nonewline [set -command [. configure -menu .menubar $setIdiomanew ]; redrawAll]
+		puts [set -command redrawAll]
 	    }
 	    fr {
 		puts [set -command redrawAll;]
