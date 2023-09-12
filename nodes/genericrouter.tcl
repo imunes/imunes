@@ -127,15 +127,12 @@ proc $MODULE.icon { size } {
     switch $size {
       normal {
 	return $ROOTDIR/$LIBDIR/icons/normal/router.svg
-        #return $ROOTDIR/$LIBDIR/icons/normal/router.gif
       }
       small {
 	return $ROOTDIR/$LIBDIR/icons/small/router.svg
-        #return $ROOTDIR/$LIBDIR/icons/small/router.gif
       }
       toolbar {
 	return $ROOTDIR/$LIBDIR/icons/tiny/router.svg
-        #return $ROOTDIR/$LIBDIR/icons/tiny/router.gif
       }
     }
 }
