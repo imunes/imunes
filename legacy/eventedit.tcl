@@ -30,7 +30,6 @@ foreach b {select const ramp square rand} {
 
     set eventedit_img($b) \
 	[image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$b.svg]
- 	#[image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$b.gif]		
 }
 
 #****f* eventedit.tcl/eventedit
