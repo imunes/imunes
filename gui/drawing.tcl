@@ -170,7 +170,7 @@ proc drawNode { node } {
 		set l [format "%s %s" $l [getIfcIPv4addr $node $ifc]]
 	    }
 	}
-	#set label [.panwin.f1.c create text $x $y -fill $colorNameNode \
+	#set label [.panwin.f1.c create text $x $y -fill $colorNameNode
 	set zoomtext "[expr {int($zoom * 9)}]"
 	set sizetext "$zoomtext" 
 	set label [.panwin.f1.c create text $x $y -fill $colorNameNode -font "-size $sizetext" \
