@@ -6,7 +6,7 @@ PACKAGES_MINIMAL="$PACKAGES_MINIMAL bind918 bind-tools"
 #PACKAGES_MINIMAL=`echo $PACKAGES_MINIMAL | sed 's/quagga/frr8/'`
 PACKAGES_COMMON=`echo $PACKAGES_COMMON | sed 's/lsof//'`
 PACKAGES="$PACKAGES_MINIMAL $PACKAGES_COMMON isc-dhcp44-server isc-dhcp44-client isc-dhcp44-relay \
-sylpheed xorp netsurf midori wireshark gnome-themes-extra fping dsniff py39-scapy xpdf"
+sylpheed xorp midori wireshark gnome-themes-extra fping dsniff py39-scapy xpdf"
 #PACKAGES=`echo $PACKAGES | sed 's/scapy/py37-scapy/'`
 PACKAGES=`echo $PACKAGES | sed -e 's/scapy/py39-scapy/' -e 's/xorp//'`
 
