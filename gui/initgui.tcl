@@ -101,7 +101,7 @@ namespace import -force ::msgcat::*
 
 #set language [lindex [split [::msgcat::mclocale] {_}] 0]
 
-set fp [open "/usr/local/lib/imunes/gui/setidioma.txt" r]
+set fp [open "$ROOTDIR/$LIBDIR/gui/setidioma.txt" r]
 set file_data [read $fp]
 puts "$file_data"
 close $fp
@@ -109,13 +109,13 @@ close $fp
 set language "$file_data"
 
 # FreeBSD 12.2, FreeBSD 13.0, FreeBSD-13.2
-if [file isfile "/usr/local/lib/imunes/gui/msgs/${language}.msg" ] {  
-	source "/usr/local/lib/imunes/gui/msgs/${language}.msg"
-	puts "Existe el archivo: /usr/local/lib/imunes/gui/msgs/${language}.msg"
+if [file isfile "$ROOTDIR/$LIBDIR/gui/msgs/${language}.msg" ] {  
+	source "$ROOTDIR/$LIBDIR/gui/msgs/${language}.msg"
+	#puts "Existe el archivo: $ROOTDIR/$LIBDIR/gui/msgs/${language}.msg"
 	::msgcat::mclocale "$language"
 	::msgcat::mcload [file join [file dirname [info script]] msgs]
 } else {
-    puts "No existe el archivo en /usr/local/lib/imunes/gui/msgs/${language}.msg"
+    #puts "No existe el archivo en $ROOTDIR/$LIBDIR/gui/msgs/${language}.msg"
 }
 
 set newlink ""
@@ -862,12 +862,12 @@ menu $m -tearoff 0
 	    global currentTheme
 	    global currentThemenew
 
-	    set fh [open "/usr/local/lib/imunes/gui/selectTheme.txt" w+]
+	    set fh [open "$ROOTDIR/$LIBDIR/gui/selectTheme.txt" w+]
 	    set currentThemenew [lindex [split $currentTheme {_}] 0]
 	    puts -nonewline $fh "$currentThemenew"
 	    close $fh
 
-	    set fh [open "/usr/local/lib/imunes/gui/selectTheme.txt" r]
+	    set fh [open "$ROOTDIR/$LIBDIR/gui/selectTheme.txt" r]
 	    set file_data [read $fh]
 	    puts $file_data
 	    close $fh
@@ -877,8 +877,6 @@ menu $m -tearoff 0
 	    puts -nonewline [set -command [ttk::style theme use $currentThemenew]; redrawAll]
             switch -exact -- $currentThemenew {
 	        black {
-		    #puts "coincide con theme $currentThemenew"
-		    # Variables puestas por mi
 		    set colorcanvas #2E3D44
 		    set gridVert gray
 		    set gridHori gray
@@ -889,8 +887,6 @@ menu $m -tearoff 0
 		    puts -nonewline [set -command [ttk::style theme use $currentThemenew]; redrawAll]
 		} 
 		imunes {
-		    #puts "coincide con theme $currentThemenew"
-		    # Variables puestas por mi
 		    set colorcanvas white
 	            set gridVert gray
 		    set gridHori gray
@@ -901,7 +897,6 @@ menu $m -tearoff 0
 		    puts -nonewline [set -command [ttk::style theme use $currentThemenew]; redrawAll]
 		}
 		clam {
-		    #puts "coincide con theme $currentThemenew"
 		    set colorcanvas white
 		    set gridVert gray
 		    set gridHori gray
@@ -912,7 +907,6 @@ menu $m -tearoff 0
 		    puts -nonewline [set -command [ttk::style theme use $currentThemenew]; redrawAll]
 		}
 		alt {
-		    #puts "coincide con theme $currentThemenew"
 		    set colorcanvas white
 		    set gridVert gray
 		    set gridHori gray
@@ -923,7 +917,6 @@ menu $m -tearoff 0
 		    puts -nonewline [set -command [ttk::style theme use $currentThemenew]; redrawAll;]
 		}
 		{default} {
-		    #puts "Coincidencia 2"
 		    set colorcanvas #ffffff
 		    set gridVert gray
 		    set gridHori gray
@@ -934,7 +927,6 @@ menu $m -tearoff 0
 		    puts -nonewline [set -command [ttk::style theme use $currentThemenew]; redrawAll]
 		}
 		classic {
-		    #puts "coincide con theme $currentThemenew"
 		    set colorcanvas white
 		    set gridVert gray
 		    set gridHori gray
@@ -945,8 +937,6 @@ menu $m -tearoff 0
 		    puts -nonewline [set -command [ttk::style theme use $currentThemenew]; redrawAll]
 		}
 		imunesdark {
-		    #puts "coincide con theme $currentThemenew"
-		    # Variables puestas por mi #4a5459
 		    set colorcanvas #2E3D44
 		    set gridVert gray
 		    set gridHori gray
@@ -954,11 +944,9 @@ menu $m -tearoff 0
 		    set gridIntHori gray
 		    set colorNameNode #63FF00
 		    set colorIPIfc #ffffff
-		   puts -nonewline [set -command [ttk::style theme use $currentThemenew]; redrawAll]
+		    puts -nonewline [set -command [ttk::style theme use $currentThemenew]; redrawAll]
 		}     
 		default {
-		    #puts "No coincidencia"
-		    puts -nonewline [set -command [redrawAll]]
 		    set colorcanvas white
 		    set gridVert gray
 		    set gridHori gray
@@ -1045,7 +1033,6 @@ foreach widget $widgetlist {
     } else {
     	$w.custom.e1 insert 0  [lindex $commands 0]
     }
-
     pack $w.custom.e1 -side top -pady 5 -padx 10 -fill x
     }
 
@@ -1054,7 +1041,6 @@ if {0} {
 .menubar.widgets add radiobutton -label [mc "Route"] \
     -variable showConfig -underline 0 -value "route"
 }
-
 #
 # Events
 #
@@ -1079,7 +1065,6 @@ menu .menubar.experiment -tearoff 0
 .menubar.experiment add separator	
 .menubar.experiment add command -label [mc "Attach to experiment"] -underline 0 -activebackground #0F7FF2 -activeforeground white \
 	-command "attachToExperimentPopup" 
-
 #
 # Help
 #
@@ -1136,7 +1121,6 @@ menu .menubar.help -tearoff 0
 #
 # Traduccion
 #
-###-------------------------------------------------------------------
 .menubar.help add command -label [mc "Translation Credit"] -activebackground #0F7FF2 -activeforeground white -command {
 	toplevel .translation
     wm title .translation [mc "About Translation Credit"]
@@ -1154,7 +1138,7 @@ menu .menubar.help -tearoff 0
 	ttk::label $traductFrame.textLabel6 -text "Idiomas Traducidos:" -justify "left" -font "-weight bold -size 9"
 	ttk::label $traductFrame.textLabel7 -text "Nota1: * Se tradujo con la App de un navegador\nweb conocido, no se garantiza su fiabilidad" -justify "left"
 	ttk::label $traductFrame.textLabel8 -text "Nota2: * Se deja la estructura para que\npersonas del idioma Nativo corrijan los errores" -justify "left"
-	ttk::label $traductFrame.textLabel9 -text "Nota3: Servidor FreeBSD 12.2 totalmente\nen codificación UTF-8" -justify "left"
+	ttk::label $traductFrame.textLabel9 -text "Nota3: Server FreeBSD 12.2 or FreeBSD full\nin codification UTF-8" -justify "left"
 	grid $traductFrame.textLabel0 -row 0 -columnspan 4 -pady 1 -padx 1 -sticky we
 	grid $traductFrame.textLabel1 -row 1 -columnspan 4 -pady 1 -padx 1 -sticky we
 	grid $traductFrame.textLabel2 -row 2 -columnspan 4 -pady 1 -padx 1 -sticky we
@@ -1202,39 +1186,11 @@ menu .menubar.help -tearoff 0
 	grid rowconfigure $traductFrame 13 -pad 3
 
 }
-
-.menubar.help add cascade -label "Practicas de Redes" -underline 0 -menu .menubar.help.practicas
-menu .menubar.help.practicas -tearoff 0
-
-.menubar.help.practicas add command -label "Practica_1" -command {
-    exec xpdf $ROOTDIR/$LIBDIR/gui/ayuda/Practica1.pdf &
-}
-.menubar.help.practicas add command -label "Practica_2" -command {
-    exec xpdf $ROOTDIR/$LIBDIR/gui/ayuda/Practica2.pdf &
-}
-.menubar.help.practicas add command -label "Practica_3" -command {
-    exec xpdf $ROOTDIR/$LIBDIR/gui/ayuda/Practica3.pdf &
-}
-.menubar.help.practicas add command -label "Practica_4" -command {
-    exec xpdf $ROOTDIR/$LIBDIR/gui/ayuda/Practica4.pdf &
-}
-.menubar.help.practicas add command -label "Practica_5" -command {
-    exec xpdf $ROOTDIR/$LIBDIR/gui/ayuda/Practica5.pdf &
-}
-.menubar.help.practicas add command -label "Practica_6" -command {
-    exec xpdf $ROOTDIR/$LIBDIR/gui/ayuda/Practica6.pdf &
-}
-.menubar.help.practicas add command -label "Practica_7" -command {
-    exec xpdf $ROOTDIR/$LIBDIR/gui/ayuda/Practica7.pdf &
-}
-.menubar.help.practicas add command -label "Practica_8" -command {
-    exec xpdf $ROOTDIR/$LIBDIR/gui/ayuda/Practica8.pdf &
-}
-
+#
 #
 # menu idiomas
 #
-###*********************************************************************
+#
 menu .menubar.idiomas
     global setIdioma
     global setIdiomanew 
@@ -1267,55 +1223,45 @@ menu .menubar.idiomas
 	global idiomaprefix
 	global setIdioma
 
-	set fh [open "/usr/local/lib/imunes/gui/setidioma.txt" w+]
+	set fh [open "$ROOTDIR/$LIBDIR/gui/setidioma.txt" w+]
 	set setIdiomanew [lindex [split $setIdioma {_}] 0]
 	puts -nonewline $fh "$setIdiomanew"
 	close $fh
 
-	set fh [open "/usr/local/lib/imunes/gui/setidioma.txt" r]
+	set fh [open "$ROOTDIR/$LIBDIR/gui/setidioma.txt" r]
 	set file_data [read $fh]
 	puts $file_data
 	close $fh
 		
 	switch -exact -- $setIdiomanew {
 	    de {
-		#puts "coincide con idioma $setIdiomanew"
 		puts [set -command redrawAll]
 	    } 
 	    en {
-		#puts "coincide con idioma $setIdiomanew"
 		puts [set -command redrawAll]
 	    }
 	    es {
-		#puts "coincide con idioma $setIdiomanew"
 		puts [set -command redrawAll]
 	    }
 	    fr {
-		#puts "coincide con idioma $setIdiomanew"
 		puts [set -command redrawAll;]
 	    }
 	    hr {
-		#puts "coincide con idioma $setIdiomanew"
 		puts [set -command redrawAll]
 	    }
 	    hu {
-	        #puts "coincide con idioma $setIdiomanew"
-		puts [set -command redrawAll]
+	        puts [set -command redrawAll]
 	    }
 	    it {
-		#puts "coincide con idioma $setIdiomanew"
 		puts [set -command redrawAll]
 	    }     
 	    pt {
-		#puts "coincide con idioma $setIdiomanew"
 		puts [set -command redrawAll]
 	    } 
 	    ru {
-		#puts "coincide con idioma $setIdiomanew"
 		puts [set -command redrawAll]
 	    }   
 	    default {
-		#puts "No coincidencia"
 		puts [set -command redrawAll]
 	    }
 	}  
@@ -1327,7 +1273,7 @@ menu .menubar.idiomas
 	.menubar.idiomas add radiobutton -label [mc "Route"] \
 	-variable setIdioma -underline 0 -value "route"
     }
-###*********************************************************************
+#
 #
 # Left-side toolbar
 #
@@ -1588,11 +1534,6 @@ menu .button3menu.icon -tearoff 0
 menu .button3menu.transform -tearoff 0
 menu .button3menu.sett -tearoff 0
 menu .button3menu.services -tearoff 0
-### SIGUIENTES MENUS COLOCADO POR MI
-menu .button3menu.apachectl -tearoff 0
-menu .button3menu.named -tearoff 0
-menu .button3menu.dhcpd -tearoff 0
-menu .button3menu.dhcrelay -tearoff 0
 menu .button3menu.sylpheed -tearoff 0
 
 menu .button3logifc -tearoff 0
