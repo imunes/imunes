@@ -6,8 +6,7 @@ PACKAGES_MINIMAL="$PACKAGES_MINIMAL bind918 bind-tools"
 #PACKAGES_MINIMAL=`echo $PACKAGES_MINIMAL | sed 's/quagga/frr8/'`
 PACKAGES_COMMON=`echo $PACKAGES_COMMON | sed 's/lsof//'`
 PACKAGES="$PACKAGES_MINIMAL $PACKAGES_COMMON isc-dhcp44-server isc-dhcp44-client isc-dhcp44-relay \
-    sylpheed apache24 apr db18 jansson xorp netsurf midori wireshark gnome-themes-extra sakura vte3 \
-    fping dsniff py39-scapy gdk-pixbuf2 gsfonts xpdf openvpn easy-rsa net-snmp"
+    sylpheed xorp netsurf midori wireshark gnome-themes-extra fping dsniff py39-scapy xpdf"
 #PACKAGES=`echo $PACKAGES | sed 's/scapy/py37-scapy/'`
 PACKAGES=`echo $PACKAGES | sed -e 's/scapy/py39-scapy/' -e 's/xorp//'`
 
@@ -49,20 +48,6 @@ mkdir $VROOT_MASTER/usr/local/etc/openvpn
 configQuagga
 
 wiresharkGUIfix
-
-configApache24
-
-configApache24 () {
-    if [ -d "$VROOT_MASTER/usr/local/etc/apache24/" ]; then
-	cd $VROOT_MASTER/usr/local/etc/apache24/
- 	cp httpd.conf httpd.conf.backup
-  	sed -i -e 's/#ServerName www.example.com:80/ServerName localhost/' /usr/local/etc/apache24/httpd.conf
-    else
-	log "ERR" "Apache24 not installed in \
-	$VROOT_MASTER/usr/local/etc/apache24/\nScript aborted."
-	exit 1
-    fi
-}
 
 cleanUnnecessary
 
