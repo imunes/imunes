@@ -59,7 +59,7 @@ this execute the following command (on FreeBSD 9.3 and higher):
 
     # pkg install tk86 ImageMagick7 tcllib wireshark socat git gmake
 
-### Dar soporte para imagenes e iconos .SVG a IMUNES
+### Support for images and icons .SVG to IMUNES
 
 https://wiki.tcl-lang.org/page/tksvg
 
@@ -70,13 +70,13 @@ https://wiki.tcl-lang.org/page/tksvg
     # make
     # make install
 
-    NOTA: tksvg0.13 (sale de la versión del paquete tksvgs, si cambia la versión debe cambiar la linea al final, 
-          segun la versión)
+    NOTE: tksvg0.13 (comes out of the tksvgs package version, if you change the version you must change the line at the end, 
+      depending on the version)
 
-    La compilación crea el siguiente arbol de directorios y archivos.
+    The compilation creates the following tree of directories and files.
 ###  
     :::text
-    Arbol de directorio dentro de /usr/local/lib/tksvg0.13
+    Directory tree inside /usr/local/lib/tksvg0.13
     
     tksvg0.13
     │
@@ -91,16 +91,16 @@ https://wiki.tcl-lang.org/page/tksvg
     ├── libtksvg0.13.so
     └── pkgIndex.tcl
     
-    Por alguna razón desconocida las dos ultimas líneas no se crean en algunas compilaciones por lo 
-    que la libreria tksvg0.13 no funciona.
+    For some unknown reason the last two lines are not created in some compilations so the tksvg0.13 library is not created. 
+    the tksvg0.13 library does not work.
     
-### Para corregir el error ejecute
+### To fix the problem run the following commands:
     
     # cd /usr/local/lib/tksvg0.13/lib/tksvg0.13/
     # cp -rf libtksvg0.13.so ../../
     # cp -rf pkgIndex.tcl ../../
 
-Esto resuelve el problema, cuando no se crea la estructura correcta del directorio y archivos durante la compilación.
+This solves the problem, when the correct directory and file structure is not created during compilation.
 
 ## Operating system (Linux)
 
