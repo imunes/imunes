@@ -101,7 +101,7 @@ namespace import -force ::msgcat::*
 
 #set language [lindex [split [::msgcat::mclocale] {_}] 0]
 
-set fp [open "$ROOTDIR/$LIBDIR/gui/setidioma.txt" r]
+set fp [open "$ROOTDIR/$LIBDIR/gui/setidioma.tcl" r]
 set file_data [read $fp]
 puts "$file_data"
 close $fp
@@ -115,7 +115,7 @@ if [file isfile "$ROOTDIR/$LIBDIR/gui/msgs/${language}.msg" ] {
 	::msgcat::mclocale "$language"
 	::msgcat::mcload [file join [file dirname [info script]] msgs]
 } else {
-    #puts "No existe el archivo en $ROOTDIR/$LIBDIR/gui/msgs/${language}.msg"
+    puts "No file exist in $ROOTDIR/$LIBDIR/gui/msgs/${language}.msg"
 }
 
 set newlink ""
@@ -140,7 +140,7 @@ set resizemode false
 #
 # Color del enlace "Red"
 set defLinkColor Red
-# Variables puestas por mi $colorBgLink
+# Variable new $colorBgLink
 set colorBgLink $defLinkColor
 
 set defFillColor Gray
@@ -204,7 +204,6 @@ set selectedExperiment ""
 set copypaste_nodes 0
 set cutNodes 0
 
-#set iconsrcfile [lindex [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] 0]
 set iconsrcfile [lindex [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.svg] 0]
 #interface selected in the topology tree
 set selectedIfc ""
@@ -424,12 +423,10 @@ set printFileType ps
     pack $w.printframe.ftype -anchor w
     pack $w.printframe.ftype.ps $w.printframe.ftype.pdf -side left -fill x -padx 10
 }
-
+#
 .menubar.file add separator
 .menubar.file add command -label [mc "Quit"] -underline 0 -command { exit } -activebackground #0F7FF2 -activeforeground white
 .menubar.file add separator
-
-
 #
 # Edit
 #
@@ -509,7 +506,6 @@ bind . <Home> { switchCanvas first }
 .menubar.canvas add command -label [mc "Last"] -accelerator [mc "End"] -activebackground #0F7FF2 -activeforeground white \
     -command { switchCanvas last }
 bind . <End> { switchCanvas last }
-
 
 #
 # Tools
@@ -729,7 +725,6 @@ menu .menubar.tools -tearoff 0
 #    pack $f2.b2 -side right -expand 1 -anchor w
 #    pack $f1  $f2 -fill x
 #}
-
 
 #
 # View
@@ -1223,12 +1218,12 @@ menu .menubar.idiomas
 	global idiomaprefix
 	global setIdioma
 
-	set fh [open "$ROOTDIR/$LIBDIR/gui/setidioma.txt" w+]
+	set fh [open "$ROOTDIR/$LIBDIR/gui/setidioma.tcl" w+]
 	set setIdiomanew [lindex [split $setIdioma {_}] 0]
 	puts -nonewline $fh "$setIdiomanew"
 	close $fh
 
-	set fh [open "$ROOTDIR/$LIBDIR/gui/setidioma.txt" r]
+	set fh [open "$ROOTDIR/$LIBDIR/gui/setidioma.tcl" r]
 	set file_data [read $fh]
 	puts $file_data
 	close $fh
@@ -1241,7 +1236,8 @@ menu .menubar.idiomas
 		puts [set -command redrawAll]
 	    }
 	    es {
-		puts [set -command redrawAll]
+		#puts [set -command redrawAll]
+  		puts -nonewline [set -command [. configure -menu .menubar $setIdiomanew ]; redrawAll]
 	    }
 	    fr {
 		puts [set -command redrawAll;]
