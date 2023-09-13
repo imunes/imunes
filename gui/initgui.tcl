@@ -98,7 +98,6 @@ namespace import -force ::msgcat::mc
 namespace import -force ::msgcat::mcset
 namespace import -force ::msgcat::*
 
-#set language [lindex [split [::msgcat::mclocale] {_}] 0]
 set fp [open "$ROOTDIR/$LIBDIR/gui/setidioma.tcl" r 600]
 set file_data [read $fp]
 puts "$file_data"
@@ -108,7 +107,6 @@ set language "$file_data"
 # FreeBSD 12.2, FreeBSD 13.0, FreeBSD-13.2
 if [file isfile "$ROOTDIR/$LIBDIR/gui/msgs/${language}.msg" ] {
 	source "$ROOTDIR/$LIBDIR/gui/msgs/${language}.msg"
-	#puts "file Exist: $ROOTDIR/$LIBDIR/gui/msgs/${language}.msg"
 	::msgcat::mclocale "$language"
 	::msgcat::mcload [file join [file dirname [info script]] msgs]
 } else {
@@ -1042,15 +1040,15 @@ menu .menubar.idiomas
     -variable setIdioma -underline 0 -value "$language"
     .menubar.idiomas add separator
     set  idiomalist { \
-	{ "German"		"de_DE" } \
-	{ "English"		"en_EN" } \
-	{ "Spanish"		"es_ES" } \
-	{ "French"		"fr_FR" } \
-	{ "Croatian"		"hr_HR" } \
-	{ "Hungarian"		"hu_HU" } \
-	{ "Italian"		"it_IT" } \
-	{ "Portuguese"		"pt_PT" } \
-	{ "Russian"		"ru_RU" } \
+	{ "German"	"de_DE" } \
+	{ "English"	"en_EN" } \
+	{ "Spanish"	"es_ES" } \
+	{ "French"	"fr_FR" } \
+	{ "Croatian"	"hr_HR" } \
+	{ "Hungarian"	"hu_HU" } \
+	{ "Italian"	"it_IT" } \
+	{ "Portuguese"	"pt_PT" } \
+	{ "Russian"	"ru_RU" } \
     }
     foreach idioma $idiomalist {
 	.menubar.idiomas add radiobutton \
@@ -1067,7 +1065,7 @@ menu .menubar.idiomas
 	global idiomaprefix
 	global setIdioma
 
-	set fh [open "$ROOTDIR/$LIBDIR/gui/setidioma.tcl" w+]
+ 	set fh [open "$ROOTDIR/$LIBDIR/gui/setidioma.tcl" w+]
 	set setIdiomanew [lindex [split $setIdioma {_}] 0]
 	puts -nonewline $fh "$setIdiomanew"
 	close $fh
@@ -1076,48 +1074,64 @@ menu .menubar.idiomas
 	set file_data [read $fh]
 	puts $file_data
 	close $fh
-		
+
+	proc notification {} {
+	    global answer
+	    global response
+	    puts [set answer [tk_messageBox -message [mc "Notification"] \
+		-title [mc "Notification"] \
+		-icon question -type yesno \
+		-detail [mc "Do you want to restart IMUNES to make the language change effective?"]]]
+	    if { $answer == "yes" } {
+		puts [set response [tk_messageBox -message [mc "Press Yes to confirm. IMUNES will close."] \
+		    -type yesno -title [mc "Notification"] -icon info]]
+	    } else {
+	        puts -nonewline [set -command [ return ]]
+	    } 
+	    if { $response == "yes"} {
+	        puts -nonewline [set -command [ exit ]]
+	    } else {
+	        puts -nonewline [set -command [ return ]]
+	    }
+	}    
 	switch -exact -- $setIdiomanew {
 	    de {
-		puts [set -command redrawAll]
+	        puts -nonewline [set -command [ ::notification ]]
 	    } 
 	    en {
-		puts [set -command redrawAll]
+		puts -nonewline [set -command [ ::notification ]]
 	    }
 	    es {
-		puts [set -command redrawAll]
+		puts -nonewline [set -command [ ::notification ]]
 	    }
 	    fr {
-		puts [set -command redrawAll;]
+		puts -nonewline [set -command [ ::notification ]]
 	    }
 	    hr {
-		puts [set -command redrawAll]
+		puts -nonewline [set -command [ ::notification ]]
 	    }
 	    hu {
-	        puts [set -command redrawAll]
+		puts -nonewline [set -command [ ::notification ]]
 	    }
 	    it {
-		puts [set -command redrawAll]
+		puts -nonewline [set -command [ ::notification ]]
 	    }     
 	    pt {
-		puts [set -command redrawAll]
+		puts -nonewline [set -command [ ::notification ]]
 	    } 
 	    ru {
-		puts [set -command redrawAll]
+		puts -nonewline [set -command [ ::notification ]]
 	    }   
 	    default {
-		puts [set -command redrawAll]
+		puts -nonewline [set -command [ ::notification ]]
 	    }
-	}  
-		
+	}  	
     }
-
     if {0} {
 	.menubar.idiomas add separator
 	.menubar.idiomas add radiobutton -label [mc "Route"] \
 	-variable setIdioma -underline 0 -value "route"
     }
-#
 #
 # Left-side toolbar
 #

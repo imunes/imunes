@@ -275,5 +275,6 @@ namespace import -force msgcat::mcset
 # Other
     ::msgcat::mcset ru "Notification"		"Уведомление"
     ::msgcat::mcset ru "For the language change to take effect, restart IMUNES."		"Чтобы изменение языка вступило в силу, перезапустите IMUNES."
-
+    ::msgcat::mcset ru "Do you want to restart IMUNES to make the language change effective?"    "Хотите ли вы перезапустить IMUNES, чтобы изменение языка вступило в силу?"
+    ::msgcat::mcset ru "Press Yes to confirm. IMUNES will close."    "Нажмите Да для подтверждения. IMUNES закроется."
 #------------------------------------------
