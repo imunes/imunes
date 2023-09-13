@@ -1237,9 +1237,9 @@ menu .menubar.idiomas
 	    }
 	    es {
 		#puts [set -command redrawAll]
-  		puts [set answer [tk_messageBox -message "Notification!" \
+  		puts [set answer [tk_messageBox -message "[mc Notification]" \
         		-icon question -type ok \
-        		-detail "For the language change to take effect, restart IMUNES."]]
+        		-detail "[mc For the language change to take effect, restart IMUNES.]"]]
 	    }
 	    fr {
 		puts [set -command redrawAll;]
