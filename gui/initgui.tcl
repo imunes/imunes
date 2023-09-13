@@ -108,14 +108,14 @@ close $fp
 
 set language "$file_data"
 
-# FreeBSD 12.2, FreeBSD 13.0, FreeBSD-13.2
+## FreeBSD 12.2
 if [file isfile "/usr/local/lib/imunes/gui/msgs/${language}.msg" ] {  
 	source "/usr/local/lib/imunes/gui/msgs/${language}.msg"
-	#puts "Existe el archivo: /usr/local/lib/imunes/gui/msgs/${language}.msg"
+	puts "Existe el archivo: /usr/local/lib/imunes/gui/msgs/${language}.msg"
 	::msgcat::mclocale "$language"
 	::msgcat::mcload [file join [file dirname [info script]] msgs]
 } else {
-    puts "No file exist in /usr/local/lib/imunes/gui/msgs/${language}.msg"
+    puts "No existe el archivo en /usr/local/lib/imunes/gui/msgs/${language}.msg"
 }
 
 set newlink ""
@@ -857,12 +857,12 @@ menu $m -tearoff 0
 	    global currentTheme
 	    global currentThemenew
 
-	    set fh [open "/usr/local/lib/imunes/gui/selectTheme.txt" w+]
+	    set fh [open "/usr/local/lib/imunes/gui/selectTheme.tcl" w+]
 	    set currentThemenew [lindex [split $currentTheme {_}] 0]
 	    puts -nonewline $fh "$currentThemenew"
 	    close $fh
 
-	    set fh [open "/usr/local/lib/imunes/gui/selectTheme.txt" r]
+	    set fh [open "/usr/local/lib/imunes/gui/selectTheme.tcl" r]
 	    set file_data [read $fh]
 	    puts $file_data
 	    close $fh
@@ -1227,76 +1227,87 @@ menu .menubar.idiomas
 	set file_data [read $fh]
 	puts $file_data
 	close $fh
+		
 	switch -exact -- $setIdiomanew {
 	    de {
-			puts "coincide con idioma $setIdiomanew"
-			puts [set answer [tk_messageBox -message [mc "Notification"] \
-        		-icon question -type ok \
+		puts "coincide con idioma $setIdiomanew"
+		puts [set answer [tk_messageBox -message [mc "Notification"] \
+        		-title [mc "Notification"] \
+				-icon question -type ok \
         		-detail [mc "For the language change to take effect, restart IMUNES."]]]
-			puts [set -command redrawAll]
+		puts [set -command redrawAll]
 	    } 
 	    en {
-			puts "coincide con idioma $setIdiomanew"
-			puts [set answer [tk_messageBox -message [mc "Notification"] \
+		puts "coincide con idioma $setIdiomanew"
+		puts [set answer [tk_messageBox -message [mc "Notification"] \
+			-title [mc "Notification"] \
         		-icon question -type ok \
         		-detail [mc "For the language change to take effect, restart IMUNES."]]]
-			puts [set -command redrawAll]
+		puts [set -command redrawAll]
 	    }
 	    es {
-			puts "coincide con idioma $setIdiomanew"
-			#puts [set -command redrawAll] [mc "Route"]
-			puts [set answer [tk_messageBox -message [mc "Notification"] \
+		puts "coincide con idioma $setIdiomanew"
+		#puts [set -command redrawAll] [mc "Route"]
+		puts [set answer [tk_messageBox -message [mc "Notification"] \
+			-title [mc "Notification"] \
         		-icon question -type ok \
         		-detail [mc "For the language change to take effect, restart IMUNES."]]]
 	    }
 	    fr {
-			puts "coincide con idioma $setIdiomanew"
-			#puts [set -command redrawAll;]
-			puts [set answer [tk_messageBox -message [mc "Notification"] \
+		puts "coincide con idioma $setIdiomanew"
+		#puts [set -command redrawAll;]
+		puts [set answer [tk_messageBox -message [mc "Notification"] \
+			-title [mc "Notification"] \
         		-icon question -type ok \
         		-detail [mc "For the language change to take effect, restart IMUNES."]]]
 	    }
 	    hr {
-			puts "coincide con idioma $setIdiomanew"
-			#puts [set -command redrawAll]
-			puts [set answer [tk_messageBox -message [mc "Notification"] \
+		puts "coincide con idioma $setIdiomanew"
+		#puts [set -command redrawAll]
+		puts [set answer [tk_messageBox -message [mc "Notification"] \
+			-title [mc "Notification"] \
         		-icon question -type ok \
         		-detail [mc "For the language change to take effect, restart IMUNES."]]]
 	    }
 	    hu {
 	        puts "coincide con idioma $setIdiomanew"
-			#puts [set -command redrawAll]
-			puts [set answer [tk_messageBox -message [mc "Notification"] \
+		#puts [set -command redrawAll]
+		puts [set answer [tk_messageBox -message [mc "Notification"] \
+			-title [mc "Notification"] \
         		-icon question -type ok \
         		-detail [mc "For the language change to take effect, restart IMUNES."]]]
 	    }
 	    it {
-			puts "coincide con idioma $setIdiomanew"
-			puts [set answer [tk_messageBox -message [mc "Notification"] \
+		puts "coincide con idioma $setIdiomanew"
+		puts [set answer [tk_messageBox -message [mc "Notification"] \
+			-title [mc "Notification"] \
         		-icon question -type ok \
         		-detail [mc "For the language change to take effect, restart IMUNES."]]]
-			puts [set -command redrawAll]
+		puts [set -command redrawAll]
 	    }     
 	    pt {
-			puts "coincide con idioma $setIdiomanew"
-			puts [set answer [tk_messageBox -message [mc "Notification"] \
+		puts "coincide con idioma $setIdiomanew"
+		puts [set answer [tk_messageBox -message [mc "Notification"] \
+			-title [mc "Notification"] \
         		-icon question -type ok \
         		-detail [mc "For the language change to take effect, restart IMUNES."]]]
-			puts [set -command redrawAll]
+		puts [set -command redrawAll]
 	    } 
 	    ru {
-			puts "coincide con idioma $setIdiomanew"
-			puts [set answer [tk_messageBox -message [mc "Notification"] \
+		puts "coincide con idioma $setIdiomanew"
+		puts [set answer [tk_messageBox -message [mc "Notification"] \
+			-title [mc "Notification"] \
         		-icon question -type ok \
         		-detail [mc "For the language change to take effect, restart IMUNES."]]]
-			puts [set -command redrawAll]
+		puts [set -command redrawAll]
 	    }   
 	    default {
-			puts "No coincidencia"
-			puts [set answer [tk_messageBox -message [mc "Notification"] \
+		puts "No coincidencia"
+		puts [set answer [tk_messageBox -message [mc "Notification"] \
+			-title [mc "Notification"] \
         		-icon question -type ok \
         		-detail [mc "For the language change to take effect, restart IMUNES."]]]
-			puts [set -command redrawAll]
+		puts [set -command redrawAll]
 	    }
 	}  
 		
