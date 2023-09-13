@@ -23,7 +23,7 @@
 # SUCH DAMAGE.
 #
 
-# $Id: theme.tcl 114 2023-08-26 11:42 jromero17 $
+# $Id: theme.tcl 114 2014-11-25 16:36:17Z valter $
 
 
 #
@@ -345,7 +345,14 @@ namespace eval ttk::theme::imunesdark {
 	ttk::style configure TProgressbar -background $colors(-frame)
 
 	ttk::style configure Sash -sashthickness 6 -gripcount 10
-	   
+	
+	## MENU
+    #menu .menubar -background #343434
+	##ttk::style configure menubar -background #343434 \
+	##    -font TkHeadingFont -relief raised -padding {3} -background $colors(-menu)
+
+    ##}
+    
     # tk widgets.
     ttk::style map Menu \
         -background [list active $colors(-lighter)] \
@@ -354,6 +361,7 @@ namespace eval ttk::theme::imunesdark {
 }
 
 ########### END NEW THEME IMUNESDARK ##################
+
 
 namespace eval ttk::theme::black {
   variable version 0.0.1
