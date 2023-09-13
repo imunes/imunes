@@ -277,4 +277,8 @@ namespace import -force msgcat::mcset
     ::msgcat::mcset en "Portuguese"
     ::msgcat::mcset en "Russian"
 
+# Other
+    ::msgcat::mcset en "Notification"
+    ::msgcat::mcset en "For the language change to take effect, restart IMUNES."
+
 #------------------------------------------
