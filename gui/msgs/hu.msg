@@ -275,4 +275,5 @@ namespace import -force msgcat::mcset
     ::msgcat::mcset hu "Notification"		"Értesítés"
     ::msgcat::mcset hu "For the language change to take effect, restart IMUNES."		"A nyelvváltoztatás érvénybe lépéséhez indítsa újra az IMUNES-t."
     ::msgcat::mcset hu "Do you want to restart IMUNES for the language change to take effect?"    "Újra kívánja indítani az IMUNES-t, hogy a nyelvváltoztatás hatályba lépjen?"
+    ::msgcat::mcset hu "Press Yes to confirm. IMUNES will close."    "Nyomja meg az Igen gombot a megerősítéshez. Az IMUNES bezáródik."
 #------------------------------------------
