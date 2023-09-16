@@ -282,4 +282,5 @@ namespace import -force msgcat::mcset
     ::msgcat::mcset es "Notification"		"Notificación"
     ::msgcat::mcset es "For the language change to take effect, restart IMUNES."		"Para que el cambio de idioma surta efecto, reinicie IMUNES"
     ::msgcat::mcset es "Do you want to restart IMUNES for the language change to take effect?"    "¿Desea reiniciar IMUNES para que el cambio de idioma surta efecto?"
+    ::msgcat::mcset es "Press Yes to confirm. IMUNES will close."    "Pulse Sí para confirmar. IMUNES se cerrará."
 #------------------------------------------
