@@ -1292,10 +1292,9 @@ pack $mf.left -side left -fill y
 #
 set bb play_start
 set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$bb.svg]
-#ttk::button $mf.left.$bb -image $img -style Toolbutton -command [list toggleTheButton $mf.left.$bb]
-ttk::button $mf.left.$bb -image $img -style Toolbutton -command [list toggleTheButton $mf.left.$bb]
+ttk::button $mf.left.$bb -image $img -style Toolbutton -command [list toggleButton $mf.left.$bb]
 set state($mf.left.$bb) 1
-proc toggleTheButton w {
+proc toggleButton w {
     global ROOTDIR
     global LIBDIR
     global state
@@ -1304,22 +1303,18 @@ proc toggleTheButton w {
 	set bb play_start
 	set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$bb.svg]
         $w configure -image $img -style Toolbutton
-        #puts -nonewline [set -command [ ::hola ]]
         puts -nonewline [set -command [ ::setOperMode edit ]]
         set msg "Execute"
-	puts "Entra star btn"
     } else {
 	set bb play_stop
 	set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$bb.svg]
         $w configure -image $img -style Toolbutton
-        #puts -nonewline [set -command [ ::chao ]]
         puts -nonewline [set -command [ ::setOperMode exec ]]
 	set msg "Terminate"
-	puts "Entra stop btn"
     }
     set state($w) [expr {!$state($w)}]
-	bind $w <Any-Enter> ".bottom.textbox config -text {$msg}"
-	bind $w <Any-Leave> ".bottom.textbox config -text {}"
+    bind $w <Any-Enter> ".bottom.textbox config -text {$msg}"
+    bind $w <Any-Leave> ".bottom.textbox config -text {}"
 }
 pack $mf.left.$bb -side top
 #
