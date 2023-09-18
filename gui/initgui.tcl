@@ -1213,7 +1213,7 @@ menu .menubar.idiomas
 	global idiomaprefix
 	global setIdioma
 
-	set fh [open "$ROOTDIR/$LIBDIR/gui/setidioma.tcl" w+]
+ 	set fh [open "$ROOTDIR/$LIBDIR/gui/setidioma.tcl" w+]
 	set setIdiomanew [lindex [split $setIdioma {_}] 0]
 	puts -nonewline $fh "$setIdiomanew"
 	close $fh
@@ -1224,57 +1224,55 @@ menu .menubar.idiomas
 	close $fh
 
 	proc notification {} {
-		global answer
-		global response
-		
-		puts [set answer [tk_messageBox -message [mc "Notification"] \
-			-title [mc "Notification"] \
-			-icon question -type yesno \
-			-detail [mc "Do you want to restart IMUNES to make the language change effective?"]]]
-
-		if { $answer == "yes" } {
-			puts [set response [tk_messageBox -message [mc "Press Yes to confirm. IMUNES will close."] \
-				-type yesno -title [mc "Notification"] -icon info]]
-		} else {
-			puts -nonewline [set -command [ return ]]
-		} 
-		if { $response == "yes"} {
-			puts -nonewline [set -command [ exit ]]
-		} else {
-			puts -nonewline [set -command [ return ]]
-		}
-	}
+	    global answer
+	    global response
+	    puts [set answer [tk_messageBox -message [mc "Notification"] \
+		-title [mc "Notification"] \
+		-icon question -type yesno \
+		-detail [mc "Do you want to restart IMUNES to make the language change effective?"]]]
+	    if { $answer == "yes" } {
+		puts [set response [tk_messageBox -message [mc "Press Yes to confirm. IMUNES will close."] \
+		    -type yesno -title [mc "Notification"] -icon info]]
+	    } else {
+	        puts -nonewline [set -command [ return ]]
+	    } 
+	    if { $response == "yes"} {
+	        puts -nonewline [set -command [ exit ]]
+	    } else {
+	        puts -nonewline [set -command [ return ]]
+	    }
+	}    
 	switch -exact -- $setIdiomanew {
-		de {
-			puts -nonewline [set -command [ ::notification ]]
-		} 
-		en {
-			puts -nonewline [set -command [ ::notification ]]
-		}
-		es {
-			puts -nonewline [set -command [ ::notification ]]
-		}
-		fr {
-			puts -nonewline [set -command [ ::notification ]]
-		}
-		hr {
-			puts -nonewline [set -command [ ::notification ]]
-		}
-		hu {
-			puts -nonewline [set -command [ ::notification ]]
-		}
-		it {
-			puts -nonewline [set -command [ ::notification ]]
-		}     
-		pt {
-			puts -nonewline [set -command [ ::notification ]]
-		} 
-		ru {
-			puts -nonewline [set -command [ ::notification ]]
-		}   
-		default {
-			puts -nonewline [set -command [ ::notification ]]
-		}
+	    de {
+	        puts -nonewline [set -command [ ::notification ]]
+	    } 
+	    en {
+		puts -nonewline [set -command [ ::notification ]]
+	    }
+	    es {
+		puts -nonewline [set -command [ ::notification ]]
+	    }
+	    fr {
+		puts -nonewline [set -command [ ::notification ]]
+	    }
+	    hr {
+		puts -nonewline [set -command [ ::notification ]]
+	    }
+	    hu {
+		puts -nonewline [set -command [ ::notification ]]
+	    }
+	    it {
+		puts -nonewline [set -command [ ::notification ]]
+	    }     
+	    pt {
+		puts -nonewline [set -command [ ::notification ]]
+	    } 
+	    ru {
+		puts -nonewline [set -command [ ::notification ]]
+	    }   
+	    default {
+		puts -nonewline [set -command [ ::notification ]]
+	    }
 	}  	
     }
     if {0} {
