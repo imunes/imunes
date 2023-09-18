@@ -841,15 +841,15 @@ menu $m -tearoff 0
 	-value black -command ::saveOptionstheme
 	proc saveOptionstheme { } {
 	    global ROOTDIR
-	    global LIBDIR
+            global LIBDIR
 	    global config
-	    global colorcanvas   
-        global gridVert
-	    global gridHori
-        global gridIntVert
-        global gridIntHori 
-		global colorNameNode
-        global colorIPIfc
+     	    global colorcanvas
+	    global gridVert
+            global gridHori
+	    global gridIntVert
+            global gridIntHori 
+	    global colorNameNode
+            global colorIPIfc
 	    global currentTheme
 	    global currentThemenew
 
@@ -878,7 +878,7 @@ menu $m -tearoff 0
 		} 
 		imunes {
 		    set colorcanvas white
-			set gridVert gray
+      		    set gridVert gray
 		    set gridHori gray
 		    set gridIntVert gray
 		    set gridIntHori gray
@@ -949,7 +949,6 @@ menu $m -tearoff 0
 	    }  
 		
 	}
-
 #
 # Show Widgets
 #
@@ -1174,7 +1173,6 @@ menu .menubar.help -tearoff 0
 	grid rowconfigure $traductFrame 11 -pad 3
 	grid rowconfigure $traductFrame 12 -pad 3
 	grid rowconfigure $traductFrame 13 -pad 3
-
 }
 #
 #
@@ -1190,15 +1188,15 @@ menu .menubar.idiomas
     -variable setIdioma -underline 0 -value "$language"
     .menubar.idiomas add separator
     set  idiomalist { \
-	{ "German"		"de_DE" } \
-	{ "English"		"en_EN" } \
-	{ "Spanish"		"es_ES" } \
-	{ "French"		"fr_FR" } \
+	{ "German"	"de_DE" } \
+	{ "English"	"en_EN" } \
+	{ "Spanish"	"es_ES" } \
+	{ "French"	"fr_FR" } \
 	{ "Croatian"	"hr_HR" } \
 	{ "Hungarian"	"hu_HU" } \
-	{ "Italian"		"it_IT" } \
+	{ "Italian"	"it_IT" } \
 	{ "Portuguese"	"pt_PT" } \
-	{ "Russian"		"ru_RU" } \
+	{ "Russian"	"ru_RU" } \
     }
     foreach idioma $idiomalist {
 	.menubar.idiomas add radiobutton \
@@ -1207,78 +1205,77 @@ menu .menubar.idiomas
 	-command ::saveOptionsidioma     
     }
     proc saveOptionsidioma  { } {
-		global ROOTDIR
-		global LIBDIR
-		global config
-		global idiomalist
-		global idioma
-		global idiomaprefix
-		global setIdioma
+	global ROOTDIR
+	global LIBDIR
+	global config
+	global idiomalist
+	global idioma
+	global idiomaprefix
+	global setIdioma
 
-		set fh [open "$ROOTDIR/$LIBDIR/gui/setidioma.tcl" w+]
-		set setIdiomanew [lindex [split $setIdioma {_}] 0]
-		puts -nonewline $fh "$setIdiomanew"
-		close $fh
+	set fh [open "$ROOTDIR/$LIBDIR/gui/setidioma.tcl" w+]
+	set setIdiomanew [lindex [split $setIdioma {_}] 0]
+	puts -nonewline $fh "$setIdiomanew"
+	close $fh
 
-		set fh [open "$ROOTDIR/$LIBDIR/gui/setidioma.tcl" r]
-		set file_data [read $fh]
-		puts $file_data
-		close $fh
+	set fh [open "$ROOTDIR/$LIBDIR/gui/setidioma.tcl" r]
+	set file_data [read $fh]
+	puts $file_data
+	close $fh
 
-		proc notification {} {
-			global answer
-			global response
+	proc notification {} {
+		global answer
+		global response
 		
-			puts [set answer [tk_messageBox -message [mc "Notification"] \
-				-title [mc "Notification"] \
-				-icon question -type yesno \
-				-detail [mc "Do you want to restart IMUNES to make the language change effective?"]]]
+		puts [set answer [tk_messageBox -message [mc "Notification"] \
+			-title [mc "Notification"] \
+			-icon question -type yesno \
+			-detail [mc "Do you want to restart IMUNES to make the language change effective?"]]]
 
-			if { $answer == "yes" } {
-				puts [set response [tk_messageBox -message [mc "Press Yes to confirm. IMUNES will close."] \
-					-type yesno -title [mc "Notification"] -icon info]]
-			} else {
-				puts -nonewline [set -command [ return ]]
-			} 
-			if { $response == "yes"} {
-				puts -nonewline [set -command [ exit ]]
-			} else {
-				puts -nonewline [set -command [ return ]]
-			}
+		if { $answer == "yes" } {
+			puts [set response [tk_messageBox -message [mc "Press Yes to confirm. IMUNES will close."] \
+				-type yesno -title [mc "Notification"] -icon info]]
+		} else {
+			puts -nonewline [set -command [ return ]]
+		} 
+		if { $response == "yes"} {
+			puts -nonewline [set -command [ exit ]]
+		} else {
+			puts -nonewline [set -command [ return ]]
 		}
-		switch -exact -- $setIdiomanew {
-			de {
-				puts -nonewline [set -command [ ::notification ]]
-			} 
-			en {
-				puts -nonewline [set -command [ ::notification ]]
-			}
-			es {
-				puts -nonewline [set -command [ ::notification ]]
-			}
-			fr {
-				puts -nonewline [set -command [ ::notification ]]
-			}
-			hr {
-				puts -nonewline [set -command [ ::notification ]]
-			}
-			hu {
-				puts -nonewline [set -command [ ::notification ]]
-			}
-			it {
-				puts -nonewline [set -command [ ::notification ]]
-			}     
-			pt {
-				puts -nonewline [set -command [ ::notification ]]
-			} 
-			ru {
-				puts -nonewline [set -command [ ::notification ]]
-			}   
-			default {
-				puts -nonewline [set -command [ ::notification ]]
-			}
-		}  
-		
+	}
+	switch -exact -- $setIdiomanew {
+		de {
+			puts -nonewline [set -command [ ::notification ]]
+		} 
+		en {
+			puts -nonewline [set -command [ ::notification ]]
+		}
+		es {
+			puts -nonewline [set -command [ ::notification ]]
+		}
+		fr {
+			puts -nonewline [set -command [ ::notification ]]
+		}
+		hr {
+			puts -nonewline [set -command [ ::notification ]]
+		}
+		hu {
+			puts -nonewline [set -command [ ::notification ]]
+		}
+		it {
+			puts -nonewline [set -command [ ::notification ]]
+		}     
+		pt {
+			puts -nonewline [set -command [ ::notification ]]
+		} 
+		ru {
+			puts -nonewline [set -command [ ::notification ]]
+		}   
+		default {
+			puts -nonewline [set -command [ ::notification ]]
+		}
+	}  	
     }
     if {0} {
 	.menubar.idiomas add separator
@@ -1290,7 +1287,41 @@ menu .menubar.idiomas
 #
 ttk::frame $mf.left
 pack $mf.left -side left -fill y
-
+#
+#
+# ToggleButton
+#
+#
+set bb play-start
+set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$bb.svg]
+ttk::button $mf.left.$bb -image $img -style Toolbutton -command [list toggleTheButton $mf.left.$bb]
+puts -nonewline [set -command [ ::setOperMode edit ]]
+set state($mf.left.$bb) 1
+proc toggleTheButton w {
+    global ROOTDIR
+    global LIBDIR
+    global state
+    	
+    if {$state($w)} {
+	set bb play-start
+	set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$bb.svg]
+        $w configure -image $img -style Toolbutton
+	puts -nonewline [set -command [ ::setOperMode edit ]]
+        set msg "Execute"
+    } else {
+    	set bb play-stop
+     	set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$bb.svg]
+        $w configure -image $img -style Toolbutton
+	puts -nonewline [set -command [ ::setOperMode exec ]]
+ 	set msg "Terminate"
+    }
+    set state($w) [expr {!$state($w)}]
+	bind $w <Any-Enter> ".bottom.textbox config -text {$msg}"
+	bind $w <Any-Leave> ".bottom.textbox config -text {}"
+}
+pack $mf.left.$bb -side top
+#
+#
 foreach b {select link} {
    set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$b.svg]
    ttk::button $mf.left.$b \
