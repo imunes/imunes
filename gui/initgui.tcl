@@ -1292,26 +1292,30 @@ pack $mf.left -side left -fill y
 #
 set bb play_start
 set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$bb.svg]
+#ttk::button $mf.left.$bb -image $img -style Toolbutton -command [list toggleTheButton $mf.left.$bb]
 ttk::button $mf.left.$bb -image $img -style Toolbutton -command [list toggleTheButton $mf.left.$bb]
-puts -nonewline [set -command [ ::setOperMode edit ]]
 set state($mf.left.$bb) 1
 proc toggleTheButton w {
     global ROOTDIR
     global LIBDIR
     global state
-    	
+	
     if {$state($w)} {
 	set bb play_start
 	set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$bb.svg]
         $w configure -image $img -style Toolbutton
-	puts -nonewline [set -command [ ::setOperMode edit ]]
+        #puts -nonewline [set -command [ ::hola ]]
+        puts -nonewline [set -command [ ::setOperMode edit ]]
         set msg "Execute"
+	puts "Entra star btn"
     } else {
-    	set bb play_stop
-     	set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$bb.svg]
+	set bb play_stop
+	set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$bb.svg]
         $w configure -image $img -style Toolbutton
-	puts -nonewline [set -command [ ::setOperMode exec ]]
- 	set msg "Terminate"
+        #puts -nonewline [set -command [ ::chao ]]
+        puts -nonewline [set -command [ ::setOperMode exec ]]
+	set msg "Terminate"
+	puts "Entra stop btn"
     }
     set state($w) [expr {!$state($w)}]
 	bind $w <Any-Enter> ".bottom.textbox config -text {$msg}"
