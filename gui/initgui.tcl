@@ -1290,7 +1290,7 @@ pack $mf.left -side left -fill y
 # ToggleButton
 #
 #
-set bb play.start
+set bb play_start
 set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$bb.svg]
 ttk::button $mf.left.$bb -image $img -style Toolbutton -command [list toggleTheButton $mf.left.$bb]
 puts -nonewline [set -command [ ::setOperMode edit ]]
@@ -1301,13 +1301,13 @@ proc toggleTheButton w {
     global state
     	
     if {$state($w)} {
-	set bb play.start
+	set bb play_start
 	set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$bb.svg]
         $w configure -image $img -style Toolbutton
 	puts -nonewline [set -command [ ::setOperMode edit ]]
         set msg "Execute"
     } else {
-    	set bb play.stop
+    	set bb play_stop
      	set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$bb.svg]
         $w configure -image $img -style Toolbutton
 	puts -nonewline [set -command [ ::setOperMode exec ]]
