@@ -1310,14 +1310,12 @@ proc toggleTheButton w {
         $w configure -image $img -style Toolbutton
         puts -nonewline [set -command [ ::setOperMode edit ]]
         set msg "Execute"
-	puts "Entra star btn"
     } else {
 	set bb play_stop
 	set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$bb.svg]
         $w configure -image $img -style Toolbutton
         puts -nonewline [set -command [ ::setOperMode exec ]]
 	set msg "Terminate"
-	puts "Entra stop btn"
     }
     set state($w) [expr {!$state($w)}]
     bind $w <Any-Enter> ".bottom.textbox config -text {$msg}"
