@@ -1295,7 +1295,7 @@ set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$bb.svg]
 ttk::button $mf.left.$bb -image $img -style Toolbutton -command [list toggleTheButton $mf.left.$bb]
 set state($mf.left.$bb) 1
 proc toggleTheButton w {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list]
+    upvar 0 ::cf::[set ::curcfg]::node_list node_list
     global ROOTDIR
     global LIBDIR
     if {$node_list == ""} {
