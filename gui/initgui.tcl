@@ -1290,12 +1290,12 @@ pack $mf.left -side left -fill y
 # ToggleButton
 #
 #
-set bb play-start
+set bb play_start
 set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$bb.svg]
 ttk::button $mf.left.$bb -image $img -style Toolbutton -command [list toggleTheButton $mf.left.$bb]
 set state($mf.left.$bb) 1
 proc toggleTheButton w {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
+    upvar 0 ::cf::[set ::curcfg]::node_list node_list]
     global ROOTDIR
     global LIBDIR
     if {$node_list == ""} {
@@ -1305,14 +1305,14 @@ proc toggleTheButton w {
     }
     global state
     if {$state($w)} {
-	set bb play-start
+	set bb play_start
 	set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$bb.svg]
         $w configure -image $img -style Toolbutton
         puts -nonewline [set -command [ ::setOperMode edit ]]
         set msg "Execute"
 	puts "Entra star btn"
     } else {
-	set bb play-stop
+	set bb play_stop
 	set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$bb.svg]
         $w configure -image $img -style Toolbutton
         puts -nonewline [set -command [ ::setOperMode exec ]]
