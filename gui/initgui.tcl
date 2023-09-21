@@ -1298,12 +1298,12 @@ proc toggleTheButton w {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     global ROOTDIR
     global LIBDIR
+    global state
     if {$node_list == ""} {
 	statline "Empty topologies can't be executed."
 	.panwin.f1.c config -cursor left_ptr
 	return
     }
-    global state
     if {$state($w)} {
 	set bb play_start
 	set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$bb.svg]
