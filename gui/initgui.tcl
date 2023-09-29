@@ -1292,9 +1292,9 @@ pack $mf.left -side left -fill y
 #
 set bb play_start
 set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$bb.svg]
-ttk::button $mf.left.$bb -image $img -style Toolbutton -command [list toggleTheButton $mf.left.$bb]
+ttk::button $mf.left.$bb -image $img -style Toolbutton -command [list toggleButton $mf.left.$bb]
 set state($mf.left.$bb) 1
-proc toggleTheButton w {
+proc toggleButton w {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     global ROOTDIR
     global LIBDIR
