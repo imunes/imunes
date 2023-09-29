@@ -1290,10 +1290,10 @@ pack $mf.left -side left -fill y
 # ToggleButton
 #
 #
-set bb play_start
-set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$bb.svg]
-ttk::button $mf.left.$bb -image $img -style Toolbutton -command [list toggleButton $mf.left.$bb]
-set state($mf.left.$bb) 1
+set b play_start
+set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$b.svg]
+ttk::button $mf.left.$b -image $img -style Toolbutton -command [list toggleButton $mf.left.$b]
+set state($mf.left.$b) 1
 proc toggleButton w {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     global ROOTDIR
@@ -1305,14 +1305,14 @@ proc toggleButton w {
 	return
     }
     if {$state($w)} {
-	set bb play_start
-	set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$bb.svg]
+	set b play_start
+	set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$b.svg]
         $w configure -image $img -style Toolbutton
         puts -nonewline [set -command [ ::setOperMode edit ]]
         set msg "Execute"
     } else {
-	set bb play_stop
-	set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$bb.svg]
+	set b play_stop
+	set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$b.svg]
         $w configure -image $img -style Toolbutton
         puts -nonewline [set -command [ ::setOperMode exec ]]
 	set msg "Terminate"
@@ -1321,7 +1321,7 @@ proc toggleButton w {
     bind $w <Any-Enter> ".bottom.textbox config -text {$msg}"
     bind $w <Any-Leave> ".bottom.textbox config -text {}"
 }
-pack $mf.left.$bb -side top
+pack $mf.left.$b -side top
 #
 #
 foreach b {select link} {
