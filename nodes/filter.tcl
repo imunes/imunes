@@ -62,13 +62,13 @@ proc $MODULE.icon {size} {
     global ROOTDIR LIBDIR
     switch $size {
       normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/filter.gif
+	return $ROOTDIR/$LIBDIR/icons/normal/filter.svg
       }
       small {
-	return $ROOTDIR/$LIBDIR/icons/small/filter.gif
+	return $ROOTDIR/$LIBDIR/icons/small/filter.svg
       }
       toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/filter.gif
+	return $ROOTDIR/$LIBDIR/icons/tiny/filter.svg
       }
     }
 }
@@ -259,15 +259,15 @@ proc $MODULE.configGUI { c node } {
     set filterguielements {}
 
     if { [ifcList $node] == "" } {
-	tk_dialog .dialog1 "IMUNES warning" \
+	tk_dialog .dialog1 [mc "IMUNES warning"] \
 	    "This node has no interfaces." \
 	    info 0 Dismiss
 	return
     }
 
     configGUI_createConfigPopupWin $c
-    wm title $wi "filter configuration"
-    configGUI_nodeName $wi $node "Node name:"
+    wm title $wi [mc "filter configuration"]
+    configGUI_nodeName $wi $node [mc "Node name:"]
 
     set tabs [configGUI_addNotebookFilter $wi $node [lsort [ifcList $node]]]
 

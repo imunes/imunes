@@ -91,13 +91,13 @@ proc $MODULE.icon { size } {
     global ROOTDIR LIBDIR
     switch $size {
       normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/rj45.gif
+	return $ROOTDIR/$LIBDIR/icons/normal/rj45.svg
       }
       small {
-	return $ROOTDIR/$LIBDIR/icons/small/rj45.gif
+	return $ROOTDIR/$LIBDIR/icons/small/rj45.svg
       }
       toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/rj45.gif
+	return $ROOTDIR/$LIBDIR/icons/tiny/rj45.svg
       }
     }
 }
@@ -230,8 +230,8 @@ proc $MODULE.configGUI { c node } {
     set treecolumns {}
 
     configGUI_createConfigPopupWin $c
-    wm title $wi "rj45 configuration"
-    configGUI_nodeName $wi $node "Physical interface:"
+    wm title $wi [mc "rj45 configuration"]
+    configGUI_nodeName $wi $node [mc "Physical interface:"]
     configGUI_etherVlan $wi $node
     configGUI_buttonsACNode $wi $node
 }

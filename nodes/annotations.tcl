@@ -1322,19 +1322,19 @@ proc image% { image percent img_name } {
     set image_h [image height $image]
     set image_w [image width $image]
     if {$hasIM && [expr { $image_h > 100 || $image_w > 100 }] } {
-	set fname "original.gif"
+	set fname "original.svg"
 	$image write $fname
 	if {!$winOS} {
-	    exec convert $fname -resize $percent\% zoom_$percent.gif
+	    exec convert $fname -resize $percent\% zoom_$percent.svg
 	} else {
-	    exec cmd /c convert $fname -resize $percent\% zoom_$percent.gif
+	    exec cmd /c convert $fname -resize $percent\% zoom_$percent.svg
 	}
-	set im2 [image create photo -file zoom_$percent.gif]
-	setImageZoomData $img_name zoom_$percent.gif $percent
+        set im2 [image create photo -file zoom_$percent.svg]
+	setImageZoomData $img_name zoom_$percent.svg $percent
 	if {!$winOS} {
-	    exec rm $fname zoom_$percent.gif
+	    exec rm $fname zoom_$percent.svg
 	} else {
-	    catch { exec cmd /c del $fname zoom_$percent.gif } err
+	    catch { exec cmd /c del $fname zoom_$percent.svg } err
 	}
     } else {
 	set deno      [gcd $percent 100]

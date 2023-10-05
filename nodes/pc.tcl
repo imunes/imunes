@@ -103,13 +103,13 @@ proc $MODULE.icon { size } {
     global ROOTDIR LIBDIR
     switch $size {
       normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/pc.gif
+	return $ROOTDIR/$LIBDIR/icons/normal/pc.svg
       }
       small {
-	return $ROOTDIR/$LIBDIR/icons/small/pc.gif
+	return $ROOTDIR/$LIBDIR/icons/small/pc.svg
       }
       toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/pc.gif
+	return $ROOTDIR/$LIBDIR/icons/tiny/pc.svg
       }
     }
 }
@@ -381,8 +381,8 @@ proc $MODULE.configGUI { c node } {
     set guielements {}
 
     configGUI_createConfigPopupWin $c
-    wm title $wi "pc configuration"
-    configGUI_nodeName $wi $node "Node name:"
+    wm title $wi [mc "pc configuration"]
+    configGUI_nodeName $wi $node [mc "Node name:"]
 
     set tabs [configGUI_addNotebook $wi $node {"Configuration" "Interfaces"}]
     set configtab [lindex $tabs 0]

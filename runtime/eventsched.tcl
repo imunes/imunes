@@ -415,8 +415,8 @@ proc elementsEventsEditor {} {
     catch {destroy $eventsPopup}
     toplevel $eventsPopup
     wm transient $eventsPopup .
-    wm title $eventsPopup "Events editor"
-    wm iconname $eventsPopup "Events editor"
+    wm title $eventsPopup [mc "Events editor"]
+    wm iconname $eventsPopup [mc "Events editor"]
     
     ttk::frame $eventsPopup.events
     pack $eventsPopup.events -fill both -expand 1

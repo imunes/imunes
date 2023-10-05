@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:v="http://vecta.io" width="42" height="40" viewBox="0 0 42 40">
+    <style>
+        <![CDATA[svg{stroke:#000;stroke-linecap:round;stroke-linejoin:round;fill:#fff;fill-rule:evenodd;font-family:Roboto;font-size:14px;text-anchor:middle;}svg text{paint-order:stroke;white-space:pre;}svg .Text\.cls{stroke:none;}]]>
+    </style>
+    <defs>
+        <linearGradient id="L001001001ff858710056c70000100.grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="1%" stop-color="#ff8587" stop-opacity="1"/>
+            <stop offset="56%" stop-color="#c70000" stop-opacity="1"/>
+        </linearGradient>
+    </defs>
+    <g transform="translate(1 1)">
+        <g>
+            <g transform="translate(2 2)">
+                <ellipse cx="18" cy="17" rx="18" ry="17" fill="url(#L001001001ff858710056c70000100.grad)" stroke="none" stroke-opacity="0" stroke-width="0.5" fill-opacity="1"/>
+            </g>
+            <g>
+                <rect rx="5" x="0" y="0" fill="none" fill-opacity="0" height="38" stroke="#262626" stroke-width="2" width="40"/>
+            </g>
+        </g>
+    </g>
+    <g transform="translate(12 11)" fill="#4f4f4f">
+        <g>
+            <g>
+                <path d="M 19 2.7693 C 19 1.1079 17.5381 0 15.7842 0 L 3.2157 0 C 1.4619 0 0 1.1079 0 2.7693 L 0 15.2307 C 0 16.8921 1.4619 18 3.2157 18 L 15.7842 18 C 17.5381 18 19 16.8921 19 15.2307 Z" fill="#4f4f4f" stroke="none" stroke-width="1" fill-opacity="1"/>
+            </g>
+        </g>
+    </g>
+    <g transform="translate(12 11)">
+        <g>
+            <g>
+                <path d="M 18 2.6154 C 18 1.0464 16.615 0 14.9535 0 L 3.0465 0 C 1.385 0 0 1.0464 0 2.6154 L 0 14.3846 C 0 15.9537 1.385 17 3.0465 17 L 14.9535 17 C 16.615 17 18 15.9537 18 14.3846 Z" fill="#ffffff" stroke="none" stroke-width="1" fill-opacity="1"/>
+            </g>
+        </g>
+    </g>
+</svg>

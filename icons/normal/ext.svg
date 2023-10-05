@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:v="http://vecta.io" width="38" height="71" viewBox="0 0 38 71">
+    <style>
+        <![CDATA[svg{stroke:#000;stroke-linecap:round;stroke-linejoin:round;fill:#fff;fill-rule:evenodd;font-family:Roboto;font-size:14px;text-anchor:middle}svg text{paint-order:stroke;white-space:pre}svg .Text\.cls{stroke:none}]]>
+    </style>
+    <g transform="translate(0.9567 0.5)">
+        <g >
+            <g transform="translate(2.8521 4.5127)">
+                <ellipse cx="3.5111" cy="7.5561" rx="3.5111" ry="7.5561" stroke-width="2" stroke="#c8c5a2" fill="#c8c5a2"/>
+            </g>
+            <g transform="translate(7.0653 1.1545)">
+                <ellipse cx="12.6398" cy="2.5187" rx="12.6398" ry="2.5187" stroke-width="2" stroke="#c8c5a2" fill="#c8c5a2"/>
+            </g>
+            <g transform="translate(7.0653 49.8501)">
+                <ellipse cx="1.4043" cy="2.5187" rx="1.4043" ry="2.5187" stroke-width="2" stroke="#c8c5a2" fill="#c8c5a2"/>
+            </g>
+            <g transform="translate(21.1095 63.2833)">
+                <ellipse cx="1.4043" cy="1.6791" rx="1.4043" ry="1.6791" stroke-width="2" stroke="#c8c5a2" fill="#c8c5a2"/>
+            </g>
+            <g transform="translate(0.0433 17.9461)">
+                <ellipse cx="2.8089" cy="3.3583" rx="2.8089" ry="3.3583" stroke-width="2" stroke="#c8c5a2" fill="#c8c5a2"/>
+            </g>
+            <g transform="translate(5.661 39.7751)">
+                <ellipse cx="3.5111" cy="6.7167" rx="3.5111" ry="6.7167" stroke-width="2" stroke="#c8c5a2" fill="#c8c5a2"/>
+            </g>
+            <g transform="translate(32.345 19.6252)">
+                <ellipse cx="1.4043" cy="8.3958" rx="1.4043" ry="8.3958" stroke-width="2" stroke="#c8c5a2" fill="#c8c5a2"/>
+            </g>
+            <g transform="translate(30.9406 22.9835)">
+                <ellipse cx="1.4043" cy="8.3958" rx="1.4043" ry="8.3958" stroke-width="2" stroke="#c8c5a2" fill="#c8c5a2"/>
+            </g>
+            <g transform="translate(30.9406 12.9085)">
+                <ellipse cx="2.1066" cy="4.198" rx="2.1066" ry="4.198" stroke-width="2" stroke="#c8c5a2" fill="#c8c5a2"/>
+            </g>
+            <g transform="translate(23.9185 29.7001)">
+                <ellipse cx="4.2133" cy="7.5561" rx="4.2133" ry="7.5561" stroke-width="2" stroke="#c8c5a2" fill="#c8c5a2"/>
+            </g>
+            <g transform="translate(25.3229 17.9461)">
+                <ellipse cx="2.1066" cy="15.1125" rx="2.1066" ry="15.1125" stroke-width="2" stroke="#c8c5a2" fill="#c8c5a2"/>
+            </g>
+            <g transform="translate(23.9185 19.6252)">
+                <ellipse cx="1.4043" cy="16.7916" rx="1.4043" ry="16.7916" stroke-width="2" stroke="#c8c5a2" fill="#c8c5a2"/>
+            </g>
+            <g transform="translate(25.3229 16.2669)">
+                <ellipse cx="1.4043" cy="16.7916" rx="1.4043" ry="16.7916" stroke-width="2" stroke="#c8c5a2" fill="#c8c5a2"/>
+            </g>
+            <g transform="translate(22.5141 22.9835)">
+                <ellipse cx="1.4043" cy="16.7916" rx="1.4043" ry="16.7916" stroke-width="2" stroke="#c8c5a2" fill="#c8c5a2"/>
+            </g>
+            <g transform="translate(0.0433 16.2669)">
+                <ellipse cx="4.2133" cy="11.7541" rx="4.2133" ry="11.7541" stroke-width="2" stroke="#c8c5a2" fill="#c8c5a2"/>
+            </g>
+            <g transform="translate(15.4919 44.8126)">
+                <ellipse cx="4.2133" cy="11.7541" rx="4.2133" ry="11.7541" stroke-width="2" stroke="none" fill="#c8c5a2" stroke-opacity="0"/>
+            </g>
+            <g transform="translate(14.0875 43.1335)">
+                <rect x="0" y="0" width="5.6177" height="26.8665" stroke-width="2" stroke="none" fill="#c8c5a2" stroke-opacity="0"/>
+            </g>
+            <g transform="translate(18.3007 38.0959)">
+                <rect x="0" y="0" width="5.6177" height="26.8665" stroke-width="2" stroke="none" fill="#c8c5a2" stroke-opacity="0"/>
+            </g>
+            <g>
+                <g >
+                    <g transform="translate(2.7042 32.6666)">
+                        <path d="M 0 7 C 0 3.122 1.8091 0 4.0562 0 C 6.3033 0 8.1124 3.122 8.1124 7 C 8.1124 10.878 6.3033 14 4.0562 14 C 1.8091 14 0 10.878 0 7 Z" stroke="none" fill="#c8c5a2" fill-opacity="1"/>
+                    </g>
+                    <g transform="translate(2.7042 25.6666)">
+                        <path d="M 0 9.3334 C 0 4.1627 1.2061 0 2.7042 0 C 4.2023 0 5.4083 4.1627 5.4083 9.3334 C 5.4083 14.5042 4.2023 18.6668 2.7042 18.6668 C 1.2061 18.6668 0 14.5042 0 9.3334 Z" stroke="none" fill="#c8c5a2" fill-opacity="1"/>
+                    </g>
+                    <g transform="translate(8.1125 32.6666)">
+                        <path d="M 0 0 L 10.8166 0 L 10.8166 37.3334 L 0 37.3334 Z" stroke="none" fill="#c8c5a2" fill-opacity="1"/>
+                    </g>
+                    <g transform="translate(2.7042 32.6666)">
+                        <path d="M 0 0 L 29.7456 0 L 29.7456 7 L 0 7 Z" stroke="none" fill="#c8c5a2" fill-opacity="1"/>
+                    </g>
+                    <g transform="translate(2.7042 32.6666)">
+                        <path d="M 0 0 L 29.7456 0 L 29.7456 7 L 0 7 Z" stroke="none" fill="#c8c5a2" fill-opacity="1"/>
+                    </g>
+                    <g transform="translate(5.6609 4.6666)">
+                        <path d="M 0 0 L 26.7888 0 L 26.7888 28 L 0 28 Z" stroke="none" fill="#c8c5a2" fill-opacity="1"/>
+                    </g>
+                    <g transform="translate(5.4081 0)">
+                        <path d="M 0 4.6666 L 5.4082 0 M 5.4084 0 L 24.3373 0" stroke="#262626" fill="none" fill-opacity="1"/>
+                    </g>
+                    <g transform="translate(2.7042 0)">
+                        <path d="M 2.704 4.6666 L 21.6329 4.6666 M 21.6332 4.6666 L 27.0414 0 M 2.7042 4.6666 L 0 7 M 0 7 L 0 16.3334" stroke="#262626" fill="none" fill-opacity="1"/>
+                    </g>
+                    <g transform="translate(0 0)">
+                        <path d="M 24.3373 4.6666 L 27.0415 7 M 29.7456 0 L 32.4497 2.3334 M 32.4496 2.3334 L 32.4496 11.6668 M 0 18.6666 L 0 32.6666 M 0 18.6668 L 2.7042 16.3334 M 27.0413 7 L 27.0413 16.3334" stroke="#262626" fill="none" fill-opacity="1"/>
+                    </g>
+                    <g transform="translate(27.0413 2.3334)">
+                        <path d="M 0 4.6666 L 5.4082 0 M 0 13.9997 L 5.4082 9.3332" stroke="#262626" fill="none" fill-opacity="1"/>
+                    </g>
+                    <g transform="translate(5.4081 9.3334)">
+                        <path d="M 0 7 L 0 0 M 2.7043 7 L 2.7043 0 M 5.4084 7 L 5.4084 0 M 8.1126 7 L 8.1126 0 M 10.8167 7 L 10.8167 0 M 13.5207 7 L 13.5207 0 M 16.2249 7 L 16.2249 0 M 18.9292 7 L 18.9292 0" stroke="#ff8200" fill="none" fill-opacity="1"/>
+                    </g>
+                    <g transform="translate(0 11.6666)">
+                        <path d="M 27.0413 4.6668 L 29.7456 7.0003 M 29.7456 7 L 29.7456 21 M 32.4496 0 L 35.1537 2.3334 M 35.1537 2.3334 L 35.1537 16.3334 M 29.7456 21 L 35.1537 16.3334 M 0 21 L 29.7456 21" stroke="#262626" fill="none" fill-opacity="1"/>
+                    </g>
+                    <g transform="translate(0 32.6666)">
+                        <path d="M 8.1125 25.6668 L 18.929 25.6668 M 1e-13 1e-13 L 8.1125 23.3334" stroke="#262626" fill="none" fill-opacity="1"/>
+                    </g>
+                    <g transform="translate(8.1125 32.6666)">
+                        <path d="M 21.6331 0 L 10.8166 24.0001 L 10.8166 37.3334 L 0 37.3334 L 0 24.0001 M 10.8164 37.3334 L 16.2246 32.6668" stroke="#262626" fill="none" fill-opacity="1"/>
+                    </g>
+                    <g transform="translate(8.1125 28)">
+                        <path d="M 16.2249 37.3334 L 16.2249 28 M 10.8164 30.3334 L 16.2246 28 M 16.2249 28 L 27.0414 7 L 27.0414 0 M 0 28 L 10.8166 28" stroke="#262626" fill="none" fill-opacity="1"/>
+                    </g>
+                    <g transform="translate(2.1634 16.3334)">
+                        <path d="M 16.7655 39.6666 L 22.1737 37.3332 M 0 23.3334 L 24.7797 23.3334 L 30.2864 21 M 3.2448 0 L 22.1737 0" stroke="#262626" fill="none" fill-opacity="1"/>
+                    </g>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

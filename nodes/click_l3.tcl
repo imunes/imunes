@@ -102,13 +102,13 @@ proc $MODULE.icon { size } {
     global ROOTDIR LIBDIR
     switch $size {
 	normal {
-	    return $ROOTDIR/$LIBDIR/icons/normal/click_l3.gif
+	    return $ROOTDIR/$LIBDIR/icons/normal/click_l3.svg
 	}
 	small {
-	    return $ROOTDIR/$LIBDIR/icons/small/click_l3.gif
+	    return $ROOTDIR/$LIBDIR/icons/small/click_l3.svg
 	}
 	toolbar {
-	    return $ROOTDIR/$LIBDIR/icons/tiny/click_l3.gif
+	    return $ROOTDIR/$LIBDIR/icons/tiny/click_l3.svg
 	}
     }
 }
@@ -459,8 +459,8 @@ proc $MODULE.configGUI { c node } {
     set guielements {}
 
     configGUI_createConfigPopupWin $c
-    wm title $wi "click_l3 configuration"
-    configGUI_nodeName $wi $node "Node name:"
+    wm title $wi [mc "click_l3 configuration"]
+    configGUI_nodeName $wi $node [mc "Node name:"]
 
     set tabs [configGUI_addNotebook $wi $node {"Configuration" "Interfaces"}]
     set configtab [lindex $tabs 0]

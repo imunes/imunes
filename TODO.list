@@ -3,6 +3,9 @@ GUI:
 - integrate ipsec GUI implementation.
 - add GIF interface to the logical interface menu
 - add services to imunes (like ssh and inetd)
+- added language support (de, en, es, fr, hr, hu, it, pt, ru)
+- added support for icons and .svg images
+- zoom was improved, now zoom in on icons and icon labels
 
 annotations:
 - select annotation while and after resizing

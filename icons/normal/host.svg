@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:v="http://vecta.io" width="55" height="70" viewBox="0 0 55 70">
+    <style>
+        <![CDATA[svg{stroke:#000;stroke-linecap:round;stroke-linejoin:round;fill:#fff;fill-rule:evenodd;font-family:Roboto;font-size:14px;text-anchor:middle}svg text{paint-order:stroke;white-space:pre}svg .Text\.cls{stroke:none}]]>
+    </style>
+    <defs>
+        <linearGradient id="L001001000e5ffff3967b6ff.grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#e5ffff"/>
+            <stop offset="39%" stop-color="#67b6ff"/>
+        </linearGradient>
+        <linearGradient id="L00100100099e6ff100003366.grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#99e6ff"/>
+            <stop offset="100%" stop-color="#003366"/>
+        </linearGradient>
+    </defs>
+    <g transform="translate(0.3935 0.3935)">
+        <g >
+            <g transform="translate(21.8345 11.4012)">
+                <path d="M 20.1043 0 L 0 0 L 0 55.4492 L 20.1043 55.4492 L 20.1043 0 Z" stroke="#ffffff" stroke-linejoin="miter" fill="url(#L001001000e5ffff3967b6ff.grad)" stroke-width="0.7870000000000001"/>
+            </g>
+            <g transform="translate(24.7058 0)">
+                <path d="M 0 19.1736 L 14.3604 19.1736 L 14.3604 31.6108 L 0 31.6108 L 0 19.1736 Z M 29.2942 0 L 17.2316 11.4012 L 17.2316 66.8504 L 29.2942 53.8946 L 29.2942 0 Z" stroke="#ffffff" stroke-linejoin="miter" fill="url(#L00100100099e6ff100003366.grad)" stroke-width="0.7870000000000001"/>
+            </g>
+            <g transform="translate(4.0281 10.8827)">
+                <path d="M 0 0 L 16.6583 0 Z" stroke="none" fill="#0f73a0"/>
+            </g>
+            <g transform="translate(4.0281 10.8827)">
+                <path d="M 1e-13 1e-13 L 16.6583 0" stroke="#ffffff" stroke-linejoin="miter" stroke-linecap="square" fill="none" stroke-width="0.7870000000000001"/>
+            </g>
+            <g transform="translate(24.1324 1.5545)">
+                <path d="M 0 7.7737 L 7.4669 0 Z" stroke="none" fill="#0f73a0"/>
+            </g>
+            <g transform="translate(24.1324 1.5545)">
+                <path d="M 0 7.7737 L 7.4669 0" stroke="#ffffff" stroke-linejoin="miter" stroke-linecap="square" fill="none" stroke-width="0.7870000000000001"/>
+            </g>
+            <g transform="translate(0.5748 0.0092)">
+                <path d="M 20.1043 11.9185 C 20.1043 11.9185 20.1043 15.5461 12.6374 15.5461 L 0 13.9915 L 0 12.9557 L 18.3812 0 L 53.4193 0 L 41.3567 11.4012 L 21.2525 11.4012" stroke="none" fill="url(#L00100100099e6ff100003366.grad)"/>
+            </g>
+            <g transform="translate(0.5748 0.0092)">
+                <path d="M 20.1043 11.9185 C 20.1043 11.9185 20.1043 15.5461 12.6374 15.5461 L 0 13.9915 L 0 12.9557 L 18.3812 0 L 53.4193 0 L 41.3567 11.4012 L 21.2525 11.4012" stroke="#ffffff" stroke-linejoin="miter" stroke-linecap="square" fill="none" stroke-width="0.7870000000000001"/>
+            </g>
+            <g transform="translate(0 11.4091)">
+                <path d="M 21.2525 0 C 21.2525 0 15.5086 3.1089 8.6151 2.5916 L 0 2.073 L 0 57.0037 L 8.6166 57.5222 C 17.2331 58.0409 21.8272 55.449 21.8272 55.449 Z" stroke="none" fill="url(#L001001000e5ffff3967b6ff.grad)"/>
+            </g>
+            <g transform="translate(0 11.4091)">
+                <path d="M 21.2525 0 C 21.2525 0 15.5086 3.1089 8.6151 2.5916 L 0 2.073 L 0 57.0037 L 8.6166 57.5222 C 17.2331 58.0409 21.8272 55.449 21.8272 55.449 Z" stroke="#ffffff" stroke-linejoin="miter" fill="none" stroke-width="0.7870000000000001"/>
+            </g>
+            <g transform="translate(4.0281 1.0359)">
+                <path d="M 0 9.8469 L 16.6583 9.8469 Z M 21.8274 7.7737 L 31.0173 0 Z" stroke="none" fill="#0f73a0"/>
+            </g>
+            <g transform="translate(25.8555 1.0359)">
+                <path d="M 0 7.7737 L 9.1899 0" stroke="#ffffff" stroke-linejoin="miter" stroke-linecap="square" fill="none"/>
+            </g>
+            <g transform="translate(25.7416 36.6123)">
+                <path d="M 1e-13 1e-13 L 12.2198 0 M 0 2.8163 L 12.2198 2.8163 M 0 5.6326 L 12.2198 5.6326 M 0 8.449 L 12.2198 8.449" stroke="#4f4f4f" stroke-linejoin="miter" stroke-linecap="square" fill="#4f4f4f"/>
+            </g>
+        </g>
+    </g>
+</svg>

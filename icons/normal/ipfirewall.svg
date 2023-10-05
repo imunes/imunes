@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:v="http://vecta.io" width="54" height="55" viewBox="0 0 54 55">
+    <style>
+        <![CDATA[svg{stroke:#000;stroke-linecap:round;stroke-linejoin:round;fill:#fff;fill-rule:evenodd;font-family:Roboto;font-size:14px;text-anchor:middle}svg text{paint-order:stroke;white-space:pre}svg .Text\.cls{stroke:none}]]>
+    </style>
+    <defs>
+        <radialGradient id="R845050505000096d510000387f.grad" cx="50%" cy="50%" r="84%" fx="50%" fy="50%">
+            <stop offset="0%" stop-color="#0096d5"/>
+            <stop offset="100%" stop-color="#00387f"/>
+        </radialGradient>
+        <radialGradient id="R615050505048fe0b01100941212.grad" cx="50%" cy="50%" r="61%" fx="50%" fy="50%">
+            <stop offset="48%" stop-color="#fe0b01"/>
+            <stop offset="100%" stop-color="#941212"/>
+        </radialGradient>
+    </defs>
+    <g transform="translate(0 0.1967)">
+        <g >
+            <g transform="translate(0.0002 19.944)">
+                <path d="M 52.9999 0 C 52.9999 7.6747 41.102 13.9103 26.3197 13.9103 C 11.898 13.9103 0 7.6747 0 0 L 0 20.1458 C 0 27.8206 11.898 34.0561 26.3197 34.0561 C 41.102 34.0561 52.9999 27.8206 52.9999 20.1458 Z" stroke="none" fill="url(#R845050505000096d510000387f.grad)"/>
+            </g>
+            <g transform="translate(0 0.0073)">
+                <path d="M 26.3197 25.3911 C 41.102 25.3911 52.9999 19.6002 52.9999 12.9183 C 52.9999 5.791 41.102 0 26.3197 0 C 11.898 0 0 5.791 0 12.9183 C 0 19.6002 11.898 25.3911 26.3197 25.3911 Z" stroke="none" fill="url(#R615050505048fe0b01100941212.grad)"/>
+            </g>
+            <g transform="translate(0.0005 12.7899)">
+                <path d="M 52.9999 0 C 52.9999 6.6282 41.102 12.3726 26.3196 12.3726 C 11.898 12.3726 0 6.6282 0 0 L 0 8.8376 C 0 15.9076 11.898 21.2101 26.3196 21.2101 C 41.102 21.2101 52.9999 15.9076 52.9999 8.8376 Z" stroke="none" fill="url(#R615050505048fe0b01100941212.grad)"/>
+            </g>
+            <g transform="translate(5.4124 12.0276)">
+                <path d="M 15.143 1.3363 L 22.3539 1.7818 M 1e-13 1e-13 L 7.2109 0.8909" stroke="#ffffff" stroke-linejoin="miter" stroke-linecap="square" fill="none" stroke-width="0.39350000000000007"/>
+            </g>
+            <g transform="translate(1.4465 8.0183)">
+                <path d="M 0.7211 0 L 6.8504 0.8909 M 7.5715 0.4454 L 0 8.0183 M 14.7824 1.7818 L 4.3266 12.0276 M 22.7145 2.2272 L 10.0954 14.7002 M 7.5715 8.9092 L 14.7824 9.3547 M 39.6602 9.8 L 46.8712 10.691 M 24.5173 8.9092 L 32.0888 9.3547 M 27.7622 4.9001 L 16.5852 16.482" stroke="#ffffff" stroke-linejoin="miter" stroke-linecap="square" fill="none" stroke-width="0.39350000000000007"/>
+            </g>
+            <g transform="translate(8.2971 0)">
+                <path d="M 28.8438 13.8093 L 17.6668 24.9458 M 36.0548 14.2547 L 26.32 24.9458 M 44.3473 12.9185 L 37.4969 21.3822 M 6.1294 20.0458 L 13.7009 20.9367 M 21.2723 21.3822 L 28.8438 21.8276 M 6.8504 1.3363 L 0 8.9092 M 16.5852 0 L 7.932 9.8 M 36.0548 6.2366 L 41.1024 6.682 M 24.8778 0.4454 L 12.6191 13.3638 M 31.7282 1.7818 L 19.83 13.8093 M 37.4969 4.4547 L 28.1227 14.2547 M 42.184 8.0183 L 35.6942 15.1457" stroke="#ffffff" stroke-linejoin="miter" stroke-linecap="square" fill="none" stroke-width="0.39350000000000007"/>
+            </g>
+            <g transform="translate(18.0316 8.4639)">
+                <path d="M 1e-13 1e-13 L 7.2109 0.4454 M 14.7824 0.8909 L 22.3539 1.7818 M 29.9254 2.2272 L 34.252 2.6728" stroke="#ffffff" stroke-linejoin="miter" stroke-linecap="square" fill="none" stroke-width="0.39350000000000007"/>
+            </g>
+            <g transform="translate(3.2492 2.2273)">
+                <path d="M 17.3063 4.9001 L 19.4695 8.9092 L 11.177 11.5819 L 12.9797 9.3547 L 0 6.6819 L 3.2449 4.0092 L 15.5036 6.6819 L 17.3063 4.9001 Z M 28.8438 14.7002 L 27.4017 10.6911 L 34.9731 8.9092 L 33.531 10.2455 L 45.7895 12.9185 L 42.9053 16.0366 L 30.6465 12.9185 L 28.8438 14.7002 Z M 24.8778 2.6727 L 33.1704 0 L 33.1704 4.4547 L 31.0071 4.0092 L 27.0411 8.0183 L 23.0751 7.5729 L 27.4017 3.1182 L 24.8778 2.6727 Z M 21.2723 18.7094 L 13.3403 20.4913 L 12.9797 16.0366 L 15.1431 16.482 L 19.4695 12.0276 L 23.4356 12.9185 L 18.7485 17.8184 L 21.2723 18.7094 Z" stroke="#ffffff" stroke-linejoin="miter" fill="#e0e0e0" stroke-width="0.39350000000000007" stroke-opacity="1" fill-opacity="1"/>
+            </g>
+        </g>
+    </g>
+</svg>

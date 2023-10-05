@@ -23,7 +23,7 @@
 # SUCH DAMAGE.
 #
 
-# $Id: ipfirewall.tcl 63 2013-10-03 12:17:50Z valter $
+# $Id: ipfirewall.tcl 63 2023-08-26 11:42 jromero17 $
 
 
 
@@ -59,13 +59,13 @@ proc $MODULE.icon { size } {
     global ROOTDIR LIBDIR
     switch $size {
       normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/ipfirewall.gif
+	return $ROOTDIR/$LIBDIR/icons/normal/ipfirewall.svg
       }
       small {
-	return $ROOTDIR/$LIBDIR/icons/small/ipfirewall.gif
+	return $ROOTDIR/$LIBDIR/icons/small/ipfirewall.svg
       }
       toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/ipfirewall.gif
+	return $ROOTDIR/$LIBDIR/icons/tiny/ipfirewall.svg
       }
     }
 }
@@ -348,8 +348,8 @@ proc $MODULE.configGUI { c node } {
     set guielements {}
 
     configGUI_createConfigPopupWin $c
-    wm title $wi "IP firewall configuration"
-    configGUI_nodeName $wi $node "Node name:"
+    wm title $wi [mc "IP firewall configuration"]
+    configGUI_nodeName $wi $node [mc "Node name:"]
 
     set tabs [configGUI_addNotebook $wi $node {"Configuration" "Interfaces"}]
     set configtab [lindex $tabs 0]

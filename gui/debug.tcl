@@ -160,5 +160,15 @@ bind . <F6> {
     source "$ROOTDIR/$LIBDIR/gui/widgets.tcl"
     source "$ROOTDIR/$LIBDIR/gui/debug.tcl"
 
+    source "$ROOTDIR/$LIBDIR/gui/msgs/de.msg"
+    source "$ROOTDIR/$LIBDIR/gui/msgs/en.msg"
+    source "$ROOTDIR/$LIBDIR/gui/msgs/es.msg"
+    source "$ROOTDIR/$LIBDIR/gui/msgs/fr.msg"
+    source "$ROOTDIR/$LIBDIR/gui/msgs/hr.msg"
+    source "$ROOTDIR/$LIBDIR/gui/msgs/hu.msg"
+    source "$ROOTDIR/$LIBDIR/gui/msgs/it.msg"
+    source "$ROOTDIR/$LIBDIR/gui/msgs/pt.msg"
+    source "$ROOTDIR/$LIBDIR/gui/msgs/ru.msg"
+    
     puts "Reloaded all sources."
 }
