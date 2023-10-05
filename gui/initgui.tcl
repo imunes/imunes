@@ -101,7 +101,7 @@ namespace import -force ::msgcat::*
 
 set fp [open "$ROOTDIR/$LIBDIR/gui/setidioma.tcl" r 600]
 set file_data [read $fp]
-puts "$file_data"
+#puts "$file_data"
 close $fp
 
 set language "$file_data"
@@ -855,16 +855,16 @@ menu $m -tearoff 0
 
 	    set fh [open "$ROOTDIR/$LIBDIR/gui/selectTheme.tcl" w+]		
 	    set currentThemenew [lindex [split $currentTheme {_}] 0]
-	    puts -nonewline $fh "$currentThemenew"
+	    #puts -nonewline $fh "$currentThemenew"
 	    close $fh
 
 	    set fh [open "$ROOTDIR/$LIBDIR/gui/selectTheme.tcl" r 660]
 	    set file_data [read $fh]
-	    puts $file_data
+	    #puts $file_data
 	    close $fh
 		
-	    puts [set -command "ttk::style theme use $currentThemenew"]
-	    puts -nonewline [set -command [ttk::style theme use $currentThemenew]; redrawAll]
+	    #puts [set -command "ttk::style theme use $currentThemenew"]
+	    #puts -nonewline [set -command [ttk::style theme use $currentThemenew]; redrawAll]
             switch -exact -- $currentThemenew {
 	        black {
 		    set colorcanvas #2E3D44
@@ -1220,7 +1220,7 @@ menu .menubar.idiomas
 
 	set fh [open "$ROOTDIR/$LIBDIR/gui/setidioma.tcl" r]
 	set file_data [read $fh]
-	puts $file_data
+	#puts $file_data
 	close $fh
 
 	proc notification {} {
