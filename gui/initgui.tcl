@@ -99,18 +99,17 @@ namespace import -force ::msgcat::mcset
 namespace import -force ::msgcat::*
 
 set fp [open "$ROOTDIR/$LIBDIR/gui/setidioma.tcl" r 600]
-set file_data [read $fp]
-puts "$file_data"
+set language [read $fp]
 close $fp
 
-set language "$file_data"
 # FreeBSD 12.2, FreeBSD 13.0, FreeBSD-13.2
 if [file isfile "$ROOTDIR/$LIBDIR/gui/msgs/${language}.msg" ] {
 	source "$ROOTDIR/$LIBDIR/gui/msgs/${language}.msg"
 	::msgcat::mclocale "$language"
 	::msgcat::mcload [file join [file dirname [info script]] msgs]
 } else {
-	#puts "No file exist in $ROOTDIR/$LIBDIR/gui/msgs/${language}.msg"
+	set language "en"
+	puts "File $ROOTDIR/$LIBDIR/gui/msgs/${language}.msg does not exist, defaulting to $language"
 }
 set newlink ""
 set selectbox ""
@@ -261,7 +260,7 @@ menu .menubar
 .menubar add cascade -label [mc "Events"] -underline 1 -menu .menubar.events
 .menubar add cascade -label [mc "Experiment"] -underline 1 -menu .menubar.experiment
 .menubar add cascade -label [mc "Help"] -underline 0 -menu .menubar.help
-.menubar add cascade -label [mc "Idiom"] -underline 0 -menu .menubar.idiom
+.menubar add cascade -label [mc "Language"] -underline 0 -menu .menubar.idiomas
 
 
 #
@@ -1070,30 +1069,19 @@ menu .menubar.idiomas
 	puts -nonewline $fh "$setIdiomanew"
 	close $fh
 
-	set fh [open "$ROOTDIR/$LIBDIR/gui/setidioma.tcl" r]
-	set file_data [read $fh]
-	puts $file_data
-	close $fh
-
 	proc notification {} {
 	    global answer
 	    global response
-	    puts [set answer [tk_messageBox -message [mc "Notification"] \
-		-title [mc "Notification"] \
-		-icon question -type yesno \
-		-detail [mc "Do you want to restart IMUNES to make the language change effective?"]]]
+	    set answer [tk_messageBox -message [mc "Notification"] \
+			-title [mc "Notification"] \
+			-icon question -type yesno \
+			-detail [mc "Restart IMUNES manually to make the language change effective. Close IMUNES?"]]
+
 	    if { $answer == "yes" } {
-		puts [set response [tk_messageBox -message [mc "Press Yes to confirm. IMUNES will close."] \
-		    -type yesno -title [mc "Notification"] -icon info]]
-	    } else {
-	        puts -nonewline [set -command [ return ]]
-	    } 
-	    if { $response == "yes"} {
-	        puts -nonewline [set -command [ exit ]]
-	    } else {
-	        puts -nonewline [set -command [ return ]]
-	    }
+			exit
+		}
 	}    
+
 	switch -exact -- $setIdiomanew {
 	    de {
 	        puts -nonewline [set -command [ ::notification ]]
