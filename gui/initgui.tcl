@@ -214,7 +214,7 @@ if { $iconlist != "" } {
     eval wm iconphoto . -default $iconlist
 }
 
-ttk::style theme use imunes
+#ttk::style theme use imunes
 
 ttk::panedwindow .panwin -orient horizontal
 ttk::frame .panwin.f1
@@ -226,6 +226,11 @@ pack .panwin -fill both -expand 1
 pack propagate .panwin.f2 0
 
 set mf .panwin.f1
+
+proc redrawMenu {} {
+try {
+    destroy .menubar
+}
 
 menu .menubar
 . configure -menu .menubar
@@ -765,18 +770,21 @@ bind . "-" "zoom down"
 .menubar.view add separator
 set m .menubar.view.themes
 menu $m -tearoff 0
-set currentTheme imunes
 .menubar.view add cascade -label "Themes" -menu $m
     $m add radiobutton -label "alt" -variable currentTheme \
-	-value alt -command "ttk::style theme use alt"
+	-value alt -command "switchTheme"
     $m add radiobutton -label "classic" -variable currentTheme\
-	-value classic -command "ttk::style theme use classic"
+	-value classic -command "switchTheme"
     $m add radiobutton -label "default" -variable currentTheme\
-	-value default -command "ttk::style theme use default"
+	-value default -command "switchTheme"
     $m add radiobutton -label "clam" -variable currentTheme\
-	-value clam -command "ttk::style theme use clam"
+	-value clam -command "switchTheme"
     $m add radiobutton -label "imunes" -variable currentTheme\
-	-value imunes -command "ttk::style theme use imunes"
+	-value imunes -command "switchTheme"
+    $m add radiobutton -label "imunesdark" -variable currentTheme\
+	-value imunesdark -command "switchTheme"
+    $m add radiobutton -label "black" -variable currentTheme\
+	-value black -command "switchTheme"
 
 
 #
@@ -934,7 +942,10 @@ menu .menubar.help -tearoff 0
     bind $mainFrame.github <Leave> "%W configure -foreground black; \
 	$mainFrame config -cursor arrow"
 }
+}
 
+set currentTheme imunes
+switchTheme "init"
 
 #
 # Left-side toolbar

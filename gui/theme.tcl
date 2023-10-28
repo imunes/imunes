@@ -52,6 +52,9 @@ namespace eval ttk::theme::imunes {
 	-lightest 	"#ffffff"
 	-selectbg	"#4a6984"
 	-selectfg	"#ffffff"
+	-menubg		"#d9d9d9"
+	-menuabg	"#ececec"
+	-menufg		"#000000"
     }
 
     ttk::style theme settings imunes {
@@ -91,7 +94,7 @@ namespace eval ttk::theme::imunes {
 	    ;
 
 	ttk::style configure Toolbutton \
-	    -anchor center -padding 1 -relief flat -padx 2 -width 90 -height 90
+	    -anchor center -padding 1 -relief flat -padx 2
 	ttk::style map Toolbutton \
 	    -relief [list \
 		    disabled flat \
@@ -110,7 +113,7 @@ namespace eval ttk::theme::imunes {
 	    -indicatorbackground "#ffffff" \
 	    -indicatormargin {1 1 4 1} \
 	    -padding 2 ;
-	ttk::style configure Radiobutton \
+	ttk::style configure TRadiobutton \
 	    -indicatorbackground "#ffffff" \
 	    -indicatormargin {1 1 4 1} \
 	    -padding 2 ;
@@ -120,7 +123,7 @@ namespace eval ttk::theme::imunes {
 	    [list  disabled $colors(-frame)  pressed $colors(-frame)]
 
 	ttk::style configure TMenubutton \
-	    -width -11 -padding 5 -relief raised
+	    -width -11 -padding 55 -relief raised
 
 	ttk::style configure TEntry -padding 1 -insertwidth 1
 	ttk::style map TEntry \
@@ -167,11 +170,6 @@ namespace eval ttk::theme::imunes {
 	ttk::style configure TProgressbar -background $colors(-frame)
 
 	ttk::style configure Sash -sashthickness 6 -gripcount 10
-	
-	## estilo background
-	ttk::style configure Tmenu \
-	    -background "#343434"
-	    
     }
 }
 
@@ -219,6 +217,9 @@ namespace eval ttk::theme::imunesdark {
     -bg.bg           "#33393b"
     -fg.fg           "#ffffff"
     -graphics.color  "#215d9c"
+	-menubg		"#343434"
+	-menuabg	"#474747"
+	-menufg		"#a5a5a5"
     }
 	##0F7FF2
 	# #1DCAFF
@@ -376,6 +377,9 @@ namespace eval ttk::theme::black {
       -lightest   "#ffffff"
       -selectbg   "#4a6984"
       -selectfg   "#ffffff"
+	-menubg		"#343434"
+	-menuabg	"#474747"
+	-menufg		"#a5a5a5"
       }
 
   ttk::style theme create black -parent clam -settings {
@@ -454,37 +458,36 @@ namespace eval ttk::theme::black {
   }
 }
 
-# A few tricks for Tablelist.
+# call with any arguments to skip redraw of canvas
+proc switchTheme { args } {
+	global currentTheme
 
-namespace eval ::tablelist:: {
+	# set default menu colors to default theme, change if any of the dark
+	# themes is selected
+	option clear
+	switch -exact -- $currentTheme {
+		"alt" -
+		"classic" -
+		"default" -
+		"clam" -
+		"imunes" {
+		    option add *font imnDefaultFont
+		}
+		"imunesdark" -
+		"black" {
+		    option add *font imnDefaultFontdark
+		    option add *Menu.background \
+		      [set ::ttk::theme::${currentTheme}::colors(-menubg)]
+		    option add *Menu.activeBackground \
+		      [set ::ttk::theme::${currentTheme}::colors(-menuabg)]
+		    option add *Menu.foreground \
+		      [set ::ttk::theme::${currentTheme}::colors(-menufg)]
+		}
+	}
 
-  proc blackTheme {} {
-    variable themeDefaults
-
-    array set colors [array get ttk::theme::black::colors]
-
-    array set themeDefaults [list \
-      -background      "#000000" \
-      -foreground      "#ffffff" \
-      -disabledforeground $colors(-disabledfg) \
-      -stripebackground      "#191919" \
-      -selectbackground      "#4a6984" \
-      -selectforeground      "#8b8b00" \
-      -selectborderwidth 0 \
-      -font        TkTextFont \
-      -labelbackground    $colors(-frame) \
-      -labeldisabledBg    "#dcdad5" \
-      -labelactiveBg    "#eeebe7" \
-      -labelpressedBg    "#eeebe7" \
-      -labelforeground    #ffffff \
-      -labeldisabledFg    "#999999" \
-      -labelactiveFg    #ffffff \
-      -labelpressedFg    #ffffff \
-      -labelfont    TkDefaultFont \
-      -labelborderwidth    2 \
-      -labelpady    1 \
-      -arrowcolor    "" \
-      -arrowstyle    sunken10x9 \
-      ]
-  }
+	ttk::style theme use $currentTheme
+	redrawMenu
+	if { [llength $args] == 0 } {
+	    redrawAll
+	}
 }
