@@ -569,6 +569,9 @@ proc startIfcsNode { node } {
 	} else {
 	    set cmds "$cmds\n nsenter -n -t $nodeNs ip link set dev $tmpifc mtu $mtu"
 	}
+	if {[getIfcNatState $node $ifc] == "on"} {
+	    set cmds "$cmds\n nsenter -n -t $nodeNs iptables -t nat -A POSTROUTING -o $ifc -j MASQUERADE"
+	}
     }
     exec sh << $cmds
 }

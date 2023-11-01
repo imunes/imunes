@@ -1303,6 +1303,10 @@ proc startIfcsNode { node } {
 	} else {
 	    set cmds "$cmds\n jexec $node_id ifconfig $ifc mtu $mtu"
 	}
+	if {[getIfcNatState $node $ifc] == "on"} {
+	    set cmds "$cmds\n jexec $node_id ipfw nat 1 config if $ifc"
+	    set cmds "$cmds\n jexec $node_id ipfw add 100 nat 1 ip from any to any via $ifc"
+	}
     }
     exec sh << $cmds
 }
