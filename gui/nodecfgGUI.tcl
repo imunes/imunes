@@ -219,7 +219,7 @@ proc configGUI_addTree { wi node } {
 
     $wi.panwin.f1.tree column #0 -width 130 -minwidth 70 -stretch 0
     foreach column $treecolumns {
-	if { [lindex $column 0] == "OperState" || [lindex $column 0] == "MTU" } {
+	if { [lindex $column 0] in "OperState NatState MTU" } {
 	    $wi.panwin.f1.tree column [lindex $column 0] -width 45 \
 		-minwidth 2 -anchor center -stretch 0
 	} elseif { [lindex $column 0] == "MACaddr" } {
@@ -261,7 +261,7 @@ proc configGUI_addTree { wi node } {
 	foreach ifc [lsort -dictionary [logIfcList $node]] {
 	    $wi.panwin.f1.tree insert logIfcFrame end -id $ifc \
 		-text "$ifc" -tags $ifc
-	    foreach column { "OperState" "MTU" "IPv4addr" "IPv6addr"} {
+	    foreach column { "OperState" "NatState" "MTU" "IPv4addr" "IPv6addr"} {
 		$wi.panwin.f1.tree set $ifc [lindex $column 0] \
 		    [getIfc[lindex $column 0] $node $ifc]
 	    }
@@ -443,7 +443,7 @@ proc configGUI_refreshIfcsTree { wi node } {
 	foreach ifc [lsort -dictionary [logIfcList $node]] {
 	    $wi insert logIfcFrame end -id $ifc \
 		-text "$ifc" -tags $ifc
-	    foreach column { "OperState" "MTU" "IPv4addr" "IPv6addr"} {
+	    foreach column { "OperState" "NatState" "MTU" "IPv4addr" "IPv6addr"} {
 		$wi set $ifc [lindex $column 0] \
 		    [getIfc[lindex $column 0] $node $ifc]
 	    }
@@ -1037,6 +1037,10 @@ proc configGUI_ifcEssentials { wi node ifc } {
     set ifoper$ifc [getIfcOperState $node $ifc]
     ttk::checkbutton $wi.if$ifc.label.state -text "up" \
 	-variable ifoper$ifc -padding 4 -onvalue "up" -offvalue "down"
+    global ifnat$ifc
+    set ifnat$ifc [getIfcNatState $node $ifc]
+    ttk::checkbutton $wi.if$ifc.label.nat -text "nat" \
+	-variable ifnat$ifc -padding 4 -onvalue "on" -offvalue "off"
     ttk::label $wi.if$ifc.label.mtul -text "MTU" -anchor e -width 5 -padding 2
     ttk::spinbox $wi.if$ifc.label.mtuv -width 5 \
 	-validate focus -invalidcommand "focusAndFlash %W"
@@ -1046,7 +1050,8 @@ proc configGUI_ifcEssentials { wi node ifc } {
 	-from 256 -to 9018 -increment 2 \
 	-validatecommand {checkIntRange %P 256 9018}
 
-    pack $wi.if$ifc.label.state \
+    pack $wi.if$ifc.label.state -side left -anchor w -padx 5
+    pack $wi.if$ifc.label.nat \
 	$wi.if$ifc.label.mtul -side left -anchor w
     pack $wi.if$ifc.label.mtuv -side left -anchor w -padx 1
 }
@@ -1853,6 +1858,15 @@ proc configGUI_ifcEssentialsApply { wi node ifc } {
     if { $ifoperstate != $oldifoperstate } {
 	if {$apply == 1} {
 	    setIfcOperState $node $ifc $ifoperstate
+	}
+	set changed 1
+    }
+    global [subst ifnat$ifc]
+    set ifnatstate [subst $[subst ifnat$ifc]]
+    set oldifnatstate [getIfcNatState $node $ifc]
+    if { $ifnatstate != $oldifnatstate } {
+	if {$apply == 1} {
+	    setIfcNatState $node $ifc $ifnatstate
 	}
 	set changed 1
     }

@@ -315,13 +315,15 @@ proc updateIfcLabel { lnode1 lnode2 } {
     if { $showIfIPv6addrs && $ifipv6addr != "" } {
 	lappend labelstr "$ifipv6addr"
     }
+    set str ""
     if { [getIfcOperState $lnode1 $ifc] == "down" } {
 	set str "*"
-    } else {
-	set str ""
+    }
+    if { [getIfcNatState $lnode1 $ifc] == "on" } {
+	set str "${str}NAT-"
     }
     foreach elem $labelstr {
-	if {$str == "" || $str == "*"} {
+	if {$str in "{} * NAT- *NAT-" } {
 	    set str "$str[set elem]"
 	} else {
 	    set str "$str\r[set elem]"

@@ -91,6 +91,12 @@
 # setIfcOperState { node_id ifc state }
 #	Sets the new interface state. Implicit default is "up".
 #
+# getIfcNatState { node_id ifc }
+#	Returns "on" or "off".
+#
+# setIfcNatState { node_id ifc state }
+#	Sets the new interface NAT state. Implicit default is "off".
+#
 # getIfcQDisc { node_id ifc }
 #	Returns "FIFO", "WFQ" or "DRR".
 #
@@ -660,6 +666,54 @@ proc setIfcOperState { node ifc state } {
     foreach line [netconfFetchSection $node "interface $ifc"] {
 	if { [lindex $line 0] != "shutdown" && \
 	    [lrange $line 0 1] != "no shutdown" } {
+	    lappend ifcfg $line
+	}
+    }
+    netconfInsertSection $node $ifcfg
+}
+
+#****f* nodecfg.tcl/getIfcNatState
+# NAME
+#   getIfcNatState -- get interface NAT state
+# SYNOPSIS
+#   set state [getIfcNatState $node $ifc]
+# FUNCTION
+#   Returns the NAT state of the specified interface. It can be "on" or "off".
+# INPUTS
+#   * node -- node id
+#   * ifc -- the interface that is used for NAT
+# RESULT
+#   * state -- the NAT state of the interface, can be either "on" or "off"
+#****
+proc getIfcNatState { node ifc } {
+    foreach line [netconfFetchSection $node "interface $ifc"] {
+	if { [lindex $line 0] == "nat" } {
+	    return "on"
+	}
+    }
+    return "off"
+}
+
+#****f* nodecfg.tcl/setIfcNatState
+# NAME
+#   setIfcNatState -- set interface NAT state
+# SYNOPSIS
+#   setIfcNatState $node $ifc
+# FUNCTION
+#   Sets the NAT state of the specified interface. It can be set to "on" or "off"
+# INPUTS
+#   * node -- node id
+#   * ifc -- interface
+#   * state -- new NAT state of the interface, can be either "on" or "off"
+#****
+proc setIfcNatState { node ifc state } {
+    set ifcfg [list "interface $ifc"]
+    if { $state == "on" } {
+	lappend ifcfg " nat"
+    }
+    foreach line [netconfFetchSection $node "interface $ifc"] {
+	if { [lindex $line 0] != "nat" && \
+	    [lrange $line 0 1] != "no nat" } {
 	    lappend ifcfg $line
 	}
     }
