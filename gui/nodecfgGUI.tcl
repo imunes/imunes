@@ -1035,10 +1035,8 @@ proc configGUI_ifcEssentials { wi node ifc } {
     lappend guielements "configGUI_ifcEssentials $ifc"
     global ifoper$ifc
     set ifoper$ifc [getIfcOperState $node $ifc]
-    ttk::radiobutton $wi.if$ifc.label.up -text "up" \
-	-variable ifoper$ifc -value up -padding 4
-    ttk::radiobutton $wi.if$ifc.label.down -text "down" \
-	-variable ifoper$ifc -value down -padding 4
+    ttk::checkbutton $wi.if$ifc.label.state -text "up" \
+	-variable ifoper$ifc -padding 4 -onvalue "up" -offvalue "down"
     ttk::label $wi.if$ifc.label.mtul -text "MTU" -anchor e -width 5 -padding 2
     ttk::spinbox $wi.if$ifc.label.mtuv -width 5 \
 	-validate focus -invalidcommand "focusAndFlash %W"
@@ -1048,8 +1046,7 @@ proc configGUI_ifcEssentials { wi node ifc } {
 	-from 256 -to 9018 -increment 2 \
 	-validatecommand {checkIntRange %P 256 9018}
 
-    pack $wi.if$ifc.label.up -side left -anchor w -padx 5
-    pack $wi.if$ifc.label.down \
+    pack $wi.if$ifc.label.state \
 	$wi.if$ifc.label.mtul -side left -anchor w
     pack $wi.if$ifc.label.mtuv -side left -anchor w -padx 1
 }
