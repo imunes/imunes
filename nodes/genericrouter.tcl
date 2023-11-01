@@ -64,6 +64,10 @@ proc $MODULE.confNewIfc { node ifc } {
     autoIPv4addr $node $ifc
     autoIPv6addr $node $ifc
     autoMACaddr $node $ifc
+
+    if { [typemodel [peerByIfc $node $ifc]] == "extnat" } {
+	setIfcNatState $node $ifc "on"
+    }
 }
 
 #****f* genericrouter.tcl/router.confNewNode

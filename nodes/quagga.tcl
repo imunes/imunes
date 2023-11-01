@@ -113,6 +113,14 @@ proc $MODULE.cfggen { node } {
 	if { [getIfcOperState $node $ifc] == "down" } {
 	    lappend cfg " shutdown"
 	}
+	if { [getIfcNatState $node $ifc] == "on" } {
+	    set peer [logicalPeerByIfc $node $ifc]
+	    set peerIfc [ifcByLogicalPeer $peer $node]
+	    if { [typemodel $peer] == "extnat" } {
+		set nexthop [lindex [split [getIfcIPv4addrs $peer $peerIfc] "/"] 0]
+		lappend cfg " ip route 0.0.0.0/0 $nexthop"
+	    }
+	}
 	lappend cfg "!"
     }
 

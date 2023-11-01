@@ -977,7 +977,7 @@ proc configGUI_nodeName { wi node label } {
     ttk::frame $wi.name -borderwidth 6
     ttk::label $wi.name.txt -text $label
 
-    if { [typemodel $node] == "rj45" } {
+    if { [typemodel $node] in "rj45 extnat" } {
 	ttk::combobox $wi.name.nodename -width 14 -textvariable extIfc$node
 	set ifcs [getExtIfcs]
 	$wi.name.nodename configure -values [concat UNASSIGNED $ifcs]

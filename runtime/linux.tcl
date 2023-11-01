@@ -468,10 +468,10 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 
     switch -exact "[[typemodel $lnode1].virtlayer]-[[typemodel $lnode2].virtlayer]" {
 	NETGRAPH-NETGRAPH {
-	    if { [nodeType $lnode1] == "ext" } {
+	    if { [nodeType $lnode1] in "ext extnat" } {
 		catch "exec ovs-vsctl add-br $eid-$lnode1"
 	    }
-	    if { [nodeType $lnode2] == "ext" } {
+	    if { [nodeType $lnode2] in "ext extnat" } {
 		catch "exec ovs-vsctl add-br $eid-$lnode2"
 	    }
 	    # generate interface names
@@ -1196,6 +1196,19 @@ proc taygaDestroy { eid node } {
 proc extInstantiate { node } {
 }
 
+proc setupExtNat { eid node ifc } {
+    set extIfc [getNodeName $node]
+    set peer [peerByIfc $node $ifc]
+    set peerIfc [ifcByLogicalPeer $peer $node]
+    set peerIp [lindex [split [getIfcIPv4addrs $peer $peerIfc] "/"] 0]
+
+    set cmds "iptables -t nat -A POSTROUTING -o $extIfc -j MASQUERADE -s $peerIp"
+    set cmds "$cmds\n iptables -A FORWARD -i $eid-$node -o $extIfc -j ACCEPT"
+    set cmds "$cmds\n iptables -A FORWARD -o $eid-$node -j ACCEPT"
+
+    exec sh << $cmds &
+}
+
 proc startExternalIfc { eid node } {
     set cmds ""
     set ifc [lindex [ifcList $node] 0]
@@ -1231,6 +1244,19 @@ proc startExternalIfc { eid node } {
 
 proc  stopExternalIfc { eid node } {
     exec ip l set $eid-$node down
+}
+
+proc unsetupExtNat { eid node ifc } {
+    set extIfc [getNodeName $node]
+    set peer [peerByIfc $node $ifc]
+    set peerIfc [ifcByLogicalPeer $peer $node]
+    set peerIp [lindex [split [getIfcIPv4addrs $peer $peerIfc] "/"] 0]
+
+    set cmds "iptables -t nat -D POSTROUTING -o $extIfc -j MASQUERADE -s $peerIp"
+    set cmds "$cmds\n iptables -D FORWARD -i $eid-$node -o $extIfc -j ACCEPT"
+    set cmds "$cmds\n iptables -D FORWARD -o $eid-$node -j ACCEPT"
+
+    exec sh << $cmds &
 }
 
 proc destroyExtInterface { eid node } {
