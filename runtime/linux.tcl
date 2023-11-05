@@ -1198,11 +1198,11 @@ proc extInstantiate { node } {
 
 proc setupExtNat { eid node ifc } {
     set extIfc [getNodeName $node]
-    set peer [peerByIfc $node $ifc]
-    set peerIfc [ifcByLogicalPeer $peer $node]
-    set peerIp [lindex [split [getIfcIPv4addrs $peer $peerIfc] "/"] 0]
+    set extIp [getIfcIPv4addrs $node $ifc]
+    set prefixLen [lindex [split $extIp "/"] 1]
+    set subnet "[ip::prefix $extIp]/$prefixLen"
 
-    set cmds "iptables -t nat -A POSTROUTING -o $extIfc -j MASQUERADE -s $peerIp"
+    set cmds "iptables -t nat -A POSTROUTING -o $extIfc -j MASQUERADE -s $subnet"
     set cmds "$cmds\n iptables -A FORWARD -i $eid-$node -o $extIfc -j ACCEPT"
     set cmds "$cmds\n iptables -A FORWARD -o $eid-$node -j ACCEPT"
 
@@ -1248,11 +1248,11 @@ proc  stopExternalIfc { eid node } {
 
 proc unsetupExtNat { eid node ifc } {
     set extIfc [getNodeName $node]
-    set peer [peerByIfc $node $ifc]
-    set peerIfc [ifcByLogicalPeer $peer $node]
-    set peerIp [lindex [split [getIfcIPv4addrs $peer $peerIfc] "/"] 0]
+    set extIp [getIfcIPv4addrs $node $ifc]
+    set prefixLen [lindex [split $extIp "/"] 1]
+    set subnet "[ip::prefix $extIp]/$prefixLen"
 
-    set cmds "iptables -t nat -D POSTROUTING -o $extIfc -j MASQUERADE -s $peerIp"
+    set cmds "iptables -t nat -D POSTROUTING -o $extIfc -j MASQUERADE -s $subnet"
     set cmds "$cmds\n iptables -D FORWARD -i $eid-$node -o $extIfc -j ACCEPT"
     set cmds "$cmds\n iptables -D FORWARD -o $eid-$node -j ACCEPT"
 
