@@ -1304,8 +1304,7 @@ proc startIfcsNode { node } {
 	    set cmds "$cmds\n jexec $node_id ifconfig $ifc mtu $mtu"
 	}
 	if {[getIfcNatState $node $ifc] == "on"} {
-	    set cmds "$cmds\n jexec $node_id ipfw nat 1 config if $ifc"
-	    set cmds "$cmds\n jexec $node_id ipfw add 100 nat 1 ip from any to any via $ifc"
+	    set cmds "$cmds\n jexec $node_id sh -c 'echo \"map $ifc 0/0 -> 0/32\" | ipnat -f -'"
 	}
     }
     exec sh << $cmds
@@ -1555,6 +1554,8 @@ proc prepareDevfs {} {
 	exec devfs rule add path zero unhide
 	exec devfs rule add path random unhide
 	exec devfs rule add path urandom unhide
+	exec devfs rule add path ipl unhide
+	exec devfs rule add path ipnat unhide
 	exec devfs rule add path crypto unhide
 	exec devfs rule add path ptyp* unhide
 	exec devfs rule add path ptyq* unhide
@@ -2102,6 +2103,17 @@ proc extInstantiate { node } {
     createNodePhysIfcs $node
 }
 
+proc setupExtNat { eid node ifc } {
+    set extIfc [getNodeName $node]
+    set extIp [getIfcIPv4addrs $node $ifc]
+    set prefixLen [lindex [split $extIp "/"] 1]
+    set subnet "[ip::prefix $extIp]/$prefixLen"
+
+    set cmds "echo 'map $extIfc $subnet -> 0/32' | ipnat -f -"
+
+    exec sh << $cmds &
+}
+
 proc startExternalIfc { eid node } {
     set cmds ""
     set ifc [lindex [ifcList $node] 0]
@@ -2128,4 +2140,15 @@ proc startExternalIfc { eid node } {
 
 proc stopExternalIfc { eid node } {
     exec ifconfig $eid-$node down
+}
+
+proc unsetupExtNat { eid node ifc } {
+    set extIfc [getNodeName $node]
+    set extIp [getIfcIPv4addrs $node $ifc]
+    set prefixLen [lindex [split $extIp "/"] 1]
+    set subnet "[ip::prefix $extIp]/$prefixLen"
+
+    set cmds "echo 'map $extIfc $subnet -> 0/32' | ipnat -f - -pr"
+
+    exec sh << $cmds &
 }
