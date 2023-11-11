@@ -1,7 +1,5 @@
 function __fish_vlink_links
-	for i in /var/run/imunes/*/links
-		cut -f1 -d' ' $i
-	end
+    vlink -l | sed -r 's/.*\((.*)\)/\1/' | tr ' ' '\n'
 end
 
 set -l flags_exclusive   l s r bw b BER B dly d dup D e eid - help ?

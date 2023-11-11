@@ -1,7 +1,5 @@
 function __fish_himage_nodes
-	for i in (docker ps | grep imunes | cut -f 1 -d' ')
-		docker inspect $i -f {{.Config.Hostname}}
-	end
+	himage -ln | sed -r 's/.*\((.*)\)/\1/' | tr ' ' '\n'
 end
 
 set -l flags_exclusive   b nt v n e i l ln d
