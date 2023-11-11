@@ -12,8 +12,11 @@ proc redrawAll {} {
     upvar 0 ::cf::[set ::curcfg]::annotation_list annotation_list
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     upvar 0 ::cf::[set ::curcfg]::zoom zoom
+
+    global colorCanvas colorFrame
     global background sizex sizey grid
     global showBkgImage showAnnotations showGrid bkgImage
+
     .bottom.zoom config -text "zoom [expr {int($zoom * 100)}]%"
     set e_sizex [expr {int($sizex * $zoom)}]
     set e_sizey [expr {int($sizey * $zoom)}]
@@ -22,6 +25,7 @@ proc redrawAll {} {
 	"-$border -$border [expr {$e_sizex + $border}] \
 	[expr {$e_sizey + $border}]"
 
+    .panwin.f1.hframe.t configure -background $colorFrame
     .panwin.f1.c delete all
 
     set canvasBkgImage [getCanvasBkg $curcanvas]
@@ -36,7 +40,7 @@ proc redrawAll {} {
 	}
     } else {
 	set background [.panwin.f1.c create rectangle 0 0 $e_sizex $e_sizey \
-	    -fill white -tags "background"]
+	    -fill $colorCanvas -tags "background"]
     }
 
     if { $showAnnotations == 1 } {
@@ -115,6 +119,7 @@ proc drawNode { node } {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global showNodeLabels pseudo
+    global colorNameNode
 
     set type [nodeType $node]
     set coords [getNodeCoords $node]
@@ -153,7 +158,9 @@ proc drawNode { node } {
 		set l [format "%s %s" $l [getIfcIPv4addr $node $ifc]]
 	    }
 	}
-	set label [.panwin.f1.c create text $x $y -fill blue \
+	set zoomtext "[expr {int($zoom * 9)}]"
+	set sizetext "$zoomtext"
+	set label [.panwin.f1.c create text $x $y -fill blue -font "-size $sizetext" \
 	    -text "$l" \
 	    -tags "nodelabel $node"]
     } else {
@@ -162,8 +169,7 @@ proc drawNode { node } {
 	set ifc [ifcByPeer $pnode [getNodeMirror $node]]
 	if { $pcanvas != $curcanvas } {
 	    set label [.panwin.f1.c create text $x $y -fill blue \
-		-text "[getNodeName $pnode]:$ifc
-@[getCanvasName $pcanvas]" \
+		-text "[getNodeName $pnode]:$ifc@[getCanvasName $pcanvas]" \
 		-tags "nodelabel $node" -justify center]
 	} else {
 	    set label [.panwin.f1.c create text $x $y -fill blue \
@@ -207,7 +213,7 @@ proc drawLink { link } {
     if { [getLinkMirror $link] != "" } {
 	set newlink [.panwin.f1.c create line 0 0 0 0 \
 	    -fill [getLinkColor $link] -width $lwidth \
-	    -tags "link $link $lnode1 $lnode2" -arrow both]
+	    -tags "link $link $lnode1 $lnode2"]
     } else {
 	set newlink [.panwin.f1.c create line 0 0 0 0 \
 	    -fill [getLinkColor $link] -width $lwidth \
@@ -218,9 +224,10 @@ proc drawLink { link } {
     if { $invisible == 1 && [getLinkMirror $link] != "" } {
 	.panwin.f1.c itemconfigure $link -state hidden
     }
+    global colorBgLink
     .panwin.f1.c raise $newlink background
     set newlink [.panwin.f1.c create line 0 0 0 0 \
-	-fill white -width [expr {$lwidth + 4}] \
+	-fill $colorBgLink -width [expr {$lwidth + 1}] \
 	-tags "link $link $lnode1 $lnode2"]
     .panwin.f1.c raise $newlink background
 
@@ -297,6 +304,7 @@ proc calcAngle { link } {
 #****
 proc updateIfcLabel { lnode1 lnode2 } {
     global showIfNames showIfIPaddrs showIfIPv6addrs
+    global colorIPIfc
 
     set link [lindex [.panwin.f1.c gettags "link && $lnode1 && $lnode2"] 1]
     set ifc [ifcByPeer $lnode1 $lnode2]
@@ -327,8 +335,11 @@ proc updateIfcLabel { lnode1 lnode2 } {
 	    set str "$str\r[set elem]"
 	}
     }
-    .panwin.f1.c itemconfigure "interface && $lnode1 && $link" \
+    #.panwin.f1.c itemconfigure "interface && $lnode1 && $link" \
 	-text $str
+	###set $colorIPIfc black
+	.panwin.f1.c itemconfigure "interface && $lnode1 && $link" \
+		-fill red -text $str -font "-size $sizetext"
 }
 
 #****f* editor.tcl/updateLinkLabel

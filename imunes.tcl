@@ -248,6 +248,9 @@ if { [string match -nocase "*imagemagick*" $imInfo] != 1} {
 
 set runtimeDir "/var/run/imunes"
 
+# modifiable in .imunesrc
+set currentTheme imunes
+
 #
 # Read config files, the first one found: .imunesrc, $HOME/.imunesrc
 #

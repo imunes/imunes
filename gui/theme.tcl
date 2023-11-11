@@ -55,6 +55,7 @@ namespace eval ttk::theme::imunes {
 	-menubg		"#d9d9d9"
 	-menuabg	"#ececec"
 	-menufg		"#000000"
+	-canvas "#ffffff"
     }
 
     ttk::style theme settings imunes {
@@ -170,6 +171,9 @@ namespace eval ttk::theme::imunes {
 	ttk::style configure TProgressbar -background $colors(-frame)
 
 	ttk::style configure Sash -sashthickness 6 -gripcount 10
+
+	ttk::style configure TLabel -foreground $colors(-menufg)
+
     }
 }
 
@@ -200,8 +204,7 @@ namespace eval ttk::theme::imunesdark {
 	-selectbg	"#4a6984"
 	-selectfg	"#1b1f20"
 	-menu		"#343434"
-	-canvas		"#444444"
-	-colorcanvas "#bfc6da"
+	-canvas		"#2e3d44"
 	-text		"#ffffff"
 	-otrocolor	"#0F7FF2"
 	-otrocolor1	"#FF32FF"
@@ -236,7 +239,7 @@ namespace eval ttk::theme::imunesdark {
 	    -selectforeground $colors(-selectfg) \
 	    -selectborderwidth 0 \
 	    -font imnDefaultFontdark \
-	    -colorcanvas $colors(-colorcanvas) \
+	    -canvas $colors(-canvas) \
 	    ;
 
 	ttk::style map "." \
@@ -352,6 +355,7 @@ namespace eval ttk::theme::imunesdark {
         -background [list active $colors(-lighter)] \
         -foreground [list disabled $colors(-disabledfg)]
     
+	ttk::style configure TLabel -foreground $colors(-menufg)
 }
 
 }
@@ -359,13 +363,6 @@ namespace eval ttk::theme::imunesdark {
 ########### END NEW THEME IMUNESDARK ##################
 
 namespace eval ttk::theme::black {
-  variable version 0.0.1
-  variable dir [file dirname [info script]]
-
-  package provide ttk::theme::black $version
-
-  # NB: These colors must be in sync with the ones in black.rdb
-
   variable colors
   array set colors {
       -disabledfg "#a9a9a9"
@@ -377,9 +374,10 @@ namespace eval ttk::theme::black {
       -lightest   "#ffffff"
       -selectbg   "#4a6984"
       -selectfg   "#ffffff"
-	-menubg		"#343434"
-	-menuabg	"#474747"
-	-menufg		"#a5a5a5"
+	  -canvas	  "#222222"
+	  -menubg		"#343434"
+	  -menuabg	"#474747"
+	  -menufg		"#a5a5a5"
       }
 
   ttk::style theme create black -parent clam -settings {
@@ -455,15 +453,32 @@ namespace eval ttk::theme::black {
     ttk::style configure TreeCtrl \
         -background gray30 -itembackground {gray60 gray50} \
         -itemfill #ffffff -itemaccentfill yellow
+
+	ttk::style configure TLabel -foreground $colors(-menufg)
   }
 }
 
 # call with any arguments to skip redraw of canvas
 proc switchTheme { args } {
 	global currentTheme
+	global colorCanvas colorFrame
 
 	# set default menu colors to default theme, change if any of the dark
 	# themes is selected
+	try {
+		set ::ttk::theme::${currentTheme}::colors(-canvas)
+	} on ok colorCanvas {
+	} on error {} {
+		set colorCanvas "#ffffff"
+	}
+
+	try {
+		set ::ttk::theme::${currentTheme}::colors(-menubg)
+	} on ok colorFrame {
+	} on error {} {
+		set colorFrame "#d9d9d9"
+	}
+
 	option clear
 	switch -exact -- $currentTheme {
 		"alt" -
@@ -486,6 +501,7 @@ proc switchTheme { args } {
 	}
 
 	ttk::style theme use $currentTheme
+
 	redrawMenu
 	if { [llength $args] == 0 } {
 	    redrawAll

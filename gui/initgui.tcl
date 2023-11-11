@@ -944,7 +944,6 @@ menu .menubar.help -tearoff 0
 }
 }
 
-set currentTheme imunes
 switchTheme "init"
 
 #
@@ -1043,7 +1042,7 @@ set c [canvas $mf.c -bd 0 -relief sunken -highlightthickness 0\
 	-yscrollcommand "$mf.vframe.scroll set"]
 
 canvas $mf.hframe.t -width 160 -height 18 -bd 0 -highlightthickness 0 \
-	-background #d9d9d9 \
+	-background $colorCanvas \
 	-xscrollcommand "$mf.hframe.ts set"
 bind $mf.hframe.t <1> {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
