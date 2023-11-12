@@ -942,6 +942,14 @@ menu .menubar.help -tearoff 0
     bind $mainFrame.github <Leave> "%W configure -foreground black; \
 	$mainFrame config -cursor arrow"
 }
+
+    global ROOTDIR LIBDIR
+    global debug
+
+    source "$ROOTDIR/$LIBDIR/gui/topogen.tcl"
+    if { $debug == 1 } {
+	source "$ROOTDIR/$LIBDIR/gui/debug.tcl"
+    }
 }
 
 switchTheme "init"

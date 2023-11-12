@@ -268,10 +268,6 @@ if {$execMode == "interactive"} {
 	safeSourceFile "$ROOTDIR/$LIBDIR/gui/$file.tcl"
     }
     source "$ROOTDIR/$LIBDIR/gui/initgui.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/topogen.tcl"
-    if { $debug == 1 } {
-	source "$ROOTDIR/$LIBDIR/gui/debug.tcl"
-    }
 
     newProject
     if { $argv != "" && [file exists $argv] } {
