@@ -1626,39 +1626,34 @@ proc configGUI_attachDockerToExt { wi node } {
     pack $w -fill both
 }
 
-#****f* nodecfgGUI.tcl/configGUI_dockerImage
+#****f* nodecfgGUI.tcl/configGUI_customImage
 # NAME
-#   configGUI_dockerImage -- configure GUI - use different Docker image
+#   configGUI_customImage -- configure GUI - use different image
 # SYNOPSIS
-#   configGUI_dockerImage $wi $node
+#   configGUI_customImage $wi $node
 # FUNCTION
-#   Creating module for using different docker images for  virtual nodes
-#   on Linux.
+#   Creating GUI module for using different images for virtual nodes
 # INPUTS
 #   * wi -- widget
 #   * node -- node id
 #****
-proc configGUI_dockerImage { wi node } {
+proc configGUI_customImage { wi node } {
     global VROOT_MASTER isOSlinux
-
-    if { !$isOSlinux } {
-	return
-    }
 
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global guielements
-    lappend guielements configGUI_dockerImage
+    lappend guielements configGUI_customImage
 
-    set docker_image [getNodeDockerImage $node]
+    set custom_image [getNodeCustomImage $node]
 
-    set w $wi.dockerImg
+    set w $wi.customImg
     ttk::frame $w -relief groove -borderwidth 2 -padding 2
-    ttk::label $w.label -text "Docker image:"
+    ttk::label $w.label -text "Custom image:"
 
     pack $w.label -side left -padx 2
 
     ttk::entry $w.img -width 40
-    $w.img insert 0 $docker_image
+    $w.img insert 0 $custom_image
     pack $w.img -side left -padx 7
 
     pack $w -fill both
@@ -2481,23 +2476,23 @@ proc configGUI_attachDockerToExtApply { wi node } {
     }
 }
 
-#****f* nodecfgGUI.tcl/configGUI_dockerImageApply
+#****f* nodecfgGUI.tcl/configGUI_customImageApply
 # NAME
-#   configGUI_dockerImageApply -- configure GUI - docker image apply
+#   configGUI_customImageApply -- configure GUI - custom image apply
 # SYNOPSIS
-#   configGUI_dockerImageApply $wi $node
+#   configGUI_customImageApply $wi $node
 # FUNCTION
-#   Saves changes in the module with different dockerImage
+#   Saves changes in the module with different customImage
 # INPUTS
 #   * wi -- widget
 #   * node -- node id
 #****
-proc configGUI_dockerImageApply { wi node } {
+proc configGUI_customImageApply { wi node } {
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    set docker_image [$wi.dockerImg.img get]
+    set custom_image [$wi.customImg.img get]
     if { $oper_mode == "edit"} {
-	if { [getNodeDockerImage $node] != $docker_image } {
-	    setNodeDockerImage $node $docker_image
+	if { [getNodeCustomImage $node] != $custom_image } {
+	    setNodeCustomImage $node $custom_image
 	    set changed 1
 	}
     }

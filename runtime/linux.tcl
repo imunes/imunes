@@ -257,7 +257,7 @@ proc allSnapshotsAvailable {} {
 
     set snapshots $VROOT_MASTER
     foreach node $node_list {
-	set img [getNodeDockerImage $node]
+	set img [getNodeCustomImage $node]
 	if {$img != ""} {
 	    lappend snapshots $img
 	}
@@ -419,7 +419,7 @@ proc createNodeContainer { node } {
     if { [getNodeDockerAttach $node] } {
 	set network "bridge"
     }
-    set vroot [getNodeDockerImage $node]
+    set vroot [getNodeCustomImage $node]
     if { $vroot == "" } {
         set vroot $VROOT_MASTER
     }

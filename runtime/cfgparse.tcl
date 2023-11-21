@@ -484,8 +484,12 @@ proc loadCfg { cfg } {
 			docker-attach {
 			    lappend $object "docker-attach $value"
 			}
+			# for backwards compatibility
 			docker-image {
-			    lappend $object "docker-image $value"
+			    lappend $object "custom-image $value"
+			}
+			custom-image {
+			    lappend $object "custom-image $value"
 			}
 			events {
 			    set cfg ""

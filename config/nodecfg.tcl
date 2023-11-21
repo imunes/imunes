@@ -288,6 +288,17 @@ proc typemodel { node } {
     }
 }
 
+proc getNodeDir { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set node_dir [getNodeCustomImage $node]
+    if { $node_dir == "" } {
+	set node_dir [getVrootDir]/$eid/$node
+    }
+
+    return $node_dir
+}
+
 #****f* nodecfg.tcl/getCustomEnabled
 # NAME
 #   getCustomEnabled -- get custom configuration enabled state 
@@ -3033,44 +3044,44 @@ proc setNodeServices { node services } {
     }
 }
 
-#****f* nodecfg.tcl/getNodeDockerImage
+#****f* nodecfg.tcl/getNodeCustomImage
 # NAME
-#   getNodeDockerImage -- get node docker image.
+#   getNodeCustomImage -- get node custom image.
 # SYNOPSIS
-#   set value [getNodeDockerImage $node]
+#   set value [getNodeCustomImage $node]
 # FUNCTION
-#   Returns node docker image setting.
+#   Returns node custom image setting.
 # INPUTS
 #   * node -- node id
 # RESULT
-#   * status -- docker image identifier
+#   * status -- custom image identifier
 #****
-proc getNodeDockerImage { node } {
+proc getNodeCustomImage { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
-    return [lindex [lsearch -inline [set $node] "docker-image *"] 1]
+    return [lindex [lsearch -inline [set $node] "custom-image *"] 1]
 }
 
-#****f* nodecfg.tcl/setNodeDockerImage
+#****f* nodecfg.tcl/setNodeCustomImage
 # NAME
-#   setNodeDockerImage -- set node docker image.
+#   setNodeCustomImage -- set node custom image.
 # SYNOPSIS
-#   setNodeDockerImage $node $img
+#   setNodeCustomImage $node $img
 # FUNCTION
-#   Sets node docker image.
+#   Sets node custom image.
 # INPUTS
 #   * node -- node id
 #   * img -- image identifier
 #****
-proc setNodeDockerImage { node img } {
+proc setNodeCustomImage { node img } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
-    set i [lsearch [set $node] "docker-image *"]
+    set i [lsearch [set $node] "custom-image *"]
     if { $i >= 0 } {
 	set $node [lreplace [set $node] $i $i]
     }
     if { $img != "" } {
-	lappend $node [list docker-image $img]
+	lappend $node [list custom-image $img]
     }
 }
 

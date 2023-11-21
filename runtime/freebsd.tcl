@@ -11,8 +11,8 @@
 #   * ext_path -- external path
 #****
 proc moveFileFromNode { node path ext_path } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-    set node_dir [getVrootDir]/$eid/$node
+    set node_dir [getNodeDir $node]
+
     catch {exec mv $node_dir$path $ext_path}
 }
 
@@ -29,8 +29,8 @@ proc moveFileFromNode { node path ext_path } {
 #   * data -- data to write
 #****
 proc writeDataToNodeFile { node path data } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-    set node_dir [getVrootDir]/$eid/$node
+    set node_dir [getNodeDir $node]
+
     writeDataToFile $node_dir/$path $data
 }
 
@@ -295,24 +295,38 @@ proc createIfc { eid type hook } {
 proc allSnapshotsAvailable {} {
     global execMode vroot_unionfs
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    set vroot "/var/imunes/vroot"
 
-    if {$vroot_unionfs} {
-	if { [file exist $vroot] } {
-	    return 1
-	} else {
-	    if {$execMode == "batch"} {
-		puts "The root filesystem for virtual nodes ($vroot) is missing.
-Run 'imunes -p' to create the root filesystem."
-	    } else {
-		tk_dialog .dialog1 "IMUNES error" \
-		"The root filesystem for virtual nodes ($vroot) is missing.
-Run 'imunes -p' to create the root filesystem." \
-		info 0 Dismiss
-	    }
-	    return 0
+    set snapshots {}
+    foreach node $node_list {
+	set img [getNodeCustomImage $node]
+	if {$img != ""} {
+	    lappend snapshots $img
 	}
     }
+
+    set snapshots [lsort -uniq $snapshots]
+    set missing 0
+
+    foreach vroot $snapshots {
+	if {$vroot_unionfs} {
+	    if { [file exist $vroot] } {
+		return 1
+	    } else {
+		if {$execMode == "batch"} {
+		    puts "The root filesystem for virtual nodes ($vroot) is missing.
+    Run 'imunes -p' to create the root filesystem."
+		} else {
+		    tk_dialog .dialog1 "IMUNES error" \
+		    "The root filesystem for virtual nodes ($vroot) is missing.
+    Run 'imunes -p' to create the root filesystem." \
+		    info 0 Dismiss
+		}
+		return 0
+	    }
+	}
+    }
+
+    return 1
 
     catch { exec zfs list -t snapshot | awk {{print $1}} | sed "1 d" } out
     set snapshotList [ split $out {
@@ -1145,8 +1159,7 @@ proc prepareFilesystemForNode { node } {
 #****
 proc createNodeContainer { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    set node_dir [getVrootDir]/$eid/$node
+    set node_dir [getNodeDir $node]
 
     pipesExec "jail -c name=$eid.$node path=$node_dir securelevel=1 \
 	host.hostname=\"[getNodeName $node]\" vnet persist" "hold"
@@ -1326,7 +1339,7 @@ proc runConfOnNode { node } {
     global viewcustomid vroot_unionfs
     global execMode
 
-    set node_dir [getVrootDir]/$eid/$node
+    set node_dir [getNodeDir $node]
     set node_id "$eid.$node"
 
     if { [getCustomEnabled $node] == true } {
