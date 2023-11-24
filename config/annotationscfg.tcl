@@ -195,10 +195,11 @@ proc getAnnotationFont { object } {
 #****
 proc setAnnotationCoords { target coords } {
     upvar 0 ::cf::[set ::curcfg]::$target $target
+    upvar 0 ::cf::[set ::curcfg]::zoom zoom
     set iconcoords "iconcoords"
 
     foreach c $coords {
-	set x [expr round($c)]
+	set x [expr int(round($c/$zoom))]
 	lappend roundcoords $x
     }
 

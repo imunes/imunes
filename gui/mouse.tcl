@@ -1478,7 +1478,7 @@ proc button1-release { c x y } {
 		}
 
 		set coordinates [$c coords [lindex [$c gettags $node] 1]]
-                set l [expr {[llength $coordinates]-1}]
+                set l [expr {[llength $coordinates]-1} / $zoom]
                 set newcoords {}
                 set i 0
 
@@ -1496,8 +1496,8 @@ proc button1-release { c x y } {
 	    if { [lindex [$c gettags $node] 0] == "text"} {
 		set bbox [$c bbox "selectmark && $node"]
 		set coordinates [$c coords [lindex [$c gettags $node] 1]]
-		set x1 [expr [lindex $coordinates 0]]
-		set y1 [expr [lindex $coordinates 1]]
+		set x1 [expr [lindex $coordinates 0] / $zoom]
+		set y1 [expr [lindex $coordinates 1] / $zoom]
 		set width [expr [lindex $bbox 2] - [lindex $bbox 0]]
 		set height [expr [lindex $bbox 3] - [lindex $bbox 1]]
 		if {[lindex $bbox 0]<0} {
