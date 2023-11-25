@@ -99,17 +99,6 @@ proc $MODULE.cfggen { node } {
     lappend cfg ""
 
     set cfg [concat $cfg [nodeCfggenRouteIPv4 $node]]
-
-    foreach ifc [allIfcList $node] {
-	if { [getIfcNatState $node $ifc] == "on" } {
-	    set peer [logicalPeerByIfc $node $ifc]
-	    set peerIfc [ifcByLogicalPeer $peer $node]
-	    if { [typemodel $peer] == "extnat" } {
-		set nexthop [lindex [split [getIfcIPv4addrs $peer $peerIfc] "/"] 0]
-		lappend cfg [getIPv4RouteCmd "0.0.0.0/0 $nexthop"]
-	    }
-	}
-    }
     set cfg [concat $cfg [nodeCfggenRouteIPv6 $node]]
 
     return $cfg

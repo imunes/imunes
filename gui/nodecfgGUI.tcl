@@ -2161,12 +2161,12 @@ proc configGUI_staticRoutesApply { wi node } {
 	}
     }
 
-    set newIPv4statrts [lsort $newIPv4statrts]
+    #set newIPv4statrts [lsort $newIPv4statrts]
     if { $oldIPv4statrts != $newIPv4statrts } {
 	setStatIPv4routes $node $newIPv4statrts
 	set changed 1
      }
-    set newIPv6statrts [lsort $newIPv6statrts]
+    #set newIPv6statrts [lsort $newIPv6statrts]
     if { $oldIPv6statrts != $newIPv6statrts } {
 	setStatIPv6routes $node $newIPv6statrts
 	set changed 1

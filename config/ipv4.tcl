@@ -410,8 +410,7 @@ proc autoIPv4defaultroute { node iface } {
     if {!$IPv4autoAssign} {
 	return
     }
-    if { [[typemodel $node].layer] != "NETWORK" || \
-	[isNodeRouter $node] } {
+    if { [[typemodel $node].layer] != "NETWORK" } {
 	#
 	# Shouldn't get called at all for link-layer nodes
 	#
@@ -425,28 +424,70 @@ proc autoIPv4defaultroute { node iface } {
 	foreach l2node [listLANnodes $peer_node {}] {
 	    foreach ifc [ifcList $l2node] {
 		set peer [logicalPeerByIfc $l2node $ifc]
-		if { ! [isNodeRouter $peer] } {
-		    continue
+		if { [nodeType $peer] != "extnat" } {
+		    if { [isNodeRouter $node] || ! [isNodeRouter $peer] } {
+			continue
+		    }
 		}
 		set peer_if [ifcByLogicalPeer $peer $l2node]
 		set peer_ip4addr [getIfcIPv4addr $peer $peer_if]
+		set existing_routes [getStatIPv4routes $node]
 		if { $peer_ip4addr != "" } {
 		    set gw [lindex [split $peer_ip4addr /] 0]
-		    setStatIPv4routes $node [list "0.0.0.0/0 $gw"]
+		    if { [lsearch $existing_routes "0.0.0.0/0 $gw"] < 0 } {
+			setStatIPv4routes $node "$existing_routes \"0.0.0.0/0 $gw\""
+		    }
 		    return
 		}
 	    }
 	}
     } else {
-	if { ! [isNodeRouter $peer_node] } {
-	    return
+	if { [nodeType $peer_node] != "extnat" } {
+	    if { [isNodeRouter $node] || ! [isNodeRouter $peer_node] } {
+		return
+	    }
 	}
 	set peer_if [ifcByLogicalPeer $peer_node $node]
 	set peer_ip4addr [getIfcIPv4addr $peer_node $peer_if]
+	set existing_routes [getStatIPv4routes $node]
 	if { $peer_ip4addr != "" } {
 	    set gw [lindex [split $peer_ip4addr /] 0]
-	    setStatIPv4routes $node [list "0.0.0.0/0 $gw"]
+	    if { [lsearch $existing_routes "0.0.0.0/0 $gw"] < 0 } {
+		setStatIPv4routes $node "$existing_routes \"0.0.0.0/0 $gw\""
+	    }
 	    return
+	}
+    }
+}
+
+#****f* ipv4.tcl/removeIPv4defaultroute
+# NAME
+#   removeIPv4defaultroute -- remove a static route matching the IPv4 address
+#   of the peer
+# SYNOPSIS
+#   removeIPv4defaultroute $node $peer
+# FUNCTION
+#   searches the IPv4 address of the peer, if it matches, it is removed from
+#   the list of static routes
+# INPUTS
+#   * node -- search routes for this node
+#   * peer -- the node of the default gateway's IPv4 address to be removed
+#****
+proc removeIPv4defaultroute { node peer } {
+    set peer_if [ifcByLogicalPeer $peer $node]
+    set peer_ip4addr [getIfcIPv4addr $peer $peer_if]
+    if { $peer_ip4addr != "" } {
+	set gw [lindex [split $peer_ip4addr /] 0]
+	set existing_routes [getStatIPv4routes $node]
+	set i [lsearch $existing_routes "0.0.0.0/0 $gw"]
+	if { $i < 0 } {
+	    return
+	}
+
+	set existing_routes [lreplace $existing_routes $i $i]
+	netconfClearSection $node "ip route [lindex [getStatIPv4routes $node] 0]"
+	if { [llength $existing_routes] > 0 } {
+	    setStatIPv4routes $node $existing_routes
 	}
     }
 }

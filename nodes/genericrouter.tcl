@@ -64,6 +64,8 @@ proc $MODULE.confNewIfc { node ifc } {
     autoIPv4addr $node $ifc
     autoIPv6addr $node $ifc
     autoMACaddr $node $ifc
+    autoIPv4defaultroute $node $ifc
+    autoIPv6defaultroute $node $ifc
 
     if { [typemodel [peerByIfc $node $ifc]] == "extnat" } {
 	setIfcNatState $node $ifc "on"

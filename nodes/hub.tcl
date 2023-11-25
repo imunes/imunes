@@ -71,7 +71,7 @@ proc $MODULE.confNewIfc { node ifc } {
     foreach l2node [listLANnodes $node ""] {
 	foreach ifc [ifcList $l2node] {
 	    set peer [peerByIfc $l2node $ifc]
-	    if { ! [isNodeRouter $peer] &&
+	    if { [nodeType $peer] != "extnat" &&
 		[[typemodel $peer].layer] == "NETWORK" } {
 		set ifname [ifcByPeer $peer $l2node]
 		autoIPv4defaultroute $peer $ifname

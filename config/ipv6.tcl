@@ -231,8 +231,7 @@ proc autoIPv6defaultroute { node iface } {
     if {!$IPv6autoAssign} {
 	return
     }
-    if { [[typemodel $node].layer] != "NETWORK" || \
-	[isNodeRouter $node] } {
+    if { [[typemodel $node].layer] != "NETWORK" } {
 	#
 	# Shouldn't get called at all for link-layer nodes
 	#
@@ -246,28 +245,70 @@ proc autoIPv6defaultroute { node iface } {
 	foreach l2node [listLANnodes $peer_node {}] {
 	    foreach ifc [ifcList $l2node] {
 		set peer [logicalPeerByIfc $l2node $ifc]
-		if {! [isNodeRouter $peer] } {
-		    continue
+		if { [nodeType $peer] != "extnat" } {
+		    if { [isNodeRouter $node] || ! [isNodeRouter $peer] } {
+			continue
+		    }
 		}
 		set peer_if [ifcByLogicalPeer $peer $l2node]
 		set peer_ip6addr [getIfcIPv6addr $peer $peer_if]
+		set existing_routes [getStatIPv6routes $node]
 		if { $peer_ip6addr != "" } {
 		    set gw [lindex [split $peer_ip6addr /] 0]
-		    setStatIPv6routes $node [list "::/0 $gw"]
+		    if { [lsearch $existing_routes "::/0 $gw"] < 0 } {
+			setStatIPv6routes $node "$existing_routes \"::/0 $gw\""
+		    }
 		    return
 		}
 	    }
 	}
     } else {
-	if {! [isNodeRouter $peer_node] } {
-	    return
+	if { [nodeType $peer_node] != "extnat" } {
+	    if { [isNodeRouter $node] || ! [isNodeRouter $peer_node] } {
+		return
+	    }
 	}
 	set peer_if [ifcByLogicalPeer $peer_node $node]
 	set peer_ip6addr [getIfcIPv6addr $peer_node $peer_if]
+	set existing_routes [getStatIPv6routes $node]
 	if { $peer_ip6addr != "" } {
 	    set gw [lindex [split $peer_ip6addr /] 0]
-	    setStatIPv6routes $node [list "::/0 $gw"]
+	    if { [lsearch $existing_routes "::/0 $gw"] < 0 } {
+		setStatIPv6routes $node "$existing_routes \"::/0 $gw\""
+	    }
 	    return
+	}
+    }
+}
+
+#****f* ipv6.tcl/removeIPv6defaultroute
+# NAME
+#   removeIPv6defaultroute -- remove a static route matching the IPv6 address
+#   of the peer
+# SYNOPSIS
+#   removeIPv6defaultroute $node $peer
+# FUNCTION
+#   searches the IPv6 address of the peer, if it matches, it is removed from
+#   the list of static routes
+# INPUTS
+#   * node -- search routes for this node
+#   * peer -- the node of the default gateway's IPv6 address to be removed
+#****
+proc removeIPv6defaultroute { node peer } {
+    set peer_if [ifcByLogicalPeer $peer $node]
+    set peer_ip6addr [getIfcIPv6addr $peer $peer_if]
+    if { $peer_ip6addr != "" } {
+	set gw [lindex [split $peer_ip6addr /] 0]
+	set existing_routes [getStatIPv6routes $node]
+	set i [lsearch $existing_routes "::/0 $gw"]
+	if { $i < 0 } {
+	    return
+	}
+
+	set existing_routes [lreplace $existing_routes $i $i]
+	netconfClearSection $node "ipv6 route [lindex [getStatIPv6routes $node] 0]"
+	if { [llength $existing_routes] > 0 } {
+	    setStatIPv6routes $node $existing_routes
 	}
     }
 }

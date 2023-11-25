@@ -844,18 +844,14 @@ proc releaseExtIfc { eid node } {
 proc getIPv4RouteCmd { statrte } {
     set route [lindex $statrte 0]
     set addr [lindex $statrte 1]
-    set cmd "ip route add $route via $addr"
+    set cmd "ip route append $route via $addr"
     return $cmd
 }
 
 proc getIPv6RouteCmd { statrte } {
     set route [lindex $statrte 0]
     set addr [lindex $statrte 1]
-    if {$route == "::/0"} {
-        set cmd "ip -6 route add $route via $addr"
-    } else {
-        set cmd "ip -6 route add default via $addr"
-    }
+	set cmd "ip -6 route append $route via $addr"
     return $cmd
 }
 
