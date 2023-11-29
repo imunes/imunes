@@ -33,7 +33,7 @@ TOOLS =	$(filter-out $(VROOT), $(wildcard scripts/*))
 
 NODE_ICONS = frswitch.gif hub.gif lanswitch.gif rj45.gif cloud.gif host.gif \
 	ipfirewall.gif pc.gif router.gif click_l2.gif click_l3.gif \
-	stpswitch.gif filter.gif packgen.gif nat64.gif ext.gif
+	stpswitch.gif filter.gif packgen.gif nat64.gif ext.gif extnat.gif
 
 NORMAL_ICONS = $(NODE_ICONS)
 

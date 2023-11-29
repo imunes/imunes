@@ -49,6 +49,7 @@ lib/imunes/icons/normal/click_l2.gif
 lib/imunes/icons/normal/click_l3.gif
 lib/imunes/icons/normal/cloud.gif
 lib/imunes/icons/normal/ext.gif
+lib/imunes/icons/normal/extnat.gif
 lib/imunes/icons/normal/filter.gif
 lib/imunes/icons/normal/frswitch.gif
 lib/imunes/icons/normal/host.gif
@@ -65,6 +66,7 @@ lib/imunes/icons/small/click_l2.gif
 lib/imunes/icons/small/click_l3.gif
 lib/imunes/icons/small/cloud.gif
 lib/imunes/icons/small/ext.gif
+lib/imunes/icons/small/extnat.gif
 lib/imunes/icons/small/filter.gif
 lib/imunes/icons/small/frswitch.gif
 lib/imunes/icons/small/host.gif
@@ -81,6 +83,7 @@ lib/imunes/icons/tiny/click_l2.gif
 lib/imunes/icons/tiny/click_l3.gif
 lib/imunes/icons/tiny/cloud.gif
 lib/imunes/icons/tiny/ext.gif
+lib/imunes/icons/tiny/extnat.gif
 lib/imunes/icons/tiny/filter.gif
 lib/imunes/icons/tiny/freeform.gif
 lib/imunes/icons/tiny/frswitch.gif
