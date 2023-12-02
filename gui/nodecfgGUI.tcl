@@ -1250,23 +1250,56 @@ proc configGUI_ipfirewallRuleset { wi node } {
 #   * node -- node id
 #****
 proc configGUI_staticRoutes { wi node } {
-    global guielements
+    global guielements auto_static_routes
     lappend guielements configGUI_staticRoutes
-    set routes [concat [getStatIPv4routes $node] [getStatIPv6routes $node]]
-    ttk::frame $wi.statrts -borderwidth 2 -relief groove -padding 4
-    ttk::label $wi.statrts.label -text "Static routes:"
-    set h [expr {[llength $routes] + 1}]
-    if { $h < 2 } {
-	set h 2
-    }
-    text $wi.statrts.text -bg white -width 42 -height $h -takefocus 0
-    foreach route $routes {
-	$wi.statrts.text insert end "$route
+    set user_sroutes [concat [getStatIPv4routes $node] [getStatIPv6routes $node]]
+    lassign [getAutoDefaultRoutes $node] auto_routes4 auto_routes6
+    set auto_routes [concat $auto_routes4 $auto_routes6]
+
+    set auto_static_routes [getAutoDefaultRoutesStatus $node]
+    set ifc_routes_enable $wi.ifc_routes_enable
+    ttk::checkbutton $ifc_routes_enable -text "Enable automatic default routes" \
+	-variable auto_static_routes -padding 4 -onvalue "enabled" -offvalue "disabled"
+    pack $ifc_routes_enable -anchor w
+
+    set sroutes_nb $wi.sroutes
+    ttk::notebook $sroutes_nb -height 2
+    pack $sroutes_nb -fill both -expand 1
+    pack propagate $sroutes_nb 0
+
+    set user_routes $sroutes_nb.user
+    ttk::frame $user_routes
+    $sroutes_nb add $user_routes -text "Custom static routes"
+    ttk::scrollbar $user_routes.vsb -orient vertical -command [list $user_routes.editor yview]
+    ttk::scrollbar $user_routes.hsb -orient horizontal -command [list $user_routes.editor xview]
+    text $user_routes.editor -width 42 -bg white -takefocus 0 -wrap none \
+	-yscrollcommand [list $user_routes.vsb set] -xscrollcommand [list $user_routes.hsb set]
+    foreach route $user_sroutes {
+	$user_routes.editor insert end "$route
 "
     }
-    pack $wi.statrts.label -anchor w -pady 2
-    pack $wi.statrts.text -fill both -expand 1 -padx 4 -expand 1
-    pack $wi.statrts -anchor w -fill both -expand 1
+
+    pack $user_routes.vsb -side right -fill y
+    pack $user_routes.hsb -side bottom -fill x
+    pack $user_routes.editor -anchor w -fill both -expand 1
+
+    set ifc_routes $sroutes_nb.ifc
+    ttk::frame $ifc_routes
+    $sroutes_nb add $ifc_routes -text "Automatic static routes"
+    ttk::scrollbar $ifc_routes.vsb -orient vertical -command [list $ifc_routes.editor yview]
+    ttk::scrollbar $ifc_routes.hsb -orient horizontal -command [list $ifc_routes.editor xview]
+    text $ifc_routes.editor -width 42 -bg white -wrap none \
+	-yscrollcommand [list $ifc_routes.vsb set] -xscrollcommand [list $ifc_routes.hsb set]
+    foreach route $auto_routes {
+	$ifc_routes.editor insert end "$route
+"
+    }
+    $ifc_routes.editor configure -state disabled
+
+    pack $ifc_routes.vsb -side right -fill y
+    pack $ifc_routes.hsb -side bottom -fill x
+    pack $ifc_routes.editor -anchor w -fill both -expand 1
+
 }
 
 #****f* nodecfgGUI.tcl/configGUI_etherVlan
@@ -2123,18 +2156,18 @@ proc configGUI_ipfirewallRulesetApply { wi node } {
 #   * node -- node id
 #****
 proc configGUI_staticRoutesApply { wi node } {
-    global changed
+    global changed auto_static_routes
     set oldIPv4statrts [lsort [getStatIPv4routes $node]]
     set oldIPv6statrts [lsort [getStatIPv6routes $node]]
     set newIPv4statrts {}
     set newIPv6statrts {}
 
-    set routes [$wi.statrts.text get 0.0 end]
+    set routes [$wi.sroutes.user.editor get 0.0 end]
 
     set checkFailed 0
     set checkFailed [checkStaticRoutesSyntax $routes]
 
-    set errline [$wi.statrts.text get $checkFailed.0 $checkFailed.end]
+    set errline [$wi.sroutes.user.editor get $checkFailed.0 $checkFailed.end]
 
     if { $checkFailed != 0} {
 	tk_dialog .dialog1 "IMUNES warning" \
@@ -2171,6 +2204,8 @@ proc configGUI_staticRoutesApply { wi node } {
 	setStatIPv6routes $node $newIPv6statrts
 	set changed 1
     }
+
+    setAutoDefaultRoutesStatus $node $auto_static_routes
 }
 
 #****f* nodecfgGUI.tcl/checkStaticRoutesSyntax

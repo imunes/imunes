@@ -142,6 +142,16 @@ proc $MODULE.cfggen { node } {
 	lappend cfg "ipv6 route $statrte"
     }
 
+    if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
+	set auto_routes [getAutoDefaultRoutes $node]
+	foreach statrte [lindex $auto_routes 0] {
+	    lappend cfg "ip route $statrte"
+	}
+	foreach statrte [lindex $auto_routes 1] {
+	    lappend cfg "ipv6 route $statrte"
+	}
+    }
+
     return $cfg
 }
 

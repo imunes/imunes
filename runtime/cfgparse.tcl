@@ -472,6 +472,9 @@ proc loadCfg { cfg } {
 			labelcoords {
 			    lappend $object "labelcoords {$value}"
 			}
+			auto_static_routes {
+			    lappend $object "auto_static_routes $value"
+			}
 			canvas {
 			    lappend $object "canvas $value"
 			}

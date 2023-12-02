@@ -61,18 +61,6 @@ proc $MODULE.confNewIfc { node ifc } {
     setBridgeIfcPriority $node $ifc 128
     setBridgeIfcPathcost $node $ifc 0
     setBridgeIfcMaxaddr $node $ifc 0
-
-    foreach l2node [listLANnodes $node ""] {
-	foreach ifc [ifcList $l2node] {
-	    set peer [peerByIfc $l2node $ifc]
-	    if { [nodeType $peer] != "router" && 
-	    [[typemodel $peer].layer] == "NETWORK" } {
-		    set ifname [ifcByPeer $peer $l2node]
-		    autoIPv4defaultroute $peer $ifname
-		    autoIPv6defaultroute $peer $ifname
-	    }
-	}
-    }
 }
 
 proc $MODULE.confNewNode { node } {

@@ -135,48 +135,6 @@ proc removeLink { link } {
 
     set pnodes [linkPeers $link]
     foreach node $pnodes {
-	set i [lsearch $pnodes $node]
-	set peer [lreplace $pnodes $i $i]
-
-	if { [[typemodel $node].layer] == "NETWORK" } {
-	    if { [isNodeRouter $peer] || [nodeType $peer] == "extnat" } {
-		removeIPv4defaultroute $node $peer
-		removeIPv6defaultroute $node $peer
-	    } else {
-		set ifc [ifcByPeer $node $peer]
-		set node_ip4addr [getIfcIPv4addr $node $ifc]
-		if { $node_ip4addr != "" } {
-		    set node_ip [lindex [split $node_ip4addr /] 0]
-		    set prefix [lindex [split $node_ip4addr /] 1]
-		    set existing_routes [getStatIPv4routes $node]
-		    foreach route $existing_routes {
-			lassign $route subnet gw
-			if { [::ip::equal [::ip::prefix $node_ip4addr] [::ip::prefix $gw/$prefix]] } {
-			    set i [lsearch $existing_routes "0.0.0.0/0 $gw"]
-			    set existing_routes [lreplace $existing_routes $i $i]
-			    setStatIPv4routes $node $existing_routes
-			}
-		    }
-		}
-		set node_ip6addr [getIfcIPv6addr $node $ifc]
-		if { $node_ip6addr != "" } {
-		    set node_ip [lindex [split $node_ip6addr /] 0]
-		    set prefix [lindex [split $node_ip6addr /] 1]
-		    set existing_routes [getStatIPv6routes $node]
-		    foreach route $existing_routes {
-			lassign $route subnet gw
-			if { [::ip::equal [::ip::prefix $node_ip6addr] [::ip::prefix $gw/$prefix]] } {
-			    set i [lsearch $existing_routes "::/0 $gw"]
-			    set existing_routes [lreplace $existing_routes $i $i]
-			    setStatIPv6routes $node $existing_routes
-			}
-		    }
-		}
-	    }
-	}
-    }
-
-    foreach node $pnodes {
 	upvar 0 ::cf::[set ::curcfg]::$node $node
 
 	set i [lsearch $pnodes $node]
@@ -191,13 +149,6 @@ proc removeLink { link } {
 	netconfClearSection $node "interface $ifc"
 	set i [lsearch [set $node] "interface-peer {$ifc $peer}"]
 	set $node [lreplace [set $node] $i $i]
-	if { [[typemodel $node].layer] == "NETWORK" } {
-	    set ifcs [ifcList $node]
-	    foreach iface $ifcs {
-		autoIPv4defaultroute $node $iface
-		autoIPv6defaultroute $node $iface
-	    }
-	}
 	foreach lifc [logIfcList $node] {
 	    switch -exact [getLogIfcType $node $lifc] {
 		vlan {
@@ -1055,21 +1006,11 @@ proc newLink { lnode1 lnode2 } {
 
     lappend link_list $link
 
-    if { [nodeType $lnode1] == "extnat" || \
-      ([nodeType $lnode2] != "extnat" && ! [isNodeRouter $lnode2]) } {
-	if {[info procs [nodeType $lnode1].confNewIfc] != ""} {
-	    [nodeType $lnode1].confNewIfc $lnode1 $ifname1
-	}
-	if {[info procs [nodeType $lnode2].confNewIfc] != ""} {
-	    [nodeType $lnode2].confNewIfc $lnode2 $ifname2
-	}
-    } else {
-	if {[info procs [nodeType $lnode2].confNewIfc] != ""} {
-	    [nodeType $lnode2].confNewIfc $lnode2 $ifname2
-	}
-	if {[info procs [nodeType $lnode1].confNewIfc] != ""} {
-	    [nodeType $lnode1].confNewIfc $lnode1 $ifname1
-	}
+    if {[info procs [nodeType $lnode1].confNewIfc] != ""} {
+	[nodeType $lnode1].confNewIfc $lnode1 $ifname1
+    }
+    if {[info procs [nodeType $lnode2].confNewIfc] != ""} {
+	[nodeType $lnode2].confNewIfc $lnode2 $ifname2
     }
 
     return $link

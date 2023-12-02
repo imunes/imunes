@@ -1989,12 +1989,6 @@ proc changeAddressRange {} {
     set autorenumber 0
     set changeAddressRange 0
     
-    foreach node $selected_nodes {
-	foreach ifc [ifcList $node] {
-	    autoIPv4defaultroute $node $ifc
-	}
-    }
-    
     redrawAll
     updateUndoLog
 }
@@ -2112,12 +2106,6 @@ proc changeAddressRange6 {} {
 
     set autorenumber 0
     set changeAddressRange6 0
-    
-    foreach node $selected_nodes {
-	foreach ifc [ifcList $node] {
-	    autoIPv6defaultroute $node $ifc
-	}
-    }
     
     redrawAll
     updateUndoLog

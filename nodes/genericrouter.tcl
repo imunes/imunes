@@ -64,11 +64,15 @@ proc $MODULE.confNewIfc { node ifc } {
     autoIPv4addr $node $ifc
     autoIPv6addr $node $ifc
     autoMACaddr $node $ifc
-    autoIPv4defaultroute $node $ifc
-    autoIPv6defaultroute $node $ifc
 
-    if { [typemodel [peerByIfc $node $ifc]] == "extnat" } {
-	setIfcNatState $node $ifc "on"
+    set peer_node [logicalPeerByIfc $node $ifc]
+    set peer_ifc [ifcByLogicalPeer $peer_node $node]
+    lassign [getL2Data $peer_node $peer_ifc {} {}] ifc_routes nodes_visited l3nodes
+    foreach l3node $l3nodes {
+	if { [typemodel $l3node] == "extnat" } {
+	    setIfcNatState $node $ifc "on"
+	    return
+	}
     }
 }
 
@@ -111,6 +115,7 @@ proc $MODULE.confNewNode { node } {
     setNodeProtocolOspfv2 $node $ospfEnable
     setNodeProtocolOspfv3 $node $ospf6Enable
 
+    setAutoDefaultRoutesStatus $node "enabled"
     setLogIfcType $node lo0 lo
     setIfcIPv4addr $node lo0 "127.0.0.1/8"
     setIfcIPv6addr $node lo0 "::1/128"

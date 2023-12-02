@@ -62,8 +62,6 @@ proc $MODULE.confNewIfc { node ifc } {
     autoIPv4addr $node $ifc
     autoIPv6addr $node $ifc
     autoMACaddr $node $ifc
-    autoIPv4defaultroute $node $ifc
-    autoIPv6defaultroute $node $ifc
 }
 
 #****f* host.tcl/host.confNewNode
@@ -85,6 +83,7 @@ proc $MODULE.confNewNode { node } {
 	! ]
     lappend $node "network-config [list $nconfig]"
 
+    setAutoDefaultRoutesStatus $node "enabled"
     setLogIfcType $node lo0 lo
     setIfcIPv4addr $node lo0 "127.0.0.1/8"
     setIfcIPv6addr $node lo0 "::1/128"
