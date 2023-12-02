@@ -99,6 +99,7 @@ proc $MODULE.notebookDimensions { wi } {
 
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
 	== "Configuration" } { 
+    set h 320
 	set w 507 
     }
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
