@@ -1250,16 +1250,18 @@ proc configGUI_ipfirewallRuleset { wi node } {
 #   * node -- node id
 #****
 proc configGUI_staticRoutes { wi node } {
-    global guielements auto_static_routes
+    global guielements auto_default_routes
     lappend guielements configGUI_staticRoutes
     set user_sroutes [concat [getStatIPv4routes $node] [getStatIPv6routes $node]]
-    lassign [getAutoDefaultRoutes $node] auto_routes4 auto_routes6
-    set auto_routes [concat $auto_routes4 $auto_routes6]
 
-    set auto_static_routes [getAutoDefaultRoutesStatus $node]
+    set auto_default_routes [getAutoDefaultRoutesStatus $node]
+    lassign [getDefaultGateways $node {}] my_gws subnets_and_gws
+    lassign [getDefaultRoutesConfig $node $my_gws] all_routes4 all_routes6
+    set auto_routes [concat $all_routes4 $all_routes6]
+
     set ifc_routes_enable $wi.ifc_routes_enable
     ttk::checkbutton $ifc_routes_enable -text "Enable automatic default routes" \
-	-variable auto_static_routes -padding 4 -onvalue "enabled" -offvalue "disabled"
+	-variable auto_default_routes -padding 4 -onvalue "enabled" -offvalue "disabled"
     pack $ifc_routes_enable -anchor w
 
     set sroutes_nb $wi.sroutes
@@ -2156,7 +2158,7 @@ proc configGUI_ipfirewallRulesetApply { wi node } {
 #   * node -- node id
 #****
 proc configGUI_staticRoutesApply { wi node } {
-    global changed auto_static_routes
+    global changed auto_default_routes
     set oldIPv4statrts [lsort [getStatIPv4routes $node]]
     set oldIPv6statrts [lsort [getStatIPv6routes $node]]
     set newIPv4statrts {}
@@ -2194,18 +2196,18 @@ proc configGUI_staticRoutesApply { wi node } {
 	}
     }
 
-    #set newIPv4statrts [lsort $newIPv4statrts]
+    set newIPv4statrts [lsort $newIPv4statrts]
     if { $oldIPv4statrts != $newIPv4statrts } {
 	setStatIPv4routes $node $newIPv4statrts
 	set changed 1
      }
-    #set newIPv6statrts [lsort $newIPv6statrts]
+    set newIPv6statrts [lsort $newIPv6statrts]
     if { $oldIPv6statrts != $newIPv6statrts } {
 	setStatIPv6routes $node $newIPv6statrts
 	set changed 1
     }
 
-    setAutoDefaultRoutesStatus $node $auto_static_routes
+    setAutoDefaultRoutesStatus $node $auto_default_routes
 }
 
 #****f* nodecfgGUI.tcl/checkStaticRoutesSyntax

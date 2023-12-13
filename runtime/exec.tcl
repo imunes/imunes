@@ -1002,9 +1002,18 @@ proc deployCfg {} {
     statline "Configuring nodes..."
 
     set step 0
+    set subnets_and_gws {}
     foreach node $node_list {
 	upvar 0 ::cf::[set ::curcfg]::$node $node
 	set type [nodeType $node]
+
+	if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
+	    lassign [getDefaultGateways $node $subnets_and_gws] my_gws subnets_and_gws
+	    lassign [getDefaultRoutesConfig $node $my_gws] all_routes4 all_routes6
+
+	    setDefaultIPv4routes $node $all_routes4
+	    setDefaultIPv6routes $node $all_routes6
+	}
 
 	incr startedCount
 	if {$execMode != "batch"} {

@@ -66,13 +66,8 @@ proc $MODULE.confNewIfc { node ifc } {
     autoMACaddr $node $ifc
 
     set peer_node [logicalPeerByIfc $node $ifc]
-    set peer_ifc [ifcByLogicalPeer $peer_node $node]
-    lassign [getL2Data $peer_node $peer_ifc {} {}] ifc_routes nodes_visited l3nodes
-    foreach l3node $l3nodes {
-	if { [typemodel $l3node] == "extnat" } {
-	    setIfcNatState $node $ifc "on"
-	    return
-	}
+    if { [typemodel $peer_node] == "extnat" } {
+	setIfcNatState $node $ifc "on"
     }
 }
 

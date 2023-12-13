@@ -143,13 +143,14 @@ proc $MODULE.cfggen { node } {
     }
 
     if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
-	set auto_routes [getAutoDefaultRoutes $node]
-	foreach statrte [lindex $auto_routes 0] {
+	foreach statrte [getDefaultIPv4routes $node] {
 	    lappend cfg "ip route $statrte"
 	}
-	foreach statrte [lindex $auto_routes 1] {
+	foreach statrte [getDefaultIPv6routes $node] {
 	    lappend cfg "ipv6 route $statrte"
 	}
+	setDefaultIPv4routes $node {}
+	setDefaultIPv6routes $node {}
     }
 
     return $cfg

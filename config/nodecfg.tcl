@@ -135,7 +135,7 @@
 #	Sets a new IPv6 address(es) on an interface. The correctness of the
 #	IP address format is not checked / enforced.
 #
-# getAutoDefaultRoutes { node_id }
+# getDefaultGateways { node_id subnets_and_gws }
 #	Returns two lists of all default IPv4/IPv6 routes as
 #	{destination gateway} pairs.
 #
@@ -1339,101 +1339,108 @@ proc getIfcLinkLocalIPv6addr { node ifc } {
     return [ip::normalize [join $final ""]]
 }
 
-#****f* nodecfg.tcl/getAutoDefaultRoutes
+#****f* nodecfg.tcl/getDefaultGateways
 # NAME
-#   getAutoDefaultRoutes -- get static IPv4/IPv6 routes.
+#   getDefaultGateways -- get default IPv4/IPv6 gateways.
 # SYNOPSIS
-#   set routes [getAutoDefaultRoutes $node]
+#   lassign [getDefaultGateways $node $subnets_and_gws] my_gws subnets_and_gws
 # FUNCTION
-#   Returns a list of all static IPv4/IPv6 routes as a list of
-#   {destination gateway} pairs.
+#   Returns a list of all default IPv4/IPv6 gateways for the subnets in which
+#   this node belongs as a {nodeType|gateway4|gateway6} values. Additionally,
+#   it concatenates newly found {subnet members - gateways} to already known
+#   list $subnets_and_gws.
 # INPUTS
 #   * node -- node id
+#   * subnets_and_gws -- already known pairs of subnets/gateways
 # RESULT
-#   * routes -- list of all static routes defined for the specified node
+#   * my_gws -- list of all possible default gateways for the specified node
+#   * subnets_and_gws -- refreshed pairs of subnets/gateways
 #****
-proc getAutoDefaultRoutes { node } {
-    set ifcs [ifcList $node]
-    set all_routes4 {}
-    set all_routes6 {}
-    foreach ifc $ifcs {
-	set peer_node [logicalPeerByIfc $node $ifc]
-	set peer_ifc [ifcByLogicalPeer $peer_node $node]
-	lassign [getL2Data $peer_node $peer_ifc {} {}] ifc_routes
-
-	foreach route $ifc_routes {
-	    lassign [split $route "|"] route_type gateway4 gateway6
-	    if { [nodeType $node] == "router" } {
-		if { $route_type == "extnat" } {
-		    if { "0.0.0.0/0 $gateway4" ni $all_routes4 } {
-			lappend all_routes4 "0.0.0.0/0 $gateway4"
-		    }
-		    if { "::/0 $gateway6" ni $all_routes6 } {
-			lappend all_routes6 "::/0 $gateway6"
-		    }
+proc getDefaultGateways { node subnets_and_gws } {
+    # go through all interfaces and collect data for each subnet
+    set my_gws {}
+    foreach ifc [ifcList $node] {
+	set subnet_checked false
+	foreach {members gws} $subnets_and_gws {
+	    if { "$node $ifc" in $members } {
+		set subnet_checked true
+		# this interface subnet data is already checked,
+		# only append gateways (if not already added)
+		if { [lindex $gws 0] ni $my_gws } {
+		    set my_gws [concat $my_gws $gws]
 		}
-	    } else {
-		if { "0.0.0.0/0 $gateway4" ni $all_routes4 } {
-		    lappend all_routes4 "0.0.0.0/0 $gateway4"
-		}
-		if { "::/0 $gateway6" ni $all_routes6 } {
-		    lappend all_routes6 "::/0 $gateway6"
-		}
+		break
 	    }
 	}
-    }
 
-    return "\"$all_routes4\" \"$all_routes6\""
-}
-
-# Called when checking L2 network for routers/extnats in order to get all
-# default routes.
-# Returns all possible default routes in this LAN, all visited {nodes ifcs}
-# pairs, and all L3 nodes in this LAN.
-proc getL2Data { this_node this_ifc nodes_visited l3nodes } {
-    if { "$this_node $this_ifc" in $nodes_visited } {
-	# this node is already visited in this run
-	return "{} \"$nodes_visited\" \"$l3nodes\""
-    }
-
-    lappend nodes_visited "$this_node $this_ifc"
-
-    if { [[typemodel $this_node].layer] == "NETWORK" } {
-	set node_type [nodeType $this_node]
-	if { $this_node ni $l3nodes } {
-	    lappend l3nodes $this_node
+	if { $subnet_checked } {
+	    continue
 	}
 
-	if { $node_type in "router extnat" } {
+	# this interface belongs to a subnet which is not yet checked, get its
+	# data
+	lassign [getSubnetData $node $ifc {} {}] members gws
+	lappend subnets_and_gws [list $members $gws]
+	set my_gws [concat $my_gws $gws]
+    }
+
+    return [list $my_gws $subnets_and_gws]
+}
+
+#****f* nodecfg.tcl/getSubnetData
+# NAME
+#   getSubnetData -- get subnet members and its IPv4/IPv6 gateways.
+# SYNOPSIS
+#   lassign [getSubnetData $this_node $this_ifc $members $gws] members gws
+# FUNCTION
+#   Called when checking L2 network for routers/extnats in order to get all
+#   default gateways. Returns all possible default gateways in this LAN, all
+#   members of this subnet as {nodes ifc} pairs, and all IPv4/IPv6 gateways.
+# INPUTS
+#   * this_node -- node id
+#   * this_ifc -- node interface
+#   * members -- already known {node ifc} pairs in this subnet
+#   * gws -- already known {nodeType|gateway4|gateway6} values
+# RESULT
+#   * members -- refreshed {node ifc} pairs in this subnet
+#   * gws -- refreshed {nodeType|gateway4|gateway6} values
+#****
+proc getSubnetData { this_node this_ifc members gws } {
+    if { "$this_node $this_ifc" in $members } {
+	# this node/ifc is already visited in this run
+	return "\"$members\" \"$gws\""
+    }
+
+    lappend members "$this_node $this_ifc"
+    set members [lsort $members]
+
+    if { [[typemodel $this_node].layer] == "NETWORK" } {
+	if { [nodeType $this_node] in "router extnat" } {
 	    # this node is a router/extnat, add our IP addresses to lists
 	    set gw4 [lindex [split [getIfcIPv4addr $this_node $this_ifc] /] 0]
 	    set gw6 [lindex [split [getIfcIPv6addr $this_node $this_ifc] /] 0]
-	    return "\"[nodeType $this_node]|$gw4|$gw6\" \"$nodes_visited\" \"$l3nodes\""
+	    lappend gws [nodeType $this_node]|$gw4|$gw6
 	}
 
-	# this node is not a router/extnat, skip
-	return "{} \"$nodes_visited\" \"$l3nodes\""
+	# first, get this node/ifc peer's subnet data in case it is an L2 node
+	# and we're not yet gone through it
+	set peer_node [logicalPeerByIfc $this_node $this_ifc]
+	set peer_ifc [ifcByLogicalPeer $peer_node $this_node]
+	lassign [getSubnetData $peer_node $peer_ifc $members $gws] members gws
+
+	# this node is not a router/extnat, do nothing else
+	return "\"$members\" \"$gws\""
     }
 
     # this node is an L2 node
-    # - collect routes from other interfaces
-    set other_ifcs [lsearch -all -not -inline -exact [ifcList $this_node] $this_ifc]
-    set routes {}
-    foreach ifc $other_ifcs {
-	if { "$this_node $ifc" in $nodes_visited } {
-	    continue
-	}
+    # - collect data from all interfaces
+    foreach ifc [ifcList $this_node] {
 	set peer_node [logicalPeerByIfc $this_node $ifc]
 	set peer_ifc [ifcByLogicalPeer $peer_node $this_node]
-	lassign [getL2Data $peer_node $peer_ifc $nodes_visited $l3nodes] new_routes nodes_visited l3nodes
-	foreach route $new_routes {
-	    if { $route ni $routes } {
-		lappend routes $route
-	    }
-	}
+	lassign [getSubnetData $peer_node $peer_ifc $members $gws] members gws
     }
 
-    return "\"$routes\" \"$nodes_visited\" \"$l3nodes\""
+    return "\"$members\" \"$gws\""
 }
 
 #****f* nodecfg.tcl/getStatIPv4routes
@@ -1481,6 +1488,102 @@ proc setStatIPv4routes { node routes } {
     netconfInsertSection $node $section
 }
 
+#****f* nodecfg.tcl/getDefaultIPv4routes
+# NAME
+#   getDefaultIPv4routes -- get auto default IPv4 routes.
+# SYNOPSIS
+#   set routes [getDefaultIPv4routes $node]
+# FUNCTION
+#   Returns a list of all auto default IPv4 routes as a list of
+#   {0.0.0.0/0 gateway} pairs.
+# INPUTS
+#   * node -- node id
+# RESULT
+#   * routes -- list of all IPv4 default routes defined for the specified node
+#****
+proc getDefaultIPv4routes { node } {
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
+    return [lrange [lsearch -inline [set $node] "default_routes4 *"] 1 end]
+}
+
+#****f* nodecfg.tcl/setDefaultIPv4routes
+# NAME
+#   setDefaultIPv4routes -- set auto default IPv4 routes.
+# SYNOPSIS
+#   setDefaultIPv4routes $node $routes
+# FUNCTION
+#   Replace all current auto default route entries with a new one, in form of a
+#   list of {0.0.0.0/0 gateway} pairs.
+# INPUTS
+#   * node -- the node id of the node whose default routes are set
+#   * routes -- list of all IPv4 default routes defined for the specified node
+#****
+proc setDefaultIPv4routes { node routes } {
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
+    set i [lsearch [set $node] "default_routes4 *"]
+    if { [llength $routes] != 0 } {
+	if { $i >= 0 } {
+	    set $node [lreplace [set $node] $i $i "default_routes4 $routes"]
+	} else {
+	    set $node [linsert [set $node] end "default_routes4 $routes"]
+	}
+    } else {
+	if { $i >= 0 } {
+	    set $node [lreplace [set $node] $i $i]
+	}
+    }
+}
+
+#****f* nodecfg.tcl/getDefaultIPv6routes
+# NAME
+#   getDefaultIPv6routes -- get auto default IPv6 routes.
+# SYNOPSIS
+#   set routes [getDefaultIPv6routes $node]
+# FUNCTION
+#   Returns a list of all auto default IPv6 routes as a list of
+#   {::/0 gateway} pairs.
+# INPUTS
+#   * node -- node id
+# RESULT
+#   * routes -- list of all IPv6 default routes defined for the specified node
+#****
+proc getDefaultIPv6routes { node } {
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
+    return [lrange [lsearch -inline [set $node] "default_routes6 *"] 1 end]
+}
+
+#****f* nodecfg.tcl/setDefaultIPv6routes
+# NAME
+#   setDefaultIPv6routes -- set auto default IPv6 routes.
+# SYNOPSIS
+#   setDefaultIPv6routes $node $routes
+# FUNCTION
+#   Replace all current auto default route entries with a new one, in form of a
+#   list of {::/0 gateway} pairs.
+# INPUTS
+#   * node -- the node id of the node whose default routes are set
+#   * routes -- list of all IPv6 default routes defined for the specified node
+#****
+proc setDefaultIPv6routes { node routes } {
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
+    set i [lsearch [set $node] "default_routes6 *"]
+    if { [llength $routes] != 0 } {
+	if { $i >= 0 } {
+	    set $node [lreplace [set $node] $i $i "default_routes6 $routes"]
+	} else {
+	    set $node [linsert [set $node] end "default_routes6 $routes"]
+	}
+    } else {
+	if { $i >= 0 } {
+	    set $node [lreplace [set $node] $i $i]
+	}
+    }
+}
+
 #****f* nodecfg.tcl/getStatIPv6routes
 # NAME
 #   getStatIPv6routes -- get static IPv6 routes.
@@ -1524,6 +1627,48 @@ proc setStatIPv6routes { node routes } {
 	lappend section "ipv6 route $route"
     }
     netconfInsertSection $node $section
+}
+
+#****f* nodecfg.tcl/getDefaultRoutesConfig
+# NAME
+#   getDefaultRoutesConfig -- get node default routes in a configuration format
+# SYNOPSIS
+#   lassign [getDefaultRoutesConfig $node $gws] routes4 routes6
+# FUNCTION
+#   Called when translating IMUNES default gateways configuration to node
+#   pre-running configuration. Returns IPv4 and IPv6 routes lists.
+# INPUTS
+#   * node -- node id
+#   * gws -- gateway values in the {nodeType|gateway4|gateway6} format
+# RESULT
+#   * all_routes4 -- {0.0.0.0/0 gw4} pairs of default IPv4 routes
+#   * all_routes6 -- {0.0.0.0/0 gw6} pairs of default IPv6 routes
+#****
+proc getDefaultRoutesConfig { node gws } {
+    set all_routes4 {}
+    set all_routes6 {}
+    foreach route $gws {
+	lassign [split $route "|"] route_type gateway4 gateway6
+	if { [nodeType $node] == "router" } {
+	    if { $route_type == "extnat" } {
+		if { "0.0.0.0/0 $gateway4" ni $all_routes4 } {
+		    lappend all_routes4 "0.0.0.0/0 $gateway4"
+		}
+		if { "::/0 $gateway6" ni $all_routes6 } {
+		    lappend all_routes6 "::/0 $gateway6"
+		}
+	    }
+	} else {
+	    if { "0.0.0.0/0 $gateway4" ni $all_routes4 } {
+		lappend all_routes4 "0.0.0.0/0 $gateway4"
+	    }
+	    if { "::/0 $gateway6" ni $all_routes6 } {
+		lappend all_routes6 "::/0 $gateway6"
+	    }
+	}
+    }
+
+    return "\"$all_routes4\" \"$all_routes6\""
 }
 
 #****f* nodecfg.tcl/getNodeName
@@ -1841,7 +1986,7 @@ proc setNodeCPUConf { node param_list } {
 proc getAutoDefaultRoutesStatus { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
-    set res [lsearch -inline [set $node] "auto_static_routes *"]
+    set res [lsearch -inline [set $node] "auto_default_routes *"]
     if { $res == "" } {
 	return "disabled"
     }
@@ -1852,12 +1997,12 @@ proc getAutoDefaultRoutesStatus { node } {
 proc setAutoDefaultRoutesStatus { node state } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
-    set i [lsearch [set $node] "auto_static_routes *"]
+    set i [lsearch [set $node] "auto_default_routes *"]
     if { $state == "enabled" } {
 	if { $i >= 0 } {
-	    set $node [lreplace [set $node] $i $i "auto_static_routes $state"]
+	    set $node [lreplace [set $node] $i $i "auto_default_routes $state"]
 	} else {
-	    set $node [linsert [set $node] end "auto_static_routes $state"]
+	    set $node [linsert [set $node] end "auto_default_routes $state"]
 	}
     } else {
 	if { $i >= 0 } {
@@ -3065,13 +3210,14 @@ proc nodeCfggenIfcIPv6 { node } {
 #****
 proc nodeCfggenRouteIPv4 { node } {
     set cfg {}
-    if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
-	foreach statrte [lindex [getAutoDefaultRoutes $node] 0] {
-	    lappend cfg [getIPv4RouteCmd $statrte]
-	}
-    }
     foreach statrte [getStatIPv4routes $node] {
 	lappend cfg [getIPv4RouteCmd $statrte]
+    }
+    if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
+	foreach statrte [getDefaultIPv4routes $node] {
+	    lappend cfg [getIPv4RouteCmd $statrte]
+	}
+	setDefaultIPv4routes $node {}
     }
     return $cfg
 }
@@ -3090,13 +3236,14 @@ proc nodeCfggenRouteIPv4 { node } {
 #****
 proc nodeCfggenRouteIPv6 { node } {
     set cfg {}
-    if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
-	foreach statrte [lindex [getAutoDefaultRoutes $node] 1] {
-	    lappend cfg [getIPv6RouteCmd $statrte]
-	}
-    }
     foreach statrte [getStatIPv6routes $node] {
 	lappend cfg [getIPv6RouteCmd $statrte]
+    }
+    if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
+	foreach statrte [getDefaultIPv6routes $node] {
+	    lappend cfg [getIPv6RouteCmd $statrte]
+	}
+	setDefaultIPv6routes $node {}
     }
     return $cfg
 }
