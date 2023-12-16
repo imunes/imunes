@@ -56,15 +56,17 @@ proc $MODULE.confNewNode { node } {
 
 proc $MODULE.icon {size} {
     global ROOTDIR LIBDIR
+	global iconext
+
     switch $size {
       normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/cloud.svg
+	return $ROOTDIR/$LIBDIR/icons/normal/cloud.$iconext
       }
       small {
-	return $ROOTDIR/$LIBDIR/icons/small/cloud.svg
+	return $ROOTDIR/$LIBDIR/icons/small/cloud.$iconext
       }
       toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/cloud.svg
+	return $ROOTDIR/$LIBDIR/icons/tiny/cloud.$iconext
       }
     }
 }

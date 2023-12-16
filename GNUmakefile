@@ -1,4 +1,4 @@
-PREFIX = /usr/local
+PREFIX = /tmp
 LIBDIR = lib/imunes
 IMUNESDIR = $(PREFIX)/$(LIBDIR)
 CONFIGDIR = $(IMUNESDIR)/config
@@ -31,16 +31,21 @@ PATCHESFILES =	$(wildcard src/patches/*)
 VROOT =	$(wildcard scripts/*.sh scripts/*.bash)
 TOOLS =	$(filter-out $(VROOT), $(wildcard scripts/*))
 
-NODE_ICONS = frswitch.svg hub.svg lanswitch.svg rj45.svg cloud.svg host.svg ipfirewall.svg \
+NODE_ICONS_SVG = frswitch.svg hub.svg lanswitch.svg rj45.svg cloud.svg host.svg ipfirewall.svg \
 	pc.svg router.svg click_l2.svg click_l3.svg stpswitch.svg filter.svg packgen.svg \
 	nat64.svg ext.svg
+NODE_ICONS_GIF = $(subst svg,gif,$(NODE_ICONS_SVG))
+NODE_ICONS = $(NODE_ICONS_SVG) $(NODE_ICONS_GIF)
 
 NORMAL_ICONS = $(NODE_ICONS)
 
 SMALL_ICONS = $(NODE_ICONS)
 
-TINY_ICONS = $(NODE_ICONS) link.svg minizoomin.svg minizoomout.svg select.svg l2.svg l2.gif l3.svg l3.gif freeform.svg \
+TINY_ICONS_SVG = link.svg minizoomin.svg minizoomout.svg select.svg l2.svg l3.svg freeform.svg \
 		oval.svg rectangle.svg text.svg
+TINY_ICONS_GIF = $(subst svg,gif,$(TINY_ICONS_SVG))
+
+TINY_ICONS = $(NODE_ICONS) $(TINY_ICONS_SVG) $(TINY_ICONS_GIF)
 
 ICONS = $(wildcard icons/imunes_*)
 

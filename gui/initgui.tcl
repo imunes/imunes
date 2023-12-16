@@ -93,11 +93,12 @@
 
 package require Tcl
 package require Tk
-package require tksvg
-package require msgcat
-namespace import -force ::msgcat::mc
-namespace import -force ::msgcat::mcset
-namespace import -force ::msgcat::*
+set iconext "svg"
+try {
+    package require tksvg
+} on error {} {
+    set iconext "gif"
+}
 
 set newlink ""
 set selectbox ""
@@ -180,7 +181,7 @@ set selectedExperiment ""
 set copypaste_nodes 0
 set cutNodes 0
 
-set iconsrcfile [lindex [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.svg] 0]
+set iconsrcfile [lindex [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.$iconext] 0]
 #interface selected in the topology tree
 set selectedIfc ""
 
@@ -951,7 +952,7 @@ ttk::frame $mf.left
 pack $mf.left -side left -fill y
 
 foreach b {select link} {
-   set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$b.svg]
+   set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$b.$iconext]
    ttk::button $mf.left.$b \
 	-image $image -style Toolbutton \
 	-command "setActiveTool $b"
@@ -985,14 +986,14 @@ foreach b $all_modules_list {
     }
 }
 
-set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/l2.svg]
+set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/l2.$iconext]
 ttk::menubutton $mf.left.link_layer -image $image -style Toolbutton \
     -menu $mf.left.link_nodes -direction right
 bind $mf.left.link_layer <Any-Enter> ".bottom.textbox config -text {Add new link layer node}"
 bind $mf.left.link_layer <Any-Leave> ".bottom.textbox config -text {}"
 pack $mf.left.link_layer
 
-set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/l3.svg]
+set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/l3.$iconext]
 ttk::menubutton $mf.left.net_layer -image $image -style Toolbutton \
     -menu $mf.left.net_nodes -direction right
 bind $mf.left.net_layer <Any-Enter> ".bottom.textbox config -text {Add new network layer node}"
@@ -1000,7 +1001,7 @@ bind $mf.left.net_layer <Any-Leave> ".bottom.textbox config -text {}"
 pack $mf.left.net_layer
 
 foreach b {rectangle oval freeform text} {
-    set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$b.svg]
+    set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$b.$iconext]
 
     ttk::button $mf.left.$b \
 	-image $image -style Toolbutton \
@@ -1020,7 +1021,7 @@ foreach b {rectangle oval freeform text} {
     bind $mf.left.$b <Any-Leave> ".bottom.textbox config -text {}"
 }
 
-set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/minizoomout.svg]
+set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/minizoomout.$iconext]
 ttk::button $mf.left.minizoomout \
     -image $image -style Toolbutton \
     -command "zoom down"
@@ -1028,7 +1029,7 @@ pack $mf.left.minizoomout -side bottom
 bind $mf.left.minizoomout <Any-Enter> ".bottom.textbox config -text {zoom down}"
 bind $mf.left.minizoomout <Any-Leave> ".bottom.textbox config -text {}"
 
-set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/minizoomin.svg]
+set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/minizoomin.$iconext]
 ttk::button $mf.left.minizoomin \
     -image $image -style Toolbutton \
     -command "zoom up"

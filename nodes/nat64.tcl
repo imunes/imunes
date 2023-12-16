@@ -76,15 +76,17 @@ proc $MODULE.confNewNode { node } {
 
 proc $MODULE.icon {size} {
     global ROOTDIR LIBDIR
+	global iconext
+
     switch $size {
       normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/nat64.svg
+	return $ROOTDIR/$LIBDIR/icons/normal/nat64.$iconext
       }
       small {
-	return $ROOTDIR/$LIBDIR/icons/small/nat64.svg
+	return $ROOTDIR/$LIBDIR/icons/small/nat64.$iconext
       }
       toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/nat64.svg
+	return $ROOTDIR/$LIBDIR/icons/tiny/nat64.$iconext
       }
     }
 }

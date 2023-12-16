@@ -114,7 +114,7 @@ proc redrawAll {} {
 proc drawNode { node } {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     upvar 0 ::cf::[set ::curcfg]::zoom zoom
-    global showNodeLabels pseudo
+    global showNodeLabels pseudo iconext
 
     set type [nodeType $node]
     set coords [getNodeCoords $node]
@@ -123,8 +123,6 @@ proc drawNode { node } {
     set customIcon [getCustomIcon $node]
     if {[string match "*img*" $customIcon] == 0} {
 	global $type
-	#agregada por mi $zoom aqui
-	global $zoom
 	.panwin.f1.c create image $x $y -image [set $type] -tags "node $node"
     } else {
 	global iconSize
@@ -132,9 +130,11 @@ proc drawNode { node } {
 	    normal {
 		set icon_data [getImageData $customIcon]
 		image create photo img_$customIcon -data $icon_data
-		set height "[expr {40 * $zoom}]" 
-		set imageHeight [image height img_$customIcon]
-		img_$customIcon configure -format [list svg -scale [expr {double($height) / $imageHeight}]]
+		if { $iconext == "svg" } {
+		    set height "[expr {40 * $zoom}]" 
+		    set imageHeight [image height img_$customIcon]
+		    img_$customIcon configure -format [list svg -scale [expr {double($height) / $imageHeight}]]
+		}
 		.panwin.f1.c create image $x $y -image img_$customIcon -tags "node $node"
 	    }
 	    small {
@@ -641,7 +641,7 @@ proc raiseAll { c } {
 #****
 proc changeIconPopup {} {
     upvar 0 ::cf::[set ::curcfg]::image_list image_list
-    global chicondialog alignCanvasBkg iconsrcfile wi
+    global chicondialog alignCanvasBkg iconsrcfile wi iconext
     global ROOTDIR LIBDIR
     
     set chicondialog .chiconDialog
@@ -700,7 +700,7 @@ proc changeIconPopup {} {
     $tree heading type -text "Type" 
     $tree column type -width 90 -stretch 0 -minwidth 90
     focus $tree
-    foreach file [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.svg] {
+    foreach file [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.$iconext] {
 	set filename [lindex [split $file /] end]
 	$tree insert {} end -id $file -text $filename -values [list "library icon"] \
 	  -tags "$file"
@@ -719,7 +719,7 @@ proc changeIconPopup {} {
 	       set iconsrcfile $img"
 	}
     }
-    foreach file [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.svg] {
+    foreach file [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.$iconext] {
 	$tree tag bind $file <Key-Up> \
 	    "if {![string equal {} [$tree prev $file]]} {
 		updateIconPreview $prevcan $wi.iconconf.right.l2 [$tree prev $file]
@@ -731,7 +731,7 @@ proc changeIconPopup {} {
 		set iconsrcfile [$tree next $file]
 	     }"
     }
-    set first [lindex [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.svg] 0]
+    set first [lindex [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.$iconext] 0]
     $tree selection set $first
     $tree focus $first
         
@@ -944,14 +944,17 @@ proc updateCustomIconReferences {} {
 #****
 proc updateIconSize {} {
   upvar 0 ::cf::[set ::curcfg]::zoom zoom
-  global all_modules_list
+  global all_modules_list iconext
   foreach b $all_modules_list {
     global $b iconSize
-    #set $b [image create photo -file [$b.icon $iconSize]]
-    set $b [image create photo $b -file [$b.icon $iconSize] -format {svg -scaletoheight 40}]
-    set height "[expr {40 * $zoom}]"
-    set imageHeight [image height $b]
-    $b configure -format [list svg -scale [expr {double($height) / $imageHeight}]]
+    if { $iconext == "svg" } {
+	set $b [image create photo $b -file [$b.icon $iconSize] -format {svg -scaletoheight 40}]
+	set height "[expr {40 * $zoom}]"
+	set imageHeight [image height $b]
+	$b configure -format [list svg -scale [expr {double($height) / $imageHeight}]]
+    } else {
+	set $b [image create photo -file [$b.icon $iconSize]]
+    }
   }
 }
 

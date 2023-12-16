@@ -57,15 +57,17 @@ registerModule $MODULE
 #****
 proc $MODULE.icon { size } {
     global ROOTDIR LIBDIR
+	global iconext
+
     switch $size {
       normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/ipfirewall.svg
+	return $ROOTDIR/$LIBDIR/icons/normal/ipfirewall.$iconext
       }
       small {
-	return $ROOTDIR/$LIBDIR/icons/small/ipfirewall.svg
+	return $ROOTDIR/$LIBDIR/icons/small/ipfirewall.$iconext
       }
       toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/ipfirewall.svg
+	return $ROOTDIR/$LIBDIR/icons/tiny/ipfirewall.$iconext
       }
     }
 }

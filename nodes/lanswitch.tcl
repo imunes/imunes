@@ -115,15 +115,17 @@ proc $MODULE.confNewNode { node } {
 #****
 proc $MODULE.icon {size} {
     global ROOTDIR LIBDIR
+	global iconext
+
     switch $size {
       normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/lanswitch.svg
+	return $ROOTDIR/$LIBDIR/icons/normal/lanswitch.$iconext
       }
       small {
-	return $ROOTDIR/$LIBDIR/icons/small/lanswitch.svg
+	return $ROOTDIR/$LIBDIR/icons/small/lanswitch.$iconext
       }
       toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/lanswitch.svg
+	return $ROOTDIR/$LIBDIR/icons/tiny/lanswitch.$iconext
       }
     }
 }
