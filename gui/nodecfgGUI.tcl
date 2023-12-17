@@ -1255,7 +1255,7 @@ proc configGUI_staticRoutes { wi node } {
     set user_sroutes [concat [getStatIPv4routes $node] [getStatIPv6routes $node]]
 
     set auto_default_routes [getAutoDefaultRoutesStatus $node]
-    lassign [getDefaultGateways $node {}] my_gws subnets_and_gws
+    lassign [getDefaultGateways $node {} {}] my_gws {} {}
     lassign [getDefaultRoutesConfig $node $my_gws] all_routes4 all_routes6
     set auto_routes [concat $all_routes4 $all_routes6]
 

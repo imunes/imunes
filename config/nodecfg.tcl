@@ -135,9 +135,9 @@
 #	Sets a new IPv6 address(es) on an interface. The correctness of the
 #	IP address format is not checked / enforced.
 #
-# getDefaultGateways { node_id subnets_and_gws }
-#	Returns two lists of all default IPv4/IPv6 routes as
-#	{destination gateway} pairs.
+# getDefaultGateways { node subnet_gws nodes_l2data }
+#	Returns a list of all default IPv4/IPv6 routes as {destination
+#	gateway} pairs and updates existing subnet gateways and members.
 #
 # getStatIPv4routes { node_id }
 #	Returns a list of all static IPv4 routes as a list of
@@ -1343,104 +1343,117 @@ proc getIfcLinkLocalIPv6addr { node ifc } {
 # NAME
 #   getDefaultGateways -- get default IPv4/IPv6 gateways.
 # SYNOPSIS
-#   lassign [getDefaultGateways $node $subnets_and_gws] my_gws subnets_and_gws
+#   lassign [getDefaultGateways $node $subnet_gws $nodes_l2data] \
+#     my_gws subnets_and_gws
 # FUNCTION
 #   Returns a list of all default IPv4/IPv6 gateways for the subnets in which
 #   this node belongs as a {nodeType|gateway4|gateway6} values. Additionally,
-#   it concatenates newly found {subnet members - gateways} to already known
-#   list $subnets_and_gws.
+#   it refreshes newly discovered gateways and subnet members to the existing
+#   $subnet_gws list and $nodes_l2data dictionary.
 # INPUTS
 #   * node -- node id
-#   * subnets_and_gws -- already known pairs of subnets/gateways
+#   * subnet_gws -- already known {nodeType|gateway4|gateway6} values
+#   * nodes_l2data -- a dictionary of already known {node ifc subnet_idx}
+#   triplets in this subnet
 # RESULT
 #   * my_gws -- list of all possible default gateways for the specified node
-#   * subnets_and_gws -- refreshed pairs of subnets/gateways
+#   * subnet_gws -- refreshed {nodeType|gateway4|gateway6} values
+#   * nodes_l2data -- refreshed dictionary of {node ifc subnet_idx} triplets in
+#   this subnet
 #****
-proc getDefaultGateways { node subnets_and_gws } {
+proc getDefaultGateways { node subnet_gws nodes_l2data } {
     # go through all interfaces and collect data for each subnet
-    set my_gws {}
     foreach ifc [ifcList $node] {
-	set subnet_checked false
-	foreach {members gws} $subnets_and_gws {
-	    if { "$node $ifc" in $members } {
-		set subnet_checked true
-		# this interface subnet data is already checked,
-		# only append gateways (if not already added)
-		if { [lindex $gws 0] ni $my_gws } {
-		    set my_gws [concat $my_gws $gws]
-		}
-		break
-	    }
-	}
-
-	if { $subnet_checked } {
+	if { [dict exists $nodes_l2data $node $ifc] } {
 	    continue
 	}
 
-	# this interface belongs to a subnet which is not yet checked, get its
-	# data
-	lassign [getSubnetData $node $ifc {} {}] members gws
-	lappend subnets_and_gws [list $members $gws]
-	set my_gws [concat $my_gws $gws]
+	# add new subnet at the end of the list
+	set subnet_idx [llength $subnet_gws]
+	set peer_node [logicalPeerByIfc $node $ifc]
+	set peer_ifc [ifcByLogicalPeer $peer_node $node]
+	lassign [getSubnetData $peer_node $peer_ifc \
+	  $subnet_gws $nodes_l2data $subnet_idx] \
+	  subnet_gws nodes_l2data
     }
 
-    return [list $my_gws $subnets_and_gws]
+    # merge all gateways values and return
+    set my_gws {}
+    foreach subnet_idx [lsort -unique [dict values [dict get $nodes_l2data $node]]] {
+	set my_gws [concat $my_gws [lindex $subnet_gws $subnet_idx]]
+    }
+
+    return [list $my_gws $subnet_gws $nodes_l2data]
 }
 
 #****f* nodecfg.tcl/getSubnetData
 # NAME
 #   getSubnetData -- get subnet members and its IPv4/IPv6 gateways.
 # SYNOPSIS
-#   lassign [getSubnetData $this_node $this_ifc $members $gws] members gws
+#   lassign [getSubnetData $this_node $this_ifc \
+#     $subnet_gws $nodes_l2data $subnet_idx] \
+#     subnet_gws nodes_l2data
 # FUNCTION
 #   Called when checking L2 network for routers/extnats in order to get all
-#   default gateways. Returns all possible default gateways in this LAN, all
-#   members of this subnet as {nodes ifc} pairs, and all IPv4/IPv6 gateways.
+#   default gateways. Returns all possible default IPv4/IPv6 gateways in this
+#   LAN appended to the subnet_gws list and updates the members of this subnet
+#   as {nodes ifc subnet_idx} triplets in the nodes_l2data dictionary.
 # INPUTS
 #   * this_node -- node id
 #   * this_ifc -- node interface
-#   * members -- already known {node ifc} pairs in this subnet
-#   * gws -- already known {nodeType|gateway4|gateway6} values
+#   * subnet_gws -- already known {nodeType|gateway4|gateway6} values
+#   * nodes_l2data -- a dictionary of already known {node ifc subnet_idx}
+#   triplets in this subnet
 # RESULT
-#   * members -- refreshed {node ifc} pairs in this subnet
-#   * gws -- refreshed {nodeType|gateway4|gateway6} values
+#   * subnet_gws -- refreshed {nodeType|gateway4|gateway6} values
+#   * nodes_l2data -- refreshed dictionary of {node ifc subnet_idx} triplets in
+#   this subnet
 #****
-proc getSubnetData { this_node this_ifc members gws } {
-    if { "$this_node $this_ifc" in $members } {
-	# this node/ifc is already visited in this run
-	return "\"$members\" \"$gws\""
+proc getSubnetData { this_node this_ifc subnet_gws nodes_l2data subnet_idx } {
+    set my_gws [lindex $subnet_gws $subnet_idx]
+
+    if { [dict exists $nodes_l2data $this_node $this_ifc] } {
+	# this node/ifc is already a part of this subnet
+	set subnet_idx [dict get $nodes_l2data $this_node $this_ifc]
+	return [list $subnet_gws $nodes_l2data]
     }
 
-    lappend members "$this_node $this_ifc"
-    set members [lsort $members]
+    dict set nodes_l2data $this_node $this_ifc $subnet_idx
 
     if { [[typemodel $this_node].layer] == "NETWORK" } {
 	if { [nodeType $this_node] in "router extnat" } {
 	    # this node is a router/extnat, add our IP addresses to lists
 	    set gw4 [lindex [split [getIfcIPv4addr $this_node $this_ifc] /] 0]
 	    set gw6 [lindex [split [getIfcIPv6addr $this_node $this_ifc] /] 0]
-	    lappend gws [nodeType $this_node]|$gw4|$gw6
+	    lappend my_gws [nodeType $this_node]|$gw4|$gw6
+	    lset subnet_gws $subnet_idx $my_gws
 	}
 
 	# first, get this node/ifc peer's subnet data in case it is an L2 node
 	# and we're not yet gone through it
 	set peer_node [logicalPeerByIfc $this_node $this_ifc]
 	set peer_ifc [ifcByLogicalPeer $peer_node $this_node]
-	lassign [getSubnetData $peer_node $peer_ifc $members $gws] members gws
+	lassign [getSubnetData $peer_node $peer_ifc \
+	  $subnet_gws $nodes_l2data $subnet_idx] \
+	  subnet_gws nodes_l2data
 
-	# this node is not a router/extnat, do nothing else
-	return "\"$members\" \"$gws\""
+	# this node is done, do nothing else
+	return [list $subnet_gws $nodes_l2data]
     }
 
     # this node is an L2 node
     # - collect data from all interfaces
     foreach ifc [ifcList $this_node] {
+	dict set nodes_l2data $this_node $ifc $subnet_idx
+
 	set peer_node [logicalPeerByIfc $this_node $ifc]
 	set peer_ifc [ifcByLogicalPeer $peer_node $this_node]
-	lassign [getSubnetData $peer_node $peer_ifc $members $gws] members gws
+	lassign [getSubnetData $peer_node $peer_ifc \
+	  $subnet_gws $nodes_l2data $subnet_idx] \
+	  subnet_gws nodes_l2data
     }
 
-    return "\"$members\" \"$gws\""
+    return [list $subnet_gws $nodes_l2data]
 }
 
 #****f* nodecfg.tcl/getStatIPv4routes

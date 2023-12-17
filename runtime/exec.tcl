@@ -1002,13 +1002,14 @@ proc deployCfg {} {
     statline "Configuring nodes..."
 
     set step 0
-    set subnets_and_gws {}
+    set subnet_gws {}
+    set nodes_l2data [dict create]
     foreach node $node_list {
 	upvar 0 ::cf::[set ::curcfg]::$node $node
 	set type [nodeType $node]
 
 	if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
-	    lassign [getDefaultGateways $node $subnets_and_gws] my_gws subnets_and_gws
+	    lassign [getDefaultGateways $node $subnet_gws $nodes_l2data] my_gws subnet_gws nodes_l2data
 	    lassign [getDefaultRoutesConfig $node $my_gws] all_routes4 all_routes6
 
 	    setDefaultIPv4routes $node $all_routes4
