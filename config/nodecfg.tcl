@@ -1362,8 +1362,13 @@ proc getIfcLinkLocalIPv6addr { node ifc } {
 #   this subnet
 #****
 proc getDefaultGateways { node subnet_gws nodes_l2data } {
+    set all_ifc [ifcList $node]
+    if { [llength $all_ifc] == 0 } {
+	return [list {} {} {}]
+    }
+
     # go through all interfaces and collect data for each subnet
-    foreach ifc [ifcList $node] {
+    foreach ifc $all_ifc {
 	if { [dict exists $nodes_l2data $node $ifc] } {
 	    continue
 	}

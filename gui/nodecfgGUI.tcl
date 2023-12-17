@@ -1257,7 +1257,6 @@ proc configGUI_staticRoutes { wi node } {
     set auto_default_routes [getAutoDefaultRoutesStatus $node]
     lassign [getDefaultGateways $node {} {}] my_gws {} {}
     lassign [getDefaultRoutesConfig $node $my_gws] all_routes4 all_routes6
-    set auto_routes [concat $all_routes4 $all_routes6]
 
     set ifc_routes_enable $wi.ifc_routes_enable
     ttk::checkbutton $ifc_routes_enable -text "Enable automatic default routes" \
@@ -1285,22 +1284,22 @@ proc configGUI_staticRoutes { wi node } {
     pack $user_routes.hsb -side bottom -fill x
     pack $user_routes.editor -anchor w -fill both -expand 1
 
-    set ifc_routes $sroutes_nb.ifc
-    ttk::frame $ifc_routes
-    $sroutes_nb add $ifc_routes -text "Automatic static routes"
-    ttk::scrollbar $ifc_routes.vsb -orient vertical -command [list $ifc_routes.editor yview]
-    ttk::scrollbar $ifc_routes.hsb -orient horizontal -command [list $ifc_routes.editor xview]
-    text $ifc_routes.editor -width 42 -bg white -wrap none \
-	-yscrollcommand [list $ifc_routes.vsb set] -xscrollcommand [list $ifc_routes.hsb set]
-    foreach route $auto_routes {
-	$ifc_routes.editor insert end "$route
+    set auto_routes $sroutes_nb.auto
+    ttk::frame $auto_routes
+    $sroutes_nb add $auto_routes -text "Automatic default routes"
+    ttk::scrollbar $auto_routes.vsb -orient vertical -command [list $auto_routes.editor yview]
+    ttk::scrollbar $auto_routes.hsb -orient horizontal -command [list $auto_routes.editor xview]
+    text $auto_routes.editor -width 42 -bg white -wrap none \
+	-yscrollcommand [list $auto_routes.vsb set] -xscrollcommand [list $auto_routes.hsb set]
+    foreach route [concat $all_routes4 $all_routes6] {
+	$auto_routes.editor insert end "$route
 "
     }
-    $ifc_routes.editor configure -state disabled
+    $auto_routes.editor configure -state disabled
 
-    pack $ifc_routes.vsb -side right -fill y
-    pack $ifc_routes.hsb -side bottom -fill x
-    pack $ifc_routes.editor -anchor w -fill both -expand 1
+    pack $auto_routes.vsb -side right -fill y
+    pack $auto_routes.hsb -side bottom -fill x
+    pack $auto_routes.editor -anchor w -fill both -expand 1
 
 }
 
