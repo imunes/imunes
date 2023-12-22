@@ -687,7 +687,7 @@ proc setIfcOperState { node ifc state } {
 #****
 proc getIfcNatState { node ifc } {
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] == "nat" } {
+	if { [lindex $line 0] in "!nat nat" } {
 	    return "on"
 	}
     }
@@ -709,11 +709,10 @@ proc getIfcNatState { node ifc } {
 proc setIfcNatState { node ifc state } {
     set ifcfg [list "interface $ifc"]
     if { $state == "on" } {
-	lappend ifcfg " nat"
+	lappend ifcfg " !nat"
     }
     foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] != "nat" && \
-	    [lrange $line 0 1] != "no nat" } {
+	if { [lindex $line 0] ni "!nat nat" } {
 	    lappend ifcfg $line
 	}
     }
