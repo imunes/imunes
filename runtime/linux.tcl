@@ -327,6 +327,44 @@ proc getHostIfcList {} {
     return $extifcs
 }
 
+#****f* linux.tcl/getHostIfcVlanExists
+# NAME
+#   getHostIfcVlanExists -- check if host VLAN interface exists
+# SYNOPSIS
+#   getHostIfcVlanExists $node $name
+# FUNCTION
+#   Returns 1 if VLAN interface with the name $name for the given node cannot
+#   be created.
+# INPUTS
+#   * node -- node id
+#   * name -- interface name
+# RESULT
+#   * check -- 1 if interface exists, 0 otherwise
+#****
+proc getHostIfcVlanExists { node name } {
+    global execMode
+
+    # check if the VLAN is available
+    set ifname [getNodeName $node]
+    set vlan [lindex [split [getNodeName $node] .] 1]
+    # if the VLAN is available then it can be created
+    if { [catch {exec ip l show $ifname} err] } {
+	return 0
+    }
+
+    set msg "Error: external interface $name can't be\
+	created.\nVLAN $vlan is already in use. \n($err)"
+    if { $execMode == "batch" } {
+	puts $msg
+    } else {
+	after idle {.dialog1.msg configure -wraplength 4i}
+	tk_dialog .dialog1 "IMUNES error" $msg \
+	    info 0 Dismiss
+    }
+
+    return 1
+}
+
 proc createExperimentContainer {} {}
 
 proc loadKernelModules {} {
@@ -822,6 +860,23 @@ proc getExtIfcs { } {
 #****
 proc captureExtIfc { eid node } {
     set ifname [getNodeName $node]
+    set ifc [lindex [split [getNodeName $node] .] 0]
+    set vlan [lindex [split [getNodeName $node] .] 1]
+    if { $vlan != "" } {
+	catch {exec ip link add link $ifc name $ifname type vlan id $vlan} err
+	if { $err != "" } {
+	    set msg "Error: VLAN $vlan on external interface $ifc can't be\
+		created.\n($err)"
+	    if { $execMode == "batch" } {
+		puts $msg
+	    } else {
+		after idle {.dialog1.msg configure -wraplength 4i}
+		tk_dialog .dialog1 "IMUNES error" $msg \
+		    info 0 Dismiss
+	    }
+	}
+    }
+
     createNetgraphNode $eid $node
     catch {exec ovs-vsctl add-port $eid-$node $ifname}
 }
@@ -838,6 +893,12 @@ proc captureExtIfc { eid node } {
 #   * node -- node id
 #****
 proc releaseExtIfc { eid node } {
+    set ifname [getNodeName $node]
+    set ifc [lindex [split [getNodeName $node] .] 0]
+    set vlan [lindex [split [getNodeName $node] .] 1]
+    if { $vlan != "" } {
+	catch "exec ip link del $ifname"
+    }
     catch "destroyNetgraphNode $eid $node"
 }
 
