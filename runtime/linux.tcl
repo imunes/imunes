@@ -1,9 +1,7 @@
-global VROOT_MASTER ULIMIT_FILE ULIMIT_PROC HOST_BRIDGE
+global VROOT_MASTER ULIMIT_FILE ULIMIT_PROC
 set VROOT_MASTER "imunes/template"
 set ULIMIT_FILE "1024:16384"
 set ULIMIT_PROC "512:1024"
-
-set HOST_BRIDGE lanswitch
 
 #****f* linux.tcl/writeDataToNodeFile
 # NAME
@@ -489,7 +487,6 @@ proc configureICMPoptions { node } {
 }
 
 proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
-    global HOST_BRIDGE
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     set ether1 [getIfcMACaddr $lnode1 $ifname1]
@@ -510,10 +507,10 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
     switch -exact "[[typemodel $lnode1].virtlayer]-[[typemodel $lnode2].virtlayer]" {
 	NETGRAPH-NETGRAPH {
 	    if { [nodeType $lnode1] in "ext extnat" } {
-		createBridge $HOST_BRIDGE $eid-$lnode1
+		createBridge "lanswitch" $eid-$lnode1
 	    }
 	    if { [nodeType $lnode2] in "ext extnat" } {
-		createBridge $HOST_BRIDGE $eid-$lnode2
+		createBridge "lanswitch" $eid-$lnode2
 	    }
 	    # generate interface names
 	    set hostIfc1 "$eid-$lname1-$ifname1"
@@ -521,8 +518,8 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 	    # create veth pair
 	    createVethPair $hostIfc1 $hostIfc2
 	    # add veth interfaces to bridges
-	    addIfcToBridge $HOST_BRIDGE $hostIfc1 $eid-$lname1
-	    addIfcToBridge $HOST_BRIDGE $hostIfc2 $eid-$lname2
+	    addIfcToBridge "lanswitch" $hostIfc1 $eid-$lname1
+	    addIfcToBridge "lanswitch" $hostIfc2 $eid-$lname2
 	    # set bridge interfaces up
 	    exec ip link set dev $hostIfc1 up
 	    exec ip link set dev $hostIfc2 up
@@ -776,12 +773,7 @@ proc createBridge { type bridge } {
 #   * node -- id of the node (type of the node is either lanswitch or hub)
 #****
 proc l2node.instantiate { eid node } {
-    global HOST_BRIDGE
-
     set type [nodeType $node]
-    if { $type == "lanswitch" } {
-	set type $HOST_BRIDGE
-    }
 
     createBridge $type $eid-$node
 }
@@ -810,12 +802,7 @@ proc destroyBridge { type bridge } {
 #   * node -- id of the node
 #****
 proc l2node.destroy { eid node } {
-    global HOST_BRIDGE
-
     set type [nodeType $node]
-    if { $type == "lanswitch" } {
-	set type $HOST_BRIDGE
-    }
 
     destroyBridge $type $eid-$node
 }
@@ -927,8 +914,8 @@ proc captureExtIfc { eid node } {
 	}
     }
 
-    createBridge $HOST_BRIDGE $eid-$node
-    addIfcToBridge $HOST_BRIDGE $ifname $eid-$node
+    createBridge "lanswitch" $eid-$node
+    addIfcToBridge "lanswitch" $ifname $eid-$node
 }
 
 #****f* linux.tcl/releaseExtIfc
@@ -943,16 +930,14 @@ proc captureExtIfc { eid node } {
 #   * node -- node id
 #****
 proc releaseExtIfc { eid node } {
-    global HOST_BRIDGE
-
     set ifname [getNodeName $node]
     set ifc [lindex [split [getNodeName $node] .] 0]
     set vlan [lindex [split [getNodeName $node] .] 1]
     if { $vlan != "" } {
-	catch "exec ip link del $ifname"
+	catch { exec ip link del $ifname }
     }
 
-    catch "destroyBridge $HOST_BRIDGE $eid-$node"
+    catch { destroyBridge "lanswitch" $eid-$node }
 }
 
 proc getIPv4RouteCmd { statrte } {
@@ -1011,12 +996,11 @@ proc createVethPair { ifc1 ifc2 } {
 }
 
 proc addNodeIfcToBridge { bridge brifc node ifc mac } {
-    global HOST_BRIDGE
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     set nodeNs [createNetNs $node]
     # create bridge
-    createBridge $HOST_BRIDGE $eid-$bridge
+    createBridge "lanswitch" $eid-$bridge
 
     # generate interface names
     set hostIfc "$eid-$bridge-$brifc"
@@ -1025,7 +1009,7 @@ proc addNodeIfcToBridge { bridge brifc node ifc mac } {
     # create veth pair
     createVethPair $hostIfc $guestIfc
     # add host side of veth pair to bridge
-    addIfcToBridge $HOST_BRIDGE $hostIfc $eid-$bridge
+    addIfcToBridge "lanswitch" $hostIfc $eid-$bridge
 
     exec ip link set "$hostIfc" up
 
@@ -1038,17 +1022,9 @@ proc addNodeIfcToBridge { bridge brifc node ifc mac } {
 }
 
 proc checkSysPrerequisites {} {
-    global HOST_BRIDGE
-
     set msg ""
     if { [catch {exec docker ps } err] } {
         set msg "Cannot start experiment. Is docker installed and running (check the output of 'docker ps')?\n"
-    }
-
-    if { $HOST_BRIDGE == "lanswitch_ovs" } {
-	if { [catch {exec pgrep ovs-vswitchd } err ] } {
-	    set msg "Cannot start experiment. Is ovs-vswitchd installed and running (check the output of 'pgrep ovs-vswitchd')?\n"
-	}
     }
 
     if { [catch {exec nsenter --version}] } {
@@ -1060,13 +1036,7 @@ proc checkSysPrerequisites {} {
     }
 
     if { $msg != "" } {
-	if { $HOST_BRIDGE == "lanswitch_ovs" } {
-	    return "$msg\nIMUNES needs docker and ovs-vswitchd services running and\
-xterm and nsenter installed."
-	} else {
-	    return "$msg\nIMUNES needs docker service running and\
-xterm and nsenter installed."
-	}
+	return "$msg\nIMUNES needs docker service running and xterm and nsenter installed."
     }
 
     return ""
@@ -1358,6 +1328,7 @@ proc startExternalIfc { eid node } {
 
 proc stopExternalIfc { eid node } {
     exec ip l set $eid-$node down
+    destroyBridge "lanswitch" $eid-$node
 }
 
 proc unsetupExtNat { eid node ifc } {
@@ -1371,8 +1342,4 @@ proc unsetupExtNat { eid node ifc } {
     set cmds "$cmds\n iptables -D FORWARD -o $eid-$node -j ACCEPT"
 
     exec sh << $cmds &
-}
-
-proc destroyExtInterface { eid node } {
-    destroyNetgraphNode $eid $node
 }

@@ -53,6 +53,10 @@ registerModule $MODULE
 #   Loads ng_bridge into the kernel.
 #****
 proc $MODULE.prepareSystem {} {
+	catch { exec sysctl net.bridge.bridge-nf-call-arptables=0 }
+	catch { exec sysctl net.bridge.bridge-nf-call-iptables=0 }
+	catch { exec sysctl net.bridge.bridge-nf-call-ip6tables=0 }
+
     catch { exec kldload ng_bridge }
 }
 
