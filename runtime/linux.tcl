@@ -859,6 +859,8 @@ proc getExtIfcs { } {
 #   * node -- node id
 #****
 proc captureExtIfc { eid node } {
+    global execMode
+
     set ifname [getNodeName $node]
     set ifc [lindex [split [getNodeName $node] .] 0]
     set vlan [lindex [split [getNodeName $node] .] 1]
