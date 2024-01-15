@@ -874,6 +874,8 @@ proc captureExtIfc { eid node } {
 		tk_dialog .dialog1 "IMUNES error" $msg \
 		    info 0 Dismiss
 	    }
+	} else {
+	    catch {exec ip link set $ifname up} err
 	}
     }
 
