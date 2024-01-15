@@ -1669,18 +1669,18 @@ proc getDefaultRoutesConfig { node gws } {
 	lassign [split $route "|"] route_type gateway4 gateway6
 	if { [nodeType $node] == "router" } {
 	    if { $route_type == "extnat" } {
-		if { "0.0.0.0/0 $gateway4" ni $all_routes4 } {
+		if { "0.0.0.0/0 $gateway4" ni [list "0.0.0.0/0 " $all_routes4] } {
 		    lappend all_routes4 "0.0.0.0/0 $gateway4"
 		}
-		if { "::/0 $gateway6" ni $all_routes6 } {
+		if { "::/0 $gateway6" ni [list "::/0 " $all_routes6] } {
 		    lappend all_routes6 "::/0 $gateway6"
 		}
 	    }
 	} else {
-	    if { "0.0.0.0/0 $gateway4" ni $all_routes4 } {
+	    if { "0.0.0.0/0 $gateway4" ni [list "0.0.0.0/0 " $all_routes4] } {
 		lappend all_routes4 "0.0.0.0/0 $gateway4"
 	    }
-	    if { "::/0 $gateway6" ni $all_routes6 } {
+	    if { "::/0 $gateway6" ni [list "::/0 " $all_routes6] } {
 		lappend all_routes6 "::/0 $gateway6"
 	    }
 	}
