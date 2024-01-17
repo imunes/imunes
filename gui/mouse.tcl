@@ -852,13 +852,7 @@ proc button3node { c x y } {
 	    .button3menu.wireshark add command -label "No interfaces available." 
 	} else {
 	    foreach ifc [allIfcList $node] {
-		set tmpifc $ifc
-		if { $isOSlinux } {
-		    if { $ifc == "lo0" } {
-			set tmpifc lo
-		    }
-		}
-		set label "$tmpifc"
+		set label "$ifc"
 		if { [getIfcIPv4addr $node $ifc] != "" } {
 		    set label "$label ([getIfcIPv4addr $node $ifc])"
 		}
@@ -866,7 +860,7 @@ proc button3node { c x y } {
 		    set label "$label ([getIfcIPv6addr $node $ifc])"
 		}
 		.button3menu.wireshark add command -label $label \
-		    -command "startWiresharkOnNodeIfc $node $tmpifc"
+		    -command "startWiresharkOnNodeIfc $node $ifc"
 	    }
 	}
 	#
@@ -878,13 +872,7 @@ proc button3node { c x y } {
 	    .button3menu.tcpdump add command -label "No interfaces available." 
 	} else {
 	    foreach ifc [allIfcList $node] {
-		set tmpifc $ifc
-		if { $isOSlinux } {
-		    if { $ifc == "lo0" } {
-			set tmpifc lo
-		    }
-		}
-		set label "$tmpifc"
+		set label "$ifc"
 		if { [getIfcIPv4addr $node $ifc] != "" } {
 		    set label "$label ([getIfcIPv4addr $node $ifc])"
 		}
@@ -892,7 +880,7 @@ proc button3node { c x y } {
 		    set label "$label ([getIfcIPv6addr $node $ifc])"
 		}
 		.button3menu.tcpdump add command -label $label \
-		    -command "startTcpdumpOnNodeIfc $node $tmpifc"
+		    -command "startTcpdumpOnNodeIfc $node $ifc"
 	    }
 	}
 	#
