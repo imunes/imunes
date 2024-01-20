@@ -486,7 +486,7 @@ proc configureICMPoptions { node } {
     pipesExec "docker exec $eid.$node sh -c \'$cmds\'" "hold"
 }
 
-proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
+proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 {direct 0} } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     set ether1 [getIfcMACaddr $lnode1 $ifname1]

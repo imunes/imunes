@@ -1618,7 +1618,7 @@ proc createExperimentContainer {} {
 #   * iname1 -- interface name on the first node
 #   * iname2 -- interface name on the second node
 #****
-proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
+proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 {direct 0} } {
     upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global debug
@@ -1647,12 +1647,17 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 	return
     }
 
-    set cmds "$cmds\n mkpeer $ngpeer1: pipe $nghook1 upper"
-    set cmds "$cmds\n name $ngpeer1:$nghook1 $lname"
-    set cmds "$cmds\n connect $lname: $ngpeer2: lower $nghook2"
+    if { $direct } {
+	set cmds "$cmds\n connect $ngpeer1: $ngpeer2: $nghook1 $nghook2"
+    } else {
+	set cmds "$cmds\n mkpeer $ngpeer1: pipe $nghook1 upper"
+	set cmds "$cmds\n name $ngpeer1:$nghook1 $lname"
+	set cmds "$cmds\n connect $lname: $ngpeer2: lower $nghook2"
 
-    # Ethernet frame has a 14-byte header - this is a temp. hack!!!
-    set cmds "$cmds\n msg $lname: setcfg {header_offset=14}"
+	# Ethernet frame has a 14-byte header - this is a temp. hack!!!
+	set cmds "$cmds\n msg $lname: setcfg {header_offset=14}"
+    }
+
     catch {exec jexec $eid ngctl -f - << $cmds} err
     if { $debug && $err != "" } {
 	puts $err

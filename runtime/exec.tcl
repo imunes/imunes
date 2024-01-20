@@ -991,7 +991,7 @@ proc deployCfg {} {
 	    update
 	}
 
-	createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2
+	createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 [linkDirect $link]
 	configureLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
     }
 
@@ -1153,7 +1153,7 @@ proc terminateAllNodes { eid } {
         set lnode2 [lindex [linkPeers $link] 1]
 #	statline "Shutting down link $link ($lnode1-$lnode2)"
 	displayBatchProgress $i [ llength $link_list ]
-	destroyLinkBetween $eid $lnode1 $lnode2
+	catch {destroyLinkBetween $eid $lnode1 $lnode2}
 
 	incr startedCount -1
 	if {$execMode != "batch"} {
