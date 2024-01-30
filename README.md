@@ -74,20 +74,21 @@ First we need to install the packages required for IMUNES:
     wireshark (with GUI)
     ImageMagick
     Docker (version 1.6 or greater)
-    OpenvSwitch
     nsenter (part of the util-linux package since version 2.23 and later)
     xterm
     make (used for installation)
     
-To run IMUNES experiments, you must run the Docker daemon and start the ovs-vswitchd service (starting these services depends on your Linux distribution).
+To run IMUNES experiments, you must run the Docker daemon (starting this service depends on your Linux distribution).
 
 Note: on some distributions the netem module `sch_netem` required for link configuration is only available by installing additional kernel packages. Please check the availability of the module:
 
     # modinfo sch_netem
     
 #### Arch
-    # pacman -S tk tcllib wireshark-gtk imagemagick docker \
-        make openvswitch xterm
+    # pacman -S tk wireshark-qt imagemagick docker make xterm
+
+	# Also, package tcllib is available on AUR:
+	# yay -S tcllib
 
 #### Debian 9 and testing(buster)
     (https://docs.docker.com/install/linux/docker-ce/debian/)[https://docs.docker.com/install/linux/docker-ce/debian/]
@@ -199,6 +200,8 @@ execute (as root):
 
     # cd imunes
     # make install
+
+Note: check your distribution repository for a pre-packaged version of IMUNES (e.g. `imunes-git` on AUR for Arch Linux).
 
 ### Filesystem for virtual nodes
 
