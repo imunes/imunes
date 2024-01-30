@@ -753,9 +753,12 @@ proc createBridge { type bridge } {
 	lanswitch_ovs {
 	    catch {exec ovs-vsctl add-br $bridge}
 	}
-	lanswitch -
-	hub {
+	lanswitch {
 	    catch {exec ip link add name $bridge type bridge}
+	    catch {exec ip link set $bridge up}
+	}
+	hub {
+	    catch {exec ip link add name $bridge type bridge ageing_time 0}
 	    catch {exec ip link set $bridge up}
 	}
     }
