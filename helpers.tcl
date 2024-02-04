@@ -198,7 +198,7 @@ proc prepareVroot {} {
 
     set curdir [pwd]
     cd $ROOTDIR/$LIBDIR
-    catch {exec >@stdout sh scripts/prepare_vroot.sh}
+    catch {exec >@stdout 2>@stdout sh scripts/prepare_vroot.sh}
     cd $curdir
 }
 

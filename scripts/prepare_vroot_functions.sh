@@ -42,7 +42,7 @@ PREPAREDIR="vroot_prepare"
 WORKDIR=/tmp/$PREPAREDIR
 
 # fetch command
-FETCH_CMD="fetch"
+FETCH_CMD="fetch -v"
 
 # postfix installation skip question
 export BATCH="yes"
@@ -55,7 +55,7 @@ VROOT_DIR=/var/imunes
 # packages for installation
 PACKAGES_MINIMAL="pkg quagga bash mrouted iftop"
 PACKAGES_COMMON="netperf lsof elinks nmap lighttpd akpop3d links nano postfix \
-   dsniff scapy p0f ettercap tcpreplay hping strongswan"
+   dsniff scapy p0f ettercap tcpreplay hping3 strongswan"
 
 ##########################
 
@@ -74,6 +74,8 @@ BASE_FILES="base"
 if [ "$ARCH" = "amd64" ]; then
     BASE_FILES="$BASE_FILES lib32"
     PKGREPO="http://pkg.freebsd.org/FreeBSD:$RELEASE_NUM:amd64/$REPO"
+elif [ "$ARCH" = "arm64" ]; then
+    PKGREPO="http://pkg.freebsd.org/FreeBSD:$RELEASE_NUM:aarch64/$REPO"
 fi
 
 ##########################
@@ -260,6 +262,10 @@ installPackagesPkg () {
 
     if [ "$err_list" != "" ]; then
 	log "OUT" "There were errors installing these packages:\n $err_list"
+	log "OUT" "Try installing missing packages using:"
+	log "OUT" " # pkg_imunes install PKGNAME"
+	log "OUT" "Additionally, you can upgrade existing ones in vroot using:"
+	log "OUT" " # pkg_imunes upgrade"
     fi
 }
 
