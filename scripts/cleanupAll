@@ -22,11 +22,12 @@ for e in $eids; do
     imunes -b -e $e
 done
 
-mounts=`zfs list | grep -o "i..... " | uniq`
-for mount in $mounts; do
-    echo "Destroying zfs mount vroot/$mount."
-    zfs destroy -R vroot/$mount
-done
+# Do not destroy random ZFS datasets
+#mounts=`zfs list | grep -o "i..... " | uniq`
+#for mount in $mounts; do
+#    echo "Destroying zfs mount vroot/$mount."
+#    zfs destroy -R vroot/$mount
+#done
 
 cd $mounts_root
 mounts=`ls | grep -v vroot`

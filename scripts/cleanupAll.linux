@@ -23,23 +23,17 @@ for e in $eids; do
     imunes -b -e $e
 done
 
-dockers=`docker ps -a | tail -n +2 | grep "imunes" | awk '{print $1}' `
-for id in $dockers; do
-    echo "Destroying docker $id."
-    docker kill $id > /dev/null 2> /dev/null
-    docker rm -f $id > /dev/null 2> /dev/null
-done
-
-bridges=`ovs-vsctl list-br`
-for id in $bridges; do
-    ovs-vsctl -t 1 del-br $id > /dev/null
-    echo "Destroying openvswitch bridge $id."
-done
+# let's not destroy unknown Docker containers
+#dockers=`docker ps -a | tail -n +2 | grep "imunes" | awk '{print $1}' `
+#for id in $dockers; do
+#    echo "Destroying docker $id."
+#    docker kill $id > /dev/null 2> /dev/null
+#    docker rm -f $id > /dev/null 2> /dev/null
+#done
 
 if test -d $mounts_root; then
-cd $mounts_root
-    mounts=`ls | grep -v vroot`
-    for mount in $mounts; do
+    cd $mounts_root
+    for mount in `ls`; do
 	echo "Destroying imunes files $mounts_root/$mount."
 	rm -fr $mount
     done

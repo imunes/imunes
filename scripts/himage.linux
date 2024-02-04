@@ -56,27 +56,24 @@ vi_name() {
 }
 
 get_explist() {
-    explist1=`docker ps | grep "imunes" | awk '{print $NF}' | rev | cut -d. -f2- | sort -u | rev`
-    explist2=`ovs-vsctl list-br | cut -d- -f1 | sort -u`
-    explist=`echo $explist1 $explist2 | tr ' ' '\n' | sort -u`
-    for exp in $explist; do
-	if test -r /var/run/imunes/$exp/; then
-	    if test $1 = "nodes"; then
-		data=`grep network-config -A 3 /var/run/imunes/$exp/config.imn | grep hostname | awk '{print $2}' | paste -s -d" " -`
-	    else
-		if test -r /var/run/imunes/$exp/name; then
-		    exp_name=`cat /var/run/imunes/$exp/name`
-		else
-		    exp_name="N/A"
-		fi
-		exp_timestamp=`cat /var/run/imunes/$exp/timestamp`
-		data="$exp_name - $exp_timestamp"
-	    fi
-	    echo "$exp ($data)"
-	else
-	    node_ids=`docker ps | grep "imunes" | grep "$exp" | awk '{print $NF}' | paste -s -d" " -`
-	    echo "$exp (`docker inspect -f "{{.Config.Hostname}}" $node_ids | paste -s -d" " -`)"
+    for exp_path in /var/run/imunes/*/; do
+	exp=$(basename $exp_path)
+	if test "$exp" = "*"; then
+	    continue
 	fi
+
+	if test $1 = "nodes"; then
+	    data=`grep network-config -A 3 /var/run/imunes/$exp/config.imn | grep hostname | awk '{print $2}' | paste -s -d" " -`
+	else
+	    if test -r /var/run/imunes/$exp/name; then
+		exp_name=`cat /var/run/imunes/$exp/name`
+	    else
+		exp_name="N/A"
+	    fi
+	    exp_timestamp=`cat /var/run/imunes/$exp/timestamp`
+	    data="$exp_name - $exp_timestamp"
+	fi
+	echo "$exp ($data)"
     done
 }
 
