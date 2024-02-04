@@ -518,8 +518,8 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 	    # create veth pair
 	    createVethPair $hostIfc1 $hostIfc2
 	    # add veth interfaces to bridges
-	    addIfcToBridge "lanswitch" $hostIfc1 $eid-$lname1
-	    addIfcToBridge "lanswitch" $hostIfc2 $eid-$lname2
+	    addIfcToBridge "hub" $hostIfc1 $eid-$lname1
+	    addIfcToBridge "hub" $hostIfc2 $eid-$lname2
 	    # set bridge interfaces up
 	    exec ip link set dev $hostIfc1 up
 	    exec ip link set dev $hostIfc2 up
@@ -917,8 +917,8 @@ proc captureExtIfc { eid node } {
 	}
     }
 
-    createBridge "lanswitch" $eid-$node
-    addIfcToBridge "lanswitch" $ifname $eid-$node
+    createBridge "hub" $eid-$node
+    addIfcToBridge "hub" $ifname $eid-$node
 }
 
 #****f* linux.tcl/releaseExtIfc
@@ -940,7 +940,7 @@ proc releaseExtIfc { eid node } {
 	catch { exec ip link del $ifname }
     }
 
-    catch { destroyBridge "lanswitch" $eid-$node }
+    catch { destroyBridge "hub" $eid-$node }
 }
 
 proc getIPv4RouteCmd { statrte } {
@@ -1003,7 +1003,7 @@ proc addNodeIfcToBridge { bridge brifc node ifc mac } {
 
     set nodeNs [createNetNs $node]
     # create bridge
-    createBridge "lanswitch" $eid-$bridge
+    createBridge "hub" $eid-$bridge
 
     # generate interface names
     set hostIfc "$eid-$bridge-$brifc"
@@ -1012,7 +1012,7 @@ proc addNodeIfcToBridge { bridge brifc node ifc mac } {
     # create veth pair
     createVethPair $hostIfc $guestIfc
     # add host side of veth pair to bridge
-    addIfcToBridge "lanswitch" $hostIfc $eid-$bridge
+    addIfcToBridge "hub" $hostIfc $eid-$bridge
 
     exec ip link set "$hostIfc" up
 
@@ -1302,27 +1302,23 @@ proc startExternalIfc { eid node } {
     set outifc "$eid-$node"
 
     set ether [getIfcMACaddr $node $ifc]
-    if {$ether == ""} {
-       autoMACaddr $node $ifc
+    if { $ether == "" } {
+	autoMACaddr $node $ifc
+	set ether [getIfcMACaddr $node $ifc]
     }
-    set ether [getIfcMACaddr $node $ifc]
     set cmds "ip l set $outifc address $ether"
 
     set cmds "$cmds\n ip a flush dev $outifc"
 
     set ipv4 [getIfcIPv4addr $node $ifc]
-    if {$ipv4 == ""} {
-       autoIPv4addr $node $ifc
+    if { $ipv4 != "" } {
+	set cmds "$cmds\n ip a add $ipv4 dev $outifc"
     }
-    set ipv4 [getIfcIPv4addr $node $ifc]
-    set cmds "$cmds\n ip a add $ipv4 dev $outifc"
 
     set ipv6 [getIfcIPv6addr $node $ifc]
-    if {$ipv6 == ""} {
-       autoIPv6addr $node $ifc
+    if { $ipv6 != "" } {
+	set cmds "$cmds\n ip a add $ipv6 dev $outifc"
     }
-    set ipv6 [getIfcIPv6addr $node $ifc]
-    set cmds "$cmds\n ip a add $ipv6 dev $outifc"
 
     set cmds "$cmds\n ip l set $outifc up"
 
@@ -1331,7 +1327,7 @@ proc startExternalIfc { eid node } {
 
 proc stopExternalIfc { eid node } {
     exec ip l set $eid-$node down
-    destroyBridge "lanswitch" $eid-$node
+    destroyBridge "hub" $eid-$node
 }
 
 proc unsetupExtNat { eid node ifc } {

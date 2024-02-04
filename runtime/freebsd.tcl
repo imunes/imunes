@@ -2119,19 +2119,22 @@ proc startExternalIfc { eid node } {
     set ifc [lindex [ifcList $node] 0]
     set outifc "$eid-$node"
 
-    set ipv4 [getIfcIPv4addr $node $ifc]
-    if {$ipv4 == ""} {
-	autoIPv4addr $node $ifc
+    set ether [getIfcMACaddr $node $ifc]
+    if { $ether != "" } {
+	autoMACaddr $node $ifc
+	set ether [getIfcMACaddr $node $ifc]
     }
+    set cmds "ifconfig $outifc link $ether"
+
     set ipv4 [getIfcIPv4addr $node $ifc]
-    set cmds "ifconfig $outifc $ipv4"
+    if { $ipv4 != "" } {
+	set cmds "ifconfig $outifc $ipv4"
+    }
 
     set ipv6 [getIfcIPv6addr $node $ifc]
-    if {$ipv6 == ""} {
-	autoIPv6addr $node $ifc
+    if { $ipv6 != "" } {
+	set cmds "$cmds\n ifconfig $outifc inet6 $ipv6"
     }
-    set ipv6 [getIfcIPv6addr $node $ifc]
-    set cmds "$cmds\n ifconfig $outifc inet6 $ipv6"
 
     set cmds "$cmds\n ifconfig $outifc up"
 
