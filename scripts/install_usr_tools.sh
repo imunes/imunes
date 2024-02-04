@@ -30,6 +30,8 @@ patch < $IMUNESDIR/src/patches/tayga_fbsd_patch.diff
 cp tayga $VROOT_MASTER/usr/local/bin 
 echo "Installing tayga done." 
 
+exit 0
+
 # Build and install click
 echo "Installing click..." 
 cd $workdir

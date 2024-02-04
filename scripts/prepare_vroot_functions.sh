@@ -55,7 +55,7 @@ VROOT_DIR=/var/imunes
 # packages for installation
 PACKAGES_MINIMAL="pkg quagga bash mrouted iftop"
 PACKAGES_COMMON="netperf lsof elinks nmap lighttpd akpop3d links nano postfix \
-   dsniff scapy p0f ettercap tcpreplay hping strongswan"
+   dsniff scapy p0f ettercap tcpreplay hping3 strongswan"
 
 ##########################
 
