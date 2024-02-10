@@ -645,6 +645,14 @@ proc runConfOnNode { node } {
 
         set bootcmd [getCustomConfigCommand $node $selected]
         set bootcfg [getCustomConfig $node $selected]
+	if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
+	    foreach statrte [getDefaultIPv4routes $node] {
+		lappend bootcfg [getIPv4RouteCmd $statrte]
+	    }
+	    foreach statrte [getDefaultIPv6routes $node] {
+		lappend bootcfg [getIPv6RouteCmd $statrte]
+	    }
+	}
         set confFile "custom.conf"
     } else {
         set bootcfg [[typemodel $node].cfggen $node]
