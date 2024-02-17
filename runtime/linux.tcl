@@ -458,7 +458,36 @@ proc createNodeContainer { node } {
 #****
 proc createNodePhysIfcs { node } {}
 
-proc createNodeLogIfcs { node } {}
+#****f* freebsd.tcl/createNodeLogIfcs
+# NAME
+#   createNodeLogIfcs -- create node logical interfaces
+# SYNOPSIS
+#   createNodeLogIfcs $node
+# FUNCTION
+#   Creates logical interfaces for the given node.
+# INPUTS
+#   * node -- node id
+#****
+proc createNodeLogIfcs { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set node_id "$eid.$node"
+
+    foreach ifc [logIfcList $node] {
+	switch -exact [getLogIfcType $node $ifc] {
+	    vlan {
+		# physical interfaces are created when creating links, so VLANs
+		# must be created after links
+	    }
+	    lo {
+		if {$ifc != "lo0"} {
+		    pipesExec "docker exec $node_id ip link add $ifc type dummy" "hold"
+		    pipesExec "docker exec $node_id ip link set $ifc up" "hold"
+		}
+	    }
+	}
+    }
+}
 
 #****f* linux.tcl/configureICMPoptions
 # NAME
