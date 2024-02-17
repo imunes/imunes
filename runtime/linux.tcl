@@ -628,6 +628,13 @@ proc startIfcsNode { node } {
     set cmds "$cmds\n nsenter -n -t $nodeNs ip link set dev lo name lo0 2>/dev/null"
     foreach ifc [allIfcList $node] {
 	set mtu [getIfcMTU $node $ifc]
+	if { [getLogIfcType $node $ifc] == "vlan" } {
+	    set tag [getIfcVlanTag $node $ifc]
+	    set dev [getIfcVlanDev $node $ifc]
+	    if {$tag != "" && $dev != ""} {
+		set cmds "$cmds\n nsenter -n -t $nodeNs ip link add link $dev name $ifc type vlan id $tag"
+	    }
+	}
 	if {[getIfcOperState $node $ifc] == "up"} {
 	    set cmds "$cmds\n nsenter -n -t $nodeNs ip link set dev $ifc up mtu $mtu"
 	} else {
