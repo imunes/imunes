@@ -862,14 +862,129 @@ proc l3node.destroy { eid node } {
 proc deployCfg {} {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
     upvar 0 ::cf::[set ::curcfg]::eid eid
-    global supp_router_models
+    global progressbarCount execMode
+
+    set progressbarCount 0
+    set nodeCount [llength $node_list]
+    set linkCount [llength $link_list]
+
+    set t_start [clock milliseconds]
+
+    try {
+	prepareSystem
+    } on error err {
+	statline "ERROR in 'prepareSystem': '$err'"
+	return
+    }
+
+    statline "Preparing for initialization..."
+    set nonVimages {}
+    set vimages {}
+    set nonPseudoNodes {}
+    set pseudoNodesCount 0
+    foreach node $node_list {
+	if { [nodeType $node] != "pseudo" } {
+	    if { [[typemodel $node].virtlayer] != "VIMAGE" } {
+		lappend nonVimages $node
+	    } else {
+		lappend vimages $node
+	    }
+	} else {
+	    incr pseudoNodesCount
+	}
+    }
+    set nonVimagesCount [llength $nonVimages]
+    set vimagesCount [llength $vimages]
+    set nonPseudoNodes [concat $nonVimages $vimages]
+    set nonPseudoNodesCount [llength $nonPseudoNodes]
+    incr nodeCount -$pseudoNodesCount
+    incr linkCount [expr -$pseudoNodesCount/2]
+    set maxProgressbasCount [expr {2*$nodeCount + 2*$linkCount}]
+
+    set w ""
+    if {$execMode != "batch"} {
+	set w .startup
+	catch {destroy $w}
+	toplevel $w -takefocus 1
+	wm transient $w .
+	wm title $w "Starting experiment $eid..."
+	message $w.msg -justify left -aspect 1200 \
+	    -text "Starting up virtual nodes and links."
+	pack $w.msg
+	update
+	ttk::progressbar $w.p -orient horizontal -length 250 \
+	    -mode determinate -maximum $maxProgressbasCount -value $progressbarCount
+	pack $w.p
+	update
+
+	grab $w
+	wm protocol $w WM_DELETE_WINDOW {
+	}
+    }
+
+    pipesCreate
+    try {
+	statline "Creating $nonVimagesCount non-VIMAGE node(s)..."
+	instantiateNodes $nonVimages $nonVimagesCount $w
+	statline ""
+
+	statline "Creating $vimagesCount VIMAGE node(s)..."
+	instantiateNodes $vimages $vimagesCount $w
+	statline ""
+	pipesClose
+
+	statline "Configuring initial networking on non-pseudo node(s)..."
+	configureInitNetNodes $nonPseudoNodes $nonPseudoNodesCount $w
+	# statline ""
+
+	statline "Copying host files to VIMAGE node(s)..."
+	copyFilesToNodes $vimages $vimagesCount $w
+	# statline ""
+
+	statline "Starting services for NODEINST hook..."
+	services start "NODEINST"
+	# statline ""
+
+	statline "Creating interfaces on non-pseudo node(s)..."
+	createNodesInterfaces $nonPseudoNodes $nonPseudoNodesCount $w
+	# statline ""
+
+	statline "Creating $linkCount link(s)..."
+	createLinks $link_list $linkCount $w
+	statline ""
+
+	statline "Configuring $linkCount link(s)..."
+	configureLinks $link_list $linkCount $w
+	statline ""
+
+	statline "Starting services for LINKINST hook..."
+	services start "LINKINST"
+	# statline ""
+
+	statline "Configuring $nonPseudoNodesCount non-pseudo node(s)..."
+	executeConfNodes $nonPseudoNodes $nonPseudoNodesCount $w
+	statline ""
+
+	# waitForConfStart $conf_nodes_ifcs
+
+	statline "Starting services for NODECONF hook..."
+	services start "NODECONF"
+	# statline ""
+    } on error err {
+	finishExecuting 0 "$err" $w
+	return
+    }
+
+    finishExecuting 1 "Experiment ID = $eid" $w
+
+    statline "Network topology instantiated in [expr ([clock milliseconds] - $t_start)/1000.0] seconds ($nodeCount nodes and $linkCount links)."
+}
+
+proc prepareSystem {} {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
     global eid_base
-    global vroot_unionfs devfs_number
-    global inst_pipes last_inst_pipe
     global execMode
-    global debug
 
     set running_eids [getResumableExperiments]
     if {$execMode != "batch"} {
@@ -887,75 +1002,49 @@ proc deployCfg {} {
 	}
     }
 
-    set t_start [clock milliseconds]
-
     loadKernelModules
     prepareVirtualFS
     prepareDevfs
 
     createExperimentContainer
+}
 
-    set nodeCount [llength $node_list]
-    set linkCount [llength $link_list]
-    set count [expr {2*$nodeCount + $linkCount}]
-    set startedCount 0
-    if {$execMode != "batch"} {
-	set w .startup
-	catch {destroy $w}
-	toplevel $w -takefocus 1
-	wm transient $w .
-	wm title $w "Starting experiment $eid..."
-	message $w.msg -justify left -aspect 1200 \
-	    -text "Starting up virtual nodes and links."
-	pack $w.msg
-	update
-	ttk::progressbar $w.p -orient horizontal -length 250 \
-	-mode determinate -maximum $count -value $startedCount
-	pack $w.p
-	update
+proc instantiateNodes { nodes nodeCount w } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    global progressbarCount execMode
 
-	grab $w
-	wm protocol $w WM_DELETE_WINDOW {
-	}
-    }
-
-    statline "Creating nodes..."
-    set step 0
-    set allNodes [ llength $node_list ]
-
-    pipesCreate
-    set pseudo_links 0
-
-    foreach node $node_list {
-	incr step
+    set batchStep 0
+    foreach node $nodes {
+	incr batchStep
+	incr progressbarCount
 	set node_id "$eid\.$node"
-	set type [nodeType $node]
 	set name [getNodeName $node]
-	incr startedCount
 	if {$execMode != "batch"} {
 	    statline "Creating node $name"
-	    $w.p configure -value $startedCount
+	    $w.p configure -value $progressbarCount
 	    update
 	}
-	displayBatchProgress $step $allNodes
-	if {$type != "pseudo"} {
+	displayBatchProgress $batchStep $nodeCount
+	try {
 	    [typemodel $node].instantiate $eid $node
-	    pipesExec ""
-	} else {
-	    incr pseudo_links
+	} on error err {
+	    return -code error "Error in '[typemodel $node].instantiate $eid $node': $err"
 	}
+	pipesExec ""
     }
+}
 
-    statline ""
-    pipesClose
+proc configureInitNetNodes { nodes nodeCount w } {}
 
-    # Start services for the NODEINST hook
-    services start "NODEINST"
+proc copyFilesToNodes { nodes nodeCount w } {}
 
-    statline "Creating links..."
-    set step 0
-    set allLinks [expr ([ llength $link_list ] - $pseudo_links/2)]
-    for {set pending_links $link_list} {$pending_links != ""} {} {
+proc createNodesInterfaces { nodesIfcs nodeCount w } {}
+
+proc createLinks { links linkCount w } {
+    global progressbarCount execMode
+
+    set batchStep 0
+    for {set pending_links $links} {$pending_links != ""} {} {
 	set link [lindex $pending_links 0]
 	set i [lsearch -exact $pending_links $link]
 	set pending_links [lreplace $pending_links $i $i]
@@ -982,31 +1071,80 @@ proc deployCfg {} {
 		statline "Creating link $link"
 	    }
 	}
-	incr step
-	displayBatchProgress $step $allLinks
+	incr batchStep
+	displayBatchProgress $batchStep $linkCount
 
-	incr startedCount
+	incr progressbarCount
 	if {$execMode != "batch"} {
-	    $w.p configure -value $startedCount
+	    $w.p configure -value $progressbarCount
 	    update
 	}
 
-	createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2
-	configureLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
+	try {
+	    createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2
+	} on error err {
+	    return -code error "Error in 'createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2': $err"
+	}
     }
+}
 
-    # Start services for the LINKINST hook
-    services start "LINKINST"
+proc configureLinks { links linkCount w } {
+    global progressbarCount execMode
 
-    statline ""
-    statline "Configuring nodes..."
+    set batchStep 0
+    for {set pending_links $links} {$pending_links != ""} {} {
+	set link [lindex $pending_links 0]
+	set i [lsearch -exact $pending_links $link]
+	set pending_links [lreplace $pending_links $i $i]
 
-    set step 0
+	set lnode1 [lindex [linkPeers $link] 0]
+	set lnode2 [lindex [linkPeers $link] 1]
+	set ifname1 [ifcByPeer $lnode1 $lnode2]
+	set ifname2 [ifcByPeer $lnode2 $lnode1]
+
+	if { [getLinkMirror $link] != "" } {
+	    set mirror_link [getLinkMirror $link]
+	    set i [lsearch -exact $pending_links $mirror_link]
+	    set pending_links [lreplace $pending_links $i $i]
+
+	    if {$execMode != "batch"} {
+		statline "Configuring link $link/$mirror_link"
+	    }
+
+	    set p_lnode2 $lnode2
+	    set lnode2 [lindex [linkPeers $mirror_link] 0]
+	    set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
+	} else {
+	    if {$execMode != "batch"} {
+		statline "Configuring link $link"
+	    }
+	}
+	incr batchStep
+	displayBatchProgress $batchStep $linkCount
+
+	incr progressbarCount
+	if {$execMode != "batch"} {
+	    $w.p configure -value $progressbarCount
+	    update
+	}
+
+	try {
+	    configureLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
+	} on error err {
+	    return -code error "Error in 'configureLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link': $err"
+	}
+    }
+}
+
+proc executeConfNodes { nodes nodeCount w } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    global progressbarCount execMode
+
+    set batchStep 0
     set subnet_gws {}
     set nodes_l2data [dict create]
-    foreach node $node_list {
+    foreach node $nodes {
 	upvar 0 ::cf::[set ::curcfg]::$node $node
-	set type [nodeType $node]
 
 	if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
 	    lassign [getDefaultGateways $node $subnet_gws $nodes_l2data] my_gws subnet_gws nodes_l2data
@@ -1016,38 +1154,45 @@ proc deployCfg {} {
 	    setDefaultIPv6routes $node $all_routes6
 	}
 
-	incr startedCount
+	incr progressbarCount
 	if {$execMode != "batch"} {
-	    $w.p configure -value $startedCount
+	    $w.p configure -value $progressbarCount
 	    update
 	}
 
-	incr step
-	displayBatchProgress $step $allNodes
+	incr batchStep
+	displayBatchProgress $batchStep $nodeCount
 
-	if {$type != "pseudo"} {
-	    if {$execMode != "batch"} {
-		statline "Configuring node [getNodeName $node]"
-	    }
+	if {$execMode != "batch"} {
+	    statline "Configuring node [getNodeName $node]"
+	}
 
-	    if {[info procs [typemodel $node].start] != ""} {
+	if {[info procs [typemodel $node].start] != ""} {
+	    try {
 		[typemodel $node].start $eid $node
+	    } on error err {
+		return -code error "Error in '[typemodel $node].start $eid $node': $err"
 	    }
 	}
     }
-    statline ""
+}
 
-    # Start services for the NODECONF hook
-    statline "Starting services..."
-    services start "NODECONF"
+proc waitForConfStart { conf_nodes_ifcs } {}
 
-    statline "Network topology instantiated in [expr ([clock milliseconds] - $t_start)/1000.0] seconds ($allNodes nodes and $allLinks links)."
+proc finishExecuting { status msg w } {
+    global progressbarCount execMode
 
-    global execMode
-    if {$execMode != "batch"} {
-	destroy $w
+    pipesClose
+    if {$execMode == "batch"} {
+	puts $msg
     } else {
-	puts "Experiment ID = $eid"
+	catch {destroy $w}
+	set progressbarCount 0
+	if { ! $status } {
+	    after idle {.dialog1.msg configure -wraplength 4i}
+	    tk_dialog .dialog1 "IMUNES error" \
+		"$msg \nTerminate the experiment and report the bug!" info 0 Dismiss
+	}
     }
 }
 
