@@ -365,7 +365,61 @@ proc getHostIfcVlanExists { node name } {
     return 1
 }
 
-proc createExperimentContainer {} {}
+proc removeNodeFS { eid node } {}
+
+proc getNodeNetns { eid node } {
+    global devfs_number
+
+    # Top-level experiment netns
+    if { $node == "" } {
+	return $eid
+    }
+
+    # Global netns
+    if { [nodeType $node] in "ext extnat" } {
+	return imunes_$devfs_number
+    }
+
+    # Node netns
+    return $eid-$node
+}
+
+proc destroyNodeVirtIfcs { eid node } {}
+
+proc createNetns { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    global devfs_number
+
+    # Top-level experiment netns
+    if { $node == "" } {
+	catch {exec ip netns add imunes_$devfs_number}
+	exec ip netns add $eid
+	return $eid
+    }
+
+    # Non-VIMAGE nodes have their own netns
+    if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
+	pipesExec "ip netns add $eid-$node" "hold"
+	return $eid-$node
+    }
+
+    # VIMAGE nodes use docker netns
+    set cmds "docker_ns=\$(docker inspect -f '{{.State.Pid}}' $eid.$node)"
+    set cmds "$cmds; ip netns del \$docker_ns > /dev/null 2>&1"
+    set cmds "$cmds; ip netns attach $eid-$node \$docker_ns"
+    set cmds "$cmds; docker exec -d $eid.$node umount /etc/resolv.conf /etc/hosts"
+
+    pipesExec "$cmds" "hold"
+
+    return $eid-$node
+}
+
+proc createExperimentContainer {} {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    # Create top-level netns
+    createNetns ""
+}
 
 proc loadKernelModules {} {
     global all_modules_list
@@ -377,7 +431,9 @@ proc loadKernelModules {} {
     }
 }
 
-proc prepareVirtualFS {} {}
+proc prepareVirtualFS {} {
+    exec mkdir -p /var/run/netns
+}
 
 #****f* linux.tcl/prepareFilesystemForNode
 # NAME
@@ -395,7 +451,6 @@ proc prepareFilesystemForNode { node } {
     set VROOTDIR /var/imunes
     set VROOT_RUNTIME $VROOTDIR/$eid/$node
     pipesExec "mkdir -p $VROOT_RUNTIME" "hold"
-    pipesExec "mkdir -p /var/run/netns" "hold"
 }
 
 #****f* linux.tcl/createNodeContainer
@@ -424,26 +479,43 @@ proc createNodeContainer { node } {
         set vroot $VROOT_MASTER
     }
 
-    catch { exec docker run --detach --init --tty \
+    pipesExec "docker run --detach --init --tty \
 	--privileged --cap-add=ALL --net=$network \
 	--name $node_id --hostname=[getNodeName $node] \
 	--volume /tmp/.X11-unix:/tmp/.X11-unix \
 	--sysctl net.ipv6.conf.all.disable_ipv6=0 \
 	--ulimit nofile=$ULIMIT_FILE --ulimit nproc=$ULIMIT_PROC \
-	$vroot } err
-    if { $debug } {
-        puts "'exec docker run' ($node_id) caught:\n$err"
-    }
-    if { [getNodeDockerAttach $node] } {
-	catch "exec docker exec $node_id ip l set eth0 down"
-	catch "exec docker exec $node_id ip l set eth0 name ext0"
-	catch "exec docker exec $node_id ip l set ext0 up"
-    }
+	$vroot &" "hold"
 
-    set status ""
-    while { [string match 'true' $status] != 1 } {
-        catch {exec docker inspect --format '{{.State.Running}}' $node_id} status
-    }
+#    catch { exec docker run --detach --init --tty \
+#	--privileged --cap-add=ALL --net=$network \
+#	--name $node_id --hostname=[getNodeName $node] \
+#	--volume /tmp/.X11-unix:/tmp/.X11-unix \
+#	--sysctl net.ipv6.conf.all.disable_ipv6=0 \
+#	--ulimit nofile=$ULIMIT_FILE --ulimit nproc=$ULIMIT_PROC \
+#	$vroot } err
+#    if { $debug } {
+#        puts "'exec docker run' ($node_id) caught:\n$err"
+#    }
+#    if { [getNodeDockerAttach $node] } {
+#	catch "exec docker exec $node_id ip l set eth0 down"
+#	catch "exec docker exec $node_id ip l set eth0 name ext0"
+#	catch "exec docker exec $node_id ip l set ext0 up"
+#    }
+#
+#    set status ""
+#    while { [string match 'true' $status] != 1 } {
+#        catch {exec docker inspect --format '{{.State.Running}}' $node_id} status
+#    }
+}
+
+proc isNodeStarted { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set node_id "$eid.$node"
+
+    catch {exec docker inspect --format '{{.State.Running}}' $node_id} status
+
+    return [string match 'true' $status]
 }
 
 #****f* linux.tcl/createNodePhysIfcs
@@ -555,8 +627,8 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 	}
 	VIMAGE-VIMAGE {
 	    # prepare namespace files
-	    set lnode1Ns [createNetNs $lnode1]
-	    set lnode2Ns [createNetNs $lnode2]
+	    set lnode1Ns [createNodeNetns $lnode1]
+	    set lnode2Ns [createNodeNetns $lnode2]
 	    # generate temporary interface names
 	    set hostIfc1 "v${ifname1}pn${lnode1Ns}"
 	    set hostIfc2 "v${ifname2}pn${lnode2Ns}"
@@ -647,13 +719,34 @@ proc startIfcsNode { node } {
     exec sh << $cmds
 }
 
-proc removeExperimentContainer { eid widget } {}
+proc removeNetns { netns } {
+    if { $netns != "" } {
+	exec ip netns del $netns
+    }
+}
+
+proc removeNodeNetns { eid node } {
+    set netns [getNodeNetns $eid $node]
+
+    if { $netns != "" } {
+	pipesExec "ip netns del $netns" "hold"
+    }
+}
+
+proc removeExperimentContainer { eid widget } {
+    removeNetns $eid
+}
+
+proc removeExperimentFiles { eid widget } {
+    set VROOT_BASE [getVrootDir]
+    catch "exec rm -fr $VROOT_BASE/$eid &"
+}
 
 proc removeNodeContainer { eid node } {
     set node_id $eid.$node
 
-    catch "exec docker kill $node_id"
-    catch "exec docker rm $node_id"
+    pipesExec "docker kill $node_id" "hold"
+    pipesExec "docker rm $node_id" "hold"
 }
 
 proc killAllNodeProcesses { eid node } {
@@ -743,11 +836,6 @@ proc removeNodeIfcIPaddrs { eid node } {
     }
 }
 
-proc removeExperimentContainer { eid widget } {
-    set VROOT_BASE [getVrootDir]
-    catch "exec rm -fr $VROOT_BASE/$eid &"
-}
-
 proc destroyNetgraphNodes { eid switches widget } {
     global execMode
 
@@ -822,7 +910,7 @@ proc destroyBridge { type bridge } {
 	}
 	lanswitch -
 	hub {
-	    catch {exec ip link delete $bridge type bridge}
+	    pipesExec "ip link delete $bridge type bridge"
 	}
     }
 }
@@ -1035,7 +1123,7 @@ proc createVethPair { ifc1 ifc2 } {
 proc addNodeIfcToBridge { bridge brifc node ifc mac } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    set nodeNs [createNetNs $node]
+    set nodeNs [createNodeNetns $node]
     # create bridge
     createBridge "hub" $eid-$bridge
 
@@ -1079,7 +1167,7 @@ proc checkSysPrerequisites {} {
     return ""
 }
 
-proc createNetNs { node } {
+proc createNodeNetns { node } {
     set nodeNs [getNodeNamespace $node]
     exec rm -f "/var/run/netns/$nodeNs"
     exec ln -s "/proc/$nodeNs/ns/net" "/var/run/netns/$nodeNs"

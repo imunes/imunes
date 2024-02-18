@@ -292,6 +292,10 @@ proc $MODULE.instantiate { eid node } {
     l3node.instantiate $eid $node
 }
 
+proc $MODULE.configureInitNet { eid node } {
+    l3node.configureInitNet $eid $node
+}
+
 #****f* pc.tcl/pc.start
 # NAME
 #   pc.start -- start

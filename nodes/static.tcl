@@ -162,6 +162,10 @@ proc $MODULE.instantiate { eid node } {
     enableIPforwarding $eid $node
 }
 
+proc $MODULE.configureInitNet { eid node } {
+    l3node.configureInitNet $eid $node
+}
+
 #****f* static.tcl/router.static.start
 # NAME
 #   router.static.start -- start

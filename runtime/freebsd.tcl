@@ -1165,6 +1165,19 @@ proc createNodeContainer { node } {
 	host.hostname=\"[getNodeName $node]\" vnet persist" "hold"
 }
 
+proc isNodeStarted { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set node_id "$eid.$node"
+
+    try {
+	exec jls -j $node_id
+    } on error {} {
+	return 0
+    }
+
+    return 1
+}
+
 #****f* freebsd.tcl/createNodePhysIfcs
 # NAME
 #   createNodePhysIfcs -- create node physical interfaces
@@ -1237,6 +1250,12 @@ proc createNodePhysIfcs { node } {
 	}
     }
 }
+
+proc createNetns { node } {}
+
+proc removeNodeNetns { eid node } {}
+
+proc removeNetns { netns } {}
 
 #****f* freebsd.tcl/createNodeLogIfcs
 # NAME
@@ -1827,6 +1846,13 @@ proc destroyVirtNodeIfcs { eid vimages } {
 #   * widget -- status widget
 #****
 proc removeExperimentContainer { eid widget } {
+    # Remove the main vimage which contained all other nodes, hopefully we
+    # cleaned everything.
+    catch "exec jexec $eid kill -9 -1 2> /dev/null"
+    exec jail -r $eid
+}
+
+proc removeExperimentFiles { eid widget } {
     global vroot_unionfs execMode
 
     set VROOT_BASE [getVrootDir]
@@ -1835,9 +1861,7 @@ proc removeExperimentContainer { eid widget } {
     # cleaned everything.
     if {$vroot_unionfs} {
 	# UNIONFS
-	catch "exec jexec $eid kill -9 -1 2> /dev/null"
-	exec jail -r $eid
-	catch "exec rm -fr $VROOT_BASE/$eid &"
+	catch "exec rm -fr $VROOT_BASE/$eid"
     } else {
 	# ZFS
 	if {$execMode == "batch"} {
