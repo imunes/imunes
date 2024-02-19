@@ -1182,7 +1182,7 @@ proc waitForConfStart { conf_nodes_ifcs } {}
 proc finishExecuting { status msg w } {
     global progressbarCount execMode
 
-    pipesClose
+    catch {pipesClose}
     if {$execMode == "batch"} {
 	puts $msg
     } else {
@@ -1196,14 +1196,147 @@ proc finishExecuting { status msg w } {
     }
 }
 
-#****f* exec.tcl/terminateAllNodes
-# NAME
-#   terminateAllNodes -- shutdown and destroy all nodes in experiment
-# SYNOPSIS
-#   terminateAllNodes
-# FUNCTION
-#
-#****
+proc checkTerminate {} {}
+
+proc terminateNgAndVimages { eid nodes nodeCount w } {
+    global progressbarCount execMode
+
+    set batchStep 0
+    foreach node $nodes {
+	if { [info procs [typemodel $node].shutdown] != "" } {
+	    try {
+		[typemodel $node].shutdown $eid $node
+	    } on error err {
+		return -code error "Error in '[typemodel $node].shutdown $eid $node': $err"
+	    }
+	}
+
+	incr batchStep
+	displayBatchProgress $batchStep $nodeCount
+
+	incr progressbarCount -1
+	if {$execMode != "batch"} {
+	    $w.p configure -value $progressbarCount
+	    update
+	}
+    }
+}
+
+proc terminateExtIfcs { eid extifcs extifcsCount w } {
+    global progressbarCount execMode
+
+    set batchStep 0
+    foreach node $extifcs {
+	try {
+	    [typemodel $node].destroy $eid $node
+	} on error err {
+	    return -code error "Error in '[typemodel $node].destroy $eid $node': $err"
+	}
+
+	incr batchStep
+	displayBatchProgress $batchStep $extifcsCount
+
+	incr progressbarCount -1
+	if {$execMode != "batch"} {
+	    $w.p configure -value $progressbarCount
+	    update
+	}
+    }
+}
+
+proc terminateLinks { eid links linkCount w } {
+    global progressbarCount execMode
+
+    set batchStep 0
+    foreach link $links {
+	set lnode1 [lindex [linkPeers $link] 0]
+	set lnode2 [lindex [linkPeers $link] 1]
+	try {
+	    destroyLinkBetween $eid $lnode1 $lnode2
+	} on error err {
+	    return -code error "Error in 'destroyLinkBetween $eid $lnode1 $lnode2': $err"
+	}
+
+	incr batchStep
+	displayBatchProgress $batchStep $linkCount
+
+	incr progressbarCount -1
+	if {$execMode != "batch"} {
+	    $w.p configure -value $progressbarCount
+	    update
+	}
+    }
+}
+
+proc destroyNodesIfcs { nodes_ifcs } {}
+
+proc destroyNgNodes { eid nonVimages nonVimagesCount w } {
+    global progressbarCount execMode
+
+    set batchStep 0
+    foreach node $nonVimages {
+	try {
+	    [typemodel $node].destroy $eid $node
+	} on error err {
+	    return -code error "Error in '[typemodel $node].destroy $eid $node': $err"
+	}
+
+	incr batchStep
+	displayBatchProgress $batchStep $nonVimagesCount
+
+	incr progressbarCount -1
+	if {$execMode != "batch"} {
+	    $w.p configure -value $progressbarCount
+	    update
+	}
+    }
+}
+
+proc destroyVimageNodes { eid vimages vimagesCount w } {
+    global progressbarCount execMode
+
+    set batchStep 0
+    foreach node $vimages {
+	try {
+	    [typemodel $node].destroy $eid $node
+	} on error err {
+	    return -code error "Error in '[typemodel $node].destroy $eid $node': $err"
+	}
+
+	incr batchStep
+	displayBatchProgress $batchStep $vimagesCount
+
+	incr progressbarCount -1
+	if {$execMode != "batch"} {
+	    $w.p configure -value $progressbarCount
+	    update
+	}
+    }
+}
+
+proc destroyExperiment { eid w } {}
+
+proc cleanExperimentFiles { eid w } {
+    removeExperimentContainer $eid $w
+}
+
+proc finishTerminating { status msg w } {
+    global progressbarCount execMode
+
+    catch {pipesClose}
+    if {$execMode == "batch"} {
+	puts $msg
+    } else {
+	catch {destroy $w}
+	set progressbarCount 0
+	if { ! $status } {
+	    after idle {.dialog1.msg configure -wraplength 4i}
+	    tk_dialog .dialog1 "IMUNES error" \
+		"$msg \nCleanup the experiment and report the bug!" info 0 Dismiss
+	}
+    }
+}
+
 proc terminateAllNodes { eid } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
@@ -1211,6 +1344,7 @@ proc terminateAllNodes { eid } {
     global execMode
     global vroot_unionfs vroot_linprocfs
 
+    # checkTerminate
     set w ""
     #preparing counters for GUI
     if {$execMode != "batch"} {
@@ -1263,6 +1397,7 @@ proc terminateAllNodes { eid } {
 	}
     }
 
+    # terminateNgAndVimages
     statline "Stopping ngraphs and vimages..."
     foreach node [ concat $ngraphs $vimages ] {
 	incr step
@@ -1282,12 +1417,16 @@ proc terminateAllNodes { eid } {
     }
     statline ""
 
+    # terminateExtIfcs
+
     # Stop services on the LINKDEST hook
     services stop "LINKDEST"
 
+    # destroyNgNodes
     # release external interfaces
     destroyNetgraphNodes $eid $extifcs $w
 
+    # terminateLinks
     # destroying links
     statline "Destroying links..."
     pipesCreate
@@ -1309,6 +1448,9 @@ proc terminateAllNodes { eid } {
     pipesClose
     statline ""
 
+    # destroyNodesIfcs
+
+    # destroyNgNodes
     destroyNetgraphNodes $eid $ngraphs $w
     incr startedCount [expr -[llength $ngraphs]]
 
@@ -1320,6 +1462,7 @@ proc terminateAllNodes { eid } {
     # Stop services on the NODEDEST hook
     services stop "NODEDEST"
 
+    # destroyVimageNodes
     # destroying vimages
     statline "Shutting down vimages..."
     pipesCreate
@@ -1339,11 +1482,147 @@ proc terminateAllNodes { eid } {
     pipesClose
     statline ""
 
+    # destroyExperiment
+    # cleanExperimentFiles
     removeExperimentContainer $eid $w
 
+    # finishTerminating
     if {$execMode != "batch"} {
 	destroy $w
     }
+
+    statline "Cleanup completed in [expr ([clock milliseconds] - $t_start)/1000.0] seconds."
+}
+
+#****f* exec.tcl/terminateAllNodes
+# NAME
+#   terminateAllNodes -- shutdown and destroy all nodes in experiment
+# SYNOPSIS
+#   terminateAllNodes
+# FUNCTION
+#
+#****
+proc terminateAllNodes { eid } {
+    upvar 0 ::cf::[set ::curcfg]::node_list node_list
+    upvar 0 ::cf::[set ::curcfg]::link_list link_list
+    global progressbarCount execMode
+
+    set nodeCount [llength $node_list]
+    set linkCount [llength $link_list]
+
+    set t_start [clock milliseconds]
+
+    try {
+	checkTerminate
+    } on error err {
+	statline "ERROR in 'checkTerminate': '$err'"
+	return
+    }
+
+    statline "Preparing for termination..."
+    set extifcs {}
+    set nonVimages {}
+    set vimages {}
+    set nonPseudoNodes {}
+    set pseudoNodesCount 0
+    foreach node $node_list {
+	if { [nodeType $node] != "pseudo" } {
+	    if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
+		if { [typemodel $node] == "rj45" } {
+		    lappend extifcs $node
+		} else {
+		    lappend nonVimages $node
+		}
+	    } else {
+		lappend vimages $node
+	    }
+	} else {
+	    incr pseudoNodesCount
+	}
+    }
+    set nonVimagesCount [llength $nonVimages]
+    set vimagesCount [llength $vimages]
+    set nonPseudoNodes [concat $nonVimages $vimages]
+    set nonPseudoNodesCount [llength $nonPseudoNodes]
+    set extifcsCount [llength $extifcs]
+    incr nodeCount -$pseudoNodesCount
+    incr linkCount [expr -$pseudoNodesCount/2]
+    set maxProgressbasCount [expr {2*$nodeCount + $extifcsCount + $linkCount}]
+    set progressbarCount $maxProgressbasCount
+
+    set w ""
+    if {$execMode != "batch"} {
+	set w .startup
+	catch {destroy $w}
+	toplevel $w -takefocus 1
+	wm transient $w .
+	wm title $w "Terminating experiment $eid..."
+	message $w.msg -justify left -aspect 1200 \
+	    -text "Deleting virtual nodes and links."
+	pack $w.msg
+	update
+	ttk::progressbar $w.p -orient horizontal -length 250 \
+	    -mode determinate -maximum $maxProgressbasCount -value $progressbarCount
+	pack $w.p
+	update
+
+	grab $w
+	wm protocol $w WM_DELETE_WINDOW {
+	}
+    }
+
+    try {
+	statline "Stopping services for NODESTOP hook..."
+	services stop "NODESTOP"
+	# statline
+
+	statline "Stopping $nonPseudoNodesCount non-pseudo node(s)..."
+	terminateNgAndVimages $eid $nonPseudoNodes $nonPseudoNodesCount $w
+	statline ""
+
+	statline "Releasing $extifcsCount external interface(s)..."
+	terminateExtIfcs $eid $extifcs $extifcsCount $w
+	statline ""
+
+	statline "Stopping services for LINKDEST hook..."
+	services stop "LINKDEST"
+	# statline ""
+
+	pipesCreate
+	statline "Destroying $linkCount link(s)..."
+	terminateLinks $eid $link_list $linkCount $w
+	statline ""
+
+	# statline "Destroying physical interface(s) on node(s)..."
+	# destroyNodesIfcs nodes_ifcs
+	# statline ""
+
+	statline "Destroying $nonVimagesCount non-VIMAGE node(s)..."
+	destroyNgNodes $eid $nonVimages $nonVimagesCount $w
+	statline ""
+
+	# check this
+	destroyVirtNodeIfcs $eid $vimages
+
+	timeoutPatch $eid $node_list
+
+	statline "Stopping services for NODEDEST hook..."
+	services stop "NODEDEST"
+	# statline ""
+
+	pipesCreate
+	statline "Shutting down $vimagesCount VIMAGE nodes(s)..."
+	destroyVimageNodes $eid $vimages $vimagesCount $w
+	statline ""
+
+	destroyExperiment $eid $w
+	cleanExperimentFiles $eid $w
+    } on error err {
+	finishTerminating 0 "$err" $w
+	return
+    }
+
+    finishTerminating 1 "Terminated experiment ID = $eid" $w
 
     statline "Cleanup completed in [expr ([clock milliseconds] - $t_start)/1000.0] seconds."
 }
