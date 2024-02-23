@@ -875,6 +875,11 @@ proc deployCfg {} {
 	prepareSystem
     } on error err {
 	statline "ERROR in 'prepareSystem': '$err'"
+	if { $execMode != "batch" } {
+	    after idle {.dialog1.msg configure -wraplength 4i}
+	    tk_dialog .dialog1 "IMUNES error" \
+		"$err \nTerminate the experiment and report the bug!" info 0 Dismiss
+	}
 	return
     }
 
@@ -1337,163 +1342,6 @@ proc finishTerminating { status msg w } {
     }
 }
 
-proc terminateAllNodes { eid } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-    global execMode
-    global vroot_unionfs vroot_linprocfs
-
-    # checkTerminate
-    set w ""
-    #preparing counters for GUI
-    if {$execMode != "batch"} {
-	set count [expr {2*[llength $node_list]+[llength $link_list]}]
-	set startedCount $count
-	set w .termWait
-	catch {destroy $w}
-	toplevel $w -takefocus 1
-	wm transient $w .
-	wm title $w "Terminating experiment $eid..."
-	message $w.msg -justify left -aspect 1200 \
-	    -text "Deleting virtual nodes and links."
-	pack $w.msg
-	ttk::progressbar $w.p -orient horizontal -length 250 \
-	    -mode determinate -maximum $count -value $startedCount
-	pack $w.p
-	update
-
-	grab $w
-	wm protocol $w WM_DELETE_WINDOW {
-	}
-    }
-
-    set t_start [clock milliseconds]
-
-    # Stop services on the NODESTOP hook
-    services stop "NODESTOP"
-
-    # Termination is done in the following order:
-    # 1. call shutdown on all ng nodes because of the packgen node.
-    # 2. call shutdown on all virtual nodes.
-    # 3. remove all links to prevent packets flowing into the interfaces.
-    # 4. destroy all netgraph nodes.
-    # 5. destroy all ngeth interfaces from vimage nodes.
-    # 6. destroy all vimage nodes.
-
-    # divide nodes into two lists
-    set ngraphs ""
-    set vimages ""
-    set extifcs ""
-    foreach node $node_list {
-	if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
-	    if { [typemodel $node] == "rj45" } {
-		lappend extifcs $node
-	    } else {
-		lappend ngraphs $node
-	    }
-	} elseif { [[typemodel $node].virtlayer] == "VIMAGE" } {
-	    lappend vimages $node
-	}
-    }
-
-    # terminateNgAndVimages
-    statline "Stopping ngraphs and vimages..."
-    foreach node [ concat $ngraphs $vimages ] {
-	incr step
-	if { [info procs [typemodel $node].shutdown] != "" } {
-#	    statline "Stopping [string tolower [[typemodel $node].virtlayer]] node $node ([typemodel $node])"
-	    displayBatchProgress $step [ llength [ concat $ngraphs $vimages ] ]
-	    [typemodel $node].shutdown $eid $node
-	} else {
-	    #puts "$node [typemodel $node] doesn't have a shutdown procedure"
-	}
-
-	incr startedCount -1
-	if {$execMode != "batch"} {
-	    $w.p configure -value $startedCount
-	    update
-	}
-    }
-    statline ""
-
-    # terminateExtIfcs
-
-    # Stop services on the LINKDEST hook
-    services stop "LINKDEST"
-
-    # destroyNgNodes
-    # release external interfaces
-    destroyNetgraphNodes $eid $extifcs $w
-
-    # terminateLinks
-    # destroying links
-    statline "Destroying links..."
-    pipesCreate
-    set i 0
-    foreach link $link_list {
-	incr i
-        set lnode1 [lindex [linkPeers $link] 0]
-        set lnode2 [lindex [linkPeers $link] 1]
-#	statline "Shutting down link $link ($lnode1-$lnode2)"
-	displayBatchProgress $i [ llength $link_list ]
-	destroyLinkBetween $eid $lnode1 $lnode2
-
-	incr startedCount -1
-	if {$execMode != "batch"} {
-	    $w.p configure -value $startedCount
-	    update
-	}
-    }
-    pipesClose
-    statline ""
-
-    # destroyNodesIfcs
-
-    # destroyNgNodes
-    destroyNetgraphNodes $eid $ngraphs $w
-    incr startedCount [expr -[llength $ngraphs]]
-
-    destroyVirtNodeIfcs $eid $vimages
-
-    # timeout patch
-    timeoutPatch $eid $node_list
-
-    # Stop services on the NODEDEST hook
-    services stop "NODEDEST"
-
-    # destroyVimageNodes
-    # destroying vimages
-    statline "Shutting down vimages..."
-    pipesCreate
-    set i 0
-    foreach node $vimages {
-#	statline "Shutting down vimage $node ([typemodel $node])"
-	incr i
-	[typemodel $node].destroy $eid $node
-	displayBatchProgress $i [ llength $vimages ]
-
-	incr startedCount -1
-	if {$execMode != "batch"} {
-	    $w.p configure -value $startedCount
-	    update
-	}
-    }
-    pipesClose
-    statline ""
-
-    # destroyExperiment
-    # cleanExperimentFiles
-    removeExperimentContainer $eid $w
-
-    # finishTerminating
-    if {$execMode != "batch"} {
-	destroy $w
-    }
-
-    statline "Cleanup completed in [expr ([clock milliseconds] - $t_start)/1000.0] seconds."
-}
-
 #****f* exec.tcl/terminateAllNodes
 # NAME
 #   terminateAllNodes -- shutdown and destroy all nodes in experiment
@@ -1516,6 +1364,11 @@ proc terminateAllNodes { eid } {
 	checkTerminate
     } on error err {
 	statline "ERROR in 'checkTerminate': '$err'"
+	if { $execMode != "batch" } {
+	    after idle {.dialog1.msg configure -wraplength 4i}
+	    tk_dialog .dialog1 "IMUNES error" \
+		"$err \nCleanup the experiment and report the bug!" info 0 Dismiss
+	}
 	return
     }
 
