@@ -365,7 +365,63 @@ proc getHostIfcVlanExists { node name } {
     return 1
 }
 
-proc createExperimentContainer {} {}
+proc getNodeNetns { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    # Top-level experiment netns
+    if { $node == "" } {
+	return $eid
+    }
+
+    if { [[::typemodel $node].virtlayer] == "NETGRAPH" } {
+	if { [_getNodeType $node] in "ext extnat" } {
+	    # global netns
+	    return ""
+	}
+
+	return $eid-$node
+    }
+
+    set node_id "$eid.$node"
+    catch { exec docker inspect -f "{{.State.Pid}}" $node_id } ns
+
+    return $ns
+}
+
+proc createNetns { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    # Top-level experiment netns
+    if { $node == "" } {
+	exec ip netns add $eid
+	return $eid
+    }
+
+    # Non-VIMAGE nodes have their own netns
+    if { [[::typemodel $node].virtlayer] == "NETGRAPH" } {
+	exec ip netns add $eid-$node
+	return $eid-$node
+    }
+
+    # VIMAGE nodes use docker netns
+    set docker_ns [getNodeNetns $node]
+    # remove whatever may be here
+    if { [file exists "/var/run/netns/$docker_ns"] } {
+	# exec rm -f "/var/run/netns/$docker_ns"
+	exec ip netns del $docker_ns
+    }
+    exec ip netns attach $eid-$node $docker_ns
+    # exec docker exec -d $eid.$node umount /etc/resolv.conf /etc/hosts
+
+    return $eid-$node
+}
+
+proc createExperimentContainer {} {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    # Create top-level netns
+    createNetns ""
+}
 
 proc loadKernelModules {} {
     global all_modules_list
@@ -377,7 +433,9 @@ proc loadKernelModules {} {
     }
 }
 
-proc prepareVirtualFS {} {}
+proc prepareVirtualFS {} {
+    exec mkdir -p /var/run/netns
+}
 
 #****f* linux.tcl/prepareFilesystemForNode
 # NAME
@@ -395,7 +453,6 @@ proc prepareFilesystemForNode { node } {
     set VROOTDIR /var/imunes
     set VROOT_RUNTIME $VROOTDIR/$eid/$node
     pipesExec "mkdir -p $VROOT_RUNTIME" "hold"
-    pipesExec "mkdir -p /var/run/netns" "hold"
 }
 
 #****f* linux.tcl/createNodeContainer
@@ -555,8 +612,8 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 	}
 	VIMAGE-VIMAGE {
 	    # prepare namespace files
-	    set lnode1Ns [createNetNs $lnode1]
-	    set lnode2Ns [createNetNs $lnode2]
+	    set lnode1Ns [createNodeNetns $lnode1]
+	    set lnode2Ns [createNodeNetns $lnode2]
 	    # generate temporary interface names
 	    set hostIfc1 "v${ifname1}pn${lnode1Ns}"
 	    set hostIfc2 "v${ifname2}pn${lnode2Ns}"
@@ -647,7 +704,28 @@ proc startIfcsNode { node } {
     exec sh << $cmds
 }
 
-proc removeExperimentContainer { eid widget } {}
+proc removeNetns { netns } {
+    if { $netns != "" } {
+	exec ip netns del $netns
+    }
+}
+
+proc removeNodeNetns { node } {
+    set netns [getNodeNetns $node]
+
+    if { $netns != "" } {
+	exec ip netns del $netns
+    }
+}
+
+proc removeExperimentContainer { eid widget } {
+    removeNetns $eid
+}
+
+proc removeExperimentFiles { eid widget } {
+    set VROOT_BASE [getVrootDir]
+    catch "exec rm -fr $VROOT_BASE/$eid &"
+}
 
 proc removeNodeContainer { eid node } {
     set node_id $eid.$node
@@ -741,11 +819,6 @@ proc removeNodeIfcIPaddrs { eid node } {
     foreach ifc [allIfcList $node] {
 	catch "exec docker exec $node_id ip addr flush dev $ifc"
     }
-}
-
-proc removeExperimentContainer { eid widget } {
-    set VROOT_BASE [getVrootDir]
-    catch "exec rm -fr $VROOT_BASE/$eid &"
 }
 
 proc destroyNetgraphNodes { eid switches widget } {
@@ -1035,7 +1108,7 @@ proc createVethPair { ifc1 ifc2 } {
 proc addNodeIfcToBridge { bridge brifc node ifc mac } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    set nodeNs [createNetNs $node]
+    set nodeNs [createNodeNetns $node]
     # create bridge
     createBridge "hub" $eid-$bridge
 
@@ -1079,7 +1152,7 @@ proc checkSysPrerequisites {} {
     return ""
 }
 
-proc createNetNs { node } {
+proc createNodeNetns { node } {
     set nodeNs [getNodeNamespace $node]
     exec rm -f "/var/run/netns/$nodeNs"
     exec ln -s "/proc/$nodeNs/ns/net" "/var/run/netns/$nodeNs"

@@ -1010,7 +1010,6 @@ proc prepareSystem {} {
     loadKernelModules
     prepareVirtualFS
     prepareDevfs
-
     createExperimentContainer
 }
 
@@ -1319,12 +1318,6 @@ proc destroyVimageNodes { eid vimages vimagesCount w } {
     }
 }
 
-proc destroyExperiment { eid w } {}
-
-proc cleanExperimentFiles { eid w } {
-    removeExperimentContainer $eid $w
-}
-
 proc finishTerminating { status msg w } {
     global progressbarCount execMode
 
@@ -1468,8 +1461,11 @@ proc terminateAllNodes { eid } {
 	destroyVimageNodes $eid $vimages $vimagesCount $w
 	statline ""
 
-	destroyExperiment $eid $w
-	cleanExperimentFiles $eid $w
+	statline "Removing experiment top-level container/netns..."
+	removeExperimentContainer $eid $w
+
+	statline "Removing experiment files..."
+	removeExperimentFiles $eid $w
     } on error err {
 	finishTerminating 0 "$err" $w
 	return
