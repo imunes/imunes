@@ -1225,6 +1225,12 @@ proc createNodePhysIfcs { node } {
     }
 }
 
+proc createNetns { node } {}
+
+proc removeNodeNetns { eid node } {}
+
+proc removeNetns { netns } {}
+
 #****f* freebsd.tcl/createNodeLogIfcs
 # NAME
 #   createNodeLogIfcs -- create node logical interfaces

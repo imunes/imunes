@@ -365,50 +365,50 @@ proc getHostIfcVlanExists { node name } {
     return 1
 }
 
-proc getNodeNetns { node } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
+proc removeNodeFS { eid node } {}
+
+proc getNodeNetns { eid node } {
+    global devfs_number
 
     # Top-level experiment netns
     if { $node == "" } {
 	return $eid
     }
 
-    if { [[::typemodel $node].virtlayer] == "NETGRAPH" } {
-	if { [_getNodeType $node] in "ext extnat" } {
-	    # global netns
-	    return ""
-	}
-
-	return $eid-$node
+    # Global netns
+    if { [nodeType $node] in "ext extnat" } {
+	return imunes_$devfs_number
     }
 
-    set node_id "$eid.$node"
-    catch { exec docker inspect -f "{{.State.Pid}}" $node_id } ns
-
-    return $ns
+    # Node netns
+    return $eid-$node
 }
+
+proc destroyNodeVirtIfcs { eid node } {}
 
 proc createNetns { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
+    global devfs_number
 
     # Top-level experiment netns
     if { $node == "" } {
+	catch {exec ip netns add imunes_$devfs_number}
 	exec ip netns add $eid
 	return $eid
     }
 
     # Non-VIMAGE nodes have their own netns
-    if { [[::typemodel $node].virtlayer] == "NETGRAPH" } {
+    if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
 	exec ip netns add $eid-$node
 	return $eid-$node
     }
 
     # VIMAGE nodes use docker netns
-    set docker_ns [getNodeNetns $node]
+    catch { exec docker inspect -f "{{.State.Pid}}" $eid.$node } docker_ns
     # remove whatever may be here
     if { [file exists "/var/run/netns/$docker_ns"] } {
 	# exec rm -f "/var/run/netns/$docker_ns"
-	exec ip netns del $docker_ns
+	catch {exec ip netns del $docker_ns}
     }
     exec ip netns attach $eid-$node $docker_ns
     # exec docker exec -d $eid.$node umount /etc/resolv.conf /etc/hosts
@@ -710,11 +710,11 @@ proc removeNetns { netns } {
     }
 }
 
-proc removeNodeNetns { node } {
-    set netns [getNodeNetns $node]
+proc removeNodeNetns { eid node } {
+    set netns [getNodeNetns $eid $node]
 
     if { $netns != "" } {
-	exec ip netns del $netns
+	pipesExec "ip netns del $netns" "hold"
     }
 }
 
@@ -730,8 +730,8 @@ proc removeExperimentFiles { eid widget } {
 proc removeNodeContainer { eid node } {
     set node_id $eid.$node
 
-    catch "exec docker kill $node_id"
-    catch "exec docker rm $node_id"
+    pipesExec "docker kill $node_id" "hold"
+    pipesExec "docker rm $node_id" "hold"
 }
 
 proc killAllNodeProcesses { eid node } {
@@ -895,7 +895,7 @@ proc destroyBridge { type bridge } {
 	}
 	lanswitch -
 	hub {
-	    catch {exec ip link delete $bridge type bridge}
+	    pipesExec "ip link delete $bridge type bridge"
 	}
     }
 }

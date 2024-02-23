@@ -213,6 +213,10 @@ proc $MODULE.instantiate { eid node } {
     enableIPforwarding $eid $node
 }
 
+proc $MODULE.configureInitNet { eid node } {
+    l3node.configureInitNet $eid $node
+}
+
 #****f* quagga.tcl/router.quagga.start
 # NAME
 #   router.quagga.start -- start

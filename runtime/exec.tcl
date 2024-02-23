@@ -787,6 +787,10 @@ proc l3node.instantiate { eid node } {
     prepareFilesystemForNode $node
     createNodeContainer $node
     createNodePhysIfcs $node
+}
+
+proc l3node.configureInitNet { eid node } {
+    createNetns $node
     createNodeLogIfcs $node
     configureICMPoptions $node
 }
@@ -846,6 +850,7 @@ proc l3node.destroy { eid node } {
     destroyNodeVirtIfcs $eid $node
     removeNodeContainer $eid $node
     removeNodeFS $eid $node
+    removeNodeNetns $eid $node
     pipesExec ""
 }
 
@@ -937,13 +942,13 @@ proc deployCfg {} {
 	statline "Creating $vimagesCount VIMAGE node(s)..."
 	instantiateNodes $vimages $vimagesCount $w
 	statline ""
+
+	statline "Configuring initial networking on $vimagesCount VIMAGE node(s)..."
+	configureInitNetNodes $vimages $vimagesCount $w
+	statline ""
 	pipesClose
 
-	statline "Configuring initial networking on non-pseudo node(s)..."
-	configureInitNetNodes $nonPseudoNodes $nonPseudoNodesCount $w
-	# statline ""
-
-	statline "Copying host files to VIMAGE node(s)..."
+	statline "Copying host files to $vimagesCount VIMAGE node(s)..."
 	copyFilesToNodes $vimages $vimagesCount $w
 	# statline ""
 
@@ -951,7 +956,7 @@ proc deployCfg {} {
 	services start "NODEINST"
 	# statline ""
 
-	statline "Creating interfaces on non-pseudo node(s)..."
+	statline "Creating interfaces on $nonPseudoNodesCount non-pseudo node(s)..."
 	createNodesInterfaces $nonPseudoNodes $nonPseudoNodesCount $w
 	# statline ""
 
@@ -1038,7 +1043,30 @@ proc instantiateNodes { nodes nodeCount w } {
     }
 }
 
-proc configureInitNetNodes { nodes nodeCount w } {}
+proc configureInitNetNodes { nodes nodeCount w } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    global progressbarCount execMode
+
+    set batchStep 0
+    foreach node $nodes {
+	incr batchStep
+	incr progressbarCount
+	set node_id "$eid\.$node"
+	set name [getNodeName $node]
+	if {$execMode != "batch"} {
+	    statline "Creating node $name"
+	    $w.p configure -value $progressbarCount
+	    update
+	}
+	displayBatchProgress $batchStep $nodeCount
+	try {
+	    [typemodel $node].configureInitNet $eid $node
+	} on error err {
+	    return -code error "Error in '[typemodel $node].configureInitNet $eid $node': $err"
+	}
+	pipesExec ""
+    }
+}
 
 proc copyFilesToNodes { nodes nodeCount w } {}
 
