@@ -234,7 +234,7 @@ proc $MODULE.destroy { eid node } {
 #****
 
 proc $MODULE.nghook { eid node ifc } {
-    return [list $eid\.$node $ifc]
+    return [list $node $ifc]
 }
 
 
