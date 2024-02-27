@@ -515,7 +515,21 @@ proc createNodeContainer { node } {
 #****
 proc createNodePhysIfcs { node } {}
 
-#****f* freebsd.tcl/createNodeLogIfcs
+#****f* linux.tcl/killProcess
+# NAME
+#   killProcess -- kill processes with the given regex
+# SYNOPSIS
+#   killProcess $regex
+# FUNCTION
+#   Executes a pkill command to kill all processes with a corresponding regex.
+# INPUTS
+#   * regex -- regularl expression of the processes
+#****
+proc killExtProcess { regex } {
+    catch "exec pkill -f \"$regex\""
+}
+
+#****f* linux.tcl/createNodeLogIfcs
 # NAME
 #   createNodeLogIfcs -- create node logical interfaces
 # SYNOPSIS

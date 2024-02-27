@@ -1455,6 +1455,7 @@ proc terminateAllNodes { eid } {
 	services stop "NODESTOP"
 	# statline ""
 
+	pipesCreate
 	statline "Stopping $nonPseudoNodesCount non-pseudo node(s)..."
 	terminateNgAndVimages $eid $nonPseudoNodes $nonPseudoNodesCount $w
 	statline ""
@@ -1467,7 +1468,6 @@ proc terminateAllNodes { eid } {
 	services stop "LINKDEST"
 	# statline ""
 
-	pipesCreate
 	statline "Destroying $linkCount link(s)..."
 	terminateLinks $eid $link_list $linkCount $w
 	statline ""
