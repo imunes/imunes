@@ -123,7 +123,7 @@ proc $MODULE.start { eid node } {
 }
 
 proc $MODULE.destroy { eid node } {
-    catch { nexec jexec $eid ngctl msg $node: shutdown }
+    catch { exec jexec $eid ngctl msg $node: shutdown }
 }
 
 proc $MODULE.nghook { eid node ifc } {

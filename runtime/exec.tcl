@@ -204,9 +204,11 @@ proc setOperMode { mode } {
 	    } else {
 		vimageCleanup $eid
 	    }
+	    pipesCreate
 	    killExtProcess "socat.*$eid"
+	    pipesClose
 	    set cfgDeployed false
-	    deleteExperimentFiles $eid
+	    #deleteExperimentFiles $eid
 	    wm protocol . WM_DELETE_WINDOW {
 		exit
 	    }
@@ -760,7 +762,7 @@ proc displayBatchProgress { prgs tot } {
     global execMode
     if {$execMode == "batch"} {
 	puts -nonewline "\r                                                "
-	puts -nonewline [format "\r%.1f" "[expr {100.0 * $prgs/$tot}]"]%
+	puts -nonewline "\r> $prgs/$tot"
 	flush stdout
     }
 }
@@ -785,7 +787,6 @@ proc l3node.instantiate { eid node } {
 }
 
 proc l3node.configureInitNet { eid node } {
-    createNetns $node
     createNodeLogIfcs $node
     configureICMPoptions $node
 }
@@ -844,9 +845,8 @@ proc l3node.shutdown { eid node } {
 proc l3node.destroy { eid node } {
     destroyNodeVirtIfcs $eid $node
     removeNodeContainer $eid $node
+    destroyNodeNamespace $eid $node
     removeNodeFS $eid $node
-    removeNodeNetns $eid $node
-    pipesExec ""
 }
 
 #****f* exec.tcl/deployCfg
@@ -884,28 +884,27 @@ proc deployCfg {} {
     }
 
     statline "Preparing for initialization..."
-    set nonVimages {}
-    set vimages {}
-    set nonPseudoNodes {}
+    set l2nodes {}
+    set l3nodes {}
+    set allNodes {}
     set pseudoNodesCount 0
     foreach node $node_list {
 	if { [nodeType $node] != "pseudo" } {
 	    if { [[typemodel $node].virtlayer] != "VIMAGE" } {
-		lappend nonVimages $node
+		lappend l2nodes $node
 	    } else {
-		lappend vimages $node
+		lappend l3nodes $node
 	    }
 	} else {
 	    incr pseudoNodesCount
 	}
     }
-    set nonVimagesCount [llength $nonVimages]
-    set vimagesCount [llength $vimages]
-    set nonPseudoNodes [concat $nonVimages $vimages]
-    set nonPseudoNodesCount [llength $nonPseudoNodes]
-    incr nodeCount -$pseudoNodesCount
+    set l2nodeCount [llength $l2nodes]
+    set l3nodeCount [llength $l3nodes]
+    set allNodes [concat $l2nodes $l3nodes]
+    set allNodeCount [llength $allNodes]
     incr linkCount [expr -$pseudoNodesCount/2]
-    set maxProgressbasCount [expr {2*$nodeCount + 2*$vimagesCount + 2*$linkCount}]
+    set maxProgressbasCount [expr {4*$allNodeCount + 1*$l2nodeCount + 6*$l3nodeCount + 2*$linkCount}]
 
     set w ""
     if {$execMode != "batch"} {
@@ -929,71 +928,84 @@ proc deployCfg {} {
     }
 
     try {
+	statline "Instantiating L2 nodes..."
 	pipesCreate
-	statline "Instantiating $nonVimagesCount non-VIMAGE node(s)..."
-	instantiateNodes $nonVimages $nonVimagesCount $w
-	statline ""
-
-	statline "Instantiating $vimagesCount VIMAGE node(s)..."
-	instantiateNodes $vimages $vimagesCount $w
-	statline ""
-
-	statline "Waiting for $vimagesCount VIMAGE node(s) to start..."
-	waitForInstantiateNodes $vimages $vimagesCount $w
-	statline ""
+	instantiateNodes $l2nodes $l2nodeCount $w
+	statline "Waiting for $l2nodeCount L2 node(s) to start..."
 	pipesClose
 
+	statline "Instantiating L3 nodes..."
 	pipesCreate
-	statline "Configuring initial networking on $vimagesCount VIMAGE node(s)..."
-	configureInitNetNodes $vimages $vimagesCount $w
-	statline ""
+	instantiateNodes $l3nodes $l3nodeCount $w
+	statline "Waiting for $l3nodeCount L3 node(s) to start..."
+	waitForInstantiateNodes $l3nodes $l3nodeCount $w
 	pipesClose
 
-	statline "Copying host files to $vimagesCount VIMAGE node(s)..."
-	copyFilesToNodes $vimages $vimagesCount $w
-	# statline ""
+	statline "Creating namespaces for L3 nodes..."
+	pipesCreate
+	createNodeNamespaces $l3nodes $l3nodeCount $w
+	statline "Waiting on namespaces for $l3nodeCount node(s)..."
+	waitForNamespaces $l3nodes $l3nodeCount $w
+	pipesClose
+
+	statline "Starting initial configuration on L3 nodes..."
+	pipesCreate
+	initConfigurationNodes $l3nodes $l3nodeCount $w
+	statline "Waiting for initial configuration on $l3nodeCount L3 node(s)..."
+	waitForInitConf $l3nodes $l3nodeCount $w
+	pipesClose
+
+	#statline "Copying host files to $l3nodeCount L3 node(s)..."
+	#copyFilesToNodes $l3nodes $l3nodeCount $w
 
 	statline "Starting services for NODEINST hook..."
 	services start "NODEINST"
-	# statline ""
 
+	statline "Creating interfaces on nodes..."
 	pipesCreate
-	statline "Creating interfaces on $nonPseudoNodesCount non-pseudo node(s)..."
-	createNodesInterfaces $nonPseudoNodes $nonPseudoNodesCount $w
-	# statline ""
+	createNodesInterfaces $allNodes $allNodeCount $w
+	statline "Waiting for interfaces on $allNodeCount node(s) to be created..."
 	pipesClose
 
+	statline "Creating links..."
 	pipesCreate
-	statline "Creating $linkCount link(s)..."
 	createLinks $link_list $linkCount $w
-	statline ""
+	statline "Waiting for $linkCount link(s) to be created..."
 	pipesClose
 
-	statline "Configuring $linkCount link(s)..."
+	pipesCreate
+	statline "Configuring links..."
 	configureLinks $link_list $linkCount $w
-	statline ""
+	statline "Waiting for $linkCount link(s) to be configured..."
+	pipesClose
 
 	statline "Starting services for LINKINST hook..."
 	services start "LINKINST"
-	# statline ""
 
-	statline "Configuring $nonPseudoNodesCount non-pseudo node(s)..."
-	executeConfNodes $nonPseudoNodes $nonPseudoNodesCount $w
-	statline ""
-
-	# waitForConfStart $conf_nodes_ifcs
+	pipesCreate
+	statline "Configuring node(s)..."
+	executeConfNodes $allNodes $allNodeCount $w
+	statline "Waiting for configuration on $l3nodeCount node(s)..."
+	waitForConfStart $l3nodes $l3nodeCount $w
+	pipesClose
 
 	statline "Starting services for NODECONF hook..."
 	services start "NODECONF"
-	# statline ""
     } on error err {
 	finishExecuting 0 "$err" $w
 	return
     }
 
-    finishExecuting 1 "Experiment ID = $eid" $w
+    statline "Checking for errors on $allNodeCount node(s)..."
+    checkForErrors $allNodes $allNodeCount $w
 
-    statline "Network topology instantiated in [expr ([clock milliseconds] - $t_start)/1000.0] seconds ($nodeCount nodes and $linkCount links)."
+    finishExecuting 1 "" $w
+
+    statline "Network topology instantiated in [expr ([clock milliseconds] - $t_start)/1000.0] seconds ($allNodeCount nodes and $linkCount links)."
+
+    if { $execMode == "batch" } {
+	puts "Experiment ID = $eid"
+    }
 }
 
 proc prepareSystem {} {
@@ -1027,27 +1039,33 @@ proc instantiateNodes { nodes nodeCount w } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
+    set batchStep 0
     foreach node $nodes {
-	incr batchStep
-	incr progressbarCount
+	displayBatchProgress $batchStep $nodeCount
 
 	try {
 	    [typemodel $node].instantiate $eid $node
 	} on error err {
 	    return -code error "Error in '[typemodel $node].instantiate $eid $node': $err"
 	}
+	pipesExec ""
 
-	set name [getNodeName $node]
+	incr batchStep
+	incr progressbarCount
+
 	if {$execMode != "batch"} {
-	    statline "Instantiating node $name"
+	    statline "Instantiating node [getNodeName $node]"
 	    $w.p configure -value $progressbarCount
 	    update
 	}
-	displayBatchProgress $batchStep $nodeCount
-
     }
 
-    pipesExec ""
+    if { $nodeCount > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+	if {$execMode == "batch"} {
+	    statline ""
+	}
+    }
 }
 
 proc waitForInstantiateNodes { nodes nodeCount w } {
@@ -1055,14 +1073,11 @@ proc waitForInstantiateNodes { nodes nodeCount w } {
     global progressbarCount execMode
 
     set batchStep 0
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
-    }
-
     set nodes_left $nodes
     while { [llength $nodes_left] > 0 } {
+	displayBatchProgress $batchStep $nodeCount
 	foreach node $nodes_left {
-	    if { ! [isNodeStarted $node]} {
+	    if { ! [isNodeStarted $node] } {
 		continue
 	    }
 
@@ -1080,39 +1095,185 @@ proc waitForInstantiateNodes { nodes nodeCount w } {
 	    set nodes_left [removeFromList $nodes_left $node]
 	}
     }
+
+    if { $nodeCount > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+	if {$execMode == "batch"} {
+	    statline ""
+	}
+    }
 }
 
-proc configureInitNetNodes { nodes nodeCount w } {
+proc createNodeNamespaces { nodes nodeCount w } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set batchStep 0
     foreach node $nodes {
+	displayBatchProgress $batchStep $nodeCount
+
+	try {
+	    createNodeNamespace $node
+	} on error err {
+	    return -code error "Error in 'createNodeNamespace $node': $err"
+	}
+	pipesExec ""
+
 	incr batchStep
 	incr progressbarCount
-	set node_id "$eid\.$node"
-	set name [getNodeName $node]
+
 	if {$execMode != "batch"} {
-	    statline "Creating node $name"
+	    statline "Creating namespace for [getNodeName $node]"
 	    $w.p configure -value $progressbarCount
 	    update
 	}
+    }
+
+    if { $nodeCount > 0 } {
 	displayBatchProgress $batchStep $nodeCount
+	if {$execMode == "batch"} {
+	    statline ""
+	}
+    }
+}
+
+proc waitForNamespaces { nodes nodeCount w } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    global progressbarCount execMode
+
+    set batchStep 0
+    set nodes_left $nodes
+    while { [llength $nodes_left] > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+	foreach node $nodes_left {
+	    if { ! [isNodeNamespaceCreated $node] } {
+		continue
+	    }
+
+	    incr batchStep
+	    incr progressbarCount
+
+	    set name [getNodeName $node]
+	    if {$execMode != "batch"} {
+		statline "Namespace for $name created"
+		$w.p configure -value $progressbarCount
+		update
+	    }
+	    displayBatchProgress $batchStep $nodeCount
+
+	    set nodes_left [removeFromList $nodes_left $node]
+	}
+    }
+
+    if { $nodeCount > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+	if {$execMode == "batch"} {
+	    statline ""
+	}
+    }
+}
+
+proc initConfigurationNodes { nodes nodeCount w } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    global progressbarCount execMode
+
+    set batchStep 0
+    foreach node $nodes {
+	displayBatchProgress $batchStep $nodeCount
+
 	try {
 	    [typemodel $node].configureInitNet $eid $node
 	} on error err {
 	    return -code error "Error in '[typemodel $node].configureInitNet $eid $node': $err"
 	}
 	pipesExec ""
+
+	incr batchStep
+	incr progressbarCount
+
+	if {$execMode != "batch"} {
+	    statline "Starting initial configuration on [getNodeName $node]"
+	    $w.p configure -value $progressbarCount
+	    update
+	}
+    }
+
+    if { $nodeCount > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+	if {$execMode == "batch"} {
+	    statline ""
+	}
+    }
+}
+
+proc waitForInitConf { nodes nodeCount w } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    global progressbarCount execMode
+
+    set batchStep 0
+    set nodes_left $nodes
+    while { [llength $nodes_left] > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+	foreach node $nodes_left {
+	    if { ! [isNodeInitNet $node] } {
+		continue
+	    }
+
+	    incr batchStep
+	    incr progressbarCount
+
+	    set name [getNodeName $node]
+	    if {$execMode != "batch"} {
+		statline "Initial networking on $name configured"
+		$w.p configure -value $progressbarCount
+		update
+	    }
+	    displayBatchProgress $batchStep $nodeCount
+
+	    set nodes_left [removeFromList $nodes_left $node]
+	}
+    }
+
+    if { $nodeCount > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+	if {$execMode == "batch"} {
+	    statline ""
+	}
     }
 }
 
 proc copyFilesToNodes { nodes nodeCount w } {}
 
 proc createNodesInterfaces { nodes nodeCount w } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    global progressbarCount execMode
+
+    set batchStep 0
     foreach node $nodes {
-	createNodePhysIfcs $node
+	displayBatchProgress $batchStep $nodeCount
+
+	try {
+	    createNodePhysIfcs $node
+	} on error err {
+	    return -code error "Error in 'createNodePhysIfcs $node': $err"
+	}
 	pipesExec ""
+
+	incr batchStep
+	incr progressbarCount
+
+	if {$execMode != "batch"} {
+	    statline "Creating physical ifcs on node [getNodeName $node]"
+	    $w.p configure -value $progressbarCount
+	    update
+	}
+    }
+
+    if { $nodeCount > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+	if {$execMode == "batch"} {
+	    statline ""
+	}
     }
 }
 
@@ -1130,40 +1291,45 @@ proc createLinks { links linkCount w } {
 	set ifname1 [ifcByPeer $lnode1 $lnode2]
 	set ifname2 [ifcByPeer $lnode2 $lnode1]
 
-	if { [getLinkMirror $link] != "" } {
-	    set mirror_link [getLinkMirror $link]
+	set msg "Creating link $link"
+	set mirror_link [getLinkMirror $link]
+	if { $mirror_link != "" } {
 	    set i [lsearch -exact $pending_links $mirror_link]
 	    set pending_links [lreplace $pending_links $i $i]
 
-	    if {$execMode != "batch"} {
-		statline "Creating link $link/$mirror_link"
-	    }
+	    set msg "Creating link $link/$mirror_link"
 
 	    set p_lnode2 $lnode2
 	    set lnode2 [lindex [linkPeers $mirror_link] 0]
 	    set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
-	} else {
-	    if {$execMode != "batch"} {
-		statline "Creating link $link"
-	    }
 	}
-	incr batchStep
-	displayBatchProgress $batchStep $linkCount
 
-	incr progressbarCount
-	if {$execMode != "batch"} {
-	    $w.p configure -value $progressbarCount
-	    update
-	}
+	displayBatchProgress $batchStep $linkCount
 
 	try {
 	    createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
 	} on error err {
 	    return -code error "Error in 'createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link': $err"
 	}
+
+	incr batchStep
+	incr progressbarCount
+
+	if {$execMode != "batch"} {
+	    statline $msg
+	    $w.p configure -value $progressbarCount
+	    update
+	}
     }
 
     pipesExec ""
+
+    if { $linkCount > 0 } {
+	displayBatchProgress $batchStep $linkCount
+	if {$execMode == "batch"} {
+	    statline ""
+	}
+    }
 }
 
 proc configureLinks { links linkCount w } {
@@ -1180,36 +1346,43 @@ proc configureLinks { links linkCount w } {
 	set ifname1 [ifcByPeer $lnode1 $lnode2]
 	set ifname2 [ifcByPeer $lnode2 $lnode1]
 
+	set msg "Configuring link $link"
 	if { [getLinkMirror $link] != "" } {
 	    set mirror_link [getLinkMirror $link]
 	    set i [lsearch -exact $pending_links $mirror_link]
 	    set pending_links [lreplace $pending_links $i $i]
 
-	    if {$execMode != "batch"} {
-		statline "Configuring link $link/$mirror_link"
-	    }
+	    set msg "Configuring link $link/$mirror_link"
 
 	    set p_lnode2 $lnode2
 	    set lnode2 [lindex [linkPeers $mirror_link] 0]
 	    set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
-	} else {
-	    if {$execMode != "batch"} {
-		statline "Configuring link $link"
-	    }
 	}
-	incr batchStep
-	displayBatchProgress $batchStep $linkCount
 
-	incr progressbarCount
-	if {$execMode != "batch"} {
-	    $w.p configure -value $progressbarCount
-	    update
-	}
+	displayBatchProgress $batchStep $linkCount
 
 	try {
 	    configureLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
 	} on error err {
 	    return -code error "Error in 'configureLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link': $err"
+	}
+
+	incr batchStep
+	incr progressbarCount
+
+	if {$execMode != "batch"} {
+	    statline $msg
+	    $w.p configure -value $progressbarCount
+	    update
+	}
+    }
+
+    pipesExec ""
+
+    if { $linkCount > 0 } {
+	displayBatchProgress $batchStep $linkCount
+	if {$execMode == "batch"} {
+	    statline ""
 	}
     }
 }
@@ -1224,25 +1397,14 @@ proc executeConfNodes { nodes nodeCount w } {
     foreach node $nodes {
 	upvar 0 ::cf::[set ::curcfg]::$node $node
 
+	displayBatchProgress $batchStep $nodeCount
+
 	if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
 	    lassign [getDefaultGateways $node $subnet_gws $nodes_l2data] my_gws subnet_gws nodes_l2data
 	    lassign [getDefaultRoutesConfig $node $my_gws] all_routes4 all_routes6
 
 	    setDefaultIPv4routes $node $all_routes4
 	    setDefaultIPv6routes $node $all_routes6
-	}
-
-	incr progressbarCount
-	if {$execMode != "batch"} {
-	    $w.p configure -value $progressbarCount
-	    update
-	}
-
-	incr batchStep
-	displayBatchProgress $batchStep $nodeCount
-
-	if {$execMode != "batch"} {
-	    statline "Configuring node [getNodeName $node]"
 	}
 
 	if {[info procs [typemodel $node].start] != ""} {
@@ -1252,10 +1414,62 @@ proc executeConfNodes { nodes nodeCount w } {
 		return -code error "Error in '[typemodel $node].start $eid $node': $err"
 	    }
 	}
+	pipesExec ""
+
+	incr batchStep
+	incr progressbarCount
+
+	if {$execMode != "batch"} {
+	    $w.p configure -value $progressbarCount
+	    statline "Starting configuration on node [getNodeName $node]"
+	    update
+	}
+    }
+
+    if { $nodeCount > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+	if {$execMode == "batch"} {
+	    statline ""
+	}
     }
 }
 
-proc waitForConfStart { conf_nodes_ifcs } {}
+proc waitForConfStart { nodes nodeCount w } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    global progressbarCount execMode
+
+    set batchStep 0
+    set nodes_left $nodes
+    while { [llength $nodes_left] > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+	foreach node $nodes_left {
+	    if { ! [isNodeConfigured $node] } {
+		continue
+	    }
+
+	    incr batchStep
+	    incr progressbarCount
+
+	    set name [getNodeName $node]
+	    if {$execMode != "batch"} {
+		statline "Node $name configured"
+		$w.p configure -value $progressbarCount
+		update
+	    }
+	    displayBatchProgress $batchStep $nodeCount
+
+	    set nodes_left [removeFromList $nodes_left $node]
+	}
+    }
+
+    if { $nodeCount > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+	if {$execMode == "batch"} {
+	    statline ""
+	}
+    }
+}
+
 
 proc finishExecuting { status msg w } {
     global progressbarCount execMode
@@ -1274,13 +1488,62 @@ proc finishExecuting { status msg w } {
     }
 }
 
+proc checkForErrors { nodes nodeCount w } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    global progressbarCount execMode
+
+    set batchStep 0
+    set err_nodes ""
+    foreach node $nodes {
+	set msg "no error"
+	if { [isNodeError $node] } {
+	    set msg "error found"
+	    append err_nodes "[getNodeName $node] ($node), "
+	}
+
+	incr batchStep
+	incr progressbarCount
+
+	set name [getNodeName $node]
+	if {$execMode != "batch"} {
+	    statline "Node $name checked - $msg"
+	    $w.p configure -value $progressbarCount
+	    update
+	}
+	displayBatchProgress $batchStep $nodeCount
+    }
+
+    if { $nodeCount > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+	if {$execMode == "batch"} {
+	    statline ""
+	}
+    }
+
+    if { $err_nodes != "" } {
+	set err_nodes [string trimright $err_nodes ", "]
+	set msg "Issues encountered while configuring nodes:\n$err_nodes\nCheck their /err.log, /out.log and /boot.conf (/custom.conf) files." \
+
+	if { $execMode != "batch" } {
+	    after idle {.dialog1.msg configure -wraplength 4i}
+	    tk_dialog .dialog1 "IMUNES warning" \
+		"$msg" \
+		info 0 Dismiss
+	} else {
+	    puts "\nIMUNES warning - $msg\n"
+	}
+    }
+}
+
 proc checkTerminate {} {}
 
-proc terminateNgAndVimages { eid nodes nodeCount w } {
+proc terminateL2L3Nodes { eid nodes nodeCount w } {
     global progressbarCount execMode
 
     set batchStep 0
     foreach node $nodes {
+	displayBatchProgress $batchStep $nodeCount
+
 	if { [info procs [typemodel $node].shutdown] != "" } {
 	    try {
 		[typemodel $node].shutdown $eid $node
@@ -1288,94 +1551,115 @@ proc terminateNgAndVimages { eid nodes nodeCount w } {
 		return -code error "Error in '[typemodel $node].shutdown $eid $node': $err"
 	    }
 	}
+	pipesExec ""
 
 	incr batchStep
-	displayBatchProgress $batchStep $nodeCount
-
 	incr progressbarCount -1
+
 	if {$execMode != "batch"} {
+	    statline "Shutting down node [getNodeName $node]"
 	    $w.p configure -value $progressbarCount
 	    update
 	}
     }
+
+    if { $nodeCount > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+	if {$execMode == "batch"} {
+	    statline ""
+	}
+    }
 }
 
-proc terminateExtIfcs { eid extifcs extifcsCount w } {
+proc releaseExternalIfcs { eid extifcs extifcsCount w } {
     global progressbarCount execMode
 
     set batchStep 0
     foreach node $extifcs {
+	displayBatchProgress $batchStep $extifcsCount
+
 	try {
 	    [typemodel $node].destroy $eid $node
 	} on error err {
 	    return -code error "Error in '[typemodel $node].destroy $eid $node': $err"
 	}
+	pipesExec ""
 
 	incr batchStep
-	displayBatchProgress $batchStep $extifcsCount
-
 	incr progressbarCount -1
+
 	if {$execMode != "batch"} {
+	    statline "Destroying external connection [getNodeName $node]"
 	    $w.p configure -value $progressbarCount
 	    update
 	}
     }
+
+    if { $extifcsCount > 0 } {
+	displayBatchProgress $batchStep $extifcsCount
+	if {$execMode == "batch"} {
+	    statline ""
+	}
+    }
 }
 
-proc terminateLinks { eid links linkCount w } {
+proc destroyLinks { eid links linkCount w } {
     global progressbarCount execMode
 
     set batchStep 0
+    set skipLinks ""
     foreach link $links {
+	displayBatchProgress $batchStep $linkCount
+
+	if { $link in $skipLinks } {
+	    continue
+	}
+
 	set lnode1 [lindex [linkPeers $link] 0]
 	set lnode2 [lindex [linkPeers $link] 1]
+
+	set msg "Destroying link $link"
+	set mirror_link [getLinkMirror $link]
+	if { $mirror_link != "" } {
+	    lappend skipLinks $mirror_link
+
+	    set msg "Destroying link $link/$mirror_link"
+
+	    set lnode2 [lindex [linkPeers $mirror_link] 0]
+	}
+
 	try {
-	    destroyLinkBetween $eid $lnode1 $lnode2
+	    destroyLinkBetween $eid $lnode1 $lnode2 $link
 	} on error err {
-	    return -code error "Error in 'destroyLinkBetween $eid $lnode1 $lnode2': $err"
+	    return -code error "Error in 'destroyLinkBetween $eid $lnode1 $lnode2 $link': $err"
 	}
 
 	incr batchStep
-	displayBatchProgress $batchStep $linkCount
-
 	incr progressbarCount -1
+
 	if {$execMode != "batch"} {
+	    statline $msg
 	    $w.p configure -value $progressbarCount
 	    update
 	}
     }
     pipesExec ""
-}
 
-proc destroyNodesIfcs { nodes_ifcs } {}
-
-proc destroyNgNodes { eid nonVimages nonVimagesCount w } {
-    global progressbarCount execMode
-
-    set batchStep 0
-    foreach node $nonVimages {
-	try {
-	    [typemodel $node].destroy $eid $node
-	} on error err {
-	    return -code error "Error in '[typemodel $node].destroy $eid $node': $err"
-	}
-
-	incr batchStep
-	displayBatchProgress $batchStep $nonVimagesCount
-
-	incr progressbarCount -1
-	if {$execMode != "batch"} {
-	    $w.p configure -value $progressbarCount
-	    update
+    if { $linkCount > 0 } {
+	displayBatchProgress $batchStep $linkCount
+	if {$execMode == "batch"} {
+	    statline ""
 	}
     }
 }
 
-proc destroyVimageNodes { eid vimages vimagesCount w } {
+proc destroyL2Nodes { eid nodes nodeCount w } {
     global progressbarCount execMode
 
     set batchStep 0
-    foreach node $vimages {
+    foreach node $nodes {
+	displayBatchProgress $batchStep $nodeCount
+
 	try {
 	    [typemodel $node].destroy $eid $node
 	} on error err {
@@ -1383,12 +1667,51 @@ proc destroyVimageNodes { eid vimages vimagesCount w } {
 	}
 
 	incr batchStep
-	displayBatchProgress $batchStep $vimagesCount
-
 	incr progressbarCount -1
+
 	if {$execMode != "batch"} {
+	    statline "Destroying L2 node [getNodeName $node]"
 	    $w.p configure -value $progressbarCount
 	    update
+	}
+    }
+
+    if { $nodeCount > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+	if {$execMode == "batch"} {
+	    statline ""
+	}
+    }
+}
+
+proc destroyL3Nodes { eid nodes nodeCount w } {
+    global progressbarCount execMode
+
+    set batchStep 0
+    foreach node $nodes {
+	displayBatchProgress $batchStep $nodeCount
+
+	try {
+	    [typemodel $node].destroy $eid $node
+	} on error err {
+	    return -code error "Error in '[typemodel $node].destroy $eid $node': $err"
+	}
+	pipesExec ""
+
+	incr batchStep
+	incr progressbarCount -1
+
+	if {$execMode != "batch"} {
+	    statline "Destroying L3 node [getNodeName $node]"
+	    $w.p configure -value $progressbarCount
+	    update
+	}
+    }
+
+    if { $nodeCount > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+	if {$execMode == "batch"} {
+	    statline ""
 	}
     }
 }
@@ -1442,9 +1765,9 @@ proc terminateAllNodes { eid } {
 
     statline "Preparing for termination..."
     set extifcs {}
-    set nonVimages {}
-    set vimages {}
-    set nonPseudoNodes {}
+    set l2nodes {}
+    set l3nodes {}
+    set allNodes {}
     set pseudoNodesCount 0
     foreach node $node_list {
 	if { [nodeType $node] != "pseudo" } {
@@ -1452,25 +1775,24 @@ proc terminateAllNodes { eid } {
 		if { [typemodel $node] == "rj45" } {
 		    lappend extifcs $node
 		} elseif { [typemodel $node] == "extnat" } {
-		    lappend vimages $node
+		    lappend l3nodes $node
 		} else {
-		    lappend nonVimages $node
+		    lappend l2nodes $node
 		}
 	    } else {
-		lappend vimages $node
+		lappend l3nodes $node
 	    }
 	} else {
 	    incr pseudoNodesCount
 	}
     }
-    set nonVimagesCount [llength $nonVimages]
-    set vimagesCount [llength $vimages]
-    set nonPseudoNodes [concat $nonVimages $vimages]
-    set nonPseudoNodesCount [llength $nonPseudoNodes]
+    set l2nodeCount [llength $l2nodes]
+    set l3nodeCount [llength $l3nodes]
+    set allNodes [concat $l2nodes $l3nodes]
+    set allNodeCount [llength $allNodes]
     set extifcsCount [llength $extifcs]
-    incr nodeCount -$pseudoNodesCount
     incr linkCount [expr -$pseudoNodesCount/2]
-    set maxProgressbasCount [expr {2*$nodeCount + $extifcsCount + $linkCount}]
+    set maxProgressbasCount [expr {1*$allNodeCount + $extifcsCount + $linkCount + $l2nodeCount + 3*$l3nodeCount}]
     set progressbarCount $maxProgressbasCount
 
     set w ""
@@ -1497,63 +1819,139 @@ proc terminateAllNodes { eid } {
     try {
 	statline "Stopping services for NODESTOP hook..."
 	services stop "NODESTOP"
-	# statline ""
 
-	statline "Stopping $nonPseudoNodesCount non-pseudo node(s)..."
-	terminateNgAndVimages $eid $nonPseudoNodes $nonPseudoNodesCount $w
-	statline ""
+	statline "Stopping all nodes..."
+	pipesCreate
+	terminateL2L3Nodes $eid $allNodes $allNodeCount $w
+	statline "Waiting for processes on $allNodeCount node(s) to shutdown..."
+	pipesClose
 
-	statline "Releasing $extifcsCount external interface(s)..."
-	terminateExtIfcs $eid $extifcs $extifcsCount $w
-	statline ""
+	statline "Releasing external interfaces..."
+	pipesCreate
+	releaseExternalIfcs $eid $extifcs $extifcsCount $w
+	statline "Waiting for $extifcsCount external interface(s) to be released..."
+	pipesClose
 
 	statline "Stopping services for LINKDEST hook..."
 	services stop "LINKDEST"
-	# statline ""
 
+	statline "Destroying links..."
 	pipesCreate
-	statline "Destroying $linkCount link(s)..."
-	terminateLinks $eid $link_list $linkCount $w
-	statline ""
+	destroyLinks $eid $link_list $linkCount $w
+	statline "Waiting for $linkCount link(s) to be destroyed..."
+	pipesClose
 
-	# statline "Destroying physical interface(s) on node(s)..."
-	# destroyNodesIfcs nodes_ifcs
-	# statline ""
+	statline "Destroying physical interfaces on L3 nodes..."
+	pipesCreate
+	destroyNodesIfcs $eid $l3nodes $l3nodeCount $w
+	statline "Waiting for physical interfaces on $l3nodeCount L3 node(s) to be destroyed..."
+	pipesClose
 
-	statline "Destroying $nonVimagesCount non-VIMAGE node(s)..."
-	destroyNgNodes $eid $nonVimages $nonVimagesCount $w
-	statline ""
+	statline "Destroying L2 nodes..."
+	pipesCreate
+	destroyL2Nodes $eid $l2nodes $l2nodeCount $w
+	statline "Waiting for $l2nodeCount L2 node(s) to be destroyed..."
+	pipesClose
 
-	# check this
-	statline "Destroying virtual interfaces..."
-	destroyVirtNodeIfcs $eid $vimages $vimagesCount $w
-	statline ""
-
-	statline "Waiting for hanging TCP connections..."
-	timeoutPatch $eid $node_list
-	statline ""
+	statline "Checking for hanging TCP connections on L3 node(s)..."
+	pipesCreate
+	timeoutPatch $eid $l3nodes $l3nodeCount $w
+	statline "Waiting for hanging TCP connections on $l3nodeCount L3 node(s)..."
+	pipesClose
 
 	statline "Stopping services for NODEDEST hook..."
 	services stop "NODEDEST"
-	# statline ""
 
-	statline "Shutting down $vimagesCount VIMAGE nodes(s)..."
-	destroyVimageNodes $eid $vimages $vimagesCount $w
-	statline ""
+	statline "Destroying L3 nodes..."
+	pipesCreate
+	destroyL3Nodes $eid $l3nodes $l3nodeCount $w
+	statline "Waiting for $l3nodeCount L3 node(s) to be destroyed..."
+	pipesClose
 
 	statline "Removing experiment top-level container/netns..."
+	pipesCreate
 	removeExperimentContainer $eid $w
+	pipesClose
 
 	statline "Removing experiment files..."
+	pipesCreate
 	removeExperimentFiles $eid $w
     } on error err {
 	finishTerminating 0 "$err" $w
 	return
     }
 
-    finishTerminating 1 "Terminated experiment ID = $eid" $w
+    finishTerminating 1 "" $w
 
     statline "Cleanup completed in [expr ([clock milliseconds] - $t_start)/1000.0] seconds."
+
+    if { $execMode == "batch" } {
+	puts "Terminated experiment ID = $eid"
+    }
+}
+
+proc timeoutPatch { eid nodes nodeCount w } {
+    global progressbarCount execMode
+
+    set batchStep 0
+    set nodes_left $nodes
+    while { [llength $nodes_left] > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+	foreach node $nodes_left {
+	    checkHangingTCPs $eid $node
+
+	    incr batchStep
+	    incr progressbarCount -1
+
+	    set name [getNodeName $node]
+	    if {$execMode != "batch"} {
+		statline "Node $name stopped"
+		$w.p configure -value $progressbarCount
+		update
+	    }
+	    displayBatchProgress $batchStep $nodeCount
+
+	    set nodes_left [removeFromList $nodes_left $node]
+	}
+    }
+
+    if { $nodeCount > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+	if {$execMode == "batch"} {
+	    statline ""
+	}
+    }
+}
+
+proc destroyNodesIfcs { eid nodes nodeCount w } {
+    global progressbarCount execMode
+
+    set batchStep 0
+    foreach node $nodes {
+	displayBatchProgress $batchStep $nodeCount
+
+	try {
+	    destroyNodeIfcs $eid $node
+	} on error err {
+	    return -code error "Error in 'destroyNodeIfcs $eid $node': $err"
+	}
+
+	incr batchStep
+	incr progressbarCount -1
+
+	if {$execMode != "batch"} {
+	    statline "Destroying physical interfaces on node [getNodeName $node]"
+	    $w.p configure -value $progressbarCount
+	    update
+	}
+    }
+
+    if { $nodeCount > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+	if {$execMode == "batch"} {
+	    statline ""
+	}
+    }
 }
 
 #****f* exec.tcl/execCmdsNode
@@ -1590,11 +1988,46 @@ proc execCmdsNode { node cmds } {
 #****
 proc startNodeFromMenu { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
+    global progressbarCount execMode
 
+    set progressbarCount 0
+    set w ""
+    if {$execMode != "batch"} {
+	set w .startup
+	catch {destroy $w}
+	toplevel $w -takefocus 1
+	wm transient $w .
+	wm title $w "Starting node $node..."
+	message $w.msg -justify left -aspect 1200 \
+	    -text "Starting up virtual nodes and links."
+	pack $w.msg
+	update
+	ttk::progressbar $w.p -orient horizontal -length 250 \
+	    -mode determinate -maximum 1 -value $progressbarCount
+	pack $w.p
+	update
+
+	grab $w
+	wm protocol $w WM_DELETE_WINDOW {
+	}
+    }
+
+    pipesCreate
     services start "NODEINST" $node
     services start "LINKINST" $node
-    [typemodel $node].start $eid $node
+    set allNodeCount 1
+    try {
+	executeConfNodes $node 1 $w
+	statline "Waiting for configuration on $allNodeCount node(s)..."
+	waitForConfStart $node $allNodeCount $w
+    } on error err {
+	finishExecuting 0 "$err" $w
+	return
+    }
     services start "NODECONF" $node
+    pipesClose
+
+    finishExecuting 1 "" $w
 }
 
 #****f* exec.tcl/stopNodeFromMenu
@@ -1609,13 +2042,44 @@ proc startNodeFromMenu { node } {
 #****
 proc stopNodeFromMenu { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
+    global progressbarCount execMode
 
+    set progressbarCount 1
+    set w ""
+    if {$execMode != "batch"} {
+	set w .startup
+	catch {destroy $w}
+	toplevel $w -takefocus 1
+	wm transient $w .
+	wm title $w "Stopping node $node..."
+	message $w.msg -justify left -aspect 1200 \
+	    -text "Deleting virtual nodes and links."
+	pack $w.msg
+	update
+	ttk::progressbar $w.p -orient horizontal -length 250 \
+	    -mode determinate -maximum 1 -value $progressbarCount
+	pack $w.p
+	update
+
+	grab $w
+	wm protocol $w WM_DELETE_WINDOW {
+	}
+    }
+
+    pipesCreate
     services stop "NODESTOP" $node
-    [typemodel $node].shutdown $eid $node
+    try {
+	terminateL2L3Nodes $eid $node 1 $w
+    } on error err {
+	finishTerminating 0 "$err" $w
+	return
+    }
     services stop "LINKDEST" $node
     services stop "NODEDEST"
-}
+    pipesClose
 
+    finishTerminating 1 "" $w
+}
 
 #****f* exec.tcl/pipesCreate
 # NAME
@@ -1633,6 +2097,19 @@ proc pipesCreate { } {
 	set inst_pipes($i) [open "| sh" r+]
     }
     set last_inst_pipe 0
+}
+
+proc pipesExecLog { line args } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    if { $line == "" } {
+	return
+    }
+
+    set logfile "/tmp/$eid.log"
+
+    pipesExec "printf \"RUN: \" >> $logfile ; cat >> $logfile 2>&1 <<\"EOF\"\n$line\nEOF" "hold"
+    pipesExec "$line >> $logfile 2>&1" "$args"
 }
 
 #****f* exec.tcl/pipesExec

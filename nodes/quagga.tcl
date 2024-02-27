@@ -209,12 +209,12 @@ proc $MODULE.instantiate { eid node } {
     global inst_pipes last_inst_pipe
 
     l3node.instantiate $eid $node
-
-    enableIPforwarding $eid $node
 }
 
 proc $MODULE.configureInitNet { eid node } {
     l3node.configureInitNet $eid $node
+
+    enableIPforwarding $eid $node
 }
 
 #****f* quagga.tcl/router.quagga.start

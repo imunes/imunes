@@ -137,13 +137,10 @@ proc $MODULE.virtlayer {} {
 #****
 
 proc $MODULE.instantiate { eid node } {
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-
-    set t [exec printf "mkpeer source x input\nmsg .x setpersistent\nshow ." | jexec $eid ngctl -f -]
-    set tlen [string length $t]
-    set id [string range $t [expr $tlen - 31] [expr $tlen - 24]]
-    catch {exec jexec $eid ngctl name \[$id\]: $node}
-    set ngnodemap($eid\.$node) $node
+    pipesExec "printf \"
+    mkpeer . source inhook input \n
+    msg .inhook setpersistent \n name .:inhook $node
+    \" | jexec $eid ngctl -f -" "hold"
 }
 
 
@@ -159,32 +156,21 @@ proc $MODULE.instantiate { eid node } {
 #   * node_id - id of the node (type of the node is packgen)
 #****
 proc $MODULE.start { eid node } {
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-
-    set ngid $ngnodemap($eid\.$node)
-
-    # Bypass ng_pipe module for rj45 peers
-    set peer [peerByIfc $node [lindex [ifcList $node] 0]]
-    if { $peer != "" && [nodeType $peer] == "rj45"} {
-	set peerngid $ngnodemap([getNodeName $peer])
-	exec jexec $eid ngctl rmhook $ngid: output
-	exec jexec $eid ngctl rmhook $peerngid: lower
-	exec jexec $eid ngctl connect $ngid: $peerngid: output lower
-    }
-
     foreach packet [packgenPackets $node] {
+	set fd [open "| jexec $eid nghook $node: input" w]
+	fconfigure $fd -encoding binary
+
 	set pdata [getPackgenPacketData $node [lindex $packet 0]]
-	
-	set fd [open "| jexec $eid nghook $ngid: input" w]
 	set bin [binary format H* $pdata]
 	puts -nonewline $fd $bin
-	catch {close $fd}
+
+	catch { close $fd }
     }
 
     set pps [getPackgenPacketRate $node]
 
-    exec jexec $eid ngctl msg $ngid: setpps $pps
-    catch {exec jexec $eid ngctl msg $ngid: start [expr 2**63]}
+    pipesExec "jexec $eid ngctl msg $node: setpps $pps" "hold"
+    pipesExec "jexec $eid ngctl msg $node: start [expr 2**63]" "hold"
 }
 
 #****f* packgen.tcl/packgen.shutdown
@@ -199,11 +185,8 @@ proc $MODULE.start { eid node } {
 #   * node_id - id of the node (type of the node is packgen) 
 #****
 proc $MODULE.shutdown { eid node } {
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-
-    set ngid $ngnodemap($eid\.$node)
-    exec jexec $eid ngctl msg $ngid: clrdata
-    exec jexec $eid ngctl msg $ngid: stop
+    pipesExec "jexec $eid ngctl msg $node: clrdata" "hold"
+    pipesExec "jexec $eid ngctl msg $node: stop" "hold"
 }
 
 
@@ -219,7 +202,7 @@ proc $MODULE.shutdown { eid node } {
 #   * node_id - id of the node (type of the node is packgen) 
 #****
 proc $MODULE.destroy { eid node } {
-    catch { nexec jexec $eid ngctl msg $node: shutdown }
+    pipesExec "jexec $eid ngctl msg $node: shutdown" "hold"
 }
 
 

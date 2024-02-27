@@ -207,12 +207,7 @@ proc $MODULE.shellcmds {} {
 #   * eid -- experiment id
 #   * node -- node id (type of the node is pc)
 #****
-proc $MODULE.instantiate { eid node } {
-    set ifc [lindex [ifcList $node] 0]
-    if { "$ifc" != "" } {
-	extInstantiate $node
-    }
-}
+proc $MODULE.instantiate { eid node } {}
 
 #****f* ext.tcl/ext.start
 # NAME
@@ -229,7 +224,7 @@ proc $MODULE.instantiate { eid node } {
 proc $MODULE.start { eid node } {
     set ifc [lindex [ifcList $node] 0]
     if { "$ifc" != "" } {
-	startExternalIfc $eid $node
+	startExternalConnection $eid $node
     }
 }
 
@@ -250,7 +245,7 @@ proc $MODULE.shutdown { eid node } {
     if { "$ifc" != "" } {
 	killExtProcess "wireshark.*[getNodeName $node].*\\($eid\\)"
 	killExtProcess "xterm -T Capturing $eid-$node -e tcpdump -ni $eid-$node"
-	stopExternalIfc $eid $node
+	stopExternalConnection $eid $node
     }
 }
 

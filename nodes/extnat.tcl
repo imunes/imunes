@@ -41,6 +41,18 @@ set MODULE extnat
 
 registerModule $MODULE
 
+#****f* extnat.tcl/extnat.prepareSystem
+# NAME
+#   extnat.prepareSystem -- prepare system
+# SYNOPSIS
+#   extnat.prepareSystem
+# FUNCTION
+#   Loads ipfilter into the kernel.
+#****
+proc $MODULE.prepareSystem {} {
+    catch { exec kldload ipfilter }
+}
+
 #****f* extnat.tcl/extnat.confNewIfc
 # NAME
 #   extnat.confNewIfc -- configure new interface
@@ -206,12 +218,7 @@ proc $MODULE.shellcmds {} {
 #   * eid -- experiment id
 #   * node -- node id (type of the node is pc)
 #****
-proc $MODULE.instantiate { eid node } {
-    set ifc [lindex [ifcList $node] 0]
-    if { "$ifc" != "" } {
-	extInstantiate $node
-    }
-}
+proc $MODULE.instantiate { eid node } {}
 
 #****f* extnat.tcl/extnat.start
 # NAME
@@ -228,7 +235,7 @@ proc $MODULE.instantiate { eid node } {
 proc $MODULE.start { eid node } {
     set ifc [lindex [ifcList $node] 0]
     if { "$ifc" != "" } {
-	startExternalIfc $eid $node
+	startExternalConnection $eid $node
 	setupExtNat $eid $node $ifc
     }
 }
@@ -250,7 +257,7 @@ proc $MODULE.shutdown { eid node } {
     if { "$ifc" != "" } {
 	killExtProcess "wireshark.*[getNodeName $node].*\\($eid\\)"
 	killExtProcess "xterm -T Capturing $eid-$node -e tcpdump -ni $eid-$node"
-	stopExternalIfc $eid $node
+	stopExternalConnection $eid $node
 	unsetupExtNat $eid $node $ifc
     }
 }

@@ -136,13 +136,10 @@ proc $MODULE.virtlayer {} {
 #   * node_id - id of the node (type of the node is filter.
 #****
 proc $MODULE.instantiate { eid node } {
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-
-    set t [exec printf "mkpeer patmat x x\nshow ." | jexec $eid ngctl -f -]
-    set tlen [string length $t]
-    set id [string range $t [expr $tlen - 31] [expr $tlen - 24]]
-    catch {exec jexec $eid ngctl name \[$id\]: $node}
-    set ngnodemap($eid\.$node) $node
+    pipesExec "printf \"
+    mkpeer . patmat tmp tmp \n
+    name .:tmp $node
+    \" | jexec $eid ngctl -f -" "hold"
 }
 
 
@@ -160,16 +157,13 @@ proc $MODULE.instantiate { eid node } {
 #   * node_id - id of the node (type of the node is filter.
 #****
 proc $MODULE.start { eid node } {
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-
-    set ngid $ngnodemap($eid\.$node)
     foreach ifc [ifcList $node] {
 	set cfg [netconfFetchSection $node "interface $ifc"]
 	set ngcfgreq "shc $ifc"
 	foreach rule [lsort -dictionary $cfg] {
 	    set ngcfgreq "[set ngcfgreq]$rule"
 	}
-	catch {exec jexec $eid ngctl msg $ngid: $ngcfgreq}
+	pipesExec "jexec $eid ngctl msg $node: $ngcfgreq" "hold"
     }
 }
 
@@ -186,13 +180,10 @@ proc $MODULE.start { eid node } {
 #   * node_id - id of the node (type of the node is filter.
 #****
 proc $MODULE.shutdown { eid node } {
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-
-    set ngid $ngnodemap($eid\.$node)
     foreach ifc [ifcList $node] {
 	set cfg [netconfFetchSection $node "interface $ifc"]
 	set ngcfgreq "shc $ifc"
-	catch {exec jexec $eid ngctl msg $ngid: $ngcfgreq}
+	pipesExec "jexec $eid ngctl msg $node: $ngcfgreq" "hold"
     }
 }
 
@@ -210,7 +201,7 @@ proc $MODULE.shutdown { eid node } {
 #   * node_id - id of the node (type of the node is filter.
 #****
 proc $MODULE.destroy { eid node } {
-    catch { nexec jexec $eid ngctl msg $node: shutdown }
+    pipesExec "jexec $eid ngctl msg $node: shutdown" "hold"
 }
 
 

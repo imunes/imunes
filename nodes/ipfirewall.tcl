@@ -228,11 +228,11 @@ proc $MODULE.bootcmd { node } {
 #   * shells -- default shells for the ipfirewall
 #****
 proc $MODULE.shellcmd { node } {
-    set ret [nexec whereis -b bash]
+    set ret [exec whereis -b bash]
     if { [llength $ret] == 2 } {
 	return [lindex $ret 1]
     } else {
-	set ret [nexec whereis -b tcsh]
+	set ret [exec whereis -b tcsh]
 	if { [llength $ret] == 2 } {
 	    return [lindex $ret 1]
 	} else {
