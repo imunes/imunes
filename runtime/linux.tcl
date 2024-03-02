@@ -377,7 +377,7 @@ proc getNodeNetns { eid node } {
 
     # Global netns
     if { [nodeType $node] in "ext extnat" } {
-	return imunes_$devfs_number
+	return ""
     }
 
     # Node netns
@@ -392,7 +392,7 @@ proc createNetns { node } {
 
     # Top-level experiment netns
     if { $node == "" } {
-	catch {exec ip netns add imunes_$devfs_number}
+	catch {exec ip netns attach imunes_$devfs_number 1}
 	exec ip netns add $eid
 	return $eid
     }
@@ -528,7 +528,47 @@ proc isNodeStarted { node } {
 # INPUTS
 #   * node -- node id
 #****
-proc createNodePhysIfcs { node } {}
+proc createNodePhysIfcs { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set nodeNs [getNodeNetns $eid $node]
+
+    # Create "physical" network interfaces
+    foreach ifc [ifcList $node] {
+	set ifname $ifc
+	if { [nodeType $node] in "ext extnat" } {
+	    set ifname $eid-$node-$ifc
+	}
+
+	# Create a veth pair - private hook in node netns and public hook
+	# in the experiment netns
+	createNsVethPair $ifname $nodeNs $node-$ifc $eid
+
+	switch -exact [string trimright $ifc "0123456789"] {
+	    e {
+		# bridge private hook with L2 node
+		setNsIfcMaster $nodeNs $ifname $node "up"
+	    }
+	    ext {
+		# bridge private hook with ext node
+		setNsIfcMaster $nodeNs $ifname $eid-$node "up"
+	    }
+	    eth {
+		set ether [getIfcMACaddr $node $ifc]
+                if {$ether == ""} {
+                    autoMACaddr $node $ifc
+		    set ether [getIfcMACaddr $node $ifc]
+                }
+
+		set nsstr ""
+		if { $nodeNs != "" } {
+		    set nsstr "-n $nodeNs"
+		}
+		pipesExec "ip $nsstr link set $ifc address $ether" "hold"
+	    }
+	}
+    }
+}
 
 #****f* freebsd.tcl/createNodeLogIfcs
 # NAME
@@ -587,71 +627,44 @@ proc configureICMPoptions { node } {
     pipesExec "docker exec $eid.$node sh -c \'$cmds\'" "hold"
 }
 
-proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
+proc createNsLinkBridge { netNs link } {
+    set nsstr ""
+    if { $netNs != "" } {
+	set nsstr "-n $netNs"
+    }
+    pipesExec "ip $nsstr link add name $link type bridge ageing_time 0" "hold"
+    pipesExec "ip $nsstr link set $link up" "hold"
+}
+
+proc createNsVethPair { ifname1 netNs1 ifname2 netNs2 } {
+    set nsstr1 ""
+    if { $netNs1 != "" } {
+	set nsstr1 "netns $netNs1"
+    }
+    set nsstr2 ""
+    if { $netNs2 != "" } {
+	set nsstr2 "netns $netNs2"
+    }
+    pipesExec "ip link add name $ifname1 $nsstr1 type veth peer name $ifname2 $nsstr2" "hold"
+}
+
+proc setNsIfcMaster { netNs ifname master state } {
+    set nsstr ""
+    if { $netNs != "" } {
+	set nsstr "-n $netNs"
+    }
+    pipesExec "ip $nsstr link set $ifname master $master $state" "hold"
+}
+
+proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    set ether1 [getIfcMACaddr $lnode1 $ifname1]
-    if {$ether1 == ""} {
-        autoMACaddr $lnode1 $ifname1
-    }
-    set ether1 [getIfcMACaddr $lnode1 $ifname1]
+    # create link bridge in experiment netns
+    createNsLinkBridge $eid $link
 
-    set ether2 [getIfcMACaddr $lnode2 $ifname2]
-    if {$ether2 == ""} {
-        autoMACaddr $lnode2 $ifname2
-    }
-    set ether2 [getIfcMACaddr $lnode2 $ifname2]
-
-    set lname1 $lnode1
-    set lname2 $lnode2
-
-    switch -exact "[[typemodel $lnode1].virtlayer]-[[typemodel $lnode2].virtlayer]" {
-	NETGRAPH-NETGRAPH {
-	    if { [nodeType $lnode1] in "ext extnat" } {
-		createBridge "lanswitch" $eid-$lnode1
-	    }
-	    if { [nodeType $lnode2] in "ext extnat" } {
-		createBridge "lanswitch" $eid-$lnode2
-	    }
-	    # generate interface names
-	    set hostIfc1 "$eid-$lname1-$ifname1"
-	    set hostIfc2 "$eid-$lname2-$ifname2"
-	    # create veth pair
-	    createVethPair $hostIfc1 $hostIfc2
-	    # add veth interfaces to bridges
-	    addIfcToBridge "hub" $hostIfc1 $eid-$lname1
-	    addIfcToBridge "hub" $hostIfc2 $eid-$lname2
-	    # set bridge interfaces up
-	    exec ip link set dev $hostIfc1 up
-	    exec ip link set dev $hostIfc2 up
-	}
-	VIMAGE-VIMAGE {
-	    # prepare namespace files
-	    set lnode1Ns [createNodeNetns $lnode1]
-	    set lnode2Ns [createNodeNetns $lnode2]
-	    # generate temporary interface names
-	    set hostIfc1 "v${ifname1}pn${lnode1Ns}"
-	    set hostIfc2 "v${ifname2}pn${lnode2Ns}"
-	    # create veth pair
-	    createVethPair $hostIfc1 $hostIfc2
-	    # move veth pair sides to node namespaces
-	    setIfcNetNs $lnode1 $hostIfc1 $ifname1
-	    setIfcNetNs $lnode2 $hostIfc2 $ifname2
-	    # set mac addresses of node ifcs
-	    exec nsenter -n -t $lnode1Ns ip link set dev "$ifname1" \
-		address "$ether1"
-	    exec nsenter -n -t $lnode2Ns ip link set dev "$ifname2" \
-		address "$ether2"
-	    # delete net namespace reference files
-	    exec ip netns del $lnode1Ns
-	    exec ip netns del $lnode2Ns
-	}
-	NETGRAPH-VIMAGE {
-	    addNodeIfcToBridge $lname1 $ifname1 $lnode2 $ifname2 $ether2
-	}
-	VIMAGE-NETGRAPH {
-	    addNodeIfcToBridge $lname2 $ifname2 $lnode1 $ifname1 $ether1
-	}
+    # add nodes ifc hooks to link bridge and bring them up
+    foreach node "$lnode1 $lnode2" ifc "$ifname1 $ifname2" {
+	setNsIfcMaster $eid $node-$ifc $link "up"
     }
 }
 
@@ -900,7 +913,14 @@ proc createBridge { type bridge } {
 proc l2node.instantiate { eid node } {
     set type [nodeType $node]
 
-    createBridge $type $eid-$node
+    set ageing_time ""
+    if { $type == "hub" } {
+	set ageing_time "ageing_time 0"
+    }
+
+    set nodeNs [createNetns $node]
+    pipesExec "ip netns exec $nodeNs ip link add name $node type bridge $ageing_time" "hold"
+    pipesExec "ip netns exec $nodeNs ip link set $node up" "hold"
 }
 
 proc destroyBridge { type bridge } {
@@ -929,7 +949,15 @@ proc destroyBridge { type bridge } {
 proc l2node.destroy { eid node } {
     set type [nodeType $node]
 
-    destroyBridge $type $eid-$node
+    set nodeNs [createNetns $node]
+
+    set nsstr ""
+    if { $nodeNs != "" } {
+	set nsstr "-n $nodeNs"
+    }
+    pipesExec "ip $nsstr link delete $node" "hold"
+
+    removeNodeNetns $eid $node
 }
 
 #****f* linux.tcl/enableIPforwarding
@@ -1253,32 +1281,22 @@ proc configureIfcLinkParams { eid node ifname bandwidth delay ber dup } {
 	set loss 0
     }
 
-    if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
-        catch {exec tc qdisc del dev $eid-$lname-$ifname root}
-	# XXX: currently we have loss, but we can easily have
-	# corrupt, add a tickbox to GUI, default behaviour
-	# should be loss because we don't do corrupt on FreeBSD
-	# set confstring "netem corrupt ${loss}%"
-	# corrupt ${loss}%
-	set cmd "tc qdisc add dev $eid-$lname-$ifname root netem"
-	catch {
-	    eval exec $cmd [getNetemConfigLine $bandwidth $delay $loss $dup]
-	} err
-
-	if { $debug && $err != "" } {
-	    puts stderr "tc ERROR: $eid-$lname-$ifname, $err"
-	    puts stderr "gui settings: bw $bandwidth loss $loss delay $delay dup $dup"
-	    catch { exec tc qdisc show dev $eid-$lname-$ifname } status
-	    puts stderr $status
-	}
-    }
-    if { [[typemodel $node].virtlayer] == "VIMAGE" } {
-        set nodeNs [getNodeNamespace $node]
-        catch {exec nsenter -n -t $nodeNs tc qdisc del dev $ifname root}
-
-	# XXX: same as the above
-	set cmd "nsenter -n -t $nodeNs tc qdisc add dev $ifname root netem"
+    catch {exec ip netns exec $eid tc qdisc del dev $lname-$ifname root}
+    # XXX: currently we have loss, but we can easily have
+    # corrupt, add a tickbox to GUI, default behaviour
+    # should be loss because we don't do corrupt on FreeBSD
+    # set confstring "netem corrupt ${loss}%"
+    # corrupt ${loss}%
+    set cmd "ip netns exec $eid tc qdisc add dev $lname-$ifname root netem"
+    catch {
 	eval exec $cmd [getNetemConfigLine $bandwidth $delay $loss $dup]
+    } err
+
+    if { $debug && $err != "" } {
+	puts stderr "tc ERROR: $lname-$ifname, $err"
+	puts stderr "gui settings: bw $bandwidth loss $loss delay $delay dup $dup"
+	catch { exec ip netns exec $eid tc qdisc show dev $lname-$ifname } status
+	puts stderr $status
     }
 
     # XXX: Now on Linux we don't care about queue lengths and we don't limit
@@ -1403,6 +1421,9 @@ proc taygaDestroy { eid node } {
 
 # XXX External connection procedures
 proc extInstantiate { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    createNsLinkBridge "" $eid-$node
 }
 
 proc setupExtNat { eid node ifc } {
