@@ -905,7 +905,7 @@ proc deployCfg {} {
     set nonPseudoNodesCount [llength $nonPseudoNodes]
     incr nodeCount -$pseudoNodesCount
     incr linkCount [expr -$pseudoNodesCount/2]
-    set maxProgressbasCount [expr {2*$nodeCount + 2*$linkCount}]
+    set maxProgressbasCount [expr {2*$nodeCount + 2*$vimagesCount + 2*$linkCount}]
 
     set w ""
     if {$execMode != "batch"} {
@@ -928,16 +928,22 @@ proc deployCfg {} {
 	}
     }
 
-    pipesCreate
     try {
-	statline "Creating $nonVimagesCount non-VIMAGE node(s)..."
+	pipesCreate
+	statline "Instantiating $nonVimagesCount non-VIMAGE node(s)..."
 	instantiateNodes $nonVimages $nonVimagesCount $w
 	statline ""
 
-	statline "Creating $vimagesCount VIMAGE node(s)..."
+	statline "Instantiating $vimagesCount VIMAGE node(s)..."
 	instantiateNodes $vimages $vimagesCount $w
 	statline ""
 
+	statline "Waiting for $vimagesCount VIMAGE node(s) to start..."
+	waitForInstantiateNodes $vimages $vimagesCount $w
+	statline ""
+	pipesClose
+
+	pipesCreate
 	statline "Configuring initial networking on $vimagesCount VIMAGE node(s)..."
 	configureInitNetNodes $vimages $vimagesCount $w
 	statline ""
@@ -1019,24 +1025,58 @@ proc instantiateNodes { nodes nodeCount w } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
-    set batchStep 0
     foreach node $nodes {
 	incr batchStep
 	incr progressbarCount
-	set node_id "$eid\.$node"
-	set name [getNodeName $node]
-	if {$execMode != "batch"} {
-	    statline "Creating node $name"
-	    $w.p configure -value $progressbarCount
-	    update
-	}
-	displayBatchProgress $batchStep $nodeCount
+
 	try {
 	    [typemodel $node].instantiate $eid $node
 	} on error err {
 	    return -code error "Error in '[typemodel $node].instantiate $eid $node': $err"
 	}
-	pipesExec ""
+
+	set name [getNodeName $node]
+	if {$execMode != "batch"} {
+	    statline "Instantiating node $name"
+	    $w.p configure -value $progressbarCount
+	    update
+	}
+	displayBatchProgress $batchStep $nodeCount
+
+    }
+
+    pipesExec ""
+}
+
+proc waitForInstantiateNodes { nodes nodeCount w } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    global progressbarCount execMode
+
+    set batchStep 0
+    if { $nodeCount > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+    }
+
+    set nodes_left $nodes
+    while { [llength $nodes_left] > 0 } {
+	foreach node $nodes_left {
+	    if { ! [isNodeStarted $node]} {
+		continue
+	    }
+
+	    incr batchStep
+	    incr progressbarCount
+
+	    set name [getNodeName $node]
+	    if {$execMode != "batch"} {
+		statline "Node $name started"
+		$w.p configure -value $progressbarCount
+		update
+	    }
+	    displayBatchProgress $batchStep $nodeCount
+
+	    set nodes_left [removeFromList $nodes_left $node]
+	}
     }
 }
 

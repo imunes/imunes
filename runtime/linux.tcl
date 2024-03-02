@@ -399,19 +399,17 @@ proc createNetns { node } {
 
     # Non-VIMAGE nodes have their own netns
     if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
-	exec ip netns add $eid-$node
+	pipesExec "ip netns add $eid-$node" "hold"
 	return $eid-$node
     }
 
     # VIMAGE nodes use docker netns
-    catch { exec docker inspect -f "{{.State.Pid}}" $eid.$node } docker_ns
-    # remove whatever may be here
-    if { [file exists "/var/run/netns/$docker_ns"] } {
-	# exec rm -f "/var/run/netns/$docker_ns"
-	catch {exec ip netns del $docker_ns}
-    }
-    exec ip netns attach $eid-$node $docker_ns
-    # exec docker exec -d $eid.$node umount /etc/resolv.conf /etc/hosts
+    set cmds "docker_ns=\$(docker inspect -f '{{.State.Pid}}' $eid.$node)"
+    set cmds "$cmds; ip netns del \$docker_ns > /dev/null 2>&1"
+    set cmds "$cmds; ip netns attach $eid-$node \$docker_ns"
+    set cmds "$cmds; docker exec -d $eid.$node umount /etc/resolv.conf /etc/hosts"
+
+    pipesExec "$cmds" "hold"
 
     return $eid-$node
 }
@@ -481,26 +479,43 @@ proc createNodeContainer { node } {
         set vroot $VROOT_MASTER
     }
 
-    catch { exec docker run --detach --init --tty \
+    pipesExec "docker run --detach --init --tty \
 	--privileged --cap-add=ALL --net=$network \
 	--name $node_id --hostname=[getNodeName $node] \
 	--volume /tmp/.X11-unix:/tmp/.X11-unix \
 	--sysctl net.ipv6.conf.all.disable_ipv6=0 \
 	--ulimit nofile=$ULIMIT_FILE --ulimit nproc=$ULIMIT_PROC \
-	$vroot } err
-    if { $debug } {
-        puts "'exec docker run' ($node_id) caught:\n$err"
-    }
-    if { [getNodeDockerAttach $node] } {
-	catch "exec docker exec $node_id ip l set eth0 down"
-	catch "exec docker exec $node_id ip l set eth0 name ext0"
-	catch "exec docker exec $node_id ip l set ext0 up"
-    }
+	$vroot &" "hold"
 
-    set status ""
-    while { [string match 'true' $status] != 1 } {
-        catch {exec docker inspect --format '{{.State.Running}}' $node_id} status
-    }
+#    catch { exec docker run --detach --init --tty \
+#	--privileged --cap-add=ALL --net=$network \
+#	--name $node_id --hostname=[getNodeName $node] \
+#	--volume /tmp/.X11-unix:/tmp/.X11-unix \
+#	--sysctl net.ipv6.conf.all.disable_ipv6=0 \
+#	--ulimit nofile=$ULIMIT_FILE --ulimit nproc=$ULIMIT_PROC \
+#	$vroot } err
+#    if { $debug } {
+#        puts "'exec docker run' ($node_id) caught:\n$err"
+#    }
+#    if { [getNodeDockerAttach $node] } {
+#	catch "exec docker exec $node_id ip l set eth0 down"
+#	catch "exec docker exec $node_id ip l set eth0 name ext0"
+#	catch "exec docker exec $node_id ip l set ext0 up"
+#    }
+#
+#    set status ""
+#    while { [string match 'true' $status] != 1 } {
+#        catch {exec docker inspect --format '{{.State.Running}}' $node_id} status
+#    }
+}
+
+proc isNodeStarted { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set node_id "$eid.$node"
+
+    catch {exec docker inspect --format '{{.State.Running}}' $node_id} status
+
+    return [string match 'true' $status]
 }
 
 #****f* linux.tcl/createNodePhysIfcs

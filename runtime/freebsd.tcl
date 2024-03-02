@@ -1114,6 +1114,19 @@ proc createNodeContainer { node } {
 	host.hostname=\"[getNodeName $node]\" vnet persist" "hold"
 }
 
+proc isNodeStarted { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set node_id "$eid.$node"
+
+    try {
+	exec jls -j $node_id
+    } on error {} {
+	return 0
+    }
+
+    return 1
+}
+
 #****f* freebsd.tcl/createNodePhysIfcs
 # NAME
 #   createNodePhysIfcs -- create node physical interfaces
