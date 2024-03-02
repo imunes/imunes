@@ -1594,7 +1594,7 @@ proc createExperimentContainer {} {
 #   * iname1 -- interface name on the first node
 #   * iname2 -- interface name on the second node
 #****
-proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
+proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global debug
 

@@ -961,11 +961,12 @@ proc deployCfg {} {
 	statline "Creating interfaces on $nonPseudoNodesCount non-pseudo node(s)..."
 	createNodesInterfaces $nonPseudoNodes $nonPseudoNodesCount $w
 	# statline ""
-	pipesClose
 
+	pipesCreate
 	statline "Creating $linkCount link(s)..."
 	createLinks $link_list $linkCount $w
 	statline ""
+	pipesClose
 
 	statline "Configuring $linkCount link(s)..."
 	configureLinks $link_list $linkCount $w
@@ -1155,11 +1156,13 @@ proc createLinks { links linkCount w } {
 	}
 
 	try {
-	    createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2
+	    createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
 	} on error err {
-	    return -code error "Error in 'createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2': $err"
+	    return -code error "Error in 'createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link': $err"
 	}
     }
+
+    pipesExec ""
 }
 
 proc configureLinks { links linkCount w } {
