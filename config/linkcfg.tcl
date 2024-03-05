@@ -140,6 +140,16 @@ proc removeLink { link } {
 	set i [lsearch $pnodes $node]
 	set peer [lreplace $pnodes $i $i]
 	set ifc [ifcByPeer $node $peer]
+
+	if { [typemodel $node] in "extelem"} {
+	    set old [getNodeExternalIfcs $node]
+	    set idx [lsearch -exact -index 0 $old "$ifc"]
+	    setNodeExternalIfcs $node [lreplace $old $idx $idx]
+	    set i [lsearch [set $node] "interface-peer {$ifc $peer}"]
+	    set $node [lreplace [set $node] $i $i]
+	    continue
+	}
+
 	set index [lsearch -exact $IPv4UsedList [getIfcIPv4addr $node $ifc]]
 	set IPv4UsedList [lreplace $IPv4UsedList $index $index]
 	set index [lsearch -exact $IPv6UsedList [getIfcIPv6addr $node $ifc]]

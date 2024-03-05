@@ -353,6 +353,9 @@ proc loadCfg { cfg } {
 			interface-peer {
 			    lappend $object "interface-peer {$value}"
 			}
+			external-ifcs {
+			    lappend $object "external-ifcs {$value}"
+			}
 			network-config {
 			    set cfg ""
 			    foreach zline [split $value {
@@ -735,6 +738,9 @@ proc loadCfg { cfg } {
     set MACUsedList ""
     foreach node $node_list {
 	set nodeType [typemodel $node]
+	if { $nodeType in "extelem" } {
+	    continue
+	}
 	if { $nodeType ni [concat $all_modules_list "pseudo"] && \
 	    ! [string match "router.*" $nodeType] } {
 	    set msg "Unknown node type: '$nodeType'."

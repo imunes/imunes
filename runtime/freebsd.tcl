@@ -1857,8 +1857,10 @@ proc getCpuCount {} {
 #   * node -- node id
 #****
 proc captureExtIfc { eid node } {
-    set ifname [getNodeName $node]
+    captureExtIfcByName $eid [getNodeName $node]
+}
 
+proc captureExtIfcByName { eid ifname } {
     pipesExec "ifconfig $ifname vnet $eid" "hold"
     pipesExec "jexec $eid ifconfig $ifname up promisc" "hold"
 }
@@ -1875,9 +1877,12 @@ proc captureExtIfc { eid node } {
 #   * node -- node id
 #****
 proc releaseExtIfc { eid node } {
-    set ifname [getNodeName $node]
+    releaseExtIfcByName $eid [getNodeName $node]
+}
 
+proc releaseExtIfcByName { eid ifname } {
     pipesExec "ifconfig $ifname -vnet $eid" "hold"
+    pipesExec "ifconfig $ifname up -promisc" "hold"
 }
 
 #****f* freebsd.tcl/enableIPforwarding

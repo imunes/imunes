@@ -1735,6 +1735,45 @@ proc setNodeName { node name } {
     netconfInsertSection $node [list "hostname $name"]
 }
 
+#****f* nodecfg.tcl/getNodeExternalIfcs
+# NAME
+#   getNodeExternalIfcs -- set node name.
+# SYNOPSIS
+#   getNodeExternalIfcs $node $name
+# FUNCTION
+#   Sets node's logical name.
+# INPUTS
+#   * node -- node id
+#   * name -- logical name of the node
+#****
+proc getNodeExternalIfcs { node } {
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
+    return [lindex [lsearch -inline [set $node] "external-ifcs *"] 1]
+}
+
+#****f* nodecfg.tcl/setNodeExternalIfcs
+# NAME
+#   setNodeExternalIfcs -- set node name.
+# SYNOPSIS
+#   setNodeExternalIfcs $node $name
+# FUNCTION
+#   Sets node's logical name.
+# INPUTS
+#   * node -- node id
+#   * name -- logical name of the node
+#****
+proc setNodeExternalIfcs { node ifcs } {
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
+    set i [lsearch [set $node] "external-ifcs *"]
+    if { $i >= 0 } {
+	set $node [lreplace [set $node] $i $i "external-ifcs {$ifcs}"]
+    } else {
+	set $node [linsert [set $node] 1 "external-ifcs {$ifcs}"]
+    }
+}
+
 #****f* nodecfg.tcl/getNodeType
 # NAME
 #   getNodeType -- get node type.

@@ -186,6 +186,7 @@ array set nodeNamingBase {
     router router
     host host
     hub hub
+    extelem xel
     lanswitch switch
     nat64 nat64-
     packgen packgen

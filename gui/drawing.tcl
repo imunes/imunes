@@ -300,6 +300,10 @@ proc updateIfcLabel { lnode1 lnode2 } {
 
     set link [lindex [.panwin.f1.c gettags "link && $lnode1 && $lnode2"] 1]
     set ifc [ifcByPeer $lnode1 $lnode2]
+    if { [nodeType $lnode1] == "extelem" } {
+	set ifcs [getNodeExternalIfcs $lnode1]
+	set ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$ifc"] 1]
+    }
     set ifipv4addr [getIfcIPv4addr $lnode1 $ifc]
     set ifipv6addr [getIfcIPv6addr $lnode1 $ifc]
     if { $ifc == 0 } {
