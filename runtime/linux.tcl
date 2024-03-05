@@ -1178,6 +1178,29 @@ proc captureExtIfc { eid node } {
     addIfcToBridge "hub" $ifname $eid-$node
 }
 
+proc captureExtIfcByName { eid ifname } {
+    global execMode
+
+    set ifc [lindex [split $ifname .] 0]
+    set vlan [lindex [split $ifname .] 1]
+    if { $vlan != "" } {
+	catch {exec ip link add link $ifc name $ifname type vlan id $vlan} err
+	if { $err != "" } {
+	    set msg "Error: VLAN $vlan on external interface $ifc can't be\
+		created.\n($err)"
+	    if { $execMode == "batch" } {
+		puts $msg
+	    } else {
+		after idle {.dialog1.msg configure -wraplength 4i}
+		tk_dialog .dialog1 "IMUNES error" $msg \
+		    info 0 Dismiss
+	    }
+	} else {
+	    catch {exec ip link set $ifname up} err
+	}
+    }
+}
+
 #****f* linux.tcl/releaseExtIfc
 # NAME
 #   releaseExtIfc -- release external interfaces
@@ -1205,6 +1228,14 @@ proc releaseExtIfc { eid node } {
     }
 
     catch { destroyBridge "hub" $eid-$node }
+}
+
+proc releaseExtIfcByName { eid ifname } {
+    set ifc [lindex [split $ifname .] 0]
+    set vlan [lindex [split $ifname .] 1]
+    if { $vlan != "" } {
+	catch { exec ip link del $ifname }
+    }
 }
 
 proc getIPv4RouteCmd { statrte } {

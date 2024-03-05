@@ -1943,6 +1943,12 @@ proc captureExtIfc { eid node } {
     nexec jexec $eid ifconfig $ifname up promisc
 }
 
+proc captureExtIfcByName { eid ifname } {
+    set ngifname [string map {. _} $ifname]
+    nexec ifconfig $ifname vnet $eid
+    nexec jexec $eid ifconfig $ifname up promisc
+}
+
 #****f* freebsd.tcl/releaseExtIfc
 # NAME
 #   releaseExtIfc -- release external interfaces
@@ -1966,6 +1972,11 @@ proc releaseExtIfc { eid node } {
     if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
 	catch {exec ifconfig $ifname destroy}
     }
+}
+
+proc releaseExtIfcByName { eid ifname } {
+    catch {nexec ifconfig $ifname -vnet $eid}
+    catch {nexec ifconfig $ifname up -promisc}
 }
 
 #****f* freebsd.tcl/enableIPforwarding
