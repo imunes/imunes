@@ -623,8 +623,8 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
 proc startIfcsNode { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    set cmds ""
     set nodeNs [getNodeNamespace $node]
+    set cmds "nsenter -n -t $nodeNs ip link set lo down 2>/dev/null"
     set cmds "$cmds\n nsenter -n -t $nodeNs ip link set dev lo name lo0 2>/dev/null"
     foreach ifc [allIfcList $node] {
 	set mtu [getIfcMTU $node $ifc]
