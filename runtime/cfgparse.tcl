@@ -510,6 +510,9 @@ proc loadCfg { cfg } {
 		    }
 		} elseif {"$class" == "link"} {
 		    switch -exact -- $field {
+			direct {
+			    lappend $object "direct $value"
+			}
 			nodes {
 			    lappend $object "nodes {$value}"
 			}

@@ -541,21 +541,15 @@ proc createNodePhysIfcs { node } {
 	    set ifname $eid-$node-$ifc
 	}
 
-	# # direct link, simulate capturing the host interface into the node,
-	# # without bridges between them
-	# set peer [peerByIfc $node $ifc]
-	# if { $peer != "" && [nodeType $peer] == "rj45" } {
-	#    set link [linkByPeers $node $peer]
-	#    if { $link != "" && [getLinkType $link] == "direct" } {
-	# 	#set ifname [getNodeName $peer]
-	# 	#set cmds "ip -n $eid link add $ifc netns $nodeNs link $ifname type macvlan mode passthru"
-	# 	## we cannot change wireless interfaces namespaces without changing phy
-	# 	## so try from default netns
-	# 	#set cmds "$cmds || ip link add $ifc netns $nodeNs link $ifname type macvlan mode passthru"
-	# 	#pipesExec "$cmds" "hold"
-	# 	return
-	#     }
-	# }
+	# direct link, simulate capturing the host interface into the node,
+	# without bridges between them
+	set peer [peerByIfc $node $ifc]
+	if { $peer != "" } {
+	    set link [linkByPeers $node $peer]
+	    if { $link != "" && [getLinkDirect $link] } {
+		continue
+	    }
+	}
 
 	switch -exact $prefix {
 	    e -
@@ -689,28 +683,50 @@ proc setNsIfcMaster { netNs ifname master state } {
 proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    # # direct link, simulate capturing the host interface into the node,
-    # # without bridges between them
-    # if { [getLinkType $link == "direct" } {
-    #     if { [nodeType $lnode1] == "rj45" || [nodeType $lnode2] == "rj45" } {
-    #         if { [nodeType $lnode1] == "rj45" } {
-    #     	set ifname [getNodeName $lnode1]
-    #     	set nodeNs [getNodeNetns $eid $lnode2]
-    #     	set ifc $ifname2
-    #         } else {
-    #     	set ifname [getNodeName $lnode2]
-    #     	set nodeNs [getNodeNetns $eid $lnode1]
-    #     	set ifc $ifname1
-    #         }
-    #         set cmds "ip -n $eid link add $ifc netns $nodeNs link $ifname type macvlan mode passthru"
-    #         # we cannot change wireless interfaces namespaces without changing phy
-    #         # so try from default netns
-    #         set cmds "$cmds || ip link add $ifc netns $nodeNs link $ifname type macvlan mode passthru"
-    #         pipesExec "$cmds" "hold"
-    #         puts "CMDS: '$cmds'"
-    #         return
-    #     }
-    # }
+    # direct link, simulate capturing the host interface into the node,
+    # without bridges between them
+    # XXX move to another proc
+    if { [getLinkDirect $link] } {
+	if { [nodeType $lnode1] == "rj45" || [nodeType $lnode2] == "rj45" } {
+	    if { [nodeType $lnode1] == "rj45" } {
+		set ifname [getNodeName $lnode1]
+		set nodeNs [getNodeNetns $eid $lnode2]
+		set ifc $ifname2
+	    } else {
+		set ifname [getNodeName $lnode2]
+		set nodeNs [getNodeNetns $eid $lnode1]
+		set ifc $ifname1
+	    }
+	    set cmds "ip -n $eid link add $ifc netns $nodeNs link $ifname type macvlan mode passthru"
+	    # we cannot change wireless interfaces namespaces without changing phy
+	    # so try from default netns
+	    set cmds "$cmds || ip link add $ifc netns $nodeNs link $ifname type macvlan mode passthru"
+	    pipesExec "$cmds" "hold"
+	    return
+	}
+
+	set node1Ns [getNodeNetns $eid $lnode1]
+	set node2Ns [getNodeNetns $eid $lnode2]
+	createNsVethPair $ifname1 $node1Ns $ifname2 $node2Ns
+
+	# add nodes ifc hooks to link bridge and bring them up
+	foreach node "$lnode1 $lnode2" ifc "$ifname1 $ifname2" ns "$node1Ns $node2Ns" {
+	    if { [[typemodel $node].virtlayer] != "NETGRAPH" } {
+		continue
+	    }
+
+	    set ifname $node-$ifc
+	    if { [nodeType $node] == "rj45" } {
+		# won't work if the node is a wireless interface
+		# because netns is not changed
+		set ifname [getNodeName $node]
+	    }
+
+	    setNsIfcMaster $ns $ifc $node "up"
+	}
+
+	return
+    }
 
     # create link bridge in experiment netns
     createNsLinkBridge $eid $link

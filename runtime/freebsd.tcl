@@ -1640,21 +1640,18 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
 	return
     }
 
-    ## direct link, connect the host interface into the node, without
-    ## ng_node between them
-    #if { [getLinkType $link == "direct" } {
-    #    if {[nodeType $lnode1] == "rj45" || [nodeType $lnode2] == "rj45"} {
-    #        catch {exec jexec $eid ngctl connect $ngpeer1: $ngpeer2: $nghook1 $nghook2}
-    #        return
-    #    }
-    #}
+    # direct link, connect the host interface into the node, without
+    # ng_node between them
+    # XXX move to another proc
+    if { [getLinkDirect $link] } {
+	pipesExec "jexec $eid ngctl connect $ngpeer1: $ngpeer2: $nghook1 $nghook2" "hold"
+	return
+    }
 
     set cmds "$cmds\n mkpeer $ngpeer1: pipe $nghook1 upper"
     set cmds "$cmds\n name $ngpeer1:$nghook1 $lname"
     set cmds "$cmds\n connect $lname: $ngpeer2: lower $nghook2"
 
-    # Ethernet frame has a 14-byte header - this is a temp. hack!!!
-    set cmds "$cmds\n msg $lname: setcfg {header_offset=14}"
     catch {exec jexec $eid ngctl -f - << $cmds} err
     if { $debug && $err != "" } {
 	puts $err

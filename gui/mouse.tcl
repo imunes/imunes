@@ -345,6 +345,9 @@ proc button3link { c x y } {
 	}
     }
 
+    global linkDirect_$link
+    set linkDirect_$link [getLinkDirect $link]
+
     .button3menu delete 0 end
 
     #
@@ -371,6 +374,19 @@ proc button3link { c x y } {
 	#
 	.button3menu add command -label "Clear link jitter" \
 	    -command "linkJitterReset $link"
+    }
+
+    #
+    # Toggle direct link
+    #
+    if { $oper_mode != "exec" } {
+	.button3menu add checkbutton -label "Direct link" \
+	    -underline 5 -variable linkDirect_$link \
+	    -command "toggleDirectLink $c $link"
+    } else {
+	.button3menu add checkbutton -label "Direct link" \
+	    -underline 5 -variable linkDirect_$link \
+	    -state disabled
     }
 
     #

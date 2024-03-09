@@ -163,6 +163,51 @@ proc removeLink { link } {
     set link_list [lreplace $link_list $i $i]
 }
 
+#****f* linkcfg.tcl/getLinkDirect
+# NAME
+#   getLinkDirect -- get if link is direct
+# SYNOPSIS
+#   set link_direct [getLinkDirect $link]
+# FUNCTION
+#   Returns boolean - link is direct.
+# INPUTS
+#   * link -- link id
+# RESULT
+#   * link_direct -- returns 0 if link is not a direct link and 1 if it is
+#****
+proc getLinkDirect { link } {
+    upvar 0 ::cf::[set ::curcfg]::$link $link
+
+    set entry [lsearch -inline [set $link] "direct *"]
+    if { $entry == "" } {
+	return 0
+    }
+
+    return [lindex $entry 1]
+}
+
+#****f* linkcfg.tcl/setLinkDirect
+# NAME
+#   setLinkDirect -- set link bandwidth
+# SYNOPSIS
+#   setLinkDirect $link $value
+# FUNCTION
+#   Sets the link bandwidth in a bits per second.
+# INPUTS
+#   * link -- link id
+#   * value -- link bandwidth in bits per second.
+#****
+proc setLinkDirect { link value } {
+    upvar 0 ::cf::[set ::curcfg]::$link $link
+
+    set i [lsearch [set $link] "direct *"]
+    if { $value == 0 } {
+	set $link [lreplace [set $link] $i $i]
+    } else {
+	set $link [lreplace [set $link] $i $i "direct $value"]
+    }
+}
+
 #****f* linkcfg.tcl/getLinkBandwidth
 # NAME
 #   getLinkBandwidth -- get link bandwidth
