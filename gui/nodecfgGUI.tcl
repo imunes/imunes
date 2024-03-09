@@ -981,7 +981,13 @@ proc configGUI_nodeName { wi node label } {
 	ttk::combobox $wi.name.nodename -width 14 -textvariable extIfc$node
 	set ifcs [getExtIfcs]
 	$wi.name.nodename configure -values [concat UNASSIGNED $ifcs]
-	$wi.name.nodename set [lindex [split [getNodeName $node] .] 0 ]
+	set name [getNodeName $node]
+	if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
+	    # use 'file rootname' to remove the 'extension' from the name
+	    # variable - last dot and everything after it
+	    set name [file rootname $name]
+	}
+	$wi.name.nodename set $name
     } else {
 	ttk::entry $wi.name.nodename -width 14 -validate focus
 	$wi.name.nodename insert 0 [lindex [split [getNodeName $node] .] 0]
@@ -1850,7 +1856,7 @@ proc configGUI_nodeNameApply { wi node } {
     global changed badentry showTree eid_base isOSlinux
 
     set name [string trim [$wi.name.nodename get]]
-    if { [regexp {^[A-Za-z_][0-9A-Za-z_-]*$} $name ] == 0 } {
+    if { [nodeType $node] ni "extnat rj45" && [regexp {^[A-Za-z_][0-9A-Za-z_-]*$} $name ] == 0 } {
 	tk_dialog .dialog1 "IMUNES warning" \
 	    "Hostname should contain only letters, digits, _, and -, and should not start with - (hyphen) or number." \
 	    info 0 Dismiss
@@ -2294,11 +2300,12 @@ proc configGUI_etherVlanApply { wi node } {
 	}
 	set changed 1
     }
-    if { [getEtherVlanEnabled $node]  && [getEtherVlanTag $node] != "" } {
-	set name [getNodeName $node].[getEtherVlanTag $node]
-    } else {
-	set name [lindex [split [getNodeName $node] .] 0]
+
+    set name [getNodeName $node]
+    if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
+	set name $name.[getEtherVlanTag $node]
     }
+
     setNodeName $node $name
 }
 

@@ -536,15 +536,38 @@ proc createNodePhysIfcs { node } {
     # Create "physical" network interfaces
     foreach ifc [ifcList $node] {
 	set ifname $ifc
+	set prefix [string trimright $ifc "0123456789"]
 	if { [nodeType $node] in "ext extnat" } {
 	    set ifname $eid-$node-$ifc
 	}
 
-	# Create a veth pair - private hook in node netns and public hook
-	# in the experiment netns
-	createNsVethPair $ifname $nodeNs $node-$ifc $eid
+	# # direct link, simulate capturing the host interface into the node,
+	# # without bridges between them
+	# set peer [peerByIfc $node $ifc]
+	# if { $peer != "" && [nodeType $peer] == "rj45" } {
+	#    set link [linkByPeers $node $peer]
+	#    if { $link != "" && [getLinkType $link] == "direct" } {
+	# 	#set ifname [getNodeName $peer]
+	# 	#set cmds "ip -n $eid link add $ifc netns $nodeNs link $ifname type macvlan mode passthru"
+	# 	## we cannot change wireless interfaces namespaces without changing phy
+	# 	## so try from default netns
+	# 	#set cmds "$cmds || ip link add $ifc netns $nodeNs link $ifname type macvlan mode passthru"
+	# 	#pipesExec "$cmds" "hold"
+	# 	return
+	#     }
+	# }
 
-	switch -exact [string trimright $ifc "0123456789"] {
+	switch -exact $prefix {
+	    e -
+	    ext -
+	    eth {
+		# Create a veth pair - private hook in node netns and public hook
+		# in the experiment netns
+		createNsVethPair $ifname $nodeNs $node-$ifc $eid
+	    }
+	}
+
+	switch -exact $prefix {
 	    e {
 		# bridge private hook with L2 node
 		setNsIfcMaster $nodeNs $ifname $node "up"
@@ -565,6 +588,13 @@ proc createNodePhysIfcs { node } {
 		    set nsstr "-n $nodeNs"
 		}
 		pipesExec "ip $nsstr link set $ifc address $ether" "hold"
+	    }
+	    default {
+		# capture physical interface directly into the node, without using a bridge
+		# we don't know the name, so make sure all other options cover other IMUNES
+		# 'physical' interfaces
+		# XXX not yet implemented
+		pipesExec "ip link set $ifc netns $nodeNs" "hold"
 	    }
 	}
     }
@@ -659,17 +689,51 @@ proc setNsIfcMaster { netNs ifname master state } {
 proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
+    # # direct link, simulate capturing the host interface into the node,
+    # # without bridges between them
+    # if { [getLinkType $link == "direct" } {
+    #     if { [nodeType $lnode1] == "rj45" || [nodeType $lnode2] == "rj45" } {
+    #         if { [nodeType $lnode1] == "rj45" } {
+    #     	set ifname [getNodeName $lnode1]
+    #     	set nodeNs [getNodeNetns $eid $lnode2]
+    #     	set ifc $ifname2
+    #         } else {
+    #     	set ifname [getNodeName $lnode2]
+    #     	set nodeNs [getNodeNetns $eid $lnode1]
+    #     	set ifc $ifname1
+    #         }
+    #         set cmds "ip -n $eid link add $ifc netns $nodeNs link $ifname type macvlan mode passthru"
+    #         # we cannot change wireless interfaces namespaces without changing phy
+    #         # so try from default netns
+    #         set cmds "$cmds || ip link add $ifc netns $nodeNs link $ifname type macvlan mode passthru"
+    #         pipesExec "$cmds" "hold"
+    #         puts "CMDS: '$cmds'"
+    #         return
+    #     }
+    # }
+
     # create link bridge in experiment netns
     createNsLinkBridge $eid $link
 
     # add nodes ifc hooks to link bridge and bring them up
     foreach node "$lnode1 $lnode2" ifc "$ifname1 $ifname2" {
-	setNsIfcMaster $eid $node-$ifc $link "up"
+	set ifname $node-$ifc
+	if { [nodeType $node] == "rj45" } {
+	    # won't work if the node is a wireless interface
+	    # because netns is not changed
+	    set ifname [getNodeName $node]
+	}
+
+	setNsIfcMaster $eid $ifname $link "up"
     }
 }
 
 proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    if { [nodeType $lnode1] == "rj45" || [nodeType $lnode2] == "rj45" } {
+	return
+    }
 
     # FIXME: merge this with execSet* commands
     execSetLinkParams $eid $link
@@ -827,6 +891,10 @@ proc runConfOnNode { node } {
 }
 
 proc destroyLinkBetween { eid lnode1 lnode2 } {
+    if { [nodeType $lnode1] == "rj45" || [nodeType $lnode2] == "rj45" } {
+	return
+    }
+
     set ifname1 [ifcByLogicalPeer $lnode1 $lnode2]
     catch {exec ip link del dev $eid-$lnode1-$ifname1}
 }
@@ -1045,6 +1113,13 @@ proc addIfcToBridge { type ifname bridge } {
 #   * node -- node id
 #****
 proc captureExtIfc { eid node } {
+    set ifname [getNodeName $node]
+
+    # won't work if the node is a wireless interface
+    pipesExec "ip link set $ifname netns $eid" "hold"
+
+    return
+
     global execMode
 
     set ifname [getNodeName $node]
@@ -1083,6 +1158,13 @@ proc captureExtIfc { eid node } {
 #   * node -- node id
 #****
 proc releaseExtIfc { eid node } {
+    global devfs_number
+
+    set ifname [getNodeName $node]
+    pipesExec "ip -n $eid link set $ifname netns imunes_$devfs_number" "hold"
+
+    return
+
     set ifname [getNodeName $node]
     set ifc [lindex [split [getNodeName $node] .] 0]
     set vlan [lindex [split [getNodeName $node] .] 1]
