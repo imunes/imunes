@@ -71,6 +71,29 @@
 # have to be implemented by additional Tk code.
 #****
 
+#****f* linkcfg.tcl/linkDirect
+# NAME
+#   linkDirect -- get if link is direct
+# SYNOPSIS
+#   set link_direct [linkDirect $link]
+# FUNCTION
+#   Returns boolean - link is direct.
+# INPUTS
+#   * link -- link id
+# RESULT
+#   * link_direct -- returns 0 if link is not a direct link and 1 if it is
+#****
+proc linkDirect { link } {
+    upvar 0 ::cf::[set ::curcfg]::$link $link
+
+    set entry [lsearch -inline [set $link] "direct *"]
+    if { $entry == "" } {
+	return 0
+    }
+
+    return [lindex $entry 1]
+}
+
 #****f* linkcfg.tcl/linkPeers
 # NAME
 #   linkPeers -- get link's peer nodes
