@@ -1191,6 +1191,13 @@ proc createNodePhysIfcs { node } {
                 set ether [getIfcMACaddr $node $ifc]
 		pipesExec "ifconfig $outifc link $ether" "hold"
 	    }
+	    default {
+		# capture physical interface directly into the node, without using a bridge
+		# we don't know the name, so make sure all other options cover other IMUNES
+		# 'physical' interfaces
+		# XXX not yet implemented
+		pipesExec "ifconfig $ifc vnet $node_id" "hold"
+	    }
 	}
     }
 }
@@ -1620,6 +1627,15 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
 	return
     }
 
+    ## direct link, connect the host interface into the node, without
+    ## ng_node between them
+    #if { [getLinkType $link == "direct" } {
+    #    if {[nodeType $lnode1] == "rj45" || [nodeType $lnode2] == "rj45"} {
+    #        catch {exec jexec $eid ngctl connect $ngpeer1: $ngpeer2: $nghook1 $nghook2}
+    #        return
+    #    }
+    #}
+
     set cmds "$cmds\n mkpeer $ngpeer1: pipe $nghook1 upper"
     set cmds "$cmds\n name $ngpeer1:$nghook1 $lname"
     set cmds "$cmds\n connect $lname: $ngpeer2: lower $nghook2"
@@ -1893,6 +1909,11 @@ proc getCpuCount {} {
 #****
 proc captureExtIfc { eid node } {
     set ifname [getNodeName $node]
+
+    pipesExec "ifconfig $ifname vnet $eid" "hold"
+    return
+
+    set ifname [getNodeName $node]
     if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
 	exec ifconfig $ifname create
 	exec ifconfig [lindex [split $ifname .] 0] up promisc
@@ -1914,6 +1935,11 @@ proc captureExtIfc { eid node } {
 #   * node -- node id
 #****
 proc releaseExtIfc { eid node } {
+    set ifname [getNodeName $node]
+
+    pipesExec "ifconfig $ifname -vnet $eid" "hold"
+    return
+
     set ifname [getNodeName $node]
     catch {nexec ifconfig $ifname -vnet $eid}
     catch {nexec ifconfig $ifname up -promisc}
