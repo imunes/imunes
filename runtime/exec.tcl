@@ -990,9 +990,13 @@ proc deployCfg {} {
 	return
     }
 
-    finishExecuting 1 "Experiment ID = $eid" $w
+    finishExecuting 1 "" $w
 
     statline "Network topology instantiated in [expr ([clock milliseconds] - $t_start)/1000.0] seconds ($nodeCount nodes and $linkCount links)."
+
+    if { $execMode == "batch" } {
+	puts "Experiment ID = $eid"
+    }
 }
 
 proc prepareSystem {} {
@@ -1536,7 +1540,7 @@ proc terminateAllNodes { eid } {
 	services stop "NODEDEST"
 	# statline ""
 
-	statline "Shutting down $vimagesCount VIMAGE nodes(s)..."
+	statline "Shutting down $vimagesCount VIMAGE node(s)..."
 	destroyVimageNodes $eid $vimages $vimagesCount $w
 	statline ""
 
@@ -1550,9 +1554,13 @@ proc terminateAllNodes { eid } {
 	return
     }
 
-    finishTerminating 1 "Terminated experiment ID = $eid" $w
+    finishTerminating 1 "" $w
 
     statline "Cleanup completed in [expr ([clock milliseconds] - $t_start)/1000.0] seconds."
+
+    if { $execMode == "batch" } {
+	puts "Terminated experiment ID = $eid"
+    }
 }
 
 #****f* exec.tcl/execCmdsNode
