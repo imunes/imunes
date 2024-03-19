@@ -32,9 +32,8 @@ done
 #done
 
 if test -d $mounts_root; then
-cd $mounts_root
-    mounts=`ls | grep -v vroot`
-    for mount in $mounts; do
+    cd $mounts_root
+    for mount in `ls`; do
 	echo "Destroying imunes files $mounts_root/$mount."
 	rm -fr $mount
     done

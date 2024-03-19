@@ -58,6 +58,10 @@ vi_name() {
 get_explist() {
     for exp_path in /var/run/imunes/*/; do
 	exp=$(basename $exp_path)
+	if test "$exp" = "*"; then
+	    continue
+	fi
+
 	if test $1 = "nodes"; then
 	    data=`grep network-config -A 3 /var/run/imunes/$exp/config.imn | grep hostname | awk '{print $2}' | paste -s -d" " -`
 	else
