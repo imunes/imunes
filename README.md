@@ -74,6 +74,7 @@ First we need to install the packages required for IMUNES:
     wireshark (with GUI)
     ImageMagick
     Docker (version 1.6 or greater)
+    iproute2
     nsenter (part of the util-linux package since version 2.23 and later)
     xterm
     make (used for installation)
