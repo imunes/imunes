@@ -961,6 +961,7 @@ proc deployCfg {} {
 	statline "Creating interfaces on $nonPseudoNodesCount non-pseudo node(s)..."
 	createNodesInterfaces $nonPseudoNodes $nonPseudoNodesCount $w
 	# statline ""
+	pipesClose
 
 	pipesCreate
 	statline "Creating $linkCount link(s)..."
@@ -968,17 +969,21 @@ proc deployCfg {} {
 	statline ""
 	pipesClose
 
+	pipesCreate
 	statline "Configuring $linkCount link(s)..."
 	configureLinks $link_list $linkCount $w
 	statline ""
+	pipesClose
 
 	statline "Starting services for LINKINST hook..."
 	services start "LINKINST"
 	# statline ""
 
+	pipesCreate
 	statline "Configuring $nonPseudoNodesCount non-pseudo node(s)..."
 	executeConfNodes $nonPseudoNodes $nonPseudoNodesCount $w
 	statline ""
+	pipesClose
 
 	# waitForConfStart $conf_nodes_ifcs
 
@@ -1215,6 +1220,8 @@ proc configureLinks { links linkCount w } {
 	    return -code error "Error in 'configureLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link': $err"
 	}
     }
+
+    pipesExec ""
 }
 
 proc executeConfNodes { nodes nodeCount w } {

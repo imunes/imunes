@@ -462,11 +462,18 @@ proc execSetIfcQDisc { eid node ifc qdisc } {
 	WFQ { set qdisc wfq }
 	DRR { set qdisc drr }
     }
+
+    #set ngnode "$lnode1-$lnode2"
+    #if { [catch { exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ $qdisc=1 } }" }] } {
+    #    set ngnode "$lnode2-$lnode1"
+    #    exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ $qdisc=1 } }"
+    #}
+
+    # this will be named $link in the future
     set ngnode "$lnode1-$lnode2"
-    if { [catch { exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ $qdisc=1 } }" }] } {
-	set ngnode "$lnode2-$lnode1"
-	exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ $qdisc=1 } }"
-    }
+    pipesExec "jexec $eid ngctl msg $ngnode: setcfg \"{ $dir={ $qdisc=1 } }\"" "hold"
+    set ngnode "$lnode2-$lnode1"
+    pipesExec "jexec $eid ngctl msg $ngnode: setcfg \"{ $dir={ $qdisc=1 } }\"" "hold"
 }
 
 #****f* freebsd.tcl/execSetIfcQDrop
@@ -498,19 +505,25 @@ proc execSetIfcQDrop { eid node ifc qdrop } {
 	drop-head { set qdrop drophead }
 	drop-tail { set qdrop droptail }
     }
+    #set ngnode "$lnode1-$lnode2"
+    #if { [catch { exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ $qdrop=1 } }" }] } {
+    #    # XXX dir should be reversed!
+    #    set ngnode "$lnode2-$lnode1"
+    #    exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ $qdrop=1 } }"
+    #}
+
+    # this will be named $link in the future
     set ngnode "$lnode1-$lnode2"
-    if { [catch { exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ $qdrop=1 } }" }] } {
-	# XXX dir should be reversed!
-	set ngnode "$lnode2-$lnode1"
-	exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ $qdrop=1 } }"
-    }
+    pipesExec "jexec $eid ngctl msg $ngnode: setcfg \"{ $dir={ $qdrop=1 } }\"" "hold"
+    set ngnode "$lnode2-$lnode1"
+    pipesExec "jexec $eid ngctl msg $ngnode: setcfg \"{ $dir={ $qdrop=1 } }\"" "hold"
 }
 
 #****f* freebsd.tcl/execSetIfcQLen
 # NAME
 #   execSetIfcQLen -- in exec mode set interface queue length
 # SYNOPSIS
-#   execSetIfcQDrop $eid $node $ifc $qlen
+#   execSetIfcQLen $eid $node $ifc $qlen
 # FUNCTION
 #   Sets the queue length during the simulation.
 #   New queue length is defined in qlen parameter.
@@ -530,14 +543,21 @@ proc execSetIfcQLen { eid node ifc qlen } {
 	set mirror_link [getLinkMirror [lindex $target 0]]
 	set lnode2 [lindex [linkPeers $mirror_link] 0]
     }
-    set ngnode "$lnode1-$lnode2"
     if { $qlen == 0 } {
 	set qlen -1
     }
-    if { [catch { exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ queuelen=$qlen } }" }] } {
-	set ngnode "$lnode2-$lnode1"
-	exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ queuelen=$qlen } }"
-    }
+
+    #set ngnode "$lnode1-$lnode2"
+    #if { [catch { exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ queuelen=$qlen } }" }] } {
+    #    set ngnode "$lnode2-$lnode1"
+    #    exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ queuelen=$qlen } }"
+    #}
+
+    # this will be named $link in the future
+    set ngnode "$lnode1-$lnode2"
+    pipesExec "jexec $eid ngctl msg $ngnode: setcfg \"{ $dir={ $queuelen=$qlen } }\"" "hold"
+    set ngnode "$lnode2-$lnode1"
+    pipesExec "jexec $eid ngctl msg $ngnode: setcfg \"{ $dir={ $queuelen=$qlen } }\"" "hold"
 }
 
 #****f* freebsd.tcl/execSetLinkParams
@@ -633,27 +653,27 @@ proc execSetLinkJitter { eid link } {
 	set jit_mode_down 2
     }
 
-    set exec_pipe [open "| jexec $eid ngctl -f -" r+]
+    set ngcmds ""
 
     if {$jitter_up != ""} {
-	puts $exec_pipe "msg $lname: setcfg {upstream={jitmode=-1}}"
+	set ngcmds "$ngcmds msg $lname: setcfg {upstream={jitmode=-1}}\n"
 	foreach val $jitter_up {
-	    puts $exec_pipe "msg $lname: setcfg {upstream={addjitter=[expr round($val*1000)]}}"
+	    set ngcmds "$ngcmds msg $lname: setcfg {upstream={addjitter=[expr round($val*1000)]}}\n"
 	}
-	puts $exec_pipe "msg $lname: setcfg {upstream={jitmode=$jit_mode_up}}"
-	puts $exec_pipe "msg $lname: setcfg {upstream={jithold=[expr round($jitter_hold_up*1000)]}}"
+	set ngcmds "$ngcmds msg $lname: setcfg {upstream={jitmode=$jit_mode_up}}\n"
+	set ngcmds "$ngcmds msg $lname: setcfg {upstream={jithold=[expr round($jitter_hold_up*1000)]}}\n"
     }
 
     if {$jitter_down != ""} {
-	puts $exec_pipe "msg $lname: setcfg {downstream={jitmode=-1}}"
+	set ngcmds "$ngcmds msg $lname: setcfg {downstream={jitmode=-1}}\n"
 	foreach val $jitter_down {
-	    puts $exec_pipe "msg $lname: setcfg {downstream={addjitter=[expr round($val*1000)]}}"
+	    set ngcmds "$ngcmds msg $lname: setcfg {downstream={addjitter=[expr round($val*1000)]}}\n"
 	}
-	puts $exec_pipe "msg $lname: setcfg {downstream={jitmode=$jit_mode_down}}"
-	puts $exec_pipe "msg $lname: setcfg {downstream={jithold=[expr round($jitter_hold_down*1000)]}}"
+	set ngcmds "$ngcmds msg $lname: setcfg {downstream={jitmode=$jit_mode_down}}\n"
+	set ngcmds "$ngcmds msg $lname: setcfg {downstream={jithold=[expr round($jitter_hold_down*1000)]}}\n"
     }
 
-    close $exec_pipe
+    pipesExec "printf \"$ngcmds\" | ngctl -f -" "hold"
 }
 
 #****f* freebsd.tcl/execResetLinkJitter
@@ -1278,19 +1298,19 @@ proc startIfcsNode { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     set node_id "$eid.$node"
-    set cmds ""
     foreach ifc [allIfcList $node] {
 	set mtu [getIfcMTU $node $ifc]
 	if {[getIfcOperState $node $ifc] == "up"} {
-	    set cmds "$cmds\n jexec $node_id ifconfig $ifc mtu $mtu up"
+	    pipesExec "jexec $node_id ifconfig $ifc mtu $mtu up" "hold"
 	} else {
-	    set cmds "$cmds\n jexec $node_id ifconfig $ifc mtu $mtu"
+	    pipesExec "jexec $node_id ifconfig $ifc mtu $mtu" "hold"
 	}
 	if {[getIfcNatState $node $ifc] == "on"} {
-	    set cmds "$cmds\n jexec $node_id sh -c 'echo \"map $ifc 0/0 -> 0/32\" | ipnat -f -'"
+	    pipesExec "jexec $node_id sh -c 'echo \"map $ifc 0/0 -> 0/32\" | ipnat -f -'" "hold"
 	}
     }
-    exec sh << $cmds
+
+    pipesExec ""
 }
 
 #****f* freebsd.tcl/runConfOnNode
@@ -1616,11 +1636,9 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     set nghook2 \
 	[lindex [[typemodel $lnode2].nghook $eid $lnode2 $ifname2] 1]
 
-    set cmds ""
-
     # Special-case WLAN nodes: no need for ng_pipe there
     if {[nodeType $lnode1] == "wlan" || [nodeType $lnode2] == "wlan"} {
-	catch {exec jexec $eid ngctl connect $ngpeer1: $ngpeer2: $nghook1 $nghook2} err
+	pipesExec "jexec $eid ngctl connect $ngpeer1: $ngpeer2: $nghook1 $nghook2" "hold"
 	if { $debug && $err != "" } {
 	    puts $err
 	}
@@ -1631,15 +1649,15 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     # ng_node between them
     # XXX move to another proc
     if { [linkDirect $link] } {
-	catch {exec jexec $eid ngctl connect $ngpeer1: $ngpeer2: $nghook1 $nghook2}
+	pipesExec "jexec $eid ngctl connect $ngpeer1: $ngpeer2: $nghook1 $nghook2" "hold"
 	return
     }
 
-    set cmds "$cmds\n mkpeer $ngpeer1: pipe $nghook1 upper"
-    set cmds "$cmds\n name $ngpeer1:$nghook1 $lname"
-    set cmds "$cmds\n connect $lname: $ngpeer2: lower $nghook2"
+    set ngcmds "mkpeer $ngpeer1: pipe $nghook1 upper"
+    set ngcmds "$ngcmds\n name $ngpeer1:$nghook1 $lname"
+    set ngcmds "$ngcmds\n connect $lname: $ngpeer2: lower $nghook2"
 
-    catch {exec jexec $eid ngctl -f - << $cmds} err
+    pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
     if { $debug && $err != "" } {
 	puts $err
     }
@@ -1670,9 +1688,10 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     set ber [expr [getLinkBER $link] + 0]
     set dup [expr [getLinkDup $link] + 0]
     # Link parameters
-    set cmds "msg $lname: setcfg {bandwidth=$bandwidth delay=$delay upstream={BER=$ber duplicate=$dup} downstream={BER=$ber duplicate=$dup}}"
+    set ngcmds "msg $lname: setcfg {bandwidth=$bandwidth delay=$delay upstream={BER=$ber duplicate=$dup} downstream={BER=$ber duplicate=$dup}}"
 
-    catch {exec jexec $eid ngctl -f - << $cmds} err
+    #catch {exec jexec $eid ngctl -f - << $cmds} err
+    pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
     if { $debug && $err != "" } {
 	puts $err
     }
@@ -1857,10 +1876,13 @@ proc l2node.instantiate { eid node } {
 	}
     }
 
-    set t [exec printf "mkpeer $ngtype link0 link0\nmsg .link0 setpersistent\nshow ." | jexec $eid ngctl -f -]
-    set tlen [string length $t]
-    set id [string range $t [expr $tlen - 31] [expr $tlen - 24]]
-    catch {exec jexec $eid ngctl name \[$id\]: $node}
+    # create an ng node and make it persistent in the same command
+    # bridge demands hookname 'linkX'
+    set ngcmds "mkpeer $ngtype link0 link0\n"
+    set ngcmds "$ngcmds msg .link0 setpersistent\n"
+    set ngcmds "$ngcmds name .link0 $node"
+    puts "printf \"$ngcmds\" | jexec $eid ngctl -f -"
+    pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
 }
 
 #****f* freebsd.tcl/l2node.destroy

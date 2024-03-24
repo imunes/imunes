@@ -802,28 +802,28 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
 proc startIfcsNode { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    set cmds ""
-    set nodeNs [getNodeNamespace $node]
-    set cmds "$cmds\n nsenter -n -t $nodeNs ip link set dev lo name lo0 2>/dev/null"
+    set nodeNs [getNodeNetns $eid $node]
+    pipesExec "ip -n $nodeNs link set dev lo name lo0 2>/dev/null" "hold"
     foreach ifc [allIfcList $node] {
 	set mtu [getIfcMTU $node $ifc]
 	if { [getLogIfcType $node $ifc] == "vlan" } {
 	    set tag [getIfcVlanTag $node $ifc]
 	    set dev [getIfcVlanDev $node $ifc]
 	    if {$tag != "" && $dev != ""} {
-		set cmds "$cmds\n nsenter -n -t $nodeNs ip link add link $dev name $ifc type vlan id $tag"
+		pipesExec "ip -n $nodeNs link add link $dev name $ifc type vlan id $tag" "hold"
 	    }
 	}
 	if {[getIfcOperState $node $ifc] == "up"} {
-	    set cmds "$cmds\n nsenter -n -t $nodeNs ip link set dev $ifc up mtu $mtu"
+	    pipesExec "ip -n $nodeNs link set dev $ifc up mtu $mtu" "hold"
 	} else {
-	    set cmds "$cmds\n nsenter -n -t $nodeNs ip link set dev $ifc mtu $mtu"
+	    pipesExec "ip -n $nodeNs link set dev $ifc mtu $mtu" "hold"
 	}
 	if {[getIfcNatState $node $ifc] == "on"} {
-	    set cmds "$cmds\n nsenter -n -t $nodeNs iptables -t nat -A POSTROUTING -o $ifc -j MASQUERADE"
+	    pipesExec "ip netns exec $nodeNs iptables -t nat -A POSTROUTING -o $ifc -j MASQUERADE" "hold"
 	}
     }
-    exec sh << $cmds
+
+    pipesExec ""
 }
 
 proc removeNetns { netns } {
