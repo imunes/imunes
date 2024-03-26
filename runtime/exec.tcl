@@ -905,7 +905,7 @@ proc deployCfg {} {
     set nonPseudoNodesCount [llength $nonPseudoNodes]
     incr nodeCount -$pseudoNodesCount
     incr linkCount [expr -$pseudoNodesCount/2]
-    set maxProgressbasCount [expr {2*$nodeCount + 2*$vimagesCount + 2*$linkCount}]
+    set maxProgressbasCount [expr {3*$nodeCount + 2*$vimagesCount + 2*$linkCount}]
 
     set w ""
     if {$execMode != "batch"} {
@@ -932,64 +932,52 @@ proc deployCfg {} {
 	pipesCreate
 	statline "Instantiating $nonVimagesCount non-VIMAGE node(s)..."
 	instantiateNodes $nonVimages $nonVimagesCount $w
-	statline ""
 
 	statline "Instantiating $vimagesCount VIMAGE node(s)..."
 	instantiateNodes $vimages $vimagesCount $w
-	statline ""
+	pipesClose
 
 	statline "Waiting for $vimagesCount VIMAGE node(s) to start..."
 	waitForInstantiateNodes $vimages $vimagesCount $w
-	statline ""
-	pipesClose
 
-	pipesCreate
 	statline "Configuring initial networking on $vimagesCount VIMAGE node(s)..."
+	pipesCreate
 	configureInitNetNodes $vimages $vimagesCount $w
-	statline ""
 	pipesClose
 
-	statline "Copying host files to $vimagesCount VIMAGE node(s)..."
-	copyFilesToNodes $vimages $vimagesCount $w
-	# statline ""
+	#statline "Copying host files to $vimagesCount VIMAGE node(s)..."
+	#copyFilesToNodes $vimages $vimagesCount $w
 
 	statline "Starting services for NODEINST hook..."
 	services start "NODEINST"
-	# statline ""
 
-	pipesCreate
 	statline "Creating interfaces on $nonPseudoNodesCount non-pseudo node(s)..."
+	pipesCreate
 	createNodesInterfaces $nonPseudoNodes $nonPseudoNodesCount $w
-	# statline ""
 	pipesClose
 
-	pipesCreate
 	statline "Creating $linkCount link(s)..."
+	pipesCreate
 	createLinks $link_list $linkCount $w
-	statline ""
 	pipesClose
 
 	pipesCreate
 	statline "Configuring $linkCount link(s)..."
 	configureLinks $link_list $linkCount $w
-	statline ""
 	pipesClose
 
 	statline "Starting services for LINKINST hook..."
 	services start "LINKINST"
-	# statline ""
 
 	pipesCreate
 	statline "Configuring $nonPseudoNodesCount non-pseudo node(s)..."
 	executeConfNodes $nonPseudoNodes $nonPseudoNodesCount $w
-	statline ""
 	pipesClose
 
 	# waitForConfStart $conf_nodes_ifcs
 
 	statline "Starting services for NODECONF hook..."
 	services start "NODECONF"
-	# statline ""
     } on error err {
 	finishExecuting 0 "$err" $w
 	return
@@ -1035,9 +1023,9 @@ proc instantiateNodes { nodes nodeCount w } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
+    set batchStep 0
     foreach node $nodes {
-	incr batchStep
-	incr progressbarCount
+	displayBatchProgress $batchStep $nodeCount
 
 	try {
 	    [typemodel $node].instantiate $eid $node
@@ -1045,17 +1033,24 @@ proc instantiateNodes { nodes nodeCount w } {
 	    return -code error "Error in '[typemodel $node].instantiate $eid $node': $err"
 	}
 
-	set name [getNodeName $node]
+	incr batchStep
+	incr progressbarCount
+
 	if {$execMode != "batch"} {
-	    statline "Instantiating node $name"
+	    statline "Instantiating node [getNodeName $node]"
 	    $w.p configure -value $progressbarCount
 	    update
 	}
-	displayBatchProgress $batchStep $nodeCount
-
     }
 
     pipesExec ""
+
+    if { $nodeCount > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+    }
+    if {$execMode == "batch"} {
+	statline ""
+    }
 }
 
 proc waitForInstantiateNodes { nodes nodeCount w } {
@@ -1063,10 +1058,6 @@ proc waitForInstantiateNodes { nodes nodeCount w } {
     global progressbarCount execMode
 
     set batchStep 0
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
-    }
-
     set nodes_left $nodes
     while { [llength $nodes_left] > 0 } {
 	foreach node $nodes_left {
@@ -1088,6 +1079,13 @@ proc waitForInstantiateNodes { nodes nodeCount w } {
 	    set nodes_left [removeFromList $nodes_left $node]
 	}
     }
+
+    if { $nodeCount > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+    }
+    if {$execMode == "batch"} {
+	statline ""
+    }
 }
 
 proc configureInitNetNodes { nodes nodeCount w } {
@@ -1096,31 +1094,65 @@ proc configureInitNetNodes { nodes nodeCount w } {
 
     set batchStep 0
     foreach node $nodes {
-	incr batchStep
-	incr progressbarCount
-	set node_id "$eid\.$node"
-	set name [getNodeName $node]
-	if {$execMode != "batch"} {
-	    statline "Creating node $name"
-	    $w.p configure -value $progressbarCount
-	    update
-	}
 	displayBatchProgress $batchStep $nodeCount
+
 	try {
 	    [typemodel $node].configureInitNet $eid $node
 	} on error err {
 	    return -code error "Error in '[typemodel $node].configureInitNet $eid $node': $err"
 	}
 	pipesExec ""
+
+	incr batchStep
+	incr progressbarCount
+
+	if {$execMode != "batch"} {
+	    statline "Starting init netconf on [getNodeName $node]"
+	    $w.p configure -value $progressbarCount
+	    update
+	}
+    }
+
+    if { $nodeCount > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+    }
+    if {$execMode == "batch"} {
+	statline ""
     }
 }
 
 proc copyFilesToNodes { nodes nodeCount w } {}
 
 proc createNodesInterfaces { nodes nodeCount w } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    global progressbarCount execMode
+
+    set batchStep 0
     foreach node $nodes {
-	createNodePhysIfcs $node
+	displayBatchProgress $batchStep $nodeCount
+
+	try {
+	    createNodePhysIfcs $node
+	} on error err {
+	    return -code error "Error in 'createNodePhysIfcs $node': $err"
+	}
 	pipesExec ""
+
+	incr batchStep
+	incr progressbarCount
+
+	if {$execMode != "batch"} {
+	    statline "Creating physical ifcs on node [getNodeName $node]"
+	    $w.p configure -value $progressbarCount
+	    update
+	}
+    }
+
+    if { $nodeCount > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+    }
+    if {$execMode == "batch"} {
+	statline ""
     }
 }
 
@@ -1138,40 +1170,45 @@ proc createLinks { links linkCount w } {
 	set ifname1 [ifcByPeer $lnode1 $lnode2]
 	set ifname2 [ifcByPeer $lnode2 $lnode1]
 
+	set msg "Creating link $link"
 	if { [getLinkMirror $link] != "" } {
 	    set mirror_link [getLinkMirror $link]
 	    set i [lsearch -exact $pending_links $mirror_link]
 	    set pending_links [lreplace $pending_links $i $i]
 
-	    if {$execMode != "batch"} {
-		statline "Creating link $link/$mirror_link"
-	    }
+	    set msg "Creating link $link/$mirror_link"
 
 	    set p_lnode2 $lnode2
 	    set lnode2 [lindex [linkPeers $mirror_link] 0]
 	    set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
-	} else {
-	    if {$execMode != "batch"} {
-		statline "Creating link $link"
-	    }
 	}
-	incr batchStep
-	displayBatchProgress $batchStep $linkCount
 
-	incr progressbarCount
-	if {$execMode != "batch"} {
-	    $w.p configure -value $progressbarCount
-	    update
-	}
+	displayBatchProgress $batchStep $linkCount
 
 	try {
 	    createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
 	} on error err {
 	    return -code error "Error in 'createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link': $err"
 	}
+
+	incr batchStep
+	incr progressbarCount
+
+	if {$execMode != "batch"} {
+	    statline $msg
+	    $w.p configure -value $progressbarCount
+	    update
+	}
     }
 
     pipesExec ""
+
+    if { $linkCount > 0 } {
+	displayBatchProgress $batchStep $linkCount
+    }
+    if {$execMode == "batch"} {
+	statline ""
+    }
 }
 
 proc configureLinks { links linkCount w } {
@@ -1188,40 +1225,45 @@ proc configureLinks { links linkCount w } {
 	set ifname1 [ifcByPeer $lnode1 $lnode2]
 	set ifname2 [ifcByPeer $lnode2 $lnode1]
 
+	set msg "Configuring link $link"
 	if { [getLinkMirror $link] != "" } {
 	    set mirror_link [getLinkMirror $link]
 	    set i [lsearch -exact $pending_links $mirror_link]
 	    set pending_links [lreplace $pending_links $i $i]
 
-	    if {$execMode != "batch"} {
-		statline "Configuring link $link/$mirror_link"
-	    }
+	    set msg "Configuring link $link/$mirror_link"
 
 	    set p_lnode2 $lnode2
 	    set lnode2 [lindex [linkPeers $mirror_link] 0]
 	    set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
-	} else {
-	    if {$execMode != "batch"} {
-		statline "Configuring link $link"
-	    }
 	}
-	incr batchStep
-	displayBatchProgress $batchStep $linkCount
 
-	incr progressbarCount
-	if {$execMode != "batch"} {
-	    $w.p configure -value $progressbarCount
-	    update
-	}
+	displayBatchProgress $batchStep $linkCount
 
 	try {
 	    configureLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
 	} on error err {
 	    return -code error "Error in 'configureLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link': $err"
 	}
+
+	incr batchStep
+	incr progressbarCount
+
+	if {$execMode != "batch"} {
+	    statline $msg
+	    $w.p configure -value $progressbarCount
+	    update
+	}
     }
 
     pipesExec ""
+
+    if { $linkCount > 0 } {
+	displayBatchProgress $batchStep $linkCount
+    }
+    if {$execMode == "batch"} {
+	statline ""
+    }
 }
 
 proc executeConfNodes { nodes nodeCount w } {
@@ -1234,25 +1276,14 @@ proc executeConfNodes { nodes nodeCount w } {
     foreach node $nodes {
 	upvar 0 ::cf::[set ::curcfg]::$node $node
 
+	displayBatchProgress $batchStep $nodeCount
+
 	if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
 	    lassign [getDefaultGateways $node $subnet_gws $nodes_l2data] my_gws subnet_gws nodes_l2data
 	    lassign [getDefaultRoutesConfig $node $my_gws] all_routes4 all_routes6
 
 	    setDefaultIPv4routes $node $all_routes4
 	    setDefaultIPv6routes $node $all_routes6
-	}
-
-	incr progressbarCount
-	if {$execMode != "batch"} {
-	    $w.p configure -value $progressbarCount
-	    update
-	}
-
-	incr batchStep
-	displayBatchProgress $batchStep $nodeCount
-
-	if {$execMode != "batch"} {
-	    statline "Configuring node [getNodeName $node]"
 	}
 
 	if {[info procs [typemodel $node].start] != ""} {
@@ -1262,6 +1293,23 @@ proc executeConfNodes { nodes nodeCount w } {
 		return -code error "Error in '[typemodel $node].start $eid $node': $err"
 	    }
 	}
+	#pipesExec ""
+
+	incr batchStep
+	incr progressbarCount
+
+	if {$execMode != "batch"} {
+	    $w.p configure -value $progressbarCount
+	    statline "Configuring node [getNodeName $node]"
+	    update
+	}
+    }
+
+    if { $nodeCount > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+    }
+    if {$execMode == "batch"} {
+	statline ""
     }
 }
 
@@ -1604,11 +1652,43 @@ proc execCmdsNode { node cmds } {
 #****
 proc startNodeFromMenu { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
+    global progressbarCount execMode
 
+    set progressbarCount 0
+    set w ""
+    if {$execMode != "batch"} {
+	set w .startup
+	catch {destroy $w}
+	toplevel $w -takefocus 1
+	wm transient $w .
+	wm title $w "Starting node $node..."
+	message $w.msg -justify left -aspect 1200 \
+	    -text "Starting up virtual nodes and links."
+	pack $w.msg
+	update
+	ttk::progressbar $w.p -orient horizontal -length 250 \
+	    -mode determinate -maximum 1 -value $progressbarCount
+	pack $w.p
+	update
+
+	grab $w
+	wm protocol $w WM_DELETE_WINDOW {
+	}
+    }
+
+    pipesCreate
     services start "NODEINST" $node
     services start "LINKINST" $node
-    [typemodel $node].start $eid $node
+    try {
+	executeConfNodes $node 1 $w
+    } on error err {
+	finishExecuting 0 "$err" $w
+	return
+    }
     services start "NODECONF" $node
+    pipesClose
+
+    finishExecuting 1 "" $w
 }
 
 #****f* exec.tcl/stopNodeFromMenu
@@ -1623,13 +1703,44 @@ proc startNodeFromMenu { node } {
 #****
 proc stopNodeFromMenu { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
+    global progressbarCount execMode
 
+    set progressbarCount 1
+    set w ""
+    if {$execMode != "batch"} {
+	set w .startup
+	catch {destroy $w}
+	toplevel $w -takefocus 1
+	wm transient $w .
+	wm title $w "Stopping node $node..."
+	message $w.msg -justify left -aspect 1200 \
+	    -text "Deleting virtual nodes and links."
+	pack $w.msg
+	update
+	ttk::progressbar $w.p -orient horizontal -length 250 \
+	    -mode determinate -maximum 1 -value $progressbarCount
+	pack $w.p
+	update
+
+	grab $w
+	wm protocol $w WM_DELETE_WINDOW {
+	}
+    }
+
+    pipesCreate
     services stop "NODESTOP" $node
-    [typemodel $node].shutdown $eid $node
+    try {
+	terminateNgAndVimages $eid $node 1 $w
+    } on error err {
+	finishTerminating 0 "$err" $w
+	return
+    }
     services stop "LINKDEST" $node
     services stop "NODEDEST"
-}
+    pipesClose
 
+    finishTerminating 1 "" $w
+}
 
 #****f* exec.tcl/pipesCreate
 # NAME

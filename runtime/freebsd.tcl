@@ -1220,6 +1220,8 @@ proc createNodePhysIfcs { node } {
 	    }
 	}
     }
+
+    pipesExec ""
 }
 
 proc createNetns { node } {}
@@ -1881,7 +1883,6 @@ proc l2node.instantiate { eid node } {
     set ngcmds "mkpeer $ngtype link0 link0\n"
     set ngcmds "$ngcmds msg .link0 setpersistent\n"
     set ngcmds "$ngcmds name .link0 $node"
-    puts "printf \"$ngcmds\" | jexec $eid ngctl -f -"
     pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
 }
 

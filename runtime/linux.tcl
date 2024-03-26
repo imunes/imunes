@@ -592,6 +592,8 @@ proc createNodePhysIfcs { node } {
 	    }
 	}
     }
+
+    pipesExec ""
 }
 
 #****f* linux.tcl/killProcess
