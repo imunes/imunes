@@ -2,10 +2,9 @@
 
 . scripts/prepare_vroot_functions.sh
 
-PACKAGES_MINIMAL="$PACKAGES_MINIMAL bind916"
+PACKAGES_MINIMAL="$PACKAGES_MINIMAL bind913"
 PACKAGES="$PACKAGES_MINIMAL $PACKAGES_COMMON isc-dhcp44-server isc-dhcp44-client \
     sylpheed xorp firefox wireshark gnome-themes-extra"
-PACKAGES=`echo $PACKAGES | sed 's/scapy/py37-scapy/'`
 
 checkArgs $*
 

@@ -1,3 +1,9 @@
+# 2019-2020 Sorbonne University
+# In this version of imunes we added a full integration of emulation of 
+# Linux namespaces and CISCO routers, saving of parameters, VLANs, WiFi 
+# emulation and other features
+# This work was developed by Benadji Hanane and Oulad Said Chawki
+# Supervised and maintained by Naceur Malouch - LIP6/SU
 #
 # Copyright 2005-2013 University of Zagreb.
 #
@@ -393,6 +399,64 @@ proc nextFreeIP4Addr { addr start peers } {
     return $ipaddr
 }
 
+#****f* ipv4.tcl/autoIPv4defaultroute 
+# NAME
+#   autoIPvdefaultroute -- automaticaly assign a default route 
+# SYNOPSIS
+#   autoIPv4defaultroute $node $iface 
+# FUNCTION
+#   searches the interface of the node for a router, if a router is found
+#   then it is a new default gateway. 
+# INPUTS
+#   * node -- default gateway is provided for this node 
+#   * iface -- the interface on witch we search for a new default gateway
+#****
+proc autoIPv4defaultroute { node iface } {
+    global IPv4autoAssign
+    if {!$IPv4autoAssign} {
+	return
+    }
+    if { [[typemodel $node].layer] != "NETWORK" || \
+	[isNodeRouter $node] } {
+	#
+	# Shouldn't get called at all for link-layer nodes
+	#
+	#puts "autoIPv4defaultroute called for [[typemodel $node].layer] node"
+	return
+    }
+
+    set peer_node [logicalPeerByIfc $node $iface]
+
+    if { [[typemodel $peer_node].layer] == "LINK" } {
+	foreach l2node [listLANnodes $peer_node {}] {
+	    foreach ifc [ifcList $l2node] {
+		set peer [logicalPeerByIfc $l2node $ifc]
+		if { ! [isNodeRouter $peer] } {
+		    continue
+		}
+		set peer_if [ifcByLogicalPeer $peer $l2node]
+		set peer_ip4addr [getIfcIPv4addr $peer $peer_if]
+		if { $peer_ip4addr != "" } {
+		    set gw [lindex [split $peer_ip4addr /] 0]
+		    setStatIPv4routes $node [list "0.0.0.0/0 $gw"]
+		    return
+		}
+	    }
+	}
+    } else {
+	if { ! [isNodeRouter $peer_node] } {
+	    return
+	}
+	set peer_if [ifcByLogicalPeer $peer_node $node]
+	set peer_ip4addr [getIfcIPv4addr $peer_node $peer_if]
+	if { $peer_ip4addr != "" } {
+	    set gw [lindex [split $peer_ip4addr /] 0]
+	    setStatIPv4routes $node [list "0.0.0.0/0 $gw"]
+	    return
+	}
+    }
+}
+
 #****f* ipv4.tcl/checkIPv4Addr 
 # NAME
 #   checkIPv4Addr -- check the IPv4 address 
@@ -487,3 +551,68 @@ proc checkIPv4Nets { str } {
     }
     return 1
 }
+
+#****f* ipv4.tcl/dec2bin
+# NAME
+#   dec2bin
+# SYNOPSIS
+#   dec2bin $dec
+# FUNCTION
+#   Covert from decimal to binary
+#****
+#
+# Modification for save.tcl
+#*****
+proc dec2bin {dec} {
+
+set number [split $dec "."]
+
+set exp_list ""
+foreach app $number {
+binary scan [binary format c $app] B* bin
+	    lappend exp_list $bin
+}
+
+return $exp_list
+}
+
+#****f* ipv4.tcl/cidr
+# NAME
+#   cidr
+# SYNOPSIS
+#   cidr $bin
+# FUNCTION
+#   Find the prefixe of the netmask
+#****
+#
+# Modification for save.tcl
+#*****
+
+proc cidr {bin} {
+set length [string length $bin]
+set cpt 0
+for {set i 0} {$i < $length} {incr i} {
+	set number [string index $bin $i]
+	if {$number == 1} {set cpt [expr {$cpt +1}]}
+}
+return $cpt
+}
+
+#****f* ipv4.tcl/cidr
+# NAME
+#   cidr2dec
+# SYNOPSIS
+#   cidr2dec $cidr
+# FUNCTION
+#   Convert CIDR to subnet mask
+#****
+#
+# Modification for save.tcl and routeur cisco
+#*****
+proc cidr2dec {cidr} {
+set n $cidr
+set mask [expr {~ 0 << ( 32 - $n )}]
+set SubnetMask [format "%d.%d.%d.%d" [expr {$mask >> 24 & 255}] [expr {$mask >> 16 & 255}] [expr {$mask >> 8 & 255}] [expr {$mask & 255}] ]
+return $SubnetMask
+}
+#********************************************************

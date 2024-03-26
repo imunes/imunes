@@ -1,3 +1,10 @@
+# 2019-2020 Sorbonne University
+# In this version of imunes we added a full integration of emulation of 
+# Linux namespaces and CISCO routers, saving of parameters, VLANs, WiFi 
+# emulation and other features
+# This work was developed by Benadji Hanane and Oulad Said Chawki
+# Supervised and maintained by Naceur Malouch - LIP6/SU
+#
 #****f* editor.tcl/showCfg
 # NAME
 #   showCfg -- show configuration
@@ -10,6 +17,7 @@
 #   * c -- tk canvas
 #   * node -- node id
 #****
+# modification for namespace 
 proc showCfg { c node } {
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     upvar 0 ::showConfig showCfg
@@ -32,12 +40,14 @@ proc showCfg { c node } {
     	$c delete -withtag showCfgPopup
 	return
     }
-    #Dont show popup window if the node virtlayer is different from VIMAGE
-    if {[[typemodel $node].virtlayer] != "VIMAGE"} {
+    #Dont show popup window if the node virtlayer is different from VIMAGE NAMESPACE and DYNAMIPS
+    if { [[typemodel $node].virtlayer] != "VIMAGE" && [[typemodel $node].virtlayer] != "NAMESPACE" && [[typemodel $node].virtlayer] != "WIFIAP" && [[typemodel $node].virtlayer] != "WIFISTA"} {
     	return
     }
     #Determine node coordinates
+
     set coords [getNodeCoords $node]
+    
     set x [expr [lindex $coords 0] + 30]
     set y [expr [lindex $coords 1] + 30]
     #Execute command on selected node and save the command output

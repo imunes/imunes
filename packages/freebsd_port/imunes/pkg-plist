@@ -49,7 +49,6 @@ lib/imunes/icons/normal/click_l2.gif
 lib/imunes/icons/normal/click_l3.gif
 lib/imunes/icons/normal/cloud.gif
 lib/imunes/icons/normal/ext.gif
-lib/imunes/icons/normal/extnat.gif
 lib/imunes/icons/normal/filter.gif
 lib/imunes/icons/normal/frswitch.gif
 lib/imunes/icons/normal/host.gif
@@ -61,12 +60,13 @@ lib/imunes/icons/normal/packgen.gif
 lib/imunes/icons/normal/pc.gif
 lib/imunes/icons/normal/rj45.gif
 lib/imunes/icons/normal/router.gif
+lib/imunes/icons/normal/wifiAP.png
+lib/imunes/icons/normal/wifiSTA.png
 lib/imunes/icons/normal/stpswitch.gif
 lib/imunes/icons/small/click_l2.gif
 lib/imunes/icons/small/click_l3.gif
 lib/imunes/icons/small/cloud.gif
 lib/imunes/icons/small/ext.gif
-lib/imunes/icons/small/extnat.gif
 lib/imunes/icons/small/filter.gif
 lib/imunes/icons/small/frswitch.gif
 lib/imunes/icons/small/host.gif
@@ -78,12 +78,15 @@ lib/imunes/icons/small/packgen.gif
 lib/imunes/icons/small/pc.gif
 lib/imunes/icons/small/rj45.gif
 lib/imunes/icons/small/router.gif
+lib/imunes/icons/small/wifiAP.png
+lib/imunes/icons/small/wifiSTA.png
 lib/imunes/icons/small/stpswitch.gif
 lib/imunes/icons/tiny/click_l2.gif
 lib/imunes/icons/tiny/click_l3.gif
 lib/imunes/icons/tiny/cloud.gif
+lib/imunes/icons/tiny/wifiAP.png
+lib/imunes/icons/tiny/wifiSTA.png
 lib/imunes/icons/tiny/ext.gif
-lib/imunes/icons/tiny/extnat.gif
 lib/imunes/icons/tiny/filter.gif
 lib/imunes/icons/tiny/freeform.gif
 lib/imunes/icons/tiny/frswitch.gif
@@ -117,6 +120,8 @@ lib/imunes/nodes/ipfirewall.tcl
 lib/imunes/nodes/lanswitch.tcl
 lib/imunes/nodes/localnodes.tcl
 lib/imunes/nodes/nat64.tcl
+lib/imunes/nodes/nouveauPc.tcl
+lib/imunes/nodes/nouveauRouteur.tcl
 lib/imunes/nodes/packgen.tcl
 lib/imunes/nodes/pc.tcl
 lib/imunes/nodes/quagga.tcl
@@ -125,6 +130,8 @@ lib/imunes/nodes/static.tcl
 lib/imunes/nodes/stpswitch.tcl
 lib/imunes/nodes/wlan.tcl
 lib/imunes/nodes/xorp.tcl
+lib/imunes/nodes/AP.tcl
+lib/imunes/nodes/STA.tcl
 lib/imunes/runtime/cfgparse.tcl
 lib/imunes/runtime/eventsched.tcl
 lib/imunes/runtime/exec.tcl

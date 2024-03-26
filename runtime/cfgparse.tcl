@@ -472,9 +472,6 @@ proc loadCfg { cfg } {
 			labelcoords {
 			    lappend $object "labelcoords {$value}"
 			}
-			auto_default_routes {
-			    lappend $object "auto_default_routes $value"
-			}
 			canvas {
 			    lappend $object "canvas $value"
 			}
@@ -484,12 +481,8 @@ proc loadCfg { cfg } {
 			docker-attach {
 			    lappend $object "docker-attach $value"
 			}
-			# for backwards compatibility
 			docker-image {
-			    lappend $object "custom-image $value"
-			}
-			custom-image {
-			    lappend $object "custom-image $value"
+			    lappend $object "docker-image $value"
 			}
 			events {
 			    set cfg ""

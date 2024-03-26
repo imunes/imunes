@@ -110,7 +110,8 @@ proc linkByPeers { node1 node2 } {
     foreach link $link_list {
 	set peers [linkPeers $link]
 	if { $peers == "$node1 $node2" || $peers == "$node2 $node1" } {
-	    return $link
+	   
+	    return $link 	
 	}
     }
 }
@@ -149,6 +150,12 @@ proc removeLink { link } {
 	netconfClearSection $node "interface $ifc"
 	set i [lsearch [set $node] "interface-peer {$ifc $peer}"]
 	set $node [lreplace [set $node] $i $i]
+	if { [[typemodel $node].layer] == "NETWORK" } {
+	    set ifcs [ifcList $node]
+	    foreach iface $ifcs {
+		autoIPv4defaultroute $node $iface
+	    }
+	}
 	foreach lifc [logIfcList $node] {
 	    switch -exact [getLogIfcType $node $lifc] {
 		vlan {
@@ -1006,11 +1013,20 @@ proc newLink { lnode1 lnode2 } {
 
     lappend link_list $link
 
-    if {[info procs [nodeType $lnode1].confNewIfc] != ""} {
-	[nodeType $lnode1].confNewIfc $lnode1 $ifname1
-    }
-    if {[info procs [nodeType $lnode2].confNewIfc] != ""} {
-	[nodeType $lnode2].confNewIfc $lnode2 $ifname2
+    if {[isNodeRouter $lnode1]} {
+	if {[info procs [nodeType $lnode1].confNewIfc] != ""} {
+	    [nodeType $lnode1].confNewIfc $lnode1 $ifname1
+	}
+	if {[info procs [nodeType $lnode2].confNewIfc] != ""} {
+	    [nodeType $lnode2].confNewIfc $lnode2 $ifname2
+	}
+    } else {
+	if {[info procs [nodeType $lnode2].confNewIfc] != ""} {
+	    [nodeType $lnode2].confNewIfc $lnode2 $ifname2
+	}
+	if {[info procs [nodeType $lnode1].confNewIfc] != ""} {
+	    [nodeType $lnode1].confNewIfc $lnode1 $ifname1
+	}
     }
 
     return $link

@@ -716,7 +716,7 @@ proc button3node { c x y } {
     # Services menu
     #
     .button3menu.services delete 0 end
-    if {$oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIMAGE" && $type != "ext"} {
+    if {$oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIMAGE" && $type != "ext" || ($oper_mode == "exec" && [[typemodel $node].virtlayer] == "NAMESPACE") || ($oper_mode == "exec" && [[typemodel $node].virtlayer] == "DYNAMIPS") || ($oper_mode == "exec" && [[typemodel $node].virtlayer] == "WIFIAP") || ($oper_mode == "exec" && [[typemodel $node].virtlayer] == "WIFISTA")} {
 	global all_services_list
 	.button3menu add cascade -label "Services" \
 	    -menu .button3menu.services
@@ -803,13 +803,16 @@ proc button3node { c x y } {
     # Shell selection
     #
     .button3menu.shell delete 0 end
-    if {$type != "ext" && $oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIMAGE"} {
+    if {$type != "ext" && $oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIMAGE" || ($oper_mode == "exec" && [[typemodel $node].virtlayer] == "NAMESPACE") || ($oper_mode == "exec" && [[typemodel $node].virtlayer] == "DYNAMIPS") || ($oper_mode == "exec" && [[typemodel $node].virtlayer] == "WIFIAP") || ($oper_mode == "exec" && [[typemodel $node].virtlayer] == "WIFISTA")} {
 	.button3menu add separator
 	.button3menu add cascade -label "Shell window" \
 	    -menu .button3menu.shell
+
 	foreach cmd [existingShells [[typemodel $node].shellcmds] $node] {
+
 	    .button3menu.shell add command -label "[lindex [split $cmd /] end]" \
 		-command "spawnShell $node $cmd"
+
 	}
     } else {
 #	.button3menu add cascade -label "Shell window" \
@@ -842,8 +845,24 @@ proc button3node { c x y } {
 	    .button3menu add command -label "tcpdump" \
 		-command "captureOnExtIfc $node tcpdump"
 	}
-    } elseif {$oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIMAGE"} {
+
+    #Modification for openvswitch 
+    } elseif { $oper_mode == "exec" && [[typemodel $node].virtlayer] == "NETGRAPH" } {
+
+       .button3menu add separator
+        # 
+	# Advanced Conf
 	#
+	.button3menu add cascade -label "Advanced Conf." \
+	    -menu .button3menu.shell
+
+	set cmd "/bin/bash"
+
+	    .button3menu.shell add command -label "[lindex [split $cmd /] end]" \
+		-command "spawnShell $node $cmd"
+
+	
+        # 
 	# Wireshark
 	#
 	.button3menu add cascade -label "Wireshark" \
@@ -852,7 +871,13 @@ proc button3node { c x y } {
 	    .button3menu.wireshark add command -label "No interfaces available." 
 	} else {
 	    foreach ifc [allIfcList $node] {
-		set label "$ifc"
+		set tmpifc $ifc
+		if { $isOSlinux } {
+		    if { $ifc == "lo0" } {
+			set tmpifc lo
+		    }
+		}
+		set label "$tmpifc"
 		if { [getIfcIPv4addr $node $ifc] != "" } {
 		    set label "$label ([getIfcIPv4addr $node $ifc])"
 		}
@@ -860,19 +885,84 @@ proc button3node { c x y } {
 		    set label "$label ([getIfcIPv6addr $node $ifc])"
 		}
 		.button3menu.wireshark add command -label $label \
-		    -command "startWiresharkOnNodeIfc $node $ifc"
+		    -command "startWiresharkOnNodeIfc $node $tmpifc"
 	    }
+	}
+    
+    } elseif {$oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIMAGE"  || ($oper_mode == "exec" && [[typemodel $node].virtlayer] == "NAMESPACE") || ($oper_mode == "exec" && [[typemodel $node].virtlayer] == "DYNAMIPS") || ($oper_mode == "exec" && [[typemodel $node].virtlayer] == "WIFIAP") || ($oper_mode == "exec" && [[typemodel $node].virtlayer] == "WIFISTA")} {
+	# 
+	# Wireshark
+	#
+	.button3menu add cascade -label "Wireshark" \
+	    -menu .button3menu.wireshark
+	if { [llength [allIfcList $node]] == 0 && [[typemodel $node].virtlayer] != "WIFISTA"} {
+	    .button3menu.wireshark add command -label "No interfaces available." 
+	} else {
+        #Modification for wifi
+
+        if {[[typemodel $node].virtlayer] == "WIFIAP" || [[typemodel $node].virtlayer] == "WIFISTA"} {
+
+        set tmpifc [split $node "n"]
+        set tmpifc [lindex $tmpifc 1]
+		set label "wlan$tmpifc"
+		
+		.button3menu.wireshark add command -label $label \
+		    -command "startWiresharkOnNodeIfc $node $label"
+		set label "hwsim0" 
+
+		.button3menu.wireshark add command -label "w_channels" \
+		    -command "startWiresharkOnNodeIfc $node $label"
+	 
+        } else {
+	    foreach ifc [allIfcList $node] {
+		set tmpifc $ifc
+		if { $isOSlinux } {
+		    if { $ifc == "lo0" } {
+			set tmpifc lo
+		    }
+		}
+		set label "$tmpifc"
+		if { [getIfcIPv4addr $node $ifc] != "" } {
+		    set label "$label ([getIfcIPv4addr $node $ifc])"
+		}
+		if { [getIfcIPv6addr $node $ifc] != "" } {
+		    set label "$label ([getIfcIPv6addr $node $ifc])"
+		}
+		.button3menu.wireshark add command -label $label \
+		    -command "startWiresharkOnNodeIfc $node $tmpifc"
+	    }
+	}
 	}
 	#
 	# tcpdump
-	#
+	#6
 	.button3menu add cascade -label "tcpdump" \
 	    -menu .button3menu.tcpdump
-	if { [llength [allIfcList $node]] == 0 } {
+        #Modification for wifi
+	if { [llength [allIfcList $node]] == 0 && [[typemodel $node].virtlayer] != "WIFISTA"} {
 	    .button3menu.tcpdump add command -label "No interfaces available." 
-	} else {
+	} elseif {[[typemodel $node].virtlayer] == "WIFIAP" || [[typemodel $node].virtlayer] == "WIFISTA"} {
+
+        set tmpifc [split $node "n"]
+        set tmpifc [lindex $tmpifc 1]
+		set label "wlan$tmpifc"
+		
+		.button3menu.tcpdump add command -label $label \
+		    -command "startTcpdumpOnNodeIfc $node $label"
+		set label "hwsim0" 
+
+		.button3menu.tcpdump add command -label "w_channels" \
+		    -command "startTcpdumpOnNodeIfc $node $label"
+ 
+   } else {
 	    foreach ifc [allIfcList $node] {
-		set label "$ifc"
+		set tmpifc $ifc
+		if { $isOSlinux } {
+		    if { $ifc == "lo0" } {
+			set tmpifc lo
+		    }
+		}
+		set label "$tmpifc"
 		if { [getIfcIPv4addr $node $ifc] != "" } {
 		    set label "$label ([getIfcIPv4addr $node $ifc])"
 		}
@@ -880,9 +970,12 @@ proc button3node { c x y } {
 		    set label "$label ([getIfcIPv6addr $node $ifc])"
 		}
 		.button3menu.tcpdump add command -label $label \
-		    -command "startTcpdumpOnNodeIfc $node $ifc"
+		    -command "startTcpdumpOnNodeIfc $node $tmpifc"
 	    }
 	}
+
+
+      
 	#
 	# Firefox
 	#
@@ -1977,6 +2070,12 @@ proc changeAddressRange {} {
     set autorenumber 0
     set changeAddressRange 0
     
+    foreach node $selected_nodes {
+	foreach ifc [ifcList $node] {
+	    autoIPv4defaultroute $node $ifc
+	}
+    }
+    
     redrawAll
     updateUndoLog
 }
@@ -2094,6 +2193,12 @@ proc changeAddressRange6 {} {
 
     set autorenumber 0
     set changeAddressRange6 0
+    
+    foreach node $selected_nodes {
+	foreach ifc [ifcList $node] {
+	    autoIPv6defaultroute $node $ifc
+	}
+    }
     
     redrawAll
     updateUndoLog

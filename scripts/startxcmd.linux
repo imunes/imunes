@@ -43,7 +43,7 @@ temp=`mktemp`
 cp $XAUTHORITY $temp
 cookie=`xauth -f $XAUTHORITY list | awk '/'"$host"'\/unix:'"$display"'/ {print $3}'`
 
-if test "X${DISPLAY%:*}" = "Xlocalhost"
+if test "X${DISPLAY%:*}" == "Xlocalhost"
 then
     # running over ssh: socat connects /tmp/.X11-unix/X10 with localhost:6010
     port=$((6000+display))

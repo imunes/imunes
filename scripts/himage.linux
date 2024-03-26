@@ -58,7 +58,8 @@ vi_name() {
 get_explist() {
     explist1=`docker ps | grep "imunes" | awk '{print $NF}' | rev | cut -d. -f2- | sort -u | rev`
     explist2=`ovs-vsctl list-br | cut -d- -f1 | sort -u`
-    explist=`echo $explist1 $explist2 | tr ' ' '\n' | sort -u`
+    explist3=`ip netns list | cut -d. -f1 | sort -u`
+    explist=`echo $explist1 $explist2 $explist3 | tr ' ' '\n' | sort -u`
     for exp in $explist; do
 	if test -r /var/run/imunes/$exp/; then
 	    if test $1 = "nodes"; then

@@ -214,6 +214,64 @@ proc nextFreeIP6Addr { addr start peers } {
     return $ipaddr
 }
 
+#****f* ipv6.tcl/autoIPv6defaultroute 
+# NAME
+#   autoIPv6defaultroute -- automaticaly assign a default route 
+# SYNOPSIS
+#   autoIPv6defaultroute $node $iface 
+# FUNCTION
+#   searches the interface of the node for a router, if a router is found
+#   then it is a new default gateway. 
+# INPUTS
+#   * node -- default gateway is provided for this node 
+#   * iface -- the interface on witch we search for a new default gateway
+#****
+proc autoIPv6defaultroute { node iface } {
+    global IPv6autoAssign
+    if {!$IPv6autoAssign} {
+	return
+    }
+    if { [[typemodel $node].layer] != "NETWORK" || \
+	[isNodeRouter $node] } {
+	#
+	# Shouldn't get called at all for link-layer nodes
+	#
+	#puts "autoIPv6defaultroute called for [[typemodel $node].layer] node"
+	return
+    }
+
+    set peer_node [logicalPeerByIfc $node $iface]
+
+    if { [[typemodel $peer_node].layer] == "LINK" } {
+	foreach l2node [listLANnodes $peer_node {}] {
+	    foreach ifc [ifcList $l2node] {
+		set peer [logicalPeerByIfc $l2node $ifc]
+		if {! [isNodeRouter $peer] } {
+		    continue
+		}
+		set peer_if [ifcByLogicalPeer $peer $l2node]
+		set peer_ip6addr [getIfcIPv6addr $peer $peer_if]
+		if { $peer_ip6addr != "" } {
+		    set gw [lindex [split $peer_ip6addr /] 0]
+		    setStatIPv6routes $node [list "::/0 $gw"]
+		    return
+		}
+	    }
+	}
+    } else {
+	if {! [isNodeRouter $peer_node] } {
+	    return
+	}
+	set peer_if [ifcByLogicalPeer $peer_node $node]
+	set peer_ip6addr [getIfcIPv6addr $peer_node $peer_if]
+	if { $peer_ip6addr != "" } {
+	    set gw [lindex [split $peer_ip6addr /] 0]
+	    setStatIPv6routes $node [list "::/0 $gw"]
+	    return
+	}
+    }
+}
+
 #****f* ipv6.tcl/checkIPv6Addr 
 # NAME
 #   checkIPv6Addr -- check the IPv6 address 

@@ -1,4 +1,10 @@
-
+# 2019-2020 Sorbonne University
+# In this version of imunes we added a full integration of emulation of 
+# Linux namespaces and CISCO routers, saving of parameters, VLANs, WiFi 
+# emulation and other features
+# This work was developed by Benadji Hanane and Oulad Said Chawki
+# Supervised and maintained by Naceur Malouch - LIP6/SU
+#
 if {[.menubar.tools entrycget last -label] != "Debugger"} {
     .menubar.tools add separator
     .menubar.tools add command -label "Debugger" -underline 0 -command popupDebugger
@@ -144,6 +150,8 @@ bind . <F6> {
     source "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/annotations.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/ext.tcl"
+    source "$ROOTDIR/$LIBDIR/nodes/nouveauPc.tcl"
+    source "$ROOTDIR/$LIBDIR/nodes/nouveauRouteur.tcl"
 
     source "$ROOTDIR/$LIBDIR/nodes/quagga.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/xorp.tcl"

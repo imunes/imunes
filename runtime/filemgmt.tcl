@@ -1,3 +1,9 @@
+# 2019-2020 Sorbonne University
+# In this version of imunes we added a full integration of emulation of 
+# Linux namespaces and CISCO routers, saving of parameters, VLANs, WiFi 
+# emulation and other features
+# This work was developed by Benadji Hanane and Oulad Said Chawki
+# Supervised and maintained by Naceur Malouch - LIP6/SU
 #
 # Copyright 2004-2013 University of Zagreb.
 #
@@ -187,7 +193,8 @@ proc setWmTitle { fname } {
     if { $fname == "" } {
 	set fname "untitled[string range $curcfg 1 end]"
     }
-    wm title . "$baseTitle - $fname"
+   # wm title . "$baseTitle - $fname"
+    wm title . "$baseTitle - SORBONNE UNIVERSITY - $fname "
 }
 
 #****f* filemgmt.tcl/openFile
@@ -208,7 +215,7 @@ proc openFile {} {
     upvar 0 ::cf::[set ::curcfg]::cfgDeployed cfgDeployed
     upvar 0 ::cf::[set ::curcfg]::stop_sched stop_sched
     global showTree
-    
+
     set fileName [file tail $currentFile]
     set fileId [open $currentFile r]
     set cfg ""
@@ -229,6 +236,7 @@ proc openFile {} {
     updateProjectMenu
     setWmTitle $currentFile
     if { $showTree } {
+
 	refreshTopologyTree
     }
 }
@@ -266,14 +274,20 @@ proc saveFile { selectedFile } {
 # FUNCTION
 #   Opens an open file dialog box.
 #****
+#Modification for routeur cisco
+
 proc fileOpenDialogBox {} {
-    global fileTypes
+    global fileTypes RouterCisco listVlan
+    #Modification for Vlan
+    set listVlan {}
 
     set selectedFile [tk_getOpenFile -filetypes $fileTypes]
     if { $selectedFile != ""} {
 	newProject
 	upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
 	set currentFile $selectedFile
+        set RouterCisco [split $selectedFile "/" ]
+        set RouterCisco [lindex $RouterCisco end]
 	openFile
     }
 }
@@ -287,16 +301,32 @@ proc fileOpenDialogBox {} {
 #   Opens dialog box for saving a file under new name
 #   if there is no current file.
 #****
+#Modification for dynamips
 proc fileSaveDialogBox {} {
     upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
-    global fileTypes
+    upvar 0 ::cf::[set ::curcfg]::eid eid 
     
-    if { $currentFile == "" } {
+	global fileTypes
+    global NameFile
+    set initname untitled
+    set File "/var/run/imunes/$eid/config.imn"
+    if { $currentFile == $File } {
+        if { [file exists /var/run/imunes/$eid/name] } {
+            set initname [exec cat "/var/run/imunes/$eid/name"] 
+            if { $initname == "" } { set initname "select again your filename" } 
+        } 
+    }
+    if { $currentFile == "" || [string first "/var/run/imunes/" $currentFile] != -1 } {
 	set selectedFile [tk_getSaveFile -filetypes $fileTypes -initialfile\
-		   untitled -defaultextension .imn]
+		   $initname -defaultextension .imn]
 	saveFile $selectedFile
+        set NameFile [split $selectedFile "/"]
+        set NameFile [lindex $NameFile end]
+        # update NameFile in name file of var run directory
+        if { [file exists $File] } { exec echo $NameFile > /var/run/imunes/$eid/name }
     } else {
 	saveFile $currentFile
+
     }
 }
 
@@ -310,11 +340,19 @@ proc fileSaveDialogBox {} {
 #****
 proc fileSaveAsDialogBox {} {
     upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
+    upvar 0 ::cf::[set ::curcfg]::eid eid 
     global fileTypes
 
     set selectedFile [tk_getSaveFile -filetypes $fileTypes -initialfile\
 	       untitled -defaultextension .imn]
 
+    # update name in name file of var run directory after attach to experiment
+    set File "/var/run/imunes/$eid/config.imn"
+    set namef [split $selectedFile "/"]
+    set namef [lindex $namef end]
+    #if { $currentFile == $File } {
+        if { [file exists $File] } { exec echo $namef > /var/run/imunes/$eid/name }
+    #}
     saveFile $selectedFile 
 }
 

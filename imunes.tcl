@@ -1,3 +1,9 @@
+# 2019-2020 Sorbonne University
+# In this version of imunes we added a full integration of emulation of 
+# Linux namespaces and CISCO routers, saving of parameters, VLANs, WiFi 
+# emulation and other features
+# This work was developed by Benadji Hanane and Oulad Said Chawki
+# Supervised and maintained by Naceur Malouch - LIP6/SU
 #
 # Copyright 2004-2013 University of Zagreb.
 #
@@ -67,8 +73,12 @@
 #    will be automatically set to the proper value by the installation script.
 #*****
 
-set LIBDIR ""
-set ROOTDIR "."
+global dynacurdir
+set LIBDIR "lib/imunes"
+set ROOTDIR "/usr/local"
+set dynacurdir "$ROOTDIR/$LIBDIR"
+set curdir [pwd]
+
 
 if { $ROOTDIR == "." } {
     set BINDIR ""
@@ -89,6 +99,7 @@ safePackageRequire [list cmdline platform ip base64]
 set initMode 0
 set execMode interactive
 set debug 0
+set eid_base i[format %04x [expr {[pid] + [expr { round( rand()*10000 ) }]}]]
 set printVersion 0
 set prepareFlag 0
 set forceFlag 0
@@ -141,22 +152,19 @@ foreach file [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
 	safeSourceFile $file
     }
 }
-
-if {! [info exists eid_base]} {
-    set eid_base [genExperimentId]
-}
+# modification for namespace and cisco router
 
 # Set default L2 node list
-set l2nodes "hub lanswitch click_l2 rj45 stpswitch filter packgen ext extnat"
+set l2nodes "hub lanswitch click_l2 rj45 stpswitch filter packgen ext"
 # Set default L3 node list
-set l3nodes "genericrouter quagga xorp static click_l3 host pc nat64"
+set l3nodes "genericrouter quagga xorp static click_l3 host pc nat64 nouveauPc nouveauRouteur AP STA"
 # Set default supported router models
 set supp_router_models "xorp quagga static"
 
 if { $isOSlinux } {
     # Limit default nodes on linux
-    set l2nodes "hub lanswitch rj45 ext extnat"
-    set l3nodes "genericrouter quagga static pc host nat64"
+    set l2nodes "lanswitch rj45 ext"
+    set l3nodes "genericrouter quagga static host pc nat64 nouveauPc nouveauRouteur AP STA"
     set supp_router_models "quagga static"
     safeSourceFile $ROOTDIR/$LIBDIR/runtime/linux.tcl
     if { $initMode == 1 } {
@@ -341,3 +349,28 @@ if {$execMode == "interactive"} {
 	deleteExperimentFiles $eid_base
     }
 }
+
+#Modification for dyanmips
+
+global RouterCisco
+set RouterCisco ""
+
+global listRouterCisco
+set listRouterCisco ""
+
+#Modification vlan
+global eidvlan modevlan booleen
+set eidvlan ""
+set modevlan ""
+set booleen "false"
+
+#Modifiation for wifi
+
+global masque dhcpIp1 dhcpIp2
+set masque "24"
+global listAP listAPIP
+set listAPIP ""
+set listAP ""
+global listSTA
+set listSTA ""
+

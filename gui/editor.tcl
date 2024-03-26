@@ -1,3 +1,9 @@
+# 2019-2020 Sorbonne University
+# In this version of imunes we added a full integration of emulation of 
+# Linux namespaces and CISCO routers, saving of parameters, VLANs, WiFi 
+# emulation and other features
+# This work was developed by Benadji Hanane and Oulad Said Chawki
+# Supervised and maintained by Naceur Malouch - LIP6/SU
 #
 # Copyright 2004-2013 University of Zagreb.
 #
@@ -160,13 +166,18 @@ proc chooseIfName {lnode rnode} {
 # RESULT
 #   * ifcName -- the name of the interface
 #****
+
+# modification for cisco router
 proc l3IfcName {lnode rnode} {
 
-    if {[nodeType $lnode] in "ext extnat"} {
+    if {[nodeType $lnode] == "ext"} {
 	return "ext"
     }
     if {[nodeType $rnode] == "wlan"} {
 	return "wlan"
+    } 
+    if {[nodeType $lnode] == "routeur"} {
+    return "f"
     } else {
 	return "eth"
     }
@@ -683,7 +694,6 @@ proc topologyElementsTree {} {
 		foreach ifc [lsort -dictionary [ifcList $node]] {
 		    $f.tree insert $node end -id $node$ifc -text "$ifc" -tags $node$ifc
 		    $f.tree set $node$ifc state [getIfcOperState $node $ifc]
-		    $f.tree set $node$ifc nat [getIfcNatState $node $ifc]
 		    $f.tree set $node$ifc IPv4 [getIfcIPv4addr $node $ifc]
 		    $f.tree set $node$ifc IPv6 [getIfcIPv6addr $node $ifc]
                     $f.tree set $node$ifc MAC [getIfcMACaddr $node $ifc]
@@ -916,12 +926,13 @@ proc refreshTopologyTree {} {
 	    foreach ifc [lsort -dictionary [ifcList $node]] {
 		    $f.tree insert $node end -id $node$ifc -text "$ifc" -tags $node$ifc
 		    $f.tree set $node$ifc state [getIfcOperState $node $ifc]
-		    $f.tree set $node$ifc nat [getIfcNatState $node $ifc]
 		    $f.tree set $node$ifc IPv4 [getIfcIPv4addr $node $ifc]
 		    $f.tree set $node$ifc IPv6 [getIfcIPv6addr $node $ifc]
                     $f.tree set $node$ifc MAC [getIfcMACaddr $node $ifc]
 	    }
 	}
+
+   
     }
 
     set linktags ""
@@ -955,6 +966,7 @@ proc refreshTopologyTree {} {
 #   Creates a popup dialog box to attach to experiment.
 #****
 proc attachToExperimentPopup {} {
+
     global selectedExperiment runtimeDir
     set  ateDialog .attachToExperimentDialog
     catch {destroy $ateDialog}
@@ -1008,6 +1020,7 @@ proc attachToExperimentPopup {} {
     focus $tree
 
     foreach exp [getResumableExperiments] {
+
 	set timestamp [getExperimentTimestampFromFile $exp]
 	$tree insert {} end -id $exp -text [list $exp "-" [getExperimentNameFromFile $exp]] -values [list $timestamp] \
 	          -tags "$exp"

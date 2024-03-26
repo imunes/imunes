@@ -1,3 +1,9 @@
+# 2019-2020 Sorbonne University
+# In this version of imunes we added a full integration of emulation of 
+# Linux namespaces and CISCO routers, saving of parameters, VLANs, WiFi 
+# emulation and other features
+# This work was developed by Benadji Hanane and Oulad Said Chawki
+# Supervised and maintained by Naceur Malouch - LIP6/SU
 PREFIX = /usr/local
 LIBDIR = lib/imunes
 IMUNESDIR = $(PREFIX)/$(LIBDIR)
@@ -33,7 +39,7 @@ TOOLS =	$(filter-out $(VROOT), $(wildcard scripts/*))
 
 NODE_ICONS = frswitch.gif hub.gif lanswitch.gif rj45.gif cloud.gif host.gif \
 	ipfirewall.gif pc.gif router.gif click_l2.gif click_l3.gif \
-	stpswitch.gif filter.gif packgen.gif nat64.gif ext.gif extnat.gif
+	stpswitch.gif filter.gif packgen.gif nat64.gif ext.gif nouveauPc.gif nouveauRouteur.gif wifiAP.png wifiSTA.png
 
 NORMAL_ICONS = $(NODE_ICONS)
 

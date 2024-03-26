@@ -94,7 +94,7 @@ proc $MODULE.virtlayer {} {
 #****
 proc $MODULE.cfggen { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
-
+    
     set cfg {}
 
     lappend cfg "interfaces {"

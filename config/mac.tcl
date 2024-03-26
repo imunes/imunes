@@ -1,3 +1,9 @@
+# 2019-2020 Sorbonne University
+# In this version of imunes we added a full integration of emulation of 
+# Linux namespaces and CISCO routers, saving of parameters, VLANs, WiFi 
+# emulation and other features
+# This work was developed by Benadji Hanane and Oulad Said Chawki
+# Supervised and maintained by Naceur Malouch - LIP6/SU
 #
 # Copyright 2010-2013 University of Zagreb.
 #
@@ -61,11 +67,12 @@ proc randomizeMACbytes {} {
 #   * iface -- the interface to witch a new, automatilacy generated, MAC  
 #     address will be assigned
 #****
+#Modification for namespace and router CISCO
 proc autoMACaddr { node ifc } {
     upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
     global mac_byte4 mac_byte5 mac_byte6
 
-    if { [nodeType $node] ni "ext extnat" && [[typemodel $node].virtlayer] != "VIMAGE" } {
+    if { [nodeType $node] != "ext" && [[typemodel $node].virtlayer] != "VIMAGE" && [[typemodel $node].virtlayer] != "NAMESPACE" && [[typemodel $node].virtlayer] != "WIFIAP" && [[typemodel $node].virtlayer] != "WIFISTA"} {
 	return
     }
 

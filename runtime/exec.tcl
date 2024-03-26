@@ -1,3 +1,9 @@
+# 2019-2020 Sorbonne University
+# In this version of imunes we added a full integration of emulation of 
+# Linux namespaces and CISCO routers, saving of parameters, VLANs, WiFi 
+# emulation and other features
+# This work was developed by Benadji Hanane and Oulad Said Chawki
+# Supervised and maintained by Naceur Malouch - LIP6/SU
 #
 # Copyright 2004-2013 University of Zagreb.
 #
@@ -65,27 +71,6 @@ proc nexec { args } {
     eval exec $args
 }
 
-#****f* exec.tcl/genExperimentId
-# NAME
-#   genExperimentId -- generate experiment ID
-# SYNOPSIS
-#   set eid [genExperimentId]
-# FUNCTION
-#   Generates a new random experiment ID that will be used when the experiment
-#   is started.
-# RESULT
-#   * eid -- a new generated experiment ID
-#****
-proc genExperimentId { } {
-    global isOSlinux
-
-    if { $isOSlinux } {
-        return i[string range [format %04x [expr {[pid] + [expr { round( rand()*10000 ) }]}]] 0 2]
-    } else {
-        return i[format %04x [expr {[pid] + [expr { round( rand()*10000 ) }]}]]
-    }
-}
-
 #****f* exec.tcl/setOperMode
 # NAME
 #   setOperMode -- set operating mode
@@ -107,6 +92,7 @@ proc genExperimentId { } {
 # INPUTS
 #   * mode -- the new operating mode. Can be edit or exec.
 #****
+#Modification for dyanmips
 proc setOperMode { mode } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::undolevel undolevel
@@ -114,6 +100,10 @@ proc setOperMode { mode } {
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     upvar 0 ::cf::[set ::curcfg]::cfgDeployed cfgDeployed
     upvar 0 ::cf::[set ::curcfg]::eid eid
+    #Modification for vlan
+    global eidvlan modevlan
+    
+    #********************
     global all_modules_list editor_only execMode isOSfreebsd isOSlinux
 
     if {$mode == "exec" && $node_list == ""} {
@@ -237,6 +227,9 @@ proc setOperMode { mode } {
 	.bottom.experiment_id configure -text ""
     }
     .panwin.f1.c config -cursor left_ptr
+
+    set modevlan $mode
+    set eidvlan $eid
 }
 
 #****f* exec.tcl/spawnShellExec
@@ -246,8 +239,9 @@ proc setOperMode { mode } {
 #   spawnShellExec
 # FUNCTION
 #   This procedure spawns a new shell on a selected and current
-#   node.
+#   Lnode.
 #****
+# modification for namespace and cisco router
 proc spawnShellExec {} {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
@@ -258,13 +252,53 @@ proc spawnShellExec {} {
 	    return
 	}
     }
-    if { [[typemodel $node].virtlayer] != "VIMAGE" } {
+    # if the de type of node is different of namespace or dynamips or vimage do nothing 
+    # else display terminal of node
+    if { [[typemodel $node].virtlayer] != "VIMAGE" && [[typemodel $node].virtlayer] != "NAMESPACE" && [[typemodel $node].virtlayer] != "DYNAMIPS" && [[typemodel $node].virtlayer] != "WIFIAP" && [[typemodel $node].virtlayer] != "WIFISTA"} {
 	nodeConfigGUI .panwin.f1.c $node
     } else {
-	set cmd [lindex [existingShells [[typemodel $node].shellcmds] $node] 0]
+      set type [nodeType $node]
+
+      if {$type == "router"} {
+      set cmd "/usr/bin/vtysh"
+       } elseif {$type == "routeur"} {
+      set cmd "telnet" 
+       } else  {
+      set cmd [lindex [existingShells [[typemodel $node].shellcmds] $node] 0]
+      } 
+          
+
+       # set type [nodeType $node]
+       # if { $type == "router.quagga" } {
+       # set cmd "/bin/vtysh"
+       # }
+	# if { [[typemodel $node].virtlayer] == "NAMESPACE"  } {
+
+	#	 nexec xterm -fa "Monospace" -fs 14 \
+    #-T "IMUNES: [getNodeName $node] (console) [string trim [lindex [split "/bin/bash" /] end] ']"  \
+    #-e "ip netns exec $node /bin/bash" 2> /dev/null &
+    #}
+    # here we display the terminal of dynamips (cisco router ) by using telnet 
+   #  if { [[typemodel $node].virtlayer] == "DYNAMIPS"  } {
+	    
+	#    set name [getNodeName $node]
+    	#set name1 [split $name "_"]
+    	#set name2 [lindex $name1 1]
+    	#set rout [expr $name2-1+2000]
+
+
+     #nexec xterm -fa "Monospace" -fs 14 \
+    #-T "IMUNES: [getNodeName $node] (console) [string trim [lindex [split "/bin/bash" /] end] ']"  \
+    #-e "telnet localhost $rout" &
+    #}
+
 	if { $cmd == "" } {
-	    return
+
+		return
+
+
 	}
+        
 	spawnShell $node $cmd
     }
 }
@@ -280,6 +314,7 @@ proc spawnShellExec {} {
 #   configurations from the running experiment settings.
 #****
 proc fetchNodeConfiguration {} {
+
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global isOSfreebsd
     set ip6Set 0
@@ -412,15 +447,25 @@ proc checkExternalInterfaces {} {
 # INPUTS
 #   * exp -- experiment id
 #****
+#Modification for dynamips
 proc resumeSelectedExperiment { exp } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global runtimeDir
     if {[info exists eid]} {
+
 	set curr_eid $eid
+    
 	if {$curr_eid == $exp} {
 	    return
 	}
     }
+
+#Modification for dynamips
+global dynacurdir
+
+    if {[file exist "$dynacurdir/Dynamips/$exp/"] == 1} {
+           prepareDynamips $exp
+}
     newProject
 
     upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
@@ -452,6 +497,7 @@ proc createExperimentFiles { eid } {
     upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
     global currentFileBatch execMode runtimeDir
     set basedir "$runtimeDir/$eid"
+
     file mkdir $basedir
     
     writeDataToFile $basedir/timestamp [clock format [clock seconds]]
@@ -646,14 +692,34 @@ proc fetchExperimentFolders {} {
 # RESULT
 #   * exp_list -- experiment id list
 #****
+# modification for namespace and cisco router
 proc getResumableExperiments {} {
     set exp_list ""
     set exp_folders [fetchExperimentFolders]
+
     foreach exp [fetchRunningExperiments] {
 	if {$exp in $exp_folders} {
+
 	    lappend exp_list $exp
 	}
     }
+
+
+# experiments namespace and cisco router
+    #foreach exptest [fetchExperimentFolders] {
+     #   if {[file exist "/var/run/imunes/$exptest"] == 1} {
+
+   	#	if {$exptest in $exp_list} {
+
+    	#	} else {
+	 #   lappend exp_list $exptest
+          #      }
+	#}
+    #}
+
+
+
+
     return $exp_list
 }
 
@@ -741,7 +807,7 @@ proc statline { line } {
     global execMode
 
     if {$execMode == "batch"} {
-	puts $line
+
 	flush stdout
     } else {
 	.bottom.textbox config -text "$line"
@@ -783,14 +849,58 @@ proc displayBatchProgress { prgs tot } {
 #   * eid -- experiment id
 #   * node -- node id
 #****
+# Modification for save.tcl
+#***********
 proc l3node.instantiate { eid node } {
     prepareFilesystemForNode $node
     createNodeContainer $node
     createNodePhysIfcs $node
     createNodeLogIfcs $node
     configureICMPoptions $node
+# Modification for save.tcl
+   configureVTYSHquagga $eid $node
 }
 
+# modification for namespace by adding new function
+
+# this fonction call 4 other fonctions to create and configurate a new namespace node
+#  with its interfaces
+proc l3node.instantiateN { eid node } {
+    prepareFilesystemForNode $node
+    createNodeContainerN $node
+    createNodePhysIfcs $node
+    createNodeLogIfcs $node
+#    configureICMPoptions $node
+}
+# modification for cisco router by adding new function
+
+# this fonction call 4 other fonctions to create and configuration a new cisco router node
+#  with its interfaces
+proc l3node.instantiateR { eid node } {
+    prepareFilesystemForNode $node
+    createNodePhysIfcs $node
+    createNodeLogIfcs $node
+    createNodeContainerR $node
+}
+
+#Modification for wifi
+# this fonction call 4 other fonctions to create and configurate a new wifi AP node
+#  with its interfaces
+proc l3node.instantiateAP { eid node } {
+    prepareFilesystemForNode $node
+    createNodeContainerAP $node
+    createNodePhysIfcs $node
+    createNodeLogIfcs $node
+#    configureICMPoptions $node
+}
+
+proc l3node.instantiateSTA { eid node } {
+    prepareFilesystemForNode $node
+    createNodeContainerSTA $node
+    createNodePhysIfcs $node
+    createNodeLogIfcs $node
+#    configureICMPoptions $node
+}
 #****f* exec.tcl/l3node.start
 # NAME
 #   l3node.start -- layer 3 node start
@@ -805,10 +915,32 @@ proc l3node.instantiate { eid node } {
 #   * eid -- experiment id
 #   * node -- node id
 #****
+# modification for namespace and cisco router
+# in this fonction we added running configuration and start interface fonction for namespace and cisco router
 proc l3node.start { eid node } {
+
+set type [nodeType $node] 
+if {$type == "routeur"} {
+
+	runConfOnNodeR $node
+} elseif {$type == "pcn"} {
+    startIfcsNodeN $node 
+    runConfOnNodeN $node
+} elseif {$type == "wifiAP"} {
+    runConfOnNodeAP $node
+    startIfcsNodeN $node 
+    runConfOnNodeN $node
+
+} elseif {$type == "wifiSTA"} {
+   runConfOnNodeSTA $node
+} else {
     startIfcsNode $node
     runConfOnNode $node
 }
+
+}
+
+
 
 #****f* exec.tcl/l3node.shutdown
 # NAME
@@ -849,6 +981,9 @@ proc l3node.destroy { eid node } {
     pipesExec ""
 }
 
+
+
+
 #****f* exec.tcl/deployCfg
 # NAME
 #   deployCfg -- deploy working configuration
@@ -859,6 +994,7 @@ proc l3node.destroy { eid node } {
 #   as defined in configuration file of in GUI of imunes. Before deploying new
 #   configuration the old one is removed (vimageCleanup procedure).
 #****
+#  modification for namespace 
 proc deployCfg {} {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
@@ -873,16 +1009,18 @@ proc deployCfg {} {
 
     set running_eids [getResumableExperiments]
     if {$execMode != "batch"} {
+
 	set eid ${eid_base}[string range $::curcfg 1 end]
 	while { $eid in $running_eids } {
-	    set eid_base [genExperimentId]
+	    set eid_base i[format %04x [expr {[pid] + [expr { round( rand()*10000 ) }]}]]
 	    set eid ${eid_base}[string range $::curcfg 1 end]
 	}
     } else {
 	set eid $eid_base
 	while { $eid in $running_eids } {
+
 	    puts -nonewline "Experiment ID $eid_base already in use, trying "
-	    set eid [genExperimentId]
+	    set eid i[format %04x [expr {[pid] + [expr { round( rand()*10000 ) }]}]]
 	    puts "$eid."
 	}
     }
@@ -894,6 +1032,9 @@ proc deployCfg {} {
     prepareDevfs
 
     createExperimentContainer
+   #Modification for wifi
+
+    prepareAP
 
     set nodeCount [llength $node_list]
     set linkCount [llength $link_list]
@@ -904,7 +1045,7 @@ proc deployCfg {} {
 	catch {destroy $w}
 	toplevel $w -takefocus 1
 	wm transient $w .
-	wm title $w "Starting experiment $eid..."
+	wm title $w "Starting experiment..."
 	message $w.msg -justify left -aspect 1200 \
 	    -text "Starting up virtual nodes and links."
 	pack $w.msg
@@ -927,9 +1068,11 @@ proc deployCfg {} {
     set pseudo_links 0
 
     foreach node $node_list {
+
 	incr step
 	set node_id "$eid\.$node"
 	set type [nodeType $node]
+
 	set name [getNodeName $node]
 	incr startedCount
 	if {$execMode != "batch"} {
@@ -938,12 +1081,44 @@ proc deployCfg {} {
 	    update
 	}
 	displayBatchProgress $step $allNodes
-	if {$type != "pseudo"} {
+
+if {$type == "pcn"} {
+[typemodel $node].instantiate $eid $node
+
+
+}
+#Modification for wifi
+if {$type == "wifiAP"} {
+[typemodel $node].instantiate $eid $node
+
+
+}
+
+if {$type == "wifiSTA"} {
+[typemodel $node].instantiate $eid $node
+
+
+}
+
+
+if {$type != "pseudo"  && $type != "pcn" && $type != "wifiAP" && $type != "wifiSTA"} {
 	    [typemodel $node].instantiate $eid $node
 	    pipesExec ""
 	} else {
 	    incr pseudo_links
 	}
+
+#Modification for Vlan
+
+	#	if {$type =="lanswitch"} {
+     #        OpenconfigureVlanSwitch $node
+
+		#}
+
+
+
+
+
     }
 
     statline ""
@@ -992,7 +1167,14 @@ proc deployCfg {} {
 	}
 
 	createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2
+set type [nodeType $lnode1]
+set type2 [nodeType $lnode2]
+if {$type != "pcn" && $type2 != "pcn"} {
 	configureLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
+}
+
+
+
     }
 
     # Start services for the LINKINST hook
@@ -1000,21 +1182,10 @@ proc deployCfg {} {
 
     statline ""
     statline "Configuring nodes..."
-
     set step 0
-    set subnet_gws {}
-    set nodes_l2data [dict create]
     foreach node $node_list {
 	upvar 0 ::cf::[set ::curcfg]::$node $node
 	set type [nodeType $node]
-
-	if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
-	    lassign [getDefaultGateways $node $subnet_gws $nodes_l2data] my_gws subnet_gws nodes_l2data
-	    lassign [getDefaultRoutesConfig $node $my_gws] all_routes4 all_routes6
-
-	    setDefaultIPv4routes $node $all_routes4
-	    setDefaultIPv6routes $node $all_routes6
-	}
 
 	incr startedCount
 	if {$execMode != "batch"} {
@@ -1029,11 +1200,22 @@ proc deployCfg {} {
 	    if {$execMode != "batch"} {
 		statline "Configuring node [getNodeName $node]"
 	    }
-
+	puts "[info procs [typemodel $node].start]"
 	    if {[info procs [typemodel $node].start] != ""} {
 		[typemodel $node].start $eid $node
 	    }
 	}
+
+
+
+
+		#Modification for Vlan
+
+		if {$type =="lanswitch"} {
+
+   			configureVlanSwitch $eid $node 
+		}
+
     }
     statline ""
 
@@ -1059,13 +1241,18 @@ proc deployCfg {} {
 # FUNCTION
 #
 #****
+# modification for namespace  and cisco router
+# in the end of the expriment we delete all namespace 
 proc terminateAllNodes { eid } {
+    set curdir [pwd]
+
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
     upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
     global execMode
     global vroot_unionfs vroot_linprocfs
-
+    set curdir [pwd]
+    global dynacurdir
     set w ""
     #preparing counters for GUI
     if {$execMode != "batch"} {
@@ -1075,7 +1262,7 @@ proc terminateAllNodes { eid } {
 	catch {destroy $w}
 	toplevel $w -takefocus 1
 	wm transient $w .
-	wm title $w "Terminating experiment $eid..."
+	wm title $w "Terminating experiment ..."
 	message $w.msg -justify left -aspect 1200 \
 	    -text "Deleting virtual nodes and links."
 	pack $w.msg
@@ -1106,6 +1293,43 @@ proc terminateAllNodes { eid } {
     set ngraphs ""
     set vimages ""
     set extifcs ""
+
+
+
+
+#Modification for dynamips 
+foreach node $node_list {
+	if {[[typemodel $node].virtlayer] == "DYNAMIPS" } {
+              foreach ifc [ifcList $node] {
+                        set word $ifc
+                        set s ""
+			set f [open "$dynacurdir/Dynamips/$eid/node/$node.txt" r]
+			while {[gets $f line] >= 0} {
+    				if {[string match $word* $line]} {
+						set s [string range $line 21 end]
+                                                catch "exec ip link del $s"
+   				 }
+			}
+			close $f
+	      }
+	}
+}
+
+
+    set path "$dynacurdir/Dynamips/$eid/"
+
+    file delete -force -- $path
+  
+
+    
+    
+    catch "exec pkill -9 dynamips"
+    catch "exec pkill -9 dynagen"
+   
+   
+
+
+     
     foreach node $node_list {
 	if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
 	    if { [typemodel $node] == "rj45" } {
@@ -1115,8 +1339,65 @@ proc terminateAllNodes { eid } {
 	    }
 	} elseif { [[typemodel $node].virtlayer] == "VIMAGE" } {
 	    lappend vimages $node
+	} elseif { [[typemodel $node].virtlayer] == "WIFIAP" } {
+		
+       #Modification for wifi
+       
+        cleanupAP $node
+          
+	} elseif { [[typemodel $node].virtlayer] == "WIFISTA" } {
+		
+           #Modification for wifi
+     
+
+        cleanupSTA $node
 	}
+         
     }
+
+
+
+    set namespace_li [exec ip netns list]
+
+	set namespace_list [split $namespace_li \n]
+
+	foreach namespa $namespace_list {
+
+			set name [split $namespa " "]
+
+			set  namespace_filtre [lindex $name 0]
+
+			set namespace_pid [exec ip netns pids $namespace_filtre]
+
+			set namespace_pid_list [split $namespace_pid \n]
+
+					foreach pids_namesp $namespace_pid_list {
+ 
+
+							catch "exec kill -9 $pids_namesp"
+
+					}
+                        catch "exec rm -rf /etc/netns/$namespace_filtre"
+	}
+
+    catch "exec ip -all netns del"
+
+    #Modification for wifi
+
+   catch "exec killall hostapd" 
+
+   catch "exec killall dnsmasq"  
+
+   catch "exec killall wpa_supplicant"
+   
+   catch "exec killall dhclient"
+
+   catch "exec modprobe -r mac80211_hwsim"
+
+   set path "$dynacurdir/WIFI/$eid/"
+
+   file delete -force -- $path
+
 
     statline "Stopping ngraphs and vimages..."
     foreach node [ concat $ngraphs $vimages ] {
@@ -1182,6 +1463,8 @@ proc terminateAllNodes { eid } {
     foreach node $vimages {
 #	statline "Shutting down vimage $node ([typemodel $node])"
 	incr i
+	
+
 	[typemodel $node].destroy $eid $node
 	displayBatchProgress $i [ llength $vimages ]
 
@@ -1190,6 +1473,7 @@ proc terminateAllNodes { eid } {
 	    $w.p configure -value $startedCount
 	    update
 	}
+
     }
     pipesClose
     statline ""
@@ -1202,6 +1486,7 @@ proc terminateAllNodes { eid } {
 
     statline "Cleanup completed in [expr ([clock milliseconds] - $t_start)/1000.0] seconds."
 }
+
 
 #****f* exec.tcl/execCmdsNode
 # NAME
@@ -1417,20 +1702,23 @@ proc l3node.ipsecInit { node } {
 # INPUTS
 #   * node -- node id
 #****
+# modification for namespace  and cisco router
+# generate hosts file for namespace node and cisco router
 proc generateHostsFile { node } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::etchosts etchosts
     global hostsAutoAssign
 
     if { $hostsAutoAssign == 1 } {
-	if { [[typemodel $node].virtlayer] == "VIMAGE" } {
+	if { [[typemodel $node].virtlayer] == "VIMAGE" || [[typemodel $node].virtlayer] == "NAMESPACE" || [[typemodel $node].virtlayer] == "DYNAMIPS" || [[typemodel $node].virtlayer] == "WIFIAP" || || [[typemodel $node].virtlayer] == "WIFISTA"} {
 	    if { $etchosts == "" } {
 		foreach iter $node_list {
-		    if { [[typemodel $iter].virtlayer] == "VIMAGE" } {
+		    if { [[typemodel $iter].virtlayer] == "VIMAGE" || [[typemodel $node].virtlayer] == "NAMESPACE" || [[typemodel $node].virtlayer] == "DYNAMIPS" || [[typemodel $node].virtlayer] == "WIFIAP" || || [[typemodel $node].virtlayer] == "WIFISTA"} {
 			foreach ifc [ifcList $iter] {
 			    if { $ifc != "" } {
 				set ipv4 [lindex [split [getIfcIPv4addr $iter $ifc] "/"] 0]
 				set ipv6 [lindex [split [getIfcIPv6addr $iter $ifc] "/"] 0]
+
 				set ifname [getNodeName $iter]
 				if { $ipv4 != "" } {
 				    set etchosts "$etchosts$ipv4	$ifname\n"

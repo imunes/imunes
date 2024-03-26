@@ -355,7 +355,7 @@ proc $MODULE.configGUI { c node } {
     set configtab [lindex $tabs 0]
     set ifctab [lindex $tabs 1]
 
-    set treecolumns {"OperState State" "NatState Nat" "Direct Direction" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
+    set treecolumns {"OperState State" "Direct Direction" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
 	    "MACaddr MAC addr" "MTU MTU" "QDisc Queue disc" "QDrop Queue drop" "QLen Queue len"}
     configGUI_addTree $ifctab $node
 

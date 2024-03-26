@@ -59,6 +59,8 @@ proc $MODULE.confNewIfc { node ifc } {
     autoIPv4addr $node $ifc
     autoIPv6addr $node $ifc
     autoMACaddr $node $ifc
+    autoIPv4defaultroute $node $ifc
+    autoIPv6defaultroute $node $ifc
 }
 
 #****f* pc.tcl/pc.confNewNode
@@ -80,7 +82,6 @@ proc $MODULE.confNewNode { node } {
 	! ]
     lappend $node "network-config [list $nconfig]"
 
-    setAutoDefaultRoutesStatus $node "enabled"
     setLogIfcType $node lo0 lo
     setIfcIPv4addr $node lo0 "127.0.0.1/8"
     setIfcIPv6addr $node lo0 "::1/128"
@@ -145,7 +146,7 @@ proc $MODULE.notebookDimensions { wi } {
 
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
 	== "Configuration" } {
-	set h 320
+	set h 270
 	set w 507
     }
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
@@ -237,7 +238,7 @@ proc $MODULE.cfggen { node } {
 
     set cfg [concat $cfg [nodeCfggenRouteIPv4 $node]]
     set cfg [concat $cfg [nodeCfggenRouteIPv6 $node]]
-
+    
     return $cfg
 }
 
@@ -255,7 +256,10 @@ proc $MODULE.cfggen { node } {
 # RESULT
 #   * appl -- application that reads the configuration (/bin/sh)
 #****
-proc $MODULE.bootcmd { node } {
+
+proc $MODULE.bootcmd { node } { 
+
+	
     return "/bin/sh"
 }
 
@@ -387,11 +391,11 @@ proc $MODULE.configGUI { c node } {
     set configtab [lindex $tabs 0]
     set ifctab [lindex $tabs 1]
 
-    set treecolumns {"OperState State" "NatState Nat" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
+    set treecolumns {"OperState State" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
 	    "MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop"}
     configGUI_addTree $ifctab $node
 
-    configGUI_customImage $configtab $node
+    configGUI_dockerImage $configtab $node
     configGUI_attachDockerToExt $configtab $node
     configGUI_servicesConfig $configtab $node
     configGUI_staticRoutes $configtab $node

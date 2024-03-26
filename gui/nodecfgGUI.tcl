@@ -1,3 +1,9 @@
+# 2019-2020 Sorbonne University
+# In this version of imunes we added a full integration of emulation of 
+# Linux namespaces and CISCO routers, saving of parameters, VLANs, WiFi 
+# emulation and other features
+# This work was developed by Benadji Hanane and Oulad Said Chawki
+# Supervised and maintained by Naceur Malouch - LIP6/SU
 #
 # Copyright 2005-2013 University of Zagreb.
 #
@@ -113,6 +119,7 @@ proc configGUI_createConfigPopupWin { c } {
 # RESULT
 #   * tabs - the list containing tab identifiers.
 #****
+
 proc configGUI_addNotebook { wi node labels } {
     ttk::notebook $wi.nbook -height 200
     pack $wi.nbook -fill both -expand 1
@@ -211,6 +218,7 @@ proc configGUI_addTree { wi node } {
 
     set column_ids ""
     foreach column $treecolumns {
+        
 	lappend columns_ids [lindex $column 0]
     }
 
@@ -219,16 +227,27 @@ proc configGUI_addTree { wi node } {
 
     $wi.panwin.f1.tree column #0 -width 130 -minwidth 70 -stretch 0
     foreach column $treecolumns {
-	if { [lindex $column 0] in "OperState NatState MTU" } {
+
+	if { [lindex $column 0] == "OperState" || [lindex $column 0] == "MTU" } {
+
 	    $wi.panwin.f1.tree column [lindex $column 0] -width 45 \
 		-minwidth 2 -anchor center -stretch 0
 	} elseif { [lindex $column 0] == "MACaddr" } {
+
             $wi.panwin.f1.tree column [lindex $column 0] -width 120 \
 		-minwidth 2 -anchor center -stretch 0
         } else {
-	    $wi.panwin.f1.tree column [lindex $column 0] -width 100 \
-		-minwidth 2 -anchor center -stretch 0
+            #100 au lieu 155
+            	set type [nodeType $node]
+   			if {$type == "lanswitch"} {
+    				$wi.panwin.f1.tree column [lindex $column 0] -width 155 \
+					-minwidth 2 -anchor center -stretch 0
+			} else {
+	    			$wi.panwin.f1.tree column [lindex $column 0] -width 100 \
+					-minwidth 2 -anchor center -stretch 0
+		               }
 	}
+
 	$wi.panwin.f1.tree heading [lindex $column 0] \
 	    -text [join [lrange $column 1 end]]
     }
@@ -249,19 +268,21 @@ proc configGUI_addTree { wi node } {
 	$wi.panwin.f1.tree insert interfaces end -id $ifc \
 	    -text "$ifc" -tags $ifc
 	foreach column $treecolumns {
+
 	    $wi.panwin.f1.tree set $ifc [lindex $column 0] \
 		[getIfc[lindex $column 0] $node $ifc]
 	}
     }
 
-    if {[[typemodel $node].virtlayer] == "VIMAGE" && [nodeType $node] != "click_l2"} {
+#Modification for namespace
+    if {( [[typemodel $node].virtlayer] == "VIMAGE" || [[typemodel $node].virtlayer] == "NAMESPACE" || [[typemodel $node].virtlayer] == "WIFIAP" ) && [nodeType $node] != "click_l2"} {
 	$wi.panwin.f1.tree insert {} end -id logIfcFrame -text \
 	    "Logical Interfaces" -open true -tags logIfcFrame
 
 	foreach ifc [lsort -dictionary [logIfcList $node]] {
 	    $wi.panwin.f1.tree insert logIfcFrame end -id $ifc \
 		-text "$ifc" -tags $ifc
-	    foreach column { "OperState" "NatState" "MTU" "IPv4addr" "IPv6addr"} {
+	    foreach column { "OperState" "MTU" "IPv4addr" "IPv6addr"} {
 		$wi.panwin.f1.tree set $ifc [lindex $column 0] \
 		    [getIfc[lindex $column 0] $node $ifc]
 	    }
@@ -327,7 +348,7 @@ proc configGUI_addTree { wi node } {
 		configGUI_showIfcInfo $wi.panwin.f2 0 $node [$wi.panwin.f1.tree next $ifc]
 	    }"
     }
-    if {[[typemodel $node].virtlayer] == "VIMAGE"} {
+    if {[[typemodel $node].virtlayer] == "VIMAGE" || [[typemodel $node].virtlayer] == "NAMESPACE" || [[typemodel $node].virtlayer] == "WIFIAP" } {
 	$wi.panwin.f1.tree tag bind [lindex [lsort -ascii [ifcList $node]] end] <Key-Down> \
 		"configGUI_showIfcInfo $wi.panwin.f2 0 $node logIfcFrame"
 
@@ -431,19 +452,21 @@ proc configGUI_refreshIfcsTree { wi node } {
 	$wi insert interfaces end -id $ifc \
 	    -text "$ifc" -tags $ifc
 	foreach column $treecolumns {
+
 	    $wi set $ifc [lindex $column 0] \
 		[getIfc[lindex $column 0] $node $ifc]
 	}
     }
 
-    if {[[typemodel $node].virtlayer] == "VIMAGE"} {
+    if {[[typemodel $node].virtlayer] == "VIMAGE" || [[typemodel $node].virtlayer] == "NAMESPACE" || [[typemodel $node].virtlayer] == "WIFIAP"} {
+
 	$wi insert {} end -id logIfcFrame -text \
 	    "Logical Interfaces" -open true -tags logIfcFrame
 
 	foreach ifc [lsort -dictionary [logIfcList $node]] {
 	    $wi insert logIfcFrame end -id $ifc \
 		-text "$ifc" -tags $ifc
-	    foreach column { "OperState" "NatState" "MTU" "IPv4addr" "IPv6addr"} {
+	    foreach column { "OperState" "MTU" "IPv4addr" "IPv6addr"} {
 		$wi set $ifc [lindex $column 0] \
 		    [getIfc[lindex $column 0] $node $ifc]
 	    }
@@ -452,14 +475,17 @@ proc configGUI_refreshIfcsTree { wi node } {
 
     set wi_bind [string trimright $wi ".panwin.f1.tree"]
 
-    $wi tag bind interfaces <1> \
-	    "configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node \"\""
-    $wi tag bind interfaces <Key-Down> \
-	    "if {[llength [ifcList $node]] != 0} {
-		configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node [lindex [lsort -ascii [ifcList $node]] 0]
-	    }"
+   # $wi tag bind interfaces <1> \
+#	    "configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node \"\""
+ #   $wi tag bind interfaces <Key-Down> \
+#	    "if {[llength [ifcList $node]] != 0} {
+
+#		configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node [lindex [lsort -ascii [ifcList $node]] 0]
+
+#	    }"
 
     foreach ifc [lsort -dictionary [ifcList $node]] {
+
 	$wi tag bind $ifc <1> \
 	  "$wi focus $ifc
 	   $wi selection set $ifc
@@ -476,6 +502,7 @@ proc configGUI_refreshIfcsTree { wi node } {
 	    }"
     }
     if {[[typemodel $node].virtlayer] == "VIMAGE"} {
+
 	$wi tag bind [lindex [lsort -ascii [ifcList $node]] end] <Key-Down> \
 		"configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node logIfcFrame"
 
@@ -526,9 +553,11 @@ proc configGUI_refreshIfcsTree { wi node } {
 #   * node - node id
 #   * ifc - interface id
 #****
+# modification for VLAN
 proc configGUI_showIfcInfo { wi phase node ifc } {
     global guielements
     global changed apply cancel badentry
+
 
     #
     #shownifcframe - frame that is currently shown below the list o interfaces
@@ -542,15 +571,20 @@ proc configGUI_showIfcInfo { wi phase node ifc } {
     #if there is already some frame shown below the list of interfaces and
     #parameters shown in that frame are not parameters of selected interface
     if {$shownifcframe != "" && $ifc != $shownifc } {
+
         if { $phase == 0 } {
+
 	    set badentry 0
 	    if { $ifc != "" } {
+
 		after 100 "configGUI_showIfcInfo $wi 1 $node $ifc"
 	    } else {
+
 		after 100 "configGUI_showIfcInfo $wi 1 $node \"\""
 	    }
 	    return
 	} elseif { $badentry } {
+
 	    [string trimright $wi .f2].f1.tree selection set $shownifc
 	    [string trimright $wi .f2].f1.tree focus $shownifc
 	    $wi config -cursor left_ptr
@@ -558,6 +592,7 @@ proc configGUI_showIfcInfo { wi phase node ifc } {
 	}
 
 	foreach guielement $guielements {
+
             #calling "apply" procedures to check if some parameters of previously
 	    #selected interface have been changed
             if { [llength $guielement] == 2 } {
@@ -570,11 +605,13 @@ proc configGUI_showIfcInfo { wi phase node ifc } {
 
 	#creating popup window with warning about unsaved changes
 	if { $changed == 1 && $apply == 0 } {
+
  	    configGUI_saveChangesPopup $wi $node $shownifc
 	}
 
 	#if user didn't select Cancel in the popup about saving changes on previously selected interface
 	if { $cancel == 0 } {
+
 	    foreach guielement $guielements {
 		set ind [lsearch $guielements $guielement]
 		#delete corresponding elements from thi list guielements
@@ -589,6 +626,7 @@ proc configGUI_showIfcInfo { wi phase node ifc } {
 	#set focus and selection on that interface whose parameters are already shown
 	#below the list of interfaces
 	} else {
+
 	     [string trimright $wi .f2].f1.tree selection set $shownifc
 	     [string trimright $wi .f2].f1.tree focus $shownifc
 	}
@@ -596,11 +634,29 @@ proc configGUI_showIfcInfo { wi phase node ifc } {
 
     #if user didn't select Cancel in the popup about saving changes on previously selected interface
     if { $cancel == 0 } {
+
+
 	set type [nodeType $node]
         #creating new frame below the list of interfaces and adding modules with
 	#parameters of selected interface
 	if {$ifc != "" && $ifc != $shownifc} {
+
 	    if { [isIfcLogical $node $ifc] } {
+
+                 # modification for VLAN
+
+		if {$type == "lanswitch"} {
+		#logical interfaces
+		configGUI_ifcMainFrame $wi $node $ifc
+		logical.configInterfacesGUI $wi $node $ifc
+		set wi1 [string trimright $wi ".f2"]
+		set h [winfo height $wi1]
+		set pos [expr $h-10]
+
+		$wi1 sashpos 0 "130"
+
+                } else {
+
 		#logical interfaces
 		configGUI_ifcMainFrame $wi $node $ifc
 		logical.configInterfacesGUI $wi $node $ifc
@@ -608,7 +664,24 @@ proc configGUI_showIfcInfo { wi phase node ifc } {
 		set h [winfo height $wi1]
 		set pos [expr $h-160]
 		$wi1 sashpos 0 $pos
+
+                }
+
 	    } elseif { $ifc != "logIfcFrame" } {
+
+                # modification for VLAN
+		if {$type == "lanswitch"} {
+
+             
+		#physical interfaces
+		configGUI_ifcMainFrame $wi $node $ifc
+		$type.configInterfacesGUI $wi $node $ifc
+		set wi1 [string trimright $wi ".f2"]
+		set h [winfo height $wi1]
+		set pos [expr $h-10]
+                $wi1 sashpos 0 "130"
+
+		} else {
 		#physical interfaces
 		configGUI_ifcMainFrame $wi $node $ifc
 		$type.configInterfacesGUI $wi $node $ifc
@@ -616,15 +689,32 @@ proc configGUI_showIfcInfo { wi phase node ifc } {
 		set h [winfo height $wi1]
 		set pos [expr $h-160]
 		$wi1 sashpos 0 $pos
+		}
+
+
+
 	    } else {
+
 		#manage logical interfaces
+
 		configGUI_logicalInterfaces $wi $node $ifc
 		set wi1 [string trimright $wi ".f2"]
 		set h [winfo height $wi1]
 		set pos [expr $h-100]
 		$wi1 sashpos 0 $pos
+
 	    }
-	}
+	} else {
+# modification for VLAN
+
+		if {$type == "lanswitch"} {
+		set wi1 [string trimright $wi ".f2"]
+		set h [winfo height $wi1]
+		set pos [expr $h-160]
+		$wi1 sashpos 0 "130"
+
+}
+}
     }
 }
 
@@ -859,6 +949,7 @@ proc configGUI_buttonsACNode { wi node } {
 #   * phase --
 #****
 proc configGUI_applyButtonNode { wi node phase } {
+
     global changed badentry close apply treecolumns
     #
     #guielements - the list of modules contained in the configuration window
@@ -882,11 +973,41 @@ proc configGUI_applyButtonNode { wi node phase } {
 	after 100 "configGUI_applyButtonNode $wi $node 1"
 	return
     } elseif { $badentry } {
+
 	$wi config -cursor left_ptr
 	return
     }
+ #Modification for vlan
+    global eidvlan modevlan
+
+ #********************
+
+
+#Modification for Vlan
+             if {$eidvlan != "" && $modevlan == "exec"} {
+	         set typelanswitch [nodeType $node]
+
+		if {$typelanswitch =="lanswitch"} {
+
+   			configureVlanSwitch $eidvlan $node 
+		}
+            }
+#Modification for Wifi
+ if {[[typemodel $node].virtlayer] == "WIFIAP"} {
+
+configFichier_AP $node
+}
+
+ if {[[typemodel $node].virtlayer] == "WIFISTA"} {
+
+configFichier_STA $node
+}
+
+
+
 
     foreach guielement $guielements {
+
 	#1)Ako se radi o modulu s nazivom cvora onda je prvi argument u pozivu
 	#"apply" procedure jednak $wi (konfiguracijski popup prozor). (SVI ELEMENTI)
 
@@ -909,41 +1030,66 @@ proc configGUI_applyButtonNode { wi node phase } {
 	#5) Inace (konfiguracijski prozor sadrzi notebook, a radi se o dijelu prozora koji
         #nema veze sa suceljima) je prvi argument u pozivu "apply" procedure
 	#jednak [lindex [$wi.nbook tabs] 0] (prvi tab u notebooku). (PC, HOST, ROUTER, IP FIREWALL)
+
 	if { $guielement == "configGUI_nodeName"} {
+
 	    $guielement\Apply $wi $node
+
 	} elseif { [lsearch [pack slaves .popup] .popup.nbook] == -1 && [llength $guielement] != 2 } {
+
 	    $guielement\Apply $wi $node
+
 	} elseif { [lsearch [pack slaves .popup] .popup.nbook] == -1 && [llength $guielement] == 2 } {
+
+
 	    [lindex $guielement 0]\Apply $wi.panwin.f2 $node [lindex $guielement 1]
+
 	} elseif { [lsearch [pack slaves .popup] .popup.nbook] != -1 && [llength $guielement] == 2 } {
+
 	    if {[lindex $guielement 0] != "configGUI_ifcBridgeAttributes" } {
+
 		[lindex $guielement 0]\Apply [lindex [.popup.nbook tabs] 1].panwin.f2 $node [lindex $guielement 1]
+
 	    } else {
+
 		[lindex $guielement 0]\Apply [lindex [.popup.nbook tabs] 2].panwin.f2 $node [lindex $guielement 1]
+
 	    }
 	} elseif { $guielement == "configGUI_nat64Config" } {
+
             $guielement\Apply [lindex [$wi.nbook tabs] 2] $node
+
 	} elseif { $guielement == "configGUI_ipsec" } {
+
             $guielement\Apply [lindex [$wi.nbook tabs] 2] $node
+
         } else {
+
 	    $guielement\Apply [lindex [$wi.nbook tabs] 0] $node
+
 	}
     }
 
     if { $changed == 1 } {
+
 	set nbook [lsearch [pack slaves .popup] .popup.nbook]
 	if { $nbook != -1 && $treecolumns != "" } {
+
 	    configGUI_refreshIfcsTree .popup.nbook.nfInterfaces.panwin.f1.tree $node
 	    set shownifcframe [pack slaves [lindex [.popup.nbook tabs] 1].panwin.f2]
 	    set shownifc [string trim [lindex [split $shownifcframe .] end] if]
 	    [lindex [.popup.nbook tabs] 1].panwin.f1.tree selection set $shownifc
 
 	    if { ".popup.nbook.nfBridge" in [.popup.nbook tabs] } {
+
 		configGUI_refreshBridgeIfcsTree .popup.nbook.nfBridge.panwin.f1.tree $node
 	    }
 	} elseif { $nbook == -1 && $treecolumns != "" } {
-	    configGUI_refreshIfcsTree .popup.panwin.f1.tree $node
+
+
+	  configGUI_refreshIfcsTree .popup.panwin.f1.tree $node
 	} else {
+
 	}
 	redrawAll
 	updateUndoLog
@@ -954,6 +1100,8 @@ proc configGUI_applyButtonNode { wi node phase } {
     if { $close == 1 } {
        destroy .popup
     } else {
+
+
 	$wi config -cursor left_ptr
 	update
     }
@@ -977,7 +1125,8 @@ proc configGUI_nodeName { wi node label } {
     ttk::frame $wi.name -borderwidth 6
     ttk::label $wi.name.txt -text $label
 
-    if { [typemodel $node] in "rj45 extnat" } {
+
+    if { [typemodel $node] == "rj45" } {
 	ttk::combobox $wi.name.nodename -width 14 -textvariable extIfc$node
 	set ifcs [getExtIfcs]
 	$wi.name.nodename configure -values [concat UNASSIGNED $ifcs]
@@ -1005,16 +1154,21 @@ proc configGUI_nodeName { wi node label } {
 #   * node -- node id
 #   * ifc -- interface name
 #****
+
 proc configGUI_ifcMainFrame { wi node ifc } {
     global apply changed
     set apply 0
     set changed 0
+    
+
     ttk::frame $wi.if$ifc -relief groove -borderwidth 2 -padding 4
-    ttk::frame $wi.if$ifc.label -borderwidth 2
-    ttk::label $wi.if$ifc.label.txt -text "Interface $ifc:" -width 13
+    ttk::frame $wi.if$ifc.label -borderwidth 2 
+    ttk::label $wi.if$ifc.label.txt -text "Interface $ifc:" -width 13 
     pack $wi.if$ifc.label.txt -side left -anchor w
     pack $wi.if$ifc.label -anchor w
     pack $wi.if$ifc -anchor w -fill both -expand 1
+
+
 }
 
 #****f* nodecfgGUI.tcl/configGUI_ifcEssentials
@@ -1035,12 +1189,10 @@ proc configGUI_ifcEssentials { wi node ifc } {
     lappend guielements "configGUI_ifcEssentials $ifc"
     global ifoper$ifc
     set ifoper$ifc [getIfcOperState $node $ifc]
-    ttk::checkbutton $wi.if$ifc.label.state -text "up" \
-	-variable ifoper$ifc -padding 4 -onvalue "up" -offvalue "down"
-    global ifnat$ifc
-    set ifnat$ifc [getIfcNatState $node $ifc]
-    ttk::checkbutton $wi.if$ifc.label.nat -text "nat" \
-	-variable ifnat$ifc -padding 4 -onvalue "on" -offvalue "off"
+    ttk::radiobutton $wi.if$ifc.label.up -text "up" \
+	-variable ifoper$ifc -value up -padding 4
+    ttk::radiobutton $wi.if$ifc.label.down -text "down" \
+	-variable ifoper$ifc -value down -padding 4
     ttk::label $wi.if$ifc.label.mtul -text "MTU" -anchor e -width 5 -padding 2
     ttk::spinbox $wi.if$ifc.label.mtuv -width 5 \
 	-validate focus -invalidcommand "focusAndFlash %W"
@@ -1050,8 +1202,8 @@ proc configGUI_ifcEssentials { wi node ifc } {
 	-from 256 -to 9018 -increment 2 \
 	-validatecommand {checkIntRange %P 256 9018}
 
-    pack $wi.if$ifc.label.state -side left -anchor w -padx 5
-    pack $wi.if$ifc.label.nat \
+    pack $wi.if$ifc.label.up -side left -anchor w -padx 5
+    pack $wi.if$ifc.label.down \
 	$wi.if$ifc.label.mtul -side left -anchor w
     pack $wi.if$ifc.label.mtuv -side left -anchor w -padx 1
 }
@@ -1068,17 +1220,33 @@ proc configGUI_ifcEssentials { wi node ifc } {
 #   * node -- node id
 #   * ifc -- interface name
 #****
+# modification for VLAN
 proc configGUI_ifcQueueConfig { wi node ifc } {
     global guielements
     lappend guielements "configGUI_ifcQueueConfig $ifc"
-    global ifqdisc$ifc ifqdrop$ifc
+    global ifqdisc$ifc ifqdrop$ifc 
     set ifqdisc$ifc [getIfcQDisc $node $ifc]
     set ifqdrop$ifc [getIfcQDrop $node $ifc]
-    ttk::frame $wi.if$ifc.queuecfg -borderwidth 2
+    
+    global enableVlan tagVlan modeVlan rangeVlan interfaceVlan treecolumns Vlancolumns 
+    global listVlan applyVlan ShowVlan DeleteVlan
+    set DeleteVlan 0
+    set ShowVlan 0
+    set applyVlan 0
+    set deleteVlan 0
+    set enableVlan 0
+    set tagVlan ""
+    set modeVlan ""
+    set rangeVlan ""
+    set interfaceVlan ""
+   
+
+
+    ttk::frame $wi.if$ifc.queuecfg -borderwidth 2 -padding 4
     ttk::label $wi.if$ifc.queuecfg.txt1 -text "Queue" -anchor w
-    ttk::combobox $wi.if$ifc.queuecfg.disc -width 6 -textvariable ifqdisc$ifc
+    ttk::combobox $wi.if$ifc.queuecfg.disc -width 5 -textvariable ifqdisc$ifc
     $wi.if$ifc.queuecfg.disc configure -values [list FIFO DRR WFQ]
-    ttk::combobox $wi.if$ifc.queuecfg.drop -width 9 -textvariable ifqdrop$ifc
+    ttk::combobox $wi.if$ifc.queuecfg.drop -width 8 -textvariable ifqdrop$ifc
     $wi.if$ifc.queuecfg.drop configure -values [list drop-tail drop-head]
     ttk::label $wi.if$ifc.queuecfg.txt2 -text "len" -anchor e -width 3 -padding 2
     ttk::spinbox $wi.if$ifc.queuecfg.len -width 4 \
@@ -1087,11 +1255,162 @@ proc configGUI_ifcQueueConfig { wi node ifc } {
     $wi.if$ifc.queuecfg.len configure \
 	-from 5 -to 4096 -increment 1 \
 	-validatecommand {checkIntRange %P 5 4096}
+    
+
+
     pack $wi.if$ifc.queuecfg.txt1 -side left -anchor w
+
     pack $wi.if$ifc.queuecfg.disc $wi.if$ifc.queuecfg.drop \
 	-side left -anchor w -padx 2
-    pack $wi.if$ifc.queuecfg.txt2 $wi.if$ifc.queuecfg.len -side left -anchor e
+
+
+   
+    pack $wi.if$ifc.queuecfg.txt2 $wi.if$ifc.queuecfg.len -side left -anchor e 
+    
+    
     pack $wi.if$ifc.queuecfg -anchor w -padx 10
+
+
+  #VLAN Options
+    set type [nodeType $node]
+
+if { $type == "lanswitch"} {
+
+    #ttk::frame $wi.if$ifc.queuecfg1 -borderwidth 2 -padding 4
+   
+    #ttk::button $wi.if$ifc.queuecfg1.beditor -width 14  -text "Advanced options" \
+	#-command "VlanOptions $node $wi.if$ifc"
+
+
+    #pack $wi.if$ifc.queuecfg1.beditor -side left
+  
+    #pack $wi.if$ifc.queuecfg1 -fill both
+
+
+    ttk::frame $wi.if$ifc.queuecfg2 -borderwidth 2 -padding 4
+    ttk::checkbutton $wi.if$ifc.queuecfg2.enable -text "Enable VLAN" -variable ::enableVlan \
+    -command "VlanOptions $node $wi.if$ifc $ifc"
+    
+    pack $wi.if$ifc.queuecfg2.enable -side left
+  
+    pack $wi.if$ifc.queuecfg2 -fill both
+
+    ttk::frame $wi.if$ifc.queuecfg3 -borderwidth 2 -padding 4
+    ttk::label $wi.if$ifc.queuecfg3.tagtxt -text "VLAN Tag:"  
+    ttk::spinbox $wi.if$ifc.queuecfg3.tag -width 6 -validate focus \
+	-invalidcommand "focusAndFlash %W" 
+    $wi.if$ifc.queuecfg3.tag configure \
+	-validatecommand {checkIntRange %P 1 4094} \
+	-from 1 -to 4094 -increment 1 -textvariable tagVlan \
+
+    ttk::label $wi.if$ifc.queuecfg3.modetxt -text "VLAN mode:" 
+    ttk::combobox $wi.if$ifc.queuecfg3.mode -width 13 -textvariable modeVlan
+    $wi.if$ifc.queuecfg3.mode configure -values [list access trunk native-tagged native-untagged dot1q-tunnel] 
+
+   # ttk::frame $wi.if$ifc.queuecfg4 -borderwidth 2 -padding 4
+    ttk::label $wi.if$ifc.queuecfg3.interfacetxt -text "Interface type:" 
+    ttk::combobox $wi.if$ifc.queuecfg3.interface -width 10 -textvariable interfaceVlan
+    $wi.if$ifc.queuecfg3.interface configure -values [list system internal tap geneve gre ipsec-gre gre64 ipsec-gre64 vxlan lisp patch]     
+
+    ttk::frame $wi.if$ifc.queuecfg5 -borderwidth 2 -padding 4
+    ttk::label $wi.if$ifc.queuecfg5.rangetxt -text "Allowed VLAN range:" 
+    ttk::entry $wi.if$ifc.queuecfg5.range -width 25 -textvariable rangeVlan
+
+    ttk::frame $wi.if$ifc.queuecfg6 -borderwidth 2 -padding 4
+    ttk::frame $wi.if$ifc.queuecfg6.button 
+    ttk::button $wi.if$ifc.queuecfg6.button.apply -text "Add VLAN" -command \
+        "set applyVlan 1; configVlan_Switch $node $ifc"
+    ttk::button $wi.if$ifc.queuecfg6.button.delete -text "Delete All VLAN" -command \
+        "set DeleteVlan 1; DeleteVlan_Switch $node $wi.if$ifc $ifc"
+    ttk::button $wi.if$ifc.queuecfg6.button.cancel -text "Show All VLAN" -command \
+        "set ShowVlan 1; ShowVlan_Switch $node $wi.if$ifc $ifc"
+
+#Remplissage des champs
+
+lappend listVlan ""
+foreach element $listVlan {
+
+               set name [lindex $element 0]
+               set enable [lindex $element 1]
+			if { "$node-$ifc" == $name && $enable == 1 } {
+                                
+				set enableVlan [lindex $element 1]
+		        set modeVlan [lindex $element 3]
+				set tagVlan [lindex $element 2]
+				set interfaceVlan [lindex $element 4]
+				set rangeVlan [lindex $$element 5]	
+        
+          			pack $wi.if$ifc.queuecfg3.tagtxt -side left -padx 2 
+        			pack $wi.if$ifc.queuecfg3.tag -side left -padx 4 -pady 4
+        			pack $wi.if$ifc.queuecfg3.modetxt -side left -padx 2
+        			pack $wi.if$ifc.queuecfg3.mode -side left -padx 4 -pady 4
+    				pack $wi.if$ifc.queuecfg3 -fill both
+
+        			pack $wi.if$ifc.queuecfg5.rangetxt -side left -padx 2
+        			pack $wi.if$ifc.queuecfg5.range -side left -padx 4 -pady 4
+        			pack $wi.if$ifc.queuecfg5 -fill both
+
+        			pack $wi.if$ifc.queuecfg3.interfacetxt -side left -padx 2
+        			pack $wi.if$ifc.queuecfg3.interface -side left -padx 4 -pady 4
+        			pack $wi.if$ifc.queuecfg3 -fill both
+
+        			pack $wi.if$ifc.queuecfg6.button.apply \
+        				$wi.if$ifc.queuecfg6.button.cancel -side left -padx 2
+
+        			pack $wi.if$ifc.queuecfg6.button -pady 2 -expand 1
+        			pack $wi.if$ifc.queuecfg6 -fill both -side bottom
+
+			}
+
+}
+
+#TreeView 
+
+  
+    ttk::frame $wi.if$ifc.queuecfg7
+    ttk::treeview $wi.if$ifc.tab -height 5 -selectmode browse \
+	-xscrollcommand "$wi.if$ifc.hscroll set"\
+	-yscrollcommand "$wi.if$ifc.vscroll set" \
+
+    ttk::scrollbar $wi.if$ifc.hscroll -orient horizontal -command "$wi.if$ifc.tab xview"
+    ttk::scrollbar $wi.if$ifc.vscroll -orient vertical -command "$wi.if$ifc.tab yview"
+
+  set column_ids ""
+   foreach column $Vlancolumns {
+	lappend columns_ids [lindex $column 0]
+    }
+
+    #Creating columns 
+    $wi.if$ifc.tab configure -columns $columns_ids
+ 
+
+ $wi.if$ifc.tab column #0 -width 130 -minwidth 70 -stretch 0
+    
+
+       foreach column $columns_ids {
+        
+	if { [lindex $column 0] == "VlanTag" } {
+	    $wi.if$ifc.tab column [lindex $column 0] -width 70 \
+		-minwidth 2 -anchor center -stretch 0 
+	} elseif { [lindex $column 0] == "VlanMode" || [lindex $column 0] == "InterfaceType" } {
+            $wi.if$ifc.tab column [lindex $column 0] -width 110 \
+		-minwidth 2 -anchor center -stretch 0
+        } else {
+	    $wi.if$ifc.tab column [lindex $column 0] -width 163 \
+		-minwidth 2 -anchor center -stretch 0
+	}
+      	    $wi.if$ifc.tab heading [lindex $column 0] \
+	    -text [lindex $column 0]
+	
+    }
+   
+   
+ 
+
+}
+
+      
+
 }
 
 #****f* nodecfgGUI.tcl/configGUI_ifcMACAddress
@@ -1250,57 +1569,23 @@ proc configGUI_ipfirewallRuleset { wi node } {
 #   * node -- node id
 #****
 proc configGUI_staticRoutes { wi node } {
-    global guielements auto_default_routes
+    global guielements
     lappend guielements configGUI_staticRoutes
-    set user_sroutes [concat [getStatIPv4routes $node] [getStatIPv6routes $node]]
-
-    set auto_default_routes [getAutoDefaultRoutesStatus $node]
-    lassign [getDefaultGateways $node {} {}] my_gws {} {}
-    lassign [getDefaultRoutesConfig $node $my_gws] all_routes4 all_routes6
-
-    set ifc_routes_enable $wi.ifc_routes_enable
-    ttk::checkbutton $ifc_routes_enable -text "Enable automatic default routes" \
-	-variable auto_default_routes -padding 4 -onvalue "enabled" -offvalue "disabled"
-    pack $ifc_routes_enable -anchor w
-
-    set sroutes_nb $wi.sroutes
-    ttk::notebook $sroutes_nb -height 2
-    pack $sroutes_nb -fill both -expand 1
-    pack propagate $sroutes_nb 0
-
-    set user_routes $sroutes_nb.user
-    ttk::frame $user_routes
-    $sroutes_nb add $user_routes -text "Custom static routes"
-    ttk::scrollbar $user_routes.vsb -orient vertical -command [list $user_routes.editor yview]
-    ttk::scrollbar $user_routes.hsb -orient horizontal -command [list $user_routes.editor xview]
-    text $user_routes.editor -width 42 -bg white -takefocus 0 -wrap none \
-	-yscrollcommand [list $user_routes.vsb set] -xscrollcommand [list $user_routes.hsb set]
-    foreach route $user_sroutes {
-	$user_routes.editor insert end "$route
+    set routes [concat [getStatIPv4routes $node] [getStatIPv6routes $node]]
+    ttk::frame $wi.statrts -borderwidth 2 -relief groove -padding 4
+    ttk::label $wi.statrts.label -text "Static routes:"
+    set h [expr {[llength $routes] + 1}]
+    if { $h < 2 } {
+	set h 2
+    }
+    text $wi.statrts.text -bg white -width 42 -height $h -takefocus 0
+    foreach route $routes {
+	$wi.statrts.text insert end "$route
 "
     }
-
-    pack $user_routes.vsb -side right -fill y
-    pack $user_routes.hsb -side bottom -fill x
-    pack $user_routes.editor -anchor w -fill both -expand 1
-
-    set auto_routes $sroutes_nb.auto
-    ttk::frame $auto_routes
-    $sroutes_nb add $auto_routes -text "Automatic default routes"
-    ttk::scrollbar $auto_routes.vsb -orient vertical -command [list $auto_routes.editor yview]
-    ttk::scrollbar $auto_routes.hsb -orient horizontal -command [list $auto_routes.editor xview]
-    text $auto_routes.editor -width 42 -bg white -wrap none \
-	-yscrollcommand [list $auto_routes.vsb set] -xscrollcommand [list $auto_routes.hsb set]
-    foreach route [concat $all_routes4 $all_routes6] {
-	$auto_routes.editor insert end "$route
-"
-    }
-    $auto_routes.editor configure -state disabled
-
-    pack $auto_routes.vsb -side right -fill y
-    pack $auto_routes.hsb -side bottom -fill x
-    pack $auto_routes.editor -anchor w -fill both -expand 1
-
+    pack $wi.statrts.label -anchor w -pady 2
+    pack $wi.statrts.text -fill both -expand 1 -padx 4 -expand 1
+    pack $wi.statrts -anchor w -fill both -expand 1
 }
 
 #****f* nodecfgGUI.tcl/configGUI_etherVlan
@@ -1390,7 +1675,7 @@ proc configGUI_customConfig { wi node } {
 	-rowspan 2 -pady 3 -padx 50 -sticky e
     pack $wi.custcfg -anchor w -fill both
 }
-
+   
 #****f* nodecfgGUI.tcl/configGUI_snapshots
 # NAME
 #   configGUI_snapshots -- configure GUI - snapshots
@@ -1626,34 +1911,39 @@ proc configGUI_attachDockerToExt { wi node } {
     pack $w -fill both
 }
 
-#****f* nodecfgGUI.tcl/configGUI_customImage
+#****f* nodecfgGUI.tcl/configGUI_dockerImage
 # NAME
-#   configGUI_customImage -- configure GUI - use different image
+#   configGUI_dockerImage -- configure GUI - use different Docker image
 # SYNOPSIS
-#   configGUI_customImage $wi $node
+#   configGUI_dockerImage $wi $node
 # FUNCTION
-#   Creating GUI module for using different images for virtual nodes
+#   Creating module for using different docker images for  virtual nodes
+#   on Linux.
 # INPUTS
 #   * wi -- widget
 #   * node -- node id
 #****
-proc configGUI_customImage { wi node } {
+proc configGUI_dockerImage { wi node } {
     global VROOT_MASTER isOSlinux
+
+    if { !$isOSlinux } {
+	return
+    }
 
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global guielements
-    lappend guielements configGUI_customImage
+    lappend guielements configGUI_dockerImage
 
-    set custom_image [getNodeCustomImage $node]
-
-    set w $wi.customImg
+    set docker_image [getNodeDockerImage $node]
+   
+    set w $wi.dockerImg
     ttk::frame $w -relief groove -borderwidth 2 -padding 2
-    ttk::label $w.label -text "Custom image:"
+    ttk::label $w.label -text "Docker image:"
 
     pack $w.label -side left -padx 2
 
     ttk::entry $w.img -width 40
-    $w.img insert 0 $custom_image
+    $w.img insert 0 $docker_image
     pack $w.img -side left -padx 7
 
     pack $w -fill both
@@ -1760,7 +2050,7 @@ proc configGUI_ifcVlanConfig { wi node ifc } {
     global ifvdev$ifc
 
     ttk::frame $wi.if$ifc.vlancfg -borderwidth 2
-    ttk::label $wi.if$ifc.vlancfg.tagtxt -text "Vlan tag" -anchor w
+    ttk::label $wi.if$ifc.vlancfg.tagtxt -text "Vlan tag" 
     ttk::spinbox $wi.if$ifc.vlancfg.tag -width 6 -validate focus \
 	-invalidcommand "focusAndFlash %W"
     $wi.if$ifc.vlancfg.tag insert 0 [getIfcVlanTag $node $ifc]
@@ -1890,15 +2180,6 @@ proc configGUI_ifcEssentialsApply { wi node ifc } {
 	}
 	set changed 1
     }
-    global [subst ifnat$ifc]
-    set ifnatstate [subst $[subst ifnat$ifc]]
-    set oldifnatstate [getIfcNatState $node $ifc]
-    if { $ifnatstate != $oldifnatstate } {
-	if {$apply == 1} {
-	    setIfcNatState $node $ifc $ifnatstate
-	}
-	set changed 1
-    }
     set mtu [$wi.if$ifc.label.mtuv get]
     set oldmtu [getIfcMTU $node $ifc]
     if {![string first vlan $ifc]} {
@@ -1934,9 +2215,11 @@ proc configGUI_ifcEssentialsApply { wi node ifc } {
 #   * node -- node id
 #   * ifc -- interface name
 #****
+
 proc configGUI_ifcQueueConfigApply { wi node ifc } {
     global changed apply
     if { [nodeType [peerByIfc $node $ifc]] != "rj45" } {
+
 	set qdisc [string trim [$wi.if$ifc.queuecfg.disc get]]
 	set oldqdisc [getIfcQDisc $node $ifc]
 	if { $qdisc != $oldqdisc } {
@@ -1945,6 +2228,7 @@ proc configGUI_ifcQueueConfigApply { wi node ifc } {
 	    }
 	    set changed 1
 	}
+
 	set qdrop [string trim [$wi.if$ifc.queuecfg.drop get]]
 	set oldqdrop [getIfcQDrop $node $ifc]
 	if { $qdrop != $oldqdrop } {
@@ -1961,6 +2245,8 @@ proc configGUI_ifcQueueConfigApply { wi node ifc } {
 	    }
 	    set changed 1
 	}
+
+	
     }
 }
 
@@ -1989,7 +2275,6 @@ proc configGUI_ifcMACAddressApply { wi node ifc } {
     if { [checkMACAddr $macaddr] == 0 } {
 	return
     }
-    set dup 0
     if { $macaddr in $MACUsedList } {
 	foreach n $node_list {
 	    foreach i [ifcList $n] {
@@ -2000,10 +2285,12 @@ proc configGUI_ifcMACAddressApply { wi node ifc } {
 		}
 	    }
 	}
+    } else {
+	set dup 1
     }
     set oldmacaddr [getIfcMACaddr $node $ifc]
     if { $macaddr != $oldmacaddr } {
-        if { $apply == 1 && $dup != 0 && $macaddr != "" } {
+        if { $apply == 1 && $dup != 1 && $macaddr != "" } {
             tk_dialog .dialog1 "IMUNES warning" \
 	        "Provided MAC address already exists on node's [lindex $dup 0] interface [lindex $dup 1]" \
 	    info 0 Dismiss
@@ -2152,18 +2439,18 @@ proc configGUI_ipfirewallRulesetApply { wi node } {
 #   * node -- node id
 #****
 proc configGUI_staticRoutesApply { wi node } {
-    global changed auto_default_routes
+    global changed
     set oldIPv4statrts [lsort [getStatIPv4routes $node]]
     set oldIPv6statrts [lsort [getStatIPv6routes $node]]
     set newIPv4statrts {}
     set newIPv6statrts {}
 
-    set routes [$wi.sroutes.user.editor get 0.0 end]
+    set routes [$wi.statrts.text get 0.0 end]
 
     set checkFailed 0
     set checkFailed [checkStaticRoutesSyntax $routes]
 
-    set errline [$wi.sroutes.user.editor get $checkFailed.0 $checkFailed.end]
+    set errline [$wi.statrts.text get $checkFailed.0 $checkFailed.end]
 
     if { $checkFailed != 0} {
 	tk_dialog .dialog1 "IMUNES warning" \
@@ -2200,8 +2487,6 @@ proc configGUI_staticRoutesApply { wi node } {
 	setStatIPv6routes $node $newIPv6statrts
 	set changed 1
     }
-
-    setAutoDefaultRoutesStatus $node $auto_default_routes
 }
 
 #****f* nodecfgGUI.tcl/checkStaticRoutesSyntax
@@ -2476,23 +2761,23 @@ proc configGUI_attachDockerToExtApply { wi node } {
     }
 }
 
-#****f* nodecfgGUI.tcl/configGUI_customImageApply
+#****f* nodecfgGUI.tcl/configGUI_dockerImageApply
 # NAME
-#   configGUI_customImageApply -- configure GUI - custom image apply
+#   configGUI_dockerImageApply -- configure GUI - docker image apply
 # SYNOPSIS
-#   configGUI_customImageApply $wi $node
+#   configGUI_dockerImageApply $wi $node
 # FUNCTION
-#   Saves changes in the module with different customImage
+#   Saves changes in the module with different dockerImage
 # INPUTS
 #   * wi -- widget
 #   * node -- node id
 #****
-proc configGUI_customImageApply { wi node } {
+proc configGUI_dockerImageApply { wi node } {
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    set custom_image [$wi.customImg.img get]
+    set docker_image [$wi.dockerImg.img get]
     if { $oper_mode == "edit"} {
-	if { [getNodeCustomImage $node] != $custom_image } {
-	    setNodeCustomImage $node $custom_image
+	if { [getNodeDockerImage $node] != $docker_image } {
+	    setNodeDockerImage $node $docker_image
 	    set changed 1
 	}
     }
@@ -2543,7 +2828,6 @@ proc configGUI_cpuConfigApply { wi node } {
 #****
 proc configGUI_cloudConfigApply { wi node } {
     set cloud_parts [$wi.cloudpart.label.num get]
-    puts $cloud_parts
     setCloudParts $node $cloud_parts
 }
 
@@ -2793,6 +3077,8 @@ proc customConfigGUIFillDefaults { wi node } {
     set cfgID [$wi.nb tab current -text]
     set cmd [[typemodel $node].bootcmd $node]
     set cfg [[typemodel $node].cfggen $node]
+    set type [nodeType $node]
+    
     set w $wi.nb.$cfgID
 
     if { [$w.bootcmd_e get] != "" || [$w.editor get 1.0 {end -1c}] != "" } {
@@ -3487,6 +3773,7 @@ proc createIPsecGUI { node mainFrame connParamsLframe espOptionsLframe ikeSALfra
     grid $espOptionsLframe.type_container.transport -column 2 -row 0 -padx 5 -pady 5
 
     ttk::frame $espOptionsLframe.esp_container
+
     ttk::label $espOptionsLframe.esp_container.esp_suit -text "Encryption algorithm:"
     ttk::combobox $espOptionsLframe.esp_container.esp_combo -textvariable esp_suits -state readonly
     $espOptionsLframe.esp_container.esp_combo configure -values [list "3des" cast128 blowfish128 blowfish192 blowfish256 aes128 aes192 aes256]
@@ -4103,16 +4390,474 @@ proc hideESPAdvancedOptions { node lFrame } {
     $lFrame.advance_button_esp configure -command "showESPAdvancedOptions $node $lFrame"
 }
 
-#****f* nodecfgGUI.tcl/showESPAdvancedOptions
+#****f* nodecfgGUI.tcl/hideVlanOptions
+# modification for VLAN
 # NAME
-#   showESPAdvancedOptions -- displays advanced options in ESP label frame
+#   hideVlanOptions
 # SYNOPSIS
-#   showESPAdvancedOptions $node
+#   hideVlanOptions $node $lFrame $ifc
 # FUNCTION
-#   Displays advanced options in ESP options label frame in IPsec GUI
-# INPUTS
-#   node - node id
-#****
+#   Delete Vlan and disable Vlan options
+
+
+proc hideVlanOptions { node lFrame ifc } {
+    global listVlan
+
+
+    set wi1 ".popup.panwin"
+    $wi1 sashpos 0 "250"
+    pack forget $lFrame.queuecfg3
+    pack forget $lFrame.queuecfg4
+    pack forget $lFrame.queuecfg5
+    pack forget $lFrame.queuecfg6.button 
+    pack forget $lFrame.queuecfg6 
+
+    foreach element $listVlan {
+	
+		set nom [lindex $element 0]
+                set nom1 [lindex $nom 0]
+
+			if { "$node-$ifc" == $nom1 } {
+
+				set id [lsearch $listVlan $element]
+                                
+                                set ID [expr $id-1]
+
+				set malist [lreplace $listVlan $id $id]
+				set malist [lreplace $malist $ID $ID]
+				set listVlan $malist
+
+                #On rajoute l'information avec enable 0
+                global enableVlan tagVlan modeVlan rangeVlan interfaceVlan listVlan
+                set Mynode [lindex $element 0]
+				set enableVlan 0
+				set tagVlan [lindex $element 2]
+                set modeVlan [lindex $element 3]
+			    set interfaceVlan [lindex $element 4]
+				set rangeVlan [lindex $element 5]
+                lappend listVlan "$Mynode $enableVlan $tagVlan $modeVlan $interfaceVlan $rangeVlan"
+			}
+
+
+				}
+
+
+
+    $lFrame.queuecfg2.enable configure -command "VlanOptions $node $lFrame $ifc"
+    
+    
+}
+
+#****f* nodecfgGUI.tcl/VlanOptions
+# modification for VLAN
+# NAME
+#   VlanOptions
+# SYNOPSIS
+#   VlanOptions $node $lFrame $ifc
+# FUNCTION
+#  enable Vlan options, Add Vlan and Show All Vlan	
+
+proc VlanOptions { node lFrame ifc} {
+global enableVlan
+
+
+if {$enableVlan == 0} {
+
+    set wi1 ".popup.panwin"
+    $wi1 sashpos 0 "250"
+    global listVlan
+    pack forget $lFrame.queuecfg3
+   # pack forget $lFrame.queuecfg4
+    pack forget $lFrame.queuecfg5
+    pack forget $lFrame.queuecfg6.button 
+    pack forget $lFrame.queuecfg6 
+
+#je supprime l'ancienne information et je rajoute une nouvelle avec enable 0
+    foreach element $listVlan {
+	
+		        set nom [lindex $element 0]
+                set nom1 [lindex $nom 0]
+
+			if { "$node-$ifc" == $nom1 } {
+
+				set id [lsearch $listVlan $element]
+                                
+                set ID [expr $id-1]
+
+				set malist [lreplace $listVlan $id $id]
+				set malist [lreplace $malist $ID $ID]
+				set listVlan $malist
+
+#On rajoute l'information avec enable 0
+                global enableVlan tagVlan modeVlan rangeVlan interfaceVlan listVlan
+                set Mynode [lindex $element 0]
+				set enableVlan 0
+				set tagVlan [lindex $element 2]
+                set modeVlan [lindex $element 3]
+			    set interfaceVlan [lindex $element 4]
+				set rangeVlan [lindex $element 5]
+                lappend listVlan "$Mynode $enableVlan $tagVlan $modeVlan $interfaceVlan $rangeVlan"
+                
+			}
+
+
+	}
+
+} else { 
+#Modification for vlan
+
+        set wi1 ".popup.panwin"
+	    $wi1 sashpos 0 "130"
+
+        pack $lFrame.queuecfg2 -fill both
+        pack $lFrame.queuecfg3.tagtxt -side left -padx 2 
+        pack $lFrame.queuecfg3.tag -side left -padx 4 -pady 4
+        pack $lFrame.queuecfg3.modetxt -side left -padx 2
+        pack $lFrame.queuecfg3.mode -side left -padx 4 -pady 4
+        pack $lFrame.queuecfg3.interfacetxt -side left -padx 2
+        pack $lFrame.queuecfg3.interface -side left -padx 4 -pady 4
+        pack $lFrame.queuecfg3 -fill both
+
+        pack $lFrame.queuecfg5.rangetxt -side left -padx 2
+        pack $lFrame.queuecfg5.range -side left -padx 4 -pady 4
+        pack $lFrame.queuecfg5 -fill both
+
+      #  pack $lFrame.queuecfg4.interfacetxt -side left -padx 2
+       # pack $lFrame.queuecfg4.interface -side left -padx 4 -pady 4
+       # pack $lFrame.queuecfg4 -fill both
+
+        pack forget $lFrame.queuecfg6.button.apply \
+        $lFrame.queuecfg6.button.cancel -side left -padx 2
+        pack forget $lFrame.queuecfg6.button.delete 
+       
+        pack $lFrame.queuecfg6.button.apply \
+        $lFrame.queuecfg6.button.cancel -side left -padx 2
+        pack $lFrame.queuecfg6.button -pady 2 -expand 1
+        pack $lFrame.queuecfg6 -fill both -side bottom
+
+
+
+        $lFrame.queuecfg2.enable configure -command "hideVlanOptions $node $lFrame $ifc"
+
+    
+}
+
+} 
+#****f* nodecfgGUI.tcl/ShowVlan_Switch
+# modification for VLAN
+# NAME
+#   ShowVlan_Switch
+# SYNOPSIS
+#   ShowVlan_Switch $node $lFrame $ifc
+# FUNCTION
+#  Display all active Vlan of a node
+ 
+proc ShowVlan_Switch { node lFrame ifc } {
+global ShowVlan listVlan Vlancolumns 
+if { $ShowVlan == 1 } {
+  pack forget $lFrame.queuecfg2
+  pack forget $lFrame.queuecfg3
+  pack forget $lFrame.queuecfg4
+  pack forget $lFrame.queuecfg5
+  pack forget $lFrame.queuecfg6.button.apply 
+  pack forget $lFrame.queuecfg6.button.cancel 
+  pack $lFrame.queuecfg6.button.delete \
+        $lFrame.queuecfg6.button.cancel -side left -padx 2
+
+  pack $lFrame.queuecfg6.button -pady 2 -expand 1
+  pack $lFrame.queuecfg6 -fill both -side bottom
+
+     
+  $lFrame.tab insert {} end -id interfaces -text \
+	"Physical Interfaces" -open true -tags interfaces
+  $lFrame.tab focus interfaces
+  $lFrame.tab selection set interfaces
+   
+
+     foreach ifc [lsort -dictionary [ifcList $node]] {
+         
+         $lFrame.tab insert interfaces end -id $ifc \
+	        -text "$ifc" -tags $ifc
+
+	foreach element $listVlan {
+ 	     
+            set name [lindex $element 0]
+            set enable [lindex $element 1]
+
+            if { "$node-$ifc" == $name && $enable == 1} { 
+
+                      set id 2
+                     foreach myelement $Vlancolumns {
+
+			 set valeur [lindex $element $id]
+                         set id [expr $id+1]
+
+	                 $lFrame.tab set $ifc [lindex $myelement 0] "$valeur"
+
+	                  }
+                }
+           }
+      }
+
+               
+    
+
+  pack $lFrame.queuecfg7 -fill both -expand 1
+  grid $lFrame.tab $lFrame.vscroll -in $lFrame.queuecfg7 -sticky nsew
+  grid $lFrame.hscroll -in $lFrame.queuecfg7 -sticky nsew
+  grid columnconfig $lFrame.queuecfg7 0 -weight 1
+  grid rowconfigure $lFrame.queuecfg7 0 -weight 1 
+
+
+
+
+
+
+ $lFrame.queuecfg6.button.cancel configure -text "VLAN options"
+ $lFrame.queuecfg6.button.cancel configure -command "VlanOptions_Switch $node $lFrame $ifc"
+}
+}
+
+#****f* nodecfgGUI.tcl/VlanOptions
+# modification for VLAN
+# NAME
+#   VlanOptions_Switch
+# SYNOPSIS
+#   VlanOptions_Switch $node $lFrame $ifc
+# FUNCTION
+#  enable Vlan options, Add Vlan and Show All Vlan	
+
+
+proc VlanOptions_Switch { node lFrame ifc} {
+
+        global listVlan enableVlan modeVlan tagVlan interfaceVlan rangeVlan
+
+
+
+        pack $lFrame.queuecfg2 -fill both
+        pack $lFrame.queuecfg3.tagtxt -side left -padx 2 
+        pack $lFrame.queuecfg3.tag -side left -padx 4 -pady 4
+        pack $lFrame.queuecfg3.modetxt -side left -padx 2
+        pack $lFrame.queuecfg3.mode -side left -padx 4 -pady 4
+        pack $lFrame.queuecfg3.interfacetxt -side left -padx 2
+        pack $lFrame.queuecfg3.interface -side left -padx 4 -pady 4
+        pack $lFrame.queuecfg3 -fill both
+
+        pack $lFrame.queuecfg5.rangetxt -side left -padx 2
+        pack $lFrame.queuecfg5.range -side left -padx 4 -pady 4
+        pack $lFrame.queuecfg5 -fill both
+        
+     
+        
+        $lFrame.tab delete [$lFrame.tab children {}]
+        pack forget $lFrame.queuecfg7 
+        pack forget $lFrame.tab
+
+        pack forget $lFrame.queuecfg6.button.apply \
+        $lFrame.queuecfg6.button.cancel -side left -padx 2
+        pack forget $lFrame.queuecfg6.button.delete 
+       
+        pack $lFrame.queuecfg6.button.apply \
+        $lFrame.queuecfg6.button.cancel -side left -padx 2
+        pack $lFrame.queuecfg6.button -pady 2 -expand 1
+        pack $lFrame.queuecfg6 -fill both -side bottom
+
+        $lFrame.queuecfg6.button.cancel configure -text "Show All VLAN"
+        $lFrame.queuecfg6.button.cancel configure -command "ShowVlan_Switch $node $lFrame $ifc"
+
+}
+#****f* nodecfgGUI.tcl/VlanOptions
+# modification for VLAN
+# NAME
+#   DeleteVlan_Switch
+# SYNOPSIS
+#   DeleteVlan_Switch $node $lFrame $ifc
+# FUNCTION
+#  Delete All Vlan of a node
+
+proc DeleteVlan_Switch { node lFrame ifc } {
+global DeleteVlan listVlan
+
+if {$DeleteVlan == 1} {
+
+#set listVlan {}
+
+ foreach element $listVlan {
+	
+                set Mynode [lindex $element 0]
+                set Mynode [split $Mynode "-"]
+                set Mynode [lindex $Mynode 0]
+
+			if { $node == $Mynode } {
+
+				set id [lsearch $listVlan $element]
+                                
+                                set ID [expr $id-1]
+
+				set malist [lreplace $listVlan $id $id]
+				set malist [lreplace $malist $ID $ID]
+				set listVlan $malist
+
+                #On rajoute l'information avec enable 0
+                global enableVlan tagVlan modeVlan rangeVlan interfaceVlan listVlan
+                set Mynode [lindex $element 0]
+				set enableVlan 0
+				set tagVlan [lindex $element 2]
+                set modeVlan [lindex $element 3]
+			    set interfaceVlan [lindex $element 4]
+				set rangeVlan [lindex $element 5]
+                lappend listVlan "$Mynode $enableVlan $tagVlan $modeVlan $interfaceVlan $rangeVlan"
+
+				set enableVlan 0
+				set tagVlan ""
+                set modeVlan ""
+			    set interfaceVlan ""
+				set rangeVlan ""
+				
+			}
+
+}
+
+
+
+  $lFrame.tab delete [$lFrame.tab children {}]
+  pack forget $lFrame.queuecfg7 
+  pack forget $lFrame.tab
+
+  pack forget $lFrame.queuecfg6.button.apply \
+  $lFrame.queuecfg6.button.cancel -side left -padx 2
+  pack forget $lFrame.queuecfg6.button.delete 
+
+  pack $lFrame.queuecfg6.button.delete \
+        $lFrame.queuecfg6.button.cancel -side left -padx 2
+
+  pack $lFrame.queuecfg6.button -pady 2 -expand 1
+  pack $lFrame.queuecfg6 -fill both -side bottom
+
+     
+  $lFrame.tab insert {} end -id interfaces -text \
+	"Physical Interfaces" -open true -tags interfaces
+  $lFrame.tab focus interfaces
+  $lFrame.tab selection set interfaces
+   
+
+     foreach ifc [lsort -dictionary [ifcList $node]] {
+
+         $lFrame.tab insert interfaces end -id $ifc \
+	        -text "$ifc" -tags $ifc
+
+	foreach element $listVlan {
+
+            set Mynode [lindex $element 0]
+            set Mynode [split $Mynode "-"]
+            set Mynode [lindex $Mynode 0]
+            set enable [lindex $element 1]
+
+            if { $node == $Mynode && $enable == 1 } { 
+
+                      set id 2
+                     foreach myelement $Vlancolumns {
+
+			 set valeur [lindex $element $id]
+                         set id [expr $id+1]
+
+	                 $lFrame.tab set $ifc [lindex $myelement 0] "$valeur"
+
+	                  }
+                }
+           }
+      }
+
+               
+    
+
+  pack $lFrame.queuecfg7 -fill both -expand 1
+  grid $lFrame.tab $lFrame.vscroll -in $lFrame.queuecfg7 -sticky nsew
+  grid $lFrame.hscroll -in $lFrame.queuecfg7 -sticky nsew
+  grid columnconfig $lFrame.queuecfg7 0 -weight 1
+  grid rowconfigure $lFrame.queuecfg7 0 -weight 1 
+
+
+
+
+
+
+ $lFrame.queuecfg6.button.cancel configure -text "VLAN options"
+ $lFrame.queuecfg6.button.cancel configure -command "VlanOptions_Switch $node $lFrame $ifc"
+       
+
+}
+
+}
+
+#****f* nodecfgGUI.tcl/VlanOptions
+# modification for VLAN
+# NAME
+#   configVlan_Switch
+# SYNOPSIS
+#   configVlan_Switch $node $ifc
+# FUNCTION
+#  The configuration of Vlan options
+
+proc configVlan_Switch { node ifc } {
+
+global enableVlan tagVlan modeVlan interfaceVlan rangeVlan 
+
+
+
+global applyVlan listVlan
+
+
+if { $applyVlan == 1 } {
+
+
+lappend listVlan "!"
+
+	foreach element $listVlan {
+
+
+		set nom [lindex $element 0]
+                set nom1 [lindex $nom 0]
+
+			if { "$node-$ifc" == $nom1 } {
+
+				set id [lsearch $listVlan $element]
+                                
+                                set ID [expr $id-1]
+
+				set malist [lreplace $listVlan $id $id]
+				set malist [lreplace $malist $ID $ID]
+				set listVlan $malist
+
+			}
+
+
+				}
+	
+if {$tagVlan == ""} { 
+set tagVlan "No-tag"
+}
+if {$modeVlan == ""} { 
+set modeVlan "No-mode"
+}
+if {$interfaceVlan== ""} { 
+set interfaceVlan "No-interface"
+}
+if {$rangeVlan== ""} { 
+set rangeVlan "No-range"
+}
+
+
+lappend listVlan "$node-$ifc $enableVlan $tagVlan $modeVlan $interfaceVlan $rangeVlan"
+
+
+
+
+} 
+
+}
+#end_modification
+
 proc showESPAdvancedOptions { node lFrame } {
     grid $lFrame.esp_container -column 0 -row 3
     $lFrame.advance_button_esp configure -text "Hide advanced options"
@@ -4676,6 +5421,7 @@ proc configGUI_bridgeConfigApply { wi node } {
 #   * node - node id
 #****
 proc configGUI_addBridgeTree { wi node } {
+
     global brtreecolumns cancel
     #
     #cancel - indicates if the user has clicked on Cancel in the popup window
@@ -6536,3 +7282,622 @@ proc configGUI_nat64ConfigApply { wi node } {
 	set changed 1
     }
 }
+
+
+
+
+
+#Modification for wifi
+proc configGUI_WIFIAP { wi node } {
+    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
+    lappend guielements configGUI_WIFIAP
+    global addresseNumber masque dhcpIp1 dhcpIp2
+    global  close apply badentry
+    global adapter ssid Ip Mask dhcp1 dhcp2 Wlanmode channel country check1 check2 check3 check4 check5 securite typesecurite typeencryption password beacon authentification listAP listAPIP
+    set wlanID [split $node "n"]
+    set wlanID [lindex $wlanID 1]
+
+
+    set driver "nl80211"
+    set ssid "network$node"
+    set Ip "192.168.$wlanID.1"
+    set Mask $masque
+    set dhcp1 "192.168.$wlanID.2"
+    set dhcp2 "192.168.$wlanID.254"
+    set Wlanmode "g"
+    set channel "6"
+    set country "FR"
+    set check1 1
+    set check2 0
+    set check3 0
+    set check4 1
+    set authentification "WPA"
+    set securite "WPA"
+    set typesecurite "WPA-PSK" 
+    set typeencryption "TKIP CCMP"
+    set password "MasterRES"
+    set beacon "100"   
+    set check5 0 
+
+    if { [llength $listAP] > 0 } {
+
+		foreach element $listAP {
+	
+		set nom [lindex $element 0] 
+		if {$node ==$nom} {
+
+		          set ssid [lindex $element 2]
+ 
+     			  set Wlanmode [lindex $element 3]
+
+                  set channel [lindex $element 4]
+
+                  set check1 [lindex $element 5]
+                  
+                  set country [lindex $element 6]
+                 
+                  set check2 [lindex $element 7]
+                 
+				  set check3 [lindex $element 8]
+                  
+                  set check4 [lindex $element 9]
+                 
+                  set securite [lindex $element 11]
+                
+                 
+								if {$securite == "0"} {
+
+									set securite "NONE"
+								} elseif {$securite == "1"} {
+									set securite "WPA"
+								} elseif {$securite == "2"} {
+									set securite "WEP"
+								} elseif {$securite == "3"} {
+									set securite "BOTH"
+								} 
+
+                  set authentification [lindex $element 12]
+               
+
+						if {$authentification == "1"} {
+								set authentification "WPA"
+						} elseif {$authentification == "2"} {
+								set authentification "WPA2"
+						} 
+                               
+                  set typesecurite [lindex $element 13]
+                  
+                  set typesecurite [regsub -all "_" $typesecurite " "]
+                  set typeencryption [lindex $element 14]
+                  
+                  set typeencryption [regsub -all "_" $typeencryption " "]
+                  set password [lindex $element 15]
+               
+                  set beacon [lindex $element 16]
+                 
+				  set check5 [lindex $element 17]
+             
+				 foreach element $listAPIP {
+						set nom [lindex $element 0] 
+						if {$node ==$nom} {
+
+             				set Ip [lindex $element 1]
+    						set Mask [lindex $element 2]
+    						set dhcp1 [lindex $element 3]
+    						set dhcp2 [lindex $element 4]
+						}
+				}
+				  
+				  
+
+		}
+
+
+
+		}
+	} 
+ 
+    
+
+    ttk::frame $wi.wlan2 -borderwidth 2 -padding 4
+    ttk::label $wi.wlan2.ssidtxt -text "SSID:" 
+    ttk::entry $wi.wlan2.ssid -width 20 -validate focus -textvariable ::ssid
+    ttk::checkbutton $wi.wlan2.enable2 -text "Ignore Boroadcast SSID" -variable ::check5
+
+    ttk::frame $wi.wlan -borderwidth 2 -padding 4
+    ttk::label $wi.wlan.adressetxt -text "AP IP/MASK:" 
+    ttk::entry $wi.wlan.adresseIP -width 15 -validate focus -textvariable ::Ip
+    ttk::label $wi.wlan.adressetxt2 -text "/"  
+    ttk::entry $wi.wlan.adresseMASK -width 5 -validate focus -textvariable ::Mask
+
+
+
+    ttk::frame $wi.wlandhcp -borderwidth 2 -padding 4
+    ttk::label $wi.wlandhcp.dhcptxt -text "DHCP server settings:" 
+    ttk::entry $wi.wlandhcp.dhcp1 -width 15 -validate focus -textvariable ::dhcp1
+    ttk::entry $wi.wlandhcp.dhcp2 -width 15 -validate focus -textvariable ::dhcp2
+
+
+    ttk::frame $wi.wlan3 -borderwidth 2 -padding 4
+    ttk::label $wi.wlan3.interfacetxt -text "Wireless Mode:" 
+    ttk::combobox $wi.wlan3.interface -width 2 -textvariable Wlanmode
+    $wi.wlan3.interface configure -values [list a b g n ac]  
+   
+    ttk::label $wi.wlan3.channeltxt -text "Channel:" 
+    ttk::combobox $wi.wlan3.channel -width 2 -textvariable channel
+    $wi.wlan3.channel configure -values [list 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14]    
+    ttk::label $wi.wlan3.codetxt -text "Country Code:" 
+    ttk::entry $wi.wlan3.code -width 10 -validate focus -textvariable ::country
+
+
+
+    ttk::frame $wi.wlan4 -borderwidth 2 -padding 4
+    ttk::checkbutton $wi.wlan4.enable1 -text "ieee80211d" -variable ::check1
+    ttk::checkbutton $wi.wlan4.enable2 -text "ieee80211n" -variable ::check2
+    ttk::checkbutton $wi.wlan4.enable3 -text "ieee80211ac" -variable ::check3
+    ttk::checkbutton $wi.wlan4.enable4 -text "Qos Support" -variable ::check4
+
+    ttk::frame $wi.wlan10 -borderwidth 2 -padding 4
+    ttk::label $wi.wlan10.beacontxt -text "Beacon Interval:" 
+    ttk::entry $wi.wlan10.beacon -width 10 -validate focus -textvariable ::beacon
+
+
+    ttk::frame $wi.wlan6 -borderwidth 2 -padding 4
+    ttk::label $wi.wlan6.securitetxt -text "Security algorithm:" 
+    ttk::combobox $wi.wlan6.securite -width 4 -textvariable securite
+    $wi.wlan6.securite configure -values [list NONE WPA WEP BOTH] 
+    
+    ttk::label $wi.wlan6.authtext -text "Authentification" 
+    ttk::combobox $wi.wlan6.auth -width 4 -textvariable authentification
+    $wi.wlan6.auth configure -values [list WPA WPA2] 
+  
+
+    ttk::frame $wi.wlan8 -borderwidth 2 -padding 4
+    ttk::label $wi.wlan8.sectypetxt -text "Security type:" 
+    ttk::entry $wi.wlan8.sectype -width 13 -validate focus -textvariable ::typesecurite 
+
+    ttk::label $wi.wlan8.enctypetxt -text "Encryption type:" 
+    ttk::entry $wi.wlan8.enctype -width 13 -validate focus -textvariable ::typeencryption
+
+
+    ttk::frame $wi.wlan9 -borderwidth 2 -padding 4
+    ttk::label $wi.wlan9.passtxt -text "Password:" 
+    ttk::entry $wi.wlan9.pass -width 20 -validate focus -textvariable ::password
+ 
+
+        pack $wi.wlan2.ssidtxt -side left -padx 2
+        pack $wi.wlan2.ssid -side left -padx 4 -pady 4
+        pack $wi.wlan2.enable2 -side left -padx 4 -pady 4
+        pack $wi.wlan2 -fill both    
+
+        pack $wi.wlan.adressetxt -side left -padx 2
+        pack $wi.wlan.adresseIP -side left -padx 4 -pady 4
+        pack $wi.wlan.adressetxt2 -side left -padx 4 -pady 4
+        pack $wi.wlan.adresseMASK -side left -padx 4 -pady 4    
+        pack $wi.wlan -fill both   
+
+        pack $wi.wlandhcp.dhcptxt -side left -padx 2
+        pack $wi.wlandhcp.dhcp1 -side left -padx 4 -pady 4
+        pack $wi.wlandhcp.dhcp2 -side left -padx 4 -pady 4
+        pack $wi.wlandhcp -fill both  
+
+
+        pack $wi.wlan3 -fill both
+        pack $wi.wlan3.interfacetxt -side left -padx 2
+        pack $wi.wlan3.interface -side left -padx 4 -pady 4
+        pack $wi.wlan3.channeltxt -side left -padx 2
+        pack $wi.wlan3.channel -side left -padx 4 -pady 4
+        pack $wi.wlan3.codetxt -side left -padx 4 -pady 4
+        pack $wi.wlan3.code -side left -padx 4 -pady 4
+
+        pack $wi.wlan4.enable1 -side left -padx 2
+        pack $wi.wlan4.enable2 -side left -padx 4 -pady 4
+        pack $wi.wlan4.enable3 -side left -padx 4 -pady 4
+        pack $wi.wlan4.enable4 -side left -padx 4 -pady 4
+        pack $wi.wlan4 -fill both
+
+        pack $wi.wlan10.beacontxt -side left -padx 2
+        pack $wi.wlan10.beacon -side left -padx 4 -pady 4
+        pack $wi.wlan10 -fill both 
+
+
+        pack $wi.wlan6.securitetxt -side left -padx 2
+        pack $wi.wlan6.securite -side left -padx 4 -pady 4
+        pack $wi.wlan6.authtext -side left -padx 4 -pady 4
+        pack $wi.wlan6.auth  -side left -padx 4 -pady 4
+        pack $wi.wlan6 -fill both
+
+        pack $wi.wlan8.sectypetxt -side left -padx 4 -pady 4
+        pack $wi.wlan8.sectype -side left -padx 4 -pady 4
+
+        pack $wi.wlan8.enctypetxt -side left -padx 4 -pady 4
+        pack $wi.wlan8.enctype -side left -padx 4 -pady 4
+        pack $wi.wlan8 -fill both
+
+        pack $wi.wlan9.passtxt -side left -padx 4 -pady 4
+        pack $wi.wlan9.pass -side left -padx 4 -pady 4
+        pack $wi.wlan9 -fill both       
+
+
+
+}
+
+proc configFichier_AP { node } {
+
+global listAP listAPIP
+global ssid Ip Mask dhcp1 dhcp2 Wlanmode channel country check1 check2 check3 check4 check5 securite typesecurite typeencryption password driver beacon authentification
+
+
+foreach element $listAP {
+	
+		set nom [lindex $element 0]
+
+
+			if { "$node" == $nom } {
+
+				set id [lsearch -exact $listAP $element]
+				set malist [lreplace $listAP $id $id]
+
+				set listAP $malist
+
+			
+			}
+
+
+	}
+
+foreach element $listAPIP {
+	
+		set nom [lindex $element 0]
+
+
+			if { "$node" == $nom } {
+
+				set id [lsearch -exact $listAPIP $element]
+				set malist [lreplace $listAPIP $id $id]
+
+				set listAPIP $malist
+			}
+
+
+	}
+
+
+if {$ssid != ""} {
+ set SSID "$ssid"
+} else {
+ set SSID "No-info"
+}
+if { $Wlanmode!= ""} {
+ set mode "$Wlanmode"
+} else {
+ set mode "No-info" 
+}
+if { $channel!= ""} {
+set ch "$channel"
+} else {
+set ch "No-info"
+}
+if {$country != "" } {
+set count "$country"
+} else {
+set count "No-info"
+}
+
+if {$securite == "NONE"} {
+
+set auth "0"
+} elseif {$securite == "WPA"} {
+set auth "1"
+} elseif {$securite == "WEP"} {
+set auth "2"
+} elseif {$securite == "BOTH"} {
+set auth "3"
+} else {
+set auth "No-info"
+}
+
+if {$authentification == "WPA"} {
+set wpa "1"
+} elseif {$authentification == "WPA2"} {
+set wpa "2"
+} else {
+set wpa "No-info"
+}
+if {$typesecurite != ""} {
+set typesecurite1 [regsub -all " " $typesecurite "_"]
+
+set typeS "$typesecurite1"
+} else {
+set typeS "No-info"
+}
+if {$typeencryption != ""} {
+set typeencryption1 [regsub -all " " $typeencryption "_"]
+set typeE "$typeencryption1"
+
+} else {
+set typeE "No-info"
+}
+if {$password != ""} {
+set pass "$password"
+} else {
+set pass "No-info"
+}
+if {$beacon != ""} {
+set beac "$beacon"
+} else {
+set beac "No-info"
+}
+
+
+    
+
+lappend listAP "$node driver=nl80211 $SSID $mode $ch $check1 $count $check2 $check3 $check4 macaddr_acl=0 $auth $wpa $typeS $typeE $pass $beac $check5"
+
+lappend listAPIP "$node $Ip $Mask $dhcp1 $dhcp2"
+
+
+}
+
+
+
+
+proc verifierconfiguration_AP { node } {
+
+global dynacurdir     
+
+upvar 0 ::cf::[set ::curcfg]::eid eid
+
+
+if { [file exist "$dynacurdir/WIFI/$eid/AP/$node.conf"] != 1 } {
+
+global masque dhcpIp1 dhcpIp2 listAPIP adapter wlanID
+
+set wlanID [split $node "n"]
+set wlanID [lindex $wlanID 1]
+
+set Ip "192.168.$wlanID.1"
+set Mask $masque
+set dhcp1 "192.168.$wlanID.2"
+set dhcp2 "192.168.$wlanID.254"
+
+          	set fp [open "$dynacurdir/WIFI/$eid/AP/$node.conf" w+]
+          	
+          	puts $fp "interface=wlan$wlanID\ndriver=nl80211\nssid=network$node\nhw_mode=g\nchannel=6\nieee80211d=1\ncountry_code=FR\nieee80211n=0\nieee80211ac=0\nwmm_enabled=1\nmacaddr_acl=0\nauth_algs=1\nwpa=1\nwpa_key_mgmt=WPA-PSK\nwpa_pairwise=TKIP CCMP\nwpa_passphrase=MasterRES\nbeacon_int=100\nignore_broadcast_ssid=0\n"
+          	close $fp
+            
+             lappend listAPIP "$node $Ip $Mask $dhcp1 $dhcp2"
+
+
+
+}
+
+
+}
+
+
+
+
+
+proc configGUI_WIFISTA { wi node } {
+    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
+    lappend guielements configGUI_WIFISTA
+    global listAP listSTA
+    global adapterSTA ssidSTA scanssidSTA encryptionSTA protocoleSTA groupeSTA pairwiseSTA prioritySTA passwordSTA ssiddefault
+
+
+    set ssiddefault "networkn0"
+    set scanssidSTA 0
+    set encryptionSTA "default"
+    set protocoleSTA "default" 
+    set groupeSTA "default"
+    set pairwiseSTA "default"
+    set passwordSTA "MasterRES" 
+    set prioritySTA ""
+    
+foreach element $listSTA {
+
+
+		set nom [lindex $element 0]
+
+			if { "$node" == $nom } {
+
+			set ssiddefault [lindex $element 1]
+            
+    		set scanssidSTA [lindex $element 5]
+            
+    		set encryptionSTA [lindex $element 2]
+          
+    		set protocoleSTA [lindex $element 3]
+           
+    		set groupeSTA [lindex $element 4]
+           
+    		set pairwiseSTA [lindex $element 6]
+          
+    		set passwordSTA [lindex $element 7]
+           
+    		set prioritySTA [lindex $element 8]
+           
+
+			}
+
+
+	}
+
+    
+    ttk::frame $wi.wlanSTA -borderwidth 2 -padding 4
+    ttk::label $wi.wlanSTA.ssidtxt -text "SSID:" 
+    ttk::entry $wi.wlanSTA.ssid -width 15 -validate focus -textvariable ::ssiddefault
+    ttk::checkbutton $wi.wlanSTA.scanssid -text "Scan SSID" -variable ::scanssidSTA
+
+        pack $wi.wlanSTA.ssidtxt -side left -padx 2
+        pack $wi.wlanSTA.ssid -side left -padx 4 -pady 4
+        pack $wi.wlanSTA.scanssid -side left -padx 4 -pady 4
+        pack $wi.wlanSTA -fill both 
+
+   
+    ttk::frame $wi.wlanSTA2 -borderwidth 2 -padding 4
+    ttk::label $wi.wlanSTA2.encrytxt -text "Encryption:" 
+    ttk::combobox $wi.wlanSTA2.encry -width 8 -textvariable encryptionSTA
+    $wi.wlanSTA2.encry configure -values [list WPA-PSK WPA-EAP IEEE8021X NONE default]  
+
+    ttk::label $wi.wlanSTA2.groutxt -text "Group:" 
+    ttk::combobox $wi.wlanSTA2.grou -width 7 -textvariable groupeSTA
+    $wi.wlanSTA2.grou configure -values [list CCMP TKIP WEP104 WEP40 default] 
+
+    ttk::label $wi.wlanSTA2.pairtxt -text "Pairwise:" 
+    ttk::combobox $wi.wlanSTA2.pair -width 7 -textvariable pairwiseSTA
+    $wi.wlanSTA2.pair configure -values [list CCMP TKIP default] 
+
+        pack $wi.wlanSTA2.encrytxt -side left -padx 2
+        pack $wi.wlanSTA2.encry -side left -padx 4 -pady 4
+        pack $wi.wlanSTA2.groutxt -side left -padx 4 -pady 4
+        pack $wi.wlanSTA2.grou -side left -padx 4 -pady 4
+        pack $wi.wlanSTA2.pairtxt -side left -padx 4 -pady 4
+        pack $wi.wlanSTA2.pair -side left -padx 4 -pady 4
+        pack $wi.wlanSTA2 -fill both
+
+    ttk::frame $wi.wlanSTA3 -borderwidth 2 -padding 4
+    ttk::label $wi.wlanSTA3.prototxt -text "Protocol:" 
+    ttk::combobox $wi.wlanSTA3.proto -width 7 -textvariable protocoleSTA
+    $wi.wlanSTA3.proto configure -values [list RSN WPA default]  
+    ttk::label $wi.wlanSTA3.priotxt -text "Priority:" 
+    ttk::entry $wi.wlanSTA3.prio -width 10 -validate focus -textvariable ::prioritySTA
+
+        pack $wi.wlanSTA3.prototxt -side left -padx 2
+        pack $wi.wlanSTA3.proto -side left -padx 4 -pady 4
+        pack $wi.wlanSTA3.priotxt -side left -padx 4 -pady 4
+        pack $wi.wlanSTA3.prio -side left -padx 4 -pady 4
+        pack $wi.wlanSTA3 -fill both 
+
+    ttk::frame $wi.wlanSTA7 -borderwidth 2 -padding 4
+    ttk::label $wi.wlanSTA7.passtxt -text "Password:" 
+    ttk::entry $wi.wlanSTA7.pass -width 20 -validate focus -textvariable ::passwordSTA
+ 
+        pack $wi.wlanSTA7.passtxt -side left -padx 2
+        pack $wi.wlanSTA7.pass -side left -padx 4 -pady 4
+        pack $wi.wlanSTA7 -fill both 
+global eidvlan modevlan
+
+
+if {$modevlan == "exec" && $eidvlan != ""} {
+ttk::frame $wi.scanresult -borderwidth 2 -padding 4
+ttk::label $wi.scanresult.scantxt -text "Status:" 
+set id [split $node "n"]
+set id [lindex $id 1]
+set node_id "$eidvlan.$node"
+set result [exec ip netns exec $node_id wpa_cli -i wlan$id status]
+ttk::frame $wi.scanresult2 -borderwidth 2 -padding 4
+ttk::label $wi.scanresult2.scantxt2 -text "$result"
+    
+	pack $wi.scanresult.scantxt -side left -padx 2
+	pack $wi.scanresult -fill both
+
+	pack $wi.scanresult2.scantxt2 -side left -padx 2
+	pack $wi.scanresult2 -fill both
+}
+           
+
+
+}
+
+
+
+proc configFichier_STA { node } {
+
+    global listSTA
+    global adapterSTA ssidSTA scanssidSTA encryptionSTA protocoleSTA groupeSTA pairwiseSTA prioritySTA passwordSTA ssiddefault
+    
+
+foreach element $listSTA {
+	
+		set nom [lindex $element 0]
+
+
+			if { "$node" == $nom } {
+
+				set id [lsearch -exact $listSTA $element]
+				set malist [lreplace $listSTA $id $id]
+
+				set listSTA $malist
+			}
+
+
+	}
+
+ 
+
+if {$ssiddefault != ""} {
+ set SSID "$ssiddefault"
+} else {
+
+set SSID "No-info"
+}
+if { $encryptionSTA != ""} {
+set encryption "$encryptionSTA"
+} else {
+set encryption "No-info"
+}
+if { $protocoleSTA != ""} {
+set protocole "$protocoleSTA"
+} else {
+set protocole "No-info"
+}
+if {$groupeSTA != "" } {
+set group "$groupeSTA"
+} else {
+set group "No-info"
+}
+
+if {$pairwiseSTA != "" } {
+set pairwise "$pairwiseSTA"
+} else {
+set pairwise "No-info"
+}
+
+
+if {$prioritySTA != "" } {
+set priority "$prioritySTA"
+} else {
+set priority "No-info"
+}
+
+if {$passwordSTA != "" } {
+set password "$passwordSTA"
+} else {
+set password "No-info"
+}
+
+
+lappend listSTA "$node $SSID $encryption $protocole $group $scanssidSTA $pairwise $password $priority"
+
+
+}
+
+proc verifierconfiguration_STA { node } {
+
+ global dynacurdir 
+    
+upvar 0 ::cf::[set ::curcfg]::eid eid
+set wlanID [split $node "n"]
+set wlanID [lindex $wlanID 1]
+
+if { [file exist "$dynacurdir/WIFI/$eid/STA/$node.conf"] != 1 } {
+
+global listIfcSTA
+
+
+	    
+
+          	set fp [open "$dynacurdir/WIFI/$eid/STA/$node.conf" w+]
+          	
+          	puts $fp "country=FR\nctrl_interface=/var/run/wpa_supplicant\nupdate_config=1\nnetwork={\nssid=\"networkn0\"\nkey_mgmt=WPA-PSK WPA-EAP\nproto=RSN WPA\ngroup=TKIP CCMP WEP104 WEP40\nscan_ssid=0\npairwise=CCMP\npsk=\"MasterRES\"\n}\n"
+          	close $fp
+            
+            lappend listIfcSTA "$node $wlanID wlan$wlanID"
+
+}
+
+
+}
+

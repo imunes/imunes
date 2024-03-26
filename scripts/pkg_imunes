@@ -27,9 +27,6 @@ else
     exit 1
 fi
 
-# need /dev/null for pkg-1.11 and above
-mount -t devfs devfs $VROOT/dev
-
 # copy resolv.conf to access remote repo
 cp /etc/resolv.conf $VROOT/etc
 
@@ -42,9 +39,6 @@ fi
 
 # remove copied resolv.conf
 rm $VROOT/etc/resolv.conf
-
-# unmount devfs
-umount $VROOT/dev
 
 # if the command was successful refresh the zfs snapshot
 if [ "$zfs" ]; then

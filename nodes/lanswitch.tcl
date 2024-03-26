@@ -53,10 +53,6 @@ registerModule $MODULE
 #   Loads ng_bridge into the kernel.
 #****
 proc $MODULE.prepareSystem {} {
-	catch { exec sysctl net.bridge.bridge-nf-call-arptables=0 }
-	catch { exec sysctl net.bridge.bridge-nf-call-iptables=0 }
-	catch { exec sysctl net.bridge.bridge-nf-call-ip6tables=0 }
-
     catch { exec kldload ng_bridge }
 }
 
@@ -72,6 +68,17 @@ proc $MODULE.prepareSystem {} {
 #   * ifc -- interface name
 #****
 proc $MODULE.confNewIfc { node ifc } {
+    foreach l2node [listLANnodes $node ""] {
+	foreach ifc [ifcList $l2node] {
+	    set peer [peerByIfc $l2node $ifc]
+	    if { ! [isNodeRouter $peer] &&
+		[[typemodel $peer].layer] == "NETWORK" } {
+		set ifname [ifcByPeer $peer $l2node]
+		autoIPv4defaultroute $peer $ifname
+		autoIPv6defaultroute $peer $ifname
+	    }
+	}
+    }
 }
 
 #****f* lanswitch.tcl/lanswitch.confNewNode
@@ -246,17 +253,28 @@ proc $MODULE.nghook { eid node ifc } {
 #   * c -- tk canvas
 #   * node -- node id
 #****
+# modification for VLAN
 proc $MODULE.configGUI { c node } {
     global wi
-    global guielements treecolumns
+
+    
+    global guielements treecolumns Vlancolumns
     set guielements {}
 
     configGUI_createConfigPopupWin $c
-    wm title $wi "lanswitch configuration"
+    wm title $wi "lanswitch configuration"  
+    	set type [nodeType $node]
+   if {$type == "lanswitch"} {
+    wm minsize $wi 400 450
+    wm resizable $wi 1 1  
+    set Vlancolumns {"VlanTag" "VlanMode" "InterfaceType" "VlanRange"}
+}
     configGUI_nodeName $wi $node "Node name:"
 
     configGUI_addPanedWin $wi
+
     set treecolumns {"QLen Queue len" "QDisc Queue disc" "QDrop Queue drop"}
+
     configGUI_addTree $wi $node
 
     configGUI_buttonsACNode $wi $node

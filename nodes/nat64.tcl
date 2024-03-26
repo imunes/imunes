@@ -66,7 +66,6 @@ proc $MODULE.confNewNode { node } {
 	}
     }
 
-    setAutoDefaultRoutesStatus $node "enabled"
     setLogIfcType $node lo0 lo
     setIfcIPv4addr $node lo0 "127.0.0.1/8"
     setIfcIPv6addr $node lo0 "::1/128"
@@ -100,7 +99,6 @@ proc $MODULE.notebookDimensions { wi } {
 
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
 	== "Configuration" } { 
-    set h 320
 	set w 507 
     }
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
@@ -238,12 +236,12 @@ proc $MODULE.configGUI { c node } {
     set ifctab [lindex $tabs 1]
     set nat64tab [lindex $tabs 2]
 
-    set treecolumns {"OperState State" "NatState Nat" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
+    set treecolumns {"OperState State" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
             "MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop" }
     configGUI_addTree $ifctab $node
 
     configGUI_routingProtocols $configtab $node
-    configGUI_customImage $configtab $node
+    configGUI_dockerImage $configtab $node
     configGUI_attachDockerToExt $configtab $node
     configGUI_servicesConfig $configtab $node
     configGUI_staticRoutes $configtab $node

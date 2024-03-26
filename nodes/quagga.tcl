@@ -1,3 +1,9 @@
+# 2019-2020 Sorbonne University
+# In this version of imunes we added a full integration of emulation of 
+# Linux namespaces and CISCO routers, saving of parameters, VLANs, WiFi 
+# emulation and other features
+# This work was developed by Benadji Hanane and Oulad Said Chawki
+# Supervised and maintained by Naceur Malouch - LIP6/SU
 #
 # Copyright 2005-2013 University of Zagreb.
 #
@@ -91,10 +97,12 @@ proc $MODULE.virtlayer {} {
 # RESULT
 #   * congif -- generated configuration 
 #****
+
 proc $MODULE.cfggen { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
     set cfg {}
+       
 
     foreach ifc [allIfcList $node] {
 	lappend cfg "interface $ifc"
@@ -140,17 +148,6 @@ proc $MODULE.cfggen { node } {
     }
     foreach statrte [getStatIPv6routes $node] {
 	lappend cfg "ipv6 route $statrte"
-    }
-
-    if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
-	foreach statrte [getDefaultIPv4routes $node] {
-	    lappend cfg "ip route $statrte"
-	}
-	foreach statrte [getDefaultIPv6routes $node] {
-	    lappend cfg "ipv6 route $statrte"
-	}
-	setDefaultIPv4routes $node {}
-	setDefaultIPv6routes $node {}
     }
 
     return $cfg
@@ -283,3 +280,19 @@ proc $MODULE.nghook { eid node ifc } {
     return [l3node.nghook $eid $node $ifc]
 }
 
+#****f* quagga.tcl/configureVTYSHquagga
+# NAME
+#   configureVTYSHquagga
+# SYNOPSIS
+#   configureVTYSHquagga $eid $node
+# FUNCTION
+#   create vtysh.conf 
+#****
+#
+# Modification for save.tcl
+#*****
+proc configureVTYSHquagga {eid node} {
+
+   set node_id "$eid\.$node"
+   exec docker exec $node_id bash -c "echo 'service integrated-vtysh-config' >> /etc/quagga/vtysh.conf"
+}

@@ -11,8 +11,8 @@
 #   * ext_path -- external path
 #****
 proc moveFileFromNode { node path ext_path } {
-    set node_dir [getNodeDir $node]
-
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set node_dir [getVrootDir]/$eid/$node
     catch {exec mv $node_dir$path $ext_path}
 }
 
@@ -29,8 +29,8 @@ proc moveFileFromNode { node path ext_path } {
 #   * data -- data to write
 #****
 proc writeDataToNodeFile { node path data } {
-    set node_dir [getNodeDir $node]
-
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set node_dir [getVrootDir]/$eid/$node
     writeDataToFile $node_dir/$path $data
 }
 
@@ -295,38 +295,24 @@ proc createIfc { eid type hook } {
 proc allSnapshotsAvailable {} {
     global execMode vroot_unionfs
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
+    set vroot "/var/imunes/vroot"
 
-    set snapshots {}
-    foreach node $node_list {
-	set img [getNodeCustomImage $node]
-	if {$img != ""} {
-	    lappend snapshots $img
-	}
-    }
-
-    set snapshots [lsort -uniq $snapshots]
-    set missing 0
-
-    foreach vroot $snapshots {
-	if {$vroot_unionfs} {
-	    if { [file exist $vroot] } {
-		return 1
+    if {$vroot_unionfs} {
+	if { [file exist $vroot] } {
+	    return 1
+	} else {
+	    if {$execMode == "batch"} {
+		puts "The root filesystem for virtual nodes ($vroot) is missing.
+Run 'imunes -p' to create the root filesystem."
 	    } else {
-		if {$execMode == "batch"} {
-		    puts "The root filesystem for virtual nodes ($vroot) is missing.
-    Run 'imunes -p' to create the root filesystem."
-		} else {
-		    tk_dialog .dialog1 "IMUNES error" \
-		    "The root filesystem for virtual nodes ($vroot) is missing.
-    Run 'imunes -p' to create the root filesystem." \
-		    info 0 Dismiss
-		}
-		return 0
+		tk_dialog .dialog1 "IMUNES error" \
+		"The root filesystem for virtual nodes ($vroot) is missing.
+Run 'imunes -p' to create the root filesystem." \
+		info 0 Dismiss
 	    }
+	    return 0
 	}
     }
-
-    return 1
 
     catch { exec zfs list -t snapshot | awk {{print $1}} | sed "1 d" } out
     set snapshotList [ split $out {
@@ -1159,7 +1145,17 @@ proc prepareFilesystemForNode { node } {
 #****
 proc createNodeContainer { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
-    set node_dir [getNodeDir $node]
+
+    set node_dir [getVrootDir]/$eid/$node
+
+    pipesExec "jail -c name=$eid.$node path=$node_dir securelevel=1 \
+	host.hostname=\"[getNodeName $node]\" vnet persist" "hold"
+}
+
+proc createNodeContainerN { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set node_dir [getVrootDir]/$eid/$node
 
     pipesExec "jail -c name=$eid.$node path=$node_dir securelevel=1 \
 	host.hostname=\"[getNodeName $node]\" vnet persist" "hold"
@@ -1316,9 +1312,6 @@ proc startIfcsNode { node } {
 	} else {
 	    set cmds "$cmds\n jexec $node_id ifconfig $ifc mtu $mtu"
 	}
-	if {[getIfcNatState $node $ifc] == "on"} {
-	    set cmds "$cmds\n jexec $node_id sh -c 'echo \"map $ifc 0/0 -> 0/32\" | ipnat -f -'"
-	}
     }
     exec sh << $cmds
 }
@@ -1339,7 +1332,7 @@ proc runConfOnNode { node } {
     global viewcustomid vroot_unionfs
     global execMode
 
-    set node_dir [getNodeDir $node]
+    set node_dir [getVrootDir]/$eid/$node
     set node_id "$eid.$node"
 
     if { [getCustomEnabled $node] == true } {
@@ -1567,8 +1560,6 @@ proc prepareDevfs {} {
 	exec devfs rule add path zero unhide
 	exec devfs rule add path random unhide
 	exec devfs rule add path urandom unhide
-	exec devfs rule add path ipl unhide
-	exec devfs rule add path ipnat unhide
 	exec devfs rule add path crypto unhide
 	exec devfs rule add path ptyp* unhide
 	exec devfs rule add path ptyq* unhide
@@ -2023,15 +2014,19 @@ proc getExtIfcs { } {
 
 proc getIPv4IfcCmd { ifc addr primary } {
     if { $primary } {
+
 	return "ifconfig $ifc inet $addr"
     }
+
     return "ifconfig $ifc inet add $addr"
 }
 
 proc getIPv6IfcCmd { ifc addr primary } {
     if { $primary } {
+
 	return "ifconfig $ifc inet6 $addr"
     }
+
     return "ifconfig $ifc inet6 add $addr"
 }
 
@@ -2116,38 +2111,24 @@ proc extInstantiate { node } {
     createNodePhysIfcs $node
 }
 
-proc setupExtNat { eid node ifc } {
-    set extIfc [getNodeName $node]
-    set extIp [getIfcIPv4addrs $node $ifc]
-    set prefixLen [lindex [split $extIp "/"] 1]
-    set subnet "[ip::prefix $extIp]/$prefixLen"
-
-    set cmds "echo 'map $extIfc $subnet -> 0/32' | ipnat -f -"
-
-    exec sh << $cmds &
-}
-
 proc startExternalIfc { eid node } {
     set cmds ""
     set ifc [lindex [ifcList $node] 0]
     set outifc "$eid-$node"
 
-    set ether [getIfcMACaddr $node $ifc]
-    if { $ether != "" } {
-	autoMACaddr $node $ifc
-	set ether [getIfcMACaddr $node $ifc]
-    }
-    set cmds "ifconfig $outifc link $ether"
-
     set ipv4 [getIfcIPv4addr $node $ifc]
-    if { $ipv4 != "" } {
-	set cmds "ifconfig $outifc $ipv4"
+    if {$ipv4 == ""} {
+	autoIPv4addr $node $ifc
     }
+    set ipv4 [getIfcIPv4addr $node $ifc]
+    set cmds "ifconfig $outifc $ipv4"
 
     set ipv6 [getIfcIPv6addr $node $ifc]
-    if { $ipv6 != "" } {
-	set cmds "$cmds\n ifconfig $outifc inet6 $ipv6"
+    if {$ipv6 == ""} {
+	autoIPv6addr $node $ifc
     }
+    set ipv6 [getIfcIPv6addr $node $ifc]
+    set cmds "$cmds\n ifconfig $outifc inet6 $ipv6"
 
     set cmds "$cmds\n ifconfig $outifc up"
 
@@ -2156,15 +2137,4 @@ proc startExternalIfc { eid node } {
 
 proc stopExternalIfc { eid node } {
     exec ifconfig $eid-$node down
-}
-
-proc unsetupExtNat { eid node ifc } {
-    set extIfc [getNodeName $node]
-    set extIp [getIfcIPv4addrs $node $ifc]
-    set prefixLen [lindex [split $extIp "/"] 1]
-    set subnet "[ip::prefix $extIp]/$prefixLen"
-
-    set cmds "echo 'map $extIfc $subnet -> 0/32' | ipnat -f - -pr"
-
-    exec sh << $cmds &
 }

@@ -1,3 +1,9 @@
+# 2019-2020 Sorbonne University
+# In this version of imunes we added a full integration of emulation of 
+# Linux namespaces and CISCO routers, saving of parameters, VLANs, WiFi 
+# emulation and other features
+# This work was developed by Benadji Hanane and Oulad Said Chawki
+# Supervised and maintained by Naceur Malouch - LIP6/SU
 #
 # Copyright 2004-2013 University of Zagreb.
 #
@@ -179,6 +185,10 @@ set selectedIfc ""
 # bases for naming new nodes
 array set nodeNamingBase {
     pc pc
+    pcn MyPC
+    routeur c7200_
+    wifiAP AP
+    wifiSTA STA
     click_l2 cswitch
     click_l3 crouter
     ext ext
@@ -256,11 +266,13 @@ bind . <Control-n> "newProject"
 bind . <Control-o> "fileOpenDialogBox"
 
 .menubar.file add command -label Save -underline 0 \
-  -accelerator "Ctrl+S" -command { fileSaveDialogBox }
+  -accelerator "Ctrl+S" -command { ApplyBatchToGUI }
 bind . <Control-s> "fileSaveDialogBox"
 
-.menubar.file add command -label "Save As" -underline 5 \
-  -command { fileSaveAsDialogBox }
+.menubar.file add command -label "Save As" -underline 3 \
+  -accelerator "Ctrl+E" -command { ApplyBatchToGUISaveAS }
+bind . <Control-e> "fileSaveAsDialogBox"
+
 
 .menubar.file add command -label "Close" -underline 0 -command { closeFile }
 
@@ -354,7 +366,33 @@ set printFileType ps
 }
 
 .menubar.file add separator
-.menubar.file add command -label Quit -underline 0 -command { exit }
+.menubar.file add command -label Quit -underline 0 -command { 
+set namespace_li [exec ip netns list]
+
+set namespace_list [split $namespace_li \n]
+
+foreach namespa $namespace_list {
+
+set name [split $namespa " "]
+
+set  namespace_filtre [lindex $name 0]
+
+set namespace_pid [exec ip netns pids $namespace_filtre]
+
+set namespace_pid_list [split $namespace_pid \n]
+
+foreach pids_namesp $namespace_pid_list {
+ 
+
+catch "exec kill -9 $pids_namesp"
+
+}
+}
+
+exit 
+
+
+}
 .menubar.file add separator
 
 
@@ -795,6 +833,8 @@ set widgetlist { \
     { "ifconfig" "ifconfig" } \
     { "IPv4 Routing table" "netstat -4 -rn" } \
     { "IPv6 Routing table" "netstat -6 -rn" } \
+    { "Quagga/Cisco IPv4 Routing table" "vtysh -c \"show ip route\"" } \
+    { "Quagga/Cisco IPv6 Routing table" "vtysh -c \"show ipv6 route\"" } \
     { "RIP routes info" "vtysh -c \"show ip rip\"" } \
     { "RIPng routes info" "vtysh -c \"show ipv6 ripng\"" } \
     { "Process list" "ps ax" } \
@@ -902,10 +942,14 @@ menu .menubar.help -tearoff 0
     $mainFrame.logoLabel configure -image $image
 
     ttk::label $mainFrame.imunesLabel -text "IMUNES" -font "-size 12 -weight bold"
+
     ttk::label $mainFrame.imunesVersion -text $imunesVersion -font "-size 10 -weight bold"
     ttk::label $mainFrame.lastChanged -text $imunesChangedDate
     ttk::label $mainFrame.imunesAdditions -text "$imunesAdditions" -font "-size 10 -weight bold"
     ttk::label $mainFrame.imunesDesc -text "Integrated Multiprotocol Network Emulator/Simulator."
+    ttk::label $mainFrame.dev1 -text "2019-2020 Sorbonne University"
+    ttk::label $mainFrame.dev2 -text "This work was developed by Benadji hanane and Oulad Said Chawki"
+    ttk::label $mainFrame.dev3 -text "In this version of imunes we added a full integration of emulation of Linux namespaces and CISCO routers"
     ttk::label $mainFrame.homepage -text "http://imunes.net/" -font "-underline 1 -size 10"
     ttk::label $mainFrame.github -text "http://github.com/imunes/imunes" -font "-underline 1 -size 10"
     ttk::label $mainFrame.copyright -text "Copyright (c) University of Zagreb 2004 - $imunesLastYear" -font "-size 8"
@@ -914,18 +958,40 @@ menu .menubar.help -tearoff 0
     grid $mainFrame.imunesLabel -column 0 -row 1 -pady 5 -padx 5
     grid $mainFrame.imunesVersion -column 0 -row 2 -pady {5 1} -padx 5
     grid $mainFrame.lastChanged -column 0 -row 3 -pady {1 5} -padx 5
+    grid $mainFrame.dev1 -column 0 -row 4  -pady 1 -padx 5
+    grid $mainFrame.dev2 -column 0 -row 5 -pady 1 -padx 5
+    grid $mainFrame.dev3 -column 0 -row 6  -pady 1 -padx 5
     if { $imunesAdditions != ""} {
-	grid $mainFrame.imunesAdditions -column 0 -row 4 -pady {0 1} -padx 5
+	grid $mainFrame.imunesAdditions -column 0 -row 7 -pady {0 1} -padx 5
     }
-    grid $mainFrame.imunesDesc -column 0 -row 5 -pady {5 10} -padx 5
-    grid $mainFrame.homepage -column 0 -row 6 -pady 1 -padx 5
-    grid $mainFrame.github -column 0 -row 7 -pady 1 -padx 5
-    grid $mainFrame.copyright -column 0 -row 8 -pady {20 10} -padx 5
+    grid $mainFrame.imunesDesc -column 0 -row 8 -pady {5 10} -padx 5
+    grid $mainFrame.homepage -column 0 -row 9 -pady 1 -padx 5
+
+    grid $mainFrame.github -column 0 -row 10 -pady 1 -padx 5
+    grid $mainFrame.copyright -column 0 -row 11 -pady {20 10} -padx 5
 
     bind $mainFrame.homepage <1> { launchBrowser [%W cget -text] }
     bind $mainFrame.homepage <Enter> "%W configure -foreground blue; \
 	$mainFrame config -cursor hand1"
     bind $mainFrame.homepage <Leave> "%W configure -foreground black; \
+	$mainFrame config -cursor arrow"
+
+  bind $mainFrame.dev1 <1> { launchBrowser [%W cget -text] }
+    bind $mainFrame.dev1 <Enter> "%W configure -foreground blue; \
+	$mainFrame config -cursor hand1"
+    bind $mainFrame.dev1 <Leave> "%W configure -foreground black; \
+	$mainFrame config -cursor arrow"
+
+  bind $mainFrame.dev2 <1> { launchBrowser [%W cget -text] }
+    bind $mainFrame.dev2 <Enter> "%W configure -foreground blue; \
+	$mainFrame config -cursor hand1"
+    bind $mainFrame.dev2 <Leave> "%W configure -foreground black; \
+	$mainFrame config -cursor arrow"
+
+  bind $mainFrame.dev3 <1> { launchBrowser [%W cget -text] }
+    bind $mainFrame.dev3 <Enter> "%W configure -foreground blue; \
+	$mainFrame config -cursor hand1"
+    bind $mainFrame.dev3 <Leave> "%W configure -foreground black; \
 	$mainFrame config -cursor arrow"
 
     bind $mainFrame.github <1> { launchBrowser [%W cget -text] }

@@ -95,6 +95,119 @@ proc redrawAll {} {
     updateIconSize
     .panwin.f1.c config -cursor left_ptr
     raiseAll .panwin.f1.c
+
+
+
+			#Modification For Vlan
+
+  			#*********************************************
+
+ foreach node $node_list {
+	if { [nodeType $node] == "lanswitch"} {
+		
+			
+
+					global RouterCisco listVlan
+
+				# c'est à dire qu'on a fait un open file qui exist
+					if { $RouterCisco != ""} {
+
+				# On remplit listVlan avec la configuration du fichier
+
+
+							set Mynode ""
+							set enable ""
+							set Mytag ""
+							set Mymode ""
+							set Myinterface ""
+							set Myrange ""
+
+               			    upvar 0 ::cf::[set ::curcfg]::$node $node
+
+                			set netconf [lindex [lsearch -inline [set $node] "network-config *"] 1]
+
+
+                			foreach entry $netconf {
+                  
+					 				if {$entry == "!"} {
+                     		       			lappend listVlan "!"
+								   			set Mynode ""
+                                 			set enable ""
+								   			set Mytag ""
+								   			set Mymode ""
+								   			set Myinterface ""
+							       			set Myrange ""
+					 				} else {
+                  	 					if { [lindex $entry 0] == "interface" && [lindex $entry 1] != ""} {
+                  		 			   				set entry1 [lindex $entry 1]
+                         			   				set Mynode "$node-$entry1"
+
+
+			         					} else { 
+
+                    				   				set entry [split $entry "="]
+                                       
+
+                            						if {[lindex $entry 0] == " vlan_enable"} {
+                            						set enable [lindex $entry 1]
+
+                            			} elseif {[lindex $entry 0] == " vlan_tag"} {
+                            						set Mytag [lindex $entry 1]	
+
+										} elseif {[lindex $entry 0] == " vlan_mode"} {
+                            						set Mymode [lindex $entry 1]	
+
+										} elseif {[lindex $entry 0] == " Interface_type"} {
+                            						set Myinterface [lindex $entry 1]
+
+										} elseif {[lindex $entry 0] == " vlan_range"} {
+                            						set Myrange [lindex $entry 1]	
+
+										}
+
+		                     } 
+					       }
+                   if {$Mynode != "" && $enable != "" && $Mytag != "" && $Mymode != "" && $Myinterface != "" && $Myrange != ""} {
+
+
+
+     				 foreach element $listVlan {
+	
+							set nom [lindex $element 0]
+                			set nom1 [lindex $nom 0]
+
+							if { $Mynode == $nom1 } {
+
+								set id [lsearch $listVlan $element]
+                                
+                                set ID [expr $id-1]
+
+								set malist [lreplace $listVlan $id $id]
+								set malist [lreplace $malist $ID $ID]
+								set listVlan $malist
+							}
+
+
+						}
+
+                         lappend listVlan "$Mynode $enable $Mytag $Mymode $Myinterface $Myrange"
+
+					}                      
+
+
+                 }
+
+
+
+}
+
+
+
+
+  			#*********************************************
+	}
+    }
+
 }
 
 #****f* editor.tcl/drawNode
@@ -315,15 +428,13 @@ proc updateIfcLabel { lnode1 lnode2 } {
     if { $showIfIPv6addrs && $ifipv6addr != "" } {
 	lappend labelstr "$ifipv6addr"
     }
-    set str ""
     if { [getIfcOperState $lnode1 $ifc] == "down" } {
 	set str "*"
-    }
-    if { [getIfcNatState $lnode1 $ifc] == "on" } {
-	set str "${str}NAT-"
+    } else {
+	set str ""
     }
     foreach elem $labelstr {
-	if {$str in "{} * NAT- *NAT-" } {
+	if {$str == "" || $str == "*"} {
 	    set str "$str[set elem]"
 	} else {
 	    set str "$str\r[set elem]"
