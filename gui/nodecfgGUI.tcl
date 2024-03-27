@@ -997,6 +997,66 @@ proc configGUI_nodeName { wi node label } {
     pack $wi.name -fill both
 }
 
+#****f* nodecfgGUI.tcl/configGUI_rj45s
+# NAME
+#   configGUI_rj45s -- configure GUI - node name
+# SYNOPSIS
+#   configGUI_rj45s $wi $node $label
+# FUNCTION
+#   Creating module with node name.
+# INPUTS
+#   * wi -- widget
+#   * node -- node id
+#   * label -- text shown before the entry with node name
+#****
+proc configGUI_rj45s { wi node label } {
+    global changed guielements
+    lappend guielements configGUI_rj45s
+
+    set ifcs [getExtIfcs]
+    foreach group [getNodeExternalIfcs $node] {
+	lassign $group ifc extIfc
+	destroy $wi.$ifc
+	ttk::frame $wi.$ifc -borderwidth 6
+	ttk::label $wi.$ifc.txt -text $label
+	ttk::combobox $wi.$ifc.nodename -width 14 -textvariable extIfc$ifc
+	$wi.$ifc.nodename configure -values [concat UNASSIGNED $ifcs]
+	$wi.$ifc.nodename set $extIfc
+
+	pack $wi.$ifc.txt -side left -anchor e -expand 1 -padx 4 -pady 4
+	pack $wi.$ifc.nodename -side left -anchor w -expand 1 -padx 4 -pady 4
+	pack $wi.$ifc -fill both
+    }
+
+    set changed 1
+}
+
+#****f* nodecfgGUI.tcl/configGUI_rj45sApply
+# NAME
+#   configGUI_rj45sApply -- configure GUI - node name apply
+# SYNOPSIS
+#   configGUI_rj45sApply $wi $node
+# FUNCTION
+#   Saves changes in the module with node name.
+# INPUTS
+#   * wi -- widget
+#   * node -- node id
+#****
+proc configGUI_rj45sApply { wi node } {
+    global changed badentry showTree eid_base isOSlinux
+
+    set name [string trim [$wi.name.nodename get]]
+    setNodeName $node $name
+
+    set ifcs {}
+    foreach ifc [ifcList $node] {
+	lappend ifcs [list $ifc [string trim [$wi.$ifc.nodename get]]]
+    }
+    setNodeExternalIfcs $node $ifcs
+
+    set changed 1
+}
+
 #****f* nodecfgGUI.tcl/configGUI_ifcMainFrame
 # NAME
 #   configGUI_ifcMainFrame -- configure GUI - interface main frame

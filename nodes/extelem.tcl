@@ -67,6 +67,9 @@ proc $MODULE.prepareSystem {} {
 #   * ifc -- interface name
 #****
 proc $MODULE.confNewIfc { node ifc } {
+    set old [getNodeExternalIfcs $node]
+    lappend old [list $ifc "UNASSIGNED"]
+    setNodeExternalIfcs $node $old
 }
 
 #****f* extelem.tcl/extelem.confNewNode
@@ -256,14 +259,14 @@ proc $MODULE.configGUI { c node } {
     global wi
     global guielements treecolumns
     set guielements {}
+    set treecolumns {}
 
     configGUI_createConfigPopupWin $c
     wm title $wi "External element configuration"
-    configGUI_nodeName $wi $node "Node name:"
+    configGUI_nodeName $wi $node "External element name:"
 
     configGUI_addPanedWin $wi
-    set treecolumns {"External interface"}
-    configGUI_addTree $wi $node
+    configGUI_rj45s $wi $node "Physical interface:"
 
     configGUI_buttonsACNode $wi $node
 }

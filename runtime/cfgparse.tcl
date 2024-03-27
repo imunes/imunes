@@ -353,6 +353,9 @@ proc loadCfg { cfg } {
 			interface-peer {
 			    lappend $object "interface-peer {$value}"
 			}
+			external-ifcs {
+			    lappend $object "external-ifcs {$value}"
+			}
 			network-config {
 			    set cfg ""
 			    foreach zline [split $value {
