@@ -85,7 +85,7 @@ proc $MODULE.confNewIfc { node ifc } {
 proc $MODULE.confNewNode { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
     global nodeNamingBase
-    
+
     set nconfig [list \
 	"hostname [getNewNodeNameType extelem $nodeNamingBase(extelem)]" \
 	! ]
@@ -193,9 +193,9 @@ proc getExtIfc { node ifc } {
 #   * node -- id of the node (type of the node is extelem)
 #****
 proc $MODULE.instantiate { eid node } {
-    foreach ifc [ifcList $node] {
-	set extifc [getExtIfc $node $ifc]
-	captureExtIfcByName $eid $extifc
+    foreach group [getNodeExternalIfcs $node] {
+	lassign $group ifc extIfc
+	captureExtIfcByName $eid $extIfc
     }
 }
 
@@ -212,9 +212,9 @@ proc $MODULE.instantiate { eid node } {
 #   * node -- id of the node (type of the node is extelem)
 #****
 proc $MODULE.destroy { eid node } {
-    foreach ifc [ifcList $node] {
-	set extifc [getExtIfc $node $ifc]
-	releaseExtIfcByName $eid $extifc
+    foreach group [getNodeExternalIfcs $node] {
+	lassign $group ifc extIfc
+	releaseExtIfcByName $eid $extIfc
     }
 } 
 

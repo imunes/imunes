@@ -531,6 +531,10 @@ proc isNodeStarted { node } {
 proc createNodePhysIfcs { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
+    if { [nodeType $node] in "extelem" } {
+	return
+    }
+
     set nodeNs [getNodeNetns $eid $node]
 
     # Create "physical" network interfaces
@@ -754,6 +758,11 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
 	    # won't work if the node is a wireless interface
 	    # because netns is not changed
 	    set ifname [getNodeName $node]
+	} elseif { [nodeType $node] == "extelem" } {
+	    # won't work if the node is a wireless interface
+	    # because netns is not changed
+	    set ifcs [getNodeExternalIfcs $node]
+	    set ifname [lindex [lsearch -inline -exact -index 0 $ifcs "$ifc"] 1]
 	}
 
 	setNsIfcMaster $eid $ifname $link "up"
@@ -763,7 +772,7 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
 proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    if { [nodeType $lnode1] == "rj45" || [nodeType $lnode2] == "rj45" } {
+    if { [nodeType $lnode1] in "rj45 extelem" || [nodeType $lnode2] in "rj45 extelem" } {
 	return
     }
 
@@ -1199,6 +1208,9 @@ proc captureExtIfcByName { eid ifname } {
 	    catch {exec ip link set $ifname up} err
 	}
     }
+
+    # won't work if the node is a wireless interface
+    pipesExec "ip link set $ifname netns $eid" "hold"
 }
 
 #****f* linux.tcl/releaseExtIfc
@@ -1231,11 +1243,17 @@ proc releaseExtIfc { eid node } {
 }
 
 proc releaseExtIfcByName { eid ifname } {
+    global devfs_number
+
     set ifc [lindex [split $ifname .] 0]
     set vlan [lindex [split $ifname .] 1]
     if { $vlan != "" } {
 	catch { exec ip link del $ifname }
     }
+
+    pipesExec "ip -n $eid link set $ifname netns imunes_$devfs_number" "hold"
+
+    return
 }
 
 proc getIPv4RouteCmd { statrte } {
