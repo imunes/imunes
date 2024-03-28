@@ -266,7 +266,7 @@ proc $MODULE.configGUI { c node } {
     configGUI_nodeName $wi $node "External element name:"
 
     configGUI_addPanedWin $wi
-    configGUI_rj45s $wi $node "Physical interface:"
+    configGUI_rj45s $wi $node
 
     configGUI_buttonsACNode $wi $node
 }

@@ -1009,26 +1009,30 @@ proc configGUI_nodeName { wi node label } {
 #   * node -- node id
 #   * label -- text shown before the entry with node name
 #****
-proc configGUI_rj45s { wi node label } {
-    global changed guielements
+proc configGUI_rj45s { wi node } {
+    global guielements
     lappend guielements configGUI_rj45s
 
     set ifcs [getExtIfcs]
     foreach group [getNodeExternalIfcs $node] {
 	lassign $group ifc extIfc
+	set lbl "Interface $ifc"
+	set peer [logicalPeerByIfc $node $ifc]
+	if { $peer != "" } {
+	    set lbl "$lbl (peer [getNodeName $peer])"
+	}
+
 	destroy $wi.$ifc
 	ttk::frame $wi.$ifc -borderwidth 6
-	ttk::label $wi.$ifc.txt -text $label
+	ttk::label $wi.$ifc.txt -text "$lbl"
 	ttk::combobox $wi.$ifc.nodename -width 14 -textvariable extIfc$ifc
 	$wi.$ifc.nodename configure -values [concat UNASSIGNED $ifcs]
 	$wi.$ifc.nodename set $extIfc
 
-	pack $wi.$ifc.txt -side left -anchor e -expand 1 -padx 4 -pady 4
-	pack $wi.$ifc.nodename -side left -anchor w -expand 1 -padx 4 -pady 4
+	pack $wi.$ifc.txt -side left -anchor w -expand 1 -padx 4 -pady 4
+	pack $wi.$ifc.nodename -side left -anchor e -expand 1 -padx 4 -pady 4
 	pack $wi.$ifc -fill both
     }
-
-    set changed 1
 }
 
 #****f* nodecfgGUI.tcl/configGUI_rj45sApply
@@ -1043,7 +1047,7 @@ proc configGUI_rj45s { wi node label } {
 #   * node -- node id
 #****
 proc configGUI_rj45sApply { wi node } {
-    global changed badentry showTree eid_base isOSlinux
+    global changed
 
     set name [string trim [$wi.name.nodename get]]
     setNodeName $node $name
@@ -1052,9 +1056,13 @@ proc configGUI_rj45sApply { wi node } {
     foreach ifc [ifcList $node] {
 	lappend ifcs [list $ifc [string trim [$wi.$ifc.nodename get]]]
     }
-    setNodeExternalIfcs $node $ifcs
-
-    set changed 1
+    set old [getNodeExternalIfcs $node]
+    if { $old != $ifcs } {
+	set changed 1
+	setNodeExternalIfcs $node $ifcs
+	redrawAll
+	updateUndoLog
+    }
 }
 
 #****f* nodecfgGUI.tcl/configGUI_ifcMainFrame
