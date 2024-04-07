@@ -187,6 +187,9 @@ proc $MODULE.shutdown { eid node } {
     }
 }
 
+proc $MODULE.destroyIfcs { eid node ifcs } {
+    l2node.destroyIfcs $eid $node $ifcs
+}
 
 #****f* filter.tcl/filter.destroy
 # NAME

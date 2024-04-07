@@ -246,6 +246,31 @@ proc createExperimentFilesFromBatch {} {
     createExperimentFiles $eid
 }
 
+#****f* freebsd.tcl/l3node.nghook
+# NAME
+#   l3node.nghook -- layer 3 node netgraph hook
+# SYNOPSIS
+#   l3node.nghook $eid $node $ifc
+# FUNCTION
+#   Returns the netgraph node name and the hook name for a given experiment
+#   id, node id, and interface name.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#   * ifc -- interface name
+# RESULT
+#   * list -- list in the form of {netgraph_node_name hook}
+#****
+proc l3node.nghook { eid node ifc } {
+    switch -exact [string trim $ifc 0123456789] {
+	wlan -
+	ext -
+	eth {
+	    return [list $node-$ifc ether]
+	}
+    }
+}
+
 #****f* exec.tcl/l3node.instantiate
 # NAME
 #   l3node.instantiate -- layer 3 node instantiate
@@ -263,6 +288,29 @@ proc createExperimentFilesFromBatch {} {
 proc l3node.instantiate { eid node } {
     prepareFilesystemForNode $node
     createNodeContainer $node
+}
+
+proc l3node.createIfcs { eid node ifcs } {
+    createNodePhysIfcs $node $ifcs
+}
+
+proc l2node.createIfcs { eid node ifcs } {
+    createNodePhysIfcs $node $ifcs
+}
+
+#****f* exec.tcl/l3node.setupNamespace
+# NAME
+#   l3node.setupNamespace -- layer 3 node setupNamespace
+# SYNOPSIS
+#   l3node.setupNamespace $eid $node
+# FUNCTION
+#   Linux only. Attaches the existing Docker netns to a new one.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
+proc l3node.setupNamespace { eid node } {
+    attachToL3NodeNamespace $node
 }
 
 #****f* exec.tcl/l3node.initConfigure
@@ -299,6 +347,21 @@ proc l3node.initConfigure { eid node } {
 proc l3node.start { eid node } {
     startIfcsNode $node
     runConfOnNode $node
+}
+
+#****f* exec.tcl/l2node.setupNamespace
+# NAME
+#   l2node.setupNamespace -- layer 2 node setupNamespace
+# SYNOPSIS
+#   l2node.setupNamespace $eid $node
+# FUNCTION
+#   Linux only. Creates a new netns.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
+proc l2node.setupNamespace { eid node } {
+    createNamespace $eid-$node
 }
 
 #****f* exec.tcl/l3node.ipsecInit
@@ -435,7 +498,7 @@ proc deployCfg {} {
     set allNodes [concat $l2nodes $l3nodes]
     set allNodeCount [llength $allNodes]
     incr linkCount [expr -$pseudoNodesCount/2]
-    set maxProgressbasCount [expr {4*$allNodeCount + 1*$l2nodeCount + 6*$l3nodeCount + 2*$linkCount}]
+    set maxProgressbasCount [expr {5*$allNodeCount + 1*$l2nodeCount + 5*$l3nodeCount + 2*$linkCount}]
 
     set w ""
     if {$execMode != "batch"} {
@@ -459,12 +522,6 @@ proc deployCfg {} {
     }
 
     try {
-	statline "Instantiating L2 nodes..."
-	pipesCreate
-	instantiateNodes $l2nodes $l2nodeCount $w
-	statline "Waiting for $l2nodeCount L2 node(s) to start..."
-	pipesClose
-
 	statline "Instantiating L3 nodes..."
 	pipesCreate
 	instantiateNodes $l3nodes $l3nodeCount $w
@@ -472,11 +529,11 @@ proc deployCfg {} {
 	waitForInstantiateNodes $l3nodes $l3nodeCount $w
 	pipesClose
 
-	statline "Creating namespaces for L3 nodes..."
+	statline "Setting up namespaces for all nodes..."
 	pipesCreate
-	createNodeNamespaces $l3nodes $l3nodeCount $w
-	statline "Waiting on namespaces for $l3nodeCount node(s)..."
-	waitForNamespaces $l3nodes $l3nodeCount $w
+	setupNodeNamespaces $allNodes $allNodeCount $w
+	statline "Waiting on namespaces for $allNodeCount node(s)..."
+	waitForNamespaces $allNodes $allNodeCount $w
 	pipesClose
 
 	statline "Starting initial configuration on L3 nodes..."
@@ -484,6 +541,12 @@ proc deployCfg {} {
 	initConfigureNodes $l3nodes $l3nodeCount $w
 	statline "Waiting for initial configuration on $l3nodeCount L3 node(s)..."
 	waitForInitConf $l3nodes $l3nodeCount $w
+	pipesClose
+
+	statline "Instantiating L2 nodes..."
+	pipesCreate
+	instantiateNodes $l2nodes $l2nodeCount $w
+	statline "Waiting for $l2nodeCount L2 node(s) to start..."
 	pipesClose
 
 	#statline "Copying host files to $l3nodeCount L3 node(s)..."
@@ -575,12 +638,14 @@ proc instantiateNodes { nodes nodeCount w } {
     foreach node $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	try {
-	    [typemodel $node].instantiate $eid $node
-	} on error err {
-	    return -code error "Error in '[typemodel $node].instantiate $eid $node': $err"
+	if { [info procs [typemodel $node].instantiate] != "" } {
+	    try {
+		[typemodel $node].instantiate $eid $node
+	    } on error err {
+		return -code error "Error in '[typemodel $node].instantiate $eid $node': $err"
+	    }
+	    pipesExec ""
 	}
-	pipesExec ""
 
 	incr batchStep
 	incr progressbarCount
@@ -636,7 +701,7 @@ proc waitForInstantiateNodes { nodes nodeCount w } {
     }
 }
 
-proc createNodeNamespaces { nodes nodeCount w } {
+proc setupNodeNamespaces { nodes nodeCount w } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
@@ -644,12 +709,14 @@ proc createNodeNamespaces { nodes nodeCount w } {
     foreach node $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	try {
-	    createNodeNamespace $node
-	} on error err {
-	    return -code error "Error in 'createNodeNamespace $node': $err"
+	if { [info procs [typemodel $node].setupNamespace] != "" } {
+	    try {
+		[typemodel $node].setupNamespace $eid $node
+	    } on error err {
+		return -code error "Error in '[typemodel $node].setupNamespace $eid $node': $err"
+	    }
+	    pipesExec ""
 	}
-	pipesExec ""
 
 	incr batchStep
 	incr progressbarCount
@@ -784,12 +851,15 @@ proc createNodesInterfaces { nodes nodeCount w } {
     foreach node $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	try {
-	    createNodePhysIfcs $node
-	} on error err {
-	    return -code error "Error in 'createNodePhysIfcs $node': $err"
+	if {[info procs [typemodel $node].createIfcs] != ""} {
+	    set ifcs [ifcList $node]
+	    try {
+		[typemodel $node].createIfcs $eid $node $ifcs
+	    } on error err {
+		return -code error "Error in '[typemodel $node].createIfcs $eid $node $ifcs': $err"
+	    }
+	    pipesExec ""
 	}
-	pipesExec ""
 
 	incr batchStep
 	incr progressbarCount

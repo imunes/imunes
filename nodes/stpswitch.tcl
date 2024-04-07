@@ -382,8 +382,16 @@ proc $MODULE.instantiate { eid node } {
     l3node.instantiate $eid $node
 }
 
+proc $MODULE.setupNamespace { eid node } {
+    l3node.setupNamespace $eid $node
+}
+
 proc $MODULE.initConfigure { eid node } {
     l3node.initConfigure $eid $node
+}
+
+proc $MODULE.createIfcs { eid node ifcs } {
+    l3node.createIfcs $eid $node $ifcs
 }
 
 #****f* stpswitch.tcl/stpswitch.start
@@ -424,6 +432,9 @@ proc $MODULE.shutdown { eid node } {
     }
 }
 
+proc $MODULE.destroyIfcs { eid node ifcs } {
+    l3node.destroyIfcs $eid $node $ifcs
+}
 
 #****f* stpswitch.tcl/stpswitch.destroy
 # NAME
@@ -440,7 +451,6 @@ proc $MODULE.shutdown { eid node } {
 proc $MODULE.destroy { eid node } {
     l3node.destroy $eid $node
 }
-
 
 #****f* stpswitch.tcl/stpswitch.nghook
 # NAME

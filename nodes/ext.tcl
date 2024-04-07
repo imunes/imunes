@@ -209,6 +209,10 @@ proc $MODULE.shellcmds {} {
 #****
 proc $MODULE.instantiate { eid node } {}
 
+proc $MODULE.createIfcs { eid node ifcs } {
+    l2node.createIfcs $eid $node $ifcs
+}
+
 #****f* ext.tcl/ext.start
 # NAME
 #   ext.start -- start
@@ -247,6 +251,10 @@ proc $MODULE.shutdown { eid node } {
 	killExtProcess "xterm -T Capturing $eid-$node -e tcpdump -ni $eid-$node"
 	stopExternalConnection $eid $node
     }
+}
+
+proc $MODULE.destroyIfcs { eid node ifcs } {
+    l2node.destroyIfcs $eid $node $ifcs
 }
 
 #****f* ext.tcl/ext.destroy

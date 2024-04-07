@@ -220,6 +220,10 @@ proc $MODULE.shellcmds {} {
 #****
 proc $MODULE.instantiate { eid node } {}
 
+proc $MODULE.createIfcs { eid node ifcs } {
+    l2node.createIfcs $eid $node $ifcs
+}
+
 #****f* extnat.tcl/extnat.start
 # NAME
 #   extnat.start -- start
@@ -260,6 +264,10 @@ proc $MODULE.shutdown { eid node } {
 	stopExternalConnection $eid $node
 	unsetupExtNat $eid $node $ifc
     }
+}
+
+proc $MODULE.destroyIfcs { eid node ifcs } {
+    l2node.destroyIfcs $eid $node $ifcs
 }
 
 #****f* extnat.tcl/extnat.destroy

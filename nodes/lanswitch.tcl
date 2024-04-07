@@ -194,6 +194,18 @@ proc $MODULE.instantiate { eid node } {
     l2node.instantiate $eid $node
 }
 
+proc $MODULE.setupNamespace { eid node } {
+    l2node.setupNamespace $eid $node
+}
+
+proc $MODULE.createIfcs { eid node ifcs } {
+    l2node.createIfcs $eid $node $ifcs
+}
+
+proc $MODULE.destroyIfcs { eid node ifcs } {
+    l2node.destroyIfcs $eid $node $ifcs
+}
+
 #****f* lanswitch.tcl/lanswitch.destroy
 # NAME
 #   lanswitch.destroy -- destroy

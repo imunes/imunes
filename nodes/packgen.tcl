@@ -189,6 +189,9 @@ proc $MODULE.shutdown { eid node } {
     pipesExec "jexec $eid ngctl msg $node: stop" "hold"
 }
 
+proc $MODULE.destroyIfcs { eid node ifcs } {
+    l2node.destroyIfcs $eid $node $ifcs
+}
 
 #****f* packgen.tcl/packgen.destroy
 # NAME
@@ -204,7 +207,6 @@ proc $MODULE.shutdown { eid node } {
 proc $MODULE.destroy { eid node } {
     pipesExec "jexec $eid ngctl msg $node: shutdown" "hold"
 }
-
 
 #****f* packgen.tcl/packgen.nghook
 # NAME
@@ -227,7 +229,6 @@ proc $MODULE.destroy { eid node } {
 proc $MODULE.nghook { eid node ifc } {
     return [list $node output]
 }
-
 
 #****f* packgen.tcl/packgen.configGUI
 # NAME

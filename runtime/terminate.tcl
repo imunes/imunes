@@ -61,6 +61,14 @@ proc l3node.shutdown { eid node } {
     removeNodeIfcIPaddrs $eid $node
 }
 
+proc l3node.destroyIfcs { eid node ifcs } {
+    destroyNodeIfcs $eid $node $ifcs
+}
+
+proc l2node.destroyIfcs { eid node ifcs } {
+    destroyNodeIfcs $eid $node $ifcs
+}
+
 #****f* exec.tcl/l3node.destroy
 # NAME
 #   l3node.destroy -- layer 3 node destroy
@@ -77,7 +85,7 @@ proc l3node.shutdown { eid node } {
 proc l3node.destroy { eid node } {
     destroyNodeVirtIfcs $eid $node
     removeNodeContainer $eid $node
-    destroyNodeNamespace $eid $node
+    destroyNamespace $eid-$node
     removeNodeFS $eid $node
 }
 
@@ -174,10 +182,12 @@ proc destroyLinks { eid links linkCount w } {
 	    set lnode2 [lindex [linkPeers $mirror_link] 0]
 	}
 
-	try {
-	    destroyLinkBetween $eid $lnode1 $lnode2 $link
-	} on error err {
-	    return -code error "Error in 'destroyLinkBetween $eid $lnode1 $lnode2 $link': $err"
+	if { ! [getLinkDirect $link] } {
+	    try {
+		destroyLinkBetween $eid $lnode1 $lnode2 $link
+	    } on error err {
+		return -code error "Error in 'destroyLinkBetween $eid $lnode1 $lnode2 $link': $err"
+	    }
 	}
 
 	incr batchStep
@@ -476,10 +486,13 @@ proc destroyNodesIfcs { eid nodes nodeCount w } {
     foreach node $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	try {
-	    destroyNodeIfcs $eid $node
-	} on error err {
-	    return -code error "Error in 'destroyNodeIfcs $eid $node': $err"
+	if { [info procs [typemodel $node].destroyIfcs] != "" } {
+	    set ifcs [ifcList $node]
+	    try {
+		[typemodel $node].destroyIfcs $eid $node $ifcs
+	    } on error err {
+		return -code error "Error in '[typemodel $node].destroyIfcs $eid $node $ifcs': $err"
+	    }
 	}
 
 	incr batchStep

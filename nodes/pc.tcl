@@ -292,8 +292,16 @@ proc $MODULE.instantiate { eid node } {
     l3node.instantiate $eid $node
 }
 
+proc $MODULE.setupNamespace { eid node } {
+    l3node.setupNamespace $eid $node
+}
+
 proc $MODULE.initConfigure { eid node } {
     l3node.initConfigure $eid $node
+}
+
+proc $MODULE.createIfcs { eid node ifcs } {
+    l3node.createIfcs $eid $node $ifcs
 }
 
 #****f* pc.tcl/pc.start
@@ -326,6 +334,10 @@ proc $MODULE.start { eid node } {
 #****
 proc $MODULE.shutdown { eid node } {
     l3node.shutdown $eid $node
+}
+
+proc $MODULE.destroyIfcs { eid node ifcs } {
+    l3node.destroyIfcs $eid $node $ifcs
 }
 
 #****f* pc.tcl/pc.destroy

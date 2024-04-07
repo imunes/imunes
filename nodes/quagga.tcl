@@ -206,15 +206,21 @@ proc $MODULE.shellcmds {} {
 #   * node - node id (type of the node is router and routing model is quagga)
 #****
 proc $MODULE.instantiate { eid node } {
-    global inst_pipes last_inst_pipe
-
     l3node.instantiate $eid $node
+}
+
+proc $MODULE.setupNamespace { eid node } {
+    l3node.setupNamespace $eid $node
 }
 
 proc $MODULE.initConfigure { eid node } {
     l3node.initConfigure $eid $node
 
     enableIPforwarding $eid $node
+}
+
+proc $MODULE.createIfcs { eid node ifcs } {
+    l3node.createIfcs $eid $node $ifcs
 }
 
 #****f* quagga.tcl/router.quagga.start
@@ -248,6 +254,10 @@ proc $MODULE.start { eid node } {
 #****
 proc $MODULE.shutdown { eid node } {
     l3node.shutdown $eid $node
+}
+
+proc $MODULE.destroyIfcs { eid node ifcs } {
+    l3node.destroyIfcs $eid $node $ifcs
 }
 
 #****f* quagga.tcl/router.quagga.destroy

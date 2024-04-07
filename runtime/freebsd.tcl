@@ -50,7 +50,7 @@ proc writeDataToNodeFile { node path data } {
 proc execCmdNode { node cmd } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    catch {eval [concat "nexec jexec " $eid.$node $cmd] } output
+    catch {eval [concat "exec jexec " $eid.$node $cmd] } output
     return $output
 }
 
@@ -238,7 +238,7 @@ proc spawnShell { node cmd } {
 
     set node_id $eid\.$node
 
-    nexec xterm -sb -rightbar \
+    exec xterm -sb -rightbar \
 	-T "IMUNES: [getNodeName $node] (console) [lindex [split $cmd /] end]" \
 	-e "jexec $node_id $cmd" &
 }
@@ -645,35 +645,6 @@ proc execResetLinkJitter { eid link } {
 
     exec jexec $eid ngctl msg $link: setcfg \
 	"{upstream={jitmode=-1} downstream={jitmode=-1}}"
-}
-
-#****f* freebsd.tcl/l3node.nghook
-# NAME
-#   l3node.nghook -- layer 3 node netgraph hook
-# SYNOPSIS
-#   l3node.nghook $eid $node $ifc
-# FUNCTION
-#   Returns the netgraph node name and the hook name for a given experiment
-#   id, node id, and interface name.
-# INPUTS
-#   * eid -- experiment id
-#   * node -- node id
-#   * ifc -- interface name
-# RESULT
-#   * list -- list in the form of {netgraph_node_name hook}
-#****
-proc l3node.nghook { eid node ifc } {
-    set ifnum [string range $ifc 3 end]
-    set node_id "$eid\.$node"
-    switch -exact [string trim $ifc 0123456789] {
-	ext {
-	    return [list $eid-$node ether]
-	}
-	wlan -
-	eth {
-	    return [list $node-$ifc ether]
-	}
-    }
 }
 
 #****f* freebsd.tcl/vimageCleanup
@@ -1112,14 +1083,14 @@ proc isNodeNamespaceCreated { node } {
 # INPUTS
 #   * node -- node id
 #****
-proc createNodePhysIfcs { node } {
+proc createNodePhysIfcs { node ifcs } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global ifc_dad_disable
 
     set node_id "$eid.$node"
     # Create a vimage
     # Create "physical" network interfaces
-    foreach ifc [ifcList $node] {
+    foreach ifc $ifcs {
 	switch -exact [string trimright $ifc 0123456789] {
 	    e {
 	    }
@@ -1155,7 +1126,7 @@ proc createNodePhysIfcs { node } {
 		set cmds "
 		  ifid=\$(printf \"mkpeer . eiface $node-$ifc ether \n
 		  show .:$node-$ifc\" | jexec $eid ngctl -f - | head -n1 | cut -d' ' -f4)"
-		set cmds "$cmds; jexec $eid ngctl name \$ifid: $outifc"
+		set cmds "$cmds; jexec $eid ngctl name \$ifid: $node-$ifc"
 		set cmds "$cmds; jexec $eid ifconfig \$ifid name $outifc"
 
 		pipesExec $cmds "hold"
@@ -1181,9 +1152,11 @@ proc createNodePhysIfcs { node } {
     pipesExec ""
 }
 
-proc createNodeNamespace { node } {}
+proc attachToL3NodeNamespace { node } {}
 
-proc destroyNodeNamespace { eid node } {}
+proc createNamespace { ns } {}
+
+proc destroyNamespace { ns } {}
 
 #****f* freebsd.tcl/createNodeLogIfcs
 # NAME
@@ -1746,14 +1719,14 @@ proc destroyLinkBetween { eid lnode1 lnode2 link } {
 #   * eid -- experiment id
 #   * vimages -- list of virtual nodes
 #****
-proc destroyNodeIfcs { eid node } {
+proc destroyNodeIfcs { eid node ifcs } {
     if { [nodeType $node] in "ext extnat" } {
-	pipesExec "jexec $eid ngctl shutdown $eid-$node:" "hold"
+	pipesExec "jexec $eid ngctl rmnode $eid-$node:" "hold"
 	return
     }
 
-    foreach ifc [ifcList $node] {
-	pipesExec "jexec $eid ngctl shutdown $ifc:" "hold"
+    foreach ifc $ifcs {
+	pipesExec "jexec $eid ngctl rmnode $node-$ifc:" "hold"
     }
 }
 
@@ -1884,16 +1857,6 @@ proc captureExtIfc { eid node } {
 
     pipesExec "ifconfig $ifname vnet $eid" "hold"
     pipesExec "jexec $eid ifconfig $ifname up promisc" "hold"
-    return
-
-    set ifname [getNodeName $node]
-    if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
-	exec ifconfig $ifname create
-	exec ifconfig [lindex [split $ifname .] 0] up promisc
-    }
-    set ngifname [string map {. _} $ifname]
-    nexec ifconfig $ifname vnet $eid
-    nexec jexec $eid ifconfig $ifname up promisc
 }
 
 #****f* freebsd.tcl/releaseExtIfc
@@ -1911,14 +1874,6 @@ proc releaseExtIfc { eid node } {
     set ifname [getNodeName $node]
 
     pipesExec "ifconfig $ifname -vnet $eid" "hold"
-    return
-
-    set ifname [getNodeName $node]
-    catch {nexec ifconfig $ifname -vnet $eid}
-    catch {nexec ifconfig $ifname up -promisc}
-    if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
-	catch {exec ifconfig $ifname destroy}
-    }
 }
 
 #****f* freebsd.tcl/enableIPforwarding
@@ -1939,21 +1894,6 @@ proc enableIPforwarding { eid node } {
 	pipesExec "jexec $eid\.$node sysctl net.inet.ip.fastforwarding=1" "hold"
     }
     pipesExec "jexec $eid\.$node sysctl net.inet6.ip6.forwarding=1" "hold"
-}
-
-#****f* freebsd.tcl/configDefaultLoIfc
-# NAME
-#   configDefaultLoIfc -- configure default logical interface
-# SYNOPSIS
-#   configDefaultLoIfc $eid $node
-# FUNCTION
-#   Configures the default logical interface address for the given node.
-# INPUTS
-#   * eid -- experiment id
-#   * node -- node id
-#****
-proc configDefaultLoIfc { eid node } {
-    pipesExec "jexec $eid\.$node ifconfig lo0 127.0.0.1/8" "hold"
 }
 
 #****f* freebsd.tcl/getExtIfcs
@@ -2065,23 +2005,7 @@ proc taygaDestroy { eid node } {
     catch {exec jexec $eid.$node ifconfig [set nat64ifc_$eid.$node] destroy}
 }
 
-# XXX External connection procedures
-proc extInstantiate { node } {
-    createNodePhysIfcs $node
-}
-
-proc setupExtNat { eid node ifc } {
-    set extIfc [getNodeName $node]
-    set extIp [getIfcIPv4addrs $node $ifc]
-    set prefixLen [lindex [split $extIp "/"] 1]
-    set subnet "[ip::prefix $extIp]/$prefixLen"
-
-    set cmds "echo 'map $extIfc $subnet -> 0/32' | ipnat -f -"
-
-    exec sh << $cmds &
-}
-
-proc startExternalIfc { eid node } {
+proc startExternalConnection { eid node } {
     set cmds ""
     set ifc [lindex [ifcList $node] 0]
     set outifc "$eid-$node"
@@ -2105,11 +2029,22 @@ proc startExternalIfc { eid node } {
 
     set cmds "$cmds\n ifconfig $outifc up"
 
-    exec sh << $cmds &
+    pipesExec "$cmds" "hold"
 }
 
-proc stopExternalIfc { eid node } {
-    exec ifconfig $eid-$node down
+proc stopExternalConnection { eid node } {
+    pipesExec "ifconfig $eid-$node down" "hold"
+}
+
+proc setupExtNat { eid node ifc } {
+    set extIfc [getNodeName $node]
+    set extIp [getIfcIPv4addrs $node $ifc]
+    set prefixLen [lindex [split $extIp "/"] 1]
+    set subnet "[ip::prefix $extIp]/$prefixLen"
+
+    set cmds "echo 'map $extIfc $subnet -> 0/32' | ipnat -f -"
+
+    pipesExec "$cmds" "hold"
 }
 
 proc unsetupExtNat { eid node ifc } {
@@ -2120,5 +2055,5 @@ proc unsetupExtNat { eid node ifc } {
 
     set cmds "echo 'map $extIfc $subnet -> 0/32' | ipnat -f - -pr"
 
-    exec sh << $cmds &
+    pipesExec "$cmds" "hold"
 }

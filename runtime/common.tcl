@@ -39,32 +39,6 @@ set devfs_number 46837
 set hostsAutoAssign 0
 set ipFastForwarding 0
 
-#****f* exec.tcl/nexec
-# NAME
-#   nexec -- execute program
-# SYNOPSIS
-#   set result [nexec $args]
-# FUNCTION
-#   Executes the string given in args variable. The sting is not executed if
-#   IMUNES is running in editor only mode.
-# INPUTS
-#   * args -- the string that should be executed.
-# RESULT
-#   * result -- the standard output of the executed string.
-#****
-proc nexec { args } {
-    global editor_only
-
-    if { $editor_only } {
-	tk_messageBox -title "Editor only" \
-	    -message "Running in editor only mode." \
-	    -type ok
-	return
-    }
-
-    eval exec $args
-}
-
 #****f* exec.tcl/statline
 # NAME
 #   statline -- status line
