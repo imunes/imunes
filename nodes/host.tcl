@@ -300,8 +300,8 @@ proc $MODULE.instantiate { eid node } {
     l3node.instantiate $eid $node
 }
 
-proc $MODULE.configureInitNet { eid node } {
-    l3node.configureInitNet $eid $node
+proc $MODULE.initConfigure { eid node } {
+    l3node.initConfigure $eid $node
 }
 
 #****f* host.tcl/host.start

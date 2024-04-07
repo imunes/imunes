@@ -262,10 +262,6 @@ proc $MODULE.shutdown { eid node } {
 #   * node -- node id (type of the node is pc)
 #****
 proc $MODULE.destroy { eid node } {
-    set ifc [lindex [ifcList $node] 0]
-    if { "$ifc" != "" } {
-	destroyNetgraphNode $eid $node
-    }
 }
 
 #****f* ext.tcl/ext.nghook

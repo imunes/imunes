@@ -19,10 +19,9 @@ proc writeDataToNodeFile { node path data } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     set node_id "$eid.$node"
-    set node_dir [getVrootDir]/$eid/$node
+    catch { exec docker inspect -f "{{.GraphDriver.Data.MergedDir}}" $node_id } node_dir
 
     writeDataToFile $node_dir/$path $data
-    exec docker exec -i $node_id sh -c "cat > $path" < $node_dir/$path
 }
 
 #****f* linux.tcl/execCmdNode
@@ -754,53 +753,70 @@ proc setNsIfcMaster { netNs ifname master state } {
     pipesExec "ip $nsstr link set $ifname master $master $state" "hold"
 }
 
-proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
+#****f* linux.tcl/createDirectLinkBetween
+# NAME
+#   createDirectLinkBetween -- create direct link between
+# SYNOPSIS
+#   createDirectLinkBetween $lnode1 $lnode2 $ifname1 $ifname2
+# FUNCTION
+#   Creates direct link between two given nodes. Direct link connects the host
+#   interface into the node, without ng_node between them.
+# INPUTS
+#   * lnode1 -- node id of the first node
+#   * lnode2 -- node id of the second node
+#   * iname1 -- interface name on the first node
+#   * iname2 -- interface name on the second node
+#****
+proc createDirectLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    # direct link, simulate capturing the host interface into the node,
-    # without bridges between them
-    # XXX move to another proc
-    if { [getLinkDirect $link] } {
-	if { [nodeType $lnode1] == "rj45" || [nodeType $lnode2] == "rj45" } {
-	    if { [nodeType $lnode1] == "rj45" } {
-		set ifname [getNodeName $lnode1]
-		set nodeNs [getNodeNetns $eid $lnode2]
-		set ifc $ifname2
-	    } else {
-		set ifname [getNodeName $lnode2]
-		set nodeNs [getNodeNetns $eid $lnode1]
-		set ifc $ifname1
-	    }
-	    set cmds "ip -n $eid link add $ifc netns $nodeNs link $ifname type macvlan mode passthru"
-	    # we cannot change wireless interfaces namespaces without changing phy
-	    # so try from default netns
-	    set cmds "$cmds || ip link add $ifc netns $nodeNs link $ifname type macvlan mode passthru"
-	    pipesExec "$cmds" "hold"
-	    return
+    if { [nodeType $lnode1] == "rj45" || [nodeType $lnode2] == "rj45" } {
+	if { [nodeType $lnode1] == "rj45" } {
+	    set physical_ifc [getNodeName $lnode1]
+	    set nodeNs [getNodeNetns $eid $lnode2]
+	    set full_virtual_ifc $eid-$lnode2-$ifname2
+	    set virtual_ifc $ifname2
+	    set ether [getIfcMACaddr $lnode2 $virtual_ifc]
+	} else {
+	    set physical_ifc [getNodeName $lnode2]
+	    set nodeNs [getNodeNetns $eid $lnode1]
+	    set full_virtual_ifc $eid-$lnode1-$ifname1
+	    set virtual_ifc $ifname1
+	    set ether [getIfcMACaddr $lnode1 $virtual_ifc]
 	}
-
-	set node1Ns [getNodeNetns $eid $lnode1]
-	set node2Ns [getNodeNetns $eid $lnode2]
-	createNsVethPair $ifname1 $node1Ns $ifname2 $node2Ns
-
-	# add nodes ifc hooks to link bridge and bring them up
-	foreach node "$lnode1 $lnode2" ifc "$ifname1 $ifname2" ns "$node1Ns $node2Ns" {
-	    if { [[typemodel $node].virtlayer] != "NETGRAPH" } {
-		continue
-	    }
-
-	    set ifname $node-$ifc
-	    if { [nodeType $node] == "rj45" } {
-		# won't work if the node is a wireless interface
-		# because netns is not changed
-		set ifname [getNodeName $node]
-	    }
-
-	    setNsIfcMaster $ns $ifc $node "up"
+	try {
+	    exec test -d /sys/class/net/$physical_ifc/wireless
+	} on error {} {
+	    # not wireless
+	    set cmds "ip link add link $physical_ifc name $full_virtual_ifc netns $nodeNs type macvlan mode private"
+	    set cmds "$cmds ; ip -n $nodeNs link set $full_virtual_ifc address $ether"
+	} on ok {} {
+	    # we cannot use macvlan on wireless interfaces, so MAC address cannot be changed
+	    set cmds "ip link add link $physical_ifc name $full_virtual_ifc netns $nodeNs type ipvlan mode l2"
 	}
-
+	set cmds "$cmds ; ip link set $physical_ifc up"
+	set cmds "$cmds ; ip -n $nodeNs link set $full_virtual_ifc name $virtual_ifc"
+	set cmds "$cmds ; ip -n $nodeNs link set $virtual_ifc up"
+	pipesExec "$cmds" "hold"
 	return
     }
+
+    set node1Ns [getNodeNetns $eid $lnode1]
+    set node2Ns [getNodeNetns $eid $lnode2]
+    createNsVethPair $ifname1 $node1Ns $ifname2 $node2Ns
+
+    # add nodes ifc hooks to link bridge and bring them up
+    foreach node "$lnode1 $lnode2" ifc "$ifname1 $ifname2" ns "$node1Ns $node2Ns" {
+	if { [[typemodel $node].virtlayer] != "NETGRAPH" } {
+	    continue
+	}
+
+	setNsIfcMaster $ns $ifc $node "up"
+    }
+}
+
+proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
 
     # create link bridge in experiment netns
     createNsLinkBridge $eid $link
@@ -809,8 +825,6 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     foreach node "$lnode1 $lnode2" ifc "$ifname1 $ifname2" {
 	set ifname $node-$ifc
 	if { [nodeType $node] == "rj45" } {
-	    # won't work if the node is a wireless interface
-	    # because netns is not changed
 	    set ifname [getNodeName $node]
 	}
 
@@ -1003,15 +1017,12 @@ proc runConfOnNode { node } {
 	}
     }
 
-    # we create the config file and insert it directly into the shell pipe
-    # created by pipesCreate, so we don't have to first write it into a file
     set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
-    # hack with "EOF" in order not to expand possible $variables in the configuration
-    set cmds "cat > /$confFile <<\"EOF\" ;"
-    set cmds "$cmds $bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
+    writeDataToNodeFile $node /$confFile $cfg
+    set cmds "$bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
+    # renaming the file signals that we're done
     set cmds "$cmds mv /tout.log /out.log ;"
     set cmds "$cmds mv /terr.log /err.log"
-    set cmds "$cmds\n$cfg\nEOF"
     pipesExec "docker exec -d $node_id sh -c '$cmds'" "hold"
 }
 
@@ -1062,26 +1073,6 @@ proc removeNodeIfcIPaddrs { eid node } {
     set node_id "$eid.$node"
     foreach ifc [allIfcList $node] {
 	pipesExec "docker exec -d $node_id sh -c 'ip addr flush dev $ifc'" "hold"
-    }
-}
-
-proc destroyNetgraphNodes { eid switches widget } {
-    global execMode
-
-    # destroying openvswitch nodes
-    if { $switches != "" } {
-        statline "Shutting down netgraph nodes..."
-        set i 0
-        foreach node $switches {
-            incr i
-            # statline "Shutting down openvswitch node $node ([typemodel $node])"
-            [typemodel $node].destroy $eid $node
-            if {$execMode != "batch"} {
-                $widget.p step -1
-            }
-            displayBatchProgress $i [ llength $switches ]
-        }
-        statline ""
     }
 }
 
@@ -1261,37 +1252,12 @@ proc addIfcToBridge { type ifname bridge } {
 #   * node -- node id
 #****
 proc captureExtIfc { eid node } {
-    set ifname [getNodeName $node]
-
-    # won't work if the node is a wireless interface
-    pipesExec "ip link set $ifname netns $eid" "hold"
-
-    return
-
-    global execMode
-
-    set ifname [getNodeName $node]
-    set ifc [lindex [split [getNodeName $node] .] 0]
-    set vlan [lindex [split [getNodeName $node] .] 1]
-    if { $vlan != "" } {
-	catch {exec ip link add link $ifc name $ifname type vlan id $vlan} err
-	if { $err != "" } {
-	    set msg "Error: VLAN $vlan on external interface $ifc can't be\
-		created.\n($err)"
-	    if { $execMode == "batch" } {
-		puts $msg
-	    } else {
-		after idle {.dialog1.msg configure -wraplength 4i}
-		tk_dialog .dialog1 "IMUNES error" $msg \
-		    info 0 Dismiss
-	    }
-	} else {
-	    catch {exec ip link set $ifname up} err
-	}
+    if { [getLinkDirect [lindex [linkByIfc $node 0] 0]] } {
+	return
     }
 
-    createBridge "hub" $eid-$node
-    addIfcToBridge "hub" $ifname $eid-$node
+    set ifname [getNodeName $node]
+    pipesExec "ip link set $ifname netns $eid" "hold"
 }
 
 #****f* linux.tcl/releaseExtIfc
@@ -1306,21 +1272,14 @@ proc captureExtIfc { eid node } {
 #   * node -- node id
 #****
 proc releaseExtIfc { eid node } {
+    if { [getLinkDirect [lindex [linkByIfc $node 0] 0]] } {
+	return
+    }
+
     global devfs_number
 
     set ifname [getNodeName $node]
     pipesExec "ip -n $eid link set $ifname netns imunes_$devfs_number" "hold"
-
-    return
-
-    set ifname [getNodeName $node]
-    set ifc [lindex [split [getNodeName $node] .] 0]
-    set vlan [lindex [split [getNodeName $node] .] 1]
-    if { $vlan != "" } {
-	catch { exec ip link del $ifname }
-    }
-
-    catch { destroyBridge "hub" $eid-$node }
 }
 
 proc getIPv4RouteCmd { statrte } {
