@@ -104,11 +104,7 @@ proc getLinuxLinkStatus { nodename eid ldata } {
     set nodeid [lindex $ldata 0]
     set ifname [lindex $ldata 1]
 
-    if { [isNodeInterface $ifname] } {
-	catch {exec himage $node tc qdisc show dev $ifname} settings
-    } else {
-	catch {exec tc qdisc show dev $eid-$nodeid-$ifname} settings
-    }
+    catch {exec ip netns exec $eid tc qdisc show dev $nodeid-$ifname} settings
 
     foreach val {delay rate duplicate loss} {
 	set $val -1
@@ -136,8 +132,8 @@ proc getLinuxLinkStatus { nodename eid ldata } {
 }
 
 # get link settings into an ordered list on FreeBSD
-proc getFreeBSDLinkStatus { eid ldata } {
-    catch {exec jexec $eid ngctl msg $ldata: getcfg} settings
+proc getFreeBSDLinkStatus { eid lid } {
+    catch {exec jexec $eid ngctl msg $lid: getcfg} settings
     set settings [lindex [lindex [split $settings "\n"] 1] 1]
     set linkStatus ""
     foreach varname { bandwidth delay BER duplicate } {
@@ -199,20 +195,11 @@ proc applyLinkSettingsLinux { bandwidth ber delay dup nodename eid ldata } {
     set nodeid [lindex $ldata 0]
     set ifname [lindex $ldata 1]
 
-    # from the interface name deduct what type of node we're dealing with
-    if { [isNodeInterface $ifname] } {
-	# this is a docker image
-	if { $cfg != "" } {
-	    catch {eval "exec himage $node tc qdisc change dev $ifname root netem [join $cfg " "]"}
-	}
-    } else {
-	# this is a switch (openvswitch)
-	catch {eval "exec tc qdisc change dev $eid-$nodeid-$ifname root netem [join $cfg " "]"}
-    }
+    catch {eval "exec ip netns exec $eid tc qdisc change dev $nodeid-$ifname root netem [join $cfg " "]"}
 }
 
 # apply settings on FreeBSD 
-proc applyLinkSettingsFreeBSD { bandwidth ber delay dup eid lname } {
+proc applyLinkSettingsFreeBSD { bandwidth ber delay dup eid lid } {
     # build the config that should be applied
     append config "{ "
     if { $bandwidth != -1 } {
@@ -252,7 +239,7 @@ proc applyLinkSettingsFreeBSD { bandwidth ber delay dup eid lname } {
     append config " }"
 
     # apply config
-    exec jexec $eid ngctl msg $lname: setcfg $config
+    exec jexec $eid ngctl msg $lid: setcfg $config
 }
 
 # define possible call arguments
@@ -482,12 +469,12 @@ switch [llength $containing_exps] {
 		set node_data [lindex [dict get $ldata $lid] 0]
 
 		if { $params(s) } {
-		    set curr_set [getFreeBSDLinkStatus $eid $node_data]
+		    set curr_set [getFreeBSDLinkStatus $eid $lid]
 		    printLinkStatus $lname $eid $curr_set
 		    return 0
 		}
 
-		applyLinkSettingsFreeBSD $ban $BER $del $dup $eid $node_data
+		applyLinkSettingsFreeBSD $ban $BER $del $dup $eid $lid
 	    }
 	    "*linux*" {
 		set nodes [split $lname $linkDelim]
