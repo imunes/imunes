@@ -562,10 +562,14 @@ proc execSetLinkParams { eid link } {
 	set dup -1
     }
 
+    # XXX temporary fix
+    pipesCreate
     pipesExec "jexec $eid ngctl msg $link: setcfg \
 	\"{ bandwidth=$bandwidth delay=$delay \
 	upstream={ BER=$ber duplicate=$dup } \
 	downstream={ BER=$ber duplicate=$dup }}\""
+
+    pipesClose
 }
 
 #****f* freebsd.tcl/execSetLinkJitter
