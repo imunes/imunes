@@ -11,6 +11,7 @@ Hostname can be in the form: hostname or hostname@eid.
 
 Usage:
   $command vi_hostname command
+  $command -m vi_hostname command (execute command in experiment master netns)
   $command -b vi_hostname command  ---> run in detached mode (background)
   $command -nt vi_hostname command ---> run without pseudo-tty (no-tty)
   $command -v vi_hostname  ---> docker full name (eid.nodename)
@@ -128,6 +129,15 @@ elif test $1 = "-b"; then
         help
         exit 2
     fi
+elif test $1 = "-m"; then
+    image_name=`vi_name $2`
+    test $? -ne 0 && exit 2
+    shift 2
+    eid=$(docker inspect -f '{{.Name}}' $image_name | tr -d "/" | cut -d"." -f1)
+    if test -z "$*"; then
+	exec ip netns exec $eid /bin/bash
+    fi
+    exec ip netns exec $eid "$@"
 elif test `expr a$1 : "a-.*"` = "0"; then
     image_name=`vi_name $1`
     test $? -ne 0 && exit 2
