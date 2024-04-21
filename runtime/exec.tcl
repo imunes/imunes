@@ -926,6 +926,9 @@ if {$type == "routeur"} {
 } elseif {$type == "pcn"} {
     startIfcsNodeN $node 
     runConfOnNodeN $node
+} elseif {$type == "Pclone"} {
+    startIfcsNodeN $node 
+    runConfOnNodeN $node
 } elseif {$type == "wifiAP"} {
     runConfOnNodeAP $node
     startIfcsNodeN $node 

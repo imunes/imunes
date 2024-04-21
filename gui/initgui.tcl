@@ -200,6 +200,7 @@ array set nodeNamingBase {
     nat64 nat64-
     packgen packgen
     stpswitch stpswitch
+    Pclone Pclone
 }
 
 # Packets required for GUI
