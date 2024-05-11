@@ -471,7 +471,7 @@ proc routerDefaultsApply { wi } {
     lset rdconfig 2 $routerOspfEnable 
     lset rdconfig 3 $routerOspf6Enable	
     set routerDefaultsModel $router_model 	
-    set model quagga
+    set model frr
     set selected_node_list [selectedNodes]
     set empty {}
 

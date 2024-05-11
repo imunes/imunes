@@ -33,7 +33,7 @@
 # FUNCTION
 #  This module is used to define all the router specific procedures.
 #  All the specific procedures for a router which uses specific routing model
-#  (quaga, xorp, static) are defined in quagga.tcl, xorp.tcl, static.tcl.
+#  (frr, quagga, static) are defined in frr.tcl, quagga.tcl, static.tcl.
 # NOTES
 #  Procedures in this module start with the keyword router and
 #  end with function specific part that is the same for all the

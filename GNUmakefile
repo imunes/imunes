@@ -28,7 +28,7 @@ NODESFILES =	$(wildcard nodes/*.tcl)
 RUNTIMEFILES =	$(wildcard runtime/*.tcl)
 PATCHESFILES =	$(wildcard src/patches/*)
 
-VROOT =	$(wildcard scripts/*.sh scripts/*.bash)
+VROOT =	$(wildcard scripts/*.sh scripts/*.bash scripts/daemons)
 TOOLS =	$(filter-out $(VROOT), $(wildcard scripts/*))
 
 NODE_ICONS = frswitch.gif hub.gif lanswitch.gif rj45.gif cloud.gif host.gif \

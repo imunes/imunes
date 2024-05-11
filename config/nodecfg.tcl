@@ -1799,7 +1799,7 @@ proc nodeType { node } {
 #   set model [getNodeModel $node]
 # FUNCTION
 #   Returns node's optional routing model. Currently supported models are 
-#   quagga, xorp and static and only nodes of type router have a defined model.
+#   frr, quagga and static and only nodes of type router have a defined model.
 # INPUTS
 #   * node -- node id
 # RESULT
@@ -1818,7 +1818,7 @@ proc getNodeModel { node } {
 #   setNodeModel $node $model
 # FUNCTION
 #   Sets an optional routing model to the node. Currently supported models are
-#   quagga, xorp and static and only nodes of type router have a defined model.
+#   frr, quagga and static and only nodes of type router have a defined model.
 # INPUTS
 #   * node -- node id
 #   * model -- routing model of the specified node
@@ -2700,19 +2700,21 @@ proc setNodeProtocolOspfv2 { node ospfEnable } {
 proc setNodeProtocolOspfv3 { node ospf6Enable } { 
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
-    set n [string trimleft $node "n"]
+    set router_id [ip::intToString [expr 1 + [string trimleft $node "n"]]]
+
+    set area_string " area 0.0.0.0 range ::/0"
+    if { [getNodeModel $node] == "quagga" } {
+	set area_string " network ::/0 area 0.0.0.0"
+    }
 
     if { $ospf6Enable == 1 } {
 	netconfInsertSection $node [list "router ospf6" \
-		" router-id 0.0.0.$n" \
+		" ospf6 router-id $router_id" \
 		" redistribute static" \
 		" redistribute connected" \
 		" redistribute ripng" \
+		" $area_string" \
 		! ]
-# Possible new line:
-#		" area 0.0.0.0 range ::/0" \
-# Old line:		
-#		" network ::/0 area 0.0.0.0" \
     } else {
 	netconfClearSection $node "router ospf6"
     }
@@ -2761,7 +2763,7 @@ proc setNodeType { node newtype } {
     } elseif { [lsearch "host pc" $oldtype] >= 0 \
 	    && $newtype == "router" } {
 	setType $node $newtype
-	setNodeModel $node "quagga"
+	setNodeModel $node "frr"
 	setNodeName $node $newtype[string range $node 1 end]
 	netconfClearSection $node "ip route *"
 	netconfClearSection $node "ipv6 route *"
@@ -3431,7 +3433,7 @@ proc transformNodes { nodes type } {
 		set nodecfg [lreplace $nodecfg $typeIndex $typeIndex "type $type"]
 
 		# set router model and default protocols
-		setNodeModel $node "quagga"
+		setNodeModel $node "frr"
 		setNodeProtocolRip $node 1
 		setNodeProtocolRipng $node 1
 		# clear default static routes

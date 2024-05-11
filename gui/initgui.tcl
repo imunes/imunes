@@ -86,7 +86,7 @@
 #    * showNodeLabels -- control variable for showing node labels
 #    * showLinkLabels -- control variable for showing link labels
 #
-#    * supp_router_models -- supproted router models, currently xorp quagga
+#    * supp_router_models -- supproted router models, currently frr quagga
 #      and static.
 #    * def_router_model -- default router model
 #****
@@ -154,9 +154,9 @@ set canvasBkgMode "original"
 set alignCanvasBkg "center"
 set bgsrcfile ""
 
-set def_router_model quagga
+set def_router_model frr
 
-set model quagga
+set model frr
 set router_model $model
 set routerDefaultsModel $model
 set ripEnable 1
@@ -558,15 +558,15 @@ menu .menubar.tools -tearoff 0
     ttk::checkbutton $w.protocols.ospf -text "ospfv2" -variable routerOspfEnable
     ttk::checkbutton $w.protocols.ospf6 -text "ospfv3" -variable routerOspf6Enable
 
-    ttk::radiobutton $w.model.quagga -text quagga -variable router_model \
-	-value quagga -command {
+    ttk::radiobutton $w.model.frr -text frr -variable router_model \
+	-value frr -command {
 	$w.protocols.rip configure -state normal
 	$w.protocols.ripng configure -state normal
 	$w.protocols.ospf configure -state normal
 	$w.protocols.ospf6 configure -state normal
     }
-    ttk::radiobutton $w.model.xorp -text xorp -variable router_model \
-	-value xorp -command {
+    ttk::radiobutton $w.model.quagga -text quagga -variable router_model \
+	-value quagga -command {
 	$w.protocols.rip configure -state normal
 	$w.protocols.ripng configure -state normal
 	$w.protocols.ospf configure -state normal
@@ -588,12 +588,12 @@ menu .menubar.tools -tearoff 0
     }
 
     if { $oper_mode != "edit" } {
+	$w.model.frr configure -state disabled
 	$w.model.quagga configure -state disabled
-	$w.model.xorp configure -state disabled
 	$w.model.static configure -state disabled
     }
-    if {"xorp" ni $supp_router_models} {
-	$w.model.xorp configure -state disabled
+    if {"frr" ni $supp_router_models} {
+	$w.model.frr configure -state disabled
     }
 
     ttk::frame $w.buttons
@@ -608,7 +608,7 @@ menu .menubar.tools -tearoff 0
     }
 
     pack $w.model -side top -fill x -pady 5
-    pack $w.model.quagga $w.model.xorp $w.model.static \
+    pack $w.model.frr $w.model.quagga $w.model.static \
 	-side left -expand 1
     pack $w.protocols -side top -pady 5
     pack $w.protocols.rip $w.protocols.ripng \
