@@ -832,7 +832,7 @@ proc killAllNodeProcesses { eid node } {
     catch "exec docker exec $node_id killall5 -o 1 -9"
 }
 
-proc destroyVirtNodeIfcs { eid vimages } {}
+proc destroyVirtNodeIfcs { eid vimages vimagesCount w } {}
 
 proc runConfOnNode { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid

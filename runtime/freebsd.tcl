@@ -710,13 +710,12 @@ proc l3node.nghook { eid node ifc } {
     set ifnum [string range $ifc 3 end]
     set node_id "$eid\.$node"
     switch -exact [string trim $ifc 0123456789] {
-	wlan -
-	ext -
-	eth {
-	    return [list $ifc@$node_id ether]
+	ext {
+	    return [list $eid-$node ether]
 	}
-	ser {
-	    return [list hdlc$ifnum@$node_id downstream]
+	wlan -
+	eth {
+	    return [list $node-$ifc ether]
 	}
     }
 }
@@ -1059,43 +1058,6 @@ proc getVrootDir {} {
     }
 }
 
-#****f* freebsd.tcl/dumpNgnodesToFile
-# NAME
-#   dumpNgnodesToFile -- dump ngnodemap list to file
-# SYNOPSIS
-#   dumpNgnodesToFile $path
-# FUNCTION
-#   Saves the list of all the ngnodes to $path.
-# INPUTS
-#   * path -- absolute path of the file
-#****
-proc dumpNgnodesToFile { path } {
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-
-    writeDataToFile $path [array get ngnodemap]
-}
-
-#****f* freebsd.tcl/readNgnodesFromFile
-# NAME
-#   readNgnodesFromFile -- read ngnodes list from file
-# SYNOPSIS
-#   readNgnodesFromFile $eid
-# FUNCTION
-#   Sets the global array ngnodemap to the content of the running config file
-#   for the given eid.
-# INPUTS
-#   * exp -- experiment id
-#****
-proc readNgnodesFromFile { exp } {
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-    global runtimeDir
-
-#    set fileId [open  r]
-#    array set ngnodemap [gets $fileId]
-#    close $fileId
-    array set ngnodemap [readDataFromFile $runtimeDir/$exp/ngnodemap]
-}
-
 #****f* freebsd.tcl/prepareFilesystemForNode
 # NAME
 #   prepareFilesystemForNode -- prepare node filesystem
@@ -1189,7 +1151,6 @@ proc isNodeStarted { node } {
 #   * node -- node id
 #****
 proc createNodePhysIfcs { node } {
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global ifc_dad_disable
 
@@ -1199,14 +1160,18 @@ proc createNodePhysIfcs { node } {
     foreach ifc [ifcList $node] {
 	switch -exact [string range $ifc 0 2] {
 	    eth {
-		set ifid [createIfc $eid eiface ether]
-		pipesExec "jexec $eid ifconfig $ifid vnet $node" "hold"
-		pipesExec "jexec $node_id ifconfig $ifid name $ifc" "hold"
+		# save newly created ngnodeX into a shell variable ifid and
+		# rename the ng node to $node-$ifc (unique to this experiment)
+		set cmds "
+		  ifid=\$(printf \"mkpeer . eiface $node-$ifc ether \n
+		  show .:$node-$ifc\" | jexec $eid ngctl -f - | head -n1 | cut -d' ' -f4)"
+		set cmds "$cmds; jexec $eid ngctl name \$ifid: $node-$ifc"
+		set cmds "$cmds; jexec $eid ifconfig \$ifid name $node-$ifc"
 
-		# XXX ng renaming is automatic in FBSD 8.4 and 9.2, remove this!
-		pipesExec "jexec $node_id ngctl name [set ifid]: $ifc" "hold"
+		pipesExec $cmds "hold"
+		pipesExec "jexec $eid ifconfig $node-$ifc vnet $node" "hold"
+		pipesExec "jexec $node_id ifconfig $node-$ifc name $ifc" "hold"
 
-#		set peer [peerByIfc $node $ifc]
 		set ether [getIfcMACaddr $node $ifc]
                 if {$ether == ""} {
                     autoMACaddr $node $ifc
@@ -1217,16 +1182,20 @@ proc createNodePhysIfcs { node } {
 		    pipesExec "jexec $node_id sysctl net.inet6.ip6.dad_count=0" "hold"
 		}
 		pipesExec "jexec $node_id ifconfig $ifc link $ether" "hold"
-		set ngnodemap($ifc@$node_id) $ifid
 	    }
 	    ext {
-		set ifid [createIfc $eid eiface ether]
 		set outifc "$eid-$node"
-		pipesExec "ifconfig $ifid -vnet $eid" "hold"
-		pipesExec "ifconfig $ifid name $outifc" "hold"
 
-		# XXX ng renaming is automatic in FBSD 8.4 and 9.2, remove this!
-		pipesExec "ngctl name [set ifid]: $outifc" "hold"
+		# save newly created ngnodeX into a shell variable ifid and
+		# rename the ng node to $node-$ifc (unique to this experiment)
+		set cmds "
+		  ifid=\$(printf \"mkpeer . eiface $node-$ifc ether \n
+		  show .:$node-$ifc\" | jexec $eid ngctl -f - | head -n1 | cut -d' ' -f4)"
+		set cmds "$cmds; jexec $eid ngctl name \$ifid: $outifc"
+		set cmds "$cmds; jexec $eid ifconfig \$ifid name $outifc"
+
+		pipesExec $cmds "hold"
+		pipesExec "ifconfig $outifc -vnet $eid" "hold"
 
 		set ether [getIfcMACaddr $node $ifc]
                 if {$ether == ""} {
@@ -1234,18 +1203,6 @@ proc createNodePhysIfcs { node } {
                 }
                 set ether [getIfcMACaddr $node $ifc]
 		pipesExec "ifconfig $outifc link $ether" "hold"
-		set ngnodemap($ifc@$node_id) $ifid
-	    }
-	    ser {
-#		set ifnum [string range $ifc 3 end]
-#		set ifid [createIfc $eid iface inet]
-#		pipesExec "jexec $eid ngctl mkpeer $ifid: cisco inet inet" "hold"
-#		pipesExec "jexec $eid ngctl connect $ifid: $ifid:inet inet6 inet6" "hold"
-#		pipesExec "jexec $eid ngctl msg $ifid: broadcast" "hold"
-#		pipesExec "jexec $eid ngctl name $ifid:inet hdlc$ifnum\@$node" "hold"
-#		pipesExec "jexec $eid ifconfig $ifid vnet $node" "hold"
-#		pipesExec "jexec $node_id ifconfig $ifid name $ifc" "hold"
-#		set ngnodemap(hdlc$ifnum@$node_id) hdlc$ifnum\@$node"
 	    }
 	    default {
 		# capture physical interface directly into the node, without using a bridge
@@ -1471,7 +1428,7 @@ proc removeNodeIfcIPaddrs { eid node } {
 proc destroyNodeVirtIfcs { eid node } {
     set node_id $eid.$node
 
-    pipesExec "for iface in `jexec $node_id ifconfig -l`; do jexec $node_id ifconfig \$iface destroy; done" "hold"
+    pipesExec "jexec $node_id \"for iface in `ifconfig -l`; do ifconfig \$iface destroy; done\"" "hold"
 }
 
 #****f* freebsd.tcl/removeNodeContainer
@@ -1657,19 +1614,16 @@ proc createExperimentContainer {} {
 #   * iname1 -- interface name on the first node
 #   * iname2 -- interface name on the second node
 #****
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
 proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global debug
 
     set lname $lnode1-$lnode2
 
-    set peer1 \
+    set ngpeer1 \
 	[lindex [[typemodel $lnode1].nghook $eid $lnode1 $ifname1] 0]
-    set peer2 \
+    set ngpeer2 \
 	[lindex [[typemodel $lnode2].nghook $eid $lnode2 $ifname2] 0]
-    set ngpeer1 $ngnodemap($peer1)
-    set ngpeer2 $ngnodemap($peer2)
     set nghook1 \
 	[lindex [[typemodel $lnode1].nghook $eid $lnode1 $ifname1] 1]
     set nghook2 \
@@ -1781,7 +1735,7 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
 #   * lnode2 -- node id of the second node
 #****
 proc destroyLinkBetween { eid lnode1 lnode2 } {
-    pipesExec "jexec $eid ngctl msg $lnode1-$lnode2: shutdown"
+    pipesExec "jexec $eid ngctl msg $lnode1-$lnode2: shutdown" "hold"
 }
 
 #dummy procedure
@@ -1831,23 +1785,19 @@ proc destroyNetgraphNodes { eid ngraphs widget } {
 #   * eid -- experiment id
 #   * vimages -- list of virtual nodes
 #****
-proc destroyVirtNodeIfcs { eid vimages } {
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
+proc destroyVirtNodeIfcs { eid vimages vimagesCount w } {
+    global progressbarCount execMode
 
     # destroying virtual interfaces
-    statline "Destroying virtual interfaces..."
-    set i 0
-    pipesCreate
+    set batchStep 0
     foreach node $vimages {
-	incr i
+	incr batchStep
 	foreach ifc [ifcList $node] {
-	    set ngnode $ngnodemap($ifc@$eid.$node)
-	    pipesExec "jexec $eid ngctl shutdown $ngnode:"
+	    pipesExec "jexec $eid ngctl shutdown $ifc:" "hold"
 	}
-	displayBatchProgress $i [ llength $vimages ]
+	displayBatchProgress $batchStep $vimagesCount
     }
-    pipesClose
-    statline ""
+    pipesExec ""
 }
 
 #****f* freebsd.tcl/removeExperimentContainer
@@ -1914,8 +1864,6 @@ proc removeExperimentFiles { eid widget } {
 #   * node -- id of the node (type of the node is either lanswitch or hub)
 #****
 proc l2node.instantiate { eid node } {
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-
     switch -exact [nodeType $node] {
 	lanswitch {
 	    set ngtype bridge
@@ -1929,7 +1877,6 @@ proc l2node.instantiate { eid node } {
     set tlen [string length $t]
     set id [string range $t [expr $tlen - 31] [expr $tlen - 24]]
     catch {exec jexec $eid ngctl name \[$id\]: $node}
-    set ngnodemap($eid\.$node) $node
 }
 
 #****f* freebsd.tcl/l2node.destroy
@@ -1974,8 +1921,6 @@ proc getCpuCount {} {
 #   * node -- node id
 #****
 proc captureExtIfc { eid node } {
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-
     set ifname [getNodeName $node]
 
     pipesExec "ifconfig $ifname vnet $eid" "hold"
@@ -1987,7 +1932,6 @@ proc captureExtIfc { eid node } {
 	exec ifconfig [lindex [split $ifname .] 0] up promisc
     }
     set ngifname [string map {. _} $ifname]
-    set ngnodemap($ifname) $ngifname
     nexec ifconfig $ifname vnet $eid
     nexec jexec $eid ifconfig $ifname up promisc
 }

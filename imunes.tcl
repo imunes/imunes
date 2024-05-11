@@ -310,9 +310,7 @@ if {$execMode == "interactive"} {
 	}
     } else {
 	set configFile "$runtimeDir/$eid_base/config.imn"
-	set ngmapFile "$runtimeDir/$eid_base/ngnodemap"
-	if { [file exists $configFile] && [file exists $ngmapFile] \
-	    && $regular_termination } {
+	if { [file exists $configFile] && $regular_termination } {
 	    set fileId [open $configFile r]
 	    set cfg ""
 	    foreach entry [read $fileId] {
@@ -323,13 +321,8 @@ if {$execMode == "interactive"} {
 	    set curcfg [newObjectId cfg]
 	    lappend cfg_list $curcfg
 	    namespace eval ::cf::[set curcfg] {}
-	    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
 	    upvar 0 ::cf::[set ::curcfg]::eid eid
 	    set eid $eid_base
-
-	    set fileId [open $ngmapFile r]
-	    array set ngnodemap [gets $fileId]
-	    close $fileId
 
 	    loadCfg $cfg
 

@@ -426,12 +426,9 @@ proc resumeSelectedExperiment { exp } {
     upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
     upvar 0 ::cf::[set ::curcfg]::cfgDeployed cfgDeployed
     upvar 0 ::cf::[set ::curcfg]::eid eid
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
 
     set currentFile [getExperimentConfigurationFromFile $exp]
     openFile
-
-    readNgnodesFromFile $exp
 
     set eid $exp
     set cfgDeployed true
@@ -456,7 +453,6 @@ proc createExperimentFiles { eid } {
     
     writeDataToFile $basedir/timestamp [clock format [clock seconds]]
     
-    dumpNgnodesToFile $basedir/ngnodemap
     dumpLinksToFile $basedir/links
 
     if { $execMode == "interactive" } {
@@ -786,7 +782,6 @@ proc displayBatchProgress { prgs tot } {
 proc l3node.instantiate { eid node } {
     prepareFilesystemForNode $node
     createNodeContainer $node
-    createNodePhysIfcs $node
 }
 
 proc l3node.configureInitNet { eid node } {
@@ -962,9 +957,11 @@ proc deployCfg {} {
 	services start "NODEINST"
 	# statline ""
 
+	pipesCreate
 	statline "Creating interfaces on $nonPseudoNodesCount non-pseudo node(s)..."
 	createNodesInterfaces $nonPseudoNodes $nonPseudoNodesCount $w
 	# statline ""
+	pipesClose
 
 	pipesCreate
 	statline "Creating $linkCount link(s)..."
@@ -1112,7 +1109,12 @@ proc configureInitNetNodes { nodes nodeCount w } {
 
 proc copyFilesToNodes { nodes nodeCount w } {}
 
-proc createNodesInterfaces { nodesIfcs nodeCount w } {}
+proc createNodesInterfaces { nodes nodeCount w } {
+    foreach node $nodes {
+	createNodePhysIfcs $node
+	pipesExec ""
+    }
+}
 
 proc createLinks { links linkCount w } {
     global progressbarCount execMode
@@ -1342,6 +1344,7 @@ proc terminateLinks { eid links linkCount w } {
 	    update
 	}
     }
+    pipesExec ""
 }
 
 proc destroyNodesIfcs { nodes_ifcs } {}
@@ -1448,6 +1451,8 @@ proc terminateAllNodes { eid } {
 	    if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
 		if { [typemodel $node] == "rj45" } {
 		    lappend extifcs $node
+		} elseif { [typemodel $node] == "extnat" } {
+		    lappend vimages $node
 		} else {
 		    lappend nonVimages $node
 		}
@@ -1492,7 +1497,7 @@ proc terminateAllNodes { eid } {
     try {
 	statline "Stopping services for NODESTOP hook..."
 	services stop "NODESTOP"
-	# statline
+	# statline ""
 
 	statline "Stopping $nonPseudoNodesCount non-pseudo node(s)..."
 	terminateNgAndVimages $eid $nonPseudoNodes $nonPseudoNodesCount $w
@@ -1520,15 +1525,18 @@ proc terminateAllNodes { eid } {
 	statline ""
 
 	# check this
-	destroyVirtNodeIfcs $eid $vimages
+	statline "Destroying virtual interfaces..."
+	destroyVirtNodeIfcs $eid $vimages $vimagesCount $w
+	statline ""
 
+	statline "Waiting for hanging TCP connections..."
 	timeoutPatch $eid $node_list
+	statline ""
 
 	statline "Stopping services for NODEDEST hook..."
 	services stop "NODEDEST"
 	# statline ""
 
-	pipesCreate
 	statline "Shutting down $vimagesCount VIMAGE nodes(s)..."
 	destroyVimageNodes $eid $vimages $vimagesCount $w
 	statline ""

@@ -225,7 +225,7 @@ proc $MODULE.destroy { eid node } {
 #****
 proc $MODULE.nghook { eid node ifc } {
     set ifunit [string range $ifc 1 end]
-    return [list $eid\.$node link$ifunit]
+    return [list $node link$ifunit]
 }
 
 
