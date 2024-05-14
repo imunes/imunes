@@ -4,13 +4,18 @@ IMUNESDIR = $(PREFIX)/$(LIBDIR)
 CONFIGDIR = $(IMUNESDIR)/config
 GUIDIR = $(IMUNESDIR)/gui
 ICONSDIR = $(IMUNESDIR)/icons
+CUSTOMICONSDIR = $(IMUNESDIR)/custom_nodes/icons
 NODESDIR = $(IMUNESDIR)/nodes
+CUSTOMNODESDIR = $(IMUNESDIR)/custom_nodes
 RUNTIMEDIR = $(IMUNESDIR)/runtime
 SCRIPTSDIR = $(IMUNESDIR)/scripts
 PATCHESDIR = $(IMUNESDIR)/src/patches
 NORMAL_ICONSDIR = $(ICONSDIR)/normal
 SMALL_ICONSDIR = $(ICONSDIR)/small
 TINY_ICONSDIR = $(ICONSDIR)/tiny
+CUSTOMNORMAL_ICONSDIR = $(CUSTOMICONSDIR)/normal
+CUSTOMSMALL_ICONSDIR = $(CUSTOMICONSDIR)/small
+CUSTOMTINY_ICONSDIR = $(CUSTOMICONSDIR)/tiny
 BINDIR = $(PREFIX)/bin
 IMUNESDATE = `date +"%Y%m%d"`
 IMUNESVER = 1.0
@@ -25,6 +30,7 @@ BASEFILES =	COPYRIGHT README.md VERSION
 CONFIGFILES =	$(wildcard config/*.tcl)
 GUIFILES =	$(wildcard gui/*.tcl)
 NODESFILES =	$(wildcard nodes/*.tcl)
+CUSTOMNODESFILES =	$(wildcard custom_nodes/*.tcl)
 RUNTIMEFILES =	$(wildcard runtime/*.tcl)
 PATCHESFILES =	$(wildcard src/patches/*)
 
@@ -41,6 +47,12 @@ SMALL_ICONS = $(NODE_ICONS)
 
 TINY_ICONS = $(NODE_ICONS) link.gif select.gif l2.gif l3.gif freeform.gif \
 		oval.gif rectangle.gif text.gif
+
+CUSTOMNORMAL_ICONS = $(wildcard custom_nodes/icons/normal/*)
+
+CUSTOMSMALL_ICONS = $(wildcard custom_nodes/icons/small/*)
+
+CUSTOMTINY_ICONS = $(wildcard custom_nodes/icons/tiny/*)
 
 ICONS = $(wildcard icons/imunes_*)
 
@@ -108,6 +120,9 @@ endif
 	mkdir -p $(NODESDIR)
 	cp $(NODESFILES) $(NODESDIR)
 
+	mkdir -p $(CUSTOMNODESDIR)
+	cp $(CUSTOMNODESFILES) $(CUSTOMNODESDIR)
+
 	mkdir -p $(RUNTIMEDIR)
 	cp $(RUNTIMEFILES) $(RUNTIMEDIR)
 
@@ -132,6 +147,21 @@ endif
 	mkdir -p $(TINY_ICONSDIR)
 	for file in $(TINY_ICONS); do \
 		cp icons/tiny/$${file} $(TINY_ICONSDIR); \
+	done ;
+
+	mkdir -p $(CUSTOMNORMAL_ICONSDIR)
+	for file in $(CUSTOMNORMAL_ICONS); do \
+		cp $${file} $(CUSTOMNORMAL_ICONSDIR); \
+	done ;
+
+	mkdir -p $(CUSTOMSMALL_ICONSDIR)
+	for file in $(CUSTOMSMALL_ICONS); do \
+		cp $${file} $(CUSTOMSMALL_ICONSDIR); \
+	done ;
+
+	mkdir -p $(CUSTOMTINY_ICONSDIR)
+	for file in $(CUSTOMTINY_ICONS); do \
+		cp $${file} $(CUSTOMTINY_ICONSDIR); \
 	done ;
 
 uninstall:
