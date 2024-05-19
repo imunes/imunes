@@ -52,6 +52,7 @@ proc startEventScheduling {} {
 # FUNCTION
 #   Stops event scheduling.
 #****
+
 proc stopEventScheduling {} {
     upvar 0 ::cf::[set ::curcfg]::stop_sched stop_sched
     set stop_sched true
