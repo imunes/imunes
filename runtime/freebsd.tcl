@@ -1580,6 +1580,10 @@ proc prepareDevfs {} {
 	exec devfs rule add path kmem unhide
 	exec devfs rule add path bpf* unhide
 	exec devfs rule add path tun* unhide
+        exec devfs rule add path pfil* unhide
+	exec devfs rule add path pf* unhide
+        exec devfs rule add path pflog* unhide
+        exec devfs rule add path ipsec* unhide
 	exec devfs ruleset 0
     }
 }
