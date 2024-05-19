@@ -820,6 +820,7 @@ proc createDirectLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 	    set virtual_ifc $ifname1
 	    set ether [getIfcMACaddr $lnode1 $virtual_ifc]
 	}
+
 	try {
 	    exec test -d /sys/class/net/$physical_ifc/wireless
 	} on error {} {
@@ -830,11 +831,21 @@ proc createDirectLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 	    # we cannot use macvlan on wireless interfaces, so MAC address cannot be changed
 	    set cmds "ip link add link $physical_ifc name $full_virtual_ifc netns $nodeNs type ipvlan mode l2"
 	}
+
 	set cmds "$cmds ; ip link set $physical_ifc up"
 	set cmds "$cmds ; ip -n $nodeNs link set $full_virtual_ifc name $virtual_ifc"
 	set cmds "$cmds ; ip -n $nodeNs link set $virtual_ifc up"
 	pipesExec "$cmds" "hold"
+
 	return
+    }
+
+    if { [nodeType $lnode1] in "ext extnat" } {
+	set ifname1 $eid-$lnode1
+    }
+
+    if { [nodeType $lnode2] in "ext extnat" } {
+	set ifname2 $eid-$lnode2
     }
 
     set node1Ns [getNodeNetns $eid $lnode1]
@@ -842,8 +853,8 @@ proc createDirectLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
     createNsVethPair $ifname1 $node1Ns $ifname2 $node2Ns
 
     # add nodes ifc hooks to link bridge and bring them up
-    foreach node "$lnode1 $lnode2" ifc "$ifname1 $ifname2" ns "$node1Ns $node2Ns" {
-	if { [[typemodel $node].virtlayer] != "NETGRAPH" } {
+    foreach node [list $lnode1 $lnode2] ifc [list $ifname1 $ifname2] ns [list $node1Ns $node2Ns] {
+	if { [[typemodel $node].virtlayer] != "NETGRAPH" || [nodeType $node] in "ext extnat" } {
 	    continue
 	}
 
@@ -1070,6 +1081,14 @@ proc runConfOnNode { node } {
     set cmds "$cmds mv /tout.log /out.log ;"
     set cmds "$cmds mv /terr.log /err.log"
     pipesExec "docker exec -d $node_id sh -c '$cmds'" "hold"
+}
+
+proc destroyDirectLinkBetween { eid lnode1 lnode2 } {
+    if { [nodeType $lnode1] in "ext extnat" } {
+	pipesExec "ip link del $eid-$lnode1"
+    } elseif { [nodeType $lnode2] in "ext extnat" } {
+	pipesExec "ip link del $eid-$lnode2"
+    }
 }
 
 proc destroyLinkBetween { eid lnode1 lnode2 link } {

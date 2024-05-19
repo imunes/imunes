@@ -182,12 +182,14 @@ proc destroyLinks { eid links linkCount w } {
 	    set lnode2 [lindex [linkPeers $mirror_link] 0]
 	}
 
-	if { ! [getLinkDirect $link] } {
-	    try {
+	try {
+	    if { [getLinkDirect $link] } {
+		destroyDirectLinkBetween $eid $lnode1 $lnode2
+	    } else {
 		destroyLinkBetween $eid $lnode1 $lnode2 $link
-	    } on error err {
-		return -code error "Error in 'destroyLinkBetween $eid $lnode1 $lnode2 $link': $err"
 	    }
+	} on error err {
+	    return -code error "Error in 'destroyLinkBetween $eid $lnode1 $lnode2 $link': $err"
 	}
 
 	incr batchStep

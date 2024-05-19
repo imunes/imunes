@@ -1696,6 +1696,9 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     }
 }
 
+proc destroyDirectLinkBetween { eid lnode1 lnode2 } {
+}
+
 #****f* freebsd.tcl/destroyLinkBetween
 # NAME
 #   destroyLinkBetween -- destroy link between
