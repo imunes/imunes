@@ -806,19 +806,39 @@ proc setNsIfcMaster { netNs ifname master state } {
 proc createDirectLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    if { [nodeType $lnode1] == "rj45" || [nodeType $lnode2] == "rj45" } {
-	if { [nodeType $lnode1] == "rj45" } {
+    if { [nodeType $lnode1] in "rj45 extelem" || [nodeType $lnode2] in "rj45 extelem" } {
+	if { [nodeType $lnode1] in "rj45 extelem" } {
 	    set physical_ifc [getNodeName $lnode1]
+	    if { [nodeType $lnode1] == "extelem" } {
+		set ifcs [getNodeExternalIfcs $lnode1]
+		set physical_ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname1"] 1]
+	    }
 	    set nodeNs [getNodeNetns $eid $lnode2]
 	    set full_virtual_ifc $eid-$lnode2-$ifname2
 	    set virtual_ifc $ifname2
 	    set ether [getIfcMACaddr $lnode2 $virtual_ifc]
+
+	    if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
+		pipesExec "ip link set $physical_ifc netns $nodeNs" "hold"
+		setNsIfcMaster $nodeNs $physical_ifc $lnode2 "up"
+		return
+	    }
 	} else {
 	    set physical_ifc [getNodeName $lnode2]
+	    if { [nodeType $lnode2] == "extelem" } {
+		set ifcs [getNodeExternalIfcs $lnode2]
+		set physical_ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname2"] 1]
+	    }
 	    set nodeNs [getNodeNetns $eid $lnode1]
 	    set full_virtual_ifc $eid-$lnode1-$ifname1
 	    set virtual_ifc $ifname1
 	    set ether [getIfcMACaddr $lnode1 $virtual_ifc]
+
+	    if { [[typemodel $lnode1].virtlayer] == "NETGRAPH" } {
+		pipesExec "ip link set $physical_ifc netns $nodeNs" "hold"
+		setNsIfcMaster $nodeNs $physical_ifc $lnode1 "up"
+		return
+	    }
 	}
 
 	try {
