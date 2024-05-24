@@ -93,18 +93,24 @@ proc checkExternalInterfaces {} {
 		} on ok {} {
 		    set link [lindex [linkByIfc $node 0] 0]
 		    if { [getLinkDirect $link] } {
-			after idle {.dialog1.msg configure -wraplength 4i}
-			tk_dialog .dialog1 "IMUNES warning" "Interface '$name' is\
-			    a wireless interface, so its peer cannot change its MAC\
-			    address in this mode!" \
-			    info 0 Dismiss
+			set severity "warning"
+			set msg "Interface '$name' is a wireless interface, so its peer\
+			    cannot change its MAC address!"
+		    } else {
+			set severity "error"
+			set msg "Cannot bridge wireless interface '$name', use 'Direct link'\
+			    to connect to this interface!"
+		    }
+
+		    if { $execMode == "batch" } {
+			puts $msg
 		    } else {
 			after idle {.dialog1.msg configure -wraplength 4i}
-			tk_dialog .dialog1 "IMUNES error" "Namespace of wireless\
-			    interface '$name' cannot be changed, use 'Direct link'\
-			    to connect to this interface!" \
+			tk_dialog .dialog1 "IMUNES $severity" "$msg" \
 			    info 0 Dismiss
+		    }
 
+		    if { $severity == "error" } {
 			return 1
 		    }
 		}
