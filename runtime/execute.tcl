@@ -63,60 +63,73 @@ proc checkExternalInterfaces {} {
 
     set extifcs [getHostIfcList]
 
+    set nodes_ifcpairs {}
     foreach node $node_list {
 	if { [nodeType $node] == "rj45" } {
-	    # check if the interface exists
-	    set name [lindex [split [getNodeName $node] .] 0]
-	    set i [lsearch $extifcs $name]
-	    if { $i < 0 } {
-		set msg "Error: external interface $name non-existant."
+	    set ifname [lindex [split [getNodeName $node] .] 0]
+	    lappend nodes_ifcpairs [list $node [list 0 $ifname]]
+	} elseif { [nodeType $node] == "extelem" } {
+	    foreach ifcs [getNodeExternalIfcs $node] {
+		lappend nodes_ifcpairs [list $node $ifcs]
+	    }
+	}
+    }
+
+    foreach node_ifcpair $nodes_ifcpairs {
+	lassign $node_ifcpair node ifcpair
+	lassign $ifcpair ifc physical_ifc
+
+	# check if the interface exists
+	set i [lsearch $extifcs $physical_ifc]
+	if { $i < 0 } {
+	    set msg "Error: external interface $physical_ifc non-existant."
+	    if { $execMode == "batch" } {
+		puts $msg
+	    } else {
+		after idle {.dialog1.msg configure -wraplength 4i}
+		tk_dialog .dialog1 "IMUNES error" $msg \
+		    info 0 Dismiss
+	    }
+	    return 1
+	}
+
+	if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
+	    if { [getHostIfcVlanExists $node $physical_ifc] } {
+		return 1
+	    }
+	}
+
+	if { $isOSlinux } {
+	    try {
+		exec test -d /sys/class/net/$physical_ifc/wireless
+	    } on error {} {
+	    } on ok {} {
+		set link [lindex [linkByIfc $node $ifc] 0]
+		if { [getLinkDirect $link] } {
+		    set severity "warning"
+		    set msg "Interface '$physical_ifc' is a wireless interface,\
+			so its peer cannot change its MAC address!"
+		} else {
+		    set severity "error"
+		    set msg "Cannot bridge wireless interface '$physical_ifc',\
+			use 'Direct link' to connect to this interface!"
+		}
+
 		if { $execMode == "batch" } {
 		    puts $msg
 		} else {
 		    after idle {.dialog1.msg configure -wraplength 4i}
-			tk_dialog .dialog1 "IMUNES error" $msg \
+		    tk_dialog .dialog1 "IMUNES $severity" "$msg" \
 			info 0 Dismiss
 		}
-		return 1
-	    }
 
-	    if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
-		if { [getHostIfcVlanExists $node $name] } {
+		if { $severity == "error" } {
 		    return 1
-		}
-	    }
-
-	    if { $isOSlinux } {
-		try {
-		    exec test -d /sys/class/net/$name/wireless
-		} on error {} {
-		} on ok {} {
-		    set link [lindex [linkByIfc $node 0] 0]
-		    if { [getLinkDirect $link] } {
-			set severity "warning"
-			set msg "Interface '$name' is a wireless interface, so its peer\
-			    cannot change its MAC address!"
-		    } else {
-			set severity "error"
-			set msg "Cannot bridge wireless interface '$name', use 'Direct link'\
-			    to connect to this interface!"
-		    }
-
-		    if { $execMode == "batch" } {
-			puts $msg
-		    } else {
-			after idle {.dialog1.msg configure -wraplength 4i}
-			tk_dialog .dialog1 "IMUNES $severity" "$msg" \
-			    info 0 Dismiss
-		    }
-
-		    if { $severity == "error" } {
-			return 1
-		    }
 		}
 	    }
 	}
     }
+
     return 0
 }
 
