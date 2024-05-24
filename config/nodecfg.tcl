@@ -2702,9 +2702,9 @@ proc setNodeProtocolOspfv3 { node ospf6Enable } {
 
     set router_id [ip::intToString [expr 1 + [string trimleft $node "n"]]]
 
-    set area_string " area 0.0.0.0 range ::/0"
+    set area_string "area 0.0.0.0 range ::/0"
     if { [getNodeModel $node] == "quagga" } {
-	set area_string " network ::/0 area 0.0.0.0"
+	set area_string "network ::/0 area 0.0.0.0"
     }
 
     if { $ospf6Enable == 1 } {
