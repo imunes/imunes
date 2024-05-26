@@ -562,13 +562,11 @@ proc execSetLinkParams { eid link } {
 	set dup -1
     }
 
-    # XXX temporary fix
     pipesCreate
     pipesExec "jexec $eid ngctl msg $link: setcfg \
 	\"{ bandwidth=$bandwidth delay=$delay \
 	upstream={ BER=$ber duplicate=$dup } \
 	downstream={ BER=$ber duplicate=$dup }}\""
-
     pipesClose
 }
 
@@ -1661,31 +1659,25 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     # Link parameters
     set ngcmds "msg $link: setcfg {bandwidth=$bandwidth delay=$delay upstream={BER=$ber duplicate=$dup} downstream={BER=$ber duplicate=$dup}}"
 
-    #catch {exec jexec $eid ngctl -f - << $cmds} err
     pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
     if { $debug && $err != "" } {
 	puts $err
     }
 
+    # FIXME: remove this to interface configuration?
     # Queues
-    foreach node [list $lnode1 $lnode2] {
-	if {$node == $lnode1} {
-	    set ifc $ifname1
-	} else {
-	    set ifc $ifname2
-	}
-
+    foreach node "$lnode1 $lnode2" ifc "$ifname1 $ifname2" {
 	if {[nodeType $lnode1] != "rj45" && [nodeType $lnode2] != "rj45"} {
 	    set qdisc [getIfcQDisc $node $ifc]
-	    if {$qdisc ne "FIFO"} {
+	    if {$qdisc != "FIFO"} {
 		execSetIfcQDisc $eid $node $ifc $qdisc
 	    }
 	    set qdrop [getIfcQDrop $node $ifc]
-	    if {$qdrop ne "drop-tail"} {
+	    if {$qdrop != "drop-tail"} {
 		execSetIfcQDrop $eid $node $ifc $qdrop
 	    }
 	    set qlen [getIfcQLen $node $ifc]
-	    if {$qlen ne 50} {
+	    if {$qlen != 50} {
 		execSetIfcQLen $eid $node $ifc $qlen
 	    }
 	}

@@ -907,32 +907,29 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
 proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    if { [nodeType $lnode1] in "rj45 extelem" || [nodeType $lnode2] in "rj45 extelem" } {
-	return
+    set bandwidth [expr [getLinkBandwidth $link] + 0]
+    set delay [expr [getLinkDelay $link] + 0]
+    set ber [expr [getLinkBER $link] + 0]
+    set dup [expr [getLinkDup $link] + 0]
+
+    configureIfcLinkParams $eid $lnode1 $ifname1 $bandwidth $delay $ber $dup
+    configureIfcLinkParams $eid $lnode2 $ifname2 $bandwidth $delay $ber $dup
+
+    # FIXME: remove this to interface configuration?
+    foreach node "$lnode1 $lnode2" ifc "$ifname1 $ifname2" {
+	if { [nodeType $node] in "rj45 extelem" } {
+	    continue
+	}
+
+	set qdisc [getIfcQDisc $node $ifc]
+	if { $qdisc != "FIFO" } {
+	    execSetIfcQDisc $eid $node $ifc $qdisc
+	}
+	set qlen [getIfcQLen $node $ifc]
+	if { $qlen != 1000 } {
+	    execSetIfcQLen $eid $node $ifc $qlen
+	}
     }
-
-    # FIXME: merge this with execSet* commands
-    execSetLinkParams $eid $link
-
-    # if {[nodeType $lnode1] != "rj45" && [nodeType $lnode2] != "rj45"} {
-    #     set qdisc [getIfcQDisc $lnode1 $ifname1]
-    #     if {$qdisc ne "FIFO"} {
-    #         execSetIfcQDisc $eid $lnode1 $ifname2 $qdisc
-    #     }
-
-    #     set qdisc [getIfcQDisc $lnode2 $ifname2]
-    #     if {$qdisc ne "FIFO"} {
-    #         execSetIfcQDisc $eid $lnode2 $ifname2 $qdisc
-    #     }
-    #     set qdrop [getIfcQDrop $node $ifc]
-    #     if {$qdrop ne "drop-tail"} {
-    #         execSetIfcQDrop $eid $node $ifc $qdrop
-    #     }
-    #     set qlen [getIfcQLen $node $ifc]
-    #     if {$qlen ne 50} {
-    #         execSetIfcQLen $eid $node $ifc $qlen
-    #     }
-    # }
 }
 
 #****f* linux.tcl/startIfcsNode
@@ -1388,18 +1385,36 @@ proc execSetIfcQDisc { eid node ifc qdisc } {
     }
     switch -exact $qdisc {
         FIFO { set qdisc fifo_fast }
-        WFQ { set qdisc wfq }
+        WFQ { set qdisc sfq }
         DRR { set qdisc drr }
     }
-    exec docker exec $eid.$node tc qdisc add dev $ifc root $qdisc
+    pipesExec "ip netns exec $eid-$node tc qdisc add dev $ifc root $qdisc" "hold"
+}
+
+#****f* linux.tcl/execSetIfcQLen
+# NAME
+#   execSetIfcQLen -- in exec mode set interface TX queue length
+# SYNOPSIS
+#   execSetIfcQLen $eid $node $ifc $qlen
+# FUNCTION
+#   Sets the queue length during the simulation.
+#   New queue length is defined in qlen parameter.
+# INPUTS
+#   eid -- experiment id
+#   node -- node id
+#   ifc -- interface name
+#   qlen -- new queue's length
+#****
+proc execSetIfcQLen { eid node ifc qlen } {
+    pipesExec "ip -n $eid-$node l set $ifc txqueuelen $qlen" "hold"
 }
 
 proc getNetemConfigLine { bandwidth delay loss dup } {
     array set netem {
-	bandwidth "rate Xbit"
-	loss      "loss random X%"
-	delay     "delay Xus"
-	dup       "duplicate X%"
+	bandwidth	"rate Xbit"
+	loss		"loss random X%"
+	delay		"delay Xus"
+	dup		"duplicate X%"
     }
     set cmd ""
 
@@ -1416,41 +1431,28 @@ proc getNetemConfigLine { bandwidth delay loss dup } {
 proc configureIfcLinkParams { eid node ifname bandwidth delay ber dup } {
     global debug
 
-    if {[nodeType $node] == "rj45"} {
-        set lname [getNodeName $node]
-    } else {
-        set lname $node
+    set devname $node-$ifname
+    if { [nodeType $node] == "rj45" } {
+        set devname [getNodeName $node]
+    } elseif { [nodeType $node] == "extelem" } {
+	set ifcs [getNodeExternalIfcs $node]
+	set devname [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname"] 1]
     }
 
-    # average packet size in the Internet is 576 bytes
-    # XXX: maybe migrate to PER (packet error rate), on FreeBSD we calculate
-    # BER with the magic number 576 and on Linux we take the value directly
+    # Linux does not have BER, only PER, so we calculate it by using the average packet
+    # size in the Internet (576 bytes): BER values lower than 4608 will have 100%
+    # loss rate
+    set loss 0
     if { $ber != 0 } {
 	set loss [expr (1 / double($ber)) * 576 * 8 * 100]
 	if { $loss > 100 } {
 	    set loss 100
 	}
-    } else {
-	set loss 0
     }
+    set netem_cfg [getNetemConfigLine $bandwidth $delay $loss $dup]
 
-    catch {exec ip netns exec $eid tc qdisc del dev $lname-$ifname root}
-    # XXX: currently we have loss, but we can easily have
-    # corrupt, add a tickbox to GUI, default behaviour
-    # should be loss because we don't do corrupt on FreeBSD
-    # set confstring "netem corrupt ${loss}%"
-    # corrupt ${loss}%
-    set cmd "ip netns exec $eid tc qdisc add dev $lname-$ifname root netem"
-    catch {
-	eval exec $cmd [getNetemConfigLine $bandwidth $delay $loss $dup]
-    } err
-
-    if { $debug && $err != "" } {
-	puts stderr "tc ERROR: $lname-$ifname, $err"
-	puts stderr "gui settings: bw $bandwidth loss $loss delay $delay dup $dup"
-	catch { exec ip netns exec $eid tc qdisc show dev $lname-$ifname } status
-	puts stderr $status
-    }
+    pipesExec "ip netns exec $eid tc qdisc del dev $devname root" "hold"
+    pipesExec "ip netns exec $eid tc qdisc add dev $devname root netem $netem_cfg" "hold"
 
     # XXX: Now on Linux we don't care about queue lengths and we don't limit
     # maximum data and burst size.
@@ -1472,8 +1474,6 @@ proc configureIfcLinkParams { eid node ifname bandwidth delay ber dup } {
 #   link -- link id
 #****
 proc execSetLinkParams { eid link } {
-    global debug
-
     set lnode1 [lindex [linkPeers $link] 0]
     set lnode2 [lindex [linkPeers $link] 1]
     set ifname1 [ifcByLogicalPeer $lnode1 $lnode2]
@@ -1497,8 +1497,10 @@ proc execSetLinkParams { eid link } {
     set ber [expr [getLinkBER $link] + 0]
     set dup [expr [getLinkDup $link] + 0]
 
+    pipesCreate
     configureIfcLinkParams $eid $lnode1 $ifname1 $bandwidth $delay $ber $dup
     configureIfcLinkParams $eid $lnode2 $ifname2 $bandwidth $delay $ber $dup
+    pipesClose
 }
 
 proc ipsecFilesToNode { node local_cert ipsecret_file } {
