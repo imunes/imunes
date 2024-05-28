@@ -135,10 +135,8 @@ bind . <F6> {
 
     source "$ROOTDIR/$LIBDIR/nodes/hub.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/lanswitch.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/click_l2.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/rj45.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/genericrouter.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/click_l3.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/host.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/pc.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"

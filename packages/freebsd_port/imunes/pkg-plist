@@ -45,8 +45,6 @@ lib/imunes/icons/imunes_icon256.png
 lib/imunes/icons/imunes_icon32.gif
 lib/imunes/icons/imunes_icon64.png
 lib/imunes/icons/imunes_logo128.png
-lib/imunes/icons/normal/click_l2.gif
-lib/imunes/icons/normal/click_l3.gif
 lib/imunes/icons/normal/cloud.gif
 lib/imunes/icons/normal/ext.gif
 lib/imunes/icons/normal/extnat.gif
@@ -62,8 +60,6 @@ lib/imunes/icons/normal/pc.gif
 lib/imunes/icons/normal/rj45.gif
 lib/imunes/icons/normal/router.gif
 lib/imunes/icons/normal/stpswitch.gif
-lib/imunes/icons/small/click_l2.gif
-lib/imunes/icons/small/click_l3.gif
 lib/imunes/icons/small/cloud.gif
 lib/imunes/icons/small/ext.gif
 lib/imunes/icons/small/extnat.gif
@@ -79,8 +75,6 @@ lib/imunes/icons/small/pc.gif
 lib/imunes/icons/small/rj45.gif
 lib/imunes/icons/small/router.gif
 lib/imunes/icons/small/stpswitch.gif
-lib/imunes/icons/tiny/click_l2.gif
-lib/imunes/icons/tiny/click_l3.gif
 lib/imunes/icons/tiny/cloud.gif
 lib/imunes/icons/tiny/ext.gif
 lib/imunes/icons/tiny/extnat.gif
@@ -106,8 +100,6 @@ lib/imunes/icons/tiny/stpswitch.gif
 lib/imunes/icons/tiny/text.gif
 lib/imunes/imunes.tcl
 lib/imunes/nodes/annotations.tcl
-lib/imunes/nodes/click_l2.tcl
-lib/imunes/nodes/click_l3.tcl
 lib/imunes/nodes/ext.tcl
 lib/imunes/nodes/filter.tcl
 lib/imunes/nodes/genericrouter.tcl
@@ -132,7 +124,6 @@ lib/imunes/runtime/filemgmt.tcl
 lib/imunes/runtime/freebsd.tcl
 lib/imunes/runtime/linux.tcl
 lib/imunes/runtime/services.tcl
-lib/imunes/scripts/install_click.sh
 lib/imunes/scripts/install_ng_modules.sh
 lib/imunes/scripts/install_usr_tools.sh
 lib/imunes/scripts/prepare_vroot.sh

@@ -254,7 +254,7 @@ proc configGUI_addTree { wi node } {
 	}
     }
 
-    if {[[typemodel $node].virtlayer] == "VIMAGE" && [nodeType $node] != "click_l2"} {
+    if {[[typemodel $node].virtlayer] == "VIMAGE"} {
 	$wi.panwin.f1.tree insert {} end -id logIfcFrame -text \
 	    "Logical Interfaces" -open true -tags logIfcFrame
 

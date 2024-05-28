@@ -1,6 +1,6 @@
 #!/bin/sh
 
-images="click_l2.gif click_l3.gif cloud.gif frswitch.gif host.gif hub.gif \
+images="cloud.gif frswitch.gif host.gif hub.gif \
 ipfirewall.gif lanswitch.gif pc.gif rj45.gif router.gif ext.gif"
 
 sfact="70%"

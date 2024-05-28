@@ -179,8 +179,6 @@ set selectedIfc ""
 # bases for naming new nodes
 array set nodeNamingBase {
     pc pc
-    click_l2 cswitch
-    click_l3 crouter
     ext ext
     filter filter
     router router

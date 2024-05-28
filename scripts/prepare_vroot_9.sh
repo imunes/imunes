@@ -34,10 +34,6 @@ preparePackagesPkg
 chroot $VROOT_MASTER /bin/sh -c 'env ASSUME_ALWAYS_YES=YES pkg bootstrap' >> $LOG 2>&1
 installPackagesPkg
 
-if [ $mini -eq 0 ]; then
-    installAdditionalTools install_click.sh
-fi
-
 configQuagga
 configXorp
 

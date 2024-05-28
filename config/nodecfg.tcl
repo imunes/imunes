@@ -52,8 +52,6 @@
 #  * router
 #  * host
 #  * pc
-#  * click_l2
-#  * click_l3
 #  * lanswitch
 #  * hub
 #  * rj45
