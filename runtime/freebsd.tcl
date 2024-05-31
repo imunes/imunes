@@ -938,39 +938,43 @@ proc getHostIfcList {} {
 # NAME
 #   getHostIfcVlanExists -- check if host VLAN interface exists
 # SYNOPSIS
-#   getHostIfcVlanExists $node $name
+#   getHostIfcVlanExists $node $ifname
 # FUNCTION
 #   Returns 1 if VLAN interface with the name $name for the given node cannot
 #   be created.
 # INPUTS
 #   * node -- node id
-#   * name -- interface name
+#   * ifname -- interface name
 # RESULT
 #   * check -- 1 if interface exists, 0 otherwise
 #****
-proc getHostIfcVlanExists { node name } {
+proc getHostIfcVlanExists { node ifname } {
     global execMode
 
-    # check if the VLAN is available
-    set ifname [getNodeName $node]
-    set vlan [lindex [split [getNodeName $node] .] 1]
-    # if the VLAN is available then it can be created
-    if { [catch {exec ifconfig $ifname create} err] } {
-	set msg "Error: external interface $name can't be\
-	    created.\nVLAN $vlan is already in use. \n($err)"
-	if { $execMode == "batch" } {
-	    puts $msg
-	} else {
-	    after idle {.dialog1.msg configure -wraplength 4i}
-	    tk_dialog .dialog1 "IMUNES error" $msg \
-		info 0 Dismiss
-	}
-	return 1
-    } else {
-	# destroy it, if it was created
-	catch {exec ifconfig $ifname destroy}
+    # check if VLAN ID is already taken
+    # this can be only done by trying to create it, as it's possible that the same
+    # VLAN interface already exists in some other namespace
+    set vlan [getEtherVlanTag $node]
+    try {
+	exec ifconfig $ifname.$vlan create
+    } on ok {} {
+	exec ifconfig $ifname.$vlan destroy
 	return 0
+    } on error err {
+	set msg "Unable to create external interface '$ifname.$vlan':\n$err\n\nPlease\
+	    verify that VLAN ID $vlan with parent interface $ifname is not already\
+	    assigned to another VLAN interface, potentially in a different jail."
     }
+
+    if { $execMode == "batch" } {
+	puts $msg
+    } else {
+	after idle {.dialog1.msg configure -wraplength 4i}
+	tk_dialog .dialog1 "IMUNES error" $msg \
+	    info 0 Dismiss
+    }
+
+    return 1
 }
 
 #****f* freebsd.tcl/getVrootDir
@@ -1850,19 +1854,55 @@ proc getCpuCount {} {
 
 #****f* freebsd.tcl/captureExtIfc
 # NAME
-#   captureExtIfc -- capture external interfaces
+#   captureExtIfc -- capture external interface
 # SYNOPSIS
 #   captureExtIfc $eid $node
 # FUNCTION
-#   Captures the external interfaces given by the given rj45 node.
+#   Captures the external interface given by the given rj45 node.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id
 #****
 proc captureExtIfc { eid node } {
-    captureExtIfcByName $eid [getNodeName $node]
+    global execMode
+
+    set ifname [getNodeName $node]
+    if { [getEtherVlanEnabled $node] } {
+	set vlan [getEtherVlanTag $node]
+	try {
+	    exec ifconfig $ifname.$vlan create
+	} on error err {
+	    set msg "Error: VLAN $vlan on external interface $ifname can't be\
+		created.\n($err)"
+
+	    if { $execMode == "batch" } {
+		puts $msg
+	    } else {
+		after idle {.dialog1.msg configure -wraplength 4i}
+		tk_dialog .dialog1 "IMUNES error" $msg \
+		    info 0 Dismiss
+	    }
+
+	    return -code error
+	} on ok {} {
+	    set ifname $ifname.$vlan
+	}
+    }
+
+    captureExtIfcByName $eid $ifname
 }
 
+#****f* freebsd.tcl/captureExtIfcByName
+# NAME
+#   captureExtIfcByName -- capture external interface
+# SYNOPSIS
+#   captureExtIfcByName $eid $ifname
+# FUNCTION
+#   Captures the external interface given by the ifname.
+# INPUTS
+#   * eid -- experiment id
+#   * ifname -- physical interface name
+#****
 proc captureExtIfcByName { eid ifname } {
     pipesExec "ifconfig $ifname vnet $eid" "hold"
     pipesExec "jexec $eid ifconfig $ifname up promisc" "hold"
@@ -1870,19 +1910,39 @@ proc captureExtIfcByName { eid ifname } {
 
 #****f* freebsd.tcl/releaseExtIfc
 # NAME
-#   releaseExtIfc -- release external interfaces
+#   releaseExtIfc -- release external interface
 # SYNOPSIS
 #   releaseExtIfc $eid $node
 # FUNCTION
-#   Releases the external interfaces captured by the given rj45 node.
+#   Releases the external interface captured by the given rj45 node.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id
 #****
 proc releaseExtIfc { eid node } {
-    releaseExtIfcByName $eid [getNodeName $node]
+    set ifname [getNodeName $node]
+    if { [getEtherVlanEnabled $node] } {
+	set vlan [getEtherVlanTag $node]
+	set ifname $ifname.$vlan
+	catch { exec ifconfig $ifname -vnet $eid destroy }
+
+	return
+    }
+
+    releaseExtIfcByName $eid $ifname
 }
 
+#****f* freebsd.tcl/releaseExtIfcByName
+# NAME
+#   releaseExtIfcByName -- release external interface by name
+# SYNOPSIS
+#   releaseExtIfcByName $eid $ifname
+# FUNCTION
+#   Releases the external interface with the name ifname.
+# INPUTS
+#   * eid -- experiment id
+#   * ifname -- physical interface name
+#****
 proc releaseExtIfcByName { eid ifname } {
     pipesExec "ifconfig $ifname -vnet $eid" "hold"
     pipesExec "ifconfig $ifname up -promisc" "hold"
