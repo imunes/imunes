@@ -379,29 +379,34 @@ proc getHostIfcList {} {
 # NAME
 #   getHostIfcVlanExists -- check if host VLAN interface exists
 # SYNOPSIS
-#   getHostIfcVlanExists $node $name
+#   getHostIfcVlanExists $node $ifname
 # FUNCTION
-#   Returns 1 if VLAN interface with the name $name for the given node cannot
+#   Returns 1 if VLAN interface with the name $ifname for the given node cannot
 #   be created.
 # INPUTS
 #   * node -- node id
-#   * name -- interface name
+#   * ifname -- interface name
 # RESULT
 #   * check -- 1 if interface exists, 0 otherwise
 #****
-proc getHostIfcVlanExists { node name } {
+proc getHostIfcVlanExists { node ifname } {
     global execMode
 
-    # check if the VLAN is available
-    set ifname [getNodeName $node]
-    set vlan [lindex [split [getNodeName $node] .] 1]
-    # if the VLAN is available then it can be created
-    if { [catch {exec ip l show $ifname} err] } {
+    # check if VLAN ID is already taken
+    # this can be only done by trying to create it, as it's possible that the same
+    # VLAN interface already exists in some other namespace
+    set vlan [getEtherVlanTag $node]
+    try {
+	exec ip link add link $ifname name $ifname.$vlan type vlan id $vlan
+    } on ok {} {
+	exec ip link del $ifname.$vlan
 	return 0
+    } on error err {
+	set msg "Unable to create external interface '$ifname.$vlan':\n$err\n\nPlease\
+	    verify that VLAN ID $vlan with parent interface $ifname is not already\
+	    assigned to another VLAN interface, potentially in a different namespace."
     }
 
-    set msg "Error: external interface $name can't be\
-	created.\nVLAN $vlan is already in use. \n($err)"
     if { $execMode == "batch" } {
 	puts $msg
     } else {
@@ -812,6 +817,9 @@ proc createDirectLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 	    if { [nodeType $lnode1] == "extelem" } {
 		set ifcs [getNodeExternalIfcs $lnode1]
 		set physical_ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname1"] 1]
+	    } elseif { [getEtherVlanEnabled $lnode1] } {
+		set vlan [getEtherVlanTag $lnode1]
+		set physical_ifc $physical_ifc.$vlan
 	    }
 	    set nodeNs [getNodeNetns $eid $lnode2]
 	    set full_virtual_ifc $eid-$lnode2-$ifname2
@@ -828,6 +836,9 @@ proc createDirectLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 	    if { [nodeType $lnode2] == "extelem" } {
 		set ifcs [getNodeExternalIfcs $lnode2]
 		set physical_ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname2"] 1]
+	    } elseif { [getEtherVlanEnabled $lnode2] } {
+		set vlan [getEtherVlanTag $lnode2]
+		set physical_ifc $physical_ifc.$vlan
 	    }
 	    set nodeNs [getNodeNetns $eid $lnode1]
 	    set full_virtual_ifc $eid-$lnode1-$ifname1
@@ -893,6 +904,10 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
 	set ifname $node-$ifc
 	if { [nodeType $node] == "rj45" } {
 	    set ifname [getNodeName $node]
+	    if { [getEtherVlanEnabled $node] } {
+		set vlan [getEtherVlanTag $node]
+		set ifname $ifname.$vlan
+	    }
 	} elseif { [nodeType $node] == "extelem" } {
 	    # won't work if the node is a wireless interface
 	    # because netns is not changed
@@ -1215,34 +1230,27 @@ proc getExtIfcs { } {
 
 #****f* linux.tcl/captureExtIfc
 # NAME
-#   captureExtIfc -- capture external interfaces
+#   captureExtIfc -- capture external interface
 # SYNOPSIS
 #   captureExtIfc $eid $node
 # FUNCTION
-#   Captures the external interfaces given by the given rj45 node.
+#   Captures the external interface given by the given rj45 node.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id
 #****
 proc captureExtIfc { eid node } {
-    if { [getLinkDirect [lindex [linkByIfc $node 0] 0]] } {
-	return
-    }
-
-    set ifname [getNodeName $node]
-    pipesExec "ip link set $ifname netns $eid" "hold"
-}
-
-proc captureExtIfcByName { eid ifname } {
     global execMode
 
-    set ifc [lindex [split $ifname .] 0]
-    set vlan [lindex [split $ifname .] 1]
-    if { $vlan != "" } {
-	catch {exec ip link add link $ifc name $ifname type vlan id $vlan} err
-	if { $err != "" } {
-	    set msg "Error: VLAN $vlan on external interface $ifc can't be\
+    set ifname [getNodeName $node]
+    if { [getEtherVlanEnabled $node] } {
+	set vlan [getEtherVlanTag $node]
+	try {
+	    exec ip link add link $ifname name $ifname.$vlan type vlan id $vlan
+	} on error err {
+	    set msg "Error: VLAN $vlan on external interface $ifname can't be\
 		created.\n($err)"
+
 	    if { $execMode == "batch" } {
 		puts $msg
 	    } else {
@@ -1250,45 +1258,77 @@ proc captureExtIfcByName { eid ifname } {
 		tk_dialog .dialog1 "IMUNES error" $msg \
 		    info 0 Dismiss
 	    }
-	} else {
-	    catch {exec ip link set $ifname up} err
+
+	    return -code error
+	} on ok {} {
+	    set ifname $ifname.$vlan
 	}
     }
 
+    if { [getLinkDirect [lindex [linkByIfc $node 0] 0]] } {
+	return
+    }
+
+    captureExtIfcByName $eid $ifname
+}
+
+#****f* linux.tcl/captureExtIfcByName
+# NAME
+#   captureExtIfcByName -- capture external interface
+# SYNOPSIS
+#   captureExtIfcByName $eid $ifname
+# FUNCTION
+#   Captures the external interface given by the ifname.
+# INPUTS
+#   * eid -- experiment id
+#   * ifname -- physical interface name
+#****
+proc captureExtIfcByName { eid ifname } {
     # won't work if the node is a wireless interface
     pipesExec "ip link set $ifname netns $eid" "hold"
 }
 
 #****f* linux.tcl/releaseExtIfc
 # NAME
-#   releaseExtIfc -- release external interfaces
+#   releaseExtIfc -- release external interface
 # SYNOPSIS
 #   releaseExtIfc $eid $node
 # FUNCTION
-#   Releases the external interfaces captured by the given rj45 node.
+#   Releases the external interface captured by the given rj45 node.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id
 #****
 proc releaseExtIfc { eid node } {
+    set ifname [getNodeName $node]
+    if { [getEtherVlanEnabled $node] } {
+	set vlan [getEtherVlanTag $node]
+	set ifname $ifname.$vlan
+	catch { exec ip link del $ifname }
+
+	return
+    }
+
     if { [getLinkDirect [lindex [linkByIfc $node 0] 0]] } {
 	return
     }
 
-    global devfs_number
-
-    set ifname [getNodeName $node]
-    pipesExec "ip -n $eid link set $ifname netns imunes_$devfs_number" "hold"
+    releaseExtIfcByName $eid $ifname
 }
 
+#****f* linux.tcl/releaseExtIfc
+# NAME
+#   releaseExtIfc -- release external interface
+# SYNOPSIS
+#   releaseExtIfc $eid $node
+# FUNCTION
+#   Releases the external interface with the name ifname.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
 proc releaseExtIfcByName { eid ifname } {
     global devfs_number
-
-    set ifc [lindex [split $ifname .] 0]
-    set vlan [lindex [split $ifname .] 1]
-    if { $vlan != "" } {
-	catch { exec ip link del $ifname }
-    }
 
     pipesExec "ip -n $eid link set $ifname netns imunes_$devfs_number" "hold"
 

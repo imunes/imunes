@@ -66,8 +66,7 @@ proc checkExternalInterfaces {} {
     set nodes_ifcpairs {}
     foreach node $node_list {
 	if { [nodeType $node] == "rj45" } {
-	    set ifname [lindex [split [getNodeName $node] .] 0]
-	    lappend nodes_ifcpairs [list $node [list 0 $ifname]]
+	    lappend nodes_ifcpairs [list $node [list 0 [getNodeName $node]]]
 	} elseif { [nodeType $node] == "extelem" } {
 	    foreach ifcs [getNodeExternalIfcs $node] {
 		lappend nodes_ifcpairs [list $node $ifcs]
@@ -97,9 +96,7 @@ proc checkExternalInterfaces {} {
 	    if { [getHostIfcVlanExists $node $physical_ifc] } {
 		return 1
 	    }
-	}
-
-	if { $isOSlinux } {
+	} elseif { $isOSlinux } {
 	    try {
 		exec test -d /sys/class/net/$physical_ifc/wireless
 	    } on error {} {
