@@ -31,33 +31,6 @@ proc isNodeInterface { ifname } {
     return 0
 }
 
-proc getLossFromBer { ber } {
-    # calculate loss % from ber assuming the average packet size is 576 bytes
-    if { $ber != 0 } {
-	set loss [expr (1 / double($ber)) * 576 * 8 * 100]
-	if { $loss > 100 } {
-	    set loss 100
-	}
-    } else {
-	set loss 0
-    }
-    return $loss
-}
-
-proc getBerFromLoss { loss } {
-    # calculate ber from loss % assuming the average packet size is 576 bytes
-    set loss [string trimright $loss %]
-    if { $loss != 0 } {
-	set ber [expr round((1 / double($loss)) * 576 * 8 * 100)]
-	if { $ber == 4608 } {
-	    set ber 1
-	}
-    } else {
-	set ber 0
-    }
-    return $ber
-}
-
 # transform bandwidth from netem output to bps
 proc getNetemBandwidth { band } {
     return [expr round \
@@ -104,7 +77,12 @@ proc getLinuxLinkStatus { nodename eid ldata } {
     set nodeid [lindex $ldata 0]
     set ifname [lindex $ldata 1]
 
-    catch {exec ip netns exec $eid tc qdisc show dev $nodeid-$ifname} settings
+    set fullname $nodeid-$ifname
+    if { $ifname == "" } {
+	set fullname $nodeid
+    }
+
+    catch {exec ip netns exec $eid tc qdisc show dev $fullname} settings
 
     foreach val {delay rate duplicate loss} {
 	set $val -1
@@ -116,15 +94,10 @@ proc getLinuxLinkStatus { nodename eid ldata } {
     set bandwidth [getNetemBandwidth $rate]
     set delay [getStandardDelay $delay]
     set duplicate [expr round ([string trimright $duplicate "%"])]
-
-    set BER -1
-    if { $loss > -1 } {
-	# don't process loss if not set
-	set BER [getBerFromLoss $loss]
-    }
+    set loss [expr round ([string trimright $loss "%"])]
 
     # don't change this order, the rest of the script depends on it
-    foreach val {bandwidth BER delay duplicate} {
+    foreach val {bandwidth loss delay duplicate} {
 	lappend curr_set [list $val [set $val]]
     }
 
@@ -158,6 +131,9 @@ proc printLinkStatus { lname eid curr_set } {
 		BER {
 		    puts "\t[lindex $sett 0] [lindex $sett 1]"
 		}
+		loss {
+		    puts "\t[lindex $sett 0] [lindex $sett 1]%"
+		}
 		delay {
 		    puts "\t[lindex $sett 0] [getDelayForPrint [lindex $sett 1]]"
 		}
@@ -174,15 +150,14 @@ proc printLinkStatus { lname eid curr_set } {
 }
 
 # apply settings on Linux
-proc applyLinkSettingsLinux { bandwidth ber delay dup nodename eid ldata } {
+proc applyLinkSettingsLinux { bandwidth loss delay dup nodename eid ldata } {
     set node $nodename\@$eid
 
     set cfg ""
     if { $bandwidth != -1 } {
 	lappend cfg "rate ${bandwidth}bit"
     }
-    if { $ber != -1 } {
-	set loss [getLossFromBer $ber]
+    if { $loss != -1 } {
 	lappend cfg "loss random ${loss}%"
     }
     if { $delay != -1 } {
@@ -195,7 +170,12 @@ proc applyLinkSettingsLinux { bandwidth ber delay dup nodename eid ldata } {
     set nodeid [lindex $ldata 0]
     set ifname [lindex $ldata 1]
 
-    catch {eval "exec ip netns exec $eid tc qdisc change dev $nodeid-$ifname root netem [join $cfg " "]"}
+    set fullname $nodeid-$ifname
+    if { $ifname == "" } {
+	set fullname $nodeid
+    }
+
+    catch {eval "exec ip netns exec $eid tc qdisc change dev $fullname root netem [join $cfg " "]"}
 }
 
 # apply settings on FreeBSD 
@@ -251,6 +231,8 @@ set options {
     {b.arg	"" "set link bandwidth (bps)"}
     {BER.arg	"" "set link BER (1/value)"}
     {B.arg	"" "set link BER (1/value)"}
+    {loss.arg	"" "set link loss (%)"}
+    {L.arg	"" "set link loss (%)"}
     {dly.arg	"" "set link delay (us)"}
     {d.arg	"" "set link delay (us)"}
     {dup.arg	"" "set link duplicate (%)"}
@@ -300,6 +282,7 @@ set check 0
 # get values from arguments, the first flag is preferred (b,B,d,D)
 set ban [parseArgs $params(b) $params(bw) -1]
 set BER [parseArgs $params(B) $params(BER) -1]
+set loss [parseArgs $params(L) $params(loss) -1]
 set del [parseArgs $params(d) $params(dly) -1]
 set dup [parseArgs $params(D) $params(dup) -1]
 
@@ -326,12 +309,19 @@ if { [regexp {^([[:digit:]]+)(%)?$} $dup] } {
     puts stderr "Error: wrong duplicate format (e.g. 10, 10%)."
     exit 1
 }
+if { [regexp {^([[:digit:]]+)(%)?$} $loss] } {
+    set loss [string trimright $loss "%"]
+} elseif { $loss != -1 } {
+    puts stderr "Error: wrong loss format (e.g. 10, 10%)."
+    exit 1
+}
 
 # reset values is the preferred option over setting new values
 if { $params(r) } {
     set ban 0
     set del 0
     set BER 0
+    set loss 0
     set dup 0
     incr check    
 }
@@ -496,14 +486,14 @@ switch [llength $containing_exps] {
 		    # apply unset settings from current status
 		    # the settings are taken in the order forwarded from
 		    # getLinuxLinkStatus and depend on it
-		    foreach val {ban BER del dup} {
+		    foreach val {ban loss del dup} {
 			if { [set $val] == -1 } {
 			    set $val [lindex [lindex $curr_set $j] 1]
 			}
 			incr j
 		    }
 
-		    applyLinkSettingsLinux $ban $BER $del $dup $node $eid $node_data
+		    applyLinkSettingsLinux $ban $loss $del $dup $node $eid $node_data
 		    incr i
 		}
 	    }

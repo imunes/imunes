@@ -344,7 +344,7 @@ proc updateIfcLabel { lnode1 lnode2 } {
 #   updateLinkLabel $link
 # FUNCTION
 #   Updates the link label, including link bandwidth, link delay,
-#   BER and duplicate values.
+#   BER, loss and duplicate values.
 # INPUTS
 #   * link -- link id of the link whose labels are updated.
 #****
@@ -355,6 +355,7 @@ proc updateLinkLabel { link } {
     set bwstr "[getLinkBandwidthString $link]"
     set delstr [getLinkDelayString $link]
     set ber [getLinkBER $link]
+    set loss [getLinkLoss $link]
     set dup [getLinkDup $link]
     set jitter [concat [getLinkJitterUpstream $link] [getLinkJitterDownstream $link]]
     if { "$bwstr" != "" } {
@@ -368,6 +369,9 @@ proc updateLinkLabel { link } {
     }
     if { "$ber" != "" } {
 	lappend labelstr "ber=$ber"
+    }
+    if { "$loss" != "" } {
+	lappend labelstr "loss=$loss%"
     }
     if { "$dup" != "" } {
 	lappend labelstr "dup=$dup%"

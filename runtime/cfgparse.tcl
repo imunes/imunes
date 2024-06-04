@@ -549,6 +549,9 @@ proc loadCfg { cfg } {
 			ber {
 			    lappend $object "ber $value"
 			}
+			loss {
+			    lappend $object "loss $value"
+			}
 			duplicate {
 			    lappend $object "duplicate $value"
 			}
