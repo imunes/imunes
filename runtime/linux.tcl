@@ -910,10 +910,11 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     set bandwidth [expr [getLinkBandwidth $link] + 0]
     set delay [expr [getLinkDelay $link] + 0]
     set ber [expr [getLinkBER $link] + 0]
+    set loss [expr [getLinkLoss $link] + 0]
     set dup [expr [getLinkDup $link] + 0]
 
-    configureIfcLinkParams $eid $lnode1 $ifname1 $bandwidth $delay $ber $dup
-    configureIfcLinkParams $eid $lnode2 $ifname2 $bandwidth $delay $ber $dup
+    configureIfcLinkParams $eid $lnode1 $ifname1 $bandwidth $delay $ber $loss $dup
+    configureIfcLinkParams $eid $lnode2 $ifname2 $bandwidth $delay $ber $loss $dup
 
     # FIXME: remove this to interface configuration?
     foreach node "$lnode1 $lnode2" ifc "$ifname1 $ifname2" {
@@ -1428,7 +1429,7 @@ proc getNetemConfigLine { bandwidth delay loss dup } {
     return $cmd
 }
 
-proc configureIfcLinkParams { eid node ifname bandwidth delay ber dup } {
+proc configureIfcLinkParams { eid node ifname bandwidth delay ber loss dup } {
     global debug
 
     set devname $node-$ifname
@@ -1439,16 +1440,6 @@ proc configureIfcLinkParams { eid node ifname bandwidth delay ber dup } {
 	set devname [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname"] 1]
     }
 
-    # Linux does not have BER, only PER, so we calculate it by using the average packet
-    # size in the Internet (576 bytes): BER values lower than 4608 will have 100%
-    # loss rate
-    set loss 0
-    if { $ber != 0 } {
-	set loss [expr (1 / double($ber)) * 576 * 8 * 100]
-	if { $loss > 100 } {
-	    set loss 100
-	}
-    }
     set netem_cfg [getNetemConfigLine $bandwidth $delay $loss $dup]
 
     pipesExec "ip netns exec $eid tc qdisc del dev $devname root" "hold"
@@ -1495,11 +1486,12 @@ proc execSetLinkParams { eid link } {
     set bandwidth [expr [getLinkBandwidth $link] + 0]
     set delay [expr [getLinkDelay $link] + 0]
     set ber [expr [getLinkBER $link] + 0]
+    set loss [expr [getLinkLoss $link] + 0]
     set dup [expr [getLinkDup $link] + 0]
 
     pipesCreate
-    configureIfcLinkParams $eid $lnode1 $ifname1 $bandwidth $delay $ber $dup
-    configureIfcLinkParams $eid $lnode2 $ifname2 $bandwidth $delay $ber $dup
+    configureIfcLinkParams $eid $lnode1 $ifname1 $bandwidth $delay $ber $loss $dup
+    configureIfcLinkParams $eid $lnode2 $ifname2 $bandwidth $delay $ber $loss $dup
     pipesClose
 }
 

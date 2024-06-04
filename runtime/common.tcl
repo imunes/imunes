@@ -505,7 +505,26 @@ proc dumpLinksToFile { path } {
 
 	set linkname "$name1$linkDelim$name2"
 
-	set line "$link {$lnode1-$lnode2 {{$lnode1 $ifname1} {$lnode2 $ifname2}} $linkname}\n"
+	set lpair [list $lnode1 $ifname1]
+	set rpair [list $lnode2 $ifname2]
+	if { [nodeType $lnode1] in "rj45 extelem" } {
+	    if { [nodeType $lnode1] == "rj45" } {
+		set lpair $name1
+	    } else {
+		set ifcs [getNodeExternalIfcs $lnode1]
+		set lpair [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname1"] 1]
+	    }
+	}
+	if { [nodeType $lnode2] in "rj45 extelem" } {
+	    if { [nodeType $lnode2] == "rj45" } {
+		set rpair $name2
+	    } else {
+		set ifcs [getNodeExternalIfcs $lnode2]
+		set rpair [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname2"] 1]
+	    }
+	}
+
+	set line "$link {$lnode1-$lnode2 {{$lpair} {$rpair}} $linkname}\n"
 	set data "$data$line"
     }
 

@@ -184,6 +184,10 @@ proc evsched {} {
 		    setLinkBER $object $value
 		    execSetLinkParams $eid $object
 		}
+		loss {
+		    setLinkLoss $object $value
+		    execSetLinkParams $eid $object
+		}
 		duplicate {
 		    setLinkDup $object $value
 		    execSetLinkParams $eid $object
@@ -216,6 +220,10 @@ proc evsched {} {
 		if { $ber == "" } {
 		    set ber 0
 		}
+		set loss [getLinkLoss $object]
+		if { $loss == "" } {
+		    set loss 0
+		}
 		set dup [getLinkDup $object]
 		if { $dup == "" } {
 		    set dup 0
@@ -225,7 +233,7 @@ proc evsched {} {
 		    set bw 0
 		}
 
-		set cfg "$delay $ber $dup $bw"
+		set cfg "$delay $ber $loss $dup $bw"
 		puts $evlogfile \
 		    "[clock seconds] $object $n0:$ifc0 $n1:$ifc1 $cfg"
 		flush $evlogfile
@@ -724,7 +732,7 @@ proc checkEventsSyntax { text type } {
      
      switch -exact $type {
 	link {
-	    set regularExpressions [list bandwidth delay ber width duplicate color]
+	    set regularExpressions [list bandwidth delay ber loss width duplicate color]
 	    set functions [list ramp rand square]
 	    set colors [list Red Green Blue Yellow Magenta Cyan Black]
 	}

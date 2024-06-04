@@ -547,6 +547,7 @@ proc execSetLinkParams { eid link } {
     set bandwidth [expr [getLinkBandwidth $link] + 0]
     set delay [expr [getLinkDelay $link] + 0]
     set ber [expr [getLinkBER $link] + 0]
+    set loss [expr [getLinkLoss $link] + 0]
     set dup [expr [getLinkDup $link] + 0]
 
     if { $bandwidth == 0 } {
@@ -557,6 +558,9 @@ proc execSetLinkParams { eid link } {
     }
     if { $ber == 0 } {
 	set ber -1
+    }
+    if { $loss == 0 } {
+	set loss -1
     }
     if { $dup == 0 } {
 	set dup -1
@@ -1655,6 +1659,7 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     set bandwidth [expr [getLinkBandwidth $link] + 0]
     set delay [expr [getLinkDelay $link] + 0]
     set ber [expr [getLinkBER $link] + 0]
+    set loss [expr [getLinkLoss $link] + 0]
     set dup [expr [getLinkDup $link] + 0]
     # Link parameters
     set ngcmds "msg $link: setcfg {bandwidth=$bandwidth delay=$delay upstream={BER=$ber duplicate=$dup} downstream={BER=$ber duplicate=$dup}}"
