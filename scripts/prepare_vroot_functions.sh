@@ -295,14 +295,12 @@ configXorp () {
 configFrr () {
     mkdir -p $VROOT_MASTER/usr/local/etc/frr/
     cd $VROOT_MASTER/usr/local/etc/frr/
-    touch zebra.conf ripd.conf ripngd.conf ospfd.conf ospf6d.conf bgpd.conf isisd.conf babeld.conf bfdd.conf eigrpd.conf fabricd.conf staticd.conf vtysh.conf
+    touch frr.conf zebra.conf vtysh.conf
     chmod 640 $VROOT_MASTER/usr/local/etc/frr/*.conf
 
     cd $IMUNESDIR
     cp $ROOTDIR/$LIBDIR/scripts/frrboot.sh $VROOT_MASTER/usr/local/bin
-    cp $ROOTDIR/$LIBDIR/scripts/daemons $VROOT_MASTER/usr/local/etc/frr
     chmod 755 $VROOT_MASTER/usr/local/bin/frrboot.sh
-    echo "frr_enable=YES" > $VROOT_MASTER/etc/rc.conf
 }
 
 wiresharkGUIfix () {
