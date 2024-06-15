@@ -1182,12 +1182,8 @@ proc createNodeLogIfcs { node } {
     foreach ifc [logIfcList $node] {
 	switch -exact [getLogIfcType $node $ifc] {
 	    vlan {
-		set tag [getIfcVlanTag $node $ifc]
-		set dev [getIfcVlanDev $node $ifc]
-		if {$tag != "" && $dev != ""} {
-		    pipesExec "jexec $node_id ifconfig $ifc create" "hold"
-		    pipesExec "jexec $node_id ifconfig $ifc vlan $tag vlandev $dev" "hold"
-		}
+		# physical interfaces are created when creating links, so VLANs
+		# must be created after links
 	    }
 	    lo {
 		if {$ifc != "lo0"} {
@@ -1250,6 +1246,13 @@ proc startIfcsNode { node } {
     set node_id "$eid.$node"
     foreach ifc [allIfcList $node] {
 	set mtu [getIfcMTU $node $ifc]
+	if { [getLogIfcType $node $ifc] == "vlan" } {
+	    set tag [getIfcVlanTag $node $ifc]
+	    set dev [getIfcVlanDev $node $ifc]
+	    if {$tag != "" && $dev != ""} {
+		pipesExec "jexec $node_id ifconfig $dev.$tag create name $ifc" "hold"
+	    }
+	}
 	if {[getIfcOperState $node $ifc] == "up"} {
 	    pipesExec "jexec $node_id ifconfig $ifc mtu $mtu up" "hold"
 	} else {
