@@ -353,7 +353,7 @@ Run 'docker pull $template' to pull the template." \
     return 1
 }
 
-proc prepareDevfs {} {}
+proc prepareDevfs { { force 0 } } {}
 
 #****f* linux.tcl/getHostIfcList
 # NAME

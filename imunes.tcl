@@ -167,7 +167,7 @@ if { $isOSlinux } {
 if { $isOSfreebsd } {
     safeSourceFile $ROOTDIR/$LIBDIR/runtime/freebsd.tcl
     if { $initMode == 1 } {
-	prepareDevfs
+	prepareDevfs 1
 	exit
     }
 }

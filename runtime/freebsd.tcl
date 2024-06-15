@@ -1513,11 +1513,11 @@ proc prepareVirtualFS {} {
 # FUNCTION
 #   Prepares devfs rules necessary for virtual nodes.
 #****
-proc prepareDevfs {} {
+proc prepareDevfs { { force 0 } } {
     global devfs_number
 
     catch {exec devfs rule showsets} devcheck
-    if { $devfs_number ni $devcheck } {
+    if { $force == 1 || $devfs_number ni $devcheck } {
 	# Prepare a devfs ruleset for L3 vnodes
 	exec devfs ruleset $devfs_number
 	exec devfs rule delset
