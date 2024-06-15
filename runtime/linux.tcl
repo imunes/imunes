@@ -1,7 +1,7 @@
 global VROOT_MASTER ULIMIT_FILE ULIMIT_PROC
 set VROOT_MASTER "imunes/template"
 set ULIMIT_FILE "1024:16384"
-set ULIMIT_PROC "512:1024"
+set ULIMIT_PROC "1024:2048"
 
 #****f* linux.tcl/l2node.instantiate
 # NAME
