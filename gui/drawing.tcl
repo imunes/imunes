@@ -144,17 +144,18 @@ proc drawNode { node } {
     set x [expr {[lindex $coords 0] * $zoom}]
     set y [expr {[lindex $coords 1] * $zoom}]
     if { [nodeType $node] != "pseudo" } {
-	set labelstr1 [getNodeName $node];
-#	set labelstr2 [getNodePartition $node];
-#	set l [format "%s\n%s" $labelstr1 $labelstr2];
-	set l $labelstr1;
+	set labelstr [getNodeName $node]
+	if { [nodeType $node] == "rj45" && [getEtherVlanEnabled $node] } {
+	    set labelstr "$labelstr (VLAN [getEtherVlanTag $node])"
+	}
+
 	foreach ifc [ifcList $node] {
 	    if {[string trim $ifc 0123456789] == "wlan"} {
-		set l [format "%s %s" $l [getIfcIPv4addr $node $ifc]]
+		set labelstr [format "%s %s" $labelstr [getIfcIPv4addr $node $ifc]]
 	    }
 	}
 	set label [.panwin.f1.c create text $x $y -fill blue \
-	    -text "$l" \
+	    -text "$labelstr" \
 	    -tags "nodelabel $node"]
     } else {
 	set pnode [peerByIfc [getNodeMirror $node] 0]

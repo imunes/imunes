@@ -982,11 +982,11 @@ proc configGUI_nodeName { wi node label } {
 	set ifcs [getExtIfcs]
 	$wi.name.nodename configure -values [concat UNASSIGNED $ifcs]
 	set name [getNodeName $node]
-	if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
-	    # use 'file rootname' to remove the 'extension' from the name
-	    # variable - last dot and everything after it
-	    set name [file rootname $name]
-	}
+#	if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
+#	    # use 'file rootname' to remove the 'extension' from the name
+#	    # variable - last dot and everything after it
+#	    set name [file rootname $name]
+#	}
 	$wi.name.nodename set $name
     } else {
 	ttk::entry $wi.name.nodename -width 14 -validate focus
@@ -2362,19 +2362,13 @@ proc configGUI_etherVlanApply { wi node } {
     if { $tag != $oldTag } {
 	setEtherVlanTag $node $tag
 	if { $tag == "" } {
-	    set vlanEnable 0
-	    setEtherVlanEnabled $node $vlanEnable
+	    setEtherVlanEnabled $node 0
 	    $wi.vlancfg.tag configure -state disabled
 	}
 	set changed 1
     }
 
-    set name [getNodeName $node]
-    if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
-	set name $name.[getEtherVlanTag $node]
-    }
-
-    setNodeName $node $name
+    setNodeName $node [getNodeName $node]
 }
 
 #****f* nodecfgGUI.tcl/configGUI_customConfigApply
