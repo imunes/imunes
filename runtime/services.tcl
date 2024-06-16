@@ -137,11 +137,7 @@ proc $service.restart { node } {
 #
 set service tcpdump
 # register for hooks and globally
-if { $isOSlinux } {
-    regHooks $service {LINKINST NODESTOP}
-} else {
-    regHooks $service {NODEINST NODESTOP}
-}
+regHooks $service {LINKINST NODESTOP}
 
 proc $service.start { node } {
     foreach ifc [allIfcList $node] {
