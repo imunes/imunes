@@ -1483,6 +1483,8 @@ proc loadKernelModules {} {
     catch {exec kldload ng_socket}
     catch {exec kldload if_tun}
     catch {exec kldload vlan}
+    catch {exec kldload ipsec}
+    catch {exec kldload pf}
 #   catch {exec kldload ng_iface}
 #   catch {exec kldload ng_cisco}
 
@@ -1535,6 +1537,7 @@ proc prepareDevfs { { force 0 } } {
 	exec devfs rule add path urandom unhide
 	exec devfs rule add path ipl unhide
 	exec devfs rule add path ipnat unhide
+	exec devfs rule add path pf unhide
 	exec devfs rule add path crypto unhide
 	exec devfs rule add path ptyp* unhide
 	exec devfs rule add path ptyq* unhide
