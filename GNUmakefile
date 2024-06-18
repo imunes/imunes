@@ -21,7 +21,7 @@ VROOT_EXISTS = $(shell [ -d /var/imunes/vroot ] && echo 1 || echo 0 )
 SERVICEDIR=/usr/local/etc/rc.d
 STARTUPDIR=/var/imunes-service
 
-BASEFILES =	COPYRIGHT README VERSION
+BASEFILES =	COPYRIGHT README.md VERSION
 CONFIGFILES =	$(wildcard config/*.tcl)
 GUIFILES =	$(wildcard gui/*.tcl)
 NODESFILES =	$(wildcard nodes/*.tcl)
