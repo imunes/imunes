@@ -42,7 +42,10 @@ set MODULE filter
 registerModule $MODULE
 
 proc $MODULE.prepareSystem {} {
-    catch {exec kldload ng_patmat}
+    catch {exec kldload ng_patmat} err
+    if { [string match "*No such file or directory" $err] } {
+	return -code error "$err:\nPlease check if the kernel module for the 'filter' node type is installed."
+    }
 }
 
 proc $MODULE.confNewIfc { node ifc } {

@@ -42,7 +42,10 @@ set MODULE packgen
 registerModule $MODULE
 
 proc $MODULE.prepareSystem {} {
-    catch {exec kldload ng_source}
+    catch {exec kldload ng_source} err
+    if { [string match "*No such file or directory" $err] } {
+	return -code error "$err:\nPlease check if the kernel module for the 'packgen' node type is installed."
+    }
 }
 
 proc $MODULE.confNewIfc { node ifc } {

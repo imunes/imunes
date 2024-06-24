@@ -28,7 +28,10 @@ set MODULE wlan
 registerModule $MODULE
 
 proc $MODULE.prepareSystem {} {
-    catch { exec kldload ng_rfee }
+    catch { exec kldload ng_rfee } err
+    if { [string match "*No such file or directory" $err] } {
+	return -code error "$err:\nPlease check if the kernel module for the 'wlan' node type is installed."
+    }
 }
 
 proc $MODULE.confNewIfc { node ifc } {

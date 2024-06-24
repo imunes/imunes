@@ -490,7 +490,7 @@ proc deployCfg {} {
 	    tk_dialog .dialog1 "IMUNES error" \
 		"$err \nTerminate the experiment and report the bug!" info 0 Dismiss
 	}
-	return
+	return -code error $err
     }
 
     statline "Preparing for initialization..."

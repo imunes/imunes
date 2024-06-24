@@ -305,8 +305,12 @@ if {$execMode == "interactive"} {
 	    return
 	}
 	if { [allSnapshotsAvailable] == 1 } {
-	    deployCfg
-	    createExperimentFilesFromBatch
+	    try {
+		deployCfg
+		createExperimentFilesFromBatch
+	    } on error err {
+		return
+	    }
 	}
     } else {
 	set configFile "$runtimeDir/$eid_base/config.imn"
