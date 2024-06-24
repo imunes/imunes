@@ -967,6 +967,10 @@ foreach b {select link} {
 menu $mf.left.link_nodes -title "Link layer nodes"
 menu $mf.left.net_nodes -title "Network layer nodes"
 foreach b $all_modules_list {
+    if { $b ni $enabled_modules_list } {
+	# display the icon, but mark it so it means 'cannot run on this system'
+	continue
+    }
     set image [image create photo -file [$b.icon toolbar]]
 
     if { [$b.layer] == "LINK" } {

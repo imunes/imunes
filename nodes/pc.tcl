@@ -40,6 +40,7 @@
 set MODULE pc
 
 registerModule $MODULE
+enableModule $MODULE
 
 #****f* pc.tcl/pc.confNewIfc
 # NAME

@@ -2849,7 +2849,24 @@ proc getCloudParts { node } {
 #****
 proc registerModule { module } {
     global all_modules_list
+
     lappend all_modules_list $module
+}
+
+#****f* nodecfg.tcl/enableModule
+# NAME
+#   enableModule -- enable module
+# SYNOPSIS
+#   enableModule $module
+# FUNCTION
+#   Adds a module to enabled_modules_list.
+# INPUTS
+#   * module -- module to add
+#****
+proc enableModule { module } {
+    global enabled_modules_list
+
+    lappend enabled_modules_list $module
 }
 
 #****f* nodecfg.tcl/deregisterModule
@@ -2864,8 +2881,24 @@ proc registerModule { module } {
 #****
 proc deregisterModule { module } {
     global all_modules_list
-    set ind [lsearch $all_modules_list $module]
-    set all_modules_list [lreplace $all_modules_list $ind $ind]
+
+	set all_modules_list [removeFromList $all_modules_list $module]
+}
+
+#****f* nodecfg.tcl/disableModule
+# NAME
+#   disableModule -- disable module
+# SYNOPSIS
+#   disableModule $module
+# FUNCTION
+#   Removes a module from enabled_modules_list.
+# INPUTS
+#   * module -- module to remove
+#****
+proc disableModule { module } {
+    global enabled_modules_list
+
+	set enabled_modules_list [removeFromList $enabled_modules_list $module]
 }
 
 #****f* nodecfg.tcl/getIfcVlanDev

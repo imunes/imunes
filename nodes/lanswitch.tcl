@@ -43,6 +43,7 @@
 set MODULE lanswitch
 
 registerModule $MODULE
+enableModule $MODULE
 
 #****f* lanswitch.tcl/lanswitch.prepareSystem
 # NAME
