@@ -272,6 +272,7 @@ set curcfg ""
 #    IMUNES GUI can be used in editor-only mode.i
 #    This variable can be modified in .imunesrc.
 set editor_only false
+set recents_number 10
 
 set winOS false
 if { $isOSwin } {
@@ -296,6 +297,29 @@ catch { set myhome $env(HOME) }
 # TODO: check what if user is sudo
 set sudo_user ""
 catch { set sudo_user $env(SUDO_USER) }
+
+set recents_fname ""
+set recent_files {}
+if { $myhome != "" } {
+    set recents_fname "$myhome/.config/imunes/recents"
+    if { ! [file isdirectory "$myhome/.config/imunes"] } {
+	set recents_fname ""
+    } else {
+	if { [file exists $recents_fname] } {
+	    set fd [open $recents_fname r]
+	    set data [read $fd]
+	    close $fd
+
+	    set fnames [split $data \n]
+	    foreach fname $fnames {
+		if { $fname != "" } {
+		    lappend recent_files $fname
+		}
+	    }
+	}
+    }
+}
+
 # Read config files
 readConfigFiles
 
