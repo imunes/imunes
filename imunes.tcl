@@ -291,11 +291,13 @@ if { [string match -nocase "*imagemagick*" $imInfo] != 1 } {
 
 set runtimeDir "/var/run/imunes"
 
-#
-# Read config files, the first one found: .imunesrc, $HOME/.imunesrc
-#
-# XXX
-readConfigFile
+set myhome ""
+catch { set myhome $env(HOME) }
+# TODO: check what if user is sudo
+set sudo_user ""
+catch { set sudo_user $env(SUDO_USER) }
+# Read config files
+readConfigFiles
 
 #
 # Initialization should be complete now, so let's start doing something...

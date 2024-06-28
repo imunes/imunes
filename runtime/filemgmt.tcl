@@ -405,28 +405,42 @@ proc closeFile {} {
     switchProject
 }
 
-#****f* filemgmt.tcl/readConfigFile
+#****f* filemgmt.tcl/readConfigFiles
 # NAME
-#   readConfigFile -- read configuration file
+#   readConfigFiles -- read configuration file
 # SYNOPSIS
-#   readConfigFile
+#   readConfigFiles
 # FUNCTION
-#   Read config files, the first one found: .imunesrc, $HOME/.imunesrc
+#   Read config files, first /etc/imunes/imunes.rc if it exists, then the first one
+#   that it finds: ./.imunesrc, $HOME/.imunesrc or $HOME/.config/imunes/imunes.rc
 #***
-proc readConfigFile {} {
-    global exec_hosts editor_only
-    global env
+proc readConfigFiles {} {
+    global myhome
+
+    if { [file exists "/etc/imunes/imunes.rc"] } {
+	readConfigFile "/etc/imunes/imunes.rc"
+    }
+
+    set file_name ""
     if { [file exists ".imunesrc"] } {
-	source ".imunesrc"
+	set file_name ".imunesrc"
     } else {
-	if { [catch { set myhome $env(HOME) }] } {
+	if { $myhome == "" } {
 	    ;# not running on UNIX
 	} else {
 	    if { [file exists "$myhome/.imunesrc"] } {
-	       source "$myhome/.imunesrc"
+		set file_name "$myhome/.imunesrc"
+	    } elseif { [file exists "$myhome/.config/imunes/imunes.rc"] } {
+		set file_name "$myhome/.config/imunes/imunes.rc"
 	    }
 	}
     }
+
+    if { $file_name == "" } {
+	return
+    }
+
+    readConfigFile $file_name
 }
 
 #****f* filemgmt.tcl/relpath
