@@ -265,6 +265,14 @@ proc existingShells { shells node } {
 proc spawnShell { node cmd } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
+    if { [catch {exec xterm -version}] } {
+	tk_dialog .dialog1 "IMUNES error" \
+	    "Cannot open terminal. Is xterm installed?" \
+            info 0 Dismiss
+
+	return
+    }
+
     set node_id $eid\.$node
 
     # FIXME make this modular
@@ -1380,23 +1388,11 @@ proc getRunningNodeIfcList { node } {
 
 proc checkSysPrerequisites {} {
     set msg ""
-    if { [catch {exec docker ps } err] } {
-        set msg "Cannot start experiment. Is docker installed and running (check the output of 'docker ps')?\n"
+    if { [catch {exec docker ps}] } {
+        set msg "Cannot start experiment. Is docker installed and running (check the output of 'docker ps')?"
     }
 
-    if { [catch {exec nsenter --version}] } {
-        set msg "Cannot start experiment. Is nsenter installed (check the output of 'nsenter --version')?\n"
-    }
-
-    if { [catch {exec xterm -version}] } {
-        set msg "Cannot start experiment. Is xterm installed (check the output of 'xterm -version')?\n"
-    }
-
-    if { $msg != "" } {
-	return "$msg\nIMUNES needs docker service running and xterm and nsenter installed."
-    }
-
-    return ""
+    return $msg
 }
 
 #****f* linux.tcl/execSetIfcQDisc
