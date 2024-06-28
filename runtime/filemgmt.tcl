@@ -487,6 +487,24 @@ proc closeFile {} {
     switchProject
 }
 
+proc readConfigFile { file_name } {
+    global configurable_options
+
+    set fd [open $file_name r]
+    set json_options [read $fd]
+    close $fd
+
+    foreach {option val} [json::json2dict $json_options] {
+	if { $option ni [dict keys $configurable_options] } {
+	    continue
+	}
+
+	global $option
+
+	set $option $val
+    }
+}
+
 #****f* filemgmt.tcl/readConfigFiles
 # NAME
 #   readConfigFiles -- read configuration file

@@ -265,14 +265,25 @@ set cf::clipboard::dict_cfg [dict create]
 set cfg_list {}
 set curcfg ""
 
-#****v* imunes.tcl/editor_only
+#****v* imunes.tcl/.imunesrc
 # NAME
-#    editor_only -- if set, Experiment -> Execute is disabled
+#    editor_only -- if true, Experiment -> Execute is disabled
+#    recents_number -- total number of recently opened file names to keep
 # FUNCTION
-#    IMUNES GUI can be used in editor-only mode.i
-#    This variable can be modified in .imunesrc.
-set editor_only false
-set recents_number 10
+#    These variables can be modified in .imunesrc in JSON format:
+#    {
+#    	"editor_only": true
+#    	"recents_number": "20"
+#    }
+#***
+set configurable_options {
+    "recents_number"		10
+    "editor_only"		false
+}
+
+foreach {option val} $configurable_options {
+    set $option $val
+}
 
 set winOS false
 if { $isOSwin } {
