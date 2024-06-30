@@ -20,39 +20,39 @@ proc popupDebugger {} {
     wm transient $wi .
     wm resizable $wi 300 200
     wm title $wi "IMUNES Debugger"
-   
+
     ttk::frame $wi.debug -borderwidth 2
-    
+
     ttk::frame $wi.debug.top
     ttk::label $wi.debug.top.label \
 		-text "Tcl/Tk script to be evaluated:"
-		
+
 	ttk::button $wi.debug.top.insert -text "upvar" -command {
 		set wi .debug_window
 		$wi.debug.editor.command insert end "upvar 0 ::cf::\[set ::curcfg\]::"
 	}
-	
+
 	pack $wi.debug.top.label -anchor w -side left \
 		-padx 4 -pady 4 -fill x
 	pack $wi.debug.top.insert -anchor e -side right \
 		-padx 4 -pady 4 -fill x
-	
+
 	pack $wi.debug.top -side top -expand 1 -fill x
-	
+
 	ttk::frame $wi.debug.editor -borderwidth 2
     text $wi.debug.editor.command -bg white -width 100 -height 5
     ttk::scrollbar $wi.debug.editor.vscroll -orient vertical \
     -command "$wi.debug.editor.command yview"
-    
+
     pack $wi.debug.editor
     pack $wi.debug -side top
-	
+
 	grid $wi.debug.editor.command $wi.debug.editor.vscroll -in $wi.debug.editor -sticky nsew
     grid columnconfig $wi.debug.editor.vscroll 0 -weight 1
     grid rowconfigure $wi.debug.editor.vscroll 0 -weight 1
-		
+
     ttk::frame $wi.buttons
-    
+
     # evaluate debugging commands entered into the text box below
     ttk::button $wi.buttons.run -text "Run script" -command {
 		set wi .debug_window
@@ -85,15 +85,15 @@ proc popupDebugger {} {
 
     pack $wi.buttons.run $wi.buttons.close -side left -padx 4 -pady 4
     pack $wi.buttons -side top
-    
+
     ttk::frame $wi.result -borderwidth 2
     ttk::label $wi.result.label \
 		-text "Script output:"
     text $wi.result.r -bg black -fg white -width 100 \
 		-height 12
-	
+
 	pack $wi.result.label $wi.result.r -side top -anchor w
-	
+
 	pack $wi.result
 }
 

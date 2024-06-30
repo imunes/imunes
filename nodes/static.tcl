@@ -31,7 +31,7 @@
 
 #****h* imunes/static.tcl
 # NAME
-#  router.static.tcl -- defines specific procedures for router 
+#  router.static.tcl -- defines specific procedures for router
 #  using static routing model
 # FUNCTION
 #  This module defines all the specific procedures for a router
@@ -51,7 +51,7 @@ set MODULE router.static
 #   set layer [router.static.layer]
 # FUNCTION
 #   Returns the layer on which the router using static routing model
-#   operates, i.e. returns NETWORK. 
+#   operates, i.e. returns NETWORK.
 # RESULT
 #   * layer -- set to NETWORK
 #****
@@ -66,7 +66,7 @@ proc $MODULE.layer {} {
 #   set layer [router.static.virtlayer]
 # FUNCTION
 #   Returns the layer on which the router using static routing model is
-#   instantiated, i.e. returns VIMAGE. 
+#   instantiated, i.e. returns VIMAGE.
 # RESULT
 #   * layer -- set to VIMAGE
 #****
@@ -90,7 +90,7 @@ proc $MODULE.virtlayer {} {
 #   * node -- node id (type of the node is router
 #     and routing model is set to static)
 # RESULT
-#   * congif -- generated configuration 
+#   * congif -- generated configuration
 #****
 proc $MODULE.cfggen { node } {
     set cfg {}
@@ -117,7 +117,7 @@ proc $MODULE.cfggen { node } {
 #   * node -- node id (type of the node is router and the
 #     routing model is set to static)
 # RESULT
-#   * appl -- application that reads the configuration (/bin/sh) 
+#   * appl -- application that reads the configuration (/bin/sh)
 #****
 proc $MODULE.bootcmd { node } {
     return "/bin/sh"
@@ -130,7 +130,7 @@ proc $MODULE.bootcmd { node } {
 #   set shells [router.static.shellcmds]
 # FUNCTION
 #   Procedure shellcmds returns the shells that can be opened
-#   as a default shell for the system. 
+#   as a default shell for the system.
 # RESULT
 #   * shells -- default shells for the router.static
 #****
@@ -144,8 +144,8 @@ proc $MODULE.shellcmds {} {
 # SYNOPSIS
 #   router.static.instantiate $eid $node
 # FUNCTION
-#   Procedure instantiate creates a new virtual node 
-#   for a given node in imunes. 
+#   Procedure instantiate creates a new virtual node
+#   for a given node in imunes.
 #   Procedure router.static.instantiate cretaes a new virtual
 #   node with all the interfaces and CPU parameters as defined
 #   in imunes.  It sets the net.inet.ip.forwarding and
@@ -178,8 +178,8 @@ proc $MODULE.createIfcs { eid node ifcs } {
 # SYNOPSIS
 #   router.static.start $eid $node
 # FUNCTION
-#   Starts a new router.static. The node can be started if it is instantiated. 
-#   Simulates the booting proces of a router.static, by calling l3node.start 
+#   Starts a new router.static. The node can be started if it is instantiated.
+#   Simulates the booting proces of a router.static, by calling l3node.start
 #   procedure.
 # INPUTS
 #   * eid -- experiment id
@@ -215,8 +215,8 @@ proc $MODULE.destroyIfcs { eid node ifcs } {
 # SYNOPSIS
 #   router.static.destroy $eid $node
 # FUNCTION
-#   Destroys a router.static. Destroys all the interfaces of the router.static 
-#   and the vimage itself by calling l3node.destroy procedure. 
+#   Destroys a router.static. Destroys all the interfaces of the router.static
+#   and the vimage itself by calling l3node.destroy procedure.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id (type of the node is router.static)
@@ -229,7 +229,7 @@ proc $MODULE.destroy { eid node } {
 # NAME
 #   router.static.nghook -- nghook
 # SYNOPSIS
-#   router.static.nghook $eid $node $ifc 
+#   router.static.nghook $eid $node $ifc
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. This procedure calls
@@ -239,7 +239,7 @@ proc $MODULE.destroy { eid node } {
 #   * node -- node id
 #   * ifc -- interface name
 # RESULT
-#   * nghook -- the list containing netgraph node id and the 
+#   * nghook -- the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node ifc } {

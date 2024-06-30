@@ -109,13 +109,11 @@ proc pipesCreate { } {
 }
 
 proc pipesExecLog { line args } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
     if { $line == "" } {
 	return
     }
 
-    set logfile "/tmp/$eid.log"
+    set logfile "/tmp/[getFromRunning "eid"].log"
 
     pipesExec "printf \"RUN: \" >> $logfile ; cat >> $logfile 2>&1 <<\"IMUNESEOF\"\n$line\nIMUNESEOF" "hold"
     pipesExec "$line >> $logfile 2>&1" "$args"
@@ -188,28 +186,24 @@ proc pipesClose { } {
 #   * mode -- the new operating mode. Can be edit or exec.
 #****
 proc setOperMode { mode } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::undolevel undolevel
-    upvar 0 ::cf::[set ::curcfg]::redolevel redolevel
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    upvar 0 ::cf::[set ::curcfg]::cfgDeployed cfgDeployed
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global all_modules_list editor_only execMode isOSfreebsd isOSlinux
 
-    if {$mode == "exec" && $node_list == ""} {
+    if { $mode == "exec" && [getFromRunning "node_list"] == "" } {
 	statline "Empty topologies can't be executed."
 	.panwin.f1.c config -cursor left_ptr
+
 	return
     }
 
-    if { !$cfgDeployed && $mode == "exec" } {
-	if { !$isOSlinux && !$isOSfreebsd } {
+    if { ! [getFromRunning "cfg_deployed"] && $mode == "exec" } {
+	if { ! $isOSlinux && ! $isOSfreebsd } {
 	    after idle {.dialog1.msg configure -wraplength 4i}
 	    tk_dialog .dialog1 "IMUNES error" \
 		"Error: To execute experiment, run IMUNES on FreeBSD or Linux." \
 	    info 0 Dismiss
 	    return
 	}
+
 	catch {exec id -u} uid
 	if { $uid != "0" } {
 	    after idle {.dialog1.msg configure -wraplength 4i}
@@ -218,6 +212,7 @@ proc setOperMode { mode } {
 	    info 0 Dismiss
 	    return
 	}
+
 	set err [checkSysPrerequisites]
 	if { $err != "" } {
 	    after idle {.dialog1.msg configure -wraplength 4i}
@@ -226,13 +221,16 @@ proc setOperMode { mode } {
 		info 0 Dismiss
 	    return
 	}
+
 	if { $editor_only } {
 	    .menubar.experiment entryconfigure "Execute" -state disabled
 	    return
 	}
+
 	if { [allSnapshotsAvailable] == 0 } {
 	    return
 	}
+
 	# Verify that links to external interfaces are properly configured
 	if { [checkExternalInterfaces] } {
 	    return
@@ -246,11 +244,13 @@ proc setOperMode { mode } {
 	    .panwin.f1.left.$b configure -state normal
 	}
     }
+
     .bottom.oper_mode configure -text "$mode mode"
     setActiveTool select
     #.panwin.f1.left.select configure -state active
     if { "$mode" == "exec" && [exec id -u] == 0} {
 	global autorearrange_enabled
+
 	set autorearrange_enabled 0
 	.menubar.tools entryconfigure "Auto rearrange all" -state disabled
 	.menubar.tools entryconfigure "Auto rearrange selected" -state disabled
@@ -262,60 +262,77 @@ proc setOperMode { mode } {
 	.menubar.tools entryconfigure "Routing protocol defaults" -state disabled
 	.panwin.f1.c bind node <Double-1> "spawnShellExec"
 	.panwin.f1.c bind nodelabel <Double-1> "spawnShellExec"
-	set oper_mode exec
+
+	setToRunning "oper_mode" "exec"
 	wm protocol . WM_DELETE_WINDOW {
 	}
-	if {!$cfgDeployed} {
+
+	if { ! [getFromRunning "cfg_deployed"] } {
 	    deployCfg
-	    set cfgDeployed true
+	    setToRunning "cfg_deployed" true
 	}
+
 	wm protocol . WM_DELETE_WINDOW {
 	    exit
 	}
-	.bottom.experiment_id configure -text "Experiment ID = $eid"
+
+	.bottom.experiment_id configure -text "Experiment ID = [getFromRunning "eid"]"
     } else {
-	if {$oper_mode != "edit"} {
+	if { [getFromRunning "oper_mode"] != "edit"} {
 	    global regular_termination
+
 	    wm protocol . WM_DELETE_WINDOW {
 	    }
+
+	    set eid [getFromRunning "eid"]
 	    if { $regular_termination } {
 		terminateAllNodes $eid
 	    } else {
 		vimageCleanup $eid
 	    }
+
 	    pipesCreate
 	    killExtProcess "socat.*$eid"
 	    pipesClose
-	    set cfgDeployed false
+
+	    setToRunning "cfg_deployed" false
 	    wm protocol . WM_DELETE_WINDOW {
 		exit
 	    }
+
 	    .menubar.tools entryconfigure "Auto rearrange all" -state normal
 	    .menubar.tools entryconfigure "Auto rearrange selected" -state normal
 	    .menubar.tools entryconfigure "Routing protocol defaults" -state normal
 	}
+
 	if { $editor_only } {
 	    .menubar.experiment entryconfigure "Execute" -state disabled
  	} else {
 	    .menubar.experiment entryconfigure "Execute" -state normal
 	}
+
 	.menubar.experiment entryconfigure "Terminate" -state disabled
 	.menubar.experiment entryconfigure "Restart" -state disabled
-	if { $undolevel > 0 } {
+
+	if { [getFromRunning "undolevel"] > 0 } {
 	    .menubar.edit entryconfigure "Undo" -state normal
 	} else {
 	    .menubar.edit entryconfigure "Undo" -state disabled
 	}
-	if { $redolevel > $undolevel } {
+
+	if { [getFromRunning "redolevel"] > [getFromRunning "undolevel"] } {
 	    .menubar.edit entryconfigure "Redo" -state normal
 	} else {
 	    .menubar.edit entryconfigure "Redo" -state disabled
 	}
+
 	.panwin.f1.c bind node <Double-1> "nodeConfigGUI .panwin.f1.c {}"
 	.panwin.f1.c bind nodelabel <Double-1> "nodeConfigGUI .panwin.f1.c {}"
-	set oper_mode edit
+
+	setToRunning "oper_mode" "edit"
 	.bottom.experiment_id configure -text ""
     }
+
     .panwin.f1.c config -cursor left_ptr
 }
 
@@ -329,8 +346,6 @@ proc setOperMode { mode } {
 #   node.
 #****
 proc spawnShellExec {} {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
     set node [lindex [.panwin.f1.c gettags {node && current}] 1]
     if { $node == "" } {
 	set node [lindex [.panwin.f1.c gettags {nodelabel && current}] 1]
@@ -360,7 +375,6 @@ proc spawnShellExec {} {
 #   configurations from the running experiment settings.
 #****
 proc fetchNodeConfiguration {} {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global isOSfreebsd
     set ip6Set 0
     set ip4Set 0
@@ -381,14 +395,14 @@ proc fetchNodeConfiguration {} {
 		    setIfcMACaddr $node $ifc $macaddr
 		} elseif {[regexp {^\tinet6 (?!fe80:)([^ ]+) prefixlen ([^ ]+)} $line -> ip6addr mask]} {
 		    if {$ip6Set == 0} {
-			setIfcIPv6addr $node $ifc $ip6addr/$mask
+			setIfcIPv6addrs $node $ifc $ip6addr/$mask
 			set ip6Set 1
 		    }
 		} elseif {[regexp {^\tinet ([^ ]+) netmask ([^ ]+) } $line \
 		     -> ip4addr netmask]} {
 		    if {$ip4Set == 0} {
 			set length [ip::maskToLength $netmask]
-			setIfcIPv4addr $node $ifc $ip4addr/$length
+			setIfcIPv4addrs $node $ifc $ip4addr/$length
 			set ip4Set 1
 		    }
 		}
@@ -406,12 +420,12 @@ proc fetchNodeConfiguration {} {
 		     -> ip4addr netmask]} {
 		    if {$ip4Set == 0} {
 			set length [ip::maskToLength $netmask]
-			setIfcIPv4addr $node $ifc $ip4addr/$length
+			setIfcIPv4addrs $node $ifc $ip4addr/$length
 			set ip4Set 1
 		    }
 		} elseif {[regexp {^\s*inet6 addr:\s(?!fe80:)([^ ]+)} $line -> ip6addr]} {
 		    if {$ip6Set == 0} {
-			setIfcIPv6addr $node $ifc $ip6addr
+			setIfcIPv6addrs $node $ifc $ip6addr
 			set ip6Set 1
 		    }
 		} elseif {[regexp {MTU:([^ ]+)} $line -> mtuvalue]} {
@@ -451,25 +465,22 @@ proc readDataFromFile { path } {
 #   * exp -- experiment id
 #****
 proc resumeSelectedExperiment { exp } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global runtimeDir
-    if {[info exists eid]} {
+
+    set eid [getFromRunning "eid"]
+    if { $eid != "" } {
 	set curr_eid $eid
-	if {$curr_eid == $exp} {
+	if { $curr_eid == $exp } {
 	    return
 	}
     }
     newProject
 
-    upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
-    upvar 0 ::cf::[set ::curcfg]::cfgDeployed cfgDeployed
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    set currentFile [getExperimentConfigurationFromFile $exp]
+    setToRunning "current_file" [getExperimentConfigurationFromFile $exp]
     openFile
 
-    set eid $exp
-    set cfgDeployed true
+    setToRunning "eid" $exp
+    setToRunning "cfg_deployed" true
     setOperMode exec
 }
 
@@ -484,28 +495,25 @@ proc resumeSelectedExperiment { exp } {
 #   * path -- absolute path of the file
 #****
 proc dumpLinksToFile { path } {
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-
     set data ""
     set linkDelim ":"
     set skipLinks ""
 
-    foreach link $link_list {
+    foreach link [getFromRunning "link_list"] {
 	if { $link in $skipLinks } {
 	    continue
 	}
-	set lnode1 [lindex [linkPeers $link] 0]
-	set lnode2 [lindex [linkPeers $link] 1]
-	set ifname1 [ifcByPeer $lnode1 $lnode2]
-	set ifname2 [ifcByPeer $lnode2 $lnode1]
 
-	if { [getLinkMirror $link] != "" } {
-	    set mirror_link [getLinkMirror $link]
+	lassign [getLinkPeers $link] lnode1 lnode2
+	lassign [getLinkPeersIfaces $link] ifname1 ifname2
+
+	set mirror_link [getLinkMirror $link]
+	if { $mirror_link != "" } {
 	    lappend skipLinks $mirror_link
 
-	    set p_lnode2 $lnode2
-	    set lnode2 [lindex [linkPeers $mirror_link] 0]
-	    set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
+	    # switch direction for mirror links
+	    lassign "$lnode2 [lindex [getLinkPeers $mirror_link] 1]" lnode1 lnode2
+	    lassign "$ifname2 [lindex [getLinkPeersIfaces $mirror_link] 1]" ifname1 ifname2
 	}
 
 	set name1 [getNodeName $lnode1]
@@ -515,19 +523,19 @@ proc dumpLinksToFile { path } {
 
 	set lpair [list $lnode1 $ifname1]
 	set rpair [list $lnode2 $ifname2]
-	if { [nodeType $lnode1] in "rj45 extelem" } {
-	    if { [nodeType $lnode1] == "rj45" } {
+	if { [getNodeType $lnode1] in "rj45 extelem" } {
+	    if { [getNodeType $lnode1] == "rj45" } {
 		set lpair $name1
 	    } else {
-		set ifcs [getNodeExternalIfcs $lnode1]
+		set ifcs [getNodeStolenIfaces $lnode1]
 		set lpair [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname1"] 1]
 	    }
 	}
-	if { [nodeType $lnode2] in "rj45 extelem" } {
-	    if { [nodeType $lnode2] == "rj45" } {
+	if { [getNodeType $lnode2] in "rj45 extelem" } {
+	    if { [getNodeType $lnode2] == "rj45" } {
 		set rpair $name2
 	    } else {
-		set ifcs [getNodeExternalIfcs $lnode2]
+		set ifcs [getNodeStolenIfaces $lnode2]
 		set rpair [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname2"] 1]
 	    }
 	}
@@ -598,13 +606,15 @@ proc getResumableExperiments {} {
 #****
 proc getExperimentTimestampFromFile { eid } {
     global runtimeDir
+
     set pathToFile "$runtimeDir/$eid/timestamp"
     set timestamp ""
-    if {[file exists $pathToFile]} {
+    if { [file exists $pathToFile] } {
 	set fileId [open $pathToFile r]
 	set timestamp [string trim [read $fileId]]
 	close $fileId
     }
+
     return $timestamp
 }
 
@@ -622,11 +632,13 @@ proc getExperimentTimestampFromFile { eid } {
 #****
 proc getExperimentNameFromFile { eid } {
     global runtimeDir
+
     set pathToFile "$runtimeDir/$eid/name"
     set name ""
-    if {[file exists $pathToFile]} {
+    if { [file exists $pathToFile] } {
 	set name [readDataFromFile $pathToFile]
     }
+
     return $name
 }
 
@@ -645,11 +657,13 @@ proc getExperimentNameFromFile { eid } {
 #****
 proc getExperimentConfigurationFromFile { eid } {
     global runtimeDir
+
     set pathToFile "$runtimeDir/$eid/config.imn"
     set file ""
-    if {[file exists $pathToFile]} {
+    if { [file exists $pathToFile] } {
 	set file $pathToFile
     }
+
     return $file
 }
 
@@ -670,7 +684,7 @@ proc captureOnExtIfc { node command } {
 	return
     }
 
-    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set eid [getFromRunning "eid"]
 
     if { $command == "tcpdump" } {
 	exec xterm -name imunes-terminal -T "Capturing $eid-$node" -e "tcpdump -ni $eid-$node" 2> /dev/null &

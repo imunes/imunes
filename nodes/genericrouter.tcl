@@ -59,6 +59,7 @@ registerRouterModule $MODULE
 #****
 proc $MODULE.confNewIfc { node ifc } {
     global changeAddressRange changeAddressRange6
+
     set changeAddressRange 0
     set changeAddressRange6 0
     autoIPv4addr $node $ifc
@@ -81,39 +82,27 @@ proc $MODULE.confNewIfc { node ifc } {
 # INPUTS
 #   * node -- node id
 #****
-proc $MODULE.confNewNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc $MODULE.confNewNode { node_id } {
     global ripEnable ripngEnable ospfEnable ospf6Enable
     global rdconfig router_model router_ConfigModel
     global def_router_model
     global nodeNamingBase
 
-    set ripEnable [lindex $rdconfig 0]
-    set ripngEnable [lindex $rdconfig 1]
-    set ospfEnable [lindex $rdconfig 2]
-    set ospf6Enable [lindex $rdconfig 3]
+    lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable
     set router_ConfigModel $router_model
 
-    if { $router_model != $def_router_model } {
-	lappend $node "model $router_model"
-    } else {
-	lappend $node "model $def_router_model"
-    }
+    setNodeName $node_id [getNewNodeNameType router $nodeNamingBase(router)]
+    setNodeModel $node_id $router_model
 
-    set nconfig [list \
-	"hostname [getNewNodeNameType router $nodeNamingBase(router)]" \
-	! ]
-    lappend $node "network-config [list $nconfig]"
+    setNodeProtocol $node_id "rip" $ripEnable
+    setNodeProtocol $node_id "ripng" $ripngEnable
+    setNodeProtocol $node_id "ospf" $ospfEnable
+    setNodeProtocol $node_id "ospf6" $ospf6Enable
 
-    setNodeProtocolRip $node $ripEnable
-    setNodeProtocolRipng $node $ripngEnable
-    setNodeProtocolOspfv2 $node $ospfEnable
-    setNodeProtocolOspfv3 $node $ospf6Enable
-
-    setAutoDefaultRoutesStatus $node "enabled"
-    setLogIfcType $node lo0 lo
-    setIfcIPv4addr $node lo0 "127.0.0.1/8"
-    setIfcIPv6addr $node lo0 "::1/128"
+    setAutoDefaultRoutesStatus $node_id "enabled"
+    setLogIfcType $node_id lo0 lo
+    setIfcIPv4addrs $node_id lo0 "127.0.0.1/8"
+    setIfcIPv6addrs $node_id lo0 "::1/128"
 }
 
 #****f* genericrouter.tcl/router.icon
@@ -130,16 +119,17 @@ proc $MODULE.confNewNode { node } {
 #****
 proc $MODULE.icon { size } {
     global ROOTDIR LIBDIR
+
     switch $size {
-      normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/router.gif
-      }
-      small {
-	return $ROOTDIR/$LIBDIR/icons/small/router.gif
-      }
-      toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/router.gif
-      }
+	normal {
+	    return $ROOTDIR/$LIBDIR/icons/normal/router.gif
+	}
+	small {
+	    return $ROOTDIR/$LIBDIR/icons/small/router.gif
+	}
+	toolbar {
+	    return $ROOTDIR/$LIBDIR/icons/tiny/router.gif
+	}
     }
 }
 
@@ -178,11 +168,13 @@ proc $MODULE.notebookDimensions { wi } {
 	set h 360
 	set w 507
     }
+
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
 	== "Interfaces" } {
 	set h 370
 	set w 507
     }
+
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
 	== "IPsec" } {
 	set h 320
@@ -250,16 +242,14 @@ proc $MODULE.IPAddrRange {} {
 proc $MODULE.configGUI { c node } {
     global wi
     global guielements treecolumns ipsecEnable
+
     set guielements {}
 
     configGUI_createConfigPopupWin $c
     wm title $wi "router configuration"
     configGUI_nodeName $wi $node "Node name:"
 
-    set tabs [configGUI_addNotebook $wi $node {"Configuration" "Interfaces" "IPsec"}]
-    set configtab [lindex $tabs 0]
-    set ifctab [lindex $tabs 1]
-    set ipsectab [lindex $tabs 2]
+    lassign [configGUI_addNotebook $wi $node {"Configuration" "Interfaces" "IPsec"}] configtab ifctab ipsectab
 
     set treecolumns {"OperState State" "NatState Nat" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
 	    "MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop" }

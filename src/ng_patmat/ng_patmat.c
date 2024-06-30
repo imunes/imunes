@@ -131,14 +131,14 @@ static const struct ng_parse_type ng_pm_hookcfg_type = {
 
 /* List of commands and how to convert arguments to/from ASCII. */
 static const struct ng_cmdlist ng_pm_cmds[] = {
-        { 
+        {
 		.cookie =       NGM_PM_COOKIE,
 		.cmd =          NGM_PM_SETHOOKCFG,
 		.name =         "shc",
 		.mesgType =     &ng_pm_hookcfg_type,
 		.respType =     NULL
 	},
-        { 
+        {
 		.cookie =       NGM_PM_COOKIE,
 		.cmd =          NGM_PM_GETHOOKCFG,
 		.name =         "ghc",
@@ -177,7 +177,7 @@ ng_pm_clear_config(node_p node)
 
 /*
  * Cfg parsing routines.
- */ 
+ */
 static int
 ng_pm_hookcfg_parse(const struct ng_parse_type *type, const char *s, int *off,
     const u_char *const start, u_char *const buf, int *buflen)
@@ -217,7 +217,7 @@ ng_pm_hookcfg_parse(const struct ng_parse_type *type, const char *s, int *off,
 		/* Bail out if no digits encountered */
 		if (*off == i || s[i++] != ':')
 			return(EINVAL);
-                         
+
 		hc->rule[rules].rule_number =
 		    strtol(&s[*off], NULL, 10);
 
@@ -463,7 +463,7 @@ ng_pm_rcvmsg(node_p node, item_p item, hook_p lasthook)
 	hook_p hook = NULL;
 	ng_pm_hookcfg_p hcp;
 	int i, j, len, error = 0;
- 
+
 	NGI_GET_MSG(item, msg);
 	if (msg->header.typecookie != NGM_PM_COOKIE)
 		error = EINVAL;

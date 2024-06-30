@@ -2,358 +2,294 @@
 # NAME
 #   addAnnotation -- add annotation object
 # SYNOPSIS
-#   addAnnotation $target $type
+#   addAnnotation $annotation_id $type
 # FUNCTION
 #   Adds annotation object to annotation list.
 # INPUTS
-#   * target -- new annotation id
+#   * annotation_id -- new annotation id
 #   * type -- annotation type
 #****
-proc addAnnotation { target type } {
-    upvar 0 ::cf::[set ::curcfg]::annotation_list annotation_list
-    upvar 0 ::cf::[set ::curcfg]::$target $target
-    lappend annotation_list $target
-    lappend $target "type $type"
+proc addAnnotation { annotation_id type } {
+    lappendToRunning "annotation_list" $annotation_id
+    setAnnotationType $annotation_id $type
 }
 
 #****f* annotations.tcl/deleteAnnotation
 # NAME
 #   deleteAnnotation -- delete annotation
 # SYNOPSIS
-#   deleteAnnotation $c $type $target
+#   deleteAnnotation $annotation_id $type
 # FUNCTION
 #   Deletes annotation from canvas.
 # INPUTS
-#   * c -- tk canvas
+#   * annotation_id -- existing annotation
 #   * type -- type of annimation
-#   * target -- existing annotation
 #****
-proc deleteAnnotation { c type target } {
-    upvar 0 ::cf::[set ::curcfg]::annotation_list annotation_list
-    upvar 0 ::cf::[set ::curcfg]::$target $target
+proc deleteAnnotation { annotation_id type } {
     global changed
 
-    set $target {}
-    
-    set i [lsearch -exact $annotation_list $target]
-    set annotation_list [lreplace $annotation_list $i $i]
-    
+    setToRunning "annotation_list" [removeFromList [getFromRunning "annotation_list"] $annotation_id]
+    cfgUnset "annotations" $annotation_id
+
     set changed 1
     updateUndoLog
     redrawAll
 }
 
-#****f* annotations.tcl/isAnnotation
-# NAME
-#   isAnnotation -- is annotation
-# SYNOPSIS
-#   isAnnotation $node
-# FUNCTION
-#   Checks if the node is annotation.
-# INPUTS
-#   * node -- node id
-# RESULT
-#   * check -- 1 if the node is annotation, otherwise 0
-#****
-proc isAnnotation { node } {
-    if { [nodeType $node] in {"text" "oval" "rectangle" "freeform"} } {
-	return 1
-    }
-    return 0
+proc getAnnotationType { annotation_id } {
+    return [cfgGet "annotations" $annotation_id "type"]
+}
+
+proc setAnnotationType { annotation_id type } {
+    cfgSet "annotations" $annotation_id "type" $type
+}
+
+proc getAnnotationCanvas { annotation_id } {
+    return [cfgGet "annotations" $annotation_id "canvas"]
+}
+
+proc setAnnotationCanvas { annotation_id canvas_id } {
+    cfgSet "annotations" $annotation_id "canvas" $canvas_id
 }
 
 #****f* annotations_cfg.tcl/getAnnotationColor
 # NAME
 #   getAnnotationColor -- get annotation color
 # SYNOPSIS
-#   getAnnotationColor $object
+#   getAnnotationColor $annotation_id
 # FUNCTION
 #   Returns the specified annotation's color.
 # INPUTS
-#   * object -- annotation object
+#   * annotation_id -- annotation object
 # RESULT
 #   * color -- annotation color
 #****
-proc getAnnotationColor { object } {
-    upvar 0 ::cf::[set ::curcfg]::$object $object
-    return [lindex [lsearch -inline [set $object] "color *"] 1]
-}
-
-#****f* annotations_cfg.tcl/getAnnotationLabel
-# NAME
-#   getAnnotationLabel -- get annotation label
-# SYNOPSIS
-#   getAnnotationLabel $object
-# FUNCTION
-#   Returns the specified annotation label
-# INPUTS
-#   * object -- annotation object
-# RESULT
-#   * label -- annotation label
-#****
-proc getAnnotationLabel { object } {
-    upvar 0 ::cf::[set ::curcfg]::$object $object
-    return [lindex [lsearch -inline [set $object] "label *"] 1]
-}
-
-#****f* annotations_cfg.tcl/getAnnotationLColor
-# NAME
-#   getAnnotationLColor -- get annotation label color
-# SYNOPSIS
-#   getAnnotationLColor $object
-# FUNCTION
-#   Returns the specified annotation's label color.
-# INPUTS
-#   * object -- annotation object
-# RESULT
-#   * lcolor -- annotation label color
-#****
-proc getAnnotationLColor { object } {
-    upvar 0 ::cf::[set ::curcfg]::$object $object
-    return [lindex [lsearch -inline [set $object] "labelcolor *"] 1]
-}
-
-#****f* annotations_cfg.tcl/getAnnotationBorderColor
-# NAME
-#   getAnnotationBorderColor -- get annotation border color
-# SYNOPSIS
-#   getAnnotationBorderColor $object
-# FUNCTION
-#   Returns the specified annotation's border color.
-# INPUTS
-#   * object -- annotation object
-# RESULT
-#   * bcolor -- annotation border color
-#****
-proc getAnnotationBorderColor { object } {
-    upvar 0 ::cf::[set ::curcfg]::$object $object
-    return [lindex [lsearch -inline [set $object] "bordercolor *"] 1]
-}
-
-#****f* annotations_cfg.tcl/getAnnotationWidth
-# NAME
-#   getAnnotationWidth -- get annotation width
-# SYNOPSIS
-#   getAnnotationWidth $object
-# FUNCTION
-#   Returns the specified annotation's width.
-# INPUTS
-#   * object -- annotation object
-# RESULT
-#   * width -- annotation width
-#****
-proc getAnnotationWidth { object } {
-    upvar 0 ::cf::[set ::curcfg]::$object $object
-    return [lindex [lsearch -inline [set $object] "width *"] 1]
-}
-
-#****f* annotations_cfg.tcl/getAnnotationRad
-# NAME
-#   getAnnotationRad -- get annotation radius
-# SYNOPSIS
-#   getAnnotationRad $object
-# FUNCTION
-#   Returns the specified annotation's radius.
-# INPUTS
-#   * object -- annotation object
-# RESULT
-#   * rad -- annotation radius
-#****
-proc getAnnotationRad { object } {
-    upvar 0 ::cf::[set ::curcfg]::$object $object
-    return [lindex [lsearch -inline [set $object] "rad *"] 1]
-}
-
-#****f* annotations_cfg.tcl/getAnnotationFont
-# NAME
-#   getAnnotationFont -- get annotation font
-# SYNOPSIS
-#   getAnnotationFont $object
-# FUNCTION
-#   Returns the specified annotation's font.
-# INPUTS
-#   * object -- annotation object
-# RESULT
-#   * font -- annotation font
-#****
-proc getAnnotationFont { object } {
-    upvar 0 ::cf::[set ::curcfg]::$object $object
-    return [lindex [lsearch -inline [set $object] "font *"] 1]
-}
-
-
-#****f* annotations_cfg.tcl/setAnnotationCoords
-# NAME
-#   setAnnotationCoords -- set annotation coordinates
-# SYNOPSIS
-#   setAnnotationCoords $target $coords
-# FUNCTION
-#   Sets annotation coordinates.
-# INPUTS
-#   * target -- annotation id
-#   * coords -- coordinates
-#****
-proc setAnnotationCoords { target coords } {
-    upvar 0 ::cf::[set ::curcfg]::$target $target
-    set iconcoords "iconcoords"
-
-    foreach c $coords {
-	set x [expr round($c)]
-	lappend roundcoords $x
-    }
-
-    lappend $iconcoords $roundcoords
-    set i [lsearch [set $target] "iconcoords *"]
-    if {$i>=0} {
-	set $target [lreplace [set $target] $i $i $iconcoords]
-    } else {
-	lappend $target $iconcoords
-    }
+proc getAnnotationColor { annotation_id } {
+    return [cfgGet "annotations" $annotation_id "color"]
 }
 
 #****f* annotations_cfg.tcl/setAnnotationColor
 # NAME
 #   setAnnotationColor -- set annotation color
 # SYNOPSIS
-#   setAnnotationColor $target $color
+#   setAnnotationColor $annotation_id $color
 # FUNCTION
 #   Sets annotation color.
 # INPUTS
-#   * target -- annotation id
+#   * annotation_id -- annotation id
 #   * color -- color
 #****
-proc setAnnotationColor { target color } {
-    upvar 0 ::cf::[set ::curcfg]::$target $target
-    set i [lsearch [set $target] "color *"]
-    if {$i>=0} {
-	set $target [lreplace [set $target] $i $i "color $color"]
-    } else { 
-	lappend $target "color $color"
-    }
+proc setAnnotationColor { annotation_id color } {
+    cfgSet "annotations" $annotation_id "color" $color
 }
 
-#****f* annotations_cfg.tcl/setAnnotationBorderColor
+#****f* annotations_cfg.tcl/getAnnotationLabel
 # NAME
-#   setAnnotationBorderColor -- set annotation border color
+#   getAnnotationLabel -- get annotation label
 # SYNOPSIS
-#   setAnnotationBorderColor $target $bordercolor
+#   getAnnotationLabel $annotation_id
 # FUNCTION
-#   Sets annotation border color
+#   Returns the specified annotation label
 # INPUTS
-#   * target -- annotation id
-#   * bordercolor -- border color
+#   * annotation_id -- annotation object
+# RESULT
+#   * label -- annotation label
 #****
-proc setAnnotationBorderColor { target bordercolor } {
-    upvar 0 ::cf::[set ::curcfg]::$target $target
-    set i [lsearch [set $target] "bordercolor *"]
-    if {$i>=0} {
-	set $target [lreplace [set $target] $i $i "bordercolor $bordercolor"]
-    } else { 
-	lappend $target "bordercolor $bordercolor"
-    }
-}
-
-#****f* annotations_cfg.tcl/setAnnotationWidth
-# NAME
-#   setAnnotationWidth -- set annotation width
-# SYNOPSIS
-#   setAnnotationWidth $target $width
-# FUNCTION
-#   Sets annotation width.
-# INPUTS
-#   * target -- annotation id
-#   * width -- width
-#****
-proc setAnnotationWidth { target width } {
-    upvar 0 ::cf::[set ::curcfg]::$target $target
-    set i [lsearch [set $target] "width *"]
-    if {$i>=0} {
-	set $target [lreplace [set $target] $i $i "width $width"]
-    } else { 
-	lappend $target "width $width"
-    }
-}
-
-#****f* annotations_cfg.tcl/setAnnotationRad
-# NAME
-#   setAnnotationRad -- set annotation radius
-# SYNOPSIS
-#   setAnnotationRad $target $rad
-# FUNCTION
-#   Sets annotation radius.
-# INPUTS
-#   * target -- annotation id
-#   * rad -- radius
-#****
-proc setAnnotationRad { target rad } {
-    upvar 0 ::cf::[set ::curcfg]::$target $target
-    set i [lsearch [set $target] "rad *"]
-    if {$i>=0} {
-	set $target [lreplace [set $target] $i $i "rad $rad"]
-    } else { 
-	lappend $target "rad $rad"
-    }
+proc getAnnotationLabel { annotation_id } {
+    return [cfgGet "annotations" $annotation_id "label"]
 }
 
 #****f* annotations_cfg.tcl/setAnnotationLabel
 # NAME
 #   setAnnotationLabel -- set annotation label
 # SYNOPSIS
-#   setAnnotationLabel $target $label
+#   setAnnotationLabel $annotation_id $labeltext
 # FUNCTION
 #   Sets annotation label.
 # INPUTS
-#   * target -- annotation id
-#   * label -- label text
+#   * annotation_id -- annotation id
+#   * labeltext -- label text
 #****
-proc setAnnotationLabel { target label } {
-    upvar 0 ::cf::[set ::curcfg]::$target $target
-    set i [lsearch [set $target] "label *"]
-    if {$i>=0} {
-	set $target [lreplace [set $target] $i $i "label {$label}"]
-    } else { 
-	lappend $target "label {$label}"
-    }
+proc setAnnotationLabel { annotation_id labeltext } {
+    cfgSet "annotations" $annotation_id "label" $labeltext
+}
+
+#****f* annotations_cfg.tcl/getAnnotationLColor
+# NAME
+#   getAnnotationLColor -- get annotation label color
+# SYNOPSIS
+#   getAnnotationLColor $annotation_id
+# FUNCTION
+#   Returns the specified annotation's label color.
+# INPUTS
+#   * annotation_id -- annotation object
+# RESULT
+#   * labelcolor -- annotation label color
+#****
+proc getAnnotationLColor { annotation_id } {
+    return [cfgGet "annotations" $annotation_id "labelcolor"]
 }
 
 #****f* annotations_cfg.tcl/setAnnotationLColor
 # NAME
 #   setAnnotationLColor -- set annotation's label color
 # SYNOPSIS
-#   setAnnotationLColor $target $lcolor
+#   setAnnotationLColor $annotation_id $labelcolor
 # FUNCTION
 #   Sets annotation's label color.
 # INPUTS
-#   * target -- annotation id
-#   * lcolor -- label color
+#   * annotation_id -- annotation id
+#   * labelcolor -- label color
 #****
-proc setAnnotationLColor { target lcolor } {
-    upvar 0 ::cf::[set ::curcfg]::$target $target
-    set i [lsearch [set $target] "labelcolor *"]
-    if {$i>=0} {
-	set $target [lreplace [set $target] $i $i "labelcolor $lcolor"]
-    } else { 
-	lappend $target "labelcolor $lcolor"
-    }
+proc setAnnotationLColor { annotation_id labelcolor } {
+    cfgSet "annotations" $annotation_id "labelcolor" $labelcolor
+}
+
+#****f* annotations_cfg.tcl/getAnnotationBorderColor
+# NAME
+#   getAnnotationBorderColor -- get annotation border color
+# SYNOPSIS
+#   getAnnotationBorderColor $annotation_id
+# FUNCTION
+#   Returns the specified annotation's border color.
+# INPUTS
+#   * annotation_id -- annotation object
+# RESULT
+#   * bcolor -- annotation border color
+#****
+proc getAnnotationBorderColor { annotation_id } {
+    return [cfgGet "annotations" $annotation_id "bordercolor"]
+}
+
+#****f* annotations_cfg.tcl/setAnnotationBorderColor
+# NAME
+#   setAnnotationBorderColor -- set annotation border color
+# SYNOPSIS
+#   setAnnotationBorderColor $annotation_id $bordercolor
+# FUNCTION
+#   Sets annotation border color
+# INPUTS
+#   * annotation_id -- annotation id
+#   * bordercolor -- border color
+#****
+proc setAnnotationBorderColor { annotation_id bordercolor } {
+    cfgSet "annotations" $annotation_id "bordercolor" $bordercolor
+}
+
+#****f* annotations_cfg.tcl/getAnnotationWidth
+# NAME
+#   getAnnotationWidth -- get annotation width
+# SYNOPSIS
+#   getAnnotationWidth $annotation_id
+# FUNCTION
+#   Returns the specified annotation's width.
+# INPUTS
+#   * annotation_id -- annotation object
+# RESULT
+#   * width -- annotation width
+#****
+proc getAnnotationWidth { annotation_id } {
+    return [cfgGet "annotations" $annotation_id "width"]
+}
+
+#****f* annotations_cfg.tcl/setAnnotationWidth
+# NAME
+#   setAnnotationWidth -- set annotation width
+# SYNOPSIS
+#   setAnnotationWidth $annotation_id $width
+# FUNCTION
+#   Sets annotation width.
+# INPUTS
+#   * annotation_id -- annotation id
+#   * width -- width
+#****
+proc setAnnotationWidth { annotation_id width } {
+    cfgSet "annotations" $annotation_id "width" $width
+}
+
+#****f* annotations_cfg.tcl/getAnnotationRad
+# NAME
+#   getAnnotationRad -- get annotation radius
+# SYNOPSIS
+#   getAnnotationRad $annotation_id
+# FUNCTION
+#   Returns the specified annotation's radius.
+# INPUTS
+#   * annotation_id -- annotation object
+# RESULT
+#   * rad -- annotation radius
+#****
+proc getAnnotationRad { annotation_id } {
+    return [cfgGet "annotations" $annotation_id "rad"]
+}
+
+#****f* annotations_cfg.tcl/setAnnotationRad
+# NAME
+#   setAnnotationRad -- set annotation radius
+# SYNOPSIS
+#   setAnnotationRad $annotation_id $rad
+# FUNCTION
+#   Sets annotation radius.
+# INPUTS
+#   * annotation_id -- annotation id
+#   * rad -- radius
+#****
+proc setAnnotationRad { annotation_id rad } {
+    cfgSet "annotations" $annotation_id "rad" $rad
+}
+
+#****f* annotations_cfg.tcl/getAnnotationFont
+# NAME
+#   getAnnotationFont -- get annotation font
+# SYNOPSIS
+#   getAnnotationFont $annotation_id
+# FUNCTION
+#   Returns the specified annotation's font.
+# INPUTS
+#   * annotation_id -- annotation object
+# RESULT
+#   * font -- annotation font
+#****
+proc getAnnotationFont { annotation_id } {
+    return [cfgGet "annotations" $annotation_id "font"]
 }
 
 #****f* annotations_cfg.tcl/setAnnotationFont
 # NAME
 #   setAnnotationFont -- set annotation font
 # SYNOPSIS
-#   setAnnotationFont $target $font
+#   setAnnotationFont $annotation_id $font
 # FUNCTION
 #   Sets annotation font.
 # INPUTS
-#   * target -- annotation id
+#   * annotation_id -- annotation id
 #   * font -- font
 #****
-proc setAnnotationFont { target font } {
-    upvar 0 ::cf::[set ::curcfg]::$target $target
-    set i [lsearch [set $target] "font *"]
-    if {$i>=0} {
-	set $target [lreplace [set $target] $i $i "font {$font}"]
-    } else { 
-	lappend $target "font {$font}"
+proc setAnnotationFont { annotation_id font } {
+    cfgSet "annotations" $annotation_id "font" $font
+}
+
+proc getAnnotationCoords { annotation_id } {
+    return [cfgGet "annotations" $annotation_id "iconcoords"]
+}
+
+#****f* annotations_cfg.tcl/setAnnotationCoords
+# NAME
+#   setAnnotationCoords -- set annotation coordinates
+# SYNOPSIS
+#   setAnnotationCoords $annotation_id $coords
+# FUNCTION
+#   Sets annotation coordinates.
+# INPUTS
+#   * annotation_id -- annotation id
+#   * coords -- coordinates
+#****
+proc setAnnotationCoords { annotation_id coords } {
+    set roundcoords {}
+    foreach c $coords {
+	set x [expr int($c)]
+	lappend roundcoords $x
     }
+
+    cfgSet "annotations" $annotation_id "iconcoords" $roundcoords
 }

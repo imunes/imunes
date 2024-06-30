@@ -40,7 +40,7 @@ set mac_byte6 0
 #****
 proc randomizeMACbytes {} {
     global mac_byte4 mac_byte5
-    
+
     set mac_byte4 [expr { (round(rand()*10000))%255 }]
     set mac_byte5 [expr { (round(rand()*10000))%255 }]
 
@@ -51,27 +51,26 @@ proc randomizeMACbytes {} {
 # NAME
 #   autoMACaddr -- automaticaly assign an MAC address
 # SYNOPSIS
-#   autoMACaddr $node $ifc 
+#   autoMACaddr $node $ifc
 # FUNCTION
-#   Automaticaly assignes an MAC address to the interface $ifc of 
-#   of the node $node.  
+#   Automaticaly assignes an MAC address to the interface $ifc of
+#   of the node $node.
 # INPUTS
-#   * node -- the node containing the interface to witch a new 
+#   * node -- the node containing the interface to witch a new
 #     MAC address should be assigned
-#   * iface -- the interface to witch a new, automatilacy generated, MAC  
+#   * iface -- the interface to witch a new, automatilacy generated, MAC
 #     address will be assigned
 #****
 proc autoMACaddr { node ifc } {
-    upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
     global mac_byte4 mac_byte5 mac_byte6
 
-    if { [nodeType $node] ni "ext extnat" && [[typemodel $node].virtlayer] != "VIMAGE" } {
+    if { [getNodeType $node] ni "ext extnat" && [[typemodel $node].virtlayer] != "VIMAGE" } {
 	return
     }
 
     set mac_byte6 0
     set macaddr [MACaddrAddZeros 42:00:aa:[format %x $mac_byte4]:[format %x $mac_byte5]:[format %x $mac_byte6]]
-    while { $macaddr in $MACUsedList } {
+    while { $macaddr in [getFromRunning "mac_used_list"] } {
 	incr mac_byte6
 	if { $mac_byte6 > 255 } {
             if { $mac_byte5 > 255 } {
@@ -89,7 +88,7 @@ proc autoMACaddr { node ifc } {
 	set macaddr [MACaddrAddZeros 42:00:aa:[format %x $mac_byte4]:[format %x $mac_byte5]:[format %x $mac_byte6]]
     }
 
-    lappend MACUsedList $macaddr
+    lappendToRunning "mac_used_list" $macaddr
     setIfcMACaddr $node $ifc $macaddr
 }
 
@@ -97,9 +96,9 @@ proc autoMACaddr { node ifc } {
 # NAME
 #   MACaddrAddZeros -- automaticaly assign an MAC address
 # SYNOPSIS
-#   set addr [MACaddrAddZeros $node $ifc] 
+#   set addr [MACaddrAddZeros $node $ifc]
 # FUNCTION
-#   Adds zeros to automatically assigned MAC address, 
+#   Adds zeros to automatically assigned MAC address,
 #   e.g 42:00:aa:aa:0:0 --> 42:00:aa:aa:00:00
 # INPUTS
 #   * str -- string
@@ -126,18 +125,18 @@ proc MACaddrAddZeros { str } {
             set newstr "$newstr$part"
         }
 	incr n
-    } 
+    }
 
     return $newstr
 }
 
 #****f* mac.tcl/checkMACAddr
 # NAME
-#   checkMACAddr -- check the MAC address 
+#   checkMACAddr -- check the MAC address
 # SYNOPSIS
 #   set valid [checkMACAddr $str]
 # FUNCTION
-#   Checks if the provided string is a valid MAC address. 
+#   Checks if the provided string is a valid MAC address.
 # INPUTS
 #   * str -- string to be evaluated. Valid MAC address is writen in form
 #     a:b:c:d:e:f, where each part (a,b,c,...) consists of two hexadecimal
@@ -151,25 +150,30 @@ proc checkMACAddr { str } {
     if { $str == "" } {
 	return 1
     }
+
     while { $n < 6 } {
 	if { $n < 5 } {
 	    set i [string first : $str]
 	} else {
 	    set i [string length $str]
 	}
+
 	if { $i < 1 } {
 	    return 0
 	}
+
 	set part [string range $str 0 [expr $i - 1]]
-	if { [string length [string trim $part]] != 1 && [string length [string trim $part]] != 2} {         
+	if { [string length [string trim $part]] != 1 && [string length [string trim $part]] != 2} {
 	    return 0
 	}
+
 	if { ![string is xdigit $part] } {
 	    return 0
 	}
+
 	set str [string range $str [expr $i + 1] end]
 	incr n
-    } 
+    }
 
     return 1
 }

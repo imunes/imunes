@@ -13,11 +13,11 @@ workdir="/tmp/vroot_prepare/tools"
 
 mkdir -p $workdir
 
-# Build and install tayga 
-echo "Installing tayga..." 
+# Build and install tayga
+echo "Installing tayga..."
 cd $workdir
 
-if [ ! -f `basename $tayga` ]; then 
+if [ ! -f `basename $tayga` ]; then
     fetch $tayga
 fi
 
@@ -26,5 +26,5 @@ cd `find . -type d -name 'tayga*'`
 patch < $IMUNESDIR/src/patches/tayga_fbsd_patch.diff
 ./configure && make
 
-cp tayga $VROOT_MASTER/usr/local/bin 
-echo "Installing tayga done." 
+cp tayga $VROOT_MASTER/usr/local/bin
+echo "Installing tayga done."

@@ -60,19 +60,14 @@ proc $MODULE.prepareSystem {} {
 # NAME
 #   rj45.confNewNode -- configure new node
 # SYNOPSIS
-#   rj45.confNewNode $node
+#   rj45.confNewNode $node_id
 # FUNCTION
 #   Configures new node with the specified id.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.confNewNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-    
-    set nconfig [list \
-	"hostname UNASSIGNED" \
-	! ]
-    lappend $node "network-config [list $nconfig]"
+proc $MODULE.confNewNode { node_id } {
+    setNodeName $node_id "UNASSIGNED"
 }
 
 #****f* rj45.tcl/rj45.icon
@@ -89,16 +84,17 @@ proc $MODULE.confNewNode { node } {
 #****
 proc $MODULE.icon { size } {
     global ROOTDIR LIBDIR
+
     switch $size {
-      normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/rj45.gif
-      }
-      small {
-	return $ROOTDIR/$LIBDIR/icons/small/rj45.gif
-      }
-      toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/rj45.gif
-      }
+	normal {
+	    return $ROOTDIR/$LIBDIR/icons/normal/rj45.gif
+	}
+	small {
+	    return $ROOTDIR/$LIBDIR/icons/small/rj45.gif
+	}
+	toolbar {
+	    return $ROOTDIR/$LIBDIR/icons/tiny/rj45.gif
+	}
     }
 }
 
@@ -136,7 +132,7 @@ proc $MODULE.ifcName {l r} {
 # SYNOPSIS
 #   set layer [rj45.layer]
 # FUNCTION
-#   Returns the layer on which the rj45 operates, i.e. returns LINK. 
+#   Returns the layer on which the rj45 operates, i.e. returns LINK.
 # RESULT
 #   * layer -- set to LINK
 #****
@@ -151,9 +147,9 @@ proc $MODULE.layer {} {
 #   set layer [rj45.virtlayer]
 # FUNCTION
 #   Returns the layer on which the rj45 node is instantiated,
-#   i.e. returns NETGRAPH. 
+#   i.e. returns NETGRAPH.
 # RESULT
-#   * layer -- set to NETGRAPH 
+#   * layer -- set to NETGRAPH
 #****
 proc $MODULE.virtlayer {} {
     return NETGRAPH
@@ -163,54 +159,55 @@ proc $MODULE.virtlayer {} {
 # NAME
 #   rj45.instantiate -- instantiate
 # SYNOPSIS
-#   rj45.instantiate $eid $node
+#   rj45.instantiate $eid $node_id
 # FUNCTION
 #   Procedure rj45.instantiate puts real interface into promiscuous mode.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id (type of the node is rj45)
+#   * node_id -- node id (type of the node is rj45)
 #****
-proc $MODULE.instantiate { eid node } {
-    captureExtIfc $eid $node
+proc $MODULE.instantiate { eid node_id } {
+    captureExtIfc $eid $node_id
 }
 
 #****f* rj45.tcl/rj45.destroy
 # NAME
 #   rj45.destroy -- destroy
 # SYNOPSIS
-#   rj45.destroy $eid $node
+#   rj45.destroy $eid $node_id
 # FUNCTION
-#   Destroys an rj45 emulation interface. 
+#   Destroys an rj45 emulation interface.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id (type of the node is rj45)
+#   * node_id -- node id (type of the node is rj45)
 #****
-proc $MODULE.destroy { eid node } {
-    releaseExtIfc $eid $node
+proc $MODULE.destroy { eid node_id } {
+    releaseExtIfc $eid $node_id
 }
 
 #****f* rj45.tcl/rj45.nghook
 # NAME
 #   rj45.nghook
 # SYNOPSIS
-#   rj45.nghook $eid $node $ifc 
+#   rj45.nghook $eid $node_id $ifc
 # FUNCTION
 #   Returns the id of the netgraph node and the netgraph hook name. In this
 #   case netgraph node name correspondes to the name of the physical interface.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
-#   * ifc -- interface name 
+#   * node_id -- node id
+#   * ifc -- interface name
 # RESULT
 #   * nghook -- the list containing netgraph node name and
 #     the netraph hook name (in this case: lower).
 #****
-proc $MODULE.nghook { eid node ifc } {
-    set ifname [getNodeName $node]
-    if { [getEtherVlanEnabled $node] } {
-	set vlan [getEtherVlanTag $node]
+proc $MODULE.nghook { eid node_id ifc } {
+    set ifname [getNodeName $node_id]
+    if { [getEtherVlanEnabled $node_id] } {
+	set vlan [getEtherVlanTag $node_id]
 	set ifname ${ifname}_$vlan
     }
+
     return [list $ifname lower]
 }
 
@@ -218,26 +215,27 @@ proc $MODULE.nghook { eid node ifc } {
 # NAME
 #   rj45.configGUI -- configuration GUI
 # SYNOPSIS
-#   rj45.configGUI $c $node
+#   rj45.configGUI $c $node_id
 # FUNCTION
 #   Defines the structure of the rj45 configuration window by calling
 #   procedures for creating and organising the window, as well as procedures
 #   for adding certain modules to that window.
 # INPUTS
 #   * c -- tk canvas
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.configGUI { c node } {
+proc $MODULE.configGUI { c node_id } {
     global wi
     global guielements treecolumns
+
     set guielements {}
     set treecolumns {}
 
     configGUI_createConfigPopupWin $c
     wm title $wi "rj45 configuration"
-    configGUI_nodeName $wi $node "Physical interface:"
-    configGUI_etherVlan $wi $node
-    configGUI_buttonsACNode $wi $node
+    configGUI_nodeName $wi $node_id "Physical interface:"
+    configGUI_etherVlan $wi $node_id
+    configGUI_buttonsACNode $wi $node_id
 }
 
 #****f* rj45.tcl/rj45.maxLinks

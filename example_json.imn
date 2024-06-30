@@ -1,0 +1,164 @@
+{
+    "canvases" : {
+        "c0" : {
+            "name" : "Canvas0"
+        },
+        "c1" : {
+            "name" : "Canvas1"
+        }
+    },
+    "nodes"    : {
+        "n0" : {
+            "type"            : "pc",
+            "name"            : "pc1",
+            "label"           : "pc1",
+            "logifaces"       : {
+                "lo0" : {
+                    "type" : "lo",
+                    "ipv4_addrs" : ["127.0.0.1/8"],
+                    "ipv6_addrs" : ["::1/128"]
+                },
+                "lo1" : {
+                    "type" : "lo",
+                    "ipv4_addrs" : ["127.0.0.2/8"],
+                    "ipv6_addrs" : ["::2/128"]
+                }
+            },
+            "ifaces"          : {
+                "eth0" : {
+                    "type" : "phys",
+                    "ipv4_addrs" : ["192.168.0.1/24", "10.0.0.1/24"]
+                },
+                "eth1" : {
+                    "type" : "phys",
+                    "ipv4_addrs" : ["192.168.0.2/24"]
+                }
+            },
+            "custom_configs"  : {
+                "custom1" : {
+                    "custom_command" : "/bin/sh",
+                    "custom_config"         : ["ip l set eth0 up","ip l add 20.0.0.1/24 dev eth0","","\techo \"hello\nworld\"","exit 0"]
+                },
+                "custom2" : {
+                    "custom_command" : "/bin/sh"
+                }
+            },
+			"ipsec": {
+				"ipsec_configs" : {
+					"home": {
+						"keylife":"51h",
+						"esp":"aes128-sha384-modp2048",
+						"left":"10.0.1.2",
+						"leftsubnet":"10.0.0.0/24",
+						"right":"10.0.1.1",
+						"rightsubnet":"10.0.2.0/24",
+						"peersname":"router3",
+						"authby":"secret",
+						"sharedkey":"1234",
+						"auto":"start"
+					},
+					"home2": {
+						"left":"10.0.0.1",
+						"leftsubnet":"10.0.1.0/24",
+						"right":"10.0.1.1",
+						"rightsubnet":"10.0.2.0/24",
+						"peersname":"router3",
+						"authby":"secret",
+						"sharedkey":"x",
+						"auto":"start"
+					}
+				},
+				"ipsec_logging": "2",
+				"local_cert": "/tmp/cert",
+				"local_privkey": "/tmp/privkey"
+			},
+			"canvas"          : "c0",
+			"iconcoords"      : "100 200",
+			"labelcoords"     : "100 226",
+            "croutes4"        : ["0.0.0.0/0 10.0.0.1","1.0.0.0/0 10.0.0.2"],
+            "croutes6"        : ["::/0 fc00::1"],
+            "custom_enabled"  : "true",
+            "custom_selected" : "custom1"
+        },
+        "n1" : {
+			"type": "stpswitch",
+			"name": "rstp1",
+			"canvas"          : "c0",
+			"iconcoords"      : "200 200",
+			"labelcoords"     : "200 220",
+			"bridge": {
+				"name": "bridge0",
+				"protocol": "rstp",
+				"priority": "32768",
+				"hold_count": "6",
+				"max_age": "20",
+				"forwarding_delay": "15",
+				"hello_time": "2",
+				"max_addresses": "100",
+				"address_timeout": "240"
+			},
+			"ifaces": {
+				"e0": {
+					"type": "phys",
+					"stp_enabled": "true",
+					"stp_snoop": "false",
+					"stp_discover": "true",
+					"stp_learn": "true",
+					"stp_sticky": "true",
+					"stp_private": "true",
+					"stp_edge": "true",
+					"stp_autoedge": "true",
+					"stp_ptp": "true",
+					"stp_autoptp": "true",
+					"stp_priority": "128",
+					"stp_max_addresses": "0",
+					"stp_path_cost": "0"
+				}
+			}
+		},
+        "n2" : {
+			"type": "filter",
+			"name": "filter1",
+			"canvas"          : "c0",
+			"iconcoords"      : "300 200",
+			"labelcoords"     : "300 234",
+			"ifaces": {
+				"e0": {
+					"type": "phys",
+					"filter_rules": {
+						"10": {
+							"action": "match_hook",
+							"pattern": "ff.ff",
+							"mask": "aa aa",
+							"offset": "1",
+							"action_data": "e1"
+						}
+					}
+				},
+				"e1": {
+					"type": "phys",
+					"filter_rules": {
+						"10": {
+							"action": "match_drop",
+							"pattern": "ab.cd",
+							"mask": "ff ff",
+							"offset": "0",
+							"action_data": ""
+						}
+					}
+				}
+			}
+		}
+    },
+
+    "links"    : {
+        "l0" : {
+            "peers"      : "n0 n0",
+            "peers_ifaces" : "eth0 eth1"
+        }
+    },
+    "options"  : {
+		"version": "1",
+        "hostsAutoAssign" : "yes"
+    }
+}

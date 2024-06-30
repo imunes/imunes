@@ -13,7 +13,7 @@ IMUNES GUI is a simple Tcl/Tk based management console, allowing for specificati
 #### Build requirements:
     # pkg install git-lite gmake
 #### Required ports:
-    # pkg install tcl86 tcllib
+    # pkg install tcl86 tcllib jq
 #### Also needed for graphical mode:
     # pkg install tk86 ImageMagick7 xterm wireshark socat
 
@@ -26,12 +26,13 @@ Depending on your platform, packages required to IMUNES in graphical mode are:
     # Build requirements:
     make (used for installation)
     git (used for installation)
-    
+
     # Required packages:
     tcl (version 8.6 or greater)
     tcllib
     Docker (version 1.6 or greater)
     iproute2
+    jq (only for IMUNES tools)
 
     # Also needed for graphical mode:
     tk (version 8.6 or greater)
@@ -39,11 +40,11 @@ Depending on your platform, packages required to IMUNES in graphical mode are:
     ImageMagick
     xterm
     socat
-    
+
 To run IMUNES experiments, you must run the Docker daemon (starting this service depends on your Linux distribution).
 
 Note: on some distributions the netem module `sch_netem` required for link configuration is only available by installing additional kernel packages. Please check the availability of the module:
-    
+
     # modinfo sch_netem
 
 -----------------------
@@ -52,7 +53,7 @@ Note: on some distributions the netem module `sch_netem` required for link confi
 #### Build requirements:
     # pacman -S git make
 #### Required packages:
-    # pacman -S tcl docker
+    # pacman -S tcl docker jq
     # Package tcllib is available on AUR, e.g.:
     # yay -S tcllib
 #### Also needed for graphical mode:
@@ -64,7 +65,7 @@ Note: on some distributions the netem module `sch_netem` required for link confi
 #### Build requirements:
     # apt install git make
 #### Required packages:
-    # apt install docker.io
+    # apt install docker.io jq
 #### Also needed for graphical mode:
     # apt install imagemagick wireshark socat
 
@@ -74,7 +75,7 @@ Note: on some distributions the netem module `sch_netem` required for link confi
 #### Build requirements:
     # apt install git make
 #### Required packages:
-    # apt install tcl tcllib docker.io
+    # apt install tcl tcllib docker.io jq
 #### Also needed for graphical mode:
     # apt install tk imagemagick xterm wireshark socat
 

@@ -53,9 +53,9 @@ registerModule $MODULE
 #   Loads ng_bridge into the kernel.
 #****
 proc $MODULE.prepareSystem {} {
-	catch { exec sysctl net.bridge.bridge-nf-call-arptables=0 }
-	catch { exec sysctl net.bridge.bridge-nf-call-iptables=0 }
-	catch { exec sysctl net.bridge.bridge-nf-call-ip6tables=0 }
+    catch { exec sysctl net.bridge.bridge-nf-call-arptables=0 }
+    catch { exec sysctl net.bridge.bridge-nf-call-iptables=0 }
+    catch { exec sysctl net.bridge.bridge-nf-call-ip6tables=0 }
 
     catch { exec kldload ng_bridge }
 }
@@ -64,39 +64,35 @@ proc $MODULE.prepareSystem {} {
 # NAME
 #   lanswitch.confNewIfc -- configure new interface
 # SYNOPSIS
-#   lanswitch.confNewIfc $node $ifc
+#   lanswitch.confNewIfc $node_id $ifc
 # FUNCTION
 #   Configures new interface for the specified node.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #   * ifc -- interface name
 #****
-proc $MODULE.confNewIfc { node ifc } {
+proc $MODULE.confNewIfc { node_id ifc } {
 }
 
 #****f* lanswitch.tcl/lanswitch.confNewNode
 # NAME
 #   lanswitch.confNewNode -- configure new node
 # SYNOPSIS
-#   lanswitch.confNewNode $node
+#   lanswitch.confNewNode $node_id
 # FUNCTION
 #   Configures new node with the specified id.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.confNewNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc $MODULE.confNewNode { node_id } {
     global nodeNamingBase
-    
-    set nconfig [list \
-	"hostname [getNewNodeNameType lanswitch $nodeNamingBase(lanswitch)]" \
-	! ]
-    lappend $node "network-config [list $nconfig]"
+
+    setNodeName $node_id [getNewNodeNameType lanswitch $nodeNamingBase(lanswitch)]
 }
 
 #****f* lanswitch.tcl/lanswitch.icon
 # NAME
-#   lanswitch.icon -- 
+#   lanswitch.icon --
 # SYNOPSIS
 #   lanswitch.icon $size
 # FUNCTION
@@ -108,16 +104,17 @@ proc $MODULE.confNewNode { node } {
 #****
 proc $MODULE.icon {size} {
     global ROOTDIR LIBDIR
+
     switch $size {
-      normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/lanswitch.gif
-      }
-      small {
-	return $ROOTDIR/$LIBDIR/icons/small/lanswitch.gif
-      }
-      toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/lanswitch.gif
-      }
+	normal {
+	    return $ROOTDIR/$LIBDIR/icons/normal/lanswitch.gif
+	}
+	small {
+	    return $ROOTDIR/$LIBDIR/icons/small/lanswitch.gif
+	}
+	toolbar {
+	    return $ROOTDIR/$LIBDIR/icons/tiny/lanswitch.gif
+	}
     }
 }
 
@@ -155,7 +152,7 @@ proc $MODULE.ifcName {l r} {
 # SYNOPSIS
 #   set layer [lanswitch.layer]
 # FUNCTION
-#   Returns the layer on which the lanswitch operates, i.e. returns LINK. 
+#   Returns the layer on which the lanswitch operates, i.e. returns LINK.
 # RESULT
 #   * layer -- set to LINK
 #****
@@ -169,8 +166,8 @@ proc $MODULE.layer {} {
 # SYNOPSIS
 #   set layer [lanswitch.virtlayer]
 # FUNCTION
-#   Returns the layer on which the lanswitch node is instantiated 
-#   i.e. returns NETGRAPH. 
+#   Returns the layer on which the lanswitch node is instantiated
+#   i.e. returns NETGRAPH.
 # RESULT
 #   * layer -- set to NETGRAPH
 #****
@@ -182,51 +179,51 @@ proc $MODULE.virtlayer {} {
 # NAME
 #   lanswitch.instantiate -- instantiate
 # SYNOPSIS
-#   lanswitch.instantiate $eid $node
+#   lanswitch.instantiate $eid $node_id
 # FUNCTION
 #   Procedure lanswitch.instantiate creates a new netgraph node of the type
 #   bridge. The name of the netgraph node is in the form of exprimentId_nodeId.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- id of the node (type of the node is lanswitch)
+#   * node_id -- id of the node (type of the node is lanswitch)
 #****
-proc $MODULE.instantiate { eid node } {
-    l2node.instantiate $eid $node
+proc $MODULE.instantiate { eid node_id } {
+    l2node.instantiate $eid $node_id
 }
 
-proc $MODULE.setupNamespace { eid node } {
-    l2node.setupNamespace $eid $node
+proc $MODULE.setupNamespace { eid node_id } {
+    l2node.setupNamespace $eid $node_id
 }
 
-proc $MODULE.createIfcs { eid node ifcs } {
-    l2node.createIfcs $eid $node $ifcs
+proc $MODULE.createIfcs { eid node_id ifcs } {
+    l2node.createIfcs $eid $node_id $ifcs
 }
 
-proc $MODULE.destroyIfcs { eid node ifcs } {
-    l2node.destroyIfcs $eid $node $ifcs
+proc $MODULE.destroyIfcs { eid node_id ifcs } {
+    l2node.destroyIfcs $eid $node_id $ifcs
 }
 
 #****f* lanswitch.tcl/lanswitch.destroy
 # NAME
 #   lanswitch.destroy -- destroy
 # SYNOPSIS
-#   lanswitch.destroy $eid $node
+#   lanswitch.destroy $eid $node_id
 # FUNCTION
-#   Destroys a lanswitch. Destroys the netgraph node that represents 
+#   Destroys a lanswitch. Destroys the netgraph node that represents
 #   the lanswitch by sending a shutdown message.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- id of the node (type of the node is lanswitch)
+#   * node_id -- id of the node (type of the node is lanswitch)
 #****
-proc $MODULE.destroy { eid node } {
-    l2node.destroy $eid $node
+proc $MODULE.destroy { eid node_id } {
+    l2node.destroy $eid $node_id
 }
 
 #****f* lanswitch.tcl/lanswitch.nghook
 # NAME
 #   lanswitch.nghook -- nghook
 # SYNOPSIS
-#   set nghook [lanswitch.nghook $eid $node $ifc] 
+#   set nghook [lanswitch.nghook $eid $node_id $ifc]
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. Netgraph node name is in
@@ -234,64 +231,64 @@ proc $MODULE.destroy { eid node } {
 #   where N is an interface number.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
-#   * ifc -- interface name 
+#   * node_id -- node id
+#   * ifc -- interface name
 # RESULT
 #   * nghook -- the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
-proc $MODULE.nghook { eid node ifc } {
+proc $MODULE.nghook { eid node_id ifc } {
     set ifunit [string range $ifc 1 end]
-    return [list $node link$ifunit]
+    return [list $node_id link$ifunit]
 }
 
 #****f* lanswitch.tcl/lanswitch.configGUI
 # NAME
 #   lanswitch.configGUI -- configuration GUI
 # SYNOPSIS
-#   lanswitch.configGUI $c $node
+#   lanswitch.configGUI $c $node_id
 # FUNCTION
 #   Defines the structure of the lanswitch configuration window by calling
 #   procedures for creating and organising the window, as well as procedures
 #   for adding certain modules to that window.
 # INPUTS
 #   * c -- tk canvas
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.configGUI { c node } {
+proc $MODULE.configGUI { c node_id } {
     global wi
     global guielements treecolumns
     set guielements {}
 
     configGUI_createConfigPopupWin $c
     wm title $wi "lanswitch configuration"
-    configGUI_nodeName $wi $node "Node name:"
+    configGUI_nodeName $wi $node_id "Node name:"
 
     configGUI_addPanedWin $wi
     set treecolumns {"QLen Queue len" "QDisc Queue disc" "QDrop Queue drop"}
-    configGUI_addTree $wi $node
+    configGUI_addTree $wi $node_id
 
-    configGUI_buttonsACNode $wi $node
+    configGUI_buttonsACNode $wi $node_id
 }
 
 #****f* lanswitch.tcl/lanswitch.configInterfacesGUI
 # NAME
 #   lanswitch.configInterfacesGUI -- configuration of interfaces GUI
 # SYNOPSIS
-#   lanswitch.configInterfacesGUI $wi $node $ifc
+#   lanswitch.configInterfacesGUI $wi $node_id $ifc
 # FUNCTION
 #   Defines which modules for changing interfaces parameters are contained in
 #   the lanswitch configuration window. It is done by calling procedures for
 #   adding certain modules to the window.
 # INPUTS
 #   * wi -- widget
-#   * node -- node id
+#   * node_id -- node id
 #   * ifc -- interface id
 #****
-proc $MODULE.configInterfacesGUI { wi node ifc } {
+proc $MODULE.configInterfacesGUI { wi node_id ifc } {
     global guielements
 
-    configGUI_ifcQueueConfig $wi $node $ifc
+    configGUI_ifcQueueConfig $wi $node_id $ifc
 }
 
 #****f* lanswitch.tcl/lanswitch.maxLinks
