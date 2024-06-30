@@ -84,7 +84,7 @@ try {
     exit 1
 }
 
-safePackageRequire [list cmdline platform ip base64]
+safePackageRequire [list cmdline platform ip base64 json json::write]
 
 set initMode 0
 set execMode interactive

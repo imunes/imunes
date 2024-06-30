@@ -805,3 +805,198 @@ proc newObjectId { type } {
     }
     return $mark$id
 }
+
+set dict_cfg [dict create]
+
+#########################################################################
+
+proc loadCfgJson { json_cfg } {
+    global dict_cfg
+
+    set dict_cfg [json::json2dict $json_cfg]
+
+    return $dict_cfg
+}
+
+# use this to read IMUNES json file
+proc readCfgJson { fname } {
+    global dict_cfg
+
+    set fd [open $fname r]
+    set json_cfg [read $fd]
+    close $fd
+
+    set dict_cfg [loadCfgJson $json_cfg]
+
+    return $dict_cfg
+}
+
+proc saveCfgJson { fname } {
+    global dict_cfg
+
+    set json_cfg [createJson "dictionary" $dict_cfg]
+    set fd [open $fname w+]
+    puts $fd $json_cfg
+    close $fd
+
+    return $json_cfg
+}
+
+#########################################################################
+
+proc dictGet { dictionary args } {
+    try {
+	dict get $dictionary {*}$args
+    } on error {} {
+	return {}
+    } on ok retv {
+	return $retv
+    }
+}
+
+proc cfgGet { args } {
+    global dict_cfg
+
+    return [dictGet $dict_cfg {*}$args]
+}
+
+proc dictSet { dictionary args } {
+    try {
+	dict set dictionary {*}$args
+    } on error {} {
+	return {}
+    } on ok retv {
+	return $retv
+    }
+}
+
+proc cfgSet { args } {
+    global dict_cfg
+
+    if { [lindex $args end] in {{} ""} } {
+
+	for {set i 1} {$i < [llength $args]} {incr i} {
+	    set dict_cfg [dictUnset $dict_cfg {*}[lrange $args 0 end-$i]]
+
+	    set new_upper [dictGet $dict_cfg {*}[lrange $args 0 end-[expr $i+1]]]
+	    if { $new_upper != "" } {
+		break
+	    }
+	}
+    } else {
+	set dict_cfg [dictSet $dict_cfg {*}$args]
+    }
+
+    return $dict_cfg
+}
+
+proc dictUnset { dictionary args } {
+    try {
+	dict unset dictionary {*}$args
+    } on error {} {
+	return {}
+    } on ok retv {
+	return $retv
+    }
+}
+
+proc cfgUnset { args } {
+    global dict_cfg
+
+    set dict_cfg [dictUnset $dict_cfg {*}$args]
+
+    return $dict_cfg
+}
+
+#########################################################################
+
+proc getOption { property } {
+    global dict_cfg
+
+    return [dictGet $dict_cfg options $property]
+}
+
+proc getCanvasList { } {
+    global dict_cfg
+
+    return [dict keys [dictGet $dict_cfg canvases]]
+}
+
+proc getCanvasProperty { canvas_id property } {
+    global dict_cfg
+
+    return [dictGet $dict_cfg canvases $canvas_id $property]
+}
+
+proc getNodeList { } {
+    global dict_cfg
+
+    return [dict keys [dictGet $dict_cfg nodes]]
+}
+
+proc getNodeProperty { node_id property } {
+    global dict_cfg
+
+    return [dictGet $dict_cfg nodes $node_id $property]
+}
+
+proc getLinkList { } {
+    global dict_cfg
+
+    return [dict keys [dictGet $dict_cfg links]]
+}
+
+proc getLinkProperty { link_id property } {
+    global dict_cfg
+
+    return [dictGet $dict_cfg links $link_id $property]
+}
+
+#########################################################################
+
+# returns the type of key 'key_name' (defined by values it hold)
+# * dictionary - holds objects with unique keys
+# * object - regular 'key-value' pair
+# * array - JSON array
+proc getJsonType { key_name } {
+    puts -nonewline "$key_name: "
+    if { $key_name in "canvases nodes links annotations custom-configs logifaces ifaces" } {
+	return "dictionary"
+    } elseif { $key_name in "config croutes4 croutes6" } {
+	return "array"
+    }
+
+    return "object"
+}
+
+proc createJson { value_type dictionary } {
+    set retv {}
+
+    switch -exact -- $value_type {
+	"dictionary" {
+	    set retv [json::write object {*}[dict map {k v} $dictionary {
+		createJson [getJsonType $k] $v
+	    }]]
+	}
+	"object" {
+	    set retv [json::write object {*}[dict map {k v} $dictionary {
+		set k_type [getJsonType $k]
+		if { $k_type in "dictionary array" } {
+		    createJson $k_type $v
+		} else {
+		    ::json::write string $v
+		}
+	    }]]
+	}
+	"array" {
+	    set json_list {}
+	    foreach line $dictionary {
+		lappend json_list [::json::write string $line]
+	    }
+
+	    set retv [::json::write array {*}$json_list]
+	}
+    }
+
+    return $retv
+}

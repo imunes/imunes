@@ -1,0 +1,68 @@
+{
+    "canvases" : {
+        "c0" : {
+            "name" : "Canvas0"
+        },
+        "c1" : {
+            "name" : "Canvas1"
+        }
+    },
+    "nodes"    : {
+        "n0" : {
+            "type"            : "pc",
+            "name"            : "pc1",
+            "label"           : "pc1",
+            "logifaces"       : {
+                "lif0" : {
+                    "name" : "lo0",
+                    "type" : "lo",
+                    "ipv4" : "127.0.0.1/8",
+                    "ipv6" : "::1/128"
+                },
+                "lif1" : {
+                    "type" : "lo",
+                    "name" : "lo1",
+                    "ipv4" : "127.0.0.2/8",
+                    "ipv6" : "::2/128"
+                }
+            },
+            "ifaces"          : {
+                "if0" : {
+                    "name" : "eth0",
+                    "type" : "physical",
+                    "ipv4" : "192.168.0.1/24"
+                },
+                "if1" : {
+                    "name" : "eth1",
+                    "type" : "physical",
+                    "ipv4" : "192.168.0.2/24"
+                }
+            },
+            "custom-configs"  : {
+                "cconf0" : {
+                    "name"           : "custom1",
+                    "custom-command" : "/bin/sh",
+                    "config"         : ["ip l set eth0 up","ip l add 20.0.0.1/24 dev eth0","","\techo \"hello\nworld\"","exit 0"]
+                },
+                "cconf1" : {
+                    "name"           : "custom2",
+                    "custom-command" : "/bin/sh",
+                    "config"         : []
+                }
+            },
+            "croutes4"        : ["0.0.0.0/0 10.0.0.1","1.0.0.0/0 10.0.0.2"],
+            "croutes6"        : ["::/0 fc00::1"],
+            "custom-enabled"  : "true",
+            "custom-selected" : "cconf0"
+        }
+    },
+    "links"    : {
+        "l0" : {
+            "peers"      : "n0 n0",
+            "interfaces" : "eth0 eth1"
+        }
+    },
+    "options"  : {
+        "hostsAutoAssign" : "yes"
+    }
+}
