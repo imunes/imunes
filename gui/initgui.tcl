@@ -176,21 +176,6 @@ set iconsrcfile [lindex [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] 0
 #interface selected in the topology tree
 set selectedIfc ""
 
-# bases for naming new nodes
-array set nodeNamingBase {
-    pc pc
-    ext ext
-    filter filter
-    router router
-    host host
-    hub hub
-    extelem xel
-    lanswitch switch
-    nat64 nat64-
-    packgen packgen
-    stpswitch stpswitch
-}
-
 # Packets required for GUI
 #package require Img
 
@@ -297,6 +282,7 @@ set printFileType ps
 .menubar.file add command -label "Print To File" -underline 9 \
   -command {
     global winOS
+
     set w .entry1
     catch {destroy $w}
     toplevel $w
@@ -305,7 +291,6 @@ set printFileType ps
     wm title $w "Printing options"
     wm iconname $w "Printing options"
 
-    #dodan glavni frame "printframe"
     ttk::frame $w.printframe
     pack $w.printframe -fill both -expand 1
 
@@ -319,10 +304,10 @@ set printFileType ps
 
     ttk::frame $w.printframe.path
 
-    if {$winOS} {
+    if { $winOS } {
 	$w.printframe.pdf configure -state disabled
     } else {
-      catch {exec ps2pdf} msg
+      catch { exec ps2pdf } msg
       if { [string match *ps2pdfwr* $msg] != 1 } {
 	  $w.printframe.pdf configure -state disabled
       }
@@ -333,6 +318,7 @@ set printFileType ps
     ttk::button $w.printframe.path.browse -text "Browse" -width 8 \
 	-command {
 	    global printFileType
+
 	    set printdest [tk_getSaveFile -initialfile print \
 	      -defaultextension .$printFileType]
 	    $w.printframe.path.e1 insert 0 $printdest
@@ -391,6 +377,7 @@ bind . <Control-d> selectAdjacent
 menu .menubar.canvas -tearoff 0
 .menubar.canvas add command -label "New" -underline 0 -command {
     newCanvas ""
+
     switchCanvas last
     set changed 1
     updateUndoLog
@@ -398,8 +385,8 @@ menu .menubar.canvas -tearoff 0
 .menubar.canvas add command -label "Rename" -underline 0 \
 -command { renameCanvasPopup }
 .menubar.canvas add command -label "Delete" -underline 0 -command {
-    upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
+    set curcanvas [getFromRunning "curcanvas"]
+    set canvas_list [getFromRunning "canvas_list"]
 
     if { [llength $canvas_list] == 1 } {
 	 return
@@ -408,12 +395,17 @@ menu .menubar.canvas -tearoff 0
 	selectNode .panwin.f1.c $obj
     }
     deleteSelection
+
     set i [lsearch $canvas_list $curcanvas]
-    set canvas_list [lreplace $canvas_list $i $i]
+    cfgUnset "canvases" $curcanvas
+    set canvas_list [getCanvasList]
+    setToRunning "canvas_list" $canvas_list
     set curcanvas [lindex $canvas_list $i]
     if { $curcanvas == "" } {
 	set curcanvas [lindex $canvas_list end]
     }
+    setToRunning "curcanvas" $curcanvas
+
     switchCanvas none
     set changed 1
     updateUndoLog
@@ -529,8 +521,6 @@ menu .menubar.tools -tearoff 0
     pack $w.ipv6frame.buttons.cancel -side right -expand 1 -anchor w -padx 2
 }
 .menubar.tools add command -label "Routing protocol defaults" -underline 0 -command {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global router_model supp_router_models routerDefaultsModel
     global routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable
 
@@ -578,6 +568,7 @@ menu .menubar.tools -tearoff 0
 	$w.protocols.ospf6 configure -state disabled
     }
 
+    set oper_mode [getFromRunning "oper_mode"]
     if { $router_model == "static" || $oper_mode != "edit" } {
 	$w.protocols.rip configure -state disabled
 	$w.protocols.ripng configure -state disabled
@@ -862,8 +853,8 @@ menu .menubar.events -tearoff  0
 .menubar.events add command -label "Start scheduling" -underline 0 \
 	-state normal -command "startEventScheduling"
 .menubar.events add command -label "Stop scheduling" -underline 1 \
-	-state disabled -command "stopEventScheduling" 
-.menubar.events add separator	
+	-state disabled -command "stopEventScheduling"
+.menubar.events add separator
 .menubar.events add command -label "Event editor" -underline 0 \
 	-command "elementsEventsEditor"
 #
@@ -876,9 +867,9 @@ menu .menubar.experiment -tearoff 0
 	-command "setOperMode edit" -state disabled
 .menubar.experiment add command -label "Restart" -underline 0 \
 	-command "setOperMode edit; setOperMode exec" -state disabled
-.menubar.experiment add separator	
+.menubar.experiment add separator
 .menubar.experiment add command -label "Attach to experiment" -underline 0 \
-	-command "attachToExperimentPopup" 
+	-command "attachToExperimentPopup"
 
 #
 # Help
@@ -952,11 +943,11 @@ foreach b {select link} {
 
     # hover status line
     set msg ""
-    if { $b == "select" } { 
-	set msg "Select tool" 
+    if { $b == "select" } {
+	set msg "Select tool"
     } elseif { $b == "link"  } {
 	set msg "Create link"
-    } 
+    }
 
     bind $mf.left.$b <Any-Enter> ".bottom.textbox config -text {$msg}"
     bind $mf.left.$b <Any-Leave> ".bottom.textbox config -text {}"
@@ -1034,21 +1025,18 @@ canvas $mf.hframe.t -width 160 -height 18 -bd 0 -highlightthickness 0 \
 	-background #d9d9d9 \
 	-xscrollcommand "$mf.hframe.ts set"
 bind $mf.hframe.t <1> {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-
     set canvas [lindex [$mf.hframe.t gettags current] 1]
-    if { $canvas != "" && $canvas != $curcanvas } {
-	set curcanvas $canvas
+    if { $canvas != "" && $canvas != [getFromRunning "curcanvas"] } {
+	setToRunning "curcanvas" $canvas
 	switchCanvas none
     }
 }
 bind $mf.hframe.t <Double-1> {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
 
     set canvas [lindex [$mf.hframe.t gettags current] 1]
     if { $canvas != "" } {
-	if { $canvas != $curcanvas } {
-	    set curcanvas $canvas
+	if { $canvas != [getFromRunning "curcanvas"] } {
+	    setToRunning "curcanvas" $canvas
 	    switchCanvas none
 	} else {
 	    renameCanvasPopup
@@ -1068,7 +1056,7 @@ bind $mf.hframe.t <Double-1> {
 #	-bd 1 -width 14
 
 ttk::scrollbar $mf.hframe.scroll -orient horiz -command "$c xview"
-ttk::scrollbar $mf.vframe.scroll -command "$c yview" 
+ttk::scrollbar $mf.vframe.scroll -command "$c yview"
 ttk::scrollbar $mf.hframe.ts -orient horiz -command ".panwin.f1.hframe.t xview"
 pack $mf.hframe.ts -side left -padx 0 -pady 0
 pack $mf.hframe.t -side left -padx 0 -pady 0 -fill both -expand true
@@ -1192,4 +1180,4 @@ bind . <Control-i> {
     redrawAll
 }
 
-focus -force . 
+focus -force .

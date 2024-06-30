@@ -33,7 +33,7 @@
 # NAME
 #  nodecfg.tcl -- file used for manipultaion with nodes in IMUNES
 # FUNCTION
-#  This module is used to define all the actions used for configuring 
+#  This module is used to define all the actions used for configuring
 #  nodes in IMUNES. The definition of nodes is presented in NOTES
 #  section.
 #
@@ -70,18 +70,6 @@
 # Network configuration is embedded in each node's config section via the
 # "network-config" statement. The following functions can be used to
 # manipulate the per-node network config:
-#
-# netconfFetchSection { node_id sectionhead }
-#	Returns a section of a config file starting with the $sectionhead
-#	line, and ending with the first occurence of the "!" sign.
-#
-# netconfClearSection { node_id sectionhead }
-#	Removes the appropriate section from the config.
-#
-# netconfInsertSection { node_id section }
-#	Inserts a section in the config file. Sections beginning with the
-#	"interface" keyword are inserted at the head of the config, and
-#	all other sequences are simply appended to the config tail.
 #
 # getIfcOperState { node_id ifc }
 #	Returns "up" or "down".
@@ -122,14 +110,14 @@
 # getIfcIPv4addr { node_id ifc }
 #	Returns a list of all IPv4 addresses assigned to an interface.
 #
-# setIfcIPv4addr { node_id ifc addr }
+# setIfcIPv4addrs { node_id ifc addr }
 #	Sets a new IPv4 address(es) on an interface. The correctness of the
 #	IP address format is not checked / enforced.
 #
 # getIfcIPv6addr { node_id ifc }
 #	Returns a list of all IPv6 addresses assigned to an interface.
 #
-# setIfcIPv6addr { node_id ifc addr }
+# setIfcIPv6addrs { node_id ifc addr }
 #	Sets a new IPv6 address(es) on an interface. The correctness of the
 #	IP address format is not checked / enforced.
 #
@@ -159,7 +147,7 @@
 # setNodeName { node_id name }
 #	Sets a new node's logical name.
 #
-# nodeType { node_id }
+# getNodeType { node_id }
 #	Returns node's type.
 #
 # getNodeModel { node_id }
@@ -207,20 +195,8 @@
 # ifcList { node_id }
 #	Returns a list of all interfaces present in a node.
 #
-# peerByIfc { node_id ifc }
-#	Returns id of the node on the other side of the interface
-#
 # logicalPeerByIfc { node_id ifc }
 #	Returns id of the logical node on the other side of the interface.
-#
-# ifcByPeer { local_node_id peer_node_id }
-#	Returns the name of the interface connected to the specified peer 
-#       if the peer is on the same canvas, otherwise returns an empty string.
-#
-# ifcByLogicalPeer { local_node_id peer_node_id }
-#	Returns the name of the interface connected to the specified peer.
-#	Returns the right interface even if the peer node is on the other
-#	canvas.
 #
 # hasIPv4Addr { node_id }
 # hasIPv6Addr { node_id }
@@ -228,11 +204,11 @@
 #	configured, otherwise returns false.
 #
 # removeNode { node_id }
-#	Removes the specified node as well as all the links that bind 
+#	Removes the specified node as well as all the links that bind
 #       that node to any other node.
 #
 # newIfc { ifc_type node_id }
-#	Returns the first available name for a new interface of the 
+#	Returns the first available name for a new interface of the
 #       specified type.
 #
 # All of the above functions are independent to any Tk objects. This means
@@ -240,7 +216,7 @@
 # GUI any updating of related Tk objects (such as text labels etc.) will
 # have to be implemented by additional Tk code.
 #
-# Additionally, an alternative configuration can be specified in 
+# Additionally, an alternative configuration can be specified in
 # "custom-config" section.
 #
 # getCustomEnabled { node }
@@ -265,20 +241,20 @@
 
 #****f* nodecfg.tcl/typemodel
 # NAME
-#   typemodel -- find node's type and routing model 
+#   typemodel -- find node's type and routing model
 # SYNOPSIS
 #   set typemod [typemodel $node]
 # FUNCTION
 #   For input node this procedure returns the node's type and routing model
-#   (if exists) 
+#   (if exists)
 # INPUTS
 #   * node -- node id
 # RESULT
 #   * typemod -- returns node's type and routing model in form type.model
 #****
-proc typemodel { node } {
-    set type [nodeType $node]
-    set model [getNodeModel $node]
+proc typemodel { node_id } {
+    set type [getNodeType $node_id]
+    set model [getNodeModel $node_id]
     if { $model != {} } {
 	return $type.$model
     } else {
@@ -287,11 +263,9 @@ proc typemodel { node } {
 }
 
 proc getNodeDir { node } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
     set node_dir [getNodeCustomImage $node]
     if { $node_dir == "" } {
-	set node_dir [getVrootDir]/$eid/$node
+	set node_dir [getVrootDir]/[getFromRunning "eid"]/$node
     }
 
     return $node_dir
@@ -299,48 +273,34 @@ proc getNodeDir { node } {
 
 #****f* nodecfg.tcl/getCustomEnabled
 # NAME
-#   getCustomEnabled -- get custom configuration enabled state 
+#   getCustomEnabled -- get custom configuration enabled state
 # SYNOPSIS
 #   set enabled [getCustomEnabled $node]
 # FUNCTION
 #   For input node this procedure returns true if custom configuration is
-#   enabled for the specified node. 
+#   enabled for the specified node.
 # INPUTS
 #   * node -- node id
 # RESULT
-#   * enabled -- returns true if custom configuration is enabled 
+#   * enabled -- returns true if custom configuration is enabled
 #****
-proc getCustomEnabled { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    if { [lindex [lsearch -inline [set $node] "custom-enabled *"] 1] == true } {
-	return true
-    } else {
-	return false
-    }
+proc getCustomEnabled { node_id } {
+    return [cfgGet "nodes" $node_id "custom_enabled"]
 }
 
 #****f* nodecfg.tcl/setCustomEnabled
 # NAME
-#   setCustomEnabled -- set custom configuration enabled state 
+#   setCustomEnabled -- set custom configuration enabled state
 # SYNOPSIS
 #   setCustomEnabled $node $enabled
 # FUNCTION
 #   For input node this procedure enables or disables custom configuration.
 # INPUTS
 #   * node -- node id
-#   * enabled -- true if enabling custom configuration, false if disabling 
+#   * enabled -- true if enabling custom configuration, false if disabling
 #****
-proc setCustomEnabled { node enabled } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set i [lsearch [set $node] "custom-enabled *"]
-    if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i]
-    }
-    if { $enabled == true } {
-	lappend $node [list custom-enabled $enabled]
-    }
+proc setCustomEnabled { node_id state } {
+    cfgSet "nodes" $node_id "custom_enabled" $state
 }
 
 #****f* nodecfg.tcl/getCustomConfigSelected
@@ -355,9 +315,8 @@ proc setCustomEnabled { node enabled } {
 # RESULT
 #   * ID -- returns default custom configuration ID
 #****
-proc getCustomConfigSelected { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-    return [lindex [lsearch -inline [set $node] "custom-selected *"] 1]
+proc getCustomConfigSelected { node_id } {
+    return [cfgGet "nodes" $node_id "custom_selected"]
 }
 
 #****f* nodecfg.tcl/setCustomConfigSelected
@@ -371,18 +330,13 @@ proc getCustomConfigSelected { node } {
 #   * node -- node id
 #   * conf -- custom-config id
 #****
-proc setCustomConfigSelected { node conf } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-    set i [lsearch [set $node] "custom-selected *"]
-    if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i]
-    }
-    lappend $node [list custom-selected $conf]
+proc setCustomConfigSelected { node_id state } {
+    cfgSet "nodes" $node_id "custom_selected" $state
 }
 
 #****f* nodecfg.tcl/getCustomConfig
 # NAME
-#   getCustomConfig -- get custom configuration 
+#   getCustomConfig -- get custom configuration
 # SYNOPSIS
 #   getCustomConfig $node $id
 # FUNCTION
@@ -392,22 +346,15 @@ proc setCustomConfigSelected { node conf } {
 #   * node -- node id
 #   * id -- configuration id
 # RESULT
-#   * customConfig -- returns custom configuration  
+#   * customConfig -- returns custom configuration
 #****
-proc getCustomConfig { node id } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-    set customCfgsList {}
-    set customCfgsList [lsearch -inline [set $node] "custom-configs *"]
-    set customCfg [lsearch -inline [lindex $customCfgsList 1] "custom-config-id $id *"]
-    set customConfig [lsearch [lindex $customCfg 2] "config*"]
-    set customConfig [lindex [lindex $customCfg 2] $customConfig+1]
-
-    return $customConfig
+proc getCustomConfig { node_id cfg_id } {
+    return [cfgGet "nodes" $node_id "custom_configs" $cfg_id "custom_config"]
 }
 
 #****f* nodecfg.tcl/setCustomConfig
 # NAME
-#   setCustomConfig -- set custom configuration 
+#   setCustomConfig -- set custom configuration
 # SYNOPSIS
 #   setCustomConfig $node $id $cmd $config
 # FUNCTION
@@ -417,41 +364,16 @@ proc getCustomConfig { node id } {
 #   * node -- node id
 #   * id -- custom-config id
 #   * cmd -- custom command
-#   * config -- custom configuration section  
+#   * config -- custom configuration section
 #****
-proc setCustomConfig { node id cmd config } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-    if {$id in [getCustomConfigIDs $node] } {
-	removeCustomConfig $node $id
-    }
-    set customCfg [list custom-config-id $id]
-    set customCfg2 [list custom-command $cmd config]
-    set cfg ""
-    foreach zline [split $config {
-}] {
-	lappend cfg $zline
-    }
-    lappend customCfg2 $cfg
-
-    lappend customCfg $customCfg2
-    
-    if {[lsearch [set $node] "custom-configs *"] != -1} {
-	set customCfgsList [lsearch -inline [set $node] "custom-configs *"]
-	set customCfgs [lindex $customCfgsList 1]
-	lappend customCfgs $customCfg
-	set customCfgsList [lreplace $customCfgsList 1 1 $customCfgs]
-	set idx1 [lsearch [set $node] "custom-configs *"]
-	set $node [lreplace [set $node] $idx1 $idx1 $customCfgsList]
-    } else {
-	set customCfgsList [list custom-configs]
-	lappend customCfgsList [list $customCfg]
-	set $node [linsert [set $node] end $customCfgsList]
-    }
+proc setCustomConfig { node_id cfg_id cmd config } {
+    cfgSet "nodes" $node_id "custom_configs" $cfg_id "custom_command" $cmd
+    cfgSet "nodes" $node_id "custom_configs" $cfg_id "custom_config" $config
 }
 
 #****f* nodecfg.tcl/removeCustomConfig
 # NAME
-#   removeCustomConfig -- remove custom configuration 
+#   removeCustomConfig -- remove custom configuration
 # SYNOPSIS
 #   removeCustomConfig $node $id
 # FUNCTION
@@ -461,14 +383,8 @@ proc setCustomConfig { node id cmd config } {
 #   * node -- node id
 #   * id -- configuration id
 #****
-proc removeCustomConfig { node id } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-    set customCfgsList [lsearch -inline [set $node] "custom-configs *"]
-    set idx [lsearch [lindex $customCfgsList 1] "custom-config-id $id *"]
-    set customCfgs [lreplace [lindex $customCfgsList 1] $idx $idx]
-    set customCfgsList [lreplace $customCfgsList 1 1 $customCfgs]
-    set idx1 [lsearch [set $node] "custom-configs *"]
-    set $node [lreplace [set $node] $idx1 $idx1 $customCfgsList]
+proc removeCustomConfig { node cfg_id } {
+    cfgUnset "nodes" $node_id "custom_configs" $cfg_id
 }
 
 #****f* nodecfg.tcl/getCustomConfigCommand
@@ -485,15 +401,8 @@ proc removeCustomConfig { node id } {
 # RESULT
 #   * customCmd -- returns custom configuration boot command
 #****
-proc getCustomConfigCommand { node id } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-    set customCfgsList {}
-    set customCfgsList [lsearch -inline [set $node] "custom-configs *"]
-    set customCfg [lsearch -inline [lindex $customCfgsList 1] "custom-config-id $id *"]
-    set customCmd [lsearch [lindex $customCfg 2] "custom-command*"]
-    set customCmd [lindex [lindex $customCfg 2] $customCmd+1]
-    
-    return $customCmd
+proc getCustomConfigCommand { node_id cfg_id } {
+    return [cfgGet "nodes" $node_id "custom_configs" $cfg_id "custom_command"]
 }
 
 #****f* nodecfg.tcl/getCustomConfigIDs
@@ -508,129 +417,8 @@ proc getCustomConfigCommand { node id } {
 # RESULT
 #   * IDs -- returns custom configuration IDs
 #****
-proc getCustomConfigIDs { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-    set customCfgsList [lsearch -inline [set $node] "custom-configs *"]
-    set customCfg [lsearch -all -inline [lindex $customCfgsList 1] "custom-config-id *"]
-    set IDs {}
-    foreach x $customCfg {
-	lappend IDs [lindex $x 1]
-    }
-    return $IDs
-}
-
-#****f* nodecfg.tcl/netconfFetchSection
-# NAME
-#   netconfFetchSection -- fetch the network configuration section 
-# SYNOPSIS
-#   set section [netconfFetchSection $node $sectionhead]
-# FUNCTION
-#   Returns a section of a network part of a configuration file starting with
-#   the $sectionhead line, and ending with the first occurrence of the "!"
-#   sign.
-# INPUTS
-#   * node -- node id
-#   * sectionhead -- represents the first line of the section in 
-#     network-config part of the configuration file
-# RESULT
-#   * section -- returns a part of the configuration file between sectionhead
-#     and "!"
-#****
-proc netconfFetchSection { node sectionhead } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set cfgmode global
-    set section {}
-    set netconf [lindex [lsearch -inline [set $node] "network-config *"] 1]
-    foreach line $netconf {
-	if { $cfgmode == "section" } {
-	    if { "$line" == "!" } {
-		return $section
-	    }
-	    lappend section "$line"
-	    continue
-	}
-	if { "$line" == "$sectionhead" } {
-	    set cfgmode section
-	}
-    }
-}
-
-#****f* nodecfg.tcl/netconfClearSection
-# NAME
-#   netconfClearSection -- clear the section from a network-config part
-# SYNOPSIS
-#   netconfClearSection $node $sectionhead
-# FUNCTION
-#   Removes the appropriate section from the network part of the
-#   configuration.
-# INPUTS
-#   * node -- node id
-#   * sectionhead -- represents the first line of the section that is to be
-#     removed from network-config part of the configuration.
-#****
-proc netconfClearSection { node sectionhead } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set i [lsearch [set $node] "network-config *"]
-    set netconf [lindex [lindex [set $node] $i] 1]
-    set lnum_beg -1
-    set lnum_end 0
-    foreach line $netconf {
-	if { $lnum_beg == -1 && "$line" == "$sectionhead" } {
-	    set lnum_beg $lnum_end
-	}
-	if { $lnum_beg > -1 && "$line" == "!" } {
-	    set netconf [lreplace $netconf $lnum_beg $lnum_end]
-	    set $node [lreplace [set $node] $i $i \
-		[list network-config $netconf]]
-	    return
-	}
-	incr lnum_end
-    }
-}
-
-#****f* nodecfg.tcl/netconfInsertSection
-# NAME
-#   netconfInsertSection -- Insert the section to a network-config
-#   part of configuration
-# SYNOPSIS
-#   netconfInsertSection $node $section
-# FUNCTION
-#   Inserts a section in the configuration. Sections beginning with the
-#   "interface" keyword are inserted at the head of the configuration, and all
-#   other sequences are simply appended to the configuration tail.
-# INPUTS
-#   * node -- the node id of the node whose config section is inserted
-#   * section -- represents the section that is being inserted. If there was a
-#     section in network configuration with the same section head, it is lost.
-#****
-proc netconfInsertSection { node section } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set sectionhead [lindex $section 0]
-    netconfClearSection $node $sectionhead
-    set i [lsearch [set $node] "network-config *"]
-    set netconf [lindex [lindex [set $node] $i] 1]
-    set lnum_beg end
-    if { "[lindex $sectionhead 0]" == "interface" } {
-	set lnum [lsearch $netconf "hostname *"]
-	if { $lnum >= 0 } {
-	    set lnum_beg [expr $lnum + 2]
-	}
-    } elseif { "[lindex $sectionhead 0]" == "hostname" } {
-	set lnum_beg 0
-    }
-    if { "[lindex $section end]" != "!" } {
-	lappend section "!"
-    }
-    foreach line $section {
-	set netconf [linsert $netconf $lnum_beg $line]
-	if { $lnum_beg != "end" } {
-	    incr lnum_beg
-	}
-    }
-    set $node [lreplace [set $node] $i $i [list network-config $netconf]]
+proc getCustomConfigIDs { node_id } {
+    return [dict keys [cfgGet "nodes" $node_id "custom_configs"]]
 }
 
 #****f* nodecfg.tcl/getIfcOperState
@@ -648,13 +436,13 @@ proc netconfInsertSection { node section } {
 #   * state -- the operating state of the interface, can be either "up" or
 #     "down".
 #****
-proc getIfcOperState { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] == "shutdown" } {
-	    return "down"
-	}
+proc getIfcOperState { node_id iface } {
+    set group "ifaces"
+    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
+	set group "logifaces"
     }
-    return "up"
+
+    return [cfgGetWithDefault "up" "nodes" $node_id $group $iface "oper_state"]
 }
 
 #****f* nodecfg.tcl/setIfcOperState
@@ -671,18 +459,13 @@ proc getIfcOperState { node ifc } {
 #   * state -- new operating state of the interface, can be either "up" or
 #     "down"
 #****
-proc setIfcOperState { node ifc state } {
-    set ifcfg [list "interface $ifc"]
-    if { $state == "down" } {
-	lappend ifcfg " shutdown"
+proc setIfcOperState { node_id iface state } {
+    set group "ifaces"
+    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
+	set group "logifaces"
     }
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] != "shutdown" && \
-	    [lrange $line 0 1] != "no shutdown" } {
-	    lappend ifcfg $line
-	}
-    }
-    netconfInsertSection $node $ifcfg
+
+    cfgSet "nodes" $node_id $group $iface "oper_state" $state
 }
 
 #****f* nodecfg.tcl/getIfcNatState
@@ -698,13 +481,13 @@ proc setIfcOperState { node ifc state } {
 # RESULT
 #   * state -- the NAT state of the interface, can be either "on" or "off"
 #****
-proc getIfcNatState { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] in "!nat nat" } {
-	    return "on"
-	}
+proc getIfcNatState { node_id iface } {
+    set group "ifaces"
+    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
+	set group "logifaces"
     }
-    return "off"
+
+    return [cfgGetWithDefault "off" "nodes" $node_id $group $iface "nat_state"]
 }
 
 #****f* nodecfg.tcl/setIfcNatState
@@ -719,17 +502,13 @@ proc getIfcNatState { node ifc } {
 #   * ifc -- interface
 #   * state -- new NAT state of the interface, can be either "on" or "off"
 #****
-proc setIfcNatState { node ifc state } {
-    set ifcfg [list "interface $ifc"]
-    if { $state == "on" } {
-	lappend ifcfg " !nat"
+proc setIfcNatState { node_id iface state } {
+    set group "ifaces"
+    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
+	set group "logifaces"
     }
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] ni "!nat nat" } {
-	    lappend ifcfg $line
-	}
-    }
-    netconfInsertSection $node $ifcfg
+
+    cfgSet "nodes" $node_id $group $iface "nat_state" $state
 }
 
 #****f* nodecfg.tcl/getIfcDirect
@@ -738,7 +517,7 @@ proc setIfcNatState { node ifc state } {
 # SYNOPSIS
 #   set direction [getIfcDirect $node $ifc]
 # FUNCTION
-#   Returns the direction of the specified interface. It can be set to 
+#   Returns the direction of the specified interface. It can be set to
 #   "internal" or "external".
 # INPUTS
 #   * node -- represents the node id of the node whose interface's queuing
@@ -748,13 +527,8 @@ proc setIfcNatState { node ifc state } {
 #   * direction -- the direction of the interface, can be either "internal" or
 #     "external".
 #****
-proc getIfcDirect { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] == "external" } {
-	    return external
-	}
-    }
-    return internal
+proc getIfcDirect { node_id iface } {
+    return [cfgGet "nodes" $node_id "ifaces" $iface "direction"]
 }
 
 #****f* nodecfg.tcl/setIfcDirect
@@ -771,19 +545,8 @@ proc getIfcDirect { node ifc } {
 #   * direct -- new direction of the interface, can be either "internal" or
 #     "external"
 #****
-proc setIfcDirect { node ifc direct } {
-    set ifcfg [list "interface $ifc"]
-    if { $direct == "external" } {
-	lappend ifcfg " external"
-
-    }
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] != "external" && \
-	    [lindex $line 0] != "internal" } {
-	    lappend ifcfg $line
-	}
-    }
-    netconfInsertSection $node $ifcfg    
+proc getIfcDirect { node_id iface direction } {
+    cfgSet "nodes" $node_id "ifaces" $iface "direction" $direction
 }
 
 #****f* nodecfg.tcl/getIfcQDisc
@@ -802,16 +565,13 @@ proc setIfcDirect { node ifc direct } {
 #   * qdisc -- returns queuing discipline of the interface, can be "FIFO",
 #     "WFQ" or "DRR".
 #****
-proc getIfcQDisc { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] == "fair-queue" } {
-	    return WFQ
-	}
-	if { [lindex $line 0] == "drr-queue" } {
-	    return DRR
-	}
+proc getIfcQDisc { node_id iface } {
+    set group "ifaces"
+    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
+	set group "logifaces"
     }
-    return FIFO
+
+    return [cfgGetWithDefault "FIFO" "nodes" $node_id $group $iface "ifc_qdisc"]
 }
 
 #****f* nodecfg.tcl/setIfcQDisc
@@ -820,7 +580,7 @@ proc getIfcQDisc { node ifc } {
 # SYNOPSIS
 #   setIfcQDisc $node $ifc $qdisc
 # FUNCTION
-#   Sets the new queuing discipline for the interface. Implicit default is 
+#   Sets the new queuing discipline for the interface. Implicit default is
 #   FIFO.
 # INPUTS
 #   * node -- represents the node id of the node whose interface's queuing
@@ -829,21 +589,13 @@ proc getIfcQDisc { node ifc } {
 #   * qdisc -- queuing discipline of the interface, can be "FIFO", "WFQ" or
 #     "DRR".
 #****
-proc setIfcQDisc { node ifc qdisc } {
-    set ifcfg [list "interface $ifc"]
-    if { $qdisc == "WFQ" } {
-	lappend ifcfg " fair-queue"
+proc setIfcQDisc { node_id iface qdisc } {
+    set group "ifaces"
+    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
+	set group "logifaces"
     }
-    if { $qdisc == "DRR" } {
-	lappend ifcfg " drr-queue"
-    }
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] != "fair-queue" && \
-	    [lindex $line 0] != "drr-queue" } {
-	    lappend ifcfg $line
-	}
-    }
-    netconfInsertSection $node $ifcfg
+
+    cfgSet "nodes" $node_id $group $iface "ifc_qdisc" $qdisc
 }
 
 #****f* nodecfg.tcl/getIfcQDrop
@@ -862,13 +614,13 @@ proc setIfcQDisc { node ifc qdisc } {
 #   * qdrop -- returns queue dropping policy of the interface, can be
 #     "drop-tail" or "drop-head".
 #****
-proc getIfcQDrop { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] == "drop-head" } {
-	    return drop-head
-	}
+proc getIfcQDrop { node_id iface } {
+    set group "ifaces"
+    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
+	set group "logifaces"
     }
-    return drop-tail
+
+    return [cfgGetWithDefault "drop-tail" "nodes" $node_id $group $iface "ifc_qdrop"]
 }
 
 #****f* nodecfg.tcl/setIfcQDrop
@@ -885,19 +637,13 @@ proc getIfcQDrop { node ifc } {
 #   * qdrop -- new queue dropping policy of the interface, can be "drop-tail"
 #     or "drop-head".
 #****
-proc setIfcQDrop { node ifc qdrop } {
-    set ifcfg [list "interface $ifc"]
-    if { $qdrop == "drop-head" } {
-	lappend ifcfg " drop-head"
+proc setIfcQDrop { node_id iface qdrop } {
+    set group "ifaces"
+    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
+	set group "logifaces"
+    }
 
-    }
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] != "drop-head" && \
-	    [lindex $line 0] != "drop-tail" } {
-	    lappend ifcfg $line
-	}
-    }
-    netconfInsertSection $node $ifcfg
+    cfgSet "nodes" $node_id $group $iface "ifc_qdrop" $qdrop
 }
 
 #****f* nodecfg.tcl/getIfcQLen
@@ -914,13 +660,13 @@ proc setIfcQDrop { node ifc qdrop } {
 # RESULT
 #   * qlen -- queue length limit represented in number of packets.
 #****
-proc getIfcQLen { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] == "queue-len" } {
-	    return [lindex $line 1]
-	}
+proc getIfcQLen { node_id iface } {
+    set group "ifaces"
+    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
+	set group "logifaces"
     }
-    return 50
+
+    return [cfgGetWithDefault 50 "nodes" $node_id $group $iface "queue_len"]
 }
 
 #****f* nodecfg.tcl/setIfcQLen
@@ -936,17 +682,13 @@ proc getIfcQLen { node ifc } {
 #   * ifc -- interface name.
 #   * qlen -- queue length limit represented in number of packets.
 #****
-proc setIfcQLen { node ifc len } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] != "queue-len" } {
-	    lappend ifcfg $line
-	}
+proc setIfcQLen { node_id iface len } {
+    set group "ifaces"
+    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
+	set group "logifaces"
     }
-    if { $len > 5 && $len != 50 } {
-	lappend ifcfg " queue-len $len"
-    }
-    netconfInsertSection $node $ifcfg
+
+    cfgSet "nodes" $node_id $group $iface "queue_len" $len
 }
 
 #****f* nodecfg.tcl/getIfcMTU
@@ -963,18 +705,18 @@ proc setIfcQLen { node ifc len } {
 # RESULT
 #   * mtu -- maximum transmission unit of the packet, represented in bytes.
 #****
-proc getIfcMTU { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] == "mtu" } {
-	    return [lindex $line 1]
+proc getIfcMTU { node_id iface } {
+    set default_mtu 1500
+    set group "ifaces"
+    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
+	set group "logifaces"
+	switch -exact [getLogIfcType $node_id $iface] {
+	    lo { set default_mtu 16384 }
+	    se { set default_mtu 2044 }
 	}
     }
-    # Return defaults
-    switch -exact [string range $ifc 0 1] {
-	lo { return 16384 }
-	se { return 2044 }
-    }
-    return 1500
+
+    return [cfgGetWithDefault $default_mtu "nodes" $node_id $group $iface "mtu"]
 }
 
 #****f* nodecfg.tcl/setIfcMTU
@@ -989,22 +731,13 @@ proc getIfcMTU { node ifc } {
 #   * ifc -- interface name.
 #   * mtu -- maximum transmission unit of a packet, represented in bytes.
 #****
-proc setIfcMTU { node ifc mtu } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] != "mtu" } {
-	    lappend ifcfg $line
-	}
+proc setIfcMTU { node_id iface mtu } {
+    set group "ifaces"
+    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
+	set group "logifaces"
     }
-#    switch -exact [string range $ifc 0 2] {
-#	eth { set limit 1500 }
-#	ser { set limit 2044 }
-#    }
-    set limit 9018
-    if { $mtu >= 256 && $mtu <= $limit } {
-	lappend ifcfg " mtu $mtu"
-    }
-    netconfInsertSection $node $ifcfg
+
+    cfgSet "nodes" $node_id $group $iface "mtu" $mtu
 }
 
 #****f* nodecfg.tcl/getIfcMACaddr
@@ -1020,14 +753,8 @@ proc setIfcMTU { node ifc mtu } {
 # RESULT
 #   * addr -- The MAC address assigned to the specified interface.
 #****
-proc getIfcMACaddr { node ifc } {
-    set addr ""
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lrange $line 0 1] == "mac address" } {
-	    set addr [lindex $line 2]
-	}
-    }
-    return $addr
+proc getIfcMACaddr { node_id iface } {
+    return [cfgGet "nodes" $node_id "ifaces" $iface "mac"]
 }
 
 #****f* nodecfg.tcl/setIfcMACaddr
@@ -1043,17 +770,8 @@ proc getIfcMACaddr { node ifc } {
 #   * ifc -- interface name.
 #   * addr -- new MAC address.
 #****
-proc setIfcMACaddr { node ifc addr } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lrange $line 0 1] != "mac address" } {
-	    lappend ifcfg $line
-	}
-    }
-    if { $addr != "" } {
-	lappend ifcfg " mac address $addr"
-    }
-    netconfInsertSection $node $ifcfg
+proc setIfcMACaddr { node_id iface addr } {
+    cfgSet "nodes" $node_id "ifaces" $iface "mac" $addr
 }
 
 #****f* nodecfg.tcl/getIfcIPv4addr
@@ -1068,14 +786,10 @@ proc setIfcMACaddr { node ifc addr } {
 #   * ifc -- interface name.
 # RESULT
 #   * addr -- first IPv4 address on the interface
-#    
+#
 #****
-proc getIfcIPv4addr { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lrange $line 0 1] == "ip address" } {
-	    return [lindex $line 2]
-	}
-    }
+proc getIfcIPv4addr { node_id iface } {
+    return [lindex [getIfcIPv4addrs $node_id $iface] 0]
 }
 
 #****f* nodecfg.tcl/getIfcIPv4addrs
@@ -1092,59 +806,13 @@ proc getIfcIPv4addr { node ifc } {
 #   * addrList -- A list of all the IPv4 addresses assigned to the specified
 #     interface.
 #****
-proc getIfcIPv4addrs { node ifc } {
-    set addrlist {}
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lrange $line 0 1] == "ip address" } {
-	    lappend addrlist [lindex $line 2]
-	}
+proc getIfcIPv4addrs { node_id iface } {
+    set group "ifaces"
+    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
+	set group "logifaces"
     }
-    return $addrlist
-}
 
-#****f* nodecfg.tcl/getLogIfcType
-# NAME
-#   getLogIfcType -- get logical interface type
-# SYNOPSIS
-#   getLogIfcType $node $ifc
-# FUNCTION
-#   Returns logical interface type from a node.
-# INPUTS
-#   * node -- node id
-#   * ifc -- interface name
-#****
-proc getLogIfcType { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] == "type" } {
-	    return [lindex $line 1]
-	}
-    }
-}
-
-#****f* nodecfg.tcl/setIfcIPv4addr
-# NAME
-#   setIfcIPv4addr -- set interface IPv4 address.
-# SYNOPSIS
-#   setIfcIPv4addr $node $ifc $addr
-# FUNCTION
-#   Sets a new IPv4 address(es) on an interface. The correctness of the IP
-#   address format is not checked / enforced.
-# INPUTS
-#   * node -- the node id of the node whose interface's IPv4 address is set.
-#   * ifc -- interface name.
-#   * addr -- new IPv4 address.
-#****
-proc setIfcIPv4addr { node ifc addr } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lrange $line 0 1] != "ip address" } {
-	    lappend ifcfg $line
-	}
-    }
-    if { $addr != "" } {
-	lappend ifcfg " ip address $addr"
-    }
-    netconfInsertSection $node $ifcfg
+    return [cfgGet "nodes" $node_id $group $iface "ipv4_addrs"]
 }
 
 #****f* nodecfg.tcl/setIfcIPv4addrs
@@ -1160,20 +828,69 @@ proc setIfcIPv4addr { node ifc addr } {
 #   * ifc -- interface name.
 #   * addrs -- new IPv4 addresses.
 #****
-proc setIfcIPv4addrs { node ifc addrs } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lrange $line 0 1] != "ip address" } {
-	    lappend ifcfg $line
-	}
+proc setIfcIPv4addrs { node_id iface addrs } {
+    set group "ifaces"
+    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
+	set group "logifaces"
     }
-    foreach addr $addrs {
-	if { $addr != "" } {
-	    set addr [string trim $addr]
-	    lappend ifcfg " ip address $addr"
-	}
+
+    cfgSet "nodes" $node_id $group $iface "ipv4_addrs" $addrs
+}
+
+#****f* nodecfg.tcl/getIfcType
+# NAME
+#   getIfcType -- get logical interface type
+# SYNOPSIS
+#   getIfcType $node $ifc
+# FUNCTION
+#   Returns logical interface type from a node.
+# INPUTS
+#   * node -- node id
+#   * ifc -- interface name
+#****
+proc getIfcType { node_id iface } {
+    set group "ifaces"
+    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
+	set group "logifaces"
     }
-    netconfInsertSection $node $ifcfg
+
+    return [cfgGet "nodes" $node_id $group $iface "type"]
+}
+
+#****f* nodecfg.tcl/setIfcType
+# NAME
+#   setIfcType -- set logical interface type
+# SYNOPSIS
+#   setIfcType $node $ifc $type
+# FUNCTION
+#   Sets node's logical interface type.
+# INPUTS
+#   * node -- node id
+#   * ifc -- interface name
+#   * type -- interface type
+#****
+proc setIfcType { node_id iface type } {
+    set group "ifaces"
+    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
+	set group "logifaces"
+    }
+
+    cfgSet "nodes" $node_id $group $iface "type" $type
+}
+
+#****f* nodecfg.tcl/getLogIfcType
+# NAME
+#   getLogIfcType -- get logical interface type
+# SYNOPSIS
+#   getLogIfcType $node $ifc
+# FUNCTION
+#   Returns logical interface type from a node.
+# INPUTS
+#   * node -- node id
+#   * ifc -- interface name
+#****
+proc getLogIfcType { node_id iface } {
+    return [cfgGet "nodes" $node_id "logifaces" $iface "type"]
 }
 
 #****f* nodecfg.tcl/setLogIfcType
@@ -1188,17 +905,62 @@ proc setIfcIPv4addrs { node ifc addrs } {
 #   * ifc -- interface name
 #   * type -- interface type
 #****
-proc setLogIfcType { node ifc type } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] != "type" } {
-	    lappend ifcfg $line
+proc setLogIfcType { node_id iface type } {
+    cfgSet "nodes" $node_id "logifaces" $iface "type" $type
+}
+
+#****f* nodecfg.tcl/getIfcStolenIfc
+# NAME
+#   getIfcStolenIfc -- get logical interface type
+# SYNOPSIS
+#   getIfcStolenIfc $node $ifc
+# FUNCTION
+#   Returns logical interface type from a node.
+# INPUTS
+#   * node -- node id
+#   * ifc -- interface name
+#****
+proc getIfcStolenIfc { node_id iface } {
+    return [cfgGet "nodes" $node_id "ifaces" $iface "stolen_iface"]
+}
+
+#****f* nodecfg.tcl/setIfcStolenIfc
+# NAME
+#   setIfcStolenIfc -- set interface stolen interface
+# SYNOPSIS
+#   setIfcStolenIfc $node $iface $stolen_iface
+# FUNCTION
+#   Sets node's interface stolen stolen interface.
+# INPUTS
+#   * node -- node id
+#   * iface -- interface name
+#   * stolen_iface -- stolen interface
+#****
+proc setIfcStolenIfc { node_id iface stolen_iface } {
+    cfgSet "nodes" $node_id "ifaces" $iface "stolen_iface" $stolen_iface
+}
+
+#****f* nodecfg.tcl/getNodeStolenIfaces
+# NAME
+#   getNodeStolenIfaces -- set node name.
+# SYNOPSIS
+#   getNodeStolenIfaces $node $name
+# FUNCTION
+#   Sets node's logical name.
+# INPUTS
+#   * node -- node id
+#   * name -- logical name of the node
+#****
+proc getNodeStolenIfaces { node_id } {
+    set external_ifaces {}
+    foreach {iface iface_cfg} [cfgGet "nodes" $node_id "ifaces"] {
+	if { [dictGet $iface_cfg "type"] == "stolen" } {
+	    set stolen_iface [dictGet $iface_cfg "stolen_iface"]
+	    lappend external_ifaces "$iface $stolen_iface"
 	}
     }
-    if { $type != "" } {
-	lappend ifcfg " type $type"
-    }
-    netconfInsertSection $node $ifcfg
+
+    return $external_ifaces
 }
 
 #****f* nodecfg.tcl/getIfcIPv6addr
@@ -1213,14 +975,10 @@ proc setLogIfcType { node ifc type } {
 #   * ifc -- interface name.
 # RESULT
 #   * addr -- first IPv6 address on the interface
-#    
+#
 #****
-proc getIfcIPv6addr { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lrange $line 0 1] == "ipv6 address" } {
-	    return [lindex $line 2]
-	}
-    }
+proc getIfcIPv6addr { node_id iface } {
+    return [lindex [getIfcIPv6addrs $node_id $iface] 0]
 }
 
 #****f* nodecfg.tcl/getIfcIPv6addrs
@@ -1237,40 +995,13 @@ proc getIfcIPv6addr { node ifc } {
 #   * addrList -- A list of all the IPv6 addresses assigned to the specified
 #     interface.
 #****
-proc getIfcIPv6addrs { node ifc } {
-    set addrlist {}
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lrange $line 0 1] == "ipv6 address" } {
-	    lappend addrlist [lindex $line 2]
-	}
+proc getIfcIPv6addrs { node_id iface } {
+    set group "ifaces"
+    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
+	set group "logifaces"
     }
-    return $addrlist
-}
 
-#****f* nodecfg.tcl/setIfcIPv6addr
-# NAME
-#   setIfcIPv6addr -- set interface IPv6 address.
-# SYNOPSIS
-#   setIfcIPv6addr $node $ifc $addr
-# FUNCTION
-#   Sets a new IPv6 address(es) on an interface. The correctness of the IP
-#   address format is not checked / enforced.
-# INPUTS
-#   * node -- the node id of the node whose interface's IPv4 address is set.
-#   * ifc -- interface name.
-#   * addr -- new IPv6 address.
-#****
-proc setIfcIPv6addr { node ifc addr } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lrange $line 0 1] != "ipv6 address" } {
-	    lappend ifcfg $line
-	}
-    }
-    if { $addr != "" } {
-	lappend ifcfg " ipv6 address $addr"
-    }
-    netconfInsertSection $node $ifcfg
+    return [cfgGet "nodes" $node_id $group $iface "ipv6_addrs"]
 }
 
 #****f* nodecfg.tcl/setIfcIPv6addrs
@@ -1286,20 +1017,26 @@ proc setIfcIPv6addr { node ifc addr } {
 #   * ifc -- interface name.
 #   * addrs -- new IPv6 addresses.
 #****
-proc setIfcIPv6addrs { node ifc addrs } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lrange $line 0 1] != "ipv6 address" } {
-	    lappend ifcfg $line
-	}
+proc setIfcIPv6addrs { node_id iface addrs } {
+    set group "ifaces"
+    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
+	set group "logifaces"
     }
-    foreach addr $addrs {
-	if { $addr != "" } {
-	    set addr [string trim $addr]
-	    lappend ifcfg " ipv6 address $addr"
-	}
-    }
-    netconfInsertSection $node $ifcfg
+
+    cfgSet "nodes" $node_id $group $iface "ipv6_addrs" $addrs
+}
+
+proc getIfcPeer { node_id iface } {
+    set link_id [getIfcLink $node_id $iface]
+    return [removeFromList [getLinkPeers $link_id] $node_id]
+}
+
+proc getIfcLink { node_id iface } {
+    return [cfgGet "nodes" $node_id "ifaces" $iface "link"]
+}
+
+proc setIfcLink { node_id iface link_id } {
+    cfgSet "nodes" $node_id "ifaces" $iface "link" $link_id
 }
 
 #****f* nodecfg.tcl/getIfcLinkLocalIPv6addr
@@ -1318,12 +1055,12 @@ proc setIfcIPv6addrs { node ifc addrs } {
 #   * addr -- The link-local IPv6 address that will be assigned to the
 #     specified interface.
 #****
-proc getIfcLinkLocalIPv6addr { node ifc } {
-    if { [isIfcLogical $node $ifc] } {
+proc getIfcLinkLocalIPv6addr { node_id iface } {
+    if { [isIfcLogical $node_id $iface] } {
 	return ""
     }
 
-    set mac [getIfcMACaddr $node $ifc]
+    set mac [getIfcMACaddr $node_id $iface]
 
     set bytes [split $mac :]
     set bytes [linsert $bytes 3 fe]
@@ -1345,6 +1082,7 @@ proc getIfcLinkLocalIPv6addr { node ifc } {
 	incr i
     }
     lappend final /64
+
     return [ip::normalize [join $final ""]]
 }
 
@@ -1356,36 +1094,35 @@ proc getIfcLinkLocalIPv6addr { node ifc } {
 #     my_gws subnets_and_gws
 # FUNCTION
 #   Returns a list of all default IPv4/IPv6 gateways for the subnets in which
-#   this node belongs as a {nodeType|gateway4|gateway6} values. Additionally,
+#   this node belongs as a {getNodeType|gateway4|gateway6} values. Additionally,
 #   it refreshes newly discovered gateways and subnet members to the existing
 #   $subnet_gws list and $nodes_l2data dictionary.
 # INPUTS
 #   * node -- node id
-#   * subnet_gws -- already known {nodeType|gateway4|gateway6} values
+#   * subnet_gws -- already known {getNodeType|gateway4|gateway6} values
 #   * nodes_l2data -- a dictionary of already known {node ifc subnet_idx}
 #   triplets in this subnet
 # RESULT
 #   * my_gws -- list of all possible default gateways for the specified node
-#   * subnet_gws -- refreshed {nodeType|gateway4|gateway6} values
+#   * subnet_gws -- refreshed {getNodeType|gateway4|gateway6} values
 #   * nodes_l2data -- refreshed dictionary of {node ifc subnet_idx} triplets in
 #   this subnet
 #****
-proc getDefaultGateways { node subnet_gws nodes_l2data } {
-    set all_ifc [ifcList $node]
+proc getDefaultGateways { node_id subnet_gws nodes_l2data } {
+    set all_ifc [ifcList $node_id]
     if { [llength $all_ifc] == 0 } {
 	return [list {} {} {}]
     }
 
     # go through all interfaces and collect data for each subnet
     foreach ifc $all_ifc {
-	if { [dict exists $nodes_l2data $node $ifc] } {
+	if { [dict exists $nodes_l2data $node_id $ifc] } {
 	    continue
 	}
 
 	# add new subnet at the end of the list
 	set subnet_idx [llength $subnet_gws]
-	set peer_node [logicalPeerByIfc $node $ifc]
-	set peer_ifc [ifcByLogicalPeer $peer_node $node]
+	lassign [logicalPeerByIfc $node_id $ifc] peer_node peer_ifc
 	lassign [getSubnetData $peer_node $peer_ifc \
 	  $subnet_gws $nodes_l2data $subnet_idx] \
 	  subnet_gws nodes_l2data
@@ -1393,7 +1130,7 @@ proc getDefaultGateways { node subnet_gws nodes_l2data } {
 
     # merge all gateways values and return
     set my_gws {}
-    foreach subnet_idx [lsort -unique [dict values [dict get $nodes_l2data $node]]] {
+    foreach subnet_idx [lsort -unique [dict values [dict get $nodes_l2data $node_id]]] {
 	set my_gws [concat $my_gws [lindex $subnet_gws $subnet_idx]]
     }
 
@@ -1415,38 +1152,37 @@ proc getDefaultGateways { node subnet_gws nodes_l2data } {
 # INPUTS
 #   * this_node -- node id
 #   * this_ifc -- node interface
-#   * subnet_gws -- already known {nodeType|gateway4|gateway6} values
+#   * subnet_gws -- already known {getNodeType|gateway4|gateway6} values
 #   * nodes_l2data -- a dictionary of already known {node ifc subnet_idx}
 #   triplets in this subnet
 # RESULT
-#   * subnet_gws -- refreshed {nodeType|gateway4|gateway6} values
+#   * subnet_gws -- refreshed {getNodeType|gateway4|gateway6} values
 #   * nodes_l2data -- refreshed dictionary of {node ifc subnet_idx} triplets in
 #   this subnet
 #****
-proc getSubnetData { this_node this_ifc subnet_gws nodes_l2data subnet_idx } {
+proc getSubnetData { this_node_id this_ifc subnet_gws nodes_l2data subnet_idx } {
     set my_gws [lindex $subnet_gws $subnet_idx]
 
-    if { [dict exists $nodes_l2data $this_node $this_ifc] } {
+    if { [dict exists $nodes_l2data $this_node_id $this_ifc] } {
 	# this node/ifc is already a part of this subnet
-	set subnet_idx [dict get $nodes_l2data $this_node $this_ifc]
+	set subnet_idx [dict get $nodes_l2data $this_node_id $this_ifc]
 	return [list $subnet_gws $nodes_l2data]
     }
 
-    dict set nodes_l2data $this_node $this_ifc $subnet_idx
+    dict set nodes_l2data $this_node_id $this_ifc $subnet_idx
 
-    if { [[typemodel $this_node].layer] == "NETWORK" } {
-	if { [nodeType $this_node] in "router extnat" } {
+    if { [[typemodel $this_node_id].layer] == "NETWORK" } {
+	if { [getNodeType $this_node_id] in "router extnat" } {
 	    # this node is a router/extnat, add our IP addresses to lists
-	    set gw4 [lindex [split [getIfcIPv4addr $this_node $this_ifc] /] 0]
-	    set gw6 [lindex [split [getIfcIPv6addr $this_node $this_ifc] /] 0]
-	    lappend my_gws [nodeType $this_node]|$gw4|$gw6
+	    set gw4 [lindex [split [getIfcIPv4addr $this_node_id $this_ifc] /] 0]
+	    set gw6 [lindex [split [getIfcIPv6addr $this_node_id $this_ifc] /] 0]
+	    lappend my_gws [getNodeType $this_node_id]|$gw4|$gw6
 	    lset subnet_gws $subnet_idx $my_gws
 	}
 
 	# first, get this node/ifc peer's subnet data in case it is an L2 node
 	# and we're not yet gone through it
-	set peer_node [logicalPeerByIfc $this_node $this_ifc]
-	set peer_ifc [ifcByLogicalPeer $peer_node $this_node]
+	lassign [logicalPeerByIfc $this_node_id $this_ifc] peer_node peer_ifc
 	lassign [getSubnetData $peer_node $peer_ifc \
 	  $subnet_gws $nodes_l2data $subnet_idx] \
 	  subnet_gws nodes_l2data
@@ -1460,11 +1196,10 @@ proc getSubnetData { this_node this_ifc subnet_gws nodes_l2data subnet_idx } {
 
     # this node is an L2 node
     # - collect data from all interfaces
-    foreach ifc [ifcList $this_node] {
-	dict set nodes_l2data $this_node $ifc $subnet_idx
+    foreach ifc [ifcList $this_node_id] {
+	dict set nodes_l2data $this_node_id $ifc $subnet_idx
 
-	set peer_node [logicalPeerByIfc $this_node $ifc]
-	set peer_ifc [ifcByLogicalPeer $peer_node $this_node]
+	lassign [logicalPeerByIfc $this_node_id $ifc] peer_node peer_ifc
 	lassign [getSubnetData $peer_node $peer_ifc \
 	  $subnet_gws $nodes_l2data $subnet_idx] \
 	  subnet_gws nodes_l2data
@@ -1486,15 +1221,8 @@ proc getSubnetData { this_node this_ifc subnet_gws nodes_l2data subnet_idx } {
 # RESULT
 #   * routes -- list of all static routes defined for the specified node
 #****
-proc getStatIPv4routes { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set routes {}
-    set netconf [lindex [lsearch -inline [set $node] "network-config *"] 1]
-    foreach entry [lsearch -all -inline $netconf "ip route *"] {
-	lappend routes [lrange $entry 2 end]
-    }
-    return $routes
+proc getStatIPv4routes { node_id } {
+    return [cfgGet "nodes" $node_id "croutes4"]
 }
 
 #****f* nodecfg.tcl/setStatIPv4routes
@@ -1509,13 +1237,8 @@ proc getStatIPv4routes { node } {
 #   * node -- the node id of the node whose static routes are set.
 #   * routes -- list of all static routes defined for the specified node
 #****
-proc setStatIPv4routes { node routes } {
-    netconfClearSection $node "ip route [lindex [getStatIPv4routes $node] 0]"
-    set section {}
-    foreach route $routes {
-	lappend section "ip route $route"
-    }
-    netconfInsertSection $node $section
+proc setStatIPv4routes { node_id routes } {
+    cfgSet "nodes" $node_id "croutes4" $routes
 }
 
 #****f* nodecfg.tcl/getDefaultIPv4routes
@@ -1531,10 +1254,8 @@ proc setStatIPv4routes { node routes } {
 # RESULT
 #   * routes -- list of all IPv4 default routes defined for the specified node
 #****
-proc getDefaultIPv4routes { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    return [lrange [lsearch -inline [set $node] "default_routes4 *"] 1 end]
+proc getDefaultIPv4routes { node_id } {
+    return [cfgGet "nodes" $node_id "default_routes4"]
 }
 
 #****f* nodecfg.tcl/setDefaultIPv4routes
@@ -1549,21 +1270,8 @@ proc getDefaultIPv4routes { node } {
 #   * node -- the node id of the node whose default routes are set
 #   * routes -- list of all IPv4 default routes defined for the specified node
 #****
-proc setDefaultIPv4routes { node routes } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set i [lsearch [set $node] "default_routes4 *"]
-    if { [llength $routes] != 0 } {
-	if { $i >= 0 } {
-	    set $node [lreplace [set $node] $i $i "default_routes4 $routes"]
-	} else {
-	    set $node [linsert [set $node] end "default_routes4 $routes"]
-	}
-    } else {
-	if { $i >= 0 } {
-	    set $node [lreplace [set $node] $i $i]
-	}
-    }
+proc setDefaultIPv4routes { node_id routes } {
+    cfgSet "nodes" $node_id "default_routes4" $routes
 }
 
 #****f* nodecfg.tcl/getDefaultIPv6routes
@@ -1579,10 +1287,8 @@ proc setDefaultIPv4routes { node routes } {
 # RESULT
 #   * routes -- list of all IPv6 default routes defined for the specified node
 #****
-proc getDefaultIPv6routes { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    return [lrange [lsearch -inline [set $node] "default_routes6 *"] 1 end]
+proc getDefaultIPv6routes { node_id } {
+    return [cfgGet "nodes" $node_id "default_routes6"]
 }
 
 #****f* nodecfg.tcl/setDefaultIPv6routes
@@ -1597,21 +1303,8 @@ proc getDefaultIPv6routes { node } {
 #   * node -- the node id of the node whose default routes are set
 #   * routes -- list of all IPv6 default routes defined for the specified node
 #****
-proc setDefaultIPv6routes { node routes } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set i [lsearch [set $node] "default_routes6 *"]
-    if { [llength $routes] != 0 } {
-	if { $i >= 0 } {
-	    set $node [lreplace [set $node] $i $i "default_routes6 $routes"]
-	} else {
-	    set $node [linsert [set $node] end "default_routes6 $routes"]
-	}
-    } else {
-	if { $i >= 0 } {
-	    set $node [lreplace [set $node] $i $i]
-	}
-    }
+proc setDefaultIPv6routes { node_id routes } {
+    cfgSet "nodes" $node_id "default_routes6" $routes
 }
 
 #****f* nodecfg.tcl/getStatIPv6routes
@@ -1627,15 +1320,8 @@ proc setDefaultIPv6routes { node routes } {
 # RESULT
 #   * routes -- list of all static routes defined for the specified node
 #****
-proc getStatIPv6routes { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set routes {}
-    set netconf [lindex [lsearch -inline [set $node] "network-config *"] 1]
-    foreach entry [lsearch -all -inline $netconf "ipv6 route *"] {
-	lappend routes [lrange $entry 2 end]
-    }
-    return $routes
+proc getStatIPv6routes { node_id } {
+    return [cfgGet "nodes" $node_id "croutes6"]
 }
 
 #****f* nodecfg.tcl/setStatIPv6routes
@@ -1650,13 +1336,8 @@ proc getStatIPv6routes { node } {
 #   * node -- node id
 #   * routes -- list of all static routes defined for the specified node
 #****
-proc setStatIPv6routes { node routes } {
-    netconfClearSection $node "ipv6 route [lindex [getStatIPv6routes $node] 0]"
-    set section {}
-    foreach route $routes {
-	lappend section "ipv6 route $route"
-    }
-    netconfInsertSection $node $section
+proc setStatIPv6routes { node_id routes } {
+    cfgSet "nodes" $node_id "croutes6" $routes
 }
 
 #****f* nodecfg.tcl/getDefaultRoutesConfig
@@ -1669,17 +1350,17 @@ proc setStatIPv6routes { node routes } {
 #   pre-running configuration. Returns IPv4 and IPv6 routes lists.
 # INPUTS
 #   * node -- node id
-#   * gws -- gateway values in the {nodeType|gateway4|gateway6} format
+#   * gws -- gateway values in the {getNodeType|gateway4|gateway6} format
 # RESULT
 #   * all_routes4 -- {0.0.0.0/0 gw4} pairs of default IPv4 routes
 #   * all_routes6 -- {0.0.0.0/0 gw6} pairs of default IPv6 routes
 #****
-proc getDefaultRoutesConfig { node gws } {
+proc getDefaultRoutesConfig { node_id gws } {
     set all_routes4 {}
     set all_routes6 {}
     foreach route $gws {
 	lassign [split $route "|"] route_type gateway4 gateway6
-	if { [nodeType $node] == "router" } {
+	if { [getNodeType $node_id] == "router" } {
 	    if { $route_type == "extnat" } {
 		if { "0.0.0.0/0 $gateway4" ni [list "0.0.0.0/0 " $all_routes4] } {
 		    lappend all_routes4 "0.0.0.0/0 $gateway4"
@@ -1713,11 +1394,8 @@ proc getDefaultRoutesConfig { node gws } {
 # RESULT
 #   * name -- logical name of the node
 #****
-proc getNodeName { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set netconf [lindex [lsearch -inline [set $node] "network-config *"] 1]
-    return [lrange [lsearch -inline $netconf "hostname *"] 1 end]
+proc getNodeName { node_id } {
+    return [cfgGet "nodes" $node_id "name"]
 }
 
 #****f* nodecfg.tcl/setNodeName
@@ -1731,48 +1409,8 @@ proc getNodeName { node } {
 #   * node -- node id
 #   * name -- logical name of the node
 #****
-proc setNodeName { node name } {
-    netconfClearSection $node "hostname [getNodeName $node]"
-    netconfInsertSection $node [list "hostname $name"]
-}
-
-#****f* nodecfg.tcl/getNodeExternalIfcs
-# NAME
-#   getNodeExternalIfcs -- set node name.
-# SYNOPSIS
-#   getNodeExternalIfcs $node $name
-# FUNCTION
-#   Sets node's logical name.
-# INPUTS
-#   * node -- node id
-#   * name -- logical name of the node
-#****
-proc getNodeExternalIfcs { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    return [lindex [lsearch -inline [set $node] "external-ifcs *"] 1]
-}
-
-#****f* nodecfg.tcl/setNodeExternalIfcs
-# NAME
-#   setNodeExternalIfcs -- set node name.
-# SYNOPSIS
-#   setNodeExternalIfcs $node $name
-# FUNCTION
-#   Sets node's logical name.
-# INPUTS
-#   * node -- node id
-#   * name -- logical name of the node
-#****
-proc setNodeExternalIfcs { node ifcs } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set i [lsearch [set $node] "external-ifcs *"]
-    if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i "external-ifcs {$ifcs}"]
-    } else {
-	set $node [linsert [set $node] 1 "external-ifcs {$ifcs}"]
-    }
+proc setNodeName { node_id name } {
+    cfgSet "nodes" $node_id "name" $name
 }
 
 #****f* nodecfg.tcl/getNodeType
@@ -1787,10 +1425,8 @@ proc setNodeExternalIfcs { node ifcs } {
 # RESULT
 #   * type -- type of the node
 #****
-proc nodeType { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    return [lindex [lsearch -inline [set $node] "type *"] 1]
+proc getNodeType { node_id } {
+    return [cfgGet "nodes" $node_id "type"]
 }
 
 #****f* nodecfg.tcl/getNodeModel
@@ -1799,17 +1435,15 @@ proc nodeType { node } {
 # SYNOPSIS
 #   set model [getNodeModel $node]
 # FUNCTION
-#   Returns node's optional routing model. Currently supported models are 
+#   Returns node's optional routing model. Currently supported models are
 #   frr, quagga and static and only nodes of type router have a defined model.
 # INPUTS
 #   * node -- node id
 # RESULT
 #   * model -- routing model of the specified node
 #****
-proc getNodeModel { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    return [lindex [lsearch -inline [set $node] "model *"] 1]
+proc getNodeModel { node_id } {
+    return [cfgGet "nodes" $node_id "model"]
 }
 
 #****f* nodecfg.tcl/setNodeModel
@@ -1824,15 +1458,8 @@ proc getNodeModel { node } {
 #   * node -- node id
 #   * model -- routing model of the specified node
 #****
-proc setNodeModel { node model } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set i [lsearch [set $node] "model *"]
-    if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i "model $model"]
-    } else {
-	set $node [linsert [set $node] 1 "model $model"]
-    }
+proc setNodeModel { node_id model } {
+    cfgSet "nodes" $node_id "model" $model
 }
 
 #****f* nodecfg.tcl/getNodeSnapshot
@@ -1847,10 +1474,8 @@ proc setNodeModel { node model } {
 # RESULT
 #   * snapshot -- snapshot name for the specified node
 #****
-proc getNodeSnapshot { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    return [lindex [lsearch -inline [set $node] "snapshot *"] 1]
+proc getNodeSnapshot { node_id } {
+    return [cfgGet "nodes" $node_id "snapshot"]
 }
 
 #****f* nodecfg.tcl/setNodeSnapshot
@@ -1864,56 +1489,40 @@ proc getNodeSnapshot { node } {
 #   * node -- node id
 #   * snapshot -- snapshot name for the specified node
 #****
-proc setNodeSnapshot { node snapshot } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set i [lsearch [set $node] "snapshot *"]
-    if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i "snapshot $snapshot"]
-    } else {
-	set $node [linsert [set $node] 1 "snapshot $snapshot"]
-    }
+proc setNodeSnapshot { node_id snapshot } {
+    cfgSet "nodes" $node_id "snapshot" $snapshot
 }
 
 #****f* nodecfg.tcl/getStpEnabled
 # NAME
-#   getStpEnabled -- get STP enabled state 
+#   getStpEnabled -- get STP enabled state
 # SYNOPSIS
 #   set enabled [getStpEnabled $node]
 # FUNCTION
 #   For input node this procedure returns true if STP is enabled
-#   for the specified node. 
+#   for the specified node.
 # INPUTS
 #   * node -- node id
 # RESULT
 #   * enabled -- returns true if STP is enabled
 #****
-proc getStpEnabled { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set netconf [lindex [lsearch -inline [set $node] "network-config *"] 1]
-    if { [lrange [lsearch -inline $netconf "stp-enabled *"] 1 end] == true } {
-	return true
-    }
-    return false
+proc getStpEnabled { node_id } {
+    return [cfgGet "nodes" $node_id "stp_enabled"]
 }
 
 #****f* nodecfg.tcl/setStpEnabled
 # NAME
-#   setStpEnabled -- set STP enabled state 
+#   setStpEnabled -- set STP enabled state
 # SYNOPSIS
 #   setStpEnabled $node $enabled
 # FUNCTION
 #   For input node this procedure enables or disables STP.
 # INPUTS
 #   * node -- node id
-#   * enabled -- true if enabling STP, false if disabling 
+#   * enabled -- true if enabling STP, false if disabling
 #****
-proc setStpEnabled { node enabled } {
-    netconfClearSection $node "stp-enabled true"
-    if { $enabled == true } {
-	netconfInsertSection $node [list "stp-enabled $enabled"]
-    }
+proc setStpEnabled { node_id state } {
+    cfgSet "nodes" $node_id "stp_enabled" $state
 }
 
 #****f* nodecfg.tcl/getNodeCoords
@@ -1928,10 +1537,8 @@ proc setStpEnabled { node enabled } {
 # RESULT
 #   * coords -- coordinates of the node's icon in form of {Xcoord Ycoord}
 #****
-proc getNodeCoords { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    return [lindex [lsearch -inline [set $node] "iconcoords *"] 1]
+proc getNodeCoords { node_id } {
+    return [cfgGet "nodes" $node_id "iconcoords"]
 }
 
 #****f* nodecfg.tcl/setNodeCoords
@@ -1945,20 +1552,13 @@ proc getNodeCoords { node } {
 #   * node -- node id
 #   * coords -- coordinates of the node's icon in form of {Xcoord Ycoord}
 #****
-proc setNodeCoords { node coords } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
+proc setNodeCoords { node_id coords } {
     foreach c $coords {
 	set x [expr round($c)]
 	lappend roundcoords $x
     }
 
-    set i [lsearch [set $node] "iconcoords *"]
-    if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i "iconcoords {$roundcoords}"]
-    } else {
-	set $node [linsert [set $node] end "iconcoords {$roundcoords}"]
-    }
+    cfgSet "nodes" $node_id "iconcoords" $roundcoords
 }
 
 #****f* nodecfg.tcl/getNodeLabelCoords
@@ -1973,10 +1573,8 @@ proc setNodeCoords { node coords } {
 # RESULT
 #   * coords -- coordinates of the node's label in form of {Xcoord Ycoord}
 #****
-proc getNodeLabelCoords { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    return [lindex [lsearch -inline [set $node] "labelcoords *"] 1]
+proc getNodeLabelCoords { node_id } {
+    return [cfgGet "nodes" $node_id "labelcoords"]
 }
 
 #****f* nodecfg.tcl/setNodeLabelCoords
@@ -1990,20 +1588,13 @@ proc getNodeLabelCoords { node } {
 #   * node -- node id
 #   * coords -- coordinates of the node's label in form of Xcoord Ycoord
 #****
-proc setNodeLabelCoords { node coords } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
+proc setNodeLabelCoords { node_id coords } {
     foreach c $coords {
 	set x [expr round($c)]
 	lappend roundcoords $x
     }
 
-    set i [lsearch [set $node] "labelcoords *"]
-    if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i "labelcoords {$roundcoords}"]
-    } else {
-	set $node [linsert [set $node] end "labelcoords {$roundcoords}"]
-    }
+    cfgSet "nodes" $node_id "labelcoords" $roundcoords
 }
 
 #****f* nodecfg.tcl/getNodeCPUConf
@@ -2018,10 +1609,8 @@ proc setNodeLabelCoords { node coords } {
 # RESULT
 #   * conf -- node's CPU scheduling parameters { minp maxp weight }
 #****
-proc getNodeCPUConf { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    return [join [lrange [lsearch -inline [set $node] "cpu *"] 1 3]]
+proc getNodeCPUConf { node_id } {
+    return [cfgGet "nodes" $node_id "cpu"]
 }
 
 #****f* nodecfg.tcl/setNodeCPUConf
@@ -2035,49 +1624,16 @@ proc getNodeCPUConf { node } {
 #   * node -- node id
 #   * param_list -- node's CPU scheduling parameters { minp maxp weight }
 #****
-proc setNodeCPUConf { node param_list } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set i [lsearch [set $node] "cpu *"]
-    if { $i >= 0 } {
-	if { $param_list != "{}" } {
-	    set $node [lreplace [set $node] $i $i "cpu $param_list"]
-	} else {
-	    set $node [lreplace [set $node] $i $i]
-	}
-    } else {
-	if { $param_list != "{}" } {
-	    set $node [linsert [set $node] 1 "cpu $param_list"]
-	}
-    }
+proc setNodeCPUConf { node_id param_list } {
+    cfgSet "nodes" $node_id "cpu" $param_list
 }
 
-proc getAutoDefaultRoutesStatus { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set res [lsearch -inline [set $node] "auto_default_routes *"]
-    if { $res == "" } {
-	return "disabled"
-    }
-
-    return [lindex $res 1]
+proc getAutoDefaultRoutesStatus { node_id } {
+    return [cfgGetWithDefault "enabled" "nodes" $node_id "auto_default_routes"]
 }
 
-proc setAutoDefaultRoutesStatus { node state } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set i [lsearch [set $node] "auto_default_routes *"]
-    if { $state == "enabled" } {
-	if { $i >= 0 } {
-	    set $node [lreplace [set $node] $i $i "auto_default_routes $state"]
-	} else {
-	    set $node [linsert [set $node] end "auto_default_routes $state"]
-	}
-    } else {
-	if { $i >= 0 } {
-	    set $node [lreplace [set $node] $i $i]
-	}
-    }
+proc setAutoDefaultRoutesStatus { node_id state } {
+    cfgSet "nodes" $node_id "auto_default_routes" $state
 }
 
 #****f* nodecfg.tcl/ifcList
@@ -2092,14 +1648,8 @@ proc setAutoDefaultRoutesStatus { node state } {
 # RESULT
 #   * interfaces -- list of all node's interfaces
 #****
-proc ifcList { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set interfaces ""
-    foreach entry [lsearch -all -inline [set $node] "interface-peer *"] {
-	lappend interfaces [lindex [lindex $entry 1] 0]
-    }
-    return $interfaces
+proc ifcList { node_id } {
+    return [dict keys [cfgGet "nodes" $node_id "ifaces"]]
 }
 
 #****f* nodecfg.tcl/logIfcList
@@ -2114,20 +1664,8 @@ proc ifcList { node } {
 # RESULT
 #   * interfaces -- list of node's logical interfaces
 #****
-proc logIfcList { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set interfaces ""
-    set netconf [lindex [lsearch -inline [set $node] "network-config *"] 1]
-    foreach line $netconf {
-	if { "interface" in $line } {
-	    set ifc [lindex $line 1]
-	    if {$ifc ni [ifcList $node]} {
-		lappend interfaces $ifc 
-	    }
-	}
-    }
-    return $interfaces
+proc logIfcList { node_id } {
+    return [dict keys [cfgGet "nodes" $node_id "logifaces"]]
 }
 
 #****f* nodecfg.tcl/isIfcLogical
@@ -2143,10 +1681,11 @@ proc logIfcList { node } {
 # RESULT
 #   * check -- true if the interface is logical, otherwise false.
 #****
-proc isIfcLogical { node ifc } {
-    if { $ifc in [logIfcList $node] } {
+proc isIfcLogical { node_id iface } {
+    if { $iface in [logIfcList $node_id] } {
 	return true
     }
+
     return false
 }
 
@@ -2162,128 +1701,39 @@ proc isIfcLogical { node ifc } {
 # RESULT
 #   * interfaces -- list of node's interfaces
 #****
-proc allIfcList { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set interfaces [concat [ifcList $node] [logIfcList $node]]
-    set lo0_pos [lsearch $interfaces lo0]
-    if { $lo0_pos != -1 } {
-	set interfaces "lo0 [lreplace $interfaces $lo0_pos $lo0_pos]"
-    }
-    return $interfaces
-}
-
-#****f* nodecfg.tcl/peerByIfc
-# NAME
-#   peerByIfc -- get node's peer by interface.
-# SYNOPSIS
-#   set peer [peerByIfc $node $ifc]
-# FUNCTION
-#   Returns id of the node on the other side of the interface. If the node on
-#   the other side of the interface is situated on the other canvas or
-#   connected via split link, this function returns a pseudo node.
-# INPUTS
-#   * node -- node id
-#   * ifc -- interface name
-# RESULT
-#   * peer -- node id of the node on the other side of the interface
-#****
-proc peerByIfc { node ifc } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set entry [lsearch -inline [set $node] "interface-peer {$ifc *}"]
-    return [lindex [lindex $entry 1] 1]
+proc allIfcList { node_id } {
+    return [concat [logIfcList $node_id] [ifcList $node_id]]
 }
 
 #****f* nodecfg.tcl/logicalPeerByIfc
 # NAME
 #   logicalPeerByIfc -- get node's peer by interface.
 # SYNOPSIS
-#   set peer [logicalPeerByIfc $node $ifc]
+#   set peer_id [logicalPeerByIfc $node $ifc]
 # FUNCTION
 #   Returns id of the node on the other side of the interface. If the node on
 #   the other side of the interface is connected via normal link (not split)
-#   this function acts the same as the function peerByIfc, but if the nodes
+#   this function acts the same as the function getIfcPeer, but if the nodes
 #   are connected via split links or situated on different canvases this
 #   function returns the logical peer node.
 # INPUTS
 #   * node -- node id
 #   * ifc -- interface name
 # RESULT
-#   * peer -- node id of the node on the other side of the interface
+#   * peer_id -- node id of the node on the other side of the interface
 #****
-proc logicalPeerByIfc { node ifc } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set peer [peerByIfc $node $ifc]
-    if { [nodeType $peer] != "pseudo" } {
-	return $peer
-
+proc logicalPeerByIfc { node_id iface } {
+    set link_id [getIfcLink $node_id $iface]
+    set mirror_link_id [getLinkMirror $link_id]
+    if { $mirror_link_id != "" } {
+	set peer_id [lindex [getLinkPeers $mirror_link_id] 1]
+	set peer_iface [lindex [getLinkPeersIfaces $mirror_link_id] 1]
     } else {
-	set mirror_node [getNodeMirror $peer]
-	set mirror_ifc [ifcList $mirror_node]
-	return [peerByIfc $mirror_node $mirror_ifc]
+	set peer_id [removeFromList [getLinkPeers $link_id] $node_id]
+	set peer_iface [removeFromList [getLinkPeersIfaces $link_id] $iface]
     }
-}
 
-#****f* nodecfg.tcl/ifcByPeer
-# NAME
-#   ifcByPeer -- get node interface by peer.
-# SYNOPSIS
-#   set ifc [peerByIfc $node $peer]
-# FUNCTION
-#   Returns the name of the interface connected to the specified peer. If the
-#   peer node is on different canvas or connected via split link to the
-#   specified node this function returns an empty string.
-# INPUTS
-#   * node -- node id
-#   * peer -- id of the peer node
-# RESULT
-#   * ifc -- interface name
-#****
-proc ifcByPeer { node peer } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set entry [lsearch -inline [set $node] "interface-peer {* $peer}"]
-    return [lindex [lindex $entry 1] 0]
-}
-
-#****f* nodecfg.tcl/ifcByLogicalPeer
-# NAME
-#   ifcByPeer -- get node interface by peer.
-# SYNOPSIS
-#   set ifc [peerByIfc $node $peer]
-# FUNCTION
-#   Returns the name of the interface connected to the specified peer. Returns
-#   the right interface even if the peer node is on the other canvas or
-#   connected via split link.
-# INPUTS
-#   * node -- node id
-#   * peer -- id of the peer node
-# RESULT
-#   * ifc -- interface name
-#****
-proc ifcByLogicalPeer { node peer } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set ifc [ifcByPeer $node $peer]
-    if { $ifc == "" } {
-	#
-	# Must search through pseudo peers
-	#
-	foreach ifc [ifcList $node] {
-	    set t_peer [peerByIfc $node $ifc]
-	    if { [nodeType $t_peer] == "pseudo" } {
-		set mirror [getNodeMirror $t_peer]
-		if { [peerByIfc $mirror [ifcList $mirror]] == $peer } {
-		    return $ifc
-		}
-	    }
-	}
-	return ""
-    } else {
-	return $ifc    
-    }
+    return "$peer_id $peer_iface"
 }
 
 #****f* nodecfg.tcl/hasIPv4Addr
@@ -2300,12 +1750,13 @@ proc ifcByLogicalPeer { node peer } {
 #   * check -- true if at least one interface has an IPv4 address, otherwise
 #     false.
 #****
-proc hasIPv4Addr { node } {
-    foreach ifc [ifcList $node] {
-	if { [getIfcIPv4addr $node $ifc] != "" } {
+proc hasIPv4Addr { node_id } {
+    foreach ifc [ifcList $node_id] {
+	if { [getIfcIPv4addr $node_id $ifc] != "" } {
 	    return true
 	}
     }
+
     return false
 }
 
@@ -2323,9 +1774,9 @@ proc hasIPv4Addr { node } {
 #   * check -- true if at least one interface has an IPv6 address, otherwise
 #     false.
 #****
-proc hasIPv6Addr { node } {
-    foreach ifc [ifcList $node] {
-	if { [getIfcIPv6addr $node $ifc] != "" } {
+proc hasIPv6Addr { node_id } {
+    foreach ifc [ifcList $node_id] {
+	if { [getIfcIPv6addr $node_id $ifc] != "" } {
 	    return true
 	}
     }
@@ -2343,27 +1794,25 @@ proc hasIPv6Addr { node } {
 # INPUTS
 #   * node -- node id
 #****
-proc removeNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc removeNode { node_id } {
     global nodeNamingBase
 
-    if { [getCustomIcon $node] != "" } {
-	removeImageReference [getCustomIcon $node] $node
+    if { [getCustomIcon $node_id] != "" } {
+	removeImageReference [getCustomIcon $node_id] $node_id
     }
 
-    foreach ifc [ifcList $node] {
-	set peer [peerByIfc $node $ifc]
-	set link [linkByPeers $node $peer]
-	removeLink $link
+    foreach iface [ifcList $node_id] {
+	removeLink [linkByPeers $node_id [getIfcPeer $node_id $iface]]
     }
-    set i [lsearch -exact $node_list $node]
-    set node_list [lreplace $node_list $i $i]
 
-    set node_type [nodeType $node]
+    setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $node_id]
+
+    set node_type [getNodeType $node_id]
     if { $node_type in [array names nodeNamingBase] } {
 	recalculateNumType $node_type $nodeNamingBase($node_type)
     }
+
+    cfgUnset "nodes" $node_id
 }
 
 #****f* nodecfg.tcl/getNodeCanvas
@@ -2378,10 +1827,8 @@ proc removeNode { node } {
 # RESULT
 #   * canvas -- canvas id
 #****
-proc getNodeCanvas { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    return [lindex [lsearch -inline [set $node] "canvas *"] 1]
+proc getNodeCanvas { node_id } {
+    return [cfgGet "nodes" $node_id "canvas"]
 }
 
 #****f* nodecfg.tcl/setNodeCanvas
@@ -2395,15 +1842,8 @@ proc getNodeCanvas { node } {
 #   * node -- node id
 #   * canvas -- canvas id
 #****
-proc setNodeCanvas { node canvas } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set i [lsearch [set $node] "canvas *"]
-    if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i "canvas $canvas"]
-    } else {
-	set $node [linsert [set $node] end "canvas $canvas"]
-    }
+proc setNodeCanvas { node_id canvas_id } {
+    cfgSet "nodes" $node_id "canvas" $canvas_id
 }
 
 #****f* nodecfg.tcl/newIfc
@@ -2419,9 +1859,10 @@ proc setNodeCanvas { node canvas } {
 # RESULT
 #   * ifc -- the first available name for a interface of the specified type
 #****
-proc newIfc { type node } {
-    set interfaces [ifcList $node]
+proc newIfc { type node_id } {
+    set interfaces [ifcList $node_id]
     for { set id 0 } { [lsearch -exact $interfaces $type$id] >= 0 } {incr id} {}
+
     return $type$id
 }
 
@@ -2437,9 +1878,10 @@ proc newIfc { type node } {
 #   * type -- interface type
 #   * node -- node id
 #****
-proc newLogIfc { type node } {
-    set interfaces [logIfcList $node]
+proc newLogIfc { type node_id } {
+    set interfaces [logIfcList $node_id]
     for { set id 0 } { [lsearch -exact $interfaces $type$id] >= 0 } {incr id} {}
+
     return $type$id
 }
 
@@ -2456,21 +1898,18 @@ proc newLogIfc { type node } {
 #   * node_id -- node id of a new node of the specified type
 #****
 proc newNode { type } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
     global viewid
-    catch {unset viewid}
-	
-    set node [newObjectId node]
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-    set $node {}
-    lappend $node "type $type"
-    lappend node_list $node
+    catch { unset viewid }
 
-    if {[info procs $type.confNewNode] == "$type.confNewNode"} {
-	$type.confNewNode $node
+    set node_id [newObjectId "node"]
+    setNodeType $node_id $type
+    lappendToRunning "node_list" $node_id
+
+    if { [info procs $type.confNewNode] == "$type.confNewNode" } {
+	$type.confNewNode $node_id
     }
-    
-    return $node
+
+    return $node_id
 }
 
 #****f* nodecfg.tcl/getNodeMirror
@@ -2489,10 +1928,8 @@ proc newNode { type } {
 # RESULT
 #   * mirror_node_id -- node id of a mirror node
 #****
-proc getNodeMirror { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    return [lindex [lsearch -inline [set $node] "mirror *"] 1]
+proc getNodeMirror { node_id } {
+    return [cfgGet "nodes" $node_id "mirror"]
 }
 
 #****f* nodecfg.tcl/setNodeMirror
@@ -2510,15 +1947,8 @@ proc getNodeMirror { node } {
 #   * node -- node id
 #   * value -- node id of a mirror node
 #****
-proc setNodeMirror { node value } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set i [lsearch [set $node] "mirror *"]
-    if { $value == "" } {
-	set $node [lreplace [set $node] $i $i]
-    } else {
-	set $node [linsert [set $node] end "mirror $value"]
-    }
+proc setNodeMirror { node_id value } {
+    cfgSet "nodes" $node_id "mirror" $value
 }
 
 #****f* nodecfg.tcl/getNodeProtocolRip
@@ -2529,18 +1959,16 @@ proc setNodeMirror { node value } {
 # FUNCTION
 #   Checks if node's current protocol is rip.
 # INPUTS
-#   * node -- node id 
+#   * node -- node id
 # RESULT
 #   * check -- 1 if it is rip, otherwise 0
 #****
-proc getNodeProtocolRip { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node    
-	   
-    if { [netconfFetchSection $node "router rip"] != "" } {
-	return 1;
-    } else {	
-	return 0;
-    }	    
+proc getNodeProtocol { node_id protocol } {
+    return [cfgGetWithDefault 0 "nodes" $node_id "router_config" $protocol]
+}
+
+proc setNodeProtocol { node_id protocol state } {
+    cfgSet "nodes" $node_id "router_config" $protocol $state
 }
 
 #****f* nodecfg.tcl/getNodeProtocolRipng
@@ -2555,15 +1983,6 @@ proc getNodeProtocolRip { node } {
 # RESULT
 #   * check -- 1 if it is ripng, otherwise 0
 #****
-proc getNodeProtocolRipng { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node    
-	   
-    if { [netconfFetchSection $node "router ripng"] != "" } {
-	return 1;
-    } else {	
-	return 0;
-    }	    
-}
 
 #****f* nodecfg.tcl/getNodeProtocolOspfv2
 # NAME
@@ -2577,224 +1996,155 @@ proc getNodeProtocolRipng { node } {
 # RESULT
 #   * check -- 1 if it is ospfv2, otherwise 0
 #****
-proc getNodeProtocolOspfv2 { node } { 
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    if { [netconfFetchSection $node "router ospf"] != ""} {	
-	return 1;
-    } else {	
-	return 0;
-    }	
-}
 
 #****f* nodecfg.tcl/getNodeProtocolOspfv3
 # NAME
 #   getNodeProtocolOspfv3
 # SYNOPSIS
-#   getNodeProtocolOspfv3 $node
+#   getNodeProtocolOspfv3 $node_id
 # FUNCTION
 #   Checks if node's current protocol is ospfv3.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 # RESULT
 #   * check -- 1 if it is ospfv3, otherwise 0
 #****
-proc getNodeProtocolOspfv3 { node } { 
-    upvar 0 ::cf::[set ::curcfg]::$node $node
 
-    if { [netconfFetchSection $node "router ospf6"] != ""} {	
-	return 1;
-    } else {	
-	return 0;
-    }	
-}
+proc getRouterInterfaceCfg { node_id iface } {
+    set ospf_enabled [getNodeProtocol $node_id "ospf"]
+    set ospf6_enabled [getNodeProtocol $node_id "ospf6"]
 
-#****f* nodecfg.tcl/setNodeProtocolRip
-# NAME
-#   setNodeProtocolRip
-# SYNOPSIS
-#   setNodeProtocolRip $node $ripEnable
-# FUNCTION
-#   Sets node's protocol to rip.
-# INPUTS
-#   * node -- node id
-#   * ripEnable -- 1 if enabling rip, 0 if disabling 
-#****
-proc setNodeProtocolRip { node ripEnable } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node    
-	   
-    if { $ripEnable == 1 } {
-	netconfInsertSection $node [list "router rip" \
-		" redistribute static" \
-		" redistribute connected" \
-		" redistribute ospf" \
-		" network 0.0.0.0/0" \
-		! ]
-    } else {	
-	netconfClearSection $node "router rip"	
-    }	    
-}
+    set cfg {}
 
-#****f* nodecfg.tcl/setNodeProtocolRipng
-# NAME
-#   setNodeProtocolRipng
-# SYNOPSIS
-#   setNodeProtocolRipng $node $ripngEnable
-# FUNCTION
-#   Sets node's protocol to ripng.
-# INPUTS
-#   * node -- node id
-#   * ripngEnable -- 1 if enabling ripng, 0 if disabling 
-#****
-proc setNodeProtocolRipng { node ripngEnable } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node    
-	   
-    if { $ripngEnable == 1 } {
-	netconfInsertSection $node [list "router ripng" \
-		" redistribute static" \
-		" redistribute connected" \
-		" redistribute ospf6" \
-		" network ::/0" \
-		! ]
-    } else {	
- 	netconfClearSection $node "router ripng"	
-    }	    
-}
+    set model [getNodeModel $node_id]
+    switch -exact -- $model {
+	"quagga" -
+	"frr" {
+	    lappend cfg "interface $iface"
 
-#****f* nodecfg.tcl/setNodeProtocolOspfv2
-# NAME
-#   setNodeProtocolOspfv2
-# SYNOPSIS
-#   setNodeProtocolOspfv2 $node $ospfEnable
-# FUNCTION
-#   Sets node's protocol to ospf.
-# INPUTS
-#   * node -- node id
-#   * ospfEnable -- 1 if enabling ospf, 0 if disabling
-#****
-proc setNodeProtocolOspfv2 { node ospfEnable } { 
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+	    set addrs [getIfcIPv4addrs $node_id $iface]
+	    foreach addr $addrs {
+		if { $addr != "" } {
+		    lappend cfg " ip address $addr"
+		}
+	    }
 
-    if { $ospfEnable == 1 } {
-	netconfInsertSection $node [list "router ospf" \
-		" redistribute static" \
-		" redistribute connected" \
-		" redistribute rip" \
-		" network 0.0.0.0/0 area 0.0.0.0" \
-		! ]
-    } else {
-	netconfClearSection $node "router ospf"
-    }
-}
+	    if { $ospf_enabled } {
+		if { ! [isIfcLogical $node_id $iface] } {
+		    lappend cfg " ip ospf area 0.0.0.0"
+		}
+	    }
 
-#****f* nodecfg.tcl/setNodeProtocolOspfv3
-# NAME
-#   setNodeProtocolOspfv3
-# SYNOPSIS
-#   setNodeProtocolOspfv3 $node $ospf6Enable
-# FUNCTION
-#   Sets node's protocol to Ospfv3.
-# INPUTS
-#   * node -- node id
-#   * ospf6Enable -- 1 if enabling ospf6, 0 if disabling
-#****
-proc setNodeProtocolOspfv3 { node ospf6Enable } { 
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+	    set addrs [getIfcIPv6addrs $node_id $iface]
+	    foreach addr $addrs {
+		if { $addr != "" } {
+		    lappend cfg " ipv6 address $addr"
+		}
+	    }
 
-    set router_id [ip::intToString [expr 1 + [string trimleft $node "n"]]]
+	    if { $model == "frr" && $ospf6_enabled } {
+		if { ! [isIfcLogical $node_id $iface] } {
+		    lappend cfg " ipv6 ospf6 area 0.0.0.0"
+		}
+	    }
 
-    set area_string "area 0.0.0.0 range ::/0"
-    if { [getNodeModel $node] == "quagga" } {
-	set area_string "network ::/0 area 0.0.0.0"
+	    if { [getIfcOperState $node_id $iface] == "down" } {
+		lappend cfg " shutdown"
+	    }
+
+	    lappend cfg "!"
+	}
+	"static" {
+	}
     }
 
-    if { $ospf6Enable == 1 } {
-	netconfInsertSection $node [list "router ospf6" \
-		" ospf6 router-id $router_id" \
-		" redistribute static" \
-		" redistribute connected" \
-		" redistribute ripng" \
-		" $area_string" \
-		! ]
-    } else {
-	netconfClearSection $node "router ospf6"
+    return $cfg
+}
+
+proc getRouterProtocolCfg { node_id protocol } {
+    if { [getNodeProtocol $node_id $protocol] == 0 } {
+	return ""
     }
+
+    set cfg {}
+
+    set model [getNodeModel $node_id]
+    switch -exact -- $model {
+	"quagga" -
+	"frr" {
+	    set router_id [ip::intToString [expr 1 + [string trimleft $node_id "n"]]]
+	    switch -exact -- $protocol {
+		"rip" {
+		    set cfg [list "router rip" \
+			" redistribute static" \
+			" redistribute connected" \
+			" redistribute ospf" \
+			" network 0.0.0.0/0" \
+			! ]
+		}
+		"ripng" {
+		    set cfg [list "router ripng" \
+			" redistribute static" \
+			" redistribute connected" \
+			" redistribute ospf6" \
+			" network ::/0" \
+			! ]
+		}
+		"ospf" {
+		    set cfg [list "router ospf" \
+			" ospf router-id $router_id" \
+			" redistribute static" \
+			" redistribute connected" \
+			" redistribute rip" \
+			! ]
+		}
+		"ospf6" {
+		    if { $model == "quagga" } {
+			set id_string "router-id $router_id"
+			#set area_string "network ::/0 area 0.0.0.0"
+		    } else {
+			set id_string "ospf6 router-id $router_id"
+			#set area_string "area 0.0.0.0 range ::/0"
+		    }
+
+		    set cfg [list "router ospf6" \
+			" $id_string" \
+			" redistribute static" \
+			" redistribute connected" \
+			" redistribute ripng" \
+			]
+
+		    if { $model == "quagga" } {
+			foreach iface [ifcList $node_id] {
+			    lappend cfg " interface $iface area 0.0.0.0"
+			}
+		    }
+
+		    lappend cfg "!"
+		}
+	    }
+	}
+	"static" {
+	    # nothing to return
+	}
+    }
+
+    return $cfg
 }
 
 #****f* nodecfg.tcl/setNodeType
 # NAME
 #   setNodeType -- set node's type.
 # SYNOPSIS
-#   setNodeType $node $newtype
-# FUNCTION
-#   Sets node's type and configuration. Conversion is possible between router
-#   on the one side, and the pc or host on the other side.
-# INPUTS
-#   * node -- node id
-#   * newtype -- new type of node
-#****
-proc setNodeType { node newtype } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-    global ripEnable ripngEnable ospfEnable ospf6Enable changeAddressRange \
-     changeAddressRange6
-    
-    set oldtype [nodeType $node]
-    if { [lsearch "rj45 hub lanswitch" $newtype] >= 0 } {
-	return
-    }
-    if { [lsearch "rj45 hub lanswitch" $oldtype] >= 0 } {
-	return
-    }
-    if { $oldtype == "router" && [lsearch "pc host" $newtype] >= 0 } {
-	setType $node $newtype
-	set i [lsearch [set $node] "model *"]
-	set $node [lreplace [set $node] $i $i]
-	setNodeName $node $newtype[string range $node 1 end]
-	setNodeProtocolRip $node 0
-	setNodeProtocolRipng $node 0
-	setNodeProtocolOspfv2 $node 0
-	setNodeProtocolOspfv3 $node 0
-	set interfaces [ifcList $node]
-	foreach ifc $interfaces {
-	    set changeAddressRange 0
-	    set changeAddressRange6 0
-	    autoIPv4addr $node $ifc
-	    autoIPv6addr $node $ifc
-	}
-    } elseif { [lsearch "host pc" $oldtype] >= 0 \
-	    && $newtype == "router" } {
-	setType $node $newtype
-	setNodeModel $node "frr"
-	setNodeName $node $newtype[string range $node 1 end]
-	netconfClearSection $node "ip route *"
-	netconfClearSection $node "ipv6 route *"
-	setNodeProtocolRip $node $ripEnable
-	setNodeProtocolRipng $node $ripngEnable
-	setNodeProtocolOspfv2 $node $ospfEnable 
-	setNodeProtocolOspfv3 $node $ospf6Enable 
-    }
-}
-
-#****f* nodecfg.tcl/setType
-# NAME
-#   setType -- set node's type.
-# SYNOPSIS
-#   setType $node $type
+#   setNodeType $node $type
 # FUNCTION
 #   Sets node's type.
 # INPUTS
 #   * node -- node id
 #   * type -- type of node
 #****
-proc setType { node type } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set i [lsearch [set $node] "type *"]
-    if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i "type $type"]
-    } else {
-	set $node [linsert [set $node] 1 "type $type"]
-    }
+proc setNodeType { node_id type } {
+    cfgSet "nodes" $node_id "type" $type
 }
 
 #****f* nodecfg.tcl/setCloudParts
@@ -2808,15 +2158,8 @@ proc setType { node type } {
 #   * node -- node id
 #   * nr_parts -- cloud parts
 #****
-proc setCloudParts { node nr_parts } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set i [lsearch [set $node] "num_parts *"]
-    if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i "num_parts $nr_parts"]
-    } else {
-	set $node [linsert [set $node] end "num_parts $nr_parts"];
-    }
+proc setCloudParts { node_id num_parts } {
+    cfgSet "nodes" $node_id "num_parts" $num_parts
 }
 
 #****f* nodecfg.tcl/getCloudParts
@@ -2831,11 +2174,8 @@ proc setCloudParts { node nr_parts } {
 # RESULT
 #   * part -- cloud parts
 #****
-proc getCloudParts { node } {
-  upvar 0 ::cf::[set ::curcfg]::$node $node
-
-  set part [lindex [lsearch -inline [set $node] "num_parts *"] 1];
-  return $part;
+proc getCloudParts { node_id } {
+    return [cfgGet "node" $node_id "num_parts"]
 }
 
 #****f* nodecfg.tcl/registerModule
@@ -2850,6 +2190,7 @@ proc getCloudParts { node } {
 #****
 proc registerModule { module } {
     global all_modules_list
+
     lappend all_modules_list $module
 }
 
@@ -2865,8 +2206,8 @@ proc registerModule { module } {
 #****
 proc deregisterModule { module } {
     global all_modules_list
-    set ind [lsearch $all_modules_list $module]
-    set all_modules_list [lreplace $all_modules_list $ind $ind]
+
+    set all_modules_list [removeFromList $all_modules_list $module]
 }
 
 #****f* nodecfg.tcl/getIfcVlanDev
@@ -2882,12 +2223,8 @@ proc deregisterModule { module } {
 # RESULT
 #   * tag -- interfaces's vlan-dev
 #****
-proc getIfcVlanDev { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] == "vlan-dev" } {
-	    return [lindex $line 1]
-	}
-    }
+proc getIfcVlanDev { node_id iface } {
+    return [cfgGet "nodes" $node_id "logifaces" $iface "vlan_dev"]
 }
 
 #****f* nodecfg.tcl/setIfcVlanDev
@@ -2902,17 +2239,8 @@ proc getIfcVlanDev { node ifc } {
 #   * ifc -- interface name
 #   * dev -- vlan-dev
 #****
-proc setIfcVlanDev { node ifc dev } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] != "vlan-dev" } {
-	    lappend ifcfg $line
-	}
-    }
-    if { $dev in [ifcList $node] } {
-	lappend ifcfg " vlan-dev $dev"
-    }
-    netconfInsertSection $node $ifcfg
+proc setIfcVlanDev { node_id iface dev } {
+    cfgSet "nodes" $node_id "logifaces" $iface "vlan_dev" $dev
 }
 
 #****f* nodecfg.tcl/getIfcVlanTag
@@ -2928,12 +2256,8 @@ proc setIfcVlanDev { node ifc dev } {
 # RESULT
 #   * tag -- interfaces's vlan-tag
 #****
-proc getIfcVlanTag { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] == "vlan-tag" } {
-	    return [lindex $line 1]
-	}
-    }
+proc getIfcVlanTag { node_id iface } {
+    return [cfgGet "nodes" $node_id "logifaces" $iface "vlan_tag"]
 }
 
 #****f* nodecfg.tcl/setIfcVlanTag
@@ -2948,39 +2272,8 @@ proc getIfcVlanTag { node ifc } {
 #   * ifc -- interface name
 #   * dev -- vlan-tag
 #****
-proc setIfcVlanTag { node ifc tag } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lindex $line 0] != "vlan-tag" } {
-	    lappend ifcfg $line
-	}
-    }
-    if { $tag >= 1 && $tag <= 4094 } {
-	lappend ifcfg " vlan-tag $tag"
-    }
-    netconfInsertSection $node $ifcfg
-}
-
-#****f* nodecfg.tcl/setEtherVlanEnabled
-# NAME
-#   setEtherVlanEnabled -- set node rj45 vlan.
-# SYNOPSIS
-#   setEtherVlanEnabled $node $value
-# FUNCTION
-#   Sets rj45 node vlan setting.
-# INPUTS
-#   * node -- node id
-#   * value -- vlan enabled
-#****
-proc setEtherVlanEnabled { node value } {
-    set vlancfg [list "vlan"]
-    lappend vlancfg " enabled $value"
-    foreach line [netconfFetchSection $node "vlan"] {
-	if { [lindex $line 0] != "enabled" } {
-	    lappend vlancfg $line
-	}
-    }
-    netconfInsertSection $node $vlancfg
+proc setIfcVlanTag { node_id iface tag } {
+    cfgSet "nodes" $node_id "logifaces" $iface "vlan_tag" $tag
 }
 
 #****f* nodecfg.tcl/getEtherVlanEnabled
@@ -2995,35 +2288,23 @@ proc setEtherVlanEnabled { node value } {
 # RESULT
 #   * value -- vlan enabled
 #****
-proc getEtherVlanEnabled { node } {
-    foreach line [netconfFetchSection $node "vlan"] {
-	if { [lindex $line 0] == "enabled" } {
-	    return [lindex $line 1]
-	}
-    }
-    return 0
+proc getEtherVlanEnabled { node_id } {
+    return [cfgGetWithDefault 0 "nodes" $node_id "vlan" "enabled"]
 }
 
-#****f* nodecfg.tcl/setEtherVlanTag
+#****f* nodecfg.tcl/setEtherVlanEnabled
 # NAME
-#   setEtherVlanTag -- set node rj45 vlan tag.
+#   setEtherVlanEnabled -- set node rj45 vlan.
 # SYNOPSIS
-#   setEtherVlanTag $node $value
+#   setEtherVlanEnabled $node $value
 # FUNCTION
-#   Sets rj45 node vlan tag.
+#   Sets rj45 node vlan setting.
 # INPUTS
 #   * node -- node id
-#   * value -- vlan tag
+#   * value -- vlan enabled
 #****
-proc setEtherVlanTag { node value } {
-    set vlancfg [list "vlan"]
-    foreach line [netconfFetchSection $node "vlan"] {
-	if { [lindex $line 0] != "tag" } {
-	    lappend vlancfg $line
-	}
-    }
-    lappend vlancfg " tag $value"
-    netconfInsertSection $node $vlancfg
+proc setEtherVlanEnabled { node_id state } {
+    cfgSet "nodes" $node_id "vlan" "enabled" $state
 }
 
 #****f* nodecfg.tcl/getEtherVlanTag
@@ -3038,12 +2319,23 @@ proc setEtherVlanTag { node value } {
 # RESULT
 #   * value -- vlan tag
 #****
-proc getEtherVlanTag { node } {
-    foreach line [netconfFetchSection $node "vlan"] {
-	if { [lindex $line 0] == "tag" } {
-	    return [lindex $line 1]
-	}
-    }
+proc getEtherVlanTag { node_id } {
+    return [cfgGetWithDefault 1 "nodes" $node_id "vlan" "tag"]
+}
+
+#****f* nodecfg.tcl/setEtherVlanTag
+# NAME
+#   setEtherVlanTag -- set node rj45 vlan tag.
+# SYNOPSIS
+#   setEtherVlanTag $node $value
+# FUNCTION
+#   Sets rj45 node vlan tag.
+# INPUTS
+#   * node -- node id
+#   * value -- vlan tag
+#****
+proc setEtherVlanTag { node_id tag } {
+    cfgSet "nodes" $node_id "vlan" "tag" $tag
 }
 
 #****f* nodecfg.tcl/getNodeServices
@@ -3058,10 +2350,8 @@ proc getEtherVlanTag { node } {
 # RESULT
 #   * services -- active services
 #****
-proc getNodeServices { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    return [lindex [lsearch -inline [set $node] "services *"] 1]
+proc getNodeServices { node_id } {
+    return [cfgGet "nodes" $node_id "services"]
 }
 
 #****f* nodecfg.tcl/setNodeServices
@@ -3075,15 +2365,8 @@ proc getNodeServices { node } {
 #   * node -- node id
 #   * services -- list of services
 #****
-proc setNodeServices { node services } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set i [lsearch [set $node] "services *"]
-    if { $i >= 0 } {
-        set $node [lreplace [set $node] $i $i "services {$services}"]
-    } else {
-        set $node [linsert [set $node] end "services {$services}"]
-    }
+proc setNodeServices { node_id services } {
+    cfgSet "nodes" $node_id "services" $services
 }
 
 #****f* nodecfg.tcl/getNodeCustomImage
@@ -3098,10 +2381,8 @@ proc setNodeServices { node services } {
 # RESULT
 #   * status -- custom image identifier
 #****
-proc getNodeCustomImage { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    return [lindex [lsearch -inline [set $node] "custom-image *"] 1]
+proc getNodeCustomImage { node_id } {
+    return [cfgGet "nodes" $node_id "custom_image"]
 }
 
 #****f* nodecfg.tcl/setNodeCustomImage
@@ -3115,16 +2396,8 @@ proc getNodeCustomImage { node } {
 #   * node -- node id
 #   * img -- image identifier
 #****
-proc setNodeCustomImage { node img } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set i [lsearch [set $node] "custom-image *"]
-    if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i]
-    }
-    if { $img != "" } {
-	lappend $node [list custom-image $img]
-    }
+proc setNodeCustomImage { node_id img } {
+    cfgSet "nodes" $node_id "custom_image" $img
 }
 
 #****f* nodecfg.tcl/getNodeDockerAttach
@@ -3139,14 +2412,8 @@ proc setNodeCustomImage { node img } {
 # RESULT
 #   * status -- attach enabled
 #****
-proc getNodeDockerAttach { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    if { [lindex [lsearch -inline [set $node] "docker-attach *"] 1] == true } {
-	return true
-    } else {
-	return false
-    }
+proc getNodeDockerAttach { node_id } {
+    return [cfgGetWithDefault "false" "nodes" $node_id "docker_attach"]
 }
 
 #****f* nodecfg.tcl/setNodeDockerAttach
@@ -3160,16 +2427,8 @@ proc getNodeDockerAttach { node } {
 #   * node -- node id
 #   * enabled -- attach status
 #****
-proc setNodeDockerAttach { node enabled } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set i [lsearch [set $node] "docker-attach *"]
-    if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i]
-    }
-    if { $enabled == true } {
-	lappend $node [list docker-attach $enabled]
-    }
+proc setNodeDockerAttach { node_id state } {
+    cfgSet "nodes" $node_id "docker_attach" $state
 }
 
 #****f* nodecfg.tcl/registerRouterModule
@@ -3184,6 +2443,7 @@ proc setNodeDockerAttach { node enabled } {
 #****
 proc registerRouterModule { module } {
     global router_modules_list
+
     lappend router_modules_list $module
 }
 
@@ -3197,11 +2457,13 @@ proc registerRouterModule { module } {
 # INPUTS
 #   * node -- node to check
 #****
-proc isNodeRouter { node } {
+proc isNodeRouter { node_id } {
     global router_modules_list
-    if { [nodeType $node] in $router_modules_list } {
+
+    if { [getNodeType $node_id] in $router_modules_list } {
 	return 1
     }
+
     return 0
 }
 
@@ -3218,21 +2480,18 @@ proc isNodeRouter { node } {
 # RESULT
 #   * value -- interface IPv4 configuration script
 #****
-proc nodeCfggenIfcIPv4 { node } {
+proc nodeCfggenIfcIPv4 { node_id } {
     set cfg {}
-    foreach ifc [allIfcList $node] {
+    foreach ifc [allIfcList $node_id] {
 	set primary 1
-	foreach addr [getIfcIPv4addrs $node $ifc] {
+	foreach addr [getIfcIPv4addrs $node_id $ifc] {
 	    if { $addr != "" } {
-		if { $primary } {
-		    lappend cfg [getIPv4IfcCmd $ifc $addr $primary]
-		    set primary 0
-		} else {
-		    lappend cfg [getIPv4IfcCmd $ifc $addr $primary]
-		}
+		lappend cfg [getIPv4IfcCmd $ifc $addr $primary]
+		set primary 0
 	    }
 	}
     }
+
     return $cfg
 }
 
@@ -3249,21 +2508,18 @@ proc nodeCfggenIfcIPv4 { node } {
 # RESULT
 #   * value -- interface IPv6 configuration script
 #****
-proc nodeCfggenIfcIPv6 { node } {
+proc nodeCfggenIfcIPv6 { node_id } {
     set cfg {}
-    foreach ifc [allIfcList $node] {
+    foreach ifc [allIfcList $node_id] {
 	set primary 1
-	foreach addr [getIfcIPv6addrs $node $ifc] {
-	    if { $addr != "" } { 
-		if { $primary } {
-		    lappend cfg [getIPv6IfcCmd $ifc $addr $primary]
-		    set primary 0
-		} else {
-		    lappend cfg [getIPv6IfcCmd $ifc $addr $primary]
-		}
+	foreach addr [getIfcIPv6addrs $node_id $ifc] {
+	    if { $addr != "" } {
+		lappend cfg [getIPv6IfcCmd $ifc $addr $primary]
+		set primary 0
 	    }
 	}
     }
+
     return $cfg
 }
 
@@ -3279,17 +2535,19 @@ proc nodeCfggenIfcIPv6 { node } {
 # RESULT
 #   * value -- route IPv4 configuration script
 #****
-proc nodeCfggenRouteIPv4 { node } {
+proc nodeCfggenRouteIPv4 { node_id } {
     set cfg {}
-    foreach statrte [getStatIPv4routes $node] {
+    foreach statrte [getStatIPv4routes $node_id] {
 	lappend cfg [getIPv4RouteCmd $statrte]
     }
-    if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
-	foreach statrte [getDefaultIPv4routes $node] {
+
+    if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
+	foreach statrte [getDefaultIPv4routes $node_id] {
 	    lappend cfg [getIPv4RouteCmd $statrte]
 	}
-	setDefaultIPv4routes $node {}
+	setDefaultIPv4routes $node_id {}
     }
+
     return $cfg
 }
 
@@ -3305,17 +2563,19 @@ proc nodeCfggenRouteIPv4 { node } {
 # RESULT
 #   * value -- route IPv6 configuration script
 #****
-proc nodeCfggenRouteIPv6 { node } {
+proc nodeCfggenRouteIPv6 { node_id } {
     set cfg {}
-    foreach statrte [getStatIPv6routes $node] {
+    foreach statrte [getStatIPv6routes $node_id] {
 	lappend cfg [getIPv6RouteCmd $statrte]
     }
-    if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
-	foreach statrte [getDefaultIPv6routes $node] {
+
+    if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
+	foreach statrte [getDefaultIPv6routes $node_id] {
 	    lappend cfg [getIPv6RouteCmd $statrte]
 	}
-	setDefaultIPv6routes $node {}
+	setDefaultIPv6routes $node_id {}
     }
+
     return $cfg
 }
 
@@ -3333,13 +2593,13 @@ proc nodeCfggenRouteIPv6 { node } {
 #   * list -- list of all nodes of the type
 #****
 proc getAllNodesType { type } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
     set type_list ""
-    foreach node $node_list {
-	if { [string match "$type*" [typemodel $node]] } {
-	    lappend type_list $node
+    foreach node_id [getFromRunning "node_list"] {
+	if { [string match "$type*" [typemodel $node_id]] } {
+	    lappend type_list $node_id
 	}
     }
+
     return $type_list
 }
 
@@ -3361,11 +2621,12 @@ proc getNewNodeNameType { type namebase } {
 
     #if the variable pcnodes isn't set we need to check through all the nodes
     #to assign a non duplicate name
-    if {! [info exists num$type] } {
+    if { ! [info exists num$type] } {
 	recalculateNumType $type $namebase
     }
 
     incr num$type
+
     return $namebase[set num$type]
 }
 
@@ -3384,9 +2645,9 @@ proc recalculateNumType { type namebase } {
     upvar 0 ::cf::[set ::curcfg]::num$type num$type
 
     set num$type 0
-    foreach n [getAllNodesType $type] {
-	set name [getNodeName $n]
-	if {[string match "$namebase*" $name]} {
+    foreach node_id [getAllNodesType $type] {
+	set name [getNodeName $node_id]
+	if { [string match "$namebase*" $name] } {
 	    set rest [string trimleft $name $namebase]
 	    if { [string is integer $rest] && $rest > [set num$type] } {
 		set num$type $rest
@@ -3397,58 +2658,49 @@ proc recalculateNumType { type namebase } {
 
 #****f* nodecfg.tcl/transformNodes
 # NAME
-#   transformNode -- transform nodes
+#   transformNodes -- change nodes' types
 # SYNOPSIS
-#   transformNodes $type $namebase
+#   transformNodes $nodes $to_type
 # FUNCTION
-#   Returns a new node name for the type and namebase, e.g. pc0 for pc.
+#   Changes nodes' type and configuration. Conversion is possible between router
+#   on the one side, and the pc or host on the other side.
 # INPUTS
-#   * type -- node type
-#   * namebase -- base for the node name
-# RESULT
-#   * name -- new node name to be assigned
+#   * nodes -- node ids
+#   * to_type -- new type of node
 #****
-proc transformNodes { nodes type } {
-    foreach node $nodes {
-	if { [[typemodel $node].layer] == "NETWORK" } {
-	    upvar 0 ::cf::[set ::curcfg]::$node nodecfg
-	    global changed
+proc transformNodes { nodes to_type } {
+    global routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable
+    global rdconfig routerDefaultsModel
+    global changed
 
-	    if { $type == "pc" || $type == "host" } {
-		# replace type
-		set typeIndex [lsearch $nodecfg "type *"]
-		set nodecfg [lreplace $nodecfg $typeIndex $typeIndex "type $type" ]
-		# if router, remove model
-		set modelIndex [lsearch $nodecfg "model *"]
-		set nodecfg [lreplace $nodecfg $modelIndex $modelIndex]
+    lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable
 
-		# delete router stuff in netconf
-		foreach model "rip ripng ospf ospf6" {
-		    netconfClearSection $node "router $model"
+    foreach node_id $nodes {
+	if { [[typemodel $node_id].layer] == "NETWORK" } {
+	    set from_type [getNodeType $node_id]
+
+	    # replace type
+	    setNodeType $node_id $to_type
+
+	    if { $to_type == "pc" || $to_type == "host" } {
+		if { $from_type == "router" } {
+		    setNodeModel $node_id {}
+		    cfgUnset "nodes" $node_id "router_config"
 		}
 
 		set changed 1
-	    } elseif { [nodeType $node] != "router" && $type == "router" } {
-		# replace type
-		set typeIndex [lsearch $nodecfg "type *"]
-		set nodecfg [lreplace $nodecfg $typeIndex $typeIndex "type $type"]
-
-		# set router model and default protocols
-		setNodeModel $node "frr"
-		setNodeProtocolRip $node 1
-		setNodeProtocolRipng $node 1
-		# clear default static routes
-		netconfClearSection $node "ip route [lindex [getStatIPv4routes $node] 0]"
-		netconfClearSection $node "ipv6 route [lindex [getStatIPv6routes $node] 0]"
+	    } elseif { $from_type != "router" && $to_type == "router" } {
+		setNodeModel $node_id $routerDefaultsModel
+		if { $routerDefaultsModel != "static" } {
+		    setNodeProtocol $node_id "rip" $ripEnable
+		    setNodeProtocol $node_id "ripng" $ripngEnable
+		    setNodeProtocol $node_id "ospf" $ospfEnable
+		    setNodeProtocol $node_id "ospf6" $ospf6Enable
+		}
 
 		set changed 1
 	    }
 	}
-    }
-
-    if { $changed == 1 } {
-	redrawAll
-	updateUndoLog
     }
 }
 

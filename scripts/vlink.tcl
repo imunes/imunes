@@ -178,7 +178,7 @@ proc applyLinkSettingsLinux { bandwidth loss delay dup nodename eid ldata } {
     catch {eval "exec ip netns exec $eid tc qdisc change dev $fullname root netem [join $cfg " "]"}
 }
 
-# apply settings on FreeBSD 
+# apply settings on FreeBSD
 proc applyLinkSettingsFreeBSD { bandwidth ber delay dup eid lid } {
     # build the config that should be applied
     append config "{ "
@@ -323,7 +323,7 @@ if { $params(r) } {
     set BER 0
     set loss 0
     set dup 0
-    incr check    
+    incr check
 }
 
 set linkDelim ":"
@@ -473,7 +473,7 @@ switch [llength $containing_exps] {
 		foreach node $nodes {
 		    # get data for linux links
 		    set node_data [lindex [lindex [dict get $ldata $lid] 1] $i]
-		    
+
 		    # get the current status
 		    set curr_set [getLinuxLinkStatus $node $eid $node_data]
 		    # if link status was specified, just output and exit

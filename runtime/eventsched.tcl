@@ -34,13 +34,12 @@
 #   Starts event scheduling.
 #****
 proc startEventScheduling {} {
-    upvar 0 ::cf::[set ::curcfg]::stop_sched stop_sched
-    upvar 0 ::cf::[set ::curcfg]::sched_init_done sched_init_done
-    set sched_init_done 0
-    set stop_sched false
+    setToRunning "sched_init_done" 0
+    setToRunning "stop_sched" false
+
     .menubar.events entryconfigure "Start scheduling" -state disabled
     .menubar.events entryconfigure "Stop scheduling" -state normal
-    .bottom.cpu_load config -text "0" 
+    .bottom.cpu_load config -text "0"
     evsched
 }
 
@@ -53,8 +52,8 @@ proc startEventScheduling {} {
 #   Stops event scheduling.
 #****
 proc stopEventScheduling {} {
-    upvar 0 ::cf::[set ::curcfg]::stop_sched stop_sched
-    set stop_sched true
+    setToRunning "stop_sched" true
+
     .menubar.events entryconfigure "Start scheduling" -state normal
     .menubar.events entryconfigure "Stop scheduling" -state disabled
 }
@@ -69,40 +68,38 @@ proc stopEventScheduling {} {
 #****
 proc evsched {} {
     global evlogfile
+
     # XXX eid should be arg to evsched()
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    upvar 0 ::cf::[set ::curcfg]::sched_init_done sched_init_done
-    upvar 0 ::cf::[set ::curcfg]::event_t0 event_t0
-    upvar 0 ::cf::[set ::curcfg]::eventqueue eventqueue
-    upvar 0 ::cf::[set ::curcfg]::stop_sched stop_sched
+    set eid [getFromRunning "eid"]
+    set oper_mode [getFromRunning "oper_mode"]
+    set eventqueue [getFromRunning "eventqueue"]
 
     # XXX temp hack, init should be called when experiment is started
-    
-    if {$stop_sched} {
+
+    if { [getFromRunning "stop_sched"] } {
 	return
     }
 
-    if { $oper_mode == "exec" } {
-	if { $sched_init_done == 0 } {
+    if { $oper_mode == "exec" && [getFromRunning "cfg_deployed"] } {
+	if { [getFromRunning "sched_init_done"] == 0 } {
 	    sched_init
 	    after 1000 evsched
 	    return
 	}
     } else {
-	set sched_init_done 0
+	setToRunning "sched_init_done" 0
 	after 1000 evsched
 	return
     }
 
-    set curtime [expr [clock seconds] - $event_t0]
+    set curtime [expr [clock seconds] - [getFromRunning "event_t0"]]
     set changed 0
     set need_sort 1
 
-    if { $oper_mode == "exec"}  {
-	.bottom.cpu_load config -text "$curtime" 
+    if { $oper_mode == "exec" } {
+	.bottom.cpu_load config -text "$curtime"
     } else {
-	.bottom.cpu_load config -text "" 
+	.bottom.cpu_load config -text ""
     }
 
     foreach event $eventqueue {
@@ -171,6 +168,7 @@ proc evsched {} {
 	    } else {
 		puts "bogus event line: $event"
 	    }
+
 	    switch -exact -- $target {
 		bandwidth {
 		    setLinkBandwidth $object $value
@@ -203,31 +201,33 @@ proc evsched {} {
 		    }
 		}
 	    }
+
 	    set changed 1
 
 	    if { $evlogfile != 0 } {
-		set peers [linkPeers $object]
-		set n0 [lindex $peers 0]
-		set n1 [lindex $peers 1]
-		set ifc0 [ifcByPeer $n0 $n1]
-		set ifc1 [ifcByPeer $n1 $n0]
+		lassign [getLinkPeers $object] node1_id node2_id
+		lassign [getLinkPeersIfaces $object] iface1 iface2
 
 		set delay [getLinkDelay $object]
 		if { $delay == "" } {
 		    set delay 0
 		}
+
 		set ber [getLinkBER $object]
 		if { $ber == "" } {
 		    set ber 0
 		}
+
 		set loss [getLinkLoss $object]
 		if { $loss == "" } {
 		    set loss 0
 		}
+
 		set dup [getLinkDup $object]
 		if { $dup == "" } {
 		    set dup 0
 		}
+
 		set bw [getLinkBandwidth $object]
 		if { $bw == "" } {
 		    set bw 0
@@ -235,7 +235,7 @@ proc evsched {} {
 
 		set cfg "$delay $ber $loss $dup $bw"
 		puts $evlogfile \
-		    "[clock seconds] $object $n0:$ifc0 $n1:$ifc1 $cfg"
+		    "[clock seconds] $object $node1_id:$iface1 $node2_id:$iface2 $cfg"
 		flush $evlogfile
 	    }
 	}
@@ -249,6 +249,7 @@ proc evsched {} {
 	set eventqueue [lsort -index 0 -integer $eventqueue]
     }
 
+    setToRunning "eventqueue" $eventqueue
     after 1000 evsched
 }
 
@@ -262,15 +263,10 @@ proc evsched {} {
 #****
 proc sched_init {} {
     global evlogfile env
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-    upvar 0 ::cf::[set ::curcfg]::event_t0 event_t0
-    upvar 0 ::cf::[set ::curcfg]::eventqueue eventqueue
-    upvar 0 ::cf::[set ::curcfg]::sched_init_done sched_init_done
 
     set eventqueue {}
 
-    foreach link $link_list {
+    foreach link [getFromRunning "link_list"] {
 	set evlist [getLinkEvents $link]
 	foreach event $evlist {
 	    lappend eventqueue \
@@ -278,7 +274,7 @@ proc sched_init {} {
 	}
     }
 
-    foreach node $node_list {
+    foreach node [getFromRunning "node_list"] {
 	set evlist [getLinkEvents $node]
 	foreach event $evlist {
 	    lappend eventqueue \
@@ -286,35 +282,32 @@ proc sched_init {} {
 	}
     }
 
-    set eventqueue [lsort -index 0 -integer $eventqueue]
+    setToRunning "eventqueue" [lsort -index 0 -integer $eventqueue]
 
-    if {[info exists env(IMUNES_EVENTLOG)]} {
+    if { [info exists env(IMUNES_EVENTLOG)] } {
 	set evlogfile [open $env(IMUNES_EVENTLOG) a]
     } else {
 	set evlogfile 0
     }
 
-    set sched_init_done 1
-    set event_t0 [clock seconds]
+    setToRunning "sched_init_done" 1
+    setToRunning "event_t0" [clock seconds]
 }
 
 #****f* eventsched.tcl/getLinkEvents
 # NAME
 #   getLinkEvents -- get link events
 # SYNOPSIS
-#   getLinkEvents $link
+#   getLinkEvents $link_id
 # FUNCTION
 #   Returns link's events.
 # INPUTS
-#   * link -- link id
+#   * link_id -- link id
 # RESULT
 #   * events -- list of events
 #****
-proc getLinkEvents { link } {
-    upvar 0 ::cf::[set ::curcfg]::$link $link
-
-    set entry [lsearch -inline [set $link] "events *"]
-    return [lsort -index 0 -integer [lindex $entry 1]]
+proc getLinkEvents { link_id } {
+    return [cfgGet "links" $link_id "events"]
 }
 
 #####################
@@ -332,10 +325,14 @@ proc getLinkEvents { link } {
 #   * events -- list of events
 #****
 proc getElementEvents { element } {
-    upvar 0 ::cf::[set ::curcfg]::$element $element
+    set group ""
+    if { $element in [getFromRunning "node_list"] } {
+	set group "nodes"
+    } elseif { $element in [getFromRunning "link_list"] } {
+	set group "links"
+    }
 
-    set entry [lindex [lsearch -inline [set $element] "events *"] 1]
-    return [formatForDisp $entry]
+    return [formatForDisp [cfgGet $group $element "events"]]
 }
 
 #****f* eventsched.tcl/setElementEvents
@@ -350,16 +347,14 @@ proc getElementEvents { element } {
 #   * events -- list of events
 #****
 proc setElementEvents { element events } {
-    upvar 0 ::cf::[set ::curcfg]::$element $element
-    
-    set cfg [formatForExec $events]
-    
-    set i [lsearch [set $element] "events *"]
-    if { $i >= 0 } {
-	set $element [lreplace [set $element] $i $i "events {$cfg}"]
-    } else {
-	set $element [linsert [set $element] end "events {$cfg}"]
+    set group ""
+    if { $element in [getFromRunning "node_list"] } {
+	set group "nodes"
+    } elseif { $element in [getFromRunning "link_list"] } {
+	set group "links"
     }
+
+    cfgSet $group $element "events" [formatForExec $events]
 }
 
 #****f* eventsched.tcl/formatForExec
@@ -413,26 +408,24 @@ proc formatForDisp { events } {
 #   Creates a window for editing elements' events.
 #****
 proc elementsEventsEditor {} {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-    upvar 0 ::cf::[set ::curcfg]::stop_sched stop_sched
     global shownElement
     set shownElement links
-    
+
     set eventsPopup .eventspopup
-    catch {destroy $eventsPopup}
+    catch { destroy $eventsPopup }
+
     toplevel $eventsPopup
     wm transient $eventsPopup .
     wm title $eventsPopup "Events editor"
     wm iconname $eventsPopup "Events editor"
-    
+
     ttk::frame $eventsPopup.events
     pack $eventsPopup.events -fill both -expand 1
 
     set pwi [ttk::panedwindow $eventsPopup.events.eventconf -orient horizontal]
-    
+
     pack $pwi -fill both -expand 1
-    
+
     #left and right pane
     ttk::frame $pwi.left -relief groove -borderwidth 3
     ttk::frame $pwi.right -relief groove -borderwidth 3
@@ -445,7 +438,7 @@ proc elementsEventsEditor {} {
 	    -height 15 -show tree \
 	    -yscrollcommand "$pwi.left.vscroll set"
     ttk::scrollbar $pwi.left.vscroll -orient vertical -command "$pwi.left.tree yview"
-	
+
     focus $pwi.left.tree
 
     pack $pwi.left.treegrid -side right -fill y
@@ -460,41 +453,39 @@ proc elementsEventsEditor {} {
     $pwi.left.tree insert {} end -id links -text "Links" -open true -tags links
     $pwi.left.tree focus links
     $pwi.left.tree selection set links
-    foreach link [lsort -dictionary $link_list] {
-	set n0 [lindex [linkPeers $link] 0]
-	set n1 [lindex [linkPeers $link] 1]
-	set name0 [getNodeName $n0]
-	set name1 [getNodeName $n1]
+    foreach link [lsort -dictionary [getFromRunning "link_list"]] {
+	lassign [lmap n [getLinkPeers $link] { getNodeName $n }] name0 name1
 	$pwi.left.tree insert links end -id $link -text "$link ($name0 to $name1)" -tags $link
 	lappend eventlinktags $link
     }
 
+#    set node_list [getFromRunning "node_list"]
 #     global eventnodetags
 #     set eventnodetags ""
 #     $pwi.left.tree insert {} end -id nodes -text "Nodes" -open true -tags nodes
 #     foreach node [lsort -dictionary $node_list] {
-# 	set type [nodeType $node]
+# 	set type [getNodeType $node]
 # 	if { $type != "pseudo" && [[typemodel $node].layer] == "NETWORK"} {
 # 	    $pwi.left.tree insert nodes end -id $node -text "[getNodeName $node]" -open false -tags $node
 # 	    lappend eventnodetags $node
 # 	}
 #     }
-      
+
     text $pwi.right.text -bg white -width 42 -height 15 -takefocus 0 -state disabled
     pack $pwi.right.text -expand 1 -fill both
-    
+
     bindEventsToEventEditor $pwi $pwi.right.text
-    
+
     set eventButtons [ttk::frame $eventsPopup.events.buttons]
     ttk::button $eventButtons.apply -text "Apply" -command {
 	    saveElementEvents .eventspopup.events.eventconf.right.text
     }
     ttk::button $eventButtons.close -text "Close" -command "destroy $eventsPopup"
-    
+
     set startText "Start scheduling"
     set stopText "Stop scheduling"
-    
-    if { $stop_sched } {
+
+    if { [getFromRunning "stop_sched"] } {
 	ttk::button $eventButtons.start_stop \
 	-text $startText -command {
 	    startStopEvent
@@ -509,7 +500,7 @@ proc elementsEventsEditor {} {
 	    $eventButtons.start_stop configure -text [startStopText $eventButtons.start_stop]
 	}
     }
-    
+
     pack $eventButtons.apply $eventButtons.close \
       $eventButtons.start_stop -side left -pady 4 -padx 5
     pack $eventButtons
@@ -530,7 +521,7 @@ proc elementsEventsEditor {} {
 #****
 proc startStopText { widget } {
     set actual [$widget cget -text]
-    if {[string match "Start*" $actual]} {
+    if { [string match "Start*" $actual] } {
 	return "Stop scheduling"
     } else {
 	return "Start scheduling"
@@ -547,8 +538,7 @@ proc startStopText { widget } {
 #   on whether scheduling is started or stopped.
 #****
 proc startStopEvent {} {
-    upvar 0 ::cf::[set ::curcfg]::stop_sched stop_sched
-    if { $stop_sched } {
+    if { [getFromRunning "stop_sched"] } {
 	startEventScheduling
     } else {
 	stopEventScheduling
@@ -570,6 +560,7 @@ proc startStopEvent {} {
 #****
 proc loadElementEvents { element text } {
     global shownElement
+
     set modified 0
     if { $shownElement != "links" && $shownElement != "nodes"} {
 	if { [string equal [string trim [$text get 0.0 end]] \
@@ -577,11 +568,14 @@ proc loadElementEvents { element text } {
 	    set modified 1
 	}
     }
+
     if { $modified == 1 && $shownElement != "links" && $shownElement != "nodes" \
 	&& $shownElement != $element } {
+
 	set answer [tk_messageBox -message "Do you want to save changes on element $shownElement?" \
 	-icon question -type yesnocancel \
 	-detail "Select \"Yes\" to save changes before choosing another element"]
+
 	switch -- $answer {
 	    #save changes
 	    yes {
@@ -627,25 +621,24 @@ proc loadElementEvents { element text } {
 proc saveElementEvents { text } {
     set selected [.eventspopup.events.eventconf.left.tree selection]
     set events [$text get 0.0 end]
-    
+
     set checkFailed 0
-    
-    if {[string match -nocase "*l*" $selected]} {
+    if { [string match -nocase "*l*" $selected] } {
 	set checkFailed [checkEventsSyntax $events link]
-    } elseif {[string match -nocase "*n*" $selected]} {
+    } elseif { [string match -nocase "*n*" $selected] } {
 	set checkFailed [checkEventsSyntax $events node]
     }
-    
+
     set errline [$text get $checkFailed.0 $checkFailed.end]
-    
+
     if { $checkFailed != 0 } {
 	    tk_dialog .dialog1 "IMUNES warning" \
-	        "Syntax error in line $checkFailed:
-'$errline'" \
+	        "Syntax error in line $checkFailed:\n'$errline'" \
 	    info 0 OK
+
 	    return
     }
-    
+
     if { $selected != "nodes" && $selected != "links"} {
 	setElementEvents $selected $events
     }
@@ -665,13 +658,13 @@ proc saveElementEvents { text } {
 #****
 proc bindEventsToEventEditor { pwi text } {
     global eventnodetags eventlinktags
+
     set f $pwi.left
-    
     $f.tree tag bind links <1> \
 	    "$text configure -state disabled"
     $f.tree tag bind links <Key-Down> \
-	    "loadElementEvents [lindex $eventlinktags 0] $text" 
-    
+	    "loadElementEvents [lindex $eventlinktags 0] $text"
+
     foreach l $eventlinktags {
 	$f.tree tag bind $l <1> \
 	    "loadElementEvents $l $text"
@@ -680,7 +673,7 @@ proc bindEventsToEventEditor { pwi text } {
 		loadElementEvents [$f.tree prev $l] $text
 	    } else {
 		$text configure -state disabled
-	    }" 
+	    }"
 	$f.tree tag bind $l <Key-Down> \
 	    "if {![string equal {} [$f.tree next $l]]} {
 		loadElementEvents [$f.tree next $l] $text
@@ -692,27 +685,27 @@ proc bindEventsToEventEditor { pwi text } {
 #     $f.tree tag bind nodes <1> \
 # 	    "$text configure -state disabled"
 #     $f.tree tag bind nodes <Key-Up> \
-# 	    "loadElementEvents [lindex $eventlinktags 0] $text" 
+# 	    "loadElementEvents [lindex $eventlinktags 0] $text"
 #     $f.tree tag bind nodes <Key-Down> \
-# 	    "loadElementEvents [lindex $eventlinktags 0] $text" 
-#     
+# 	    "loadElementEvents [lindex $eventlinktags 0] $text"
+#
 #     foreach n $eventnodetags {
-# 	set type [nodeType $n]
+# 	set type [getNodeType $n]
 # 	global selectedIfc
 # 	$f.tree tag bind $n <1> \
-# 	      "loadElementEvents $n $text"   
+# 	      "loadElementEvents $n $text"
 # 	$f.tree tag bind $n <Key-Up> \
 # 	    "if {![string equal {} [$f.tree prev $n]]} {
 # 		loadElementEvents [$f.tree prev $n] $text
 # 	    } else {
 # 		$text configure -state disabled
-# 	    }" 
+# 	    }"
 # 	$f.tree tag bind $n <Key-Down> \
 # 	    "if {![string equal {} [$f.tree next $n]]} {
 # 		loadElementEvents [$f.tree next $n] $text
 # 	    } else {
 # 		$text configure -state disabled
-# 	    }"           
+# 	    }"
 #     }
 }
 
@@ -729,7 +722,6 @@ proc bindEventsToEventEditor { pwi text } {
 #****
 proc checkEventsSyntax { text type } {
      set text [split $text "\n"]
-     
      switch -exact $type {
 	link {
 	    set regularExpressions [list bandwidth delay ber loss width duplicate color]
@@ -740,51 +732,59 @@ proc checkEventsSyntax { text type } {
 	    set regularExpressions [list ]
 	}
      }
-     
+
      set i 0
      foreach line $text {
 	incr i
-	if {$line == ""} {
+	if { $line == "" } {
 	    continue
 	}
+
 	set splitLine [split $line " "]
-	if {[llength $line] == 4} {
-	    if {![string is integer [lindex $splitLine 0]]} { 
-		return $i 
-	    }
-	    if {[lindex $splitLine 1] ni $regularExpressions} {
+	if { [llength $line] == 4 } {
+	    if { ! [string is integer [lindex $splitLine 0]] } {
 		return $i
 	    }
-	    if {[lindex $splitLine 2] != "const"} {
+
+	    if { [lindex $splitLine 1] ni $regularExpressions } {
 		return $i
 	    }
-	    if {![string is integer [lindex $splitLine 3]] \
-		&& [lindex $splitLine 3] ni $colors } { 
-		return $i 
-	    }
-	} elseif {[llength $line] == 6} {
-	    if {![string is integer [lindex $splitLine 0]]} { 
-		return $i 
-	    }
-	    if {[lindex $splitLine 1] ni $regularExpressions} {
+	    if { [lindex $splitLine 2] != "const" } {
 		return $i
 	    }
-	    if {[lindex $splitLine 2] ni $functions} {
+	    if { ! [string is integer [lindex $splitLine 3]] \
+		&& [lindex $splitLine 3] ni $colors } {
+
 		return $i
 	    }
-	    if {![string is integer [lindex $splitLine 3]]} { 
-		return $i 
+	} elseif { [llength $line] == 6 } {
+	    if { ! [string is integer [lindex $splitLine 0]] } {
+		return $i
 	    }
-	    if {![string is integer [lindex $splitLine 4]]} { 
-		return $i 
+
+	    if { [lindex $splitLine 1] ni $regularExpressions } {
+		return $i
 	    }
-	    if {![string is integer [lindex $splitLine 5]]} { 
-		return $i 
+
+	    if { [lindex $splitLine 2] ni $functions } {
+		return $i
+	    }
+
+	    if { ! [string is integer [lindex $splitLine 3]] } {
+		return $i
+	    }
+
+	    if { ! [string is integer [lindex $splitLine 4]] } {
+		return $i
+	    }
+
+	    if { ! [string is integer [lindex $splitLine 5]] } {
+		return $i
 	    }
 	} else {
 	    return $i
 	}
      }
-     
+
      return 0
 }

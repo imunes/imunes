@@ -939,7 +939,7 @@ ng_rfee_modevent(module_t mod, int type, void *unused)
 {
 	int error = 0;
 	int m, e;
-                
+
 	switch (type) {
 	case MOD_LOAD:
 		ngd_zone = uma_zcreate("ng_rfee", sizeof(struct ngd_hdr),

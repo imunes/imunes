@@ -106,59 +106,60 @@ for { set i 3 } { $i <= 24 } { incr i } {
 # NAME
 #   newNodes -- new nodes
 # SYNOPSIS
-#   newNodes $n
+#   newNodes $node_num
 # FUNCTION
-#   Creates n new nodes.
+#   Creates node_num new nodes.
 # INPUTS
-#   * n -- number of new nodes
+#   * node_num -- number of new nodes
 # RESULT
-#   * v -- created nodes
+#   * new_nodes -- created nodes
 #****
-proc newNodes { n } {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
+proc newNodes { node_num } {
     global grid sizex sizey activetool
 
-    set v {}
-    set r [expr {($n - 1) * (1 + 4 / $n) * $grid / 2}]
+    set new_nodes {}
+    set r [expr {($node_num - 1) * (1 + 4 / $node_num) * $grid / 2}]
     set x0 [expr {$sizex / 2}]
     set y0 [expr {$sizey / 2}]
-    set twopidivn [expr {acos(0) * 4 / $n}]
+    set twopidivn [expr {acos(0) * 4 / $node_num}]
     if { $activetool == "router" } {
 	set dy 24
     } else {
 	set dy 32
     }
 
-    for { set i 0 } { $i < $n } { incr i } {
-	set new_node [newNode $activetool]
+    for { set i 0 } { $i < $node_num } { incr i } {
+	set new_node_id [newNode $activetool]
 	set x [expr {$x0 + $r * cos($twopidivn * $i)}]
 	set y [expr {$y0 - $r * sin($twopidivn * $i)}]
-	setNodeCoords $new_node "$x $y"
-	setNodeLabelCoords $new_node "$x [expr {$y + $dy}]"
-	setNodeCanvas $new_node $curcanvas
-	lappend v $new_node
+
+	setNodeCoords $new_node_id "$x $y"
+	setNodeLabelCoords $new_node_id "$x [expr {$y + $dy}]"
+	setNodeCanvas $new_node_id [getFromRunning "curcanvas"]
+
+	lappend new_nodes $new_node_id
     }
 
-    return $v
+    return $new_nodes
 }
 
 #****f* topogen.tcl/topoGenDone
 # NAME
 #   topoGenDone -- topology generating done
 # SYNOPSIS
-#   topoGenDone $v
+#   topoGenDone $nodes
 # FUNCTION
 #   This procedure is called when topology generating is completed.
 # INPUTS
-#   * v -- nodes
+#   * nodes -- generated nodes
 #****
-proc topoGenDone { v } {
+proc topoGenDone { nodes } {
     global changed
 
     set changed 1
     updateUndoLog
     redrawAll
-    selectNodes $v
+    selectNodes $nodes
 }
 
 #
@@ -168,19 +169,21 @@ proc topoGenDone { v } {
 # NAME
 #   P -- chain topology
 # SYNOPSIS
-#   P $v
+#   P $nodes
 # FUNCTION
 #   Creates chain topology.
 # INPUTS
-#   * v -- nodes
+#   * nodes -- nodes
 #****
-proc P { v } {
+proc P { nodes } {
     .panwin.f1.c config -cursor watch; update
-    set n [llength $v]
-    for { set i 0 } { $i < [expr {$n - 1}] } { incr i } {
-	newLink [lindex $v $i] [lindex $v [expr {($i + 1) % $n}]]
+
+    set node_num [llength $nodes]
+    for { set i 0 } { $i < [expr {$node_num - 1}] } { incr i } {
+	newLink [lindex $nodes $i] [lindex $nodes [expr {($i + 1) % $node_num}]]
     }
-    topoGenDone $v
+
+    topoGenDone $nodes
 }
 
 #
@@ -190,44 +193,48 @@ proc P { v } {
 # NAME
 #   C -- cycle topology
 # SYNOPSIS
-#   C $v
+#   C $nodes
 # FUNCTION
 #   Creates cycle topology.
 # INPUTS
-#   * v -- nodes
+#   * nodes -- nodes
 #****
-proc C { v } {
+proc C { nodes } {
     .panwin.f1.c config -cursor watch; update
-    set n [llength $v]
-    for { set i 0 } { $i < $n } { incr i } {
-	newLink [lindex $v $i] [lindex $v [expr {($i + 1) % $n}]]
+
+    set node_num [llength $nodes]
+    for { set i 0 } { $i < $node_num } { incr i } {
+	newLink [lindex $nodes $i] [lindex $nodes [expr {($i + 1) % $node_num}]]
     }
-    topoGenDone $v
+
+    topoGenDone $nodes
 }
 
 #
-# Wheel 
+# Wheel
 #
 #****f* topogen.tcl/W
 # NAME
 #   W -- wheel topology
 # SYNOPSIS
-#   W $v
+#   W $nodes
 # FUNCTION
 #   Creates wheel topology.
 # INPUTS
-#   * v -- nodes
+#   * nodes -- nodes
 #****
-proc W { v } {
+proc W { nodes } {
     .panwin.f1.c config -cursor watch; update
-    set n [llength $v]
-    set vr [lindex $v 0]
-    set vt "$v [lindex $v 1]"
-    for { set i 1 } { $i < $n } { incr i } {
-	newLink $vr [lindex $v $i]
-	newLink [lindex $v $i] [lindex $vt [expr {$i + 1}]]
+
+    set node_num [llength $nodes]
+    set vr [lindex $nodes 0]
+    set vt "$nodes [lindex $nodes 1]"
+    for { set i 1 } { $i < $node_num } { incr i } {
+	newLink $vr [lindex $nodes $i]
+	newLink [lindex $nodes $i] [lindex $vt [expr {$i + 1}]]
     }
-    topoGenDone $v
+
+    topoGenDone $nodes
 }
 
 #
@@ -237,25 +244,26 @@ proc W { v } {
 # NAME
 #   Q -- cube topology
 # SYNOPSIS
-#   Q $v
+#   Q $nodes
 # FUNCTION
 #   Creates cube topology.
 # INPUTS
-#   * v -- nodes
+#   * nodes -- nodes
 #****
-proc Q { v } {
-    set n [llength $v]
-    set order [expr int(log($n)/log(2))]
+proc Q { nodes } {
+    set node_num [llength $nodes]
+    set order [expr int(log($node_num)/log(2))]
     for { set i 0 } { $i < $order } { incr i } {
 	animateCursor
 	set d [expr {int(pow(2, $i))}]
-	for { set j 0 } { $j < $n } { incr j } {
-	    if { [llength [ifcList [lindex $v $j]]] <= $i} {
-		newLink [lindex $v $j] [lindex $v [expr {($j + $d) % $n}]]
+	for { set j 0 } { $j < $node_num } { incr j } {
+	    if { [llength [ifcList [lindex $nodes $j]]] <= $i} {
+		newLink [lindex $nodes $j] [lindex $nodes [expr {($j + $d) % $node_num}]]
 	    }
 	}
     }
-    topoGenDone $v
+
+    topoGenDone $nodes
 }
 
 #
@@ -265,21 +273,22 @@ proc Q { v } {
 # NAME
 #   K -- clique topology
 # SYNOPSIS
-#   K $v
+#   K $nodes
 # FUNCTION
 #   Creates clique topology.
 # INPUTS
-#   * v -- nodes
+#   * nodes -- nodes
 #****
-proc K { v } {
-    set n [llength $v]
-    for { set i 0 } { $i < [expr {$n - 1}] } { incr i } {
+proc K { nodes } {
+    set node_num [llength $nodes]
+    for { set i 0 } { $i < [expr {$node_num - 1}] } { incr i } {
 	animateCursor
-	for { set j [expr {$i + 1}] } { $j < $n } {incr j } {
-	    newLink [lindex $v $i] [lindex $v $j]
+	for { set j [expr {$i + 1}] } { $j < $node_num } {incr j } {
+	    newLink [lindex $nodes $i] [lindex $nodes $j]
 	}
     }
-    topoGenDone $v
+
+    topoGenDone $nodes
 }
 
 #
@@ -305,6 +314,7 @@ proc Kb { v1 v2 } {
 	    newLink [lindex $v1 $i] [lindex $v2 $j]
 	}
     }
+
     topoGenDone "$v1 $v2"
 }
 
@@ -312,16 +322,16 @@ proc Kb { v1 v2 } {
 # NAME
 #   Kbhelper -- bipartite topology helper
 # SYNOPSIS
-#   Kbhelper $n $m
+#   Kbhelper $node_num $m
 # FUNCTION
-#   
+#
 # INPUTS
-#   * n -- 
-#   * m -- 
+#   * node_num --
+#   * m --
 #****
-proc Kbhelper { n m } {
-    set v [newNodes [expr $n + $m]]
-    Kb [lrange $v 0 [expr $n - 1]] [lrange $v $n end]
+proc Kbhelper { node_num m } {
+    set nodes [newNodes [expr $node_num + $m]]
+    Kb [lrange $nodes 0 [expr $node_num - 1]] [lrange $nodes $node_num end]
 }
 
 #
@@ -331,17 +341,17 @@ proc Kbhelper { n m } {
 # NAME
 #   R -- random topology
 # SYNOPSIS
-#   R $v $m
+#   R $nodes $m
 # FUNCTION
 #   Creates random topology.
 # INPUTS
-#   * v -- nodes
-#   * m -- 
+#   * nodes -- nodes
+#   * m --
 #****
-proc R { v m } {
-    set cn [lindex $v 0]
-    set dn [lrange $v 1 end]
-    
+proc R { nodes m } {
+    set cn [lindex $nodes 0]
+    set dn [lrange $nodes 1 end]
+
     set i 0
     while { $i < $m } {
 	if { [llength $dn] > 0 } {
@@ -352,14 +362,15 @@ proc R { v m } {
 	    set dn [lreplace $dn $node_2 $node_2]
 	    incr i
 	} else {
-	    set node_1 [expr int(rand() * [llength $v])]
-	    set node_2 [expr int(rand() * [llength $v])]
+	    set node_1 [expr int(rand() * [llength $nodes])]
+	    set node_2 [expr int(rand() * [llength $nodes])]
 	    if { $node_1 != $node_2 &&
-		[linkByPeers [lindex $v $node_1] [lindex $v $node_2]] == ""} {
-		newLink [lindex $v $node_1] [lindex $v $node_2]
+		[linkByPeers [lindex $nodes $node_1] [lindex $nodes $node_2]] == ""} {
+		newLink [lindex $nodes $node_1] [lindex $nodes $node_2]
 		incr i
 	    }
 	}
     }
-    topoGenDone $v
+
+    topoGenDone $nodes
 }

@@ -99,7 +99,7 @@ proc $MODULE.toolbarIconDescr {} {
 proc $MODULE.notebookDimensions { wi } {
     set h 210
     set w 507
-    
+
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
 	== "Configuration" } {
 	set w 507
@@ -110,7 +110,7 @@ proc $MODULE.notebookDimensions { wi } {
 	set w 507
     }
 
-    return [list $h $w] 
+    return [list $h $w]
 }
 
 #****f* ipfirewall.tcl/ipfirewall.ifcName
@@ -147,7 +147,7 @@ proc $MODULE.IPAddrRange {} {
 # SYNOPSIS
 #   set layer [ipfirewall.layer]
 # FUNCTION
-#   Returns the layer on which the ipfirewall operates i.e. returns NETWORK. 
+#   Returns the layer on which the ipfirewall operates i.e. returns NETWORK.
 # RESULT
 #   * layer -- set to NETWORK
 #****
@@ -169,7 +169,7 @@ proc $MODULE.layer {} {
 # INPUTS
 #   * node -- node id (type of the node is ipfirewall)
 # RESULT
-#   * congif -- generated configuration 
+#   * congif -- generated configuration
 #****
 proc $MODULE.cfggen { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
@@ -210,7 +210,7 @@ proc $MODULE.cfggen { node } {
 # INPUTS
 #   * node -- node id (type of the node is ipfirewall)
 # RESULT
-#   * appl -- application that reads the configuration (/bin/sh) 
+#   * appl -- application that reads the configuration (/bin/sh)
 #****
 proc $MODULE.bootcmd { node } {
     return "/bin/sh"
@@ -223,7 +223,7 @@ proc $MODULE.bootcmd { node } {
 #   set shells [ipfirewall.shellcmds]
 # FUNCTION
 #   Procedure shellcmds returns the shells that can be opened
-#   as a default shell for the system. 
+#   as a default shell for the system.
 # RESULT
 #   * shells -- default shells for the ipfirewall
 #****
@@ -248,7 +248,7 @@ proc $MODULE.shellcmd { node } {
 #   ipfirewall.instantiate $eid $node
 # FUNCTION
 #   Procedure instantiate creates a new virtaul node
-#   for a given node in imunes. 
+#   for a given node in imunes.
 #   Procedure ipfirewall.instantiate cretaes a new virtual node with
 #   all the interfaces and CPU parameters as defined in imunes.
 # INPUTS
@@ -265,8 +265,8 @@ proc $MODULE.instantiate { eid node } {
 # SYNOPSIS
 #   ipfirewall.start $eid $node
 # FUNCTION
-#   Starts a new ipfirewall. The node can be started if it is instantiated. 
-#   Simulates the booting proces of an ipfirewall, by calling l3node.start 
+#   Starts a new ipfirewall. The node can be started if it is instantiated.
+#   Simulates the booting proces of an ipfirewall, by calling l3node.start
 #   procedure.
 # INPUTS
 #   * eid -- experiment id
@@ -282,7 +282,7 @@ proc $MODULE.start { eid node } {
 # SYNOPSIS
 #   ipfirewall.shutdown $eid $node
 # FUNCTION
-#   Shutdowns an ipfirewall. Simulates the shutdown proces of an ipfirewall, 
+#   Shutdowns an ipfirewall. Simulates the shutdown proces of an ipfirewall,
 #   by calling the l3node.shutdown procedure.
 # INPUTS
 #   * eid -- experiment id
@@ -298,7 +298,7 @@ proc $MODULE.shutdown { eid node } {
 # SYNOPSIS
 #   ipfirewall.destroy $eid $node
 # FUNCTION
-#   Destroys an ipfirewall. Destroys all the interfaces of the ipfirewall 
+#   Destroys an ipfirewall. Destroys all the interfaces of the ipfirewall
 #   and the vimage itself by calling l3node.destroy procedure.
 # INPUTS
 #   * eid -- experiment id
@@ -312,7 +312,7 @@ proc $MODULE.destroy { eid node } {
 # NAME
 #   ipfirewall.nghook -- nghook
 # SYNOPSIS
-#   ipfirewall.nghook $eid $node $ifc 
+#   ipfirewall.nghook $eid $node $ifc
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. This procedure calls
@@ -322,7 +322,7 @@ proc $MODULE.destroy { eid node } {
 #   * node -- node id
 #   * ifc -- interface name
 # RESULT
-#   * nghook -- the list containing netgraph node id and the 
+#   * nghook -- the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node ifc } {

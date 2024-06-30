@@ -1,78 +1,40 @@
 proc getPackgenPacketRate { node } {
-    foreach line [netconfFetchSection $node "packet generator"] {
-	if { [lindex $line 0] == "packetrate" } {
-		return [lindex $line 1]
-	}
-    }
-    return 100
+    return [cfgGetWithDefault 100 "nodes" $node "packgen" "packetrate"]
 }
 
 proc setPackgenPacketRate { node value } {
-    set ifcfg [list "packet generator"]
-    foreach line [netconfFetchSection $node "packet generator"] {
-	if { [lindex $line 0] != "packetrate" } {
-	    lappend ifcfg $line
-	}
-    }
-    if { $value >= 0 } {
-	lappend ifcfg " packetrate $value"
-    }
-    netconfInsertSection $node $ifcfg
+    cfgSet "nodes" $node "packgen" "packetrate" $value
 }
 
 proc getPackgenPacket { node id } {
-    foreach line [netconfFetchSection $node "packets"] {
-	if { [string trim [lindex [split $line :] 0]] == $id } {
-		    return [string trim $line]
-	}
-    }
+    return [cfgGet "nodes" $node "packgen" "packets" $id]
 }
 
 proc addPackgenPacket { node id value } {
-    set ifcfg [list "packets"]
-    foreach line [netconfFetchSection $node "packets"] {
-	if { [string trim [lindex [split $line :] 0]] != $id } {
-	    lappend ifcfg $line
-	}
-    }
-    lappend ifcfg " $value"
-    netconfInsertSection $node $ifcfg
+    cfgSetEmpty "nodes" $node "packgen" "packets" $id $value
 }
 
 proc removePackgenPacket { node id } {
-    set ifcfg [list "packets"]
-    foreach line [netconfFetchSection $node "packets"] {
-	if { [string trim [lindex [split $line :] 0]] != $id } {
-	    lappend ifcfg $line
-	}
-    }
-    netconfInsertSection $node $ifcfg
+    cfgUnset "nodes" $node "packgen" "packets" $id
 }
 
 proc getPackgenPacketData { node id } {
-    foreach line [netconfFetchSection $node "packets"] {
-	if { [string trim [lindex [split $line :] 0]] == $id } {
-		    return [lindex [string trim [split $line :]] 1]
-	}
-    }
+    return [cfgGet "nodes" $node "packgen" "packets" $id]
 }
 
 proc packgenPackets { node } {
-    set packetList ""
-    foreach line [netconfFetchSection $node "packets"] {
-	lappend packetList [string trim [lindex [split $line :] 0]]
-    }
-    return $packetList
+    return [cfgGet "nodes" $node "packgen" "packets"]
 }
 
-proc checkRuleNum { str } {
+proc checkPacketNum { str } {
     return [regexp {^([1-9])([0-9])*$} $str]
 }
 
 proc checkPacketData { str } {
     set str [string map { " " "." ":" "." } $str]
     if { $str != "" } {
-	return [regexp {^([0-9a-f])*$} $str]
+	return [regexp {^([0-9a-f][0-9a-f])*$} $str]
     }
+
     return 1
 }

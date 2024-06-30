@@ -84,7 +84,7 @@ try {
     exit 1
 }
 
-safePackageRequire [list cmdline platform ip base64]
+safePackageRequire [list cmdline platform ip base64 json json::write]
 
 set initMode 0
 set execMode interactive
@@ -146,6 +146,22 @@ if {! [info exists eid_base]} {
     set eid_base [genExperimentId]
 }
 
+# bases for naming new nodes
+array set nodeNamingBase {
+    pc pc
+    ext ext
+    filter filter
+    router router
+    host host
+    hub hub
+    extelem xel
+    lanswitch switch
+    nat64 nat64-
+    packgen packgen
+    stpswitch stpswitch
+    wlan wlan
+}
+
 # Set default L2 node list
 set l2nodes "hub lanswitch rj45 stpswitch filter packgen ext extnat"
 # Set default L3 node list
@@ -164,6 +180,7 @@ if { $isOSlinux } {
 	exit
     }
 }
+
 if { $isOSfreebsd } {
     safeSourceFile $ROOTDIR/$LIBDIR/runtime/freebsd.tcl
     if { $initMode == 1 } {
@@ -191,10 +208,12 @@ foreach file [glob -directory $ROOTDIR/$LIBDIR/config *.tcl] {
 foreach file $l2nodes {
     safeSourceFile "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
 }
+
 # L3 nodes
 foreach file $l3nodes {
     safeSourceFile "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
 }
+
 # additional nodes
 safeSourceFile "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
 safeSourceFile "$ROOTDIR/$LIBDIR/nodes/annotations.tcl"
@@ -218,6 +237,7 @@ set cf::clipboard::link_list {}
 set cf::clipboard::annotation_list {}
 set cf::clipboard::canvas_list {}
 set cf::clipboard::image_list {}
+set cf::clipboard::dict_cfg [dict create]
 
 set cfg_list {}
 set curcfg ""
@@ -235,8 +255,8 @@ if { $isOSwin } {
     set winOS true
 }
 
-if { !$isOSwin } {
-    catch {exec convert -version | head -1 | cut -d " " -f 1,2,3} imInfo
+if { ! $isOSwin } {
+    catch {exec magick -version | head -1 | cut -d " " -f 1,2,3} imInfo
 } else {
     set imInfo $env(PATH)
 }
@@ -258,12 +278,14 @@ readConfigFile
 # Initialization should be complete now, so let's start doing something...
 #
 
-if {$execMode == "interactive"} {
+if { $execMode == "interactive" } {
     safePackageRequire Tk "To run the IMUNES GUI, Tk must be installed."
+
     foreach file "canvas copypaste drawing editor help theme linkcfgGUI \
 	mouse nodecfgGUI widgets" {
 	safeSourceFile "$ROOTDIR/$LIBDIR/gui/$file.tcl"
     }
+
     source "$ROOTDIR/$LIBDIR/gui/initgui.tcl"
     source "$ROOTDIR/$LIBDIR/gui/topogen.tcl"
     if { $debug == 1 } {
@@ -272,38 +294,41 @@ if {$execMode == "interactive"} {
 
     newProject
     if { $argv != "" && [file exists $argv] } {
-	set ::cf::[set curcfg]::currentFile $argv
+	setToRunning "current_file" $argv
 	openFile
     }
+
     updateProjectMenu
     # Fire up the animation loop
     animate
     # Event scheduler - should be started / stopped on per-experiment base?
 #     evsched
 } else {
-    if {$argv != ""} {
-	if { ![file exists $argv] } {
+    if { $argv != "" } {
+	if { ! [file exists $argv] } {
 	    puts "Error: file '$argv' doesn't exist"
 	    exit
 	}
+
 	global currentFileBatch
 	set currentFileBatch $argv
-	set fileId [open $argv r]
-	set cfg ""
-	foreach entry [read $fileId] {
-	    lappend cfg $entry
-	}
-	close $fileId
 
-	set curcfg [newObjectId cfg]
+	set curcfg [newObjectId "cfg"]
 	lappend cfg_list $curcfg
-	namespace eval ::cf::[set curcfg] {}
 
-	loadCfg $cfg
+	namespace eval ::cf::[set curcfg] {}
+	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+	set dict_cfg [dict create]
+	set dict_run [dict create]
+
+	lappendToRunning "cfg_list" $curcfg
+	readCfgJson $currentFileBatch
 
 	if { [checkExternalInterfaces] } {
 	    return
 	}
+
 	if { [allSnapshotsAvailable] == 1 } {
 	    deployCfg
 	    createExperimentFilesFromBatch
@@ -311,21 +336,19 @@ if {$execMode == "interactive"} {
     } else {
 	set configFile "$runtimeDir/$eid_base/config.imn"
 	if { [file exists $configFile] && $regular_termination } {
-	    set fileId [open $configFile r]
-	    set cfg ""
-	    foreach entry [read $fileId] {
-		lappend cfg $entry
-	    }
-	    close $fileId
-
-	    set curcfg [newObjectId cfg]
+	    set curcfg [newObjectId "cfg"]
 	    lappend cfg_list $curcfg
+
 	    namespace eval ::cf::[set curcfg] {}
-	    upvar 0 ::cf::[set ::curcfg]::eid eid
-	    set eid $eid_base
+	    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+	    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+	    set dict_cfg [dict create]
+	    set dict_run [dict create]
+	    lappendToRunning "cfg_list" $curcfg
 
-	    loadCfg $cfg
+	    readCfgJson $configFile
 
+	    setToRunning "eid" $eid_base
 	    terminateAllNodes $eid_base
 	} else {
 	    vimageCleanup $eid_base

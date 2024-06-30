@@ -45,45 +45,41 @@ registerModule $MODULE
 # NAME
 #   pc.confNewIfc -- configure new interface
 # SYNOPSIS
-#   pc.confNewIfc $node $ifc
+#   pc.confNewIfc $node_id $ifc
 # FUNCTION
 #   Configures new interface for the specified node.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #   * ifc -- interface name
 #****
-proc $MODULE.confNewIfc { node ifc } {
+proc $MODULE.confNewIfc { node_id ifc } {
     global changeAddressRange changeAddressRange6
+
     set changeAddressRange 0
     set changeAddressRange6 0
-    autoIPv4addr $node $ifc
-    autoIPv6addr $node $ifc
-    autoMACaddr $node $ifc
+    autoIPv4addr $node_id $ifc
+    autoIPv6addr $node_id $ifc
+    autoMACaddr $node_id $ifc
 }
 
 #****f* pc.tcl/pc.confNewNode
 # NAME
 #   pc.confNewNode -- configure new node
 # SYNOPSIS
-#   pc.confNewNode $node
+#   pc.confNewNode $node_id
 # FUNCTION
 #   Configures new node with the specified id.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.confNewNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc $MODULE.confNewNode { node_id } {
     global nodeNamingBase
 
-    set nconfig [list \
-	"hostname [getNewNodeNameType pc $nodeNamingBase(pc)]" \
-	! ]
-    lappend $node "network-config [list $nconfig]"
-
-    setAutoDefaultRoutesStatus $node "enabled"
-    setLogIfcType $node lo0 lo
-    setIfcIPv4addr $node lo0 "127.0.0.1/8"
-    setIfcIPv6addr $node lo0 "::1/128"
+    setNodeName $node_id [getNewNodeNameType pc $nodeNamingBase(pc)]
+    setAutoDefaultRoutesStatus $node_id "enabled"
+    setLogIfcType $node_id lo0 lo
+    setIfcIPv4addrs $node_id lo0 "127.0.0.1/8"
+    setIfcIPv6addrs $node_id lo0 "::1/128"
 }
 
 #****f* pc.tcl/pc.icon
@@ -100,16 +96,17 @@ proc $MODULE.confNewNode { node } {
 #****
 proc $MODULE.icon { size } {
     global ROOTDIR LIBDIR
+
     switch $size {
-      normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/pc.gif
-      }
-      small {
-	return $ROOTDIR/$LIBDIR/icons/small/pc.gif
-      }
-      toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/pc.gif
-      }
+	normal {
+	    return $ROOTDIR/$LIBDIR/icons/normal/pc.gif
+	}
+	small {
+	    return $ROOTDIR/$LIBDIR/icons/small/pc.gif
+	}
+	toolbar {
+	    return $ROOTDIR/$LIBDIR/icons/tiny/pc.gif
+	}
     }
 }
 
@@ -217,7 +214,7 @@ proc $MODULE.virtlayer {} {
 # NAME
 #   pc.cfggen -- configuration generator
 # SYNOPSIS
-#   set config [pc.cfggen $node]
+#   set config [pc.cfggen $node_id]
 # FUNCTION
 #   Returns the generated configuration. This configuration represents
 #   the configuration loaded on the booting time of the virtual nodes
@@ -225,18 +222,18 @@ proc $MODULE.virtlayer {} {
 #   For each interface in the interface list of the node, ip address is
 #   configured and each static route from the simulator is added.
 # INPUTS
-#   * node -- node id (type of the node is pc)
+#   * node_id -- node id (type of the node is pc)
 # RESULT
 #   * congif -- generated configuration
 #****
-proc $MODULE.cfggen { node } {
+proc $MODULE.cfggen { node_id } {
     set cfg {}
-    set cfg [concat $cfg [nodeCfggenIfcIPv4 $node]]
-    set cfg [concat $cfg [nodeCfggenIfcIPv6 $node]]
+    set cfg [concat $cfg [nodeCfggenIfcIPv4 $node_id]]
+    set cfg [concat $cfg [nodeCfggenIfcIPv6 $node_id]]
     lappend cfg ""
 
-    set cfg [concat $cfg [nodeCfggenRouteIPv4 $node]]
-    set cfg [concat $cfg [nodeCfggenRouteIPv6 $node]]
+    set cfg [concat $cfg [nodeCfggenRouteIPv4 $node_id]]
+    set cfg [concat $cfg [nodeCfggenRouteIPv6 $node_id]]
 
     return $cfg
 }
@@ -245,17 +242,17 @@ proc $MODULE.cfggen { node } {
 # NAME
 #   pc.bootcmd -- boot command
 # SYNOPSIS
-#   set appl [pc.bootcmd $node]
+#   set appl [pc.bootcmd $node_id]
 # FUNCTION
 #   Procedure bootcmd returns the application that reads and employes the
 #   configuration generated in pc.cfggen.
 #   In this case (procedure pc.bootcmd) specific application is /bin/sh
 # INPUTS
-#   * node -- node id (type of the node is pc)
+#   * node_id -- node id (type of the node is pc)
 # RESULT
 #   * appl -- application that reads the configuration (/bin/sh)
 #****
-proc $MODULE.bootcmd { node } {
+proc $MODULE.bootcmd { node_id } {
     return "/bin/sh"
 }
 
@@ -278,7 +275,7 @@ proc $MODULE.shellcmds {} {
 # NAME
 #   pc.instantiate -- instantiate
 # SYNOPSIS
-#   pc.instantiate $eid $node
+#   pc.instantiate $eid $node_id
 # FUNCTION
 #   Procedure instantiate creates a new virtaul node
 #   for a given node in imunes.
@@ -286,157 +283,157 @@ proc $MODULE.shellcmds {} {
 #   all the interfaces and CPU parameters as defined in imunes.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id (type of the node is pc)
+#   * node_id -- node id (type of the node is pc)
 #****
-proc $MODULE.instantiate { eid node } {
-    l3node.instantiate $eid $node
+proc $MODULE.instantiate { eid node_id } {
+    l3node.instantiate $eid $node_id
 }
 
-proc $MODULE.setupNamespace { eid node } {
-    l3node.setupNamespace $eid $node
+proc $MODULE.setupNamespace { eid node_id } {
+    l3node.setupNamespace $eid $node_id
 }
 
-proc $MODULE.initConfigure { eid node } {
-    l3node.initConfigure $eid $node
+proc $MODULE.initConfigure { eid node_id } {
+    l3node.initConfigure $eid $node_id
 }
 
-proc $MODULE.createIfcs { eid node ifcs } {
-    l3node.createIfcs $eid $node $ifcs
+proc $MODULE.createIfcs { eid node_id ifcs } {
+    l3node.createIfcs $eid $node_id $ifcs
 }
 
 #****f* pc.tcl/pc.start
 # NAME
 #   pc.start -- start
 # SYNOPSIS
-#   pc.start $eid $node
+#   pc.start $eid $node_id
 # FUNCTION
 #   Starts a new pc. The node can be started if it is instantiated.
 #   Simulates the booting proces of a pc, by calling l3node.start procedure.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id (type of the node is pc)
+#   * node_id -- node id (type of the node is pc)
 #****
-proc $MODULE.start { eid node } {
-    l3node.start $eid $node
+proc $MODULE.start { eid node_id } {
+    l3node.start $eid $node_id
 }
 
 #****f* pc.tcl/pc.shutdown
 # NAME
 #   pc.shutdown -- shutdown
 # SYNOPSIS
-#   pc.shutdown $eid $node
+#   pc.shutdown $eid $node_id
 # FUNCTION
 #   Shutdowns a pc. Simulates the shutdown proces of a pc,
 #   by calling the l3node.shutdown procedure.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id (type of the node is pc)
+#   * node_id -- node id (type of the node is pc)
 #****
-proc $MODULE.shutdown { eid node } {
-    l3node.shutdown $eid $node
+proc $MODULE.shutdown { eid node_id } {
+    l3node.shutdown $eid $node_id
 }
 
-proc $MODULE.destroyIfcs { eid node ifcs } {
-    l3node.destroyIfcs $eid $node $ifcs
+proc $MODULE.destroyIfcs { eid node_id ifcs } {
+    l3node.destroyIfcs $eid $node_id $ifcs
 }
 
 #****f* pc.tcl/pc.destroy
 # NAME
 #   pc.destroy -- destroy
 # SYNOPSIS
-#   pc.destroy $eid $node
+#   pc.destroy $eid $node_id
 # FUNCTION
 #   Destroys a pc. Destroys all the interfaces of the pc
 #   and the vimage itself by calling l3node.destroy procedure.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id (type of the node is pc)
+#   * node_id -- node id (type of the node is pc)
 #****
-proc $MODULE.destroy { eid node } {
-    l3node.destroy $eid $node
+proc $MODULE.destroy { eid node_id } {
+    l3node.destroy $eid $node_id
 }
 
 #****f* pc.tcl/pc.nghook
 # NAME
 #   pc.nghook -- nghook
 # SYNOPSIS
-#   pc.nghook $eid $node $ifc
+#   pc.nghook $eid $node_id $ifc
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. This procedure calls
 #   l3node.hook procedure and passes the result of that procedure.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
+#   * node_id -- node id
 #   * ifc -- interface name
 # RESULT
 #   * nghook -- the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
-proc $MODULE.nghook { eid node ifc } {
-    return [l3node.nghook $eid $node $ifc]
+proc $MODULE.nghook { eid node_id ifc } {
+    return [l3node.nghook $eid $node_id $ifc]
 }
 
 #****f* pc.tcl/pc.configGUI
 # NAME
 #   pc.configGUI -- configuration GUI
 # SYNOPSIS
-#   pc.configGUI $c $node
+#   pc.configGUI $c $node_id
 # FUNCTION
 #   Defines the structure of the pc configuration window by calling
 #   procedures for creating and organising the window, as well as
 #   procedures for adding certain modules to that window.
 # INPUTS
 #   * c -- tk canvas
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.configGUI { c node } {
+proc $MODULE.configGUI { c node_id } {
     global wi
     global guielements treecolumns
     set guielements {}
 
     configGUI_createConfigPopupWin $c
     wm title $wi "pc configuration"
-    configGUI_nodeName $wi $node "Node name:"
+    configGUI_nodeName $wi $node_id "Node name:"
 
-    set tabs [configGUI_addNotebook $wi $node {"Configuration" "Interfaces"}]
+    set tabs [configGUI_addNotebook $wi $node_id {"Configuration" "Interfaces"}]
     set configtab [lindex $tabs 0]
     set ifctab [lindex $tabs 1]
 
     set treecolumns {"OperState State" "NatState Nat" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
 	    "MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop"}
-    configGUI_addTree $ifctab $node
+    configGUI_addTree $ifctab $node_id
 
-    configGUI_customImage $configtab $node
-    configGUI_attachDockerToExt $configtab $node
-    configGUI_servicesConfig $configtab $node
-    configGUI_staticRoutes $configtab $node
-    configGUI_snapshots $configtab $node
-    configGUI_customConfig $configtab $node
+    configGUI_customImage $configtab $node_id
+    configGUI_attachDockerToExt $configtab $node_id
+    configGUI_servicesConfig $configtab $node_id
+    configGUI_staticRoutes $configtab $node_id
+    configGUI_snapshots $configtab $node_id
+    configGUI_customConfig $configtab $node_id
 
-    configGUI_buttonsACNode $wi $node
+    configGUI_buttonsACNode $wi $node_id
 }
 
 #****f* pc.tcl/pc.configInterfacesGUI
 # NAME
 #   pc.configInterfacesGUI -- configuration of interfaces GUI
 # SYNOPSIS
-#   pc.configInterfacesGUI $wi $node $ifc
+#   pc.configInterfacesGUI $wi $node_id $ifc
 # FUNCTION
 #   Defines which modules for changing interfaces parameters are contained in
 #   the pc configuration window. It is done by calling procedures for adding
 #   certain modules to the window.
 # INPUTS
 #   * wi -- widget
-#   * node -- node id
+#   * node_id -- node id
 #   * ifc -- interface name
 #****
-proc $MODULE.configInterfacesGUI { wi node ifc } {
+proc $MODULE.configInterfacesGUI { wi node_id ifc } {
     global guielements
 
-    configGUI_ifcEssentials $wi $node $ifc
-    configGUI_ifcQueueConfig $wi $node $ifc
-    configGUI_ifcMACAddress $wi $node $ifc
-    configGUI_ifcIPv4Address $wi $node $ifc
-    configGUI_ifcIPv6Address $wi $node $ifc
+    configGUI_ifcEssentials $wi $node_id $ifc
+    configGUI_ifcQueueConfig $wi $node_id $ifc
+    configGUI_ifcMACAddress $wi $node_id $ifc
+    configGUI_ifcIPv4Address $wi $node_id $ifc
+    configGUI_ifcIPv6Address $wi $node_id $ifc
 }

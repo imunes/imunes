@@ -890,7 +890,7 @@ ng_source_dup_mod(sc_p sc, struct mbuf *m0, struct mbuf **m_ptr)
 
 	/* Duplicate the packet. */
 	m = m_dup(m0, M_DONTWAIT);
-	if (m == NULL) 
+	if (m == NULL)
 		return (ENOBUFS);
 	*m_ptr = m;
 

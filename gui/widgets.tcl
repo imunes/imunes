@@ -11,13 +11,11 @@
 #   * node -- node id
 #****
 proc showCfg { c node } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     upvar 0 ::showConfig showCfg
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     upvar 0 ::lastObservedNode lastObservedNode
 
     #Show only if in exec mode
-    if { $oper_mode != "exec" } {
+    if { [getFromRunning "oper_mode"] != "exec" } {
     	return
     }
     #Dont draw again if cursor did not move
@@ -25,10 +23,10 @@ proc showCfg { c node } {
 	    return
     }
     set lastObservedNode [winfo pointerxy .]
-    #Dont show popup window if 'None' or 'Route' is selected from 
+    #Dont show popup window if 'None' or 'Route' is selected from
     #the 'Show' menu
     #Also, dont show popup window if there is no node
-    if {$showCfg == "None" || $showCfg == "route" || $node == "" } {
+    if { $showCfg == "None" || $showCfg == "route" || $node == "" } {
     	$c delete -withtag showCfgPopup
 	return
     }
@@ -45,7 +43,7 @@ proc showCfg { c node } {
     set title "$node# $showCfg\n"
     append title $output
     #Call showCfgPopup
-    showCfgPopup $c $node $title $x $y    	
+    showCfgPopup $c $node $title $x $y
 }
 
 #****f* editor.tcl/showCfgPopup
@@ -64,20 +62,23 @@ proc showCfg { c node } {
 #****
 proc showCfgPopup { c node title x y } {
     global defaultFontSize
+
     #Therecan be shown only one popup at the time
     $c delete -withtag showCfgPopup
     #Show command output
     set popup [$c create text $x $y \
     			-text $title -tag "showCfgPopup" \
 			-font "Courier $defaultFontSize" -justify left -anchor nw]
+
     #Create frame for the command output
-    set box [$c bbox $popup]
-    set x1 [expr {[lindex $box 0] - 5}]
-    set y1 [expr {[lindex $box 1] - 5}]
-    set x2 [expr {[lindex $box 2] + 5}]
-    set y2 [expr {[lindex $box 3] + 5}]
+    lassign [$c bbox $popup] x1 y1 x2 y2
+    set x1 [expr {$x1 - 5}]
+    set y1 [expr {$y1 - 5}]
+    set x2 [expr {$x2 + 5}]
+    set y2 [expr {$y2 + 5}]
     $c create rectangle $x1 $y1 $x2 $y2 -fill "#CECECE" -tag "showCfgPopup"
     $c raise $popup
+
     #If popup goes beyond the canvas borders move it up and/or left
     set width [expr {abs($x2 - $x1)}]
     set height [expr {abs($y2 - $y1)}]
@@ -86,49 +87,45 @@ proc showCfgPopup { c node title x y } {
     set change 0
     set newX $x
     set newY $y
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    set sizex [lindex [getCanvasSize $curcanvas] 0]
-    set sizey [lindex [getCanvasSize $curcanvas] 1]
 
-    set nodeX [lindex [getNodeCoords $node] 0]
-    set nodeY [lindex [getNodeCoords $node] 1]
+    lassign [getCanvasSize [getFromRunning "curcanvas"]] sizex sizey
+    lassign [getNodeCoords $node] nodeX nodeY
+    lassign [$c cget -scrollregion] rx1 ry1 rx2 ry2
 
-    set canvasRegion [$c cget -scrollregion]
-    set rx1 [lindex $canvasRegion 0]    
-    set ry1 [lindex $canvasRegion 1]    
-    set rx2 [lindex $canvasRegion 2]    
-    set ry2 [lindex $canvasRegion 3]
+    #set vx1 [expr {round ([lindex [$c xview] 0]*($rx2-$rx1)+$rx1)}]
+    #set vx2 [expr {round ([lindex [$c xview] 1]*($rx2-$rx1)+$rx1)}]
+    lassign [lmap n [$c xview] {expr {round($n * ($rx2 - $rx1) + $rx1)}}] vx1 vx2
 
-    set vx1 [expr {round ([lindex [$c xview] 0]*($rx2-$rx1)+$rx1)}]
-    set vx2 [expr {round ([lindex [$c xview] 1]*($rx2-$rx1)+$rx1)}]
-    set vy1 [expr {round ([lindex [$c yview] 0]*($ry2-$ry1)+$ry1)}]
-    set vy2 [expr {round ([lindex [$c yview] 1]*($ry2-$ry1)+$ry1)}]
-    
-    set vwidth [expr {abs($vx2 - $vx1)}] 
-    set vheight [expr {abs($vy2 - $vy1)}] 
+    #set vy1 [expr {round ([lindex [$c yview] 0]*($ry2-$ry1)+$ry1)}]
+    #set vy2 [expr {round ([lindex [$c yview] 1]*($ry2-$ry1)+$ry1)}]
+    lassign [lmap n [$c yview] {expr {round($n * ($ry2 - $ry1) + $ry1)}}] vy1 vy2
+
+    set vwidth [expr {abs($vx2 - $vx1)}]
+    set vheight [expr {abs($vy2 - $vy1)}]
 
     set shift 40
 
     if {$nodeX > [expr {$vx1 + $vwidth/2 + 10}]} {
-	set newX [expr {$vx1+$shift}] 
+	set newX [expr {$vx1+$shift}]
     } else {
-	set newX [expr {$vx2-$width-$shift}] 
+	set newX [expr {$vx2-$width-$shift}]
     }
-    
+
     if {$nodeY > [expr {$vy1 + $vheight/2 + 10}]} {
-	set newY [expr {$vy1+$shift}] 
+	set newY [expr {$vy1+$shift}]
     } else {
-	set newY [expr {$vy2-$height-$shift}] 
+	set newY [expr {$vy2-$height-$shift}]
     }
-    
-    if {$nodeX > [expr {$newX-$shift}] && $nodeX < [expr {$newX+$width+$shift}] \
-	&& $nodeY > [expr {$newY-$shift}] && $nodeY < \
-	[expr {$newY+$height+$shift}] } {
+
+    if { $nodeX > [expr {$newX-$shift}] && $nodeX < [expr {$newX+$width+$shift}] && \
+	$nodeY > [expr {$newY-$shift}] && $nodeY < [expr {$newY+$height+$shift}] } {
+
 	return
     }
 
-    if {$x2 > $vx2 || $y2 > $vy2} {
+    if { $x2 > $vx2 || $y2 > $vy2 } {
 	deleteAndShowPopup $c $title $newX $newY
+
 	return
     }
 }
@@ -177,47 +174,51 @@ proc deleteAndShowPopup { c title x y } {
 #   * node2 -- second node
 #****
 proc showRoute { c node2 } {
-    global activetool
     upvar 0 ::showConfig showCfg
-    upvar 0 ::traceRouteTime traceRouteTime  
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    upvar 0 ::cf::[set ::curcfg]::eid eid
+    upvar 0 ::traceRouteTime traceRouteTime
+    global activetool
+
     #Route can only be drawn in exec mode
-    if {$oper_mode != "exec"} {
+    if { [getFromRunning "oper_mode"] != "exec"} {
 	    return
     }
+
     #Determine selected node
     set selected {}
     foreach obj [.panwin.f1.c find withtag "node && selected"] {
 	lappend selected [lindex [.panwin.f1.c gettags $obj] 1]
     }
+
     #Draw route only if 'Route' option is selected form 'Show' menu
-    if { $showCfg == "route"} {
+    if { $showCfg == "route" } {
 	#Draw route only if one node is selected
-    	if {[llength $selected] != 1} {
-		if {[llength $selected] != 0} {
-	    	    set line "To show route, only one node can be selected."
-	    	    .bottom.textbox config -text "$line"
-    		}
+	if { [llength $selected] != 1 } {
+	    if { [llength $selected] != 0 } {
+		set line "To show route, only one node can be selected."
+		.bottom.textbox config -text "$line"
+	    }
 	} else {
 	    set node1 $selected
+
 	    #Draw route only if both nodes work on network layer
 	    set type1 [[typemodel $node1].layer]
 	    set type2 [[typemodel $node2].layer]
-	    if { $node1 != $node2 && $type1 == "NETWORK" && $type2 == "NETWORK"} {
+	    if { $node1 != $node2 && $type1 == "NETWORK" && $type2 == "NETWORK" } {
 		#User notification
     		set line "Please wait. Route is being calculated."
     		.bottom.textbox config -text "$line"
 		after 5 {set t 1}
 		vwait t
+
 		#Get second nodes list of interfaces
 		set ifcs [lsort -ascii [ifcList $node2]]
+
 		#Make your own traceroute
 		set ifc [lindex $ifcs 0]
 		set ip [getIfcIPv4addr $node2 $ifc]
 		set slashPlace [string first "/" $ip]
 		set ipAddr [string range $ip 0 [expr $slashPlace-1]]
-		set nodeId "$eid.$node1"
+		set nodeId "[getFromRunning "eid"].$node1"
 		set hopIP ""
 		set hop 0
 		set n1 $node1
@@ -225,12 +226,11 @@ proc showRoute { c node2 } {
 		set timeExcedeed No
 		set cntr 0
 		set errDet 0
-		while {$hopIP != $ipAddr} {
+		while { $hopIP != $ipAddr } {
 		    incr hop
 		    set cmd [concat "exec jexec " $nodeId ping -n -c 1 -m $hop -t 1 -o -s 56 $ipAddr]
-		    catch {
-			eval $cmd 
-	    	    } result
+		    catch { eval $cmd } result
+
 		    set adBeg [string first "from" $result]
 		    incr adBeg 5
 		    set adEnd [string last ":" $result]
@@ -238,7 +238,8 @@ proc showRoute { c node2 } {
 		    set hopIP [string range $result $adBeg $adEnd]
 		    set n1 $n2
 		    set n2 [findNode $c $hopIP]
-		    if {$n1 == $n2 || $n2 == "" } {
+
+		    if { $n1 == $n2 || $n2 == "" } {
 			set errDet 1
 			incr hop -1
 			incr cntr
@@ -247,11 +248,13 @@ proc showRoute { c node2 } {
 			set cntr 0
 			set errDet 0
 		    }
+
 		    if {$errDet == 0} {
 			drawLine $c $n1 $n2
 
 	    	    }
 		}
+
 	    	#User notification
     		set line "Route calculation finished."
     		.bottom.textbox config -text "$line"
@@ -314,12 +317,9 @@ proc findNode { c ipAddr } {
 #****
 proc drawLine { c node1 node2 } {
     global activetool
-    set xy1 [getNodeCoords $node1]
-    set x1 [lindex $xy1 0]
-    set y1 [lindex $xy1 1]				
-    set xy2 [getNodeCoords $node2]
-    set x2 [lindex $xy2 0]
-    set y2 [lindex $xy2 1]
+
+    lassign [getNodeCoords $node1] x1 y1
+    lassign [getNodeCoords $node2] x2 y2
     $c create line $x1 $y1 $x2 $y2 -fill green \
     	-width 3 -tags "route"
     raiseAll $c
