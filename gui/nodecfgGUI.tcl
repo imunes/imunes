@@ -1624,7 +1624,7 @@ proc configGUI_ifcIPv4Address { wi node_id iface_id } {
 
     set addrs4 [string trim $addrs4 "; "]
     $wi.if$iface_id.ipv4.addr insert 0 $addrs4
-    $wi.if$iface_id.ipv4.addr configure -validatecommand { checkIPv4Nets %P }
+    $wi.if$iface_id.ipv4.addr configure -validatecommand { checkIPv4NetsDHCP %P }
 
     pack $wi.if$iface_id.ipv4.txt $wi.if$iface_id.ipv4.addr -side left
     pack $wi.if$iface_id.ipv4 -anchor w -padx 10
@@ -2630,9 +2630,13 @@ proc configGUI_ifcIPv4AddressApply { wi node_id iface_id } {
     global changed force apply node_cfg
 
     set addrs4 [formatIPaddrList [$wi.if$iface_id.ipv4.addr get]]
-    foreach addr $addrs4 {
-	if { [checkIPv4Net $addr] == 0 } {
-	    return
+    if { $addrs4 == "dhcp" } {
+	set changed 1
+    } else {
+	foreach addr $addrs4 {
+	    if { [checkIPv4Net $addr] == 0 } {
+		return
+	    }
 	}
     }
 

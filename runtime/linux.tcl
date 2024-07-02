@@ -1630,6 +1630,10 @@ proc getFlushIPv6IfcCmd { iface_name } {
 }
 
 proc getIPv4IfcCmd { ifc addr primary } {
+    if { $addr == "dhcp" } {
+	return "dhclient -nw $ifc"
+    }
+
     return "ip addr add $addr dev $ifc"
 }
 
@@ -1638,6 +1642,10 @@ proc getIPv6IfcCmd { iface_name addr primary } {
 }
 
 proc getDelIPv4IfcCmd { ifc addr } {
+    if { $addr == "dhcp" } {
+	return "pkill -f 'dhclient -nw $ifc\\>'"
+    }
+
     return "ip addr del $addr dev $ifc"
 }
 
