@@ -1233,9 +1233,11 @@ proc routerCfggenIfc { node_id iface_id } {
 
 	    set addrs4 [getIfcIPv4addrs $node_id $iface_id]
 	    setToRunning "${node_id}|${iface_id}_old_ipv4_addrs" $addrs4
-	    foreach addr $addrs4 {
-		if { $addr != "" } {
-		    lappend cfg " ip address $addr"
+	    if { $addrs4 != "dhcp" } {
+		foreach addr $addrs4 {
+		    if { $addr != "" } {
+			lappend cfg " ip address $addr"
+		    }
 		}
 	    }
 
@@ -1267,6 +1269,10 @@ proc routerCfggenIfc { node_id iface_id } {
 
 	    lappend cfg "!"
 	    lappend cfg "__EOF__"
+
+	    if { $addrs4 == "dhcp" } {
+		lappend cfg "[getIPv4IfcCmd $iface_name $addrs4 1]"
+	    }
 	}
 	"static" {
 	    set cfg [concat $cfg [nodeCfggenIfc $node_id $iface_id]]
@@ -1296,9 +1302,11 @@ proc routerUncfggenIfc { node_id iface_id } {
 	    lappend cfg "interface $iface_name"
 
 	    set addrs4 [getFromRunning "${node_id}|${iface_id}_old_ipv4_addrs"]
-	    foreach addr $addrs4 {
-		if { $addr != "" } {
-		    lappend cfg " no ip address $addr"
+	    if { $addrs4 != "dhcp" } {
+		foreach addr $addrs4 {
+		    if { $addr != "" } {
+			lappend cfg " no ip address $addr"
+		    }
 		}
 	    }
 
@@ -1325,6 +1333,10 @@ proc routerUncfggenIfc { node_id iface_id } {
 
 	    lappend cfg "!"
 	    lappend cfg "__EOF__"
+
+	    if { $addrs4 == "dhcp" } {
+		lappend cfg "[getDelIPv4IfcCmd $iface_name $addrs4]"
+	    }
 	}
 	"static" {
 	    set cfg [concat $cfg [nodeUncfggenIfc $node_id $iface_id]]
