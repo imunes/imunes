@@ -105,8 +105,11 @@ https://wiki.tcl-lang.org/page/tksvg
     # apt install tk imagemagick wireshark socat
     # apt install tcl8.6-dev tcl-dev tk8.6-dev tk-dev
     # bash configure --with-tcl=/usr/lib/tcl8.6 --with-tk=/usr/lib/tk8.6 --exec-prefix=/usr/lib/tksvg0.14
-    # make
     # make install
+
+    # cd /usr/lib/tksvg0.14/lib/tksvg0.14/
+    # cp -rf libtksvg0.14.so ../../
+    # cp -rf pkgIndex.tcl ../../
 
 This solves the problem, when the correct directory and file structure is not created during compilation.
 
