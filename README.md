@@ -100,6 +100,14 @@ https://wiki.tcl-lang.org/page/tksvg
     # cp -rf libtksvg0.14.so ../../
     # cp -rf pkgIndex.tcl ../../
 
+### In Operating system Linux Debian 12.5
+    # apt install tcl tcllib docker.io
+    # apt install tk imagemagick wireshark socat
+    # apt install tcl8.6-dev tcl-dev tk8.6-dev tk-dev
+    # bash configure --with-tcl=/usr/lib/tcl8.6 --with-tk=/usr/lib/tk8.6 --exec-prefix=/usr/lib/tksvg0.14
+    # make
+    # make install
+
 This solves the problem, when the correct directory and file structure is not created during compilation.
 
 ## Operating system (Linux)
