@@ -653,15 +653,17 @@ proc topologyElementsTree {} {
 	grid rowconfigure $f.treegrid 0 -weight 1
 	
 	#stvaranje columna            
-	$f.tree configure -columns { state MAC IPv4 IPv6 canvas }
+	$f.tree configure -columns { state nat MAC IPv4 IPv6 canvas }
 	$f.tree column #0 -width 200 -stretch 0
 	$f.tree column state -width 60 -anchor center -stretch 0
+	$f.tree column nat -width 40 -anchor center -stretch 0
         $f.tree column MAC -width 120 -anchor center -stretch 0
 	$f.tree column IPv4 -width 100 -anchor center -stretch 0
 	$f.tree column IPv6 -width 100 -anchor center -stretch 0
 	$f.tree column canvas -width 60 -anchor center -stretch 0
 	$f.tree heading #0 -text "(Expand All)"
 	$f.tree heading state -text "State"
+	$f.tree heading nat -text "NAT"
         $f.tree heading MAC -text "MAC address"
 	$f.tree heading IPv4 -text "IPv4 address"
 	$f.tree heading IPv6 -text "IPv6 address"
