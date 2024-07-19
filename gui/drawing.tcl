@@ -8,7 +8,7 @@
 #****
 proc redrawAll {} {
     global background sizex sizey grid
-    global showBkgImage showAnnotations showGrid bkgImage
+    global show_background_images show_annotations show_grid bkgImage
 
     set zoom [getFromRunning "zoom"]
     set curcanvas [getFromRunning "curcanvas"]
@@ -24,7 +24,7 @@ proc redrawAll {} {
     .panwin.f1.c delete all
 
     set canvasBkgImage [getCanvasBkg $curcanvas]
-    if { $showBkgImage == 1 && "$canvasBkgImage" != ""} {
+    if { $show_background_images == 1 && "$canvasBkgImage" != ""} {
 	set ret [backgroundImage .panwin.f1.c $canvasBkgImage]
 	if { "$ret" == 2 } {
 	    set background [.panwin.f1.c create rectangle 0 0 $e_sizex $e_sizey \
@@ -38,7 +38,7 @@ proc redrawAll {} {
 	    -fill white -tags "background"]
     }
 
-    if { $showAnnotations == 1 } {
+    if { $show_annotations == 1 } {
 	foreach annotation_id [getFromRunning "annotation_list"] {
 	    if { [getAnnotationCanvas $annotation_id] == $curcanvas } {
 		drawAnnotation $annotation_id
@@ -49,7 +49,7 @@ proc redrawAll {} {
     # Grid
     set e_grid [expr {int($grid * $zoom)}]
     set e_grid2 [expr {$e_grid * 2}]
-    if { $showGrid } {
+    if { $show_grid } {
 	for { set x $e_grid } { $x < $e_sizex } { incr x $e_grid } {
 	    if { [expr {$x % $e_grid2}] != 0 } {
 		if { $zoom > 0.5 } {
@@ -105,84 +105,83 @@ proc redrawAll {} {
 # FUNCTION
 #   Draws the specified node. Draws node's image (router pc
 #   host lanswitch frswitch rj45 hub pseudo) and label.
-#   The visibility of the label depends on the showNodeLabels
+#   The visibility of the label depends on the show_node_labels
 #   variable for all types of nodes and on invisible variable
 #   for pseudo nodes.
 # INPUTS
 #   * node_id -- node id
 #****
 proc drawNode { node_id } {
-    global showNodeLabels pseudo
+    global show_node_labels pseudo
 
-    set zoom [getFromRunning "zoom"]
     set type [getNodeType $node_id]
-    lassign [getNodeCoords $node_id] x y
-    set x [expr {$x * $zoom}]
-    set y [expr {$y * $zoom}]
+    set zoom [getFromRunning "zoom"]
+    lassign [lmap coord [getNodeCoords $node_id] {expr $coord * $zoom}] x y
 
-    set customIcon [getCustomIcon $node_id]
-    if { [string match "*img*" $customIcon] == 0 } {
+    set custom_icon [getCustomIcon $node_id]
+    if { $custom_icon == "" } {
 	global $type
+
 	.panwin.f1.c create image $x $y -image [set $type] -tags "node $node_id"
     } else {
-	global iconSize
-	switch $iconSize {
+	global icon_size
+
+	switch $icon_size {
 	    normal {
-		set icon_data [getImageData $customIcon]
-		image create photo img_$customIcon -data $icon_data
-		.panwin.f1.c create image $x $y -image img_$customIcon -tags "node $node_id"
+		set icon_data [getImageData $custom_icon]
+		image create photo img_$custom_icon -data $icon_data
+		.panwin.f1.c create image $x $y -image img_$custom_icon -tags "node $node_id"
 	    }
 	    small {
-		set icon_data [getImageData $customIcon]
-		image create photo img_$customIcon -data $icon_data
-		set img_$customIcon [image% img_$customIcon 70 $customIcon]
-		.panwin.f1.c create image $x $y -image [set img_$customIcon] -tags "node $node_id"
+		set icon_data [getImageData $custom_icon]
+		image create photo img_$custom_icon -data $icon_data
+		set img_$custom_icon [image% img_$custom_icon 70 $custom_icon]
+		.panwin.f1.c create image $x $y -image [set img_$custom_icon] -tags "node $node_id"
 	    }
 	}
     }
 
-    lassign [getNodeLabelCoords $node_id] x y
-    set x [expr {$x * $zoom}]
-    set y [expr {$y * $zoom}]
-    if { [getNodeType $node_id] != "pseudo" } {
-	set labelstr [getNodeName $node_id]
-	if { [getNodeType $node_id] == "rj45" && [getEtherVlanEnabled $node_id] } {
-	    set labelstr "$labelstr (VLAN [getEtherVlanTag $node_id])"
+    lassign [lmap coord [getNodeLabelCoords $node_id] {expr $coord * $zoom}] x y
+    if { $type != "pseudo" } {
+	set label_str [getNodeName $node_id]
+	if { $type == "rj45" && [getEtherVlanEnabled $node_id] } {
+	    set label_str "$label_str (VLAN [getEtherVlanTag $node_id])"
 	}
 
 	foreach ifc [ifcList $node_id] {
 	    if { [string trim $ifc 0123456789] == "wlan" } {
-		set labelstr [format "%s %s" $labelstr [getIfcIPv4addr $node_id $ifc]]
+		set label_str [format "%s %s" $label_str [getIfcIPv4addr $node_id $ifc]]
 	    }
 	}
-	set label [.panwin.f1.c create text $x $y -fill blue \
-	    -text "$labelstr" \
-	    -tags "nodelabel $node_id"]
-
     } else {
-	set pnode [getIfcPeer [getNodeMirror $node_id] "0"]
-	set pcanvas [getNodeCanvas $pnode]
-	set ifc [ifcByPeer $pnode [getNodeMirror $node_id]]
-	if { $pcanvas != [getFromRunning "curcanvas"] } {
-	    set label [.panwin.f1.c create text $x $y -fill blue \
-		-text "[getNodeName $pnode]:$ifc
-@[getCanvasName $pcanvas]" \
-		-tags "nodelabel $node_id" -justify center]
-	} else {
-	    set label [.panwin.f1.c create text $x $y -fill blue \
-		-text "[getNodeName $pnode]:$ifc" \
-		-tags "nodelabel $node_id" -justify center]
+	# get mirror link and its real node/iface
+	set mirror_link_id [getIfcLink [getNodeMirror $node_id] "0"]
+	set peer_id [lindex [getLinkPeers $mirror_link_id] 1]
+	set peer_iface [lindex [getLinkPeersIfaces $mirror_link_id] 1]
+
+	set label_str "[getNodeName $peer_id]:$peer_iface"
+	set peer_canvas [getNodeCanvas $peer_id]
+	if { $peer_canvas != [getFromRunning "curcanvas"] } {
+	    set label_str "$label_str\n@[getCanvasName $peer_canvas]"
 	}
+
     }
-    if { $showNodeLabels == 0} {
-	.panwin.f1.c itemconfigure $label -state hidden
+
+    set label_elem [.panwin.f1.c create text $x $y -fill blue \
+	-text "$label_str" -tags "nodelabel $node_id" -justify center]
+
+    if { $show_node_labels == 0} {
+	.panwin.f1.c itemconfigure $label_elem -state hidden
     }
+
     # XXX Invisible pseudo-node labels
     global invisible
-    if { $invisible == 1 && [getNodeType $node_id] == "pseudo" } {
-	.panwin.f1.c itemconfigure $label -state hidden
+
+    if { $invisible == 1 && $type == "pseudo" } {
+	.panwin.f1.c itemconfigure $label_elem -state hidden
     }
-    if { [getNodeType $node_id] == "cloud" } {
+
+    if { $type == "cloud" } {
 	setCloudParts $node_id 1
     }
 }
@@ -282,47 +281,51 @@ proc calcAngle { link } {
 # NAME
 #   updateIfcLabel -- update interface label
 # SYNOPSIS
-#   updateIfcLabel $lnode1 $lnode2
+#   updateIfcLabel $link_id $node_id $iface
 # FUNCTION
 #   Updates the interface label, including interface name,
 #   interface state (* for interfaces that are down), IPv4
 #   address and IPv6 address.
 # INPUTS
-#   * lnode1 -- node id of a node where the interface resides
-#   * lnode2 -- node id of the node that is connected by this
-#   interface.
+#   * node_id -- node id of a node where the interface resides
+#   * iface -- interface to update
 #****
-proc updateIfcLabel { lnode1 lnode2 } {
-    global showIfNames showIfIPaddrs showIfIPv6addrs
+proc updateIfcLabel { link_id node_id iface } {
+    global show_interface_names show_interface_ipv4 show_interface_ipv6
 
-    set link_id [lindex [.panwin.f1.c gettags "link && $lnode1 && $lnode2"] 1]
-    set ifc [ifcByPeer $lnode1 $lnode2]
-    if { [getNodeType $lnode1] == "extelem" } {
-	set ifcs [getNodeStolenIfaces $lnode1]
-	set ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$ifc"] 1]
+    if { [getNodeType $node_id] == "extelem" } {
+	set ifaces [getNodeStolenIfaces $node_id]
+	set iface [lindex [lsearch -inline -exact -index 0 $ifaces "$iface"] 1]
     }
-    set ifipv4addr [getIfcIPv4addr $lnode1 $ifc]
-    set ifipv6addr [getIfcIPv6addr $lnode1 $ifc]
-    if { $ifc == 0 } {
-	set ifc ""
+
+    set ifipv4addr [getIfcIPv4addr $node_id $iface]
+    set ifipv6addr [getIfcIPv6addr $node_id $iface]
+    if { $iface == 0 } {
+	set iface ""
     }
+
     set labelstr ""
-    if { $showIfNames } {
-	lappend labelstr "$ifc"
+    if { $show_interface_names } {
+	lappend labelstr "$iface"
     }
-    if { $showIfIPaddrs && $ifipv4addr != "" } {
+
+    if { $show_interface_ipv4 && $ifipv4addr != "" } {
 	lappend labelstr "$ifipv4addr"
     }
-    if { $showIfIPv6addrs && $ifipv6addr != "" } {
+
+    if { $show_interface_ipv6 && $ifipv6addr != "" } {
 	lappend labelstr "$ifipv6addr"
     }
+
     set str ""
-    if { [getIfcOperState $lnode1 $ifc] == "down" } {
+    if { [getIfcOperState $node_id $iface] == "down" } {
 	set str "*"
     }
-    if { [getIfcNatState $lnode1 $ifc] == "on" } {
+
+    if { [getIfcNatState $node_id $iface] == "on" } {
 	set str "${str}NAT-"
     }
+
     foreach elem $labelstr {
 	if { $str in "{} * NAT- *NAT-" } {
 	    set str "$str[set elem]"
@@ -330,7 +333,8 @@ proc updateIfcLabel { lnode1 lnode2 } {
 	    set str "$str\r[set elem]"
 	}
     }
-    .panwin.f1.c itemconfigure "interface && $lnode1 && $link_id" \
+
+    .panwin.f1.c itemconfigure "interface && $node_id && $link_id" \
 	-text $str
 }
 
@@ -346,7 +350,7 @@ proc updateIfcLabel { lnode1 lnode2 } {
 #   * link -- link id of the link whose labels are updated.
 #****
 proc updateLinkLabel { link } {
-    global showLinkLabels linkJitterConfiguration
+    global show_link_labels linkJitterConfiguration
 
     set labelstr ""
     set bwstr "[getLinkBandwidthString $link]"
@@ -385,7 +389,7 @@ proc updateLinkLabel { link } {
 
     set ang [calcAngle $link]
     .panwin.f1.c itemconfigure "linklabel && $link" -text $str -angle $ang
-    if { $showLinkLabels == 0} {
+    if { $show_link_labels == 0} {
 	.panwin.f1.c itemconfigure "linklabel && $link" -state hidden
     }
 }
@@ -451,21 +455,22 @@ proc redrawLink { link_id } {
     }
     .panwin.f1.c coords "linklabel && $link_id" $lx $ly
 
+    lassign [getLinkPeersIfaces $link_id] iface1 iface2
     if { [getNodeType $lnode1] != "pseudo" } {
-	updateIfcLabelParams $link_id $lnode1 $lnode2 $x1 $y1 $x2 $y2
-	updateIfcLabel $lnode1 $lnode2
+	updateIfcLabelParams $link_id $lnode1 $iface1 $x1 $y1 $x2 $y2
+	updateIfcLabel $link_id $lnode1 $iface1
     }
 
     if { [getNodeType $lnode2] != "pseudo" } {
-	updateIfcLabelParams $link_id $lnode2 $lnode1 $x2 $y2 $x1 $y1
-	updateIfcLabel $lnode2 $lnode1
+	updateIfcLabelParams $link_id $lnode2 $iface2 $x2 $y2 $x1 $y1
+	updateIfcLabel $link_id $lnode2 $iface2
     }
 }
 
-proc updateIfcLabelParams { link_id lnode1 lnode2 x1 y1 x2 y2 } {
-    global showIfIPaddrs showIfIPv6addrs showIfNames
+proc updateIfcLabelParams { link_id node_id iface x1 y1 x2 y2 } {
+    global show_interface_ipv4 show_interface_ipv6 show_interface_names
 
-    set bbox [.panwin.f1.c bbox "node && $lnode1"]
+    set bbox [.panwin.f1.c bbox "node && $node_id"]
     set iconwidth [expr [lindex $bbox 2] - [lindex $bbox 0]]
     set iconheight [expr [lindex $bbox 3] - [lindex $bbox 1]]
 
@@ -473,15 +478,17 @@ proc updateIfcLabelParams { link_id lnode1 lnode2 x1 y1 x2 y2 } {
     set just "center"
     set anchor "center"
 
-    set IP4 $showIfIPaddrs
-    if { [getIfcIPv4addr $lnode1 [lindex [ifcByPeer $lnode1 $lnode2] 0]] == "" } {
+    set IP4 $show_interface_ipv4
+    if { [getIfcIPv4addr $node_id $iface] == "" } {
 	set IP4 0
     }
-    set IP6 $showIfIPv6addrs
-    if { [getIfcIPv6addr $lnode1 [lindex [ifcByPeer $lnode1 $lnode2] 0]] == "" } {
+
+    set IP6 $show_interface_ipv6
+    if { [getIfcIPv6addr $node_id $iface] == "" } {
 	set IP6 0
     }
-    set add_height [expr 10*($showIfNames + $IP4 + $IP6)]
+
+    set add_height [expr 10*($show_interface_ipv4 + $IP4 + $IP6)]
 
     # these params could be called dy and dx, respectively
     # additional height represents the ifnames, ipv4 and ipv6 addrs
@@ -499,6 +506,7 @@ proc updateIfcLabelParams { link_id lnode1 lnode2 x1 y1 x2 y2 } {
 		set anchor e
 		set lx [expr $x1 - $width]
 	    }
+
 	    set ly $y1
 	} else {
 	    set just center
@@ -511,6 +519,7 @@ proc updateIfcLabelParams { link_id lnode1 lnode2 x1 y1 x2 y2 } {
 		set ly [expr $y1 + $height + 10]
 		set a [expr ($x2-$x1)/($y2-$y1)*2]
 	    }
+
 	    set lx [expr $a*$height + $x1]
 	}
     } else {
@@ -525,10 +534,12 @@ proc updateIfcLabelParams { link_id lnode1 lnode2 x1 y1 x2 y2 } {
 	    set lx [expr $x1 + $width]
 	    set a [expr ($y2-$y1)/($x2-$x1)]
 	}
+
 	set ly [expr $a*$width + $y1]
     }
-    .panwin.f1.c coords "interface && $lnode1 && $link_id" $lx $ly
-    .panwin.f1.c itemconfigure "interface && $lnode1 && $link_id" -justify $just \
+
+    .panwin.f1.c coords "interface && $node_id && $link_id" $lx $ly
+    .panwin.f1.c itemconfigure "interface && $node_id && $link_id" -justify $just \
 	-anchor $anchor -angle $ang
 }
 
@@ -932,8 +943,8 @@ proc updateIconSize {} {
   global all_modules_list
 
   foreach b $all_modules_list {
-    global $b iconSize
-    set $b [image create photo -file [$b.icon $iconSize]]
+    global $b icon_size
+    set $b [image create photo -file [$b.icon $icon_size]]
   }
 }
 

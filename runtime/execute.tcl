@@ -1064,11 +1064,11 @@ proc executeConfNodes { nodes nodeCount w } {
 # INPUTS
 #   * node_id -- node id
 #****
-    global hostsAutoAssign
 proc generateHostsFile { node_id } {
+    global auto_etc_hosts
 
-    if { $hostsAutoAssign == 1 } {
     set etc_hosts [getFromRunning "etc_hosts"]
+    if { $auto_etc_hosts == 1 } {
 	if { [[typemodel $node_id].virtlayer] == "VIMAGE" } {
 	    if { $etc_hosts == "" } {
 		foreach iter [getFromRunning "node_list"] {

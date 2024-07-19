@@ -61,11 +61,11 @@ proc loadCfgLegacy { cfg } {
     upvar 0 ::cf::[set ::curcfg]::ipv4_used_list ipv4_used_list
     upvar 0 ::cf::[set ::curcfg]::mac_used_list mac_used_list
     upvar 0 ::cf::[set ::curcfg]::etchosts etchosts
-    global showIfNames showNodeLabels showLinkLabels
-    global showIfIPaddrs showIfIPv6addrs
-    global showBkgImage showGrid showAnnotations
-    global iconSize
-    global hostsAutoAssign
+    global show_interface_names show_node_labels show_link_labels
+    global show_interface_ipv4 show_interface_ipv6
+    global show_background_images show_grid show_annotations
+    global icon_size
+    global auto_etc_hosts
     global execMode all_modules_list
 
     upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
@@ -716,82 +716,86 @@ proc loadCfgLegacy { cfg } {
 		    }
 		} elseif {"$class" == "option"} {
 		    cfgUnset $dict_object $object
-		    cfgSet $dict_object "show_$field" $value
 		    switch -exact -- $field {
 			interface_names {
 			    if { $value == "no" } {
-				set showIfNames 0
+				set show_interface_names 0
 			    } elseif { $value == "yes" } {
-				set showIfNames 1
+				set show_interface_names 1
 			    }
+			    cfgSet $dict_object "show_interface_names" $show_interface_names
 			}
 			ip_addresses {
 			    if { $value == "no" } {
-				set showIfIPaddrs 0
+				set show_interface_ipv4 0
 			    } elseif { $value == "yes" } {
-				set showIfIPaddrs 1
+				set show_interface_ipv4 1
 			    }
+			    cfgSet $dict_object "show_interface_ipv4" $show_interface_ipv4
 			}
 			ipv6_addresses {
 			    if { $value == "no" } {
-				set showIfIPv6addrs 0
+				set show_interface_ipv6 0
 			    } elseif { $value == "yes" } {
-				set showIfIPv6addrs 1
+				set show_interface_ipv6 1
 			    }
+			    cfgSet $dict_object "show_interface_ipv6" $show_interface_ipv6
 			}
 			node_labels {
 			    if { $value == "no" } {
-				set showNodeLabels 0
+				set show_node_labels 0
 			    } elseif { $value == "yes" } {
-				set showNodeLabels 1
+				set show_node_labels 1
 			    }
+			    cfgSet $dict_object "show_node_labels" $show_node_labels
 			}
 			link_labels {
 			    if { $value == "no" } {
-				set showLinkLabels 0
+				set show_link_labels 0
 			    } elseif { $value == "yes" } {
-				set showLinkLabels 1
+				set show_link_labels 1
 			    }
+			    cfgSet $dict_object "show_link_labels" $show_link_labels
 			}
 			background_images {
 			    if { $value == "no" } {
-				set showBkgImage 0
+				set show_background_images 0
 			    } elseif { $value == "yes" } {
-				set showBkgImage 1
+				set show_background_images 1
 			    }
+			    cfgSet $dict_object "show_background_images" $show_background_images
 			}
 			annotations {
 			    if { $value == "no" } {
-				set showAnnotations 0
+				set show_annotations 0
 			    } elseif { $value == "yes" } {
-				set showAnnotations 1
+				set show_annotations 1
 			    }
+			    cfgSet $dict_object "show_annotations" $show_annotations
 			}
 			grid {
 			    if { $value == "no" } {
-				set showGrid 0
+				set show_grid 0
 			    } elseif { $value == "yes" } {
-				set showGrid 1
+				set show_grid 1
 			    }
+			    cfgSet $dict_object "show_grid" $show_grid
 			}
 			hostsAutoAssign {
-			    cfgUnset $dict_object "show_$field"
-			    cfgSet $dict_object "auto_etc_hosts" $value
 			    if { $value == "no" } {
-				set hostsAutoAssign 0
+				set auto_etc_hosts 0
 			    } elseif { $value == "yes" } {
-				set hostsAutoAssign 1
+				set auto_etc_hosts 1
 			    }
+			    cfgSet $dict_object "auto_etc_hosts" $auto_etc_hosts
 			}
 			zoom {
-			    cfgUnset $dict_object "show_$field"
-			    cfgSet $dict_object $field $value
 			    set zoom $value
+			    cfgSet $dict_object "zoom" $zoom
 			}
 			iconSize {
-			    cfgUnset $dict_object "show_$field"
-			    cfgSet $dict_object $field $value
-			    set iconSize $value
+			    set icon_size $value
+			    cfgSet $dict_object "icon_size" $icon_size
 			}
 		    }
 		} elseif {"$class" == "annotation"} {
@@ -872,7 +876,7 @@ proc loadCfgLegacy { cfg } {
 	set object ""
     }
     global CFG_VERSION
-    cfgSet "options" "version" $CFG_VERSION
+    setOption "version" $CFG_VERSION
 
     setToRunning "node_list" $node_list
     setToRunning "link_list" $link_list
@@ -1007,6 +1011,8 @@ proc loadCfgJson { json_cfg } {
     setToRunning "annotation_list" [getAnnotationList]
     setToRunning "image_list" [getImageList]
 
+    applyOptions
+
     # Speeding up auto renumbering of MAC, IPv4 and IPv6 addresses by remembering
     # used addresses in lists.
     set ipv4_used_list {}
@@ -1071,6 +1077,8 @@ proc readCfgJson { fname } {
 
 proc saveCfgJson { fname } {
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+
+    saveOptions
 
     set json_cfg [createJson "dictionary" $dict_cfg]
     set fd [open $fname w+]
@@ -1300,7 +1308,23 @@ proc setToUndolog { undolevel { value "" } } {
 proc getOption { property } {
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-    return [dictGet $dict_cfg "option" $property]
+    return [dictGet $dict_cfg "options" $property]
+}
+
+proc setOption { property value } {
+    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+
+    set dict_cfg [dictSet $dict_cfg "options" $property $value]
+
+    return $dict_cfg
+}
+
+proc unsetOption { property } {
+    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+
+    set dict_cfg [dictUnset $dict_cfg "options" $property]
+
+    return $dict_cfg
 }
 
 proc getCanvasList { } {

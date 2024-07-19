@@ -179,5 +179,6 @@ bind . <F6> {
 
     source "$ROOTDIR/$LIBDIR/gui/debug.tcl"
 
+    applyOptions
     puts "Reloaded all sources."
 }
