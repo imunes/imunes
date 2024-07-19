@@ -477,12 +477,12 @@ proc selectZoomApply { w } {
 #****
 proc routerDefaultsApply { wi } {
     global changed router_model routerDefaultsModel router_ConfigModel
-    global routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable
+    global routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable routerBgpEnable
     global rdconfig
 
     set oper_mode [getFromRunning "oper_mode"]
 
-    set rdconfig "$routerRipEnable $routerRipngEnable $routerOspfEnable $routerOspf6Enable"
+    set rdconfig "$routerRipEnable $routerRipngEnable $routerOspfEnable $routerOspf6Enable $routerBgpEnable"
     set routerDefaultsModel $router_model
 
     set selected_node_list [selectedNodes]
@@ -496,11 +496,12 @@ proc routerDefaultsApply { wi } {
 
 	    set router_ConfigModel $router_model
 	    if { $router_ConfigModel != "static" } {
-		lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable
+		lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable
 		setNodeProtocol $node_id "rip" $ripEnable
 		setNodeProtocol $node_id "ripng" $ripngEnable
 		setNodeProtocol $node_id "ospf" $ospfEnable
 		setNodeProtocol $node_id "ospf6" $ospf6Enable
+		setNodeProtocol $node_id "bgp" $bgpEnable
 	    }
 	    set changed 1
 	}

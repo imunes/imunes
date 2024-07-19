@@ -81,12 +81,12 @@ proc $MODULE.confNewIfc { node_id iface_id } {
 #   * node_id -- node id
 #****
 proc $MODULE.confNewNode { node_id } {
-    global ripEnable ripngEnable ospfEnable ospf6Enable
+    global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable
     global rdconfig router_model router_ConfigModel
     global def_router_model
     global nodeNamingBase
 
-    lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable
+    lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable
     set router_ConfigModel $router_model
 
     setNodeName $node_id [getNewNodeNameType router $nodeNamingBase(router)]
@@ -96,6 +96,7 @@ proc $MODULE.confNewNode { node_id } {
     setNodeProtocol $node_id "ripng" $ripngEnable
     setNodeProtocol $node_id "ospf" $ospfEnable
     setNodeProtocol $node_id "ospf6" $ospf6Enable
+    setNodeProtocol $node_id "bgp" $bgpEnable
 
     setAutoDefaultRoutesStatus $node_id "enabled"
     setLogIfcType $node_id lo0 lo
