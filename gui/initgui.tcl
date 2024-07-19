@@ -687,7 +687,8 @@ menu $m -tearoff 0
 	set show_interface_ipv6 1
 	set show_node_labels 1
 	set show_link_labels 1
-	redrawAllLinks
+
+	redrawAll
 
 	foreach object [.panwin.f1.c find withtag linklabel] {
 	    .panwin.f1.c itemconfigure $object -state normal
@@ -700,7 +701,8 @@ menu $m -tearoff 0
 	set show_interface_ipv6 0
 	set show_node_labels 0
 	set show_link_labels 0
-	redrawAllLinks
+
+	redrawAll
 
 	foreach object [.panwin.f1.c find withtag linklabel] {
 	    .panwin.f1.c itemconfigure $object -state hidden
