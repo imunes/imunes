@@ -125,7 +125,7 @@ proc paste {} {
 	cfgSet "annotations" $new_annotation_id $annotation_orig_cfg
 	lappendToRunning "annotation_list" $new_annotation_id
 
-	setNodeCanvas $new_annotation_id $curcanvas
+	setAnnotationCanvas $new_annotation_id $curcanvas
 	drawAnnotation $new_annotation_id
     }
     raiseAll .panwin.f1.c

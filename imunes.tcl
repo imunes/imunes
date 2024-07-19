@@ -162,6 +162,28 @@ array set nodeNamingBase {
     wlan wlan
 }
 
+set option_defaults {
+    auto_etc_hosts		0
+}
+
+set gui_option_defaults {
+    show_interface_names	1
+    show_interface_ipv4		1
+    show_interface_ipv6		1
+    show_node_labels		1
+    show_link_labels		1
+    show_background_images	0
+    show_annotations		1
+    show_grid			1
+    icon_size			"normal"
+    zoom			1
+}
+
+foreach {option default_value} [concat $option_defaults $gui_option_defaults] {
+    global $option
+    set $option $default_value
+}
+
 # Set default L2 node list
 set l2nodes "hub lanswitch rj45 stpswitch filter packgen ext extnat"
 # Set default L3 node list
@@ -175,18 +197,15 @@ if { $isOSlinux } {
     set l3nodes "genericrouter frr quagga static pc host nat64 extelem"
     set supp_router_models "frr quagga static"
     safeSourceFile $ROOTDIR/$LIBDIR/runtime/linux.tcl
-    if { $initMode == 1 } {
-	#puts "INFO: devfs preparation is done only on FreeBSD."
-	exit
-    }
 }
 
 if { $isOSfreebsd } {
     safeSourceFile $ROOTDIR/$LIBDIR/runtime/freebsd.tcl
-    if { $initMode == 1 } {
-	prepareDevfs 1
-	exit
-    }
+}
+
+if { $initMode == 1 } {
+    prepareDevfs 1
+    exit
 }
 
 if { $execMode == "batch" } {

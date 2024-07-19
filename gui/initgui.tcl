@@ -80,11 +80,11 @@
 #    * defEthBandwidth -- defines the ethernet bandwidth
 #    * defSerBandwidth -- defines the serail link bandwidth
 #    * defSerDelay -- defines the serail link delay
-#    * showIfNames -- control variable for showing interface names
-#    * showIfIPaddrs -- control variable for showing interface IPv4 addresses
-#    * showIfIPv6addrs -- control variable for showing interface IPv6 addrs
-#    * showNodeLabels -- control variable for showing node labels
-#    * showLinkLabels -- control variable for showing link labels
+#    * show_interface_names -- control variable for showing interface names
+#    * show_interface_ipv4 -- control variable for showing interface IPv4 addresses
+#    * show_interface_ipv6 -- control variable for showing interface IPv6 addresses
+#    * show_node_labels -- control variable for showing node labels
+#    * show_link_labels -- control variable for showing link labels
 #
 #    * supp_router_models -- supproted router models, currently frr quagga
 #      and static.
@@ -102,7 +102,6 @@ set badentry 0
 set cursorState 0
 set clock_seconds 0
 set grid 24
-set showGrid 1
 set autorearrange_enabled 0
 set activetool select
 
@@ -131,23 +130,12 @@ set defTextFont "Arial 12"
 set defTextFontFamily "Arial"
 set defTextFontSize 12
 set defTextColor #000000
-
-set showIfNames 1
-set showIfIPaddrs 1
-set showIfIPv6addrs 1
-set showNodeLabels 1
-set showLinkLabels 1
 set showZFSsnapshots 0
 
 set IPv4autoAssign 1
 set IPv6autoAssign 1
-set hostsAutoAssign 0
 
 set showTree 0
-
-set showBkgImage 0
-set showAnnotations 1
-set iconSize normal
 set zoom_stops [list 0.2 0.4 0.5 0.6 0.8 1 \
   1.25 1.5 1.75 2.0 3.0]
 set canvasBkgMode "original"
@@ -447,7 +435,7 @@ menu .menubar.tools -tearoff 0
 .menubar.tools add checkbutton -label "IPv6 auto-assign addresses/routes"  \
     -variable IPv6autoAssign
 .menubar.tools add checkbutton -label "Auto-generate /etc/hosts file"  \
-    -variable hostsAutoAssign
+    -variable auto_etc_hosts
 .menubar.tools add separator
 .menubar.tools add command -label "Randomize MAC bytes" -underline 10 \
     -command randomizeMACbytes
@@ -657,26 +645,26 @@ menu .menubar.view -tearoff 0
 set m .menubar.view.iconsize
 menu $m -tearoff 0
 .menubar.view add cascade -label "Icon size" -menu $m -underline 5
-    $m add radiobutton -label "Small" -variable iconSize \
+    $m add radiobutton -label "Small" -variable icon_size \
 	-value small -command { updateIconSize; redrawAll }
-    $m add radiobutton -label "Normal" -variable iconSize \
+    $m add radiobutton -label "Normal" -variable icon_size \
 	-value normal -command { updateIconSize; redrawAll }
 
 .menubar.view add separator
 
 .menubar.view add checkbutton -label "Show Interface Names" \
-    -underline 5 -variable showIfNames \
+    -underline 5 -variable show_interface_names \
     -command { redrawAllLinks }
 .menubar.view add checkbutton -label "Show IPv4 Addresses " \
-    -underline 8 -variable showIfIPaddrs \
+    -underline 8 -variable show_interface_ipv4 \
     -command { redrawAllLinks }
 .menubar.view add checkbutton -label "Show IPv6 Addresses " \
-    -underline 8 -variable showIfIPv6addrs \
+    -underline 8 -variable show_interface_ipv6 \
     -command { redrawAllLinks }
 .menubar.view add checkbutton -label "Show Node Labels" \
-    -underline 5 -variable showNodeLabels -command {
+    -underline 5 -variable show_node_labels -command {
     foreach object [.panwin.f1.c find withtag nodelabel] {
-	if { $showNodeLabels } {
+	if { $show_node_labels } {
 	    .panwin.f1.c itemconfigure $object -state normal
 	} else {
 	    .panwin.f1.c itemconfigure $object -state hidden
@@ -684,9 +672,9 @@ menu $m -tearoff 0
     }
 }
 .menubar.view add checkbutton -label "Show Link Labels" \
-    -underline 5 -variable showLinkLabels -command {
+    -underline 5 -variable show_link_labels -command {
     foreach object [.panwin.f1.c find withtag linklabel] {
-	if { $showLinkLabels } {
+	if { $show_link_labels } {
 	    .panwin.f1.c itemconfigure $object -state normal
 	} else {
 	    .panwin.f1.c itemconfigure $object -state hidden
@@ -696,24 +684,28 @@ menu $m -tearoff 0
 
 .menubar.view add command -label "Show All" \
     -underline 5 -command {
-	set showIfNames 1
-	set showIfIPaddrs 1
-	set showIfIPv6addrs 1
-	set showNodeLabels 1
-	set showLinkLabels 1
-	redrawAllLinks
+	set show_interface_names 1
+	set show_interface_ipv4 1
+	set show_interface_ipv6 1
+	set show_node_labels 1
+	set show_link_labels 1
+
+	redrawAll
+
 	foreach object [.panwin.f1.c find withtag linklabel] {
 	    .panwin.f1.c itemconfigure $object -state normal
 	}
     }
 .menubar.view add command -label "Show None" \
     -underline 6 -command {
-	set showIfNames 0
-	set showIfIPaddrs 0
-	set showIfIPv6addrs 0
-	set showNodeLabels 0
-	set showLinkLabels 0
-	redrawAllLinks
+	set show_interface_names 0
+	set show_interface_ipv4 0
+	set show_interface_ipv6 0
+	set show_node_labels 0
+	set show_link_labels 0
+
+	redrawAll
+
 	foreach object [.panwin.f1.c find withtag linklabel] {
 	    .panwin.f1.c itemconfigure $object -state hidden
 	}
@@ -732,13 +724,13 @@ menu $m -tearoff 0
 .menubar.view add separator
 
 .menubar.view add checkbutton -label "Show Background Image" \
-    -underline 5 -variable showBkgImage \
+    -underline 5 -variable show_background_images \
     -command { redrawAll }
 .menubar.view add checkbutton -label "Show Annotations" \
-    -underline 8 -variable showAnnotations \
+    -underline 8 -variable show_annotations \
     -command { redrawAll }
 .menubar.view add checkbutton -label "Show Grid" \
-    -underline 5 -variable showGrid \
+    -underline 5 -variable show_grid \
     -command { redrawAll }
 
 

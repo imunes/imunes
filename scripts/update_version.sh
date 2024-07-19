@@ -13,9 +13,9 @@ git status > /dev/null 2>&1
 if [ "$?" -eq 0 ]; then
     tag=`git describe --abbrev=0 --tags`
     if test `uname -s` = "Linux"; then
-	sed -i'' "s/VERSION: .*/VERSION: $tag/" $ver_file
+	sed -i'' "s/^VERSION: .*/VERSION: $tag/" $ver_file
     else
-	sed -i '' "s/VERSION: .*/VERSION: $tag/" $ver_file
+	sed -i '' "s/^VERSION: .*/VERSION: $tag/" $ver_file
     fi
     for attr in "%h" "%ai" "%ae"; do
 	value=`git log --format="$attr" -n 1`
