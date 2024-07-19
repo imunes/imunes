@@ -2482,6 +2482,28 @@ proc getNodeProtocolOspfv3 { node } {
     }	
 }
 
+#****f* nodecfg.tcl/getNodeProtocolBgp
+# NAME
+#   getNodeProtocolBgp
+# SYNOPSIS
+#   getNodeProtocolBgp $node
+# FUNCTION
+#   Checks if node's current protocol is rip.
+# INPUTS
+#   * node -- node id
+# RESULT
+#   * check -- 1 if it is rip, otherwise 0
+#****
+proc getNodeProtocolBgp { node } {
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
+    if { [netconfFetchSection $node "router bgp 1000"] != "" } {
+	return 1;
+    } else {
+	return 0;
+    }
+}
+
 #****f* nodecfg.tcl/setNodeProtocolRip
 # NAME
 #   setNodeProtocolRip
@@ -2594,6 +2616,37 @@ proc setNodeProtocolOspfv3 { node ospf6Enable } {
     }
 }
 
+#****f* nodecfg.tcl/setNodeProtocolBgp
+# NAME
+#   setNodeProtocolBgp
+# SYNOPSIS
+#   setNodeProtocolBgp $node $bgpEnable
+# FUNCTION
+#   Sets node's protocol to bgp.
+# INPUTS
+#   * node -- node id
+#   * bgpEnable -- 1 if enabling bgp, 0 if disabling
+#****
+proc setNodeProtocolBgp { node bgpEnable } {
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+
+    if { $bgpEnable == 1 } {
+	set loopback_ipv4 [lindex [split [getIfcIPv4addrs $node "lo0"] "/"] 0]
+
+	netconfInsertSection $node [list "router bgp 1000" \
+		" bgp router-id $loopback_ipv4" \
+		" no bgp ebgp-requires-policy" \
+		" neighbor DEFAULT peer-group" \
+		" neighbor DEFAULT remote-as 1000" \
+		" neighbor DEFAULT update-source $loopback_ipv4" \
+		" redistribute static" \
+		" redistribute connected" \
+		! ]
+    } else {
+	netconfClearSection $node "router bgp 1000"
+    }
+}
+
 #****f* nodecfg.tcl/setNodeType
 # NAME
 #   setNodeType -- set node's type.
@@ -2608,7 +2661,7 @@ proc setNodeProtocolOspfv3 { node ospf6Enable } {
 #****
 proc setNodeType { node newtype } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
-    global ripEnable ripngEnable ospfEnable ospf6Enable changeAddressRange \
+    global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable changeAddressRange \
      changeAddressRange6
     
     set oldtype [nodeType $node]
@@ -2627,6 +2680,7 @@ proc setNodeType { node newtype } {
 	setNodeProtocolRipng $node 0
 	setNodeProtocolOspfv2 $node 0
 	setNodeProtocolOspfv3 $node 0
+	setNodeProtocolBgp $node 0
 	set interfaces [ifcList $node]
 	foreach ifc $interfaces {
 	    set changeAddressRange 0
@@ -2645,6 +2699,7 @@ proc setNodeType { node newtype } {
 	setNodeProtocolRipng $node $ripngEnable
 	setNodeProtocolOspfv2 $node $ospfEnable 
 	setNodeProtocolOspfv3 $node $ospf6Enable 
+	setNodeProtocolBgp $node $bgpEnable
     }
 }
 

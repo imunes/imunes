@@ -92,6 +92,10 @@ proc $MODULE.cfggen { node } {
 	    }
 
 	    foreach proto { rip ripng ospf ospf6 bgp } {
+		if { $proto == "bgp" } {
+		    set proto "bgp 1000"
+		}
+
 		set protocfg [netconfFetchSection $node "router $proto"]
 		if { $protocfg != "" } {
 		    lappend cfg "router $proto"
@@ -316,7 +320,7 @@ proc $MODULE.confNewIfc { node ifc } {
 #****
 proc $MODULE.confNewNode { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
-    global ripEnable ripngEnable ospfEnable ospf6Enable
+    global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable
     global rdconfig router_model router_ConfigModel
     global def_router_model
     global nodeNamingBase
@@ -325,6 +329,7 @@ proc $MODULE.confNewNode { node } {
     set ripngEnable [lindex $rdconfig 1]
     set ospfEnable [lindex $rdconfig 2]
     set ospf6Enable [lindex $rdconfig 3]
+    set bgpEnable [lindex $rdconfig 4]
     set router_ConfigModel $router_model
 
     if { $router_model != $def_router_model } {
@@ -342,6 +347,7 @@ proc $MODULE.confNewNode { node } {
     setNodeProtocolRipng $node $ripngEnable
     setNodeProtocolOspfv2 $node $ospfEnable
     setNodeProtocolOspfv3 $node $ospf6Enable
+    setNodeProtocolBgp $node $bgpEnable
 
     setAutoDefaultRoutesStatus $node "enabled"
     setLogIfcType $node lo0 lo

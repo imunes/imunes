@@ -468,13 +468,14 @@ proc routerDefaultsApply { wi } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global changed router_model routerDefaultsModel router_ConfigModel
-    global routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable
+    global routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable routerBgpEnable
     global rdconfig
 
     lset rdconfig 0 $routerRipEnable
     lset rdconfig 1 $routerRipngEnable
     lset rdconfig 2 $routerOspfEnable 
     lset rdconfig 3 $routerOspf6Enable	
+    lset rdconfig 4 $routerBgpEnable
     set routerDefaultsModel $router_model 	
     set selected_node_list [selectedNodes]
     set empty {}
@@ -489,15 +490,18 @@ proc routerDefaultsApply { wi } {
 		    set ripngEnable [lindex $rdconfig 1]
 		    set ospfEnable [lindex $rdconfig 2]
 		    set ospf6Enable [lindex $rdconfig 3]
+		    set bgpEnable [lindex $rdconfig 4]
 		    setNodeProtocolRip $node $ripEnable
 		    setNodeProtocolRipng $node $ripngEnable
 		    setNodeProtocolOspfv2 $node $ospfEnable
 		    setNodeProtocolOspfv3 $node $ospf6Enable
+		    setNodeProtocolBgp $node $bgpEnable
 		} else {
 		    $wi.nbook.nf1.protocols.rip configure -state disabled
 		    $wi.nbook.nf1.protocols.ripng configure -state disabled
 		    $wi.nbook.nf1.protocols.ospf configure -state disabled
 		    $wi.nbook.nf1.protocols.ospf6 configure -state disabled
+		    $wi.nbook.nf1.protocols.bgp configure -state disabled
 		}
 		set changed 1
 	    }
@@ -512,15 +516,18 @@ proc routerDefaultsApply { wi } {
 		    set ripngEnable [lindex $rdconfig 1]
 		    set ospfEnable [lindex $rdconfig 2]
 		    set ospf6Enable [lindex $rdconfig 3]
+		    set bgpEnable [lindex $rdconfig 4]
 		    setNodeProtocolRip $node  $ripEnable
 		    setNodeProtocolRipng $node $ripngEnable
 		    setNodeProtocolOspfv2 $node $ospfEnable
 		    setNodeProtocolOspfv3 $node $ospf6Enable
+		    setNodeProtocolBgp $node $bgpEnable
 		} else {
 		    $wi.nbook.nf1.protocols.rip configure -state disabled
 		    $wi.nbook.nf1.protocols.ripng configure -state disabled
 		    $wi.nbook.nf1.protocols.ospf configure -state disabled
 		    $wi.nbook.nf1.protocols.ospf6 configure -state disabled
+		    $wi.nbook.nf1.protocols.bgp configure -state disabled
 		}
 		set changed 1
 	    }		
