@@ -198,6 +198,8 @@ proc openFile {} {
     readCfgJson [getFromRunning "current_file"]
 
     setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
+    applyOptions
+
     switchCanvas none
     redrawAll
 
@@ -214,6 +216,71 @@ proc openFile {} {
     if { $showTree } {
 	refreshTopologyTree
     }
+}
+
+proc saveOptions {} {
+    global option_defaults gui_option_defaults
+    set running_zoom [getFromRunning "zoom"]
+
+    foreach {option default_value} $option_defaults {
+	global $option
+
+	set value [set $option]
+	if { $value != $default_value } {
+	    setOption $option $value
+	} else {
+	    unsetOption $option
+	}
+    }
+
+    foreach {option default_value} $gui_option_defaults {
+	global $option
+
+	set value [set $option]
+	if { $value != $default_value } {
+	    setOption $option $value
+	} else {
+	    unsetOption $option
+	}
+    }
+
+    if { $running_zoom == "" } {
+	return
+    }
+
+    if { $running_zoom != [dictGet $gui_option_defaults "zoom"] } {
+	setOption "zoom" $running_zoom
+    } else {
+	unsetOption "zoom"
+    }
+}
+
+proc applyOptions {} {
+    global option_defaults gui_option_defaults
+
+    foreach {option default_value} $option_defaults {
+	global $option
+
+	set value [getOption $option]
+	if { $value != "" } {
+	    set $option $value
+	} else {
+	    set $option $default_value
+	}
+    }
+
+    foreach {option default_value} $gui_option_defaults {
+	global $option
+
+	set value [getOption $option]
+	if { $value != "" } {
+	    set $option $value
+	} else {
+	    set $option $default_value
+	}
+    }
+
+    setToRunning "zoom" $zoom
 }
 
 #****f* filemgmt.tcl/saveFile

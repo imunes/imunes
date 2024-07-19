@@ -777,7 +777,6 @@ proc loadCfgLegacy { cfg } {
 		    }
 		} elseif { "$class" == "option" } {
 		    cfgUnset $dict_object $object
-		    cfgSet $dict_object "show_$field" $value
 		    switch -exact -- $field {
 			interface_names {
 			    if { $value == "no" } {
@@ -785,6 +784,7 @@ proc loadCfgLegacy { cfg } {
 			    } elseif { $value == "yes" } {
 				set show_interface_names 1
 			    }
+			    cfgSet $dict_object "show_interface_names" $show_interface_names
 			}
 			ip_addresses {
 			    if { $value == "no" } {
@@ -792,6 +792,7 @@ proc loadCfgLegacy { cfg } {
 			    } elseif { $value == "yes" } {
 				set show_interface_ipv4 1
 			    }
+			    cfgSet $dict_object "show_interface_ipv4" $show_interface_ipv4
 			}
 			ipv6_addresses {
 			    if { $value == "no" } {
@@ -799,6 +800,7 @@ proc loadCfgLegacy { cfg } {
 			    } elseif { $value == "yes" } {
 				set show_interface_ipv6 1
 			    }
+			    cfgSet $dict_object "show_interface_ipv6" $show_interface_ipv6
 			}
 			node_labels {
 			    if { $value == "no" } {
@@ -806,6 +808,7 @@ proc loadCfgLegacy { cfg } {
 			    } elseif { $value == "yes" } {
 				set show_node_labels 1
 			    }
+			    cfgSet $dict_object "show_node_labels" $show_node_labels
 			}
 			link_labels {
 			    if { $value == "no" } {
@@ -813,6 +816,7 @@ proc loadCfgLegacy { cfg } {
 			    } elseif { $value == "yes" } {
 				set show_link_labels 1
 			    }
+			    cfgSet $dict_object "show_link_labels" $show_link_labels
 			}
 			background_images {
 			    if { $value == "no" } {
@@ -820,6 +824,7 @@ proc loadCfgLegacy { cfg } {
 			    } elseif { $value == "yes" } {
 				set show_background_image 1
 			    }
+			    cfgSet $dict_object "show_background_image" $show_background_image
 			}
 			annotations {
 			    if { $value == "no" } {
@@ -827,6 +832,7 @@ proc loadCfgLegacy { cfg } {
 			    } elseif { $value == "yes" } {
 				set show_annotations 1
 			    }
+			    cfgSet $dict_object "show_annotations" $show_annotations
 			}
 			grid {
 			    if { $value == "no" } {
@@ -834,26 +840,23 @@ proc loadCfgLegacy { cfg } {
 			    } elseif { $value == "yes" } {
 				set show_grid 1
 			    }
+			    cfgSet $dict_object "show_grid" $show_grid
 			}
 			hostsAutoAssign {
-			    cfgUnset $dict_object "show_$field"
-			    cfgSet $dict_object "auto_etc_hosts" $value
 			    if { $value == "no" } {
 				set auto_etc_hosts 0
 			    } elseif { $value == "yes" } {
 				set auto_etc_hosts 1
 			    }
+			    cfgSet $dict_object "auto_etc_hosts" $auto_etc_hosts
 			}
 			zoom {
-			    cfgUnset $dict_object "show_$field"
-			    cfgSet $dict_object $field $value
-			    setToRunning "zoom" $value
 			    set zoom $value
+			    cfgSet $dict_object "zoom" $zoom
 			}
 			iconSize {
-			    cfgUnset $dict_object "show_$field"
-			    cfgSet $dict_object $field $value
 			    set icon_size $value
+			    cfgSet $dict_object "icon_size" $icon_size
 			}
 		    }
 		} elseif { "$class" == "annotation" } {
@@ -1095,6 +1098,8 @@ proc loadCfgJson { json_cfg } {
     setToRunning "annotation_list" [getAnnotationList]
     setToRunning "image_list" [getImageList]
 
+    applyOptions
+
     set ipv4_used_list {}
     set ipv6_used_list {}
     set mac_used_list {}
@@ -1186,6 +1191,8 @@ proc readCfgJson { fname } {
 
 proc saveCfgJson { fname } {
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+
+    saveOptions
 
     set json_cfg [createJson "dictionary" $dict_cfg]
     set fd [open $fname w+]
