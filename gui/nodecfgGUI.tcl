@@ -1619,7 +1619,7 @@ proc configGUI_stp { wi node } {
 #   * node -- node id
 #****
 proc configGUI_routingModel { wi node_id } {
-    global ripEnable ripngEnable ospfEnable ospf6Enable supp_router_models
+    global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable supp_router_models
     global router_ConfigModel guielements
 
     lappend guielements configGUI_routingModel
@@ -1634,24 +1634,28 @@ proc configGUI_routingModel { wi node_id } {
     ttk::checkbutton $w.protocols.ripng -text "ripng" -variable ripngEnable
     ttk::checkbutton $w.protocols.ospf -text "ospfv2" -variable ospfEnable
     ttk::checkbutton $w.protocols.ospf6 -text "ospfv3" -variable ospf6Enable
+    ttk::checkbutton $w.protocols.bgp -text "bgp" -variable bgpEnable -state disabled
     ttk::radiobutton $w.model.frr -text frr \
 	-variable router_ConfigModel -value frr -command \
 	"$w.protocols.rip configure -state normal;
 	 $w.protocols.ripng configure -state normal;
 	 $w.protocols.ospf configure -state normal;
-	 $w.protocols.ospf6 configure -state normal"
+	 $w.protocols.ospf6 configure -state normal;
+	 $w.protocols.bgp configure -state disabled"
     ttk::radiobutton $w.model.quagga -text quagga \
 	-variable router_ConfigModel -value quagga -command \
 	"$w.protocols.rip configure -state normal;
 	 $w.protocols.ripng configure -state normal;
 	 $w.protocols.ospf configure -state normal;
-	 $w.protocols.ospf6 configure -state normal"
+	 $w.protocols.ospf6 configure -state normal;
+	 $w.protocols.bgp configure -state disabled"
     ttk::radiobutton $w.model.static -text static \
 	-variable router_ConfigModel -value static -command \
 	"$w.protocols.rip configure -state disabled;
 	 $w.protocols.ripng configure -state disabled;
 	 $w.protocols.ospf configure -state disabled;
-	 $w.protocols.ospf6 configure -state disabled"
+	 $w.protocols.ospf6 configure -state disabled;
+	 $w.protocols.bgp configure -state disabled"
 
     set router_ConfigModel [getNodeModel $node_id]
     if { $router_ConfigModel != "static" } {
@@ -1659,11 +1663,13 @@ proc configGUI_routingModel { wi node_id } {
 	set ripngEnable [getNodeProtocol $node_id "ripng"]
 	set ospfEnable [getNodeProtocol $node_id "ospf"]
 	set ospf6Enable [getNodeProtocol $node_id "ospf6"]
+	set bgpEnable [getNodeProtocol $node_id "bgp"]
     } else {
         $w.protocols.rip configure -state disabled
 	$w.protocols.ripng configure -state disabled
  	$w.protocols.ospf configure -state disabled
  	$w.protocols.ospf6 configure -state disabled
+ 	$w.protocols.bgp configure -state disabled
     }
 
     if { [getFromRunning "oper_mode"] != "edit" } {
@@ -1674,6 +1680,7 @@ proc configGUI_routingModel { wi node_id } {
 	$w.protocols.ripng configure -state disabled
 	$w.protocols.ospf configure -state disabled
 	$w.protocols.ospf6 configure -state disabled
+	$w.protocols.bgp configure -state disabled
     }
 
     if {"frr" ni $supp_router_models} {
@@ -1686,7 +1693,8 @@ proc configGUI_routingModel { wi node_id } {
     pack $w.model -fill both -expand 1
     pack $w.protocols.label -side left -padx 2
     pack $w.protocols.rip $w.protocols.ripng \
-	$w.protocols.ospf $w.protocols.ospf6 -side left -padx 6
+	$w.protocols.ospf $w.protocols.ospf6 \
+	$w.protocols.bgp -side left -padx 6
     pack $w.protocols -fill both -expand 1
     pack $w -fill both
 }
@@ -2465,7 +2473,7 @@ proc configGUI_stpApply { wi node } {
 #****
 proc configGUI_routingModelApply { wi node } {
     global router_ConfigModel
-    global ripEnable ripngEnable ospfEnable ospf6Enable
+    global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable
 
     if { [getFromRunning "oper_mode"] == "edit" } {
 	if { [getNodeType $node] != "nat64" } {
@@ -2477,11 +2485,13 @@ proc configGUI_routingModelApply { wi node } {
 	    setNodeProtocol $node "ripng" $ripngEnable
 	    setNodeProtocol $node "ospf" $ospfEnable
 	    setNodeProtocol $node "ospf6" $ospf6Enable
+	    setNodeProtocol $node "bgp" $bgpEnable
 	} else {
 	    $wi.routing.protocols.rip configure -state disabled
 	    $wi.routing.protocols.ripng configure -state disabled
 	    $wi.routing.protocols.ospf configure -state disabled
             $wi.routing.protocols.ospf6 configure -state disabled
+            $wi.routing.protocols.bgp configure -state disabled
 	}
 
 	set changed 1
@@ -6539,7 +6549,7 @@ proc configGUI_packetConfigDelete { } {
 ## nat64
 ## custom GUI procedures
 proc configGUI_routingProtocols { wi node } {
-    global ripEnable ripngEnable ospfEnable ospf6Enable
+    global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable
     global guielements
 
     lappend guielements configGUI_routingModel
@@ -6551,20 +6561,24 @@ proc configGUI_routingProtocols { wi node } {
     ttk::checkbutton $wi.routing.protocols.ripng -text "ripng" -variable ripngEnable
     ttk::checkbutton $wi.routing.protocols.ospf -text "ospfv2" -variable ospfEnable
     ttk::checkbutton $wi.routing.protocols.ospf6 -text "ospfv3" -variable ospf6Enable
+    ttk::checkbutton $wi.routing.protocols.bgp -text "bgp" -variable bgpEnable
 
     set ripEnable [getNodeProtocol $node "rip"]
     set ripngEnable [getNodeProtocol $node "ripng"]
     set ospfEnable [getNodeProtocol $node "ospf"]
     set ospf6Enable [getNodeProtocol $node "ospf6"]
+    set bgpEnable [getNodeProtocol $node "bgp"]
     if { [getFromRunning "oper_mode"] != "edit" } {
 	$wi.routing.protocols.rip configure -state disabled
 	$wi.routing.protocols.ripng configure -state disabled
 	$wi.routing.protocols.ospf configure -state disabled
 	$wi.routing.protocols.ospf6 configure -state disabled
+	$wi.routing.protocols.bgp configure -state disabled
     }
     pack $wi.routing.protocols.label -side left -padx 2
     pack $wi.routing.protocols.rip $wi.routing.protocols.ripng \
-	$wi.routing.protocols.ospf $wi.routing.protocols.ospf6 -side left -padx 6
+	$wi.routing.protocols.ospf $wi.routing.protocols.ospf6 \
+	$wi.routing.protocols.bgp -side left -padx 6
     pack $wi.routing.protocols -fill both -expand 1
     pack $wi.routing -fill both
 }

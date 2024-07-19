@@ -1206,6 +1206,18 @@ proc getRouterProtocolCfg { node_id protocol } {
 
 		    lappend cfg "!"
 		}
+		"bgp" {
+		    set loopback_ipv4 [lindex [split [getIfcIPv4addr $node_id "lo0" ] "/"] 0]
+		    set cfg [list "router bgp 1000" \
+			" bgp router-id $loopback_ipv4" \
+			" no bgp ebgp-requires-policy" \
+			" neighbor DEFAULT peer-group" \
+			" neighbor DEFAULT remote-as 1000" \
+			" neighbor DEFAULT update-source $loopback_ipv4" \
+			" redistribute static" \
+			" redistribute connected" \
+			! ]
+		}
 	    }
 	}
 	"static" {
@@ -1616,7 +1628,7 @@ proc transformNodes { nodes to_type } {
     global rdconfig routerDefaultsModel
     global changed
 
-    lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable
+    lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable
 
     foreach node_id $nodes {
 	if { [[getNodeType $node_id].netlayer] == "NETWORK" } {
@@ -1639,6 +1651,7 @@ proc transformNodes { nodes to_type } {
 		    setNodeProtocol $node_id "ripng" $ripngEnable
 		    setNodeProtocol $node_id "ospf" $ospfEnable
 		    setNodeProtocol $node_id "ospf6" $ospf6Enable
+		    setNodeProtocol $node_id "bgp" $bgpEnable
 		}
 
 		set changed 1
