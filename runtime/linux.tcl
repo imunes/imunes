@@ -1457,7 +1457,13 @@ proc getExtIfcs {} {
 proc captureExtIfc { eid node_id iface_id } {
     global execMode
 
-    set iface_name [getNodeName $node_id]
+    if { [getNodeType $node_id] == "extelem" } {
+	set ifaces [getNodeStolenIfaces $node_id]
+	set iface_name [lindex [lsearch -inline -exact -index 0 $ifaces "$iface_id"] 1]
+    } else {
+	set iface_name [getNodeName $node_id]
+    }
+
     if { [getEtherVlanEnabled $node_id] } {
 	set vlan [getEtherVlanTag $node_id]
 	try {
@@ -1480,7 +1486,7 @@ proc captureExtIfc { eid node_id iface_id } {
 	}
     }
 
-    if { [getLinkDirect [getIfcLink $node_id "0"]] } {
+    if { [getLinkDirect [getIfcLink $node_id $iface_id]] } {
 	return
     }
 
@@ -1515,7 +1521,13 @@ proc captureExtIfcByName { eid iface_name node_id } {
 #   * node_id -- node id
 #****
 proc releaseExtIfc { eid node_id iface_id } {
-    set iface_name [getNodeName $node_id]
+    if { [getNodeType $node_id] == "extelem" } {
+	set ifaces [getNodeStolenIfaces $node_id]
+	set iface_name [lindex [lsearch -inline -exact -index 0 $ifaces "$iface_id"] 1]
+    } else {
+	set iface_name [getNodeName $node_id]
+    }
+
     set vlan [getEtherVlanTag $node_id]
     if { $vlan != "" && [getEtherVlanEnabled $node_id] } {
 	set iface_name $iface_name.$vlan
@@ -1524,7 +1536,7 @@ proc releaseExtIfc { eid node_id iface_id } {
 	return
     }
 
-    if { [getLinkDirect [getIfcLink $node_id "0"]] } {
+    if { [getLinkDirect [getIfcLink $node_id $iface_id]] } {
 	return
     }
 

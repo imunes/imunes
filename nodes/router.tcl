@@ -108,7 +108,8 @@ proc $MODULE.confNewIfc { node_id iface_id } {
     autoIPv6addr $node_id $iface_id
     autoMACaddr $node_id $iface_id
 
-    if { [getNodeType [lindex [logicalPeerByIfc $node_id $iface_id] 0]] == "extnat" } {
+    lassign [logicalPeerByIfc $node_id $iface_id] peer_id -
+    if { $peer_id != "" && [getNodeType $peer_id] == "extnat" } {
 	setIfcNatState $node_id $iface_id "on"
     }
 }

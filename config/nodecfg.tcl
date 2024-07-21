@@ -633,6 +633,10 @@ proc getDefaultGateways { node_id subnet_gws nodes_l2data } {
 	# add new subnet at the end of the list
 	set subnet_idx [llength $subnet_gws]
 	lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
+	if { $peer_id == "" } {
+	    continue
+	}
+
 	lassign [getSubnetData $peer_id $peer_iface_id \
 	  $subnet_gws $nodes_l2data $subnet_idx] \
 	  subnet_gws nodes_l2data
@@ -640,8 +644,10 @@ proc getDefaultGateways { node_id subnet_gws nodes_l2data } {
 
     # merge all gateways values and return
     set my_gws {}
-    foreach subnet_idx [lsort -unique [dict values [dict get $nodes_l2data $node_id]]] {
-	set my_gws [concat $my_gws [lindex $subnet_gws $subnet_idx]]
+    if { $nodes_l2data != {} } {
+	foreach subnet_idx [lsort -unique [dict values [dict get $nodes_l2data $node_id]]] {
+	    set my_gws [concat $my_gws [lindex $subnet_gws $subnet_idx]]
+	}
     }
 
     return [list $my_gws $subnet_gws $nodes_l2data]
@@ -681,13 +687,14 @@ proc getSubnetData { this_node_id this_iface_id subnet_gws nodes_l2data subnet_i
 
     dict set nodes_l2data $this_node_id $this_iface_id $subnet_idx
 
-    if { [[getNodeType $this_node_id].netlayer] == "NETWORK" } {
-	if { [getNodeType $this_node_id] in "router nat64 extnat" } {
+    set this_type [getNodeType $this_node_id]
+    if { [$this_type.netlayer] == "NETWORK" } {
+	if { $this_type in "router nat64 extnat" } {
 	    # this node is a router/extnat, add our IP addresses to lists
 	    # TODO: multiple addresses per iface - split subnet4data and subnet6data
 	    set gw4 [lindex [split [getIfcIPv4addrs $this_node_id $this_iface_id] /] 0]
 	    set gw6 [lindex [split [getIfcIPv6addrs $this_node_id $this_iface_id] /] 0]
-	    lappend my_gws [getNodeType $this_node_id]|$gw4|$gw6
+	    lappend my_gws $this_type|$gw4|$gw6
 	    lset subnet_gws $subnet_idx $my_gws
 	}
 
@@ -712,6 +719,10 @@ proc getSubnetData { this_node_id this_iface_id subnet_gws nodes_l2data subnet_i
 	dict set nodes_l2data $this_node_id $iface_id $subnet_idx
 
 	lassign [logicalPeerByIfc $this_node_id $iface_id] peer_id peer_iface_id
+	if { $peer_id == "" } {
+	    continue
+	}
+
 	lassign [getSubnetData $peer_id $peer_iface_id \
 	  $subnet_gws $nodes_l2data $subnet_idx] \
 	  subnet_gws nodes_l2data
@@ -1361,7 +1372,7 @@ proc setAutoDefaultRoutesStatus { node_id state } {
 # INPUTS
 #   * node_id -- node id
 #****
-proc removeNode { node_id } {
+proc removeNode { node_id { keep_other_ifaces 0 } } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global nodeNamingBase
@@ -1372,7 +1383,7 @@ proc removeNode { node_id } {
 
     foreach iface_id [ifcList $node_id] {
 	foreach link_id [linksByPeers $node_id [getIfcPeer $node_id $iface_id]] {
-	    removeLink $link_id
+	    removeLink $link_id $keep_other_ifaces
 	}
     }
 
@@ -2106,9 +2117,27 @@ proc setNodeDockerAttach { node_id state } {
 }
 
 proc getNodeIface { node_id iface_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
+
+    set netconf [lindex [lsearch -inline [set $node_id] "network-config *"] 1]
+    foreach line $netconf {
+	if { $line == "interface $iface_id" } {
+	    return [list "interface $iface_id" [netconfFetchSection $node_id "interface $iface_id"]]
+	}
+    }
+
+    return ""
 }
 
 proc setNodeIface { node_id iface_id new_iface } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
+
+    set ifcfg [list "interface $iface_id"]
+    foreach line $new_iface {
+	lappend ifcfg $line
+    }
+
+    netconfInsertSection $node_id $ifcfg
 }
 
 #****f* nodecfg.tcl/getAllNodesType

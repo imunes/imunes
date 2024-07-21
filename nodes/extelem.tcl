@@ -223,9 +223,14 @@ proc $MODULE.nodeInitConfigure { eid node_id } {
 }
 
 proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
-    foreach group [getNodeStolenIfaces $node_id] {
-	lassign $group iface_id extIfc
-	captureExtIfcByName $eid $extIfc $node_id
+    foreach iface_id [allIfcList $node_id] {
+	set link_id [getIfcLink $node_id $iface_id]
+	if { $link_id != "" && [getLinkDirect $link_id] } {
+	    # do direct link stuff
+	    captureExtIfc $eid $node_id $iface_id
+	} else {
+	    captureExtIfc $eid $node_id $iface_id
+	}
     }
 }
 
@@ -288,9 +293,14 @@ proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
 }
 
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
-    foreach group [getNodeStolenIfaces $node_id] {
-	lassign $group iface_id extIfc
-	releaseExtIfcByName $eid $extIfc $node_id
+    foreach iface_id [allIfcList $node_id] {
+	set link_id [getIfcLink $node_id $iface_id]
+	if { $link_id != "" && [getLinkDirect $link_id] } {
+	    # do direct link stuff
+	    releaseExtIfc $eid $node_id $iface_id
+	} else {
+	    releaseExtIfc $eid $node_id $iface_id
+	}
     }
 }
 

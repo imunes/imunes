@@ -781,6 +781,10 @@ proc getIfcLink { node_id iface_id } {
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
 
     set peer_id [getIfcPeer $node_id $iface_id]
+    if { $peer_id == "" } {
+	return
+    }
+
     foreach link_id $link_list {
 	set endpoints [getLinkPeers $link_id]
 	if { $endpoints in "{$node_id $peer_id} {$peer_id $node_id}" } {
@@ -1000,11 +1004,16 @@ proc logicalPeerByIfc { node_id iface_id } {
     upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 
     set peer_id [getIfcPeer $node_id $iface_id]
+    if { $peer_id == "" } {
+	return
+    }
+
     if { [getNodeType $peer_id] == "pseudo" } {
 	set node_id [getNodeMirror $peer_id]
 	set peer_id [getIfcPeer $node_id "0"]
 	set peer_iface_id [ifcByPeer $peer_id $node_id]
     } else {
+	set peer_iface_id ""
 	foreach link_id [linksByPeers $node_id $peer_id] {
 	    set ifaces [getLinkPeersIfaces $link_id]
 
@@ -1243,15 +1252,27 @@ proc nodeCfggenIfcIPv6 { node_id iface_id } {
 # FUNCTION
 #   Returns the first available name for a new interface of the specified type.
 # INPUTS
-#   * type -- interface type
 #   * node_id -- node id
+#   * type -- interface type
+#   * auto_config -- enable auto iface configuration
+#   * stolen_iface -- if stolen, interface name
 # RESULT
 #   * iface_id -- the first available name for a interface of the specified type
 #****
-proc newIface { type node_id } {
-    for { set id 0 } { [lsearch -exact [ifcList $node_id] $type$id] >= 0 } { incr id } {}
+proc newIface { node_id iface_type auto_config { stolen_iface "" } } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 
-    return $type$id
+    set iface_id [chooseIfName $node_id $node_id]
+
+    setNodeIface $node_id $iface_id ""
+    lappend $node_id "interface-peer {$iface_id \"\"}"
+
+    if { $auto_config } {
+	set node_type [getNodeType $node_id]
+	$node_type.confNewIfc $node_id $iface_id
+    }
+
+    return $iface_id
 }
 
 #****f* nodecfg.tcl/newLogIface
@@ -1270,6 +1291,36 @@ proc newLogIface { type node_id } {
     for { set id 0 } { [lsearch -exact [logIfcList $node_id] $type$id] >= 0 } { incr id } {}
 
     return $type$id
+}
+
+proc removeIface { node_id iface_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
+    upvar 0 ::cf::[set ::curcfg]::IPv4UsedList IPv4UsedList
+    upvar 0 ::cf::[set ::curcfg]::IPv6UsedList IPv6UsedList
+    upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
+
+    set link_id [getIfcLink $node_id $iface_id]
+    if { $link_id != "" } {
+	removeLink $link_id 1
+    }
+
+    set IPv4UsedList [removeFromList $IPv4UsedList [getIfcIPv4addrs $node_id $iface_id] "keep_doubles"]
+    set IPv6UsedList [removeFromList $IPv6UsedList [getIfcIPv6addrs $node_id $iface_id] "keep_doubles"]
+    set MACUsedList [removeFromList $MACUsedList [getIfcMACaddr $node_id $iface_id] "keep_doubles"]
+
+    netconfClearSection $node_id "interface $iface_id"
+    set idx [lsearch [set $node_id] "interface-peer \{$iface_id *"]
+    set $node_id [lreplace [set $node_id] $idx $idx]
+
+    foreach lifc [logIfcList $node_id] {
+	switch -exact [getLogIfcType $node_id $lifc] {
+	    vlan {
+		if { [getIfcVlanDev $node_id $lifc] == $iface_id } {
+		    netconfClearSection $node_id "interface $lifc"
+		}
+	    }
+	}
+    }
 }
 
 proc nodeCfggenIfc { node_id iface_id } {
