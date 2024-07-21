@@ -150,16 +150,23 @@ proc drawNode { node_id } {
 	    set label_str "$label_str (VLAN [getEtherVlanTag $node_id])"
 	}
 
+	set has_empty_ifaces 0
 	foreach iface_id [ifcList $node_id] {
-	    if { [string trim $iface_id 0123456789] == "wlan" } {
-		set label_str [format "%s %s" $label_str [getIfcIPv4addrs $node_id $iface_id]]
+	    if { [getNodeType $node_id] == "wlan" } {
+		set label_str "$label_str [getIfcIPv4addrs $node_id $iface_id]"
+	    } elseif { [getIfcLink $node_id $iface_id] == "" } {
+		if { $has_empty_ifaces == 0 } {
+		    incr y 8
+		    set label_str "$label_str\n$iface_id"
+		    set has_empty_ifaces 1
+		} else {
+		    set label_str "$label_str $iface_id"
+		}
 	    }
 	}
     } else {
 	# get mirror link and its real node/iface
-	set mirror_link_id [getIfcLink [getNodeMirror $node_id] "0"]
-	set peer_id [lindex [getLinkPeers $mirror_link_id] 1]
-	set peer_iface [lindex [getLinkPeersIfaces $mirror_link_id] 1]
+	lassign [logicalPeerByIfc $node_id "0"] peer_id peer_iface
 
 	set label_str "[getNodeName $peer_id]:$peer_iface"
 	set peer_canvas [getNodeCanvas $peer_id]
@@ -598,14 +605,18 @@ proc connectWithNode { nodes target_node_id } {
 #   * node2_id -- node id of the second node
 #****
 proc newLinkGUI { node1_id node2_id } {
+    return [newLinkWithIfacesGUI $node1_id "" $node2_id ""]
+}
+
+proc newLinkWithIfacesGUI { node1_id iface1_id node2_id iface2_id } {
     global changed
 
-    set link_id [newLink $node1_id $node2_id]
+    set link_id [newLinkWithIfaces $node1_id $iface1_id $node2_id $iface2_id]
     if { $link_id == "" } {
 	return
     }
 
-    if { [getNodeCanvas $node1_id] != [getNodeCanvas $node2_id] } {
+    if { [getNodeCanvas $node1_id] != [getNodeCanvas $node2_id] || $node1_id == $node2_id } {
 	lassign [getLinkPeers $link_id] orig_node1 orig_node2
 	lassign [splitLink $link_id] new_node1 new_node2
 
