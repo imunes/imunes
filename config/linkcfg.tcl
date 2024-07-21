@@ -110,7 +110,7 @@ proc linksByPeers { node1_id node2_id } {
 # INPUTS
 #   * link_id -- link id
 #****
-proc removeLink { link_id } {
+proc removeLink { link_id { keep_ifaces 0 } } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
     upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
@@ -118,11 +118,27 @@ proc removeLink { link_id } {
     upvar 0 ::cf::[set ::curcfg]::IPv6UsedList IPv6UsedList
     upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
 
-    set pnodes [getLinkPeers $link_id]
-    foreach node_id $pnodes iface_id [getLinkPeersIfaces $link_id] {
+    lassign [getLinkPeers $link_id] node1_id node2_id
+    foreach node_id "$node1_id $node2_id" iface_id [getLinkPeersIfaces $link_id] {
 	upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 
-	set peer_id [removeFromList $pnodes $node_id "keep_doubles"]
+	set peer_id [removeFromList "$node1_id $node2_id" $node_id "keep_doubles"]
+
+	if { $keep_ifaces } {
+	    if { [getNodeType $node_id] in "extelem" } {
+		set old [getNodeStolenIfaces $node_id]
+		set idx [lsearch -exact -index 0 $old "$iface_id"]
+		setNodeStolenIfaces $node_id [lreplace $old $idx $idx "$iface_id \"\""]
+		set i [lsearch [set $node_id] "interface-peer {$iface_id $peer_id}"]
+		set $node_id [lreplace [set $node_id] $i $i "interface-peer {$iface_id \"\"}"]
+		continue
+	    }
+
+	    set i [lsearch [set $node_id] "interface-peer {$iface_id $peer_id}"]
+	    set $node_id [lreplace [set $node_id] $i $i "interface-peer {$iface_id \"\"}"]
+
+	    continue
+	}
 
 	if { [getNodeType $node_id] in "extelem" } {
 	    set old [getNodeStolenIfaces $node_id]
@@ -153,10 +169,10 @@ proc removeLink { link_id } {
     set mirror_link_id [getLinkMirror $link_id]
     if { $mirror_link_id != "" } {
 	setLinkMirror $mirror_link_id ""
-	removeLink $mirror_link_id
+	removeLink $mirror_link_id $keep_ifaces
     }
 
-    foreach node_id $pnodes {
+    foreach node_id "$node1_id $node2_id" {
 	if { [getNodeType $node_id] == "pseudo" } {
 	    set node_list [removeFromList $node_list $node_id]
 	}
@@ -1201,8 +1217,8 @@ proc mergeLink { link_id } {
     upvar 0 ::cf::[set ::curcfg]::$orig_node1_id $orig_node1_id
     upvar 0 ::cf::[set ::curcfg]::$orig_node2_id $orig_node2_id
 
-    lassign [getLinkPeersIfaces $link_id] orig_node1_iface -
-    lassign [getLinkPeersIfaces $mirror_link_id] orig_node2_iface -
+    lassign [getLinkPeersIfaces $link_id] orig_node1_iface_id -
+    lassign [getLinkPeersIfaces $mirror_link_id] orig_node2_iface_id -
 
     set i [lsearch [set $orig_node1_id] "interface-peer {$orig_node1_iface_id $pseudo_node1_id}"]
     set $orig_node1_id [lreplace [set $orig_node1_id] $i $i \
@@ -1241,7 +1257,16 @@ proc mergeLink { link_id } {
 proc numOfLinks { node_id } {
     upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 
-    return [llength [lsearch -all [set $node_id] "interface-peer*"]]
+    set num 0
+    foreach full [lsearch -all -inline [set $node_id] "interface-peer*"] {
+	lassign $full - interface_peer
+	lassign $interface_peer iface_id peer_id
+	if { $peer_id != "" } {
+	    incr num
+	}
+    }
+
+    return $num
 }
 
 #****f* linkcfg.tcl/newLink
@@ -1259,60 +1284,100 @@ proc numOfLinks { node_id } {
 #   * new_link_id -- new link id.
 #****
 proc newLink { node1_id node2_id } {
+    return [newLinkWithIfaces $node1_id "" $node2_id ""]
+}
+
+proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
     upvar 0 ::cf::[set ::curcfg]::$node1_id $node1_id
     upvar 0 ::cf::[set ::curcfg]::$node2_id $node2_id
     global defEthBandwidth defSerBandwidth defSerDelay
 
-    foreach node_id "$node1_id $node2_id" {
+    foreach node_id "$node1_id $node2_id" iface_id "\"$iface1_id\" \"$iface2_id\"" {
 	set type [getNodeType $node_id]
 	if { $type == "pseudo" } {
 	    return
 	}
 
-	if { [info procs $type.maxLinks] != "" } {
-	    if { [numOfLinks $node_id] == [$type.maxLinks] } {
-		tk_dialog .dialog1 "IMUNES warning" \
-		   "Warning: Maximum links connected to the node $node_id" \
-		   info 0 Dismiss
+	# maximum number of ifaces on a node
+	if { $iface_id == "" } {
+	    if { [info procs $type.maxLinks] != "" } {
+		# TODO: maxIfaces would be a better name
+		if { [llength [ifcList $node_id]] >= [$type.maxLinks] } {
+		    after idle {.dialog1.msg configure -wraplength 4i}
+		    tk_dialog .dialog1 "IMUNES warning" \
+			"Warning: Maximum links connected to the node $node_id" \
+			info 0 Dismiss
 
-		return
+		    return
+		}
 	    }
+
+	    continue
 	}
+
+	# iface does not exist
+	if { [getNodeIface $node_id $iface_id] == "" } {
+	    after idle {.dialog1.msg configure -wraplength 4i}
+	    tk_dialog .dialog1 "IMUNES warning" \
+		"Warning: Interface '[getIfcName $node_id $iface_id]' on node '[getNodeName $node_id]' does not exist" \
+		info 0 Dismiss
+
+	    return
+	}
+
+	# iface already connected to a link
+	if { [getIfcPeer $node_id $iface_id] != "" } {
+	    after idle {.dialog1.msg configure -wraplength 4i}
+	    tk_dialog .dialog1 "IMUNES warning" \
+		"Warning: Interface '[getIfcName $node_id $iface_id]' already connected to a link" \
+		info 0 Dismiss
+
+	    return
+	}
+    }
+
+    set config_iface1 0
+    if { $iface1_id == "" } {
+	set config_iface1 1
+	set iface1_id [newIface $node1_id "phys" 0]
+    }
+
+    set config_iface2 0
+    if { $iface2_id == "" } {
+	set config_iface2 1
+	set iface2_id [newIface $node2_id "phys" 0]
     }
 
     set link_id [newObjectId $link_list "l"]
     upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
     set $link_id {}
 
-    set ifname1 [chooseIfName $node1_id $node2_id]
-    lappend $node1_id "interface-peer {$ifname1 $node2_id}"
-    set ifname2 [chooseIfName $node2_id $node1_id]
-    lappend $node2_id "interface-peer {$ifname2 $node1_id}"
+    set i [lsearch [set $node1_id] "interface-peer {$iface1_id \"\"}"]
+    if { $i == -1 } {
+	lappend $node1_id "interface-peer {$iface1_id $node2_id}"
+    } else {
+	set $node1_id [lreplace [set $node1_id] $i $i "interface-peer {$iface1_id $node2_id}"]
+    }
+
+    set i [lsearch [set $node2_id] "interface-peer {$iface2_id \"\"}"]
+    if { $i == -1 } {
+	lappend $node2_id "interface-peer {$iface2_id $node1_id}"
+    } else {
+	set $node2_id [lreplace [set $node2_id] $i $i "interface-peer {$iface2_id $node1_id}"]
+    }
 
     lappend $link_id "nodes {$node1_id $node2_id}"
-    lappend $link_id "ifaces {$ifname1 $ifname2}"
-    if { ([getNodeType $node1_id] == "lanswitch" || \
-	[getNodeType $node2_id] == "lanswitch" || \
-	[string first eth "$ifname1 $ifname2"] != -1) && \
-	[getNodeType $node1_id] != "rj45" && \
-	[getNodeType $node2_id] != "rj45" &&
-	$defEthBandwidth != 0 } {
-
-	lappend $link_id "bandwidth $defEthBandwidth"
-    } elseif { [string first ser "$ifname1 $ifname2"] != -1 } {
-	lappend $link_id "bandwidth $defSerBandwidth"
-	lappend $link_id "delay $defSerDelay"
-    }
+    lappend $link_id "ifaces {$iface1_id $iface2_id}"
 
     lappend link_list $link_id
 
-    if { [info procs [getNodeType $node1_id].confNewIfc] != "" } {
-	[getNodeType $node1_id].confNewIfc $node1_id $ifname1
+    if { $config_iface1 && [info procs [getNodeType $node1_id].confNewIfc] != "" } {
+	[getNodeType $node1_id].confNewIfc $node1_id $iface1_id
     }
 
-    if { [info procs [getNodeType $node2_id].confNewIfc] != "" } {
-	[getNodeType $node2_id].confNewIfc $node2_id $ifname2
+    if { $config_iface2 && [info procs [getNodeType $node2_id].confNewIfc] != "" } {
+	[getNodeType $node2_id].confNewIfc $node2_id $iface2_id
     }
 
     return $link_id
