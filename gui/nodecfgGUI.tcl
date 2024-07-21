@@ -238,13 +238,13 @@ proc configGUI_addTree { wi node } {
     $wi.panwin.f1.tree heading #0 -text "(Expand)"
 
     #Creating new items
-    $wi.panwin.f1.tree insert {} end -id interfaces -text \
-	"Physical Interfaces" -open true -tags interfaces
-    $wi.panwin.f1.tree focus interfaces
-    $wi.panwin.f1.tree selection set interfaces
+    $wi.panwin.f1.tree insert {} end -id physIfcFrame -text \
+	"Physical Interfaces" -open true -tags physIfcFrame
+    $wi.panwin.f1.tree focus physIfcFrame
+    $wi.panwin.f1.tree selection set physIfcFrame
 
     foreach ifc [lsort -dictionary [ifcList $node]] {
-	$wi.panwin.f1.tree insert interfaces end -id $ifc \
+	$wi.panwin.f1.tree insert physIfcFrame end -id $ifc \
 	    -text "$ifc" -tags $ifc
 	foreach column $treecolumns {
 	    $wi.panwin.f1.tree set $ifc [lindex $column 0] \
@@ -271,6 +271,7 @@ proc configGUI_addTree { wi node } {
     #selected in the topology tree and calling procedure configGUI_showIfcInfo with that
     #interfaces as the second argument
     global selectedIfc
+
     if {[ifcList $node] != "" && $selectedIfc == ""} {
 	$wi.panwin.f1.tree focus [lindex [lsort -ascii [ifcList $node]] 0]
 	$wi.panwin.f1.tree selection set [lindex [lsort -ascii [ifcList $node]] 0]
@@ -282,6 +283,7 @@ proc configGUI_addTree { wi node } {
 	set cancel 0
 	configGUI_showIfcInfo $wi.panwin.f2 0 $node [lindex [lsort -ascii [allIfcList $node]] 0]
     }
+
     if {[ifcList $node] != "" && $selectedIfc != ""} {
 	$wi.panwin.f1.tree focus $selectedIfc
 	$wi.panwin.f1.tree selection set $selectedIfc
@@ -289,10 +291,10 @@ proc configGUI_addTree { wi node } {
 	configGUI_showIfcInfo $wi.panwin.f2 0 $node $selectedIfc
     }
 
-    #binding for tag interfaces
-    $wi.panwin.f1.tree tag bind interfaces <1> \
+    #binding for tag physIfcFrame
+    $wi.panwin.f1.tree tag bind physIfcFrame <1> \
 	    "configGUI_showIfcInfo $wi.panwin.f2 0 $node \"\""
-    $wi.panwin.f1.tree tag bind interfaces <Key-Down> \
+    $wi.panwin.f1.tree tag bind physIfcFrame <Key-Down> \
 	    "if {[llength [ifcList $node]] != 0} {
 		configGUI_showIfcInfo $wi.panwin.f2 0 $node [lindex [lsort -ascii [ifcList $node]] 0]
 	    }"
@@ -422,13 +424,13 @@ proc configGUI_refreshIfcsTree { wi node } {
 
     $wi delete [$wi children {}]
     #Creating new items
-    $wi insert {} end -id interfaces -text \
-	"Physical Interfaces" -open true -tags interfaces
-    $wi focus interfaces
-    $wi selection set interfaces
+    $wi insert {} end -id physIfcFrame -text \
+	"Physical Interfaces" -open true -tags physIfcFrame
+    $wi focus physIfcFrame
+    $wi selection set physIfcFrame
 
     foreach ifc [lsort -dictionary [ifcList $node]] {
-	$wi insert interfaces end -id $ifc \
+	$wi insert physIfcFrame end -id $ifc \
 	    -text "$ifc" -tags $ifc
 	foreach column $treecolumns {
 	    $wi set $ifc [lindex $column 0] \
@@ -452,9 +454,9 @@ proc configGUI_refreshIfcsTree { wi node } {
 
     set wi_bind [string trimright $wi ".panwin.f1.tree"]
 
-    $wi tag bind interfaces <1> \
+    $wi tag bind physIfcFrame <1> \
 	    "configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node \"\""
-    $wi tag bind interfaces <Key-Down> \
+    $wi tag bind physIfcFrame <Key-Down> \
 	    "if {[llength [ifcList $node]] != 0} {
 		configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node [lindex [lsort -ascii [ifcList $node]] 0]
 	    }"
@@ -584,7 +586,7 @@ proc configGUI_showIfcInfo { wi phase node ifc } {
 	    foreach guielement $guielements {
 		#delete corresponding elements from the guielements list
 		if { $shownifc in $guielement } {
-		    set guielements [removeFromList $guielements $guielement]
+		    set guielements [removeFromList $guielements \{$guielement\}]
 		}
 	    }
 
@@ -605,8 +607,16 @@ proc configGUI_showIfcInfo { wi phase node ifc } {
 	set type [getNodeType $node]
         #creating new frame below the list of interfaces and adding modules with
 	#parameters of selected interface
-	if { $ifc != "" && $ifc != $shownifc } {
-	    if { [isIfcLogical $node $ifc] } {
+	if { $ifc != $shownifc } {
+	    if { $ifc == "" } {
+		#manage physical interfaces
+		configGUI_physicalInterfaces $wi $node "physIfcFrame"
+
+		set wi1 [string trimright $wi ".f2"]
+		set h [winfo height $wi1]
+		set pos [expr $h-100]
+		$wi1 sashpos 0 $pos
+	    } elseif { [isIfcLogical $node $ifc] } {
 		#logical interfaces
 		configGUI_ifcMainFrame $wi $node $ifc
 		logical.configInterfacesGUI $wi $node $ifc
@@ -655,11 +665,9 @@ proc logical.configInterfacesGUI { wi node ifc } {
 	    configGUI_ifcEssentials $wi $node $ifc
 	    configGUI_ifcIPv4Address $wi $node $ifc
 	    configGUI_ifcIPv6Address $wi $node $ifc
-	    #nothing for now
 	}
 	bridge {
 	    configGUI_ifcEssentials $wi $node $ifc
-
 	}
 	gif {
 	    configGUI_ifcEssentials $wi $node $ifc
@@ -755,6 +763,99 @@ proc configGUI_logicalInterfaces { wi node ifc } {
 	configGUI_refreshIfcsTree .popup.nbook.nfInterfaces.panwin.f1.tree $curnode
 	configGUI_showIfcInfo .popup.nbook.nfInterfaces.panwin.f2 0 $curnode logIfcFrame
 	.popup.nbook.nfInterfaces.panwin.f1.tree selection set logIfcFrame
+    }
+
+    pack $wi.if$ifc -anchor w -fill both -expand 1
+
+    grid $wi.if$ifc.txt -in $wi.if$ifc -column 0 -row 0 -sticky w \
+	-columnspan 3 -pady 5
+    #grid $wi.if$ifc.list -in $wi.if$ifc -column 0 -row 1 -padx 3 -rowspan 6 -sticky w
+
+    grid $wi.if$ifc.addtxt -in $wi.if$ifc -column 1 -row 1 -sticky w -padx 8
+    grid $wi.if$ifc.addbox -in $wi.if$ifc -column 2 -row 1 -padx 5
+    grid $wi.if$ifc.addbtn -in $wi.if$ifc -column 3 -row 1
+
+    grid $wi.if$ifc.rmvtxt -in $wi.if$ifc -column 1 -row 2 -sticky w -padx 8
+    grid $wi.if$ifc.rmvbox -in $wi.if$ifc -column 2 -row 2 -padx 5
+    grid $wi.if$ifc.rmvbtn -in $wi.if$ifc -column 3 -row 2
+
+#    pack $wi.if$ifc.list -anchor w
+}
+
+proc configGUI_physicalInterfaces { wi node ifc } {
+    global physIfcs curnode
+    global changed
+
+    set curnode $node
+    set ifc physIfcFrame
+    ttk::frame $wi.if$ifc -relief groove -borderwidth 2 -padding 4
+    ttk::label $wi.if$ifc.txt -text "Manage physical interfaces:"
+
+    set physIfcs [lsort [ifcList $node]]
+    listbox $wi.if$ifc.list -height 7 -width 10 -listvariable physIfcs
+
+    ttk::label $wi.if$ifc.addtxt -text "Add new interface:"
+    # TODO: stolen ifaces
+    set types "phys stolen"
+    set types "phys"
+    ttk::combobox $wi.if$ifc.addbox -width 10 -values $types \
+	-state readonly
+    $wi.if$ifc.addbox set [lindex $types 0]
+    ttk::button $wi.if$ifc.addbtn -text "Add" -command {
+	global curnode physIfcs
+
+	set wi .popup.nbook.nfInterfaces.panwin.f2.ifphysIfcFrame
+	set ifctype [$wi.addbox get]
+	set new_ifc [newIface $curnode $ifctype 1]
+
+	set physIfcs [lsort [ifcList $curnode]]
+	$wi.rmvbox configure -values $physIfcs
+	$wi.list configure -listvariable physIfcs
+	configGUI_refreshIfcsTree .popup.nbook.nfInterfaces.panwin.f1.tree $curnode
+	configGUI_showIfcInfo .popup.nbook.nfInterfaces.panwin.f2 0 $curnode $new_ifc
+	.popup.nbook.nfInterfaces.panwin.f1.tree selection set $new_ifc
+
+	set changed 1
+	redrawAll
+	updateUndoLog
+    }
+
+    ttk::label $wi.if$ifc.rmvtxt -text "Remove interface:"
+    ttk::combobox $wi.if$ifc.rmvbox -width 10 -values $physIfcs \
+	-state readonly
+
+    ttk::button $wi.if$ifc.rmvbtn -text "Remove" -command {
+	global curnode physIfcs
+
+	set wi .popup.nbook.nfInterfaces.panwin.f2.ifphysIfcFrame
+	set ifc [$wi.rmvbox get]
+	if { $ifc == "" } {
+	    return
+	}
+
+	$wi.rmvbox set ""
+	set link_id [getIfcLink $curnode $ifc]
+	if { $link_id != "" } {
+	    removeLinkGUI $link_id 1
+	}
+
+	# move to removeIfaces procedure
+	setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] [getIfcIPv4addr $curnode $ifc]]
+	setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] [getIfcIPv6addr $curnode $ifc]]
+	setToRunning "mac_used_list" [removeFromList [getFromRunning "mac_used_list"] [getIfcMACaddr $curnode $ifc]]
+
+	cfgUnset "nodes" $curnode "ifaces" $ifc
+
+	set physIfcs [lsort [ifcList $curnode]]
+	$wi.rmvbox configure -values $physIfcs
+	$wi.list configure -listvariable physIfcs
+	configGUI_refreshIfcsTree .popup.nbook.nfInterfaces.panwin.f1.tree $curnode
+	configGUI_showIfcInfo .popup.nbook.nfInterfaces.panwin.f2 0 $curnode physIfcFrame
+	.popup.nbook.nfInterfaces.panwin.f1.tree selection set physIfcFrame
+
+	set changed 1
+	redrawAll
+	updateUndoLog
     }
 
     pack $wi.if$ifc -anchor w -fill both -expand 1
@@ -4897,13 +4998,13 @@ proc configGUI_addBridgeTree { wi node } {
     $wi.panwin.f1.tree heading #0 -text "(Expand)"
 
     #Creating new items
-    $wi.panwin.f1.tree insert {} end -id interfaces -text "Bridge" -open true \
-	-tags interfaces
-    $wi.panwin.f1.tree focus interfaces
-    $wi.panwin.f1.tree selection set interfaces
+    $wi.panwin.f1.tree insert {} end -id physIfcFrame -text "Bridge" -open true \
+	-tags physIfcFrame
+    $wi.panwin.f1.tree focus physIfcFrame
+    $wi.panwin.f1.tree selection set physIfcFrame
 
     foreach ifc [lsort -dictionary [ifcList $node]] {
-	$wi.panwin.f1.tree insert interfaces end -id $ifc -text "$ifc" \
+	$wi.panwin.f1.tree insert physIfcFrame end -id $ifc -text "$ifc" \
 	    -tags $ifc
 	foreach column $brtreecolumns {
 	    $wi.panwin.f1.tree set $ifc [lindex $column 0] \
@@ -4945,10 +5046,10 @@ proc configGUI_addBridgeTree { wi node } {
 	configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node $selectedIfc
     }
 
-    #binding for tag interfaces
-    $wi.panwin.f1.tree tag bind interfaces <1> \
+    #binding for tag physIfcFrame
+    $wi.panwin.f1.tree tag bind physIfcFrame <1> \
 	    "configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node \"\""
-    $wi.panwin.f1.tree tag bind interfaces <Key-Down> \
+    $wi.panwin.f1.tree tag bind physIfcFrame <Key-Down> \
 	    "if {[llength [ifcList $node]] != 0} {
 		configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node \
 		    [lindex [lsort -ascii [ifcList $node]] 0]
@@ -5476,7 +5577,7 @@ proc configGUI_showFilterIfcRuleInfo { wi phase node ifc rule } {
     global filterguielements
     global changed apply cancel badentry
     #
-    #shownruleframe - frame that is currently shown below the list o interfaces
+    #shownruleframe - frame that is currently shown below the list of interfaces
     #
     if { $badentry == -1 } {
 	return
@@ -6283,7 +6384,7 @@ proc configGUI_showPacketInfo { wi phase node pac } {
     global changed apply cancel badentry
 
     #
-    #shownruleframe - frame that is currently shown below the list o interfaces
+    #shownruleframe - frame that is currently shown below the list of interfaces
     #
     set shownpacframe [grid slaves $wi]
     set i [lsearch $shownpacframe "*buttons*"]
