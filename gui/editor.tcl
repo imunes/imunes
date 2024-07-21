@@ -85,8 +85,9 @@ proc updateUndoLog {} {
 #   configuration. Reduces the value of undolevel.
 #****
 proc undo {} {
-    set undolevel [getFromRunning "undolevel"]
+    global changed
 
+    set undolevel [getFromRunning "undolevel"]
     if { [getFromRunning "oper_mode"] == "edit" && $undolevel > 0 } {
 	.menubar.edit entryconfigure "Redo" -state normal
 	setToRunning "undolevel" [incr undolevel -1]
@@ -103,6 +104,10 @@ proc undo {} {
 	setToRunning "annotation_list" [getAnnotationList]
 	switchCanvas none
     }
+
+    if { $changed } {
+	redrawAll
+    }
 }
 
 #****f* editor.tcl/redo
@@ -117,9 +122,10 @@ proc undo {} {
 #   of undolevel.
 #****
 proc redo {} {
+    global changed
+
     set undolevel [getFromRunning "undolevel"]
     set redolevel [getFromRunning "redolevel"]
-
     if { [getFromRunning "oper_mode"] == "edit" && $redolevel > $undolevel } {
 	setToRunning "undolevel" [incr undolevel]
 	if { $undolevel == 1 } {
@@ -137,6 +143,10 @@ proc redo {} {
 	setToRunning "link_list" [getLinkList]
 	setToRunning "annotation_list" [getAnnotationList]
 	switchCanvas none
+    }
+
+    if { $changed } {
+	redrawAll
     }
 }
 

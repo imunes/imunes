@@ -1155,6 +1155,7 @@ bind . <F5> "redrawAll"
 #
 menu .button3menu -tearoff 0
 menu .button3menu.connect -tearoff 0
+menu .button3menu.connect_iface -tearoff 0
 menu .button3menu.moveto -tearoff 0
 menu .button3menu.shell -tearoff 0
 menu .button3menu.wireshark -tearoff 0

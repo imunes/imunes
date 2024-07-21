@@ -41,7 +41,7 @@ proc animateCursor {} {
 #     of a composed, non-atomic action (relevant for updating log
 #     for undo).
 #****
-proc removeLinkGUI { link_id atomic } {
+proc removeLinkGUI { link_id atomic { keep_ifaces 0 } } {
     global changed
 
     # this data needs to be fetched before we removeLink
@@ -57,7 +57,7 @@ proc removeLinkGUI { link_id atomic } {
 	return
     }
 
-    removeLink $link_id
+    removeLink $link_id $keep_ifaces
     .panwin.f1.c delete $link_id
 
     if { $mirror_link_id != "" } {
@@ -71,6 +71,10 @@ proc removeLinkGUI { link_id atomic } {
 
     if { $atomic == "atomic" } {
 	set changed 1
+	if { $keep_ifaces } {
+	    redrawAll
+	}
+
 	updateUndoLog
     }
 }
@@ -86,12 +90,12 @@ proc removeLinkGUI { link_id atomic } {
 # INPUTS
 #   * node_id -- node id
 #****
-proc removeNodeGUI { node_id } {
+proc removeNodeGUI { node_id { keep_other_ifaces 0 } } {
     foreach iface_id [ifcList $node_id] {
-	removeLinkGUI [linkByPeers $node_id [getIfcPeer $node_id $iface_id]] non-atomic
+	removeLinkGUI [linkByPeers $node_id [getIfcPeer $node_id $iface_id]] non-atomic $keep_other_ifaces
     }
 
-    removeNode $node_id
+    removeNode $node_id $keep_other_ifaces
     .panwin.f1.c delete $node_id
 }
 
@@ -414,6 +418,17 @@ proc button3link { c x y } {
     }
 
     #
+    # Delete link (keep ifaces)
+    #
+    if { $oper_mode != "exec" } {
+	.button3menu add command -label "Delete (keep interfaces)" \
+	    -command "removeLinkGUI $link_id atomic 1"
+    } else {
+	.button3menu add command -label "Delete (keep interfaces)" \
+	    -state disabled
+    }
+
+    #
     # Split link
     #
     if { $oper_mode != "exec" && [getLinkMirror $link_id] == "" } {
@@ -510,7 +525,12 @@ proc moveToCanvas { canvas_id } {
 #   * node_id -- node id of a pseudo node.
 #****
 proc mergeNodeGUI { node_id } {
+    global changed
+
     mergeLink [getIfcLink $node_id "0"]
+
+    set changed 1
+    updateUndoLog
     redrawAll
 }
 
@@ -656,14 +676,79 @@ proc button3node { c x y } {
 
     foreach peer_node [getFromRunning "node_list"] {
 	set canvas_id [getNodeCanvas $peer_node]
-	if { [getNodeType $peer_node] != "pseudo" } {
+	if { $node_id == $peer_node } {
+	    .button3menu.connect.$canvas_id add command \
+		-label [getNodeName $peer_node] \
+		-command "newLinkGUI $node_id $node_id"
+	} elseif { [getNodeType $peer_node] != "pseudo" } {
 	    .button3menu.connect.$canvas_id add command \
 		-label [getNodeName $peer_node] \
 		-command "connectWithNode \"[selectedRealNodes]\" $peer_node"
-#	} elseif { [getNodeType $peer_node] != "pseudo" } {
-#	    .button3menu.connect.$canvas_id add command \
-#		-label [getNodeName $peer_node] \
-#		-state disabled
+	}
+    }
+
+    #
+    # Connect interface - can be between different canvases
+    #
+    .button3menu.connect_iface delete 0 end
+    if { $oper_mode == "edit" && $type != "pseudo" } {
+	.button3menu add cascade -label "Connect interface" \
+	    -menu .button3menu.connect_iface
+    }
+
+    foreach my_iface_id [concat "new_iface" [ifcList $node_id]] {
+	if { [getIfcLink $node_id $my_iface_id] != "" } {
+	    continue
+	}
+
+	set my_iface_name $my_iface_id
+	set my_iface_label $my_iface_id
+	if { $my_iface_id == "new_iface" } {
+	    set my_iface_name {}
+	    set my_iface_label "Create new interface"
+	}
+
+	destroy .button3menu.connect_iface.$my_iface_id
+	menu .button3menu.connect_iface.$my_iface_id -tearoff 0
+	.button3menu.connect_iface add cascade -label $my_iface_label \
+	    -menu .button3menu.connect_iface.$my_iface_id
+
+	foreach canvas_id $canvas_list {
+	    destroy .button3menu.connect_iface.$my_iface_id.$canvas_id
+	    menu .button3menu.connect_iface.$my_iface_id.$canvas_id -tearoff 0
+	    .button3menu.connect_iface.$my_iface_id add cascade -label [getCanvasName $canvas_id] \
+		-menu .button3menu.connect_iface.$my_iface_id.$canvas_id
+	}
+
+	foreach peer_node [getFromRunning "node_list"] {
+	    set canvas_id [getNodeCanvas $peer_node]
+	    if { [getNodeType $peer_node] != "pseudo" } {
+		destroy .button3menu.connect_iface.$my_iface_id.$canvas_id.$peer_node
+		menu .button3menu.connect_iface.$my_iface_id.$canvas_id.$peer_node -tearoff 0
+		.button3menu.connect_iface.$my_iface_id.$canvas_id add cascade -label [getNodeName $peer_node] \
+		    -menu .button3menu.connect_iface.$my_iface_id.$canvas_id.$peer_node
+
+		foreach peer_iface_id [concat "new_peer_iface" [ifcList $peer_node]] {
+		    if { $node_id == $peer_node && $my_iface_id == $peer_iface_id } {
+			continue
+		    }
+
+		    if { [getIfcLink $peer_node $peer_iface_id] != "" } {
+			continue
+		    }
+
+		    set peer_iface_name $peer_iface_id
+		    set peer_iface_label $peer_iface_id
+		    if { $peer_iface_id == "new_peer_iface" } {
+			set peer_iface_name {}
+			set peer_iface_label "Create new interface"
+		    }
+
+		    .button3menu.connect_iface.$my_iface_id.$canvas_id.$peer_node add command \
+			-label $peer_iface_label \
+			-command "newLinkWithIfacesGUI $node_id \"$my_iface_name\" $peer_node \"$peer_iface_name\""
+		}
+	    }
 	}
     }
 
@@ -701,7 +786,14 @@ proc button3node { c x y } {
     # Delete selection
     #
     if { $oper_mode != "exec" } {
-	.button3menu add command -label "Delete" -command deleteSelection
+	.button3menu add command -label "Delete" -command "deleteSelection"
+    }
+
+    #
+    # Delete selection (keep linked interfaces)
+    #
+    if { $oper_mode != "exec" } {
+	.button3menu add command -label "Delete (keep interfaces)" -command "deleteSelection 1"
     }
 
     if { $type != "pseudo" } {
@@ -782,9 +874,11 @@ proc button3node { c x y } {
 
 	.button3menu add command -label "IPv4 autorenumber" -command {
 	    global IPv4autoAssign
+
+	    set tmp $IPv4autoAssign
 	    set IPv4autoAssign 1
 	    changeAddressRange
-	    set IPv4autoAssign 0
+	    set IPv4autoAssign $tmp
 	}
     }
 
@@ -796,9 +890,11 @@ proc button3node { c x y } {
 
 	.button3menu add command -label "IPv6 autorenumber" -command {
 	    global IPv6autoAssign
+
+	    set tmp $IPv6autoAssign
 	    set IPv6autoAssign 1
 	    changeAddressRange6
-	    set IPv6autoAssign 0
+	    set IPv6autoAssign $tmp
 	}
     }
 
@@ -1819,7 +1915,7 @@ proc anyLeave { c } {
 #   By calling this procedure all the selected nodes in imunes will
 #   be deleted.
 #****
-proc deleteSelection {} {
+proc deleteSelection { { keep_other_ifaces 0 } } {
     global changed
     global background
     global viewid
@@ -1832,7 +1928,7 @@ proc deleteSelection {} {
     .panwin.f1.c config -cursor watch; update
 
     foreach lnode [selectedNodes] {
-	removeNodeGUI $lnode
+	removeNodeGUI $lnode $keep_other_ifaces
 
 	set changed 1
     }
@@ -1843,8 +1939,11 @@ proc deleteSelection {} {
 	set changed 1
     }
 
-    raiseAll .panwin.f1.c
-    updateUndoLog
+    if { $changed } {
+	raiseAll .panwin.f1.c
+	updateUndoLog
+	redrawAll
+    }
 
     .panwin.f1.c config -cursor left_ptr
     .bottom.textbox config -text ""

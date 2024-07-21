@@ -276,26 +276,28 @@ proc autoIPv4addr { node_id iface_id } {
 
     lassign [logicalPeerByIfc $node_id $iface_id] peer_node peer_if
     set peer_ip4addrs {}
-    if { [[getNodeType $peer_node].netlayer] == "LINK" } {
-	foreach l2node [listLANNodes $peer_node {}] {
-	    foreach ifc [ifcList $l2node] {
-		lassign [logicalPeerByIfc $l2node $ifc] peer peer_if
-		set peer_ip4addr [getIfcIPv4addr $peer $peer_if]
-		if { $peer_ip4addr == "" } {
-		    continue
-		}
+    if { $peer_node != "" } {
+	if { [[getNodeType $peer_node].netlayer] == "LINK" } {
+	    foreach l2node [listLANNodes $peer_node {}] {
+		foreach ifc [ifcList $l2node] {
+		    lassign [logicalPeerByIfc $l2node $ifc] peer peer_if
+		    set peer_ip4addr [getIfcIPv4addr $peer $peer_if]
+		    if { $peer_ip4addr == "" } {
+			continue
+		    }
 
-		if { $changeAddressRange == 1 } {
-		    if { "$peer $peer_if" in $autorenumbered_ifcs } {
+		    if { $changeAddressRange == 1 } {
+			if { "$peer $peer_if" in $autorenumbered_ifcs } {
+			    lappend peer_ip4addrs $peer_ip4addr
+			}
+		    } else {
 			lappend peer_ip4addrs $peer_ip4addr
 		    }
-		} else {
-		    lappend peer_ip4addrs $peer_ip4addr
 		}
 	    }
+	} else {
+	    set peer_ip4addrs [getIfcIPv4addr $peer_node $peer_if]
 	}
-    } else {
-	set peer_ip4addrs [getIfcIPv4addr $peer_node $peer_if]
     }
 
     # TODO: reduce with _getNextIPv4addr proc

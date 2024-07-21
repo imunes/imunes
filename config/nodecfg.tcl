@@ -1100,6 +1100,10 @@ proc getDefaultGateways { node_id subnet_gws nodes_l2data } {
 	# add new subnet at the end of the list
 	set subnet_idx [llength $subnet_gws]
 	lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
+	if { $peer_id == "" } {
+	    continue
+	}
+
 	lassign [getSubnetData $peer_id $peer_iface_id \
 	  $subnet_gws $nodes_l2data $subnet_idx] \
 	  subnet_gws nodes_l2data
@@ -1107,8 +1111,10 @@ proc getDefaultGateways { node_id subnet_gws nodes_l2data } {
 
     # merge all gateways values and return
     set my_gws {}
-    foreach subnet_idx [lsort -unique [dict values [dict get $nodes_l2data $node_id]]] {
-	set my_gws [concat $my_gws [lindex $subnet_gws $subnet_idx]]
+    if { $nodes_l2data != {} } {
+	foreach subnet_idx [lsort -unique [dict values [dict get $nodes_l2data $node_id]]] {
+	    set my_gws [concat $my_gws [lindex $subnet_gws $subnet_idx]]
+	}
     }
 
     return [list $my_gws $subnet_gws $nodes_l2data]
@@ -1148,12 +1154,13 @@ proc getSubnetData { this_node_id this_ifc subnet_gws nodes_l2data subnet_idx } 
 
     dict set nodes_l2data $this_node_id $this_ifc $subnet_idx
 
-    if { [[getNodeType $this_node_id].netlayer] == "NETWORK" } {
-	if { [getNodeType $this_node_id] in "router extnat" } {
+    set this_type [getNodeType $this_node_id]
+    if { [$this_type.netlayer] == "NETWORK" } {
+	if { $this_type in "router extnat" } {
 	    # this node is a router/extnat, add our IP addresses to lists
 	    set gw4 [lindex [split [getIfcIPv4addr $this_node_id $this_ifc] /] 0]
 	    set gw6 [lindex [split [getIfcIPv6addr $this_node_id $this_ifc] /] 0]
-	    lappend my_gws [getNodeType $this_node_id]|$gw4|$gw6
+	    lappend my_gws $this_type|$gw4|$gw6
 	    lset subnet_gws $subnet_idx $my_gws
 	}
 
@@ -1178,6 +1185,10 @@ proc getSubnetData { this_node_id this_ifc subnet_gws nodes_l2data subnet_idx } 
 	dict set nodes_l2data $this_node_id $iface_id $subnet_idx
 
 	lassign [logicalPeerByIfc $this_node_id $iface_id] peer_id peer_iface_id
+	if { $peer_id == "" } {
+	    continue
+	}
+
 	lassign [getSubnetData $peer_id $peer_iface_id \
 	  $subnet_gws $nodes_l2data $subnet_idx] \
 	  subnet_gws nodes_l2data
@@ -1703,15 +1714,21 @@ proc allIfcList { node_id } {
 proc logicalPeerByIfc { node_id iface_id } {
     set link_id [getIfcLink $node_id $iface_id]
     set mirror_link_id [getLinkMirror $link_id]
+
+    set peer_id ""
+    set peer_iface_id ""
     if { $mirror_link_id != "" } {
 	set peer_id [lindex [getLinkPeers $mirror_link_id] 1]
-	set peer_iface [lindex [getLinkPeersIfaces $mirror_link_id] 1]
+	set peer_iface_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]
     } else {
-	set peer_id [removeFromList [getLinkPeers $link_id] $node_id]
-	set peer_iface [removeFromList [getLinkPeersIfaces $link_id] $iface_id]
+	foreach peer_id [getLinkPeers $link_id] peer_iface_id [getLinkPeersIfaces $link_id] {
+	    if { $peer_id != $node_id } {
+		break
+	    }
+	}
     }
 
-    return "$peer_id $peer_iface"
+    return "$peer_id $peer_iface_id"
 }
 
 #****f* nodecfg.tcl/hasIPv4Addr
@@ -1772,7 +1789,7 @@ proc hasIPv6Addr { node_id } {
 # INPUTS
 #   * node_id -- node id
 #****
-proc removeNode { node_id } {
+proc removeNode { node_id { keep_other_ifaces 0 } } {
     global nodeNamingBase
 
     if { [getCustomIcon $node_id] != "" } {
@@ -1780,7 +1797,7 @@ proc removeNode { node_id } {
     }
 
     foreach iface_id [ifcList $node_id] {
-	removeLink [linkByPeers $node_id [getIfcPeer $node_id $iface_id]]
+	removeLink [linkByPeers $node_id [getIfcPeer $node_id $iface_id]] $keep_other_ifaces
     }
 
     setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $node_id]
@@ -2428,6 +2445,25 @@ proc setNodeDockerAttach { node_id state } {
     cfgSet "nodes" $node_id "docker_attach" $state
 }
 
+proc getNodeIface { node_id iface } {
+    set group "ifaces"
+    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
+	set group "logifaces"
+    }
+
+    return [cfgGet "nodes" $node_id $group $iface]
+}
+
+# is this needed?
+proc setNodeIface { node_id iface new_iface } {
+    set group "ifaces"
+    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
+	set group "logifaces"
+    }
+
+    cfgSet "nodes" $node_id $group $iface $new_iface
+}
+
 #****f* nodecfg.tcl/nodeCfggenIfcIPv4
 # NAME
 #   nodeCfggenIfcIPv4 -- generate interface IPv4 configuration
@@ -2704,4 +2740,36 @@ proc pseudo.netlayer {} {
 #   * virtlayer -- returns an empty string
 #****
 proc pseudo.virtlayer {} {
+}
+
+proc newIface { node_id type auto_config { stolen_iface "" } } {
+    set node_type [getNodeType $node_id]
+    switch -exact -- $type {
+	"phys" {
+	    set prefix [$node_type.ifcName $node_id ""]
+	}
+	"stolen" {
+	    set prefix $stolen_iface
+	}
+    }
+
+    set ifaces {}
+    foreach iface [ifcList $node_id] {
+	if { [getIfcType $node_id $iface] == $type } {
+	    lappend ifaces $iface
+	}
+    }
+
+    set new_iface [newObjectIdAlt $ifaces $prefix]
+
+    setIfcType $node_id $new_iface $type
+    if { $type == "stolen" } {
+	setIfcStolenIfc $node_id $new_iface $stolen_iface
+    }
+
+    if { $auto_config } {
+	$node_type.confNewIfc $node_id $new_iface
+    }
+
+    return $new_iface
 }
