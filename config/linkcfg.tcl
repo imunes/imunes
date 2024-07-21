@@ -109,9 +109,19 @@ proc linksByPeers { node1_id node2_id } {
 # INPUTS
 #   * link_id -- link id
 #****
-proc removeLink { link_id } {
-    set pnodes [getLinkPeers $link_id]
-    foreach node_id $pnodes iface_id [getLinkPeersIfaces $link_id] {
+proc removeLink { link_id { keep_ifaces 0 } } {
+    # direct links handling in edit/exec mode?
+    if { [getLinkDirect $link_id] && [getFromRunning "oper_mode"] == "exec" } {
+	set keep_ifaces 0
+    }
+
+    lassign [getLinkPeers $link_id] node1_id node2_id
+    foreach node_id "$node1_id $node2_id" iface_id [getLinkPeersIfaces $link_id] {
+	if { $keep_ifaces } {
+	    cfgUnset "nodes" $node_id "ifaces" $iface_id "link"
+	    continue
+	}
+
 	if { [getNodeType $node_id] in "extelem" } {
 	    cfgUnset "nodes" $node_id "ifaces" $iface_id
 	    continue
@@ -137,10 +147,10 @@ proc removeLink { link_id } {
     set mirror_link_id [getLinkMirror $link_id]
     if { $mirror_link_id != "" } {
 	setLinkMirror $mirror_link_id ""
-	removeLink $mirror_link_id
+	removeLink $mirror_link_id $keep_ifaces
     }
 
-    foreach node_id $pnodes {
+    foreach node_id "$node1_id $node2_id" {
 	if { [getNodeType $node_id] == "pseudo" } {
 	    setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $node_id]
 	    cfgUnset "nodes" $node_id
@@ -921,7 +931,7 @@ proc splitLink { orig_link_id } {
 	set other_orig_node_id [removeFromList $orig_nodes $orig_node_id "keep_doubles"]
 
 	# change peer for original node interface
-	setIfcPeer $orig_node_id $orig_node_iface_id $pseudo_node_id
+	setIfcLink $orig_node_id $orig_node_iface_id $link_id
 
 	# setup new pseudo node properties
 	setNodeMirror $pseudo_node_id [removeFromList $pseudo_nodes $pseudo_node_id "keep_doubles"]
@@ -929,7 +939,7 @@ proc splitLink { orig_link_id } {
 	setNodeCoords $pseudo_node_id [getNodeCoords $other_orig_node_id]
 	setNodeLabelCoords $pseudo_node_id [getNodeCoords $other_orig_node_id]
 	setIfcType $pseudo_node_id "0" "phys"
-	setIfcPeer $pseudo_node_id "0" $orig_node_id
+	setIfcLink $pseudo_node_id "0" $link_id
 
 	# setup both link properties
 	setLinkPeers $link_id "$pseudo_node_id $orig_node_id"
@@ -1002,7 +1012,7 @@ proc mergeLink { link_id } {
 #****
 proc numOfLinks { node_id } {
     set num 0
-    foreach {iface iface_cfg} [cfgGet "nodes" $node_id "ifaces"] {
+    foreach {iface_id iface_cfg} [cfgGet "nodes" $node_id "ifaces"] {
 	catch { dictGet $iface_cfg "link" } link_id
 	if { $link_id != "" } {
 	    incr num
@@ -1027,9 +1037,44 @@ proc numOfLinks { node_id } {
 #   * new_link_id -- new link id.
 #****
 proc newLink { node1_id node2_id } {
+    return [newLinkWithIfaces $node1_id "" $node2_id ""]
+}
+
+proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
     global defEthBandwidth defSerBandwidth defSerDelay
 
-    foreach node_id "$node1_id $node2_id" {
+    set config_iface1 0
+    if { $iface1_id == "" } {
+	set config_iface1 1
+	set iface1_id [newIface $node1_id "phys" 0]
+    }
+
+    set config_iface2 0
+    if { $iface2_id == "" } {
+	set config_iface2 1
+	set iface2_id [newIface $node2_id "phys" 0]
+    }
+
+    foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
+	# iface already connected to a link
+	if { [getNodeIface $node_id $iface_id] == "" } {
+	    after idle {.dialog1.msg configure -wraplength 4i}
+	    tk_dialog .dialog1 "IMUNES warning" \
+		"Warning: Interface '$iface_id' on node '$node_id' does not exist" \
+		info 0 Dismiss
+
+	    return
+	}
+
+	if { [getIfcLink $node_id $iface_id] != "" } {
+	    after idle {.dialog1.msg configure -wraplength 4i}
+	    tk_dialog .dialog1 "IMUNES warning" \
+		"Warning: Interface $iface_id already connected to a link" \
+		info 0 Dismiss
+
+	    return
+	}
+
 	set type [getNodeType $node_id]
 	if { $type == "pseudo" } {
 	    return
@@ -1037,6 +1082,7 @@ proc newLink { node1_id node2_id } {
 
 	if { [info procs $type.maxLinks] != "" } {
 	    if { [numOfLinks $node_id] == [$type.maxLinks] } {
+		after idle {.dialog1.msg configure -wraplength 4i}
 		tk_dialog .dialog1 "IMUNES warning" \
 		   "Warning: Maximum links connected to the node $node_id" \
 		   info 0 Dismiss
@@ -1048,36 +1094,19 @@ proc newLink { node1_id node2_id } {
 
     set link_id [newObjectId [getFromRunning "link_list"] "l"]
 
-    set ifname1 [chooseIfName $node1_id $node2_id]
-    cfgSet "nodes" $node1_id "ifaces" $ifname1 "type" "phys"
-    cfgSet "nodes" $node1_id "ifaces" $ifname1 "peer" $node2_id
-    set ifname2 [chooseIfName $node2_id $node1_id]
-    cfgSet "nodes" $node2_id "ifaces" $ifname2 "type" "phys"
-    cfgSet "nodes" $node2_id "ifaces" $ifname2 "peer" $node1_id
+    setIfcLink $node1_id $iface1_id $link_id
+    setIfcLink $node2_id $iface2_id $link_id
 
-    cfgSet "links" $link_id "peers" "$node1_id $node2_id"
-    cfgSet "links" $link_id "peers_ifaces" "$ifname1 $ifname2"
-    if { ([getNodeType $node1_id] == "lanswitch" || \
-	[getNodeType $node2_id] == "lanswitch" || \
-	[string first eth "$ifname1 $ifname2"] != -1) && \
-	[getNodeType $node1_id] != "rj45" && \
-	[getNodeType $node2_id] != "rj45" &&
-	$defEthBandwidth != 0 } {
-
-	cfgSet "links" $link_id "bandwidth" $defEthBandwidth
-    } elseif { [string first ser "$ifname1 $ifname2"] != -1 } {
-	cfgSet "links" $link_id "bandwidth" $defSerBandwidth
-	cfgSet "links" $link_id "bandwidth" $defSerDelay
-    }
-
+    setLinkPeers $link_id "$node1_id $node2_id"
+    setLinkPeersIfaces $link_id "$iface1_id $iface2_id"
     lappendToRunning "link_list" $link_id
 
-    if { [info procs [getNodeType $node1_id].confNewIfc] != "" } {
-	[getNodeType $node1_id].confNewIfc $node1_id $ifname1
+    if { $config_iface1 && [info procs [getNodeType $node1_id].confNewIfc] != "" } {
+	[getNodeType $node1_id].confNewIfc $node1_id $iface1_id
     }
 
-    if { [info procs [getNodeType $node2_id].confNewIfc] != "" } {
-	[getNodeType $node2_id].confNewIfc $node2_id $ifname2
+    if { $config_iface2 && [info procs [getNodeType $node2_id].confNewIfc] != "" } {
+	[getNodeType $node2_id].confNewIfc $node2_id $iface2_id
     }
 
     return $link_id

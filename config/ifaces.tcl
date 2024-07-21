@@ -842,39 +842,25 @@ proc allIfcList { node_id } {
 #****
 proc logicalPeerByIfc { node_id iface_id } {
     set link_id [getIfcLink $node_id $iface_id]
+    if { $link_id == "" } {
+	return
+    }
     set mirror_link_id [getLinkMirror $link_id]
+
+    set peer_id ""
+    set peer_iface_id ""
     if { $mirror_link_id != "" } {
 	set peer_id [lindex [getLinkPeers $mirror_link_id] 1]
 	set peer_iface_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]
     } else {
-	set peer_id [removeFromList [getLinkPeers $link_id] $node_id "keep_doubles"]
-	set peer_iface_id [removeFromList [getLinkPeersIfaces $link_id] $iface_id "keep_doubles"]
+	foreach peer_id [getLinkPeers $link_id] peer_iface_id [getLinkPeersIfaces $link_id] {
+	    if { $peer_id != $node_id } {
+		break
+	    }
+	}
     }
 
     return "$peer_id $peer_iface_id"
-}
-
-#****f* nodecfg.tcl/ifcByPeer
-# NAME
-#   ifcByPeer -- get node interface by peer.
-# SYNOPSIS
-#   set iface_id [getIfcPeer $node_id $peer_id]
-# FUNCTION
-#   Returns the name of the interface connected to the specified peer. If the
-#   peer node is on different canvas or connected via split link to the
-#   specified node this function returns an empty string.
-# INPUTS
-#   * node_id -- node id
-#   * peer_id -- id of the peer node
-# RESULT
-#   * iface_id -- interface id
-#****
-proc ifcByPeer { node_id peer_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    set entry [lsearch -inline [set $node_id] "interface-peer {* $peer_id}"]
-
-    return [lindex [lindex $entry 1] 0]
 }
 
 #****f* nodecfg.tcl/hasIPv4Addr
@@ -1047,15 +1033,30 @@ proc nodeCfggenIfcIPv6 { node_id iface_id } {
 # FUNCTION
 #   Returns the first available name for a new interface of the specified type.
 # INPUTS
-#   * type -- interface type
 #   * node_id -- node id
+#   * type -- interface type
+#   * auto_config -- enable auto ifaec configuration
+#   * stolen_iface -- if stolen, interface name
 # RESULT
 #   * iface_id -- the first available name for a interface of the specified type
 #****
-proc newIface { type node_id } {
-    for { set id 0 } { [lsearch -exact [ifcList $node_id] $type$id] >= 0 } { incr id } {}
+proc newIface { node_id iface_type auto_config { stolen_iface "" } } {
+    set iface_id [newObjectId [ifcList $node_id] "ifc"]
 
-    return $type$id
+    setIfcType $node_id $iface_id $iface_type
+    if { $iface_type == "stolen" } {
+	setIfcStolenIfc $node_id $iface_id $stolen_iface
+	setIfcName $node_id $iface_id $stolen_iface
+    } else {
+	setIfcName $node_id $iface_id [chooseIfName $node_id $node_id]
+    }
+
+    if { $auto_config } {
+	set node_type [getNodeType $node_id]
+	$node_type.confNewIfc $node_id $iface_id
+    }
+
+    return $iface_id
 }
 
 #****f* nodecfg.tcl/newLogIface
