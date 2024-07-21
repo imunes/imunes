@@ -141,30 +141,36 @@ proc drawNode { node_id } {
 	}
     }
 
-    lassign [lmap coord [getNodeLabelCoords $node_id] {expr $coord * $zoom}] x y
+    lassign [lmap coord [getNodeLabelCoords $node_id] {expr int($coord * $zoom)}] x y
     if { $type != "pseudo" } {
 	set label_str [getNodeName $node_id]
 	if { $type == "rj45" && [getEtherVlanEnabled $node_id] } {
 	    set label_str "$label_str (VLAN [getEtherVlanTag $node_id])"
 	}
 
+	set has_empty_ifaces 0
 	foreach ifc [ifcList $node_id] {
-	    if { [string trim $ifc 0123456789] == "wlan" } {
-		set label_str [format "%s %s" $label_str [getIfcIPv4addr $node_id $ifc]]
+	    if { [getNodeType $node_id] == "wlan" } {
+		set label_str "$label_str [getIfcIPv4addr $node_id $ifc]"
+	    } elseif { [getIfcLink $node_id $ifc] == "" } {
+		if { $has_empty_ifaces == 0 } {
+		    incr y 8
+		    set label_str "$label_str\n$ifc"
+		    set has_empty_ifaces 1
+		} else {
+		    set label_str "$label_str $ifc"
+		}
 	    }
 	}
     } else {
 	# get mirror link and its real node/iface
-	set mirror_link_id [getIfcLink [getNodeMirror $node_id] "0"]
-	set peer_id [lindex [getLinkPeers $mirror_link_id] 1]
-	set peer_iface [lindex [getLinkPeersIfaces $mirror_link_id] 1]
+	lassign [logicalPeerByIfc $node_id "0"] peer_id peer_iface
 
 	set label_str "[getNodeName $peer_id]:$peer_iface"
 	set peer_canvas [getNodeCanvas $peer_id]
 	if { $peer_canvas != [getFromRunning "curcanvas"] } {
 	    set label_str "$label_str\n@[getCanvasName $peer_canvas]"
 	}
-
     }
 
     set label_elem [.panwin.f1.c create text $x $y -fill blue \
@@ -549,7 +555,7 @@ proc updateIfcLabelParams { link_id node_id iface x1 y1 x2 y2 } {
 # SYNOPSIS
 #   connectWithNode $nodes $target_node_id
 # FUNCTION
-#   This procedure calls newGUILink procedure to connect all given nodes with
+#   This procedure calls newLinkGUI procedure to connect all given nodes with
 #   the one node.
 # INPUTS
 #   * nodes -- list of all node ids to connect
@@ -558,16 +564,16 @@ proc updateIfcLabelParams { link_id node_id iface x1 y1 x2 y2 } {
 proc connectWithNode { nodes target_node_id } {
     foreach node_id $nodes {
 	if { $node_id != $target_node_id } {
-	    newGUILink $node_id $target_node_id
+	    newLinkGUI $node_id $target_node_id
 	}
     }
 }
 
-#****f* editor.tcl/newGUILink
+#****f* editor.tcl/newLinkGUI
 # NAME
-#   newGUILink -- new GUI link
+#   newLinkGUI -- new GUI link
 # SYNOPSIS
-#   newGUILink $lnode1 $lnode2
+#   newLinkGUI $lnode1 $lnode2
 # FUNCTION
 #   This procedure is called to create a new link between
 #   nodes lnode1 and lnode2. Nodes can be on the same canvas
@@ -577,7 +583,7 @@ proc connectWithNode { nodes target_node_id } {
 #   * lnode1 -- node id of the first node
 #   * lnode2 -- node id of the second node
 #****
-proc newGUILink { lnode1 lnode2 } {
+proc newLinkGUI { lnode1 lnode2 } {
     global changed
 
     set link [newLink $lnode1 $lnode2]
@@ -585,7 +591,28 @@ proc newGUILink { lnode1 lnode2 } {
 	return
     }
 
-    if { [getNodeCanvas $lnode1] != [getNodeCanvas $lnode2] } {
+    if { [getNodeCanvas $lnode1] != [getNodeCanvas $lnode2] || $lnode1 == $lnode2 } {
+	lassign [getLinkPeers $link] orig_node1 orig_node2
+	lassign [splitLink $link] new_node1 new_node2
+
+	setNodeName $new_node1 $orig_node2
+	setNodeName $new_node2 $orig_node1
+    }
+
+    redrawAll
+    set changed 1
+    updateUndoLog
+}
+
+proc newLinkWithIfacesGUI { lnode1 iface1 lnode2 iface2 } {
+    global changed
+
+    set link [newLinkWithIfaces $lnode1 $iface1 $lnode2 $iface2]
+    if { $link == "" } {
+	return
+    }
+
+    if { [getNodeCanvas $lnode1] != [getNodeCanvas $lnode2] || $lnode1 == $lnode2 } {
 	lassign [getLinkPeers $link] orig_node1 orig_node2
 	lassign [splitLink $link] new_node1 new_node2
 
