@@ -953,6 +953,8 @@ proc splitLink { link nodetype } {
     lappend $new_node1 "interface-peer {0 $orig_node1}"
     lappend $new_node2 "interface-peer {0 $orig_node2}"
 
+    setLinkDirect $new_link1 [getLinkDirect $link]
+    setLinkDirect $new_link2 [getLinkDirect $link]
     setLinkBandwidth $new_link1 [getLinkBandwidth $link]
     setLinkBandwidth $new_link2 [getLinkBandwidth $link]
     setLinkDelay $new_link1 [getLinkDelay $link]
@@ -1014,6 +1016,7 @@ proc mergeLink { link } {
     set $new_link {}
     lappend $new_link "nodes {$orig_node1 $orig_node2}"
 
+    setLinkDirect $new_link [getLinkDirect $link]
     setLinkBandwidth $new_link [getLinkBandwidth $link]
     setLinkDelay $new_link [getLinkDelay $link]
     setLinkBER $new_link [getLinkBER $link]
