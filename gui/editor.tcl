@@ -63,7 +63,7 @@ proc updateUndoLog {} {
 	    .menubar.edit entryconfigure "Undo" -state normal
 	}
 
-	setToUndolog $undolevel
+	saveToUndoLevel $undolevel
 	setToRunning "redolevel" $undolevel
 	set changed 0
 	# When some changes are made in the topology, new /etc/hosts files
@@ -97,11 +97,7 @@ proc undo {} {
 
 	.panwin.f1.c config -cursor watch
 
-	set dict_cfg [getFromUndolog $undolevel]
-	setToRunning "canvas_list" [getCanvasList]
-	setToRunning "node_list" [getNodeList]
-	setToRunning "link_list" [getLinkList]
-	setToRunning "annotation_list" [getAnnotationList]
+	jumpToUndoLevel $undolevel
 	switchCanvas none
     }
 
@@ -137,11 +133,7 @@ proc redo {} {
 
 	.panwin.f1.c config -cursor watch
 
-	set dict_cfg [getFromUndolog $undolevel]
-	setToRunning "canvas_list" [getCanvasList]
-	setToRunning "node_list" [getNodeList]
-	setToRunning "link_list" [getLinkList]
-	setToRunning "annotation_list" [getAnnotationList]
+	jumpToUndoLevel $undolevel
 	switchCanvas none
     }
 
