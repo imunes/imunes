@@ -110,7 +110,7 @@ proc newProject {} {
     setToRunning "canvas_list" {}
     setToRunning "curcanvas" [newCanvas ""]
     setToRunning "current_file" ""
-    setToUndolog 0
+    saveToUndoLevel 0
 
     updateProjectMenu
     switchProject
@@ -208,7 +208,7 @@ proc openFile {} {
     setToRunning "stop_sched" true
     setToRunning "undolevel" 0
     setToRunning "redolevel" 0
-    setToUndolog 0
+    saveToUndoLevel 0
     setActiveTool select
     updateProjectMenu
     setWmTitle $current_file
@@ -392,7 +392,7 @@ proc closeFile {} {
         switchCanvas none
 	setToRunning "undolevel" 0
 	setToRunning "redolevel" 0
-	setToUndolog 0
+	saveToUndoLevel 0
     } else {
 	newProject
     }

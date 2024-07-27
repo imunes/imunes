@@ -1337,13 +1337,22 @@ proc lappendToRunning { key value } {
     return $dict_run
 }
 
-proc getFromUndolog { undolevel } {
+proc jumpToUndoLevel { undolevel } {
+    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
     upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
 
-    return [dictGet $dict_run "undolog" $undolevel]
+    foreach list_var "canvas_list node_list link_list annotation_list image_list \
+	mac_used_list ipv4_used_list ipv6_used_list" {
+
+	setToRunning $list_var [dictGet $dict_run "undolog" $undolevel $list_var]
+    }
+
+    set dict_cfg [dictGet $dict_run "undolog" $undolevel "config"]
+
+    return $dict_cfg
 }
 
-proc setToUndolog { undolevel { value "" } } {
+proc saveToUndoLevel { undolevel { value "" } } {
     upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
@@ -1351,7 +1360,12 @@ proc setToUndolog { undolevel { value "" } } {
 	set value $dict_cfg
     }
 
-    set dict_run [dictSet $dict_run "undolog" $undolevel $value]
+    foreach list_var "canvas_list node_list link_list annotation_list image_list \
+	mac_used_list ipv4_used_list ipv6_used_list" {
+
+	set dict_run [dictSet $dict_run "undolog" $undolevel $list_var [getFromRunning $list_var]]
+    }
+    set dict_run [dictSet $dict_run "undolog" $undolevel "config" $value]
 
     return $dict_run
 }

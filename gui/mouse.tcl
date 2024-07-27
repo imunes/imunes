@@ -1646,12 +1646,7 @@ proc button1-release { c x y } {
 	} else {
 	    .panwin.f1.c config -cursor watch
 
-	    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-	    set dict_cfg [getFromUndolog $undolevel]
-	    setToRunning "canvas_list" [getCanvasList]
-	    setToRunning "node_list" [getNodeList]
-	    setToRunning "link_list" [getLinkList]
-	    setToRunning "annotation_list" [getAnnotationList]
+	    jumpToUndoLevel $undolevel
 	    redrawAll
 
 	    if { $activetool == "select" } {
