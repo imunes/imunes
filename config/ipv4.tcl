@@ -317,7 +317,7 @@ proc autoIPv4addr { node iface } {
         }
     }
 
-    lappendToRunning ipv4_used_list [getIfcIPv4addr $node $iface]
+    lappendToRunning "ipv4_used_list" [getIfcIPv4addr $node $iface]
 }
 
 #****f* ipv4.tcl/nextFreeIP4Addr
