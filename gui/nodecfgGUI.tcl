@@ -544,13 +544,13 @@ proc configGUI_showIfcInfo { wi phase node_id iface_id } {
     global changed apply cancel badentry
 
     #
-    #shownifcframe - frame that is currently shown below the list o interfaces
+    #shownifcframe - frame that is currently shown below the list of interfaces
     #
     set shownifcframe [pack slaves $wi]
     #
     #shownifc - interface whose parameters are shown in shownifcframe
     #
-    set shownifc [string trim [lindex [split $shownifcframe .] end] if]
+    regsub ***=if [lindex [split $shownifcframe .] end] "" shownifc
 
     #if there is already some frame shown below the list of interfaces and
     #parameters shown in that frame are not parameters of selected interface
@@ -1068,7 +1068,7 @@ proc configGUI_applyButtonNode { wi node_id phase } {
 	if { $nbook != -1 && $treecolumns != "" } {
 	    configGUI_refreshIfcsTree .popup.nbook.nfInterfaces.panwin.f1.tree $node_id
 	    set shownifcframe [pack slaves [lindex [.popup.nbook tabs] 1].panwin.f2]
-	    set shownifc [string trim [lindex [split $shownifcframe .] end] if]
+	    regsub ***=if [lindex [split $shownifcframe .] end] "" shownifc
 	    [lindex [.popup.nbook tabs] 1].panwin.f1.tree selection set $shownifc
 
 	    if { ".popup.nbook.nfBridge" in [.popup.nbook tabs] } {
@@ -1249,6 +1249,7 @@ proc configGUI_ifcEssentials { wi node_id iface_id } {
     set ifnat$iface_id [getIfcNatState $node_id $iface_id]
     ttk::checkbutton $wi.if$iface_id.label.nat -text "nat" \
 	-variable ifnat$iface_id -padding 4 -onvalue "on" -offvalue "off"
+
     ttk::label $wi.if$iface_id.label.mtul -text "MTU" -anchor e -width 5 -padding 2
     ttk::spinbox $wi.if$iface_id.label.mtuv -width 5 \
 	-validate focus -invalidcommand "focusAndFlash %W"
@@ -5054,13 +5055,13 @@ proc configGUI_showBridgeIfcInfo { wi phase node_id iface_id } {
     global guielements brguielements
     global changed apply cancel badentry
     #
-    #shownifcframe - frame that is currently shown below the list o interfaces
+    #shownifcframe - frame that is currently shown below the list of interfaces
     #
     set shownifcframe [pack slaves $wi]
     #
     #shownifc - interface whose parameters are shown in shownifcframe
     #
-    set shownifc [string trim [lindex [split $shownifcframe .] end] if]
+    regsub ***=if [lindex [split $shownifcframe .] end] "" shownifc
 
     #if there is already some frame shown below the list of interfaces and
     #parameters shown in that frame are not parameters of selected interface
@@ -5105,6 +5106,7 @@ proc configGUI_showBridgeIfcInfo { wi phase node_id iface_id } {
 		    set brguielements [lreplace $brguielements $ind $ind]
 		}
 	    }
+
 	    foreach guielement $guielements {
 		set ind [lsearch $guielements $guielement]
 		#delete corresponding elements from thi list guielements
