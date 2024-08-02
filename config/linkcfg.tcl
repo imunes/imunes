@@ -911,76 +911,26 @@ proc numOfLinks { node_id } {
 # RESULT
 #   * new_link_id -- new link id.
 #****
-proc newLink { lnode1 lnode2 } {
-    global defEthBandwidth defSerBandwidth defSerDelay
-
-    foreach node_id "$lnode1 $lnode2" {
-	set type [getNodeType $node_id]
-	if { $type == "pseudo" } {
-	    return
-	}
-
-	if { [info procs $type.maxLinks] != "" } {
-	    if { [ numOfLinks $node_id ] == [$type.maxLinks] } {
-		tk_dialog .dialog1 "IMUNES warning" \
-		   "Warning: Maximum links connected to the node $node_id" \
-		   info 0 Dismiss
-		return
-	    }
-	}
-    }
-
-    set link_id [newObjectId "link"]
-
-    set ifname1 [newIfc [chooseIfName $lnode1 $lnode2] $lnode1]
-    setIfcType $lnode1 $ifname1 "phys"
-    setIfcLink $lnode1 $ifname1 $link_id
-    set ifname2 [newIfc [chooseIfName $lnode2 $lnode1] $lnode2]
-    setIfcType $lnode2 $ifname2 "phys"
-    setIfcLink $lnode2 $ifname2 $link_id
-
-    setLinkPeers $link_id "$lnode1 $lnode2"
-    setLinkPeersIfaces $link_id "$ifname1 $ifname2"
-    if { ([getNodeType $lnode1] == "lanswitch" || \
-	[getNodeType $lnode2] == "lanswitch" || \
-	[string first eth "$ifname1 $ifname2"] != -1) && \
-	[getNodeType $lnode1] != "rj45" && \
-	[getNodeType $lnode2] != "rj45" &&
-	$defEthBandwidth != 0 } {
-
-	setLinkBandwidth $link_id $defEthBandwidth
-    } elseif { [string first ser "$ifname1 $ifname2"] != -1 } {
-	setLinkBandwidth $link_id $defSerBandwidth
-	setLinkDelay $link_id $defSerDelay
-    }
-    lappendToRunning "link_list" $link_id
-
-    if { [info procs [getNodeType $lnode1].confNewIfc] != "" } {
-	[getNodeType $lnode1].confNewIfc $lnode1 $ifname1
-    }
-    if { [info procs [getNodeType $lnode2].confNewIfc] != "" } {
-	[getNodeType $lnode2].confNewIfc $lnode2 $ifname2
-    }
-
-    return $link_id
+proc newLink { node1_id node2_id } {
+    return [newLinkWithIfaces $node1_id "" $node2_id ""]
 }
 
-proc newLinkWithIfaces { lnode1 iface1 lnode2 iface2 } {
+proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
     global defEthBandwidth defSerBandwidth defSerDelay
 
     set config_iface1 0
-    if { $iface1 == "" } {
+    if { $iface1_id == "" } {
 	set config_iface1 1
-	set iface1 [newIface $lnode1 "phys" 0]
+	set iface1_id [newIface $node1_id "phys" 0]
     }
 
     set config_iface2 0
-    if { $iface2 == "" } {
+    if { $iface2_id == "" } {
 	set config_iface2 1
-	set iface2 [newIface $lnode2 "phys" 0]
+	set iface2_id [newIface $node2_id "phys" 0]
     }
 
-    foreach node_id "$lnode1 $lnode2" iface "$iface1 $iface2" {
+    foreach node_id "$node1_id $node2_id" iface "$iface1_id $iface2_id" {
 	# iface already connected to a link
 	if { [getNodeIface $node_id $iface] == "" } {
 	    after idle {.dialog1.msg configure -wraplength 4i}
@@ -1017,33 +967,21 @@ proc newLinkWithIfaces { lnode1 iface1 lnode2 iface2 } {
 	}
     }
 
-    set link_id [newObjectId "link"]
+    set link_id [newObjectIdAlt [getFromRunning "link_list"] "l"]
 
-    setIfcLink $lnode1 $iface1 $link_id
-    setIfcLink $lnode2 $iface2 $link_id
+    setIfcLink $node1_id $iface1_id $link_id
+    setIfcLink $node2_id $iface2_id $link_id
 
-    setLinkPeers $link_id "$lnode1 $lnode2"
-    setLinkPeersIfaces $link_id "$iface1 $iface2"
-    if { ([getNodeType $lnode1] == "lanswitch" || \
-	[getNodeType $lnode2] == "lanswitch" || \
-	[string first eth "$iface1 $iface2"] != -1) && \
-	[getNodeType $lnode1] != "rj45" && \
-	[getNodeType $lnode2] != "rj45" &&
-	$defEthBandwidth != 0 } {
-
-	setLinkBandwidth $link_id $defEthBandwidth
-    } elseif { [string first ser "$iface1 $iface2"] != -1 } {
-	setLinkBandwidth $link_id $defSerBandwidth
-	setLinkDelay $link_id $defSerDelay
-    }
+    setLinkPeers $link_id "$node1_id $node2_id"
+    setLinkPeersIfaces $link_id "$iface1_id $iface2_id"
     lappendToRunning "link_list" $link_id
 
-    if { $config_iface1 && [info procs [getNodeType $lnode1].confNewIfc] != "" } {
-	[getNodeType $lnode1].confNewIfc $lnode1 $iface1
+    if { $config_iface1 && [info procs [getNodeType $node1_id].confNewIfc] != "" } {
+	[getNodeType $node1_id].confNewIfc $node1_id $iface1_id
     }
 
-    if { $config_iface2 && [info procs [getNodeType $lnode2].confNewIfc] != "" } {
-	[getNodeType $lnode2].confNewIfc $lnode2 $iface2
+    if { $config_iface2 && [info procs [getNodeType $node2_id].confNewIfc] != "" } {
+	[getNodeType $node2_id].confNewIfc $node2_id $iface2_id
     }
 
     return $link_id

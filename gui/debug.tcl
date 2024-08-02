@@ -134,6 +134,7 @@ bind . <F6> {
 
     source "$ROOTDIR/$LIBDIR/config/annotationscfg.tcl"
     source "$ROOTDIR/$LIBDIR/config/filtercfg.tcl"
+    source "$ROOTDIR/$LIBDIR/config/ifaces.tcl"
     source "$ROOTDIR/$LIBDIR/config/ipsec.tcl"
     source "$ROOTDIR/$LIBDIR/config/ipv4.tcl"
     source "$ROOTDIR/$LIBDIR/config/ipv6.tcl"
