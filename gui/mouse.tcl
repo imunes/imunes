@@ -495,7 +495,7 @@ proc moveToCanvas { canvas_id } {
 proc mergeNodeGUI { node_id } {
     global changed
 
-    mergeLink [getIfcLink $node_id "0"]
+    mergeLink [getIfcLink $node_id "ifc0"]
 
     set changed 1
     updateUndoLog
@@ -664,57 +664,57 @@ proc button3node { c x y } {
 	    -menu .button3menu.connect_iface
     }
 
-    foreach my_iface_id [concat "new_iface" [ifcList $node_id]] {
-	if { [getIfcLink $node_id $my_iface_id] != "" } {
+    foreach this_iface_id [concat "new_iface" [ifcList $node_id]] {
+	if { [getIfcLink $node_id $this_iface_id] != "" } {
 	    continue
 	}
 
-	set my_iface_name $my_iface_id
-	set my_iface_label $my_iface_id
-	if { $my_iface_id == "new_iface" } {
-	    set my_iface_name {}
-	    set my_iface_label "Create new interface"
+	set from_iface_id $this_iface_id
+	set from_iface_label [getIfcName $node_id $this_iface_id]
+	if { $this_iface_id == "new_iface" } {
+	    set from_iface_id {}
+	    set from_iface_label "Create new interface"
 	}
 
-	destroy .button3menu.connect_iface.$my_iface_id
-	menu .button3menu.connect_iface.$my_iface_id -tearoff 0
-	.button3menu.connect_iface add cascade -label $my_iface_label \
-	    -menu .button3menu.connect_iface.$my_iface_id
+	destroy .button3menu.connect_iface.$this_iface_id
+	menu .button3menu.connect_iface.$this_iface_id -tearoff 0
+	.button3menu.connect_iface add cascade -label $from_iface_label \
+	    -menu .button3menu.connect_iface.$this_iface_id
 
 	foreach canvas_id $canvas_list {
-	    destroy .button3menu.connect_iface.$my_iface_id.$canvas_id
-	    menu .button3menu.connect_iface.$my_iface_id.$canvas_id -tearoff 0
-	    .button3menu.connect_iface.$my_iface_id add cascade -label [getCanvasName $canvas_id] \
-		-menu .button3menu.connect_iface.$my_iface_id.$canvas_id
+	    destroy .button3menu.connect_iface.$this_iface_id.$canvas_id
+	    menu .button3menu.connect_iface.$this_iface_id.$canvas_id -tearoff 0
+	    .button3menu.connect_iface.$this_iface_id add cascade -label [getCanvasName $canvas_id] \
+		-menu .button3menu.connect_iface.$this_iface_id.$canvas_id
 	}
 
-	foreach peer_node [getFromRunning "node_list"] {
-	    set canvas_id [getNodeCanvas $peer_node]
-	    if { [getNodeType $peer_node] != "pseudo" } {
-		destroy .button3menu.connect_iface.$my_iface_id.$canvas_id.$peer_node
-		menu .button3menu.connect_iface.$my_iface_id.$canvas_id.$peer_node -tearoff 0
-		.button3menu.connect_iface.$my_iface_id.$canvas_id add cascade -label [getNodeName $peer_node] \
-		    -menu .button3menu.connect_iface.$my_iface_id.$canvas_id.$peer_node
+	foreach peer_node_id [getFromRunning "node_list"] {
+	    set canvas_id [getNodeCanvas $peer_node_id]
+	    if { [getNodeType $peer_node_id] != "pseudo" } {
+		destroy .button3menu.connect_iface.$this_iface_id.$canvas_id.$peer_node_id
+		menu .button3menu.connect_iface.$this_iface_id.$canvas_id.$peer_node_id -tearoff 0
+		.button3menu.connect_iface.$this_iface_id.$canvas_id add cascade -label [getNodeName $peer_node_id] \
+		    -menu .button3menu.connect_iface.$this_iface_id.$canvas_id.$peer_node_id
 
-		foreach peer_iface_id [concat "new_peer_iface" [ifcList $peer_node]] {
-		    if { $node_id == $peer_node && $my_iface_id == $peer_iface_id } {
+		foreach other_iface_id [concat "new_peer_iface" [ifcList $peer_node_id]] {
+		    if { $node_id == $peer_node_id && $this_iface_id == $other_iface_id } {
 			continue
 		    }
 
-		    if { [getIfcLink $peer_node $peer_iface_id] != "" } {
+		    if { [getIfcLink $peer_node_id $other_iface_id] != "" } {
 			continue
 		    }
 
-		    set peer_iface_name $peer_iface_id
-		    set peer_iface_label $peer_iface_id
-		    if { $peer_iface_id == "new_peer_iface" } {
-			set peer_iface_name {}
-			set peer_iface_label "Create new interface"
+		    set to_iface_id $other_iface_id
+		    set to_iface_label [getIfcName $peer_node_id $other_iface_id]
+		    if { $other_iface_id == "new_peer_iface" } {
+			set to_iface_id {}
+			set to_iface_label "Create new interface"
 		    }
 
-		    .button3menu.connect_iface.$my_iface_id.$canvas_id.$peer_node add command \
-			-label $peer_iface_label \
-			-command "newLinkWithIfacesGUI $node_id \"$my_iface_name\" $peer_node \"$peer_iface_name\""
+		    .button3menu.connect_iface.$this_iface_id.$canvas_id.$peer_node_id add command \
+			-label $to_iface_label \
+			-command "newLinkWithIfacesGUI $node_id \"$from_iface_id\" $peer_node_id \"$to_iface_id\""
 		}
 	    }
 	}
@@ -1810,7 +1810,7 @@ proc nodeEnter { c } {
     }
     if { $type != "rj45" } {
 	foreach iface [ifcList $node_id] {
-	    set line "$line $iface:[getIfcIPv4addr $node_id $iface]"
+	    set line "$line [getIfcName $node_id $iface]:[getIfcIPv4addr $node_id $iface]"
 	}
     }
     .bottom.textbox config -text "$line"

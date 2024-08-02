@@ -155,18 +155,18 @@ proc drawNode { node_id } {
 	    } elseif { [getIfcLink $node_id $ifc] == "" } {
 		if { $has_empty_ifaces == 0 } {
 		    incr y 8
-		    set label_str "$label_str\n$ifc"
+		    set label_str "$label_str\n[getIfcName $node_id $ifc]"
 		    set has_empty_ifaces 1
 		} else {
-		    set label_str "$label_str $ifc"
+		    set label_str "$label_str [getIfcName $node_id $ifc]"
 		}
 	    }
 	}
     } else {
 	# get mirror link and its real node/iface
-	lassign [logicalPeerByIfc $node_id "0"] peer_id peer_iface
+	lassign [logicalPeerByIfc $node_id "ifc0"] peer_id peer_iface
 
-	set label_str "[getNodeName $peer_id]:$peer_iface"
+	set label_str "[getNodeName $peer_id]:[getIfcName $peer_id $peer_iface]"
 	set peer_canvas [getNodeCanvas $peer_id]
 	if { $peer_canvas != [getFromRunning "curcanvas"] } {
 	    set label_str "$label_str\n@[getCanvasName $peer_canvas]"
@@ -312,7 +312,7 @@ proc updateIfcLabel { link_id node_id iface } {
 
     set labelstr ""
     if { $show_interface_names } {
-	lappend labelstr "$iface"
+	lappend labelstr "[getIfcName $node_id $iface]"
     }
 
     if { $show_interface_ipv4 && $ifipv4addr != "" } {

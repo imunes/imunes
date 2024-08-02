@@ -111,34 +111,19 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 	set keep_ifaces 0
     }
 
-    # move to removeIfaces procedure
     set pnodes [getLinkPeers $link_id]
-    foreach node_id $pnodes iface [getLinkPeersIfaces $link_id] {
+    foreach node_id $pnodes iface_id [getLinkPeersIfaces $link_id] {
 	if { $keep_ifaces } {
-	    cfgUnset "nodes" $node_id "ifaces" $iface "link"
+	    cfgUnset "nodes" $node_id "ifaces" $iface_id "link"
 	    continue
 	}
 
 	if { [getNodeType $node_id] in "extelem" } {
-	    cfgUnset "nodes" $node_id "ifaces" $iface
+	    cfgUnset "nodes" $node_id "ifaces" $iface_id
 	    continue
 	}
 
-	setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] [getIfcIPv4addr $node_id $iface] 1]
-	setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] [getIfcIPv6addr $node_id $iface] 1]
-	setToRunning "mac_used_list" [removeFromList [getFromRunning "mac_used_list"] [getIfcMACaddr $node_id $iface] 1]
-
-	cfgUnset "nodes" $node_id "ifaces" $iface
-
-	foreach lifc [logIfcList $node_id] {
-	    switch -exact [getLogIfcType $node_id $lifc] {
-		vlan {
-		    if { [getIfcVlanDev $node_id $lifc] == $iface } {
-			cfgUnset "nodes" $node_id "logifaces" $lifc
-		    }
-		}
-	    }
-	}
+	removeIface $node_id $iface_id
     }
 
     set mirror_link_id [getLinkMirror $link_id]
@@ -147,7 +132,7 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 	removeLink $mirror_link_id $keep_ifaces
     }
 
-    # move to removeIfaces procedure
+    # move to removeIfaces procedure?
     foreach node_id $pnodes {
 	if { [getNodeType $node_id] == "pseudo" } {
 	    setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $node_id]
@@ -814,11 +799,11 @@ proc splitLink { orig_link_id } {
 	setNodeCanvas $pseudo_node_id [getNodeCanvas $orig_node_id]
 	setNodeCoords $pseudo_node_id [getNodeCoords $other_orig_node_id]
 	setNodeLabelCoords $pseudo_node_id [getNodeCoords $other_orig_node_id]
-	setIfcLink $pseudo_node_id "0" $link_id
+	setIfcLink $pseudo_node_id "ifc0" $link_id
 
 	# setup both link properties
 	setLinkPeers $link_id "$pseudo_node_id $orig_node_id"
-	setLinkPeersIfaces $link_id "0 $orig_node_iface"
+	setLinkPeersIfaces $link_id "ifc0 $orig_node_iface"
 	setLinkMirror $link_id [removeFromList $links $link_id 1]
     }
 
