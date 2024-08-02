@@ -156,8 +156,19 @@ proc redo {} {
 #   * ifcName -- the name of the interface
 #****
 proc chooseIfName { lnode_id rnode_id } {
+    set iface_prefix [[getNodeType $lnode_id].ifacePrefix]
 
-    return [[getNodeType $lnode_id].ifcName $lnode_id $rnode_id]
+    set ifaces {}
+    foreach {iface_id iface_cfg} [cfgGet "nodes" $lnode_id "ifaces"] {
+	if { [dictGet $iface_cfg "type"] == "phys" } {
+	    set iface_name [dictGet $iface_cfg "name"]
+	    if { [regexp "$iface_prefix\[0-9\]+" $iface_name] } {
+		lappend ifaces $iface_name
+	    }
+	}
+    }
+
+    return [newObjectIdAlt $ifaces $iface_prefix]
 }
 
 #****f* editor.tcl/l3IfcName
@@ -174,7 +185,6 @@ proc chooseIfName { lnode_id rnode_id } {
 #   * ifcName -- the name of the interface
 #****
 proc l3IfcName { lnode_id rnode_id } {
-
     if { [getNodeType $lnode_id] in "ext extnat" } {
 	return "ext"
     }

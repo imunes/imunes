@@ -168,6 +168,20 @@ proc $MODULE.ifcName {l r} {
     return [l3IfcName $l $r]
 }
 
+#****f* pc.tcl/pc.ifacePrefix
+# NAME
+#   pc.ifacePrefix -- interface name
+# SYNOPSIS
+#   pc.ifacePrefix
+# FUNCTION
+#   Returns pc interface name prefix.
+# RESULT
+#   * name -- name prefix string
+#****
+proc $MODULE.ifacePrefix {} {
+    return "eth"
+}
+
 #****f* pc.tcl/pc.IPAddrRange
 # NAME
 #   pc.IPAddrRange -- IP address range
