@@ -1184,15 +1184,15 @@ proc destroyNamespace { ns } {}
 proc createNodeLogIfcs { node } {
     set node_id "[getFromRunning "eid"].$node"
 
-    foreach ifc [logIfcList $node] {
-	switch -exact [getLogIfcType $node $ifc] {
+    foreach {liface_id liface_cfg} [cfgGet "nodes" $node_id "ifaces"] {
+	switch -exact [dictGet $liface_cfg "type"] {
 	    vlan {
 		# physical interfaces are created when creating links, so VLANs
 		# must be created after links
 	    }
 	    lo {
-		if { $ifc != "lo0" } {
-		    pipesExec "jexec $node_id ifconfig $ifc create" "hold"
+		if { $liface_id != "lo0" } {
+		    pipesExec "jexec $node_id ifconfig $liface_id create" "hold"
 		}
 	    }
 	}
@@ -1244,24 +1244,27 @@ proc isNodeInitNet { node } {
 #****
 proc startIfcsNode { node } {
     set node_id "[getFromRunning "eid"].$node"
-    foreach ifc [allIfcList $node] {
-	set mtu [getIfcMTU $node $ifc]
-	if { [getLogIfcType $node $ifc] == "vlan" } {
-	    set tag [getIfcVlanTag $node $ifc]
-	    set dev [getIfcVlanDev $node $ifc]
+
+    foreach {iface_id iface_cfg} [concat [cfgGet "nodes" $node "ifaces"] [cfgGet "nodes" $node "ifaces"]] {
+	set iface_name [dictGet $iface_cfg "name"]
+	set mtu [dictGet $iface_cfg "mtu"]
+
+	if { [dictGet $iface_cfg "type"] == "vlan" } {
+	    set tag [dictGet $iface_cfg "vlan_tag"]
+	    set dev [dictGet $iface_cfg "vlan_dev"]
 	    if { $tag != "" && $dev != "" } {
-		pipesExec "jexec $node_id ifconfig $dev.$tag create name $ifc" "hold"
+		pipesExec "jexec $node_id ifconfig $dev.$tag create name $iface_name" "hold"
 	    }
 	}
 
-	if { [getIfcOperState $node $ifc] == "up" } {
-	    pipesExec "jexec $node_id ifconfig $ifc mtu $mtu up" "hold"
+	if { [dictGetWithDefault "up" $iface_cfg "oper_state"] == "up" } {
+	    pipesExec "jexec $node_id ifconfig $iface_name mtu $mtu up" "hold"
 	} else {
-	    pipesExec "jexec $node_id ifconfig $ifc mtu $mtu" "hold"
+	    pipesExec "jexec $node_id ifconfig $iface_name mtu $mtu" "hold"
 	}
 
-	if { [getIfcNatState $node $ifc] == "on" } {
-	    pipesExec "jexec $node_id sh -c 'echo \"map $ifc 0/0 -> 0/32\" | ipnat -f -'" "hold"
+	if { [dictGetWithDefault "on" $iface_cfg "nat_state"] == "on" } {
+	    pipesExec "jexec $node_id sh -c 'echo \"map $iface_name 0/0 -> 0/32\" | ipnat -f -'" "hold"
 	}
     }
 }

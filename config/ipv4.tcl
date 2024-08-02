@@ -336,6 +336,7 @@ proc autoIPv4addr { node iface } {
 #****
 proc nextFreeIP4Addr { addr start peers } {
     global execMode
+
     set ipnums [ip::prefix $addr]
     set mask [lindex [split $addr /] 1]
 
@@ -353,7 +354,7 @@ proc nextFreeIP4Addr { addr start peers } {
 
     set ipaddr "$ip1.$ip2.$ip3.$ip4/$mask"
 
-    while {$ipaddr in $peers} {
+    while { $ipaddr in $peers } {
         incr ip4
         if { $ip4 > 254} {
             incr ip3

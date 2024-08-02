@@ -245,7 +245,7 @@ proc configGUI_addTree { wi node } {
 
     foreach ifc [lsort -dictionary [ifcList $node]] {
 	$wi.panwin.f1.tree insert physIfcFrame end -id $ifc \
-	    -text "$ifc" -tags $ifc
+	    -text "[getIfcName $curnode $ifc]" -tags $ifc
 	foreach column $treecolumns {
 	    $wi.panwin.f1.tree set $ifc [lindex $column 0] \
 		[getIfc[lindex $column 0] $node $ifc]
@@ -258,7 +258,7 @@ proc configGUI_addTree { wi node } {
 
 	foreach ifc [lsort -dictionary [logIfcList $node]] {
 	    $wi.panwin.f1.tree insert logIfcFrame end -id $ifc \
-		-text "$ifc" -tags $ifc
+		-text "[getIfcName $node $ifc]" -tags $ifc
 	    foreach column { "OperState" "NatState" "MTU" "IPv4addr" "IPv6addr"} {
 		$wi.panwin.f1.tree set $ifc [lindex $column 0] \
 		    [getIfc[lindex $column 0] $node $ifc]
@@ -383,15 +383,15 @@ proc showLogIfcMenu { ifc } {
     set button3logifc_ifc $ifc
     .button3logifc delete 0 end
     .button3logifc add command -label "Remove interface $ifc" -command {
-	global curnode logIfcs button3logifc_ifc changed
+	global curnode logifaces_list button3logifc_ifc changed
 
 	set changed 0
 	set ifc $button3logifc_ifc
 	if { $ifc != "lo0" } {
-	    cfgUnset "nodes" $curnode "logifaces" $ifc
+	    cfgUnset "nodes" $curnode "ifaces" $ifc
 
 	    set wi .popup.nbook.nfInterfaces.panwin
-	    set logIfcs [lsort [logIfcList $curnode]]
+	    set logifaces_list [lsort [logIfcList $curnode]]
 
 	    configGUI_refreshIfcsTree $wi.f1.tree $curnode
 	    configGUI_showIfcInfo $wi.f2 0 $curnode logIfcFrame
@@ -431,7 +431,7 @@ proc configGUI_refreshIfcsTree { wi node } {
 
     foreach ifc [lsort -dictionary [ifcList $node]] {
 	$wi insert physIfcFrame end -id $ifc \
-	    -text "$ifc" -tags $ifc
+	    -text "[getIfcName $node $ifc]" -tags $ifc
 	foreach column $treecolumns {
 	    $wi set $ifc [lindex $column 0] \
 		[getIfc[lindex $column 0] $node $ifc]
@@ -444,7 +444,7 @@ proc configGUI_refreshIfcsTree { wi node } {
 
 	foreach ifc [lsort -dictionary [logIfcList $node]] {
 	    $wi insert logIfcFrame end -id $ifc \
-		-text "$ifc" -tags $ifc
+		-text "[getIfcName $node $ifc]" -tags $ifc
 	    foreach column { "OperState" "NatState" "MTU" "IPv4addr" "IPv6addr"} {
 		$wi set $ifc [lindex $column 0] \
 		    [getIfc[lindex $column 0] $node $ifc]
@@ -660,7 +660,7 @@ proc configGUI_showIfcInfo { wi phase node ifc } {
 #   * ifc -- interface name
 #****
 proc logical.configInterfacesGUI { wi node ifc } {
-    switch -exact [getLogIfcType $node $ifc] {
+    switch -exact [getIfcType $node $ifc] {
 	lo {
 	    configGUI_ifcEssentials $wi $node $ifc
 	    configGUI_ifcIPv4Address $wi $node $ifc
@@ -705,48 +705,53 @@ proc logical.configInterfacesGUI { wi node ifc } {
 #   * ifc -- interface name
 #****
 proc configGUI_logicalInterfaces { wi node ifc } {
-    global logIfcs curnode
+    global logifaces_list curnode
+
     set curnode $node
     ttk::frame $wi.if$ifc -relief groove -borderwidth 2 -padding 4
     ttk::label $wi.if$ifc.txt -text "Manage logical interfaces:"
 
-    set logIfcs [lsort [logIfcList $node]]
-    listbox $wi.if$ifc.list -height 7 -width 10 -listvariable logIfcs
+    set logifaces_list [lsort [logIfaceNames $curnode]]
+    listbox $wi.if$ifc.list -height 7 -width 10 -listvariable logifaces_list
 
     ttk::label $wi.if$ifc.addtxt -text "Add new interface:"
     #set types [list lo gif gre vlan bridge tun tap]
     set types [list lo vlan]
-    ttk::combobox $wi.if$ifc.addbox -width 10 -values [lsort $types] \
+    ttk::combobox $wi.if$ifc.addbox -width 10 -values $types \
 	-state readonly
     $wi.if$ifc.addbox set [lindex [lsort $types] 0]
+
     ttk::button $wi.if$ifc.addbtn -text "Add" -command {
-	global curnode logIfcs
+	global curnode logifaces_list
+
 	set wi .popup.nbook.nfInterfaces.panwin.f2.iflogIfcFrame
 	set ifctype [$wi.addbox get]
-	set newIfcName [newLogIfc $ifctype $curnode]
-	setLogIfcType $curnode $newIfcName $ifctype
-	set logIfcs [lsort [logIfcList $curnode]]
-	$wi.rmvbox configure -values $logIfcs
-	$wi.list configure -listvariable logIfcs
+	set logiface_id [newLogIface $curnode $ifctype]
+
+	set logifaces_list [lsort [logIfaceNames $curnode]]
+	$wi.rmvbox configure -values $logifaces_list
+	$wi.list configure -listvariable logifaces_list
+
 	configGUI_refreshIfcsTree .popup.nbook.nfInterfaces.panwin.f1.tree $curnode
-	configGUI_showIfcInfo .popup.nbook.nfInterfaces.panwin.f2 0 $curnode $newIfcName
-	.popup.nbook.nfInterfaces.panwin.f1.tree selection set $newIfcName
+	configGUI_showIfcInfo .popup.nbook.nfInterfaces.panwin.f2 0 $curnode $logiface_id
+	.popup.nbook.nfInterfaces.panwin.f1.tree selection set $logiface_id
     }
 
     ttk::label $wi.if$ifc.rmvtxt -text "Remove interface:"
-    ttk::combobox $wi.if$ifc.rmvbox -width 10 -values $logIfcs \
+    ttk::combobox $wi.if$ifc.rmvbox -width 10 -values $logifaces_list \
 	-state readonly
 
     ttk::button $wi.if$ifc.rmvbtn -text "Remove" -command {
-	global curnode logIfcs
+	global curnode logifaces_list
 
 	set wi .popup.nbook.nfInterfaces.panwin.f2.iflogIfcFrame
-	set ifc [$wi.rmvbox get]
-	if { $ifc == "" } {
+	set iface_name [$wi.rmvbox get]
+	set iface_id [ifaceIdFromName $curnode $iface_name]
+	if { $iface_id == "" } {
 	    return
 	}
 
-	if { $ifc == "lo0" } {
+	if { $iface_name == "lo0" } {
 	    tk_dialog .dialog1 "IMUNES warning" \
 		"The loopback interface lo0 cannot be deleted!" \
 	    info 0 Dismiss
@@ -755,11 +760,12 @@ proc configGUI_logicalInterfaces { wi node ifc } {
 	}
 
 	$wi.rmvbox set ""
-	cfgUnset "nodes" $curnode "logifaces" $ifc
-	set logIfcs [lsort [logIfcList $curnode]]
+	cfgUnset "nodes" $curnode "ifaces" $iface_id
 
-	$wi.rmvbox configure -values $logIfcs
-	$wi.list configure -listvariable logIfcs
+	set logifaces_list [lsort [logIfaceNames $curnode]]
+	$wi.rmvbox configure -values $logifaces_list
+	$wi.list configure -listvariable logifaces_list
+
 	configGUI_refreshIfcsTree .popup.nbook.nfInterfaces.panwin.f1.tree $curnode
 	configGUI_showIfcInfo .popup.nbook.nfInterfaces.panwin.f2 0 $curnode logIfcFrame
 	.popup.nbook.nfInterfaces.panwin.f1.tree selection set logIfcFrame
@@ -783,16 +789,14 @@ proc configGUI_logicalInterfaces { wi node ifc } {
 }
 
 proc configGUI_physicalInterfaces { wi node ifc } {
-    global physIfcs curnode
-    global changed
+    global ifaces_list curnode
 
     set curnode $node
-    set ifc physIfcFrame
     ttk::frame $wi.if$ifc -relief groove -borderwidth 2 -padding 4
     ttk::label $wi.if$ifc.txt -text "Manage physical interfaces:"
 
-    set physIfcs [lsort [ifcList $node]]
-    listbox $wi.if$ifc.list -height 7 -width 10 -listvariable physIfcs
+    set ifaces_list [lsort [ifaceNames $curnode]]
+    listbox $wi.if$ifc.list -height 7 -width 10 -listvariable ifaces_list
 
     ttk::label $wi.if$ifc.addtxt -text "Add new interface:"
     # TODO: stolen ifaces
@@ -801,19 +805,22 @@ proc configGUI_physicalInterfaces { wi node ifc } {
     ttk::combobox $wi.if$ifc.addbox -width 10 -values $types \
 	-state readonly
     $wi.if$ifc.addbox set [lindex $types 0]
+
     ttk::button $wi.if$ifc.addbtn -text "Add" -command {
-	global curnode physIfcs
+	global curnode ifaces_list
+	global changed
 
 	set wi .popup.nbook.nfInterfaces.panwin.f2.ifphysIfcFrame
 	set ifctype [$wi.addbox get]
-	set new_ifc [newIface $curnode $ifctype 1]
+	set iface_id [newIface $curnode $ifctype 1]
 
-	set physIfcs [lsort [ifcList $curnode]]
-	$wi.rmvbox configure -values $physIfcs
-	$wi.list configure -listvariable physIfcs
+	set ifaces_list [lsort [ifaceNames $curnode]]
+	$wi.rmvbox configure -values $ifaces_list
+	$wi.list configure -listvariable ifaces_list
+
 	configGUI_refreshIfcsTree .popup.nbook.nfInterfaces.panwin.f1.tree $curnode
-	configGUI_showIfcInfo .popup.nbook.nfInterfaces.panwin.f2 0 $curnode $new_ifc
-	.popup.nbook.nfInterfaces.panwin.f1.tree selection set $new_ifc
+	configGUI_showIfcInfo .popup.nbook.nfInterfaces.panwin.f2 0 $curnode $iface_id
+	.popup.nbook.nfInterfaces.panwin.f1.tree selection set $iface_id
 
 	set changed 1
 	redrawAll
@@ -821,34 +828,26 @@ proc configGUI_physicalInterfaces { wi node ifc } {
     }
 
     ttk::label $wi.if$ifc.rmvtxt -text "Remove interface:"
-    ttk::combobox $wi.if$ifc.rmvbox -width 10 -values $physIfcs \
+    ttk::combobox $wi.if$ifc.rmvbox -width 10 -values $ifaces_list \
 	-state readonly
 
     ttk::button $wi.if$ifc.rmvbtn -text "Remove" -command {
-	global curnode physIfcs
+	global curnode ifaces_list
 
 	set wi .popup.nbook.nfInterfaces.panwin.f2.ifphysIfcFrame
-	set ifc [$wi.rmvbox get]
-	if { $ifc == "" } {
+	set iface_name [$wi.rmvbox get]
+	set iface_id [ifaceIdFromName $curnode $iface_name]
+	if { $iface_id == "" } {
 	    return
 	}
 
 	$wi.rmvbox set ""
-	set link_id [getIfcLink $curnode $ifc]
-	if { $link_id != "" } {
-	    removeLinkGUI $link_id 1
-	}
+	removeIface $curnode $iface_id
 
-	# move to removeIfaces procedure
-	setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] [getIfcIPv4addr $curnode $ifc] 1]
-	setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] [getIfcIPv6addr $curnode $ifc] 1]
-	setToRunning "mac_used_list" [removeFromList [getFromRunning "mac_used_list"] [getIfcMACaddr $curnode $ifc] 1]
+	set ifaces_list [lsort [ifaceNames $curnode]]
+	$wi.rmvbox configure -values $ifaces_list
+	$wi.list configure -listvariable ifaces_list
 
-	cfgUnset "nodes" $curnode "ifaces" $ifc
-
-	set physIfcs [lsort [ifcList $curnode]]
-	$wi.rmvbox configure -values $physIfcs
-	$wi.list configure -listvariable physIfcs
 	configGUI_refreshIfcsTree .popup.nbook.nfInterfaces.panwin.f1.tree $curnode
 	configGUI_showIfcInfo .popup.nbook.nfInterfaces.panwin.f2 0 $curnode physIfcFrame
 	.popup.nbook.nfInterfaces.panwin.f1.tree selection set physIfcFrame
@@ -891,7 +890,7 @@ proc configGUI_physicalInterfaces { wi node ifc } {
 proc configGUI_saveChangesPopup { wi node ifc } {
     global guielements treecolumns apply cancel changed
 
-    set answer [tk_messageBox -message "Do you want to save changes on interface $ifc?" \
+    set answer [tk_messageBox -message "Do you want to save changes on interface [getIfcName $node $ifc]?" \
         -icon question -type yesnocancel \
         -detail "Select \"Yes\" to save changes before choosing another interface"]
 
@@ -1134,7 +1133,7 @@ proc configGUI_rj45s { wi node } {
     set ifcs [getExtIfcs]
     foreach group [getNodeStolenIfaces $node] {
 	lassign $group ifc extIfc
-	set lbl "Interface $ifc"
+	set lbl "Interface [getIfcName $node $ifc]"
 	lassign [logicalPeerByIfc $node $ifc] peer -
 	if { $peer != "" } {
 	    set lbl "$lbl (peer [getNodeName $peer])"
@@ -1201,11 +1200,14 @@ proc configGUI_rj45sApply { wi node_id } {
 #****
 proc configGUI_ifcMainFrame { wi node ifc } {
     global apply changed
+
     set apply 0
     set changed 0
     ttk::frame $wi.if$ifc -relief groove -borderwidth 2 -padding 4
     ttk::frame $wi.if$ifc.label -borderwidth 2
-    ttk::label $wi.if$ifc.label.txt -text "Interface $ifc:" -width 13
+
+    ttk::label $wi.if$ifc.label.txt -text "Interface [getIfcName $node $ifc]:" -width 13
+
     pack $wi.if$ifc.label.txt -side left -anchor w
     pack $wi.if$ifc.label -anchor w
     pack $wi.if$ifc -anchor w -fill both -expand 1
@@ -1401,23 +1403,27 @@ proc configGUI_ifcIPv6Address { wi node ifc } {
 #****
 proc configGUI_ifcDirection { wi node ifc } {
     global guielements externalifc
+
     lappend guielements "configGUI_ifcDirection $ifc"
     set external 0
     set externalifc ""
     ttk::frame $wi.if$ifc.direct -borderwidth 2
     ttk::label $wi.if$ifc.direct.txt -text "Direction " -anchor w
+
     global ifdirect$ifc
     set ifdirect$ifc [getIfcDirect $node $ifc]
     foreach interface [ifcList $node] {
- 	if { [string equal [getIfcDirect $node $interface] "external"] } {
- 	    set external 1
-            set externalifc $interface
- 	}
-     }
+	if { [string equal [getIfcDirect $node $interface] "external"] } {
+	    set external 1
+	    set externalifc $interface
+	}
+    }
+
     ttk::radiobutton $wi.if$ifc.direct.int -text "internal" \
 	-variable ifdirect$ifc -value internal -padding 2
     ttk::radiobutton $wi.if$ifc.direct.ext -text "external" \
 	    -variable ifdirect$ifc -value external -padding 2
+
     pack $wi.if$ifc.direct.txt -side left
     pack $wi.if$ifc.direct.int $wi.if$ifc.direct.ext -side left -anchor w
     pack $wi.if$ifc.direct -anchor w -padx 10
@@ -1436,6 +1442,7 @@ proc configGUI_ifcDirection { wi node ifc } {
 #****
 proc configGUI_ipfirewallRuleset { wi node } {
     global guielements
+
     lappend guielements configGUI_ipfirewallRuleset
     ttk::frame $wi.rules -borderwidth 2 -relief groove -padding 4
     ttk::label $wi.rules.label -text "Add rules:"
@@ -1483,8 +1490,7 @@ proc configGUI_staticRoutes { wi node } {
     text $user_routes.editor -width 42 -bg white -takefocus 0 -wrap none \
 	-yscrollcommand [list $user_routes.vsb set] -xscrollcommand [list $user_routes.hsb set]
     foreach route $user_sroutes {
-	$user_routes.editor insert end "$route
-"
+	$user_routes.editor insert end "$route\n"
     }
 
     pack $user_routes.vsb -side right -fill y
@@ -1499,8 +1505,7 @@ proc configGUI_staticRoutes { wi node } {
     text $auto_routes.editor -width 42 -bg white -wrap none \
 	-yscrollcommand [list $auto_routes.vsb set] -xscrollcommand [list $auto_routes.hsb set]
     foreach route [concat $all_routes4 $all_routes6] {
-	$auto_routes.editor insert end "$route
-"
+	$auto_routes.editor insert end "$route\n"
     }
     $auto_routes.editor configure -state disabled
 
@@ -1978,7 +1983,7 @@ proc configGUI_ifcVlanConfig { wi node ifc } {
     set ifvdev$ifc [getIfcVlanDev $node $ifc]
     ttk::label $wi.if$ifc.vlancfg.devtxt -text "Vlan dev" -anchor w
     ttk::combobox $wi.if$ifc.vlancfg.dev -width 6 -textvariable ifvdev$ifc
-    $wi.if$ifc.vlancfg.dev configure -values [ifcList $node] -state readonly
+    $wi.if$ifc.vlancfg.dev configure -values [ifaceNames $node] -state readonly
 
     pack $wi.if$ifc.vlancfg -anchor w -padx 10
     grid $wi.if$ifc.vlancfg.devtxt -in $wi.if$ifc.vlancfg -column 0 -row 0 \
@@ -2012,7 +2017,7 @@ proc configGUI_externalIfcs { wi node } {
     ttk::frame $wi.if$ifc.ipv4
     ttk::frame $wi.if$ifc.ipv6
 
-    ttk::label $wi.if$ifc.labelName -text "Interface $ifc"
+    ttk::label $wi.if$ifc.labelName -text "Interface [getIfcName $node $ifc]"
     ttk::label $wi.if$ifc.labelMAC -text "MAC address:" -width 11
     ttk::entry $wi.if$ifc.mac.addr -width 24 -validate focus
     $wi.if$ifc.mac.addr insert 0 [getIfcMACaddr $node $ifc]
@@ -5273,8 +5278,9 @@ proc configGUI_showBridgeIfcInfo { wi phase node ifc } {
 #****
 proc configGUI_saveBridgeChangesPopup { wi node ifc } {
     global guielements brguielements brtreecolumns apply cancel changed
+
     set answer [tk_messageBox \
-	-message "Do you want to save changes on interface $ifc?" \
+	-message "Do you want to save changes on interface [getIfcName $node $ifc]?" \
         -icon question -type yesnocancel \
         -detail "Select \"Yes\" to save changes before choosing another interface"]
 
@@ -5721,7 +5727,7 @@ proc configGUI_ruleMainFrame { wi node ifc rule } {
     set changed 0
     ttk::frame $wi.if$rule -relief groove -borderwidth 2 -padding 4
     ttk::frame $wi.if$rule.label -borderwidth 2
-    ttk::label $wi.if$rule.label.txt -text "Interface $ifc (Rule $rule):"
+    ttk::label $wi.if$rule.label.txt -text "Interface [getIfcName $node $ifc] (Rule $rule):"
 
     grid $wi.if$rule -sticky nsew -column 1 -row 0 -columnspan 10 -ipadx 45
 

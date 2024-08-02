@@ -122,12 +122,7 @@
 #     "down".
 #****
 proc getIfcOperState { node_id iface } {
-    set group "ifaces"
-    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
-	set group "logifaces"
-    }
-
-    return [cfgGetWithDefault "up" "nodes" $node_id $group $iface "oper_state"]
+    return [cfgGetWithDefault "up" "nodes" $node_id "ifaces" $iface "oper_state"]
 }
 
 #****f* nodecfg.tcl/setIfcOperState
@@ -145,12 +140,7 @@ proc getIfcOperState { node_id iface } {
 #     "down"
 #****
 proc setIfcOperState { node_id iface state } {
-    set group "ifaces"
-    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
-	set group "logifaces"
-    }
-
-    cfgSet "nodes" $node_id $group $iface "oper_state" $state
+    cfgSet "nodes" $node_id "ifaces" $iface "oper_state" $state
 }
 
 #****f* nodecfg.tcl/getIfcNatState
@@ -167,12 +157,7 @@ proc setIfcOperState { node_id iface state } {
 #   * state -- the NAT state of the interface, can be either "on" or "off"
 #****
 proc getIfcNatState { node_id iface } {
-    set group "ifaces"
-    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
-	set group "logifaces"
-    }
-
-    return [cfgGetWithDefault "off" "nodes" $node_id $group $iface "nat_state"]
+    return [cfgGetWithDefault "off" "nodes" $node_id "ifaces" $iface "nat_state"]
 }
 
 #****f* nodecfg.tcl/setIfcNatState
@@ -188,12 +173,7 @@ proc getIfcNatState { node_id iface } {
 #   * state -- new NAT state of the interface, can be either "on" or "off"
 #****
 proc setIfcNatState { node_id iface state } {
-    set group "ifaces"
-    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
-	set group "logifaces"
-    }
-
-    cfgSet "nodes" $node_id $group $iface "nat_state" $state
+    cfgSet "nodes" $node_id "ifaces" $iface "nat_state" $state
 }
 
 #****f* nodecfg.tcl/getIfcDirect
@@ -251,12 +231,7 @@ proc getIfcDirect { node_id iface direction } {
 #     "WFQ" or "DRR".
 #****
 proc getIfcQDisc { node_id iface } {
-    set group "ifaces"
-    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
-	set group "logifaces"
-    }
-
-    return [cfgGetWithDefault "FIFO" "nodes" $node_id $group $iface "ifc_qdisc"]
+    return [cfgGetWithDefault "FIFO" "nodes" $node_id "ifaces" $iface "ifc_qdisc"]
 }
 
 #****f* nodecfg.tcl/setIfcQDisc
@@ -275,12 +250,7 @@ proc getIfcQDisc { node_id iface } {
 #     "DRR".
 #****
 proc setIfcQDisc { node_id iface qdisc } {
-    set group "ifaces"
-    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
-	set group "logifaces"
-    }
-
-    cfgSet "nodes" $node_id $group $iface "ifc_qdisc" $qdisc
+    cfgSet "nodes" $node_id "ifaces" $iface "ifc_qdisc" $qdisc
 }
 
 #****f* nodecfg.tcl/getIfcQDrop
@@ -300,12 +270,7 @@ proc setIfcQDisc { node_id iface qdisc } {
 #     "drop-tail" or "drop-head".
 #****
 proc getIfcQDrop { node_id iface } {
-    set group "ifaces"
-    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
-	set group "logifaces"
-    }
-
-    return [cfgGetWithDefault "drop-tail" "nodes" $node_id $group $iface "ifc_qdrop"]
+    return [cfgGetWithDefault "drop-tail" "nodes" $node_id "ifaces" $iface "ifc_qdrop"]
 }
 
 #****f* nodecfg.tcl/setIfcQDrop
@@ -323,12 +288,7 @@ proc getIfcQDrop { node_id iface } {
 #     or "drop-head".
 #****
 proc setIfcQDrop { node_id iface qdrop } {
-    set group "ifaces"
-    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
-	set group "logifaces"
-    }
-
-    cfgSet "nodes" $node_id $group $iface "ifc_qdrop" $qdrop
+    cfgSet "nodes" $node_id "ifaces" $iface "ifc_qdrop" $qdrop
 }
 
 #****f* nodecfg.tcl/getIfcQLen
@@ -346,12 +306,7 @@ proc setIfcQDrop { node_id iface qdrop } {
 #   * qlen -- queue length limit represented in number of packets.
 #****
 proc getIfcQLen { node_id iface } {
-    set group "ifaces"
-    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
-	set group "logifaces"
-    }
-
-    return [cfgGetWithDefault 50 "nodes" $node_id $group $iface "queue_len"]
+    return [cfgGetWithDefault 50 "nodes" $node_id "ifaces" $iface "queue_len"]
 }
 
 #****f* nodecfg.tcl/setIfcQLen
@@ -368,12 +323,7 @@ proc getIfcQLen { node_id iface } {
 #   * qlen -- queue length limit represented in number of packets.
 #****
 proc setIfcQLen { node_id iface len } {
-    set group "ifaces"
-    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
-	set group "logifaces"
-    }
-
-    cfgSet "nodes" $node_id $group $iface "queue_len" $len
+    cfgSet "nodes" $node_id "ifaces" $iface "queue_len" $len
 }
 
 #****f* nodecfg.tcl/getIfcMTU
@@ -392,16 +342,13 @@ proc setIfcQLen { node_id iface len } {
 #****
 proc getIfcMTU { node_id iface } {
     set default_mtu 1500
-    set group "ifaces"
-    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
-	set group "logifaces"
-	switch -exact [getLogIfcType $node_id $iface] {
-	    lo { set default_mtu 16384 }
-	    se { set default_mtu 2044 }
-	}
+
+    switch -exact [getIfcType $node_id $iface] {
+	lo { set default_mtu 16384 }
+	se { set default_mtu 2044 }
     }
 
-    return [cfgGetWithDefault $default_mtu "nodes" $node_id $group $iface "mtu"]
+    return [cfgGetWithDefault $default_mtu "nodes" $node_id "ifaces" $iface "mtu"]
 }
 
 #****f* nodecfg.tcl/setIfcMTU
@@ -417,12 +364,7 @@ proc getIfcMTU { node_id iface } {
 #   * mtu -- maximum transmission unit of a packet, represented in bytes.
 #****
 proc setIfcMTU { node_id iface mtu } {
-    set group "ifaces"
-    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
-	set group "logifaces"
-    }
-
-    cfgSet "nodes" $node_id $group $iface "mtu" $mtu
+    cfgSet "nodes" $node_id "ifaces" $iface "mtu" $mtu
 }
 
 #****f* nodecfg.tcl/getIfcMACaddr
@@ -492,12 +434,7 @@ proc getIfcIPv4addr { node_id iface } {
 #     interface.
 #****
 proc getIfcIPv4addrs { node_id iface } {
-    set group "ifaces"
-    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
-	set group "logifaces"
-    }
-
-    return [cfgGet "nodes" $node_id $group $iface "ipv4_addrs"]
+    return [cfgGet "nodes" $node_id "ifaces" $iface "ipv4_addrs"]
 }
 
 #****f* nodecfg.tcl/setIfcIPv4addrs
@@ -514,12 +451,7 @@ proc getIfcIPv4addrs { node_id iface } {
 #   * addrs -- new IPv4 addresses.
 #****
 proc setIfcIPv4addrs { node_id iface addrs } {
-    set group "ifaces"
-    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
-	set group "logifaces"
-    }
-
-    cfgSet "nodes" $node_id $group $iface "ipv4_addrs" $addrs
+    cfgSet "nodes" $node_id "ifaces" $iface "ipv4_addrs" $addrs
 }
 
 #****f* nodecfg.tcl/getIfcType
@@ -534,12 +466,7 @@ proc setIfcIPv4addrs { node_id iface addrs } {
 #   * ifc -- interface name
 #****
 proc getIfcType { node_id iface } {
-    set group "ifaces"
-    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
-	set group "logifaces"
-    }
-
-    return [cfgGet "nodes" $node_id $group $iface "type"]
+    return [cfgGet "nodes" $node_id "ifaces" $iface "type"]
 }
 
 #****f* nodecfg.tcl/setIfcType
@@ -555,61 +482,15 @@ proc getIfcType { node_id iface } {
 #   * type -- interface type
 #****
 proc setIfcType { node_id iface type } {
-    set group "ifaces"
-    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
-	set group "logifaces"
-    }
-
-    cfgSet "nodes" $node_id $group $iface "type" $type
+    cfgSet "nodes" $node_id "ifaces" $iface "type" $type
 }
 
 proc getIfcName { node_id iface_id } {
-    set group "ifaces"
-    if { $iface_id in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
-	set group "logifaces"
-    }
-
-    return [cfgGet "nodes" $node_id $group $iface_id "name"]
+    return [cfgGet "nodes" $node_id "ifaces" $iface_id "name"]
 }
 
 proc setIfcName { node_id iface_id name } {
-    set group "ifaces"
-    if { $iface_id in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
-	set group "logifaces"
-    }
-
-    cfgSet "nodes" $node_id $group $iface_id "name" $name
-}
-
-#****f* nodecfg.tcl/getLogIfcType
-# NAME
-#   getLogIfcType -- get logical interface type
-# SYNOPSIS
-#   getLogIfcType $node $ifc
-# FUNCTION
-#   Returns logical interface type from a node.
-# INPUTS
-#   * node -- node id
-#   * ifc -- interface name
-#****
-proc getLogIfcType { node_id iface } {
-    return [cfgGet "nodes" $node_id "logifaces" $iface "type"]
-}
-
-#****f* nodecfg.tcl/setLogIfcType
-# NAME
-#   setLogIfcType -- set logical interface type
-# SYNOPSIS
-#   setLogIfcType $node $ifc $type
-# FUNCTION
-#   Sets node's logical interface type.
-# INPUTS
-#   * node -- node id
-#   * ifc -- interface name
-#   * type -- interface type
-#****
-proc setLogIfcType { node_id iface type } {
-    cfgSet "nodes" $node_id "logifaces" $iface "type" $type
+    cfgSet "nodes" $node_id "ifaces" $iface_id "name" $name
 }
 
 #****f* nodecfg.tcl/getIfcStolenIfc
@@ -676,12 +557,7 @@ proc getIfcIPv6addr { node_id iface } {
 #     interface.
 #****
 proc getIfcIPv6addrs { node_id iface } {
-    set group "ifaces"
-    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
-	set group "logifaces"
-    }
-
-    return [cfgGet "nodes" $node_id $group $iface "ipv6_addrs"]
+    return [cfgGet "nodes" $node_id "ifaces" $iface "ipv6_addrs"]
 }
 
 #****f* nodecfg.tcl/setIfcIPv6addrs
@@ -698,12 +574,7 @@ proc getIfcIPv6addrs { node_id iface } {
 #   * addrs -- new IPv6 addresses.
 #****
 proc setIfcIPv6addrs { node_id iface addrs } {
-    set group "ifaces"
-    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
-	set group "logifaces"
-    }
-
-    cfgSet "nodes" $node_id $group $iface "ipv6_addrs" $addrs
+    cfgSet "nodes" $node_id "ifaces" $iface "ipv6_addrs" $addrs
 }
 
 proc getIfcPeer { node_id iface } {
@@ -779,7 +650,18 @@ proc getIfcLinkLocalIPv6addr { node_id iface } {
 #   * interfaces -- list of all node's interfaces
 #****
 proc ifcList { node_id } {
-    return [dict keys [cfgGet "nodes" $node_id "ifaces"]]
+    return [lsearch -glob -all -inline [dict keys [cfgGet "nodes" $node_id "ifaces"]] "ifc*"]
+}
+
+proc ifaceNames { node_id } {
+    set iface_names {}
+    foreach {iface_id iface_cfg} [cfgGet "nodes" $node_id "ifaces"] {
+	if { [string match "ifc*" $iface_id] } {
+	    lappend iface_names [dictGet $iface_cfg "name"]
+	}
+    }
+
+    return $iface_names
 }
 
 #****f* nodecfg.tcl/logIfcList
@@ -795,7 +677,18 @@ proc ifcList { node_id } {
 #   * interfaces -- list of node's logical interfaces
 #****
 proc logIfcList { node_id } {
-    return [dict keys [cfgGet "nodes" $node_id "logifaces"]]
+    return [lsearch -glob -all -inline [dict keys [cfgGet "nodes" $node_id "ifaces"]] "lifc*"]
+}
+
+proc logIfaceNames { node_id } {
+    set logiface_names {}
+    foreach {logiface_id logiface_cfg} [cfgGet "nodes" $node_id "ifaces"] {
+	if { [string match "lifc*" $logiface_id] } {
+	    lappend logiface_names [dictGet $logiface_cfg "name"]
+	}
+    }
+
+    return $logiface_names
 }
 
 #****f* nodecfg.tcl/isIfcLogical
@@ -832,7 +725,7 @@ proc isIfcLogical { node_id iface } {
 #   * interfaces -- list of node's interfaces
 #****
 proc allIfcList { node_id } {
-    return [concat [logIfcList $node_id] [ifcList $node_id]]
+    return [dict keys [cfgGet "nodes" $node_id "ifaces"]]
 }
 
 #****f* nodecfg.tcl/logicalPeerByIfc
@@ -873,6 +766,16 @@ proc logicalPeerByIfc { node_id iface } {
     }
 
     return "$peer_id $peer_iface"
+}
+
+proc ifaceIdFromName { node_id iface_name } {
+    foreach {iface_id iface_cfg} [cfgGet "nodes" $node_id "ifaces"] {
+	if { $iface_name == [dictGet $iface_cfg "name"] } {
+	    return $iface_id
+	}
+    }
+
+    return ""
 }
 
 #****f* nodecfg.tcl/hasIPv4Addr
@@ -973,7 +876,7 @@ proc newLogIfc { type node_id } {
 #   * tag -- interfaces's vlan-dev
 #****
 proc getIfcVlanDev { node_id iface } {
-    return [cfgGet "nodes" $node_id "logifaces" $iface "vlan_dev"]
+    return [cfgGet "nodes" $node_id "ifaces" $iface "vlan_dev"]
 }
 
 #****f* nodecfg.tcl/setIfcVlanDev
@@ -989,7 +892,7 @@ proc getIfcVlanDev { node_id iface } {
 #   * dev -- vlan-dev
 #****
 proc setIfcVlanDev { node_id iface dev } {
-    cfgSet "nodes" $node_id "logifaces" $iface "vlan_dev" $dev
+    cfgSet "nodes" $node_id "ifaces" $iface "vlan_dev" $dev
 }
 
 #****f* nodecfg.tcl/getIfcVlanTag
@@ -1006,7 +909,7 @@ proc setIfcVlanDev { node_id iface dev } {
 #   * tag -- interfaces's vlan-tag
 #****
 proc getIfcVlanTag { node_id iface } {
-    return [cfgGet "nodes" $node_id "logifaces" $iface "vlan_tag"]
+    return [cfgGet "nodes" $node_id "ifaces" $iface "vlan_tag"]
 }
 
 #****f* nodecfg.tcl/setIfcVlanTag
@@ -1022,25 +925,15 @@ proc getIfcVlanTag { node_id iface } {
 #   * dev -- vlan-tag
 #****
 proc setIfcVlanTag { node_id iface tag } {
-    cfgSet "nodes" $node_id "logifaces" $iface "vlan_tag" $tag
+    cfgSet "nodes" $node_id "ifaces" $iface "vlan_tag" $tag
 }
 
 proc getNodeIface { node_id iface } {
-    set group "ifaces"
-    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
-	set group "logifaces"
-    }
-
-    return [cfgGet "nodes" $node_id $group $iface]
+    return [cfgGet "nodes" $node_id "ifaces" $iface]
 }
 
 proc setNodeIface { node_id iface new_iface } {
-    set group "ifaces"
-    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
-	set group "logifaces"
-    }
-
-    cfgSet "nodes" $node_id $group $iface $new_iface
+    cfgSetEmpty "nodes" $node_id "ifaces" $iface $new_iface
 }
 
 #****f* nodecfg.tcl/nodeCfggenIfcIPv4
@@ -1097,6 +990,7 @@ proc nodeCfggenIfcIPv6 { node_id iface } {
 
 proc newIface { node_id iface_type auto_config { stolen_iface "" } } {
     set iface_id [newObjectIdAlt [ifcList $node_id] "ifc"]
+    setNodeIface $node_id $iface_id {}
 
     setIfcType $node_id $iface_id $iface_type
     if { $iface_type == "stolen" } {
@@ -1107,9 +1001,46 @@ proc newIface { node_id iface_type auto_config { stolen_iface "" } } {
     }
 
     if { $auto_config } {
-	set node_type [getNodeType $node_id]
-	$node_type.confNewIfc $node_id $iface_id
+	[getNodeType $node_id].confNewIfc $node_id $iface_id
     }
 
     return $iface_id
+}
+
+proc newLogIface { node_id logiface_type } {
+    set current_logiface_names [lsearch -all -inline -glob [logIfaceNames $node_id] "$logiface_type*"]
+
+    set logiface_id [newObjectIdAlt [logIfcList $node_id] "lifc"]
+    setNodeIface $node_id $logiface_id {}
+
+    setIfcType $node_id $logiface_id $logiface_type
+    setIfcName $node_id $logiface_id [newObjectIdAlt $current_logiface_names $logiface_type]
+
+    return $logiface_id
+}
+
+proc removeIface { node_id iface_id } {
+    set link_id [getIfcLink $node_id $iface_id]
+    if { $link_id != "" } {
+	cfgUnset "nodes" $node_id "ifaces" $iface_id "link"
+	removeLink $link_id 1
+    }
+
+    # move to removeIfaces procedure
+    setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] [getIfcIPv4addr $node_id $iface_id] 1]
+    setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] [getIfcIPv6addr $node_id $iface_id] 1]
+    setToRunning "mac_used_list" [removeFromList [getFromRunning "mac_used_list"] [getIfcMACaddr $node_id $iface_id] 1]
+
+    set iface_name [getIfcName $node_id $iface_id]
+    cfgUnset "nodes" $node_id "ifaces" $iface_id
+
+    foreach {logiface_id iface_cfg} [cfgGet "nodes" $node_id "ifaces"] {
+	switch -exact [dictGet $iface_cfg "type"] {
+	    vlan {
+		if { [dictGet $iface_cfg "vlan_dev"] == $iface_name } {
+		    cfgUnset "nodes" $node_id "ifaces" $logiface_id
+		}
+	    }
+	}
+    }
 }
