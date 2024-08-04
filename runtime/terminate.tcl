@@ -299,7 +299,7 @@ proc finishTerminating { status msg w } {
 # FUNCTION
 #
 #****
-proc undeployCfg { eid } {
+proc undeployCfg { eid terminate node_list destroy_nodes_ifaces link_list unconf_link_list unconf_nodes_ifaces unconf_nodes } {
     global progressbarCount execMode
 
     set node_list [getFromRunning "node_list"]

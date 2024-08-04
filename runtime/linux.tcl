@@ -1025,6 +1025,34 @@ proc startIfcsNode { node_id ifaces } {
     }
 }
 
+proc startNodeIfaces { node_id ifaces } {
+    set eid [getFromRunning "eid"]
+
+    set docker_id "$eid.$node_id"
+
+    if { [getCustomEnabled $node_id] == true } {
+	return
+    }
+
+    set bootcfg [[getNodeType $node_id].generateConfigIfaces $node_id $ifaces]
+    set bootcmd [[getNodeType $node_id].bootcmd $node_id]
+    set confFile "boot_ifaces.conf"
+
+    #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
+    set cfg [join "{set -x} $bootcfg" "\n"]
+    writeDataToNodeFile $node_id /$confFile $cfg
+    set cmds "$bootcmd /$confFile >> /tout_ifaces.log 2>> /terr_ifaces.log ;"
+    # renaming the file signals that we're done
+    set cmds "$cmds mv /tout_ifaces.log /out_ifaces.log ;"
+    set cmds "$cmds mv /terr_ifaces.log /err_ifaces.log"
+    pipesExec "docker exec -d $docker_id sh -c '$cmds'" "hold"
+}
+
+#proc isNodeIfacesConfigured { node_id } {
+#    # TODO
+#    return true
+#}
+
 proc isNodeConfigured { node_id } {
     set docker_id "[getFromRunning "eid"].$node_id"
 
@@ -1061,13 +1089,17 @@ proc isNodeError { node_id } {
 	# docker exec sometimes hangs, so don't use it while we have other pipes opened
 	exec docker inspect -f "{{.GraphDriver.Data.MergedDir}}" $docker_id
     } on ok mergedir {
-	try {
-	    exec test -s ${mergedir}/err.log
-	} on error {} {
-	    return false
-	} on ok {} {
+	catch { exec sed "/^+ /d" ${mergedir}/err_ifaces.log } errlog
+	if { $errlog == "" } {
+	    catch { exec sed "/^+ /d" ${mergedir}/err.log } errlog
+	    if { $errlog == "" } {
+		return false
+	    }
+
 	    return true
 	}
+
+	return true
     } on error err {
 	puts "Error on docker inspect: '$err'"
     }
@@ -1112,7 +1144,7 @@ proc killAllNodeProcesses { eid node_id } {
     pipesExec "docker exec -d $docker_id sh -c 'killall5 -9 -o 1 -o \$(pgrep -P 1)'" "hold"
 }
 
-proc runConfOnNode { node_id ifaces } {
+proc runConfOnNode { node_id } {
     set eid [getFromRunning "eid"]
 
     set docker_id "$eid.$node_id"
@@ -1146,7 +1178,8 @@ proc runConfOnNode { node_id ifaces } {
 	}
     }
 
-    set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
+    #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
+    set cfg [join "{set -x} $bootcfg" "\n"]
     writeDataToNodeFile $node_id /$confFile $cfg
     set cmds "$bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
     # renaming the file signals that we're done
@@ -1374,6 +1407,22 @@ proc releaseExtIfcByName { eid ifname } {
     pipesExec "ip -n $eid link set $ifname netns imunes_$devfs_number" "hold"
 
     return
+}
+
+proc getStateIfcCmd { iface_name state } {
+    return "ip link set dev $iface_name $state"
+}
+
+proc getVlanTagIfcCmd { iface_name dev_name tag } {
+    return "ip link add link $dev_name name $iface_name type vlan id $tag"
+}
+
+proc getMtuIfcCmd { iface_name mtu } {
+    return "ip link set dev $iface_name mtu $mtu"
+}
+
+proc getNatIfcCmd { iface_name } {
+    return "iptables -t nat -A POSTROUTING -o $iface_name -j MASQUERADE"
 }
 
 proc getIPv4RouteCmd { statrte } {

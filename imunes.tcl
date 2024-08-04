@@ -369,7 +369,7 @@ if { $execMode == "interactive" } {
 	    readCfgJson $configFile
 
 	    setToRunning "eid" $eid_base
-	    undeployCfg $eid_base
+	    undeployCfg $eid_base 1 [getFromRunning "node_list"] "*" [getFromRunning "link_list"] "*" "*" "*"
 	} else {
 	    vimageCleanup $eid_base
 	}
