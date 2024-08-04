@@ -638,26 +638,9 @@ proc nodePhysIfacesCreate { node_id ifaces } {
 
 	# direct link, simulate capturing the host interface into the node,
 	# without bridges between them
-	set peer_id [getIfcPeer $node_id $iface_id]
-	if { $peer_id != "" } {
-	    set this_link_id ""
-	    foreach link_id [linksByPeers $node_id $peer_id] {
-		set link_peers [getLinkPeers $link_id]
-		set link_ifaces [getLinkPeersIfaces $link_id]
-		if { $node_id == [lindex $link_peers 0] && $iface_id == [lindex $link_ifaces 0] } {
-		    set this_link_id $link_id
-		    break
-		}
-
-		if { $node_id == [lindex $link_peers 1] && $iface_id == [lindex $link_ifaces 1] } {
-		    set this_link_id $link_id
-		    break
-		}
-	    }
-
-	    if { $this_link_id != "" && [getLinkDirect $this_link_id] } {
-		continue
-	    }
+	set this_link_id [getIfcLink $node_id $iface_id]
+	if { $this_link_id != "" && [getLinkDirect $this_link_id] } {
+	    continue
 	}
 
 	switch -exact $prefix {
@@ -680,17 +663,17 @@ proc nodePhysIfacesCreate { node_id ifaces } {
 		#setNsIfcMaster $nodeNs $iface_name $eid-$node_id "up"
 	    }
 	    eth {
-		set ether [getIfcMACaddr $node_id $iface_id]
-                if { $ether == "" } {
-                    autoMACaddr $node_id $iface_id
-		    set ether [getIfcMACaddr $node_id $iface_id]
-                }
+		#set ether [getIfcMACaddr $node_id $iface_id]
+		#if { $ether == "" } {
+		#    autoMACaddr $node_id $iface_id
+		#    set ether [getIfcMACaddr $node_id $iface_id]
+		#}
 
-		set nsstr ""
-		if { $nodeNs != "" } {
-		    set nsstr "-n $nodeNs"
-		}
-		pipesExec "ip $nsstr link set $iface_name address $ether" "hold"
+		#set nsstr ""
+		#if { $nodeNs != "" } {
+		#    set nsstr "-n $nodeNs"
+		#}
+		#pipesExec "ip $nsstr link set $iface_name address $ether" "hold"
 	    }
 	    default {
 		# capture physical interface directly into the node, without using a bridge
@@ -934,11 +917,15 @@ proc createDirectLinkBetween { node1_id node2_id iface1_id iface2_id } {
     }
 
     if { [getNodeType $node1_id] in "ext extnat" } {
-	set iface1_name $eid-$node1_id
+	set iface1_name $node1_id
+    } else {
+	set iface1_name [getIfcName $node1_id $iface1_id]
     }
 
     if { [getNodeType $node2_id] in "ext extnat" } {
-	set iface2_name $eid-$node2_id
+	set iface2_name $node2_id
+    } else {
+	set iface2_name [getIfcName $node2_id $iface2_id]
     }
 
     set node1Ns [getNodeNetns $eid $node1_id]
@@ -1020,15 +1007,19 @@ proc configureLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 # INPUTS
 #   * node_id -- node id
 #****
-proc startIfcsNode { node_id } {
+proc startIfcsNode { node_id ifaces } {
     set nodeNs [getNodeNetns [getFromRunning "eid"] $node_id]
+
+    if { $ifaces == "*" } {
+	set ifaces [allIfcList $node_id]
+    }
 
     pipesExec "ip -n $nodeNs link set dev lo down 2>/dev/null" "hold"
     pipesExec "ip -n $nodeNs link set dev lo name lo0 2>/dev/null" "hold"
-    foreach iface_id [allIfcList $node_id] {
+    foreach iface_id $ifaces {
 	set iface_name [getIfcName $node_id $iface_id]
 	set mtu [getIfcMTU $node_id $iface_id]
-	if { [getLogIfcType $node_id $iface_id] == "vlan" } {
+	if { [getIfcType $node_id $iface_id] == "vlan" } {
 	    set tag [getIfcVlanTag $node_id $iface_id]
 	    set dev [getIfcVlanDev $node_id $iface_id]
 	    if { $tag != "" && $dev != "" } {
@@ -1047,6 +1038,34 @@ proc startIfcsNode { node_id } {
 	}
     }
 }
+
+proc startNodeIfaces { node_id ifaces } {
+    set eid [getFromRunning "eid"]
+
+    set docker_id "$eid.$node_id"
+
+    if { [getCustomEnabled $node_id] == true } {
+	return
+    }
+
+    set bootcfg [[getNodeType $node_id].generateConfigIfaces $node_id $ifaces]
+    set bootcmd [[getNodeType $node_id].bootcmd $node_id]
+    set confFile "boot_ifaces.conf"
+
+    #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
+    set cfg [join "{set -x} $bootcfg" "\n"]
+    writeDataToNodeFile $node_id /$confFile $cfg
+    set cmds "$bootcmd /$confFile >> /tout_ifaces.log 2>> /terr_ifaces.log ;"
+    # renaming the file signals that we're done
+    set cmds "$cmds mv /tout_ifaces.log /out_ifaces.log ;"
+    set cmds "$cmds mv /terr_ifaces.log /err_ifaces.log"
+    pipesExec "docker exec -d $docker_id sh -c '$cmds'" "hold"
+}
+
+#proc isNodeIfacesConfigured { node_id } {
+#    # TODO
+#    return true
+#}
 
 proc isNodeConfigured { node_id } {
     set docker_id "[getFromRunning "eid"].$node_id"
@@ -1084,13 +1103,17 @@ proc isNodeError { node_id } {
 	# docker exec sometimes hangs, so don't use it while we have other pipes opened
 	exec docker inspect -f "{{.GraphDriver.Data.MergedDir}}" $docker_id
     } on ok mergedir {
-	try {
-	    exec test -s ${mergedir}/err.log
-	} on error {} {
-	    return false
-	} on ok {} {
+	catch { exec sed "/^+ /d" ${mergedir}/err_ifaces.log } errlog
+	if { $errlog == "" } {
+	    catch { exec sed "/^+ /d" ${mergedir}/err.log } errlog
+	    if { $errlog == "" } {
+		return false
+	    }
+
 	    return true
 	}
+
+	return true
     } on error err {
 	puts "Error on docker inspect: '$err'"
     }
@@ -1169,7 +1192,8 @@ proc runConfOnNode { node_id } {
 	}
     }
 
-    set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
+    #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
+    set cfg [join "{set -x} $bootcfg" "\n"]
     writeDataToNodeFile $node_id /$confFile $cfg
     set cmds "$bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
     # renaming the file signals that we're done
