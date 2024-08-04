@@ -287,7 +287,7 @@ proc setOperMode { mode } {
 
 	    set eid [getFromRunning "eid"]
 	    if { $regular_termination } {
-		undeployCfg $eid
+		undeployCfg $eid 1 [getFromRunning "node_list"] "*" [getFromRunning "link_list"] "*" "*" "*"
 	    } else {
 		vimageCleanup $eid
 	    }
