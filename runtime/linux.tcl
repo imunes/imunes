@@ -3,18 +3,18 @@ set VROOT_MASTER "imunes/template"
 set ULIMIT_FILE "1024:16384"
 set ULIMIT_PROC "1024:2048"
 
-#****f* linux.tcl/l2node.instantiate
+#****f* linux.tcl/l2node.nodeInstantiate
 # NAME
-#   l2node.instantiate -- instantiate
+#   l2node.nodeInstantiate -- nodeInstantiate
 # SYNOPSIS
-#   l2node.instantiate $eid $node
+#   l2node.nodeInstantiate $eid $node
 # FUNCTION
-#   Procedure l2node.instantiate creates a new netgraph node of the appropriate type.
+#   Procedure l2node.nodeInstantiate creates a new netgraph node of the appropriate type.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- id of the node (type of the node is either lanswitch or hub)
 #****
-proc l2node.instantiate { eid node } {
+proc l2node.nodeInstantiate { eid node } {
     set type [getNodeType $node]
 
     set ageing_time ""
@@ -673,39 +673,43 @@ proc checkHangingTCPs { eid nodes } {}
 # NAME
 #   createNodeLogIfcs -- create node logical interfaces
 # SYNOPSIS
-#   createNodeLogIfcs $node
+#   createNodeLogIfcs $node_id
 # FUNCTION
 #   Creates logical interfaces for the given node.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc createNodeLogIfcs { node } {
-    set node_id "[getFromRunning "eid"].$node"
+proc createNodeLogIfcs { node_id } {
+    set docker_node "[getFromRunning "eid"].$node_id"
 
-    foreach iface_id [logIfcList $node] {
-	set iface_name [getIfcName $node $iface_id]
-	switch -exact [getIfcType $node $iface_id] {
+    foreach iface_id [logIfcList $node_id] {
+	set iface_name [getIfcName $node_id $iface_id]
+	switch -exact [getIfcType $node_id $iface_id] {
 	    vlan {
 	    }
 	    lo {
 		if { $iface_name != "lo0" } {
-		    pipesExec "docker exec -d $node_id ip link add $iface_name type dummy" "hold"
-		    pipesExec "docker exec -d $node_id ip link set $iface_name up" "hold"
+		    pipesExec "docker exec -d $docker_node ip link add $iface_name type dummy" "hold"
+		    pipesExec "docker exec -d $docker_node ip link set $iface_name up" "hold"
+		} else {
+		    pipesExec "docker exec -d $docker_node ip link set dev lo down 2>/dev/null" "hold"
+		    pipesExec "docker exec -d $docker_node ip link set dev lo name lo0 2>/dev/null" "hold"
+		    pipesExec "docker exec -d $docker_node ip a flush lo0 2>/dev/null" "hold"
 		}
 	    }
 	}
     }
 
-    # docker interface is created before other ones, so let's rename it to something that's not used by IMUNES
-    if { [getNodeDockerAttach $node] == 1 } {
-	set cmds "ip r save > /tmp/routes"
-	set cmds "$cmds ; ip l set eth0 down"
-	set cmds "$cmds ; ip l set eth0 name docker0"
-	set cmds "$cmds ; ip l set docker0 up"
-	set cmds "$cmds ; ip r restore < /tmp/routes"
-	set cmds "$cmds ; rm -f /tmp/routes"
-	pipesExec "docker exec -d $node_id sh -c '$cmds'" "hold"
-    }
+#    # docker interface is created before other ones, so let's rename it to something that's not used by IMUNES
+#    if { [getNodeDockerAttach $node_id] == 1 } {
+#	set cmds "ip r save > /tmp/routes"
+#	set cmds "$cmds ; ip l set eth0 down"
+#	set cmds "$cmds ; ip l set eth0 name docker0"
+#	set cmds "$cmds ; ip l set docker0 up"
+#	set cmds "$cmds ; ip r restore < /tmp/routes"
+#	set cmds "$cmds ; rm -f /tmp/routes"
+#	pipesExec "docker exec -d $docker_node sh -c '$cmds'" "hold"
+#    }
 }
 
 #****f* linux.tcl/configureICMPoptions
@@ -997,6 +1001,34 @@ proc startIfcsNode { node_id ifaces } {
     }
 }
 
+proc startNodeIfaces { node_id ifaces } {
+    set eid [getFromRunning "eid"]
+
+    set docker_node "$eid.$node_id"
+
+    if { [getCustomEnabled $node_id] == true } {
+	return
+    }
+
+    set bootcfg [[getNodeType $node_id].generateConfigIfaces $node_id $ifaces]
+    set bootcmd [[getNodeType $node_id].bootcmd $node_id]
+    set confFile "boot_ifaces.conf"
+
+    #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
+    set cfg [join "{set -x} $bootcfg" "\n"]
+    writeDataToNodeFile $node_id /$confFile $cfg
+    set cmds "$bootcmd /$confFile >> /tout_ifaces.log 2>> /terr_ifaces.log ;"
+    # renaming the file signals that we're done
+    set cmds "$cmds mv /tout_ifaces.log /out_ifaces.log ;"
+    set cmds "$cmds mv /terr_ifaces.log /err_ifaces.log"
+    pipesExec "docker exec -d $docker_node sh -c '$cmds'" "hold"
+}
+
+#proc isNodeIfacesConfigured { node } {
+#    # TODO
+#    return true
+#}
+
 proc isNodeConfigured { node } {
     set node_id "[getFromRunning "eid"].$node"
 
@@ -1033,13 +1065,17 @@ proc isNodeError { node } {
 	# docker exec sometimes hangs, so don't use it while we have other pipes opened
 	exec docker inspect -f "{{.GraphDriver.Data.MergedDir}}" $node_id
     } on ok mergedir {
-	try {
-	    exec test -s ${mergedir}/err.log
-	} on error {} {
-	    return false
-	} on ok {} {
+	catch { exec sed "/^+ /d" ${mergedir}/err_ifaces.log } errlog
+	if { $errlog == "" } {
+	    catch { exec sed "/^+ /d" ${mergedir}/err.log } errlog
+	    if { $errlog == "" } {
+		return false
+	    }
+
 	    return true
 	}
+
+	return true
     } on error err {
 	puts "Error on docker inspect: '$err'"
     }
@@ -1084,7 +1120,7 @@ proc killAllNodeProcesses { eid node } {
     pipesExec "docker exec -d $node_id sh -c 'killall5 -9 -o 1 -o \$(pgrep -P 1)'" "hold"
 }
 
-proc runConfOnNode { node ifaces } {
+proc runConfOnNode { node } {
     set eid [getFromRunning "eid"]
 
     set node_id "$eid.$node"
@@ -1104,7 +1140,7 @@ proc runConfOnNode { node ifaces } {
 	}
         set confFile "custom.conf"
     } else {
-        set bootcfg [[getNodeType $node].cfggen $node]
+        set bootcfg [[getNodeType $node].generateConfig $node]
         set bootcmd [[getNodeType $node].bootcmd $node]
         set confFile "boot.conf"
     }
@@ -1118,7 +1154,8 @@ proc runConfOnNode { node ifaces } {
 	}
     }
 
-    set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
+    #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
+    set cfg [join "{set -x} $bootcfg" "\n"]
     writeDataToNodeFile $node /$confFile $cfg
     set cmds "$bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
     # renaming the file signals that we're done
@@ -1346,6 +1383,22 @@ proc releaseExtIfcByName { eid ifname } {
     return
 }
 
+proc getStateIfcCmd { iface_name state } {
+    return "ip link set dev $iface_name $state"
+}
+
+proc getVlanTagIfcCmd { iface_name dev_name tag } {
+    return "ip link add link $dev_name name $iface_name type vlan id $tag"
+}
+
+proc getMtuIfcCmd { iface_name mtu } {
+    return "ip link set dev $iface_name mtu $mtu"
+}
+
+proc getNatIfcCmd { iface_name } {
+    return "iptables -t nat -A POSTROUTING -o $iface_name -j MASQUERADE"
+}
+
 proc getIPv4RouteCmd { statrte } {
     set route [lindex $statrte 0]
     set addr [lindex $statrte 1]
@@ -1356,7 +1409,8 @@ proc getIPv4RouteCmd { statrte } {
 proc getIPv6RouteCmd { statrte } {
     set route [lindex $statrte 0]
     set addr [lindex $statrte 1]
-	set cmd "ip -6 route append $route via $addr"
+    set cmd "ip -6 route append $route via $addr"
+
     return $cmd
 }
 
