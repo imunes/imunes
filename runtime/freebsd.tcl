@@ -1717,18 +1717,18 @@ proc destroyLinkBetween { eid lnode1 lnode2 link } {
     pipesExec "jexec $eid ngctl msg $link: shutdown" "hold"
 }
 
-#****f* freebsd.tcl/destroyNodeIfcs
+#****f* freebsd.tcl/destroyNodeIfaces
 # NAME
-#   destroyNodeIfcs -- destroy virtual node interfaces
+#   destroyNodeIfaces -- destroy virtual node interfaces
 # SYNOPSIS
-#   destroyNodeIfcs $eid $vimages
+#   destroyNodeIfaces $eid $vimages
 # FUNCTION
 #   Destroys all virtual node interfaces.
 # INPUTS
 #   * eid -- experiment id
 #   * vimages -- list of virtual nodes
 #****
-proc destroyNodeIfcs { eid node ifcs } {
+proc destroyNodeIfaces { eid node ifcs } {
     if { [getNodeType $node] in "ext extnat" } {
 	pipesExec "jexec $eid ngctl rmnode $eid-$node:" "hold"
 	return
@@ -1793,18 +1793,18 @@ proc removeExperimentFiles { eid widget } {
 }
 
 
-#****f* freebsd.tcl/l2node.instantiate
+#****f* freebsd.tcl/l2node.nodeInstantiate
 # NAME
-#   l2node.instantiate -- instantiate
+#   l2node.nodeInstantiate -- nodeInstantiate
 # SYNOPSIS
-#   l2node.instantiate $eid $node
+#   l2node.nodeInstantiate $eid $node
 # FUNCTION
-#   Procedure l2node.instantiate creates a new netgraph node of the appropriate type.
+#   Procedure l2node.nodeInstantiate creates a new netgraph node of the appropriate type.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- id of the node (type of the node is either lanswitch or hub)
 #****
-proc l2node.instantiate { eid node } {
+proc l2node.nodeInstantiate { eid node } {
     switch -exact [getNodeType $node] {
 	lanswitch {
 	    set ngtype bridge

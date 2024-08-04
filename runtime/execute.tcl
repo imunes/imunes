@@ -288,104 +288,30 @@ proc l3node.nghook { eid node ifc } {
     }
 }
 
-#****f* exec.tcl/l3node.instantiate
-# NAME
-#   l3node.instantiate -- layer 3 node instantiate
-# SYNOPSIS
-#   l3node.instantiate $eid $node
-# FUNCTION
-#   Instantiates the specified node. This means that it creates a new vimage
-#   node, all the required interfaces (for serial interface a new netgraph
-#   interface of type iface; for ethernet of type eiface, using createIfc
-#   procedure) including loopback interface, and sets kernel variables.
-# INPUTS
-#   * eid -- experiment id
-#   * node -- node id
-#****
-proc l3node.instantiate { eid node } {
-    prepareFilesystemForNode $node
-    createNodeContainer $node
-}
-
-proc l3node.createIfcs { eid node ifcs } {
+proc l2node.nodeCreateIfaces { eid node ifcs } {
     createNodePhysIfcs $node $ifcs
 }
 
-proc l2node.createIfcs { eid node ifcs } {
-    createNodePhysIfcs $node $ifcs
-}
-
-#****f* exec.tcl/l3node.setupNamespace
+#****f* exec.tcl/l2node.nodeSetupNamespace
 # NAME
-#   l3node.setupNamespace -- layer 3 node setupNamespace
+#   l2node.nodeSetupNamespace -- layer 2 node nodeSetupNamespace
 # SYNOPSIS
-#   l3node.setupNamespace $eid $node
-# FUNCTION
-#   Linux only. Attaches the existing Docker netns to a new one.
-# INPUTS
-#   * eid -- experiment id
-#   * node -- node id
-#****
-proc l3node.setupNamespace { eid node } {
-    attachToL3NodeNamespace $node
-}
-
-#****f* exec.tcl/l3node.initConfigure
-# NAME
-#   l3node.initConfigure -- layer 3 node initConfigure
-# SYNOPSIS
-#   l3node.initConfigure $eid $node
-# FUNCTION
-#   Runs initial L3 configuration, such as creating logical interfaces and
-#   configuring sysctls.
-# INPUTS
-#   * eid -- experiment id
-#   * node -- node id
-#****
-proc l3node.initConfigure { eid node } {
-    createNodeLogIfcs $node
-    configureICMPoptions $node
-}
-
-#****f* exec.tcl/l3node.start
-# NAME
-#   l3node.start -- layer 3 node start
-# SYNOPSIS
-#   l3node.start $eid $node
-# FUNCTION
-#   Starts a new layer 3 node (pc, host or router). The node can be started if
-#   it is instantiated.
-#   Simulates the booting proces of a node, starts all the services and
-#   assignes the ip addresses to the interfaces.
-# INPUTS
-#   * eid -- experiment id
-#   * node -- node id
-#****
-proc l3node.start { eid node_id } {
-    startIfcsNode $node_id
-    runConfOnNode $node_id
-}
-
-#****f* exec.tcl/l2node.setupNamespace
-# NAME
-#   l2node.setupNamespace -- layer 2 node setupNamespace
-# SYNOPSIS
-#   l2node.setupNamespace $eid $node
+#   l2node.nodeSetupNamespace $eid $node
 # FUNCTION
 #   Linux only. Creates a new netns.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id
 #****
-proc l2node.setupNamespace { eid node } {
+proc l2node.nodeSetupNamespace { eid node } {
     createNamespace $eid-$node
 }
 
-#****f* exec.tcl/l3node.ipsecInit
+#****f* exec.tcl/nodeIpsecInit
 # NAME
-#   l3node.ipsecInit -- IPsec initialization
+#   nodeIpsecInit -- IPsec initialization
 # SYNOPSIS
-#   l3node.ipsecInit $node
+#   nodeIpsecInit $node
 # FUNCTION
 #   Creates ipsec.conf and ipsec.secrets files from IPsec configuration of given node
 #   and copies certificates to desired folders (if there are any certificates)
@@ -395,7 +321,7 @@ proc l2node.setupNamespace { eid node } {
 global ipsecConf ipsecSecrets
 set ipsecConf ""
 set ipsecSecrets ""
-proc l3node.ipsecInit { node } {
+proc nodeIpsecInit { node } {
     global ipsecConf ipsecSecrets isOSfreebsd
 
     if { [getNodeIPsec $node] == "" } {
@@ -474,11 +400,8 @@ proc l3node.ipsecInit { node } {
 #   as defined in configuration file of in GUI of imunes. Before deploying new
 #   configuration the old one is removed (vimageCleanup procedure).
 #****
-proc deployCfg {} {
+proc deployCfg { node_list nodes_ifaces link_list conf_link_list conf_nodes_ifaces conf_nodes } {
     global progressbarCount execMode
-
-    set node_list [getFromRunning "node_list"]
-    set link_list [getFromRunning "link_list"]
 
     set progressbarCount 0
     set nodeCount [llength $node_list]
@@ -519,6 +442,10 @@ proc deployCfg {} {
     set l3nodeCount [llength $l3nodes]
     set allNodes [concat $l2nodes $l3nodes]
     set allNodeCount [llength $allNodes]
+    if { $conf_nodes == "*" } {
+	set conf_nodes $allNodes
+    }
+    set conf_nodes_count [llength $conf_nodes]
     incr linkCount [expr -$pseudoNodesCount/2]
     set maxProgressbasCount [expr {5*$allNodeCount + 1*$l2nodeCount + 5*$l3nodeCount + 2*$linkCount}]
 
@@ -583,8 +510,15 @@ proc deployCfg {} {
 
 	statline "Creating interfaces on nodes..."
 	pipesCreate
-	createNodesInterfaces $allNodes $allNodeCount $w
-	statline "Waiting for interfaces on $allNodeCount node(s) to be created..."
+	if { $nodes_ifaces == "*" } {
+	    set nodes_ifaces [lmap node_id $allNodes {set node_id "$node_id *"}]
+	    set node_ifaces_count $allNodeCount
+	} else {
+	    set node_ifaces_count [llength $nodes_ifaces]
+	}
+	createNodesInterfaces $nodes_ifaces $node_ifaces_count $w
+
+	statline "Waiting for interfaces on $node_ifaces_count node(s) to be created..."
 	pipesClose
 
 	statline "Creating links..."
@@ -604,9 +538,18 @@ proc deployCfg {} {
 
 	pipesCreate
 	statline "Configuring node(s)..."
-	executeConfNodes $allNodes $allNodeCount $w
-	statline "Waiting for configuration on $l3nodeCount node(s)..."
-	waitForConfStart $l3nodes $l3nodeCount $w
+	if { $conf_nodes_ifaces == "*" } {
+	    set conf_nodes_ifaces [lmap node_id $allNodes {set node_id "$node_id *"}]
+	    set conf_node_ifaces_count $allNodeCount
+	} else {
+	    set conf_node_ifaces_count [llength $conf_nodes_ifaces]
+	}
+	configureIfaces $conf_nodes_ifaces $conf_node_ifaces_count $w
+	#configureIfacesWait $conf_nodes_ifaces $conf_node_ifaces_count $w
+
+	executeConfNodes $conf_nodes $conf_nodes_count $w
+	statline "Waiting for configuration on $conf_nodes_count node(s)..."
+	waitForConfStart $conf_nodes $conf_nodes_count $w
 	pipesClose
 
 	statline "Starting services for NODECONF hook..."
@@ -632,6 +575,10 @@ proc deployCfg {} {
 proc prepareSystem {} {
     global eid_base
     global execMode
+
+    if { [getFromRunning "cfg_deployed"] } {
+	return
+    }
 
     set running_eids [getResumableExperiments]
     if { $execMode != "batch" } {
@@ -661,16 +608,18 @@ proc prepareSystem {} {
 proc instantiateNodes { nodes nodeCount w } {
     global progressbarCount execMode
 
+    set eid [getFromRunning "eid"]
+
     set batchStep 0
-    foreach node $nodes {
+    foreach node_id $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	if { [info procs [getNodeType $node].instantiate] != "" } {
-	    set eid [getFromRunning "eid"]
+	if { [info procs [getNodeType $node_id].nodeInstantiate] != "" } {
 	    try {
-		[getNodeType $node].instantiate $eid $node
+		[getNodeType $node_id].nodeInstantiate $eid $node_id
+		setToRunning "${node_id}_running" true
 	    } on error err {
-		return -code error "Error in '[getNodeType $node].instantiate $eid $node': $err"
+		return -code error "Error in '[getNodeType $node_id].nodeInstantiate $eid $node_id': $err"
 	    }
 	    pipesExec ""
 	}
@@ -678,8 +627,8 @@ proc instantiateNodes { nodes nodeCount w } {
 	incr batchStep
 	incr progressbarCount
 
-	if {$execMode != "batch"} {
-	    statline "Instantiating node [getNodeName $node]"
+	if { $execMode != "batch" } {
+	    statline "Instantiating node [getNodeName $node_id]"
 	    $w.p configure -value $progressbarCount
 	    update
 	}
@@ -687,7 +636,7 @@ proc instantiateNodes { nodes nodeCount w } {
 
     if { $nodeCount > 0 } {
 	displayBatchProgress $batchStep $nodeCount
-	if {$execMode == "batch"} {
+	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
@@ -709,7 +658,7 @@ proc waitForInstantiateNodes { nodes nodeCount w } {
 	    incr progressbarCount
 
 	    set name [getNodeName $node]
-	    if {$execMode != "batch"} {
+	    if { $execMode != "batch" } {
 		statline "Node $name started"
 		$w.p configure -value $progressbarCount
 		update
@@ -722,7 +671,7 @@ proc waitForInstantiateNodes { nodes nodeCount w } {
 
     if { $nodeCount > 0 } {
 	displayBatchProgress $batchStep $nodeCount
-	if {$execMode == "batch"} {
+	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
@@ -731,16 +680,17 @@ proc waitForInstantiateNodes { nodes nodeCount w } {
 proc setupNodeNamespaces { nodes nodeCount w } {
     global progressbarCount execMode
 
+    set eid [getFromRunning "eid"]
+
     set batchStep 0
     foreach node $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	if { [info procs [getNodeType $node].setupNamespace] != "" } {
-	    set eid [getFromRunning "eid"]
+	if { [info procs [getNodeType $node].nodeSetupNamespace] != "" } {
 	    try {
-		[getNodeType $node].setupNamespace $eid $node
+		[getNodeType $node].nodeSetupNamespace $eid $node
 	    } on error err {
-		return -code error "Error in '[getNodeType $node].setupNamespace $eid $node': $err"
+		return -code error "Error in '[getNodeType $node].nodeSetupNamespace $eid $node': $err"
 	    }
 	    pipesExec ""
 	}
@@ -801,15 +751,16 @@ proc waitForNamespaces { nodes nodeCount w } {
 proc initConfigureNodes { nodes nodeCount w } {
     global progressbarCount execMode
 
+    set eid [getFromRunning "eid"]
+
     set batchStep 0
     foreach node $nodes {
 	displayBatchProgress $batchStep $nodeCount
-	set eid [getFromRunning "eid"]
 
 	try {
-	    [getNodeType $node].initConfigure $eid $node
+	    [getNodeType $node].nodeInitSetup $eid $node
 	} on error err {
-	    return -code error "Error in '[getNodeType $node].initConfigure $eid $node': $err"
+	    return -code error "Error in '[getNodeType $node].nodeInitSetup $eid $node': $err"
 	}
 	pipesExec ""
 
@@ -868,20 +819,25 @@ proc waitForInitConf { nodes nodeCount w } {
 
 proc copyFilesToNodes { nodes nodeCount w } {}
 
-proc createNodesInterfaces { nodes nodeCount w } {
+proc createNodesInterfaces { nodes_ifaces nodeCount w } {
     global progressbarCount execMode
 
+    set eid [getFromRunning "eid"]
+
     set batchStep 0
-    foreach node $nodes {
+    foreach node_ifaces $nodes_ifaces {
+	lassign $node_ifaces node ifaces
 	displayBatchProgress $batchStep $nodeCount
 
-	if { [info procs [getNodeType $node].createIfcs] != "" } {
-	    set ifcs [ifcList $node]
-	    set eid [getFromRunning "eid"]
+	if { [info procs [getNodeType $node].nodeCreateIfaces] != "" } {
+	    if { $ifaces == "*" } {
+		set ifaces [ifcList $node]
+	    }
+
 	    try {
-		[getNodeType $node].createIfcs $eid $node $ifcs
+		[getNodeType $node].nodeCreateIfaces $eid $node $ifaces
 	    } on error err {
-		return -code error "Error in '[getNodeType $node].createIfcs $eid $node $ifcs': $err"
+		return -code error "Error in '[getNodeType $node].nodeCreateIfaces $eid $node $ifaces': $err"
 	    }
 	    pipesExec ""
 	}
@@ -890,7 +846,7 @@ proc createNodesInterfaces { nodes nodeCount w } {
 	incr progressbarCount
 
 	if { $execMode != "batch" } {
-	    statline "Creating physical ifcs on node [getNodeName $node]"
+	    statline "Creating physical ifaces on node [getNodeName $node]"
 	    $w.p configure -value $progressbarCount
 	    update
 	}
@@ -1008,13 +964,19 @@ proc configureLinks { links linkCount w } {
     }
 }
 
-proc executeConfNodes { nodes nodeCount w } {
+proc configureIfaces { nodes_ifaces nodeCount w } {
     global progressbarCount execMode
+
+    set eid [getFromRunning "eid"]
 
     set batchStep 0
     set subnet_gws {}
     set nodes_l2data [dict create]
-    foreach node $nodes {
+    foreach node_ifaces $nodes_ifaces {
+	lassign $node_ifaces node ifaces
+	if { $ifaces == "*" } {
+	    set ifaces [allIfcList $node]
+	}
 	displayBatchProgress $batchStep $nodeCount
 
 	if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
@@ -1025,12 +987,11 @@ proc executeConfNodes { nodes nodeCount w } {
 	    setDefaultIPv6routes $node $all_routes6
 	}
 
-	if { [info procs [getNodeType $node].start] != "" } {
-	    set eid [getFromRunning "eid"]
+	if { [info procs [getNodeType $node].nodeStartIfaces] != "" } {
 	    try {
-		[getNodeType $node].start $eid $node
+		[getNodeType $node].nodeStartIfaces $eid $node $ifaces
 	    } on error err {
-		return -code error "Error in '[getNodeType $node].start $eid $node': $err"
+		return -code error "Error in '[getNodeType $node].nodeStartIfaces $eid $node $ifaces': $err"
 	    }
 	}
 	pipesExec ""
@@ -1040,7 +1001,90 @@ proc executeConfNodes { nodes nodeCount w } {
 
 	if { $execMode != "batch" } {
 	    $w.p configure -value $progressbarCount
-	    statline "Starting configuration on node [getNodeName $node]"
+	    statline "Configuring interfaces on node [getNodeName $node]"
+	    update
+	}
+    }
+
+    if { $nodeCount > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+	if { $execMode == "batch" } {
+	    statline ""
+	}
+    }
+}
+
+#proc configureIfacesWait { nodes_ifaces nodeCount w } {
+#    global progressbarCount execMode
+#
+#    set nodes [lmap node_id $nodes_ifaces {set node_id [lindex $node_id 0]}]
+#
+#    set batchStep 0
+#    set nodes_left $nodes
+#    while { [llength $nodes_left] > 0 } {
+#	displayBatchProgress $batchStep $nodeCount
+#	foreach node $nodes_left {
+#	    if { ! [isNodeIfacesConfigured $node] } {
+#		continue
+#	    }
+#
+#	    incr batchStep
+#	    incr progressbarCount
+#
+#	    set name [getNodeName $node]
+#	    if { $execMode != "batch" } {
+#		statline "Node $name configured"
+#		$w.p configure -value $progressbarCount
+#		update
+#	    }
+#	    displayBatchProgress $batchStep $nodeCount
+#
+#	    set nodes_left [removeFromList $nodes_left $node]
+#	}
+#    }
+#
+#    if { $nodeCount > 0 } {
+#	displayBatchProgress $batchStep $nodeCount
+#	if { $execMode == "batch" } {
+#	    statline ""
+#	}
+#    }
+#}
+
+proc executeConfNodes { nodes nodeCount w } {
+    global progressbarCount execMode
+
+    set eid [getFromRunning "eid"]
+
+    set batchStep 0
+    set subnet_gws {}
+    set nodes_l2data [dict create]
+    foreach node_id $nodes {
+	displayBatchProgress $batchStep $nodeCount
+
+	if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
+	    lassign [getDefaultGateways $node_id $subnet_gws $nodes_l2data] my_gws subnet_gws nodes_l2data
+	    lassign [getDefaultRoutesConfig $node_id $my_gws] all_routes4 all_routes6
+
+	    setDefaultIPv4routes $node_id $all_routes4
+	    setDefaultIPv6routes $node_id $all_routes6
+	}
+
+	if { [info procs [getNodeType $node_id].nodeStart] != "" } {
+	    try {
+		[getNodeType $node_id].nodeStart $eid $node_id
+	    } on error err {
+		return -code error "Error in '[getNodeType $node_id].nodeStart $eid $node_id': $err"
+	    }
+	}
+	pipesExec ""
+
+	incr batchStep
+	incr progressbarCount
+
+	if { $execMode != "batch" } {
+	    $w.p configure -value $progressbarCount
+	    statline "Starting configuration on node [getNodeName $node_id]"
 	    update
 	}
     }
@@ -1111,8 +1155,10 @@ proc generateHostsFile { node_id } {
     }
 }
 
-proc waitForConfStart { nodes nodeCount w } {
+proc waitForConfStart { nodes_ifaces nodeCount w } {
     global progressbarCount execMode
+
+    set nodes [lmap node_id $nodes_ifaces {set node_id [lindex $node_id 0]}]
 
     set batchStep 0
     set nodes_left $nodes
@@ -1197,7 +1243,7 @@ proc checkForErrors { nodes nodeCount w } {
 
     if { $err_nodes != "" } {
 	set err_nodes [string trimright $err_nodes ", "]
-	set msg "Issues encountered while configuring nodes:\n$err_nodes\nCheck their /err.log, /out.log and /boot.conf (/custom.conf) files." \
+	set msg "Issues encountered while configuring nodes:\n$err_nodes\nCheck their /err.log, /err_ifaces.log, /out.log, /out_ifaces.log, /boot.conf and /boot_ifaces.conf (or /custom.conf) files." \
 
 	if { $execMode != "batch" } {
 	    after idle {.dialog1.msg configure -wraplength 4i}
@@ -1216,7 +1262,7 @@ proc checkForErrors { nodes nodeCount w } {
 # SYNOPSIS
 #   startNodeFromMenu $node
 # FUNCTION
-#   Invokes the [typmodel $node].start procedure, along with services startup.
+#   Invokes the [typmodel $node].nodeConfigure procedure, along with services startup.
 # INPUTS
 #   * node -- node id
 #****

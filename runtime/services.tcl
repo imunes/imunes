@@ -3,7 +3,7 @@
 #  services.tcl -- file used for defining services that start on virtual node
 #  at a specific point in the experiment startup process and are stopped at a
 #  certain point of experiment termination. These points are defined as hooks
-#  in the exec.tcl file within the deployCfg and terminateAllNodes procedures.
+#  in the exec.tcl file within the deployCfg and undeployCfg procedures.
 # FUNCTION
 #  This module is used to setup default variables an procedures for service
 #  management. After that specific services are defined along with their
@@ -260,7 +260,7 @@ set service ipsec
 regHooks $service {NODECONF NODESTOP}
 
 proc $service.start { node } {
-    l3node.ipsecInit $node
+    nodeIpsecInit $node
     set output [execCmdNode $node "ipsec start"]
     writeDataToNodeFile $node "ipsec_service.log" $output
 }
