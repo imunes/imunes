@@ -43,26 +43,6 @@ proc $MODULE.confNewNode { node_id } {
     lappend $node_id "network-config [list $nconfig]"
 }
 
-proc $MODULE.icon { size } {
-    global ROOTDIR LIBDIR
-
-    switch $size {
-	normal {
-	    return $ROOTDIR/$LIBDIR/icons/normal/cloud.gif
-	}
-	small {
-	    return $ROOTDIR/$LIBDIR/icons/small/cloud.gif
-	}
-	toolbar {
-	    return $ROOTDIR/$LIBDIR/icons/tiny/cloud.gif
-	}
-    }
-}
-
-proc $MODULE.toolbarIconDescr {} {
-    return "Add new WLAN domain"
-}
-
 proc $MODULE.ifacePrefix {} {
     return "e"
 }
@@ -130,24 +110,6 @@ proc $MODULE.nodeDestroy { eid node_id } {
 proc $MODULE.nghook { eid node_id iface_id } {
     set ifunit [string range $iface_id 1 end]
     return [list $eid\.$node_id link$ifunit]
-}
-
-proc $MODULE.configGUI { c node_id } {
-    global wi
-    global guielements treecolumns
-    set guielements {}
-
-    configGUI_createConfigPopupWin $c
-    wm title $wi "WLAN configuration"
-    configGUI_nodeName $wi $node_id "Node name:"
-
-    configGUI_buttonsACNode $wi $node_id
-}
-
-proc $MODULE.configInterfacesGUI { wi node_id iface_id } {
-    global guielements
-
-    configGUI_ifcQueueConfig $wi $node_id $iface_id
 }
 
 proc $MODULE.maxLinks {} {
