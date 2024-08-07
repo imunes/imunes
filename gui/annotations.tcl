@@ -228,7 +228,7 @@ proc popupOvalApply { c wi target } {
 
     if { $target == 0 } {
 	# Create a new annotation object
-	set target [newObjectId $annotation_list "a"]
+	set target [newObjectId [getFromRunning "annotation_list"] "a"]
 	addAnnotation $target oval
 
 	set coords [$c coords $newoval]
@@ -448,7 +448,7 @@ proc popupRectangleApply { c wi target } {
 
     if { $target == 0 } {
 	# Create a new annotation object
-	set target [newObjectId $annotation_list "a"]
+	set target [newObjectId [getFromRunning "annotation_list"] "a"]
 	addAnnotation $target rectangle
 
 	set coords [$c coords $newrect]
@@ -651,7 +651,7 @@ proc popupTextApply { c wi target } {
     if { $label != "" } {
 	if { $target == 0 } {
 	    # Create a new annotation object
-	    set target [newObjectId $annotation_list "a"]
+	    set target [newObjectId [getFromRunning "annotation_list"] "a"]
 	    addAnnotation $target text
 	    set coords [$c coords $newtext]
 	} else {
@@ -822,7 +822,7 @@ proc popupFreeformApply { c wi target } {
     set color [$wi.colors.color cget -text]
     if { $target == 0 } {
 	# Create a new annotation object
-	set target [newObjectId $annotation_list "a"]
+	set target [newObjectId [getFromRunning "annotation_list"] "a"]
 	addAnnotation $target freeform
 
 	set coords [$c coords $newfree]
