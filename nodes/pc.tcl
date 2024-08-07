@@ -82,76 +82,28 @@ proc $MODULE.confNewNode { node_id } {
     setIfcIPv6addrs $node_id $logiface_id "::1/128"
 }
 
-#****f* pc.tcl/pc.icon
 # NAME
-#   pc.icon -- icon
 # SYNOPSIS
-#   pc.icon $size
 # FUNCTION
-#   Returns path to node icon, depending on the specified size.
 # INPUTS
-#   * size -- "normal", "small" or "toolbar"
-# RESULT
-#   * path -- path to icon
 #****
-proc $MODULE.icon { size } {
-    global ROOTDIR LIBDIR
-
-    switch $size {
-	normal {
-	    return $ROOTDIR/$LIBDIR/icons/normal/pc.gif
-	}
-	small {
-	    return $ROOTDIR/$LIBDIR/icons/small/pc.gif
-	}
-	toolbar {
-	    return $ROOTDIR/$LIBDIR/icons/tiny/pc.gif
-	}
-    }
 }
 
-#****f* pc.tcl/pc.toolbarIconDescr
-# NAME
-#   pc.toolbarIconDescr -- toolbar icon description
-# SYNOPSIS
-#   pc.toolbarIconDescr
-# FUNCTION
-#   Returns this module's toolbar icon description.
-# RESULT
-#   * descr -- string describing the toolbar icon
-#****
-proc $MODULE.toolbarIconDescr {} {
-    return "Add new PC"
+
+
+
+
+
 }
 
-#****f* pc.tcl/pc.notebookDimensions
 # NAME
-#   pc.notebookDimensions -- notebook dimensions
 # SYNOPSIS
-#   pc.notebookDimensions $wi
 # FUNCTION
-#   Returns the specified notebook height and width.
 # INPUTS
-#   * wi -- widget
 # RESULT
-#   * size -- notebook size as {height width}
 #****
-proc $MODULE.notebookDimensions { wi } {
-    set h 210
-    set w 507
-
-    if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
-	== "Configuration" } {
-	set h 320
-	set w 507
-    }
-    if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
-	== "Interfaces" } {
-	set h 370
-	set w 507
     }
 
-    return [list $h $w]
 }
 
 #****f* pc.tcl/pc.ifcName
@@ -390,66 +342,16 @@ proc $MODULE.nghook { eid node_id ifc } {
     return [l3node.nghook $eid $node_id $ifc]
 }
 
-#****f* pc.tcl/pc.configGUI
 # NAME
-#   pc.configGUI -- configuration GUI
 # SYNOPSIS
-#   pc.configGUI $c $node_id
 # FUNCTION
-#   Defines the structure of the pc configuration window by calling
-#   procedures for creating and organising the window, as well as
-#   procedures for adding certain modules to that window.
 # INPUTS
-#   * c -- tk canvas
-#   * node_id -- node id
 #****
-proc $MODULE.configGUI { c node_id } {
-    global wi
-    global guielements treecolumns
-    set guielements {}
-
-    configGUI_createConfigPopupWin $c
-    wm title $wi "pc configuration"
-    configGUI_nodeName $wi $node_id "Node name:"
-
-    set tabs [configGUI_addNotebook $wi $node_id {"Configuration" "Interfaces"}]
-    set configtab [lindex $tabs 0]
-    set ifctab [lindex $tabs 1]
-
-    set treecolumns {"OperState State" "NatState Nat" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
-	    "MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop"}
-    configGUI_addTree $ifctab $node_id
-
-    configGUI_customImage $configtab $node_id
-    configGUI_attachDockerToExt $configtab $node_id
-    configGUI_servicesConfig $configtab $node_id
-    configGUI_staticRoutes $configtab $node_id
-    configGUI_snapshots $configtab $node_id
-    configGUI_customConfig $configtab $node_id
-
-    configGUI_buttonsACNode $wi $node_id
 }
 
-#****f* pc.tcl/pc.configInterfacesGUI
 # NAME
-#   pc.configInterfacesGUI -- configuration of interfaces GUI
 # SYNOPSIS
-#   pc.configInterfacesGUI $wi $node_id $ifc
 # FUNCTION
-#   Defines which modules for changing interfaces parameters are contained in
-#   the pc configuration window. It is done by calling procedures for adding
-#   certain modules to the window.
 # INPUTS
-#   * wi -- widget
-#   * node_id -- node id
-#   * ifc -- interface name
 #****
-proc $MODULE.configInterfacesGUI { wi node_id ifc } {
-    global guielements
-
-    configGUI_ifcEssentials $wi $node_id $ifc
-    configGUI_ifcQueueConfig $wi $node_id $ifc
-    configGUI_ifcMACAddress $wi $node_id $ifc
-    configGUI_ifcIPv4Address $wi $node_id $ifc
-    configGUI_ifcIPv6Address $wi $node_id $ifc
 }

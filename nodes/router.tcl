@@ -104,34 +104,6 @@ proc $MODULE.confNewNode { node_id } {
     setIfcIPv6addrs $node_id $logiface_id "::1/128"
 }
 
-#****f* genericrouter.tcl/router.icon
-# NAME
-#   router.icon -- icon
-# SYNOPSIS
-#   router.icon $size
-# FUNCTION
-#   Returns path to node icon, depending on the specified size.
-# INPUTS
-#   * size -- "normal", "small" or "toolbar"
-# RESULT
-#   * path -- path to icon
-#****
-proc $MODULE.icon { size } {
-    global ROOTDIR LIBDIR
-
-    switch $size {
-	normal {
-	    return $ROOTDIR/$LIBDIR/icons/normal/router.gif
-	}
-	small {
-	    return $ROOTDIR/$LIBDIR/icons/small/router.gif
-	}
-	toolbar {
-	    return $ROOTDIR/$LIBDIR/icons/tiny/router.gif
-	}
-    }
-}
-
 #****f* frr.tcl/router.frr.layer
 # NAME
 #   router.frr.layer -- layer
@@ -347,57 +319,6 @@ proc $MODULE.nghook { eid node_id iface } {
 
 }
 
-#****f* genericrouter.tcl/router.toolbarIconDescr
-# NAME
-#   router.toolbarIconDescr -- toolbar icon description
-# SYNOPSIS
-#   router.toolbarIconDescr
-# FUNCTION
-#   Returns this module's toolbar icon description.
-# RESULT
-#   * descr -- string describing the toolbar icon
-#****
-proc $MODULE.toolbarIconDescr {} {
-    return "Add new Router"
-}
-
-#****f* genericrouter.tcl/router.notebookDimensions
-# NAME
-#   router.notebookDimensions -- notebook dimensions
-# SYNOPSIS
-#   router.notebookDimensions $wi
-# FUNCTION
-#   Returns the specified notebook height and width.
-# INPUTS
-#   * wi -- widget
-# RESULT
-#   * size -- notebook size as {height width}
-#****
-proc $MODULE.notebookDimensions { wi } {
-    set h 250
-    set w 507
-
-    if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
-	== "Configuration" } {
-	set h 360
-	set w 507
-    }
-
-    if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
-	== "Interfaces" } {
-	set h 370
-	set w 507
-    }
-
-    if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
-	== "IPsec" } {
-	set h 320
-	set w 507
-    }
-
-    return [list $h $w]
-}
-
 #****f* genericrouter.tcl/router.ifcName
 # NAME
 #   router.ifcName -- interface name
@@ -438,69 +359,4 @@ proc $MODULE.layer {} {
 #****
 proc $MODULE.IPAddrRange {} {
     return 1
-}
-
-#****f* genericrouter.tcl/router.configGUI
-# NAME
-#   router.configGUI -- configuration GUI
-# SYNOPSIS
-#   router.configGUI $c $node
-# FUNCTION
-#   Defines the structure of the router configuration window by calling
-#   procedures for creating and organising the window, as well as procedures
-#   for adding certain modules to that window.
-# INPUTS
-#   * c -- tk canvas
-#   * node -- node id
-#****
-proc $MODULE.configGUI { c node } {
-    global wi
-    global guielements treecolumns ipsecEnable
-
-    set guielements {}
-
-    configGUI_createConfigPopupWin $c
-    wm title $wi "router configuration"
-    configGUI_nodeName $wi $node "Node name:"
-
-    lassign [configGUI_addNotebook $wi $node {"Configuration" "Interfaces" "IPsec"}] configtab ifctab ipsectab
-
-    set treecolumns {"OperState State" "NatState Nat" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
-	    "MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop" }
-    configGUI_addTree $ifctab $node
-
-    configGUI_routingModel $configtab $node
-    configGUI_customImage $configtab $node
-    configGUI_attachDockerToExt $configtab $node
-    configGUI_servicesConfig $configtab $node
-    configGUI_staticRoutes $configtab $node
-    configGUI_snapshots $configtab $node
-    configGUI_customConfig $configtab $node
-    configGUI_ipsec $ipsectab $node
-
-    configGUI_buttonsACNode $wi $node
-}
-
-#****f* genericrouter.tcl/router.configInterfacesGUI
-# NAME
-#   router.configInterfacesGUI -- configuration of interfaces GUI
-# SYNOPSIS
-#   router.configInterfacesGUI $wi $node $ifc
-# FUNCTION
-#   Defines which modules for changing interfaces parameters are contained in
-#   the router configuration window. It is done by calling procedures for
-#   adding certain modules to the window.
-# INPUTS
-#   * wi -- widget
-#   * node -- node id
-#   * ifc -- interface name
-#****
-proc $MODULE.configInterfacesGUI { wi node ifc } {
-    global guielements
-
-    configGUI_ifcEssentials $wi $node $ifc
-    configGUI_ifcQueueConfig $wi $node $ifc
-    configGUI_ifcMACAddress $wi $node $ifc
-    configGUI_ifcIPv4Address $wi $node $ifc
-    configGUI_ifcIPv6Address $wi $node $ifc
 }

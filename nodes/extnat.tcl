@@ -89,48 +89,6 @@ proc $MODULE.confNewNode { node_id } {
     setNodeName $node_id "UNASSIGNED"
 }
 
-#****f* extnat.tcl/extnat.icon
-# NAME
-#   extnat.icon -- icon
-# SYNOPSIS
-#   extnat.icon $size
-# FUNCTION
-#   Returns path to node icon, depending on the specified size.
-# INPUTS
-#   * size -- "normal", "small" or "toolbar"
-# RESULT
-#   * path -- path to icon
-#****
-proc $MODULE.icon { size } {
-    global ROOTDIR LIBDIR
-
-    switch $size {
-	normal {
-	    return $ROOTDIR/$LIBDIR/icons/normal/extnat.gif
-	}
-	small {
-	    return $ROOTDIR/$LIBDIR/icons/small/extnat.gif
-	}
-	toolbar {
-	    return $ROOTDIR/$LIBDIR/icons/tiny/extnat.gif
-	}
-    }
-}
-
-#****f* extnat.tcl/extnat.toolbarIconDescr
-# NAME
-#   extnat.toolbarIconDescr -- toolbar icon description
-# SYNOPSIS
-#   extnat.toolbarIconDescr
-# FUNCTION
-#   Returns this module's toolbar icon description.
-# RESULT
-#   * descr -- string describing the toolbar icon
-#****
-proc $MODULE.toolbarIconDescr {} {
-    return "Add new External NAT connection"
-}
-
 #****f* extnat.tcl/extnat.ifcName
 # NAME
 #   extnat.ifcName -- interface name
@@ -301,39 +259,6 @@ proc $MODULE.destroy { eid node_id } {
 #****
 proc $MODULE.nghook { eid node_id ifc } {
     return [l3node.nghook $eid $node_id $ifc]
-}
-
-#****f* extnat.tcl/extnat.configGUI
-# NAME
-#   extnat.configGUI -- configuration GUI
-# SYNOPSIS
-#   extnat.configGUI $c $node_id
-# FUNCTION
-#   Defines the structure of the pc configuration window by calling
-#   procedures for creating and organising the window, as well as
-#   procedures for adding certain modules to that window.
-# INPUTS
-#   * c -- tk canvas
-#   * node_id -- node id
-#****
-proc $MODULE.configGUI { c node_id } {
-    set ifc [lindex [ifcList $node_id] 0]
-    if { "$ifc" == "" } {
-	return
-    }
-
-    global wi
-    global guielements treecolumns
-    set guielements {}
-    set treecolumns {}
-
-    configGUI_createConfigPopupWin $c
-    wm title $wi "extnat configuration"
-    configGUI_nodeName $wi $node_id "Host interface:"
-
-    configGUI_externalIfcs $wi $node_id
-
-    configGUI_buttonsACNode $wi $node_id
 }
 
 #****f* extnat.tcl/extnat.maxLinks

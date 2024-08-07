@@ -70,48 +70,6 @@ proc $MODULE.confNewNode { node_id } {
     setNodeName $node_id "UNASSIGNED"
 }
 
-#****f* rj45.tcl/rj45.icon
-# NAME
-#   rj45.icon -- icon
-# SYNOPSIS
-#   rj45.icon $size
-# FUNCTION
-#   Returns path to node icon, depending on the specified size.
-# INPUTS
-#   * size -- "normal", "small" or "toolbar"
-# RESULT
-#   * path -- path to icon
-#****
-proc $MODULE.icon { size } {
-    global ROOTDIR LIBDIR
-
-    switch $size {
-	normal {
-	    return $ROOTDIR/$LIBDIR/icons/normal/rj45.gif
-	}
-	small {
-	    return $ROOTDIR/$LIBDIR/icons/small/rj45.gif
-	}
-	toolbar {
-	    return $ROOTDIR/$LIBDIR/icons/tiny/rj45.gif
-	}
-    }
-}
-
-#****f* rj45.tcl/rj45.toolbarIconDescr
-# NAME
-#   rj45.toolbarIconDescr -- toolbar icon description
-# SYNOPSIS
-#   rj45.toolbarIconDescr
-# FUNCTION
-#   Returns this module's toolbar icon description.
-# RESULT
-#   * descr -- string describing the toolbar icon
-#****
-proc $MODULE.toolbarIconDescr {} {
-    return "Add new External interface"
-}
-
 #****f* rj45.tcl/rj45.ifcName
 # NAME
 #   rj45.ifcName -- interface name
@@ -209,33 +167,6 @@ proc $MODULE.nghook { eid node_id ifc } {
     }
 
     return [list $ifname lower]
-}
-
-#****f* rj45.tcl/rj45.configGUI
-# NAME
-#   rj45.configGUI -- configuration GUI
-# SYNOPSIS
-#   rj45.configGUI $c $node_id
-# FUNCTION
-#   Defines the structure of the rj45 configuration window by calling
-#   procedures for creating and organising the window, as well as procedures
-#   for adding certain modules to that window.
-# INPUTS
-#   * c -- tk canvas
-#   * node_id -- node id
-#****
-proc $MODULE.configGUI { c node_id } {
-    global wi
-    global guielements treecolumns
-
-    set guielements {}
-    set treecolumns {}
-
-    configGUI_createConfigPopupWin $c
-    wm title $wi "rj45 configuration"
-    configGUI_nodeName $wi $node_id "Physical interface:"
-    configGUI_etherVlan $wi $node_id
-    configGUI_buttonsACNode $wi $node_id
 }
 
 #****f* rj45.tcl/rj45.maxLinks

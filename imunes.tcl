@@ -226,11 +226,13 @@ foreach file [glob -directory $ROOTDIR/$LIBDIR/config *.tcl] {
 # L2 nodes
 foreach file $l2nodes {
     safeSourceFile "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
+    safeSourceFile "$ROOTDIR/$LIBDIR/gui/$file.tcl"
 }
 
 # L3 nodes
 foreach file $l3nodes {
     safeSourceFile "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
+    safeSourceFile "$ROOTDIR/$LIBDIR/gui/$file.tcl"
 }
 
 # additional nodes

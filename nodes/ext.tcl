@@ -79,48 +79,6 @@ proc $MODULE.confNewNode { node_id } {
     setNodeName $node_id [getNewNodeNameType ext $nodeNamingBase(ext)]
 }
 
-#****f* ext.tcl/ext.icon
-# NAME
-#   ext.icon -- icon
-# SYNOPSIS
-#   ext.icon $size
-# FUNCTION
-#   Returns path to node icon, depending on the specified size.
-# INPUTS
-#   * size -- "normal", "small" or "toolbar"
-# RESULT
-#   * path -- path to icon
-#****
-proc $MODULE.icon { size } {
-    global ROOTDIR LIBDIR
-
-    switch $size {
-	normal {
-	    return $ROOTDIR/$LIBDIR/icons/normal/ext.gif
-	}
-	small {
-	    return $ROOTDIR/$LIBDIR/icons/small/ext.gif
-	}
-	toolbar {
-	    return $ROOTDIR/$LIBDIR/icons/tiny/ext.gif
-	}
-    }
-}
-
-#****f* ext.tcl/ext.toolbarIconDescr
-# NAME
-#   ext.toolbarIconDescr -- toolbar icon description
-# SYNOPSIS
-#   ext.toolbarIconDescr
-# FUNCTION
-#   Returns this module's toolbar icon description.
-# RESULT
-#   * descr -- string describing the toolbar icon
-#****
-proc $MODULE.toolbarIconDescr {} {
-    return "Add new External connection"
-}
-
 #****f* ext.tcl/ext.ifcName
 # NAME
 #   ext.ifcName -- interface name
@@ -289,39 +247,6 @@ proc $MODULE.destroy { eid node_id } {
 #****
 proc $MODULE.nghook { eid node_id ifc } {
     return [l3node.nghook $eid $node_id $ifc]
-}
-
-#****f* ext.tcl/ext.configGUI
-# NAME
-#   ext.configGUI -- configuration GUI
-# SYNOPSIS
-#   ext.configGUI $c $node_id
-# FUNCTION
-#   Defines the structure of the pc configuration window by calling
-#   procedures for creating and organising the window, as well as
-#   procedures for adding certain modules to that window.
-# INPUTS
-#   * c -- tk canvas
-#   * node_id -- node id
-#****
-proc $MODULE.configGUI { c node_id } {
-    set ifc [lindex [ifcList $node_id] 0]
-    if { "$ifc" == "" } {
-	return
-    }
-
-    global wi
-    global guielements treecolumns
-    set guielements {}
-    set treecolumns {}
-
-    configGUI_createConfigPopupWin $c
-    wm title $wi "ext configuration"
-    configGUI_nodeName $wi $node_id "Node name:"
-
-    configGUI_externalIfcs $wi $node_id
-
-    configGUI_buttonsACNode $wi $node_id
 }
 
 #****f* ext.tcl/ext.maxLinks

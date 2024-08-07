@@ -87,48 +87,6 @@ proc $MODULE.confNewNode { node_id } {
     setNodeName $node_id [getNewNodeNameType extelem $nodeNamingBase(extelem)]
 }
 
-#****f* extelem.tcl/extelem.icon
-# NAME
-#   extelem.icon -- icon
-# SYNOPSIS
-#   extelem.icon $size
-# FUNCTION
-#   Returns path to node icon, depending on the specified size.
-# INPUTS
-#   * size -- "normal", "small" or "toolbar"
-# RESULT
-#   * path -- path to icon
-#****
-proc $MODULE.icon { size } {
-    global ROOTDIR LIBDIR
-
-    switch $size {
-	normal {
-	    return $ROOTDIR/$LIBDIR/icons/normal/cloud.gif
-	}
-	small {
-	    return $ROOTDIR/$LIBDIR/icons/small/cloud.gif
-	}
-	toolbar {
-	    return $ROOTDIR/$LIBDIR/icons/tiny/cloud.gif
-	}
-    }
-}
-
-#****f* extelem.tcl/extelem.toolbarIconDescr
-# NAME
-#   extelem.toolbarIconDescr -- toolbar icon description
-# SYNOPSIS
-#   extelem.toolbarIconDescr
-# FUNCTION
-#   Returns this module's toolbar icon description.
-# RESULT
-#   * descr -- string describing the toolbar icon
-#****
-proc $MODULE.toolbarIconDescr {} {
-    return "Add new External element"
-}
-
 #****f* extelem.tcl/extelem.ifcName
 # NAME
 #   extelem.ifcName -- interface name
@@ -230,53 +188,4 @@ proc $MODULE.destroy { eid node_id } {
 proc $MODULE.nghook { eid node_id ifc } {
     lassign [lindex [lsearch -index 0 -all -inline -exact [getNodeStolenIfaces $node_id] $ifc] 0] ifc extIfc
     return [list $extIfc lower]
-}
-
-#****f* extelem.tcl/extelem.configGUI
-# NAME
-#   extelem.configGUI -- configuration GUI
-# SYNOPSIS
-#   extelem.configGUI $c $node_id
-# FUNCTION
-#   Defines the structure of the extelem configuration window by calling
-#   procedures for creating and organising the window, as well as procedures
-#   for adding certain modules to that window.
-# INPUTS
-#   * c -- tk canvas
-#   * node_id -- node id
-#****
-proc $MODULE.configGUI { c node_id } {
-    global wi
-    global guielements treecolumns
-    set guielements {}
-    set treecolumns {}
-
-    configGUI_createConfigPopupWin $c
-    wm title $wi "External element configuration"
-    configGUI_nodeName $wi $node_id "External element name:"
-
-    configGUI_addPanedWin $wi
-    configGUI_rj45s $wi $node_id
-
-    configGUI_buttonsACNode $wi $node_id
-}
-
-#****f* extelem.tcl/extelem.configInterfacesGUI
-# NAME
-#   extelem.configInterfacesGUI -- configuration of interfaces GUI
-# SYNOPSIS
-#   extelem.configInterfacesGUI $wi $node_id $ifc
-# FUNCTION
-#   Defines which modules for changing interfaces parameters are contained in
-#   the extelem configuration window. It is done by calling procedures for adding
-#   certain modules to the window.
-# INPUTS
-#   * wi -- widget
-#   * node_id -- node id
-#   * ifc -- interface id
-#****
-proc $MODULE.configInterfacesGUI { wi node_id ifc } {
-    global guielements
-
-    configGUI_ifcQueueConfig $wi $node_id $ifc
 }
