@@ -86,48 +86,6 @@ proc $MODULE.confNewNode { node_id } {
     setNodeName $node_id [getNewNodeNameType hub $nodeNamingBase(hub)]
 }
 
-#****f* hub.tcl/hub.icon
-# NAME
-#   hub.icon -- icon
-# SYNOPSIS
-#   hub.icon $size
-# FUNCTION
-#   Returns path to node icon, depending on the specified size.
-# INPUTS
-#   * size -- "normal", "small" or "toolbar"
-# RESULT
-#   * path -- path to icon
-#****
-proc $MODULE.icon { size } {
-    global ROOTDIR LIBDIR
-
-    switch $size {
-	normal {
-	    return $ROOTDIR/$LIBDIR/icons/normal/hub.gif
-	}
-	small {
-	    return $ROOTDIR/$LIBDIR/icons/small/hub.gif
-	}
-	toolbar {
-	    return $ROOTDIR/$LIBDIR/icons/tiny/hub.gif
-	}
-    }
-}
-
-#****f* hub.tcl/hub.toolbarIconDescr
-# NAME
-#   hub.toolbarIconDescr -- toolbar icon description
-# SYNOPSIS
-#   hub.toolbarIconDescr
-# FUNCTION
-#   Returns this module's toolbar icon description.
-# RESULT
-#   * descr -- string describing the toolbar icon
-#****
-proc $MODULE.toolbarIconDescr {} {
-    return "Add new Hub"
-}
-
 #****f* hub.tcl/hub.ifcName
 # NAME
 #   hub.ifcName -- interface name
@@ -235,54 +193,4 @@ proc $MODULE.destroy { eid node_id } {
 proc $MODULE.nghook { eid node_id ifc } {
     set ifunit [string range $ifc 1 end]
     return [list $node_id link$ifunit]
-}
-
-
-#****f* hub.tcl/hub.configGUI
-# NAME
-#   hub.configGUI -- configuration GUI
-# SYNOPSIS
-#   hub.configGUI $c $node_id
-# FUNCTION
-#   Defines the structure of the hub configuration window by calling
-#   procedures for creating and organising the window, as well as procedures
-#   for adding certain modules to that window.
-# INPUTS
-#   * c -- tk canvas
-#   * node_id -- node id
-#****
-proc $MODULE.configGUI { c node_id } {
-    global wi
-    global guielements treecolumns
-    set guielements {}
-
-    configGUI_createConfigPopupWin $c
-    wm title $wi "hub configuration"
-    configGUI_nodeName $wi $node_id "Node name:"
-
-    configGUI_addPanedWin $wi
-    set treecolumns {"QLen Queue len" "QDisc Queue disc" "QDrop Queue drop"}
-    configGUI_addTree $wi $node_id
-
-    configGUI_buttonsACNode $wi $node_id
-}
-
-#****f* hub.tcl/hub.configInterfacesGUI
-# NAME
-#   hub.configInterfacesGUI -- configuration of interfaces GUI
-# SYNOPSIS
-#   hub.configInterfacesGUI $wi $node_id $ifc
-# FUNCTION
-#   Defines which modules for changing interfaces parameters are contained in
-#   the hub configuration window. It is done by calling procedures for adding
-#   certain modules to the window.
-# INPUTS
-#   * wi -- widget
-#   * node_id -- node id
-#   * ifc -- interface id
-#****
-proc $MODULE.configInterfacesGUI { wi node_id ifc } {
-    global guielements
-
-    configGUI_ifcQueueConfig $wi $node_id $ifc
 }

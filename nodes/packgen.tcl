@@ -54,33 +54,6 @@ proc $MODULE.confNewNode { node_id } {
     setNodeName $node_id [getNewNodeNameType packgen $nodeNamingBase(packgen)]
 }
 
-proc $MODULE.icon { size } {
-    global ROOTDIR LIBDIR
-
-    switch $size {
-	normal {
-	    return $ROOTDIR/$LIBDIR/icons/normal/packgen.gif
-	}
-	small {
-	    return $ROOTDIR/$LIBDIR/icons/small/packgen.gif
-	}
-	toolbar {
-	    return $ROOTDIR/$LIBDIR/icons/tiny/packgen.gif
-	}
-    }
-}
-
-proc $MODULE.toolbarIconDescr {} {
-    return "Add new Packet generator"
-}
-
-proc $MODULE.notebookDimensions { wi } {
-    set h 430
-    set w 652
-
-    return [list $h $w]
-}
-
 proc $MODULE.ifcName { l r } {
     return e
 }
@@ -225,63 +198,6 @@ proc $MODULE.destroy { eid node_id } {
 
 proc $MODULE.nghook { eid node_id iface } {
     return [list $node_id output]
-}
-
-#****f* packgen.tcl/packgen.configGUI
-# NAME
-#   packgen.configGUI
-# SYNOPSIS
-#   packgen.configGUI $c $node_id
-# FUNCTION
-#   Defines the structure of the packgen configuration window
-#   by calling procedures for creating and organising the
-#   window, as well as procedures for adding certain modules
-#   to that window.
-# INPUTS
-#   * c - tk canvas
-#   * node_id - node id
-#****
-proc $MODULE.configGUI { c node_id } {
-    global wi
-    global packgenguielements packgentreecolumns curnode
-
-    set curnode $node_id
-    set packgenguielements {}
-
-    configGUI_createConfigPopupWin $c
-    wm title $wi "packet generator configuration"
-    configGUI_nodeName $wi $node_id "Node name:"
-
-    set tabs [configGUI_addNotebookPackgen $wi $node_id]
-
-    configGUI_packetRate [lindex $tabs 0] $node_id
-
-    set packgentreecolumns {"Data Data"}
-    foreach tab $tabs {
-	configGUI_addTreePackgen $tab $node_id
-    }
-
-    configGUI_buttonsACPackgenNode $wi $node_id
-}
-
-#****f* packgen.tcl/packgen.configInterfacesGUI
-# NAME
-#   packgen.configInterfacesGUI
-# SYNOPSIS
-#   packgen.configInterfacesGUI $wi $node_id $iface
-# FUNCTION
-#   Defines which modules for changing interfaces parameters
-#   are contained in the packgen.configuration window. It is done
-#   by calling procedures for adding certain modules to the window.
-# INPUTS
-#   * wi - widget
-#   * node_id - node id
-#   * iface - interface id
-#****
-proc $MODULE.configPacketsGUI { wi node_id pac } {
-    global packgenguielements
-
-    configGUI_packetConfig $wi $node_id $pac
 }
 
 #****f* rj45.tcl/rj45.maxLinks

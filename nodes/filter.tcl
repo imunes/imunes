@@ -54,33 +54,6 @@ proc $MODULE.confNewNode { node_id } {
     setNodeName $node_id [getNewNodeNameType filter $nodeNamingBase(filter)]
 }
 
-proc $MODULE.icon {size} {
-    global ROOTDIR LIBDIR
-
-    switch $size {
-	normal {
-	    return $ROOTDIR/$LIBDIR/icons/normal/filter.gif
-	}
-	small {
-	    return $ROOTDIR/$LIBDIR/icons/small/filter.gif
-	}
-	toolbar {
-	    return $ROOTDIR/$LIBDIR/icons/tiny/filter.gif
-	}
-    }
-}
-
-proc $MODULE.toolbarIconDescr {} {
-    return "Add new Filter node"
-}
-
-proc $MODULE.notebookDimensions { wi } {
-    set h 370
-    set w 667
-
-    return [list $h $w]
-}
-
 proc $MODULE.ifcName {l r} {
     return e
 }
@@ -222,68 +195,4 @@ proc $MODULE.destroy { eid node_id } {
 #****
 proc $MODULE.nghook { eid node_id iface } {
     return [list $node_id $iface]
-}
-
-#****f* filter.tcl/filter.configGUI
-# NAME
-#   filter.configGUI
-# SYNOPSIS
-#   filter.configGUI $c $node_id
-# FUNCTION
-#   Defines the structure of the filter.configuration window
-#   by calling procedures for creating and organising the
-#   window, as well as procedures for adding certain modules
-#   to that window.
-# INPUTS
-#   * c - tk canvas
-#   * node_id - node id
-#****
-proc $MODULE.configGUI { c node_id } {
-    global wi
-    global filterguielements filtertreecolumns curnode
-
-    set curnode $node_id
-    set filterguielements {}
-
-    if { [ifcList $node_id] == "" } {
-	tk_dialog .dialog1 "IMUNES warning" \
-	    "This node has no interfaces." \
-	    info 0 Dismiss
-
-	return
-    }
-
-    configGUI_createConfigPopupWin $c
-    wm title $wi "filter configuration"
-    configGUI_nodeName $wi $node_id "Node name:"
-
-    set tabs [configGUI_addNotebookFilter $wi $node_id [lsort [ifcList $node_id]]]
-
-    set filtertreecolumns {"Action Action" "Pattern Pattern" "Mask Mask" \
-	"Offset Offset" "ActionData ActionData"}
-    foreach tab $tabs {
-	configGUI_addTreeFilter $tab $node_id
-    }
-
-    configGUI_buttonsACFilterNode $wi $node_id
-}
-
-#****f* filter.tcl/filter.configInterfacesGUI
-# NAME
-#   filter.configInterfacesGUI
-# SYNOPSIS
-#   filter.configInterfacesGUI $wi $node_id $iface
-# FUNCTION
-#   Defines which modules for changing interfaces parameters
-#   are contained in the filter.configuration window. It is done
-#   by calling procedures for adding certain modules to the window.
-# INPUTS
-#   * wi - widget
-#   * node_id - node id
-#   * iface - interface id
-#****
-proc $MODULE.configIfcRulesGUI { wi node_id iface rule } {
-    global filterguielements
-
-    configGUI_ifcRuleConfig $wi $node_id $iface $rule
 }

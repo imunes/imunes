@@ -58,44 +58,6 @@ proc $MODULE.confNewNode { node_id } {
     setTaygaIPv6Prefix $node_id "2001::/96"
 }
 
-proc $MODULE.icon { size } {
-    global ROOTDIR LIBDIR
-
-    switch $size {
-	normal {
-	    return $ROOTDIR/$LIBDIR/icons/normal/nat64.gif
-	}
-	small {
-	    return $ROOTDIR/$LIBDIR/icons/small/nat64.gif
-	}
-	toolbar {
-	    return $ROOTDIR/$LIBDIR/icons/tiny/nat64.gif
-	}
-    }
-}
-
-proc $MODULE.toolbarIconDescr {} {
-    return "Add new NAT64"
-}
-
-proc $MODULE.notebookDimensions { wi } {
-    set h 270
-    set w 507
-
-    if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
-	== "Configuration" } {
-    set h 320
-	set w 507
-    }
-    if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
-	== "Interfaces" } {
-	set h 320
-	set w 507
-    }
-
-    return [list $h $w]
-}
-
 proc $MODULE.ifcName { l r } {
     return [l3IfcName $l $r]
 }
@@ -221,44 +183,4 @@ proc $MODULE.destroy { eid node_id } {
 
 proc $MODULE.nghook { eid node_id ifc } {
     return [router.frr.nghook $eid $node_id $ifc]
-}
-
-proc $MODULE.configGUI { c node_id } {
-    global wi
-    global guielements treecolumns
-    set guielements {}
-
-    configGUI_createConfigPopupWin $c
-    wm title $wi "nat64 configuration"
-    configGUI_nodeName $wi $node_id "Node name:"
-
-    set tabs [configGUI_addNotebook $wi $node_id {"Configuration" "Interfaces" "NAT64"}]
-    set configtab [lindex $tabs 0]
-    set ifctab [lindex $tabs 1]
-    set nat64tab [lindex $tabs 2]
-
-    set treecolumns {"OperState State" "NatState Nat" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
-            "MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop" }
-    configGUI_addTree $ifctab $node_id
-
-    configGUI_routingProtocols $configtab $node_id
-    configGUI_customImage $configtab $node_id
-    configGUI_attachDockerToExt $configtab $node_id
-    configGUI_servicesConfig $configtab $node_id
-    configGUI_staticRoutes $configtab $node_id
-    configGUI_snapshots $configtab $node_id
-    configGUI_customConfig $configtab $node_id
-    configGUI_nat64Config $nat64tab $node_id
-
-    configGUI_buttonsACNode $wi $node_id
-}
-
-proc $MODULE.configInterfacesGUI { wi node_id ifc } {
-    global guielements
-
-    configGUI_ifcEssentials $wi $node_id $ifc
-    configGUI_ifcQueueConfig $wi $node_id $ifc
-    configGUI_ifcMACAddress $wi $node_id $ifc
-    configGUI_ifcIPv4Address $wi $node_id $ifc
-    configGUI_ifcIPv6Address $wi $node_id $ifc
 }
