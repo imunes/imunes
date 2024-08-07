@@ -38,7 +38,7 @@
 
 set copyright {
 
-Copyright 2004-2014 University of Zagreb.
+Copyright 2004- University of Zagreb.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions
