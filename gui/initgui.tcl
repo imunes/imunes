@@ -91,7 +91,6 @@
 #    * def_router_model -- default router model
 #****
 
-
 set newlink ""
 set selectbox ""
 set selected ""

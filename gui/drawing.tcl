@@ -88,10 +88,12 @@ proc redrawAll {} {
 	    [getNodeCanvas [lindex $nodes 1]] != $curcanvas } {
 	    continue
 	}
+
 	drawLink $link
 	redrawLink $link
 	updateLinkLabel $link
     }
+
     updateIconSize
     .panwin.f1.c config -cursor left_ptr
     raiseAll .panwin.f1.c

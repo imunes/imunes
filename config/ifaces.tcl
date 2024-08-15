@@ -139,8 +139,9 @@ proc getIfcOperState { node_id iface } {
 #   * state -- new operating state of the interface, can be either "up" or
 #     "down"
 #****
-proc setIfcOperState { node_id iface state } {
-    cfgSet "nodes" $node_id "ifaces" $iface "oper_state" $state
+proc setIfcOperState { node_id iface_id state } {
+    cfgSet "nodes" $node_id "ifaces" $iface_id "oper_state" $state
+
 }
 
 #****f* nodecfg.tcl/getIfcNatState
@@ -172,8 +173,8 @@ proc getIfcNatState { node_id iface } {
 #   * ifc -- interface
 #   * state -- new NAT state of the interface, can be either "on" or "off"
 #****
-proc setIfcNatState { node_id iface state } {
-    cfgSet "nodes" $node_id "ifaces" $iface "nat_state" $state
+proc setIfcNatState { node_id iface_id state } {
+    cfgSet "nodes" $node_id "ifaces" $iface_id "nat_state" $state
 
 }
 
@@ -212,8 +213,9 @@ proc getIfcQDisc { node_id iface } {
 #   * qdisc -- queuing discipline of the interface, can be "FIFO", "WFQ" or
 #     "DRR".
 #****
-proc setIfcQDisc { node_id iface qdisc } {
-    cfgSet "nodes" $node_id "ifaces" $iface "ifc_qdisc" $qdisc
+proc setIfcQDisc { node_id iface_id qdisc } {
+    cfgSet "nodes" $node_id "ifaces" $iface_id "ifc_qdisc" $qdisc
+
 }
 
 #****f* nodecfg.tcl/getIfcQDrop
@@ -250,8 +252,9 @@ proc getIfcQDrop { node_id iface } {
 #   * qdrop -- new queue dropping policy of the interface, can be "drop-tail"
 #     or "drop-head".
 #****
-proc setIfcQDrop { node_id iface qdrop } {
-    cfgSet "nodes" $node_id "ifaces" $iface "ifc_qdrop" $qdrop
+proc setIfcQDrop { node_id iface_id qdrop } {
+    cfgSet "nodes" $node_id "ifaces" $iface_id "ifc_qdrop" $qdrop
+
 }
 
 #****f* nodecfg.tcl/getIfcQLen
@@ -285,8 +288,9 @@ proc getIfcQLen { node_id iface } {
 #   * ifc -- interface name.
 #   * qlen -- queue length limit represented in number of packets.
 #****
-proc setIfcQLen { node_id iface len } {
-    cfgSet "nodes" $node_id "ifaces" $iface "queue_len" $len
+proc setIfcQLen { node_id iface_id len } {
+    cfgSet "nodes" $node_id "ifaces" $iface_id "queue_len" $len
+
 }
 
 #****f* nodecfg.tcl/getIfcMTU
@@ -326,8 +330,9 @@ proc getIfcMTU { node_id iface } {
 #   * ifc -- interface name.
 #   * mtu -- maximum transmission unit of a packet, represented in bytes.
 #****
-proc setIfcMTU { node_id iface mtu } {
-    cfgSet "nodes" $node_id "ifaces" $iface "mtu" $mtu
+proc setIfcMTU { node_id iface_id mtu } {
+    cfgSet "nodes" $node_id "ifaces" $iface_id "mtu" $mtu
+
 }
 
 #****f* nodecfg.tcl/getIfcMACaddr
@@ -360,8 +365,9 @@ proc getIfcMACaddr { node_id iface } {
 #   * ifc -- interface name.
 #   * addr -- new MAC address.
 #****
-proc setIfcMACaddr { node_id iface addr } {
-    cfgSet "nodes" $node_id "ifaces" $iface "mac" $addr
+proc setIfcMACaddr { node_id iface_id addr } {
+    cfgSet "nodes" $node_id "ifaces" $iface_id "mac" $addr
+
 }
 
 #****f* nodecfg.tcl/getIfcIPv4addr
@@ -413,8 +419,9 @@ proc getIfcIPv4addrs { node_id iface } {
 #   * ifc -- interface name.
 #   * addrs -- new IPv4 addresses.
 #****
-proc setIfcIPv4addrs { node_id iface addrs } {
-    cfgSet "nodes" $node_id "ifaces" $iface "ipv4_addrs" $addrs
+proc setIfcIPv4addrs { node_id iface_id addrs } {
+    cfgSet "nodes" $node_id "ifaces" $iface_id "ipv4_addrs" $addrs
+
 }
 
 #****f* nodecfg.tcl/getIfcType
@@ -444,8 +451,9 @@ proc getIfcType { node_id iface } {
 #   * ifc -- interface name
 #   * type -- interface type
 #****
-proc setIfcType { node_id iface type } {
-    cfgSet "nodes" $node_id "ifaces" $iface "type" $type
+proc setIfcType { node_id iface_id type } {
+    cfgSet "nodes" $node_id "ifaces" $iface_id "type" $type
+
 }
 
 proc getIfcName { node_id iface_id } {
@@ -483,8 +491,9 @@ proc getIfcStolenIfc { node_id iface } {
 #   * iface -- interface name
 #   * stolen_iface -- stolen interface
 #****
-proc setIfcStolenIfc { node_id iface stolen_iface } {
-    cfgSet "nodes" $node_id "ifaces" $iface "stolen_iface" $stolen_iface
+proc setIfcStolenIfc { node_id iface_id stolen_iface } {
+    cfgSet "nodes" $node_id "ifaces" $iface_id "stolen_iface" $stolen_iface
+
 }
 
 #****f* nodecfg.tcl/getIfcIPv6addr
@@ -536,8 +545,9 @@ proc getIfcIPv6addrs { node_id iface } {
 #   * ifc -- interface name.
 #   * addrs -- new IPv6 addresses.
 #****
-proc setIfcIPv6addrs { node_id iface addrs } {
-    cfgSet "nodes" $node_id "ifaces" $iface "ipv6_addrs" $addrs
+proc setIfcIPv6addrs { node_id iface_id addrs } {
+    cfgSet "nodes" $node_id "ifaces" $iface_id "ipv6_addrs" $addrs
+
 }
 
 proc getIfcPeer { node_id iface } {
@@ -549,8 +559,9 @@ proc getIfcLink { node_id iface } {
     return [cfgGet "nodes" $node_id "ifaces" $iface "link"]
 }
 
-proc setIfcLink { node_id iface link_id } {
-    cfgSet "nodes" $node_id "ifaces" $iface "link" $link_id
+proc setIfcLink { node_id iface_id link_id } {
+    cfgSet "nodes" $node_id "ifaces" $iface_id "link" $link_id
+
 }
 
 #****f* nodecfg.tcl/getIfcLinkLocalIPv6addr
@@ -667,8 +678,8 @@ proc logIfaceNames { node_id } {
 # RESULT
 #   * check -- true if the interface is logical, otherwise false.
 #****
-proc isIfcLogical { node_id iface } {
-    if { $iface in [logIfcList $node_id] } {
+proc isIfcLogical { node_id iface_id } {
+    if { $iface_id in [logIfcList $node_id] } {
 	return true
     }
 
@@ -887,16 +898,16 @@ proc getIfcVlanTag { node_id iface } {
 #   * ifc -- interface name
 #   * dev -- vlan-tag
 #****
-proc setIfcVlanTag { node_id iface tag } {
-    cfgSet "nodes" $node_id "ifaces" $iface "vlan_tag" $tag
+proc setIfcVlanTag { node_id iface_id tag } {
+    cfgSet "nodes" $node_id "ifaces" $iface_id "vlan_tag" $tag
 }
 
-proc getNodeIface { node_id iface } {
-    return [cfgGet "nodes" $node_id "ifaces" $iface]
+proc getNodeIface { node_id iface_id } {
+    return [cfgGet "nodes" $node_id "ifaces" $iface_id]
 }
 
-proc setNodeIface { node_id iface new_iface } {
-    cfgSetEmpty "nodes" $node_id "ifaces" $iface $new_iface
+proc setNodeIface { node_id iface_id new_iface } {
+    cfgSetEmpty "nodes" $node_id "ifaces" $iface_id $new_iface
 }
 
 #****f* nodecfg.tcl/nodeCfggenIfcIPv4
@@ -912,12 +923,12 @@ proc setNodeIface { node_id iface new_iface } {
 # RESULT
 #   * value -- interface IPv4 configuration script
 #****
-proc nodeCfggenIfcIPv4 { node_id iface } {
+proc nodeCfggenIfcIPv4 { node_id iface_id } {
     set cfg {}
     set primary 1
-    foreach addr [getIfcIPv4addrs $node_id $iface] {
+    foreach addr [getIfcIPv4addrs $node_id $iface_id] {
 	if { $addr != "" } {
-	    lappend cfg [getIPv4IfcCmd $iface $addr $primary]
+	    lappend cfg [getIPv4IfcCmd [getIfcName $node_id $iface_id] $addr $primary]
 	    set primary 0
 	}
     }
@@ -938,12 +949,12 @@ proc nodeCfggenIfcIPv4 { node_id iface } {
 # RESULT
 #   * value -- interface IPv6 configuration script
 #****
-proc nodeCfggenIfcIPv6 { node_id iface } {
+proc nodeCfggenIfcIPv6 { node_id iface_id } {
     set cfg {}
     set primary 1
-    foreach addr [getIfcIPv6addrs $node_id $iface] {
+    foreach addr [getIfcIPv6addrs $node_id $iface_id] {
 	if { $addr != "" } {
-	    lappend cfg [getIPv6IfcCmd $iface $addr $primary]
+	    lappend cfg [getIPv6IfcCmd [getIfcName $node_id $iface_id] $addr $primary]
 	    set primary 0
 	}
     }
@@ -989,7 +1000,6 @@ proc removeIface { node_id iface_id } {
 	removeLink $link_id 1
     }
 
-    # move to removeIfaces procedure
     setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] [getIfcIPv4addr $node_id $iface_id] 1]
     setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] [getIfcIPv6addr $node_id $iface_id] 1]
     setToRunning "mac_used_list" [removeFromList [getFromRunning "mac_used_list"] [getIfcMACaddr $node_id $iface_id] 1]

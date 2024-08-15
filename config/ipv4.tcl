@@ -296,6 +296,7 @@ proc autoIPv4addr { node iface } {
 	}
     }
 
+    # TODO: reduce with _getNextIPv4addr proc
     set targetbyte [$node_type.IPAddrRange]
 
     set targetbyte2 0
@@ -318,6 +319,35 @@ proc autoIPv4addr { node iface } {
     }
 
     lappendToRunning "ipv4_used_list" [getIfcIPv4addr $node $iface]
+}
+
+proc _getNextIPv4addr { node_type } {
+    global IPv4autoAssign
+
+    if { ! $IPv4autoAssign } {
+	return
+    }
+
+    global numbits
+
+    set targetbyte [$node_type.IPAddrRange]
+
+    set targetbyte2 0
+
+    if { $numbits <= 8 } {
+	set ipv4addr "[findFreeIPv4Net $numbits].$targetbyte2.$targetbyte2.$targetbyte/$numbits"
+    } elseif { $numbits > 8 && $numbits <=16 } {
+	set ipv4addr "[findFreeIPv4Net $numbits].$targetbyte2.$targetbyte/$numbits"
+    } elseif { $numbits > 16 && $numbits <=24 } {
+	set ipv4addr "[findFreeIPv4Net $numbits].$targetbyte/$numbits"
+    } elseif { $numbits > 24 } {
+	set lastbyte [lindex [split [findFreeIPv4Net $numbits] .] 3]
+	set first3bytes [join [lrange [split [findFreeIPv4Net $numbits] .] 0 2] .]
+	set targetbyte3 [expr {$lastbyte + 1}]
+	set ipv4addr "$first3bytes.$targetbyte3/$numbits"
+    }
+
+    return $ipv4addr
 }
 
 #****f* ipv4.tcl/nextFreeIP4Addr
