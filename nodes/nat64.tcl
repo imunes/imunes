@@ -104,7 +104,7 @@ proc $MODULE.IPAddrRange {} {
     return 20
 }
 
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return NETWORK
 }
 

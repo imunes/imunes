@@ -85,18 +85,18 @@ proc $MODULE.ifcName {l r} {
     return e
 }
 
-#****f* filter.tcl/filter.layer
+#****f* filter.tcl/filter.netlayer
 # NAME
-#   filter.layer
+#   filter.netlayer
 # SYNOPSIS
-#   set layer [filter.layer]
+#   set layer [filter.netlayer]
 # FUNCTION
 #   Returns the layer on which the filter.communicates
 #   i.e. returns LINK.
 # RESULT
 #   * layer -- set to LINK
 #****
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return LINK
 }
 

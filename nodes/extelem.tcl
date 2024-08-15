@@ -143,17 +143,17 @@ proc $MODULE.ifcName {l r} {
     return x
 }
 
-#****f* extelem.tcl/extelem.layer
+#****f* extelem.tcl/extelem.netlayer
 # NAME
-#   extelem.layer -- layer
+#   extelem.netlayer -- layer
 # SYNOPSIS
-#   set layer [extelem.layer]
+#   set layer [extelem.netlayer]
 # FUNCTION
 #   Returns the layer on which the extelem operates, i.e. returns LINK.
 # RESULT
 #   * layer -- set to LINK
 #****
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return NETWORK
 }
 

@@ -215,7 +215,7 @@ proc listLANNodes { l2node_id l2peers } {
     lappend l2peers $l2node_id
     foreach ifc [ifcList $l2node_id] {
 	lassign [logicalPeerByIfc $l2node_id $ifc] peer -
-	if { [[getNodeType $peer].layer] == "LINK" &&  [getNodeType $peer] != "rj45" } {
+	if { [[getNodeType $peer].netlayer] == "LINK" &&  [getNodeType $peer] != "rj45" } {
 	    if { $peer ni $l2peers } {
 		set l2peers [listLANNodes $peer $l2peers]
 	    }
@@ -1078,21 +1078,21 @@ proc setActiveTool { tool } {
     set ungrouped "select link rectangle oval freeform text"
     if { $activetool in $ungrouped } {
 	$mf.left.$activetool state !selected
-    } elseif { [$activetool.layer] == "LINK" } {
+    } elseif { [$activetool.netlayer] == "LINK" } {
 	$mf.left.link_layer state !selected
-    } elseif { [$activetool.layer] == "NETWORK" } {
+    } elseif { [$activetool.netlayer] == "NETWORK" } {
 	$mf.left.net_layer state !selected
     }
 
     if { $tool in $ungrouped } {
 	$mf.left.$tool state selected
-    } elseif { [$tool.layer] == "LINK" } {
+    } elseif { [$tool.netlayer] == "LINK" } {
 	set image [image create photo -file [$tool.icon toolbar]]
 	set arrowimage [image create photo -file "$ROOTDIR/$LIBDIR/icons/tiny/l2.gif"]
 	$image copy $arrowimage -from 29 30 40 40 -to 29 30 40 40 -compositingrule overlay
 	$mf.left.link_layer configure -image $image
 	$mf.left.link_layer state selected
-    } elseif { [$tool.layer] == "NETWORK" } {
+    } elseif { [$tool.netlayer] == "NETWORK" } {
 	set image [image create photo -file [$tool.icon toolbar]]
 	set arrowimage [image create photo -file "$ROOTDIR/$LIBDIR/icons/tiny/l3.gif"]
 	$image copy $arrowimage -from 29 30 40 40 -to 29 30 40 40 -compositingrule overlay

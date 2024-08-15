@@ -911,7 +911,7 @@ proc loadCfgLegacy { cfg } {
 	    exit
 	}
 	if { "lo0" ni [logIfcList $node] && \
-	    [[getNodeType $node].layer] == "NETWORK"} {
+	    [[getNodeType $node].netlayer] == "NETWORK"} {
 
 	    set logiface_id [newLogIface $node_id "lo"]
 	    setIfcIPv4addrs $node $logiface_id "127.0.0.1/8"

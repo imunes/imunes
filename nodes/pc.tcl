@@ -197,17 +197,17 @@ proc $MODULE.IPAddrRange {} {
     return 20
 }
 
-#****f* pc.tcl/pc.layer
+#****f* pc.tcl/pc.netlayer
 # NAME
-#   pc.layer -- layer
+#   pc.netlayer -- layer
 # SYNOPSIS
-#   set layer [pc.layer]
+#   set layer [pc.netlayer]
 # FUNCTION
 #   Returns the layer on which the pc communicates, i.e. returns NETWORK.
 # RESULT
 #   * layer -- set to NETWORK
 #****
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return NETWORK
 }
 

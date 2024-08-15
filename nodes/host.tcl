@@ -186,17 +186,17 @@ proc $MODULE.IPAddrRange {} {
     return 10
 }
 
-#****f* host.tcl/host.layer
+#****f* host.tcl/host.netlayer
 # NAME
-#   host.layer -- layer
+#   host.netlayer -- layer
 # SYNOPSIS
-#   set layer [host.layer]
+#   set layer [host.netlayer]
 # FUNCTION
 #   Returns the layer on which the host operates i.e. returns NETWORK.
 # RESULT
 #   * layer -- set to NETWORK
 #****
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return NETWORK
 }
 

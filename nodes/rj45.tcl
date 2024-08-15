@@ -126,17 +126,17 @@ proc $MODULE.ifcName {l r} {
     return ""
 }
 
-#****f* rj45.tcl/rj45.layer
+#****f* rj45.tcl/rj45.netlayer
 # NAME
-#   rj45.layer -- layer
+#   rj45.netlayer -- layer
 # SYNOPSIS
-#   set layer [rj45.layer]
+#   set layer [rj45.netlayer]
 # FUNCTION
 #   Returns the layer on which the rj45 operates, i.e. returns LINK.
 # RESULT
 #   * layer -- set to LINK
 #****
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return LINK
 }
 

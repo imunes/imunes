@@ -85,11 +85,11 @@ proc $MODULE.ifcName { l r } {
     return e
 }
 
-#****f* packgen.tcl/packgen.layer
+#****f* packgen.tcl/packgen.netlayer
 # NAME
-#   packgen.layer
+#   packgen.netlayer
 # SYNOPSIS
-#   set layer [packgen.layer]
+#   set layer [packgen.netlayer]
 # FUNCTION
 #   Returns the layer on which the packgen.communicates
 #   i.e. returns LINK.
@@ -97,7 +97,7 @@ proc $MODULE.ifcName { l r } {
 #   * layer -- set to LINK
 #****
 
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return LINK
 }
 
