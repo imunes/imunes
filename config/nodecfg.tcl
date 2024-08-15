@@ -444,7 +444,7 @@ proc getSubnetData { this_node_id this_ifc subnet_gws nodes_l2data subnet_idx } 
     dict set nodes_l2data $this_node_id $this_ifc $subnet_idx
 
     set this_type [getNodeType $this_node_id]
-    if { [$this_type.layer] == "NETWORK" } {
+    if { [$this_type.netlayer] == "NETWORK" } {
 	if { $this_type in "router extnat" } {
 	    # this node is a router/extnat, add our IP addresses to lists
 	    set gw4 [lindex [split [getIfcIPv4addr $this_node_id $this_ifc] /] 0]
@@ -1619,7 +1619,7 @@ proc transformNodes { nodes to_type } {
     lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable
 
     foreach node_id $nodes {
-	if { [[getNodeType $node_id].layer] == "NETWORK" } {
+	if { [[getNodeType $node_id].netlayer] == "NETWORK" } {
 	    set from_type [getNodeType $node_id]
 
 	    # replace type
@@ -1647,18 +1647,18 @@ proc transformNodes { nodes to_type } {
     }
 }
 
-#****f* nodecfg.tcl/pseudo.layer
+#****f* nodecfg.tcl/pseudo.netlayer
 # NAME
-#   pseudo.layer -- pseudo layer
+#   pseudo.netlayer -- pseudo layer
 # SYNOPSIS
-#   set layer [pseudo.layer]
+#   set layer [pseudo.netlayer]
 # FUNCTION
 #   Returns the layer on which the pseudo node operates
 #   i.e. returns no layer.
 # RESULT
 #   * layer -- returns an empty string
 #****
-proc pseudo.layer {} {
+proc pseudo.netlayer {} {
 }
 
 #****f* nodecfg.tcl/pseudo.virtlayer

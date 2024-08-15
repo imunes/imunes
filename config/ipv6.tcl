@@ -127,7 +127,7 @@ proc autoIPv6addr { node iface } {
     #autorenumbered_ifcs6 - list of all interfaces that changed an address
 
     set node_type [getNodeType $node]
-    if { [$node_type.layer] != "NETWORK" } {
+    if { [$node_type.netlayer] != "NETWORK" } {
 	#
 	# Shouldn't get called at all for link-layer nodes
 	#
@@ -139,7 +139,7 @@ proc autoIPv6addr { node iface } {
     lassign [logicalPeerByIfc $node $iface] peer_node peer_if
     set peer_ip6addrs {}
     if { $peer_node != "" } {
-	if { [[getNodeType $peer_node].layer] == "LINK" } {
+	if { [[getNodeType $peer_node].netlayer] == "LINK" } {
 	    foreach l2node [listLANNodes $peer_node {}] {
 		foreach ifc [ifcList $l2node] {
 		    lassign [logicalPeerByIfc $l2node $ifc] peer peer_if

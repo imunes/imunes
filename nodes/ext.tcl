@@ -149,17 +149,17 @@ proc $MODULE.IPAddrRange {} {
     return 20
 }
 
-#****f* ext.tcl/ext.layer
+#****f* ext.tcl/ext.netlayer
 # NAME
-#   ext.layer -- layer
+#   ext.netlayer -- layer
 # SYNOPSIS
-#   set layer [ext.layer]
+#   set layer [ext.netlayer]
 # FUNCTION
 #   Returns the layer on which the pc communicates, i.e. returns NETWORK.
 # RESULT
 #   * layer -- set to NETWORK
 #****
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return NETWORK
 }
 

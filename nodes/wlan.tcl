@@ -64,7 +64,7 @@ proc $MODULE.ifcName {l r} {
     return e
 }
 
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return LINK
 }
 

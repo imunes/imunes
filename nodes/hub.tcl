@@ -142,17 +142,17 @@ proc $MODULE.ifcName {l r} {
     return e
 }
 
-#****f* hub.tcl/hub.layer
+#****f* hub.tcl/hub.netlayer
 # NAME
-#   hub.layer -- layer
+#   hub.netlayer -- layer
 # SYNOPSIS
-#   set layer [hub.layer]
+#   set layer [hub.netlayer]
 # FUNCTION
 #   Returns the layer on which the hub operates, i.e. returns LINK.
 # RESULT
 #   * layer -- set to LINK
 #****
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return LINK
 }
 

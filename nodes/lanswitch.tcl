@@ -146,17 +146,17 @@ proc $MODULE.ifcName {l r} {
     return e
 }
 
-#****f* lanswitch.tcl/lanswitch.layer
+#****f* lanswitch.tcl/lanswitch.netlayer
 # NAME
-#   lanswitch.layer -- layer
+#   lanswitch.netlayer -- layer
 # SYNOPSIS
-#   set layer [lanswitch.layer]
+#   set layer [lanswitch.netlayer]
 # FUNCTION
 #   Returns the layer on which the lanswitch operates, i.e. returns LINK.
 # RESULT
 #   * layer -- set to LINK
 #****
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return LINK
 }
 

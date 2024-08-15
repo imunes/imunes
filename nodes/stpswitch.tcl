@@ -127,11 +127,11 @@ proc $MODULE.IPAddrRange {} {
     return 20
 }
 
-#****f* stpswitch.tcl/stpswitch.layer
+#****f* stpswitch.tcl/stpswitch.netlayer
 # NAME
-#   stpswitch.layer
+#   stpswitch.netlayer
 # SYNOPSIS
-#   set layer [stpswitch.layer]
+#   set layer [stpswitch.netlayer]
 # FUNCTION
 #   Returns the layer on which the stpswitch communicates
 #   i.e. returns LINK.
@@ -139,7 +139,7 @@ proc $MODULE.IPAddrRange {} {
 #   * layer -- set to LINK
 #****
 
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return LINK
 }
 
