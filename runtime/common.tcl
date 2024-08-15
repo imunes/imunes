@@ -296,6 +296,7 @@ proc setOperMode { mode } {
 	    pipesClose
 
 	    setToRunning "cfg_deployed" false
+
 	    wm protocol . WM_DELETE_WINDOW {
 		exit
 	    }
@@ -346,21 +347,21 @@ proc setOperMode { mode } {
 #   node.
 #****
 proc spawnShellExec {} {
-    set node [lindex [.panwin.f1.c gettags {node && current}] 1]
-    if { $node == "" } {
-	set node [lindex [.panwin.f1.c gettags {nodelabel && current}] 1]
-	if { $node == "" } {
+    set node_id [lindex [.panwin.f1.c gettags {node && current}] 1]
+    if { $node_id == "" } {
+	set node_id [lindex [.panwin.f1.c gettags {nodelabel && current}] 1]
+	if { $node_id == "" } {
 	    return
 	}
     }
-    if { [[getNodeType $node].virtlayer] != "VIMAGE" } {
-	nodeConfigGUI .panwin.f1.c $node
+    if { [[getNodeType $node_id].virtlayer] != "VIMAGE" } {
+	nodeConfigGUI .panwin.f1.c $node_id
     } else {
-	set cmd [lindex [existingShells [[getNodeType $node].shellcmds] $node] 0]
+	set cmd [lindex [existingShells [[getNodeType $node_id].shellcmds] $node_id] 0]
 	if { $cmd == "" } {
 	    return
 	}
-	spawnShell $node $cmd
+	spawnShell $node_id $cmd
     }
 }
 
@@ -505,7 +506,7 @@ proc dumpLinksToFile { path } {
 	}
 
 	lassign [getLinkPeers $link] lnode1 lnode2
-	lassign [getLinkPeersIfaces $link] ifname1 ifname2
+	lassign [getLinkPeersIfaces $link] iface1_id iface2_id
 
 	set mirror_link [getLinkMirror $link]
 	if { $mirror_link != "" } {
@@ -513,7 +514,7 @@ proc dumpLinksToFile { path } {
 
 	    # switch direction for mirror links
 	    lassign "$lnode2 [lindex [getLinkPeers $mirror_link] 1]" lnode1 lnode2
-	    lassign "$ifname2 [lindex [getLinkPeersIfaces $mirror_link] 1]" ifname1 ifname2
+	    lassign "$iface2_id [lindex [getLinkPeersIfaces $mirror_link] 1]" iface1_id iface2_id
 	}
 
 	set name1 [getNodeName $lnode1]
@@ -521,8 +522,8 @@ proc dumpLinksToFile { path } {
 
 	set linkname "$name1$linkDelim$name2"
 
-	set lpair [list $lnode1 $ifname1]
-	set rpair [list $lnode2 $ifname2]
+	set lpair [list $lnode1 [getIfcName $lnode1 $iface1_id]]
+	set rpair [list $lnode2 [getIfcName $lnode2 $iface2_id]]
 	if { [getNodeType $lnode1] in "rj45 extelem" } {
 	    if { [getNodeType $lnode1] == "rj45" } {
 		set lpair $name1

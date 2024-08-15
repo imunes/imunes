@@ -132,7 +132,6 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 	removeLink $mirror_link_id $keep_ifaces
     }
 
-    # move to removeIfaces procedure?
     foreach node_id $pnodes {
 	if { [getNodeType $node_id] == "pseudo" } {
 	    setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $node_id]

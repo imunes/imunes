@@ -283,15 +283,15 @@ proc setCustomConfig { node_id cfg_id cmd config } {
 # NAME
 #   removeCustomConfig -- remove custom configuration
 # SYNOPSIS
-#   removeCustomConfig $node $id
+#   removeCustomConfig $node_id $id
 # FUNCTION
 #   For input node and configuration ID this procedure removes custom
 #   configuration from node.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #   * id -- configuration id
 #****
-proc removeCustomConfig { node cfg_id } {
+proc removeCustomConfig { node_id cfg_id } {
     cfgUnset "nodes" $node_id "custom_configs" $cfg_id
 }
 
@@ -603,7 +603,7 @@ proc getStatIPv6routes { node_id } {
 
 #****f* nodecfg.tcl/setStatIPv6routes
 # NAME
-#   setStatIPv4routes -- set static IPv6 routes.
+#   setStatIPv6routes -- set static IPv6 routes.
 # SYNOPSIS
 #   setStatIPv6routes $node $routes
 # FUNCTION
@@ -931,8 +931,8 @@ proc removeNode { node_id { keep_other_ifaces 0 } } {
 	removeImageReference [getCustomIcon $node_id] $node_id
     }
 
-    foreach iface [ifcList $node_id] {
-	removeLink [linkByPeers $node_id [getIfcPeer $node_id $iface]] $keep_other_ifaces
+    foreach iface_id [ifcList $node_id] {
+	removeLink [linkByPeers $node_id [getIfcPeer $node_id $iface_id]] $keep_other_ifaces
     }
 
     setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $node_id]
@@ -1098,10 +1098,10 @@ proc getRouterInterfaceCfg { node_id } {
     switch -exact -- $model {
 	"quagga" -
 	"frr" {
-	    foreach iface [allIfcList $node_id] {
-		lappend cfg "interface $iface"
+	    foreach iface_id [allIfcList $node_id] {
+		lappend cfg "interface [getIfcName $node_id $iface_id]"
 
-		set addrs [getIfcIPv4addrs $node_id $iface]
+		set addrs [getIfcIPv4addrs $node_id $iface_id]
 		foreach addr $addrs {
 		    if { $addr != "" } {
 			lappend cfg " ip address $addr"
@@ -1109,12 +1109,12 @@ proc getRouterInterfaceCfg { node_id } {
 		}
 
 		if { $ospf_enabled } {
-		    if { ! [isIfcLogical $node_id $iface] } {
+		    if { ! [isIfcLogical $node_id $iface_id] } {
 			lappend cfg " ip ospf area 0.0.0.0"
 		    }
 		}
 
-		set addrs [getIfcIPv6addrs $node_id $iface]
+		set addrs [getIfcIPv6addrs $node_id $iface_id]
 		foreach addr $addrs {
 		    if { $addr != "" } {
 			lappend cfg " ipv6 address $addr"
@@ -1122,12 +1122,12 @@ proc getRouterInterfaceCfg { node_id } {
 		}
 
 		if { $model == "frr" && $ospf6_enabled } {
-		    if { ! [isIfcLogical $node_id $iface] } {
+		    if { ! [isIfcLogical $node_id $iface_id] } {
 			lappend cfg " ipv6 ospf6 area 0.0.0.0"
 		    }
 		}
 
-		if { [getIfcOperState $node_id $iface] == "down" } {
+		if { [getIfcOperState $node_id $iface_id] == "down" } {
 		    lappend cfg " shutdown"
 		}
 
@@ -1135,9 +1135,9 @@ proc getRouterInterfaceCfg { node_id } {
 	    }
 	}
 	"static" {
-	    foreach iface [allIfcList $node_id] {
-		set cfg [concat $cfg [nodeCfggenIfcIPv4 $node_id $iface]]
-		set cfg [concat $cfg [nodeCfggenIfcIPv6 $node_id $iface]]
+	    foreach iface_id [allIfcList $node_id] {
+		set cfg [concat $cfg [nodeCfggenIfcIPv4 $node_id $iface_id]]
+		set cfg [concat $cfg [nodeCfggenIfcIPv6 $node_id $iface_id]]
 	    }
 	}
     }

@@ -143,20 +143,20 @@ proc checkForApplications { node app_list } {
 # NAME
 #   startWiresharkOnNodeIfc -- start wireshark on an interface
 # SYNOPSIS
-#   startWiresharkOnNodeIfc $node $ifc
+#   startWiresharkOnNodeIfc $node $iface_name
 # FUNCTION
 #   Start Wireshark on a virtual node on the specified interface.
 # INPUTS
 #   * node -- virtual node id
-#   * ifc -- virtual node interface
+#   * iface_name -- virtual node interface
 #****
-proc startWiresharkOnNodeIfc { node ifc } {
+proc startWiresharkOnNodeIfc { node iface_name } {
     set eid [getFromRunning "eid"]
 
     if { [checkForExternalApps "startxcmd"] == 0 && \
 	[checkForApplications $node "wireshark"] == 0 } {
 
-        startXappOnNode $node "wireshark -ki $ifc"
+        startXappOnNode $node "wireshark -ki $iface_name"
     } else {
 	set wiresharkComm ""
 	foreach wireshark "wireshark wireshark-gtk wireshark-qt" {
@@ -167,8 +167,8 @@ proc startWiresharkOnNodeIfc { node ifc } {
 	}
 
 	if { $wiresharkComm != "" } {
-	    exec docker exec $eid.$node tcpdump -s 0 -U -w - -i $ifc 2>/dev/null |\
-		$wiresharkComm -o "gui.window_title:$ifc@[getNodeName $node] ($eid)" -k -i - &
+	    exec docker exec $eid.$node tcpdump -s 0 -U -w - -i $iface_name 2>/dev/null |\
+		$wiresharkComm -o "gui.window_title:$iface_name@[getNodeName $node] ($eid)" -k -i - &
 	} else {
             tk_dialog .dialog1 "IMUNES error" \
 	"IMUNES could not find an installation of Wireshark.\
@@ -210,16 +210,16 @@ proc startXappOnNode { node app } {
 # NAME
 #   startTcpdumpOnNodeIfc -- start tcpdump on an interface
 # SYNOPSIS
-#   startTcpdumpOnNodeIfc $node $ifc
+#   startTcpdumpOnNodeIfc $node $iface_name
 # FUNCTION
 #   Start tcpdump in xterm on a virtual node on the specified interface.
 # INPUTS
 #   * node -- virtual node id
-#   * ifc -- virtual node interface
+#   * iface_name -- virtual node interface
 #****
-proc startTcpdumpOnNodeIfc { node ifc } {
+proc startTcpdumpOnNodeIfc { node iface_name } {
     if { [checkForApplications $node "tcpdump"] == 0 } {
-        spawnShell $node "tcpdump -ni $ifc"
+        spawnShell $node "tcpdump -ni $iface_name"
     }
 }
 
@@ -591,16 +591,16 @@ proc createNodePhysIfcs { node ifcs } {
     set node_type [getNodeType $node]
 
     # Create "physical" network interfaces
-    foreach ifc $ifcs {
-	set ifname $ifc
-	set prefix [string trimright $ifc "0123456789"]
+    foreach iface_id $ifcs {
+	set iface_name [getIfcName $node $iface_id]
+	set prefix [string trimright $iface_name "0123456789"]
 	if { $node_type in "ext extnat" } {
-	    set ifname $eid-$node
+	    set iface_name $eid-$node
 	}
 
 	# direct link, simulate capturing the host interface into the node,
 	# without bridges between them
-	set peer [getIfcPeer $node $ifc]
+	set peer [getIfcPeer $node $iface_id]
 	if { $peer != "" } {
 	    set link [linkByPeers $node $peer]
 	    if { $link != "" && [getLinkDirect $link] } {
@@ -614,38 +614,38 @@ proc createNodePhysIfcs { node ifcs } {
 	    eth {
 		# Create a veth pair - private hook in node netns and public hook
 		# in the experiment netns
-		createNsVethPair $ifname $nodeNs $node-$ifc $eid
+		createNsVethPair $iface_id $nodeNs $node-$iface_id $eid
 	    }
 	}
 
 	switch -exact $prefix {
 	    e {
 		# bridge private hook with L2 node
-		setNsIfcMaster $nodeNs $ifname $node "up"
+		setNsIfcMaster $nodeNs $iface_id $node "up"
 	    }
 	    ext {
 		# bridge private hook with ext node
-		#setNsIfcMaster $nodeNs $ifname $eid-$node "up"
+		#setNsIfcMaster $nodeNs $iface_id $eid-$node "up"
 	    }
 	    eth {
-		set ether [getIfcMACaddr $node $ifc]
-                if { $ether == "" } {
-                    autoMACaddr $node $ifc
-		    set ether [getIfcMACaddr $node $ifc]
-                }
+		#set ether [getIfcMACaddr $node $iface_id]
+		#if { $ether == "" } {
+		#    autoMACaddr $node $iface_id
+		#    set ether [getIfcMACaddr $node $iface_id]
+		#}
 
-		set nsstr ""
-		if { $nodeNs != "" } {
-		    set nsstr "-n $nodeNs"
-		}
-		pipesExec "ip $nsstr link set $ifc address $ether" "hold"
+		#set nsstr ""
+		#if { $nodeNs != "" } {
+		#    set nsstr "-n $nodeNs"
+		#}
+		#pipesExec "ip $nsstr link set $iface_id address $ether" "hold"
 	    }
 	    default {
 		# capture physical interface directly into the node, without using a bridge
 		# we don't know the name, so make sure all other options cover other IMUNES
 		# 'physical' interfaces
 		# XXX not yet implemented
-		pipesExec "ip link set $ifc netns $nodeNs" "hold"
+		pipesExec "ip link set $iface_id netns $nodeNs" "hold"
 	    }
 	}
     }
@@ -682,16 +682,15 @@ proc checkHangingTCPs { eid nodes } {}
 proc createNodeLogIfcs { node } {
     set node_id "[getFromRunning "eid"].$node"
 
-    foreach ifc [logIfcList $node] {
-	switch -exact [getLogIfcType $node $ifc] {
+    foreach iface_id [logIfcList $node] {
+	set iface_name [getIfcName $node $iface_id]
+	switch -exact [getIfcType $node $iface_id] {
 	    vlan {
-		# physical interfaces are created when creating links, so VLANs
-		# must be created after links
 	    }
 	    lo {
-		if { $ifc != "lo0" } {
-		    pipesExec "docker exec -d $node_id ip link add $ifc type dummy" "hold"
-		    pipesExec "docker exec -d $node_id ip link set $ifc up" "hold"
+		if { $iface_name != "lo0" } {
+		    pipesExec "docker exec -d $node_id ip link add $iface_name type dummy" "hold"
+		    pipesExec "docker exec -d $node_id ip link set $iface_name up" "hold"
 		}
 	    }
 	}
@@ -772,12 +771,14 @@ proc createNsVethPair { ifname1 netNs1 ifname2 netNs2 } {
 	set nsstr1 "netns $netNs1"
 	set nsstr1x "-n $netNs1"
     }
+
     set nsstr2 ""
     set nsstr2x ""
     if { $netNs2 != "" } {
 	set nsstr2 "netns $netNs2"
 	set nsstr2x "-n $netNs2"
     }
+
     pipesExec "ip link add name $eid-$ifname1 $nsstr1 type veth peer name $eid-$ifname2 $nsstr2" "hold"
     pipesExec "ip $nsstr1x link set $eid-$ifname1 name $ifname1" "hold"
     pipesExec "ip $nsstr2x link set $eid-$ifname2 name $ifname2" "hold"
@@ -800,7 +801,7 @@ proc setNsIfcMaster { netNs ifname master state } {
 # NAME
 #   createDirectLinkBetween -- create direct link between
 # SYNOPSIS
-#   createDirectLinkBetween $lnode1 $lnode2 $ifname1 $ifname2
+#   createDirectLinkBetween $lnode1 $lnode2 $iface1_id $iface2_id
 # FUNCTION
 #   Creates direct link between two given nodes. Direct link connects the host
 #   interface into the node, without ng_node between them.
@@ -810,7 +811,7 @@ proc setNsIfcMaster { netNs ifname master state } {
 #   * iname1 -- interface name on the first node
 #   * iname2 -- interface name on the second node
 #****
-proc createDirectLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
+proc createDirectLinkBetween { lnode1 lnode2 iface1_id iface2_id } {
     set eid [getFromRunning "eid"]
 
     if { [getNodeType $lnode1] in "rj45 extelem" || [getNodeType $lnode2] in "rj45 extelem" } {
@@ -818,14 +819,14 @@ proc createDirectLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 	    set physical_ifc [getNodeName $lnode1]
 	    if { [getNodeType $lnode1] == "extelem" } {
 		set ifcs [getNodeStolenIfaces $lnode1]
-		set physical_ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname1"] 1]
+		set physical_ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$iface1_id"] 1]
 	    } elseif { [getEtherVlanEnabled $lnode1] } {
 		set vlan [getEtherVlanTag $lnode1]
 		set physical_ifc $physical_ifc.$vlan
 	    }
 	    set nodeNs [getNodeNetns $eid $lnode2]
-	    set full_virtual_ifc $eid-$lnode2-$ifname2
-	    set virtual_ifc $ifname2
+	    set full_virtual_ifc $eid-$lnode2-$iface2_id
+	    set virtual_ifc $iface2_id
 	    set ether [getIfcMACaddr $lnode2 $virtual_ifc]
 
 	    if { [[getNodeType $lnode2].virtlayer] == "NETGRAPH" } {
@@ -837,14 +838,14 @@ proc createDirectLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 	    set physical_ifc [getNodeName $lnode2]
 	    if { [getNodeType $lnode2] == "extelem" } {
 		set ifcs [getNodeStolenIfaces $lnode2]
-		set physical_ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname2"] 1]
+		set physical_ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$iface2_id"] 1]
 	    } elseif { [getEtherVlanEnabled $lnode2] } {
 		set vlan [getEtherVlanTag $lnode2]
 		set physical_ifc $physical_ifc.$vlan
 	    }
 	    set nodeNs [getNodeNetns $eid $lnode1]
-	    set full_virtual_ifc $eid-$lnode1-$ifname1
-	    set virtual_ifc $ifname1
+	    set full_virtual_ifc $eid-$lnode1-$iface1_id
+	    set virtual_ifc $iface1_id
 	    set ether [getIfcMACaddr $lnode1 $virtual_ifc]
 
 	    if { [[getNodeType $lnode1].virtlayer] == "NETGRAPH" } {
@@ -874,54 +875,58 @@ proc createDirectLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
     }
 
     if { [getNodeType $lnode1] in "ext extnat" } {
-	set ifname1 $eid-$lnode1
+	set iface1_name $eid-$lnode1
+    } else {
+	set iface1_name [getIfcName $lnode1 $iface1_id]
     }
 
     if { [getNodeType $lnode2] in "ext extnat" } {
-	set ifname2 $eid-$lnode2
+	set iface2_name $eid-$lnode2
+    } else {
+	set iface2_name [getIfcName $lnode2 $iface2_id]
     }
 
     set node1Ns [getNodeNetns $eid $lnode1]
     set node2Ns [getNodeNetns $eid $lnode2]
-    createNsVethPair $ifname1 $node1Ns $ifname2 $node2Ns
+    createNsVethPair $iface1_name $node1Ns $iface2_name $node2Ns
 
-    # add nodes ifc hooks to link bridge and bring them up
-    foreach node [list $lnode1 $lnode2] ifc [list $ifname1 $ifname2] ns [list $node1Ns $node2Ns] {
-	if { [[getNodeType $node].virtlayer] != "NETGRAPH" || [getNodeType $node] in "ext extnat" } {
+    # add nodes iface hooks to link bridge and bring them up
+    foreach node_id [list $lnode1 $lnode2] iface_id [list $iface1_id $iface2_id] ns [list $node1Ns $node2Ns] {
+	if { [[getNodeType $node_id].virtlayer] != "NETGRAPH" || [getNodeType $node_id] in "ext extnat" } {
 	    continue
 	}
 
-	setNsIfcMaster $ns $ifc $node "up"
+	setNsIfcMaster $ns $iface_id $node_id "up"
     }
 }
 
-proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
+proc createLinkBetween { lnode1 lnode2 iface1_id iface2_id link } {
     set eid [getFromRunning "eid"]
 
     # create link bridge in experiment netns
     createNsLinkBridge $eid $link
 
-    # add nodes ifc hooks to link bridge and bring them up
-    foreach node "$lnode1 $lnode2" ifc "$ifname1 $ifname2" {
-	set ifname $node-$ifc
-	if { [getNodeType $node] == "rj45" } {
-	    set ifname [getNodeName $node]
-	    if { [getEtherVlanEnabled $node] } {
-		set vlan [getEtherVlanTag $node]
-		set ifname $ifname.$vlan
+    # add nodes iface hooks to link bridge and bring them up
+    foreach node_id "$lnode1 $lnode2" iface_id "$iface1_id $iface2_id" {
+	#set iface_name $node_id-[getIfcName $node_id $iface_id]
+	set iface_name $node_id-$iface_id
+	if { [getNodeType $node_id] == "rj45" } {
+	    set iface_name [getNodeName $node_id]
+	    if { [getEtherVlanEnabled $node_id] } {
+		set vlan [getEtherVlanTag $node_id]
+		set iface_name $iface_name.$vlan
 	    }
-	} elseif { [getNodeType $node] == "extelem" } {
+	} elseif { [getNodeType $node_id] == "extelem" } {
 	    # won't work if the node is a wireless interface
 	    # because netns is not changed
-	    set ifcs [getNodeStolenIfaces $node]
-	    set ifname [lindex [lsearch -inline -exact -index 0 $ifcs "$ifc"] 1]
+	    set iface_name [lindex [lsearch -inline -exact -index 0 [getNodeStolenIfaces $node_id] "$iface_id"] 1]
 	}
 
-	setNsIfcMaster $eid $ifname $link "up"
+	setNsIfcMaster $eid $iface_name $link "up"
     }
 }
 
-proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
+proc configureLinkBetween { lnode1 lnode2 iface1_id iface2_id link } {
     set eid [getFromRunning "eid"]
 
     set bandwidth [expr [getLinkBandwidth $link] + 0]
@@ -930,22 +935,22 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     set loss [expr [getLinkLoss $link] + 0]
     set dup [expr [getLinkDup $link] + 0]
 
-    configureIfcLinkParams $eid $lnode1 $ifname1 $bandwidth $delay $ber $loss $dup
-    configureIfcLinkParams $eid $lnode2 $ifname2 $bandwidth $delay $ber $loss $dup
+    configureIfcLinkParams $eid $lnode1 $iface1_id $bandwidth $delay $ber $loss $dup
+    configureIfcLinkParams $eid $lnode2 $iface2_id $bandwidth $delay $ber $loss $dup
 
     # FIXME: remove this to interface configuration?
-    foreach node "$lnode1 $lnode2" ifc "$ifname1 $ifname2" {
-	if { [getNodeType $node] in "rj45 extelem" } {
+    foreach node_id "$lnode1 $lnode2" iface_id "$iface1_id $iface2_id" {
+	if { [getNodeType $node_id] in "rj45 extelem" } {
 	    continue
 	}
 
-	set qdisc [getIfcQDisc $node $ifc]
+	set qdisc [getIfcQDisc $node_id $iface_id]
 	if { $qdisc != "FIFO" } {
-	    execSetIfcQDisc $eid $node $ifc $qdisc
+	    execSetIfcQDisc $eid $node_id $iface_id $qdisc
 	}
-	set qlen [getIfcQLen $node $ifc]
+	set qlen [getIfcQLen $node_id $iface_id]
 	if { $qlen != 1000 } {
-	    execSetIfcQLen $eid $node $ifc $qlen
+	    execSetIfcQLen $eid $node_id $iface_id $qlen
 	}
     }
 }
@@ -954,33 +959,40 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
 # NAME
 #   startIfcsNode -- start interfaces on node
 # SYNOPSIS
-#   startIfcsNode $node
+#   startIfcsNode $node_id
 # FUNCTION
 #  Starts all interfaces on the given node.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc startIfcsNode { node } {
-    set nodeNs [getNodeNetns [getFromRunning "eid"] $node]
+proc startIfcsNode { node_id ifaces } {
+    set nodeNs [getNodeNetns [getFromRunning "eid"] $node_id]
+
+    if { $ifaces == "*" } {
+	set ifaces [allIfcList $node_id]
+    }
 
     pipesExec "ip -n $nodeNs link set dev lo down 2>/dev/null" "hold"
     pipesExec "ip -n $nodeNs link set dev lo name lo0 2>/dev/null" "hold"
-    foreach ifc [allIfcList $node] {
-	set mtu [getIfcMTU $node $ifc]
-	if { [getLogIfcType $node $ifc] == "vlan" } {
-	    set tag [getIfcVlanTag $node $ifc]
-	    set dev [getIfcVlanDev $node $ifc]
+    foreach iface_id $ifaces {
+	set iface_name [getIfcName $node_id $iface_id]
+	set mtu [getIfcMTU $node_id $iface_id]
+	if { [getIfcType $node_id $iface_id] == "vlan" } {
+	    set tag [getIfcVlanTag $node_id $iface_id]
+	    set dev [getIfcVlanDev $node_id $iface_id]
 	    if { $tag != "" && $dev != "" } {
-		pipesExec "ip -n $nodeNs link add link $dev name $ifc type vlan id $tag" "hold"
+		pipesExec "ip -n $nodeNs link add link $dev name $iface_name type vlan id $tag" "hold"
 	    }
 	}
-	if {[getIfcOperState $node $ifc] == "up"} {
-	    pipesExec "ip -n $nodeNs link set dev $ifc up mtu $mtu" "hold"
+
+	if { [getIfcOperState $node_id $iface_id] == "up" } {
+	    pipesExec "ip -n $nodeNs link set dev $iface_name up mtu $mtu" "hold"
 	} else {
-	    pipesExec "ip -n $nodeNs link set dev $ifc mtu $mtu" "hold"
+	    pipesExec "ip -n $nodeNs link set dev $iface_name mtu $mtu" "hold"
 	}
-	if {[getIfcNatState $node $ifc] == "on"} {
-	    pipesExec "ip netns exec $nodeNs iptables -t nat -A POSTROUTING -o $ifc -j MASQUERADE" "hold"
+
+	if { [getIfcNatState $node_id $iface_id] == "on" } {
+	    pipesExec "ip netns exec $nodeNs iptables -t nat -A POSTROUTING -o $iface_name -j MASQUERADE" "hold"
 	}
     }
 }
@@ -1072,7 +1084,7 @@ proc killAllNodeProcesses { eid node } {
     pipesExec "docker exec -d $node_id sh -c 'killall5 -9 -o 1 -o \$(pgrep -P 1)'" "hold"
 }
 
-proc runConfOnNode { node } {
+proc runConfOnNode { node ifaces } {
     set eid [getFromRunning "eid"]
 
     set node_id "$eid.$node"
@@ -1483,16 +1495,16 @@ proc configureIfcLinkParams { eid node ifname bandwidth delay ber loss dup } {
 #****
 proc execSetLinkParams { eid link } {
     lassign [getLinkPeers $link] lnode1 lnode2
-    lassign [getLinkPeersIfaces $link] ifname1 ifname2
+    lassign [getLinkPeersIfaces $link] iface1_id iface2_id
 
     set mirror_link [getLinkMirror $link]
     if { $mirror_link != "" } {
 	if { [getNodeType $lnode1] == "pseudo" } {
 	    set lnode1 [lindex [getLinkPeers $mirror_link] 1]
-	    set ifname1 [lindex [getLinkPeersIfaces $mirror_link] 1]
+	    set iface1_id [lindex [getLinkPeersIfaces $mirror_link] 1]
 	} else {
 	    set lnode2 [lindex [getLinkPeers $mirror_link] 1]
-	    set ifname2 [lindex [getLinkPeersIfaces $mirror_link] 1]
+	    set iface2_id [lindex [getLinkPeersIfaces $mirror_link] 1]
 	}
     }
 
@@ -1503,8 +1515,8 @@ proc execSetLinkParams { eid link } {
     set dup [expr [getLinkDup $link] + 0]
 
     pipesCreate
-    configureIfcLinkParams $eid $lnode1 $ifname1 $bandwidth $delay $ber $loss $dup
-    configureIfcLinkParams $eid $lnode2 $ifname2 $bandwidth $delay $ber $loss $dup
+    configureIfcLinkParams $eid $lnode1 $iface1_id $bandwidth $delay $ber $loss $dup
+    configureIfcLinkParams $eid $lnode2 $iface2_id $bandwidth $delay $ber $loss $dup
     pipesClose
 }
 

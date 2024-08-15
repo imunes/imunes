@@ -162,6 +162,7 @@ proc autoIPv6addr { node iface } {
 	}
     }
 
+    # TODO: reduce with _getNextIPv6addr proc
     set targetbyte [expr 0x[$node_type.IPAddrRange]]
 
     if { $peer_ip6addrs != "" && $changeAddrRange6 == 0 } {
@@ -171,6 +172,18 @@ proc autoIPv6addr { node iface } {
     }
 
     lappendToRunning "ipv6_used_list" [getIfcIPv6addr $node $iface]
+}
+
+proc _getNextIPv6addr { node_type } {
+    global IPv6autoAssign
+
+    if { ! $IPv6autoAssign } {
+	return
+    }
+
+    set targetbyte [expr 0x[$node_type.IPAddrRange]]
+
+    return "[findFreeIPv6Net 64][format %x $targetbyte]/64"
 }
 
 #****f* ipv6.tcl/nextFreeIP6Addr

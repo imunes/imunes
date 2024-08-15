@@ -246,13 +246,13 @@ proc destroyL3Nodes { eid nodes nodeCount w } {
     global progressbarCount execMode
 
     set batchStep 0
-    foreach node $nodes {
+    foreach node_id $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
 	try {
-	    [getNodeType $node].destroy $eid $node
+	    [getNodeType $node_id].destroy $eid $node_id
 	} on error err {
-	    return -code error "Error in '[getNodeType $node].destroy $eid $node': $err"
+	    return -code error "Error in '[getNodeType $node_id].destroy $eid $node_id': $err"
 	}
 	pipesExec ""
 
@@ -260,7 +260,7 @@ proc destroyL3Nodes { eid nodes nodeCount w } {
 	incr progressbarCount -1
 
 	if { $execMode != "batch" } {
-	    statline "Destroying L3 node [getNodeName $node]"
+	    statline "Destroying L3 node [getNodeName $node_id]"
 	    $w.p configure -value $progressbarCount
 	    update
 	}

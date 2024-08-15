@@ -38,7 +38,6 @@
 #****
 
 set MODULE pc
-
 registerModule $MODULE
 
 #****f* pc.tcl/pc.confNewIfc
@@ -165,7 +164,7 @@ proc $MODULE.notebookDimensions { wi } {
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifcName {l r} {
+proc $MODULE.ifcName { l r } {
     return [l3IfcName $l $r]
 }
 
