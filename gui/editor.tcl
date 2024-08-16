@@ -507,7 +507,7 @@ proc routerDefaultsApply { wi } {
     }
 
     foreach node_id $selected_node_list {
-	if { $oper_mode == "edit" && [getNodeType $node_id] == "router" } {
+	if { [getNodeType $node_id] == "router" } {
 	    setNodeModel $node_id $router_model
 
 	    set router_ConfigModel $router_model

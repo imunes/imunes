@@ -741,7 +741,7 @@ proc configGUI_logicalInterfaces { wi node_id ifc } {
     ttk::frame $wi.if$ifc -relief groove -borderwidth 2 -padding 4
     ttk::label $wi.if$ifc.txt -text "Manage logical interfaces:"
 
-    set logifaces_list [lsort [_logIfaceNames $curnode]]
+    set logifaces_list [lsort [logIfaceNames $curnode]]
     listbox $wi.if$ifc.list -height 7 -width 10 -listvariable logifaces_list
 
     ttk::label $wi.if$ifc.addtxt -text "Add new interface:"
@@ -759,7 +759,7 @@ proc configGUI_logicalInterfaces { wi node_id ifc } {
 	set ifctype [$wi.addbox get]
 	set logiface_id [newLogIface $curnode $ifctype]
 
-	set logifaces_list [lsort [_logIfaceNames $curnode]]
+	set logifaces_list [lsort [logIfaceNames $curnode]]
 	$wi.rmvbox configure -values $logifaces_list
 	$wi.list configure -listvariable logifaces_list
 
@@ -778,7 +778,7 @@ proc configGUI_logicalInterfaces { wi node_id ifc } {
 
 	set wi .popup.nbook.nfInterfaces.panwin.f2.iflogIfcFrame
 	set iface_name [$wi.rmvbox get]
-	set iface_id [_ifaceIdFromName $curnode $iface_name]
+	set iface_id [ifaceIdFromName $curnode $iface_name]
 	if { $iface_id == "" } {
 	    return
 	}
@@ -794,7 +794,7 @@ proc configGUI_logicalInterfaces { wi node_id ifc } {
 	$wi.rmvbox set ""
 	cfgUnset "nodes" $curnode "ifaces" $iface_id
 
-	set logifaces_list [lsort [_logIfaceNames $curnode]]
+	set logifaces_list [lsort [logIfaceNames $curnode]]
 	$wi.rmvbox configure -values $logifaces_list
 	$wi.list configure -listvariable logifaces_list
 

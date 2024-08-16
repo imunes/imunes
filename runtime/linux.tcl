@@ -575,17 +575,17 @@ proc isNodeNamespaceCreated { node } {
     return true
 }
 
-#****f* linux.tcl/createNodePhysIfcs
+#****f* linux.tcl/nodePhysIfacesCreate
 # NAME
-#   createNodePhysIfcs -- create node physical interfaces
+#   nodePhysIfacesCreate -- create node physical interfaces
 # SYNOPSIS
-#   createNodePhysIfcs $node
+#   nodePhysIfacesCreate $node
 # FUNCTION
 #   Creates physical interfaces for the given node.
 # INPUTS
 #   * node -- node id
 #****
-proc createNodePhysIfcs { node_id ifcs } {
+proc nodePhysIfacesCreate { node_id ifcs } {
     set eid [getFromRunning "eid"]
 
     if { [getNodeType $node_id] in "extelem" } {
@@ -597,6 +597,7 @@ proc createNodePhysIfcs { node_id ifcs } {
 
     # Create "physical" network interfaces
     foreach iface_id $ifcs {
+	setToRunning "${node_id}|${iface_id}_running" true
 	set iface_name [getIfcName $node_id $iface_id]
 	set prefix [string trimright $iface_name "0123456789"]
 	if { $node_type in "ext extnat" } {
@@ -619,14 +620,14 @@ proc createNodePhysIfcs { node_id ifcs } {
 	    eth {
 		# Create a veth pair - private hook in node netns and public hook
 		# in the experiment netns
-		createNsVethPair $iface_id $nodeNs $node_id-$iface_id $eid
+		createNsVethPair $iface_name $nodeNs $node_id-$iface_name $eid
 	    }
 	}
 
 	switch -exact $prefix {
 	    e {
 		# bridge private hook with L2 node
-		setNsIfcMaster $nodeNs $iface_id $node_id "up"
+		setNsIfcMaster $nodeNs $iface_name $node_id "up"
 	    }
 	    ext {
 		# bridge private hook with ext node
@@ -650,7 +651,7 @@ proc createNodePhysIfcs { node_id ifcs } {
 		# we don't know the name, so make sure all other options cover other IMUNES
 		# 'physical' interfaces
 		# XXX not yet implemented
-		pipesExec "ip link set $iface_id netns $nodeNs" "hold"
+		pipesExec "ip link set $iface_name netns $nodeNs" "hold"
 	    }
 	}
     }
@@ -674,25 +675,30 @@ proc killExtProcess { regex } {
 
 proc checkHangingTCPs { eid nodes } {}
 
-#****f* linux.tcl/createNodeLogIfcs
+#****f* linux.tcl/nodeLogIfacesCreate
 # NAME
-#   createNodeLogIfcs -- create node logical interfaces
+#   nodeLogIfacesCreate -- create node logical interfaces
 # SYNOPSIS
-#   createNodeLogIfcs $node_id
+#   nodeLogIfacesCreate $node_id
 # FUNCTION
 #   Creates logical interfaces for the given node.
 # INPUTS
 #   * node_id -- node id
 #****
-proc createNodeLogIfcs { node_id } {
+proc nodeLogIfacesCreate { node_id ifaces } {
     set docker_node "[getFromRunning "eid"].$node_id"
 
-    foreach iface_id [logIfcList $node_id] {
+    foreach iface_id $ifaces {
 	setToRunning "${node_id}|${iface_id}_running" true
 
 	set iface_name [getIfcName $node_id $iface_id]
 	switch -exact [getIfcType $node_id $iface_id] {
 	    vlan {
+		set tag [getIfcVlanTag $node_id $iface_id]
+		set dev [getIfcVlanDev $node_id $iface_id]
+		if { $tag != "" && $dev != "" } {
+		    pipesExec "docker exec -d $docker_node [getVlanTagIfcCmd $iface_name $dev $tag]" "hold"
+		}
 	    }
 	    lo {
 		if { $iface_name != "lo0" } {
@@ -723,13 +729,13 @@ proc createNodeLogIfcs { node_id } {
 # NAME
 #   configureICMPoptions -- configure ICMP options
 # SYNOPSIS
-#   configureICMPoptions $node
+#   configureICMPoptions $node_id
 # FUNCTION
 #  Configures the necessary ICMP sysctls in the given node.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc configureICMPoptions { node } {
+proc configureICMPoptions { node_id } {
     array set sysctl_icmp {
 	net.ipv4.icmp_ratelimit			0
 	net.ipv4.icmp_echo_ignore_broadcasts	1
@@ -740,7 +746,7 @@ proc configureICMPoptions { node } {
     }
     set cmds [join $cmd "; "]
 
-    pipesExec "docker exec -d [getFromRunning "eid"].$node sh -c '$cmds ; touch /tmp/init'" "hold"
+    pipesExec "docker exec -d [getFromRunning "eid"].$node_id sh -c '$cmds ; touch /tmp/init'" "hold"
 }
 
 proc isNodeInitNet { node } {
@@ -919,8 +925,7 @@ proc createLinkBetween { lnode1 lnode2 iface1_id iface2_id link } {
 
     # add nodes iface hooks to link bridge and bring them up
     foreach node_id "$lnode1 $lnode2" iface_id "$iface1_id $iface2_id" {
-	#set iface_name $node_id-[getIfcName $node_id $iface_id]
-	set iface_name $node_id-$iface_id
+	set iface_name $node_id-[getIfcName $node_id $iface_id]
 	if { [getNodeType $node_id] == "rj45" } {
 	    set iface_name [getNodeName $node_id]
 	    if { [getEtherVlanEnabled $node_id] } {
@@ -1228,7 +1233,9 @@ proc destroyNodeIfaces { eid node_id ifaces } {
     }
 
     foreach iface_id $ifaces {
-	pipesExec "ip -n $eid link del $node_id-$iface_id" "hold"
+	set iface_name [getIfcName $node_id $iface_id]
+	pipesExec "ip -n $eid link del $node_id-$iface_name" "hold"
+	setToRunning "${node_id}|${iface_id}_running" false
     }
 }
 
@@ -1268,14 +1275,13 @@ proc getCpuCount {} {
 # NAME
 #   enableIPforwarding -- enable IP forwarding
 # SYNOPSIS
-#   enableIPforwarding $eid $node
+#   enableIPforwarding $node_id
 # FUNCTION
 #   Enables IPv4 and IPv6 forwarding on the given node.
 # INPUTS
-#   * eid -- experiment id
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc enableIPforwarding { eid node } {
+proc enableIPforwarding { node_id } {
     array set sysctl_ipfwd {
 	net.ipv6.conf.all.forwarding	1
 	net.ipv4.conf.all.forwarding	1
@@ -1288,7 +1294,7 @@ proc enableIPforwarding { eid node } {
     }
     set cmds [join $cmd "; "]
 
-    pipesExec "docker exec -d $eid.$node sh -c \'$cmds\'" "hold"
+    pipesExec "docker exec -d [getFromRunning "eid"].$node_id sh -c \'$cmds\'" "hold"
 }
 
 #****f* linux.tcl/getExtIfcs
@@ -1678,7 +1684,15 @@ proc fetchNodeRunningConfig { node_id } {
 	set node_cfg [_setStatIPv6routes $node_cfg $new_croutes6]
     }
 
+    # don't trigger anything new - save variables state
+    prepareInstantiateVars
+    prepareTerminateVars
+
     updateNode $node_id "*" $node_cfg
+
+    # don't trigger anything new - restore variables state
+    updateInstantiateVars
+    updateTerminateVars
 
     if { $node_existing_mac != [getFromRunning "mac_used_list"] } {
 	setToRunning "mac_used_list" $node_existing_mac
@@ -1946,4 +1960,40 @@ proc unsetupExtNat { eid node ifc } {
     set cmds "$cmds\n iptables -D FORWARD -o $eid-$node -j ACCEPT"
 
     pipesExec "$cmds" "hold"
+}
+
+proc startRoutingDaemons { node_id } {
+    set run_dir "/run/frr"
+    set cmds "mkdir -p $run_dir ; chown frr:frr $run_dir"
+
+    set conf_dir "/etc/frr"
+
+    foreach protocol { rip ripng ospf ospf6 } {
+	if { [getNodeProtocol $node_id $protocol] != 1 } {
+	    continue
+	}
+
+	set cmds "$cmds; sed -i'' \"s/${protocol}d=no/${protocol}d=yes/\" $conf_dir/daemons"
+    }
+
+    foreach protocol { ldp bfd } {
+	if { [getNodeProtocol $node_id $protocol] != 1 } {
+	    continue
+	}
+
+	set cmds "$cmds; sed -i'' \"s/${protocol}d=no/${protocol}d=yes/\" $conf_dir/daemons"
+    }
+
+    foreach protocol { bgp isis } {
+	if { [getNodeProtocol $node_id $protocol] != 1 } {
+	    continue
+	}
+
+	set cmds "$cmds; sed -i'' \"s/${protocol}d=no/${protocol}d=yes/\" $conf_dir/daemons"
+    }
+
+    set init_file "/etc/init.d/frr"
+    set cmds "$cmds; if \[ -f $init_file \]; then $init_file restart ; fi"
+
+    pipesExec "docker exec -d [getFromRunning "eid"].$node_id sh -c '$cmds'" "hold"
 }

@@ -1081,7 +1081,15 @@ proc fetchNodeRunningConfig { node_id } {
 	set node_cfg [_setStatIPv6routes $node_cfg $new_croutes6]
     }
 
+    # don't trigger anything new - save variables state
+    prepareInstantiateVars
+    prepareTerminateVars
+
     updateNode $node_id "*" $node_cfg
+
+    # don't trigger anything new - restore variables state
+    updateInstantiateVars
+    updateTerminateVars
 
     if { $node_existing_mac != [getFromRunning "mac_used_list"] } {
 	setToRunning "mac_used_list" $node_existing_mac
@@ -2239,20 +2247,22 @@ proc releaseExtIfcByName { eid ifname } {
 # NAME
 #   enableIPforwarding -- enable IP forwarding
 # SYNOPSIS
-#   enableIPforwarding $eid $node
+#   enableIPforwarding $node_id
 # FUNCTION
 #   Enables IPv4 and IPv6 forwarding on the given node.
 # INPUTS
-#   * eid -- experiment id
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc enableIPforwarding { eid node } {
+proc enableIPforwarding { node_id } {
     global ipFastForwarding
-    pipesExec "jexec $eid\.$node sysctl net.inet.ip.forwarding=1" "hold"
+
+    set eid [getFromRunning "eid"]
+
+    pipesExec "jexec $eid\.$node_id sysctl net.inet.ip.forwarding=1" "hold"
     if { $ipFastForwarding } {
-	pipesExec "jexec $eid\.$node sysctl net.inet.ip.fastforwarding=1" "hold"
+	pipesExec "jexec $eid\.$node_id sysctl net.inet.ip.fastforwarding=1" "hold"
     }
-    pipesExec "jexec $eid\.$node sysctl net.inet6.ip6.forwarding=1" "hold"
+    pipesExec "jexec $eid\.$node_id sysctl net.inet6.ip6.forwarding=1" "hold"
 }
 
 #****f* freebsd.tcl/getExtIfcs
