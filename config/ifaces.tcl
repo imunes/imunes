@@ -174,44 +174,7 @@ proc getIfcNatState { node_id iface } {
 #****
 proc setIfcNatState { node_id iface state } {
     cfgSet "nodes" $node_id "ifaces" $iface "nat_state" $state
-}
 
-#****f* nodecfg.tcl/getIfcDirect
-# NAME
-#   getIfcDirect -- get interface queuing discipline
-# SYNOPSIS
-#   set direction [getIfcDirect $node $ifc]
-# FUNCTION
-#   Returns the direction of the specified interface. It can be set to
-#   "internal" or "external".
-# INPUTS
-#   * node -- represents the node id of the node whose interface's queuing
-#     discipline is checked.
-#   * ifc -- The interface name.
-# RESULT
-#   * direction -- the direction of the interface, can be either "internal" or
-#     "external".
-#****
-proc getIfcDirect { node_id iface } {
-    return [cfgGet "nodes" $node_id "ifaces" $iface "direction"]
-}
-
-#****f* nodecfg.tcl/setIfcDirect
-# NAME
-#   setIfcDirect -- set interface direction
-# SYNOPSIS
-#   setIfcDirect $node $ifc $direct
-# FUNCTION
-#   Sets the direction of the specified interface. It can be set to "internal"
-#   or "external".
-# INPUTS
-#   * node -- node id
-#   * ifc -- interface
-#   * direct -- new direction of the interface, can be either "internal" or
-#     "external"
-#****
-proc getIfcDirect { node_id iface direction } {
-    cfgSet "nodes" $node_id "ifaces" $iface "direction" $direction
 }
 
 #****f* nodecfg.tcl/getIfcQDisc

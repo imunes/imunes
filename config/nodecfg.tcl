@@ -1263,37 +1263,6 @@ proc setNodeType { node_id type } {
     cfgSet "nodes" $node_id "type" $type
 }
 
-#****f* nodecfg.tcl/setCloudParts
-# NAME
-#   setCloudParts -- set cloud parts
-# SYNOPSIS
-#   setCloudParts $node $nr_parts
-# FUNCTION
-#   Sets the parts of the node's cloud.
-# INPUTS
-#   * node -- node id
-#   * nr_parts -- cloud parts
-#****
-proc setCloudParts { node_id num_parts } {
-    cfgSet "nodes" $node_id "num_parts" $num_parts
-}
-
-#****f* nodecfg.tcl/getCloudParts
-# NAME
-#   getCloudParts -- get cloud parts
-# SYNOPSIS
-#   getCloudParts $node
-# FUNCTION
-#   Returns the node's cloud parts.
-# INPUTS
-#   * node -- node id
-# RESULT
-#   * part -- cloud parts
-#****
-proc getCloudParts { node_id } {
-    return [cfgGet "node" $node_id "num_parts"]
-}
-
 #****f* nodecfg.tcl/registerModule
 # NAME
 #   registerModule -- register module
