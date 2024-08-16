@@ -90,7 +90,7 @@ proc services { action hook args } {
     global services$hook
 
     set iterlist [getFromRunning "node_list"]
-    if { $args != "" } {
+    if { $args != "" && $args != "*" } {
 	set iterlist $args
     }
 

@@ -52,7 +52,7 @@ proc $MODULE.virtlayer {} {
     return NETGRAPH
 }
 
-proc $MODULE.instantiate { eid node_id } {
+proc $MODULE.nodeCreate { eid node_id } {
     upvar 0 ::cf::[set ::curcfg]::ngnodemap
 
     set t [exec printf "mkpeer rfee link0 link0\nshow ." | jexec $eid ngctl -f -]
@@ -62,7 +62,7 @@ proc $MODULE.instantiate { eid node_id } {
     set ngnodemap($eid\.$node_id) $node_id
 }
 
-proc $MODULE.start { eid node_id } {
+proc $MODULE.nodeConfigure { eid node_id } {
     upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
 
     set ngid $ngnodemap($eid\.$node_id)
@@ -100,7 +100,7 @@ proc $MODULE.start { eid node_id } {
     }
 }
 
-proc $MODULE.destroy { eid node_id } {
+proc $MODULE.nodeDestroy { eid node_id } {
     catch { exec jexec $eid ngctl msg $node_id: shutdown }
 }
 

@@ -210,87 +210,87 @@ proc $MODULE.shellcmds {} {
     return "csh bash sh tcsh"
 }
 
-#****f* host.tcl/host.instantiate
+#****f* host.tcl/host.nodeCreate
 # NAME
-#   host.instantiate -- instantiate
+#   host.nodeCreate -- instantiate
 # SYNOPSIS
-#   host.instantiate $eid $node_id
+#   host.nodeCreate $eid $node_id
 # FUNCTION
 #   Procedure instantiate creates a new virtaul node
 #   for a given node in imunes.
-#   Procedure host.instantiate cretaes a new virtual node with
+#   Procedure host.nodeCreate cretaes a new virtual node with
 #   all the interfaces and CPU parameters as defined in imunes.
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- node id (type of the node is host)
 #****
-proc $MODULE.instantiate { eid node_id } {
-    l3node.instantiate $eid $node_id
+proc $MODULE.nodeCreate { eid node_id } {
+    l3node.nodeCreate $eid $node_id
 }
 
 proc $MODULE.setupNamespace { eid node_id } {
     l3node.setupNamespace $eid $node_id
 }
 
-proc $MODULE.initConfigure { eid node_id } {
-    l3node.initConfigure $eid $node_id
+proc $MODULE.nodeInitConfigure { eid node_id } {
+    l3node.nodeInitConfigure $eid $node_id
 }
 
 proc $MODULE.createIfcs { eid node_id ifcs } {
     l3node.createIfcs $eid $node_id $ifcs
 }
 
-#****f* host.tcl/host.start
+#****f* host.tcl/host.nodeConfigure
 # NAME
-#   host.start -- start
+#   host.nodeConfigure -- start
 # SYNOPSIS
-#   host.start $eid $node_id
+#   host.nodeConfigure $eid $node_id
 # FUNCTION
 #   Starts a new host. The node can be started if it is instantiated.
-#   Simulates the booting proces of a host, by calling l3node.start procedure.
+#   Simulates the booting proces of a host, by calling l3node.nodeConfigure procedure.
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- node id (type of the node is host)
 #****
-proc $MODULE.start { eid node_id } {
-    l3node.start $eid $node_id
+proc $MODULE.nodeConfigure { eid node_id } {
+    l3node.nodeConfigure $eid $node_id
 }
 
 
-#****f* host.tcl/host.shutdown
+#****f* host.tcl/host.nodeShutdown
 # NAME
-#   host.shutdown -- shutdown
+#   host.nodeShutdown -- shutdown
 # SYNOPSIS
-#   host.shutdown $eid $node_id
+#   host.nodeShutdown $eid $node_id
 # FUNCTION
 #   Shutdowns a host. Simulates the shutdown proces of a host,
-#   by calling the l3node.shutdown procedure.
+#   by calling the l3node.nodeShutdown procedure.
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- node id (type of the node is host)
 #****
-proc $MODULE.shutdown { eid node_id } {
-    l3node.shutdown $eid $node_id
+proc $MODULE.nodeShutdown { eid node_id } {
+    l3node.nodeShutdown $eid $node_id
 }
 
 proc $MODULE.destroyIfcs { eid node_id ifcs } {
     l3node.destroyIfcs $eid $node_id $ifcs
 }
 
-#****f* host.tcl/host.destroy
+#****f* host.tcl/host.nodeDestroy
 # NAME
-#   host.destroy -- destroy
+#   host.nodeDestroy -- destroy
 # SYNOPSIS
-#   host.destroy $eid $node_id
+#   host.nodeDestroy $eid $node_id
 # FUNCTION
 #   Destroys a host. Destroys all the interfaces of the host
-#   and the vimage itself by calling l3node.destroy procedure.
+#   and the vimage itself by calling l3node.nodeDestroy procedure.
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- node id (type of the node is host)
 #****
-proc $MODULE.destroy { eid node_id } {
-    l3node.destroy $eid $node_id
+proc $MODULE.nodeDestroy { eid node_id } {
+    l3node.nodeDestroy $eid $node_id
 }
 
 #****f* host.tcl/host.nghook

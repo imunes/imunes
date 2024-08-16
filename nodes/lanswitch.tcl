@@ -133,20 +133,20 @@ proc $MODULE.virtlayer {} {
     return NETGRAPH
 }
 
-#****f* lanswitch.tcl/lanswitch.instantiate
+#****f* lanswitch.tcl/lanswitch.nodeCreate
 # NAME
-#   lanswitch.instantiate -- instantiate
+#   lanswitch.nodeCreate -- instantiate
 # SYNOPSIS
-#   lanswitch.instantiate $eid $node_id
+#   lanswitch.nodeCreate $eid $node_id
 # FUNCTION
-#   Procedure lanswitch.instantiate creates a new netgraph node of the type
+#   Procedure lanswitch.nodeCreate creates a new netgraph node of the type
 #   bridge. The name of the netgraph node is in the form of exprimentId_nodeId.
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- id of the node (type of the node is lanswitch)
 #****
-proc $MODULE.instantiate { eid node_id } {
-    l2node.instantiate $eid $node_id
+proc $MODULE.nodeCreate { eid node_id } {
+    l2node.nodeCreate $eid $node_id
 }
 
 proc $MODULE.setupNamespace { eid node_id } {
@@ -161,11 +161,11 @@ proc $MODULE.destroyIfcs { eid node_id ifcs } {
     l2node.destroyIfcs $eid $node_id $ifcs
 }
 
-#****f* lanswitch.tcl/lanswitch.destroy
+#****f* lanswitch.tcl/lanswitch.nodeDestroy
 # NAME
-#   lanswitch.destroy -- destroy
+#   lanswitch.nodeDestroy -- destroy
 # SYNOPSIS
-#   lanswitch.destroy $eid $node_id
+#   lanswitch.nodeDestroy $eid $node_id
 # FUNCTION
 #   Destroys a lanswitch. Destroys the netgraph node that represents
 #   the lanswitch by sending a shutdown message.
@@ -173,8 +173,8 @@ proc $MODULE.destroyIfcs { eid node_id ifcs } {
 #   * eid -- experiment id
 #   * node_id -- id of the node (type of the node is lanswitch)
 #****
-proc $MODULE.destroy { eid node_id } {
-    l2node.destroy $eid $node_id
+proc $MODULE.nodeDestroy { eid node_id } {
+    l2node.nodeDestroy $eid $node_id
 }
 
 #****f* lanswitch.tcl/lanswitch.nghook
