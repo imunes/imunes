@@ -128,20 +128,20 @@ proc $MODULE.virtlayer {} {
     return NETGRAPH
 }
 
-#****f* hub.tcl/hub.instantiate
+#****f* hub.tcl/hub.nodeCreate
 # NAME
-#   hub.instantiate -- instantiate
+#   hub.nodeCreate -- instantiate
 # SYNOPSIS
-#   hub.instantiate $eid $node_id
+#   hub.nodeCreate $eid $node_id
 # FUNCTION
-#   Procedure hub.instantiate creates a new netgraph node of the type hub.
+#   Procedure hub.nodeCreate creates a new netgraph node of the type hub.
 #   The name of the netgraph node is in form of exprimentId_nodeId.
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- id of the node (type of the node is hub)
 #****
-proc $MODULE.instantiate { eid node_id } {
-    l2node.instantiate $eid $node_id
+proc $MODULE.nodeCreate { eid node_id } {
+    l2node.nodeCreate $eid $node_id
 }
 
 proc $MODULE.setupNamespace { eid node_id } {
@@ -156,11 +156,11 @@ proc $MODULE.destroyIfcs { eid node_id ifcs } {
     l2node.destroyIfcs $eid $node_id $ifcs
 }
 
-#****f* hub.tcl/hub.destroy
+#****f* hub.tcl/hub.nodeDestroy
 # NAME
-#   hub.destroy -- destroy
+#   hub.nodeDestroy -- destroy
 # SYNOPSIS
-#   hub.destroy $eid $node_id
+#   hub.nodeDestroy $eid $node_id
 # FUNCTION
 #   Destroys a hub. Destroys the netgraph node that represents
 #   the hub by sending a shutdown message.
@@ -168,8 +168,8 @@ proc $MODULE.destroyIfcs { eid node_id ifcs } {
 #   * eid -- experiment id
 #   * node_id -- id of the node (type of the node is hub)
 #****
-proc $MODULE.destroy { eid node_id } {
-    l2node.destroy $eid $node_id
+proc $MODULE.nodeDestroy { eid node_id } {
+    l2node.nodeDestroy $eid $node_id
 }
 
 #****f* hub.tcl/hub.nghook

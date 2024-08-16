@@ -120,6 +120,9 @@ proc drawNode { node_id } {
     set zoom [getFromRunning "zoom"]
     lassign [lmap coord [getNodeCoords $node_id] {expr $coord * $zoom}] x y
 
+    .panwin.f1.c delete -withtags "node && $node_id"
+    .panwin.f1.c delete -withtags "nodelabel && $node_id"
+
     set custom_icon [getCustomIcon $node_id]
     if { $custom_icon == "" } {
 	global $type
@@ -175,7 +178,13 @@ proc drawNode { node_id } {
 	}
     }
 
-    set label_elem [.panwin.f1.c create text $x $y -fill blue \
+    if { [getFromRunning "${node_id}_running"] == true } {
+	set color red
+    } else {
+	set color blue
+    }
+
+    set label_elem [.panwin.f1.c create text $x $y -fill $color \
 	-text "$label_str" -tags "nodelabel $node_id" -justify center]
 
     if { $show_node_labels == 0} {
@@ -582,41 +591,27 @@ proc connectWithNode { nodes target_node_id } {
 #   * lnode2 -- node id of the second node
 #****
 proc newLinkGUI { lnode1 lnode2 } {
-    global changed
-
-    set link [newLink $lnode1 $lnode2]
-    if { $link == "" } {
-	return
-    }
-
-    if { [getNodeCanvas $lnode1] != [getNodeCanvas $lnode2] || $lnode1 == $lnode2 } {
-	lassign [getLinkPeers $link] orig_node1 orig_node2
-	lassign [splitLink $link] new_node1 new_node2
-
-	setNodeName $new_node1 $orig_node2
-	setNodeName $new_node2 $orig_node1
-    }
-
-    redrawAll
-    set changed 1
-    updateUndoLog
+    return [newLinkWithIfacesGUI $lnode1 "" $lnode2 ""]
 }
 
 proc newLinkWithIfacesGUI { lnode1 iface1 lnode2 iface2 } {
     global changed
 
-    set link [newLinkWithIfaces $lnode1 $iface1 $lnode2 $iface2]
-    if { $link == "" } {
+    set link_id [newLinkWithIfaces $lnode1 $iface1 $lnode2 $iface2]
+    if { $link_id == "" } {
 	return
     }
 
     if { [getNodeCanvas $lnode1] != [getNodeCanvas $lnode2] || $lnode1 == $lnode2 } {
-	lassign [getLinkPeers $link] orig_node1 orig_node2
-	lassign [splitLink $link] new_node1 new_node2
+	lassign [getLinkPeers $link_id] orig_node1 orig_node2
+	lassign [splitLink $link_id] new_node1 new_node2
 
 	setNodeName $new_node1 $orig_node2
 	setNodeName $new_node2 $orig_node1
     }
+
+    undeployCfg
+    deployCfg
 
     redrawAll
     set changed 1

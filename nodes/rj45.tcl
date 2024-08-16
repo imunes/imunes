@@ -113,33 +113,33 @@ proc $MODULE.virtlayer {} {
     return NETGRAPH
 }
 
-#****f* rj45.tcl/rj45.instantiate
+#****f* rj45.tcl/rj45.nodeCreate
 # NAME
-#   rj45.instantiate -- instantiate
+#   rj45.nodeCreate -- instantiate
 # SYNOPSIS
-#   rj45.instantiate $eid $node_id
+#   rj45.nodeCreate $eid $node_id
 # FUNCTION
-#   Procedure rj45.instantiate puts real interface into promiscuous mode.
+#   Procedure rj45.nodeCreate puts real interface into promiscuous mode.
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- node id (type of the node is rj45)
 #****
-proc $MODULE.instantiate { eid node_id } {
+proc $MODULE.nodeCreate { eid node_id } {
     captureExtIfc $eid $node_id
 }
 
-#****f* rj45.tcl/rj45.destroy
+#****f* rj45.tcl/rj45.nodeDestroy
 # NAME
-#   rj45.destroy -- destroy
+#   rj45.nodeDestroy -- destroy
 # SYNOPSIS
-#   rj45.destroy $eid $node_id
+#   rj45.nodeDestroy $eid $node_id
 # FUNCTION
 #   Destroys an rj45 emulation interface.
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- node id (type of the node is rj45)
 #****
-proc $MODULE.destroy { eid node_id } {
+proc $MODULE.nodeDestroy { eid node_id } {
     releaseExtIfc $eid $node_id
 }
 

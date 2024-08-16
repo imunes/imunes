@@ -149,58 +149,58 @@ proc $MODULE.virtlayer {} {
 proc $MODULE.shellcmds {} {
 }
 
-#****f* ext.tcl/ext.instantiate
+#****f* ext.tcl/ext.nodeCreate
 # NAME
-#   ext.instantiate -- instantiate
+#   ext.nodeCreate -- instantiate
 # SYNOPSIS
-#   ext.instantiate $eid $node_id
+#   ext.nodeCreate $eid $node_id
 # FUNCTION
 #   Procedure instantiate creates a new virtaul node
 #   for a given node in imunes.
-#   Procedure ext.instantiate cretaes a new virtual node with
+#   Procedure ext.nodeCreate cretaes a new virtual node with
 #   all the interfaces and CPU parameters as defined in imunes.
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- node id (type of the node is pc)
 #****
-proc $MODULE.instantiate { eid node_id } {}
+proc $MODULE.nodeCreate { eid node_id } {}
 
 proc $MODULE.createIfcs { eid node_id ifcs } {
     l2node.createIfcs $eid $node_id $ifcs
 }
 
-#****f* ext.tcl/ext.start
+#****f* ext.tcl/ext.nodeConfigure
 # NAME
-#   ext.start -- start
+#   ext.nodeConfigure -- start
 # SYNOPSIS
-#   ext.start $eid $node_id
+#   ext.nodeConfigure $eid $node_id
 # FUNCTION
 #   Starts a new ext. The node can be started if it is instantiated.
-#   Simulates the booting proces of a pc, by calling l3node.start procedure.
+#   Simulates the booting proces of a pc, by calling l3node.nodeConfigure procedure.
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- node id (type of the node is pc)
 #****
-proc $MODULE.start { eid node_id } {
+proc $MODULE.nodeConfigure { eid node_id } {
     set ifc [lindex [ifcList $node_id] 0]
     if { "$ifc" != "" } {
 	startExternalConnection $eid $node_id
     }
 }
 
-#****f* ext.tcl/ext.shutdown
+#****f* ext.tcl/ext.nodeShutdown
 # NAME
-#   ext.shutdown -- shutdown
+#   ext.nodeShutdown -- shutdown
 # SYNOPSIS
-#   ext.shutdown $eid $node_id
+#   ext.nodeShutdown $eid $node_id
 # FUNCTION
 #   Shutdowns a ext. Simulates the shutdown proces of a pc,
-#   by calling the l3node.shutdown procedure.
+#   by calling the l3node.nodeShutdown procedure.
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- node id (type of the node is pc)
 #****
-proc $MODULE.shutdown { eid node_id } {
+proc $MODULE.nodeShutdown { eid node_id } {
     set ifc [lindex [ifcList $node_id] 0]
     if { "$ifc" != "" } {
 	killExtProcess "wireshark.*[getNodeName $node_id].*\\($eid\\)"
@@ -213,19 +213,19 @@ proc $MODULE.destroyIfcs { eid node_id ifcs } {
     l2node.destroyIfcs $eid $node_id $ifcs
 }
 
-#****f* ext.tcl/ext.destroy
+#****f* ext.tcl/ext.nodeDestroy
 # NAME
-#   ext.destroy -- destroy
+#   ext.nodeDestroy -- destroy
 # SYNOPSIS
-#   ext.destroy $eid $node_id
+#   ext.nodeDestroy $eid $node_id
 # FUNCTION
 #   Destroys a ext. Destroys all the interfaces of the pc
-#   and the vimage itself by calling l3node.destroy procedure.
+#   and the vimage itself by calling l3node.nodeDestroy procedure.
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- node id (type of the node is pc)
 #****
-proc $MODULE.destroy { eid node_id } {
+proc $MODULE.nodeDestroy { eid node_id } {
 }
 
 #****f* ext.tcl/ext.nghook

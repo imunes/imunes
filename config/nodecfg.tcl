@@ -456,14 +456,17 @@ proc getSubnetData { this_node_id this_ifc subnet_gws nodes_l2data subnet_idx } 
 	# first, get this node/ifc peer's subnet data in case it is an L2 node
 	# and we're not yet gone through it
 	lassign [logicalPeerByIfc $this_node_id $this_ifc] peer_node peer_ifc
-	lassign [getSubnetData $peer_node $peer_ifc \
-	  $subnet_gws $nodes_l2data $subnet_idx] \
-	  subnet_gws nodes_l2data
+	if { $peer_node != "" } {
+	    lassign [getSubnetData $peer_node $peer_ifc \
+		$subnet_gws $nodes_l2data $subnet_idx] \
+		subnet_gws nodes_l2data
+	}
 
 	# this node is done, do nothing else
 	if { $subnet_gws == "" } {
 	    set subnet_gws "{||}"
 	}
+
 	return [list $subnet_gws $nodes_l2data]
     }
 
@@ -911,6 +914,8 @@ proc getAutoDefaultRoutesStatus { node_id } {
 
 proc setAutoDefaultRoutesStatus { node_id state } {
     cfgSet "nodes" $node_id "auto_default_routes" $state
+
+    trigger_nodeReconfig $node_id
 }
 
 #****f* nodecfg.tcl/removeNode
@@ -932,7 +937,7 @@ proc removeNode { node_id { keep_other_ifaces 0 } } {
     }
 
     foreach iface_id [ifcList $node_id] {
-	removeLink [linkByPeers $node_id [getIfcPeer $node_id $iface_id]] $keep_other_ifaces
+	removeIface $node_id $iface_id
     }
 
     setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $node_id]
@@ -1000,6 +1005,7 @@ proc newNode { type } {
 	$type.confNewNode $node_id
     }
 
+    setToRunning "${node_id}_running" false
     return $node_id
 }
 
@@ -1156,31 +1162,33 @@ proc getRouterProtocolCfg { node_id protocol } {
     switch -exact -- $model {
 	"quagga" -
 	"frr" {
+	    lappend cfg "vtysh << __EOF__"
+	    lappend cfg "conf term"
 	    set router_id [ip::intToString [expr 1 + [string trimleft $node_id "n"]]]
 	    switch -exact -- $protocol {
 		"rip" {
-		    set cfg [list "router rip" \
-			" redistribute static" \
-			" redistribute connected" \
-			" redistribute ospf" \
-			" network 0.0.0.0/0" \
-			! ]
+		    lappend cfg "router rip"
+		    lappend cfg " redistribute static"
+		    lappend cfg " redistribute connected"
+		    lappend cfg " redistribute ospf"
+		    lappend cfg " network 0.0.0.0/0"
+		    lappend cfg "!"
 		}
 		"ripng" {
-		    set cfg [list "router ripng" \
-			" redistribute static" \
-			" redistribute connected" \
-			" redistribute ospf6" \
-			" network ::/0" \
-			! ]
+		    lappend cfg "router ripng"
+		    lappend cfg " redistribute static"
+		    lappend cfg " redistribute connected"
+		    lappend cfg " redistribute ospf6"
+		    lappend cfg " network ::/0"
+		    lappend cfg "!"
 		}
 		"ospf" {
-		    set cfg [list "router ospf" \
-			" ospf router-id $router_id" \
-			" redistribute static" \
-			" redistribute connected" \
-			" redistribute rip" \
-			! ]
+		    lappend cfg "router ospf"
+		    lappend cfg " ospf router-id $router_id"
+		    lappend cfg " redistribute static"
+		    lappend cfg " redistribute connected"
+		    lappend cfg " redistribute rip"
+		    lappend cfg "!"
 		}
 		"ospf6" {
 		    if { $model == "quagga" } {
@@ -1191,12 +1199,11 @@ proc getRouterProtocolCfg { node_id protocol } {
 			#set area_string "area 0.0.0.0 range ::/0"
 		    }
 
-		    set cfg [list "router ospf6" \
-			" $id_string" \
-			" redistribute static" \
-			" redistribute connected" \
-			" redistribute ripng" \
-			]
+		    lappend cfg "router ospf6"
+		    lappend cfg " $id_string"
+		    lappend cfg " redistribute static"
+		    lappend cfg " redistribute connected"
+		    lappend cfg " redistribute ripng"
 
 		    if { $model == "quagga" } {
 			foreach iface [ifcList $node_id] {
@@ -1208,17 +1215,19 @@ proc getRouterProtocolCfg { node_id protocol } {
 		}
 		"bgp" {
 		    set loopback_ipv4 [lindex [split [getIfcIPv4addr $node_id "lo0" ] "/"] 0]
-		    set cfg [list "router bgp 1000" \
-			" bgp router-id $loopback_ipv4" \
-			" no bgp ebgp-requires-policy" \
-			" neighbor DEFAULT peer-group" \
-			" neighbor DEFAULT remote-as 1000" \
-			" neighbor DEFAULT update-source $loopback_ipv4" \
-			" redistribute static" \
-			" redistribute connected" \
-			! ]
+		    lappend cfg "router bgp 1000"
+		    lappend cfg " bgp router-id $loopback_ipv4"
+		    lappend cfg " no bgp ebgp-requires-policy"
+		    lappend cfg " neighbor DEFAULT peer-group"
+		    lappend cfg " neighbor DEFAULT remote-as 1000"
+		    lappend cfg " neighbor DEFAULT update-source $loopback_ipv4"
+		    lappend cfg " redistribute static"
+		    lappend cfg " redistribute connected"
+		    lappend cfg "!"
 		}
 	    }
+
+	    lappend cfg "__EOF__"
 	}
 	"static" {
 	    # nothing to return
@@ -1686,4 +1695,132 @@ proc pseudo.netlayer {} {
 #   * virtlayer -- returns an empty string
 #****
 proc pseudo.virtlayer {} {
+}
+
+proc nodeCfggenStaticRoutes4 { node_id { vtysh 0 } } {
+    set cfg {}
+    foreach statrte [getStatIPv4routes $node_id] {
+	if { $vtysh } {
+	    lappend cfg "ip route $statrte"
+	} else {
+	    lappend cfg [getIPv4RouteCmd $statrte]
+	}
+    }
+
+    return $cfg
+}
+
+proc nodeUncfggenStaticRoutes4 { node_id { vtysh 0 } } {
+    set cfg {}
+    foreach statrte [getStatIPv4routes $node_id] {
+	if { $vtysh } {
+	    lappend cfg "no ip route $statrte"
+	} else {
+	    lappend cfg [getRemoveIPv4RouteCmd $statrte]
+	}
+    }
+
+    return $cfg
+}
+
+proc nodeCfggenAutoRoutes4 { node_id { vtysh 0 } } {
+    set cfg {}
+
+    set default_routes4 [getDefaultIPv4routes $node_id]
+    setToRunning "${node_id}_old_default_routes4" $default_routes4
+    #if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
+	foreach statrte $default_routes4 {
+	    if { $vtysh } {
+		lappend cfg "ip route $statrte"
+	    } else {
+		lappend cfg [getIPv4RouteCmd $statrte]
+	    }
+	}
+	setDefaultIPv4routes $node_id {}
+    #}
+
+    return $cfg
+}
+
+proc nodeUncfggenAutoRoutes4 { node_id { vtysh 0 } } {
+    set cfg {}
+
+    set default_routes4 [getFromRunning "${node_id}_old_default_routes4"]
+    #if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
+	foreach statrte $default_routes4 {
+	    if { $vtysh } {
+		lappend cfg "ip route $statrte"
+	    } else {
+		lappend cfg [getRemoveIPv4RouteCmd $statrte]
+	    }
+	}
+	setDefaultIPv4routes $node_id {}
+    #}
+    unsetRunning "${node_id}_old_default_routes4"
+
+    return $cfg
+}
+
+proc nodeCfggenAutoRoutes6 { node_id { vtysh 0 } } {
+    set cfg {}
+
+    set default_routes6 [getDefaultIPv6routes $node_id]
+    setToRunning "${node_id}_old_default_routes6" $default_routes6
+    #if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
+	foreach statrte $default_routes6 {
+	    if { $vtysh } {
+		lappend cfg "ipv6 route $statrte"
+	    } else {
+		lappend cfg [getIPv6RouteCmd $statrte]
+	    }
+	}
+	setDefaultIPv6routes $node_id {}
+    #}
+
+    return $cfg
+}
+
+proc nodeUncfggenAutoRoutes6 { node_id { vtysh 0 } } {
+    set cfg {}
+
+    set default_routes6 [getFromRunning "${node_id}_old_default_routes6"]
+    #if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
+	foreach statrte $default_routes6 {
+	    if { $vtysh } {
+		lappend cfg "ipv6 route $statrte"
+	    } else {
+		lappend cfg [getRemoveIPv6RouteCmd $statrte]
+	    }
+	}
+	setDefaultIPv6routes $node_id {}
+    #}
+    unsetRunning "${node_id}_old_default_routes6"
+
+    return $cfg
+}
+
+proc nodeCfggenStaticRoutes6 { node_id { vtysh 0 } } {
+    set cfg {}
+    foreach statrte [getStatIPv6routes $node_id] {
+	if { $vtysh } {
+	    lappend cfg "ipv6 route $statrte"
+	} else {
+	    lappend cfg [getIPv6RouteCmd $statrte]
+	}
+    }
+
+    return $cfg
+}
+
+proc nodeUncfggenStaticRoutes6 { node_id { vtysh 0 } } {
+    set cfg {}
+    foreach statrte [getStatIPv6routes $node_id] {
+	if { $vtysh } {
+	    lappend cfg "no ipv6 route $statrte"
+	} else {
+	    lappend cfg [getRemoveIPv6RouteCmd $statrte]
+	}
+    }
+
+    return $cfg
 }
