@@ -99,8 +99,8 @@ proc $MODULE.generateUnconfig { node_id } {
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifacePrefix { l r } {
-    return e
+proc $MODULE.ifacePrefix {} {
+    return "e"
 }
 
 proc $MODULE.IPAddrRange {} {
@@ -159,7 +159,7 @@ proc $MODULE.shellcmds {} {
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node_id iface_id } {
-    set ifunit [string range $iface_id 1 end]
+    set ifunit [string range $iface_id 3 end]
     return [list $node_id link$ifunit]
 }
 
@@ -176,6 +176,11 @@ proc $MODULE.nghook { eid node_id iface_id } {
 #   Loads ng_hub into the kernel.
 #****
 proc $MODULE.prepareSystem {} {
+    # TODO: check
+    catch { exec sysctl net.bridge.bridge-nf-call-arptables=0 }
+    catch { exec sysctl net.bridge.bridge-nf-call-iptables=0 }
+    catch { exec sysctl net.bridge.bridge-nf-call-ip6tables=0 }
+
     catch { exec kldload ng_hub }
 }
 
@@ -196,14 +201,14 @@ proc $MODULE.nodeCreate { eid node_id } {
 }
 
 proc $MODULE.nodeNamespaceSetup { eid node_id } {
-    l2node.nodeNamespaceSetup $eid $node_id
+    createNamespace $eid-$node_id
 }
 
 proc $MODULE.nodeInitConfigure { eid node_id } {
 }
 
 proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
-    l2node.nodePhysIfacesCreate $eid $node_id $ifaces
+    nodePhysIfacesCreate $node_id $ifaces
 }
 
 proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
@@ -264,7 +269,7 @@ proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
 }
 
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
-    l2node.nodeIfacesDestroy $eid $node_id $ifaces
+    destroyNodeIfaces $eid $node_id $ifaces
 }
 
 proc $MODULE.nodeUnconfigure { eid node_id } {

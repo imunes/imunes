@@ -284,6 +284,11 @@ proc setLinkBandwidth { link_id bandwidth } {
     }
 
     cfgSet "links" $link_id "bandwidth" $bandwidth
+
+    set mirror_link_id [getLinkMirror $link_id]
+    if { $mirror_link_id != "" } {
+	cfgSet "links" $mirror_link_id "bandwidth" $bandwidth
+    }
 }
 
 #****f* linkcfg.tcl/getLinkColor
@@ -423,6 +428,11 @@ proc setLinkDelay { link_id delay } {
     }
 
     cfgSet "links" $link_id "delay" $delay
+
+    set mirror_link_id [getLinkMirror $link_id]
+    if { $mirror_link_id != "" } {
+	cfgSet "links" $mirror_link_id "delay" $delay
+    }
 }
 
 #****f* linkcfg.tcl/getLinkJitterUpstream
@@ -669,6 +679,11 @@ proc setLinkBER { link_id ber } {
     }
 
     cfgSet "links" $link_id "ber" $ber
+
+    set mirror_link_id [getLinkMirror $link_id]
+    if { $mirror_link_id != "" } {
+	cfgSet "links" $mirror_link_id "ber" $ber
+    }
 }
 
 #****f* linkcfg.tcl/getLinkLoss
@@ -704,6 +719,11 @@ proc setLinkLoss { link_id loss } {
     }
 
     cfgSet "links" $link_id "loss" $loss
+
+    set mirror_link_id [getLinkMirror $link_id]
+    if { $mirror_link_id != "" } {
+	cfgSet "links" $mirror_link_id "loss" $loss
+    }
 }
 
 #****f* linkcfg.tcl/getLinkDup
@@ -739,6 +759,11 @@ proc setLinkDup { link_id duplicate } {
     }
 
     cfgSet "links" $link_id "duplicate" $duplicate
+
+    set mirror_link_id [getLinkMirror $link_id]
+    if { $mirror_link_id != "" } {
+	cfgSet "links" $mirror_link_id "duplicate" $duplicate
+    }
 }
 
 #****f* linkcfg.tcl/linkResetConfig
@@ -871,6 +896,7 @@ proc mergeLink { link_id } {
 
     # recycle the first pseudo link ID
     lassign [lsort "$link_id $mirror_link_id"] link_id mirror_link_id
+    unsetRunning "${mirror_link_id}_running"
 
     lassign [getLinkPeers $link_id] pseudo_node1_id orig_node1_id
     lassign [getLinkPeers $mirror_link_id] pseudo_node2_id orig_node2_id

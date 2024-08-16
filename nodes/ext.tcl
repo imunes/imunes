@@ -76,8 +76,13 @@ proc $MODULE.confNewIfc { node_id iface_id } {
 
     autoIPv4addr $node_id $iface_id
     autoIPv6addr $node_id $iface_id
+
+    set bkp_mac_byte4 $mac_byte4
+    set bkp_mac_byte5 $mac_byte5
     randomizeMACbytes
     autoMACaddr $node_id $iface_id
+    set mac_byte4 $bkp_mac_byte4
+    set mac_byte5 $bkp_mac_byte5
 }
 
 proc $MODULE.generateConfigIfaces { node_id ifaces } {
@@ -102,8 +107,8 @@ proc $MODULE.generateUnconfig { node_id } {
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifacePrefix { l r } {
-    return [l3IfcName $l $r]
+proc $MODULE.ifacePrefix {} {
+    return "ext"
 }
 
 #****f* ext.tcl/ext.IPAddrRange
@@ -183,7 +188,7 @@ proc $MODULE.shellcmds {} {
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node_id iface_id } {
-    return [l3node.nghook $eid $node_id $iface_id]
+    return [list $node_id-[getIfcName $node_id $iface_id] ether]
 }
 
 #****f* ext.tcl/ext.maxLinks
@@ -213,6 +218,7 @@ proc $MODULE.maxLinks {} {
 #   Does nothing
 #****
 proc $MODULE.prepareSystem {} {
+    # nothing to do
 }
 
 #****f* ext.tcl/ext.nodeCreate
@@ -260,7 +266,7 @@ proc $MODULE.nodeInitConfigure { eid node_id } {
 }
 
 proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
-    l2node.nodePhysIfacesCreate $eid $node_id $ifaces
+    nodePhysIfacesCreate $node_id $ifaces
 }
 
 proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
@@ -281,6 +287,10 @@ proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
 #   * ifaces -- list of interface ids
 #****
 proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
+    set iface_id [lindex [ifcList $node_id] 0]
+    if { "$iface_id" != "" } {
+	configureExternalConnection $eid $node_id
+    }
 }
 
 #****f* ext.tcl/ext.nodeConfigure
@@ -296,10 +306,6 @@ proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeConfigure { eid node_id } {
-    set iface_id [lindex [ifcList $node_id] 0]
-    if { "$iface_id" != "" } {
-	startExternalConnection $eid $node_id
-    }
 }
 
 ################################################################################
@@ -321,10 +327,14 @@ proc $MODULE.nodeConfigure { eid node_id } {
 #   * ifaces -- list of interface ids
 #****
 proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
+    set iface_id [lindex [ifcList $node_id] 0]
+    if { "$iface_id" != "" } {
+	unconfigureExternalConnection $eid $node_id
+    }
 }
 
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
-    l2node.nodeIfacesDestroy $eid $node_id $ifaces
+    destroyNodeIfaces $eid $node_id $ifaces
 }
 
 proc $MODULE.nodeUnconfigure { eid node_id } {
