@@ -75,8 +75,8 @@ proc $MODULE.generateUnconfig { node_id } {
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifacePrefix { l r } {
-    return e
+proc $MODULE.ifacePrefix {} {
+    return "e"
 }
 
 #****f* filter.tcl/filter.IPAddrRange
@@ -171,8 +171,8 @@ proc $MODULE.shellcmds {} {
 #   * nghook - the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
-proc $MODULE.nghook { eid node_id iface_id } {
-    return [list $node_id $iface_id]
+proc $MODULE.nghook { eid node_id iface } {
+    return [list $node_id [getIfcName $node_id $iface]]
 }
 
 ################################################################################
@@ -270,7 +270,7 @@ proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
 #****
 proc $MODULE.nodeConfigure { eid node_id } {
     foreach iface_id [ifcList $node_id] {
-	set ngcfgreq "shc $iface_id"
+	set ngcfgreq "shc [getIfcName $node_id $iface_id]"
 	foreach rule_num [lsort -dictionary [ifcFilterRuleList $node_id $iface_id]] {
 	    set rule [getFilterIfcRuleAsString $node_id $iface_id $rule_num]
 	    set ngcfgreq "${ngcfgreq} ${rule}"
@@ -302,7 +302,7 @@ proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
 }
 
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
-    l2node.nodeIfacesDestroy $eid $node_id $ifaces
+    destroyNodeIfaces $eid $node_id $ifaces
 }
 
 proc $MODULE.nodeUnconfigure { eid node_id } {
@@ -322,8 +322,8 @@ proc $MODULE.nodeUnconfigure { eid node_id } {
 #   * node_id - id of the node
 #****
 proc $MODULE.nodeShutdown { eid node_id } {
-    foreach iface_id [ifcList $node_id] {
-	set ngcfgreq "shc $iface_id"
+    foreach iface [ifcList $node_id] {
+	set ngcfgreq "shc $iface"
 
 	pipesExec "jexec $eid ngctl msg $node_id: $ngcfgreq" "hold"
     }

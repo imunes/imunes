@@ -40,8 +40,8 @@ proc $MODULE.confNewNode { node_id } {
     setNodeName $node_id [getNewNodeNameType wlan $nodeNamingBase(wlan)]
 }
 
-proc $MODULE.ifacePrefix { l r } {
-    return e
+proc $MODULE.ifacePrefix {} {
+    return "e"
 }
 
 proc $MODULE.netlayer {} {

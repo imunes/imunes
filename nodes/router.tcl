@@ -106,9 +106,39 @@ proc $MODULE.confNewIfc { node_id iface_id } {
 }
 
 proc $MODULE.generateConfigIfaces { node_id ifaces } {
+    if { $ifaces == "*" } {
+	set ifaces "[ifcList $node_id] [logIfcList $node_id]"
+    } else {
+	# sort physical ifaces before logical ones (because of vlans)
+	set ifaces [lsort -dictionary $ifaces]
+    }
+
+    set cfg {}
+    foreach iface_id $ifaces {
+	set cfg [concat $cfg [routerCfggenIfc $node_id $iface_id]]
+
+	lappend cfg ""
+    }
+
+    return $cfg
 }
 
 proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
+    if { $ifaces == "*" } {
+	set ifaces "[ifcList $node_id] [logIfcList $node_id]"
+    } else {
+	# sort physical ifaces before logical ones
+	set ifaces [lsort -dictionary $ifaces]
+    }
+
+    set cfg {}
+    foreach iface_id $ifaces {
+	set cfg [concat $cfg [routerUncfggenIfc $node_id $iface_id]]
+
+	lappend cfg ""
+    }
+
+    return $cfg
 }
 
 #****f* router.tcl/router.generateConfig
@@ -130,23 +160,38 @@ proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
 #****
 proc $MODULE.generateConfig { node_id } {
     set cfg {}
-
-    # setup interfaces
-    set cfg [concat $cfg [getRouterInterfaceCfg $node_id]]
-
-    # setup routing protocols
     foreach protocol { rip ripng ospf ospf6 bgp } {
 	set cfg [concat $cfg [getRouterProtocolCfg $node_id $protocol]]
     }
 
-    # setup IPv4/IPv6 static routes
-    set cfg [concat $cfg [getRouterStaticRoutes4Cfg $node_id]]
-    set cfg [concat $cfg [getRouterStaticRoutes6Cfg $node_id]]
+    set subnet_gws {}
+    set nodes_l2data [dict create]
+    if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
+	lassign [getDefaultGateways $node_id $subnet_gws $nodes_l2data] my_gws subnet_gws nodes_l2data
+	lassign [getDefaultRoutesConfig $node_id $my_gws] all_routes4 all_routes6
+
+	setDefaultIPv4routes $node_id $all_routes4
+	setDefaultIPv6routes $node_id $all_routes6
+    } else {
+	setDefaultIPv4routes $node_id {}
+	setDefaultIPv6routes $node_id {}
+    }
+
+    set cfg [concat $cfg [routerRoutesCfggen $node_id]]
 
     return $cfg
 }
 
 proc $MODULE.generateUnconfig { node_id } {
+    set cfg {}
+
+    foreach protocol { rip ripng ospf ospf6 bgp } {
+	set cfg [concat $cfg [getRouterProtocolUnconfig $node_id $protocol]]
+    }
+
+    set cfg [concat $cfg [routerRoutesUncfggen $node_id]]
+
+    return $cfg
 }
 
 #****f* router.tcl/router.ifacePrefix
@@ -159,8 +204,8 @@ proc $MODULE.generateUnconfig { node_id } {
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifacePrefix { l r } {
-    return [l3IfcName $l $r]
+proc $MODULE.ifacePrefix {} {
+    return "eth"
 }
 
 #****f* router.tcl/router.IPAddrRange
@@ -256,7 +301,7 @@ proc $MODULE.shellcmds {} {
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node_id iface_id } {
-    return [l3node.nghook $eid $node_id $iface_id]
+    return [list $node_id-[getIfcName $node_id $iface_id] ether]
 }
 
 ################################################################################
@@ -272,6 +317,7 @@ proc $MODULE.nghook { eid node_id iface_id } {
 #   Does nothing
 #****
 proc $MODULE.prepareSystem {} {
+    # nothing to do
 }
 
 #****f* router.tcl/router.nodeCreate
@@ -289,7 +335,8 @@ proc $MODULE.prepareSystem {} {
 #   * node_id - node id
 #****
 proc $MODULE.nodeCreate { eid node_id } {
-    l3node.nodeCreate $eid $node_id
+    prepareFilesystemForNode $node_id
+    createNodeContainer $node_id
 }
 
 #****f* router.tcl/router.nodeNamespaceSetup
@@ -304,7 +351,7 @@ proc $MODULE.nodeCreate { eid node_id } {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeNamespaceSetup { eid node_id } {
-    l3node.nodeNamespaceSetup $eid $node_id
+    attachToL3NodeNamespace $node_id
 }
 
 #****f* router.tcl/router.nodeInitConfigure
@@ -320,12 +367,13 @@ proc $MODULE.nodeNamespaceSetup { eid node_id } {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeInitConfigure { eid node_id } {
-    l3node.nodeInitConfigure $eid $node_id
-    enableIPforwarding $eid $node_id
+    configureICMPoptions $node_id
+    enableIPforwarding $node_id
+    startRoutingDaemons $node_id
 }
 
 proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
-    l3node.nodePhysIfacesCreate $eid $node_id $ifaces
+    nodePhysIfacesCreate $node_id $ifaces
 }
 
 proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
@@ -347,6 +395,7 @@ proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
 #   * ifaces -- list of interface ids
 #****
 proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
+    startNodeIfaces $node_id $ifaces
 }
 
 #****f* router.tcl/router.nodeConfigure
@@ -362,7 +411,7 @@ proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
 #   * node_id - node id
 #****
 proc $MODULE.nodeConfigure { eid node_id } {
-    l3node.nodeConfigure $eid $node_id
+    runConfOnNode $node_id
 }
 
 ################################################################################
@@ -384,13 +433,15 @@ proc $MODULE.nodeConfigure { eid node_id } {
 #   * ifaces -- list of interface ids
 #****
 proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
+    unconfigNodeIfaces $eid $node_id $ifaces
 }
 
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
-    l3node.nodeIfacesDestroy $eid $node_id $ifaces
+    destroyNodeIfaces $eid $node_id $ifaces
 }
 
 proc $MODULE.nodeUnconfigure { eid node_id } {
+    unconfigNode $eid $node_id
 }
 
 #****f* router.tcl/router.nodeShutdown
@@ -406,7 +457,8 @@ proc $MODULE.nodeUnconfigure { eid node_id } {
 #   * node_id - node id
 #****
 proc $MODULE.nodeShutdown { eid node_id } {
-    l3node.nodeShutdown $eid $node_id
+    killExtProcess "wireshark.*[getNodeName $node_id].*\\($eid\\)"
+    killAllNodeProcesses $eid $node_id
 }
 
 #****f* router.tcl/router.nodeDestroy
@@ -423,5 +475,8 @@ proc $MODULE.nodeShutdown { eid node_id } {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeDestroy { eid node_id } {
-    l3node.nodeDestroy $eid $node_id
+    destroyNodeVirtIfcs $eid $node_id
+    removeNodeContainer $eid $node_id
+    destroyNamespace $eid-$node_id
+    removeNodeFS $eid $node_id
 }
