@@ -186,10 +186,6 @@ proc drawNode { node_id } {
     if { $invisible == 1 && $type == "pseudo" } {
 	.panwin.f1.c itemconfigure $label_elem -state hidden
     }
-
-    if { $type == "cloud" } {
-	setCloudParts $node_id 1
-    }
 }
 
 #****f* editor.tcl/drawLink
