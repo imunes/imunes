@@ -97,8 +97,8 @@ proc $MODULE.generateUnconfig { node_id } {
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifacePrefix { l r } {
-    return ""
+proc $MODULE.ifacePrefix {} {
+    return "x"
 }
 
 #****f* rj45.tcl/rj45.netlayer
@@ -147,9 +147,9 @@ proc $MODULE.virtlayer {} {
 #     the netraph hook name (in this case: lower).
 #****
 proc $MODULE.nghook { eid node_id iface_id } {
-    set ifname [getNodeName $node_id]
-    if { [getEtherVlanEnabled $node_id] } {
-	set vlan [getEtherVlanTag $node_id]
+    set ifname [getIfcName $node_id $iface_id]
+    if { [getIfcVlanDev $node_id $iface_id] != "" } {
+	set vlan [getIfcVlanTag $node_id $iface_id]
 	set ifname ${ifname}_$vlan
     }
 
@@ -188,7 +188,7 @@ proc $MODULE.prepareSystem {} {
 
 #****f* rj45.tcl/rj45.nodeCreate
 # NAME
-#   rj45.nodeCreate -- nodeCreate
+#   rj45.nodeCreate -- instantiate
 # SYNOPSIS
 #   rj45.nodeCreate $eid $node_id
 # FUNCTION
@@ -198,7 +198,7 @@ proc $MODULE.prepareSystem {} {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeCreate { eid node_id } {
-    captureExtIfc $eid $node_id
+    setToRunning "${node_id}_running" true
 }
 
 #****f* rj45.tcl/rj45.nodeNamespaceSetup
@@ -231,6 +231,17 @@ proc $MODULE.nodeInitConfigure { eid node_id } {
 }
 
 proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
+    foreach iface_id $ifaces {
+	set link_id [getIfcLink $node_id $iface_id]
+	if { $link_id != "" && [getLinkDirect $link_id] } {
+	    # do direct link stuff
+	    captureExtIfc $eid $node_id $iface_id
+	} else {
+	    captureExtIfc $eid $node_id $iface_id
+	}
+
+	setToRunning "${node_id}|${iface_id}_running" true
+    }
 }
 
 proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
@@ -292,6 +303,21 @@ proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
 }
 
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
+    if { $ifaces == "*" } {
+	set ifaces [ifcList $node_id]
+    }
+
+    foreach iface_id $ifaces {
+	set link_id [getIfcLink $node_id $iface_id]
+	if { $link_id != "" && [getLinkDirect $link_id] } {
+	    # do direct link stuff
+	    releaseExtIfc $eid $node_id $iface_id
+	} else {
+	    releaseExtIfc $eid $node_id $iface_id
+	}
+
+	setToRunning "${node_id}|${iface_id}_running" false
+    }
 }
 
 proc $MODULE.nodeUnconfigure { eid node_id } {
@@ -325,5 +351,5 @@ proc $MODULE.nodeShutdown { eid node_id } {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeDestroy { eid node_id } {
-    releaseExtIfc $eid $node_id
+    setToRunning "${node_id}_running" false
 }

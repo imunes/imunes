@@ -67,8 +67,7 @@ proc $MODULE.prepareSystem {} {
 #   * iface_id -- interface name
 #****
 proc $MODULE.confNewIfc { node_id iface_id } {
-    setIfcType $node_id $iface_id "stolen"
-    setIfcStolenIfc $node_id $iface_id "UNASSIGNED"
+    setIfcName $node_id $iface_id "UNASSIGNED"
 }
 
 #****f* extelem.tcl/extelem.confNewNode
@@ -97,8 +96,8 @@ proc $MODULE.confNewNode { node_id } {
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifacePrefix { l r } {
-    return x
+proc $MODULE.ifacePrefix {} {
+    return "x"
 }
 
 #****f* extelem.tcl/extelem.netlayer
@@ -131,7 +130,7 @@ proc $MODULE.virtlayer {} {
 
 #****f* extelem.tcl/extelem.nodeCreate
 # NAME
-#   extelem.nodeCreate -- nodeCreate
+#   extelem.nodeCreate -- instantiate
 # SYNOPSIS
 #   extelem.nodeCreate $eid $node_id
 # FUNCTION
@@ -142,9 +141,8 @@ proc $MODULE.virtlayer {} {
 #   * node_id -- id of the node
 #****
 proc $MODULE.nodeCreate { eid node_id } {
-    foreach group [getNodeStolenIfaces $node_id] {
-	lassign $group iface_id extIfc
-	captureExtIfcByName $eid $extIfc
+    foreach iface_id [allIfcList $node_id] {
+	captureExtIfcByName $eid [getIfcName $node_id $iface_id]
     }
 }
 
@@ -161,9 +159,8 @@ proc $MODULE.nodeCreate { eid node_id } {
 #   * node_id -- id of the node
 #****
 proc $MODULE.nodeDestroy { eid node_id } {
-    foreach group [getNodeStolenIfaces $node_id] {
-	lassign $group iface_id extIfc
-	releaseExtIfcByName $eid $extIfc
+    foreach iface_id [allIfcList $node_id] {
+	releaseExtIfcByName $eid [getIfcName $node_id $iface_id]
     }
 }
 
@@ -186,6 +183,5 @@ proc $MODULE.nodeDestroy { eid node_id } {
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node_id iface_id } {
-    lassign [lindex [lsearch -index 0 -all -inline -exact [getNodeStolenIfaces $node_id] $iface_id] 0] iface_id extIfc
-    return [list $extIfc lower]
+    return [list [getIfcName $node_id $iface_id] lower]
 }
