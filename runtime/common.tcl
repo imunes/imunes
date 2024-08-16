@@ -53,10 +53,17 @@ set ipFastForwarding 0
 proc statline { line } {
     global execMode
 
-    if {$execMode == "batch"} {
+    if { $execMode == "batch" } {
 	puts $line
 	flush stdout
     } else {
+	global debug
+
+	if { $debug } {
+	    puts $line
+	    flush stdout
+	}
+
 	.bottom.textbox config -text "$line"
 	animateCursor
     }
@@ -74,10 +81,11 @@ proc statline { line } {
 #   * total -- total number of steps
 #****
 proc displayBatchProgress { prgs tot } {
-    global execMode
-    if {$execMode == "batch"} {
+    global execMode debug
+
+    if { $debug || $execMode == "batch" } {
 	puts -nonewline "\r                                                "
-	puts -nonewline "\r> $prgs/$tot"
+	puts -nonewline "\r> $prgs/$tot "
 	flush stdout
     }
 }
