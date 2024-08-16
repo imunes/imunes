@@ -137,6 +137,8 @@ proc getIfcOperState { node_id iface_id } {
 #****
 proc setIfcOperState { node_id iface_id state } {
     cfgSet "nodes" $node_id "ifaces" $iface_id "oper_state" $state
+
+    trigger_ifaceReconfig $node_id $iface_id
 }
 
 #****f* nodecfg.tcl/getIfcNatState
@@ -170,6 +172,8 @@ proc getIfcNatState { node_id iface_id } {
 #****
 proc setIfcNatState { node_id iface_id state } {
     cfgSet "nodes" $node_id "ifaces" $iface_id "nat_state" $state
+
+    trigger_ifaceReconfig $node_id $iface_id
 }
 
 #****f* nodecfg.tcl/getIfcQDisc
@@ -209,6 +213,9 @@ proc getIfcQDisc { node_id iface_id } {
 #****
 proc setIfcQDisc { node_id iface_id qdisc } {
     cfgSet "nodes" $node_id "ifaces" $iface_id "ifc_qdisc" $qdisc
+
+    # TODO
+    trigger_ifaceReconfig $node_id $iface_id
 }
 
 #****f* nodecfg.tcl/getIfcQDrop
@@ -247,6 +254,9 @@ proc getIfcQDrop { node_id iface_id } {
 #****
 proc setIfcQDrop { node_id iface_id qdrop } {
     cfgSet "nodes" $node_id "ifaces" $iface_id "ifc_qdrop" $qdrop
+
+    # TODO
+    trigger_ifaceReconfig $node_id $iface_id
 }
 
 #****f* nodecfg.tcl/getIfcQLen
@@ -282,6 +292,9 @@ proc getIfcQLen { node_id iface_id } {
 #****
 proc setIfcQLen { node_id iface_id len } {
     cfgSet "nodes" $node_id "ifaces" $iface_id "queue_len" $len
+
+    # TODO
+    trigger_ifaceReconfig $node_id $iface_id
 }
 
 #****f* nodecfg.tcl/getIfcMTU
@@ -323,6 +336,8 @@ proc getIfcMTU { node_id iface_id } {
 #****
 proc setIfcMTU { node_id iface_id mtu } {
     cfgSet "nodes" $node_id "ifaces" $iface_id "mtu" $mtu
+
+    trigger_ifaceReconfig $node_id $iface_id
 }
 
 #****f* nodecfg.tcl/getIfcMACaddr
@@ -357,6 +372,8 @@ proc getIfcMACaddr { node_id iface_id } {
 #****
 proc setIfcMACaddr { node_id iface_id addr } {
     cfgSet "nodes" $node_id "ifaces" $iface_id "mac" $addr
+
+    trigger_ifaceReconfig $node_id $iface_id
 }
 
 #****f* nodecfg.tcl/getIfcIPv4addrs
@@ -392,6 +409,37 @@ proc getIfcIPv4addrs { node_id iface_id } {
 #****
 proc setIfcIPv4addrs { node_id iface_id addrs } {
     cfgSet "nodes" $node_id "ifaces" $iface_id "ipv4_addrs" $addrs
+
+    trigger_ifaceReconfig $node_id $iface_id
+
+    if { [isIfcLogical $node_id $iface_id] || [getNodeType $node_id] ni "router nat64 extnat" } {
+	return
+    }
+
+    lassign [getSubnetData $node_id $iface_id {} {} 0] subnet_gws subnet_data
+    if { $subnet_gws == "{||}" } {
+	return
+    }
+
+    set has_extnat [string match "*extnat*" $subnet_gws]
+    foreach subnet_node [removeFromList [dict keys $subnet_data] $node_id] {
+	if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+	    continue
+	}
+
+	set subnet_node_type [getNodeType $subnet_node]
+	if { $subnet_node_type == "extnat" || [$subnet_node_type.netlayer] != "NETWORK" } {
+	    # skip extnat and L2 nodes
+	    continue
+	}
+
+	if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
+	    # skip routers if there is no extnats
+	    continue
+	}
+
+	trigger_nodeReconfig $subnet_node
+    }
 }
 
 #****f* nodecfg.tcl/getIfcType
@@ -456,6 +504,14 @@ proc getIfcName { node_id iface_id } {
 #****
 proc setIfcName { node_id iface_id name } {
     cfgSet "nodes" $node_id "ifaces" $iface_id "name" $name
+
+    # TODO
+    trigger_ifaceRecreate $node_id $iface_id
+
+    set link_id [getIfcLink $node_id $iface_id]
+    if { $link_id != "" } {
+	trigger_linkRecreate $link_id
+    }
 }
 
 #****f* nodecfg.tcl/getIfcIPv6addrs
@@ -491,6 +547,37 @@ proc getIfcIPv6addrs { node_id iface_id } {
 #****
 proc setIfcIPv6addrs { node_id iface_id addrs } {
     cfgSet "nodes" $node_id "ifaces" $iface_id "ipv6_addrs" $addrs
+
+    trigger_ifaceReconfig $node_id $iface_id
+
+    if { [isIfcLogical $node_id $iface_id] || [getNodeType $node_id] ni "router nat64 extnat" } {
+	return
+    }
+
+    lassign [getSubnetData $node_id $iface_id {} {} 0] subnet_gws subnet_data
+    if { $subnet_gws == "{||}" } {
+	return
+    }
+
+    set has_extnat [string match "*extnat*" $subnet_gws]
+    foreach subnet_node [removeFromList [dict keys $subnet_data] $node_id] {
+	if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+	    continue
+	}
+
+	set subnet_node_type [getNodeType $subnet_node]
+	if { $subnet_node_type == "extnat" || [$subnet_node_type.netlayer] != "NETWORK" } {
+	    # skip extnat and L2 nodes
+	    continue
+	}
+
+	if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
+	    # skip routers if there is no extnats
+	    continue
+	}
+
+	trigger_nodeReconfig $subnet_node
+    }
 }
 
 #****f* nodecfg.tcl/getIfcPeer
@@ -545,6 +632,9 @@ proc getIfcLink { node_id iface_id } {
 #****
 proc setIfcLink { node_id iface_id link_id } {
     cfgSet "nodes" $node_id "ifaces" $iface_id "link" $link_id
+
+    # TODO?
+    #trigger_linkRecreate $link_id
 }
 
 #****f* nodecfg.tcl/getIfcLinkLocalIPv6addr
@@ -834,6 +924,10 @@ proc getIfcVlanDev { node_id iface_id } {
 #****
 proc setIfcVlanDev { node_id iface_id dev } {
     cfgSet "nodes" $node_id "ifaces" $iface_id "vlan_dev" $dev
+
+    if { [getNodeType $node_id] == "rj45" } {
+	trigger_nodeRecreate $node_id
+    }
 }
 
 #****f* nodecfg.tcl/getIfcVlanTag
@@ -867,6 +961,10 @@ proc getIfcVlanTag { node_id iface_id } {
 #****
 proc setIfcVlanTag { node_id iface_id tag } {
     cfgSet "nodes" $node_id "ifaces" $iface_id "vlan_tag" $tag
+
+    if { [getNodeType $node_id] == "rj45" } {
+	trigger_nodeRecreate $node_id
+    }
 }
 
 #****f* nodecfg.tcl/nodeCfggenIfcIPv4
@@ -953,6 +1051,7 @@ proc newIface { node_id iface_type auto_config { stolen_iface "" } } {
     }
 
     setToRunning "${node_id}|${iface_id}_running" false
+    trigger_ifaceCreate $node_id $iface_id
 
     setNodeIface $node_id $iface_id {}
 
@@ -984,6 +1083,10 @@ proc newLogIface { node_id logiface_type } {
 
 proc removeIface { node_id iface_id } {
     set node_type [getNodeType $node_id]
+    if { $node_type != "pseudo" } {
+	trigger_ifaceDestroy $node_id $iface_id
+    }
+
     set link_id [getIfcLink $node_id $iface_id]
     if { $link_id != "" } {
 	cfgUnset "nodes" $node_id "ifaces" $iface_id "link"
@@ -1041,6 +1144,7 @@ proc nodeCfggenIfc { node_id iface_id } {
 
     set primary 1
     set addrs [getIfcIPv4addrs $node_id $iface_id]
+    setToRunning "${node_id}|${iface_id}_old_ipv4_addrs" $addrs
     foreach addr $addrs {
 	if { $addr != "" } {
 	    lappend cfg [getIPv4IfcCmd $iface_name $addr $primary]
@@ -1050,6 +1154,7 @@ proc nodeCfggenIfc { node_id iface_id } {
 
     set primary 1
     set addrs [getIfcIPv6addrs $node_id $iface_id]
+    setToRunning "${node_id}|${iface_id}_old_ipv6_addrs" $addrs
     if { $isOSlinux } {
 	# Linux is prioritizing IPv6 addresses in reversed order
 	set addrs [lreverse $addrs]
@@ -1076,19 +1181,21 @@ proc nodeUncfggenIfc { node_id iface_id } {
 
     set iface_name [getIfcName $node_id $iface_id]
 
-    set addrs [getIfcIPv4addrs $node_id $iface_id]
+    set addrs [getFromRunning "${node_id}|${iface_id}_old_ipv4_addrs"]
     foreach addr $addrs {
         if { $addr != "" } {
             lappend cfg [getDelIPv4IfcCmd $iface_name $addr]
         }
     }
+    unsetRunning "${node_id}|${iface_id}_old_ipv4_addrs"
 
-    set addrs [getIfcIPv6addrs $node_id $iface_id]
+    set addrs [getFromRunning "${node_id}|${iface_id}_old_ipv6_addrs"]
     foreach addr $addrs {
         if { $addr != "" } {
             lappend cfg [getDelIPv6IfcCmd $iface_name $addr]
         }
     }
+    unsetRunning "${node_id}|${iface_id}_old_ipv6_addrs"
 
     return $cfg
 }
@@ -1125,6 +1232,7 @@ proc routerCfggenIfc { node_id iface_id } {
 	    lappend cfg "interface $iface_name"
 
 	    set addrs [getIfcIPv4addrs $node_id $iface_id]
+	    setToRunning "${node_id}|${iface_id}_old_ipv4_addrs" $addrs
 	    foreach addr $addrs {
 		if { $addr != "" } {
 		    lappend cfg " ip address $addr"
@@ -1138,6 +1246,7 @@ proc routerCfggenIfc { node_id iface_id } {
 	    }
 
 	    set addrs [getIfcIPv6addrs $node_id $iface_id]
+	    setToRunning "${node_id}|${iface_id}_old_ipv6_addrs" $addrs
 	    foreach addr $addrs {
 		if { $addr != "" } {
 		    lappend cfg " ipv6 address $addr"
@@ -1186,7 +1295,7 @@ proc routerUncfggenIfc { node_id iface_id } {
 	    lappend cfg "conf term"
 	    lappend cfg "interface $iface_name"
 
-	    set addrs [getIfcIPv4addrs $node_id $iface_id]
+	    set addrs [getFromRunning "${node_id}|${iface_id}_old_ipv4_addrs"]
 	    foreach addr $addrs {
 		if { $addr != "" } {
 		    lappend cfg " no ip address $addr"
@@ -1199,7 +1308,7 @@ proc routerUncfggenIfc { node_id iface_id } {
 		}
 	    }
 
-	    set addrs [getIfcIPv6addrs $node_id $iface_id]
+	    set addrs [getFromRunning "${node_id}|${iface_id}_old_ipv6_addrs"]
 	    foreach addr $addrs {
 		if { $addr != "" } {
 		    lappend cfg " no ipv6 address $addr"

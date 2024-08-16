@@ -120,6 +120,9 @@ proc drawNode { node_id } {
     set zoom [getFromRunning "zoom"]
     lassign [lmap coord [getNodeCoords $node_id] {expr $coord * $zoom}] x y
 
+    .panwin.f1.c delete -withtags "node && $node_id"
+    .panwin.f1.c delete -withtags "nodelabel && $node_id"
+
     set custom_icon [getCustomIcon $node_id]
     if { $custom_icon == "" } {
 	global $type
@@ -177,7 +180,13 @@ proc drawNode { node_id } {
 	}
     }
 
-    set label_elem [.panwin.f1.c create text $x $y -fill blue \
+    if { [getFromRunning "${node_id}_running"] == true } {
+	set color red
+    } else {
+	set color blue
+    }
+
+    set label_elem [.panwin.f1.c create text $x $y -fill $color \
 	-text "$label_str" -tags "nodelabel $node_id" -justify center]
 
     if { $show_node_labels == 0 } {
@@ -630,6 +639,9 @@ proc newLinkWithIfacesGUI { node1_id iface1_id node2_id iface2_id } {
 	setNodeName $new_node1 $orig_node2
 	setNodeName $new_node2 $orig_node1
     }
+
+    undeployCfg
+    deployCfg
 
     redrawAll
     set changed 1

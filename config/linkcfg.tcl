@@ -110,8 +110,50 @@ proc linksByPeers { node1_id node2_id } {
 #   * link_id -- link id
 #****
 proc removeLink { link_id { keep_ifaces 0 } } {
+    trigger_linkDestroy $link_id
+
+    # direct links handling in edit/exec mode?
+    if { [getLinkDirect $link_id] && [getFromRunning "oper_mode"] == "exec" } {
+	set keep_ifaces 0
+    }
+
     lassign [getLinkPeers $link_id] node1_id node2_id
-    foreach node_id "$node1_id $node2_id" iface_id [getLinkPeersIfaces $link_id] {
+    lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
+
+    # before deleting the link, refresh nodes auto default routes
+    set subnet_gws {}
+    set subnet_data [dict create]
+    foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
+	lassign [getSubnetData $node_id $iface_id $subnet_gws $subnet_data 0] subnet_gws subnet_data
+	if { $subnet_gws != "{||}" } {
+	    set has_extnat [string match "*extnat*" $subnet_gws]
+	    foreach subnet_node [dict keys $subnet_data] {
+		if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+		    continue
+		}
+
+		set subnet_node_type [getNodeType $subnet_node]
+		if { $subnet_node_type == "extnat" || [$subnet_node_type.netlayer] != "NETWORK" } {
+		    continue
+		}
+
+		if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
+		    continue
+		}
+
+		trigger_nodeReconfig $subnet_node
+	    }
+	}
+    }
+
+    foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
+	set node_type [getNodeType $node_id]
+	if { $node_type in "packgen" } {
+	    trigger_nodeUnconfig $node_id
+	} elseif { $node_type in "filter" } {
+	    trigger_nodeReconfig $node_id
+	}
+
 	if { $keep_ifaces } {
 	    cfgUnset "nodes" $node_id "ifaces" $iface_id "link"
 	    continue
@@ -898,6 +940,7 @@ proc splitLink { orig_link_id } {
     set mirror_link_id [newObjectId [getFromRunning "link_list"] "l"]
     cfgSet "links" $mirror_link_id [cfgGet "links" $orig_link_id]
     lappendToRunning "link_list" $mirror_link_id
+    setToRunning "${mirror_link_id}_running" false
     set links "$orig_link_id $mirror_link_id"
 
     # create pseudo nodes
@@ -947,6 +990,7 @@ proc mergeLink { link_id } {
 
     # recycle the first pseudo link ID
     lassign [lsort "$link_id $mirror_link_id"] link_id mirror_link_id
+    unsetRunning "${mirror_link_id}_running"
 
     lassign [getLinkPeers $link_id] pseudo_node1_id orig_node1_id
     lassign [getLinkPeers $mirror_link_id] pseudo_node2_id orig_node2_id
@@ -1084,7 +1128,21 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
 	}
     }
 
+    foreach node_id "$node1_id $node2_id" {
+	set node_type [getNodeType $node_id]
+	if { $node_type in "packgen" } {
+	    trigger_nodeConfig $node_id
+	} elseif { $node_type in "filter" } {
+	    trigger_nodeReconfig $node_id
+	}
+    }
+
+    # save old subnet data for comparation
+    lassign [getSubnetData $node1_id $iface1_id {} {} 0] old_subnet1_gws old_subnet1_data
+    lassign [getSubnetData $node2_id $iface2_id {} {} 0] old_subnet2_gws old_subnet2_data
+
     set link_id [newObjectId [getFromRunning "link_list"] "l"]
+    setToRunning "${link_id}_running" false
 
     setIfcLink $node1_id $iface1_id $link_id
     setIfcLink $node2_id $iface2_id $link_id
@@ -1099,6 +1157,63 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
 
     if { $config_iface2 && [info procs [getNodeType $node2_id].confNewIfc] != "" } {
 	[getNodeType $node2_id].confNewIfc $node2_id $iface2_id
+    }
+
+    trigger_linkCreate $link_id
+
+    lassign [getSubnetData $node1_id $iface1_id {} {} 0] new_subnet1_gws new_subnet1_data
+    lassign [getSubnetData $node2_id $iface2_id {} {} 0] new_subnet2_gws new_subnet2_data
+
+    if { $old_subnet1_gws != "" } {
+	set diff [removeFromList {*}$new_subnet1_gws {*}$old_subnet1_gws]
+	if { $diff ni "{} {||}" } {
+	    # there was a change in subnet1, go through its old nodes and attach new data
+	    set has_extnat [string match "*extnat*" $diff]
+	    foreach subnet_node [dict keys $old_subnet1_data] {
+		if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+		    continue
+		}
+
+		set subnet_node_type [getNodeType $subnet_node]
+		if { $subnet_node_type == "extnat" || [$subnet_node_type.netlayer] != "NETWORK" } {
+		    # skip extnat and L2 nodes
+		    continue
+		}
+
+		if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
+		    # skip routers if there is no extnats
+		    continue
+		}
+
+		trigger_nodeReconfig $subnet_node
+	    }
+	}
+    }
+
+    if { $old_subnet2_gws != "" } {
+	set diff [removeFromList {*}$new_subnet2_gws {*}$old_subnet2_gws]
+	if { $diff ni "{} {||}" } {
+	    # change in subnet1, go through its old nodes and attach new data
+	    set has_extnat [string match "*extnat*" $diff]
+	    foreach subnet_node [dict keys $old_subnet2_data] {
+		if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+		    continue
+		}
+
+		set subnet_node_type [getNodeType $subnet_node]
+		if { $subnet_node_type == "extnat" || [$subnet_node_type.netlayer] != "NETWORK" } {
+		    # skip extnat and L2 nodes
+		    continue
+		}
+
+		if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
+		    # skip routers if there is no extnats
+		    continue
+		}
+
+		trigger_nodeReconfig $subnet_node
+	    }
+	}
     }
 
     return $link_id
