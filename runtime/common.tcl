@@ -39,6 +39,492 @@ set devfs_number 46837
 set auto_etc_hosts 0
 set ipFastForwarding 0
 
+proc prepareInstantiateVars { { force "" } } {
+    global debug
+
+    if { ! [getFromRunning "cfg_deployed"] && $force == "" } {
+	return
+    }
+
+    foreach var "instantiate_nodes create_nodes_ifaces instantiate_links
+	configure_links configure_nodes_ifaces configure_nodes" {
+
+	upvar 1 $var $var
+	set $var [getFromExecuteVars "$var"]
+	if { $debug } {
+	    puts "'[info level -1]' - '[info level 0]': $var '[set $var]'"
+	}
+    }
+}
+
+proc prepareTerminateVars {} {
+    global debug
+
+    if { ! [getFromRunning "cfg_deployed"] } {
+	return
+    }
+
+    foreach var "terminate_nodes destroy_nodes_ifaces terminate_links
+	unconfigure_links unconfigure_nodes_ifaces unconfigure_nodes" {
+
+	upvar 1 $var $var
+	set $var [getFromExecuteVars "$var"]
+	if { $debug } {
+	    puts "'[info level -1]' - '[info level 0]': $var '[set $var]'"
+	}
+    }
+}
+
+proc updateInstantiateVars {} {
+    global debug
+
+    if { ! [getFromRunning "cfg_deployed"] } {
+	return
+    }
+
+    foreach var "instantiate_nodes create_nodes_ifaces instantiate_links
+	configure_links configure_nodes_ifaces configure_nodes" {
+
+	upvar 1 $var $var
+	if { $debug } {
+	    puts "'[info level -1]' - '[info level 0]': $var '[set $var]'"
+	}
+	setToExecuteVars "$var" [set $var]
+    }
+}
+
+proc updateTerminateVars {} {
+    global debug
+
+    if { ! [getFromRunning "cfg_deployed"] } {
+	return
+    }
+
+    foreach var "terminate_nodes destroy_nodes_ifaces terminate_links
+	unconfigure_links unconfigure_nodes_ifaces unconfigure_nodes" {
+
+	upvar 1 $var $var
+	if { $debug } {
+	    puts "'[info level -1]' - '[info level 0]': $var '[set $var]'"
+	}
+	setToExecuteVars "$var" [set $var]
+    }
+}
+
+proc trigger_nodeConfig { node_id } {
+    if { ! [getFromRunning "cfg_deployed"] } {
+	return
+    }
+
+    prepareInstantiateVars
+
+    if { $node_id ni $configure_nodes } {
+	lappend configure_nodes $node_id
+    }
+
+    updateInstantiateVars
+}
+
+proc trigger_nodeUnconfig { node_id } {
+    if { ! [getFromRunning "cfg_deployed"] } {
+	return
+    }
+
+    prepareTerminateVars
+
+    set node_running [getFromRunning "${node_id}_running"]
+    if { $node_id ni $unconfigure_nodes && $node_running } {
+	lappend unconfigure_nodes $node_id
+    }
+
+    updateTerminateVars
+}
+
+proc trigger_nodeReconfig { node_id } {
+    if { ! [getFromRunning "cfg_deployed"] } {
+	return
+    }
+
+    set node_running [getFromRunning "${node_id}_running"]
+    if { $node_running } {
+	trigger_nodeUnconfig $node_id
+    }
+
+    trigger_nodeConfig $node_id
+}
+
+proc trigger_nodeFullConfig { node_id } {
+    if { ! [getFromRunning "cfg_deployed"] } {
+	return
+    }
+
+    trigger_nodeConfig $node_id
+    foreach iface_id [allIfcList $node_id] {
+	trigger_ifaceConfig $node_id $iface_id
+    }
+}
+
+proc trigger_nodeFullUnconfig { node_id } {
+    if { ! [getFromRunning "cfg_deployed"] } {
+	return
+    }
+
+    trigger_nodeUnconfig $node_id
+    foreach iface_id [allIfcList $node_id] {
+	trigger_ifaceUnconfig $node_id $iface_id
+    }
+}
+
+proc trigger_nodeFullReconfig { node_id } {
+    if { ! [getFromRunning "cfg_deployed"] } {
+	return
+    }
+
+    set node_running [getFromRunning "${node_id}_running"]
+    if { $node_running } {
+	trigger_nodeUnconfig $node_id
+
+	prepareTerminateVars
+	dict set unconfigure_nodes_ifaces $node_id "*"
+	updateTerminateVars
+    }
+
+    trigger_nodeConfig $node_id
+
+    prepareInstantiateVars
+    dict set configure_nodes_ifaces $node_id "*"
+    updateInstantiateVars
+}
+
+proc trigger_nodeCreate { node_id } {
+    if { ! [getFromRunning "cfg_deployed"] } {
+	return
+    }
+
+    prepareInstantiateVars
+
+    if { $node_id ni $instantiate_nodes } {
+	lappend instantiate_nodes $node_id
+    }
+
+    if { $node_id ni $configure_nodes } {
+	lappend configure_nodes $node_id
+    }
+
+    dict set create_nodes_ifaces $node_id "*"
+    dict set configure_nodes_ifaces $node_id "*"
+
+    updateInstantiateVars
+
+    foreach iface_id [ifcList $node_id] {
+	set link_id [getIfcLink $node_id $iface_id]
+	if { $link_id == "" } {
+	    continue
+	}
+
+	trigger_linkRecreate $link_id
+    }
+}
+
+proc trigger_nodeDestroy { node_id } {
+    if { ! [getFromRunning "cfg_deployed"] } {
+	return
+    }
+
+    prepareTerminateVars
+
+    set node_running [getFromRunning "${node_id}_running"]
+    if { $node_id ni $terminate_nodes && $node_running } {
+	lappend terminate_nodes $node_id
+    }
+
+    if { $node_id ni $unconfigure_nodes && $node_running } {
+	lappend unconfigure_nodes $node_id
+    }
+
+    if { $node_running } {
+	dict set unconfigure_nodes_ifaces $node_id "*"
+	dict set destroy_nodes_ifaces $node_id "*"
+    }
+
+    updateTerminateVars
+
+    foreach iface_id [ifcList $node_id] {
+	set link_id [getIfcLink $node_id $iface_id]
+	if { $link_id == "" } {
+	    continue
+	}
+
+	trigger_linkRecreate $link_id
+    }
+
+    prepareInstantiateVars
+
+    if { $node_id in $instantiate_nodes && ! $node_running } {
+	set instantiate_nodes [removeFromList $instantiate_nodes $node_id]
+    }
+
+    if { $node_id in $configure_nodes && ! $node_running } {
+	set configure_nodes [removeFromList $configure_nodes $node_id]
+    }
+
+    if { $node_id in [dict keys $create_nodes_ifaces] && ! $node_running } {
+	dict unset create_nodes_ifaces $node_id
+    }
+
+    if { $node_id in [dict keys $configure_nodes_ifaces] && ! $node_running } {
+	dict unset configure_nodes_ifaces $node_id
+    }
+
+    updateInstantiateVars
+}
+
+proc trigger_nodeRecreate { node_id } {
+    if { ! [getFromRunning "cfg_deployed"] } {
+	return
+    }
+
+    set node_running [getFromRunning "${node_id}_running"]
+    if { $node_running } {
+	trigger_nodeDestroy $node_id
+    }
+
+    trigger_nodeCreate $node_id
+
+    foreach iface_id [ifcList $node_id] {
+	set link_id [getIfcLink $node_id $iface_id]
+	if { $link_id == "" } {
+	    continue
+	}
+
+	trigger_linkRecreate $link_id
+    }
+}
+
+proc trigger_linkConfig { link_id } {
+    if { ! [getFromRunning "cfg_deployed"] } {
+	return
+    }
+
+    prepareInstantiateVars
+
+    if { $link_id ni $configure_links } {
+	lappend configure_links $link_id
+    }
+
+    updateInstantiateVars
+}
+
+proc trigger_linkUnconfig { link_id } {
+    if { ! [getFromRunning "cfg_deployed"] } {
+	return
+    }
+
+    prepareTerminateVars
+
+    set link_running [getFromRunning "${link_id}_running"]
+    if { $link_id ni $unconfigure_links && $link_running } {
+	lappend unconfigure_links $link_id
+    }
+
+    updateTerminateVars
+
+    prepareInstantiateVars
+
+    if { $link_id in $configure_links && ! $link_running } {
+	set configure_links [removeFromList $configure_links $link_id]
+    }
+
+    updateInstantiateVars
+}
+
+proc trigger_linkReconfig { link_id } {
+    if { ! [getFromRunning "cfg_deployed"] } {
+	return
+    }
+
+    set link_running [getFromRunning "${link_id}_running"]
+    if { $link_running } {
+	trigger_linkUnconfig $link_id
+    }
+
+    trigger_linkConfig $link_id
+}
+
+proc trigger_linkCreate { link_id } {
+    if { ! [getFromRunning "cfg_deployed"] } {
+	return
+    }
+
+    prepareInstantiateVars
+
+    if { $link_id ni $instantiate_links } {
+	lappend instantiate_links $link_id
+    }
+
+    updateInstantiateVars
+
+    trigger_linkConfig $link_id
+}
+
+proc trigger_linkDestroy { link_id } {
+    if { ! [getFromRunning "cfg_deployed"] } {
+	return
+    }
+
+    trigger_linkUnconfig $link_id
+
+    prepareTerminateVars
+
+    set link_running [getFromRunning "${link_id}_running"]
+    if { $link_id ni $terminate_links && $link_running } {
+	lappend terminate_links $link_id
+    }
+
+    updateTerminateVars
+
+    prepareInstantiateVars
+
+    if { $link_id in $instantiate_links && ! $link_running } {
+	set instantiate_links [removeFromList $instantiate_links $link_id]
+    }
+
+    updateInstantiateVars
+}
+
+proc trigger_linkRecreate { link_id } {
+    if { ! [getFromRunning "cfg_deployed"] } {
+	return
+    }
+
+    set link_running [getFromRunning "${link_id}_running"]
+    if { $link_running } {
+	trigger_linkDestroy $link_id
+    }
+
+    trigger_linkCreate $link_id
+}
+
+proc trigger_ifaceCreate { node_id iface_id } {
+    if { ! [getFromRunning "cfg_deployed"] || ! [getFromRunning "${node_id}_running"] } {
+	return
+    }
+
+    prepareInstantiateVars
+
+    set ifaces [dictGet $create_nodes_ifaces $node_id]
+    if { "*" ni $ifaces && $iface_id ni $ifaces } {
+	dict lappend create_nodes_ifaces $node_id $iface_id
+    }
+
+    updateInstantiateVars
+
+    trigger_ifaceConfig $node_id $iface_id
+}
+
+proc trigger_ifaceDestroy { node_id iface_id } {
+    if { ! [getFromRunning "cfg_deployed"] || ! [getFromRunning "${node_id}_running"] } {
+	return
+    }
+
+    prepareTerminateVars
+
+    set iface_running [getFromRunning "${node_id}|${iface_id}_running"]
+    set ifaces [dictGet $destroy_nodes_ifaces $node_id]
+    if { "*" ni $ifaces && $iface_id ni $ifaces && $iface_running } {
+	dict lappend destroy_nodes_ifaces $node_id $iface_id
+    }
+
+    updateTerminateVars
+
+    prepareInstantiateVars
+
+    set ifaces [dictGet $create_nodes_ifaces $node_id]
+    if { $iface_id in $ifaces && ! $iface_running } {
+	set ifaces [removeFromList $ifaces $iface_id]
+	if { $ifaces == {} } {
+	    dict unset create_nodes_ifaces $node_id
+	} else {
+	    dict set create_nodes_ifaces $node_id $ifaces
+	}
+    }
+
+    updateInstantiateVars
+
+    trigger_ifaceUnconfig $node_id $iface_id
+}
+
+proc trigger_ifaceRecreate { node_id iface_id } {
+    if { ! [getFromRunning "cfg_deployed"] || ! [getFromRunning "${node_id}_running"] } {
+	return
+    }
+
+    set iface_running [getFromRunning "${node_id}|${iface_id}_running"]
+    if { $iface_running } {
+	trigger_ifaceDestroy $node_id $iface_id
+    }
+
+    trigger_ifaceCreate $node_id $iface_id
+}
+
+proc trigger_ifaceConfig { node_id iface_id } {
+    if { ! [getFromRunning "cfg_deployed"] || ! [getFromRunning "${node_id}_running"] } {
+	return
+    }
+
+    prepareInstantiateVars
+
+    set ifaces [dictGet $configure_nodes_ifaces $node_id]
+    if { "*" ni $ifaces && $iface_id ni $ifaces } {
+	dict lappend configure_nodes_ifaces $node_id $iface_id
+    }
+
+    updateInstantiateVars
+}
+
+proc trigger_ifaceUnconfig { node_id iface_id } {
+    if { ! [getFromRunning "cfg_deployed"] || ! [getFromRunning "${node_id}_running"] } {
+	return
+    }
+
+    prepareTerminateVars
+
+    set iface_running [getFromRunning "${node_id}|${iface_id}_running"]
+    set ifaces [dictGet $unconfigure_nodes_ifaces $node_id]
+    if { "*" ni $ifaces && $iface_id ni $ifaces && $iface_running } {
+	dict lappend unconfigure_nodes_ifaces $node_id $iface_id
+    }
+
+    updateTerminateVars
+
+    prepareInstantiateVars
+
+    set ifaces [dictGet $configure_nodes_ifaces $node_id]
+    if { $iface_id in $ifaces && ! $iface_running } {
+	set ifaces [removeFromList $ifaces $iface_id]
+	if { $ifaces == {} } {
+	    dict unset configure_nodes_ifaces $node_id
+	} else {
+	    dict set configure_nodes_ifaces $node_id $ifaces
+	}
+    }
+
+    updateInstantiateVars
+}
+
+proc trigger_ifaceReconfig { node_id iface_id } {
+    if { ! [getFromRunning "cfg_deployed"] || ! [getFromRunning "${node_id}_running"] } {
+	return
+    }
+
+    set iface_running [getFromRunning "${node_id}|${iface_id}_running"]
+    if { $iface_running } {
+	trigger_ifaceUnconfig $node_id $iface_id
+    }
+
+    trigger_ifaceConfig $node_id $iface_id
+}
+
 #****f* exec.tcl/statline
 # NAME
 #   statline -- status line
