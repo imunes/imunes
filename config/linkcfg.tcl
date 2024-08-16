@@ -110,6 +110,11 @@ proc linksByPeers { node1_id node2_id } {
 #   * link_id -- link id
 #****
 proc removeLink { link_id { keep_ifaces 0 } } {
+    # direct links handling in edit/exec mode?
+    if { [getLinkDirect $link_id] && [getFromRunning "oper_mode"] == "exec" } {
+	set keep_ifaces 0
+    }
+
     lassign [getLinkPeers $link_id] node1_id node2_id
     foreach node_id "$node1_id $node2_id" iface_id [getLinkPeersIfaces $link_id] {
 	if { $keep_ifaces } {
@@ -902,6 +907,7 @@ proc splitLink { orig_link_id } {
     set mirror_link_id [newObjectId [getFromRunning "link_list"] "l"]
     cfgSet "links" $mirror_link_id [cfgGet "links" $orig_link_id]
     lappendToRunning "link_list" $mirror_link_id
+    setToRunning "${mirror_link_id}_running" false
     set links "$orig_link_id $mirror_link_id"
 
     # create pseudo nodes
@@ -951,6 +957,7 @@ proc mergeLink { link_id } {
 
     # recycle the first pseudo link ID
     lassign [lsort "$link_id $mirror_link_id"] link_id mirror_link_id
+    unsetRunning "${mirror_link_id}_running"
 
     lassign [getLinkPeers $link_id] pseudo_node1_id orig_node1_id
     lassign [getLinkPeers $mirror_link_id] pseudo_node2_id orig_node2_id

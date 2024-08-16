@@ -52,7 +52,7 @@ proc terminate_nodesShutdown { eid nodes nodes_count w } {
     foreach node_id $nodes {
 	displayBatchProgress $batchStep $nodes_count
 
-	if { [info procs [getNodeType $node_id].nodeShutdown] != "" } {
+	if { [info procs [getNodeType $node_id].nodeShutdown] != "" && [getFromRunning "${node_id}_running"] in "true delete" } {
 	    try {
 		[getNodeType $node_id].nodeShutdown $eid $node_id
 	    } on error err {
@@ -142,6 +142,7 @@ proc terminate_nodesDestroy { eid nodes nodes_count w } {
 
 	try {
 	    [getNodeType $node_id].nodeDestroy $eid $node_id
+	    setToRunning "${node_id}_running" false
 	} on error err {
 	    return -code error "Error in '[getNodeType $node_id].nodeDestroy $eid $node_id': $err"
 	}
@@ -168,6 +169,12 @@ proc terminate_nodesDestroy { eid nodes nodes_count w } {
 proc finishTerminating { status msg w } {
     global progressbarCount execMode
 
+    foreach var "terminate_nodes destroy_nodes_ifaces terminate_links
+	unconfigure_links unconfigure_nodes_ifaces unconfigure_nodes" {
+
+	setToExecuteVars "$var" ""
+    }
+
     catch { pipesClose }
     if { $execMode == "batch" } {
 	puts $msg
@@ -188,13 +195,53 @@ proc finishTerminating { status msg w } {
 # SYNOPSIS
 #   undeployCfg
 # FUNCTION
-#   Undeploys a current working configuration. It terminates all the nodes and links
-#   given as procedure arguments.
+#   Undeploys a current working configuration. It terminates and unconfigures
+#   all the nodes and links given in the "executeVars" set of variables:
+#   terminate_nodes, destroy_nodes_ifaces, terminate_links,
+#   unconfigure_links, unconfigure_nodes_ifaces, unconfigure_nodes
 #****
-proc undeployCfg { eid terminate terminate_nodes destroy_nodes_ifaces terminate_links unconfigure_links unconfigure_nodes_ifaces unconfigure_nodes } {
+proc undeployCfg { { eid "" } { terminate 0 } } {
     global progressbarCount execMode skip_nodes
 
-    set nodes_count [llength $terminate_nodes]
+    if { ! $terminate } {
+	if { ! [getFromRunning "cfg_deployed"] } {
+	    return
+	}
+
+	if { ! [getFromRunning "auto_execution"] } {
+	    if { $eid == "" } {
+		set eid [getFromRunning "eid"]
+	    }
+
+	    createExperimentFiles $eid
+	    createRunningVarsFile $eid
+
+	    return
+	}
+    }
+
+    foreach var "terminate_nodes destroy_nodes_ifaces terminate_links
+	unconfigure_links unconfigure_nodes_ifaces unconfigure_nodes" {
+
+	set $var ""
+    }
+
+    if { "$terminate_nodes$destroy_nodes_ifaces$terminate_links$unconfigure_links$unconfigure_nodes_ifaces$unconfigure_nodes" == "" } {
+	setToExecuteVars "terminate_cfg" ""
+
+	return
+    }
+
+    set bkp_cfg ""
+    set terminate_cfg [getFromExecuteVars "terminate_cfg"]
+    if { $terminate_cfg != "" && $terminate_cfg != [cfgGet] } {
+	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+
+	set bkp_cfg [cfgGet]
+	set dict_cfg $terminate_cfg
+    }
+
+    set skip_nodes {}
     set links_count [llength $terminate_links]
 
     set t_start [clock milliseconds]
@@ -219,10 +266,6 @@ proc undeployCfg { eid terminate terminate_nodes destroy_nodes_ifaces terminate_
     set all_nodes {}
     set pseudoNodesCount 0
     foreach node_id $terminate_nodes {
-	if { $node_id in $skip_nodes } {
-	    continue
-	}
-
 	set node_type [getNodeType $node_id]
 	if { $node_type != "pseudo" } {
 	    if { [$node_type.virtlayer] == "NATIVE" } {
@@ -287,10 +330,13 @@ proc undeployCfg { eid terminate terminate_nodes destroy_nodes_ifaces terminate_
 	set unconfigure_nodes $all_nodes
     }
     set unconfigure_nodes_count [llength $unconfigure_nodes]
-    set skip_nodes {}
 
     set maxProgressbasCount [expr {1 + 1*$all_nodes_count + 1*$links_count + 1*$native_nodes_count + 2*$virtualized_nodes_count + 1*$unconfigure_nodes_ifaces_count + 1*$destroy_nodes_ifaces_count + 1*$destroy_nodes_extifaces_count + 1*$unconfigure_nodes_count}]
     set progressbarCount $maxProgressbasCount
+
+    if { $eid == "" } {
+	set eid [getFromRunning "eid"]
+    }
 
     set w ""
     if { $execMode != "batch" } {
@@ -379,14 +425,16 @@ proc undeployCfg { eid terminate terminate_nodes destroy_nodes_ifaces terminate_
 	statline "Waiting for $virtualized_nodes_count VIRTUALIZED node(s) to be destroyed..."
 	pipesClose
 
-	statline "Removing experiment top-level container/netns..."
-	pipesCreate
-	terminate_removeExperimentContainer $eid
-	pipesClose
+	if { $terminate } {
+	    statline "Removing experiment top-level container/netns..."
+	    pipesCreate
+	    terminate_removeExperimentContainer $eid
+	    pipesClose
 
-	statline "Removing experiment files..."
-	terminate_removeExperimentFiles $eid
-	terminate_deleteExperimentFiles $eid
+	    statline "Removing experiment files..."
+	    terminate_removeExperimentFiles $eid
+	    terminate_deleteExperimentFiles $eid
+	}
     } on error err {
 	finishTerminating 0 "$err" $w
 	return
@@ -394,7 +442,19 @@ proc undeployCfg { eid terminate terminate_nodes destroy_nodes_ifaces terminate_
 
     finishTerminating 1 "" $w
 
+    if { ! $terminate } {
+	createExperimentFiles $eid
+	createRunningVarsFile $eid
+    }
+
     statline "Cleanup completed in [expr ([clock milliseconds] - $t_start)/1000.0] seconds."
+
+    if { $bkp_cfg != "" } {
+	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+
+	set dict_cfg $bkp_cfg
+	setToExecuteVars "terminate_cfg" ""
+    }
 
     if { $execMode == "batch" } {
 	puts "Terminated experiment ID = $eid"
@@ -443,7 +503,7 @@ proc terminate_nodesUnconfigure { eid nodes nodes_count w } {
     foreach node_id $nodes {
 	displayBatchProgress $batchStep $nodes_count
 
-	if { [info procs [getNodeType $node_id].nodeUnconfigure] != "" } {
+	if { [info procs [getNodeType $node_id].nodeUnconfigure] != "" && [getFromRunning "${node_id}_running"] in "true delete" } {
 	    try {
 		[getNodeType $node_id].nodeUnconfigure $eid $node_id
 	    } on error err {
