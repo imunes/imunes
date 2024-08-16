@@ -190,8 +190,13 @@ proc chooseIfName { lnode_id rnode_id } {
 #****
 proc listLANNodes { l2node_id l2peers } {
     lappend l2peers $l2node_id
+
     foreach iface_id [ifcList $l2node_id] {
-	lassign [logicalPeerByIfc $l2node_id $iface_id] peer_id -
+	lassign [logicalPeerByIfc $l2node_id $iface_id] peer_id peer_iface_id
+	if { [getIfcLink $peer_id $peer_iface_id] == "" } {
+	    continue
+	}
+
 	if { [[getNodeType $peer_id].netlayer] == "LINK" && [getNodeType $peer_id] != "rj45" } {
 	    if { $peer_id ni $l2peers } {
 		set l2peers [listLANNodes $peer_id $l2peers]
@@ -476,11 +481,13 @@ proc routerDefaultsApply { wi } {
 
     set selected_node_list [selectedNodes]
     if { $selected_node_list == {} } {
-	set selected_node_list [getFromRunning "node_list"]
+	destroy $wi
+
+	return
     }
 
     foreach node_id $selected_node_list {
-	if { [getFromRunning "oper_mode"] == "edit" && [getNodeType $node_id] == "router" } {
+	if { [getNodeType $node_id] == "router" } {
 	    setNodeModel $node_id $router_model
 
 	    set router_ConfigModel $router_model
@@ -497,6 +504,9 @@ proc routerDefaultsApply { wi } {
     }
 
     if { $changed == 1 } {
+	undeployCfg
+	deployCfg
+
 	redrawAll
 	updateUndoLog
     }
@@ -1018,6 +1028,7 @@ proc resumeAndDestroy {} {
     }
 
     destroy .attachToExperimentDialog
+    toggleAutoExecutionGUI [getFromRunning "auto_execution"]
 }
 
 #****f* editor.tcl/updateScreenshotPreview
@@ -1111,5 +1122,36 @@ proc launchBrowser { url } {
 	catch { exec su - $env(SUDO_USER) /bin/sh -c "$command $url" > /dev/null 2> /dev/null & }
     } else {
 	catch { exec {*}$command $url > /dev/null 2> /dev/null & }
+    }
+}
+
+proc toggleAutoExecutionGUI { { new_value "" } } {
+    for { set index 0 } { $index <= [.menubar.experiment index last] } { incr index } {
+	catch { .menubar.experiment entrycget $index -label } label_str
+	if { $label_str == "Pause auto execution" } {
+	    if { $new_value != "" && $new_value } {
+		break
+	    }
+
+	    .menubar.experiment entryconfigure $index -label "Resume auto execution"
+	    setToExecuteVars "terminate_cfg" [cfgGet]
+	    if { [getFromRunning "cfg_deployed"] } {
+		.bottom.oper_mode configure -text "paused"
+	    }
+
+	    break
+	} elseif { $label_str == "Resume auto execution" } {
+	    if { $new_value != "" && ! $new_value } {
+		break
+	    }
+
+	    .menubar.experiment entryconfigure $index -label "Pause auto execution"
+	    redrawAll
+	    if { [getFromRunning "cfg_deployed"] } {
+		.bottom.oper_mode configure -text "exec mode"
+	    }
+
+	    break
+	}
     }
 }

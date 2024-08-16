@@ -75,6 +75,10 @@ proc checkExternalInterfaces {} {
 	lassign $node_ifcpair node_id ifcpair
 	lassign $ifcpair iface_id physical_ifc
 
+	if { $physical_ifc == "UNASSIGNED" } {
+	    continue
+	}
+
 	# check if the interface exists
 	set i [lsearch $extifcs $physical_ifc]
 	if { $i < 0 } {
@@ -210,6 +214,30 @@ proc createExperimentFiles { eid } {
     }
 }
 
+proc createRunningVarsFile { eid } {
+    global runtimeDir
+
+    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+    upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
+
+    # TODO: maybe remove some elements?
+    writeDataToFile $runtimeDir/$eid/runningVars [list "dict_run" "$dict_run" "execute_vars" "$execute_vars"]
+}
+
+proc readRunningVarsFile { eid } {
+    global runtimeDir
+
+    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+    upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
+
+    set fd [open $runtimeDir/$eid/runningVars r]
+    set vars_dict [read $fd]
+    close $fd
+
+    set dict_run [dictGet $vars_dict "dict_run"]
+    set execute_vars [dictGet $vars_dict "execute_vars"]
+}
+
 #****f* exec.tcl/saveRunningConfiguration
 # NAME
 #   saveRunningConfiguration -- save running configuration in
@@ -307,7 +335,7 @@ set ipsecSecrets ""
 proc nodeIpsecInit { node_id } {
     global ipsecConf ipsecSecrets isOSfreebsd
 
-    if { [getNodeIPsec $node_id] == "" } {
+    if { [getFromRunning "${node_id}_running"] == false || [getNodeIPsec $node_id] == "" } {
 	return
     }
 
@@ -382,11 +410,32 @@ proc nodeIpsecInit { node_id } {
 # SYNOPSIS
 #   deployCfg
 # FUNCTION
-#   Deploys a current working configuration. It creates all the nodes and links
-#   given as procedure arguments.
+#   Deploys a current working configuration. It creates and configures all the
+#   nodes, interfaces and links given in the "executeVars" set of variables:
+#   instantiate_nodes, create_nodes_ifaces, instantiate_links, configure_links,
+#   configure_nodes_ifaces, configure_nodes
 #****
-proc deployCfg { instantiate_nodes create_nodes_ifaces instantiate_links configure_links configure_nodes_ifaces configure_nodes } {
+proc deployCfg { { execute 0 } } {
     global progressbarCount execMode skip_nodes err_skip_nodesifaces err_skip_nodes
+
+    if { ! $execute } {
+	if { ! [getFromRunning "cfg_deployed"] } {
+	    return
+	}
+
+	if { ! [getFromRunning "auto_execution"] } {
+	    createExperimentFiles [getFromRunning "eid"]
+	    createRunningVarsFile [getFromRunning "eid"]
+
+	    return
+	}
+    }
+
+    prepareInstantiateVars "force"
+
+    if { "$instantiate_nodes$create_nodes_ifaces$instantiate_links$configure_links$configure_nodes_ifaces$configure_nodes" == "" } {
+	return
+    }
 
     set progressbarCount 0
     set skip_nodes {}
@@ -493,6 +542,22 @@ proc deployCfg { instantiate_nodes create_nodes_ifaces instantiate_links configu
 	}
     }
 
+    if { $execute && ! [getFromRunning "auto_execution"] } {
+	createRunningVarsFile $eid
+
+	statline "Empty topology instantiated in [expr ([clock milliseconds] - $t_start)/1000.0] seconds."
+
+	if { $execMode == "batch" } {
+	    puts "Experiment ID = $eid"
+	}
+
+	catch { destroy $w }
+
+	set progressbarCount 0
+
+	return
+    }
+
     try {
 	statline "Instantiating VIRTUALIZED nodes..."
 	pipesCreate
@@ -587,7 +652,10 @@ proc deployCfg { instantiate_nodes create_nodes_ifaces instantiate_links configu
 
     finishExecuting 1 "" $w
 
-    createExperimentFiles $eid
+    if { ! $execute } {
+	createExperimentFiles $eid
+    }
+    createRunningVarsFile $eid
 
     statline "Network topology instantiated in [expr ([clock milliseconds] - $t_start)/1000.0] seconds ($all_nodes_count nodes and $links_count links)."
 
@@ -678,6 +746,8 @@ proc waitForInstantiateNodes { nodes nodes_count w } {
 	    if { ! [isNodeStarted $node_id] } {
 		continue
 	    }
+
+	    setToRunning "${node_id}_running" true
 
 	    incr batchStep
 	    incr progressbarCount
@@ -975,6 +1045,8 @@ proc execute_linksCreate { links links_count w } {
 		} else {
 		    createLinkBetween $node1_id $node2_id $iface1_id $iface2_id $link_id
 		}
+
+		setToRunning "${link_id}_running" true
 	    } on error err {
 		return -code error "Error in 'createLinkBetween $node1_id $node2_id $iface1_id $iface2_id $link_id': $err"
 	    }
@@ -1282,6 +1354,12 @@ proc waitForConfStart { nodes nodes_count w } {
 
 proc finishExecuting { status msg w } {
     global progressbarCount execMode
+
+    foreach var "instantiate_nodes create_nodes_ifaces instantiate_links
+	configure_links configure_nodes_ifaces configure_nodes" {
+
+	setToExecuteVars "$var" ""
+    }
 
     catch { pipesClose }
     if { $execMode == "batch" } {

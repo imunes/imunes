@@ -196,6 +196,14 @@ proc configGUI_addPanedWin { wi } {
 proc configGUI_addTree { wi node_id } {
     global treecolumns cancel curnode
     set curnode $node_id
+
+    set iface_list [ifcList $node_id]
+    set sorted_iface_list [lsort -ascii $iface_list]
+    set logiface_list [logIfcList $node_id]
+    set sorted_logiface_list [lsort -ascii $logiface_list]
+    set all_iface_list "$iface_list $logiface_list"
+    set sorted_all_iface_list [lsort -ascii $all_iface_list]
+
     #
     #cancel - indicates if the user has clicked on Cancel in the popup window about
     #         saving changes on the previously selected interface in the list of interfaces,
@@ -248,9 +256,9 @@ proc configGUI_addTree { wi node_id } {
     $wi.panwin.f1.tree focus physIfcFrame
     $wi.panwin.f1.tree selection set physIfcFrame
 
-    foreach iface_id [lsort -dictionary [ifcList $node_id]] {
+    foreach iface_id $sorted_iface_list {
 	$wi.panwin.f1.tree insert physIfcFrame end -id $iface_id \
-	    -text "[getIfcName $curnode $iface_id]" -tags $iface_id
+	    -text "[getIfcName $node_id $iface_id]" -tags $iface_id
 
 	foreach column $treecolumns {
 	    $wi.panwin.f1.tree set $iface_id [lindex $column 0] \
@@ -262,10 +270,11 @@ proc configGUI_addTree { wi node_id } {
 	$wi.panwin.f1.tree insert {} end -id logIfcFrame -text \
 	    "Logical Interfaces" -open true -tags logIfcFrame
 
-	foreach iface_id [lsort -dictionary [logIfcList $node_id]] {
+	foreach iface_id $sorted_logiface_list {
 	    $wi.panwin.f1.tree insert logIfcFrame end -id $iface_id \
 		-text "[getIfcName $node_id $iface_id]" -tags $iface_id
-	    foreach column { "OperState" "NatState" "MTU" "IPv4addrs" "IPv6addrs" } {
+
+	    foreach column $treecolumns {
 		$wi.panwin.f1.tree set $iface_id [lindex $column 0] \
 		    [getIfc[lindex $column 0] $node_id $iface_id]
 	    }
@@ -277,18 +286,18 @@ proc configGUI_addTree { wi node_id } {
     #interfaces as the second argument
     global selectedIfc
 
-    if { [ifcList $node_id] != "" && $selectedIfc == "" } {
-	$wi.panwin.f1.tree focus [lindex [lsort -ascii [ifcList $node_id]] 0]
-	$wi.panwin.f1.tree selection set [lindex [lsort -ascii [ifcList $node_id]] 0]
+    if { $iface_list != "" && $selectedIfc == "" } {
+	$wi.panwin.f1.tree focus [lindex $sorted_iface_list 0]
+	$wi.panwin.f1.tree selection set [lindex $sorted_iface_list 0]
 
 	set cancel 0
-	configGUI_showIfcInfo $wi.panwin.f2 0 $node_id [lindex [lsort -ascii [ifcList $node_id]] 0]
-    } elseif { [allIfcList $node_id] != "" && $selectedIfc == "" } {
-	$wi.panwin.f1.tree focus [lindex [lsort -ascii [allIfcList $node_id]] 0]
-	$wi.panwin.f1.tree selection set [lindex [lsort -ascii [allIfcList $node_id]] 0]
+	configGUI_showIfcInfo $wi.panwin.f2 0 $node_id [lindex $sorted_iface_list 0]
+    } elseif { $all_iface_list != "" && $selectedIfc == "" } {
+	$wi.panwin.f1.tree focus [lindex $sorted_all_iface_list 0]
+	$wi.panwin.f1.tree selection set [lindex $sorted_all_iface_list 0]
 
 	set cancel 0
-	configGUI_showIfcInfo $wi.panwin.f2 0 $node_id [lindex [lsort -ascii [allIfcList $node_id]] 0]
+	configGUI_showIfcInfo $wi.panwin.f2 0 $node_id [lindex $sorted_all_iface_list 0]
     } else {
 	$wi.panwin.f1.tree focus "physIfcFrame"
 	$wi.panwin.f1.tree selection set "physIfcFrame"
@@ -297,7 +306,7 @@ proc configGUI_addTree { wi node_id } {
 	configGUI_showIfcInfo $wi.panwin.f2 0 $node_id "physIfcFrame"
     }
 
-    if { [ifcList $node_id] != "" && $selectedIfc != "" } {
+    if { $iface_list != "" && $selectedIfc != "" } {
 	$wi.panwin.f1.tree focus $selectedIfc
 	$wi.panwin.f1.tree selection set $selectedIfc
 
@@ -313,12 +322,12 @@ proc configGUI_addTree { wi node_id } {
 	"configGUI_showIfcInfo $wi.panwin.f2 0 $node_id physIfcFrame"
 
     $wi.panwin.f1.tree tag bind physIfcFrame <Key-Down> \
-	    "if { [llength [ifcList $node_id]] != 0 } {
-		configGUI_showIfcInfo $wi.panwin.f2 0 $node_id [lindex [lsort -ascii [ifcList $node_id]] 0]
-	    }"
+	"if { [llength $iface_list] != 0 } {
+	    configGUI_showIfcInfo $wi.panwin.f2 0 $node_id [lindex $sorted_iface_list 0]
+	}"
 
     #binding for tags $iface_id
-    foreach iface_id [lsort -dictionary [ifcList $node_id]] {
+    foreach iface_id $sorted_iface_list {
 	$wi.panwin.f1.tree tag bind $iface_id <1> \
 	  "$wi.panwin.f1.tree focus $iface_id
 	   $wi.panwin.f1.tree selection set $iface_id
@@ -352,17 +361,17 @@ proc configGUI_addTree { wi node_id } {
     }
 
     if { [[getNodeType $node_id].virtlayer] == "VIRTUALIZED" } {
-	$wi.panwin.f1.tree tag bind [lindex [lsort -ascii [ifcList $node_id]] end] <Key-Down> \
+	$wi.panwin.f1.tree tag bind [lindex $sorted_iface_list end] <Key-Down> \
 	    "configGUI_showIfcInfo $wi.panwin.f2 0 $node_id logIfcFrame"
 
 	$wi.panwin.f1.tree tag bind logIfcFrame <1> \
 		"configGUI_showIfcInfo $wi.panwin.f2 0 $node_id logIfcFrame"
 	$wi.panwin.f1.tree tag bind logIfcFrame <Key-Up> \
-		"configGUI_showIfcInfo $wi.panwin.f2 0 $node_id [lindex [lsort -ascii [ifcList $node_id]] end]"
+		"configGUI_showIfcInfo $wi.panwin.f2 0 $node_id [lindex $sorted_iface_list end]"
 	$wi.panwin.f1.tree tag bind logIfcFrame <Key-Down> \
-		"configGUI_showIfcInfo $wi.panwin.f2 0 $node_id [lindex [lsort -ascii [logIfcList $node_id]] 0]"
+		"configGUI_showIfcInfo $wi.panwin.f2 0 $node_id [lindex $sorted_logiface_list 0]"
 
-	foreach iface_id [lsort -ascii [logIfcList $node_id]] {
+	foreach iface_id $sorted_logiface_list {
 	    $wi.panwin.f1.tree tag bind $iface_id <1> \
 	      "$wi.panwin.f1.tree focus $iface_id
 	       $wi.panwin.f1.tree selection set $iface_id
@@ -501,6 +510,11 @@ proc showPhysIfcMenu { iface_id } {
 proc configGUI_refreshIfcsTree { wi node_id } {
     global treecolumns
 
+    set iface_list [ifcList $node_id]
+    set sorted_iface_list [lsort -ascii $iface_list]
+    set logiface_list [logIfcList $node_id]
+    set sorted_logiface_list [lsort -ascii $logiface_list]
+
     $wi delete [$wi children {}]
     #Creating new items
     $wi insert {} end -id physIfcFrame -text \
@@ -511,7 +525,7 @@ proc configGUI_refreshIfcsTree { wi node_id } {
 	$wi focus physIfcFrame
     }
 
-    foreach iface_id [lsort -dictionary [ifcList $node_id]] {
+    foreach iface_id $sorted_iface_list {
 	$wi insert physIfcFrame end -id $iface_id \
 	    -text "[getIfcName $node_id $iface_id]" -tags $iface_id
 
@@ -525,10 +539,11 @@ proc configGUI_refreshIfcsTree { wi node_id } {
 	$wi insert {} end -id logIfcFrame -text \
 	    "Logical Interfaces" -open true -tags logIfcFrame
 
-	foreach iface_id [lsort -dictionary [logIfcList $node_id]] {
+	foreach iface_id $sorted_logiface_list {
 	    $wi insert logIfcFrame end -id $iface_id \
 		-text "[getIfcName $node_id $iface_id]" -tags $iface_id
-	    foreach column { "OperState" "NatState" "MTU" "IPv4addrs" "IPv6addrs" } {
+
+	    foreach column $treecolumns {
 		$wi set $iface_id [lindex $column 0] \
 		    [getIfc[lindex $column 0] $node_id $iface_id]
 	    }
@@ -542,15 +557,16 @@ proc configGUI_refreshIfcsTree { wi node_id } {
     $wi tag bind physIfcFrame <Key-Up> \
 	    "configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id physIfcFrame"
     $wi tag bind physIfcFrame <Key-Down> \
-	    "if { [llength [ifcList $node_id]] != 0 } {
-		configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id [lindex [lsort -ascii [ifcList $node_id]] 0]
-	    }"
+	"if { [llength $iface_list] != 0 } {
+	    configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id [lindex $sorted_iface_list 0]
+	}"
 
-    foreach iface_id [lsort -dictionary [ifcList $node_id]] {
+    foreach iface_id $sorted_iface_list {
 	$wi tag bind $iface_id <1> \
-	  "$wi focus $iface_id
-	   $wi selection set $iface_id
-           configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id $iface_id"
+	    "$wi focus $iface_id
+
+	$wi selection set $iface_id
+	configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id $iface_id"
 	$wi tag bind $iface_id <Key-Up> \
 	    "if { ! [string equal {} [$wi prev $iface_id]] } {
 		configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id [$wi prev $iface_id]
@@ -566,18 +582,19 @@ proc configGUI_refreshIfcsTree { wi node_id } {
 		configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id [$wi next $iface_id]
 	    }"
     }
+
     if { [[getNodeType $node_id].virtlayer] == "VIRTUALIZED" } {
-	$wi tag bind [lindex [lsort -ascii [ifcList $node_id]] end] <Key-Down> \
+	$wi tag bind [lindex $sorted_iface_list end] <Key-Down> \
 		"configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id logIfcFrame"
 
 	$wi tag bind logIfcFrame <1> \
 		"configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id logIfcFrame"
 	$wi tag bind logIfcFrame <Key-Up> \
-		"configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id [lindex [lsort -ascii [ifcList $node_id]] end]"
+		"configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id [lindex $sorted_iface_list end]"
 	$wi tag bind logIfcFrame <Key-Down> \
-		"configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id [lindex [lsort -ascii [logIfcList $node_id]] 0]"
+		"configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id [lindex $sorted_logiface_list 0]"
 
-	foreach iface_id [lsort -ascii [logIfcList $node_id]] {
+	foreach iface_id $sorted_logiface_list {
 	    $wi tag bind $iface_id <1> \
 	      "$wi focus $iface_id
 	       $wi selection set $iface_id
@@ -620,6 +637,8 @@ proc configGUI_showIfcInfo { wi phase node_id iface_id } {
     global guielements
     global changed apply cancel badentry
 
+    set all_iface_list [allIfcList $node_id]
+
     #
     #shownifcframe - frame that is currently shown below the list of interfaces
     #
@@ -652,7 +671,7 @@ proc configGUI_showIfcInfo { wi phase node_id iface_id } {
 	foreach guielement $guielements {
 	    #calling "apply" procedures to check if some parameters of previously
 	    #selected interface have been changed
-            if { [llength $guielement] == 2 && [lindex $guielement 1] in [allIfcList $node_id] } {
+	    if { [llength $guielement] == 2 && [lindex $guielement 1] in $all_iface_list } {
 		global brguielements
 
 		if { $guielement ni $brguielements } {
@@ -813,6 +832,7 @@ proc configGUI_logicalInterfaces { wi node_id iface_id } {
 
     ttk::button $wi.if$iface_id.addbtn -text "Add" -command {
 	global curnode logifaces_list
+	global changed
 
 	set wi .popup.nbook.nfInterfaces.panwin.f2.iflogIfcFrame
 	set ifctype [$wi.addbox get]
@@ -833,6 +853,7 @@ proc configGUI_logicalInterfaces { wi node_id iface_id } {
 
     ttk::button $wi.if$iface_id.rmvbtn -text "Remove" -command {
 	global curnode logifaces_list
+	global changed
 
 	set wi .popup.nbook.nfInterfaces.panwin.f2.iflogIfcFrame
 	set iface_name [$wi.rmvbox get]
@@ -922,10 +943,6 @@ proc configGUI_physicalInterfaces { wi node_id iface_id } {
 	configGUI_refreshIfcsTree .popup.nbook.nfInterfaces.panwin.f1.tree $curnode
 	configGUI_showIfcInfo .popup.nbook.nfInterfaces.panwin.f2 0 $curnode $iface_id
 	.popup.nbook.nfInterfaces.panwin.f1.tree selection set $iface_id
-
-	set changed 1
-	redrawAll
-	updateUndoLog
     }
 
     ttk::label $wi.if$iface_id.rmvtxt -text "Remove interface:"
@@ -934,6 +951,7 @@ proc configGUI_physicalInterfaces { wi node_id iface_id } {
 
     ttk::button $wi.if$iface_id.rmvbtn -text "Remove" -command {
 	global curnode ifaces_list
+	global changed
 
 	set wi .popup.nbook.nfInterfaces.panwin.f2.ifphysIfcFrame
 	set iface_name [$wi.rmvbox get]
@@ -942,7 +960,15 @@ proc configGUI_physicalInterfaces { wi node_id iface_id } {
 	    return
 	}
 
+	# TODO: not here
+	setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] [getIfcIPv4addrs $curnode $iface_id] "keep_doubles"]
+	setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] [getIfcIPv6addrs $curnode $iface_id] "keep_doubles"]
+	setToRunning "mac_used_list" [removeFromList [getFromRunning "mac_used_list"] [getIfcMACaddr $curnode $iface_id] "keep_doubles"]
+
 	$wi.rmvbox set ""
+	if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+	    setToExecuteVars "terminate_cfg" [cfgGet]
+	}
 	removeIface $curnode $iface_id
 
 	set ifaces_list [lsort [ifaceNames $curnode]]
@@ -954,10 +980,6 @@ proc configGUI_physicalInterfaces { wi node_id iface_id } {
 	configGUI_refreshIfcsTree .popup.nbook.nfInterfaces.panwin.f1.tree $curnode
 	configGUI_showIfcInfo .popup.nbook.nfInterfaces.panwin.f2 0 $curnode physIfcFrame
 	.popup.nbook.nfInterfaces.panwin.f1.tree selection set physIfcFrame
-
-	set changed 1
-	redrawAll
-	updateUndoLog
     }
 
     pack $wi.if$iface_id -anchor w -fill both -expand 1
@@ -992,6 +1014,7 @@ proc configGUI_physicalInterfaces { wi node_id iface_id } {
 #****
 proc configGUI_saveChangesPopup { wi node_id iface_id } {
     global guielements treecolumns apply cancel changed
+    global
 
     if { $iface_id ni [allIfcList $node_id] } {
 	return
@@ -1020,9 +1043,6 @@ proc configGUI_saveChangesPopup { wi node_id iface_id } {
 		} elseif { $nbook == -1 && $treecolumns != "" } {
 		    configGUI_refreshIfcsTree .popup.panwin.f1.tree $node_id
 		}
-
-	        redrawAll
-	        updateUndoLog
             }
 	}
 
@@ -1061,13 +1081,19 @@ proc configGUI_buttonsACNode { wi node_id } {
     ttk::button $wi.bottom.buttons.applyclose -text "Apply and Close" -command \
         "set apply 1; set close 1; configGUI_applyButtonNode $wi $node_id 0"
     ttk::button $wi.bottom.buttons.cancel -text "Cancel" -command \
-        "set badentry -1; destroy $wi"
+	"cancelNodeUpdate $node_id ; set badentry -1 ; destroy $wi"
+
     pack $wi.bottom.buttons.apply $wi.bottom.buttons.applyclose \
 	$wi.bottom.buttons.cancel -side left -padx 2
     pack $wi.bottom.buttons -pady 2 -expand 1
     pack $wi.bottom -fill both -side bottom
 
-    bind $wi <Key-Escape> "set badentry -1; destroy $wi"
+    bind $wi <Key-Escape> "cancelNodeUpdate $node_id ; set badentry -1 ; destroy $wi"
+}
+
+proc cancelNodeUpdate { node_id } {
+    redrawAll
+    updateUndoLog
 }
 
 #****f* nodecfgGUI.tcl/configGUI_applyButtonNode
@@ -1160,6 +1186,13 @@ proc configGUI_applyButtonNode { wi node_id phase } {
 	}
     }
 
+    if { $apply } {
+	if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+	    undeployCfg
+	    deployCfg
+	}
+    }
+
     if { $changed == 1 } {
 	set nbook [lsearch [pack slaves .popup] .popup.nbook]
 	if { $nbook != -1 && $treecolumns != "" } {
@@ -1174,12 +1207,15 @@ proc configGUI_applyButtonNode { wi node_id phase } {
 	} elseif { $nbook == -1 && $treecolumns != "" } {
 	    configGUI_refreshIfcsTree .popup.panwin.f1.tree $node_id
 	}
-
-	redrawAll
-	updateUndoLog
     }
 
-    set apply 0
+    if { $apply } {
+	set apply 0
+
+	redrawAll
+	# will reset 'changed' to 0
+	updateUndoLog
+    }
 
     if { $close } {
        destroy .popup
@@ -1850,17 +1886,6 @@ proc configGUI_routingModel { wi node_id } {
 	$w.protocols.bgp configure -state disabled
     }
 
-    if { [getFromRunning "oper_mode"] != "edit" } {
-	$w.model.frr configure -state disabled
-	$w.model.quagga configure -state disabled
-	$w.model.static configure -state disabled
-	$w.protocols.rip configure -state disabled
-	$w.protocols.ripng configure -state disabled
-	$w.protocols.ospf configure -state disabled
-	$w.protocols.ospf6 configure -state disabled
-	$w.protocols.bgp configure -state disabled
-    }
-
     if { "frr" ni $supp_router_models } {
 	$w.model.frr configure -state disabled
     }
@@ -1904,12 +1929,7 @@ proc configGUI_servicesConfig { wi node_id } {
 	global $srv\_enable
 
 	set $srv\_enable 0
-	if { [getFromRunning "oper_mode"] == "edit" } {
-	    ttk::checkbutton $w.list.$srv -text "$srv" -variable $srv\_enable
-	} else {
-	    ttk::checkbutton $w.list.$srv -text "$srv" -variable $srv\_enable \
-		-state disabled
-	}
+	ttk::checkbutton $w.list.$srv -text "$srv" -variable $srv\_enable
 	pack $w.list.$srv -side left -padx 6
     }
 
@@ -1952,12 +1972,7 @@ proc configGUI_attachDockerToExt { wi node_id } {
 
     pack $w.label -side left -padx 2
 
-    if { [getFromRunning "oper_mode"] == "edit" } {
-	ttk::checkbutton $w.chkbox -text "Enabled" -variable docker_enable
-    } else {
-	ttk::checkbutton $w.chkbox -text "Enabled" -variable docker_enable \
-	    -state disabled
-    }
+    ttk::checkbutton $w.chkbox -text "Enabled" -variable docker_enable
     pack $w.chkbox -side left -padx 7
 
     pack $w -fill both
@@ -2299,7 +2314,7 @@ proc configGUI_ifcQueueConfigApply { wi node_id iface_id } {
 #   * iface_id -- interface name
 #****
 proc configGUI_ifcMACAddressApply { wi node_id iface_id } {
-    global changed apply close
+    global changed force apply close
 
     set entry [$wi.if$iface_id.mac.addr get]
     if { $entry != "" } {
@@ -2326,12 +2341,13 @@ proc configGUI_ifcMACAddressApply { wi node_id iface_id } {
     }
 
     set oldmacaddr [getIfcMACaddr $node_id $iface_id]
-    if { $macaddr != $oldmacaddr } {
-        if { $apply == 1 && $dup != 0 && $macaddr != "" } {
-            tk_dialog .dialog1 "IMUNES warning" \
-	        "Provided MAC address already exists on node's [lindex $dup 0] interface [lindex $dup 1]" \
-	    info 0 Dismiss
-        }
+    if { $force || $macaddr != $oldmacaddr } {
+	if { $apply == 1 && $dup != 0 && $macaddr != "" } {
+	    lassign $dup dup_node_id dup_iface_id
+	    tk_dialog .dialog1 "IMUNES warning" \
+		"Provided MAC address already exists on node's $dup_node_id ([getNodeName $dup_node_id]) interface $dup_iface_id ([getIfcName $dup_node_id $dup_iface_id])" \
+		info 0 Dismiss
+	}
 
 	if { $apply == 1 } {
 	    setIfcMACaddr $node_id $iface_id $macaddr
@@ -2359,7 +2375,7 @@ proc configGUI_ifcMACAddressApply { wi node_id iface_id } {
 #   * iface_id -- interface name
 #****
 proc configGUI_ifcIPv4AddressApply { wi node_id iface_id } {
-    global changed apply
+    global changed force apply
 
     set ipaddrs [formatIPaddrList [$wi.if$iface_id.ipv4.addr get]]
     foreach ipaddr $ipaddrs {
@@ -2369,7 +2385,7 @@ proc configGUI_ifcIPv4AddressApply { wi node_id iface_id } {
     }
 
     set oldipaddrs [getIfcIPv4addrs $node_id $iface_id]
-    if { $ipaddrs != $oldipaddrs } {
+    if { $force || $ipaddrs != $oldipaddrs } {
 	if { $apply == 1 } {
 	    setIfcIPv4addrs $node_id $iface_id $ipaddrs
 	}
@@ -2396,7 +2412,7 @@ proc configGUI_ifcIPv4AddressApply { wi node_id iface_id } {
 #   * iface_id -- interface name
 #****
 proc configGUI_ifcIPv6AddressApply { wi node_id iface_id } {
-    global changed apply
+    global changed force apply
 
     set ipaddrs [formatIPaddrList [$wi.if$iface_id.ipv6.addr get]]
     foreach ipaddr $ipaddrs {
@@ -2406,7 +2422,7 @@ proc configGUI_ifcIPv6AddressApply { wi node_id iface_id } {
     }
 
     set oldipaddrs [getIfcIPv6addrs $node_id $iface_id]
-    if { $ipaddrs != $oldipaddrs } {
+    if { $force || $ipaddrs != $oldipaddrs } {
 	if { $apply == 1 } {
 	    setIfcIPv6addrs $node_id $iface_id $ipaddrs
 	}
@@ -2483,7 +2499,10 @@ proc configGUI_staticRoutesApply { wi node_id } {
 	set changed 1
     }
 
-    setAutoDefaultRoutesStatus $node_id $auto_default_routes
+    if { [getAutoDefaultRoutesStatus $node_id] != $auto_default_routes } {
+	setAutoDefaultRoutesStatus $node_id $auto_default_routes
+	set changed 1
+    }
 }
 
 #****f* nodecfgGUI.tcl/checkStaticRoutesSyntax
@@ -2683,27 +2702,23 @@ proc configGUI_routingModelApply { wi node_id } {
     global router_ConfigModel
     global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable
 
-    if { [getFromRunning "oper_mode"] == "edit" } {
-	if { [getNodeType $node_id] != "nat64" } {
-	    setNodeModel $node_id $router_ConfigModel
-	}
-
-	if { $router_ConfigModel != "static" } {
-	    setNodeProtocol $node_id "rip" $ripEnable
-	    setNodeProtocol $node_id "ripng" $ripngEnable
-	    setNodeProtocol $node_id "ospf" $ospfEnable
-	    setNodeProtocol $node_id "ospf6" $ospf6Enable
-	    setNodeProtocol $node_id "bgp" $bgpEnable
-	} else {
-	    $wi.routing.protocols.rip configure -state disabled
-	    $wi.routing.protocols.ripng configure -state disabled
-	    $wi.routing.protocols.ospf configure -state disabled
-            $wi.routing.protocols.ospf6 configure -state disabled
-            $wi.routing.protocols.bgp configure -state disabled
-	}
-
-	set changed 1
+    if { [getNodeType $node_id] != "nat64" && $router_ConfigModel != [getNodeModel $node_id]} {
+	setNodeModel $node_id $router_ConfigModel
     }
+
+    if { $router_ConfigModel != "static" } {
+	foreach var "rip ripng ospf ospf6 bgp" {
+	    if { [getNodeProtocol $node_id "$var"] != [set ${var}Enable] } {
+		setNodeProtocol $node_id "$var" [set ${var}Enable]
+	    }
+	}
+    } else {
+	foreach var "rip ripng ospf ospf6 bgp" {
+	    $wi.routing.protocols.$var configure -state disabled
+	}
+    }
+
+    set changed 1
 }
 
 #****f* nodecfgGUI.tcl/configGUI_servicesConfigApply
@@ -2718,21 +2733,20 @@ proc configGUI_routingModelApply { wi node_id } {
 #   * node_id -- node id
 #****
 proc configGUI_servicesConfigApply { wi node_id } {
-    global all_services_list
+    global all_services_list changed
 
-    if { [getFromRunning "oper_mode"] == "edit" } {
-	set serviceList ""
-	foreach srv $all_services_list {
-	    global $srv\_enable
-	    if { [set $srv\_enable] } {
-		lappend serviceList $srv
-	    }
-	}
+    set serviceList ""
+    foreach srv $all_services_list {
+	global $srv\_enable
 
-	if { [getNodeServices $node_id] != $serviceList } {
-	    setNodeServices $node_id $serviceList
-	    set changed 1
+	if { [set $srv\_enable] } {
+	    lappend serviceList $srv
 	}
+    }
+
+    if { [getNodeServices $node_id] != $serviceList } {
+	setNodeServices $node_id $serviceList
+	set changed 1
     }
 }
 
@@ -2748,14 +2762,12 @@ proc configGUI_servicesConfigApply { wi node_id } {
 #   * node_id -- node id
 #****
 proc configGUI_attachDockerToExtApply { wi node_id } {
-    global docker_enable
+    global changed docker_enable
 
     set docker_enable_str [string map {0 "" 1 true} $docker_enable]
-    if { [getFromRunning "oper_mode"] == "edit" } {
-	if { [getNodeDockerAttach $node_id] != $docker_enable_str } {
-	    setNodeDockerAttach $node_id $docker_enable_str
-	    set changed 1
-	}
+    if { [getNodeDockerAttach $node_id] != $docker_enable_str } {
+	setNodeDockerAttach $node_id $docker_enable_str
+	set changed 1
     }
 }
 
@@ -2774,11 +2786,9 @@ proc configGUI_customImageApply { wi node_id } {
     global changed
 
     set custom_image [$wi.customImg.img get]
-    if { [getFromRunning "oper_mode"] == "edit" } {
-	if { [getNodeCustomImage $node_id] != $custom_image } {
-	    setNodeCustomImage $node_id $custom_image
-	    set changed 1
-	}
+    if { [getNodeCustomImage $node_id] != $custom_image } {
+	setNodeCustomImage $node_id $custom_image
+	set changed 1
     }
 }
 
@@ -2794,6 +2804,8 @@ proc configGUI_customImageApply { wi node_id } {
 #   * node_id -- node id
 #****
 proc configGUI_cpuConfigApply { wi node_id } {
+    global changed
+
     set oldcpuconf [getNodeCPUConf $node_id]
     set newcpuconf {}
     set cpumin [$wi.cpucfg.minvalue get]
@@ -5487,8 +5499,6 @@ proc configGUI_saveBridgeChangesPopup { wi node_id iface_id } {
 		} elseif { $nbook == -1 && $brtreecolumns != "" } {
 		    configGUI_refreshBridgeIfcsTree .popup.panwin.f1.tree $node_id
 		}
-	        redrawAll
-	        updateUndoLog
             }
 	}
         #discard changes
@@ -5894,7 +5904,6 @@ proc configGUI_saveFilterChangesPopup { wi node_id iface_id rule } {
                 if { $filtertreecolumns != "" } {
 		    configGUI_refreshIfcRulesTree
 		}
-	        updateUndoLog
             }
 	}
         #discard changes
@@ -6385,6 +6394,8 @@ proc configGUI_addPackgenPanedWin { wi } {
 	}
     ttk::button $wi.panwin.f2.buttons.savpac -text "Save packet" \
 	-command {
+	    global changed
+
 	    set sel [configGUI_packetConfigApply 0 0]
 	    if { $changed == 1 } {
 		configGUI_refreshPacketsTree
@@ -6437,6 +6448,8 @@ proc configGUI_buttonsACPackgenNode { wi node_id } {
     ttk::frame $wi.bottom.buttons -borderwidth 6
     ttk::button $wi.bottom.buttons.apply -text "Apply" -command \
         {
+	    global changed
+
 	    configGUI_packetRateApply
 	    set sel [configGUI_packetConfigApply 0 0]
 	    if { $changed == 1 } {
@@ -6694,7 +6707,6 @@ proc configGUI_savePackgenChangesPopup { wi node_id pac } {
                 if { $packgentreecolumns != "" } {
 		    configGUI_refreshPacketsTree
 		}
-	        updateUndoLog
             }
 	}
         #discard changes
