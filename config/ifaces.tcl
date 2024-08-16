@@ -958,6 +958,7 @@ proc newLogIface { node_id logiface_type } {
     set current_logiface_names [lsearch -all -inline -glob [logIfaceNames $node_id] "$logiface_type*"]
 
     set logiface_id [newObjectId [logIfcList $node_id] "lifc"]
+    setToRunning "${node_id}|${logiface_id}_running" false
     setNodeIface $node_id $logiface_id {}
 
     setIfcType $node_id $logiface_id $logiface_type
@@ -989,4 +990,83 @@ proc removeIface { node_id iface_id } {
 	    }
 	}
     }
+}
+
+proc nodeCfggenIfc { node_id iface_id } {
+    global isOSlinux
+
+    set cfg {}
+
+    set iface_name [getIfcName $node_id $iface_id]
+
+    set mac_addr [getIfcMACaddr $node_id $iface_id]
+    if { $mac_addr != "" } {
+	lappend cfg [getMacIfcCmd $iface_name $mac_addr]
+    }
+
+    set mtu [getIfcMTU $node_id $iface_id]
+    lappend cfg [getMtuIfcCmd $iface_name $mtu]
+
+    if { [getIfcNatState $node_id $iface_id] == "on" } {
+	lappend cfg [getNatIfcCmd $iface_name]
+    }
+
+    set primary 1
+    set addrs [getIfcIPv4addrs $node_id $iface_id]
+    setToRunning "${node_id}|${iface_id}_old_ipv4_addrs" $addrs
+    foreach addr $addrs {
+	if { $addr != "" } {
+	    lappend cfg [getIPv4IfcCmd $iface_name $addr $primary]
+	    set primary 0
+	}
+    }
+
+    set primary 1
+    set addrs [getIfcIPv6addrs $node_id $iface_id]
+    setToRunning "${node_id}|${iface_id}_old_ipv6_addrs" $addrs
+    if { $isOSlinux } {
+	# Linux is prioritizing IPv6 addresses in reversed order
+	set addrs [lreverse $addrs]
+    }
+    foreach addr $addrs {
+	if { $addr != "" } {
+	    lappend cfg [getIPv6IfcCmd $iface_name $addr $primary]
+	    set primary 0
+	}
+    }
+
+    set state [getIfcOperState $node_id $iface_id]
+    if { $state == "" } {
+	set state "up"
+    }
+
+    lappend cfg [getStateIfcCmd $iface_name $state]
+
+    return $cfg
+}
+
+proc nodeUncfggenIfc { node_id iface_id } {
+    set cfg {}
+
+    set iface_name [getIfcName $node_id $iface_id]
+
+    set addrs [getFromRunning "${node_id}|${iface_id}_old_ipv4_addrs"]
+    foreach addr $addrs {
+        if { $addr != "" } {
+            lappend cfg [getDelIPv4IfcCmd $iface_name $addr]
+        }
+    }
+    unsetRunning "${node_id}|${iface_id}_old_ipv4_addrs"
+    #lappend cfg [getFlushIPv4IfcCmd $iface_name]
+
+    set addrs [getFromRunning "${node_id}|${iface_id}_old_ipv6_addrs"]
+    foreach addr $addrs {
+        if { $addr != "" } {
+            lappend cfg [getDelIPv6IfcCmd $iface_name $addr]
+        }
+    }
+    unsetRunning "${node_id}|${iface_id}_old_ipv6_addrs"
+    #lappend cfg [getFlushIPv6IfcCmd $iface_name]
+
+    return $cfg
 }

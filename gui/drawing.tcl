@@ -120,6 +120,9 @@ proc drawNode { node_id } {
     set zoom [getFromRunning "zoom"]
     lassign [lmap coord [getNodeCoords $node_id] {expr $coord * $zoom}] x y
 
+    .panwin.f1.c delete -withtags "node && $node_id"
+    .panwin.f1.c delete -withtags "nodelabel && $node_id"
+
     set custom_icon [getCustomIcon $node_id]
     if { $custom_icon == "" } {
 	global $type
@@ -175,7 +178,13 @@ proc drawNode { node_id } {
 	}
     }
 
-    set label_elem [.panwin.f1.c create text $x $y -fill blue \
+    if { [getFromRunning "${node_id}_running"] == true } {
+	set color red
+    } else {
+	set color blue
+    }
+
+    set label_elem [.panwin.f1.c create text $x $y -fill $color \
 	-text "$label_str" -tags "nodelabel $node_id" -justify center]
 
     if { $show_node_labels == 0 } {
@@ -472,15 +481,15 @@ proc redrawLink { link_id } {
     }
     .panwin.f1.c coords "linklabel && $link_id" $lx $ly
 
-    lassign [getLinkPeersIfaces $link_id] iface1 iface2
-    if { [getNodeType $lnode1] != "pseudo" } {
-	updateIfcLabelParams $link_id $lnode1 $iface1 $x1 $y1 $x2 $y2
-	updateIfcLabel $link_id $lnode1 $iface1
+    lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
+    if { [getNodeType $node1_id] != "pseudo" } {
+	updateIfcLabelParams $link_id $node1_id $iface1_id $x1 $y1 $x2 $y2
+	updateIfcLabel $link_id $node1_id $iface1_id
     }
 
-    if { [getNodeType $lnode2] != "pseudo" } {
-	updateIfcLabelParams $link_id $lnode2 $iface2 $x2 $y2 $x1 $y1
-	updateIfcLabel $link_id $lnode2 $iface2
+    if { [getNodeType $node2_id] != "pseudo" } {
+	updateIfcLabelParams $link_id $node2_id $iface2_id $x2 $y2 $x1 $y1
+	updateIfcLabel $link_id $node2_id $iface2_id
     }
 }
 
@@ -595,41 +604,27 @@ proc connectWithNode { nodes target_node_id } {
 #   * node2_id -- node id of the second node
 #****
 proc newLinkGUI { node1_id node2_id } {
+    return [newLinkWithIfacesGUI $node1_id "" $node2_id ""]
+}
+
+proc newLinkWithIfacesGUI { node1_id iface1_id node2_id iface2_id } {
     global changed
 
-    set link_id [newLink $node1_id $node2_id]
+    set link_id [newLinkWithIfaces $node1_id $iface1_id $node2_id $iface2_id]
     if { $link_id == "" } {
 	return
     }
 
-    if { [getNodeCanvas $lnode1] != [getNodeCanvas $lnode2] || $lnode1 == $lnode2 } {
-	lassign [getLinkPeers $link] orig_node1 orig_node2
-	lassign [splitLink $link] new_node1 new_node2
+    if { [getNodeCanvas $node1_id] != [getNodeCanvas $node2_id] || $node1_id == $node2_id } {
+	lassign [getLinkPeers $link_id] orig_node1 orig_node2
+	lassign [splitLink $link_id] new_node1 new_node2
 
 	setNodeName $new_node1 $orig_node2
 	setNodeName $new_node2 $orig_node1
     }
 
-    redrawAll
-    set changed 1
-    updateUndoLog
-}
-
-proc newLinkWithIfacesGUI { lnode1 iface1 lnode2 iface2 } {
-    global changed
-
-    set link [newLinkWithIfaces $lnode1 $iface1 $lnode2 $iface2]
-    if { $link == "" } {
-	return
-    }
-
-    if { [getNodeCanvas $lnode1] != [getNodeCanvas $lnode2] || $lnode1 == $lnode2 } {
-	lassign [getLinkPeers $link] orig_node1 orig_node2
-	lassign [splitLink $link] new_node1 new_node2
-
-	setNodeName $new_node1 $orig_node2
-	setNodeName $new_node2 $orig_node1
-    }
+    undeployCfg
+    deployCfg
 
     redrawAll
     set changed 1

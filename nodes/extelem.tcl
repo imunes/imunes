@@ -131,7 +131,7 @@ proc $MODULE.virtlayer {} {
 
 #****f* extelem.tcl/extelem.nodeCreate
 # NAME
-#   extelem.nodeCreate -- nodeCreate
+#   extelem.nodeCreate -- instantiate
 # SYNOPSIS
 #   extelem.nodeCreate $eid $node_id
 # FUNCTION
@@ -148,11 +148,11 @@ proc $MODULE.nodeCreate { eid node_id } {
     }
 }
 
-#****f* extelem.tcl/extelem.destroy
+#****f* extelem.tcl/extelem.nodeDestroy
 # NAME
-#   extelem.destroy -- destroy
+#   extelem.nodeDestroy -- destroy
 # SYNOPSIS
-#   extelem.destroy $eid $node_id
+#   extelem.nodeDestroy $eid $node_id
 # FUNCTION
 #   Destroys a extelem. Destroys the netgraph node that represents
 #   the extelem by sending a shutdown message.
@@ -160,7 +160,7 @@ proc $MODULE.nodeCreate { eid node_id } {
 #   * eid -- experiment id
 #   * node_id -- id of the node (type of the node is extelem)
 #****
-proc $MODULE.destroy { eid node_id } {
+proc $MODULE.nodeDestroy { eid node_id } {
     foreach group [getNodeStolenIfaces $node_id] {
 	lassign $group iface_id extIfc
 	releaseExtIfcByName $eid $extIfc

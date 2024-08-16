@@ -133,7 +133,7 @@ proc $MODULE.virtlayer {} {
 #   Foreach interface in the interface list of the node ip address is
 #   configured and each static route from the simulator is added.
 # INPUTS
-#   * node_id - id of the node (type of the node is stpswitch)
+#   * node_id - id of the node
 # RESULT
 #   * config -- generated configuration
 #****
@@ -296,7 +296,7 @@ proc $MODULE.generateConfig { node_id } {
 #   In this case (procedure stpswitch.bootcmd) specific application
 #   is /bin/sh
 # INPUTS
-#   * node_id - id of the node (type of the node is stpswitch)
+#   * node_id - id of the node
 # RESULT
 #   * appl -- application that reads the configuration (/bin/sh)
 #****
@@ -327,12 +327,14 @@ proc $MODULE.shellcmds {} {
 # SYNOPSIS
 #   stpswitch.nodeCreate $eid $node_id
 # FUNCTION
+#   Procedure instantiate creates a new virtaul node
+#   for a given node in imunes.
 #   Procedure stpswitch.nodeCreate cretaes a new virtual node
 #   with all the interfaces and CPU parameters as defined
 #   in imunes.
 # INPUTS
 #   * eid - experiment id
-#   * node_id - id of the node (type of the node is stpswitch)
+#   * node_id - id of the node
 #****
 
 proc $MODULE.nodeCreate { eid node_id } {
@@ -351,37 +353,39 @@ proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
     l3node.nodePhysIfacesCreate $eid $node_id $ifaces
 }
 
-#****f* stpswitch.tcl/stpswitch.start
+#****f* stpswitch.tcl/stpswitch.nodeConfigure
 # NAME
-#   stpswitch.start
+#   stpswitch.nodeConfigure
 # SYNOPSIS
-#   stpswitch.start $eid $node_id
+#   stpswitch.nodeConfigure $eid $node_id
 # FUNCTION
 #   Starts a new stpswitch. The node can be started if it is instantiated.
-#   Simulates the booting proces of a stpswitch, by calling l3node.start
+#   Simulates the booting proces of a stpswitch, by calling l3node.nodeConfigure
 #   procedure.
 # INPUTS
 #   * eid - experiment id
-#   * node_id - id of the node (type of the node is stpswitch)
+#   * node_id - id of the node
 #****
-proc $MODULE.start { eid node_id } {
-    l3node.start $eid $node_id
+proc $MODULE.nodeConfigure { eid node_id } {
+    l3node.nodeConfigure $eid $node_id
 }
 
-#****f* stpswitch.tcl/stpswitch.shutdown
+#****f* stpswitch.tcl/stpswitch.nodeShutdown
 # NAME
-#   stpswitch.shutdown
+#   stpswitch.nodeShutdown
 # SYNOPSIS
-#   stpswitch.shutdown $eid $node_id
+#   stpswitch.nodeShutdown $eid $node_id
 # FUNCTION
-#   Shutdowns a stpswitch. Simulates the shutdown proces of a stpswitch,
-#   by calling the l3node.shutdown procedure.
+#   Shutdowns an stpswitch node.
+#   Simulates the shutdown proces of a node, kills all the services and
 # INPUTS
 #   * eid - experiment id
-#   * node_id - id of the node (type of the node is stpswitch)
+#   * node_id - id of the node
 #****
-proc $MODULE.shutdown { eid node_id } {
-    l3node.shutdown $eid $node_id
+proc $MODULE.nodeShutdown { eid node_id } {
+    killExtProcess "wireshark.*[getNodeName $node_id].*\\($eid\\)"
+    killAllNodeProcesses $eid $node_id
+
     catch { exec jexec $eid.$node_id ifconfig | grep bridge | cut -d : -f1 } br
     set bridges [split $br]
     foreach bridge $bridges {
@@ -393,20 +397,24 @@ proc $MODULE.destroyIfcs { eid node_id ifaces } {
     l3node.destroyIfcs $eid $node_id $ifaces
 }
 
-#****f* stpswitch.tcl/stpswitch.destroy
+#****f* stpswitch.tcl/stpswitch.nodeDestroy
 # NAME
-#   stpswitch.destroy
+#   stpswitch.nodeDestroy
 # SYNOPSIS
-#   stpswitch.destroy $eid $node_id
+#   stpswitch.nodeDestroy $eid $node_id
 # FUNCTION
-#   Destroys a stpswitch. Destroys all the interfaces of the stpswitch
-#   and the vimage itself by calling l3node.destroy procedure.
+#   Destroys an stpswitch node.
+#   First, it destroys all remaining virtual ifaces (vlans, tuns, etc).
+#   Then, it destroys the jail/container with its namespaces and FS.
 # INPUTS
 #   * eid - experiment id
-#   * node_id - id of the node (type of the node is stpswitch)
+#   * node_id - id of the node
 #****
-proc $MODULE.destroy { eid node_id } {
-    l3node.destroy $eid $node_id
+proc $MODULE.nodeDestroy { eid node_id } {
+    destroyNodeVirtIfcs $eid $node_id
+    removeNodeContainer $eid $node_id
+    destroyNamespace $eid-$node_id
+    removeNodeFS $eid $node_id
 }
 
 #****f* stpswitch.tcl/stpswitch.nghook

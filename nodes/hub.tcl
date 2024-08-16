@@ -156,11 +156,11 @@ proc $MODULE.destroyIfcs { eid node_id ifaces } {
     l2node.destroyIfcs $eid $node_id $ifaces
 }
 
-#****f* hub.tcl/hub.destroy
+#****f* hub.tcl/hub.nodeDestroy
 # NAME
-#   hub.destroy -- destroy
+#   hub.nodeDestroy -- destroy
 # SYNOPSIS
-#   hub.destroy $eid $node_id
+#   hub.nodeDestroy $eid $node_id
 # FUNCTION
 #   Destroys a hub. Destroys the netgraph node that represents
 #   the hub by sending a shutdown message.
@@ -168,8 +168,8 @@ proc $MODULE.destroyIfcs { eid node_id ifaces } {
 #   * eid -- experiment id
 #   * node_id -- id of the node (type of the node is hub)
 #****
-proc $MODULE.destroy { eid node_id } {
-    l2node.destroy $eid $node_id
+proc $MODULE.nodeDestroy { eid node_id } {
+    l2node.nodeDestroy $eid $node_id
 }
 
 #****f* hub.tcl/hub.nghook

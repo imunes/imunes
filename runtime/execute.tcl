@@ -214,6 +214,31 @@ proc createExperimentFiles { eid } {
     }
 }
 
+proc createRunningVarsFile { eid } {
+    puts "[info level -1] - [info level 0]"
+    global runtimeDir
+
+    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+    upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
+
+    # TODO: maybe remove some elements?
+    writeDataToFile $runtimeDir/$eid/runningVars [list "dict_run" "$dict_run" "execute_vars" "$execute_vars"]
+}
+
+proc readRunningVarsFile { eid } {
+    global runtimeDir
+
+    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+    upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
+
+    set fd [open $runtimeDir/$eid/runningVars r]
+    set vars_dict [read $fd]
+    close $fd
+
+    set dict_run [dictGet $vars_dict "dict_run"]
+    set execute_vars [dictGet $vars_dict "execute_vars"]
+}
+
 #****f* exec.tcl/saveRunningConfigurationInteractive
 # NAME
 #   saveRunningConfigurationInteractive -- save running configuration in
@@ -312,25 +337,6 @@ proc l3node.nghook { eid node ifc } {
     }
 }
 
-proc l2node.nodePhysIfacesCreate { eid node ifcs } {
-    nodePhysIfacesCreate $node $ifcs
-}
-
-#****f* exec.tcl/l2node.nodeNamespaceSetup
-# NAME
-#   l2node.nodeNamespaceSetup -- layer 2 node nodeNamespaceSetup
-# SYNOPSIS
-#   l2node.nodeNamespaceSetup $eid $node
-# FUNCTION
-#   Linux only. Creates a new netns.
-# INPUTS
-#   * eid -- experiment id
-#   * node -- node id
-#****
-proc l2node.nodeNamespaceSetup { eid node } {
-    createNamespace $eid-$node
-}
-
 #****f* exec.tcl/nodeIpsecInit
 # NAME
 #   nodeIpsecInit -- IPsec initialization
@@ -424,24 +430,42 @@ proc nodeIpsecInit { node } {
 #   as defined in configuration file of in GUI of imunes. Before deploying new
 #   configuration the old one is removed (vimageCleanup procedure).
 #****
-proc deployCfg { node_list nodes_ifaces link_list conf_link_list conf_nodes_ifaces conf_nodes } {
+proc deployCfg { { execute 0 } } {
     global progressbarCount execMode
 
+    if { ! $execute } {
+	if { ! [getFromRunning "cfg_deployed"] } {
+	    return
+	}
+
+	if { ! [getFromRunning "auto_execution"] } {
+	    createExperimentFiles [getFromRunning "eid"]
+	    createRunningVarsFile [getFromRunning "eid"]
+
+	    return
+	}
+    }
+
+    if { "$instantiate_nodes$create_nodes_ifaces$instantiate_links$configure_links$configure_nodes_ifaces$configure_nodes" == "" } {
+	return
+    }
+
     set progressbarCount 0
-    set nodeCount [llength $node_list]
-    set linkCount [llength $link_list]
+    set nodeCount [llength $instantiate_nodes]
+    set linkCount [llength $instantiate_links]
 
     set t_start [clock milliseconds]
 
     try {
-	prepareSystem
+	execute_prepareSystem
     } on error err {
-	statline "ERROR in 'prepareSystem': '$err'"
+	statline "ERROR in 'execute_prepareSystem': '$err'"
 	if { $execMode != "batch" } {
 	    after idle { .dialog1.msg configure -wraplength 4i }
 	    tk_dialog .dialog1 "IMUNES error" \
 		"$err \nTerminate the experiment and report the bug!" info 0 Dismiss
 	}
+
 	return
     }
 
@@ -450,12 +474,13 @@ proc deployCfg { node_list nodes_ifaces link_list conf_link_list conf_nodes_ifac
     set l3nodes {}
     set allNodes {}
     set pseudoNodesCount 0
-    foreach node $node_list {
-	if { [getNodeType $node] != "pseudo" } {
-	    if { [[getNodeType $node].virtlayer] != "VIRTUALIZED" } {
-		lappend l2nodes $node
+    foreach node_id $instantiate_nodes {
+	set node_type [getNodeType $node_id]
+	if { $node_type != "pseudo" } {
+	    if { [$node_type.virtlayer] != "VIRTUALIZED" } {
+		lappend l2nodes $node_id
 	    } else {
-		lappend l3nodes $node
+		lappend l3nodes $node_id
 	    }
 	} else {
 	    incr pseudoNodesCount
@@ -466,12 +491,34 @@ proc deployCfg { node_list nodes_ifaces link_list conf_link_list conf_nodes_ifac
     set l3nodeCount [llength $l3nodes]
     set allNodes [concat $l2nodes $l3nodes]
     set allNodeCount [llength $allNodes]
-    if { $conf_nodes == "*" } {
-	set conf_nodes $allNodes
+
+    if { $create_nodes_ifaces == "*" } {
+	set create_nodes_ifaces ""
+	foreach node_id $allNodes {
+	    dict set create_nodes_ifaces $node_id "*"
+	}
+	set create_nodes_ifaces_count $allNodeCount
+    } else {
+	set create_nodes_ifaces_count [llength [dict keys $create_nodes_ifaces]]
     }
-    set conf_nodes_count [llength $conf_nodes]
+
+    if { $configure_nodes_ifaces == "*" } {
+	set configure_nodes_ifaces ""
+	foreach node_id $allNodes {
+	    dict set configure_nodes_ifaces $node_id "*"
+	}
+	set configure_nodes_ifaces_count $allNodeCount
+    } else {
+	set configure_nodes_ifaces_count [llength [dict keys $configure_nodes_ifaces]]
+    }
+
+    if { $configure_nodes == "*" } {
+	set configure_nodes $allNodes
+    }
+    set configure_nodes_count [llength $configure_nodes]
+
     incr linkCount [expr -$pseudoNodesCount/2]
-    set maxProgressbasCount [expr {5*$allNodeCount + 1*$l2nodeCount + 5*$l3nodeCount + 2*$linkCount}]
+    set maxProgressbasCount [expr {5*$allNodeCount + 1*$l2nodeCount + 5*$l3nodeCount + 2*$linkCount + $configure_nodes_count + $create_nodes_ifaces_count + $configure_nodes_ifaces_count}]
 
     set w ""
     set eid [getFromRunning "eid"]
@@ -527,22 +574,16 @@ proc deployCfg { node_list nodes_ifaces link_list conf_link_list conf_nodes_ifac
 	pipesClose
 
 	#statline "Copying host files to $l3nodeCount L3 node(s)..."
-	#copyFilesToNodes $l3nodes $l3nodeCount $w
+	#execute_nodesCopyFiles $l3nodes $l3nodeCount $w
 
 	statline "Starting services for NODEINST hook..."
-	services start "NODEINST" "bkg" $allNodes
+	services start "NODEINST" "bkg" $configure_nodes
 
 	statline "Creating interfaces on nodes..."
 	pipesCreate
-	if { $nodes_ifaces == "*" } {
-	    set nodes_ifaces [lmap node_id $allNodes {set node_id "$node_id *"}]
-	    set node_ifaces_count $allNodeCount
-	} else {
-	    set node_ifaces_count [llength $nodes_ifaces]
-	}
-	execute_nodesPhysIfacesCreate $nodes_ifaces $node_ifaces_count $w
+	execute_nodesPhysIfacesCreate $create_nodes_ifaces $create_nodes_ifaces_count $w
 
-	statline "Waiting for interfaces on $node_ifaces_count node(s) to be created..."
+	statline "Waiting for interfaces on $create_nodes_ifaces_count node(s) to be created..."
 	pipesClose
 
 	statline "Creating logical interfaces on nodes..."
@@ -553,46 +594,58 @@ proc deployCfg { node_list nodes_ifaces link_list conf_link_list conf_nodes_ifac
 
 	statline "Creating links..."
 	pipesCreate
-	createLinks $link_list $linkCount $w
+	execute_linksCreate $instantiate_links $linkCount $w
 	statline "Waiting for $linkCount link(s) to be created..."
 	pipesClose
 
 	pipesCreate
 	statline "Configuring links..."
-	configureLinks $link_list $linkCount $w
+	execute_linksConfigure $instantiate_links $linkCount $w
 	statline "Waiting for $linkCount link(s) to be configured..."
 	pipesClose
 
 	statline "Starting services for LINKINST hook..."
-	services start "LINKINST" "bkg" $allNodes
+	services start "LINKINST" "bkg" $configure_nodes
+
+	pipesCreate
+	statline "Configuring interfaces on node(s)..."
+	execute_nodesIfacesConfigure $configure_nodes_ifaces $configure_nodes_ifaces_count $w
+	statline "Waiting for interface configuration on $configure_nodes_ifaces_count node(s)..."
+	pipesClose
 
 	pipesCreate
 	statline "Configuring node(s)..."
-	if { $conf_nodes_ifaces == "*" } {
-	    set conf_nodes_ifaces [lmap node_id $allNodes {set node_id "$node_id *"}]
-	    set conf_node_ifaces_count $allNodeCount
-	} else {
-	    set conf_node_ifaces_count [llength $conf_nodes_ifaces]
-	}
-	configureIfaces $conf_nodes_ifaces $conf_node_ifaces_count $w
-
-	executeConfNodes $conf_nodes $conf_nodes_count $w
-	statline "Waiting for configuration on $conf_nodes_count node(s)..."
-	waitForConfStart $conf_nodes $conf_nodes_count $w
+	execute_nodesConfigure $configure_nodes $configure_nodes_count $w
+	statline "Waiting for configuration on $configure_nodes_count node(s)..."
+	waitForConfStart $configure_nodes $configure_nodes_count $w
 	pipesClose
 
 	statline "Starting services for NODECONF hook..."
-	services start "NODECONF" "bkg" $l3nodes
+	services start "NODECONF" "bkg" $configure_nodes
     } on error err {
 	finishExecuting 0 "$err" $w
 
 	return
     }
 
-    statline "Checking for errors on $allNodeCount node(s)..."
-    checkForErrors $allNodes $allNodeCount $w
+    if { $configure_nodes_ifaces != "" } {
+	set error_check_nodes [lsort -unique [dict keys $configure_nodes_ifaces]]
+	set error_check_nodes_count [llength $error_check_nodes]
+	statline "Checking for errors on $error_check_nodes_count node(s) interfaces..."
+	checkForErrorsIfaces $error_check_nodes $error_check_nodes_count $w
+    }
+
+    set error_check_nodes [lsort -unique $configure_nodes]
+    set error_check_nodes_count [llength $error_check_nodes]
+    statline "Checking for errors on $error_check_nodes_count node(s)..."
+    checkForErrors $error_check_nodes $error_check_nodes_count $w
 
     finishExecuting 1 "" $w
+
+    if { ! $execute } {
+	createExperimentFiles [getFromRunning "eid"]
+    }
+    createRunningVarsFile $eid
 
     statline "Network topology instantiated in [expr ([clock milliseconds] - $t_start)/1000.0] seconds ($allNodeCount nodes and $linkCount links)."
 
@@ -601,7 +654,7 @@ proc deployCfg { node_list nodes_ifaces link_list conf_link_list conf_nodes_ifac
     }
 }
 
-proc prepareSystem {} {
+proc execute_prepareSystem {} {
     global eid_base
     global execMode
 
@@ -846,7 +899,7 @@ proc waitForInitConf { nodes nodeCount w } {
     }
 }
 
-proc copyFilesToNodes { nodes nodeCount w } {}
+proc execute_nodesCopyFiles { nodes nodeCount w } {}
 
 proc execute_nodesPhysIfacesCreate { nodes_ifaces nodeCount w } {
     global progressbarCount execMode
@@ -854,8 +907,7 @@ proc execute_nodesPhysIfacesCreate { nodes_ifaces nodeCount w } {
     set eid [getFromRunning "eid"]
 
     set batchStep 0
-    foreach node_ifaces $nodes_ifaces {
-	lassign $node_ifaces node ifaces
+    dict for {node ifaces} $nodes_ifaces {
 	displayBatchProgress $batchStep $nodeCount
 
 	if { [info procs [getNodeType $node].nodePhysIfacesCreate] != "" } {
@@ -929,21 +981,21 @@ proc execute_nodesLogIfacesCreate { nodes_ifaces nodeCount w } {
     }
 }
 
-proc createLinks { links linkCount w } {
+proc execute_linksCreate { links linkCount w } {
     global progressbarCount execMode
 
     set batchStep 0
     for { set pending_links $links } { $pending_links != "" } {} {
-	set link [lindex $pending_links 0]
-	set msg "Creating link $link"
-	set pending_links [removeFromList $pending_links $link]
+	set link_id [lindex $pending_links 0]
+	set msg "Creating link $link_id"
+	set pending_links [removeFromList $pending_links $link_id]
 
-	lassign [getLinkPeers $link] lnode1 lnode2
-	lassign [getLinkPeersIfaces $link] ifname1 ifname2
+	lassign [getLinkPeers $link_id] lnode1 lnode2
+	lassign [getLinkPeersIfaces $link_id] ifname1 ifname2
 
-	set mirror_link [getLinkMirror $link]
+	set mirror_link [getLinkMirror $link_id]
 	if { $mirror_link != "" } {
-	    set msg "Creating link $link/$mirror_link"
+	    set msg "Creating link $link_id/$mirror_link"
 	    set pending_links [removeFromList $pending_links $mirror_link]
 
 	    # switch direction for mirror links
@@ -954,13 +1006,13 @@ proc createLinks { links linkCount w } {
 	displayBatchProgress $batchStep $linkCount
 
 	try {
-	    if { [getLinkDirect $link] || [getNodeType $lnode1] == "wlan" || [getNodeType $lnode2] == "wlan" } {
+	    if { [getLinkDirect $link_id] || [getNodeType $lnode1] == "wlan" || [getNodeType $lnode2] == "wlan" } {
 		createDirectLinkBetween $lnode1 $lnode2 $ifname1 $ifname2
 	    } else {
-		createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
+		createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link_id
 	    }
 	} on error err {
-	    return -code error "Error in 'createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link': $err"
+	    return -code error "Error in 'createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link_id': $err"
 	}
 
 	incr batchStep
@@ -983,7 +1035,7 @@ proc createLinks { links linkCount w } {
     }
 }
 
-proc configureLinks { links linkCount w } {
+proc execute_linksConfigure { links linkCount w } {
     global progressbarCount execMode
 
     set batchStep 0
@@ -1033,34 +1085,23 @@ proc configureLinks { links linkCount w } {
     }
 }
 
-proc configureIfaces { nodes_ifaces nodeCount w } {
+proc execute_nodesIfacesConfigure { nodes_ifaces nodeCount w } {
     global progressbarCount execMode
 
     set eid [getFromRunning "eid"]
 
     set batchStep 0
-    set subnet_gws {}
-    set nodes_l2data [dict create]
-    foreach node_ifaces $nodes_ifaces {
-	lassign $node_ifaces node ifaces
+    dict for {node ifaces} $nodes_ifaces {
 	if { $ifaces == "*" } {
 	    set ifaces [allIfcList $node]
 	}
 	displayBatchProgress $batchStep $nodeCount
 
-	if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
-	    lassign [getDefaultGateways $node $subnet_gws $nodes_l2data] my_gws subnet_gws nodes_l2data
-	    lassign [getDefaultRoutesConfig $node $my_gws] all_routes4 all_routes6
-
-	    setDefaultIPv4routes $node $all_routes4
-	    setDefaultIPv6routes $node $all_routes6
-	}
-
-	if { [info procs [getNodeType $node].nodeStartIfaces] != "" } {
+	if { [info procs [getNodeType $node].nodeIfacesConfigure] != "" } {
 	    try {
-		[getNodeType $node].nodeStartIfaces $eid $node $ifaces
+		[getNodeType $node].nodeIfacesConfigure $eid $node $ifaces
 	    } on error err {
-		return -code error "Error in '[getNodeType $node].nodeStartIfaces $eid $node $ifaces': $err"
+		return -code error "Error in '[getNodeType $node].nodeIfacesConfigure $eid $node $ifaces': $err"
 	    }
 	}
 	pipesExec ""
@@ -1083,30 +1124,20 @@ proc configureIfaces { nodes_ifaces nodeCount w } {
     }
 }
 
-proc executeConfNodes { nodes nodeCount w } {
+proc execute_nodesConfigure { nodes nodeCount w } {
     global progressbarCount execMode
 
     set eid [getFromRunning "eid"]
 
     set batchStep 0
-    set subnet_gws {}
-    set nodes_l2data [dict create]
     foreach node_id $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
-	    lassign [getDefaultGateways $node_id $subnet_gws $nodes_l2data] my_gws subnet_gws nodes_l2data
-	    lassign [getDefaultRoutesConfig $node_id $my_gws] all_routes4 all_routes6
-
-	    setDefaultIPv4routes $node_id $all_routes4
-	    setDefaultIPv6routes $node_id $all_routes6
-	}
-
-	if { [info procs [getNodeType $node_id].nodeStart] != "" } {
+	if { [info procs [getNodeType $node_id].nodeConfigure] != "" } {
 	    try {
-		[getNodeType $node_id].nodeStart $eid $node_id
+		[getNodeType $node_id].nodeConfigure $eid $node_id
 	    } on error err {
-		return -code error "Error in '[getNodeType $node_id].nodeStart $eid $node_id': $err"
+		return -code error "Error in '[getNodeType $node_id].nodeConfigure $eid $node_id': $err"
 	    }
 	}
 	pipesExec ""
@@ -1190,10 +1221,8 @@ proc generateHostsFile { node_id } {
     writeDataToNodeFile $node_id /etc/hosts $etc_hosts
 }
 
-proc waitForConfStart { nodes_ifaces nodeCount w } {
+proc waitForConfStart { nodes nodeCount w } {
     global progressbarCount execMode
-
-    set nodes [lmap node_id $nodes_ifaces {set node_id [lindex $node_id 0]}]
 
     set batchStep 0
     set nodes_left $nodes
@@ -1230,6 +1259,12 @@ proc waitForConfStart { nodes_ifaces nodeCount w } {
 proc finishExecuting { status msg w } {
     global progressbarCount execMode
 
+    foreach var "instantiate_nodes create_nodes_ifaces instantiate_links
+	configure_links configure_nodes_ifaces configure_nodes" {
+
+	setToExecuteVars "$var" ""
+    }
+
     catch { pipesClose }
     if { $execMode == "batch" } {
 	puts $msg
@@ -1250,9 +1285,18 @@ proc checkForErrors { nodes nodeCount w } {
 
     set batchStep 0
     set err_nodes ""
-    foreach node $nodes {
+    for {set pending_nodes $nodes} {$pending_nodes != ""} {} {
+	set node [lindex $pending_nodes 0]
+	set pending_nodes [removeFromList $pending_nodes $node]
+
 	set msg "no error"
-	if { [isNodeError $node] } {
+	set err [isNodeError $node]
+	if { $err == "" } {
+	    lappend pending_nodes $node
+	    continue
+	}
+
+	if { $err } {
 	    set msg "error found"
 	    append err_nodes "[getNodeName $node] ($node), "
 	}
@@ -1278,7 +1322,62 @@ proc checkForErrors { nodes nodeCount w } {
 
     if { $err_nodes != "" } {
 	set err_nodes [string trimright $err_nodes ", "]
-	set msg "Issues encountered while configuring nodes:\n$err_nodes\nCheck their /err.log, /err_ifaces.log, /out.log, /out_ifaces.log, /boot.conf and /boot_ifaces.conf (or /custom.conf) files." \
+	set msg "Issues encountered while configuring nodes:\n$err_nodes\nCheck their /err.log, /out.log and /boot.conf (or /custom.conf) files." \
+
+	if { $execMode != "batch" } {
+	    after idle {.dialog1.msg configure -wraplength 4i}
+	    tk_dialog .dialog1 "IMUNES warning" \
+		"$msg" \
+		info 0 Dismiss
+	} else {
+	    puts "\nIMUNES warning - $msg\n"
+	}
+    }
+}
+
+proc checkForErrorsIfaces { nodes nodeCount w } {
+    global progressbarCount execMode
+
+    set batchStep 0
+    set err_nodes ""
+    for {set pending_nodes $nodes} {$pending_nodes != ""} {} {
+	set node [lindex $pending_nodes 0]
+	set pending_nodes [removeFromList $pending_nodes $node]
+
+	set msg "no error"
+	set err [isNodeErrorIfaces $node]
+	if { $err == "" } {
+	    lappend pending_nodes $node
+	    continue
+	}
+
+	if { $err } {
+	    set msg "error found"
+	    append err_nodes "[getNodeName $node] ($node), "
+	}
+
+	incr batchStep
+	incr progressbarCount
+
+	set name [getNodeName $node]
+	if { $execMode != "batch" } {
+	    statline "Interfaces on node $name checked - $msg"
+	    $w.p configure -value $progressbarCount
+	    update
+	}
+	displayBatchProgress $batchStep $nodeCount
+    }
+
+    if { $nodeCount > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+	if { $execMode == "batch" } {
+	    statline ""
+	}
+    }
+
+    if { $err_nodes != "" } {
+	set err_nodes [string trimright $err_nodes ", "]
+	set msg "Issues encountered while configuring interfaces on nodes:\n$err_nodes\nCheck their /err_ifaces.log, /out_ifaces.log and /boot_ifaces.conf files." \
 
 	if { $execMode != "batch" } {
 	    after idle { .dialog1.msg configure -wraplength 4i }
@@ -1334,7 +1433,7 @@ proc startNodeFromMenu { node } {
 
     set allNodeCount 1
     try {
-	executeConfNodes $node 1 $w
+	execute_nodesConfigure $node 1 $w
 	statline "Waiting for configuration on $allNodeCount node(s)..."
 	waitForConfStart $node $allNodeCount $w
     } on error err {

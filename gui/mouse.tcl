@@ -44,34 +44,38 @@ proc animateCursor {} {
 proc removeLinkGUI { link_id atomic { keep_ifaces 0 } } {
     global changed
 
-    # this data needs to be fetched before we removeLink
-    lassign [getLinkPeers $link_id] node1 node2
-    set mirror_link_id [getLinkMirror $link_id]
-    if { $mirror_link_id != "" } {
-	set mirror_node_id [getNodeMirror $node1]
+    if { $atomic == "atomic" } {
+	if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+	    setToExecuteVars "terminate_cfg" [cfgGet]
+	}
     }
 
+    set new_link_id [mergeLink $link_id]
+    if { $new_link_id != "" } {
+	set link_id $new_link_id
+    }
+
+    # this data needs to be fetched before we removeLink
+    lassign [getLinkPeers $link_id] node1 node2
+
+    set node1_type [getNodeType $node1]
+    set node2_type [getNodeType $node2]
     # TODO: check this when wlan node turn comes
-    if { [getNodeType $node1] == "wlan" || [getNodeType $node2] == "wlan" } {
+    if { "wlan" in "$node1_type $node2_type" } {
 	removeLink $link_id
 	return
     }
 
     removeLink $link_id $keep_ifaces
-    .panwin.f1.c delete $link_id
-
-    if { $mirror_link_id != "" } {
-	# remove mirror link from GUI
-	.panwin.f1.c delete $mirror_link_id
-
-	# remove pseudo nodes from GUI
-	.panwin.f1.c delete $node1
-	.panwin.f1.c delete $mirror_node_id
-    }
 
     if { $atomic == "atomic" } {
+	.panwin.f1.c delete $link_id
+
+	undeployCfg
+	deployCfg
+
 	set changed 1
-	if { $keep_ifaces } {
+	if { $new_link_id != "" || $keep_ifaces || "rj45" in "$node1_type $node2_type" } {
 	    redrawAll
 	}
 
@@ -91,11 +95,22 @@ proc removeLinkGUI { link_id atomic { keep_ifaces 0 } } {
 #   * node_id -- node id
 #****
 proc removeNodeGUI { node_id { keep_other_ifaces 0 } } {
+    if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+	setToExecuteVars "terminate_cfg" [cfgGet]
+    }
+
     foreach iface_id [ifcList $node_id] {
-	removeLinkGUI [linkByPeers $node_id [getIfcPeer $node_id $iface_id]] non-atomic $keep_other_ifaces
+	set link_id [getIfcLink $node_id $iface_id]
+	if { $link_id != "" } {
+	    removeLinkGUI $link_id non-atomic $keep_other_ifaces
+	}
     }
 
     removeNode $node_id $keep_other_ifaces
+
+    undeployCfg
+    deployCfg
+
     .panwin.f1.c delete $node_id
 }
 
@@ -409,24 +424,14 @@ proc button3link { c x y } {
     #
     # Delete link
     #
-    if { $oper_mode != "exec" } {
-	.button3menu add command -label "Delete" \
-	    -command "removeLinkGUI $link_id atomic"
-    } else {
-	.button3menu add command -label "Delete" \
-	    -state disabled
-    }
+    .button3menu add command -label "Delete" \
+	-command "removeLinkGUI $link_id atomic"
 
     #
     # Delete link (keep ifaces)
     #
-    if { $oper_mode != "exec" } {
-	.button3menu add command -label "Delete (keep interfaces)" \
-	    -command "removeLinkGUI $link_id atomic 1"
-    } else {
-	.button3menu add command -label "Delete (keep interfaces)" \
-	    -state disabled
-    }
+    .button3menu add command -label "Delete (keep interfaces)" \
+	-command "removeLinkGUI $link_id atomic 1"
 
     #
     # Split link
@@ -630,7 +635,7 @@ proc button3node { c x y } {
     # Node icon preferences
     #
     .button3menu.icon delete 0 end
-    if { $oper_mode == "edit" && $type != "pseudo" } {
+    if { $type != "pseudo" } {
 	.button3menu add cascade -label "Node icon" \
 	    -menu .button3menu.icon
 	.button3menu.icon add command -label "Change node icons" \
@@ -643,7 +648,7 @@ proc button3node { c x y } {
     # Create a new link - can be between different canvases
     #
     .button3menu.connect delete 0 end
-    if { $oper_mode == "edit" && $type != "pseudo" } {
+    if { $type != "pseudo" } {
 	.button3menu add cascade -label "Create link to" \
 	    -menu .button3menu.connect
     }
@@ -691,7 +696,7 @@ proc button3node { c x y } {
     # Connect interface - can be between different canvases
     #
     .button3menu.connect_iface delete 0 end
-    if { $oper_mode == "edit" && $type != "pseudo" } {
+    if { $type != "pseudo" } {
 	.button3menu add cascade -label "Connect interface" \
 	    -menu .button3menu.connect_iface
     }
@@ -756,7 +761,7 @@ proc button3node { c x y } {
     # Move to another canvas
     #
     .button3menu.moveto delete 0 end
-    if { $oper_mode == "edit" && $type != "pseudo" } {
+    if { $type != "pseudo" } {
 	.button3menu add cascade -label "Move to" \
 	    -menu .button3menu.moveto
 	.button3menu.moveto add command -label "Canvas:" -state disabled
@@ -776,8 +781,7 @@ proc button3node { c x y } {
     #
     # Merge two pseudo nodes / links
     #
-    if { $oper_mode != "exec" && $type == "pseudo" && \
-	[getNodeCanvas $mirror_node] == $curcanvas } {
+    if { $type == "pseudo" && [getNodeCanvas $mirror_node] == $curcanvas } {
 	.button3menu add command -label "Merge" \
 	    -command "mergeNodeGUI $node_id"
     }
@@ -785,26 +789,22 @@ proc button3node { c x y } {
     #
     # Delete selection
     #
-    if { $oper_mode != "exec" } {
-	.button3menu add command -label "Delete" -command "deleteSelection"
-    }
+    .button3menu add command -label "Delete" -command "deleteSelection"
 
     #
     # Delete selection (keep linked interfaces)
     #
-    if { $oper_mode != "exec" } {
-	.button3menu add command -label "Delete (keep interfaces)" -command "deleteSelection 1"
-    }
+    .button3menu add command -label "Delete (keep interfaces)" -command "deleteSelection 1"
 
-    if { $type != "pseudo" } {
+    if { $type != "pseudo" && [$type.netlayer] != "LINK" } {
 	.button3menu add separator
     }
 
     #
     # Start & stop node
     #
-    if { $oper_mode == "exec" && [info procs [getNodeType $node_id].start] != "" \
-	&& [info procs [getNodeType $node_id].shutdown] != "" } {
+    if { $oper_mode == "exec" && [info procs [getNodeType $node_id].nodeConfigure] != "" \
+	&& [info procs [getNodeType $node_id].nodeShutdown] != "" } {
 
 	.button3menu add command -label Start \
 	    -command "startNodeFromMenu $node_id"
@@ -846,55 +846,62 @@ proc button3node { c x y } {
     # Node settings
     #
     .button3menu.sett delete 0 end
-    if { $type != "pseudo" } {
-	if { $type == "ext" && $oper_mode == "exec" } {
-	    .button3menu add cascade -label "Settings" \
-		-menu .button3menu.sett -state disabled
-	} else {
-	    .button3menu add cascade -label "Settings" \
-		-menu .button3menu.sett
-	}
-    }
+    if { $type != "pseudo" && [$type.netlayer] != "LINK" } {
+	.button3menu add cascade -label "Settings" \
+	    -menu .button3menu.sett
 
-    if { $oper_mode == "exec" } {
-	.button3menu.sett add command -label "Import Running Configuration" \
-	    -command "fetchNodeConfiguration"
-    } else {
+	#
+	# Import Running Configuration
+	#
+	if { $oper_mode == "exec" && $type ni "ext extnat" } {
+	    .button3menu.sett add command -label "Import Running Configuration" \
+		-command "fetchNodesConfiguration"
+	}
+
+	#
+	# Remove IPv4/IPv6 addresses
+	#
 	.button3menu.sett add command -label "Remove IPv4 addresses" \
 	    -command "removeIPv4nodes"
-        .button3menu.sett add command -label "Remove IPv6 addresses" \
+	.button3menu.sett add command -label "Remove IPv6 addresses" \
 	    -command "removeIPv6nodes"
-    }
 
-    #
-    # IPv4 autorenumber
-    #
-    if { $oper_mode == "edit" && [[getNodeType $node_id].netlayer] != "LINK" \
-	&& $type != "pseudo" } {
-
-	.button3menu add command -label "IPv4 autorenumber" -command {
+	#
+	# IPv4 autorenumber
+	#
+	.button3menu.sett add command -label "IPv4 autorenumber" -command {
 	    global IPv4autoAssign
+
+	    if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+		setToExecuteVars "terminate_cfg" [cfgGet]
+	    }
 
 	    set tmp $IPv4autoAssign
 	    set IPv4autoAssign 1
 	    changeAddressRange
 	    set IPv4autoAssign $tmp
+
+	    undeployCfg
+	    deployCfg
 	}
-    }
 
-    #
-    # IPv6 autorenumber
-    #
-    if { $oper_mode == "edit" && [[getNodeType $node_id].netlayer] != "LINK" \
-	&& $type != "pseudo" } {
-
-	.button3menu add command -label "IPv6 autorenumber" -command {
+	#
+	# IPv6 autorenumber
+	#
+	.button3menu.sett add command -label "IPv6 autorenumber" -command {
 	    global IPv6autoAssign
+
+	    if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+		setToExecuteVars "terminate_cfg" [cfgGet]
+	    }
 
 	    set tmp $IPv6autoAssign
 	    set IPv6autoAssign 1
 	    changeAddressRange6
 	    set IPv6autoAssign $tmp
+
+	    undeployCfg
+	    deployCfg
 	}
     }
 
@@ -953,15 +960,18 @@ proc button3node { c x y } {
 		-command "startWiresharkOnNodeIfc $node_id any"
 
 	    foreach iface_id [allIfcList $node_id] {
-		set label "$iface_id"
+		set iface_name "[getIfcName $node_id $iface_id]"
+		set iface_label "$iface_name"
 		if { [getIfcIPv4addr $node_id $iface_id] != "" } {
-		    set label "$label ([getIfcIPv4addr $node_id $iface_id])"
+		    set iface_label "$iface_label ([getIfcIPv4addr $node_id $iface_id])"
 		}
+
 		if { [getIfcIPv6addr $node_id $iface_id] != "" } {
-		    set label "$label ([getIfcIPv6addr $node_id $iface_id])"
+		    set iface_label "$iface_label ([getIfcIPv6addr $node_id $iface_id])"
 		}
-		.button3menu.wireshark add command -label $label \
-		    -command "startWiresharkOnNodeIfc $node_id $iface_id"
+
+		.button3menu.wireshark add command -label $iface_label \
+		    -command "startWiresharkOnNodeIfc $node_id $iface_name"
 	    }
 	}
 
@@ -977,15 +987,18 @@ proc button3node { c x y } {
 		-command "startTcpdumpOnNodeIfc $node_id any"
 
 	    foreach iface_id [allIfcList $node_id] {
-		set label "$iface_id"
+		set iface_name "[getIfcName $node_id $iface_id]"
+		set iface_label "$iface_name"
 		if { [getIfcIPv4addr $node_id $iface_id] != "" } {
-		    set label "$label ([getIfcIPv4addr $node_id $iface_id])"
+		    set iface_label "$iface_label ([getIfcIPv4addr $node_id $iface_id])"
 		}
+
 		if { [getIfcIPv6addr $node_id $iface_id] != "" } {
-		    set label "$label ([getIfcIPv6addr $node_id $iface_id])"
+		    set iface_label "$iface_label ([getIfcIPv6addr $node_id $iface_id])"
 		}
-		.button3menu.tcpdump add command -label $label \
-		    -command "startTcpdumpOnNodeIfc $node_id $iface_id"
+
+		.button3menu.tcpdump add command -label $iface_label \
+		    -command "startTcpdumpOnNodeIfc $node_id $iface_name"
 	    }
 	}
 
@@ -1158,6 +1171,7 @@ proc button1 { c x y button } {
 
 	    drawNode $node_id
 	    selectNode $c [$c find withtag "node && $node_id"]
+
 	    set changed 1
 	} elseif { $activetool == "select" \
 	    && $curtype != "node" && $curtype != "nodelabel" } {
@@ -1444,6 +1458,9 @@ proc button1-release { c x y } {
 		updateLinkLabel $link_id
 		set changed 1
 	    }
+
+	    undeployCfg
+	    deployCfg
 	}
     } elseif { $activetool in "rectangle oval text freeform" } {
 	popupAnnotationDialog $c 0 "false"
@@ -1639,6 +1656,15 @@ proc button1-release { c x y } {
 	}
 
 	if { $regular == "true" } {
+	    undeployCfg
+	    deployCfg
+
+	    foreach img [$c find withtag "node && selected"] {
+		set node_id [lindex [$c gettags $img] 1]
+		drawNode $node_id
+		selectNode $c [$c find withtag "node && $node_id"]
+	    }
+
 	    foreach link_id [$c find withtag "link && need_redraw"] {
 		redrawLink [lindex [$c gettags $link_id] 1]
 		updateLinkLabel [lindex [$c gettags $link_id] 1]
@@ -1915,10 +1941,6 @@ proc deleteSelection { { keep_other_ifaces 0 } } {
     global background
     global viewid
 
-    if { [getFromRunning "oper_mode"] == "exec" } {
-	return
-    }
-
     catch { unset viewid }
     .panwin.f1.c config -cursor watch; update
 
@@ -1955,12 +1977,27 @@ proc deleteSelection { { keep_other_ifaces 0 } } {
 proc removeIPv4nodes {} {
     global changed
 
+    if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+	setToExecuteVars "terminate_cfg" [cfgGet]
+    }
+
+    set removed_addrs {}
     foreach node_id [selectedNodes] {
+	if { [getNodeType $node_id] == "pseudo" } {
+	    continue
+	}
+
 	setStatIPv4routes $node_id ""
 	foreach iface_id [ifcList $node_id] {
+	    set removed_addrs [concat $removed_addrs [getIfcIPv4addrs $node_id $iface_id]]
 	    setIfcIPv4addrs $node_id $iface_id ""
 	}
     }
+
+    setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] $removed_addrs "keep_doubles"]
+
+    undeployCfg
+    deployCfg
 
     redrawAll
     set changed 1
@@ -1978,12 +2015,27 @@ proc removeIPv4nodes {} {
 proc removeIPv6nodes {} {
     global changed
 
+    if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+	setToExecuteVars "terminate_cfg" [cfgGet]
+    }
+
+    set removed_addrs {}
     foreach node_id [selectedNodes] {
+	if { [getNodeType $node_id] == "pseudo" } {
+	    continue
+	}
+
 	setStatIPv6routes $node_id ""
 	foreach iface_id [ifcList $node_id] {
+	    set removed_addrs [concat $removed_addrs [getIfcIPv6addrs $node_id $iface_id]]
 	    setIfcIPv6addrs $node_id $iface_id ""
 	}
     }
+
+    setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] $removed_addrs "keep_doubles"]
+
+    undeployCfg
+    deployCfg
 
     redrawAll
     set changed 1
@@ -2069,6 +2121,10 @@ proc changeAddressRange {} {
 
     # save nodes not connected to the L2 node in the autorenumber_nodes list
     foreach node_id $selected_nodes {
+	if { [getNodeType $node_id] == "pseudo" } {
+	    continue
+	}
+
 	if { [[getNodeType $node_id].netlayer] != "LINK" } {
 	    foreach iface_id [ifcList $node_id] {
 		lassign [logicalPeerByIfc $node_id $iface_id] peer peer_iface
@@ -2083,8 +2139,10 @@ proc changeAddressRange {} {
     }
 
     # delete the existing IP addresses
+    set removed_addrs {}
     foreach el $autorenumber_ifcs {
 	lassign $el node_id iface_id
+	set removed_addrs [concat $removed_addrs [getIfcIPv4addrs $node_id $iface_id]]
 	setIfcIPv4addrs $node_id $iface_id ""
     }
 
@@ -2103,6 +2161,8 @@ proc changeAddressRange {} {
 
     set autorenumber 0
     set changeAddressRange 0
+
+    setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] $removed_addrs "keep_doubles"]
 
     redrawAll
     updateUndoLog
@@ -2188,6 +2248,10 @@ proc changeAddressRange6 {} {
 
     # save nodes not connected to the L2 node in the autorenumber_nodes list
     foreach node_id $selected_nodes {
+	if { [getNodeType $node_id] == "pseudo" } {
+	    continue
+	}
+
 	if { [[getNodeType $node_id].netlayer] != "LINK" } {
 	    foreach iface_id [ifcList $node_id] {
 		lassign [logicalPeerByIfc $node_id $iface_id] peer peer_iface
@@ -2202,9 +2266,11 @@ proc changeAddressRange6 {} {
     }
 
     # delete the existing IP addresses
+    set removed_addrs {}
     foreach el $autorenumber_ifcs {
 	lassign $el node_id iface_id
-	setIfcIPv6addr $node_id $iface_id ""
+	set removed_addrs [concat $removed_addrs [getIfcIPv6addrs $node_id $iface_id]]
+	setIfcIPv6addrs $node_id $iface_id ""
     }
 
     # assign IP addresses to interfaces not connected to L2 nodes
@@ -2222,6 +2288,8 @@ proc changeAddressRange6 {} {
 
     set autorenumber 0
     set changeAddressRange6 0
+
+    setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] $removed_addrs "keep_doubles"]
 
     redrawAll
     updateUndoLog

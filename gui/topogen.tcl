@@ -156,6 +156,9 @@ proc newNodes { node_num } {
 proc topoGenDone { nodes } {
     global changed
 
+    undeployCfg
+    deployCfg
+
     set changed 1
     updateUndoLog
     redrawAll
@@ -355,18 +358,21 @@ proc R { nodes m } {
     set i 0
     while { $i < $m } {
 	if { [llength $dn] > 0 } {
-	    set node_1 [expr int(rand() * [llength $cn])]
-	    set node_2 [expr int(rand() * [llength $dn])]
-	    newLink [lindex $cn $node_1] [lindex $dn $node_2]
-	    lappend cn [lindex $dn $node_2]
-	    set dn [lreplace $dn $node_2 $node_2]
+	    set node1_id [lindex $cn [expr int(rand() * [llength $cn])]]
+	    set node2_idx [expr int(rand() * [llength $dn])]
+	    set node2_id [lindex $dn $node2_idx]
+
+	    set link_id [newLink $node1_id $node2_id]
+
+	    lappend cn $node2_id
+	    set dn [lreplace $dn $node2_idx $node2_idx]
 	    incr i
 	} else {
-	    set node_1 [expr int(rand() * [llength $nodes])]
-	    set node_2 [expr int(rand() * [llength $nodes])]
-	    if { $node_1 != $node_2 &&
-		[linkByPeers [lindex $nodes $node_1] [lindex $nodes $node_2]] == "" } {
-		newLink [lindex $nodes $node_1] [lindex $nodes $node_2]
+	    set node1_id [lindex $nodes [expr int(rand() * [llength $nodes])]]
+	    set node2_id [lindex $nodes [expr int(rand() * [llength $nodes])]]
+	    if { $node1_id != $node2_id && [linkByPeers $node1_id $node2_id] == "" } {
+		set link_id [newLink $node1_id $node2_id]
+
 		incr i
 	    }
 	}

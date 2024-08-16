@@ -75,7 +75,7 @@ proc $MODULE.virtlayer {} {
 }
 
 proc $MODULE.generateConfig { node_id } {
-    set cfg [router.frr.generateConfig $node_id]
+    set cfg [router.generateConfig $node_id]
 
     set eid [getFromRunning "eid"]
     global nat64ifc_$eid.$node_id
@@ -103,15 +103,15 @@ proc $MODULE.generateConfig { node_id } {
 }
 
 proc $MODULE.bootcmd { node_id } {
-    return [router.frr.bootcmd $node_id]
+    return [router.bootcmd $node_id]
 }
 
 proc $MODULE.shellcmds {} {
-    return [router.frr.shellcmds]
+    return [router.shellcmds]
 }
 
 proc $MODULE.nodeCreate { eid node_id } {
-    router.frr.nodeCreate $eid $node_id
+    router.nodeCreate $eid $node_id
 }
 
 proc $MODULE.nodeNamespaceSetup { eid node_id } {
@@ -128,13 +128,13 @@ proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
     l3node.nodePhysIfacesCreate $eid $node_id $ifaces
 }
 
-proc $MODULE.start { eid node_id } {
+proc $MODULE.nodeConfigure { eid node_id } {
     global nat64ifc_$eid.$node_id
 
     set tun [createStartTunIfc $eid $node_id]
     set nat64ifc_$eid.$node_id $tun
 
-    router.frr.start $eid $node_id
+    router.nodeConfigure $eid $node_id
 
     set datadir "/var/db/tayga"
 
@@ -156,7 +156,7 @@ proc $MODULE.start { eid node_id } {
 
     # XXX
     # Even though this routes should be added here, we add them in the
-    # router.frr.start procedure which invokes nat64.generateConfig where we define
+    # router.nodeConfigure procedure which invokes nat64.generateConfig where we define
     # them with:
     # lappend cfg "ip route $tayga4pool $tun"
     # lappend cfg "ipv6 route $tayga6prefix $tun"
@@ -171,16 +171,16 @@ proc $MODULE.start { eid node_id } {
     execCmdNode $node_id tayga
 }
 
-proc $MODULE.shutdown { eid node_id } {
-    router.frr.shutdown $eid $node_id
+proc $MODULE.nodeShutdown { eid node_id } {
+    router.nodeShutdown $eid $node_id
     taygaShutdown $eid $node_id
 }
 
-proc $MODULE.destroy { eid node_id } {
+proc $MODULE.nodeDestroy { eid node_id } {
     taygaDestroy $eid $node_id
-    router.frr.destroy $eid $node_id
+    router.nodeDestroy $eid $node_id
 }
 
 proc $MODULE.nghook { eid node_id iface_id } {
-    return [router.frr.nghook $eid $node_id $iface_id]
+    return [router.nghook $eid $node_id $iface_id]
 }

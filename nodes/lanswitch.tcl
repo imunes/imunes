@@ -161,11 +161,11 @@ proc $MODULE.destroyIfcs { eid node_id ifcs } {
     l2node.destroyIfcs $eid $node_id $ifcs
 }
 
-#****f* lanswitch.tcl/lanswitch.destroy
+#****f* lanswitch.tcl/lanswitch.nodeDestroy
 # NAME
-#   lanswitch.destroy -- destroy
+#   lanswitch.nodeDestroy -- destroy
 # SYNOPSIS
-#   lanswitch.destroy $eid $node_id
+#   lanswitch.nodeDestroy $eid $node_id
 # FUNCTION
 #   Destroys a lanswitch. Destroys the netgraph node that represents
 #   the lanswitch by sending a shutdown message.
@@ -173,8 +173,8 @@ proc $MODULE.destroyIfcs { eid node_id ifcs } {
 #   * eid -- experiment id
 #   * node_id -- id of the node (type of the node is lanswitch)
 #****
-proc $MODULE.destroy { eid node_id } {
-    l2node.destroy $eid $node_id
+proc $MODULE.nodeDestroy { eid node_id } {
+    l2node.nodeDestroy $eid $node_id
 }
 
 #****f* lanswitch.tcl/lanswitch.nghook

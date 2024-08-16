@@ -93,15 +93,18 @@ proc newProject {} {
     namespace eval ::cf::[set curcfg] {}
     upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+    upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
 
     set dict_cfg [dict create]
     setOption "version" $CFG_VERSION
 
     set dict_run [dict create]
+    set execute_vars [dict create]
     lappendToRunning "cfg_list" $curcfg
     setToRunning "eid" ""
     setToRunning "oper_mode" "edit"
     .bottom.oper_mode configure -text "[getFromRunning "oper_mode"] mode"
+    setToRunning "auto_execution" 1
     setToRunning "cfg_deployed" false
     setToRunning "stop_sched" true
     setToRunning "undolevel" 0

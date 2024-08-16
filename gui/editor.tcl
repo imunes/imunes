@@ -213,8 +213,13 @@ proc l3IfcName { lnode_id rnode_id } {
 #****
 proc listLANNodes { l2node_id l2peers } {
     lappend l2peers $l2node_id
+
     foreach ifc [ifcList $l2node_id] {
-	lassign [logicalPeerByIfc $l2node_id $ifc] peer -
+	lassign [logicalPeerByIfc $l2node_id $ifc] peer peer_iface
+	if { [getIfcLink $peer $peer_iface] == "" } {
+	    continue
+	}
+
 	if { [[getNodeType $peer].netlayer] == "LINK" && [getNodeType $peer] != "rj45" } {
 	    if { $peer ni $l2peers } {
 		set l2peers [listLANNodes $peer $l2peers]
@@ -1042,6 +1047,7 @@ proc resumeAndDestroy {} {
     }
 
     destroy .attachToExperimentDialog
+    toggleAutoExecutionGUI [getFromRunning "auto_execution"]
 }
 
 #****f* editor.tcl/updateScreenshotPreview
@@ -1135,5 +1141,36 @@ proc launchBrowser { url } {
 	catch { exec su - $env(SUDO_USER) /bin/sh -c "$command $url" > /dev/null 2> /dev/null & }
     } else {
 	catch { exec {*}$command $url > /dev/null 2> /dev/null & }
+    }
+}
+
+proc toggleAutoExecutionGUI { { new_value "" } } {
+    for { set index 0 } { $index <= [.menubar.experiment index last] } { incr index } {
+	catch { .menubar.experiment entrycget $index -label } label_str
+	if { $label_str == "Pause auto execution" } {
+	    if { $new_value != "" && $new_value } {
+		break
+	    }
+
+	    .menubar.experiment entryconfigure $index -label "Resume auto execution"
+	    setToExecuteVars "terminate_cfg" [cfgGet]
+	    if { [getFromRunning "cfg_deployed"] } {
+		.bottom.oper_mode configure -text "paused"
+	    }
+
+	    break
+	} elseif { $label_str == "Resume auto execution" } {
+	    if { $new_value != "" && ! $new_value } {
+		break
+	    }
+
+	    .menubar.experiment entryconfigure $index -label "Pause auto execution"
+	    redrawAll
+	    if { [getFromRunning "cfg_deployed"] } {
+		.bottom.oper_mode configure -text "exec mode"
+	    }
+
+	    break
+	}
     }
 }

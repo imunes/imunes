@@ -69,9 +69,11 @@ proc loadCfgLegacy { cfg } {
     global execMode all_modules_list
 
     upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+    upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
     set dict_cfg [dict create]
     set dict_run [dict create]
+    set execute_vars [dict create]
 
     # Cleanup first
     set node_list {}
@@ -92,8 +94,10 @@ proc loadCfgLegacy { cfg } {
 	    set $object {}
 	    set dict_object "${class}s"
 	    if { "$class" == "node" } {
+		setToRunning "${object}_running" false
 		lappend node_list $object
 	    } elseif { "$class" == "link" } {
+		setToRunning "${object}_running" false
 		lappend link_list $object
 	    } elseif { "$class" == "canvas" } {
 		set dict_object "canvases"
@@ -141,9 +145,28 @@ proc loadCfgLegacy { cfg } {
 			}
 			interface-peer {
 			    cfgUnset $dict_object $object $field
-			    lassign $value iface peer
-			    cfgSet $dict_object $object "ifaces" $iface "peer" $peer
-			    cfgSet $dict_object $object "ifaces" $iface "peer_iface" $iface
+			    lassign $value iface_name peer_id
+
+			    if { [cfgGet "nodes" $object "type"] ni "pc host router nat64 ext extnat stpswitch" } {
+				set all_ifaces [dict keys [cfgGet "nodes" $object "ifaces"]]
+				set iface_id [newObjectId $all_ifaces "ifc"]
+				cfgSet "nodes" $object "ifaces" $iface_id "type" "phys"
+				cfgSet "nodes" $object "ifaces" $iface_id "name" "$iface_name"
+			    } else {
+				set iface_id [ifaceIdFromName $object $iface_name]
+			    }
+
+			    if { $iface_id == "" } {
+				puts "ERROR: '$object: interface-peer {$value}' field appears before the definition of '$iface_name'"
+				puts "	- create 'interface $iface_name' field in node's network-config if it doesn't exist OR"
+				puts "	- move this field at the end of the node configuration in your .imn file"
+
+				exit
+			    }
+
+			    cfgSet $dict_object $object "ifaces" $iface_id "peer" $peer_id
+			    cfgSet $dict_object $object "ifaces" $iface_id "peer_iface" $iface_id
+
 			    lappend $object "interface-peer {$value}"
 			}
 			external-ifcs {
@@ -398,6 +421,7 @@ proc loadCfgLegacy { cfg } {
 				    }
 				    "interface *" {
 					set ifname [lindex $zline end]
+					dict set all_ifaces $ifname "name" $ifname
 					set ipv4_addrs {}
 					set ipv6_addrs {}
 				    }
@@ -435,10 +459,22 @@ proc loadCfgLegacy { cfg } {
 			    set cfg [lrange $cfg 1 [expr {[llength $cfg] - 2}]]
 			    lappend $object "network-config {$cfg}"
 
-			    foreach iface [dict keys $all_ifaces] {
-				catch { dict get $all_ifaces $iface "type" } type
+			    set all_iface_ids {}
+			    set all_logiface_ids {}
+			    foreach iface_name [dict keys $all_ifaces] {
+				set type [dictGet $all_ifaces $iface_name "type"]
 
-				cfgSet $dict_object $object "ifaces" "$iface" [dict get $all_ifaces $iface]
+				if { $type == "" } {
+				    dict set all_ifaces $iface_name "type" "phys"
+				    set iface_id [newObjectId $all_iface_ids "ifc"]
+				    lappend all_iface_ids $iface_id
+				} else {
+				    set iface_id [newObjectId $all_logiface_ids "lifc"]
+				    lappend all_logiface_ids $iface_id
+				}
+
+				setToRunning "${object}|${iface_id}_running" false
+				cfgSet $dict_object $object "ifaces" $iface_id [dict get $all_ifaces $iface_name]
 			    }
 
 			    cfgSet $dict_object $object "croutes4" $croutes4
@@ -632,16 +668,16 @@ proc loadCfgLegacy { cfg } {
 			nodes {
 			    cfgUnset $dict_object $object $field
 			    cfgSet $dict_object $object "peers" $value
-			    lappend $object "nodes {$value}"
+
 			    set ifaces {}
-			    foreach node $value {
-				set other_node [removeFromList $value $node]
-				dict for {iface if_value} [cfgGet "nodes" $node "ifaces"] {
-				    if { [dictGet $if_value "peer"] == "$other_node" } {
-					lappend ifaces $iface
-					cfgUnset "nodes" $node "ifaces" $iface "peer"
-					cfgUnset "nodes" $node "ifaces" $iface "peer_iface"
-					cfgSet "nodes" $node "ifaces" $iface "link" $object
+			    foreach node_id $value {
+				set other_node_id [removeFromList $value $node_id]
+				dict for {iface_id iface_cfg} [cfgGet "nodes" $node_id "ifaces"] {
+				    if { [dictGet $iface_cfg "peer"] == "$other_node_id" } {
+					lappend ifaces $iface_id
+					cfgSet "nodes" $node_id "ifaces" $iface_id "link" $object
+					cfgUnset "nodes" $node_id "ifaces" $iface_id "peer"
+					cfgUnset "nodes" $node_id "ifaces" $iface_id "peer_iface"
 
 					break
 				    }
@@ -649,6 +685,8 @@ proc loadCfgLegacy { cfg } {
 			    }
 
 			    cfgSet $dict_object $object "peers_ifaces" $ifaces
+
+			    lappend $object "nodes {$value}"
 			}
 			mirror {
 			    lappend $object "mirror $value"
@@ -899,6 +937,9 @@ proc loadCfgLegacy { cfg } {
     setToRunning "link_list" $link_list
     setToRunning "canvas_list" $canvas_list
     setToRunning "annotation_list" $annotation_list
+    setToRunning "image_list" $image_list
+    setToRunning "cfg_deployed" false
+    setToRunning "auto_execution" 1
 
     #
     # Hack for comaptibility with old format files (no canvases)
@@ -915,13 +956,15 @@ proc loadCfgLegacy { cfg } {
     set ipv6_used_list {}
     set ipv4_used_list {}
     set mac_used_list {}
-    foreach node $node_list {
-	set node_type [getNodeType $node]
+    foreach node_id $node_list {
+	set node_type [getNodeType $node_id]
 	if { $node_type in "extelem" } {
 	    continue
 	}
+
 	if { $node_type ni [concat $all_modules_list "pseudo"] && \
 	    ! [string match "router.*" $node_type] } {
+
 	    set msg "Unknown node type: '$node_type'."
 	    if { $execMode == "batch" } {
 		statline $msg
@@ -930,24 +973,32 @@ proc loadCfgLegacy { cfg } {
 		    "Error: $msg" \
 		info 0 Dismiss
 	    }
+
 	    exit
 	}
-	if { "lo0" ni [logIfcList $node] && \
-	    [[getNodeType $node].netlayer] == "NETWORK"} {
+
+	if { "lo0" ni [logIfaceNames $node_id] && \
+	    [[getNodeType $node_id].netlayer] == "NETWORK"} {
 
 	    set logiface_id [newLogIface $node_id "lo"]
-	    setIfcIPv4addrs $node $logiface_id "127.0.0.1/8"
-	    setIfcIPv6addrs $node $logiface_id "::1/128"
+	    setIfcIPv4addrs $node_id $logiface_id "127.0.0.1/8"
+	    setIfcIPv6addrs $node_id $logiface_id "::1/128"
 	}
+
 	# Speeding up auto renumbering of MAC, IPv4 and IPv6 addresses by remembering
 	# used addresses in lists.
-	foreach iface [ifcList $node] {
-	    lassign [split [getIfcIPv6addr $node $iface] "/"] addr mask
+	foreach iface_id [ifcList $node_id] {
+	    lassign [split [getIfcIPv6addr $node_id $iface_id] "/"] addr mask
 	    if { $addr != "" } { lappend ipv6_used_list "[ip::contract [ip::prefix $addr]]/$mask" }
-	    set addr [getIfcIPv4addr $node $iface]
+	    set addr [getIfcIPv4addr $node_id $iface_id]
 	    if { $addr != "" } { lappend ipv4_used_list $addr }
-	    set addr [getIfcMACaddr $node $iface]
-	    if { $addr != "" } { lappend mac_used_list [getIfcMACaddr $node $iface] }
+	    set addr [getIfcMACaddr $node_id $iface_id]
+	    if { $addr != "" } { lappend mac_used_list $addr }
+	}
+
+	# disable auto_default_routes if not explicitly enabled in old topologies
+	if { [cfgGet "nodes" $node_id "auto_default_routes"] == "" } {
+	    setAutoDefaultRoutesStatus $node_id "disabled"
 	}
     }
 
@@ -1041,24 +1092,33 @@ proc loadCfgJson { json_cfg } {
 
     applyOptions
 
-    # Speeding up auto renumbering of MAC, IPv4 and IPv6 addresses by remembering
-    # used addresses in lists.
     set ipv4_used_list {}
     set ipv6_used_list {}
     set mac_used_list {}
     foreach node_id [getFromRunning "node_list"] {
-	foreach iface [ifcList $node_id] {
+	setToRunning "${node_id}_running" false
+	foreach iface [allIfcList $node_id] {
+	    setToRunning "${node_id}|${iface}_running" false
+	    if { [isIfcLogical $node_id $iface] } {
+		continue
+	    }
+
 	    lassign [split [getIfcIPv6addr $node_id $iface] "/"] addr mask
 	    if { $addr != "" } { lappend ipv6_used_list "[ip::contract [ip::prefix $addr]]/$mask" }
 	    set addr [getIfcIPv4addr $node_id $iface]
 	    if { $addr != "" } { lappend ipv4_used_list $addr }
-	    lappend mac_used_list [getIfcMACaddr $node_id $iface]
+	    set addr [getIfcMACaddr $node_id $iface]
+	    if { $addr != "" } { lappend mac_used_list $addr }
 	}
     }
 
     setToRunning ipv4_used_list $ipv4_used_list
     setToRunning ipv6_used_list $ipv6_used_list
     setToRunning mac_used_list $mac_used_list
+
+    foreach link_id [getFromRunning "link_list"] {
+	setToRunning "${link_id}_running" false
+    }
 
     return $dict_cfg
 }
@@ -1330,6 +1390,43 @@ proc lappendToRunning { key value } {
     set dict_run [dictLappend $dict_run $key $value]
 
     return $dict_run
+}
+
+proc getFromExecuteVars { key { config "" } } {
+    if { $config == "" } {
+	set config [set ::curcfg]
+    }
+    upvar 0 ::cf::${config}::execute_vars execute_vars
+
+    return [dictGet $execute_vars $key]
+}
+
+proc setToExecuteVars { key value } {
+    upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
+
+    set execute_vars [dictSet $execute_vars $key $value]
+
+    return $execute_vars
+}
+
+proc unsetExecuteVars { key } {
+    upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
+
+    if { $key == "" } {
+	set execute_vars [dictSet $execute_vars {}]
+    } else {
+	set execute_vars [dictUnset $execute_vars $key]
+    }
+
+    return $execute_vars
+}
+
+proc lappendToExecuteVars { key value } {
+    upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
+
+    set execute_vars [dictLappend $execute_vars $key $value]
+
+    return $execute_vars
 }
 
 proc jumpToUndoLevel { undolevel } {

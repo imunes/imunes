@@ -111,8 +111,8 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 	set keep_ifaces 0
     }
 
-    set pnodes [getLinkPeers $link_id]
-    foreach node_id $pnodes iface_id [getLinkPeersIfaces $link_id] {
+    lassign [getLinkPeers $link_id] node1_id node2_id
+    foreach node_id "$node1_id $node2_id" iface_id [getLinkPeersIfaces $link_id] {
 	if { $keep_ifaces } {
 	    cfgUnset "nodes" $node_id "ifaces" $iface_id "link"
 	    continue
@@ -132,7 +132,7 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 	removeLink $mirror_link_id $keep_ifaces
     }
 
-    foreach node_id $pnodes {
+    foreach node_id "$node1_id $node2_id" {
 	if { [getNodeType $node_id] == "pseudo" } {
 	    setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $node_id]
 	    cfgUnset "nodes" $node_id
@@ -243,6 +243,11 @@ proc setLinkBandwidth { link_id bandwidth } {
     }
 
     cfgSet "links" $link_id "bandwidth" $bandwidth
+
+    set mirror_link_id [getLinkMirror $link_id]
+    if { $mirror_link_id != "" } {
+	cfgSet "links" $mirror_link_id "bandwidth" $bandwidth
+    }
 }
 
 #****f* linkcfg.tcl/getLinkColor
@@ -382,6 +387,11 @@ proc setLinkDelay { link_id delay } {
     }
 
     cfgSet "links" $link_id "delay" $delay
+
+    set mirror_link_id [getLinkMirror $link_id]
+    if { $mirror_link_id != "" } {
+	cfgSet "links" $mirror_link_id "delay" $delay
+    }
 }
 
 #****f* linkcfg.tcl/getLinkJitterUpstream
@@ -628,6 +638,11 @@ proc setLinkBER { link_id ber } {
     }
 
     cfgSet "links" $link_id "ber" $ber
+
+    set mirror_link_id [getLinkMirror $link_id]
+    if { $mirror_link_id != "" } {
+	cfgSet "links" $mirror_link_id "ber" $ber
+    }
 }
 
 #****f* linkcfg.tcl/getLinkLoss
@@ -663,6 +678,11 @@ proc setLinkLoss { link_id loss } {
     }
 
     cfgSet "links" $link_id "loss" $loss
+
+    set mirror_link_id [getLinkMirror $link_id]
+    if { $mirror_link_id != "" } {
+	cfgSet "links" $mirror_link_id "loss" $loss
+    }
 }
 
 #****f* linkcfg.tcl/getLinkDup
@@ -698,6 +718,11 @@ proc setLinkDup { link_id duplicate } {
     }
 
     cfgSet "links" $link_id "duplicate" $duplicate
+
+    set mirror_link_id [getLinkMirror $link_id]
+    if { $mirror_link_id != "" } {
+	cfgSet "links" $mirror_link_id "duplicate" $duplicate
+    }
 }
 
 #****f* linkcfg.tcl/linkResetConfig

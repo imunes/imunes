@@ -95,6 +95,8 @@ proc $MODULE.virtlayer {} {
 # SYNOPSIS
 #   packgen.nodeCreate $eid $node_id
 # FUNCTION
+#   Procedure instantiate creates a new virtaul node
+#   for a given node in imunes.
 #   Procedure packgen.nodeCreate cretaes a new virtual node
 #   with all the interfaces and CPU parameters as defined
 #   in imunes.
@@ -111,18 +113,18 @@ proc $MODULE.nodeCreate { eid node_id } {
 }
 
 
-#****f* packgen.tcl/packgen.start
+#****f* packgen.tcl/packgen.nodeConfigure
 # NAME
-#   packgen.start
+#   packgen.nodeConfigure
 # SYNOPSIS
-#   packgen.start $eid $node_id
+#   packgen.nodeConfigure $eid $node_id
 # FUNCTION
 #   Starts a new packgen. The node can be started if it is instantiated.
 # INPUTS
 #   * eid - experiment id
 #   * node_id - id of the node (type of the node is packgen)
 #****
-proc $MODULE.start { eid node_id } {
+proc $MODULE.nodeConfigure { eid node_id } {
     foreach packet [packgenPackets $node_id] {
 	set fd [open "| jexec $eid nghook $node_id: input" w]
 	fconfigure $fd -encoding binary
@@ -140,18 +142,18 @@ proc $MODULE.start { eid node_id } {
     pipesExec "jexec $eid ngctl msg $node_id: start [expr 2**63]" "hold"
 }
 
-#****f* packgen.tcl/packgen.shutdown
+#****f* packgen.tcl/packgen.nodeShutdown
 # NAME
-#   packgen.shutdown
+#   packgen.nodeShutdown
 # SYNOPSIS
-#   packgen.shutdown $eid $node_id
+#   packgen.nodeShutdown $eid $node_id
 # FUNCTION
 #   Shutdowns a packgen. Simulates the shutdown proces of a packgen.
 # INPUTS
 #   * eid - experiment id
 #   * node_id - id of the node (type of the node is packgen)
 #****
-proc $MODULE.shutdown { eid node_id } {
+proc $MODULE.nodeShutdown { eid node_id } {
     pipesExec "jexec $eid ngctl msg $node_id: clrdata" "hold"
     pipesExec "jexec $eid ngctl msg $node_id: stop" "hold"
 }
@@ -160,18 +162,18 @@ proc $MODULE.destroyIfcs { eid node_id ifaces } {
     l2node.destroyIfcs $eid $node_id $ifaces
 }
 
-#****f* packgen.tcl/packgen.destroy
+#****f* packgen.tcl/packgen.nodeDestroy
 # NAME
-#   packgen.destroy
+#   packgen.nodeDestroy
 # SYNOPSIS
-#   packgen.destroy $eid $node_id
+#   packgen.nodeDestroy $eid $node_id
 # FUNCTION
 #   Destroys a packgen. Destroys all the interfaces of the packgen.
 # INPUTS
 #   * eid - experiment id
 #   * node_id - id of the node (type of the node is packgen)
 #****
-proc $MODULE.destroy { eid node_id } {
+proc $MODULE.nodeDestroy { eid node_id } {
     pipesExec "jexec $eid ngctl msg $node_id: shutdown" "hold"
 }
 

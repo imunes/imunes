@@ -185,17 +185,10 @@ proc pipesClose {} {
 # INPUTS
 #   * mode -- the new operating mode. Can be edit or exec.
 #****
-proc setOperMode { mode } {
+proc setOperMode { oper_mode } {
     global all_modules_list editor_only execMode isOSfreebsd isOSlinux
 
-    if { $mode == "exec" && [getFromRunning "node_list"] == "" } {
-	statline "Empty topologies can't be executed."
-	.panwin.f1.c config -cursor left_ptr
-
-	return
-    }
-
-    if { ! [getFromRunning "cfg_deployed"] && $mode == "exec" } {
+    if { ! [getFromRunning "cfg_deployed"] && $oper_mode == "exec" } {
 	if { ! $isOSlinux && ! $isOSfreebsd } {
 	    after idle { .dialog1.msg configure -wraplength 4i }
 	    tk_dialog .dialog1 "IMUNES error" \
@@ -237,18 +230,8 @@ proc setOperMode { mode } {
 	}
     }
 
-    foreach b { link link_layer net_layer } {
-	if { "$mode" == "exec" } {
-	    .panwin.f1.left.$b configure -state disabled
-	} else {
-	    .panwin.f1.left.$b configure -state normal
-	}
-    }
-
-    .bottom.oper_mode configure -text "$mode mode"
-    setActiveTool select
     #.panwin.f1.left.select configure -state active
-    if { "$mode" == "exec" && [exec id -u] == 0 } {
+    if { "$oper_mode" == "exec" && [exec id -u] == 0 } {
 	global autorearrange_enabled
 
 	set autorearrange_enabled 0
@@ -268,7 +251,15 @@ proc setOperMode { mode } {
 	}
 
 	if { ! [getFromRunning "cfg_deployed"] } {
-	    deployCfg
+	    setToExecuteVars "instantiate_nodes" [getFromRunning "node_list"]
+	    setToExecuteVars "create_nodes_ifaces" "*"
+	    setToExecuteVars "instantiate_links" [getFromRunning "link_list"]
+	    setToExecuteVars "configure_links" "*"
+	    setToExecuteVars "configure_nodes_ifaces" "*"
+	    setToExecuteVars "configure_nodes" "*"
+
+	    deployCfg 1
+
 	    setToRunning "cfg_deployed" true
 	}
 
@@ -277,6 +268,11 @@ proc setOperMode { mode } {
 	}
 
 	.bottom.experiment_id configure -text "Experiment ID = [getFromRunning "eid"]"
+	if { [getFromRunning "auto_execution"] } {
+	    set oper_mode_text "exec mode"
+	} else {
+	    set oper_mode_text "paused"
+	}
     } else {
 	if { [getFromRunning "oper_mode"] != "edit" } {
 	    global regular_termination
@@ -286,7 +282,15 @@ proc setOperMode { mode } {
 
 	    set eid [getFromRunning "eid"]
 	    if { $regular_termination } {
-		undeployCfg $eid 1 [getFromRunning "node_list"] "*" [getFromRunning "link_list"] "*" "*" "*"
+		setToExecuteVars "terminate_cfg" [cfgGet]
+		setToExecuteVars "terminate_nodes" [getFromRunning "node_list"]
+		setToExecuteVars "destroy_nodes_ifaces" "*"
+		setToExecuteVars "terminate_links" [getFromRunning "link_list"]
+		setToExecuteVars "unconfigure_links" "*"
+		setToExecuteVars "unconfigure_nodes_ifaces" "*"
+		setToExecuteVars "unconfigure_nodes" "*"
+
+		undeployCfg $eid 1
 	    } else {
 		vimageCleanup $eid
 	    }
@@ -332,8 +336,12 @@ proc setOperMode { mode } {
 
 	setToRunning "oper_mode" "edit"
 	.bottom.experiment_id configure -text ""
+	set oper_mode_text "edit mode"
     }
 
+    .bottom.oper_mode configure -text "$oper_mode_text"
+
+    catch { redrawAll }
     .panwin.f1.c config -cursor left_ptr
 }
 
@@ -354,7 +362,7 @@ proc spawnShellExec {} {
 	    return
 	}
     }
-    if { [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" } {
+    if { [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" || ! [getFromRunning "${node_id}_running"] } {
 	nodeConfigGUI .panwin.f1.c $node_id
     } else {
 	set cmd [lindex [existingShells [[getNodeType $node_id].shellcmds] $node_id] 0]
@@ -365,76 +373,21 @@ proc spawnShellExec {} {
     }
 }
 
-#****f* exec.tcl/fetchNodeConfiguration
+#****f* exec.tcl/fetchNodesConfiguration
 # NAME
-#   fetchNodeConfiguration -- fetches current node configuration
+#   fetchNodesConfiguration -- fetches current node configuration
 # SYNOPSIS
-#   fetchNodeConfiguration
+#   fetchNodesConfiguration
 # FUNCTION
 #   This procedure is called when the button3.menu.sett->Fetch Node
 #   Configurations button is pressed. It is used to update the selected nodes
 #   configurations from the running experiment settings.
 #****
-proc fetchNodeConfiguration {} {
-    global isOSfreebsd
-    set ip6Set 0
-    set ip4Set 0
-
+proc fetchNodesConfiguration {} {
     foreach node [selectedNodes] {
-	set lines [getRunningNodeIfcList $node]
-	# XXX - here we parse ifconfig output, maybe require virtual nodes on
-	# linux to have ifconfig, or create different parsing procedures for ip
-	# and ifconfig that will have the same output
-	if ($isOSfreebsd) {
-	    foreach line $lines {
-		if { [regexp {^([[:alnum:]]+):.*mtu ([^$]+)$} $line \
-		     -> ifc mtuvalue] } {
-		    setIfcMTU $node $ifc $mtuvalue
-		    set ip6Set 0
-		    set ip4Set 0
-		} elseif { [regexp {^\tether ([^ ]+)} $line -> macaddr] } {
-		    setIfcMACaddr $node $ifc $macaddr
-		} elseif { [regexp {^\tinet6 (?!fe80:)([^ ]+) prefixlen ([^ ]+)} $line -> ip6addr mask] } {
-		    if { $ip6Set == 0 } {
-			setIfcIPv6addrs $node $ifc $ip6addr/$mask
-			set ip6Set 1
-		    }
-		} elseif { [regexp {^\tinet ([^ ]+) netmask ([^ ]+) } $line \
-		     -> ip4addr netmask] } {
-		    if { $ip4Set == 0 } {
-			set length [ip::maskToLength $netmask]
-			setIfcIPv4addrs $node $ifc $ip4addr/$length
-			set ip4Set 1
-		    }
-		}
-	    }
-	} else {
-	    foreach line $lines {
-		if { [regexp {^([[:alnum:]]+)} $line -> ifc] } {
-		    set ip6Set 0
-		    set ip4Set 0
-		}
-		if { [regexp {^([[:alnum:]]+)\s.*HWaddr ([^$]+)$} $line \
-		     -> ifc macaddr] } {
-		    setIfcMACaddr $node $ifc $macaddr
-		} elseif { [regexp {^\s*inet addr:([^ ]+)\s.*\sMask:([^ ]+)} $line \
-		     -> ip4addr netmask] } {
-		    if { $ip4Set == 0 } {
-			set length [ip::maskToLength $netmask]
-			setIfcIPv4addrs $node $ifc $ip4addr/$length
-			set ip4Set 1
-		    }
-		} elseif { [regexp {^\s*inet6 addr:\s(?!fe80:)([^ ]+)} $line -> ip6addr] } {
-		    if { $ip6Set == 0 } {
-			setIfcIPv6addrs $node $ifc $ip6addr
-			set ip6Set 1
-		    }
-		} elseif { [regexp {MTU:([^ ]+)} $line -> mtuvalue] } {
-		    setIfcMTU $node $ifc $mtuvalue
-		}
-	    }
-	}
+	set lines [fetchNodeRunningConfig $node]
     }
+
     redrawAll
 }
 
@@ -479,6 +432,7 @@ proc resumeSelectedExperiment { exp } {
 
     setToRunning "current_file" [getExperimentConfigurationFromFile $exp]
     openFile
+    readRunningVarsFile $exp
 
     setToRunning "eid" $exp
     setToRunning "cfg_deployed" true
