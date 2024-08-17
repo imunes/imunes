@@ -134,12 +134,12 @@ proc $MODULE.netlayer {} {
 # SYNOPSIS
 #   set layer [host.virtlayer]
 # FUNCTION
-#   Returns the layer on which the host is instantiated i.e. returns VIMAGE.
+#   Returns the layer on which the host is instantiated i.e. returns VIRTUALIZED.
 # RESULT
-#   * layer -- set to VIMAGE
+#   * layer -- set to VIRTUALIZED
 #****
 proc $MODULE.virtlayer {} {
-    return VIMAGE
+    return VIRTUALIZED
 }
 
 #****f* host.tcl/host.cfggen

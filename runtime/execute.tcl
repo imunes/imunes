@@ -455,7 +455,7 @@ proc deployCfg { { execute 0 } } {
     foreach node_id $instantiate_nodes {
 	set node_type [getNodeType $node_id]
 	if { $node_type != "pseudo" } {
-	    if { [$node_type.virtlayer] != "VIMAGE" } {
+	    if { [$node_type.virtlayer] != "VIRTUALIZED" } {
 		lappend l2nodes $node_id
 	    } else {
 		lappend l3nodes $node_id
@@ -1192,10 +1192,10 @@ proc generateHostsFile { node_id } {
 
     set etc_hosts [getFromRunning "etc_hosts"]
     if { $auto_etc_hosts == 1 } {
-	if { [[getNodeType $node_id].virtlayer] == "VIMAGE" } {
+	if { [[getNodeType $node_id].virtlayer] == "VIRTUALIZED" } {
 	    if { $etc_hosts == "" } {
 		foreach iter [getFromRunning "node_list"] {
-		    if { [[getNodeType $iter].virtlayer] == "VIMAGE" } {
+		    if { [[getNodeType $iter].virtlayer] == "VIRTUALIZED" } {
 			set ctr 0
 			set ctr6 0
 			foreach ifc [ifcList $iter] {

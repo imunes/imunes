@@ -185,12 +185,12 @@ proc $MODULE.netlayer {} {
 # SYNOPSIS
 #   set layer [pc.virtlayer]
 # FUNCTION
-#   Returns the layer on which the pc is instantiated i.e. returns VIMAGE.
+#   Returns the layer on which the pc is instantiated i.e. returns VIRTUALIZED.
 # RESULT
-#   * layer -- set to VIMAGE
+#   * layer -- set to VIRTUALIZED
 #****
 proc $MODULE.virtlayer {} {
-    return VIMAGE
+    return VIRTUALIZED
 }
 
 #****f* pc.tcl/pc.bootcmd

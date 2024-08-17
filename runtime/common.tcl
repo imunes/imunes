@@ -848,7 +848,7 @@ proc spawnShellExec {} {
 	    return
 	}
     }
-    if { [[getNodeType $node_id].virtlayer] != "VIMAGE" || ! [getFromRunning "${node_id}_running"] } {
+    if { [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" || ! [getFromRunning "${node_id}_running"] } {
 	nodeConfigGUI .panwin.f1.c $node_id
     } else {
 	set cmd [lindex [existingShells [[getNodeType $node_id].shellcmds] $node_id] 0]
