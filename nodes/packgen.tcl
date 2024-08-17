@@ -81,13 +81,13 @@ proc $MODULE.netlayer {} {
 #   set layer [packgen.virtlayer]
 # FUNCTION
 #   Returns the layer on which the packgen is instantiated
-#   i.e. returns NETGRAPH.
+#   i.e. returns NATIVE.
 # RESULT
-#   * layer -- set to NETGRAPH
+#   * layer -- set to NATIVE
 #****
 
 proc $MODULE.virtlayer {} {
-    return NETGRAPH
+    return NATIVE
 }
 
 #****f* packgen.tcl/packgen.nodeCreate

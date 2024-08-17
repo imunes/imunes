@@ -113,13 +113,13 @@ proc $MODULE.netlayer {} {
 #   set layer [stpswitch.virtlayer]
 # FUNCTION
 #   Returns the layer on which the stpswitch is instantiated
-#   i.e. returns VIMAGE.
+#   i.e. returns VIRTUALIZED.
 # RESULT
-#   * layer -- set to VIMAGE
+#   * layer -- set to VIRTUALIZED
 #****
 
 proc $MODULE.virtlayer {} {
-    return VIMAGE
+    return VIRTUALIZED
 }
 
 #****f* stpswitch.tcl/stpswitch.cfggen

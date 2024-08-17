@@ -49,7 +49,7 @@ proc $MODULE.netlayer {} {
 }
 
 proc $MODULE.virtlayer {} {
-    return NETGRAPH
+    return NATIVE
 }
 
 proc $MODULE.nodeCreate { eid node_id } {

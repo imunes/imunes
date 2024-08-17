@@ -71,7 +71,7 @@ proc $MODULE.netlayer {} {
 }
 
 proc $MODULE.virtlayer {} {
-    return VIMAGE
+    return VIRTUALIZED
 }
 
 proc $MODULE.cfggen { node_id } {

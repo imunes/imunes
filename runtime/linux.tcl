@@ -472,7 +472,7 @@ proc attachToL3NodeNamespace { node } {
 	pipesExec "docker network disconnect imunes-bridge $eid.$node" "hold"
     }
 
-    # VIMAGE nodes use docker netns
+    # VIRTUALIZED nodes use docker netns
     set cmds "docker_ns=\$(docker inspect -f '{{.State.Pid}}' $eid.$node)"
     set cmds "$cmds; ip netns del \$docker_ns > /dev/null 2>&1"
     set cmds "$cmds; ip netns attach $eid-$node \$docker_ns"
@@ -846,7 +846,7 @@ proc createDirectLinkBetween { lnode1 lnode2 iface1_id iface2_id } {
 	    set virtual_ifc $iface2_id
 	    set ether [getIfcMACaddr $lnode2 $virtual_ifc]
 
-	    if { [[getNodeType $lnode2].virtlayer] == "NETGRAPH" } {
+	    if { [[getNodeType $lnode2].virtlayer] == "NATIVE" } {
 		pipesExec "ip link set $physical_ifc netns $nodeNs" "hold"
 		setNsIfcMaster $nodeNs $physical_ifc $lnode2 "up"
 		return
@@ -865,7 +865,7 @@ proc createDirectLinkBetween { lnode1 lnode2 iface1_id iface2_id } {
 	    set virtual_ifc $iface1_id
 	    set ether [getIfcMACaddr $lnode1 $virtual_ifc]
 
-	    if { [[getNodeType $lnode1].virtlayer] == "NETGRAPH" } {
+	    if { [[getNodeType $lnode1].virtlayer] == "NATIVE" } {
 		pipesExec "ip link set $physical_ifc netns $nodeNs" "hold"
 		setNsIfcMaster $nodeNs $physical_ifc $lnode1 "up"
 		return
@@ -909,7 +909,7 @@ proc createDirectLinkBetween { lnode1 lnode2 iface1_id iface2_id } {
 
     # add nodes iface hooks to link bridge and bring them up
     foreach node_id [list $lnode1 $lnode2] iface_id [list $iface1_id $iface2_id] ns [list $node1Ns $node2Ns] {
-	if { [[getNodeType $node_id].virtlayer] != "NETGRAPH" || [getNodeType $node_id] in "ext extnat" } {
+	if { [[getNodeType $node_id].virtlayer] != "NATIVE" || [getNodeType $node_id] in "ext extnat" } {
 	    continue
 	}
 
@@ -1044,7 +1044,7 @@ proc unconfigNodeIfaces { eid node_id ifaces } {
 proc isNodeConfigured { node } {
     set node_id "[getFromRunning "eid"].$node"
 
-    if { [[getNodeType $node].virtlayer] == "NETGRAPH" } {
+    if { [[getNodeType $node].virtlayer] == "NATIVE" } {
 	return true
     }
 
@@ -1069,7 +1069,7 @@ proc isNodeConfigured { node } {
 proc isNodeError { node } {
     set node_id "[getFromRunning "eid"].$node"
 
-    if { [[getNodeType $node].virtlayer] == "NETGRAPH" } {
+    if { [[getNodeType $node].virtlayer] == "NATIVE" } {
 	return false
     }
 
@@ -1097,7 +1097,7 @@ proc isNodeError { node } {
 proc isNodeErrorIfaces { node } {
     set node_id "[getFromRunning "eid"].$node"
 
-    if { [[getNodeType $node].virtlayer] == "NETGRAPH" } {
+    if { [[getNodeType $node].virtlayer] == "NATIVE" } {
 	return false
     }
 

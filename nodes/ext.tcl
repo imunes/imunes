@@ -127,12 +127,12 @@ proc $MODULE.netlayer {} {
 # SYNOPSIS
 #   set layer [ext.virtlayer]
 # FUNCTION
-#   Returns the layer on which the pc is instantiated i.e. returns NETGRAPH.
+#   Returns the layer on which the pc is instantiated i.e. returns NATIVE.
 # RESULT
-#   * layer -- set to NETGRAPH
+#   * layer -- set to NATIVE
 #****
 proc $MODULE.virtlayer {} {
-    return NETGRAPH
+    return NATIVE
 }
 
 #****f* ext.tcl/ext.shellcmds

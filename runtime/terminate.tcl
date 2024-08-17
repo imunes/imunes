@@ -303,7 +303,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
     foreach node $terminate_nodes {
 	set node_type [getNodeType $node]
 	if { $node_type != "pseudo" } {
-	    if { [$node_type.virtlayer] == "NETGRAPH" } {
+	    if { [$node_type.virtlayer] == "NATIVE" } {
 		if { $node_type == "rj45" } {
 		    lappend extifcs $node
 		} elseif { $node_type == "extnat" } {

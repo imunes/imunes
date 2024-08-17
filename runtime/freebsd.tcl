@@ -1606,7 +1606,7 @@ proc unconfigNodeIfaces { eid node_id ifaces } {
 proc isNodeConfigured { node } {
     set node_id "[getFromRunning "eid"].$node"
 
-    if { [[getNodeType $node].virtlayer] == "NETGRAPH" } {
+    if { [[getNodeType $node].virtlayer] == "NATIVE" } {
 	return true
     }
 
@@ -1622,7 +1622,7 @@ proc isNodeConfigured { node } {
 proc isNodeError { node } {
     set jail_id "[getFromRunning "eid"].$node"
 
-    if { [[getNodeType $node].virtlayer] == "NETGRAPH" } {
+    if { [[getNodeType $node].virtlayer] == "NATIVE" } {
 	return false
     }
 

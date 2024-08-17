@@ -30,8 +30,8 @@ proc showCfg { c node } {
     	$c delete -withtag showCfgPopup
 	return
     }
-    #Dont show popup window if the node virtlayer is different from VIMAGE
-    if {[[getNodeType $node].virtlayer] != "VIMAGE"} {
+    #Dont show popup window if the node virtlayer is different from VIRTUALIZED
+    if {[[getNodeType $node].virtlayer] != "VIRTUALIZED"} {
     	return
     }
     #Determine node coordinates
