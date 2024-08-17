@@ -1194,48 +1194,51 @@ proc execute_nodesConfigure { nodes nodes_count w } {
 proc generateHostsFile { node_id } {
     global auto_etc_hosts
 
+    if { $auto_etc_hosts != 1 || [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" } {
+	return
+    }
+
     set etc_hosts [getFromRunning "etc_hosts"]
-    if { $auto_etc_hosts == 1 } {
-	if { [[getNodeType $node_id].virtlayer] == "VIRTUALIZED" } {
-	    if { $etc_hosts == "" } {
-		foreach iter [getFromRunning "node_list"] {
-		    if { [[getNodeType $iter].virtlayer] == "VIRTUALIZED" } {
-			set ctr 0
-			set ctr6 0
-			foreach ifc [ifcList $iter] {
-			    if { $ifc != "" } {
-				set node_name [getNodeName $iter]
-
-				foreach ipv4 [getIfcIPv4addrs $iter $ifc] {
-				    set ipv4 [lindex [split $ipv4 "/"] 0]
-				    if { $ctr == 0 } {
-					set etc_hosts "$etc_hosts$ipv4	${node_name}\n"
-				    } else {
-					set etc_hosts "$etc_hosts$ipv4	${node_name}_${ctr}\n"
-				    }
-				    incr ctr
-				}
-
-				foreach ipv6 [getIfcIPv6addrs $iter $ifc] {
-				    set ipv6 [lindex [split $ipv6 "/"] 0]
-				    if { $ctr6 == 0 } {
-					set etc_hosts "$etc_hosts$ipv6	${node_name}.6\n"
-				    } else {
-					set etc_hosts "$etc_hosts$ipv6	${node_name}_${ctr6}.6\n"
-				    }
-				    incr ctr6
-				}
-			    }
-			}
-		    }
-		}
-
-		setToRunning "etc_hosts" $etc_hosts
+    if { $etc_hosts == "" } {
+	foreach iter [getFromRunning "node_list"] {
+	    if { [[getNodeType $iter].virtlayer] != "VIRTUALIZED" } {
+		continue
 	    }
 
-	    writeDataToNodeFile $node_id /etc/hosts $etc_hosts
+	    set ctr 0
+	    set ctr6 0
+	    foreach ifc [ifcList $iter] {
+		if { $ifc == "" } {
+		    continue
+		}
+
+		set node_name [getNodeName $iter]
+		foreach ipv4 [getIfcIPv4addrs $iter $ifc] {
+		    set ipv4 [lindex [split $ipv4 "/"] 0]
+		    if { $ctr == 0 } {
+			set etc_hosts "$etc_hosts$ipv4	${node_name}\n"
+		    } else {
+			set etc_hosts "$etc_hosts$ipv4	${node_name}_${ctr}\n"
+		    }
+		    incr ctr
+		}
+
+		foreach ipv6 [getIfcIPv6addrs $iter $ifc] {
+		    set ipv6 [lindex [split $ipv6 "/"] 0]
+		    if { $ctr6 == 0 } {
+			set etc_hosts "$etc_hosts$ipv6	${node_name}.6\n"
+		    } else {
+			set etc_hosts "$etc_hosts$ipv6	${node_name}_${ctr6}.6\n"
+		    }
+		    incr ctr6
+		}
+	    }
 	}
+
+	setToRunning "etc_hosts" $etc_hosts
     }
+
+    writeDataToNodeFile $node_id /etc/hosts $etc_hosts
 }
 
 proc waitForConfStart { nodes nodes_count w } {
