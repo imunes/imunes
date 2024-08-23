@@ -303,7 +303,7 @@ if { $execMode == "interactive" } {
     safePackageRequire Tk "To run the IMUNES GUI, Tk must be installed."
 
     foreach file "canvas copypaste drawing editor help theme linkcfgGUI \
-	mouse nodecfgGUI widgets" {
+	mouse nodecfgGUI ifacesGUI widgets" {
 	safeSourceFile "$ROOTDIR/$LIBDIR/gui/$file.tcl"
     }
 

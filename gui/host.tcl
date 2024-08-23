@@ -56,6 +56,28 @@ proc $MODULE.toolbarIconDescr {} {
     return "Add new Host"
 }
 
+proc $MODULE._confNewIfc { node_cfg iface_id } {
+    global changeAddressRange changeAddressRange6
+    global node_existing_mac node_existing_ipv4 node_existing_ipv6
+
+    set changeAddressRange 0
+    set changeAddressRange6 0
+
+    set ipv4addr [getNextIPv4addr [_getNodeType $node_cfg] $node_existing_ipv4]
+    lappend node_existing_ipv4 $ipv4addr
+    set node_cfg [_setIfcIPv4addrs $node_cfg $iface_id $ipv4addr]
+
+    set ipv6addr [getNextIPv6addr [_getNodeType $node_cfg] $node_existing_ipv6]
+    lappend node_existing_ipv6 $ipv6addr
+    set node_cfg [_setIfcIPv6addrs $node_cfg $iface_id $ipv6addr]
+
+    set macaddr [getNextMACaddr $node_existing_mac]
+    lappend node_existing_mac $macaddr
+    set node_cfg [_setIfcMACaddr $node_cfg $iface_id $macaddr]
+
+    return $node_cfg
+}
+
 #****f* host.tcl/host.icon
 # NAME
 #   host.icon -- icon
@@ -132,28 +154,27 @@ proc $MODULE.configGUI { c node_id } {
     #
     #guielements - the list of modules contained in the configuration window
     #              (each element represents the name of the procedure which creates
-    #               that module)
+    #              that module)
     #
     #treecolumns - the list of columns in the interfaces tree (each element
     #              consists of the column id and the column name)
     #
     global guielements treecolumns
-    global node_cfg
+    global node_cfg node_existing_mac node_existing_ipv4 node_existing_ipv6
 
     set guielements {}
+    set treecolumns {}
     set node_cfg [cfgGet "nodes" $node_id]
+    set node_existing_mac [getFromRunning "mac_used_list"]
+    set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
+    set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
 
     configGUI_createConfigPopupWin $c
     wm title $wi "host configuration"
+
     configGUI_nodeName $wi $node_id "Node name:"
 
-    set tabs [configGUI_addNotebook $wi $node_id {"Configuration" "Interfaces"}]
-    set configtab [lindex $tabs 0]
-    set ifctab [lindex $tabs 1]
-
-    set treecolumns {"OperState State" "NatState Nat" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
-	    "MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop"}
-    configGUI_addTree $ifctab $node_id
+    lassign [configGUI_addNotebook $wi $node_id {"Configuration" "Interfaces"}] configtab ifctab
 
     configGUI_customImage $configtab $node_id
     configGUI_attachDockerToExt $configtab $node_id
@@ -161,6 +182,10 @@ proc $MODULE.configGUI { c node_id } {
     configGUI_staticRoutes $configtab $node_id
     configGUI_snapshots $configtab $node_id
     configGUI_customConfig $configtab $node_id
+
+    set treecolumns {"OperState State" "NatState Nat" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
+	"MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop"}
+    configGUI_addTree $ifctab $node_id
 
     configGUI_nodeRestart $wi $node_id
     configGUI_buttonsACNode $wi $node_id

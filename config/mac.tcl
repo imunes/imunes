@@ -71,18 +71,18 @@ proc autoMACaddr { node ifc } {
 	setToRunning "mac_used_list" [removeFromList [getFromRunning "mac_used_list"] $old_mac 1]
     }
 
-    set macaddr [getNextMACaddr]
+    set macaddr [getNextMACaddr [getFromRunning "mac_used_list"]]
 
     lappendToRunning "mac_used_list" $macaddr
     setIfcMACaddr $node $ifc $macaddr
 }
 
-proc getNextMACaddr {} {
+proc getNextMACaddr { { mac_used_list "" } } {
     global mac_byte4 mac_byte5 mac_byte6
 
     set mac_byte6 0
     set macaddr [MACaddrAddZeros 42:00:aa:[format %x $mac_byte4]:[format %x $mac_byte5]:[format %x $mac_byte6]]
-    while { $macaddr in [getFromRunning "mac_used_list"] } {
+    while { $macaddr in $mac_used_list } {
 	incr mac_byte6
 	if { $mac_byte6 > 255 } {
 	    if { $mac_byte5 > 255 } {
