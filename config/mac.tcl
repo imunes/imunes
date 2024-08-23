@@ -66,6 +66,11 @@ proc autoMACaddr { node_id iface_id } {
 	return
     }
 
+    set old_mac [getIfcMACaddr $node_id $iface_id]
+    if { $old_mac != "" } {
+	setToRunning "mac_used_list" [removeFromList [getFromRunning "mac_used_list"] $old_mac 1]
+    }
+
     set macaddr [getNextMACaddr]
 
     lappendToRunning "mac_used_list" $macaddr
