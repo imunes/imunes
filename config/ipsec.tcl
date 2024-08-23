@@ -25,25 +25,6 @@
 
 # $Id: ipsec.tcl 60 2013-10-03 09:05:13Z denis $
 
-#****f* ipsec.tcl/nodeIPsecConnExists
-# NAME
-#   nodeIPsecConnExists -- checks if connection already exists
-# SYNOPSIS
-#   nodeIPsecConnExists $node_id $connection_name
-# FUNCTION
-#   Checks if given connection already exists in IPsec configuration of given node
-# INPUTS
-#   node_id - node id
-#   connection_name - name of IPsec connection
-#****
-proc nodeIPsecConnExists { node_id connection_name } {
-    if { $connection_name in [getNodeIPsecConnList $node_id] } {
-        return 1
-    }
-
-    return 0
-}
-
 #****f* ipsec.tcl/getListOfOtherNodes
 # NAME
 #   getListOfOtherNodes -- retreives list of all nodes
