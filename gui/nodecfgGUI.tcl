@@ -1186,7 +1186,7 @@ proc configGUI_nodeRestart { wi node_id } {
 	ttk::checkbutton $w.options.$element -text "$element" -variable force_${element}
 	pack $w.options.$element -side left -padx 6
 
-	if { [getFromRunning "oper_mode"] == "edit" || ! [getFromRunning "${node_id}_running"] } {
+	if { [getFromRunning "oper_mode"] == "edit" || [getFromRunning "${node_id}_running"] == false } {
 	    $w.options.$element configure -state disabled
 	}
     }

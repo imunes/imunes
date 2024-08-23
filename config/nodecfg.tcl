@@ -987,6 +987,11 @@ proc removeNode { node_id { keep_other_ifaces 0 } } {
     }
 
     cfgUnset "nodes" $node_id
+    if { [getFromRunning "${node_id}_running"] == "true" } {
+	setToRunning "${node_id}_running" delete
+    } else {
+	unsetRunning "${node_id}_running"
+    }
 }
 #****f* nodecfg.tcl/getNodeCanvas
 # NAME
@@ -1037,17 +1042,27 @@ proc newNode { type } {
     global viewid
     catch { unset viewid }
 
-    set node_id [newObjectId $node_list "n"]
-    setToRunning "${node_id}_running" false
+    set node_list [getFromRunning "node_list"]
+    set node_id ""
+    while { $node_id == "" } {
+	set node_id [newObjectId $node_list "n"]
+	if { [getFromRunning "${node_id}_running"] != "" } {
+	    lappend node_list $node_id
+	    set node_id ""
+	}
+    }
 
     setNodeType $node_id $type
+    if { $type != "pseudo" } {
+	setToRunning "${node_id}_running" false
+    }
+
     lappendToRunning "node_list" $node_id
 
     if { [info procs $type.confNewNode] == "$type.confNewNode" } {
 	$type.confNewNode $node_id
     }
 
-    setToRunning "${node_id}_running" false
     return $node_id
 }
 

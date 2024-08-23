@@ -962,6 +962,10 @@ proc loadCfgLegacy { cfg } {
 	    continue
 	}
 
+	if { $node_type == "pseudo" } {
+	    unsetRunning "${node_id}_running"
+	}
+
 	if { $node_type ni [concat $all_modules_list "pseudo"] && \
 	    ! [string match "router.*" $node_type] } {
 
