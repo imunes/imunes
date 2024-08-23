@@ -1450,6 +1450,12 @@ proc cfgLappend { args } {
     return $dict_cfg
 }
 
+proc _cfgLappend { node_cfg args } {
+    set node_cfg [dictLappend $node_cfg {*}$args]
+
+    return $node_cfg
+}
+
 proc cfgUnset { args } {
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
@@ -1718,4 +1724,37 @@ proc createJson { value_type dictionary } {
     }
 
     return $retv
+}
+
+proc dictDiff { dict1 dict2 } {
+    if { $dict1 == "-" } {
+	return [dict map {key value} $dict2 {set value "new"}]
+    }
+
+    set diff_dict [dict map {key value} $dict1 {set value "removed"}]
+
+    dict for {key value1} $dict1 {
+	try {
+	    dict get $dict2 $key
+	} on ok value2 {
+	    if { $value1 == $value2 } {
+		dict set diff_dict $key "copy"
+	    } elseif { $value2 == "" } {
+		dict set diff_dict $key "removed"
+	    } else {
+		dict set diff_dict $key "changed"
+	    }
+	} on error {} {}
+    }
+
+    dict for {key value2} $dict2 {
+	try {
+	    dict get $dict1 $key
+	} on ok value1 {
+	} on error {} {
+	    dict set diff_dict $key "new"
+	}
+    }
+
+    return $diff_dict
 }
