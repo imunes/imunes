@@ -15,13 +15,15 @@ proc showCfg { c node } {
     upvar 0 ::lastObservedNode lastObservedNode
 
     #Show only if in exec mode
-    if { [getFromRunning "oper_mode"] != "exec" } {
+    if { [getFromRunning "${node}_running"] == false } {
     	return
     }
+
     #Dont draw again if cursor did not move
-    if {[winfo pointerxy .] == $lastObservedNode} {
+    if { [winfo pointerxy .] == $lastObservedNode } {
 	    return
     }
+
     set lastObservedNode [winfo pointerxy .]
     #Dont show popup window if 'None' or 'Route' is selected from
     #the 'Show' menu
@@ -30,18 +32,22 @@ proc showCfg { c node } {
     	$c delete -withtag showCfgPopup
 	return
     }
+
     #Dont show popup window if the node virtlayer is different from VIRTUALIZED
-    if {[[getNodeType $node].virtlayer] != "VIRTUALIZED"} {
+    if { [[getNodeType $node].virtlayer] != "VIRTUALIZED" } {
     	return
     }
+
     #Determine node coordinates
     set coords [getNodeCoords $node]
     set x [expr [lindex $coords 0] + 30]
     set y [expr [lindex $coords 1] + 30]
+
     #Execute command on selected node and save the command output
     set output [execCmdNode $node $showCfg]
     set title "$node# $showCfg\n"
     append title $output
+
     #Call showCfgPopup
     showCfgPopup $c $node $title $x $y
 }
