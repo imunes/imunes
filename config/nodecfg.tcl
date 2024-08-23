@@ -2326,6 +2326,9 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 
 		    switch -exact $iface_change {
 			"removed" {
+			    if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+				setToExecuteVars "terminate_cfg" [cfgGet]
+			    }
 			    removeIface $node_id $iface_key
 			}
 

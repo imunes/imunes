@@ -995,14 +995,16 @@ proc loadCfgLegacy { cfg } {
 
 	# Speeding up auto renumbering of MAC, IPv4 and IPv6 addresses by remembering
 	# used addresses in lists.
-	foreach iface [ifcList $node_id] {
-	    foreach addr [getIfcIPv6addrs $node_id $iface_id] {
-		lassign [split $addr "/"] addr mask
+	foreach iface_id [ifcList $node_id] {
+	    foreach full_addr [getIfcIPv6addrs $node_id $iface_id] {
+		lassign [split $full_addr "/"] addr mask
 		lappend ipv6_used_list "[ip::contract [ip::prefix $addr]]/$mask"
 	    }
+
 	    foreach addr [getIfcIPv4addrs $node_id $iface_id] {
 		lappend ipv4_used_list $addr
 	    }
+
 	    set addr [getIfcMACaddr $node_id $iface_id]
 	    if { $addr != "" } { lappend mac_used_list $addr }
 	}
@@ -1114,14 +1116,17 @@ proc loadCfgJson { json_cfg } {
 		continue
 	    }
 
-	    foreach addr [getIfcIPv6addrs $node_id $iface] {
-		lassign [split [getIfcIPv6addrs $node_id $iface] "/"] addr mask
+	    foreach full_addr [getIfcIPv6addrs $node_id $iface] {
+		lassign [split $full_addr "/"] addr mask
 		lappend ipv6_used_list "[ip::contract [ip::prefix $addr]]/$mask"
 	    }
+
 	    foreach addr [getIfcIPv4addrs $node_id $iface] {
 		lappend ipv4_used_list $addr
 	    }
-	    lappend mac_used_list [getIfcMACaddr $node_id $iface]
+
+	    set addr [getIfcMACaddr $node_id $iface]
+	    if { $addr != "" } { lappend mac_used_list $addr }
 	}
     }
 
@@ -1245,10 +1250,18 @@ proc cfgGet { args } {
     return [dictGet $dict_cfg {*}$args]
 }
 
+proc _cfgGet { node_cfg args } {
+    return [dictGet $node_cfg {*}$args]
+}
+
 proc cfgGetWithDefault { default_value args } {
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
     return [dictGetWithDefault $default_value $dict_cfg {*}$args]
+}
+
+proc _cfgGetWithDefault { default_value node_cfg args } {
+    return [dictGetWithDefault $default_value $node_cfg {*}$args]
 }
 
 proc cfgSet { args } {
@@ -1268,6 +1281,23 @@ proc cfgSet { args } {
     }
 
     return $dict_cfg
+}
+
+proc _cfgSet { node_cfg args } {
+    if { [lindex $args end] in {{} ""} } {
+	for {set i 1} {$i < [llength $args]} {incr i} {
+	    set node_cfg [dictUnset $node_cfg {*}[lrange $args 0 end-$i]]
+
+	    set new_upper [dictGet $node_cfg {*}[lrange $args 0 end-[expr $i+1]]]
+	    if { $new_upper != "" } {
+		break
+	    }
+	}
+    } else {
+	set node_cfg [dictSet $node_cfg {*}$args]
+    }
+
+    return $node_cfg
 }
 
 # to forcefully set empty values to a dictionary key
