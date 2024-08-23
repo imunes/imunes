@@ -2026,13 +2026,11 @@ proc configureExternalConnection { eid node_id } {
 
     set cmds "$cmds\n ip a flush dev $outifc"
 
-    set ipv4 [getIfcIPv4addr $node_id $ifc]
-    if { $ipv4 != "" } {
+    foreach ipv4 [getIfcIPv4addrs $node_id $ifc] {
 	set cmds "$cmds\n ip a add $ipv4 dev $outifc"
     }
 
-    set ipv6 [getIfcIPv6addr $node_id $ifc]
-    if { $ipv6 != "" } {
+    foreach ipv6 [getIfcIPv6addrs $node_id $ifc] {
 	set cmds "$cmds\n ip a add $ipv6 dev $outifc"
     }
 

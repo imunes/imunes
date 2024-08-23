@@ -1181,6 +1181,7 @@ menu .button3menu.transform -tearoff 0
 menu .button3menu.sett -tearoff 0
 menu .button3menu.services -tearoff 0
 
+menu .button3physifc -tearoff 0
 menu .button3logifc -tearoff 0
 #
 # Invisible pseudo links

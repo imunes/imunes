@@ -171,6 +171,22 @@ proc chooseIfName { lnode_id rnode_id } {
     return [newObjectId $ifaces $iface_prefix]
 }
 
+proc _chooseIfaceName { node_cfg } {
+    set iface_prefix [[dictGet $node_cfg "type"].ifacePrefix]
+
+    set ifaces {}
+    foreach {iface_id iface_cfg} [dictGet $node_cfg "ifaces"] {
+	if { [dictGet $iface_cfg "type"] == "phys" } {
+	    set iface_name [dictGet $iface_cfg "name"]
+	    if { [regexp "$iface_prefix\[0-9\]+" $iface_name] } {
+		lappend ifaces $iface_name
+	    }
+	}
+    }
+
+    return [newObjectId $ifaces $iface_prefix]
+}
+
 #****f* editor.tcl/l3IfcName
 # NAME
 #   l3IfcName -- default interface name picker for l3 nodes
@@ -670,8 +686,8 @@ proc topologyElementsTree {} {
 		    $f.tree insert $node_id end -id $node_id$ifc -text "$ifc" -tags $node_id$ifc
 		    $f.tree set $node_id$ifc state [getIfcOperState $node_id $ifc]
 		    $f.tree set $node_id$ifc nat [getIfcNatState $node_id $ifc]
-		    $f.tree set $node_id$ifc IPv4 [getIfcIPv4addr $node_id $ifc]
-		    $f.tree set $node_id$ifc IPv6 [getIfcIPv6addr $node_id $ifc]
+		    $f.tree set $node_id$ifc IPv4 [getIfcIPv4addrs $node_id $ifc]
+		    $f.tree set $node_id$ifc IPv6 [getIfcIPv6addrs $node_id $ifc]
                     $f.tree set $node_id$ifc MAC [getIfcMACaddr $node_id $ifc]
 		}
 	    }
@@ -899,8 +915,8 @@ proc refreshTopologyTree {} {
 		    $f.tree insert $node_id end -id $node_id$ifc -text "$ifc" -tags $node_id$ifc
 		    $f.tree set $node_id$ifc state [getIfcOperState $node_id $ifc]
 		    $f.tree set $node_id$ifc nat [getIfcNatState $node_id $ifc]
-		    $f.tree set $node_id$ifc IPv4 [getIfcIPv4addr $node_id $ifc]
-		    $f.tree set $node_id$ifc IPv6 [getIfcIPv6addr $node_id $ifc]
+		    $f.tree set $node_id$ifc IPv4 [getIfcIPv4addrs $node_id $ifc]
+		    $f.tree set $node_id$ifc IPv6 [getIfcIPv6addrs $node_id $ifc]
                     $f.tree set $node_id$ifc MAC [getIfcMACaddr $node_id $ifc]
 	    }
 	}

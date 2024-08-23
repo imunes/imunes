@@ -79,10 +79,9 @@ proc IPv6AddrApply { w } {
 # RESULT
 #   * ipnet -- returns the free IPv6 network address in the form "a $i".
 #****
-proc findFreeIPv6Net { mask } {
+proc findFreeIPv6Net { mask { ipv6_used_list "" } } {
     global ipv6
 
-    set ipv6_used_list [getFromRunning "ipv6_used_list"]
     if { $ipv6_used_list == {} } {
 	set defip6net [ip::contract [ip::prefix $ipv6]]
 	set testnet [ip::contract "[string trimright $defip6net :]::"]
@@ -148,38 +147,37 @@ proc autoIPv6addr { node_id iface_id } {
 	    foreach l2node [listLANNodes $peer_node {}] {
 		foreach ifc [ifcList $l2node] {
 		    lassign [logicalPeerByIfc $l2node $ifc] peer peer_if
-		    set peer_ip6addr [getIfcIPv6addr $peer $peer_if]
+		    set peer_ip6addr [getIfcIPv6addrs $peer $peer_if]
 		    if { $peer_ip6addr == "" } {
 			continue
 		    }
 
 		    if { $changeAddressRange6 == 1 } {
 			if { "$peer $peer_if" in $autorenumbered_ifcs6 } {
-			    lappend peer_ip6addrs $peer_ip6addr
+			    lappend peer_ip6addrs {*}$peer_ip6addr
 			}
 		    } else {
-			lappend peer_ip6addrs $peer_ip6addr
+			lappend peer_ip6addrs {*}$peer_ip6addr
 		    }
 		}
 	    }
 	} else {
-	    set peer_ip6addrs [getIfcIPv6addr $peer_node $peer_if]
+	    set peer_ip6addrs [getIfcIPv6addrs $peer_node $peer_if]
 	}
     }
 
-    # TODO: reduce with _getNextIPv6addr proc
-    set targetbyte [expr 0x[$node_type.IPAddrRange]]
-
     if { $peer_ip6addrs != "" && $changeAddrRange6 == 0 } {
-	setIfcIPv6addrs $node_id $iface_id [nextFreeIP6Addr [lindex $peer_ip6addrs 0] $targetbyte $peer_ip6addrs]
+	set targetbyte [expr 0x[$node_type.IPAddrRange]]
+	set addr [nextFreeIP6Addr [lindex $peer_ip6addrs 0] $targetbyte $peer_ip6addrs]
     } else {
-	setIfcIPv6addrs $node_id $iface_id "[findFreeIPv6Net 64][format %x $targetbyte]/64"
+	set addr [getNextIPv6addr $node_type [getFromRunning "ipv6_used_list"]]
     }
 
-    lappendToRunning "ipv6_used_list" [getIfcIPv6addr $node_id $iface_id]
+    setIfcIPv6addrs $node_id $iface_id $addr
+    lappendToRunning "ipv6_used_list" $addr
 }
 
-proc _getNextIPv6addr { node_type } {
+proc getNextIPv6addr { node_type existing_addrs } {
     global IPv6autoAssign
 
     if { ! $IPv6autoAssign } {
@@ -188,7 +186,8 @@ proc _getNextIPv6addr { node_type } {
 
     set targetbyte [expr 0x[$node_type.IPAddrRange]]
 
-    return "[findFreeIPv6Net 64][format %x $targetbyte]/64"
+    # TODO: enable changing IPv6 pool mask
+    return "[findFreeIPv6Net 64 $existing_addrs][format %x $targetbyte]/64"
 }
 
 #****f* ipv6.tcl/nextFreeIP6Addr

@@ -992,10 +992,15 @@ proc loadCfgLegacy { cfg } {
 	# Speeding up auto renumbering of MAC, IPv4 and IPv6 addresses by remembering
 	# used addresses in lists.
 	foreach iface_id [ifcList $node_id] {
-	    lassign [split [getIfcIPv6addr $node_id $iface_id] "/"] addr mask
-	    if { $addr != "" } { lappend ipv6_used_list "[ip::contract [ip::prefix $addr]]/$mask" }
-	    set addr [getIfcIPv4addr $node_id $iface_id]
-	    if { $addr != "" } { lappend ipv4_used_list $addr }
+	    foreach full_addr [getIfcIPv6addrs $node_id $iface_id] {
+		lassign [split $full_addr "/"] addr mask
+		lappend ipv6_used_list "[ip::contract [ip::prefix $addr]]/$mask"
+	    }
+
+	    foreach addr [getIfcIPv4addrs $node_id $iface_id] {
+		lappend ipv4_used_list $addr
+	    }
+
 	    set addr [getIfcMACaddr $node_id $iface_id]
 	    if { $addr != "" } { lappend mac_used_list $addr }
 	}
@@ -1107,10 +1112,15 @@ proc loadCfgJson { json_cfg } {
 		continue
 	    }
 
-	    lassign [split [getIfcIPv6addr $node_id $iface] "/"] addr mask
-	    if { $addr != "" } { lappend ipv6_used_list "[ip::contract [ip::prefix $addr]]/$mask" }
-	    set addr [getIfcIPv4addr $node_id $iface]
-	    if { $addr != "" } { lappend ipv4_used_list $addr }
+	    foreach full_addr [getIfcIPv6addrs $node_id $iface] {
+		lassign [split $full_addr "/"] addr mask
+		lappend ipv6_used_list "[ip::contract [ip::prefix $addr]]/$mask"
+	    }
+
+	    foreach addr [getIfcIPv4addrs $node_id $iface] {
+		lappend ipv4_used_list $addr
+	    }
+
 	    set addr [getIfcMACaddr $node_id $iface]
 	    if { $addr != "" } { lappend mac_used_list $addr }
 	}

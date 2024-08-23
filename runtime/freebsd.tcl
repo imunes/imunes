@@ -1770,10 +1770,10 @@ proc removeNodeIfcIPaddrs { eid node_id } {
     set jail_id "$eid.$node_id"
 
     foreach ifc [ifcList $node_id] {
-	foreach ipv4 [getIfcIPv4addr $node_id $ifc] {
+	foreach ipv4 [getIfcIPv4addrs $node_id $ifc] {
 	    pipesExec "jexec $jail_id ifconfig $ifc $ipv4 -alias" "hold"
 	}
-	foreach ipv6 [getIfcIPv6addr $node_id $ifc] {
+	foreach ipv6 [getIfcIPv6addrs $node_id $ifc] {
 	    pipesExec "jexec $jail_id ifconfig $ifc inet6 $ipv6 -alias" "hold"
 	}
     }
@@ -2519,13 +2519,11 @@ proc startExternalConnection { eid node_id } {
     }
     set cmds "ifconfig $outifc link $ether"
 
-    set ipv4 [getIfcIPv4addr $node_id $ifc]
-    if { $ipv4 != "" } {
+    foreach ipv4 [getIfcIPv4addrs $node_id $ifc] {
 	set cmds "ifconfig $outifc $ipv4"
     }
 
-    set ipv6 [getIfcIPv6addr $node_id $ifc]
-    if { $ipv6 != "" } {
+    foreach ipv6 [getIfcIPv6addrs $node_id $ifc] {
 	set cmds "$cmds\n ifconfig $outifc inet6 $ipv6"
     }
 

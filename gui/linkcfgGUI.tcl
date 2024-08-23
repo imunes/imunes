@@ -543,3 +543,545 @@ proc configGUI_linkColorApply { wi link_id } {
 	set changed 1
     }
 }
+
+#****f* linkcfg.tcl/getLinkDirect
+# NAME
+#   getLinkDirect -- get if link is direct
+# SYNOPSIS
+#   set link_direct [getLinkDirect $link_id]
+# FUNCTION
+#   Returns boolean - link is direct.
+# INPUTS
+#   * link_id -- link id
+# RESULT
+#   * link_direct -- returns 0 if link is not a direct link and 1 if it is
+#****
+proc _getLinkDirect { link_cfg } {
+    return [_cfgGetWithDefault 0 $link_cfg "direct"]
+}
+
+#****f* linkcfg.tcl/setLinkDirect
+# NAME
+#   setLinkDirect -- set link bandwidth
+# SYNOPSIS
+#   setLinkDirect $link_id $direct
+# FUNCTION
+#   Sets the link bandwidth in a bits per second.
+# INPUTS
+#   * link_id -- link id
+#   * direct -- link bandwidth in bits per second.
+#****
+proc _setLinkDirect { link_cfg direct } {
+    return [_cfgSet $link_cfg "direct" $direct]
+}
+
+#****f* linkcfg.tcl/getLinkBandwidth
+# NAME
+#   getLinkBandwidth -- get link bandwidth
+# SYNOPSIS
+#   set bandwidth [getLinkBandwidth $link_id]
+# FUNCTION
+#   Returns the link bandwidth expressed in bits per second.
+# INPUTS
+#   * link_id -- link id
+# RESULT
+#   * bandwidth -- The value of link bandwidth in bits per second.
+#****
+proc _getLinkBandwidth { link_cfg } {
+    return [_cfgGet $link_cfg "bandwidth"]
+}
+
+#****f* linkcfg.tcl/setLinkBandwidth
+# NAME
+#   setLinkBandwidth -- set link bandwidth
+# SYNOPSIS
+#   setLinkBandwidth $link_id $bandwidth
+# FUNCTION
+#   Sets the link bandwidth in a bits per second.
+# INPUTS
+#   * link_id -- link id
+#   * bandwidth -- link bandwidth in bits per second.
+#****
+proc _setLinkBandwidth { link_cfg bandwidth } {
+    if { $bandwidth == 0 } {
+	set bandwidth ""
+    }
+
+    return [_cfgSet $link_cfg "bandwidth" $bandwidth]
+}
+
+#****f* linkcfg.tcl/getLinkColor
+# NAME
+#   getLinkColor -- get link color
+# SYNOPSIS
+#   getLinkColor $link
+# FUNCTION
+#   Returns the color of the link.
+# INPUTS
+#   * link -- link id
+# RESULT
+#   * color -- link color
+#****
+proc _getLinkColor { link_cfg } {
+    global defLinkColor
+
+    return [_cfgGetWithDefault $defLinkColor $link_cfg "color"]
+}
+
+#****f* linkcfg.tcl/setLinkColor
+# NAME
+#   setLinkColor -- set link color
+# SYNOPSIS
+#   setLinkColor $link_id $color
+# FUNCTION
+#   Sets the color of the link.
+# INPUTS
+#   * link_id -- link id
+#   * color -- link color
+#****
+proc _setLinkColor { link_cfg color } {
+    if { $color == "Red" } {
+	set color ""
+    }
+
+    return [_cfgSet $link_cfg "color" $color]
+}
+
+#****f* linkcfg.tcl/getLinkWidth
+# NAME
+#   getLinkWidth -- get link width
+# SYNOPSIS
+#   getLinkWidth $link
+# FUNCTION
+#   Returns the link width on canvas.
+# INPUTS
+#   * link -- link id
+#****
+proc _getLinkWidth { link_cfg } {
+    global defLinkWidth
+
+    return [_cfgGetWithDefault $defLinkWidth $link_cfg "width"]
+}
+
+#****f* linkcfg.tcl/setLinkWidth
+# NAME
+#   setLinkWidth -- set link width
+# SYNOPSIS
+#   setLinkWidth $link_id $width
+# FUNCTION
+#   Sets the link width on canvas.
+# INPUTS
+#   * link_id -- link id
+#   * width -- link width
+#****
+proc _setLinkWidth { link_cfg width } {
+    global defLinkWidth
+
+    if { $width == $defLinkWidth } {
+	set width ""
+    }
+
+    return [_cfgSet $link_cfg "width" $width]
+}
+
+#****f* linkcfg.tcl/getLinkDelay
+# NAME
+#   getLinkDelay -- get link delay
+# SYNOPSIS
+#   set delay [getLinkDelay $link_id]
+# FUNCTION
+#   Returns the link delay expressed in microseconds.
+# INPUTS
+#   * link_id -- link id
+# RESULT
+#   * delay -- The value of link delay in microseconds.
+#****
+proc _getLinkDelay { link_cfg } {
+    return [_cfgGet $link_cfg "delay"]
+}
+
+#****f* linkcfg.tcl/setLinkDelay
+# NAME
+#   setLinkDelay -- set link delay
+# SYNOPSIS
+#   setLinkDelay $link_id $delay
+# FUNCTION
+#   Sets the link delay in microseconds.
+# INPUTS
+#   * link_id -- link id
+#   * delay -- link delay delay in microseconds.
+#****
+proc _setLinkDelay { link_cfg delay } {
+    if { $delay == 0 } {
+	set delay ""
+    }
+
+    return [_cfgSet $link_cfg "delay" $delay]
+}
+
+#****f* linkcfg.tcl/getLinkJitterUpstream
+# NAME
+#   getLinkJitterUpstream -- get link upstream Jitter
+# SYNOPSIS
+#   set delay [getLinkJitterUpstream $link_id]
+# FUNCTION
+#   Returns the list of upstream link jitter values expressed in microseconds.
+# INPUTS
+#   * link_id -- link id
+# RESULT
+#   * jitter -- the list of values for jitter in microseconds
+#****
+proc _getLinkJitterUpstream { link_cfg } {
+    return [_cfgGet $link_cfg "jitter_upstream"]
+}
+
+#****f* linkcfg.tcl/setLinkJitterUpstream
+# NAME
+#   setLinkJitterUpstream -- set link upstream jitter
+# SYNOPSIS
+#   setLinkJitterUpstream $link_id $jitter_upstream
+# FUNCTION
+#   Sets the link upstream jitter in microseconds.
+# INPUTS
+#   * link_id -- link id
+#   * jitter_upstream -- link upstream jitter values in microseconds.
+#****
+proc _setLinkJitterUpstream { link_cfg jitter_upstream } {
+    if { $jitter_upstream == 0 } {
+	set jitter_upstream ""
+    }
+
+    return [_cfgSet $link_cfg "jitter_upstream" $jitter_upstream]
+}
+
+#****f* linkcfg.tcl/getLinkJitterModeUpstream
+# NAME
+#   getLinkJitterModeUpstream -- get link upstream jitter mode
+# SYNOPSIS
+#   set delay [getLinkJitterModeUpstream $link_id]
+# FUNCTION
+#   Returns the upstream link jitter mode.
+# INPUTS
+#   * link_id -- link id
+# RESULT
+#   * jitter_mode -- The jitter mode for upstream direction.
+#****
+proc _getLinkJitterModeUpstream { link_cfg } {
+    return [_cfgGet $link_cfg "jitter_upstream_mode"]
+}
+
+#****f* linkcfg.tcl/setLinkJitterModeUpstream
+# NAME
+#   setLinkJitterModeUpstream -- set link upstream jitter mode
+# SYNOPSIS
+#   setLinkJitterModeUpstream $link_id $jitter_upstream_mode
+# FUNCTION
+#   Sets the link upstream jitter mode.
+# INPUTS
+#   * link_id -- link id
+#   * jitter_upstream_mode -- link upstream jitter mode.
+#****
+proc _setLinkJitterModeUpstream { link_cfg jitter_upstream_mode } {
+    if { $jitter_upstream_mode == 0 } {
+	set jitter_upstream_mode ""
+    }
+
+    return [_cfgSet $link_cfg "jitter_upstream_mode" $jitter_upstream_mode]
+}
+
+#****f* linkcfg.tcl/getLinkJitterHoldUpstream
+# NAME
+#   getLinkJitterHoldUpstream -- get link upstream jitter hold
+# SYNOPSIS
+#   set delay [getLinkJitterHoldUpstream $link_id]
+# FUNCTION
+#   Returns the upstream link jitter hold.
+# INPUTS
+#   * link_id -- link id
+# RESULT
+#   * jitter_hold -- The jitter hold for upstream direction.
+#****
+proc _getLinkJitterHoldUpstream { link_cfg } {
+    return [_cfgGet $link_cfg "jitter_upstream_hold"]
+}
+
+#****f* linkcfg.tcl/setLinkJitterHoldUpstream
+# NAME
+#   setLinkJitterHoldUpstream -- set link upstream jitter hold
+# SYNOPSIS
+#   setLinkJitterHoldUpstream $link_id $jitter_upstream_hold
+# FUNCTION
+#   Sets the link upstream jitter hold.
+# INPUTS
+#   * link_id -- link id
+#   * jitter_upstream_hold -- link upstream jitter hold.
+#****
+proc _setLinkJitterHoldUpstream { link_cfg jitter_upstream_hold } {
+    if { $jitter_upstream_hold == 0 } {
+	set jitter_upstream_hold ""
+    }
+
+    return [_cfgSet $link_cfg "jitter_upstream_hold" $jitter_upstream_hold]
+}
+
+#****f* linkcfg.tcl/getLinkJitterDownstream
+# NAME
+#   getLinkJitterDownstream -- get link downstream Jitter
+# SYNOPSIS
+#   set delay [getLinkJitterDownstream $link_id]
+# FUNCTION
+#   Returns the downstream link jitter values expressed in microseconds in a
+#   list.
+# INPUTS
+#   * link_id -- link id
+# RESULT
+#   * jitter -- The list of values for jitter in microseconds.
+#****
+proc _getLinkJitterDownstream { link_cfg } {
+    return [_cfgGet $link_cfg "jitter_downstream"]
+}
+
+#****f* linkcfg.tcl/setLinkJitterDownstream
+# NAME
+#   setLinkJitterDownstream -- set link downstream jitter
+# SYNOPSIS
+#   setLinkJitterDownstream $link_id $jitter_downstream
+# FUNCTION
+#   Sets the link downstream jitter in microseconds.
+# INPUTS
+#   * link_id -- link id
+#   * jitter_downstream -- link downstream jitter values in microseconds.
+#****
+proc _setLinkJitterDownstream { link_cfg jitter_downstream } {
+    if { $jitter_downstream == 0 } {
+	set jitter_downstream ""
+    }
+
+    return [_cfgSet $link_cfg "jitter_downstream" $jitter_downstream]
+}
+
+#****f* linkcfg.tcl/getLinkJitterModeDownstream
+# NAME
+#   getLinkJitterModeDownstream -- get link downstream jitter mode
+# SYNOPSIS
+#   set delay [getLinkJitterModeDownstream $link_id]
+# FUNCTION
+#   Returns the downstream link jitter mode.
+# INPUTS
+#   * link_id -- link id
+# RESULT
+#   * jitter_mode -- The jitter mode for downstream direction.
+#****
+proc _getLinkJitterModeDownstream { link_cfg } {
+    return [_cfgGet $link_cfg "jitter_downstream_mode"]
+}
+
+#****f* linkcfg.tcl/setLinkJitterModeDownstream
+# NAME
+#   setLinkJitterModeDownstream -- set link downstream jitter mode
+# SYNOPSIS
+#   setLinkJitterModeDownstream $link_id $jitter_downstream_mode
+# FUNCTION
+#   Sets the link downstream jitter mode.
+# INPUTS
+#   * link_id -- link id
+#   * jitter_downstream_mode -- link downstream jitter mode.
+#****
+proc _setLinkJitterModeDownstream { link_cfg jitter_downstream_mode } {
+    if { $jitter_downstream_mode == 0 } {
+	set jitter_downstream_mode ""
+    }
+
+    return [_cfgSet $link_cfg "jitter_downstream_mode" $jitter_downstream_mode]
+}
+
+#****f* linkcfg.tcl/getLinkJitterHoldDownstream
+# NAME
+#   getLinkJitterHoldDownstream -- get link downstream jitter hold
+# SYNOPSIS
+#   set delay [getLinkJitterHoldDownstream $link_id]
+# FUNCTION
+#   Returns the downstream link jitter hold.
+# INPUTS
+#   * link_id -- link id
+# RESULT
+#   * jitter_hold -- The jitter hold for downstream direction.
+#****
+proc _getLinkJitterHoldDownstream { link_cfg } {
+    return [_cfgGet $link_cfg "jitter_downstream_hold"]
+}
+
+#****f* linkcfg.tcl/setLinkJitterHoldDownstream
+# NAME
+#   setLinkJitterHoldDownstream -- set link downstream jitter hold
+# SYNOPSIS
+#   setLinkJitterHoldDownstream $link_id $jitter_downstream_hold
+# FUNCTION
+#   Sets the link downstream jitter hold.
+# INPUTS
+#   * link_id -- link id
+#   * jitter_downstream_hold -- link downstream jitter hold.
+#****
+proc _setLinkJitterHoldDownstream { link_cfg jitter_downstream_hold } {
+    if { $jitter_downstream_hold == 0 } {
+	set jitter_downstream_hold ""
+    }
+
+    return [_cfgSet $link_cfg "jitter_downstream_hold" $jitter_downstream_hold]
+}
+
+#****f* linkcfg.tcl/getLinkBER
+# NAME
+#   getLinkBER -- get link BER
+# SYNOPSIS
+#   set BER [getLinkBER $link_id]
+# FUNCTION
+#   Returns 1/BER value of the link.
+# INPUTS
+#   * link_id -- link id
+# RESULT
+#   * BER -- The value of 1/BER of the link.
+#****
+proc _getLinkBER { link_cfg } {
+    return [_cfgGet $link_cfg "ber"]
+}
+
+#****f* linkcfg.tcl/setLinkBER
+# NAME
+#   setLinkBER -- set link BER
+# SYNOPSIS
+#   setLinkBER $link_id ber
+# FUNCTION
+#   Sets the BER value of the link.
+# INPUTS
+#   * link_id -- link id
+#   * ber -- The value of 1/BER of the link.
+#****
+proc _setLinkBER { link_cfg ber } {
+    if { $ber == 0 } {
+	set ber ""
+    }
+
+    return [_cfgSet $link_cfg "ber" $ber]
+}
+
+#****f* linkcfg.tcl/getLinkLoss
+# NAME
+#   getLinkLoss -- get link loss
+# SYNOPSIS
+#   set loss [getLinkLoss $link_id]
+# FUNCTION
+#   Returns loss percentage of the link.
+# INPUTS
+#   * link_id -- link id
+# RESULT
+#   * loss -- The loss percentage of the link.
+#****
+proc _getLinkLoss { link_cfg } {
+    return [_cfgGet $link_cfg "loss"]
+}
+
+#****f* linkcfg.tcl/setLinkLoss
+# NAME
+#   setLinkLoss -- set link loss
+# SYNOPSIS
+#   setLinkLoss $link_id loss
+# FUNCTION
+#   Sets the loss percentage of the link.
+# INPUTS
+#   * link_id -- link id
+#   * loss -- The loss percentage of the link.
+#****
+proc _setLinkLoss { link_cfg loss } {
+    if { $loss == 0 } {
+	set loss ""
+    }
+
+    return [_cfgSet $link_cfg "loss" $loss]
+}
+
+#****f* linkcfg.tcl/getLinkDup
+# NAME
+#   getLinkDup -- get link packet duplicate value
+# SYNOPSIS
+#   set duplicate [getLinkDup $link_id]
+# FUNCTION
+#   Returns the value of the link duplicate percentage.
+# INPUTS
+#   * link_id -- link id
+# RESULT
+#   * duplicate -- The percentage of the link packet duplicate value.
+#****
+proc _getLinkDup { link_cfg } {
+    return [_cfgGet $link_cfg "duplicate"]
+}
+
+#****f* linkcfg.tcl/setLinkDup
+# NAME
+#   setLinkDup -- set link packet duplicate value
+# SYNOPSIS
+#   setLinkDup $link_id $duplicate
+# FUNCTION
+#   Set link packet duplicate percentage.
+# INPUTS
+#   * link_id -- link id
+#   * duplicate -- The percentage of the link packet duplicate value.
+#****
+proc _setLinkDup { link_cfg duplicate } {
+    if { $duplicate == 0 } {
+	set duplicate ""
+    }
+
+    return [_cfgSet $link_cfg "duplicate" $duplicate]
+}
+
+#****f* linkcfg.tcl/getLinkMirror
+# NAME
+#   getLinkMirror -- get link's mirror link
+# SYNOPSIS
+#   set mirror_link_id [getLinkMirror $link_id]
+# FUNCTION
+#   Returns the value of the link's mirror link. Mirror link is the other part
+#   of the link connecting node to a pseudo node. Two mirror links present
+#   only one physical link.
+# INPUTS
+#   * link_id -- link id
+# RESULT
+#   * mirror_link_id -- mirror link id
+#****
+proc _getLinkMirror { link_cfg } {
+    return [_cfgGet $link_cfg "mirror"]
+}
+
+#****f* linkcfg.tcl/setLinkMirror
+# NAME
+#   setLinkMirror -- set link's mirror link
+# SYNOPSIS
+#   setLinkMirror $link_id $mirror
+# FUNCTION
+#   Sets the value of the link's mirror link. Mirror link is the other part of
+#   the link connecting node to a pseudo node. Two mirror links present only
+#   one physical link.
+# INPUTS
+#   * link_id -- link id
+#   * mirror -- mirror link's id
+#****
+proc _setLinkMirror { link_cfg mirror } {
+    return [_cfgSet $link_cfg "mirror" $mirror]
+}
+
+proc _getLinkPeers { link_cfg } {
+    return [_cfgGet $link_cfg "peers"]
+}
+
+proc _setLinkPeers { link_cfg peers } {
+    return [_cfgSet $link_cfg "peers" $peers]
+}
+
+proc _getLinkPeersIfaces { link_cfg } {
+    return [_cfgGet $link_cfg "peers_ifaces"]
+}
+
+proc _setLinkPeersIfaces { link_cfg peers_ifaces } {
+    return [_cfgSet $link_cfg "peers_ifaces" $peers_ifaces]
+}
