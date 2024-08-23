@@ -330,7 +330,7 @@ set ipsecSecrets ""
 proc nodeIpsecInit { node } {
     global ipsecConf ipsecSecrets isOSfreebsd
 
-    if { ! [getFromRunning "${node}_running"] || [getNodeIPsec $node] == "" } {
+    if { [getFromRunning "${node}_running"] == false || [getNodeIPsec $node] == "" } {
 	return
     }
 
@@ -674,10 +674,13 @@ proc execute_nodesCreate { nodes nodeCount w } {
     foreach node_id $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
+	if { [getNodeType $node_id] != "pseudo" } {
+	    setToRunning "${node_id}_running" true
+	}
+
 	if { [info procs [getNodeType $node_id].nodeCreate] != "" } {
 	    try {
 		[getNodeType $node_id].nodeCreate $eid $node_id
-		setToRunning "${node_id}_running" true
 	    } on error err {
 		return -code error "Error in '[getNodeType $node_id].nodeCreate $eid $node_id': $err"
 	    }
