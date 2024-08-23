@@ -56,6 +56,10 @@ proc $MODULE.toolbarIconDescr {} {
     return "Add new LAN switch"
 }
 
+proc $MODULE._confNewIfc { node_cfg iface_id } {
+    return $node_cfg
+}
+
 #****f* lanswitch.tcl/lanswitch.icon
 # NAME
 #   lanswitch.icon --
@@ -148,4 +152,5 @@ proc $MODULE.configInterfacesGUI { wi node_id iface_id } {
     global guielements
 
     configGUI_ifcQueueConfig $wi $node_id $iface_id
+    configGUI_ifcGap $wi $iface_id 30
 }
