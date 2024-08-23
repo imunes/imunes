@@ -1637,7 +1637,7 @@ proc isNodeError { node } {
 proc isNodeErrorIfaces { node } {
     set jail_id "[getFromRunning "eid"].$node"
 
-    if { [[getNodeType $node].virtlayer] == "NATIVE" } {
+    if { [getCustomEnabled $node] || [[getNodeType $node].virtlayer] == "NATIVE" } {
 	return false
     }
 

@@ -268,6 +268,11 @@ proc autoIPv4addr { node iface } {
 	return
     }
 
+    set old_addrs [getIfcIPv4addrs $node $iface]
+    if { $old_addrs != "" } {
+	setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] $old_addrs 1]
+    }
+
     setIfcIPv4addrs $node $iface ""
 
     lassign [logicalPeerByIfc $node $iface] peer_node peer_if
