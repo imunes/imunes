@@ -193,7 +193,7 @@ proc getNodeDir { node_id } {
 #   * state -- returns true if custom configuration is enabled
 #****
 proc getCustomEnabled { node_id } {
-    return [cfgGet "nodes" $node_id "custom_enabled"]
+    return [cfgGetWithDefault "false" "nodes" $node_id "custom_enabled"]
 }
 
 #****f* nodecfg.tcl/setCustomEnabled
@@ -209,6 +209,8 @@ proc getCustomEnabled { node_id } {
 #****
 proc setCustomEnabled { node_id state } {
     cfgSet "nodes" $node_id "custom_enabled" $state
+
+    trigger_nodeRecreate $node_id
 }
 
 #****f* nodecfg.tcl/getCustomConfigSelected
@@ -238,8 +240,12 @@ proc getCustomConfigSelected { node_id } {
 #   * node_id -- node id
 #   * conf -- custom-config id
 #****
-proc setCustomConfigSelected { node_id state } {
-    cfgSet "nodes" $node_id "custom_selected" $state
+proc setCustomConfigSelected { node_id cfg_id } {
+    cfgSet "nodes" $node_id "custom_selected" $cfg_id
+
+    if { [getCustomEnabled $node_id] && [getCustomConfigSelected $node_id] == $cfg_id } {
+	trigger_nodeRecreate $node_id
+    }
 }
 
 #****f* nodecfg.tcl/getCustomConfig
@@ -277,6 +283,10 @@ proc getCustomConfig { node_id cfg_id } {
 proc setCustomConfig { node_id cfg_id cmd config } {
     cfgSet "nodes" $node_id "custom_configs" $cfg_id "custom_command" $cmd
     cfgSet "nodes" $node_id "custom_configs" $cfg_id "custom_config" $config
+
+    if { [getCustomEnabled $node_id] && [getCustomConfigSelected $node_id] == $cfg_id } {
+	trigger_nodeRecreate $node_id
+    }
 }
 
 #****f* nodecfg.tcl/removeCustomConfig
@@ -445,7 +455,7 @@ proc getSubnetData { this_node_id this_ifc subnet_gws nodes_l2data subnet_idx } 
 
     set this_type [getNodeType $this_node_id]
     if { [$this_type.netlayer] == "NETWORK" } {
-	if { $this_type in "router extnat" } {
+	if { $this_type in "router nat64 extnat" } {
 	    # this node is a router/extnat, add our IP addresses to lists
 	    set gw4 [lindex [split [getIfcIPv4addr $this_node_id $this_ifc] /] 0]
 	    set gw6 [lindex [split [getIfcIPv6addr $this_node_id $this_ifc] /] 0]
@@ -644,11 +654,12 @@ proc getDefaultRoutesConfig { node_id gws } {
     set all_routes6 {}
     foreach route $gws {
 	lassign [split $route "|"] route_type gateway4 gateway6
-	if { [getNodeType $node_id] == "router" } {
+	if { [getNodeType $node_id] in "router nat64" } {
 	    if { $route_type == "extnat" } {
 		if { "0.0.0.0/0 $gateway4" ni [list "0.0.0.0/0 " $all_routes4] } {
 		    lappend all_routes4 "0.0.0.0/0 $gateway4"
 		}
+
 		if { "::/0 $gateway6" ni [list "::/0 " $all_routes6] } {
 		    lappend all_routes6 "::/0 $gateway6"
 		}
@@ -657,6 +668,7 @@ proc getDefaultRoutesConfig { node_id gws } {
 	    if { "0.0.0.0/0 $gateway4" ni [list "0.0.0.0/0 " $all_routes4] } {
 		lappend all_routes4 "0.0.0.0/0 $gateway4"
 	    }
+
 	    if { "::/0 $gateway6" ni [list "::/0 " $all_routes6] } {
 		lappend all_routes6 "::/0 $gateway6"
 	    }
@@ -2023,4 +2035,544 @@ proc nodeUncfggenStaticRoutes6 { node_id { vtysh 0 } } {
     unsetRunning "${node_id}_old_croutes6"
 
     return $cfg
+}
+
+proc updateNode { node_id old_node_cfg new_node_cfg } {
+    puts ""
+    puts "= /UPDATE NODE $node_id START ="
+
+    if { $old_node_cfg == "*" } {
+	set old_node_cfg [cfgGet "nodes" $node_id]
+    }
+
+    set cfg_diff [dictDiff $old_node_cfg $new_node_cfg]
+    puts "= cfg_diff: '$cfg_diff'"
+    if { $cfg_diff == "" || [lsort -uniq [dict values $cfg_diff]] == "copy" } {
+	puts "= NO CHANGE"
+	puts "= /UPDATE NODE $node_id END ="
+	return $new_node_cfg
+    }
+
+    set eid [getFromRunning "eid"]
+
+    set commands {}
+
+    if { $new_node_cfg == "" } {
+	return $old_node_cfg
+    }
+
+    dict for {key change} $cfg_diff {
+	if { $change == "copy" } {
+	    continue
+	}
+
+	puts "==== $change: '$key'"
+
+	set old_value [_cfgGet $old_node_cfg $key]
+	set new_value [_cfgGet $new_node_cfg $key]
+	if { $change in "changed" } {
+	    puts "==== OLD: '$old_value'"
+	}
+	if { $change in "new changed" } {
+	    puts "==== NEW: '$new_value'"
+	}
+
+	switch -exact $key {
+	    "name" {
+		setNodeName $node_id $new_value
+	    }
+
+	    "custom_image" {
+		setNodeCustomImage $node_id $new_value
+	    }
+
+	    "docker_attach" {
+		setNodeDockerAttach $node_id $new_value
+	    }
+
+	    "croutes4" {
+		setStatIPv4routes $node_id $new_value
+	    }
+
+	    "croutes6" {
+		setStatIPv6routes $node_id $new_value
+	    }
+
+	    "auto_default_routes" {
+		setAutoDefaultRoutesStatus $node_id $new_value
+	    }
+
+	    "services" {
+		setNodeServices $node_id $new_value
+	    }
+
+	    "custom_configs" {
+		set custom_configs_diff [dictDiff $old_value $new_value]
+		dict for {custom_configs_key custom_configs_change} $custom_configs_diff {
+		    if { $custom_configs_change == "copy" } {
+			continue
+		    }
+
+		    puts "======== $custom_configs_change: '$custom_configs_key'"
+
+		    set custom_configs_old_value [_cfgGet $old_value $custom_configs_key]
+		    set custom_configs_new_value [_cfgGet $new_value $custom_configs_key]
+		    if { $custom_configs_change in "changed" } {
+			puts "======== OLD: '$custom_configs_old_value'"
+		    }
+		    if { $custom_configs_change in "new changed" } {
+			puts "======== NEW: '$custom_configs_new_value'"
+		    }
+
+		    lassign [dict values $custom_configs_new_value] cmd cfg
+		    setCustomConfig $node_id $custom_configs_key $cmd $cfg
+		}
+	    }
+
+	    "ipsec" {
+		set ipsec_diff [dictDiff $old_value $new_value]
+		dict for {ipsec_key ipsec_change} $ipsec_diff {
+		    if { $ipsec_change == "copy" } {
+			continue
+		    }
+
+		    puts "======== $ipsec_change: '$ipsec_key'"
+
+		    set ipsec_old_value [_cfgGet $old_value $ipsec_key]
+		    set ipsec_new_value [_cfgGet $new_value $ipsec_key]
+		    if { $ipsec_change in "changed" } {
+			puts "======== OLD: '$ipsec_old_value'"
+		    }
+		    if { $ipsec_change in "new changed" } {
+			puts "======== NEW: '$ipsec_new_value'"
+		    }
+
+		    switch -exact $ipsec_key {
+			"ipsec_logging" {
+			    setNodeIPsecItem $node_id "ipsec_logging" $ipsec_new_value
+			}
+
+			"ipsec_configs" {
+			    set ipsec_configs_diff [dictDiff $ipsec_old_value $ipsec_new_value]
+			    dict for {ipsec_configs_key ipsec_configs_change} $ipsec_configs_diff {
+				if { $ipsec_configs_change == "copy" } {
+				    continue
+				}
+
+				puts "============ $ipsec_configs_change: '$ipsec_configs_key'"
+
+				set ipsec_configs_old_value [_cfgGet $ipsec_old_value $ipsec_configs_key]
+				set ipsec_configs_new_value [_cfgGet $ipsec_new_value $ipsec_configs_key]
+				if { $ipsec_configs_change in "changed" } {
+				    puts "============ OLD: '$ipsec_configs_old_value'"
+				}
+				if { $ipsec_configs_change in "new changed" } {
+				    puts "============ NEW: '$ipsec_configs_new_value'"
+				}
+
+				switch -exact $ipsec_configs_change {
+				    "removed" {
+					delNodeIPsecConnection $node_id $ipsec_configs_key
+				    }
+
+				    "new" -
+				    "changed" {
+					setNodeIPsecConnection $node_id $ipsec_configs_key $ipsec_configs_new_value
+				    }
+				}
+			    }
+			}
+		    }
+		}
+	    }
+
+	    "nat64" {
+		set nat64_diff [dictDiff $old_value $new_value]
+		dict for {nat64_key nat64_change} $nat64_diff {
+		    if { $nat64_change == "copy" } {
+			continue
+		    }
+
+		    puts "======== $nat64_change: '$nat64_key'"
+
+		    set nat64_old_value [_cfgGet $old_value $nat64_key]
+		    set nat64_new_value [_cfgGet $new_value $nat64_key]
+		    if { $nat64_change in "changed" } {
+			puts "======== OLD: '$nat64_old_value'"
+		    }
+		    if { $nat64_change in "new changed" } {
+			puts "======== NEW: '$nat64_new_value'"
+		    }
+
+		    switch -exact $nat64_key {
+			"tun_ipv4_addr" {
+			    setTunIPv4Addr $node_id $nat64_new_value
+			}
+
+			"tun_ipv6_addr" {
+			    setTunIPv6Addr $node_id $nat64_new_value
+			}
+
+			"tayga_ipv4_addr" {
+			    setTaygaIPv4Addr $node_id $nat64_new_value
+			}
+
+			"tayga_ipv6_prefix" {
+			    setTaygaIPv6Prefix $node_id $nat64_new_value
+			}
+
+			"tayga_ipv4_pool" {
+			    setTaygaIPv4DynPool $node_id $nat64_new_value
+			}
+
+			"tayga_mappings" {
+			    setTaygaMappings $node_id $nat64_new_value
+			}
+		    }
+		}
+	    }
+
+	    "custom_enabled" {
+		setCustomEnabled $node_id $new_value
+	    }
+
+	    "custom_selected" {
+		setCustomConfigSelected $node_id $new_value
+	    }
+
+	    "canvas" {
+		setNodeCanvas $node_id $new_value
+	    }
+
+	    "iconcoords" {
+		setNodeCoords $node_id $new_value
+	    }
+
+	    "labelcoords" {
+		setNodeLabelCoords $node_id $new_value
+	    }
+
+	    "events" {
+		# TODO
+	    }
+
+	    "custom_icon" {
+		setCustomIcon $node_id $new_value
+	    }
+
+	    "ifaces" {
+		set ifaces_diff [dictDiff $old_value $new_value]
+		dict for {iface_key iface_change} $ifaces_diff {
+		    if { $iface_change == "copy" } {
+			continue
+		    }
+
+		    puts "======== $iface_change: '$iface_key'"
+
+		    set iface_old_value [_cfgGet $old_value $iface_key]
+		    set iface_new_value [_cfgGet $new_value $iface_key]
+		    if { $iface_change in "changed" } {
+			puts "======== OLD: '$iface_old_value'"
+		    }
+		    if { $iface_change in "new changed" } {
+			puts "======== NEW: '$iface_new_value'"
+		    }
+
+		    switch -exact $iface_change {
+			"removed" {
+			    removeIface $node_id $iface_key
+			}
+
+			"new" -
+			"changed" {
+			    set iface_type [_cfgGet $iface_new_value "type"]
+			    if { $iface_change == "new" } {
+				if { [string match "lifc*" $iface_key] } {
+				    set iface_id [newLogIface $node_id $iface_type]
+				} else {
+				    set iface_id [newIface $node_id $iface_type 0]
+				}
+			    } else {
+				set iface_id $iface_key
+			    }
+
+			    set iface_diff [dictDiff $iface_old_value $iface_new_value]
+			    dict for {iface_prop_key iface_prop_change} $iface_diff {
+				if { $iface_prop_change == "copy" } {
+				    continue
+				}
+
+				set iface_prop_old_value [_cfgGet $iface_old_value $iface_prop_key]
+				set iface_prop_new_value [_cfgGet $iface_new_value $iface_prop_key]
+				puts "============ $iface_prop_change: '$iface_prop_key'"
+				if { $iface_prop_change in "changed" } {
+				    puts "============ OLD: '$iface_prop_old_value'"
+				}
+				if { $iface_prop_change in "new changed" } {
+				    puts "============ NEW: '$iface_prop_new_value'"
+				}
+
+				switch -exact $iface_prop_key {
+				    "link" {
+					# link cannot be changed, only removed
+					if { $iface_prop_change == "removed" } {
+					    removeLink $iface_prop_old_value 1
+					}
+				    }
+
+				    "type" {
+					setIfcType $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "name" {
+					setIfcName $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "oper_state" {
+					setIfcOperState $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "nat_state" {
+					setIfcNatState $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "mtu" {
+					setIfcMTU $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "ifc_qdisc" {
+					setIfcQDisc $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "ifc_qdrop" {
+					setIfcQDrop $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "queue_len" {
+					setIfcQLen $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "vlan_dev" {
+					setIfcVlanDev $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "vlan_tag" {
+					setIfcVlanTag $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "mac" {
+					if { $iface_prop_new_value == "auto" } {
+					    autoMACaddr $node_id $iface_id
+					} else {
+					    setIfcMACaddr $node_id $iface_id $iface_prop_new_value
+					}
+				    }
+
+				    "ipv4_addrs" {
+					if { $iface_prop_new_value == "auto" } {
+					    autoIPv4addr $node_id $iface_id
+					} else {
+					    setIfcIPv4addrs $node_id $iface_id $iface_prop_new_value
+					}
+				    }
+
+				    "ipv6_addrs" {
+					if { $iface_prop_new_value == "auto" } {
+					    autoIPv6addr $node_id $iface_id
+					} else {
+					    setIfcIPv6addrs $node_id $iface_id $iface_prop_new_value
+					}
+				    }
+
+				    "filter_rules" {
+					clearFilterIfcRules $node_id $iface_id
+
+					if { $iface_change != "removed" } {
+					    foreach {rule_id rule_cfg} $iface_prop_new_value {
+						addFilterIfcRule $node_id $iface_id $rule_id $rule_cfg
+					    }
+					}
+				    }
+
+				    "stp_discover" {
+					setBridgeIfcDiscover $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "stp_learn" {
+					setBridgeIfcLearn $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "stp_sticky" {
+					setBridgeIfcSticky $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "stp_private" {
+					setBridgeIfcPrivate $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "stp_snoop" {
+					setBridgeIfcSnoop $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "stp_enabled" {
+					setBridgeIfcStp $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "stp_edge" {
+					setBridgeIfcEdge $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "stp_autoedge" {
+					setBridgeIfcAutoedge $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "stp_ptp" {
+					setBridgeIfcPtp $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "stp_autoptp" {
+					setBridgeIfcAutoptp $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "stp_priority" {
+					setBridgeIfcPriority $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "stp_path_cost" {
+					setBridgeIfcPathcost $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "stp_max_addresses" {
+					setBridgeIfcMaxaddr $node_id $iface_id $iface_prop_new_value
+				    }
+				}
+			    }
+			}
+		    }
+		}
+	    }
+
+	    "packgen" {
+		set packgen_diff [dictDiff $old_value $new_value]
+		dict for {packets_key packets_change} $packgen_diff {
+		    if { $packets_change == "copy" } {
+			continue
+		    }
+
+		    puts "======== $packets_change: '$packets_key'"
+
+		    set packets_old_value [_cfgGet $old_value $packets_key]
+		    set packets_new_value [_cfgGet $new_value $packets_key]
+		    if { $packets_change in "changed" } {
+			puts "======== OLD: '$packets_old_value'"
+		    }
+		    if { $packets_change in "new changed" } {
+			puts "======== NEW: '$packets_new_value'"
+		    }
+
+		    if { $packets_key == "packetrate" } {
+			puts "setPackgenPacketRate $node_id $packets_new_value"
+			setPackgenPacketRate $node_id $packets_new_value
+			continue
+		    }
+
+		    set packets_diff [dictDiff $packets_old_value $packets_new_value]
+		    foreach {packet_key packet_change} $packets_diff {
+			if { $packet_change == "copy" } {
+			    continue
+			}
+
+			puts "============ $packet_change: '$packet_key'"
+
+			set packet_old_value [_cfgGet $packets_old_value $packet_key]
+			set packet_new_value [_cfgGet $packets_new_value $packet_key]
+			if { $packet_change in "changed" } {
+			    puts "============ OLD: '$packet_old_value'"
+			}
+			if { $packet_change in "new changed" } {
+			    puts "============ NEW: '$packet_new_value'"
+			}
+
+			switch -exact $packet_change {
+			    "removed" {
+				removePackgenPacket $node_id $packet_key
+			    }
+
+			    "new" {
+				addPackgenPacket $node_id $packet_key $packet_new_value
+			    }
+
+			    "changed" {
+				removePackgenPacket $node_id $packet_key
+				addPackgenPacket $node_id $packet_key $packet_new_value
+			    }
+			}
+		    }
+		}
+	    }
+
+	    "bridge" {
+		set bridge_diff [dictDiff $old_value $new_value]
+		dict for {bridge_key bridge_change} $bridge_diff {
+		    if { $bridge_change == "copy" } {
+			continue
+		    }
+
+		    puts "======== $bridge_change: '$bridge_key'"
+
+		    set bridge_old_value [_cfgGet $old_value $bridge_key]
+		    set bridge_new_value [_cfgGet $new_value $bridge_key]
+		    if { $bridge_change in "changed" } {
+			puts "======== OLD: '$bridge_old_value'"
+		    }
+		    if { $bridge_change in "new changed" } {
+			puts "======== NEW: '$bridge_new_value'"
+		    }
+
+		    switch -exact $bridge_key {
+			"protocol" {
+			    setBridgeProtocol $node_id $bridge_new_value
+			}
+
+			"priority" {
+			    setBridgePriority $node_id $bridge_new_value
+			}
+
+			"hold_count" {
+			    setBridgeHoldCount $node_id $bridge_new_value
+			}
+
+			"max_age" {
+			    setBridgeMaxAge $node_id $bridge_new_value
+			}
+
+			"forwarding_delay" {
+			    setBridgeFwdDelay $node_id $bridge_new_value
+			}
+
+			"hello_time" {
+			    setBridgeHelloTime $node_id $bridge_new_value
+			}
+
+			"max_addresses" {
+			    setBridgeMaxAddr $node_id $bridge_new_value
+			}
+
+			"address_timeout" {
+			    setBridgeTimeout $node_id $bridge_new_value
+			}
+		    }
+		}
+	    }
+
+	    default {
+		# do nothing
+	    }
+	}
+    }
+
+    puts "= /UPDATE NODE $node_id END ="
+    puts ""
+
+    return $new_node_cfg
 }

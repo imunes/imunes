@@ -1232,10 +1232,18 @@ proc cfgGet { args } {
     return [dictGet $dict_cfg {*}$args]
 }
 
+proc _cfgGet { node_cfg args } {
+    return [dictGet $node_cfg {*}$args]
+}
+
 proc cfgGetWithDefault { default_value args } {
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
     return [dictGetWithDefault $default_value $dict_cfg {*}$args]
+}
+
+proc _cfgGetWithDefault { default_value node_cfg args } {
+    return [dictGetWithDefault $default_value $node_cfg {*}$args]
 }
 
 proc cfgSet { args } {
@@ -1255,6 +1263,23 @@ proc cfgSet { args } {
     }
 
     return $dict_cfg
+}
+
+proc _cfgSet { node_cfg args } {
+    if { [lindex $args end] in {{} ""} } {
+	for {set i 1} {$i < [llength $args]} {incr i} {
+	    set node_cfg [dictUnset $node_cfg {*}[lrange $args 0 end-$i]]
+
+	    set new_upper [dictGet $node_cfg {*}[lrange $args 0 end-[expr $i+1]]]
+	    if { $new_upper != "" } {
+		break
+	    }
+	}
+    } else {
+	set node_cfg [dictSet $node_cfg {*}$args]
+    }
+
+    return $node_cfg
 }
 
 # to forcefully set empty values to a dictionary key
@@ -1277,6 +1302,12 @@ proc cfgLappend { args } {
     set dict_cfg [dictLappend $dict_cfg {*}$args]
 
     return $dict_cfg
+}
+
+proc _cfgLappend { node_cfg args } {
+    set node_cfg [dictLappend $node_cfg {*}$args]
+
+    return $node_cfg
 }
 
 proc cfgUnset { args } {
@@ -1600,4 +1631,37 @@ proc createJson { value_type dictionary } {
     }
 
     return $retv
+}
+
+proc dictDiff { dict1 dict2 } {
+    if { $dict1 == "-" } {
+	return [dict map {key value} $dict2 {set value "new"}]
+    }
+
+    set diff_dict [dict map {key value} $dict1 {set value "removed"}]
+
+    dict for {key value1} $dict1 {
+	try {
+	    dict get $dict2 $key
+	} on ok value2 {
+	    if { $value1 == $value2 } {
+		dict set diff_dict $key "copy"
+	    } elseif { $value2 == "" } {
+		dict set diff_dict $key "removed"
+	    } else {
+		dict set diff_dict $key "changed"
+	    }
+	} on error {} {}
+    }
+
+    dict for {key value2} $dict2 {
+	try {
+	    dict get $dict1 $key
+	} on ok value1 {
+	} on error {} {
+	    dict set diff_dict $key "new"
+	}
+    }
+
+    return $diff_dict
 }

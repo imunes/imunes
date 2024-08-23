@@ -1143,7 +1143,7 @@ proc isNodeError { node_id } {
 proc isNodeErrorIfaces { node } {
     set node_id "[getFromRunning "eid"].$node"
 
-    if { [[getNodeType $node].virtlayer] == "NATIVE" } {
+    if { [getCustomEnabled $node] || [[getNodeType $node].virtlayer] == "NATIVE" } {
 	return false
     }
 

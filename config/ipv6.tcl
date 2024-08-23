@@ -134,6 +134,11 @@ proc autoIPv6addr { node_id iface_id } {
 	return
     }
 
+    set old_addrs [getIfcIPv6addrs $node_id $iface_id]
+    if { $old_addrs != "" } {
+	setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] $old_addrs "keep_doubles"]
+    }
+
     setIfcIPv6addrs $node_id $iface_id ""
 
     lassign [logicalPeerByIfc $node_id $iface_id] peer_node peer_if
