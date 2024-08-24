@@ -796,23 +796,40 @@ proc button3node { c x y } {
     #
     .button3menu add command -label "Delete (keep interfaces)" -command "deleteSelection 1"
 
-    if { $type != "pseudo" && [$type.netlayer] != "LINK" } {
+    if { $type != "pseudo" && $oper_mode == "exec" } {
 	.button3menu add separator
     }
 
     #
-    # Start & stop node
+    # Node execution menu
     #
-    if { $oper_mode == "exec" && [info procs $type.nodeConfigure] != "" \
-	&& [info procs $type.nodeShutdown] != "" } {
+    .button3menu.node_execute delete 0 end
+    if { $type != "pseudo" && $oper_mode == "exec" } {
+	.button3menu add cascade -label "Node execution" \
+	    -menu .button3menu.node_execute
 
-	.button3menu add command -label Start \
-	    -command "startNodeFromMenu $node_id"
-	.button3menu add command -label Stop \
-	    -command "stopNodeFromMenu $node_id"
-	.button3menu add command -label Restart \
-	    -command "stopNodeFromMenu $node_id; \
-	     startNodeFromMenu $node_id"
+	.button3menu.node_execute add command -label "Create" \
+	    -command "trigger_nodeCreate $node_id ; undeployCfg ; deployCfg ; redrawAll"
+	.button3menu.node_execute add command -label "Destroy" \
+	    -command "trigger_nodeDestroy $node_id ; undeployCfg ; deployCfg ; redrawAll"
+	.button3menu.node_execute add command -label "Recreate" \
+	    -command "trigger_nodeRecreate $node_id ; undeployCfg ; deployCfg ; redrawAll"
+    }
+
+    #
+    # Node config menu
+    #
+    .button3menu.node_config delete 0 end
+    if { $type != "pseudo" && $oper_mode == "exec" } {
+	.button3menu add cascade -label "Node configuration" \
+	    -menu .button3menu.node_config
+
+	.button3menu.node_config add command -label "Configure" \
+	    -command "trigger_nodeFullConfig $node_id ; undeployCfg ; deployCfg ; redrawAll"
+	.button3menu.node_config add command -label "Unconfigure" \
+	    -command "trigger_nodeFullUnconfig $node_id ; undeployCfg ; deployCfg ; redrawAll"
+	.button3menu.node_config add command -label "Reconfigure" \
+	    -command "trigger_nodeFullReconfig $node_id ; undeployCfg ; deployCfg ; redrawAll"
     }
 
     #
