@@ -147,10 +147,16 @@ proc loadCfgLegacy { cfg } {
 			    cfgUnset $dict_object $object $field
 			    lassign $value iface_name peer_id
 
-			    if { [cfgGet "nodes" $object "type"] ni "pc host router nat64 ext extnat stpswitch" } {
+			    set node_type [cfgGet "nodes" $object "type"]
+			    if { $node_type ni "pc host router nat64 ext extnat stpswitch" } {
 				set all_ifaces [dict keys [cfgGet "nodes" $object "ifaces"]]
 				set iface_id [newObjectId $all_ifaces "ifc"]
-				cfgSet "nodes" $object "ifaces" $iface_id "type" "phys"
+				if { $node_type in "rj45 extelem" } {
+				    cfgSet "nodes" $object "ifaces" $iface_id "type" "stolen"
+				} else {
+				    cfgSet "nodes" $object "ifaces" $iface_id "type" "phys"
+				}
+
 				cfgSet "nodes" $object "ifaces" $iface_id "name" "$iface_name"
 				setToRunning "${object}|${iface_id}_running" false
 			    } else {
@@ -674,6 +680,10 @@ proc loadCfgLegacy { cfg } {
 			    foreach node_id $value {
 				set other_node_id [removeFromList $value $node_id]
 				dict for {iface_id iface_cfg} [cfgGet "nodes" $node_id "ifaces"] {
+				    if { [cfgGet "nodes" $node_id "type"] == "rj45" } {
+					set iface_id "ifc0"
+				    }
+
 				    if { [dictGet $iface_cfg "peer"] == "$other_node_id" } {
 					lappend ifaces $iface_id
 					cfgSet "nodes" $node_id "ifaces" $iface_id "link" $object
@@ -997,6 +1007,15 @@ proc loadCfgLegacy { cfg } {
 	# Speeding up auto renumbering of MAC, IPv4 and IPv6 addresses by remembering
 	# used addresses in lists.
 	foreach iface_id [ifcList $node_id] {
+	    if { $node_type == "rj45" } {
+		set iface_name [getNodeName $node_id]
+		setIfcName $node_id $iface_id $iface_name
+		if { [cfgGet "nodes" $node_id "vlan" "enabled"] } {
+		    setIfcVlanDev $node_id $iface_id $iface_name
+		    setIfcVlanTag $node_id $iface_id [cfgGet "nodes" $node_id "vlan" "tag"]
+		}
+	    }
+
 	    foreach addr [getIfcIPv6addrs $node_id $iface_id] {
 		lassign [split $addr "/"] addr mask
 		lappend ipv6_used_list "[ip::contract [ip::prefix $addr]]/$mask"
@@ -1011,7 +1030,7 @@ proc loadCfgLegacy { cfg } {
 	}
 
 	# disable auto_default_routes if not explicitly enabled in old topologies
-	if { [cfgGet "nodes" $node_id "auto_default_routes"] == "" } {
+	if { [cfgGet "nodes" $node_id "auto_default_routes"] == "" && [$node_type.netlayer] == "NETWORK" } {
 	    setAutoDefaultRoutesStatus $node_id "disabled"
 	}
     }
