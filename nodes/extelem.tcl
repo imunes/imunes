@@ -41,7 +41,6 @@
 #****
 
 set MODULE extelem
-
 registerModule $MODULE
 
 #****f* extelem.tcl/extelem.prepareSystem
@@ -53,6 +52,7 @@ registerModule $MODULE
 #   Loads ng_extelem into the kernel.
 #****
 proc $MODULE.prepareSystem {} {
+    catch { exec kldload ng_ether }
 }
 
 #****f* extelem.tcl/extelem.confNewIfc
@@ -67,8 +67,7 @@ proc $MODULE.prepareSystem {} {
 #   * ifc -- interface name
 #****
 proc $MODULE.confNewIfc { node_id ifc } {
-    setIfcType $node_id $ifc "stolen"
-    setIfcStolenIfc $node_id $ifc "UNASSIGNED"
+    setIfcName $node_id $ifc "UNASSIGNED"
 }
 
 #****f* extelem.tcl/extelem.confNewNode
@@ -99,6 +98,20 @@ proc $MODULE.confNewNode { node_id } {
 #****
 proc $MODULE.ifcName {l r} {
     return x
+}
+
+#****f* extelem.tcl/extelem.ifacePrefix
+# NAME
+#   extelem.ifacePrefix -- interface name
+# SYNOPSIS
+#   extelem.ifacePrefix
+# FUNCTION
+#   Returns extelem interface name prefix.
+# RESULT
+#   * name -- name prefix string
+#****
+proc $MODULE.ifacePrefix {} {
+    return "x"
 }
 
 #****f* extelem.tcl/extelem.netlayer
@@ -142,9 +155,8 @@ proc $MODULE.virtlayer {} {
 #   * node_id -- id of the node (type of the node is extelem)
 #****
 proc $MODULE.nodeCreate { eid node_id } {
-    foreach group [getNodeStolenIfaces $node_id] {
-	lassign $group ifc extIfc
-	captureExtIfcByName $eid $extIfc
+    foreach iface_id [allIfcList $node_id] {
+	captureExtIfcByName $eid [getIfcName $node_id $iface_id]
     }
 }
 
@@ -161,9 +173,8 @@ proc $MODULE.nodeCreate { eid node_id } {
 #   * node_id -- id of the node (type of the node is extelem)
 #****
 proc $MODULE.nodeDestroy { eid node_id } {
-    foreach group [getNodeStolenIfaces $node_id] {
-	lassign $group ifc extIfc
-	releaseExtIfcByName $eid $extIfc
+    foreach iface_id [allIfcList $node_id] {
+	releaseExtIfcByName $eid [getIfcName $node_id $iface_id]
     }
 }
 
@@ -171,7 +182,7 @@ proc $MODULE.nodeDestroy { eid node_id } {
 # NAME
 #   extelem.nghook
 # SYNOPSIS
-#   extelem.nghook $eid $node_id $ifc
+#   extelem.nghook $eid $node_id $iface_id
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. Netgraph node name is in
@@ -180,12 +191,11 @@ proc $MODULE.nodeDestroy { eid node_id } {
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- node id
-#   * ifc -- interface name
+#   * iface_id -- interface name
 # RESULT
 #   * nghook -- the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
-proc $MODULE.nghook { eid node_id ifc } {
-    lassign [lindex [lsearch -index 0 -all -inline -exact [getNodeStolenIfaces $node_id] $ifc] 0] ifc extIfc
-    return [list $extIfc lower]
+proc $MODULE.nghook { eid node_id iface_id } {
+    return [list [getIfcName $node_id $iface_id] lower]
 }

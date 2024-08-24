@@ -64,9 +64,7 @@ proc checkExternalInterfaces {} {
 
     set nodes_ifcpairs {}
     foreach node [getFromRunning "node_list"] {
-	if { [getNodeType $node] == "rj45" } {
-	    lappend nodes_ifcpairs [list $node [list 0 [getNodeName $node]]]
-	} elseif { [getNodeType $node] == "extelem" } {
+	if { [getNodeType $node] in "rj45 extelem" } {
 	    foreach ifcs [getNodeStolenIfaces $node] {
 		lappend nodes_ifcpairs [list $node $ifcs]
 	    }
@@ -92,7 +90,7 @@ proc checkExternalInterfaces {} {
 	    return 1
 	}
 
-	if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
+	if { [getIfcVlanDev $node $iface] != "" && [getIfcVlanTag $node $iface] != "" } {
 	    if { [getHostIfcVlanExists $node $physical_ifc] } {
 		return 1
 	    }
@@ -448,6 +446,7 @@ proc deployCfg { { execute 0 } } {
     }
 
     statline "Preparing for initialization..."
+    # TODO: fix this mess
     set l2nodes {}
     set l3nodes {}
     set allNodes {}

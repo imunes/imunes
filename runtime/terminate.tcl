@@ -79,38 +79,6 @@ proc terminate_nodesShutdown { eid nodes nodeCount w } {
     }
 }
 
-proc terminate_releaseExternalIfaces { eid extifcs extifcsCount w } {
-    global progressbarCount execMode
-
-    set batchStep 0
-    foreach node $extifcs {
-	displayBatchProgress $batchStep $extifcsCount
-
-	try {
-	    [getNodeType $node].nodeDestroy $eid $node
-	} on error err {
-	    return -code error "Error in '[getNodeType $node].nodeDestroy $eid $node': $err"
-	}
-	pipesExec ""
-
-	incr batchStep
-	incr progressbarCount -1
-
-	if { $execMode != "batch" } {
-	    statline "Destroying external connection [getNodeName $node]"
-	    $w.p configure -value $progressbarCount
-	    update
-	}
-    }
-
-    if { $extifcsCount > 0 } {
-	displayBatchProgress $batchStep $extifcsCount
-	if { $execMode == "batch" } {
-	    statline ""
-	}
-    }
-}
-
 proc linksDestroy { eid links linkCount w } {
     global progressbarCount execMode
 
@@ -275,7 +243,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 
     set bkp_cfg ""
     set terminate_cfg [getFromExecuteVars "terminate_cfg"]
-    if { $terminate_cfg != "" } {
+    if { $terminate_cfg != "" && $terminate_cfg != [cfgGet] } {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
 	set bkp_cfg [cfgGet]
@@ -300,6 +268,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
     }
 
     statline "Preparing for termination..."
+    # TODO: fix this mess
     set extifcs {}
     set l2nodes {}
     set l3nodes {}
@@ -311,6 +280,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 	    if { [$node_type.virtlayer] == "NATIVE" } {
 		if { $node_type == "rj45" } {
 		    lappend extifcs $node
+		    lappend l2nodes $node
 		} elseif { $node_type == "extnat" } {
 		    lappend l3nodes $node
 		} else {
@@ -330,14 +300,30 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
     set extifcsCount [llength $extifcs]
     incr linkCount [expr -$pseudoNodesCount/2]
 
+    set destroy_nodes_ifaces_count 0
+    set destroy_nodes_extifaces {}
+    set destroy_nodes_extifaces_count 0
     if { $destroy_nodes_ifaces == "*" } {
 	set destroy_nodes_ifaces ""
 	foreach node_id $allNodes {
-	    dict set destroy_nodes_ifaces $node_id "*"
+	    if { $node_id ni $extifcs } {
+		dict set destroy_nodes_ifaces $node_id "*"
+		incr destroy_nodes_ifaces_count
+	    } else {
+		dict set destroy_nodes_extifaces $node_id "*"
+		incr destroy_nodes_extifaces_count
+	    }
 	}
-	set destroy_nodes_ifaces_count $allNodeCount
     } else {
-	set destroy_nodes_ifaces_count [llength [dict keys $destroy_nodes_ifaces]]
+	foreach {node_id ifaces} $destroy_nodes_ifaces {
+	    if { $node_id ni $extifcs } {
+		incr destroy_nodes_ifaces_count
+	    } else {
+		dict unset destroy_nodes_ifaces $node_id
+		dict set destroy_nodes_extifaces $node_id $ifaces
+		incr destroy_nodes_extifaces_count
+	    }
+	}
     }
 
     if { $unconfigure_nodes_ifaces == "*" } {
@@ -355,7 +341,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
     }
     set unconfigure_nodes_count [llength $unconfigure_nodes]
 
-    set maxProgressbasCount [expr {1*$allNodeCount + $extifcsCount + $linkCount + $l2nodeCount + 3*$l3nodeCount + $unconfigure_nodes_ifaces_count + $destroy_nodes_ifaces_count + $unconfigure_nodes_count}]
+    set maxProgressbasCount [expr {1*$allNodeCount + $extifcsCount + $linkCount + $l2nodeCount + 3*$l3nodeCount + $unconfigure_nodes_ifaces_count + $destroy_nodes_ifaces_count + $destroy_nodes_extifaces_count + $unconfigure_nodes_count}]
     set progressbarCount $maxProgressbasCount
 
     if { $eid == "" } {
@@ -407,10 +393,10 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 	statline "Waiting for physical interfaces on $unconfigure_nodes_ifaces_count L3 node(s) to be unconfigured..."
 	pipesClose
 
-	statline "Releasing external interfaces..."
+	statline "Destroying physical interfaces on RJ45 nodes..."
 	pipesCreate
-	terminate_releaseExternalIfaces $eid $extifcs $extifcsCount $w
-	statline "Waiting for $extifcsCount external interface(s) to be released..."
+	terminate_nodesIfacesDestroy $eid $destroy_nodes_extifaces $destroy_nodes_extifaces_count $w
+	statline "Waiting for physical interfaces on $destroy_nodes_extifaces_count RJ45 node(s) to be destroyed..."
 	pipesClose
 
 	statline "Stopping services for LINKDEST hook..."
@@ -425,7 +411,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 	statline "Destroying physical interfaces on L3 nodes..."
 	pipesCreate
 	terminate_nodesIfacesDestroy $eid $destroy_nodes_ifaces $destroy_nodes_ifaces_count $w
-	statline "Waiting for physical interfaces on $l3nodeCount L3 node(s) to be destroyed..."
+	statline "Waiting for physical interfaces on $destroy_nodes_ifaces_count L3 node(s) to be destroyed..."
 	pipesClose
 
 	statline "Destroying L2 nodes..."
