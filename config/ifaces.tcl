@@ -507,40 +507,11 @@ proc setIfcName { node_id iface_id name } {
 
     # TODO
     trigger_ifaceRecreate $node_id $iface_id
-}
 
-#****f* nodecfg.tcl/getIfcStolenIfc
-# NAME
-#   getIfcStolenIfc -- get logical interface type
-# SYNOPSIS
-#   getIfcStolenIfc $node $ifc
-# FUNCTION
-#   Returns logical interface type from a node.
-# INPUTS
-#   * node -- node id
-#   * ifc -- interface name
-#****
-proc getIfcStolenIfc { node_id iface } {
-    return [cfgGet "nodes" $node_id "ifaces" $iface "stolen_iface"]
-}
-
-#****f* nodecfg.tcl/setIfcStolenIfc
-# NAME
-#   setIfcStolenIfc -- set interface stolen interface
-# SYNOPSIS
-#   setIfcStolenIfc $node $iface $stolen_iface
-# FUNCTION
-#   Sets node's interface stolen stolen interface.
-# INPUTS
-#   * node -- node id
-#   * iface -- interface name
-#   * stolen_iface -- stolen interface
-#****
-proc setIfcStolenIfc { node_id iface_id stolen_iface } {
-    cfgSet "nodes" $node_id "ifaces" $iface_id "stolen_iface" $stolen_iface
-
-    # TODO
-    trigger_ifaceRecreate $node_id $iface_id
+    set link_id [getIfcLink $node_id $iface_id]
+    if { $link_id != "" } {
+	trigger_linkRecreate $link_id
+    }
 }
 
 #****f* nodecfg.tcl/getIfcIPv6addr
@@ -946,6 +917,10 @@ proc getIfcVlanDev { node_id iface } {
 #****
 proc setIfcVlanDev { node_id iface dev } {
     cfgSet "nodes" $node_id "ifaces" $iface "vlan_dev" $dev
+
+    if { [getNodeType $node_id] in "rj45 extelem" } {
+	trigger_nodeRecreate $node_id
+    }
 }
 
 #****f* nodecfg.tcl/getIfcVlanTag
@@ -979,6 +954,10 @@ proc getIfcVlanTag { node_id iface } {
 #****
 proc setIfcVlanTag { node_id iface_id tag } {
     cfgSet "nodes" $node_id "ifaces" $iface_id "vlan_tag" $tag
+
+    if { [getNodeType $node_id] in "rj45 extelem" } {
+	trigger_nodeRecreate $node_id
+    }
 }
 
 proc getNodeIface { node_id iface_id } {
@@ -1050,7 +1029,6 @@ proc newIface { node_id iface_type auto_config { stolen_iface "" } } {
 
     setIfcType $node_id $iface_id $iface_type
     if { $iface_type == "stolen" } {
-	setIfcStolenIfc $node_id $iface_id $stolen_iface
 	setIfcName $node_id $iface_id $stolen_iface
     } else {
 	setIfcName $node_id $iface_id [chooseIfName $node_id $node_id]

@@ -467,37 +467,6 @@ proc _setIfcName { node_cfg iface_id name } {
     return [_cfgSet $node_cfg "ifaces" $iface_id "name" $name]
 }
 
-#****f* nodecfg.tcl/getIfcStolenIfc
-# NAME
-#   getIfcStolenIfc -- get logical interface type
-# SYNOPSIS
-#   getIfcStolenIfc $node $ifc
-# FUNCTION
-#   Returns logical interface type from a node.
-# INPUTS
-#   * node -- node id
-#   * ifc -- interface name
-#****
-proc _getIfcStolenIfc { node_cfg iface } {
-    return [_cfgGet $node_cfg "ifaces" $iface "stolen_iface"]
-}
-
-#****f* nodecfg.tcl/setIfcStolenIfc
-# NAME
-#   setIfcStolenIfc -- set interface stolen interface
-# SYNOPSIS
-#   setIfcStolenIfc $node $iface $stolen_iface
-# FUNCTION
-#   Sets node's interface stolen stolen interface.
-# INPUTS
-#   * node -- node id
-#   * iface -- interface name
-#   * stolen_iface -- stolen interface
-#****
-proc _setIfcStolenIfc { node_cfg iface stolen_iface } {
-    return [_cfgSet $node_cfg "ifaces" $iface "stolen_iface" $stolen_iface]
-}
-
 #****f* nodecfg.tcl/getIfcIPv6addr
 # NAME
 #   getIfcIPv6addr -- get interface first IPv6 address.
@@ -759,7 +728,6 @@ proc _newIface { node_cfg iface_type auto_config { stolen_iface "" } } {
 
     set node_cfg [_setIfcType $node_cfg $iface_id $iface_type]
     if { $iface_type == "stolen" } {
-	set node_cfg [_setIfcStolenIface $node_cfg $iface_id $stolen_iface]
 	set node_cfg [_setIfcName $node_cfg $iface_id $stolen_iface]
     } else {
 	set node_cfg [_setIfcName $node_cfg $iface_id [_chooseIfaceName $node_cfg]]

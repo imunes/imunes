@@ -74,10 +74,16 @@ proc $MODULE.confNewIfc { node_id ifc } {
 
     set changeAddressRange 0
     set changeAddressRange6 0
+
     autoIPv4addr $node_id $ifc
     autoIPv6addr $node_id $ifc
+
+    set bkp_mac_byte4 $mac_byte4
+    set bkp_mac_byte5 $mac_byte5
     randomizeMACbytes
     autoMACaddr $node_id $ifc
+    set mac_byte4 $bkp_mac_byte4
+    set mac_byte5 $bkp_mac_byte5
 }
 
 proc $MODULE.generateConfigIfaces { node_id ifaces } {
@@ -196,7 +202,7 @@ proc $MODULE.shellcmds {} {
 #   * nghook -- the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
-proc $MODULE.nghook { eid node_id ifc } {
+proc $MODULE.nghook { eid node_id iface_id } {
     return [list $node_id-[getIfcName $node_id $iface_id] ether]
 }
 
@@ -228,6 +234,7 @@ proc $MODULE.maxLinks {} {
 #****
 proc $MODULE.prepareSystem {} {
     catch { exec kldload ipfilter }
+    catch { sysctl net.inet.ip.forwarding=1 }
 }
 
 #****f* extnat.tcl/extnat.nodeCreate
