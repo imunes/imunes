@@ -835,25 +835,42 @@ proc button3node { c x y } {
     }
 
     #
-    # Start & stop node
+    # Node execution menu
     #
-    if { $oper_mode == "exec" && [info procs [getNodeType $node_id].nodeConfigure] != "" \
-	&& [info procs [getNodeType $node_id].nodeShutdown] != "" } {
+    .button3menu.node_execute delete 0 end
+    if { $oper_mode == "exec" && [[getNodeType $node_id].virtlayer] == "VIRTUALIZED" } {
+	.button3menu add cascade -label "Node execution" \
+	    -menu .button3menu.node_execute
 
-	.button3menu add command -label Start \
-	    -command "startNodeFromMenu $node_id"
-	.button3menu add command -label Stop \
-	    -command "stopNodeFromMenu $node_id"
-	.button3menu add command -label Restart \
-	    -command "stopNodeFromMenu $node_id; \
-	     startNodeFromMenu $node_id"
+	.button3menu.node_execute add command -label "Create" \
+	    -command "trigger_nodeCreate $node_id ; undeployCfg ; deployCfg ; redrawAll"
+	.button3menu.node_execute add command -label "Destroy" \
+	    -command "trigger_nodeDestroy $node_id ; undeployCfg ; deployCfg ; redrawAll"
+	.button3menu.node_execute add command -label "Recreate" \
+	    -command "trigger_nodeRecreate $node_id ; undeployCfg ; deployCfg ; redrawAll"
+    }
+
+    #
+    # Node config menu
+    #
+    .button3menu.node_config delete 0 end
+    if { $oper_mode == "exec" && [[getNodeType $node_id].virtlayer] == "VIRTUALIZED" } {
+	.button3menu add cascade -label "Node configuration" \
+	    -menu .button3menu.node_config
+
+	.button3menu.node_config add command -label "Configure" \
+	    -command "trigger_nodeFullConfig $node_id ; undeployCfg ; deployCfg ; redrawAll"
+	.button3menu.node_config add command -label "Unconfigure" \
+	    -command "trigger_nodeFullUnconfig $node_id ; undeployCfg ; deployCfg ; redrawAll"
+	.button3menu.node_config add command -label "Reconfigure" \
+	    -command "trigger_nodeFullReconfig $node_id ; undeployCfg ; deployCfg ; redrawAll"
     }
 
     #
     # Services menu
     #
     .button3menu.services delete 0 end
-    if { $oper_mode == "exec" && [[getNodeType $node_id].virtlayer] == "VIRTUALIZED" && $type != "ext" } {
+    if { $oper_mode == "exec" && [[getNodeType $node_id].virtlayer] == "VIRTUALIZED" } {
 	global all_services_list
 
 	.button3menu add cascade -label "Services" \
