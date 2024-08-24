@@ -1163,7 +1163,8 @@ proc getHostIfcVlanExists { node_id ifname } {
     # check if VLAN ID is already taken
     # this can be only done by trying to create it, as it's possible that the same
     # VLAN interface already exists in some other namespace
-    set vlan [getEtherVlanTag $node_id]
+    set iface_id [ifaceIdFromName $node_id $ifname]
+    set vlan [getIfcVlanTag $node_id $iface_id]
     try {
 	exec ifconfig $ifname.$vlan create
     } on ok {} {
@@ -1401,7 +1402,17 @@ proc nodePhysIfacesCreate { node_id ifaces } {
 		# we don't know the name, so make sure all other options cover other IMUNES
 		# 'physical' interfaces
 		# XXX not yet implemented
-		pipesExec "ifconfig $iface_name vnet $jail_id" "hold"
+		if { [getIfcType $node_id $iface_id] == "stolen" } {
+		    captureExtIfcByName $eid $iface_name $node_id
+		    if { [getNodeType $node_id] in "hub lanswitch" } {
+			lassign [[getNodeType $node_id].nghook $eid $node_id $iface_id] \
+			    ngpeer1 nghook1
+			lassign "$iface_name lower" \
+			    ngpeer2 nghook2
+
+			pipesExec "jexec $eid ngctl connect $ngpeer1: $ngpeer2: $nghook1 $nghook2" "hold"
+		    }
+		}
 	    }
 	}
     }
@@ -2111,14 +2122,25 @@ proc destroyLinkBetween { eid node1_id node2_id link_id } {
 #   * eid -- experiment id
 #   * vimages -- list of virtual nodes
 #****
-proc destroyNodeIfaces { eid node_id ifcs } {
-    if { [getNodeType $node_id] in "ext extnat" } {
-	pipesExec "jexec $eid ngctl rmnode $eid-$node_id:" "hold"
-	return
+proc destroyNodeIfaces { eid node_id ifaces } {
+    set node_type [getNodeType $node_id]
+    if { $node_type == "rj45" } {
+	foreach iface_id $ifaces {
+	    releaseExtIfcByName $eid [getIfcName $node_id $iface_id] $node_id
+	}
+    } else {
+	foreach iface_id $ifaces {
+	    set iface_name [getIfcName $node_id $iface_id]
+	    if { [getIfcType $node_id $iface_id] == "stolen" } {
+		releaseExtIfcByName $eid $iface_name $node_id
+	    } else {
+		pipesExec "jexec $eid ngctl rmnode $node_id-$iface_name:" "hold"
+	    }
+	}
     }
 
-    foreach ifc $ifcs {
-	pipesExec "jexec $eid ngctl rmnode $node_id-$ifc:" "hold"
+    foreach iface_id $ifaces {
+	setToRunning "${node_id}|${iface_id}_running" false
     }
 }
 
@@ -2239,19 +2261,20 @@ proc getCpuCount {} {
 # NAME
 #   captureExtIfc -- capture external interface
 # SYNOPSIS
-#   captureExtIfc $eid $node_id
+#   captureExtIfc $eid $node_id $iface_id
 # FUNCTION
 #   Captures the external interface given by the given rj45 node.
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- node id
+#   * iface_id -- interface id
 #****
-proc captureExtIfc { eid node_id } {
+proc captureExtIfc { eid node_id iface_id } {
     global execMode
 
-    set ifname [getNodeName $node_id]
-    if { [getEtherVlanEnabled $node_id] } {
-	set vlan [getEtherVlanTag $node_id]
+    set ifname [getIfcName $node_id $iface_id]
+    if { [getIfcVlanDev $node_id $iface_id] != "" } {
+	set vlan [getIfcVlanTag $node_id $iface_id]
 	try {
 	    exec ifconfig $ifname.$vlan create
 	} on error err {
@@ -2272,7 +2295,7 @@ proc captureExtIfc { eid node_id } {
 	}
     }
 
-    captureExtIfcByName $eid $ifname
+    captureExtIfcByName $eid $ifname $node_id
 }
 
 #****f* freebsd.tcl/captureExtIfcByName
@@ -2286,33 +2309,40 @@ proc captureExtIfc { eid node_id } {
 #   * eid -- experiment id
 #   * ifname -- physical interface name
 #****
-proc captureExtIfcByName { eid ifname } {
-    pipesExec "ifconfig $ifname vnet $eid" "hold"
-    pipesExec "jexec $eid ifconfig $ifname up promisc" "hold"
+proc captureExtIfcByName { eid ifname node_id } {
+    if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
+	set nodeNs $eid
+    } else {
+	set nodeNs $eid.$node_id
+    }
+
+    pipesExec "ifconfig $ifname vnet $nodeNs" "hold"
+    pipesExec "jexec $nodeNs ifconfig $ifname up promisc" "hold"
 }
 
 #****f* freebsd.tcl/releaseExtIfc
 # NAME
 #   releaseExtIfc -- release external interface
 # SYNOPSIS
-#   releaseExtIfc $eid $node_id
+#   releaseExtIfc $eid $node_id $iface_id
 # FUNCTION
 #   Releases the external interface captured by the given rj45 node.
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- node id
+#   * iface_id -- interface id
 #****
-proc releaseExtIfc { eid node_id } {
-    set ifname [getNodeName $node_id]
-    if { [getEtherVlanEnabled $node_id] } {
-	set vlan [getEtherVlanTag $node_id]
+proc releaseExtIfc { eid node_id iface_id } {
+    set ifname [getIfcName $node_id $iface_id]
+    if { [getIfcVlanDev $node_id $iface_id] != "" } {
+	set vlan [getIfcVlanTag $node_id $iface_id]
 	set ifname $ifname.$vlan
 	catch { exec ifconfig $ifname -vnet $eid destroy }
 
 	return
     }
 
-    releaseExtIfcByName $eid $ifname
+    releaseExtIfcByName $eid $ifname $node_id
 }
 
 #****f* freebsd.tcl/releaseExtIfcByName
@@ -2326,8 +2356,14 @@ proc releaseExtIfc { eid node_id } {
 #   * eid -- experiment id
 #   * ifname -- physical interface name
 #****
-proc releaseExtIfcByName { eid ifname } {
-    pipesExec "ifconfig $ifname -vnet $eid" "hold"
+proc releaseExtIfcByName { eid ifname node_id } {
+    if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
+	set nodeNs $eid
+    } else {
+	set nodeNs $eid.$node_id
+    }
+
+    pipesExec "ifconfig $ifname -vnet $nodeNs" "hold"
     pipesExec "ifconfig $ifname up -promisc" "hold"
 }
 
@@ -2507,7 +2543,7 @@ proc configureTunIface { tayga4pool tayga6prefix } {
     return $cfg
 }
 
-proc startExternalConnection { eid node_id } {
+proc configureExternalConnection { eid node_id } {
     set cmds ""
     set ifc [lindex [ifcList $node_id] 0]
     set outifc "$eid-$node_id"
@@ -2519,15 +2555,37 @@ proc startExternalConnection { eid node_id } {
     }
     set cmds "ifconfig $outifc link $ether"
 
-    foreach ipv4 [getIfcIPv4addrs $node_id $ifc] {
-	set cmds "ifconfig $outifc $ipv4"
+    set addrs [getIfcIPv4addrs $node_id $ifc]
+    setToRunning "${node_id}|${ifc}_old_ipv4_addrs" $addrs
+    foreach ipv4 $addrs {
+	set cmds "$cmds\n ifconfig $outifc $ipv4"
     }
 
-    foreach ipv6 [getIfcIPv6addrs $node_id $ifc] {
+    set addrs [getIfcIPv6addrs $node_id $ifc]
+    setToRunning "${node_id}|${ifc}_old_ipv6_addrs" $addrs
+    foreach ipv6 $addrs {
 	set cmds "$cmds\n ifconfig $outifc inet6 $ipv6"
     }
 
     set cmds "$cmds\n ifconfig $outifc up"
+
+    pipesExec "$cmds" "hold"
+}
+
+proc unconfigureExternalConnection { eid node_id } {
+    set cmds ""
+    set ifc [lindex [ifcList $node_id] 0]
+    set outifc "$eid-$node_id"
+
+    set addrs [getFromRunning "${node_id}|${ifc}_old_ipv4_addrs"]
+    foreach ipv4 $addrs {
+	set cmds "ifconfig $outifc inet $ipv4 -alias"
+    }
+
+    set addrs [getFromRunning "${node_id}|${ifc}_old_ipv6_addrs"]
+    foreach ipv6 $addrs {
+	set cmds "ifconfig $outifc inet $ipv6 -alias"
+    }
 
     pipesExec "$cmds" "hold"
 }

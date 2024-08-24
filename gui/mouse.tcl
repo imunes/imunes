@@ -411,7 +411,15 @@ proc button3link { c x y } {
     #
     # Toggle direct link
     #
-    if { $oper_mode != "exec" } {
+    lassign [getLinkPeers $link_id] peer1_id peer2_id
+    lassign [getLinkPeersIfaces $link_id] peer1_iface peer2_iface
+    if { [getNodeType $peer1_id] == "pseudo" } {
+	lassign [logicalPeerByIfc $peer2_id $peer2_iface] peer1_id peer1_iface
+    }
+    if { ($oper_mode != "exec" || ! [getFromRunning "auto_execution"]) && \
+   	 (! [getFromRunning "${peer1_id}|${peer1_iface}_running"] && \
+	 ! [getFromRunning "${peer2_id}|${peer2_iface}_running"]) } {
+
 	.button3menu add checkbutton -label "Direct link" \
 	    -underline 5 -variable linkDirect_$link_id \
 	    -command "toggleDirectLink $c $link_id"
@@ -430,8 +438,17 @@ proc button3link { c x y } {
     #
     # Delete link (keep ifaces)
     #
-    .button3menu add command -label "Delete (keep interfaces)" \
-	-command "removeLinkGUI $link_id atomic 1"
+    if { ! [set linkDirect_$link_id] || \
+	 ($oper_mode != "exec" || ! [getFromRunning "auto_execution"]) && \
+   	 (! [getFromRunning "${peer1_id}|${peer1_iface}_running"] && \
+	 ! [getFromRunning "${peer2_id}|${peer2_iface}_running"]) } {
+
+	.button3menu add command -label "Delete (keep interfaces)" \
+	    -command "removeLinkGUI $link_id atomic 1"
+    } else {
+	.button3menu add command -label "Delete (keep interfaces)" \
+	    -state disabled
+    }
 
     #
     # Split link
@@ -531,11 +548,13 @@ proc moveToCanvas { canvas_id } {
 proc mergeNodeGUI { node_id } {
     global changed
 
-    mergeLink [getIfcLink $node_id "ifc0"]
+    set link_id [mergeLink [getIfcLink $node_id "ifc0"]]
 
     set changed 1
     updateUndoLog
     redrawAll
+
+    return $link_id
 }
 
 #****f* editor.tcl/button3node
@@ -737,7 +756,9 @@ proc button3node { c x y } {
 			continue
 		    }
 
-		    if { [getIfcLink $peer_node_id $other_iface_id] != "" } {
+		    if { [getIfcLink $peer_node_id $other_iface_id] != "" ||
+			[getIfcType $peer_node_id $other_iface_id] == "stolen" } {
+
 			continue
 		    }
 
@@ -1874,7 +1895,7 @@ proc nodeEnter { c } {
     }
     if { $type != "rj45" } {
 	foreach iface_id [ifcList $node_id] {
-	    set line "$line [getIfcName $node_id $iface_id]:[getIfcIPv4addr $node_id $iface_id]"
+	    set line "$line [getIfcName $node_id $iface_id]:[getIfcIPv4addrs $node_id $iface_id]"
 	}
     }
     .bottom.textbox config -text "$line"

@@ -41,7 +41,6 @@
 #****
 
 set MODULE extelem
-
 registerModule $MODULE
 
 #****f* extelem.tcl/extelem.prepareSystem
@@ -53,6 +52,7 @@ registerModule $MODULE
 #   Loads ng_extelem into the kernel.
 #****
 proc $MODULE.prepareSystem {} {
+    catch { exec kldload ng_ether }
 }
 
 #****f* extelem.tcl/extelem.confNewIfc
@@ -67,8 +67,7 @@ proc $MODULE.prepareSystem {} {
 #   * iface_id -- interface name
 #****
 proc $MODULE.confNewIfc { node_id iface_id } {
-    setIfcType $node_id $iface_id "stolen"
-    setIfcStolenIfc $node_id $iface_id "UNASSIGNED"
+    setIfcName $node_id $iface_id "UNASSIGNED"
 }
 
 #****f* extelem.tcl/extelem.confNewNode
@@ -99,6 +98,20 @@ proc $MODULE.confNewNode { node_id } {
 #****
 proc $MODULE.ifacePrefix { l r } {
     return x
+}
+
+#****f* extelem.tcl/extelem.ifacePrefix
+# NAME
+#   extelem.ifacePrefix -- interface name
+# SYNOPSIS
+#   extelem.ifacePrefix
+# FUNCTION
+#   Returns extelem interface name prefix.
+# RESULT
+#   * name -- name prefix string
+#****
+proc $MODULE.ifacePrefix {} {
+    return "x"
 }
 
 #****f* extelem.tcl/extelem.netlayer
@@ -142,9 +155,8 @@ proc $MODULE.virtlayer {} {
 #   * node_id -- id of the node (type of the node is extelem)
 #****
 proc $MODULE.nodeCreate { eid node_id } {
-    foreach group [getNodeStolenIfaces $node_id] {
-	lassign $group iface_id extIfc
-	captureExtIfcByName $eid $extIfc
+    foreach iface_id [allIfcList $node_id] {
+	captureExtIfcByName $eid [getIfcName $node_id $iface_id]
     }
 }
 
@@ -161,9 +173,8 @@ proc $MODULE.nodeCreate { eid node_id } {
 #   * node_id -- id of the node (type of the node is extelem)
 #****
 proc $MODULE.nodeDestroy { eid node_id } {
-    foreach group [getNodeStolenIfaces $node_id] {
-	lassign $group iface_id extIfc
-	releaseExtIfcByName $eid $extIfc
+    foreach iface_id [allIfcList $node_id] {
+	releaseExtIfcByName $eid [getIfcName $node_id $iface_id]
     }
 }
 
@@ -186,6 +197,5 @@ proc $MODULE.nodeDestroy { eid node_id } {
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node_id iface_id } {
-    lassign [lindex [lsearch -index 0 -all -inline -exact [getNodeStolenIfaces $node_id] $iface_id] 0] iface_id extIfc
-    return [list $extIfc lower]
+    return [list [getIfcName $node_id $iface_id] lower]
 }

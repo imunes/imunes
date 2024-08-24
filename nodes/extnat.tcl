@@ -74,10 +74,16 @@ proc $MODULE.confNewIfc { node_id iface_id } {
 
     set changeAddressRange 0
     set changeAddressRange6 0
+
     autoIPv4addr $node_id $iface_id
     autoIPv6addr $node_id $iface_id
+
+    set bkp_mac_byte4 $mac_byte4
+    set bkp_mac_byte5 $mac_byte5
     randomizeMACbytes
     autoMACaddr $node_id $iface_id
+    set mac_byte4 $bkp_mac_byte4
+    set mac_byte5 $bkp_mac_byte5
 }
 
 proc $MODULE.generateConfigIfaces { node_id ifaces } {
@@ -214,6 +220,7 @@ proc $MODULE.maxLinks {} {
 #****
 proc $MODULE.prepareSystem {} {
     catch { exec kldload ipfilter }
+    catch { sysctl net.inet.ip.forwarding=1 }
 }
 
 #****f* extnat.tcl/extnat.nodeCreate

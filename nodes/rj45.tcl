@@ -41,20 +41,11 @@
 #****
 
 set MODULE rj45
-
 registerModule $MODULE
 
-#****f* rj45.tcl/rj45.prepareSystem
-# NAME
-#   rj45.prepareSystem -- prepare system
-# SYNOPSIS
-#   rj45.prepareSystem
-# FUNCTION
-#   Loads ng_ether into the kernel.
-#****
-proc $MODULE.prepareSystem {} {
-    catch { exec kldload ng_ether }
-}
+################################################################################
+########################### CONFIGURATION PROCEDURES ###########################
+################################################################################
 
 #****f* rj45.tcl/rj45.confNewNode
 # NAME
@@ -70,6 +61,32 @@ proc $MODULE.confNewNode { node_id } {
     setNodeName $node_id "UNASSIGNED"
 }
 
+#****f* rj45.tcl/rj45.confNewIfc
+# NAME
+#   rj45.confNewIfc -- configure new interface
+# SYNOPSIS
+#   rj45.confNewIfc $node_id $ifc
+# FUNCTION
+#   Configures new interface for the specified node.
+# INPUTS
+#   * node_id -- node id
+#   * ifc -- interface name
+#****
+proc $MODULE.confNewIfc { node_id ifc } {
+}
+
+proc $MODULE.generateConfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateConfig { node_id } {
+}
+
+proc $MODULE.generateUnconfig { node_id } {
+}
+
 #****f* rj45.tcl/rj45.ifacePrefix
 # NAME
 #   rj45.ifacePrefix -- interface name prefix
@@ -80,8 +97,8 @@ proc $MODULE.confNewNode { node_id } {
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifacePrefix { l r } {
-    return ""
+proc $MODULE.ifacePrefix {} {
+    return "x"
 }
 
 #****f* rj45.tcl/rj45.netlayer
@@ -113,6 +130,63 @@ proc $MODULE.virtlayer {} {
     return NATIVE
 }
 
+#****f* rj45.tcl/rj45.nghook
+# NAME
+#   rj45.nghook
+# SYNOPSIS
+#   rj45.nghook $eid $node_id $ifc
+# FUNCTION
+#   Returns the id of the netgraph node and the netgraph hook name. In this
+#   case netgraph node name correspondes to the name of the physical interface.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifc -- interface name
+# RESULT
+#   * nghook -- the list containing netgraph node name and
+#     the netraph hook name (in this case: lower).
+#****
+proc $MODULE.nghook { eid node_id ifc } {
+    set iface_id [lindex [allIfcList $node_id] 0]
+    set ifname [getIfcName $node_id $iface_id]
+    if { [getIfcVlanDev $node_id $iface_id] != "" } {
+	set vlan [getIfcVlanTag $node_id $iface_id]
+	set ifname ${ifname}_$vlan
+    }
+
+    return [list $ifname lower]
+}
+
+#****f* rj45.tcl/rj45.maxLinks
+# NAME
+#   rj45.maxLinks -- maximum number of links
+# SYNOPSIS
+#   rj45.maxLinks
+# FUNCTION
+#   Returns rj45 maximum number of links.
+# RESULT
+#   * maximum number of links.
+#****
+proc $MODULE.maxLinks {} {
+    return 1
+}
+
+################################################################################
+############################ INSTANTIATE PROCEDURES ############################
+################################################################################
+
+#****f* rj45.tcl/rj45.prepareSystem
+# NAME
+#   rj45.prepareSystem -- prepare system
+# SYNOPSIS
+#   rj45.prepareSystem
+# FUNCTION
+#   Loads ng_ether into the kernel.
+#****
+proc $MODULE.prepareSystem {} {
+    catch { exec kldload ng_ether }
+}
+
 #****f* rj45.tcl/rj45.nodeCreate
 # NAME
 #   rj45.nodeCreate -- instantiate
@@ -128,7 +202,7 @@ proc $MODULE.nodeCreate { eid node_id } {
     setToRunning "${node_id}_running" true
 }
 
-#****f* pc.tcl/pc.nodeNamespaceSetup
+#****f* rj45.tcl/rj45.nodeNamespaceSetup
 # NAME
 #   pc.nodeNamespaceSetup -- pc node nodeNamespaceSetup
 # SYNOPSIS
@@ -278,45 +352,5 @@ proc $MODULE.nodeShutdown { eid node_id } {
 #   * node_id -- node id (type of the node is rj45)
 #****
 proc $MODULE.nodeDestroy { eid node_id } {
-    releaseExtIfc $eid $node_id
-}
-
-#****f* rj45.tcl/rj45.nghook
-# NAME
-#   rj45.nghook
-# SYNOPSIS
-#   rj45.nghook $eid $node_id $iface_id
-# FUNCTION
-#   Returns the id of the netgraph node and the netgraph hook name. In this
-#   case netgraph node name correspondes to the name of the physical interface.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id
-#   * iface_id -- interface id
-# RESULT
-#   * nghook -- the list containing netgraph node name and
-#     the netraph hook name (in this case: lower).
-#****
-proc $MODULE.nghook { eid node_id iface_id } {
-    set ifname [getNodeName $node_id]
-    if { [getEtherVlanEnabled $node_id] } {
-	set vlan [getEtherVlanTag $node_id]
-	set ifname ${ifname}_$vlan
-    }
-
-    return [list $ifname lower]
-}
-
-#****f* rj45.tcl/rj45.maxLinks
-# NAME
-#   rj45.maxLinks -- maximum number of links
-# SYNOPSIS
-#   rj45.maxLinks
-# FUNCTION
-#   Returns rj45 maximum number of links.
-# RESULT
-#   * maximum number of links.
-#****
-proc $MODULE.maxLinks {} {
-    return 1
+    setToRunning "${node_id}_running" false
 }
