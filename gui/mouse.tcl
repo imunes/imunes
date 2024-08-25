@@ -307,17 +307,24 @@ proc selectAdjacent {} {
     foreach node_id $selected {
 	foreach iface [ifcList $node_id] {
 	    set peer [getIfcPeer $node_id $iface]
-	    if { [getNodeMirror $peer] != "" } {
-		return
+	    if { $peer == "" } {
+		continue
 	    }
 
-	    if { [lsearch $adjacent $peer] < 0 } {
+	    set mirror_node [getNodeMirror $peer]
+	    if { $mirror_node != "" } {
+		set peer [getIfcPeer $mirror_node "ifc0"]
+	    }
+
+	    if { $peer ni $adjacent } {
 		lappend adjacent $peer
 	    }
 	}
     }
 
-    selectNodes $adjacent
+    if { $adjacent != "" } {
+	selectNodes $adjacent
+    }
 }
 
 #****f* editor.tcl/button3link
