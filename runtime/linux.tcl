@@ -1,7 +1,56 @@
 global VROOT_MASTER ULIMIT_FILE ULIMIT_PROC
 set VROOT_MASTER "imunes/template"
 set ULIMIT_FILE "1024:16384"
-set ULIMIT_PROC "512:1024"
+set ULIMIT_PROC "1024:2048"
+
+#****f* linux.tcl/l2node.instantiate
+# NAME
+#   l2node.instantiate -- instantiate
+# SYNOPSIS
+#   l2node.instantiate $eid $node
+# FUNCTION
+#   Procedure l2node.instantiate creates a new netgraph node of the appropriate type.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- id of the node (type of the node is either lanswitch or hub)
+#****
+proc l2node.instantiate { eid node } {
+    set type [nodeType $node]
+
+    set ageing_time ""
+    if { $type == "hub" } {
+	set ageing_time "ageing_time 0"
+    }
+
+    set nodeNs [getNodeNetns $eid $node]
+    pipesExec "ip netns exec $nodeNs ip link add name $node type bridge $ageing_time" "hold"
+    pipesExec "ip netns exec $nodeNs ip link set $node up" "hold"
+}
+
+#****f* linux.tcl/l2node.destroy
+# NAME
+#   l2node.destroy -- destroy
+# SYNOPSIS
+#   l2node.destroy $eid $node
+# FUNCTION
+#   Destroys a l2 node.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- id of the node
+#****
+proc l2node.destroy { eid node } {
+    set type [nodeType $node]
+
+    set nodeNs [getNodeNetns $eid $node]
+
+    set nsstr ""
+    if { $nodeNs != "" } {
+	set nsstr "-n $nodeNs"
+    }
+    pipesExec "ip $nsstr link delete $node" "hold"
+
+    removeNodeNetns $eid $node
+}
 
 #****f* linux.tcl/writeDataToNodeFile
 # NAME
@@ -19,10 +68,9 @@ proc writeDataToNodeFile { node path data } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     set node_id "$eid.$node"
-    set node_dir [getVrootDir]/$eid/$node
+    catch { exec docker inspect -f "{{.GraphDriver.Data.MergedDir}}" $node_id } node_dir
 
     writeDataToFile $node_dir/$path $data
-    exec docker exec -i $node_id sh -c "cat > $path" < $node_dir/$path
 }
 
 #****f* linux.tcl/execCmdNode
@@ -41,7 +89,7 @@ proc writeDataToNodeFile { node path data } {
 proc execCmdNode { node cmd } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    catch {eval [concat "nexec docker exec " $eid.$node $cmd] } output
+    catch {eval [concat "exec docker exec " $eid.$node $cmd] } output
     return $output
 }
 
@@ -217,10 +265,18 @@ proc existingShells { shells node } {
 proc spawnShell { node cmd } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
+    if { [catch {exec xterm -version}] } {
+	tk_dialog .dialog1 "IMUNES error" \
+	    "Cannot open terminal. Is xterm installed?" \
+            info 0 Dismiss
+
+	return
+    }
+
     set node_id $eid\.$node
 
     # FIXME make this modular
-    nexec xterm -sb -rightbar \
+    exec xterm -sb -rightbar \
     -T "IMUNES: [getNodeName $node] (console) [string trim [lindex [split $cmd /] end] ']" \
     -e "docker exec -it $node_id $cmd" 2> /dev/null &
 }
@@ -257,7 +313,7 @@ proc allSnapshotsAvailable {} {
 
     set snapshots $VROOT_MASTER
     foreach node $node_list {
-	set img [getNodeDockerImage $node]
+	set img [getNodeCustomImage $node]
 	if {$img != ""} {
 	    lappend snapshots $img
 	}
@@ -305,7 +361,7 @@ Run 'docker pull $template' to pull the template." \
     return 1
 }
 
-proc prepareDevfs {} {}
+proc prepareDevfs { { force 0 } } {}
 
 #****f* linux.tcl/getHostIfcList
 # NAME
@@ -327,7 +383,77 @@ proc getHostIfcList {} {
     return $extifcs
 }
 
-proc createExperimentContainer {} {}
+#****f* linux.tcl/getHostIfcVlanExists
+# NAME
+#   getHostIfcVlanExists -- check if host VLAN interface exists
+# SYNOPSIS
+#   getHostIfcVlanExists $node $ifname
+# FUNCTION
+#   Returns 1 if VLAN interface with the name $ifname for the given node cannot
+#   be created.
+# INPUTS
+#   * node -- node id
+#   * ifname -- interface name
+# RESULT
+#   * check -- 1 if interface exists, 0 otherwise
+#****
+proc getHostIfcVlanExists { node ifname } {
+    global execMode
+
+    # check if VLAN ID is already taken
+    # this can be only done by trying to create it, as it's possible that the same
+    # VLAN interface already exists in some other namespace
+    set vlan [getEtherVlanTag $node]
+    try {
+	exec ip link add link $ifname name $ifname.$vlan type vlan id $vlan
+    } on ok {} {
+	exec ip link del $ifname.$vlan
+	return 0
+    } on error err {
+	set msg "Unable to create external interface '$ifname.$vlan':\n$err\n\nPlease\
+	    verify that VLAN ID $vlan with parent interface $ifname is not already\
+	    assigned to another VLAN interface, potentially in a different namespace."
+    }
+
+    if { $execMode == "batch" } {
+	puts $msg
+    } else {
+	after idle {.dialog1.msg configure -wraplength 4i}
+	tk_dialog .dialog1 "IMUNES error" $msg \
+	    info 0 Dismiss
+    }
+
+    return 1
+}
+
+proc removeNodeFS { eid node } {
+    set VROOT_BASE [getVrootDir]
+
+    pipesExec "rm -fr $VROOT_BASE/$eid/$node" "hold"
+}
+
+proc getNodeNetns { eid node } {
+    global devfs_number
+
+    # Top-level experiment netns
+    if { $node in "" || [nodeType $node] in "rj45 extelem" } {
+	return $eid
+    }
+
+    # Global netns
+    if { [nodeType $node] in "ext extnat" } {
+	return ""
+    }
+
+    # Node netns
+    return $eid-$node
+}
+
+proc destroyNodeVirtIfcs { eid node } {
+    set node_id "$eid.$node"
+
+    pipesExec "docker exec -d $node_id sh -c 'for iface in `ls /sys/class/net` ; do ip link del \$iface; done'" "hold"
+}
 
 proc loadKernelModules {} {
     global all_modules_list
@@ -339,7 +465,40 @@ proc loadKernelModules {} {
     }
 }
 
-proc prepareVirtualFS {} {}
+proc prepareVirtualFS {} {
+    exec mkdir -p /var/run/netns
+}
+
+proc attachToL3NodeNamespace { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    # VIMAGE nodes use docker netns
+    set cmds "docker_ns=\$(docker inspect -f '{{.State.Pid}}' $eid.$node)"
+    set cmds "$cmds; ip netns del \$docker_ns > /dev/null 2>&1"
+    set cmds "$cmds; ip netns attach $eid-$node \$docker_ns"
+    set cmds "$cmds; docker exec -d $eid.$node umount /etc/resolv.conf /etc/hosts"
+
+    pipesExec "sh -c \'$cmds\'" "hold"
+}
+
+proc createNamespace { ns } {
+    pipesExec "ip netns add $ns" "hold"
+}
+
+proc destroyNamespace { ns } {
+    pipesExec "ip netns del $ns" "hold"
+}
+
+proc createExperimentContainer {} {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    global devfs_number
+
+    catch {exec ip netns attach imunes_$devfs_number 1}
+
+    # Top-level experiment netns
+    exec ip netns add $eid
+
+}
 
 #****f* linux.tcl/prepareFilesystemForNode
 # NAME
@@ -357,7 +516,6 @@ proc prepareFilesystemForNode { node } {
     set VROOTDIR /var/imunes
     set VROOT_RUNTIME $VROOTDIR/$eid/$node
     pipesExec "mkdir -p $VROOT_RUNTIME" "hold"
-    pipesExec "mkdir -p /var/run/netns" "hold"
 }
 
 #****f* linux.tcl/createNodeContainer
@@ -381,31 +539,44 @@ proc createNodeContainer { node } {
     if { [getNodeDockerAttach $node] } {
 	set network "bridge"
     }
-    set vroot [getNodeDockerImage $node]
+    set vroot [getNodeCustomImage $node]
     if { $vroot == "" } {
         set vroot $VROOT_MASTER
     }
 
-    catch { exec docker run --detach --init --tty \
+    pipesExec "docker run --detach --init --tty \
 	--privileged --cap-add=ALL --net=$network \
 	--name $node_id --hostname=[getNodeName $node] \
 	--volume /tmp/.X11-unix:/tmp/.X11-unix \
 	--sysctl net.ipv6.conf.all.disable_ipv6=0 \
 	--ulimit nofile=$ULIMIT_FILE --ulimit nproc=$ULIMIT_PROC \
-	$vroot } err
-    if { $debug } {
-        puts "'exec docker run' ($node_id) caught:\n$err"
-    }
-    if { [getNodeDockerAttach $node] } {
-	catch "exec docker exec $node_id ip l set eth0 down"
-	catch "exec docker exec $node_id ip l set eth0 name ext0"
-	catch "exec docker exec $node_id ip l set ext0 up"
+	$vroot &" "hold"
+}
+
+proc isNodeStarted { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set node_id "$eid.$node"
+
+    catch {exec docker inspect --format '{{.State.Running}}' $node_id} status
+
+    return [string match 'true' $status]
+}
+
+proc isNodeNamespaceCreated { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set nodeNs [getNodeNetns $eid $node]
+
+    if { $nodeNs == "" } {
+	return true
     }
 
-    set status ""
-    while { [string match 'true' $status] != 1 } {
-        catch {exec docker inspect --format '{{.State.Running}}' $node_id} status
+    try {
+       exec ip netns exec $nodeNs true
+    } on error {} {
+       return false
     }
+
+    return true
 }
 
 #****f* linux.tcl/createNodePhysIfcs
@@ -418,9 +589,136 @@ proc createNodeContainer { node } {
 # INPUTS
 #   * node -- node id
 #****
-proc createNodePhysIfcs { node } {}
+proc createNodePhysIfcs { node ifcs } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
 
-proc createNodeLogIfcs { node } {}
+    if { [nodeType $node] in "extelem" } {
+	return
+    }
+
+    set nodeNs [getNodeNetns $eid $node]
+    set node_type [nodeType $node]
+
+    # Create "physical" network interfaces
+    foreach ifc $ifcs {
+	set ifname $ifc
+	set prefix [string trimright $ifc "0123456789"]
+	if { $node_type in "ext extnat" } {
+	    set ifname $eid-$node
+	}
+
+	# direct link, simulate capturing the host interface into the node,
+	# without bridges between them
+	set peer [peerByIfc $node $ifc]
+	if { $peer != "" } {
+	    set link [linkByPeers $node $peer]
+	    if { $link != "" && [getLinkDirect $link] } {
+		continue
+	    }
+	}
+
+	switch -exact $prefix {
+	    e -
+	    ext -
+	    eth {
+		# Create a veth pair - private hook in node netns and public hook
+		# in the experiment netns
+		createNsVethPair $ifname $nodeNs $node-$ifc $eid
+	    }
+	}
+
+	switch -exact $prefix {
+	    e {
+		# bridge private hook with L2 node
+		setNsIfcMaster $nodeNs $ifname $node "up"
+	    }
+	    ext {
+		# bridge private hook with ext node
+		#setNsIfcMaster $nodeNs $ifname $eid-$node "up"
+	    }
+	    eth {
+		set ether [getIfcMACaddr $node $ifc]
+                if {$ether == ""} {
+                    autoMACaddr $node $ifc
+		    set ether [getIfcMACaddr $node $ifc]
+                }
+
+		set nsstr ""
+		if { $nodeNs != "" } {
+		    set nsstr "-n $nodeNs"
+		}
+		pipesExec "ip $nsstr link set $ifc address $ether" "hold"
+	    }
+	    default {
+		# capture physical interface directly into the node, without using a bridge
+		# we don't know the name, so make sure all other options cover other IMUNES
+		# 'physical' interfaces
+		# XXX not yet implemented
+		pipesExec "ip link set $ifc netns $nodeNs" "hold"
+	    }
+	}
+    }
+
+    pipesExec ""
+}
+
+#****f* linux.tcl/killProcess
+# NAME
+#   killProcess -- kill processes with the given regex
+# SYNOPSIS
+#   killProcess $regex
+# FUNCTION
+#   Executes a pkill command to kill all processes with a corresponding regex.
+# INPUTS
+#   * regex -- regularl expression of the processes
+#****
+proc killExtProcess { regex } {
+    pipesExec "pkill -f \"$regex\"" "hold"
+}
+
+proc checkHangingTCPs { eid nodes } {}
+
+#****f* linux.tcl/createNodeLogIfcs
+# NAME
+#   createNodeLogIfcs -- create node logical interfaces
+# SYNOPSIS
+#   createNodeLogIfcs $node
+# FUNCTION
+#   Creates logical interfaces for the given node.
+# INPUTS
+#   * node -- node id
+#****
+proc createNodeLogIfcs { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set node_id "$eid.$node"
+
+    foreach ifc [logIfcList $node] {
+	switch -exact [getLogIfcType $node $ifc] {
+	    vlan {
+		# physical interfaces are created when creating links, so VLANs
+		# must be created after links
+	    }
+	    lo {
+		if {$ifc != "lo0"} {
+		    pipesExec "docker exec -d $node_id ip link add $ifc type dummy" "hold"
+		    pipesExec "docker exec -d $node_id ip link set $ifc up" "hold"
+		}
+	    }
+	}
+    }
+
+    # docker interface is created before other ones, so let's rename it to something that's not used by IMUNES
+    if { [getNodeDockerAttach $node] } {
+	set cmds "ip r save > /tmp/routes"
+	set cmds "$cmds ; ip l set eth0 down"
+	set cmds "$cmds ; ip l set eth0 name docker0"
+	set cmds "$cmds ; ip l set docker0 up"
+	set cmds "$cmds ; ip r restore < /tmp/routes"
+	set cmds "$cmds ; rm -f /tmp/routes"
+	pipesExec "docker exec -d $node_id sh -c '$cmds'" "hold"
+    }
+}
 
 #****f* linux.tcl/configureICMPoptions
 # NAME
@@ -445,102 +743,217 @@ proc configureICMPoptions { node } {
     }
     set cmds [join $cmd "; "]
 
-    pipesExec "docker exec $eid.$node sh -c \'$cmds\'" "hold"
+    pipesExec "docker exec -d $eid.$node sh -c '$cmds ; touch /tmp/init'" "hold"
 }
 
-proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
+proc isNodeInitNet { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set node_id "$eid.$node"
+
+    try {
+	exec docker inspect -f "{{.GraphDriver.Data.MergedDir}}" $node_id
+    } on ok mergedir {
+	try {
+	    exec test -f ${mergedir}/tmp/init
+	} on error {} {
+	    return false
+	}
+    } on error {} {
+	return false
+    }
+
+    return true
+}
+
+proc createNsLinkBridge { netNs link } {
+    set nsstr ""
+    if { $netNs != "" } {
+	set nsstr "-n $netNs"
+    }
+    pipesExec "ip $nsstr link add name $link type bridge ageing_time 0" "hold"
+    pipesExec "ip $nsstr link set $link up" "hold"
+}
+
+proc createNsVethPair { ifname1 netNs1 ifname2 netNs2 } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    set ether1 [getIfcMACaddr $lnode1 $ifname1]
-    if {$ether1 == ""} {
-        autoMACaddr $lnode1 $ifname1
+    set nsstr1 ""
+    set nsstr1x ""
+    if { $netNs1 != "" } {
+	set nsstr1 "netns $netNs1"
+	set nsstr1x "-n $netNs1"
     }
-    set ether1 [getIfcMACaddr $lnode1 $ifname1]
-
-    set ether2 [getIfcMACaddr $lnode2 $ifname2]
-    if {$ether2 == ""} {
-        autoMACaddr $lnode2 $ifname2
+    set nsstr2 ""
+    set nsstr2x ""
+    if { $netNs2 != "" } {
+	set nsstr2 "netns $netNs2"
+	set nsstr2x "-n $netNs2"
     }
-    set ether2 [getIfcMACaddr $lnode2 $ifname2]
+    pipesExec "ip link add name $eid-$ifname1 $nsstr1 type veth peer name $eid-$ifname2 $nsstr2" "hold"
+    pipesExec "ip $nsstr1x link set $eid-$ifname1 name $ifname1" "hold"
+    pipesExec "ip $nsstr2x link set $eid-$ifname2 name $ifname2" "hold"
+}
 
-    set lname1 $lnode1
-    set lname2 $lnode2
+proc setNsIfcMaster { netNs ifname master state } {
+    set nsstr ""
+    if { $netNs != "" } {
+	set nsstr "-n $netNs"
+    }
+    pipesExec "ip $nsstr link set $ifname master $master $state" "hold"
+}
 
-    switch -exact "[[typemodel $lnode1].virtlayer]-[[typemodel $lnode2].virtlayer]" {
-	NETGRAPH-NETGRAPH {
-	    if { [nodeType $lnode1] == "ext" } {
-		catch "exec ovs-vsctl add-br $eid-$lnode1"
+#****f* linux.tcl/createDirectLinkBetween
+# NAME
+#   createDirectLinkBetween -- create direct link between
+# SYNOPSIS
+#   createDirectLinkBetween $lnode1 $lnode2 $ifname1 $ifname2
+# FUNCTION
+#   Creates direct link between two given nodes. Direct link connects the host
+#   interface into the node, without ng_node between them.
+# INPUTS
+#   * lnode1 -- node id of the first node
+#   * lnode2 -- node id of the second node
+#   * iname1 -- interface name on the first node
+#   * iname2 -- interface name on the second node
+#****
+proc createDirectLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    if { [nodeType $lnode1] in "rj45 extelem" || [nodeType $lnode2] in "rj45 extelem" } {
+	if { [nodeType $lnode1] in "rj45 extelem" } {
+	    set physical_ifc [getNodeName $lnode1]
+	    if { [nodeType $lnode1] == "extelem" } {
+		set ifcs [getNodeExternalIfcs $lnode1]
+		set physical_ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname1"] 1]
+	    } elseif { [getEtherVlanEnabled $lnode1] } {
+		set vlan [getEtherVlanTag $lnode1]
+		set physical_ifc $physical_ifc.$vlan
 	    }
-	    if { [nodeType $lnode2] == "ext" } {
-		catch "exec ovs-vsctl add-br $eid-$lnode2"
+	    set nodeNs [getNodeNetns $eid $lnode2]
+	    set full_virtual_ifc $eid-$lnode2-$ifname2
+	    set virtual_ifc $ifname2
+	    set ether [getIfcMACaddr $lnode2 $virtual_ifc]
+
+	    if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
+		pipesExec "ip link set $physical_ifc netns $nodeNs" "hold"
+		setNsIfcMaster $nodeNs $physical_ifc $lnode2 "up"
+		return
 	    }
-	    # generate interface names
-	    set hostIfc1 "$eid-$lname1-$ifname1"
-	    set hostIfc2 "$eid-$lname2-$ifname2"
-	    # create veth pair
-	    catch {exec ip link add name "$hostIfc1" type veth peer name "$hostIfc2"}
-	    # add veth interfaces to bridges
-	    catch "exec ovs-vsctl add-port $eid-$lname1 $hostIfc1"
-	    catch "exec ovs-vsctl add-port $eid-$lname2 $hostIfc2"
-	    # set bridge interfaces up
-	    exec ip link set dev $hostIfc1 up
-	    exec ip link set dev $hostIfc2 up
+	} else {
+	    set physical_ifc [getNodeName $lnode2]
+	    if { [nodeType $lnode2] == "extelem" } {
+		set ifcs [getNodeExternalIfcs $lnode2]
+		set physical_ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname2"] 1]
+	    } elseif { [getEtherVlanEnabled $lnode2] } {
+		set vlan [getEtherVlanTag $lnode2]
+		set physical_ifc $physical_ifc.$vlan
+	    }
+	    set nodeNs [getNodeNetns $eid $lnode1]
+	    set full_virtual_ifc $eid-$lnode1-$ifname1
+	    set virtual_ifc $ifname1
+	    set ether [getIfcMACaddr $lnode1 $virtual_ifc]
+
+	    if { [[typemodel $lnode1].virtlayer] == "NETGRAPH" } {
+		pipesExec "ip link set $physical_ifc netns $nodeNs" "hold"
+		setNsIfcMaster $nodeNs $physical_ifc $lnode1 "up"
+		return
+	    }
 	}
-	VIMAGE-VIMAGE {
-	    # prepare namespace files
-	    set lnode1Ns [createNetNs $lnode1]
-	    set lnode2Ns [createNetNs $lnode2]
-	    # generate temporary interface names
-	    set hostIfc1 "v${ifname1}pn${lnode1Ns}"
-	    set hostIfc2 "v${ifname2}pn${lnode2Ns}"
-	    # create veth pair
-	    exec ip link add name "$hostIfc1" type veth peer name "$hostIfc2"
-	    # move veth pair sides to node namespaces
-	    setIfcNetNs $lnode1 $hostIfc1 $ifname1
-	    setIfcNetNs $lnode2 $hostIfc2 $ifname2
-	    # set mac addresses of node ifcs
-	    exec nsenter -n -t $lnode1Ns ip link set dev "$ifname1" \
-		address "$ether1"
-	    exec nsenter -n -t $lnode2Ns ip link set dev "$ifname2" \
-		address "$ether2"
-	    # delete net namespace reference files
-	    exec ip netns del $lnode1Ns
-	    exec ip netns del $lnode2Ns
+
+	try {
+	    exec test -d /sys/class/net/$physical_ifc/wireless
+	} on error {} {
+	    # not wireless
+	    set cmds "ip link add link $physical_ifc name $full_virtual_ifc netns $nodeNs type macvlan mode private"
+	    set cmds "$cmds ; ip -n $nodeNs link set $full_virtual_ifc address $ether"
+	} on ok {} {
+	    # we cannot use macvlan on wireless interfaces, so MAC address cannot be changed
+	    set cmds "ip link add link $physical_ifc name $full_virtual_ifc netns $nodeNs type ipvlan mode l2"
 	}
-	NETGRAPH-VIMAGE {
-	    addNodeIfcToBridge $lname1 $ifname1 $lnode2 $ifname2 $ether2
+
+	set cmds "$cmds ; ip link set $physical_ifc up"
+	set cmds "$cmds ; ip -n $nodeNs link set $full_virtual_ifc name $virtual_ifc"
+	set cmds "$cmds ; ip -n $nodeNs link set $virtual_ifc up"
+	pipesExec "$cmds" "hold"
+
+	return
+    }
+
+    if { [nodeType $lnode1] in "ext extnat" } {
+	set ifname1 $eid-$lnode1
+    }
+
+    if { [nodeType $lnode2] in "ext extnat" } {
+	set ifname2 $eid-$lnode2
+    }
+
+    set node1Ns [getNodeNetns $eid $lnode1]
+    set node2Ns [getNodeNetns $eid $lnode2]
+    createNsVethPair $ifname1 $node1Ns $ifname2 $node2Ns
+
+    # add nodes ifc hooks to link bridge and bring them up
+    foreach node [list $lnode1 $lnode2] ifc [list $ifname1 $ifname2] ns [list $node1Ns $node2Ns] {
+	if { [[typemodel $node].virtlayer] != "NETGRAPH" || [nodeType $node] in "ext extnat" } {
+	    continue
 	}
-	VIMAGE-NETGRAPH {
-	    addNodeIfcToBridge $lname2 $ifname2 $lnode1 $ifname1 $ether1
+
+	setNsIfcMaster $ns $ifc $node "up"
+    }
+}
+
+proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    # create link bridge in experiment netns
+    createNsLinkBridge $eid $link
+
+    # add nodes ifc hooks to link bridge and bring them up
+    foreach node "$lnode1 $lnode2" ifc "$ifname1 $ifname2" {
+	set ifname $node-$ifc
+	if { [nodeType $node] == "rj45" } {
+	    set ifname [getNodeName $node]
+	    if { [getEtherVlanEnabled $node] } {
+		set vlan [getEtherVlanTag $node]
+		set ifname $ifname.$vlan
+	    }
+	} elseif { [nodeType $node] == "extelem" } {
+	    # won't work if the node is a wireless interface
+	    # because netns is not changed
+	    set ifcs [getNodeExternalIfcs $node]
+	    set ifname [lindex [lsearch -inline -exact -index 0 $ifcs "$ifc"] 1]
 	}
+
+	setNsIfcMaster $eid $ifname $link "up"
     }
 }
 
 proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    # FIXME: merge this with execSet* commands
-    execSetLinkParams $eid $link
+    set bandwidth [expr [getLinkBandwidth $link] + 0]
+    set delay [expr [getLinkDelay $link] + 0]
+    set ber [expr [getLinkBER $link] + 0]
+    set loss [expr [getLinkLoss $link] + 0]
+    set dup [expr [getLinkDup $link] + 0]
 
-    # if {[nodeType $lnode1] != "rj45" && [nodeType $lnode2] != "rj45"} {
-    #     set qdisc [getIfcQDisc $lnode1 $ifname1]
-    #     if {$qdisc ne "FIFO"} {
-    #         execSetIfcQDisc $eid $lnode1 $ifname2 $qdisc
-    #     }
+    configureIfcLinkParams $eid $lnode1 $ifname1 $bandwidth $delay $ber $loss $dup
+    configureIfcLinkParams $eid $lnode2 $ifname2 $bandwidth $delay $ber $loss $dup
 
-    #     set qdisc [getIfcQDisc $lnode2 $ifname2]
-    #     if {$qdisc ne "FIFO"} {
-    #         execSetIfcQDisc $eid $lnode2 $ifname2 $qdisc
-    #     }
-    #     set qdrop [getIfcQDrop $node $ifc]
-    #     if {$qdrop ne "drop-tail"} {
-    #         execSetIfcQDrop $eid $node $ifc $qdrop
-    #     }
-    #     set qlen [getIfcQLen $node $ifc]
-    #     if {$qlen ne 50} {
-    #         execSetIfcQLen $eid $node $ifc $qlen
-    #     }
-    # }
+    # FIXME: remove this to interface configuration?
+    foreach node "$lnode1 $lnode2" ifc "$ifname1 $ifname2" {
+	if { [nodeType $node] in "rj45 extelem" } {
+	    continue
+	}
+
+	set qdisc [getIfcQDisc $node $ifc]
+	if { $qdisc != "FIFO" } {
+	    execSetIfcQDisc $eid $node $ifc $qdisc
+	}
+	set qlen [getIfcQLen $node $ifc]
+	if { $qlen != 1000 } {
+	    execSetIfcQLen $eid $node $ifc $qlen
+	}
+    }
 }
 
 #****f* linux.tcl/startIfcsNode
@@ -556,54 +969,136 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
 proc startIfcsNode { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    set cmds ""
-    set nodeNs [getNodeNamespace $node]
+    set nodeNs [getNodeNetns $eid $node]
+    pipesExec "ip -n $nodeNs link set dev lo down 2>/dev/null" "hold"
+    pipesExec "ip -n $nodeNs link set dev lo name lo0 2>/dev/null" "hold"
     foreach ifc [allIfcList $node] {
 	set mtu [getIfcMTU $node $ifc]
-	set tmpifc $ifc
-	if { $ifc == "lo0" } {
-	    set tmpifc lo
+	if { [getLogIfcType $node $ifc] == "vlan" } {
+	    set tag [getIfcVlanTag $node $ifc]
+	    set dev [getIfcVlanDev $node $ifc]
+	    if {$tag != "" && $dev != ""} {
+		pipesExec "ip -n $nodeNs link add link $dev name $ifc type vlan id $tag" "hold"
+	    }
 	}
 	if {[getIfcOperState $node $ifc] == "up"} {
-	    set cmds "$cmds\n nsenter -n -t $nodeNs ip link set dev $tmpifc up mtu $mtu"
+	    pipesExec "ip -n $nodeNs link set dev $ifc up mtu $mtu" "hold"
 	} else {
-	    set cmds "$cmds\n nsenter -n -t $nodeNs ip link set dev $tmpifc mtu $mtu"
+	    pipesExec "ip -n $nodeNs link set dev $ifc mtu $mtu" "hold"
+	}
+	if {[getIfcNatState $node $ifc] == "on"} {
+	    pipesExec "ip netns exec $nodeNs iptables -t nat -A POSTROUTING -o $ifc -j MASQUERADE" "hold"
 	}
     }
-    exec sh << $cmds
 }
 
-proc removeExperimentContainer { eid widget } {}
+proc isNodeConfigured { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set node_id "$eid.$node"
+
+    if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
+	return true
+    }
+
+    try {
+	# docker exec sometimes hangs, so don't use it while we have other pipes opened
+	exec docker inspect -f "{{.GraphDriver.Data.MergedDir}}" $node_id
+    } on ok mergedir {
+	try {
+	    exec test -f ${mergedir}/out.log
+	} on error {} {
+	    return false
+	} on ok {} {
+	    return true
+	}
+    } on error err {
+	puts "Error on docker inspect: '$err'"
+    }
+
+    return false
+}
+
+proc isNodeError { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set node_id "$eid.$node"
+
+    if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
+	return false
+    }
+
+    try {
+	# docker exec sometimes hangs, so don't use it while we have other pipes opened
+	exec docker inspect -f "{{.GraphDriver.Data.MergedDir}}" $node_id
+    } on ok mergedir {
+	try {
+	    exec test -s ${mergedir}/err.log
+	} on error {} {
+	    return false
+	} on ok {} {
+	    return true
+	}
+    } on error err {
+	puts "Error on docker inspect: '$err'"
+    }
+
+    return true
+}
+
+proc removeNetns { netns } {
+    if { $netns != "" } {
+	exec ip netns del $netns
+    }
+}
+
+proc removeNodeNetns { eid node } {
+    set netns [getNodeNetns $eid $node]
+
+    if { $netns != "" } {
+	pipesExec "ip netns del $netns" "hold"
+    }
+}
+
+proc removeExperimentContainer { eid widget } {
+    removeNetns $eid
+}
+
+proc removeExperimentFiles { eid widget } {
+    set VROOT_BASE [getVrootDir]
+    catch "exec rm -fr $VROOT_BASE/$eid &"
+}
 
 proc removeNodeContainer { eid node } {
     set node_id $eid.$node
 
-    catch "exec docker kill $node_id"
-    catch "exec docker rm $node_id"
+    pipesExec "docker kill $node_id" "hold"
+    pipesExec "docker rm $node_id" "hold"
 }
 
 proc killAllNodeProcesses { eid node } {
     set node_id "$eid.$node"
 
-    catch "exec docker exec $node_id killall5 -o 1 -9"
+    # kill all processes except pid 1 and its child(ren)
+    pipesExec "docker exec -d $node_id sh -c 'killall5 -9 -o 1 -o \$(pgrep -P 1)'" "hold"
 }
-
-proc destroyVirtNodeIfcs { eid vimages } {}
 
 proc runConfOnNode { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
-    global execMode
 
-    set node_dir [getVrootDir]/$eid/$node
     set node_id "$eid.$node"
-
-    catch {exec docker exec $node_id umount /etc/resolv.conf /etc/hosts}
 
     if { [getCustomEnabled $node] == true } {
         set selected [getCustomConfigSelected $node]
 
         set bootcmd [getCustomConfigCommand $node $selected]
         set bootcfg [getCustomConfig $node $selected]
+	if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
+	    foreach statrte [getDefaultIPv4routes $node] {
+		lappend bootcfg [getIPv4RouteCmd $statrte]
+	    }
+	    foreach statrte [getDefaultIPv6routes $node] {
+		lappend bootcfg [getIPv6RouteCmd $statrte]
+	    }
+	}
         set confFile "custom.conf"
     } else {
         set bootcfg [[typemodel $node].cfggen $node]
@@ -611,43 +1106,56 @@ proc runConfOnNode { node } {
         set confFile "boot.conf"
     }
 
-    # change all occurrences of "dev lo0" to "dev lo"
-    regsub -all {dev lo0} $bootcfg {dev lo} bootcfg
+    generateHostsFile $node
 
-    writeDataToFile $node_dir/$confFile [join "{ip a flush dev lo} $bootcfg" "\n"]
-    exec docker exec -i $node_id sh -c "cat > /$confFile" < $node_dir/$confFile
-    exec echo "LOG START" > $node_dir/out.log
-    catch {exec docker exec --tty $node_id $bootcmd /$confFile >>& $node_dir/out.log} err
-    if { $err != "" } {
-	if { $execMode != "batch" } {
-	    after idle {.dialog1.msg configure -wraplength 4i}
-	    tk_dialog .dialog1 "IMUNES warning" \
-		"There was a problem with configuring the node [getNodeName $node] ($node_id).\nCheck its /$confFile and /out.log files." \
-	    info 0 Dismiss
-	} else {
-	    puts "IMUNES warning"
-	    puts "\nThere was a problem with configuring the node [getNodeName $node] ($node_id).\nCheck its /$confFile and /out.log files."
-	}
-    }
-    exec docker exec -i $node_id sh -c "cat > /out.log" < $node_dir/out.log
-
-    set nodeNs [getNodeNamespace $node]
+    set nodeNs [getNodeNetns $eid $node]
     foreach ifc [allIfcList $node] {
 	if {[getIfcOperState $node $ifc] == "down"} {
-	    set tmpifc $ifc
-	    if { $ifc == "lo0" } {
-		set ifc lo
-	    }
-	    exec nsenter -n -t $nodeNs ip link set dev $ifc down
+	    pipesExec "ip -n $nodeNs link set dev $ifc down"
 	}
     }
 
-    generateHostsFile $node
+    set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
+    writeDataToNodeFile $node /$confFile $cfg
+    set cmds "$bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
+    # renaming the file signals that we're done
+    set cmds "$cmds mv /tout.log /out.log ;"
+    set cmds "$cmds mv /terr.log /err.log"
+    pipesExec "docker exec -d $node_id sh -c '$cmds'" "hold"
 }
 
-proc destroyLinkBetween { eid lnode1 lnode2 } {
-    set ifname1 [ifcByLogicalPeer $lnode1 $lnode2]
-    catch {exec ip link del dev $eid-$lnode1-$ifname1}
+proc destroyDirectLinkBetween { eid lnode1 lnode2 } {
+    if { [nodeType $lnode1] in "ext extnat" } {
+	pipesExec "ip link del $eid-$lnode1"
+    } elseif { [nodeType $lnode2] in "ext extnat" } {
+	pipesExec "ip link del $eid-$lnode2"
+    }
+}
+
+proc destroyLinkBetween { eid lnode1 lnode2 link } {
+    pipesExec "ip -n $eid link del $link"
+}
+
+#****f* linux.tcl/destroyNodeIfcs
+# NAME
+#   destroyNodeIfcs -- destroy virtual node interfaces
+# SYNOPSIS
+#   destroyNodeIfcs $eid $vimages
+# FUNCTION
+#   Destroys all virtual node interfaces.
+# INPUTS
+#   * eid -- experiment id
+#   * vimages -- list of virtual nodes
+#****
+proc destroyNodeIfcs { eid node ifcs } {
+    if { [nodeType $node] in "ext extnat" } {
+	pipesExec "ip link del $eid-$node" "hold"
+	return
+    }
+
+    foreach ifc $ifcs {
+	pipesExec "ip $eid link del $node-$ifc" "hold"
+    }
 }
 
 #****f* linux.tcl/removeNodeIfcIPaddrs
@@ -664,40 +1172,7 @@ proc destroyLinkBetween { eid lnode1 lnode2 } {
 proc removeNodeIfcIPaddrs { eid node } {
     set node_id "$eid.$node"
     foreach ifc [allIfcList $node] {
-	catch "exec docker exec $node_id ip addr flush dev $ifc"
-    }
-}
-
-proc removeExperimentContainer { eid widget } {
-    set VROOT_BASE [getVrootDir]
-    catch "exec rm -fr $VROOT_BASE/$eid &"
-}
-
-proc createNetgraphNode { eid node } {
-    catch {exec ovs-vsctl add-br $eid-$node}
-}
-
-proc destroyNetgraphNode { eid node } {
-    catch {exec ovs-vsctl del-br $eid-$node}
-}
-
-proc destroyNetgraphNodes { eid switches widget } {
-    global execMode
-
-    # destroying openvswitch nodes
-    if { $switches != "" } {
-        statline "Shutting down netgraph nodes..."
-        set i 0
-        foreach node $switches {
-            incr i
-            # statline "Shutting down openvswitch node $node ([typemodel $node])"
-            [typemodel $node].destroy $eid $node
-            if {$execMode != "batch"} {
-                $widget.p step -1
-            }
-            displayBatchProgress $i [ llength $switches ]
-        }
-        statline ""
+	pipesExec "docker exec -d $node_id sh -c 'ip addr flush dev $ifc'" "hold"
     }
 }
 
@@ -713,36 +1188,6 @@ proc destroyNetgraphNodes { eid switches widget } {
 #****
 proc getCpuCount {} {
     return [lindex [exec grep -c processor /proc/cpuinfo] 0]
-}
-
-#****f* linux.tcl/l2node.instantiate
-# NAME
-#   l2node.instantiate -- instantiate
-# SYNOPSIS
-#   l2node.instantiate $eid $node
-# FUNCTION
-#   Procedure l2node.instantiate creates a new netgraph node of the appropriate type.
-# INPUTS
-#   * eid -- experiment id
-#   * node -- id of the node (type of the node is either lanswitch or hub)
-#****
-proc l2node.instantiate { eid node } {
-    createNetgraphNode $eid $node
-}
-
-#****f* linux.tcl/l2node.destroy
-# NAME
-#   l2node.destroy -- destroy
-# SYNOPSIS
-#   l2node.destroy $eid $node
-# FUNCTION
-#   Destroys a l2 node.
-# INPUTS
-#   * eid -- experiment id
-#   * node -- id of the node
-#****
-proc l2node.destroy { eid node } {
-    destroyNetgraphNode $eid $node
 }
 
 #****f* linux.tcl/enableIPforwarding
@@ -769,22 +1214,7 @@ proc enableIPforwarding { eid node } {
     }
     set cmds [join $cmd "; "]
 
-    pipesExec "docker exec $eid.$node sh -c \'$cmds\'" "hold"
-}
-
-#****f* linux.tcl/configDefaultLoIfc
-# NAME
-#   configDefaultLoIfc -- configure default logical interface
-# SYNOPSIS
-#   configDefaultLoIfc $eid $node
-# FUNCTION
-#   Configures the default logical interface address for the given node.
-# INPUTS
-#   * eid -- experiment id
-#   * node -- node id
-#****
-proc configDefaultLoIfc { eid node } {
-    pipesExec "docker exec $eid\.$node ifconfig lo 127.0.0.1/8" "hold"
+    pipesExec "docker exec -d $eid.$node sh -c \'$cmds\'" "hold"
 }
 
 #****f* linux.tcl/getExtIfcs
@@ -808,51 +1238,122 @@ proc getExtIfcs { } {
 
 #****f* linux.tcl/captureExtIfc
 # NAME
-#   captureExtIfc -- capture external interfaces
+#   captureExtIfc -- capture external interface
 # SYNOPSIS
 #   captureExtIfc $eid $node
 # FUNCTION
-#   Captures the external interfaces given by the given rj45 node.
+#   Captures the external interface given by the given rj45 node.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id
 #****
 proc captureExtIfc { eid node } {
+    global execMode
+
     set ifname [getNodeName $node]
-    createNetgraphNode $eid $node
-    catch {exec ovs-vsctl add-port $eid-$node $ifname}
+    if { [getEtherVlanEnabled $node] } {
+	set vlan [getEtherVlanTag $node]
+	try {
+	    exec ip link add link $ifname name $ifname.$vlan type vlan id $vlan
+	} on error err {
+	    set msg "Error: VLAN $vlan on external interface $ifname can't be\
+		created.\n($err)"
+
+	    if { $execMode == "batch" } {
+		puts $msg
+	    } else {
+		after idle {.dialog1.msg configure -wraplength 4i}
+		tk_dialog .dialog1 "IMUNES error" $msg \
+		    info 0 Dismiss
+	    }
+
+	    return -code error
+	} on ok {} {
+	    set ifname $ifname.$vlan
+	}
+    }
+
+    if { [getLinkDirect [lindex [linkByIfc $node 0] 0]] } {
+	return
+    }
+
+    captureExtIfcByName $eid $ifname
+}
+
+#****f* linux.tcl/captureExtIfcByName
+# NAME
+#   captureExtIfcByName -- capture external interface
+# SYNOPSIS
+#   captureExtIfcByName $eid $ifname
+# FUNCTION
+#   Captures the external interface given by the ifname.
+# INPUTS
+#   * eid -- experiment id
+#   * ifname -- physical interface name
+#****
+proc captureExtIfcByName { eid ifname } {
+    # won't work if the node is a wireless interface
+    pipesExec "ip link set $ifname netns $eid" "hold"
 }
 
 #****f* linux.tcl/releaseExtIfc
 # NAME
-#   releaseExtIfc -- release external interfaces
+#   releaseExtIfc -- release external interface
 # SYNOPSIS
 #   releaseExtIfc $eid $node
 # FUNCTION
-#   Releases the external interfaces captured by the given rj45 node.
+#   Releases the external interface captured by the given rj45 node.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id
 #****
 proc releaseExtIfc { eid node } {
-    catch "destroyNetgraphNode $eid $node"
+    set ifname [getNodeName $node]
+    if { [getEtherVlanEnabled $node] } {
+	set vlan [getEtherVlanTag $node]
+	set ifname $ifname.$vlan
+	catch { exec ip link del $ifname }
+
+	return
+    }
+
+    if { [getLinkDirect [lindex [linkByIfc $node 0] 0]] } {
+	return
+    }
+
+    releaseExtIfcByName $eid $ifname
+}
+
+#****f* linux.tcl/releaseExtIfc
+# NAME
+#   releaseExtIfc -- release external interface
+# SYNOPSIS
+#   releaseExtIfc $eid $node
+# FUNCTION
+#   Releases the external interface with the name ifname.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
+proc releaseExtIfcByName { eid ifname } {
+    global devfs_number
+
+    pipesExec "ip -n $eid link set $ifname netns imunes_$devfs_number" "hold"
+
+    return
 }
 
 proc getIPv4RouteCmd { statrte } {
     set route [lindex $statrte 0]
     set addr [lindex $statrte 1]
-    set cmd "ip route add $route via $addr"
+    set cmd "ip route append $route via $addr"
     return $cmd
 }
 
 proc getIPv6RouteCmd { statrte } {
     set route [lindex $statrte 0]
     set addr [lindex $statrte 1]
-    if {$route == "::/0"} {
-        set cmd "ip -6 route add $route via $addr"
-    } else {
-        set cmd "ip -6 route add default via $addr"
-    }
+	set cmd "ip -6 route append $route via $addr"
     return $cmd
 }
 
@@ -885,87 +1386,13 @@ proc getRunningNodeIfcList { node } {
     return $lines
 }
 
-proc hub.start { eid node } {
-    set node_id "$eid-$node"
-    catch {exec ovs-vsctl list-ports $node_id} ports
-    foreach port $ports {
-        catch {exec ovs-vsctl -- add bridge $node_id mirrors @m \
-        -- --id=@p get port $port \
-        -- --id=@m create mirror name=$port select-all=true output-port=@p}
-    }
-}
-
-proc getNodeNamespace { node } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    set node_id "$eid.$node"
-    catch {exec docker inspect -f "{{.State.Pid}}" $node_id} ns
-    return $ns
-}
-
-proc addNodeIfcToBridge { bridge brifc node ifc mac } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    set nodeNs [createNetNs $node]
-    # create bridge
-    catch "exec ovs-vsctl add-br $eid-$bridge"
-
-    # generate interface names
-    set hostIfc "$eid-$bridge-$brifc"
-    set guestIfc "$eid-$node-$ifc"
-
-    # create veth pair
-    exec ip link add name "$hostIfc" type veth peer name "$guestIfc"
-    # add host side of veth pair to bridge
-    catch "exec ovs-vsctl add-port $eid-$bridge $hostIfc"
-
-    exec ip link set "$hostIfc" up
-
-    # move guest side of veth pair to node namespace
-    setIfcNetNs $node $guestIfc $ifc
-    # set mac address
-    exec nsenter -n -t $nodeNs ip link set dev "$ifc" address "$mac"
-    # delete net namespace reference file
-    exec ip netns del $nodeNs
-}
-
 proc checkSysPrerequisites {} {
     set msg ""
-    if { [catch {exec docker ps } err] } {
-        set msg "Cannot start experiment. Is docker installed and running (check the output of 'docker ps')?\n"
+    if { [catch {exec docker ps}] } {
+        set msg "Cannot start experiment. Is docker installed and running (check the output of 'docker ps')?"
     }
 
-    if { [catch {exec pgrep ovs-vswitchd } err ] } {
-        set msg "Cannot start experiment. Is ovs-vswitchd installed and running (check the output of 'pgrep ovs-vswitchd')?\n"
-    }
-
-    if { [catch {exec nsenter --version}] } {
-        set msg "Cannot start experiment. Is nsenter installed (check the output of 'nsenter --version')?\n"
-    }
-
-    if { [catch {exec xterm -version}] } {
-        set msg "Cannot start experiment. Is xterm installed (check the output of 'xterm -version')?\n"
-    }
-
-    if { $msg != "" } {
-        return "$msg\nIMUNES needs docker and ovs-vswitchd services running and\
-xterm and nsenter installed."
-    }
-
-    return ""
-}
-
-proc createNetNs { node } {
-    set nodeNs [getNodeNamespace $node]
-    exec rm -f "/var/run/netns/$nodeNs"
-    exec ln -s "/proc/$nodeNs/ns/net" "/var/run/netns/$nodeNs"
-    return $nodeNs
-}
-
-proc setIfcNetNs { node oldIfc newIfc } {
-    set nodeNs [getNodeNamespace $node]
-    exec ip link set "$oldIfc" netns "$nodeNs"
-    exec nsenter -n -t $nodeNs ip link set "$oldIfc" name "$newIfc"
+    return $msg
 }
 
 #****f* linux.tcl/execSetIfcQDisc
@@ -995,18 +1422,36 @@ proc execSetIfcQDisc { eid node ifc qdisc } {
     }
     switch -exact $qdisc {
         FIFO { set qdisc fifo_fast }
-        WFQ { set qdisc wfq }
+        WFQ { set qdisc sfq }
         DRR { set qdisc drr }
     }
-    exec docker exec $eid.$node tc qdisc add dev $ifc root $qdisc
+    pipesExec "ip netns exec $eid-$node tc qdisc add dev $ifc root $qdisc" "hold"
+}
+
+#****f* linux.tcl/execSetIfcQLen
+# NAME
+#   execSetIfcQLen -- in exec mode set interface TX queue length
+# SYNOPSIS
+#   execSetIfcQLen $eid $node $ifc $qlen
+# FUNCTION
+#   Sets the queue length during the simulation.
+#   New queue length is defined in qlen parameter.
+# INPUTS
+#   eid -- experiment id
+#   node -- node id
+#   ifc -- interface name
+#   qlen -- new queue's length
+#****
+proc execSetIfcQLen { eid node ifc qlen } {
+    pipesExec "ip -n $eid-$node l set $ifc txqueuelen $qlen" "hold"
 }
 
 proc getNetemConfigLine { bandwidth delay loss dup } {
     array set netem {
-	bandwidth "rate Xbit"
-	loss      "loss random X%"
-	delay     "delay Xus"
-	dup       "duplicate X%"
+	bandwidth	"rate Xbit"
+	loss		"loss random X%"
+	delay		"delay Xus"
+	dup		"duplicate X%"
     }
     set cmd ""
 
@@ -1020,54 +1465,21 @@ proc getNetemConfigLine { bandwidth delay loss dup } {
     return $cmd
 }
 
-proc configureIfcLinkParams { eid node ifname bandwidth delay ber dup } {
+proc configureIfcLinkParams { eid node ifname bandwidth delay ber loss dup } {
     global debug
 
-    if {[nodeType $node] == "rj45"} {
-        set lname [getNodeName $node]
-    } else {
-        set lname $node
+    set devname $node-$ifname
+    if { [nodeType $node] == "rj45" } {
+        set devname [getNodeName $node]
+    } elseif { [nodeType $node] == "extelem" } {
+	set ifcs [getNodeExternalIfcs $node]
+	set devname [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname"] 1]
     }
 
-    # average packet size in the Internet is 576 bytes
-    # XXX: maybe migrate to PER (packet error rate), on FreeBSD we calculate
-    # BER with the magic number 576 and on Linux we take the value directly
-    if { $ber != 0 } {
-	set loss [expr (1 / double($ber)) * 576 * 8 * 100]
-	if { $loss > 100 } {
-	    set loss 100
-	}
-    } else {
-	set loss 0
-    }
+    set netem_cfg [getNetemConfigLine $bandwidth $delay $loss $dup]
 
-    if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
-        catch {exec tc qdisc del dev $eid-$lname-$ifname root}
-	# XXX: currently we have loss, but we can easily have
-	# corrupt, add a tickbox to GUI, default behaviour
-	# should be loss because we don't do corrupt on FreeBSD
-	# set confstring "netem corrupt ${loss}%"
-	# corrupt ${loss}%
-	set cmd "tc qdisc add dev $eid-$lname-$ifname root netem"
-	catch {
-	    eval exec $cmd [getNetemConfigLine $bandwidth $delay $loss $dup]
-	} err
-
-	if { $debug && $err != "" } {
-	    puts stderr "tc ERROR: $eid-$lname-$ifname, $err"
-	    puts stderr "gui settings: bw $bandwidth loss $loss delay $delay dup $dup"
-	    catch { exec tc qdisc show dev $eid-$lname-$ifname } status
-	    puts stderr $status
-	}
-    }
-    if { [[typemodel $node].virtlayer] == "VIMAGE" } {
-        set nodeNs [getNodeNamespace $node]
-        catch {exec nsenter -n -t $nodeNs tc qdisc del dev $ifname root}
-
-	# XXX: same as the above
-	set cmd "nsenter -n -t $nodeNs tc qdisc add dev $ifname root netem"
-	eval exec $cmd [getNetemConfigLine $bandwidth $delay $loss $dup]
-    }
+    pipesExec "ip netns exec $eid tc qdisc del dev $devname root" "hold"
+    pipesExec "ip netns exec $eid tc qdisc add dev $devname root netem $netem_cfg" "hold"
 
     # XXX: Now on Linux we don't care about queue lengths and we don't limit
     # maximum data and burst size.
@@ -1089,8 +1501,6 @@ proc configureIfcLinkParams { eid node ifname bandwidth delay ber dup } {
 #   link -- link id
 #****
 proc execSetLinkParams { eid link } {
-    global debug
-
     set lnode1 [lindex [linkPeers $link] 0]
     set lnode2 [lindex [linkPeers $link] 1]
     set ifname1 [ifcByLogicalPeer $lnode1 $lnode2]
@@ -1112,10 +1522,13 @@ proc execSetLinkParams { eid link } {
     set bandwidth [expr [getLinkBandwidth $link] + 0]
     set delay [expr [getLinkDelay $link] + 0]
     set ber [expr [getLinkBER $link] + 0]
+    set loss [expr [getLinkLoss $link] + 0]
     set dup [expr [getLinkDup $link] + 0]
 
-    configureIfcLinkParams $eid $lnode1 $ifname1 $bandwidth $delay $ber $dup
-    configureIfcLinkParams $eid $lnode2 $ifname2 $bandwidth $delay $ber $dup
+    pipesCreate
+    configureIfcLinkParams $eid $lnode1 $ifname1 $bandwidth $delay $ber $loss $dup
+    configureIfcLinkParams $eid $lnode2 $ifname2 $bandwidth $delay $ber $loss $dup
+    pipesClose
 }
 
 proc ipsecFilesToNode { node local_cert ipsecret_file } {
@@ -1181,7 +1594,7 @@ proc prepareTaygaConf { eid node data datadir } {
 
 proc taygaShutdown { eid node } {
     catch "exec docker exec $eid.$node killall5 -9 tayga"
-    exec docker exec $eid.$node rm -rf /var/db/tayga
+    catch "exec docker exec $eid.$node rm -rf /var/db/tayga"
 }
 
 proc taygaDestroy { eid node } {
@@ -1189,47 +1602,61 @@ proc taygaDestroy { eid node } {
     catch {exec docker exec $eid.$node ip l delete [set nat64ifc_$eid.$node]}
 }
 
-# XXX External connection procedures
-proc extInstantiate { node } {
-}
-
-proc startExternalIfc { eid node } {
+proc startExternalConnection { eid node } {
     set cmds ""
     set ifc [lindex [ifcList $node] 0]
     set outifc "$eid-$node"
 
     set ether [getIfcMACaddr $node $ifc]
-    if {$ether == ""} {
-       autoMACaddr $node $ifc
+    if { $ether == "" } {
+	autoMACaddr $node $ifc
+	set ether [getIfcMACaddr $node $ifc]
     }
-    set ether [getIfcMACaddr $node $ifc]
     set cmds "ip l set $outifc address $ether"
 
     set cmds "$cmds\n ip a flush dev $outifc"
 
     set ipv4 [getIfcIPv4addr $node $ifc]
-    if {$ipv4 == ""} {
-       autoIPv4addr $node $ifc
+    if { $ipv4 != "" } {
+	set cmds "$cmds\n ip a add $ipv4 dev $outifc"
     }
-    set ipv4 [getIfcIPv4addr $node $ifc]
-    set cmds "$cmds\n ip a add $ipv4 dev $outifc"
 
     set ipv6 [getIfcIPv6addr $node $ifc]
-    if {$ipv6 == ""} {
-       autoIPv6addr $node $ifc
+    if { $ipv6 != "" } {
+	set cmds "$cmds\n ip a add $ipv6 dev $outifc"
     }
-    set ipv6 [getIfcIPv6addr $node $ifc]
-    set cmds "$cmds\n ip a add $ipv6 dev $outifc"
 
     set cmds "$cmds\n ip l set $outifc up"
 
-    exec sh << $cmds &
+    pipesExec "$cmds" "hold"
 }
 
-proc  stopExternalIfc { eid node } {
-    exec ip l set $eid-$node down
+proc stopExternalConnection { eid node } {
+    pipesExec "ip link set $eid-$node down" "hold"
 }
 
-proc destroyExtInterface { eid node } {
-    destroyNetgraphNode $eid $node
+proc setupExtNat { eid node ifc } {
+    set extIfc [getNodeName $node]
+    set extIp [getIfcIPv4addrs $node $ifc]
+    set prefixLen [lindex [split $extIp "/"] 1]
+    set subnet "[ip::prefix $extIp]/$prefixLen"
+
+    set cmds "iptables -t nat -A POSTROUTING -o $extIfc -j MASQUERADE -s $subnet"
+    set cmds "$cmds\n iptables -A FORWARD -i $eid-$node -o $extIfc -j ACCEPT"
+    set cmds "$cmds\n iptables -A FORWARD -o $eid-$node -j ACCEPT"
+
+    pipesExec "$cmds" "hold"
+}
+
+proc unsetupExtNat { eid node ifc } {
+    set extIfc [getNodeName $node]
+    set extIp [getIfcIPv4addrs $node $ifc]
+    set prefixLen [lindex [split $extIp "/"] 1]
+    set subnet "[ip::prefix $extIp]/$prefixLen"
+
+    set cmds "iptables -t nat -D POSTROUTING -o $extIfc -j MASQUERADE -s $subnet"
+    set cmds "$cmds\n iptables -D FORWARD -i $eid-$node -o $extIfc -j ACCEPT"
+    set cmds "$cmds\n iptables -D FORWARD -o $eid-$node -j ACCEPT"
+
+    pipesExec "$cmds" "hold"
 }
