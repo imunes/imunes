@@ -55,7 +55,7 @@ VROOT_DIR=/var/imunes
 # packages for installation
 PACKAGES_MINIMAL="pkg quagga bash mrouted iftop"
 PACKAGES_COMMON="netperf lsof elinks nmap lighttpd akpop3d links nano postfix \
-   dsniff scapy p0f ettercap tcpreplay hping strongswan"
+   dsniff scapy p0f ettercap tcpreplay hping3 strongswan"
 
 ##########################
 
@@ -286,6 +286,17 @@ configXorp () {
     fi
 }
 
+configFrr () {
+    mkdir -p $VROOT_MASTER/usr/local/etc/frr/
+    cd $VROOT_MASTER/usr/local/etc/frr/
+    touch frr.conf zebra.conf vtysh.conf
+    chmod 640 $VROOT_MASTER/usr/local/etc/frr/*.conf
+
+    cd $IMUNESDIR
+    cp $ROOTDIR/$LIBDIR/scripts/frrboot.sh $VROOT_MASTER/usr/local/bin
+    chmod 755 $VROOT_MASTER/usr/local/bin/frrboot.sh
+}
+
 wiresharkGUIfix () {
     # Avoid Wireshark 'run as root is dangerous' dialog
     mkdir $VROOT_MASTER/root/.wireshark/
@@ -294,6 +305,19 @@ wiresharkGUIfix () {
     # Make Wireshark's main upper and middle window panes bigger on first start
     echo "gui.geometry_main_upper_pane: 135" > $VROOT_MASTER/root/.wireshark/recent
     echo "gui.geometry_main_lower_pane: 200" >> $VROOT_MASTER/root/.wireshark/recent
+}
+
+configApache24 () {
+    if [ -d "$VROOT_MASTER/usr/local/etc/apache24/" ]; then
+	cd $VROOT_MASTER/usr/local/etc/apache24/
+ 	cp httpd.conf httpd.conf.backup
+  	sed -i -e 's/#ServerName www.example.com:80/ServerName localhost/' /usr/local/etc/apache24/httpd.conf
+   	sed -i -e 's/#ServerName www.example.com:80/ServerName localhost/' httpd.conf
+    else
+	log "ERR" "Apache24 not installed in \
+	$VROOT_MASTER/usr/local/etc/apache24/\nScript aborted."
+	exit 1
+    fi
 }
 
 cleanUnnecessary () {
