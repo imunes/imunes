@@ -4,6 +4,7 @@ IMUNESDIR = $(PREFIX)/$(LIBDIR)
 CONFIGDIR = $(IMUNESDIR)/config
 GUIDIR = $(IMUNESDIR)/gui
 GUIDIRMSGS = $(GUIDIR)/msgs
+GUIDIRAYU = $(GUIDIR)/ayuda
 ICONSDIR = $(IMUNESDIR)/icons
 NODESDIR = $(IMUNESDIR)/nodes
 RUNTIMEDIR = $(IMUNESDIR)/runtime
@@ -41,7 +42,7 @@ NORMAL_ICONS = $(NODE_ICONS)
 
 SMALL_ICONS = $(NODE_ICONS)
 
-TINY_ICONS = $(NODE_ICONS) link.svg minizoomin.svg minizoomout.svg select.svg l2.svg l2.gif l3.svg l3.gif freeform.svg \
+TINY_ICONS = $(NODE_ICONS) link.svg minizoomin.svg minizoomout.svg play_start.svg play_stop.svg select.svg l2.svg l2.gif l3.svg l3.gif freeform.svg \
 		oval.svg rectangle.svg text.svg
 
 ICONS = $(wildcard icons/imunes_*)
@@ -105,6 +106,8 @@ endif
 
 	mkdir -p $(GUIDIRMSGS)
 	cp $(GUIFILESMSGS) $(GUIDIRMSGS)
+
+	mkdir -p $(GUIDIRAYU)
 
 	mkdir -p $(NODESDIR)
 	cp $(NODESFILES) $(NODESDIR)
