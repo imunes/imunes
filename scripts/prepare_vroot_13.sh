@@ -2,13 +2,16 @@
 
 . scripts/prepare_vroot_functions.sh
 
-PACKAGES_MINIMAL="$PACKAGES_MINIMAL bind918 bind-tools"
+PACKAGES_MINIMAL="$PACKAGES_MINIMAL bind918 bind-tools dnsmasq"
 #PACKAGES_MINIMAL=`echo $PACKAGES_MINIMAL | sed 's/quagga/frr8/'`
 PACKAGES_COMMON=`echo $PACKAGES_COMMON | sed 's/lsof//'`
 PACKAGES="$PACKAGES_MINIMAL $PACKAGES_COMMON isc-dhcp44-server isc-dhcp44-client isc-dhcp44-relay \
-sylpheed xorp midori wireshark gnome-themes-extra fping dsniff py39-scapy xpdf"
+sylpheed firefox-esr apache24 apr db18 jansson xorp netsurf midori wireshark gnome-themes-extra sakura vte3 \
+fping dsniff py39-scapy gdk-pixbuf2 gsfonts xpdf openvpn easy-rsa net-snmp "
 #PACKAGES=`echo $PACKAGES | sed 's/scapy/py37-scapy/'`
-PACKAGES=`echo $PACKAGES | sed -e 's/scapy/py39-scapy/' -e 's/xorp//'`
+#PACKAGES=`echo $PACKAGES | sed -e 's/scapy/py39-scapy/' -e 's/xorp//'`
+PACKAGES=`echo $PACKAGES | sed 's/scapy/py39-scapy/'`
+PACKAGES=`echo $PACKAGES | sed 's/quagga/frr8/'`
 
 checkArgs $*
 
@@ -42,10 +45,15 @@ if [ $mini -eq 0 ]; then
 fi
 
 #configXorp
+mkdir $VROOT_MASTER/usr/local/etc/snmp
+mkdir $VROOT_MASTER/usr/local/etc/openvpn
 
-configQuagga
+#configQuagga
+configFrr
 
 wiresharkGUIfix
+
+configApache24
 
 cleanUnnecessary
 
