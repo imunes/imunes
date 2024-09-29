@@ -198,6 +198,11 @@ proc prepareVroot {} {
 
     set curdir [pwd]
     cd $ROOTDIR/$LIBDIR
-    catch {exec >@stdout sh scripts/prepare_vroot.sh}
+    catch {exec >@stdout 2>@stdout sh scripts/prepare_vroot.sh}
     cd $curdir
+}
+
+proc removeFromList { list_values element } {
+    set idx [lsearch $list_values $element]
+    return [lreplace $list_values $idx $idx]
 }
