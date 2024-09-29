@@ -5,15 +5,19 @@ IMUNES - an Integrated Multiprotocol Network Emulator / Simulator
 Overview
 ========
 
-IMUNES GUI is a simple Tcl/Tk based management console, allowing for
-specification and management of virtual network topologies. The emulation
+### Description
+IMUNES GUI is a simple Tcl/Tk based management console, allowing for 
+specification and management of virtual network topologies. The emulation 
 execution engine itself operates within the operating system kernel.
-
 
 System requirements
 ===================
 
     1) Operating system
+
+    ### System requirements (FreeBSD)
+    -----------------------
+    **Note: Do not use IMUNES with FreeBSD 14.0, as there is a serious bug with UnionFS. FreeBSD 14.1 fixes this issue.**
 
     IMUNES works on top of the FreeBSD 8 (or higher) kernel that is
     compiled with the VIMAGE option included. A sample kernel kernel
