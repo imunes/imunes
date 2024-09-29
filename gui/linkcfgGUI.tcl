@@ -44,6 +44,33 @@ proc linkConfigGUI { c link } {
     link.configGUI $c $link
 }
 
+#****f* linkcfgGUI.tcl/toggleDirectLink
+# NAME
+#   toggleDirectLink -- link configuration GUI
+# SYNOPSIS
+#   toggleDirectLink $c $link
+# FUNCTION
+#   Toggles link 'direct' option.
+# INPUTS
+#   * c - tk canvas
+#   * link - link id
+#****
+proc toggleDirectLink { c link } {
+    if {$link == ""} {
+	set link [lindex [$c gettags current] 1]
+    }
+#    if { [getLinkDirect $link] } {
+#	setLinkDirect $link 0
+#    } else {
+#	setLinkDirect $link 1
+    set new_value [expr [getLinkDirect $link] ^ 1]
+    setLinkDirect $link $new_value
+    set mirror_link [getLinkMirror $link]
+    if { $mirror_link != "" } {
+	setLinkDirect $mirror_link $new_value
+    }
+}
+
 #****f* linkcfgGUI.tcl/link.configGUI
 # NAME
 #   link.configGUI -- configuration GUI
