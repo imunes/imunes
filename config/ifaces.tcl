@@ -434,7 +434,7 @@ proc setIfcIPv4addrs { node_id iface_id addrs } {
 
     trigger_ifaceReconfig $node_id $iface_id
 
-    if { [isIfcLogical $node_id $iface_id] || [getNodeType $node_id] ni "router extnat" } {
+    if { [isIfcLogical $node_id $iface_id] || [getNodeType $node_id] ni "router nat64 extnat" } {
 	return
     }
 
@@ -597,7 +597,7 @@ proc setIfcIPv6addrs { node_id iface_id addrs } {
 
     trigger_ifaceReconfig $node_id $iface_id
 
-    if { [isIfcLogical $node_id $iface_id] || [getNodeType $node_id] ni "router extnat" } {
+    if { [isIfcLogical $node_id $iface_id] || [getNodeType $node_id] ni "router nat64 extnat" } {
 	return
     }
 
@@ -1164,6 +1164,140 @@ proc nodeUncfggenIfc { node_id iface_id } {
     }
     unsetRunning "${node_id}|${iface_id}_old_ipv6_addrs"
     #lappend cfg [getFlushIPv6IfcCmd $iface_name]
+
+    return $cfg
+}
+
+proc routerCfggenIfc { node_id iface_id } {
+    set ospf_enabled [getNodeProtocol $node_id "ospf"]
+    set ospf6_enabled [getNodeProtocol $node_id "ospf6"]
+
+    set cfg {}
+
+    set model [getNodeModel $node_id]
+    set iface_name [getIfcName $node_id $iface_id]
+    if { $iface_name == "lo0" } {
+	set model "static"
+    }
+
+    switch -exact -- $model {
+	"quagga" -
+	"frr" {
+	    set mac_addr [getIfcMACaddr $node_id $iface_id]
+	    if { $mac_addr != "" } {
+		lappend cfg [getMacIfcCmd $iface_name $mac_addr]
+	    }
+
+	    set mtu [getIfcMTU $node_id $iface_id]
+	    lappend cfg [getMtuIfcCmd $iface_name $mtu]
+
+	    if { [getIfcNatState $node_id $iface_id] == "on" } {
+		lappend cfg [getNatIfcCmd $iface_name]
+	    }
+
+	    lappend cfg "vtysh << __EOF__"
+	    lappend cfg "conf term"
+	    lappend cfg "interface $iface_name"
+
+	    set addrs [getIfcIPv4addrs $node_id $iface_id]
+	    setToRunning "${node_id}|${iface_id}_old_ipv4_addrs" $addrs
+	    foreach addr $addrs {
+		if { $addr != "" } {
+		    lappend cfg " ip address $addr"
+		}
+	    }
+
+	    if { $ospf_enabled } {
+		if { ! [isIfcLogical $node_id $iface_id] } {
+		    lappend cfg " ip ospf area 0.0.0.0"
+		}
+	    }
+
+	    set addrs [getIfcIPv6addrs $node_id $iface_id]
+	    setToRunning "${node_id}|${iface_id}_old_ipv6_addrs" $addrs
+	    foreach addr $addrs {
+		if { $addr != "" } {
+		    lappend cfg " ipv6 address $addr"
+		}
+	    }
+
+	    if { $model == "frr" && $ospf6_enabled } {
+		if { ! [isIfcLogical $node_id $iface_id] } {
+		    lappend cfg " ipv6 ospf6 area 0.0.0.0"
+		}
+	    }
+
+	    if { [getIfcOperState $node_id $iface_id] == "down" } {
+		lappend cfg " shutdown"
+	    } else {
+		lappend cfg " no shutdown"
+	    }
+
+	    lappend cfg "!"
+	    lappend cfg "__EOF__"
+	}
+	"static" {
+	    set cfg [concat $cfg [nodeCfggenIfc $node_id $iface_id]]
+	}
+    }
+
+    return $cfg
+}
+
+proc routerUncfggenIfc { node_id iface_id } {
+    set ospf_enabled [getNodeProtocol $node_id "ospf"]
+    set ospf6_enabled [getNodeProtocol $node_id "ospf6"]
+
+    set cfg {}
+
+    set model [getNodeModel $node_id]
+    set iface_name [getIfcName $node_id $iface_id]
+    if { $iface_name == "lo0" } {
+	set model "static"
+    }
+
+    switch -exact -- $model {
+	"quagga" -
+	"frr" {
+	    lappend cfg "vtysh << __EOF__"
+	    lappend cfg "conf term"
+	    lappend cfg "interface $iface_name"
+
+	    set addrs [getFromRunning "${node_id}|${iface_id}_old_ipv4_addrs"]
+	    foreach addr $addrs {
+		if { $addr != "" } {
+		    lappend cfg " no ip address $addr"
+		}
+	    }
+
+	    if { $ospf_enabled } {
+		if { ! [isIfcLogical $node_id $iface_id] } {
+		    lappend cfg " no ip ospf area 0.0.0.0"
+		}
+	    }
+
+	    set addrs [getFromRunning "${node_id}|${iface_id}_old_ipv6_addrs"]
+	    foreach addr $addrs {
+		if { $addr != "" } {
+		    lappend cfg " no ipv6 address $addr"
+		}
+	    }
+
+	    if { $model == "frr" && $ospf6_enabled } {
+		if { ! [isIfcLogical $node_id $iface_id] } {
+		    lappend cfg " no ipv6 ospf6 area 0.0.0.0"
+		}
+	    }
+
+	    lappend cfg " shutdown"
+
+	    lappend cfg "!"
+	    lappend cfg "__EOF__"
+	}
+	"static" {
+	    set cfg [concat $cfg [nodeUncfggenIfc $node_id $iface_id]]
+	}
+    }
 
     return $cfg
 }

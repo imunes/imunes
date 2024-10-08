@@ -102,8 +102,11 @@ proc $MODULE.configGUI { c node_id } {
 
     global wi
     global guielements treecolumns
+    global node_cfg
+
     set guielements {}
     set treecolumns {}
+    set node_cfg [cfgGet "nodes" $node_id]
 
     configGUI_createConfigPopupWin $c
     wm title $wi "extnat configuration"

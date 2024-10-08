@@ -696,7 +696,16 @@ proc getNodeName { node_id } {
 proc setNodeName { node_id name } {
     cfgSet "nodes" $node_id "name" $name
 
-    if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
+    set node_type [getNodeType $node_id]
+    if { $node_type == "pseudo" } {
+	return
+    }
+
+    if { [$node_type.virtlayer] == "NATIVE" } {
+	if { $node_type in "rj45 extnat" } {
+	    trigger_nodeReconfig $node_id
+	}
+
 	return
     }
 
@@ -1176,6 +1185,7 @@ proc getRouterInterfaceCfg { node_id } {
 }
 
 proc getRouterProtocolCfg { node_id protocol } {
+    setToRunning "${node_id}_old_$protocol" [getNodeProtocol $node_id $protocol]
     if { [getNodeProtocol $node_id $protocol] == 0 } {
 	return ""
     }
@@ -1263,32 +1273,134 @@ proc getRouterProtocolCfg { node_id protocol } {
     return $cfg
 }
 
-proc getRouterStaticRoutes4Cfg { node_id } {
+proc getRouterProtocolUnconfig { node_id protocol } {
+    if { [getFromRunning "${node_id}_old_$protocol"] == 0 } {
+	return ""
+    }
+
     set cfg {}
 
-    switch -exact -- [getNodeModel $node_id] {
+    set model [getNodeModel $node_id]
+    switch -exact -- $model {
 	"quagga" -
 	"frr" {
-	    set cfg [nodeCfggenRouteIPv4 $node_id 1]
+	    lappend cfg "vtysh << __EOF__"
+	    lappend cfg "conf term"
+
+	    set router_id [ip::intToString [expr 1 + [string trimleft $node_id "n"]]]
+	    switch -exact -- $protocol {
+		"rip" {
+		    lappend cfg "no router rip"
+		}
+		"ripng" {
+		    lappend cfg "no router ripng"
+		}
+		"ospf" {
+		    lappend cfg "no router ospf"
+		}
+		"ospf6" {
+		    lappend cfg "no router ospf6"
+
+		    if { $model == "quagga" } {
+			foreach iface [ifcList $node_id] {
+			    lappend cfg " no interface $iface area 0.0.0.0"
+			}
+		    }
+
+		    lappend cfg "!"
+		}
+		"bgp" {
+		    lappend cfg "no router bgp 1000"
+		}
+	    }
+
+	    lappend cfg "__EOF__"
 	}
 	"static" {
-	    set cfg [nodeCfggenRouteIPv4 $node_id]
+	    # nothing to return
+	}
+    }
+
+
+    return $cfg
+}
+
+proc routerRoutesCfggen { node_id } {
+    set cfg {}
+
+    set model [getNodeModel $node_id]
+    switch -exact -- $model {
+	"quagga" -
+	"frr" {
+	    lappend cfg "vtysh << __EOF__"
+	    lappend cfg "conf term"
+
+	    set cfg [concat $cfg [nodeCfggenStaticRoutes4 $node_id 1]]
+	    set cfg [concat $cfg [nodeCfggenStaticRoutes6 $node_id 1]]
+
+	    lappend cfg "!"
+	    lappend cfg "__EOF__"
+
+	    lappend cfg "vtysh << __EOF__"
+	    lappend cfg "conf term"
+
+	    set cfg [concat $cfg [nodeCfggenAutoRoutes4 $node_id 1]]
+	    set cfg [concat $cfg [nodeCfggenAutoRoutes6 $node_id 1]]
+
+	    lappend cfg "!"
+	    lappend cfg "__EOF__"
+	}
+	"static" {
+	    set cfg [concat $cfg [nodeCfggenStaticRoutes4 $node_id]]
+	    set cfg [concat $cfg [nodeCfggenStaticRoutes6 $node_id]]
+
+	    lappend cfg ""
+
+	    set cfg [concat $cfg [nodeCfggenAutoRoutes4 $node_id]]
+	    set cfg [concat $cfg [nodeCfggenAutoRoutes6 $node_id]]
+
+	    lappend cfg ""
 	}
     }
 
     return $cfg
 }
 
-proc getRouterStaticRoutes6Cfg { node_id } {
+proc routerRoutesUncfggen { node_id } {
     set cfg {}
 
-    switch -exact -- [getNodeModel $node_id] {
+    set model [getNodeModel $node_id]
+    switch -exact -- $model {
 	"quagga" -
 	"frr" {
-	    set cfg [nodeCfggenRouteIPv6 $node_id 1]
+	    lappend cfg "vtysh << __EOF__"
+	    lappend cfg "conf term"
+
+	    set cfg [concat $cfg [nodeUncfggenStaticRoutes4 $node_id 1]]
+	    set cfg [concat $cfg [nodeUncfggenStaticRoutes6 $node_id 1]]
+
+	    lappend cfg "!"
+	    lappend cfg "__EOF__"
+
+	    lappend cfg "vtysh << __EOF__"
+	    lappend cfg "conf term"
+
+	    set cfg [concat $cfg [nodeUncfggenAutoRoutes4 $node_id 1]]
+	    set cfg [concat $cfg [nodeUncfggenAutoRoutes6 $node_id 1]]
+
+	    lappend cfg "!"
+	    lappend cfg "__EOF__"
 	}
 	"static" {
-	    set cfg [nodeCfggenRouteIPv6 $node_id]
+	    set cfg [concat $cfg [nodeUncfggenStaticRoutes4 $node_id]]
+	    set cfg [concat $cfg [nodeUncfggenStaticRoutes6 $node_id]]
+
+	    lappend cfg ""
+
+	    set cfg [concat $cfg [nodeUncfggenAutoRoutes4 $node_id]]
+	    set cfg [concat $cfg [nodeUncfggenAutoRoutes6 $node_id]]
+
+	    lappend cfg ""
 	}
     }
 
@@ -1308,6 +1420,10 @@ proc getRouterStaticRoutes6Cfg { node_id } {
 #****
 proc setNodeType { node_id type } {
     cfgSet "nodes" $node_id "type" $type
+
+    if { $type == "pseudo" } {
+	return
+    }
 
     trigger_nodeRecreate $node_id
 }
@@ -1503,76 +1619,81 @@ proc setNodeDockerAttach { node_id state } {
     trigger_nodeRecreate $node_id
 }
 
-#****f* nodecfg.tcl/nodeCfggenRouteIPv4
+#****f* nodecfg.tcl/getNodeIPsec
 # NAME
-#   nodeCfggenRouteIPv4 -- generate ifconfig IPv4 configuration
+#   getNodeIPsec -- retreives IPsec configuration for selected node
 # SYNOPSIS
-#   nodeCfggenRouteIPv4 $node_id
+#   getNodeIPsec $node_id
 # FUNCTION
-#   Generate IPv4 route configuration.
+#   Retreives all IPsec connections for current node
 # INPUTS
-#   * node -- node to generate configuration for
-# RESULT
-#   * value -- route IPv4 configuration script
+#   node - node id
 #****
-proc nodeCfggenRouteIPv4 { node_id { vtysh 0 } } {
-    set cfg {}
-    foreach statrte [getStatIPv4routes $node_id] {
-	if { $vtysh } {
-	    lappend cfg "ip route $statrte"
-	} else {
-	    lappend cfg [getIPv4RouteCmd $statrte]
-	}
-    }
-
-    if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
-	foreach statrte [getDefaultIPv4routes $node_id] {
-	    if { $vtysh } {
-		lappend cfg "ip route $statrte"
-	    } else {
-		lappend cfg [getIPv4RouteCmd $statrte]
-	    }
-	}
-	setDefaultIPv4routes $node_id {}
-    }
-
-    return $cfg
+proc getNodeIPsec { node_id } {
+    return [cfgGet "nodes" $node_id "ipsec" "ipsec_configs"]
 }
 
-#****f* nodecfg.tcl/nodeCfggenRouteIPv6
+proc setNodeIPsec { node_id new_value } {
+    cfgSet "nodes" $node_id "ipsec" "ipsec_configs" $new_value
+}
+
+#****f* nodecfg.tcl/getNodeIPsecItem
 # NAME
-#   nodeCfggenRouteIPv6 -- generate ifconfig IPv6 configuration
+#   getNodeIPsecItem -- get node IPsec item
 # SYNOPSIS
-#   nodeCfggenRouteIPv6 $node_id
+#   getNodeIPsecItem $node_id $item
 # FUNCTION
-#   Generate IPv6 route configuration.
+#   Retreives an item from IPsec configuration of given node
 # INPUTS
-#   * node_id -- node to generate configuration for
-# RESULT
-#   * value -- route IPv6 configuration script
-#****
-proc nodeCfggenRouteIPv6 { node_id { vtysh 0 } } {
-    set cfg {}
-    foreach statrte [getStatIPv6routes $node_id] {
-	if { $vtysh } {
-	    lappend cfg "ipv6 route $statrte"
-	} else {
-	    lappend cfg [getIPv6RouteCmd $statrte]
-	}
-    }
+#   node - node id
+#   item - search item
+proc getNodeIPsecItem { node_id item } {
+    return [cfgGet "nodes" $node_id "ipsec" $item]
+}
 
-    if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
-	foreach statrte [getDefaultIPv6routes $node_id] {
-	    if { $vtysh } {
-		lappend cfg "ipv6 route $statrte"
-	    } else {
-		lappend cfg [getIPv6RouteCmd $statrte]
-	    }
-	}
-	setDefaultIPv6routes $node_id {}
-    }
+#****f* nodecfg.tcl/setNodeIPsecItem
+# NAME
+#   setNodeIPsecItem -- set node IPsec item
+# SYNOPSIS
+#   setNodeIPsecItem $node $item
+# FUNCTION
+#   Sets an item from IPsec configuration of given node
+# INPUTS
+#   node - node id
+#   item - search item
+proc setNodeIPsecItem { node_id item new_value } {
+    cfgSet "nodes" $node_id "ipsec" $item $new_value
 
-    return $cfg
+    # TODO: check services
+    trigger_nodeRecreate $node_id
+}
+
+proc setNodeIPsecConnection { node_id connection new_value } {
+    cfgSet "nodes" $node_id "ipsec" "ipsec_configs" $connection $new_value
+
+    # TODO: check services
+    trigger_nodeRecreate $node_id
+}
+
+proc delNodeIPsecConnection { node_id connection } {
+    cfgUnset "nodes" $node_id "ipsec" "ipsec_configs" $connection
+
+    if { $connection != "%default" } {
+	# TODO: check services
+	trigger_nodeRecreate $node_id
+    }
+}
+
+proc getNodeIPsecSetting { node_id connection setting } {
+    return [cfgGet "nodes" $node_id "ipsec" "ipsec_configs" $connection $setting]
+}
+
+proc setNodeIPsecSetting { node_id connection setting new_value } {
+    cfgSet "nodes" $node_id "ipsec" "ipsec_configs" $connection $setting $new_value
+}
+
+proc getNodeIPsecConnList { node_id } {
+    return [dict keys [cfgGet "nodes" $node_id "ipsec" "ipsec_configs"]]
 }
 
 #****f* nodecfg.tcl/getAllNodesType
@@ -1701,6 +1822,51 @@ proc transformNodes { nodes to_type } {
     }
 }
 
+proc getNodeFromHostname { hostname } {
+    foreach node_id [getFromRunning "node_list"] {
+	if { $hostname == [getNodeName $node_id] } {
+	    return $node_id
+	}
+    }
+
+    return ""
+}
+
+#****f* nodecfg.tcl/getLocalIpAddress
+# NAME
+#   getLocalIpAddress -- retreives local IP addresses for current node
+# SYNOPSIS
+#   getLocalIpAddress $node
+# FUNCTION
+#   Retreives all local addresses (IPv4 and IPv6) for current node
+# INPUTS
+#   node - node id
+#****
+proc getAllIpAddresses { node } {
+    set ifaces_list [ifcList $node]
+    foreach logifc [logIfcList $node] {
+	if { [string match "vlan*" $logifc]} {
+	    lappend ifaces_list $logifc
+	}
+    }
+
+    set ipv4_list ""
+    set ipv6_list ""
+    foreach item $ifaces_list {
+	set ifcIP [getIfcIPv4addr $node $item]
+	if { $ifcIP != "" } {
+	    lappend ipv4_list $ifcIP
+	}
+
+	set ifcIP [getIfcIPv6addr $node $item]
+	if { $ifcIP != "" } {
+	    lappend ipv6_list $ifcIP
+	}
+    }
+
+    return "\"$ipv4_list\" \"$ipv6_list\""
+}
+
 #****f* nodecfg.tcl/pseudo.netlayer
 # NAME
 #   pseudo.netlayer -- pseudo layer
@@ -1765,16 +1931,14 @@ proc nodeCfggenAutoRoutes4 { node_id { vtysh 0 } } {
 
     set default_routes4 [getDefaultIPv4routes $node_id]
     setToRunning "${node_id}_old_default_routes4" $default_routes4
-    #if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
-	foreach statrte $default_routes4 {
-	    if { $vtysh } {
-		lappend cfg "ip route $statrte"
-	    } else {
-		lappend cfg [getIPv4RouteCmd $statrte]
-	    }
+    foreach statrte $default_routes4 {
+	if { $vtysh } {
+	    lappend cfg "ip route $statrte"
+	} else {
+	    lappend cfg [getIPv4RouteCmd $statrte]
 	}
-	setDefaultIPv4routes $node_id {}
-    #}
+    }
+    setDefaultIPv4routes $node_id {}
 
     return $cfg
 }
@@ -1783,16 +1947,14 @@ proc nodeUncfggenAutoRoutes4 { node_id { vtysh 0 } } {
     set cfg {}
 
     set default_routes4 [getFromRunning "${node_id}_old_default_routes4"]
-    #if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
-	foreach statrte $default_routes4 {
-	    if { $vtysh } {
-		lappend cfg "ip route $statrte"
-	    } else {
-		lappend cfg [getRemoveIPv4RouteCmd $statrte]
-	    }
+    foreach statrte $default_routes4 {
+	if { $vtysh } {
+	    lappend cfg "no ip route $statrte"
+	} else {
+	    lappend cfg [getRemoveIPv4RouteCmd $statrte]
 	}
-	setDefaultIPv4routes $node_id {}
-    #}
+    }
+    setDefaultIPv4routes $node_id {}
     unsetRunning "${node_id}_old_default_routes4"
 
     return $cfg
@@ -1803,16 +1965,14 @@ proc nodeCfggenAutoRoutes6 { node_id { vtysh 0 } } {
 
     set default_routes6 [getDefaultIPv6routes $node_id]
     setToRunning "${node_id}_old_default_routes6" $default_routes6
-    #if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
-	foreach statrte $default_routes6 {
-	    if { $vtysh } {
-		lappend cfg "ipv6 route $statrte"
-	    } else {
-		lappend cfg [getIPv6RouteCmd $statrte]
-	    }
+    foreach statrte $default_routes6 {
+	if { $vtysh } {
+	    lappend cfg "ipv6 route $statrte"
+	} else {
+	    lappend cfg [getIPv6RouteCmd $statrte]
 	}
-	setDefaultIPv6routes $node_id {}
-    #}
+    }
+    setDefaultIPv6routes $node_id {}
 
     return $cfg
 }
@@ -1821,16 +1981,14 @@ proc nodeUncfggenAutoRoutes6 { node_id { vtysh 0 } } {
     set cfg {}
 
     set default_routes6 [getFromRunning "${node_id}_old_default_routes6"]
-    #if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
-	foreach statrte $default_routes6 {
-	    if { $vtysh } {
-		lappend cfg "ipv6 route $statrte"
-	    } else {
-		lappend cfg [getRemoveIPv6RouteCmd $statrte]
-	    }
+    foreach statrte $default_routes6 {
+	if { $vtysh } {
+	    lappend cfg "no ipv6 route $statrte"
+	} else {
+	    lappend cfg [getRemoveIPv6RouteCmd $statrte]
 	}
-	setDefaultIPv6routes $node_id {}
-    #}
+    }
+    setDefaultIPv6routes $node_id {}
     unsetRunning "${node_id}_old_default_routes6"
 
     return $cfg

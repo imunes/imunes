@@ -38,15 +38,11 @@
 #****
 
 set MODULE filter
-
 registerModule $MODULE
 
-proc $MODULE.prepareSystem {} {
-    catch { exec kldload ng_patmat }
-}
-
-proc $MODULE.confNewIfc { node_id iface_id } {
-}
+################################################################################
+########################### CONFIGURATION PROCEDURES ###########################
+################################################################################
 
 proc $MODULE.confNewNode { node_id } {
     global nodeNamingBase
@@ -54,8 +50,36 @@ proc $MODULE.confNewNode { node_id } {
     setNodeName $node_id [getNewNodeNameType filter $nodeNamingBase(filter)]
 }
 
-proc $MODULE.ifacePrefix { l r } {
-    return e
+proc $MODULE.confNewIfc { node_id iface } {
+}
+
+proc $MODULE.generateConfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateConfig { node_id } {
+}
+
+proc $MODULE.generateUnconfig { node_id } {
+}
+
+#****f* filter.tcl/filter.ifacePrefix
+# NAME
+#   filter.ifacePrefix -- interface name
+# SYNOPSIS
+#   filter.ifacePrefix
+# FUNCTION
+#   Returns filter interface name prefix.
+# RESULT
+#   * name -- name prefix string
+#****
+proc $MODULE.ifacePrefix {} {
+    return "e"
+}
+
+proc $MODULE.IPAddrRange {} {
 }
 
 #****f* filter.tcl/filter.netlayer
@@ -88,92 +112,10 @@ proc $MODULE.virtlayer {} {
     return NATIVE
 }
 
-#****f* filter.tcl/filter.nodeCreate
-# NAME
-#   filter.nodeCreate
-# SYNOPSIS
-#   filter.nodeCreate $eid $node_id
-# FUNCTION
-#   Procedure instantiate creates a new virtaul node
-#   for a given node in imunes.
-#   Procedure filter.nodeCreate cretaes a new virtual node
-#   with all the interfaces and CPU parameters as defined
-#   in imunes.
-# INPUTS
-#   * eid - experiment id
-#   * node_id - id of the node (type of the node is filter).
-#****
-proc $MODULE.nodeCreate { eid node_id } {
-    pipesExec "printf \"
-    mkpeer . patmat tmp tmp \n
-    name .:tmp $node_id
-    \" | jexec $eid ngctl -f -" "hold"
+proc $MODULE.bootcmd { node_id } {
 }
 
-#****f* filter.tcl/filter.nodeConfigure
-# NAME
-#   filter.nodeConfigure
-# SYNOPSIS
-#   filter.nodeConfigure $eid $node_id
-# FUNCTION
-#   Starts a new filter. The node can be started if it is instantiated.
-#   Simulates the booting proces of a filter. by calling l3node.nodeConfigure
-#   procedure.
-# INPUTS
-#   * eid - experiment id
-#   * node_id - id of the node (type of the node is filter.
-#****
-proc $MODULE.nodeConfigure { eid node_id } {
-    foreach iface_id [ifcList $node_id] {
-	set ngcfgreq "shc $iface_id"
-	foreach rule_num [lsort -dictionary [ifcFilterRuleList $node_id $iface_id]] {
-	    set rule [getFilterIfcRuleAsString $node_id $iface_id $rule_num]
-	    set ngcfgreq "${ngcfgreq} ${rule}"
-	}
-
-	pipesExec "jexec $eid ngctl msg $node_id: $ngcfgreq" "hold"
-    }
-}
-
-#****f* filter.tcl/filter.nodeShutdown
-# NAME
-#   filter.nodeShutdown
-# SYNOPSIS
-#   filter.nodeShutdown $eid $node_id
-# FUNCTION
-#   Shutdowns a filter node.
-#   Simulates the shutdown proces of a node, kills all the services and
-#   processes.
-# INPUTS
-#   * eid - experiment id
-#   * node_id - id of the node (type of the node is filter.
-#****
-proc $MODULE.nodeShutdown { eid node_id } {
-    foreach iface_id [ifcList $node_id] {
-	set ngcfgreq "shc $iface_id"
-
-	pipesExec "jexec $eid ngctl msg $node_id: $ngcfgreq" "hold"
-    }
-}
-
-proc $MODULE.destroyIfcs { eid node_id ifaces } {
-    l2node.destroyIfcs $eid $node_id $ifaces
-}
-
-#****f* filter.tcl/filter.nodeDestroy
-# NAME
-#   filter.nodeDestroy
-# SYNOPSIS
-#   filter.nodeDestroy $eid $node_id
-# FUNCTION
-#   Destroys a filter node.
-#   It issues the shutdown command to ngctl.
-# INPUTS
-#   * eid - experiment id
-#   * node_id - id of the node (type of the node is filter.
-#****
-proc $MODULE.nodeDestroy { eid node_id } {
-    pipesExec "jexec $eid ngctl msg $node_id: shutdown" "hold"
+proc $MODULE.shellcmds {} {
 }
 
 #****f* filter.tcl/filter.nghook
@@ -194,6 +136,141 @@ proc $MODULE.nodeDestroy { eid node_id } {
 #   * nghook - the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
-proc $MODULE.nghook { eid node_id iface_id } {
-    return [list $node_id $iface_id]
+proc $MODULE.nghook { eid node_id iface } {
+    return [list $node_id [getIfcName $node_id $iface]]
+}
+
+################################################################################
+############################ INSTANTIATE PROCEDURES ############################
+################################################################################
+
+proc $MODULE.prepareSystem {} {
+    catch { exec kldload ng_patmat }
+}
+
+#****f* filter.tcl/filter.nodeCreate
+# NAME
+#   filter.nodeCreate
+# SYNOPSIS
+#   filter.nodeCreate $eid $node_id
+# FUNCTION
+#   Procedure instantiate creates a new virtaul node
+#   for a given node in imunes.
+#   Procedure filter.nodeCreate creates a new virtual node
+#   with all the interfaces and CPU parameters as defined
+#   in imunes.
+# INPUTS
+#   * eid - experiment id
+#   * node_id - id of the node
+#****
+proc $MODULE.nodeCreate { eid node_id } {
+    pipesExec "printf \"
+    mkpeer . patmat tmp tmp \n
+    name .:tmp $node_id
+    \" | jexec $eid ngctl -f -" "hold"
+}
+
+proc $MODULE.nodeNamespaceSetup { eid node_id } {
+}
+
+proc $MODULE.nodeInitConfigure { eid node_id } {
+}
+
+proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
+}
+
+proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
+}
+
+#****f* filter.tcl/filter.nodeIfacesConfigure
+# NAME
+#   filter.nodeIfacesConfigure -- configure filter node interfaces
+# SYNOPSIS
+#   filter.nodeIfacesConfigure $eid $node_id $ifaces
+# FUNCTION
+#   Configure interfaces on a filter. Set MAC, MTU, queue parameters, assign the IP
+#   addresses to the interfaces, etc. This procedure can be called if the node
+#   is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
+}
+
+#****f* filter.tcl/filter.nodeConfigure
+# NAME
+#   filter.nodeConfigure
+# SYNOPSIS
+#   filter.nodeConfigure $eid $node_id
+# FUNCTION
+#   Starts a new filter. The node can be started if it is instantiated.
+#   Simulates the booting proces of a filter. by calling l3node.nodeConfigure
+#   procedure.
+# INPUTS
+#   * eid - experiment id
+#   * node_id - id of the node
+#****
+proc $MODULE.nodeConfigure { eid node_id } {
+    foreach iface_id [ifcList $node_id] {
+	set ngcfgreq "shc [getIfcName $node_id $iface_id]"
+	foreach rule_num [lsort -dictionary [ifcFilterRuleList $node_id $iface_id]] {
+	    set rule [getFilterIfcRuleAsString $node_id $iface_id $rule_num]
+	    set ngcfgreq "${ngcfgreq} ${rule}"
+	}
+
+	pipesExec "jexec $eid ngctl msg $node_id: $ngcfgreq" "hold"
+    }
+}
+
+################################################################################
+############################# TERMINATE PROCEDURES #############################
+################################################################################
+
+proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
+}
+
+proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
+    destroyNodeIfaces $eid $node_id $ifaces
+}
+
+proc $MODULE.nodeUnconfigure { eid node_id } {
+}
+
+#****f* filter.tcl/filter.nodeShutdown
+# NAME
+#   filter.nodeShutdown
+# SYNOPSIS
+#   filter.nodeShutdown $eid $node_id
+# FUNCTION
+#   Shutdowns a filter node.
+#   Simulates the shutdown proces of a node, kills all the services and
+#   processes.
+# INPUTS
+#   * eid - experiment id
+#   * node_id - id of the node
+#****
+proc $MODULE.nodeShutdown { eid node_id } {
+    foreach iface [ifcList $node_id] {
+	set ngcfgreq "shc $iface"
+
+	pipesExec "jexec $eid ngctl msg $node_id: $ngcfgreq" "hold"
+    }
+}
+
+#****f* filter.tcl/filter.nodeDestroy
+# NAME
+#   filter.nodeDestroy
+# SYNOPSIS
+#   filter.nodeDestroy $eid $node_id
+# FUNCTION
+#   Destroys a filter node.
+#   It issues the shutdown command to ngctl.
+# INPUTS
+#   * eid - experiment id
+#   * node_id - id of the node
+#****
+proc $MODULE.nodeDestroy { eid node_id } {
+    pipesExec "jexec $eid ngctl msg $node_id: shutdown" "hold"
 }

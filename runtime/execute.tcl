@@ -354,7 +354,7 @@ set ipsecSecrets ""
 proc nodeIpsecInit { node } {
     global ipsecConf ipsecSecrets isOSfreebsd
 
-    if { [getNodeIPsec $node] == "" } {
+    if { ! [getFromRunning "${node}_running"] || [getNodeIPsec $node] == "" } {
 	return
     }
 

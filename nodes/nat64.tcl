@@ -27,79 +27,161 @@
 #
 
 set MODULE nat64
-
 registerModule $MODULE
+
+################################################################################
+########################### CONFIGURATION PROCEDURES ###########################
+################################################################################
+
+proc $MODULE.confNewNode { node_id } {
+    global nodeNamingBase
+
+    router.confNewNode $node_id
+
+    setNodeName $node_id [getNewNodeNameType nat64 $nodeNamingBase(nat64)]
+    setTaygaIPv4DynPool $node_id "192.168.64.0/24"
+    setTaygaIPv6Prefix $node_id "2001::/96"
+}
 
 proc $MODULE.confNewIfc { node_id iface_id } {
     router.confNewIfc $node_id $iface_id
 }
 
-proc $MODULE.confNewNode { node_id } {
-    global ripEnable ripngEnable ospfEnable ospf6Enable
-    global rdconfig
-    global nodeNamingBase
-
-    lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable
-
-    setNodeName $node_id [getNewNodeNameType nat64 $nodeNamingBase(nat64)]
-
-    setNodeProtocol $node_id "rip" $ripEnable
-    setNodeProtocol $node_id "ripng" $ripngEnable
-    setNodeProtocol $node_id "ospf" $ospfEnable
-    setNodeProtocol $node_id "ospf6" $ospf6Enable
-
-    setAutoDefaultRoutesStatus $node_id "enabled"
-
-    set logiface_id [newLogIface $node_id "lo"]
-    setIfcIPv4addrs $node_id $logiface_id "127.0.0.1/8"
-    setIfcIPv6addrs $node_id $logiface_id "::1/128"
-
-    setTaygaIPv4DynPool $node_id "192.168.64.0/24"
-    setTaygaIPv6Prefix $node_id "2001::/96"
+proc $MODULE.generateConfigIfaces { node_id ifaces } {
+    return [router.generateConfigIfaces $node_id $ifaces]
 }
 
-proc $MODULE.ifacePrefix { l r } {
-    return [l3IfcName $l $r]
-}
-
-proc $MODULE.IPAddrRange {} {
-    return 20
-}
-
-proc $MODULE.netlayer {} {
-    return NETWORK
-}
-
-proc $MODULE.virtlayer {} {
-    return VIRTUALIZED
+proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
+    return [router.generateUnconfigIfaces $node_id $ifaces]
 }
 
 proc $MODULE.generateConfig { node_id } {
     set cfg [router.generateConfig $node_id]
 
-    set eid [getFromRunning "eid"]
-    global nat64ifc_$eid.$node_id
+    lappend cfg ""
 
-    if { [info exists nat64ifc_$eid.$node_id] == 0 } {
-	set nat64ifc_$eid.$node_id "tun0"
+    set tayga4pool [getTaygaIPv4DynPool $node_id]
+    setToRunning "${node_id}_old_tayga_ipv4_pool" $tayga4pool
+    set tayga6prefix [getTaygaIPv6Prefix $node_id]
+    setToRunning "${node_id}_old_tayga_ipv6_prefix" $tayga6prefix
+
+    set tun_dev "tun64"
+    if { $tayga4pool != "" } {
+	lappend cfg "vtysh << __EOF__"
+	lappend cfg "conf term"
+
+	lappend cfg "!"
+	lappend cfg "ip route $tayga4pool $tun_dev"
+
+	lappend cfg "!"
+	lappend cfg "__EOF__"
     }
 
-    set tun [set nat64ifc_$eid.$node_id]
-    if { $tun != "" } {
-	set tayga4pool [getTaygaIPv4DynPool $node_id]
-	set tayga6prefix [getTaygaIPv6Prefix $node_id]
+    if { $tayga6prefix != "" } {
+	lappend cfg "vtysh << __EOF__"
+	lappend cfg "conf term"
 
-	if { $tayga4pool != "" } {
-	    lappend cfg "!"
-	    lappend cfg "ip route $tayga4pool $tun"
-	}
-	if { $tayga6prefix != "" } {
-	    lappend cfg "ipv6 route $tayga6prefix $tun"
-	    lappend cfg "!"
-	}
+	lappend cfg "ipv6 route $tayga6prefix $tun_dev"
+
+	lappend cfg "!"
+	lappend cfg "__EOF__"
     }
+
+    set tayga4addr [lindex [split [getTaygaIPv4DynPool $node_id] "/"] 0]
+    set tayga4pool [getTaygaIPv4DynPool $node_id]
+    set tayga6prefix [getTaygaIPv6Prefix $node_id]
+
+    set conf_file "/usr/local/etc/tayga.conf"
+    set datadir "/var/db/tayga"
+
+    lappend cfg "mkdir -p $datadir"
+    lappend cfg "cat << __EOF__ > $conf_file"
+    lappend cfg "tun-device\t$tun_dev"
+    lappend cfg " ipv4-addr\t$tayga4addr"
+    lappend cfg " dynamic-pool\t$tayga4pool"
+    lappend cfg " prefix\t\t$tayga6prefix"
+    lappend cfg " data-dir\t$datadir"
+    lappend cfg ""
+    foreach map [getTaygaMappings $node_id] {
+	lappend cfg " map\t\t$map"
+    }
+    lappend cfg "__EOF__"
+
+    lappend cfg ""
+
+    lappend cfg "tayga -c $conf_file --mktun"
+    set cfg "[concat $cfg [configureTunIface $tayga4pool $tayga6prefix]]"
+
+    lappend cfg "tayga -c $conf_file"
 
     return $cfg
+}
+
+proc $MODULE.generateUnconfig { node_id } {
+    set tayga4pool [getFromRunning "${node_id}_old_tayga_ipv4_pool"]
+    set tayga6prefix [getFromRunning "${node_id}_old_tayga_ipv6_prefix"]
+
+    set cfg ""
+
+    set tun_dev "tun64"
+    if { $tayga4pool != "" } {
+	lappend cfg "vtysh << __EOF__"
+	lappend cfg "conf term"
+
+	lappend cfg "!"
+	lappend cfg "no ip route $tayga4pool $tun_dev"
+
+	lappend cfg "!"
+	lappend cfg "__EOF__"
+    }
+
+    if { $tayga6prefix != "" } {
+	lappend cfg "vtysh << __EOF__"
+	lappend cfg "conf term"
+
+	lappend cfg "no ipv6 route $tayga6prefix $tun_dev"
+
+	lappend cfg "!"
+	lappend cfg "__EOF__"
+    }
+
+    set conf_file "/usr/local/etc/tayga.conf"
+    set datadir "/var/db/tayga"
+
+    lappend cfg "killall tayga >/dev/null 2>&1"
+    lappend cfg "[getStateIfcCmd "tun64" "down"]"
+    lappend cfg "tayga -c $conf_file --rmtun"
+    lappend cfg "rm -rf $datadir"
+
+    set cfg [concat $cfg [router.generateUnconfig $node_id]]
+
+    return $cfg
+}
+
+#****f* nat64.tcl/nat64.ifacePrefix
+# NAME
+#   nat64.ifacePrefix -- interface name
+# SYNOPSIS
+#   nat64.ifacePrefix
+# FUNCTION
+#   Returns nat64 interface name prefix.
+# RESULT
+#   * name -- name prefix string
+#****
+proc $MODULE.ifacePrefix {} {
+    return [router.ifacePrefix]
+}
+
+proc $MODULE.IPAddrRange {} {
+    return [router.IPAddrRange]
+}
+
+proc $MODULE.netlayer {} {
+    return [router.netlayer]
+}
+
+proc $MODULE.virtlayer {} {
+    return [router.virtlayer]
 }
 
 proc $MODULE.bootcmd { node_id } {
@@ -110,77 +192,102 @@ proc $MODULE.shellcmds {} {
     return [router.shellcmds]
 }
 
+proc $MODULE.nghook { eid node_id iface_id } {
+    return [router.nghook $eid $node_id $iface_id]
+}
+
+################################################################################
+############################ INSTANTIATE PROCEDURES ############################
+################################################################################
+
+#****f* nat64.tcl/nat64.prepareSystem
+# NAME
+#   nat64.prepareSystem -- prepare system
+# SYNOPSIS
+#   nat64.prepareSystem
+# FUNCTION
+#   Does nothing
+#****
+proc $MODULE.prepareSystem {} {
+    router.prepareSystem
+}
+
 proc $MODULE.nodeCreate { eid node_id } {
     router.nodeCreate $eid $node_id
 }
 
 proc $MODULE.nodeNamespaceSetup { eid node_id } {
-    l3node.nodeNamespaceSetup $eid $node_id
+    router.nodeNamespaceSetup $eid $node_id
 }
 
-proc $MODULE.nodeInitConfigure { eid node_id } {
-    l3node.nodeInitConfigure $eid $node_id
-
-    enableIPforwarding $eid $node_id
+proc $MODULE.nodeInitConfigure { eid node } {
+    router.nodeInitConfigure $eid $node
 }
 
 proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
-    l3node.nodePhysIfacesCreate $eid $node_id $ifaces
+    router.nodePhysIfacesCreate $eid $node_id $ifaces
+}
+
+proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
+    router.nodeLogIfacesCreate $eid $node_id $ifaces
+}
+
+#****f* exec.tcl/nat64.nodeIfacesConfigure
+# NAME
+#   nat64.nodeIfacesConfigure -- configure nat64 node interfaces
+# SYNOPSIS
+#   nat64.nodeIfacesConfigure $eid $node_id $ifaces
+# FUNCTION
+#   Configure interfaces on a nat64. Set MAC, MTU, queue parameters, assign the IP
+#   addresses to the interfaces, etc. This procedure can be called if the node
+#   is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
+    router.nodeIfacesConfigure $eid $node_id $ifaces
 }
 
 proc $MODULE.nodeConfigure { eid node_id } {
-    global nat64ifc_$eid.$node_id
-
-    set tun [createStartTunIfc $eid $node_id]
-    set nat64ifc_$eid.$node_id $tun
-
     router.nodeConfigure $eid $node_id
+}
 
-    set datadir "/var/db/tayga"
+################################################################################
+############################# TERMINATE PROCEDURES #############################
+################################################################################
 
-    set tayga4addr [lindex [split [getTaygaIPv4DynPool $node_id] "/"] 0]
-    set tayga4pool [getTaygaIPv4DynPool $node_id]
-    set tayga6prefix [getTaygaIPv6Prefix $node_id]
+#****f* exec.tcl/nat64.nodeIfacesUnconfigure
+# NAME
+#   nat64.nodeIfacesUnconfigure -- unconfigure nat64 node interfaces
+# SYNOPSIS
+#   nat64.nodeIfacesUnconfigure $eid $node_id $ifaces
+# FUNCTION
+#   Unconfigure interfaces on a nat64 to a default state. Set name to iface_id,
+#   flush IP addresses to the interfaces, etc. This procedure can be called if
+#   the node is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
+    router.nodeIfacesUnconfigure $eid $node_id $ifaces
+}
 
-    set fd "tun-device\t$tun\n"
-    set fd "$fd ipv4-addr\t$tayga4addr\n"
-    set fd "$fd dynamic-pool\t$tayga4pool\n"
-    set fd "$fd prefix\t\t$tayga6prefix\n"
-    set fd "$fd data-dir\t$datadir\n"
-    set fd "$fd\n"
-    foreach map [getTaygaMappings $node_id] {
-	set fd "$fd map\t\t$map\n"
-    }
+proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
+    router.nodeIfacesDestroy $eid $node_id $ifaces
+}
 
-    prepareTaygaConf $eid $node_id $fd $datadir
-
-    # XXX
-    # Even though this routes should be added here, we add them in the
-    # router.nodeConfigure procedure which invokes nat64.generateConfig where we define
-    # them with:
-    # lappend cfg "ip route $tayga4pool $tun"
-    # lappend cfg "ipv6 route $tayga6prefix $tun"
-    # This is done in order for frr to redistribute these routes.
-    # FreeBSD:
-    # exec jexec $eid.$node_id route -n add -inet $tayga4pool -interface $tun
-    # exec jexec $eid.$node_id route -n add -inet6 $tayga6prefix -interface $tun
-    # Linux:
-    # exec docker exec $eid.$node_id ip route add $tayga4pool dev $tun
-    # exec docker exec $eid.$node_id ip route add $tayga6prefix dev $tun
-
-    execCmdNode $node_id tayga
+proc $MODULE.nodeUnconfigure { eid node_id } {
+    router.nodeUnconfigure $eid $node_id
 }
 
 proc $MODULE.nodeShutdown { eid node_id } {
     router.nodeShutdown $eid $node_id
-    taygaShutdown $eid $node_id
 }
 
 proc $MODULE.nodeDestroy { eid node_id } {
-    taygaDestroy $eid $node_id
     router.nodeDestroy $eid $node_id
-}
-
-proc $MODULE.nghook { eid node_id iface_id } {
-    return [router.nghook $eid $node_id $iface_id]
 }

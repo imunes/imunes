@@ -38,19 +38,24 @@
 #****
 
 set MODULE extnat
-
 registerModule $MODULE
 
-#****f* extnat.tcl/extnat.prepareSystem
+################################################################################
+########################### CONFIGURATION PROCEDURES ###########################
+################################################################################
+
+#****f* extnat.tcl/extnat.confNewNode
 # NAME
-#   extnat.prepareSystem -- prepare system
+#   extnat.confNewNode -- configure new node
 # SYNOPSIS
-#   extnat.prepareSystem
+#   extnat.confNewNode $node_id
 # FUNCTION
-#   Loads ipfilter into the kernel.
+#   Configures new node with the specified id.
+# INPUTS
+#   * node_id -- node id
 #****
-proc $MODULE.prepareSystem {} {
-    catch { exec kldload ipfilter }
+proc $MODULE.confNewNode { node_id } {
+    setNodeName $node_id "UNASSIGNED"
 }
 
 #****f* extnat.tcl/extnat.confNewIfc
@@ -75,32 +80,30 @@ proc $MODULE.confNewIfc { node_id iface_id } {
     autoMACaddr $node_id $iface_id
 }
 
-#****f* extnat.tcl/extnat.confNewNode
-# NAME
-#   extnat.confNewNode -- configure new node
-# SYNOPSIS
-#   extnat.confNewNode $node_id
-# FUNCTION
-#   Configures new node with the specified id.
-# INPUTS
-#   * node_id -- node id
-#****
-proc $MODULE.confNewNode { node_id } {
-    setNodeName $node_id "UNASSIGNED"
+proc $MODULE.generateConfigIfaces { node_id ifaces } {
 }
 
-#****f* extnat.tcl/extnat.ifacePrefix
+proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateConfig { node_id } {
+}
+
+proc $MODULE.generateUnconfig { node_id } {
+}
+
+#****f* ext.tcl/ext.ifacePrefix
 # NAME
 #   extnat.ifacePrefix -- interface name prefix
 # SYNOPSIS
-#   extnat.ifacePrefix
+#   ext.ifacePrefix
 # FUNCTION
-#   Returns pc interface name prefix.
+#   Returns ext interface name prefix.
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifacePrefix { l r } {
-    return [l3IfcName $l $r]
+proc $MODULE.ifacePrefix {} {
+    return "ext"
 }
 
 #****f* extnat.tcl/extnat.IPAddrRange
@@ -109,9 +112,9 @@ proc $MODULE.ifacePrefix { l r } {
 # SYNOPSIS
 #   extnat.IPAddrRange
 # FUNCTION
-#   Returns pc IP address range
+#   Returns extnat IP address range
 # RESULT
-#   * range -- pc IP address range
+#   * range -- extnat IP address range
 #****
 proc $MODULE.IPAddrRange {} {
     return 20
@@ -123,7 +126,7 @@ proc $MODULE.IPAddrRange {} {
 # SYNOPSIS
 #   set layer [extnat.netlayer]
 # FUNCTION
-#   Returns the layer on which the pc communicates, i.e. returns NETWORK.
+#   Returns the layer on which the extnat communicates, i.e. returns NETWORK.
 # RESULT
 #   * layer -- set to NETWORK
 #****
@@ -137,12 +140,15 @@ proc $MODULE.netlayer {} {
 # SYNOPSIS
 #   set layer [extnat.virtlayer]
 # FUNCTION
-#   Returns the layer on which the pc is instantiated i.e. returns NATIVE.
+#   Returns the layer on which the extnat is instantiated i.e. returns NATIVE.
 # RESULT
 #   * layer -- set to NATIVE
 #****
 proc $MODULE.virtlayer {} {
     return NATIVE
+}
+
+proc $MODULE.bootcmd { node_id } {
 }
 
 #****f* extnat.tcl/extnat.shellcmds
@@ -154,90 +160,9 @@ proc $MODULE.virtlayer {} {
 #   Procedure shellcmds returns the shells that can be opened
 #   as a default shell for the system.
 # RESULT
-#   * shells -- default shells for the pc node
+#   * shells -- default shells for the extnat node
 #****
 proc $MODULE.shellcmds {} {
-}
-
-#****f* extnat.tcl/extnat.nodeCreate
-# NAME
-#   extnat.nodeCreate -- instantiate
-# SYNOPSIS
-#   extnat.nodeCreate $eid $node_id
-# FUNCTION
-#   Procedure instantiate creates a new virtaul node
-#   for a given node in imunes.
-#   Procedure extnat.nodeCreate cretaes a new virtual node with
-#   all the interfaces and CPU parameters as defined in imunes.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id (type of the node is pc)
-#****
-proc $MODULE.nodeCreate { eid node_id } {}
-
-proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
-    l2node.nodePhysIfacesCreate $eid $node_id $ifaces
-}
-
-#****f* extnat.tcl/extnat.nodeConfigure
-# NAME
-#   extnat.nodeConfigure -- start
-# SYNOPSIS
-#   extnat.nodeConfigure $eid $node_id
-# FUNCTION
-#   Starts a new extnat. The node can be started if it is instantiated.
-#   Simulates the booting proces of a pc, by calling l3node.nodeConfigure procedure.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id (type of the node is pc)
-#****
-proc $MODULE.nodeConfigure { eid node_id } {
-    set iface_id [lindex [ifcList $node_id] 0]
-    if { "$iface_id" != "" } {
-	startExternalConnection $eid $node_id
-	setupExtNat $eid $node_id $iface_id
-    }
-}
-
-#****f* extnat.tcl/extnat.nodeShutdown
-# NAME
-#   extnat.nodeShutdown -- shutdown
-# SYNOPSIS
-#   extnat.nodeShutdown $eid $node_id
-# FUNCTION
-#   Shutdowns a extnat. Simulates the shutdown proces of a pc,
-#   by calling the l3node.nodeShutdown procedure.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id (type of the node is pc)
-#****
-proc $MODULE.nodeShutdown { eid node_id } {
-    set iface_id [lindex [ifcList $node_id] 0]
-    if { "$iface_id" != "" } {
-	killExtProcess "wireshark.*[getNodeName $node_id].*\\($eid\\)"
-	killExtProcess "xterm -name imunes-terminal -T Capturing $eid-$node_id -e tcpdump -ni $eid-$node_id"
-	stopExternalConnection $eid $node_id
-	unsetupExtNat $eid $node_id $iface_id
-    }
-}
-
-proc $MODULE.destroyIfcs { eid node_id ifaces } {
-    l2node.destroyIfcs $eid $node_id $ifaces
-}
-
-#****f* extnat.tcl/extnat.nodeDestroy
-# NAME
-#   extnat.nodeDestroy -- destroy
-# SYNOPSIS
-#   extnat.nodeDestroy $eid $node_id
-# FUNCTION
-#   Destroys a extnat. Destroys all the interfaces of the pc
-#   and the vimage itself by calling l3node.nodeDestroy procedure.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id (type of the node is pc)
-#****
-proc $MODULE.nodeDestroy { eid node_id } {
 }
 
 #****f* extnat.tcl/extnat.nghook
@@ -258,7 +183,7 @@ proc $MODULE.nodeDestroy { eid node_id } {
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node_id iface_id } {
-    return [l3node.nghook $eid $node_id $iface_id]
+    return [list $node_id-[getIfcName $node_id $iface_id] ether]
 }
 
 #****f* extnat.tcl/extnat.maxLinks
@@ -273,4 +198,189 @@ proc $MODULE.nghook { eid node_id iface_id } {
 #****
 proc $MODULE.maxLinks {} {
     return 1
+}
+
+################################################################################
+############################ INSTANTIATE PROCEDURES ############################
+################################################################################
+
+#****f* extnat.tcl/extnat.prepareSystem
+# NAME
+#   extnat.prepareSystem -- prepare system
+# SYNOPSIS
+#   extnat.prepareSystem
+# FUNCTION
+#   Loads ipfilter into the kernel.
+#****
+proc $MODULE.prepareSystem {} {
+    catch { exec kldload ipfilter }
+}
+
+#****f* extnat.tcl/extnat.nodeCreate
+# NAME
+#   extnat.nodeCreate -- instantiate
+# SYNOPSIS
+#   extnat.nodeCreate $eid $node_id
+# FUNCTION
+#   Procedure instantiate creates a new virtaul node
+#   for a given node in imunes.
+#   Procedure extnat.nodeCreate creates a new virtual node with
+#   all the interfaces and CPU parameters as defined in imunes.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeCreate { eid node_id } {
+}
+
+#****f* ext.tcl/ext.nodeNamespaceSetup
+# NAME
+#   ext.nodeNamespaceSetup -- ext node nodeNamespaceSetup
+# SYNOPSIS
+#   ext.nodeNamespaceSetup $eid $node_id
+# FUNCTION
+#   Linux only. Attaches the existing Docker netns to a new one.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeNamespaceSetup { eid node_id } {
+}
+
+#****f* ext.tcl/ext.nodeInitConfigure
+# NAME
+#   ext.nodeInitConfigure -- ext node nodeInitConfigure
+# SYNOPSIS
+#   ext.nodeInitConfigure $eid $node_id
+# FUNCTION
+#   Runs initial L3 configuration, such as creating logical interfaces and
+#   configuring sysctls.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeInitConfigure { eid node_id } {
+    #configureICMPoptions $node_id
+}
+
+proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
+    nodePhysIfacesCreate $node_id $ifaces
+}
+
+proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
+    #nodeLogIfacesCreate $node_id $ifaces
+}
+
+#****f* ext.tcl/extnat.nodeIfacesConfigure
+# NAME
+#   extnat.nodeIfacesConfigure -- configure extnat node interfaces
+# SYNOPSIS
+#   extnat.nodeIfacesConfigure $eid $node_id $ifaces
+# FUNCTION
+#   Configure interfaces on a extnat. Set MAC, MTU, queue parameters, assign the IP
+#   addresses to the interfaces, etc. This procedure can be called if the node
+#   is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
+    #startNodeIfaces $node_id $ifaces
+    set iface_id [lindex [ifcList $node_id] 0]
+    if { "$iface_id" != "" } {
+	configureExternalConnection $eid $node_id
+    }
+}
+
+#****f* extnat.tcl/extnat.nodeConfigure
+# NAME
+#   extnat.nodeConfigure -- start
+# SYNOPSIS
+#   extnat.nodeConfigure $eid $node_id
+# FUNCTION
+#   Starts a new extnat. The node can be started if it is instantiated.
+#   Sets up the NAT for the given interface.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeConfigure { eid node_id } {
+    set iface_id [lindex [ifcList $node_id] 0]
+    if { "$iface_id" != "" } {
+	setupExtNat $eid $node_id $iface_id
+    }
+}
+
+################################################################################
+############################# TERMINATE PROCEDURES #############################
+################################################################################
+
+#****f* extnat.tcl/extnat.nodeIfacesUnconfigure
+# NAME
+#   extnat.nodeIfacesUnconfigure -- unconfigure extnat node interfaces
+# SYNOPSIS
+#   extnat.nodeIfacesUnconfigure $eid $node_id $ifaces
+# FUNCTION
+#   Unconfigure interfaces on a extnat to a default state. Set name to iface_id,
+#   flush IP addresses to the interfaces, etc. This procedure can be called if
+#   the node is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
+    #unconfigNodeIfaces $eid $node_id $ifaces
+    set iface_id [lindex [ifcList $node_id] 0]
+    if { "$iface_id" != "" } {
+	unconfigureExternalConnection $eid $node_id
+    }
+}
+
+proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
+    destroyNodeIfaces $eid $node_id $ifaces
+}
+
+proc $MODULE.nodeUnconfigure { eid node_id } {
+    set iface_id [lindex [ifcList $node_id] 0]
+    if { "$iface_id" != "" } {
+	unsetupExtNat $eid $node_id $iface_id
+    }
+}
+
+#****f* extnat.tcl/extnat.nodeShutdown
+# NAME
+#   extnat.nodeShutdown -- shutdown
+# SYNOPSIS
+#   extnat.nodeShutdown $eid $node_id
+# FUNCTION
+#   Shutdowns an extnat node.
+#   It kills all external packet sniffers and sets the interface down.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeShutdown { eid node_id } {
+    set iface_id [lindex [ifcList $node_id] 0]
+    if { "$iface_id" != "" } {
+	killExtProcess "wireshark.*[getNodeName $node_id].*\\($eid\\)"
+	killExtProcess "xterm -name imunes-terminal -T Capturing $eid-$node_id -e tcpdump -ni $eid-$node_id"
+	stopExternalConnection $eid $node_id
+    }
+}
+
+#****f* extnat.tcl/extnat.nodeDestroy
+# NAME
+#   extnat.nodeDestroy -- destroy
+# SYNOPSIS
+#   extnat.nodeDestroy $eid $node_id
+# FUNCTION
+#   Destroys an extnat node.
+#   Does nothing.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeDestroy { eid node_id } {
 }

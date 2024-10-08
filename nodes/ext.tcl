@@ -28,18 +28,37 @@
 
 #****h* imunes/ext.tcl
 # NAME
-#  ext.tcl -- defines pc specific procedures
+#  ext.tcl -- defines ext specific procedures
 # FUNCTION
-#  This module is used to define all the pc specific procedures.
+#  This module is used to define all the ext specific procedures.
 # NOTES
-#  Procedures in this module start with the keyword pc and
+#  Procedures in this module start with the keyword ext and
 #  end with function specific part that is the same for all the node
 #  types that work on the same layer.
 #****
 
 set MODULE ext
-
 registerModule $MODULE
+
+################################################################################
+########################### CONFIGURATION PROCEDURES ###########################
+################################################################################
+
+#****f* ext.tcl/ext.confNewNode
+# NAME
+#   ext.confNewNode -- configure new node
+# SYNOPSIS
+#   ext.confNewNode $node_id
+# FUNCTION
+#   Configures new node with the specified id.
+# INPUTS
+#   * node_id -- node id
+#****
+proc $MODULE.confNewNode { node_id } {
+    global nodeNamingBase
+
+    setNodeName $node_id [getNewNodeNameType ext $nodeNamingBase(ext)]
+}
 
 #****f* ext.tcl/ext.confNewIfc
 # NAME
@@ -63,20 +82,16 @@ proc $MODULE.confNewIfc { node_id iface_id } {
     autoMACaddr $node_id $iface_id
 }
 
-#****f* ext.tcl/ext.confNewNode
-# NAME
-#   ext.confNewNode -- configure new node
-# SYNOPSIS
-#   ext.confNewNode $node_id
-# FUNCTION
-#   Configures new node with the specified id.
-# INPUTS
-#   * node_id -- node id
-#****
-proc $MODULE.confNewNode { node_id } {
-    global nodeNamingBase
+proc $MODULE.generateConfigIfaces { node_id ifaces } {
+}
 
-    setNodeName $node_id [getNewNodeNameType ext $nodeNamingBase(ext)]
+proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateConfig { node_id } {
+}
+
+proc $MODULE.generateUnconfig { node_id } {
 }
 
 #****f* ext.tcl/ext.ifacePrefix
@@ -85,12 +100,12 @@ proc $MODULE.confNewNode { node_id } {
 # SYNOPSIS
 #   ext.ifacePrefix
 # FUNCTION
-#   Returns pc interface name prefix.
+#   Returns ext interface name prefix.
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifacePrefix { l r } {
-    return [l3IfcName $l $r]
+proc $MODULE.ifacePrefix {} {
+    return "ext"
 }
 
 #****f* ext.tcl/ext.IPAddrRange
@@ -99,9 +114,9 @@ proc $MODULE.ifacePrefix { l r } {
 # SYNOPSIS
 #   ext.IPAddrRange
 # FUNCTION
-#   Returns pc IP address range
+#   Returns ext IP address range
 # RESULT
-#   * range -- pc IP address range
+#   * range -- ext IP address range
 #****
 proc $MODULE.IPAddrRange {} {
     return 20
@@ -113,7 +128,7 @@ proc $MODULE.IPAddrRange {} {
 # SYNOPSIS
 #   set layer [ext.netlayer]
 # FUNCTION
-#   Returns the layer on which the pc communicates, i.e. returns NETWORK.
+#   Returns the layer on which the ext communicates, i.e. returns NETWORK.
 # RESULT
 #   * layer -- set to NETWORK
 #****
@@ -127,12 +142,15 @@ proc $MODULE.netlayer {} {
 # SYNOPSIS
 #   set layer [ext.virtlayer]
 # FUNCTION
-#   Returns the layer on which the pc is instantiated i.e. returns NATIVE.
+#   Returns the layer on which the ext is instantiated i.e. returns NATIVE.
 # RESULT
 #   * layer -- set to NATIVE
 #****
 proc $MODULE.virtlayer {} {
     return NATIVE
+}
+
+proc $MODULE.bootcmd { node_id } {
 }
 
 #****f* ext.tcl/ext.shellcmds
@@ -144,88 +162,9 @@ proc $MODULE.virtlayer {} {
 #   Procedure shellcmds returns the shells that can be opened
 #   as a default shell for the system.
 # RESULT
-#   * shells -- default shells for the pc node
+#   * shells -- default shells for the ext node
 #****
 proc $MODULE.shellcmds {} {
-}
-
-#****f* ext.tcl/ext.nodeCreate
-# NAME
-#   ext.nodeCreate -- instantiate
-# SYNOPSIS
-#   ext.nodeCreate $eid $node_id
-# FUNCTION
-#   Procedure instantiate creates a new virtaul node
-#   for a given node in imunes.
-#   Procedure ext.nodeCreate cretaes a new virtual node with
-#   all the interfaces and CPU parameters as defined in imunes.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id (type of the node is pc)
-#****
-proc $MODULE.nodeCreate { eid node_id } {}
-
-proc $MODULE.nodePhysIfacesCreate { eid node_id ifcs } {
-    l2node.nodePhysIfacesCreate $eid $node_id $ifcs
-}
-
-#****f* ext.tcl/ext.nodeConfigure
-# NAME
-#   ext.nodeConfigure -- start
-# SYNOPSIS
-#   ext.nodeConfigure $eid $node_id
-# FUNCTION
-#   Starts a new ext. The node can be started if it is instantiated.
-#   Simulates the booting proces of a pc, by calling l3node.nodeConfigure procedure.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id (type of the node is pc)
-#****
-proc $MODULE.nodeConfigure { eid node_id } {
-    set iface_id [lindex [ifcList $node_id] 0]
-    if { "$iface_id" != "" } {
-	startExternalConnection $eid $node_id
-    }
-}
-
-#****f* ext.tcl/ext.nodeShutdown
-# NAME
-#   ext.nodeShutdown -- shutdown
-# SYNOPSIS
-#   ext.nodeShutdown $eid $node_id
-# FUNCTION
-#   Shutdowns a ext. Simulates the shutdown proces of a pc,
-#   by calling the l3node.nodeShutdown procedure.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id (type of the node is pc)
-#****
-proc $MODULE.nodeShutdown { eid node_id } {
-    set iface_id [lindex [ifcList $node_id] 0]
-    if { "$iface_id" != "" } {
-	killExtProcess "wireshark.*[getNodeName $node_id].*\\($eid\\)"
-	killExtProcess "xterm -name imunes-terminal -T Capturing $eid-$node_id -e tcpdump -ni $eid-$node_id"
-	stopExternalConnection $eid $node_id
-    }
-}
-
-proc $MODULE.destroyIfcs { eid node_id ifcs } {
-    l2node.destroyIfcs $eid $node_id $ifcs
-}
-
-#****f* ext.tcl/ext.nodeDestroy
-# NAME
-#   ext.nodeDestroy -- destroy
-# SYNOPSIS
-#   ext.nodeDestroy $eid $node_id
-# FUNCTION
-#   Destroys a ext. Destroys all the interfaces of the pc
-#   and the vimage itself by calling l3node.nodeDestroy procedure.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id (type of the node is pc)
-#****
-proc $MODULE.nodeDestroy { eid node_id } {
 }
 
 #****f* ext.tcl/ext.nghook
@@ -246,7 +185,7 @@ proc $MODULE.nodeDestroy { eid node_id } {
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node_id iface_id } {
-    return [l3node.nghook $eid $node_id $iface_id]
+    return [list $node_id-[getIfcName $node_id $iface_id] ether]
 }
 
 #****f* ext.tcl/ext.maxLinks
@@ -261,4 +200,182 @@ proc $MODULE.nghook { eid node_id iface_id } {
 #****
 proc $MODULE.maxLinks {} {
     return 1
+}
+
+################################################################################
+############################ INSTANTIATE PROCEDURES ############################
+################################################################################
+
+#****f* ext.tcl/ext.prepareSystem
+# NAME
+#   ext.prepareSystem -- prepare system
+# SYNOPSIS
+#   ext.prepareSystem
+# FUNCTION
+#   Does nothing
+#****
+proc $MODULE.prepareSystem {} {
+    # nothing to do
+}
+
+#****f* ext.tcl/ext.nodeCreate
+# NAME
+#   ext.nodeCreate -- instantiate
+# SYNOPSIS
+#   ext.nodeCreate $eid $node_id
+# FUNCTION
+#   Procedure instantiate creates a new virtaul node
+#   for a given node in imunes.
+#   Procedure ext.nodeCreate creates a new virtual node with
+#   all the interfaces and CPU parameters as defined in imunes.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeCreate { eid node_id } {
+}
+
+#****f* ext.tcl/ext.nodeNamespaceSetup
+# NAME
+#   ext.nodeNamespaceSetup -- ext node nodeNamespaceSetup
+# SYNOPSIS
+#   ext.nodeNamespaceSetup $eid $node_id
+# FUNCTION
+#   Linux only. Attaches the existing Docker netns to a new one.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeNamespaceSetup { eid node_id } {
+}
+
+#****f* ext.tcl/ext.nodeInitConfigure
+# NAME
+#   ext.nodeInitConfigure -- ext node nodeInitConfigure
+# SYNOPSIS
+#   ext.nodeInitConfigure $eid $node_id
+# FUNCTION
+#   Runs initial L3 configuration, such as creating logical interfaces and
+#   configuring sysctls.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeInitConfigure { eid node_id } {
+    #configureICMPoptions $node_id
+}
+
+proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
+    nodePhysIfacesCreate $node_id $ifaces
+}
+
+proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
+    #nodeLogIfacesCreate $node_id $ifaces
+}
+
+#****f* ext.tcl/pc.nodeIfacesConfigure
+# NAME
+#   pc.nodeIfacesConfigure -- configure pc node interfaces
+# SYNOPSIS
+#   pc.nodeIfacesConfigure $eid $node_id $ifaces
+# FUNCTION
+#   Configure interfaces on a pc. Set MAC, MTU, queue parameters, assign the IP
+#   addresses to the interfaces, etc. This procedure can be called if the node
+#   is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
+    #startNodeIfaces $node_id $ifaces
+    set iface_id [lindex [ifcList $node_id] 0]
+    if { "$iface_id" != "" } {
+	configureExternalConnection $eid $node_id
+    }
+}
+
+#****f* ext.tcl/ext.nodeConfigure
+# NAME
+#   ext.nodeConfigure -- start
+# SYNOPSIS
+#   ext.nodeConfigure $eid $node_id
+# FUNCTION
+#   Starts a new ext. The node can be started if it is instantiated.
+#   Simulates the booting proces of a ext, by calling l3node.nodeConfigure procedure.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeConfigure { eid node_id } {
+}
+
+################################################################################
+############################# TERMINATE PROCEDURES #############################
+################################################################################
+
+#****f* pc.tcl/pc.nodeIfacesUnconfigure
+# NAME
+#   pc.nodeIfacesUnconfigure -- unconfigure pc node interfaces
+# SYNOPSIS
+#   pc.nodeIfacesUnconfigure $eid $node_id $ifaces
+# FUNCTION
+#   Unconfigure interfaces on a pc to a default state. Set name to iface_id,
+#   flush IP addresses to the interfaces, etc. This procedure can be called if
+#   the node is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
+    #unconfigNodeIfaces $eid $node_id $ifaces
+    set iface_id [lindex [ifcList $node_id] 0]
+    if { "$iface_id" != "" } {
+	unconfigureExternalConnection $eid $node_id
+    }
+}
+
+proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
+    destroyNodeIfaces $eid $node_id $ifaces
+}
+
+proc $MODULE.nodeUnconfigure { eid node_id } {
+    #unconfigNode $eid $node_id
+}
+
+#****f* ext.tcl/ext.nodeShutdown
+# NAME
+#   ext.nodeShutdown -- shutdown
+# SYNOPSIS
+#   ext.nodeShutdown $eid $node_id
+# FUNCTION
+#   Shutdowns an ext node.
+#   It kills all external packet sniffers and sets the interface down.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeShutdown { eid node_id } {
+    set iface_id [lindex [ifcList $node_id] 0]
+    if { "$iface_id" != "" } {
+	killExtProcess "wireshark.*[getNodeName $node_id].*\\($eid\\)"
+	killExtProcess "xterm -name imunes-terminal -T Capturing $eid-$node_id -e tcpdump -ni $eid-$node_id"
+	stopExternalConnection $eid $node_id
+    }
+}
+
+#****f* ext.tcl/ext.nodeDestroy
+# NAME
+#   ext.nodeDestroy -- destroy
+# SYNOPSIS
+#   ext.nodeDestroy $eid $node_id
+# FUNCTION
+#   Destroys an ext node.
+#   Does nothing, as it is not created.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeDestroy { eid node_id } {
 }

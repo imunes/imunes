@@ -125,7 +125,145 @@ proc $MODULE.virtlayer {} {
 #   * node_id -- node id (type of the node is rj45)
 #****
 proc $MODULE.nodeCreate { eid node_id } {
-    captureExtIfc $eid $node_id
+    setToRunning "${node_id}_running" true
+}
+
+#****f* pc.tcl/pc.nodeNamespaceSetup
+# NAME
+#   pc.nodeNamespaceSetup -- pc node nodeNamespaceSetup
+# SYNOPSIS
+#   pc.nodeNamespaceSetup $eid $node_id
+# FUNCTION
+#   Linux only. Attaches the existing Docker netns to a new one.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeNamespaceSetup { eid node_id } {
+}
+
+#****f* pc.tcl/pc.nodeInitConfigure
+# NAME
+#   pc.nodeInitConfigure -- pc node nodeInitConfigure
+# SYNOPSIS
+#   pc.nodeInitConfigure $eid $node_id
+# FUNCTION
+#   Runs initial L3 configuration, such as creating logical interfaces and
+#   configuring sysctls.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeInitConfigure { eid node_id } {
+}
+
+proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
+    foreach iface_id $ifaces {
+	set link_id [getIfcLink $node_id $iface_id]
+	if { $link_id != "" && [getLinkDirect $link_id] } {
+	    # do direct link stuff
+	    captureExtIfc $eid $node_id $iface_id
+	} else {
+	    captureExtIfc $eid $node_id $iface_id
+	}
+
+	setToRunning "${node_id}|${iface_id}_running" true
+    }
+}
+
+proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
+}
+
+#****f* pc.tcl/pc.nodeIfacesConfigure
+# NAME
+#   pc.nodeIfacesConfigure -- configure pc node interfaces
+# SYNOPSIS
+#   pc.nodeIfacesConfigure $eid $node_id $ifaces
+# FUNCTION
+#   Configure interfaces on a pc. Set MAC, MTU, queue parameters, assign the IP
+#   addresses to the interfaces, etc. This procedure can be called if the node
+#   is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
+}
+
+#****f* pc.tcl/pc.nodeConfigure
+# NAME
+#   pc.nodeConfigure -- configure pc node
+# SYNOPSIS
+#   pc.nodeConfigure $eid $node_id
+# FUNCTION
+#   Starts a new pc. Simulates the booting proces of a node, starts all the
+#   services, etc.
+#   This procedure can be called if it is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeConfigure { eid node_id } {
+}
+
+################################################################################
+############################# TERMINATE PROCEDURES #############################
+################################################################################
+
+#****f* pc.tcl/pc.nodeIfacesUnconfigure
+# NAME
+#   pc.nodeIfacesUnconfigure -- unconfigure pc node interfaces
+# SYNOPSIS
+#   pc.nodeIfacesUnconfigure $eid $node_id $ifaces
+# FUNCTION
+#   Unconfigure interfaces on a pc to a default state. Set name to iface_id,
+#   flush IP addresses to the interfaces, etc. This procedure can be called if
+#   the node is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
+}
+
+proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
+    if { $ifaces == "*" } {
+	set ifaces [ifcList $node_id]
+    }
+
+    foreach iface_id $ifaces {
+	set link_id [getIfcLink $node_id $iface_id]
+	if { $link_id != "" && [getLinkDirect $link_id] } {
+	    # do direct link stuff
+	    releaseExtIfc $eid $node_id $iface_id
+	} else {
+	    releaseExtIfc $eid $node_id $iface_id
+	}
+
+	setToRunning "${node_id}|${iface_id}_running" false
+    }
+}
+
+proc $MODULE.nodeUnconfigure { eid node_id } {
+}
+
+#****f* pc.tcl/pc.nodeShutdown
+# NAME
+#   pc.nodeShutdown -- layer 3 node nodeShutdown
+# SYNOPSIS
+#   pc.nodeShutdown $eid $node_id
+# FUNCTION
+#   Shutdowns a pc node.
+#   Simulates the shutdown proces of a node, kills all the services and
+#   processes.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeShutdown { eid node_id } {
 }
 
 #****f* rj45.tcl/rj45.nodeDestroy

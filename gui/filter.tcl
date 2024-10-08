@@ -83,11 +83,17 @@ proc $MODULE.notebookDimensions { wi } {
 proc $MODULE.configGUI { c node_id } {
     global wi
     global filterguielements filtertreecolumns curnode
+    global node_cfg node_existing_mac node_existing_ipv4 node_existing_ipv6
+
+    set node_cfg [cfgGet "nodes" $node_id]
+    set node_existing_mac [getFromRunning "mac_used_list"]
+    set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
+    set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
 
     set curnode $node_id
     set filterguielements {}
 
-    if { [ifcList $node_id] == "" } {
+    if { [_ifcList $node_cfg] == "" } {
 	tk_dialog .dialog1 "IMUNES warning" \
 	    "This node has no interfaces." \
 	    info 0 Dismiss
@@ -97,9 +103,10 @@ proc $MODULE.configGUI { c node_id } {
 
     configGUI_createConfigPopupWin $c
     wm title $wi "filter configuration"
+
     configGUI_nodeName $wi $node_id "Node name:"
 
-    set tabs [configGUI_addNotebookFilter $wi $node_id [lsort [ifcList $node_id]]]
+    set tabs [configGUI_addNotebookFilter $wi $node_id [lsort [_ifcList $node_cfg]]]
 
     set filtertreecolumns {"Action Action" "Pattern Pattern" "Mask Mask" \
 	"Offset Offset" "ActionData ActionData"}
@@ -107,6 +114,7 @@ proc $MODULE.configGUI { c node_id } {
 	configGUI_addTreeFilter $tab $node_id
     }
 
+    configGUI_nodeRestart $wi $node_id
     configGUI_buttonsACFilterNode $wi $node_id
 }
 

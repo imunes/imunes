@@ -6071,6 +6071,8 @@ proc configGUI_addNotebookPackgen { wi node_id } {
 }
 
 proc configGUI_packetRate { wi node_id } {
+    global node_cfg
+
     set wi $wi.panwin.f1
 
     ttk::frame $wi.packetRate
@@ -6080,7 +6082,7 @@ proc configGUI_packetRate { wi node_id } {
 	-validatecommand { checkIntRange %P 1 1000000 } \
 	-invalidcommand "focusAndFlash %W"
 
-    $wi.packetRate.box insert 0 [getPackgenPacketRate $node_id]
+    $wi.packetRate.box insert 0 [_getPackgenPacketRate $node_cfg]
 
     grid $wi.packetRate.label -in $wi.packetRate -row 0 -column 0
     grid $wi.packetRate.box -in $wi.packetRate -row 0 -column 1
@@ -6088,13 +6090,14 @@ proc configGUI_packetRate { wi node_id } {
 }
 
 proc configGUI_packetRateApply {} {
-    global curnode
+    global curnode node_cfg
+
     set wi .popup.nbook.nfConfiguration.panwin.f1
 
     set newPacketRate [$wi.packetRate.box get]
-    set oldPacketRate [getPackgenPacketRate $curnode]
+    set oldPacketRate [_getPackgenPacketRate $node_cfg]
     if { $newPacketRate != $oldPacketRate } {
-	setPackgenPacketRate $curnode $newPacketRate
+	set node_cfg [_setPackgenPacketRate $node_cfg $newPacketRate]
     }
 }
 
@@ -6197,38 +6200,66 @@ proc configGUI_buttonsACPackgenNode { wi node_id } {
     ttk::frame $wi.bottom
     ttk::frame $wi.bottom.buttons -borderwidth 6
     ttk::button $wi.bottom.buttons.apply -text "Apply" -command \
-        {
-	    global changed
-
-	    configGUI_packetRateApply
-	    set sel [configGUI_packetConfigApply 0 0]
-	    if { $changed == 1 } {
-		configGUI_refreshPacketsTree
-		if { $sel != "" } {
-		    global curnode
-
-		    set wi .popup.nbook.nfConfiguration
-		    $wi.panwin.f1.tree focus $sel
-		    $wi.panwin.f1.tree selection set $sel
-
-		    configGUI_showPacketInfo $wi.panwin.f2 0 $curnode $sel
-		}
-		set changed 0
-	    }
-	}
+        "configGUI_applyPackgenNode ; set badentry -1"
     ttk::button $wi.bottom.buttons.applyclose -text "Apply and Close" -command \
-        "configGUI_packetRateApply; configGUI_packetConfigApply 0 0;set badentry -1;destroy $wi"
+        "configGUI_applyPackgenNode ; set badentry -1 ; destroy $wi"
     ttk::button $wi.bottom.buttons.cancel -text "Cancel" -command \
-        "set badentry -1; destroy $wi"
+        "cancelNodeUpdate $node_id ; set badentry -1; destroy $wi"
     pack $wi.bottom.buttons.apply $wi.bottom.buttons.applyclose \
         $wi.bottom.buttons.cancel -side left -padx 2
     pack $wi.bottom.buttons -pady 2 -expand 1
     pack $wi.bottom -fill both -side bottom
-    bind $wi <Key-Escape> "set badentry -1; destroy $wi"
+
+    bind $wi <Key-Escape> "cancelNodeUpdate $node_id ; set badentry -1; destroy $wi"
+}
+
+proc configGUI_applyPackgenNode { } {
+    global apply curnode changed node_cfg
+
+    configGUI_nodeNameApply .popup $curnode
+
+    global node_cfg
+
+    configGUI_packetRateApply
+    set sel [configGUI_packetConfigApply 0 0]
+    if { $changed == 1 } {
+	configGUI_refreshPacketsTree
+	if { $sel != "" } {
+	    set wi .popup.nbook.nfConfiguration
+
+	    $wi.panwin.f1.tree focus $sel
+	    $wi.panwin.f1.tree selection set $sel
+
+	    configGUI_showPacketInfo $wi.panwin.f2 0 $curnode $sel
+	}
+	set changed 0
+    }
+
+    global node_existing_mac node_existing_ipv4 node_existing_ipv6
+
+    updateNode $curnode "*" $node_cfg
+    undeployCfg
+    deployCfg
+
+    if { $node_existing_mac != [getFromRunning "mac_used_list"] } {
+	setToRunning "mac_used_list" $node_existing_mac
+    }
+
+    if { $node_existing_ipv4 != [getFromRunning "ipv4_used_list"] } {
+	setToRunning "ipv4_used_list" $node_existing_ipv4
+    }
+
+    if { $node_existing_ipv6 != [getFromRunning "ipv6_used_list"] } {
+	setToRunning "ipv6_used_list" $node_existing_ipv6
+    }
+
+    set node_cfg [cfgGet "nodes" $curnode]
+
+    redrawAll
 }
 
 proc configGUI_addTreePackgen { wi node_id } {
-    global packgentreecolumns cancel
+    global packgentreecolumns cancel node_cfg
 
     #
     #cancel - indicates if the user has clicked on Cancel in the popup window about
@@ -6265,12 +6296,12 @@ proc configGUI_addTreePackgen { wi node_id } {
 
     #Creating new items
 
-    set all_packets [packgenPackets $node_id]
+    set all_packets [_packgenPackets $node_cfg]
     set sorted [lsort -integer [dict keys $all_packets]]
     foreach packet_id $sorted {
 	$wi.panwin.f1.tree insert {} end -id $packet_id -text "$packet_id" -tags $packet_id
 	foreach column $packgentreecolumns {
-	    $wi.panwin.f1.tree set $packet_id [lindex $column 0] [getPackgenPacket[lindex $column 0] $node_id $packet_id]
+	    $wi.panwin.f1.tree set $packet_id [lindex $column 0] [_getPackgenPacket[lindex $column 0] $node_cfg $packet_id]
 	}
     }
 
@@ -6311,7 +6342,7 @@ proc configGUI_addTreePackgen { wi node_id } {
 }
 
 proc configGUI_refreshPacketsTree {} {
-    global packgentreecolumns curnode
+    global packgentreecolumns curnode node_cfg
 
     set node_id $curnode
     set tab [.popup.nbook tab current -text]
@@ -6319,11 +6350,11 @@ proc configGUI_refreshPacketsTree {} {
     set wi .popup.nbook.nf$tab
     $wi.panwin.f1.tree delete [$wi.panwin.f1.tree children {}]
 
-    set sorted [lsort -integer [dict keys [packgenPackets $node_id]]]
+    set sorted [lsort -integer [dict keys [_packgenPackets $node_cfg]]]
     foreach packet_id $sorted {
 	$wi.panwin.f1.tree insert {} end -id $packet_id -text "$packet_id" -tags $packet_id
 	foreach column $packgentreecolumns {
-	    $wi.panwin.f1.tree set $packet_id [lindex $column 0] [getPackgenPacket[lindex $column 0] $node_id $packet_id]
+	    $wi.panwin.f1.tree set $packet_id [lindex $column 0] [_getPackgenPacket[lindex $column 0] $node_cfg $packet_id]
 	}
     }
 
@@ -6351,7 +6382,7 @@ proc configGUI_refreshPacketsTree {} {
 
 proc configGUI_showPacketInfo { wi phase node_id pac } {
     global packgenguielements
-    global changed apply cancel badentry
+    global changed apply cancel badentry node_cfg
 
     #
     #shownruleframe - frame that is currently shown below the list of interfaces
@@ -6361,10 +6392,11 @@ proc configGUI_showPacketInfo { wi phase node_id pac } {
     if { $i != -1 } {
 	set shownpacframe [lreplace $shownpacframe $i $i]
     }
+
     #
     #shownrule - interface whose parameters are shown in shownruleframe
     #
-    set shownpac [string trim [lindex [split $shownpacframe .] end] if]
+    set shownpac [string trim [lindex [split $shownpacframe .] end] "if"]
 
     #if there is already some frame shown below the list of interfaces and
     #parameters shown in that frame are not parameters of selected interface
@@ -6396,8 +6428,7 @@ proc configGUI_showPacketInfo { wi phase node_id pac } {
 
 	#creating popup window with warning about unsaved changes
 	if { $changed == 1 && $apply == 0 } {
-	    # TODO: fix this (new popup for these types of elements)
- 	    configGUI_saveChangesPopup $wi $node_id $shownpac
+	    configGUI_saveChangesPackgenPopup $wi $node_id $shownpac
 	    if { $cancel == 0 } {
 		[string trimright $wi .f2].f1.tree selection set $rule
 	    }
@@ -6426,7 +6457,7 @@ proc configGUI_showPacketInfo { wi phase node_id pac } {
 
     #if user didn't select Cancel in the popup about saving changes on previously selected interface
     if { $cancel == 0 } {
-	set type [getNodeType $node_id]
+	set type [_getNodeType $node_cfg]
         #creating new frame below the list of interfaces and adding modules with
 	#parameters of selected interface
 	if { $pac != "" && $pac != $shownpac } {
@@ -6436,37 +6467,22 @@ proc configGUI_showPacketInfo { wi phase node_id pac } {
     }
 }
 
-proc configGUI_savePackgenChangesPopup { wi node_id pac } {
+proc configGUI_saveChangesPackgenPopup { wi node_id pac } {
     global packgenguielements packgentreecolumns apply cancel changed
 
-    set answer [tk_messageBox -message "Do you want to save changes of packet $pac?" \
-        -icon question -type yesnocancel \
-        -detail "Select \"Yes\" to save changes before choosing another rule."]
+    #save changes
+    set apply 1
+    set cancel 0
+    foreach packgenguielement $guielements {
+	if { [llength $guielement] == 2 } {
+	    [lindex $guielement 0]\Apply $wi $node_id [lrange $guielement 1 end]
+	}
+    }
 
-    switch -- $answer {
-        #save changes
-	yes {
-	    set apply 1
-	    set cancel 0
-	    foreach packgenguielement $guielements {
-		if { [llength $guielement] == 2 } {
-		    [lindex $guielement 0]\Apply $wi $node_id [lrange $guielement 1 end]
-		}
-	    }
-	    #nbook - da li prozor sadrzi notebook
-	    if { $changed == 1 } {
-                if { $packgentreecolumns != "" } {
-		    configGUI_refreshPacketsTree
-		}
-            }
-	}
-        #discard changes
-	no {
-	    set cancel 0
-	}
-        #get back on editing that interface
-        cancel {
-	    set cancel 1
+    # nbook - does it contain a notebook element
+    if { $changed == 1 } {
+	if { $packgentreecolumns != "" } {
+	    configGUI_refreshPacketsTree
 	}
     }
 }
@@ -6485,9 +6501,10 @@ proc configGUI_packetMainFrame { wi node_id pac } {
 
 proc configGUI_packetConfig { wi node_id pac } {
     global packgenguielements
-    global curnode
-
     lappend packgenguielements "configGUI_packetConfig $pac"
+
+    global node_cfg
+
     ttk::frame $wi.if$pac.rconfig -borderwidth 2
     ttk::label $wi.if$pac.rconfig.rntxt -text "Packet ID: " -anchor w
     ttk::entry $wi.if$pac.rconfig.rnval -width 4 \
@@ -6498,7 +6515,7 @@ proc configGUI_packetConfig { wi node_id pac } {
     ttk::label $wi.if$pac.rconfig.ptxt -text "Packet data: " -anchor w
     text $wi.if$pac.rconfig.pval -width 48 -height 8 -font "Courier 10"
 
-    set pdata [getPackgenPacketData $node_id $pac]
+    set pdata [_getPackgenPacketData $node_cfg $pac]
     set text ""
     for { set byte [string range $pdata 0 1]; set i 0 } { $byte != "" } {} {
 	incr i
@@ -6526,7 +6543,7 @@ proc configGUI_packetConfig { wi node_id pac } {
 }
 
 proc configGUI_packetConfigApply { add dup } {
-    global changed apply curnode
+    global changed apply node_cfg
 
     set pacNumChanged 0
 
@@ -6535,8 +6552,7 @@ proc configGUI_packetConfigApply { add dup } {
 
     if { $pac == "" } {
 	if { $add != 0 && $dup == 0 } {
-	    set new_pac ""
-	    addPackgenPacket $curnode 10 $new_pac
+	    set node_cfg [_addPackgenPacket $node_cfg 10 ""]
 	    set changed 1
 
 	    return 10
@@ -6604,7 +6620,7 @@ proc configGUI_packetConfigApply { add dup } {
 	set pacNumChanged 1
     } else {
 	if { $add != 0 } {
-	    set sorted [lsort -integer [dict keys [packgenPackets $curnode]]]
+	    set sorted [lsort -integer [dict keys [_packgenPackets $node_cfg]]]
 	    set pacnum [expr {[lindex $sorted end] + 10}]
 	    if { $dup == 0 } {
 		set pdata ""
@@ -6617,7 +6633,7 @@ proc configGUI_packetConfigApply { add dup } {
     }
 
     if { $pacNumChanged == 1 } {
-	if { $pacnum in [removeFromList [dict keys [packgenPackets $curnode]] $old_pacnum] } {
+	if { $pacnum in [removeFromList [dict keys [_packgenPackets $node_cfg]] $old_pacnum] } {
 	    tk_dialog .dialog1 "IMUNES warning" \
 		"Packet ID already exists." \
 	    info 0 Dismiss
@@ -6626,29 +6642,29 @@ proc configGUI_packetConfigApply { add dup } {
 	}
     }
 
-    set old_packet [getPackgenPacket $curnode $old_pacnum]
+    set old_packet [_getPackgenPacket $node_cfg $old_pacnum]
     set new_packet $pdata
 
     if { $add || $dup || $pacNumChanged || $new_packet != $old_packet } {
 	set changed 1
 	if { $add == 0 } {
-	    removePackgenPacket $curnode $old_pacnum
+	    set node_cfg [_removePackgenPacket $node_cfg $old_pacnum]
 	}
-	addPackgenPacket $curnode $pacnum $new_packet
+	set node_cfg [_addPackgenPacket $node_cfg $pacnum $new_packet]
 
 	return $pacnum
     }
 }
 
 proc configGUI_packetConfigDelete {} {
-    global curnode
+    global node_cfg
 
     set pac [.popup.nbook.nfConfiguration.panwin.f1.tree selection]
     if { $pac == "" } {
 	return
     }
 
-    removePackgenPacket $curnode $pac
+    set node_cfg [_removePackgenPacket $node_cfg $pac]
     set next [.popup.nbook.nfConfiguration.panwin.f1.tree next $pac]
     set prev [.popup.nbook.nfConfiguration.panwin.f1.tree prev $pac]
 
@@ -6659,46 +6675,13 @@ proc configGUI_packetConfigDelete {} {
     }
 }
 
-## nat64
-## custom GUI procedures
-proc configGUI_routingProtocols { wi node_id } {
-    global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable
-    global guielements
-
-    lappend guielements configGUI_routingModel
-    ttk::frame $wi.routing -relief groove -borderwidth 2 -padding 2
-    ttk::frame $wi.routing.protocols -padding 2
-    ttk::label $wi.routing.protocols.label -text "Protocols:"
-
-    ttk::checkbutton $wi.routing.protocols.rip -text "rip" -variable ripEnable
-    ttk::checkbutton $wi.routing.protocols.ripng -text "ripng" -variable ripngEnable
-    ttk::checkbutton $wi.routing.protocols.ospf -text "ospfv2" -variable ospfEnable
-    ttk::checkbutton $wi.routing.protocols.ospf6 -text "ospfv3" -variable ospf6Enable
-    ttk::checkbutton $wi.routing.protocols.bgp -text "bgp" -variable bgpEnable
-
-    set ripEnable [getNodeProtocol $node_id "rip"]
-    set ripngEnable [getNodeProtocol $node_id "ripng"]
-    set ospfEnable [getNodeProtocol $node_id "ospf"]
-    set ospf6Enable [getNodeProtocol $node_id "ospf6"]
-    set bgpEnable [getNodeProtocol $node_id "bgp"]
-    if { [getFromRunning "oper_mode"] != "edit" } {
-	$wi.routing.protocols.rip configure -state disabled
-	$wi.routing.protocols.ripng configure -state disabled
-	$wi.routing.protocols.ospf configure -state disabled
-	$wi.routing.protocols.ospf6 configure -state disabled
-	$wi.routing.protocols.bgp configure -state disabled
-    }
-    pack $wi.routing.protocols.label -side left -padx 2
-    pack $wi.routing.protocols.rip $wi.routing.protocols.ripng \
-	$wi.routing.protocols.ospf $wi.routing.protocols.ospf6 \
-	$wi.routing.protocols.bgp -side left -padx 6
-    pack $wi.routing.protocols -fill both -expand 1
-    pack $wi.routing -fill both
-}
-
+### nat64
+### custom GUI procedures
 proc configGUI_nat64Config { wi node_id } {
     global guielements
     lappend guielements configGUI_nat64Config
+
+    global node_cfg
 
 #    ttk::frame $wi.tunconf -relief groove -borderwidth 2 -padding 2
 #    ttk::label $wi.tunconf.label -text "tun interface:"
@@ -6735,12 +6718,12 @@ proc configGUI_nat64Config { wi node_id } {
     ttk::entry $wi.taygaconf.paddr -width 30 -validate focus \
      -invalidcommand "focusAndFlash %W"
     $wi.taygaconf.paddr configure -validatecommand { checkIPv6Net %P }
-    $wi.taygaconf.paddr insert 0 [getTaygaIPv6Prefix $node_id]
+    $wi.taygaconf.paddr insert 0 [_getTaygaIPv6Prefix $node_cfg]
     ttk::label $wi.taygaconf.dlabel -text "IPv4 dynamic pool:"
     ttk::entry $wi.taygaconf.daddr -width 30 -validate focus \
      -invalidcommand "focusAndFlash %W"
     $wi.taygaconf.daddr configure -validatecommand { checkIPv4Net %P }
-    $wi.taygaconf.daddr insert 0 [getTaygaIPv4DynPool $node_id]
+    $wi.taygaconf.daddr insert 0 [_getTaygaIPv4DynPool $node_cfg]
     grid $wi.taygaconf.label -in $wi.taygaconf \
 	-column 0 -row 0 -sticky ew -pady 5
     grid $wi.taygaconf.dlabel -in $wi.taygaconf \
@@ -6760,10 +6743,9 @@ proc configGUI_nat64Config { wi node_id } {
     ttk::frame $wi.mapconf -relief groove -borderwidth 2 -padding 2
     ttk::label $wi.mapconf.label -text "Fixed mappings:"
     text $wi.mapconf.mappings -bg white -width 42 -height 7
-    set mps [getTaygaMappings $node_id]
+    set mps [_getTaygaMappings $node_cfg]
     foreach map $mps {
-	$wi.mapconf.mappings insert end "$map
-"
+	$wi.mapconf.mappings insert end "$map\n"
     }
     pack $wi.mapconf.label -anchor w -pady 2
     pack $wi.mapconf.mappings -fill both -expand 1 -padx 4
@@ -6773,7 +6755,7 @@ proc configGUI_nat64Config { wi node_id } {
 }
 
 proc configGUI_nat64ConfigApply { wi node_id } {
-    global changed
+    global changed node_cfg
 
 #    set newTun4addr [$wi.tunconf.4addr get]
 #    set oldTun4addr [getTunIPv4Addr $node_id]
@@ -6797,20 +6779,20 @@ proc configGUI_nat64ConfigApply { wi node_id } {
 #    }
 
     set newTayga6pAddr [$wi.taygaconf.paddr get]
-    set oldTayga6pAddr [getTaygaIPv6Prefix $node_id]
+    set oldTayga6pAddr [_getTaygaIPv6Prefix $node_cfg]
     if { $oldTayga6pAddr != $newTayga6pAddr } {
-	setTaygaIPv6Prefix $node_id $newTayga6pAddr
+	set node_cfg [_setTaygaIPv6Prefix $node_cfg $newTayga6pAddr]
 	set changed 1
     }
 
     set newTayga4dAddr [$wi.taygaconf.daddr get]
-    set oldTayga4dAddr [getTaygaIPv4DynPool $node_id]
+    set oldTayga4dAddr [_getTaygaIPv4DynPool $node_cfg]
     if { $oldTayga4dAddr != $newTayga4dAddr } {
-	setTaygaIPv4DynPool $node_id $newTayga4dAddr
+	set node_cfg [_setTaygaIPv4DynPool $node_cfg $newTayga4dAddr]
 	set changed 1
     }
 
-    set oldTaygaMappings [lsort [getTaygaMappings $node_id]]
+    set oldTaygaMappings [lsort [_getTaygaMappings $node_cfg]]
     set newTaygaMappings {}
     set i 1
     while { 1 } {
@@ -6835,7 +6817,7 @@ proc configGUI_nat64ConfigApply { wi node_id } {
 
     set newTaygaMappings [lsort -unique $newTaygaMappings]
     if { $oldTaygaMappings != $newTaygaMappings } {
-	setTaygaMappings $node_id $newTaygaMappings
+	set node_cfg [_setTaygaMappings $node_cfg $newTaygaMappings]
 	set changed 1
     }
 }

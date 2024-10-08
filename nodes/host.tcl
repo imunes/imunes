@@ -41,29 +41,11 @@
 #****
 
 set MODULE host
-
 registerModule $MODULE
 
-#****f* host.tcl/host.confNewIfc
-# NAME
-#   host.confNewIfc -- configure new interface
-# SYNOPSIS
-#   host.confNewIfc $node_id $iface_id
-# FUNCTION
-#   Configures new interface for the specified node.
-# INPUTS
-#   * node_id -- node id
-#   * iface_id -- interface name
-#****
-proc $MODULE.confNewIfc { node_id iface_id } {
-    global changeAddressRange changeAddressRange6
-
-    set changeAddressRange 0
-    set changeAddressRange6 0
-    autoIPv4addr $node_id $iface_id
-    autoIPv6addr $node_id $iface_id
-    autoMACaddr $node_id $iface_id
-}
+################################################################################
+########################### CONFIGURATION PROCEDURES ###########################
+################################################################################
 
 #****f* host.tcl/host.confNewNode
 # NAME
@@ -86,6 +68,132 @@ proc $MODULE.confNewNode { node_id } {
     setIfcIPv6addrs $node_id $logiface_id "::1/128"
 }
 
+#****f* host.tcl/host.confNewIfc
+# NAME
+#   host.confNewIfc -- configure new interface
+# SYNOPSIS
+#   host.confNewIfc $node_id $iface_id
+# FUNCTION
+#   Configures new interface for the specified node.
+# INPUTS
+#   * node_id -- node id
+#   * iface_id -- interface name
+#****
+proc $MODULE.confNewIfc { node_id iface_id } {
+    global changeAddressRange changeAddressRange6
+
+    set changeAddressRange 0
+    set changeAddressRange6 0
+    autoIPv4addr $node_id $iface_id
+    autoIPv6addr $node_id $iface_id
+    autoMACaddr $node_id $iface_id
+}
+
+proc $MODULE.generateConfigIfaces { node_id ifaces } {
+    if { $ifaces == "*" } {
+	set ifaces "[ifcList $node_id] [logIfcList $node_id]"
+    } else {
+	# sort physical ifaces before logical ones (because of vlans)
+	set ifaces [lsort -dictionary $ifaces]
+    }
+
+    set cfg {}
+    foreach iface_id $ifaces {
+	set cfg [concat $cfg [nodeCfggenIfc $node_id $iface_id]]
+
+	lappend cfg ""
+    }
+
+    return $cfg
+}
+
+proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
+    if { $ifaces == "*" } {
+	set ifaces "[ifcList $node_id] [logIfcList $node_id]"
+    } else {
+	# sort physical ifaces before logical ones
+	set ifaces [lsort -dictionary $ifaces]
+    }
+
+    set cfg {}
+    foreach iface_id $ifaces {
+	set cfg [concat $cfg [nodeUncfggenIfc $node_id $iface_id]]
+
+	lappend cfg ""
+    }
+
+    return $cfg
+}
+
+#****f* host.tcl/host.generateConfig
+# NAME
+#   host.generateConfig -- configuration generator
+# SYNOPSIS
+#   set config [host.generateConfig $node_id]
+# FUNCTION
+#   Returns the generated configuration. This configuration represents
+#   the configuration loaded on the booting time of the virtual nodes
+#   and it is closly related to the procedure host.bootcmd.
+#   Foreach interface in the interface list of the node ip address is
+#   configured and each static route from the simulator is added. portmap
+#   and inetd are also started.
+# INPUTS
+#   * node_id -- node id
+# RESULT
+#   * config -- generated configuration
+#****
+proc $MODULE.generateConfig { node_id } {
+    set cfg {}
+
+    set cfg [concat $cfg [nodeCfggenStaticRoutes4 $node_id]]
+    set cfg [concat $cfg [nodeCfggenStaticRoutes6 $node_id]]
+
+    lappend cfg ""
+
+    set subnet_gws {}
+    set nodes_l2data [dict create]
+    if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
+	lassign [getDefaultGateways $node_id $subnet_gws $nodes_l2data] my_gws subnet_gws nodes_l2data
+	lassign [getDefaultRoutesConfig $node_id $my_gws] all_routes4 all_routes6
+
+	setDefaultIPv4routes $node_id $all_routes4
+	setDefaultIPv6routes $node_id $all_routes6
+    } else {
+	setDefaultIPv4routes $node_id {}
+	setDefaultIPv6routes $node_id {}
+    }
+
+    set cfg [concat $cfg [nodeCfggenAutoRoutes4 $node_id]]
+    set cfg [concat $cfg [nodeCfggenAutoRoutes6 $node_id]]
+
+    lappend cfg ""
+
+    lappend cfg "rpcbind"
+    lappend cfg "inetd"
+
+    return $cfg
+}
+
+proc $MODULE.generateUnconfig { node_id } {
+    set cfg {}
+
+    set cfg [concat $cfg [nodeUncfggenStaticRoutes4 $node_id]]
+    set cfg [concat $cfg [nodeUncfggenStaticRoutes6 $node_id]]
+
+    lappend cfg ""
+
+    set cfg [concat $cfg [nodeUncfggenAutoRoutes4 $node_id]]
+    set cfg [concat $cfg [nodeUncfggenAutoRoutes6 $node_id]]
+
+    lappend cfg ""
+
+    # TODO: check
+    lappend cfg "killall rpcbind"
+    lappend cfg "killall inetd"
+
+    return $cfg
+}
+
 #****f* host.tcl/host.ifacePrefix
 # NAME
 #   host.ifacePrefix -- interface name
@@ -96,8 +204,8 @@ proc $MODULE.confNewNode { node_id } {
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifacePrefix { l r } {
-    return [l3IfcName $l $r]
+proc $MODULE.ifacePrefix {} {
+    return "eth"
 }
 
 #****f* host.tcl/host.IPAddrRange
@@ -142,41 +250,6 @@ proc $MODULE.virtlayer {} {
     return VIRTUALIZED
 }
 
-#****f* host.tcl/host.generateConfig
-# NAME
-#   host.generateConfig -- configuration generator
-# SYNOPSIS
-#   set config [host.generateConfig $node_id]
-# FUNCTION
-#   Returns the generated configuration. This configuration represents
-#   the configuration loaded on the booting time of the virtual nodes
-#   and it is closly related to the procedure host.bootcmd.
-#   Foreach interface in the interface list of the node ip address is
-#   configured and each static route from the simulator is added. portmap
-#   and inetd are also started.
-# INPUTS
-#   * node_id -- node id (type of the node is host)
-# RESULT
-#   * config -- generated configuration
-#****
-proc $MODULE.generateConfig { node_id } {
-    set cfg {}
-    foreach iface [allIfcList $node_id] {
-	set cfg [concat $cfg [nodeCfggenIfcIPv4 $node_id $iface]]
-	set cfg [concat $cfg [nodeCfggenIfcIPv6 $node_id $iface]]
-    }
-    lappend cfg ""
-
-    set cfg [concat $cfg [nodeCfggenRouteIPv4 $node_id]]
-    set cfg [concat $cfg [nodeCfggenRouteIPv6 $node_id]]
-    lappend cfg ""
-
-    lappend cfg "rpcbind"
-    lappend cfg "inetd"
-
-    return $cfg
-}
-
 #****f* host.tcl/host.bootcmd
 # NAME
 #   host.bootcmd -- boot command
@@ -187,7 +260,7 @@ proc $MODULE.generateConfig { node_id } {
 #   configuration generated in host.generateConfig.
 #   In this case (procedure host.bootcmd) specific application is /bin/sh
 # INPUTS
-#   * node_id -- node id (type of the node is host)
+#   * node_id -- node id
 # RESULT
 #   * appl -- application that reads the configuration (/bin/sh)
 #****
@@ -210,89 +283,6 @@ proc $MODULE.shellcmds {} {
     return "csh bash sh tcsh"
 }
 
-#****f* host.tcl/host.nodeCreate
-# NAME
-#   host.nodeCreate -- instantiate
-# SYNOPSIS
-#   host.nodeCreate $eid $node_id
-# FUNCTION
-#   Procedure instantiate creates a new virtaul node
-#   for a given node in imunes.
-#   Procedure host.nodeCreate cretaes a new virtual node with
-#   all the interfaces and CPU parameters as defined in imunes.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id (type of the node is host)
-#****
-proc $MODULE.nodeCreate { eid node_id } {
-    l3node.nodeCreate $eid $node_id
-}
-
-proc $MODULE.nodeNamespaceSetup { eid node_id } {
-    l3node.nodeNamespaceSetup $eid $node_id
-}
-
-proc $MODULE.nodeInitConfigure { eid node_id } {
-    l3node.nodeInitConfigure $eid $node_id
-}
-
-proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
-    l3node.nodePhysIfacesCreate $eid $node_id $ifaces
-}
-
-#****f* host.tcl/host.nodeConfigure
-# NAME
-#   host.nodeConfigure -- start
-# SYNOPSIS
-#   host.nodeConfigure $eid $node_id
-# FUNCTION
-#   Starts a new host. The node can be started if it is instantiated.
-#   Simulates the booting proces of a host, by calling l3node.nodeConfigure procedure.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id (type of the node is host)
-#****
-proc $MODULE.nodeConfigure { eid node_id } {
-    l3node.nodeConfigure $eid $node_id
-}
-
-
-#****f* host.tcl/host.nodeShutdown
-# NAME
-#   host.nodeShutdown -- shutdown
-# SYNOPSIS
-#   host.nodeShutdown $eid $node_id
-# FUNCTION
-#   Shutdowns a host. Simulates the shutdown proces of a host,
-#   by calling the l3node.nodeShutdown procedure.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id (type of the node is host)
-#****
-proc $MODULE.nodeShutdown { eid node_id } {
-    l3node.nodeShutdown $eid $node_id
-}
-
-proc $MODULE.destroyIfcs { eid node_id ifaces } {
-    l3node.destroyIfcs $eid $node_id $ifaces
-}
-
-#****f* host.tcl/host.nodeDestroy
-# NAME
-#   host.nodeDestroy -- destroy
-# SYNOPSIS
-#   host.nodeDestroy $eid $node_id
-# FUNCTION
-#   Destroys a host. Destroys all the interfaces of the host
-#   and the vimage itself by calling l3node.nodeDestroy procedure.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id (type of the node is host)
-#****
-proc $MODULE.nodeDestroy { eid node_id } {
-    l3node.nodeDestroy $eid $node_id
-}
-
 #****f* host.tcl/host.nghook
 # NAME
 #   host.nghook -- nghook
@@ -311,5 +301,157 @@ proc $MODULE.nodeDestroy { eid node_id } {
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node_id iface_id } {
-    return [l3node.nghook $eid $node_id $iface_id]
+    return [list $node_id-[getIfcName $node_id $iface_id] ether]
+}
+
+################################################################################
+############################ INSTANTIATE PROCEDURES ############################
+################################################################################
+
+#****f* host.tcl/host.prepareSystem
+# NAME
+#   host.prepareSystem -- prepare system
+# SYNOPSIS
+#   host.prepareSystem
+# FUNCTION
+#   Does nothing
+#****
+proc $MODULE.prepareSystem {} {
+    # nothing to do
+}
+
+#****f* host.tcl/host.nodeCreate
+# NAME
+#   host.nodeCreate -- instantiate
+# SYNOPSIS
+#   host.nodeCreate $eid $node_id
+# FUNCTION
+#   Procedure instantiate creates a new virtaul node
+#   for a given node in imunes.
+#   Procedure host.nodeCreate creates a new virtual node with
+#   all the interfaces and CPU parameters as defined in imunes.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeCreate { eid node_id } {
+    prepareFilesystemForNode $node_id
+    createNodeContainer $node_id
+}
+
+proc $MODULE.nodeNamespaceSetup { eid node_id } {
+    attachToL3NodeNamespace $node_id
+}
+
+proc $MODULE.nodeInitConfigure { eid node_id } {
+    configureICMPoptions $node_id
+}
+
+proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
+    nodePhysIfacesCreate $node_id $ifaces
+}
+
+proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
+    nodeLogIfacesCreate $node_id $ifaces
+}
+
+#****f* host.tcl/host.nodeIfacesConfigure
+# NAME
+#   host.nodeIfacesConfigure -- configure host node interfaces
+# SYNOPSIS
+#   host.nodeIfacesConfigure $eid $node_id $ifaces
+# FUNCTION
+#   Configure interfaces on a host. Set MAC, MTU, queue parameters, assign the IP
+#   addresses to the interfaces, etc. This procedure can be called if the node
+#   is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
+    startNodeIfaces $node_id $ifaces
+}
+
+#****f* host.tcl/host.nodeConfigure
+# NAME
+#   host.nodeConfigure -- start
+# SYNOPSIS
+#   host.nodeConfigure $eid $node_id
+# FUNCTION
+#   Starts a new host. The node can be started if it is instantiated.
+#   Simulates the booting proces of a host, by calling l3node.nodeConfigure procedure.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeConfigure { eid node_id } {
+    runConfOnNode $node_id
+}
+
+################################################################################
+############################# TERMINATE PROCEDURES #############################
+################################################################################
+
+#****f* host.tcl/host.nodeIfacesUnconfigure
+# NAME
+#   host.nodeIfacesUnconfigure -- unconfigure host node interfaces
+# SYNOPSIS
+#   host.nodeIfacesUnconfigure $eid $node_id $ifaces
+# FUNCTION
+#   Unconfigure interfaces on a host to a default state. Set name to iface_id,
+#   flush IP addresses to the interfaces, etc. This procedure can be called if
+#   the node is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
+    unconfigNodeIfaces $eid $node_id $ifaces
+}
+
+proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
+    destroyNodeIfaces $eid $node_id $ifaces
+}
+
+proc $MODULE.nodeUnconfigure { eid node_id } {
+    unconfigNode $eid $node_id
+}
+
+#****f* host.tcl/host.nodeShutdown
+# NAME
+#   host.nodeShutdown -- shutdown
+# SYNOPSIS
+#   host.nodeShutdown $eid $node_id
+# FUNCTION
+#   Shutdowns a host node.
+#   Simulates the shutdown proces of a node, kills all the services and
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id (type of the node is host)
+#****
+proc $MODULE.nodeShutdown { eid node_id } {
+    killExtProcess "wireshark.*[getNodeName $node_id].*\\($eid\\)"
+    killAllNodeProcesses $eid $node_id
+}
+
+#****f* host.tcl/host.nodeDestroy
+# NAME
+#   host.nodeDestroy -- layer 3 node destroy
+# SYNOPSIS
+#   host.nodeDestroy $eid $node_id
+# FUNCTION
+#   Destroys a host node.
+#   First, it destroys all remaining virtual ifaces (vlans, tuns, etc).
+#   Then, it destroys the jail/container with its namespaces and FS.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeDestroy { eid node_id } {
+    destroyNodeVirtIfcs $eid $node_id
+    removeNodeContainer $eid $node_id
+    destroyNamespace $eid-$node_id
+    removeNodeFS $eid $node_id
 }

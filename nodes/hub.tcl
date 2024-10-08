@@ -41,34 +41,11 @@
 #****
 
 set MODULE hub
-
 registerModule $MODULE
 
-#****f* hub.tcl/hub.prepareSystem
-# NAME
-#   hub.prepareSystem -- prepare system
-# SYNOPSIS
-#   hub.prepareSystem
-# FUNCTION
-#   Loads ng_hub into the kernel.
-#****
-proc $MODULE.prepareSystem {} {
-    catch { exec kldload ng_hub }
-}
-
-#****f* hub.tcl/hub.confNewIfc
-# NAME
-#   hub.confNewIfc -- configure new interface
-# SYNOPSIS
-#   hub.confNewIfc $node_id $iface_id
-# FUNCTION
-#   Configures new interface for the specified node.
-# INPUTS
-#   * node_id -- node id
-#   * iface_id -- interface name
-#****
-proc $MODULE.confNewIfc { node_id iface_id } {
-}
+################################################################################
+########################### CONFIGURATION PROCEDURES ###########################
+################################################################################
 
 #****f* hub.tcl/hub.confNewNode
 # NAME
@@ -86,6 +63,32 @@ proc $MODULE.confNewNode { node_id } {
     setNodeName $node_id [getNewNodeNameType hub $nodeNamingBase(hub)]
 }
 
+#****f* hub.tcl/hub.confNewIfc
+# NAME
+#   hub.confNewIfc -- configure new interface
+# SYNOPSIS
+#   hub.confNewIfc $node_id $iface_id
+# FUNCTION
+#   Configures new interface for the specified node.
+# INPUTS
+#   * node_id -- node id
+#   * iface_id -- interface name
+#****
+proc $MODULE.confNewIfc { node_id iface_id } {
+}
+
+proc $MODULE.generateConfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateConfig { node_id } {
+}
+
+proc $MODULE.generateUnconfig { node_id } {
+}
+
 #****f* hub.tcl/hub.ifacePrefix
 # NAME
 #   hub.ifacePrefix -- interface name
@@ -96,8 +99,11 @@ proc $MODULE.confNewNode { node_id } {
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifacePrefix { l r } {
-    return e
+proc $MODULE.ifacePrefix {} {
+    return "e"
+}
+
+proc $MODULE.IPAddrRange {} {
 }
 
 #****f* hub.tcl/hub.netlayer
@@ -128,48 +134,10 @@ proc $MODULE.virtlayer {} {
     return NATIVE
 }
 
-#****f* hub.tcl/hub.nodeCreate
-# NAME
-#   hub.nodeCreate -- instantiate
-# SYNOPSIS
-#   hub.nodeCreate $eid $node_id
-# FUNCTION
-#   Procedure hub.nodeCreate creates a new netgraph node of the type hub.
-#   The name of the netgraph node is in form of exprimentId_nodeId.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- id of the node (type of the node is hub)
-#****
-proc $MODULE.nodeCreate { eid node_id } {
-    l2node.nodeCreate $eid $node_id
+proc $MODULE.bootcmd { node_id } {
 }
 
-proc $MODULE.nodeNamespaceSetup { eid node_id } {
-    l2node.nodeNamespaceSetup $eid $node_id
-}
-
-proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
-    l2node.nodePhysIfacesCreate $eid $node_id $ifaces
-}
-
-proc $MODULE.destroyIfcs { eid node_id ifaces } {
-    l2node.destroyIfcs $eid $node_id $ifaces
-}
-
-#****f* hub.tcl/hub.nodeDestroy
-# NAME
-#   hub.nodeDestroy -- destroy
-# SYNOPSIS
-#   hub.nodeDestroy $eid $node_id
-# FUNCTION
-#   Destroys a hub. Destroys the netgraph node that represents
-#   the hub by sending a shutdown message.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- id of the node (type of the node is hub)
-#****
-proc $MODULE.nodeDestroy { eid node_id } {
-    l2node.nodeDestroy $eid $node_id
+proc $MODULE.shellcmds {} {
 }
 
 #****f* hub.tcl/hub.nghook
@@ -191,6 +159,129 @@ proc $MODULE.nodeDestroy { eid node_id } {
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node_id iface_id } {
-    set ifunit [string range $iface_id 1 end]
+    set ifunit [string range $iface_id 3 end]
     return [list $node_id link$ifunit]
+}
+
+################################################################################
+############################ INSTANTIATE PROCEDURES ############################
+################################################################################
+
+#****f* hub.tcl/hub.prepareSystem
+# NAME
+#   hub.prepareSystem -- prepare system
+# SYNOPSIS
+#   hub.prepareSystem
+# FUNCTION
+#   Loads ng_hub into the kernel.
+#****
+proc $MODULE.prepareSystem {} {
+	# TODO: check
+    catch { exec sysctl net.bridge.bridge-nf-call-arptables=0 }
+    catch { exec sysctl net.bridge.bridge-nf-call-iptables=0 }
+    catch { exec sysctl net.bridge.bridge-nf-call-ip6tables=0 }
+
+    catch { exec kldload ng_hub }
+}
+
+#****f* hub.tcl/hub.nodeCreate
+# NAME
+#   hub.nodeCreate -- instantiate
+# SYNOPSIS
+#   hub.nodeCreate $eid $node_id
+# FUNCTION
+#   Procedure hub.nodeCreate creates a new netgraph node of the type hub.
+#   The name of the netgraph node is in form of exprimentId_nodeId.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- id of the node
+#****
+proc $MODULE.nodeCreate { eid node_id } {
+    l2node.nodeCreate $eid $node_id
+}
+
+proc $MODULE.nodeNamespaceSetup { eid node_id } {
+    createNamespace $eid-$node_id
+}
+
+proc $MODULE.nodeInitConfigure { eid node_id } {
+}
+
+proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
+    nodePhysIfacesCreate $node_id $ifaces
+}
+
+proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
+    #nodeLogIfacesCreate $node_id $ifaces
+}
+
+#****f* exec.tcl/hub.nodeIfacesConfigure
+# NAME
+#   hub.nodeIfacesConfigure -- configure hub node interfaces
+# SYNOPSIS
+#   hub.nodeIfacesConfigure $eid $node_id $ifaces
+# FUNCTION
+#   Configure interfaces on a hub. Set MAC, MTU, queue parameters, assign the IP
+#   addresses to the interfaces, etc. This procedure can be called if the node
+#   is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
+    #startNodeIfaces $node_id $ifaces
+}
+
+#****f* exec.tcl/hub.nodeConfigure
+# NAME
+#   hub.nodeConfigure -- configure hub node
+# SYNOPSIS
+#   hub.nodeConfigure $eid $node_id
+# FUNCTION
+#   Starts a new hub. Simulates the booting proces of a node, starts all the
+#   services, etc.
+#   This procedure can be called if it is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeConfigure { eid node_id } {
+    #runConfOnNode $node_id
+}
+
+################################################################################
+############################# TERMINATE PROCEDURES #############################
+################################################################################
+
+proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
+    #unconfigNodeIfaces $eid $node_id $ifaces
+}
+
+proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
+    destroyNodeIfaces $eid $node_id $ifaces
+}
+
+proc $MODULE.nodeUnconfigure { eid node_id } {
+    #unconfigNode $eid $node_id
+}
+
+proc $MODULE.nodeShutdown { eid node_id } {
+}
+
+#****f* hub.tcl/hub.nodeDestroy
+# NAME
+#   hub.nodeDestroy -- destroy
+# SYNOPSIS
+#   hub.nodeDestroy $eid $node_id
+# FUNCTION
+#   Destroys a hub. Destroys the netgraph node that represents
+#   the hub by sending a shutdown message.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- id of the node
+#****
+proc $MODULE.nodeDestroy { eid node_id } {
+    l2node.nodeDestroy $eid $node_id
 }

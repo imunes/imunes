@@ -890,6 +890,7 @@ proc mergeLink { link_id } {
 
     # recycle the first pseudo link ID
     lassign [lsort "$link_id $mirror_link_id"] link_id mirror_link_id
+    unsetRunning "${mirror_link_id}_running"
 
     lassign [getLinkPeers $link_id] pseudo_node1_id orig_node1_id
     lassign [getLinkPeers $mirror_link_id] pseudo_node2_id orig_node2_id

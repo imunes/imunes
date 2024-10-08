@@ -436,19 +436,18 @@ proc button3link { c x y } {
     #
     # Split link
     #
-    if { $oper_mode != "exec" && [getLinkMirror $link_id] == "" } {
+    if { [getLinkMirror $link_id] == "" } {
 	.button3menu add command -label "Split" \
 	    -command "splitLinkGUI $link_id"
     } else {
-	.button3menu add command -label "Split" \
-	    -state disabled
+	.button3menu add command -label "Split" -state disabled
     }
 
     #
     # Merge two pseudo nodes / links
     #
     set link_mirror_id [getLinkMirror $link_id]
-    if { $oper_mode != "exec" && $link_mirror_id != "" &&
+    if { $link_mirror_id != "" &&
 	[getNodeCanvas [lindex [getLinkPeers $link_mirror_id] 0]] ==
 	[getFromRunning "curcanvas"] } {
 
