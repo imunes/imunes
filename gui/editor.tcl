@@ -181,6 +181,22 @@ proc chooseIfName { lnode_id rnode_id } {
     return [newObjectId $ifaces $iface_prefix]
 }
 
+proc _chooseIfaceName { node_cfg } {
+    set iface_prefix [[dictGet $node_cfg "type"].ifacePrefix]
+
+    set ifaces {}
+    foreach {iface_id iface_cfg} [dictGet $node_cfg "ifaces"] {
+	if { [dictGet $iface_cfg "type"] == "phys" } {
+	    set iface_name [dictGet $iface_cfg "name"]
+	    if { [regexp "$iface_prefix\[0-9\]+" $iface_name] } {
+		lappend ifaces $iface_name
+	    }
+	}
+    }
+
+    return [newObjectId $ifaces $iface_prefix]
+}
+
 #****f* editor.tcl/listLANNodes
 # NAME
 #   listLANNodes -- list LAN nodes

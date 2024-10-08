@@ -83,11 +83,18 @@ proc $MODULE.notebookDimensions { wi } {
 proc $MODULE.configGUI { c node_id } {
     global wi
     global packgenguielements packgentreecolumns curnode
+    global node_cfg node_existing_mac node_existing_ipv4 node_existing_ipv6
+
+    set node_cfg [cfgGet "nodes" $node_id]
+    set node_existing_mac [getFromRunning "mac_used_list"]
+    set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
+    set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
 
     set curnode $node_id
     set packgenguielements {}
 
     configGUI_createConfigPopupWin $c
+
     wm title $wi "packet generator configuration"
     configGUI_nodeName $wi $node_id "Node name:"
 
