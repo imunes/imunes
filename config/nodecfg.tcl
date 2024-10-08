@@ -1337,6 +1337,10 @@ proc getRouterStaticRoutes6Cfg { node_id } {
 #****
 proc setNodeType { node_id type } {
     cfgSet "nodes" $node_id "type" $type
+
+    if { $type == "pseudo" } {
+	return
+    }
 }
 
 #****f* nodecfg.tcl/registerModule
