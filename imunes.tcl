@@ -187,14 +187,14 @@ foreach {option default_value} [concat $option_defaults $gui_option_defaults] {
 # Set default L2 node list
 set l2nodes "hub lanswitch rj45 stpswitch filter packgen ext extnat"
 # Set default L3 node list
-set l3nodes "genericrouter frr quagga static host pc nat64 extelem"
+set l3nodes "router host pc nat64 extelem"
 # Set default supported router models
 set supp_router_models "frr quagga static"
 
 if { $isOSlinux } {
     # Limit default nodes on linux
     set l2nodes "hub lanswitch rj45 ext extnat"
-    set l3nodes "genericrouter frr quagga static pc host nat64 extelem"
+    set l3nodes "router pc host nat64 extelem"
     set supp_router_models "frr quagga static"
     safeSourceFile $ROOTDIR/$LIBDIR/runtime/linux.tcl
 }

@@ -265,9 +265,8 @@ proc autoIPv4addr { node_id iface_id } {
     #changeAddressRange - is this procedure called from 'changeAddressRange' (1 if true, otherwise 0)
     #autorenumbered_ifcs - list of all interfaces that changed an address
 
-    set peer_ip4addrs {}
-
-    if { [[typemodel $node_id].netlayer] != "NETWORK" } {
+    set node_type [getNodeType $node_id]
+    if { [$node_type.netlayer] != "NETWORK" } {
 	#
 	# Shouldn't get called at all for link-layer nodes
 	#
@@ -275,33 +274,32 @@ proc autoIPv4addr { node_id iface_id } {
     }
     setIfcIPv4addrs $node_id $iface_id ""
 
-    set peer_node [logicalPeerByIfc $node_id $iface_id]
-    if { [[typemodel $peer_node].netlayer] == "LINK" } {
+    lassign [logicalPeerByIfc $node_id $iface_id] peer_node peer_if
+    set peer_ip4addrs {}
+    if { [[getNodeType $peer_node].netlayer] == "LINK" } {
 	foreach l2node [listLANNodes $peer_node {}] {
 	    foreach ifc [ifcList $l2node] {
-		set peer [logicalPeerByIfc $l2node $ifc]
-		set peer_if [ifcByLogicalPeer $peer $l2node]
+		lassign [logicalPeerByIfc $l2node $ifc] peer peer_if
 		set peer_ip4addr [getIfcIPv4addr $peer $peer_if]
+		if { $peer_ip4addr == "" } {
+		    continue
+		}
+
 		if { $changeAddressRange == 1 } {
-		    if { [lsearch $autorenumbered_ifcs "$peer $peer_if"] != -1 } {
-			if { $peer_ip4addr != "" } {
-			    lappend peer_ip4addrs $peer_ip4addr
-			}
-		    }
-		} else {
-		    if { $peer_ip4addr != "" } {
+		    if { "$peer $peer_if" in $autorenumbered_ifcs } {
 			lappend peer_ip4addrs $peer_ip4addr
 		    }
+		} else {
+		    lappend peer_ip4addrs $peer_ip4addr
 		}
 	    }
 	}
-    } elseif { [[typemodel $peer_node].netlayer] != "LINK" } {
-	set peer_if [ifcByLogicalPeer $peer_node $node_id]
-	set peer_ip4addr [getIfcIPv4addr $peer_node $peer_if]
-	set peer_ip4addrs $peer_ip4addr
+    } else {
+	set peer_ip4addrs [getIfcIPv4addr $peer_node $peer_if]
     }
 
-    set targetbyte [[getNodeType $node_id].IPAddrRange]
+    # TODO: reduce with _getNextIPv4addr proc
+    set targetbyte [$node_type.IPAddrRange]
 
     set targetbyte2 0
 
@@ -323,6 +321,35 @@ proc autoIPv4addr { node_id iface_id } {
     }
 
     lappendToRunning "ipv4_used_list" [getIfcIPv4addr $node_id $iface_id]
+}
+
+proc _getNextIPv4addr { node_type } {
+    global IPv4autoAssign
+
+    if { ! $IPv4autoAssign } {
+	return
+    }
+
+    global numbits
+
+    set targetbyte [$node_type.IPAddrRange]
+
+    set targetbyte2 0
+
+    if { $numbits <= 8 } {
+	set ipv4addr "[findFreeIPv4Net $numbits].$targetbyte2.$targetbyte2.$targetbyte/$numbits"
+    } elseif { $numbits > 8 && $numbits <=16 } {
+	set ipv4addr "[findFreeIPv4Net $numbits].$targetbyte2.$targetbyte/$numbits"
+    } elseif { $numbits > 16 && $numbits <=24 } {
+	set ipv4addr "[findFreeIPv4Net $numbits].$targetbyte/$numbits"
+    } elseif { $numbits > 24 } {
+	set lastbyte [lindex [split [findFreeIPv4Net $numbits] .] 3]
+	set first3bytes [join [lrange [split [findFreeIPv4Net $numbits] .] 0 2] .]
+	set targetbyte3 [expr {$lastbyte + 1}]
+	set ipv4addr "$first3bytes.$targetbyte3/$numbits"
+    }
+
+    return $ipv4addr
 }
 
 #****f* ipv4.tcl/nextFreeIP4Addr

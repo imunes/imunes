@@ -232,8 +232,10 @@ proc $MODULE.virtlayer {} {
 #****
 proc $MODULE.generateConfig { node_id } {
     set cfg {}
-    set cfg [concat $cfg [nodeCfggenIfcIPv4 $node_id]]
-    set cfg [concat $cfg [nodeCfggenIfcIPv6 $node_id]]
+    foreach iface [allIfcList $node_id] {
+	set cfg [concat $cfg [nodeCfggenIfcIPv4 $node_id $iface]]
+	set cfg [concat $cfg [nodeCfggenIfcIPv6 $node_id $iface]]
+    }
     lappend cfg ""
 
     set cfg [concat $cfg [nodeCfggenRouteIPv4 $node_id]]

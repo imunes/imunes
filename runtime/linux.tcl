@@ -1028,7 +1028,7 @@ proc startIfcsNode { node_id ifaces } {
 proc isNodeConfigured { node_id } {
     set docker_id "[getFromRunning "eid"].$node_id"
 
-    if { [[typemodel $node_id].virtlayer] == "NATIVE" } {
+    if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
 	return true
     }
 
@@ -1053,7 +1053,7 @@ proc isNodeConfigured { node_id } {
 proc isNodeError { node_id } {
     set docker_id "[getFromRunning "eid"].$node_id"
 
-    if { [[typemodel $node_id].virtlayer] == "NATIVE" } {
+    if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
 	return false
     }
 

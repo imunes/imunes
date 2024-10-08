@@ -42,7 +42,94 @@
 #  types that work on the same layer.
 #****
 
-set MODULE router.frr
+set MODULE router
+registerModule $MODULE
+
+#****f* genericrouter.tcl/router.confNewIfc
+# NAME
+#   router.confNewIfc -- configure new interface
+# SYNOPSIS
+#   router.confNewIfc $node_id $iface_id
+# FUNCTION
+#   Configures new interface for the specified node.
+# INPUTS
+#   * node_id -- node id
+#   * iface_id -- interface name
+#****
+proc $MODULE.confNewIfc { node_id iface_id } {
+    global changeAddressRange changeAddressRange6
+
+    set changeAddressRange 0
+    set changeAddressRange6 0
+    autoIPv4addr $node_id $iface_id
+    autoIPv6addr $node_id $iface_id
+    autoMACaddr $node_id $iface_id
+
+    if { [getNodeType [lindex [logicalPeerByIfc $node_id $iface_id] 0]] == "extnat" } {
+	setIfcNatState $node_id $iface_id "on"
+    }
+}
+
+#****f* genericrouter.tcl/router.confNewNode
+# NAME
+#   router.confNewNode -- configure new node
+# SYNOPSIS
+#   router.confNewNode $node_id
+# FUNCTION
+#   Configures new node with the specified id.
+# INPUTS
+#   * node_id -- node id
+#****
+proc $MODULE.confNewNode { node_id } {
+    global ripEnable ripngEnable ospfEnable ospf6Enable
+    global rdconfig router_model router_ConfigModel
+    global def_router_model
+    global nodeNamingBase
+
+    lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable
+    set router_ConfigModel $router_model
+
+    setNodeName $node_id [getNewNodeNameType router $nodeNamingBase(router)]
+    setNodeModel $node_id $router_model
+
+    setNodeProtocol $node_id "rip" $ripEnable
+    setNodeProtocol $node_id "ripng" $ripngEnable
+    setNodeProtocol $node_id "ospf" $ospfEnable
+    setNodeProtocol $node_id "ospf6" $ospf6Enable
+
+    setAutoDefaultRoutesStatus $node_id "enabled"
+    setLogIfcType $node_id lo0 lo
+    setIfcIPv4addrs $node_id lo0 "127.0.0.1/8"
+    setIfcIPv6addrs $node_id lo0 "::1/128"
+}
+
+#****f* genericrouter.tcl/router.icon
+# NAME
+#   router.icon -- icon
+# SYNOPSIS
+#   router.icon $size
+# FUNCTION
+#   Returns path to node icon, depending on the specified size.
+# INPUTS
+#   * size -- "normal", "small" or "toolbar"
+# RESULT
+#   * path -- path to icon
+#****
+proc $MODULE.icon { size } {
+    global ROOTDIR LIBDIR
+
+    switch $size {
+	normal {
+	    return $ROOTDIR/$LIBDIR/icons/normal/router.gif
+	}
+	small {
+	    return $ROOTDIR/$LIBDIR/icons/small/router.gif
+	}
+	toolbar {
+	    return $ROOTDIR/$LIBDIR/icons/tiny/router.gif
+	}
+    }
+}
 
 #****f* frr.tcl/router.frr.netlayer
 # NAME
@@ -95,9 +182,7 @@ proc $MODULE.generateConfig { node_id } {
     set cfg {}
 
     # setup interfaces
-    foreach iface_id [allIfcList $node_id] {
-	set cfg [concat $cfg [getRouterInterfaceCfg $node_id $iface_id]]
-    }
+    set cfg [concat $cfg [getRouterInterfaceCfg $node_id]]
 
     # setup routing protocols
     foreach protocol { rip ripng ospf ospf6 bgp } {
@@ -105,27 +190,8 @@ proc $MODULE.generateConfig { node_id } {
     }
 
     # setup IPv4/IPv6 static routes
-    foreach statrte [getStatIPv4routes $node_id] {
-	lappend cfg "ip route $statrte"
-    }
-
-    foreach statrte [getStatIPv6routes $node_id] {
-	lappend cfg "ipv6 route $statrte"
-    }
-
-    # setup automatic default routes (static)
-    if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
-	foreach statrte [getDefaultIPv4routes $node_id] {
-	    lappend cfg "ip route $statrte"
-	}
-
-	foreach statrte [getDefaultIPv6routes $node_id] {
-	    lappend cfg "ipv6 route $statrte"
-	}
-
-	setDefaultIPv4routes $node_id {}
-	setDefaultIPv6routes $node_id {}
-    }
+    set cfg [concat $cfg [getRouterStaticRoutes4Cfg $node_id]]
+    set cfg [concat $cfg [getRouterStaticRoutes6Cfg $node_id]]
 
     return $cfg
 }
@@ -146,7 +212,17 @@ proc $MODULE.generateConfig { node_id } {
 #   * appl -- application that reads the configuration (frrboot.sh)
 #****
 proc $MODULE.bootcmd { node_id } {
-    return "/usr/local/bin/frrboot.sh"
+    switch -exact -- [getNodeModel $node_id] {
+	"quagga" {
+	    return "/usr/local/bin/quaggaboot.sh"
+	}
+	"frr" {
+	    return "/usr/local/bin/frrboot.sh"
+	}
+	"static" {
+	    return "/bin/sh"
+	}
+    }
 }
 
 #****f* frr.tcl/router.frr.shellcmds
@@ -267,4 +343,162 @@ proc $MODULE.destroy { eid node_id } {
 #****
 proc $MODULE.nghook { eid node_id iface_id } {
     return [l3node.nghook $eid $node_id $iface_id]
+}
+
+#****f* genericrouter.tcl/router.toolbarIconDescr
+# NAME
+#   router.toolbarIconDescr -- toolbar icon description
+# SYNOPSIS
+#   router.toolbarIconDescr
+# FUNCTION
+#   Returns this module's toolbar icon description.
+# RESULT
+#   * descr -- string describing the toolbar icon
+#****
+proc $MODULE.toolbarIconDescr {} {
+    return "Add new Router"
+}
+
+#****f* genericrouter.tcl/router.notebookDimensions
+# NAME
+#   router.notebookDimensions -- notebook dimensions
+# SYNOPSIS
+#   router.notebookDimensions $wi
+# FUNCTION
+#   Returns the specified notebook height and width.
+# INPUTS
+#   * wi -- widget
+# RESULT
+#   * size -- notebook size as {height width}
+#****
+proc $MODULE.notebookDimensions { wi } {
+    set h 250
+    set w 507
+
+    if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
+	== "Configuration" } {
+	set h 360
+	set w 507
+    }
+
+    if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
+	== "Interfaces" } {
+	set h 370
+	set w 507
+    }
+
+    if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
+	== "IPsec" } {
+	set h 320
+	set w 507
+    }
+
+    return [list $h $w]
+}
+
+#****f* genericrouter.tcl/router.ifacePrefix
+# NAME
+#   router.ifacePrefix -- interface name
+# SYNOPSIS
+#   router.ifacePrefix
+# FUNCTION
+#   Returns router interface name prefix.
+# RESULT
+#   * name -- name prefix string
+#****
+proc $MODULE.ifacePrefix { l r } {
+    return [l3IfcName $l $r]
+}
+
+#****f* genericrouter.tcl/router.layer
+# NAME
+#   router..layer -- layer
+# SYNOPSIS
+#   set layer [router.layer]
+# FUNCTION
+#   Returns the layer on which the router operates, i.e. returns NETWORK.
+# RESULT
+#   * layer -- set to NETWORK
+#****
+proc $MODULE.layer {} {
+    return NETWORK
+}
+
+#****f* genericrouter.tcl/router.IPAddrRange
+# NAME
+#   router.IPAddrRange -- IP address range
+# SYNOPSIS
+#   router.IPAddrRange
+# FUNCTION
+#   Returns router IP address range
+# RESULT
+#   * range -- router IP address range
+#****
+proc $MODULE.IPAddrRange {} {
+    return 1
+}
+
+#****f* genericrouter.tcl/router.configGUI
+# NAME
+#   router.configGUI -- configuration GUI
+# SYNOPSIS
+#   router.configGUI $c $node_id
+# FUNCTION
+#   Defines the structure of the router configuration window by calling
+#   procedures for creating and organising the window, as well as procedures
+#   for adding certain modules to that window.
+# INPUTS
+#   * c -- tk canvas
+#   * node_id -- node id
+#****
+proc $MODULE.configGUI { c node_id } {
+    global wi
+    global guielements treecolumns ipsecEnable
+
+    set guielements {}
+
+    configGUI_createConfigPopupWin $c
+    wm title $wi "router configuration"
+    configGUI_nodeName $wi $node_id "Node name:"
+
+    lassign [configGUI_addNotebook $wi $node_id { "Configuration" "Interfaces" "IPsec" }] configtab ifctab ipsectab
+
+    set treecolumns { "OperState State" "NatState Nat" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
+	    "MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop" }
+    configGUI_addTree $ifctab $node_id
+
+    configGUI_routingModel $configtab $node_id
+    configGUI_customImage $configtab $node_id
+    configGUI_attachDockerToExt $configtab $node_id
+    configGUI_servicesConfig $configtab $node_id
+    configGUI_staticRoutes $configtab $node_id
+    configGUI_snapshots $configtab $node_id
+    configGUI_customConfig $configtab $node_id
+    configGUI_ipsec $ipsectab $node_id
+
+    configGUI_buttonsACNode $wi $node_id
+}
+
+#****f* genericrouter.tcl/router.configInterfacesGUI
+# NAME
+#   router.configInterfacesGUI -- configuration of interfaces GUI
+# SYNOPSIS
+#   router.configInterfacesGUI $wi $node_id $iface_id
+# FUNCTION
+#   Defines which modules for changing interfaces parameters are contained in
+#   the router configuration window. It is done by calling procedures for
+#   adding certain modules to the window.
+# INPUTS
+#   * wi -- widget
+#   * node_id -- node id
+#   * iface_id -- interface name
+#****
+proc $MODULE.configInterfacesGUI { wi node_id iface_id } {
+    global guielements
+
+    configGUI_ifcEssentials $wi $node_id $iface_id
+    configGUI_ifcQueueConfig $wi $node_id $iface_id
+    configGUI_ifcMACAddress $wi $node_id $iface_id
+    configGUI_ifcIPv4Address $wi $node_id $iface_id
+    configGUI_ifcIPv6Address $wi $node_id $iface_id
 }

@@ -921,7 +921,7 @@ proc loadCfgLegacy { cfg } {
     set ipv4_used_list {}
     set mac_used_list {}
     foreach node $node_list {
-	set node_type [typemodel $node]
+	set node_type [getNodeType $node]
 	if { $node_type in "extelem" } {
 	    continue
 	}
@@ -938,7 +938,8 @@ proc loadCfgLegacy { cfg } {
 	    exit
 	}
 	if { "lo0" ni [logIfcList $node] && \
-		[[typemodel $node].netlayer] == "NETWORK" } {
+	    [[getNodeType $node].netlayer] == "NETWORK"} {
+
 	    setLogIfcType $node lo0 lo
 	    setIfcIPv4addrs $node lo0 "127.0.0.1/8"
 	    setIfcIPv6addrs $node lo0 "::1/128"

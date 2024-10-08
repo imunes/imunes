@@ -528,7 +528,7 @@ proc deployCfg {} {
     set pseudoNodesCount 0
     foreach node $node_list {
 	if { [getNodeType $node] != "pseudo" } {
-	    if { [[typemodel $node].virtlayer] != "VIRTUALIZED" } {
+	    if { [[getNodeType $node].virtlayer] != "VIRTUALIZED" } {
 		lappend l2nodes $node
 	    } else {
 		lappend l3nodes $node
@@ -696,11 +696,11 @@ proc execute_nodesCreate { nodes nodeCount w } {
     foreach node $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	if { [info procs [typemodel $node].nodeCreate] != "" } {
+	if { [info procs [getNodeType $node].nodeCreate] != "" } {
 	    try {
-		[typemodel $node].nodeCreate $eid $node
+		[getNodeType $node].nodeCreate $eid $node
 	    } on error err {
-		return -code error "Error in '[typemodel $node].nodeCreate $eid $node': $err"
+		return -code error "Error in '[getNodeType $node].nodeCreate $eid $node': $err"
 	    }
 	    pipesExec ""
 	}
@@ -767,11 +767,11 @@ proc execute_nodesNamespaceSetup { nodes nodeCount w } {
     foreach node $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	if { [info procs [typemodel $node].nodeNamespaceSetup] != "" } {
+	if { [info procs [getNodeType $node].nodeNamespaceSetup] != "" } {
 	    try {
-		[typemodel $node].nodeNamespaceSetup $eid $node
+		[getNodeType $node].nodeNamespaceSetup $eid $node
 	    } on error err {
-		return -code error "Error in '[typemodel $node].nodeNamespaceSetup $eid $node': $err"
+		return -code error "Error in '[getNodeType $node].nodeNamespaceSetup $eid $node': $err"
 	    }
 	    pipesExec ""
 	}
@@ -839,9 +839,9 @@ proc execute_nodesInitConfigure { nodes nodeCount w } {
 	displayBatchProgress $batchStep $nodeCount
 
 	try {
-	    [typemodel $node].nodeInitConfigure $eid $node
+	    [getNodeType $node].nodeInitConfigure $eid $node
 	} on error err {
-	    return -code error "Error in '[typemodel $node].nodeInitConfigure $eid $node': $err"
+	    return -code error "Error in '[getNodeType $node].nodeInitConfigure $eid $node': $err"
 	}
 	pipesExec ""
 
@@ -909,12 +909,12 @@ proc execute_nodesPhysIfacesCreate { nodes nodeCount w } {
     foreach node $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	if { [info procs [typemodel $node].nodePhysIfacesCreate] != "" } {
+	if { [info procs [getNodeType $node].nodePhysIfacesCreate] != "" } {
 	    set ifcs [ifcList $node]
 	    try {
-		[typemodel $node].nodePhysIfacesCreate $eid $node $ifcs
+		[getNodeType $node].nodePhysIfacesCreate $eid $node $ifcs
 	    } on error err {
-		return -code error "Error in '[typemodel $node].nodePhysIfacesCreate $eid $node $ifcs': $err"
+		return -code error "Error in '[getNodeType $node].nodePhysIfacesCreate $eid $node $ifcs': $err"
 	    }
 	    pipesExec ""
 	}
@@ -1100,11 +1100,11 @@ proc executeConfNodes { nodes nodeCount w } {
 	    setDefaultIPv6routes $node $all_routes6
 	}
 
-	if { [info procs [typemodel $node].nodeConfigure] != "" } {
+	if { [info procs [getNodeType $node].nodeConfigure] != "" } {
 	    try {
-		[typemodel $node].nodeConfigure $eid $node
+		[getNodeType $node].nodeConfigure $eid $node
 	    } on error err {
-		return -code error "Error in '[typemodel $node].nodeConfigure $eid $node': $err"
+		return -code error "Error in '[getNodeType $node].nodeConfigure $eid $node': $err"
 	    }
 	}
 	pipesExec ""

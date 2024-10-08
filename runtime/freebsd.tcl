@@ -734,7 +734,7 @@ proc vimageCleanup { eid } {
 	    incr step
 	    displayBatchProgress $step $allVimages
 
-	    [typemodel $node_id].shutdown $eid $node_id
+	    [getNodeType $node_id].shutdown $eid $node_id
 	}
 
 	statline ""
@@ -1319,8 +1319,8 @@ proc runConfOnNode { node_id } {
 	}
 	set confFile "custom.conf"
     } else {
-	set bootcfg [[typemodel $node_id].generateConfig $node_id]
-	set bootcmd [[typemodel $node_id].bootcmd $node_id]
+	set bootcfg [[getNodeType $node_id].generateConfig $node_id]
+	set bootcmd [[getNodeType $node_id].bootcmd $node_id]
 	set confFile "boot.conf"
     }
 
@@ -1344,7 +1344,7 @@ proc runConfOnNode { node_id } {
 proc isNodeConfigured { node_id } {
     set jail_id "[getFromRunning "eid"].$node_id"
 
-    if { [[typemodel $node_id].virtlayer] == "NATIVE" } {
+    if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
 	return true
     }
 
@@ -1360,7 +1360,7 @@ proc isNodeConfigured { node_id } {
 proc isNodeError { node_id } {
     set jail_id "[getFromRunning "eid"].$node_id"
 
-    if { [[typemodel $node_id].virtlayer] == "NATIVE" } {
+    if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
 	return false
     }
 
@@ -1620,13 +1620,13 @@ proc createDirectLinkBetween { node1_id node2_id iface1_id iface2_id } {
     set eid [getFromRunning "eid"]
 
     set ngpeer1 \
-	[lindex [[typemodel $node1_id].nghook $eid $node1_id $iface1_id] 0]
+	[lindex [[getNodeType $node1_id].nghook $eid $node1_id $iface1_id] 0]
     set ngpeer2 \
-	[lindex [[typemodel $node2_id].nghook $eid $node2_id $iface2_id] 0]
+	[lindex [[getNodeType $node2_id].nghook $eid $node2_id $iface2_id] 0]
     set nghook1 \
-	[lindex [[typemodel $node1_id].nghook $eid $node1_id $iface1_id] 1]
+	[lindex [[getNodeType $node1_id].nghook $eid $node1_id $iface1_id] 1]
     set nghook2 \
-	[lindex [[typemodel $node2_id].nghook $eid $node2_id $iface2_id] 1]
+	[lindex [[getNodeType $node2_id].nghook $eid $node2_id $iface2_id] 1]
 
     pipesExec "jexec $eid ngctl connect $ngpeer1: $ngpeer2: $nghook1 $nghook2" "hold"
 }
@@ -1648,13 +1648,13 @@ proc createLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
     set eid [getFromRunning "eid"]
 
     set ngpeer1 \
-	[lindex [[typemodel $node1_id].nghook $eid $node1_id $iface1_id] 0]
+	[lindex [[getNodeType $node1_id].nghook $eid $node1_id $iface1_id] 0]
     set ngpeer2 \
-	[lindex [[typemodel $node2_id].nghook $eid $node2_id $iface2_id] 0]
+	[lindex [[getNodeType $node2_id].nghook $eid $node2_id $iface2_id] 0]
     set nghook1 \
-	[lindex [[typemodel $node1_id].nghook $eid $node1_id $iface1_id] 1]
+	[lindex [[getNodeType $node1_id].nghook $eid $node1_id $iface1_id] 1]
     set nghook2 \
-	[lindex [[typemodel $node2_id].nghook $eid $node2_id $iface2_id] 1]
+	[lindex [[getNodeType $node2_id].nghook $eid $node2_id $iface2_id] 1]
 
     set ngcmds "mkpeer $ngpeer1: pipe $nghook1 upper"
     set ngcmds "$ngcmds\n name $ngpeer1:$nghook1 $link_id"

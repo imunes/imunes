@@ -200,8 +200,8 @@ proc l3IfcName { lnode_id rnode_id } {
 proc listLANNodes { l2node_id l2peers } {
     lappend l2peers $l2node_id
     foreach ifc [ifcList $l2node_id] {
-	set peer [logicalPeerByIfc $l2node_id $ifc]
-	if { [[typemodel $peer].netlayer] == "LINK" && [getNodeType $peer] != "rj45" } {
+	lassign [logicalPeerByIfc $l2node_id $ifc] peer -
+	if { [[getNodeType $peer].netlayer] == "LINK" && [getNodeType $peer] != "rj45" } {
 	    if { $peer ni $l2peers } {
 		set l2peers [listLANNodes $peer $l2peers]
 	    }

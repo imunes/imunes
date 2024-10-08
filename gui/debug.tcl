@@ -115,10 +115,9 @@ proc logCaller {} {
 }
 
 bind . <F6> {
-    global all_modules_list router_module_list
+    global all_modules_list
     global isOSfreebsd
     set all_modules_list {}
-    set router_modules_list {}
 
     source "$ROOTDIR/$LIBDIR/runtime/cfgparse.tcl"
     source "$ROOTDIR/$LIBDIR/runtime/common.tcl"
@@ -153,18 +152,14 @@ bind . <F6> {
     source "$ROOTDIR/$LIBDIR/nodes/host.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/hub.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/lanswitch.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/genericrouter.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/nat64.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/packgen.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/pc.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/rj45.tcl"
+    source "$ROOTDIR/$LIBDIR/nodes/router.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/stpswitch.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/wlan.tcl"
-
-    source "$ROOTDIR/$LIBDIR/nodes/frr.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/quagga.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/static.tcl"
 
     source "$ROOTDIR/$LIBDIR/gui/canvas.tcl"
     source "$ROOTDIR/$LIBDIR/gui/copypaste.tcl"

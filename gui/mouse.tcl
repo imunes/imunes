@@ -711,8 +711,8 @@ proc button3node { c x y } {
     #
     # Start & stop node
     #
-    if { $oper_mode == "exec" && [info procs [typemodel $node_id].start] != "" \
-	&& [info procs [typemodel $node_id].shutdown] != "" } {
+    if { $oper_mode == "exec" && [info procs [getNodeType $node_id].start] != "" \
+	&& [info procs [getNodeType $node_id].shutdown] != "" } {
 
 	.button3menu add command -label Start \
 	    -command "startNodeFromMenu $node_id"
@@ -727,7 +727,7 @@ proc button3node { c x y } {
     # Services menu
     #
     .button3menu.services delete 0 end
-    if { $oper_mode == "exec" && [[typemodel $node_id].virtlayer] == "VIRTUALIZED" && $type != "ext" } {
+    if { $oper_mode == "exec" && [[getNodeType $node_id].virtlayer] == "VIRTUALIZED" && $type != "ext" } {
 	global all_services_list
 
 	.button3menu add cascade -label "Services" \
@@ -777,7 +777,7 @@ proc button3node { c x y } {
     #
     # IPv4 autorenumber
     #
-    if { $oper_mode == "edit" && [[typemodel $node_id].netlayer] != "LINK" \
+    if { $oper_mode == "edit" && [[getNodeType $node_id].netlayer] != "LINK" \
 	&& $type != "pseudo" } {
 
 	.button3menu add command -label "IPv4 autorenumber" -command {
@@ -791,7 +791,7 @@ proc button3node { c x y } {
     #
     # IPv6 autorenumber
     #
-    if { $oper_mode == "edit" && [[typemodel $node_id].netlayer] != "LINK" \
+    if { $oper_mode == "edit" && [[getNodeType $node_id].netlayer] != "LINK" \
 	&& $type != "pseudo" } {
 
 	.button3menu add command -label "IPv6 autorenumber" -command {
@@ -806,11 +806,11 @@ proc button3node { c x y } {
     # Shell selection
     #
     .button3menu.shell delete 0 end
-    if { $type != "ext" && $oper_mode == "exec" && [[typemodel $node_id].virtlayer] == "VIRTUALIZED" } {
+    if { $type != "ext" && $oper_mode == "exec" && [[getNodeType $node_id].virtlayer] == "VIRTUALIZED" } {
 	.button3menu add separator
 	.button3menu add cascade -label "Shell window" \
 	    -menu .button3menu.shell
-	foreach cmd [existingShells [[typemodel $node_id].shellcmds] $node_id] {
+	foreach cmd [existingShells [[getNodeType $node_id].shellcmds] $node_id] {
 	    .button3menu.shell add command -label "[lindex [split $cmd /] end]" \
 		-command "spawnShell $node_id $cmd"
 	}
@@ -844,7 +844,7 @@ proc button3node { c x y } {
 	    .button3menu add command -label "tcpdump" \
 		-command "captureOnExtIfc $node_id tcpdump"
 	}
-    } elseif { $oper_mode == "exec" && [[typemodel $node_id].virtlayer] == "VIRTUALIZED" } {
+    } elseif { $oper_mode == "exec" && [[getNodeType $node_id].virtlayer] == "VIRTUALIZED" } {
 	#
 	# Wireshark
 	#
@@ -1927,7 +1927,7 @@ proc changeAddressRange {} {
 
     # all L2 nodes are saved in link_nodes_selected list
     foreach node_id [lsort -dictionary $selected_nodes] {
-	if { [[typemodel $node_id].netlayer] == "LINK" } {
+	if { [[getNodeType $node_id].netlayer] == "LINK" } {
 	    lappend link_nodes_selected $node_id
 	}
     }
@@ -1949,10 +1949,9 @@ proc changeAddressRange {} {
 	foreach node_id $element {
 	    set autorenumber_nodes ""
 	    foreach iface_id [ifcList $node_id] {
-		set peer [getIfcPeer $node_id $iface_id]
-		if { $peer != "" && [[typemodel $peer].netlayer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
-		    set peer_ifc [ifcByPeer $peer $node_id]
-		    lappend autorenumber_nodes "$peer $peer_ifc"
+		lassign [logicalPeerByIfc $node_id $iface_id] peer peer_iface
+		if { $peer != "" && [[getNodeType $peer].netlayer] != "LINK" && $peer in $selected_nodes } {
+		    lappend autorenumber_nodes "$peer $peer_iface"
 		}
 	    }
 
@@ -1976,10 +1975,10 @@ proc changeAddressRange {} {
 
     # save nodes not connected to the L2 node in the autorenumber_nodes list
     foreach node_id $selected_nodes {
-	if { [[typemodel $node_id].netlayer] != "LINK" } {
+	if { [[getNodeType $node_id].netlayer] != "LINK" } {
 	    foreach iface_id [ifcList $node_id] {
-		set peer [getIfcPeer $node_id $iface_id]
-		if { $peer != "" && [[typemodel $peer].netlayer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
+		lassign [logicalPeerByIfc $node_id $iface_id] peer peer_iface
+		if { $peer != "" && [[getNodeType $peer].netlayer] != "LINK" && $peer in $selected_nodes } {
 		    lappend autorenumber_ifcs "$node_id $iface_id"
 		    if { [lsearch $autorenumber_nodes $node_id] == -1 } {
 			lappend autorenumber_nodes $node_id
@@ -1998,7 +1997,7 @@ proc changeAddressRange {} {
     # assign IP addresses to interfaces not connected to L2 nodes
     foreach el $autorenumber_ifcs {
 	lassign $el node_id iface_id
-	set peer [getIfcPeer $node_id $iface_id]
+	lassign [logicalPeerByIfc $node_id $iface_id] peer peer_iface
 	if { [lsearch $autorenumber_nodes $node_id] < [lsearch $autorenumber_nodes $peer] } {
 	    set changeAddrRange 1
 	}
@@ -2046,7 +2045,7 @@ proc changeAddressRange6 {} {
 
     # all L2 nodes are saved in link_nodes_selected list
     foreach node_id [lsort -dictionary $selected_nodes] {
-	if { [[typemodel $node_id].netlayer] == "LINK" } {
+	if { [[getNodeType $node_id].netlayer] == "LINK" } {
 	    lappend link_nodes_selected $node_id
 	}
     }
@@ -2068,10 +2067,9 @@ proc changeAddressRange6 {} {
 	foreach node_id $element {
 	    set autorenumber_nodes ""
 	    foreach iface_id [ifcList $node_id] {
-		set peer [getIfcPeer $node_id $iface_id]
-		if { $peer != "" && [[typemodel $peer].netlayer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
-		    set peer_ifc [ifcByPeer $peer $node_id]
-		    lappend autorenumber_nodes "$peer $peer_ifc"
+		lassign [logicalPeerByIfc $node_id $iface_id] peer peer_iface
+		if { $peer != "" && [[getNodeType $peer].netlayer] != "LINK" && $peer in $selected_nodes } {
+		    lappend autorenumber_nodes "$peer $peer_iface"
 		}
 	    }
 
@@ -2096,10 +2094,10 @@ proc changeAddressRange6 {} {
 
     # save nodes not connected to the L2 node in the autorenumber_nodes list
     foreach node_id $selected_nodes {
-	if { [[typemodel $node_id].netlayer] != "LINK" } {
+	if { [[getNodeType $node_id].netlayer] != "LINK" } {
 	    foreach iface_id [ifcList $node_id] {
-		set peer [getIfcPeer $node_id $iface_id]
-		if { $peer != "" && [[typemodel $peer].netlayer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
+		lassign [logicalPeerByIfc $node_id $iface_id] peer peer_iface
+		if { $peer != "" && [[getNodeType $peer].netlayer] != "LINK" && $peer in $selected_nodes } {
 		    lappend autorenumber_ifcs "$node_id $iface_id"
 		    if { [lsearch $autorenumber_nodes $node_id] == -1 } {
 			lappend autorenumber_nodes $node_id
@@ -2118,7 +2116,7 @@ proc changeAddressRange6 {} {
     # assign IP addresses to interfaces not connected to L2 nodes
     foreach el $autorenumber_ifcs {
 	lassign $el node_id iface_id
-	set peer [getIfcPeer $node_id $iface_id]
+	lassign [logicalPeerByIfc $node_id $iface_id] peer peer_iface
 	if { [lsearch $autorenumber_nodes $node_id] < [lsearch $autorenumber_nodes $peer] } {
 	    set changeAddrRange6 1
 	}

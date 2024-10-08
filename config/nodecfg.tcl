@@ -239,29 +239,6 @@
 #
 #****
 
-#****f* nodecfg.tcl/typemodel
-# NAME
-#   typemodel -- find node's type and routing model
-# SYNOPSIS
-#   set typemod [typemodel $node_id]
-# FUNCTION
-#   For input node this procedure returns the node's type and routing model
-#   (if exists)
-# INPUTS
-#   * node_id -- node id
-# RESULT
-#   * typemod -- returns node's type and routing model in form type.model
-#****
-proc typemodel { node_id } {
-    set type [getNodeType $node_id]
-    set model [getNodeModel $node_id]
-    if { $model != {} } {
-	return $type.$model
-    } else {
-	return $type
-    }
-}
-
 proc getNodeDir { node_id } {
     set node_dir [getNodeCustomImage $node_id]
     if { $node_dir == "" } {
@@ -1171,7 +1148,7 @@ proc getSubnetData { this_node_id this_ifc subnet_gws nodes_l2data subnet_idx } 
 
     dict set nodes_l2data $this_node_id $this_ifc $subnet_idx
 
-    if { [[typemodel $this_node_id].netlayer] == "NETWORK" } {
+    if { [[getNodeType $this_node_id].netlayer] == "NETWORK" } {
 	if { [getNodeType $this_node_id] in "router extnat" } {
 	    # this node is a router/extnat, add our IP addresses to lists
 	    set gw4 [lindex [split [getIfcIPv4addr $this_node_id $this_ifc] /] 0]
@@ -2011,7 +1988,7 @@ proc setNodeProtocol { node_id protocol state } {
 #   * check -- 1 if it is ospfv3, otherwise 0
 #****
 
-proc getRouterInterfaceCfg { node_id iface_id } {
+proc getRouterInterfaceCfg { node_id } {
     set ospf_enabled [getNodeProtocol $node_id "ospf"]
     set ospf6_enabled [getNodeProtocol $node_id "ospf6"]
 
@@ -2021,41 +1998,47 @@ proc getRouterInterfaceCfg { node_id iface_id } {
     switch -exact -- $model {
 	"quagga" -
 	"frr" {
-	    lappend cfg "interface $iface_id"
+	    foreach iface_id [allIfcList $node_id] {
+		lappend cfg "interface [getIfcName $node_id $iface_id]"
 
-	    set addrs [getIfcIPv4addrs $node_id $iface_id]
-	    foreach addr $addrs {
-		if { $addr != "" } {
-		    lappend cfg " ip address $addr"
+		set addrs [getIfcIPv4addrs $node_id $iface_id]
+		foreach addr $addrs {
+		    if { $addr != "" } {
+			lappend cfg " ip address $addr"
+		    }
 		}
-	    }
 
-	    if { $ospf_enabled } {
-		if { ! [isIfcLogical $node_id $iface_id] } {
-		    lappend cfg " ip ospf area 0.0.0.0"
+		if { $ospf_enabled } {
+		    if { ! [isIfcLogical $node_id $iface_id] } {
+			lappend cfg " ip ospf area 0.0.0.0"
+		    }
 		}
-	    }
 
-	    set addrs [getIfcIPv6addrs $node_id $iface_id]
-	    foreach addr $addrs {
-		if { $addr != "" } {
-		    lappend cfg " ipv6 address $addr"
+		set addrs [getIfcIPv6addrs $node_id $iface_id]
+		foreach addr $addrs {
+		    if { $addr != "" } {
+			lappend cfg " ipv6 address $addr"
+		    }
 		}
-	    }
 
-	    if { $model == "frr" && $ospf6_enabled } {
-		if { ! [isIfcLogical $node_id $iface_id] } {
-		    lappend cfg " ipv6 ospf6 area 0.0.0.0"
+		if { $model == "frr" && $ospf6_enabled } {
+		    if { ! [isIfcLogical $node_id $iface_id] } {
+			lappend cfg " ipv6 ospf6 area 0.0.0.0"
+		    }
 		}
-	    }
 
-	    if { [getIfcOperState $node_id $iface_id] == "down" } {
-		lappend cfg " shutdown"
-	    }
+		if { [getIfcOperState $node_id $iface_id] == "down" } {
+		    lappend cfg " shutdown"
+		}
 
-	    lappend cfg "!"
+		lappend cfg "!"
+	    }
 	}
 	"static" {
+	    foreach iface_id [allIfcList $node_id] {
+		set cfg [concat $cfg [nodeCfggenIfcIPv4 $node_id $iface_id]]
+		set cfg [concat $cfg [nodeCfggenIfcIPv6 $node_id $iface_id]]
+	    }
 	}
     }
 
@@ -2127,6 +2110,38 @@ proc getRouterProtocolCfg { node_id protocol } {
 	}
 	"static" {
 	    # nothing to return
+	}
+    }
+
+    return $cfg
+}
+
+proc getRouterStaticRoutes4Cfg { node_id } {
+    set cfg {}
+
+    switch -exact -- [getNodeModel $node_id] {
+	"quagga" -
+	"frr" {
+	    set cfg [nodeCfggenRouteIPv4 $node_id 1]
+	}
+	"static" {
+	    set cfg [nodeCfggenRouteIPv4 $node_id]
+	}
+    }
+
+    return $cfg
+}
+
+proc getRouterStaticRoutes6Cfg { node_id } {
+    set cfg {}
+
+    switch -exact -- [getNodeModel $node_id] {
+	"quagga" -
+	"frr" {
+	    set cfg [nodeCfggenRouteIPv6 $node_id 1]
+	}
+	"static" {
+	    set cfg [nodeCfggenRouteIPv6 $node_id]
 	}
     }
 
@@ -2401,42 +2416,6 @@ proc setNodeDockerAttach { node_id state } {
     cfgSet "nodes" $node_id "docker_attach" $state
 }
 
-#****f* nodecfg.tcl/registerRouterModule
-# NAME
-#   registerRouterModule -- register module
-# SYNOPSIS
-#   registerRouterModule $module
-# FUNCTION
-#   Adds a module to router_modules_list.
-# INPUTS
-#   * module -- module to add
-#****
-proc registerRouterModule { module } {
-    global router_modules_list
-
-    lappend router_modules_list $module
-}
-
-#****f* nodecfg.tcl/isNodeRouter
-# NAME
-#   isNodeRouter -- check whether a node is registered as a router
-# SYNOPSIS
-#   isNodeRouter $node_id
-# FUNCTION
-#   Checks if a node is a router.
-# INPUTS
-#   * node_id -- node to check
-#****
-proc isNodeRouter { node_id } {
-    global router_modules_list
-
-    if { [getNodeType $node_id] in $router_modules_list } {
-	return 1
-    }
-
-    return 0
-}
-
 #****f* nodecfg.tcl/nodeCfggenIfcIPv4
 # NAME
 #   nodeCfggenIfcIPv4 -- generate interface IPv4 configuration
@@ -2450,15 +2429,13 @@ proc isNodeRouter { node_id } {
 # RESULT
 #   * value -- interface IPv4 configuration script
 #****
-proc nodeCfggenIfcIPv4 { node_id } {
+proc nodeCfggenIfcIPv4 { node_id iface_id } {
     set cfg {}
-    foreach iface_id [allIfcList $node_id] {
-	set primary 1
-	foreach addr [getIfcIPv4addrs $node_id $iface_id] {
-	    if { $addr != "" } {
-		lappend cfg [getIPv4IfcCmd $iface_id $addr $primary]
-		set primary 0
-	    }
+    set primary 1
+    foreach addr [getIfcIPv4addrs $node_id $iface_id] {
+	if { $addr != "" } {
+	    lappend cfg [getIPv4IfcCmd $iface_id $addr $primary]
+	    set primary 0
 	}
     }
 
@@ -2478,15 +2455,13 @@ proc nodeCfggenIfcIPv4 { node_id } {
 # RESULT
 #   * value -- interface IPv6 configuration script
 #****
-proc nodeCfggenIfcIPv6 { node_id } {
+proc nodeCfggenIfcIPv6 { node_id iface_id } {
     set cfg {}
-    foreach iface_id [allIfcList $node_id] {
-	set primary 1
-	foreach addr [getIfcIPv6addrs $node_id $iface_id] {
-	    if { $addr != "" } {
-		lappend cfg [getIPv6IfcCmd $iface_id $addr $primary]
-		set primary 0
-	    }
+    set primary 1
+    foreach addr [getIfcIPv6addrs $node_id $iface_id] {
+	if { $addr != "" } {
+	    lappend cfg [getIPv6IfcCmd $iface_id $addr $primary]
+	    set primary 0
 	}
     }
 
@@ -2505,15 +2480,23 @@ proc nodeCfggenIfcIPv6 { node_id } {
 # RESULT
 #   * value -- route IPv4 configuration script
 #****
-proc nodeCfggenRouteIPv4 { node_id } {
+proc nodeCfggenRouteIPv4 { node_id { vtysh 0 } } {
     set cfg {}
     foreach statrte [getStatIPv4routes $node_id] {
-	lappend cfg [getIPv4RouteCmd $statrte]
+	if { $vtysh } {
+	    lappend cfg "ip route $statrte"
+	} else {
+	    lappend cfg [getIPv4RouteCmd $statrte]
+	}
     }
 
     if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
 	foreach statrte [getDefaultIPv4routes $node_id] {
-	    lappend cfg [getIPv4RouteCmd $statrte]
+	    if { $vtysh } {
+		lappend cfg "ip route $statrte"
+	    } else {
+		lappend cfg [getIPv4RouteCmd $statrte]
+	    }
 	}
 	setDefaultIPv4routes $node_id {}
     }
@@ -2533,15 +2516,23 @@ proc nodeCfggenRouteIPv4 { node_id } {
 # RESULT
 #   * value -- route IPv6 configuration script
 #****
-proc nodeCfggenRouteIPv6 { node_id } {
+proc nodeCfggenRouteIPv6 { node_id { vtysh 0 } } {
     set cfg {}
     foreach statrte [getStatIPv6routes $node_id] {
-	lappend cfg [getIPv6RouteCmd $statrte]
+	if { $vtysh } {
+	    lappend cfg "ipv6 route $statrte"
+	} else {
+	    lappend cfg [getIPv6RouteCmd $statrte]
+	}
     }
 
     if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
 	foreach statrte [getDefaultIPv6routes $node_id] {
-	    lappend cfg [getIPv6RouteCmd $statrte]
+	    if { $vtysh } {
+		lappend cfg "ipv6 route $statrte"
+	    } else {
+		lappend cfg [getIPv6RouteCmd $statrte]
+	    }
 	}
 	setDefaultIPv6routes $node_id {}
     }
@@ -2565,7 +2556,7 @@ proc nodeCfggenRouteIPv6 { node_id } {
 proc getAllNodesType { type } {
     set type_list ""
     foreach node_id [getFromRunning "node_list"] {
-	if { [string match "$type*" [typemodel $node_id]] } {
+	if { [string match "$type*" [getNodeType $node_id]] } {
 	    lappend type_list $node_id
 	}
     }
@@ -2646,7 +2637,7 @@ proc transformNodes { nodes to_type } {
     lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable
 
     foreach node_id $nodes {
-	if { [[typemodel $node_id].netlayer] == "NETWORK" } {
+	if { [[getNodeType $node_id].netlayer] == "NETWORK" } {
 	    set from_type [getNodeType $node_id]
 
 	    # replace type

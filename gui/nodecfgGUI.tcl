@@ -256,7 +256,7 @@ proc configGUI_addTree { wi node_id } {
 	}
     }
 
-    if { [[typemodel $node_id].virtlayer] == "VIRTUALIZED" } {
+    if { [[getNodeType $node_id].virtlayer] == "VIRTUALIZED" } {
 	$wi.panwin.f1.tree insert {} end -id logIfcFrame -text \
 	    "Logical Interfaces" -open true -tags logIfcFrame
 
@@ -335,7 +335,7 @@ proc configGUI_addTree { wi node_id } {
 	    }"
     }
 
-    if { [[typemodel $node_id].virtlayer] == "VIRTUALIZED" } {
+    if { [[getNodeType $node_id].virtlayer] == "VIRTUALIZED" } {
 	$wi.panwin.f1.tree tag bind [lindex [lsort -ascii [ifcList $node_id]] end] <Key-Down> \
 	    "configGUI_showIfcInfo $wi.panwin.f2 0 $node_id logIfcFrame"
 
@@ -448,7 +448,7 @@ proc configGUI_refreshIfcsTree { wi node_id } {
 	}
     }
 
-    if { [[typemodel $node_id].virtlayer] == "VIRTUALIZED" } {
+    if { [[getNodeType $node_id].virtlayer] == "VIRTUALIZED" } {
 	$wi insert {} end -id logIfcFrame -text \
 	    "Logical Interfaces" -open true -tags logIfcFrame
 
@@ -487,7 +487,7 @@ proc configGUI_refreshIfcsTree { wi node_id } {
 		configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id [$wi next $iface_id]
 	    }"
     }
-    if { [[typemodel $node_id].virtlayer] == "VIRTUALIZED" } {
+    if {[[getNodeType $node_id].virtlayer] == "VIRTUALIZED"} {
 	$wi tag bind [lindex [lsort -ascii [ifcList $node_id]] end] <Key-Down> \
 		"configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id logIfcFrame"
 
@@ -1010,7 +1010,7 @@ proc configGUI_nodeName { wi node_id label } {
     ttk::frame $wi.name -borderwidth 6
     ttk::label $wi.name.txt -text $label
 
-    if { [typemodel $node_id] in "rj45 extnat" } {
+    if { [getNodeType $node_id] in "rj45 extnat" } {
 	ttk::combobox $wi.name.nodename -width 14 -textvariable extIfc$node_id
 	set ifcs [getExtIfcs]
 	$wi.name.nodename configure -values [concat UNASSIGNED $ifcs]
@@ -2773,8 +2773,8 @@ proc createTab { node_id cfg_id } {
 #****
 proc customConfigGUIFillDefaults { wi node_id } {
     set cfg_id [$wi.nb tab current -text]
-    set cmd [[typemodel $node_id].bootcmd $node_id]
-    set cfg [[typemodel $node_id].generateConfig $node_id]
+    set cmd [[getNodeType $node_id].bootcmd $node_id]
+    set cfg [[getNodeType $node_id].generateConfig $node_id]
     set w $wi.nb.$cfg_id
 
     if { [$w.bootcmd_e get] != "" || [$w.editor get 1.0 {end -1c}] != "" } {

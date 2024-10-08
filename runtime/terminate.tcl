@@ -98,11 +98,11 @@ proc terminateL2L3Nodes { eid nodes nodeCount w } {
     foreach node $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	if { [info procs [typemodel $node].nodeShutdown] != "" } {
+	if { [info procs [getNodeType $node].nodeShutdown] != "" } {
 	    try {
-		[typemodel $node].nodeShutdown $eid $node
+		[getNodeType $node].nodeShutdown $eid $node
 	    } on error err {
-		return -code error "Error in '[typemodel $node].nodeShutdown $eid $node': $err"
+		return -code error "Error in '[getNodeType $node].nodeShutdown $eid $node': $err"
 	    }
 	}
 	pipesExec ""
@@ -133,9 +133,9 @@ proc releaseExternalIfcs { eid extifcs extifcsCount w } {
 	displayBatchProgress $batchStep $extifcsCount
 
 	try {
-	    [typemodel $node].nodeDestroy $eid $node
+	    [getNodeType $node].nodeDestroy $eid $node
 	} on error err {
-	    return -code error "Error in '[typemodel $node].nodeDestroy $eid $node': $err"
+	    return -code error "Error in '[getNodeType $node].nodeDestroy $eid $node': $err"
 	}
 	pipesExec ""
 
@@ -219,9 +219,9 @@ proc destroyL2Nodes { eid nodes nodeCount w } {
 	displayBatchProgress $batchStep $nodeCount
 
 	try {
-	    [typemodel $node].nodeDestroy $eid $node
+	    [getNodeType $node].nodeDestroy $eid $node
 	} on error err {
-	    return -code error "Error in '[typemodel $node].nodeDestroy $eid $node': $err"
+	    return -code error "Error in '[getNodeType $node].nodeDestroy $eid $node': $err"
 	}
 
 	incr batchStep
@@ -250,9 +250,9 @@ proc destroyL3Nodes { eid nodes nodeCount w } {
 	displayBatchProgress $batchStep $nodeCount
 
 	try {
-	    [typemodel $node_id].nodeDestroy $eid $node_id
+	    [getNodeType $node_id].nodeDestroy $eid $node_id
 	} on error err {
-	    return -code error "Error in '[typemodel $node_id].nodeDestroy $eid $node_id': $err"
+	    return -code error "Error in '[getNodeType $node_id].nodeDestroy $eid $node_id': $err"
 	}
 	pipesExec ""
 
@@ -330,10 +330,10 @@ proc undeployCfg { eid } {
     set pseudoNodesCount 0
     foreach node $node_list {
 	if { [getNodeType $node] != "pseudo" } {
-	    if { [[typemodel $node].virtlayer] == "NATIVE" } {
-		if { [typemodel $node] == "rj45" } {
+	    if { [[getNodeType $node].virtlayer] == "NATIVE" } {
+		if { [getNodeType $node] == "rj45" } {
 		    lappend extifcs $node
-		} elseif { [typemodel $node] == "extnat" } {
+		} elseif { [getNodeType $node] == "extnat" } {
 		    lappend l3nodes $node
 		} else {
 		    lappend l2nodes $node
@@ -491,12 +491,12 @@ proc destroyNodesIfcs { eid nodes nodeCount w } {
     foreach node $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	if { [info procs [typemodel $node].destroyIfcs] != "" } {
+	if { [info procs [getNodeType $node].destroyIfcs] != "" } {
 	    set ifcs [ifcList $node]
 	    try {
-		[typemodel $node].destroyIfcs $eid $node $ifcs
+		[getNodeType $node].destroyIfcs $eid $node $ifcs
 	    } on error err {
-		return -code error "Error in '[typemodel $node].destroyIfcs $eid $node $ifcs': $err"
+		return -code error "Error in '[getNodeType $node].destroyIfcs $eid $node $ifcs': $err"
 	    }
 	}
 
