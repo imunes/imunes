@@ -100,7 +100,10 @@ proc $MODULE.icon {size} {
 proc $MODULE.configGUI { c node_id } {
     global wi
     global guielements treecolumns
+    global node_cfg
+
     set guielements {}
+    set node_cfg [cfgGet "nodes" $node_id]
 
     configGUI_createConfigPopupWin $c
     wm title $wi "lanswitch configuration"
