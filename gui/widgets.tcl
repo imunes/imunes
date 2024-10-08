@@ -31,7 +31,7 @@ proc showCfg { c node } {
 	return
     }
     #Dont show popup window if the node virtlayer is different from VIMAGE
-    if {[[typemodel $node].virtlayer] != "VIMAGE"} {
+    if {[[getNodeType $node].virtlayer] != "VIMAGE"} {
     	return
     }
     #Determine node coordinates
@@ -201,8 +201,8 @@ proc showRoute { c node2 } {
 	    set node1 $selected
 
 	    #Draw route only if both nodes work on network layer
-	    set type1 [[typemodel $node1].layer]
-	    set type2 [[typemodel $node2].layer]
+	    set type1 [[getNodeType $node1].layer]
+	    set type2 [[getNodeType $node2].layer]
 	    if { $node1 != $node2 && $type1 == "NETWORK" && $type2 == "NETWORK" } {
 		#User notification
     		set line "Please wait. Route is being calculated."
@@ -280,7 +280,7 @@ proc findNode { c ipAddr } {
     set nodeList {}
     foreach obj [$c find withtag node] {
     	set node [lindex [$c gettags $obj] 1]
-    	set type [[typemodel $node].layer]
+	set type [[getNodeType $node].layer]
     	if { $type == "NETWORK" } {
 	    lappend nodeList $node
 	    incr i

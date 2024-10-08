@@ -245,7 +245,7 @@ proc findFreeIPv4Net { mask } {
 # INPUTS
 #   * node -- the node containing the interface to witch a new
 #     IPv4 address should be assigned
-#   * iface -- the interface to witch a new, automatilacy generated, IPv4
+#   * iface -- the interface to witch a new, automatically generated, IPv4
 #     address will be assigned
 #****
 proc autoIPv4addr { node iface } {
@@ -260,43 +260,41 @@ proc autoIPv4addr { node iface } {
     #changeAddressRange - is this procedure called from 'changeAddressRange' (1 if true, otherwise 0)
     #autorenumbered_ifcs - list of all interfaces that changed an address
 
-    set peer_ip4addrs {}
-
-    if { [[typemodel $node].layer] != "NETWORK" } {
+    set node_type [getNodeType $node]
+    if { [$node_type.layer] != "NETWORK" } {
 	#
 	# Shouldn't get called at all for link-layer nodes
 	#
 	return
     }
+
     setIfcIPv4addrs $node $iface ""
 
-    set peer_node [logicalPeerByIfc $node $iface]
-    if { [[typemodel $peer_node].layer] == "LINK"} {
+    lassign [logicalPeerByIfc $node $iface] peer_node peer_if
+    set peer_ip4addrs {}
+    if { [[getNodeType $peer_node].layer] == "LINK"} {
 	foreach l2node [listLANNodes $peer_node {}] {
 	    foreach ifc [ifcList $l2node] {
-		set peer [logicalPeerByIfc $l2node $ifc]
-		set peer_if [ifcByLogicalPeer $peer $l2node]
+		lassign [logicalPeerByIfc $l2node $ifc] peer peer_if
 		set peer_ip4addr [getIfcIPv4addr $peer $peer_if]
+		if { $peer_ip4addr == "" } {
+		    continue
+		}
+
 		if { $changeAddressRange == 1 } {
-		    if { [lsearch $autorenumbered_ifcs "$peer $peer_if"] != -1 } {
-			if { $peer_ip4addr != "" } {
-			    lappend peer_ip4addrs $peer_ip4addr
-			}
-		    }
-		} else {
-		    if { $peer_ip4addr != "" } {
+		    if { "$peer $peer_if" in $autorenumbered_ifcs } {
 			lappend peer_ip4addrs $peer_ip4addr
 		    }
+		} else {
+		    lappend peer_ip4addrs $peer_ip4addr
 		}
 	    }
 	}
-    } elseif {[[typemodel $peer_node].layer] != "LINK"} {
-	set peer_if [ifcByLogicalPeer $peer_node $node]
-	set peer_ip4addr [getIfcIPv4addr $peer_node $peer_if]
-	set peer_ip4addrs $peer_ip4addr
+    } else {
+	set peer_ip4addrs [getIfcIPv4addr $peer_node $peer_if]
     }
 
-    set targetbyte [[getNodeType $node].IPAddrRange]
+    set targetbyte [$node_type.IPAddrRange]
 
     set targetbyte2 0
 

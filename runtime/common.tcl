@@ -353,10 +353,10 @@ proc spawnShellExec {} {
 	    return
 	}
     }
-    if { [[typemodel $node].virtlayer] != "VIMAGE" } {
+    if { [[getNodeType $node].virtlayer] != "VIMAGE" } {
 	nodeConfigGUI .panwin.f1.c $node
     } else {
-	set cmd [lindex [existingShells [[typemodel $node].shellcmds] $node] 0]
+	set cmd [lindex [existingShells [[getNodeType $node].shellcmds] $node] 0]
 	if { $cmd == "" } {
 	    return
 	}
