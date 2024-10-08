@@ -180,6 +180,7 @@ bind . <F6> {
     source "$ROOTDIR/$LIBDIR/gui/drawing.tcl"
     source "$ROOTDIR/$LIBDIR/gui/editor.tcl"
     source "$ROOTDIR/$LIBDIR/gui/help.tcl"
+    source "$ROOTDIR/$LIBDIR/gui/ifacesGUI.tcl"
     source "$ROOTDIR/$LIBDIR/gui/linkcfgGUI.tcl"
     source "$ROOTDIR/$LIBDIR/gui/mouse.tcl"
     source "$ROOTDIR/$LIBDIR/gui/nodecfgGUI.tcl"

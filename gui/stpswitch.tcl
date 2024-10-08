@@ -43,6 +43,25 @@ proc $MODULE.toolbarIconDescr {} {
     return "Add new RSTP switch"
 }
 
+proc $MODULE._confNewIfc { node_cfg iface_id } {
+    global node_existing_mac node_existing_ipv4 node_existing_ipv6
+
+    set macaddr [getNextMACaddr $node_existing_mac]
+    lappend node_existing_mac $macaddr
+    set node_cfg [_setIfcMACaddr $node_cfg $iface_id $macaddr]
+
+    set node_cfg [_setBridgeIfcDiscover $node_cfg $iface_id 1]
+    set node_cfg [_setBridgeIfcLearn $node_cfg $iface_id 1]
+    set node_cfg [_setBridgeIfcStp $node_cfg $iface_id 1]
+    set node_cfg [_setBridgeIfcAutoedge $node_cfg $iface_id 1]
+    set node_cfg [_setBridgeIfcAutoptp $node_cfg $iface_id 1]
+    set node_cfg [_setBridgeIfcPriority $node_cfg $iface_id 128]
+    set node_cfg [_setBridgeIfcPathcost $node_cfg $iface_id 0]
+    set node_cfg [_setBridgeIfcMaxaddr $node_cfg $iface_id 0]
+
+    return $node_cfg
+}
+
 proc $MODULE.icon { size } {
     global ROOTDIR LIBDIR
 
@@ -60,16 +79,16 @@ proc $MODULE.icon { size } {
 }
 
 proc $MODULE.notebookDimensions { wi } {
-    set h 340
+    set h 360
     set w 507
 
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
 	== "Interfaces" } {
-	set h 320
+	set h 340
     }
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
 	== "Bridge" } {
-	set h 370
+	set h 390
 	set w 513
     }
 
@@ -92,12 +111,25 @@ proc $MODULE.notebookDimensions { wi } {
 #****
 proc $MODULE.configGUI { c node_id } {
     global wi
+    #
+    #guielements - the list of modules contained in the configuration window
+    #              (each element represents the name of the procedure which creates
+    #              that module)
+    #
+    #treecolumns - the list of columns in the interfaces tree (each element
+    #              consists of the column id and the column name)
+    #
     global guielements treecolumns
     global brguielements
     global brtreecolumns
+    global node_cfg node_existing_mac node_existing_ipv4 node_existing_ipv6
 
     set guielements {}
     set brguielements {}
+    set node_cfg [cfgGet "nodes" $node_id]
+    set node_existing_mac [getFromRunning "mac_used_list"]
+    set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
+    set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
 
     configGUI_createConfigPopupWin $c
     wm title $wi "stpswitch configuration"
@@ -125,6 +157,7 @@ proc $MODULE.configGUI { c node_id } {
     configGUI_staticRoutes $configtab $node_id
     configGUI_customConfig $configtab $node_id
 
+    configGUI_nodeRestart $wi $node_id
     configGUI_buttonsACNode $wi $node_id
 }
 
