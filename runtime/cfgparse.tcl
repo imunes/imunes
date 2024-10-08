@@ -999,6 +999,63 @@ proc newObjectId { type } {
     return $mark$id
 }
 
+
+proc nextFreeIndex { sorted_list prefix } {
+    set len [llength $sorted_list]
+
+    # Initial interval - the start to the middle of the list
+    set start 0
+    set end [expr $len - 1]
+    set mid [expr $len / 2]
+    set lastmid -1
+
+    if { "$prefix$end" == [lindex $sorted_list end] } {
+	return $prefix[expr $end + 1]
+    }
+
+    while { $mid != $lastmid } {
+	set val [lindex $sorted_list $mid]
+	set idx [lsearch -dictionary -bisect $sorted_list $val]
+	regsub $prefix $val "" val
+
+	if { [expr $mid < $val] } {
+	    set end $mid
+	} else {
+	    set start [expr $mid + 1]
+	}
+
+	set lastmid $mid
+	set mid [expr ($start + $end ) / 2]
+    }
+
+    return $prefix$mid
+}
+
+#****f* nodecfg.tcl/newObjectId
+# NAME
+#   newObjectId -- new object Id
+# SYNOPSIS
+#   set obj_id [newObjectId $type]
+# FUNCTION
+#   Returns the Id for a new object of the defined type. Supported types
+#   are node, link and canvas. The Id is in the form $prefix$number. $prefix is
+#   the first letter of the given type and $number is the first available
+#   number to that can be used for id.
+# INPUTS
+#   * type -- the type of the new object. Can be node, link or canvas.
+# RESULT
+#   * obj_id -- object Id in the form $prefix$number. $prefix is the
+#	 first letter of the given type and $number is the first available number
+#	 to that can be used for id.
+#****
+proc newObjectIdAlt { elem_list prefix } {
+    if { [llength $elem_list] == 0 } {
+	return ${prefix}0
+    }
+
+    return [nextFreeIndex [lsort -dictionary $elem_list] $prefix]
+}
+
 #########################################################################
 
 proc loadCfgJson { json_cfg } {
