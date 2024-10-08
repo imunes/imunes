@@ -138,7 +138,10 @@ proc $MODULE.configGUI { c node_id } {
     #              consists of the column id and the column name)
     #
     global guielements treecolumns
+    global node_cfg
+
     set guielements {}
+    set node_cfg [cfgGet "nodes" $node_id]
 
     configGUI_createConfigPopupWin $c
     wm title $wi "host configuration"
@@ -159,6 +162,7 @@ proc $MODULE.configGUI { c node_id } {
     configGUI_snapshots $configtab $node_id
     configGUI_customConfig $configtab $node_id
 
+    configGUI_nodeRestart $wi $node_id
     configGUI_buttonsACNode $wi $node_id
 }
 
