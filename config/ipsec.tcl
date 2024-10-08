@@ -1278,72 +1278,6 @@ proc checkSharedSecret { str } {
 
 ###################################
 
-#****f* ipsec.tcl/getNodeIPsec
-# NAME
-#   getNodeIPsec -- retreives IPsec configuration for selected node
-# SYNOPSIS
-#   getNodeIPsec $node
-# FUNCTION
-#   Retreives all IPsec connections for current node
-# INPUTS
-#   node - node id
-#****
-proc getNodeIPsec { node_id } {
-    return [cfgGet "nodes" $node_id "ipsec" "ipsec_configs"]
-}
-
-proc setNodeIPsec { node_id new_value } {
-    cfgSet "nodes" $node_id "ipsec" "ipsec_configs" $new_value
-}
-
-#****f* ipsec.tcl/getNodeIPsecItem
-# NAME
-#   getNodeIPsecItem -- get node IPsec item
-# SYNOPSIS
-#   getNodeIPsecItem $node $item
-# FUNCTION
-#   Retreives an item from IPsec configuration of given node
-# INPUTS
-#   node - node id
-#   item - search item
-proc getNodeIPsecItem { node_id item } {
-    return [cfgGet "nodes" $node_id "ipsec" $item]
-}
-
-#****f* ipsec.tcl/setNodeIPsecItem
-# NAME
-#   setNodeIPsecItem -- set node IPsec item
-# SYNOPSIS
-#   setNodeIPsecItem $node $item
-# FUNCTION
-#   Sets an item from IPsec configuration of given node
-# INPUTS
-#   node - node id
-#   item - search item
-proc setNodeIPsecItem { node_id item new_value } {
-    cfgSet "nodes" $node_id "ipsec" $item $new_value
-}
-
-proc setNodeIPsecConnection { node_id connection new_value } {
-    cfgSet "nodes" $node_id "ipsec" "ipsec_configs" $connection $new_value
-}
-
-proc delNodeIPsecConnection { node_id connection } {
-    cfgUnset "nodes" $node_id "ipsec" "ipsec_configs" $connection
-}
-
-proc getNodeIPsecSetting { node_id connection setting } {
-    return [cfgGet "nodes" $node_id "ipsec" "ipsec_configs" $connection $setting]
-}
-
-proc setNodeIPsecSetting { node_id connection setting new_value } {
-    cfgSet "nodes" $node_id "ipsec" "ipsec_configs" $connection $setting $new_value
-}
-
-proc getNodeIPsecConnList { node_id } {
-    return [dict keys [cfgGet "nodes" $node_id "ipsec" "ipsec_configs"]]
-}
-
 #****f* ipsec.tcl/nodeIPsecConnExists
 # NAME
 #   nodeIPsecConnExists -- checks if connection already exists
@@ -1381,41 +1315,6 @@ proc getListOfOtherNodes { my_node_id } {
     }
 
     return $name_list
-}
-
-#****f* ipsec.tcl/getLocalIpAddress
-# NAME
-#   getLocalIpAddress -- retreives local IP addresses for current node
-# SYNOPSIS
-#   getLocalIpAddress $node
-# FUNCTION
-#   Retreives all local addresses (IPv4 and IPv6) for current node
-# INPUTS
-#   node - node id
-#****
-proc getAllIpAddresses { node } {
-    set listOfInterfaces [ifcList $node]
-    foreach logifc [logIfcList $node] {
-	if { [string match "vlan*" $logifc]} {
-	    lappend listOfInterfaces $logifc
-	}
-    }
-
-    set listOfIP4s ""
-    set listOfIP6s ""
-    foreach item $listOfInterfaces {
-	set ifcIP [getIfcIPv4addr $node $item]
-	if { $ifcIP != "" } {
-	    lappend listOfIP4s $ifcIP
-	}
-
-	set ifcIP [getIfcIPv6addr $node $item]
-	if { $ifcIP != "" } {
-	    lappend listOfIP6s $ifcIP
-	}
-    }
-
-    return [concat $listOfIP4s $listOfIP6s]
 }
 
 #****f* ipsec.tcl/getIPAddressForPeer
@@ -1460,16 +1359,6 @@ proc getIPAddressForPeer { node curIP } {
     }
 
     return $listOfIPs
-}
-
-proc getNodeFromHostname { hostname } {
-    foreach node [getFromRunning "node_list"] {
-	if { $hostname == [getNodeName $node] } {
-	    return $node
-	}
-    }
-
-    return ""
 }
 
 #****f* ipsec.tcl/getLocalSubnets

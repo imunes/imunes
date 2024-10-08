@@ -843,6 +843,7 @@ proc splitLink { orig_link_id } {
     cfgSet "links" $pseudo_link_id [cfgGet "links" $orig_link_id]
     lappendToRunning "link_list" $pseudo_link_id
     set links "$orig_link_id $pseudo_link_id"
+    setToRunning "${pseudo_link_id}_running" false
 
     # create pseudo nodes
     set pseudo_nodes [newNode "pseudo"]
@@ -889,6 +890,7 @@ proc mergeLink { link_id } {
 
     # recycle the first pseudo link ID
     lassign [lsort "$link_id $mirror_link_id"] link_id mirror_link_id
+    unsetRunning "${mirror_link_id}_running"
 
     lassign [getLinkPeers $link_id] pseudo_node1 orig_node1
     lassign [getLinkPeers $mirror_link_id] pseudo_node2 orig_node2
