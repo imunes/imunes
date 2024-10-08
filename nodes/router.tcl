@@ -98,8 +98,7 @@ proc $MODULE.confNewIfc { node_id iface_id } {
     autoIPv6addr $node_id $iface_id
     autoMACaddr $node_id $iface_id
 
-    set peer_node [logicalPeerByIfc $node_id $iface_id]
-    if { [getNodeType $peer_node] == "extnat" } {
+    if { [getNodeType [lindex [logicalPeerByIfc $node_id $iface_id] 0]] == "extnat" } {
 	setIfcNatState $node_id $iface_id "on"
     }
 }
@@ -130,90 +129,17 @@ proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
 proc $MODULE.generateConfig { node_id } {
     set cfg {}
 
-    switch -exact -- [getNodeModel $node_id] {
-	"quagga" -
-	"frr" {
-	    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
+    # setup interfaces
+    set cfg [concat $cfg [getRouterInterfaceCfg $node_id]]
 
-	    # setup interfaces
-	    foreach iface_id [allIfcList $node_id] {
-		lappend cfg "interface $iface_id"
-		set addrs [getIfcIPv4addrs $node_id $iface_id]
-		foreach addr $addrs {
-		    if { $addr != "" } {
-			lappend cfg " ip address $addr"
-		    }
-		}
-
-		set addrs [getIfcIPv6addrs $node_id $iface_id]
-		foreach addr $addrs {
-		    if { $addr != "" } {
-			lappend cfg " ipv6 address $addr"
-		    }
-		}
-
-		if { [getIfcOperState $node_id $iface_id] == "down" } {
-		    lappend cfg " shutdown"
-		}
-
-		lappend cfg "!"
-	    }
-
-	    # setup routing protocols
-	    foreach proto { rip ripng ospf ospf6 bgp } {
-		set protocfg [netconfFetchSection $node_id "router $proto"]
-		if { $protocfg != "" } {
-		    lappend cfg "router $proto"
-		    foreach line $protocfg {
-			lappend cfg "$line"
-		    }
-
-		    if { $proto == "ospf6" } {
-			foreach iface_id [allIfcList $node_id] {
-			    if { $iface_id == "lo0" } {
-				continue
-			    }
-
-			    lappend cfg " interface $iface_id area 0.0.0.0"
-			}
-		    }
-
-		    lappend cfg "!"
-		}
-	    }
-
-	    # setup IPv4/IPv6 static routes
-	    foreach statrte [getStatIPv4routes $node_id] {
-		lappend cfg "ip route $statrte"
-	    }
-
-	    foreach statrte [getStatIPv6routes $node_id] {
-		lappend cfg "ipv6 route $statrte"
-	    }
-
-	    # setup automatic default routes (static)
-	    if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
-		foreach statrte [getDefaultIPv4routes $node_id] {
-		    lappend cfg "ip route $statrte"
-		}
-
-		foreach statrte [getDefaultIPv6routes $node_id] {
-		    lappend cfg "ipv6 route $statrte"
-		}
-
-		setDefaultIPv4routes $node_id {}
-		setDefaultIPv6routes $node_id {}
-	    }
-	}
-	"static" {
-	    set cfg [concat $cfg [nodeCfggenIfcIPv4 $node_id]]
-	    set cfg [concat $cfg [nodeCfggenIfcIPv6 $node_id]]
-	    lappend cfg ""
-
-	    set cfg [concat $cfg [nodeCfggenRouteIPv4 $node_id]]
-	    set cfg [concat $cfg [nodeCfggenRouteIPv6 $node_id]]
-	}
+    # setup routing protocols
+    foreach protocol { rip ripng ospf ospf6 bgp } {
+	set cfg [concat $cfg [getRouterProtocolCfg $node_id $protocol]]
     }
+
+    # setup IPv4/IPv6 static routes
+    set cfg [concat $cfg [getRouterStaticRoutes4Cfg $node_id]]
+    set cfg [concat $cfg [getRouterStaticRoutes6Cfg $node_id]]
 
     return $cfg
 }
@@ -292,17 +218,7 @@ proc $MODULE.virtlayer {} {
 #   * appl -- application that reads the configuration
 #****
 proc $MODULE.bootcmd { node_id } {
-    switch -exact -- [getNodeModel $node_id] {
-	"quagga" {
-	    return "/usr/local/bin/quaggaboot.sh"
-	}
-	"frr" {
-	    return "/usr/local/bin/frrboot.sh"
-	}
-	"static" {
-	    return "/bin/sh"
-	}
-    }
+    return "/bin/sh"
 }
 
 #****f* router.tcl/router.shellcmds
