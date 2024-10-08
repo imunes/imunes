@@ -505,7 +505,7 @@ proc deployCfg {} {
     set pseudoNodesCount 0
     foreach node $node_list {
 	if { [getNodeType $node] != "pseudo" } {
-	    if { [[typemodel $node].virtlayer] != "VIMAGE" } {
+	    if { [[getNodeType $node].virtlayer] != "VIMAGE" } {
 		lappend l2nodes $node
 	    } else {
 		lappend l3nodes $node
@@ -665,12 +665,12 @@ proc instantiateNodes { nodes nodeCount w } {
     foreach node $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	if { [info procs [typemodel $node].instantiate] != "" } {
+	if { [info procs [getNodeType $node].instantiate] != "" } {
 	    set eid [getFromRunning "eid"]
 	    try {
-		[typemodel $node].instantiate $eid $node
+		[getNodeType $node].instantiate $eid $node
 	    } on error err {
-		return -code error "Error in '[typemodel $node].instantiate $eid $node': $err"
+		return -code error "Error in '[getNodeType $node].instantiate $eid $node': $err"
 	    }
 	    pipesExec ""
 	}
@@ -735,12 +735,12 @@ proc setupNodeNamespaces { nodes nodeCount w } {
     foreach node $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	if { [info procs [typemodel $node].setupNamespace] != "" } {
+	if { [info procs [getNodeType $node].setupNamespace] != "" } {
 	    set eid [getFromRunning "eid"]
 	    try {
-		[typemodel $node].setupNamespace $eid $node
+		[getNodeType $node].setupNamespace $eid $node
 	    } on error err {
-		return -code error "Error in '[typemodel $node].setupNamespace $eid $node': $err"
+		return -code error "Error in '[getNodeType $node].setupNamespace $eid $node': $err"
 	    }
 	    pipesExec ""
 	}
@@ -807,9 +807,9 @@ proc initConfigureNodes { nodes nodeCount w } {
 	set eid [getFromRunning "eid"]
 
 	try {
-	    [typemodel $node].initConfigure $eid $node
+	    [getNodeType $node].initConfigure $eid $node
 	} on error err {
-	    return -code error "Error in '[typemodel $node].initConfigure $eid $node': $err"
+	    return -code error "Error in '[getNodeType $node].initConfigure $eid $node': $err"
 	}
 	pipesExec ""
 
@@ -875,13 +875,13 @@ proc createNodesInterfaces { nodes nodeCount w } {
     foreach node $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	if { [info procs [typemodel $node].createIfcs] != "" } {
+	if { [info procs [getNodeType $node].createIfcs] != "" } {
 	    set ifcs [ifcList $node]
 	    set eid [getFromRunning "eid"]
 	    try {
-		[typemodel $node].createIfcs $eid $node $ifcs
+		[getNodeType $node].createIfcs $eid $node $ifcs
 	    } on error err {
-		return -code error "Error in '[typemodel $node].createIfcs $eid $node $ifcs': $err"
+		return -code error "Error in '[getNodeType $node].createIfcs $eid $node $ifcs': $err"
 	    }
 	    pipesExec ""
 	}
@@ -1025,12 +1025,12 @@ proc executeConfNodes { nodes nodeCount w } {
 	    setDefaultIPv6routes $node $all_routes6
 	}
 
-	if { [info procs [typemodel $node].start] != "" } {
+	if { [info procs [getNodeType $node].start] != "" } {
 	    set eid [getFromRunning "eid"]
 	    try {
-		[typemodel $node].start $eid $node
+		[getNodeType $node].start $eid $node
 	    } on error err {
-		return -code error "Error in '[typemodel $node].start $eid $node': $err"
+		return -code error "Error in '[getNodeType $node].start $eid $node': $err"
 	    }
 	}
 	pipesExec ""
@@ -1069,10 +1069,10 @@ proc generateHostsFile { node_id } {
 
     set etc_hosts [getFromRunning "etc_hosts"]
     if { $auto_etc_hosts == 1 } {
-	if { [[typemodel $node_id].virtlayer] == "VIMAGE" } {
+	if { [[getNodeType $node_id].virtlayer] == "VIMAGE" } {
 	    if { $etc_hosts == "" } {
 		foreach iter [getFromRunning "node_list"] {
-		    if { [[typemodel $iter].virtlayer] == "VIMAGE" } {
+		    if { [[getNodeType $iter].virtlayer] == "VIMAGE" } {
 			set ctr 0
 			set ctr6 0
 			foreach ifc [ifcList $iter] {
@@ -1080,7 +1080,7 @@ proc generateHostsFile { node_id } {
 				set node_name [getNodeName $iter]
 
 				foreach ipv4 [getIfcIPv4addrs $iter $ifc] {
-				    set ipv4 [split $ipv4 "/"]
+				    set ipv4 [lindex [split $ipv4 "/"] 0]
 				    if { $ctr == 0 } {
 					set etc_hosts "$etc_hosts$ipv4	${node_name}\n"
 				    } else {
@@ -1090,7 +1090,7 @@ proc generateHostsFile { node_id } {
 				}
 
 				foreach ipv6 [getIfcIPv6addrs $iter $ifc] {
-				    set ipv6 [split $ipv6 "/"]
+				    set ipv6 [lindex [split $ipv6 "/"] 0]
 				    if { $ctr6 == 0 } {
 					set etc_hosts "$etc_hosts$ipv6	${node_name}.6\n"
 				    } else {

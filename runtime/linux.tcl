@@ -828,7 +828,7 @@ proc createDirectLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 	    set virtual_ifc $ifname2
 	    set ether [getIfcMACaddr $lnode2 $virtual_ifc]
 
-	    if { [[typemodel $lnode2].virtlayer] == "NETGRAPH" } {
+	    if { [[getNodeType $lnode2].virtlayer] == "NETGRAPH" } {
 		pipesExec "ip link set $physical_ifc netns $nodeNs" "hold"
 		setNsIfcMaster $nodeNs $physical_ifc $lnode2 "up"
 		return
@@ -847,7 +847,7 @@ proc createDirectLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 	    set virtual_ifc $ifname1
 	    set ether [getIfcMACaddr $lnode1 $virtual_ifc]
 
-	    if { [[typemodel $lnode1].virtlayer] == "NETGRAPH" } {
+	    if { [[getNodeType $lnode1].virtlayer] == "NETGRAPH" } {
 		pipesExec "ip link set $physical_ifc netns $nodeNs" "hold"
 		setNsIfcMaster $nodeNs $physical_ifc $lnode1 "up"
 		return
@@ -887,7 +887,7 @@ proc createDirectLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 
     # add nodes ifc hooks to link bridge and bring them up
     foreach node [list $lnode1 $lnode2] ifc [list $ifname1 $ifname2] ns [list $node1Ns $node2Ns] {
-	if { [[typemodel $node].virtlayer] != "NETGRAPH" || [getNodeType $node] in "ext extnat" } {
+	if { [[getNodeType $node].virtlayer] != "NETGRAPH" || [getNodeType $node] in "ext extnat" } {
 	    continue
 	}
 
@@ -988,7 +988,7 @@ proc startIfcsNode { node } {
 proc isNodeConfigured { node } {
     set node_id "[getFromRunning "eid"].$node"
 
-    if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
+    if { [[getNodeType $node].virtlayer] == "NETGRAPH" } {
 	return true
     }
 
@@ -1013,7 +1013,7 @@ proc isNodeConfigured { node } {
 proc isNodeError { node } {
     set node_id "[getFromRunning "eid"].$node"
 
-    if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
+    if { [[getNodeType $node].virtlayer] == "NETGRAPH" } {
 	return false
     }
 
@@ -1092,8 +1092,8 @@ proc runConfOnNode { node } {
 	}
         set confFile "custom.conf"
     } else {
-        set bootcfg [[typemodel $node].cfggen $node]
-        set bootcmd [[typemodel $node].bootcmd $node]
+        set bootcfg [[getNodeType $node].cfggen $node]
+        set bootcmd [[getNodeType $node].bootcmd $node]
         set confFile "boot.conf"
     }
 
