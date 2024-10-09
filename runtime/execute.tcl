@@ -1057,42 +1057,56 @@ proc executeConfNodes { nodes nodeCount w } {
 # NAME
 #   generateHostsFile -- generate hosts file
 # SYNOPSIS
-#   generateHostsFile $node
+#   generateHostsFile $node_id
 # FUNCTION
 #   Generates /etc/hosts file on the given node containing all the nodes in the
 #   topology.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc generateHostsFile { node } {
     global hostsAutoAssign
+proc generateHostsFile { node_id } {
 
     if { $hostsAutoAssign == 1 } {
-	if { [[typemodel $node].virtlayer] == "VIMAGE" } {
-	    if { [getFromRunning "etc_hosts"] == "" } {
+    set etc_hosts [getFromRunning "etc_hosts"]
+	if { [[typemodel $node_id].virtlayer] == "VIMAGE" } {
+	    if { $etc_hosts == "" } {
 		foreach iter [getFromRunning "node_list"] {
 		    if { [[typemodel $iter].virtlayer] == "VIMAGE" } {
+			set ctr 0
+			set ctr6 0
 			foreach ifc [ifcList $iter] {
 			    if { $ifc != "" } {
-				set ipv4 [lindex [split [getIfcIPv4addr $iter $ifc] "/"] 0]
-				set ipv6 [lindex [split [getIfcIPv6addr $iter $ifc] "/"] 0]
-				set ifname [getNodeName $iter]
-				if { $ipv4 != "" } {
-				    setToRunning "etc_hosts" "$etchosts$ipv4	$ifname\n"
+				set node_name [getNodeName $iter]
+
+				foreach ipv4 [getIfcIPv4addrs $iter $ifc] {
+				    set ipv4 [split $ipv4 "/"]
+				    if { $ctr == 0 } {
+					set etc_hosts "$etc_hosts$ipv4	${node_name}\n"
+				    } else {
+					set etc_hosts "$etc_hosts$ipv4	${node_name}_${ctr}\n"
+				    }
+				    incr ctr
 				}
 
-				if { $ipv6 != "" } {
-				    setToRunning "etc_hosts" "$etchosts$ipv6	$ifname\n"
+				foreach ipv6 [getIfcIPv6addrs $iter $ifc] {
+				    set ipv6 [split $ipv6 "/"]
+				    if { $ctr6 == 0 } {
+					set etc_hosts "$etc_hosts$ipv6	${node_name}.6\n"
+				    } else {
+					set etc_hosts "$etc_hosts$ipv6	${node_name}_${ctr6}.6\n"
+				    }
+				    incr ctr6
 				}
-
-				break
 			    }
 			}
 		    }
 		}
+
+		setToRunning "etc_hosts" $etc_hosts
 	    }
 
-	    writeDataToNodeFile $node /etc/hosts [getFromRunning "etc_hosts"]
+	    writeDataToNodeFile $node_id /etc/hosts $etc_hosts
 	}
     }
 }
