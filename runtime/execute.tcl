@@ -1252,3 +1252,4 @@ proc startNodeFromMenu { node } {
 
     finishExecuting 1 "" $w
 }
+
