@@ -18,8 +18,8 @@ log () {
 # GLOBAL FOR EVERY VERSION
 ##########################
 # directories
-ROOTDIR="."
-LIBDIR=""
+ROOTDIR=/usr/local
+LIBDIR=lib/imunes
 IMUNESDIR=`pwd`
 cd ~
 HOMEDIR=`pwd`
@@ -262,7 +262,7 @@ installPackagesPkg () {
 
     if [ "$err_list" != "" ]; then
 	log "OUT" "There were errors installing these packages:\n $err_list"
- 	log "OUT" "Try installing missing packages using:"
+	log "OUT" "Try installing missing packages using:"
 	log "OUT" " # pkg_imunes install PKGNAME"
 	log "OUT" "Additionally, you can upgrade existing ones in vroot using:"
 	log "OUT" " # pkg_imunes upgrade"
