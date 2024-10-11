@@ -23,7 +23,7 @@
 # SUCH DAMAGE.
 #
 
-# $Id: ipfirewall.tcl 63 2023-08-26 11:42 jromero17 $
+# $Id: ipfirewall.tcl 63 2013-10-03 12:17:50Z valter $
 
 
 
@@ -228,11 +228,11 @@ proc $MODULE.bootcmd { node } {
 #   * shells -- default shells for the ipfirewall
 #****
 proc $MODULE.shellcmd { node } {
-    set ret [nexec whereis -b bash]
+    set ret [exec whereis -b bash]
     if { [llength $ret] == 2 } {
 	return [lindex $ret 1]
     } else {
-	set ret [nexec whereis -b tcsh]
+	set ret [exec whereis -b tcsh]
 	if { [llength $ret] == 2 } {
 	    return [lindex $ret 1]
 	} else {
@@ -355,7 +355,7 @@ proc $MODULE.configGUI { c node } {
     set configtab [lindex $tabs 0]
     set ifctab [lindex $tabs 1]
 
-    set treecolumns {"OperState State" "Direct Direction" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
+    set treecolumns {"OperState State" "NatState Nat" "Direct Direction" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
 	    "MACaddr MAC addr" "MTU MTU" "QDisc Queue disc" "QDrop Queue drop" "QLen Queue len"}
     configGUI_addTree $ifctab $node
 
