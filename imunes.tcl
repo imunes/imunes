@@ -147,17 +147,17 @@ if {! [info exists eid_base]} {
 }
 
 # Set default L2 node list
-set l2nodes "hub lanswitch click_l2 rj45 stpswitch filter packgen ext"
+set l2nodes "hub lanswitch rj45 stpswitch filter packgen ext extnat"
 # Set default L3 node list
-set l3nodes "genericrouter quagga xorp static click_l3 host pc nat64"
+set l3nodes "genericrouter frr quagga static host pc nat64 extelem"
 # Set default supported router models
-set supp_router_models "xorp quagga static"
+set supp_router_models "frr quagga static"
 
 if { $isOSlinux } {
     # Limit default nodes on linux
-    set l2nodes "lanswitch rj45 ext"
-    set l3nodes "genericrouter quagga static pc host nat64"
-    set supp_router_models "quagga static"
+    set l2nodes "hub lanswitch rj45 ext extnat"
+    set l3nodes "genericrouter frr quagga static pc host nat64 extelem"
+    set supp_router_models "frr quagga static"
     safeSourceFile $ROOTDIR/$LIBDIR/runtime/linux.tcl
     if { $initMode == 1 } {
 	#puts "INFO: devfs preparation is done only on FreeBSD."
@@ -167,7 +167,7 @@ if { $isOSlinux } {
 if { $isOSfreebsd } {
     safeSourceFile $ROOTDIR/$LIBDIR/runtime/freebsd.tcl
     if { $initMode == 1 } {
-	prepareDevfs
+	prepareDevfs 1
 	exit
     }
 }
@@ -310,9 +310,7 @@ if {$execMode == "interactive"} {
 	}
     } else {
 	set configFile "$runtimeDir/$eid_base/config.imn"
-	set ngmapFile "$runtimeDir/$eid_base/ngnodemap"
-	if { [file exists $configFile] && [file exists $ngmapFile] \
-	    && $regular_termination } {
+	if { [file exists $configFile] && $regular_termination } {
 	    set fileId [open $configFile r]
 	    set cfg ""
 	    foreach entry [read $fileId] {
@@ -323,13 +321,8 @@ if {$execMode == "interactive"} {
 	    set curcfg [newObjectId cfg]
 	    lappend cfg_list $curcfg
 	    namespace eval ::cf::[set curcfg] {}
-	    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
 	    upvar 0 ::cf::[set ::curcfg]::eid eid
 	    set eid $eid_base
-
-	    set fileId [open $ngmapFile r]
-	    array set ngnodemap [gets $fileId]
-	    close $fileId
 
 	    loadCfg $cfg
 
