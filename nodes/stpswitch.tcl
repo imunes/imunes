@@ -61,18 +61,6 @@ proc $MODULE.confNewIfc { node ifc } {
     setBridgeIfcPriority $node $ifc 128
     setBridgeIfcPathcost $node $ifc 0
     setBridgeIfcMaxaddr $node $ifc 0
-
-    foreach l2node [listLANnodes $node ""] {
-	foreach ifc [ifcList $l2node] {
-	    set peer [peerByIfc $l2node $ifc]
-	    if { [nodeType $peer] != "router" && 
-	    [[typemodel $peer].layer] == "NETWORK" } {
-		    set ifname [ifcByPeer $peer $l2node]
-		    autoIPv4defaultroute $peer $ifname
-		    autoIPv6defaultroute $peer $ifname
-	    }
-	}
-    }
 }
 
 proc $MODULE.confNewNode { node } {
@@ -394,6 +382,17 @@ proc $MODULE.instantiate { eid node } {
     l3node.instantiate $eid $node
 }
 
+proc $MODULE.setupNamespace { eid node } {
+    l3node.setupNamespace $eid $node
+}
+
+proc $MODULE.initConfigure { eid node } {
+    l3node.initConfigure $eid $node
+}
+
+proc $MODULE.createIfcs { eid node ifcs } {
+    l3node.createIfcs $eid $node $ifcs
+}
 
 #****f* stpswitch.tcl/stpswitch.start
 # NAME
@@ -433,6 +432,9 @@ proc $MODULE.shutdown { eid node } {
     }
 }
 
+proc $MODULE.destroyIfcs { eid node ifcs } {
+    l3node.destroyIfcs $eid $node $ifcs
+}
 
 #****f* stpswitch.tcl/stpswitch.destroy
 # NAME
@@ -449,7 +451,6 @@ proc $MODULE.shutdown { eid node } {
 proc $MODULE.destroy { eid node } {
     l3node.destroy $eid $node
 }
-
 
 #****f* stpswitch.tcl/stpswitch.nghook
 # NAME
@@ -507,7 +508,7 @@ proc $MODULE.configGUI { c node } {
     set ifctab [lindex $tabs 1]
     set bridgeifctab [lindex $tabs 2]
 
-    set treecolumns { "OperState State" "IPv4addr IPv4 addr" \
+    set treecolumns { "OperState State" "NatState Nat" "IPv4addr IPv4 addr" \
 	"IPv6addr IPv6 addr" "MACaddr MAC addr" "MTU MTU" \
 	"QLen Queue len" "QDisc Queue disc" "QDrop Queue drop"}
     configGUI_addTree $ifctab $node
@@ -555,3 +556,4 @@ proc $MODULE.configBridgeInterfacesGUI { wi node ifc } {
 
     configGUI_ifcBridgeAttributes $wi $node $ifc
 }
+
