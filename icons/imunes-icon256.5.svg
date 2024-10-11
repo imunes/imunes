@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:v="http://vecta.io" width="340.0001" height="300.0001" viewBox="0 0 340.00014999999996 300.00005">
+    <style>
+        <![CDATA[svg{stroke:#000;stroke-linecap:round;stroke-linejoin:round;fill:#fff;fill-rule:evenodd;font-family:Roboto;font-size:14px;text-anchor:middle;}svg text{paint-order:stroke;white-space:pre;}svg .Text\.cls{stroke:none;}]]>
+    </style>
+    <defs>
+        <linearGradient id="L00100100000aaff10010000387f100.grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#00aaff" stop-opacity="1"/>
+            <stop offset="100%" stop-color="#00387f" stop-opacity="1"/>
+        </linearGradient>
+    </defs>
+    <g transform="translate(24.1512 20)">
+        <g>
+            <g transform="translate(240.4187 115)">
+                <path d="M 0.00001 30 L 0 0" fill="#007fff" stroke="#007fff" stroke-dasharray="9 18" stroke-linecap="round" stroke-linejoin="miter" stroke-width="9"/>
+            </g>
+            <g transform="translate(50.3024 106.1929)">
+                <path d="M 0.00001 0.00001 L 0 52.9061" fill="#007fff" stroke="#007fff" stroke-linejoin="miter" stroke-width="10"/>
+            </g>
+            <g transform="translate(109.2114 77.5258)">
+                <path d="M 0.00001 101.0023 L 90.5809 0" fill="#007fff" stroke="#007fff" stroke-dasharray="10 20" stroke-linecap="round" stroke-linejoin="miter" stroke-width="10"/>
+            </g>
+            <g transform="translate(119.7457 215.3854)">
+                <path d="M 0.00001 0.00001 L 61.9769 0" fill="#007fff" stroke="#007fff" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="10"/>
+            </g>
+            <g class="llv21zwl1o8.lay" transform="translate(-14.1511 -30.0001) rotate(90 64.999 74.9992)" v:layer_name="Capa sin título">
+                <path d="M 129.9999 106.7793 L 129.9999 43.2204 L 65.0003 0 L 0 43.2205 L 0 106.7793 L 65.0003 150.0001 Z" fill="url(#L00100100000aaff10010000387f100.grad)" fill-opacity="1" stroke="none" stroke-linejoin="miter" stroke-opacity="0" stroke-width="2.0833"/>
+            </g>
+            <g fill-rule="nonzero" transform="translate(20.849 -2)">
+                <path d="M 60.9999 79.7456 L 60.9999 93 L 0 93 L 0 79.7456 L 20.0739 79.7456 L 20.0739 13.3267 L 0 13.3267 L 0 0 L 60.9999 0 L 60.9999 13.3267 L 40.2434 13.3267 L 40.2434 79.7456 L 60.9999 79.7456 Z" stroke="none" stroke-dasharray="40 48" stroke-linecap="butt" stroke-linejoin="miter" stroke-opacity="0" stroke-width="8"/>
+            </g>
+            <g class="llv21zwl1o8.lay" transform="translate(175.8487 -29.9998) rotate(90 65.0001 74.9998)" v:layer_name="Capa sin título">
+                <path d="M 130.0004 106.7802 L 130.0004 43.2206 L 65.0003 0 L 0 43.2207 L 0 106.7802 L 65.0003 150 Z" fill="url(#L00100100000aaff10010000387f100.grad)" fill-opacity="1" stroke="none" stroke-linejoin="miter" stroke-opacity="0" stroke-width="2.0833"/>
+            </g>
+            <g class="llv21zwl1o8.lay" transform="translate(-14.1512 139.9999) rotate(90 65.0001 75)" v:layer_name="Capa sin título">
+                <path d="M 130.0001 106.7814 L 130.0001 43.2207 L 65.0003 0 L 0 43.2208 L 0 106.7814 L 65.0003 150 Z" fill="url(#L00100100000aaff10010000387f100.grad)" fill-opacity="1" stroke="none" stroke-linejoin="miter" stroke-opacity="0" stroke-width="2.0833"/>
+            </g>
+            <g fill-rule="nonzero" transform="translate(20.8489 168)">
+                <path d="M 61 0 L 61 94 L 45.8597 94 L 45.8597 30.3977 L 36.2778 64.1804 L 24.5758 64.1804 L 15.1403 30.3977 L 15.1403 94 L 0 94 L 0 0 L 17.9932 0 L 30.4269 42.4978 L 42.8604 0 L 61 0 Z" stroke="none" stroke-dasharray="40 48" stroke-linecap="butt" stroke-linejoin="miter" stroke-opacity="0" stroke-width="8"/>
+            </g>
+            <g class="llv21zwl1o8.lay" transform="translate(175.8489 140) rotate(90 64.9994 74.9992)" v:layer_name="Capa sin título">
+                <path d="M 130 106.7796 L 130 43.2204 L 65.0003 0 L 0 43.2204 L 0 106.7796 L 65.0003 150.0001 Z" fill="url(#L00100100000aaff10010000387f100.grad)" fill-opacity="1" stroke="none" stroke-linejoin="miter" stroke-opacity="0" stroke-width="2.0833"/>
+            </g>
+            <g fill-rule="nonzero" transform="translate(212.1985 168)">
+                <path d="M 60.6504 0 L 60.6504 94 L 43.1966 94 L 15.0535 25.8592 L 15.0535 94 L 0 94 L 0 0 L 18.9084 0 L 45.5969 64.7556 L 45.5969 0 L 60.6504 0 Z" stroke="none" stroke-dasharray="40 48" stroke-linecap="butt" stroke-linejoin="miter" stroke-opacity="0" stroke-width="8"/>
+            </g>
+        </g>
+    </g>
+</svg>

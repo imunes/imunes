@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:v="http://vecta.io" width="471.6978" height="410" viewBox="0 0 471.6977697674413 410">
+    <style>
+        <![CDATA[svg{stroke:#000;stroke-linecap:round;stroke-linejoin:round;fill:#fff;fill-rule:evenodd;font-family:Roboto;font-size:14px;text-anchor:middle;}svg text{paint-order:stroke;white-space:pre;}svg .Text\.cls{stroke:none;}]]>
+    </style>
+    <defs>
+        <linearGradient id="L00100100000aaff10010000387f100.grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#00aaff" stop-opacity="1"/>
+            <stop offset="100%" stop-color="#00387f" stop-opacity="1"/>
+        </linearGradient>
+    </defs>
+    <g>
+        <g>
+            <g transform="translate(35 15)">
+                <g>
+                    <g transform="translate(200.4187 100)">
+                        <path d="M 0.00001 30 L 0 0" fill="#007fff" stroke="#007fff" stroke-dasharray="8 16" stroke-linecap="round" stroke-linejoin="miter" stroke-width="8"/>
+                    </g>
+                    <g transform="translate(200.4187 250)">
+                        <path d="M 0.00001 30 L 0 0" fill="#007fff" stroke="#007fff" stroke-dasharray="8 16" stroke-linecap="round" stroke-linejoin="miter" stroke-width="8"/>
+                    </g>
+                    <g transform="translate(-25 -5)">
+                        <g>
+                            <g transform="translate(55.3024 96.1927)">
+                                <path d="M 0.00001 0.00001 L 0 52.9061" fill="#007fff" stroke="#007fff" stroke-linejoin="miter" stroke-width="8"/>
+                            </g>
+                            <g transform="translate(88.2108 77.5258) rotate(355 45.2905 50.5011)">
+                                <path d="M 0.00001 101.0023 L 90.5809 0" fill="#007fff" stroke="#007fff" stroke-dasharray="8 16" stroke-linecap="round" stroke-linejoin="miter" stroke-width="8"/>
+                            </g>
+                            <g transform="translate(269.8381 45.0963)">
+                                <path d="M 0.00001 0.00001 L 57.2093 0" fill="#007fff" stroke="#007fff" stroke-dasharray="8 16" stroke-linecap="round" stroke-linejoin="miter" stroke-width="8"/>
+                            </g>
+                            <g transform="translate(260.3029 62.1446)">
+                                <path d="M 0.00001 0.00001 L 90.5809 101.0023" fill="#007fff" stroke="#007fff" stroke-dasharray="8 16" stroke-linecap="round" stroke-linejoin="miter" stroke-width="8"/>
+                            </g>
+                            <g transform="translate(115.7457 195.3854)">
+                                <path d="M 0.00001 0.00001 L 61.9769 0" fill="#007fff" stroke="#007fff" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="8"/>
+                            </g>
+                            <g transform="translate(93.4419 216.4336)">
+                                <path d="M 85.8143 0.00001 L 0 101.0023" fill="#007fff" stroke="#007fff" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="8"/>
+                            </g>
+                            <g transform="translate(107.7457 344.6769)">
+                                <path d="M 0.00001 0.00001 L 4.7678 0.0001 L 61.9769 0" fill="#007fff" stroke="#007fff" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="8"/>
+                            </g>
+                            <g transform="translate(274.8377 344.6746)">
+                                <path d="M 0.00001 0.00001 L 61.9769 0" fill="#007fff" stroke="#007fff" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="8"/>
+                            </g>
+                            <g transform="translate(266.0001 211.4441) rotate(355 47.6744 50.5012)">
+                                <path d="M 95.3488 0.00001 L 0 101.0023" fill="#007fff" stroke="#007fff" stroke-dasharray="8 16" stroke-linecap="round" stroke-linejoin="miter" stroke-width="8"/>
+                            </g>
+                            <g transform="translate(55.3024 255.6729)">
+                                <path d="M 0.00001 0.00001 L 0 29.3271" fill="#007fff" stroke="#007fff" stroke-dasharray="8 16" stroke-linecap="round" stroke-linejoin="miter" stroke-width="8"/>
+                            </g>
+                        </g>
+                    </g>
+                </g>
+            </g>
+            <g class="llv21zwl1o8.lay" transform="translate(10 -10) rotate(90 55 65)" v:layer_name="Capa sin título">
+                <path d="M 110 92.5433 L 110 37.4581 L 55.0003 0 L 0 37.4582 L 0 92.5433 L 55.0003 130 Z" fill="url(#L00100100000aaff10010000387f100.grad)" fill-opacity="1" stroke="none" stroke-linejoin="miter" stroke-opacity="0" stroke-width="2.0833"/>
+            </g>
+            <g fill-rule="nonzero" transform="translate(45 20.4479)">
+                <path d="M 40 59.639 L 40 69.5521 L 0 69.5521 L 0 59.639 L 13.1629 59.639 L 13.1629 9.9666 L 0 9.9666 L 0 0 L 40 0 L 40 9.9666 L 26.3897 9.9666 L 26.3897 59.639 L 40 59.639 Z" stroke="none" stroke-dasharray="40 48" stroke-linecap="butt" stroke-linejoin="miter" stroke-opacity="0" stroke-width="8"/>
+            </g>
+            <g class="llv21zwl1o8.lay" transform="translate(180 -10) rotate(90 55 65)" v:layer_name="Capa sin título">
+                <path d="M 110 92.5433 L 110 37.4581 L 55.0003 0 L 0 37.4582 L 0 92.5433 L 55.0003 130 Z" fill="url(#L00100100000aaff10010000387f100.grad)" fill-opacity="1" stroke="none" stroke-linejoin="miter" stroke-opacity="0" stroke-width="2.0833"/>
+            </g>
+            <g class="llv21zwl1o8.lay" transform="translate(10 140) rotate(90 55 65)" v:layer_name="Capa sin título">
+                <path d="M 110 92.5433 L 110 37.4581 L 55.0003 0 L 0 37.4582 L 0 92.5433 L 55.0003 130 Z" fill="url(#L00100100000aaff10010000387f100.grad)" fill-opacity="1" stroke="none" stroke-linejoin="miter" stroke-opacity="0" stroke-width="2.0833"/>
+            </g>
+            <g fill-rule="nonzero" transform="translate(43.3496 170)">
+                <path d="M 46.6504 0 L 46.6504 70 L 35.0717 70 L 35.0717 22.6361 L 27.7441 47.7932 L 18.7944 47.7932 L 11.5787 22.6361 L 11.5787 70 L 0 70 L 0 0 L 13.7601 0 L 23.2693 31.6474 L 32.7784 0 L 46.6504 0 Z" stroke="none" stroke-dasharray="40 48" stroke-linecap="butt" stroke-linejoin="miter" stroke-opacity="0" stroke-width="8"/>
+            </g>
+            <g class="llv21zwl1o8.lay" transform="translate(10 290) rotate(90 55 65)" v:layer_name="Capa sin título">
+                <path d="M 110 92.5433 L 110 37.4581 L 55.0003 0 L 0 37.4582 L 0 92.5433 L 55.0003 130 Z" fill="url(#L00100100000aaff10010000387f100.grad)" fill-opacity="1" stroke="none" stroke-linejoin="miter" stroke-opacity="0" stroke-width="2.0833"/>
+            </g>
+            <g fill-rule="nonzero" transform="translate(43.3496 320)">
+                <path d="M 46.6504 0 L 46.6504 70 L 33.2257 70 L 11.5787 19.2568 L 11.5787 70 L 0 70 L 0 0 L 14.5434 0 L 35.0717 48.2221 L 35.0717 0 L 46.6504 0 Z" stroke="none" stroke-dasharray="40 48" stroke-linecap="butt" stroke-linejoin="miter" stroke-opacity="0" stroke-width="8"/>
+            </g>
+            <g class="llv21zwl1o8.lay" transform="translate(180 140) rotate(90 55 65)" v:layer_name="Capa sin título">
+                <path d="M 110 92.5433 L 110 37.4581 L 55.0003 0 L 0 37.4582 L 0 92.5433 L 55.0003 130 Z" fill="url(#L00100100000aaff10010000387f100.grad)" fill-opacity="1" stroke="none" stroke-linejoin="miter" stroke-opacity="0" stroke-width="2.0833"/>
+            </g>
+            <g fill-rule="nonzero" transform="translate(215 170)">
+                <path d="M 45 0 L 45 44.2772 Q 45 50.1281 43.678 54.8719 Q 42.3561 59.6159 39.5774 62.9632 Q 36.7985 66.3101 32.5359 68.1551 Q 28.2733 70 22.4461 70 Q 16.5647 70 12.383 68.1551 Q 8.2015 66.3101 5.4226 62.9632 Q 2.6439 59.6159 1.322 54.8193 Q 0 50.0225 0 44.1717 L 0 0 L 11.1691 0 L 11.1691 44.2772 Q 11.1691 46.8599 11.5468 49.6272 Q 11.9244 52.3946 13.0845 54.7666 Q 14.2446 57.1385 16.5108 58.6408 Q 18.777 60.143 22.4461 60.143 Q 26.0612 60.143 28.3274 58.6408 Q 30.5935 57.1385 31.8345 54.8193 Q 33.0756 52.4999 33.4532 49.6801 Q 33.8309 46.8599 33.8309 44.2772 L 33.8309 0 L 45 0 Z" stroke="none" stroke-dasharray="40 48" stroke-linecap="butt" stroke-linejoin="miter" stroke-opacity="0" stroke-width="8"/>
+            </g>
+            <g class="llv21zwl1o8.lay" transform="translate(180 290) rotate(90 55 65)" v:layer_name="Capa sin título">
+                <path d="M 110 92.5433 L 110 37.4581 L 55.0003 0 L 0 37.4582 L 0 92.5433 L 55.0003 130 Z" fill="url(#L00100100000aaff10010000387f100.grad)" fill-opacity="1" stroke="none" stroke-linejoin="miter" stroke-opacity="0" stroke-width="2.0833"/>
+            </g>
+            <g fill-rule="nonzero" transform="translate(210 320)">
+                <path d="M 50 60.0231 L 50 70 L 0 70 L 0 0 L 50 0 L 50 10.0307 L 12.4101 10.0307 L 12.4101 29.3411 L 41.7264 29.3411 L 41.7264 39.3718 L 12.4101 39.3718 L 12.4101 60.0231 L 50 60.0231 Z" stroke="none" stroke-dasharray="40 48" stroke-linecap="butt" stroke-linejoin="miter" stroke-opacity="0" stroke-width="8"/>
+            </g>
+            <g class="llv21zwl1o8.lay" transform="translate(350 290) rotate(90 55 65)" v:layer_name="Capa sin título">
+                <path d="M 110 92.5433 L 110 37.4581 L 55.0003 0 L 0 37.4582 L 0 92.5433 L 55.0003 130 Z" fill="url(#L00100100000aaff10010000387f100.grad)" fill-opacity="1" stroke="none" stroke-linejoin="miter" stroke-opacity="0" stroke-width="2.0833"/>
+            </g>
+            <g fill-rule="nonzero" transform="translate(381.6797 320)">
+                <path d="M 48.3203 50.2444 Q 48.3203 54.9111 46.6302 58.5666 Q 44.94 62.2222 42.0309 64.7629 Q 39.1218 67.3036 35.1044 68.6518 Q 31.0867 70 26.543 70 Q 21.4448 70 17.3443 68.2889 Q 13.2437 66.5778 10.3068 62.637 L 10.3068 68.8073 L 0 68.8073 L 0 46.7184 L 10.3068 46.7184 Q 10.3068 50.037 11.5536 52.5776 Q 12.8004 55.1185 14.8507 56.8555 Q 16.9011 58.5926 19.6162 59.4999 Q 22.3316 60.4074 25.3794 60.4074 Q 30.5327 60.4074 33.6912 58.1778 Q 36.8498 55.9481 36.8498 51.074 Q 36.8498 48.5333 35.88 46.7184 Q 34.9103 44.9036 33.1093 43.4778 Q 31.3085 42.0518 28.7041 40.9889 Q 26.0996 39.926 22.7747 38.7333 Q 18.8404 37.4889 14.9061 35.9333 Q 10.9718 34.3778 7.8686 32.0962 Q 4.7655 29.8148 2.826 26.4703 Q 0.8865 23.126 0.8865 18.0445 Q 0.8865 13.5852 2.6322 10.2408 Q 4.3777 6.8963 7.2868 4.6147 Q 10.1959 2.3333 14.0473 1.1667 Q 17.8985 0 22.2207 0 Q 27.2079 0 30.782 1.9703 Q 34.3561 3.9407 36.2956 7.2074 L 36.2956 1.1408 L 46.6024 1.1408 L 46.6024 22.1926 L 36.2956 22.1926 Q 36.2956 16.2297 32.9431 12.8852 Q 29.5906 9.5407 23.9386 9.5407 Q 18.9513 9.5407 15.6542 11.7184 Q 12.3572 13.8962 12.3572 17.8371 Q 12.3572 19.8593 13.2162 21.2853 Q 14.0749 22.711 15.7097 23.8778 Q 17.3443 25.0445 19.838 26.0555 Q 22.3316 27.0667 25.6009 28.2592 Q 29.7015 29.6074 33.7467 31.3185 Q 37.7919 33.0297 41.0057 35.5184 Q 44.2198 38.0074 46.2699 41.5593 Q 48.3203 45.111 48.3203 50.2444 Z" stroke="none" stroke-dasharray="40 48" stroke-linecap="butt" stroke-linejoin="miter" stroke-opacity="0" stroke-width="8"/>
+            </g>
+            <g class="llv21zwl1o8.lay" transform="translate(350 140) rotate(90 55 65)" v:layer_name="Capa sin título">
+                <path d="M 110 92.5433 L 110 37.4581 L 55.0003 0 L 0 37.4582 L 0 92.5433 L 55.0003 130 Z" fill="url(#L00100100000aaff10010000387f100.grad)" fill-opacity="1" stroke="none" stroke-linejoin="miter" stroke-opacity="0" stroke-width="2.0833"/>
+            </g>
+            <g class="llv21zwl1o8.lay" transform="translate(350 -10) rotate(90 55 65)" v:layer_name="Capa sin título">
+                <path d="M 110 92.5433 L 110 37.4581 L 55.0003 0 L 0 37.4582 L 0 92.5433 L 55.0003 130 Z" fill="url(#L00100100000aaff10010000387f100.grad)" fill-opacity="1" stroke="none" stroke-linejoin="miter" stroke-opacity="0" stroke-width="2.0833"/>
+            </g>
+        </g>
+    </g>
+</svg>
