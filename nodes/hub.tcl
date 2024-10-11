@@ -26,7 +26,7 @@
 # and Technology through the research contract #IP-2003-143.
 #
 
-# $Id: hub.tcl 129 2023-08-26 11:42 jromero17 $
+# $Id: hub.tcl 129 2015-02-13 11:14:44Z valter $
 
 
 #****h* imunes/hub.tcl
@@ -68,17 +68,6 @@ proc $MODULE.prepareSystem {} {
 #   * ifc -- interface name
 #****
 proc $MODULE.confNewIfc { node ifc } {
-    foreach l2node [listLANnodes $node ""] {
-	foreach ifc [ifcList $l2node] {
-	    set peer [peerByIfc $l2node $ifc]
-	    if { ! [isNodeRouter $peer] &&
-		[[typemodel $peer].layer] == "NETWORK" } {
-		set ifname [ifcByPeer $peer $l2node]
-		autoIPv4defaultroute $peer $ifname
-		autoIPv6defaultroute $peer $ifname
-	    }
-	}
-    }
 }
 
 #****f* hub.tcl/hub.confNewNode
@@ -200,6 +189,18 @@ proc $MODULE.instantiate { eid node } {
     l2node.instantiate $eid $node
 }
 
+proc $MODULE.setupNamespace { eid node } {
+    l2node.setupNamespace $eid $node
+}
+
+proc $MODULE.createIfcs { eid node ifcs } {
+    l2node.createIfcs $eid $node $ifcs
+}
+
+proc $MODULE.destroyIfcs { eid node ifcs } {
+    l2node.destroyIfcs $eid $node $ifcs
+}
+
 #****f* hub.tcl/hub.destroy
 # NAME
 #   hub.destroy -- destroy
@@ -236,7 +237,7 @@ proc $MODULE.destroy { eid node } {
 #****
 proc $MODULE.nghook { eid node ifc } {
     set ifunit [string range $ifc 1 end]
-    return [list $eid\.$node link$ifunit]
+    return [list $node link$ifunit]
 }
 
 
