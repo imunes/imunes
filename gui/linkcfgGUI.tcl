@@ -59,12 +59,10 @@ proc toggleDirectLink { c link } {
     if {$link == ""} {
 	set link [lindex [$c gettags current] 1]
     }
-#    if { [getLinkDirect $link] } {
-#	setLinkDirect $link 0
-#    } else {
-#	setLinkDirect $link 1
+
     set new_value [expr [getLinkDirect $link] ^ 1]
     setLinkDirect $link $new_value
+
     set mirror_link [getLinkMirror $link]
     if { $mirror_link != "" } {
 	setLinkDirect $mirror_link $new_value
@@ -105,6 +103,7 @@ proc link.configGUI { c link } {
     configGUI_linkConfig $wi $link "Bandwidth" "Bandwidth (bps):"
     configGUI_linkConfig $wi $link "Delay" "Delay (us):"
     configGUI_linkConfig $wi $link "BER" "BER (1/N):"
+    configGUI_linkConfig $wi $link "Loss" "Loss (%):"
     configGUI_linkConfig $wi $link "Dup" "Duplicate (%):"
     configGUI_linkConfig $wi $link "Width" "Width:"
     configGUI_linkColor $wi $link
@@ -230,6 +229,8 @@ proc configGUI_linkConfig { wi link param label } {
         set from 0; set to 10000000; set inc 5
     } elseif { $param == "BER" } {
         set from 0; set to 10000000000000; set inc 1000
+    } elseif { $param == "Loss" } {
+        set from 0; set to 100; set inc 1
     } elseif { $param == "Dup" } {
         set from 0; set to 50; set inc 1
     } elseif { $param == "Width" } {
