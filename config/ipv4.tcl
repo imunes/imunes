@@ -536,6 +536,7 @@ proc checkIPv4Net { str } {
 #   * valid -- function returns 0 if the input string is not in the form
 #     of a valid IP network, 1 otherwise
 #****
+
 proc checkIPv4Nets { str } {
     foreach net [split $str ";"] {
 	set net [string trim $net]
