@@ -206,8 +206,12 @@ proc $MODULE.destroy { eid node } {
 #     the netraph hook name (in this case: lower).
 #****
 proc $MODULE.nghook { eid node ifc } {
-    set nodename [getNodeName $node]
-    return [list $nodename lower]
+    set ifname [getNodeName $node]
+    if { [getEtherVlanEnabled $node] } {
+	set vlan [getEtherVlanTag $node]
+	set ifname ${ifname}_$vlan
+    }
+    return [list $ifname lower]
 }
 
 #****f* rj45.tcl/rj45.configGUI
