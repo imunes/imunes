@@ -9,7 +9,6 @@ proc getBridgeProtocol { node bridge } {
     }
     return rstp
 }
-
 proc setBridgeProtocol { node bridge proto } {
     set ifcfg [list "bridge $bridge"]
     foreach line [netconfFetchSection $node "bridge $bridge"] {
