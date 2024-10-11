@@ -159,6 +159,12 @@ proc removeLink { link } {
 	netconfClearSection $node "interface $ifc"
 	set i [lsearch [set $node] "interface-peer {$ifc $peer}"]
 	set $node [lreplace [set $node] $i $i]
+	#...
+
+
+
+	...
+	#
 	foreach lifc [logIfcList $node] {
 	    switch -exact [getLogIfcType $node $lifc] {
 		vlan {
