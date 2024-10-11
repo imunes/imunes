@@ -59,6 +59,7 @@ lib/imunes/icons/normal/click_l2.svg
 lib/imunes/icons/normal/click_l3.svg
 lib/imunes/icons/normal/cloud.svg
 lib/imunes/icons/normal/ext.svg
+lib/imunes/icons/normal/extnat.svg
 lib/imunes/icons/normal/filter.svg
 lib/imunes/icons/normal/frswitch.svg
 lib/imunes/icons/normal/host.svg
@@ -75,6 +76,7 @@ lib/imunes/icons/small/click_l2.svg
 lib/imunes/icons/small/click_l3.svg
 lib/imunes/icons/small/cloud.svg
 lib/imunes/icons/small/ext.svg
+lib/imunes/icons/small/extnat.svg
 lib/imunes/icons/small/filter.svg
 lib/imunes/icons/small/frswitch.svg
 lib/imunes/icons/small/host.svf
@@ -91,6 +93,7 @@ lib/imunes/icons/tiny/click_l2.svg
 lib/imunes/icons/tiny/click_l3.svg
 lib/imunes/icons/tiny/cloud.svg
 lib/imunes/icons/tiny/ext.svg
+lib/imunes/icons/tiny/extnat.svg
 lib/imunes/icons/tiny/filter.svg
 lib/imunes/icons/tiny/freeform.svg
 lib/imunes/icons/tiny/frswitch.svg
