@@ -23,7 +23,7 @@
 # SUCH DAMAGE.
 #
 
-# $Id: genericrouter.tcl 130 2023-08-26 11:42 jromero17 $
+# $Id: genericrouter.tcl 130 2015-02-24 09:52:19Z valter $
 
 
 
@@ -33,7 +33,7 @@
 # FUNCTION
 #  This module is used to define all the router specific procedures.
 #  All the specific procedures for a router which uses specific routing model
-#  (quaga, xorp, static) are defined in quagga.tcl, xorp.tcl, static.tcl.
+#  (frr, quagga, static) are defined in frr.tcl, quagga.tcl, static.tcl.
 # NOTES
 #  Procedures in this module start with the keyword router and
 #  end with function specific part that is the same for all the
@@ -64,6 +64,11 @@ proc $MODULE.confNewIfc { node ifc } {
     autoIPv4addr $node $ifc
     autoIPv6addr $node $ifc
     autoMACaddr $node $ifc
+
+    set peer_node [logicalPeerByIfc $node $ifc]
+    if { [typemodel $peer_node] == "extnat" } {
+	setIfcNatState $node $ifc "on"
+    }
 }
 
 #****f* genericrouter.tcl/router.confNewNode
@@ -105,6 +110,7 @@ proc $MODULE.confNewNode { node } {
     setNodeProtocolOspfv2 $node $ospfEnable
     setNodeProtocolOspfv3 $node $ospf6Enable
 
+    setAutoDefaultRoutesStatus $node "enabled"
     setLogIfcType $node lo0 lo
     setIfcIPv4addr $node lo0 "127.0.0.1/8"
     setIfcIPv6addr $node lo0 "::1/128"
@@ -169,7 +175,7 @@ proc $MODULE.notebookDimensions { wi } {
 
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
 	== "Configuration" } {
-	set h 310
+	set h 360
 	set w 507
     }
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
@@ -255,12 +261,12 @@ proc $MODULE.configGUI { c node } {
     set ifctab [lindex $tabs 1]
     set ipsectab [lindex $tabs 2]
 
-    set treecolumns {"OperState State" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
+    set treecolumns {"OperState State" "NatState Nat" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
 	    "MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop" }
     configGUI_addTree $ifctab $node
 
     configGUI_routingModel $configtab $node
-    configGUI_dockerImage $configtab $node
+    configGUI_customImage $configtab $node
     configGUI_attachDockerToExt $configtab $node
     configGUI_servicesConfig $configtab $node
     configGUI_staticRoutes $configtab $node
