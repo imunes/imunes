@@ -53,6 +53,10 @@ registerModule $MODULE
 #   Loads ng_bridge into the kernel.
 #****
 proc $MODULE.prepareSystem {} {
+	catch { exec sysctl net.bridge.bridge-nf-call-arptables=0 }
+	catch { exec sysctl net.bridge.bridge-nf-call-iptables=0 }
+	catch { exec sysctl net.bridge.bridge-nf-call-ip6tables=0 }
+
     catch { exec kldload ng_bridge }
 }
 
@@ -68,17 +72,6 @@ proc $MODULE.prepareSystem {} {
 #   * ifc -- interface name
 #****
 proc $MODULE.confNewIfc { node ifc } {
-    foreach l2node [listLANnodes $node ""] {
-	foreach ifc [ifcList $l2node] {
-	    set peer [peerByIfc $l2node $ifc]
-	    if { ! [isNodeRouter $peer] &&
-		[[typemodel $peer].layer] == "NETWORK" } {
-		set ifname [ifcByPeer $peer $l2node]
-		autoIPv4defaultroute $peer $ifname
-		autoIPv6defaultroute $peer $ifname
-	    }
-	}
-    }
 }
 
 #****f* lanswitch.tcl/lanswitch.confNewNode
@@ -201,6 +194,18 @@ proc $MODULE.instantiate { eid node } {
     l2node.instantiate $eid $node
 }
 
+proc $MODULE.setupNamespace { eid node } {
+    l2node.setupNamespace $eid $node
+}
+
+proc $MODULE.createIfcs { eid node ifcs } {
+    l2node.createIfcs $eid $node $ifcs
+}
+
+proc $MODULE.destroyIfcs { eid node ifcs } {
+    l2node.destroyIfcs $eid $node $ifcs
+}
+
 #****f* lanswitch.tcl/lanswitch.destroy
 # NAME
 #   lanswitch.destroy -- destroy
@@ -237,7 +242,7 @@ proc $MODULE.destroy { eid node } {
 #****
 proc $MODULE.nghook { eid node ifc } {
     set ifunit [string range $ifc 1 end]
-    return [list $eid\.$node link$ifunit]
+    return [list $node link$ifunit]
 }
 
 #****f* lanswitch.tcl/lanswitch.configGUI
