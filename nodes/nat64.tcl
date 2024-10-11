@@ -66,6 +66,7 @@ proc $MODULE.confNewNode { node } {
 	}
     }
 
+    setAutoDefaultRoutesStatus $node "enabled"
     setLogIfcType $node lo0 lo
     setIfcIPv4addr $node lo0 "127.0.0.1/8"
     setIfcIPv6addr $node lo0 "::1/128"
@@ -99,6 +100,7 @@ proc $MODULE.notebookDimensions { wi } {
 
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
 	== "Configuration" } { 
+    set h 320
 	set w 507 
     }
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
@@ -127,9 +129,8 @@ proc $MODULE.virtlayer {} {
 }
 
 proc $MODULE.cfggen { node } {
-    #set cfg [router.quagga.cfggen $node]
     set cfg [router.frr.cfggen $node]
-    
+
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global nat64ifc_$eid.$node
     if { [info exists nat64ifc_$eid.$node] == 0 } {
@@ -154,27 +155,27 @@ proc $MODULE.cfggen { node } {
 }
 
 proc $MODULE.bootcmd { node } {
-    #return [router.quagga.bootcmd $node] 
     return [router.frr.bootcmd $node]
 }
 
 proc $MODULE.shellcmds { } {
-    #return [router.quagga.shellcmds]
     return [router.frr.shellcmds]
 }
 
 proc $MODULE.instantiate { eid node } {
-    #router.quagga.instantiate $eid $node
     router.frr.instantiate $eid $node
 }
 
 proc $MODULE.setupNamespace { eid node } {
     l3node.setupNamespace $eid $node
 }
+
 proc $MODULE.initConfigure { eid node } {
     l3node.initConfigure $eid $node
+
     enableIPforwarding $eid $node
 }
+
 proc $MODULE.createIfcs { eid node ifcs } {
     l3node.createIfcs $eid $node $ifcs
 }
@@ -185,7 +186,6 @@ proc $MODULE.start { eid node } {
     set tun [createStartTunIfc $eid $node]
     set nat64ifc_$eid.$node $tun
 
-    #router.quagga.start $eid $node
     router.frr.start $eid $node
 
     set datadir "/var/db/tayga"
@@ -208,12 +208,10 @@ proc $MODULE.start { eid node } {
 
     # XXX
     # Even though this routes should be added here, we add them in the
-    ## router.quagga.start procedure which invokes nat64.cfggen where we define
-    # router.quagga.start procedure which invokes nat64.cfggen where we define
+    # router.frr.start procedure which invokes nat64.cfggen where we define
     # them with:
     # lappend cfg "ip route $tayga4pool $tun"
     # lappend cfg "ipv6 route $tayga6prefix $tun"
-    ## This is done in order for quagga to redistribute these routes.
     # This is done in order for frr to redistribute these routes.
     # FreeBSD:
     # exec jexec $eid.$node route -n add -inet $tayga4pool -interface $tun
@@ -226,19 +224,16 @@ proc $MODULE.start { eid node } {
 }
 
 proc $MODULE.shutdown { eid node } {
-    #router.quagga.shutdown $eid $node
     router.frr.shutdown $eid $node
     taygaShutdown $eid $node
 }
 
 proc $MODULE.destroy { eid node } {
     taygaDestroy $eid $node
-    #router.quagga.destroy $eid $node
     router.frr.destroy $eid $node
 }
 
 proc $MODULE.nghook { eid node ifc } {
-    #return [router.quagga.nghook $eid $node $ifc] 
     return [router.frr.nghook $eid $node $ifc]
 }
 
@@ -262,7 +257,7 @@ proc $MODULE.configGUI { c node } {
     configGUI_addTree $ifctab $node
 
     configGUI_routingProtocols $configtab $node
-    configGUI_dockerImage $configtab $node
+    configGUI_customImage $configtab $node
     configGUI_attachDockerToExt $configtab $node
     configGUI_servicesConfig $configtab $node
     configGUI_staticRoutes $configtab $node
