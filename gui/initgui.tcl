@@ -86,7 +86,7 @@
 #    * showNodeLabels -- control variable for showing node labels
 #    * showLinkLabels -- control variable for showing link labels
 #
-#    * supp_router_models -- supproted router models, currently xorp quagga
+#    * supp_router_models -- supproted router models, currently frr quagga
 #      and static.
 #    * def_router_model -- default router model
 #****
@@ -99,20 +99,25 @@ namespace import -force ::msgcat::mc
 namespace import -force ::msgcat::mcset
 namespace import -force ::msgcat::*
 
+#set language [lindex [split [::msgcat::mclocale] {_}] 0]
+
 set fp [open "$ROOTDIR/$LIBDIR/gui/setidioma.tcl" r 600]
 set file_data [read $fp]
 #puts "$file_data"
 close $fp
 
 set language "$file_data"
+
 # FreeBSD 12.2, FreeBSD 13.0, FreeBSD-13.2
 if [file isfile "$ROOTDIR/$LIBDIR/gui/msgs/${language}.msg" ] {
 	source "$ROOTDIR/$LIBDIR/gui/msgs/${language}.msg"
+	#puts "Existe el archivo: $ROOTDIR/$LIBDIR/gui/msgs/${language}.msg"
 	::msgcat::mclocale "$language"
 	::msgcat::mcload [file join [file dirname [info script]] msgs]
 } else {
-	#puts "No file exist in $ROOTDIR/$LIBDIR/gui/msgs/${language}.msg"
+	#puts "No existe el archivo en $ROOTDIR/$LIBDIR/gui/msgs/${language}.msg"
 }
+
 set newlink ""
 set selectbox ""
 set selected ""
@@ -130,16 +135,15 @@ set typeIdiom ""
 
 # resize Oval/Rectangle, "false" or direction: north/west/east/...
 set resizemode false
+
 #
 # Initialize a few variables to default values
 #
 # Color del enlace "Red"
 set defLinkColor Red
-# Variable new $colorBgLink
+# Variables puestas por mi $colorBgLink
 set colorBgLink $defLinkColor
-
 set defFillColor Gray
-# Ancho de la linea de enlace
 set defLinkWidth 2
 set defEthBandwidth 0
 set defSerBandwidth 0
@@ -180,9 +184,9 @@ set canvasBkgMode "original"
 set alignCanvasBkg "center"
 set bgsrcfile ""
 
-set def_router_model quagga
+set def_router_model frr
 
-set model quagga
+set model frr
 set router_model $model
 set routerDefaultsModel $model
 set ripEnable 1
@@ -199,6 +203,7 @@ set selectedExperiment ""
 set copypaste_nodes 0
 set cutNodes 0
 
+#set iconsrcfile [lindex [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] 0]
 set iconsrcfile [lindex [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.svg] 0]
 #interface selected in the topology tree
 set selectedIfc ""
@@ -206,13 +211,13 @@ set selectedIfc ""
 # bases for naming new nodes
 array set nodeNamingBase {
     pc pc
-    click_l2 cswitch
-    click_l3 crouter
     ext ext
     filter filter
+    ipfirewall ipfirewall
     router router
     host host
     hub hub
+    extelem xel
     lanswitch switch
     nat64 nat64-
     packgen packgen
@@ -241,19 +246,19 @@ if { $iconlist != "" } {
     eval wm iconphoto . -default $iconlist
 }
 
-# New Variables
+# Variables puestas por mi
 global themeselec
-global colorcanvas   
+global colorcanvas
 global gridVert
 global gridHori
 global gridIntVert
 global gridIntHori
 global colorNameNode
-global colorIPIfc 
+global colorIPIfc
 global currentTheme
 global currentThemenew
-
-set colorcanvas "#ffffff"   
+# Variables puestas por mi
+set colorcanvas "#ffffff"
 set gridVert gray
 set gridHori gray
 set gridIntVert gray
@@ -292,9 +297,9 @@ if { $themeselec ni {"imunesdark" "black"}} {
 	.menubar add cascade -label [mc "Help"] -underline 0 -menu .menubar.help -font "-weight bold -size 10" -background #343434 -foreground #A5A5A5 -activebackground #0F7FF2 -activeforeground white
 	.menubar add cascade -label [mc "Idiom"] -underline 0 -menu .menubar.idiomas -font "-weight bold -size 10" -background #343434 -foreground #A5A5A5 -activebackground #0F7FF2 -activeforeground white
 
-} else {
+} else { 
 	menu .menubar
-	. configure -menu .menubar 
+	. configure -menu .menubar
 	.menubar add cascade -label [mc "File"] -underline 0 -menu .menubar.file
 	.menubar add cascade -label [mc "Edit"] -underline 0 -menu .menubar.edit
 	.menubar add cascade -label [mc "Canvas"] -underline 0 -menu .menubar.canvas
@@ -307,6 +312,8 @@ if { $themeselec ni {"imunesdark" "black"}} {
 	.menubar add cascade -label [mc "Help"] -underline 0 -menu .menubar.help
 	.menubar add cascade -label [mc "Idiom"] -underline 0 -menu .menubar.idiomas
 }
+
+
 
 #
 # File
@@ -418,10 +425,12 @@ set printFileType ps
     pack $w.printframe.ftype -anchor w
     pack $w.printframe.ftype.ps $w.printframe.ftype.pdf -side left -fill x -padx 10
 }
-#
+
 .menubar.file add separator
 .menubar.file add command -label [mc "Quit"] -underline 0 -command { exit } -activebackground #0F7FF2 -activeforeground white
 .menubar.file add separator
+
+
 #
 # Edit
 #
@@ -501,6 +510,7 @@ bind . <Home> { switchCanvas first }
 .menubar.canvas add command -label [mc "Last"] -accelerator [mc "End"] -activebackground #0F7FF2 -activeforeground white \
     -command { switchCanvas last }
 bind . <End> { switchCanvas last }
+
 
 #
 # Tools
@@ -592,7 +602,7 @@ menu .menubar.tools -tearoff 0
     pack $w.ipv6frame.buttons.apply -side left -expand 1 -anchor e -padx 2
     pack $w.ipv6frame.buttons.cancel -side right -expand 1 -anchor w -padx 2
 }
-.menubar.tools add command -label "Routing protocol defaults" -underline 0 -activebackground #0F7FF2 -activeforeground white -command {
+.menubar.tools add command -label "Routing protocol defaults" -underline 0 -command {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global router_model supp_router_models routerDefaultsModel
@@ -620,15 +630,15 @@ menu .menubar.tools -tearoff 0
     ttk::checkbutton $w.protocols.ospf -text "ospfv2" -variable routerOspfEnable
     ttk::checkbutton $w.protocols.ospf6 -text "ospfv3" -variable routerOspf6Enable
 
-    ttk::radiobutton $w.model.quagga -text quagga -variable router_model \
-	-value quagga -command {
+    ttk::radiobutton $w.model.frr -text frr -variable router_model \
+	-value frr -command {
 	$w.protocols.rip configure -state normal
 	$w.protocols.ripng configure -state normal
 	$w.protocols.ospf configure -state normal
 	$w.protocols.ospf6 configure -state normal
     }
-    ttk::radiobutton $w.model.xorp -text xorp -variable router_model \
-	-value xorp -command {
+    ttk::radiobutton $w.model.quagga -text quagga -variable router_model \
+	-value quagga -command {
 	$w.protocols.rip configure -state normal
 	$w.protocols.ripng configure -state normal
 	$w.protocols.ospf configure -state normal
@@ -650,12 +660,12 @@ menu .menubar.tools -tearoff 0
     }
 
     if { $oper_mode != "edit" } {
+	$w.model.frr configure -state disabled
 	$w.model.quagga configure -state disabled
-	$w.model.xorp configure -state disabled
 	$w.model.static configure -state disabled
     }
-    if {"xorp" ni $supp_router_models} {
-	$w.model.xorp configure -state disabled
+    if {"frr" ni $supp_router_models} {
+	$w.model.frr configure -state disabled
     }
 
     ttk::frame $w.buttons
@@ -670,7 +680,7 @@ menu .menubar.tools -tearoff 0
     }
 
     pack $w.model -side top -fill x -pady 5
-    pack $w.model.quagga $w.model.xorp $w.model.static \
+    pack $w.model.frr $w.model.quagga $w.model.static \
 	-side left -expand 1
     pack $w.protocols -side top -pady 5
     pack $w.protocols.rip $w.protocols.ripng \
@@ -721,6 +731,7 @@ menu .menubar.tools -tearoff 0
 #    pack $f1  $f2 -fill x
 #}
 
+
 #
 # View
 #
@@ -765,6 +776,7 @@ menu $m -tearoff 0
 	}
     }
 }
+
 .menubar.view add command -label [mc "Show All"] -activebackground #0F7FF2 -activeforeground white \
     -underline 5 -command {
 	set showIfNames 1
@@ -820,6 +832,7 @@ bind . "+" "zoom up"
      -command "zoom down"
 bind . "-" "zoom down"
 
+
 #dodan element "Themes"
 .menubar.view add separator
 set m .menubar.view.themes
@@ -839,34 +852,36 @@ menu $m -tearoff 0
 	-value imunesdark -command ::saveOptionstheme
 	$m add radiobutton -label "black" -variable currentTheme -activebackground #0F7FF2 -activeforeground white \
 	-value black -command ::saveOptionstheme
+	#-value black -command "ttk::style theme use black"
+	###########################
 	proc saveOptionstheme { } {
 	    global ROOTDIR
-            global LIBDIR
+	    global LIBDIR
 	    global config
-     	    global colorcanvas
+	    global colorcanvas
 	    global gridVert
-            global gridHori
+	    global gridHori
 	    global gridIntVert
-            global gridIntHori 
+	    global gridIntHori
 	    global colorNameNode
-            global colorIPIfc
+	    global colorIPIfc
 	    global currentTheme
 	    global currentThemenew
 
-	    set fh [open "$ROOTDIR/$LIBDIR/gui/selectTheme.tcl" w+]		
+	    set fh [open "$ROOTDIR/$LIBDIR/gui/selectTheme.tcl" w+]
 	    set currentThemenew [lindex [split $currentTheme {_}] 0]
-	    #puts -nonewline $fh "$currentThemenew"
+	    ##puts -nonewline $fh "$currentThemenew"
 	    close $fh
 
 	    set fh [open "$ROOTDIR/$LIBDIR/gui/selectTheme.tcl" r 660]
 	    set file_data [read $fh]
 	    #puts $file_data
 	    close $fh
-		
+
 	    #puts [set -command "ttk::style theme use $currentThemenew"]
 	    #puts -nonewline [set -command [ttk::style theme use $currentThemenew]; redrawAll]
-            switch -exact -- $currentThemenew {
-	        black {
+	    switch -exact -- $currentThemenew {
+		black {
 		    set colorcanvas #2E3D44
 		    set gridVert gray
 		    set gridHori gray
@@ -875,10 +890,10 @@ menu $m -tearoff 0
 		    set colorNameNode #63FF00
 		    set colorIPIfc #ffffff
 		    puts -nonewline [set -command [ttk::style theme use $currentThemenew]; redrawAll]
-		} 
+		}
 		imunes {
 		    set colorcanvas white
-      		    set gridVert gray
+	      	    set gridVert gray
 		    set gridHori gray
 		    set gridIntVert gray
 		    set gridIntHori gray
@@ -933,9 +948,9 @@ menu $m -tearoff 0
 		    set gridIntVert gray
 		    set gridIntHori gray
 		    set colorNameNode #63FF00
-		    set colorIPIfc #ffffff
+		    set colorIPIfc #000000
 		    puts -nonewline [set -command [ttk::style theme use $currentThemenew]; redrawAll]
-		}     
+		}
 		default {
 		    set colorcanvas white
 		    set gridVert gray
@@ -945,10 +960,10 @@ menu $m -tearoff 0
 		    set colorNameNode blue
 		    set colorIPIfc #000000
 		    puts -nonewline [set -command [ttk::style theme use $currentThemenew]; redrawAll]
-		}
-	    }  
-		
+	        }
+	    }
 	}
+
 #
 # Show Widgets
 #
@@ -1022,6 +1037,7 @@ foreach widget $widgetlist {
     } else {
     	$w.custom.e1 insert 0  [lindex $commands 0]
     }
+
     pack $w.custom.e1 -side top -pady 5 -padx 10 -fill x
     }
 
@@ -1030,6 +1046,7 @@ if {0} {
 .menubar.widgets add radiobutton -label [mc "Route"] \
     -variable showConfig -underline 0 -value "route"
 }
+
 #
 # Events
 #
@@ -1037,8 +1054,8 @@ menu .menubar.events -tearoff  0
 .menubar.events add command -label "Start scheduling" -underline 0 -activebackground #0F7FF2 -activeforeground white \
 	-state normal -command "startEventScheduling"
 .menubar.events add command -label "Stop scheduling" -underline 1 -activebackground #0F7FF2 -activeforeground white \
-	-state disabled -command "stopEventScheduling" 
-.menubar.events add separator	
+	-state disabled -command "stopEventScheduling"
+.menubar.events add separator
 .menubar.events add command -label [mc "Event editor"] -underline 0 -activebackground #0F7FF2 -activeforeground white \
 	-command "elementsEventsEditor"
 #
@@ -1051,9 +1068,10 @@ menu .menubar.experiment -tearoff 0
 	-command "setOperMode edit" -state disabled
 .menubar.experiment add command -label "Restart" -underline 0 -activebackground #0F7FF2 -activeforeground white \
 	-command "setOperMode edit; setOperMode exec" -state disabled
-.menubar.experiment add separator	
+.menubar.experiment add separator
 .menubar.experiment add command -label [mc "Attach to experiment"] -underline 0 -activebackground #0F7FF2 -activeforeground white \
-	-command "attachToExperimentPopup" 
+	-command "attachToExperimentPopup"
+
 #
 # Help
 #
@@ -1074,11 +1092,11 @@ menu .menubar.help -tearoff 0
     ttk::label $mainFrame.logoLabel
     $mainFrame.logoLabel configure -image $image
 
-    ttk::label $mainFrame.imunesLabel -text "IMUNES" -font "-weight bold -size 12"
-    ttk::label $mainFrame.imunesVersion -text $imunesVersion -font "-weight bold -size 10"
+    ttk::label $mainFrame.imunesLabel -text "IMUNES" -font "-size 12 -weight bold"
+    ttk::label $mainFrame.imunesVersion -text $imunesVersion -font "-size 10 -weight bold"
     ttk::label $mainFrame.lastChanged -text $imunesChangedDate
-    ttk::label $mainFrame.imunesAdditions -text "$imunesAdditions" -font "-weight bold -size 10"
-    ttk::label $mainFrame.imunesDesc -text [mc "Integrated Multiprotocol Network Emulator/Simulator."]
+    ttk::label $mainFrame.imunesAdditions -text "$imunesAdditions" -font "-size 10 -weight bold"
+    ttk::label $mainFrame.imunesDesc -text "Integrated Multiprotocol Network Emulator/Simulator."
     ttk::label $mainFrame.homepage -text "http://imunes.net/" -font "-underline 1 -size 10"
     ttk::label $mainFrame.github -text "http://github.com/imunes/imunes" -font "-underline 1 -size 10"
     ttk::label $mainFrame.copyright -text "Copyright (c) University of Zagreb 2004 - $imunesLastYear" -font "-size 8"
@@ -1107,9 +1125,13 @@ menu .menubar.help -tearoff 0
     bind $mainFrame.github <Leave> "%W configure -foreground black; \
 	$mainFrame config -cursor arrow"
 }
+
+
+
 #
 # Traduccion
 #
+###-------------------------------------------------------------------
 .menubar.help add command -label [mc "Translation Credit"] -activebackground #0F7FF2 -activeforeground white -command {
 	toplevel .translation
     wm title .translation [mc "About Translation Credit"]
@@ -1118,16 +1140,16 @@ menu .menubar.help -tearoff 0
     ttk::frame $traductFrame -padding 5 -relief groove
 	pack $traductFrame -fill both -expand 1
 	ttk::style configure TButton -width 10 -height 10 -font "serif 10"
-	ttk::label $traductFrame.textLabel0 -text [mc "        Crédito de Traducción"] -justify "center" -font "-weight bold -size 12"
+	ttk::label $traductFrame.textLabel0 -text [mc "        Crédito de Traducción"] -justify "center" -font "-size 12 -weight bold"
 	ttk::label $traductFrame.textLabel1 -text "Traducción realizada por:" -justify "left"
 	ttk::label $traductFrame.textLabel2 -text "Ing. Msc. José Manuel Romero Herrera" -justify "left"
 	ttk::label $traductFrame.textLabel3 -text "Prof. Asociado de la UPT-Aragua - VENEZUELA" -justify "left"
 	ttk::label $traductFrame.textLabel4 -text "email: panake2000@gmail.com" -justify "left"
 	ttk::label $traductFrame.textLabel5 -text "Idioma original: English" -justify "left"
-	ttk::label $traductFrame.textLabel6 -text "Idiomas Traducidos:" -justify "left" -font "-weight bold -size 9"
+	ttk::label $traductFrame.textLabel6 -text "Idiomas Traducidos:" -justify "left" -font "-size 9 -weight bold"
 	ttk::label $traductFrame.textLabel7 -text "Nota1: * Se tradujo con la App de un navegador\nweb conocido, no se garantiza su fiabilidad" -justify "left"
 	ttk::label $traductFrame.textLabel8 -text "Nota2: * Se deja la estructura para que\npersonas del idioma Nativo corrijan los errores" -justify "left"
-	ttk::label $traductFrame.textLabel9 -text "Nota3: Server FreeBSD 12.2 or FreeBSD full\nin codification UTF-8" -justify "left"
+	ttk::label $traductFrame.textLabel9 -text "Nota3: Servidor FreeBSD 12.2 totalmente\nen codificación UTF-8" -justify "left"
 	grid $traductFrame.textLabel0 -row 0 -columnspan 4 -pady 1 -padx 1 -sticky we
 	grid $traductFrame.textLabel1 -row 1 -columnspan 4 -pady 1 -padx 1 -sticky we
 	grid $traductFrame.textLabel2 -row 2 -columnspan 4 -pady 1 -padx 1 -sticky we
@@ -1173,6 +1195,35 @@ menu .menubar.help -tearoff 0
 	grid rowconfigure $traductFrame 11 -pad 3
 	grid rowconfigure $traductFrame 12 -pad 3
 	grid rowconfigure $traductFrame 13 -pad 3
+
+}
+
+.menubar.help add cascade -label "Practicas de Redes" -underline 0 -menu .menubar.help.practicas
+menu .menubar.help.practicas -tearoff 0
+
+.menubar.help.practicas add command -label "Practica_1" -command {
+    exec xpdf $ROOTDIR/$LIBDIR/gui/ayuda/Practica1.pdf &
+}
+.menubar.help.practicas add command -label "Practica_2" -command {
+    exec xpdf $ROOTDIR/$LIBDIR/gui/ayuda/Practica2.pdf &
+}
+.menubar.help.practicas add command -label "Practica_3" -command {
+    exec xpdf $ROOTDIR/$LIBDIR/gui/ayuda/Practica3.pdf &
+}
+.menubar.help.practicas add command -label "Practica_4" -command {
+    exec xpdf $ROOTDIR/$LIBDIR/gui/ayuda/Practica4.pdf &
+}
+.menubar.help.practicas add command -label "Practica_5" -command {
+    exec xpdf $ROOTDIR/$LIBDIR/gui/ayuda/Practica5.pdf &
+}
+.menubar.help.practicas add command -label "Practica_6" -command {
+    exec xpdf $ROOTDIR/$LIBDIR/gui/ayuda/Practica6.pdf &
+}
+.menubar.help.practicas add command -label "Practica_7" -command {
+    exec xpdf $ROOTDIR/$LIBDIR/gui/ayuda/Practica7.pdf &
+}
+.menubar.help.practicas add command -label "Practica_8" -command {
+    exec xpdf $ROOTDIR/$LIBDIR/gui/ayuda/Practica8.pdf &
 }
 #
 #
@@ -1180,111 +1231,114 @@ menu .menubar.help -tearoff 0
 #
 #
 menu .menubar.idiomas
-    global setIdioma
-    global setIdiomanew 
-    set setIdioma "$language"
-    set setIdiomanew ""
-    .menubar.idiomas add radiobutton -label [mc "$language"] -activebackground #0F7FF2 -activeforeground white \
-    -variable setIdioma -underline 0 -value "$language"
-    .menubar.idiomas add separator
-    set  idiomalist { \
-	{ "German"	"de_DE" } \
-	{ "English"	"en_EN" } \
-	{ "Spanish"	"es_ES" } \
-	{ "French"	"fr_FR" } \
-	{ "Croatian"	"hr_HR" } \
-	{ "Hungarian"	"hu_HU" } \
-	{ "Italian"	"it_IT" } \
-	{ "Portuguese"	"pt_PT" } \
-	{ "Russian"	"ru_RU" } \
-    }
-    foreach idioma $idiomalist {
-	.menubar.idiomas add radiobutton \
+global setIdioma
+global setIdiomanew 
+set setIdioma "$language"
+set setIdiomanew ""
+.menubar.idiomas add radiobutton -label [mc "$language"] -activebackground #0F7FF2 -activeforeground white \
+-variable setIdioma -underline 0 -value "$language"
+.menubar.idiomas add separator
+set  idiomalist { \
+    { "German"	   "de_DE" } \
+    { "English"	   "en_EN" } \
+    { "Spanish"	   "es_ES" } \
+    { "French"	   "fr_FR" } \
+    { "Croatian"   "hr_HR" } \
+    { "Hungarian"  "hu_HU" } \
+    { "Italian"	   "it_IT" } \
+    { "Portuguese" "pt_PT" } \
+    { "Russian"	   "ru_RU" } \
+}
+foreach idioma $idiomalist {
+    .menubar.idiomas add radiobutton \
 	-label [mc [lindex $idioma 0]] -activebackground #0F7FF2 -activeforeground white \
 	-variable setIdioma -underline 0 -value [lindex $idioma 1] \
 	-command ::saveOptionsidioma     
-    }
-    proc saveOptionsidioma  { } {
-	global ROOTDIR
-	global LIBDIR
-	global config
-	global idiomalist
-	global idioma
-	global idiomaprefix
-	global setIdioma
+}
+proc saveOptionsidioma  { } {
+    global ROOTDIR
+    global LIBDIR
+    global config
+    global idiomalist
+    global idioma
+    global idiomaprefix
+    global setIdioma
 
- 	set fh [open "$ROOTDIR/$LIBDIR/gui/setidioma.tcl" w+]
-	set setIdiomanew [lindex [split $setIdioma {_}] 0]
-	puts -nonewline $fh "$setIdiomanew"
-	close $fh
+    set fh [open "$ROOTDIR/$LIBDIR/gui/setidioma.tcl" w+]
+    set setIdiomanew [lindex [split $setIdioma {_}] 0]
+    puts -nonewline $fh "$setIdiomanew"
+    close $fh
 
-	set fh [open "$ROOTDIR/$LIBDIR/gui/setidioma.tcl" r]
-	set file_data [read $fh]
-	#puts $file_data
-	close $fh
+    set fh [open "$ROOTDIR/$LIBDIR/gui/setidioma.tcl" r]
+    set file_data [read $fh]
+    #puts $file_data
+    close $fh
 
-	proc notification {} {
-	    global answer
-	    global response
-	    puts [set answer [tk_messageBox -message [mc "Notification"] \
-		-title [mc "Notification"] \
-		-icon question -type yesno \
-		-detail [mc "Do you want to restart IMUNES to make the language change effective?"]]]
-	    if { $answer == "yes" } {
-		puts [set response [tk_messageBox -message [mc "Press Yes to confirm. IMUNES will close."] \
-		    -type yesno -title [mc "Notification"] -icon info]]
-	    } else {
-	        puts -nonewline [set -command [ return ]]
-	    } 
-	    if { $response == "yes"} {
-	        puts -nonewline [set -command [ exit ]]
-	    } else {
-	        puts -nonewline [set -command [ return ]]
-	    }
-	}    
-	switch -exact -- $setIdiomanew {
-	    de {
-	        puts -nonewline [set -command [ ::notification ]]
-	    } 
-	    en {
-		puts -nonewline [set -command [ ::notification ]]
-	    }
-	    es {
-		puts -nonewline [set -command [ ::notification ]]
-	    }
-	    fr {
-		puts -nonewline [set -command [ ::notification ]]
-	    }
-	    hr {
-		puts -nonewline [set -command [ ::notification ]]
-	    }
-	    hu {
-		puts -nonewline [set -command [ ::notification ]]
-	    }
-	    it {
-		puts -nonewline [set -command [ ::notification ]]
-	    }     
-	    pt {
-		puts -nonewline [set -command [ ::notification ]]
-	    } 
-	    ru {
-		puts -nonewline [set -command [ ::notification ]]
-	    }   
-	    default {
-		puts -nonewline [set -command [ ::notification ]]
-	    }
-	}  	
-    }
-    if {0} {
-	.menubar.idiomas add separator
-	.menubar.idiomas add radiobutton -label [mc "Route"] \
-	-variable setIdioma -underline 0 -value "route"
-    }
+    proc notification {} {
+        global answer
+	global response
+	puts [set answer [tk_messageBox -message [mc "Notification"] \
+	    -title [mc "Notification"] \
+	    -icon question -type yesno \
+	    -detail [mc "Do you want to restart IMUNES to make the language change effective?"]]]
+	if { $answer == "yes" } {
+	    puts [set response [tk_messageBox -message [mc "Press Yes to confirm. IMUNES will close."] \
+		-type yesno -title [mc "Notification"] -icon info]]
+	} else {
+	    puts -nonewline [set -command [ return ]]
+	} 
+	if { $response == "yes"} {
+	    puts -nonewline [set -command [ exit ]]
+	} else {
+	    puts -nonewline [set -command [ return ]]
+        }
+    }    
+    switch -exact -- $setIdiomanew {
+	de {
+	    puts -nonewline [set -command [ ::notification ]]
+	} 
+	en {
+	    puts -nonewline [set -command [ ::notification ]]
+	}
+	es {
+	    puts -nonewline [set -command [ ::notification ]]
+	}
+	fr {
+	    puts -nonewline [set -command [ ::notification ]]
+	}
+	hr {
+	    puts -nonewline [set -command [ ::notification ]]
+	}
+	hu {
+	    puts -nonewline [set -command [ ::notification ]]
+	}
+	it {
+	    puts -nonewline [set -command [ ::notification ]]
+	}     
+	pt {
+	    puts -nonewline [set -command [ ::notification ]]
+	} 
+	ru {
+	    puts -nonewline [set -command [ ::notification ]]
+	}   
+	default {
+	    puts -nonewline [set -command [ ::notification ]]
+        }
+    }  	
+}    
+if {0} {
+    .menubar.idiomas add separator
+    .menubar.idiomas add radiobutton -label [mc "Route"] \
+        -variable setIdioma -underline 0 -value "route"
+}
+###*********************************************************************
 #
 # Left-side toolbar
 #
 ttk::frame $mf.left
 pack $mf.left -side left -fill y
+
+#***********************************************************************
 #
 #
 # ToggleButton
@@ -1293,9 +1347,11 @@ pack $mf.left -side left -fill y
 set b play_start
 set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$b.svg]
 ttk::button $mf.left.$b -image $img -style Toolbutton -command [list toggleButton $mf.left.$b]
+
 set state($mf.left.$b) 0
 proc toggleButton w {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
+    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global ROOTDIR
     global LIBDIR
     global state
@@ -1308,25 +1364,28 @@ proc toggleButton w {
 	set b play_start
 	set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$b.svg]
         $w configure -image $img -style Toolbutton
-        puts -nonewline [set -command [ ::setOperMode edit ]]
+        puts -nonewline [set -command [ setOperMode edit ]]
         set msg "Execute"
     } else {
 	set b play_stop
 	set img [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$b.svg]
         $w configure -image $img -style Toolbutton
-        puts -nonewline [set -command [ ::setOperMode exec ]]
+        puts -nonewline [set -command [ setOperMode exec ]]
 	set msg "Terminate"
     }
     set state($w) [expr {!$state($w)}]
     bind $w <Any-Enter> ".bottom.textbox config -text {$msg}"
     bind $w <Any-Leave> ".bottom.textbox config -text {}"
 }
+
 pack $mf.left.$b -side top
 #
 #
 foreach b {select link} {
-   set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$b.svg]
-   ttk::button $mf.left.$b \
+
+    #set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$b.gif]
+	set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$b.svg]
+    ttk::button $mf.left.$b \
 	-image $image -style Toolbutton \
 	-command "setActiveTool $b"
     pack $mf.left.$b -side top
@@ -1387,7 +1446,7 @@ foreach b {rectangle oval freeform text} {
 	oval { set msg "Add an Oval" }
 	freeform { set msg "Add a Freeform" }
 	text { set msg "Add a Textbox" }
-        cloud { set msg "Add a Zoom up" }
+	cloud { set msg "Add a Zoom up" }
 	default { set msg "" }
     }
     bind $mf.left.$b <Any-Enter> ".bottom.textbox config -text {$msg}"
@@ -1578,6 +1637,12 @@ menu .button3menu.icon -tearoff 0
 menu .button3menu.transform -tearoff 0
 menu .button3menu.sett -tearoff 0
 menu .button3menu.services -tearoff 0
+### SIGUIENTES MENUS COLOCADO POR MI
+menu .button3menu.apachectl -tearoff 0
+menu .button3menu.nginx -tearoff 0
+menu .button3menu.named -tearoff 0
+menu .button3menu.dhcpd -tearoff 0
+menu .button3menu.dhcrelay -tearoff 0
 menu .button3menu.sylpheed -tearoff 0
 
 menu .button3logifc -tearoff 0
