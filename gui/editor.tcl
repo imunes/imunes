@@ -162,7 +162,7 @@ proc chooseIfName {lnode rnode} {
 #****
 proc l3IfcName {lnode rnode} {
 
-    if {[nodeType $lnode] == "ext"} {
+    if {[nodeType $lnode] in "ext extnat"} {
 	return "ext"
     }
     if {[nodeType $rnode] == "wlan"} {
@@ -471,7 +471,7 @@ proc routerDefaultsApply { wi } {
     lset rdconfig 2 $routerOspfEnable 
     lset rdconfig 3 $routerOspf6Enable	
     set routerDefaultsModel $router_model 	
-    set model quagga
+    set model frr
     set selected_node_list [selectedNodes]
     set empty {}
 
@@ -648,31 +648,30 @@ proc topologyElementsTree {} {
 
 	pack $f.treegrid -side right -fill y
 	grid $f.tree $f.vscroll -in $f.treegrid -sticky nsew
-        grid $f.hscroll -in $f.treegrid -sticky nsew
+    grid $f.hscroll -in $f.treegrid -sticky nsew
 	grid columnconfig $f.treegrid 0 -weight 1
 	grid rowconfigure $f.treegrid 0 -weight 1
 	
 	#stvaranje columna            
-	#$f.tree configure -columns { state MAC IPv4 IPv6 canvas }
-        $f.tree configure -columns { state nat MAC IPv4 IPv6 canvas }
+	$f.tree configure -columns { state nat MAC IPv4 IPv6 canvas }
 	$f.tree column #0 -width 200 -stretch 0
 	$f.tree column state -width 60 -anchor center -stretch 0
-        $f.tree column nat -width 40 -anchor center -stretch 0
-        $f.tree column MAC -width 120 -anchor center -stretch 0
+	$f.tree column nat -width 40 -anchor center -stretch 0
+    $f.tree column MAC -width 120 -anchor center -stretch 0
 	$f.tree column IPv4 -width 100 -anchor center -stretch 0
 	$f.tree column IPv6 -width 100 -anchor center -stretch 0
 	$f.tree column canvas -width 60 -anchor center -stretch 0
 	$f.tree heading #0 -text "(Expand All)"
 	$f.tree heading state -text "State"
- 	$f.tree heading nat -text "NAT"
-        $f.tree heading MAC -text "MAC address"
+	$f.tree heading nat -text "NAT"
+    $f.tree heading MAC -text "MAC address"
 	$f.tree heading IPv4 -text "IPv4 address"
 	$f.tree heading IPv6 -text "IPv6 address"
 	$f.tree heading canvas -text "Canvas"
 
 
 	#punjenje stabla podacima o cvorovima
-        global nodetags
+    global nodetags
 	set nodetags ""
 	$f.tree insert {} end -id nodes -text "Nodes" -open true -tags nodes
 	$f.tree focus nodes
@@ -686,9 +685,10 @@ proc topologyElementsTree {} {
 		foreach ifc [lsort -dictionary [ifcList $node]] {
 		    $f.tree insert $node end -id $node$ifc -text "$ifc" -tags $node$ifc
 		    $f.tree set $node$ifc state [getIfcOperState $node $ifc]
+		    $f.tree set $node$ifc nat [getIfcNatState $node $ifc]
 		    $f.tree set $node$ifc IPv4 [getIfcIPv4addr $node $ifc]
 		    $f.tree set $node$ifc IPv6 [getIfcIPv6addr $node $ifc]
-                    $f.tree set $node$ifc MAC [getIfcMACaddr $node $ifc]
+            $f.tree set $node$ifc MAC [getIfcMACaddr $node $ifc]
 		}
 	    }
 	}
@@ -918,9 +918,10 @@ proc refreshTopologyTree {} {
 	    foreach ifc [lsort -dictionary [ifcList $node]] {
 		    $f.tree insert $node end -id $node$ifc -text "$ifc" -tags $node$ifc
 		    $f.tree set $node$ifc state [getIfcOperState $node $ifc]
+		    $f.tree set $node$ifc nat [getIfcNatState $node $ifc]
 		    $f.tree set $node$ifc IPv4 [getIfcIPv4addr $node $ifc]
 		    $f.tree set $node$ifc IPv6 [getIfcIPv6addr $node $ifc]
-                    $f.tree set $node$ifc MAC [getIfcMACaddr $node $ifc]
+            $f.tree set $node$ifc MAC [getIfcMACaddr $node $ifc]
 	    }
 	}
     }
