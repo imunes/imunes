@@ -227,7 +227,7 @@ proc showRoute { c node2 } {
 		set errDet 0
 		while {$hopIP != $ipAddr} {
 		    incr hop
-		    set cmd [concat "nexec jexec " $nodeId ping -n -c 1 -m $hop -t 1 -o -s 56 $ipAddr]
+		    set cmd [concat "exec jexec " $nodeId ping -n -c 1 -m $hop -t 1 -o -s 56 $ipAddr]
 		    catch {
 			eval $cmd 
 	    	    } result
