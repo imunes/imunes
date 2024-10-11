@@ -11,8 +11,8 @@
 #   * ext_path -- external path
 #****
 proc moveFileFromNode { node path ext_path } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-    set node_dir [getVrootDir]/$eid/$node
+    set node_dir [getNodeDir $node]
+
     catch {exec mv $node_dir$path $ext_path}
 }
 
@@ -29,8 +29,8 @@ proc moveFileFromNode { node path ext_path } {
 #   * data -- data to write
 #****
 proc writeDataToNodeFile { node path data } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-    set node_dir [getVrootDir]/$eid/$node
+    set node_dir [getNodeDir $node]
+
     writeDataToFile $node_dir/$path $data
 }
 
@@ -50,7 +50,7 @@ proc writeDataToNodeFile { node path data } {
 proc execCmdNode { node cmd } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    catch {eval [concat "nexec jexec " $eid.$node $cmd] } output
+    catch {eval [concat "exec jexec " $eid.$node $cmd] } output
     return $output
 }
 
@@ -238,7 +238,7 @@ proc spawnShell { node cmd } {
 
     set node_id $eid\.$node
 
-    nexec xterm -sb -rightbar \
+    exec xterm -sb -rightbar \
 	-T "IMUNES: [getNodeName $node] (console) [lindex [split $cmd /] end]" \
 	-e "jexec $node_id $cmd" &
 }
@@ -260,29 +260,6 @@ proc fetchRunningExperiments {} {
     return $exp_list
 }
 
-#****f* freebsd.tcl/createIfc
-# NAME
-#   createIfc -- create interface
-# SYNOPSIS
-#   set name [createIfc $eid $type $hook]
-# FUNCTION
-#   Creates a new netgraph interface, of the type $type.
-#   Returns the name of the newly created interface.
-# INPUTS
-#   * eid -- experiment id
-#   * type -- new interface type. In imunes are used only eiface or iface
-#     types. Additional specification on this types can be found in manual
-#     pages for netgraph nodes.
-#   * hook -- parameter specific for every netgraph node. For iface hook hook
-#     is inet, and for eiface type the hook is ether.
-# RESULT
-#   * name -- the name of the new interface
-#****
-proc createIfc { eid type hook } {
-    catch { exec printf "mkpeer $type $hook $hook \n show .$hook" | jexec $eid ngctl -f - } nglist
-    return [lindex $nglist 1]
-}
-
 #****f* freebsd.tcl/allSnapshotsAvailable
 # NAME
 #   allSnapshotsAvailable -- all snapshots available
@@ -295,24 +272,38 @@ proc createIfc { eid type hook } {
 proc allSnapshotsAvailable {} {
     global execMode vroot_unionfs
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    set vroot "/var/imunes/vroot"
 
-    if {$vroot_unionfs} {
-	if { [file exist $vroot] } {
-	    return 1
-	} else {
-	    if {$execMode == "batch"} {
-		puts "The root filesystem for virtual nodes ($vroot) is missing.
-Run 'imunes -p' to create the root filesystem."
-	    } else {
-		tk_dialog .dialog1 "IMUNES error" \
-		"The root filesystem for virtual nodes ($vroot) is missing.
-Run 'imunes -p' to create the root filesystem." \
-		info 0 Dismiss
-	    }
-	    return 0
+    set snapshots {}
+    foreach node $node_list {
+	set img [getNodeCustomImage $node]
+	if {$img != ""} {
+	    lappend snapshots $img
 	}
     }
+
+    set snapshots [lsort -uniq $snapshots]
+    set missing 0
+
+    foreach vroot $snapshots {
+	if {$vroot_unionfs} {
+	    if { [file exist $vroot] } {
+		return 1
+	    } else {
+		if {$execMode == "batch"} {
+		    puts "The root filesystem for virtual nodes ($vroot) is missing.
+    Run 'imunes -p' to create the root filesystem."
+		} else {
+		    tk_dialog .dialog1 "IMUNES error" \
+		    "The root filesystem for virtual nodes ($vroot) is missing.
+    Run 'imunes -p' to create the root filesystem." \
+		    info 0 Dismiss
+		}
+		return 0
+	    }
+	}
+    }
+
+    return 1
 
     catch { exec zfs list -t snapshot | awk {{print $1}} | sed "1 d" } out
     set snapshotList [ split $out {
@@ -351,11 +342,11 @@ Run 'make' or 'make vroot' to create the main ZFS snapshot." \
     return 1
 }
 
-#****f* freebsd.tcl/timeoutPatch
+#****f* freebsd.tcl/checkHangingTCPs
 # NAME
-#   timeoutPatch -- timeout patch
+#   checkHangingTCPs -- timeout patch
 # SYNOPSIS
-#   timeoutPatch $eid $vimages
+#   checkHangingTCPs $eid $vimage
 # FUNCTION
 #   Timeout patch that is applied for hanging TCP connections. We need to wait
 #   for TCP connections to close regularly because we can't terminate them in
@@ -364,7 +355,7 @@ Run 'make' or 'make vroot' to create the main ZFS snapshot." \
 #   * eid -- experiment ID
 #   * vimages -- list of current vimages
 #****
-proc timeoutPatch { eid vimages } {
+proc checkHangingTCPs { eid vimage } {
     global execMode
     set vrti 1
     set sec 60
@@ -374,11 +365,9 @@ proc timeoutPatch { eid vimages } {
     }
 
     set timeoutNeeded 0
-    foreach vimage $vimages {
-	if { [catch {exec jexec $eid.$vimage netstat -an -f inet | fgrep "WAIT"} odg] == 0} {
-	    set timeoutNeeded 1
-	    break
-	}
+    if { [catch {exec jexec $eid.$vimage netstat -an -f inet | fgrep "WAIT"} odg] == 0} {
+	set timeoutNeeded 1
+	break
     }
 
     if { $timeoutNeeded == 0 } {
@@ -408,23 +397,21 @@ Please don't try killing the process.
 
     while { $vrti == 1 } {
         set vrti 0
-        foreach vimage $vimages {
-            # puts "vimage $vimage...\n"
-            while { [catch {exec jexec $eid.$vimage netstat -an -f inet | fgrep "WAIT"} odg] == 0} {
-                set vrti 1
-                # puts "vimage $vimage: \n$odg\n"
-                after 1000
-                set sec [expr $sec - 1]
-                if { $execMode == "batch" } {
-                    puts -nonewline "."
-                    flush stdout
-                } else {
-                    statline "~ $sec seconds ..."
-		    $w.p step -1
-                    update
-                }
-            }
-        }
+	# puts "vimage $vimage...\n"
+	while { [catch {exec jexec $eid.$vimage netstat -an -f inet | fgrep "WAIT"} odg] == 0} {
+	    set vrti 1
+	    # puts "vimage $vimage: \n$odg\n"
+	    after 1000
+	    set sec [expr $sec - 1]
+	    if { $execMode == "batch" } {
+		puts -nonewline "."
+		flush stdout
+	    } else {
+		statline "~ $sec seconds ..."
+		$w.p step -1
+		update
+	    }
+	}
     }
     if { $execMode != "batch" } {
         destroy .timewait
@@ -448,25 +435,22 @@ Please don't try killing the process.
 #   qdisc -- queuing discipline
 #****
 proc execSetIfcQDisc { eid node ifc qdisc } {
-    set target [linkByIfc $node $ifc]
-    set peers [linkPeers [lindex $target 0]]
-    set dir [lindex $target 1]
+    set link [linkByIfc $node $ifc]
+    set peers [linkPeers [lindex $link 0]]
+    set dir [lindex $link 1]
     set lnode1 [lindex $peers 0]
     set lnode2 [lindex $peers 1]
-    if { [nodeType $lnode2] == "pseudo" } {
-	set mirror_link [getLinkMirror [lindex $target 0]]
-	set lnode2 [lindex [linkPeers $mirror_link] 0]
-    }
     switch -exact $qdisc {
 	FIFO { set qdisc fifo }
 	WFQ { set qdisc wfq }
 	DRR { set qdisc drr }
     }
-    set ngnode "$lnode1-$lnode2"
-    if { [catch { exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ $qdisc=1 } }" }] } {
-	set ngnode "$lnode2-$lnode1"
-	exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ $qdisc=1 } }"
+    if { [nodeType $lnode2] == "pseudo" } {
+	set mirror_link [getLinkMirror [lindex $link 0]]
+	pipesExec "jexec $eid ngctl msg $mirror_link: setcfg \"{ $dir={ $qdisc=1 } }\"" "hold"
     }
+
+    pipesExec "jexec $eid ngctl msg $link: setcfg \"{ $dir={ $qdisc=1 } }\"" "hold"
 }
 
 #****f* freebsd.tcl/execSetIfcQDrop
@@ -485,32 +469,28 @@ proc execSetIfcQDisc { eid node ifc qdisc } {
 #   qdrop -- queue dropping policy
 #****
 proc execSetIfcQDrop { eid node ifc qdrop } {
-    set target [linkByIfc $node $ifc]
-    set peers [linkPeers [lindex $target 0]]
-    set dir [lindex $target 1]
+    set link [linkByIfc $node $ifc]
+    set peers [linkPeers [lindex $link 0]]
+    set dir [lindex $link 1]
     set lnode1 [lindex $peers 0]
     set lnode2 [lindex $peers 1]
-    if { [nodeType $lnode2] == "pseudo" } {
-	set mirror_link [getLinkMirror [lindex $target 0]]
-	set lnode2 [lindex [linkPeers $mirror_link] 0]
-    }
     switch -exact $qdrop {
 	drop-head { set qdrop drophead }
 	drop-tail { set qdrop droptail }
     }
-    set ngnode "$lnode1-$lnode2"
-    if { [catch { exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ $qdrop=1 } }" }] } {
-	# XXX dir should be reversed!
-	set ngnode "$lnode2-$lnode1"
-	exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ $qdrop=1 } }"
+    if { [nodeType $lnode2] == "pseudo" } {
+	set mirror_link [getLinkMirror [lindex $link 0]]
+	pipesExec "jexec $eid ngctl msg $mirror_link: setcfg \"{ $dir={ $qdrop=1 } }\"" "hold"
     }
+
+    pipesExec "jexec $eid ngctl msg $link: setcfg \"{ $dir={ $qdrop=1 } }\"" "hold"
 }
 
 #****f* freebsd.tcl/execSetIfcQLen
 # NAME
 #   execSetIfcQLen -- in exec mode set interface queue length
 # SYNOPSIS
-#   execSetIfcQDrop $eid $node $ifc $qlen
+#   execSetIfcQLen $eid $node $ifc $qlen
 # FUNCTION
 #   Sets the queue length during the simulation.
 #   New queue length is defined in qlen parameter.
@@ -521,23 +501,20 @@ proc execSetIfcQDrop { eid node ifc qdrop } {
 #   qlen -- new queue's length
 #****
 proc execSetIfcQLen { eid node ifc qlen } {
-    set target [linkByIfc $node $ifc]
-    set peers [linkPeers [lindex $target 0]]
-    set dir [lindex $target 1]
+    set link [linkByIfc $node $ifc]
+    set peers [linkPeers [lindex $link 0]]
+    set dir [lindex $link 1]
     set lnode1 [lindex $peers 0]
     set lnode2 [lindex $peers 1]
-    if { [nodeType $lnode2] == "pseudo" } {
-	set mirror_link [getLinkMirror [lindex $target 0]]
-	set lnode2 [lindex [linkPeers $mirror_link] 0]
-    }
-    set ngnode "$lnode1-$lnode2"
     if { $qlen == 0 } {
 	set qlen -1
     }
-    if { [catch { exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ queuelen=$qlen } }" }] } {
-	set ngnode "$lnode2-$lnode1"
-	exec jexec $eid ngctl msg $ngnode: setcfg "{ $dir={ queuelen=$qlen } }"
+    if { [nodeType $lnode2] == "pseudo" } {
+	set mirror_link [getLinkMirror [lindex $link 0]]
+	pipesExec "jexec $eid ngctl msg $mirror_link: setcfg \"{ $dir={ $queuelen=$qlen } }\"" "hold"
     }
+
+    pipesExec "jexec $eid ngctl msg $link: setcfg \"{ $dir={ $queuelen=$qlen } }\"" "hold"
 }
 
 #****f* freebsd.tcl/execSetLinkParams
@@ -567,11 +544,10 @@ proc execSetLinkParams { eid link } {
 	}
     }
 
-    set lname $lnode1-$lnode2
-
     set bandwidth [expr [getLinkBandwidth $link] + 0]
     set delay [expr [getLinkDelay $link] + 0]
     set ber [expr [getLinkBER $link] + 0]
+    set loss [expr [getLinkLoss $link] + 0]
     set dup [expr [getLinkDup $link] + 0]
 
     if { $bandwidth == 0 } {
@@ -583,17 +559,19 @@ proc execSetLinkParams { eid link } {
     if { $ber == 0 } {
 	set ber -1
     }
+    if { $loss == 0 } {
+	set loss -1
+    }
     if { $dup == 0 } {
 	set dup -1
     }
 
-    catch {exec jexec $eid ngctl msg $lname: setcfg \
-	"{ bandwidth=$bandwidth delay=$delay \
+    pipesCreate
+    pipesExec "jexec $eid ngctl msg $link: setcfg \
+	\"{ bandwidth=$bandwidth delay=$delay \
 	upstream={ BER=$ber duplicate=$dup } \
-	downstream={ BER=$ber duplicate=$dup } }"} err
-    if { $debug && $err != "" } {
-	puts $err
-    }
+	downstream={ BER=$ber duplicate=$dup }}\""
+    pipesClose
 }
 
 #****f* freebsd.tcl/execSetLinkJitter
@@ -611,7 +589,6 @@ proc execSetLinkParams { eid link } {
 proc execSetLinkJitter { eid link } {
     set lnode1 [lindex [linkPeers $link] 0]
     set lnode2 [lindex [linkPeers $link] 1]
-    set lname $lnode1-$lnode2
 
     set jitter_up [getLinkJitterUpstream $link]
     set jitter_mode_up [getLinkJitterModeUpstream $link]
@@ -633,27 +610,27 @@ proc execSetLinkJitter { eid link } {
 	set jit_mode_down 2
     }
 
-    set exec_pipe [open "| jexec $eid ngctl -f -" r+]
+    set ngcmds ""
 
     if {$jitter_up != ""} {
-	puts $exec_pipe "msg $lname: setcfg {upstream={jitmode=-1}}"
+	set ngcmds "$ngcmds msg $link: setcfg {upstream={jitmode=-1}}\n"
 	foreach val $jitter_up {
-	    puts $exec_pipe "msg $lname: setcfg {upstream={addjitter=[expr round($val*1000)]}}"
+	    set ngcmds "$ngcmds msg $link: setcfg {upstream={addjitter=[expr round($val*1000)]}}\n"
 	}
-	puts $exec_pipe "msg $lname: setcfg {upstream={jitmode=$jit_mode_up}}"
-	puts $exec_pipe "msg $lname: setcfg {upstream={jithold=[expr round($jitter_hold_up*1000)]}}"
+	set ngcmds "$ngcmds msg $link: setcfg {upstream={jitmode=$jit_mode_up}}\n"
+	set ngcmds "$ngcmds msg $link: setcfg {upstream={jithold=[expr round($jitter_hold_up*1000)]}}\n"
     }
 
     if {$jitter_down != ""} {
-	puts $exec_pipe "msg $lname: setcfg {downstream={jitmode=-1}}"
+	set ngcmds "$ngcmds msg $link: setcfg {downstream={jitmode=-1}}\n"
 	foreach val $jitter_down {
-	    puts $exec_pipe "msg $lname: setcfg {downstream={addjitter=[expr round($val*1000)]}}"
+	    set ngcmds "$ngcmds msg $link: setcfg {downstream={addjitter=[expr round($val*1000)]}}\n"
 	}
-	puts $exec_pipe "msg $lname: setcfg {downstream={jitmode=$jit_mode_down}}"
-	puts $exec_pipe "msg $lname: setcfg {downstream={jithold=[expr round($jitter_hold_down*1000)]}}"
+	set ngcmds "$ngcmds msg $link: setcfg {downstream={jitmode=$jit_mode_down}}\n"
+	set ngcmds "$ngcmds msg $link: setcfg {downstream={jithold=[expr round($jitter_hold_down*1000)]}}\n"
     }
 
-    close $exec_pipe
+    pipesExec "printf \"$ngcmds\" | ngctl -f -" "hold"
 }
 
 #****f* freebsd.tcl/execResetLinkJitter
@@ -671,40 +648,9 @@ proc execSetLinkJitter { eid link } {
 proc execResetLinkJitter { eid link } {
     set lnode1 [lindex [linkPeers $link] 0]
     set lnode2 [lindex [linkPeers $link] 1]
-    set lname $lnode1-$lnode2
 
-    exec jexec $eid ngctl msg $lname: setcfg \
+    exec jexec $eid ngctl msg $link: setcfg \
 	"{upstream={jitmode=-1} downstream={jitmode=-1}}"
-}
-
-#****f* freebsd.tcl/l3node.nghook
-# NAME
-#   l3node.nghook -- layer 3 node netgraph hook
-# SYNOPSIS
-#   l3node.nghook $eid $node $ifc
-# FUNCTION
-#   Returns the netgraph node name and the hook name for a given experiment
-#   id, node id, and interface name.
-# INPUTS
-#   * eid -- experiment id
-#   * node -- node id
-#   * ifc -- interface name
-# RESULT
-#   * list -- list in the form of {netgraph_node_name hook}
-#****
-proc l3node.nghook { eid node ifc } {
-    set ifnum [string range $ifc 3 end]
-    set node_id "$eid\.$node"
-    switch -exact [string trim $ifc 0123456789] {
-	wlan -
-	ext -
-	eth {
-	    return [list $ifc@$node_id ether]
-	}
-	ser {
-	    return [list hdlc$ifnum@$node_id downstream]
-	}
-    }
 }
 
 #****f* freebsd.tcl/vimageCleanup
@@ -777,7 +723,9 @@ proc vimageCleanup { eid } {
 	}
 
 	statline ""
-	timeoutPatch $eid $vimages
+	foreach vimage $vimages {
+	    checkHangingTCPs $eid $vimage
+	}
     }
 
     statline "Shutting down netgraph nodes..."
@@ -990,39 +938,43 @@ proc getHostIfcList {} {
 # NAME
 #   getHostIfcVlanExists -- check if host VLAN interface exists
 # SYNOPSIS
-#   getHostIfcVlanExists $node $name
+#   getHostIfcVlanExists $node $ifname
 # FUNCTION
 #   Returns 1 if VLAN interface with the name $name for the given node cannot
 #   be created.
 # INPUTS
 #   * node -- node id
-#   * name -- interface name
+#   * ifname -- interface name
 # RESULT
 #   * check -- 1 if interface exists, 0 otherwise
 #****
-proc getHostIfcVlanExists { node name } {
+proc getHostIfcVlanExists { node ifname } {
     global execMode
 
-    # check if the VLAN is available
-    set ifname [getNodeName $node]
-    set vlan [lindex [split [getNodeName $node] .] 1]
-    # if the VLAN is available then it can be created
-    if { [catch {exec ifconfig $ifname create} err] } {
-	set msg "Error: external interface $name can't be\
-	    created.\nVLAN $vlan is already in use. \n($err)"
-	if { $execMode == "batch" } {
-	    puts $msg
-	} else {
-	    after idle {.dialog1.msg configure -wraplength 4i}
-	    tk_dialog .dialog1 "IMUNES error" $msg \
-		info 0 Dismiss
-	}
-	return 1
-    } else {
-	# destroy it, if it was created
-	catch {exec ifconfig $ifname destroy}
+    # check if VLAN ID is already taken
+    # this can be only done by trying to create it, as it's possible that the same
+    # VLAN interface already exists in some other namespace
+    set vlan [getEtherVlanTag $node]
+    try {
+	exec ifconfig $ifname.$vlan create
+    } on ok {} {
+	exec ifconfig $ifname.$vlan destroy
 	return 0
+    } on error err {
+	set msg "Unable to create external interface '$ifname.$vlan':\n$err\n\nPlease\
+	    verify that VLAN ID $vlan with parent interface $ifname is not already\
+	    assigned to another VLAN interface, potentially in a different jail."
     }
+
+    if { $execMode == "batch" } {
+	puts $msg
+    } else {
+	after idle {.dialog1.msg configure -wraplength 4i}
+	tk_dialog .dialog1 "IMUNES error" $msg \
+	    info 0 Dismiss
+    }
+
+    return 1
 }
 
 #****f* freebsd.tcl/getVrootDir
@@ -1043,43 +995,6 @@ proc getVrootDir {} {
     } else {
 	return "/vroot"
     }
-}
-
-#****f* freebsd.tcl/dumpNgnodesToFile
-# NAME
-#   dumpNgnodesToFile -- dump ngnodemap list to file
-# SYNOPSIS
-#   dumpNgnodesToFile $path
-# FUNCTION
-#   Saves the list of all the ngnodes to $path.
-# INPUTS
-#   * path -- absolute path of the file
-#****
-proc dumpNgnodesToFile { path } {
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-
-    writeDataToFile $path [array get ngnodemap]
-}
-
-#****f* freebsd.tcl/readNgnodesFromFile
-# NAME
-#   readNgnodesFromFile -- read ngnodes list from file
-# SYNOPSIS
-#   readNgnodesFromFile $eid
-# FUNCTION
-#   Sets the global array ngnodemap to the content of the running config file
-#   for the given eid.
-# INPUTS
-#   * exp -- experiment id
-#****
-proc readNgnodesFromFile { exp } {
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-    global runtimeDir
-
-#    set fileId [open  r]
-#    array set ngnodemap [gets $fileId]
-#    close $fileId
-    array set ngnodemap [readDataFromFile $runtimeDir/$exp/ngnodemap]
 }
 
 #****f* freebsd.tcl/prepareFilesystemForNode
@@ -1145,11 +1060,27 @@ proc prepareFilesystemForNode { node } {
 #****
 proc createNodeContainer { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    set node_dir [getVrootDir]/$eid/$node
+    set node_dir [getNodeDir $node]
 
     pipesExec "jail -c name=$eid.$node path=$node_dir securelevel=1 \
 	host.hostname=\"[getNodeName $node]\" vnet persist" "hold"
+}
+
+proc isNodeStarted { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set node_id "$eid.$node"
+
+    try {
+	exec jls -j $node_id
+    } on error {} {
+	return false
+    }
+
+    return true
+}
+
+proc isNodeNamespaceCreated { node } {
+    return true
 }
 
 #****f* freebsd.tcl/createNodePhysIfcs
@@ -1162,25 +1093,30 @@ proc createNodeContainer { node } {
 # INPUTS
 #   * node -- node id
 #****
-proc createNodePhysIfcs { node } {
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
+proc createNodePhysIfcs { node ifcs } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global ifc_dad_disable
 
     set node_id "$eid.$node"
     # Create a vimage
     # Create "physical" network interfaces
-    foreach ifc [ifcList $node] {
-	switch -exact [string range $ifc 0 2] {
+    foreach ifc $ifcs {
+	switch -exact [string trimright $ifc 0123456789] {
+	    e {
+	    }
 	    eth {
-		set ifid [createIfc $eid eiface ether]
-		pipesExec "jexec $eid ifconfig $ifid vnet $node" "hold"
-		pipesExec "jexec $node_id ifconfig $ifid name $ifc" "hold"
+		# save newly created ngnodeX into a shell variable ifid and
+		# rename the ng node to $node-$ifc (unique to this experiment)
+		set cmds "
+		  ifid=\$(printf \"mkpeer . eiface $node-$ifc ether \n
+		  show .:$node-$ifc\" | jexec $eid ngctl -f - | head -n1 | cut -d' ' -f4)"
+		set cmds "$cmds; jexec $eid ngctl name \$ifid: $node-$ifc"
+		set cmds "$cmds; jexec $eid ifconfig \$ifid name $node-$ifc"
 
-		# XXX ng renaming is automatic in FBSD 8.4 and 9.2, remove this!
-		pipesExec "jexec $node_id ngctl name [set ifid]: $ifc" "hold"
+		pipesExec $cmds "hold"
+		pipesExec "jexec $eid ifconfig $node-$ifc vnet $node" "hold"
+		pipesExec "jexec $node_id ifconfig $node-$ifc name $ifc" "hold"
 
-#		set peer [peerByIfc $node $ifc]
 		set ether [getIfcMACaddr $node $ifc]
                 if {$ether == ""} {
                     autoMACaddr $node $ifc
@@ -1191,16 +1127,20 @@ proc createNodePhysIfcs { node } {
 		    pipesExec "jexec $node_id sysctl net.inet6.ip6.dad_count=0" "hold"
 		}
 		pipesExec "jexec $node_id ifconfig $ifc link $ether" "hold"
-		set ngnodemap($ifc@$node_id) $ifid
 	    }
 	    ext {
-		set ifid [createIfc $eid eiface ether]
 		set outifc "$eid-$node"
-		pipesExec "ifconfig $ifid -vnet $eid" "hold"
-		pipesExec "ifconfig $ifid name $outifc" "hold"
 
-		# XXX ng renaming is automatic in FBSD 8.4 and 9.2, remove this!
-		pipesExec "ngctl name [set ifid]: $outifc" "hold"
+		# save newly created ngnodeX into a shell variable ifid and
+		# rename the ng node to $node-$ifc (unique to this experiment)
+		set cmds "
+		  ifid=\$(printf \"mkpeer . eiface $node-$ifc ether \n
+		  show .:$node-$ifc\" | jexec $eid ngctl -f - | head -n1 | cut -d' ' -f4)"
+		set cmds "$cmds; jexec $eid ngctl name \$ifid: $node-$ifc"
+		set cmds "$cmds; jexec $eid ifconfig \$ifid name $outifc"
+
+		pipesExec $cmds "hold"
+		pipesExec "ifconfig $outifc -vnet $eid" "hold"
 
 		set ether [getIfcMACaddr $node $ifc]
                 if {$ether == ""} {
@@ -1208,22 +1148,25 @@ proc createNodePhysIfcs { node } {
                 }
                 set ether [getIfcMACaddr $node $ifc]
 		pipesExec "ifconfig $outifc link $ether" "hold"
-		set ngnodemap($ifc@$node_id) $ifid
 	    }
-	    ser {
-#		set ifnum [string range $ifc 3 end]
-#		set ifid [createIfc $eid iface inet]
-#		pipesExec "jexec $eid ngctl mkpeer $ifid: cisco inet inet" "hold"
-#		pipesExec "jexec $eid ngctl connect $ifid: $ifid:inet inet6 inet6" "hold"
-#		pipesExec "jexec $eid ngctl msg $ifid: broadcast" "hold"
-#		pipesExec "jexec $eid ngctl name $ifid:inet hdlc$ifnum\@$node" "hold"
-#		pipesExec "jexec $eid ifconfig $ifid vnet $node" "hold"
-#		pipesExec "jexec $node_id ifconfig $ifid name $ifc" "hold"
-#		set ngnodemap(hdlc$ifnum@$node_id) hdlc$ifnum\@$node"
+	    default {
+		# capture physical interface directly into the node, without using a bridge
+		# we don't know the name, so make sure all other options cover other IMUNES
+		# 'physical' interfaces
+		# XXX not yet implemented
+		pipesExec "ifconfig $ifc vnet $node_id" "hold"
 	    }
 	}
     }
+
+    pipesExec ""
 }
+
+proc attachToL3NodeNamespace { node } {}
+
+proc createNamespace { ns } {}
+
+proc destroyNamespace { ns } {}
 
 #****f* freebsd.tcl/createNodeLogIfcs
 # NAME
@@ -1243,12 +1186,8 @@ proc createNodeLogIfcs { node } {
     foreach ifc [logIfcList $node] {
 	switch -exact [getLogIfcType $node $ifc] {
 	    vlan {
-		set tag [getIfcVlanTag $node $ifc]
-		set dev [getIfcVlanDev $node $ifc]
-		if {$tag != "" && $dev != ""} {
-		    pipesExec "jexec $node_id ifconfig $ifc create" "hold"
-		    pipesExec "jexec $node_id ifconfig $ifc vlan $tag vlandev $dev" "hold"
-		}
+		# physical interfaces are created when creating links, so VLANs
+		# must be created after links
 	    }
 	    lo {
 		if {$ifc != "lo0"} {
@@ -1279,6 +1218,20 @@ proc configureICMPoptions { node } {
 
     # Enable more fragments per packet for IPv4
     pipesExec "jexec $node_id sysctl net.inet.ip.maxfragsperpacket=64000" "hold"
+    pipesExec "jexec $node_id touch /tmp/init" "hold"
+}
+
+proc isNodeInitNet { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set node_id "$eid.$node"
+
+    try {
+       exec jexec $node_id rm /tmp/init > /dev/null
+    } on error {} {
+       return false
+    }
+
+    return true
 }
 
 #****f* freebsd.tcl/startIfcsNode
@@ -1295,16 +1248,24 @@ proc startIfcsNode { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     set node_id "$eid.$node"
-    set cmds ""
     foreach ifc [allIfcList $node] {
 	set mtu [getIfcMTU $node $ifc]
+	if { [getLogIfcType $node $ifc] == "vlan" } {
+	    set tag [getIfcVlanTag $node $ifc]
+	    set dev [getIfcVlanDev $node $ifc]
+	    if {$tag != "" && $dev != ""} {
+		pipesExec "jexec $node_id ifconfig $dev.$tag create name $ifc" "hold"
+	    }
+	}
 	if {[getIfcOperState $node $ifc] == "up"} {
-	    set cmds "$cmds\n jexec $node_id ifconfig $ifc mtu $mtu up"
+	    pipesExec "jexec $node_id ifconfig $ifc mtu $mtu up" "hold"
 	} else {
-	    set cmds "$cmds\n jexec $node_id ifconfig $ifc mtu $mtu"
+	    pipesExec "jexec $node_id ifconfig $ifc mtu $mtu" "hold"
+	}
+	if {[getIfcNatState $node $ifc] == "on"} {
+	    pipesExec "jexec $node_id sh -c 'echo \"map $ifc 0/0 -> 0/32\" | ipnat -f -'" "hold"
 	}
     }
-    exec sh << $cmds
 }
 
 #****f* freebsd.tcl/runConfOnNode
@@ -1319,11 +1280,7 @@ proc startIfcsNode { node } {
 #****
 proc runConfOnNode { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
-    global vroot_unionfs
-    global viewcustomid vroot_unionfs
-    global execMode
 
-    set node_dir [getVrootDir]/$eid/$node
     set node_id "$eid.$node"
 
     if { [getCustomEnabled $node] == true } {
@@ -1331,6 +1288,14 @@ proc runConfOnNode { node } {
 
 	set bootcmd [getCustomConfigCommand $node $selected]
 	set bootcfg [getCustomConfig $node $selected]
+	if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
+	    foreach statrte [getDefaultIPv4routes $node] {
+		lappend bootcfg [getIPv4RouteCmd $statrte]
+	    }
+	    foreach statrte [getDefaultIPv6routes $node] {
+		lappend bootcfg [getIPv6RouteCmd $statrte]
+	    }
+	}
 	set confFile "custom.conf"
     } else {
 	set bootcfg [[typemodel $node].cfggen $node]
@@ -1338,38 +1303,55 @@ proc runConfOnNode { node } {
 	set confFile "boot.conf"
     }
 
-    set cmds ""
-
-    writeDataToFile $node_dir/$confFile [join $bootcfg "\n"]
-    if {[typemodel $node] in "click_l2 click_l3 router.xorp"} {
-	# click has no daemon mode, run in backgorund
-	# xorp in daemon mode is too slow, run in background
-	set cmds "\njexec $node_id $bootcmd $confFile > $node_dir/out.log 2>&1 &"
-    } else {
-	set cmds "\njexec $node_id $bootcmd $confFile > $node_dir/out.log 2>&1"
-    }
+    generateHostsFile $node
 
     foreach ifc [allIfcList $node] {
 	if {[getIfcOperState $node $ifc] == "down"} {
-	    set cmds "$cmds\njexec $node_id ifconfig $ifc down"
+	    pipesExec "jexec $node_id ifconfig $ifc down" "hold"
 	}
     }
 
-    generateHostsFile $node
+    set cfg [join $bootcfg "\n"]
+    writeDataToNodeFile $node /$confFile $cfg
+    set cmds "$bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
+    # renaming the file signals that we're done
+    set cmds "$cmds mv /tout.log /out.log ;"
+    set cmds "$cmds mv /terr.log /err.log"
+    pipesExec "jexec $node_id sh -c '$cmds'" "hold"
+}
 
-    catch {exec sh << $cmds} err
-    if { $err != "" } {
-	if { $execMode != "batch" } {
-	    after idle {.dialog1.msg configure -wraplength 4i}
-	    tk_dialog .dialog1 "IMUNES warning" \
-		"There was a problem with configuring the node [getNodeName $node] ($node_id).\nCheck its /$confFile and /out.log files." \
-	    info 0 Dismiss
-	} else {
-	    puts "IMUNES warning"
-	    puts "\nThere was a problem with configuring the node [getNodeName $node] ($node_id).\nCheck its /$confFile and /out.log files."
-	}
+proc isNodeConfigured { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set node_id "$eid.$node"
+
+    if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
+	return true
     }
 
+    try {
+	exec jexec $node_id test -f /out.log > /dev/null
+    } on error {} {
+	return false
+    }
+
+    return true
+}
+
+proc isNodeError { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set node_id "$eid.$node"
+
+    if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
+	return false
+    }
+
+    try {
+	exec jexec $node_id test -s /err.log > /dev/null
+    } on error {} {
+	return false
+    }
+
+    return true
 }
 
 #****f* freebsd.tcl/killAllNodeProcesses
@@ -1386,8 +1368,8 @@ proc runConfOnNode { node } {
 proc killAllNodeProcesses { eid node } {
     set node_id "$eid.$node"
 
-    catch "exec jexec $node_id kill -9 -1 2> /dev/null"
-    catch "exec jexec $node_id tcpdrop -a 2> /dev/null"
+    pipesExec "jexec $node_id kill -9 -1 2> /dev/null" "hold"
+    pipesExec "jexec $node_id tcpdrop -a 2> /dev/null" "hold"
 }
 
 #****f* freebsd.tcl/removeNodeIfcIPaddrs
@@ -1406,10 +1388,10 @@ proc removeNodeIfcIPaddrs { eid node } {
 
     foreach ifc [ifcList $node] {
 	foreach ipv4 [getIfcIPv4addr $node $ifc] {
-	    catch "exec jexec $node_id ifconfig $ifc $ipv4 -alias"
+	    pipesExec "jexec $node_id ifconfig $ifc $ipv4 -alias" "hold"
 	}
 	foreach ipv6 [getIfcIPv6addr $node $ifc] {
-	    catch "exec jexec $node_id ifconfig $ifc inet6 $ipv6 -alias"
+	    pipesExec "jexec $node_id ifconfig $ifc inet6 $ipv6 -alias" "hold"
 	}
     }
 }
@@ -1429,7 +1411,7 @@ proc removeNodeIfcIPaddrs { eid node } {
 proc destroyNodeVirtIfcs { eid node } {
     set node_id $eid.$node
 
-    pipesExec "for iface in `jexec $node_id ifconfig -l`; do jexec $node_id ifconfig \$iface destroy; done" "hold"
+    pipesExec "jexec $node_id sh -c 'for iface in \$(ifconfig -l); do echo \$iface ; ifconfig \$iface destroy ; done'" "hold"
 }
 
 #****f* freebsd.tcl/removeNodeContainer
@@ -1540,11 +1522,11 @@ proc prepareVirtualFS {} {
 # FUNCTION
 #   Prepares devfs rules necessary for virtual nodes.
 #****
-proc prepareDevfs {} {
+proc prepareDevfs { { force 0 } } {
     global devfs_number
 
     catch {exec devfs rule showsets} devcheck
-    if { $devfs_number ni $devcheck } {
+    if { $force == 1 || $devfs_number ni $devcheck } {
 	# Prepare a devfs ruleset for L3 vnodes
 	exec devfs ruleset $devfs_number
 	exec devfs rule delset
@@ -1553,8 +1535,9 @@ proc prepareDevfs {} {
 	exec devfs rule add path zero unhide
 	exec devfs rule add path random unhide
 	exec devfs rule add path urandom unhide
- 	exec devfs rule add path ipl unhide
+	exec devfs rule add path ipl unhide
 	exec devfs rule add path ipnat unhide
+	exec devfs rule add path pf unhide
 	exec devfs rule add path crypto unhide
 	exec devfs rule add path ptyp* unhide
 	exec devfs rule add path ptyq* unhide
@@ -1584,10 +1567,6 @@ proc prepareDevfs {} {
 	exec devfs rule add path kmem unhide
 	exec devfs rule add path bpf* unhide
 	exec devfs rule add path tun* unhide
-        exec devfs rule add path pfil* unhide
-	exec devfs rule add path pf* unhide
-        exec devfs rule add path pflog* unhide
-        exec devfs rule add path ipsec* unhide
 	exec devfs ruleset 0
     }
 }
@@ -1600,13 +1579,41 @@ proc prepareDevfs {} {
 # FUNCTION
 #   Creates a root jail (container) for the current experiment.
 #****
-
 proc createExperimentContainer {} {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     # Create top-level vimage
     exec jail -c name=$eid vnet children.max=[llength $node_list] persist
+}
+
+#****f* freebsd.tcl/createDirectLinkBetween
+# NAME
+#   createDirectLinkBetween -- create direct link between
+# SYNOPSIS
+#   createDirectLinkBetween $lnode1 $lnode2 $ifname1 $ifname2
+# FUNCTION
+#   Creates direct link between two given nodes. Direct link connects the host
+#   interface into the node, without ng_node between them.
+# INPUTS
+#   * lnode1 -- node id of the first node
+#   * lnode2 -- node id of the second node
+#   * iname1 -- interface name on the first node
+#   * iname2 -- interface name on the second node
+#****
+proc createDirectLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set ngpeer1 \
+	[lindex [[typemodel $lnode1].nghook $eid $lnode1 $ifname1] 0]
+    set ngpeer2 \
+	[lindex [[typemodel $lnode2].nghook $eid $lnode2 $ifname2] 0]
+    set nghook1 \
+	[lindex [[typemodel $lnode1].nghook $eid $lnode1 $ifname1] 1]
+    set nghook2 \
+	[lindex [[typemodel $lnode2].nghook $eid $lnode2 $ifname2] 1]
+
+    pipesExec "jexec $eid ngctl connect $ngpeer1: $ngpeer2: $nghook1 $nghook2" "hold"
 }
 
 #****f* freebsd.tcl/createLinkBetween
@@ -1622,61 +1629,23 @@ proc createExperimentContainer {} {
 #   * iname1 -- interface name on the first node
 #   * iname2 -- interface name on the second node
 #****
-proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
+proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
-    global debug
 
-    set lname $lnode1-$lnode2
-
-    set peer1 \
+    set ngpeer1 \
 	[lindex [[typemodel $lnode1].nghook $eid $lnode1 $ifname1] 0]
-    set peer2 \
+    set ngpeer2 \
 	[lindex [[typemodel $lnode2].nghook $eid $lnode2 $ifname2] 0]
-    set ngpeer1 $ngnodemap($peer1)
-    set ngpeer2 $ngnodemap($peer2)
     set nghook1 \
 	[lindex [[typemodel $lnode1].nghook $eid $lnode1 $ifname1] 1]
     set nghook2 \
 	[lindex [[typemodel $lnode2].nghook $eid $lnode2 $ifname2] 1]
 
-    set cmds ""
+    set ngcmds "mkpeer $ngpeer1: pipe $nghook1 upper"
+    set ngcmds "$ngcmds\n name $ngpeer1:$nghook1 $link"
+    set ngcmds "$ngcmds\n connect $link: $ngpeer2: lower $nghook2"
 
-    # Special-case WLAN nodes: no need for ng_pipe there
-    if {[nodeType $lnode1] == "wlan" || [nodeType $lnode2] == "wlan"} {
-	catch {exec jexec $eid ngctl connect $ngpeer1: $ngpeer2: $nghook1 $nghook2} err
-	if { $debug && $err != "" } {
-	    puts $err
-	}
-	return
-    }
-
-    ## direct link, connect the host interface into the node, without
-    ## ng_node between them
-    #if { [getLinkType $link == "direct" } {
-    #    if {[nodeType $lnode1] == "rj45" || [nodeType $lnode2] == "rj45"} {
-    #        catch {exec jexec $eid ngctl connect $ngpeer1: $ngpeer2: $nghook1 $nghook2}
-    #        return
-    #    }
-    #}
-    # direct link, connect the host interface into the node, without
-    # ng_node between them
-    # XXX move to another proc
-    if { [getLinkDirect $link] } {
-	pipesExec "jexec $eid ngctl connect $ngpeer1: $ngpeer2: $nghook1 $nghook2" "hold"
-	return
-    }
-
-    set cmds "$cmds\n mkpeer $ngpeer1: pipe $nghook1 upper"
-    set cmds "$cmds\n name $ngpeer1:$nghook1 $lname"
-    set cmds "$cmds\n connect $lname: $ngpeer2: lower $nghook2"
-
-    # Ethernet frame has a 14-byte header - this is a temp. hack!!!
-    #set cmds "$cmds\n msg $lname: setcfg {header_offset=14}"
-    catch {exec jexec $eid ngctl -f - << $cmds} err
-    if { $debug && $err != "" } {
-	puts $err
-    }
+    pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
 }
 
 #****f* freebsd.tcl/configureLinkBetween
@@ -1697,39 +1666,33 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global linkJitterConfiguration debug
 
-    set lname $lnode1-$lnode2
-
     set bandwidth [expr [getLinkBandwidth $link] + 0]
     set delay [expr [getLinkDelay $link] + 0]
     set ber [expr [getLinkBER $link] + 0]
+    set loss [expr [getLinkLoss $link] + 0]
     set dup [expr [getLinkDup $link] + 0]
     # Link parameters
-    set cmds "msg $lname: setcfg {bandwidth=$bandwidth delay=$delay upstream={BER=$ber duplicate=$dup} downstream={BER=$ber duplicate=$dup}}"
+    set ngcmds "msg $link: setcfg {bandwidth=$bandwidth delay=$delay upstream={BER=$ber duplicate=$dup} downstream={BER=$ber duplicate=$dup}}"
 
-    catch {exec jexec $eid ngctl -f - << $cmds} err
+    pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
     if { $debug && $err != "" } {
 	puts $err
     }
 
+    # FIXME: remove this to interface configuration?
     # Queues
-    foreach node [list $lnode1 $lnode2] {
-	if {$node == $lnode1} {
-	    set ifc $ifname1
-	} else {
-	    set ifc $ifname2
-	}
-
+    foreach node "$lnode1 $lnode2" ifc "$ifname1 $ifname2" {
 	if {[nodeType $lnode1] != "rj45" && [nodeType $lnode2] != "rj45"} {
 	    set qdisc [getIfcQDisc $node $ifc]
-	    if {$qdisc ne "FIFO"} {
+	    if {$qdisc != "FIFO"} {
 		execSetIfcQDisc $eid $node $ifc $qdisc
 	    }
 	    set qdrop [getIfcQDrop $node $ifc]
-	    if {$qdrop ne "drop-tail"} {
+	    if {$qdrop != "drop-tail"} {
 		execSetIfcQDrop $eid $node $ifc $qdrop
 	    }
 	    set qlen [getIfcQLen $node $ifc]
-	    if {$qlen ne 50} {
+	    if {$qlen != 50} {
 		execSetIfcQLen $eid $node $ifc $qlen
 	    }
 	}
@@ -1738,6 +1701,9 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     if  { $linkJitterConfiguration } {
 	execSetLinkJitter $eid $link
     }
+}
+
+proc destroyDirectLinkBetween { eid lnode1 lnode2 } {
 }
 
 #****f* freebsd.tcl/destroyLinkBetween
@@ -1752,74 +1718,30 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
 #   * lnode1 -- node id of the first node
 #   * lnode2 -- node id of the second node
 #****
-proc destroyLinkBetween { eid lnode1 lnode2 } {
-    pipesExec "jexec $eid ngctl msg $lnode1-$lnode2: shutdown"
+proc destroyLinkBetween { eid lnode1 lnode2 link } {
+    pipesExec "jexec $eid ngctl msg $link: shutdown" "hold"
 }
 
-#dummy procedure
-proc destroyNetgraphNode { eid node } {
-}
-
-#****f* freebsd.tcl/destroyNetgraphNodes
+#****f* freebsd.tcl/destroyNodeIfcs
 # NAME
-#   destroyNetgraphNodes -- destroy netgraph nodes
+#   destroyNodeIfcs -- destroy virtual node interfaces
 # SYNOPSIS
-#   destroyNetgraphNodes $eid $ngraphs $widget
-# FUNCTION
-#   Destroys all netgraph nodes.
-# INPUTS
-#   * eid -- experiment id
-#   * ngraphs -- list of ngraphs nodes
-#   * widget -- status widget
-#****
-proc destroyNetgraphNodes { eid ngraphs widget } {
-    global execMode
-
-    # destroying netgraph nodes
-    if { $ngraphs != "" } {
-	statline "Shutting down netgraph nodes..."
-	set i 0
-	foreach node $ngraphs {
-	    incr i
-	    # statline "Shutting down netgraph node $node ([typemodel $node])"
-	    [typemodel $node].destroy $eid $node
-	    if {$execMode != "batch"} {
-		$widget.p step -1
-	    }
-	    displayBatchProgress $i [ llength $ngraphs ]
-	}
-	statline ""
-    }
-}
-
-#****f* freebsd.tcl/destroyVirtNodeIfcs
-# NAME
-#   destroyVirtNodeIfcs -- destroy virtual node interfaces
-# SYNOPSIS
-#   destroyVirtNodeIfcs $eid $vimages
+#   destroyNodeIfcs $eid $vimages
 # FUNCTION
 #   Destroys all virtual node interfaces.
 # INPUTS
 #   * eid -- experiment id
 #   * vimages -- list of virtual nodes
 #****
-proc destroyVirtNodeIfcs { eid vimages } {
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-
-    # destroying virtual interfaces
-    statline "Destroying virtual interfaces..."
-    set i 0
-    pipesCreate
-    foreach node $vimages {
-	incr i
-	foreach ifc [ifcList $node] {
-	    set ngnode $ngnodemap($ifc@$eid.$node)
-	    pipesExec "jexec $eid ngctl shutdown $ngnode:"
-	}
-	displayBatchProgress $i [ llength $vimages ]
+proc destroyNodeIfcs { eid node ifcs } {
+    if { [nodeType $node] in "ext extnat" } {
+	pipesExec "jexec $eid ngctl rmnode $eid-$node:" "hold"
+	return
     }
-    pipesClose
-    statline ""
+
+    foreach ifc $ifcs {
+	pipesExec "jexec $eid ngctl rmnode $node-$ifc:" "hold"
+    }
 }
 
 #****f* freebsd.tcl/removeExperimentContainer
@@ -1834,6 +1756,13 @@ proc destroyVirtNodeIfcs { eid vimages } {
 #   * widget -- status widget
 #****
 proc removeExperimentContainer { eid widget } {
+    # Remove the main vimage which contained all other nodes, hopefully we
+    # cleaned everything.
+    catch "exec jexec $eid kill -9 -1 2> /dev/null"
+    exec jail -r $eid
+}
+
+proc removeExperimentFiles { eid widget } {
     global vroot_unionfs execMode
 
     set VROOT_BASE [getVrootDir]
@@ -1842,9 +1771,7 @@ proc removeExperimentContainer { eid widget } {
     # cleaned everything.
     if {$vroot_unionfs} {
 	# UNIONFS
-	catch "exec jexec $eid kill -9 -1 2> /dev/null"
-	exec jail -r $eid
-	catch "exec rm -fr $VROOT_BASE/$eid &"
+	catch "exec rm -fr $VROOT_BASE/$eid"
     } else {
 	# ZFS
 	if {$execMode == "batch"} {
@@ -1881,8 +1808,6 @@ proc removeExperimentContainer { eid widget } {
 #   * node -- id of the node (type of the node is either lanswitch or hub)
 #****
 proc l2node.instantiate { eid node } {
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-
     switch -exact [nodeType $node] {
 	lanswitch {
 	    set ngtype bridge
@@ -1892,11 +1817,12 @@ proc l2node.instantiate { eid node } {
 	}
     }
 
-    set t [exec printf "mkpeer $ngtype link0 link0\nmsg .link0 setpersistent\nshow ." | jexec $eid ngctl -f -]
-    set tlen [string length $t]
-    set id [string range $t [expr $tlen - 31] [expr $tlen - 24]]
-    catch {exec jexec $eid ngctl name \[$id\]: $node}
-    set ngnodemap($eid\.$node) $node
+    # create an ng node and make it persistent in the same command
+    # bridge demands hookname 'linkX'
+    set ngcmds "mkpeer $ngtype link0 link0\n"
+    set ngcmds "$ngcmds msg .link0 setpersistent\n"
+    set ngcmds "$ngcmds name .link0 $node"
+    pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
 }
 
 #****f* freebsd.tcl/l2node.destroy
@@ -1912,7 +1838,7 @@ proc l2node.instantiate { eid node } {
 #   * node -- id of the node
 #****
 proc l2node.destroy { eid node } {
-    catch { nexec jexec $eid ngctl msg $node: shutdown }
+    pipesExec "jexec $eid ngctl msg $node: shutdown" "hold"
 }
 
 #****f* freebsd.tcl/getCpuCount
@@ -1931,47 +1857,98 @@ proc getCpuCount {} {
 
 #****f* freebsd.tcl/captureExtIfc
 # NAME
-#   captureExtIfc -- capture external interfaces
+#   captureExtIfc -- capture external interface
 # SYNOPSIS
 #   captureExtIfc $eid $node
 # FUNCTION
-#   Captures the external interfaces given by the given rj45 node.
+#   Captures the external interface given by the given rj45 node.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id
 #****
 proc captureExtIfc { eid node } {
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
+    global execMode
 
     set ifname [getNodeName $node]
-    if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
-	exec ifconfig $ifname create
-	exec ifconfig [lindex [split $ifname .] 0] up promisc
+    if { [getEtherVlanEnabled $node] } {
+	set vlan [getEtherVlanTag $node]
+	try {
+	    exec ifconfig $ifname.$vlan create
+	} on error err {
+	    set msg "Error: VLAN $vlan on external interface $ifname can't be\
+		created.\n($err)"
+
+	    if { $execMode == "batch" } {
+		puts $msg
+	    } else {
+		after idle {.dialog1.msg configure -wraplength 4i}
+		tk_dialog .dialog1 "IMUNES error" $msg \
+		    info 0 Dismiss
+	    }
+
+	    return -code error
+	} on ok {} {
+	    set ifname $ifname.$vlan
+	}
     }
-    set ngifname [string map {. _} $ifname]
-    set ngnodemap($ifname) $ngifname
-    nexec ifconfig $ifname vnet $eid
-    nexec jexec $eid ifconfig $ifname up promisc
+
+    captureExtIfcByName $eid $ifname
+}
+
+#****f* freebsd.tcl/captureExtIfcByName
+# NAME
+#   captureExtIfcByName -- capture external interface
+# SYNOPSIS
+#   captureExtIfcByName $eid $ifname
+# FUNCTION
+#   Captures the external interface given by the ifname.
+# INPUTS
+#   * eid -- experiment id
+#   * ifname -- physical interface name
+#****
+proc captureExtIfcByName { eid ifname } {
+    pipesExec "ifconfig $ifname vnet $eid" "hold"
+    pipesExec "jexec $eid ifconfig $ifname up promisc" "hold"
 }
 
 #****f* freebsd.tcl/releaseExtIfc
 # NAME
-#   releaseExtIfc -- release external interfaces
+#   releaseExtIfc -- release external interface
 # SYNOPSIS
 #   releaseExtIfc $eid $node
 # FUNCTION
-#   Releases the external interfaces captured by the given rj45 node.
+#   Releases the external interface captured by the given rj45 node.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id
 #****
 proc releaseExtIfc { eid node } {
     set ifname [getNodeName $node]
-    catch {nexec ifconfig $ifname -vnet $eid}
-    catch {nexec ifconfig $ifname up -promisc}
-    if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
-	catch {exec ifconfig $ifname destroy}
+    if { [getEtherVlanEnabled $node] } {
+	set vlan [getEtherVlanTag $node]
+	set ifname $ifname.$vlan
+	catch { exec ifconfig $ifname -vnet $eid destroy }
+
+	return
     }
+
+    releaseExtIfcByName $eid $ifname
+}
+
+#****f* freebsd.tcl/releaseExtIfcByName
+# NAME
+#   releaseExtIfcByName -- release external interface by name
+# SYNOPSIS
+#   releaseExtIfcByName $eid $ifname
+# FUNCTION
+#   Releases the external interface with the name ifname.
+# INPUTS
+#   * eid -- experiment id
+#   * ifname -- physical interface name
+#****
+proc releaseExtIfcByName { eid ifname } {
+    pipesExec "ifconfig $ifname -vnet $eid" "hold"
+    pipesExec "ifconfig $ifname up -promisc" "hold"
 }
 
 #****f* freebsd.tcl/enableIPforwarding
@@ -1992,21 +1969,6 @@ proc enableIPforwarding { eid node } {
 	pipesExec "jexec $eid\.$node sysctl net.inet.ip.fastforwarding=1" "hold"
     }
     pipesExec "jexec $eid\.$node sysctl net.inet6.ip6.forwarding=1" "hold"
-}
-
-#****f* freebsd.tcl/configDefaultLoIfc
-# NAME
-#   configDefaultLoIfc -- configure default logical interface
-# SYNOPSIS
-#   configDefaultLoIfc $eid $node
-# FUNCTION
-#   Configures the default logical interface address for the given node.
-# INPUTS
-#   * eid -- experiment id
-#   * node -- node id
-#****
-proc configDefaultLoIfc { eid node } {
-    pipesExec "jexec $eid\.$node ifconfig lo0 127.0.0.1/8" "hold"
 }
 
 #****f* freebsd.tcl/getExtIfcs
@@ -2118,35 +2080,55 @@ proc taygaDestroy { eid node } {
     catch {exec jexec $eid.$node ifconfig [set nat64ifc_$eid.$node] destroy}
 }
 
-# XXX External connection procedures
-proc extInstantiate { node } {
-    createNodePhysIfcs $node
-}
-
-proc startExternalIfc { eid node } {
+proc startExternalConnection { eid node } {
     set cmds ""
     set ifc [lindex [ifcList $node] 0]
     set outifc "$eid-$node"
 
-    set ipv4 [getIfcIPv4addr $node $ifc]
-    if {$ipv4 == ""} {
-	autoIPv4addr $node $ifc
+    set ether [getIfcMACaddr $node $ifc]
+    if { $ether != "" } {
+	autoMACaddr $node $ifc
+	set ether [getIfcMACaddr $node $ifc]
     }
+    set cmds "ifconfig $outifc link $ether"
+
     set ipv4 [getIfcIPv4addr $node $ifc]
-    set cmds "ifconfig $outifc $ipv4"
+    if { $ipv4 != "" } {
+	set cmds "ifconfig $outifc $ipv4"
+    }
 
     set ipv6 [getIfcIPv6addr $node $ifc]
-    if {$ipv6 == ""} {
-	autoIPv6addr $node $ifc
+    if { $ipv6 != "" } {
+	set cmds "$cmds\n ifconfig $outifc inet6 $ipv6"
     }
-    set ipv6 [getIfcIPv6addr $node $ifc]
-    set cmds "$cmds\n ifconfig $outifc inet6 $ipv6"
 
     set cmds "$cmds\n ifconfig $outifc up"
 
-    exec sh << $cmds &
+    pipesExec "$cmds" "hold"
 }
 
-proc stopExternalIfc { eid node } {
-    exec ifconfig $eid-$node down
+proc stopExternalConnection { eid node } {
+    pipesExec "ifconfig $eid-$node down" "hold"
+}
+
+proc setupExtNat { eid node ifc } {
+    set extIfc [getNodeName $node]
+    set extIp [getIfcIPv4addrs $node $ifc]
+    set prefixLen [lindex [split $extIp "/"] 1]
+    set subnet "[ip::prefix $extIp]/$prefixLen"
+
+    set cmds "echo 'map $extIfc $subnet -> 0/32' | ipnat -f -"
+
+    pipesExec "$cmds" "hold"
+}
+
+proc unsetupExtNat { eid node ifc } {
+    set extIfc [getNodeName $node]
+    set extIp [getIfcIPv4addrs $node $ifc]
+    set prefixLen [lindex [split $extIp "/"] 1]
+    set subnet "[ip::prefix $extIp]/$prefixLen"
+
+    set cmds "echo 'map $extIfc $subnet -> 0/32' | ipnat -f - -pr"
+
+    pipesExec "$cmds" "hold"
 }
