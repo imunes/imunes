@@ -35,7 +35,6 @@
 #  This file is considered to contain all the help information.
 #  Currently it contains only copyright information.
 #****
-
 set copyright {
 
 Copyright 2004-2014 University of Zagreb.
