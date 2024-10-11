@@ -23,7 +23,7 @@
 # SUCH DAMAGE.
 #
 
-# $Id: ext.tcl 63 2023-08-26 11:42 jromero17 $
+# $Id: ext.tcl 63 2013-10-03 12:17:50Z valter $
 
 
 #****h* imunes/ext.tcl
@@ -207,11 +207,10 @@ proc $MODULE.shellcmds {} {
 #   * eid -- experiment id
 #   * node -- node id (type of the node is pc)
 #****
-proc $MODULE.instantiate { eid node } {
-    set ifc [lindex [ifcList $node] 0]
-    if { "$ifc" != "" } {
-	extInstantiate $node
-    }
+proc $MODULE.instantiate { eid node } {}
+
+proc $MODULE.createIfcs { eid node ifcs } {
+    l2node.createIfcs $eid $node $ifcs
 }
 
 #****f* ext.tcl/ext.start
@@ -229,7 +228,7 @@ proc $MODULE.instantiate { eid node } {
 proc $MODULE.start { eid node } {
     set ifc [lindex [ifcList $node] 0]
     if { "$ifc" != "" } {
-	startExternalIfc $eid $node
+	startExternalConnection $eid $node
     }
 }
 
@@ -250,8 +249,12 @@ proc $MODULE.shutdown { eid node } {
     if { "$ifc" != "" } {
 	killExtProcess "wireshark.*[getNodeName $node].*\\($eid\\)"
 	killExtProcess "xterm -T Capturing $eid-$node -e tcpdump -ni $eid-$node"
-	stopExternalIfc $eid $node
+	stopExternalConnection $eid $node
     }
+}
+
+proc $MODULE.destroyIfcs { eid node ifcs } {
+    l2node.destroyIfcs $eid $node $ifcs
 }
 
 #****f* ext.tcl/ext.destroy
@@ -267,10 +270,6 @@ proc $MODULE.shutdown { eid node } {
 #   * node -- node id (type of the node is pc)
 #****
 proc $MODULE.destroy { eid node } {
-    set ifc [lindex [ifcList $node] 0]
-    if { "$ifc" != "" } {
-	destroyNetgraphNode $eid $node
-    }
 }
 
 #****f* ext.tcl/ext.nghook
