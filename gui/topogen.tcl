@@ -25,7 +25,6 @@
 
 # $Id: topogen.tcl 68 2013-10-04 11:17:13Z denis $
 
-
 menu .menubar.t_g -tearoff 0
 
 set m .menubar.t_g.chain
