@@ -9,7 +9,6 @@
 #  management. After that specific services are defined along with their
 #  startup commands.
 #****
-
 #
 # Define global variable that will hold the list of all services, to enable
 # dynamic loading of services into the gui.
@@ -137,11 +136,7 @@ proc $service.restart { node } {
 #
 set service tcpdump
 # register for hooks and globally
-if { $isOSlinux } {
-    regHooks $service {LINKINST NODESTOP}
-} else {
-    regHooks $service {NODEINST NODESTOP}
-}
+regHooks $service {LINKINST NODESTOP}
 
 proc $service.start { node } {
     foreach ifc [allIfcList $node] {
@@ -184,16 +179,26 @@ proc $service.restart { node } {
 #
 # inetd services helper functions
 #
-proc inetd.start { service node } {
-    lappend cmds "sed -i -e \"s/#$service/$service/\" /etc/inetd.conf"
+proc inetd.start { service node { insecure false } } {
+    if { $insecure } {
+	lappend cmds "sed -i -e \"s/^#<off># $service/$service/\" /etc/inetd.conf"
+    } else {
+	lappend cmds "sed -i -e \"s/^#$service/$service/\" /etc/inetd.conf"
+    }
+
     lappend cmds [inetdServiceRestartCmds]
 
     set output [execCmdsNode $node $cmds]
     writeDataToNodeFile $node "$service\_start.log" $output
 }
 
-proc inetd.stop { service node } {
-    lappend cmds "sed -i -e \"s/$service/#$service/\" /etc/inetd.conf"
+proc inetd.stop { service node { insecure false } } {
+    if { $insecure } {
+	lappend cmds "sed -i -e \"s/^$service/#<off># $service/\" /etc/inetd.conf"
+    } else {
+	lappend cmds "sed -i -e \"s/^$service/#$service/\" /etc/inetd.conf"
+    }
+
     lappend cmds [inetdServiceRestartCmds]
 
     set output [execCmdsNode $node $cmds]
@@ -231,18 +236,19 @@ set service telnet
 regHooks $service {NODECONF NODESTOP}
 
 proc $service.start { node } {
-    global service
-    inetd.start telnet $node
+    global service isOSlinux
+    inetd.start telnet $node $isOSlinux
 }
 
 proc $service.stop { node } {
-    inetd.stop telnet $node
+    global isOSlinux
+    inetd.stop telnet $node $isOSlinux
 }
 
 proc $service.restart { node } {
-    global service
-    inetd.stop telnet $node
-    inetd.start telnet $node
+    global service isOSlinux
+    inetd.stop telnet $node $isOSlinux
+    inetd.start telnet $node $isOSlinux
 }
 ######################################################################
 
