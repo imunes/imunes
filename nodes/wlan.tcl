@@ -32,17 +32,6 @@ proc $MODULE.prepareSystem {} {
 }
 
 proc $MODULE.confNewIfc { node ifc } {
-    foreach l2node [listLANnodes $node ""] {
-	foreach ifc [ifcList $l2node] {
-	    set peer [peerByIfc $l2node $ifc]
-	    if { ! [isNodeRouter $peer] &&
-		[[typemodel $peer].layer] == "NETWORK" } {
-		set ifname [ifcByPeer $peer $l2node]
-		autoIPv4defaultroute $peer $ifname
-		autoIPv6defaultroute $peer $ifname
-	    }
-	}
-    }
 }
 
 proc $MODULE.confNewNode { node } {
@@ -134,7 +123,7 @@ proc $MODULE.start { eid node } {
 }
 
 proc $MODULE.destroy { eid node } {
-    catch { nexec jexec $eid ngctl msg $node: shutdown }
+    catch { exec jexec $eid ngctl msg $node: shutdown }
 }
 
 proc $MODULE.nghook { eid node ifc } {
