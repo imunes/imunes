@@ -23,13 +23,12 @@
 # SUCH DAMAGE.
 #
 
-# $Id: theme.tcl 114 2023-08-26 11:42 jromero17 $
+# $Id: theme.tcl 114 2014-11-25 16:36:17Z valter $
 
 
 #
 # Imunes theme
 #
-
 global defaultFontSize
 set defaultFontSize 9
 
@@ -110,7 +109,7 @@ namespace eval ttk::theme::imunes {
 	    -indicatorbackground "#ffffff" \
 	    -indicatormargin {1 1 4 1} \
 	    -padding 2 ;
-	ttk::style configure Radiobutton \
+	ttk::style configure TRadiobutton \
 	    -indicatorbackground "#ffffff" \
 	    -indicatormargin {1 1 4 1} \
 	    -padding 2 ;
@@ -171,7 +170,6 @@ namespace eval ttk::theme::imunes {
 	## estilo background
 	ttk::style configure Tmenu \
 	    -background "#343434"
-	    
     }
 }
 
