@@ -593,10 +593,8 @@ ng_rfee_dlq_enqueue(hook_priv_p hp, struct mbuf *m, struct timeval *now,
 static void
 ng_rfee_dlq_dequeue(hook_priv_p hp, struct timeval *now)
 {
-
 	struct ngd_hdr *ngd_h, *ngd_h_next;
 	int error;
-
 
 	TAILQ_FOREACH_SAFE(ngd_h, &hp->dlq_head, ngd_le, ngd_h_next) {
 		/* Bail out if queue head is not yet due for tx. */
