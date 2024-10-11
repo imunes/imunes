@@ -632,7 +632,7 @@ proc changeBkgPopup {} {
 		{{All Images} {.png}  {}}
 		{{Gif Images} {.gif}  {}}
 		{{PNG Images} {.png} {}}
-  		{{SVG Images} {.svg} {}}
+		{{SVG Images} {.svg} {}}
 	    }
 #		{{All Images} {.jpeg} {}}
 #		{{All Images} {.jpg}  {}}
@@ -728,7 +728,7 @@ proc changeBkgPopup {} {
     #packing left side
     pack $wi.bgconf.left.up.l -anchor w
     pack $wi.bgconf.left.center.left.e -pady 2
-    pack $wi.bgconf.left.center.right.b
+    pack $wi.bgconf.left.center.right.
     pack $wi.bgconf.left.down.l $wi.bgconf.left.down.r -pady 2 -padx 10 -anchor w -side left
     pack $wi -fill both
     
@@ -1119,7 +1119,7 @@ proc renameCanvasPopup {} {
 
     ttk::frame $w.renameframe.buttons
     pack $w.renameframe.buttons -side bottom -fill x -pady 2m
-    ttk::button $w.renameframe.buttons.print -text [mc "Apply"] -command "renameCanvasApply $w"
+    ttk::button $w.renameframe.buttons.print -text [mc "Apply"]  -command "renameCanvasApply $w"
     ttk::button $w.renameframe.buttons.cancel -text [mc "Cancel"] -command "destroy $w"
     pack $w.renameframe.buttons.print $w.renameframe.buttons.cancel -side left -expand 1
 
