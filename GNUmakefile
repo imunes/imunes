@@ -29,7 +29,7 @@ RUNTIMEFILES =	$(wildcard runtime/*.tcl)
 PATCHESFILES =	$(wildcard src/patches/*)
 
 VROOT =	$(wildcard scripts/*.sh scripts/*.bash)
-TOOLS =	$(filter-out $(VROOT), $(wildcard scripts/*))
+TOOLS =	$(filter-out $(VROOT) scripts/convert_to_json.tcl, $(wildcard scripts/*))
 
 NODE_ICONS = frswitch.gif hub.gif lanswitch.gif rj45.gif cloud.gif host.gif \
 	ipfirewall.gif pc.gif router.gif \
@@ -87,6 +87,10 @@ endif
 	mv $(BINDIR)/vlink.tcl $(BINDIR)/vlink
 
 	mkdir -p $(SCRIPTSDIR)
+
+	sed -e "s,set LIBDIR \"\",set LIBDIR $(LIBDIR)," \
+	    -e "s,set ROOTDIR \".\",set ROOTDIR $(PREFIX)," \
+	    scripts/convert_to_json.tcl > $(SCRIPTSDIR)/convert_to_json.tcl
 
 	for file in $(VROOT); do \
 	    sed -e "s,LIBDIR=\"\",LIBDIR=$(LIBDIR)," \

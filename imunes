@@ -30,7 +30,12 @@
 ROOTDIR="."
 LIBDIR=""
 
-imunes=$ROOTDIR/$LIBDIR/imunes.tcl
+if [ "$1" = "--convert" ] ; then
+	shift 1
+	imunes=$ROOTDIR/$LIBDIR/scripts/convert_to_json.tcl
+else
+	imunes=$ROOTDIR/$LIBDIR/imunes.tcl
+fi
 
 which tclsh8.6 2>&1 > /dev/null
 if [ $? -ne 0 ]; then
