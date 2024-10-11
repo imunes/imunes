@@ -52,7 +52,6 @@ proc startEventScheduling {} {
 # FUNCTION
 #   Stops event scheduling.
 #****
-
 proc stopEventScheduling {} {
     upvar 0 ::cf::[set ::curcfg]::stop_sched stop_sched
     set stop_sched true
@@ -185,6 +184,10 @@ proc evsched {} {
 		    setLinkBER $object $value
 		    execSetLinkParams $eid $object
 		}
+		loss {
+		    setLinkLoss $object $value
+		    execSetLinkParams $eid $object
+		}
 		duplicate {
 		    setLinkDup $object $value
 		    execSetLinkParams $eid $object
@@ -217,6 +220,10 @@ proc evsched {} {
 		if { $ber == "" } {
 		    set ber 0
 		}
+		set loss [getLinkLoss $object]
+		if { $loss == "" } {
+		    set loss 0
+		}
 		set dup [getLinkDup $object]
 		if { $dup == "" } {
 		    set dup 0
@@ -226,7 +233,7 @@ proc evsched {} {
 		    set bw 0
 		}
 
-		set cfg "$delay $ber $dup $bw"
+		set cfg "$delay $ber $loss $dup $bw"
 		puts $evlogfile \
 		    "[clock seconds] $object $n0:$ifc0 $n1:$ifc1 $cfg"
 		flush $evlogfile
@@ -416,7 +423,7 @@ proc elementsEventsEditor {} {
     catch {destroy $eventsPopup}
     toplevel $eventsPopup
     wm transient $eventsPopup .
-    wm title $eventsPopup [mc "Events editor"]
+    wm title $eventsPopup  [mc "Events editor"]
     wm iconname $eventsPopup [mc "Events editor"]
     
     ttk::frame $eventsPopup.events
@@ -725,7 +732,7 @@ proc checkEventsSyntax { text type } {
      
      switch -exact $type {
 	link {
-	    set regularExpressions [list bandwidth delay ber width duplicate color]
+	    set regularExpressions [list bandwidth delay ber loss width duplicate color]
 	    set functions [list ramp rand square]
 	    set colors [list Red Green Blue Yellow Magenta Cyan Black]
 	}
