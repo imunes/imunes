@@ -1,4 +1,3 @@
-
 if {[.menubar.tools entrycget last -label] != "Debugger"} {
     .menubar.tools add separator
     .menubar.tools add command -label "Debugger" -underline 0 -command popupDebugger
@@ -135,18 +134,16 @@ bind . <F6> {
 
     source "$ROOTDIR/$LIBDIR/nodes/hub.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/lanswitch.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/click_l2.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/rj45.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/genericrouter.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/click_l3.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/host.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/pc.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/annotations.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/ext.tcl"
 
+    source "$ROOTDIR/$LIBDIR/nodes/frr.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/quagga.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/xorp.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/static.tcl"
 
     source "$ROOTDIR/$LIBDIR/gui/canvas.tcl"
@@ -159,7 +156,10 @@ bind . <F6> {
     source "$ROOTDIR/$LIBDIR/gui/nodecfgGUI.tcl"
     source "$ROOTDIR/$LIBDIR/gui/widgets.tcl"
     source "$ROOTDIR/$LIBDIR/gui/debug.tcl"
-
+    
+    source "$ROOTDIR/$LIBDIR/gui/selectTheme.tcl"
+    source "$ROOTDIR/$LIBDIR/gui/setidioma.tcl"
+    
     source "$ROOTDIR/$LIBDIR/gui/msgs/de.msg"
     source "$ROOTDIR/$LIBDIR/gui/msgs/en.msg"
     source "$ROOTDIR/$LIBDIR/gui/msgs/es.msg"
@@ -169,6 +169,6 @@ bind . <F6> {
     source "$ROOTDIR/$LIBDIR/gui/msgs/it.msg"
     source "$ROOTDIR/$LIBDIR/gui/msgs/pt.msg"
     source "$ROOTDIR/$LIBDIR/gui/msgs/ru.msg"
-    
+
     puts "Reloaded all sources."
 }
