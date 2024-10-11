@@ -31,7 +31,7 @@ set bridgeProtocol rstp
 set brguielements {}
 set selectedFilterRule ""
 set selectedPackgenPacket ""
-set router_ConfigModel "quagga"
+set router_ConfigModel "frr"
 
 #****f* nodecfgGUI.tcl/nodeConfigGUI
 # NAME
@@ -219,7 +219,7 @@ proc configGUI_addTree { wi node } {
 
     $wi.panwin.f1.tree column #0 -width 130 -minwidth 70 -stretch 0
     foreach column $treecolumns {
-	if { [lindex $column 0] == "OperState" || [lindex $column 0] == "MTU" } {
+	if { [lindex $column 0] in "OperState NatState MTU" } {
 	    $wi.panwin.f1.tree column [lindex $column 0] -width 45 \
 		-minwidth 2 -anchor center -stretch 0
 	} elseif { [lindex $column 0] == "MACaddr" } {
@@ -241,7 +241,7 @@ proc configGUI_addTree { wi node } {
 
     #Creating new items
     $wi.panwin.f1.tree insert {} end -id interfaces -text \
-	[mc "Physical Interfaces"] -open true -tags interfaces
+	"Physical Interfaces" -open true -tags interfaces
     $wi.panwin.f1.tree focus interfaces
     $wi.panwin.f1.tree selection set interfaces
 
@@ -254,14 +254,14 @@ proc configGUI_addTree { wi node } {
 	}
     }
 
-    if {[[typemodel $node].virtlayer] == "VIMAGE" && [nodeType $node] != "click_l2"} {
+    if {[[typemodel $node].virtlayer] == "VIMAGE"} {
 	$wi.panwin.f1.tree insert {} end -id logIfcFrame -text \
 	    "Logical Interfaces" -open true -tags logIfcFrame
 
 	foreach ifc [lsort -dictionary [logIfcList $node]] {
 	    $wi.panwin.f1.tree insert logIfcFrame end -id $ifc \
 		-text "$ifc" -tags $ifc
-	    foreach column { "OperState" "MTU" "IPv4addr" "IPv6addr"} {
+	    foreach column { "OperState" "NatState" "MTU" "IPv4addr" "IPv6addr"} {
 		$wi.panwin.f1.tree set $ifc [lindex $column 0] \
 		    [getIfc[lindex $column 0] $node $ifc]
 	    }
@@ -443,7 +443,7 @@ proc configGUI_refreshIfcsTree { wi node } {
 	foreach ifc [lsort -dictionary [logIfcList $node]] {
 	    $wi insert logIfcFrame end -id $ifc \
 		-text "$ifc" -tags $ifc
-	    foreach column { "OperState" "MTU" "IPv4addr" "IPv6addr"} {
+	    foreach column { "OperState" "NatState" "MTU" "IPv4addr" "IPv6addr"} {
 		$wi set $ifc [lindex $column 0] \
 		    [getIfc[lindex $column 0] $node $ifc]
 	    }
@@ -977,11 +977,17 @@ proc configGUI_nodeName { wi node label } {
     ttk::frame $wi.name -borderwidth 6
     ttk::label $wi.name.txt -text $label
 
-    if { [typemodel $node] == "rj45" } {
+    if { [typemodel $node] in "rj45 extnat" } {
 	ttk::combobox $wi.name.nodename -width 14 -textvariable extIfc$node
 	set ifcs [getExtIfcs]
 	$wi.name.nodename configure -values [concat UNASSIGNED $ifcs]
-	$wi.name.nodename set [lindex [split [getNodeName $node] .] 0 ]
+	set name [getNodeName $node]
+#	if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
+#	    # use 'file rootname' to remove the 'extension' from the name
+#	    # variable - last dot and everything after it
+#	    set name [file rootname $name]
+#	}
+	$wi.name.nodename set $name
     } else {
 	ttk::entry $wi.name.nodename -width 14 -validate focus
 	$wi.name.nodename insert 0 [lindex [split [getNodeName $node] .] 0]
@@ -989,6 +995,74 @@ proc configGUI_nodeName { wi node label } {
     pack $wi.name.txt -side left -anchor e -expand 1 -padx 4 -pady 4
     pack $wi.name.nodename -side left -anchor w -expand 1 -padx 4 -pady 4
     pack $wi.name -fill both
+}
+
+#****f* nodecfgGUI.tcl/configGUI_rj45s
+# NAME
+#   configGUI_rj45s -- configure GUI - node name
+# SYNOPSIS
+#   configGUI_rj45s $wi $node $label
+# FUNCTION
+#   Creating module with node name.
+# INPUTS
+#   * wi -- widget
+#   * node -- node id
+#   * label -- text shown before the entry with node name
+#****
+proc configGUI_rj45s { wi node } {
+    global guielements
+    lappend guielements configGUI_rj45s
+
+    set ifcs [getExtIfcs]
+    foreach group [getNodeExternalIfcs $node] {
+	lassign $group ifc extIfc
+	set lbl "Interface $ifc"
+	set peer [logicalPeerByIfc $node $ifc]
+	if { $peer != "" } {
+	    set lbl "$lbl (peer [getNodeName $peer])"
+	}
+
+	destroy $wi.$ifc
+	ttk::frame $wi.$ifc -borderwidth 6
+	ttk::label $wi.$ifc.txt -text "$lbl"
+	ttk::combobox $wi.$ifc.nodename -width 14 -textvariable extIfc$ifc
+	$wi.$ifc.nodename configure -values [concat UNASSIGNED $ifcs]
+	$wi.$ifc.nodename set $extIfc
+
+	pack $wi.$ifc.txt -side left -anchor w -expand 1 -padx 4 -pady 4
+	pack $wi.$ifc.nodename -side left -anchor e -expand 1 -padx 4 -pady 4
+	pack $wi.$ifc -fill both
+    }
+}
+
+#****f* nodecfgGUI.tcl/configGUI_rj45sApply
+# NAME
+#   configGUI_rj45sApply -- configure GUI - node name apply
+# SYNOPSIS
+#   configGUI_rj45sApply $wi $node
+# FUNCTION
+#   Saves changes in the module with node name.
+# INPUTS
+#   * wi -- widget
+#   * node -- node id
+#****
+proc configGUI_rj45sApply { wi node } {
+    global changed
+
+    set name [string trim [$wi.name.nodename get]]
+    setNodeName $node $name
+
+    set ifcs {}
+    foreach ifc [ifcList $node] {
+	lappend ifcs [list $ifc [string trim [$wi.$ifc.nodename get]]]
+    }
+    set old [getNodeExternalIfcs $node]
+    if { $old != $ifcs } {
+	set changed 1
+	setNodeExternalIfcs $node $ifcs
+	redrawAll
+	updateUndoLog
+    }
 }
 
 #****f* nodecfgGUI.tcl/configGUI_ifcMainFrame
@@ -1035,10 +1109,12 @@ proc configGUI_ifcEssentials { wi node ifc } {
     lappend guielements "configGUI_ifcEssentials $ifc"
     global ifoper$ifc
     set ifoper$ifc [getIfcOperState $node $ifc]
-    ttk::radiobutton $wi.if$ifc.label.up -text "up" \
-	-variable ifoper$ifc -value up -padding 4
-    ttk::radiobutton $wi.if$ifc.label.down -text "down" \
-	-variable ifoper$ifc -value down -padding 4
+    ttk::checkbutton $wi.if$ifc.label.state -text "up" \
+	-variable ifoper$ifc -padding 4 -onvalue "up" -offvalue "down"
+    global ifnat$ifc
+    set ifnat$ifc [getIfcNatState $node $ifc]
+    ttk::checkbutton $wi.if$ifc.label.nat -text "nat" \
+	-variable ifnat$ifc -padding 4 -onvalue "on" -offvalue "off"
     ttk::label $wi.if$ifc.label.mtul -text "MTU" -anchor e -width 5 -padding 2
     ttk::spinbox $wi.if$ifc.label.mtuv -width 5 \
 	-validate focus -invalidcommand "focusAndFlash %W"
@@ -1048,8 +1124,8 @@ proc configGUI_ifcEssentials { wi node ifc } {
 	-from 256 -to 9018 -increment 2 \
 	-validatecommand {checkIntRange %P 256 9018}
 
-    pack $wi.if$ifc.label.up -side left -anchor w -padx 5
-    pack $wi.if$ifc.label.down \
+    pack $wi.if$ifc.label.state -side left -anchor w -padx 5
+    pack $wi.if$ifc.label.nat \
 	$wi.if$ifc.label.mtul -side left -anchor w
     pack $wi.if$ifc.label.mtuv -side left -anchor w -padx 1
 }
@@ -1248,23 +1324,57 @@ proc configGUI_ipfirewallRuleset { wi node } {
 #   * node -- node id
 #****
 proc configGUI_staticRoutes { wi node } {
-    global guielements
+    global guielements auto_default_routes
     lappend guielements configGUI_staticRoutes
-    set routes [concat [getStatIPv4routes $node] [getStatIPv6routes $node]]
-    ttk::frame $wi.statrts -borderwidth 2 -relief groove -padding 4
-    ttk::label $wi.statrts.label -text "Static routes:"
-    set h [expr {[llength $routes] + 1}]
-    if { $h < 2 } {
-	set h 2
-    }
-    text $wi.statrts.text -bg white -width 42 -height $h -takefocus 0
-    foreach route $routes {
-	$wi.statrts.text insert end "$route
+    set user_sroutes [concat [getStatIPv4routes $node] [getStatIPv6routes $node]]
+
+    set auto_default_routes [getAutoDefaultRoutesStatus $node]
+    lassign [getDefaultGateways $node {} {}] my_gws {} {}
+    lassign [getDefaultRoutesConfig $node $my_gws] all_routes4 all_routes6
+
+    set ifc_routes_enable $wi.ifc_routes_enable
+    ttk::checkbutton $ifc_routes_enable -text "Enable automatic default routes" \
+	-variable auto_default_routes -padding 4 -onvalue "enabled" -offvalue "disabled"
+    pack $ifc_routes_enable -anchor w
+
+    set sroutes_nb $wi.sroutes
+    ttk::notebook $sroutes_nb -height 2
+    pack $sroutes_nb -fill both -expand 1
+    pack propagate $sroutes_nb 0
+
+    set user_routes $sroutes_nb.user
+    ttk::frame $user_routes
+    $sroutes_nb add $user_routes -text "Custom static routes"
+    ttk::scrollbar $user_routes.vsb -orient vertical -command [list $user_routes.editor yview]
+    ttk::scrollbar $user_routes.hsb -orient horizontal -command [list $user_routes.editor xview]
+    text $user_routes.editor -width 42 -bg white -takefocus 0 -wrap none \
+	-yscrollcommand [list $user_routes.vsb set] -xscrollcommand [list $user_routes.hsb set]
+    foreach route $user_sroutes {
+	$user_routes.editor insert end "$route
 "
     }
-    pack $wi.statrts.label -anchor w -pady 2
-    pack $wi.statrts.text -fill both -expand 1 -padx 4 -expand 1
-    pack $wi.statrts -anchor w -fill both -expand 1
+
+    pack $user_routes.vsb -side right -fill y
+    pack $user_routes.hsb -side bottom -fill x
+    pack $user_routes.editor -anchor w -fill both -expand 1
+
+    set auto_routes $sroutes_nb.auto
+    ttk::frame $auto_routes
+    $sroutes_nb add $auto_routes -text "Automatic default routes"
+    ttk::scrollbar $auto_routes.vsb -orient vertical -command [list $auto_routes.editor yview]
+    ttk::scrollbar $auto_routes.hsb -orient horizontal -command [list $auto_routes.editor xview]
+    text $auto_routes.editor -width 42 -bg white -wrap none \
+	-yscrollcommand [list $auto_routes.vsb set] -xscrollcommand [list $auto_routes.hsb set]
+    foreach route [concat $all_routes4 $all_routes6] {
+	$auto_routes.editor insert end "$route
+"
+    }
+    $auto_routes.editor configure -state disabled
+
+    pack $auto_routes.vsb -side right -fill y
+    pack $auto_routes.hsb -side bottom -fill x
+    pack $auto_routes.editor -anchor w -fill both -expand 1
+
 }
 
 #****f* nodecfgGUI.tcl/configGUI_etherVlan
@@ -1451,14 +1561,14 @@ proc configGUI_routingModel { wi node } {
     ttk::checkbutton $w.protocols.ripng -text "ripng" -variable ripngEnable
     ttk::checkbutton $w.protocols.ospf -text "ospfv2" -variable ospfEnable
     ttk::checkbutton $w.protocols.ospf6 -text "ospfv3" -variable ospf6Enable
-    ttk::radiobutton $w.model.quagga -text quagga \
-	-variable router_ConfigModel -value quagga -command \
+    ttk::radiobutton $w.model.frr -text frr \
+	-variable router_ConfigModel -value frr -command \
 	"$w.protocols.rip configure -state normal;
 	 $w.protocols.ripng configure -state normal;
 	 $w.protocols.ospf configure -state normal;
 	 $w.protocols.ospf6 configure -state normal"
-    ttk::radiobutton $w.model.xorp -text xorp \
-	-variable router_ConfigModel -value xorp -command \
+    ttk::radiobutton $w.model.quagga -text quagga \
+	-variable router_ConfigModel -value quagga -command \
 	"$w.protocols.rip configure -state normal;
 	 $w.protocols.ripng configure -state normal;
 	 $w.protocols.ospf configure -state normal;
@@ -1483,19 +1593,19 @@ proc configGUI_routingModel { wi node } {
  	$w.protocols.ospf6 configure -state disabled
     }
     if { $oper_mode != "edit" } {
+	$w.model.frr configure -state disabled
 	$w.model.quagga configure -state disabled
-	$w.model.xorp configure -state disabled
 	$w.model.static configure -state disabled
 	$w.protocols.rip configure -state disabled
 	$w.protocols.ripng configure -state disabled
 	$w.protocols.ospf configure -state disabled
 	$w.protocols.ospf6 configure -state disabled
     }
-    if {"xorp" ni $supp_router_models} {
-	$w.model.xorp configure -state disabled
+    if {"frr" ni $supp_router_models} {
+	$w.model.frr configure -state disabled
     }
     pack $w.model.label -side left -padx 2
-    pack $w.model.quagga $w.model.xorp $w.model.static \
+    pack $w.model.frr $w.model.quagga $w.model.static \
         -side left -padx 6
     pack $w.model -fill both -expand 1
     pack $w.protocols.label -side left -padx 2
@@ -1590,39 +1700,34 @@ proc configGUI_attachDockerToExt { wi node } {
     pack $w -fill both
 }
 
-#****f* nodecfgGUI.tcl/configGUI_dockerImage
+#****f* nodecfgGUI.tcl/configGUI_customImage
 # NAME
-#   configGUI_dockerImage -- configure GUI - use different Docker image
+#   configGUI_customImage -- configure GUI - use different image
 # SYNOPSIS
-#   configGUI_dockerImage $wi $node
+#   configGUI_customImage $wi $node
 # FUNCTION
-#   Creating module for using different docker images for  virtual nodes
-#   on Linux.
+#   Creating GUI module for using different images for virtual nodes
 # INPUTS
 #   * wi -- widget
 #   * node -- node id
 #****
-proc configGUI_dockerImage { wi node } {
+proc configGUI_customImage { wi node } {
     global VROOT_MASTER isOSlinux
-
-    if { !$isOSlinux } {
-	return
-    }
 
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global guielements
-    lappend guielements configGUI_dockerImage
+    lappend guielements configGUI_customImage
 
-    set docker_image [getNodeDockerImage $node]
+    set custom_image [getNodeCustomImage $node]
 
-    set w $wi.dockerImg
+    set w $wi.customImg
     ttk::frame $w -relief groove -borderwidth 2 -padding 2
-    ttk::label $w.label -text "Docker image:"
+    ttk::label $w.label -text "Custom image:"
 
     pack $w.label -side left -padx 2
 
     ttk::entry $w.img -width 40
-    $w.img insert 0 $docker_image
+    $w.img insert 0 $custom_image
     pack $w.img -side left -padx 7
 
     pack $w -fill both
@@ -1819,7 +1924,7 @@ proc configGUI_nodeNameApply { wi node } {
     global changed badentry showTree eid_base isOSlinux
 
     set name [string trim [$wi.name.nodename get]]
-    if { [regexp {^[A-Za-z_][0-9A-Za-z_-]*$} $name ] == 0 } {
+    if { [nodeType $node] ni "extnat rj45" && [regexp {^[A-Za-z_][0-9A-Za-z_-]*$} $name ] == 0 } {
 	tk_dialog .dialog1 "IMUNES warning" \
 	    "Hostname should contain only letters, digits, _, and -, and should not start with - (hyphen) or number." \
 	    info 0 Dismiss
@@ -1856,6 +1961,15 @@ proc configGUI_ifcEssentialsApply { wi node ifc } {
     if { $ifoperstate != $oldifoperstate } {
 	if {$apply == 1} {
 	    setIfcOperState $node $ifc $ifoperstate
+	}
+	set changed 1
+    }
+    global [subst ifnat$ifc]
+    set ifnatstate [subst $[subst ifnat$ifc]]
+    set oldifnatstate [getIfcNatState $node $ifc]
+    if { $ifnatstate != $oldifnatstate } {
+	if {$apply == 1} {
+	    setIfcNatState $node $ifc $ifnatstate
 	}
 	set changed 1
     }
@@ -2112,18 +2226,18 @@ proc configGUI_ipfirewallRulesetApply { wi node } {
 #   * node -- node id
 #****
 proc configGUI_staticRoutesApply { wi node } {
-    global changed
+    global changed auto_default_routes
     set oldIPv4statrts [lsort [getStatIPv4routes $node]]
     set oldIPv6statrts [lsort [getStatIPv6routes $node]]
     set newIPv4statrts {}
     set newIPv6statrts {}
 
-    set routes [$wi.statrts.text get 0.0 end]
+    set routes [$wi.sroutes.user.editor get 0.0 end]
 
     set checkFailed 0
     set checkFailed [checkStaticRoutesSyntax $routes]
 
-    set errline [$wi.statrts.text get $checkFailed.0 $checkFailed.end]
+    set errline [$wi.sroutes.user.editor get $checkFailed.0 $checkFailed.end]
 
     if { $checkFailed != 0} {
 	tk_dialog .dialog1 "IMUNES warning" \
@@ -2160,6 +2274,8 @@ proc configGUI_staticRoutesApply { wi node } {
 	setStatIPv6routes $node $newIPv6statrts
 	set changed 1
     }
+
+    setAutoDefaultRoutesStatus $node $auto_default_routes
 }
 
 #****f* nodecfgGUI.tcl/checkStaticRoutesSyntax
@@ -2246,18 +2362,13 @@ proc configGUI_etherVlanApply { wi node } {
     if { $tag != $oldTag } {
 	setEtherVlanTag $node $tag
 	if { $tag == "" } {
-	    set vlanEnable 0
-	    setEtherVlanEnabled $node $vlanEnable
+	    setEtherVlanEnabled $node 0
 	    $wi.vlancfg.tag configure -state disabled
 	}
 	set changed 1
     }
-    if { [getEtherVlanEnabled $node]  && [getEtherVlanTag $node] != "" } {
-	set name [getNodeName $node].[getEtherVlanTag $node]
-    } else {
-	set name [lindex [split [getNodeName $node] .] 0]
-    }
-    setNodeName $node $name
+
+    setNodeName $node [getNodeName $node]
 }
 
 #****f* nodecfgGUI.tcl/configGUI_customConfigApply
@@ -2434,23 +2545,23 @@ proc configGUI_attachDockerToExtApply { wi node } {
     }
 }
 
-#****f* nodecfgGUI.tcl/configGUI_dockerImageApply
+#****f* nodecfgGUI.tcl/configGUI_customImageApply
 # NAME
-#   configGUI_dockerImageApply -- configure GUI - docker image apply
+#   configGUI_customImageApply -- configure GUI - custom image apply
 # SYNOPSIS
-#   configGUI_dockerImageApply $wi $node
+#   configGUI_customImageApply $wi $node
 # FUNCTION
-#   Saves changes in the module with different dockerImage
+#   Saves changes in the module with different customImage
 # INPUTS
 #   * wi -- widget
 #   * node -- node id
 #****
-proc configGUI_dockerImageApply { wi node } {
+proc configGUI_customImageApply { wi node } {
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    set docker_image [$wi.dockerImg.img get]
+    set custom_image [$wi.customImg.img get]
     if { $oper_mode == "edit"} {
-	if { [getNodeDockerImage $node] != $docker_image } {
-	    setNodeDockerImage $node $docker_image
+	if { [getNodeCustomImage $node] != $custom_image } {
+	    setNodeCustomImage $node $custom_image
 	    set changed 1
 	}
     }
@@ -6162,7 +6273,7 @@ proc configGUI_packetConfig { wi node pac } {
     $wi.if$pac.rconfig.rnval insert 0 $pac
 
     ttk::label $wi.if$pac.rconfig.ptxt -text "Packet data: " -anchor w
-    text $wi.if$pac.rconfig.pval -width 48 -height 8 -font "Courier 10 bold"
+    text $wi.if$pac.rconfig.pval -width 48 -height 8 -font "Courier 10"
 
     set pdata [getPackgenPacketData $node $pac]
     set text ""
@@ -6418,7 +6529,8 @@ proc configGUI_nat64Config { wi node } {
     text $wi.mapconf.mappings -bg white -width 42 -height 7
     set mps [getTaygaMappings $node]
     foreach map $mps {
-	$wi.mapconf.mappings insert end "$map"
+	$wi.mapconf.mappings insert end "$map
+"
     }
     pack $wi.mapconf.label -anchor w -pady 2
     pack $wi.mapconf.mappings -fill both -expand 1 -padx 4
