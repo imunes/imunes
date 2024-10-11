@@ -353,6 +353,9 @@ proc loadCfg { cfg } {
 			interface-peer {
 			    lappend $object "interface-peer {$value}"
 			}
+			external-ifcs {
+			    lappend $object "external-ifcs {$value}"
+			}
 			network-config {
 			    set cfg ""
 			    foreach zline [split $value {
@@ -472,6 +475,9 @@ proc loadCfg { cfg } {
 			labelcoords {
 			    lappend $object "labelcoords {$value}"
 			}
+			auto_default_routes {
+			    lappend $object "auto_default_routes $value"
+			}
 			canvas {
 			    lappend $object "canvas $value"
 			}
@@ -481,8 +487,12 @@ proc loadCfg { cfg } {
 			docker-attach {
 			    lappend $object "docker-attach $value"
 			}
+			# for backwards compatibility
 			docker-image {
-			    lappend $object "docker-image $value"
+			    lappend $object "custom-image $value"
+			}
+			custom-image {
+			    lappend $object "custom-image $value"
 			}
 			events {
 			    set cfg ""
@@ -503,7 +513,7 @@ proc loadCfg { cfg } {
 		    }
 		} elseif {"$class" == "link"} {
 		    switch -exact -- $field {
-      			direct {
+			direct {
 			    lappend $object "direct $value"
 			}
 			nodes {
@@ -538,6 +548,9 @@ proc loadCfg { cfg } {
 			}
 			ber {
 			    lappend $object "ber $value"
+			}
+			loss {
+			    lappend $object "loss $value"
 			}
 			duplicate {
 			    lappend $object "duplicate $value"
@@ -728,6 +741,9 @@ proc loadCfg { cfg } {
     set MACUsedList ""
     foreach node $node_list {
 	set nodeType [typemodel $node]
+	if { $nodeType in "extelem" } {
+	    continue
+	}
 	if { $nodeType ni [concat $all_modules_list "pseudo"] && \
 	    ! [string match "router.*" $nodeType] } {
 	    set msg "Unknown node type: '$nodeType'."
