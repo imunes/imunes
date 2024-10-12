@@ -1050,10 +1050,6 @@ proc startNodeIfaces { node_id ifaces } {
 proc unconfigNode { eid node_id } {
     set docker_id "$eid.$node_id"
 
-    if { [getCustomEnabled $node_id] == true } {
-	return
-    }
-
     set bootcfg [[getNodeType $node_id].generateUnconfig $node_id]
     set bootcmd [[getNodeType $node_id].bootcmd $node_id]
     set confFile "boot.conf"
@@ -1268,14 +1264,7 @@ proc runConfOnNode { node_id } {
 
         set bootcmd [getCustomConfigCommand $node_id $selected]
         set bootcfg [getCustomConfig $node_id $selected]
-	if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
-	    foreach statrte [getDefaultIPv4routes $node_id] {
-		lappend bootcfg [getIPv4RouteCmd $statrte]
-	    }
-	    foreach statrte [getDefaultIPv6routes $node_id] {
-		lappend bootcfg [getIPv6RouteCmd $statrte]
-	    }
-	}
+	set bootcfg [concat $bootcfg [[getNodeType $node_id].generateConfig $node_id]]
         set confFile "custom.conf"
     } else {
         set bootcfg [[getNodeType $node_id].generateConfig $node_id]
