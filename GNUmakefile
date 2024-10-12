@@ -36,14 +36,14 @@ TOOLS =	$(filter-out $(VROOT), $(wildcard scripts/*))
 
 NODE_ICONS = frswitch.svg hub.svg lanswitch.svg rj45.svg cloud.svg host.svg ipfirewall.svg \
 	pc.svg router.svg click_l2.svg click_l3.svg stpswitch.svg filter.svg packgen.svg \
-	nat64.svg ext.svg
+	nat64.svg ext.svg extnat.svg
 
 NORMAL_ICONS = $(NODE_ICONS)
 
 SMALL_ICONS = $(NODE_ICONS)
 
-TINY_ICONS = $(NODE_ICONS) link.svg minizoomin.svg minizoomout.svg play_start.svg play_stop.svg select.svg l2.svg l2.gif l3.svg l3.gif freeform.svg \
-		oval.svg rectangle.svg text.svg
+TINY_ICONS = $(NODE_ICONS) link.svg minizoomin.svg minizoomout.svg play_start.svg play_stop.svg \
+		select.svg extnat.svg l2.svg l2.gif l3.svg l3.gif freeform.svg oval.svg rectangle.svg text.svg
 
 ICONS = $(wildcard icons/imunes_*)
 
