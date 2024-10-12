@@ -160,8 +160,10 @@ proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
 #****
 proc $MODULE.generateConfig { node_id } {
     set cfg {}
-    foreach protocol { rip ripng ospf ospf6 bgp } {
-	set cfg [concat $cfg [getRouterProtocolCfg $node_id $protocol]]
+    if { [getCustomEnabled $node_id] != true } {
+	foreach protocol { rip ripng ospf ospf6 bgp } {
+	    set cfg [concat $cfg [getRouterProtocolCfg $node_id $protocol]]
+	}
     }
 
     set subnet_gws {}
@@ -185,8 +187,10 @@ proc $MODULE.generateConfig { node_id } {
 proc $MODULE.generateUnconfig { node_id } {
     set cfg {}
 
-    foreach protocol { rip ripng ospf ospf6 bgp } {
-	set cfg [concat $cfg [getRouterProtocolUnconfig $node_id $protocol]]
+    if { [getCustomEnabled $node_id] != true } {
+	foreach protocol { rip ripng ospf ospf6 bgp } {
+	    set cfg [concat $cfg [getRouterProtocolUnconfig $node_id $protocol]]
+	}
     }
 
     set cfg [concat $cfg [routerRoutesUncfggen $node_id]]
