@@ -124,7 +124,7 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 	if { $subnet_gws != "{||}" } {
 	    set has_extnat [string match "*extnat*" $subnet_gws]
 	    foreach subnet_node [dict keys $subnet_data] {
-		if { [getCustomEnabled $subnet_node] == "true" || [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+		if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
 		    continue
 		}
 
@@ -1053,7 +1053,7 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
 	    # there was a change in subnet1, go through its old nodes and attach new data
 	    set has_extnat [string match "*extnat*" $diff]
 	    foreach subnet_node [dict keys $old_subnet1_data] {
-		if { [getCustomEnabled $subnet_node] == "true" || [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+		if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
 		    continue
 		}
 
@@ -1079,7 +1079,7 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
 	    # change in subnet1, go through its old nodes and attach new data
 	    set has_extnat [string match "*extnat*" $diff]
 	    foreach subnet_node [dict keys $old_subnet2_data] {
-		if { [getCustomEnabled $subnet_node] == "true" || [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+		if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
 		    continue
 		}
 
