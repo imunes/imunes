@@ -53,8 +53,10 @@ lib/imunes/gui/msgs/ru.msg
 lib/imunes/helpers.tcl
 lib/imunes/icons/imunes_icon128.png
 lib/imunes/icons/imunes_icon256.png
+lib/imunes/icons/imunes-icon256.5.svg
 lib/imunes/icons/imunes_icon64.png
 lib/imunes/icons/imunes_logo128.png
+lib/imunes/icons/imunes-logo2.1.svg
 lib/imunes/icons/normal/click_l2.svg
 lib/imunes/icons/normal/click_l3.svg
 lib/imunes/icons/normal/cloud.svg
