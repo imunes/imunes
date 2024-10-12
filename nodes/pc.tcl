@@ -141,10 +141,12 @@ proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
 proc $MODULE.generateConfig { node_id } {
     set cfg {}
 
-    set cfg [concat $cfg [nodeCfggenStaticRoutes4 $node_id]]
-    set cfg [concat $cfg [nodeCfggenStaticRoutes6 $node_id]]
+    if { [getCustomEnabled $node_id] != true } {
+	set cfg [concat $cfg [nodeCfggenStaticRoutes4 $node_id]]
+	set cfg [concat $cfg [nodeCfggenStaticRoutes6 $node_id]]
 
-    lappend cfg ""
+	lappend cfg ""
+    }
 
     set subnet_gws {}
     set nodes_l2data [dict create]

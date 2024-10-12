@@ -1643,7 +1643,7 @@ proc configGUI_staticRoutes { wi node_id } {
 	-command "
 	    global auto_default_routes force_reconfigure
 
-	    if { \$auto_default_routes == \"enabled\" && (\"$all_routes4\" != \"\" || \"$all_routes6\" != \"\")} {
+	    if { (\"$all_routes4\" != \"\" || \"$all_routes6\" != \"\") } {
 		set force_reconfigure 1
 	    }
 	"
