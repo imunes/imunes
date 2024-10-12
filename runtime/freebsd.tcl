@@ -1517,14 +1517,7 @@ proc runConfOnNode { node } {
 
 	set bootcmd [getCustomConfigCommand $node $selected]
 	set bootcfg [getCustomConfig $node $selected]
-	if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
-	    foreach statrte [getDefaultIPv4routes $node] {
-		lappend bootcfg [getIPv4RouteCmd $statrte]
-	    }
-	    foreach statrte [getDefaultIPv6routes $node] {
-		lappend bootcfg [getIPv6RouteCmd $statrte]
-	    }
-	}
+	set bootcfg [concat $bootcfg [[getNodeType $node].generateConfig $node]]
 	set confFile "custom.conf"
     } else {
         set bootcfg [[getNodeType $node].generateConfig $node]
@@ -1574,10 +1567,6 @@ proc startNodeIfaces { node_id ifaces } {
 
 proc unconfigNode { eid node_id } {
     set jail_id "$eid.$node_id"
-
-    if { [getCustomEnabled $node_id] == true } {
-	return
-    }
 
     set bootcfg [[getNodeType $node_id].generateUnconfig $node_id]
     set bootcmd [[getNodeType $node_id].bootcmd $node_id]

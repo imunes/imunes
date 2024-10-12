@@ -1358,14 +1358,16 @@ proc routerRoutesCfggen { node_id } {
     switch -exact -- $model {
 	"quagga" -
 	"frr" {
-	    lappend cfg "vtysh << __EOF__"
-	    lappend cfg "conf term"
+	    if { [getCustomEnabled $node_id] != true } {
+		lappend cfg "vtysh << __EOF__"
+		lappend cfg "conf term"
 
-	    set cfg [concat $cfg [nodeCfggenStaticRoutes4 $node_id 1]]
-	    set cfg [concat $cfg [nodeCfggenStaticRoutes6 $node_id 1]]
+		set cfg [concat $cfg [nodeCfggenStaticRoutes4 $node_id 1]]
+		set cfg [concat $cfg [nodeCfggenStaticRoutes6 $node_id 1]]
 
-	    lappend cfg "!"
-	    lappend cfg "__EOF__"
+		lappend cfg "!"
+		lappend cfg "__EOF__"
+	    }
 
 	    lappend cfg "vtysh << __EOF__"
 	    lappend cfg "conf term"
@@ -1377,10 +1379,12 @@ proc routerRoutesCfggen { node_id } {
 	    lappend cfg "__EOF__"
 	}
 	"static" {
-	    set cfg [concat $cfg [nodeCfggenStaticRoutes4 $node_id]]
-	    set cfg [concat $cfg [nodeCfggenStaticRoutes6 $node_id]]
+	    if { [getCustomEnabled $node_id] != true } {
+		set cfg [concat $cfg [nodeCfggenStaticRoutes4 $node_id]]
+		set cfg [concat $cfg [nodeCfggenStaticRoutes6 $node_id]]
 
-	    lappend cfg ""
+		lappend cfg ""
+	    }
 
 	    set cfg [concat $cfg [nodeCfggenAutoRoutes4 $node_id]]
 	    set cfg [concat $cfg [nodeCfggenAutoRoutes6 $node_id]]
@@ -1399,14 +1403,16 @@ proc routerRoutesUncfggen { node_id } {
     switch -exact -- $model {
 	"quagga" -
 	"frr" {
-	    lappend cfg "vtysh << __EOF__"
-	    lappend cfg "conf term"
+	    if { [getCustomEnabled $node_id] != true } {
+		lappend cfg "vtysh << __EOF__"
+		lappend cfg "conf term"
 
-	    set cfg [concat $cfg [nodeUncfggenStaticRoutes4 $node_id 1]]
-	    set cfg [concat $cfg [nodeUncfggenStaticRoutes6 $node_id 1]]
+		set cfg [concat $cfg [nodeUncfggenStaticRoutes4 $node_id 1]]
+		set cfg [concat $cfg [nodeUncfggenStaticRoutes6 $node_id 1]]
 
-	    lappend cfg "!"
-	    lappend cfg "__EOF__"
+		lappend cfg "!"
+		lappend cfg "__EOF__"
+	    }
 
 	    lappend cfg "vtysh << __EOF__"
 	    lappend cfg "conf term"
@@ -1418,10 +1424,12 @@ proc routerRoutesUncfggen { node_id } {
 	    lappend cfg "__EOF__"
 	}
 	"static" {
-	    set cfg [concat $cfg [nodeUncfggenStaticRoutes4 $node_id]]
-	    set cfg [concat $cfg [nodeUncfggenStaticRoutes6 $node_id]]
+	    if { [getCustomEnabled $node_id] != true } {
+		set cfg [concat $cfg [nodeUncfggenStaticRoutes4 $node_id]]
+		set cfg [concat $cfg [nodeUncfggenStaticRoutes6 $node_id]]
 
-	    lappend cfg ""
+		lappend cfg ""
+	    }
 
 	    set cfg [concat $cfg [nodeUncfggenAutoRoutes4 $node_id]]
 	    set cfg [concat $cfg [nodeUncfggenAutoRoutes6 $node_id]]
