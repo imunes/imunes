@@ -918,7 +918,7 @@ proc getIfcVlanDev { node_id iface } {
 proc setIfcVlanDev { node_id iface dev } {
     cfgSet "nodes" $node_id "ifaces" $iface "vlan_dev" $dev
 
-    if { [getNodeType $node_id] in "rj45 extelem" } {
+    if { [getNodeType $node_id] == "rj45" } {
 	trigger_nodeRecreate $node_id
     }
 }
@@ -955,7 +955,7 @@ proc getIfcVlanTag { node_id iface } {
 proc setIfcVlanTag { node_id iface_id tag } {
     cfgSet "nodes" $node_id "ifaces" $iface_id "vlan_tag" $tag
 
-    if { [getNodeType $node_id] in "rj45 extelem" } {
+    if { [getNodeType $node_id] == "rj45" } {
 	trigger_nodeRecreate $node_id
     }
 }

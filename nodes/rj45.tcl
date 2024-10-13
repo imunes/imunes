@@ -58,7 +58,9 @@ registerModule $MODULE
 #   * node_id -- node id
 #****
 proc $MODULE.confNewNode { node_id } {
-    setNodeName $node_id "UNASSIGNED"
+    global nodeNamingBase
+
+    setNodeName $node_id [getNewNodeNameType rj45 $nodeNamingBase(rj45)]
 }
 
 #****f* rj45.tcl/rj45.confNewIfc
@@ -148,20 +150,19 @@ proc $MODULE.virtlayer {} {
 # NAME
 #   rj45.nghook
 # SYNOPSIS
-#   rj45.nghook $eid $node_id $ifc
+#   rj45.nghook $eid $node_id $iface_id
 # FUNCTION
 #   Returns the id of the netgraph node and the netgraph hook name. In this
 #   case netgraph node name correspondes to the name of the physical interface.
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- node id
-#   * ifc -- interface name
+#   * iface_id -- interface name
 # RESULT
 #   * nghook -- the list containing netgraph node name and
 #     the netraph hook name (in this case: lower).
 #****
-proc $MODULE.nghook { eid node_id ifc } {
-    set iface_id [lindex [allIfcList $node_id] 0]
+proc $MODULE.nghook { eid node_id iface_id } {
     set ifname [getIfcName $node_id $iface_id]
     if { [getIfcVlanDev $node_id $iface_id] != "" } {
 	set vlan [getIfcVlanTag $node_id $iface_id]
@@ -169,20 +170,6 @@ proc $MODULE.nghook { eid node_id ifc } {
     }
 
     return [list $ifname lower]
-}
-
-#****f* rj45.tcl/rj45.maxLinks
-# NAME
-#   rj45.maxLinks -- maximum number of links
-# SYNOPSIS
-#   rj45.maxLinks
-# FUNCTION
-#   Returns rj45 maximum number of links.
-# RESULT
-#   * maximum number of links.
-#****
-proc $MODULE.maxLinks {} {
-    return 1
 }
 
 ################################################################################

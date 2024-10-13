@@ -968,9 +968,6 @@ proc loadCfgLegacy { cfg } {
     set mac_used_list {}
     foreach node_id $node_list {
 	set node_type [getNodeType $node_id]
-	if { $node_type in "extelem" } {
-	    continue
-	}
 
 	if { $node_type == "pseudo" } {
 	    unsetRunning "${node_id}_running"
@@ -991,8 +988,8 @@ proc loadCfgLegacy { cfg } {
 	    exit
 	}
 
-	if { "lo0" ni [logIfaceNames $node_id] && \
-	    [[getNodeType $node_id].netlayer] == "NETWORK"} {
+	if { $node_type != "extelem" && "lo0" ni [logIfaceNames $node_id] && \
+	    [[getNodeType $node_id].netlayer] == "NETWORK" } {
 
 	    set logiface_id [newLogIface $node_id "lo"]
 	    setIfcIPv4addrs $node_id $logiface_id "127.0.0.1/8"
@@ -1002,12 +999,23 @@ proc loadCfgLegacy { cfg } {
 	# Speeding up auto renumbering of MAC, IPv4 and IPv6 addresses by remembering
 	# used addresses in lists.
 	foreach iface_id [ifcList $node_id] {
-	    if { $node_type == "rj45" } {
+	    if { $node_type == "extelem" } {
+		set iface_name [getIfcName $node_id $iface_id]
+		foreach ifaces_pair [cfgGet "nodes" $node_id "external-ifcs"] {
+		    lassign $ifaces_pair old_iface_id physical_iface
+		    if { $old_iface_id == $iface_name } {
+			setIfcName $node_id $iface_id $physical_iface
+			break
+		    }
+		}
+	    } elseif { $node_type == "rj45" } {
 		set iface_name [getNodeName $node_id]
 		setIfcName $node_id $iface_id $iface_name
-		if { [cfgGet "nodes" $node_id "vlan" "enabled"] } {
+		set vlan_enabled [cfgGet "nodes" $node_id "vlan" "enabled"]
+		if { $vlan_enabled != "" && $vlan_enabled } {
 		    setIfcVlanDev $node_id $iface_id $iface_name
 		    setIfcVlanTag $node_id $iface_id [cfgGet "nodes" $node_id "vlan" "tag"]
+		    cfgUnset "nodes" $node_id "vlan"
 		}
 	    }
 
@@ -1022,6 +1030,12 @@ proc loadCfgLegacy { cfg } {
 
 	    set addr [getIfcMACaddr $node_id $iface_id]
 	    if { $addr != "" } { lappend mac_used_list $addr }
+	}
+
+	if { $node_type == "extelem" } {
+	    set node_type "rj45"
+	    setNodeType $node_id $node_type
+	    cfgUnset "nodes" $node_id "external-ifcs"
 	}
 
 	# disable auto_default_routes if not explicitly enabled in old topologies
