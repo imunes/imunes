@@ -168,8 +168,6 @@ proc drawNode { node_id } {
 		} else {
 		    set label_str "$label_str $iflabel"
 		}
-	    } elseif { $type == "rj45" && [getIfcVlanDev $node_id $ifc] != "" } {
-		set label_str "$label_str (VLAN [getIfcVlanTag $node_id $ifc])"
 	    }
 	}
     } else {
@@ -319,11 +317,15 @@ proc updateIfcLabel { link_id node_id iface } {
 
     set labelstr ""
     if { $show_interface_names } {
-	if { [getNodeType $node_id] in "rj45 extelem" } {
+	if { [getNodeType $node_id] == "rj45" } {
 	    lappend labelstr "$iface - [getIfcName $node_id $iface]"
+	    if { [getIfcVlanDev $node_id $iface] != "" } {
+		lappend labelstr "VLAN [getIfcVlanTag $node_id $iface]"
+	    }
 	} else {
 	    lappend labelstr "[getIfcName $node_id $iface]"
 	}
+
     }
 
     if { $show_interface_ipv4 && $ifipv4addr != "" } {
@@ -514,6 +516,10 @@ proc updateIfcLabelParams { link_id node_id iface x1 y1 x2 y2 } {
     }
 
     set add_height [expr 10*($show_interface_ipv4 + $IP4 + $IP6)]
+
+    if { [getNodeType $node_id] == "rj45" && [getIfcVlanDev $node_id $iface] != "" } {
+	incr add_height [expr 10*$show_interface_ipv4]
+    }
 
     # these params could be called dy and dx, respectively
     # additional height represents the ifnames, ipv4 and ipv6 addrs

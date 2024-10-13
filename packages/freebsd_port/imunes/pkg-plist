@@ -98,7 +98,6 @@ lib/imunes/icons/tiny/text.gif
 lib/imunes/imunes.tcl
 lib/imunes/nodes/annotations.tcl
 lib/imunes/nodes/ext.tcl
-lib/imunes/nodes/extelem.tcl
 lib/imunes/nodes/extnat.tcl
 lib/imunes/nodes/filter.tcl
 lib/imunes/nodes/frr.tcl

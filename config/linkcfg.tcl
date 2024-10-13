@@ -152,11 +152,6 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 	    continue
 	}
 
-	if { [getNodeType $node_id] in "extelem" } {
-	    cfgUnset "nodes" $node_id "ifaces" $iface_id
-	    continue
-	}
-
 	removeIface $node_id $iface_id
     }
 
@@ -1009,8 +1004,6 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
     if { $iface1_id == "" } {
 	set config_iface1 1
 	if { [getNodeType $node1_id] == "rj45" } {
-	    set iface1_id [newIface $node1_id "stolen" 0 [getNodeName $node1_id]]
-	} elseif { [getNodeType $node1_id] == "extelem" } {
 	    set iface1_id [newIface $node1_id "stolen" 0 "UNASSIGNED"]
 	} else {
 	    set iface1_id [newIface $node1_id "phys" 0]
@@ -1021,8 +1014,6 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
     if { $iface2_id == "" } {
 	set config_iface2 1
 	if { [getNodeType $node2_id] == "rj45" } {
-	    set iface2_id [newIface $node2_id "stolen" 0 [getNodeName $node2_id]]
-	} elseif { [getNodeType $node2_id] == "extelem" } {
 	    set iface2_id [newIface $node2_id "stolen" 0 "UNASSIGNED"]
 	} else {
 	    set iface2_id [newIface $node2_id "phys" 0]
