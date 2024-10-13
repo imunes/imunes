@@ -64,7 +64,7 @@ proc checkExternalInterfaces {} {
 
     set nodes_ifcpairs {}
     foreach node [getFromRunning "node_list"] {
-	if { [getNodeType $node] in "rj45 extelem" } {
+	if { [getNodeType $node] == "rj45" } {
 	    foreach ifcs [getNodeStolenIfaces $node] {
 		lappend nodes_ifcpairs [list $node $ifcs]
 	    }
