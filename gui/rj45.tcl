@@ -90,6 +90,13 @@ proc $MODULE.icon { size } {
     }
 }
 
+proc $MODULE.notebookDimensions { wi } {
+    set h 160
+    set w 100
+
+    return [list $h $w]
+}
+
 #****f* rj45.tcl/rj45.configGUI
 # NAME
 #   rj45.configGUI -- configuration GUI
@@ -126,8 +133,8 @@ proc $MODULE.configGUI { c node_id } {
     configGUI_createConfigPopupWin $c
     wm title $wi "rj45 configuration"
 
-    configGUI_nodeName $wi $node_id "Physical interface:"
-    configGUI_etherVlan $wi $node_id
+    configGUI_nodeName $wi $node_id "Node name:"
+    set tabs [configGUI_addNotebookRj45 $wi $node_id [lsort [_ifcList $node_cfg]]]
 
     configGUI_nodeRestart $wi $node_id
     configGUI_buttonsACNode $wi $node_id
