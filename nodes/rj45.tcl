@@ -58,7 +58,9 @@ registerModule $MODULE
 #   * node_id -- node id
 #****
 proc $MODULE.confNewNode { node_id } {
-    setNodeName $node_id "UNASSIGNED"
+    global nodeNamingBase
+
+    setNodeName $node_id [getNewNodeNameType rj45 $nodeNamingBase(rj45)]
 }
 
 #****f* rj45.tcl/rj45.confNewIfc
@@ -154,20 +156,6 @@ proc $MODULE.nghook { eid node_id iface_id } {
     }
 
     return [list $iface_name lower]
-}
-
-#****f* rj45.tcl/rj45.maxLinks
-# NAME
-#   rj45.maxLinks -- maximum number of links
-# SYNOPSIS
-#   rj45.maxLinks
-# FUNCTION
-#   Returns rj45 maximum number of links.
-# RESULT
-#   * maximum number of links.
-#****
-proc $MODULE.maxLinks {} {
-    return 1
 }
 
 ################################################################################
