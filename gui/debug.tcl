@@ -145,7 +145,6 @@ bind . <F6> {
     source "$ROOTDIR/$LIBDIR/config/packgencfg.tcl"
     source "$ROOTDIR/$LIBDIR/config/stpswitchcfg.tcl"
 
-    source "$ROOTDIR/$LIBDIR/nodes/extelem.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/extnat.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/ext.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/filter.tcl"
@@ -162,7 +161,6 @@ bind . <F6> {
     source "$ROOTDIR/$LIBDIR/nodes/wlan.tcl"
 
     source "$ROOTDIR/$LIBDIR/gui/annotations.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/extelem.tcl"
     source "$ROOTDIR/$LIBDIR/gui/extnat.tcl"
     source "$ROOTDIR/$LIBDIR/gui/ext.tcl"
     source "$ROOTDIR/$LIBDIR/gui/filter.tcl"
