@@ -1675,9 +1675,6 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     set ngcmds "msg $link: setcfg {bandwidth=$bandwidth delay=$delay upstream={BER=$ber duplicate=$dup} downstream={BER=$ber duplicate=$dup}}"
 
     pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
-    if { $debug && $err != "" } {
-	puts $err
-    }
 
     # FIXME: remove this to interface configuration?
     # Queues
