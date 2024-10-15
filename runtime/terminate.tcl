@@ -373,7 +373,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 
     try {
 	statline "Stopping services for NODESTOP hook..."
-	services stop "NODESTOP"
+	services stop "NODESTOP" $unconfigure_nodes
 
 	statline "Unconfiguring L3 nodes..."
 	pipesCreate
@@ -400,7 +400,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 	pipesClose
 
 	statline "Stopping services for LINKDEST hook..."
-	services stop "LINKDEST"
+	services stop "LINKDEST" $unconfigure_nodes
 
 	statline "Destroying links..."
 	pipesCreate
@@ -427,7 +427,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 	pipesClose
 
 	statline "Stopping services for NODEDEST hook..."
-	services stop "NODEDEST"
+	services stop "NODEDEST" $unconfigure_nodes
 
 	statline "Destroying L3 nodes..."
 	pipesCreate

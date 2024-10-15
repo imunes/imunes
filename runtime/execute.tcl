@@ -554,7 +554,7 @@ proc deployCfg { { execute 0 } } {
 	#execute_nodesCopyFiles $l3nodes $l3nodeCount $w
 
 	statline "Starting services for NODEINST hook..."
-	services start "NODEINST"
+	services start "NODEINST" $configure_nodes
 
 	statline "Creating physical interfaces on nodes..."
 	pipesCreate
@@ -581,7 +581,7 @@ proc deployCfg { { execute 0 } } {
 	pipesClose
 
 	statline "Starting services for LINKINST hook..."
-	services start "LINKINST"
+	services start "LINKINST" $configure_nodes
 
 	pipesCreate
 	statline "Configuring interfaces on node(s)..."
@@ -598,7 +598,7 @@ proc deployCfg { { execute 0 } } {
 	pipesClose
 
 	statline "Starting services for NODECONF hook..."
-	services start "NODECONF"
+	services start "NODECONF" $configure_nodes
     } on error err {
 	finishExecuting 0 "$err" $w
 
