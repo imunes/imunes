@@ -5,6 +5,7 @@ proc getFilterIfcRule { node ifc id } {
 	}
     }
 }
+
 proc addFilterIfcRule { node ifc id value } {
     set ifcfg [list "interface $ifc"]
     foreach line [netconfFetchSection $node "interface $ifc"] {
