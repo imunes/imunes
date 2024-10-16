@@ -83,7 +83,6 @@ set fileTypes {
 # FUNCTION
 #   Configures and creates a new Imunes project.
 #****
-
 proc newProject {} {
     global curcfg cfg_list
 
