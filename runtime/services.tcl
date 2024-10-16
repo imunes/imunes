@@ -9,6 +9,7 @@
 #  management. After that specific services are defined along with their
 #  startup commands.
 #****
+
 #
 # Define global variable that will hold the list of all services, to enable
 # dynamic loading of services into the gui.
