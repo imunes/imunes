@@ -9,7 +9,6 @@
 #   * target -- new annotation id
 #   * type -- annotation type
 #****
-
 proc addAnnotation { target type } {
     upvar 0 ::cf::[set ::curcfg]::annotation_list annotation_list
     upvar 0 ::cf::[set ::curcfg]::$target $target
