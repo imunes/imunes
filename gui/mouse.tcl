@@ -982,6 +982,9 @@ proc button3node { c x y } {
 	if { [llength [allIfcList $node_id]] == 0 } {
 	    .button3menu.wireshark add command -label "No interfaces available."
 	} else {
+	    .button3menu.wireshark add command -label "%any" \
+		-command "startWiresharkOnNodeIfc $node_id any"
+
 	    foreach iface_id [allIfcList $node_id] {
 		set iface_name "[getIfcName $node_id $iface_id]"
 		set iface_label "$iface_name"
@@ -1006,6 +1009,9 @@ proc button3node { c x y } {
 	if { [llength [allIfcList $node_id]] == 0 } {
 	    .button3menu.tcpdump add command -label "No interfaces available."
 	} else {
+	    .button3menu.tcpdump add command -label "%any" \
+		-command "startTcpdumpOnNodeIfc $node_id any"
+
 	    foreach iface_id [allIfcList $node_id] {
 		set iface_name "[getIfcName $node_id $iface_id]"
 		set iface_label "$iface_name"
