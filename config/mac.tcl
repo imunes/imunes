@@ -23,6 +23,7 @@
 # SUCH DAMAGE.
 #
 #
+
 global mac_byte4 mac_byte5 mac_byte6
 
 set mac_byte4 0
