@@ -17,6 +17,7 @@ proc setTunIPv4Addr { node addr } {
     netconfInsertSection $node $cfg
 }
 
+
 proc getTunIPv6Addr { node } {
     foreach line [netconfFetchSection $node "nat64"] {
 	if { [lindex $line 0] == "tunIPv6addr" } {
