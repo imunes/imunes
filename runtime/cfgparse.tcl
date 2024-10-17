@@ -38,7 +38,7 @@
 #  to a file or a string. This module also contains a function for returning 
 #  a new ID for nodes, links and canvases.
 #****
-
+#
 #****f* nodecfg.tcl/dumpputs
 # NAME
 #   dumpputs -- puts a string to a file or a string configuration 
