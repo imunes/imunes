@@ -28,7 +28,6 @@
 
 # $Id: host.tcl 63 2013-10-03 12:17:50Z valter $
 
-
 #****h* imunes/host.tcl
 # NAME
 #  host.tcl -- defines host specific procedures
