@@ -913,14 +913,14 @@ proc button3node { c x y } {
 		#
 	# Chromium 
 	# 
-	#if {[checkForExternalApps "startxcmd"] == 0 && \
-	#    [checkForApplications $node "chrome"] == 0} {
-	#    .button3menu add command -label "Chromium Browser" \
-	#	-command "startXappOnNode $node \"chrome %u --no-remote --setDefaultBrowser about:blank\""
-	#} else {
-	#    .button3menu add command -label "Web Browser" \
-	#	-state disabled
-	#}
+	if {[checkForExternalApps "startxcmd"] == 0 && \
+	    [checkForApplications $node "chrome"] == 0} {
+	    .button3menu add command -label "Chromium Browser" \
+		-command "startXappOnNode $node \"chrome %u --no-remote --setDefaultBrowser about:blank\""
+	} else {
+	    .button3menu add command -label "Web Browser" \
+		-state disabled
+	}
 	# 
 	# Midori
  	#
