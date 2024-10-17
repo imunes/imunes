@@ -36,7 +36,6 @@
 #  end with function specific part that is the same for all the node
 #  types that work on the same layer.
 #****
-
 set MODULE pc
 
 registerModule $MODULE
