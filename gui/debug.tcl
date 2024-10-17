@@ -1,3 +1,4 @@
+
 if {[.menubar.tools entrycget last -label] != "Debugger"} {
     .menubar.tools add separator
     .menubar.tools add command -label "Debugger" -underline 0 -command popupDebugger
