@@ -312,6 +312,7 @@ proc findNode { c ipAddr } {
 #   * node1 -- first node
 #   * node2 -- second node
 #****
+
 proc drawLine { c node1 node2 } {
     global activetool
     set xy1 [getNodeCoords $node1]
