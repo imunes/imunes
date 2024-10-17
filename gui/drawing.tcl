@@ -6,7 +6,6 @@
 # FUNCTION
 #   Redraws all the objects on the current canvas.
 #****
-
 proc redrawAll {} {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
