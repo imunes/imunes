@@ -25,7 +25,6 @@
 
 # $Id: linkcfgGUI.tcl 67 2013-10-04 08:31:52Z denis $
 
-
 #****f* linkcfgGUI.tcl/linkConfigGUI
 # NAME
 #   linkConfigGUI -- link configuration GUI
