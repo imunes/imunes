@@ -41,7 +41,6 @@
 #  end with function specific part that is the same for all the node
 #  types that work on the same layer.
 #****
-
 set MODULE router.quagga
 
 #****f* quagga.tcl/router.quagga.layer
