@@ -318,7 +318,7 @@ configApache24 () {
 	cd $VROOT_MASTER/usr/local/etc/apache24/
  	cp httpd.conf httpd.conf.backup
   	sed -i -e 's/#ServerName www.example.com:80/ServerName localhost/' /usr/local/etc/apache24/httpd.conf
-   	sed -i -e 's/#ServerName www.example.com:80/ServerName localhost/' httpd.conf
+   	#sed -i -e 's/#ServerName www.example.com:80/ServerName localhost/' httpd.conf
     else
 	log "ERR" "Apache24 not installed in \
 	$VROOT_MASTER/usr/local/etc/apache24/\nScript aborted."
