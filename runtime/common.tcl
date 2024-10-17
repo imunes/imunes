@@ -25,7 +25,6 @@
 # This work was supported in part by the Croatian Ministry of Science
 # and Technology through the research contract #IP-2003-143.
 #
-
 global vroot_unionfs vroot_linprocfs ifc_dad_disable regular_termination \
     devfs_number hostsAutoAssign linkJitterConfiguration ipsecSecrets \
     ipsecConf ipFastForwarding
