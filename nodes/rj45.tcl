@@ -28,7 +28,6 @@
 
 # $Id: rj45.tcl 130 2015-02-24 09:52:19Z valter $
 
-
 #****h* imunes/rj45.tcl
 # NAME
 #  rj45.tcl -- defines rj45 specific procedures
