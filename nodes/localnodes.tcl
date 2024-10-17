@@ -22,8 +22,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-
 # $Id: localnodes.tcl 43 2013-09-23 13:57:44Z valter $
+
 #
 # Implementations for any local or vendor-specific node types should
 # be sourced-in from this file.
