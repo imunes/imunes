@@ -67,6 +67,7 @@ proc stopEventScheduling {} {
 # FUNCTION
 #   Function that start scheduling events accoring to scheduling data.
 #****
+
 proc evsched {} {
     global evlogfile
     # XXX eid should be arg to evsched()
