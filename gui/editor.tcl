@@ -45,6 +45,7 @@
 #   Updates the undo log. Writes the current configuration to the 
 #   undolog array and updates the undolevel variable.
 #****
+
 proc updateUndoLog {} {
     upvar 0 ::cf::[set ::curcfg]::undolevel undolevel
     upvar 0 ::cf::[set ::curcfg]::redolevel redolevel
