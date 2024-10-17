@@ -28,7 +28,6 @@
 
 # $Id: lanswitch.tcl 129 2015-02-13 11:14:44Z valter $
 
-
 #****h* imunes/lanswitch.tcl
 # NAME
 #  lanswitch.tcl -- defines lanswitch specific procedures
