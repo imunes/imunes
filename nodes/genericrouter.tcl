@@ -25,8 +25,6 @@
 
 # $Id: genericrouter.tcl 130 2015-02-24 09:52:19Z valter $
 
-
-
 #****h* imunes/genericrouter.tcl
 # NAME
 #  genericrouter.tcl -- defines router specific procedures
