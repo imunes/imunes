@@ -28,7 +28,6 @@
 
 # $Id: frr.tcl 128 2014-12-19 11:59:09Z denis $
 
-
 #****h* imunes/frr.tcl
 # NAME
 #  router.frr.tcl -- defines specific procedures for router 
