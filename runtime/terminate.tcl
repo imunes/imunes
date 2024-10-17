@@ -36,7 +36,6 @@
 # INPUTS
 #   * eid -- experiment id
 #****
-
 proc deleteExperimentFiles { eid } {
     global runtimeDir
     set folderName "$runtimeDir/$eid"
