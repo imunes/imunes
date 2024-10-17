@@ -148,7 +148,6 @@ lib/imunes/nodes/wlan.tcl
 lib/imunes/nodes/xorp.tcl
 lib/imunes/runtime/cfgparse.tcl
 lib/imunes/runtime/eventsched.tcl
-lib/imunes/runtime/exec.tcl
 lib/imunes/runtime/execute.tcl
 lib/imunes/runtime/filemgmt.tcl
 lib/imunes/runtime/freebsd.tcl
