@@ -25,7 +25,6 @@
 
 # $Id: extnat.tcl 63 2023-11-01 17:45:50Z dsalopek $
 
-
 #****h* imunes/extnat.tcl
 # NAME
 #  extnat.tcl -- defines extnat specific procedures
