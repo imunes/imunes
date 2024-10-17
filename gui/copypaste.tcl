@@ -33,6 +33,7 @@
 # FUNCTION
 #   Cuts selected nodes.
 #****
+
 proc cutSelection {} {
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global cutNodes
