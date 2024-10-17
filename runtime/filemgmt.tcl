@@ -25,7 +25,6 @@
 # This work was supported in part by Croatian Ministry of Science
 # and Technology through the research contract #IP-2003-143.
 #
-
 ##****h* imunes/filemgmt.tcl
 # NAME
 #  filemgmt.tcl -- file used for manipulation with files
