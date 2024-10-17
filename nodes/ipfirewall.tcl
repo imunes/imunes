@@ -25,8 +25,6 @@
 
 # $Id: ipfirewall.tcl 63 2013-10-03 12:17:50Z valter $
 
-
-
 #****h* imunes/ipfirewall.tcl
 # NAME
 #  ipfirewall.tcl -- defines IP firewall specific procedures
