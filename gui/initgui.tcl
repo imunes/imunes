@@ -90,7 +90,6 @@
 #      and static.
 #    * def_router_model -- default router model
 #****
-
 package require Tcl
 package require Tk
 package require tksvg
