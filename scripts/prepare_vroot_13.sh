@@ -4,7 +4,7 @@
 
 PACKAGES_MINIMAL="$PACKAGES_MINIMAL bind918 bind-tools dnsmasq"
 PACKAGES="$PACKAGES_MINIMAL $PACKAGES_COMMON isc-dhcp44-server isc-dhcp44-client isc-dhcp44-relay \
-    sylpheed firefox-esr apache24 apr db18 jansson netsurf midori wireshark gnome-themes-extra sakura vte3 \
+    sylpheed apache24 apr db18 jansson netsurf midori wireshark gnome-themes-extra sakura vte3 \
     fping dsniff gdk-pixbuf2 gsfonts xpdf openvpn easy-rsa net-snmp"
 PACKAGES=`echo $PACKAGES | sed 's/scapy/py39-scapy/'`
 PACKAGES=`echo $PACKAGES | sed 's/quagga/frr9/'`
