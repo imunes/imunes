@@ -14,6 +14,7 @@ set ULIMIT_PROC "1024:2048"
 #   * eid -- experiment id
 #   * node -- id of the node (type of the node is either lanswitch or hub)
 #****
+
 proc l2node.instantiate { eid node } {
     set type [nodeType $node]
 
