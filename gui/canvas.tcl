@@ -1224,6 +1224,7 @@ proc renameCanvasApply { w } {
 # INPUTS
 #   * w -- tk widget (resize canvas popup dialog box)
 #****
+
 proc resizeCanvasApply { w } {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     global changed
