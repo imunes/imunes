@@ -6,6 +6,7 @@ proc getPackgenPacketRate { node } {
     }
     return 100
 }
+
 proc setPackgenPacketRate { node value } {
     set ifcfg [list "packet generator"]
     foreach line [netconfFetchSection $node "packet generator"] {
