@@ -78,6 +78,7 @@ proc nodeConfigGUI { c node } {
 # INPUTS
 #   * c -- tk canvas
 #****
+
 proc configGUI_createConfigPopupWin { c } {
     global wi debug
     set wi .popup
