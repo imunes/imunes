@@ -41,7 +41,6 @@
 #   * edit -- If $edit is set to "1", selected ipsec-config will be just
 #     edited. If $edit is set to "0", selected ipsec-config will be deleted. 
 #****
-
 proc editIpsecCfg { w node deleteid edit phase } {
     global viewid badentry
 
