@@ -25,7 +25,6 @@
 
 # $Id: ext.tcl 63 2013-10-03 12:17:50Z valter $
 
-
 #****h* imunes/ext.tcl
 # NAME
 #  ext.tcl -- defines pc specific procedures
