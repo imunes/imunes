@@ -7,7 +7,7 @@ PACKAGES="$PACKAGES_MINIMAL $PACKAGES_COMMON isc-dhcp44-server isc-dhcp44-client
     sylpheed apache24 apr db18 jansson netsurf midori wireshark gnome-themes-extra sakura vte3 \
     fping dsniff gdk-pixbuf2 gsfonts xpdf openvpn easy-rsa net-snmp"
 PACKAGES=`echo $PACKAGES | sed 's/scapy/py39-scapy/'`
-PACKAGES=`echo $PACKAGES | sed 's/quagga/frr8/'`
+PACKAGES=`echo $PACKAGES | sed 's/quagga/frr9/'`
 
 checkArgs $*
 
