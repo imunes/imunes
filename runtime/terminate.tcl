@@ -1,4 +1,3 @@
-
 #
 # Copyright 2004-2013 University of Zagreb.
 #
@@ -26,7 +25,6 @@
 # This work was supported in part by the Croatian Ministry of Science
 # and Technology through the research contract #IP-2003-143.
 #
-
 #****f* exec.tcl/deleteExperimentFiles
 # NAME
 #   deleteExperimentFiles -- delete experiment files
