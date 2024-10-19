@@ -453,8 +453,8 @@ proc deployCfg { { execute 0 } } {
     }
 
     set progressbarCount 0
-    set nodeCount [llength $instantiate_nodes]
-    set linkCount [llength $instantiate_links]
+    set nodes_count [llength $instantiate_nodes]
+    set links_count [llength $instantiate_links]
 
     set t_start [clock milliseconds]
 
@@ -472,55 +472,62 @@ proc deployCfg { { execute 0 } } {
     }
 
     statline "Preparing for initialization..."
-    set l2nodes {}
-    set l3nodes {}
-    set allNodes {}
-    set pseudoNodesCount 0
+    # TODO: fix this mess
+    set native_nodes {}
+    set virtualized_nodes {}
+    set all_nodes {}
+    set pseudo_nodes_count 0
     foreach node_id $instantiate_nodes {
 	set node_type [getNodeType $node_id]
 	if { $node_type != "pseudo" } {
 	    if { [$node_type.virtlayer] != "VIRTUALIZED" } {
-		lappend l2nodes $node_id
+		lappend native_nodes $node_id
 	    } else {
-		lappend l3nodes $node_id
+		lappend virtualized_nodes $node_id
 	    }
 	} else {
-	    incr pseudoNodesCount
+	    incr pseudo_nodes_count
 	}
     }
 
-    set l2nodeCount [llength $l2nodes]
-    set l3nodeCount [llength $l3nodes]
-    set allNodes [concat $l2nodes $l3nodes]
-    set allNodeCount [llength $allNodes]
+    set native_nodes_count [llength $native_nodes]
+    set virtualized_nodes_count [llength $virtualized_nodes]
+    set all_nodes [concat $native_nodes $virtualized_nodes]
+    set all_nodes_count [llength $all_nodes]
 
     if { $create_nodes_ifaces == "*" } {
 	set create_nodes_ifaces ""
-	foreach node_id $allNodes {
+	foreach node_id $all_nodes {
 	    dict set create_nodes_ifaces $node_id "*"
 	}
-	set create_nodes_ifaces_count $allNodeCount
+	set create_nodes_ifaces_count $all_nodes_count
     } else {
 	set create_nodes_ifaces_count [llength [dict keys $create_nodes_ifaces]]
     }
 
     if { $configure_nodes_ifaces == "*" } {
 	set configure_nodes_ifaces ""
-	foreach node_id $allNodes {
+	foreach node_id $all_nodes {
 	    dict set configure_nodes_ifaces $node_id "*"
 	}
-	set configure_nodes_ifaces_count $allNodeCount
+	set configure_nodes_ifaces_count $all_nodes_count
     } else {
 	set configure_nodes_ifaces_count [llength [dict keys $configure_nodes_ifaces]]
     }
 
+    set error_check_nodes_ifaces [lsort -unique [dict keys $configure_nodes_ifaces]]
+    set error_check_nodes_ifaces_count [llength $error_check_nodes_ifaces]
+
     if { $configure_nodes == "*" } {
-	set configure_nodes $allNodes
+	set configure_nodes $all_nodes
     }
     set configure_nodes_count [llength $configure_nodes]
 
-    incr linkCount [expr -$pseudoNodesCount/2]
-    set maxProgressbasCount [expr {5*$allNodeCount + 1*$l2nodeCount + 5*$l3nodeCount + 2*$linkCount + $configure_nodes_count + $create_nodes_ifaces_count + $configure_nodes_ifaces_count}]
+    set error_check_nodes [lsort -unique $configure_nodes]
+    set error_check_nodes_count [llength $error_check_nodes]
+
+    incr links_count [expr -$pseudo_nodes_count/2]
+    set maxProgressbasCount [expr {2*$all_nodes_count + 1*$native_nodes_count + 4*$virtualized_nodes_count + 2*$links_count + 2*$configure_nodes_count + 2*$create_nodes_ifaces_count + 1*$configure_nodes_ifaces_count + $error_check_nodes_ifaces_count + $error_check_nodes_count}]
 
     set w ""
     set eid [getFromRunning "eid"]
@@ -548,35 +555,35 @@ proc deployCfg { { execute 0 } } {
     }
 
     try {
-	statline "Instantiating L3 nodes..."
+	statline "Instantiating VIRTUALIZED nodes..."
 	pipesCreate
-	execute_nodesCreate $l3nodes $l3nodeCount $w
-	statline "Waiting for $l3nodeCount L3 node(s) to start..."
-	waitForInstantiateNodes $l3nodes $l3nodeCount $w
+	execute_nodesCreate $virtualized_nodes $virtualized_nodes_count $w
+	statline "Waiting for $virtualized_nodes_count VIRTUALIZED node(s) to start..."
+	waitForInstantiateNodes $virtualized_nodes $virtualized_nodes_count $w
 	pipesClose
 
 	statline "Setting up namespaces for all nodes..."
 	pipesCreate
-	execute_nodesNamespaceSetup $allNodes $allNodeCount $w
-	statline "Waiting on namespaces for $allNodeCount node(s)..."
-	waitForNamespaces $allNodes $allNodeCount $w
+	execute_nodesNamespaceSetup $all_nodes $all_nodes_count $w
+	statline "Waiting on namespaces for $all_nodes_count node(s)..."
+	waitForNamespaces $all_nodes $all_nodes_count $w
 	pipesClose
 
-	statline "Starting initial configuration on L3 nodes..."
+	statline "Starting initial configuration on VIRTUALIZED nodes..."
 	pipesCreate
-	execute_nodesInitConfigure $l3nodes $l3nodeCount $w
-	statline "Waiting for initial configuration on $l3nodeCount L3 node(s)..."
-	waitForInitConf $l3nodes $l3nodeCount $w
+	execute_nodesInitConfigure $virtualized_nodes $virtualized_nodes_count $w
+	statline "Waiting for initial configuration on $virtualized_nodes_count VIRTUALIZED node(s)..."
+	waitForInitConf $virtualized_nodes $virtualized_nodes_count $w
 	pipesClose
 
-	statline "Instantiating L2 nodes..."
+	statline "Instantiating NATIVE nodes..."
 	pipesCreate
-	execute_nodesCreate $l2nodes $l2nodeCount $w
-	statline "Waiting for $l2nodeCount L2 node(s) to start..."
+	execute_nodesCreate $native_nodes $native_nodes_count $w
+	statline "Waiting for $native_nodes_count NATIVE node(s) to start..."
 	pipesClose
 
-	#statline "Copying host files to $l3nodeCount L3 node(s)..."
-	#execute_nodesCopyFiles $l3nodes $l3nodeCount $w
+	#statline "Copying host files to $virtualized_nodes_count VIRTUALIZED node(s)..."
+	#execute_nodesCopyFiles $virtualized_nodes $virtualized_nodes_count $w
 
 	statline "Starting services for NODEINST hook..."
 	services start "NODEINST" "bkg" $configure_nodes
@@ -595,14 +602,14 @@ proc deployCfg { { execute 0 } } {
 
 	statline "Creating links..."
 	pipesCreate
-	execute_linksCreate $instantiate_links $linkCount $w
-	statline "Waiting for $linkCount link(s) to be created..."
+	execute_linksCreate $instantiate_links $links_count $w
+	statline "Waiting for $links_count link(s) to be created..."
 	pipesClose
 
 	pipesCreate
 	statline "Configuring links..."
-	execute_linksConfigure $instantiate_links $linkCount $w
-	statline "Waiting for $linkCount link(s) to be configured..."
+	execute_linksConfigure $instantiate_links $links_count $w
+	statline "Waiting for $links_count link(s) to be configured..."
 	pipesClose
 
 	statline "Starting services for LINKINST hook..."
@@ -630,14 +637,10 @@ proc deployCfg { { execute 0 } } {
     }
 
     if { $configure_nodes_ifaces != "" } {
-	set error_check_nodes [lsort -unique [dict keys $configure_nodes_ifaces]]
-	set error_check_nodes_count [llength $error_check_nodes]
-	statline "Checking for errors on $error_check_nodes_count node(s) interfaces..."
-	checkForErrorsIfaces $error_check_nodes $error_check_nodes_count $w
+	statline "Checking for errors on $error_check_nodes_ifaces_count node(s) interfaces..."
+	checkForErrorsIfaces $error_check_nodes_ifaces $error_check_nodes_ifaces_count $w
     }
 
-    set error_check_nodes [lsort -unique $configure_nodes]
-    set error_check_nodes_count [llength $error_check_nodes]
     statline "Checking for errors on $error_check_nodes_count node(s)..."
     checkForErrors $error_check_nodes $error_check_nodes_count $w
 
@@ -648,7 +651,7 @@ proc deployCfg { { execute 0 } } {
     }
     createRunningVarsFile $eid
 
-    statline "Network topology instantiated in [expr ([clock milliseconds] - $t_start)/1000.0] seconds ($allNodeCount nodes and $linkCount links)."
+    statline "Network topology instantiated in [expr ([clock milliseconds] - $t_start)/1000.0] seconds ($all_nodes_count nodes and $links_count links)."
 
     if { $execMode == "batch" } {
 	puts "Experiment ID = $eid"
@@ -688,14 +691,14 @@ proc execute_prepareSystem {} {
     createExperimentFiles $eid
 }
 
-proc execute_nodesCreate { nodes nodeCount w } {
+proc execute_nodesCreate { nodes nodes_count w } {
     global progressbarCount execMode
 
     set eid [getFromRunning "eid"]
 
     set batchStep 0
     foreach node_id $nodes {
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
 
 	if { [info procs [getNodeType $node_id].nodeCreate] != "" } {
 	    try {
@@ -717,21 +720,21 @@ proc execute_nodesCreate { nodes nodeCount w } {
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc waitForInstantiateNodes { nodes nodeCount w } {
+proc waitForInstantiateNodes { nodes nodes_count w } {
     global progressbarCount execMode
 
     set batchStep 0
     set nodes_left $nodes
     while { [llength $nodes_left] > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
 	foreach node $nodes_left {
 	    if { ! [isNodeStarted $node] } {
 		continue
@@ -746,28 +749,28 @@ proc waitForInstantiateNodes { nodes nodeCount w } {
 		$w.p configure -value $progressbarCount
 		update
 	    }
-	    displayBatchProgress $batchStep $nodeCount
+	    displayBatchProgress $batchStep $nodes_count
 
 	    set nodes_left [removeFromList $nodes_left $node]
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc execute_nodesNamespaceSetup { nodes nodeCount w } {
+proc execute_nodesNamespaceSetup { nodes nodes_count w } {
     global progressbarCount execMode
 
     set eid [getFromRunning "eid"]
 
     set batchStep 0
     foreach node $nodes {
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
 
 	if { [info procs [getNodeType $node].nodeNamespaceSetup] != "" } {
 	    try {
@@ -788,8 +791,8 @@ proc execute_nodesNamespaceSetup { nodes nodeCount w } {
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
@@ -831,14 +834,14 @@ proc waitForNamespaces { nodes nodes_count w } {
     }
 }
 
-proc execute_nodesInitConfigure { nodes nodeCount w } {
+proc execute_nodesInitConfigure { nodes nodes_count w } {
     global progressbarCount execMode
 
     set eid [getFromRunning "eid"]
 
     set batchStep 0
     foreach node $nodes {
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
 
 	try {
 	    [getNodeType $node].nodeInitConfigure $eid $node
@@ -857,21 +860,21 @@ proc execute_nodesInitConfigure { nodes nodeCount w } {
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc waitForInitConf { nodes nodeCount w } {
+proc waitForInitConf { nodes nodes_count w } {
     global progressbarCount execMode
 
     set batchStep 0
     set nodes_left $nodes
     while { [llength $nodes_left] > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
 	foreach node $nodes_left {
 	    if { ! [isNodeInitNet $node] } {
 		continue
@@ -886,30 +889,30 @@ proc waitForInitConf { nodes nodeCount w } {
 		$w.p configure -value $progressbarCount
 		update
 	    }
-	    displayBatchProgress $batchStep $nodeCount
+	    displayBatchProgress $batchStep $nodes_count
 
 	    set nodes_left [removeFromList $nodes_left $node]
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc execute_nodesCopyFiles { nodes nodeCount w } {}
+proc execute_nodesCopyFiles { nodes nodes_count w } {}
 
-proc execute_nodesPhysIfacesCreate { nodes_ifaces nodeCount w } {
+proc execute_nodesPhysIfacesCreate { nodes_ifaces nodes_count w } {
     global progressbarCount execMode
 
     set eid [getFromRunning "eid"]
 
     set batchStep 0
     dict for {node ifaces} $nodes_ifaces {
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
 
 	if { [info procs [getNodeType $node].nodePhysIfacesCreate] != "" } {
 	    if { $ifaces == "*" } {
@@ -934,22 +937,22 @@ proc execute_nodesPhysIfacesCreate { nodes_ifaces nodeCount w } {
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc execute_nodesLogIfacesCreate { nodes_ifaces nodeCount w } {
+proc execute_nodesLogIfacesCreate { nodes_ifaces nodes_count w } {
     global progressbarCount execMode
 
     set eid [getFromRunning "eid"]
 
     set batchStep 0
     dict for {node ifaces} $nodes_ifaces {
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
 
 	if { [info procs [getNodeType $node].nodeLogIfacesCreate] != "" } {
 	    if { $ifaces == "*" } {
@@ -974,15 +977,15 @@ proc execute_nodesLogIfacesCreate { nodes_ifaces nodeCount w } {
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc execute_linksCreate { links linkCount w } {
+proc execute_linksCreate { links links_count w } {
     global progressbarCount execMode
 
     set batchStep 0
@@ -1004,7 +1007,7 @@ proc execute_linksCreate { links linkCount w } {
 	    lassign "$ifname2 [lindex [getLinkPeersIfaces $mirror_link] 1]" ifname1 ifname2
 	}
 
-	displayBatchProgress $batchStep $linkCount
+	displayBatchProgress $batchStep $links_count
 
 	try {
 	    if { [getLinkDirect $link_id] || [getNodeType $lnode1] == "wlan" || [getNodeType $lnode2] == "wlan" } {
@@ -1029,15 +1032,15 @@ proc execute_linksCreate { links linkCount w } {
 
     pipesExec ""
 
-    if { $linkCount > 0 } {
-	displayBatchProgress $batchStep $linkCount
+    if { $links_count > 0 } {
+	displayBatchProgress $batchStep $links_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc execute_linksConfigure { links linkCount w } {
+proc execute_linksConfigure { links links_count w } {
     global progressbarCount execMode
 
     set batchStep 0
@@ -1059,7 +1062,7 @@ proc execute_linksConfigure { links linkCount w } {
 	    lassign "$ifname2 [lindex [getLinkPeersIfaces $mirror_link] 1]" ifname1 ifname2
 	}
 
-	displayBatchProgress $batchStep $linkCount
+	displayBatchProgress $batchStep $links_count
 
 	try {
 	    configureLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
@@ -1079,15 +1082,15 @@ proc execute_linksConfigure { links linkCount w } {
 
     pipesExec ""
 
-    if { $linkCount > 0 } {
-	displayBatchProgress $batchStep $linkCount
+    if { $links_count > 0 } {
+	displayBatchProgress $batchStep $links_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc execute_nodesIfacesConfigure { nodes_ifaces nodeCount w } {
+proc execute_nodesIfacesConfigure { nodes_ifaces nodes_count w } {
     global progressbarCount execMode
 
     set eid [getFromRunning "eid"]
@@ -1097,7 +1100,7 @@ proc execute_nodesIfacesConfigure { nodes_ifaces nodeCount w } {
 	if { $ifaces == "*" } {
 	    set ifaces [allIfcList $node]
 	}
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
 
 	if { [info procs [getNodeType $node].nodeIfacesConfigure] != "" } {
 	    try {
@@ -1118,22 +1121,22 @@ proc execute_nodesIfacesConfigure { nodes_ifaces nodeCount w } {
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc execute_nodesConfigure { nodes nodeCount w } {
+proc execute_nodesConfigure { nodes nodes_count w } {
     global progressbarCount execMode
 
     set eid [getFromRunning "eid"]
 
     set batchStep 0
     foreach node_id $nodes {
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
 
 	if { [info procs [getNodeType $node_id].nodeConfigure] != "" } {
 	    try {
@@ -1154,8 +1157,8 @@ proc execute_nodesConfigure { nodes nodeCount w } {
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
@@ -1223,13 +1226,13 @@ proc generateHostsFile { node_id } {
     writeDataToNodeFile $node_id /etc/hosts $etc_hosts
 }
 
-proc waitForConfStart { nodes nodeCount w } {
+proc waitForConfStart { nodes nodes_count w } {
     global progressbarCount execMode
 
     set batchStep 0
     set nodes_left $nodes
     while { [llength $nodes_left] > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
 	foreach node $nodes_left {
 	    if { ! [isNodeConfigured $node] } {
 		continue
@@ -1244,14 +1247,14 @@ proc waitForConfStart { nodes nodeCount w } {
 		$w.p configure -value $progressbarCount
 		update
 	    }
-	    displayBatchProgress $batchStep $nodeCount
+	    displayBatchProgress $batchStep $nodes_count
 
 	    set nodes_left [removeFromList $nodes_left $node]
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
@@ -1282,7 +1285,7 @@ proc finishExecuting { status msg w } {
     }
 }
 
-proc checkForErrors { nodes nodeCount w } {
+proc checkForErrors { nodes nodes_count w } {
     global progressbarCount execMode
 
     set batchStep 0
@@ -1312,11 +1315,11 @@ proc checkForErrors { nodes nodeCount w } {
 	    $w.p configure -value $progressbarCount
 	    update
 	}
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
@@ -1337,7 +1340,7 @@ proc checkForErrors { nodes nodeCount w } {
     }
 }
 
-proc checkForErrorsIfaces { nodes nodeCount w } {
+proc checkForErrorsIfaces { nodes nodes_count w } {
     global progressbarCount execMode
 
     set batchStep 0
@@ -1367,11 +1370,11 @@ proc checkForErrorsIfaces { nodes nodeCount w } {
 	    $w.p configure -value $progressbarCount
 	    update
 	}
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
@@ -1391,61 +1394,3 @@ proc checkForErrorsIfaces { nodes nodeCount w } {
 	}
     }
 }
-
-#****f* exec.tcl/startNodeFromMenu
-# NAME
-#   startNodeFromMenu -- start node from button3menu
-# SYNOPSIS
-#   startNodeFromMenu $node
-# FUNCTION
-#   Invokes the [typmodel $node].nodeConfigure procedure, along with services startup.
-# INPUTS
-#   * node -- node id
-#****
-proc startNodeFromMenu { node } {
-    global progressbarCount execMode
-
-    set progressbarCount 0
-    set w ""
-    if { $execMode != "batch" } {
-	set w .startup
-	catch { destroy $w }
-
-	toplevel $w -takefocus 1
-	wm transient $w .
-	wm title $w "Starting node $node..."
-	message $w.msg -justify left -aspect 1200 \
-	    -text "Starting up virtual nodes and links."
-	pack $w.msg
-	update
-
-	ttk::progressbar $w.p -orient horizontal -length 250 \
-	    -mode determinate -maximum 1 -value $progressbarCount
-	pack $w.p
-	update
-
-	grab $w
-	wm protocol $w WM_DELETE_WINDOW {
-	}
-    }
-
-    pipesCreate
-    services start "NODEINST" "" $node
-    services start "LINKINST" "" $node
-
-    set allNodeCount 1
-    try {
-	execute_nodesConfigure $node 1 $w
-	statline "Waiting for configuration on $allNodeCount node(s)..."
-	waitForConfStart $node $allNodeCount $w
-    } on error err {
-	finishExecuting 0 "$err" $w
-	return
-    }
-
-    services start "NODECONF" "" $node
-    pipesClose
-
-    finishExecuting 1 "" $w
-}
-
