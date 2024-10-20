@@ -558,7 +558,7 @@ proc loadCfgLegacy { cfg } {
 			}
 			custom-selected {
 			    cfgUnset $dict_object $object $field
-			    cfgSet $dict_object $object "custom_selected" $value
+			    cfgSet $dict_object $object "custom_selected" "NODE_CONFIG" $value
 			    lappend $object "custom-selected $value"
 			}
 			custom-command {
@@ -608,8 +608,8 @@ proc loadCfgLegacy { cfg } {
 				set cfg [lreplace [lrange $value $x $x+2] 2 2 $cfg_pconf]
 				lappend cfgs $cfg
 
-				cfgSet $dict_object $object "custom_configs" $custom_config_id "custom_command" $custom_command
-				cfgSet $dict_object $object "custom_configs" $custom_config_id "custom_config" $custom_config
+				cfgSet $dict_object $object "custom_configs" "NODE_CONFIG" $custom_config_id "custom_command" $custom_command
+				cfgSet $dict_object $object "custom_configs" "NODE_CONFIG" $custom_config_id "custom_config" $custom_config
 			    }
 			    lappend $object "custom-configs {$cfgs}"
 			}
@@ -1203,6 +1203,24 @@ proc handleVersionMismatch { cfg_version file_name } {
 
 	loadCfgLegacy $cfg
 	setToRunning "current_file" $file_name
+
+	set custom_config 0
+	set nodes {}
+	foreach node_id [getFromRunning "node_list"] {
+	    if { [getCustomConfigIDs $node_id "NODE_CONFIG"] != "" } {
+		set custom_config 1
+		lappend nodes [getNodeName $node_id]
+	    }
+	}
+
+	if { $custom_config } {
+	    append msg "\n\n"
+	    append msg "WARNING: Custom configurations are now separated into IFACES and NODE configurations.\n\n"
+	    append msg "The custom configurations for node(s) '$nodes' have been loaded into the NODE custom configuration. "
+	    append msg "To avoid configuration errors, please:\n"
+	    append msg "    1. Move interfaces configurations to the IFACE custom configuration, or\n"
+	    append msg "    2. Remove them completely if you wish to use the IMUNES defaults.\n"
+	}
     } elseif { $cfg_version < $CFG_VERSION } {
 	set msg "Loading older .imn configuration (version $cfg_version)...\n\n"
 	append msg "This configuration will be saved as a new version ($CFG_VERSION).\n"
@@ -1224,7 +1242,7 @@ proc handleVersionMismatch { cfg_version file_name } {
     if { $execMode == "batch" } {
 	puts $msg
     } else {
-	after idle {.dialog1.msg configure -wraplength 4i}
+	after idle {.dialog1.msg configure -wraplength 6i}
 	tk_dialog .dialog1 "IMUNES warning" \
 	    "$msg" \
 	    info 0 Dismiss
@@ -1605,9 +1623,9 @@ proc getImageProperty { image_id property } {
 # * array - JSON array
 # * inner_dictionary - dictionary inside of an object
 proc getJsonType { key_name } {
-    if { $key_name in "canvases nodes links annotations images custom_configs ipsec_configs ifaces ifaces" } {
+    if { $key_name in "canvases nodes links annotations images custom_configs ipsec_configs ifaces IFACES_CONFIG NODE_CONFIG" } {
 	return "dictionary"
-    } elseif { $key_name in "custom_config croutes4 croutes6 ipv4_addrs ipv6_addrs services events tayga_mappings" } {
+    } elseif { $key_name in "croutes4 croutes6 ipv4_addrs ipv6_addrs services events tayga_mappings" } {
 	return "array"
     } elseif { $key_name in "vlan ipsec nat64 packgen packets" } {
 	return "inner_dictionary"

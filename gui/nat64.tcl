@@ -54,11 +54,21 @@ proc $MODULE.notebookDimensions { wi } {
 
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
 	== "Configuration" } {
-    set h 320
+
+	set h 400
 	set w 507
     }
+
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
 	== "Interfaces" } {
+
+	set h 360
+	set w 507
+    }
+
+    if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
+	== "NAT64" } {
+
 	set h 320
 	set w 507
     }
