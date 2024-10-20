@@ -1558,30 +1558,31 @@ proc runConfOnNode { node_id } {
 
     set jail_id "[getFromRunning "eid"].$node_id"
 
-    if { [getCustomEnabled $node_id] == true } {
-	set selected [getCustomConfigSelected $node_id]
-
-	set bootcmd [getCustomConfigCommand $node_id $selected]
-	set bootcfg [getCustomConfig $node_id $selected]
-	set bootcfg [concat $bootcfg [[getNodeType $node_id].generateConfig $node_id]]
+    set custom_selected [getCustomConfigSelected $node_id "NODE_CONFIG"]
+    if { [getCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
+        set bootcmd [getCustomConfigCommand $node_id "NODE_CONFIG" $custom_selected]
+        set bootcfg [getCustomConfig $node_id "NODE_CONFIG" $custom_selected]
+	set bootcfg "$bootcfg\n[join [[getNodeType $node_id].generateConfig $node_id] "\n"]"
 	set confFile "custom.conf"
     } else {
-	set bootcfg [[getNodeType $node_id].generateConfig $node_id]
+        set bootcfg [join [[getNodeType $node_id].generateConfig $node_id] "\n"]
 	set bootcmd [[getNodeType $node_id].bootcmd $node_id]
 	set confFile "boot.conf"
     }
 
     generateHostsFile $node_id
 
+    # XXX don't do this here
     foreach ifc [allIfcList $node_id] {
 	if { [getIfcOperState $node_id $ifc] == "down" } {
 	    pipesExec "jexec $jail_id ifconfig $ifc down" "hold"
 	}
     }
 
-    set cfg [join $bootcfg "\n"]
+    set cfg "set -x\n$bootcfg"
     writeDataToNodeFile $node_id /$confFile $cfg
-    set cmds "$bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
+    set cmds "rm -f /out.log /err.log ;"
+    set cmds "$cmds $bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
     # renaming the file signals that we're done
     set cmds "$cmds mv /tout.log /out.log ;"
     set cmds "$cmds mv /terr.log /err.log"
@@ -1595,18 +1596,21 @@ proc startNodeIfaces { node_id ifaces } {
 
     set jail_id "$eid.$node_id"
 
-    if { [getCustomEnabled $node_id] == true } {
-	return
+    set custom_selected [getCustomConfigSelected $node_id "IFACES_CONFIG"]
+    if { [getCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
+        set bootcmd [getCustomConfigCommand $node_id "IFACES_CONFIG" $custom_selected]
+        set bootcfg [getCustomConfig $node_id "IFACES_CONFIG" $custom_selected]
+        set confFile "custom_ifaces.conf"
+    } else {
+	set bootcfg [join [[getNodeType $node_id].generateConfigIfaces $node_id $ifaces] "\n"]
+	set bootcmd [[getNodeType $node_id].bootcmd $node_id]
+	set confFile "boot_ifaces.conf"
     }
 
-    set bootcfg [[getNodeType $node_id].generateConfigIfaces $node_id $ifaces]
-    set bootcmd [[getNodeType $node_id].bootcmd $node_id]
-    set confFile "boot_ifaces.conf"
-
-    #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
-    set cfg [join "{set -x} $bootcfg" "\n"]
+    set cfg "set -x\n$bootcfg"
     writeDataToNodeFile $node_id /$confFile $cfg
-    set cmds "$bootcmd /$confFile >> /tout_ifaces.log 2>> /terr_ifaces.log ;"
+    set cmds "rm -f /out_ifaces.log /err_ifaces.log ;"
+    set cmds "$cmds $bootcmd /$confFile >> /tout_ifaces.log 2>> /terr_ifaces.log ;"
     # renaming the file signals that we're done
     set cmds "$cmds mv /tout_ifaces.log /out_ifaces.log ;"
     set cmds "$cmds mv /terr_ifaces.log /err_ifaces.log"
@@ -1616,14 +1620,19 @@ proc startNodeIfaces { node_id ifaces } {
 proc unconfigNode { eid node_id } {
     set jail_id "$eid.$node_id"
 
-    set bootcfg [[getNodeType $node_id].generateUnconfig $node_id]
+    set custom_selected [getCustomConfigSelected $node_id "NODE_CONFIG"]
+    if { [getCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
+	return
+    }
+
+    set bootcfg [join [[getNodeType $node_id].generateUnconfig $node_id] "\n"]
     set bootcmd [[getNodeType $node_id].bootcmd $node_id]
     set confFile "boot.conf"
 
-    #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
-    set cfg [join "{set -x} $bootcfg" "\n"]
+    set cfg "set -x\n$bootcfg"
     writeDataToNodeFile $node_id /$confFile $cfg
-    set cmds "$bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
+    set cmds "rm -f /out.log /err.log ;"
+    set cmds "$cmds $bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
     # renaming the file signals that we're done
     set cmds "$cmds mv /tout.log /out.log ;"
     set cmds "$cmds mv /terr.log /err.log"
@@ -1633,18 +1642,19 @@ proc unconfigNode { eid node_id } {
 proc unconfigNodeIfaces { eid node_id ifaces } {
     set jail_id "$eid.$node_id"
 
-    if { [getCustomEnabled $node_id] == true } {
+    set custom_selected [getCustomConfigSelected $node_id "IFACES_CONFIG"]
+    if { [getCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
 	return
     }
 
-    set bootcfg [[getNodeType $node_id].generateUnconfigIfaces $node_id $ifaces]
+    set bootcfg [join [[getNodeType $node_id].generateUnconfigIfaces $node_id $ifaces] "\n"]
     set bootcmd [[getNodeType $node_id].bootcmd $node_id]
     set confFile "boot_ifaces.conf"
 
-    #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
-    set cfg [join "{set -x} $bootcfg" "\n"]
+    set cfg "set -x\n$bootcfg"
     writeDataToNodeFile $node_id /$confFile $cfg
-    set cmds "$bootcmd /$confFile >> /tout_ifaces.log 2>> /terr_ifaces.log ;"
+    set cmds "rm -f /out_ifaces.log /err_ifaces.log ;"
+    set cmds "$cmds $bootcmd /$confFile >> /tout_ifaces.log 2>> /terr_ifaces.log ;"
     # renaming the file signals that we're done
     set cmds "$cmds mv /tout_ifaces.log /out_ifaces.log ;"
     set cmds "$cmds mv /terr_ifaces.log /err_ifaces.log"

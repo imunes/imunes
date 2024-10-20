@@ -552,7 +552,7 @@ proc loadCfgLegacy { cfg } {
 			}
 			custom-selected {
 			    cfgUnset $dict_object $object $field
-			    cfgSet $dict_object $object "custom_selected" $value
+			    cfgSet $dict_object $object "custom_selected" "NODE_CONFIG" $value
 			    lappend $object "custom-selected $value"
 			}
 			custom-command {
@@ -602,8 +602,8 @@ proc loadCfgLegacy { cfg } {
 				set cfg [lreplace [lrange $value $x $x+2] 2 2 $cfg_pconf]
 				lappend cfgs $cfg
 
-				cfgSet $dict_object $object "custom_configs" $custom_config_id "custom_command" $custom_command
-				cfgSet $dict_object $object "custom_configs" $custom_config_id "custom_config" $custom_config
+				cfgSet $dict_object $object "custom_configs" "NODE_CONFIG" $custom_config_id "custom_command" $custom_command
+				cfgSet $dict_object $object "custom_configs" "NODE_CONFIG" $custom_config_id "custom_config" $custom_config
 			    }
 			    lappend $object "custom-configs {$cfgs}"
 			}
@@ -1632,9 +1632,9 @@ proc getImageProperty { image_id property } {
 # * array - JSON array
 # * inner_dictionary - dictionary inside of an object
 proc getJsonType { key_name } {
-    if { $key_name in "canvases nodes links annotations images custom_configs ipsec_configs ifaces ifaces" } {
+    if { $key_name in "canvases nodes links annotations images custom_configs ipsec_configs ifaces IFACES_CONFIG NODE_CONFIG" } {
 	return "dictionary"
-    } elseif { $key_name in "custom_config croutes4 croutes6 ipv4_addrs ipv6_addrs services events tayga_mappings" } {
+    } elseif { $key_name in "croutes4 croutes6 ipv4_addrs ipv6_addrs services events tayga_mappings" } {
 	return "array"
     } elseif { $key_name in "vlan ipsec nat64 packgen packets" } {
 	return "inner_dictionary"

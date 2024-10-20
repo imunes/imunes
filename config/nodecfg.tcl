@@ -210,7 +210,15 @@ proc getCustomEnabled { node_id } {
 proc setCustomEnabled { node_id state } {
     cfgSet "nodes" $node_id "custom_enabled" $state
 
-    trigger_nodeRecreate $node_id
+    if { [getCustomConfigSelected $node_id "NODE_CONFIG"] ni "\"\" DISABLED" } {
+	trigger_nodeReconfig $node_id
+    }
+
+    if { [getCustomConfigSelected $node_id "IFACES_CONFIG"] ni "\"\" DISABLED" } {
+	foreach iface_id [allIfcList $node_id] {
+	    trigger_ifaceReconfig $node_id $iface_id
+	}
+    }
 }
 
 #****f* nodecfg.tcl/getCustomConfigSelected
@@ -225,8 +233,8 @@ proc setCustomEnabled { node_id state } {
 # RESULT
 #   * ID -- returns default custom configuration ID
 #****
-proc getCustomConfigSelected { node_id } {
-    return [cfgGet "nodes" $node_id "custom_selected"]
+proc getCustomConfigSelected { node_id hook } {
+    return [cfgGet "nodes" $node_id "custom_selected" $hook]
 }
 
 #****f* nodecfg.tcl/setCustomConfigSelected
@@ -240,11 +248,21 @@ proc getCustomConfigSelected { node_id } {
 #   * node_id -- node id
 #   * conf -- custom-config id
 #****
-proc setCustomConfigSelected { node_id cfg_id } {
-    cfgSet "nodes" $node_id "custom_selected" $cfg_id
+proc setCustomConfigSelected { node_id hook cfg_id } {
+    cfgSet "nodes" $node_id "custom_selected" $hook $cfg_id
 
-    if { [getCustomEnabled $node_id] && [getCustomConfigSelected $node_id] == $cfg_id } {
-	trigger_nodeRecreate $node_id
+    if { ! [getCustomEnabled $node_id] } {
+	return
+    }
+
+    if { [getCustomEnabled $node_id] } {
+	if { $hook == "NODE_CONFIG" } {
+	    trigger_nodeReconfig $node_id
+	} elseif { $hook == "IFACES_CONFIG" } {
+	    foreach iface_id [allIfcList $node_id] {
+		trigger_ifaceReconfig $node_id $iface_id
+	    }
+	}
     }
 }
 
@@ -262,8 +280,8 @@ proc setCustomConfigSelected { node_id cfg_id } {
 # RESULT
 #   * customConfig -- returns custom configuration
 #****
-proc getCustomConfig { node_id cfg_id } {
-    return [cfgGet "nodes" $node_id "custom_configs" $cfg_id "custom_config"]
+proc getCustomConfig { node_id hook cfg_id } {
+    return [cfgGet "nodes" $node_id "custom_configs" $hook $cfg_id "custom_config"]
 }
 
 #****f* nodecfg.tcl/setCustomConfig
@@ -280,12 +298,23 @@ proc getCustomConfig { node_id cfg_id } {
 #   * cmd -- custom command
 #   * config -- custom configuration section
 #****
-proc setCustomConfig { node_id cfg_id cmd config } {
-    cfgSet "nodes" $node_id "custom_configs" $cfg_id "custom_command" $cmd
-    cfgSet "nodes" $node_id "custom_configs" $cfg_id "custom_config" $config
+proc setCustomConfig { node_id hook cfg_id cmd config } {
+    # XXX cannot be empty
+    cfgSetEmpty "nodes" $node_id "custom_configs" $hook $cfg_id "custom_command" $cmd
+    cfgSetEmpty "nodes" $node_id "custom_configs" $hook $cfg_id "custom_config" $config
 
-    if { [getCustomEnabled $node_id] && [getCustomConfigSelected $node_id] == $cfg_id } {
-	trigger_nodeRecreate $node_id
+    if { ! [getCustomEnabled $node_id] || [getCustomConfigSelected $node_id $hook] != $cfg_id } {
+	return
+    }
+
+    if { [getCustomEnabled $node_id] } {
+	if { $hook == "NODE_CONFIG" } {
+	    trigger_nodeReconfig $node_id
+	} elseif { $hook == "IFACES_CONFIG" } {
+	    foreach iface_id [allIfcList $node_id] {
+		trigger_ifaceReconfig $node_id $iface_id
+	    }
+	}
     }
 }
 
@@ -301,8 +330,8 @@ proc setCustomConfig { node_id cfg_id cmd config } {
 #   * node_id -- node id
 #   * id -- configuration id
 #****
-proc removeCustomConfig { node_id cfg_id } {
-    cfgUnset "nodes" $node_id "custom_configs" $cfg_id
+proc removeCustomConfig { node_id hook cfg_id } {
+    cfgUnset "nodes" $node_id "custom_configs" $hook $cfg_id
 }
 
 #****f* nodecfg.tcl/getCustomConfigCommand
@@ -319,8 +348,8 @@ proc removeCustomConfig { node_id cfg_id } {
 # RESULT
 #   * customCmd -- returns custom configuration boot command
 #****
-proc getCustomConfigCommand { node_id cfg_id } {
-    return [cfgGet "nodes" $node_id "custom_configs" $cfg_id "custom_command"]
+proc getCustomConfigCommand { node_id hook cfg_id } {
+    return [cfgGet "nodes" $node_id "custom_configs" $hook $cfg_id "custom_command"]
 }
 
 #****f* nodecfg.tcl/getCustomConfigIDs
@@ -335,8 +364,8 @@ proc getCustomConfigCommand { node_id cfg_id } {
 # RESULT
 #   * IDs -- returns custom configuration IDs
 #****
-proc getCustomConfigIDs { node_id } {
-    return [dict keys [cfgGet "nodes" $node_id "custom_configs"]]
+proc getCustomConfigIDs { node_id hook } {
+    return [dict keys [cfgGet "nodes" $node_id "custom_configs" $hook]]
 }
 
 #****f* nodecfg.tcl/getNodeStolenIfaces
@@ -1326,7 +1355,6 @@ proc getRouterProtocolCfg { node_id protocol } {
 	}
     }
 
-
     return $cfg
 }
 
@@ -2129,8 +2157,31 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 			puts "======== NEW: '$custom_configs_new_value'"
 		    }
 
-		    lassign [dict values $custom_configs_new_value] cmd cfg
-		    setCustomConfig $node_id $custom_configs_key $cmd $cfg
+		    set hook_diff [dictDiff $custom_configs_old_value $custom_configs_new_value]
+		    dict for {hook_key hook_change} $hook_diff {
+			if { $hook_change == "copy" } {
+			    continue
+			}
+
+			puts "============ $hook_change: '$hook_key'"
+
+			set hook_old_value [_cfgGet $custom_configs_old_value $hook_key]
+			set hook_new_value [_cfgGet $custom_configs_new_value $hook_key]
+			if { $hook_change in "changed" } {
+			    puts "============ OLD: '$hook_old_value'"
+			}
+			if { $hook_change in "new changed" } {
+			    puts "============ NEW: '$hook_new_value'"
+			}
+
+			if { $hook_change == "removed" } {
+			    removeCustomConfig $node_id $custom_configs_key $hook_key
+			} else {
+			    set cmd [dict get $hook_new_value "custom_command"]
+			    set cfg [dict get $hook_new_value "custom_config"]
+			    setCustomConfig $node_id $custom_configs_key $hook_key $cmd $cfg
+			}
+		    }
 		}
 	    }
 
@@ -2242,7 +2293,25 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 	    }
 
 	    "custom_selected" {
-		setCustomConfigSelected $node_id $new_value
+		set custom_selected_diff [dictDiff $old_value $new_value]
+		dict for {custom_selected_key custom_selected_change} $custom_selected_diff {
+		    if { $custom_selected_change == "copy" } {
+			continue
+		    }
+
+		    puts "======== $custom_selected_change: '$custom_selected_key'"
+
+		    set custom_selected_old_value [_cfgGet $old_value $custom_selected_key]
+		    set custom_selected_new_value [_cfgGet $new_value $custom_selected_key]
+		    if { $custom_selected_change in "changed" } {
+			puts "======== OLD: '$custom_selected_old_value'"
+		    }
+		    if { $custom_selected_change in "new changed" } {
+			puts "======== NEW: '$custom_selected_new_value'"
+		    }
+
+		    setCustomConfigSelected $node_id $custom_selected_key $custom_selected_new_value
+		}
 	    }
 
 	    "canvas" {
