@@ -1,20 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:v="http://vecta.io" width="40" height="32" viewBox="0 0 40 32">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:v="http://vecta.io" width="41" height="33" viewBox="0 0 41 33">
     <style>
-        <![CDATA[svg{stroke:#000;stroke-linecap:round;stroke-linejoin:round;fill:#fff;fill-rule:evenodd;font-family:Roboto;font-size:14px;text-anchor:middle}svg text{paint-order:stroke;white-space:pre}svg .Text\.cls{stroke:none}]]>
+        <![CDATA[svg{stroke:#000;stroke-linecap:round;stroke-linejoin:round;fill:#fff;fill-rule:evenodd;font-family:Roboto;font-size:14px;text-anchor:middle;}svg text{paint-order:stroke;white-space:pre;}svg .Text\.cls{stroke:none;}]]>
     </style>
     <defs>
-        <linearGradient id="L001001000808080100100000000100.grad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#808080" stop-opacity="1"/>
-            <stop offset="100%" stop-color="#000000" stop-opacity="1"/>
+        <linearGradient id="L001001000ffffff100100c7c7c7100.grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+            <stop offset="100%" stop-color="#c7c7c7" stop-opacity="1"/>
         </linearGradient>
     </defs>
-    <g transform="translate(1.5 1.4985)">
-        <g >
+    <g fill="url(#L001001000ffffff100100c7c7c7100.grad)" transform="translate(1 1)" stroke-width="2">
+        <g>
             <g>
-                <path d="M 6.1266 10.0471 C 6.1038 10.3751 5.8922 10.6414 5.6295 10.6762 C 2.4482 11.1032 0 15.0339 0 19.8196 C 0 24.8899 2.8021 29 6.2592 29 L 30.1229 29 C 33.9209 29 37 24.6571 37 19.2972 C 37 14.162 34.172 9.9581 30.5941 9.6254 C 30.3203 9.5991 30.0983 9.3593 30.0452 9.0218 C 29.246 3.8711 25.5584 0 21.1985 0 C 18.3649 0 15.8409 1.6094 14.2018 4.1705 C 14.0415 4.4204 13.7726 4.5342 13.5358 4.4104 C 12.9049 4.0776 12.239 3.9175 11.4934 3.9175 C 8.6771 3.9175 6.3652 6.6148 6.1254 10.0533 Z" stroke="none" fill="#d0cfce" fill-rule="nonzero"/>
+                <path d="M 13.3516 3.4366 C 6.6536 1.6996 3.0111 6.2792 3.5984 10.3846 L 3.5984 10.5428 C -1.6889 11.8058 -0.2789 20.1751 2.3063 20.1751 L 2.5414 20.1751 C 1.8363 24.1223 8.0635 28.0703 11.4715 26.0176 L 11.7065 25.7018 C 12.8816 29.3333 17.3462 29.8072 21.5764 29.9656 C 25.3367 30.1238 27.4515 29.8072 29.0967 27.5963 L 29.3315 27.5963 C 35.324 28.2281 38.0268 22.7018 36.7342 18.7538 L 37.0868 18.5956 C 39.0844 17.9639 39.3193 11.6475 35.7942 10.7003 L 35.9121 10.3845 C 37.4395 6.2783 33.7971 2.489 28.8617 3.1208 L 28.5096 2.9625 C 24.9842 -1.4587 14.7616 -0.6692 13.5865 3.5948 Z" fill="url(#L001001000ffffff100100c7c7c7100.grad)" fill-opacity="1" stroke="none" stroke-width="2"/>
             </g>
-            <g transform="translate(0 0.0015)">
-                <path d="M 6.1266 10.0455 C 6.1038 10.3736 5.8922 10.6398 5.6314 10.6746 C 2.4482 11.1017 0 15.0323 0 19.818 C 0 24.8883 2.8021 28.9985 6.2592 28.9985 L 30.1229 28.9985 C 33.9209 28.9985 37 24.6555 37 19.2956 C 37 14.1596 34.1714 9.9566 30.5916 9.6238 C 30.319 9.5975 30.0983 9.3577 30.0452 9.0203 C 29.246 3.8702 25.5584 0 21.1985 0 C 18.3643 0 15.8397 1.6109 14.1994 4.1728 C 14.0403 4.422 13.7677 4.5365 13.5395 4.4049 C 12.9081 4.0722 12.2402 3.9097 11.494 3.9097 C 8.6777 3.9097 6.3658 6.607 6.1254 10.0455 Z" stroke="url(#L001001000808080100100000000100.grad)" fill="none" stroke-width="3"/>
+            <g>
+                <path d="M 13.3516 3.4366 C 6.6536 1.6996 3.0111 6.2792 3.5984 10.3846 L 3.5984 10.5428 C -1.6889 11.8058 -0.2789 20.1751 2.3063 20.1751 L 2.5414 20.1751 C 1.8363 24.1223 8.0635 28.0703 11.4715 26.0176 L 11.7065 25.7018 C 12.8816 29.3333 17.3462 29.8072 21.5764 29.9656 C 25.3367 30.1238 27.4515 29.8072 29.0967 27.5963 L 29.3315 27.5963 C 35.324 28.2281 38.0268 22.7018 36.7342 18.7538 L 37.0868 18.5956 C 39.0844 17.9639 39.3193 11.6475 35.7942 10.7003 L 35.9121 10.3845 C 37.4395 6.2783 33.7971 2.489 28.8617 3.1208 L 28.5096 2.9625 C 24.9842 -1.4587 14.7616 -0.6692 13.5865 3.5948 Z" fill="url(#L001001000ffffff100100c7c7c7100.grad)" fill-opacity="1" stroke="#0f73a0" stroke-width="2"/>
             </g>
         </g>
     </g>
