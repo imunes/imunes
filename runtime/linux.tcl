@@ -1011,19 +1011,24 @@ proc startNodeIfaces { node_id ifaces } {
 
     set docker_node "$eid.$node_id"
 
-    if { [getCustomEnabled $node_id] == true } {
-	return
+    set custom_selected [getCustomConfigSelected $node_id "IFACES_CONFIG"]
+    if { [getCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
+        set bootcmd [getCustomConfigCommand $node_id "IFACES_CONFIG" $custom_selected]
+        set bootcfg [getCustomConfig $node_id "IFACES_CONFIG" $custom_selected]
+	set bootcfg [concat $bootcfg [[getNodeType $node_id].generateConfig $node_id]]
+        set confFile "custom_ifaces.conf"
+    } else {
+	set bootcfg [[getNodeType $node_id].generateConfigIfaces $node_id $ifaces]
+	set bootcmd [[getNodeType $node_id].bootcmd $node_id]
+	set confFile "boot_ifaces.conf"
     }
-
-    set bootcfg [[getNodeType $node_id].generateConfigIfaces $node_id $ifaces]
-    set bootcmd [[getNodeType $node_id].bootcmd $node_id]
-    set confFile "boot_ifaces.conf"
 
     #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
     set cfg [join "{set -x} $bootcfg" "\n"]
     writeDataToNodeFile $node_id /tout_ifaces.log ""
     writeDataToNodeFile $node_id /$confFile $cfg
-    set cmds "$bootcmd /$confFile >> /tout_ifaces.log 2>> /terr_ifaces.log ;"
+    set cmds "rm -f /out_ifaces.log /err_ifaces.log ;"
+    set cmds "$cmds $bootcmd /$confFile >> /tout_ifaces.log 2>> /terr_ifaces.log ;"
     # renaming the file signals that we're done
     set cmds "$cmds mv /tout_ifaces.log /out_ifaces.log ;"
     set cmds "$cmds mv /terr_ifaces.log /err_ifaces.log"
@@ -1033,6 +1038,11 @@ proc startNodeIfaces { node_id ifaces } {
 proc unconfigNode { eid node_id } {
     set docker_node "$eid.$node_id"
 
+    set custom_selected [getCustomConfigSelected $node_id "NODE_CONFIG"]
+    if { [getCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
+	return
+    }
+
     set bootcfg [[getNodeType $node_id].generateUnconfig $node_id]
     set bootcmd [[getNodeType $node_id].bootcmd $node_id]
     set confFile "boot.conf"
@@ -1041,7 +1051,8 @@ proc unconfigNode { eid node_id } {
     set cfg [join "{set -x} $bootcfg" "\n"]
     writeDataToNodeFile $node_id /tout.log ""
     writeDataToNodeFile $node_id /$confFile $cfg
-    set cmds "$bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
+    set cmds "rm -f /out.log /err.log ;"
+    set cmds "$cmds $bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
     # renaming the file signals that we're done
     set cmds "$cmds mv /tout.log /out.log ;"
     set cmds "$cmds mv /terr.log /err.log"
@@ -1051,7 +1062,8 @@ proc unconfigNode { eid node_id } {
 proc unconfigNodeIfaces { eid node_id ifaces } {
     set docker_node "$eid.$node_id"
 
-    if { [getCustomEnabled $node_id] == true } {
+    set custom_selected [getCustomConfigSelected $node_id "IFACES_CONFIG"]
+    if { [getCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
 	return
     }
 
@@ -1063,7 +1075,8 @@ proc unconfigNodeIfaces { eid node_id ifaces } {
     set cfg [join "{set -x} $bootcfg" "\n"]
     writeDataToNodeFile $node_id /tout_ifaces.log ""
     writeDataToNodeFile $node_id /$confFile $cfg
-    set cmds "$bootcmd /$confFile >> /tout_ifaces.log 2>> /terr_ifaces.log ;"
+    set cmds "rm -f /out_ifaces.log /err_ifaces.log ;"
+    set cmds "$cmds $bootcmd /$confFile >> /tout_ifaces.log 2>> /terr_ifaces.log ;"
     # renaming the file signals that we're done
     set cmds "$cmds mv /tout_ifaces.log /out_ifaces.log ;"
     set cmds "$cmds mv /terr_ifaces.log /err_ifaces.log"
@@ -1242,11 +1255,10 @@ proc runConfOnNode { node } {
 
     set node_id "$eid.$node"
 
-    if { [getCustomEnabled $node] == true } {
-        set selected [getCustomConfigSelected $node]
-
-        set bootcmd [getCustomConfigCommand $node $selected]
-        set bootcfg [getCustomConfig $node $selected]
+    set custom_selected [getCustomConfigSelected $node "NODE_CONFIG"]
+    if { [getCustomEnabled $node] == true && $custom_selected ni "\"\" DISABLED" } {
+        set bootcmd [getCustomConfigCommand $node "NODE_CONFIG" $custom_selected]
+        set bootcfg [getCustomConfig $node "NODE_CONFIG" $custom_selected]
 	set bootcfg [concat $bootcfg [[getNodeType $node].generateConfig $node]]
         set confFile "custom.conf"
     } else {
@@ -1257,6 +1269,7 @@ proc runConfOnNode { node } {
 
     generateHostsFile $node
 
+    # XXX don't do this here
     set nodeNs [getNodeNetns $eid $node]
     foreach ifc [allIfcList $node] {
 	if { [getIfcOperState $node $ifc] == "down" } {
@@ -1268,7 +1281,8 @@ proc runConfOnNode { node } {
     set cfg [join "{set -x} $bootcfg" "\n"]
     writeDataToNodeFile $node /tout.log ""
     writeDataToNodeFile $node /$confFile $cfg
-    set cmds "$bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
+    set cmds "rm -f /out.log /err.log ;"
+    set cmds "$cmds $bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
     # renaming the file signals that we're done
     set cmds "$cmds mv /tout.log /out.log ;"
     set cmds "$cmds mv /terr.log /err.log"
