@@ -1630,7 +1630,7 @@ proc configGUI_etherVlan { wi node_id } {
 #   * node_id -- node id
 #****
 proc configGUI_customConfig { wi node_id } {
-    global customEnabled guielements selectedConfig
+    global customEnabled guielements selected_hook
     lappend guielements configGUI_customConfig
 
     ttk::frame $wi.custcfg -borderwidth 2 -relief groove -padding 4
@@ -1639,20 +1639,11 @@ proc configGUI_customConfig { wi node_id } {
     ttk::checkbutton $wi.custcfg.echeckOnOff -text "Enabled" \
 	-variable customEnabled -onvalue true -offvalue false
 
-    ttk::label $wi.custcfg.dtxt -text "Selected custom config:"
-    ttk::combobox $wi.custcfg.dcomboDefault -height 10 -width 15 \
-	-state readonly -textvariable selectedConfig
-    $wi.custcfg.dcomboDefault configure -values [getCustomConfigIDs $node_id]
-    $wi.custcfg.dcomboDefault set [getCustomConfigSelected $node_id]
-
     ttk::button $wi.custcfg.beditor -text "Editor" -command "customConfigGUI $node_id"
 
     grid $wi.custcfg.etxt -in $wi.custcfg -sticky w -column 0 -row 0
     grid $wi.custcfg.echeckOnOff -in $wi.custcfg -sticky w -column 1 \
 	-row 0 -padx 5 -pady 3
-    grid $wi.custcfg.dtxt -in $wi.custcfg -sticky w -column 0 -row 1
-    grid $wi.custcfg.dcomboDefault -in $wi.custcfg -sticky w -column 1 \
-	-row 1 -padx 7 -pady 3
     grid $wi.custcfg.beditor -in $wi.custcfg -column 2 -row 0 \
 	-rowspan 2 -pady 3 -padx 50 -sticky e
     pack $wi.custcfg -anchor w -fill both
@@ -2534,17 +2525,11 @@ proc configGUI_etherVlanApply { wi node_id } {
 #****
 proc configGUI_customConfigApply { wi node_id } {
     global changed
-    global customEnabled selectedConfig
+    global customEnabled selected_hook
 
     set oldcustomenabled [getCustomEnabled $node_id]
     if { $oldcustomenabled != $customEnabled } {
 	setCustomEnabled $node_id $customEnabled
-	set changed 1
-    }
-
-    set oldselectedconfig [getCustomConfigSelected $node_id]
-    if { $oldselectedconfig != $selectedConfig } {
-	setCustomConfigSelected $node_id $selectedConfig
 	set changed 1
     }
 }
@@ -2833,29 +2818,50 @@ proc customConfigGUI { node_id } {
 	return
     }
 
+    global custom_config_hooks previous_hook selected_hook
+    # XXX move to global
+    set custom_config_hooks "IFACES_CONFIG NODE_CONFIG"
+    set selected_hook [lindex $custom_config_hooks 0]
+    set previous_hook $selected_hook
+
     wm title $wi "Custom configurations $node_id"
     wm minsize $wi 584 445
     wm resizable $wi 0 1
 
     ttk::frame $wi.options -height 50 -borderwidth 3
     ttk::notebook $wi.nb -height 200
+    bind $wi.nb <<NotebookTabChanged>> \
+	"global selected_hook ; customConfigGUI_Apply $wi $node_id \$selected_hook"
+
     ttk::frame $wi.bottom
     ttk::frame $wi.bottom.buttons -borderwidth 2
+
+    ttk::label $o.lh -text "Hook:"
+    ttk::combobox $o.cbh -height 10 -width 22 -state readonly \
+	-textvariable selected_hook
+    $o.cbh configure -values $custom_config_hooks
+    $o.cbh set $selected_hook
+    bind $o.cbh <<ComboboxSelected>> \
+	"resetCustomConfigNotebook $node_id $wi"
 
     ttk::label $o.l -text "Create new configuration:"
     ttk::entry $o.e -width 24
     ttk::button $o.b -text "Create" \
 	-command "createNewConfiguration $wi $node_id"
+
     ttk::label $o.ld -text "Default configuration:"
-    ttk::combobox $o.cb -height 10 -width 22 -state readonly \
-	-textvariable defaultConfig
-    $o.cb configure -values [getCustomConfigIDs $node_id]
-    $o.cb set [getCustomConfigSelected $node_id]
+    ttk::combobox $o.cb -height 10 -width 22 -state readonly
+    $o.cb configure -values "DISABLED [getCustomConfigIDs $node_id $selected_hook]"
+    set defaultConfig [getCustomConfigSelected $node_id $selected_hook]
+    if { $defaultConfig == "" } {
+	set defaultConfig "DISABLED"
+    }
+    $o.cb set $defaultConfig
 
     ttk::button $b.apply -text "Apply" \
-	-command "customConfigGUI_Apply $wi $node_id"
+	-command "global selected_hook ; customConfigGUI_Apply $wi $node_id \$selected_hook"
     ttk::button $b.applyClose -text "Apply and Close" \
-	-command "customConfigGUI_Apply $wi $node_id; destroy $wi"
+	-command "global selected_hook ; customConfigGUI_Apply $wi $node_id \$selected_hook; destroy $wi"
     ttk::button $b.cancel -text "Cancel" -command "destroy $wi"
 
     pack $wi.options -side top -fill both
@@ -2863,18 +2869,79 @@ proc customConfigGUI { node_id } {
     pack $wi.bottom.buttons -pady 2
     pack $wi.bottom -fill both -side bottom
 
-    grid $o.l -row 0 -column 0 -sticky w
-    grid $o.e -row 0 -column 1 -sticky w -padx 5 -sticky we
-    grid $o.b -row 0 -column 2 -padx 5
-    grid $o.ld -row 1 -column 0 -sticky w
-    grid $o.cb -row 1 -column 1 -sticky we -padx 5
+    grid $o.lh -row 0 -column 0 -sticky w
+    grid $o.cbh -row 0 -column 1 -sticky we -padx 5
+    grid $o.l -row 1 -column 0 -sticky w
+    grid $o.e -row 1 -column 1 -sticky w -padx 5 -sticky we
+    grid $o.b -row 1 -column 2 -padx 5
+    grid $o.ld -row 2 -column 0 -sticky w
+    grid $o.cb -row 2 -column 1 -sticky we -padx 5
 
     grid $b.apply -row 0 -column 1 -sticky swe -padx 2
     grid $b.applyClose -row 0 -column 2 -sticky swe -padx 2
     grid $b.cancel -row 0 -column 4 -sticky swe -padx 2
 
-    foreach cfg_id [lsort [getCustomConfigIDs $node_id]] {
-	createTab $node_id $cfg_id
+    foreach cfg_id [lsort [getCustomConfigIDs $node_id $selected_hook]] {
+	createTab $node_id $selected_hook $cfg_id
+    }
+}
+
+proc resetCustomConfigNotebook { node_id wi } {
+    global previous_hook selected_hook
+
+    if { [$wi.nb tabs] != "" } {
+	set cfg_id [$wi.nb tab current -text]
+	set w $wi.nb.$cfg_id
+	if { [$w.editor get 1.0 {end -1c}] != [getCustomConfig $node_id $previous_hook $cfg_id] || \
+	    [$w.bootcmd_e get] != [getCustomConfigCommand $node_id $previous_hook $cfg_id] || \
+	    [llength [$wi.nb tabs]] != [llength [getCustomConfigIDs $node_id $previous_hook]] } {
+
+	    set answer [tk_messageBox -message \
+		"Custom config $cfg_id not saved. Apply changes?" \
+		-icon warning -type yesno ]
+
+	    switch -- $answer {
+		yes {
+		    customConfigGUI_Apply $wi $node_id $previous_hook
+		    set defaultConfig [getCustomConfigSelected $node_id $selected_hook]
+		    if { $defaultConfig == "" } {
+			set defaultConfig "DISABLED"
+		    }
+		    $wi.options.cb set $defaultConfig
+		}
+
+		no {
+		    set o $wi.options
+		    $o.cb configure -values "DISABLED [getCustomConfigIDs $node_id $selected_hook]"
+		}
+	    }
+	} else {
+	    customConfigGUI_Apply $wi $node_id $previous_hook
+	    set defaultConfig [getCustomConfigSelected $node_id $selected_hook]
+	    if { $defaultConfig == "" } {
+		set defaultConfig "DISABLED"
+	    }
+	    $wi.options.cb set $defaultConfig
+	}
+    } else {
+	set o $wi.options
+	$o.cb configure -values "DISABLED [getCustomConfigIDs $node_id $selected_hook]"
+
+	set defaultConfig [getCustomConfigSelected $node_id $selected_hook]
+	if { $defaultConfig == "" } {
+	    set defaultConfig "DISABLED"
+	}
+	$wi.options.cb set $defaultConfig
+    }
+
+    set previous_hook $selected_hook
+
+    foreach tab [$wi.nb tabs] {
+	destroy $tab
+    }
+
+    foreach cfg_id [lsort [getCustomConfigIDs $node_id $selected_hook]] {
+	createTab $node_id $selected_hook $cfg_id
     }
 }
 
@@ -2889,44 +2956,40 @@ proc customConfigGUI { node_id } {
 # INPUTS
 #   * node_id -- node id
 #****
-proc customConfigGUI_Apply { wi node_id } {
+proc customConfigGUI_Apply { wi node_id hook } {
+    global selected_hook
+
     set o $wi.options
 
-    if { [$wi.nb tabs] != "" } {
-	set t $wi.nb.[$wi.nb tab current -text]
-	set cfg_id [$t.confid_e get]
-	if { [$t.confid_e get] != [$wi.nb tab current -text] } {
-	    removeCustomConfig $node_id [$wi.nb tab current -text]
-	    setCustomConfig $node_id [$t.confid_e get] \
-		[$t.bootcmd_e get] [$t.editor get 1.0 {end -1c}]
-
-	    destroy $t
-	    createTab $node_id $cfg_id
-	} else {
-	    setCustomConfig $node_id [$t.confid_e get] \
-		[$t.bootcmd_e get] [$t.editor get 1.0 {end -1c}]
-	}
-
-	if { [getCustomConfigSelected $node_id] ni [getCustomConfigIDs $node_id] } {
-	    setCustomConfigSelected $node_id ""
-	}
-
-	set defaultConfig [$wi.options.cb get]
-	if { [llength [getCustomConfigIDs $node_id]] == 1 && $defaultConfig == "" } {
-	    set config [lindex [getCustomConfigIDs $node_id] 0]
-	    setCustomConfigSelected $node_id $config
-
-	    $wi.options.cb set $config
-	    .popup.nbook.nfConfiguration.custcfg.dcomboDefault set $config
-	} else {
-	    setCustomConfigSelected $node_id $defaultConfig
-	    .popup.nbook.nfConfiguration.custcfg.dcomboDefault set $defaultConfig
-	}
-
-	$o.cb configure -values [getCustomConfigIDs $node_id]
-	.popup.nbook.nfConfiguration.custcfg.dcomboDefault \
-	    configure -values [getCustomConfigIDs $node_id]
+    if { [$wi.nb tabs] == "" } {
+	return
     }
+
+    set cfg_id [$wi.nb tab current -text]
+    set t $wi.nb.$cfg_id
+
+    set custom_command [$t.bootcmd_e get]
+    if { $custom_command == "" } {
+	after idle {.dialog1.msg configure -wraplength 4i}
+	tk_dialog .dialog1 "IMUNES warning" \
+	    "Custom command cannot be empty!" \
+	    info 0 Dismiss
+
+	return
+    }
+
+    set custom_config [$t.editor get 1.0 {end -1c}]
+    setCustomConfig $node_id $hook $cfg_id \
+	$custom_command $custom_config
+
+    set defaultConfig [$wi.options.cb get]
+    if { $defaultConfig == "DISABLED" } {
+	setCustomConfigSelected $node_id $hook ""
+    } else {
+	setCustomConfigSelected $node_id $hook $defaultConfig
+    }
+
+    $o.cb configure -values "DISABLED [_getCustomConfigIDs $node_cfg $selected_hook]"
 }
 
 #****f* nodecfgGUI.tcl/createTab
@@ -2941,48 +3004,37 @@ proc customConfigGUI_Apply { wi node_id } {
 #   * node_id -- node id
 #   * cfg_id -- configuration id
 #****
-proc createTab { node_id cfg_id } {
+proc createTab { node_id selected_hook cfg_id } {
     set wi .cfgEditor
     set o $wi.options
     set w $wi.nb.$cfg_id
 
     ttk::frame $wi.nb.$cfg_id
-    ttk::label $w.confid_l -text "Configuration ID:" -width 15
-    ttk::entry $w.confid_e -width 25
     ttk::label $w.bootcmd_l -text "Boot command:" -width 15
     ttk::entry $w.bootcmd_e -width 25
 
     ttk::button $w.delete -text "Delete config" \
 	-command "deleteConfig $wi $node_id"
     ttk::button $w.generate -text "Fill defaults" \
-	-command "customConfigGUIFillDefaults $wi $node_id"
+	-command "customConfigGUIFillDefaults $wi $node_id $selected_hook"
 
     ttk::scrollbar $w.vsb -orient vertical -command [list $w.editor yview]
     ttk::scrollbar $w.hsb -orient horizontal -command [list $w.editor xview]
     text $w.editor -width 80 -height 20 -bg white -wrap none \
 	-yscrollcommand [list $w.vsb set] -xscrollcommand [list $w.hsb set]
 
-    $o.cb configure -values [getCustomConfigIDs $node_id]
-    .popup.nbook.nfConfiguration.custcfg.dcomboDefault \
-	configure -values [getCustomConfigIDs $node_id]
+    $o.cb configure -values "DISABLED [getCustomConfigIDs $node_id $selected_hook]"
 
     $wi.nb add $wi.nb.$cfg_id -text $cfg_id
-    $w.confid_e insert 0 $cfg_id
-    $w.bootcmd_e insert 0 [getCustomConfigCommand $node_id $cfg_id]
-
-    set config [getCustomConfig $node_id $cfg_id]
-    set x 0
-    set numOfLines [llength $config]
-    foreach data $config {
-	incr x
-	$w.editor insert end "$data"
-	if { $x != $numOfLines } {
-	    $w.editor insert end "\n"
-	}
+    set custom_command [getCustomConfigCommand $node_id $selected_hook $cfg_id]
+    if { $custom_command == "" } {
+	set custom_command "/bin/sh"
     }
+    $w.bootcmd_e insert 0 $custom_command
 
-    grid $w.confid_l -row 0 -column 0 -in $w -sticky w -pady 3
-    grid $w.confid_e -row 0 -column 1 -in $w -sticky w -pady 3
+    set config [getCustomConfig $node_id $selected_hook $cfg_id]
+    $w.editor insert end "$config"
+
     grid $w.generate -row 0 -column 2 -rowspan 2 -in $w
     grid $w.delete -row 0 -column 3 -rowspan 2 -in $w
     grid $w.bootcmd_l -row 1 -column 0 -in $w  -sticky w -pady 2
@@ -3007,12 +3059,18 @@ proc createTab { node_id cfg_id } {
 #   * wi -- current widget
 #   * node_id -- node id
 #****
-proc customConfigGUIFillDefaults { wi node_id } {
+proc customConfigGUIFillDefaults { wi node_id selected_hook } {
     set cfg_id [$wi.nb tab current -text]
     set node_type [getNodeType $node_id]
     set cmd [$node_type.bootcmd $node_id]
-    set cfg [$node_type.generateConfigIfaces $node_id "*"]
-    set cfg [concat $cfg [$node_type.generateConfig $node_id]]
+    switch -exact -- $selected_hook {
+	"IFACES_CONFIG" {
+	    set cfg [$node_type.generateConfigIfaces $node_id "*"]
+	}
+	"NODE_CONFIG" {
+	    set cfg [$node_type.generateConfig $node_id]
+	}
+    }
     set w $wi.nb.$cfg_id
 
     if { [$w.bootcmd_e get] != "" || [$w.editor get 1.0 {end -1c}] != "" } {
@@ -3057,6 +3115,8 @@ proc customConfigGUIFillDefaults { wi node_id } {
 #   * cfg_id -- configuration id
 #****
 proc deleteConfig { wi node_id } {
+    global selected_hook
+
     set cfg_id [$wi.nb tab current -text]
     set answer [tk_messageBox -message \
 	"Are you sure you want to delete custom config '$cfg_id'?" \
@@ -3065,19 +3125,17 @@ proc deleteConfig { wi node_id } {
     switch -- $answer {
 	yes {
 	    destroy $wi.nb.$cfg_id
-	    removeCustomConfig $node_id $cfg_id
-	    if { $cfg_id == [getCustomConfigSelected $node_id] } {
-		setCustomConfigSelected $node_id ""
-		$wi.options.cb set ""
-		.popup.nbook.nfConfiguration.custcfg.dcomboDefault set ""
-	    }
-	    $wi.options.cb configure -values [getCustomConfigIDs $node_id]
 
-	    .popup.nbook.nfConfiguration.custcfg.dcomboDefault \
-		configure -values [getCustomConfigIDs $node_id]
-	    if { [getCustomConfigSelected $node_id] ni [getCustomConfigIDs $node_id] } {
-		setCustomConfigSelected $node_id [lindex [getCustomConfigIDs $node_id] 0]
+	    removeCustomConfig $node_id $selected_hook $cfg_id
+	    if { $cfg_id == [getCustomConfigSelected $node_id $selected_hook] || $cfg_id == [$wi.options.cb get] } {
+		$wi.options.cb set "DISABLED"
 	    }
+
+	    if { [getCustomConfigSelected $node_id $selected_hook] ni [getCustomConfigIDs $node_id $selected_hook] } {
+		setCustomConfigSelected $node_id $selected_hook [lindex [getCustomConfigIDs $node_id $selected_hook] 0]
+	    }
+
+	    $wi.options.cb configure -values "DISABLED [getCustomConfigIDs $node_id $selected_hook]"
 	}
 
 	no {}
@@ -3097,23 +3155,57 @@ proc deleteConfig { wi node_id } {
 #   * cfgName -- configuration id
 #****
 proc createNewConfiguration { wi node_id } {
+    global previous_hook selected_hook
+
     set cfgName [string trim [$wi.options.e get]]
     if { $cfgName == "" } {
 	set cfgName "default"
+    } else {
+	set cfgName [string tolower $cfgName 0 0]
     }
 
     if { "$wi.nb.$cfgName" in [$wi.nb tabs] }  {
+	tk_messageBox -message "Configuration '$cfgName' already exits, use another name!"\
+	    -icon warning
+	focus $wi.options.e
+
 	return
     }
 
-    set cfgName [string tolower $cfgName 0 0]
-    if { $cfgName in [getCustomConfigIDs $node_id] } {
+    if { $cfgName in [getCustomConfigIDs $node_id $selected_hook] } {
 	tk_messageBox -message "Configuration already exits, use another name!"\
 	    -icon warning
 	focus $wi.options.e
     } else {
-	createTab $node_id $cfgName
+	if { [$wi.nb tabs] != "" } {
+	    set cfg_id [$wi.nb tab current -text]
+	    set w $wi.nb.$cfg_id
+	    if { [$w.editor get 1.0 {end -1c}] != [getCustomConfig $node_id $previous_hook $cfg_id] || \
+		[$w.bootcmd_e get] != [getCustomConfigCommand $node_id $previous_hook $cfg_id] } {
+
+		set answer [tk_messageBox -message \
+		    "Custom config $cfg_id not saved. Apply changes?" \
+		    -icon warning -type yesno ]
+
+		switch -- $answer {
+		    yes {
+			customConfigGUI_Apply $wi $node_id $previous_hook
+		    }
+
+		    no {
+			set o $wi.options
+			$o.cb configure -values "DISABLED [getCustomConfigIDs $node_id $selected_hook]"
+		    }
+		}
+	    } else {
+		customConfigGUI_Apply $wi $node_id $previous_hook
+	    }
+	}
+
+	createTab $node_id $selected_hook $cfgName
 	$wi.options.e delete 0 end
+	set o $wi.options
+	$o.cb set $cfgName
     }
 }
 
