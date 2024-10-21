@@ -859,11 +859,42 @@ proc button3node { c x y } {
 	    -menu .button3menu.node_config
 
 	.button3menu.node_config add command -label "Configure" \
-	    -command "trigger_nodeFullConfig $node_id ; undeployCfg ; deployCfg ; redrawAll"
+	    -command "trigger_nodeConfig $node_id ; undeployCfg ; deployCfg ; redrawAll"
 	.button3menu.node_config add command -label "Unconfigure" \
-	    -command "trigger_nodeFullUnconfig $node_id ; undeployCfg ; deployCfg ; redrawAll"
+	    -command "trigger_nodeUnconfig $node_id ; undeployCfg ; deployCfg ; redrawAll"
 	.button3menu.node_config add command -label "Reconfigure" \
-	    -command "trigger_nodeFullReconfig $node_id ; undeployCfg ; deployCfg ; redrawAll"
+	    -command "trigger_nodeReconfig $node_id ; undeployCfg ; deployCfg ; redrawAll"
+    }
+
+    #
+    # Ifaces config menu
+    #
+    .button3menu.ifaces_config delete 0 end
+    if { $oper_mode == "exec" && [[getNodeType $node_id].virtlayer] == "VIRTUALIZED" } {
+	.button3menu add cascade -label "Ifaces configuration" \
+	    -menu .button3menu.ifaces_config
+
+	.button3menu.ifaces_config add command -label "Configure" \
+	    -command "
+		foreach iface_id \[allIfcList $node_id\] {
+		    trigger_ifaceConfig $node_id \$iface_id
+		}
+		undeployCfg ; deployCfg ; redrawAll
+	    "
+	.button3menu.ifaces_config add command -label "Unconfigure" \
+	    -command "
+		foreach iface_id \[allIfcList $node_id\] {
+		    trigger_ifaceUnconfig $node_id \$iface_id
+		}
+		undeployCfg ; deployCfg ; redrawAll
+	    "
+	.button3menu.ifaces_config add command -label "Reconfigure" \
+	    -command "
+		foreach iface_id \[allIfcList $node_id\] {
+		    trigger_ifaceReconfig $node_id \$iface_id
+		}
+		undeployCfg ; deployCfg ; redrawAll
+	    "
     }
 
     #
