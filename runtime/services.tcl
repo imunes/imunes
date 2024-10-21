@@ -91,7 +91,7 @@ proc services { action hook args } {
 
     set iterlist [getFromRunning "node_list"]
     if { $args != "" && $args != "*" } {
-	set iterlist $args
+	set iterlist {*}$args
     }
 
     set servlist [set services$hook]
