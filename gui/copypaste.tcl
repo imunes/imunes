@@ -117,6 +117,7 @@ proc paste {} {
 	return
     }
 
+    set new_annotations {}
     set curcanvas [getFromRunning "curcanvas"]
     # Paste annotations from the clipboard and rename them on the fly
     foreach {annotation_orig annotation_orig_cfg} [clipboardGet "annotations"] {
@@ -124,6 +125,7 @@ proc paste {} {
 
 	cfgSet "annotations" $new_annotation_id $annotation_orig_cfg
 	lappendToRunning "annotation_list" $new_annotation_id
+	lappend new_annotations $new_annotation_id
 
 	setAnnotationCanvas $new_annotation_id $curcanvas
 	drawAnnotation $new_annotation_id
@@ -224,5 +226,5 @@ proc paste {} {
 
     redrawAll
     setActiveTool select
-    selectNodes $copypaste_list
+    selectNodes [concat $copypaste_list $new_annotations]
 }

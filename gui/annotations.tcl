@@ -286,7 +286,7 @@ proc drawOval { oval } {
 
     set newoval [.panwin.f1.c create oval $x1 $y1 $x2 $y2 \
 	-fill $color -width $width -outline $bordercolor -tags "oval $oval"]
-    .panwin.f1.c raise $newoval background
+    .panwin.f1.c raise $newoval
 }
 
 #****f* annotations.tcl/popupRectangleDialog
@@ -1021,6 +1021,16 @@ proc button3annotation { type c x y } {
     if { $item == "" } {
 	return
     }
+
+    set wasselected [expr {$item in [selectedNodes]}]
+    if { ! $wasselected } {
+	foreach node_type "node text oval rectangle freeform" {
+	    $c dtag $node_type selected
+	}
+	$c delete -withtags selectmark
+    }
+
+    selectNode $c [$c find withtag "current"]
     set menutext "$type $item"
 
     .button3menu delete 0 end
@@ -1029,6 +1039,25 @@ proc button3annotation { type c x y } {
 	-command "annotationConfig $c $item"
     .button3menu add command -label "Delete $menutext" \
 	-command "deleteAnnotation $item $type"
+
+    #
+    # Move to another canvas
+    #
+    .button3menu.moveto delete 0 end
+    .button3menu add cascade -label "Move to" \
+	-menu .button3menu.moveto
+    .button3menu.moveto add command -label "Canvas:" -state disabled
+
+    foreach canvas_id [getFromRunning "canvas_list"] {
+	if { $canvas_id != [getFromRunning "curcanvas"] } {
+	    .button3menu.moveto add command \
+		-label [getCanvasName $canvas_id] \
+		-command "moveToCanvas $canvas_id"
+	} else {
+	    .button3menu.moveto add command \
+		-label [getCanvasName $canvas_id] -state disabled
+	}
+    }
 
     set x [winfo pointerx .]
     set y [winfo pointery .]

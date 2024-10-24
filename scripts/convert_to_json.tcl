@@ -168,7 +168,6 @@ foreach file $l3nodes {
 
 # additional nodes
 safeSourceFile "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
-safeSourceFile "$ROOTDIR/$LIBDIR/nodes/annotations.tcl"
 
 #
 # Global variables are initialized here

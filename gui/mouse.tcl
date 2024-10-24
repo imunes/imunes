@@ -476,7 +476,12 @@ proc moveToCanvas { canvas_id } {
 
     set selected_nodes [selectedNodes]
     foreach node_id $selected_nodes {
-	setNodeCanvas $node_id $canvas_id
+	# XXX temp hack, we should separate selected nodes and annotations somehow
+	if { $node_id in [getFromRunning "node_list"] } {
+	    setNodeCanvas $node_id $canvas_id
+	} else {
+	    setAnnotationCanvas $node_id $canvas_id
+	}
 	set changed 1
     }
 
@@ -1100,9 +1105,7 @@ proc button1 { c x y button } {
 	 [getNodeType [lindex [$c gettags $curobj] 1]] == "pseudo") } {
 
 	set node_id [lindex [$c gettags current] 1]
-	set wasselected \
-	    [expr {[lsearch [$c find withtag "selected"] \
-	    [$c find withtag "(node || text || freeform || rectangle || oval) && $node_id"]] > -1}]
+	set wasselected [expr {$node_id in [selectedNodes]}]
 
 	if { $button == "ctrl" } {
 	    if { $wasselected } {

@@ -237,7 +237,6 @@ foreach file $l3nodes {
 
 # additional nodes
 safeSourceFile "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
-safeSourceFile "$ROOTDIR/$LIBDIR/nodes/annotations.tcl"
 
 #
 # Global variables are initialized here
@@ -303,7 +302,8 @@ if { $execMode == "interactive" } {
     safePackageRequire Tk "To run the IMUNES GUI, Tk must be installed."
 
     foreach file "canvas copypaste drawing editor help theme linkcfgGUI \
-	mouse nodecfgGUI ifacesGUI widgets" {
+	mouse nodecfgGUI ifacesGUI widgets annotations" {
+
 	safeSourceFile "$ROOTDIR/$LIBDIR/gui/$file.tcl"
     }
 
