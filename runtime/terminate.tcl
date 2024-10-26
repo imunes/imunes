@@ -230,7 +230,7 @@ proc finishTerminating { status msg w } {
 #
 #****
 proc undeployCfg { { eid "" } { terminate 0 } } {
-    global progressbarCount execMode
+    global progressbarCount execMode skip_nodes
 
     if { ! $terminate } {
 	if { ! [getFromRunning "cfg_deployed"] } {
@@ -270,6 +270,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 	set dict_cfg $terminate_cfg
     }
 
+    set skip_nodes {}
     set links_count [llength $terminate_links]
 
     set t_start [clock milliseconds]
