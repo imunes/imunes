@@ -1359,24 +1359,34 @@ proc routerRoutesCfggen { node_id } {
 	"quagga" -
 	"frr" {
 	    if { [getCustomEnabled $node_id] != true } {
+		set routes4 [nodeCfggenStaticRoutes4 $node_id 1]
+		set routes6 [nodeCfggenStaticRoutes6 $node_id 1]
+
+		if { $routes4 != "" || $routes6 != "" } {
+		    lappend cfg "vtysh << __EOF__"
+		    lappend cfg "conf term"
+
+		    set cfg [concat $cfg $routes4]
+		    set cfg [concat $cfg $routes6]
+
+		    lappend cfg "!"
+		    lappend cfg "__EOF__"
+		}
+	    }
+
+	    set routes4 [nodeCfggenAutoRoutes4 $node_id 1]
+	    set routes6 [nodeCfggenAutoRoutes6 $node_id 1]
+
+	    if { $routes4 != "" || $routes6 != "" } {
 		lappend cfg "vtysh << __EOF__"
 		lappend cfg "conf term"
 
-		set cfg [concat $cfg [nodeCfggenStaticRoutes4 $node_id 1]]
-		set cfg [concat $cfg [nodeCfggenStaticRoutes6 $node_id 1]]
+		set cfg [concat $cfg $routes4]
+		set cfg [concat $cfg $routes6]
 
 		lappend cfg "!"
 		lappend cfg "__EOF__"
 	    }
-
-	    lappend cfg "vtysh << __EOF__"
-	    lappend cfg "conf term"
-
-	    set cfg [concat $cfg [nodeCfggenAutoRoutes4 $node_id 1]]
-	    set cfg [concat $cfg [nodeCfggenAutoRoutes6 $node_id 1]]
-
-	    lappend cfg "!"
-	    lappend cfg "__EOF__"
 	}
 	"static" {
 	    if { [getCustomEnabled $node_id] != true } {
