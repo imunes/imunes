@@ -309,19 +309,22 @@ proc focusAndFlash { W { count 9 } } {
 	set badentry 1
     }
 
-    focus -force $W
-    if { $count < 1 } {
-	$W configure -foreground $fg -background $bg
-	set badentry 0
-    } else {
-	if { $count % 2 } {
-	    $W configure -foreground $bg -background $fg
-	} else {
+    try {
+	focus -force $W
+    } on ok {} {
+	if { $count < 1 } {
 	    $W configure -foreground $fg -background $bg
-	}
+	    set badentry 0
+	} else {
+	    if { $count % 2 } {
+		$W configure -foreground $bg -background $fg
+	    } else {
+		$W configure -foreground $fg -background $bg
+	    }
 
-	after 200 [list focusAndFlash $W [expr {$count - 1}]]
-    }
+	    after 200 [list focusAndFlash $W [expr {$count - 1}]]
+	}
+    } on error {} {}
 }
 
 #****f* editor.tcl/setZoom
