@@ -90,6 +90,21 @@ proc execCmdNode { node cmd } {
     return $output
 }
 
+#****f* linux.tcl/execCmdNodeBkg
+# NAME
+#   execCmdNodeBkg -- execute command on virtual node
+# SYNOPSIS
+#   execCmdNodeBkg $node $cmd
+# FUNCTION
+#   Executes a command on a virtual node (in the background).
+# INPUTS
+#   * node -- virtual node id
+#   * cmd -- command to execute
+#****
+proc execCmdNodeBkg { node cmd } {
+    pipesExec "docker exec -d [getFromRunning "eid"].$node sh -c '$cmd'" "hold"
+}
+
 #****f* linux.tcl/checkForExternalApps
 # NAME
 #   checkForExternalApps -- check whether external applications exist

@@ -149,6 +149,30 @@ proc execCmdsNode { node cmds } {
     return $output
 }
 
+#****f* exec.tcl/execCmdsNodeBkg
+# NAME
+#   execCmdsNodeBkg -- execute a set of commands on virtual node
+# SYNOPSIS
+#   execCmdsNodeBkg $node $cmds
+# FUNCTION
+#   Executes commands on a virtual node (in the background).
+# INPUTS
+#   * node -- virtual node id
+#   * cmds -- list of commands to execute
+#****
+proc execCmdsNodeBkg { node cmds { output "" } } {
+    set cmds_str ""
+    foreach cmd $cmds {
+	if { $output != "" } {
+	    set cmd "$cmd >> $output"
+	}
+
+	set cmds_str "$cmds_str $cmd ;"
+    }
+
+    execCmdNodeBkg $node $cmds_str
+}
+
 #****f* exec.tcl/createExperimentFiles
 # NAME
 #   createExperimentFiles -- create experiment files
@@ -563,7 +587,7 @@ proc deployCfg { { execute 0 } } {
 	#execute_nodesCopyFiles $virtualized_nodes $virtualized_nodes_count $w
 
 	statline "Starting services for NODEINST hook..."
-	services start "NODEINST" $configure_nodes
+	services start "NODEINST" "bkg" $configure_nodes
 
 	statline "Creating physical interfaces on nodes..."
 	pipesCreate
@@ -590,7 +614,7 @@ proc deployCfg { { execute 0 } } {
 	pipesClose
 
 	statline "Starting services for LINKINST hook..."
-	services start "LINKINST" $configure_nodes
+	services start "LINKINST" "bkg" $configure_nodes
 
 	pipesCreate
 	statline "Configuring interfaces on node(s)..."
@@ -607,7 +631,7 @@ proc deployCfg { { execute 0 } } {
 	pipesClose
 
 	statline "Starting services for NODECONF hook..."
-	services start "NODECONF" $configure_nodes
+	services start "NODECONF" "bkg" $configure_nodes
     } on error err {
 	finishExecuting 0 "$err" $w
 
