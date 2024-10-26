@@ -1865,6 +1865,14 @@ proc transformNodes { nodes to_type } {
     }
 }
 
+proc getNodeDockerOptions { node_id type } {
+    return [cfgGet "nodes" $node_id "docker_options" $type]
+}
+
+proc setNodeDockerOptions { node_id type new_value } {
+    cfgSet "nodes" $node_id "docker_options" $type $new_value
+}
+
 proc getNodeFromHostname { hostname } {
     foreach node [getFromRunning "node_list"] {
 	if { $hostname == [getNodeName $node] } {
@@ -2139,6 +2147,34 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 
 	    "services" {
 		setNodeServices $node_id $new_value
+	    }
+
+	    "docker_options" {
+		set docker_options_diff [dictDiff $old_value $new_value]
+		dict for {docker_options_key docker_options_change} $docker_options_diff {
+		    if { $docker_options_change == "copy" } {
+			continue
+		    }
+
+		    puts "======== $docker_options_change: '$docker_options_key'"
+
+		    set docker_options_old_value [_cfgGet $old_value $docker_options_key]
+		    set docker_options_new_value [_cfgGet $new_value $docker_options_key]
+		    if { $docker_options_change in "changed" } {
+			puts "======== OLD: '$docker_options_old_value'"
+		    }
+		    if { $docker_options_change in "new changed" } {
+			puts "======== NEW: '$docker_options_new_value'"
+		    }
+
+		    if { $docker_options_change == "removed" } {
+			puts "setNodeDockerOptions $node_id $docker_options_key \"\""
+			setNodeDockerOptions $node_id $docker_options_key ""
+		    } else {
+			puts "setNodeDockerOptions $node_id $docker_options_key $docker_options_new_value"
+			setNodeDockerOptions $node_id $docker_options_key $docker_options_new_value
+		    }
+		}
 	    }
 
 	    "custom_configs" {
