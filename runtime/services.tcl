@@ -88,7 +88,7 @@ proc regHooks { service hooks } {
 #****
 proc services { action hook bkg args } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    global services$hook
+    global services$hook skip_nodes
 
     set iterlist $node_list
     if { $args != "" && $args != "*" } {
@@ -98,6 +98,10 @@ proc services { action hook bkg args } {
     set servlist [set services$hook]
     pipesCreate
     foreach node_id $iterlist {
+	if { $node_id in $skip_nodes } {
+	    continue
+	}
+
 	set nodeserv [getNodeServices $node_id]
 	foreach nserv $nodeserv {
 	    if { $nserv in $servlist } {

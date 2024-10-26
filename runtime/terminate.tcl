@@ -43,7 +43,21 @@ proc terminate_deleteExperimentFiles { eid } {
     file delete -force $folderName
 }
 
-proc checkTerminate {} {}
+proc checkTerminate {} {
+    upvar 0 ::cf::[set ::curcfg]::node_list node_list
+    global skip_nodes
+
+    if { [info exists skip_nodes] } {
+	return
+    }
+
+    set skip_nodes {}
+    foreach node_id $node_list {
+	if { ! [isNodeStarted $node_id] } {
+	    lappend skip_nodes $node_id
+	}
+    }
+}
 
 proc terminate_nodesShutdown { eid nodes nodes_count w } {
     global progressbarCount execMode
@@ -224,7 +238,7 @@ proc finishTerminating { status msg w } {
 #   given as procedure arguments.
 #****
 proc undeployCfg { eid terminate terminate_nodes destroy_nodes_ifaces terminate_links unconfigure_links unconfigure_nodes_ifaces unconfigure_nodes } {
-    global progressbarCount execMode
+    global progressbarCount execMode skip_nodes
 
     set nodes_count [llength $terminate_nodes]
     set links_count [llength $terminate_links]
@@ -251,6 +265,10 @@ proc undeployCfg { eid terminate terminate_nodes destroy_nodes_ifaces terminate_
     set all_nodes {}
     set pseudoNodesCount 0
     foreach node_id $terminate_nodes {
+	if { $node_id in $skip_nodes } {
+	    continue
+	}
+
 	set node_type [getNodeType $node_id]
 	if { $node_type != "pseudo" } {
 	    if { [$node_type.virtlayer] == "NATIVE" } {
@@ -315,6 +333,7 @@ proc undeployCfg { eid terminate terminate_nodes destroy_nodes_ifaces terminate_
 	set unconfigure_nodes $all_nodes
     }
     set unconfigure_nodes_count [llength $unconfigure_nodes]
+    set skip_nodes {}
 
     set maxProgressbasCount [expr {1 + 1*$all_nodes_count + 1*$links_count + 1*$native_nodes_count + 2*$virtualized_nodes_count + 1*$unconfigure_nodes_ifaces_count + 1*$destroy_nodes_ifaces_count + 1*$destroy_nodes_extifaces_count + 1*$unconfigure_nodes_count}]
     set progressbarCount $maxProgressbasCount
