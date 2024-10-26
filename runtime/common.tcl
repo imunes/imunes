@@ -433,6 +433,7 @@ proc resumeSelectedExperiment { exp } {
     setToRunning "current_file" [getExperimentConfigurationFromFile $exp]
     openFile
     readRunningVarsFile $exp
+    catch { cd [getFromRunning "cwd"] }
 
     setToRunning "eid" $exp
     setToRunning "cfg_deployed" true

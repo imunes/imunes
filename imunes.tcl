@@ -315,6 +315,7 @@ if { $execMode == "interactive" } {
 
     newProject
     if { $argv != "" && [file exists $argv] } {
+	setToRunning "cwd" [pwd]
 	setToRunning "current_file" $argv
 	openFile
     }
@@ -360,6 +361,7 @@ if { $execMode == "interactive" } {
 	readCfgJson $currentFileBatch
 
 	setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
+	setToRunning "cwd" [pwd]
 	setToRunning "current_file" $argv
 
 	if { [checkExternalInterfaces] } {
