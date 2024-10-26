@@ -87,7 +87,7 @@ proc regHooks { service hooks } {
 #   * hooks -- hooks for which the service is executed
 #****
 proc services { action hook args } {
-    global services$hook
+    global services$hook skip_nodes
 
     set iterlist [getFromRunning "node_list"]
     if { $args != "" && $args != "*" } {
@@ -96,6 +96,10 @@ proc services { action hook args } {
 
     set servlist [set services$hook]
     foreach node $iterlist {
+	if { $node in $skip_nodes } {
+	    continue
+	}
+
         set nodeserv [getNodeServices $node]
         foreach nserv $nodeserv {
             if { $nserv in $servlist } {

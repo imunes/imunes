@@ -1257,10 +1257,18 @@ proc prepareFilesystemForNode { node } {
 #   * node -- node id
 #****
 proc createNodeContainer { node } {
+    global debug
+
     set node_dir [getNodeDir $node]
 
-    pipesExec "jail -c name=[getFromRunning "eid"].$node path=$node_dir securelevel=1 \
-	host.hostname=\"[getNodeName $node]\" vnet persist" "hold"
+    set jail_cmd "jail -c name=[getFromRunning "eid"].$node path=$node_dir securelevel=1 \
+	host.hostname=\"[getNodeName $node]\" vnet persist"
+
+    if { $debug } {
+	puts "Node $node -> '$jail_cmd'"
+    }
+
+    pipesExec "$jail_cmd" "hold"
 }
 
 proc isNodeStarted { node } {
@@ -1444,6 +1452,12 @@ proc configureICMPoptions { node } {
 }
 
 proc isNodeInitNet { node } {
+    global skip_nodes
+
+    if { $node in $skip_nodes } {
+	return true
+    }
+
     set node_id "[getFromRunning "eid"].$node"
 
     try {
@@ -1510,6 +1524,8 @@ proc startIfcsNode { node ifaces } {
 #   * node -- node id
 #****
 proc runConfOnNode { node } {
+    global nodeconf_timeout
+
     set jail_id "[getFromRunning "eid"].$node"
 
     if { [getCustomEnabled $node] == true } {
@@ -1539,10 +1555,12 @@ proc runConfOnNode { node } {
     # renaming the file signals that we're done
     set cmds "$cmds mv /tout.log /out.log ;"
     set cmds "$cmds mv /terr.log /err.log"
-    pipesExec "jexec $jail_id sh -c '$cmds'" "hold"
+    pipesExec "timeout --foreground $nodeconf_timeout jexec $jail_id sh -c '$cmds'" "hold"
 }
 
 proc startNodeIfaces { node_id ifaces } {
+    global ifacesconf_timeout
+
     set eid [getFromRunning "eid"]
 
     set jail_id "$eid.$node_id"
@@ -1562,7 +1580,7 @@ proc startNodeIfaces { node_id ifaces } {
     # renaming the file signals that we're done
     set cmds "$cmds mv /tout_ifaces.log /out_ifaces.log ;"
     set cmds "$cmds mv /terr_ifaces.log /err_ifaces.log"
-    pipesExec "jexec $jail_id sh -c '$cmds'" "hold"
+    pipesExec "timeout --foreground $ifacesconf_timeout jexec $jail_id sh -c '$cmds'" "hold"
 }
 
 proc unconfigNode { eid node_id } {
@@ -1603,7 +1621,35 @@ proc unconfigNodeIfaces { eid node_id ifaces } {
     pipesExec "jexec $jail_id sh -c '$cmds'" "hold"
 }
 
+proc isNodeIfacesConfigured { node } {
+    global skip_nodes
+
+    if { $node in $skip_nodes } {
+	return true
+    }
+
+    set node_id "[getFromRunning "eid"].$node"
+
+    if { [[getNodeType $node].virtlayer] == "NATIVE" } {
+	return true
+    }
+
+    try {
+	exec jexec $node_id test -f /out_ifaces.log > /dev/null
+    } on error {} {
+	return false
+    }
+
+    return true
+}
+
 proc isNodeConfigured { node } {
+    global skip_nodes
+
+    if { $node in $skip_nodes } {
+	return true
+    }
+
     set node_id "[getFromRunning "eid"].$node"
 
     if { [[getNodeType $node].virtlayer] == "NATIVE" } {
@@ -1620,6 +1666,12 @@ proc isNodeConfigured { node } {
 }
 
 proc isNodeError { node } {
+    global skip_nodes
+
+    if { $node in $skip_nodes } {
+	return false
+    }
+
     set jail_id "[getFromRunning "eid"].$node"
 
     if { [[getNodeType $node].virtlayer] == "NATIVE" } {
@@ -1635,6 +1687,12 @@ proc isNodeError { node } {
 }
 
 proc isNodeErrorIfaces { node } {
+    global skip_nodes
+
+    if { $node in $skip_nodes } {
+	return false
+    }
+
     set jail_id "[getFromRunning "eid"].$node"
 
     if { [getCustomEnabled $node] || [[getNodeType $node].virtlayer] == "NATIVE" } {
