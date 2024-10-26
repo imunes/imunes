@@ -598,6 +598,12 @@ proc isNodeStarted { node_id } {
 }
 
 proc isNodeNamespaceCreated { node_id } {
+    global skip_nodes
+
+    if { $node_id in $skip_nodes } {
+	return true
+    }
+
     set nodeNs [getNodeNetns [getFromRunning "eid"] $node_id]
 
     if { $nodeNs == "" } {
@@ -781,6 +787,12 @@ proc configureICMPoptions { node_id } {
 }
 
 proc isNodeInitNet { node_id } {
+    global skip_nodes
+
+    if { $node_id in $skip_nodes } {
+	return true
+    }
+
     set docker_id "[getFromRunning "eid"].$node_id"
 
     try {
@@ -1019,6 +1031,7 @@ proc startNodeIfaces { node_id ifaces } {
 
     #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
     set cfg [join "{set -x} $bootcfg" "\n"]
+    writeDataToNodeFile $node_id /tout_ifaces.log ""
     writeDataToNodeFile $node_id /$confFile $cfg
     set cmds "$bootcmd /$confFile >> /tout_ifaces.log 2>> /terr_ifaces.log ;"
     # renaming the file signals that we're done
@@ -1040,6 +1053,7 @@ proc unconfigNode { eid node_id } {
 
     #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
     set cfg [join "{set -x} $bootcfg" "\n"]
+    writeDataToNodeFile $node_id /tout.log ""
     writeDataToNodeFile $node_id /$confFile $cfg
     set cmds "$bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
     # renaming the file signals that we're done
@@ -1061,6 +1075,7 @@ proc unconfigNodeIfaces { eid node_id ifaces } {
 
     #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
     set cfg [join "{set -x} $bootcfg" "\n"]
+    writeDataToNodeFile $node_id /tout_ifaces.log ""
     writeDataToNodeFile $node_id /$confFile $cfg
     set cmds "$bootcmd /$confFile >> /tout_ifaces.log 2>> /terr_ifaces.log ;"
     # renaming the file signals that we're done
@@ -1069,12 +1084,13 @@ proc unconfigNodeIfaces { eid node_id ifaces } {
     pipesExec "docker exec -d $docker_id sh -c '$cmds'" "hold"
 }
 
-#proc isNodeIfacesConfigured { node_id } {
-#    # TODO
-#    return true
-#}
+proc isNodeIfacesConfigured { node_id } {
+    global skip_nodes
 
-proc isNodeConfigured { node_id } {
+    if { $node_id in $skip_nodes } {
+	return true
+    }
+
     set docker_id "[getFromRunning "eid"].$node_id"
 
     if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
@@ -1085,13 +1101,44 @@ proc isNodeConfigured { node_id } {
 	# docker exec sometimes hangs, so don't use it while we have other pipes opened
 	exec docker inspect -f "{{.GraphDriver.Data.MergedDir}}" $docker_id
     } on ok mergedir {
-	try {
-	    exec test -f ${mergedir}/out.log
-	} on error {} {
-	    return false
-	} on ok {} {
+	catch { exec test ! -f ${mergedir}/tout_ifaces.log } err1
+	catch { exec test -f ${mergedir}/out_ifaces.log } err2
+	if { $err1 == "" && $err2 == "" } {
 	    return true
 	}
+
+	return false
+    } on error err {
+	puts "Error on docker inspect: '$err'"
+    }
+
+    return false
+}
+
+proc isNodeConfigured { node } {
+    global skip_nodes
+
+    if { $node in $skip_nodes } {
+	return true
+    }
+
+    set node_id "[getFromRunning "eid"].$node"
+
+    if { [[getNodeType $node].virtlayer] == "NATIVE" } {
+	return true
+    }
+
+    try {
+	# docker exec sometimes hangs, so don't use it while we have other pipes opened
+	exec docker inspect -f "{{.GraphDriver.Data.MergedDir}}" $node_id
+    } on ok mergedir {
+	catch { exec test ! -f ${mergedir}/tout.log } err1
+	catch { exec test -f ${mergedir}/out.log } err2
+	if { $err1 == "" && $err2 == "" } {
+	    return true
+	}
+
+	return false
     } on error err {
 	puts "Error on docker inspect: '$err'"
     }
@@ -1100,6 +1147,12 @@ proc isNodeConfigured { node_id } {
 }
 
 proc isNodeError { node_id } {
+    global skip_nodes
+
+    if { $node_id in $skip_nodes } {
+	return false
+    }
+
     set docker_id "[getFromRunning "eid"].$node_id"
 
     if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
@@ -1128,6 +1181,12 @@ proc isNodeError { node_id } {
 }
 
 proc isNodeErrorIfaces { node } {
+    global skip_nodes
+
+    if { $node in $skip_nodes } {
+	return false
+    }
+
     set node_id "[getFromRunning "eid"].$node"
 
     if { [getCustomEnabled $node] || [[getNodeType $node].virtlayer] == "NATIVE" } {
@@ -1228,6 +1287,7 @@ proc runConfOnNode { node_id } {
 
     #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
     set cfg [join "{set -x} $bootcfg" "\n"]
+    writeDataToNodeFile $node_id /tout.log ""
     writeDataToNodeFile $node_id /$confFile $cfg
     set cmds "$bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
     # renaming the file signals that we're done

@@ -1453,6 +1453,12 @@ proc configureICMPoptions { node_id } {
 }
 
 proc isNodeInitNet { node_id } {
+    global skip_nodes
+
+    if { $node_id in $skip_nodes } {
+	return true
+    }
+
     set jail_id "[getFromRunning "eid"].$node_id"
 
     try {
@@ -1519,6 +1525,8 @@ proc startIfcsNode { node_id ifaces } {
 #   * node_id -- node id
 #****
 proc runConfOnNode { node_id } {
+    global nodeconf_timeout
+
     set jail_id "[getFromRunning "eid"].$node_id"
 
     if { [getCustomEnabled $node_id] == true } {
@@ -1555,10 +1563,12 @@ proc runConfOnNode { node_id } {
     # renaming the file signals that we're done
     set cmds "$cmds mv /tout.log /out.log ;"
     set cmds "$cmds mv /terr.log /err.log"
-    pipesExec "jexec $jail_id sh -c '$cmds'" "hold"
+    pipesExec "timeout --foreground $nodeconf_timeout jexec $jail_id sh -c '$cmds'" "hold"
 }
 
 proc startNodeIfaces { node_id ifaces } {
+    global ifacesconf_timeout
+
     set eid [getFromRunning "eid"]
 
     set jail_id "$eid.$node_id"
@@ -1578,7 +1588,7 @@ proc startNodeIfaces { node_id ifaces } {
     # renaming the file signals that we're done
     set cmds "$cmds mv /tout_ifaces.log /out_ifaces.log ;"
     set cmds "$cmds mv /terr_ifaces.log /err_ifaces.log"
-    pipesExec "jexec $jail_id sh -c '$cmds'" "hold"
+    pipesExec "timeout --foreground $ifacesconf_timeout jexec $jail_id sh -c '$cmds'" "hold"
 }
 
 proc unconfigNode { eid node_id } {
@@ -1623,7 +1633,35 @@ proc unconfigNodeIfaces { eid node_id ifaces } {
     pipesExec "jexec $jail_id sh -c '$cmds'" "hold"
 }
 
+proc isNodeIfacesConfigured { node_id } {
+    global skip_nodes
+
+    if { $node_id in $skip_nodes } {
+	return true
+    }
+
+    set jail_id "[getFromRunning "eid"].$node_id"
+
+    if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
+	return true
+    }
+
+    try {
+	exec jexec $jail_id test -f /out_ifaces.log > /dev/null
+    } on error {} {
+	return false
+    }
+
+    return true
+}
+
 proc isNodeConfigured { node_id } {
+    global skip_nodes
+
+    if { $node_id in $skip_nodes } {
+	return true
+    }
+
     set jail_id "[getFromRunning "eid"].$node_id"
 
     if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
@@ -1640,6 +1678,12 @@ proc isNodeConfigured { node_id } {
 }
 
 proc isNodeError { node_id } {
+    global skip_nodes
+
+    if { $node_id in $skip_nodes } {
+	return false
+    }
+
     set jail_id "[getFromRunning "eid"].$node_id"
 
     if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
@@ -1655,6 +1699,12 @@ proc isNodeError { node_id } {
 }
 
 proc isNodeErrorIfaces { node_id } {
+    global skip_nodes
+
+    if { $node_id in $skip_nodes } {
+	return false
+    }
+
     set jail_id "[getFromRunning "eid"].$node_id"
 
     if { [getCustomEnabled $node_id] || [[getNodeType $node_id].virtlayer] == "NATIVE" } {
