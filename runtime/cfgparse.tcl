@@ -1705,12 +1705,14 @@ proc getImageProperty { image_id property } {
 # * array - JSON array
 # * inner_dictionary - dictionary inside of an object
 proc getJsonType { key_name } {
-    if { $key_name in "canvases nodes links annotations images custom_configs ipsec_configs ifaces IFACES_CONFIG NODE_CONFIG" } {
+    if { $key_name in "canvases nodes links annotations images custom_configs ipsec_configs ifaces IFACES_CONFIG NODE_CONFIG docker_options" } {
 	return "dictionary"
     } elseif { $key_name in "croutes4 croutes6 ipv4_addrs ipv6_addrs services events tayga_mappings" } {
 	return "array"
     } elseif { $key_name in "vlan ipsec nat64 packgen packets" } {
 	return "inner_dictionary"
+    } elseif { $key_name in "docker_volumes" } {
+	return "dictionary_array"
     }
 
     return "object"
@@ -1741,6 +1743,14 @@ proc createJson { value_type dictionary } {
 	    set json_list {}
 	    foreach line $dictionary {
 		lappend json_list [::json::write string $line]
+	    }
+
+	    set retv [::json::write array {*}$json_list]
+	}
+	"dictionary_array" {
+	    set json_list {}
+	    foreach line $dictionary {
+		lappend json_list [createJson "object" $line]
 	    }
 
 	    set retv [::json::write array {*}$json_list]

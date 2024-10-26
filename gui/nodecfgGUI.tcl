@@ -2162,7 +2162,279 @@ proc configGUI_attachDockerToExt { wi node_id } {
     ttk::checkbutton $w.chkbox -text "Enabled" -variable docker_enable
     pack $w.chkbox -side left -padx 7
 
+    ttk::button $w.docker_options -text "Docker options" \
+	-command "dockerOptionsGUI $node_id"
+    pack $w.docker_options -side left -padx 7
+
     pack $w -fill both
+}
+
+proc dockerOptionsGUI { node_id } {
+    set wi .docker_options
+
+    catch { destroy $wi }
+    tk::toplevel $wi
+
+    try {
+	grab $wi
+    } on error {} {
+	catch { destroy $wi }
+	return
+    }
+
+    global node_cfg dockeroptions_volumes
+
+    set dockeroptions_volumes {}
+    set cfg_volumes [_getNodeDockerOptions $node_cfg "docker_volumes"]
+
+    set index 0
+    foreach cfg_volume $cfg_volumes {
+	dict set dockeroptions_volumes $index $cfg_volume
+
+	incr index
+    }
+
+    wm title $wi "Docker options for node '[_getNodeName $node_cfg]' ($node_id)"
+    wm minsize $wi 584 445
+    wm resizable $wi 0 1
+
+    set notebook $wi.notebook
+    ttk::notebook $notebook
+
+    # Docker volumes tab
+    set volumes $notebook.volumes
+    ttk::frame $volumes
+    $notebook add $volumes -text "Docker volumes"
+
+    set volume_add_btn $volumes.add_button
+    ttk::button $volume_add_btn -text "Add" -width 120
+    grid $volume_add_btn -row 0 -column 0 -columnspan 6 -in $volumes -sticky "" -pady 4
+    $volume_add_btn configure -command \
+    "
+	dockerOptionVolumes_save $volumes ignore
+	dockerOptionVolumes_addElem
+	dockerOptionVolumesGUI_refresh $volumes
+    "
+
+    # redraw header and existing elements
+    dockerOptionVolumesGUI_refresh $volumes
+    # Buttons
+    set bottom $wi.bottom
+    ttk::frame $bottom
+    set buttons $wi.bottom.buttons
+    ttk::frame $buttons -borderwidth 2
+
+    ttk::button $buttons.apply -text "Apply" \
+	-command "saveDockerOptions $notebook"
+    ttk::button $buttons.applyClose -text "Apply and Close" \
+	-command "if { \[saveDockerOptions $notebook\] == \"\" } { destroy $wi }"
+    ttk::button $buttons.cancel -text "Cancel" -command "destroy $wi"
+
+    grid $buttons.apply -row 0 -column 1 -sticky swe -padx 2
+    grid $buttons.applyClose -row 0 -column 2 -sticky swe -padx 2
+    grid $buttons.cancel -row 0 -column 3 -sticky swe -padx 2
+
+    pack $notebook -fill both -expand 1
+    pack $bottom -fill both -side bottom
+    pack $buttons -pady 2
+}
+
+proc saveDockerOptions { notebook } {
+    global node_cfg dockeroptions_volumes
+
+    set volumes $notebook.volumes
+    set err [dockerOptionVolumes_save $volumes]
+    if { $err != "" } {
+	$notebook select $volumes
+	focus $volumes
+
+	after idle {.dialog1.msg configure -wraplength 4i}
+	tk_dialog .dialog1 "Error in volumes" $err info 0 Dismiss
+
+	return $err
+    }
+
+    set volumes [dict values $dockeroptions_volumes]
+    set node_cfg [_setNodeDockerOptions $node_cfg "docker_volumes" $volumes]
+
+    return
+}
+
+proc dockerOptionVolumes_addElem {} {
+    global dockeroptions_volumes
+
+    if { [dict size $dockeroptions_volumes] == 0 } {
+	set index 0
+    } else {
+	set index [expr [lindex [lsort -integer [dict keys $dockeroptions_volumes]] end] + 1]
+    }
+
+    set elem [dict create]
+    dict set elem "enabled" 1
+    dict set elem "type" "bind"
+    dict set elem "src" ""
+    dict set elem "dst" ""
+    dict set elem "readonly" 0
+    dict set dockeroptions_volumes $index $elem
+    puts "ADDED EMPTY TO $index: '$elem'"
+    puts "NEW [dict get $dockeroptions_volumes]"
+}
+
+proc dockerOptionVolumes_removeElem { index } {
+    global dockeroptions_volumes
+
+    dict unset dockeroptions_volumes $index
+
+    puts "REMOVED '$index'"
+    puts "NEW [dict get $dockeroptions_volumes]"
+}
+
+proc dockerOptionVolumes_save { volumes { ignore_errors "" } } {
+    global dockeroptions_volumes
+
+    set changed 0
+    set content $volumes.content
+    set checkbutton_dict "0 !selected 1 selected"
+
+    set error_state ""
+    foreach index [lsort -integer [dict keys $dockeroptions_volumes]] {
+	set err ""
+	set volume [dict get $dockeroptions_volumes $index]
+	foreach key "enabled type src dst readonly" {
+	    set $key [dict get $volume "$key"]
+	}
+
+	set elem $content.enabled$index
+	set new_enabled [expr {"selected" in [$elem state]}]
+
+	set elem $content.type$index
+	set new_type [$elem get]
+
+	set elem $content.src$index
+	set new_src [$elem get]
+	if { $new_src == "" } {
+	    set err "Source volume cannot be empty."
+	} elseif { $new_type == "bind" && [file pathtype $new_src] != "absolute" } {
+	    if { ! [string match "./*" $new_src] } {
+		set err "Source volume '$new_src' must be an absolute path - set it as './$new_src'."
+	    }
+	} elseif { $new_type == "volume" && [regexp {^[A-Za-z_0-9][A-Za-z0-9_.-]*$} $new_src] == 0 } {
+	    set err "Source volume '$new_src' includes invalid characters for a local volume name, only '\[a-zA-Z0-9\]\[a-zA-Z0-9_.-\]' are allowed."
+	}
+
+	set elem $content.dst$index
+	set new_dst [$elem get]
+	if { $new_dst == "" } {
+	    set err "Destination path cannot be empty."
+	} elseif { [file pathtype $new_dst] != "absolute" || $new_dst == "/" } {
+	    set err "Destination path '$new_dst' must be an absolute path and must not be /."
+	}
+
+	set elem $content.readonly$index
+	set new_readonly [expr {"selected" in [$elem state]}]
+
+	if { $err != "" && $ignore_errors != "ignore" } {
+	    set error_state "Option ($index): $err"
+	    break
+	}
+
+	foreach varname "enabled type src dst readonly" {
+	    if { [set new_$varname] != [set $varname] } {
+		set $varname [set new_$varname]
+		set changed 1
+	    }
+	}
+
+	if { $changed } {
+	    set new_volume [dict create]
+	    foreach key "enabled type src dst readonly" {
+		dict set new_volume "$key" [set $key]
+	    }
+
+	    dict set dockeroptions_volumes $index $new_volume
+	}
+    }
+
+    return $error_state
+}
+
+proc dockerOptionVolumesGUI_refresh { volumes } {
+    global dockeroptions_volumes
+
+    set content $volumes.content
+    catch { destroy $content }
+    ttk::frame $content -relief groove -borderwidth 2 -padding 2
+    grid $content -in $volumes -sticky nsew -pady 4 -columnspan 6
+
+    set padx 0
+
+    ttk::label $content.h_enabled -text "Enabled"
+    ttk::label $content.h_type -text "Type"
+    ttk::label $content.h_src -text "Source"
+    ttk::label $content.h_dst -text "Destination"
+    ttk::label $content.h_readonly -text "Readonly"
+    ttk::label $content.h_del -text ""
+
+    grid $content.h_enabled -row 0 -column 0 -in $content -sticky "" -padx $padx
+    grid columnconfigure $content $content.h_enabled -weight 1
+    grid $content.h_type -row 0 -column 1 -in $content -sticky "" -padx $padx
+    grid columnconfigure $content $content.h_type -weight 1
+    grid $content.h_src -row 0 -column 2 -in $content -sticky "" -padx $padx
+    grid columnconfigure $content $content.h_src -weight 3
+    grid $content.h_dst -row 0 -column 3 -in $content -sticky "" -padx $padx
+    grid columnconfigure $content $content.h_dst -weight 3
+    grid $content.h_readonly -row 0 -column 4 -in $content -sticky "" -padx $padx
+    grid columnconfigure $content $content.h_readonly -weight 1
+    grid $content.h_del -row 0 -column 5 -in $content -sticky "" -padx $padx
+    grid columnconfigure $content $content.h_del -weight 1
+
+    set type_values "bind volume"
+
+    # skip header row
+    set row 1
+    set checkbutton_dict "0 !selected 1 selected"
+    foreach index [lsort -integer [dict keys $dockeroptions_volumes]] {
+	set volume [dict get $dockeroptions_volumes $index]
+	set enabled [dict get $volume "enabled"]
+	set type [dict get $volume "type"]
+	set src [dict get $volume "src"]
+	set dst [dict get $volume "dst"]
+	set readonly [dict get $volume "readonly"]
+
+	ttk::checkbutton $content.enabled$index -text "($index)"
+	$content.enabled$index state [dict get $checkbutton_dict $enabled]
+
+	ttk::combobox $content.type$index -width 8 -state readonly
+	$content.type$index configure -values $type_values
+	$content.type$index set $type
+
+	ttk::entry $content.src$index -width 34
+	$content.src$index insert 0 $src
+
+	ttk::entry $content.dst$index -width 34
+	$content.dst$index insert 0 $dst
+
+	ttk::checkbutton $content.readonly$index
+	$content.readonly$index state [dict get $checkbutton_dict $readonly]
+
+	ttk::button $content.del$index -text "Delete ($index)" -command \
+	"
+	    dockerOptionVolumes_removeElem $index
+	    dockerOptionVolumes_save $volumes ignore
+	    dockerOptionVolumesGUI_refresh $volumes
+	"
+
+	grid $content.enabled$index -row $row -column 0 -in $content -sticky "" -padx $padx
+	grid $content.type$index -row $row -column 1 -in $content -sticky "" -padx $padx
+	grid $content.src$index -row $row -column 2 -in $content -sticky "" -padx $padx
+	grid $content.dst$index -row $row -column 3 -in $content -sticky "" -padx $padx
+	grid $content.readonly$index -row $row -column 4 -in $content -sticky "" -padx $padx
+	grid $content.del$index -row $row -column 5 -in $content -sticky "" -padx $padx
+
+	incr row
+    }
+
+    grid columnconfigure $content "all" -uniform allTheSame
 }
 
 #****f* nodecfgGUI.tcl/configGUI_customImage
@@ -7738,4 +8010,12 @@ proc _getAllIpAddresses { node_cfg } {
     }
 
     return "\"$ipv4_list\" \"$ipv6_list\""
+}
+
+proc _getNodeDockerOptions { node_cfg type } {
+    return [_cfgGet $node_cfg "docker_options" $type]
+}
+
+proc _setNodeDockerOptions { node_cfg type new_value } {
+    return [_cfgSet $node_cfg "docker_options" $type $new_value]
 }
