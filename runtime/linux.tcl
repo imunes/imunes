@@ -573,6 +573,23 @@ proc createNodeContainer { node_id } {
 }
 
 proc isNodeStarted { node_id } {
+    set node_type [getNodeType $node_id]
+    if { [$node_type.virtlayer] != "VIRTUALIZED" } {
+	if { $node_type in "rj45 extnat" } {
+	    return true
+	}
+
+	set nodeNs "[getFromRunning "eid"]-$node_id"
+
+	try {
+	    exec ip netns exec $nodeNs ip link show $node_id
+	} on error {} {
+	    return false
+	}
+
+	return true
+    }
+
     set docker_id "[getFromRunning "eid"].$node_id"
 
     catch { exec docker inspect --format '{{.State.Running}}' $docker_id } status

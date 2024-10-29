@@ -1286,6 +1286,21 @@ proc createNodeContainer { node_id } {
 }
 
 proc isNodeStarted { node_id } {
+    set node_type [getNodeType $node_id]
+    if { [$node_type.virtlayer] != "VIRTUALIZED" } {
+	if { $node_type in "rj45 extnat" } {
+	    return true
+	}
+
+	try {
+	    exec jexec [getFromRunning "eid"] ngctl show $node_id:
+	} on error {} {
+	    return false
+	}
+
+	return true
+    }
+
     set jail_id "[getFromRunning "eid"].$node_id"
 
     try {

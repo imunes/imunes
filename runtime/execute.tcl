@@ -580,6 +580,7 @@ proc deployCfg { { execute 0 } } {
 	pipesCreate
 	execute_nodesCreate $native_nodes $native_nodes_count $w
 	statline "Waiting for $native_nodes_count NATIVE node(s) to start..."
+	waitForInstantiateNodes $native_nodes $native_nodes_count $w
 	pipesClose
 
 	#statline "Copying host files to $virtualized_nodes_count VIRTUALIZED node(s)..."
