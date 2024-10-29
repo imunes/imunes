@@ -705,6 +705,9 @@ proc execute_nodesCreate { nodes nodes_count w } {
 	if { $node_id ni $skip_nodes && [info procs [getNodeType $node_id].nodeCreate] != "" } {
 	    try {
 		[getNodeType $node_id].nodeCreate $eid $node_id
+		if { [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" } {
+		    setToRunning "${node_id}_running" true
+		}
 	    } on error err {
 		return -code error "Error in '[getNodeType $node_id].nodeCreate $eid $node_id': $err"
 	    }
