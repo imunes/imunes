@@ -177,21 +177,6 @@ proc $MODULE.nghook { eid node_id ifc } {
     return [list $node_id link$ifunit]
 }
 
-#****f* hub.tcl/hub.maxLinks
-# NAME
-#   hub.maxLinks -- maximum number of links
-# SYNOPSIS
-#   hub.maxLinks
-# FUNCTION
-#   Returns hub maximum number of links.
-# RESULT
-#   * maximum number of links.
-#****
-proc $MODULE.maxLinks {} {
-	# TODO: check
-    return 32
-}
-
 ################################################################################
 ############################ INSTANTIATE PROCEDURES ############################
 ################################################################################
