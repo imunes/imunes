@@ -3120,7 +3120,7 @@ proc resetCustomConfigNotebook { node_id wi } {
     if { [$wi.nb tabs] != "" } {
 	set cfg_id [$wi.nb tab current -text]
 	set w $wi.nb.$cfg_id
-	if { [split [$w.editor get 1.0 {end -1c}] "\n"] != [_getCustomConfig $node_cfg $previous_hook $cfg_id] || \
+	if { [$w.editor get 1.0 {end -1c}] != [_getCustomConfig $node_cfg $previous_hook $cfg_id] || \
 	    [$w.bootcmd_e get] != [_getCustomConfigCommand $node_cfg $previous_hook $cfg_id] || \
 	    [llength [$wi.nb tabs]] != [llength [_getCustomConfigIDs $node_cfg $previous_hook]] } {
 
@@ -3199,7 +3199,7 @@ proc customConfigGUI_Apply { wi node_id hook } {
     set cfg_id [$wi.nb tab current -text]
     set t $wi.nb.$cfg_id
     set node_cfg [_setCustomConfig $node_cfg $hook $cfg_id \
-	[$t.bootcmd_e get] [split [$t.editor get 1.0 {end -1c}] "\n"]]
+	[$t.bootcmd_e get] [$t.editor get 1.0 {end -1c}]]
 
     set defaultConfig [$wi.options.cb get]
     if { $defaultConfig == "DISABLED" } {
@@ -3250,15 +3250,7 @@ proc createTab { node_id selected_hook cfg_id } {
     $w.bootcmd_e insert 0 [_getCustomConfigCommand $node_cfg $selected_hook $cfg_id]
 
     set config [_getCustomConfig $node_cfg $selected_hook $cfg_id]
-    set x 0
-    set numOfLines [llength $config]
-    foreach data $config {
-	incr x
-	$w.editor insert end "$data"
-	if { $x != $numOfLines } {
-	    $w.editor insert end "\n"
-	}
-    }
+    $w.editor insert end "$config"
 
     grid $w.generate -row 0 -column 2 -rowspan 2 -in $w
     grid $w.delete -row 0 -column 3 -rowspan 2 -in $w
@@ -3407,7 +3399,7 @@ proc createNewConfiguration { wi node_id } {
 	if { [$wi.nb tabs] != "" } {
 	    set cfg_id [$wi.nb tab current -text]
 	    set w $wi.nb.$cfg_id
-	    if { [split [$w.editor get 1.0 {end -1c}] "\n"] != [_getCustomConfig $node_cfg $previous_hook $cfg_id] || \
+	    if { [$w.editor get 1.0 {end -1c}] != [_getCustomConfig $node_cfg $previous_hook $cfg_id] || \
 	    	[$w.bootcmd_e get] != [_getCustomConfigCommand $node_cfg $previous_hook $cfg_id] } {
 
 		set answer [tk_messageBox -message \

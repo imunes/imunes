@@ -1006,6 +1006,54 @@ proc configureLinkBetween { lnode1 lnode2 iface1_id iface2_id link } {
     }
 }
 
+#****f* linux.tcl/runConfOnNode
+# NAME
+#   runConfOnNode -- run configuration script on node
+# SYNOPSIS
+#   runConfOnNode $node_id
+# FUNCTION
+#   Run startup configuration file on the given node.
+# INPUTS
+#   * node_id -- node id
+#****
+proc runConfOnNode { node_id } {
+    set eid [getFromRunning "eid"]
+
+    set docker_id "$eid.$node_id"
+
+    set custom_selected [getCustomConfigSelected $node_id "NODE_CONFIG"]
+    if { [getCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
+        set bootcmd [getCustomConfigCommand $node_id "NODE_CONFIG" $custom_selected]
+        set bootcfg [getCustomConfig $node_id "NODE_CONFIG" $custom_selected]
+	set bootcfg "$bootcfg\n[join [[getNodeType $node_id].generateConfig $node_id] "\n"]"
+        set confFile "custom.conf"
+    } else {
+        set bootcfg [join [[getNodeType $node_id].generateConfig $node_id] "\n"]
+        set bootcmd [[getNodeType $node_id].bootcmd $node_id]
+        set confFile "boot.conf"
+    }
+
+    generateHostsFile $node_id
+
+    # XXX don't do this here
+    set nodeNs [getNodeNetns $eid $node_id]
+    foreach ifc [allIfcList $node_id] {
+	if { [getIfcOperState $node_id $ifc] == "down" } {
+	    pipesExec "ip -n $nodeNs link set dev $ifc down"
+	}
+    }
+
+    set cfg "set -x\n$bootcfg"
+    writeDataToNodeFile $node_id /tout.log ""
+    writeDataToNodeFile $node_id /$confFile $cfg
+    set cmds "rm -f /out.log /err.log ;"
+    set cmds "$cmds $bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
+    # renaming the file signals that we're done
+    set cmds "$cmds mv /tout.log /out.log ;"
+    set cmds "$cmds mv /terr.log /err.log"
+    pipesExec "docker exec -d $docker_id sh -c '$cmds'" "hold"
+}
+
 proc startNodeIfaces { node_id ifaces } {
     set eid [getFromRunning "eid"]
 
@@ -1015,16 +1063,14 @@ proc startNodeIfaces { node_id ifaces } {
     if { [getCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
         set bootcmd [getCustomConfigCommand $node_id "IFACES_CONFIG" $custom_selected]
         set bootcfg [getCustomConfig $node_id "IFACES_CONFIG" $custom_selected]
-	set bootcfg [concat $bootcfg [[getNodeType $node_id].generateConfig $node_id]]
         set confFile "custom_ifaces.conf"
     } else {
-	set bootcfg [[getNodeType $node_id].generateConfigIfaces $node_id $ifaces]
+	set bootcfg [join [[getNodeType $node_id].generateConfigIfaces $node_id $ifaces] "\n"]
 	set bootcmd [[getNodeType $node_id].bootcmd $node_id]
 	set confFile "boot_ifaces.conf"
     }
 
-    #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
-    set cfg [join "{set -x} $bootcfg" "\n"]
+    set cfg "set -x\n$bootcfg"
     writeDataToNodeFile $node_id /tout_ifaces.log ""
     writeDataToNodeFile $node_id /$confFile $cfg
     set cmds "rm -f /out_ifaces.log /err_ifaces.log ;"
@@ -1043,12 +1089,11 @@ proc unconfigNode { eid node_id } {
 	return
     }
 
-    set bootcfg [[getNodeType $node_id].generateUnconfig $node_id]
+    set bootcfg [join [[getNodeType $node_id].generateUnconfig $node_id] "\n"]
     set bootcmd [[getNodeType $node_id].bootcmd $node_id]
     set confFile "boot.conf"
 
-    #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
-    set cfg [join "{set -x} $bootcfg" "\n"]
+    set cfg "set -x\n$bootcfg"
     writeDataToNodeFile $node_id /tout.log ""
     writeDataToNodeFile $node_id /$confFile $cfg
     set cmds "rm -f /out.log /err.log ;"
@@ -1067,12 +1112,11 @@ proc unconfigNodeIfaces { eid node_id ifaces } {
 	return
     }
 
-    set bootcfg [[getNodeType $node_id].generateUnconfigIfaces $node_id $ifaces]
+    set bootcfg [join [[getNodeType $node_id].generateUnconfigIfaces $node_id $ifaces] "\n"]
     set bootcmd [[getNodeType $node_id].bootcmd $node_id]
     set confFile "boot_ifaces.conf"
 
-    #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
-    set cfg [join "{set -x} $bootcfg" "\n"]
+    set cfg "set -x\n$bootcfg"
     writeDataToNodeFile $node_id /tout_ifaces.log ""
     writeDataToNodeFile $node_id /$confFile $cfg
     set cmds "rm -f /out_ifaces.log /err_ifaces.log ;"
@@ -1248,45 +1292,6 @@ proc killAllNodeProcesses { eid node } {
 
     # kill all processes except pid 1 and its child(ren)
     pipesExec "docker exec -d $node_id sh -c 'killall5 -9 -o 1 -o \$(pgrep -P 1)'" "hold"
-}
-
-proc runConfOnNode { node } {
-    set eid [getFromRunning "eid"]
-
-    set node_id "$eid.$node"
-
-    set custom_selected [getCustomConfigSelected $node "NODE_CONFIG"]
-    if { [getCustomEnabled $node] == true && $custom_selected ni "\"\" DISABLED" } {
-        set bootcmd [getCustomConfigCommand $node "NODE_CONFIG" $custom_selected]
-        set bootcfg [getCustomConfig $node "NODE_CONFIG" $custom_selected]
-	set bootcfg [concat $bootcfg [[getNodeType $node].generateConfig $node]]
-        set confFile "custom.conf"
-    } else {
-        set bootcfg [[getNodeType $node].generateConfig $node]
-        set bootcmd [[getNodeType $node].bootcmd $node]
-        set confFile "boot.conf"
-    }
-
-    generateHostsFile $node
-
-    # XXX don't do this here
-    set nodeNs [getNodeNetns $eid $node]
-    foreach ifc [allIfcList $node] {
-	if { [getIfcOperState $node $ifc] == "down" } {
-	    pipesExec "ip -n $nodeNs link set dev $ifc down"
-	}
-    }
-
-    #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
-    set cfg [join "{set -x} $bootcfg" "\n"]
-    writeDataToNodeFile $node /tout.log ""
-    writeDataToNodeFile $node /$confFile $cfg
-    set cmds "rm -f /out.log /err.log ;"
-    set cmds "$cmds $bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
-    # renaming the file signals that we're done
-    set cmds "$cmds mv /tout.log /out.log ;"
-    set cmds "$cmds mv /terr.log /err.log"
-    pipesExec "docker exec -d $node_id sh -c '$cmds'" "hold"
 }
 
 proc destroyDirectLinkBetween { eid lnode1 lnode2 } {

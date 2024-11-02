@@ -1357,7 +1357,6 @@ proc getRouterProtocolCfg { node_id protocol } {
 	}
     }
 
-
     return $cfg
 }
 
