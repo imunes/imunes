@@ -682,22 +682,55 @@ proc getDefaultRoutesConfig { node_id gws } {
     set all_routes6 {}
     foreach route $gws {
 	lassign [split $route "|"] route_type gateway4 gateway6
+
+	set match4 false
+	set match6 false
+	foreach iface [ifcList $node_id] {
+	    if { ! $match4 } {
+		foreach ipv4_addr [getIfcIPv4addrs $node_id $iface] {
+		    set mask [ip::mask $ipv4_addr]
+		    if { [ip::prefix $gateway4/$mask] == [ip::prefix $ipv4_addr] } {
+			set match4 true
+			break
+		    }
+		}
+	    }
+
+	    if { ! $match6 } {
+		foreach ipv6_addr [getIfcIPv6addrs $node_id $iface] {
+		    set mask [ip::mask $ipv6_addr]
+		    if { [ip::contract [ip::prefix $gateway6/$mask]] == [ip::contract [ip::prefix $ipv6_addr]] } {
+			set match6 true
+			break
+		    }
+		}
+	    }
+
+	    if { $match4 && $match6} {
+		break
+	    }
+	}
+
+	if { ! $match4 && ! $match6} {
+	    continue
+	}
+
 	if { [getNodeType $node_id] in "router nat64" } {
 	    if { $route_type == "extnat" } {
-		if { "0.0.0.0/0 $gateway4" ni [list "0.0.0.0/0 " $all_routes4] } {
+		if { $match4 && "0.0.0.0/0 $gateway4" ni [list "0.0.0.0/0 " $all_routes4] } {
 		    lappend all_routes4 "0.0.0.0/0 $gateway4"
 		}
 
-		if { "::/0 $gateway6" ni [list "::/0 " $all_routes6] } {
+		if { $match6 && "::/0 $gateway6" ni [list "::/0 " $all_routes6] } {
 		    lappend all_routes6 "::/0 $gateway6"
 		}
 	    }
 	} else {
-	    if { "0.0.0.0/0 $gateway4" ni [list "0.0.0.0/0 " $all_routes4] } {
+	    if { $match4 && "0.0.0.0/0 $gateway4" ni [list "0.0.0.0/0 " $all_routes4] } {
 		lappend all_routes4 "0.0.0.0/0 $gateway4"
 	    }
 
-	    if { "::/0 $gateway6" ni [list "::/0 " $all_routes6] } {
+	    if { $match6 && "::/0 $gateway6" ni [list "::/0 " $all_routes6] } {
 		lappend all_routes6 "::/0 $gateway6"
 	    }
 	}
