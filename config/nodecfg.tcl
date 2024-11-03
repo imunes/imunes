@@ -1563,21 +1563,11 @@ proc setNodeDockerAttach { node_id state } {
 }
 
 proc getNodeIface { node_id iface_id } {
-    set group "ifaces"
-    if { $iface_id in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
-	set group "logifaces"
-    }
-
-    return [cfgGet "nodes" $node_id $group $iface_id]
+    return [cfgGet "nodes" $node_id "ifaces" $iface_id]
 }
 
 proc setNodeIface { node_id iface_id new_iface } {
-    set group "ifaces"
-    if { $iface_id in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
-	set group "logifaces"
-    }
-
-    cfgSet "nodes" $node_id $group $iface_id $new_iface
+    cfgSetEmpty "nodes" $node_id "ifaces" $iface_id $new_iface
 }
 
 #****f* nodecfg.tcl/nodeCfggenRouteIPv4
