@@ -1353,7 +1353,7 @@ proc captureExtIfc { eid node_id } {
 	}
     }
 
-    if { [getLinkDirect [getIfcLink $node_id "0"]] } {
+    if { [getLinkDirect [getIfcLink $node_id "ifc0"]] } {
 	return
     }
 
@@ -1397,7 +1397,7 @@ proc releaseExtIfc { eid node_id } {
 	return
     }
 
-    if { [getLinkDirect [getIfcLink $node_id "0"]] } {
+    if { [getLinkDirect [getIfcLink $node_id "ifc0"]] } {
 	return
     }
 
