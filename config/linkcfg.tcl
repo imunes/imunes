@@ -124,21 +124,7 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 	    continue
 	}
 
-	setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] [getIfcIPv4addrs $node_id $iface] "keep_doubles"]
-	setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] [getIfcIPv6addrs $node_id $iface] "keep_doubles"]
-	setToRunning "mac_used_list" [removeFromList [getFromRunning "mac_used_list"] [getIfcMACaddr $node_id $iface] "keep_doubles"]
-
-	cfgUnset "nodes" $node_id "ifaces" $iface_id
-
-	foreach lifc [logIfcList $node_id] {
-	    switch -exact [getLogIfcType $node_id $lifc] {
-		vlan {
-		    if { [getIfcVlanDev $node_id $lifc] == $iface_id } {
-			cfgUnset "nodes" $node_id "logifaces" $lifc
-		    }
-		}
-	    }
-	}
+	removeIface $node_id $iface_id
     }
 
     set mirror_link_id [getLinkMirror $link_id]
@@ -854,11 +840,11 @@ proc splitLink { orig_link_id } {
 	setNodeCanvas $pseudo_node_id [getNodeCanvas $orig_node_id]
 	setNodeCoords $pseudo_node_id [getNodeCoords $other_orig_node_id]
 	setNodeLabelCoords $pseudo_node_id [getNodeCoords $other_orig_node_id]
-	setIfcLink $pseudo_node_id "0" $link_id
+	setIfcLink $pseudo_node_id "ifc0" $link_id
 
 	# setup both link properties
 	setLinkPeers $link_id "$pseudo_node_id $orig_node_id"
-	setLinkPeersIfaces $link_id "0 $orig_node_iface_id"
+	setLinkPeersIfaces $link_id "ifc0 $orig_node_iface_id"
 	setLinkMirror $link_id [removeFromList $links $link_id "keep_doubles"]
     }
 

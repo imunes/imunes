@@ -436,14 +436,9 @@ proc loadCfgLegacy { cfg } {
 			    lappend $object "network-config {$cfg}"
 
 			    foreach iface [dict keys $all_ifaces] {
-				set group "ifaces"
-
 				catch { dict get $all_ifaces $iface "type" } type
-				if { $type in "lo vlan tun" } {
-				    set group "logifaces"
-				}
 
-				cfgSet $dict_object $object $group "$iface" [dict get $all_ifaces $iface]
+				cfgSet $dict_object $object "ifaces" "$iface" [dict get $all_ifaces $iface]
 			    }
 
 			    cfgSet $dict_object $object "croutes4" $croutes4
@@ -944,9 +939,9 @@ proc loadCfgLegacy { cfg } {
 	if { "lo0" ni [logIfcList $node] && \
 	    [$node_type.netlayer] == "NETWORK"} {
 
-	    setLogIfcType $node lo0 lo
-	    setIfcIPv4addrs $node lo0 "127.0.0.1/8"
-	    setIfcIPv6addrs $node lo0 "::1/128"
+	    set logiface_id [newLogIface $node_id "lo"]
+	    setIfcIPv4addrs $node $logiface_id "127.0.0.1/8"
+	    setIfcIPv6addrs $node $logiface_id "::1/128"
 	}
 	# Speeding up auto renumbering of MAC, IPv4 and IPv6 addresses by remembering
 	# used addresses in lists.
@@ -1133,7 +1128,7 @@ proc saveCfgJson { fname } {
 
 #########################################################################
 
-proc getWithDefault { default_value dictionary args } {
+proc dictGetWithDefault { default_value dictionary args } {
     try {
 	return [dict get $dictionary {*}$args]
     } on error {} {
@@ -1190,7 +1185,7 @@ proc cfgGet { args } {
 proc cfgGetWithDefault { default_value args } {
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-    return [getWithDefault $default_value $dict_cfg {*}$args]
+    return [dictGetWithDefault $default_value $dict_cfg {*}$args]
 }
 
 proc cfgSet { args } {
@@ -1478,7 +1473,7 @@ proc getImageProperty { image_id property } {
 # * array - JSON array
 # * inner_dictionary - dictionary inside of an object
 proc getJsonType { key_name } {
-    if { $key_name in "canvases nodes links annotations images custom_configs ipsec_configs logifaces ifaces" } {
+    if { $key_name in "canvases nodes links annotations images custom_configs ipsec_configs ifaces ifaces" } {
 	return "dictionary"
     } elseif { $key_name in "custom_config croutes4 croutes6 ipv4_addrs ipv6_addrs services events tayga_mappings" } {
 	return "array"
