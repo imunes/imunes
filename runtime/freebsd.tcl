@@ -1269,24 +1269,27 @@ proc isNodeInitNet { node_id } {
 #****
 proc startIfcsNode { node_id } {
     set jail_id "[getFromRunning "eid"].$node_id"
-    foreach ifc [allIfcList $node_id] {
-	set mtu [getIfcMTU $node_id $ifc]
-	if { [getLogIfcType $node_id $ifc] == "vlan" } {
-	    set tag [getIfcVlanTag $node_id $ifc]
-	    set dev [getIfcVlanDev $node_id $ifc]
+
+    foreach {iface_id iface_cfg} [concat [cfgGet "nodes" $node_id "ifaces"] [cfgGet "nodes" $node_id "ifaces"]] {
+	set iface_name [dictGet $iface_cfg "name"]
+	set mtu [dictGet $iface_cfg "mtu"]
+
+	if { [dictGet $iface_cfg "type"] == "vlan" } {
+	    set tag [dictGet $iface_cfg "vlan_tag"]
+	    set dev [dictGet $iface_cfg "vlan_dev"]
 	    if { $tag != "" && $dev != "" } {
-		pipesExec "jexec $jail_id ifconfig $dev.$tag create name $ifc" "hold"
+		pipesExec "jexec $jail_id ifconfig $dev.$tag create name $iface_name" "hold"
 	    }
 	}
 
-	if { [getIfcOperState $node_id $ifc] == "up" } {
-	    pipesExec "jexec $jail_id ifconfig $ifc mtu $mtu up" "hold"
+	if { [dictGetWithDefault "up" $iface_cfg "oper_state"] == "up" } {
+	    pipesExec "jexec $jail_id ifconfig $iface_name mtu $mtu up" "hold"
 	} else {
-	    pipesExec "jexec $jail_id ifconfig $ifc mtu $mtu" "hold"
+	    pipesExec "jexec $jail_id ifconfig $iface_name mtu $mtu" "hold"
 	}
 
-	if { [getIfcNatState $node_id $ifc] == "on" } {
-	    pipesExec "jexec $jail_id sh -c 'echo \"map $ifc 0/0 -> 0/32\" | ipnat -f -'" "hold"
+	if { [dictGetWithDefault "on" $iface_cfg "nat_state"] == "on" } {
+	    pipesExec "jexec $jail_id sh -c 'echo \"map $iface_name 0/0 -> 0/32\" | ipnat -f -'" "hold"
 	}
     }
 }

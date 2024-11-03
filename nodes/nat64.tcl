@@ -49,9 +49,10 @@ proc $MODULE.confNewNode { node_id } {
     setNodeProtocol $node_id "ospf6" $ospf6Enable
 
     setAutoDefaultRoutesStatus $node_id "enabled"
-    setLogIfcType $node_id lo0 lo
-    setIfcIPv4addrs $node_id lo0 "127.0.0.1/8"
-    setIfcIPv6addrs $node_id lo0 "::1/128"
+
+    set logiface_id [newLogIface $node_id "lo"]
+    setIfcIPv4addrs $node_id $logiface_id "127.0.0.1/8"
+    setIfcIPv6addrs $node_id $logiface_id "::1/128"
 
     setTaygaIPv4DynPool $node_id "192.168.64.0/24"
     setTaygaIPv6Prefix $node_id "2001::/96"

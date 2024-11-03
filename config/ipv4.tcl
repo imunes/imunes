@@ -370,6 +370,7 @@ proc _getNextIPv4addr { node_type } {
 #****
 proc nextFreeIP4Addr { addr start peers } {
     global execMode
+
     set ipnums [ip::prefix $addr]
     set mask [lindex [split $addr /] 1]
 
