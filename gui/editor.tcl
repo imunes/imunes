@@ -233,21 +233,21 @@ proc checkIntRange { str low high } {
     return 1
 }
 
-#****f* editor.tcl/focusAndFlash 
+#****f* editor.tcl/focusAndFlash
 # NAME
 #   focusAndFlash -- focus and flash
 # SYNOPSIS
 #   focusAndFlash $W $count
 # FUNCTION
 #   This procedure sets the focus on the bad entry field
-#   and on this field it provides an effect of flashing 
+#   and on this field it provides an effect of flashing
 #   for approximately 1 second.
 # INPUTS
 #   * W -- textbox field that caused the bad entry
 #   * count -- the parameter that causes flashes.
 #   It can be left blank.
 #****
-proc focusAndFlash {W {count 9}} {
+proc focusAndFlash { W { count 9 } } {
     global badentry
 
     set fg black
@@ -258,18 +258,23 @@ proc focusAndFlash {W {count 9}} {
     } else {
 	set badentry 1
     }
-    focus -force $W
-    if {$count<1} {
-	$W configure -foreground $fg -background $bg
-	set badentry 0
-    } else {
-	if {$count%2} {
-	    $W configure -foreground $bg -background $fg
-	} else {
+
+    try {
+	focus -force $W
+    } on ok {} {
+	if { $count < 1 } {
 	    $W configure -foreground $fg -background $bg
+	    set badentry 0
+	} else {
+	    if { $count % 2 } {
+		$W configure -foreground $bg -background $fg
+	    } else {
+		$W configure -foreground $fg -background $bg
+	    }
+
+	    after 200 [list focusAndFlash $W [expr {$count - 1}]]
 	}
-	after 200 [list focusAndFlash $W [expr {$count - 1}]]
-    }
+    } on error {} {}
 }
 
 #****f* editor.tcl/setZoom
