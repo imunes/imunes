@@ -276,7 +276,7 @@ proc spawnShell { node cmd } {
     set node_id $eid\.$node
 
     # FIXME make this modular
-    exec xterm -sb -rightbar \
+    exec xterm -name imunes-terminal -sb -rightbar \
     -T "IMUNES: [getNodeName $node] (console) [string trim [lindex [split $cmd /] end] ']" \
     -e "docker exec -it $node_id $cmd" 2> /dev/null &
 }

@@ -147,7 +147,7 @@ proc captureOnExtIfc { node command } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     if { $command == "tcpdump" } {
-	exec xterm -T "Capturing $eid-$node" -e "tcpdump -ni $eid-$node" 2> /dev/null &
+	exec xterm -name imunes-terminal -T "Capturing $eid-$node" -e "tcpdump -ni $eid-$node" 2> /dev/null &
     } else {
 	exec $command -o "gui.window_title:[getNodeName $node] ($eid)" -k -i $eid-$node 2> /dev/null &
     }
@@ -238,7 +238,7 @@ proc spawnShell { node cmd } {
 
     set node_id $eid\.$node
 
-    exec xterm -sb -rightbar \
+    exec xterm -name imunes-terminal -sb -rightbar \
 	-T "IMUNES: [getNodeName $node] (console) [lindex [split $cmd /] end]" \
 	-e "jexec $node_id $cmd" &
 }

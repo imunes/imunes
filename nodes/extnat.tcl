@@ -260,7 +260,7 @@ proc $MODULE.shutdown { eid node } {
     set ifc [lindex [ifcList $node] 0]
     if { "$ifc" != "" } {
 	killExtProcess "wireshark.*[getNodeName $node].*\\($eid\\)"
-	killExtProcess "xterm -T Capturing $eid-$node -e tcpdump -ni $eid-$node"
+	killExtProcess "xterm -name imunes-terminal -T Capturing $eid-$node -e tcpdump -ni $eid-$node"
 	stopExternalConnection $eid $node
 	unsetupExtNat $eid $node $ifc
     }
