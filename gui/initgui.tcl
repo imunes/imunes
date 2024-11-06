@@ -319,12 +319,12 @@ set printFileType ps
 
     ttk::frame $w.printframe.path
 
-    if {$winOS} {
-	$w.printframe.pdf configure -state disabled
+    if { $winOS } {
+	$w.printframe.ftype.pdf configure -state disabled
     } else {
-      catch {exec ps2pdf} msg
+      catch { exec ps2pdf } msg
       if { [string match *ps2pdfwr* $msg] != 1 } {
-	  $w.printframe.pdf configure -state disabled
+	  $w.printframe.ftype.pdf configure -state disabled
       }
     }
 
