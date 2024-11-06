@@ -116,32 +116,52 @@ proc logCaller {} {
 
 bind . <F6> {
     global all_modules_list router_module_list
+    global isOSfreebsd
     set all_modules_list {}
     set router_modules_list {}
 
     source "$ROOTDIR/$LIBDIR/runtime/cfgparse.tcl"
+    source "$ROOTDIR/$LIBDIR/runtime/common.tcl"
     source "$ROOTDIR/$LIBDIR/runtime/eventsched.tcl"
-    source "$ROOTDIR/$LIBDIR/runtime/exec.tcl"
+    source "$ROOTDIR/$LIBDIR/runtime/execute.tcl"
     source "$ROOTDIR/$LIBDIR/runtime/filemgmt.tcl"
+    if { $isOSfreebsd } {
+	source "$ROOTDIR/$LIBDIR/runtime/freebsd.tcl"
+    } else {
+	source "$ROOTDIR/$LIBDIR/runtime/linux.tcl"
+    }
     source "$ROOTDIR/$LIBDIR/runtime/services.tcl"
+    source "$ROOTDIR/$LIBDIR/runtime/terminate.tcl"
 
     source "$ROOTDIR/$LIBDIR/config/annotationscfg.tcl"
+    source "$ROOTDIR/$LIBDIR/config/filtercfg.tcl"
     source "$ROOTDIR/$LIBDIR/config/ipsec.tcl"
     source "$ROOTDIR/$LIBDIR/config/ipv4.tcl"
     source "$ROOTDIR/$LIBDIR/config/ipv6.tcl"
     source "$ROOTDIR/$LIBDIR/config/linkcfg.tcl"
     source "$ROOTDIR/$LIBDIR/config/mac.tcl"
+    source "$ROOTDIR/$LIBDIR/config/nat64cfg.tcl"
     source "$ROOTDIR/$LIBDIR/config/nodecfg.tcl"
+    source "$ROOTDIR/$LIBDIR/config/packgencfg.tcl"
+    source "$ROOTDIR/$LIBDIR/config/stpswitchcfg.tcl"
 
-    source "$ROOTDIR/$LIBDIR/nodes/hub.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/lanswitch.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/rj45.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/genericrouter.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/host.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/pc.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/annotations.tcl"
+    source "$ROOTDIR/$LIBDIR/nodes/extelem.tcl"
+    source "$ROOTDIR/$LIBDIR/nodes/extnat.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/ext.tcl"
+    source "$ROOTDIR/$LIBDIR/nodes/filter.tcl"
+    source "$ROOTDIR/$LIBDIR/nodes/host.tcl"
+    source "$ROOTDIR/$LIBDIR/nodes/hub.tcl"
+    source "$ROOTDIR/$LIBDIR/nodes/ipfirewall.tcl"
+    source "$ROOTDIR/$LIBDIR/nodes/lanswitch.tcl"
+    source "$ROOTDIR/$LIBDIR/nodes/genericrouter.tcl"
+    source "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
+    source "$ROOTDIR/$LIBDIR/nodes/nat64.tcl"
+    source "$ROOTDIR/$LIBDIR/nodes/packgen.tcl"
+    source "$ROOTDIR/$LIBDIR/nodes/pc.tcl"
+    source "$ROOTDIR/$LIBDIR/nodes/rj45.tcl"
+    source "$ROOTDIR/$LIBDIR/nodes/stpswitch.tcl"
+    source "$ROOTDIR/$LIBDIR/nodes/wlan.tcl"
 
     source "$ROOTDIR/$LIBDIR/nodes/frr.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/quagga.tcl"
@@ -156,6 +176,7 @@ bind . <F6> {
     source "$ROOTDIR/$LIBDIR/gui/mouse.tcl"
     source "$ROOTDIR/$LIBDIR/gui/nodecfgGUI.tcl"
     source "$ROOTDIR/$LIBDIR/gui/widgets.tcl"
+
     source "$ROOTDIR/$LIBDIR/gui/debug.tcl"
 
     puts "Reloaded all sources."
