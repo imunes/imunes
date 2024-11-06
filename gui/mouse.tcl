@@ -293,22 +293,29 @@ proc selectedRealNodes {} {
 #   Finds all adjacent nodes and selects them.
 #****
 proc selectAdjacent {} {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-
     set selected [selectedNodes]
     set adjacent {}
-    foreach node $selected {
-	foreach ifc [ifcList $node] {
-	    set peer [peerByIfc $node $ifc]
-	    if { [getNodeMirror $peer] != "" } {
-		return
+    foreach node_id $selected {
+	foreach iface [ifcList $node_id] {
+	    set peer [peerByIfc $node_id $iface]
+	    if { $peer == "" } {
+		continue
 	    }
-	    if { [lsearch $adjacent $peer] < 0 } {
+
+	    set mirror_node [getNodeMirror $peer]
+	    if { $mirror_node != "" } {
+		set peer [peerByIfc $mirror_node 0]
+	    }
+
+	    if { $peer ni $adjacent } {
 		lappend adjacent $peer
 	    }
 	}
     }
-    selectNodes $adjacent
+
+    if { $adjacent != "" } {
+	selectNodes $adjacent
+    }
 }
 
 #****f* editor.tcl/button3link
