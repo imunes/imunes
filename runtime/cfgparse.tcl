@@ -256,18 +256,18 @@ proc dumpCfg { method dest } {
     }
 }
 
-#****f* nodecfg.tcl/loadCfg
+#****f* nodecfg.tcl/loadCfgLegacy
 # NAME
-#   loadCfg -- loads the current configuration.
+#   loadCfgLegacy -- loads the current configuration.
 # SYNOPSIS
-#   loadCfg $cfg
+#   loadCfgLegacy $cfg
 # FUNCTION
 #   Loads the configuration written in the cfg string to a current 
 #   configuration. 
 # INPUTS
 #   * cfg -- string containing the new working configuration.
 #****
-proc loadCfg { cfg } {
+proc loadCfgLegacy { cfg } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
     upvar 0 ::cf::[set ::curcfg]::annotation_list annotation_list
@@ -747,13 +747,13 @@ proc loadCfg { cfg } {
     set IPv4UsedList ""
     set MACUsedList ""
     foreach node $node_list {
-	set nodeType [nodeType $node]
-	if { $nodeType in "extelem" } {
+	set node_type [getNodeType $node]
+	if { $node_type in "extelem" } {
 	    continue
 	}
-	if { $nodeType ni [concat $all_modules_list "pseudo"] && \
-	    ! [string match "router.*" $nodeType] } {
-	    set msg "Unknown node type: '$nodeType'."
+	if { $node_type ni [concat $all_modules_list "pseudo"] && \
+	    ! [string match "router.*" $node_type] } {
+	    set msg "Unknown node type: '$node_type'."
 	    if { $execMode == "batch" } {
 		statline $msg
 	    } else {
@@ -764,7 +764,7 @@ proc loadCfg { cfg } {
 	    exit
 	}
 	if { "lo0" ni [logIfcList $node] && \
-		[$nodeType.layer] == "NETWORK"} {
+		[$node_type.netlayer] == "NETWORK"} {
 	    setLogIfcType $node lo0 lo
 	    setIfcIPv4addrs $node lo0 "127.0.0.1/8"
 	    setIfcIPv6addrs $node lo0 "::1/128"
@@ -788,14 +788,14 @@ proc loadCfg { cfg } {
 
     # older .imn files have only one link per node pair, so match links with interfaces
     foreach link $link_list {
-	if { [linkPeersIfaces $link] != {} } {
+	if { [getLinkPeersIfaces $link] != {} } {
 	    # if one link has ifaces, then all of them do too
 	    return
 	}
 
 	upvar 0 ::cf::[set ::curcfg]::$link $link
 
-	lassign [linkPeers $link] node1 node2
+	lassign [getLinkPeers $link] node1 node2
 	set iface1 [ifcByPeer $node1 $node2]
 	set iface2 [ifcByPeer $node2 $node1]
 

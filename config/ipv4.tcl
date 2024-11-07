@@ -262,12 +262,12 @@ proc autoIPv4addr { node iface } {
     #autorenumbered_ifcs - list of all interfaces that changed an address
     global autorenumbered_ifcs
 
-    set node_type [nodeType $node]
-    if { [$node_type.layer] != "NETWORK" } {
+    set node_type [getNodeType $node]
+    if { [$node_type.netlayer] != "NETWORK" } {
 	#
 	# Shouldn't get called at all for link-layer nodes
 	#
-	#puts "autoIPv4 called for a [[nodeType $node].layer] layer node"
+	#puts "autoIPv4 called for a [[getNodeType $node].netlayer] layer node"
 	return
     }
 
@@ -278,8 +278,8 @@ proc autoIPv4addr { node iface } {
     lassign [logicalPeerByIfc $node $iface] peer_node peer_if
     set peer_ip4addrs {}
     if { $peer_node != "" } {
-	if { [[nodeType $peer_node].layer] == "LINK" } {
-	    foreach l2node [listLANnodes $peer_node {}] {
+	if { [[getNodeType $peer_node].netlayer] == "LINK" } {
+	    foreach l2node [listLANNodes $peer_node {}] {
 		foreach ifc [ifcList $l2node] {
 		    lassign [logicalPeerByIfc $l2node $ifc] peer peer_if
 		    set peer_ip4addr [getIfcIPv4addrs $peer $peer_if]

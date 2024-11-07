@@ -84,15 +84,15 @@ proc $MODULE.notebookDimensions { wi } {
     return [list $h $w] 
 }
 
-proc $MODULE.ifcName {l r} {
+proc $MODULE.ifacePrefix {l r} {
     return e
 }
 
-#****f* filter.tcl/filter.layer
+#****f* filter.tcl/filter.netlayer
 # NAME
-#   filter.layer  
+#   filter.netlayer  
 # SYNOPSIS
-#   set layer [filter.layer]
+#   set layer [filter.netlayer]
 # FUNCTION
 #   Returns the layer on which the filter.communicates
 #   i.e. returns LINK. 
@@ -100,7 +100,7 @@ proc $MODULE.ifcName {l r} {
 #   * layer -- set to LINK 
 #****
 
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return LINK
 }
 
@@ -120,22 +120,20 @@ proc $MODULE.virtlayer {} {
     return NATIVE
 }
 
-#****f* filter.tcl/filter.instantiate
+#****f* filter.tcl/filter.nodeCreate
 # NAME
-#   filter.instantiate
+#   filter.nodeCreate
 # SYNOPSIS
-#   filter.instantiate $eid $node_id
+#   filter.nodeCreate $eid $node_id
 # FUNCTION
-#   Procedure instantiate creates a new virtaul node
-#   for a given node in imunes. 
-#   Procedure filter.instantiate cretaes a new virtual node
+#   Procedure filter.nodeCreate cretaes a new virtual node
 #   with all the interfaces and CPU parameters as defined
 #   in imunes. 
 # INPUTS
 #   * eid - experiment id
 #   * node_id - id of the node (type of the node is filter.
 #****
-proc $MODULE.instantiate { eid node } {
+proc $MODULE.nodeCreate { eid node } {
     pipesExec "printf \"
     mkpeer . patmat tmp tmp \n
     name .:tmp $node
@@ -143,20 +141,20 @@ proc $MODULE.instantiate { eid node } {
 }
 
 
-#****f* filter.tcl/filter.start
+#****f* filter.tcl/filter.nodeConfigure
 # NAME
-#   filter.start
+#   filter.nodeConfigure
 # SYNOPSIS
-#   filter.start $eid $node_id
+#   filter.nodeConfigure $eid $node_id
 # FUNCTION
 #   Starts a new filter. The node can be started if it is instantiated. 
-#   Simulates the booting proces of a filter. by calling l3node.start 
+#   Simulates the booting proces of a filter. by calling l3node.nodeConfigure 
 #   procedure.
 # INPUTS
 #   * eid - experiment id
 #   * node_id - id of the node (type of the node is filter.
 #****
-proc $MODULE.start { eid node } {
+proc $MODULE.nodeConfigure { eid node } {
     foreach ifc [ifcList $node] {
 	set cfg [netconfFetchSection $node "interface $ifc"]
 	set ngcfgreq "shc $ifc"
@@ -167,19 +165,19 @@ proc $MODULE.start { eid node } {
     }
 }
 
-#****f* filter.tcl/filter.shutdown
+#****f* filter.tcl/filter.nodeShutdown
 # NAME
-#   filter.shutdown
+#   filter.nodeShutdown
 # SYNOPSIS
-#   filter.shutdown $eid $node_id
+#   filter.nodeShutdown $eid $node_id
 # FUNCTION
 #   Shutdowns a filter. Simulates the shutdown proces of a filter. 
-#   by calling the l3node.shutdown procedure.
+#   by calling the l3node.nodeShutdown procedure.
 # INPUTS
 #   * eid - experiment id
 #   * node_id - id of the node (type of the node is filter.
 #****
-proc $MODULE.shutdown { eid node } {
+proc $MODULE.nodeShutdown { eid node } {
     foreach ifc [ifcList $node] {
 	set cfg [netconfFetchSection $node "interface $ifc"]
 	set ngcfgreq "shc $ifc"
@@ -187,23 +185,23 @@ proc $MODULE.shutdown { eid node } {
     }
 }
 
-proc $MODULE.destroyIfcs { eid node ifcs } {
-    l2node.destroyIfcs $eid $node $ifcs
+proc $MODULE.nodeIfacesDestroy { eid node ifcs } {
+    l2node.nodeIfacesDestroy $eid $node $ifcs
 }
 
-#****f* filter.tcl/filter.destroy
+#****f* filter.tcl/filter.nodeDestroy
 # NAME
-#   filter.destroy
+#   filter.nodeDestroy
 # SYNOPSIS
-#   filter.destroy $eid $node_id
+#   filter.nodeDestroy $eid $node_id
 # FUNCTION
 #   Destroys a filter. Destroys all the interfaces of the filter.
-#   and the vimage itself by calling l3node.destroy procedure. 
+#   and the vimage itself by calling l3node.nodeDestroy procedure. 
 # INPUTS
 #   * eid - experiment id
 #   * node_id - id of the node (type of the node is filter.
 #****
-proc $MODULE.destroy { eid node } {
+proc $MODULE.nodeDestroy { eid node } {
     pipesExec "jexec $eid ngctl msg $node: shutdown" "hold"
 }
 

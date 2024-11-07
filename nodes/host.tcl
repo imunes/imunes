@@ -160,17 +160,17 @@ proc $MODULE.notebookDimensions { wi } {
     return [list $h $w]
 }
 
-#****f* host.tcl/host.ifcName
+#****f* host.tcl/host.ifacePrefix
 # NAME
-#   host.ifcName -- interface name
+#   host.ifacePrefix -- interface name
 # SYNOPSIS
-#   host.ifcName
+#   host.ifacePrefix
 # FUNCTION
 #   Returns host interface name prefix.
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifcName {l r} {
+proc $MODULE.ifacePrefix {l r} {
     return [l3IfcName $l $r]
 }
 
@@ -188,17 +188,17 @@ proc $MODULE.IPAddrRange {} {
     return 10
 }
 
-#****f* host.tcl/host.layer
+#****f* host.tcl/host.netlayer
 # NAME
-#   host.layer -- layer
+#   host.netlayer -- layer
 # SYNOPSIS
-#   set layer [host.layer]
+#   set layer [host.netlayer]
 # FUNCTION
 #   Returns the layer on which the host operates i.e. returns NETWORK.
 # RESULT
 #   * layer -- set to NETWORK
 #****
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return NETWORK
 }
 
@@ -216,11 +216,11 @@ proc $MODULE.virtlayer {} {
     return VIRTUALIZED
 }
 
-#****f* host.tcl/host.cfggen
+#****f* host.tcl/host.generateConfig
 # NAME
-#   host.cfggen -- configuration generator
+#   host.generateConfig -- configuration generator
 # SYNOPSIS
-#   set config [host.cfggen $node]
+#   set config [host.generateConfig $node]
 # FUNCTION
 #   Returns the generated configuration. This configuration represents
 #   the configuration loaded on the booting time of the virtual nodes
@@ -233,7 +233,7 @@ proc $MODULE.virtlayer {} {
 # RESULT
 #   * congif -- generated configuration
 #****
-proc $MODULE.cfggen { node } {
+proc $MODULE.generateConfig { node } {
     set cfg {}
     set cfg [concat $cfg [nodeCfggenIfcIPv4 $node]]
     set cfg [concat $cfg [nodeCfggenIfcIPv6 $node]]
@@ -256,7 +256,7 @@ proc $MODULE.cfggen { node } {
 #   set appl [host.bootcmd $node]
 # FUNCTION
 #   Procedure bootcmd returns the application that reads and employes the
-#   configuration generated in host.cfggen.
+#   configuration generated in host.generateConfig.
 #   In this case (procedure host.bootcmd) specific application is /bin/sh
 # INPUTS
 #   * node -- node id (type of the node is host)
@@ -282,87 +282,85 @@ proc $MODULE.shellcmds {} {
     return "csh bash sh tcsh"
 }
 
-#****f* host.tcl/host.instantiate
+#****f* host.tcl/host.nodeCreate
 # NAME
-#   host.instantiate -- instantiate
+#   host.nodeCreate -- instantiate
 # SYNOPSIS
-#   host.instantiate $eid $node
+#   host.nodeCreate $eid $node
 # FUNCTION
-#   Procedure instantiate creates a new virtaul node
-#   for a given node in imunes.
-#   Procedure host.instantiate cretaes a new virtual node with
+#   Procedure host.nodeCreate cretaes a new virtual node with
 #   all the interfaces and CPU parameters as defined in imunes.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id (type of the node is host)
 #****
-proc $MODULE.instantiate { eid node } {
-    l3node.instantiate $eid $node
+proc $MODULE.nodeCreate { eid node } {
+    l3node.nodeCreate $eid $node
 }
 
-proc $MODULE.setupNamespace { eid node } {
-    l3node.setupNamespace $eid $node
+proc $MODULE.nodeNamespaceSetup { eid node } {
+    l3node.nodeNamespaceSetup $eid $node
 }
 
-proc $MODULE.initConfigure { eid node } {
-    l3node.initConfigure $eid $node
+proc $MODULE.nodeInitConfigure { eid node } {
+    l3node.nodeInitConfigure $eid $node
 }
 
-proc $MODULE.createIfcs { eid node ifcs } {
-    l3node.createIfcs $eid $node $ifcs
+proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
+    l3node.nodePhysIfacesCreate $eid $node $ifcs
 }
 
-#****f* host.tcl/host.start
+#****f* host.tcl/host.nodeConfigure
 # NAME
-#   host.start -- start
+#   host.nodeConfigure -- start
 # SYNOPSIS
-#   host.start $eid $node
+#   host.nodeConfigure $eid $node
 # FUNCTION
 #   Starts a new host. The node can be started if it is instantiated.
-#   Simulates the booting proces of a host, by calling l3node.start procedure.
+#   Simulates the booting proces of a host, by calling l3node.nodeConfigure procedure.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id (type of the node is host)
 #****
-proc $MODULE.start { eid node } {
-    l3node.start $eid $node
+proc $MODULE.nodeConfigure { eid node } {
+    l3node.nodeConfigure $eid $node
 }
 
 
-#****f* host.tcl/host.shutdown
+#****f* host.tcl/host.nodeShutdown
 # NAME
-#   host.shutdown -- shutdown
+#   host.nodeShutdown -- shutdown
 # SYNOPSIS
-#   host.shutdown $eid $node
+#   host.nodeShutdown $eid $node
 # FUNCTION
 #   Shutdowns a host. Simulates the shutdown proces of a host,
-#   by calling the l3node.shutdown procedure.
+#   by calling the l3node.nodeShutdown procedure.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id (type of the node is host)
 #****
-proc $MODULE.shutdown { eid node } {
-    l3node.shutdown $eid $node
+proc $MODULE.nodeShutdown { eid node } {
+    l3node.nodeShutdown $eid $node
 }
 
-proc $MODULE.destroyIfcs { eid node ifcs } {
-    l3node.destroyIfcs $eid $node $ifcs
+proc $MODULE.nodeIfacesDestroy { eid node ifcs } {
+    l3node.nodeIfacesDestroy $eid $node $ifcs
 }
 
-#****f* host.tcl/host.destroy
+#****f* host.tcl/host.nodeDestroy
 # NAME
-#   host.destroy -- destroy
+#   host.nodeDestroy -- destroy
 # SYNOPSIS
-#   host.destroy $eid $node
+#   host.nodeDestroy $eid $node
 # FUNCTION
 #   Destroys a host. Destroys all the interfaces of the host
-#   and the vimage itself by calling l3node.destroy procedure.
+#   and the vimage itself by calling l3node.nodeDestroy procedure.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id (type of the node is host)
 #****
-proc $MODULE.destroy { eid node } {
-    l3node.destroy $eid $node
+proc $MODULE.nodeDestroy { eid node } {
+    l3node.nodeDestroy $eid $node
 }
 
 #****f* host.tcl/host.nghook

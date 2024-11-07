@@ -123,17 +123,17 @@ proc $MODULE.toolbarIconDescr {} {
     return "Add new External connection"
 }
 
-#****f* ext.tcl/ext.ifcName
+#****f* ext.tcl/ext.ifacePrefix
 # NAME
-#   ext.ifcName -- interface name
+#   ext.ifacePrefix -- interface name
 # SYNOPSIS
-#   ext.ifcName
+#   ext.ifacePrefix
 # FUNCTION
 #   Returns pc interface name prefix.
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifcName {l r} {
+proc $MODULE.ifacePrefix {l r} {
     return [l3IfcName $l $r]
 }
 
@@ -151,17 +151,17 @@ proc $MODULE.IPAddrRange {} {
     return 20
 }
 
-#****f* ext.tcl/ext.layer
+#****f* ext.tcl/ext.netlayer
 # NAME
-#   ext.layer -- layer
+#   ext.netlayer -- layer
 # SYNOPSIS
-#   set layer [ext.layer]
+#   set layer [ext.netlayer]
 # FUNCTION
 #   Returns the layer on which the pc communicates, i.e. returns NETWORK. 
 # RESULT
 #   * layer -- set to NETWORK
 #****
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return NETWORK
 }
 
@@ -193,58 +193,56 @@ proc $MODULE.virtlayer {} {
 proc $MODULE.shellcmds {} {
 }
 
-#****f* ext.tcl/ext.instantiate
+#****f* ext.tcl/ext.nodeCreate
 # NAME
-#   ext.instantiate -- instantiate
+#   ext.nodeCreate -- instantiate
 # SYNOPSIS
-#   ext.instantiate $eid $node
+#   ext.nodeCreate $eid $node
 # FUNCTION
-#   Procedure instantiate creates a new virtaul node
-#   for a given node in imunes.
-#   Procedure ext.instantiate cretaes a new virtual node with
+#   Procedure ext.nodeCreate cretaes a new virtual node with
 #   all the interfaces and CPU parameters as defined in imunes. 
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id (type of the node is pc)
 #****
-proc $MODULE.instantiate { eid node } {}
+proc $MODULE.nodeCreate { eid node } {}
 
-proc $MODULE.createIfcs { eid node ifcs } {
-    l2node.createIfcs $eid $node $ifcs
+proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
+    l2node.nodePhysIfacesCreate $eid $node $ifcs
 }
 
-#****f* ext.tcl/ext.start
+#****f* ext.tcl/ext.nodeConfigure
 # NAME
-#   ext.start -- start
+#   ext.nodeConfigure -- start
 # SYNOPSIS
-#   ext.start $eid $node
+#   ext.nodeConfigure $eid $node
 # FUNCTION
 #   Starts a new ext. The node can be started if it is instantiated.
-#   Simulates the booting proces of a pc, by calling l3node.start procedure.
+#   Simulates the booting proces of a pc, by calling l3node.nodeConfigure procedure.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id (type of the node is pc)
 #****
-proc $MODULE.start { eid node } {
+proc $MODULE.nodeConfigure { eid node } {
     set ifc [lindex [ifcList $node] 0]
     if { "$ifc" != "" } {
-	startExternalConnection $eid $node
+	configureExternalConnection $eid $node
     }
 }
 
-#****f* ext.tcl/ext.shutdown
+#****f* ext.tcl/ext.nodeShutdown
 # NAME
-#   ext.shutdown -- shutdown
+#   ext.nodeShutdown -- shutdown
 # SYNOPSIS
-#   ext.shutdown $eid $node
+#   ext.nodeShutdown $eid $node
 # FUNCTION
 #   Shutdowns a ext. Simulates the shutdown proces of a pc, 
-#   by calling the l3node.shutdown procedure.
+#   by calling the l3node.nodeShutdown procedure.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id (type of the node is pc)
 #****
-proc $MODULE.shutdown { eid node } {
+proc $MODULE.nodeShutdown { eid node } {
     set ifc [lindex [ifcList $node] 0]
     if { "$ifc" != "" } {
 	killExtProcess "wireshark.*[getNodeName $node].*\\($eid\\)"
@@ -253,23 +251,23 @@ proc $MODULE.shutdown { eid node } {
     }
 }
 
-proc $MODULE.destroyIfcs { eid node ifcs } {
-    l2node.destroyIfcs $eid $node $ifcs
+proc $MODULE.nodeIfacesDestroy { eid node ifcs } {
+    l2node.nodeIfacesDestroy $eid $node $ifcs
 }
 
-#****f* ext.tcl/ext.destroy
+#****f* ext.tcl/ext.nodeDestroy
 # NAME
-#   ext.destroy -- destroy
+#   ext.nodeDestroy -- destroy
 # SYNOPSIS
-#   ext.destroy $eid $node
+#   ext.nodeDestroy $eid $node
 # FUNCTION
 #   Destroys a ext. Destroys all the interfaces of the pc 
-#   and the vimage itself by calling l3node.destroy procedure. 
+#   and the vimage itself by calling l3node.nodeDestroy procedure. 
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id (type of the node is pc)
 #****
-proc $MODULE.destroy { eid node } {
+proc $MODULE.nodeDestroy { eid node } {
 }
 
 #****f* ext.tcl/ext.nghook

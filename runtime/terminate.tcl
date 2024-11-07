@@ -26,27 +26,27 @@
 # and Technology through the research contract #IP-2003-143.
 #
 
-#****f* exec.tcl/deleteExperimentFiles
+#****f* exec.tcl/terminate_deleteExperimentFiles
 # NAME
-#   deleteExperimentFiles -- delete experiment files
+#   terminate_deleteExperimentFiles -- delete experiment files
 # SYNOPSIS
-#   deleteExperimentFiles $eid
+#   terminate_deleteExperimentFiles $eid
 # FUNCTION
 #   Deletes experiment files for the specified experiment.
 # INPUTS
 #   * eid -- experiment id
 #****
-proc deleteExperimentFiles { eid } {
+proc terminate_deleteExperimentFiles { eid } {
     global runtimeDir
     set folderName "$runtimeDir/$eid"
     file delete -force $folderName
 }
 
-#****f* exec.tcl/l3node.shutdown
+#****f* exec.tcl/l3node.nodeShutdown
 # NAME
-#   l3node.shutdown -- layer 3 node shutdown
+#   l3node.nodeShutdown -- layer 3 node shutdown
 # SYNOPSIS
-#   l3node.shutdown $eid $node
+#   l3node.nodeShutdown $eid $node
 # FUNCTION
 #   Shutdowns a layer 3 node (pc, host or router).
 #   Simulates the shutdown proces of a node, kills all the services and
@@ -55,25 +55,25 @@ proc deleteExperimentFiles { eid } {
 #   * eid -- experiment id
 #   * node -- node id
 #****
-proc l3node.shutdown { eid node } {
+proc l3node.nodeShutdown { eid node } {
     killExtProcess "wireshark.*[getNodeName $node].*\\($eid\\)"
     killAllNodeProcesses $eid $node
     removeNodeIfcIPaddrs $eid $node
 }
 
-proc l3node.destroyIfcs { eid node ifcs } {
-    destroyNodeIfcs $eid $node $ifcs
+proc l3node.nodeIfacesDestroy { eid node ifcs } {
+    nodeIfacesDestroy $eid $node $ifcs
 }
 
-proc l2node.destroyIfcs { eid node ifcs } {
-    destroyNodeIfcs $eid $node $ifcs
+proc l2node.nodeIfacesDestroy { eid node ifcs } {
+    nodeIfacesDestroy $eid $node $ifcs
 }
 
-#****f* exec.tcl/l3node.destroy
+#****f* exec.tcl/l3node.nodeDestroy
 # NAME
-#   l3node.destroy -- layer 3 node destroy
+#   l3node.nodeDestroy -- layer 3 node destroy
 # SYNOPSIS
-#   l3node.destroy $eid $node
+#   l3node.nodeDestroy $eid $node
 # FUNCTION
 #   Destroys a layer 3 node (pc, host or router).
 #   Destroys all the interfaces of the node by sending a shutdown message to
@@ -82,7 +82,7 @@ proc l2node.destroyIfcs { eid node ifcs } {
 #   * eid -- experiment id
 #   * node -- node id
 #****
-proc l3node.destroy { eid node } {
+proc l3node.nodeDestroy { eid node } {
     destroyNodeVirtIfcs $eid $node
     removeNodeContainer $eid $node
     destroyNamespace $eid-$node
@@ -91,18 +91,18 @@ proc l3node.destroy { eid node } {
 
 proc checkTerminate {} {}
 
-proc terminateL2L3Nodes { eid nodes nodeCount w } {
+proc terminate_nodesShutdown { eid nodes nodeCount w } {
     global progressbarCount execMode
 
     set batchStep 0
     foreach node $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	if { [info procs [nodeType $node].shutdown] != "" } {
+	if { [info procs [getNodeType $node].nodeShutdown] != "" } {
 	    try {
-		[nodeType $node].shutdown $eid $node
+		[getNodeType $node].nodeShutdown $eid $node
 	    } on error err {
-		return -code error "Error in '[nodeType $node].shutdown $eid $node': $err"
+		return -code error "Error in '[getNodeType $node].nodeShutdown $eid $node': $err"
 	    }
 	}
 	pipesExec ""
@@ -125,7 +125,7 @@ proc terminateL2L3Nodes { eid nodes nodeCount w } {
     }
 }
 
-proc releaseExternalIfcs { eid extifcs extifcsCount w } {
+proc terminate_releaseExternalIfaces { eid extifcs extifcsCount w } {
     global progressbarCount execMode
 
     set batchStep 0
@@ -133,9 +133,9 @@ proc releaseExternalIfcs { eid extifcs extifcsCount w } {
 	displayBatchProgress $batchStep $extifcsCount
 
 	try {
-	    [nodeType $node].destroy $eid $node
+	    [getNodeType $node].nodeDestroy $eid $node
 	} on error err {
-	    return -code error "Error in '[nodeType $node].destroy $eid $node': $err"
+	    return -code error "Error in '[getNodeType $node].nodeDestroy $eid $node': $err"
 	}
 	pipesExec ""
 
@@ -157,7 +157,7 @@ proc releaseExternalIfcs { eid extifcs extifcsCount w } {
     }
 }
 
-proc destroyLinks { eid links linkCount w } {
+proc terminate_linksDestroy { eid links linkCount w } {
     global progressbarCount execMode
 
     set batchStep 0
@@ -169,8 +169,8 @@ proc destroyLinks { eid links linkCount w } {
 	    continue
 	}
 
-	set lnode1 [lindex [linkPeers $link] 0]
-	set lnode2 [lindex [linkPeers $link] 1]
+	set lnode1 [lindex [getLinkPeers $link] 0]
+	set lnode2 [lindex [getLinkPeers $link] 1]
 
 	set msg "Destroying link $link"
 	set mirror_link [getLinkMirror $link]
@@ -179,7 +179,7 @@ proc destroyLinks { eid links linkCount w } {
 
 	    set msg "Destroying link $link/$mirror_link"
 
-	    set lnode2 [lindex [linkPeers $mirror_link] 0]
+	    set lnode2 [lindex [getLinkPeers $mirror_link] 0]
 	}
 
 	try {
@@ -219,9 +219,9 @@ proc destroyL2Nodes { eid nodes nodeCount w } {
 	displayBatchProgress $batchStep $nodeCount
 
 	try {
-	    [nodeType $node].destroy $eid $node
+	    [getNodeType $node].nodeDestroy $eid $node
 	} on error err {
-	    return -code error "Error in '[nodeType $node].destroy $eid $node': $err"
+	    return -code error "Error in '[getNodeType $node].nodeDestroy $eid $node': $err"
 	}
 
 	incr batchStep
@@ -242,7 +242,7 @@ proc destroyL2Nodes { eid nodes nodeCount w } {
     }
 }
 
-proc destroyL3Nodes { eid nodes nodeCount w } {
+proc terminate_nodesDestroy { eid nodes nodeCount w } {
     global progressbarCount execMode
 
     set batchStep 0
@@ -250,9 +250,9 @@ proc destroyL3Nodes { eid nodes nodeCount w } {
 	displayBatchProgress $batchStep $nodeCount
 
 	try {
-	    [nodeType $node].destroy $eid $node
+	    [getNodeType $node].nodeDestroy $eid $node
 	} on error err {
-	    return -code error "Error in '[nodeType $node].destroy $eid $node': $err"
+	    return -code error "Error in '[getNodeType $node].nodeDestroy $eid $node': $err"
 	}
 	pipesExec ""
 
@@ -291,15 +291,15 @@ proc finishTerminating { status msg w } {
     }
 }
 
-#****f* exec.tcl/terminateAllNodes
+#****f* exec.tcl/undeployCfg
 # NAME
-#   terminateAllNodes -- shutdown and destroy all nodes in experiment
+#   undeployCfg -- shutdown and destroy all nodes in experiment
 # SYNOPSIS
-#   terminateAllNodes
+#   undeployCfg
 # FUNCTION
 #
 #****
-proc terminateAllNodes { eid } {
+proc undeployCfg { eid } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
     global progressbarCount execMode
@@ -328,11 +328,11 @@ proc terminateAllNodes { eid } {
     set allNodes {}
     set pseudoNodesCount 0
     foreach node $node_list {
-	if { [nodeType $node] != "pseudo" } {
-	    if { [[nodeType $node].virtlayer] == "NATIVE" } {
-		if { [nodeType $node] == "rj45" } {
+	if { [getNodeType $node] != "pseudo" } {
+	    if { [[getNodeType $node].virtlayer] == "NATIVE" } {
+		if { [getNodeType $node] == "rj45" } {
 		    lappend extifcs $node
-		} elseif { [nodeType $node] == "extnat" } {
+		} elseif { [getNodeType $node] == "extnat" } {
 		    lappend l3nodes $node
 		} else {
 		    lappend l2nodes $node
@@ -380,13 +380,13 @@ proc terminateAllNodes { eid } {
 
 	statline "Stopping all nodes..."
 	pipesCreate
-	terminateL2L3Nodes $eid $allNodes $allNodeCount $w
+	terminate_nodesShutdown $eid $allNodes $allNodeCount $w
 	statline "Waiting for processes on $allNodeCount node(s) to shutdown..."
 	pipesClose
 
 	statline "Releasing external interfaces..."
 	pipesCreate
-	releaseExternalIfcs $eid $extifcs $extifcsCount $w
+	terminate_releaseExternalIfaces $eid $extifcs $extifcsCount $w
 	statline "Waiting for $extifcsCount external interface(s) to be released..."
 	pipesClose
 
@@ -395,13 +395,13 @@ proc terminateAllNodes { eid } {
 
 	statline "Destroying links..."
 	pipesCreate
-	destroyLinks $eid $link_list $linkCount $w
+	terminate_linksDestroy $eid $link_list $linkCount $w
 	statline "Waiting for $linkCount link(s) to be destroyed..."
 	pipesClose
 
 	statline "Destroying physical interfaces on L3 nodes..."
 	pipesCreate
-	destroyNodesIfcs $eid $l3nodes $l3nodeCount $w
+	terminate_nodesIfacesDestroy $eid $l3nodes $l3nodeCount $w
 	statline "Waiting for physical interfaces on $l3nodeCount L3 node(s) to be destroyed..."
 	pipesClose
 
@@ -422,18 +422,18 @@ proc terminateAllNodes { eid } {
 
 	statline "Destroying L3 nodes..."
 	pipesCreate
-	destroyL3Nodes $eid $l3nodes $l3nodeCount $w
+	terminate_nodesDestroy $eid $l3nodes $l3nodeCount $w
 	statline "Waiting for $l3nodeCount L3 node(s) to be destroyed..."
 	pipesClose
 
 	statline "Removing experiment top-level container/netns..."
 	pipesCreate
-	removeExperimentContainer $eid $w
+	terminate_removeExperimentContainer $eid $w
 	pipesClose
 
 	statline "Removing experiment files..."
-	removeExperimentFiles $eid $w
-	deleteExperimentFiles $eid
+	terminate_removeExperimentFiles $eid $w
+	terminate_deleteExperimentFiles $eid
     } on error err {
 	finishTerminating 0 "$err" $w
 	return
@@ -481,19 +481,19 @@ proc timeoutPatch { eid nodes nodeCount w } {
     }
 }
 
-proc destroyNodesIfcs { eid nodes nodeCount w } {
+proc terminate_nodesIfacesDestroy { eid nodes nodeCount w } {
     global progressbarCount execMode
 
     set batchStep 0
     foreach node $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	if { [info procs [nodeType $node].destroyIfcs] != "" } {
+	if { [info procs [getNodeType $node].nodeIfacesDestroy] != "" } {
 	    set ifcs [ifcList $node]
 	    try {
-		[nodeType $node].destroyIfcs $eid $node $ifcs
+		[getNodeType $node].nodeIfacesDestroy $eid $node $ifcs
 	    } on error err {
-		return -code error "Error in '[nodeType $node].destroyIfcs $eid $node $ifcs': $err"
+		return -code error "Error in '[getNodeType $node].nodeIfacesDestroy $eid $node $ifcs': $err"
 	    }
 	}
 
@@ -521,7 +521,7 @@ proc destroyNodesIfcs { eid nodes nodeCount w } {
 # SYNOPSIS
 #   stopNodeFromMenu $node
 # FUNCTION
-#   Invokes the [nodeType $node].shutdown procedure, along with services shutdown.
+#   Invokes the [getNodeType $node].nodeShutdown procedure, along with services shutdown.
 # INPUTS
 #   * node -- node id
 #****
@@ -554,7 +554,7 @@ proc stopNodeFromMenu { node } {
     services stop "NODESTOP" "" $node
     pipesCreate
     try {
-	terminateL2L3Nodes $eid $node 1 $w
+	terminate_nodesShutdown $eid $node 1 $w
     } on error err {
 	finishTerminating 0 "$err" $w
 	return

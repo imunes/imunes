@@ -255,7 +255,7 @@ proc getListOfOtherNodes { node } {
 
     set listOfNames ""
     foreach node $listOfNodes {
-	if { [nodeType $node] == "pseudo" } {
+	if { [getNodeType $node] == "pseudo" } {
 	    continue
 	}
 

@@ -157,17 +157,17 @@ proc $MODULE.notebookDimensions { wi } {
     return [list $h $w]
 }
 
-#****f* pc.tcl/pc.ifcName
+#****f* pc.tcl/pc.ifacePrefix
 # NAME
-#   pc.ifcName -- interface name
+#   pc.ifacePrefix -- interface name
 # SYNOPSIS
-#   pc.ifcName
+#   pc.ifacePrefix
 # FUNCTION
 #   Returns pc interface name prefix.
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifcName {l r} {
+proc $MODULE.ifacePrefix {l r} {
     return [l3IfcName $l $r]
 }
 
@@ -185,17 +185,17 @@ proc $MODULE.IPAddrRange {} {
     return 20
 }
 
-#****f* pc.tcl/pc.layer
+#****f* pc.tcl/pc.netlayer
 # NAME
-#   pc.layer -- layer
+#   pc.netlayer -- layer
 # SYNOPSIS
-#   set layer [pc.layer]
+#   set layer [pc.netlayer]
 # FUNCTION
 #   Returns the layer on which the pc communicates, i.e. returns NETWORK.
 # RESULT
 #   * layer -- set to NETWORK
 #****
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return NETWORK
 }
 
@@ -213,11 +213,11 @@ proc $MODULE.virtlayer {} {
     return VIRTUALIZED
 }
 
-#****f* pc.tcl/pc.cfggen
+#****f* pc.tcl/pc.generateConfig
 # NAME
-#   pc.cfggen -- configuration generator
+#   pc.generateConfig -- configuration generator
 # SYNOPSIS
-#   set config [pc.cfggen $node]
+#   set config [pc.generateConfig $node]
 # FUNCTION
 #   Returns the generated configuration. This configuration represents
 #   the configuration loaded on the booting time of the virtual nodes
@@ -229,7 +229,7 @@ proc $MODULE.virtlayer {} {
 # RESULT
 #   * congif -- generated configuration
 #****
-proc $MODULE.cfggen { node } {
+proc $MODULE.generateConfig { node } {
     set cfg {}
     set cfg [concat $cfg [nodeCfggenIfcIPv4 $node]]
     set cfg [concat $cfg [nodeCfggenIfcIPv6 $node]]
@@ -248,7 +248,7 @@ proc $MODULE.cfggen { node } {
 #   set appl [pc.bootcmd $node]
 # FUNCTION
 #   Procedure bootcmd returns the application that reads and employes the
-#   configuration generated in pc.cfggen.
+#   configuration generated in pc.generateConfig.
 #   In this case (procedure pc.bootcmd) specific application is /bin/sh
 # INPUTS
 #   * node -- node id (type of the node is pc)
@@ -274,86 +274,84 @@ proc $MODULE.shellcmds {} {
     return "csh bash sh tcsh"
 }
 
-#****f* pc.tcl/pc.instantiate
+#****f* pc.tcl/pc.nodeCreate
 # NAME
-#   pc.instantiate -- instantiate
+#   pc.nodeCreate -- instantiate
 # SYNOPSIS
-#   pc.instantiate $eid $node
+#   pc.nodeCreate $eid $node
 # FUNCTION
-#   Procedure instantiate creates a new virtaul node
-#   for a given node in imunes.
-#   Procedure pc.instantiate cretaes a new virtual node with
+#   Procedure pc.nodeCreate cretaes a new virtual node with
 #   all the interfaces and CPU parameters as defined in imunes.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id (type of the node is pc)
 #****
-proc $MODULE.instantiate { eid node } {
-    l3node.instantiate $eid $node
+proc $MODULE.nodeCreate { eid node } {
+    l3node.nodeCreate $eid $node
 }
 
-proc $MODULE.setupNamespace { eid node } {
-    l3node.setupNamespace $eid $node
+proc $MODULE.nodeNamespaceSetup { eid node } {
+    l3node.nodeNamespaceSetup $eid $node
 }
 
-proc $MODULE.initConfigure { eid node } {
-    l3node.initConfigure $eid $node
+proc $MODULE.nodeInitConfigure { eid node } {
+    l3node.nodeInitConfigure $eid $node
 }
 
-proc $MODULE.createIfcs { eid node ifcs } {
-    l3node.createIfcs $eid $node $ifcs
+proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
+    l3node.nodePhysIfacesCreate $eid $node $ifcs
 }
 
-#****f* pc.tcl/pc.start
+#****f* pc.tcl/pc.nodeConfigure
 # NAME
-#   pc.start -- start
+#   pc.nodeConfigure -- start
 # SYNOPSIS
-#   pc.start $eid $node
+#   pc.nodeConfigure $eid $node
 # FUNCTION
 #   Starts a new pc. The node can be started if it is instantiated.
-#   Simulates the booting proces of a pc, by calling l3node.start procedure.
+#   Simulates the booting proces of a pc, by calling l3node.nodeConfigure procedure.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id (type of the node is pc)
 #****
-proc $MODULE.start { eid node } {
-    l3node.start $eid $node
+proc $MODULE.nodeConfigure { eid node } {
+    l3node.nodeConfigure $eid $node
 }
 
-#****f* pc.tcl/pc.shutdown
+#****f* pc.tcl/pc.nodeShutdown
 # NAME
-#   pc.shutdown -- shutdown
+#   pc.nodeShutdown -- shutdown
 # SYNOPSIS
-#   pc.shutdown $eid $node
+#   pc.nodeShutdown $eid $node
 # FUNCTION
 #   Shutdowns a pc. Simulates the shutdown proces of a pc,
-#   by calling the l3node.shutdown procedure.
+#   by calling the l3node.nodeShutdown procedure.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id (type of the node is pc)
 #****
-proc $MODULE.shutdown { eid node } {
-    l3node.shutdown $eid $node
+proc $MODULE.nodeShutdown { eid node } {
+    l3node.nodeShutdown $eid $node
 }
 
-proc $MODULE.destroyIfcs { eid node ifcs } {
-    l3node.destroyIfcs $eid $node $ifcs
+proc $MODULE.nodeIfacesDestroy { eid node ifcs } {
+    l3node.nodeIfacesDestroy $eid $node $ifcs
 }
 
-#****f* pc.tcl/pc.destroy
+#****f* pc.tcl/pc.nodeDestroy
 # NAME
-#   pc.destroy -- destroy
+#   pc.nodeDestroy -- destroy
 # SYNOPSIS
-#   pc.destroy $eid $node
+#   pc.nodeDestroy $eid $node
 # FUNCTION
 #   Destroys a pc. Destroys all the interfaces of the pc
-#   and the vimage itself by calling l3node.destroy procedure.
+#   and the vimage itself by calling l3node.nodeDestroy procedure.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id (type of the node is pc)
 #****
-proc $MODULE.destroy { eid node } {
-    l3node.destroy $eid $node
+proc $MODULE.nodeDestroy { eid node } {
+    l3node.nodeDestroy $eid $node
 }
 
 #****f* pc.tcl/pc.nghook

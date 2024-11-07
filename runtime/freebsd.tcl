@@ -453,8 +453,8 @@ Please don't try killing the process.
 #   qdisc -- queuing discipline
 #****
 proc execSetIfcQDisc { eid node ifc qdisc } {
-    set link [linkByIfc $node $ifc]
-    set peers [linkPeers [lindex $link 0]]
+    set link [getIfcLink $node $ifc]
+    set peers [getLinkPeers [lindex $link 0]]
     set dir [lindex $link 1]
     set lnode1 [lindex $peers 0]
     set lnode2 [lindex $peers 1]
@@ -463,7 +463,7 @@ proc execSetIfcQDisc { eid node ifc qdisc } {
 	WFQ { set qdisc wfq }
 	DRR { set qdisc drr }
     }
-    if { [nodeType $lnode2] == "pseudo" } {
+    if { [getNodeType $lnode2] == "pseudo" } {
 	set link [getLinkMirror $link]
     }
 
@@ -486,8 +486,8 @@ proc execSetIfcQDisc { eid node ifc qdisc } {
 #   qdrop -- queue dropping policy
 #****
 proc execSetIfcQDrop { eid node ifc qdrop } {
-    set link [linkByIfc $node $ifc]
-    set peers [linkPeers [lindex $link 0]]
+    set link [getIfcLink $node $ifc]
+    set peers [getLinkPeers [lindex $link 0]]
     set dir [lindex $link 1]
     set lnode1 [lindex $peers 0]
     set lnode2 [lindex $peers 1]
@@ -495,7 +495,7 @@ proc execSetIfcQDrop { eid node ifc qdrop } {
 	drop-head { set qdrop drophead }
 	drop-tail { set qdrop droptail }
     }
-    if { [nodeType $lnode2] == "pseudo" } {
+    if { [getNodeType $lnode2] == "pseudo" } {
 	set link [getLinkMirror $link]
     }
 
@@ -517,15 +517,15 @@ proc execSetIfcQDrop { eid node ifc qdrop } {
 #   qlen -- new queue's length
 #****
 proc execSetIfcQLen { eid node ifc qlen } {
-    set link [linkByIfc $node $ifc]
-    set peers [linkPeers [lindex $link 0]]
+    set link [getIfcLink $node $ifc]
+    set peers [getLinkPeers [lindex $link 0]]
     set dir [lindex $link 1]
     set lnode1 [lindex $peers 0]
     set lnode2 [lindex $peers 1]
     if { $qlen == 0 } {
 	set qlen -1
     }
-    if { [nodeType $lnode2] == "pseudo" } {
+    if { [getNodeType $lnode2] == "pseudo" } {
 	set link [getLinkMirror $link]
     }
 
@@ -590,8 +590,8 @@ proc execSetLinkParams { eid link } {
 #   link -- link id
 #****
 proc execSetLinkJitter { eid link } {
-    set lnode1 [lindex [linkPeers $link] 0]
-    set lnode2 [lindex [linkPeers $link] 1]
+    set lnode1 [lindex [getLinkPeers $link] 0]
+    set lnode2 [lindex [getLinkPeers $link] 1]
 
     set jitter_up [getLinkJitterUpstream $link]
     set jitter_mode_up [getLinkJitterModeUpstream $link]
@@ -649,8 +649,8 @@ proc execSetLinkJitter { eid link } {
 #   * link -- link id
 #****
 proc execResetLinkJitter { eid link } {
-    set lnode1 [lindex [linkPeers $link] 0]
-    set lnode2 [lindex [linkPeers $link] 1]
+    set lnode1 [lindex [getLinkPeers $link] 0]
+    set lnode2 [lindex [getLinkPeers $link] 1]
 
     exec jexec $eid ngctl msg $link: setcfg \
 	"{upstream={jitmode=-1} downstream={jitmode=-1}}"
@@ -722,7 +722,7 @@ proc vimageCleanup { eid } {
 	    incr step
 	    displayBatchProgress $step $allVimages
 
-	    [nodeType $node].shutdown $eid $node
+	    [getNodeType $node].nodeShutdown $eid $node
 	}
 
 	statline ""
@@ -1080,7 +1080,7 @@ proc createNodeContainer { node } {
 proc isNodeStarted { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    set node_type [nodeType $node]
+    set node_type [getNodeType $node]
     if { [$node_type.virtlayer] != "VIRTUALIZED" } {
 	if { $node_type in "rj45 ext extnat extelem" } {
 	    return true
@@ -1110,17 +1110,17 @@ proc isNodeNamespaceCreated { node } {
     return true
 }
 
-#****f* freebsd.tcl/createNodePhysIfcs
+#****f* freebsd.tcl/nodePhysIfacesCreate
 # NAME
-#   createNodePhysIfcs -- create node physical interfaces
+#   nodePhysIfacesCreate -- create node physical interfaces
 # SYNOPSIS
-#   createNodePhysIfcs $node
+#   nodePhysIfacesCreate $node
 # FUNCTION
 #   Creates physical interfaces for the given node.
 # INPUTS
 #   * node -- node id
 #****
-proc createNodePhysIfcs { node ifcs } {
+proc nodePhysIfacesCreate { node ifcs } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global ifc_dad_disable
 
@@ -1195,17 +1195,17 @@ proc createNamespace { ns } {}
 
 proc destroyNamespace { ns } {}
 
-#****f* freebsd.tcl/createNodeLogIfcs
+#****f* freebsd.tcl/nodeLogIfacesCreate
 # NAME
-#   createNodeLogIfcs -- create node logical interfaces
+#   nodeLogIfacesCreate -- create node logical interfaces
 # SYNOPSIS
-#   createNodeLogIfcs $node
+#   nodeLogIfacesCreate $node
 # FUNCTION
 #   Creates logical interfaces for the given node.
 # INPUTS
 #   * node -- node id
 #****
-proc createNodeLogIfcs { node } {
+proc nodeLogIfacesCreate { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     set node_id "$eid.$node"
@@ -1325,8 +1325,8 @@ proc runConfOnNode { node } {
 	}
 	set confFile "custom.conf"
     } else {
-	set bootcfg [[nodeType $node].cfggen $node]
-	set bootcmd [[nodeType $node].bootcmd $node]
+	set bootcfg [[getNodeType $node].generateConfig $node]
+	set bootcmd [[getNodeType $node].bootcmd $node]
 	set confFile "boot.conf"
     }
 
@@ -1351,7 +1351,7 @@ proc isNodeConfigured { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     set node_id "$eid.$node"
 
-    if { [[nodeType $node].virtlayer] == "NATIVE" } {
+    if { [[getNodeType $node].virtlayer] == "NATIVE" } {
 	return true
     }
 
@@ -1368,7 +1368,7 @@ proc isNodeError { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     set node_id "$eid.$node"
 
-    if { [[nodeType $node].virtlayer] == "NATIVE" } {
+    if { [[getNodeType $node].virtlayer] == "NATIVE" } {
 	return false
     }
 
@@ -1632,13 +1632,13 @@ proc createDirectLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     set ngpeer1 \
-	[lindex [[nodeType $lnode1].nghook $eid $lnode1 $ifname1] 0]
+	[lindex [[getNodeType $lnode1].nghook $eid $lnode1 $ifname1] 0]
     set ngpeer2 \
-	[lindex [[nodeType $lnode2].nghook $eid $lnode2 $ifname2] 0]
+	[lindex [[getNodeType $lnode2].nghook $eid $lnode2 $ifname2] 0]
     set nghook1 \
-	[lindex [[nodeType $lnode1].nghook $eid $lnode1 $ifname1] 1]
+	[lindex [[getNodeType $lnode1].nghook $eid $lnode1 $ifname1] 1]
     set nghook2 \
-	[lindex [[nodeType $lnode2].nghook $eid $lnode2 $ifname2] 1]
+	[lindex [[getNodeType $lnode2].nghook $eid $lnode2 $ifname2] 1]
 
     pipesExec "jexec $eid ngctl connect $ngpeer1: $ngpeer2: $nghook1 $nghook2" "hold"
 }
@@ -1660,13 +1660,13 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     set ngpeer1 \
-	[lindex [[nodeType $lnode1].nghook $eid $lnode1 $ifname1] 0]
+	[lindex [[getNodeType $lnode1].nghook $eid $lnode1 $ifname1] 0]
     set ngpeer2 \
-	[lindex [[nodeType $lnode2].nghook $eid $lnode2 $ifname2] 0]
+	[lindex [[getNodeType $lnode2].nghook $eid $lnode2 $ifname2] 0]
     set nghook1 \
-	[lindex [[nodeType $lnode1].nghook $eid $lnode1 $ifname1] 1]
+	[lindex [[getNodeType $lnode1].nghook $eid $lnode1 $ifname1] 1]
     set nghook2 \
-	[lindex [[nodeType $lnode2].nghook $eid $lnode2 $ifname2] 1]
+	[lindex [[getNodeType $lnode2].nghook $eid $lnode2 $ifname2] 1]
 
     set ngcmds "mkpeer $ngpeer1: pipe $nghook1 upper"
     set ngcmds "$ngcmds\n name $ngpeer1:$nghook1 $link"
@@ -1706,7 +1706,7 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     # FIXME: remove this to interface configuration?
     # Queues
     foreach node "$lnode1 $lnode2" ifc "$ifname1 $ifname2" {
-	if {[nodeType $lnode1] != "rj45" && [nodeType $lnode2] != "rj45"} {
+	if {[getNodeType $lnode1] != "rj45" && [getNodeType $lnode2] != "rj45"} {
 	    set qdisc [getIfcQDisc $node $ifc]
 	    if {$qdisc != "FIFO"} {
 		execSetIfcQDisc $eid $node $ifc $qdisc
@@ -1746,19 +1746,19 @@ proc destroyLinkBetween { eid lnode1 lnode2 link } {
     pipesExec "jexec $eid ngctl msg $link: shutdown" "hold"
 }
 
-#****f* freebsd.tcl/destroyNodeIfcs
+#****f* freebsd.tcl/nodeIfacesDestroy
 # NAME
-#   destroyNodeIfcs -- destroy virtual node interfaces
+#   nodeIfacesDestroy -- destroy virtual node interfaces
 # SYNOPSIS
-#   destroyNodeIfcs $eid $vimages
+#   nodeIfacesDestroy $eid $vimages
 # FUNCTION
 #   Destroys all virtual node interfaces.
 # INPUTS
 #   * eid -- experiment id
 #   * vimages -- list of virtual nodes
 #****
-proc destroyNodeIfcs { eid node ifcs } {
-    if { [nodeType $node] in "ext extnat" } {
+proc nodeIfacesDestroy { eid node ifcs } {
+    if { [getNodeType $node] in "ext extnat" } {
 	pipesExec "jexec $eid ngctl rmnode $eid-$node:" "hold"
 	return
     }
@@ -1768,25 +1768,25 @@ proc destroyNodeIfcs { eid node ifcs } {
     }
 }
 
-#****f* freebsd.tcl/removeExperimentContainer
+#****f* freebsd.tcl/terminate_removeExperimentContainer
 # NAME
-#   removeExperimentContainer -- remove experiment container
+#   terminate_removeExperimentContainer -- remove experiment container
 # SYNOPSIS
-#   removeExperimentContainer $eid $widget
+#   terminate_removeExperimentContainer $eid $widget
 # FUNCTION
 #   Removes the root jail of the given experiment.
 # INPUTS
 #   * eid -- experiment id
 #   * widget -- status widget
 #****
-proc removeExperimentContainer { eid widget } {
+proc terminate_removeExperimentContainer { eid widget } {
     # Remove the main vimage which contained all other nodes, hopefully we
     # cleaned everything.
     catch "exec jexec $eid kill -9 -1 2> /dev/null"
     exec jail -r $eid
 }
 
-proc removeExperimentFiles { eid widget } {
+proc terminate_removeExperimentFiles { eid widget } {
     global vroot_unionfs execMode
 
     set VROOT_BASE [getVrootDir]
@@ -1820,19 +1820,19 @@ proc removeExperimentFiles { eid widget } {
 }
 
 
-#****f* freebsd.tcl/l2node.instantiate
+#****f* freebsd.tcl/l2node.nodeCreate
 # NAME
-#   l2node.instantiate -- instantiate
+#   l2node.nodeCreate -- instantiate
 # SYNOPSIS
-#   l2node.instantiate $eid $node
+#   l2node.nodeCreate $eid $node
 # FUNCTION
-#   Procedure l2node.instantiate creates a new netgraph node of the appropriate type.
+#   Procedure l2node.nodeCreate creates a new netgraph node of the appropriate type.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- id of the node (type of the node is either lanswitch or hub)
 #****
-proc l2node.instantiate { eid node } {
-    switch -exact [nodeType $node] {
+proc l2node.nodeCreate { eid node } {
+    switch -exact [getNodeType $node] {
 	lanswitch {
 	    set ngtype bridge
 	}
@@ -1849,11 +1849,11 @@ proc l2node.instantiate { eid node } {
     pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
 }
 
-#****f* freebsd.tcl/l2node.destroy
+#****f* freebsd.tcl/l2node.nodeDestroy
 # NAME
-#   l2node.destroy -- destroy
+#   l2node.nodeDestroy -- destroy
 # SYNOPSIS
-#   l2node.destroy $eid $node
+#   l2node.nodeDestroy $eid $node
 # FUNCTION
 #   Destroys a l2node (netgraph) node by sending a shutdown
 #   message.
@@ -1861,7 +1861,7 @@ proc l2node.instantiate { eid node } {
 #   * eid -- experiment id
 #   * node -- id of the node
 #****
-proc l2node.destroy { eid node } {
+proc l2node.nodeDestroy { eid node } {
     pipesExec "jexec $eid ngctl msg $node: shutdown" "hold"
 }
 
@@ -2117,7 +2117,7 @@ proc taygaDestroy { eid node } {
     catch {exec jexec $eid.$node ifconfig [set nat64ifc_$eid.$node] destroy}
 }
 
-proc startExternalConnection { eid node } {
+proc configureExternalConnection { eid node } {
     set cmds ""
     set ifc [lindex [ifcList $node] 0]
     set outifc "$eid-$node"

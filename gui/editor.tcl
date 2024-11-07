@@ -94,7 +94,7 @@ proc undo {} {
 	    .menubar.edit entryconfigure "Undo" -state disabled
 	}
 	.panwin.f1.c config -cursor watch
-	loadCfg $undolog($undolevel)
+	loadCfgLegacy $undolog($undolevel)
 	switchCanvas none
 
 	if { $showTree } {
@@ -130,7 +130,7 @@ proc redo {} {
 	    .menubar.edit entryconfigure "Redo" -state disabled
 	}
 	.panwin.f1.c config -cursor watch
-	loadCfg $undolog($undolevel)
+	loadCfgLegacy $undolog($undolevel)
 	switchCanvas none
 
 	if { $showTree } {
@@ -143,50 +143,50 @@ proc redo {} {
 # NAME
 #   chooseIfName -- choose interface name
 # SYNOPSIS
-#   set ifcName [chooseIfName $local_node $remote_node]
+#   set ifc_name [chooseIfName $local_node $remote_node]
 # FUNCTION
 #   Choose a node-specific interface base name.
 # INPUTS
 #   * lnode -- id of a "local" node
 #   * rnode -- id of a "remote" node
 # RESULT
-#   * ifcName -- the name of the interface
+#   * ifc_name -- the name of the interface
 #****
 proc chooseIfName {lnode rnode} {
 
-    return [[nodeType $lnode].ifcName $lnode $rnode]
+    return [[getNodeType $lnode].ifacePrefix $lnode $rnode]
 }
 
 #****f* editor.tcl/l3IfcName
 # NAME
 #   l3IfcName -- default interface name picker for l3 nodes
 # SYNOPSIS
-#   set ifcName [l3IfcName $local_node $remote_node]
+#   set ifc_name [l3IfcName $local_node $remote_node]
 # FUNCTION
 #   Pick a default interface base name for a L3 node.
 # INPUTS
 #   * lnode -- id of a "local" node
 #   * rnode -- id of a "remote" node
 # RESULT
-#   * ifcName -- the name of the interface
+#   * ifc_name -- the name of the interface
 #****
 proc l3IfcName {lnode rnode} {
 
-    if {[nodeType $lnode] in "ext extnat"} {
+    if {[getNodeType $lnode] in "ext extnat"} {
 	return "ext"
     }
-    if {[nodeType $rnode] == "wlan"} {
+    if {[getNodeType $rnode] == "wlan"} {
 	return "wlan"
     } else {
 	return "eth"
     }
 }
 
-#****f* editor.tcl/listLANnodes
+#****f* editor.tcl/listLANNodes
 # NAME
-#   listLANnodes -- list LAN nodes
+#   listLANNodes -- list LAN nodes
 # SYNOPSIS
-#   set l2peers [listLANnodes $l2node $l2peers]
+#   set l2peers [listLANNodes $l2node $l2peers]
 # FUNCTION
 #   Recursive function for finding all link layer nodes that are 
 #   connected to node l2node. Returns the list of all link layer 
@@ -197,13 +197,13 @@ proc l3IfcName {lnode rnode} {
 # RESULT
 #   * l2peers -- new link layer nodes on the same LAN
 #****
-proc listLANnodes { l2node l2peers } {
+proc listLANNodes { l2node l2peers } {
     lappend l2peers $l2node
     foreach ifc [ifcList $l2node] {
 	lassign [logicalPeerByIfc $l2node $ifc] peer -
-	if {[[nodeType $peer].layer] == "LINK" &&  [nodeType $peer] != "rj45"} {
+	if { [[getNodeType $peer].netlayer] == "LINK" &&  [getNodeType $peer] != "rj45" } {
 	    if { [lsearch $l2peers $peer] == -1 } {
-		set l2peers [listLANnodes $peer $l2peers]
+		set l2peers [listLANNodes $peer $l2peers]
 	    }
 	}
     }
@@ -492,7 +492,7 @@ proc routerDefaultsApply { wi } {
 
     if { $selected_node_list != $empty } {
 	foreach node $selected_node_list {
-	    if { $oper_mode == "edit" && [nodeType $node] == "router" } {
+	    if { $oper_mode == "edit" && [getNodeType $node] == "router" } {
 		setNodeModel $node $router_model
 		set router_ConfigModel $router_model
 		if { $router_ConfigModel != "static" } {
@@ -518,7 +518,7 @@ proc routerDefaultsApply { wi } {
 	}		
     } else {
 	foreach node $node_list {
-	    if { $oper_mode == "edit" && [nodeType $node] == "router"} {
+	    if { $oper_mode == "edit" && [getNodeType $node] == "router"} {
 		setNodeModel $node $router_model
 		set router_ConfigModel $router_model
 		if { $router_ConfigModel != "static" } {
@@ -698,7 +698,7 @@ proc topologyElementsTree {} {
 	$f.tree focus nodes
 	$f.tree selection set nodes
 	foreach node [lsort -dictionary $node_list] {
-	    set type [nodeType $node]
+	    set type [getNodeType $node]
 	    if { $type != "pseudo" } {
 		$f.tree insert nodes end -id $node -text "[getNodeName $node]" -open false -tags $node
 		lappend nodetags $node
@@ -719,8 +719,8 @@ proc topologyElementsTree {} {
 	set linktags ""
 	$f.tree insert {} end -id links -text "Links" -open false -tags links
 	foreach link [lsort -dictionary $link_list] {
-	    set n0 [lindex [linkPeers $link] 0]
-	    set n1 [lindex [linkPeers $link] 1]
+	    set n0 [lindex [getLinkPeers $link] 0]
+	    set n1 [lindex [getLinkPeers $link] 1]
 	    set name0 [getNodeName $n0]
 	    set name1 [getNodeName $n1]
 	    $f.tree insert links end -id $link -text "From $name0 to $name1" -tags $link
@@ -810,7 +810,7 @@ proc bindEventsToTree {} {
 	    .panwin.f1.c delete -withtags selectmark"
 
     foreach n $nodetags {
-	set type [nodeType $n]
+	set type [getNodeType $n]
 	global selectedIfc
 	$f.tree tag bind $n <1> \
 	      "selectNodeFromTree $n"   
@@ -895,8 +895,8 @@ proc selectNodeFromTree { n } {
 #****
 proc selectLinkPeersFromTree { l } {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    set n0 [lindex [linkPeers $l] 0]
-    set n1 [lindex [linkPeers $l] 1]    
+    set n0 [lindex [getLinkPeers $l] 0]
+    set n1 [lindex [getLinkPeers $l] 1]    
     set canvas [getNodeCanvas $n0]
     set curcanvas $canvas
     switchCanvas none
@@ -931,7 +931,7 @@ proc refreshTopologyTree {} {
     set nodetags ""
     $f.tree insert {} end -id nodes -text "Nodes" -open true -tags nodes
     foreach node [lsort -dictionary $node_list] {
-	set type [nodeType $node]
+	set type [getNodeType $node]
 	if { $type != "pseudo" } {
 	    $f.tree insert nodes end -id $node -text "[getNodeName $node]" -tags $node
 	    lappend nodetags $node
@@ -950,8 +950,8 @@ proc refreshTopologyTree {} {
     set linktags ""
     $f.tree insert {} end -id links -text "Links" -open false -tags links
     foreach link [lsort -dictionary $link_list] {
-	set n0 [lindex [linkPeers $link] 0]
-	set n1 [lindex [linkPeers $link] 1]
+	set n0 [lindex [getLinkPeers $link] 0]
+	set n1 [lindex [getLinkPeers $link] 1]
 	set name0 [getNodeName $n0]
 	set name1 [getNodeName $n1]
 	$f.tree insert links end -id $link -text "From $name0 to $name1" -tags $link
@@ -1124,21 +1124,21 @@ proc setActiveTool { tool } {
 
     if { $activetool in $ungrouped } {
 	$mf.left.$activetool state !selected
-    } elseif { [$activetool.layer] == "LINK" } {
+    } elseif { [$activetool.netlayer] == "LINK" } {
 	$mf.left.link_layer state !selected
-    } elseif { [$activetool.layer] == "NETWORK" } {
+    } elseif { [$activetool.netlayer] == "NETWORK" } {
 	$mf.left.net_layer state !selected
     }
 
     if { $tool in $ungrouped } {
 	$mf.left.$tool state selected
-    } elseif { [$tool.layer] == "LINK" } {
+    } elseif { [$tool.netlayer] == "LINK" } {
 	set image [image create photo -file [$tool.icon toolbar]]
 	set arrowimage [image create photo -file "$ROOTDIR/$LIBDIR/icons/tiny/l2.gif"]
 	$image copy $arrowimage -from 29 30 40 40 -to 29 30 40 40 -compositingrule overlay
 	$mf.left.link_layer configure -image $image 
 	$mf.left.link_layer state selected
-    } elseif { [$tool.layer] == "NETWORK" } {
+    } elseif { [$tool.netlayer] == "NETWORK" } {
 	set image [image create photo -file [$tool.icon toolbar]]
 	set arrowimage [image create photo -file "$ROOTDIR/$LIBDIR/icons/tiny/l3.gif"]
 	$image copy $arrowimage -from 29 30 40 40 -to 29 30 40 40 -compositingrule overlay

@@ -53,7 +53,7 @@ proc nodeConfigGUI { c node } {
     if {$node == ""} {
         set node [lindex [$c gettags current] 1]
     }
-    set type [nodeType $node]
+    set type [getNodeType $node]
     if { $type == "pseudo" } {
         #
 	# Hyperlink to another canvas
@@ -151,7 +151,7 @@ proc configGUI_addNotebook { wi node labels } {
 #   * node - node id
 #****
 proc notebookSize { wi node } {
-    set type [nodeType $node]
+    set type [getNodeType $node]
 
     set dim [$type.notebookDimensions $wi]
     set configh [lindex $dim 0]
@@ -254,7 +254,7 @@ proc configGUI_addTree { wi node } {
 	}
     }
 
-    if {[[nodeType $node].virtlayer] == "VIRTUALIZED"} {
+    if {[[getNodeType $node].virtlayer] == "VIRTUALIZED"} {
 	$wi.panwin.f1.tree insert {} end -id logIfcFrame -text \
 	    "Logical Interfaces" -open true -tags logIfcFrame
 
@@ -327,7 +327,7 @@ proc configGUI_addTree { wi node } {
 		configGUI_showIfcInfo $wi.panwin.f2 0 $node [$wi.panwin.f1.tree next $ifc]
 	    }"
     }
-    if {[[nodeType $node].virtlayer] == "VIRTUALIZED"} {
+    if {[[getNodeType $node].virtlayer] == "VIRTUALIZED"} {
 	$wi.panwin.f1.tree tag bind [lindex [lsort -ascii [ifcList $node]] end] <Key-Down> \
 		"configGUI_showIfcInfo $wi.panwin.f2 0 $node logIfcFrame"
 
@@ -436,7 +436,7 @@ proc configGUI_refreshIfcsTree { wi node } {
 	}
     }
 
-    if {[[nodeType $node].virtlayer] == "VIRTUALIZED"} {
+    if {[[getNodeType $node].virtlayer] == "VIRTUALIZED"} {
 	$wi insert {} end -id logIfcFrame -text \
 	    "Logical Interfaces" -open true -tags logIfcFrame
 
@@ -475,7 +475,7 @@ proc configGUI_refreshIfcsTree { wi node } {
 		configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node [$wi next $ifc]
 	    }"
     }
-    if {[[nodeType $node].virtlayer] == "VIRTUALIZED"} {
+    if {[[getNodeType $node].virtlayer] == "VIRTUALIZED"} {
 	$wi tag bind [lindex [lsort -ascii [ifcList $node]] end] <Key-Down> \
 		"configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node logIfcFrame"
 
@@ -596,7 +596,7 @@ proc configGUI_showIfcInfo { wi phase node ifc } {
 
     #if user didn't select Cancel in the popup about saving changes on previously selected interface
     if { $cancel == 0 } {
-	set type [nodeType $node]
+	set type [getNodeType $node]
         #creating new frame below the list of interfaces and adding modules with
 	#parameters of selected interface
 	if {$ifc != "" && $ifc != $shownifc} {
@@ -706,7 +706,7 @@ proc configGUI_logicalInterfaces { wi node ifc } {
 	global curnode logIfcs
 	set wi .popup.nbook.nfInterfaces.panwin.f2.iflogIfcFrame
 	set ifctype [$wi.addbox get]
-	set newIfcName [newLogIfc $ifctype $curnode]
+	set newIfcName [newLogIface $ifctype $curnode]
 	setLogIfcType $curnode $newIfcName $ifctype
 	set logIfcs [lsort [logIfcList $curnode]]
 	$wi.rmvbox configure -values $logIfcs
@@ -977,7 +977,7 @@ proc configGUI_nodeName { wi node label } {
     ttk::frame $wi.name -borderwidth 6
     ttk::label $wi.name.txt -text $label
 
-    if { [nodeType $node] in "rj45 extnat" } {
+    if { [getNodeType $node] in "rj45 extnat" } {
 	ttk::combobox $wi.name.nodename -width 14 -textvariable extIfc$node
 	set ifcs [getExtIfcs]
 	$wi.name.nodename configure -values [concat UNASSIGNED $ifcs]
@@ -1014,7 +1014,7 @@ proc configGUI_rj45s { wi node } {
     lappend guielements configGUI_rj45s
 
     set ifcs [getExtIfcs]
-    foreach group [getNodeExternalIfcs $node] {
+    foreach group [getNodeStolenIfaces $node] {
 	lassign $group ifc extIfc
 	set lbl "Interface $ifc"
 	lassign [logicalPeerByIfc $node $ifc] peer -
@@ -1056,10 +1056,10 @@ proc configGUI_rj45sApply { wi node } {
     foreach ifc [ifcList $node] {
 	lappend ifcs [list $ifc [string trim [$wi.$ifc.nodename get]]]
     }
-    set old [getNodeExternalIfcs $node]
+    set old [getNodeStolenIfaces $node]
     if { $old != $ifcs } {
 	set changed 1
-	setNodeExternalIfcs $node $ifcs
+	setNodeStolenIfaces $node $ifcs
 	redrawAll
 	updateUndoLog
     }
@@ -1844,7 +1844,7 @@ proc configGUI_nodeNameApply { wi node } {
     global changed badentry showTree eid_base isOSlinux
 
     set name [string trim [$wi.name.nodename get]]
-    if { [nodeType $node] ni "extnat rj45" && [regexp {^[A-Za-z_][0-9A-Za-z_-]*$} $name ] == 0 } {
+    if { [getNodeType $node] ni "extnat rj45" && [regexp {^[A-Za-z_][0-9A-Za-z_-]*$} $name ] == 0 } {
 	tk_dialog .dialog1 "IMUNES warning" \
 	    "Hostname should contain only letters, digits, _, and -, and should not start with - (hyphen) or number." \
 	    info 0 Dismiss
@@ -1930,7 +1930,7 @@ proc configGUI_ifcEssentialsApply { wi node ifc } {
 #****
 proc configGUI_ifcQueueConfigApply { wi node ifc } {
     global changed apply
-    if { [nodeType [peerByIfc $node $ifc]] != "rj45" } {
+    if { [getNodeType [getIfcPeer $node $ifc]] != "rj45" } {
 	set qdisc [string trim [$wi.if$ifc.queuecfg.disc get]]
 	set oldqdisc [getIfcQDisc $node $ifc]
 	if { $qdisc != $oldqdisc } {
@@ -2318,7 +2318,7 @@ proc configGUI_routingModelApply { wi node } {
     global router_ConfigModel
     global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable
     if { $oper_mode == "edit"} {
-	if { [nodeType $node] != "nat64" } {
+	if { [getNodeType $node] != "nat64" } {
 	    setNodeModel $node $router_ConfigModel
 	}
 	if { $router_ConfigModel != "static" } {
@@ -2327,7 +2327,7 @@ proc configGUI_routingModelApply { wi node } {
 	    setNodeProtocolOspfv2 $node $ospfEnable
 	    setNodeProtocolOspfv3 $node $ospf6Enable
 	    setNodeProtocolBgp $node $bgpEnable
-	    if { [nodeType $node] == "nat64" } {
+	    if { [getNodeType $node] == "nat64" } {
 		foreach proto { rip ripng ospf ospf6 bgp } {
 		    set protocfg [netconfFetchSection $node "router $proto"]
 		    if { $protocfg != "" } {
@@ -2693,15 +2693,15 @@ proc createTab { node cfgID } {
 #   customConfigGUIFillDefaults $wi $node
 # FUNCTION
 #   For the current node and custom configuration fills in the default values
-#   that are generated with cfggen and bootcmd commands for nodes.
+#   that are generated with generateConfig and bootcmd commands for nodes.
 # INPUTS
 #   * wi -- current widget
 #   * node -- node id
 #****
 proc customConfigGUIFillDefaults { wi node } {
     set cfgID [$wi.nb tab current -text]
-    set cmd [[nodeType $node].bootcmd $node]
-    set cfg [[nodeType $node].cfggen $node]
+    set cmd [[getNodeType $node].bootcmd $node]
+    set cfg [[getNodeType $node].generateConfig $node]
     set w $wi.nb.$cfgID
 
     if { [$w.bootcmd_e get] != "" || [$w.editor get 1.0 {end -1c}] != "" } {
@@ -4902,7 +4902,7 @@ proc configGUI_showBridgeIfcInfo { wi phase node ifc } {
     #if user didn't select Cancel in the popup about saving changes on
     #previously selected interface
     if { $cancel == 0 } {
-	set type [nodeType $node]
+	set type [getNodeType $node]
         #creating new frame below the list of interfaces and adding modules with
 	#parameters of selected interface
 	if {$ifc != "" && $ifc != $shownifc} {
@@ -5312,7 +5312,7 @@ proc configGUI_showFilterIfcRuleInfo { wi phase node ifc rule } {
 
     #if user didn't select Cancel in the popup about saving changes on previously selected interface
     if { $cancel == 0 } {
-	set type [nodeType $node]
+	set type [getNodeType $node]
         #creating new frame below the list of interfaces and adding modules with
 	#parameters of selected interface
 	if {$rule != "" && $rule != $shownrule} {
@@ -6068,7 +6068,7 @@ proc configGUI_showPacketInfo { wi phase node pac } {
 
     #if user didn't select Cancel in the popup about saving changes on previously selected interface
     if { $cancel == 0 } {
-	set type [nodeType $node]
+	set type [getNodeType $node]
         #creating new frame below the list of interfaces and adding modules with
 	#parameters of selected interface
 	if {$pac != "" && $pac != $shownpac} {
@@ -6471,4 +6471,8 @@ proc configGUI_nat64ConfigApply { wi node } {
 	setTaygaMappings $node $newTaygaMappings
 	set changed 1
     }
+}
+
+proc transformNodesGUI { nodes type } {
+    transformNodes $nodes $type
 }
