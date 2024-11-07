@@ -321,7 +321,7 @@ if {$execMode == "interactive"} {
 	lappend cfg_list $curcfg
 	namespace eval ::cf::[set curcfg] {}
 
-	loadCfg $cfg
+	loadCfgLegacy $cfg
 
 	if { [checkExternalInterfaces] } {
 	    return
@@ -346,9 +346,9 @@ if {$execMode == "interactive"} {
 	    upvar 0 ::cf::[set ::curcfg]::eid eid
 	    set eid $eid_base
 
-	    loadCfg $cfg
+	    loadCfgLegacy $cfg
 
-	    terminateAllNodes $eid_base
+	    undeployCfg $eid_base
 	} else {
 	    vimageCleanup $eid_base
 	}

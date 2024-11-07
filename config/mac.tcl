@@ -64,7 +64,7 @@ proc randomizeMACbytes {} {
 proc autoMACaddr { node iface } {
     upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
 
-    if { [nodeType $node] ni "ext extnat" && [[nodeType $node].virtlayer] != "VIRTUALIZED" } {
+    if { [getNodeType $node] ni "ext extnat" && [[getNodeType $node].virtlayer] != "VIRTUALIZED" } {
 	return
     }
 
