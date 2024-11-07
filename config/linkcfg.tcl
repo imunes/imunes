@@ -38,10 +38,10 @@
 #
 # NOTES
 #
-# linkPeers { link }
+# getLinkPeers { link }
 #	Returns nodes of link endpoints
 #
-# linkByPeers { node1 node2 }
+# linksByPeers { node1 node2 }
 #	Returns link whose peers are node1 and node2
 #
 # removeLink { link }
@@ -71,11 +71,11 @@
 # have to be implemented by additional Tk code.
 #****
 
-#****f* linkcfg.tcl/linkPeers
+#****f* linkcfg.tcl/getLinkPeers
 # NAME
-#   linkPeers -- get link's peer nodes
+#   getLinkPeers -- get link's peer nodes
 # SYNOPSIS
-#   set link_peers [linkPeers $link]
+#   set link_peers [getLinkPeers $link]
 # FUNCTION
 #   Returns nodes of link endpoints.
 # INPUTS
@@ -83,18 +83,18 @@
 # RESULT
 #   * link_peers -- returns nodes of a link endpoints in a list {node1 node2}
 #****
-proc linkPeers { link } {
+proc getLinkPeers { link } {
     upvar 0 ::cf::[set ::curcfg]::$link $link
 
     set entry [lsearch -inline [set $link] "nodes {*}"]
     return [lindex $entry 1]
 }
 
-#****f* linkcfg.tcl/linkPeersIfaces
+#****f* linkcfg.tcl/getLinkPeersIfaces
 # NAME
-#   linkPeersIfaces -- get link's peer interfaces
+#   getLinkPeersIfaces -- get link's peer interfaces
 # SYNOPSIS
-#   set link_ifaces [linkPeersIfaces $link]
+#   set link_ifaces [getLinkPeersIfaces $link]
 # FUNCTION
 #   Returns ifaces of link endpoints.
 # INPUTS
@@ -102,18 +102,18 @@ proc linkPeers { link } {
 # RESULT
 #   * link_ifaces -- returns interfaces of a link endpoints in a list {iface1 iface2}
 #****
-proc linkPeersIfaces { link } {
+proc getLinkPeersIfaces { link } {
     upvar 0 ::cf::[set ::curcfg]::$link $link
 
     set entry [lsearch -inline [set $link] "ifaces {*}"]
     return [lindex $entry 1]
 }
 
-#****f* linkcfg.tcl/linkByPeers
+#****f* linkcfg.tcl/linksByPeers
 # NAME
-#   linkByPeers -- get link id from peer nodes
+#   linksByPeers -- get link id from peer nodes
 # SYNOPSIS
-#   set link [linkByPeers $node1 $node2]
+#   set link [linksByPeers $node1 $node2]
 # FUNCTION
 #   Returns links whose peers are node1 and node2.
 #   The order of input nodes is irrelevant.
@@ -123,12 +123,12 @@ proc linkPeersIfaces { link } {
 # RESULT
 #   * links -- returns ids of links connecting endpoints node1 and node2
 #****
-proc linkByPeers { node1 node2 } {
+proc linksByPeers { node1 node2 } {
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
 
     set links {}
     foreach link $link_list {
-	set peers [linkPeers $link]
+	set peers [getLinkPeers $link]
 	if { $peers == "$node1 $node2" || $peers == "$node2 $node1" } {
 	    lappend links $link
 	}
@@ -156,17 +156,17 @@ proc removeLink { link } {
     upvar 0 ::cf::[set ::curcfg]::IPv6UsedList IPv6UsedList
     upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
 
-    set pnodes [linkPeers $link]
-    set pifaces [linkPeersIfaces $link]
+    set pnodes [getLinkPeers $link]
+    set pifaces [getLinkPeersIfaces $link]
     foreach node $pnodes ifc $pifaces {
 	upvar 0 ::cf::[set ::curcfg]::$node $node
 
 	set peer [removeFromList $pnodes $node "keep_doubles"]
 
-	if { [nodeType $node] in "extelem"} {
-	    set old [getNodeExternalIfcs $node]
+	if { [getNodeType $node] in "extelem"} {
+	    set old [getNodeStolenIfaces $node]
 	    set idx [lsearch -exact -index 0 $old "$ifc"]
-	    setNodeExternalIfcs $node [lreplace $old $idx $idx]
+	    setNodeStolenIfaces $node [lreplace $old $idx $idx]
 	    set i [lsearch [set $node] "interface-peer {$ifc $peer}"]
 	    set $node [lreplace [set $node] $i $i]
 	    continue
@@ -196,7 +196,7 @@ proc removeLink { link } {
     }
 
     foreach node_id $pnodes {
-	if { [nodeType $node_id] == "pseudo" } {
+	if { [getNodeType $node_id] == "pseudo" } {
 	    set node_list [removeFromList $node_list $node_id]
 	}
     }
@@ -1084,12 +1084,12 @@ proc splitLink { link nodetype } {
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
     upvar 0 ::cf::[set ::curcfg]::$link $link
 
-    set orig_nodes [linkPeers $link]
+    set orig_nodes [getLinkPeers $link]
     lassign $orig_nodes orig_node1_id orig_node2_id
     upvar 0 ::cf::[set ::curcfg]::$orig_node1_id $orig_node1_id
     upvar 0 ::cf::[set ::curcfg]::$orig_node2_id $orig_node2_id
 
-    set orig_ifaces [linkPeersIfaces $link]
+    set orig_ifaces [getLinkPeersIfaces $link]
 
     # create mirror link and copy the properties from the original
     set mirror_link_id [newObjectId $link_list "l"]
@@ -1158,8 +1158,8 @@ proc mergeLink { link } {
     # recycle the first pseudo link ID
     lassign [lsort "$link $mirror_link"] link mirror_link
 
-    lassign [linkPeers $link] orig_node1_id pseudo_node1_id
-    lassign [linkPeers $mirror_link] orig_node2_id pseudo_node2_id
+    lassign [getLinkPeers $link] orig_node1_id pseudo_node1_id
+    lassign [getLinkPeers $mirror_link] orig_node2_id pseudo_node2_id
 
     if { $orig_node1_id == $orig_node2_id } {
 	return
@@ -1170,8 +1170,8 @@ proc mergeLink { link } {
     upvar 0 ::cf::[set ::curcfg]::$orig_node1_id $orig_node1_id
     upvar 0 ::cf::[set ::curcfg]::$orig_node2_id $orig_node2_id
 
-    lassign [linkPeersIfaces $link] orig_node1_iface -
-    lassign [linkPeersIfaces $mirror_link] orig_node2_iface -
+    lassign [getLinkPeersIfaces $link] orig_node1_iface -
+    lassign [getLinkPeersIfaces $mirror_link] orig_node2_iface -
 
     set i [lsearch [set $orig_node1_id] "interface-peer {$orig_node1_iface $pseudo_node1_id}"]
     set $orig_node1_id [lreplace [set $orig_node1_id] $i $i \
@@ -1233,7 +1233,7 @@ proc newLink { lnode1 lnode2 } {
     global defEthBandwidth defSerBandwidth defSerDelay
 
     foreach node "$lnode1 $lnode2" {
-	set type [nodeType $node]
+	set type [getNodeType $node]
 	if { $type == "pseudo" } {
 	    return
 	}
@@ -1252,18 +1252,18 @@ proc newLink { lnode1 lnode2 } {
     upvar 0 ::cf::[set ::curcfg]::$link $link
     set $link {}
 
-    set ifname1 [newIfc [chooseIfName $lnode1 $lnode2] $lnode1]
+    set ifname1 [newIface [chooseIfName $lnode1 $lnode2] $lnode1]
     lappend $lnode1 "interface-peer {$ifname1 $lnode2}"
-    set ifname2 [newIfc [chooseIfName $lnode2 $lnode1] $lnode2]
+    set ifname2 [newIface [chooseIfName $lnode2 $lnode1] $lnode2]
     lappend $lnode2 "interface-peer {$ifname2 $lnode1}"
 
     lappend $link "nodes {$lnode1 $lnode2}"
     lappend $link "ifaces {$ifname1 $ifname2}"
-    if { ([nodeType $lnode1] == "lanswitch" || \
-	[nodeType $lnode2] == "lanswitch" || \
+    if { ([getNodeType $lnode1] == "lanswitch" || \
+	[getNodeType $lnode2] == "lanswitch" || \
 	[string first eth "$ifname1 $ifname2"] != -1) && \
-	[nodeType $lnode1] != "rj45" && \
-	[nodeType $lnode2] != "rj45" } {
+	[getNodeType $lnode1] != "rj45" && \
+	[getNodeType $lnode2] != "rj45" } {
 	lappend $link "bandwidth $defEthBandwidth"
     } elseif { [string first ser "$ifname1 $ifname2"] != -1 } {
 	lappend $link "bandwidth $defSerBandwidth"
@@ -1272,21 +1272,21 @@ proc newLink { lnode1 lnode2 } {
 
     lappend link_list $link
 
-    if {[info procs [nodeType $lnode1].confNewIfc] != ""} {
-	[nodeType $lnode1].confNewIfc $lnode1 $ifname1
+    if {[info procs [getNodeType $lnode1].confNewIfc] != ""} {
+	[getNodeType $lnode1].confNewIfc $lnode1 $ifname1
     }
-    if {[info procs [nodeType $lnode2].confNewIfc] != ""} {
-	[nodeType $lnode2].confNewIfc $lnode2 $ifname2
+    if {[info procs [getNodeType $lnode2].confNewIfc] != ""} {
+	[getNodeType $lnode2].confNewIfc $lnode2 $ifname2
     }
 
     return $link
 }
 
-#****f* linkcfg.tcl/linkByIfc
+#****f* linkcfg.tcl/getIfcLink
 # NAME
-#   linkByIfg -- get link by interface
+#   getIfcLink -- get link by interface
 # SYNOPSIS
-#   set link [linkByIfc $node $fc]
+#   set link [getIfcLink $node $fc]
 # FUNCTION
 #   Returns the link id of the link connecting the node's interface.
 # INPUTS
@@ -1295,12 +1295,12 @@ proc newLink { lnode1 lnode2 } {
 # RESULT
 #   * link -- link id.
 #****
-proc linkByIfc { node ifc } {
+proc getIfcLink { node ifc } {
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
 
-    set peer [peerByIfc $node $ifc]
+    set peer [getIfcPeer $node $ifc]
     foreach link $link_list {
-	set endpoints [linkPeers $link]
+	set endpoints [getLinkPeers $link]
 	if { $endpoints == "$node $peer" } {
 	    set dir downstream
 	    break
