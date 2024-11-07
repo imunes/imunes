@@ -135,31 +135,31 @@ proc $MODULE.toolbarIconDescr {} {
     return "Add new LAN switch"
 }
 
-#****f* lanswitch.tcl/lanswitch.ifcName
+#****f* lanswitch.tcl/lanswitch.ifacePrefix
 # NAME
-#   lanswitch.ifcName -- interface name
+#   lanswitch.ifacePrefix -- interface name
 # SYNOPSIS
-#   lanswitch.ifcName
+#   lanswitch.ifacePrefix
 # FUNCTION
 #   Returns lanswitch interface name prefix.
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifcName {l r} {
+proc $MODULE.ifacePrefix {l r} {
     return e
 }
 
-#****f* lanswitch.tcl/lanswitch.layer
+#****f* lanswitch.tcl/lanswitch.netlayer
 # NAME
-#   lanswitch.layer -- layer
+#   lanswitch.netlayer -- layer
 # SYNOPSIS
-#   set layer [lanswitch.layer]
+#   set layer [lanswitch.netlayer]
 # FUNCTION
 #   Returns the layer on which the lanswitch operates, i.e. returns LINK. 
 # RESULT
 #   * layer -- set to LINK
 #****
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return LINK
 }
 
@@ -178,28 +178,28 @@ proc $MODULE.virtlayer {} {
     return NATIVE
 }
 
-#****f* lanswitch.tcl/lanswitch.instantiate
+#****f* lanswitch.tcl/lanswitch.nodeCreate
 # NAME
-#   lanswitch.instantiate -- instantiate
+#   lanswitch.nodeCreate -- instantiate
 # SYNOPSIS
-#   lanswitch.instantiate $eid $node
+#   lanswitch.nodeCreate $eid $node
 # FUNCTION
-#   Procedure lanswitch.instantiate creates a new netgraph node of the type
+#   Procedure lanswitch.nodeCreate creates a new netgraph node of the type
 #   bridge. The name of the netgraph node is in the form of exprimentId_nodeId.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- id of the node (type of the node is lanswitch)
 #****
-proc $MODULE.instantiate { eid node } {
-    l2node.instantiate $eid $node
+proc $MODULE.nodeCreate { eid node } {
+    l2node.nodeCreate $eid $node
 }
 
-proc $MODULE.setupNamespace { eid node } {
-    l2node.setupNamespace $eid $node
+proc $MODULE.nodeNamespaceSetup { eid node } {
+    l2node.nodeNamespaceSetup $eid $node
 }
 
-proc $MODULE.createIfcs { eid node ifcs } {
-    l2node.createIfcs $eid $node $ifcs
+proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
+    l2node.nodePhysIfacesCreate $eid $node $ifcs
 }
 
 proc $MODULE.destroyIfcs { eid node ifcs } {

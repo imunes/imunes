@@ -84,15 +84,15 @@ proc $MODULE.notebookDimensions { wi } {
     return [list $h $w] 
 }
 
-proc $MODULE.ifcName {l r} {
+proc $MODULE.ifacePrefix {l r} {
     return e
 }
 
-#****f* filter.tcl/filter.layer
+#****f* filter.tcl/filter.netlayer
 # NAME
-#   filter.layer  
+#   filter.netlayer  
 # SYNOPSIS
-#   set layer [filter.layer]
+#   set layer [filter.netlayer]
 # FUNCTION
 #   Returns the layer on which the filter.communicates
 #   i.e. returns LINK. 
@@ -100,7 +100,7 @@ proc $MODULE.ifcName {l r} {
 #   * layer -- set to LINK 
 #****
 
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return LINK
 }
 
@@ -120,22 +120,20 @@ proc $MODULE.virtlayer {} {
     return NATIVE
 }
 
-#****f* filter.tcl/filter.instantiate
+#****f* filter.tcl/filter.nodeCreate
 # NAME
-#   filter.instantiate
+#   filter.nodeCreate
 # SYNOPSIS
-#   filter.instantiate $eid $node_id
+#   filter.nodeCreate $eid $node_id
 # FUNCTION
-#   Procedure instantiate creates a new virtaul node
-#   for a given node in imunes. 
-#   Procedure filter.instantiate cretaes a new virtual node
+#   Procedure filter.nodeCreate cretaes a new virtual node
 #   with all the interfaces and CPU parameters as defined
 #   in imunes. 
 # INPUTS
 #   * eid - experiment id
 #   * node_id - id of the node (type of the node is filter.
 #****
-proc $MODULE.instantiate { eid node } {
+proc $MODULE.nodeCreate { eid node } {
     pipesExec "printf \"
     mkpeer . patmat tmp tmp \n
     name .:tmp $node

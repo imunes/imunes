@@ -279,7 +279,7 @@ proc setOperMode { mode } {
 	    wm protocol . WM_DELETE_WINDOW {
 	    }
 	    if { $regular_termination } {
-		terminateAllNodes $eid
+		undeployCfg $eid
 	    } else {
 		vimageCleanup $eid
 	    }
@@ -494,8 +494,8 @@ proc dumpLinksToFile { path } {
 	if { $link in $skipLinks } {
 	    continue
 	}
-	set lnode1 [lindex [linkPeers $link] 0]
-	set lnode2 [lindex [linkPeers $link] 1]
+	set lnode1 [lindex [getLinkPeers $link] 0]
+	set lnode2 [lindex [getLinkPeers $link] 1]
 	set ifname1 [ifcByPeer $lnode1 $lnode2]
 	set ifname2 [ifcByPeer $lnode2 $lnode1]
 
@@ -504,7 +504,7 @@ proc dumpLinksToFile { path } {
 	    lappend skipLinks $mirror_link
 
 	    set p_lnode2 $lnode2
-	    set lnode2 [lindex [linkPeers $mirror_link] 0]
+	    set lnode2 [lindex [getLinkPeers $mirror_link] 0]
 	    set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
 	}
 
@@ -515,16 +515,16 @@ proc dumpLinksToFile { path } {
 
 	set lpair [list $lnode1 $ifname1]
 	set rpair [list $lnode2 $ifname2]
-	if { [nodeType $lnode1] in "rj45 extelem" } {
-	    if { [nodeType $lnode1] == "rj45" } {
+	if { [getNodeType $lnode1] in "rj45 extelem" } {
+	    if { [getNodeType $lnode1] == "rj45" } {
 		set lpair $name1
 	    } else {
 		set ifcs [getNodeExternalIfcs $lnode1]
 		set lpair [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname1"] 1]
 	    }
 	}
-	if { [nodeType $lnode2] in "rj45 extelem" } {
-	    if { [nodeType $lnode2] == "rj45" } {
+	if { [getNodeType $lnode2] in "rj45 extelem" } {
+	    if { [getNodeType $lnode2] == "rj45" } {
 		set rpair $name2
 	    } else {
 		set ifcs [getNodeExternalIfcs $lnode2]

@@ -116,31 +116,31 @@ proc $MODULE.toolbarIconDescr {} {
     return "Add new External interface"
 }
 
-#****f* rj45.tcl/rj45.ifcName
+#****f* rj45.tcl/rj45.ifacePrefix
 # NAME
-#   rj45.ifcName -- interface name
+#   rj45.ifacePrefix -- interface name
 # SYNOPSIS
-#   rj45.ifcName
+#   rj45.ifacePrefix
 # FUNCTION
 #   Returns rj45 interface name prefix.
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifcName {l r} {
+proc $MODULE.ifacePrefix {l r} {
     return ""
 }
 
-#****f* rj45.tcl/rj45.layer
+#****f* rj45.tcl/rj45.netlayer
 # NAME
-#   rj45.layer -- layer
+#   rj45.netlayer -- layer
 # SYNOPSIS
-#   set layer [rj45.layer]
+#   set layer [rj45.netlayer]
 # FUNCTION
 #   Returns the layer on which the rj45 operates, i.e. returns LINK. 
 # RESULT
 #   * layer -- set to LINK
 #****
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return LINK
 }
 
@@ -159,18 +159,18 @@ proc $MODULE.virtlayer {} {
     return NATIVE
 }
 
-#****f* rj45.tcl/rj45.instantiate
+#****f* rj45.tcl/rj45.nodeCreate
 # NAME
-#   rj45.instantiate -- instantiate
+#   rj45.nodeCreate -- nodeCreate
 # SYNOPSIS
-#   rj45.instantiate $eid $node
+#   rj45.nodeCreate $eid $node
 # FUNCTION
-#   Procedure rj45.instantiate puts real interface into promiscuous mode.
+#   Procedure rj45.nodeCreate puts real interface into promiscuous mode.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id (type of the node is rj45)
 #****
-proc $MODULE.instantiate { eid node } {
+proc $MODULE.nodeCreate { eid node } {
     captureExtIfc $eid $node
 }
 

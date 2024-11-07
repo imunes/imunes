@@ -76,7 +76,7 @@ proc popupAnnotationDialog { c target modify } {
 #   * obj -- type of annotation to draw
 #****
 proc drawAnnotation { obj } {
-    switch -exact -- [nodeType $obj] {
+    switch -exact -- [getNodeType $obj] {
 	oval {
 	    drawOval $obj
 	}
@@ -125,7 +125,7 @@ proc popupOvalDialog { c target modify } {
 	set coords [$c bbox "$target"]
 	set color [getAnnotationColor $target]
 	set bordercolor [getAnnotationBorderColor $target]
-	set annotationType [nodeType $target]
+	set annotationType [getNodeType $target]
     }
 
     if { $color == "" } { set color $defFillColor }
@@ -330,7 +330,7 @@ proc popupRectangleDialog { c target modify } {
 	set coords [$c bbox "$target"]
 	set color [getAnnotationColor $target]
 	set bordercolor [getAnnotationBorderColor $target]
-	set annotationType [nodeType $target]
+	set annotationType [getNodeType $target]
 	set rad [getAnnotationRad $target]
     }
 
@@ -557,9 +557,9 @@ proc popupTextDialog { c target modify } {
 	set label ""
     } else {
 	set coords [$c bbox "$target"]
-	set annotationType [nodeType $target]
+	set annotationType [getNodeType $target]
 	set label [getAnnotationLabel $target]
-	set lcolor [getAnnotationLColor $target]
+	set lcolor [getAnnotationLabelColor $target]
 	set font [getAnnotationFont $target]
     }
     if { $lcolor == "" } { set lcolor black }
@@ -662,7 +662,7 @@ proc popupTextApply { c wi target } {
 	}
 	setAnnotationCoords $target $coords
 	setAnnotationLabel $target $label
-	setAnnotationLColor $target $labelcolor
+	setAnnotationLabelColor $target $labelcolor
 	setAnnotationFont $target $font
 
 	destroyNewText $c
@@ -696,7 +696,7 @@ proc drawText { text } {
     }
     set x [expr {[lindex $coords 0] * $zoom}]
     set y [expr {[lindex $coords 1] * $zoom}]
-    set labelcolor [getAnnotationLColor $text]
+    set labelcolor [getAnnotationLabelColor $text]
     set label [getAnnotationLabel $text]
     set font [getAnnotationFont $text]
     
@@ -735,7 +735,7 @@ proc popupFreeformDialog { c target modify } {
 	set annotationType "freeform"
     } else {
 	set coords [$c bbox "$target"]
-	set annotationType [nodeType $target]
+	set annotationType [getNodeType $target]
 	set color [getAnnotationColor $target]
 	set width [getAnnotationWidth $target]
     }
@@ -978,7 +978,7 @@ proc annotationConfigGUI { c } {
 #   * target -- existing or a new annotation
 #****
 proc annotationConfig { c target } {
-    switch -exact -- [nodeType $target] {
+    switch -exact -- [getNodeType $target] {
 	oval {
 	    popupOvalDialog $c $target "true"
 	}
@@ -992,7 +992,7 @@ proc annotationConfig { c target } {
 	    popupFreeformDialog $c $target "true"
 	}
 	default {
-	    puts "Unknown type [nodeType $target] for target $target"
+	    puts "Unknown type [getNodeType $target] for target $target"
 	}
     }
     redrawAll
@@ -1216,7 +1216,7 @@ proc popupColor { type l settext } {
 #****
 proc selectmarkEnter { c x y } {
     set obj [lindex [$c gettags current] 1]
-    set type [nodeType $obj]
+    set type [getNodeType $obj]
 
     if {$type != "oval" && $type != "rectangle"} { return }
 

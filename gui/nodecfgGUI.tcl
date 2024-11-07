@@ -53,7 +53,7 @@ proc nodeConfigGUI { c node } {
     if {$node == ""} {
         set node [lindex [$c gettags current] 1]
     }
-    set type [nodeType $node]
+    set type [getNodeType $node]
     if { $type == "pseudo" } {
         #
 	# Hyperlink to another canvas
@@ -151,7 +151,7 @@ proc configGUI_addNotebook { wi node labels } {
 #   * node - node id
 #****
 proc notebookSize { wi node } {
-    set type [nodeType $node]
+    set type [getNodeType $node]
 
     set dim [$type.notebookDimensions $wi]
     set configh [lindex $dim 0]
@@ -596,7 +596,7 @@ proc configGUI_showIfcInfo { wi phase node ifc } {
 
     #if user didn't select Cancel in the popup about saving changes on previously selected interface
     if { $cancel == 0 } {
-	set type [nodeType $node]
+	set type [getNodeType $node]
         #creating new frame below the list of interfaces and adding modules with
 	#parameters of selected interface
 	if {$ifc != "" && $ifc != $shownifc} {
@@ -1836,7 +1836,7 @@ proc configGUI_nodeNameApply { wi node } {
     global changed badentry showTree eid_base isOSlinux
 
     set name [string trim [$wi.name.nodename get]]
-    if { [nodeType $node] ni "extnat rj45" && [regexp {^[A-Za-z_][0-9A-Za-z_-]*$} $name ] == 0 } {
+    if { [getNodeType $node] ni "extnat rj45" && [regexp {^[A-Za-z_][0-9A-Za-z_-]*$} $name ] == 0 } {
 	tk_dialog .dialog1 "IMUNES warning" \
 	    "Hostname should contain only letters, digits, _, and -, and should not start with - (hyphen) or number." \
 	    info 0 Dismiss
@@ -1922,7 +1922,7 @@ proc configGUI_ifcEssentialsApply { wi node ifc } {
 #****
 proc configGUI_ifcQueueConfigApply { wi node ifc } {
     global changed apply
-    if { [nodeType [peerByIfc $node $ifc]] != "rj45" } {
+    if { [getNodeType [getIfcPeer $node $ifc]] != "rj45" } {
 	set qdisc [string trim [$wi.if$ifc.queuecfg.disc get]]
 	set oldqdisc [getIfcQDisc $node $ifc]
 	if { $qdisc != $oldqdisc } {
@@ -2310,7 +2310,7 @@ proc configGUI_routingModelApply { wi node } {
     global router_ConfigModel
     global ripEnable ripngEnable ospfEnable ospf6Enable
     if { $oper_mode == "edit"} {
-	if { [nodeType $node] != "nat64" } {
+	if { [getNodeType $node] != "nat64" } {
 	    setNodeModel $node $router_ConfigModel
 	}
 	if { $router_ConfigModel != "static" } {
@@ -2318,7 +2318,7 @@ proc configGUI_routingModelApply { wi node } {
 	    setNodeProtocolRipng $node $ripngEnable
 	    setNodeProtocolOspfv2 $node $ospfEnable
 	    setNodeProtocolOspfv3 $node $ospf6Enable
-	    if { [nodeType $node] == "nat64" } {
+	    if { [getNodeType $node] == "nat64" } {
 		foreach proto { rip ripng ospf ospf6 bgp } {
 		    set protocfg [netconfFetchSection $node "router $proto"]
 		    if { $protocfg != "" } {
@@ -2683,7 +2683,7 @@ proc createTab { node cfgID } {
 #   customConfigGUIFillDefaults $wi $node
 # FUNCTION
 #   For the current node and custom configuration fills in the default values
-#   that are generated with cfggen and bootcmd commands for nodes.
+#   that are generated with generateConfig and bootcmd commands for nodes.
 # INPUTS
 #   * wi -- current widget
 #   * node -- node id
@@ -2691,7 +2691,7 @@ proc createTab { node cfgID } {
 proc customConfigGUIFillDefaults { wi node } {
     set cfgID [$wi.nb tab current -text]
     set cmd [[typemodel $node].bootcmd $node]
-    set cfg [[typemodel $node].cfggen $node]
+    set cfg [[typemodel $node].generateConfig $node]
     set w $wi.nb.$cfgID
 
     if { [$w.bootcmd_e get] != "" || [$w.editor get 1.0 {end -1c}] != "" } {
@@ -4862,7 +4862,7 @@ proc configGUI_showBridgeIfcInfo { wi phase node ifc } {
     #if user didn't select Cancel in the popup about saving changes on
     #previously selected interface
     if { $cancel == 0 } {
-	set type [nodeType $node]
+	set type [getNodeType $node]
         #creating new frame below the list of interfaces and adding modules with
 	#parameters of selected interface
 	if {$ifc != "" && $ifc != $shownifc} {
@@ -5272,7 +5272,7 @@ proc configGUI_showFilterIfcRuleInfo { wi phase node ifc rule } {
 
     #if user didn't select Cancel in the popup about saving changes on previously selected interface
     if { $cancel == 0 } {
-	set type [nodeType $node]
+	set type [getNodeType $node]
         #creating new frame below the list of interfaces and adding modules with
 	#parameters of selected interface
 	if {$rule != "" && $rule != $shownrule} {
@@ -6028,7 +6028,7 @@ proc configGUI_showPacketInfo { wi phase node pac } {
 
     #if user didn't select Cancel in the popup about saving changes on previously selected interface
     if { $cancel == 0 } {
-	set type [nodeType $node]
+	set type [getNodeType $node]
         #creating new frame below the list of interfaces and adding modules with
 	#parameters of selected interface
 	if {$pac != "" && $pac != $shownpac} {

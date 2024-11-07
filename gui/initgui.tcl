@@ -967,11 +967,11 @@ menu $mf.left.net_nodes -title "Network layer nodes"
 foreach b $all_modules_list {
     set image [image create photo -file [$b.icon toolbar]]
 
-    if { [$b.layer] == "LINK" } {
+    if { [$b.netlayer] == "LINK" } {
 	$mf.left.link_nodes add command -image $image -hidemargin 1 \
 	    -compound left -label [string range [$b.toolbarIconDescr] 8 end] \
 	    -command "setActiveTool $b"
-    } elseif { [$b.layer] == "NETWORK" } {
+    } elseif { [$b.netlayer] == "NETWORK" } {
 	$mf.left.net_nodes add command -image $image -hidemargin 1 \
 	    -compound left -label [string range [$b.toolbarIconDescr] 8 end] \
 	    -command "setActiveTool $b"

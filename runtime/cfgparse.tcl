@@ -256,18 +256,18 @@ proc dumpCfg { method dest } {
     }
 }
 
-#****f* nodecfg.tcl/loadCfg
+#****f* nodecfg.tcl/loadCfgLegacy
 # NAME
-#   loadCfg -- loads the current configuration.
+#   loadCfgLegacy -- loads the current configuration.
 # SYNOPSIS
-#   loadCfg $cfg
+#   loadCfgLegacy $cfg
 # FUNCTION
 #   Loads the configuration written in the cfg string to a current 
 #   configuration. 
 # INPUTS
 #   * cfg -- string containing the new working configuration.
 #****
-proc loadCfg { cfg } {
+proc loadCfgLegacy { cfg } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
     upvar 0 ::cf::[set ::curcfg]::annotation_list annotation_list
@@ -740,13 +740,13 @@ proc loadCfg { cfg } {
     set IPv4UsedList ""
     set MACUsedList ""
     foreach node $node_list {
-	set nodeType [typemodel $node]
-	if { $nodeType in "extelem" } {
+	set node_type [typemodel $node]
+	if { $node_type in "extelem" } {
 	    continue
 	}
-	if { $nodeType ni [concat $all_modules_list "pseudo"] && \
-	    ! [string match "router.*" $nodeType] } {
-	    set msg "Unknown node type: '$nodeType'."
+	if { $node_type ni [concat $all_modules_list "pseudo"] && \
+	    ! [string match "router.*" $node_type] } {
+	    set msg "Unknown node type: '$node_type'."
 	    if { $execMode == "batch" } {
 		statline $msg
 	    } else {
@@ -757,7 +757,7 @@ proc loadCfg { cfg } {
 	    exit
 	}
 	if { "lo0" ni [logIfcList $node] && \
-		[[typemodel $node].layer] == "NETWORK"} {
+		[[typemodel $node].netlayer] == "NETWORK"} {
 	    setLogIfcType $node lo0 lo
 	    setIfcIPv4addr $node lo0 "127.0.0.1/8"
 	    setIfcIPv6addr $node lo0 "::1/128"

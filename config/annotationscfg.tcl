@@ -154,11 +154,11 @@ proc getAnnotationLabel { object } {
     return [lindex [lsearch -inline [set $object] "label *"] 1]
 }
 
-#****f* annotations_cfg.tcl/getAnnotationLColor
+#****f* annotations_cfg.tcl/getAnnotationLabelColor
 # NAME
-#   getAnnotationLColor -- get annotation label color
+#   getAnnotationLabelColor -- get annotation label color
 # SYNOPSIS
-#   getAnnotationLColor $object
+#   getAnnotationLabelColor $object
 # FUNCTION
 #   Returns the specified annotation's label color.
 # INPUTS
@@ -166,7 +166,7 @@ proc getAnnotationLabel { object } {
 # RESULT
 #   * lcolor -- annotation label color
 #****
-proc getAnnotationLColor { object } {
+proc getAnnotationLabelColor { object } {
     upvar 0 ::cf::[set ::curcfg]::$object $object
     return [lindex [lsearch -inline [set $object] "labelcolor *"] 1]
 }
@@ -374,18 +374,18 @@ proc setAnnotationLabel { target label } {
     }
 }
 
-#****f* annotations_cfg.tcl/setAnnotationLColor
+#****f* annotations_cfg.tcl/setAnnotationLabelColor
 # NAME
-#   setAnnotationLColor -- set annotation's label color
+#   setAnnotationLabelColor -- set annotation's label color
 # SYNOPSIS
-#   setAnnotationLColor $target $lcolor
+#   setAnnotationLabelColor $target $lcolor
 # FUNCTION
 #   Sets annotation's label color.
 # INPUTS
 #   * target -- annotation id
 #   * lcolor -- label color
 #****
-proc setAnnotationLColor { target lcolor } {
+proc setAnnotationLabelColor { target lcolor } {
     upvar 0 ::cf::[set ::curcfg]::$target $target
     set i [lsearch [set $target] "labelcolor *"]
     if {$i>=0} {

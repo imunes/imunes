@@ -80,7 +80,7 @@ proc copySelection {} {
     foreach node $node_list {
 	set ::cf::clipboard::$node [set ::cf::[set ::curcfg]::$node]
 	foreach ifc [ifcList $node] {
-	    set peer [peerByIfc $node $ifc]
+	    set peer [getIfcPeer $node $ifc]
 	    if { [lsearch $node_list $peer] < 0 } {
 		continue
 	    }
@@ -100,7 +100,7 @@ proc copySelection {} {
         upvar 0 ::cf::[set ::curcfg]::$node $node
 
 	foreach ifc [ifcList $node] {
-	    set peer [peerByIfc $node $ifc]
+	    set peer [getIfcPeer $node $ifc]
 	    if { [lsearch $node_list $peer] < 0 } {
 		netconfClearSection $node "interface $ifc"
 		set i [lsearch [set $node] "interface-peer {$ifc $peer}"]
@@ -163,7 +163,7 @@ proc paste {} {
 	set $node_copy [set ::cf::clipboard::$node_orig]
 	lappend node_list $node_copy
 	lappend copypaste_list $node_copy
-	set node_type [nodeType $node_orig]
+	set node_type [getNodeType $node_orig]
 	if { $node_type in [array names nodeNamingBase] } {
 	    setNodeName $node_copy [getNewNodeNameType $node_type $nodeNamingBase($node_type)]
 	} else {
@@ -182,7 +182,7 @@ proc paste {} {
     foreach node_orig [set ::cf::clipboard::node_list] {
 	set node_copy $node_map($node_orig)
 	foreach ifc [ifcList $node_copy] {
-	    set old_peer [peerByIfc $node_copy $ifc]
+	    set old_peer [getIfcPeer $node_copy $ifc]
 	    set i [lsearch [set $node_copy] "interface-peer {$ifc $old_peer}"]
 	    set $node_copy [lreplace [set $node_copy] $i $i \
 		"interface-peer {$ifc $node_map($old_peer)}"]
@@ -210,7 +210,7 @@ proc paste {} {
 	upvar 0 ::cf::[set ::curcfg]::$link_copy $link_copy
 	set $link_copy [set ::cf::clipboard::$link_orig]
 	lappend link_list $link_copy
-	set old_peers [linkPeers $link_copy]
+	set old_peers [getLinkPeers $link_copy]
 	set new_peers \
 	    "$node_map([lindex $old_peers 0]) $node_map([lindex $old_peers 1])"
 	set i [lsearch [set $link_copy] "nodes {$old_peers}"]

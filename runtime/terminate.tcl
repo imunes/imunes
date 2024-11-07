@@ -42,11 +42,11 @@ proc deleteExperimentFiles { eid } {
     file delete -force $folderName
 }
 
-#****f* exec.tcl/l3node.shutdown
+#****f* exec.tcl/l3node.nodeShutdown
 # NAME
-#   l3node.shutdown -- layer 3 node shutdown
+#   l3node.nodeShutdown -- layer 3 node shutdown
 # SYNOPSIS
-#   l3node.shutdown $eid $node
+#   l3node.nodeShutdown $eid $node
 # FUNCTION
 #   Shutdowns a layer 3 node (pc, host or router).
 #   Simulates the shutdown proces of a node, kills all the services and
@@ -55,25 +55,25 @@ proc deleteExperimentFiles { eid } {
 #   * eid -- experiment id
 #   * node -- node id
 #****
-proc l3node.shutdown { eid node } {
+proc l3node.nodeShutdown { eid node } {
     killExtProcess "wireshark.*[getNodeName $node].*\\($eid\\)"
     killAllNodeProcesses $eid $node
     removeNodeIfcIPaddrs $eid $node
 }
 
 proc l3node.destroyIfcs { eid node ifcs } {
-    destroyNodeIfcs $eid $node $ifcs
+    destroyNodeIfaces $eid $node $ifcs
 }
 
 proc l2node.destroyIfcs { eid node ifcs } {
-    destroyNodeIfcs $eid $node $ifcs
+    destroyNodeIfaces $eid $node $ifcs
 }
 
-#****f* exec.tcl/l3node.destroy
+#****f* exec.tcl/l3node.nodeDestroy
 # NAME
-#   l3node.destroy -- layer 3 node destroy
+#   l3node.nodeDestroy -- layer 3 node destroy
 # SYNOPSIS
-#   l3node.destroy $eid $node
+#   l3node.nodeDestroy $eid $node
 # FUNCTION
 #   Destroys a layer 3 node (pc, host or router).
 #   Destroys all the interfaces of the node by sending a shutdown message to
@@ -82,7 +82,7 @@ proc l2node.destroyIfcs { eid node ifcs } {
 #   * eid -- experiment id
 #   * node -- node id
 #****
-proc l3node.destroy { eid node } {
+proc l3node.nodeDestroy { eid node } {
     destroyNodeVirtIfcs $eid $node
     removeNodeContainer $eid $node
     destroyNamespace $eid-$node
@@ -98,11 +98,11 @@ proc terminateL2L3Nodes { eid nodes nodeCount w } {
     foreach node $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	if { [info procs [typemodel $node].shutdown] != "" } {
+	if { [info procs [typemodel $node].nodeShutdown] != "" } {
 	    try {
-		[typemodel $node].shutdown $eid $node
+		[typemodel $node].nodeShutdown $eid $node
 	    } on error err {
-		return -code error "Error in '[typemodel $node].shutdown $eid $node': $err"
+		return -code error "Error in '[typemodel $node].nodeShutdown $eid $node': $err"
 	    }
 	}
 	pipesExec ""
@@ -133,9 +133,9 @@ proc releaseExternalIfcs { eid extifcs extifcsCount w } {
 	displayBatchProgress $batchStep $extifcsCount
 
 	try {
-	    [typemodel $node].destroy $eid $node
+	    [typemodel $node].nodeDestroy $eid $node
 	} on error err {
-	    return -code error "Error in '[typemodel $node].destroy $eid $node': $err"
+	    return -code error "Error in '[typemodel $node].nodeDestroy $eid $node': $err"
 	}
 	pipesExec ""
 
@@ -169,8 +169,8 @@ proc destroyLinks { eid links linkCount w } {
 	    continue
 	}
 
-	set lnode1 [lindex [linkPeers $link] 0]
-	set lnode2 [lindex [linkPeers $link] 1]
+	set lnode1 [lindex [getLinkPeers $link] 0]
+	set lnode2 [lindex [getLinkPeers $link] 1]
 
 	set msg "Destroying link $link"
 	set mirror_link [getLinkMirror $link]
@@ -179,7 +179,7 @@ proc destroyLinks { eid links linkCount w } {
 
 	    set msg "Destroying link $link/$mirror_link"
 
-	    set lnode2 [lindex [linkPeers $mirror_link] 0]
+	    set lnode2 [lindex [getLinkPeers $mirror_link] 0]
 	}
 
 	try {
@@ -219,9 +219,9 @@ proc destroyL2Nodes { eid nodes nodeCount w } {
 	displayBatchProgress $batchStep $nodeCount
 
 	try {
-	    [typemodel $node].destroy $eid $node
+	    [typemodel $node].nodeDestroy $eid $node
 	} on error err {
-	    return -code error "Error in '[typemodel $node].destroy $eid $node': $err"
+	    return -code error "Error in '[typemodel $node].nodeDestroy $eid $node': $err"
 	}
 
 	incr batchStep
@@ -250,9 +250,9 @@ proc destroyL3Nodes { eid nodes nodeCount w } {
 	displayBatchProgress $batchStep $nodeCount
 
 	try {
-	    [typemodel $node].destroy $eid $node
+	    [typemodel $node].nodeDestroy $eid $node
 	} on error err {
-	    return -code error "Error in '[typemodel $node].destroy $eid $node': $err"
+	    return -code error "Error in '[typemodel $node].nodeDestroy $eid $node': $err"
 	}
 	pipesExec ""
 
@@ -291,15 +291,15 @@ proc finishTerminating { status msg w } {
     }
 }
 
-#****f* exec.tcl/terminateAllNodes
+#****f* exec.tcl/undeployCfg
 # NAME
-#   terminateAllNodes -- shutdown and destroy all nodes in experiment
+#   undeployCfg -- shutdown and destroy all nodes in experiment
 # SYNOPSIS
-#   terminateAllNodes
+#   undeployCfg
 # FUNCTION
 #
 #****
-proc terminateAllNodes { eid } {
+proc undeployCfg { eid } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
     global progressbarCount execMode
@@ -328,7 +328,7 @@ proc terminateAllNodes { eid } {
     set allNodes {}
     set pseudoNodesCount 0
     foreach node $node_list {
-	if { [nodeType $node] != "pseudo" } {
+	if { [getNodeType $node] != "pseudo" } {
 	    if { [[typemodel $node].virtlayer] == "NATIVE" } {
 		if { [typemodel $node] == "rj45" } {
 		    lappend extifcs $node
@@ -521,7 +521,7 @@ proc destroyNodesIfcs { eid nodes nodeCount w } {
 # SYNOPSIS
 #   stopNodeFromMenu $node
 # FUNCTION
-#   Invokes the [typmodel $node].shutdown procedure, along with services shutdown.
+#   Invokes the [typmodel $node].nodeShutdown procedure, along with services shutdown.
 # INPUTS
 #   * node -- node id
 #****

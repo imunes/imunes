@@ -122,19 +122,19 @@ proc autoIPv6addr { node iface } {
     set peer_ip6addrs {}
 
 
-    if { [[typemodel $node].layer] != "NETWORK" } { 
+    if { [[typemodel $node].netlayer] != "NETWORK" } { 
 	#
 	# Shouldn't get called at all for link-layer nodes
 	#
-	#puts "autoIPv6 called for a [[typemodel $node].layer] layer node"
+	#puts "autoIPv6 called for a [[typemodel $node].netlayer] layer node"
 	return
     }  
 
     setIfcIPv6addr $node $iface ""
     set peer_node [logicalPeerByIfc $node $iface]
 
-    if { [[typemodel $peer_node].layer] == "LINK" } {
-	foreach l2node [listLANnodes $peer_node {}] {
+    if { [[typemodel $peer_node].netlayer] == "LINK" } {
+	foreach l2node [listLANNodes $peer_node {}] {
 	    foreach ifc [ifcList $l2node] {
 		set peer [logicalPeerByIfc $l2node $ifc]
 		set peer_if [ifcByLogicalPeer $peer $l2node]
@@ -158,7 +158,7 @@ proc autoIPv6addr { node iface } {
 	set peer_ip6addrs $peer_ip6addr
     }
 
-    set targetbyte [expr 0x[[nodeType $node].IPAddrRange]]
+    set targetbyte [expr 0x[[getNodeType $node].IPAddrRange]]
 
     if { $peer_ip6addrs != "" && $changeAddrRange6 == 0 } {
 	set ipaddr  [nextFreeIP6Addr [lindex $peer_ip6addrs 0] $targetbyte $peer_ip6addrs]

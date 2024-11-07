@@ -112,7 +112,7 @@ proc $MODULE.notebookDimensions { wi } {
     return [list $h $w] 
 }
 
-proc $MODULE.ifcName {l r} {
+proc $MODULE.ifacePrefix {l r} {
     return [l3IfcName $l $r]
 }
 
@@ -120,7 +120,7 @@ proc $MODULE.IPAddrRange {} {
     return 20
 }
 
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return NETWORK
 }
 
@@ -128,8 +128,8 @@ proc $MODULE.virtlayer {} {
     return VIRTUALIZED 
 }
 
-proc $MODULE.cfggen { node } {
-    set cfg [router.frr.cfggen $node]
+proc $MODULE.generateConfig { node } {
+    set cfg [router.frr.generateConfig $node]
 
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global nat64ifc_$eid.$node
@@ -162,22 +162,22 @@ proc $MODULE.shellcmds { } {
     return [router.frr.shellcmds]
 }
 
-proc $MODULE.instantiate { eid node } {
-    router.frr.instantiate $eid $node
+proc $MODULE.nodeCreate { eid node } {
+    router.frr.nodeCreate $eid $node
 }
 
-proc $MODULE.setupNamespace { eid node } {
-    l3node.setupNamespace $eid $node
+proc $MODULE.nodeNamespaceSetup { eid node } {
+    l3node.nodeNamespaceSetup $eid $node
 }
 
-proc $MODULE.initConfigure { eid node } {
-    l3node.initConfigure $eid $node
+proc $MODULE.nodeInitConfigure { eid node } {
+    l3node.nodeInitConfigure $eid $node
 
     enableIPforwarding $eid $node
 }
 
-proc $MODULE.createIfcs { eid node ifcs } {
-    l3node.createIfcs $eid $node $ifcs
+proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
+    l3node.nodePhysIfacesCreate $eid $node $ifcs
 }
 
 proc $MODULE.start { eid node } {
@@ -208,7 +208,7 @@ proc $MODULE.start { eid node } {
 
     # XXX
     # Even though this routes should be added here, we add them in the
-    # router.frr.start procedure which invokes nat64.cfggen where we define
+    # router.frr.start procedure which invokes nat64.generateConfig where we define
     # them with:
     # lappend cfg "ip route $tayga4pool $tun"
     # lappend cfg "ipv6 route $tayga6prefix $tun"

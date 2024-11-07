@@ -122,7 +122,7 @@ proc $MODULE.notebookDimensions { wi } {
     return [list $h $w] 
 }
 
-proc $MODULE.ifcName {l r} {
+proc $MODULE.ifacePrefix {l r} {
     return [l3IfcName $l $r]
 }
 
@@ -130,11 +130,11 @@ proc $MODULE.IPAddrRange {} {
     return 20
 }
 
-#****f* stpswitch.tcl/stpswitch.layer
+#****f* stpswitch.tcl/stpswitch.netlayer
 # NAME
-#   stpswitch.layer  
+#   stpswitch.netlayer  
 # SYNOPSIS
-#   set layer [stpswitch.layer]
+#   set layer [stpswitch.netlayer]
 # FUNCTION
 #   Returns the layer on which the stpswitch communicates
 #   i.e. returns LINK. 
@@ -142,7 +142,7 @@ proc $MODULE.IPAddrRange {} {
 #   * layer -- set to LINK
 #****
 
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return LINK 
 }
 
@@ -162,11 +162,11 @@ proc $MODULE.virtlayer {} {
     return VIRTUALIZED
 }
 
-#****f* stpswitch.tcl/stpswitch.cfggen
+#****f* stpswitch.tcl/stpswitch.generateConfig
 # NAME
-#   stpswitch.cfggen  
+#   stpswitch.generateConfig  
 # SYNOPSIS
-#   set config [stpswitch.cfggen $node_id]
+#   set config [stpswitch.generateConfig $node_id]
 # FUNCTION
 #   Returns the generated configuration. This configuration represents
 #   the configuration loaded on the booting time of the virtual nodes
@@ -179,7 +179,7 @@ proc $MODULE.virtlayer {} {
 #   * congif -- generated configuration 
 #****
 
-proc $MODULE.cfggen { node } {
+proc $MODULE.generateConfig { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
     set cfg {}
@@ -333,7 +333,7 @@ proc $MODULE.cfggen { node } {
 #   set appl [stpswitch.bootcmd $node_id]
 # FUNCTION
 #   Procedure bootcmd returns the application that reads and 
-#   employes the configuration generated in stpswitch.cfggen.
+#   employes the configuration generated in stpswitch.generateConfig.
 #   In this case (procedure stpswitch.bootcmd) specific application
 #   is /bin/sh
 # INPUTS
@@ -362,15 +362,13 @@ proc $MODULE.shellcmds { } {
         return "csh bash sh tcsh"
 }
 
-#****f* stpswitch.tcl/stpswitch.instantiate
+#****f* stpswitch.tcl/stpswitch.nodeCreate
 # NAME
-#   stpswitch.instantiate
+#   stpswitch.nodeCreate
 # SYNOPSIS
-#   stpswitch.instantiate $eid $node_id
+#   stpswitch.nodeCreate $eid $node_id
 # FUNCTION
-#   Procedure instantiate creates a new virtaul node
-#   for a given node in imunes. 
-#   Procedure stpswitch.instantiate cretaes a new virtual node
+#   Procedure stpswitch.nodeCreate cretaes a new virtual node
 #   with all the interfaces and CPU parameters as defined
 #   in imunes. 
 # INPUTS
@@ -378,20 +376,20 @@ proc $MODULE.shellcmds { } {
 #   * node_id - id of the node (type of the node is stpswitch)
 #****
 
-proc $MODULE.instantiate { eid node } {
-    l3node.instantiate $eid $node
+proc $MODULE.nodeCreate { eid node } {
+    l3node.nodeCreate $eid $node
 }
 
-proc $MODULE.setupNamespace { eid node } {
-    l3node.setupNamespace $eid $node
+proc $MODULE.nodeNamespaceSetup { eid node } {
+    l3node.nodeNamespaceSetup $eid $node
 }
 
-proc $MODULE.initConfigure { eid node } {
-    l3node.initConfigure $eid $node
+proc $MODULE.nodeInitConfigure { eid node } {
+    l3node.nodeInitConfigure $eid $node
 }
 
-proc $MODULE.createIfcs { eid node ifcs } {
-    l3node.createIfcs $eid $node $ifcs
+proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
+    l3node.nodePhysIfacesCreate $eid $node $ifcs
 }
 
 #****f* stpswitch.tcl/stpswitch.start

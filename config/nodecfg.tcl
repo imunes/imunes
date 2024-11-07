@@ -159,7 +159,7 @@
 # setNodeName { node_id name }
 #	Sets a new node's logical name.
 #
-# nodeType { node_id }
+# getNodeType { node_id }
 #	Returns node's type.
 #
 # getNodeModel { node_id }
@@ -207,7 +207,7 @@
 # ifcList { node_id }
 #	Returns a list of all interfaces present in a node.
 #
-# peerByIfc { node_id ifc }
+# getIfcPeer { node_id ifc }
 #	Returns id of the node on the other side of the interface
 #
 # logicalPeerByIfc { node_id ifc }
@@ -277,7 +277,7 @@
 #   * typemod -- returns node's type and routing model in form type.model
 #****
 proc typemodel { node } {
-    set type [nodeType $node]
+    set type [getNodeType $node]
     set model [getNodeModel $node]
     if { $model != {} } {
 	return $type.$model
@@ -1356,17 +1356,17 @@ proc getIfcLinkLocalIPv6addr { node ifc } {
 #     my_gws subnets_and_gws
 # FUNCTION
 #   Returns a list of all default IPv4/IPv6 gateways for the subnets in which
-#   this node belongs as a {nodeType|gateway4|gateway6} values. Additionally,
+#   this node belongs as a {node_type|gateway4|gateway6} values. Additionally,
 #   it refreshes newly discovered gateways and subnet members to the existing
 #   $subnet_gws list and $nodes_l2data dictionary.
 # INPUTS
 #   * node -- node id
-#   * subnet_gws -- already known {nodeType|gateway4|gateway6} values
+#   * subnet_gws -- already known {node_type|gateway4|gateway6} values
 #   * nodes_l2data -- a dictionary of already known {node ifc subnet_idx}
 #   triplets in this subnet
 # RESULT
 #   * my_gws -- list of all possible default gateways for the specified node
-#   * subnet_gws -- refreshed {nodeType|gateway4|gateway6} values
+#   * subnet_gws -- refreshed {node_type|gateway4|gateway6} values
 #   * nodes_l2data -- refreshed dictionary of {node ifc subnet_idx} triplets in
 #   this subnet
 #****
@@ -1415,11 +1415,11 @@ proc getDefaultGateways { node subnet_gws nodes_l2data } {
 # INPUTS
 #   * this_node -- node id
 #   * this_ifc -- node interface
-#   * subnet_gws -- already known {nodeType|gateway4|gateway6} values
+#   * subnet_gws -- already known {node_type|gateway4|gateway6} values
 #   * nodes_l2data -- a dictionary of already known {node ifc subnet_idx}
 #   triplets in this subnet
 # RESULT
-#   * subnet_gws -- refreshed {nodeType|gateway4|gateway6} values
+#   * subnet_gws -- refreshed {node_type|gateway4|gateway6} values
 #   * nodes_l2data -- refreshed dictionary of {node ifc subnet_idx} triplets in
 #   this subnet
 #****
@@ -1434,12 +1434,12 @@ proc getSubnetData { this_node this_ifc subnet_gws nodes_l2data subnet_idx } {
 
     dict set nodes_l2data $this_node $this_ifc $subnet_idx
 
-    if { [[typemodel $this_node].layer] == "NETWORK" } {
-	if { [nodeType $this_node] in "router extnat" } {
+    if { [[typemodel $this_node].netlayer] == "NETWORK" } {
+	if { [getNodeType $this_node] in "router extnat" } {
 	    # this node is a router/extnat, add our IP addresses to lists
 	    set gw4 [lindex [split [getIfcIPv4addr $this_node $this_ifc] /] 0]
 	    set gw6 [lindex [split [getIfcIPv6addr $this_node $this_ifc] /] 0]
-	    lappend my_gws [nodeType $this_node]|$gw4|$gw6
+	    lappend my_gws [getNodeType $this_node]|$gw4|$gw6
 	    lset subnet_gws $subnet_idx $my_gws
 	}
 
@@ -1669,7 +1669,7 @@ proc setStatIPv6routes { node routes } {
 #   pre-running configuration. Returns IPv4 and IPv6 routes lists.
 # INPUTS
 #   * node -- node id
-#   * gws -- gateway values in the {nodeType|gateway4|gateway6} format
+#   * gws -- gateway values in the {node_type|gateway4|gateway6} format
 # RESULT
 #   * all_routes4 -- {0.0.0.0/0 gw4} pairs of default IPv4 routes
 #   * all_routes6 -- {0.0.0.0/0 gw6} pairs of default IPv6 routes
@@ -1679,7 +1679,7 @@ proc getDefaultRoutesConfig { node gws } {
     set all_routes6 {}
     foreach route $gws {
 	lassign [split $route "|"] route_type gateway4 gateway6
-	if { [nodeType $node] == "router" } {
+	if { [getNodeType $node] == "router" } {
 	    if { $route_type == "extnat" } {
 		if { "0.0.0.0/0 $gateway4" ni [list "0.0.0.0/0 " $all_routes4] } {
 		    lappend all_routes4 "0.0.0.0/0 $gateway4"
@@ -1787,7 +1787,7 @@ proc setNodeExternalIfcs { node ifcs } {
 # RESULT
 #   * type -- type of the node
 #****
-proc nodeType { node } {
+proc getNodeType { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
     return [lindex [lsearch -inline [set $node] "type *"] 1]
@@ -2173,11 +2173,11 @@ proc allIfcList { node } {
     return $interfaces
 }
 
-#****f* nodecfg.tcl/peerByIfc
+#****f* nodecfg.tcl/getIfcPeer
 # NAME
-#   peerByIfc -- get node's peer by interface.
+#   getIfcPeer -- get node's peer by interface.
 # SYNOPSIS
-#   set peer [peerByIfc $node $ifc]
+#   set peer [getIfcPeer $node $ifc]
 # FUNCTION
 #   Returns id of the node on the other side of the interface. If the node on
 #   the other side of the interface is situated on the other canvas or
@@ -2188,7 +2188,7 @@ proc allIfcList { node } {
 # RESULT
 #   * peer -- node id of the node on the other side of the interface
 #****
-proc peerByIfc { node ifc } {
+proc getIfcPeer { node ifc } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
     set entry [lsearch -inline [set $node] "interface-peer {$ifc *}"]
@@ -2203,7 +2203,7 @@ proc peerByIfc { node ifc } {
 # FUNCTION
 #   Returns id of the node on the other side of the interface. If the node on
 #   the other side of the interface is connected via normal link (not split)
-#   this function acts the same as the function peerByIfc, but if the nodes
+#   this function acts the same as the function getIfcPeer, but if the nodes
 #   are connected via split links or situated on different canvases this
 #   function returns the logical peer node.
 # INPUTS
@@ -2215,14 +2215,14 @@ proc peerByIfc { node ifc } {
 proc logicalPeerByIfc { node ifc } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
-    set peer [peerByIfc $node $ifc]
-    if { [nodeType $peer] != "pseudo" } {
+    set peer [getIfcPeer $node $ifc]
+    if { [getNodeType $peer] != "pseudo" } {
 	return $peer
 
     } else {
 	set mirror_node [getNodeMirror $peer]
 	set mirror_ifc [ifcList $mirror_node]
-	return [peerByIfc $mirror_node $mirror_ifc]
+	return [getIfcPeer $mirror_node $mirror_ifc]
     }
 }
 
@@ -2230,7 +2230,7 @@ proc logicalPeerByIfc { node ifc } {
 # NAME
 #   ifcByPeer -- get node interface by peer.
 # SYNOPSIS
-#   set ifc [peerByIfc $node $peer]
+#   set ifc [getIfcPeer $node $peer]
 # FUNCTION
 #   Returns the name of the interface connected to the specified peer. If the
 #   peer node is on different canvas or connected via split link to the
@@ -2252,7 +2252,7 @@ proc ifcByPeer { node peer } {
 # NAME
 #   ifcByPeer -- get node interface by peer.
 # SYNOPSIS
-#   set ifc [peerByIfc $node $peer]
+#   set ifc [getIfcPeer $node $peer]
 # FUNCTION
 #   Returns the name of the interface connected to the specified peer. Returns
 #   the right interface even if the peer node is on the other canvas or
@@ -2272,10 +2272,10 @@ proc ifcByLogicalPeer { node peer } {
 	# Must search through pseudo peers
 	#
 	foreach ifc [ifcList $node] {
-	    set t_peer [peerByIfc $node $ifc]
-	    if { [nodeType $t_peer] == "pseudo" } {
+	    set t_peer [getIfcPeer $node $ifc]
+	    if { [getNodeType $t_peer] == "pseudo" } {
 		set mirror [getNodeMirror $t_peer]
-		if { [peerByIfc $mirror [ifcList $mirror]] == $peer } {
+		if { [getIfcPeer $mirror [ifcList $mirror]] == $peer } {
 		    return $ifc
 		}
 	    }
@@ -2353,13 +2353,13 @@ proc removeNode { node } {
     }
 
     foreach ifc [ifcList $node] {
-	set peer [peerByIfc $node $ifc]
+	set peer [getIfcPeer $node $ifc]
 	set link [linkByPeers $node $peer]
 	removeLink $link
     }
     set node_list [removeFromList $node_list $node]
 
-    set node_type [nodeType $node]
+    set node_type [getNodeType $node]
     if { $node_type in [array names nodeNamingBase] } {
 	recalculateNumType $node_type $nodeNamingBase($node_type)
     }
@@ -2737,7 +2737,7 @@ proc setNodeType { node newtype } {
     global ripEnable ripngEnable ospfEnable ospf6Enable changeAddressRange \
      changeAddressRange6
     
-    set oldtype [nodeType $node]
+    set oldtype [getNodeType $node]
     if { [lsearch "rj45 hub lanswitch" $newtype] >= 0 } {
 	return
     }
@@ -3157,7 +3157,7 @@ proc registerRouterModule { module } {
 #****
 proc isNodeRouter { node } {
     global router_modules_list
-    if { [nodeType $node] in $router_modules_list } {
+    if { [getNodeType $node] in $router_modules_list } {
 	return 1
     }
     return 0
@@ -3368,7 +3368,7 @@ proc recalculateNumType { type namebase } {
 #****
 proc transformNodes { nodes type } {
     foreach node $nodes {
-	if { [[typemodel $node].layer] == "NETWORK" } {
+	if { [[typemodel $node].netlayer] == "NETWORK" } {
 	    upvar 0 ::cf::[set ::curcfg]::$node nodecfg
 	    global changed
 
@@ -3386,7 +3386,7 @@ proc transformNodes { nodes type } {
 		}
 
 		set changed 1
-	    } elseif { [nodeType $node] != "router" && $type == "router" } {
+	    } elseif { [getNodeType $node] != "router" && $type == "router" } {
 		# replace type
 		set typeIndex [lsearch $nodecfg "type *"]
 		set nodecfg [lreplace $nodecfg $typeIndex $typeIndex "type $type"]
@@ -3410,18 +3410,18 @@ proc transformNodes { nodes type } {
     }
 }
 
-#****f* nodecfg.tcl/pseudo.layer
+#****f* nodecfg.tcl/pseudo.netlayer
 # NAME
-#   pseudo.layer -- pseudo layer
+#   pseudo.netlayer -- pseudo layer
 # SYNOPSIS
-#   set layer [pseudo.layer]
+#   set layer [pseudo.netlayer]
 # FUNCTION
 #   Returns the layer on which the pseudo node operates
 #   i.e. returns no layer.
 # RESULT
 #   * layer -- returns an empty string
 #****
-proc pseudo.layer {} {
+proc pseudo.netlayer {} {
 }
 
 #****f* nodecfg.tcl/pseudo.virtlayer

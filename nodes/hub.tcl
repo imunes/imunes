@@ -131,31 +131,31 @@ proc $MODULE.toolbarIconDescr {} {
     return "Add new Hub"
 }
 
-#****f* hub.tcl/hub.ifcName
+#****f* hub.tcl/hub.ifacePrefix
 # NAME
-#   hub.ifcName -- interface name
+#   hub.ifacePrefix -- interface name
 # SYNOPSIS
-#   hub.ifcName
+#   hub.ifacePrefix
 # FUNCTION
 #   Returns hub interface name prefix.
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifcName {l r} {
+proc $MODULE.ifacePrefix {l r} {
     return e
 }
 
-#****f* hub.tcl/hub.layer
+#****f* hub.tcl/hub.netlayer
 # NAME
-#   hub.layer -- layer
+#   hub.netlayer -- layer
 # SYNOPSIS
-#   set layer [hub.layer]
+#   set layer [hub.netlayer]
 # FUNCTION
 #   Returns the layer on which the hub operates, i.e. returns LINK. 
 # RESULT
 #   * layer -- set to LINK
 #****
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return LINK
 }
 
@@ -173,28 +173,28 @@ proc $MODULE.virtlayer {} {
     return NATIVE
 }
 
-#****f* hub.tcl/hub.instantiate
+#****f* hub.tcl/hub.nodeCreate
 # NAME
-#   hub.instantiate -- instantiate
+#   hub.nodeCreate -- instantiate
 # SYNOPSIS
-#   hub.instantiate $eid $node
+#   hub.nodeCreate $eid $node
 # FUNCTION
-#   Procedure hub.instantiate creates a new netgraph node of the type hub.
+#   Procedure hub.nodeCreate creates a new netgraph node of the type hub.
 #   The name of the netgraph node is in form of exprimentId_nodeId.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- id of the node (type of the node is hub)
 #****
-proc $MODULE.instantiate { eid node } {
-    l2node.instantiate $eid $node
+proc $MODULE.nodeCreate { eid node } {
+    l2node.nodeCreate $eid $node
 }
 
-proc $MODULE.setupNamespace { eid node } {
-    l2node.setupNamespace $eid $node
+proc $MODULE.nodeNamespaceSetup { eid node } {
+    l2node.nodeNamespaceSetup $eid $node
 }
 
-proc $MODULE.createIfcs { eid node ifcs } {
-    l2node.createIfcs $eid $node $ifcs
+proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
+    l2node.nodePhysIfacesCreate $eid $node $ifcs
 }
 
 proc $MODULE.destroyIfcs { eid node ifcs } {

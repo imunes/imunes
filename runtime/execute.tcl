@@ -65,9 +65,9 @@ proc checkExternalInterfaces {} {
 
     set nodes_ifcpairs {}
     foreach node $node_list {
-	if { [nodeType $node] == "rj45" } {
+	if { [getNodeType $node] == "rj45" } {
 	    lappend nodes_ifcpairs [list $node [list 0 [getNodeName $node]]]
-	} elseif { [nodeType $node] == "extelem" } {
+	} elseif { [getNodeType $node] == "extelem" } {
 	    foreach ifcs [getNodeExternalIfcs $node] {
 		lappend nodes_ifcpairs [list $node $ifcs]
 	    }
@@ -311,11 +311,11 @@ proc l3node.nghook { eid node ifc } {
     }
 }
 
-#****f* exec.tcl/l3node.instantiate
+#****f* exec.tcl/l3node.nodeCreate
 # NAME
-#   l3node.instantiate -- layer 3 node instantiate
+#   l3node.nodeCreate -- layer 3 node instantiate
 # SYNOPSIS
-#   l3node.instantiate $eid $node
+#   l3node.nodeCreate $eid $node
 # FUNCTION
 #   Instantiates the specified node. This means that it creates a new vimage
 #   node, all the required interfaces (for serial interface a new netgraph
@@ -325,39 +325,39 @@ proc l3node.nghook { eid node ifc } {
 #   * eid -- experiment id
 #   * node -- node id
 #****
-proc l3node.instantiate { eid node } {
+proc l3node.nodeCreate { eid node } {
     prepareFilesystemForNode $node
     createNodeContainer $node
 }
 
-proc l3node.createIfcs { eid node ifcs } {
-    createNodePhysIfcs $node $ifcs
+proc l3node.nodePhysIfacesCreate { eid node ifcs } {
+    nodePhysIfacesCreate $node $ifcs
 }
 
-proc l2node.createIfcs { eid node ifcs } {
-    createNodePhysIfcs $node $ifcs
+proc l2node.nodePhysIfacesCreate { eid node ifcs } {
+    nodePhysIfacesCreate $node $ifcs
 }
 
-#****f* exec.tcl/l3node.setupNamespace
+#****f* exec.tcl/l3node.nodeNamespaceSetup
 # NAME
-#   l3node.setupNamespace -- layer 3 node setupNamespace
+#   l3node.nodeNamespaceSetup -- layer 3 node nodeNamespaceSetup
 # SYNOPSIS
-#   l3node.setupNamespace $eid $node
+#   l3node.nodeNamespaceSetup $eid $node
 # FUNCTION
 #   Linux only. Attaches the existing Docker netns to a new one.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id
 #****
-proc l3node.setupNamespace { eid node } {
+proc l3node.nodeNamespaceSetup { eid node } {
     attachToL3NodeNamespace $node
 }
 
-#****f* exec.tcl/l3node.initConfigure
+#****f* exec.tcl/l3node.nodeInitConfigure
 # NAME
-#   l3node.initConfigure -- layer 3 node initConfigure
+#   l3node.nodeInitConfigure -- layer 3 node nodeInitConfigure
 # SYNOPSIS
-#   l3node.initConfigure $eid $node
+#   l3node.nodeInitConfigure $eid $node
 # FUNCTION
 #   Runs initial L3 configuration, such as creating logical interfaces and
 #   configuring sysctls.
@@ -365,8 +365,8 @@ proc l3node.setupNamespace { eid node } {
 #   * eid -- experiment id
 #   * node -- node id
 #****
-proc l3node.initConfigure { eid node } {
-    createNodeLogIfcs $node
+proc l3node.nodeInitConfigure { eid node } {
+    nodeLogIfacesCreate $node
     configureICMPoptions $node
 }
 
@@ -389,26 +389,26 @@ proc l3node.start { eid node } {
     runConfOnNode $node
 }
 
-#****f* exec.tcl/l2node.setupNamespace
+#****f* exec.tcl/l2node.nodeNamespaceSetup
 # NAME
-#   l2node.setupNamespace -- layer 2 node setupNamespace
+#   l2node.nodeNamespaceSetup -- layer 2 node nodeNamespaceSetup
 # SYNOPSIS
-#   l2node.setupNamespace $eid $node
+#   l2node.nodeNamespaceSetup $eid $node
 # FUNCTION
 #   Linux only. Creates a new netns.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id
 #****
-proc l2node.setupNamespace { eid node } {
+proc l2node.nodeNamespaceSetup { eid node } {
     createNamespace $eid-$node
 }
 
-#****f* exec.tcl/l3node.ipsecInit
+#****f* exec.tcl/nodeIpsecInit
 # NAME
-#   l3node.ipsecInit -- IPsec initialization
+#   nodeIpsecInit -- IPsec initialization
 # SYNOPSIS
-#   l3node.ipsecInit $node
+#   nodeIpsecInit $node
 # FUNCTION
 #   Creates ipsec.conf and ipsec.secrets files from IPsec configuration of given node
 #   and copies certificates to desired folders (if there are any certificates)
@@ -417,7 +417,7 @@ proc l2node.setupNamespace { eid node } {
 #****
 set ipsecConf ""
 set ipsecSecrets ""
-proc l3node.ipsecInit { node } {
+proc nodeIpsecInit { node } {
     global ipsecConf ipsecSecrets isOSfreebsd
 
     set config_content [getNodeIPsec $node]
@@ -523,7 +523,7 @@ proc deployCfg {} {
     set allNodes {}
     set pseudoNodesCount 0
     foreach node $node_list {
-	if { [nodeType $node] != "pseudo" } {
+	if { [getNodeType $node] != "pseudo" } {
 	    if { [[typemodel $node].virtlayer] != "VIRTUALIZED" } {
 		lappend l2nodes $node
 	    } else {
@@ -564,28 +564,28 @@ proc deployCfg {} {
     try {
 	statline "Instantiating L3 nodes..."
 	pipesCreate
-	instantiateNodes $l3nodes $l3nodeCount $w
+	execute_nodesCreate $l3nodes $l3nodeCount $w
 	statline "Waiting for $l3nodeCount L3 node(s) to start..."
 	waitForInstantiateNodes $l3nodes $l3nodeCount $w
 	pipesClose
 
 	statline "Setting up namespaces for all nodes..."
 	pipesCreate
-	setupNodeNamespaces $allNodes $allNodeCount $w
+	execute_nodesNamespaceSetup $allNodes $allNodeCount $w
 	statline "Waiting on namespaces for $allNodeCount node(s)..."
 	waitForNamespaces $allNodes $allNodeCount $w
 	pipesClose
 
 	statline "Starting initial configuration on L3 nodes..."
 	pipesCreate
-	initConfigureNodes $l3nodes $l3nodeCount $w
+	execute_nodesInitConfigure $l3nodes $l3nodeCount $w
 	statline "Waiting for initial configuration on $l3nodeCount L3 node(s)..."
 	waitForInitConf $l3nodes $l3nodeCount $w
 	pipesClose
 
 	statline "Instantiating L2 nodes..."
 	pipesCreate
-	instantiateNodes $l2nodes $l2nodeCount $w
+	execute_nodesCreate $l2nodes $l2nodeCount $w
 	statline "Waiting for $l2nodeCount L2 node(s) to start..."
 	pipesClose
 
@@ -597,7 +597,7 @@ proc deployCfg {} {
 
 	statline "Creating interfaces on nodes..."
 	pipesCreate
-	createNodesInterfaces $allNodes $allNodeCount $w
+	execute_nodesPhysIfacesCreate $allNodes $allNodeCount $w
 	statline "Waiting for interfaces on $allNodeCount node(s) to be created..."
 	pipesClose
 
@@ -670,7 +670,7 @@ proc prepareSystem {} {
     createExperimentFiles $eid
 }
 
-proc instantiateNodes { nodes nodeCount w } {
+proc execute_nodesCreate { nodes nodeCount w } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
@@ -678,11 +678,11 @@ proc instantiateNodes { nodes nodeCount w } {
     foreach node $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	if { [info procs [typemodel $node].instantiate] != "" } {
+	if { [info procs [typemodel $node].nodeCreate] != "" } {
 	    try {
-		[typemodel $node].instantiate $eid $node
+		[typemodel $node].nodeCreate $eid $node
 	    } on error err {
-		return -code error "Error in '[typemodel $node].instantiate $eid $node': $err"
+		return -code error "Error in '[typemodel $node].nodeCreate $eid $node': $err"
 	    }
 	    pipesExec ""
 	}
@@ -741,7 +741,7 @@ proc waitForInstantiateNodes { nodes nodeCount w } {
     }
 }
 
-proc setupNodeNamespaces { nodes nodeCount w } {
+proc execute_nodesNamespaceSetup { nodes nodeCount w } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
@@ -749,11 +749,11 @@ proc setupNodeNamespaces { nodes nodeCount w } {
     foreach node $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	if { [info procs [typemodel $node].setupNamespace] != "" } {
+	if { [info procs [typemodel $node].nodeNamespaceSetup] != "" } {
 	    try {
-		[typemodel $node].setupNamespace $eid $node
+		[typemodel $node].nodeNamespaceSetup $eid $node
 	    } on error err {
-		return -code error "Error in '[typemodel $node].setupNamespace $eid $node': $err"
+		return -code error "Error in '[typemodel $node].nodeNamespaceSetup $eid $node': $err"
 	    }
 	    pipesExec ""
 	}
@@ -812,18 +812,18 @@ proc waitForNamespaces { nodes nodeCount w } {
     }
 }
 
-proc initConfigureNodes { nodes nodeCount w } {
+proc execute_nodesInitConfigure { nodes nodes_count w } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set batchStep 0
     foreach node $nodes {
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
 
 	try {
-	    [typemodel $node].initConfigure $eid $node
+	    [typemodel $node].nodeInitConfigure $eid $node
 	} on error err {
-	    return -code error "Error in '[typemodel $node].initConfigure $eid $node': $err"
+	    return -code error "Error in '[typemodel $node].nodeInitConfigure $eid $node': $err"
 	}
 	pipesExec ""
 
@@ -837,8 +837,8 @@ proc initConfigureNodes { nodes nodeCount w } {
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if {$execMode == "batch"} {
 	    statline ""
 	}
@@ -883,7 +883,7 @@ proc waitForInitConf { nodes nodeCount w } {
 
 proc copyFilesToNodes { nodes nodeCount w } {}
 
-proc createNodesInterfaces { nodes nodeCount w } {
+proc execute_nodesPhysIfacesCreate { nodes nodeCount w } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
@@ -891,12 +891,12 @@ proc createNodesInterfaces { nodes nodeCount w } {
     foreach node $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	if {[info procs [typemodel $node].createIfcs] != ""} {
+	if {[info procs [typemodel $node].nodePhysIfacesCreate] != ""} {
 	    set ifcs [ifcList $node]
 	    try {
-		[typemodel $node].createIfcs $eid $node $ifcs
+		[typemodel $node].nodePhysIfacesCreate $eid $node $ifcs
 	    } on error err {
-		return -code error "Error in '[typemodel $node].createIfcs $eid $node $ifcs': $err"
+		return -code error "Error in '[typemodel $node].nodePhysIfacesCreate $eid $node $ifcs': $err"
 	    }
 	    pipesExec ""
 	}
@@ -928,8 +928,8 @@ proc createLinks { links linkCount w } {
 	set i [lsearch -exact $pending_links $link]
 	set pending_links [lreplace $pending_links $i $i]
 
-	set lnode1 [lindex [linkPeers $link] 0]
-	set lnode2 [lindex [linkPeers $link] 1]
+	set lnode1 [lindex [getLinkPeers $link] 0]
+	set lnode2 [lindex [getLinkPeers $link] 1]
 	set ifname1 [ifcByPeer $lnode1 $lnode2]
 	set ifname2 [ifcByPeer $lnode2 $lnode1]
 
@@ -942,14 +942,14 @@ proc createLinks { links linkCount w } {
 	    set msg "Creating link $link/$mirror_link"
 
 	    set p_lnode2 $lnode2
-	    set lnode2 [lindex [linkPeers $mirror_link] 0]
+	    set lnode2 [lindex [getLinkPeers $mirror_link] 0]
 	    set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
 	}
 
 	displayBatchProgress $batchStep $linkCount
 
 	try {
-	    if { [getLinkDirect $link] || [nodeType $lnode1] == "wlan" || [nodeType $lnode2] == "wlan" } {
+	    if { [getLinkDirect $link] || [getNodeType $lnode1] == "wlan" || [getNodeType $lnode2] == "wlan" } {
 		createDirectLinkBetween $lnode1 $lnode2 $ifname1 $ifname2
 	    } else {
 		createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
@@ -987,8 +987,8 @@ proc configureLinks { links linkCount w } {
 	set i [lsearch -exact $pending_links $link]
 	set pending_links [lreplace $pending_links $i $i]
 
-	set lnode1 [lindex [linkPeers $link] 0]
-	set lnode2 [lindex [linkPeers $link] 1]
+	set lnode1 [lindex [getLinkPeers $link] 0]
+	set lnode2 [lindex [getLinkPeers $link] 1]
 	set ifname1 [ifcByPeer $lnode1 $lnode2]
 	set ifname2 [ifcByPeer $lnode2 $lnode1]
 
@@ -1001,7 +1001,7 @@ proc configureLinks { links linkCount w } {
 	    set msg "Configuring link $link/$mirror_link"
 
 	    set p_lnode2 $lnode2
-	    set lnode2 [lindex [linkPeers $mirror_link] 0]
+	    set lnode2 [lindex [getLinkPeers $mirror_link] 0]
 	    set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
 	}
 

@@ -206,7 +206,7 @@ proc evsched {} {
 	    set changed 1
 
 	    if { $evlogfile != 0 } {
-		set peers [linkPeers $object]
+		set peers [getLinkPeers $object]
 		set n0 [lindex $peers 0]
 		set n1 [lindex $peers 1]
 		set ifc0 [ifcByPeer $n0 $n1]
@@ -461,8 +461,8 @@ proc elementsEventsEditor {} {
     $pwi.left.tree focus links
     $pwi.left.tree selection set links
     foreach link [lsort -dictionary $link_list] {
-	set n0 [lindex [linkPeers $link] 0]
-	set n1 [lindex [linkPeers $link] 1]
+	set n0 [lindex [getLinkPeers $link] 0]
+	set n1 [lindex [getLinkPeers $link] 1]
 	set name0 [getNodeName $n0]
 	set name1 [getNodeName $n1]
 	$pwi.left.tree insert links end -id $link -text "$link ($name0 to $name1)" -tags $link
@@ -473,8 +473,8 @@ proc elementsEventsEditor {} {
 #     set eventnodetags ""
 #     $pwi.left.tree insert {} end -id nodes -text "Nodes" -open true -tags nodes
 #     foreach node [lsort -dictionary $node_list] {
-# 	set type [nodeType $node]
-# 	if { $type != "pseudo" && [[typemodel $node].layer] == "NETWORK"} {
+# 	set type [getNodeType $node]
+# 	if { $type != "pseudo" && [[typemodel $node].netlayer] == "NETWORK"} {
 # 	    $pwi.left.tree insert nodes end -id $node -text "[getNodeName $node]" -open false -tags $node
 # 	    lappend eventnodetags $node
 # 	}
@@ -697,7 +697,7 @@ proc bindEventsToEventEditor { pwi text } {
 # 	    "loadElementEvents [lindex $eventlinktags 0] $text" 
 #     
 #     foreach n $eventnodetags {
-# 	set type [nodeType $n]
+# 	set type [getNodeType $n]
 # 	global selectedIfc
 # 	$f.tree tag bind $n <1> \
 # 	      "loadElementEvents $n $text"   

@@ -44,18 +44,18 @@
 
 set MODULE router.frr
 
-#****f* frr.tcl/router.frr.layer
+#****f* frr.tcl/router.frr.netlayer
 # NAME
-#   router.frr.layer -- layer
+#   router.frr.netlayer -- layer
 # SYNOPSIS
-#   set layer [router.frr.layer]
+#   set layer [router.frr.netlayer]
 # FUNCTION
 #   Returns the layer on which the router using frr model
 #   operates, i.e. returns NETWORK. 
 # RESULT
 #   * layer -- set to NETWORK
 #****
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return NETWORK
 }
 
@@ -74,11 +74,11 @@ proc $MODULE.virtlayer {} {
     return VIRTUALIZED
 }
 
-#****f* frr.tcl/router.frr.cfggen
+#****f* frr.tcl/router.frr.generateConfig
 # NAME
-#   router.frr.cfggen -- configuration generator
+#   router.frr.generateConfig -- configuration generator
 # SYNOPSIS
-#   set config [router.frr.cfggen $node]
+#   set config [router.frr.generateConfig $node]
 # FUNCTION
 #   Generates configuration. This configuration represents the default
 #   configuration loaded on the booting time of the virtual nodes and it is
@@ -91,7 +91,7 @@ proc $MODULE.virtlayer {} {
 # RESULT
 #   * congif -- generated configuration 
 #****
-proc $MODULE.cfggen { node } {
+proc $MODULE.generateConfig { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
     set cfg {}
@@ -163,7 +163,7 @@ proc $MODULE.cfggen { node } {
 #   set appl [router.frr.bootcmd $node]
 # FUNCTION
 #   Procedure bootcmd returns the defaut application that reads and employes
-#   the configuration generated in router.frr.cfggen.
+#   the configuration generated in router.frr.generateConfig.
 #   In this case (procedure router.frr.bootcmd) specific application
 #   is frrboot.sh
 # INPUTS
@@ -191,36 +191,36 @@ proc $MODULE.shellcmds {} {
     return "csh bash vtysh sh tcsh"
 }
 
-#****f* frr.tcl/router.frr.instantiate
+#****f* frr.tcl/router.frr.nodeCreate
 # NAME
-#   router.frr.instantiate -- instantiate
+#   router.frr.nodeCreate -- instantiate
 # SYNOPSIS
-#   router.frr.instantiate $eid $node
+#   router.frr.nodeCreate $eid $node
 # FUNCTION
 #   Creates a new virtual node for a given node in imunes. 
-#   Procedure router.frr.instantiate cretaes a new virtual node with all
+#   Procedure router.frr.nodeCreate cretaes a new virtual node with all
 #   the interfaces and CPU parameters as defined in imunes. It sets the
 #   net.inet.ip.forwarding and net.inet6.ip6.forwarding kernel variables to 1.
 # INPUTS
 #   * eid - experiment id
 #   * node - node id (type of the node is router and routing model is frr)
 #****
-proc $MODULE.instantiate { eid node } {
-    l3node.instantiate $eid $node
+proc $MODULE.nodeCreate { eid node } {
+    l3node.nodeCreate $eid $node
 }
 
-proc $MODULE.setupNamespace { eid node } {
-    l3node.setupNamespace $eid $node
+proc $MODULE.nodeNamespaceSetup { eid node } {
+    l3node.nodeNamespaceSetup $eid $node
 }
 
-proc $MODULE.initConfigure { eid node } {
-    l3node.initConfigure $eid $node
+proc $MODULE.nodeInitConfigure { eid node } {
+    l3node.nodeInitConfigure $eid $node
 
     enableIPforwarding $eid $node
 }
 
-proc $MODULE.createIfcs { eid node ifcs } {
-    l3node.createIfcs $eid $node $ifcs
+proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
+    l3node.nodePhysIfacesCreate $eid $node $ifcs
 }
 
 #****f* frr.tcl/router.frr.start

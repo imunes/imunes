@@ -192,31 +192,31 @@ proc $MODULE.notebookDimensions { wi } {
     return [list $h $w]
 }
 
-#****f* genericrouter.tcl/router.ifcName
+#****f* genericrouter.tcl/router.ifacePrefix
 # NAME
-#   router.ifcName -- interface name
+#   router.ifacePrefix -- interface name
 # SYNOPSIS
-#   router.ifcName
+#   router.ifacePrefix
 # FUNCTION
 #   Returns router interface name prefix.
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifcName {l r} {
+proc $MODULE.ifacePrefix {l r} {
     return [l3IfcName $l $r]
 }
 
-#****f* genericrouter.tcl/router.layer
+#****f* genericrouter.tcl/router.netlayer
 # NAME
-#   router..layer -- layer
+#   router..netlayer -- layer
 # SYNOPSIS
-#   set layer [router.layer]
+#   set layer [router.netlayer]
 # FUNCTION
 #   Returns the layer on which the router operates, i.e. returns NETWORK.
 # RESULT
 #   * layer -- set to NETWORK
 #****
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return NETWORK
 }
 

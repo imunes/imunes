@@ -62,11 +62,11 @@ proc $MODULE.toolbarIconDescr {} {
     return "Add new WLAN domain"
 }
 
-proc $MODULE.ifcName {l r} {
+proc $MODULE.ifacePrefix {l r} {
     return e
 }
 
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return LINK
 }
 
@@ -74,7 +74,7 @@ proc $MODULE.virtlayer {} {
     return NATIVE
 }
 
-proc $MODULE.instantiate { eid node } {
+proc $MODULE.nodeCreate { eid node } {
     upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
 
     set t [exec printf "mkpeer rfee link0 link0\nshow ." | jexec $eid ngctl -f -]

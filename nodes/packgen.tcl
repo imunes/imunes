@@ -84,15 +84,15 @@ proc $MODULE.notebookDimensions { wi } {
     return [list $h $w] 
 }
 
-proc $MODULE.ifcName {l r} {
+proc $MODULE.ifacePrefix {l r} {
     return e
 }
 
-#****f* packgen.tcl/packgen.layer
+#****f* packgen.tcl/packgen.netlayer
 # NAME
-#   packgen.layer  
+#   packgen.netlayer  
 # SYNOPSIS
-#   set layer [packgen.layer]
+#   set layer [packgen.netlayer]
 # FUNCTION
 #   Returns the layer on which the packgen.communicates
 #   i.e. returns LINK. 
@@ -100,7 +100,7 @@ proc $MODULE.ifcName {l r} {
 #   * layer -- set to LINK 
 #****
 
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return LINK
 }
 
@@ -120,15 +120,13 @@ proc $MODULE.virtlayer {} {
     return NATIVE
 }
 
-#****f* packgen.tcl/packgen.instantiate
+#****f* packgen.tcl/packgen.nodeCreate
 # NAME
-#   packgen.instantiate
+#   packgen.nodeCreate
 # SYNOPSIS
-#   packgen.instantiate $eid $node_id
+#   packgen.nodeCreate $eid $node_id
 # FUNCTION
-#   Procedure instantiate creates a new virtaul node
-#   for a given node in imunes. 
-#   Procedure packgen.instantiate cretaes a new virtual node
+#   Procedure packgen.nodeCreate cretaes a new virtual node
 #   with all the interfaces and CPU parameters as defined
 #   in imunes. 
 # INPUTS
@@ -136,7 +134,7 @@ proc $MODULE.virtlayer {} {
 #   * node_id - id of the node (type of the node is packgen.
 #****
 
-proc $MODULE.instantiate { eid node } {
+proc $MODULE.nodeCreate { eid node } {
     pipesExec "printf \"
     mkpeer . source inhook input \n
     msg .inhook setpersistent \n name .:inhook $node

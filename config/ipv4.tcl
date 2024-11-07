@@ -268,19 +268,19 @@ proc autoIPv4addr { node iface } {
 
     set peer_ip4addrs {}
 
-    if { [[typemodel $node].layer] != "NETWORK" } {
+    if { [[typemodel $node].netlayer] != "NETWORK" } {
 	#
 	# Shouldn't get called at all for link-layer nodes
 	#
-	#puts "autoIPv4 called for a [[typemodel $node].layer] layer node"
+	#puts "autoIPv4 called for a [[typemodel $node].netlayer] layer node"
 	return
     }
     setIfcIPv4addr $node $iface ""
 
     set peer_node [logicalPeerByIfc $node $iface]
 
-    if { [[typemodel $peer_node].layer] == "LINK"} {
-	foreach l2node [listLANnodes $peer_node {}] {
+    if { [[typemodel $peer_node].netlayer] == "LINK"} {
+	foreach l2node [listLANNodes $peer_node {}] {
 	    foreach ifc [ifcList $l2node] {
 		set peer [logicalPeerByIfc $l2node $ifc]
 		set peer_if [ifcByLogicalPeer $peer $l2node]
@@ -298,13 +298,13 @@ proc autoIPv4addr { node iface } {
 		}
 	    }
 	}
-    } elseif {[[typemodel $peer_node].layer] != "LINK"} {
+    } elseif {[[typemodel $peer_node].netlayer] != "LINK"} {
 	set peer_if [ifcByLogicalPeer $peer_node $node]
 	set peer_ip4addr [getIfcIPv4addr $peer_node $peer_if]
 	set peer_ip4addrs $peer_ip4addr
     }
 
-    set targetbyte [[nodeType $node].IPAddrRange]
+    set targetbyte [[getNodeType $node].IPAddrRange]
     
     set targetbyte2 0
         

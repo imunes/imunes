@@ -44,18 +44,18 @@
 
 set MODULE router.static
 
-#****f* static.tcl/router.static.layer
+#****f* static.tcl/router.static.netlayer
 # NAME
-#   router.static.layer -- layer
+#   router.static.netlayer -- layer
 # SYNOPSIS
-#   set layer [router.static.layer]
+#   set layer [router.static.netlayer]
 # FUNCTION
 #   Returns the layer on which the router using static routing model
 #   operates, i.e. returns NETWORK. 
 # RESULT
 #   * layer -- set to NETWORK
 #****
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return NETWORK
 }
 
@@ -74,11 +74,11 @@ proc $MODULE.virtlayer {} {
     return VIRTUALIZED
 }
 
-#****f* static.tcl/router.static.cfggen
+#****f* static.tcl/router.static.generateConfig
 # NAME
-#   router.static.cfggen -- configuration generator
+#   router.static.generateConfig -- configuration generator
 # SYNOPSIS
-#   set config [router.static.cfggen $node]
+#   set config [router.static.generateConfig $node]
 # FUNCTION
 #   Generates configuration. This configuration represents the default
 #   configuration loaded on the booting time of the virtual nodes and it is
@@ -92,7 +92,7 @@ proc $MODULE.virtlayer {} {
 # RESULT
 #   * congif -- generated configuration 
 #****
-proc $MODULE.cfggen { node } {
+proc $MODULE.generateConfig { node } {
     set cfg {}
     set cfg [concat $cfg [nodeCfggenIfcIPv4 $node]]
     set cfg [concat $cfg [nodeCfggenIfcIPv6 $node]]
@@ -111,7 +111,7 @@ proc $MODULE.cfggen { node } {
 #   set appl [router.static.bootcmd $node]
 # FUNCTION
 #   Procedure bootcmd returns the defaut application that reads and employes
-#   the configuration generated in router.static.cfggen. In this case
+#   the configuration generated in router.static.generateConfig. In this case
 #   (procedure router.static.bootcmd) specific application is /bin/sh
 # INPUTS
 #   * node -- node id (type of the node is router and the
@@ -138,15 +138,13 @@ proc $MODULE.shellcmds {} {
     return "csh bash sh tcsh"
 }
 
-#****f* static.tcl/router.static.instantiate
+#****f* static.tcl/router.static.nodeCreate
 # NAME
-#   router.static.instantiate -- instantiate
+#   router.static.nodeCreate -- instantiate
 # SYNOPSIS
-#   router.static.instantiate $eid $node
+#   router.static.nodeCreate $eid $node
 # FUNCTION
-#   Procedure instantiate creates a new virtual node 
-#   for a given node in imunes. 
-#   Procedure router.static.instantiate cretaes a new virtual
+#   Procedure router.static.nodeCreate cretaes a new virtual
 #   node with all the interfaces and CPU parameters as defined
 #   in imunes.  It sets the net.inet.ip.forwarding and
 #   net.inet6.ip6.forwarding kernel variables to 1.
@@ -154,22 +152,22 @@ proc $MODULE.shellcmds {} {
 #   * eid -- experiment id
 #   * node -- node id (type of the node is router and routing model is static)
 #****
-proc $MODULE.instantiate { eid node } {
-    l3node.instantiate $eid $node
+proc $MODULE.nodeCreate { eid node } {
+    l3node.nodeCreate $eid $node
 }
 
-proc $MODULE.setupNamespace { eid node } {
-    l3node.setupNamespace $eid $node
+proc $MODULE.nodeNamespaceSetup { eid node } {
+    l3node.nodeNamespaceSetup $eid $node
 }
 
-proc $MODULE.initConfigure { eid node } {
-    l3node.initConfigure $eid $node
+proc $MODULE.nodeInitConfigure { eid node } {
+    l3node.nodeInitConfigure $eid $node
 
     enableIPforwarding $eid $node
 }
 
-proc $MODULE.createIfcs { eid node ifcs } {
-    l3node.createIfcs $eid $node $ifcs
+proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
+    l3node.nodePhysIfacesCreate $eid $node $ifcs
 }
 
 #****f* static.tcl/router.static.start

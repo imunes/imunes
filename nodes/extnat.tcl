@@ -134,17 +134,17 @@ proc $MODULE.toolbarIconDescr {} {
     return "Add new External NAT connection"
 }
 
-#****f* extnat.tcl/extnat.ifcName
+#****f* extnat.tcl/extnat.ifacePrefix
 # NAME
-#   extnat.ifcName -- interface name
+#   extnat.ifacePrefix -- interface name
 # SYNOPSIS
-#   extnat.ifcName
+#   extnat.ifacePrefix
 # FUNCTION
 #   Returns pc interface name prefix.
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifcName {l r} {
+proc $MODULE.ifacePrefix {l r} {
     return [l3IfcName $l $r]
 }
 
@@ -162,17 +162,17 @@ proc $MODULE.IPAddrRange {} {
     return 20
 }
 
-#****f* extnat.tcl/extnat.layer
+#****f* extnat.tcl/extnat.netlayer
 # NAME
-#   extnat.layer -- layer
+#   extnat.netlayer -- layer
 # SYNOPSIS
-#   set layer [extnat.layer]
+#   set layer [extnat.netlayer]
 # FUNCTION
 #   Returns the layer on which the pc communicates, i.e. returns NETWORK. 
 # RESULT
 #   * layer -- set to NETWORK
 #****
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return NETWORK
 }
 
@@ -204,24 +204,22 @@ proc $MODULE.virtlayer {} {
 proc $MODULE.shellcmds {} {
 }
 
-#****f* extnat.tcl/extnat.instantiate
+#****f* extnat.tcl/extnat.nodeCreate
 # NAME
-#   extnat.instantiate -- instantiate
+#   extnat.nodeCreate -- instantiate
 # SYNOPSIS
-#   extnat.instantiate $eid $node
+#   extnat.nodeCreate $eid $node
 # FUNCTION
-#   Procedure instantiate creates a new virtaul node
-#   for a given node in imunes.
-#   Procedure extnat.instantiate cretaes a new virtual node with
+#   Procedure extnat.nodeCreate cretaes a new virtual node with
 #   all the interfaces and CPU parameters as defined in imunes. 
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id (type of the node is pc)
 #****
-proc $MODULE.instantiate { eid node } {}
+proc $MODULE.nodeCreate { eid node } {}
 
-proc $MODULE.createIfcs { eid node ifcs } {
-    l2node.createIfcs $eid $node $ifcs
+proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
+    l2node.nodePhysIfacesCreate $eid $node $ifcs
 }
 
 #****f* extnat.tcl/extnat.start
