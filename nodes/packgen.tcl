@@ -84,15 +84,15 @@ proc $MODULE.notebookDimensions { wi } {
     return [list $h $w] 
 }
 
-proc $MODULE.ifcName {l r} {
+proc $MODULE.ifacePrefix {l r} {
     return e
 }
 
-#****f* packgen.tcl/packgen.layer
+#****f* packgen.tcl/packgen.netlayer
 # NAME
-#   packgen.layer  
+#   packgen.netlayer  
 # SYNOPSIS
-#   set layer [packgen.layer]
+#   set layer [packgen.netlayer]
 # FUNCTION
 #   Returns the layer on which the packgen.communicates
 #   i.e. returns LINK. 
@@ -100,7 +100,7 @@ proc $MODULE.ifcName {l r} {
 #   * layer -- set to LINK 
 #****
 
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return LINK
 }
 
@@ -120,15 +120,13 @@ proc $MODULE.virtlayer {} {
     return NATIVE
 }
 
-#****f* packgen.tcl/packgen.instantiate
+#****f* packgen.tcl/packgen.nodeCreate
 # NAME
-#   packgen.instantiate
+#   packgen.nodeCreate
 # SYNOPSIS
-#   packgen.instantiate $eid $node_id
+#   packgen.nodeCreate $eid $node_id
 # FUNCTION
-#   Procedure instantiate creates a new virtaul node
-#   for a given node in imunes. 
-#   Procedure packgen.instantiate cretaes a new virtual node
+#   Procedure packgen.nodeCreate cretaes a new virtual node
 #   with all the interfaces and CPU parameters as defined
 #   in imunes. 
 # INPUTS
@@ -136,7 +134,7 @@ proc $MODULE.virtlayer {} {
 #   * node_id - id of the node (type of the node is packgen.
 #****
 
-proc $MODULE.instantiate { eid node } {
+proc $MODULE.nodeCreate { eid node } {
     pipesExec "printf \"
     mkpeer . source inhook input \n
     msg .inhook setpersistent \n name .:inhook $node
@@ -144,18 +142,18 @@ proc $MODULE.instantiate { eid node } {
 }
 
 
-#****f* packgen.tcl/packgen.start
+#****f* packgen.tcl/packgen.nodeConfigure
 # NAME
-#   packgen.start
+#   packgen.nodeConfigure
 # SYNOPSIS
-#   packgen.start $eid $node_id
+#   packgen.nodeConfigure $eid $node_id
 # FUNCTION
 #   Starts a new packgen. The node can be started if it is instantiated. 
 # INPUTS
 #   * eid - experiment id
 #   * node_id - id of the node (type of the node is packgen)
 #****
-proc $MODULE.start { eid node } {
+proc $MODULE.nodeConfigure { eid node } {
     foreach packet [packgenPackets $node] {
 	set fd [open "| jexec $eid nghook $node: input" w]
 	fconfigure $fd -encoding binary
@@ -173,38 +171,38 @@ proc $MODULE.start { eid node } {
     pipesExec "jexec $eid ngctl msg $node: start [expr 2**63]" "hold"
 }
 
-#****f* packgen.tcl/packgen.shutdown
+#****f* packgen.tcl/packgen.nodeShutdown
 # NAME
-#   packgen.shutdown
+#   packgen.nodeShutdown
 # SYNOPSIS
-#   packgen.shutdown $eid $node_id
+#   packgen.nodeShutdown $eid $node_id
 # FUNCTION
 #   Shutdowns a packgen. Simulates the shutdown proces of a packgen. 
 # INPUTS
 #   * eid - experiment id
 #   * node_id - id of the node (type of the node is packgen) 
 #****
-proc $MODULE.shutdown { eid node } {
+proc $MODULE.nodeShutdown { eid node } {
     pipesExec "jexec $eid ngctl msg $node: clrdata" "hold"
     pipesExec "jexec $eid ngctl msg $node: stop" "hold"
 }
 
-proc $MODULE.destroyIfcs { eid node ifcs } {
-    l2node.destroyIfcs $eid $node $ifcs
+proc $MODULE.nodeIfacesDestroy { eid node ifcs } {
+    l2node.nodeIfacesDestroy $eid $node $ifcs
 }
 
-#****f* packgen.tcl/packgen.destroy
+#****f* packgen.tcl/packgen.nodeDestroy
 # NAME
-#   packgen.destroy
+#   packgen.nodeDestroy
 # SYNOPSIS
-#   packgen.destroy $eid $node_id
+#   packgen.nodeDestroy $eid $node_id
 # FUNCTION
 #   Destroys a packgen. Destroys all the interfaces of the packgen.
 # INPUTS
 #   * eid - experiment id
 #   * node_id - id of the node (type of the node is packgen) 
 #****
-proc $MODULE.destroy { eid node } {
+proc $MODULE.nodeDestroy { eid node } {
     pipesExec "jexec $eid ngctl msg $node: shutdown" "hold"
 }
 
