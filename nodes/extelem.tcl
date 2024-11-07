@@ -133,31 +133,31 @@ proc $MODULE.toolbarIconDescr {} {
     return "Add new External element"
 }
 
-#****f* extelem.tcl/extelem.ifcName
+#****f* extelem.tcl/extelem.ifacePrefix
 # NAME
-#   extelem.ifcName -- interface name
+#   extelem.ifacePrefix -- interface name
 # SYNOPSIS
-#   extelem.ifcName
+#   extelem.ifacePrefix
 # FUNCTION
 #   Returns extelem interface name prefix.
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifcName {l r} {
+proc $MODULE.ifacePrefix {l r} {
     return x
 }
 
-#****f* extelem.tcl/extelem.layer
+#****f* extelem.tcl/extelem.netlayer
 # NAME
-#   extelem.layer -- layer
+#   extelem.netlayer -- layer
 # SYNOPSIS
-#   set layer [extelem.layer]
+#   set layer [extelem.netlayer]
 # FUNCTION
 #   Returns the layer on which the extelem operates, i.e. returns LINK. 
 # RESULT
 #   * layer -- set to LINK
 #****
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return NETWORK
 }
 
@@ -175,30 +175,30 @@ proc $MODULE.virtlayer {} {
     return NATIVE
 }
 
-#****f* extelem.tcl/extelem.instantiate
+#****f* extelem.tcl/extelem.nodeCreate
 # NAME
-#   extelem.instantiate -- instantiate
+#   extelem.nodeCreate -- instantiate
 # SYNOPSIS
-#   extelem.instantiate $eid $node
+#   extelem.nodeCreate $eid $node
 # FUNCTION
-#   Procedure extelem.instantiate creates a new netgraph node of the type extelem.
+#   Procedure extelem.nodeCreate creates a new netgraph node of the type extelem.
 #   The name of the netgraph node is in form of exprimentId_nodeId.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- id of the node (type of the node is extelem)
 #****
-proc $MODULE.instantiate { eid node } {
+proc $MODULE.nodeCreate { eid node } {
     foreach group [getNodeExternalIfcs $node] {
 	lassign $group ifc extIfc
 	captureExtIfcByName $eid $extIfc
     }
 }
 
-#****f* extelem.tcl/extelem.destroy
+#****f* extelem.tcl/extelem.nodeDestroy
 # NAME
-#   extelem.destroy -- destroy
+#   extelem.nodeDestroy -- destroy
 # SYNOPSIS
-#   extelem.destroy $eid $node
+#   extelem.nodeDestroy $eid $node
 # FUNCTION
 #   Destroys a extelem. Destroys the netgraph node that represents
 #   the extelem by sending a shutdown message.
@@ -206,7 +206,7 @@ proc $MODULE.instantiate { eid node } {
 #   * eid -- experiment id
 #   * node -- id of the node (type of the node is extelem)
 #****
-proc $MODULE.destroy { eid node } {
+proc $MODULE.nodeDestroy { eid node } {
     foreach group [getNodeExternalIfcs $node] {
 	lassign $group ifc extIfc
 	releaseExtIfcByName $eid $extIfc
