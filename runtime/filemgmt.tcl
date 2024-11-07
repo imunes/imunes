@@ -102,7 +102,7 @@ proc newProject {} {
     upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
     upvar 0 ::cf::[set ::curcfg]::stop_sched stop_sched
 
-    loadCfg ""
+    loadCfgLegacy ""
     if {! [info exists eid] } {
 	set eid ""
     }
@@ -216,7 +216,7 @@ proc openFile {} {
 	lappend cfg $entry
     }
     close $fileId
-    loadCfg $cfg
+    loadCfgLegacy $cfg
     set curcanvas [lindex $canvas_list 0]
     switchCanvas none
     redrawAll
@@ -333,7 +333,7 @@ proc closeFile {} {
 	set cfg_list [removeFromList $cfg_list $curcfg]
 
         set cfg [lindex $cfg_list 0]
-        loadCfg $cfg
+        loadCfgLegacy $cfg
         set curcfg $cfg
 
         upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list

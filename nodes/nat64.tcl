@@ -96,7 +96,7 @@ proc $MODULE.notebookDimensions { wi } {
     return [list $h $w] 
 }
 
-proc $MODULE.ifcName {l r} {
+proc $MODULE.ifacePrefix {l r} {
     return [l3IfcName $l $r]
 }
 
@@ -104,7 +104,7 @@ proc $MODULE.IPAddrRange {} {
     return 20
 }
 
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return NETWORK
 }
 
@@ -112,8 +112,8 @@ proc $MODULE.virtlayer {} {
     return VIRTUALIZED 
 }
 
-proc $MODULE.cfggen { node } {
-    set cfg [router.cfggen $node]
+proc $MODULE.generateConfig { node } {
+    set cfg [router.generateConfig $node]
 
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global nat64ifc_$eid.$node
@@ -146,31 +146,31 @@ proc $MODULE.shellcmds { } {
     return [router.shellcmds]
 }
 
-proc $MODULE.instantiate { eid node } {
-    router.instantiate $eid $node
+proc $MODULE.nodeCreate { eid node } {
+    router.nodeCreate $eid $node
 }
 
-proc $MODULE.setupNamespace { eid node } {
-    l3node.setupNamespace $eid $node
+proc $MODULE.nodeNamespaceSetup { eid node } {
+    l3node.nodeNamespaceSetup $eid $node
 }
 
-proc $MODULE.initConfigure { eid node } {
-    l3node.initConfigure $eid $node
+proc $MODULE.nodeInitConfigure { eid node } {
+    l3node.nodeInitConfigure $eid $node
 
     enableIPforwarding $eid $node
 }
 
-proc $MODULE.createIfcs { eid node ifcs } {
-    l3node.createIfcs $eid $node $ifcs
+proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
+    l3node.nodePhysIfacesCreate $eid $node $ifcs
 }
 
-proc $MODULE.start { eid node } {
+proc $MODULE.nodeConfigure { eid node } {
     global nat64ifc_$eid.$node
 
     set tun [createStartTunIfc $eid $node]
     set nat64ifc_$eid.$node $tun
 
-    router.start $eid $node
+    router.nodeConfigure $eid $node
 
     set datadir "/var/db/tayga"
 
@@ -192,7 +192,7 @@ proc $MODULE.start { eid node } {
 
     # XXX
     # Even though this routes should be added here, we add them in the
-    # router.start procedure which invokes nat64.cfggen where we define
+    # router.nodeConfigure procedure which invokes nat64.generateConfig where we define
     # them with:
     # lappend cfg "ip route $tayga4pool $tun"
     # lappend cfg "ipv6 route $tayga6prefix $tun"
@@ -207,14 +207,14 @@ proc $MODULE.start { eid node } {
     execCmdNode $node tayga
 }
 
-proc $MODULE.shutdown { eid node } {
-    router.shutdown $eid $node
+proc $MODULE.nodeShutdown { eid node } {
+    router.nodeShutdown $eid $node
     taygaShutdown $eid $node
 }
 
-proc $MODULE.destroy { eid node } {
+proc $MODULE.nodeDestroy { eid node } {
     taygaDestroy $eid $node
-    router.destroy $eid $node
+    router.nodeDestroy $eid $node
 }
 
 proc $MODULE.nghook { eid node ifc } {

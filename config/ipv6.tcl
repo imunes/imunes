@@ -123,12 +123,12 @@ proc autoIPv6addr { node iface } {
     #changeAddressRange6 - is this procedure called from 'changeAddressRange' (1 if true, otherwise 0)
     #autorenumbered_ifcs6 - list of all interfaces that changed an address
 
-    set node_type [nodeType $node]
-    if { [$node_type.layer] != "NETWORK" } {
+    set node_type [getNodeType $node]
+    if { [$node_type.netlayer] != "NETWORK" } {
 	#
 	# Shouldn't get called at all for link-layer nodes
 	#
-	#puts "autoIPv6 called for a [[nodeType $node].layer] layer node"
+	#puts "autoIPv6 called for a [[getNodeType $node].netlayer] layer node"
 	return
     }  
 
@@ -138,8 +138,8 @@ proc autoIPv6addr { node iface } {
     lassign [logicalPeerByIfc $node $iface] peer_node peer_if
     set peer_ip6addrs {}
     if { $peer_node != "" } {
-	if { [[nodeType $peer_node].layer] == "LINK" } {
-	    foreach l2node [listLANnodes $peer_node {}] {
+	if { [[getNodeType $peer_node].netlayer] == "LINK" } {
+	    foreach l2node [listLANNodes $peer_node {}] {
 		foreach ifc [ifcList $l2node] {
 		    lassign [logicalPeerByIfc $l2node $ifc] peer peer_if
 		    set peer_ip6addr [getIfcIPv6addrs $peer $peer_if]

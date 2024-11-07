@@ -559,7 +559,7 @@ proc popupTextDialog { c target modify } {
 	set coords [$c bbox "$target"]
 	set annotationType [getAnnotationType $target]
 	set label [getAnnotationLabel $target]
-	set lcolor [getAnnotationLColor $target]
+	set lcolor [getAnnotationLabelColor $target]
 	set font [getAnnotationFont $target]
     }
     if { $lcolor == "" } { set lcolor black }
@@ -662,7 +662,7 @@ proc popupTextApply { c wi target } {
 	}
 	setAnnotationCoords $target $coords
 	setAnnotationLabel $target $label
-	setAnnotationLColor $target $labelcolor
+	setAnnotationLabelColor $target $labelcolor
 	setAnnotationFont $target $font
 
 	destroyNewText $c
@@ -696,7 +696,7 @@ proc drawText { text } {
     }
     set x [expr {[lindex $coords 0] * $zoom}]
     set y [expr {[lindex $coords 1] * $zoom}]
-    set labelcolor [getAnnotationLColor $text]
+    set labelcolor [getAnnotationLabelColor $text]
     set label [getAnnotationLabel $text]
     set font [getAnnotationFont $text]
     
@@ -1069,7 +1069,7 @@ proc button3annotation { type c x y } {
 	if { $canvas_id != $curcanvas } {
 	    .button3menu.moveto add command \
 		-label [getCanvasName $canvas_id] \
-		-command "movetoCanvas $canvas_id"
+		-command "moveToCanvas $canvas_id"
 	} else {
 	    .button3menu.moveto add command \
 		-label [getCanvasName $canvas_id] -state disabled

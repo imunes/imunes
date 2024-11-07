@@ -46,11 +46,11 @@
 set MODULE router
 registerModule $MODULE
 
-#****f* router.tcl/router.cfggen
+#****f* router.tcl/router.generateConfig
 # NAME
-#   router.cfggen -- configuration generator
+#   router.generateConfig -- configuration generator
 # SYNOPSIS
-#   set config [router.cfggen $node]
+#   set config [router.generateConfig $node]
 # FUNCTION
 #   Generates configuration. This configuration represents the default
 #   configuration loaded on the booting time of the virtual nodes and it is
@@ -63,7 +63,7 @@ registerModule $MODULE
 # RESULT
 #   * congif -- generated configuration
 #****
-proc $MODULE.cfggen { node } {
+proc $MODULE.generateConfig { node } {
     set cfg {}
 
     switch -exact -- [getNodeModel $node] {
@@ -187,44 +187,44 @@ proc $MODULE.shellcmds {} {
     return "csh bash vtysh sh tcsh"
 }
 
-#****f* router.tcl/router.instantiate
+#****f* router.tcl/router.nodeCreate
 # NAME
-#   router.instantiate -- instantiate
+#   router.nodeCreate -- instantiate
 # SYNOPSIS
-#   router.instantiate $eid $node
+#   router.nodeCreate $eid $node
 # FUNCTION
 #   Creates a new virtual node for a given node in imunes.
-#   Procedure router.instantiate creates a new virtual node with all
+#   Procedure router.nodeCreate creates a new virtual node with all
 #   the interfaces and CPU parameters as defined in imunes. It sets the
 #   net.inet.ip.forwarding and net.inet6.ip6.forwarding kernel variables to 1.
 # INPUTS
 #   * eid - experiment id
 #   * node - node id
 #****
-proc $MODULE.instantiate { eid node } {
-    l3node.instantiate $eid $node
+proc $MODULE.nodeCreate { eid node } {
+    l3node.nodeCreate $eid $node
 }
 
-#****f* router.tcl/router.setupNamespace
+#****f* router.tcl/router.nodeNamespaceSetup
 # NAME
-#   router.setupNamespace -- router node setupNamespace
+#   router.nodeNamespaceSetup -- router node nodeNamespaceSetup
 # SYNOPSIS
-#   router.setupNamespace $eid $node
+#   router.nodeNamespaceSetup $eid $node
 # FUNCTION
 #   Linux only. Attaches the existing Docker netns to a new one.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id
 #****
-proc $MODULE.setupNamespace { eid node } {
-    l3node.setupNamespace $eid $node
+proc $MODULE.nodeNamespaceSetup { eid node } {
+    l3node.nodeNamespaceSetup $eid $node
 }
 
-#****f* router.tcl/router.start
+#****f* router.tcl/router.nodeConfigure
 # NAME
-#   router.start -- start
+#   router.nodeConfigure -- start
 # SYNOPSIS
-#   router.start $eid $node
+#   router.nodeConfigure $eid $node
 # FUNCTION
 #   Starts a new router. The node can be started if it is instantiated.
 #   Simulates the booting proces of a router.
@@ -232,15 +232,15 @@ proc $MODULE.setupNamespace { eid node } {
 #   * eid - experiment id
 #   * node - node id
 #****
-proc $MODULE.start { eid node } {
-    l3node.start $eid $node
+proc $MODULE.nodeConfigure { eid node } {
+    l3node.nodeConfigure $eid $node
 }
 
-#****f* router.tcl/router.shutdown
+#****f* router.tcl/router.nodeShutdown
 # NAME
-#   router.shutdown -- shutdown
+#   router.nodeShutdown -- shutdown
 # SYNOPSIS
-#   router.shutdown $eid $node
+#   router.nodeShutdown $eid $node
 # FUNCTION
 #   Shutdowns a router node.
 #   Simulates the shutdown proces of a node, kills all the services and
@@ -248,29 +248,29 @@ proc $MODULE.start { eid node } {
 #   * eid - experiment id
 #   * node - node id
 #****
-proc $MODULE.shutdown { eid node } {
-    l3node.shutdown $eid $node
+proc $MODULE.nodeShutdown { eid node } {
+    l3node.nodeShutdown $eid $node
 }
 
-proc $MODULE.initConfigure { eid node } {
-    l3node.initConfigure $eid $node
+proc $MODULE.nodeInitConfigure { eid node } {
+    l3node.nodeInitConfigure $eid $node
 
     enableIPforwarding $eid $node
 }
 
-proc $MODULE.createIfcs { eid node ifcs } {
-    l3node.createIfcs $eid $node $ifcs
+proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
+    l3node.nodePhysIfacesCreate $eid $node $ifcs
 }
 
-proc $MODULE.destroyIfcs { eid node ifcs } {
-    l3node.destroyIfcs $eid $node $ifcs
+proc $MODULE.nodeIfacesDestroy { eid node ifcs } {
+    l3node.nodeIfacesDestroy $eid $node $ifcs
 }
 
-#****f* router.tcl/router.destroy
+#****f* router.tcl/router.nodeDestroy
 # NAME
-#   router.destroy -- layer 3 node destroy
+#   router.nodeDestroy -- layer 3 node destroy
 # SYNOPSIS
-#   router.destroy $eid $node
+#   router.nodeDestroy $eid $node
 # FUNCTION
 #   Destroys a router node.
 #   First, it destroys all remaining virtual ifaces (vlans, tuns, etc).
@@ -279,8 +279,8 @@ proc $MODULE.destroyIfcs { eid node ifcs } {
 #   * eid -- experiment id
 #   * node -- node id
 #****
-proc $MODULE.destroy { eid node } {
-    l3node.destroy $eid $node
+proc $MODULE.nodeDestroy { eid node } {
+    l3node.nodeDestroy $eid $node
 }
 
 #****f* router.tcl/router.confNewIfc
@@ -303,7 +303,7 @@ proc $MODULE.confNewIfc { node ifc } {
     autoMACaddr $node $ifc
 
     lassign [logicalPeerByIfc $node $ifc] peer_node -
-    if { [nodeType $peer_node] == "extnat" } {
+    if { [getNodeType $peer_node] == "extnat" } {
 	setIfcNatState $node $ifc "on"
     }
 }
@@ -382,17 +382,17 @@ proc $MODULE.icon { size } {
     }
 }
 
-#****f* router.tcl/router.layer
+#****f* router.tcl/router.netlayer
 # NAME
-#   router.layer -- layer
+#   router.netlayer -- layer
 # SYNOPSIS
-#   set layer [router.layer]
+#   set layer [router.netlayer]
 # FUNCTION
 #   Returns the layer on which the router operates, i.e. returns NETWORK.
 # RESULT
 #   * layer -- set to NETWORK
 #****
-proc $MODULE.layer {} {
+proc $MODULE.netlayer {} {
     return NETWORK
 }
 
@@ -466,17 +466,17 @@ proc $MODULE.notebookDimensions { wi } {
     return [list $h $w]
 }
 
-#****f* router.tcl/router.ifcName
+#****f* router.tcl/router.ifacePrefix
 # NAME
-#   router.ifcName -- interface name
+#   router.ifacePrefix -- interface name
 # SYNOPSIS
-#   router.ifcName
+#   router.ifacePrefix
 # FUNCTION
 #   Returns router interface name prefix.
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifcName {l r} {
+proc $MODULE.ifacePrefix {l r} {
     return [l3IfcName $l $r]
 }
 
