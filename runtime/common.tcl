@@ -186,22 +186,16 @@ proc pipesClose {} {
 #   * mode -- the new operating mode. Can be edit or exec.
 #****
 proc setOperMode { mode } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::undolevel undolevel
-    upvar 0 ::cf::[set ::curcfg]::redolevel redolevel
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    upvar 0 ::cf::[set ::curcfg]::cfgDeployed cfgDeployed
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global all_modules_list editor_only execMode isOSfreebsd isOSlinux
 
-    if { $mode == "exec" && $node_list == "" } {
+    if { $mode == "exec" && [getFromRunning "node_list"] == "" } {
 	statline "Empty topologies can't be executed."
 	.panwin.f1.c config -cursor left_ptr
 
 	return
     }
 
-    if { !$cfgDeployed && $mode == "exec" } {
+    if { ! [getFromRunning "cfg_deployed"] && $mode == "exec" } {
 	if { ! $isOSlinux && ! $isOSfreebsd } {
 	    after idle { .dialog1.msg configure -wraplength 4i }
 	    tk_dialog .dialog1 "IMUNES error" \
@@ -268,28 +262,29 @@ proc setOperMode { mode } {
 	.menubar.tools entryconfigure "Routing protocol defaults" -state disabled
 	.panwin.f1.c bind node <Double-1> "spawnShellExec"
 	.panwin.f1.c bind nodelabel <Double-1> "spawnShellExec"
-	set oper_mode exec
 
+	setToRunning "oper_mode" "exec"
 	wm protocol . WM_DELETE_WINDOW {
 	}
-	if { ! $cfgDeployed } {
 
+	if { ! [getFromRunning "cfg_deployed"] } {
 	    deployCfg
-	    set cfgDeployed true
+	    setToRunning "cfg_deployed" true
 	}
 
 	wm protocol . WM_DELETE_WINDOW {
 	    exit
 	}
-	.bottom.experiment_id configure -text "Experiment ID = $eid"
 
+	.bottom.experiment_id configure -text "Experiment ID = [getFromRunning "eid"]"
     } else {
-	if { $oper_mode != "edit" } {
+	if { [getFromRunning "oper_mode"] != "edit" } {
 	    global regular_termination
 
 	    wm protocol . WM_DELETE_WINDOW {
 	    }
 
+	    set eid [getFromRunning "eid"]
 	    if { $regular_termination } {
 		undeployCfg $eid
 	    } else {
@@ -299,7 +294,8 @@ proc setOperMode { mode } {
 	    pipesCreate
 	    killExtProcess "socat.*$eid"
 	    pipesClose
-	    set cfgDeployed false
+
+	    setToRunning "cfg_deployed" false
 
 	    wm protocol . WM_DELETE_WINDOW {
 		exit
@@ -318,14 +314,14 @@ proc setOperMode { mode } {
 
 	.menubar.experiment entryconfigure "Terminate" -state disabled
 	.menubar.experiment entryconfigure "Restart" -state disabled
-	if { $undolevel > 0 } {
 
+	if { [getFromRunning "undolevel"] > 0 } {
 	    .menubar.edit entryconfigure "Undo" -state normal
 	} else {
 	    .menubar.edit entryconfigure "Undo" -state disabled
 	}
-	if { $redolevel > $undolevel } {
 
+	if { [getFromRunning "redolevel"] > [getFromRunning "undolevel"] } {
 	    .menubar.edit entryconfigure "Redo" -state normal
 	} else {
 	    .menubar.edit entryconfigure "Redo" -state disabled
@@ -333,8 +329,8 @@ proc setOperMode { mode } {
 
 	.panwin.f1.c bind node <Double-1> "nodeConfigGUI .panwin.f1.c {}"
 	.panwin.f1.c bind nodelabel <Double-1> "nodeConfigGUI .panwin.f1.c {}"
-	set oper_mode edit
 
+	setToRunning "oper_mode" "edit"
 	.bottom.experiment_id configure -text ""
     }
 
@@ -351,21 +347,21 @@ proc setOperMode { mode } {
 #   node.
 #****
 proc spawnShellExec {} {
-    set node [lindex [.panwin.f1.c gettags {node && current}] 1]
-    if { $node == "" } {
-	set node [lindex [.panwin.f1.c gettags {nodelabel && current}] 1]
-	if { $node == "" } {
+    set node_id [lindex [.panwin.f1.c gettags {node && current}] 1]
+    if { $node_id == "" } {
+	set node_id [lindex [.panwin.f1.c gettags {nodelabel && current}] 1]
+	if { $node_id == "" } {
 	    return
 	}
     }
-    if { [[typemodel $node].virtlayer] != "VIRTUALIZED" } {
-	nodeConfigGUI .panwin.f1.c $node
+    if { [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" } {
+	nodeConfigGUI .panwin.f1.c $node_id
     } else {
-	set cmd [lindex [existingShells [[typemodel $node].shellcmds] $node] 0]
+	set cmd [lindex [existingShells [[getNodeType $node_id].shellcmds] $node_id] 0]
 	if { $cmd == "" } {
 	    return
 	}
-	spawnShell $node $cmd
+	spawnShell $node_id $cmd
     }
 }
 
@@ -400,14 +396,14 @@ proc fetchNodeConfiguration {} {
 		    setIfcMACaddr $node $ifc $macaddr
 		} elseif { [regexp {^\tinet6 (?!fe80:)([^ ]+) prefixlen ([^ ]+)} $line -> ip6addr mask] } {
 		    if { $ip6Set == 0 } {
-			setIfcIPv6addr $node $ifc $ip6addr/$mask
+			setIfcIPv6addrs $node $ifc $ip6addr/$mask
 			set ip6Set 1
 		    }
 		} elseif { [regexp {^\tinet ([^ ]+) netmask ([^ ]+) } $line \
 		     -> ip4addr netmask] } {
 		    if { $ip4Set == 0 } {
 			set length [ip::maskToLength $netmask]
-			setIfcIPv4addr $node $ifc $ip4addr/$length
+			setIfcIPv4addrs $node $ifc $ip4addr/$length
 			set ip4Set 1
 		    }
 		}
@@ -425,12 +421,12 @@ proc fetchNodeConfiguration {} {
 		     -> ip4addr netmask] } {
 		    if { $ip4Set == 0 } {
 			set length [ip::maskToLength $netmask]
-			setIfcIPv4addr $node $ifc $ip4addr/$length
+			setIfcIPv4addrs $node $ifc $ip4addr/$length
 			set ip4Set 1
 		    }
-		} elseif { [regexp {^\s*inet6 addr:\s(?!fe80:)([^ ]+)} $line -> ip6addr]} {
+		} elseif { [regexp {^\s*inet6 addr:\s(?!fe80:)([^ ]+)} $line -> ip6addr] } {
 		    if { $ip6Set == 0 } {
-			setIfcIPv6addr $node $ifc $ip6addr
+			setIfcIPv6addrs $node $ifc $ip6addr
 			set ip6Set 1
 		    }
 		} elseif { [regexp {MTU:([^ ]+)} $line -> mtuvalue] } {
@@ -470,10 +466,10 @@ proc readDataFromFile { path } {
 #   * exp -- experiment id
 #****
 proc resumeSelectedExperiment { exp } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global runtimeDir
-    if { [info exists eid] } {
 
+    set eid [getFromRunning "eid"]
+    if { $eid != "" } {
 	set curr_eid $eid
 	if { $curr_eid == $exp } {
 	    return
@@ -481,15 +477,11 @@ proc resumeSelectedExperiment { exp } {
     }
     newProject
 
-    upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
-    upvar 0 ::cf::[set ::curcfg]::cfgDeployed cfgDeployed
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    set currentFile [getExperimentConfigurationFromFile $exp]
+    setToRunning "current_file" [getExperimentConfigurationFromFile $exp]
     openFile
 
-    set eid $exp
-    set cfgDeployed true
+    setToRunning "eid" $exp
+    setToRunning "cfg_deployed" true
     setOperMode exec
 }
 
@@ -504,28 +496,25 @@ proc resumeSelectedExperiment { exp } {
 #   * path -- absolute path of the file
 #****
 proc dumpLinksToFile { path } {
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-
     set data ""
     set linkDelim ":"
     set skipLinks ""
 
-    foreach link $link_list {
+    foreach link [getFromRunning "link_list"] {
 	if { $link in $skipLinks } {
 	    continue
 	}
-	set lnode1 [lindex [getLinkPeers $link] 0]
-	set lnode2 [lindex [getLinkPeers $link] 1]
-	set ifname1 [ifcByPeer $lnode1 $lnode2]
-	set ifname2 [ifcByPeer $lnode2 $lnode1]
 
-	if { [getLinkMirror $link] != "" } {
-	    set mirror_link [getLinkMirror $link]
+	lassign [getLinkPeers $link] lnode1 lnode2
+	lassign [getLinkPeersIfaces $link] iface1_id iface2_id
+
+	set mirror_link [getLinkMirror $link]
+	if { $mirror_link != "" } {
 	    lappend skipLinks $mirror_link
 
-	    set p_lnode2 $lnode2
-	    set lnode2 [lindex [getLinkPeers $mirror_link] 0]
-	    set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
+	    # switch direction for mirror links
+	    lassign "$lnode2 [lindex [getLinkPeers $mirror_link] 1]" lnode1 lnode2
+	    lassign "$iface2_id [lindex [getLinkPeersIfaces $mirror_link] 1]" iface1_id iface2_id
 	}
 
 	set name1 [getNodeName $lnode1]
@@ -533,13 +522,13 @@ proc dumpLinksToFile { path } {
 
 	set linkname "$name1$linkDelim$name2"
 
-	set lpair [list $lnode1 $ifname1]
-	set rpair [list $lnode2 $ifname2]
+	set lpair [list $lnode1 [getIfcName $lnode1 $iface1_id]]
+	set rpair [list $lnode2 [getIfcName $lnode2 $iface2_id]]
 	if { [getNodeType $lnode1] in "rj45 extelem" } {
 	    if { [getNodeType $lnode1] == "rj45" } {
 		set lpair $name1
 	    } else {
-		set ifcs [getNodeExternalIfcs $lnode1]
+		set ifcs [getNodeStolenIfaces $lnode1]
 		set lpair [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname1"] 1]
 	    }
 	}
@@ -547,7 +536,7 @@ proc dumpLinksToFile { path } {
 	    if { [getNodeType $lnode2] == "rj45" } {
 		set rpair $name2
 	    } else {
-		set ifcs [getNodeExternalIfcs $lnode2]
+		set ifcs [getNodeStolenIfaces $lnode2]
 		set rpair [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname2"] 1]
 	    }
 	}
@@ -696,7 +685,7 @@ proc captureOnExtIfc { node command } {
 	return
     }
 
-    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set eid [getFromRunning "eid"]
 
     if { $command == "tcpdump" } {
 	exec xterm -name imunes-terminal -T "Capturing $eid-$node" -e "tcpdump -ni $eid-$node" 2> /dev/null &

@@ -62,11 +62,18 @@ proc randomizeMACbytes {} {
 #     address will be assigned
 #****
 proc autoMACaddr { node_id iface_id } {
-    global mac_byte4 mac_byte5 mac_byte6
-
     if { [getNodeType $node_id] ni "ext extnat" && [[typemodel $node_id].virtlayer] != "VIRTUALIZED" } {
 	return
     }
+
+    set macaddr [getNextMACaddr]
+
+    lappendToRunning "mac_used_list" $macaddr
+    setIfcMACaddr $node_id $iface_id $macaddr
+}
+
+proc getNextMACaddr {} {
+    global mac_byte4 mac_byte5 mac_byte6
 
     set mac_byte6 0
     set macaddr [MACaddrAddZeros 42:00:aa:[format %x $mac_byte4]:[format %x $mac_byte5]:[format %x $mac_byte6]]
@@ -88,8 +95,7 @@ proc autoMACaddr { node_id iface_id } {
 	set macaddr [MACaddrAddZeros 42:00:aa:[format %x $mac_byte4]:[format %x $mac_byte5]:[format %x $mac_byte6]]
     }
 
-    lappendToRunning "mac_used_list" $macaddr
-    setIfcMACaddr $node_id $iface_id $macaddr
+    return $macaddr
 }
 
 #****f* mac.tcl/MACaddrAddZeros

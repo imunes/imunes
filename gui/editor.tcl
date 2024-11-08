@@ -45,27 +45,30 @@
 #   Updates the undo log. Writes the current configuration to the
 #   undolog array and updates the undolevel variable.
 #****
+# BUG
+# 'Redo' visible after changing the config when not in top undolevel
+# Repro:
+#  1. add any node
+#  2. click Undo
+#  3. add any node
+# Should reset redolog when changing config from somewhere in undolog
 proc updateUndoLog {} {
-    upvar 0 ::cf::[set ::curcfg]::undolevel undolevel
-    upvar 0 ::cf::[set ::curcfg]::redolevel redolevel
-    upvar 0 ::cf::[set ::curcfg]::undolog undolog
-    upvar 0 ::cf::[set ::curcfg]::etchosts etchosts
     global changed showTree
 
+    set undolevel [getFromRunning "undolevel"]
+
     if { $changed } {
-	global t_undolog
-	set t_undolog ""
-	dumpCfg string t_undolog
-	incr undolevel
+	setToRunning "undolevel" [incr undolevel]
 	if { $undolevel == 1 } {
 	    .menubar.edit entryconfigure "Undo" -state normal
 	}
-	set undolog($undolevel) $t_undolog
-	set redolevel $undolevel
+
+	setToUndolog $undolevel
+	setToRunning "redolevel" $undolevel
 	set changed 0
 	# When some changes are made in the topology, new /etc/hosts files
 	# should be generated.
-	set etchosts ""
+	setToRunning "etc_hosts" ""
 	if { $showTree } {
 	    refreshTopologyTree
 	}
@@ -82,18 +85,22 @@ proc updateUndoLog {} {
 #   configuration. Reduces the value of undolevel.
 #****
 proc undo {} {
-    upvar 0 ::cf::[set ::curcfg]::undolevel undolevel
-    upvar 0 ::cf::[set ::curcfg]::undolog undolog
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
+    set undolevel [getFromRunning "undolevel"]
 
-    if { $oper_mode == "edit" && $undolevel > 0 } {
+    if { [getFromRunning "oper_mode"] == "edit" && $undolevel > 0 } {
 	.menubar.edit entryconfigure "Redo" -state normal
-	incr undolevel -1
+	setToRunning "undolevel" [incr undolevel -1]
 	if { $undolevel == 0 } {
 	    .menubar.edit entryconfigure "Undo" -state disabled
 	}
+
 	.panwin.f1.c config -cursor watch
-	loadCfgLegacy $undolog($undolevel)
+
+	set dict_cfg [getFromUndolog $undolevel]
+	setToRunning "canvas_list" [getCanvasList]
+	setToRunning "node_list" [getNodeList]
+	setToRunning "link_list" [getLinkList]
+	setToRunning "annotation_list" [getAnnotationList]
 	switchCanvas none
     }
 }
@@ -110,21 +117,25 @@ proc undo {} {
 #   of undolevel.
 #****
 proc redo {} {
-    upvar 0 ::cf::[set ::curcfg]::undolevel undolevel
-    upvar 0 ::cf::[set ::curcfg]::redolevel redolevel
-    upvar 0 ::cf::[set ::curcfg]::undolog undolog
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
+    set undolevel [getFromRunning "undolevel"]
+    set redolevel [getFromRunning "redolevel"]
 
-    if { $oper_mode == "edit" && $redolevel > $undolevel } {
-	incr undolevel
+    if { [getFromRunning "oper_mode"] == "edit" && $redolevel > $undolevel } {
+	setToRunning "undolevel" [incr undolevel]
 	if { $undolevel == 1 } {
 	    .menubar.edit entryconfigure "Undo" -state normal
 	}
 	if { $redolevel <= $undolevel } {
 	    .menubar.edit entryconfigure "Redo" -state disabled
 	}
+
 	.panwin.f1.c config -cursor watch
-	loadCfgLegacy $undolog($undolevel)
+
+	set dict_cfg [getFromUndolog $undolevel]
+	setToRunning "canvas_list" [getCanvasList]
+	setToRunning "node_list" [getNodeList]
+	setToRunning "link_list" [getLinkList]
+	setToRunning "annotation_list" [getAnnotationList]
 	switchCanvas none
     }
 }
@@ -142,8 +153,8 @@ proc redo {} {
 # RESULT
 #   * ifc_name -- the name of the interface
 #****
-proc chooseIfName { lnode rnode } {
-    return [[getNodeType $lnode].ifacePrefix $lnode $rnode]
+proc chooseIfName { lnode_id rnode_id } {
+    return [[getNodeType $lnode_id].ifacePrefix $lnode_id $rnode_id]
 }
 
 #****f* editor.tcl/l3IfcName
@@ -159,11 +170,12 @@ proc chooseIfName { lnode rnode } {
 # RESULT
 #   * ifc_name -- the name of the interface
 #****
-proc l3IfcName { lnode rnode } {
-    if { [getNodeType $lnode] in "ext extnat" } {
+proc l3IfcName { lnode_id rnode_id } {
+    if { [getNodeType $lnode_id] in "ext extnat" } {
 	return "ext"
     }
-    if { [getNodeType $rnode] == "wlan" } {
+
+    if { [getNodeType $rnode_id] == "wlan" } {
 	return "wlan"
     } else {
 	return "eth"
@@ -292,9 +304,6 @@ proc focusAndFlash { W { count 9 } } {
 #   * y -- zoom y coordinate
 #****
 proc setZoom { x y } {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
-
     set w .entry1
     catch { destroy $w }
     toplevel $w -takefocus 1
@@ -329,7 +338,7 @@ proc setZoom { x y } {
     bind $w <Key-Return> "setZoomApply $w"
 
     ttk::entry $w.setzoom.e1
-    $w.setzoom.e1 insert 0 [expr {int($zoom * 100)}]
+    $w.setzoom.e1 insert 0 [expr {int([getFromRunning "zoom"] * 100)}]
     pack $w.setzoom.e1 -side top -pady 5 -padx 10 -fill x
 }
 
@@ -345,11 +354,9 @@ proc setZoom { x y } {
 #   * w -- tk widget (set zoom popup dialog box)
 #****
 proc setZoomApply { w } {
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
-
     set newzoom [expr [$w.setzoom.e1 get] / 100.0]
-    if { $newzoom != $zoom } {
-	set zoom $newzoom
+    if { $newzoom != [getFromRunning "zoom"] } {
+	setToRunning "zoom" $newzoom
 	redrawAll
     }
 
@@ -368,8 +375,6 @@ proc setZoomApply { w } {
 #   * y -- zoom y coordinate
 #****
 proc selectZoom { x y } {
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
-
     global zoom_stops
 
     set values {}
@@ -407,7 +412,7 @@ proc selectZoom { x y } {
     bind $w <Key-Return> "selectZoomApply $w"
 
     ttk::combobox $w.selectzoom.e1 -values $values
-    $w.selectzoom.e1 insert 0 [expr {int($zoom * 100)}]
+    $w.selectzoom.e1 insert 0 [expr {int([getFromRunning "zoom"] * 100)}]
     pack $w.selectzoom.e1 -side top -pady 5 -padx 10 -fill x
 
     update
@@ -427,7 +432,6 @@ proc selectZoom { x y } {
 #   * w -- tk widget (select zoom popup dialog box)
 #****
 proc selectZoomApply { w } {
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global hasIM changed
 
     set tempzoom [$w.selectzoom.e1 get]
@@ -449,8 +453,8 @@ proc selectZoomApply { w } {
     }
 
     set newzoom [ expr $tempzoom / 100.0]
-    if { $newzoom != $zoom } {
-	set zoom $newzoom
+    if { $newzoom != [getFromRunning "zoom"] } {
+	setToRunning "zoom" $newzoom
 
 	redrawAll
 	set changed 1
@@ -472,66 +476,33 @@ proc selectZoomApply { w } {
 #   * wi -- widget
 #****
 proc routerDefaultsApply { wi } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global changed router_model routerDefaultsModel router_ConfigModel
     global routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable
     global rdconfig
 
-    lset rdconfig 0 $routerRipEnable
-    lset rdconfig 1 $routerRipngEnable
-    lset rdconfig 2 $routerOspfEnable
-    lset rdconfig 3 $routerOspf6Enable
-    set routerDefaultsModel $router_model
-    set model frr
-    set selected_node_list [selectedNodes]
-    set empty {}
+    set oper_mode [getFromRunning "oper_mode"]
 
-    if { $selected_node_list != $empty } {
-	foreach node $selected_node_list {
-	    if { $oper_mode == "edit" && [getNodeType $node] == "router" } {
-		setNodeModel $node $router_model
-		set router_ConfigModel $router_model
-		if { $router_ConfigModel != "static" } {
-		    set ripEnable [lindex $rdconfig 0]
-		    set ripngEnable [lindex $rdconfig 1]
-		    set ospfEnable [lindex $rdconfig 2]
-		    set ospf6Enable [lindex $rdconfig 3]
-		    setNodeProtocolRip $node $ripEnable
-		    setNodeProtocolRipng $node $ripngEnable
-		    setNodeProtocolOspfv2 $node $ospfEnable
-		    setNodeProtocolOspfv3 $node $ospf6Enable
-		} else {
-		    $wi.nbook.nf1.protocols.rip configure -state disabled
-		    $wi.nbook.nf1.protocols.ripng configure -state disabled
-		    $wi.nbook.nf1.protocols.ospf configure -state disabled
-		    $wi.nbook.nf1.protocols.ospf6 configure -state disabled
-		}
-		set changed 1
+    set rdconfig "$routerRipEnable $routerRipngEnable $routerOspfEnable $routerOspf6Enable"
+    set routerDefaultsModel $router_model
+
+    set selected_node_list [selectedNodes]
+    if { $selected_node_list == {} } {
+	set selected_node_list [getFromRunning "node_list"]
+    }
+
+    foreach node_id $selected_node_list {
+	if { $oper_mode == "edit" && [getNodeType $node_id] == "router" } {
+	    setNodeModel $node_id $router_model
+
+	    set router_ConfigModel $router_model
+	    if { $router_ConfigModel != "static" } {
+		lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable
+		setNodeProtocol $node_id "rip" $ripEnable
+		setNodeProtocol $node_id "ripng" $ripngEnable
+		setNodeProtocol $node_id "ospf" $ospfEnable
+		setNodeProtocol $node_id "ospf6" $ospf6Enable
 	    }
-	}
-    } else {
-	foreach node $node_list {
-	    if { $oper_mode == "edit" && [getNodeType $node] == "router" } {
-		setNodeModel $node $router_model
-		set router_ConfigModel $router_model
-		if { $router_ConfigModel != "static" } {
-		    set ripEnable [lindex $rdconfig 0]
-		    set ripngEnable [lindex $rdconfig 1]
-		    set ospfEnable [lindex $rdconfig 2]
-		    set ospf6Enable [lindex $rdconfig 3]
-		    setNodeProtocolRip $node  $ripEnable
-		    setNodeProtocolRipng $node $ripngEnable
-		    setNodeProtocolOspfv2 $node $ospfEnable
-		    setNodeProtocolOspfv3 $node $ospf6Enable
-		} else {
-		    $wi.nbook.nf1.protocols.rip configure -state disabled
-		    $wi.nbook.nf1.protocols.ripng configure -state disabled
-		    $wi.nbook.nf1.protocols.ospf configure -state disabled
-		    $wi.nbook.nf1.protocols.ospf6 configure -state disabled
-		}
-		set changed 1
-	    }
+	    set changed 1
 	}
     }
 
@@ -554,16 +525,8 @@ proc routerDefaultsApply { wi } {
 #   * node_id -- node to change
 #   * icon_name -- icon name
 #****
-proc setCustomIcon { node iconName } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-    global $iconName
-
-    set i [lsearch [set $node] "customIcon *"]
-    if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i "customIcon $iconName"]
-    } else {
-	set $node [linsert [set $node] end "customIcon $iconName"]
-    }
+proc setCustomIcon { node_id icon_name } {
+    cfgSet "nodes" $node_id "custom_icon" $icon_name
 }
 
 #****f* editor.tcl/getCustomIcon
@@ -576,10 +539,8 @@ proc setCustomIcon { node iconName } {
 # INPUTS
 #   * node_id -- node to get the icon from
 #****
-proc getCustomIcon { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    return [lindex [lsearch -inline [set $node] "customIcon *"] 1]
+proc getCustomIcon { node_id } {
+    return [cfgGet "nodes" $node_id "custom_icon"]
 }
 
 #****f* editor.tcl/removeCustomIcon
@@ -592,13 +553,8 @@ proc getCustomIcon { node } {
 # INPUTS
 #   * node_id -- node to remove the icon from
 #****
-proc removeCustomIcon { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set i [lsearch [set $node] "customIcon *"]
-    if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i]
-    }
+proc removeCustomIcon { node_id } {
+    cfgUnset "nodes" $node_id "custom_icon"
 }
 
 #****f* editor.tcl/getMostDistantNodeCoordinates
@@ -610,11 +566,10 @@ proc removeCustomIcon { node } {
 #   Returns the most distant node coordinates.
 #****
 proc getMostDistantNodeCoordinates {} {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
     set x 0
     set y 0
-    foreach node $node_list {
-	set coords [getNodeCoords $node]
+    foreach node_id [getFromRunning "node_list"] {
+	set coords [getNodeCoords $node_id]
 	if { [lindex $coords 0] > $x } {
 	    set x [lindex $coords 0]
 	}
@@ -638,8 +593,6 @@ proc getMostDistantNodeCoordinates {} {
 #   Creates the tree with all network elements form the topology.
 #****
 proc topologyElementsTree {} {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
     global showTree
 
     set f .panwin.f2
@@ -687,8 +640,8 @@ proc topologyElementsTree {} {
 	$f.tree insert {} end -id nodes -text "Nodes" -open true -tags nodes
 	$f.tree focus nodes
 	$f.tree selection set nodes
-	foreach node [lsort -dictionary $node_list] {
-	    set type [getNodeType $node]
+	foreach node_id [lsort -dictionary [getFromRunning "node_list"]] {
+	    set type [getNodeType $node_id]
 	    if { $type != "pseudo" } {
 		$f.tree insert nodes end -id $node_id -text "[getNodeName $node_id]" -open false -tags $node_id
 		lappend nodetags $node_id
@@ -709,13 +662,11 @@ proc topologyElementsTree {} {
 
 	set linktags ""
 	$f.tree insert {} end -id links -text "Links" -open false -tags links
-	foreach link [lsort -dictionary $link_list] {
-	    set n0 [lindex [getLinkPeers $link] 0]
-	    set n1 [lindex [getLinkPeers $link] 1]
-	    set name0 [getNodeName $n0]
-	    set name1 [getNodeName $n1]
-	    $f.tree insert links end -id $link -text "From $name0 to $name1" -tags $link
-	    lappend linktags $link
+	foreach link_id [lsort -dictionary [getFromRunning "link_list"]] {
+	    lassign [getLinkPeers $link_id] node1_id node2_id
+	    $f.tree insert links end -id $link_id -text \
+		"From [getNodeName $node1_id] to [getNodeName $node2_id]" -tags $link_id
+	    lappend linktags $link_id
 	}
 
 	global expandtree
@@ -864,14 +815,14 @@ proc bindEventsToTree {} {
 # FUNCTION
 #   Selects icon of the node selected in the topology tree.
 #****
-proc selectNodeFromTree { n } {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    set canvas [getNodeCanvas $n]
-    set curcanvas $canvas
+proc selectNodeFromTree { node_id } {
+    setToRunning "curcanvas" [getNodeCanvas $node_id]
     switchCanvas none
+
     .panwin.f1.c dtag node selected
     .panwin.f1.c delete -withtags selectmark
-    set obj [.panwin.f1.c find withtag "node && $n"]
+
+    set obj [.panwin.f1.c find withtag "node && $node_id"]
     selectNode .panwin.f1.c $obj
 }
 
@@ -884,17 +835,16 @@ proc selectNodeFromTree { n } {
 #   Selects icons of nodes that are endnodes
 #   of the link selected in the topology tree.
 #****
-proc selectLinkPeersFromTree { l } {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    set n0 [lindex [getLinkPeers $l] 0]
-    set n1 [lindex [getLinkPeers $l] 1]
-    set canvas [getNodeCanvas $n0]
-    set curcanvas $canvas
+proc selectLinkPeersFromTree { link_id } {
+    lassign [getLinkPeers $link_id] node1_id node2_id
+    setToRunning "curcanvas" [getNodeCanvas $node1_id]
     switchCanvas none
+
     .panwin.f1.c dtag node selected
     .panwin.f1.c delete -withtags selectmark
-    set obj0 [.panwin.f1.c find withtag "node && $n0"]
-    set obj1 [.panwin.f1.c find withtag "node && $n1"]
+
+    set obj0 [.panwin.f1.c find withtag "node && $node1_id"]
+    set obj1 [.panwin.f1.c find withtag "node && $node2_id"]
     selectNode .panwin.f1.c $obj0
     selectNode .panwin.f1.c $obj1
 }
@@ -908,8 +858,6 @@ proc selectLinkPeersFromTree { l } {
 #   Refreshes the topology tree.
 #****
 proc refreshTopologyTree {} {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
     global nodetags linktags
 
     set f .panwin.f2
@@ -921,32 +869,30 @@ proc refreshTopologyTree {} {
 
     set nodetags ""
     $f.tree insert {} end -id nodes -text "Nodes" -open true -tags nodes
-    foreach node [lsort -dictionary $node_list] {
-	set type [getNodeType $node]
+    foreach node_id [lsort -dictionary [getFromRunning "node_list"]] {
+	set type [getNodeType $node_id]
 	if { $type != "pseudo" } {
-	    $f.tree insert nodes end -id $node -text "[getNodeName $node]" -tags $node
-	    lappend nodetags $node
-	    $f.tree set $node canvas [getCanvasName [getNodeCanvas $node]]
-	    foreach ifc [lsort -dictionary [ifcList $node]] {
-		    $f.tree insert $node end -id $node$ifc -text "$ifc" -tags $node$ifc
-		    $f.tree set $node$ifc state [getIfcOperState $node $ifc]
-		    $f.tree set $node$ifc nat [getIfcNatState $node $ifc]
-		    $f.tree set $node$ifc IPv4 [getIfcIPv4addr $node $ifc]
-		    $f.tree set $node$ifc IPv6 [getIfcIPv6addr $node $ifc]
-                    $f.tree set $node$ifc MAC [getIfcMACaddr $node $ifc]
+	    $f.tree insert nodes end -id $node_id -text "[getNodeName $node_id]" -tags $node_id
+	    lappend nodetags $node_id
+	    $f.tree set $node_id canvas [getCanvasName [getNodeCanvas $node_id]]
+	    foreach ifc [lsort -dictionary [ifcList $node_id]] {
+		    $f.tree insert $node_id end -id $node_id$ifc -text "$ifc" -tags $node_id$ifc
+		    $f.tree set $node_id$ifc state [getIfcOperState $node_id $ifc]
+		    $f.tree set $node_id$ifc nat [getIfcNatState $node_id $ifc]
+		    $f.tree set $node_id$ifc IPv4 [getIfcIPv4addr $node_id $ifc]
+		    $f.tree set $node_id$ifc IPv6 [getIfcIPv6addr $node_id $ifc]
+                    $f.tree set $node_id$ifc MAC [getIfcMACaddr $node_id $ifc]
 	    }
 	}
     }
 
     set linktags ""
     $f.tree insert {} end -id links -text "Links" -open false -tags links
-    foreach link [lsort -dictionary $link_list] {
-	set n0 [lindex [getLinkPeers $link] 0]
-	set n1 [lindex [getLinkPeers $link] 1]
-	set name0 [getNodeName $n0]
-	set name1 [getNodeName $n1]
-	$f.tree insert links end -id $link -text "From $name0 to $name1" -tags $link
-	lappend linktags $link
+    foreach link_id [lsort -dictionary [getFromRunning "link_list"]] {
+	lassign [getLinkPeers $link_id] node1_id node2_id
+	$f.tree insert links end -id $link_id -text \
+	    "From [getNodeName $node1_id] to [getNodeName $node2_id]" -tags $link_id
+	lappend linktags $link_id
     }
 
     if { [$f.tree exists $selected] } {

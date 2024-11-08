@@ -11,13 +11,11 @@
 #   * node -- node id
 #****
 proc showCfg { c node } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     upvar 0 ::showConfig showCfg
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     upvar 0 ::lastObservedNode lastObservedNode
 
     #Show only if in exec mode
-    if { $oper_mode != "exec" } {
+    if { [getFromRunning "oper_mode"] != "exec" } {
     	return
     }
 
@@ -95,23 +93,18 @@ proc showCfgPopup { c node title x y } {
     set change 0
     set newX $x
     set newY $y
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    set sizex [lindex [getCanvasSize $curcanvas] 0]
-    set sizey [lindex [getCanvasSize $curcanvas] 1]
 
-    set nodeX [lindex [getNodeCoords $node] 0]
-    set nodeY [lindex [getNodeCoords $node] 1]
+    lassign [getCanvasSize [getFromRunning "curcanvas"]] sizex sizey
+    lassign [getNodeCoords $node] nodeX nodeY
+    lassign [$c cget -scrollregion] rx1 ry1 rx2 ry2
 
-    set canvasRegion [$c cget -scrollregion]
-    set rx1 [lindex $canvasRegion 0]
-    set ry1 [lindex $canvasRegion 1]
-    set rx2 [lindex $canvasRegion 2]
-    set ry2 [lindex $canvasRegion 3]
+    #set vx1 [expr {round ([lindex [$c xview] 0]*($rx2-$rx1)+$rx1)}]
+    #set vx2 [expr {round ([lindex [$c xview] 1]*($rx2-$rx1)+$rx1)}]
+    lassign [lmap n [$c xview] {expr {round($n * ($rx2 - $rx1) + $rx1)}}] vx1 vx2
 
-    set vx1 [expr {round ([lindex [$c xview] 0]*($rx2-$rx1)+$rx1)}]
-    set vx2 [expr {round ([lindex [$c xview] 1]*($rx2-$rx1)+$rx1)}]
-    set vy1 [expr {round ([lindex [$c yview] 0]*($ry2-$ry1)+$ry1)}]
-    set vy2 [expr {round ([lindex [$c yview] 1]*($ry2-$ry1)+$ry1)}]
+    #set vy1 [expr {round ([lindex [$c yview] 0]*($ry2-$ry1)+$ry1)}]
+    #set vy2 [expr {round ([lindex [$c yview] 1]*($ry2-$ry1)+$ry1)}]
+    lassign [lmap n [$c yview] {expr {round($n * ($ry2 - $ry1) + $ry1)}}] vy1 vy2
 
     set vwidth [expr {abs($vx2 - $vx1)}]
     set vheight [expr {abs($vy2 - $vy1)}]
@@ -187,13 +180,12 @@ proc deleteAndShowPopup { c title x y } {
 #   * node2 -- second node
 #****
 proc showRoute { c node2 } {
-    global activetool
     upvar 0 ::showConfig showCfg
     upvar 0 ::traceRouteTime traceRouteTime
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    upvar 0 ::cf::[set ::curcfg]::eid eid
+    global activetool
+
     #Route can only be drawn in exec mode
-    if { $oper_mode != "exec" } {
+    if { [getFromRunning "oper_mode"] != "exec" } {
 	    return
     }
 
@@ -232,7 +224,7 @@ proc showRoute { c node2 } {
 		set ip [getIfcIPv4addr $node2 $ifc]
 		set slashPlace [string first "/" $ip]
 		set ipAddr [string range $ip 0 [expr $slashPlace-1]]
-		set nodeId "$eid.$node1"
+		set nodeId "[getFromRunning "eid"].$node1"
 		set hopIP ""
 		set hop 0
 		set n1 $node1

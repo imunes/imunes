@@ -34,10 +34,9 @@
 #   Starts event scheduling.
 #****
 proc startEventScheduling {} {
-    upvar 0 ::cf::[set ::curcfg]::stop_sched stop_sched
-    upvar 0 ::cf::[set ::curcfg]::sched_init_done sched_init_done
-    set sched_init_done 0
-    set stop_sched false
+    setToRunning "sched_init_done" 0
+    setToRunning "stop_sched" false
+
     .menubar.events entryconfigure "Start scheduling" -state disabled
     .menubar.events entryconfigure "Stop scheduling" -state normal
     .bottom.cpu_load config -text "0"
@@ -53,8 +52,7 @@ proc startEventScheduling {} {
 #   Stops event scheduling.
 #****
 proc stopEventScheduling {} {
-    upvar 0 ::cf::[set ::curcfg]::stop_sched stop_sched
-    set stop_sched true
+    setToRunning "stop_sched" true
 
     .menubar.events entryconfigure "Start scheduling" -state normal
     .menubar.events entryconfigure "Stop scheduling" -state disabled
@@ -72,32 +70,29 @@ proc evsched {} {
     global evlogfile
 
     # XXX eid should be arg to evsched()
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    upvar 0 ::cf::[set ::curcfg]::sched_init_done sched_init_done
-    upvar 0 ::cf::[set ::curcfg]::event_t0 event_t0
-    upvar 0 ::cf::[set ::curcfg]::eventqueue eventqueue
-    upvar 0 ::cf::[set ::curcfg]::stop_sched stop_sched
+    set eid [getFromRunning "eid"]
+    set oper_mode [getFromRunning "oper_mode"]
+    set eventqueue [getFromRunning "eventqueue"]
 
     # XXX temp hack, init should be called when experiment is started
 
-    if { $stop_sched } {
+    if { [getFromRunning "stop_sched"] } {
 	return
     }
 
-    if { $oper_mode == "exec" } {
-	if { $sched_init_done == 0 } {
+    if { $oper_mode == "exec" && [getFromRunning "cfg_deployed"] } {
+	if { [getFromRunning "sched_init_done"] == 0 } {
 	    sched_init
 	    after 1000 evsched
 	    return
 	}
     } else {
-	set sched_init_done 0
+	setToRunning "sched_init_done" 0
 	after 1000 evsched
 	return
     }
 
-    set curtime [expr [clock seconds] - $event_t0]
+    set curtime [expr [clock seconds] - [getFromRunning "event_t0"]]
     set changed 0
     set need_sort 1
 
@@ -210,11 +205,8 @@ proc evsched {} {
 	    set changed 1
 
 	    if { $evlogfile != 0 } {
-		set peers [getLinkPeers $object]
-		set n0 [lindex $peers 0]
-		set n1 [lindex $peers 1]
-		set ifc0 [ifcByPeer $n0 $n1]
-		set ifc1 [ifcByPeer $n1 $n0]
+		lassign [getLinkPeers $object] node1_id node2_id
+		lassign [getLinkPeersIfaces $object] iface1 iface2
 
 		set delay [getLinkDelay $object]
 		if { $delay == "" } {
@@ -243,7 +235,7 @@ proc evsched {} {
 
 		set cfg "$delay $ber $loss $dup $bw"
 		puts $evlogfile \
-		    "[clock seconds] $object $n0:$ifc0 $n1:$ifc1 $cfg"
+		    "[clock seconds] $object $node1_id:$iface1 $node2_id:$iface2 $cfg"
 		flush $evlogfile
 	    }
 	}
@@ -257,6 +249,7 @@ proc evsched {} {
 	set eventqueue [lsort -index 0 -integer $eventqueue]
     }
 
+    setToRunning "eventqueue" $eventqueue
     after 1000 evsched
 }
 
@@ -270,15 +263,10 @@ proc evsched {} {
 #****
 proc sched_init {} {
     global evlogfile env
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-    upvar 0 ::cf::[set ::curcfg]::event_t0 event_t0
-    upvar 0 ::cf::[set ::curcfg]::eventqueue eventqueue
-    upvar 0 ::cf::[set ::curcfg]::sched_init_done sched_init_done
 
     set eventqueue {}
 
-    foreach link $link_list {
+    foreach link [getFromRunning "link_list"] {
 	set evlist [getLinkEvents $link]
 	foreach event $evlist {
 	    lappend eventqueue \
@@ -286,7 +274,7 @@ proc sched_init {} {
 	}
     }
 
-    foreach node $node_list {
+    foreach node [getFromRunning "node_list"] {
 	set evlist [getLinkEvents $node]
 	foreach event $evlist {
 	    lappend eventqueue \
@@ -294,7 +282,7 @@ proc sched_init {} {
 	}
     }
 
-    set eventqueue [lsort -index 0 -integer $eventqueue]
+    setToRunning "eventqueue" [lsort -index 0 -integer $eventqueue]
 
     if { [info exists env(IMUNES_EVENTLOG)] } {
 	set evlogfile [open $env(IMUNES_EVENTLOG) a]
@@ -302,8 +290,8 @@ proc sched_init {} {
 	set evlogfile 0
     }
 
-    set sched_init_done 1
-    set event_t0 [clock seconds]
+    setToRunning "sched_init_done" 1
+    setToRunning "event_t0" [clock seconds]
 }
 
 #****f* eventsched.tcl/getLinkEvents
@@ -318,11 +306,8 @@ proc sched_init {} {
 # RESULT
 #   * events -- list of events
 #****
-proc getLinkEvents { link } {
-    upvar 0 ::cf::[set ::curcfg]::$link $link
-
-    set entry [lsearch -inline [set $link] "events *"]
-    return [lsort -index 0 -integer [lindex $entry 1]]
+proc getLinkEvents { link_id } {
+    return [cfgGet "links" $link_id "events"]
 }
 
 #####################
@@ -340,10 +325,14 @@ proc getLinkEvents { link } {
 #   * events -- list of events
 #****
 proc getElementEvents { element } {
-    upvar 0 ::cf::[set ::curcfg]::$element $element
+    set group ""
+    if { $element in [getFromRunning "node_list"] } {
+	set group "nodes"
+    } elseif { $element in [getFromRunning "link_list"] } {
+	set group "links"
+    }
 
-    set entry [lindex [lsearch -inline [set $element] "events *"] 1]
-    return [formatForDisp $entry]
+    return [formatForDisp [cfgGet $group $element "events"]]
 }
 
 #****f* eventsched.tcl/setElementEvents
@@ -358,16 +347,14 @@ proc getElementEvents { element } {
 #   * events -- list of events
 #****
 proc setElementEvents { element events } {
-    upvar 0 ::cf::[set ::curcfg]::$element $element
-
-    set cfg [formatForExec $events]
-
-    set i [lsearch [set $element] "events *"]
-    if { $i >= 0 } {
-	set $element [lreplace [set $element] $i $i "events {$cfg}"]
-    } else {
-	set $element [linsert [set $element] end "events {$cfg}"]
+    set group ""
+    if { $element in [getFromRunning "node_list"] } {
+	set group "nodes"
+    } elseif { $element in [getFromRunning "link_list"] } {
+	set group "links"
     }
+
+    cfgSet $group $element "events" [formatForExec $events]
 }
 
 #****f* eventsched.tcl/formatForExec
@@ -421,9 +408,6 @@ proc formatForDisp { events } {
 #   Creates a window for editing elements' events.
 #****
 proc elementsEventsEditor {} {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-    upvar 0 ::cf::[set ::curcfg]::stop_sched stop_sched
     global shownElement
     set shownElement links
 
@@ -469,15 +453,13 @@ proc elementsEventsEditor {} {
     $pwi.left.tree insert {} end -id links -text "Links" -open true -tags links
     $pwi.left.tree focus links
     $pwi.left.tree selection set links
-    foreach link [lsort -dictionary $link_list] {
-	set n0 [lindex [getLinkPeers $link] 0]
-	set n1 [lindex [getLinkPeers $link] 1]
-	set name0 [getNodeName $n0]
-	set name1 [getNodeName $n1]
+    foreach link [lsort -dictionary [getFromRunning "link_list"]] {
+	lassign [lmap n [getLinkPeers $link] { getNodeName $n }] name0 name1
 	$pwi.left.tree insert links end -id $link -text "$link ($name0 to $name1)" -tags $link
 	lappend eventlinktags $link
     }
 
+#    set node_list [getFromRunning "node_list"]
 #     global eventnodetags
 #     set eventnodetags ""
 #     $pwi.left.tree insert {} end -id nodes -text "Nodes" -open true -tags nodes
@@ -502,8 +484,8 @@ proc elementsEventsEditor {} {
 
     set startText "Start scheduling"
     set stopText "Stop scheduling"
-    if { $stop_sched } {
 
+    if { [getFromRunning "stop_sched"] } {
 	ttk::button $eventButtons.start_stop \
 	-text $startText -command {
 	    startStopEvent
@@ -556,8 +538,7 @@ proc startStopText { widget } {
 #   on whether scheduling is started or stopped.
 #****
 proc startStopEvent {} {
-    upvar 0 ::cf::[set ::curcfg]::stop_sched stop_sched
-    if { $stop_sched } {
+    if { [getFromRunning "stop_sched"] } {
 	startEventScheduling
     } else {
 	stopEventScheduling

@@ -49,13 +49,9 @@ proc $MODULE.confNewIfc { node_id iface_id } {
 }
 
 proc $MODULE.confNewNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global nodeNamingBase
 
-    set nconfig [list \
-	"hostname [getNewNodeNameType filter $nodeNamingBase(filter)]" \
-	! ]
-    lappend $node_id "network-config [list $nconfig]"
+    setNodeName $node_id [getNewNodeNameType filter $nodeNamingBase(filter)]
 }
 
 proc $MODULE.icon { size } {
@@ -154,10 +150,10 @@ proc $MODULE.nodeCreate { eid node_id } {
 #****
 proc $MODULE.start { eid node_id } {
     foreach iface_id [ifcList $node_id] {
-	set cfg [netconfFetchSection $node_id "interface $iface_id"]
 	set ngcfgreq "shc $iface_id"
-	foreach rule [lsort -dictionary $cfg] {
-	    set ngcfgreq "[set ngcfgreq]$rule"
+	foreach rule_num [lsort -dictionary [ifcFilterRuleList $node_id $iface_id]] {
+	    set rule [getFilterIfcRuleAsString $node_id $iface_id $rule_num]
+	    set ngcfgreq "${ngcfgreq} ${rule}"
 	}
 
 	pipesExec "jexec $eid ngctl msg $node_id: $ngcfgreq" "hold"

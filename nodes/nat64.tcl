@@ -35,41 +35,23 @@ proc $MODULE.confNewIfc { node_id iface_id } {
 }
 
 proc $MODULE.confNewNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global ripEnable ripngEnable ospfEnable ospf6Enable
     global rdconfig
     global nodeNamingBase
 
-    set ripEnable [lindex $rdconfig 0]
-    set ripngEnable [lindex $rdconfig 1]
-    set ospfEnable [lindex $rdconfig 2]
-    set ospf6Enable [lindex $rdconfig 3]
+    lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable
 
-    set nconfig [list \
-	"hostname [getNewNodeNameType nat64 $nodeNamingBase(nat64)]" \
-	! ]
-    lappend $node_id "network-config [list $nconfig]"
+    setNodeName $node_id [getNewNodeNameType nat64 $nodeNamingBase(nat64)]
 
-    setNodeProtocolRip $node_id $ripEnable
-    setNodeProtocolRipng $node_id $ripngEnable
-    setNodeProtocolOspfv2 $node_id $ospfEnable
-    setNodeProtocolOspfv3 $node_id $ospf6Enable
-
-    foreach proto { rip ripng ospf ospf6 bgp } {
-	set protocfg [netconfFetchSection $node_id "router $proto"]
-	if { $protocfg != "" } {
-	    set protocfg [linsert $protocfg 0 "router $proto"]
-	    set protocfg [linsert $protocfg end "!"]
-	    set protocfg [linsert $protocfg [lsearch $protocfg " network *"] " redistribute kernel" ]
-	    netconfClearSection $node_id "router $proto"
-	    netconfInsertSection $node_id $protocfg
-	}
-    }
+    setNodeProtocol $node_id "rip" $ripEnable
+    setNodeProtocol $node_id "ripng" $ripngEnable
+    setNodeProtocol $node_id "ospf" $ospfEnable
+    setNodeProtocol $node_id "ospf6" $ospf6Enable
 
     setAutoDefaultRoutesStatus $node_id "enabled"
     setLogIfcType $node_id lo0 lo
-    setIfcIPv4addr $node_id lo0 "127.0.0.1/8"
-    setIfcIPv6addr $node_id lo0 "::1/128"
+    setIfcIPv4addrs $node_id lo0 "127.0.0.1/8"
+    setIfcIPv6addrs $node_id lo0 "::1/128"
 
     setTaygaIPv4DynPool $node_id "192.168.64.0/24"
     setTaygaIPv6Prefix $node_id "2001::/96"

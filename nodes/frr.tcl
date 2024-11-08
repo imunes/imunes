@@ -92,55 +92,16 @@ proc $MODULE.virtlayer {} {
 #   * config -- generated configuration
 #****
 proc $MODULE.generateConfig { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
     set cfg {}
 
     # setup interfaces
     foreach iface_id [allIfcList $node_id] {
-	lappend cfg "interface $iface_id"
-	set addrs [getIfcIPv4addrs $node_id $iface_id]
-	foreach addr $addrs {
-	    if { $addr != "" } {
-		lappend cfg " ip address $addr"
-	    }
-	}
-
-	set addrs [getIfcIPv6addrs $node_id $iface_id]
-	foreach addr $addrs {
-	    if { $addr != "" } {
-		lappend cfg " ipv6 address $addr"
-	    }
-	}
-
-	if { [getIfcOperState $node_id $iface_id] == "down" } {
-	    lappend cfg " shutdown"
-	}
-
-	lappend cfg "!"
+	set cfg [concat $cfg [getRouterInterfaceCfg $node_id $iface_id]]
     }
 
     # setup routing protocols
-    foreach proto { rip ripng ospf ospf6 bgp } {
-	set protocfg [netconfFetchSection $node_id "router $proto"]
-	if { $protocfg != "" } {
-	    lappend cfg "router $proto"
-	    foreach line $protocfg {
-		lappend cfg "$line"
-	    }
-
-	    if { $proto == "ospf6" } {
-		foreach iface_id [allIfcList $node_id] {
-		    if { $iface_id == "lo0" } {
-			continue
-		    }
-
-		    lappend cfg " interface $iface_id area 0.0.0.0"
-		}
-	    }
-
-	    lappend cfg "!"
-	}
+    foreach protocol { rip ripng ospf ospf6 bgp } {
+	set cfg [concat $cfg [getRouterProtocolCfg $node_id $protocol]]
     }
 
     # setup IPv4/IPv6 static routes

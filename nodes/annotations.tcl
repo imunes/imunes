@@ -77,7 +77,7 @@ proc popupAnnotationDialog { c target modify } {
 #   * obj -- type of annotation to draw
 #****
 proc drawAnnotation { obj } {
-    switch -exact -- [getNodeType $obj] {
+    switch -exact -- [getAnnotationType $obj] {
 	oval {
 	    drawOval $obj
 	}
@@ -126,7 +126,7 @@ proc popupOvalDialog { c target modify } {
 	set coords [$c bbox "$target"]
 	set color [getAnnotationColor $target]
 	set bordercolor [getAnnotationBorderColor $target]
-	set annotationType [getNodeType $target]
+	set annotationType [getAnnotationType $target]
     }
 
     if { $color == "" } { set color $defFillColor }
@@ -214,14 +214,13 @@ proc popupOvalDialog { c target modify } {
 #   * target -- existing or a new annotation
 #****
 proc popupOvalApply { c wi target } {
-    upvar 0 ::cf::[set ::curcfg]::annotation_list annotation_list
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     global newrect newoval
     global changed
     global width
 
-    set sizex [expr [lindex [getCanvasSize $curcanvas] 0] - 5]
-    set sizey [expr [lindex [getCanvasSize $curcanvas] 1] - 5]
+    set curcanvas [getFromRunning "curcanvas"]
+    # subtract 5 from each value and assign to variables sizex sizey
+    lassign [lmap n [getCanvasSize $curcanvas] {expr $n - 5}] sizex sizey
 
     set color [$wi.colors.color cget -text]
     set bordercolor [$wi.border.color cget -text]
@@ -245,7 +244,7 @@ proc popupOvalApply { c wi target } {
 	    set coords [lreplace $coords 3 3 $sizey]
 	}
     } else {
-	set coords [getNodeCoords $target]
+	set coords [getAnnotationCoords $target]
     }
 
     setAnnotationCoords $target $coords
@@ -254,7 +253,7 @@ proc popupOvalApply { c wi target } {
     setAnnotationWidth $target $width
 
     destroyNewOval $c
-    setNodeCanvas $target $curcanvas
+    setAnnotationCanvas $target $curcanvas
 
     set changed 1
     updateUndoLog
@@ -273,15 +272,10 @@ proc popupOvalApply { c wi target } {
 #   * oval -- oval annotation
 #****
 proc drawOval { oval } {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global defFillColor
 
-    set coords [getNodeCoords $oval]
-    set x1 [expr {[lindex $coords 0] * $zoom}]
-    set y1 [expr {[lindex $coords 1] * $zoom}]
-    set x2 [expr {[lindex $coords 2] * $zoom}]
-    set y2 [expr {[lindex $coords 3] * $zoom}]
+    # multiply each coordinate with $zoom and assign to variables x1, y1, x2, y2
+    lassign [lmap n [getAnnotationCoords $oval] {expr $n * [getFromRunning "zoom"]}] x1 y1 x2 y2
     set color [getAnnotationColor $oval]
     set bordercolor [getAnnotationBorderColor $oval]
     set width [getAnnotationWidth $oval]
@@ -329,7 +323,7 @@ proc popupRectangleDialog { c target modify } {
 	set coords [$c bbox "$target"]
 	set color [getAnnotationColor $target]
 	set bordercolor [getAnnotationBorderColor $target]
-	set annotationType [getNodeType $target]
+	set annotationType [getAnnotationType $target]
 	set rad [getAnnotationRad $target]
     }
 
@@ -436,14 +430,13 @@ proc popupRectangleDialog { c target modify } {
 #   * target -- existing or a new annotation
 #****
 proc popupRectangleApply { c wi target } {
-    upvar 0 ::cf::[set ::curcfg]::annotation_list annotation_list
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     global newrect newoval
     global changed
     global width rad
 
-    set sizex [expr [lindex [getCanvasSize $curcanvas] 0] - 5]
-    set sizey [expr [lindex [getCanvasSize $curcanvas] 1] - 5]
+    set curcanvas [getFromRunning "curcanvas"]
+    # subtract 5 from each value and assign to variables sizex sizey
+    lassign [lmap n [getCanvasSize $curcanvas] {expr $n - 5}] sizex sizey
 
     set color [$wi.colors.color cget -text]
     set bordercolor [$wi.border.color cget -text]
@@ -467,7 +460,7 @@ proc popupRectangleApply { c wi target } {
 	    set coords [lreplace $coords 3 3 $sizey]
 	}
     } else {
-	set coords [getNodeCoords $target]
+	set coords [getAnnotationCoords $target]
     }
 
     setAnnotationCoords $target $coords
@@ -477,7 +470,7 @@ proc popupRectangleApply { c wi target } {
     setAnnotationRad $target $rad
 
     destroyNewRect $c
-    setNodeCanvas $target $curcanvas
+    setAnnotationCanvas $target $curcanvas
 
     set changed 1
     updateUndoLog
@@ -496,15 +489,11 @@ proc popupRectangleApply { c wi target } {
 #   * rectangle -- rectangle annotation
 #****
 proc drawRect { rectangle } {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global defFillColor
 
-    set coords [getNodeCoords $rectangle]
-    set x1 [expr {[lindex $coords 0] * $zoom}]
-    set y1 [expr {[lindex $coords 1] * $zoom}]
-    set x2 [expr {[lindex $coords 2] * $zoom}]
-    set y2 [expr {[lindex $coords 3] * $zoom}]
+    # multiply each coordinate with $zoom and assign to variables x1, y1, x2, y2
+    lassign [lmap n [getAnnotationCoords $rectangle] {expr $n * [getFromRunning "zoom"]}] x1 y1 x2 y2
+
     set color [getAnnotationColor $rectangle]
     set bordercolor [getAnnotationBorderColor $rectangle]
     set width [getAnnotationWidth $rectangle]
@@ -558,7 +547,7 @@ proc popupTextDialog { c target modify } {
 	set label ""
     } else {
 	set coords [$c bbox "$target"]
-	set annotationType [getNodeType $target]
+	set annotationType [getAnnotationType $target]
 	set label [getAnnotationLabel $target]
 	set lcolor [getAnnotationLabelColor $target]
 	set font [getAnnotationFont $target]
@@ -643,8 +632,6 @@ proc popupTextDialog { c target modify } {
 #   * target -- existing or a new annotation
 #****
 proc popupTextApply { c wi target } {
-    upvar 0 ::cf::[set ::curcfg]::annotation_list annotation_list
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     global newrect newoval newtext
     global changed
 
@@ -659,7 +646,7 @@ proc popupTextApply { c wi target } {
 	    addAnnotation $target text
 	    set coords [$c coords $newtext]
 	} else {
-	    set coords [getNodeCoords $target]
+	    set coords [getAnnotationCoords $target]
 	}
 
 	setAnnotationCoords $target $coords
@@ -668,7 +655,7 @@ proc popupTextApply { c wi target } {
 	setAnnotationFont $target $font
 
 	destroyNewText $c
-	setNodeCanvas $target $curcanvas
+	setAnnotationCanvas $target [getFromRunning "curcanvas"]
 	set changed 1
 	updateUndoLog
     }
@@ -688,17 +675,13 @@ proc popupTextApply { c wi target } {
 #   * text -- text annotation
 #****
 proc drawText { text } {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global defTextColor
 
-    set coords [getNodeCoords $text]
+    set coords [getAnnotationCoords $text]
     if { $coords == "" } {
-	puts "Empty coordinates for text $text" ;# MM debug
 	return
     }
-    set x [expr {[lindex $coords 0] * $zoom}]
-    set y [expr {[lindex $coords 1] * $zoom}]
+
     set labelcolor [getAnnotationLabelColor $text]
     set label [getAnnotationLabel $text]
     set font [getAnnotationFont $text]
@@ -706,6 +689,7 @@ proc drawText { text } {
     if { $labelcolor == "" } { set labelcolor $defTextColor }
     if { $font == "" } { set font TkTextFont }
 
+    lassign [lmap n $coords {expr $n * [getFromRunning "zoom"]}] x y
     set newtext [.panwin.f1.c create text $x $y -text $label -anchor w \
 	-font "$font" -justify left -fill $labelcolor -tags "text $text"]
 	.panwin.f1.c raise $newtext background
@@ -739,7 +723,7 @@ proc popupFreeformDialog { c target modify } {
 	set annotationType "freeform"
     } else {
 	set coords [$c bbox "$target"]
-	set annotationType [getNodeType $target]
+	set annotationType [getAnnotationType $target]
 	set color [getAnnotationColor $target]
 	set width [getAnnotationWidth $target]
     }
@@ -817,8 +801,6 @@ proc popupFreeformDialog { c target modify } {
 #   * target -- existing or a new annotation
 #****
 proc popupFreeformApply { c wi target } {
-    upvar 0 ::cf::[set ::curcfg]::annotation_list annotation_list
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     global newfree
     global changed
     global width
@@ -831,7 +813,7 @@ proc popupFreeformApply { c wi target } {
 
 	set coords [$c coords $newfree]
     } else {
-	set coords [getNodeCoords $target]
+	set coords [getAnnotationCoords $target]
     }
 
     setAnnotationCoords $target $coords
@@ -839,7 +821,7 @@ proc popupFreeformApply { c wi target } {
     setAnnotationWidth $target $width
 
     destroyNewFree $c
-    setNodeCanvas $target $curcanvas
+    setAnnotationCanvas $target [getFromRunning "curcanvas"]
 
     set changed 1
     updateUndoLog
@@ -858,10 +840,8 @@ proc popupFreeformApply { c wi target } {
 #   * freeform -- freeform annotation
 #****
 proc drawFreeform { freeform } {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
-
-    set coords [getNodeCoords $freeform]
+    set zoom [getFromRunning "zoom"]
+    set coords [getAnnotationCoords $freeform]
     set color [getAnnotationColor $freeform]
     set width [getAnnotationWidth $freeform]
 
@@ -984,7 +964,7 @@ proc annotationConfigGUI { c } {
 #   * target -- existing or a new annotation
 #****
 proc annotationConfig { c target } {
-    switch -exact -- [getNodeType $target] {
+    switch -exact -- [getAnnotationType $target] {
 	oval {
 	    popupOvalDialog $c $target "true"
 	}
@@ -998,7 +978,7 @@ proc annotationConfig { c target } {
 	    popupFreeformDialog $c $target "true"
 	}
 	default {
-	    puts "Unknown type [getNodeType $target] for target $target"
+	    puts "Unknown type [getAnnotationType $target] for target $target"
 	}
     }
     redrawAll
@@ -1222,7 +1202,7 @@ proc popupColor { type l settext } {
 #****
 proc selectmarkEnter { c x y } {
     set obj [lindex [$c gettags current] 1]
-    set type [getNodeType $obj]
+    set type [getAnnotationType $obj]
 
     if { $type != "oval" && $type != "rectangle" } { return }
 
@@ -1298,10 +1278,9 @@ proc selectmarkLeave { c x y } {
 #   * img -- variable that contains the image data in the memory
 #****
 proc backgroundImage { c img } {
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     global sizex sizey
 
+    set zoom [getFromRunning "zoom"]
     set e_sizex [expr {int($sizex * $zoom)}]
     set e_sizey [expr {int($sizey * $zoom)}]
 

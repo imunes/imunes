@@ -122,52 +122,66 @@ proc autoIPv6addr { node_id iface_id } {
     }
 
     global changeAddrRange6 control changeAddressRange6 autorenumbered_ifcs6
-    set peer_ip6addrs {}
+    #changeAddrRange6 - to change the subnet (1) or not (0)
+    #changeAddressRange6 - is this procedure called from 'changeAddressRange' (1 if true, otherwise 0)
+    #autorenumbered_ifcs6 - list of all interfaces that changed an address
 
-    if { [[typemodel $node_id].netlayer] != "NETWORK" } {
+    set node_type [getNodeType $node_id]
+    if { [$node_type.netlayer] != "NETWORK" } {
 	#
 	# Shouldn't get called at all for link-layer nodes
 	#
 	return
     }
 
-    setIfcIPv6addr $node_id $iface_id ""
-    set peer_node [logicalPeerByIfc $node_id $iface_id]
+    setIfcIPv6addrs $node_id $iface_id ""
 
-    if { [[typemodel $peer_node].netlayer] == "LINK" } {
+    lassign [logicalPeerByIfc $node_id $iface_id] peer_node peer_if
+    set peer_ip6addrs {}
+    if { [[getNodeType $peer_node].netlayer] == "LINK" } {
 	foreach l2node [listLANNodes $peer_node {}] {
 	    foreach ifc [ifcList $l2node] {
-		set peer [logicalPeerByIfc $l2node $ifc]
-		set peer_if [ifcByLogicalPeer $peer $l2node]
+		lassign [logicalPeerByIfc $l2node $ifc] peer peer_if
 		set peer_ip6addr [getIfcIPv6addr $peer $peer_if]
+		if { $peer_ip6addr == "" } {
+		    continue
+		}
+
 		if { $changeAddressRange6 == 1 } {
-		    if { [lsearch $autorenumbered_ifcs6 "$peer $peer_if"] != -1 } {
-			if { $peer_ip6addr != "" } {
-			    lappend peer_ip6addrs $peer_ip6addr
-			}
-		    }
-		} else {
-		    if { $peer_ip6addr != "" } {
+		    if { "$peer $peer_if" in $autorenumbered_ifcs6 } {
 			lappend peer_ip6addrs $peer_ip6addr
 		    }
+		} else {
+		    lappend peer_ip6addrs $peer_ip6addr
 		}
 	    }
 	}
     } else {
-	set peer_if [ifcByLogicalPeer $peer_node $node_id]
-	set peer_ip6addr [getIfcIPv6addr $peer_node $peer_if]
-	set peer_ip6addrs $peer_ip6addr
+	set peer_ip6addrs [getIfcIPv6addr $peer_node $peer_if]
     }
 
-    set targetbyte [expr 0x[[getNodeType $node_id].IPAddrRange]]
+    # TODO: reduce with _getNextIPv6addr proc
+    set targetbyte [expr 0x[$node_type.IPAddrRange]]
 
     if { $peer_ip6addrs != "" && $changeAddrRange6 == 0 } {
-	set ipaddr  [nextFreeIP6Addr [lindex $peer_ip6addrs 0] $targetbyte $peer_ip6addrs]
-	setIfcIPv6addr $node_id $iface_id $ipaddr
+	setIfcIPv6addrs $node_id $iface_id [nextFreeIP6Addr [lindex $peer_ip6addrs 0] $targetbyte $peer_ip6addrs]
     } else {
-	setIfcIPv6addr $node_id $iface_id "[findFreeIPv6Net 64][format %x $targetbyte]/64"
-    lappendToRunning "ipv6_used_list" [getIfcIPv6addr $node_id $iface_id]
+	setIfcIPv6addrs $node_id $iface_id "[findFreeIPv6Net 64][format %x $targetbyte]/64"
     }
+
+    lappendToRunning "ipv6_used_list" [getIfcIPv6addr $node_id $iface_id]
+}
+
+proc _getNextIPv6addr { node_type } {
+    global IPv6autoAssign
+
+    if { ! $IPv6autoAssign } {
+	return
+    }
+
+    set targetbyte [expr 0x[$node_type.IPAddrRange]]
+
+    return "[findFreeIPv6Net 64][format %x $targetbyte]/64"
 }
 
 #****f* ipv6.tcl/nextFreeIP6Addr

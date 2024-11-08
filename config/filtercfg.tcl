@@ -1,101 +1,67 @@
 proc getFilterIfcRule { node_id iface_id id } {
-    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
-	if { [string trim [lindex [split $line :] 0]] == $id } {
-		    return [string trim $line]
-	}
-    }
+    return [cfgGet "nodes" $node_id "ifaces" $iface_id "filter_rules" $id]
 }
 
 proc addFilterIfcRule { node_id iface_id id rule } {
-    set ifcfg [list "interface $iface_id"]
-    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
-	if { [string trim [lindex [split $line :] 0]] != $id } {
-	    lappend ifcfg $line
-	}
-    }
-    lappend ifcfg " $rule"
-    netconfInsertSection $node_id $ifcfg
+    cfgSet "nodes" $node_id "ifaces" $iface_id "filter_rules" $id $rule
 }
 
 proc removeFilterIfcRule { node_id iface_id id } {
-    set ifcfg [list "interface $iface_id"]
-    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
-	if { [string trim [lindex [split $line :] 0]] != $id } {
-	    lappend ifcfg $line
-	}
-    }
-    netconfInsertSection $node_id $ifcfg
+    cfgUnset "nodes" $node_id "ifaces" $iface_id "filter_rules" $id
 }
 
-
 proc getFilterIfcAction { node_id iface_id id } {
-    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
-	if { [string trim [lindex [split $line :] 0]] == $id } {
-		    return [lindex [string trim [split $line :]] 1]
-	}
-    }
+    return [cfgGet "nodes" $node_id "ifaces" $iface_id "filter_rules" $id "action"]
 }
 
 proc setFilterIfcAction { node_id iface_id id action } {
+    cfgSet "nodes" $node_id "ifaces" $iface_id "filter_rules" $id "action" $action
 }
 
 proc getFilterIfcPattern { node_id iface_id id } {
-    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
-	if { [string trim [lindex [split $line :] 0]] == $id } {
-		    return [lindex [split [lindex [string trim [split $line :]] 2] /] 0]
-	}
-    }
+    return [cfgGet "nodes" $node_id "ifaces" $iface_id "filter_rules" $id "pattern"]
 }
 
 proc setFilterIfcPattern { node_id iface_id id pattern } {
+    cfgSet "nodes" $node_id "ifaces" $iface_id "filter_rules" $id "pattern" $pattern
 }
 
 proc getFilterIfcMask { node_id iface_id id } {
-    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
-	if { [string trim [lindex [split $line :] 0]] == $id } {
-		    return [lindex [split [lindex [split [lindex [string trim [split $line :]] 2] /] 1] @] 0]
-	}
-    }
+    return [cfgGet "nodes" $node_id "ifaces" $iface_id "filter_rules" $id "mask"]
 }
 
 proc setFilterIfcMask { node_id iface_id id mask } {
+    cfgSet "nodes" $node_id "ifaces" $iface_id "filter_rules" $id "mask" $mask
 }
 
 proc getFilterIfcOffset { node_id iface_id id } {
-    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
-	if { [string trim [lindex [split $line :] 0]] == $id } {
-		    return [lindex [split [lindex [split [lindex [string trim [split $line :]] 2] /] 1] @] 1]
-	}
-    }
+    return [cfgGet "nodes" $node_id "ifaces" $iface_id "filter_rules" $id "offset"]
 }
 
 proc setFilterIfcOffset { node_id iface_id id offset } {
+    cfgSet "nodes" $node_id "ifaces" $iface_id "filter_rules" $id "offset" $offset
 }
 
 proc getFilterIfcActionData { node_id iface_id id } {
-    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
-	if { [string trim [lindex [split $line :] 0]] == $id } {
-		    return [lindex [string trim [split $line :]] 3]
-	}
-    }
+    return [cfgGet "nodes" $node_id "ifaces" $iface_id "filter_rules" $id "action_data"]
 }
 
 proc setFilterIfcActionData { node_id iface_id id action_data } {
+    cfgSet "nodes" $node_id "ifaces" $iface_id "filter_rules" $id "action_data" $action_data
 }
 
 proc ifcFilterRuleList { node_id iface_id } {
-    set ruleList ""
-    set ifcfg [list "interface $iface_id"]
-    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
-	lappend ruleList [string trim [lindex [split $line :] 0]]
-    }
-    return $ruleList
+    return [dict keys [cfgGet "nodes" $node_id "ifaces" $iface_id "filter_rules"]]
 }
 
 proc getFilterIfcRuleAsString { node_id iface_id id } {
-    set rule_line [getFilterIfcRule $node_id $iface_id $id]
+    set rule_dict [getFilterIfcRule $node_id $iface_id $id]
 
-    lassign [split $rule_line ":"] action pattern mask offset action_data
+    set action [dictGet $rule_dict "action"]
+    set pattern [dictGet $rule_dict "pattern"]
+    set mask [dictGet $rule_dict "mask"]
+    set offset [dictGet $rule_dict "offset"]
+    set action_data [dictGet $rule_dict "action_data"]
 
     if { $offset != "" } {
 	return "${id}:${action}:${pattern}/${mask}@${offset}:${action_data}"

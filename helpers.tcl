@@ -123,6 +123,7 @@ proc parseCmdArgs { options usage } {
 proc fetchImunesVersion {} {
     global ROOTDIR LIBDIR imunesVersion imunesChangedDate
     global imunesLastYear imunesAdditions
+    global CFG_VERSION
 
     set imunesCommit ""
 
@@ -131,6 +132,9 @@ proc fetchImunesVersion {} {
     foreach line [split $data "\n"] {
 	if { [string match "VERSION:*" $line] } {
 	    set imunesVersion [string range $line [expr [string first ":" $line] + 2] end]
+	}
+	if { [string match "CFG_VERSION:*" $line] } {
+	    set CFG_VERSION [string range $line [expr [string first ":" $line] + 2] end]
 	}
 	if { [string match "Commit:*" $line] } {
 	    set imunesCommit [string range $line [expr [string first ":" $line] + 2] end]

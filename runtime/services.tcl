@@ -149,7 +149,8 @@ set service tcpdump
 regHooks $service {LINKINST NODESTOP}
 
 proc $service.start { node_id { bkg "" } } {
-    foreach iface_name [allIfcList $node_id] {
+    foreach iface_id [allIfcList $node_id] {
+	set iface_name [getIfcName $node_id $iface_id]
 	if { [string match "lo*" $iface_name] } {
 	    continue
 	}
@@ -177,7 +178,8 @@ proc $service.stop { node_id { bkg "" } } {
 
     set ext_dir /tmp/[getFromRunning "eid"]/
     file mkdir $ext_dir
-    foreach iface_name [allIfcList $node_id] {
+    foreach iface_id [allIfcList $node_id] {
+	set iface_name [getIfcName $node_id $iface_id]
 	if { [string match "lo*" $iface_name] } {
 	    continue
 	}

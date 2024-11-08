@@ -85,13 +85,9 @@ proc $MODULE.confNewIfc { node_id iface_id } {
 #   * node_id -- node id
 #****
 proc $MODULE.confNewNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global nodeNamingBase
 
-    set nconfig [list \
-	"hostname [getNewNodeNameType lanswitch $nodeNamingBase(lanswitch)]" \
-	! ]
-    lappend $node_id "network-config [list $nconfig]"
+    setNodeName $node_id [getNewNodeNameType lanswitch $nodeNamingBase(lanswitch)]
 }
 
 #****f* lanswitch.tcl/lanswitch.icon

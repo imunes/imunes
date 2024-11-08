@@ -67,10 +67,9 @@
 #   - opens dialog box for saving a file under new name
 #****
 
-global currentFile fileTypes
-set currentFile ""
+global file_types
 
-set fileTypes {
+set file_types {
     { "IMUNES network configuration" {.imn} }
     { "All files" {*} }
 }
@@ -85,41 +84,33 @@ set fileTypes {
 #****
 proc newProject {} {
     global curcfg cfg_list
+    global CFG_VERSION
 
     set curcfg [newObjectId $cfg_list "cfg"]
     lappend cfg_list $curcfg
 
     namespace eval ::cf::[set curcfg] {}
+    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-    upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    upvar 0 ::cf::[set ::curcfg]::undolevel undolevel
-    upvar 0 ::cf::[set ::curcfg]::redolevel redolevel
-    upvar 0 ::cf::[set ::curcfg]::undolog undolog
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    upvar 0 ::cf::[set ::curcfg]::cfgDeployed cfgDeployed
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-    upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
-    upvar 0 ::cf::[set ::curcfg]::stop_sched stop_sched
+    set dict_cfg [dict create]
+    cfgSet "options" "version" $CFG_VERSION
 
-    loadCfgLegacy ""
-    if { ! [info exists eid] } {
-	set eid ""
-    }
+    set dict_run [dict create]
+    lappendToRunning "cfg_list" $curcfg
+    setToRunning "eid" ""
+    setToRunning "oper_mode" "edit"
+    .bottom.oper_mode configure -text "[getFromRunning "oper_mode"] mode"
+    setToRunning "cfg_deployed" false
+    setToRunning "stop_sched" true
+    setToRunning "undolevel" 0
+    setToRunning "redolevel" 0
+    setToRunning "zoom" 1.0
+    setToRunning "canvas_list" {}
+    setToRunning "curcanvas" [newCanvas ""]
+    setToRunning "current_file" ""
+    setToUndolog 0
 
-    set oper_mode edit
-    .bottom.oper_mode configure -text "$oper_mode mode"
-    set cfgDeployed false
-    set stop_sched true
-    set undolevel 0
-    set redolevel 0
-    set undolog(0) ""
-    set zoom 1.0
-    set canvas_list {}
-    newCanvas ""
-    set curcanvas [lindex $canvas_list 0]
-    set currentFile ""
     updateProjectMenu
     switchProject
 }
@@ -139,7 +130,7 @@ proc updateProjectMenu {} {
     .menubar.file add separator
 
     foreach cfg $cfg_list {
-	set fname [set ::cf::[set cfg]::currentFile]
+	set fname [getFromRunning "current_file" $cfg]
 	if { $fname == "" } {
 	    set fname "untitled[string range $cfg 3 end]"
 	}
@@ -161,13 +152,11 @@ proc switchProject {} {
     if { $curcfg == 0 } {
         set curcfg "cfg0"
     }
-    upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
 
-    setOperMode $oper_mode
+    setOperMode [getFromRunning "oper_mode"]
     switchCanvas none
     redrawAll
-    setWmTitle $currentFile
+    setWmTitle [getFromRunning "current_file"]
     if { $showTree } {
 	refreshTopologyTree
     }
@@ -201,35 +190,45 @@ proc setWmTitle { fname } {
 #   Loads the configuration from the file named current_file.
 #****
 proc openFile {} {
-    upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    upvar 0 ::cf::[set ::curcfg]::undolevel undolevel
-    upvar 0 ::cf::[set ::curcfg]::redolevel redolevel
-    upvar 0 ::cf::[set ::curcfg]::undolog undolog
-    upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
-    upvar 0 ::cf::[set ::curcfg]::cfgDeployed cfgDeployed
-    upvar 0 ::cf::[set ::curcfg]::stop_sched stop_sched
-    global showTree
+    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+    global CFG_VERSION showTree
 
-    set fileName [file tail $currentFile]
-    set fileId [open $currentFile r]
-    set cfg ""
-    foreach entry [read $fileId] {
-	lappend cfg $entry
+    set current_file [getFromRunning "current_file"]
+    set dict_cfg [readCfgJson $current_file]
+    set cfg_version [cfgGet "options" "version"]
+    if { $cfg_version == "" } {
+	puts "Loading legacy .imn configuration..."
+	puts "This configuration will be saved as a new version (version $CFG_VERSION)."
+	loadCfgLegacy ""
+	set fileName [file tail $current_file]
+	set fileId [open $current_file r]
+	set cfg ""
+	foreach entry [read $fileId] {
+	    lappend cfg $entry
+	}
+	close $fileId
+	loadCfgLegacy $cfg
+    } elseif { $cfg_version < $CFG_VERSION } {
+	puts "Loading older .imn configuration (version $cfg_version)..."
+	puts "This configuration will be saved as a new version ($CFG_VERSION)."
+	puts "Please check if everything is loaded/saved successfully."
+    } elseif { $cfg_version > $CFG_VERSION } {
+	puts "Your IMUNES version is too old for this configuration (version $cfg_version > $CFG_VERSION)."
+	puts "Please install newer IMUNES or risk corrupting your topology."
     }
-    close $fileId
-    loadCfgLegacy $cfg
-    set curcanvas [lindex $canvas_list 0]
+
+    setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
     switchCanvas none
     redrawAll
-    set cfgDeployed false
-    set stop_sched true
-    set undolevel 0
-    set redolevel 0
-    set undolog(0) $cfg
+    setToRunning "cfg_deployed" false
+    setToRunning "stop_sched" true
+    setToRunning "undolevel" 0
+    setToRunning "redolevel" 0
+    setToUndolog 0
     setActiveTool select
     updateProjectMenu
-    setWmTitle $currentFile
+    setWmTitle $current_file
+
     if { $showTree } {
 	refreshTopologyTree
     }
@@ -245,18 +244,17 @@ proc openFile {} {
 # INPUTS
 #   * selected_file -- name of the file where current configuration is saved.
 #****
-proc saveFile { selectedFile } {
-    upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
+proc saveFile { selected_file } {
+    if { $selected_file != ""} {
+	set current_file $selected_file
+	setToRunning "current_file" $current_file
+	saveCfgJson $current_file
 
-    if { $selectedFile != "" } {
-	set currentFile $selectedFile
-	set fileName [file tail $currentFile]
-	set fileId [open $currentFile w]
-	dumpCfg file $fileId
-	close $fileId
-	.bottom.textbox config -text "Saved $fileName"
+	set file_name [file tail $current_file]
+	.bottom.textbox config -text "Saved $file_name"
+
 	updateProjectMenu
-	setWmTitle $currentFile
+	setWmTitle $current_file
     }
 }
 
@@ -269,13 +267,12 @@ proc saveFile { selectedFile } {
 #   Opens an open file dialog box.
 #****
 proc fileOpenDialogBox {} {
-    global fileTypes
+    global file_types
 
-    set selectedFile [tk_getOpenFile -filetypes $fileTypes]
-    if { $selectedFile != "" } {
+    set selected_file [tk_getOpenFile -filetypes $file_types]
+    if { $selected_file != "" } {
 	newProject
-	upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
-	set currentFile $selectedFile
+	setToRunning "current_file" $selected_file
 	openFile
     }
 }
@@ -290,15 +287,15 @@ proc fileOpenDialogBox {} {
 #   if there is no current file.
 #****
 proc fileSaveDialogBox {} {
-    upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
-    global fileTypes
+    global file_types
 
-    if { $currentFile == "" } {
-	set selectedFile [tk_getSaveFile -filetypes $fileTypes -initialfile\
-		   untitled -defaultextension .imn]
-	saveFile $selectedFile
+    set current_file [getFromRunning "current_file"]
+    if { $current_file == "" } {
+	set selected_file [tk_getSaveFile -filetypes $file_types -initialfile \
+	    untitled -defaultextension .imn]
+	saveFile $selected_file
     } else {
-	saveFile $currentFile
+	saveFile $current_file
     }
 }
 
@@ -311,13 +308,13 @@ proc fileSaveDialogBox {} {
 #   Opens dialog box for saving a file under new name.
 #****
 proc fileSaveAsDialogBox {} {
-    upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
-    global fileTypes
+    global file_types
 
-    set selectedFile [tk_getSaveFile -filetypes $fileTypes -initialfile\
-	       untitled -defaultextension .imn]
+    set current_file [getFromRunning "current_file"]
+    set selected_file [tk_getSaveFile -filetypes $file_types -initialfile \
+	untitled -defaultextension .imn]
 
-    saveFile $selectedFile
+    saveFile $selected_file
 }
 
 #****f* filemgmt.tcl/closeFile
@@ -330,7 +327,7 @@ proc fileSaveAsDialogBox {} {
 #****
 proc closeFile {} {
     global cfg_list curcfg
-      
+
     set idx [lsearch -exact $cfg_list $curcfg]
     set cfg_list [removeFromList $cfg_list $curcfg]
     set len [llength $cfg_list]
@@ -340,29 +337,20 @@ proc closeFile {} {
 	} elseif { $idx != 0 } {
 	    incr idx -1
 	}
-        set cfg [lindex $cfg_list $idx]
+        set curcfg [lindex $cfg_list $idx]
 
-        loadCfgLegacy $cfg
-        set curcfg $cfg
-
-        upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
-        upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-        upvar 0 ::cf::[set ::curcfg]::undolevel undolevel
-        upvar 0 ::cf::[set ::curcfg]::redolevel redolevel
-        upvar 0 ::cf::[set ::curcfg]::undolog undolog
-        upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
-
-        set curcanvas [lindex $canvas_list 0]
+	setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
         switchCanvas none
-        set undolevel 0
-        set redolevel 0
-        set undolog(0) $cfg
-        setActiveTool select
-        updateProjectMenu
-        switchProject
+	setToRunning "undolevel" 0
+	setToRunning "redolevel" 0
+	setToUndolog 0
     } else {
 	newProject
     }
+
+    setActiveTool select
+    updateProjectMenu
+    switchProject
 }
 
 #****f* filemgmt.tcl/readConfigFile
@@ -408,9 +396,8 @@ proc readConfigFile {} {
 
 ;#proc relpath {basedir target} {
 proc relpath { target } {
-    upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
+    set basedir [getFromRunning "current_file"]
 
-    set basedir $currentFile
     # Try and make a relative path to a target file/dir from base directory
     set bparts [file split [file normalize $basedir]]
     set tparts [file split [file normalize $target]]

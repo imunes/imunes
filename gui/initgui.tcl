@@ -163,21 +163,6 @@ set iconsrcfile [lindex [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] 0
 #interface selected in the topology tree
 set selectedIfc ""
 
-# bases for naming new nodes
-array set nodeNamingBase {
-    pc pc
-    ext ext
-    filter filter
-    router router
-    host host
-    hub hub
-    extelem xel
-    lanswitch switch
-    nat64 nat64-
-    packgen packgen
-    stpswitch stpswitch
-}
-
 # Packets required for GUI
 #package require Img
 
@@ -387,8 +372,8 @@ menu .menubar.canvas -tearoff 0
 .menubar.canvas add command -label "Rename" -underline 0 \
 -command { renameCanvasPopup }
 .menubar.canvas add command -label "Delete" -underline 0 -command {
-    upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
+    set curcanvas [getFromRunning "curcanvas"]
+    set canvas_list [getFromRunning "canvas_list"]
 
     if { [llength $canvas_list] == 1 } {
 	 return
@@ -398,11 +383,14 @@ menu .menubar.canvas -tearoff 0
     deleteSelection
 
     set i [lsearch $canvas_list $curcanvas]
-    set canvas_list [lreplace $canvas_list $i $i]
+    cfgUnset "canvases" $curcanvas
+    set canvas_list [getCanvasList]
+    setToRunning "canvas_list" $canvas_list
     set curcanvas [lindex $canvas_list $i]
     if { $curcanvas == "" } {
 	set curcanvas [lindex $canvas_list end]
     }
+    setToRunning "curcanvas" $curcanvas
 
     switchCanvas none
     set changed 1
@@ -519,7 +507,6 @@ menu .menubar.tools -tearoff 0
     pack $w.ipv6frame.buttons.cancel -side right -expand 1 -anchor w -padx 2
 }
 .menubar.tools add command -label "Routing protocol defaults" -underline 0 -command {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global router_model supp_router_models routerDefaultsModel
     global routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable
 
@@ -567,6 +554,7 @@ menu .menubar.tools -tearoff 0
 	$w.protocols.ospf6 configure -state disabled
     }
 
+    set oper_mode [getFromRunning "oper_mode"]
     if { $router_model == "static" || $oper_mode != "edit" } {
 	$w.protocols.rip configure -state disabled
 	$w.protocols.ripng configure -state disabled
@@ -1025,20 +1013,18 @@ canvas $mf.hframe.t -width 160 -height 18 -bd 0 -highlightthickness 0 \
 	-background #d9d9d9 \
 	-xscrollcommand "$mf.hframe.ts set"
 bind $mf.hframe.t <1> {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     set canvas [lindex [$mf.hframe.t gettags current] 1]
-    if { $canvas != "" && $canvas != $curcanvas } {
-	set curcanvas $canvas
+    if { $canvas != "" && $canvas != [getFromRunning "curcanvas"] } {
+	setToRunning "curcanvas" $canvas
 	switchCanvas none
     }
 }
 bind $mf.hframe.t <Double-1> {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
 
     set canvas [lindex [$mf.hframe.t gettags current] 1]
     if { $canvas != "" } {
-	if { $canvas != $curcanvas } {
-	    set curcanvas $canvas
+	if { $canvas != [getFromRunning "curcanvas"] } {
+	    setToRunning "curcanvas" $canvas
 	    switchCanvas none
 	} else {
 	    renameCanvasPopup

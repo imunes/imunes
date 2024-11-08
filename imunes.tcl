@@ -84,7 +84,7 @@ try {
     exit 1
 }
 
-safePackageRequire [list cmdline platform ip base64]
+safePackageRequire [list cmdline platform ip base64 json json::write]
 
 set initMode 0
 set execMode interactive
@@ -144,6 +144,22 @@ foreach file [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
 
 if { ! [info exists eid_base] } {
     set eid_base [genExperimentId]
+}
+
+# bases for naming new nodes
+array set nodeNamingBase {
+    pc pc
+    ext ext
+    filter filter
+    router router
+    host host
+    hub hub
+    extelem xel
+    lanswitch switch
+    nat64 nat64-
+    packgen packgen
+    stpswitch stpswitch
+    wlan wlan
 }
 
 set option_defaults {
@@ -240,6 +256,7 @@ set cf::clipboard::link_list {}
 set cf::clipboard::annotation_list {}
 set cf::clipboard::canvas_list {}
 set cf::clipboard::image_list {}
+set cf::clipboard::dict_cfg [dict create]
 
 set cfg_list {}
 set curcfg ""
@@ -297,7 +314,7 @@ if { $execMode == "interactive" } {
 
     newProject
     if { $argv != "" && [file exists $argv] } {
-	set ::cf::[set curcfg]::currentFile $argv
+	setToRunning "current_file" $argv
 	openFile
     }
 
@@ -315,19 +332,18 @@ if { $execMode == "interactive" } {
 
 	global currentFileBatch
 	set currentFileBatch $argv
-	set fileId [open $argv r]
-	set cfg ""
-	foreach entry [read $fileId] {
-	    lappend cfg $entry
-	}
-	close $fileId
 
 	set curcfg [newObjectId $cfg_list "cfg"]
 	lappend cfg_list $curcfg
 
 	namespace eval ::cf::[set curcfg] {}
+	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+	set dict_cfg [dict create]
+	set dict_run [dict create]
 
-	loadCfgLegacy $cfg
+	lappendToRunning "cfg_list" $curcfg
+	readCfgJson $currentFileBatch
 
 	if { [checkExternalInterfaces] } {
 	    return
@@ -340,22 +356,19 @@ if { $execMode == "interactive" } {
     } else {
 	set configFile "$runtimeDir/$eid_base/config.imn"
 	if { [file exists $configFile] && $regular_termination } {
-	    set fileId [open $configFile r]
-	    set cfg ""
-	    foreach entry [read $fileId] {
-		lappend cfg $entry
-	    }
-	    close $fileId
-
 	    set curcfg [newObjectId $cfg_list "cfg"]
 	    lappend cfg_list $curcfg
 
 	    namespace eval ::cf::[set curcfg] {}
-	    upvar 0 ::cf::[set ::curcfg]::eid eid
-	    set eid $eid_base
+	    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+	    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+	    set dict_cfg [dict create]
+	    set dict_run [dict create]
+	    lappendToRunning "cfg_list" $curcfg
 
-	    loadCfgLegacy $cfg
+	    readCfgJson $configFile
 
+	    setToRunning "eid" $eid_base
 	    undeployCfg $eid_base
 	} else {
 	    vimageCleanup $eid_base
