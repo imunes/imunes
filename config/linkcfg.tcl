@@ -38,9 +38,6 @@
 #
 # NOTES
 #
-# getLinkPeers { link_id }
-#	Returns nodes of link endpoints
-#
 # linksByPeers { node1 node2 }
 #	Returns link whose peers are node1 and node2
 #
@@ -86,10 +83,11 @@
 #   * link_ids -- returns ids of links connecting endpoints node1 and node2
 #****
 proc linksByPeers { node1_id node2_id } {
+    set links [cfgGet "links"]
     set link_ids {}
-    foreach link_id [getFromRunning "link_list"] {
-	set peers [getLinkPeers $link_id]
-	if { $peers == "$node1_id $node2_id" || $peers == "$node2_id $node1_id" } {
+    foreach {link_id link_cfg} $links {
+	set peers [dictGet $links $link_id "peers"]
+	if { $node1_id in $peers && $node2_id in $peers } {
 	    lappend link_ids $link_id
 	}
     }
@@ -109,45 +107,55 @@ proc linksByPeers { node1_id node2_id } {
 #   * link_id -- link id
 #****
 proc removeLink { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-    upvar 0 ::cf::[set ::curcfg]::IPv4UsedList IPv4UsedList
-    upvar 0 ::cf::[set ::curcfg]::IPv6UsedList IPv6UsedList
-    upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
-
     set pnodes [getLinkPeers $link_id]
-    set pifaces [getLinkPeersIfaces $link_id]
-    foreach node_id $pnodes iface_id $pifaces {
-	upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-	set peer_id [removeFromList $pnodes $node_id "keep_doubles"]
-
+    foreach node_id $pnodes iface_id [getLinkPeersIfaces $link_id] {
 	if { [getNodeType $node_id] in "extelem" } {
-	    set old [getNodeExternalIfcs $node_id]
-	    set idx [lsearch -exact -index 0 $old "$iface_id"]
-	    setNodeExternalIfcs $node_id [lreplace $old $idx $idx]
-	    set i [lsearch [set $node_id] "interface-peer {$iface_id $peer_id}"]
-	    set $node_id [lreplace [set $node_id] $i $i]
+	    cfgUnset "nodes" $node_id "ifaces" $iface_id
 	    continue
 	}
 
-	set IPv4UsedList [removeFromList $IPv4UsedList [getIfcIPv4addrs $node_id $iface_id] "keep_doubles"]
-	set IPv6UsedList [removeFromList $IPv6UsedList [getIfcIPv6addrs $node_id $iface_id] "keep_doubles"]
-	set MACUsedList [removeFromList $MACUsedList [getIfcMACaddr $node_id $iface_id] "keep_doubles"]
-	netconfClearSection $node_id "interface $iface_id"
-	set i [lsearch [set $node_id] "interface-peer {$iface_id $peer_id}"]
-	set $node_id [lreplace [set $node_id] $i $i]
+	set ipv4_used_list [getFromRunning "ipv4_used_list"]
+	foreach addr [getIfcIPv4addrs $node_id $iface_id] {
+	    set ipv4_used_list [removeFromList $ipv4_used_list $addr]
+	}
+	setToRunning "ipv4_used_list" $ipv4_used_list
+
+	set ipv6_used_list [getFromRunning "ipv6_used_list"]
+	foreach addr [getIfcIPv6addrs $node_id $iface_id] {
+	    set ipv6_used_list [removeFromList $ipv6_used_list $addr]
+	}
+	setToRunning "ipv6_used_list" $ipv6_used_list
+
+	setToRunning "mac_used_list" [removeFromList [getFromRunning "mac_used_list"] [getIfcMACaddr $node_id $iface_id]]
+
+	cfgUnset "nodes" $node_id "ifaces" $iface_id
+
 	foreach lifc [logIfcList $node_id] {
 	    switch -exact [getLogIfcType $node_id $lifc] {
 		vlan {
 		    if { [getIfcVlanDev $node_id $lifc] == $iface_id } {
-			netconfClearSection $node_id "interface $lifc"
+			cfgUnset "nodes" $node_id "logifaces" $lifc
 		    }
 		}
 	    }
 	}
     }
 
+    set mirror_link_id [getLinkMirror $link_id]
+    if { $mirror_link_id != "" } {
+	setLinkMirror $mirror_link_id ""
+	removeLink $mirror_link_id
+    }
+
+    foreach node_id $pnodes {
+	if { [getNodeType $node_id] == "pseudo" } {
+	    setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $node_id]
+	    cfgUnset "nodes" $node_id
+	}
+    }
+
     setToRunning "link_list" [removeFromList [getFromRunning "link_list"] $link_id]
+    cfgUnset "links" $link_id
 }
 
 #****f* linkcfg.tcl/getLinkDirect
@@ -163,14 +171,7 @@ proc removeLink { link_id } {
 #   * link_direct -- returns 0 if link is not a direct link and 1 if it is
 #****
 proc getLinkDirect { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    set entry [lsearch -inline [set $link_id] "direct *"]
-    if { $entry == "" } {
-	return 0
-    }
-
-    return [lindex $entry 1]
+    return [cfgGetWithDefault 0 "links" $link_id "direct"]
 }
 
 #****f* linkcfg.tcl/setLinkDirect
@@ -185,14 +186,7 @@ proc getLinkDirect { link_id } {
 #   * direct -- link bandwidth in bits per second.
 #****
 proc setLinkDirect { link_id direct } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    set i [lsearch [set $link_id] "direct *"]
-    if { $direct == 0 } {
-	set $link_id [lreplace [set $link_id] $i $i]
-    } else {
-	set $link_id [lreplace [set $link_id] $i $i "direct $direct"]
-    }
+    cfgSet "links" $link_id "direct" $direct
 }
 
 #****f* linkcfg.tcl/getLinkPeers
@@ -208,11 +202,11 @@ proc setLinkDirect { link_id direct } {
 #   * link_peers -- returns nodes of a link endpoints in a list {node1 node2}
 #****
 proc getLinkPeers { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
+    return [cfgGet "links" $link_id "peers"]
+}
 
-    set entry [lsearch -inline [set $link_id] "nodes {*}"]
-
-    return [lindex $entry 1]
+proc setLinkPeers { link_id peers } {
+    cfgSet "links" $link_id "peers" $peers
 }
 
 #****f* linkcfg.tcl/getLinkPeersIfaces
@@ -228,10 +222,11 @@ proc getLinkPeers { link_id } {
 #   * link_ifaces -- returns interfaces of a link endpoints in a list {iface1_id iface2_id}
 #****
 proc getLinkPeersIfaces { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
+    return [cfgGet "links" $link_id "peers_ifaces"]
+}
 
-    set entry [lsearch -inline [set $link_id] "ifaces {*}"]
-    return [lindex $entry 1]
+proc setLinkPeersIfaces { link_id peers_ifaces } {
+    cfgSet "links" $link_id "peers_ifaces" $peers_ifaces
 }
 
 #****f* linkcfg.tcl/getLinkBandwidth
@@ -247,11 +242,7 @@ proc getLinkPeersIfaces { link_id } {
 #   * bandwidth -- The value of link bandwidth in bits per second.
 #****
 proc getLinkBandwidth { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    set entry [lsearch -inline [set $link_id] "bandwidth *"]
-
-    return [lindex $entry 1]
+    return [cfgGet "links" $link_id "bandwidth"]
 }
 
 #****f* linkcfg.tcl/getLinkBandwidthString
@@ -269,8 +260,6 @@ proc getLinkBandwidth { link_id } {
 #     measure unit.
 #****
 proc getLinkBandwidthString { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
     set bandwidth_string ""
     set bandwidth [getLinkBandwidth $link_id]
     if { $bandwidth > 0 } {
@@ -304,16 +293,12 @@ proc getLinkBandwidthString { link_id } {
 #   * bandwidth -- link bandwidth in bits per second.
 #****
 proc setLinkBandwidth { link_id bandwidth } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    set i [lsearch [set $link_id] "bandwidth *"]
-    if { $bandwidth <= 0 } {
-	set $link_id [lreplace [set $link_id] $i $i]
-    } else {
-	set $link_id [lreplace [set $link_id] $i $i "bandwidth $bandwidth"]
+    if { $bandwidth == 0 } {
+	set bandwidth ""
     }
-}
 
+    cfgSet "links" $link_id "bandwidth" $bandwidth
+}
 
 #****f* linkcfg.tcl/getLinkColor
 # NAME
@@ -328,15 +313,9 @@ proc setLinkBandwidth { link_id bandwidth } {
 #   * color -- link color
 #****
 proc getLinkColor { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
     global defLinkColor
 
-    set entry [lsearch -inline [set $link_id] "color *"]
-    if { $entry == "" } {
-	return $defLinkColor
-    }
-
-    return [lindex $entry 1]
+    return [cfgGetWithDefault $defLinkColor "links" $link_id "color"]
 }
 
 #****f* linkcfg.tcl/setLinkColor
@@ -351,10 +330,11 @@ proc getLinkColor { link_id } {
 #   * color -- link color
 #****
 proc setLinkColor { link_id color } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
+    if { $color == "Red" } {
+	set color ""
+    }
 
-    set i [lsearch [set $link_id] "color *"]
-    set $link_id [lreplace [set $link_id] $i $i "color $color"]
+    cfgSet "links" $link_id "color" $color
 }
 
 #****f* linkcfg.tcl/getLinkWidth
@@ -368,15 +348,9 @@ proc setLinkColor { link_id color } {
 #   * link_id -- link id
 #****
 proc getLinkWidth { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
     global defLinkWidth
 
-    set entry [lsearch -inline [set $link_id] "width *"]
-    if { $entry == "" } {
-	return $defLinkWidth
-    }
-
-    return [lindex $entry 1]
+    return [cfgGetWithDefault $defLinkWidth "links" $link_id "width"]
 }
 
 #****f* linkcfg.tcl/setLinkWidth
@@ -391,10 +365,13 @@ proc getLinkWidth { link_id } {
 #   * width -- link width
 #****
 proc setLinkWidth { link_id width } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
+    global defLinkWidth
 
-    set i [lsearch [set $link_id] "width *"]
-    set $link_id [lreplace [set $link_id] $i $i "width $width"]
+    if { $width == $defLinkWidth } {
+	set width ""
+    }
+
+    cfgSet "links" $link_id "width" $width
 }
 
 #****f* linkcfg.tcl/getLinkDelay
@@ -410,11 +387,7 @@ proc setLinkWidth { link_id width } {
 #   * delay -- The value of link delay in microseconds.
 #****
 proc getLinkDelay { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    set entry [lsearch -inline [set $link_id] "delay *"]
-
-    return [lindex $entry 1]
+    return [cfgGet "links" $link_id "delay"]
 }
 
 #****f* linkcfg.tcl/getLinkDelayString
@@ -432,8 +405,7 @@ proc getLinkDelay { link_id } {
 #     measure unit.
 #****
 proc getLinkDelayString { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
+    set delstr ""
     set delay [getLinkDelay $link_id]
     if { "$delay" != "" } {
 	if { $delay >= 10000 } {
@@ -443,8 +415,6 @@ proc getLinkDelayString { link_id } {
 	} else {
 	    set delstr "$delay us"
 	}
-    } else {
-	set delstr ""
     }
 
     return $delstr
@@ -462,14 +432,11 @@ proc getLinkDelayString { link_id } {
 #   * delay -- link delay delay in microseconds.
 #****
 proc setLinkDelay { link_id delay } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    set i [lsearch [set $link_id] "delay *"]
-    if { $delay <= 0 } {
-	set $link_id [lreplace [set $link_id] $i $i]
-    } else {
-	set $link_id [lreplace [set $link_id] $i $i "delay $delay"]
+    if { $delay == 0 } {
+	set delay ""
     }
+
+    cfgSet "links" $link_id "delay" $delay
 }
 
 #****f* linkcfg.tcl/getLinkJitterUpstream
@@ -485,9 +452,7 @@ proc setLinkDelay { link_id delay } {
 #   * jitter -- the list of values for jitter in microseconds
 #****
 proc getLinkJitterUpstream { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    return [lindex [lsearch -inline [set $link_id] "jitter-upstream *"] 1]
+    return [cfgGet "links" $link_id "jitter_upstream"]
 }
 
 #****f* linkcfg.tcl/setLinkJitterUpstream
@@ -502,14 +467,11 @@ proc getLinkJitterUpstream { link_id } {
 #   * jitter_upstream -- link upstream jitter values in microseconds.
 #****
 proc setLinkJitterUpstream { link_id jitter_upstream } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    set i [lsearch [set $link_id] "jitter-upstream *"]
-    if { $jitter_upstream == "" } {
-	set $link_id [lreplace [set $link_id] $i $i]
-    } else {
-	set $link_id [lreplace [set $link_id] $i $i "jitter-upstream {$jitter_upstream}"]
+    if { $jitter_upstream == 0 } {
+	set jitter_upstream ""
     }
+
+    cfgSet "links" $link_id "jitter_upstream" $jitter_upstream
 }
 
 #****f* linkcfg.tcl/getLinkJitterModeUpstream
@@ -525,9 +487,7 @@ proc setLinkJitterUpstream { link_id jitter_upstream } {
 #   * jitter_mode -- The jitter mode for upstream direction.
 #****
 proc getLinkJitterModeUpstream { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    return [lindex [lsearch -inline [set $link_id] "jitter-upstream-mode *"] 1]
+    return [cfgGet "links" $link_id "jitter_upstream_mode"]
 }
 
 #****f* linkcfg.tcl/setLinkJitterModeUpstream
@@ -542,14 +502,11 @@ proc getLinkJitterModeUpstream { link_id } {
 #   * jitter_upstream_mode -- link upstream jitter mode.
 #****
 proc setLinkJitterModeUpstream { link_id jitter_upstream_mode } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    set i [lsearch [set $link_id] "jitter-upstream-mode *"]
-    if { $jitter_upstream_mode == "" } {
-	set $link_id [lreplace [set $link_id] $i $i]
-    } else {
-	set $link_id [lreplace [set $link_id] $i $i "jitter-upstream-mode $jitter_upstream_mode"]
+    if { $jitter_upstream_mode == 0 } {
+	set jitter_upstream_mode ""
     }
+
+    cfgSet "links" $link_id "jitter_upstream_mode" $jitter_upstream_mode
 }
 
 #****f* linkcfg.tcl/getLinkJitterHoldUpstream
@@ -565,9 +522,7 @@ proc setLinkJitterModeUpstream { link_id jitter_upstream_mode } {
 #   * jitter_hold -- The jitter hold for upstream direction.
 #****
 proc getLinkJitterHoldUpstream { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    return [lindex [lsearch -inline [set $link_id] "jitter-upstream-hold *"] 1]
+    return [cfgGet "links" $link_id "jitter_upstream_hold"]
 }
 
 #****f* linkcfg.tcl/setLinkJitterHoldUpstream
@@ -582,14 +537,11 @@ proc getLinkJitterHoldUpstream { link_id } {
 #   * jitter_upstream_hold -- link upstream jitter hold.
 #****
 proc setLinkJitterHoldUpstream { link_id jitter_upstream_hold } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    set i [lsearch [set $link_id] "jitter-upstream-hold *"]
-    if { $jitter_upstream_hold == "" } {
-	set $link_id [lreplace [set $link_id] $i $i]
-    } else {
-	set $link_id [lreplace [set $link_id] $i $i "jitter-upstream-hold $jitter_upstream_hold"]
+    if { $jitter_upstream_hold == 0 } {
+	set jitter_upstream_hold ""
     }
+
+    cfgSet "links" $link_id "jitter_upstream_hold" $jitter_upstream_hold
 }
 
 #****f* linkcfg.tcl/getLinkJitterDownstream
@@ -606,9 +558,7 @@ proc setLinkJitterHoldUpstream { link_id jitter_upstream_hold } {
 #   * jitter -- The list of values for jitter in microseconds.
 #****
 proc getLinkJitterDownstream { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    return [lindex [lsearch -inline [set $link_id] "jitter-downstream *"] 1]
+    return [cfgGet "links" $link_id "jitter_downstream"]
 }
 
 #****f* linkcfg.tcl/setLinkJitterDownstream
@@ -623,14 +573,11 @@ proc getLinkJitterDownstream { link_id } {
 #   * jitter_downstream -- link downstream jitter values in microseconds.
 #****
 proc setLinkJitterDownstream { link_id jitter_downstream } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    set i [lsearch [set $link_id] "jitter-downstream *"]
-    if { $jitter_downstream == "" } {
-	set $link_id [lreplace [set $link_id] $i $i]
-    } else {
-	set $link_id [lreplace [set $link_id] $i $i "jitter-downstream {$jitter_downstream}"]
+    if { $jitter_downstream == 0 } {
+	set jitter_downstream ""
     }
+
+    cfgSet "links" $link_id "jitter_downstream" $jitter_downstream
 }
 
 #****f* linkcfg.tcl/getLinkJitterModeDownstream
@@ -646,9 +593,7 @@ proc setLinkJitterDownstream { link_id jitter_downstream } {
 #   * jitter_mode -- The jitter mode for downstream direction.
 #****
 proc getLinkJitterModeDownstream { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    return [lindex [lsearch -inline [set $link_id] "jitter-downstream-mode *"] 1]
+    return [cfgGet "links" $link_id "jitter_downstream_mode"]
 }
 
 #****f* linkcfg.tcl/setLinkJitterModeDownstream
@@ -663,14 +608,11 @@ proc getLinkJitterModeDownstream { link_id } {
 #   * jitter_downstream_mode -- link downstream jitter mode.
 #****
 proc setLinkJitterModeDownstream { link_id jitter_downstream_mode } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    set i [lsearch [set $link_id] "jitter-downstream-mode *"]
-    if { $jitter_downstream_mode  == "" } {
-	set $link_id [lreplace [set $link_id] $i $i]
-    } else {
-	set $link_id [lreplace [set $link_id] $i $i "jitter-downstream-mode $jitter_downstream_mode"]
+    if { $jitter_downstream_mode == 0 } {
+	set jitter_downstream_mode ""
     }
+
+    cfgSet "links" $link_id "jitter_downstream_mode" $jitter_downstream_mode
 }
 
 #****f* linkcfg.tcl/getLinkJitterHoldDownstream
@@ -686,9 +628,7 @@ proc setLinkJitterModeDownstream { link_id jitter_downstream_mode } {
 #   * jitter_hold -- The jitter hold for downstream direction.
 #****
 proc getLinkJitterHoldDownstream { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    return [lindex [lsearch -inline [set $link_id] "jitter-downstream-hold *"] 1]
+    return [cfgGet "links" $link_id "jitter_downstream_hold"]
 }
 
 #****f* linkcfg.tcl/setLinkJitterHoldDownstream
@@ -703,14 +643,11 @@ proc getLinkJitterHoldDownstream { link_id } {
 #   * jitter_downstream_hold -- link downstream jitter hold.
 #****
 proc setLinkJitterHoldDownstream { link_id jitter_downstream_hold } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    set i [lsearch [set $link_id] "jitter-downstream-hold *"]
-    if { $jitter_downstream_hold == "" } {
-	set $link_id [lreplace [set $link_id] $i $i]
-    } else {
-	set $link_id [lreplace [set $link_id] $i $i "jitter-downstream-hold $jitter_downstream_hold"]
+    if { $jitter_downstream_hold == 0 } {
+	set jitter_downstream_hold ""
     }
+
+    cfgSet "links" $link_id "jitter_downstream_hold" $jitter_downstream_hold
 }
 
 #****f* linkcfg.tcl/getLinkBER
@@ -726,11 +663,7 @@ proc setLinkJitterHoldDownstream { link_id jitter_downstream_hold } {
 #   * BER -- The value of 1/BER of the link.
 #****
 proc getLinkBER { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    set entry [lsearch -inline [set $link_id] "ber *"]
-
-    return [lindex $entry 1]
+    return [cfgGet "links" $link_id "ber"]
 }
 
 #****f* linkcfg.tcl/setLinkBER
@@ -745,14 +678,11 @@ proc getLinkBER { link_id } {
 #   * ber -- The value of 1/BER of the link.
 #****
 proc setLinkBER { link_id ber } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    set i [lsearch [set $link_id] "ber *"]
-    if { $ber <= 0 } {
-	set $link_id [lreplace [set $link_id] $i $i]
-    } else {
-	set $link_id [lreplace [set $link_id] $i $i "ber $ber"]
+    if { $ber == 0 } {
+	set ber ""
     }
+
+    cfgSet "links" $link_id "ber" $ber
 }
 
 #****f* linkcfg.tcl/getLinkLoss
@@ -768,11 +698,7 @@ proc setLinkBER { link_id ber } {
 #   * loss -- The loss percentage of the link.
 #****
 proc getLinkLoss { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    set entry [lsearch -inline [set $link_id] "loss *"]
-
-    return [lindex $entry 1]
+    return [cfgGet "links" $link_id "loss"]
 }
 
 #****f* linkcfg.tcl/setLinkLoss
@@ -787,14 +713,11 @@ proc getLinkLoss { link_id } {
 #   * loss -- The loss percentage of the link.
 #****
 proc setLinkLoss { link_id loss } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    set i [lsearch [set $link_id] "loss *"]
-    if { $loss <= 0 } {
-	set $link_id [lreplace [set $link_id] $i $i]
-    } else {
-	set $link_id [lreplace [set $link_id] $i $i "loss $loss"]
+    if { $loss == 0 } {
+	set loss ""
     }
+
+    cfgSet "links" $link_id "loss" $loss
 }
 
 #****f* linkcfg.tcl/getLinkDup
@@ -810,11 +733,7 @@ proc setLinkLoss { link_id loss } {
 #   * duplicate -- The percentage of the link packet duplicate value.
 #****
 proc getLinkDup { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    set entry [lsearch -inline [set $link_id] "duplicate *"]
-
-    return [lindex $entry 1]
+    return [cfgGet "links" $link_id "duplicate"]
 }
 
 #****f* linkcfg.tcl/setLinkDup
@@ -829,14 +748,11 @@ proc getLinkDup { link_id } {
 #   * duplicate -- The percentage of the link packet duplicate value.
 #****
 proc setLinkDup { link_id duplicate } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    set i [lsearch [set $link_id] "duplicate *"]
-    if { $duplicate <= 0 || $duplicate > 50 } {
-	set $link_id [lreplace [set $link_id] $i $i]
-    } else {
-	set $link_id [lreplace [set $link_id] $i $i "duplicate $duplicate"]
+    if { $duplicate == 0 } {
+	set duplicate ""
     }
+
+    cfgSet "links" $link_id "duplicate" $duplicate
 }
 
 #****f* linkcfg.tcl/linkResetConfig
@@ -850,16 +766,16 @@ proc setLinkDup { link_id duplicate } {
 #   * link_id -- link id
 #****
 proc linkResetConfig { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-
     setLinkBandwidth $link_id ""
     setLinkBER $link_id ""
+    setLinkLoss $link_id ""
     setLinkDelay $link_id ""
     setLinkDup $link_id ""
-    if { $oper_mode == "exec" } {
-	upvar 0 ::cf::[set ::curcfg]::eid eid
-	execSetLinkParams $eid $link_id
+
+    if { [getFromRunning "oper_mode"] == "exec" } {
+	execSetLinkParams [getFromRunning "eid"] $link_id
     }
+
     redrawAll
 }
 
@@ -878,11 +794,7 @@ proc linkResetConfig { link_id } {
 #   * mirror_link_id -- mirror link id
 #****
 proc getLinkMirror { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    set entry [lsearch -inline [set $link_id] "mirror *"]
-
-    return [lindex $entry 1]
+    return [cfgGet "links" $link_id "mirror"]
 }
 
 #****f* linkcfg.tcl/setLinkMirror
@@ -899,14 +811,7 @@ proc getLinkMirror { link_id } {
 #   * mirror -- mirror link's id
 #****
 proc setLinkMirror { link_id mirror } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    set i [lsearch [set $link_id] "mirror *"]
-    if { $mirror == "" } {
-	set $link_id [lreplace [set $link_id] $i $i]
-    } else {
-	set $link_id [lreplace [set $link_id] $i $i "mirror $mirror"]
-    }
+    cfgSet "links" $link_id "mirror" $mirror
 }
 
 #****f* linkcfg.tcl/splitLink
@@ -923,51 +828,37 @@ proc setLinkMirror { link_id mirror } {
 #   * nodes -- list of node ids of new nodes.
 #****
 proc splitLink { orig_link_id } {
-    upvar 0 ::cf::[set ::curcfg]::$orig_link_id $orig_link_id
-
     set orig_nodes [getLinkPeers $orig_link_id]
     lassign $orig_nodes orig_node1_id orig_node2_id
-    upvar 0 ::cf::[set ::curcfg]::$orig_node1_id $orig_node1_id
-    upvar 0 ::cf::[set ::curcfg]::$orig_node2_id $orig_node2_id
-
-    set orig_ifaces "[ifcByPeer $orig_node1_id $orig_node2_id] [ifcByPeer $orig_node2_id $orig_node1_id]"
+    set orig_ifaces [getLinkPeersIfaces $orig_link_id]
 
     # create mirror link and copy the properties from the original
     set mirror_link_id [newObjectId [getFromRunning "link_list"] "l"]
-    upvar 0 ::cf::[set ::curcfg]::$mirror_link_id $mirror_link_id
-    set $mirror_link_id [set $orig_link_id]
+    cfgSet "links" $mirror_link_id [cfgGet "links" $orig_link_id]
     lappendToRunning "link_list" $mirror_link_id
+    setToRunning "${mirror_link_id}_running" false
     set links "$orig_link_id $mirror_link_id"
 
     # create pseudo nodes
-    set new_node1_id [newNode "pseudo"]
-    set new_node2_id [newNode "pseudo"]
-    upvar 0 ::cf::[set ::curcfg]::$new_node1_id $new_node1_id
-    upvar 0 ::cf::[set ::curcfg]::$new_node2_id $new_node2_id
-    set pseudo_nodes "$new_node1_id $new_node2_id"
+    set pseudo_nodes [newNode "pseudo"]
+    lappend pseudo_nodes [newNode "pseudo"]
 
     foreach orig_node_id $orig_nodes orig_node_iface_id $orig_ifaces pseudo_node_id $pseudo_nodes link_id $links {
 	set other_orig_node_id [removeFromList $orig_nodes $orig_node_id "keep_doubles"]
 
 	# change peer for original node interface
-	set i [lsearch [set $orig_node_id] "interface-peer {$orig_node_iface_id $other_orig_node_id}"]
-	set $orig_node_id [lreplace [set $orig_node_id] $i $i \
-	    "interface-peer {$orig_node_iface_id $pseudo_node_id}"]
+	setIfcPeer $orig_node_id $orig_node_iface_id $pseudo_node_id
 
 	# setup new pseudo node properties
 	setNodeMirror $pseudo_node_id [removeFromList $pseudo_nodes $pseudo_node_id "keep_doubles"]
 	setNodeCanvas $pseudo_node_id [getNodeCanvas $orig_node_id]
 	setNodeCoords $pseudo_node_id [getNodeCoords $other_orig_node_id]
 	setNodeLabelCoords $pseudo_node_id [getNodeCoords $other_orig_node_id]
+	setIfcPeer $pseudo_node_id "0" $orig_node_id
 
 	# setup both link properties
-	lappend $pseudo_node_id "interface-peer {0 $orig_node_id}"
-	set i [lsearch [set $link_id] "nodes *"]
-	set $link_id [lreplace [set $link_id] $i $i \
-	    "nodes {$pseudo_node_id $orig_node_id}"]
-	set i [lsearch [set $link_id] "ifaces *"]
-	set $link_id [lreplace [set $link_id] $i $i \
-	    "ifaces {0 $orig_node_iface_id}"]
+	setLinkPeers $link_id "$pseudo_node_id $orig_node_id"
+	setLinkPeersIfaces $link_id "0 $orig_node_iface_id"
 	setLinkMirror $link_id [removeFromList $links $link_id "keep_doubles"]
     }
 
@@ -995,39 +886,29 @@ proc mergeLink { link_id } {
     # recycle the first pseudo link ID
     lassign [lsort "$link_id $mirror_link_id"] link_id mirror_link_id
 
-    lassign [getLinkPeers $link_id] pseudo_node1_id orig_node1_id 
+    lassign [getLinkPeers $link_id] pseudo_node1_id orig_node1_id
     lassign [getLinkPeers $mirror_link_id] pseudo_node2_id orig_node2_id
 
     if { $orig_node1_id == $orig_node2_id } {
 	return
     }
 
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-    upvar 0 ::cf::[set ::curcfg]::$mirror_link_id $mirror_link_id
-    upvar 0 ::cf::[set ::curcfg]::$orig_node1_id $orig_node1_id
-    upvar 0 ::cf::[set ::curcfg]::$orig_node2_id $orig_node2_id
+    lassign [getLinkPeersIfaces $link_id] - orig_node1_iface_id
+    lassign [getLinkPeersIfaces $mirror_link_id] - orig_node2_iface_id
 
-    lassign [getLinkPeersIfaces $link] - orig_node1_iface
-    lassign [getLinkPeersIfaces $mirror_link] - orig_node2_iface
-
-    set i [lsearch [set $orig_node1_id] "interface-peer {$orig_node1_iface $pseudo_node1_id}"]
-    set $orig_node1_id [lreplace [set $orig_node1_id] $i $i \
-			"interface-peer {$orig_node1_iface $orig_node2_id}"]
-    set i [lsearch [set $orig_node2_id] "interface-peer {$orig_node2_iface $pseudo_node2_id}"]
-    set $orig_node2_id [lreplace [set $orig_node2_id] $i $i \
-			"interface-peer {$orig_node2_iface $orig_node1_id}"]
-
-    set i [lsearch [set $link_id] "nodes *"]
-    set $link_id [lreplace [set $link_id] $i $i \
-			"nodes {$orig_node1_id $orig_node2_id}"]
-    set i [lsearch [set $link] "ifaces *"]
-    set $link [lreplace [set $link] $i $i \
-			"ifaces {$orig_node1_iface $orig_node2_iface}"]
+    setIfcLink $orig_node1_id $orig_node1_iface_id $link_id
+    setIfcLink $orig_node2_id $orig_node2_iface_id $link_id
 
     setLinkMirror $link_id ""
+    setLinkPeers $link_id "$orig_node1_id $orig_node2_id"
+    setLinkPeersIfaces $link_id "$orig_node1_iface_id $orig_node2_iface_id"
+
+    setToRunning "node_list" [removeFromList [getFromRunning "node_list"] "$pseudo_node1_id $pseudo_node2_id"]
+    cfgUnset "nodes" $pseudo_node1_id
+    cfgUnset "nodes" $pseudo_node2_id
 
     setToRunning "link_list" [removeFromList [getFromRunning "link_list"] $mirror_link_id]
-    setToRunning "node_list" [removeFromList [getFromRunning "node_list"] "$pseudo_node1_id $pseudo_node2_id"]
+    cfgUnset "links" $mirror_link_id
 
     return $link_id
 }
@@ -1045,9 +926,15 @@ proc mergeLink { link_id } {
 #   * totalLinks -- a number of links.
 #****
 proc numOfLinks { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
+    set num 0
+    foreach {iface iface_cfg} [cfgGet "nodes" $node_id "ifaces"] {
+	catch { dictGet $iface_cfg "link" } link_id
+	if { $link_id != "" } {
+	    incr num
+	}
+    }
 
-    return [llength [lsearch -all [set $node_id] "interface-peer*"]]
+    return $num
 }
 
 #****f* linkcfg.tcl/newLink
@@ -1065,13 +952,29 @@ proc numOfLinks { node_id } {
 #   * new_link_id -- new link id.
 #****
 proc newLink { node1_id node2_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node1_id $node1_id
-    upvar 0 ::cf::[set ::curcfg]::$node2_id $node2_id
     global defEthBandwidth defSerBandwidth defSerDelay
 
+    foreach link_id [getFromRunning "link_list"] {
+	lassign [set peers [getLinkPeers $link_id]] node1 node2
+	set mirror_link_id [getLinkMirror $link_id]
+	if { $mirror_link_id != "" } {
+	    # pseudo node is always on index 0
+	    set peers "[lindex [getLinkPeers $mirror_link_id] 1] $node2"
+	}
+
+	if { $node1_id in $peers && $node2_id in $peers } {
+	    return
+	}
+    }
+
     foreach node_id "$node1_id $node2_id" {
-	if { [info procs [getNodeType $node_id].maxLinks] != "" } {
-	    if { [ numOfLinks $node_id ] == [[getNodeType $node_id].maxLinks] } {
+	set type [getNodeType $node_id]
+	if { $type == "pseudo" } {
+	    return
+	}
+
+	if { [info procs $type.maxLinks] != "" } {
+	    if { [ numOfLinks $node_id ] == [$type.maxLinks] } {
 		tk_dialog .dialog1 "IMUNES warning" \
 		   "Warning: Maximum links connected to the node $node_id" \
 		   info 0 Dismiss
@@ -1081,26 +984,27 @@ proc newLink { node1_id node2_id } {
     }
 
     set link_id [newObjectId [getFromRunning "link_list"] "l"]
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-    set $link_id {}
 
     set ifname1 [newIfc [chooseIfName $node1_id $node2_id] $node1_id]
-    lappend $node1_id "interface-peer {$ifname1 $node2_id}"
+    cfgSet "nodes" $node1_id "ifaces" $ifname1 "type" "phys"
+    cfgSet "nodes" $node1_id "ifaces" $ifname1 "peer" $node2_id
     set ifname2 [newIfc [chooseIfName $node2_id $node1_id] $node2_id]
-    lappend $node2_id "interface-peer {$ifname2 $node1_id}"
+    cfgSet "nodes" $node2_id "ifaces" $ifname2 "type" "phys"
+    cfgSet "nodes" $node2_id "ifaces" $ifname2 "peer" $node1_id
 
-    lappend $link_id "nodes {$node1_id $node2_id}"
-    lappend $link_id "ifaces {$ifname1 $ifname2}"
+    cfgSet "links" $link_id "peers" "$node1_id $node2_id"
+    cfgSet "links" $link_id "peers_ifaces" "$ifname1 $ifname2"
     if { ([getNodeType $node1_id] == "lanswitch" || \
 	[getNodeType $node2_id] == "lanswitch" || \
 	[string first eth "$ifname1 $ifname2"] != -1) && \
 	[getNodeType $node1_id] != "rj45" && \
-	[getNodeType $node2_id] != "rj45" } {
+	[getNodeType $node2_id] != "rj45" &&
+	$defEthBandwidth != 0 } {
 
-	lappend $link_id "bandwidth $defEthBandwidth"
+	cfgSet "links" $link_id "bandwidth" $defEthBandwidth
     } elseif { [string first ser "$ifname1 $ifname2"] != -1 } {
-	lappend $link_id "bandwidth $defSerBandwidth"
-	lappend $link_id "delay $defSerDelay"
+	cfgSet "links" $link_id "bandwidth" $defSerBandwidth
+	cfgSet "links" $link_id "bandwidth" $defSerDelay
     }
 
     lappendToRunning "link_list" $link_id
@@ -1116,33 +1020,26 @@ proc newLink { node1_id node2_id } {
     return $link_id
 }
 
-#****f* linkcfg.tcl/linkByIfc
+#****f* linkcfg.tcl/linkDirection
 # NAME
-#   linkByIfg -- get link by interface
+#   linkByIfg -- get direction of link in regards to the node's interface
 # SYNOPSIS
-#   set link_id [linkByIfc $node_id $iface_id]
+#   set link [linkDirection $node_id $iface_id]
 # FUNCTION
-#   Returns the link id of the link connecting the node's interface.
+#   Returns the direction of the link connecting the node's interface.
 # INPUTS
 #   * node_id -- node id
 #   * iface_id -- interface
 # RESULT
-#   * link_id -- link id.
+#   * direction -- upstream/downstream
 #****
-proc linkByIfc { node_id iface_id } {
-    set peer_id [getIfcPeer $node_id $iface_id]
-    foreach link_id [getFromRunning "link_list"] {
-	set endpoints [getLinkPeers $link_id]
-	if { $endpoints == "$node_id $peer_id" } {
-	    set dir downstream
-	    break
-	}
+proc linkDirection { node_id iface_id } {
+    set link_id [getIfcLink $node_id $iface_id]
 
-	if { $endpoints == "$peer_id $node_id" } {
-	    set dir upstream
-	    break
-	}
+    set direction upstream
+    if { $node_id == [lindex [getLinkPeers $link_id] 0] } {
+	set direction downstream
     }
 
-    return [list $link_id $dir]
+    return $direction
 }

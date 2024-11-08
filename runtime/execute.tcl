@@ -67,7 +67,7 @@ proc checkExternalInterfaces {} {
 	if { [getNodeType $node] == "rj45" } {
 	    lappend nodes_ifcpairs [list $node [list 0 [getNodeName $node]]]
 	} elseif { [getNodeType $node] == "extelem" } {
-	    foreach ifcs [getNodeExternalIfcs $node] {
+	    foreach ifcs [getNodeStolenIfaces $node] {
 		lappend nodes_ifcpairs [list $node $ifcs]
 	    }
 	}
@@ -75,7 +75,7 @@ proc checkExternalInterfaces {} {
 
     foreach node_ifcpair $nodes_ifcpairs {
 	lassign $node_ifcpair node ifcpair
-	lassign $ifcpair ifc physical_ifc
+	lassign $ifcpair iface physical_ifc
 
 	# check if the interface exists
 	set i [lsearch $extifcs $physical_ifc]
@@ -101,8 +101,7 @@ proc checkExternalInterfaces {} {
 		exec test -d /sys/class/net/$physical_ifc/wireless
 	    } on error {} {
 	    } on ok {} {
-		set link [lindex [linkByIfc $node $ifc] 0]
-		if { [getLinkDirect $link] } {
+		if { [getLinkDirect [getIfcLink $node $iface]] } {
 		    set severity "warning"
 		    set msg "Interface '$physical_ifc' is a wireless interface,\
 			so its peer cannot change its MAC address!"
@@ -231,9 +230,7 @@ proc saveRunningConfigurationInteractive { eid } {
     global runtimeDir
 
     set fileName "$runtimeDir/$eid/config.imn"
-    set fileId [open $fileName w]
-    dumpCfg file $fileId
-    close $fileId
+    saveCfgJson $fileName
 }
 
 #****f* exec.tcl/saveRunningConfigurationBatch
@@ -345,60 +342,62 @@ proc l2node.nodeNamespaceSetup { eid node } {
 # INPUTS
 #   * node -- node id
 #****
+global ipsecConf ipsecSecrets
 set ipsecConf ""
 set ipsecSecrets ""
 proc nodeIpsecInit { node } {
     global ipsecConf ipsecSecrets isOSfreebsd
 
-    set config_content [getNodeIPsec $node]
-    if { $config_content != "" } {
-	setNodeIPsecSetting $node "configuration" "conn %default" "keyexchange" "ikev2"
-	set ipsecConf "# /etc/ipsec.conf - strongSwan IPsec configuration file\n"
-    } else {
+    if { [getNodeIPsec $node] == "" } {
 	return
     }
 
-    set config_content [getNodeIPsecItem $node "configuration"]
+    setNodeIPsecSetting $node "%default" "keyexchange" "ikev2"
+    set ipsecConf "# /etc/ipsec.conf - strongSwan IPsec configuration file\n"
+    set ipsecConf "${ipsecConf}config setup\n"
 
-    foreach item $config_content {
-	set element [lindex $item 0]
-	set settings [lindex $item 1]
-	set ipsecConf "$ipsecConf$element\n"
+    foreach {config_name config} [getNodeIPsecItem $node "ipsec_configs"] {
+	set ipsecConf "${ipsecConf}conn $config_name\n"
 	set hasKey 0
 	set hasRight 0
-	foreach setting $settings {
-	    if { [string match "peersname=*" $setting] } {
+	foreach {setting value} $config {
+	    if { $setting == "peersname" } {
 		continue
 	    }
-	    if { [string match "sharedkey=*" $setting] } {
+
+	    if { $setting == "sharedkey" } {
 		set hasKey 1
-		set psk_key [lindex [split $setting =] 1]
+		set psk_key $value
 		continue
 	    }
-	    if { [string match "right=*" $setting] } {
+
+	    if { $setting == "right" } {
 		set hasRight 1
-		set right [lindex [split $setting =] 1]
+		set right $value
 	    }
-	    set ipsecConf "$ipsecConf        $setting\n"
+
+	    set ipsecConf "$ipsecConf        $setting=$value\n"
 	}
+
 	if { $hasKey && $hasRight } {
 	    set ipsecSecrets "$right : PSK $psk_key"
 	}
     }
 
-    delNodeIPsecElement $node "configuration" "conn %default"
+    delNodeIPsecConnection $node "%default"
 
     set local_cert [getNodeIPsecItem $node "local_cert"]
     set ipsecret_file [getNodeIPsecItem $node "local_key_file"]
     ipsecFilesToNode $node $local_cert $ipsecret_file
 
-    set ipsec_log_level [getNodeIPsecItem $node "ipsec-logging"]
+    set ipsec_log_level [getNodeIPsecItem $node "ipsec_logging"]
     if { $ipsec_log_level != "" } {
 	execCmdNode $node "touch /tmp/charon.log"
 
 	set charon "charon {\n\
 	\tfilelog {\n\
-	\t\t/tmp/charon.log {\n\
+	\t\tcharon {\n\
+	\t\t\tpath = /tmp/charon.log\n\
 	\t\t\tappend = yes\n\
 	\t\t\tflush_line = yes\n\
 	\t\t\tdefault = $ipsec_log_level\n\
@@ -912,25 +911,20 @@ proc createLinks { links linkCount w } {
     set batchStep 0
     for { set pending_links $links } { $pending_links != "" } {} {
 	set link [lindex $pending_links 0]
-	set i [lsearch -exact $pending_links $link]
-	set pending_links [lreplace $pending_links $i $i]
-
-	set lnode1 [lindex [getLinkPeers $link] 0]
-	set lnode2 [lindex [getLinkPeers $link] 1]
-	set ifname1 [lindex [getLinkPeersIfaces $link] 0]
-	set ifname2 [lindex [getLinkPeersIfaces $link] 1]
-
 	set msg "Creating link $link"
+	set pending_links [removeFromList $pending_links $link]
+
+	lassign [getLinkPeers $link] lnode1 lnode2
+	lassign [getLinkPeersIfaces $link] ifname1 ifname2
+
 	set mirror_link [getLinkMirror $link]
 	if { $mirror_link != "" } {
-	    set i [lsearch -exact $pending_links $mirror_link]
-	    set pending_links [lreplace $pending_links $i $i]
-
 	    set msg "Creating link $link/$mirror_link"
+	    set pending_links [removeFromList $pending_links $mirror_link]
 
-	    set p_lnode2 $lnode2
-	    set lnode2 [lindex [getLinkPeers $mirror_link] 0]
-	    set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
+	    # switch direction for mirror links
+	    lassign "$lnode2 [lindex [getLinkPeers $mirror_link] 1]" lnode1 lnode2
+	    lassign "$ifname2 [lindex [getLinkPeersIfaces $mirror_link] 1]" ifname1 ifname2
 	}
 
 	displayBatchProgress $batchStep $linkCount
@@ -971,25 +965,20 @@ proc configureLinks { links linkCount w } {
     set batchStep 0
     for { set pending_links $links } { $pending_links != "" } {} {
 	set link [lindex $pending_links 0]
-	set i [lsearch -exact $pending_links $link]
-	set pending_links [lreplace $pending_links $i $i]
-
-	set lnode1 [lindex [getLinkPeers $link] 0]
-	set lnode2 [lindex [getLinkPeers $link] 1]
-	set ifname1 [lindex [getLinkPeersIfaces $link] 0]
-	set ifname2 [lindex [getLinkPeersIfaces $link] 1]
-
 	set msg "Configuring link $link"
-	if { [getLinkMirror $link] != "" } {
-	    set mirror_link [getLinkMirror $link]
-	    set i [lsearch -exact $pending_links $mirror_link]
-	    set pending_links [lreplace $pending_links $i $i]
+	set pending_links [removeFromList $pending_links $link]
 
+	lassign [getLinkPeers $link] lnode1 lnode2
+	lassign [getLinkPeersIfaces $link] ifname1 ifname2
+
+	set mirror_link [getLinkMirror $link]
+	if { $mirror_link != "" } {
 	    set msg "Configuring link $link/$mirror_link"
+	    set pending_links [removeFromList $pending_links $mirror_link]
 
-	    set p_lnode2 $lnode2
-	    set lnode2 [lindex [getLinkPeers $mirror_link] 0]
-	    set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
+	    # switch direction for mirror links
+	    lassign "$lnode2 [lindex [getLinkPeers $mirror_link] 1]" lnode1 lnode2
+	    lassign "$ifname2 [lindex [getLinkPeersIfaces $mirror_link] 1]" ifname1 ifname2
 	}
 
 	displayBatchProgress $batchStep $linkCount
@@ -1029,8 +1018,6 @@ proc executeConfNodes { nodes nodeCount w } {
     set subnet_gws {}
     set nodes_l2data [dict create]
     foreach node $nodes {
-	upvar 0 ::cf::[set ::curcfg]::$node $node
-
 	displayBatchProgress $batchStep $nodeCount
 
 	if { [getAutoDefaultRoutesStatus $node] == "enabled" } {

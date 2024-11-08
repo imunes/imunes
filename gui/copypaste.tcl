@@ -65,51 +65,38 @@ proc copySelection {} {
 
     catch { namespace delete ::cf::clipboard }
     namespace eval ::cf::clipboard {}
-    upvar 0 ::cf::clipboard::node_list node_list
-    upvar 0 ::cf::clipboard::link_list link_list
-    upvar 0 ::cf::clipboard::annotation_list annotation_list
+    upvar 0 ::cf::clipboard::dict_cfg dict_cfg
+    set dict_cfg [dict create]
 
-    set annotation_list $selected_annotations
-    foreach annotation $selected_annotations {
-	set ::cf::clipboard::$annotation [set ::cf::[set ::curcfg]::$annotation]
+    clipboardSet "annotation_list" {}
+    foreach annotation_id $selected_annotations {
+	clipboardLappend "annotation_list" $annotation_id
+	clipboardSet "annotations" $annotation_id [cfgGet "annotations" $annotation_id]
     }
 
     # Copy selected nodes and interconnecting links to the clipboard
-    set node_list $selected_nodes
-    set link_list {}
-    foreach node $node_list {
-	set ::cf::clipboard::$node [set ::cf::[set ::curcfg]::$node]
-	foreach ifc [ifcList $node] {
-	    set peer [getIfcPeer $node $ifc]
-	    if { [lsearch $node_list $peer] < 0 } {
+    clipboardSet "node_list" $selected_nodes
+    set clipboard_link_list {}
+    foreach node_id $selected_nodes {
+	clipboardSet "nodes" $node_id [cfgGet "nodes" $node_id]
+
+	foreach iface [ifcList $node_id] {
+	    set peer [getIfcPeer $node_id $iface]
+	    if { $peer != "" && $peer ni $selected_nodes } {
+		clipboardUnset "nodes" $node_id "ifaces" $iface
 		continue
 	    }
-	    foreach link [linksByPeers $node $peer] {
-		if { [lsearch $link_list $link] >= 0 } {
-		    continue
+
+	    foreach link_id [linksByPeers $node_id $peer] {
+		if { $link_id ni $clipboard_link_list } {
+		    lappend clipboard_link_list $link_id
+		    clipboardSet "links" $link_id [cfgGet "links" $link_id]
 		}
-		lappend link_list $link
-		set ::cf::clipboard::$link [set ::cf::[set ::curcfg]::$link]
 	    }
 	}
     }
 
-    # Prune stale interface data from copied nodes
-    set savedcurcfg $curcfg
-    set curcfg clipboard
-    foreach node $node_list {
-        upvar 0 ::cf::[set ::curcfg]::$node $node
-
-	foreach ifc [ifcList $node] {
-	    set peer [getIfcPeer $node $ifc]
-	    if { [lsearch $node_list $peer] < 0 } {
-		netconfClearSection $node "interface $ifc"
-		set i [lsearch [set $node] "interface-peer {$ifc $peer}"]
-		set $node [lreplace [set $node] $i $i]
-	    }
-	}
-    }
-    set curcfg $savedcurcfg
+    clipboardSet "link_list" $clipboard_link_list
 }
 
 #****f* copypaste.tcl/paste
@@ -125,47 +112,50 @@ proc paste {} {
     global changed copypaste_list cutNodes copypaste_nodes
     global nodeNamingBase
 
-    set curcanvas [getFromRunning "curcanvas"]
     if { [getFromRunning "oper_mode"] == "exec" } {
 	return
     }
 
-    set copypaste_list ""
-    set new_annotations ""
-
-    # Paste annotations from the clipboard and rename them on the fly
-    foreach annotation_orig [set ::cf::clipboard::annotation_list] {
-	set annotation_copy [newObjectId [getFromRunning "annotation_list"] "a"]
-	lappend new_annotations $annotation_copy
-	set annotation_map($annotation_orig) $annotation_copy
-	upvar 0 ::cf::[set ::curcfg]::$annotation_copy $annotation_copy
-	set $annotation_copy [set ::cf::clipboard::$annotation_orig]
-	lappendToRunning "annotation_list" $annotation_copy
-	setNodeCanvas $annotation_copy $curcanvas
-	#drawAnnotation $annotation_copy
-    }
-    #raiseAll .panwin.f1.c
-
-    # Nothing to do if clipboard is empty
-    if { [set ::cf::clipboard::node_list] == {} && [set ::cf::clipboard::annotation_list] == {} } {
+    # Nothing to do if clipboards are empty
+    set clipboard_node_list [clipboardGet "node_list"]
+    set clipboard_annotations [clipboardGet "annotations"]
+    if { $clipboard_node_list == {} && $clipboard_annotations == {} } {
 	return
     }
 
+    set new_annotations {}
+    set curcanvas [getFromRunning "curcanvas"]
+    # Paste annotations from the clipboard and rename them on the fly
+    foreach {annotation_orig annotation_orig_cfg} $clipboard_annotations {
+	set new_annotation_id [newObjectId [getFromRunning "annotation_list"] "a"]
+
+	cfgSet "annotations" $new_annotation_id $annotation_orig_cfg
+	lappendToRunning "annotation_list" $new_annotation_id
+	lappend new_annotations $new_annotation_id
+
+	setAnnotationCanvas $new_annotation_id $curcanvas
+    }
+
+    set copypaste_list {}
+    array set node_map {}
     # Paste nodes from the clipboard and rename them on the fly
-    foreach node_orig [set ::cf::clipboard::node_list] {
-	set node_copy [newObjectId [getFromRunning "node_list"] "n"]
-	set node_map($node_orig) $node_copy
-	upvar 0 ::cf::[set ::curcfg]::$node_copy $node_copy
-	set $node_copy [set ::cf::clipboard::$node_orig]
-	lappendToRunning "node_list" $node_copy
-	lappend copypaste_list $node_copy
+    foreach {node_orig node_orig_cfg} [clipboardGet "nodes"] {
+	set new_node_id [newObjectId [getFromRunning "node_list"] "n"]
+	set node_map($node_orig) $new_node_id
+	cfgSet "nodes" $new_node_id $node_orig_cfg
+	lappendToRunning "node_list" $new_node_id
+
+	lappend copypaste_list $new_node_id
 	set node_type [getNodeType $node_orig]
 	if { $node_type in [array names nodeNamingBase] } {
-	    setNodeName $node_copy [getNewNodeNameType $node_type $nodeNamingBase($node_type)]
+	    setNodeName $new_node_id [getNewNodeNameType $node_type $nodeNamingBase($node_type)]
+	} elseif { $node_type in "ext extnat rj45" } {
+	    setNodeName $new_node_id "UNASSIGNED"
 	} else {
-	    setNodeName $node_copy $node_copy
+	    setNodeName $new_node_id $new_node_id
 	}
-	setNodeCanvas $node_copy $curcanvas
+
+	setNodeCanvas $new_node_id $curcanvas
     }
 
     #
@@ -175,23 +165,25 @@ proc paste {} {
     set delta 128
     set curx [expr $delta / 2]
     set cury [expr $delta / 2]
-    foreach node_orig [set ::cf::clipboard::node_list] {
-	set node_copy $node_map($node_orig)
-	foreach ifc [ifcList $node_copy] {
-	    set old_peer [getIfcPeer $node_copy $ifc]
-	    set i [lsearch [set $node_copy] "interface-peer {$ifc $old_peer}"]
-	    set $node_copy [lreplace [set $node_copy] $i $i \
-		"interface-peer {$ifc $node_map($old_peer)}"]
+    foreach node_orig $clipboard_node_list {
+	set new_node_id $node_map($node_orig)
+
+	foreach iface [ifcList $new_node_id] {
+	    setToRunning "${new_node_id}|${iface}_running" false
+	    #set new_peer_id $node_map([getIfcPeer $new_node_id $iface])
+	    #cfgSet "nodes" $new_node_id "ifaces" $iface "peer" $new_link_id
+
 	    if { $cutNodes == 0 } {
-		autoMACaddr $node_copy $ifc
+		autoMACaddr $new_node_id $iface
 	    }
 	}
 
-	set nodecoords [getNodeCoords $node_copy]
+	set nodecoords [getNodeCoords $new_node_id]
 	if { [lindex $nodecoords 0] >= $sizex ||
 	    [lindex $nodecoords 1] >= $sizey } {
-	    setNodeCoords $node_copy "$curx $cury"
-	    setNodeLabelCoords $node_copy "$curx [expr $cury + $delta / 4]"
+	    setNodeCoords $new_node_id "$curx $cury"
+	    setNodeLabelCoords $new_node_id "$curx [expr $cury + $delta / 4]"
+
 	    incr curx $delta
 	    if { $curx > $sizex } {
 		incr cury $delta
@@ -201,16 +193,21 @@ proc paste {} {
     }
 
     # Paste links from the clipboard and rename them on the fly
-    foreach link_orig [set ::cf::clipboard::link_list] {
-	set link_copy [newObjectId [getFromRunning "link_list"] "l"]
-	upvar 0 ::cf::[set ::curcfg]::$link_copy $link_copy
-	set $link_copy [set ::cf::clipboard::$link_orig]
-	lappendToRunning "link_list" $link_copy
-	set old_peers [getLinkPeers $link_copy]
+    foreach {link_orig link_orig_cfg} [clipboardGet "links"] {
+	set new_link_id [newObjectId [getFromRunning "link_list"] "l"]
+	cfgSet "links" $new_link_id $link_orig_cfg
+	lappendToRunning "link_list" $new_link_id
+	setToRunning "${new_link_id}_running" false
+
+	set old_peers [getLinkPeers $new_link_id]
 	set new_peers \
 	    "$node_map([lindex $old_peers 0]) $node_map([lindex $old_peers 1])"
-	set i [lsearch [set $link_copy] "nodes {$old_peers}"]
-	set $link_copy [lreplace [set $link_copy] $i $i "nodes {$new_peers}"]
+
+	foreach node_id $new_peers iface [getLinkPeersIfaces $new_link_id] {
+	    cfgSet "nodes" $node_id "ifaces" $iface "link" $new_link_id
+	}
+
+	cfgSet "links" $new_link_id "peers" $new_peers
     }
 
     updateCustomIconReferences
