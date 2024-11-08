@@ -311,7 +311,7 @@ proc updateIfcLabel { link_id node_id iface_id } {
     global show_interface_names show_interface_ipv4 show_interface_ipv6
 
     if { [getNodeType $node_id] == "extelem" } {
-	set ifaces [getNodeExternalIfcs $node_id]
+	set ifaces [getNodeStolenIfaces $node_id]
 	set iface_id [lindex [lsearch -inline -exact -index 0 $ifaces "$iface_id"] 1]
     }
 

@@ -274,10 +274,10 @@ proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
 #****
 proc $MODULE.nodeConfigure { eid node_id } {
     foreach iface_id [ifcList $node_id] {
-	set cfg [netconfFetchSection $node_id "interface $iface_id"]
 	set ngcfgreq "shc $iface_id"
-	foreach rule [lsort -dictionary $cfg] {
-	    set ngcfgreq "[set ngcfgreq]$rule"
+	foreach rule_num [lsort -dictionary [ifcFilterRuleList $node_id $iface_id]] {
+	    set rule [getFilterIfcRuleAsString $node_id $iface_id $rule_num]
+	    set ngcfgreq "${ngcfgreq} ${rule}"
 	}
 
 	pipesExec "jexec $eid ngctl msg $node_id: $ngcfgreq" "hold"

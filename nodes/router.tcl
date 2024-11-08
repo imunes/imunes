@@ -60,33 +60,21 @@ registerModule $MODULE
 #   * node_id -- node id
 #****
 proc $MODULE.confNewNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global ripEnable ripngEnable ospfEnable ospf6Enable
     global rdconfig router_model router_ConfigModel
     global def_router_model
     global nodeNamingBase
 
-    set ripEnable [lindex $rdconfig 0]
-    set ripngEnable [lindex $rdconfig 1]
-    set ospfEnable [lindex $rdconfig 2]
-    set ospf6Enable [lindex $rdconfig 3]
+    lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable
     set router_ConfigModel $router_model
 
-    if { $router_model != $def_router_model } {
-	lappend $node_id "model $router_model"
-    } else {
-	lappend $node_id "model $def_router_model"
-    }
+    setNodeName $node_id [getNewNodeNameType router $nodeNamingBase(router)]
+    setNodeModel $node_id $router_model
 
-    set nconfig [list \
-	"hostname [getNewNodeNameType router $nodeNamingBase(router)]" \
-	! ]
-    lappend $node_id "network-config [list $nconfig]"
-
-    setNodeProtocolRip $node_id $ripEnable
-    setNodeProtocolRipng $node_id $ripngEnable
-    setNodeProtocolOspfv2 $node_id $ospfEnable
-    setNodeProtocolOspfv3 $node_id $ospf6Enable
+    setNodeProtocol $node_id "rip" $ripEnable
+    setNodeProtocol $node_id "ripng" $ripngEnable
+    setNodeProtocol $node_id "ospf" $ospfEnable
+    setNodeProtocol $node_id "ospf6" $ospf6Enable
 
     setAutoDefaultRoutesStatus $node_id "enabled"
     setLogIfcType $node_id lo0 lo
