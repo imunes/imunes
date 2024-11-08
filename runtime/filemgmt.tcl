@@ -321,22 +321,20 @@ proc closeFile {} {
 	} elseif { $idx != 0 } {
 	    incr idx -1
 	}
-	set cfg [lindex $cfg_list $idx]
-
-	loadCfgLegacy $cfg
-	set curcfg $cfg
+	set curcfg [lindex $cfg_list $idx]
 
 	setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
 	switchCanvas none
 	setToRunning "undolevel" 0
 	setToRunning "redolevel" 0
-	saveToUndoLevel 0 $cfg
-	setActiveTool select
-	updateProjectMenu
-	switchProject
+	saveToUndoLevel 0
     } else {
 	newProject
     }
+
+    setActiveTool select
+    updateProjectMenu
+    switchProject
 }
 
 #****f* filemgmt.tcl/readConfigFile

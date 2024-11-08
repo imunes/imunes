@@ -325,64 +325,64 @@ proc l3node.nghook { eid node_id iface_id } {
 # INPUTS
 #   * node_id -- node id
 #****
+global ipsecConf ipsecSecrets
 set ipsecConf ""
 set ipsecSecrets ""
 proc nodeIpsecInit { node_id } {
     global ipsecConf ipsecSecrets isOSfreebsd
 
-    set config_content [getNodeIPsec $node_id]
-    if { $config_content != "" } {
-	setNodeIPsecSetting $node_id "configuration" "conn %default" "keyexchange" "ikev2"
-	set ipsecConf "# /etc/ipsec.conf - strongSwan IPsec configuration file\n"
-    } else {
+    if { [getNodeIPsec $node_id] == "" } {
 	return
     }
 
     set ipsecSecrets "# /etc/ipsec.secrets - strongSwan IPsec secrets file\n\n"
-    set config_content [getNodeIPsecItem $node_id "configuration"]
 
-    #setNodeIPsecSetting $node "%default" "keyexchange" "ikev2"
-    #set ipsecConf "${ipsecConf}config setup\n"
+    setNodeIPsecSetting $node_id "%default" "keyexchange" "ikev2"
+    set ipsecConf "# /etc/ipsec.conf - strongSwan IPsec configuration file\n"
+    set ipsecConf "${ipsecConf}config setup\n"
 
-    foreach item $config_content {
-	set element [lindex $item 0]
-	set settings [lindex $item 1]
-	set ipsecConf "$ipsecConf$element\n"
+    foreach {config_name config} [getNodeIPsecItem $node_id "ipsec_configs"] {
+	set ipsecConf "${ipsecConf}conn $config_name\n"
 	set hasKey 0
 	set hasRight 0
-	foreach setting $settings {
-	    if { [string match "peersname=*" $setting] } {
+	foreach {setting value} $config {
+	    if { $setting == "peersname" } {
 		continue
 	    }
-	    if { [string match "sharedkey=*" $setting] } {
+
+	    if { $setting == "sharedkey" } {
 		set hasKey 1
-		set psk_key [lindex [split $setting =] 1]
+		set psk_key $value
 		continue
 	    }
-	    if { [string match "right=*" $setting] } {
+
+	    if { $setting == "right" } {
 		set hasRight 1
-		set right [lindex [split $setting =] 1]
+		set right $value
 	    }
-	    set ipsecConf "$ipsecConf        $setting\n"
+
+	    set ipsecConf "$ipsecConf        $setting=$value\n"
 	}
+
 	if { $hasKey && $hasRight } {
 	    set ipsecSecrets "${ipsecSecrets}$right : PSK $psk_key\n"
 	}
     }
 
-    delNodeIPsecElement $node_id "configuration" "conn %default"
+    delNodeIPsecConnection $node_id "%default"
 
     set local_cert [getNodeIPsecItem $node_id "local_cert"]
     set ipsecret_file [getNodeIPsecItem $node_id "local_key_file"]
     ipsecFilesToNode $node_id $local_cert $ipsecret_file
 
-    set ipsec_log_level [getNodeIPsecItem $node_id "ipsec-logging"]
+    set ipsec_log_level [getNodeIPsecItem $node_id "ipsec_logging"]
     if { $ipsec_log_level != "" } {
 	execCmdNode $node_id "touch /tmp/charon.log"
 
 	set charon "charon {\n\
 	\tfilelog {\n\
-	\t\t/tmp/charon.log {\n\
+	\t\tcharon {\n\
+	\t\t\tpath = /tmp/charon.log\n\
 	\t\t\tappend = yes\n\
 	\t\t\tflush_line = yes\n\
 	\t\t\tdefault = $ipsec_log_level\n\
