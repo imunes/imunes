@@ -60,7 +60,6 @@ registerModule $MODULE
 #   * node_id -- node id
 #****
 proc $MODULE.confNewNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global ripEnable ripngEnable ospfEnable ospf6Enable
     global rdconfig router_model router_ConfigModel
     global def_router_model
@@ -69,16 +68,8 @@ proc $MODULE.confNewNode { node_id } {
     lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable
     set router_ConfigModel $router_model
 
-    if { $router_model != $def_router_model } {
-	lappend $node_id "model $router_model"
-    } else {
-	lappend $node_id "model $def_router_model"
-    }
-
-    set nconfig [list \
-	"hostname [getNewNodeNameType router $nodeNamingBase(router)]" \
-	! ]
-    lappend $node_id "network-config [list $nconfig]"
+    setNodeName $node_id [getNewNodeNameType router $nodeNamingBase(router)]
+    setNodeModel $node_id $router_model
 
     setNodeProtocolRip $node_id $ripEnable
     setNodeProtocolRipng $node_id $ripngEnable

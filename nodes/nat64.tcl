@@ -34,33 +34,18 @@ registerModule $MODULE
 ################################################################################
 
 proc $MODULE.confNewNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global ripEnable ripngEnable ospfEnable ospf6Enable
     global rdconfig
     global nodeNamingBase
 
     lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable
 
-    set nconfig [list \
-	"hostname [getNewNodeNameType nat64 $nodeNamingBase(nat64)]" \
-	! ]
-    lappend $node_id "network-config [list $nconfig]"
 
     setNodeProtocolRip $node_id $ripEnable
     setNodeProtocolRipng $node_id $ripngEnable
     setNodeProtocolOspfv2 $node_id $ospfEnable
     setNodeProtocolOspfv3 $node_id $ospf6Enable
-
-    foreach proto { rip ripng ospf ospf6 bgp } {
-	set protocfg [netconfFetchSection $node_id "router $proto"]
-	if { $protocfg != "" } {
-	    set protocfg [linsert $protocfg 0 "router $proto"]
-	    set protocfg [linsert $protocfg end "!"]
-	    set protocfg [linsert $protocfg [lsearch $protocfg " network *"] " redistribute kernel" ]
-	    netconfClearSection $node_id "router $proto"
-	    netconfInsertSection $node_id $protocfg
-	}
-    }
+    setNodeName $node_id [getNewNodeNameType nat64 $nodeNamingBase(nat64)]
 
     setAutoDefaultRoutesStatus $node_id "enabled"
     setLogIfcType $node_id lo0 lo

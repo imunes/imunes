@@ -316,7 +316,7 @@ proc selectAdjacent {} {
 
 	    set mirror_node [getNodeMirror $peer_id]
 	    if { $mirror_node != "" } {
-		set peer_id [getIfcPeer $mirror_node "0"]
+		set peer_id [getIfcPeer $mirror_node "ifc0"]
 	    }
 
 	    if { $peer_id ni $adjacent } {

@@ -67,9 +67,8 @@ proc $MODULE.prepareSystem {} {
 #   * iface_id -- interface name
 #****
 proc $MODULE.confNewIfc { node_id iface_id } {
-    set old [getNodeStolenIfaces $node_id]
-    lappend old [list $iface_id "UNASSIGNED"]
-    setNodeStolenIfaces $node_id $old
+    setIfcType $node_id $iface_id "stolen"
+    setIfcStolenIfc $node_id $iface_id "UNASSIGNED"
 }
 
 #****f* extelem.tcl/extelem.confNewNode
@@ -83,13 +82,9 @@ proc $MODULE.confNewIfc { node_id iface_id } {
 #   * node_id -- node id
 #****
 proc $MODULE.confNewNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global nodeNamingBase
 
-    set nconfig [list \
-	"hostname [getNewNodeNameType extelem $nodeNamingBase(extelem)]" \
-	! ]
-    lappend $node_id "network-config [list $nconfig]"
+    setNodeName $node_id [getNewNodeNameType extelem $nodeNamingBase(extelem)]
 }
 
 #****f* extelem.tcl/extelem.ifacePrefix
