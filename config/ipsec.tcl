@@ -42,25 +42,7 @@ proc getNodeIPsec { node_id } {
 }
 
 proc setNodeIPsec { node_id new_value } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    set ipsecCfgIndex [lsearch -index 0 [set $node_id] "ipsec-config"]
-
-    if { $ipsecCfgIndex != -1 } {
-	set $node_id [lreplace [set $node_id] $ipsecCfgIndex $ipsecCfgIndex "ipsec-config {$new_value}"]
-    } else {
-	set $node_id [linsert [set $node_id] end "ipsec-config {$new_value}"]
-    }
-}
-
-proc delNodIPsec { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    set ipsecCfgIndex [lsearch -index 0 [set $node_id] "ipsec-config"]
-
-    if { $ipsecCfgIndex != -1 } {
-	set $node_id [lreplace [set $node_id] $ipsecCfgIndex $ipsecCfgIndex]
-    }
+    cfgSet "nodes" $node_id "ipsec" "ipsec_configs" $new_value
 }
 
 #****f* ipsec.tcl/getNodeIPsecItem
@@ -104,104 +86,20 @@ proc setNodeIPsecItem { node_id item new_value } {
     setNodeIPsec $node_id $newIpsecCfg
 }
 
-proc delNodeIPsecItem { node_id item } {
-    set ipsecCfg [getNodeIPsec $node_id]
-
-    set itemIndex [lsearch -index 0 $ipsecCfg $item]
-    if { $itemIndex != -1 } {
-	set newIpsecCfg [lreplace $ipsecCfg $itemIndex $itemIndex]
-    }
-
-    setNodeIPsec $node_id $newIpsecCfg
+proc setNodeIPsecConnection { node_id connection new_value } {
+    cfgSet "nodes" $node_id "ipsec" "ipsec_configs" $connection $new_value
 }
 
-#****f* ipsec.tcl/getNodeIPsecElement
-# NAME
-#   getNodeIPsecElement -- get node IPsec element item
-# SYNOPSIS
-#   getNodeIPsecElement $node_id $item
-# FUNCTION
-#   Retreives an element from IPsec configuration of given node from the
-#   given item.
-# INPUTS
-#   node_id - node id
-#   item - search item
-#   element  - search element
-proc getNodeIPsecElement { node_id item element } {
-    set itemCfg [getNodeIPsecItem $node_id $item]
-
-    if { [lsearch $itemCfg "{$element} *"] != -1 } {
-	return [lindex [lsearch -inline $itemCfg "{$element} *"] 1]
-    }
-    return ""
+proc delNodeIPsecConnection { node_id connection } {
+    cfgUnset "nodes" $node_id "ipsec" "ipsec_configs" $connection
 }
 
-proc setNodeIPsecElement { node_id item element new_value } {
-    set itemCfg [getNodeIPsecItem $node_id $item]
-
-    set elementIndex [lsearch -index 0 $itemCfg $element]
-    if { $elementIndex != -1 } {
-	set newItemCfg [lreplace $itemCfg $elementIndex $elementIndex "{$element} {$new_value}"]
-    } else {
-	set newItemCfg [linsert $itemCfg end "{$element} {$new_value}"]
-    }
-
-    setNodeIPsecItem $node_id $item $newItemCfg
+proc getNodeIPsecSetting { node_id connection setting } {
+    return [cfgGet "nodes" $node_id "ipsec" "ipsec_configs" $connection $setting]
 }
 
-proc delNodeIPsecElement { node_id item element } {
-    set itemCfg [getNodeIPsecItem $node_id $item]
-
-    set elementIndex [lsearch -index 0 $itemCfg $element]
-    if { $elementIndex != -1 } {
-	set newItemCfg [lreplace $itemCfg $elementIndex $elementIndex]
-    } else {
-	return
-    }
-
-    setNodeIPsecItem $node_id $item $newItemCfg
-
-    if { [getNodeIPsecConnList $node_id] == "" } {
-	delNodIPsec $node_id
-    }
-}
-
-proc getNodeIPsecSetting { node_id item element setting } {
-    set elementCfg [getNodeIPsecElement $node_id $item $element]
-
-    if { [lsearch $elementCfg "$setting=*"] != -1 } {
-	return [lindex [split [lsearch -inline $elementCfg "$setting=*"] =] 1]
-    }
-    return ""
-}
-
-proc setNodeIPsecSetting { node_id item element setting new_value } {
-    set elementCfg [getNodeIPsecElement $node_id $item $element]
-
-    set settingIndex [lsearch $elementCfg "$setting=*"]
-    if { $new_value == "" } {
-	if { $settingIndex != -1 } {
-	    set newElementCfg [lreplace $elementCfg $settingIndex $settingIndex]
-	} else {
-	    return
-	}
-    } else {
-	if { $settingIndex != -1 } {
-	    set newElementCfg [lreplace $elementCfg $settingIndex $settingIndex "$setting=$new_value"]
-	} else {
-	    set newElementCfg [linsert $elementCfg end "$setting=$new_value"]
-	}
-    }
-
-    setNodeIPsecElement $node_id $item $element $newElementCfg
-}
-
-proc createEmptyIPsecCfg { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    setNodeIPsec $node_id ""
-    setNodeIPsecItem $node_id "configuration" ""
-    setNodeIPsecElement $node_id "configuration" "config setup" ""
+proc setNodeIPsecSetting { node_id connection setting new_value } {
+    cfgSet "nodes" $node_id "ipsec" "ipsec_configs" $connection $setting $new_value
 }
 
 proc getNodeIPsecConnList { node_id } {
@@ -343,13 +241,13 @@ proc checkIfPeerStartsSameConnection { peer local_ip local_subnet local_id } {
     set connList [getNodeIPsecConnList $peer]
 
     foreach conn $connList {
-	set auto [getNodeIPsecSetting $peer "configuration" "conn $conn" "auto"]
+	set auto [getNodeIPsecSetting $peer $conn "auto"]
 	if { "$auto" == "start" } {
-	    set right [getNodeIPsecSetting $peer "configuration" "conn $conn" "right"]
+	    set right [getNodeIPsecSetting $peer $conn "right"]
 	    if { "$right" == "$local_ip" } {
-		set rightsubnet [getNodeIPsecSetting $peer "configuration" "conn $conn" "rightsubnet"]
+		set rightsubnet [getNodeIPsecSetting $peer $conn "rightsubnet"]
 		if { "$rightsubnet" == "$local_subnet" } {
-		    set rightid [getNodeIPsecSetting $peer "configuration" "conn $conn" "rightid"]
+		    set rightid [getNodeIPsecSetting $peer $conn "rightid"]
 		    if { $rightid == "" || $local_id == "" } {
 			return 1
 		    } else {

@@ -227,42 +227,42 @@ proc $MODULE.generateConfig { node_id } {
 
     set bridge_name "stp_br"
 
-    set bridgeProtocol [getBridgeProtocol $node_id bridge0]
+    set bridgeProtocol [getBridgeProtocol $node_id]
     if { $bridgeProtocol != "" } {
 	lappend cfg "ifconfig $bridge_name proto $bridgeProtocol"
     }
 
-    set bridgePriority [getBridgePriority $node_id bridge0]
+    set bridgePriority [getBridgePriority $node_id]
     if { $bridgePriority != "" } {
 	lappend cfg "ifconfig $bridge_name priority $bridgePriority"
     }
 
-    set bridgeMaxAge [getBridgeMaxAge $node_id bridge0]
+    set bridgeMaxAge [getBridgeMaxAge $node_id]
     if { $bridgeMaxAge != "" } {
 	lappend cfg "ifconfig $bridge_name maxage $bridgeMaxAge"
     }
 
-    set bridgeFwdDelay [getBridgeFwdDelay $node_id bridge0]
+    set bridgeFwdDelay [getBridgeFwdDelay $node_id]
     if { $bridgeFwdDelay != "" } {
 	lappend cfg "ifconfig $bridge_name fwddelay $bridgeFwdDelay"
     }
 
-    set bridgeHoldCnt [getBridgeHoldCount $node_id bridge0]
+    set bridgeHoldCnt [getBridgeHoldCount $node_id]
     if { $bridgeHoldCnt != "" } {
 	lappend cfg "ifconfig $bridge_name holdcnt $bridgeHoldCnt"
     }
 
-    set bridgeHelloTime [getBridgeHelloTime $node_id bridge0]
+    set bridgeHelloTime [getBridgeHelloTime $node_id]
     if { $bridgeHelloTime != "" && $bridgeProtocol == "stp" } {
 	lappend cfg "ifconfig $bridge_name hellotime $bridgeHelloTime"
     }
 
-    set bridgeMaxAddr [getBridgeMaxAddr $node_id bridge0]
+    set bridgeMaxAddr [getBridgeMaxAddr $node_id]
     if { $bridgeMaxAddr != "" } {
 	lappend cfg "ifconfig $bridge_name maxaddr $bridgeMaxAddr"
     }
 
-    set bridgeTimeout [getBridgeTimeout $node_id bridge0]
+    set bridgeTimeout [getBridgeTimeout $node_id]
     if { $bridgeTimeout != "" } {
 	lappend cfg "ifconfig $bridge_name timeout $bridgeTimeout"
     }
