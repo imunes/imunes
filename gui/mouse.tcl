@@ -1659,7 +1659,7 @@ proc button1-release { c x y } {
 proc button3background { c x y } {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
-    global showBkgImage changed
+    global show_background_image changed
 
     .button3menu delete 0 end
 
@@ -1667,7 +1667,7 @@ proc button3background { c x y } {
     # Show canvas background
     #
     .button3menu add checkbutton -label "Show background" \
-    -underline 5 -variable showBkgImage \
+    -underline 5 -variable show_background_image \
     -command { redrawAll }
     
     .button3menu add separator
@@ -1923,12 +1923,12 @@ proc removeIPv6nodes {} {
 #   Change address range for selected nodes.
 #****
 proc changeAddressRange {} {
-    global changed changeAddrRange control changeAddressRange
+    global changed change_subnet4 control changeAddressRange
     global copypaste_nodes copypaste_list
 
     set control 0
     set autorenumber 1
-    set changeAddrRange 0
+    set change_subnet4 0
     set changeAddressRange 1
 
     if { $copypaste_nodes } {
@@ -1974,13 +1974,13 @@ proc changeAddressRange {} {
 		set n [lindex $el 0]
 		set i [lindex $el 1]
 		if { $counter == 0 } {
-		    set changeAddrRange 1
+		    set change_subnet4 1
 		}
 		autoIPv4addr $n $i
 		lappend autorenumbered_ifcs "$n $i"
 		incr counter
 		set changed 1
-		set changeAddrRange 0
+		set change_subnet4 0
 	    }
 	}
     }
@@ -2017,11 +2017,11 @@ proc changeAddressRange {} {
 	set ifc [lindex $el 1]
 	lassign [logicalPeerByIfc $node $ifc] peer -
 	if { [lsearch $autorenumber_nodes $node] < [lsearch $autorenumber_nodes $peer] } {
-	    set changeAddrRange 1
+	    set change_subnet4 1
 	}
 	autoIPv4addr $node $ifc
 	set changed 1
-	set changeAddrRange 0
+	set change_subnet4 0
     }
 
     set autorenumber 0
@@ -2040,12 +2040,12 @@ proc changeAddressRange {} {
 #   Change IPv6 address range for selected nodes.
 #****
 proc changeAddressRange6 {} {
-    global changed changeAddrRange6 control changeAddressRange6
+    global changed change_subnet6 control changeAddressRange6
     global copypaste_nodes copypaste_list
 
     set control 0
     set autorenumber 1
-    set changeAddrRange6 0
+    set change_subnet6 0
     set changeAddressRange6 1
 
     if { $copypaste_nodes } {
@@ -2091,13 +2091,13 @@ proc changeAddressRange6 {} {
 		set n [lindex $el 0]
 		set i [lindex $el 1]
 		if { $counter == 0 } {
-		    set changeAddrRange6 1
+		    set change_subnet6 1
 		}
 		autoIPv6addr $n $i
 		lappend autorenumbered_ifcs6 "$n $i"
 		incr counter
 		set changed 1
-		set changeAddrRange6 0
+		set change_subnet6 0
 	    }
 	}
     }
@@ -2134,11 +2134,11 @@ proc changeAddressRange6 {} {
 	set ifc [lindex $el 1]
 	lassign [logicalPeerByIfc $node $ifc] peer -
 	if { [lsearch $autorenumber_nodes $node] < [lsearch $autorenumber_nodes $peer] } {
-	    set changeAddrRange6 1
+	    set change_subnet6 1
 	}
 	autoIPv6addr $node $ifc
 	set changed 1
-	set changeAddrRange6 0
+	set change_subnet6 0
     }
 
     set autorenumber 0

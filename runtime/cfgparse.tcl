@@ -89,11 +89,11 @@ proc dumpCfg { method dest } {
     upvar 0 ::cf::[set ::curcfg]::zoom zoom
     upvar 0 ::cf::[set ::curcfg]::image_list image_list
     # the globals bellow should be placed in a namespace as well
-    global showIfNames showNodeLabels showLinkLabels
-    global showIfIPaddrs showIfIPv6addrs
-    global showBkgImage showGrid showAnnotations
-    global iconSize
-    global hostsAutoAssign
+    global show_interface_names show_node_labels show_link_labels
+    global show_interface_ipv4 show_interface_ipv6
+    global show_background_image show_grid show_annotations
+    global icon_size
+    global auto_etc_hosts
 
     foreach node $node_list {
 	upvar 0 ::cf::[set ::curcfg]::$node lnode
@@ -200,43 +200,43 @@ proc dumpCfg { method dest } {
     dumpputs $method $dest "option show \{"
 
     # XXX - this needs to be refactored.
-    if {$showIfNames == 0} { 
-	dumpputs $method $dest "    interface_names no" 
+    if { $show_interface_names == 0 } {
+	dumpputs $method $dest "    interface_names no"
     } else {
 	dumpputs $method $dest "    interface_names yes" }
-    if {$showIfIPaddrs == 0} { 
-	dumpputs $method $dest "    ip_addresses no" 
+    if { $show_interface_ipv4 == 0 } {
+	dumpputs $method $dest "    ip_addresses no"
     } else {
 	dumpputs $method $dest "    ip_addresses yes" }
-    if {$showIfIPv6addrs == 0} { 
-	dumpputs $method $dest "    ipv6_addresses no" 
+    if { $show_interface_ipv6 == 0 } {
+	dumpputs $method $dest "    ipv6_addresses no"
     } else {
 	dumpputs $method $dest "    ipv6_addresses yes" }
-    if {$showNodeLabels == 0} { 
-	dumpputs $method $dest "    node_labels no" 
+    if { $show_node_labels == 0 } {
+	dumpputs $method $dest "    node_labels no"
     } else {
 	dumpputs $method $dest "    node_labels yes" }
-    if {$showLinkLabels == 0} { 
-	dumpputs $method $dest "    link_labels no" 
+    if { $show_link_labels == 0 } {
+	dumpputs $method $dest "    link_labels no"
     } else {
 	dumpputs $method $dest "    link_labels yes" }
-    if {$showBkgImage == 0} {
+    if { $show_background_image == 0 } {
 	dumpputs $method $dest "    background_images no"
     } else {
 	dumpputs $method $dest "    background_images yes" }
-    if {$showAnnotations == 0} {
+    if { $show_annotations == 0 } {
 	dumpputs $method $dest "    annotations no"
     } else {
 	dumpputs $method $dest "    annotations yes" }
-    if {$hostsAutoAssign == 0} {
+    if { $auto_etc_hosts == 0 } {
 	dumpputs $method $dest "    hostsAutoAssign no"
     } else {
 	dumpputs $method $dest "    hostsAutoAssign yes" }
-    if {$showGrid == 0} {
+    if { $show_grid == 0 } {
 	dumpputs $method $dest "    grid no"
     } else {
 	dumpputs $method $dest "    grid yes" }
-    dumpputs $method $dest "    iconSize $iconSize"
+    dumpputs $method $dest "    iconSize $icon_size"
     dumpputs $method $dest "    zoom $zoom"
     dumpputs $method $dest "\}"
     dumpputs $method $dest ""
@@ -278,11 +278,11 @@ proc loadCfg { cfg } {
     upvar 0 ::cf::[set ::curcfg]::IPv4UsedList IPv4UsedList
     upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
     upvar 0 ::cf::[set ::curcfg]::etchosts etchosts
-    global showIfNames showNodeLabels showLinkLabels
-    global showIfIPaddrs showIfIPv6addrs
-    global showBkgImage showGrid showAnnotations
-    global iconSize
-    global hostsAutoAssign
+    global show_interface_names show_node_labels show_link_labels
+    global show_interface_ipv4 show_interface_ipv6
+    global show_background_image show_grid show_annotations
+    global icon_size
+    global auto_etc_hosts
     global execMode all_modules_list
 
     # Cleanup first
@@ -594,72 +594,72 @@ proc loadCfg { cfg } {
 		    switch -exact -- $field {
 			interface_names {
 			    if { $value == "no" } {
-				set showIfNames 0
+				set show_interface_names 0
 			    } elseif { $value == "yes" } {
-				set showIfNames 1
+				set show_interface_names 1
 			    }
 			}
 			ip_addresses {
 			    if { $value == "no" } {
-				set showIfIPaddrs 0
+				set show_interface_ipv4 0
 			    } elseif { $value == "yes" } {
-				set showIfIPaddrs 1
+				set show_interface_ipv4 1
 			    }
 			}
 			ipv6_addresses {
 			    if { $value == "no" } {
-				set showIfIPv6addrs 0
+				set show_interface_ipv6 0
 			    } elseif { $value == "yes" } {
-				set showIfIPv6addrs 1
+				set show_interface_ipv6 1
 			    }
 			}
 			node_labels {
 			    if { $value == "no" } {
-				set showNodeLabels 0
+				set show_node_labels 0
 			    } elseif { $value == "yes" } {
-				set showNodeLabels 1
+				set show_node_labels 1
 			    }
 			}
 			link_labels {
 			    if { $value == "no" } {
-				set showLinkLabels 0
+				set show_link_labels 0
 			    } elseif { $value == "yes" } {
-				set showLinkLabels 1
+				set show_link_labels 1
 			    }
 			}
 			background_images {
 			    if { $value == "no" } {
-				set showBkgImage 0
+				set show_background_image 0
 			    } elseif { $value == "yes" } {
-				set showBkgImage 1
+				set show_background_image 1
 			    }
 			}
 			annotations {
 			    if { $value == "no" } {
-				set showAnnotations 0
+				set show_annotations 0
 			    } elseif { $value == "yes" } {
-				set showAnnotations 1
+				set show_annotations 1
 			    }
 			}
 			grid {
 			    if { $value == "no" } {
-				set showGrid 0
+				set show_grid 0
 			    } elseif { $value == "yes" } {
-				set showGrid 1
+				set show_grid 1
 			    }
 			}
 			hostsAutoAssign {
 			    if { $value == "no" } {
-				set hostsAutoAssign 0
+				set auto_etc_hosts 0
 			    } elseif { $value == "yes" } {
-				set hostsAutoAssign 1
+				set auto_etc_hosts 1
 			    }
 			}
 			zoom {
 			    set zoom $value
 			}
 			iconSize {
-			    set iconSize $value
+			    set icon_size $value
 			}
 		    }
 		} elseif {"$class" == "annotation"} {

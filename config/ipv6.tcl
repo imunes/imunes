@@ -30,10 +30,10 @@
 # NAME
 #   ipv6.tcl -- file for handeling IPv6
 #****
-global ipv6 changeAddrRange6 changeAddressRange6
+global ipv6 change_subnet6 changeAddressRange6
 
 set ipv6 fc00::/64
-set changeAddrRange6 0
+set change_subnet6 0
 set changeAddressRange6 0
 
 #****f* ipv6.tcl/IPv6AddrApply
@@ -118,8 +118,8 @@ proc autoIPv6addr { node iface } {
     if {!$IPv6autoAssign} {
 	return
     }
-    global changeAddrRange6 control changeAddressRange6 autorenumbered_ifcs6
-    #changeAddrRange6 - to change the subnet (1) or not (0)
+    global change_subnet6 control changeAddressRange6 autorenumbered_ifcs6
+    #change_subnet6 - to change the subnet (1) or not (0)
     #changeAddressRange6 - is this procedure called from 'changeAddressRange' (1 if true, otherwise 0)
     #autorenumbered_ifcs6 - list of all interfaces that changed an address
 
@@ -164,7 +164,7 @@ proc autoIPv6addr { node iface } {
 	}
     }
 
-    if { $peer_ip6addrs != "" && $changeAddrRange6 == 0 } {
+    if { $peer_ip6addrs != "" && $change_subnet6 == 0 } {
 	set targetbyte [expr 0x[$node_type.IPAddrRange]]
 	set addr [nextFreeIP6Addr [lindex $peer_ip6addrs 0] $targetbyte $peer_ip6addrs]
     } else {

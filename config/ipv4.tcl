@@ -30,12 +30,12 @@
 # NAME
 #   ipv4.tcl -- file for handling IPv4
 #****
-global ipv4 numbits control changeAddrRange changeAddressRange
+global ipv4 numbits control change_subnet4 changeAddressRange
 
 set ipv4 10.0.0.0/24
 set numbits [lindex [split $ipv4 /] 1]
 set control 0
-set changeAddrRange 0
+set change_subnet4 0
 set changeAddressRange 0
 
 #****f* ipv4.tcl/IPv4AddrApply
@@ -255,12 +255,11 @@ proc autoIPv4addr { node iface } {
 	return
     }
     global numbits
-    #changeAddrRange - oznacuje da li se treba mijenjati podmreza (1) ili ne (0) 
-    global changeAddrRange control
-    #changeAddressRange - oznacuje da li je ova procedura pozvana iz
-    #procedure changeAddressRange (1 ako je, 0 inace)
+    #change_subnet4 - to change the subnet (1) or not (0)
+    global change_subnet4 control
+    #changeAddressRange - is this procedure called from 'changeAddressRange' (1 if true, otherwise 0)
     global changeAddressRange
-    #autorenumbered_ifcs - lista svih sucelja cvorova kojima je promijenjena adresa
+    #autorenumbered_ifcs - list of all interfaces that changed an address
     global autorenumbered_ifcs
 
     set node_type [nodeType $node]
@@ -305,7 +304,7 @@ proc autoIPv4addr { node iface } {
 	}
     }
 
-    if { $peer_ip4addrs != "" && $changeAddrRange == 0 } {
+    if { $peer_ip4addrs != "" && $change_subnet4 == 0 } {
 	set addr [nextFreeIP4Addr [lindex $peer_ip4addrs 0] [$node_type.IPAddrRange] $peer_ip4addrs]
     } else {
 	set addr [getNextIPv4addr $node_type $IPv4UsedList]
