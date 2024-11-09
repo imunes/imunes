@@ -376,7 +376,7 @@ proc terminateAllNodes { eid } {
 
     try {
 	statline "Stopping services for NODESTOP hook..."
-	services stop "NODESTOP"
+	services stop "NODESTOP" "bkg" $allNodes
 
 	statline "Stopping all nodes..."
 	pipesCreate
@@ -391,7 +391,7 @@ proc terminateAllNodes { eid } {
 	pipesClose
 
 	statline "Stopping services for LINKDEST hook..."
-	services stop "LINKDEST"
+	services stop "LINKDEST" "bkg" $allNodes
 
 	statline "Destroying links..."
 	pipesCreate
@@ -418,7 +418,7 @@ proc terminateAllNodes { eid } {
 	pipesClose
 
 	statline "Stopping services for NODEDEST hook..."
-	services stop "NODEDEST"
+	services stop "NODEDEST" "bkg" $l3nodes
 
 	statline "Destroying L3 nodes..."
 	pipesCreate
@@ -552,15 +552,15 @@ proc stopNodeFromMenu { node } {
     }
 
     pipesCreate
-    services stop "NODESTOP" $node
+    services stop "NODESTOP" "" $node
     try {
 	terminateL2L3Nodes $eid $node 1 $w
     } on error err {
 	finishTerminating 0 "$err" $w
 	return
     }
-    services stop "LINKDEST" $node
-    services stop "NODEDEST"
+    services stop "LINKDEST" "" $node
+    services stop "NODEDEST" "" $node
     pipesClose
 
     finishTerminating 1 "" $w
