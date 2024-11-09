@@ -36,25 +36,26 @@ proc $MODULE.confNewIfc { node ifc } {
 
 proc $MODULE.confNewNode { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
-    
+
     set nconfig [list \
 	"hostname $node" \
 	! ]
     lappend $node "network-config [list $nconfig]"
 }
 
-proc $MODULE.icon {size} {
+proc $MODULE.icon { size } {
     global ROOTDIR LIBDIR
+
     switch $size {
-      normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/cloud.gif
-      }
-      small {
-	return $ROOTDIR/$LIBDIR/icons/small/cloud.gif
-      }
-      toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/cloud.gif
-      }
+	normal {
+	    return $ROOTDIR/$LIBDIR/icons/normal/cloud.gif
+	}
+	small {
+	    return $ROOTDIR/$LIBDIR/icons/small/cloud.gif
+	}
+	toolbar {
+	    return $ROOTDIR/$LIBDIR/icons/tiny/cloud.gif
+	}
     }
 }
 
@@ -62,7 +63,7 @@ proc $MODULE.toolbarIconDescr {} {
     return "Add new WLAN domain"
 }
 
-proc $MODULE.ifacePrefix {l r} {
+proc $MODULE.ifacePrefix { l r } {
     return e
 }
 
@@ -80,7 +81,7 @@ proc $MODULE.nodeCreate { eid node } {
     set t [exec printf "mkpeer rfee link0 link0\nshow ." | jexec $eid ngctl -f -]
     set tlen [string length $t]
     set id [string range $t [expr $tlen - 31] [expr $tlen - 24]]
-    catch {exec jexec $eid ngctl name \[$id\]: $node}
+    catch { exec jexec $eid ngctl name \[$id\]: $node }
     set ngnodemap($eid\.$node) $node
 }
 
@@ -105,14 +106,14 @@ proc $MODULE.nodeConfigure { eid node } {
 	set local_x [lindex [getNodeCoords n$local_epid] 0]
 	set local_y [lindex [getNodeCoords n$local_epid] 1]
 	foreach epid $wlan_epids {
-	    if {$epid == $local_epid} {
+	    if { $epid == $local_epid } {
 		continue
 	    }
 	    set x [lindex [getNodeCoords n$epid] 0]
 	    set y [lindex [getNodeCoords n$epid] 1]
 	    set d [expr sqrt(($local_x - $x) ** 2 + ($local_y - $y) ** 2)]
 	    set ber [format %1.0E [expr 1 - 0.99999999 / (1 + ($d / 500) ** 30)]]
-	    if {$ber == "1E+00"} {
+	    if { $ber == "1E+00" } {
 		continue
 	    }
 	    lappend visible_epids $epid:ber$ber
