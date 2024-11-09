@@ -39,7 +39,7 @@ font create imnDefaultFont -family TkDefaultFont -size $defaultFontSize
 option add *font imnDefaultFont
 
 namespace eval ttk::theme::imunes {
-    variable colors 
+    variable colors
     array set colors {
 	-disabledfg	"#999999"
 	-frame  	"#d9d9d9"

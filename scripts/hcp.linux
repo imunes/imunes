@@ -13,7 +13,7 @@ fi
 help() {
 cat <<__END__
 
-Command $command can be used to copy files to/from virtual images. 
+Command $command can be used to copy files to/from virtual images.
 Hostname is used instead of virtual images filesystem mount point.
 
 Usage:
@@ -65,7 +65,7 @@ getCopyDirection() {
 	echo betweenVi
         return
     fi
-    # "toVi" if only the last one is in virtual image 
+    # "toVi" if only the last one is in virtual image
     if  contains "${@: -1}" ":"; then
         for argn in ${@:0:$#}; do
             if  contains "$argn" ":"; then
@@ -117,7 +117,7 @@ copyToVi () {
     # copy file to external link
     n=`expr $# - 1`
     # copy file using docker
-    for f in ${@:1:$n} 
+    for f in ${@:1:$n}
     do
 	if ! test "${f:0:1}" = "-"; then
 	    cp -r $f $docktmpdir
