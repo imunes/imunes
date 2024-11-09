@@ -244,7 +244,7 @@ proc createExperimentScreenshot { eid } {
 	-data .panwin.f1.c} err]
     if { ($error == 0) } {
 	screenshot write $fileName -format png
-	catch {exec convert $fileName -resize 300x210\! $fileName\2}
+	catch { exec magick $fileName -resize 300x210\! $fileName\2 }
 	catch {exec mv $fileName\2 $fileName}
     }
 }

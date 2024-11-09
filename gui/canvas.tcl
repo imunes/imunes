@@ -871,19 +871,19 @@ proc popupBkgApply { wi c } {
 		original {
 		    if {$crop == 1} {
 			if {!$winOS} {
-			    exec convert $bgsrcfile -gravity $alignCanvasBkg -background white \
+			    exec magick $bgsrcfile -gravity $alignCanvasBkg -background white \
 			      -extent $sizex\x$sizey $destImgFile
 			} else {
-			    exec cmd /c convert $bgsrcfile -gravity $alignCanvasBkg -background white \
+			    exec cmd /c magick $bgsrcfile -gravity $alignCanvasBkg -background white \
 			      -extent $sizex\x$sizey $destImgFile
 			}
 		    } else {
 			if {!$winOS} {
-			    exec convert $bgsrcfile -gravity $alignCanvasBkg -background white \
+			    exec magick $bgsrcfile -gravity $alignCanvasBkg -background white \
 			      -extent $sizex\x$sizey $destImgFile
 			} else {
-			  exec cmd /c convert $bgsrcfile -gravity $alignCanvasBkg -background white \
-			      -extent $sizex\x$sizey $destImgFile 
+			  exec cmd /c magick $bgsrcfile -gravity $alignCanvasBkg -background white \
+			      -extent $sizex\x$sizey $destImgFile
 			}
 		    }	    
 		    
@@ -898,10 +898,10 @@ proc popupBkgApply { wi c } {
 		}
 		str_shr {
 		    if {!$winOS} {
-			exec convert $bgsrcfile -resize $sizex\x$sizey \
+			exec magick $bgsrcfile -resize $sizex\x$sizey \
 			  -size $sizex\x$sizey xc:white +swap -gravity $alignCanvasBkg -composite $destImgFile
 		    } else {
-			exec cmd /c convert $bgsrcfile -resize $sizex\x$sizey \
+			exec cmd /c magick $bgsrcfile -resize $sizex\x$sizey \
 			  -size $sizex\x$sizey xc:white +swap -gravity $alignCanvasBkg -composite $destImgFile
 		    }
 		    
@@ -943,9 +943,9 @@ proc popupBkgApply { wi c } {
 		}
 		adjustI2C {
 		    if {!$winOS} {
-			exec convert $bgsrcfile -resize $sizex\x$sizey\! $destImgFile
+			exec magick $bgsrcfile -resize $sizex\x$sizey\! $destImgFile
 		    } else {
-			exec cmd /c convert $bgsrcfile -resize $sizex\x$sizey\! $destImgFile
+			exec cmd /c magick $bgsrcfile -resize $sizex\x$sizey\! $destImgFile
 		    }
 
 		    set bkgname [loadImage $destImgFile $c canvasBackground $bgsrcfile]

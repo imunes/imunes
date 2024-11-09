@@ -236,7 +236,7 @@ if { $isOSwin } {
 }
 
 if { !$isOSwin } {
-    catch {exec convert -version | head -1 | cut -d " " -f 1,2,3} imInfo
+    catch {exec magick -version | head -1 | cut -d " " -f 1,2,3} imInfo
 } else {
     set imInfo $env(PATH)
 }

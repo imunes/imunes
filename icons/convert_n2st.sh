@@ -12,11 +12,11 @@ tiny_opt="-adaptive-resize $tfact -gravity center -background none -extent $tsiz
 
 for img in $images; do
     if [ ! -e small/$img ] || [ normal/$img -nt small/$img ]; then
-	convert $small_opt normal/$img small/$img
+	magick $small_opt normal/$img small/$img
 	echo "Converting normal/$img to small."
     fi
     if [ ! -e tiny/$img ] || [ normal/$img -nt tiny/$img ]; then
-	convert $tiny_opt normal/$img tiny/$img
+	magick $tiny_opt normal/$img tiny/$img
 	echo "Converting normal/$img to tiny."
     fi
 done
