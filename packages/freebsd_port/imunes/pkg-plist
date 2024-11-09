@@ -105,7 +105,6 @@ lib/imunes/nodes/frr.tcl
 lib/imunes/nodes/genericrouter.tcl
 lib/imunes/nodes/host.tcl
 lib/imunes/nodes/hub.tcl
-lib/imunes/nodes/ipfirewall.tcl
 lib/imunes/nodes/lanswitch.tcl
 lib/imunes/nodes/localnodes.tcl
 lib/imunes/nodes/nat64.tcl

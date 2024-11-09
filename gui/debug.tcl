@@ -152,7 +152,6 @@ bind . <F6> {
     source "$ROOTDIR/$LIBDIR/nodes/filter.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/host.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/hub.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/ipfirewall.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/lanswitch.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/genericrouter.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"

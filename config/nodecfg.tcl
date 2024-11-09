@@ -2797,47 +2797,6 @@ proc setType { node type } {
     }
 }
 
-#****f* nodecfg.tcl/setCloudParts
-# NAME
-#   setCloudParts -- set cloud parts
-# SYNOPSIS
-#   setCloudParts $node $nr_parts
-# FUNCTION
-#   Sets the parts of the node's cloud.
-# INPUTS
-#   * node -- node id
-#   * nr_parts -- cloud parts
-#****
-proc setCloudParts { node nr_parts } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set i [lsearch [set $node] "num_parts *"]
-    if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i "num_parts $nr_parts"]
-    } else {
-	set $node [linsert [set $node] end "num_parts $nr_parts"];
-    }
-}
-
-#****f* nodecfg.tcl/getCloudParts
-# NAME
-#   getCloudParts -- get cloud parts
-# SYNOPSIS
-#   getCloudParts $node
-# FUNCTION
-#   Returns the node's cloud parts.
-# INPUTS
-#   * node -- node id
-# RESULT
-#   * part -- cloud parts
-#****
-proc getCloudParts { node } {
-  upvar 0 ::cf::[set ::curcfg]::$node $node
-
-  set part [lindex [lsearch -inline [set $node] "num_parts *"] 1];
-  return $part;
-}
-
 #****f* nodecfg.tcl/registerModule
 # NAME
 #   registerModule -- register module

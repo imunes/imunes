@@ -180,9 +180,6 @@ proc drawNode { node } {
     if { $invisible == 1 && [nodeType $node] == "pseudo" } {
 	.panwin.f1.c itemconfigure $label -state hidden
     }
-    if {[nodeType $node] == "cloud"} {
-	setCloudParts $node 1
-    }
 }
 
 #****f* editor.tcl/drawLink

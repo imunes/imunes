@@ -1253,65 +1253,6 @@ proc configGUI_ifcIPv6Address { wi node ifc } {
     pack $wi.if$ifc.ipv6 -anchor w -padx 10
 }
 
-#****f* nodecfgGUI.tcl/configGUI_ifcDirection
-# NAME
-#   configGUI_ifcDirection -- configure GUI - interface direction
-# SYNOPSIS
-#   configGUI_ifcDirection $wi $node $ifc
-# FUNCTION
-#   Creating module for changing direction of the interface (internal or
-#   external).
-# INPUTS
-#   * wi -- widget
-#   * node -- node id
-#   * ifc -- interface id
-#****
-proc configGUI_ifcDirection { wi node ifc } {
-    global guielements externalifc
-    lappend guielements "configGUI_ifcDirection $ifc"
-    set external 0
-    set externalifc ""
-    ttk::frame $wi.if$ifc.direct -borderwidth 2
-    ttk::label $wi.if$ifc.direct.txt -text "Direction " -anchor w
-    global ifdirect$ifc
-    set ifdirect$ifc [getIfcDirect $node $ifc]
-    foreach interface [ifcList $node] {
- 	if { [string equal [getIfcDirect $node $interface] "external"] } {
- 	    set external 1
-            set externalifc $interface
- 	}
-     }
-    ttk::radiobutton $wi.if$ifc.direct.int -text "internal" \
-	-variable ifdirect$ifc -value internal -padding 2
-    ttk::radiobutton $wi.if$ifc.direct.ext -text "external" \
-	    -variable ifdirect$ifc -value external -padding 2
-    pack $wi.if$ifc.direct.txt -side left
-    pack $wi.if$ifc.direct.int $wi.if$ifc.direct.ext -side left -anchor w
-    pack $wi.if$ifc.direct -anchor w -padx 10
-}
-
-#****f* nodecfgGUI.tcl/configGUI_ipfirewallRuleset
-# NAME
-#   configGUI_ipfirewallRuleset -- configure GUI - ipfirewall ruleset
-# SYNOPSIS
-#   configGUI_ipfirewallRuleset $wi $node
-# FUNCTION
-#   Creating module for adding rules for packet filtering (ipfw rules).
-# INPUTS
-#   * wi -- widget
-#   * node -- node id
-#****
-proc configGUI_ipfirewallRuleset { wi node } {
-    global guielements
-    lappend guielements configGUI_ipfirewallRuleset
-    ttk::frame $wi.rules -borderwidth 2 -relief groove -padding 4
-    ttk::label $wi.rules.label -text "Add rules:"
-    text $wi.rules.text -bg white -width 42 -height 4 -takefocus 0
-    pack $wi.rules.label -anchor w -pady 2
-    pack $wi.rules.text -fill both -expand 1 -padx 4 -expand 1
-    pack $wi.rules -anchor w -fill both -expand 1
-}
-
 #****f* nodecfgGUI.tcl/configGUI_staticRoutes
 # NAME
 #   configGUI_staticRoutes -- configure GUI - static routes
@@ -1787,35 +1728,6 @@ proc configGUI_cpuConfig { wi node } {
     pack $wi.cpucfg -anchor w -fill both
 }
 
-#****f* nodecfgGUI.tcl/configGUI_cloudConfig
-# NAME
-#   configGUI_cloudConfig -- configure GUI - cloud configuration
-# SYNOPSIS
-#   configGUI_cloudConfig $wi $node
-# FUNCTION
-#   Creating module for cloud configuration.
-# INPUTS
-#   * wi -- widget
-#   * node -- node id
-#****
-proc configGUI_cloudConfig { wi node } {
-    global guielements
-    lappend guielements configGUI_cloudConfig
-    ttk::frame $wi.cloudpart -borderwidth 2 -relief groove -padding 6
-    ttk::frame $wi.cloudpart.label
-    ttk::label $wi.cloudpart.label.txt -text "Number of hosts:"
-    ttk::spinbox $wi.cloudpart.label.num -width 10 -validate focus \
-        -invalidcommand "focusAndFlash %W"
-    $wi.cloudpart.label.num insert 0 1;
-    $wi.cloudpart.label.num configure \
-        -validatecommand {checkIntRange %P 1 1000000} \
-        -from 1 -to 1000000 -increment 1
-    pack $wi.cloudpart.label.txt -side left -anchor w -padx 4
-    pack $wi.cloudpart.label.num
-    pack $wi.cloudpart.label -expand 1 -fill both
-    pack $wi.cloudpart -expand 1 -fill both
-}
-
 #****f* nodecfgGUI.tcl/configGUI_ifcVlanConfig
 # NAME
 #   configGUI_ifcVlanConfig -- configure GUI - interface vlan configuration
@@ -2146,71 +2058,6 @@ proc configGUI_ifcIPv6AddressApply { wi node ifc } {
 	    setIfcIPv6addrs $node $ifc $ipaddrs
 	}
 	set changed 1
-    }
-}
-
-#****f* nodecfgGUI.tcl/configGUI_ifcDirectionApply
-# NAME
-#   configGUI_ifcDirectionApply -- configure GUI - interface direction apply
-# SYNOPSIS
-#   configGUI_ifcDirectionApply $wi $node $ifc
-# FUNCTION
-#   Saves changes in the module with direction of the interface .
-# INPUTS
-#   * wi -- widget
-#   * node -- node id
-#   * ifc -- interface name
-#****
-proc configGUI_ifcDirectionApply { wi node ifc } {
-    global changed apply externalifc
-    global [subst ifdirect$ifc]
-    set ifdirectstate [subst $[subst ifdirect$ifc]]
-    set oldifdirectstate [getIfcDirect $node $ifc]
-    if { $ifdirectstate != $oldifdirectstate } {
-	if { $ifdirectstate == "external" } {
-	    setIfcDirect $node $externalifc "internal"
-	}
-	set externalifc $ifc
-	if {$apply == 1} {
-	    setIfcDirect $node $ifc $ifdirectstate
-	}
-	set changed 1
-    }
-}
-
-#****f* nodecfgGUI.tcl/configGUI_ipfirewallRulesetApply
-# NAME
-#   configGUI_ipfirewallRulesetApply -- configure GUI - ipfirewall rulset apply
-# SYNOPSIS
-#   configGUI_ipfirewallRulesetApply $wi $node
-# FUNCTION
-#   Saves changes in the module with ipfw rules.
-# INPUTS
-#   * wi -- widget
-#   * node -- node id
-#****
-proc configGUI_ipfirewallRulesetApply { wi node } {
-    global changed
-    set i 1
-    set error 0
-
-    while { 1 } {
-      set text [$wi.rules.text get $i.0 $i.end]
-      if { $text == "" } {
-	  break
-      }
-      set rule [string range $text 0 end]
-      catch { eval exec "ipfw -n $rule" } msg
-      if { [string range $msg 0 4] == "ipfw:" } {
-	  set error 1
-	  set warning "The rule syntax is wrong."
-	  tk_messageBox -message $warning -type ok -icon warning \
-	      -title "Rule syntax error"
-      }
-      if { $error == 1 } {
-	  break
-      }
-      incr i
     }
 }
 
@@ -2597,23 +2444,6 @@ proc configGUI_cpuConfigApply { wi node } {
 	setNodeCPUConf $node [list $newcpuconf]
 	set changed 1
     }
-}
-
-#****f* nodecfgGUI.tcl/configGUI_cloudConfigApply
-# NAME
-#   configGUI_cloudConfigApply -- configure GUI - cloud configuration apply
-# SYNOPSIS
-#   configGUI_cloudConfigApply $wi $node
-# FUNCTION
-#   Saves changes in the module with cloud configuration parameters.
-# INPUTS
-#   * wi -- widget
-#   * node -- node id
-#****
-proc configGUI_cloudConfigApply { wi node } {
-    set cloud_parts [$wi.cloudpart.label.num get]
-    puts $cloud_parts
-    setCloudParts $node $cloud_parts
 }
 
 #****f* nodecfgGUI.tcl/configGUI_ifcVlanConfigApply
