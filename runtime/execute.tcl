@@ -1060,43 +1060,61 @@ proc executeConfNodes { nodes nodeCount w } {
 # NAME
 #   generateHostsFile -- generate hosts file
 # SYNOPSIS
-#   generateHostsFile $node
+#   generateHostsFile $node_id
 # FUNCTION
 #   Generates /etc/hosts file on the given node containing all the nodes in the
 #   topology.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc generateHostsFile { node } {
+proc generateHostsFile { node_id } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::etchosts etchosts
+
     global hostsAutoAssign
 
-    if { $hostsAutoAssign == 1 } {
-	if { [[typemodel $node].virtlayer] == "VIMAGE" } {
-	    if { $etchosts == "" } {
-		foreach iter $node_list {
-		    if { [[typemodel $iter].virtlayer] == "VIMAGE" } {
-			foreach ifc [ifcList $iter] {
-			    if { $ifc != "" } {
-				set ipv4 [lindex [split [getIfcIPv4addr $iter $ifc] "/"] 0]
-				set ipv6 [lindex [split [getIfcIPv6addr $iter $ifc] "/"] 0]
-				set ifname [getNodeName $iter]
-				if { $ipv4 != "" } {
-				    set etchosts "$etchosts$ipv4	$ifname\n"
-				}
-				if { $ipv6 != "" } {
-				    set etchosts "$etchosts$ipv6	$ifname\n"
-				}
-				break
-			    }
-			}
+    if { $hostsAutoAssign != 1 || [[typemodel $node_id].virtlayer] != "VIMAGE" } {
+	return
+    }
+
+    if { $etchosts == "" } {
+	foreach other_node_id $node_list {
+	    if { [[typemodel $other_node_id].virtlayer] != "VIMAGE" } {
+		continue
+	    }
+
+	    set ctr 0
+	    set ctr6 0
+	    foreach ifc [ifcList $other_node_id] {
+		if { $ifc == "" } {
+		    continue
+		}
+
+		set node_name [getNodeName $other_node_id]
+		foreach ipv4 [getIfcIPv4addrs $other_node_id $ifc] {
+		    set ipv4 [lindex [split $ipv4 "/"] 0]
+		    if { $ctr == 0 } {
+			set etchosts "$etchosts$ipv4	${node_name}\n"
+		    } else {
+			set etchosts "$etchosts$ipv4	${node_name}_${ctr}\n"
 		    }
+		    incr ctr
+		}
+
+		foreach ipv6 [getIfcIPv6addrs $other_node_id $ifc] {
+		    set ipv6 [lindex [split $ipv6 "/"] 0]
+		    if { $ctr6 == 0 } {
+			set etchosts "$etchosts$ipv6	${node_name}.6\n"
+		    } else {
+			set etchosts "$etchosts$ipv6	${node_name}_${ctr6}.6\n"
+		    }
+		    incr ctr6
 		}
 	    }
-	    writeDataToNodeFile $node /etc/hosts $etchosts
 	}
     }
+
+    writeDataToNodeFile $node_id /etc/hosts $etchosts
 }
 
 proc waitForConfStart { nodes nodeCount w } {
