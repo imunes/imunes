@@ -1,4 +1,4 @@
-#! /bin/sh 
+#! /bin/sh
 
 command=`basename $0`
 
@@ -70,10 +70,10 @@ get_explist() {
 		exp_timestamp=`cat /var/run/imunes/$exp/timestamp`
 		data="$exp_name - $exp_timestamp"
 	    fi
-	    echo "$exp ($data)"
+	    echo "$exp [$data]"
 	else
 	    # for older IMUNES versions
-	    echo "$exp (`jls host.hostname path | grep "imunes/$exp" | cut -d" " -f1 |  paste -s -d" " -`)"
+	    echo "$exp [`jls host.hostname path | grep "imunes/$exp" | cut -d" " -f1 |  paste -s -d" " -`]"
 	fi
     done
 }

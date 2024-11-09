@@ -91,7 +91,6 @@
 #    * def_router_model -- default router model
 #****
 
-
 set newlink ""
 set selectbox ""
 set selected ""
@@ -194,7 +193,7 @@ wm geometry . 1016x716-20+0
 set iconlist ""
 foreach size "256 128 64" {
     set path "$ROOTDIR/$LIBDIR/icons/imunes_icon$size.png"
-    if {[file exists $path]} {
+    if { [file exists $path] } {
 	set icon$size [image create photo -file $path]
 	append iconlist "\$icon$size "
     }
@@ -257,7 +256,7 @@ bind . <Control-s> "fileSaveDialogBox"
 .menubar.file add command -label "Print" -underline 0 \
   -command {
     set w .entry1
-    catch {destroy $w}
+    catch { destroy $w }
     toplevel $w
     wm transient $w .
     wm resizable $w 0 0
@@ -287,15 +286,15 @@ set printFileType ps
 .menubar.file add command -label "Print To File" -underline 9 \
   -command {
     global winOS
+
     set w .entry1
-    catch {destroy $w}
+    catch { destroy $w }
     toplevel $w
     wm transient $w .
     wm resizable $w 0 0
     wm title $w "Printing options"
     wm iconname $w "Printing options"
 
-    #dodan glavni frame "printframe"
     ttk::frame $w.printframe
     pack $w.printframe -fill both -expand 1
 
@@ -323,6 +322,7 @@ set printFileType ps
     ttk::button $w.printframe.path.browse -text "Browse" -width 8 \
 	-command {
 	    global printFileType
+
 	    set printdest [tk_getSaveFile -initialfile print \
 	      -defaultextension .$printFileType]
 	    $w.printframe.path.e1 insert 0 $printdest
@@ -381,6 +381,7 @@ bind . <Control-d> selectAdjacent
 menu .menubar.canvas -tearoff 0
 .menubar.canvas add command -label "New" -underline 0 -command {
     newCanvas ""
+
     switchCanvas last
     set changed 1
     updateUndoLog
@@ -398,12 +399,14 @@ menu .menubar.canvas -tearoff 0
 	selectNode .panwin.f1.c $obj
     }
     deleteSelection
+
     set i [lsearch $canvas_list $curcanvas]
     set canvas_list [lreplace $canvas_list $i $i]
     set curcanvas [lindex $canvas_list $i]
     if { $curcanvas == "" } {
 	set curcanvas [lindex $canvas_list end]
     }
+
     switchCanvas none
     set changed 1
     updateUndoLog
@@ -452,7 +455,7 @@ menu .menubar.tools -tearoff 0
 .menubar.tools add command -label "IPv4 address pool" -underline 3 \
     -command {
     set w .entry1
-    catch {destroy $w}
+    catch { destroy $w }
     toplevel $w
     wm transient $w .
     #wm resizable $w 0 0
@@ -471,7 +474,7 @@ menu .menubar.tools -tearoff 0
     $w.ipv4frame.e1 insert 0 $ipv4
     pack $w.ipv4frame.e1 -side top -pady 5 -padx 10 -fill x
 
-    $w.ipv4frame.e1 configure -invalidcommand {checkIPv4Net %P}
+    $w.ipv4frame.e1 configure -invalidcommand { checkIPv4Net %P }
 
     ttk::frame $w.ipv4frame.buttons
     pack $w.ipv4frame.buttons -side bottom -fill x -pady 2m
@@ -487,7 +490,7 @@ menu .menubar.tools -tearoff 0
 .menubar.tools add command -label "IPv6 address pool" -underline 3 \
     -command {
     set w .entry1
-    catch {destroy $w}
+    catch { destroy $w }
     toplevel $w
     wm transient $w .
     #wm resizable $w 0 0
@@ -505,7 +508,7 @@ menu .menubar.tools -tearoff 0
     $w.ipv6frame.e1 insert 0 $ipv6
     pack $w.ipv6frame.e1 -side top -pady 5 -padx 10 -fill x
 
-    $w.ipv6frame.e1 configure -invalidcommand {checkIPv6Net %P}
+    $w.ipv6frame.e1 configure -invalidcommand { checkIPv6Net %P }
 
     ttk::frame $w.ipv6frame.buttons
     pack $w.ipv6frame.buttons -side bottom -fill x -pady 2m
@@ -519,13 +522,12 @@ menu .menubar.tools -tearoff 0
     pack $w.ipv6frame.buttons.cancel -side right -expand 1 -anchor w -padx 2
 }
 .menubar.tools add command -label "Routing protocol defaults" -underline 0 -command {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global router_model supp_router_models routerDefaultsModel
     global routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable routerBgpEnable
 
     set wi .popup
-    catch {destroy $wi}
+    catch { destroy $wi }
     toplevel $wi
     wm transient $wi .
     wm resizable $wi 0 0
@@ -585,7 +587,7 @@ menu .menubar.tools -tearoff 0
 	$w.model.quagga configure -state disabled
 	$w.model.static configure -state disabled
     }
-    if {"frr" ni $supp_router_models} {
+    if { "frr" ni $supp_router_models } {
 	$w.model.frr configure -state disabled
     }
 
@@ -608,13 +610,14 @@ menu .menubar.tools -tearoff 0
     pack $w.buttons.b1 -side left -expand 1 -anchor e -padx 2
     pack $w.buttons.b2 -side right -expand 1 -anchor w -padx 2
 }
+
 #.menubar.tools add separator
 #.menubar.tools add command -label "ns2imunes converter" \
 #    -underline 0 -command {
 #
 #    #dodana varijabla ns2imdialog, dodan glavni frame "ns2convframe"
 #    set ns2imdialog .ns2im-dialog
-#    catch {destroy $ns2imdialog}
+#    catch { destroy $ns2imdialog }
 #    toplevel $ns2imdialog
 #    wm transient $ns2imdialog .
 #    wm resizable $ns2imdialog 0 0
@@ -641,7 +644,7 @@ menu .menubar.tools -tearoff 0
 #	ns2im $srcfile
 #	destroy $ns2imdialog
 #    }
-#    ttk::button $f2.b2 -text "Cancel" -command { destroy $ns2imdialog}
+#    ttk::button $f2.b2 -text "Cancel" -command { destroy $ns2imdialog }
 #
 #    pack $f1.b $f1.e -side right
 #    pack $f1.l -side right -fill x -expand 1
@@ -704,6 +707,7 @@ menu $m -tearoff 0
 	set show_node_labels 1
 	set show_link_labels 1
 	redrawAllLinks
+
 	foreach object [.panwin.f1.c find withtag linklabel] {
 	    .panwin.f1.c itemconfigure $object -state normal
 	}
@@ -716,6 +720,7 @@ menu $m -tearoff 0
 	set show_node_labels 0
 	set show_link_labels 0
 	redrawAllLinks
+
 	foreach object [.panwin.f1.c find withtag linklabel] {
 	    .panwin.f1.c itemconfigure $object -state hidden
 	}
@@ -806,7 +811,7 @@ foreach widget $widgetlist {
     -underline 0 -command {
     global showConfig
     set w .entry1
-    catch {destroy $w}
+    catch { destroy $w }
     toplevel $w
     wm transient $w .
     wm resizable $w 0 0
@@ -833,7 +838,7 @@ foreach widget $widgetlist {
     set commands {"ifconfig" "ps ax" "netstat -rnf inet" "netstat -rn" "ls" \
 	"cat boot.conf"}
     ttk::combobox $w.custom.e1 -width 30 -values $commands
-    if {$showConfig != "None"} {
+    if { $showConfig != "None" } {
     	$w.custom.e1 insert 0 $showConfig
     } else {
     	$w.custom.e1 insert 0  [lindex $commands 0]
@@ -855,8 +860,8 @@ menu .menubar.events -tearoff  0
 .menubar.events add command -label "Start scheduling" -underline 0 \
 	-state normal -command "startEventScheduling"
 .menubar.events add command -label "Stop scheduling" -underline 1 \
-	-state disabled -command "stopEventScheduling" 
-.menubar.events add separator	
+	-state disabled -command "stopEventScheduling"
+.menubar.events add separator
 .menubar.events add command -label "Event editor" -underline 0 \
 	-command "elementsEventsEditor"
 #
@@ -869,9 +874,9 @@ menu .menubar.experiment -tearoff 0
 	-command "setOperMode edit" -state disabled
 .menubar.experiment add command -label "Restart" -underline 0 \
 	-command "setOperMode edit; setOperMode exec" -state disabled
-.menubar.experiment add separator	
+.menubar.experiment add separator
 .menubar.experiment add command -label "Attach to experiment" -underline 0 \
-	-command "attachToExperimentPopup" 
+	-command "attachToExperimentPopup"
 
 #
 # Help
@@ -906,7 +911,7 @@ menu .menubar.help -tearoff 0
     grid $mainFrame.imunesLabel -column 0 -row 1 -pady 5 -padx 5
     grid $mainFrame.imunesVersion -column 0 -row 2 -pady {5 1} -padx 5
     grid $mainFrame.lastChanged -column 0 -row 3 -pady {1 5} -padx 5
-    if { $imunesAdditions != ""} {
+    if { $imunesAdditions != "" } {
 	grid $mainFrame.imunesAdditions -column 0 -row 4 -pady {0 1} -padx 5
     }
     grid $mainFrame.imunesDesc -column 0 -row 5 -pady {5 10} -padx 5
@@ -945,11 +950,11 @@ foreach b {select link} {
 
     # hover status line
     set msg ""
-    if { $b == "select" } { 
-	set msg "Select tool" 
+    if { $b == "select" } {
+	set msg "Select tool"
     } elseif { $b == "link"  } {
 	set msg "Create link"
-    } 
+    }
 
     bind $mf.left.$b <Any-Enter> ".bottom.textbox config -text {$msg}"
     bind $mf.left.$b <Any-Leave> ".bottom.textbox config -text {}"
@@ -1028,7 +1033,6 @@ canvas $mf.hframe.t -width 160 -height 18 -bd 0 -highlightthickness 0 \
 	-xscrollcommand "$mf.hframe.ts set"
 bind $mf.hframe.t <1> {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-
     set canvas [lindex [$mf.hframe.t gettags current] 1]
     if { $canvas != "" && $canvas != $curcanvas } {
 	set curcanvas $canvas
@@ -1061,7 +1065,7 @@ bind $mf.hframe.t <Double-1> {
 #	-bd 1 -width 14
 
 ttk::scrollbar $mf.hframe.scroll -orient horiz -command "$c xview"
-ttk::scrollbar $mf.vframe.scroll -command "$c yview" 
+ttk::scrollbar $mf.vframe.scroll -command "$c yview"
 ttk::scrollbar $mf.hframe.ts -orient horiz -command ".panwin.f1.hframe.t xview"
 pack $mf.hframe.ts -side left -padx 0 -pady 0
 pack $mf.hframe.t -side left -padx 0 -pady 0 -fill both -expand true
@@ -1188,4 +1192,4 @@ bind . <Control-i> {
     redrawAll
 }
 
-focus -force . 
+focus -force .

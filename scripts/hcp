@@ -1,4 +1,4 @@
-#! /bin/sh 
+#! /bin/sh
 
 if [ `id -u` -ne  0 ]; then
     echo "You must be root to run this script."
@@ -10,7 +10,7 @@ command=`basename $0`
 help() {
 cat <<__END__
 
-Command $command can be used to copy files to/from virtual images. 
+Command $command can be used to copy files to/from virtual images.
 Hostname is used instead of virtual images filesystem mount point.
 
 Usage:
@@ -71,7 +71,7 @@ do
     fi
     com="$com $arg"
 done
-    
+
 eval "$com"
 stat=$?
 if [ $stat -ne 0 ] ; then
