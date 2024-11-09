@@ -3,7 +3,7 @@ package require cmdline
 package require platform
 
 # check for uid
-catch {exec id -u} uid
+catch { exec id -u } uid
 if { $uid != "0" } {
     puts stderr "Error: vlink must be executed with root privileges."
     exit 1
@@ -50,7 +50,7 @@ proc getStandardDelay { delay } {
 
 # generic procedure that transforms from bps and us to units for nicer printing
 proc getUnitForPrint { value units } {
-    for {set i 0} { $i < [llength $units] } {incr i} {
+    for { set i 0 } { $i < [llength $units] } { incr i } {
 	set head [expr double($value) / 10**(3*$i)]
 	if { $head < 1 } {
 	    return "[format %.6g [expr $head*10**3]][lindex $units $i-1]"
@@ -82,9 +82,9 @@ proc getLinuxLinkStatus { nodename eid ldata } {
 	set fullname $nodeid
     }
 
-    catch {exec ip netns exec $eid tc qdisc show dev $fullname} settings
+    catch { exec ip netns exec $eid tc qdisc show dev $fullname } settings
 
-    foreach val {delay rate duplicate loss} {
+    foreach val "delay rate duplicate loss" {
 	set $val -1
 	if { $val in $settings } {
 	    set $val [lindex $settings [lsearch $settings "$val*"]+1]
@@ -97,7 +97,7 @@ proc getLinuxLinkStatus { nodename eid ldata } {
     set loss [expr round ([string trimright $loss "%"])]
 
     # don't change this order, the rest of the script depends on it
-    foreach val {bandwidth loss delay duplicate} {
+    foreach val "bandwidth loss delay duplicate" {
 	lappend curr_set [list $val [set $val]]
     }
 
@@ -106,7 +106,7 @@ proc getLinuxLinkStatus { nodename eid ldata } {
 
 # get link settings into an ordered list on FreeBSD
 proc getFreeBSDLinkStatus { eid lid } {
-    catch {exec jexec $eid ngctl msg $lid: getcfg} settings
+    catch { exec jexec $eid ngctl msg $lid: getcfg } settings
     set settings [lindex [lindex [split $settings "\n"] 1] 1]
     set linkStatus ""
     foreach varname { bandwidth delay BER duplicate } {
@@ -175,10 +175,10 @@ proc applyLinkSettingsLinux { bandwidth loss delay dup nodename eid ldata } {
 	set fullname $nodeid
     }
 
-    catch {eval "exec ip netns exec $eid tc qdisc change dev $fullname root netem [join $cfg " "]"}
+    catch { eval "exec ip netns exec $eid tc qdisc change dev $fullname root netem [join $cfg " "]" }
 }
 
-# apply settings on FreeBSD 
+# apply settings on FreeBSD
 proc applyLinkSettingsFreeBSD { bandwidth ber delay dup eid lid } {
     # build the config that should be applied
     append config "{ "
@@ -209,7 +209,7 @@ proc applyLinkSettingsFreeBSD { bandwidth ber delay dup eid lid } {
 	}
 	append config "upstream={ duplicate=" $dup " }"
 	append config "downstream={ duplicate=" $dup " }"
-    } elseif { $ber != -1} {
+    } elseif { $ber != -1 } {
 	if { $ber == 0 } {
 	    set ber -1
 	}
@@ -245,7 +245,7 @@ set usage "\[options\] link_name\[@eid\]
 options:"
 
 # parse arguments
-catch {array set params [::cmdline::getoptions argv $options $usage]} err
+catch { array set params [::cmdline::getoptions argv $options $usage] } err
 if { $err != "" } {
     puts stderr "Usage:"
     puts stderr $err
@@ -323,7 +323,7 @@ if { $params(r) } {
     set BER 0
     set loss 0
     set dup 0
-    incr check    
+    incr check
 }
 
 set linkDelim ":"
@@ -335,7 +335,7 @@ set link2 "$node1$linkDelim$node0"
 
 # get running experiments
 set running_exps ""
-catch {exec himage -l} himage
+catch { exec himage -l } himage
 foreach line [split $himage "\n"] {
     set expid [lindex $line 0]
     lappend running_exps $expid
@@ -346,7 +346,7 @@ foreach line [split $himage "\n"] {
 if { $selected_eid != "" } {
     if { $selected_eid in $running_exps } {
 	set running_exps $selected_eid
-    } elseif {! $params(l)} {
+    } elseif { ! $params(l) } {
 	puts stderr "Error: Experiment with the specified eid ($selected_eid) is not running."
 	exit 1
     }
@@ -473,7 +473,7 @@ switch [llength $containing_exps] {
 		foreach node $nodes {
 		    # get data for linux links
 		    set node_data [lindex [lindex [dict get $ldata $lid] 1] $i]
-		    
+
 		    # get the current status
 		    set curr_set [getLinuxLinkStatus $node $eid $node_data]
 		    # if link status was specified, just output and exit
@@ -486,7 +486,7 @@ switch [llength $containing_exps] {
 		    # apply unset settings from current status
 		    # the settings are taken in the order forwarded from
 		    # getLinuxLinkStatus and depend on it
-		    foreach val {ban loss del dup} {
+		    foreach val "ban loss del dup" {
 			if { [set $val] == -1 } {
 			    set $val [lindex [lindex $curr_set $j] 1]
 			}

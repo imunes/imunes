@@ -30,7 +30,7 @@
 # NAME
 #  annotations.tcl -- oval, rectangle, text, background, ...
 # FUNCTION
-#  This module is used for configuration/image annotations, such as oval, 
+#  This module is used for configuration/image annotations, such as oval,
 #  rectangle, text, background or some other.
 #****
 
@@ -49,6 +49,7 @@
 #****
 proc popupAnnotationDialog { c target modify } {
     global activetool
+
     switch $activetool {
 	oval {
 	    popupOvalDialog $c $target $modify
@@ -105,17 +106,17 @@ proc drawAnnotation { obj } {
 #   * modify -- modify existing or newly created
 #****
 proc popupOvalDialog { c target modify } {
-    global newrect newoval 
-    global width rad 
-    global defFillColor defTextColor 
+    global newrect newoval
+    global width
+    global defFillColor defTextColor
 
-    # do nothing, return, if coords are empty
+    # return if coords are empty
     if { $target == 0 && [$c coords "$newoval"] == "" } {
 	return
     }
+
     if { $target == 0 } {
 	set width 1
-	set rad 25
 	set coords [$c bbox "$newoval"]
 	set annotationType "oval"
 	set color ""
@@ -131,14 +132,14 @@ proc popupOvalDialog { c target modify } {
     if { $color == "" } { set color $defFillColor }
     if { $bordercolor == "" } { set bordercolor black }
     if { $width == "" } { set width 1 }
-    
+
     set wi .popup
-    catch {destroy $wi}
+    catch { destroy $wi }
     toplevel $wi
 
     wm transient $wi .
     wm resizable $wi 0 0
-    
+
     tk fontchooser configure -parent $wi
 
     if { $modify == "true" } {
@@ -147,7 +148,7 @@ proc popupOvalDialog { c target modify } {
 	set windowtitle "Add a new $annotationType"
     }
     wm title $wi $windowtitle
-    
+
     # fill color, border color
     ttk::frame $wi.colors -relief groove -borderwidth 2 -padding 2
     # color selection controls
@@ -175,23 +176,23 @@ proc popupOvalDialog { c target modify } {
 	$wi.border.fg $wi.border.color $wi.border.label \
 	-side left -padx 2 -pady 2 -anchor w -fill x
     pack $wi.border -side top -fill x
-    
+
     # Add new oval or modify old one?
-    if { $modify == "true"  } {
+    if { $modify == "true" } {
 	set cancelcmd "destroy $wi"
 	set applytext "Modify $annotationType"
     } else {
 	set cancelcmd "destroy $wi; destroyNewOval $c"
 	set applytext "Add $annotationType"
     }
-    
+
     ttk::frame $wi.butt -borderwidth 6 -padding 2
     pack $wi.butt -fill both -expand 1
     ttk::button $wi.butt.apply -text $applytext -command \
       "popupOvalApply $c $wi $target"
 
     ttk::button $wi.butt.cancel -text "Cancel" -command $cancelcmd
-    bind $wi <Key-Escape> "$cancelcmd" 
+    bind $wi <Key-Escape> "$cancelcmd"
     bind $wi <Key-Return> "popupOvalApply $c $wi $target"
     pack $wi.butt.apply -side left -expand 1 -anchor e
     pack $wi.butt.cancel -side right -expand 1 -anchor w
@@ -217,22 +218,19 @@ proc popupOvalApply { c wi target } {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     global newrect newoval
     global changed
-    global width rad
-
-    # attributes
-    #set iconcoords "iconcoords"
+    global width
 
     set sizex [expr [lindex [getCanvasSize $curcanvas] 0] - 5]
     set sizey [expr [lindex [getCanvasSize $curcanvas] 1] - 5]
 
     set color [$wi.colors.color cget -text]
     set bordercolor [$wi.border.color cget -text]
-    
 
     if { $target == 0 } {
 	# Create a new annotation object
 	set target [newObjectId $annotation_list "a"]
 	addAnnotation $target oval
+
 	set coords [$c coords $newoval]
 	if { [lindex $coords 0] < 0 } {
 	    set coords [lreplace $coords 0 0 5]
@@ -240,10 +238,10 @@ proc popupOvalApply { c wi target } {
 	if { [lindex $coords 1] < 0 } {
 	    set coords [lreplace $coords 1 1 5]
 	}
-	if { [lindex $coords 2] > $sizex} {
+	if { [lindex $coords 2] > $sizex } {
 	    set coords [lreplace $coords 2 2 $sizex]
 	}
-	if { [lindex $coords 3] > $sizey} {
+	if { [lindex $coords 3] > $sizey } {
 	    set coords [lreplace $coords 3 3 $sizey]
 	}
     } else {
@@ -254,14 +252,14 @@ proc popupOvalApply { c wi target } {
     setAnnotationColor $target $color
     setAnnotationBorderColor $target $bordercolor
     setAnnotationWidth $target $width
-    
+
     destroyNewOval $c
-    #setType $target "oval"
     setAnnotationCanvas $target $curcanvas
+
     set changed 1
     updateUndoLog
     redrawAll
-    destroy $wi 
+    destroy $wi
 }
 
 #****f* annotations.tcl/drawOval
@@ -277,7 +275,7 @@ proc popupOvalApply { c wi target } {
 proc drawOval { oval } {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     upvar 0 ::cf::[set ::curcfg]::zoom zoom
-    global defFillColor 
+    global defFillColor
 
     set coords [getNodeCoords $oval]
     set x1 [expr {[lindex $coords 0] * $zoom}]
@@ -287,7 +285,7 @@ proc drawOval { oval } {
     set color [getAnnotationColor $oval]
     set bordercolor [getAnnotationBorderColor $oval]
     set width [getAnnotationWidth $oval]
-    
+
     if { $color == "" } { set color $defFillColor }
     if { $width == "" } { set width 1 }
     if { $bordercolor == "" } { set bordercolor black }
@@ -310,14 +308,15 @@ proc drawOval { oval } {
 #   * modify -- modify existing or newly created
 #****
 proc popupRectangleDialog { c target modify } {
-    global newrect newoval 
-    global width rad 
-    global defFillColor defTextColor 
+    global newrect newoval
+    global width rad
+    global defFillColor defTextColor
 
-    # do nothing, return, if coords are empty
+    # return if coords are empty
     if { $target == 0 && [$c coords "$newrect"] == "" } {
 	return
     }
+
     if { $target == 0 } {
 	set width 1
 	set rad 25
@@ -337,13 +336,10 @@ proc popupRectangleDialog { c target modify } {
     if { $color == "" } { set color $defFillColor }
     if { $bordercolor == "" } { set bordercolor black }
     if { $width == "" } { set width 1 }
-    
-    set x1 [lindex $coords 0] 
-    set y1 [lindex $coords 1]
-    set x2 [lindex $coords 2]
-    set y2 [lindex $coords 3]
-    set xx [expr {abs($x2 - $x1)}] 
-    set yy [expr {abs($y2 - $y1)}] 
+
+    lassign $coords x1 y1 x2 y2
+    set xx [expr {abs($x2 - $x1)}]
+    set yy [expr {abs($y2 - $y1)}]
     if { $xx > $yy } {
 	set maxrad [expr $yy * 3.0 / 8.0]
     } else {
@@ -351,12 +347,12 @@ proc popupRectangleDialog { c target modify } {
     }
 
     set wi .popup
-    catch {destroy $wi}
+    catch { destroy $wi }
     toplevel $wi
 
     wm transient $wi .
     wm resizable $wi 0 0
-    
+
     tk fontchooser configure -parent $wi
 
     if { $modify == "true" } {
@@ -365,7 +361,7 @@ proc popupRectangleDialog { c target modify } {
 	set windowtitle "Add a new $annotationType"
     }
     wm title $wi $windowtitle
-    
+
     # fill color, border color
     ttk::frame $wi.colors -relief groove -borderwidth 2 -padding 2
     # color selection controls
@@ -393,32 +389,32 @@ proc popupRectangleDialog { c target modify } {
 	$wi.border.fg $wi.border.color $wi.border.label \
 	-side left -padx 2 -pady 2 -anchor w -fill x
     pack $wi.border -side top -fill x
-    
+
     ttk::frame $wi.radius -relief groove -borderwidth 2 -padding 2
-    ttk::label $wi.radius.scale_label -text "Radius of the bend at the corners: " 
+    ttk::label $wi.radius.scale_label -text "Radius of the bend at the corners: "
     ttk::scale $wi.radius.rad -from 0 -to [expr int($maxrad)] \
 	-length 400 -variable rad \
 	-orient horizontal
     pack $wi.radius -side top -fill x
     pack $wi.radius.scale_label -side top -fill x
     pack $wi.radius.rad -side left -padx 2 -pady 2 -anchor w -fill x -expand 1
-    
+
     # Add new rectangle or modify old one?
-    if { $modify == "true"  } {
+    if { $modify == "true" } {
 	set cancelcmd "destroy $wi"
 	set applytext "Modify $annotationType"
     } else {
 	set cancelcmd "destroy $wi; destroyNewRect $c"
 	set applytext "Add $annotationType"
     }
-    
+
     ttk::frame $wi.butt -borderwidth 6 -padding 2
     pack $wi.butt -fill both -expand 1
     ttk::button $wi.butt.apply -text $applytext -command \
       "popupRectangleApply $c $wi $target"
 
     ttk::button $wi.butt.cancel -text "Cancel" -command $cancelcmd
-    bind $wi <Key-Escape> "$cancelcmd" 
+    bind $wi <Key-Escape> "$cancelcmd"
     bind $wi <Key-Return> "popupRectangleApply $c $wi $target"
     pack $wi.butt.apply -side left -expand 1 -anchor e
     pack $wi.butt.cancel -side right -expand 1 -anchor w
@@ -456,6 +452,7 @@ proc popupRectangleApply { c wi target } {
 	# Create a new annotation object
 	set target [newObjectId $annotation_list "a"]
 	addAnnotation $target rectangle
+
 	set coords [$c coords $newrect]
 	if { [lindex $coords 0] < 0 } {
 	    set coords [lreplace $coords 0 0 5]
@@ -463,27 +460,29 @@ proc popupRectangleApply { c wi target } {
 	if { [lindex $coords 1] < 0 } {
 	    set coords [lreplace $coords 1 1 5]
 	}
-	if { [lindex $coords 2] > $sizex} {
+	if { [lindex $coords 2] > $sizex } {
 	    set coords [lreplace $coords 2 2 $sizex]
 	}
-	if { [lindex $coords 3] > $sizey} {
+	if { [lindex $coords 3] > $sizey } {
 	    set coords [lreplace $coords 3 3 $sizey]
 	}
     } else {
 	set coords [getAnnotationCoords $target]
     }
+
     setAnnotationCoords $target $coords
     setAnnotationColor $target $color
     setAnnotationBorderColor $target $bordercolor
     setAnnotationWidth $target $width
     setAnnotationRad $target $rad
-           
+
     destroyNewRect $c
     setAnnotationCanvas $target $curcanvas
+
     set changed 1
     updateUndoLog
     redrawAll
-    destroy $wi 
+    destroy $wi
 }
 
 #****f* annotations.tcl/drawRect
@@ -499,7 +498,7 @@ proc popupRectangleApply { c wi target } {
 proc drawRect { rectangle } {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     upvar 0 ::cf::[set ::curcfg]::zoom zoom
-    global defFillColor 
+    global defFillColor
 
     set coords [getNodeCoords $rectangle]
     set x1 [expr {[lindex $coords 0] * $zoom}]
@@ -525,6 +524,7 @@ proc drawRect { rectangle } {
 	    -fill $color -outline $bordercolor -width $width \
 	    -tags "rectangle $rectangle"]
     }
+
     .panwin.f1.c raise $newrect
 }
 
@@ -542,13 +542,14 @@ proc drawRect { rectangle } {
 #****
 proc popupTextDialog { c target modify } {
     global newrect newoval newtext
-    global width rad 
-    global defFillColor defTextColor 
+    global width rad
+    global defFillColor defTextColor
 
-    # do nothing, return, if coords are empty
+    # return if coords are empty
     if { $target == 0 && [$c coords "$newtext"] == "" } {
 	return
     }
+
     if { $target == 0 } {
 	set coords [$c bbox "$newtext"]
 	set annotationType "text"
@@ -562,16 +563,17 @@ proc popupTextDialog { c target modify } {
 	set lcolor [getAnnotationLabelColor $target]
 	set font [getAnnotationFont $target]
     }
+
     if { $lcolor == "" } { set lcolor black }
     if { $font == "" } { set font TkTextFont }
-    
+
     set wi .popup
-    catch {destroy $wi}
+    catch { destroy $wi }
     toplevel $wi
 
     wm transient $wi .
     wm resizable $wi 0 0
-    
+
     tk fontchooser configure -parent $wi
 
     if { $modify == "true" } {
@@ -592,10 +594,9 @@ proc popupTextDialog { c target modify } {
     pack $wi.text.lab -side top -fill x
     pack $wi.text -side top -fill x
 
-    ttk::frame $wi.colors -borderwidth 2 -padding 2    
+    ttk::frame $wi.colors -borderwidth 2 -padding 2
 
-    # color selection 
-    
+    # color selection
     ttk::button $wi.colors.fg -text "Text color" -command \
 	"popupColor foreground $wi.text.lab.name false"
     ttk::button $wi.colors.font -text "Font" -command \
@@ -604,23 +605,23 @@ proc popupTextDialog { c target modify } {
     pack $wi.colors.fg -side left  -pady 2
     pack $wi.colors.font -side left -pady 2 -padx 10
     pack $wi.colors -side top -fill x
-    
-    # Add new oval or modify old one?
-    if { $modify == "true"  } {
+
+    # Add new text or modify old one?
+    if { $modify == "true" } {
 	set cancelcmd "destroy $wi"
 	set applytext "Modify $annotationType"
     } else {
 	set cancelcmd "destroy $wi; destroyNewText $c"
 	set applytext "Add $annotationType"
     }
-    
+
     ttk::frame $wi.butt -borderwidth 6 -padding 2
     pack $wi.butt -fill both -expand 1
     ttk::button $wi.butt.apply -text $applytext -command \
       "popupTextApply $c $wi $target"
 
     ttk::button $wi.butt.cancel -text "Cancel" -command $cancelcmd
-    bind $wi <Key-Escape> "$cancelcmd" 
+    bind $wi <Key-Escape> "$cancelcmd"
     bind $wi <Key-Return> "popupTextApply $c $wi $target"
     pack $wi.butt.apply -side left -expand 1 -anchor e
     pack $wi.butt.cancel -side right -expand 1 -anchor w
@@ -649,8 +650,8 @@ proc popupTextApply { c wi target } {
 
     set label [string trim [$wi.text.lab.name get]]
     set labelcolor [$wi.text.lab.name cget -foreground]
-    set font [$wi.text.lab.name cget -font] 
-    
+    set font [$wi.text.lab.name cget -font]
+
     if { $label != "" } {
 	if { $target == 0 } {
 	    # Create a new annotation object
@@ -660,6 +661,7 @@ proc popupTextApply { c wi target } {
 	} else {
 	    set coords [getAnnotationCoords $target]
 	}
+
 	setAnnotationCoords $target $coords
 	setAnnotationLabel $target $label
 	setAnnotationLabelColor $target $labelcolor
@@ -667,11 +669,13 @@ proc popupTextApply { c wi target } {
 
 	destroyNewText $c
 	setAnnotationCanvas $target $curcanvas
+
 	set changed 1
 	updateUndoLog
     }
+
     redrawAll
-    destroy $wi 
+    destroy $wi
 }
 
 #****f* annotations.tcl/drawText
@@ -690,16 +694,16 @@ proc drawText { text } {
     global defTextColor
 
     set coords [getAnnotationCoords $text]
-    if {$coords == ""} {
-	puts "Empty coordinates for text $text" ;# MM debug
+    if { $coords == "" } {
 	return
     }
+
     set x [expr {[lindex $coords 0] * $zoom}]
     set y [expr {[lindex $coords 1] * $zoom}]
     set labelcolor [getAnnotationLabelColor $text]
     set label [getAnnotationLabel $text]
     set font [getAnnotationFont $text]
-    
+
     if { $labelcolor == "" } { set labelcolor $defTextColor }
     if { $font == "" } { set font TkTextFont }
 
@@ -721,14 +725,15 @@ proc drawText { text } {
 #   * modify -- modify existing or newly created
 #****
 proc popupFreeformDialog { c target modify } {
-    global newfree 
-    global width 
-    global defFillColor 
+    global newfree
+    global width
+    global defFillColor
 
-    # do nothing, return, if coords are empty
+    # return if coords are empty
     if { $target == 0 && [$c coords "$newfree"] == "" } {
 	return
     }
+
     if { $target == 0 } {
 	set width 2
 	set color blue
@@ -739,14 +744,14 @@ proc popupFreeformDialog { c target modify } {
 	set color [getAnnotationColor $target]
 	set width [getAnnotationWidth $target]
     }
-	
+
     set wi .popup
-    catch {destroy $wi}
+    catch { destroy $wi }
     toplevel $wi
 
     wm transient $wi .
     wm resizable $wi 0 0
-    
+
     tk fontchooser configure -parent $wi
 
     if { $modify == "true" } {
@@ -755,11 +760,11 @@ proc popupFreeformDialog { c target modify } {
 	set windowtitle "Add a new $annotationType"
     }
     wm title $wi $windowtitle
-    
+
     ttk::frame $wi.colors -relief groove -borderwidth 2 -padding 2
+
     # color selection controls
     ttk::label $wi.colors.label -text "Line color:"
-
     ttk::label $wi.colors.color -text $color -width 8 \
       -background $color
     ttk::button $wi.colors.bg -text "Color" -command \
@@ -767,7 +772,7 @@ proc popupFreeformDialog { c target modify } {
     pack $wi.colors.label $wi.colors.color $wi.colors.bg \
 	-side left -padx 2 -pady 2 -anchor w -fill x
     pack $wi.colors -side top -fill x
-    
+
     ttk::frame $wi.width -relief groove -borderwidth 2 -padding 2
     ttk::label $wi.width.label -text "Width:"
     ttk::combobox $wi.width.number -textvariable width -width 3
@@ -775,23 +780,23 @@ proc popupFreeformDialog { c target modify } {
     pack $wi.width $wi.width.label $wi.width.number \
 	-side left -padx 2 -pady 2 -anchor w -fill x
     pack $wi.width -side top -fill x
-    
-    # Add new oval or modify old one?
-    if { $modify == "true"  } {
+
+    # Add new freeform or modify old one?
+    if { $modify == "true" } {
 	set cancelcmd "destroy $wi"
 	set applytext "Modify $annotationType"
     } else {
 	set cancelcmd "destroy $wi; destroyNewFree $c"
 	set applytext "Add $annotationType"
     }
-    
+
     ttk::frame $wi.butt -borderwidth 6 -padding 2
     pack $wi.butt -fill both -expand 1
     ttk::button $wi.butt.apply -text $applytext -command \
       "popupFreeformApply $c $wi $target"
 
     ttk::button $wi.butt.cancel -text "Cancel" -command $cancelcmd
-    bind $wi <Key-Escape> "$cancelcmd" 
+    bind $wi <Key-Escape> "$cancelcmd"
     bind $wi <Key-Return> "popupFreeformApply $c $wi $target"
     pack $wi.butt.apply -side left -expand 1 -anchor e
     pack $wi.butt.cancel -side right -expand 1 -anchor w
@@ -820,11 +825,11 @@ proc popupFreeformApply { c wi target } {
     global width
 
     set color [$wi.colors.color cget -text]
-
     if { $target == 0 } {
 	# Create a new annotation object
 	set target [newObjectId $annotation_list "a"]
 	addAnnotation $target freeform
+
 	set coords [$c coords $newfree]
     } else {
 	set coords [getAnnotationCoords $target]
@@ -833,14 +838,14 @@ proc popupFreeformApply { c wi target } {
     setAnnotationCoords $target $coords
     setAnnotationColor $target $color
     setAnnotationWidth $target $width
-    
+
     destroyNewFree $c
-    
     setAnnotationCanvas $target $curcanvas
+
     set changed 1
     updateUndoLog
     redrawAll
-    destroy $wi 
+    destroy $wi
 }
 
 #****f* annotations.tcl/drawFreeform
@@ -860,30 +865,30 @@ proc drawFreeform { freeform } {
     set coords [getAnnotationCoords $freeform]
     set color [getAnnotationColor $freeform]
     set width [getAnnotationWidth $freeform]
-    
+
     if { $color == "" } { set color $defFillColor }
     if { $width == "" } { set width 2 }
-    
+
     set l [expr {[llength $coords]-2}]
     set i 0
-    while {$i<=$l} {
-	if {$i==0} {
+    while { $i<=$l } {
+	if { $i==0 } {
 	    set x1 [expr {[lindex $coords $i] * $zoom}]
 	    set y1 [expr {[lindex $coords $i+1] * $zoom}]
 	    set x2 [expr {[lindex $coords $i+2] * $zoom}]
 	    set y2 [expr {[lindex $coords $i+3] * $zoom}]
-	    set newfree [.panwin.f1.c create line $x1 $y1 $x2 $y2 \
+	    set tempfree [.panwin.f1.c create line $x1 $y1 $x2 $y2 \
 		-fill $color -width $width \
 		-tags "freeform $freeform"]
-	} else { 
+	} else {
 	    set x1 [expr {[lindex $coords $i] * $zoom}]
 	    set y1 [expr {[lindex $coords $i+1] * $zoom}]
-	    xpos $newfree $x1 $y1 $width $color
+	    xpos $tempfree $x1 $y1 $width $color
 	}
 	    set i [expr {$i+2}]
     }
-    
-    .panwin.f1.c raise $newfree
+
+    .panwin.f1.c raise $tempfree
 }
 
 #****f* annotations.tcl/destroyNewOval
@@ -930,6 +935,7 @@ proc destroyNewRect { c } {
 #****
 proc destroyNewText { c } {
     global newtext
+
     $c delete -withtags newtext
     set newtext ""
 }
@@ -946,6 +952,7 @@ proc destroyNewText { c } {
 #****
 proc destroyNewFree { c } {
     global newfree
+
     $c delete -withtags newfree
     set newfree ""
 }
@@ -1034,7 +1041,7 @@ proc button3annotation { type c x y } {
 	# ???
 	return
     }
-    
+
     if { $item == "" } {
 	return
     }
@@ -1119,7 +1126,7 @@ proc roundRect { w x0 y0 x3 y3 radius args } {
     set y2 [expr { $y3 - $d }]
 
     set cmd [list $w create polygon]
-    lappend cmd $x0 $y0 $x1 $y0 $x2 $y0 $x3 $y0 $x3 $y1 $x3 $y2 
+    lappend cmd $x0 $y0 $x1 $y0 $x2 $y0 $x3 $y0 $x3 $y1 $x3 $y2
     lappend cmd $x3 $y3 $x2 $y3 $x1 $y3 $x0 $y3 $x0 $y2 $x0 $y1
     lappend cmd -smooth 1
     return [eval $cmd $args]
@@ -1189,7 +1196,7 @@ proc popupColor { type l settext } {
     } else {
 	set initcolor [$l cget -background]
     }
-    if {$initcolor == ""} {
+    if { $initcolor == "" } {
 	set initcolor #808080
     }
     set newcolor [tk_chooseColor -parent .popup.colors -initialcolor $initcolor]
@@ -1213,7 +1220,7 @@ proc popupColor { type l settext } {
 # FUNCTION
 #   Changes the mouse cursor for resizing annotations.
 # INPUTS
-#   * c -- annotation object 
+#   * c -- annotation object
 #   * x -- cursor x coordinate
 #   * y -- cursor y coordinate
 #****
@@ -1221,7 +1228,7 @@ proc selectmarkEnter { c x y } {
     set obj [lindex [$c gettags current] 1]
     set type [getAnnotationType $obj]
 
-    if {$type != "oval" && $type != "rectangle"} { return }
+    if { $type != "oval" && $type != "rectangle" } { return }
 
     set bbox [$c bbox $obj]
     set x1 [lindex $bbox 0]
@@ -1241,25 +1248,25 @@ proc selectmarkEnter { c x y } {
     if { $y < [expr $y1+($y2-$y1)/8.0]} { set u 1 }
     if { $y > [expr $y2-($y2-$y1)/8.0]} { set d 1 }
 
-    if {$l==1} {
-	if {$u==1} { 
+    if { $l==1 } {
+	if { $u==1 } {
 	    $c config -cursor top_left_corner
-	} elseif {$d==1} { 
+	} elseif { $d==1 } {
 	    $c config -cursor bottom_left_corner
-	} else { 
+	} else {
 	    $c config -cursor left_side
-	} 
-    } elseif {$r==1} {
-	if {$u==1} { 
+	}
+    } elseif { $r==1 } {
+	if { $u==1 } {
 	    $c config -cursor top_right_corner
-	} elseif {$d==1} { 
+	} elseif { $d==1 } {
 	    $c config -cursor bottom_right_corner
-	} else { 
+	} else {
 	    $c config -cursor right_side
-	} 
-    } elseif {$u==1} { 
+	}
+    } elseif { $u==1 } {
 	$c config -cursor top_side
-    } elseif {$d==1} {
+    } elseif { $d==1 } {
 	$c config -cursor bottom_side
     } else {
 	$c config -cursor left_ptr
@@ -1274,7 +1281,7 @@ proc selectmarkEnter { c x y } {
 # FUNCTION
 #   Resets the mouse cursor when leaving the annotation.
 # INPUTS
-#   * c -- annotation object 
+#   * c -- annotation object
 #   * x -- cursor x coordinate
 #   * y -- cursor y coordinate
 #****
@@ -1302,34 +1309,34 @@ proc backgroundImage { c img } {
     set e_sizex [expr {int($sizex * $zoom)}]
     set e_sizey [expr {int($sizey * $zoom)}]
 
-    if {"$img" == ""} {
+    if { "$img" == "" } {
 	return
     }
-    
+
     set img_data [getImageData $img]
-     
+
     image create photo Photo -data $img_data
-    
+
     set image_h [image height Photo]
     set image_w [image width Photo]
-    
+
     set rx [expr $e_sizex * 1.0 / $image_w]
     set ry [expr $e_sizey  * 1.0/ $image_h]
-    
+
     if { $rx < $ry } {
-	set faktor [expr $rx * 100]
+	set factor [expr $rx * 100]
     } else {
-	set faktor [expr $ry * 100]
+	set factor [expr $ry * 100]
     }
-    
-    set faktor [expr int($faktor)]
-    
-    if { $faktor != 100 } {
-	if { [getImageZoomData $img $faktor] != "" } {
-	    image create photo Photo -data [getImageZoomData $img $faktor]
+
+    set factor [expr int($factor)]
+
+    if { $factor != 100 } {
+	if { [getImageZoomData $img $factor] != "" } {
+	    image create photo Photo -data [getImageZoomData $img $factor]
 	    set image Photo
 	} else {
-	    set image [image% Photo $faktor $img]
+	    set image [image% Photo $factor $img]
 	}
     } else {
 	set image Photo
@@ -1351,33 +1358,39 @@ proc backgroundImage { c img } {
 #****
 proc image% { image percent img_name } {
     global hasIM winOS
+
     set image_h [image height $image]
     set image_w [image width $image]
-    if {$hasIM && [expr { $image_h > 100 || $image_w > 100 }] } {
+    if { $hasIM && [expr {$image_h > 100 || $image_w > 100}] } {
 	set fname "original.gif"
 	$image write $fname
-	if {!$winOS} {
+	if { ! $winOS } {
 	    exec magick $fname -resize $percent\% zoom_$percent.gif
 	} else {
 	    exec cmd /c magick $fname -resize $percent\% zoom_$percent.gif
 	}
+
 	set im2 [image create photo -file zoom_$percent.gif]
 	setImageZoomData $img_name zoom_$percent.gif $percent
-	if {!$winOS} {
+	if { ! $winOS } {
 	    exec rm $fname zoom_$percent.gif
 	} else {
 	    catch { exec cmd /c del $fname zoom_$percent.gif } err
 	}
     } else {
-	set deno      [gcd $percent 100]
-	set zoom      [expr {$percent/$deno}]
+	set deno [gcd $percent 100]
+	set zoom [expr {$percent/$deno}]
 	set subsample [expr {100/$deno}]
+
 	set im1 [image create photo]
 	$im1 copy $image -zoom $zoom
+
 	set im2 [image create photo]
 	$im2 copy $im1 -subsample $subsample
+
 	image delete $im1
     }
+
     set im2
 }
 
@@ -1411,22 +1424,22 @@ proc gcd { u v } {expr {$u? [gcd [expr $v%$u] $u]: $v}}
 #   * color -- freeform color
 #****
 proc xpos { tempfree x y width color } {
-
     set all_dots [.panwin.f1.c coords $tempfree]
     set len [llength $all_dots]
 
     # Remove dots one very close to another
     set d 1.5
     set i [expr $len - 20]
-    if {$i < 2} {
+    if { $i < 2 } {
 	set i 2
     }
-    for {} {$i < $len} {incr i 2} {
+
+    for {} { $i < $len } { incr i 2 } {
 	set a_x [lindex $all_dots [expr $i - 2]]
 	set a_y [lindex $all_dots [expr $i - 1]]
 	set b_x [lindex $all_dots $i]
 	set b_y [lindex $all_dots [expr $i + 1]]
-	if {[expr abs($a_x - $b_x)] < $d && [expr abs($a_y - $b_y)] < $d} {
+	if { [expr abs($a_x - $b_x)] < $d && [expr abs($a_y - $b_y)] < $d } {
 	    set all_dots [lreplace $all_dots $i [expr $i + 1]]
 	    incr len -2
 	}
@@ -1435,18 +1448,20 @@ proc xpos { tempfree x y width color } {
     # Remove dots which can be safely linearly interpolated
     set d 1.5
     set i [expr $len - 20]
-    if {$i < 2} {
+    if { $i < 2 } {
 	set i 2
     }
-    for {} {$i < $len} {incr i 2} {
+
+    for {} { $i < $len } { incr i 2 } {
 	set a_x [lindex $all_dots [expr $i - 4]]
 	set a_y [lindex $all_dots [expr $i - 3]]
 	set b_x [lindex $all_dots [expr $i - 2]]
 	set b_y [lindex $all_dots [expr $i - 1]]
 	set c_x [lindex $all_dots $i]
 	set c_y [lindex $all_dots [expr $i + 1]]
-	if {[expr abs(($a_x + $c_x) / 2 - $b_x)] < $d &&
-	    [expr abs(($a_y + $c_y) / 2 - $b_y)] < $d} {
+	if { [expr abs(($a_x + $c_x) / 2 - $b_x)] < $d &&
+	    [expr abs(($a_y + $c_y) / 2 - $b_y)] < $d } {
+
 	    set all_dots [lreplace $all_dots [expr $i - 2] [expr $i - 1]]
 	    incr len -2
 	}

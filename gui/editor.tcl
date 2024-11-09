@@ -29,7 +29,7 @@
 #****h* imunes/editor.tcl
 # NAME
 #  editor.tcl -- file used for defining functions that can be used in
-#  edit mode as well as all the functions which change the appearance 
+#  edit mode as well as all the functions which change the appearance
 #  of the imunes GUI.
 # FUNCTION
 #  This module is used for defining all possible actions in imunes
@@ -42,7 +42,7 @@
 # SYNOPSIS
 #   updateUndoLog
 # FUNCTION
-#   Updates the undo log. Writes the current configuration to the 
+#   Updates the undo log. Writes the current configuration to the
 #   undolog array and updates the undolevel variable.
 #****
 proc updateUndoLog {} {
@@ -54,15 +54,19 @@ proc updateUndoLog {} {
 
     if { $changed } {
 	global t_undolog
+
 	set t_undolog ""
 	dumpCfg string t_undolog
+
 	incr undolevel
 	if { $undolevel == 1 } {
 	    .menubar.edit entryconfigure "Undo" -state normal
 	}
+
 	set undolog($undolevel) $t_undolog
 	set redolevel $undolevel
 	set changed 0
+
 	# When some changes are made in the topology, new /etc/hosts files
 	# should be generated.
 	set etchosts ""
@@ -76,7 +80,7 @@ proc updateUndoLog {} {
 # NAME
 #   undo -- undo function
 # SYNOPSIS
-#   undo 
+#   undo
 # FUNCTION
 #   Undo the change. Reads the undolog and updates the current
 #   configuration. Reduces the value of undolevel.
@@ -87,13 +91,15 @@ proc undo {} {
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global showTree
 
-    if {$oper_mode == "edit" && $undolevel > 0} {
+    if { $oper_mode == "edit" && $undolevel > 0 } {
 	.menubar.edit entryconfigure "Redo" -state normal
 	incr undolevel -1
 	if { $undolevel == 0 } {
 	    .menubar.edit entryconfigure "Undo" -state disabled
 	}
+
 	.panwin.f1.c config -cursor watch
+
 	loadCfgLegacy $undolog($undolevel)
 	switchCanvas none
 
@@ -109,10 +115,10 @@ proc undo {} {
 # SYNOPSIS
 #   redo
 # FUNCTION
-#   Redo the change if possible (redolevel is greater than 
+#   Redo the change if possible (redolevel is greater than
 #   undolevel). Reads the configuration from undolog and
-#   updates the current configuration. Increases the value 
-#   of undolevel. 
+#   updates the current configuration. Increases the value
+#   of undolevel.
 #****
 proc redo {} {
     upvar 0 ::cf::[set ::curcfg]::undolevel undolevel
@@ -121,15 +127,18 @@ proc redo {} {
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global showTree
 
-    if {$oper_mode == "edit" && $redolevel > $undolevel} {
+    if { $oper_mode == "edit" && $redolevel > $undolevel } {
 	incr undolevel
 	if { $undolevel == 1 } {
 	    .menubar.edit entryconfigure "Undo" -state normal
 	}
-	if {$redolevel <= $undolevel} {
+
+	if { $redolevel <= $undolevel } {
 	    .menubar.edit entryconfigure "Redo" -state disabled
 	}
+
 	.panwin.f1.c config -cursor watch
+
 	loadCfgLegacy $undolog($undolevel)
 	switchCanvas none
 
@@ -147,13 +156,12 @@ proc redo {} {
 # FUNCTION
 #   Choose a node-specific interface base name.
 # INPUTS
-#   * lnode -- id of a "local" node
-#   * rnode -- id of a "remote" node
+#   * lnode_id -- id of a "local" node
+#   * rnode_id -- id of a "remote" node
 # RESULT
 #   * ifc_name -- the name of the interface
 #****
-proc chooseIfName {lnode rnode} {
-
+proc chooseIfName { lnode rnode } {
     return [[getNodeType $lnode].ifacePrefix $lnode $rnode]
 }
 
@@ -165,17 +173,17 @@ proc chooseIfName {lnode rnode} {
 # FUNCTION
 #   Pick a default interface base name for a L3 node.
 # INPUTS
-#   * lnode -- id of a "local" node
-#   * rnode -- id of a "remote" node
+#   * lnode_id -- id of a "local" node
+#   * rnode_id -- id of a "remote" node
 # RESULT
 #   * ifc_name -- the name of the interface
 #****
-proc l3IfcName {lnode rnode} {
-
-    if {[getNodeType $lnode] in "ext extnat"} {
+proc l3IfcName { lnode rnode } {
+    if { [getNodeType $lnode] in "ext extnat" } {
 	return "ext"
     }
-    if {[getNodeType $rnode] == "wlan"} {
+
+    if { [getNodeType $rnode] == "wlan" } {
 	return "wlan"
     } else {
 	return "eth"
@@ -188,8 +196,8 @@ proc l3IfcName {lnode rnode} {
 # SYNOPSIS
 #   set l2peers [listLANNodes $l2node $l2peers]
 # FUNCTION
-#   Recursive function for finding all link layer nodes that are 
-#   connected to node l2node. Returns the list of all link layer 
+#   Recursive function for finding all link layer nodes that are
+#   connected to node l2node. Returns the list of all link layer
 #   nodes that are on the same LAN as l2node.
 # INPUTS
 #   * l2node -- node id of a link layer node
@@ -201,22 +209,23 @@ proc listLANNodes { l2node l2peers } {
     lappend l2peers $l2node
     foreach ifc [ifcList $l2node] {
 	lassign [logicalPeerByIfc $l2node $ifc] peer -
-	if { [[getNodeType $peer].netlayer] == "LINK" &&  [getNodeType $peer] != "rj45" } {
-	    if { [lsearch $l2peers $peer] == -1 } {
+	if { [[getNodeType $peer].netlayer] == "LINK" && [getNodeType $peer] != "rj45" } {
+	    if { $peer ni $l2peers } {
 		set l2peers [listLANNodes $peer $l2peers]
 	    }
 	}
     }
+
     return $l2peers
 }
 
-#****f* editor.tcl/checkIntRange 
+#****f* editor.tcl/checkIntRange
 # NAME
 #   checkIntRange -- check integer range
 # SYNOPSIS
 #   set check [checkIntRange $str $low $high]
 # FUNCTION
-#   This procedure checks the input string to see if it is 
+#   This procedure checks the input string to see if it is
 #   an integer between the low and high value.
 # INPUTS
 #   str -- string to check
@@ -230,16 +239,20 @@ proc checkIntRange { str low high } {
     if { $str == "" } {
 	return 1
     }
+
     set str [string trimleft $str 0]
     if { $str == "" } {
 	set str 0
     }
-    if { ![string is integer $str] } {
+
+    if { ! [string is integer $str] } {
 	return 0
     }
+
     if { $str < $low || $str > $high } {
 	return 0
     }
+
     return 1
 }
 
@@ -303,7 +316,7 @@ proc setZoom { x y } {
     upvar 0 ::cf::[set ::curcfg]::zoom zoom
 
     set w .entry1
-    catch {destroy $w}
+    catch { destroy $w }
     toplevel $w -takefocus 1
 
     if { $x == 0 && $y == 0 } {
@@ -318,7 +331,6 @@ proc setZoom { x y } {
     wm title $w "Set zoom %"
     wm iconname $w "Set zoom %"
 
-    #dodan glavni frame "setzoom"
     ttk::frame $w.setzoom
     pack $w.setzoom -fill both -expand 1
 
@@ -360,6 +372,7 @@ proc setZoomApply { w } {
 	set zoom $newzoom
 	redrawAll
     }
+
     destroy $w
 }
 
@@ -378,14 +391,14 @@ proc selectZoom { x y } {
     upvar 0 ::cf::[set ::curcfg]::zoom zoom
 
     global zoom_stops
-    
+
     set values {}
     foreach z $zoom_stops {
 	lappend values [expr {int($z*100)}]
     }
 
     set w .entry1
-    catch {destroy $w}
+    catch { destroy $w }
     toplevel $w -takefocus 1
 
     if { $x == 0 && $y == 0 } {
@@ -399,7 +412,7 @@ proc selectZoom { x y } {
     wm geometry $w +$x+$y
     wm title $w "Select zoom %"
     wm iconname $w "Select zoom %"
- 
+
     #dodan glavni frame "selectzoom"
     ttk::frame $w.selectzoom
     pack $w.selectzoom -fill both -expand 1
@@ -438,16 +451,18 @@ proc selectZoomApply { w } {
     global hasIM changed
 
     set tempzoom [$w.selectzoom.e1 get]
-    
-    if {!$hasIM} {
+    if { ! $hasIM } {
 	global zoom_stops
+
 	set values {}
 	foreach z $zoom_stops {
 	    lappend values [expr {int($z*100)}]
 	}
+
 	if { $tempzoom > 400 || $tempzoom < 10 } {
 	    set tempzoom 100
 	}
+
 	if { [lsearch $values $tempzoom] == -1 } {
 	    set tempzoom [expr int($tempzoom/10)*10]
 	}
@@ -456,10 +471,12 @@ proc selectZoomApply { w } {
     set newzoom [ expr $tempzoom / 100.0]
     if { $newzoom != $zoom } {
 	set zoom $newzoom
+
 	redrawAll
 	set changed 1
 	updateUndoLog
     }
+
     destroy $w
 }
 
@@ -469,7 +486,7 @@ proc selectZoomApply { w } {
 # SYNOPSIS
 #   routerDefaultsApply $wi
 # FUNCTION
-#   This procedure is called when the button apply is pressed in 
+#   This procedure is called when the button apply is pressed in
 #   popup router defaults dialog box.
 # INPUTS
 #   * wi -- widget
@@ -483,17 +500,17 @@ proc routerDefaultsApply { wi } {
 
     lset rdconfig 0 $routerRipEnable
     lset rdconfig 1 $routerRipngEnable
-    lset rdconfig 2 $routerOspfEnable 
-    lset rdconfig 3 $routerOspf6Enable	
+    lset rdconfig 2 $routerOspfEnable
+    lset rdconfig 3 $routerOspf6Enable
     lset rdconfig 4 $routerBgpEnable
-    set routerDefaultsModel $router_model 	
-    set selected_node_list [selectedNodes]
-    set empty {}
+    set routerDefaultsModel $router_model
 
-    if { $selected_node_list != $empty } {
+    set selected_node_list [selectedNodes]
+    if { $selected_node_list != {} } {
 	foreach node $selected_node_list {
 	    if { $oper_mode == "edit" && [getNodeType $node] == "router" } {
 		setNodeModel $node $router_model
+
 		set router_ConfigModel $router_model
 		if { $router_ConfigModel != "static" } {
 		    set ripEnable [lindex $rdconfig 0]
@@ -515,11 +532,12 @@ proc routerDefaultsApply { wi } {
 		}
 		set changed 1
 	    }
-	}		
+	}
     } else {
 	foreach node $node_list {
-	    if { $oper_mode == "edit" && [getNodeType $node] == "router"} {
+	    if { $oper_mode == "edit" && [getNodeType $node] == "router" } {
 		setNodeModel $node $router_model
+
 		set router_ConfigModel $router_model
 		if { $router_ConfigModel != "static" } {
 		    set ripEnable [lindex $rdconfig 0]
@@ -540,32 +558,33 @@ proc routerDefaultsApply { wi } {
 		    $wi.nbook.nf1.protocols.bgp configure -state disabled
 		}
 		set changed 1
-	    }		
-	}		
+	    }
+	}
     }
 
     if { $changed == 1 } {
 	redrawAll
 	updateUndoLog
-    }	
-    destroy $wi	
+    }
+
+    destroy $wi
 }
 
 #****f* editor.tcl/setCustomIcon
 # NAME
 #   setCustomIcon -- set custom icon
 # SYNOPSIS
-#   setCustomIcon $node $iconName
+#   setCustomIcon $node_id $icon_name
 # FUNCTION
 #   Sets the custom icon to a node.
 # INPUTS
-#   * node -- node to change
-#   * iconName -- icon name
+#   * node_id -- node to change
+#   * icon_name -- icon name
 #****
 proc setCustomIcon { node iconName } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
     global $iconName
-    
+
     set i [lsearch [set $node] "customIcon *"]
     if { $i >= 0 } {
 	set $node [lreplace [set $node] $i $i "customIcon $iconName"]
@@ -578,11 +597,11 @@ proc setCustomIcon { node iconName } {
 # NAME
 #   getCustomIcon -- get custom icon
 # SYNOPSIS
-#   getCustomIcon $node
+#   getCustomIcon $node_id
 # FUNCTION
 #   Returns the custom icon from a node.
 # INPUTS
-#   * node -- node to get the icon from
+#   * node_id -- node to get the icon from
 #****
 proc getCustomIcon { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
@@ -594,11 +613,11 @@ proc getCustomIcon { node } {
 # NAME
 #   removeCustomIcon -- remove custom icon
 # SYNOPSIS
-#   removeCustomIcon $node
+#   removeCustomIcon $node_id
 # FUNCTION
 #   Removes the custom icon from a node.
 # INPUTS
-#   * node -- node to remove the icon from
+#   * node_id -- node to remove the icon from
 #****
 proc removeCustomIcon { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
@@ -623,21 +642,22 @@ proc getMostDistantNodeCoordinates {} {
     set y 0
     foreach node $node_list {
 	set coords [getNodeCoords $node]
-	if {[lindex $coords 0] > $x} {
-	    set x [lindex $coords 0] 
+	if { [lindex $coords 0] > $x } {
+	    set x [lindex $coords 0]
 	}
-	if {[lindex $coords 1] > $y} {
-	    set y [lindex $coords 1] 
+	if { [lindex $coords 1] > $y } {
+	    set y [lindex $coords 1]
 	}
     }
+
     set x [expr $x + 25]
     set y [expr $y + 30]
-    
+
     return [list $x $y]
 }
 
 
-#****f* editor.tcl/topologyElementsTree 
+#****f* editor.tcl/topologyElementsTree
 # NAME
 #   topologyElementsTree -- topology elements tree
 # SYNOPSIS
@@ -648,11 +668,10 @@ proc getMostDistantNodeCoordinates {} {
 proc topologyElementsTree {} {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
+    global showTree
 
-    global showTree   
     set f .panwin.f2
-
-    if { !$showTree } {
+    if { ! $showTree } {
         .panwin forget $f
     }
 
@@ -664,7 +683,7 @@ proc topologyElementsTree {} {
 	    -yscrollcommand "$f.vscroll set"
 	ttk::scrollbar $f.hscroll -orient horizontal -command "$f.tree xview"
 	ttk::scrollbar $f.vscroll -orient vertical -command "$f.tree yview"
-	
+
 	focus $f.tree
 
 	pack $f.treegrid -side right -fill y
@@ -672,8 +691,7 @@ proc topologyElementsTree {} {
         grid $f.hscroll -in $f.treegrid -sticky nsew
 	grid columnconfig $f.treegrid 0 -weight 1
 	grid rowconfigure $f.treegrid 0 -weight 1
-	
-	#stvaranje columna            
+
 	$f.tree configure -columns { state nat MAC IPv4 IPv6 canvas }
 	$f.tree column #0 -width 200 -stretch 0
 	$f.tree column state -width 60 -anchor center -stretch 0
@@ -690,9 +708,9 @@ proc topologyElementsTree {} {
 	$f.tree heading IPv6 -text "IPv6 address"
 	$f.tree heading canvas -text "Canvas"
 
-
-	#punjenje stabla podacima o cvorovima
+	# filling the tree with node info
         global nodetags
+
 	set nodetags ""
 	$f.tree insert {} end -id nodes -text "Nodes" -open true -tags nodes
 	$f.tree focus nodes
@@ -700,22 +718,23 @@ proc topologyElementsTree {} {
 	foreach node [lsort -dictionary $node_list] {
 	    set type [getNodeType $node]
 	    if { $type != "pseudo" } {
-		$f.tree insert nodes end -id $node -text "[getNodeName $node]" -open false -tags $node
-		lappend nodetags $node
-		$f.tree set $node canvas [getCanvasName [getNodeCanvas $node]]
-		foreach ifc [lsort -dictionary [ifcList $node]] {
-		    $f.tree insert $node end -id $node$ifc -text "$ifc" -tags $node$ifc
-		    $f.tree set $node$ifc state [getIfcOperState $node $ifc]
-		    $f.tree set $node$ifc nat [getIfcNatState $node $ifc]
-		    $f.tree set $node$ifc IPv4 [join [getIfcIPv4addrs $node $ifc] ";"]
-		    $f.tree set $node$ifc IPv6 [join [getIfcIPv6addrs $node $ifc] ";"]
-                    $f.tree set $node$ifc MAC [getIfcMACaddr $node $ifc]
+		$f.tree insert nodes end -id $node_id -text "[getNodeName $node_id]" -open false -tags $node_id
+		lappend nodetags $node_id
+		$f.tree set $node_id canvas [getCanvasName [getNodeCanvas $node_id]]
+		foreach ifc [lsort -dictionary [ifcList $node_id]] {
+		    $f.tree insert $node_id end -id $node_id$ifc -text "$ifc" -tags $node_id$ifc
+		    $f.tree set $node_id$ifc state [getIfcOperState $node_id $ifc]
+		    $f.tree set $node_id$ifc nat [getIfcNatState $node_id $ifc]
+		    $f.tree set $node_id$ifc IPv4 [join [getIfcIPv4addrs $node_id $ifc] ";"]
+		    $f.tree set $node_id$ifc IPv6 [join [getIfcIPv6addrs $node_id $ifc] ";"]
+                    $f.tree set $node_id$ifc MAC [getIfcMACaddr $node_id $ifc]
 		}
 	    }
 	}
 
-	#punjenje stabla podacima o linkovima
+	# filling the tree with link info
 	global linktags
+
 	set linktags ""
 	$f.tree insert {} end -id links -text "Links" -open false -tags links
 	foreach link [lsort -dictionary $link_list] {
@@ -733,14 +752,13 @@ proc topologyElementsTree {} {
 	    "expandOrCollapseTree"
 
 	bindEventsToTree
-
     } else {
 	destroy $f.treegrid
-	destroy $f.tree $f.vscroll 
+	destroy $f.tree $f.vscroll
 	destroy $f.tree $f.hscroll
 	destroy $f.buttons
 	destroy $f.tree
-    } 
+    }
 }
 
 #****f* editor.tcl/expandOrCollapseTree
@@ -753,14 +771,15 @@ proc topologyElementsTree {} {
 #****
 proc expandOrCollapseTree {} {
     global expandtree
+
     if { $expandtree == 0 } {
 	set expandtree 1
 	set f .panwin.f2
 	$f.tree heading #0 -text "(Collapse All)"
 	$f.tree item nodes -open true
 	$f.tree item links -open true
-	foreach node [$f.tree children nodes] {
-	    $f.tree item $node -open true	
+	foreach node_id [$f.tree children nodes] {
+	    $f.tree item $node_id -open true
 	}
     } else {
 	set expandtree 0
@@ -768,8 +787,8 @@ proc expandOrCollapseTree {} {
 	$f.tree heading #0 -text "(Expand All)"
 	$f.tree item nodes -open false
 	$f.tree item links -open false
-	foreach node [$f.tree children nodes] {
-	    $f.tree item $node -open false	
+	foreach node_id [$f.tree children nodes] {
+	    $f.tree item $node_id -open false
 	}
     }
 }
@@ -780,24 +799,24 @@ proc expandOrCollapseTree {} {
 # SYNOPSIS
 #   bindEventsToTree
 # FUNCTION
-#   Adds a Tk binding script for the specified 
-#   event sequence to the specified tag. 
+#   Adds a Tk binding script for the specified
+#   event sequence to the specified tag.
 #****
 proc bindEventsToTree {} {
     global nodetags linktags
     set f .panwin.f2
     $f.tree tag bind nodes <Key-Down> \
-	"if {[llength $nodetags] != 0} {
+	"if { [llength $nodetags] != 0 } {
 	    selectNodeFromTree [lindex $nodetags 0]
 	}"
 
     $f.tree tag bind links <Key-Up> \
-	"if {[llength $nodetags] != 0} {
+	"if { [llength $nodetags] != 0 } {
 	    selectNodeFromTree [lindex $nodetags end]
 	}"
 
     $f.tree tag bind links <Key-Down> \
-	"if {[llength $linktags] != 0} {
+	"if { [llength $linktags] != 0 } {
 	    selectLinkPeersFromTree [lindex $linktags 0]
 	}"
 
@@ -813,21 +832,21 @@ proc bindEventsToTree {} {
 	set type [getNodeType $n]
 	global selectedIfc
 	$f.tree tag bind $n <1> \
-	      "selectNodeFromTree $n"   
+	      "selectNodeFromTree $n"
 	$f.tree tag bind $n <Key-Up> \
-	    "if {![string equal {} [$f.tree prev $n]]} {
+	    "if { ! [string equal {} [$f.tree prev $n]] } {
 		selectNodeFromTree [$f.tree prev $n]
 	    } else {
 		.panwin.f1.c dtag node selected
 		.panwin.f1.c delete -withtags selectmark
-	    }" 
+	    }"
 	$f.tree tag bind $n <Key-Down> \
-	    "if {![string equal {} [$f.tree next $n]]} {
+	    "if { ! [string equal {} [$f.tree next $n]] } {
 		selectNodeFromTree [$f.tree next $n]
 	    } else {
 		.panwin.f1.c dtag node selected
 		.panwin.f1.c delete -withtags selectmark
-	    }"           
+	    }"
 	$f.tree tag bind $n <Double-1> \
 	    "$type.configGUI .panwin.f1.c $n"
 	$f.tree tag bind $n <Key-Return> \
@@ -848,14 +867,14 @@ proc bindEventsToTree {} {
 	$f.tree tag bind $l <1> \
 	    "selectLinkPeersFromTree $l"
 	$f.tree tag bind $l <Key-Up> \
-	    "if {![string equal {} [$f.tree prev $l]]} {
+	    "if { ! [string equal {} [$f.tree prev $l]] } {
 		selectLinkPeersFromTree [$f.tree prev $l]
 	    } else {
 		.panwin.f1.c dtag node selected
 		.panwin.f1.c delete -withtags selectmark
-	    }" 
+	    }"
 	$f.tree tag bind $l <Key-Down> \
-	    "if {![string equal {} [$f.tree next $l]]} {
+	    "if { ! [string equal {} [$f.tree next $l]] } {
 		selectLinkPeersFromTree [$f.tree next $l]
 	    }"
 	$f.tree tag bind $l <Double-1> \
@@ -875,11 +894,14 @@ proc bindEventsToTree {} {
 #****
 proc selectNodeFromTree { n } {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
+
     set canvas [getNodeCanvas $n]
     set curcanvas $canvas
     switchCanvas none
+
     .panwin.f1.c dtag node selected
     .panwin.f1.c delete -withtags selectmark
+
     set obj [.panwin.f1.c find withtag "node && $n"]
     selectNode .panwin.f1.c $obj
 }
@@ -895,13 +917,16 @@ proc selectNodeFromTree { n } {
 #****
 proc selectLinkPeersFromTree { l } {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
+
     set n0 [lindex [getLinkPeers $l] 0]
-    set n1 [lindex [getLinkPeers $l] 1]    
+    set n1 [lindex [getLinkPeers $l] 1]
     set canvas [getNodeCanvas $n0]
     set curcanvas $canvas
     switchCanvas none
+
     .panwin.f1.c dtag node selected
     .panwin.f1.c delete -withtags selectmark
+
     set obj0 [.panwin.f1.c find withtag "node && $n0"]
     set obj1 [.panwin.f1.c find withtag "node && $n1"]
     selectNode .panwin.f1.c $obj0
@@ -979,8 +1004,10 @@ proc refreshTopologyTree {} {
 #****
 proc attachToExperimentPopup {} {
     global selectedExperiment runtimeDir
-    set  ateDialog .attachToExperimentDialog
-    catch {destroy $ateDialog}
+
+    set ateDialog .attachToExperimentDialog
+    catch { destroy $ateDialog }
+
     toplevel $ateDialog
     wm transient $ateDialog .
     wm resizable $ateDialog 0 0
@@ -988,45 +1015,45 @@ proc attachToExperimentPopup {} {
     wm iconname $ateDialog "Attach to experiment"
 
     set wi [ttk::frame $ateDialog.mainframe]
-    
+
     ttk::panedwindow $wi.expChooser -orient horizontal
     pack $wi.expChooser -fill both
-    
+
     #left and right pane
     ttk::frame $wi.expChooser.left -relief groove -borderwidth 3
     pack  $wi.expChooser.left
     ttk::frame $wi.expChooser.right -relief groove -borderwidth 3
     pack  $wi.expChooser.right
-    
+
     #right pane definition
     set prevcan [canvas $wi.expChooser.right.pc -bd 0 -relief sunken -highlightthickness 0 \
     		-width 300 -height 210 -background white]
     pack $prevcan -anchor center
     $prevcan create text 150 105 -text "(Preview)" -tags "preview"
-    
+
     $wi.expChooser add $wi.expChooser.left
     $wi.expChooser add $wi.expChooser.right
     pack $wi
 
     ttk::frame $wi.expChooser.left.grid
     pack $wi.expChooser.left.grid -expand 1 -fill both
-    
+
     set tree $wi.expChooser.left.tree
     ttk::treeview $tree -columns "type" -height 5 -selectmode browse \
     	-xscrollcommand "$wi.expChooser.left.hscroll set"\
         -yscrollcommand "$wi.expChooser.left.vscroll set"
     ttk::scrollbar $wi.expChooser.left.hscroll -orient horizontal -command "$wi.expChooser.left.tree xview"
     ttk::scrollbar $wi.expChooser.left.vscroll -orient vertical -command "$wi.expChooser.left.tree yview"
-    
+
     grid $wi.expChooser.left.tree $wi.expChooser.left.vscroll -in $wi.expChooser.left.grid -sticky nsew
     #disabled for now, if the addition of new columns happens it will be useful
     #grid $wi.expChooser.left.up.hscroll -in $wi.expChooser.left.up.grid -sticky nsew
     grid columnconfig $wi.expChooser.left.grid 0 -weight 1
     grid rowconfigure $wi.expChooser.left.grid 0 -weight 1
-    
+
     $tree heading #0 -text "Experiment ID"
-    $tree column #0 -width 240 -minwidth 100 
-    $tree heading type -text "Timestamp" 
+    $tree column #0 -width 240 -minwidth 100
+    $tree heading type -text "Timestamp"
     $tree column type -width 200 -stretch 0 -minwidth 90
     focus $tree
 
@@ -1035,18 +1062,18 @@ proc attachToExperimentPopup {} {
 	$tree insert {} end -id $exp -text [list $exp "-" [getExperimentNameFromFile $exp]] -values [list $timestamp] \
 	          -tags "$exp"
 	$tree tag bind $exp <1> \
-	  "updateScreenshotPreview $prevcan $runtimeDir/$exp/screenshot.png 
+	  "updateScreenshotPreview $prevcan $runtimeDir/$exp/screenshot.png
 	   set selectedExperiment $exp"
     }
-    
+
     foreach exp [getResumableExperiments] {
 	$tree tag bind $exp <Key-Up> \
-	"if {![string equal {} [$tree prev $exp]]} {
+	"if { ! [string equal {} [$tree prev $exp]] } {
 	    updateScreenshotPreview $prevcan $runtimeDir/[$tree prev $exp]/screenshot.png
 	    set selectedExperiment [$tree prev $exp]
 	}"
 	$tree tag bind $exp <Key-Down> \
-	"if {![string equal {} [$tree next $exp]]} {
+	"if { ! [string equal {} [$tree next $exp]] } {
 	    updateScreenshotPreview $prevcan $runtimeDir/[$tree next $exp]/screenshot.png
 	    set selectedExperiment [$tree next $exp]
 	}"
@@ -1058,17 +1085,17 @@ proc attachToExperimentPopup {} {
     $tree focus $first
     set selectedExperiment $first
 
-    if {$selectedExperiment != ""} {
+    if { $selectedExperiment != "" } {
 	updateScreenshotPreview $prevcan $runtimeDir/$selectedExperiment/screenshot.png
     }
-    
+
     ttk::frame $wi.buttons
     pack $wi.buttons -side bottom -fill x -pady 2m
     ttk::button $wi.buttons.resume -text "Resume selected experiment" -command "resumeAndDestroy"
     ttk::button $wi.buttons.cancel -text "Cancel" -command "destroy $ateDialog"
     pack $wi.buttons.cancel $wi.buttons.resume -side right -expand 1
-    
-    bind $ateDialog <Key-Return> {resumeSelectedExperiment $selectedExperiment; destroy .attachToExperimentDialog}
+
+    bind $ateDialog <Key-Return> { resumeSelectedExperiment $selectedExperiment; destroy .attachToExperimentDialog }
     bind $ateDialog <Key-Escape> "destroy $ateDialog"
 }
 
@@ -1082,7 +1109,11 @@ proc attachToExperimentPopup {} {
 #****
 proc resumeAndDestroy {} {
     global selectedExperiment
-    resumeSelectedExperiment $selectedExperiment
+
+    if { $selectedExperiment != "" } {
+	resumeSelectedExperiment $selectedExperiment
+    }
+
     destroy .attachToExperimentDialog
 }
 
@@ -1099,7 +1130,7 @@ proc resumeAndDestroy {} {
 #****
 proc updateScreenshotPreview { pc image } {
     $pc delete "preview"
-    if {[file exists $image]} {
+    if { [file exists $image] } {
 	image create photo screenshot -file $image
 	$pc create image 150 105 -image screenshot -tags "preview"
     } else {
@@ -1120,8 +1151,8 @@ proc updateScreenshotPreview { pc image } {
 #****
 proc setActiveTool { tool } {
     global activetool mf ROOTDIR LIBDIR
-    set ungrouped {select link rectangle oval freeform text} 
 
+    set ungrouped "select link rectangle oval freeform text"
     if { $activetool in $ungrouped } {
 	$mf.left.$activetool state !selected
     } elseif { [$activetool.netlayer] == "LINK" } {
@@ -1136,19 +1167,19 @@ proc setActiveTool { tool } {
 	set image [image create photo -file [$tool.icon toolbar]]
 	set arrowimage [image create photo -file "$ROOTDIR/$LIBDIR/icons/tiny/l2.gif"]
 	$image copy $arrowimage -from 29 30 40 40 -to 29 30 40 40 -compositingrule overlay
-	$mf.left.link_layer configure -image $image 
+	$mf.left.link_layer configure -image $image
 	$mf.left.link_layer state selected
     } elseif { [$tool.netlayer] == "NETWORK" } {
 	set image [image create photo -file [$tool.icon toolbar]]
 	set arrowimage [image create photo -file "$ROOTDIR/$LIBDIR/icons/tiny/l3.gif"]
 	$image copy $arrowimage -from 29 30 40 40 -to 29 30 40 40 -compositingrule overlay
-	$mf.left.net_layer configure -image $image 
+	$mf.left.net_layer configure -image $image
 	$mf.left.net_layer state selected
     }
 
     set activetool $tool
 
-    if { $tool in {"router" "pc" "host"} } {
+    if { $tool in "router pc host" } {
 	set state normal
     } else {
 	set state disabled
@@ -1159,23 +1190,23 @@ proc setActiveTool { tool } {
     }
 }
 
-proc launchBrowser {url} {
+proc launchBrowser { url } {
     global tcl_platform env
 
-    if {$tcl_platform(platform) eq "windows"} {
+    if { $tcl_platform(platform) eq "windows" } {
 	set command [list {*}[auto_execok start] {}]
 	set url [string map {& ^&} $url]
-    } elseif {$tcl_platform(os) eq "Darwin"} {
+    } elseif { $tcl_platform(os) eq "Darwin" } {
 	set command [list open]
     } else {
 	set command [list xdg-open]
     }
 
-    if {$tcl_platform(platform) eq "windows"} {
-	catch {exec {*}$command $url}
-    } elseif {"SUDO_USER" in [array names env]} {
-	catch {exec su - $env(SUDO_USER) /bin/sh -c "$command $url" > /dev/null 2> /dev/null &} 
+    if { $tcl_platform(platform) eq "windows" } {
+	catch { exec {*}$command $url }
+    } elseif { "SUDO_USER" in [array names env] } {
+	catch { exec su - $env(SUDO_USER) /bin/sh -c "$command $url" > /dev/null 2> /dev/null & }
     } else {
-	catch {exec {*}$command $url > /dev/null 2> /dev/null &}
+	catch { exec {*}$command $url > /dev/null 2> /dev/null & }
     }
 }

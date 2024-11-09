@@ -142,7 +142,7 @@ foreach file [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
     }
 }
 
-if {! [info exists eid_base]} {
+if { ! [info exists eid_base] } {
     set eid_base [genExperimentId]
 }
 
@@ -181,17 +181,15 @@ if { $isOSlinux } {
     set l3nodes "router pc host nat64 extelem"
     set supp_router_models "frr quagga static"
     safeSourceFile $ROOTDIR/$LIBDIR/runtime/linux.tcl
-    if { $initMode == 1 } {
-	#puts "INFO: devfs preparation is done only on FreeBSD."
-	exit
-    }
 }
+
 if { $isOSfreebsd } {
     safeSourceFile $ROOTDIR/$LIBDIR/runtime/freebsd.tcl
-    if { $initMode == 1 } {
-	prepareDevfs 1
-	exit
-    }
+}
+
+if { $initMode == 1 } {
+    prepareDevfs 1
+    exit
 }
 
 if { $execMode == "batch" } {
@@ -213,10 +211,12 @@ foreach file [glob -directory $ROOTDIR/$LIBDIR/config *.tcl] {
 foreach file $l2nodes {
     safeSourceFile "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
 }
+
 # L3 nodes
 foreach file $l3nodes {
     safeSourceFile "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
 }
+
 # additional nodes
 safeSourceFile "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
 safeSourceFile "$ROOTDIR/$LIBDIR/nodes/annotations.tcl"
@@ -257,14 +257,14 @@ if { $isOSwin } {
     set winOS true
 }
 
-if { !$isOSwin } {
-    catch {exec magick -version | head -1 | cut -d " " -f 1,2,3} imInfo
+if { ! $isOSwin } {
+    catch { exec magick -version | head -1 | cut -d " " -f 1,2,3 } imInfo
 } else {
     set imInfo $env(PATH)
 }
 
 set hasIM true
-if { [string match -nocase "*imagemagick*" $imInfo] != 1} {
+if { [string match -nocase "*imagemagick*" $imInfo] != 1 } {
     set hasIM false
 }
 
@@ -280,12 +280,15 @@ readConfigFile
 # Initialization should be complete now, so let's start doing something...
 #
 
-if {$execMode == "interactive"} {
+if { $execMode == "interactive" } {
     safePackageRequire Tk "To run the IMUNES GUI, Tk must be installed."
+
     foreach file "canvas copypaste drawing editor help theme linkcfgGUI \
 	mouse nodecfgGUI widgets" {
+
 	safeSourceFile "$ROOTDIR/$LIBDIR/gui/$file.tcl"
     }
+
     source "$ROOTDIR/$LIBDIR/gui/initgui.tcl"
     source "$ROOTDIR/$LIBDIR/gui/topogen.tcl"
     if { $debug == 1 } {
@@ -297,17 +300,19 @@ if {$execMode == "interactive"} {
 	set ::cf::[set curcfg]::currentFile $argv
 	openFile
     }
+
     updateProjectMenu
     # Fire up the animation loop
     animate
     # Event scheduler - should be started / stopped on per-experiment base?
 #     evsched
 } else {
-    if {$argv != ""} {
-	if { ![file exists $argv] } {
+    if { $argv != "" } {
+	if { ! [file exists $argv] } {
 	    puts "Error: file '$argv' doesn't exist"
 	    exit
 	}
+
 	global currentFileBatch
 	set currentFileBatch $argv
 	set fileId [open $argv r]
@@ -319,6 +324,7 @@ if {$execMode == "interactive"} {
 
 	set curcfg [newObjectId $cfg_list "cfg"]
 	lappend cfg_list $curcfg
+
 	namespace eval ::cf::[set curcfg] {}
 
 	loadCfgLegacy $cfg
@@ -326,6 +332,7 @@ if {$execMode == "interactive"} {
 	if { [checkExternalInterfaces] } {
 	    return
 	}
+
 	if { [allSnapshotsAvailable] == 1 } {
 	    deployCfg
 	    createExperimentFilesFromBatch
@@ -342,6 +349,7 @@ if {$execMode == "interactive"} {
 
 	    set curcfg [newObjectId $cfg_list "cfg"]
 	    lappend cfg_list $curcfg
+
 	    namespace eval ::cf::[set curcfg] {}
 	    upvar 0 ::cf::[set ::curcfg]::eid eid
 	    set eid $eid_base

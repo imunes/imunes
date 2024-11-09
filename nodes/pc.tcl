@@ -38,28 +38,11 @@
 #****
 
 set MODULE pc
-
 registerModule $MODULE
 
-#****f* pc.tcl/pc.confNewIfc
-# NAME
-#   pc.confNewIfc -- configure new interface
-# SYNOPSIS
-#   pc.confNewIfc $node $ifc
-# FUNCTION
-#   Configures new interface for the specified node.
-# INPUTS
-#   * node -- node id
-#   * ifc -- interface name
-#****
-proc $MODULE.confNewIfc { node ifc } {
-    global changeAddressRange changeAddressRange6
-    set changeAddressRange 0
-    set changeAddressRange6 0
-    autoIPv4addr $node $ifc
-    autoIPv6addr $node $ifc
-    autoMACaddr $node $ifc
-}
+################################################################################
+########################### CONFIGURATION PROCEDURES ###########################
+################################################################################
 
 #****f* pc.tcl/pc.confNewNode
 # NAME
@@ -86,75 +69,53 @@ proc $MODULE.confNewNode { node } {
     setIfcIPv6addrs $node lo0 "::1/128"
 }
 
-#****f* pc.tcl/pc.icon
+#****f* pc.tcl/pc.confNewIfc
 # NAME
-#   pc.icon -- icon
+#   pc.confNewIfc -- configure new interface
 # SYNOPSIS
-#   pc.icon $size
+#   pc.confNewIfc $node $ifc
 # FUNCTION
-#   Returns path to node icon, depending on the specified size.
+#   Configures new interface for the specified node.
 # INPUTS
-#   * size -- "normal", "small" or "toolbar"
-# RESULT
-#   * path -- path to icon
+#   * node -- node id
+#   * ifc -- interface name
 #****
-proc $MODULE.icon { size } {
-    global ROOTDIR LIBDIR
-    switch $size {
-      normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/pc.gif
-      }
-      small {
-	return $ROOTDIR/$LIBDIR/icons/small/pc.gif
-      }
-      toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/pc.gif
-      }
-    }
+proc $MODULE.confNewIfc { node ifc } {
+    global changeAddressRange changeAddressRange6
+
+    set changeAddressRange 0
+    set changeAddressRange6 0
+    autoIPv4addr $node $ifc
+    autoIPv6addr $node $ifc
+    autoMACaddr $node $ifc
 }
 
-#****f* pc.tcl/pc.toolbarIconDescr
+#****f* pc.tcl/pc.generateConfig
 # NAME
-#   pc.toolbarIconDescr -- toolbar icon description
+#   pc.generateConfig -- configuration generator
 # SYNOPSIS
-#   pc.toolbarIconDescr
+#   set config [pc.generateConfig $node]
 # FUNCTION
-#   Returns this module's toolbar icon description.
-# RESULT
-#   * descr -- string describing the toolbar icon
-#****
-proc $MODULE.toolbarIconDescr {} {
-    return "Add new PC"
-}
-
-#****f* pc.tcl/pc.notebookDimensions
-# NAME
-#   pc.notebookDimensions -- notebook dimensions
-# SYNOPSIS
-#   pc.notebookDimensions $wi
-# FUNCTION
-#   Returns the specified notebook height and width.
+#   Returns the generated configuration. This configuration represents
+#   the configuration loaded on the booting time of the virtual nodes
+#   and it is closly related to the procedure pc.bootcmd.
+#   For each interface in the interface list of the node, ip address is
+#   configured and each static route from the simulator is added.
 # INPUTS
-#   * wi -- widget
+#   * node -- node id
 # RESULT
-#   * size -- notebook size as {height width}
+#   * config -- generated configuration
 #****
-proc $MODULE.notebookDimensions { wi } {
-    set h 210
-    set w 507
+proc $MODULE.generateConfig { node } {
+    set cfg {}
+    set cfg [concat $cfg [nodeCfggenIfcIPv4 $node]]
+    set cfg [concat $cfg [nodeCfggenIfcIPv6 $node]]
+    lappend cfg ""
 
-    if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
-	== "Configuration" } {
-	set h 320
-	set w 507
-    }
-    if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
-	== "Interfaces" } {
-	set h 370
-	set w 507
-    }
+    set cfg [concat $cfg [nodeCfggenRouteIPv4 $node]]
+    set cfg [concat $cfg [nodeCfggenRouteIPv6 $node]]
 
-    return [list $h $w]
+    return $cfg
 }
 
 #****f* pc.tcl/pc.ifacePrefix
@@ -167,7 +128,7 @@ proc $MODULE.notebookDimensions { wi } {
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifacePrefix {l r} {
+proc $MODULE.ifacePrefix { l r } {
     return [l3IfcName $l $r]
 }
 
@@ -213,34 +174,6 @@ proc $MODULE.virtlayer {} {
     return VIRTUALIZED
 }
 
-#****f* pc.tcl/pc.generateConfig
-# NAME
-#   pc.generateConfig -- configuration generator
-# SYNOPSIS
-#   set config [pc.generateConfig $node]
-# FUNCTION
-#   Returns the generated configuration. This configuration represents
-#   the configuration loaded on the booting time of the virtual nodes
-#   and it is closly related to the procedure pc.bootcmd.
-#   For each interface in the interface list of the node, ip address is
-#   configured and each static route from the simulator is added.
-# INPUTS
-#   * node -- node id (type of the node is pc)
-# RESULT
-#   * congif -- generated configuration
-#****
-proc $MODULE.generateConfig { node } {
-    set cfg {}
-    set cfg [concat $cfg [nodeCfggenIfcIPv4 $node]]
-    set cfg [concat $cfg [nodeCfggenIfcIPv6 $node]]
-    lappend cfg ""
-
-    set cfg [concat $cfg [nodeCfggenRouteIPv4 $node]]
-    set cfg [concat $cfg [nodeCfggenRouteIPv6 $node]]
-
-    return $cfg
-}
-
 #****f* pc.tcl/pc.bootcmd
 # NAME
 #   pc.bootcmd -- boot command
@@ -251,7 +184,7 @@ proc $MODULE.generateConfig { node } {
 #   configuration generated in pc.generateConfig.
 #   In this case (procedure pc.bootcmd) specific application is /bin/sh
 # INPUTS
-#   * node -- node id (type of the node is pc)
+#   * node -- node id
 # RESULT
 #   * appl -- application that reads the configuration (/bin/sh)
 #****
@@ -274,86 +207,6 @@ proc $MODULE.shellcmds {} {
     return "csh bash sh tcsh"
 }
 
-#****f* pc.tcl/pc.nodeCreate
-# NAME
-#   pc.nodeCreate -- instantiate
-# SYNOPSIS
-#   pc.nodeCreate $eid $node
-# FUNCTION
-#   Procedure pc.nodeCreate cretaes a new virtual node with
-#   all the interfaces and CPU parameters as defined in imunes.
-# INPUTS
-#   * eid -- experiment id
-#   * node -- node id (type of the node is pc)
-#****
-proc $MODULE.nodeCreate { eid node } {
-    l3node.nodeCreate $eid $node
-}
-
-proc $MODULE.nodeNamespaceSetup { eid node } {
-    l3node.nodeNamespaceSetup $eid $node
-}
-
-proc $MODULE.nodeInitConfigure { eid node } {
-    l3node.nodeInitConfigure $eid $node
-}
-
-proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
-    l3node.nodePhysIfacesCreate $eid $node $ifcs
-}
-
-#****f* pc.tcl/pc.nodeConfigure
-# NAME
-#   pc.nodeConfigure -- start
-# SYNOPSIS
-#   pc.nodeConfigure $eid $node
-# FUNCTION
-#   Starts a new pc. The node can be started if it is instantiated.
-#   Simulates the booting proces of a pc, by calling l3node.nodeConfigure procedure.
-# INPUTS
-#   * eid -- experiment id
-#   * node -- node id (type of the node is pc)
-#****
-proc $MODULE.nodeConfigure { eid node } {
-    l3node.nodeConfigure $eid $node
-}
-
-#****f* pc.tcl/pc.nodeShutdown
-# NAME
-#   pc.nodeShutdown -- shutdown
-# SYNOPSIS
-#   pc.nodeShutdown $eid $node
-# FUNCTION
-#   Shutdowns a pc. Simulates the shutdown proces of a pc,
-#   by calling the l3node.nodeShutdown procedure.
-# INPUTS
-#   * eid -- experiment id
-#   * node -- node id (type of the node is pc)
-#****
-proc $MODULE.nodeShutdown { eid node } {
-    l3node.nodeShutdown $eid $node
-}
-
-proc $MODULE.nodeIfacesDestroy { eid node ifcs } {
-    l3node.nodeIfacesDestroy $eid $node $ifcs
-}
-
-#****f* pc.tcl/pc.nodeDestroy
-# NAME
-#   pc.nodeDestroy -- destroy
-# SYNOPSIS
-#   pc.nodeDestroy $eid $node
-# FUNCTION
-#   Destroys a pc. Destroys all the interfaces of the pc
-#   and the vimage itself by calling l3node.nodeDestroy procedure.
-# INPUTS
-#   * eid -- experiment id
-#   * node -- node id (type of the node is pc)
-#****
-proc $MODULE.nodeDestroy { eid node } {
-    l3node.nodeDestroy $eid $node
-}
-
 #****f* pc.tcl/pc.nghook
 # NAME
 #   pc.nghook -- nghook
@@ -373,6 +226,196 @@ proc $MODULE.nodeDestroy { eid node } {
 #****
 proc $MODULE.nghook { eid node ifc } {
     return [l3node.nghook $eid $node $ifc]
+}
+
+################################################################################
+############################ INSTANTIATE PROCEDURES ############################
+################################################################################
+
+#****f* pc.tcl/pc.nodeCreate
+# NAME
+#   pc.nodeCreate -- nodeCreate
+# SYNOPSIS
+#   pc.nodeCreate $eid $node
+# FUNCTION
+#   Creates a new virtualized pc node (using jails/docker).
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
+proc $MODULE.nodeCreate { eid node } {
+    l3node.nodeCreate $eid $node
+}
+
+#****f* pc.tcl/pc.nodeNamespaceSetup
+# NAME
+#   pc.nodeNamespaceSetup -- pc node nodeNamespaceSetup
+# SYNOPSIS
+#   pc.nodeNamespaceSetup $eid $node
+# FUNCTION
+#   Linux only. Attaches the existing Docker netns to a new one.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
+proc $MODULE.nodeNamespaceSetup { eid node } {
+    l3node.nodeNamespaceSetup $eid $node
+}
+
+#****f* pc.tcl/pc.nodeInitConfigure
+# NAME
+#   pc.nodeInitConfigure -- pc node nodeInitConfigure
+# SYNOPSIS
+#   pc.nodeInitConfigure $eid $node
+# FUNCTION
+#   Runs initial L3 configuration, such as creating logical interfaces and
+#   configuring sysctls.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
+proc $MODULE.nodeInitConfigure { eid node } {
+    l3node.nodeInitConfigure $eid $node
+}
+
+proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
+    l3node.nodePhysIfacesCreate $eid $node $ifcs
+}
+
+#****f* pc.tcl/pc.nodeConfigure
+# NAME
+#   pc.nodeConfigure -- start
+# SYNOPSIS
+#   pc.nodeConfigure $eid $node
+# FUNCTION
+#   Starts a new pc. The node can be started if it is instantiated.
+#   Simulates the booting proces of a pc, by calling l3node.nodeConfigure procedure.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
+proc $MODULE.nodeConfigure { eid node } {
+    l3node.nodeConfigure $eid $node
+}
+
+################################################################################
+############################# TERMINATE PROCEDURES #############################
+################################################################################
+
+proc $MODULE.nodeIfacesDestroy { eid node ifcs } {
+    l3node.nodeIfacesDestroy $eid $node $ifcs
+}
+
+#****f* pc.tcl/pc.nodeShutdown
+# NAME
+#   pc.nodeShutdown -- layer 3 node shutdown
+# SYNOPSIS
+#   pc.nodeShutdown $eid $node
+# FUNCTION
+#   Shutdowns a pc node.
+#   Simulates the shutdown proces of a node, kills all the services and
+#   processes.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
+proc $MODULE.nodeShutdown { eid node } {
+    l3node.nodeShutdown $eid $node
+}
+
+#****f* pc.tcl/pc.nodeDestroy
+# NAME
+#   pc.nodeDestroy -- layer 3 node destroy
+# SYNOPSIS
+#   pc.nodeDestroy $eid $node
+# FUNCTION
+#   Destroys a pc node.
+#   First, it destroys all remaining virtual ifaces (vlans, tuns, etc).
+#   Then, it destroys the jail/container with its namespaces and FS.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
+proc $MODULE.nodeDestroy { eid node } {
+    l3node.nodeDestroy $eid $node
+}
+
+################################################################################
+################################ GUI PROCEDURES ################################
+################################################################################
+
+#****f* pc.tcl/pc.icon
+# NAME
+#   pc.icon -- icon
+# SYNOPSIS
+#   pc.icon $size
+# FUNCTION
+#   Returns path to node icon, depending on the specified size.
+# INPUTS
+#   * size -- "normal", "small" or "toolbar"
+# RESULT
+#   * path -- path to icon
+#****
+proc $MODULE.icon { size } {
+    global ROOTDIR LIBDIR
+
+    switch $size {
+	normal {
+	    return $ROOTDIR/$LIBDIR/icons/normal/pc.gif
+	}
+	small {
+	    return $ROOTDIR/$LIBDIR/icons/small/pc.gif
+	}
+	toolbar {
+	    return $ROOTDIR/$LIBDIR/icons/tiny/pc.gif
+	}
+    }
+}
+
+#****f* pc.tcl/pc.toolbarIconDescr
+# NAME
+#   pc.toolbarIconDescr -- toolbar icon description
+# SYNOPSIS
+#   pc.toolbarIconDescr
+# FUNCTION
+#   Returns this module's toolbar icon description.
+# RESULT
+#   * descr -- string describing the toolbar icon
+#****
+proc $MODULE.toolbarIconDescr {} {
+    return "Add new PC"
+}
+
+#****f* pc.tcl/pc.notebookDimensions
+# NAME
+#   pc.notebookDimensions -- notebook dimensions
+# SYNOPSIS
+#   pc.notebookDimensions $wi
+# FUNCTION
+#   Returns the specified notebook height and width.
+# INPUTS
+#   * wi -- widget
+# RESULT
+#   * size -- notebook size as {height width}
+#****
+proc $MODULE.notebookDimensions { wi } {
+    set h 210
+    set w 507
+
+    if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
+	== "Configuration" } {
+
+	set h 320
+	set w 507
+    }
+    if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
+	== "Interfaces" } {
+
+	set h 370
+	set w 507
+    }
+
+    return [list $h $w]
 }
 
 #****f* pc.tcl/pc.configGUI
@@ -402,7 +445,7 @@ proc $MODULE.configGUI { c node } {
     set ifctab [lindex $tabs 1]
 
     set treecolumns {"OperState State" "NatState Nat" "IPv4addrs IPv4 addrs" "IPv6addrs IPv6 addrs" \
-	    "MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop"}
+	"MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop"}
     configGUI_addTree $ifctab $node
 
     configGUI_customImage $configtab $node

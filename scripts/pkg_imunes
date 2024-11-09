@@ -15,12 +15,12 @@ union=`ls -A $union_mount 2>/dev/null`
 zfs=`zfs list | grep "vroot/vroot"`
 
 # prefer unionfs mount
-if [ "$union" ]; then 
+if [ "$union" ]; then
     VROOT="$union_mount"
     zfs=""
-elif [ "$zfs" ]; then 
+elif [ "$zfs" ]; then
     VROOT="/vroot/vroot"
-else 
+else
     echo "We couldn't detect any of the standard virtual node filesystems."
     echo "Please run the following to instantiate the filesystem:"
     echo "  # imunes -p"

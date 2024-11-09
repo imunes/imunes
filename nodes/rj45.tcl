@@ -41,20 +41,11 @@
 #****
 
 set MODULE rj45
-
 registerModule $MODULE
 
-#****f* rj45.tcl/rj45.prepareSystem
-# NAME
-#   rj45.prepareSystem -- prepare system
-# SYNOPSIS
-#   rj45.prepareSystem
-# FUNCTION
-#   Loads ng_ether into the kernel.
-#****
-proc $MODULE.prepareSystem {} {
-    catch { exec kldload ng_ether }
-}
+################################################################################
+########################### CONFIGURATION PROCEDURES ###########################
+################################################################################
 
 #****f* rj45.tcl/rj45.confNewNode
 # NAME
@@ -68,12 +59,149 @@ proc $MODULE.prepareSystem {} {
 #****
 proc $MODULE.confNewNode { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
-    
+
     set nconfig [list \
 	"hostname UNASSIGNED" \
 	! ]
     lappend $node "network-config [list $nconfig]"
 }
+
+#****f* rj45.tcl/rj45.ifacePrefix
+# NAME
+#   rj45.ifacePrefix -- interface name prefix
+# SYNOPSIS
+#   rj45.ifacePrefix
+# FUNCTION
+#   Returns rj45 interface name prefix.
+# RESULT
+#   * name -- name prefix string
+#****
+proc $MODULE.ifacePrefix { l r } {
+    return ""
+}
+
+#****f* rj45.tcl/rj45.netlayer
+# NAME
+#   rj45.netlayer -- layer
+# SYNOPSIS
+#   set layer [rj45.netlayer]
+# FUNCTION
+#   Returns the layer on which the rj45 operates, i.e. returns LINK.
+# RESULT
+#   * layer -- set to LINK
+#****
+proc $MODULE.netlayer {} {
+    return LINK
+}
+
+#****f* rj45.tcl/rj45.virtlayer
+# NAME
+#   rj45.virtlayer -- virtual layer
+# SYNOPSIS
+#   set layer [rj45.virtlayer]
+# FUNCTION
+#   Returns the layer on which the rj45 node is instantiated,
+#   i.e. returns NATIVE.
+# RESULT
+#   * layer -- set to NATIVE
+#****
+proc $MODULE.virtlayer {} {
+    return NATIVE
+}
+
+#****f* rj45.tcl/rj45.nghook
+# NAME
+#   rj45.nghook
+# SYNOPSIS
+#   rj45.nghook $eid $node $ifc
+# FUNCTION
+#   Returns the id of the netgraph node and the netgraph hook name. In this
+#   case netgraph node name correspondes to the name of the physical interface.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#   * ifc -- interface id
+# RESULT
+#   * nghook -- the list containing netgraph node name and
+#     the netraph hook name (in this case: lower).
+#****
+proc $MODULE.nghook { eid node ifc } {
+    set ifname [getNodeName $node]
+    if { [getEtherVlanEnabled $node] } {
+	set vlan [getEtherVlanTag $node]
+	set ifname ${ifname}_$vlan
+    }
+
+    return [list $ifname lower]
+}
+
+#****f* rj45.tcl/rj45.maxLinks
+# NAME
+#   rj45.maxLinks -- maximum number of links
+# SYNOPSIS
+#   rj45.maxLinks
+# FUNCTION
+#   Returns rj45 maximum number of links.
+# RESULT
+#   * maximum number of links.
+#****
+proc $MODULE.maxLinks {} {
+    return 1
+}
+
+################################################################################
+############################ INSTANTIATE PROCEDURES ############################
+################################################################################
+
+#****f* rj45.tcl/rj45.prepareSystem
+# NAME
+#   rj45.prepareSystem -- prepare system
+# SYNOPSIS
+#   rj45.prepareSystem
+# FUNCTION
+#   Loads ng_ether into the kernel.
+#****
+proc $MODULE.prepareSystem {} {
+    catch { exec kldload ng_ether }
+}
+
+#****f* rj45.tcl/rj45.nodeCreate
+# NAME
+#   rj45.nodeCreate -- instantiate
+# SYNOPSIS
+#   rj45.nodeCreate $eid $node
+# FUNCTION
+#   Procedure rj45.nodeCreate puts real interface into promiscuous mode.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
+proc $MODULE.nodeCreate { eid node } {
+    captureExtIfc $eid $node
+}
+
+################################################################################
+############################# TERMINATE PROCEDURES #############################
+################################################################################
+
+#****f* rj45.tcl/rj45.nodeDestroy
+# NAME
+#   rj45.nodeDestroy -- destroy
+# SYNOPSIS
+#   rj45.nodeDestroy $eid $node
+# FUNCTION
+#   Destroys an rj45 emulation interface.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
+proc $MODULE.nodeDestroy { eid node } {
+    releaseExtIfc $eid $node
+}
+
+################################################################################
+################################ GUI PROCEDURES ################################
+################################################################################
 
 #****f* rj45.tcl/rj45.icon
 # NAME
@@ -89,16 +217,17 @@ proc $MODULE.confNewNode { node } {
 #****
 proc $MODULE.icon { size } {
     global ROOTDIR LIBDIR
+
     switch $size {
-      normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/rj45.gif
-      }
-      small {
-	return $ROOTDIR/$LIBDIR/icons/small/rj45.gif
-      }
-      toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/rj45.gif
-      }
+	normal {
+	    return $ROOTDIR/$LIBDIR/icons/normal/rj45.gif
+	}
+	small {
+	    return $ROOTDIR/$LIBDIR/icons/small/rj45.gif
+	}
+	toolbar {
+	    return $ROOTDIR/$LIBDIR/icons/tiny/rj45.gif
+	}
     }
 }
 
@@ -114,104 +243,6 @@ proc $MODULE.icon { size } {
 #****
 proc $MODULE.toolbarIconDescr {} {
     return "Add new External interface"
-}
-
-#****f* rj45.tcl/rj45.ifacePrefix
-# NAME
-#   rj45.ifacePrefix -- interface name
-# SYNOPSIS
-#   rj45.ifacePrefix
-# FUNCTION
-#   Returns rj45 interface name prefix.
-# RESULT
-#   * name -- name prefix string
-#****
-proc $MODULE.ifacePrefix {l r} {
-    return ""
-}
-
-#****f* rj45.tcl/rj45.netlayer
-# NAME
-#   rj45.netlayer -- layer
-# SYNOPSIS
-#   set layer [rj45.netlayer]
-# FUNCTION
-#   Returns the layer on which the rj45 operates, i.e. returns LINK. 
-# RESULT
-#   * layer -- set to LINK
-#****
-proc $MODULE.netlayer {} {
-    return LINK
-}
-
-#****f* rj45.tcl/rj45.virtlayer
-# NAME
-#   rj45.virtlayer -- virtual layer
-# SYNOPSIS
-#   set layer [rj45.virtlayer]
-# FUNCTION
-#   Returns the layer on which the rj45 node is instantiated,
-#   i.e. returns NATIVE. 
-# RESULT
-#   * layer -- set to NATIVE 
-#****
-proc $MODULE.virtlayer {} {
-    return NATIVE
-}
-
-#****f* rj45.tcl/rj45.nodeCreate
-# NAME
-#   rj45.nodeCreate -- nodeCreate
-# SYNOPSIS
-#   rj45.nodeCreate $eid $node
-# FUNCTION
-#   Procedure rj45.nodeCreate puts real interface into promiscuous mode.
-# INPUTS
-#   * eid -- experiment id
-#   * node -- node id (type of the node is rj45)
-#****
-proc $MODULE.nodeCreate { eid node } {
-    captureExtIfc $eid $node
-}
-
-#****f* rj45.tcl/rj45.nodeDestroy
-# NAME
-#   rj45.nodeDestroy -- destroy
-# SYNOPSIS
-#   rj45.nodeDestroy $eid $node
-# FUNCTION
-#   Destroys an rj45 emulation interface. 
-# INPUTS
-#   * eid -- experiment id
-#   * node -- node id (type of the node is rj45)
-#****
-proc $MODULE.nodeDestroy { eid node } {
-    releaseExtIfc $eid $node
-}
-
-#****f* rj45.tcl/rj45.nghook
-# NAME
-#   rj45.nghook
-# SYNOPSIS
-#   rj45.nghook $eid $node $ifc 
-# FUNCTION
-#   Returns the id of the netgraph node and the netgraph hook name. In this
-#   case netgraph node name correspondes to the name of the physical interface.
-# INPUTS
-#   * eid -- experiment id
-#   * node -- node id
-#   * ifc -- interface name 
-# RESULT
-#   * nghook -- the list containing netgraph node name and
-#     the netraph hook name (in this case: lower).
-#****
-proc $MODULE.nghook { eid node ifc } {
-    set ifname [getNodeName $node]
-    if { [getEtherVlanEnabled $node] } {
-	set vlan [getEtherVlanTag $node]
-	set ifname ${ifname}_$vlan
-    }
-    return [list $ifname lower]
 }
 
 #****f* rj45.tcl/rj45.configGUI
@@ -230,6 +261,7 @@ proc $MODULE.nghook { eid node ifc } {
 proc $MODULE.configGUI { c node } {
     global wi
     global guielements treecolumns
+
     set guielements {}
     set treecolumns {}
 
@@ -238,18 +270,4 @@ proc $MODULE.configGUI { c node } {
     configGUI_nodeName $wi $node "Physical interface:"
     configGUI_etherVlan $wi $node
     configGUI_buttonsACNode $wi $node
-}
-
-#****f* rj45.tcl/rj45.maxLinks
-# NAME
-#   rj45.maxLinks -- maximum number of links
-# SYNOPSIS
-#   rj45.maxLinks
-# FUNCTION
-#   Returns rj45 maximum number of links.
-# RESULT
-#   * maximum number of links.
-#****
-proc $MODULE.maxLinks {} {
-    return 1
 }

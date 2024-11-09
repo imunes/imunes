@@ -89,7 +89,7 @@ proc writeDataToNodeFile { node path data } {
 proc execCmdNode { node cmd } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    catch {eval [concat "exec docker exec " $eid.$node $cmd] } output
+    catch { eval [concat "exec docker exec " $eid.$node $cmd] } output
     return $output
 }
 
@@ -124,13 +124,13 @@ proc execCmdNodeBkg { node cmd } {
 #   * returns 0 if the applications exist, otherwise it returns 1.
 #****
 proc checkForExternalApps { app_list } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     foreach app $app_list {
 	set status [ catch { exec which $app } err ]
 	if { $status } {
 	    return 1
 	}
     }
+
     return 0
 }
 
@@ -156,6 +156,7 @@ proc checkForApplications { node app_list } {
             return 1
         }
     }
+
     return 0
 }
 
@@ -173,13 +174,14 @@ proc checkForApplications { node app_list } {
 proc startWiresharkOnNodeIfc { node ifc } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    if {[checkForExternalApps "startxcmd"] == 0 && \
-    [checkForApplications $node "wireshark"] == 0} {
+    if { [checkForExternalApps "startxcmd"] == 0 && \
+	[checkForApplications $node "wireshark"] == 0 } {
+
         startXappOnNode $node "wireshark -ki $ifc"
     } else {
 	set wiresharkComm ""
 	foreach wireshark "wireshark wireshark-gtk wireshark-qt" {
-	    if {[checkForExternalApps $wireshark] == 0} {
+	    if { [checkForExternalApps $wireshark] == 0 } {
 		set wiresharkComm $wireshark
 		break
 	    }
@@ -187,7 +189,7 @@ proc startWiresharkOnNodeIfc { node ifc } {
 
 	if { $wiresharkComm != "" } {
 	    exec docker exec $eid.$node tcpdump -s 0 -U -w - -i $ifc 2>/dev/null |\
-	    $wiresharkComm -o "gui.window_title:$ifc@[getNodeName $node] ($eid)" -k -i - &
+		$wiresharkComm -o "gui.window_title:$ifc@[getNodeName $node] ($eid)" -k -i - &
 	} else {
             tk_dialog .dialog1 "IMUNES error" \
 	"IMUNES could not find an installation of Wireshark.\
@@ -211,13 +213,14 @@ proc startWiresharkOnNodeIfc { node ifc } {
 proc startXappOnNode { node app } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global debug
-    if {[checkForExternalApps "socat"] != 0 } {
+
+    if { [checkForExternalApps "socat"] != 0 } {
         puts "To run X applications on the node, install socat on your host."
         return
     }
 
     set logfile "/dev/null"
-    if {$debug} {
+    if { $debug } {
         set logfile "/tmp/startxcmd_$eid\_$node.log"
     }
 
@@ -236,7 +239,7 @@ proc startXappOnNode { node app } {
 #   * ifc -- virtual node interface
 #****
 proc startTcpdumpOnNodeIfc { node ifc } {
-    if {[checkForApplications $node "tcpdump"] == 0} {
+    if { [checkForApplications $node "tcpdump"] == 0 } {
         spawnShell $node "tcpdump -ni $ifc"
     }
 }
@@ -259,11 +262,12 @@ proc existingShells { shells node } {
     set existing []
     foreach shell $shells {
         set cmd "docker exec $eid.$node which $shell"
-        set err [catch {eval exec $cmd} res]
-        if  {!$err} {
+        set err [catch { eval exec $cmd } res]
+        if  { ! $err } {
             lappend existing $res
         }
     }
+
     return $existing
 }
 
@@ -282,7 +286,7 @@ proc existingShells { shells node } {
 proc spawnShell { node cmd } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    if { [catch {exec xterm -version}] } {
+    if { [catch { exec xterm -version }] } {
 	tk_dialog .dialog1 "IMUNES error" \
 	    "Cannot open terminal. Is xterm installed?" \
             info 0 Dismiss
@@ -309,7 +313,7 @@ proc spawnShell { node cmd } {
 #   * exp_list -- experiment id list
 #****
 proc fetchRunningExperiments {} {
-    catch {exec himage -l | cut -d " " -f 1} exp_list
+    catch { exec himage -l | cut -d " " -f 1 } exp_list
     set exp_list [split $exp_list "
 "]
     return "$exp_list"
@@ -341,25 +345,25 @@ proc allSnapshotsAvailable {} {
 
     foreach template $snapshots {
 	set search_template $template
-	if {[string match "*:*" $template] != 1} {
+	if { [string match "*:*" $template] != 1 } {
 	    append search_template ":latest"
 	}
 
-	catch {exec docker images -q $search_template} images
-	if {[llength $images] > 0} {
+	catch { exec docker images -q $search_template } images
+	if { [llength $images] > 0 } {
 	    continue
 	} else {
 	    # be nice to the user and see whether there is an image id matching
-	    if {[string length $template] == 12} {
-                catch {exec docker images -q} all_images
-		if {[lsearch $all_images $template] == -1} {
+	    if { [string length $template] == 12 } {
+                catch { exec docker images -q } all_images
+		if { [lsearch $all_images $template] == -1 } {
 		    incr missing
 		}
 	    } else {
 		incr missing
 	    }
-	    if {$missing} {
-                if {$execMode == "batch"} {
+	    if { $missing } {
+                if { $execMode == "batch" } {
                     puts "Docker image for some virtual nodes:
     $template
 is missing.
@@ -436,7 +440,7 @@ proc getHostIfcVlanExists { node ifname } {
     if { $execMode == "batch" } {
 	puts $msg
     } else {
-	after idle {.dialog1.msg configure -wraplength 4i}
+	after idle { .dialog1.msg configure -wraplength 4i }
 	tk_dialog .dialog1 "IMUNES error" $msg \
 	    info 0 Dismiss
     }
@@ -477,7 +481,7 @@ proc loadKernelModules {} {
     global all_modules_list
 
     foreach module $all_modules_list {
-        if {[info procs $module.prepareSystem] == "$module.prepareSystem"} {
+        if { [info procs $module.prepareSystem] == "$module.prepareSystem" } {
             $module.prepareSystem
         }
     }
@@ -511,7 +515,7 @@ proc createExperimentContainer {} {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global devfs_number
 
-    catch {exec ip netns attach imunes_$devfs_number 1}
+    catch { exec ip netns attach imunes_$devfs_number 1 }
 
     # Top-level experiment netns
     exec ip netns add $eid
@@ -533,6 +537,7 @@ proc prepareFilesystemForNode { node } {
 
     set VROOTDIR /var/imunes
     set VROOT_RUNTIME $VROOTDIR/$eid/$node
+
     pipesExec "mkdir -p $VROOT_RUNTIME" "hold"
 }
 
@@ -557,6 +562,7 @@ proc createNodeContainer { node } {
     if { [getNodeDockerAttach $node] } {
 	set network "bridge"
     }
+
     set vroot [getNodeCustomImage $node]
     if { $vroot == "" } {
         set vroot $VROOT_MASTER
@@ -599,7 +605,7 @@ proc isNodeStarted { node } {
 
     set node_id "$eid.$node"
 
-    catch {exec docker inspect --format '{{.State.Running}}' $node_id} status
+    catch { exec docker inspect --format '{{.State.Running}}' $node_id } status
 
     return [string match 'true' $status]
 }
@@ -694,7 +700,7 @@ proc nodePhysIfacesCreate { node ifcs } {
 	    }
 	    eth {
 		set ether [getIfcMACaddr $node $ifc]
-                if {$ether == ""} {
+                if { $ether == "" } {
                     autoMACaddr $node $ifc
 		    set ether [getIfcMACaddr $node $ifc]
                 }
@@ -756,7 +762,7 @@ proc nodeLogIfacesCreate { node } {
 		# must be created after links
 	    }
 	    lo {
-		if {$ifc != "lo0"} {
+		if { $ifc != "lo0" } {
 		    pipesExec "docker exec -d $node_id ip link add $ifc type dummy" "hold"
 		    pipesExec "docker exec -d $node_id ip link set $ifc up" "hold"
 		}
@@ -842,12 +848,14 @@ proc createNsVethPair { ifname1 netNs1 ifname2 netNs2 } {
 	set nsstr1 "netns $netNs1"
 	set nsstr1x "-n $netNs1"
     }
+
     set nsstr2 ""
     set nsstr2x ""
     if { $netNs2 != "" } {
 	set nsstr2 "netns $netNs2"
 	set nsstr2x "-n $netNs2"
     }
+
     pipesExec "ip link add name $eid-$ifname1 $nsstr1 type veth peer name $eid-$ifname2 $nsstr2" "hold"
     pipesExec "ip $nsstr1x link set $eid-$ifname1 name $ifname1" "hold"
     pipesExec "ip $nsstr2x link set $eid-$ifname2 name $ifname2" "hold"
@@ -863,6 +871,7 @@ proc setNsIfcMaster { netNs ifname master state } {
     if { $netNs != "" } {
 	set nsstr "-n $netNs"
     }
+
     pipesExec "ip $nsstr link set $ifname master $master $state" "hold"
 }
 
@@ -1013,11 +1022,65 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
 	if { $qdisc != "FIFO" } {
 	    execSetIfcQDisc $eid $node $ifc $qdisc
 	}
+
 	set qlen [getIfcQLen $node $ifc]
 	if { $qlen != 1000 } {
 	    execSetIfcQLen $eid $node $ifc $qlen
 	}
     }
+}
+
+#****f* linux.tcl/runConfOnNode
+# NAME
+#   runConfOnNode -- run configuration script on node
+# SYNOPSIS
+#   runConfOnNode $node
+# FUNCTION
+#   Run startup configuration file on the given node.
+# INPUTS
+#   * node -- node id
+#****
+proc runConfOnNode { node } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set node_id "$eid.$node"
+
+    if { [getCustomEnabled $node] == true } {
+        set selected [getCustomConfigSelected $node]
+
+        set bootcmd [getCustomConfigCommand $node $selected]
+        set bootcfg [getCustomConfig $node $selected]
+	if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
+	    foreach statrte [getDefaultIPv4routes $node] {
+		lappend bootcfg [getIPv4RouteCmd $statrte]
+	    }
+	    foreach statrte [getDefaultIPv6routes $node] {
+		lappend bootcfg [getIPv6RouteCmd $statrte]
+	    }
+	}
+        set confFile "custom.conf"
+    } else {
+        set bootcfg [[getNodeType $node].generateConfig $node]
+        set bootcmd [[getNodeType $node].bootcmd $node]
+        set confFile "boot.conf"
+    }
+
+    generateHostsFile $node
+
+    set nodeNs [getNodeNetns $eid $node]
+    foreach ifc [allIfcList $node] {
+	if { [getIfcOperState $node $ifc] == "down" } {
+	    pipesExec "ip -n $nodeNs link set dev $ifc down"
+	}
+    }
+
+    set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
+    writeDataToNodeFile $node /$confFile $cfg
+    set cmds "$bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
+    # renaming the file signals that we're done
+    set cmds "$cmds mv /tout.log /out.log ;"
+    set cmds "$cmds mv /terr.log /err.log"
+    pipesExec "docker exec -d $node_id sh -c '$cmds'" "hold"
 }
 
 #****f* linux.tcl/startIfcsNode
@@ -1034,6 +1097,7 @@ proc startIfcsNode { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     set nodeNs [getNodeNetns $eid $node]
+
     pipesExec "ip -n $nodeNs link set dev lo down 2>/dev/null" "hold"
     pipesExec "ip -n $nodeNs link set dev lo name lo0 2>/dev/null" "hold"
     foreach ifc [allIfcList $node] {
@@ -1041,16 +1105,18 @@ proc startIfcsNode { node } {
 	if { [getLogIfcType $node $ifc] == "vlan" } {
 	    set tag [getIfcVlanTag $node $ifc]
 	    set dev [getIfcVlanDev $node $ifc]
-	    if {$tag != "" && $dev != ""} {
+	    if { $tag != "" && $dev != "" } {
 		pipesExec "ip -n $nodeNs link add link $dev name $ifc type vlan id $tag" "hold"
 	    }
 	}
-	if {[getIfcOperState $node $ifc] == "up"} {
+
+	if { [getIfcOperState $node $ifc] == "up" } {
 	    pipesExec "ip -n $nodeNs link set dev $ifc up mtu $mtu" "hold"
 	} else {
 	    pipesExec "ip -n $nodeNs link set dev $ifc mtu $mtu" "hold"
 	}
-	if {[getIfcNatState $node $ifc] == "on"} {
+
+	if { [getIfcNatState $node $ifc] == "on" } {
 	    pipesExec "ip netns exec $nodeNs iptables -t nat -A POSTROUTING -o $ifc -j MASQUERADE" "hold"
 	}
     }
@@ -1143,49 +1209,6 @@ proc killAllNodeProcesses { eid node } {
 
     # kill all processes except pid 1 and its child(ren)
     pipesExec "docker exec -d $node_id sh -c 'killall5 -9 -o 1 -o \$(pgrep -P 1)'" "hold"
-}
-
-proc runConfOnNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    set node_id "$eid.$node"
-
-    if { [getCustomEnabled $node] == true } {
-        set selected [getCustomConfigSelected $node]
-
-        set bootcmd [getCustomConfigCommand $node $selected]
-        set bootcfg [getCustomConfig $node $selected]
-	if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
-	    foreach statrte [getDefaultIPv4routes $node] {
-		lappend bootcfg [getIPv4RouteCmd $statrte]
-	    }
-	    foreach statrte [getDefaultIPv6routes $node] {
-		lappend bootcfg [getIPv6RouteCmd $statrte]
-	    }
-	}
-        set confFile "custom.conf"
-    } else {
-        set bootcfg [[getNodeType $node].generateConfig $node]
-        set bootcmd [[getNodeType $node].bootcmd $node]
-        set confFile "boot.conf"
-    }
-
-    generateHostsFile $node
-
-    set nodeNs [getNodeNetns $eid $node]
-    foreach ifc [allIfcList $node] {
-	if {[getIfcOperState $node $ifc] == "down"} {
-	    pipesExec "ip -n $nodeNs link set dev $ifc down"
-	}
-    }
-
-    set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
-    writeDataToNodeFile $node /$confFile $cfg
-    set cmds "$bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
-    # renaming the file signals that we're done
-    set cmds "$cmds mv /tout.log /out.log ;"
-    set cmds "$cmds mv /terr.log /err.log"
-    pipesExec "docker exec -d $node_id sh -c '$cmds'" "hold"
 }
 
 proc destroyDirectLinkBetween { eid lnode1 lnode2 } {
@@ -1292,7 +1315,7 @@ proc enableIPforwarding { eid node } {
 # RESULT
 #   * ifsc - list of interfaces
 #****
-proc getExtIfcs { } {
+proc getExtIfcs {} {
     catch { exec ls /sys/class/net } ifcs
     foreach ignore "lo* ipfw* tun*" {
         set ifcs [ lsearch -all -inline -not $ifcs $ignore ]
@@ -1326,7 +1349,7 @@ proc captureExtIfc { eid node } {
 	    if { $execMode == "batch" } {
 		puts $msg
 	    } else {
-		after idle {.dialog1.msg configure -wraplength 4i}
+		after idle { .dialog1.msg configure -wraplength 4i }
 		tk_dialog .dialog1 "IMUNES error" $msg \
 		    info 0 Dismiss
 	    }
@@ -1337,7 +1360,7 @@ proc captureExtIfc { eid node } {
 	}
     }
 
-    if { [getLinkDirect [lindex [getIfcLink $node 0] 0]] } {
+    if { [getLinkDirect [lindex [getIfcLink $node "0"] 0]] } {
 	return
     }
 
@@ -1381,7 +1404,7 @@ proc releaseExtIfc { eid node } {
 	return
     }
 
-    if { [getLinkDirect [lindex [getIfcLink $node 0] 0]] } {
+    if { [getLinkDirect [lindex [getIfcLink $node "0"] 0]] } {
 	return
     }
 
@@ -1417,7 +1440,8 @@ proc getIPv4RouteCmd { statrte } {
 proc getIPv6RouteCmd { statrte } {
     set route [lindex $statrte 0]
     set addr [lindex $statrte 1]
-	set cmd "ip -6 route append $route via $addr"
+    set cmd "ip -6 route append $route via $addr"
+
     return $cmd
 }
 
@@ -1444,7 +1468,7 @@ proc getIPv6IfcCmd { ifc addr primary } {
 proc getRunningNodeIfcList { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    catch {exec docker exec $eid.$node ifconfig} full
+    catch { exec docker exec $eid.$node ifconfig } full
     set lines [split $full "\n"]
 
     return $lines
@@ -1452,7 +1476,7 @@ proc getRunningNodeIfcList { node } {
 
 proc checkSysPrerequisites {} {
     set msg ""
-    if { [catch {exec docker ps}] } {
+    if { [catch { exec docker ps }] } {
         set msg "Cannot start experiment. Is docker installed and running (check the output of 'docker ps')?"
     }
 
@@ -1463,15 +1487,15 @@ proc checkSysPrerequisites {} {
 # NAME
 #   execSetIfcQDisc -- in exec mode set interface queuing discipline
 # SYNOPSIS
-#   execSetIfcQDisc $eid $node $ifc $qdisc
+#   execSetIfcQDisc $eid $node_id $iface $qdisc
 # FUNCTION
 #   Sets the queuing discipline during the simulation.
 #   New queuing discipline is defined in qdisc parameter.
 #   Queueing discipline can be set to fifo, wfq or drr.
 # INPUTS
 #   eid -- experiment id
-#   node -- node id
-#   ifc -- interface name
+#   node_id -- node id
+#   iface -- interface name
 #   qdisc -- queuing discipline
 #****
 proc execSetIfcQDisc { eid node ifc qdisc } {
@@ -1480,6 +1504,7 @@ proc execSetIfcQDisc { eid node ifc qdisc } {
         WFQ { set qdisc sfq }
         DRR { set qdisc drr }
     }
+
     pipesExec "ip netns exec $eid-$node tc qdisc add dev $ifc root $qdisc" "hold"
 }
 
@@ -1588,8 +1613,9 @@ proc ipsecFilesToNode { node ca_cert local_cert ipsecret_file } {
 
 	set fileId [open $ca_cert "r"]
 	set trimmed_ca_cert_data [read $fileId]
-	writeDataToNodeFile $node /etc/ipsec.d/cacerts/$trimmed_ca_cert $trimmed_ca_cert_data
 	close $fileId
+
+	writeDataToNodeFile $node /etc/ipsec.d/cacerts/$trimmed_ca_cert $trimmed_ca_cert_data
     }
 
     if { $local_cert != "" } {
@@ -1597,8 +1623,9 @@ proc ipsecFilesToNode { node ca_cert local_cert ipsecret_file } {
 
 	set fileId [open $local_cert "r"]
 	set trimmed_local_cert_data [read $fileId]
-	writeDataToNodeFile $node /etc/ipsec.d/certs/$trimmed_local_cert $trimmed_local_cert_data
 	close $fileId
+
+	writeDataToNodeFile $node /etc/ipsec.d/certs/$trimmed_local_cert $trimmed_local_cert_data
     }
 
     if { $ipsecret_file != "" } {
@@ -1620,6 +1647,7 @@ proc ipsecFilesToNode { node ca_cert local_cert ipsecret_file } {
 proc sshServiceStartCmds {} {
     lappend cmds "dpkg-reconfigure openssh-server"
     lappend cmds "service ssh start"
+
     return $cmds
 }
 
@@ -1633,8 +1661,9 @@ proc inetdServiceRestartCmds {} {
 
 proc moveFileFromNode { node path ext_path } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
-    catch {exec hcp [getNodeName $node]@$eid:$path $ext_path}
-    catch {exec docker exec $eid.$node rm -fr $path}
+
+    catch { exec hcp [getNodeName $node]@$eid:$path $ext_path }
+    catch { exec docker exec $eid.$node rm -fr $path }
 }
 
 # XXX NAT64 procedures
@@ -1660,7 +1689,7 @@ proc taygaShutdown { eid node } {
 
 proc taygaDestroy { eid node } {
     global nat64ifc_$eid.$node
-    catch {exec docker exec $eid.$node ip l delete [set nat64ifc_$eid.$node]}
+    catch { exec docker exec $eid.$node ip l delete [set nat64ifc_$eid.$node] }
 }
 
 proc configureExternalConnection { eid node } {

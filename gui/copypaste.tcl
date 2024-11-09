@@ -42,6 +42,7 @@ proc cutSelection {} {
     }
 
     set cutNodes 1
+
     copySelection
     deleteSelection
 }
@@ -60,7 +61,7 @@ proc copySelection {} {
     set selected_nodes [selectedRealNodes]
     set selected_annotations [selectedAnnotations]
     if { $selected_nodes == {} && $selected_annotations == {} } {
-      return
+	return
     }
 
     catch { namespace delete ::cf::clipboard }
@@ -84,10 +85,12 @@ proc copySelection {} {
 	    if { [lsearch $node_list $peer] < 0 } {
 		continue
 	    }
+
 	    foreach link [linksByPeers $node $peer] {
 		if { [lsearch $link_list $link] >= 0 } {
 		    continue
 		}
+
 		lappend link_list $link
 		set ::cf::clipboard::$link [set ::cf::[set ::curcfg]::$link]
 	    }
@@ -109,6 +112,7 @@ proc copySelection {} {
 	    }
 	}
     }
+
     set curcfg $savedcurcfg
 }
 
@@ -146,11 +150,12 @@ proc paste {} {
 	upvar 0 ::cf::[set ::curcfg]::$annotation_copy $annotation_copy
 	set $annotation_copy [set ::cf::clipboard::$annotation_orig]
 	lappend annotation_list $annotation_copy
+
 	setNodeCanvas $annotation_copy $curcanvas
     }
 
     # Nothing to do if clipboard is empty
-    if {[set ::cf::clipboard::node_list] == {} && [set ::cf::clipboard::annotation_list] == {} } {
+    if { [set ::cf::clipboard::node_list] == {} && [set ::cf::clipboard::annotation_list] == {} } {
 	return
     }
 
@@ -162,12 +167,14 @@ proc paste {} {
 	set $node_copy [set ::cf::clipboard::$node_orig]
 	lappend node_list $node_copy
 	lappend copypaste_list $node_copy
+
 	set node_type [getNodeType $node_orig]
 	if { $node_type in [array names nodeNamingBase] } {
 	    setNodeName $node_copy [getNewNodeNameType $node_type $nodeNamingBase($node_type)]
 	} else {
 	    setNodeName $node_copy $node_copy
 	}
+
 	setNodeCanvas $node_copy $curcanvas
     }
 
@@ -180,21 +187,23 @@ proc paste {} {
     set cury [expr $delta / 2]
     foreach node_orig [set ::cf::clipboard::node_list] {
 	set node_copy $node_map($node_orig)
+
 	foreach ifc [ifcList $node_copy] {
 	    set old_peer [getIfcPeer $node_copy $ifc]
 	    set i [lsearch [set $node_copy] "interface-peer {$ifc $old_peer}"]
 	    set $node_copy [lreplace [set $node_copy] $i $i \
 		"interface-peer {$ifc $node_map($old_peer)}"]
+
 	    if { $cutNodes == 0 } {
 		autoMACaddr $node_copy $ifc
 	    }
 	}
 
 	set nodecoords [getNodeCoords $node_copy]
-	if { [lindex $nodecoords 0] >= $sizex ||
-	    [lindex $nodecoords 1] >= $sizey } {
+	if { [lindex $nodecoords 0] >= $sizex || [lindex $nodecoords 1] >= $sizey } {
 	    setNodeCoords $node_copy "$curx $cury"
 	    setNodeLabelCoords $node_copy "$curx [expr $cury + $delta / 4]"
+
 	    incr curx $delta
 	    if { $curx > $sizex } {
 		incr cury $delta
@@ -209,9 +218,11 @@ proc paste {} {
 	upvar 0 ::cf::[set ::curcfg]::$link_copy $link_copy
 	set $link_copy [set ::cf::clipboard::$link_orig]
 	lappend link_list $link_copy
+
 	set old_peers [getLinkPeers $link_copy]
 	set new_peers \
 	    "$node_map([lindex $old_peers 0]) $node_map([lindex $old_peers 1])"
+
 	set i [lsearch [set $link_copy] "nodes {$old_peers}"]
 	set $link_copy [lreplace [set $link_copy] $i $i "nodes {$new_peers}"]
     }
@@ -228,6 +239,7 @@ proc paste {} {
 
     set changed 1
     updateUndoLog
+
     redrawAll
     setActiveTool select
     selectNodes [concat $copypaste_list $new_annotations]

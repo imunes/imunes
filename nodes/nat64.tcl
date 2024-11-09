@@ -27,12 +27,11 @@
 #
 
 set MODULE nat64
-
 registerModule $MODULE
 
-proc $MODULE.confNewIfc { node ifc } {
-    router.confNewIfc $node $ifc
-}
+################################################################################
+########################### CONFIGURATION PROCEDURES ###########################
+################################################################################
 
 proc $MODULE.confNewNode { node } {
     global nodeNamingBase
@@ -59,67 +58,20 @@ proc $MODULE.confNewNode { node } {
     setTaygaIPv6Prefix $node "2001::/96"
 }
 
-proc $MODULE.icon {size} {
-    global ROOTDIR LIBDIR
-    switch $size {
-      normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/nat64.gif
-      }
-      small {
-	return $ROOTDIR/$LIBDIR/icons/small/nat64.gif
-      }
-      toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/nat64.gif
-      }
-    }
-}
-
-proc $MODULE.toolbarIconDescr {} {
-    return "Add new NAT64"
-}
-
-proc $MODULE.notebookDimensions { wi } { 
-    set h 270 
-    set w 507 
-
-    if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
-	== "Configuration" } { 
-    set h 320
-	set w 507 
-    }
-    if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
-	== "Interfaces" } { 
-	set h 320 
-	set w 507 
-    }
-
-    return [list $h $w] 
-}
-
-proc $MODULE.ifacePrefix {l r} {
-    return [l3IfcName $l $r]
-}
-
-proc $MODULE.IPAddrRange {} {
-    return 20
-}
-
-proc $MODULE.netlayer {} {
-    return NETWORK
-}
-
-proc $MODULE.virtlayer {} {
-    return VIRTUALIZED 
+proc $MODULE.confNewIfc { node ifc } {
+    router.confNewIfc $node $ifc
 }
 
 proc $MODULE.generateConfig { node } {
-    set cfg [router.generateConfig $node]
-
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global nat64ifc_$eid.$node
+
+    set cfg [router.generateConfig $node]
+
     if { [info exists nat64ifc_$eid.$node] == 0 } {
 	set nat64ifc_$eid.$node "tun0"
     }
+
     set tun [set nat64ifc_$eid.$node]
     if { $tun != "" } {
 	set tayga4pool [getTaygaIPv4DynPool $node]
@@ -138,13 +90,47 @@ proc $MODULE.generateConfig { node } {
     return $cfg
 }
 
+#****f* nat64.tcl/nat64.ifacePrefix
+# NAME
+#   nat64.ifacePrefix -- interface name
+# SYNOPSIS
+#   nat64.ifacePrefix
+# FUNCTION
+#   Returns nat64 interface name prefix.
+# RESULT
+#   * name -- name prefix string
+#****
+proc $MODULE.ifacePrefix { l r } {
+    return [l3IfcName $l $r]
+}
+
+proc $MODULE.IPAddrRange {} {
+    return 20
+}
+
+proc $MODULE.netlayer {} {
+    return NETWORK
+}
+
+proc $MODULE.virtlayer {} {
+    return VIRTUALIZED
+}
+
 proc $MODULE.bootcmd { node } {
     return [router.bootcmd $node]
 }
 
-proc $MODULE.shellcmds { } {
+proc $MODULE.shellcmds {} {
     return [router.shellcmds]
 }
+
+proc $MODULE.nghook { eid node ifc } {
+    return [router.nghook $eid $node $ifc]
+}
+
+################################################################################
+############################ INSTANTIATE PROCEDURES ############################
+################################################################################
 
 proc $MODULE.nodeCreate { eid node } {
     router.nodeCreate $eid $node
@@ -156,7 +142,6 @@ proc $MODULE.nodeNamespaceSetup { eid node } {
 
 proc $MODULE.nodeInitConfigure { eid node } {
     l3node.nodeInitConfigure $eid $node
-
     enableIPforwarding $eid $node
 }
 
@@ -207,6 +192,10 @@ proc $MODULE.nodeConfigure { eid node } {
     execCmdNode $node tayga
 }
 
+################################################################################
+############################# TERMINATE PROCEDURES #############################
+################################################################################
+
 proc $MODULE.nodeShutdown { eid node } {
     router.nodeShutdown $eid $node
     taygaShutdown $eid $node
@@ -217,10 +206,47 @@ proc $MODULE.nodeDestroy { eid node } {
     router.nodeDestroy $eid $node
 }
 
-proc $MODULE.nghook { eid node ifc } {
-    return [router.nghook $eid $node $ifc]
+################################################################################
+################################ GUI PROCEDURES ################################
+################################################################################
+
+proc $MODULE.icon { size } {
+    global ROOTDIR LIBDIR
+
+    switch $size {
+	normal {
+	    return $ROOTDIR/$LIBDIR/icons/normal/nat64.gif
+	}
+	small {
+	    return $ROOTDIR/$LIBDIR/icons/small/nat64.gif
+	}
+	toolbar {
+	    return $ROOTDIR/$LIBDIR/icons/tiny/nat64.gif
+	}
+    }
 }
 
+proc $MODULE.toolbarIconDescr {} {
+    return "Add new NAT64"
+}
+
+proc $MODULE.notebookDimensions { wi } {
+    set h 270
+    set w 507
+
+    if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
+	== "Configuration" } {
+    set h 320
+	set w 507
+    }
+    if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
+	== "Interfaces" } {
+	set h 320
+	set w 507
+    }
+
+    return [list $h $w]
+}
 
 proc $MODULE.configGUI { c node } {
     global wi
@@ -231,13 +257,13 @@ proc $MODULE.configGUI { c node } {
     wm title $wi "nat64 configuration"
     configGUI_nodeName $wi $node "Node name:"
 
-    set tabs [configGUI_addNotebook $wi $node {"Configuration" "Interfaces" "NAT64"}]
+    set tabs [configGUI_addNotebook $wi $node { "Configuration" "Interfaces" "NAT64" }]
     set configtab [lindex $tabs 0]
     set ifctab [lindex $tabs 1]
     set nat64tab [lindex $tabs 2]
 
-    set treecolumns {"OperState State" "NatState Nat" "IPv4addrs IPv4 addrs" "IPv6addrs IPv6 addrs" \
-            "MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop" }
+    set treecolumns { "OperState State" "NatState Nat" "IPv4addrs IPv4 addrs" "IPv6addrs IPv6 addrs" \
+	"MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop" }
     configGUI_addTree $ifctab $node
 
     configGUI_routingProtocols $configtab $node

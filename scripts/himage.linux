@@ -1,11 +1,11 @@
-#! /bin/sh 
+#! /bin/sh
 
 command=`basename $0`
 
 help() {
 cat <<__END__
 
-Command $command can be used as an interface to the docker command 
+Command $command can be used as an interface to the docker command
 for virtual nodes. Hostname is used instead of docker names.
 Hostname can be in the form: hostname or hostname@eid.
 
@@ -74,7 +74,7 @@ get_explist() {
 	    exp_timestamp=`cat /var/run/imunes/$exp/timestamp`
 	    data="$exp_name - $exp_timestamp"
 	fi
-	echo "$exp ($data)"
+	echo "$exp [$data]"
     done
 }
 
@@ -110,7 +110,7 @@ elif test $1 = "-nt"; then
     if test -n "$*"; then
         exec docker exec -i $image_name "$@"
     else
-        echo $command: command is missing 
+        echo $command: command is missing
         help
         exit 2
     fi
@@ -125,7 +125,7 @@ elif test $1 = "-b"; then
     if test -n "$*"; then
         exec docker exec -d $image_name "$@"
     else
-        echo $command: command is missing 
+        echo $command: command is missing
         help
         exit 2
     fi

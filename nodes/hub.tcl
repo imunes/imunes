@@ -41,19 +41,30 @@
 #****
 
 set MODULE hub
-
 registerModule $MODULE
 
-#****f* hub.tcl/hub.prepareSystem
+################################################################################
+########################### CONFIGURATION PROCEDURES ###########################
+################################################################################
+
+#****f* hub.tcl/hub.confNewNode
 # NAME
-#   hub.prepareSystem -- prepare system
+#   hub.confNewNode -- configure new node
 # SYNOPSIS
-#   hub.prepareSystem
+#   hub.confNewNode $node
 # FUNCTION
-#   Loads ng_hub into the kernel.
+#   Configures new node with the specified id.
+# INPUTS
+#   * node -- node id
 #****
-proc $MODULE.prepareSystem {} {
-    catch { exec kldload ng_hub }
+proc $MODULE.confNewNode { node } {
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+    global nodeNamingBase
+
+    set nconfig [list \
+	"hostname [getNewNodeNameType hub $nodeNamingBase(hub)]" \
+	! ]
+    lappend $node "network-config [list $nconfig]"
 }
 
 #****f* hub.tcl/hub.confNewIfc
@@ -70,25 +81,138 @@ proc $MODULE.prepareSystem {} {
 proc $MODULE.confNewIfc { node ifc } {
 }
 
-#****f* hub.tcl/hub.confNewNode
+#****f* hub.tcl/hub.ifacePrefix
 # NAME
-#   hub.confNewNode -- configure new node
+#   hub.ifacePrefix -- interface name
 # SYNOPSIS
-#   hub.confNewNode $node
+#   hub.ifacePrefix
 # FUNCTION
-#   Configures new node with the specified id.
-# INPUTS
-#   * node -- node id
+#   Returns hub interface name prefix.
+# RESULT
+#   * name -- name prefix string
 #****
-proc $MODULE.confNewNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-    global nodeNamingBase
-    
-    set nconfig [list \
-	"hostname [getNewNodeNameType hub $nodeNamingBase(hub)]" \
-	! ]
-    lappend $node "network-config [list $nconfig]"
+proc $MODULE.ifacePrefix { l r } {
+    return e
 }
+
+#****f* hub.tcl/hub.netlayer
+# NAME
+#   hub.netlayer -- layer
+# SYNOPSIS
+#   set layer [hub.netlayer]
+# FUNCTION
+#   Returns the layer on which the hub operates, i.e. returns LINK.
+# RESULT
+#   * layer -- set to LINK
+#****
+proc $MODULE.netlayer {} {
+    return LINK
+}
+
+#****f* hub.tcl/hub.virtlayer
+# NAME
+#   hub.virtlayer -- virtual layer
+# SYNOPSIS
+#   set layer [hub.virtlayer]
+# FUNCTION
+#   Returns the layer on which the hub is instantiated, i.e. returns NATIVE.
+# RESULT
+#   * layer -- set to NATIVE
+#****
+proc $MODULE.virtlayer {} {
+    return NATIVE
+}
+
+#****f* hub.tcl/hub.nghook
+# NAME
+#   hub.nghook
+# SYNOPSIS
+#   hub.nghook $eid $node $ifc
+# FUNCTION
+#   Returns the id of the netgraph node and the name of the netgraph hook
+#   which is used for connecting two netgraph nodes. Netgraph node name is in
+#   format experimentId_nodeId and the netgraph hook is in the form of linkN,
+#   where N is interface number.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#   * ifc -- interface name
+# RESULT
+#   * nghook -- the list containing netgraph node id and the
+#     netgraph hook (ngNode ngHook).
+#****
+proc $MODULE.nghook { eid node ifc } {
+    set ifunit [string range $ifc 1 end]
+    return [list $node link$ifunit]
+}
+
+################################################################################
+############################ INSTANTIATE PROCEDURES ############################
+################################################################################
+
+#****f* hub.tcl/hub.prepareSystem
+# NAME
+#   hub.prepareSystem -- prepare system
+# SYNOPSIS
+#   hub.prepareSystem
+# FUNCTION
+#   Loads ng_hub into the kernel.
+#****
+proc $MODULE.prepareSystem {} {
+    catch { exec kldload ng_hub }
+}
+
+#****f* hub.tcl/hub.nodeCreate
+# NAME
+#   hub.nodeCreate -- instantiate
+# SYNOPSIS
+#   hub.nodeCreate $eid $node
+# FUNCTION
+#   Procedure hub.nodeCreate creates a new netgraph node of the type hub.
+#   The name of the netgraph node is in form of exprimentId_nodeId.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- id of the node
+#****
+proc $MODULE.nodeCreate { eid node } {
+    l2node.nodeCreate $eid $node
+}
+
+proc $MODULE.nodeNamespaceSetup { eid node } {
+    l2node.nodeNamespaceSetup $eid $node
+}
+
+proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
+    l2node.nodePhysIfacesCreate $eid $node $ifcs
+}
+
+################################################################################
+############################# TERMINATE PROCEDURES #############################
+################################################################################
+
+proc $MODULE.nodeIfacesDestroy { eid node ifcs } {
+    l2node.nodeIfacesDestroy $eid $node $ifcs
+}
+
+#****f* hub.tcl/hub.nodeDestroy
+# NAME
+#   hub.nodeDestroy -- destroy
+# SYNOPSIS
+#   hub.nodeDestroy $eid $node
+# FUNCTION
+#   Destroys a hub. Destroys the netgraph node that represents
+#   the hub by sending a shutdown message.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- id of the node
+#****
+proc $MODULE.nodeDestroy { eid node } {
+    l2node.nodeDestroy $eid $node
+}
+
+################################################################################
+################################ GUI PROCEDURES ################################
+################################################################################
 
 #****f* hub.tcl/hub.icon
 # NAME
@@ -103,17 +227,18 @@ proc $MODULE.confNewNode { node } {
 #   * path -- path to icon
 #****
 proc $MODULE.icon { size } {
-    global ROOTDIR LIBDIR 
+    global ROOTDIR LIBDIR
+
     switch $size {
-      normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/hub.gif
-      }
-      small {
-	return $ROOTDIR/$LIBDIR/icons/small/hub.gif
-      }
-      toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/hub.gif
-      }
+	normal {
+	    return $ROOTDIR/$LIBDIR/icons/normal/hub.gif
+	}
+	small {
+	    return $ROOTDIR/$LIBDIR/icons/small/hub.gif
+	}
+	toolbar {
+	    return $ROOTDIR/$LIBDIR/icons/tiny/hub.gif
+	}
     }
 }
 
@@ -130,116 +255,6 @@ proc $MODULE.icon { size } {
 proc $MODULE.toolbarIconDescr {} {
     return "Add new Hub"
 }
-
-#****f* hub.tcl/hub.ifacePrefix
-# NAME
-#   hub.ifacePrefix -- interface name
-# SYNOPSIS
-#   hub.ifacePrefix
-# FUNCTION
-#   Returns hub interface name prefix.
-# RESULT
-#   * name -- name prefix string
-#****
-proc $MODULE.ifacePrefix {l r} {
-    return e
-}
-
-#****f* hub.tcl/hub.netlayer
-# NAME
-#   hub.netlayer -- layer
-# SYNOPSIS
-#   set layer [hub.netlayer]
-# FUNCTION
-#   Returns the layer on which the hub operates, i.e. returns LINK. 
-# RESULT
-#   * layer -- set to LINK
-#****
-proc $MODULE.netlayer {} {
-    return LINK
-}
-
-#****f* hub.tcl/hub.virtlayer
-# NAME
-#   hub.virtlayer -- virtual layer  
-# SYNOPSIS
-#   set layer [hub.virtlayer]
-# FUNCTION
-#   Returns the layer on which the hub is instantiated, i.e. returns NATIVE. 
-# RESULT
-#   * layer -- set to NATIVE
-#****
-proc $MODULE.virtlayer {} {
-    return NATIVE
-}
-
-#****f* hub.tcl/hub.nodeCreate
-# NAME
-#   hub.nodeCreate -- instantiate
-# SYNOPSIS
-#   hub.nodeCreate $eid $node
-# FUNCTION
-#   Procedure hub.nodeCreate creates a new netgraph node of the type hub.
-#   The name of the netgraph node is in form of exprimentId_nodeId.
-# INPUTS
-#   * eid -- experiment id
-#   * node -- id of the node (type of the node is hub)
-#****
-proc $MODULE.nodeCreate { eid node } {
-    l2node.nodeCreate $eid $node
-}
-
-proc $MODULE.nodeNamespaceSetup { eid node } {
-    l2node.nodeNamespaceSetup $eid $node
-}
-
-proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
-    l2node.nodePhysIfacesCreate $eid $node $ifcs
-}
-
-proc $MODULE.nodeIfacesDestroy { eid node ifcs } {
-    l2node.nodeIfacesDestroy $eid $node $ifcs
-}
-
-#****f* hub.tcl/hub.nodeDestroy
-# NAME
-#   hub.nodeDestroy -- destroy
-# SYNOPSIS
-#   hub.nodeDestroy $eid $node
-# FUNCTION
-#   Destroys a hub. Destroys the netgraph node that represents
-#   the hub by sending a shutdown message.
-# INPUTS
-#   * eid -- experiment id
-#   * node -- id of the node (type of the node is hub)
-#****
-proc $MODULE.nodeDestroy { eid node } {
-    l2node.nodeDestroy $eid $node
-} 
-
-#****f* hub.tcl/hub.nghook
-# NAME
-#   hub.nghook
-# SYNOPSIS
-#   hub.nghook $eid $node $ifc 
-# FUNCTION
-#   Returns the id of the netgraph node and the name of the netgraph hook
-#   which is used for connecting two netgraph nodes. Netgraph node name is in
-#   format experimentId_nodeId and the netgraph hook is in the form of linkN,
-#   where N is interface number.
-# INPUTS
-#   * eid -- experiment id
-#   * node -- node id
-#   * ifc -- interface name 
-# RESULT
-#   * nghook -- the list containing netgraph node id and the 
-#     netgraph hook (ngNode ngHook).
-#****
-proc $MODULE.nghook { eid node ifc } {
-    set ifunit [string range $ifc 1 end]
-    return [list $node link$ifunit]
-}
-
 
 #****f* hub.tcl/hub.configGUI
 # NAME
@@ -264,7 +279,7 @@ proc $MODULE.configGUI { c node } {
     configGUI_nodeName $wi $node "Node name:"
 
     configGUI_addPanedWin $wi
-    set treecolumns {"QLen Queue len" "QDisc Queue disc" "QDrop Queue drop"}
+    set treecolumns { "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop" }
     configGUI_addTree $wi $node
 
     configGUI_buttonsACNode $wi $node

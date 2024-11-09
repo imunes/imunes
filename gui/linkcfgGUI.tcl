@@ -30,42 +30,43 @@
 # NAME
 #   linkConfigGUI -- link configuration GUI
 # SYNOPSIS
-#   linkConfigGUI $c $link
+#   linkConfigGUI $c $link_id
 # FUNCTION
-#   Calls procedure link.configGUI. 
+#   Calls procedure link.configGUI.
 # INPUTS
 #   * c - tk canvas
-#   * link - link id
+#   * link_id - link id
 #****
-proc linkConfigGUI { c link } {
-    if {$link == ""} {
-	set link [lindex [$c gettags current] 1]
+proc linkConfigGUI { c link_id } {
+    if { $link_id == "" } {
+	set link_id [lindex [$c gettags current] 1]
     }
-    link.configGUI $c $link
+
+    link.configGUI $c $link_id
 }
 
 #****f* linkcfgGUI.tcl/toggleDirectLink
 # NAME
 #   toggleDirectLink -- link configuration GUI
 # SYNOPSIS
-#   toggleDirectLink $c $link
+#   toggleDirectLink $c $link_id
 # FUNCTION
 #   Toggles link 'direct' option.
 # INPUTS
 #   * c - tk canvas
-#   * link - link id
+#   * link_id - link id
 #****
-proc toggleDirectLink { c link } {
-    if {$link == ""} {
-	set link [lindex [$c gettags current] 1]
+proc toggleDirectLink { c link_id } {
+    if { $link_id == "" } {
+	set link_id [lindex [$c gettags current] 1]
     }
 
-    set new_value [expr [getLinkDirect $link] ^ 1]
-    setLinkDirect $link $new_value
+    set new_value [expr [getLinkDirect $link_id] ^ 1]
+    setLinkDirect $link_id $new_value
 
-    set mirror_link [getLinkMirror $link]
-    if { $mirror_link != "" } {
-	setLinkDirect $mirror_link $new_value
+    set mirror_link_id [getLinkMirror $link_id]
+    if { $mirror_link_id != "" } {
+	setLinkDirect $mirror_link_id $new_value
     }
 }
 
@@ -73,16 +74,16 @@ proc toggleDirectLink { c link } {
 # NAME
 #   link.configGUI -- configuration GUI
 # SYNOPSIS
-#   link.configGUI $c $link
+#   link.configGUI $c $link_id
 # FUNCTION
 #   Defines the structure of the link configuration window by calling
 #   procedures for creating and organising the window, as well as
 #   procedures for adding certain modules to that window.
 # INPUTS
 #   * c - tk canvas
-#   * link - link id
+#   * link_id - link id
 #****
-proc link.configGUI { c link } {
+proc link.configGUI { c link_id } {
     global wi
     #
     #guielements - the list of link configuration parameters (except Color parameter)
@@ -91,51 +92,49 @@ proc link.configGUI { c link } {
     global configelements
     set configelements {}
 
-    set n0 [lindex [getLinkPeers $link] 0]
-    set n1 [lindex [getLinkPeers $link] 1]
-    set name0 [getNodeName $n0]
-    set name1 [getNodeName $n1]
-
     configGUI_createConfigPopupWin $c
     wm title $wi "link configuration"
 
-    configGUI_linkFromTo $wi $link
-    configGUI_linkConfig $wi $link "Bandwidth" "Bandwidth (bps):"
-    configGUI_linkConfig $wi $link "Delay" "Delay (us):"
-    configGUI_linkConfig $wi $link "BER" "BER (1/N):"
-    configGUI_linkConfig $wi $link "Loss" "Loss (%):"
-    configGUI_linkConfig $wi $link "Dup" "Duplicate (%):"
-    configGUI_linkConfig $wi $link "Width" "Width:"
-    configGUI_linkColor $wi $link
+    configGUI_linkFromTo $wi $link_id
+    configGUI_linkConfig $wi $link_id "Bandwidth" "Bandwidth (bps):"
+    configGUI_linkConfig $wi $link_id "Delay" "Delay (us):"
+    configGUI_linkConfig $wi $link_id "BER" "BER (1/N):"
+    configGUI_linkConfig $wi $link_id "Loss" "Loss (%):"
+    configGUI_linkConfig $wi $link_id "Dup" "Duplicate (%):"
+    configGUI_linkConfig $wi $link_id "Width" "Width:"
+    configGUI_linkColor $wi $link_id
 
-    configGUI_buttonsACLink $wi $link
+    configGUI_buttonsACLink $wi $link_id
 }
 
 #****f* linkcfgGUI.tcl/configGUI_buttonsACLink
 # NAME
 #   configGUI_buttonsACLink -- configuration GUI - buttons apply/close link
 # SYNOPSIS
-#  configGUI_buttonsACLink $wi $link
+#  configGUI_buttonsACLink $wi $link_id
 # FUNCTION
 #   Creates module with options for saving/discarding changes (Apply, Cancel).
 # INPUTS
 #   * wi - widget
-#   * link - link id
+#   * link_id - link id
 #****
-proc configGUI_buttonsACLink { wi link } {
+proc configGUI_buttonsACLink { wi link_id } {
     global badentry configelements
+
     ttk::frame $wi.buttons -borderwidth 6
     ttk::button $wi.buttons.apply -text "Apply" -command \
-        "configGUI_applyButtonLink $wi $link 0"
+        "configGUI_applyButtonLink $wi $link_id 0"
     focus $wi.buttons.apply
+
     ttk::button $wi.buttons.cancel -text "Cancel" -command \
         "set badentry -1; destroy $wi"
+
     pack $wi.buttons.apply -side left -anchor e -expand 1 -pady 2
     pack $wi.buttons.cancel -side right -anchor w -expand 1 -pady 2
     pack $wi.buttons -fill both -expand 1 -side bottom
-    
+
     bind $wi <Key-Return> \
-        "configGUI_applyButtonLink $wi $link 0"
+        "configGUI_applyButtonLink $wi $link_id 0"
     bind $wi <Key-Escape> "set badentry -1; destroy $wi"
 }
 
@@ -143,15 +142,15 @@ proc configGUI_buttonsACLink { wi link } {
 # NAME
 #   configGUI_applyButtonLink -- configuration GUI - apply button link
 # SYNOPSIS
-#   configGUI_applyButtonLink $wi $link $phase
+#   configGUI_applyButtonLink $wi $link_id $phase
 # FUNCTION
 #   Calles procedures for saving changes to the link.
 # INPUTS
 #   * wi -- widget
-#   * link -- link id
-#   * phase -- 
+#   * link_id -- link id
+#   * phase --
 #****
-proc configGUI_applyButtonLink { wi link phase } {
+proc configGUI_applyButtonLink { wi link_id phase } {
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global changed badentry
@@ -161,19 +160,19 @@ proc configGUI_applyButtonLink { wi link phase } {
     if { $phase == 0 } {
 	set badentry 0
 	focus .
-	after 100 "configGUI_applyButtonLink $wi $link 1"
+	after 100 "configGUI_applyButtonLink $wi $link_id 1"
 	return
     } elseif { $badentry } {
 	$wi config -cursor left_ptr
 	return
     }
 
-    configGUI_linkConfigApply $wi $link
-    configGUI_linkColorApply $wi $link
+    configGUI_linkConfigApply $wi $link_id
+    configGUI_linkColorApply $wi $link_id
 
     if { $changed == 1 && $oper_mode == "exec" } {
 	saveRunningConfigurationInteractive $eid
-	execSetLinkParams $eid $link
+	execSetLinkParams $eid $link_id
     }
 
     if { $changed == 1 } {
@@ -188,21 +187,19 @@ proc configGUI_applyButtonLink { wi link phase } {
 # NAME
 #   configGUI_linkFromTo -- configuration GUI - link from node1 to node2
 # SYNOPSIS
-#  configGUI_linkFromTo $wi $link
+#  configGUI_linkFromTo $wi $link_id
 # FUNCTION
 #   Creates module with information about link endpoints.
 # INPUTS
 #   * wi - widget
-#   * link - link id
+#   * link_id - link id
 #****
-proc configGUI_linkFromTo { wi link } {
-    set n0 [lindex [getLinkPeers $link] 0]
-    set n1 [lindex [getLinkPeers $link] 1]
-    set name0 [getNodeName $n0]
-    set name1 [getNodeName $n1]
+proc configGUI_linkFromTo { wi link_id } {
+    lassign [getLinkPeers $link_id] node1 node2
 
     ttk::frame $wi.name -borderwidth 6
-    ttk::label $wi.name.txt -text "Link from $name0 to $name1"
+    ttk::label $wi.name.txt -text "Link from [getNodeName $node1] to [getNodeName $node2]"
+
     pack $wi.name.txt
     pack $wi.name -fill both -expand 1
 }
@@ -211,17 +208,18 @@ proc configGUI_linkFromTo { wi link } {
 # NAME
 #   configGUI_linkConfig -- configuration GUI - link configuration
 # SYNOPSIS
-#  configGUI_linkConfig $wi $link $param $label
+#  configGUI_linkConfig $wi $link_id $param $label
 # FUNCTION
 #   Creates module for changing specific parameter.
 # INPUTS
 #   * wi - widget
-#   * link - link id
+#   * link_id - link id
 #   * param - link parameter
 #   * label - link parameter label
 #****
-proc configGUI_linkConfig { wi link param label } {
+proc configGUI_linkConfig { wi link_id param label } {
     global configelements
+
     lappend configelements $param
     if { $param == "Bandwidth" } {
         set from 0; set to 1000000000000; set inc 1000
@@ -238,23 +236,25 @@ proc configGUI_linkConfig { wi link param label } {
     } else {
 	return
     }
+
     set fr [string tolower $param ]
     ttk::frame $wi.$fr -borderwidth 4
     ttk::label $wi.$fr.txt -text $label
     ttk::spinbox $wi.$fr.value -justify right -width 10 \
 	    -validate focus -invalidcommand "focusAndFlash %W"
-    set value [getLink$param $link]
-    if {$value == ""} {
+    set value [getLink$param $link_id]
+    if { $value == "" } {
         set value 0
     }
-    
+
     $wi.$fr.value insert 0 $value
 
     $wi.$fr.value configure \
 	    -validatecommand "checkIntRange %P $from $to" \
 	    -from $from -to $to -increment $inc
+
     pack $wi.$fr.txt -side left
-    pack $wi.$fr.value -side right 
+    pack $wi.$fr.value -side right
     pack $wi.$fr -fill both -expand 1
 }
 
@@ -262,64 +262,66 @@ proc configGUI_linkConfig { wi link param label } {
 # NAME
 #   configGUI_linkColor -- configuration GUI - link color
 # SYNOPSIS
-#  configGUI_linkColor $wi $link
+#  configGUI_linkColor $wi $link_id
 # FUNCTION
 #   Creates module for changing link color.
 # INPUTS
 #   * wi - widget
-#   * link - link id
+#   * link_id - link id
 #****
-proc configGUI_linkColor { wi link } {
-    global link_color 
+proc configGUI_linkColor { wi link_id } {
+    global link_color
+
     ttk::frame $wi.color -borderwidth 4
     ttk::label $wi.color.txt -text "Color:"
-    set link_color [getLinkColor $link]
-    ttk::combobox $wi.color.value -justify right -width 11 -textvariable link_color 
+
+    set link_color [getLinkColor $link_id]
+    ttk::combobox $wi.color.value -justify right -width 11 -textvariable link_color
     $wi.color.value configure -values [list Red Green Blue Yellow Magenta Cyan Black]
+
     pack $wi.color.txt -side left
     pack $wi.color.value -side right
-    pack $wi.color -fill both -expand 1        
+    pack $wi.color -fill both -expand 1
 }
 
 #****f* linkcfgGUI.tcl/linkJitterConfigGUI
 # NAME
 #   linkJitterConfigGUI -- link jitter configuration GUI
 # SYNOPSIS
-#   linkJitterConfigGUI $c $link
+#   linkJitterConfigGUI $c $link_id
 # FUNCTION XXX
 #   Defines the structure of the link configuration window by calling
 #   procedures for creating and organising the window, as well as
 #   procedures for adding certain modules to that window.
 # INPUTS
 #   * c - tk canvas
-#   * link - link id
+#   * link_id - link id
 #****
-proc linkJitterConfigGUI { c link } {
+proc linkJitterConfigGUI { c link_id } {
     global wi badentry up_jitmode down_jitmode
 
-    set n0 [lindex [getLinkPeers $link] 0]
-    set n1 [lindex [getLinkPeers $link] 1]
-    set name0 [getNodeName $n0]
-    set name1 [getNodeName $n1]
+    lassign [getLinkPeers $link_id] node1 node2
+    set node1_name [getNodeName $node1]
+    set node2_name [getNodeName $node2]
 
     configGUI_createConfigPopupWin $c
-    wm title $wi "link $name0-$name1 jitter configuration"
+    wm title $wi "link $node1_name-$node2_name jitter configuration"
 
     ttk::frame $wi.up
     ttk::frame $wi.down
     ttk::separator $wi.s -orient vertical
 
-    ttk::label $wi.up.label -text "Upstream ($name1->$name0):"
-    ttk::label $wi.down.label -text "Downstream ($name0->$name1):"
+    ttk::label $wi.up.label -text "Upstream ($node2_name->$node1_name):"
+    ttk::label $wi.down.label -text "Downstream ($node1_name->$node2_name):"
 
     ttk::label $wi.up.modelab -text "Jitter mode:"
     ttk::label $wi.down.modelab -text "Jitter mode:"
     ttk::combobox $wi.up.jitmode -justify right -width 10 \
 	-textvariable up_jitmode -state readonly
-    $wi.up.jitmode configure -values {sequential random}
+    $wi.up.jitmode configure -values "sequential random"
     ttk::combobox $wi.down.jitmode -justify right -width 10 \
 	-textvariable down_jitmode -state readonly
-    $wi.down.jitmode configure -values {sequential random}
+    $wi.down.jitmode configure -values "sequential random"
 
     ttk::label $wi.up.holdlab -text "Jitter hold (ms):"
     ttk::label $wi.down.holdlab -text "Jitter hold (ms):"
@@ -344,30 +346,30 @@ proc linkJitterConfigGUI { c link } {
 
     ttk::frame $wi.buttons -borderwidth 3
     ttk::button $wi.buttons.apply -text "Apply" -command \
-        "applyJitterLink $wi $link"
+        "applyJitterLink $wi $link_id"
     ttk::button $wi.buttons.applyclose -text "Apply & Close" -command \
-        "applyJitterLink $wi $link; destroy $wi"
+        "applyJitterLink $wi $link_id; destroy $wi"
     ttk::button $wi.buttons.cancel -text "Cancel" -command \
         "destroy $wi"
     bind $wi <Key-Escape> "destroy $wi"
 
-    set up_jitmode [getLinkJitterModeUpstream $link]
-    if { $up_jitmode == "" } { set up_jitmode sequential}
-    set down_jitmode [getLinkJitterModeDownstream $link]
-    if { $down_jitmode == "" } { set down_jitmode sequential}
+    set up_jitmode [getLinkJitterModeUpstream $link_id]
+    if { $up_jitmode == "" } { set up_jitmode sequential }
+    set down_jitmode [getLinkJitterModeDownstream $link_id]
+    if { $down_jitmode == "" } { set down_jitmode sequential }
 
-    $wi.up.editor insert end [join [getLinkJitterUpstream $link] "\n"]
-    $wi.down.editor insert end [join [getLinkJitterDownstream $link] "\n"]
+    $wi.up.editor insert end [join [getLinkJitterUpstream $link_id] "\n"]
+    $wi.down.editor insert end [join [getLinkJitterDownstream $link_id] "\n"]
 
-    set val [getLinkJitterHoldUpstream $link]
-    if {$val == ""} { set val 0 }
+    set val [getLinkJitterHoldUpstream $link_id]
+    if { $val == "" } { set val 0 }
     $wi.up.holdval insert 0 $val
-    set val [getLinkJitterHoldDownstream $link]
-    if {$val == ""} { set val 0 }
+    set val [getLinkJitterHoldDownstream $link_id]
+    if { $val == "" } { set val 0 }
     $wi.down.holdval insert 0 $val
 
     grid $wi.up.label -row 0 -column 0 -in $wi.up -sticky w -pady 3
-    grid $wi.up.modelab -row 1 -column 0 -in $wi.up -sticky w 
+    grid $wi.up.modelab -row 1 -column 0 -in $wi.up -sticky w
     grid $wi.up.jitmode -row 1 -column 0 -in $wi.up -sticky e
     grid $wi.up.holdlab -row 2 -column 0 -in $wi.up -sticky w -pady 2
     grid $wi.up.holdval -row 2 -column 0 -in $wi.up -sticky e -pady 2
@@ -376,8 +378,8 @@ proc linkJitterConfigGUI { c link } {
     grid $wi.up.vsb -row 4 -column 1 -sticky nsew -in $wi.up
 
     grid $wi.down.label -row 0 -column 0 -in $wi.down -sticky w -pady 3
-    grid $wi.down.modelab -row 1 -column 0 -in $wi.down -sticky w 
-    grid $wi.down.jitmode -row 1 -column 0 -in $wi.down -sticky e 
+    grid $wi.down.modelab -row 1 -column 0 -in $wi.down -sticky w
+    grid $wi.down.jitmode -row 1 -column 0 -in $wi.down -sticky e
     grid $wi.down.holdlab -row 2 -column 0 -in $wi.down -sticky w -pady 2
     grid $wi.down.holdval -row 2 -column 0 -in $wi.down -sticky e -pady 2
     grid $wi.down.elab -row 3 -column 0 -in $wi.down -sticky w
@@ -398,47 +400,47 @@ proc linkJitterConfigGUI { c link } {
 # NAME
 #   applyJitterLink -- apply jitter link
 # SYNOPSIS
-#   applyJitterLink $wi $link
+#   applyJitterLink $wi $link_id
 # FUNCTION
 #   Applies jitter upstream and downstream to the specified link.
 # INPUTS
 #   * wi -- widget
-#   * link -- link id
+#   * link_id -- link id
 #****
-proc applyJitterLink { wi link } {
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     upvar 0 ::cf::[set ::curcfg]::eid eid
+proc applyJitterLink { wi link_id } {
     global up_jitmode down_jitmode
 
-    setLinkJitterModeUpstream $link $up_jitmode
-    setLinkJitterModeDownstream $link $down_jitmode
+    setLinkJitterModeUpstream $link_id $up_jitmode
+    setLinkJitterModeDownstream $link_id $down_jitmode
 
-    setLinkJitterHoldUpstream $link [$wi.up.holdval get]
-    setLinkJitterHoldDownstream $link [$wi.down.holdval get]
+    setLinkJitterHoldUpstream $link_id [$wi.up.holdval get]
+    setLinkJitterHoldDownstream $link_id [$wi.down.holdval get]
 
-    set jitt_up [$wi.up.editor get 1.0 {end -1c}]
-    set jitt_down [$wi.down.editor get 1.0 {end -1c}]
+    set jitt_up [$wi.up.editor get 1.0 "end -1c"]
+    set jitt_down [$wi.down.editor get 1.0 "end -1c"]
 
     set jup ""
     set jdown ""
 
     foreach line $jitt_up {
-	if {[string is double $line] && $line != "" && $line < 10000} {
+	if { [string is double $line] && $line != "" && $line < 10000 } {
 	    lappend jup [expr round($line*1000)/1000.0]
 	}
     }
 
     foreach line $jitt_down {
-	if {[string is double $line] && $line != "" && $line < 10000} {
+	if { [string is double $line] && $line != "" && $line < 10000 } {
 	    lappend jdown [expr round($line*1000)/1000.0]
 	}
     }
 
-    if {$jup != ""} {
-	setLinkJitterUpstream $link $jup
+    if { $jup != "" } {
+	setLinkJitterUpstream $link_id $jup
     }
-    if {$jdown != ""} {
-	setLinkJitterDownstream $link $jdown
+    if { $jdown != "" } {
+	setLinkJitterDownstream $link_id $jdown
     }
 
     $wi.up.editor delete 1.0 end
@@ -448,7 +450,7 @@ proc applyJitterLink { wi link } {
 
     if { $oper_mode == "exec" } {
 	saveRunningConfigurationInteractive $eid
-	execSetLinkJitter $eid $link
+	execSetLinkJitter $eid $link_id
     }
 
     updateUndoLog
@@ -459,18 +461,18 @@ proc applyJitterLink { wi link } {
 # NAME
 #   linkJitterReset -- reset jitter link
 # SYNOPSIS
-#   linkJitterReset $link
+#   linkJitterReset $link_id
 # FUNCTION
 #   Resets upstream and downstream inputs for a specified link.
 # INPUTS
-#   * link -- link id
+#   * link_id -- link id
 #****
 proc linkJitterReset { link } {
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    setLinkJitterModeUpstream $link "" 
-    setLinkJitterModeDownstream $link "" 
+    setLinkJitterModeUpstream $link ""
+    setLinkJitterModeDownstream $link ""
 
     setLinkJitterHoldUpstream $link ""
     setLinkJitterHoldDownstream $link ""
@@ -492,27 +494,32 @@ proc linkJitterReset { link } {
 # NAME
 #   configGUI_linkConfigApply -- configuration GUI - link configuration apply
 # SYNOPSIS
-#  configGUI_linkConfigApply $wi $link
+#  configGUI_linkConfigApply $wi $link_id
 # FUNCTION
 #   Saves changes in the module with specific parameter
 #   (except Color parameter).
 # INPUTS
 #   * wi - widget
-#   * link - link id
+#   * link_id - link id
 #****
-proc configGUI_linkConfigApply { wi link } {
+proc configGUI_linkConfigApply { wi link_id } {
     global changed configelements
+
     foreach element $configelements {
-	set mirror [getLinkMirror $link]
-	set fr [string tolower $element ]
-	set value [$wi.$fr.value get]
-	if { $value != [getLink$element $link] } {
-	    setLink$element $link $value
+	set value [$wi.[string tolower $element].value get]
+	if { $value == 0 } {
+	    set value ""
+	}
+
+	if { $value != [getLink$element $link_id] } {
+	    set mirror [getLinkMirror $link_id]
+	    setLink$element $link_id $value
 	    if { $mirror != "" } {
 		setLink$element $mirror $value
 	    }
+
 	    set changed 1
-	} 
+	}
     }
 }
 
@@ -520,21 +527,23 @@ proc configGUI_linkConfigApply { wi link } {
 # NAME
 #   configGUI_linkColorApply-- configuration GUI - link color apply
 # SYNOPSIS
-#  configGUI_linkColorApply $wi $link
+#  configGUI_linkColorApply $wi $link_id
 # FUNCTION
 #   Saves changes in the module with link color.
 # INPUTS
 #   * wi - widget
-#   * link - link id
+#   * link_id - link id
 #****
-proc configGUI_linkColorApply { wi link } {
+proc configGUI_linkColorApply { wi link_id } {
     global changed link_color
-    set mirror [getLinkMirror $link]
-    if { $link_color != [getLinkColor $link] } {
-        setLinkColor $link $link_color
+
+    set mirror [getLinkMirror $link_id]
+    if { $link_color != [getLinkColor $link_id] } {
+	setLinkColor $link_id $link_color
 	if { $mirror != "" } {
 	    setLinkColor $mirror $link_color
 	}
-    set changed 1
+
+	set changed 1
     }
 }

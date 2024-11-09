@@ -147,7 +147,7 @@ or:\n	# imunes -f -p"
 populateFs () {
     cd $WORKDIR
 
-    for file in $BASE_FILES; do 
+    for file in $BASE_FILES; do
 	if [ -f "$file.txz" ]; then
 	    log "OUT" "Unpacking $file..."
 	    tar -xf $file.txz -C $VROOT_MASTER

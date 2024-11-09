@@ -42,9 +42,85 @@
 #  types that work on the same layer.
 #****
 
-
 set MODULE router
 registerModule $MODULE
+
+################################################################################
+########################### CONFIGURATION PROCEDURES ###########################
+################################################################################
+
+#****f* router.tcl/router.confNewNode
+# NAME
+#   router.confNewNode -- configure new node
+# SYNOPSIS
+#   router.confNewNode $node
+# FUNCTION
+#   Configures new node with the specified id.
+# INPUTS
+#   * node -- node id
+#****
+proc $MODULE.confNewNode { node } {
+    upvar 0 ::cf::[set ::curcfg]::$node $node
+    global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable
+    global rdconfig router_model router_ConfigModel
+    global def_router_model
+    global nodeNamingBase
+
+    set ripEnable [lindex $rdconfig 0]
+    set ripngEnable [lindex $rdconfig 1]
+    set ospfEnable [lindex $rdconfig 2]
+    set ospf6Enable [lindex $rdconfig 3]
+    set bgpEnable [lindex $rdconfig 4]
+    set router_ConfigModel $router_model
+
+    if { $router_model != $def_router_model } {
+	lappend $node "model $router_model"
+    } else {
+	lappend $node "model $def_router_model"
+    }
+
+    set nconfig [list \
+	"hostname [getNewNodeNameType router $nodeNamingBase(router)]" \
+	! ]
+    lappend $node "network-config [list $nconfig]"
+
+    setNodeProtocolRip $node $ripEnable
+    setNodeProtocolRipng $node $ripngEnable
+    setNodeProtocolOspfv2 $node $ospfEnable
+    setNodeProtocolOspfv3 $node $ospf6Enable
+    setNodeProtocolBgp $node $bgpEnable
+
+    setAutoDefaultRoutesStatus $node "enabled"
+    setLogIfcType $node lo0 lo
+    setIfcIPv4addrs $node lo0 "127.0.0.1/8"
+    setIfcIPv6addrs $node lo0 "::1/128"
+}
+
+#****f* router.tcl/router.confNewIfc
+# NAME
+#   router.confNewIfc -- configure new interface
+# SYNOPSIS
+#   router.confNewIfc $node $ifc
+# FUNCTION
+#   Configures new interface for the specified node.
+# INPUTS
+#   * node -- node id
+#   * ifc -- interface name
+#****
+proc $MODULE.confNewIfc { node ifc } {
+    global changeAddressRange changeAddressRange6
+
+    set changeAddressRange 0
+    set changeAddressRange6 0
+    autoIPv4addr $node $ifc
+    autoIPv6addr $node $ifc
+    autoMACaddr $node $ifc
+
+    lassign [logicalPeerByIfc $node $ifc] peer_node -
+    if { [getNodeType $peer_node] == "extnat" } {
+	setIfcNatState $node $ifc "on"
+    }
+}
 
 #****f* router.tcl/router.generateConfig
 # NAME
@@ -145,6 +221,63 @@ proc $MODULE.generateConfig { node } {
     return $cfg
 }
 
+#****f* router.tcl/router.ifacePrefix
+# NAME
+#   router.ifacePrefix -- interface name
+# SYNOPSIS
+#   router.ifacePrefix
+# FUNCTION
+#   Returns router interface name prefix.
+# RESULT
+#   * name -- name prefix string
+#****
+proc $MODULE.ifacePrefix { l r } {
+    return [l3IfcName $l $r]
+}
+
+#****f* router.tcl/router.IPAddrRange
+# NAME
+#   router.IPAddrRange -- IP address range
+# SYNOPSIS
+#   router.IPAddrRange
+# FUNCTION
+#   Returns router IP address range
+# RESULT
+#   * range -- router IP address range
+#****
+proc $MODULE.IPAddrRange {} {
+    return 1
+}
+
+#****f* router.tcl/router.netlayer
+# NAME
+#   router.netlayer -- layer
+# SYNOPSIS
+#   set layer [router.netlayer]
+# FUNCTION
+#   Returns the layer on which the router operates, i.e. returns NETWORK.
+# RESULT
+#   * layer -- set to NETWORK
+#****
+proc $MODULE.netlayer {} {
+    return NETWORK
+}
+
+#****f* router.tcl/router.virtlayer
+# NAME
+#   router.virtlayer -- virtual layer
+# SYNOPSIS
+#   set layer [router.virtlayer]
+# FUNCTION
+#   Returns the layer on which the router is instantiated, i.e. returns
+#   VIRTUALIZED.
+# RESULT
+#   * layer -- set to VIRTUALIZED
+#****
+proc $MODULE.virtlayer {} {
+    return VIRTUALIZED
+}
+
 #****f* router.tcl/router.bootcmd
 # NAME
 #   router.bootcmd -- boot command
@@ -187,6 +320,31 @@ proc $MODULE.shellcmds {} {
     return "csh bash vtysh sh tcsh"
 }
 
+#****f* router.tcl/router.nghook
+# NAME
+#   router.nghook -- nghook
+# SYNOPSIS
+#   router.nghook $eid $node $ifc
+# FUNCTION
+#   Returns the id of the netgraph node and the name of the netgraph hook
+#   which is used for connecting two netgraph nodes. This procedure calls
+#   l3node.hook procedure and passes the result of that procedure.
+# INPUTS
+#   * eid - experiment id
+#   * node - node id
+#   * ifc - interface name
+# RESULT
+#   * nghook - the list containing netgraph node id and the
+#     netgraph hook (ngNode ngHook).
+#****
+proc $MODULE.nghook { eid node ifc } {
+    return [l3node.nghook $eid $node $ifc]
+}
+
+################################################################################
+############################ INSTANTIATE PROCEDURES ############################
+################################################################################
+
 #****f* router.tcl/router.nodeCreate
 # NAME
 #   router.nodeCreate -- instantiate
@@ -220,6 +378,27 @@ proc $MODULE.nodeNamespaceSetup { eid node } {
     l3node.nodeNamespaceSetup $eid $node
 }
 
+#****f* router.tcl/router.nodeInitConfigure
+# NAME
+#   router.nodeInitConfigure -- router node nodeInitConfigure
+# SYNOPSIS
+#   router.nodeInitConfigure $eid $node
+# FUNCTION
+#   Runs initial L3 configuration, such as creating logical interfaces and
+#   configuring sysctls.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#****
+proc $MODULE.nodeInitConfigure { eid node } {
+    l3node.nodeInitConfigure $eid $node
+    enableIPforwarding $eid $node
+}
+
+proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
+    l3node.nodePhysIfacesCreate $eid $node $ifcs
+}
+
 #****f* router.tcl/router.nodeConfigure
 # NAME
 #   router.nodeConfigure -- start
@@ -236,6 +415,14 @@ proc $MODULE.nodeConfigure { eid node } {
     l3node.nodeConfigure $eid $node
 }
 
+################################################################################
+############################# TERMINATE PROCEDURES #############################
+################################################################################
+
+proc $MODULE.nodeIfacesDestroy { eid node ifcs } {
+    l3node.nodeIfacesDestroy $eid $node $ifcs
+}
+
 #****f* router.tcl/router.nodeShutdown
 # NAME
 #   router.nodeShutdown -- shutdown
@@ -250,20 +437,6 @@ proc $MODULE.nodeConfigure { eid node } {
 #****
 proc $MODULE.nodeShutdown { eid node } {
     l3node.nodeShutdown $eid $node
-}
-
-proc $MODULE.nodeInitConfigure { eid node } {
-    l3node.nodeInitConfigure $eid $node
-
-    enableIPforwarding $eid $node
-}
-
-proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
-    l3node.nodePhysIfacesCreate $eid $node $ifcs
-}
-
-proc $MODULE.nodeIfacesDestroy { eid node ifcs } {
-    l3node.nodeIfacesDestroy $eid $node $ifcs
 }
 
 #****f* router.tcl/router.nodeDestroy
@@ -283,77 +456,9 @@ proc $MODULE.nodeDestroy { eid node } {
     l3node.nodeDestroy $eid $node
 }
 
-#****f* router.tcl/router.confNewIfc
-# NAME
-#   router.confNewIfc -- configure new interface
-# SYNOPSIS
-#   router.confNewIfc $node $ifc
-# FUNCTION
-#   Configures new interface for the specified node.
-# INPUTS
-#   * node -- node id
-#   * ifc -- interface name
-#****
-proc $MODULE.confNewIfc { node ifc } {
-    global changeAddressRange changeAddressRange6
-    set changeAddressRange 0
-    set changeAddressRange6 0
-    autoIPv4addr $node $ifc
-    autoIPv6addr $node $ifc
-    autoMACaddr $node $ifc
-
-    lassign [logicalPeerByIfc $node $ifc] peer_node -
-    if { [getNodeType $peer_node] == "extnat" } {
-	setIfcNatState $node $ifc "on"
-    }
-}
-
-#****f* router.tcl/router.confNewNode
-# NAME
-#   router.confNewNode -- configure new node
-# SYNOPSIS
-#   router.confNewNode $node
-# FUNCTION
-#   Configures new node with the specified id.
-# INPUTS
-#   * node -- node id
-#****
-proc $MODULE.confNewNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-    global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable
-    global rdconfig router_model router_ConfigModel
-    global def_router_model
-    global nodeNamingBase
-
-    set ripEnable [lindex $rdconfig 0]
-    set ripngEnable [lindex $rdconfig 1]
-    set ospfEnable [lindex $rdconfig 2]
-    set ospf6Enable [lindex $rdconfig 3]
-    set bgpEnable [lindex $rdconfig 4]
-    set router_ConfigModel $router_model
-
-    if { $router_model != $def_router_model } {
-	lappend $node "model $router_model"
-    } else {
-	lappend $node "model $def_router_model"
-    }
-
-    set nconfig [list \
-	"hostname [getNewNodeNameType router $nodeNamingBase(router)]" \
-	! ]
-    lappend $node "network-config [list $nconfig]"
-
-    setNodeProtocolRip $node $ripEnable
-    setNodeProtocolRipng $node $ripngEnable
-    setNodeProtocolOspfv2 $node $ospfEnable
-    setNodeProtocolOspfv3 $node $ospf6Enable
-    setNodeProtocolBgp $node $bgpEnable
-
-    setAutoDefaultRoutesStatus $node "enabled"
-    setLogIfcType $node lo0 lo
-    setIfcIPv4addrs $node lo0 "127.0.0.1/8"
-    setIfcIPv6addrs $node lo0 "::1/128"
-}
+################################################################################
+################################ GUI PROCEDURES ################################
+################################################################################
 
 #****f* router.tcl/router.icon
 # NAME
@@ -369,52 +474,18 @@ proc $MODULE.confNewNode { node } {
 #****
 proc $MODULE.icon { size } {
     global ROOTDIR LIBDIR
+
     switch $size {
-      normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/router.gif
-      }
-      small {
-	return $ROOTDIR/$LIBDIR/icons/small/router.gif
-      }
-      toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/router.gif
-      }
+	normal {
+	    return $ROOTDIR/$LIBDIR/icons/normal/router.gif
+	}
+	small {
+	    return $ROOTDIR/$LIBDIR/icons/small/router.gif
+	}
+	toolbar {
+	    return $ROOTDIR/$LIBDIR/icons/tiny/router.gif
+	}
     }
-}
-
-#****f* router.tcl/router.netlayer
-# NAME
-#   router.netlayer -- layer
-# SYNOPSIS
-#   set layer [router.netlayer]
-# FUNCTION
-#   Returns the layer on which the router operates, i.e. returns NETWORK.
-# RESULT
-#   * layer -- set to NETWORK
-#****
-proc $MODULE.netlayer {} {
-    return NETWORK
-}
-
-#****f* router.tcl/router.nghook
-# NAME
-#   router.nghook -- nghook
-# SYNOPSIS
-#   router.nghook $eid $node $ifc
-# FUNCTION
-#   Returns the id of the netgraph node and the name of the netgraph hook
-#   which is used for connecting two netgraph nodes. This procedure calls
-#   l3node.hook procedure and passes the result of that procedure.
-# INPUTS
-#   * eid - experiment id
-#   * node - node id
-#   * ifc - interface name
-# RESULT
-#   * nghook - the list containing netgraph node id and the
-#     netgraph hook (ngNode ngHook).
-#****
-proc $MODULE.nghook { eid node ifc } {
-    return [l3node.nghook $eid $node $ifc]
 }
 
 #****f* router.tcl/router.toolbarIconDescr
@@ -452,11 +523,13 @@ proc $MODULE.notebookDimensions { wi } {
 	set h 360
 	set w 507
     }
+
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
 	== "Interfaces" } {
 	set h 370
 	set w 507
     }
+
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
 	== "IPsec" } {
 	set h 320
@@ -464,49 +537,6 @@ proc $MODULE.notebookDimensions { wi } {
     }
 
     return [list $h $w]
-}
-
-#****f* router.tcl/router.ifacePrefix
-# NAME
-#   router.ifacePrefix -- interface name
-# SYNOPSIS
-#   router.ifacePrefix
-# FUNCTION
-#   Returns router interface name prefix.
-# RESULT
-#   * name -- name prefix string
-#****
-proc $MODULE.ifacePrefix {l r} {
-    return [l3IfcName $l $r]
-}
-
-#****f* router.tcl/router.virtlayer
-# NAME
-#   router.virtlayer -- virtual layer
-# SYNOPSIS
-#   set layer [router.virtlayer]
-# FUNCTION
-#   Returns the layer on which the router is instantiated, i.e. returns
-#   VIRTUALIZED.
-# RESULT
-#   * layer -- set to VIRTUALIZED
-#****
-proc $MODULE.virtlayer {} {
-    return VIRTUALIZED
-}
-
-#****f* router.tcl/router.IPAddrRange
-# NAME
-#   router.IPAddrRange -- IP address range
-# SYNOPSIS
-#   router.IPAddrRange
-# FUNCTION
-#   Returns router IP address range
-# RESULT
-#   * range -- router IP address range
-#****
-proc $MODULE.IPAddrRange {} {
-    return 1
 }
 
 #****f* router.tcl/router.configGUI
@@ -525,19 +555,17 @@ proc $MODULE.IPAddrRange {} {
 proc $MODULE.configGUI { c node } {
     global wi
     global guielements treecolumns ipsecEnable
+
     set guielements {}
 
     configGUI_createConfigPopupWin $c
     wm title $wi "router configuration"
     configGUI_nodeName $wi $node "Node name:"
 
-    set tabs [configGUI_addNotebook $wi $node {"Configuration" "Interfaces" "IPsec"}]
-    set configtab [lindex $tabs 0]
-    set ifctab [lindex $tabs 1]
-    set ipsectab [lindex $tabs 2]
+    lassign [configGUI_addNotebook $wi $node { "Configuration" "Interfaces" "IPsec" }] configtab ifctab ipsectab
 
-    set treecolumns {"OperState State" "NatState Nat" "IPv4addrs IPv4 addrs" "IPv6addrs IPv6 addrs" \
-	    "MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop" }
+    set treecolumns { "OperState State" "NatState Nat" "IPv4addrs IPv4 addrs" "IPv6addrs IPv6 addrs" \
+	"MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop" }
     configGUI_addTree $ifctab $node
 
     configGUI_routingModel $configtab $node

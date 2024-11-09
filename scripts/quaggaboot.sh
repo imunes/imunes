@@ -3,7 +3,7 @@
 zebra -dP0
 
 for f in rip ripng ospf ospf6; do
-    grep -q "router $f\$" $1 && ${f}d -dP0 
+    grep -q "router $f\$" $1 && ${f}d -dP0
 done
 
 for f in bgp isis; do
