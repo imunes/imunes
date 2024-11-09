@@ -776,32 +776,52 @@ proc loadCfg { cfg } {
 
 #****f* nodecfg.tcl/newObjectId
 # NAME
-#   newObjectId -- new object Id 
+#   newObjectId -- new object Id
 # SYNOPSIS
-#   set obj_id [newObjectId $type]
+#   set obj_id [newObjectId $elem_list $prefix]
 # FUNCTION
-#   Returns the Id for a new object of the defined type. Supported types
-#   are node, link and canvas. The Id is in the form $mark$number. $mark is
-#   the first letter of the given type and $number is the first available
-#   number to that can be used for id. 
+#   Returns the ID for a new object of with the defined $prefix. The ID is in
+#   the form $prefix$number. $number is the first available number from the
+#   given list (all the elements of the list share the same prefix and the list
+#   does not need to be sorted beforehand).
 # INPUTS
-#   * type -- the type of the new object. Can be node, link or canvas.
+#   * elem_list -- the list of existing elements
+#   * prefix -- the prefix of the new object.
 # RESULT
-#   * obj_id -- object Id in the form $mark$number. $mark is the 
-#     first letter of the given type and $number is the first available number
-#     to that can be used for id. 
+#   * obj_id -- object ID in the form $prefix$number
 #****
-proc newObjectId { type } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-    upvar 0 ::cf::[set ::curcfg]::annotation_list annotation_list
-    upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
-    global cfg_list
-
-    set mark [string range [set type] 0 0]
-    set id 0
-    while {[lsearch [set [set type]_list] "$mark$id"]  != -1} {
-	incr id
+proc newObjectId { elem_list prefix } {
+    set len [llength $elem_list]
+    if { $len == 0 } {
+	return ${prefix}0
     }
-    return $mark$id
+
+    set sorted_list [lsort -dictionary $elem_list]
+
+    # Initial interval - the start to the middle of the list
+    set start 0
+    set end [expr $len - 1]
+    set mid [expr $len / 2]
+    set lastmid -1
+
+    if { "$prefix$end" == [lindex $sorted_list end] } {
+	return $prefix[expr $end + 1]
+    }
+
+    while { $mid != $lastmid } {
+	set val [lindex $sorted_list $mid]
+	set idx [lsearch -dictionary -bisect $sorted_list $val]
+	regsub $prefix $val "" val
+
+	if { [expr $mid < $val] } {
+	    set end $mid
+	} else {
+	    set start [expr $mid + 1]
+	}
+
+	set lastmid $mid
+	set mid [expr ($start + $end ) / 2]
+    }
+
+    return $prefix$mid
 }

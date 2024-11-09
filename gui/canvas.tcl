@@ -75,7 +75,7 @@ proc removeCanvas { canvas } {
 proc newCanvas { name } {
     upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
 
-    set canvas [newObjectId canvas]
+    set canvas [newObjectId $canvas_list "c"]
     upvar 0 ::cf::[set ::curcfg]::$canvas $canvas
     lappend canvas_list $canvas
     set $canvas {}

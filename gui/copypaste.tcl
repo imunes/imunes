@@ -140,7 +140,7 @@ proc paste {} {
 
     # Paste annotations from the clipboard and rename them on the fly
     foreach annotation_orig [set ::cf::clipboard::annotation_list] {
-	set annotation_copy [newObjectId annotation]
+	set annotation_copy [newObjectId $annotation_list "a"]
 	set annotation_map($annotation_orig) $annotation_copy
 	upvar 0 ::cf::[set ::curcfg]::$annotation_copy $annotation_copy
 	set $annotation_copy [set ::cf::clipboard::$annotation_orig]
@@ -157,7 +157,7 @@ proc paste {} {
 
     # Paste nodes from the clipboard and rename them on the fly
     foreach node_orig [set ::cf::clipboard::node_list] {
-	set node_copy [newObjectId node]
+	set node_copy [newObjectId $node_list "n"]
 	set node_map($node_orig) $node_copy
 	upvar 0 ::cf::[set ::curcfg]::$node_copy $node_copy
 	set $node_copy [set ::cf::clipboard::$node_orig]
@@ -206,7 +206,7 @@ proc paste {} {
 
     # Paste links from the clipboard and rename them on the fly
     foreach link_orig [set ::cf::clipboard::link_list] {
-	set link_copy [newObjectId link]
+	set link_copy [newObjectId $link_list "l"]
 	upvar 0 ::cf::[set ::curcfg]::$link_copy $link_copy
 	set $link_copy [set ::cf::clipboard::$link_orig]
 	lappend link_list $link_copy

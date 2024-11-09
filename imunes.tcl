@@ -295,7 +295,7 @@ if {$execMode == "interactive"} {
 	}
 	close $fileId
 
-	set curcfg [newObjectId cfg]
+	set curcfg [newObjectId $cfg_list "cfg"]
 	lappend cfg_list $curcfg
 	namespace eval ::cf::[set curcfg] {}
 
@@ -318,7 +318,7 @@ if {$execMode == "interactive"} {
 	    }
 	    close $fileId
 
-	    set curcfg [newObjectId cfg]
+	    set curcfg [newObjectId $cfg_list "cfg"]
 	    lappend cfg_list $curcfg
 	    namespace eval ::cf::[set curcfg] {}
 	    upvar 0 ::cf::[set ::curcfg]::eid eid

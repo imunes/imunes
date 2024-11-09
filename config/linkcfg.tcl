@@ -913,9 +913,9 @@ proc splitLink { link nodetype } {
     set orig_node2 [lindex $orig_nodes 1]
     set new_node1 [newNode $nodetype]
     set new_node2 [newNode $nodetype]
-    set new_link1 [newObjectId link]
+    set new_link1 [newObjectId $link_list "l"]
     lappend link_list $new_link1
-    set new_link2 [newObjectId link]
+    set new_link2 [newObjectId $link_list "l"]
     lappend link_list $new_link2
     set ifc1 [ifcByPeer $orig_node1 $orig_node2]
     set ifc2 [ifcByPeer $orig_node2 $orig_node1]
@@ -999,7 +999,7 @@ proc mergeLink { link } {
     set orig_node2 [lindex $link2_peers 0]
     set pseudo_node1 [lindex $link1_peers 1]
     set pseudo_node2 [lindex $link2_peers 1]
-    set new_link [newObjectId link]
+    set new_link [newObjectId $link_list "l"]
     upvar 0 ::cf::[set ::curcfg]::$orig_node1 $orig_node1
     upvar 0 ::cf::[set ::curcfg]::$orig_node2 $orig_node2
     upvar 0 ::cf::[set ::curcfg]::$new_link $new_link
@@ -1085,7 +1085,7 @@ proc newLink { lnode1 lnode2 } {
 	}
     }
 
-    set link [newObjectId link]
+    set link [newObjectId $link_list "l"]
     upvar 0 ::cf::[set ::curcfg]::$link $link
     set $link {}
 

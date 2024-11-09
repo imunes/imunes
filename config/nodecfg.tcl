@@ -2460,7 +2460,7 @@ proc newNode { type } {
     global viewid
     catch {unset viewid}
 	
-    set node [newObjectId node]
+    set node [newObjectId $node_list "n"]
     upvar 0 ::cf::[set ::curcfg]::$node $node
     set $node {}
     lappend $node "type $type"

@@ -625,10 +625,10 @@ proc prepareSystem {} {
 
     set running_eids [getResumableExperiments]
     if {$execMode != "batch"} {
-	set eid ${eid_base}[string range $::curcfg 1 end]
+	set eid ${eid_base}[string range $::curcfg 3 end]
 	while { $eid in $running_eids } {
 	    set eid_base [genExperimentId]
-	    set eid ${eid_base}[string range $::curcfg 1 end]
+	    set eid ${eid_base}[string range $::curcfg 3 end]
 	}
     } else {
 	set eid $eid_base

@@ -86,7 +86,7 @@ set fileTypes {
 proc newProject {} {
     global curcfg cfg_list
 
-    set curcfg [newObjectId cfg]
+    set curcfg [newObjectId $cfg_list "cfg"]
     lappend cfg_list $curcfg
     namespace eval ::cf::[set curcfg] {}
 
@@ -139,7 +139,7 @@ proc updateProjectMenu {} {
     foreach cfg $cfg_list {
 	set fname [set ::cf::[set cfg]::currentFile]
 	if { $fname == "" } {
-	    set fname "untitled[string range $cfg 1 end]"
+	    set fname "untitled[string range $cfg 3 end]"
 	}
 	.menubar.file add checkbutton -label $fname -variable curcfg \
 	    -onvalue $cfg -command switchProject
@@ -157,7 +157,7 @@ proc updateProjectMenu {} {
 proc switchProject {} {
     global curcfg showTree
     if {$curcfg == 0} {
-        set curcfg "c0"
+        set curcfg "cfg0"
     } 
     upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
@@ -185,7 +185,7 @@ proc setWmTitle { fname } {
     global curcfg baseTitle imunesVersion imunesAdditions
 
     if { $fname == "" } {
-	set fname "untitled[string range $curcfg 1 end]"
+	set fname "untitled[string range $curcfg 3 end]"
     }
     wm title . "$baseTitle - $fname"
 }
