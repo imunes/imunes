@@ -67,10 +67,10 @@
 #   - opens dialog box for saving a file under new name  
 #****
 
-global currentFile fileTypes
+global currentFile file_types
 set currentFile ""
 
-set fileTypes {
+set file_types {
     { "IMUNES network configuration" {.imn} }
     { "All files" {*} }
 }
@@ -267,9 +267,9 @@ proc saveFile { selectedFile } {
 #   Opens an open file dialog box.
 #****
 proc fileOpenDialogBox {} {
-    global fileTypes
+    global file_types
 
-    set selectedFile [tk_getOpenFile -filetypes $fileTypes]
+    set selectedFile [tk_getOpenFile -filetypes $file_types]
     if { $selectedFile != ""} {
 	newProject
 	upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
@@ -289,11 +289,11 @@ proc fileOpenDialogBox {} {
 #****
 proc fileSaveDialogBox {} {
     upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
-    global fileTypes
-    
+    global file_types
+
     if { $currentFile == "" } {
-	set selectedFile [tk_getSaveFile -filetypes $fileTypes -initialfile\
-		   untitled -defaultextension .imn]
+	set selectedFile [tk_getSaveFile -filetypes $file_types -initialfile \
+	    untitled -defaultextension .imn]
 	saveFile $selectedFile
     } else {
 	saveFile $currentFile
@@ -310,10 +310,10 @@ proc fileSaveDialogBox {} {
 #****
 proc fileSaveAsDialogBox {} {
     upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
-    global fileTypes
+    global file_types
 
-    set selectedFile [tk_getSaveFile -filetypes $fileTypes -initialfile\
-	       untitled -defaultextension .imn]
+    set selectedFile [tk_getSaveFile -filetypes $file_types -initialfile \
+	untitled -defaultextension .imn]
 
     saveFile $selectedFile 
 }
