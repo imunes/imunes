@@ -146,6 +146,28 @@ if { ! [info exists eid_base] } {
     set eid_base [genExperimentId]
 }
 
+set option_defaults {
+    auto_etc_hosts		0
+}
+
+set gui_option_defaults {
+    show_interface_names	1
+    show_interface_ipv4		1
+    show_interface_ipv6		1
+    show_node_labels		1
+    show_link_labels		1
+    show_background_images	0
+    show_annotations		1
+    show_grid			1
+    icon_size			"normal"
+    zoom			1
+}
+
+foreach {option default_value} [concat $option_defaults $gui_option_defaults] {
+    global $option
+    set $option $default_value
+}
+
 # Set default L2 node list
 set l2nodes "hub lanswitch rj45 stpswitch filter packgen ext extnat"
 # Set default L3 node list

@@ -826,9 +826,9 @@ proc updateBkgPreview { pc imgsize prsrcfile } {
 #   * c -- canvas on which the background is being modified
 #****
 proc popupBkgApply { wi c } {
-    global changed bgsrcfile canvasBkgMode showBkgImage alignCanvasBkg hasIM winOS
+    global changed bgsrcfile canvasBkgMode show_background_images alignCanvasBkg hasIM winOS
 
-    set showBkgImage 0
+    set show_background_images 0
     $wi config -cursor watch
     update
 
@@ -893,7 +893,7 @@ proc popupBkgApply { wi c } {
 			return 0
 		    }
 		    setCanvasBkg $c $bkgname
-		    set showBkgImage 1
+		    set show_background_images 1
 		    set changed 1
 		    destroy $wi
 		}
@@ -911,7 +911,7 @@ proc popupBkgApply { wi c } {
 			return 0
 		    }
 		    setCanvasBkg $c $bkgname
-		    set showBkgImage 1
+		    set show_background_images 1
 		    set changed 1
 		    destroy $wi
 		}
@@ -937,7 +937,7 @@ proc popupBkgApply { wi c } {
 			    return 0
 			}
 			setCanvasBkg $c $bkgname
-			set showBkgImage 1
+			set show_background_images 1
 			set changed 1
 			destroy $wi
 		    }
@@ -954,7 +954,7 @@ proc popupBkgApply { wi c } {
 			return 0
 		    }
 		    setCanvasBkg $c $bkgname
-		    set showBkgImage 1
+		    set show_background_images 1
 		    set changed 1
 		    destroy $wi
 		}
@@ -997,7 +997,7 @@ proc popupBkgApply { wi c } {
 		return 0
 	    }
 	    setCanvasBkg $c $bkgname
-	    set showBkgImage 1
+	    set show_background_images 1
 	    set changed 1
 	    destroy $wi
 	}

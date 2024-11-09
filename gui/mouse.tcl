@@ -1685,7 +1685,7 @@ proc button1-release { c x y } {
 proc button3background { c x y } {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
-    global showBkgImage changed
+    global show_background_images changed
 
     .button3menu delete 0 end
 
@@ -1693,7 +1693,7 @@ proc button3background { c x y } {
     # Show canvas background
     #
     .button3menu add checkbutton -label "Show background" \
-    -underline 5 -variable showBkgImage \
+    -underline 5 -variable show_background_images \
     -command { redrawAll }
 
     .button3menu add separator
