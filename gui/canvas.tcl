@@ -30,21 +30,21 @@
 # NAME
 #  canvas.tcl -- file used for manipultaion with canvases in IMUNES
 # FUNCTION
-#  This module is used to define all the actions used for configuring 
+#  This module is used to define all the actions used for configuring
 #  canvases in IMUNES. On each canvas a part of the simulation is presented
-#  If there is no additional canvas defined, simulation is presented on the 
+#  If there is no additional canvas defined, simulation is presented on the
 #  defalut canvas.
 #
 #****
 
 #****f* canvas.tcl/removeCanvas
 # NAME
-#   removeCanvas -- remove canvas 
+#   removeCanvas -- remove canvas
 # SYNOPSIS
 #   removeCanvas $canvas
 # FUNCTION
-#   Removes the canvas from simulation. This function does not change the 
-#   configuration of the nodes, i.e. nodes attached to the removed canvas 
+#   Removes the canvas from simulation. This function does not change the
+#   configuration of the nodes, i.e. nodes attached to the removed canvas
 #   remain attached to the same non existing canvas.
 # INPUTS
 #   * canvas -- canvas id
@@ -59,7 +59,7 @@ proc removeCanvas { canvas } {
 
 #****f* canvas.tcl/newCanvas
 # NAME
-#   newCanvas -- create new canvas 
+#   newCanvas -- create new canvas
 # SYNOPSIS
 #   set canvas_id [newCanvas $name]
 # FUNCTION
@@ -73,15 +73,15 @@ proc removeCanvas { canvas } {
 #****
 proc newCanvas { name } {
     upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
-
     set canvas [newObjectId $canvas_list "c"]
+
     upvar 0 ::cf::[set ::curcfg]::$canvas $canvas
     lappend canvas_list $canvas
     set $canvas {}
     if { $name != "" } {
 	setCanvasName $canvas $name
     } else {
-	setCanvasName $canvas Canvas[string range $canvas 1 end]
+	setCanvasName $canvas "Canvas[string range $canvas 1 end]"
     }
 
     return $canvas
@@ -249,7 +249,7 @@ proc removeCanvasBkg { canvas } {
 #****
 proc setImageReference { img target } {
     upvar 0 ::cf::[set ::curcfg]::$img $img
-    
+
     set i [lsearch [set $img] "referencedBy *"]
     if { $i >= 0 } {
 	set ref_list [getImageReferences $img]
@@ -275,11 +275,11 @@ proc setImageReference { img target } {
 #****
 proc getImageReferences { img } {
     upvar 0 ::cf::[set ::curcfg]::$img $img
-    
+
     set entry [lrange [lsearch -inline [set $img] "referencedBy *"] 1 end]
     set entry [string trim $entry \{\}]
     set entry [split $entry " "]
-    
+
     return $entry
 }
 
@@ -296,16 +296,16 @@ proc getImageReferences { img } {
 #****
 proc removeImageReference { img target } {
     upvar 0 ::cf::[set ::curcfg]::$img $img
-    
+
     set entry [lrange [lsearch -inline [set $img] "referencedBy *"] 1 end]
     set entry [string trim $entry \{\}]
     set entry [split $entry " "]
-    
+
     set j [lsearch $entry "$target"]
     if { $j >= 0 } {
 	set entry [lreplace $entry $j $j ]
     }
-    
+
     set i [lsearch [set $img] "referencedBy *"]
     if { $i >= 0 } {
 	set $img [lreplace [set $img] $i $i "referencedBy {$entry}"]
@@ -325,7 +325,7 @@ proc removeImageReference { img target } {
 #****
 proc setImageType { img type } {
     upvar 0 ::cf::[set ::curcfg]::$img $img
-    
+
     set i [lsearch [set $img] "type *"]
     if { $i >= 0 } {
 	set $img [lreplace [set $img] $i $i "type {$type}"]
@@ -348,7 +348,7 @@ proc setImageType { img type } {
 #****
 proc getImageType { img } {
     upvar 0 ::cf::[set ::curcfg]::$img $img
-    
+
     set entry [lrange [lsearch -inline [set $img] "type *"] 1 end]
     return [string trim $entry \{\}]
 }
@@ -366,10 +366,10 @@ proc getImageType { img } {
 #****
 proc setImageData { img path } {
     upvar 0 ::cf::[set ::curcfg]::$img $img
-    
+
     set f [open $path]
     fconfigure $f -translation binary
-    
+
     set data [read -nonewline $f]
     set enc_data [base64::encode $data]
     set enc_data [string map {"\n" "\n          "} $enc_data]
@@ -395,7 +395,7 @@ proc setImageData { img path } {
 #****
 proc getImageData { img } {
     upvar 0 ::cf::[set ::curcfg]::$img $img
-    
+
     set entry [lrange [lsearch -inline [set $img] "data *"] 1 end]
     set enc [string trim $entry \{\}]
     set enc [string trim $enc " "]
@@ -417,10 +417,10 @@ proc getImageData { img } {
 #****
 proc setImageZoomData { img path zoom } {
     upvar 0 ::cf::[set ::curcfg]::$img $img
-    
+
     set f [open $path]
     fconfigure $f -translation binary
-    
+
     set data [read -nonewline $f]
     set enc_data [base64::encode $data]
     set enc_data [string map {"\n" "\n          "} $enc_data]
@@ -447,7 +447,7 @@ proc setImageZoomData { img path zoom } {
 #****
 proc getImageZoomData { img zoom } {
     upvar 0 ::cf::[set ::curcfg]::$img $img
-    
+
     set entry [lrange [lsearch -inline [set $img] "zoom_$zoom *"] 1 end]
     set enc [string trim $entry \{\}]
     set enc [string trim $enc " "]
@@ -468,7 +468,7 @@ proc getImageZoomData { img zoom } {
 #****
 proc setImageFile { img file } {
     upvar 0 ::cf::[set ::curcfg]::$img $img
-    
+
     set i [lsearch [set $img] "file *"]
     if { $i >= 0 } {
 	set $img [lreplace [set $img] $i $i "file {$file}"]
@@ -491,7 +491,7 @@ proc setImageFile { img file } {
 #****
 proc getImageFile { img } {
     upvar 0 ::cf::[set ::curcfg]::$img $img
-    
+
     set entry [lrange [lsearch -inline [set $img] "file *"] 1 end]
     return [string trim $entry \{\}]
 }
@@ -514,37 +514,39 @@ proc getImageFile { img } {
 #****
 proc loadImage { path ref type file } {
     upvar 0 ::cf::[set ::curcfg]::image_list image_list
-    
+
     if { [file exists $path] != 1 } {
-	after idle {.dialog1.msg configure -wraplength 4i}
+	after idle { .dialog1.msg configure -wraplength 4i }
 	tk_dialog .dialog1 "IMUNES error" \
 	    "Couldn\'t find image file." \
 	    info 0 Dismiss
 	return 2
     }
-    
+
     set i [lsearch -all -glob $image_list "img_*"]
     set i [lindex $i end]
     set count [string range [lindex $image_list $i] 4 end]
-    if {$count != ""} {
+    if { $count != "" } {
 	incr count
     } else {
 	set count 0
     }
-    
+
     set imgname "img_$count"
     upvar 0 ::cf::[set ::curcfg]::$imgname $imgname
     set $imgname {}
 
     lappend image_list $imgname
-    
+
     setImageData $imgname $path
     setImageFile $imgname [relpath $file]
+
     if { $ref != "" } {
 	setImageReference $imgname $ref
-    }    
+    }
+
     setImageType $imgname $type
-    
+
     return $imgname
 }
 
@@ -576,10 +578,11 @@ proc random { range start } {
 proc changeBkgPopup {} {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     global wi canvasBkgMode chbgdialog cc alignCanvasBkg bgsrcfile winOS hasIM
-    
+
     set cc $curcanvas
     set chbgdialog .chbgDialog
-    catch {destroy $chbgdialog}
+    catch { destroy $chbgdialog }
+
     toplevel $chbgdialog
     wm transient $chbgdialog .
     wm resizable $chbgdialog 0 0
@@ -587,42 +590,42 @@ proc changeBkgPopup {} {
     wm iconname $chbgdialog "Change canvas background"
 
     set wi [ttk::frame $chbgdialog.changebgframe]
-    
+
     ttk::panedwindow $wi.bgconf -orient horizontal
     pack $wi.bgconf -fill both
-    
+
     #left and right pane
     ttk::frame $wi.bgconf.left -relief groove -borderwidth 3
     ttk::frame $wi.bgconf.right -relief groove -borderwidth 3
-    
+
     #right pane definition
     set size [getCanvasSize $curcanvas]
     set sizex [lrange $size 0 0]
     set sizey [lrange $size 1 1]
     ttk::label $wi.bgconf.right.l -text "Canvas: $sizex*$sizey"
     pack $wi.bgconf.right.l
-    
+
     set prevcanvas [canvas $wi.bgconf.right.pc -bd 0 -relief sunken -highlightthickness 0 \
     		-width 150 -height 150]
     pack $prevcanvas
-    
+
     ttk::label $wi.bgconf.right.l2 -text "Image:"
     pack $wi.bgconf.right.l2
-    
+
     #left pane definition
     #upper left frame with label
     ttk::frame $wi.bgconf.left.up
     pack $wi.bgconf.left.up -anchor w
     ttk::label $wi.bgconf.left.up.l -text "Choose background file:"
-    
+
     #center left frame with entry and button
     ttk::frame $wi.bgconf.left.center
     ttk::frame $wi.bgconf.left.center.left
     ttk::frame $wi.bgconf.left.center.right
     pack $wi.bgconf.left.center -fill both -padx 10
     pack $wi.bgconf.left.center.left $wi.bgconf.left.center.right -side left -anchor n -padx 2
-    
-    
+
+
     ttk::entry $wi.bgconf.left.center.left.e -width 35 -textvariable bkgFile
     ttk::button $wi.bgconf.left.center.right.b -text "Browse" -width 8 \
 	-command {
@@ -647,92 +650,91 @@ proc changeBkgPopup {} {
 	    set bgsrcfile [tk_getOpenFile -parent $chbgdialog -filetypes $fType]
 	    $wi.bgconf.left.center.left.e delete 0 end
 	    $wi.bgconf.left.center.left.e insert 0 "$bgsrcfile"
-	    if {$bgsrcfile != ""} {
+	    if { $bgsrcfile != "" } {
 		updateBkgPreview $prevcanvas $imgsize $bgsrcfile
 	    }
     }
-    
-    if {$bgsrcfile != ""} {
+
+    if { $bgsrcfile != "" } {
 	set prevcanvas $wi.bgconf.right.pc
 	set imgsize $wi.bgconf.right.l2
 	updateBkgPreview $prevcanvas $imgsize $bgsrcfile
     }
-    
+
     ttk::frame $wi.bgconf.left.down
     pack $wi.bgconf.left.down -pady 5
     ttk::frame $wi.bgconf.left.down.r
     ttk::label $wi.bgconf.left.down.r.l -text "Image alignment:"
     pack $wi.bgconf.left.down.r.l -anchor w
-    
+
     ttk::frame $wi.bgconf.left.down.r.align -relief groove -borderwidth 2
     pack $wi.bgconf.left.down.r.align
     #lower right frame with alignment options
     ###frame that contains NORTH alignment
     ttk::frame $wi.bgconf.left.down.r.align.n
     ttk::radiobutton $wi.bgconf.left.down.r.align.n.w \
-    -variable alignCanvasBkg -value northwest -state enabled 
+    -variable alignCanvasBkg -value northwest -state enabled
     ttk::radiobutton $wi.bgconf.left.down.r.align.n.c \
-    -variable alignCanvasBkg -value north -state enabled 
+    -variable alignCanvasBkg -value north -state enabled
     ttk::radiobutton $wi.bgconf.left.down.r.align.n.e \
     -variable alignCanvasBkg -value northeast -state enabled
     pack $wi.bgconf.left.down.r.align.n.w  $wi.bgconf.left.down.r.align.n.c \
       $wi.bgconf.left.down.r.align.n.e -padx 10 -side left
     pack $wi.bgconf.left.down.r.align.n -pady 3
-    
+
     ###frame that contains CENTER alignment
     ttk::frame $wi.bgconf.left.down.r.align.c
     ttk::radiobutton $wi.bgconf.left.down.r.align.c.w \
-    -variable alignCanvasBkg -value west -state enabled 
+    -variable alignCanvasBkg -value west -state enabled
     ttk::radiobutton $wi.bgconf.left.down.r.align.c.c \
-    -variable alignCanvasBkg -value center -state enabled 
+    -variable alignCanvasBkg -value center -state enabled
     ttk::radiobutton $wi.bgconf.left.down.r.align.c.e \
-    -variable alignCanvasBkg -value east -state enabled 
+    -variable alignCanvasBkg -value east -state enabled
     pack $wi.bgconf.left.down.r.align.c.w  $wi.bgconf.left.down.r.align.c.c \
       $wi.bgconf.left.down.r.align.c.e -padx 10 -side left
     pack $wi.bgconf.left.down.r.align.c -pady 3
-    
+
     ###frame that contains SOUTH alignment
     ttk::frame $wi.bgconf.left.down.r.align.s
     ttk::radiobutton $wi.bgconf.left.down.r.align.s.w \
-    -variable alignCanvasBkg -value southwest -state enabled 
+    -variable alignCanvasBkg -value southwest -state enabled
     ttk::radiobutton $wi.bgconf.left.down.r.align.s.c \
-    -variable alignCanvasBkg -value south -state enabled 
+    -variable alignCanvasBkg -value south -state enabled
     ttk::radiobutton $wi.bgconf.left.down.r.align.s.e \
-    -variable alignCanvasBkg -value southeast -state enabled 
+    -variable alignCanvasBkg -value southeast -state enabled
     pack $wi.bgconf.left.down.r.align.s.w  $wi.bgconf.left.down.r.align.s.c \
       $wi.bgconf.left.down.r.align.s.e -padx 10 -side left
     pack $wi.bgconf.left.down.r.align.s -pady 3
-    
-    
+
     #lower left frame with options
     ttk::frame $wi.bgconf.left.down.l
-    
+
     ttk::radiobutton $wi.bgconf.left.down.l.original -text "Use original/cropped image" \
     -variable canvasBkgMode -value original
     pack $wi.bgconf.left.down.l.original -anchor w
-    
+
     ttk::radiobutton $wi.bgconf.left.down.l.str_shr -text "Stretch/shrink image" \
     -variable canvasBkgMode -value str_shr
     pack $wi.bgconf.left.down.l.str_shr -anchor w
-    
+
     ttk::radiobutton $wi.bgconf.left.down.l.adjust -text "Adjust canvas to image" \
-    -variable canvasBkgMode -value adjustC2I 
+    -variable canvasBkgMode -value adjustC2I
     pack $wi.bgconf.left.down.l.adjust -anchor w
-    
+
     ttk::radiobutton $wi.bgconf.left.down.l.adjust2 -text "Adjust image to canvas" \
-    -variable canvasBkgMode -value adjustI2C 
+    -variable canvasBkgMode -value adjustI2C
     pack $wi.bgconf.left.down.l.adjust2 -anchor w
-    
+
     #packing left side
     pack $wi.bgconf.left.up.l -anchor w
     pack $wi.bgconf.left.center.left.e -pady 2
     pack $wi.bgconf.left.center.right.b
     pack $wi.bgconf.left.down.l $wi.bgconf.left.down.r -pady 2 -padx 10 -anchor w -side left
     pack $wi -fill both
-    
+
     #bottom frame with information about imagemagick
     ttk::frame $wi.bgconf.left.downdown
-    if {!$hasIM} {
+    if { ! $hasIM } {
 	set canvasBkgMode "adjustC2I"
 	$wi.bgconf.left.down.l.original configure -state disabled
 	$wi.bgconf.left.down.l.str_shr configure -state disabled
@@ -742,7 +744,7 @@ proc changeBkgPopup {} {
 	pack $wi.bgconf.left.downdown.l -anchor w
     }
     pack $wi.bgconf.left.downdown -side top -anchor w -expand 1
-    
+
     #adding panes to paned window
     $wi.bgconf add $wi.bgconf.left
     $wi.bgconf add $wi.bgconf.right
@@ -757,12 +759,12 @@ proc changeBkgPopup {} {
     ttk::button $wi.buttons.cancel -text "Cancel" -command "destroy $chbgdialog"
     ttk::button $wi.buttons.remove -text "Remove background" -command \
 	 "removeCanvasBkg $cc;
-	  if {\"[getCanvasBkg $cc]\" != \"\"} {
+	  if { \"[getCanvasBkg $cc]\" != \"\" } {
 	      removeImageReference [getCanvasBkg $cc] $cc
 	  }
 	  destroy $chbgdialog; redrawAll; set changed 1; updateUndoLog"
     pack $wi.buttons.remove $wi.buttons.cancel $wi.buttons.apply -side right -expand 1
-    
+
     bind $chbgdialog <Key-Return> "popupBkgApply $chbgdialog $cc"
     bind $chbgdialog <Key-Escape> "destroy $chbgdialog"
 }
@@ -788,9 +790,9 @@ proc updateBkgPreview { pc imgsize prsrcfile } {
     set image_w [image width $image]
     $imgsize configure -text "Image: $image_w*$image_h"
 
-    if {$image_w > 150 || $image_h > 150} {
+    if { $image_w > 150 || $image_h > 150 } {
 	set preview 0
-	if {$image_w > $image_h} {
+	if { $image_w > $image_h } {
 	    set x [expr {int($image_w/150.0)}]
 	    set y [expr {int($image_h/((150.0/$image_w)*$image_h))}]
 	    $preview copy $image -subsample $x $y
@@ -825,32 +827,32 @@ proc updateBkgPreview { pc imgsize prsrcfile } {
 #****
 proc popupBkgApply { wi c } {
     global changed bgsrcfile canvasBkgMode showBkgImage alignCanvasBkg hasIM winOS
-    
+
     set showBkgImage 0
     $wi config -cursor watch
     update
-    
+
     #OS detection (windows or unix) - needed to change the slash sign (/) into backslash (\)
     #in the path of the image file
     #also used to change the exec command because of portability problems
-    if {$winOS} {
+    if { $winOS } {
 	set bgsrcfile [string map {/ \\} $bgsrcfile]
     }
 
     set pastBkg [getCanvasBkg $c]
-    if { $pastBkg != ""} {
+    if { $pastBkg != "" } {
 	removeImageReference $pastBkg $c
     }
-    
+
     # if there is ImageMagick create a new image, load it and then remove it from the drive.
     if { $bgsrcfile != "" && $hasIM } {
 	set randNum [random 899 100]
 	set destImgFile "background_$c\_$randNum.gif"
-	while {[file exists $destImgFile] == 1} {
+	while { [file exists $destImgFile] == 1 } {
 	    set randNum [random 899 100]
 	    set destImgFile "background_$c_$randNum.gif"
 	}
-	
+
 	set size [getCanvasSize $c]
 	set sizex [lrange $size 0 0]
 	set sizey [lrange $size 1 1]
@@ -859,17 +861,17 @@ proc popupBkgApply { wi c } {
 	set image_x [image width bkg]
 	set image_y [image height bkg]
 	image delete bkg
-	if {$image_x > $sizex || $image_y > $sizey} {
+	if { $image_x > $sizex || $image_y > $sizey } {
 	    set crop 1
 	} else {
 	    set crop 0
 	}
-	
-	if {$bgsrcfile != ""} { 
+
+	if { $bgsrcfile != "" } {
 	    switch $canvasBkgMode {
 		original {
-		    if {$crop == 1} {
-			if {!$winOS} {
+		    if { $crop == 1 } {
+			if { ! $winOS } {
 			    exec magick $bgsrcfile -gravity $alignCanvasBkg -background white \
 			      -extent $sizex\x$sizey $destImgFile
 			} else {
@@ -877,17 +879,17 @@ proc popupBkgApply { wi c } {
 			      -extent $sizex\x$sizey $destImgFile
 			}
 		    } else {
-			if {!$winOS} {
+			if { ! $winOS } {
 			    exec magick $bgsrcfile -gravity $alignCanvasBkg -background white \
 			      -extent $sizex\x$sizey $destImgFile
 			} else {
 			  exec cmd /c magick $bgsrcfile -gravity $alignCanvasBkg -background white \
 			      -extent $sizex\x$sizey $destImgFile
 			}
-		    }	    
-		    
+		    }
+
 		    set bkgname [loadImage $destImgFile $c canvasBackground $bgsrcfile]
-		    if {$bkgname == 2} {
+		    if { $bkgname == 2 } {
 			return 0
 		    }
 		    setCanvasBkg $c $bkgname
@@ -896,16 +898,16 @@ proc popupBkgApply { wi c } {
 		    destroy $wi
 		}
 		str_shr {
-		    if {!$winOS} {
+		    if { ! $winOS } {
 			exec magick $bgsrcfile -resize $sizex\x$sizey \
 			  -size $sizex\x$sizey xc:white +swap -gravity $alignCanvasBkg -composite $destImgFile
 		    } else {
 			exec cmd /c magick $bgsrcfile -resize $sizex\x$sizey \
 			  -size $sizex\x$sizey xc:white +swap -gravity $alignCanvasBkg -composite $destImgFile
 		    }
-		    
+
 		    set bkgname [loadImage $destImgFile $c canvasBackground $bgsrcfile]
-		    if {$bkgname == 2} {
+		    if { $bkgname == 2 } {
 			return 0
 		    }
 		    setCanvasBkg $c $bkgname
@@ -916,13 +918,13 @@ proc popupBkgApply { wi c } {
 		adjustC2I {
 		    set ix [lindex [getMostDistantNodeCoordinates] 0]
 		    set iy [lindex [getMostDistantNodeCoordinates] 1]
-    
-		    if { $image_x < $ix || $image_y < $iy} {
+
+		    if { $image_x < $ix || $image_y < $iy } {
 			$wi config -cursor arrow
 			update
 			set errmsg "Canvas cannot be set to this size: $image_x $image_y. \
 			  The most distant icons are on $ix $iy."
-			after idle {.dialog1.msg configure -wraplength 4i}
+			after idle { .dialog1.msg configure -wraplength 4i }
 			tk_dialog .dialog1 "IMUNES error" \
 			    $errmsg \
 			    info 0 Dismiss
@@ -931,7 +933,7 @@ proc popupBkgApply { wi c } {
 			set changed 1
 			switchCanvas none
 			set bkgname [loadImage $bgsrcfile $c canvasBackground $bgsrcfile]
-			if {$bkgname == 2} {
+			if { $bkgname == 2 } {
 			    return 0
 			}
 			setCanvasBkg $c $bkgname
@@ -941,14 +943,14 @@ proc popupBkgApply { wi c } {
 		    }
 		}
 		adjustI2C {
-		    if {!$winOS} {
+		    if { ! $winOS } {
 			exec magick $bgsrcfile -resize $sizex\x$sizey\! $destImgFile
 		    } else {
 			exec cmd /c magick $bgsrcfile -resize $sizex\x$sizey\! $destImgFile
 		    }
 
 		    set bkgname [loadImage $destImgFile $c canvasBackground $bgsrcfile]
-		    if {$bkgname == 2} {
+		    if { $bkgname == 2 } {
 			return 0
 		    }
 		    setCanvasBkg $c $bkgname
@@ -958,16 +960,16 @@ proc popupBkgApply { wi c } {
 		}
 	    }
 	}
-	
-	if {!$winOS && $canvasBkgMode != "adjustC2I"} {
+
+	if { ! $winOS && $canvasBkgMode != "adjustC2I" } {
 	    exec rm $destImgFile
 	}
-	if {$winOS && $canvasBkgMode != "adjustC2I"} {
+	if { $winOS && $canvasBkgMode != "adjustC2I" } {
 	    catch { exec cmd /c del $destImgFile } err
 	}
     }
-    
-    #if there is no IM then apply only the adjsut canvas to image option 
+
+    #if there is no IM then apply only the adjsut canvas to image option
     if { $bgsrcfile != "" && !$hasIM && $canvasBkgMode == "adjustC2I" } {
 	image create photo bkg -file $bgsrcfile
 	set image_x [image width bkg]
@@ -976,13 +978,13 @@ proc popupBkgApply { wi c } {
 
 	set ix [lindex [getMostDistantNodeCoordinates] 0]
 	set iy [lindex [getMostDistantNodeCoordinates] 1]
-    
-	if { $image_x < $ix || $image_y < $iy} {
+
+	if { $image_x < $ix || $image_y < $iy } {
 	    $wi config -cursor arrow
 	    update
 	    set errmsg "Canvas cannot be set to this size: $image_x $image_y. \
 	      The most distant icons are on $ix $iy."
-	    after idle {.dialog1.msg configure -wraplength 4i}
+	    after idle { .dialog1.msg configure -wraplength 4i }
 	    tk_dialog .dialog1 "IMUNES error" \
 		$errmsg \
 		info 0 Dismiss
@@ -991,7 +993,7 @@ proc popupBkgApply { wi c } {
 	    set changed 1
 	    switchCanvas none
 	    set bkgname [loadImage $bgsrcfile $c canvasBackground $bgsrcfile]
-	    if {$bkgname == 2} {
+	    if { $bkgname == 2 } {
 		return 0
 	    }
 	    setCanvasBkg $c $bkgname
@@ -1000,8 +1002,8 @@ proc popupBkgApply { wi c } {
 	    destroy $wi
 	}
     }
-    
-    if {$changed == 1} {
+
+    if { $changed == 1 } {
 	redrawAll
 	updateUndoLog
     }
@@ -1014,7 +1016,7 @@ proc popupBkgApply { wi c } {
 #   printCanvas $w
 # FUNCTION
 #   This procedure is called when the print button in
-#   print dialog box is pressed. 
+#   print dialog box is pressed.
 # INPUTS
 #   * w -- print dialog widget
 #****
@@ -1035,28 +1037,28 @@ proc printCanvas { w } {
 #   printCanvasToFile $w $entry
 # FUNCTION
 #   This procedure is called when the print to file
-#   button in print to file dialog box is pressed. 
+#   button in print to file dialog box is pressed.
 # INPUTS
 #   * w -- print to file dialog widget
 #   * entry -- file name
 #****
-proc printCanvasToFile { w entry } {    
+proc printCanvasToFile { w entry } {
     upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global printFileType
-    
-    if { [string match -nocase *.* [$entry get]] != 1} {
+
+    if { [string match -nocase *.* [$entry get]] != 1 } {
 	set box "[$entry get]\.$printFileType"
 	$entry delete 0 end
 	$entry insert 0 $box
     }
-    
+
     set temp [$entry get]
-    if { $temp == "" || [string match -nocase *.$printFileType $temp] != 1} {
+    if { $temp == "" || [string match -nocase *.$printFileType $temp] != 1 } {
 	return
     }
-    
+
     set start_canvas $curcanvas
     if { $printFileType == "ps" } {
 	set psname [$entry get]
@@ -1067,44 +1069,44 @@ proc printCanvasToFile { w entry } {
     }
 
     foreach canvas $canvas_list {
-	set p [open "$psname" a+]
 	set curcanvas $canvas
 	switchCanvas none
+
 	set sizex [expr {[lindex [getCanvasSize $curcanvas] 0]*$zoom}]
 	set sizey [expr {[lindex [getCanvasSize $curcanvas] 1]*$zoom}]
+
+	set p [open "$psname" a+]
 	puts $p [.panwin.f1.c postscript -height $sizey -width $sizex -x 0 -y 0 -rotate yes -pageheight 297m -pagewidth 210m]
 	close $p
     }
-    
+
     if { $printFileType == "pdf" } {
 	exec ps2pdf -dPDFSETTINGS=/screen $psname $pdfname
 	exec rm $psname
     }
-    
+
     set curcanvas $start_canvas
     switchCanvas none
     destroy $w
 }
 
-#****f* editor.tcl/renameCanvasPopup 
+#****f* editor.tcl/renameCanvasPopup
 # NAME
 #   renameCanvasPopup -- rename canvas popup
 # SYNOPSIS
 #   renameCanvasPopup
 # FUNCTION
-#   Tk widget for renaming the canvas. 
+#   Tk widget for renaming the canvas.
 #****
 proc renameCanvasPopup {} {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
 
     set w .entry1
-    catch {destroy $w}
+    catch { destroy $w }
     toplevel $w -takefocus 1
     wm transient $w .
     wm resizable $w 0 0
 
-    #update
-    #grab $w
     wm title $w "Canvas rename"
     wm iconname $w "Canvas rename"
 
@@ -1141,22 +1143,18 @@ proc resizeCanvasPopup {} {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
 
     set w .entry1
-    catch {destroy $w}
+    catch { destroy $w }
     toplevel $w -takefocus 1
     wm transient $w .
     wm resizable $w 0 0
-    #update
-    #grab $w
     wm title $w "Canvas resize"
     wm iconname $w "Canvas resize"
 
     set minWidth [lindex [getMostDistantNodeCoordinates] 0]
     set minHeight [lindex [getMostDistantNodeCoordinates] 1]
 
-    #dodan glavni frame "resizeframe"
     ttk::frame $w.resizeframe
     pack $w.resizeframe -fill both -expand 1
-
 
     ttk::label $w.resizeframe.msg -wraplength 5i -justify left -text "Canvas size:"
     pack $w.resizeframe.msg -side top
@@ -1190,9 +1188,9 @@ proc resizeCanvasPopup {} {
 # NAME
 #   renameCanvasApply -- rename canvas apply
 # SYNOPSIS
-#   renameCanvasApply $w 
+#   renameCanvasApply $w
 # FUNCTION
-#   This procedure is called by clicking on apply button in rename 
+#   This procedure is called by clicking on apply button in rename
 #   canvas popup dialog box. It renames the current canvas.
 # INPUTS
 #   * w -- tk widget (rename canvas popup dialog box)
@@ -1206,6 +1204,7 @@ proc renameCanvasApply { w } {
     if { $newname != [getCanvasName $curcanvas] } {
 	set changed 1
     }
+
     setCanvasName $curcanvas $newname
     switchCanvas none
     updateUndoLog
@@ -1217,7 +1216,7 @@ proc renameCanvasApply { w } {
 # SYNOPSIS
 #   resizeCanvasApply $w
 # FUNCTION
-#   This procedure is called by clicking on apply button in resize 
+#   This procedure is called by clicking on apply button in resize
 #   canvas popup dialog box. It resizes the current canvas.
 # INPUTS
 #   * w -- tk widget (resize canvas popup dialog box)
@@ -1225,19 +1224,20 @@ proc renameCanvasApply { w } {
 proc resizeCanvasApply { w } {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     global changed
-    
+
     set x [$w.resizeframe.size.x get]
     set y [$w.resizeframe.size.y get]
     set ix [lindex [getMostDistantNodeCoordinates] 0]
     set iy [lindex [getMostDistantNodeCoordinates] 1]
-    
-    if { [getCanvasBkg $curcanvas] == "" && $ix <= $x && $iy <= $y} {
+
+    if { [getCanvasBkg $curcanvas] == "" && $ix <= $x && $iy <= $y } {
 	destroy $w
 	if { "$x $y" != [getCanvasSize $curcanvas] } {
 	    set changed 1
 	}
+
 	setCanvasSize $curcanvas $x $y
 	switchCanvas none
 	updateUndoLog
-    } 
+    }
 }

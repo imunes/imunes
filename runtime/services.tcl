@@ -28,7 +28,7 @@ set all_services_list ""
 #   - NODESTOP - before all nodes are stopped
 #   - LINKDEST - before all links are destroyed
 #   - NODEDEST - before all nodes are destroyed
-# 
+#
 # These global variables are filled with the list of services that are started
 # on the specific hook.
 #
@@ -135,8 +135,8 @@ proc $service.stop { node { bkg "" } } {
 }
 
 proc $service.restart { node } {
-    ssh.stop $node    
-    ssh.start $node    
+    ssh.stop $node
+    ssh.start $node
 }
 #
 ######################################################################
@@ -157,7 +157,7 @@ proc $service.start { node { bkg "" } } {
 	lappend cmds "ifconfig $ifc up"
 	lappend cmds "nohup tcpdump -Uni $ifc -w /tmp/$ifc.pcap > /dev/null 2> /dev/null &"
     }
-    
+
     if { $bkg == "" } {
 	set output [execCmdsNode $node $cmds]
 	writeDataToNodeFile $node "tcpdump_start.log" $output
@@ -168,9 +168,8 @@ proc $service.start { node { bkg "" } } {
 
 proc $service.stop { node { bkg "" } } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
-
     lappend cmds "pkill tcpdump"
-    
+
     if { $bkg == "" } {
 	set output [execCmdsNode $node $cmds]
 	writeDataToNodeFile $node "tcpdump_stop.log" $output

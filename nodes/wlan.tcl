@@ -31,30 +31,31 @@ proc $MODULE.prepareSystem {} {
     catch { exec kldload ng_rfee }
 }
 
-proc $MODULE.confNewIfc { node ifc } {
+proc $MODULE.confNewIfc { node_id ifc } {
 }
 
 proc $MODULE.confNewNode { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
-    
+
     set nconfig [list \
 	"hostname $node" \
 	! ]
     lappend $node "network-config [list $nconfig]"
 }
 
-proc $MODULE.icon {size} {
+proc $MODULE.icon { size } {
     global ROOTDIR LIBDIR
+
     switch $size {
-      normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/cloud.gif
-      }
-      small {
-	return $ROOTDIR/$LIBDIR/icons/small/cloud.gif
-      }
-      toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/cloud.gif
-      }
+	normal {
+	    return $ROOTDIR/$LIBDIR/icons/normal/cloud.gif
+	}
+	small {
+	    return $ROOTDIR/$LIBDIR/icons/small/cloud.gif
+	}
+	toolbar {
+	    return $ROOTDIR/$LIBDIR/icons/tiny/cloud.gif
+	}
     }
 }
 
@@ -62,7 +63,7 @@ proc $MODULE.toolbarIconDescr {} {
     return "Add new WLAN domain"
 }
 
-proc $MODULE.ifacePrefix {l r} {
+proc $MODULE.ifacePrefix { l r } {
     return e
 }
 
@@ -74,28 +75,28 @@ proc $MODULE.virtlayer {} {
     return NATIVE
 }
 
-proc $MODULE.nodeCreate { eid node } {
-    upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
+proc $MODULE.nodeCreate { eid node_id } {
+    upvar 0 ::cf::[set ::curcfg]::ngnodemap
 
     set t [exec printf "mkpeer rfee link0 link0\nshow ." | jexec $eid ngctl -f -]
     set tlen [string length $t]
     set id [string range $t [expr $tlen - 31] [expr $tlen - 24]]
-    catch {exec jexec $eid ngctl name \[$id\]: $node}
-    set ngnodemap($eid\.$node) $node
+    catch { exec jexec $eid ngctl name \[$id\]: $node_id }
+    set ngnodemap($eid\.$node_id) $node_id
 }
 
-proc $MODULE.start { eid node } {
+proc $MODULE.start { eid node_id } {
     upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
 
-    set ngid $ngnodemap($eid\.$node)
+    set ngid $ngnodemap($eid\.$node_id)
     set wlan_epids ""
-    foreach ifc [ifcList $node] {
-	lappend wlan_epids [string range [logicalPeerByIfc $node $ifc] 1 end]
+    foreach ifc [ifcList $node_id] {
+	lappend wlan_epids [string range [lindex [logicalPeerByIfc $node_id $ifc] 0] 1 end]
     }
 
-    foreach ifc [ifcList $node] {
+    foreach ifc [ifcList $node_id] {
 	set local_linkname link[string range $ifc 1 end]
-	set local_epid [string range [logicalPeerByIfc $node $ifc] 1 end]
+	set local_epid [string range [lindex [logicalPeerByIfc $node_id $ifc] 0] 1 end]
 	set tx_bandwidth 54000000
 	set tx_jitter 1.5
 	set tx_duplicate 5
@@ -105,14 +106,14 @@ proc $MODULE.start { eid node } {
 	set local_x [lindex [getNodeCoords n$local_epid] 0]
 	set local_y [lindex [getNodeCoords n$local_epid] 1]
 	foreach epid $wlan_epids {
-	    if {$epid == $local_epid} {
+	    if { $epid == $local_epid } {
 		continue
 	    }
 	    set x [lindex [getNodeCoords n$epid] 0]
 	    set y [lindex [getNodeCoords n$epid] 1]
 	    set d [expr sqrt(($local_x - $x) ** 2 + ($local_y - $y) ** 2)]
 	    set ber [format %1.0E [expr 1 - 0.99999999 / (1 + ($d / 500) ** 30)]]
-	    if {$ber == "1E+00"} {
+	    if { $ber == "1E+00" } {
 		continue
 	    }
 	    lappend visible_epids $epid:ber$ber
@@ -122,31 +123,31 @@ proc $MODULE.start { eid node } {
     }
 }
 
-proc $MODULE.destroy { eid node } {
-    catch { exec jexec $eid ngctl msg $node: shutdown }
+proc $MODULE.destroy { eid node_id } {
+    catch { exec jexec $eid ngctl msg $node_id: shutdown }
 }
 
-proc $MODULE.nghook { eid node ifc } {
+proc $MODULE.nghook { eid node_id ifc } {
     set ifunit [string range $ifc 1 end]
-    return [list $eid\.$node link$ifunit]
+    return [list $eid\.$node_id link$ifunit]
 }
 
-proc $MODULE.configGUI { c node } {
+proc $MODULE.configGUI { c node_id } {
     global wi
     global guielements treecolumns
     set guielements {}
 
     configGUI_createConfigPopupWin $c
     wm title $wi "WLAN configuration"
-    configGUI_nodeName $wi $node "Node name:"
+    configGUI_nodeName $wi $node_id "Node name:"
 
-    configGUI_buttonsACNode $wi $node
+    configGUI_buttonsACNode $wi $node_id
 }
 
-proc $MODULE.configInterfacesGUI { wi node ifc } {
+proc $MODULE.configInterfacesGUI { wi node_id ifc } {
     global guielements
 
-    configGUI_ifcQueueConfig $wi $node $ifc
+    configGUI_ifcQueueConfig $wi $node_id $ifc
 }
 
 proc $MODULE.maxLinks {} {

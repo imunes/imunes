@@ -42,6 +42,7 @@ proc cutSelection {} {
     }
 
     set cutNodes 1
+
     copySelection
     deleteSelection
 }
@@ -60,7 +61,7 @@ proc copySelection {} {
     set selected_nodes [selectedRealNodes]
     set selected_annotations [selectedAnnotations]
     if { $selected_nodes == {} && $selected_annotations == {} } {
-      return
+	return
     }
 
     catch { namespace delete ::cf::clipboard }
@@ -151,7 +152,7 @@ proc paste {} {
     #raiseAll .panwin.f1.c
 
     # Nothing to do if clipboard is empty
-    if {[set ::cf::clipboard::node_list] == {} && [set ::cf::clipboard::annotation_list] == {} } {
+    if { [set ::cf::clipboard::node_list] == {} && [set ::cf::clipboard::annotation_list] == {} } {
 	return
     }
 
@@ -229,6 +230,7 @@ proc paste {} {
 
     set changed 1
     updateUndoLog
+
     redrawAll
     setActiveTool select
     selectNodes [concat $copypaste_list $new_annotations]

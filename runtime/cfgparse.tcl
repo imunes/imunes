@@ -33,24 +33,24 @@
 # NAME
 #  cfgparse.tcl -- file used for parsing the configuration
 # FUNCTION
-#  This module is used for parsing the configuration, i.e. reading the 
-#  configuration from a file or a string and writing the configuration 
-#  to a file or a string. This module also contains a function for returning 
+#  This module is used for parsing the configuration, i.e. reading the
+#  configuration from a file or a string and writing the configuration
+#  to a file or a string. This module also contains a function for returning
 #  a new ID for nodes, links and canvases.
 #****
 
 #****f* nodecfg.tcl/dumpputs
 # NAME
-#   dumpputs -- puts a string to a file or a string configuration 
+#   dumpputs -- puts a string to a file or a string configuration
 # SYNOPSIS
 #   dumpputs $method $destination $string
 # FUNCTION
-#   Puts a sting to the file or appends the string configuration (used for 
+#   Puts a sting to the file or appends the string configuration (used for
 #   undo functions), the choice depends on the value of method parameter.
 # INPUTS
-#   * method -- method used. Possiable values are file (if saving the string 
+#   * method -- method used. Possiable values are file (if saving the string
 #     to the file) and string (if appending the string configuration)
-#   * dest -- destination used. File_id for files, and string name for string 
+#   * dest -- destination used. File_id for files, and string name for string
 #     configuration
 #   * string -- the string that is inserted to a file or appended to the string
 #     configuartion
@@ -70,15 +70,15 @@ proc dumpputs { method dest string } {
 
 #****f* nodecfg.tcl/dumpCfg
 # NAME
-#   dumpCfg -- puts the current configuraton to a file or a string 
+#   dumpCfg -- puts the current configuraton to a file or a string
 # SYNOPSIS
 #   dumpCfg $method $destination
 # FUNCTION
 #   Writes the working (current) configuration to a file or a string.
 # INPUTS
-#   * method -- used method. Possiable values are file (saving current congif
+#   * method -- used method. Possiable values are file (saving current config
 #     to the file) and string (saving current config in a string)
-#   * dest -- destination used. File_id for files, and string name for string 
+#   * dest -- destination used. File_id for files, and string name for string
 #     configurations
 #****
 proc dumpCfg { method dest } {
@@ -144,7 +144,7 @@ proc dumpCfg { method dest } {
 	    } elseif { "[lindex $element 0]" == "custom-configs" } {
 		dumpputs $method $dest "    custom-configs \{"
 		foreach line [lindex $element 1] {
-		    for {set x 0} {$x<[llength $line]} {incr x 3} {
+		    for { set x 0 } { $x<[llength $line] } { incr x 3 } {
 			if { $x != {} } {
 			    dumpputs $method $dest "        [lindex $line $x] [lindex $line $x+1] \{"
 			    dumpputs $method $dest "            [lrange [lindex $line $x+2] 0 1]"
@@ -158,7 +158,7 @@ proc dumpCfg { method dest } {
 		    }
 		}
 		dumpputs $method $dest "    \}"
-	    } elseif { "[lindex $element 0]" == "events" } { 
+	    } elseif { "[lindex $element 0]" == "events" } {
 		dumpputs $method $dest "    events \{"
 		foreach line [lindex $element 1] {
 		    if { $line != {} } {
@@ -180,7 +180,7 @@ proc dumpCfg { method dest } {
 	    upvar 0 ::cf::[set ::curcfg]::$elem lelem
 	    dumpputs $method $dest "$obj $elem \{"
 	    foreach element $lelem {
-		if { "[lindex $element 0]" == "events" } { 
+		if { "[lindex $element 0]" == "events" } {
 		    dumpputs $method $dest "    events \{"
 		    foreach line [lindex $element 1] {
 			if { $line != {} } {
@@ -200,39 +200,39 @@ proc dumpCfg { method dest } {
     dumpputs $method $dest "option show \{"
 
     # XXX - this needs to be refactored.
-    if {$showIfNames == 0} { 
-	dumpputs $method $dest "    interface_names no" 
+    if { $showIfNames == 0 } {
+	dumpputs $method $dest "    interface_names no"
     } else {
 	dumpputs $method $dest "    interface_names yes" }
-    if {$showIfIPaddrs == 0} { 
-	dumpputs $method $dest "    ip_addresses no" 
+    if { $showIfIPaddrs == 0 } {
+	dumpputs $method $dest "    ip_addresses no"
     } else {
 	dumpputs $method $dest "    ip_addresses yes" }
-    if {$showIfIPv6addrs == 0} { 
-	dumpputs $method $dest "    ipv6_addresses no" 
+    if { $showIfIPv6addrs == 0 } {
+	dumpputs $method $dest "    ipv6_addresses no"
     } else {
 	dumpputs $method $dest "    ipv6_addresses yes" }
-    if {$showNodeLabels == 0} { 
-	dumpputs $method $dest "    node_labels no" 
+    if { $showNodeLabels == 0 } {
+	dumpputs $method $dest "    node_labels no"
     } else {
 	dumpputs $method $dest "    node_labels yes" }
-    if {$showLinkLabels == 0} { 
-	dumpputs $method $dest "    link_labels no" 
+    if { $showLinkLabels == 0 } {
+	dumpputs $method $dest "    link_labels no"
     } else {
 	dumpputs $method $dest "    link_labels yes" }
-    if {$showBkgImage == 0} {
+    if { $showBkgImage == 0 } {
 	dumpputs $method $dest "    background_images no"
     } else {
 	dumpputs $method $dest "    background_images yes" }
-    if {$showAnnotations == 0} {
+    if { $showAnnotations == 0 } {
 	dumpputs $method $dest "    annotations no"
     } else {
 	dumpputs $method $dest "    annotations yes" }
-    if {$hostsAutoAssign == 0} {
+    if { $hostsAutoAssign == 0 } {
 	dumpputs $method $dest "    hostsAutoAssign no"
     } else {
 	dumpputs $method $dest "    hostsAutoAssign yes" }
-    if {$showGrid == 0} {
+    if { $showGrid == 0 } {
 	dumpputs $method $dest "    grid no"
     } else {
 	dumpputs $method $dest "    grid yes" }
@@ -242,11 +242,11 @@ proc dumpCfg { method dest } {
     dumpputs $method $dest ""
 
     foreach elem $image_list {
-	if {[getImageReferences $elem] != ""} {
+	if { [getImageReferences $elem] != "" } {
 	    upvar 0 ::cf::[set ::curcfg]::$elem lelem
 	    dumpputs $method $dest "image $elem \{"
 	    foreach element $lelem {
-		if {[string match "*zoom_*" $element] != 1} {
+		if { [string match "*zoom_*" $element] != 1 } {
 		    dumpputs $method $dest "    $element"
 		}
 	    }
@@ -262,8 +262,8 @@ proc dumpCfg { method dest } {
 # SYNOPSIS
 #   loadCfgLegacy $cfg
 # FUNCTION
-#   Loads the configuration written in the cfg string to a current 
-#   configuration. 
+#   Loads the configuration written in the cfg string to a current
+#   configuration.
 # INPUTS
 #   * cfg -- string containing the new working configuration.
 #****
@@ -295,26 +295,26 @@ proc loadCfgLegacy { cfg } {
     set class ""
     set object ""
     foreach entry $cfg {
-	if {"$class" == ""} {
+	if { "$class" == "" } {
 	    set class $entry
 	    continue
-	} elseif {"$object" == ""} {
+	} elseif { "$object" == "" } {
 	    set object $entry
 	    upvar 0 ::cf::[set ::curcfg]::$object $object
 	    set $object {}
-	    if {"$class" == "node"} {
+	    if { "$class" == "node" } {
 		lappend node_list $object
-	    } elseif {"$class" == "link"} {
+	    } elseif { "$class" == "link" } {
 		lappend link_list $object
-	    } elseif {"$class" == "link"} {
+	    } elseif { "$class" == "link" } {
 		lappend link_list $object
-	    } elseif {"$class" == "canvas"} {
+	    } elseif { "$class" == "canvas" } {
 		lappend canvas_list $object
-	    } elseif {"$class" == "option"} {
+	    } elseif { "$class" == "option" } {
 		# do nothing
-	    } elseif {"$class" == "annotation"} {
+	    } elseif { "$class" == "annotation" } {
 		lappend annotation_list $object
-	    } elseif {"$class" == "image"} {
+	    } elseif { "$class" == "image" } {
 		lappend image_list $object
 	    } else {
 		puts "configuration parsing error: unknown object class $class"
@@ -323,17 +323,17 @@ proc loadCfgLegacy { cfg } {
 	    continue
 	} else {
 	    set line [concat $entry]
-	    while {[llength $line] >= 2} {
+	    while { [llength $line] >= 2 } {
 		set field [lindex $line 0]
-		if {"$field" == ""} {
+		if { "$field" == "" } {
 		    set line [lreplace $line 0 0]
 		    continue
 		}
 
 		set value [lindex $line 1]
 		set line [lreplace $line 0 1]
-    
-		if {"$class" == "node"} {
+
+		if { "$class" == "node" } {
 		    switch -exact -- $field {
 			type {
 			    lappend $object "type $value"
@@ -432,7 +432,7 @@ proc loadCfgLegacy { cfg } {
 			}
 			custom-config {
 			    set cfg ""
-			
+
 			    foreach zline [split $value {
 }] {
 				if { [string index "$zline" 0] == "	" } {
@@ -445,7 +445,7 @@ proc loadCfgLegacy { cfg } {
 			}
 			custom-configs {
 			    set cfgs ""
-			    for {set x 0} {$x<[llength $value]} {incr x 3} {
+			    for { set x 0 } { $x<[llength $value] } { incr x 3 } {
 				set cfg ""
 				set config [lindex [lindex $value $x+2] 3]
 				set empty 0
@@ -511,7 +511,7 @@ proc loadCfgLegacy { cfg } {
 			    lappend $object "customIcon $value"
 			}
 		    }
-		} elseif {"$class" == "link"} {
+		} elseif { "$class" == "link" } {
 		    switch -exact -- $field {
 			direct {
 			    lappend $object "direct $value"
@@ -575,7 +575,7 @@ proc loadCfgLegacy { cfg } {
 			    lappend $object "events {$cfg}"
 			}
 		    }
-		} elseif {"$class" == "canvas"} {
+		} elseif { "$class" == "canvas" } {
 		    switch -exact -- $field {
 			name {
 			    lappend $object "name {$value}"
@@ -587,7 +587,7 @@ proc loadCfgLegacy { cfg } {
 			    lappend $object "bkgImage {$value}"
 			}
 		    }
-		} elseif {"$class" == "option"} {
+		} elseif { "$class" == "option" } {
 		    switch -exact -- $field {
 			interface_names {
 			    if { $value == "no" } {
@@ -659,7 +659,7 @@ proc loadCfgLegacy { cfg } {
 			    set iconSize $value
 			}
 		    }
-		} elseif {"$class" == "annotation"} {
+		} elseif { "$class" == "annotation" } {
 		    switch -exact -- $field {
 			type {
 			    lappend $object "type $value"
@@ -701,7 +701,7 @@ proc loadCfgLegacy { cfg } {
 			    lappend $object "bordercolor $value"
 			}
 		    }
-		} elseif {"$class" == "image"} {
+		} elseif { "$class" == "image" } {
 		    upvar 0 ::cf::[set ::curcfg]::$object $object
 		    switch -glob -- $field {
 			referencedBy {
@@ -757,7 +757,7 @@ proc loadCfgLegacy { cfg } {
 	    exit
 	}
 	if { "lo0" ni [logIfcList $node] && \
-		[[typemodel $node].netlayer] == "NETWORK"} {
+		[[typemodel $node].netlayer] == "NETWORK" } {
 	    setLogIfcType $node lo0 lo
 	    setIfcIPv4addr $node lo0 "127.0.0.1/8"
 	    setIfcIPv6addr $node lo0 "::1/128"

@@ -98,11 +98,11 @@ proc displayBatchProgress { prgs tot } {
 # FUNCTION
 #   Create pipes for parallel execution to the shell.
 #****
-proc pipesCreate { } {
+proc pipesCreate {} {
     global inst_pipes last_inst_pipe
 
     set ncpus [getCpuCount]
-    for {set i 0} {$i < $ncpus} {incr i} {
+    for { set i 0 } { $i < $ncpus } { incr i } {
 	set inst_pipes($i) [open "| sh" r+]
     }
     set last_inst_pipe 0
@@ -142,7 +142,7 @@ proc pipesExec { line args } {
     if { $args != "hold" } {
 	incr last_inst_pipe
     }
-    if {$last_inst_pipe >= [llength [array names inst_pipes]]} {
+    if { $last_inst_pipe >= [llength [array names inst_pipes]] } {
 	set last_inst_pipe 0
     }
 }
@@ -155,14 +155,14 @@ proc pipesExec { line args } {
 # FUNCTION
 #   Close pipes.
 #****
-proc pipesClose { } {
+proc pipesClose {} {
     global inst_pipes last_inst_pipe
 
     foreach i [array names inst_pipes] {
 	close $inst_pipes($i) w
 	# A dummy read, just to flush the output from the command pipeline
 	read $inst_pipes($i)
-	catch {close $inst_pipes($i)}
+	catch { close $inst_pipes($i) }
     }
 }
 
@@ -196,43 +196,49 @@ proc setOperMode { mode } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global all_modules_list editor_only execMode isOSfreebsd isOSlinux
 
-    if {$mode == "exec" && $node_list == ""} {
+    if { $mode == "exec" && $node_list == "" } {
 	statline "Empty topologies can't be executed."
 	.panwin.f1.c config -cursor left_ptr
+
 	return
     }
 
     if { !$cfgDeployed && $mode == "exec" } {
-	if { !$isOSlinux && !$isOSfreebsd } {
-	    after idle {.dialog1.msg configure -wraplength 4i}
+	if { ! $isOSlinux && ! $isOSfreebsd } {
+	    after idle { .dialog1.msg configure -wraplength 4i }
 	    tk_dialog .dialog1 "IMUNES error" \
 		"Error: To execute experiment, run IMUNES on FreeBSD or Linux." \
 	    info 0 Dismiss
 	    return
 	}
-	catch {exec id -u} uid
+
+	catch { exec id -u } uid
 	if { $uid != "0" } {
-	    after idle {.dialog1.msg configure -wraplength 4i}
+	    after idle { .dialog1.msg configure -wraplength 4i }
 	    tk_dialog .dialog1 "IMUNES error" \
 		"Error: To execute experiment, run IMUNES with root permissions." \
 	    info 0 Dismiss
 	    return
 	}
+
 	set err [checkSysPrerequisites]
 	if { $err != "" } {
-	    after idle {.dialog1.msg configure -wraplength 4i}
+	    after idle { .dialog1.msg configure -wraplength 4i }
 	    tk_dialog .dialog1 "IMUNES error" \
 		"$err" \
 		info 0 Dismiss
 	    return
 	}
+
 	if { $editor_only } {
 	    .menubar.experiment entryconfigure "Execute" -state disabled
 	    return
 	}
+
 	if { [allSnapshotsAvailable] == 0 } {
 	    return
 	}
+
 	# Verify that links to external interfaces are properly configured
 	if { [checkExternalInterfaces] } {
 	    return
@@ -246,11 +252,13 @@ proc setOperMode { mode } {
 	    .panwin.f1.left.$b configure -state normal
 	}
     }
+
     .bottom.oper_mode configure -text "$mode mode"
     setActiveTool select
     #.panwin.f1.left.select configure -state active
-    if { "$mode" == "exec" && [exec id -u] == 0} {
+    if { "$mode" == "exec" && [exec id -u] == 0 } {
 	global autorearrange_enabled
+
 	set autorearrange_enabled 0
 	.menubar.tools entryconfigure "Auto rearrange all" -state disabled
 	.menubar.tools entryconfigure "Auto rearrange selected" -state disabled
@@ -263,59 +271,75 @@ proc setOperMode { mode } {
 	.panwin.f1.c bind node <Double-1> "spawnShellExec"
 	.panwin.f1.c bind nodelabel <Double-1> "spawnShellExec"
 	set oper_mode exec
+
 	wm protocol . WM_DELETE_WINDOW {
 	}
-	if {!$cfgDeployed} {
+	if { ! $cfgDeployed } {
+
 	    deployCfg
 	    set cfgDeployed true
 	}
+
 	wm protocol . WM_DELETE_WINDOW {
 	    exit
 	}
 	.bottom.experiment_id configure -text "Experiment ID = $eid"
+
     } else {
-	if {$oper_mode != "edit"} {
+	if { $oper_mode != "edit" } {
 	    global regular_termination
+
 	    wm protocol . WM_DELETE_WINDOW {
 	    }
+
 	    if { $regular_termination } {
 		undeployCfg $eid
 	    } else {
 		vimageCleanup $eid
 	    }
+
 	    pipesCreate
 	    killExtProcess "socat.*$eid"
 	    pipesClose
 	    set cfgDeployed false
+
 	    wm protocol . WM_DELETE_WINDOW {
 		exit
 	    }
+
 	    .menubar.tools entryconfigure "Auto rearrange all" -state normal
 	    .menubar.tools entryconfigure "Auto rearrange selected" -state normal
 	    .menubar.tools entryconfigure "Routing protocol defaults" -state normal
 	}
+
 	if { $editor_only } {
 	    .menubar.experiment entryconfigure "Execute" -state disabled
  	} else {
 	    .menubar.experiment entryconfigure "Execute" -state normal
 	}
+
 	.menubar.experiment entryconfigure "Terminate" -state disabled
 	.menubar.experiment entryconfigure "Restart" -state disabled
 	if { $undolevel > 0 } {
+
 	    .menubar.edit entryconfigure "Undo" -state normal
 	} else {
 	    .menubar.edit entryconfigure "Undo" -state disabled
 	}
 	if { $redolevel > $undolevel } {
+
 	    .menubar.edit entryconfigure "Redo" -state normal
 	} else {
 	    .menubar.edit entryconfigure "Redo" -state disabled
 	}
+
 	.panwin.f1.c bind node <Double-1> "nodeConfigGUI .panwin.f1.c {}"
 	.panwin.f1.c bind nodelabel <Double-1> "nodeConfigGUI .panwin.f1.c {}"
 	set oper_mode edit
+
 	.bottom.experiment_id configure -text ""
     }
+
     .panwin.f1.c config -cursor left_ptr
 }
 
@@ -329,8 +353,6 @@ proc setOperMode { mode } {
 #   node.
 #****
 proc spawnShellExec {} {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
     set node [lindex [.panwin.f1.c gettags {node && current}] 1]
     if { $node == "" } {
 	set node [lindex [.panwin.f1.c gettags {nodelabel && current}] 1]
@@ -360,7 +382,6 @@ proc spawnShellExec {} {
 #   configurations from the running experiment settings.
 #****
 proc fetchNodeConfiguration {} {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global isOSfreebsd
     set ip6Set 0
     set ip4Set 0
@@ -372,21 +393,21 @@ proc fetchNodeConfiguration {} {
 	# and ifconfig that will have the same output
 	if ($isOSfreebsd) {
 	    foreach line $lines {
-		if {[regexp {^([[:alnum:]]+):.*mtu ([^$]+)$} $line \
-		     -> ifc mtuvalue]} {
+		if { [regexp {^([[:alnum:]]+):.*mtu ([^$]+)$} $line \
+		     -> ifc mtuvalue] } {
 		    setIfcMTU $node $ifc $mtuvalue
 		    set ip6Set 0
 		    set ip4Set 0
-		} elseif {[regexp {^\tether ([^ ]+)} $line -> macaddr]} {
+		} elseif { [regexp {^\tether ([^ ]+)} $line -> macaddr] } {
 		    setIfcMACaddr $node $ifc $macaddr
-		} elseif {[regexp {^\tinet6 (?!fe80:)([^ ]+) prefixlen ([^ ]+)} $line -> ip6addr mask]} {
-		    if {$ip6Set == 0} {
+		} elseif { [regexp {^\tinet6 (?!fe80:)([^ ]+) prefixlen ([^ ]+)} $line -> ip6addr mask] } {
+		    if { $ip6Set == 0 } {
 			setIfcIPv6addr $node $ifc $ip6addr/$mask
 			set ip6Set 1
 		    }
-		} elseif {[regexp {^\tinet ([^ ]+) netmask ([^ ]+) } $line \
-		     -> ip4addr netmask]} {
-		    if {$ip4Set == 0} {
+		} elseif { [regexp {^\tinet ([^ ]+) netmask ([^ ]+) } $line \
+		     -> ip4addr netmask] } {
+		    if { $ip4Set == 0 } {
 			set length [ip::maskToLength $netmask]
 			setIfcIPv4addr $node $ifc $ip4addr/$length
 			set ip4Set 1
@@ -395,26 +416,26 @@ proc fetchNodeConfiguration {} {
 	    }
 	} else {
 	    foreach line $lines {
-		if {[regexp {^([[:alnum:]]+)} $line -> ifc]} {
+		if { [regexp {^([[:alnum:]]+)} $line -> ifc] } {
 		    set ip6Set 0
 		    set ip4Set 0
 		}
-		if {[regexp {^([[:alnum:]]+)\s.*HWaddr ([^$]+)$} $line \
-		     -> ifc macaddr]} {
+		if { [regexp {^([[:alnum:]]+)\s.*HWaddr ([^$]+)$} $line \
+		     -> ifc macaddr] } {
 		    setIfcMACaddr $node $ifc $macaddr
-		} elseif {[regexp {^\s*inet addr:([^ ]+)\s.*\sMask:([^ ]+)} $line \
-		     -> ip4addr netmask]} {
-		    if {$ip4Set == 0} {
+		} elseif { [regexp {^\s*inet addr:([^ ]+)\s.*\sMask:([^ ]+)} $line \
+		     -> ip4addr netmask] } {
+		    if { $ip4Set == 0 } {
 			set length [ip::maskToLength $netmask]
 			setIfcIPv4addr $node $ifc $ip4addr/$length
 			set ip4Set 1
 		    }
-		} elseif {[regexp {^\s*inet6 addr:\s(?!fe80:)([^ ]+)} $line -> ip6addr]} {
-		    if {$ip6Set == 0} {
+		} elseif { [regexp {^\s*inet6 addr:\s(?!fe80:)([^ ]+)} $line -> ip6addr]} {
+		    if { $ip6Set == 0 } {
 			setIfcIPv6addr $node $ifc $ip6addr
 			set ip6Set 1
 		    }
-		} elseif {[regexp {MTU:([^ ]+)} $line -> mtuvalue]} {
+		} elseif { [regexp {MTU:([^ ]+)} $line -> mtuvalue] } {
 		    setIfcMTU $node $ifc $mtuvalue
 		}
 	    }
@@ -453,9 +474,10 @@ proc readDataFromFile { path } {
 proc resumeSelectedExperiment { exp } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global runtimeDir
-    if {[info exists eid]} {
+    if { [info exists eid] } {
+
 	set curr_eid $eid
-	if {$curr_eid == $exp} {
+	if { $curr_eid == $exp } {
 	    return
 	}
     }
@@ -555,7 +577,7 @@ proc fetchExperimentFolders {} {
     global runtimeDir
     set exp_list ""
     set exp_files [glob -nocomplain -directory $runtimeDir -type d *]
-    if {$exp_files != ""} {
+    if { $exp_files != "" } {
 	foreach file $exp_files {
 	    lappend exp_list [file tail $file]
 	}
@@ -577,7 +599,7 @@ proc getResumableExperiments {} {
     set exp_list ""
     set exp_folders [fetchExperimentFolders]
     foreach exp [fetchRunningExperiments] {
-	if {$exp in $exp_folders} {
+	if { $exp in $exp_folders } {
 	    lappend exp_list $exp
 	}
     }
@@ -598,13 +620,15 @@ proc getResumableExperiments {} {
 #****
 proc getExperimentTimestampFromFile { eid } {
     global runtimeDir
+
     set pathToFile "$runtimeDir/$eid/timestamp"
     set timestamp ""
-    if {[file exists $pathToFile]} {
+    if { [file exists $pathToFile] } {
 	set fileId [open $pathToFile r]
 	set timestamp [string trim [read $fileId]]
 	close $fileId
     }
+
     return $timestamp
 }
 
@@ -622,11 +646,13 @@ proc getExperimentTimestampFromFile { eid } {
 #****
 proc getExperimentNameFromFile { eid } {
     global runtimeDir
+
     set pathToFile "$runtimeDir/$eid/name"
     set name ""
-    if {[file exists $pathToFile]} {
+    if { [file exists $pathToFile] } {
 	set name [readDataFromFile $pathToFile]
     }
+
     return $name
 }
 
@@ -645,11 +671,13 @@ proc getExperimentNameFromFile { eid } {
 #****
 proc getExperimentConfigurationFromFile { eid } {
     global runtimeDir
+
     set pathToFile "$runtimeDir/$eid/config.imn"
     set file ""
-    if {[file exists $pathToFile]} {
+    if { [file exists $pathToFile] } {
 	set file $pathToFile
     }
+
     return $file
 }
 

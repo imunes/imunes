@@ -37,39 +37,40 @@
 #  types that work on the same layer.
 #****
 
-set MODULE packgen 
+set MODULE packgen
 
 registerModule $MODULE
 
 proc $MODULE.prepareSystem {} {
-    catch {exec kldload ng_source}
+    catch { exec kldload ng_source }
 }
 
-proc $MODULE.confNewIfc { node ifc } {
+proc $MODULE.confNewIfc { node_id iface } {
 }
 
 proc $MODULE.confNewNode { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
     global nodeNamingBase
-    
+
     set nconfig [list \
 	"hostname [getNewNodeNameType packgen $nodeNamingBase(packgen)]" \
 	! ]
     lappend $node "network-config [list $nconfig]"
 }
 
-proc $MODULE.icon {size} {
+proc $MODULE.icon { size } {
     global ROOTDIR LIBDIR
+
     switch $size {
-      normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/packgen.gif
-      }
-      small {
-	return $ROOTDIR/$LIBDIR/icons/small/packgen.gif
-      }
-      toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/packgen.gif
-      }
+	normal {
+	    return $ROOTDIR/$LIBDIR/icons/normal/packgen.gif
+	}
+	small {
+	    return $ROOTDIR/$LIBDIR/icons/small/packgen.gif
+	}
+	toolbar {
+	    return $ROOTDIR/$LIBDIR/icons/tiny/packgen.gif
+	}
     }
 }
 
@@ -77,41 +78,40 @@ proc $MODULE.toolbarIconDescr {} {
     return "Add new Packet generator"
 }
 
-proc $MODULE.notebookDimensions { wi } { 
-    set h 430 
+proc $MODULE.notebookDimensions { wi } {
+    set h 430
     set w 652
-		    
-    return [list $h $w] 
+
+    return [list $h $w]
 }
 
-proc $MODULE.ifacePrefix {l r} {
+proc $MODULE.ifacePrefix { l r } {
     return e
 }
 
 #****f* packgen.tcl/packgen.netlayer
 # NAME
-#   packgen.netlayer  
+#   packgen.netlayer
 # SYNOPSIS
 #   set layer [packgen.netlayer]
 # FUNCTION
 #   Returns the layer on which the packgen.communicates
-#   i.e. returns LINK. 
+#   i.e. returns LINK.
 # RESULT
-#   * layer -- set to LINK 
+#   * layer -- set to LINK
 #****
-
 proc $MODULE.netlayer {} {
     return LINK
 }
 
 #****f* packgen.tcl/packgen.virtlayer
 # NAME
-#   packgen.virtlayer  
+#   packgen.virtlayer
 # SYNOPSIS
 #   set layer [packgen.virtlayer]
 # FUNCTION
 #   Returns the layer on which the packgen is instantiated
-#   i.e. returns NATIVE. 
+#   i.e. returns NATIVE.
 # RESULT
 #   * layer -- set to NATIVE
 #****
@@ -128,16 +128,16 @@ proc $MODULE.virtlayer {} {
 # FUNCTION
 #   Procedure packgen.nodeCreate cretaes a new virtual node
 #   with all the interfaces and CPU parameters as defined
-#   in imunes. 
+#   in imunes.
 # INPUTS
 #   * eid - experiment id
 #   * node_id - id of the node (type of the node is packgen.
 #****
 
-proc $MODULE.nodeCreate { eid node } {
+proc $MODULE.nodeCreate { eid node_id } {
     pipesExec "printf \"
     mkpeer . source inhook input \n
-    msg .inhook setpersistent \n name .:inhook $node
+    msg .inhook setpersistent \n name .:inhook $node_id
     \" | jexec $eid ngctl -f -" "hold"
 }
 
@@ -148,27 +148,27 @@ proc $MODULE.nodeCreate { eid node } {
 # SYNOPSIS
 #   packgen.start $eid $node_id
 # FUNCTION
-#   Starts a new packgen. The node can be started if it is instantiated. 
+#   Starts a new packgen. The node can be started if it is instantiated.
 # INPUTS
 #   * eid - experiment id
 #   * node_id - id of the node (type of the node is packgen)
 #****
-proc $MODULE.start { eid node } {
-    foreach packet [packgenPackets $node] {
-	set fd [open "| jexec $eid nghook $node: input" w]
+proc $MODULE.start { eid node_id } {
+    foreach packet [packgenPackets $node_id] {
+	set fd [open "| jexec $eid nghook $node_id: input" w]
 	fconfigure $fd -encoding binary
 
-	set pdata [getPackgenPacketData $node [lindex $packet 0]]
+	set pdata [getPackgenPacketData $node_id [lindex $packet 0]]
 	set bin [binary format H* $pdata]
 	puts -nonewline $fd $bin
 
 	catch { close $fd }
     }
 
-    set pps [getPackgenPacketRate $node]
+    set pps [getPackgenPacketRate $node_id]
 
-    pipesExec "jexec $eid ngctl msg $node: setpps $pps" "hold"
-    pipesExec "jexec $eid ngctl msg $node: start [expr 2**63]" "hold"
+    pipesExec "jexec $eid ngctl msg $node_id: setpps $pps" "hold"
+    pipesExec "jexec $eid ngctl msg $node_id: start [expr 2**63]" "hold"
 }
 
 #****f* packgen.tcl/packgen.shutdown
@@ -177,18 +177,18 @@ proc $MODULE.start { eid node } {
 # SYNOPSIS
 #   packgen.shutdown $eid $node_id
 # FUNCTION
-#   Shutdowns a packgen. Simulates the shutdown proces of a packgen. 
+#   Shutdowns a packgen. Simulates the shutdown proces of a packgen.
 # INPUTS
 #   * eid - experiment id
-#   * node_id - id of the node (type of the node is packgen) 
+#   * node_id - id of the node (type of the node is packgen)
 #****
-proc $MODULE.shutdown { eid node } {
-    pipesExec "jexec $eid ngctl msg $node: clrdata" "hold"
-    pipesExec "jexec $eid ngctl msg $node: stop" "hold"
+proc $MODULE.shutdown { eid node_id } {
+    pipesExec "jexec $eid ngctl msg $node_id: clrdata" "hold"
+    pipesExec "jexec $eid ngctl msg $node_id: stop" "hold"
 }
 
-proc $MODULE.destroyIfcs { eid node ifcs } {
-    l2node.destroyIfcs $eid $node $ifcs
+proc $MODULE.destroyIfcs { eid node_id ifaces } {
+    l2node.destroyIfcs $eid $node_id $ifaces
 }
 
 #****f* packgen.tcl/packgen.destroy
@@ -200,88 +200,89 @@ proc $MODULE.destroyIfcs { eid node ifcs } {
 #   Destroys a packgen. Destroys all the interfaces of the packgen.
 # INPUTS
 #   * eid - experiment id
-#   * node_id - id of the node (type of the node is packgen) 
+#   * node_id - id of the node (type of the node is packgen)
 #****
-proc $MODULE.destroy { eid node } {
-    pipesExec "jexec $eid ngctl msg $node: shutdown" "hold"
+proc $MODULE.destroy { eid node_id } {
+    pipesExec "jexec $eid ngctl msg $node_id: shutdown" "hold"
 }
 
 #****f* packgen.tcl/packgen.nghook
 # NAME
 #   packgen.nghook
 # SYNOPSIS
-#   packgen.nghook $eid $node_id $ifc 
+#   packgen.nghook $eid $node_id $iface
 # FUNCTION
-#   Returns the id of the netgraph node and the name of the 
-#   netgraph hook which is used for connecting two netgraph 
+#   Returns the id of the netgraph node and the name of the
+#   netgraph hook which is used for connecting two netgraph
 #   nodes.
 # INPUTS
 #   * eid - experiment id
 #   * node_id - node id
-#   * ifc - interface name
+#   * iface - interface name
 # RESULT
-#   * nghook - the list containing netgraph node id and the 
+#   * nghook - the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
 
-proc $MODULE.nghook { eid node ifc } {
-    return [list $node output]
+proc $MODULE.nghook { eid node_id iface } {
+    return [list $node_id output]
 }
 
 #****f* packgen.tcl/packgen.configGUI
 # NAME
 #   packgen.configGUI
 # SYNOPSIS
-#   packgen.configGUI $c $node
+#   packgen.configGUI $c $node_id
 # FUNCTION
 #   Defines the structure of the packgen configuration window
-#   by calling procedures for creating and organising the 
+#   by calling procedures for creating and organising the
 #   window, as well as procedures for adding certain modules
 #   to that window.
 # INPUTS
 #   * c - tk canvas
-#   * node - node id
+#   * node_id - node id
 #****
-proc $MODULE.configGUI { c node } {
+proc $MODULE.configGUI { c node_id } {
     global wi
     global packgenguielements packgentreecolumns curnode
-    set curnode $node
+
+    set curnode $node_id
     set packgenguielements {}
 
     configGUI_createConfigPopupWin $c
     wm title $wi "packet generator configuration"
-    configGUI_nodeName $wi $node "Node name:"
+    configGUI_nodeName $wi $node_id "Node name:"
 
-    set tabs [configGUI_addNotebookPackgen $wi $node]
+    set tabs [configGUI_addNotebookPackgen $wi $node_id]
 
-    configGUI_packetRate [lindex $tabs 0] $node
+    configGUI_packetRate [lindex $tabs 0] $node_id
 
-    set packgentreecolumns {"Data Data"}
+    set packgentreecolumns { "Data Data" }
     foreach tab $tabs {
-	configGUI_addTreePackgen $tab $node
+	configGUI_addTreePackgen $tab $node_id
     }
-    
-    configGUI_buttonsACPackgenNode $wi $node
+
+    configGUI_buttonsACPackgenNode $wi $node_id
 }
 
 #****f* packgen.tcl/packgen.configInterfacesGUI
 # NAME
 #   packgen.configInterfacesGUI
 # SYNOPSIS
-#   packgen.configInterfacesGUI $wi $node $ifc
+#   packgen.configInterfacesGUI $wi $node_id $iface
 # FUNCTION
 #   Defines which modules for changing interfaces parameters
 #   are contained in the packgen.configuration window. It is done
 #   by calling procedures for adding certain modules to the window.
 # INPUTS
 #   * wi - widget
-#   * node - node id
-#   * ifc - interface id
+#   * node_id - node id
+#   * iface - interface id
 #****
-proc $MODULE.configPacketsGUI { wi node pac } {
+proc $MODULE.configPacketsGUI { wi node_id pac } {
     global packgenguielements
 
-    configGUI_packetConfig $wi $node $pac
+    configGUI_packetConfig $wi $node_id $pac
 }
 
 #****f* rj45.tcl/rj45.maxLinks

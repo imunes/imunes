@@ -110,7 +110,7 @@ proc terminateL2L3Nodes { eid nodes nodeCount w } {
 	incr batchStep
 	incr progressbarCount -1
 
-	if {$execMode != "batch"} {
+	if { $execMode != "batch" } {
 	    statline "Shutting down node [getNodeName $node]"
 	    $w.p configure -value $progressbarCount
 	    update
@@ -119,7 +119,7 @@ proc terminateL2L3Nodes { eid nodes nodeCount w } {
 
     if { $nodeCount > 0 } {
 	displayBatchProgress $batchStep $nodeCount
-	if {$execMode == "batch"} {
+	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
@@ -142,7 +142,7 @@ proc releaseExternalIfcs { eid extifcs extifcsCount w } {
 	incr batchStep
 	incr progressbarCount -1
 
-	if {$execMode != "batch"} {
+	if { $execMode != "batch" } {
 	    statline "Destroying external connection [getNodeName $node]"
 	    $w.p configure -value $progressbarCount
 	    update
@@ -151,7 +151,7 @@ proc releaseExternalIfcs { eid extifcs extifcsCount w } {
 
     if { $extifcsCount > 0 } {
 	displayBatchProgress $batchStep $extifcsCount
-	if {$execMode == "batch"} {
+	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
@@ -195,7 +195,7 @@ proc destroyLinks { eid links linkCount w } {
 	incr batchStep
 	incr progressbarCount -1
 
-	if {$execMode != "batch"} {
+	if { $execMode != "batch" } {
 	    statline $msg
 	    $w.p configure -value $progressbarCount
 	    update
@@ -205,7 +205,7 @@ proc destroyLinks { eid links linkCount w } {
 
     if { $linkCount > 0 } {
 	displayBatchProgress $batchStep $linkCount
-	if {$execMode == "batch"} {
+	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
@@ -227,7 +227,7 @@ proc destroyL2Nodes { eid nodes nodeCount w } {
 	incr batchStep
 	incr progressbarCount -1
 
-	if {$execMode != "batch"} {
+	if { $execMode != "batch" } {
 	    statline "Destroying L2 node [getNodeName $node]"
 	    $w.p configure -value $progressbarCount
 	    update
@@ -236,7 +236,7 @@ proc destroyL2Nodes { eid nodes nodeCount w } {
 
     if { $nodeCount > 0 } {
 	displayBatchProgress $batchStep $nodeCount
-	if {$execMode == "batch"} {
+	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
@@ -259,7 +259,7 @@ proc destroyL3Nodes { eid nodes nodeCount w } {
 	incr batchStep
 	incr progressbarCount -1
 
-	if {$execMode != "batch"} {
+	if { $execMode != "batch" } {
 	    statline "Destroying L3 node [getNodeName $node]"
 	    $w.p configure -value $progressbarCount
 	    update
@@ -268,7 +268,7 @@ proc destroyL3Nodes { eid nodes nodeCount w } {
 
     if { $nodeCount > 0 } {
 	displayBatchProgress $batchStep $nodeCount
-	if {$execMode == "batch"} {
+	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
@@ -277,14 +277,14 @@ proc destroyL3Nodes { eid nodes nodeCount w } {
 proc finishTerminating { status msg w } {
     global progressbarCount execMode
 
-    catch {pipesClose}
-    if {$execMode == "batch"} {
+    catch { pipesClose }
+    if { $execMode == "batch" } {
 	puts $msg
     } else {
-	catch {destroy $w}
+	catch { destroy $w }
 	set progressbarCount 0
 	if { ! $status } {
-	    after idle {.dialog1.msg configure -wraplength 4i}
+	    after idle { .dialog1.msg configure -wraplength 4i }
 	    tk_dialog .dialog1 "IMUNES error" \
 		"$msg \nCleanup the experiment and report the bug!" info 0 Dismiss
 	}
@@ -314,7 +314,7 @@ proc undeployCfg { eid } {
     } on error err {
 	statline "ERROR in 'checkTerminate': '$err'"
 	if { $execMode != "batch" } {
-	    after idle {.dialog1.msg configure -wraplength 4i}
+	    after idle { .dialog1.msg configure -wraplength 4i }
 	    tk_dialog .dialog1 "IMUNES error" \
 		"$err \nCleanup the experiment and report the bug!" info 0 Dismiss
 	}
@@ -354,9 +354,10 @@ proc undeployCfg { eid } {
     set progressbarCount $maxProgressbasCount
 
     set w ""
-    if {$execMode != "batch"} {
+    if { $execMode != "batch" } {
 	set w .startup
-	catch {destroy $w}
+	catch { destroy $w }
+
 	toplevel $w -takefocus 1
 	wm transient $w .
 	wm title $w "Terminating experiment $eid..."
@@ -364,6 +365,7 @@ proc undeployCfg { eid } {
 	    -text "Deleting virtual nodes and links."
 	pack $w.msg
 	update
+
 	ttk::progressbar $w.p -orient horizontal -length 250 \
 	    -mode determinate -maximum $maxProgressbasCount -value $progressbarCount
 	pack $w.p
@@ -462,7 +464,7 @@ proc timeoutPatch { eid nodes nodeCount w } {
 	    incr progressbarCount -1
 
 	    set name [getNodeName $node]
-	    if {$execMode != "batch"} {
+	    if { $execMode != "batch" } {
 		statline "Node $name stopped"
 		$w.p configure -value $progressbarCount
 		update
@@ -475,7 +477,7 @@ proc timeoutPatch { eid nodes nodeCount w } {
 
     if { $nodeCount > 0 } {
 	displayBatchProgress $batchStep $nodeCount
-	if {$execMode == "batch"} {
+	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
@@ -500,7 +502,7 @@ proc destroyNodesIfcs { eid nodes nodeCount w } {
 	incr batchStep
 	incr progressbarCount -1
 
-	if {$execMode != "batch"} {
+	if { $execMode != "batch" } {
 	    statline "Destroying physical interfaces on node [getNodeName $node]"
 	    $w.p configure -value $progressbarCount
 	    update
@@ -509,7 +511,7 @@ proc destroyNodesIfcs { eid nodes nodeCount w } {
 
     if { $nodeCount > 0 } {
 	displayBatchProgress $batchStep $nodeCount
-	if {$execMode == "batch"} {
+	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
@@ -531,9 +533,10 @@ proc stopNodeFromMenu { node } {
 
     set progressbarCount 1
     set w ""
-    if {$execMode != "batch"} {
+    if { $execMode != "batch" } {
 	set w .startup
-	catch {destroy $w}
+	catch { destroy $w }
+
 	toplevel $w -takefocus 1
 	wm transient $w .
 	wm title $w "Stopping node $node..."
@@ -541,6 +544,7 @@ proc stopNodeFromMenu { node } {
 	    -text "Deleting virtual nodes and links."
 	pack $w.msg
 	update
+
 	ttk::progressbar $w.p -orient horizontal -length 250 \
 	    -mode determinate -maximum 1 -value $progressbarCount
 	pack $w.p

@@ -1,8 +1,8 @@
 proc getBridgeProtocol { node bridge } {
     foreach line [netconfFetchSection $node "bridge $bridge"] {
 	if { [lindex $line 0] == "rstp" } {
-	    return "rstp" 
-	} 
+	    return "rstp"
+	}
 	if { [lindex $line 0] == "stp" } {
 	    return "stp"
 	}

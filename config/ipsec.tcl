@@ -32,19 +32,18 @@
 # SYNOPSIS
 #   editIpsecCfg $w $node $deleteid $edit
 # FUNCTION
-#   Change (if $edit == 1) or delete (if $edit == 0) 
+#   Change (if $edit == 1) or delete (if $edit == 0)
 #   particular ipsec-config defined by ipsec-config-id.
 # INPUTS
 #   * w -- ipsec config window
-#   * node  -- node 
+#   * node  -- node
 #   * deleteid -- ipsec-config-id that determines which ipsec-config to delete
 #   * edit -- If $edit is set to "1", selected ipsec-config will be just
-#     edited. If $edit is set to "0", selected ipsec-config will be deleted. 
+#     edited. If $edit is set to "0", selected ipsec-config will be deleted.
 #****
 proc editIpsecCfg { w node deleteid edit phase } {
     global viewid badentry
 
-#     $w config -cursor watch; update
     if { $phase == 0 } {
 	set badentry 0
 	focus .
@@ -54,6 +53,7 @@ proc editIpsecCfg { w node deleteid edit phase } {
 	$w config -cursor left_ptr
 	return
     }
+
     set ipsecCfgList [getIpsecConfig $node]
     set i 0
     foreach element $ipsecCfgList {
@@ -76,38 +76,37 @@ proc editIpsecCfg { w node deleteid edit phase } {
     foreach ipsecCfg $ipsecCfgList {
 	setIpsecConfig $node $ipsecCfg
     }
+
     if { $edit != "1" } {
-	#sanja
 	.popup.nbook.nfIPsec.ipseccfg forget $w
 	destroy $w.ipsecframe
 	.popup.nbook configure -height 90 -width 400
-	#sanja
 	set delete "1"
     } else {
 	set delete "0"
     }
+
     set view "1"
     viewIpsecCfg $node $delete $view
-    
-    #sanja
+
     set idlist {}
     set ipsecCfgList [getIpsecConfig $node]
     foreach cfg $ipsecCfgList {
 	set id [lindex [lsearch -inline $cfg "ipsec-config-id *"] 1]
 	lappend idlist $id
     }
+
     .popup.nbook.nfIPsec.ipseccfg.f1.operations.edit configure \
 	-values $idlist
     .popup.nbook.nfIPsec.ipseccfg.f1.operations.edit \
 	set [lindex $idlist 0]
-    #sanja
 
     return
 }
 
 #****f* ipsec.tcl/showIpsecErrors
 # NAME
-#   showIpsecErrors -- show window with errors 
+#   showIpsecErrors -- show window with errors
 #   related to ipsec-config information
 # SYNOPSIS
 #   showIpsecErrors $str
@@ -116,10 +115,9 @@ proc editIpsecCfg { w node deleteid edit phase } {
 #   manipulating ipsec-config information.
 # INPUTS
 #   * str -- information about ipsec error that will be
-#     written in the error window. 
+#     written in the error window.
 #****
 proc showIpsecErrors { str } {
-	
     set error ""
     set error $str
     tk_messageBox -message $error -type ok -icon error \
@@ -148,7 +146,7 @@ proc showIPsecInfo { str } {
 #   viewIpsecCfg $node $delete $view
 # FUNCTION
 #   Form the ipsec configuration window, either for adding
-#   new ipsec-config structure or for editing existing 
+#   new ipsec-config structure or for editing existing
 #   ipsec-config structures.
 # INPUTS
 #   * node  -- node
@@ -158,58 +156,56 @@ proc showIPsecInfo { str } {
 #     variable will be set to show the first element of the ipsecCfgList.
 #     If delete is "0", viewIpsecCfg has been invoked just to show existing
 #     ipsec-configs.
-#   * view -- If $view is set to "0", viewIpsecCfg is used to add new 
-#     ipsec-config item. If view is set to "1" viewIpsecCfg is used to 
-#     edit ipsec-config items.  
+#   * view -- If $view is set to "0", viewIpsecCfg is used to add new
+#     ipsec-config item. If view is set to "1" viewIpsecCfg is used to
+#     edit ipsec-config items.
 #****
 proc viewIpsecCfg { node delete view } {
-    #sanja
+    global viewid badentry
+
     set w .popup.nbook.nfIPsec.ipseccfg.f2
-    if { [pack slaves $w] != "" && $view == 0} {
+    if { [pack slaves $w] != "" && $view == 0 } {
 	return
-    } elseif { [pack slaves $w] != "" && $view == 1} {
+    } elseif { [pack slaves $w] != "" && $view == 1 } {
 	.popup.nbook.nfIPsec.ipseccfg forget $w
 	 destroy $w.ipsecframe
     }
+
     .popup.nbook.nfIPsec.ipseccfg add .popup.nbook.nfIPsec.ipseccfg.f2
     .popup.nbook configure -height 610 -width 400
-    #sanja
     set idlist {}
-    global viewid badentry
+
     set ipsecCfgList [getIpsecConfig $node]
     set len [llength $ipsecCfgList]
     foreach ipsecCfg $ipsecCfgList {
 	set id [lindex [lsearch -inline $ipsecCfg "ipsec-config-id *"] 1]
 	lappend idlist $id
     }
+
     if { $delete == "1" } {
 	set viewid [lindex $idlist 0]
     }
-    
+
     if { $view == "0" } {
-	catch {unset viewid}
+	catch { unset viewid }
     }
 
     set ipsecCfg ""
-
     if { $view == "1" && $idlist == {} } {
-	#sanja
 	.popup.nbook.nfIPsec.ipseccfg forget $w
 	destroy $w.ipsecframe
 	.popup.nbook configure -height 90 -width 400
-	#sanja
 	set error "There are no ipsec-config entries with specified ipsec-config-id."
 	showIpsecErrors $error
-
     } else {
         ttk::frame $w.ipsecframe -padding 4 -borderwidth 2 -relief groove
-        pack $w.ipsecframe -fill both -expand 1 
+        pack $w.ipsecframe -fill both -expand 1
 
 	if { $view == "1" } {
 	    if { $delete != "1" } {
 		set viewid  [.popup.nbook.nfIPsec.ipseccfg.f1.operations.edit get]
 	    }
-  
+
 	    foreach element $ipsecCfgList {
 		set cid \
 		    [lindex [lsearch -inline $element "ipsec-config-id *"] 1]
@@ -231,10 +227,11 @@ proc viewIpsecCfg { node delete view } {
 	} else {
 		set id ""
 	}
+
 	$w.ipsecframe.id.text insert end $id
 	pack $w.ipsecframe.id.text $w.ipsecframe.id.label -side left -padx 4 -pady 0
 	pack $w.ipsecframe.id -side top -anchor w
-	
+
 	# SAD database:
 	ttk::labelframe $w.ipsecframe.sad -text "SAD database (Security Associations)"
         pack $w.ipsecframe.sad -pady 6 -fill both -expand 1
@@ -252,9 +249,10 @@ proc viewIpsecCfg { node delete view } {
 	} else {
 	    set sourceSA ""
 	}
+
 	$w.ipsecframe.sad.sourceSA.source insert end $sourceSA
 	$w.ipsecframe.sad.sourceSA.source configure \
-	    -validatecommand {checkSAaddress %P}
+	    -validatecommand { checkSAaddress %P }
 	pack $w.ipsecframe.sad.sourceSA.source $w.ipsecframe.sad.sourceSA.label \
 	    -side left -padx 2 -pady 0
 	pack $w.ipsecframe.sad.sourceSA -side top -anchor w
@@ -272,9 +270,10 @@ proc viewIpsecCfg { node delete view } {
 	} else {
 	    set destSA ""
 	}
+
 	$w.ipsecframe.sad.destSA.dest insert end $destSA
 	$w.ipsecframe.sad.destSA.dest configure \
-	    -validatecommand {checkSAaddress %P}
+	    -validatecommand { checkSAaddress %P }
 	pack $w.ipsecframe.sad.destSA.dest $w.ipsecframe.sad.destSA.label \
 	    -side left -padx 2 -pady 0
 	pack $w.ipsecframe.sad.destSA -side top -anchor w
@@ -293,12 +292,13 @@ proc viewIpsecCfg { node delete view } {
 	} else {
 	    set inboundspi ""
 	}
+
 	ttk::spinbox $w.ipsecframe.sad.spi.inboundv -width 5 \
 	    -validate focus -invalidcommand "focusAndFlash %W"
 	$w.ipsecframe.sad.spi.inboundv insert 0 $inboundspi
 	$w.ipsecframe.sad.spi.inboundv configure \
 	    -from 1366 -to 65535 -increment 1 \
-	    -validatecommand {checkIntRange %P 1366 65535}
+	    -validatecommand { checkIntRange %P 1366 65535 }
 	pack $w.ipsecframe.sad.spi.inboundl $w.ipsecframe.sad.spi.inboundv \
 	    -side left -padx 2 -anchor w
 
@@ -312,12 +312,13 @@ proc viewIpsecCfg { node delete view } {
 	} else {
 	    set outboundspi ""
 	}
+
 	ttk::spinbox $w.ipsecframe.sad.spi.outboundv -width 5 \
 	    -validate focus -invalidcommand "focusAndFlash %W"
 	$w.ipsecframe.sad.spi.outboundv insert 0 $outboundspi
 	$w.ipsecframe.sad.spi.outboundv configure \
 	    -from 1367 -to 65535 -increment 1 \
-	    -validatecommand {checkIntRange %P 1366 65535 }
+	    -validatecommand { checkIntRange %P 1366 65535 }
 	pack $w.ipsecframe.sad.spi.outboundl $w.ipsecframe.sad.spi.outboundv \
 	    -side left -anchor w
 	pack $w.ipsecframe.sad.spi -side top -anchor w
@@ -334,6 +335,7 @@ proc viewIpsecCfg { node delete view } {
 	} else {
 	    set ipsecalg esp
 	}
+
 	# TODO: Add ESP with authenticated payload
         ttk::combobox $w.ipsecframe.sad.ipsecalg.alg -width 4 -textvariable ipsecalg
         $w.ipsecframe.sad.ipsecalg.alg configure -values [list esp ah]
@@ -352,6 +354,7 @@ proc viewIpsecCfg { node delete view } {
 	} else {
 	    set ipcompalg "no IPcomp"
 	}
+
         ttk::combobox $w.ipsecframe.sad.ipsecalg.ipcompalg -width 10 -textvariable ipcompalg
         $w.ipsecframe.sad.ipsecalg.ipcompalg configure -values [list deflate lzs "no IPcomp"]
 	#tk_optionMenu $w.ipsecframe.sad.ipsecalg.ipcompalg ipcompalg \
@@ -377,6 +380,7 @@ proc viewIpsecCfg { node delete view } {
 	    set caesp 3des-cbc
 	    set caah hmac-md5
 	}
+
 	set cryptoalgesp $caesp
 	set cryptoalgah $caah
         ttk::combobox $w.ipsecframe.sad.cryptoalg.esp -width 12 -textvariable cryptoalgesp
@@ -406,11 +410,12 @@ proc viewIpsecCfg { node delete view } {
 	} else {
 	    set psk ""
 	}
+
 	$w.ipsecframe.sad.psk.text insert end $psk
-	$w.ipsecframe.sad.psk.text configure -validatecommand {checkSharedSecret %P}
+	$w.ipsecframe.sad.psk.text configure -validatecommand { checkSharedSecret %P }
 	pack $w.ipsecframe.sad.psk.text $w.ipsecframe.sad.psk.label -side right -padx 2 -pady 0
 	pack $w.ipsecframe.sad.psk -side top -anchor w
-	
+
 	#
 	# SPD database:
 	#
@@ -433,9 +438,10 @@ proc viewIpsecCfg { node delete view } {
 	} else {
 	    set sourceSP ""
 	}
+
 	$w.ipsecframe.spd.sourceSP.source insert end $sourceSP
 	$w.ipsecframe.spd.sourceSP.source configure \
-	    -validatecommand {checkSPrange %P}
+	    -validatecommand { checkSPrange %P }
 	pack $w.ipsecframe.spd.sourceSP.source $w.ipsecframe.spd.sourceSP.label \
 	    -side right -padx 4 -pady 0
 	pack $w.ipsecframe.spd.sourceSP -side top -anchor w
@@ -452,8 +458,9 @@ proc viewIpsecCfg { node delete view } {
 	} else {
 	    set destSP ""
 	}
+
 	$w.ipsecframe.spd.destSP.dest insert end $destSP
-	$w.ipsecframe.spd.destSP.dest configure -validatecommand {checkSPrange %P}
+	$w.ipsecframe.spd.destSP.dest configure -validatecommand { checkSPrange %P }
 	pack $w.ipsecframe.spd.destSP.dest $w.ipsecframe.spd.destSP.label -side right -padx 4 -pady 0
 	pack $w.ipsecframe.spd.destSP -side top -anchor w
 
@@ -469,8 +476,9 @@ proc viewIpsecCfg { node delete view } {
 	} else {
 	    set sourcesgw ""
 	}
+
 	$w.ipsecframe.spd.sourcesgw.source insert end $sourcesgw
-	$w.ipsecframe.spd.sourcesgw.source configure -validatecommand {checkIPv4Addr %P}
+	$w.ipsecframe.spd.sourcesgw.source configure -validatecommand { checkIPv4Addr %P }
 	pack $w.ipsecframe.spd.sourcesgw.source $w.ipsecframe.spd.sourcesgw.label \
 	    -side right -padx 4 -pady 0
 	pack $w.ipsecframe.spd.sourcesgw -side top -anchor w
@@ -487,12 +495,13 @@ proc viewIpsecCfg { node delete view } {
 	} else {
 	    set destsgw ""
 	}
+
 	$w.ipsecframe.spd.destsgw.source insert end $destsgw
-	$w.ipsecframe.spd.destsgw.source configure -validatecommand {checkIPv4Addr %P}
+	$w.ipsecframe.spd.destsgw.source configure -validatecommand { checkIPv4Addr %P }
 	pack $w.ipsecframe.spd.destsgw.source $w.ipsecframe.spd.destsgw.label \
 		-side right -padx 4 -pady 0
 	pack $w.ipsecframe.spd.destsgw -side top -anchor w
-	
+
 	#
 	# Traffic for protection:
 	#
@@ -503,8 +512,9 @@ proc viewIpsecCfg { node delete view } {
 	if { $ipsecCfg != {} } {
 	    set traffic [ getConfig $ipsecCfg "traffic-to-process"]
 	} else {
-	    set traffic icmp	
+	    set traffic icmp
 	}
+
         ttk::combobox $w.ipsecframe.spd.traffic.value -width 6 -textvariable traffic
         $w.ipsecframe.spd.traffic.value configure -values [list icmp tcp udp any]
 	#tk_optionMenu $w.ipsecframe.spd.traffic.value traffic icmp tcp udp any
@@ -522,8 +532,9 @@ proc viewIpsecCfg { node delete view } {
 	if { $ipsecCfg != {} } {
 	    set action [ getConfig $ipsecCfg "processing-action"]
 	} else {
-	    set action ipsec	
+	    set action ipsec
 	}
+
         ttk::combobox $w.ipsecframe.spd.traffic.actionv -width 6 -textvariable action
         $w.ipsecframe.spd.traffic.actionv configure -values [list ipsec discard bypass]
 	#tk_optionMenu $w.ipsecframe.spd.traffic.actionv action ipsec discard bypass
@@ -532,7 +543,7 @@ proc viewIpsecCfg { node delete view } {
 
 	#
 	# Processing level:
-	#   require, default, use 
+	#   require, default, use
 	#
         ttk::frame $w.ipsecframe.spd.traffic.tab5
         pack $w.ipsecframe.spd.traffic.tab5 -side left -anchor w -padx 2
@@ -542,8 +553,9 @@ proc viewIpsecCfg { node delete view } {
 	if { $ipsecCfg != {} } {
 	    set level [ getConfig $ipsecCfg "processing-level"]
 	} else {
-	    set level require	
+	    set level require
 	}
+
         ttk::combobox $w.ipsecframe.spd.traffic.levelv -width 8 -textvariable level
         $w.ipsecframe.spd.traffic.levelv configure -values [list require default use]
 	#tk_optionMenu $w.ipsecframe.spd.traffic.levelv level require default use
@@ -565,6 +577,7 @@ proc viewIpsecCfg { node delete view } {
 	} else {
 	    set spipsecalg esp
 	}
+
 	ttk::radiobutton $w.ipsecframe.spd.algorithm.esp -text "esp" \
 	    -variable spipsecalg -value esp
 	ttk::radiobutton $w.ipsecframe.spd.algorithm.ah -text "ah" \
@@ -585,8 +598,9 @@ proc viewIpsecCfg { node delete view } {
 	if { $ipsecCfg != {} } {
 	    set mode [ getConfig $ipsecCfg "ipsec-mode"]
 	} else {
-	    set mode transport	
+	    set mode transport
 	}
+
 	ttk::radiobutton $w.ipsecframe.spd.mode.transport -text "transport" \
 	    -variable mode -value transport
 	ttk::radiobutton $w.ipsecframe.spd.mode.tunnel -text "tunnel" \
@@ -599,14 +613,14 @@ proc viewIpsecCfg { node delete view } {
 	#
 	# Buttons
 	#
-	ttk::frame $w.ipsecframe.bottom 
+	ttk::frame $w.ipsecframe.bottom
 	ttk::frame $w.ipsecframe.bottom.buttons -borderwidth 2
 	pack $w.ipsecframe.bottom.buttons -expand 1
 	pack $w.ipsecframe.bottom -side bottom -fill both
-	#sanja
 	ttk::button $w.ipsecframe.bottom.buttons.close -text Close -command \
 	    "set badentry -1 ; .popup.nbook.nfIPsec.ipseccfg forget $w; \
 		  destroy $w.ipsecframe; .popup.nbook configure -height 90 -width 400"
+
 	if { $view == "1" } {
 	    set edit "1"
 	    ttk::button $w.ipsecframe.bottom.buttons.delete -text Delete \
@@ -630,7 +644,7 @@ proc viewIpsecCfg { node delete view } {
 #****f* ipsec.tcl/deleteIpsecCfg
 # NAME
 #   deleteIpsecCfg -- invoke editIpsecCfg to delete ipsec-config item defined
-#       with ipsec-config-id viewid. 
+#       with ipsec-config-id viewid.
 # SYNOPSIS
 #   deleteIpsecCfg $w $node $viewid $edit
 # FUNCTION
@@ -652,7 +666,7 @@ proc deleteIpsecCfg { w node viewid edit } {
 #****f* ipsec.tcl/ipsecConfigApply
 # NAME
 #   ipsecConfigApply -- read ipsec configuration from the ipsec configuration
-#       window. Check the ipsec configuration. 
+#       window. Check the ipsec configuration.
 # SYNOPSIS
 #   ipsecConfigApply $w $node $add
 # FUNCTION
@@ -701,7 +715,6 @@ proc ipsecConfigApply { w node add phase } {
     if { $add == "1" } {
 	set error [checkIpsecCfg $node "ipsec-config-id" $id]
 	if { $error != "" } {
-	    #sanja
 	    .popup.nbook.nfIPsec.ipseccfg forget $w
 	     destroy $w.ipsecframe
 	    .popup.nbook configure -height 90 -width 400
@@ -732,30 +745,29 @@ proc ipsecConfigApply { w node add phase } {
 
     setIpsecConfig $node $ipsecCfg
 
-    #sanja
     set idlist {}
     set ipsecCfgList [getIpsecConfig $node]
     foreach cfg $ipsecCfgList {
 	set id [lindex [lsearch -inline $cfg "ipsec-config-id *"] 1]
 	lappend idlist $id
     }
+
     .popup.nbook.nfIPsec.ipseccfg.f1.operations.edit configure \
 	-values $idlist
     .popup.nbook.nfIPsec.ipseccfg.f1.operations.edit \
 	set [lindex $idlist 0]
-    
+
     .popup.nbook.nfIPsec.ipseccfg forget $w
     destroy $w.ipsecframe
     .popup.nbook configure -height 90 -width 400
-    #sanja
-    
+
     return $ipsecCfg
 }
 
 # TODO: Add check for the IPv4/IPv6 addresses
 # TODO: Add check for the shared secret field
-#   Currently, if there are some errors in syntax 
-#   od the setkey.conf, they will be shown after 
+#   Currently, if there are some errors in syntax
+#   od the setkey.conf, they will be shown after
 #   Experiment->Execute in error window.
 
 #****f* ipsec.tcl/checkIpsecCfg
@@ -769,17 +781,15 @@ proc ipsecConfigApply { w node add phase } {
 #   to check new inputs in the ipsec configuration window.
 # INPUTS
 #   * node -- node id
-#   * strd -- string description, that is i.e. "ipsec-config-id", 
+#   * strd -- string description, that is i.e. "ipsec-config-id",
 #     "SA-source-address", etc.
 #   * str -- string, that is value related to strd.
 # RESULT
 #   * valid -- valid is set to 0, if there is an error and otherwise 1.
 #****
 proc checkIpsecCfg { node strd str } {
-	
     set error ""
     set ipsecCfgList [getIpsecConfig $node]
-	
     switch $strd {
 	ipsec-config-id {
 	    if { $str == "" } {
@@ -794,6 +804,7 @@ proc checkIpsecCfg { node strd str } {
 	    }
 	}
     }
+
     return $error
 }
 
@@ -803,7 +814,7 @@ proc checkIpsecCfg { node strd str } {
 # SYNOPSIS
 #   setConfig $strlist $str
 # FUNCTION
-#   Returns requested element that belongs to ipsec-config structure. 
+#   Returns requested element that belongs to ipsec-config structure.
 # INPUTS
 #   * strlist -- ipsec-config structure
 #   * cfg -- current ipsec-config that will be extended with new elements
@@ -812,7 +823,6 @@ proc checkIpsecCfg { node strd str } {
 #   * strlist -- new ipsec-config sructure
 #****
 proc setConfig { strlist cfg str } {
-
     set i [lsearch $strlist "$str *"]
 
     if { $i < 0 } {
@@ -836,7 +846,7 @@ proc setConfig { strlist cfg str } {
 # SYNOPSIS
 #   getConfig $strlist $str
 # FUNCTION
-#   Returns requested element that belongs to ipsec-config structure. 
+#   Returns requested element that belongs to ipsec-config structure.
 # INPUTS
 #   * strlist -- ipsec-config structure
 #   * str -- an element of the ipsec-config structure
@@ -954,6 +964,7 @@ proc setIpsecEnabled { node enabled } {
     if { $i >= 0 } {
 	set $node [lreplace [set $node] $i $i]
     }
+
     if { $enabled == true } {
 	lappend $node [list ipsec-enabled $enabled]
     }
@@ -975,7 +986,7 @@ proc setIpsecEnabled { node enabled } {
 proc ipsecCfggen { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
-    set sourceSA "" 
+    set sourceSA ""
     set destSA ""
     set ipsecalg ""
     set ipcompalg ""
@@ -984,7 +995,7 @@ proc ipsecCfggen { node } {
     set cryptoalgesp ""
     set cryptoalgah ""
     set psk ""
-    set sourceSP "" 
+    set sourceSP ""
     set destSP ""
     set sourcesgw ""
     set destsgw ""
@@ -993,7 +1004,7 @@ proc ipsecCfggen { node } {
     set spipsecalg ""
     set mode ""
     set level ""
-	
+
     set cfg {}
     set ipsecCfgList [getIpsecConfig $node]
 
@@ -1003,7 +1014,7 @@ proc ipsecCfggen { node } {
 
     foreach ipsecCfg $ipsecCfgList {
 	set cryptoalg ""
-		
+
 	set sourceSA [getConfig $ipsecCfg "SA-source-address"]
 	set destSA [getConfig $ipsecCfg "SA-destination-address"]
 	set ipsecalg [getConfig $ipsecCfg "ipsec-algorithm"]
@@ -1033,7 +1044,7 @@ proc ipsecCfggen { node } {
 
 	if { $ipcompalg == "defalte" || $ipcompalg == "lzs" } {
 	    set ipcompalgorithm " -C $ipcompalg"
-	    append cryptoalg $ipcompalgorithm 
+	    append cryptoalg $ipcompalgorithm
 	}
 
 	if { $sourceSA != "" && $destSA != "" && \
@@ -1042,7 +1053,7 @@ proc ipsecCfggen { node } {
 	    $outboundspi != "" } {
 	    lappend cfg "add $sourceSA $destSA $ipsecalgorithm
 	    $inboundspi $cryptoalg $psk;"
-			
+
 	    lappend cfg "add $destSA $sourceSA $ipsecalgorithm
 	    $outboundspi $cryptoalg $psk;"
 	}
@@ -1059,7 +1070,7 @@ proc ipsecCfggen { node } {
 
 	if { $sourceSP != "" && $destSP != "" && \
 	    $traffic != "" && $action != "" && \
-	    $spipsecalg != "" && $mode != "" && $level != ""} {
+	    $spipsecalg != "" && $mode != "" && $level != "" } {
 	    if { $mode == "transport" } {
 		lappend cfg "spdadd $sourceSP $destSP $traffic -P out
 		$action $spipsecalg/$mode//$level;"
@@ -1075,6 +1086,7 @@ proc ipsecCfggen { node } {
 	    }
 	}
     }
+
     return $cfg
 }
 
@@ -1092,6 +1104,7 @@ proc setkeyError { setkeyerror } {
     set str "[lindex [split $setkeyerror "\."] 0]"
     set errorstr "Error in created setkey.conf: "
     append errorstr $str
+
     showIpsecErrors $errorstr
 }
 
@@ -1124,6 +1137,7 @@ proc checkSPrange { SPrange } {
     } elseif { [checkIPv46AddrPort $SPrange] == 1 } {
 	return 1
     }
+
     return 0
 }
 
@@ -1133,7 +1147,7 @@ proc checkSPrange { SPrange } {
 # SYNOPSIS
 #   checkIPv46AddrPort $addr
 # FUNCTION
-#   Check if str has the following form: 
+#   Check if str has the following form:
 #   address[port] or address/prefixlen[port].
 #   (Address can be IPv4 or IPv6 address.)
 # INPUTS
@@ -1146,6 +1160,7 @@ proc checkIPv46AddrPort { str } {
     if { $str == "" } {
 	return 1
     }
+
     set addr [lindex [split $str "\["] 0]
     set SAaddress [checkSAaddress $addr]
     set SPnet [checkSPnet $addr]
@@ -1173,18 +1188,20 @@ proc checkIPv46AddrPort { str } {
 # INPUTS
 #   * str -- IPv4 or IPv6 address
 # RESULT
-#   * 1 -- if str is valid address 
-#   * 0 -- otherwise 
+#   * 1 -- if str is valid address
+#   * 0 -- otherwise
 #****
 proc checkSAaddress { str } {
     if { $str == "" } {
 	return 1
     }
+
     if { [checkIPv4Addr $str] == 1 } {
 	return 1
     } elseif { [checkIPv6Addr $str] == 1 } {
 	return 1
     }
+
     return 0
 }
 
@@ -1204,11 +1221,13 @@ proc checkSPnet { str } {
     if { $str == "" } {
 	return 1
     }
+
     if { [checkIPv4Net $str] == 1 } {
 	return 1
     } elseif { [checkIPv6Net $str] == 1 } {
 	return 1
     }
+
     return 0
 }
 
@@ -1232,6 +1251,7 @@ proc checkSharedSecret { str } {
     if { $str == "" } {
 	return 1
     }
+
     set hexmark ""
     set limiter1 ""
     set limiter2 ""
@@ -1245,13 +1265,14 @@ proc checkSharedSecret { str } {
 		return 1
 	    }
 	}
-    }elseif { $limiter1 == "\"" && $limiter2 == "\"" } {
+    } elseif { $limiter1 == "\"" && $limiter2 == "\"" } {
 	set psk [string replace $str 0 0]
 	set pskonly [string replace $psk end end]
 	if { $pskonly != "" } {
 	    return 1
 	}
     }
+
     return 0
 }
 
@@ -1421,7 +1442,7 @@ proc setNodeIPsecSetting { node item element setting newValue } {
 	if { $settingIndex != -1 } {
 	    set newElementCfg [lreplace $elementCfg $settingIndex $settingIndex "$setting=$newValue"]
 	} else {
-	    set newElementCfg [linsert $elementCfg end "$setting=$newValue"] 
+	    set newElementCfg [linsert $elementCfg end "$setting=$newValue"]
 	}
     }
 
@@ -1466,6 +1487,7 @@ proc nodeIPsecConnExists { node connection_name } {
     if { [ lsearch $connList $connection_name ] != -1 } {
         return 1
     }
+
     return 0
 }
 
@@ -1505,10 +1527,11 @@ proc getListOfOtherNodes { node } {
 proc getAllIpAddresses { node } {
     set listOfInterfaces [ifcList $node]
     foreach logifc [logIfcList $node] {
-	if { [string match "vlan*" $logifc]} {
+	if { [string match "vlan*" $logifc] } {
 	    lappend listOfInterfaces $logifc
 	}
     }
+
     set listOfIP4s ""
     set listOfIP6s ""
     foreach item $listOfInterfaces {
@@ -1516,6 +1539,7 @@ proc getAllIpAddresses { node } {
 	if { $ifcIP != "" } {
 	    lappend listOfIP4s $ifcIP
 	}
+
 	set ifcIP [getIfcIPv6addr $node $item]
 	if { $ifcIP != "" } {
 	    lappend listOfIP6s $ifcIP
@@ -1538,7 +1562,7 @@ proc getAllIpAddresses { node } {
 proc getIPAddressForPeer { node curIP } {
     set listOfInterfaces [ifcList $node]
     foreach logifc [logIfcList $node] {
-	if { [string match "vlan*" $logifc]} {
+	if { [string match "vlan*" $logifc] } {
 	    lappend listOfInterfaces $logifc
 	}
     }
@@ -1547,8 +1571,9 @@ proc getIPAddressForPeer { node curIP } {
     if { $curIP == "" } {
 	set IPversion 4
     } else {
-	set IPversion [ ::ip::version $curIP ] 
+	set IPversion [ ::ip::version $curIP ]
     }
+
     if { $IPversion == 4 } {
 	foreach item $listOfInterfaces {
 	    set ifcIP [getIfcIPv4addr $node $item]
@@ -1598,10 +1623,12 @@ proc getSubnetsFromIPs { listOfIPs } {
 	if { [::ip::version $item ] == 6 } {
 	    set total_string [ip::contract $total_string]
 	}
+
 	append total_string "/"
 	append total_string [::ip::mask $item]
 	lappend total_list $total_string
     }
+
     return $total_list
 }
 
@@ -1612,14 +1639,14 @@ proc checkIfPeerStartsSameConnection { peer local_ip local_subnet local_id } {
 	set auto [getNodeIPsecSetting $peer "configuration" "conn $conn" "auto"]
 	if { "$auto" == "start" } {
 	    set right [getNodeIPsecSetting $peer "configuration" "conn $conn" "right"]
-	    if { "$right" == "$local_ip"} {
+	    if { "$right" == "$local_ip" } {
 		set rightsubnet [getNodeIPsecSetting $peer "configuration" "conn $conn" "rightsubnet"]
-		if { "$rightsubnet" == "$local_subnet"} {
+		if { "$rightsubnet" == "$local_subnet" } {
 		    set rightid [getNodeIPsecSetting $peer "configuration" "conn $conn" "rightid"]
 		    if { $rightid == "" || $local_id == "" } {
 			return 1
 		    } else {
-			if { "$rightid" == "$local_id"} {
+			if { "$rightid" == "$local_id" } {
 			    return 1
 			}
 		    }
@@ -1654,16 +1681,16 @@ proc prepareNodeConfiguration { node } {
 	    foreach element $elementCfg {
 		puts $element
 
-		puts "ITEM: $item"
 		if { [llength $item] > 2 } {
 		    set help_item $item
 
-		    if { [lsearch $item "keyexchange=*"] == -1} {
+		    if { [lsearch $item "keyexchange=*"] == -1 } {
 			set help_item [linsert $help_item 2 "keyexchange=ikev2"]
-		    } 
-		    if { [lsearch $item "leftfirewall=*"] == -1} {
+		    }
+
+		    if { [lsearch $item "leftfirewall=*"] == -1 } {
 			set help_item [linsert $help_item 5 "leftfirewall=no"]
-		    } 
+		    }
 
 		    if { [lsearch $cfg "local_cert *"] != -1 && [lsearch $item "authby=secret"] == -1 } {
 			set local_cert_file [lindex [lsearch -inline $cfg "local_cert *"] 1]
@@ -1673,7 +1700,7 @@ proc prepareNodeConfiguration { node } {
 			    set for_file $local_cert_file
 			}
 			set help_item [linsert $help_item 3 "leftcert=$for_file"]
-		    }	
+		    }
 		    lappend new_cfg $help_item
 
 		} else {
@@ -1682,5 +1709,6 @@ proc prepareNodeConfiguration { node } {
 	    }
 	}
     }
+
     return $new_cfg
 }

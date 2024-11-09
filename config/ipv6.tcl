@@ -73,11 +73,11 @@ proc IPv6AddrApply { w } {
 #   set ipnet [findFreeIPv4Net $mask]
 # FUNCTION
 #   Finds a free IPv6 network. Network is concidered to be free
-#   if there are no simulated nodes attached to it. 
+#   if there are no simulated nodes attached to it.
 # INPUTS
 #   * mask -- this parameter is left unused for now
 # RESULT
-#   * ipnet -- returns the free IPv6 network address in the form "a $i". 
+#   * ipnet -- returns the free IPv6 network address in the form "a $i".
 #****
 proc findFreeIPv6Net { mask } {
     upvar 0 ::cf::[set ::curcfg]::IPv6UsedList IPv6UsedList
@@ -86,6 +86,7 @@ proc findFreeIPv6Net { mask } {
     if { $IPv6UsedList == "" } {
 	set defip6net [ip::contract [ip::prefix $ipv6]]
 	set testnet [ip::contract "[string trimright $defip6net :]::"]
+
 	return $testnet
     } else {
 	set defip6net [ip::contract [ip::prefix $ipv6]]
@@ -98,37 +99,37 @@ proc findFreeIPv6Net { mask } {
     }
 }
 
-#****f* ipv6.tcl/autoIPv6addr 
+#****f* ipv6.tcl/autoIPv6addr
 # NAME
 #   autoIPv6addr -- automaticaly assign an IPv6 address
 # SYNOPSIS
-#   autoIPv6addr $node $iface 
+#   autoIPv6addr $node $iface
 # FUNCTION
-#   automaticaly assignes an IPv6 address to the interface $iface of 
+#   automaticaly assignes an IPv6 address to the interface $iface of
 #   of the node $node.
 # INPUTS
-#   * node -- the node containing the interface to witch a new 
+#   * node -- the node containing the interface to witch a new
 #     IPv6 address should be assigned
-#   * iface -- the interface to witch a new, automatilacy generated, IPv6  
+#   * iface -- the interface to witch a new, automatically generated, IPv6
 #     address will be assigned
 #****
 proc autoIPv6addr { node iface } {
     upvar 0 ::cf::[set ::curcfg]::IPv6UsedList IPv6UsedList
     global IPv6autoAssign
-    if {!$IPv6autoAssign} {
+
+    if { ! $IPv6autoAssign } {
 	return
     }
+
     global changeAddrRange6 control changeAddressRange6 autorenumbered_ifcs6
     set peer_ip6addrs {}
 
-
-    if { [[typemodel $node].netlayer] != "NETWORK" } { 
+    if { [[typemodel $node].netlayer] != "NETWORK" } {
 	#
 	# Shouldn't get called at all for link-layer nodes
 	#
-	#puts "autoIPv6 called for a [[typemodel $node].netlayer] layer node"
 	return
-    }  
+    }
 
     setIfcIPv6addr $node $iface ""
     set peer_node [logicalPeerByIfc $node $iface]
@@ -143,7 +144,7 @@ proc autoIPv6addr { node iface } {
 		    if { [lsearch $autorenumbered_ifcs6 "$peer $peer_if"] != -1 } {
 			if { $peer_ip6addr != "" } {
 			    lappend peer_ip6addrs $peer_ip6addr
-			}   
+			}
 		    }
 		} else {
 		    if { $peer_ip6addr != "" } {
@@ -173,20 +174,20 @@ proc autoIPv6addr { node iface } {
 # NAME
 #   nextFreeIP6Addr -- automaticaly assign an IPv6 address
 # SYNOPSIS
-#   nextFreeIP6Addr $addr $start $peers 
+#   nextFreeIP6Addr $addr $start $peers
 # FUNCTION
 #   Automaticaly searches for free IPv6 addresses within a given range
-#   defined by $addr, containing $peers 
+#   defined by $addr, containing $peers
 # INPUTS
 #   * $addr -- address of a node within the range
 #   * $start -- starting host address for a specified node type
 #   * $peers -- list of peers in the current network
 #****
-proc nextFreeIP6Addr { addr start peers } { 
+proc nextFreeIP6Addr { addr start peers } {
     global execMode
-    set mask 64
 
-    set prefix [ip::prefix $addr] 
+    set mask 64
+    set prefix [ip::prefix $addr]
     set ipnums [split $prefix :]
 
     set lastpart [expr [lindex $ipnums 7] + $start]
@@ -198,29 +199,29 @@ proc nextFreeIP6Addr { addr start peers } {
 	set ipaddr [ip::contract [join $ipnums :]]/$mask
     }
 
-    set x [ip::prefix $addr] 
-    set y [ip::prefix $ipaddr] 
+    set x [ip::prefix $addr]
+    set y [ip::prefix $ipaddr]
 
-    if { $x != $y } { 
+    if { $x != $y } {
 	if { $execMode != "batch" } {
-	    after idle {.dialog1.msg configure -wraplength 4i}
+	    after idle { .dialog1.msg configure -wraplength 4i }
 	    tk_dialog .dialog1 "IMUNES warning" \
 		"You have depleted the current pool of addresses ([ip::contract $x]/$mask). Please choose a new pool from Tools->IPV6 address pool or delete nodes to free the address space." \
 	    info 0 Dismiss
 	}
 	return ""
-    }   
+    }
 
     return $ipaddr
 }
 
-#****f* ipv6.tcl/checkIPv6Addr 
+#****f* ipv6.tcl/checkIPv6Addr
 # NAME
-#   checkIPv6Addr -- check the IPv6 address 
+#   checkIPv6Addr -- check the IPv6 address
 # SYNOPSIS
 #   set valid [checkIPv6Addr $str]
 # FUNCTION
-#   Checks if the provided string is a valid IPv6 address. 
+#   Checks if the provided string is a valid IPv6 address.
 # INPUTS
 #   * str -- string to be evaluated.
 # RESULT
@@ -262,15 +263,15 @@ proc checkIPv6Addr { str } {
     return 1
 }
 
-#****f* ipv6.tcl/checkIPv6Net 
+#****f* ipv6.tcl/checkIPv6Net
 # NAME
-#   checkIPv6Net -- check the IPv6 network 
+#   checkIPv6Net -- check the IPv6 network
 # SYNOPSIS
 #   set valid [checkIPv6Net $str]
 # FUNCTION
-#   Checks if the provided string is a valid IPv6 network. 
+#   Checks if the provided string is a valid IPv6 network.
 # INPUTS
-#   * str -- string to be evaluated. Valid string is in form ipv6addr/m 
+#   * str -- string to be evaluated. Valid string is in form ipv6addr/m
 # RESULT
 #   * valid -- function returns 0 if the input string is not in the form
 #     of a valid IP address, 1 otherwise.
@@ -279,7 +280,7 @@ proc checkIPv6Net { str } {
     if { $str == "" } {
 	return 1
     }
-    if { ![checkIPv6Addr [lindex [split $str /] 0]]} {
+    if { ![checkIPv6Addr [lindex [split $str /] 0]] } {
 	return 0
     }
     set net [string trim [lindex [split $str /] 1]]
@@ -295,10 +296,10 @@ proc checkIPv6Net { str } {
 # SYNOPSIS
 #   set valid [checkIPv6Nets $str]
 # FUNCTION
-#   Checks if the provided string is a valid IPv6 networks. 
+#   Checks if the provided string is a valid IPv6 networks.
 # INPUTS
 #   * str -- string to be evaluated. Valid IPv6 networks are writen in form
-#     a.b.c.d; e.f.g.h 
+#     a.b.c.d; e.f.g.h
 # RESULT
 #   * valid -- function returns 0 if the input string is not in the form
 #     of a valid IP network, 1 otherwise

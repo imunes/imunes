@@ -105,7 +105,7 @@ mode to download it."
 unpackAll () {
     for arg in $BASE_FILES
     do
-	cd $arg 
+	cd $arg
 	log "OUT" "Unpacking $arg... "
 	cat $arg.?? |  tar --unlink -xpzf - -C $VROOT_MASTER
 	if [ $? -ne 0 ]; then

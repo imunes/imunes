@@ -44,25 +44,25 @@
 # linkByPeers { node1 node2 }
 #	Returns link whose peers are node1 and node2
 #
-# removeLink { link }
+# removeLink { link_id }
 #	Removes the link and related entries in peering node's configs
 #
-# getLinkBandwidth { link }
+# getLinkBandwidth { link_id }
 #	... in bits per second
 #
-# getLinkBandwidthString { link }
+# getLinkBandwidthString { link_id }
 #	... as string
 #
-# getLinkDelay { link }
+# getLinkDelay { link_id }
 #	... in microseconds
 #
-# getLinkDelayString { link }
+# getLinkDelayString { link_id }
 #	... as sting
 #
-# setLinkBandwidth { link bandwidth }
+# setLinkBandwidth { link_id bandwidth }
 #	... in bits per second
 #
-# setLinkDelay { link delay }
+# setLinkDelay { link_id delay }
 #	... in microseconds
 #
 # All of the above functions are independent to any Tk objects. This means
@@ -87,6 +87,7 @@ proc getLinkPeers { link } {
     upvar 0 ::cf::[set ::curcfg]::$link $link
 
     set entry [lsearch -inline [set $link] "nodes {*}"]
+
     return [lindex $entry 1]
 }
 
@@ -94,7 +95,7 @@ proc getLinkPeers { link } {
 # NAME
 #   linkByPeers -- get link id from peer nodes
 # SYNOPSIS
-#   set link [linkByPeers $node1 $node2]
+#   set link_id [linkByPeers $node1 $node2]
 # FUNCTION
 #   Returns link whose peers are node1 and node2.
 #   The order of input nodes is irrelevant.
@@ -102,7 +103,7 @@ proc getLinkPeers { link } {
 #   * node1 -- node id of the first node
 #   * node2 -- node id of the second node
 # RESULT
-#   * link -- returns id of a link connecting endpoints node1 and node2
+#   * link_id -- returns id of a link connecting endpoints node1 and node2
 #****
 proc linkByPeers { node1 node2 } {
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
@@ -119,12 +120,12 @@ proc linkByPeers { node1 node2 } {
 # NAME
 #   removeLink -- removes a link.
 # SYNOPSIS
-#   removeLink $link
+#   removeLink $link_id
 # FUNCTION
 #   Removes the link and related entries in peering node's configs.
 #   Updates the default route for peer nodes.
 # INPUTS
-#   * link -- link id
+#   * link_id -- link id
 #****
 proc removeLink { link } {
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
@@ -140,7 +141,7 @@ proc removeLink { link } {
 	set peer [removeFromList $pnodes $node]
 	set ifc [ifcByPeer $node $peer]
 
-	if { [typemodel $node] in "extelem"} {
+	if { [typemodel $node] in "extelem" } {
 	    set old [getNodeExternalIfcs $node]
 	    set idx [lsearch -exact -index 0 $old "$ifc"]
 	    setNodeExternalIfcs $node [lreplace $old $idx $idx]
@@ -158,7 +159,7 @@ proc removeLink { link } {
 	foreach lifc [logIfcList $node] {
 	    switch -exact [getLogIfcType $node $lifc] {
 		vlan {
-		    if {[getIfcVlanDev $node $lifc] == $ifc} {
+		    if { [getIfcVlanDev $node $lifc] == $ifc } {
 			netconfClearSection $node "interface $lifc"
 		    }
 		}
@@ -172,11 +173,11 @@ proc removeLink { link } {
 # NAME
 #   getLinkDirect -- get if link is direct
 # SYNOPSIS
-#   set link_direct [getLinkDirect $link]
+#   set link_direct [getLinkDirect $link_id]
 # FUNCTION
 #   Returns boolean - link is direct.
 # INPUTS
-#   * link -- link id
+#   * link_id -- link id
 # RESULT
 #   * link_direct -- returns 0 if link is not a direct link and 1 if it is
 #****
@@ -195,12 +196,12 @@ proc getLinkDirect { link } {
 # NAME
 #   setLinkDirect -- set link bandwidth
 # SYNOPSIS
-#   setLinkDirect $link $value
+#   setLinkDirect $link_id $direct
 # FUNCTION
 #   Sets the link bandwidth in a bits per second.
 # INPUTS
-#   * link -- link id
-#   * value -- link bandwidth in bits per second.
+#   * link_id -- link id
+#   * direct -- link bandwidth in bits per second.
 #****
 proc setLinkDirect { link value } {
     upvar 0 ::cf::[set ::curcfg]::$link $link
@@ -217,11 +218,11 @@ proc setLinkDirect { link value } {
 # NAME
 #   getLinkBandwidth -- get link bandwidth
 # SYNOPSIS
-#   set bandwidth [getLinkBandwidth $link]
+#   set bandwidth [getLinkBandwidth $link_id]
 # FUNCTION
 #   Returns the link bandwidth expressed in bits per second.
 # INPUTS
-#   * link -- link id
+#   * link_id -- link id
 # RESULT
 #   * bandwidth -- The value of link bandwidth in bits per second.
 #****
@@ -229,6 +230,7 @@ proc getLinkBandwidth { link } {
     upvar 0 ::cf::[set ::curcfg]::$link $link
 
     set entry [lsearch -inline [set $link] "bandwidth *"]
+
     return [lindex $entry 1]
 }
 
@@ -236,19 +238,17 @@ proc getLinkBandwidth { link } {
 # NAME
 #   getLinkBandwidthString -- get link bandwidth string
 # SYNOPSIS
-#   set bandwidth_str [getLinkBandwidthString $link]
+#   set bandwidth_str [getLinkBandwidthString $link_id]
 # FUNCTION
 #   Returns the link bandwidth in form of a number an a mesure unit.
 #   Measure unit is automaticaly asigned depending on the value of bandwidth.
 # INPUTS
-#   * link -- link id
+#   * link_id -- link id
 # RESULT
-#   * bandstr -- The value of link bandwidth formated in a sting containing a
+#   * bandwidth_string -- The value of link bandwidth formated in a sting containing a
 #     measure unit.
 #****
 proc getLinkBandwidthString { link } {
-    upvar 0 ::cf::[set ::curcfg]::$link $link
-
     set bandstr ""
     set bandwidth [getLinkBandwidth $link]
     if { $bandwidth > 0 } {
@@ -266,6 +266,7 @@ proc getLinkBandwidthString { link } {
 	    set bandstr "$bandwidth bps"
 	}
     }
+
     return $bandstr
 }
 
@@ -273,12 +274,12 @@ proc getLinkBandwidthString { link } {
 # NAME
 #   setLinkBandwidth -- set link bandwidth
 # SYNOPSIS
-#   setLinkBandwidth $link $value
+#   setLinkBandwidth $link_id $bandwidth
 # FUNCTION
 #   Sets the link bandwidth in a bits per second.
 # INPUTS
-#   * link -- link id
-#   * value -- link bandwidth in bits per second.
+#   * link_id -- link id
+#   * bandwidth -- link bandwidth in bits per second.
 #****
 proc setLinkBandwidth { link value } {
     upvar 0 ::cf::[set ::curcfg]::$link $link
@@ -291,9 +292,6 @@ proc setLinkBandwidth { link value } {
     }
 }
 
-#
-# Marko - XXX document!
-#
 
 #****f* linkcfg.tcl/getLinkColor
 # NAME
@@ -314,21 +312,21 @@ proc getLinkColor { link } {
     set entry [lsearch -inline [set $link] "color *"]
     if { $entry == "" } {
 	return $defLinkColor
-    } else {
-	return [lindex $entry 1]
     }
+
+    return [lindex $entry 1]
 }
 
 #****f* linkcfg.tcl/setLinkColor
 # NAME
 #   setLinkColor -- set link color
 # SYNOPSIS
-#   setLinkColor $link $value
+#   setLinkColor $link_id $color
 # FUNCTION
 #   Sets the color of the link.
 # INPUTS
-#   * link -- link id
-#   * value -- link color
+#   * link_id -- link id
+#   * color -- link color
 #****
 proc setLinkColor { link value } {
     upvar 0 ::cf::[set ::curcfg]::$link $link
@@ -354,21 +352,21 @@ proc getLinkWidth { link } {
     set entry [lsearch -inline [set $link] "width *"]
     if { $entry == "" } {
 	return $defLinkWidth
-    } else {
-	return [lindex $entry 1]
     }
+
+    return [lindex $entry 1]
 }
 
 #****f* linkcfg.tcl/setLinkWidth
 # NAME
 #   setLinkWidth -- set link width
 # SYNOPSIS
-#   setLinkWidth $link $value
+#   setLinkWidth $link_id $width
 # FUNCTION
 #   Sets the link width on canvas.
 # INPUTS
-#   * link -- link id
-#   * value -- link width
+#   * link_id -- link id
+#   * width -- link width
 #****
 proc setLinkWidth { link value } {
     upvar 0 ::cf::[set ::curcfg]::$link $link
@@ -381,11 +379,11 @@ proc setLinkWidth { link value } {
 # NAME
 #   getLinkDelay -- get link delay
 # SYNOPSIS
-#   set delay [getLinkDelay $link]
+#   set delay [getLinkDelay $link_id]
 # FUNCTION
 #   Returns the link delay expressed in microseconds.
 # INPUTS
-#   * link -- link id
+#   * link_id -- link id
 # RESULT
 #   * delay -- The value of link delay in microseconds.
 #****
@@ -393,6 +391,7 @@ proc getLinkDelay { link } {
     upvar 0 ::cf::[set ::curcfg]::$link $link
 
     set entry [lsearch -inline [set $link] "delay *"]
+
     return [lindex $entry 1]
 }
 
@@ -400,12 +399,12 @@ proc getLinkDelay { link } {
 # NAME
 #   getLinkDelayString -- get link delay string
 # SYNOPSIS
-#   set delay [getLinkDelayString $link]
+#   set delay [getLinkDelayString $link_id]
 # FUNCTION
 #   Returns the link delay as a string with avalue and measure unit.
 #   Measure unit is automaticaly asigned depending on the value of delay.
 # INPUTS
-#   * link -- link id
+#   * link_id -- link id
 # RESULT
 #   * delay -- The value of link delay formated in a sting containing a
 #     measure unit.
@@ -425,6 +424,7 @@ proc getLinkDelayString { link } {
     } else {
 	set delstr ""
     }
+
     return $delstr
 }
 
@@ -432,12 +432,12 @@ proc getLinkDelayString { link } {
 # NAME
 #   setLinkDelay -- set link delay
 # SYNOPSIS
-#   setLinkDelay $link $value
+#   setLinkDelay $link_id $delay
 # FUNCTION
 #   Sets the link delay in microseconds.
 # INPUTS
-#   * link -- link id
-#   * value -- link delay value in microseconds.
+#   * link_id -- link id
+#   * delay -- link delay delay in microseconds.
 #****
 proc setLinkDelay { link value } {
     upvar 0 ::cf::[set ::curcfg]::$link $link
@@ -454,11 +454,11 @@ proc setLinkDelay { link value } {
 # NAME
 #   getLinkJitterUpstream -- get link upstream Jitter
 # SYNOPSIS
-#   set delay [getLinkJitterUpstream $link]
+#   set delay [getLinkJitterUpstream $link_id]
 # FUNCTION
 #   Returns the list of upstream link jitter values expressed in microseconds.
 # INPUTS
-#   * link -- link id
+#   * link_id -- link id
 # RESULT
 #   * jitter -- the list of values for jitter in microseconds
 #****
@@ -472,12 +472,12 @@ proc getLinkJitterUpstream { link } {
 # NAME
 #   setLinkJitterUpstream -- set link upstream jitter
 # SYNOPSIS
-#   setLinkJitterUpstream $link $values
+#   setLinkJitterUpstream $link_id $jitter_upstream
 # FUNCTION
 #   Sets the link upstream jitter in microseconds.
 # INPUTS
-#   * link -- link id
-#   * values -- link upstream jitter values in microseconds.
+#   * link_id -- link id
+#   * jitter_upstream -- link upstream jitter values in microseconds.
 #****
 proc setLinkJitterUpstream { link values } {
     upvar 0 ::cf::[set ::curcfg]::$link $link
@@ -494,11 +494,11 @@ proc setLinkJitterUpstream { link values } {
 # NAME
 #   getLinkJitterModeUpstream -- get link upstream jitter mode
 # SYNOPSIS
-#   set delay [getLinkJitterModeUpstream $link]
+#   set delay [getLinkJitterModeUpstream $link_id]
 # FUNCTION
 #   Returns the upstream link jitter mode.
 # INPUTS
-#   * link -- link id
+#   * link_id -- link id
 # RESULT
 #   * jitter_mode -- The jitter mode for upstream direction.
 #****
@@ -512,12 +512,12 @@ proc getLinkJitterModeUpstream { link } {
 # NAME
 #   setLinkJitterModeUpstream -- set link upstream jitter mode
 # SYNOPSIS
-#   setLinkJitterModeUpstream $link $value
+#   setLinkJitterModeUpstream $link_id $jitter_upstream_mode
 # FUNCTION
 #   Sets the link upstream jitter mode.
 # INPUTS
-#   * link -- link id
-#   * value -- link upstream jitter mode.
+#   * link_id -- link id
+#   * jitter_upstream_mode -- link upstream jitter mode.
 #****
 proc setLinkJitterModeUpstream { link value } {
     upvar 0 ::cf::[set ::curcfg]::$link $link
@@ -534,11 +534,11 @@ proc setLinkJitterModeUpstream { link value } {
 # NAME
 #   getLinkJitterHoldUpstream -- get link upstream jitter hold
 # SYNOPSIS
-#   set delay [getLinkJitterHoldUpstream $link]
+#   set delay [getLinkJitterHoldUpstream $link_id]
 # FUNCTION
 #   Returns the upstream link jitter hold.
 # INPUTS
-#   * link -- link id
+#   * link_id -- link id
 # RESULT
 #   * jitter_hold -- The jitter hold for upstream direction.
 #****
@@ -552,12 +552,12 @@ proc getLinkJitterHoldUpstream { link } {
 # NAME
 #   setLinkJitterHoldUpstream -- set link upstream jitter hold
 # SYNOPSIS
-#   setLinkJitterHoldUpstream $link $value
+#   setLinkJitterHoldUpstream $link_id $jitter_upstream_hold
 # FUNCTION
 #   Sets the link upstream jitter hold.
 # INPUTS
-#   * link -- link id
-#   * value -- link upstream jitter hold.
+#   * link_id -- link id
+#   * jitter_upstream_hold -- link upstream jitter hold.
 #****
 proc setLinkJitterHoldUpstream { link value } {
     upvar 0 ::cf::[set ::curcfg]::$link $link
@@ -574,12 +574,12 @@ proc setLinkJitterHoldUpstream { link value } {
 # NAME
 #   getLinkJitterDownstream -- get link downstream Jitter
 # SYNOPSIS
-#   set delay [getLinkJitterDownstream $link]
+#   set delay [getLinkJitterDownstream $link_id]
 # FUNCTION
 #   Returns the downstream link jitter values expressed in microseconds in a
 #   list.
 # INPUTS
-#   * link -- link id
+#   * link_id -- link id
 # RESULT
 #   * jitter -- The list of values for jitter in microseconds.
 #****
@@ -593,12 +593,12 @@ proc getLinkJitterDownstream { link } {
 # NAME
 #   setLinkJitterDownstream -- set link downstream jitter
 # SYNOPSIS
-#   setLinkJitterDownstream $link $values
+#   setLinkJitterDownstream $link_id $jitter_downstream
 # FUNCTION
 #   Sets the link downstream jitter in microseconds.
 # INPUTS
-#   * link -- link id
-#   * values -- link downstream jitter values in microseconds.
+#   * link_id -- link id
+#   * jitter_downstream -- link downstream jitter values in microseconds.
 #****
 proc setLinkJitterDownstream { link values } {
     upvar 0 ::cf::[set ::curcfg]::$link $link
@@ -615,11 +615,11 @@ proc setLinkJitterDownstream { link values } {
 # NAME
 #   getLinkJitterModeDownstream -- get link downstream jitter mode
 # SYNOPSIS
-#   set delay [getLinkJitterModeDownstream $link]
+#   set delay [getLinkJitterModeDownstream $link_id]
 # FUNCTION
 #   Returns the downstream link jitter mode.
 # INPUTS
-#   * link -- link id
+#   * link_id -- link id
 # RESULT
 #   * jitter_mode -- The jitter mode for downstream direction.
 #****
@@ -633,12 +633,12 @@ proc getLinkJitterModeDownstream { link } {
 # NAME
 #   setLinkJitterModeDownstream -- set link downstream jitter mode
 # SYNOPSIS
-#   setLinkJitterModeDownstream $link $value
+#   setLinkJitterModeDownstream $link_id $jitter_downstream_mode
 # FUNCTION
 #   Sets the link downstream jitter mode.
 # INPUTS
-#   * link -- link id
-#   * value -- link downstream jitter mode.
+#   * link_id -- link id
+#   * jitter_downstream_mode -- link downstream jitter mode.
 #****
 proc setLinkJitterModeDownstream { link value } {
     upvar 0 ::cf::[set ::curcfg]::$link $link
@@ -655,11 +655,11 @@ proc setLinkJitterModeDownstream { link value } {
 # NAME
 #   getLinkJitterHoldDownstream -- get link downstream jitter hold
 # SYNOPSIS
-#   set delay [getLinkJitterHoldDownstream $link]
+#   set delay [getLinkJitterHoldDownstream $link_id]
 # FUNCTION
 #   Returns the downstream link jitter hold.
 # INPUTS
-#   * link -- link id
+#   * link_id -- link id
 # RESULT
 #   * jitter_hold -- The jitter hold for downstream direction.
 #****
@@ -673,12 +673,12 @@ proc getLinkJitterHoldDownstream { link } {
 # NAME
 #   setLinkJitterHoldDownstream -- set link downstream jitter hold
 # SYNOPSIS
-#   setLinkJitterHoldDownstream $link $value
+#   setLinkJitterHoldDownstream $link_id $jitter_downstream_hold
 # FUNCTION
 #   Sets the link downstream jitter hold.
 # INPUTS
-#   * link -- link id
-#   * value -- link downstream jitter hold.
+#   * link_id -- link id
+#   * jitter_downstream_hold -- link downstream jitter hold.
 #****
 proc setLinkJitterHoldDownstream { link value } {
     upvar 0 ::cf::[set ::curcfg]::$link $link
@@ -695,11 +695,11 @@ proc setLinkJitterHoldDownstream { link value } {
 # NAME
 #   getLinkBER -- get link BER
 # SYNOPSIS
-#   set BER [getLinkBER $link]
+#   set BER [getLinkBER $link_id]
 # FUNCTION
 #   Returns 1/BER value of the link.
 # INPUTS
-#   * link -- link id
+#   * link_id -- link id
 # RESULT
 #   * BER -- The value of 1/BER of the link.
 #****
@@ -707,25 +707,7 @@ proc getLinkBER { link } {
     upvar 0 ::cf::[set ::curcfg]::$link $link
 
     set entry [lsearch -inline [set $link] "ber *"]
-    return [lindex $entry 1]
-}
 
-#****f* linkcfg.tcl/getLinkLoss
-# NAME
-#   getLinkLoss -- get link loss
-# SYNOPSIS
-#   set loss [getLinkLoss $link]
-# FUNCTION
-#   Returns loss percentage of the link.
-# INPUTS
-#   * link -- link id
-# RESULT
-#   * loss -- The loss percentage of the link.
-#****
-proc getLinkLoss { link } {
-    upvar 0 ::cf::[set ::curcfg]::$link $link
-
-    set entry [lsearch -inline [set $link] "loss *"]
     return [lindex $entry 1]
 }
 
@@ -751,16 +733,36 @@ proc setLinkBER { link value } {
     }
 }
 
+#****f* linkcfg.tcl/getLinkLoss
+# NAME
+#   getLinkLoss -- get link loss
+# SYNOPSIS
+#   set loss [getLinkLoss $link]
+# FUNCTION
+#   Returns loss percentage of the link.
+# INPUTS
+#   * link -- link id
+# RESULT
+#   * loss -- The loss percentage of the link.
+#****
+proc getLinkLoss { link } {
+    upvar 0 ::cf::[set ::curcfg]::$link $link
+
+    set entry [lsearch -inline [set $link] "loss *"]
+
+    return [lindex $entry 1]
+}
+
 #****f* linkcfg.tcl/setLinkLoss
 # NAME
 #   setLinkLoss -- set link loss
 # SYNOPSIS
-#   setLinkLoss $link percentage
+#   setLinkLoss $link_id loss
 # FUNCTION
 #   Sets the loss percentage of the link.
 # INPUTS
-#   * link -- link id
-#   * value -- The loss percentage of the link.
+#   * link_id -- link id
+#   * loss -- The loss percentage of the link.
 #****
 proc setLinkLoss { link value } {
     upvar 0 ::cf::[set ::curcfg]::$link $link
@@ -777,11 +779,11 @@ proc setLinkLoss { link value } {
 # NAME
 #   getLinkDup -- get link packet duplicate value
 # SYNOPSIS
-#   set duplicate [getLinkDup $link]
+#   set duplicate [getLinkDup $link_id]
 # FUNCTION
 #   Returns the value of the link duplicate percentage.
 # INPUTS
-#   * link -- link id
+#   * link_id -- link id
 # RESULT
 #   * duplicate -- The percentage of the link packet duplicate value.
 #****
@@ -789,6 +791,7 @@ proc getLinkDup { link } {
     upvar 0 ::cf::[set ::curcfg]::$link $link
 
     set entry [lsearch -inline [set $link] "duplicate *"]
+
     return [lindex $entry 1]
 }
 
@@ -796,12 +799,12 @@ proc getLinkDup { link } {
 # NAME
 #   setLinkDup -- set link packet duplicate value
 # SYNOPSIS
-#   setLinkDup $link $value
+#   setLinkDup $link_id $duplicate
 # FUNCTION
 #   Set link packet duplicate percentage.
 # INPUTS
-#   * link -- link id
-#   * value -- The percentage of the link packet duplicate value.
+#   * link_id -- link id
+#   * duplicate -- The percentage of the link packet duplicate value.
 #****
 proc setLinkDup { link value } {
     upvar 0 ::cf::[set ::curcfg]::$link $link
@@ -818,11 +821,11 @@ proc setLinkDup { link value } {
 # NAME
 #   linkResetConfig -- reset link configuration
 # SYNOPSIS
-#   linkResetConfig $link
+#   linkResetConfig $link_id
 # FUNCTION
 #   Reset link configuration to default values.
 # INPUTS
-#   * link -- link id
+#   * link_id -- link id
 #****
 proc linkResetConfig { link } {
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
@@ -842,13 +845,13 @@ proc linkResetConfig { link } {
 # NAME
 #   getLinkMirror -- get link's mirror link
 # SYNOPSIS
-#   set mirror_link_id [getLinkMirror $link]
+#   set mirror_link_id [getLinkMirror $link_id]
 # FUNCTION
 #   Returns the value of the link's mirror link. Mirror link is the other part
 #   of the link connecting node to a pseudo node. Two mirror links present
 #   only one physical link.
 # INPUTS
-#   * link -- link id
+#   * link_id -- link id
 # RESULT
 #   * mirror_link_id -- mirror link id
 #****
@@ -856,6 +859,7 @@ proc getLinkMirror { link } {
     upvar 0 ::cf::[set ::curcfg]::$link $link
 
     set entry [lsearch -inline [set $link] "mirror *"]
+
     return [lindex $entry 1]
 }
 
@@ -863,15 +867,14 @@ proc getLinkMirror { link } {
 # NAME
 #   setLinkMirror -- set link's mirror link
 # SYNOPSIS
-#   setLinkMirror $link $mirror_link_id
+#   setLinkMirror $link_id $mirror
 # FUNCTION
 #   Sets the value of the link's mirror link. Mirror link is the other part of
 #   the link connecting node to a pseudo node. Two mirror links present only
 #   one physical link.
 # INPUTS
-#   * link -- link id
-# RESULT
-#   * mirror_link_id -- mirror link id
+#   * link_id -- link id
+#   * mirror -- mirror link's id
 #****
 proc setLinkMirror { link value } {
     upvar 0 ::cf::[set ::curcfg]::$link $link
@@ -886,16 +889,14 @@ proc setLinkMirror { link value } {
 
 #****f* linkcfg.tcl/splitLink
 # NAME
-#   splitLink -- slit the link
+#   splitLink -- split the link
 # SYNOPSIS
-#   set nodes [splitLink  $link $nodetype]
+#   set nodes [splitLink $orig_link_id]
 # FUNCTION
 #   Splits the link in two parts. Each part of the split link is one pseudo
 #   link.
 # INPUTS
-#   * link -- link id
-#   * nodetype -- type of the new nodes connecting split links.
-#     Usual value is pseudo.
+#   * orig_link_id -- link id
 # RESULT
 #   * nodes -- list of node ids of new nodes.
 #****
@@ -953,13 +954,13 @@ proc splitLink { link nodetype } {
 # NAME
 #   mergeLink -- merge the link
 # SYNOPSIS
-#   set new_link_id [mergeLink $link]
+#   set new_link_id [mergeLink $link_id]
 # FUNCTION
 #   Rebuilts a link from two pseudo links.
 # INPUTS
-#   * link -- pseudo link id
+#   * link_id -- pseudo link id
 # RESULT
-#   * new_link_id -- rebuilt link id
+#   * link_id -- rebuilt link id
 #****
 proc mergeLink { link } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
@@ -967,7 +968,6 @@ proc mergeLink { link } {
 
     set mirror_link [getLinkMirror $link]
     if { $mirror_link == "" } {
-	puts "XXX mergeLink called for non-pseudo link!!!"
 	return
     }
 
@@ -1022,6 +1022,7 @@ proc mergeLink { link } {
 #****
 proc numOfLinks { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
+
     return [llength [lsearch -all [set $node] "interface-peer*"]]
 }
 
@@ -1046,7 +1047,7 @@ proc newLink { lnode1 lnode2 } {
     global defEthBandwidth defSerBandwidth defSerDelay
 
     foreach node "$lnode1 $lnode2" {
-	if {[info procs [getNodeType $node].maxLinks] != "" } {
+	if { [info procs [getNodeType $node].maxLinks] != "" } {
 	    if { [ numOfLinks $node ] == [[getNodeType $node].maxLinks] } {
 		tk_dialog .dialog1 "IMUNES warning" \
 		   "Warning: Maximum links connected to the node $node" \
@@ -1071,6 +1072,7 @@ proc newLink { lnode1 lnode2 } {
 	[string first eth "$ifname1 $ifname2"] != -1) && \
 	[getNodeType $lnode1] != "rj45" && \
 	[getNodeType $lnode2] != "rj45" } {
+
 	lappend $link "bandwidth $defEthBandwidth"
     } elseif { [string first ser "$ifname1 $ifname2"] != -1 } {
 	lappend $link "bandwidth $defSerBandwidth"
@@ -1079,10 +1081,11 @@ proc newLink { lnode1 lnode2 } {
 
     lappend link_list $link
 
-    if {[info procs [getNodeType $lnode1].confNewIfc] != ""} {
+    if { [info procs [getNodeType $lnode1].confNewIfc] != "" } {
 	[getNodeType $lnode1].confNewIfc $lnode1 $ifname1
     }
-    if {[info procs [getNodeType $lnode2].confNewIfc] != ""} {
+
+    if { [info procs [getNodeType $lnode2].confNewIfc] != "" } {
 	[getNodeType $lnode2].confNewIfc $lnode2 $ifname2
     }
 
@@ -1112,6 +1115,7 @@ proc linkByIfc { node ifc } {
 	    set dir downstream
 	    break
 	}
+
 	if { $endpoints == "$peer $node" } {
 	    set dir upstream
 	    break

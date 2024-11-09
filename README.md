@@ -26,7 +26,7 @@ Depending on your platform, packages required to IMUNES in graphical mode are:
     # Build requirements:
     make (used for installation)
     git (used for installation)
-    
+
     # Required packages:
     tcl (version 8.6 or greater)
     tcllib
@@ -39,11 +39,11 @@ Depending on your platform, packages required to IMUNES in graphical mode are:
     ImageMagick
     xterm
     socat
-    
+
 To run IMUNES experiments, you must run the Docker daemon (starting this service depends on your Linux distribution).
 
 Note: on some distributions the netem module `sch_netem` required for link configuration is only available by installing additional kernel packages. Please check the availability of the module:
-    
+
     # modinfo sch_netem
 
 -----------------------

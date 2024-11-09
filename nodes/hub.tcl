@@ -60,30 +60,30 @@ proc $MODULE.prepareSystem {} {
 # NAME
 #   hub.confNewIfc -- configure new interface
 # SYNOPSIS
-#   hub.confNewIfc $node $ifc
+#   hub.confNewIfc $node_id $ifc
 # FUNCTION
 #   Configures new interface for the specified node.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #   * ifc -- interface name
 #****
-proc $MODULE.confNewIfc { node ifc } {
+proc $MODULE.confNewIfc { node_id ifc } {
 }
 
 #****f* hub.tcl/hub.confNewNode
 # NAME
 #   hub.confNewNode -- configure new node
 # SYNOPSIS
-#   hub.confNewNode $node
+#   hub.confNewNode $node_id
 # FUNCTION
 #   Configures new node with the specified id.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #****
 proc $MODULE.confNewNode { node } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
     global nodeNamingBase
-    
+
     set nconfig [list \
 	"hostname [getNewNodeNameType hub $nodeNamingBase(hub)]" \
 	! ]
@@ -103,17 +103,18 @@ proc $MODULE.confNewNode { node } {
 #   * path -- path to icon
 #****
 proc $MODULE.icon { size } {
-    global ROOTDIR LIBDIR 
+    global ROOTDIR LIBDIR
+
     switch $size {
-      normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/hub.gif
-      }
-      small {
-	return $ROOTDIR/$LIBDIR/icons/small/hub.gif
-      }
-      toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/hub.gif
-      }
+	normal {
+	    return $ROOTDIR/$LIBDIR/icons/normal/hub.gif
+	}
+	small {
+	    return $ROOTDIR/$LIBDIR/icons/small/hub.gif
+	}
+	toolbar {
+	    return $ROOTDIR/$LIBDIR/icons/tiny/hub.gif
+	}
     }
 }
 
@@ -141,7 +142,7 @@ proc $MODULE.toolbarIconDescr {} {
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifacePrefix {l r} {
+proc $MODULE.ifacePrefix { l r } {
     return e
 }
 
@@ -151,7 +152,7 @@ proc $MODULE.ifacePrefix {l r} {
 # SYNOPSIS
 #   set layer [hub.netlayer]
 # FUNCTION
-#   Returns the layer on which the hub operates, i.e. returns LINK. 
+#   Returns the layer on which the hub operates, i.e. returns LINK.
 # RESULT
 #   * layer -- set to LINK
 #****
@@ -161,11 +162,11 @@ proc $MODULE.netlayer {} {
 
 #****f* hub.tcl/hub.virtlayer
 # NAME
-#   hub.virtlayer -- virtual layer  
+#   hub.virtlayer -- virtual layer
 # SYNOPSIS
 #   set layer [hub.virtlayer]
 # FUNCTION
-#   Returns the layer on which the hub is instantiated, i.e. returns NATIVE. 
+#   Returns the layer on which the hub is instantiated, i.e. returns NATIVE.
 # RESULT
 #   * layer -- set to NATIVE
 #****
@@ -177,51 +178,51 @@ proc $MODULE.virtlayer {} {
 # NAME
 #   hub.nodeCreate -- instantiate
 # SYNOPSIS
-#   hub.nodeCreate $eid $node
+#   hub.nodeCreate $eid $node_id
 # FUNCTION
 #   Procedure hub.nodeCreate creates a new netgraph node of the type hub.
 #   The name of the netgraph node is in form of exprimentId_nodeId.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- id of the node (type of the node is hub)
+#   * node_id -- id of the node (type of the node is hub)
 #****
-proc $MODULE.nodeCreate { eid node } {
-    l2node.nodeCreate $eid $node
+proc $MODULE.nodeCreate { eid node_id } {
+    l2node.nodeCreate $eid $node_id
 }
 
-proc $MODULE.nodeNamespaceSetup { eid node } {
-    l2node.nodeNamespaceSetup $eid $node
+proc $MODULE.nodeNamespaceSetup { eid node_id } {
+    l2node.nodeNamespaceSetup $eid $node_id
 }
 
-proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
-    l2node.nodePhysIfacesCreate $eid $node $ifcs
+proc $MODULE.nodePhysIfacesCreate { eid node_id ifcs } {
+    l2node.nodePhysIfacesCreate $eid $node_id $ifcs
 }
 
-proc $MODULE.destroyIfcs { eid node ifcs } {
-    l2node.destroyIfcs $eid $node $ifcs
+proc $MODULE.destroyIfcs { eid node_id ifcs } {
+    l2node.destroyIfcs $eid $node_id $ifcs
 }
 
 #****f* hub.tcl/hub.destroy
 # NAME
 #   hub.destroy -- destroy
 # SYNOPSIS
-#   hub.destroy $eid $node
+#   hub.destroy $eid $node_id
 # FUNCTION
 #   Destroys a hub. Destroys the netgraph node that represents
 #   the hub by sending a shutdown message.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- id of the node (type of the node is hub)
+#   * node_id -- id of the node (type of the node is hub)
 #****
-proc $MODULE.destroy { eid node } {
-    l2node.destroy $eid $node
-} 
+proc $MODULE.destroy { eid node_id } {
+    l2node.destroy $eid $node_id
+}
 
 #****f* hub.tcl/hub.nghook
 # NAME
 #   hub.nghook
 # SYNOPSIS
-#   hub.nghook $eid $node $ifc 
+#   hub.nghook $eid $node_id $ifc
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. Netgraph node name is in
@@ -229,15 +230,15 @@ proc $MODULE.destroy { eid node } {
 #   where N is interface number.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
-#   * ifc -- interface name 
+#   * node_id -- node id
+#   * ifc -- interface name
 # RESULT
-#   * nghook -- the list containing netgraph node id and the 
+#   * nghook -- the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
-proc $MODULE.nghook { eid node ifc } {
+proc $MODULE.nghook { eid node_id ifc } {
     set ifunit [string range $ifc 1 end]
-    return [list $node link$ifunit]
+    return [list $node_id link$ifunit]
 }
 
 
@@ -245,47 +246,47 @@ proc $MODULE.nghook { eid node ifc } {
 # NAME
 #   hub.configGUI -- configuration GUI
 # SYNOPSIS
-#   hub.configGUI $c $node
+#   hub.configGUI $c $node_id
 # FUNCTION
 #   Defines the structure of the hub configuration window by calling
 #   procedures for creating and organising the window, as well as procedures
 #   for adding certain modules to that window.
 # INPUTS
 #   * c -- tk canvas
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.configGUI { c node } {
+proc $MODULE.configGUI { c node_id } {
     global wi
     global guielements treecolumns
     set guielements {}
 
     configGUI_createConfigPopupWin $c
     wm title $wi "hub configuration"
-    configGUI_nodeName $wi $node "Node name:"
+    configGUI_nodeName $wi $node_id "Node name:"
 
     configGUI_addPanedWin $wi
-    set treecolumns {"QLen Queue len" "QDisc Queue disc" "QDrop Queue drop"}
-    configGUI_addTree $wi $node
+    set treecolumns { "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop" }
+    configGUI_addTree $wi $node_id
 
-    configGUI_buttonsACNode $wi $node
+    configGUI_buttonsACNode $wi $node_id
 }
 
 #****f* hub.tcl/hub.configInterfacesGUI
 # NAME
 #   hub.configInterfacesGUI -- configuration of interfaces GUI
 # SYNOPSIS
-#   hub.configInterfacesGUI $wi $node $ifc
+#   hub.configInterfacesGUI $wi $node_id $ifc
 # FUNCTION
 #   Defines which modules for changing interfaces parameters are contained in
 #   the hub configuration window. It is done by calling procedures for adding
 #   certain modules to the window.
 # INPUTS
 #   * wi -- widget
-#   * node -- node id
+#   * node_id -- node id
 #   * ifc -- interface id
 #****
-proc $MODULE.configInterfacesGUI { wi node ifc } {
+proc $MODULE.configInterfacesGUI { wi node_id ifc } {
     global guielements
 
-    configGUI_ifcQueueConfig $wi $node $ifc
+    configGUI_ifcQueueConfig $wi $node_id $ifc
 }

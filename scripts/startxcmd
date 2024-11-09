@@ -24,7 +24,7 @@ remote=$1
 node=`echo $1 | cut -d'@' -f1`
 shift 1   # "$@" is now a remote command with arguments
 
-himage $remote true 
+himage $remote true
 if [ $? -ne 0 ]
 then
     exit 2
@@ -47,7 +47,7 @@ xsocket="`himage -d $remote`/tmp/.X11-unix/X0"
 
 if test "X${DISPLAY%:*}" == "Xlocalhost"
 then
-    # running over ssh 
+    # running over ssh
     port=$((6000+display))
     socat_args="unix-listen:${xsocket},fork TCP:localhost:$port"
 else

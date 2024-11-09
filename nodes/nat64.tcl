@@ -30,8 +30,8 @@ set MODULE nat64
 
 registerModule $MODULE
 
-proc $MODULE.confNewIfc { node ifc } {
-    router.confNewIfc $node $ifc
+proc $MODULE.confNewIfc { node_id ifc } {
+    router.confNewIfc $node_id $ifc
 }
 
 proc $MODULE.confNewNode { node } {
@@ -43,18 +43,18 @@ proc $MODULE.confNewNode { node } {
     set ripEnable [lindex $rdconfig 0]
     set ripngEnable [lindex $rdconfig 1]
     set ospfEnable [lindex $rdconfig 2]
-    set ospf6Enable [lindex $rdconfig 3]	
-    
+    set ospf6Enable [lindex $rdconfig 3]
+
     set nconfig [list \
 	"hostname [getNewNodeNameType nat64 $nodeNamingBase(nat64)]" \
 	! ]
     lappend $node "network-config [list $nconfig]"
-    
+
     setNodeProtocolRip $node $ripEnable
     setNodeProtocolRipng $node $ripngEnable
-    setNodeProtocolOspfv2 $node $ospfEnable 
+    setNodeProtocolOspfv2 $node $ospfEnable
     setNodeProtocolOspfv3 $node $ospf6Enable
-    
+
     foreach proto { rip ripng ospf ospf6 bgp } {
 	set protocfg [netconfFetchSection $node "router $proto"]
 	if { $protocfg != "" } {
@@ -75,18 +75,19 @@ proc $MODULE.confNewNode { node } {
     setTaygaIPv6Prefix $node "2001::/96"
 }
 
-proc $MODULE.icon {size} {
+proc $MODULE.icon { size } {
     global ROOTDIR LIBDIR
+
     switch $size {
-      normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/nat64.gif
-      }
-      small {
-	return $ROOTDIR/$LIBDIR/icons/small/nat64.gif
-      }
-      toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/nat64.gif
-      }
+	normal {
+	    return $ROOTDIR/$LIBDIR/icons/normal/nat64.gif
+	}
+	small {
+	    return $ROOTDIR/$LIBDIR/icons/small/nat64.gif
+	}
+	toolbar {
+	    return $ROOTDIR/$LIBDIR/icons/tiny/nat64.gif
+	}
     }
 }
 
@@ -94,25 +95,25 @@ proc $MODULE.toolbarIconDescr {} {
     return "Add new NAT64"
 }
 
-proc $MODULE.notebookDimensions { wi } { 
-    set h 270 
-    set w 507 
+proc $MODULE.notebookDimensions { wi } {
+    set h 270
+    set w 507
 
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
-	== "Configuration" } { 
+	== "Configuration" } {
     set h 320
-	set w 507 
+	set w 507
     }
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
-	== "Interfaces" } { 
-	set h 320 
-	set w 507 
+	== "Interfaces" } {
+	set h 320
+	set w 507
     }
 
-    return [list $h $w] 
+    return [list $h $w]
 }
 
-proc $MODULE.ifacePrefix {l r} {
+proc $MODULE.ifacePrefix { l r } {
     return [l3IfcName $l $r]
 }
 
@@ -125,21 +126,23 @@ proc $MODULE.netlayer {} {
 }
 
 proc $MODULE.virtlayer {} {
-    return VIRTUALIZED 
+    return VIRTUALIZED
 }
 
-proc $MODULE.generateConfig { node } {
-    set cfg [router.frr.generateConfig $node]
+proc $MODULE.generateConfig { node_id } {
+    set cfg [router.frr.generateConfig $node_id]
+
+    global nat64ifc_$eid.$node_id
 
     upvar 0 ::cf::[set ::curcfg]::eid eid
-    global nat64ifc_$eid.$node
-    if { [info exists nat64ifc_$eid.$node] == 0 } {
-	set nat64ifc_$eid.$node "tun0"
+    if { [info exists nat64ifc_$eid.$node_id] == 0 } {
+	set nat64ifc_$eid.$node_id "tun0"
     }
-    set tun [set nat64ifc_$eid.$node]
+
+    set tun [set nat64ifc_$eid.$node_id]
     if { $tun != "" } {
-	set tayga4pool [getTaygaIPv4DynPool $node]
-	set tayga6prefix [getTaygaIPv6Prefix $node]
+	set tayga4pool [getTaygaIPv4DynPool $node_id]
+	set tayga6prefix [getTaygaIPv6Prefix $node_id]
 
 	if { $tayga4pool != "" } {
 	    lappend cfg "!"
@@ -154,16 +157,16 @@ proc $MODULE.generateConfig { node } {
     return $cfg
 }
 
-proc $MODULE.bootcmd { node } {
-    return [router.frr.bootcmd $node]
+proc $MODULE.bootcmd { node_id } {
+    return [router.frr.bootcmd $node_id]
 }
 
-proc $MODULE.shellcmds { } {
+proc $MODULE.shellcmds {} {
     return [router.frr.shellcmds]
 }
 
-proc $MODULE.nodeCreate { eid node } {
-    router.frr.nodeCreate $eid $node
+proc $MODULE.nodeCreate { eid node_id } {
+    router.frr.nodeCreate $eid $node_id
 }
 
 proc $MODULE.nodeNamespaceSetup { eid node } {
@@ -180,19 +183,19 @@ proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
     l3node.nodePhysIfacesCreate $eid $node $ifcs
 }
 
-proc $MODULE.start { eid node } {
-    global nat64ifc_$eid.$node
+proc $MODULE.start { eid node_id } {
+    global nat64ifc_$eid.$node_id
 
-    set tun [createStartTunIfc $eid $node]
-    set nat64ifc_$eid.$node $tun
+    set tun [createStartTunIfc $eid $node_id]
+    set nat64ifc_$eid.$node_id $tun
 
-    router.frr.start $eid $node
+    router.frr.start $eid $node_id
 
     set datadir "/var/db/tayga"
 
-    set tayga4addr [lindex [split [getTaygaIPv4DynPool $node] "/"] 0]
-    set tayga4pool [getTaygaIPv4DynPool $node]
-    set tayga6prefix [getTaygaIPv6Prefix $node]
+    set tayga4addr [lindex [split [getTaygaIPv4DynPool $node_id] "/"] 0]
+    set tayga4pool [getTaygaIPv4DynPool $node_id]
+    set tayga6prefix [getTaygaIPv6Prefix $node_id]
 
     set fd "tun-device\t$tun\n"
     set fd "$fd ipv4-addr\t$tayga4addr\n"
@@ -200,11 +203,11 @@ proc $MODULE.start { eid node } {
     set fd "$fd prefix\t\t$tayga6prefix\n"
     set fd "$fd data-dir\t$datadir\n"
     set fd "$fd\n"
-    foreach map [getTaygaMappings $node] {
+    foreach map [getTaygaMappings $node_id] {
 	set fd "$fd map\t\t$map\n"
     }
 
-    prepareTaygaConf $eid $node $fd $datadir
+    prepareTaygaConf $eid $node_id $fd $datadir
 
     # XXX
     # Even though this routes should be added here, we add them in the
@@ -214,66 +217,65 @@ proc $MODULE.start { eid node } {
     # lappend cfg "ipv6 route $tayga6prefix $tun"
     # This is done in order for frr to redistribute these routes.
     # FreeBSD:
-    # exec jexec $eid.$node route -n add -inet $tayga4pool -interface $tun
-    # exec jexec $eid.$node route -n add -inet6 $tayga6prefix -interface $tun
+    # exec jexec $eid.$node_id route -n add -inet $tayga4pool -interface $tun
+    # exec jexec $eid.$node_id route -n add -inet6 $tayga6prefix -interface $tun
     # Linux:
-    # exec docker exec $eid.$node ip route add $tayga4pool dev $tun
-    # exec docker exec $eid.$node ip route add $tayga6prefix dev $tun
+    # exec docker exec $eid.$node_id ip route add $tayga4pool dev $tun
+    # exec docker exec $eid.$node_id ip route add $tayga6prefix dev $tun
 
-    execCmdNode $node tayga
+    execCmdNode $node_id tayga
 }
 
-proc $MODULE.shutdown { eid node } {
-    router.frr.shutdown $eid $node
-    taygaShutdown $eid $node
+proc $MODULE.shutdown { eid node_id } {
+    router.frr.shutdown $eid $node_id
+    taygaShutdown $eid $node_id
 }
 
-proc $MODULE.destroy { eid node } {
-    taygaDestroy $eid $node
-    router.frr.destroy $eid $node
+proc $MODULE.destroy { eid node_id } {
+    taygaDestroy $eid $node_id
+    router.frr.destroy $eid $node_id
 }
 
-proc $MODULE.nghook { eid node ifc } {
-    return [router.frr.nghook $eid $node $ifc]
+proc $MODULE.nghook { eid node_id ifc } {
+    return [router.frr.nghook $eid $node_id $ifc]
 }
 
-
-proc $MODULE.configGUI { c node } {
+proc $MODULE.configGUI { c node_id } {
     global wi
     global guielements treecolumns
     set guielements {}
 
     configGUI_createConfigPopupWin $c
     wm title $wi "nat64 configuration"
-    configGUI_nodeName $wi $node "Node name:"
+    configGUI_nodeName $wi $node_id "Node name:"
 
-    set tabs [configGUI_addNotebook $wi $node {"Configuration" "Interfaces" "NAT64"}]
+    set tabs [configGUI_addNotebook $wi $node_id { "Configuration" "Interfaces" "NAT64" }]
     set configtab [lindex $tabs 0]
     set ifctab [lindex $tabs 1]
     set nat64tab [lindex $tabs 2]
 
-    set treecolumns {"OperState State" "NatState Nat" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
+    set treecolumns { "OperState State" "NatState Nat" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
             "MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop" }
-    configGUI_addTree $ifctab $node
+    configGUI_addTree $ifctab $node_id
 
-    configGUI_routingProtocols $configtab $node
-    configGUI_customImage $configtab $node
-    configGUI_attachDockerToExt $configtab $node
-    configGUI_servicesConfig $configtab $node
-    configGUI_staticRoutes $configtab $node
-    configGUI_snapshots $configtab $node
-    configGUI_customConfig $configtab $node
-    configGUI_nat64Config $nat64tab $node
+    configGUI_routingProtocols $configtab $node_id
+    configGUI_customImage $configtab $node_id
+    configGUI_attachDockerToExt $configtab $node_id
+    configGUI_servicesConfig $configtab $node_id
+    configGUI_staticRoutes $configtab $node_id
+    configGUI_snapshots $configtab $node_id
+    configGUI_customConfig $configtab $node_id
+    configGUI_nat64Config $nat64tab $node_id
 
-    configGUI_buttonsACNode $wi $node
+    configGUI_buttonsACNode $wi $node_id
 }
 
-proc $MODULE.configInterfacesGUI { wi node ifc } {
+proc $MODULE.configInterfacesGUI { wi node_id ifc } {
     global guielements
 
-    configGUI_ifcEssentials $wi $node $ifc
-    configGUI_ifcQueueConfig $wi $node $ifc
-    configGUI_ifcMACAddress $wi $node $ifc
-    configGUI_ifcIPv4Address $wi $node $ifc
-    configGUI_ifcIPv6Address $wi $node $ifc
+    configGUI_ifcEssentials $wi $node_id $ifc
+    configGUI_ifcQueueConfig $wi $node_id $ifc
+    configGUI_ifcMACAddress $wi $node_id $ifc
+    configGUI_ifcIPv4Address $wi $node_id $ifc
+    configGUI_ifcIPv6Address $wi $node_id $ifc
 }

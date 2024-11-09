@@ -86,6 +86,7 @@ proc checkPatternMask { str } {
     if { $str != "" } {
 	return [regexp {^([0-9a-f][0-9a-f]\.)*([0-9a-f][0-9a-f])$} $str]
     }
+
     return 1
 }
 
@@ -104,6 +105,7 @@ proc checkOffset { str } {
 	    return 0
 	}
     }
+
     return 0
 }
 
@@ -112,5 +114,6 @@ proc checkAction { str } {
 	nomatch_hook nomatch_dupto nomatch_skipto nomatch_drop] } {
 	    return 1
     }
+
     return 0
 }

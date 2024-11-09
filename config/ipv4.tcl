@@ -65,7 +65,7 @@ proc IPv4AddrApply { w } {
    if { $newipv4 != $ipv4 } {
 	set changed 1
         set control 1
-   }    
+   }
    set ipv4 $newipv4
    set numbits [lindex [split $ipv4 /] 1]
 }
@@ -80,16 +80,21 @@ proc IPv4AddrApply { w } {
 # INPUTS
 #   * dec -- decimal number
 #****
-proc dec2bin { dec } {                    
+proc dec2bin { dec } {
     set res ""
-    while {$dec > 0} {
+
+    while { $dec > 0 } {
 	set res [expr {$dec % 2}]$res
 	set dec [expr {$dec / 2}]
     }
-    if {$res == ""} {set res 0}
-    if {[string length $res] < 8} {
+
+    if { $res == "" } {
+	set res 0
+    }
+
+    if { [string length $res] < 8 } {
 	set n [expr {8-[string length $res]}]
-	for {set i 0} {$i < $n} {incr i} {  
+	for { set i 0 } { $i < $n } { incr i } {
 	    set res 0$res
 	}
     }
@@ -106,7 +111,7 @@ proc dec2bin { dec } {
 # INPUTS
 #   * bin -- binary number
 #****
-proc bin2dec { bin } {			
+proc bin2dec { bin } {
     set res 0
     foreach i $bin {
 	set res [expr {$res*2 + $i}]
@@ -121,112 +126,111 @@ proc bin2dec { bin } {
 #   set ipnet [findFreeIPv4Net $mask]
 # FUNCTION
 #   Finds a free IPv4 network. Network is concidered to be free
-#   if there are no simulated nodes attached to it. 
+#   if there are no simulated nodes attached to it.
 # INPUTS
 #   * mask -- this parameter is left unused for now
 # RESULT
-#   * ipnet -- returns the free IPv4 network address in the form a.b.c.d 
-#**** 
+#   * ipnet -- returns the free IPv4 network address in the form a.b.c.d
+#****
 proc findFreeIPv4Net { mask } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::IPv4UsedList IPv4UsedList
 
-    global ipv4 
+    global ipv4
     global numbits
 
     set numbits $mask
-   
-    set addr [lindex [split $ipv4 /] 0]     			
-     
-    set a [dec2bin [lindex [split $addr .] 0]]  
+
+    set addr [lindex [split $ipv4 /] 0]
+
+    set a [dec2bin [lindex [split $addr .] 0]]
     set b [dec2bin [lindex [split $addr .] 1]]
     set c [dec2bin [lindex [split $addr .] 2]]
     set d [dec2bin [lindex [split $addr .] 3]]
 
-    set addr_bin $a$b$c$d                                 	 
+    set addr_bin $a$b$c$d
 
-    set host_id [string range $addr_bin $numbits end]   
+    set host_id [string range $addr_bin $numbits end]
 
-    while {[string first 1 $host_id] != -1} {                	
+    while { [string first 1 $host_id] != -1 } {
 	set i [string first 1 $host_id]
 	set host_id [string replace $host_id $i $i 0]
     }
 
-    set net_id [string range $addr_bin 0 [expr {$numbits-1}]]     
+    set net_id [string range $addr_bin 0 [expr {$numbits-1}]]
 
-    set sub_addr $net_id$host_id  
- 
-    if {$numbits == 8 || $numbits == 16 || $numbits == 24} {
-        set pot 0  
-    } else { 
-        set pot [expr {8 - ($numbits % 8)}] 
+    set sub_addr $net_id$host_id
+
+    if { $numbits == 8 || $numbits == 16 || $numbits == 24 } {
+        set pot 0
+    } else {
+        set pot [expr {8 - ($numbits % 8)}]
     }
 
-    set step [expr {1 << $pot}]            			 
+    set step [expr {1 << $pot}]
 
     set ipnets {}
 
     foreach addr $IPv4UsedList {
-	if {$numbits <= 8}  {
+	if { $numbits <= 8 }  {
 	    set ipnet [lindex [split $addr .] 0]
-	} elseif {$numbits > 8 && $numbits <=16} {
+	} elseif { $numbits > 8 && $numbits <=16 } {
 	    set ipnet [lrange [split $addr .] 0 1]
-	} elseif {$numbits > 16 && $numbits <=24} {
+	} elseif { $numbits > 16 && $numbits <=24 } {
 	    set ipnet [lrange [split $addr .] 0 2]
-	} elseif {$numbits > 24}  {
+	} elseif { $numbits > 24 }  {
 	    set ifcaddr [lindex [split $addr /] 0]
-	    if {[lindex [split $ifcaddr .] 3] != ""} {
+	    if { [lindex [split $ifcaddr .] 3] != "" } {
 		set x [expr {[lindex [split $ifcaddr .] 3] - \
-		    ([lindex [split $ifcaddr .] 3] % $step)}] 
+		    ([lindex [split $ifcaddr .] 3] % $step)}]
 		set ipnet [split $ifcaddr .]
 		lset ipnet 3 $x
 	    } else {
 		set ipnet {}
-	    }      
+	    }
 	}
-	if {[lsearch $ipnets $ipnet] == -1} {
+	if { [lsearch $ipnets $ipnet] == -1 } {
 	    lappend ipnets $ipnet
 	}
     }
 
-    set a_sub [bin2dec [split [string range $sub_addr 0 7] {}]]  
-    set b_sub [bin2dec [split [string range $sub_addr 8 15] {}]] 
-    set c_sub [bin2dec [split [string range $sub_addr 16 23] {}]]  
-    set d_sub [bin2dec [split [string range $sub_addr 24 31] {}]] 
-       
-    if {$numbits <= 8} {
+    set a_sub [bin2dec [split [string range $sub_addr 0 7] {}]]
+    set b_sub [bin2dec [split [string range $sub_addr 8 15] {}]]
+    set c_sub [bin2dec [split [string range $sub_addr 16 23] {}]]
+    set d_sub [bin2dec [split [string range $sub_addr 24 31] {}]]
+
+    if { $numbits <= 8 } {
 	for { set i $a_sub } { $i <= 255 } { incr i $step } {
-	    if {[lsearch $ipnets "$i"] == -1} {
+	    if { [lsearch $ipnets "$i"] == -1 } {
 		set ipnet "$i"
 		return $ipnet
-	    }       
-	}  
-    } elseif {$numbits > 8 && $numbits <=16} {
-	for { set i $a_sub } { $i <= 255 } { incr i } {
-	    for { set j $b_sub } { $j <= 255 } { incr j $step } {
-		if {[lsearch $ipnets "$i $j"] == -1} {	        
-		    set ipnet "$i.$j"
-		    return $ipnet
-		}     
 	    }
 	}
-    } elseif {$numbits > 16 && $numbits <=24} {
+    } elseif { $numbits > 8 && $numbits <=16 } {
+	for { set i $a_sub } { $i <= 255 } { incr i } {
+	    for { set j $b_sub } { $j <= 255 } { incr j $step } {
+		if { [lsearch $ipnets "$i $j"] == -1 } {
+		    set ipnet "$i.$j"
+		    return $ipnet
+		}
+	    }
+	}
+    } elseif { $numbits > 16 && $numbits <=24 } {
 	for { set i $a_sub } { $i <= 255 } { incr i } {
 	    for { set j $b_sub } { $j <= 255 } { incr j } {
 		for { set k $c_sub } { $k <= 255 } { incr k $step } {
-		    if {[lsearch $ipnets "$i $j $k"] == -1} {
+		    if { [lsearch $ipnets "$i $j $k"] == -1 } {
 			set ipnet "$i.$j.$k"
 			return $ipnet
 		    }
 		}
 	    }
 	}
-    } elseif {$numbits > 24} {
+    } elseif { $numbits > 24 } {
 	for { set i $a_sub } { $i <= 255 } { incr i } {
 	    for { set j $b_sub } { $j <= 255 } { incr j } {
 		for { set k $c_sub } { $k <= 255 } { incr k } {
-		    for { set l $d_sub } { $l <= 255 } { incr l $step } { 
-			if {[lsearch $ipnets "$i $j $k $l"] == -1} {
+		    for { set l $d_sub } { $l <= 255 } { incr l $step } {
+			if { [lsearch $ipnets "$i $j $k $l"] == -1 } {
 			    set ipnet "$i.$j.$k.$l"
 			    return $ipnet
 			}
@@ -234,37 +238,35 @@ proc findFreeIPv4Net { mask } {
 		}
 	    }
 	}
-    }   
+    }
 }
 
-#****f* ipv4.tcl/autoIPv4addr 
+#****f* ipv4.tcl/autoIPv4addr
 # NAME
 #   autoIPv4addr -- automaticaly assign an IPv4 address
 # SYNOPSIS
-#   autoIPv4addr $node $iface 
+#   autoIPv4addr $node $iface
 # FUNCTION
-#   automaticaly assignes an IPv4 address to the interface $iface of 
-#   of the node $node  
+#   automaticaly assignes an IPv4 address to the interface $iface of
+#   of the node $node
 # INPUTS
-#   * node -- the node containing the interface to witch a new 
+#   * node -- the node containing the interface to witch a new
 #     IPv4 address should be assigned
-#   * iface -- the interface to witch a new, automatilacy generated, IPv4  
+#   * iface -- the interface to witch a new, automatically generated, IPv4
 #     address will be assigned
 #****
 proc autoIPv4addr { node iface } {
     upvar 0 ::cf::[set ::curcfg]::IPv4UsedList IPv4UsedList
     global IPv4autoAssign
-    if {!$IPv4autoAssign} {
+
+    if { ! $IPv4autoAssign } {
 	return
     }
-    global numbits
-    #changeAddrRange - oznacuje da li se treba mijenjati podmreza (1) ili ne (0) 
-    global changeAddrRange control
-    #changeAddressRange - oznacuje da li je ova procedura pozvana iz
-    #procedure changeAddressRange (1 ako je, 0 inace)
-    global changeAddressRange
-    #autorenumbered_ifcs - lista svih sucelja cvorova kojima je promijenjena adresa
-    global autorenumbered_ifcs
+
+    global numbits changeAddrRange control changeAddressRange autorenumbered_ifcs
+    #changeAddrRange - to change the subnet (1) or not (0)
+    #changeAddressRange - is this procedure called from 'changeAddressRange' (1 if true, otherwise 0)
+    #autorenumbered_ifcs - list of all interfaces that changed an address
 
     set peer_ip4addrs {}
 
@@ -272,14 +274,12 @@ proc autoIPv4addr { node iface } {
 	#
 	# Shouldn't get called at all for link-layer nodes
 	#
-	#puts "autoIPv4 called for a [[typemodel $node].netlayer] layer node"
 	return
     }
     setIfcIPv4addr $node $iface ""
 
     set peer_node [logicalPeerByIfc $node $iface]
-
-    if { [[typemodel $peer_node].netlayer] == "LINK"} {
+    if { [[typemodel $peer_node].netlayer] == "LINK" } {
 	foreach l2node [listLANNodes $peer_node {}] {
 	    foreach ifc [ifcList $l2node] {
 		set peer [logicalPeerByIfc $l2node $ifc]
@@ -298,32 +298,33 @@ proc autoIPv4addr { node iface } {
 		}
 	    }
 	}
-    } elseif {[[typemodel $peer_node].netlayer] != "LINK"} {
+    } elseif { [[typemodel $peer_node].netlayer] != "LINK" } {
 	set peer_if [ifcByLogicalPeer $peer_node $node]
 	set peer_ip4addr [getIfcIPv4addr $peer_node $peer_if]
 	set peer_ip4addrs $peer_ip4addr
     }
 
     set targetbyte [[getNodeType $node].IPAddrRange]
-    
+
     set targetbyte2 0
-        
+
     if { $peer_ip4addrs != "" && $changeAddrRange == 0 } {
 	setIfcIPv4addr $node $iface [nextFreeIP4Addr [lindex $peer_ip4addrs 0] $targetbyte $peer_ip4addrs]
     } else {
-        if {$numbits <= 8} {
+        if { $numbits <= 8 } {
 	    setIfcIPv4addr $node $iface "[findFreeIPv4Net $numbits].$targetbyte2.$targetbyte2.$targetbyte/$numbits"
-	} elseif {$numbits > 8 && $numbits <=16} {
+	} elseif { $numbits > 8 && $numbits <=16 } {
 	    setIfcIPv4addr $node $iface "[findFreeIPv4Net $numbits].$targetbyte2.$targetbyte/$numbits"
-	} elseif {$numbits > 16 && $numbits <=24} {
+	} elseif { $numbits > 16 && $numbits <=24 } {
 	    setIfcIPv4addr $node $iface "[findFreeIPv4Net $numbits].$targetbyte/$numbits"
-	} elseif {$numbits > 24} { 
-            set lastbyte [lindex [split [findFreeIPv4Net $numbits] .] 3] 
-            set first3bytes [join [lrange [split [findFreeIPv4Net $numbits] .] 0 2] .] 
-            set targetbyte3 [expr {$lastbyte + 1}] 
+	} elseif { $numbits > 24 } {
+            set lastbyte [lindex [split [findFreeIPv4Net $numbits] .] 3]
+            set first3bytes [join [lrange [split [findFreeIPv4Net $numbits] .] 0 2] .]
+            set targetbyte3 [expr {$lastbyte + 1}]
 	    setIfcIPv4addr $node $iface "$first3bytes.$targetbyte3/$numbits"
         }
     }
+
     lappend IPv4UsedList [getIfcIPv4addr $node $iface]
 }
 
@@ -331,17 +332,17 @@ proc autoIPv4addr { node iface } {
 # NAME
 #   nextFreeIP4Addr -- automaticaly assign an IPv4 address
 # SYNOPSIS
-#   nextFreeIP4Addr $addr $start $peers 
+#   nextFreeIP4Addr $addr $start $peers
 # FUNCTION
 #   Automaticaly searches for free IPv4 addresses within a given range
-#   defined by $addr, containing $peers 
+#   defined by $addr, containing $peers
 # INPUTS
 #   * $addr -- address of a node within the range
 #   * $start -- starting host address for a specified node type, ignored
 #     if the netmask is bigger than 24
 #   * $peers -- list of peers in the current network
 #****
-proc nextFreeIP4Addr { addr start peers } { 
+proc nextFreeIP4Addr { addr start peers } {
     global execMode
     set ipnums [ip::prefix $addr]
     set mask [lindex [split $addr /] 1]
@@ -360,49 +361,49 @@ proc nextFreeIP4Addr { addr start peers } {
 
     set ipaddr "$ip1.$ip2.$ip3.$ip4/$mask"
 
-    while {$ipaddr in $peers} {
-        incr ip4 
-        if { $ip4 > 254} {
-            incr ip3 
+    while { $ipaddr in $peers } {
+        incr ip4
+        if { $ip4 > 254 } {
+            incr ip3
             set ip4 1
-            if { $ip3 > 254} {
-                incr ip2 
+            if { $ip3 > 254 } {
+                incr ip2
                 set ip3 0
-                if { $ip2 > 254} {
-                    incr ip1 
+                if { $ip2 > 254 } {
+                    incr ip1
                     set ip2 0
-                }   
-            }   
-        }   
+                }
+            }
+        }
         set ipaddr "$ip1.$ip2.$ip3.$ip4/$mask"
-    }   
+    }
 
-    set x [ip::prefix $addr] 
-    set y [ip::prefix $ipaddr] 
+    set x [ip::prefix $addr]
+    set y [ip::prefix $ipaddr]
 
-    if { $x != $y  || "$ip1.$ip2.$ip3.$ip4" == [ip::broadcastAddress $ipaddr] } { 
+    if { $x != $y  || "$ip1.$ip2.$ip3.$ip4" == [ip::broadcastAddress $ipaddr] } {
 	if { $execMode != "batch" } {
-	    after idle {.dialog1.msg configure -wraplength 4i}
+	    after idle { .dialog1.msg configure -wraplength 4i }
 	    tk_dialog .dialog1 "IMUNES warning" \
 		"You have depleted the current pool of addresses ($x/$mask). Please choose a new pool from Tools->IPV4 address pool or delete nodes to free the address space." \
 	    info 0 Dismiss
 	}
 	return ""
-    }   
+    }
 
     return $ipaddr
 }
 
-#****f* ipv4.tcl/checkIPv4Addr 
+#****f* ipv4.tcl/checkIPv4Addr
 # NAME
-#   checkIPv4Addr -- check the IPv4 address 
+#   checkIPv4Addr -- check the IPv4 address
 # SYNOPSIS
 #   set valid [checkIPv4Addr $str]
 # FUNCTION
-#   Checks if the provided string is a valid IPv4 address. 
+#   Checks if the provided string is a valid IPv4 address.
 # INPUTS
 #   * str -- string to be evaluated. Valid IPv4 address is writen in form
-#     a.b.c.d 
+#     a.b.c.d
 # RESULT
 #   * valid -- function returns 0 if the input string is not in the form
 #     of a valid IP address, 1 otherwise
@@ -437,15 +438,15 @@ proc checkIPv4Addr { str } {
     return 1
 }
 
-#****f* ipv4.tcl/checkIPv4Net 
+#****f* ipv4.tcl/checkIPv4Net
 # NAME
-#   checkIPv4Net -- check the IPv4 network 
+#   checkIPv4Net -- check the IPv4 network
 # SYNOPSIS
 #   set valid [checkIPv4Net $str]
 # FUNCTION
-#   Checks if the provided string is a valid IPv4 network. 
+#   Checks if the provided string is a valid IPv4 network.
 # INPUTS
-#   * str -- string to be evaluated. Valid string is in form a.b.c.d/m 
+#   * str -- string to be evaluated. Valid string is in form a.b.c.d/m
 # RESULT
 #   * valid -- function returns 0 if the input string is not in the form
 #     of a valid IP address, 1 otherwise
@@ -454,7 +455,7 @@ proc checkIPv4Net { str } {
     if { $str == "" } {
 	return 1
     }
-    if { ![checkIPv4Addr [lindex [split $str /] 0]]} {
+    if { ! [checkIPv4Addr [lindex [split $str /] 0]] } {
 	return 0
     }
     set net [string trim [lindex [split $str /] 1]]
@@ -470,10 +471,10 @@ proc checkIPv4Net { str } {
 # SYNOPSIS
 #   set valid [checkIPv4Nets $str]
 # FUNCTION
-#   Checks if the provided string is a valid IPv4 networks. 
+#   Checks if the provided string is a valid IPv4 networks.
 # INPUTS
 #   * str -- string to be evaluated. Valid IPv4 networks are writen in form
-#     a.b.c.d; e.f.g.h 
+#     a.b.c.d; e.f.g.h
 # RESULT
 #   * valid -- function returns 0 if the input string is not in the form
 #     of a valid IP network, 1 otherwise

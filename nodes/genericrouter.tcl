@@ -59,6 +59,7 @@ registerRouterModule $MODULE
 #****
 proc $MODULE.confNewIfc { node ifc } {
     global changeAddressRange changeAddressRange6
+
     set changeAddressRange 0
     set changeAddressRange6 0
     autoIPv4addr $node $ifc
@@ -130,16 +131,17 @@ proc $MODULE.confNewNode { node } {
 #****
 proc $MODULE.icon { size } {
     global ROOTDIR LIBDIR
+
     switch $size {
-      normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/router.gif
-      }
-      small {
-	return $ROOTDIR/$LIBDIR/icons/small/router.gif
-      }
-      toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/router.gif
-      }
+	normal {
+	    return $ROOTDIR/$LIBDIR/icons/normal/router.gif
+	}
+	small {
+	    return $ROOTDIR/$LIBDIR/icons/small/router.gif
+	}
+	toolbar {
+	    return $ROOTDIR/$LIBDIR/icons/tiny/router.gif
+	}
     }
 }
 
@@ -178,11 +180,13 @@ proc $MODULE.notebookDimensions { wi } {
 	set h 360
 	set w 507
     }
+
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
 	== "Interfaces" } {
 	set h 370
 	set w 507
     }
+
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
 	== "IPsec" } {
 	set h 320
@@ -202,7 +206,7 @@ proc $MODULE.notebookDimensions { wi } {
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifacePrefix {l r} {
+proc $MODULE.ifacePrefix { l r } {
     return [l3IfcName $l $r]
 }
 
@@ -250,18 +254,16 @@ proc $MODULE.IPAddrRange {} {
 proc $MODULE.configGUI { c node } {
     global wi
     global guielements treecolumns ipsecEnable
+
     set guielements {}
 
     configGUI_createConfigPopupWin $c
     wm title $wi "router configuration"
     configGUI_nodeName $wi $node "Node name:"
 
-    set tabs [configGUI_addNotebook $wi $node {"Configuration" "Interfaces" "IPsec"}]
-    set configtab [lindex $tabs 0]
-    set ifctab [lindex $tabs 1]
-    set ipsectab [lindex $tabs 2]
+    lassign [configGUI_addNotebook $wi $node { "Configuration" "Interfaces" "IPsec" }] configtab ifctab ipsectab
 
-    set treecolumns {"OperState State" "NatState Nat" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
+    set treecolumns { "OperState State" "NatState Nat" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
 	    "MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop" }
     configGUI_addTree $ifctab $node
 
