@@ -26,7 +26,7 @@ remote=$1
 node=`echo $1 | cut -d'@' -f1`
 shift 1   # "$@" is now a remote command with arguments
 
-himage $remote true 
+himage $remote true
 if [ $? -ne 0 ]
 then
     exit 2
@@ -48,7 +48,7 @@ then
     # running over ssh: socat connects /tmp/.X11-unix/X10 with localhost:6010
     port=$((6000+display))
     socat_args="unix-listen:/tmp/.X11-unix/X${display},fork TCP:localhost:${port}"
-    pgrep -f "[s]ocat $socat_args" > /dev/null 2>&1 
+    pgrep -f "[s]ocat $socat_args" > /dev/null 2>&1
     if test $? -eq 1
     then
         socat $socat_args &

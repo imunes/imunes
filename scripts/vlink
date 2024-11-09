@@ -97,31 +97,31 @@ if { $params(r) } {
     set delay -1
     set BER -1
     set dup -1
-    incr check    
+    incr check
 }
 
 # build the config that should be applied
 append config "{ "
 if { $bandwidth != "" } {
     append config "bandwidth=" $bandwidth " "
-    incr check    
+    incr check
 }
 if { $delay != "" } {
     append config "delay=" $delay " "
-    incr check    
+    incr check
 }
 if { $dup != "" && $BER != "" } {
     append config "upstream={ duplicate=" $dup " BER=" $BER " } "
     append config "downstream={ duplicate=" $dup " BER=" $BER " } "
-    incr check    
+    incr check
 } elseif { $dup != "" } {
     append config "upstream={ duplicate=" $dup " } "
     append config "downstream={ duplicate=" $dup " } "
-    incr check    
+    incr check
 } elseif { $BER != ""} {
     append config "upstream={ BER=" $BER " } "
     append config "downstream={ BER=" $BER " } "
-    incr check    
+    incr check
 }
 append config "}"
 

@@ -1,7 +1,7 @@
 proc getPrettyUsage { options } {
     set usage "Usage:
     imunes \[OPTION...\] \[.imn FILE\]
-	
+
 Options:
 "
     foreach opt $options {
@@ -59,7 +59,7 @@ proc parseCmdArgs { options usage } {
     global initMode execMode eid_base debug argv
     global printVersion prepareFlag forceFlag
 
-    catch {array set params [::cmdline::getoptions argv $options $usage]} err
+    catch { array set params [::cmdline::getoptions argv $options $usage] } err
     if { $err != "" || $params(h) } {
 	puts stderr $usage
 	exit 1
@@ -75,12 +75,12 @@ proc parseCmdArgs { options usage } {
 	set initMode 1
     }
 
-    if { $params(b) || $params(batch)} {
+    if { $params(b) || $params(batch) } {
 	if { $params(e) == "" && $params(eid) == "" && $fileName == "" } {
 	    puts stderr $usage
 	    exit 1
 	}
-	catch {exec id -u} uid
+	catch { exec id -u } uid
 	if { $uid != "0" } {
 	    puts "Error: To execute experiment, run IMUNES with root permissions."
 	    exit 1
@@ -107,7 +107,7 @@ proc parseCmdArgs { options usage } {
 	}
     }
 
-    if { $params(v) || $params(version)} {
+    if { $params(v) || $params(version) } {
 	set printVersion 1
     }
 
@@ -129,16 +129,16 @@ proc fetchImunesVersion {} {
     set verfile [open "$ROOTDIR/$LIBDIR/VERSION" r]
     set data [read $verfile]
     foreach line [split $data "\n"] {
-	if {[string match "VERSION:*" $line]} {
+	if { [string match "VERSION:*" $line] } {
 	    set imunesVersion [string range $line [expr [string first ":" $line] + 2] end]
 	}
-	if {[string match "Commit:*" $line]} {
+	if { [string match "Commit:*" $line] } {
 	    set imunesCommit [string range $line [expr [string first ":" $line] + 2] end]
 	}
-	if {[string match "Last changed:*" $line]} {
+	if { [string match "Last changed:*" $line] } {
 	    set imunesChangedDate [string range $line [expr [string first ":" $line] + 2] end]
 	}
-	if {[string match "Additions:*" $line]} {
+	if { [string match "Additions:*" $line] } {
 	    set imunesAdditions [string range $line [expr [string first ":" $line] + 2] end]
 	}
     }
@@ -179,7 +179,7 @@ proc setPlatformVariables {} {
 	"*win*" {
 	    set isOSwin true
 	}
-    } 
+    }
 }
 
 proc prepareVroot {} {
@@ -187,18 +187,18 @@ proc prepareVroot {} {
     global isOSfreebsd isOSlinux prepareFlag forceFlag
 
     if { $isOSfreebsd && $forceFlag } {
-	catch {exec >@stdout umount /var/imunes/vroot/dev}
-	catch {exec >@stdout chflags -R noschg /var/imunes/vroot}
-	catch {exec >@stdout rm -fr /var/imunes/vroot}
+	catch { exec >@stdout umount /var/imunes/vroot/dev }
+	catch { exec >@stdout chflags -R noschg /var/imunes/vroot }
+	catch { exec >@stdout rm -fr /var/imunes/vroot }
     }
 
     if { $isOSlinux && $forceFlag } {
-	catch {exec >@stdout docker rmi -f imunes/vroot}
+	catch { exec >@stdout docker rmi -f imunes/vroot }
     }
 
     set curdir [pwd]
     cd $ROOTDIR/$LIBDIR
-    catch {exec >@stdout 2>@stdout sh scripts/prepare_vroot.sh}
+    catch { exec >@stdout 2>@stdout sh scripts/prepare_vroot.sh }
     cd $curdir
 }
 

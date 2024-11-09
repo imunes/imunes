@@ -38,41 +38,11 @@
 #****
 
 set MODULE extnat
-
 registerModule $MODULE
 
-#****f* extnat.tcl/extnat.prepareSystem
-# NAME
-#   extnat.prepareSystem -- prepare system
-# SYNOPSIS
-#   extnat.prepareSystem
-# FUNCTION
-#   Loads ipfilter into the kernel.
-#****
-proc $MODULE.prepareSystem {} {
-    catch { exec kldload ipfilter }
-}
-
-#****f* extnat.tcl/extnat.confNewIfc
-# NAME
-#   extnat.confNewIfc -- configure new interface
-# SYNOPSIS
-#   extnat.confNewIfc $node $ifc
-# FUNCTION
-#   Configures new interface for the specified node.
-# INPUTS
-#   * node -- node id
-#   * ifc -- interface name
-#****
-proc $MODULE.confNewIfc { node ifc } {
-    global changeAddressRange changeAddressRange6 mac_byte4 mac_byte5
-    set changeAddressRange 0
-    set changeAddressRange6 0
-    autoIPv4addr $node $ifc
-    autoIPv6addr $node $ifc
-    randomizeMACbytes
-    autoMACaddr $node $ifc
-}
+################################################################################
+########################### CONFIGURATION PROCEDURES ###########################
+################################################################################
 
 #****f* extnat.tcl/extnat.confNewNode
 # NAME
@@ -93,6 +63,29 @@ proc $MODULE.confNewNode { node } {
     lappend $node "network-config [list $nconfig]"
 }
 
+#****f* extnat.tcl/extnat.confNewIfc
+# NAME
+#   extnat.confNewIfc -- configure new interface
+# SYNOPSIS
+#   extnat.confNewIfc $node $ifc
+# FUNCTION
+#   Configures new interface for the specified node.
+# INPUTS
+#   * node -- node id
+#   * ifc -- interface id
+#****
+proc $MODULE.confNewIfc { node ifc } {
+    global changeAddressRange changeAddressRange6 mac_byte4 mac_byte5
+
+    set changeAddressRange 0
+    set changeAddressRange6 0
+    autoIPv4addr $node $ifc
+    autoIPv6addr $node $ifc
+
+    randomizeMACbytes
+    autoMACaddr $node $ifc
+}
+
 #****f* extnat.tcl/extnat.icon
 # NAME
 #   extnat.icon -- icon
@@ -107,16 +100,17 @@ proc $MODULE.confNewNode { node } {
 #****
 proc $MODULE.icon { size } {
     global ROOTDIR LIBDIR
+
     switch $size {
-      normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/extnat.gif
-      }
-      small {
-	return $ROOTDIR/$LIBDIR/icons/small/extnat.gif
-      }
-      toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/extnat.gif
-      }
+	normal {
+	    return $ROOTDIR/$LIBDIR/icons/normal/extnat.gif
+	}
+	small {
+	    return $ROOTDIR/$LIBDIR/icons/small/extnat.gif
+	}
+	toolbar {
+	    return $ROOTDIR/$LIBDIR/icons/tiny/extnat.gif
+	}
     }
 }
 
@@ -136,15 +130,15 @@ proc $MODULE.toolbarIconDescr {} {
 
 #****f* extnat.tcl/extnat.ifacePrefix
 # NAME
-#   extnat.ifacePrefix -- interface name
+#   extnat.ifacePrefix -- interface name prefix
 # SYNOPSIS
 #   extnat.ifacePrefix
 # FUNCTION
-#   Returns pc interface name prefix.
+#   Returns extnat interface name prefix.
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifacePrefix {l r} {
+proc $MODULE.ifacePrefix { l r } {
     return [l3IfcName $l $r]
 }
 
@@ -154,9 +148,9 @@ proc $MODULE.ifacePrefix {l r} {
 # SYNOPSIS
 #   extnat.IPAddrRange
 # FUNCTION
-#   Returns pc IP address range
+#   Returns extnat IP address range
 # RESULT
-#   * range -- pc IP address range
+#   * range -- extnat IP address range
 #****
 proc $MODULE.IPAddrRange {} {
     return 20
@@ -168,7 +162,7 @@ proc $MODULE.IPAddrRange {} {
 # SYNOPSIS
 #   set layer [extnat.netlayer]
 # FUNCTION
-#   Returns the layer on which the pc communicates, i.e. returns NETWORK. 
+#   Returns the layer on which the extnat communicates, i.e. returns NETWORK.
 # RESULT
 #   * layer -- set to NETWORK
 #****
@@ -182,7 +176,7 @@ proc $MODULE.netlayer {} {
 # SYNOPSIS
 #   set layer [extnat.virtlayer]
 # FUNCTION
-#   Returns the layer on which the pc is instantiated i.e. returns NATIVE.
+#   Returns the layer on which the extnat is instantiated i.e. returns NATIVE.
 # RESULT
 #   * layer -- set to NATIVE
 #****
@@ -199,9 +193,60 @@ proc $MODULE.virtlayer {} {
 #   Procedure shellcmds returns the shells that can be opened
 #   as a default shell for the system.
 # RESULT
-#   * shells -- default shells for the pc node
+#   * shells -- default shells for the extnat node
 #****
 proc $MODULE.shellcmds {} {
+}
+
+#****f* extnat.tcl/extnat.nghook
+# NAME
+#   extnat.nghook -- nghook
+# SYNOPSIS
+#   extnat.nghook $eid $node $ifc
+# FUNCTION
+#   Returns the id of the netgraph node and the name of the netgraph hook
+#   which is used for connecting two netgraph nodes. This procedure calls
+#   l3node.hook procedure and passes the result of that procedure.
+# INPUTS
+#   * eid -- experiment id
+#   * node -- node id
+#   * ifc -- interface id
+# RESULT
+#   * nghook -- the list containing netgraph node id and the
+#     netgraph hook (ngNode ngHook).
+#****
+proc $MODULE.nghook { eid node ifc } {
+    return [l3node.nghook $eid $node $ifc]
+}
+
+#****f* extnat.tcl/extnat.maxLinks
+# NAME
+#   extnat.maxLinks -- maximum number of links
+# SYNOPSIS
+#   extnat.maxLinks
+# FUNCTION
+#   Returns extnat node maximum number of links.
+# RESULT
+#   * maximum number of links.
+#****
+proc $MODULE.maxLinks {} {
+    return 1
+}
+
+################################################################################
+############################ INSTANTIATE PROCEDURES ############################
+################################################################################
+
+#****f* extnat.tcl/extnat.prepareSystem
+# NAME
+#   extnat.prepareSystem -- prepare system
+# SYNOPSIS
+#   extnat.prepareSystem
+# FUNCTION
+#   Loads ipfilter into the kernel.
+#****
+proc $MODULE.prepareSystem {} {
+    catch { exec kldload ipfilter }
 }
 
 #****f* extnat.tcl/extnat.nodeCreate
@@ -210,13 +255,14 @@ proc $MODULE.shellcmds {} {
 # SYNOPSIS
 #   extnat.nodeCreate $eid $node
 # FUNCTION
-#   Procedure extnat.nodeCreate cretaes a new virtual node with
-#   all the interfaces and CPU parameters as defined in imunes. 
+#   Creates an extnat node.
+#   Does nothing, as it is not created per se.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id (type of the node is pc)
+#   * node -- node id
 #****
-proc $MODULE.nodeCreate { eid node } {}
+proc $MODULE.nodeCreate { eid node } {
+}
 
 proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
     l2node.nodePhysIfacesCreate $eid $node $ifcs
@@ -229,10 +275,10 @@ proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
 #   extnat.nodeConfigure $eid $node
 # FUNCTION
 #   Starts a new extnat. The node can be started if it is instantiated.
-#   Simulates the booting proces of a pc, by calling l3node.nodeConfigure procedure.
+#   Sets up the NAT for the given interface.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id (type of the node is pc)
+#   * node -- node id
 #****
 proc $MODULE.nodeConfigure { eid node } {
     set ifc [lindex [ifcList $node] 0]
@@ -242,17 +288,25 @@ proc $MODULE.nodeConfigure { eid node } {
     }
 }
 
+################################################################################
+############################# TERMINATE PROCEDURES #############################
+################################################################################
+
+proc $MODULE.nodeIfacesDestroy { eid node ifcs } {
+    l2node.nodeIfacesDestroy $eid $node $ifcs
+}
+
 #****f* extnat.tcl/extnat.nodeShutdown
 # NAME
 #   extnat.nodeShutdown -- shutdown
 # SYNOPSIS
 #   extnat.nodeShutdown $eid $node
 # FUNCTION
-#   Shutdowns a extnat. Simulates the shutdown proces of a pc, 
-#   by calling the l3node.nodeShutdown procedure.
+#   Shutdowns an extnat node.
+#   It kills all external packet sniffers and sets the interface down.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id (type of the node is pc)
+#   * node -- node id
 #****
 proc $MODULE.nodeShutdown { eid node } {
     set ifc [lindex [ifcList $node] 0]
@@ -264,44 +318,19 @@ proc $MODULE.nodeShutdown { eid node } {
     }
 }
 
-proc $MODULE.nodeIfacesDestroy { eid node ifcs } {
-    l2node.nodeIfacesDestroy $eid $node $ifcs
-}
-
 #****f* extnat.tcl/extnat.nodeDestroy
 # NAME
 #   extnat.nodeDestroy -- destroy
 # SYNOPSIS
 #   extnat.nodeDestroy $eid $node
 # FUNCTION
-#   Destroys a extnat. Destroys all the interfaces of the pc 
-#   and the vimage itself by calling l3node.nodeDestroy procedure. 
-# INPUTS
-#   * eid -- experiment id
-#   * node -- node id (type of the node is pc)
-#****
-proc $MODULE.nodeDestroy { eid node } {
-}
-
-#****f* extnat.tcl/extnat.nghook
-# NAME
-#   extnat.nghook -- nghook
-# SYNOPSIS
-#   extnat.nghook $eid $node $ifc 
-# FUNCTION
-#   Returns the id of the netgraph node and the name of the netgraph hook
-#   which is used for connecting two netgraph nodes. This procedure calls
-#   l3node.hook procedure and passes the result of that procedure.
+#   Destroys an extnat node.
+#   Does nothing.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id
-#   * ifc -- interface name
-# RESULT
-#   * nghook -- the list containing netgraph node id and the 
-#     netgraph hook (ngNode ngHook).
 #****
-proc $MODULE.nghook { eid node ifc } {
-    return [l3node.nghook $eid $node $ifc]
+proc $MODULE.nodeDestroy { eid node } {
 }
 
 #****f* extnat.tcl/extnat.configGUI
@@ -335,18 +364,4 @@ proc $MODULE.configGUI { c node } {
     configGUI_externalIfcs $wi $node
 
     configGUI_buttonsACNode $wi $node
-}
-
-#****f* extnat.tcl/extnat.maxLinks
-# NAME
-#   extnat.maxLinks -- maximum number of links
-# SYNOPSIS
-#   extnat.maxLinks
-# FUNCTION
-#   Returns extnat node maximum number of links.
-# RESULT
-#   * maximum number of links.
-#****
-proc $MODULE.maxLinks {} {
-    return 1
 }
