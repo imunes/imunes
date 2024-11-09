@@ -1095,9 +1095,9 @@ proc generateHostsFile { node_id } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::etchosts etchosts
 
-    global hostsAutoAssign
+    global auto_etc_hosts
 
-    if { $hostsAutoAssign != 1 || [[nodeType $node_id].virtlayer] != "VIRTUALIZED" } {
+    if { $auto_etc_hosts != 1 || [[nodeType $node_id].virtlayer] != "VIRTUALIZED" } {
 	return
     }
 
