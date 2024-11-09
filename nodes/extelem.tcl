@@ -41,7 +41,6 @@
 #****
 
 set MODULE extelem
-
 registerModule $MODULE
 
 #****f* extelem.tcl/extelem.prepareSystem
@@ -105,17 +104,18 @@ proc $MODULE.confNewNode { node } {
 #   * path -- path to icon
 #****
 proc $MODULE.icon { size } {
-    global ROOTDIR LIBDIR 
+    global ROOTDIR LIBDIR
+
     switch $size {
-      normal {
-	return $ROOTDIR/$LIBDIR/icons/normal/cloud.gif
-      }
-      small {
-	return $ROOTDIR/$LIBDIR/icons/small/cloud.gif
-      }
-      toolbar {
-	return $ROOTDIR/$LIBDIR/icons/tiny/cloud.gif
-      }
+	normal {
+	    return $ROOTDIR/$LIBDIR/icons/normal/cloud.gif
+	}
+	small {
+	    return $ROOTDIR/$LIBDIR/icons/small/cloud.gif
+	}
+	toolbar {
+	    return $ROOTDIR/$LIBDIR/icons/tiny/cloud.gif
+	}
     }
 }
 
@@ -143,7 +143,7 @@ proc $MODULE.toolbarIconDescr {} {
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifacePrefix {l r} {
+proc $MODULE.ifacePrefix { l r } {
     return x
 }
 
@@ -153,7 +153,7 @@ proc $MODULE.ifacePrefix {l r} {
 # SYNOPSIS
 #   set layer [extelem.netlayer]
 # FUNCTION
-#   Returns the layer on which the extelem operates, i.e. returns LINK. 
+#   Returns the layer on which the extelem operates, i.e. returns LINK.
 # RESULT
 #   * layer -- set to LINK
 #****
@@ -163,11 +163,11 @@ proc $MODULE.netlayer {} {
 
 #****f* extelem.tcl/extelem.virtlayer
 # NAME
-#   extelem.virtlayer -- virtual layer  
+#   extelem.virtlayer -- virtual layer
 # SYNOPSIS
 #   set layer [extelem.virtlayer]
 # FUNCTION
-#   Returns the layer on which the extelem is instantiated, i.e. returns NATIVE. 
+#   Returns the layer on which the extelem is instantiated, i.e. returns NATIVE.
 # RESULT
 #   * layer -- set to NATIVE
 #****
@@ -177,7 +177,7 @@ proc $MODULE.virtlayer {} {
 
 #****f* extelem.tcl/extelem.nodeCreate
 # NAME
-#   extelem.nodeCreate -- instantiate
+#   extelem.nodeCreate -- nodeCreate
 # SYNOPSIS
 #   extelem.nodeCreate $eid $node
 # FUNCTION
@@ -185,10 +185,10 @@ proc $MODULE.virtlayer {} {
 #   The name of the netgraph node is in form of exprimentId_nodeId.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- id of the node (type of the node is extelem)
+#   * node -- id of the node
 #****
 proc $MODULE.nodeCreate { eid node } {
-    foreach group [getNodeExternalIfcs $node] {
+    foreach group [getNodeStolenIfaces $node] {
 	lassign $group ifc extIfc
 	captureExtIfcByName $eid $extIfc
     }
@@ -204,20 +204,20 @@ proc $MODULE.nodeCreate { eid node } {
 #   the extelem by sending a shutdown message.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- id of the node (type of the node is extelem)
+#   * node -- id of the node
 #****
 proc $MODULE.nodeDestroy { eid node } {
     foreach group [getNodeExternalIfcs $node] {
 	lassign $group ifc extIfc
 	releaseExtIfcByName $eid $extIfc
     }
-} 
+}
 
 #****f* extelem.tcl/extelem.nghook
 # NAME
 #   extelem.nghook
 # SYNOPSIS
-#   extelem.nghook $eid $node $ifc 
+#   extelem.nghook $eid $node $ifc
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. Netgraph node name is in
@@ -226,16 +226,15 @@ proc $MODULE.nodeDestroy { eid node } {
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id
-#   * ifc -- interface name 
+#   * ifc -- interface name
 # RESULT
-#   * nghook -- the list containing netgraph node id and the 
+#   * nghook -- the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node ifc } {
-    lassign [lindex [lsearch -index 0 -all -inline -exact [getNodeExternalIfcs $node] $ifc] 0] ifc extIfc
+    lassign [lindex [lsearch -index 0 -all -inline -exact [getNodeStolenIfaces $node] $ifc] 0] ifc extIfc
     return [list $extIfc lower]
 }
-
 
 #****f* extelem.tcl/extelem.configGUI
 # NAME
