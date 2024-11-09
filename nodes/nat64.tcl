@@ -125,7 +125,7 @@ proc $MODULE.layer {} {
 }
 
 proc $MODULE.virtlayer {} {
-    return VIMAGE 
+    return VIRTUALIZED 
 }
 
 proc $MODULE.cfggen { node } {

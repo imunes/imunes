@@ -111,13 +111,13 @@ proc $MODULE.layer {} {
 #   set layer [filter.virtlayer]
 # FUNCTION
 #   Returns the layer on which the filter is instantiated
-#   i.e. returns NETGRAPH. 
+#   i.e. returns NATIVE. 
 # RESULT
-#   * layer -- set to NETGRAPH
+#   * layer -- set to NATIVE
 #****
 
 proc $MODULE.virtlayer {} {
-    return NETGRAPH
+    return NATIVE
 }
 
 #****f* filter.tcl/filter.instantiate

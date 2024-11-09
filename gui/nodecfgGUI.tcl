@@ -254,7 +254,7 @@ proc configGUI_addTree { wi node } {
 	}
     }
 
-    if {[[typemodel $node].virtlayer] == "VIMAGE"} {
+    if {[[typemodel $node].virtlayer] == "VIRTUALIZED"} {
 	$wi.panwin.f1.tree insert {} end -id logIfcFrame -text \
 	    "Logical Interfaces" -open true -tags logIfcFrame
 
@@ -327,7 +327,7 @@ proc configGUI_addTree { wi node } {
 		configGUI_showIfcInfo $wi.panwin.f2 0 $node [$wi.panwin.f1.tree next $ifc]
 	    }"
     }
-    if {[[typemodel $node].virtlayer] == "VIMAGE"} {
+    if {[[typemodel $node].virtlayer] == "VIRTUALIZED"} {
 	$wi.panwin.f1.tree tag bind [lindex [lsort -ascii [ifcList $node]] end] <Key-Down> \
 		"configGUI_showIfcInfo $wi.panwin.f2 0 $node logIfcFrame"
 
@@ -436,7 +436,7 @@ proc configGUI_refreshIfcsTree { wi node } {
 	}
     }
 
-    if {[[typemodel $node].virtlayer] == "VIMAGE"} {
+    if {[[typemodel $node].virtlayer] == "VIRTUALIZED"} {
 	$wi insert {} end -id logIfcFrame -text \
 	    "Logical Interfaces" -open true -tags logIfcFrame
 
@@ -475,7 +475,7 @@ proc configGUI_refreshIfcsTree { wi node } {
 		configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node [$wi next $ifc]
 	    }"
     }
-    if {[[typemodel $node].virtlayer] == "VIMAGE"} {
+    if {[[typemodel $node].virtlayer] == "VIRTUALIZED"} {
 	$wi tag bind [lindex [lsort -ascii [ifcList $node]] end] <Key-Down> \
 		"configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node logIfcFrame"
 

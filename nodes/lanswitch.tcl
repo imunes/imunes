@@ -170,12 +170,12 @@ proc $MODULE.layer {} {
 #   set layer [lanswitch.virtlayer]
 # FUNCTION
 #   Returns the layer on which the lanswitch node is instantiated 
-#   i.e. returns NETGRAPH. 
+#   i.e. returns NATIVE. 
 # RESULT
-#   * layer -- set to NETGRAPH
+#   * layer -- set to NATIVE
 #****
 proc $MODULE.virtlayer {} {
-    return NETGRAPH
+    return NATIVE
 }
 
 #****f* lanswitch.tcl/lanswitch.instantiate

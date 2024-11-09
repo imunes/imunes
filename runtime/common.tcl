@@ -338,7 +338,7 @@ proc spawnShellExec {} {
 	    return
 	}
     }
-    if { [[typemodel $node].virtlayer] != "VIMAGE" } {
+    if { [[typemodel $node].virtlayer] != "VIRTUALIZED" } {
 	nodeConfigGUI .panwin.f1.c $node
     } else {
 	set cmd [lindex [existingShells [[typemodel $node].shellcmds] $node] 0]

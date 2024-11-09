@@ -329,7 +329,7 @@ proc terminateAllNodes { eid } {
     set pseudoNodesCount 0
     foreach node $node_list {
 	if { [nodeType $node] != "pseudo" } {
-	    if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
+	    if { [[typemodel $node].virtlayer] == "NATIVE" } {
 		if { [typemodel $node] == "rj45" } {
 		    lappend extifcs $node
 		} elseif { [typemodel $node] == "extnat" } {

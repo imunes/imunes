@@ -739,7 +739,7 @@ proc button3node { c x y } {
     # Services menu
     #
     .button3menu.services delete 0 end
-    if {$oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIMAGE" && $type != "ext"} {
+    if {$oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIRTUALIZED" && $type != "ext"} {
 	global all_services_list
 	.button3menu add cascade -label "Services" \
 	    -menu .button3menu.services
@@ -826,7 +826,7 @@ proc button3node { c x y } {
     # Shell selection
     #
     .button3menu.shell delete 0 end
-    if {$type != "ext" && $oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIMAGE"} {
+    if {$type != "ext" && $oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIRTUALIZED"} {
 	.button3menu add separator
 	.button3menu add cascade -label "Shell window" \
 	    -menu .button3menu.shell
@@ -865,7 +865,7 @@ proc button3node { c x y } {
 	    .button3menu add command -label "tcpdump" \
 		-command "captureOnExtIfc $node tcpdump"
 	}
-    } elseif {$oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIMAGE"} {
+    } elseif {$oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIRTUALIZED"} {
 	#
 	# Wireshark
 	#

@@ -66,12 +66,12 @@ proc $MODULE.layer {} {
 #   set layer [router.static.virtlayer]
 # FUNCTION
 #   Returns the layer on which the router using static routing model is
-#   instantiated, i.e. returns VIMAGE. 
+#   instantiated, i.e. returns VIRTUALIZED. 
 # RESULT
-#   * layer -- set to VIMAGE
+#   * layer -- set to VIRTUALIZED
 #****
 proc $MODULE.virtlayer {} {
-    return VIMAGE
+    return VIRTUALIZED
 }
 
 #****f* static.tcl/router.static.cfggen

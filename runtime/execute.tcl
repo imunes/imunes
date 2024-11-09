@@ -500,7 +500,7 @@ proc deployCfg {} {
     set pseudoNodesCount 0
     foreach node $node_list {
 	if { [nodeType $node] != "pseudo" } {
-	    if { [[typemodel $node].virtlayer] != "VIMAGE" } {
+	    if { [[typemodel $node].virtlayer] != "VIRTUALIZED" } {
 		lappend l2nodes $node
 	    } else {
 		lappend l3nodes $node
@@ -1073,13 +1073,13 @@ proc generateHostsFile { node_id } {
 
     global hostsAutoAssign
 
-    if { $hostsAutoAssign != 1 || [[typemodel $node_id].virtlayer] != "VIMAGE" } {
+    if { $hostsAutoAssign != 1 || [[typemodel $node_id].virtlayer] != "VIRTUALIZED" } {
 	return
     }
 
     if { $etchosts == "" } {
 	foreach other_node_id $node_list {
-	    if { [[typemodel $other_node_id].virtlayer] != "VIMAGE" } {
+	    if { [[typemodel $other_node_id].virtlayer] != "VIRTUALIZED" } {
 		continue
 	    }
 

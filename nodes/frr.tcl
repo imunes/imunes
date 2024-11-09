@@ -66,12 +66,12 @@ proc $MODULE.layer {} {
 #   set layer [router.frr.virtlayer]
 # FUNCTION
 #   Returns the layer on which the router using model frr is instantiated,
-#   i.e. returns VIMAGE. 
+#   i.e. returns VIRTUALIZED. 
 # RESULT
-#   * layer -- set to VIMAGE
+#   * layer -- set to VIRTUALIZED
 #****
 proc $MODULE.virtlayer {} {
-    return VIMAGE
+    return VIRTUALIZED
 }
 
 #****f* frr.tcl/router.frr.cfggen

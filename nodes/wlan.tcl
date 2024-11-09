@@ -71,7 +71,7 @@ proc $MODULE.layer {} {
 }
 
 proc $MODULE.virtlayer {} {
-    return NETGRAPH
+    return NATIVE
 }
 
 proc $MODULE.instantiate { eid node } {

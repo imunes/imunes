@@ -1325,7 +1325,7 @@ proc isNodeConfigured { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     set node_id "$eid.$node"
 
-    if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
+    if { [[typemodel $node].virtlayer] == "NATIVE" } {
 	return true
     }
 
@@ -1342,7 +1342,7 @@ proc isNodeError { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     set node_id "$eid.$node"
 
-    if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
+    if { [[typemodel $node].virtlayer] == "NATIVE" } {
 	return false
     }
 
