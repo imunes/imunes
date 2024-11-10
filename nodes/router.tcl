@@ -106,10 +106,6 @@ proc $MODULE.confNewNode { node_id } {
 #   * iface_id -- interface name
 #****
 proc $MODULE.confNewIfc { node_id iface_id } {
-    global changeAddressRange changeAddressRange6
-
-    set changeAddressRange 0
-    set changeAddressRange6 0
     autoIPv4addr $node_id $iface_id
     autoIPv6addr $node_id $iface_id
     autoMACaddr $node_id $iface_id
@@ -118,6 +114,12 @@ proc $MODULE.confNewIfc { node_id iface_id } {
     if { [getNodeType $peer_node] == "extnat" } {
 	setIfcNatState $node_id $iface_id "on"
     }
+}
+
+proc $MODULE.generateConfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
 }
 
 #****f* router.tcl/router.generateConfig
@@ -226,6 +228,9 @@ proc $MODULE.generateConfig { node_id } {
     }
 
     return $cfg
+}
+
+proc $MODULE.generateUnconfig { node_id } {
 }
 
 #****f* router.tcl/router.ifacePrefix
@@ -352,6 +357,17 @@ proc $MODULE.nghook { eid node_id iface_id } {
 ############################ INSTANTIATE PROCEDURES ############################
 ################################################################################
 
+#****f* router.tcl/router.prepareSystem
+# NAME
+#   router.prepareSystem -- prepare system
+# SYNOPSIS
+#   router.prepareSystem
+# FUNCTION
+#   Does nothing
+#****
+proc $MODULE.prepareSystem {} {
+}
+
 #****f* router.tcl/router.nodeCreate
 # NAME
 #   router.nodeCreate -- instantiate
@@ -406,6 +422,27 @@ proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
     l3node.nodePhysIfacesCreate $eid $node_id $ifaces
 }
 
+proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
+    nodeLogIfacesCreate $node_id $ifaces
+}
+
+#****f* router.tcl/router.nodeIfacesConfigure
+# NAME
+#   router.nodeIfacesConfigure -- configure router node interfaces
+# SYNOPSIS
+#   router.nodeIfacesConfigure $eid $node_id $ifaces
+# FUNCTION
+#   Configure interfaces on a router. Set MAC, MTU, queue parameters, assign the IP
+#   addresses to the interfaces, etc. This procedure can be called if the node
+#   is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
+}
+
 #****f* router.tcl/router.nodeConfigure
 # NAME
 #   router.nodeConfigure -- start
@@ -426,8 +463,28 @@ proc $MODULE.nodeConfigure { eid node_id } {
 ############################# TERMINATE PROCEDURES #############################
 ################################################################################
 
+#****f* router.tcl/router.nodeIfacesUnconfigure
+# NAME
+#   router.nodeIfacesUnconfigure -- unconfigure router node interfaces
+# SYNOPSIS
+#   router.nodeIfacesUnconfigure $eid $node_id $ifaces
+# FUNCTION
+#   Unconfigure interfaces on a router to a default state. Set name to iface_id,
+#   flush IP addresses to the interfaces, etc. This procedure can be called if
+#   the node is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
+}
+
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
     l3node.nodeIfacesDestroy $eid $node_id $ifaces
+}
+
+proc $MODULE.nodeUnconfigure { eid node_id } {
 }
 
 #****f* router.tcl/router.nodeShutdown

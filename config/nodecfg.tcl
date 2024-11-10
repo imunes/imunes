@@ -605,6 +605,38 @@ proc netconfInsertSection { node_id section } {
     set $node_id [lreplace [set $node_id] $i $i [list network-config $netconf]]
 }
 
+#****f* nodecfg.tcl/getIfcName
+# NAME
+#   getIfcName -- get interface name
+# SYNOPSIS
+#   set name [getIfcName $node_id $iface_id]
+# FUNCTION
+#   Returns the name of the specified interface.
+# INPUTS
+#   * node_id -- node id
+#   * iface_id -- the interface id
+# RESULT
+#   * name -- the name of the interface
+#****
+proc getIfcName { node_id iface_id } {
+    return $iface_id
+}
+
+#****f* nodecfg.tcl/setIfcName
+# NAME
+#   setIfcName -- set interface name
+# SYNOPSIS
+#   setIfcName $node_id $iface_id $name
+# FUNCTION
+#   Sets the name of the specified interface.
+# INPUTS
+#   * node_id -- node id
+#   * iface_id -- interface id
+#   * name -- new name of the interface
+#****
+proc setIfcName { node_id iface_id name } {
+}
+
 #****f* nodecfg.tcl/getIfcOperState
 # NAME
 #   getIfcOperState -- get interface operating state
@@ -2621,8 +2653,7 @@ proc setNodeProtocolOspfv3 { node_id ospf6Enable } {
 #****
 proc setNodeType { node_id newtype } {
     upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-    global ripEnable ripngEnable ospfEnable ospf6Enable changeAddressRange \
-     changeAddressRange6
+    global ripEnable ripngEnable ospfEnable ospf6Enable
 
     set oldtype [getNodeType $node_id]
     if { [lsearch "rj45 hub lanswitch" $newtype] >= 0 } {
@@ -2642,8 +2673,6 @@ proc setNodeType { node_id newtype } {
 	setNodeProtocolOspfv3 $node_id 0
 	set interfaces [ifcList $node_id]
 	foreach iface_id $interfaces {
-	    set changeAddressRange 0
-	    set changeAddressRange6 0
 	    autoIPv4addr $node_id $iface_id
 	    autoIPv6addr $node_id $iface_id
 	}
@@ -3257,11 +3286,6 @@ proc transformNodes { nodes type } {
 		set changed 1
 	    }
 	}
-    }
-
-    if { $changed == 1 } {
-	redrawAll
-	updateUndoLog
     }
 }
 

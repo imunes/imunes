@@ -64,6 +64,32 @@ proc $MODULE.confNewNode { node_id } {
     lappend $node_id "network-config [list $nconfig]"
 }
 
+#****f* packgen.tcl/packgen.confNewIfc
+# NAME
+#   packgen.confNewIfc -- configure new interface
+# SYNOPSIS
+#   packgen.confNewIfc $node_id $iface_id
+# FUNCTION
+#   Configures new interface for the specified node.
+# INPUTS
+#   * node_id -- node id
+#   * iface_id -- interface name
+#****
+proc $MODULE.confNewIfc { node_id iface_id } {
+}
+
+proc $MODULE.generateConfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateConfig { node_id } {
+}
+
+proc $MODULE.generateUnconfig { node_id } {
+}
+
 #****f* packgen.tcl/packgen.ifacePrefix
 # NAME
 #   packgen.ifacePrefix -- interface name prefix
@@ -76,6 +102,9 @@ proc $MODULE.confNewNode { node_id } {
 #****
 proc $MODULE.ifacePrefix { l r } {
     return e
+}
+
+proc $MODULE.IPAddrRange {} {
 }
 
 #****f* packgen.tcl/packgen.netlayer
@@ -106,6 +135,12 @@ proc $MODULE.netlayer {} {
 #****
 proc $MODULE.virtlayer {} {
     return NATIVE
+}
+
+proc $MODULE.bootcmd { node_id } {
+}
+
+proc $MODULE.shellcmds {} {
 }
 
 #****f* packgen.tcl/packgen.nghook
@@ -171,6 +206,35 @@ proc $MODULE.nodeCreate { eid node_id } {
     \" | jexec $eid ngctl -f -" "hold"
 }
 
+proc $MODULE.nodeNamespaceSetup { eid node_id } {
+}
+
+proc $MODULE.nodeInitConfigure { eid node_id } {
+}
+
+proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
+}
+
+proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
+}
+
+#****f* packgen.tcl/packgen.nodeIfacesConfigure
+# NAME
+#   packgen.nodeIfacesConfigure -- configure packgen node interfaces
+# SYNOPSIS
+#   packgen.nodeIfacesConfigure $eid $node_id $ifaces
+# FUNCTION
+#   Configure interfaces on a packgen. Set MAC, MTU, queue parameters, assign the IP
+#   addresses to the interfaces, etc. This procedure can be called if the node
+#   is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
+}
+
 #****f* packgen.tcl/packgen.nodeConfigure
 # NAME
 #   packgen.nodeConfigure
@@ -204,8 +268,14 @@ proc $MODULE.nodeConfigure { eid node_id } {
 ############################# TERMINATE PROCEDURES #############################
 ################################################################################
 
+proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
+}
+
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
     l2node.nodeIfacesDestroy $eid $node_id $ifaces
+}
+
+proc $MODULE.nodeUnconfigure { eid node_id } {
 }
 
 #****f* packgen.tcl/packgen.nodeShutdown

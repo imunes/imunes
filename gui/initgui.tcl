@@ -163,21 +163,6 @@ set iconsrcfile [lindex [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] 0
 #interface selected in the topology tree
 set selectedIfc ""
 
-# bases for naming new nodes
-array set nodeNamingBase {
-    pc pc
-    ext ext
-    filter filter
-    router router
-    host host
-    hub hub
-    extelem xel
-    lanswitch switch
-    nat64 nat64-
-    packgen packgen
-    stpswitch stpswitch
-}
-
 # Packets required for GUI
 #package require Img
 
@@ -393,9 +378,8 @@ menu .menubar.canvas -tearoff 0
     if { [llength $canvas_list] == 1 } {
 	 return
     }
-    foreach obj [.panwin.f1.c find withtag node] {
-	selectNode .panwin.f1.c $obj
-    }
+
+    selectAllObjects
     deleteSelection
 
     set i [lsearch $canvas_list $curcanvas]

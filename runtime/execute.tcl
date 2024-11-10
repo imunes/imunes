@@ -539,6 +539,12 @@ proc deployCfg {} {
 	statline "Waiting for interfaces on $allNodeCount node(s) to be created..."
 	pipesClose
 
+	statline "Creating logical interfaces on nodes..."
+	pipesCreate
+	execute_nodesLogIfacesCreate $create_nodes_ifaces $create_nodes_ifaces_count $w
+	statline "Waiting for logical on $create_nodes_ifaces_count node(s) to be created..."
+	pipesClose
+
 	statline "Creating links..."
 	pipesCreate
 	createLinks $link_list $linkCount $w
@@ -842,6 +848,46 @@ proc execute_nodesPhysIfacesCreate { nodes nodeCount w } {
 
 	if { $execMode != "batch" } {
 	    statline "Creating physical ifaces on node [getNodeName $node_id]"
+	    $w.p configure -value $progressbarCount
+	    update
+	}
+    }
+
+    if { $nodeCount > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+	if { $execMode == "batch" } {
+	    statline ""
+	}
+    }
+}
+
+proc execute_nodesLogIfacesCreate { nodes_ifaces nodeCount w } {
+    global progressbarCount execMode
+
+    set eid [getFromRunning "eid"]
+
+    set batchStep 0
+    dict for {node ifaces} $nodes_ifaces {
+	displayBatchProgress $batchStep $nodeCount
+
+	if { [info procs [getNodeType $node].nodeLogIfacesCreate] != "" } {
+	    if { $ifaces == "*" } {
+		set ifaces [logIfcList $node]
+	    }
+
+	    try {
+		[getNodeType $node].nodeLogIfacesCreate $eid $node $ifaces
+	    } on error err {
+		return -code error "Error in '[getNodeType $node].nodeLogIfacesCreate $eid $node $ifaces': $err"
+	    }
+	    pipesExec ""
+	}
+
+	incr batchStep
+	incr progressbarCount
+
+	if { $execMode != "batch" } {
+	    statline "Creating logical ifaces on node [getNodeName $node]"
 	    $w.p configure -value $progressbarCount
 	    update
 	}
