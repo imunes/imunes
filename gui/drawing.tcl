@@ -120,9 +120,10 @@ proc drawNode { node_id } {
     global show_node_labels pseudo
 
     set type [getNodeType $node_id]
-    set coords [getNodeCoords $node_id]
-    set x [expr {[lindex $coords 0] * $zoom}]
-    set y [expr {[lindex $coords 1] * $zoom}]
+    lassign [getNodeCoords $node_id] x y
+    set x [expr {$x * $zoom}]
+    set y [expr {$y * $zoom}]
+
     set customIcon [getCustomIcon $node_id]
 
     if { [string match "*img*" $customIcon] == 0 } {
@@ -146,9 +147,10 @@ proc drawNode { node_id } {
 	    }
 	}
     }
-    set coords [getNodeLabelCoords $node_id]
-    set x [expr {[lindex $coords 0] * $zoom}]
-    set y [expr {[lindex $coords 1] * $zoom}]
+
+    lassign [getNodeLabelCoords $node_id] x y
+    set x [expr {$x * $zoom}]
+    set y [expr {$y * $zoom}]
     if { [getNodeType $node_id] != "pseudo" } {
 	set label_str [getNodeName $node_id]
 	if { [getNodeType $node_id] == "rj45" && [getEtherVlanEnabled $node_id] } {
@@ -202,9 +204,7 @@ proc drawNode { node_id } {
 #   * link_id -- link id
 #****
 proc drawLink { link_id } {
-    set nodes [getLinkPeers $link_id]
-    set node1_id [lindex $nodes 0]
-    set node2_id [lindex $nodes 1]
+    lassign [getLinkPeers $link_id] node1_id node2_id
     if { [getNodeType $node1_id] == "wlan" || [getNodeType $node2_id] == "wlan" } {
 	return
     }
@@ -428,9 +428,10 @@ proc redrawAllLinks {} {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
 
     foreach link_id $link_list {
-	set nodes [getLinkPeers $link_id]
-	if { [getNodeCanvas [lindex $nodes 0]] != $curcanvas ||
-	    [getNodeCanvas [lindex $nodes 1]] != $curcanvas } {
+	lassign [getLinkPeers $link_id] node1_id node2_id
+	if { [getNodeCanvas $node1_id] != $curcanvas ||
+	    [getNodeCanvas $node2_id] != $curcanvas } {
+
 	    continue
 	}
 

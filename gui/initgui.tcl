@@ -393,9 +393,8 @@ menu .menubar.canvas -tearoff 0
     if { [llength $canvas_list] == 1 } {
 	 return
     }
-    foreach obj [.panwin.f1.c find withtag node] {
-	selectNode .panwin.f1.c $obj
-    }
+
+    selectAllObjects
     deleteSelection
 
     set i [lsearch $canvas_list $curcanvas]

@@ -118,7 +118,7 @@ proc splitLinkGUI { link_id } {
 
     set peer_nodes [getLinkPeers $link_id]
     lassign $peer_nodes orig_node1 orig_node2
-    set new_nodes [splitLink $link_id pseudo]
+    set new_nodes [splitLink $link_id]
     lassign $new_nodes new_node1 new_node2
 
     set x1 [lindex [getNodeCoords $orig_node1] 0]
@@ -496,7 +496,7 @@ proc moveToCanvas { canvas_id } {
 		}
 		continue
 	    }
-	    set new_nodes [splitLink $link_id pseudo]
+	    set new_nodes [splitLink $link_id]
 	    set new_node1 [lindex $new_nodes 0]
 	    set new_node2 [lindex $new_nodes 1]
 	    setNodeMirror $new_node1 $new_node2
@@ -1391,16 +1391,14 @@ proc button1-release { c x y } {
 	# if there is an object beneath the cursor and an object was
 	# selected by the button1 procedure create a link between nodes
 	if { $destobj != "" && $curobj != "" && $destobj != $curobj } {
-	    set lnode1 [lindex [$c gettags $destobj] 1]
-	    set lnode2 [lindex [$c gettags $curobj] 1]
-	    if { [ifcByLogicalPeer $lnode1 $lnode2] == "" } {
-		set link_id [newLink $lnode1 $lnode2]
-		if { $link_id != "" } {
-		    drawLink $link_id
-		    redrawLink $link_id
-		    updateLinkLabel $link_id
-		    set changed 1
-		}
+	    set lnode1 [lindex [$c gettags $curobj] 1]
+	    set lnode2 [lindex [$c gettags $destobj] 1]
+	    set link_id [newLink $lnode1 $lnode2]
+	    if { $link_id != "" } {
+		drawLink $link_id
+		redrawLink $link_id
+		updateLinkLabel $link_id
+		set changed 1
 	    }
 	}
     } elseif { $activetool in "rectangle oval text freeform" } {
@@ -1907,8 +1905,7 @@ proc deleteSelection {} {
 proc removeIPv4nodes {} {
     global changed
 
-    set nodelist [selectedNodes]
-    foreach node_id $nodelist {
+    foreach node_id [selectedNodes] {
 	setStatIPv4routes $node_id ""
 	foreach iface_id [ifcList $node_id] {
 	    setIfcIPv4addrs $node_id $iface_id ""
@@ -1931,8 +1928,7 @@ proc removeIPv4nodes {} {
 proc removeIPv6nodes {} {
     global changed
 
-    set nodelist [selectedNodes]
-    foreach node_id $nodelist {
+    foreach node_id [selectedNodes] {
 	setStatIPv6routes $node_id ""
 	foreach iface_id [ifcList $node_id] {
 	    setIfcIPv6addrs $node_id $iface_id ""
@@ -2040,7 +2036,7 @@ proc changeAddressRange {} {
     # delete the existing IP addresses
     foreach el $autorenumber_ifcs {
 	lassign $el node_id iface_id
-	setIfcIPv4addr $node_id $iface_id ""
+	setIfcIPv4addrs $node_id $iface_id ""
     }
 
     # assign IP addresses to interfaces not connected to L2 nodes
@@ -2197,19 +2193,18 @@ proc changeAddressRange6 {} {
 #   * y -- double click y coordinate
 #****
 proc double1onGrid { c x y } {
-    set obj [$c find closest $x $y]
-    set tags [$c gettags $obj]
-    set node_id [lindex $tags 1]
+    set tags [$c gettags [$c find closest $x $y]]
     if { [lsearch $tags grid] != -1 || [lsearch $tags background] != -1 } {
 	return
     }
 
+    set node_id [lindex $tags 1]
     # Is this really necessary?
     lassign [getAnnotationCoords $node_id] x1 y1 x2 y2
     if { $x < $x1 || $x > $x2 || $y < $y1 || $y > $y2 } {
 	# cursor is not ON the closest object
 	return
-    } else {
-	annotationConfig $c $node_id
     }
+
+    annotationConfig $c $node_id
 }

@@ -902,7 +902,7 @@ proc setLinkMirror { link_id mirror } {
 # RESULT
 #   * nodes -- list of node ids of new nodes.
 #****
-proc splitLink { orig_link_id nodetype } {
+proc splitLink { orig_link_id } {
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
     upvar 0 ::cf::[set ::curcfg]::$orig_link_id $orig_link_id
 
@@ -921,8 +921,8 @@ proc splitLink { orig_link_id nodetype } {
     set links "$orig_link_id $mirror_link_id"
 
     # create pseudo nodes
-    set new_node1_id [newNode $nodetype]
-    set new_node2_id [newNode $nodetype]
+    set new_node1_id [newNode "pseudo"]
+    set new_node2_id [newNode "pseudo"]
     upvar 0 ::cf::[set ::curcfg]::$new_node1_id $new_node1_id
     upvar 0 ::cf::[set ::curcfg]::$new_node2_id $new_node2_id
     set pseudo_nodes "$new_node1_id $new_node2_id"

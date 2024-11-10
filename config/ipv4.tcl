@@ -276,7 +276,7 @@ proc autoIPv4addr { node_id iface_id } {
 	#
 	return
     }
-    setIfcIPv4addr $node_id $iface_id ""
+    setIfcIPv4addrs $node_id $iface_id ""
 
     set peer_node [logicalPeerByIfc $node_id $iface_id]
     if { [[typemodel $peer_node].netlayer] == "LINK" } {
@@ -309,19 +309,19 @@ proc autoIPv4addr { node_id iface_id } {
     set targetbyte2 0
 
     if { $peer_ip4addrs != "" && $changeAddrRange == 0 } {
-	setIfcIPv4addr $node_id $iface_id [nextFreeIP4Addr [lindex $peer_ip4addrs 0] $targetbyte $peer_ip4addrs]
+	setIfcIPv4addrs $node_id $iface_id [nextFreeIP4Addr [lindex $peer_ip4addrs 0] $targetbyte $peer_ip4addrs]
     } else {
         if { $numbits <= 8 } {
-	    setIfcIPv4addr $node_id $iface_id "[findFreeIPv4Net $numbits].$targetbyte2.$targetbyte2.$targetbyte/$numbits"
+	    setIfcIPv4addrs $node_id $iface_id "[findFreeIPv4Net $numbits].$targetbyte2.$targetbyte2.$targetbyte/$numbits"
 	} elseif { $numbits > 8 && $numbits <=16 } {
-	    setIfcIPv4addr $node_id $iface_id "[findFreeIPv4Net $numbits].$targetbyte2.$targetbyte/$numbits"
+	    setIfcIPv4addrs $node_id $iface_id "[findFreeIPv4Net $numbits].$targetbyte2.$targetbyte/$numbits"
 	} elseif { $numbits > 16 && $numbits <=24 } {
-	    setIfcIPv4addr $node_id $iface_id "[findFreeIPv4Net $numbits].$targetbyte/$numbits"
+	    setIfcIPv4addrs $node_id $iface_id "[findFreeIPv4Net $numbits].$targetbyte/$numbits"
 	} elseif { $numbits > 24 } {
             set lastbyte [lindex [split [findFreeIPv4Net $numbits] .] 3]
             set first3bytes [join [lrange [split [findFreeIPv4Net $numbits] .] 0 2] .]
             set targetbyte3 [expr {$lastbyte + 1}]
-	    setIfcIPv4addr $node_id $iface_id "$first3bytes.$targetbyte3/$numbits"
+	    setIfcIPv4addrs $node_id $iface_id "$first3bytes.$targetbyte3/$numbits"
         }
     }
 

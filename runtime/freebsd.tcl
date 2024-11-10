@@ -1220,12 +1220,12 @@ proc destroyNamespace { ns } {}
 # INPUTS
 #   * node_id -- node id
 #****
-proc nodeLogIfacesCreate { node_id } {
+proc nodeLogIfacesCreate { node_id ifaces } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     set jail_id "$eid.$node_id"
 
-    foreach iface_id [logIfcList $node_id] {
+    foreach iface_id $ifaces {
 	set iface_name $iface_id
 	switch -exact [getLogIfcType $node_id $iface_id] {
 	    vlan {
