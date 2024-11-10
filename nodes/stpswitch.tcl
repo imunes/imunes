@@ -80,6 +80,12 @@ proc $MODULE.confNewIfc { node_id iface_id } {
     setBridgeIfcMaxaddr $node_id $iface_id 0
 }
 
+proc $MODULE.generateConfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
+}
+
 #****f* stpswitch.tcl/stpswitch.generateConfig
 # NAME
 #   stpswitch.generateConfig
@@ -114,42 +120,42 @@ proc $MODULE.generateConfig { node_id } {
 
     lappend cfg "bridgeName=`ifconfig bridge create`"
 
-    set bridgeProtocol [getBridgeProtocol $node_id bridge0]
+    set bridgeProtocol [getBridgeProtocol $node_id]
     if { $bridgeProtocol != "" } {
 	lappend cfg "ifconfig \$bridgeName proto $bridgeProtocol"
     }
 
-    set bridgePriority [getBridgePriority $node_id bridge0]
+    set bridgePriority [getBridgePriority $node_id]
     if { $bridgePriority != "" } {
 	lappend cfg "ifconfig \$bridgeName priority $bridgePriority"
     }
 
-    set bridgeMaxAge [getBridgeMaxAge $node_id bridge0]
+    set bridgeMaxAge [getBridgeMaxAge $node_id]
     if { $bridgeMaxAge != "" } {
 	lappend cfg "ifconfig \$bridgeName maxage $bridgeMaxAge"
     }
 
-    set bridgeFwdDelay [getBridgeFwdDelay $node_id bridge0]
+    set bridgeFwdDelay [getBridgeFwdDelay $node_id]
     if { $bridgeFwdDelay != "" } {
 	lappend cfg "ifconfig \$bridgeName fwddelay $bridgeFwdDelay"
     }
 
-    set bridgeHoldCnt [getBridgeHoldCount $node_id bridge0]
+    set bridgeHoldCnt [getBridgeHoldCount $node_id]
     if { $bridgeHoldCnt != "" } {
 	lappend cfg "ifconfig \$bridgeName holdcnt $bridgeHoldCnt"
     }
 
-    set bridgeHelloTime [getBridgeHelloTime $node_id bridge0]
+    set bridgeHelloTime [getBridgeHelloTime $node_id]
     if { $bridgeHelloTime != "" && $bridgeProtocol == "stp" } {
 	lappend cfg "ifconfig \$bridgeName hellotime $bridgeHelloTime"
     }
 
-    set bridgeMaxAddr [getBridgeMaxAddr $node_id bridge0]
+    set bridgeMaxAddr [getBridgeMaxAddr $node_id]
     if { $bridgeMaxAddr != "" } {
 	lappend cfg "ifconfig \$bridgeName maxaddr $bridgeMaxAddr"
     }
 
-    set bridgeTimeout [getBridgeTimeout $node_id bridge0]
+    set bridgeTimeout [getBridgeTimeout $node_id]
     if { $bridgeTimeout != "" } {
 	lappend cfg "ifconfig \$bridgeName timeout $bridgeTimeout"
     }
@@ -239,6 +245,21 @@ proc $MODULE.generateConfig { node_id } {
     }
 
     return $cfg
+}
+
+#****f* stpswitch.tcl/stpswitch.generateUnconfig
+# NAME
+#   stpswitch.generateUnconfig -- unconfiguration generator
+# SYNOPSIS
+#   set unconfig [stpswitch.generateUnconfig $node_id]
+# FUNCTION
+#   Returns the generated unconfig script.
+# INPUTS
+#   * node_id -- node id
+# RESULT
+#   * unconfig -- generated unconfiguration
+#****
+proc $MODULE.generateUnconfig { node_id } {
 }
 
 #****f* stpswitch.tcl/stpswitch.ifacePrefix
@@ -396,6 +417,27 @@ proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
     l3node.nodePhysIfacesCreate $eid $node_id $ifaces
 }
 
+proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
+    nodeLogIfacesCreate $node_id $ifaces
+}
+
+#****f* stpswitch.tcl/stpswitch.nodeIfacesConfigure
+# NAME
+#   stpswitch.nodeIfacesConfigure -- configure stpswitch node interfaces
+# SYNOPSIS
+#   stpswitch.nodeIfacesConfigure $eid $node_id $ifaces
+# FUNCTION
+#   Configure interfaces on a stpswitch. Set MAC, MTU, queue parameters, assign the IP
+#   addresses to the interfaces, etc. This procedure can be called if the node
+#   is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
+}
+
 #****f* stpswitch.tcl/stpswitch.nodeConfigure
 # NAME
 #   stpswitch.nodeConfigure
@@ -417,8 +459,28 @@ proc $MODULE.nodeConfigure { eid node_id } {
 ############################# TERMINATE PROCEDURES #############################
 ################################################################################
 
+#****f* stpswitch.tcl/stpswitch.nodeIfacesUnconfigure
+# NAME
+#   stpswitch.nodeIfacesUnconfigure -- unconfigure stpswitch node interfaces
+# SYNOPSIS
+#   stpswitch.nodeIfacesUnconfigure $eid $node_id $ifaces
+# FUNCTION
+#   Unconfigure interfaces on a stpswitch to a default state. Set name to iface_id,
+#   flush IP addresses to the interfaces, etc. This procedure can be called if
+#   the node is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
+}
+
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
     l3node.nodeIfacesDestroy $eid $node_id $ifaces
+}
+
+proc $MODULE.nodeUnconfigure { eid node_id } {
 }
 
 #****f* stpswitch.tcl/stpswitch.nodeShutdown

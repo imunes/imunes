@@ -119,8 +119,7 @@ proc removeLink { link_id } {
     upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
 
     set pnodes [getLinkPeers $link_id]
-    set pifaces [getLinkPeersIfaces $link_id]
-    foreach node_id $pnodes iface_id $pifaces {
+    foreach node_id $pnodes iface_id [getLinkPeersIfaces $link_id] {
 	upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 
 	set peer_id [removeFromList $pnodes $node_id "keep_doubles"]
@@ -243,6 +242,20 @@ proc getLinkPeers { link_id } {
     return [lindex $entry 1]
 }
 
+#****f* linkcfg.tcl/setLinkPeers
+# NAME
+#   setLinkPeers -- set link's peer nodes
+# SYNOPSIS
+#   setLinkPeers $link_id $peers
+# FUNCTION
+#   Sets nodes of link endpoints.
+# INPUTS
+#   * link_id -- link id
+#   * peers -- nodes of a link endpoints as a list {node1_id node2_id}
+#****
+proc setLinkPeers { link_id peers } {
+}
+
 #****f* linkcfg.tcl/getLinkPeersIfaces
 # NAME
 #   getLinkPeersIfaces -- get link's peer interfaces
@@ -260,6 +273,20 @@ proc getLinkPeersIfaces { link_id } {
 
     set entry [lsearch -inline [set $link_id] "ifaces {*}"]
     return [lindex $entry 1]
+}
+
+#****f* linkcfg.tcl/setLinkPeersIfaces
+# NAME
+#   setLinkPeersIfaces -- set link's peer interfaces
+# SYNOPSIS
+#   setLinkPeersIfaces $link_id $peers_ifaces
+# FUNCTION
+#   Sets interfaces of link endpoints.
+# INPUTS
+#   * link_id -- link id
+#   * peers_ifaces -- interfaces of a link endpoints as a list {iface1_id iface2_id}
+#****
+proc setLinkPeersIfaces { link_id peers_ifaces } {
 }
 
 #****f* linkcfg.tcl/getLinkBandwidth
@@ -1085,7 +1112,7 @@ proc setLinkMirror { link_id mirror } {
 # RESULT
 #   * nodes -- list of node ids of new nodes.
 #****
-proc splitLink { orig_link_id nodetype } {
+proc splitLink { orig_link_id } {
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
     upvar 0 ::cf::[set ::curcfg]::$orig_link_id $orig_link_id
 
@@ -1104,8 +1131,8 @@ proc splitLink { orig_link_id nodetype } {
     set links "$orig_link_id $mirror_link_id"
 
     # create pseudo nodes
-    set new_node1_id [newNode $nodetype]
-    set new_node2_id [newNode $nodetype]
+    set new_node1_id [newNode "pseudo"]
+    set new_node2_id [newNode "pseudo"]
     upvar 0 ::cf::[set ::curcfg]::$new_node1_id $new_node1_id
     upvar 0 ::cf::[set ::curcfg]::$new_node2_id $new_node2_id
     set pseudo_nodes "$new_node1_id $new_node2_id"
@@ -1269,7 +1296,8 @@ proc newLink { node1_id node2_id } {
 	[getNodeType $node2_id] == "lanswitch" || \
 	[string first eth "$ifname1 $ifname2"] != -1) && \
 	[getNodeType $node1_id] != "rj45" && \
-	[getNodeType $node2_id] != "rj45" } {
+	[getNodeType $node2_id] != "rj45" &&
+	$defEthBandwidth != 0 } {
 
 	lappend $link_id "bandwidth $defEthBandwidth"
     } elseif { [string first ser "$ifname1 $ifname2"] != -1 } {
@@ -1309,16 +1337,35 @@ proc getIfcLink { node_id iface_id } {
     set peer_id [getIfcPeer $node_id $iface_id]
     foreach link_id $link_list {
 	set endpoints [getLinkPeers $link_id]
-	if { $endpoints == "$node_id $peer_id" } {
-	    set dir downstream
-	    break
-	}
-
-	if { $endpoints == "$peer_id $node_id" } {
-	    set dir upstream
+	if { $endpoints in "{$node_id $peer_id} {$peer_id $node_id}" } {
 	    break
 	}
     }
 
-    return [list $link_id $dir]
+    return $link_id
+}
+
+#****f* linkcfg.tcl/linkDirection
+# NAME
+#   linkByIfg -- get direction of link in regards to the node's interface
+# SYNOPSIS
+#   set link [linkDirection $node_id $iface_id]
+# FUNCTION
+#   Returns the direction of the link connecting the node's interface.
+# INPUTS
+#   * node_id -- node id
+#   * iface_id -- interface
+# RESULT
+#   * direction -- upstream/downstream
+#****
+proc linkDirection { node_id iface_id } {
+    set link_id [getIfcLink $node_id $iface_id]
+
+    if { $node_id == [lindex [getLinkPeers $link_id] 0] } {
+	set direction downstream
+    } else {
+	set direction upstream
+    }
+
+    return $direction
 }

@@ -220,8 +220,8 @@ proc popupOvalApply { c wi target } {
     global changed
     global width
 
-    set sizex [expr [lindex [getCanvasSize $curcanvas] 0] - 5]
-    set sizey [expr [lindex [getCanvasSize $curcanvas] 1] - 5]
+    # subtract 5 from each value and assign to variables sizex sizey
+    lassign [lmap n [getCanvasSize $curcanvas] {expr $n - 5}] sizex sizey
 
     set color [$wi.colors.color cget -text]
     set bordercolor [$wi.border.color cget -text]
@@ -277,11 +277,9 @@ proc drawOval { oval } {
     upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global defFillColor
 
-    set coords [getNodeCoords $oval]
-    set x1 [expr {[lindex $coords 0] * $zoom}]
-    set y1 [expr {[lindex $coords 1] * $zoom}]
-    set x2 [expr {[lindex $coords 2] * $zoom}]
-    set y2 [expr {[lindex $coords 3] * $zoom}]
+    # multiply each coordinate with $zoom and assign to variables x1, y1, x2, y2
+    lassign [lmap n [getAnnotationCoords $oval] {expr $n * $zoom}] x1 y1 x2 y2
+
     set color [getAnnotationColor $oval]
     set bordercolor [getAnnotationBorderColor $oval]
     set width [getAnnotationWidth $oval]
@@ -442,8 +440,8 @@ proc popupRectangleApply { c wi target } {
     global changed
     global width rad
 
-    set sizex [expr [lindex [getCanvasSize $curcanvas] 0] - 5]
-    set sizey [expr [lindex [getCanvasSize $curcanvas] 1] - 5]
+    # subtract 5 from each value and assign to variables sizex sizey
+    lassign [lmap n [getCanvasSize $curcanvas] {expr $n - 5}] sizex sizey
 
     set color [$wi.colors.color cget -text]
     set bordercolor [$wi.border.color cget -text]
@@ -500,11 +498,9 @@ proc drawRect { rectangle } {
     upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global defFillColor
 
-    set coords [getNodeCoords $rectangle]
-    set x1 [expr {[lindex $coords 0] * $zoom}]
-    set y1 [expr {[lindex $coords 1] * $zoom}]
-    set x2 [expr {[lindex $coords 2] * $zoom}]
-    set y2 [expr {[lindex $coords 3] * $zoom}]
+    # multiply each coordinate with $zoom and assign to variables x1, y1, x2, y2
+    lassign [lmap n [getAnnotationCoords $rectangle] {expr $n * $zoom}] x1 y1 x2 y2
+
     set color [getAnnotationColor $rectangle]
     set bordercolor [getAnnotationBorderColor $rectangle]
     set width [getAnnotationWidth $rectangle]
@@ -698,8 +694,6 @@ proc drawText { text } {
 	return
     }
 
-    set x [expr {[lindex $coords 0] * $zoom}]
-    set y [expr {[lindex $coords 1] * $zoom}]
     set labelcolor [getAnnotationLabelColor $text]
     set label [getAnnotationLabel $text]
     set font [getAnnotationFont $text]
@@ -707,6 +701,7 @@ proc drawText { text } {
     if { $labelcolor == "" } { set labelcolor $defTextColor }
     if { $font == "" } { set font TkTextFont }
 
+    lassign [lmap n $coords {expr $n * $zoom}] x y
     set newtext [.panwin.f1.c create text $x $y -text $label -anchor w \
 	-font "$font" -justify left -fill $labelcolor -tags "text $text"]
 	.panwin.f1.c raise $newtext

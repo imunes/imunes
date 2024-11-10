@@ -120,12 +120,10 @@ proc drawNode { node_id } {
     global show_node_labels pseudo
 
     set type [getNodeType $node_id]
-    set coords [getNodeCoords $node_id]
-    set x [expr {[lindex $coords 0] * $zoom}]
-    set y [expr {[lindex $coords 1] * $zoom}]
+    lassign [lmap coord [getNodeCoords $node_id] {expr $coord * $zoom}] x y
 
     set custom_icon [getCustomIcon $node_id]
-    if { [string match "*img*" $custom_icon] == 0 } {
+    if { $custom_icon == "" } {
 	global $type
 
 	.panwin.f1.c create image $x $y -image [set $type] -tags "node $node_id"
@@ -147,12 +145,10 @@ proc drawNode { node_id } {
 	}
     }
 
-    set coords [getNodeLabelCoords $node_id]
-    set x [expr {[lindex $coords 0] * $zoom}]
-    set y [expr {[lindex $coords 1] * $zoom}]
-    if { [getNodeType $node_id] != "pseudo" } {
+    lassign [lmap coord [getNodeLabelCoords $node_id] {expr int($coord * $zoom)}] x y
+    if { $type != "pseudo" } {
 	set label_str [getNodeName $node_id]
-	if { [getNodeType $node_id] == "rj45" && [getEtherVlanEnabled $node_id] } {
+	if { $type == "rj45" && [getEtherVlanEnabled $node_id] } {
 	    set label_str "$label_str (VLAN [getEtherVlanTag $node_id])"
 	}
 
@@ -161,25 +157,19 @@ proc drawNode { node_id } {
 		set label_str [format "%s %s" $label_str [getIfcIPv4addrs $node_id $iface_id]]
 	    }
 	}
-
-	set label_elem [.panwin.f1.c create text $x $y -fill blue \
-	    -text "$label_str" \
-	    -tags "nodelabel $node_id"]
-
     } else {
-	set pnode [getIfcPeer [getNodeMirror $node_id] "0"]
-	set pcanvas [getNodeCanvas $pnode]
-	set iface_id [ifcByPeer $pnode [getNodeMirror $node_id]]
-	if { $pcanvas != $curcanvas } {
-	    set label_elem [.panwin.f1.c create text $x $y -fill blue \
-		-text "[getNodeName $pnode]:$iface_id\n@[getCanvasName $pcanvas]" \
-		-tags "nodelabel $node_id" -justify center]
-	} else {
-	    set label_elem [.panwin.f1.c create text $x $y -fill blue \
-		-text "[getNodeName $pnode]:$iface_id" \
-		-tags "nodelabel $node_id" -justify center]
+	# get mirror link and its real node/iface
+	lassign [logicalPeerByIfc [getNodeMirror $node_id] "0"] peer_id peer_iface
+
+	set label_str "[getNodeName $peer_id]:[getIfcName $peer_id $peer_iface]"
+	set peer_canvas [getNodeCanvas $peer_id]
+	if { $peer_canvas != $curcanvas } {
+	    set label_str "$label_str\n@[getCanvasName $peer_canvas]"
 	}
     }
+
+    set label_elem [.panwin.f1.c create text $x $y -fill blue \
+	-text "$label_str" -tags "nodelabel $node_id" -justify center]
 
     if { $show_node_labels == 0 } {
 	.panwin.f1.c itemconfigure $label_elem -state hidden
@@ -188,7 +178,7 @@ proc drawNode { node_id } {
     # XXX Invisible pseudo-node labels
     global invisible
 
-    if { $invisible == 1 && [getNodeType $node_id] == "pseudo" } {
+    if { $invisible == 1 && $type == "pseudo" } {
 	.panwin.f1.c itemconfigure $label_elem -state hidden
     }
 }
@@ -206,9 +196,7 @@ proc drawNode { node_id } {
 #   * link_id -- link id
 #****
 proc drawLink { link_id } {
-    set nodes [getLinkPeers $link_id]
-    set node1_id [lindex $nodes 0]
-    set node2_id [lindex $nodes 1]
+    lassign [getLinkPeers $link_id] node1_id node2_id
     if { [getNodeType $node1_id] == "wlan" || [getNodeType $node2_id] == "wlan" } {
 	return
     }
@@ -440,9 +428,10 @@ proc redrawAllLinks {} {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
 
     foreach link_id $link_list {
-	set nodes [getLinkPeers $link_id]
-	if { [getNodeCanvas [lindex $nodes 0]] != $curcanvas ||
-	    [getNodeCanvas [lindex $nodes 1]] != $curcanvas } {
+	lassign [getLinkPeers $link_id] node1_id node2_id
+	if { [getNodeCanvas $node1_id] != $curcanvas ||
+	    [getNodeCanvas $node2_id] != $curcanvas } {
+
 	    continue
 	}
 
@@ -524,7 +513,7 @@ proc updateIfcLabelParams { link_id node_id iface_id x1 y1 x2 y2 } {
     set add_height [expr 10*($show_interface_names + $IP4 + $IP6)]
     # these params could be called dy and dx, respectively
     # additional height represents the ifnames, ipv4 and ipv6 addrs
-    set height [expr $iconheight/2 + $add_height]
+    set height [expr 8 + $iconheight/2 + $add_height]
     # 5 pixels from icon
     set width [expr $iconwidth/2 + 10]
 
