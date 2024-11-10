@@ -160,8 +160,7 @@ proc removeLink { link } {
     foreach node $pnodes ifc $pifaces {
 	upvar 0 ::cf::[set ::curcfg]::$node $node
 
-	set i [lsearch $pnodes $node]
-	set peer [lreplace $pnodes $i $i]
+	set peer [removeFromList $pnodes $node "keep_doubles"]
 
 	if { [nodeType $node] in "extelem"} {
 	    set old [getNodeExternalIfcs $node]
@@ -172,16 +171,9 @@ proc removeLink { link } {
 	    continue
 	}
 
-	foreach addr [getIfcIPv4addrs $node $ifc] {
-	    set index [lsearch -exact $IPv4UsedList $addr]
-	    set IPv4UsedList [lreplace $IPv4UsedList $index $index]
-	}
-	foreach addr [getIfcIPv6addrs $node $ifc] {
-	    set index [lsearch -exact $IPv6UsedList $addr]
-	    set IPv6UsedList [lreplace $IPv6UsedList $index $index]
-	}
-	set index [lsearch -exact $MACUsedList [getIfcMACaddr $node $ifc]]
-	set MACUsedList [lreplace $MACUsedList $index $index]
+	set IPv4UsedList [removeFromList $IPv4UsedList [getIfcIPv4addrs $node $ifc] "keep_doubles"]
+	set IPv6UsedList [removeFromList $IPv6UsedList [getIfcIPv6addrs $node $ifc] "keep_doubles"]
+	set MACUsedList [removeFromList $MACUsedList [getIfcMACaddr $node $ifc] "keep_doubles"]
 	netconfClearSection $node "interface $ifc"
 	set i [lsearch [set $node] "interface-peer {$ifc $peer}"]
 	set $node [lreplace [set $node] $i $i]
@@ -195,8 +187,7 @@ proc removeLink { link } {
 	    }
 	}
     }
-    set i [lsearch -exact $link_list $link]
-    set link_list [lreplace $link_list $i $i]
+    set link_list [removeFromList $link_list $link]
 }
 
 #****f* linkcfg.tcl/getLinkDirect
@@ -994,8 +985,7 @@ proc splitLink { link nodetype } {
     setLinkDup $new_link1 [getLinkDup $link]
     setLinkDup $new_link2 [getLinkDup $link]
 
-    set i [lsearch -exact $link_list $link]
-    set link_list [lreplace $link_list $i $i]
+    set link_list [removeFromList $link_list $link]
 
     return "$new_node1 $new_node2"
 }
@@ -1052,16 +1042,10 @@ proc mergeLink { link } {
     setLinkLoss $new_link [getLinkLoss $link]
     setLinkDup $new_link [getLinkDup $link]
 
-    set i [lsearch -exact $link_list $link]
-    set link_list [lreplace $link_list $i $i]
-    set i [lsearch -exact $link_list $mirror_link]
-    set link_list [lreplace $link_list $i $i]
+    set link_list [removeFromList $link_list "$link $mirror_link"]
     lappend link_list $new_link
 
-    set i [lsearch -exact $node_list $pseudo_node1]
-    set node_list [lreplace $node_list $i $i]
-    set i [lsearch -exact $node_list $pseudo_node2]
-    set node_list [lreplace $node_list $i $i]
+    set node_list [removeFromList $node_list "$pseudo_node1 $pseudo_node2"]
 
     return $new_link
 }

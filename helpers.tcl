@@ -202,7 +202,19 @@ proc prepareVroot {} {
     cd $curdir
 }
 
-proc removeFromList { list_values element } {
-    set idx [lsearch $list_values $element]
-    return [lreplace $list_values $idx $idx]
+proc removeFromList { list_values elements { keep_doubles "" } } {
+    if { $keep_doubles != "" } {
+	foreach element $elements {
+	    set idx [lsearch -exact $list_values $element]
+	    set list_values [lreplace $list_values $idx $idx]
+	}
+
+	return $list_values
+    }
+
+    foreach element $elements {
+	set list_values [lsearch -not -all -inline -exact $list_values $element]
+    }
+
+    return $list_values
 }

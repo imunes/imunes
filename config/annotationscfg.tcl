@@ -35,8 +35,7 @@ proc deleteAnnotation { c type target } {
 
     set $target {}
     
-    set i [lsearch -exact $annotation_list $target]
-    set annotation_list [lreplace $annotation_list $i $i]
+    set annotation_list [removeFromList $annotation_list $target]
     
     set changed 1
     updateUndoLog
