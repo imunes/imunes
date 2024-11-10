@@ -2357,8 +2357,7 @@ proc removeNode { node } {
 	set link [linkByPeers $node $peer]
 	removeLink $link
     }
-    set i [lsearch -exact $node_list $node]
-    set node_list [lreplace $node_list $i $i]
+    set node_list [removeFromList $node_list $node]
 
     set node_type [nodeType $node]
     if { $node_type in [array names nodeNamingBase] } {

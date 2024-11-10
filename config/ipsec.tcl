@@ -1482,8 +1482,7 @@ proc nodeIPsecConnExists { node connection_name } {
 proc getListOfOtherNodes { node } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
 
-    set idx [lsearch -exact $node_list $node ]
-    set listOfNodes [lreplace $node_list $idx $idx]
+    set listOfNodes [removeFromList $node_list $node]
 
     set listOfNames ""
     foreach node $listOfNodes {

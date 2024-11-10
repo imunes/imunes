@@ -3524,8 +3524,7 @@ proc updateLocalSubnetCombobox { connParamsLframe } {
 
     set IPs [$connParamsLframe.local_ip_entry cget -values]
 
-    set idx [lsearch -exact $IPs $local_ip_address ]
-    set IPs [lreplace $IPs $idx $idx]
+    set IPs [removeFromList $IPs $local_ip_address "keep_doubles"]
     set subnets [getSubnetsFromIPs $IPs]
 
     if { $subnets != "" } {
@@ -5470,8 +5469,7 @@ proc configGUI_ifcRuleConfigApply { add dup } {
     }
     if { $ruleNumChanged == 1 } {
 	set l [ifcFilterRuleList $curnode $ifc]
-	set i [lsearch $l $old_rulnum]
-	set l [lreplace $l $i $i]
+	set l [removeFromList $l $old_rulnum]
 	if { $rulnum in $l} {
 	    tk_dialog .dialog1 "IMUNES warning" \
 		"Rule number already exists." \
@@ -5490,8 +5488,7 @@ proc configGUI_ifcRuleConfigApply { add dup } {
     switch -regexp $action {
 	(no)?match_hook {
 	    set vals [lsort [ifcList $curnode]]
-	    set c [lsearch $vals $ifc]
-	    set vals [lreplace $vals $c $c]
+	    set vals [removeFromList $vals $ifc]
 	    if { $adata ni $vals } {
 		tk_dialog .dialog1 "IMUNES warning" \
 		    "ActData: Select one of the existing hooks, but not the current one ($ifc)." \
@@ -5501,8 +5498,7 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 	}
 	(no)?match_dupto {
 	    set vals [lsort [ifcList $curnode]]
-	    set c [lsearch $vals $ifc]
-	    set vals [lreplace $vals $c $c]
+	    set vals [removeFromList $vals $ifc]
 	    if { $adata ni $vals } {
 		tk_dialog .dialog1 "IMUNES warning" \
 		    "ActData: Select one of the existing hooks, but not the current one ($ifc)." \
@@ -5637,16 +5633,14 @@ proc refreshIfcActionDataValues { node refresh } {
     switch -regexp [set ifcFilterAction$ifc$rule] {
 	(no)?match_hook {
 	    set vals [lsort [ifcList $node]]
-	    set c [lsearch $vals $ifc]
-	    set vals [lreplace $vals $c $c]
+	    set vals [removeFromList $vals $ifc]
 	    if { [set ifcFilterActionData$ifc$rule] == "" || $refresh == 1 } {
 		set ifcFilterActionData$ifc$rule [lindex $vals 0]
 	    }
 	}
 	(no)?match_dupto {
 	    set vals [lsort [ifcList $node]]
-	    set c [lsearch $vals $ifc]
-	    set vals [lreplace $vals $c $c]
+	    set vals [removeFromList $vals $ifc]
 	    if { [set ifcFilterActionData$ifc$rule] == "" || $refresh == 1 } {
 		set ifcFilterActionData$ifc$rule [lindex $vals 0]
 	    }
@@ -6210,8 +6204,7 @@ if {0} {
     }
     if { $pacNumChanged == 1 } {
 	set l [packgenPackets $curnode]
-	set i [lsearch $l $old_pacnum]
-	set l [lreplace $l $i $i]
+	set l [removeFromList $l $old_pacnum]
 	if { $pacnum in $l} {
 	    tk_dialog .dialog1 "IMUNES warning" \
 		"Packet ID already exists." \

@@ -53,8 +53,7 @@ proc removeCanvas { canvas } {
     upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
     upvar 0 ::cf::[set ::curcfg]::$canvas $canvas
 
-    set i [lsearch $canvas_list $canvas]
-    set canvas_list [lreplace $canvas_list $i $i]
+    set canvas_list [removeFromList $canvas_list $canvas]
     set $canvas {}
 }
 
