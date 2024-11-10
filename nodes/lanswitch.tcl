@@ -147,20 +147,6 @@ proc $MODULE.nghook { eid node_id iface_id } {
     return [list $node_id link$ifunit]
 }
 
-#****f* lanswitch.tcl/lanswitch.maxLinks
-# NAME
-#   lanswitch.maxLinks -- maximum number of links
-# SYNOPSIS
-#   lanswitch.maxLinks
-# FUNCTION
-#   Returns lanswitch maximum number of links.
-# RESULT
-#   * maximum number of links.
-#****
-proc $MODULE.maxLinks {} {
-    return 32
-}
-
 ################################################################################
 ############################ INSTANTIATE PROCEDURES ############################
 ################################################################################

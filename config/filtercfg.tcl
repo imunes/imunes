@@ -36,12 +36,18 @@ proc getFilterIfcAction { node_id iface_id id } {
     }
 }
 
+proc setFilterIfcAction { node_id iface_id id action } {
+}
+
 proc getFilterIfcPattern { node_id iface_id id } {
     foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [string trim [lindex [split $line :] 0]] == $id } {
 		    return [lindex [split [lindex [string trim [split $line :]] 2] /] 0]
 	}
     }
+}
+
+proc setFilterIfcPattern { node_id iface_id id pattern } {
 }
 
 proc getFilterIfcMask { node_id iface_id id } {
@@ -52,12 +58,18 @@ proc getFilterIfcMask { node_id iface_id id } {
     }
 }
 
+proc setFilterIfcMask { node_id iface_id id mask } {
+}
+
 proc getFilterIfcOffset { node_id iface_id id } {
     foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [string trim [lindex [split $line :] 0]] == $id } {
 		    return [lindex [split [lindex [split [lindex [string trim [split $line :]] 2] /] 1] @] 1]
 	}
     }
+}
+
+proc setFilterIfcOffset { node_id iface_id id offset } {
 }
 
 proc getFilterIfcActionData { node_id iface_id id } {
@@ -68,6 +80,9 @@ proc getFilterIfcActionData { node_id iface_id id } {
     }
 }
 
+proc setFilterIfcActionData { node_id iface_id id action_data } {
+}
+
 proc ifcFilterRuleList { node_id iface_id } {
     set ruleList ""
     set ifcfg [list "interface $iface_id"]
@@ -75,6 +90,18 @@ proc ifcFilterRuleList { node_id iface_id } {
 	lappend ruleList [string trim [lindex [split $line :] 0]]
     }
     return $ruleList
+}
+
+proc getFilterIfcRuleAsString { node_id iface_id id } {
+    set rule_line [getFilterIfcRule $node_id $iface_id $id]
+
+    lassign [split $rule_line ":"] action pattern mask offset action_data
+
+    if { $offset != "" } {
+	return "${id}:${action}:${pattern}/${mask}@${offset}:${action_data}"
+    }
+
+    return "${id}:${action}::${action_data}"
 }
 
 proc checkRuleNum { str } {

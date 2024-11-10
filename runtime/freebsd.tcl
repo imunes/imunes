@@ -460,10 +460,8 @@ Please don't try killing the process.
 #****
 proc execSetIfcQDisc { eid node_id iface_id qdisc } {
     set link_id [getIfcLink $node_id $iface_id]
-    set peers [getLinkPeers [lindex $link_id 0]]
-    set direction [lindex $link_id 1]
-    set node1_id [lindex $peers 0]
-    set node2_id [lindex $peers 1]
+    set direction [linkDirection $node_id $iface_id]
+    lassign [getLinkPeers $link_id] - node2_id
 
     switch -exact $qdisc {
 	FIFO { set qdisc fifo }
@@ -495,10 +493,8 @@ proc execSetIfcQDisc { eid node_id iface_id qdisc } {
 #****
 proc execSetIfcQDrop { eid node_id iface_id qdrop } {
     set link_id [getIfcLink $node_id $iface_id]
-    set peers [getLinkPeers [lindex $link_id 0]]
-    set direction [lindex $link_id 1]
-    set node1_id [lindex $peers 0]
-    set node2_id [lindex $peers 1]
+    set direction [linkDirection $node_id $iface_id]
+    lassign [getLinkPeers $link_id] - node2_id
 
     switch -exact $qdrop {
 	drop-head { set qdrop drophead }
@@ -528,10 +524,8 @@ proc execSetIfcQDrop { eid node_id iface_id qdrop } {
 #****
 proc execSetIfcQLen { eid node_id iface_id qlen } {
     set link_id [getIfcLink $node_id $iface_id]
-    set peers [getLinkPeers [lindex $link_id 0]]
-    set direction [lindex $link_id 1]
-    set node1_id [lindex $peers 0]
-    set node2_id [lindex $peers 1]
+    set direction [linkDirection $node_id $iface_id]
+    lassign [getLinkPeers $link_id] - node2_id
 
     if { $qlen == 0 } {
 	set qlen -1
@@ -602,9 +596,6 @@ proc execSetLinkParams { eid link_id } {
 #   link_id -- link id
 #****
 proc execSetLinkJitter { eid link_id } {
-    set node1_id [lindex [getLinkPeers $link_id] 0]
-    set node2_id [lindex [getLinkPeers $link_id] 1]
-
     set jitter_up [getLinkJitterUpstream $link_id]
     set jitter_mode_up [getLinkJitterModeUpstream $link_id]
     set jitter_hold_up [expr [getLinkJitterHoldUpstream $link_id] + 0]
@@ -661,9 +652,6 @@ proc execSetLinkJitter { eid link_id } {
 #   * link_id -- link id
 #****
 proc execResetLinkJitter { eid link_id } {
-    set node1_id [lindex [getLinkPeers $link_id] 0]
-    set node2_id [lindex [getLinkPeers $link_id] 1]
-
     exec jexec $eid ngctl msg $link_id: setcfg \
 	"{upstream={jitmode=-1} downstream={jitmode=-1}}"
 }
@@ -2043,11 +2031,39 @@ proc getExtIfcs {} {
     return "$ifcs"
 }
 
+proc getStateIfcCmd { iface_name state } {
+    return "ifconfig $iface_name $state"
+}
+
+proc getNameIfcCmd { iface_name name } {
+    return "ifconfig $iface_name name $name"
+}
+
+proc getMacIfcCmd { iface_name mac_addr } {
+    return "ifconfig $iface_name link $mac_addr"
+}
+
+proc getVlanTagIfcCmd { iface_name dev_name tag } {
+    return "ifconfig $dev_name.$tag create name $iface_name"
+}
+
+proc getMtuIfcCmd { iface_name mtu } {
+    return "ifconfig $iface_name mtu $mtu"
+}
+
+proc getNatIfcCmd { iface_name } {
+    return "sh -c 'echo \"map $iface_name 0/0 -> 0/32\" | ipnat -f -'"
+}
+
 proc getIPv4IfcCmd { ifc addr primary } {
     if { $primary } {
 	return "ifconfig $ifc inet $addr"
     }
     return "ifconfig $ifc inet add $addr"
+}
+
+proc getDelIPv4IfcCmd { ifc addr } {
+    return "ifconfig $ifc inet $addr -alias"
 }
 
 proc getIPv6IfcCmd { ifc addr primary } {
@@ -2057,12 +2073,40 @@ proc getIPv6IfcCmd { ifc addr primary } {
     return "ifconfig $ifc inet6 add $addr"
 }
 
+proc getDelIPv6IfcCmd { ifc addr } {
+    return "ifconfig $ifc inet6 $addr -alias"
+}
+
 proc getIPv4RouteCmd { statrte } {
     return "route -q add -inet $statrte"
 }
 
+proc getRemoveIPv4RouteCmd { statrte } {
+    return "route -q delete -inet $statrte"
+}
+
 proc getIPv6RouteCmd { statrte } {
     return "route -q add -inet6 $statrte"
+}
+
+proc getRemoveIPv6RouteCmd { statrte } {
+    return "route -q delete -inet6 $statrte"
+}
+
+proc getIPv4IfcRouteCmd { subnet iface } {
+    return "route -q add -inet $subnet -interface $iface"
+}
+
+proc getRemoveIPv4IfcRouteCmd { subnet iface } {
+    return "route -q delete -inet $subnet -interface $iface"
+}
+
+proc getIPv6IfcRouteCmd { subnet iface } {
+    return "route -q add -inet6 $subnet -interface $iface"
+}
+
+proc getRemoveIPv6IfcRouteCmd { subnet iface } {
+    return "route -q delete -inet6 $subnet -interface $iface"
 }
 
 proc checkSysPrerequisites {} {
@@ -2127,6 +2171,7 @@ proc inetdServiceRestartCmds {} {
 proc createStartTunIfc { eid node_id } {
     # create and start tun interface and return its name
     catch { exec jexec $eid.$node_id ifconfig tun create } tun
+    exec jexec $eid.$node_id ifconfig $tun inet6 -ifdisabled
     exec jexec $eid.$node_id ifconfig $tun up
 
     return $tun

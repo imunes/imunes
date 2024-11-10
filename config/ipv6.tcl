@@ -30,11 +30,10 @@
 # NAME
 #   ipv6.tcl -- file for handeling IPv6
 #****
-global ipv6 change_subnet6 changeAddressRange6
+global ipv6 change_subnet6
 
 set ipv6 fc00::/64
 set change_subnet6 0
-set changeAddressRange6 0
 
 #****f* ipv6.tcl/IPv6AddrApply
 # NAME
@@ -113,7 +112,7 @@ proc findFreeIPv6Net { mask { ipv6_used_list "" } } {
 #   * iface_id -- the interface to witch a new, automatically generated, IPv6
 #     address will be assigned
 #****
-proc autoIPv6addr { node_id iface_id } {
+proc autoIPv6addr { node_id iface_id { use_autorenumbered "" } } {
     upvar 0 ::cf::[set ::curcfg]::IPv6UsedList IPv6UsedList
     global IPv6autoAssign
 
@@ -121,9 +120,8 @@ proc autoIPv6addr { node_id iface_id } {
 	return
     }
 
-    global change_subnet6 control changeAddressRange6 autorenumbered_ifcs6
+    global change_subnet6 control autorenumbered_ifcs6
     #change_subnet6 - to change the subnet (1) or not (0)
-    #changeAddressRange6 - is this procedure called from 'changeAddressRange' (1 if true, otherwise 0)
     #autorenumbered_ifcs6 - list of all interfaces that changed an address
 
     set node_type [getNodeType $node_id]
@@ -150,7 +148,7 @@ proc autoIPv6addr { node_id iface_id } {
 			continue
 		    }
 
-		    if { $changeAddressRange6 == 1 } {
+		    if { $use_autorenumbered != "" } {
 			if { "$new_peer_id $new_peer_iface_id" in $autorenumbered_ifcs6 } {
 			    lappend peer_ip6addrs {*}$peer_ip6addr
 			}

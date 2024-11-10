@@ -824,12 +824,11 @@ proc loadCfgLegacy { cfg } {
 #   * obj_id -- object ID in the form $prefix$number
 #****
 proc newObjectId { elem_list prefix } {
-    set len [llength $elem_list]
+    set sorted_list [lsort -dictionary [lsearch -regexp -all -inline $elem_list "^$prefix\[0-9\]\[0-9\]*$"]]
+    set len [llength $sorted_list]
     if { $len == 0 } {
 	return ${prefix}0
     }
-
-    set sorted_list [lsort -dictionary $elem_list]
 
     # Initial interval - the start to the middle of the list
     set start 0

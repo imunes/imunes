@@ -113,15 +113,11 @@ proc splitLinkGUI { link_id } {
     upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global changed
 
-    set peer_nodes [getLinkPeers $link_id]
-    lassign $peer_nodes orig_node1_id orig_node2_id
-    set new_nodes [splitLink $link_id "pseudo"]
-    lassign $new_nodes new_node1_id new_node2_id
+    lassign [getLinkPeers $link_id] orig_node1_id orig_node2_id
+    lassign [splitLink $link_id] new_node1_id new_node2_id
 
-    set x1 [lindex [getNodeCoords $orig_node1_id] 0]
-    set y1 [lindex [getNodeCoords $orig_node1_id] 1]
-    set x2 [lindex [getNodeCoords $orig_node2_id] 0]
-    set y2 [lindex [getNodeCoords $orig_node2_id] 1]
+    lassign [getNodeCoords $orig_node1_id] x1 y1
+    lassign [getNodeCoords $orig_node2_id] x2 y2
 
     setNodeCoords $new_node1_id \
 	"[expr {($x1 + 0.4 * ($x2 - $x1)) / $zoom}] \
@@ -290,7 +286,7 @@ proc selectedRealNodes {} {
     set selected {}
     foreach obj [.panwin.f1.c find withtag "node && selected"] {
 	set node_id [lindex [.panwin.f1.c gettags $obj] 1]
-	if { [getNodeMirror $node_id] != "" || [getNodeType $node_id] == "rj45" } {
+	if { [getNodeType $node_id] == "pseudo" } {
 	    continue
 	}
 	lappend selected $node_id
@@ -479,13 +475,10 @@ proc moveToCanvas { canvas_id } {
 
     foreach obj [.panwin.f1.c find withtag "linklabel"] {
 	set link_id [lindex [.panwin.f1.c gettags $obj] 1]
-	set link_peers [getLinkPeers $link_id]
-	set peer1_id [lindex $link_peers 0]
-	set peer2_id [lindex $link_peers 1]
-	set peer1_in_selected [lsearch $selected_nodes $peer1_id]
-	set peer2_in_selected [lsearch $selected_nodes $peer2_id]
-	if { ($peer1_in_selected == -1 && $peer2_in_selected != -1) ||
-	    ($peer1_in_selected != -1 && $peer2_in_selected == -1) } {
+
+	lassign [getLinkPeers $link_id] peer1_id peer2_id
+	if { ($peer1_id ni $selected_nodes && $peer2_id in $selected_nodes) || \
+	    ($peer1_id in $selected_nodes && $peer2_id ni $selected_nodes) } {
 
 	    # pseudo nodes are always peer2
 	    if { [getNodeType $peer2_id] == "pseudo" } {
@@ -493,11 +486,11 @@ proc moveToCanvas { canvas_id } {
 		if { [getNodeCanvas [getNodeMirror $peer2_id]] == $canvas_id } {
 		    mergeLink $link_id
 		}
+
 		continue
 	    }
-	    set new_nodes [splitLink $link_id "pseudo"]
-	    set new_node1_id [lindex $new_nodes 0]
-	    set new_node2_id [lindex $new_nodes 1]
+
+	    lassign [splitLink $link_id] new_node1_id new_node2_id
 	    setNodeName $new_node1_id $peer2_id
 	    setNodeName $new_node2_id $peer1_id
 	}
@@ -523,8 +516,7 @@ proc moveToCanvas { canvas_id } {
 proc mergeNodeGUI { node_id } {
     global changed
 
-    set link_id [lindex [getIfcLink $node_id [ifcList $node_id]] 0]
-    mergeLink $link_id
+    mergeLink [getIfcLink $node_id "0"]
 
     set changed 1
     updateUndoLog
@@ -674,15 +666,10 @@ proc button3node { c x y } {
 
     foreach peer_node_id $node_list {
 	set canvas_id [getNodeCanvas $peer_node_id]
-	if { $type != "rj45" &&
-	    [lsearch {pseudo rj45} [getNodeType $peer_node_id]] < 0 } {
+	if { [getNodeType $peer_node_id] != "pseudo" } {
 	    .button3menu.connect.$canvas_id add command \
 		-label [getNodeName $peer_node_id] \
 		-command "connectWithNode \"[selectedRealNodes]\" $peer_node_id"
-	} elseif { [getNodeType $peer_node_id] != "pseudo" } {
-	    .button3menu.connect.$canvas_id add command \
-		-label [getNodeName $peer_node_id] \
-		-state disabled
 	}
     }
 
@@ -730,8 +717,8 @@ proc button3node { c x y } {
     #
     # Start & stop node
     #
-    if { $oper_mode == "exec" && [info procs [getNodeType $node_id].start] != "" \
-	&& [info procs [getNodeType $node_id].nodeShutdown] != "" } {
+    if { $oper_mode == "exec" && [info procs $type.nodeConfigure] != "" \
+	&& [info procs $type.nodeShutdown] != "" } {
 
 	.button3menu add command -label Start \
 	    -command "startNodeFromMenu $node_id"
@@ -746,7 +733,7 @@ proc button3node { c x y } {
     # Services menu
     #
     .button3menu.services delete 0 end
-    if { $oper_mode == "exec" && [$type.virtlayer] == "VIRTUALIZED" && $type != "ext" } {
+    if { $oper_mode == "exec" && [$type.virtlayer] == "VIRTUALIZED" } {
 	global all_services_list
 
 	.button3menu add cascade -label "Services" \
@@ -796,7 +783,7 @@ proc button3node { c x y } {
     #
     # IPv4 autorenumber
     #
-    if { $oper_mode == "edit" && [[getNodeType $node_id].netlayer] == "NETWORK" } {
+    if { $oper_mode == "edit" && [$type.netlayer] == "NETWORK" } {
 	.button3menu add command -label "IPv4 autorenumber" -command {
 	    global IPv4autoAssign
 	    set IPv4autoAssign 1
@@ -808,7 +795,7 @@ proc button3node { c x y } {
     #
     # IPv6 autorenumber
     #
-    if { $oper_mode == "edit" && [[getNodeType $node_id].netlayer] == "NETWORK" } {
+    if { $oper_mode == "edit" && [$type.netlayer] == "NETWORK" } {
 	.button3menu add command -label "IPv6 autorenumber" -command {
 	    global IPv6autoAssign
 	    set IPv6autoAssign 1
@@ -825,7 +812,7 @@ proc button3node { c x y } {
 	.button3menu add separator
 	.button3menu add cascade -label "Shell window" \
 	    -menu .button3menu.shell
-	foreach cmd [existingShells [[getNodeType $node_id].shellcmds] $node_id] {
+	foreach cmd [existingShells [$type.shellcmds] $node_id] {
 	    .button3menu.shell add command -label "[lindex [split $cmd /] end]" \
 		-command "spawnShell $node_id $cmd"
 	}
@@ -833,7 +820,7 @@ proc button3node { c x y } {
 
     .button3menu.wireshark delete 0 end
     .button3menu.tcpdump delete 0 end
-    if { $oper_mode == "exec" && $type == "ext" } {
+    if { $oper_mode == "exec" && $type in "ext extnat" } {
 	.button3menu add separator
 
 	#
@@ -1001,6 +988,7 @@ proc button1 { c x y button } {
 
     set curobj [$c find withtag current]
     set curtype [lindex [$c gettags current] 0]
+    set wasselected 0
     if { $curtype in "node oval rectangle text freeform" || ( $curtype == "nodelabel" &&
 	 [getNodeType [lindex [$c gettags $curobj] 1]] == "pseudo") } {
 
@@ -1019,14 +1007,12 @@ proc button1 { c x y button } {
 	    $c delete -withtags selectmark
 	}
 
-	if { $activetool == "select" && ! $wasselected } {
+	if { $activetool != "link" && ! $wasselected } {
 	    selectNode $c $curobj
 	}
     } elseif { $curtype == "selectmark" } {
-	set t1 [$c gettags current]
-	set o1 [lindex $t1 1]
-	set type1 [getNodeType $o1]
-	if { $type1 == "oval" || $type1 == "rectangle" } {
+	set o1 [lindex [$c gettags current] 1]
+	if { [getNodeType $o1] in "oval rectangle" } {
 	    set resizeobj $o1
 	    set bbox1 [$c bbox $o1]
 	    set x1 [lindex $bbox1 0]
@@ -1125,7 +1111,11 @@ proc button1 { c x y button } {
 	}
     } else {
 	if { $curtype in "node nodelabel text oval rectangle freeform" } {
-	    $c config -cursor fleur
+	    if { $activetool == "select" && $button == "ctrl" && $wasselected } {
+		$c config -cursor cross
+	    } else {
+		$c config -cursor fleur
+	    }
 	}
 
 	if { $activetool == "link" && $curtype == "node" } {
@@ -1379,8 +1369,8 @@ proc button1-release { c x y } {
 	# if there is an object beneath the cursor and an object was
 	# selected by the button1 procedure create a link between nodes
 	if { $destobj != "" && $curobj != "" && $destobj != $curobj } {
-	    set lnode1 [lindex [$c gettags $destobj] 1]
-	    set lnode2 [lindex [$c gettags $curobj] 1]
+	    set lnode1 [lindex [$c gettags $curobj] 1]
+	    set lnode2 [lindex [$c gettags $destobj] 1]
 	    set link_id [newLink $lnode1 $lnode2]
 	    if { $link_id != "" } {
 		drawLink $link_id
@@ -1898,15 +1888,31 @@ proc deleteSelection {} {
 #   Sets all nodes' IPv4 addresses to empty strings.
 #****
 proc removeIPv4nodes {} {
+    upvar 0 ::cf::[set ::curcfg]::IPv4UsedList IPv4UsedList
     global changed
 
-    set nodelist [selectedNodes]
-    foreach node_id $nodelist {
-	setStatIPv4routes $node_id ""
+    set removed_addrs {}
+    foreach node_id [selectedNodes] {
+	if { [getNodeType $node_id] == "pseudo" } {
+	    continue
+	}
+
+	if { [getStatIPv4routes $node_id] != "" } {
+	    setStatIPv4routes $node_id ""
+	}
+
 	foreach iface_id [ifcList $node_id] {
+	    set addrs [getIfcIPv4addrs $node_id $iface_id]
+	    if { $addrs == "" } {
+		continue
+	    }
+
+	    set removed_addrs [concat $removed_addrs $addrs]
 	    setIfcIPv4addrs $node_id $iface_id ""
 	}
     }
+
+    set IPv4UsedList [removeFromList $IPv4UsedList $removed_addrs "keep_doubles"]
 
     redrawAll
     set changed 1
@@ -1922,15 +1928,31 @@ proc removeIPv4nodes {} {
 #   Sets all nodes' IPv6 addresses to empty strings.
 #****
 proc removeIPv6nodes {} {
+    upvar 0 ::cf::[set ::curcfg]::IPv6UsedList IPv6UsedList
     global changed
 
-    set nodelist [selectedNodes]
-    foreach node_id $nodelist {
-	setStatIPv6routes $node_id ""
+    set removed_addrs {}
+    foreach node_id [selectedNodes] {
+	if { [getNodeType $node_id] == "pseudo" } {
+	    continue
+	}
+
+	if { [getStatIPv6routes $node_id] != "" } {
+	    setStatIPv6routes $node_id ""
+	}
+
 	foreach iface_id [ifcList $node_id] {
+	    set addrs [getIfcIPv6addrs $node_id $iface_id]
+	    if { $addrs == "" } {
+		continue
+	    }
+
+	    set removed_addrs [concat $removed_addrs $addrs]
 	    setIfcIPv6addrs $node_id $iface_id ""
 	}
     }
+
+    set IPv6UsedList [removeFromList $IPv6UsedList $removed_addrs "keep_doubles"]
 
     redrawAll
     set changed 1
@@ -1947,13 +1969,12 @@ proc removeIPv6nodes {} {
 #****
 # TODO: merge this with auto default gateway procedures?
 proc changeAddressRange {} {
-    global changed change_subnet4 control changeAddressRange
+    global changed change_subnet4 control
     global copypaste_nodes copypaste_list
 
     set control 0
     set autorenumber 1
     set change_subnet4 0
-    set changeAddressRange 1
 
     if { $copypaste_nodes } {
 	set selected_nodes $copypaste_list
@@ -2002,7 +2023,7 @@ proc changeAddressRange {} {
 		    set change_subnet4 1
 		}
 
-		autoIPv4addr $node_id $iface_id
+		autoIPv4addr $node_id $iface_id "use_autorenumbered"
 		lappend autorenumbered_ifcs "$node_id $iface_id"
 		incr counter
 		set changed 1
@@ -2043,13 +2064,12 @@ proc changeAddressRange {} {
 	    set change_subnet4 1
 	}
 
-	autoIPv4addr $node_id $iface_id
+	autoIPv4addr $node_id $iface_id "use_autorenumbered"
 	set changed 1
 	set change_subnet4 0
     }
 
     set autorenumber 0
-    set changeAddressRange 0
 
     redrawAll
     updateUndoLog
@@ -2065,13 +2085,12 @@ proc changeAddressRange {} {
 #****
 # TODO: merge this with auto default gateway procedures?
 proc changeAddressRange6 {} {
-    global changed change_subnet6 control changeAddressRange6
+    global changed change_subnet6 control
     global copypaste_nodes copypaste_list
 
     set control 0
     set autorenumber 1
     set change_subnet6 0
-    set changeAddressRange6 1
 
     if { $copypaste_nodes } {
 	set selected_nodes $copypaste_list
@@ -2120,7 +2139,7 @@ proc changeAddressRange6 {} {
 		    set change_subnet6 1
 		}
 
-		autoIPv6addr $node_id $iface_id
+		autoIPv6addr $node_id $iface_id "use_autorenumbered"
 		lappend autorenumbered_ifcs6 "$node_id $iface_id"
 
 		incr counter
@@ -2162,13 +2181,12 @@ proc changeAddressRange6 {} {
 	    set change_subnet6 1
 	}
 
-	autoIPv6addr $node_id $iface_id
+	autoIPv6addr $node_id $iface_id "use_autorenumbered"
 	set changed 1
 	set change_subnet6 0
     }
 
     set autorenumber 0
-    set changeAddressRange6 0
 
     redrawAll
     updateUndoLog
@@ -2188,19 +2206,18 @@ proc changeAddressRange6 {} {
 #   * y -- double click y coordinate
 #****
 proc double1onGrid { c x y } {
-    set obj [$c find closest $x $y]
-    set tags [$c gettags $obj]
-    set node_id [lindex $tags 1]
+    set tags [$c gettags [$c find closest $x $y]]
     if { [lsearch $tags grid] != -1 || [lsearch $tags background] != -1 } {
 	return
     }
 
+    set node_id [lindex $tags 1]
     # Is this really necessary?
     lassign [getAnnotationCoords $node_id] x1 y1 x2 y2
     if { $x < $x1 || $x > $x2 || $y < $y1 || $y > $y2 } {
 	# cursor is not ON the closest object
 	return
-    } else {
-	annotationConfig $c $node_id
     }
+
+    annotationConfig $c $node_id
 }

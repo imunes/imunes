@@ -66,11 +66,7 @@ proc $MODULE.confNewNode { node_id } {
     global def_router_model
     global nodeNamingBase
 
-    set ripEnable [lindex $rdconfig 0]
-    set ripngEnable [lindex $rdconfig 1]
-    set ospfEnable [lindex $rdconfig 2]
-    set ospf6Enable [lindex $rdconfig 3]
-    set bgpEnable [lindex $rdconfig 4]
+    lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable
     set router_ConfigModel $router_model
 
     if { $router_model != $def_router_model } {
@@ -84,11 +80,11 @@ proc $MODULE.confNewNode { node_id } {
 	! ]
     lappend $node_id "network-config [list $nconfig]"
 
-    setNodeProtocolRip $node_id $ripEnable
-    setNodeProtocolRipng $node_id $ripngEnable
-    setNodeProtocolOspfv2 $node_id $ospfEnable
-    setNodeProtocolOspfv3 $node_id $ospf6Enable
-    setNodeProtocolBgp $node_id $bgpEnable
+    setNodeProtocol $node_id "rip" $ripEnable
+    setNodeProtocol $node_id "ripng" $ripngEnable
+    setNodeProtocol $node_id "ospf" $ospfEnable
+    setNodeProtocol $node_id "ospf6" $ospf6Enable
+    setNodeProtocol $node_id "bgp" $bgpEnable
 
     setAutoDefaultRoutesStatus $node_id "enabled"
     setLogIfcType $node_id lo0 lo
@@ -108,10 +104,6 @@ proc $MODULE.confNewNode { node_id } {
 #   * iface_id -- interface name
 #****
 proc $MODULE.confNewIfc { node_id iface_id } {
-    global changeAddressRange changeAddressRange6
-
-    set changeAddressRange 0
-    set changeAddressRange6 0
     autoIPv4addr $node_id $iface_id
     autoIPv6addr $node_id $iface_id
     autoMACaddr $node_id $iface_id

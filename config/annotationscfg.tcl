@@ -435,8 +435,9 @@ proc setAnnotationCoords { annotation_id coords } {
 
     set iconcoords "iconcoords"
 
+    set roundcoords {}
     foreach c $coords {
-	set x [expr round($c)]
+	set x [expr int($c)]
 	lappend roundcoords $x
     }
 

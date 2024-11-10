@@ -89,7 +89,7 @@ proc undo {} {
     upvar 0 ::cf::[set ::curcfg]::undolevel undolevel
     upvar 0 ::cf::[set ::curcfg]::undolog undolog
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    global showTree
+    global showTree changed
 
     if { $oper_mode == "edit" && $undolevel > 0 } {
 	.menubar.edit entryconfigure "Redo" -state normal
@@ -106,6 +106,10 @@ proc undo {} {
 	if { $showTree } {
 	    refreshTopologyTree
 	}
+    }
+
+    if { $changed } {
+	redrawAll
     }
 }
 
@@ -125,7 +129,7 @@ proc redo {} {
     upvar 0 ::cf::[set ::curcfg]::redolevel redolevel
     upvar 0 ::cf::[set ::curcfg]::undolog undolog
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    global showTree
+    global showTree changed
 
     if { $oper_mode == "edit" && $redolevel > $undolevel } {
 	incr undolevel
@@ -145,6 +149,10 @@ proc redo {} {
 	if { $showTree } {
 	    refreshTopologyTree
 	}
+    }
+
+    if { $changed } {
+	redrawAll
     }
 }
 
@@ -498,66 +506,34 @@ proc routerDefaultsApply { wi } {
     global routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable routerBgpEnable
     global rdconfig
 
-    lset rdconfig 0 $routerRipEnable
-    lset rdconfig 1 $routerRipngEnable
-    lset rdconfig 2 $routerOspfEnable
-    lset rdconfig 3 $routerOspf6Enable
-    lset rdconfig 4 $routerBgpEnable
+    set rdconfig "$routerRipEnable $routerRipngEnable $routerOspfEnable $routerOspf6Enable $routerBgpEnable"
     set routerDefaultsModel $router_model
 
     set selected_node_list [selectedNodes]
-    if { $selected_node_list != {} } {
-	foreach node_id $selected_node_list {
-	    if { $oper_mode == "edit" && [getNodeType $node_id] == "router" } {
-		setNodeModel $node_id $router_model
+    if { $selected_node_list == {} } {
+	set selected_node_list $node_list
+    }
 
-		set router_ConfigModel $router_model
-		if { $router_ConfigModel != "static" } {
-		    set ripEnable [lindex $rdconfig 0]
-		    set ripngEnable [lindex $rdconfig 1]
-		    set ospfEnable [lindex $rdconfig 2]
-		    set ospf6Enable [lindex $rdconfig 3]
-		    set bgpEnable [lindex $rdconfig 4]
-		    setNodeProtocolRip $node_id $ripEnable
-		    setNodeProtocolRipng $node_id $ripngEnable
-		    setNodeProtocolOspfv2 $node_id $ospfEnable
-		    setNodeProtocolOspfv3 $node_id $ospf6Enable
-		    setNodeProtocolBgp $node_id $bgpEnable
-		} else {
-		    $wi.nbook.nf1.protocols.rip configure -state disabled
-		    $wi.nbook.nf1.protocols.ripng configure -state disabled
-		    $wi.nbook.nf1.protocols.ospf configure -state disabled
-		    $wi.nbook.nf1.protocols.ospf6 configure -state disabled
-		    $wi.nbook.nf1.protocols.bgp configure -state disabled
-		}
-		set changed 1
-	    }
-	}
-    } else {
-	foreach node_id $node_list {
-	    if { $oper_mode == "edit" && [getNodeType $node_id] == "router" } {
-		setNodeModel $node_id $router_model
+    foreach node_id $selected_node_list {
+	if { $oper_mode == "edit" && [getNodeType $node_id] == "router" } {
+	    setNodeModel $node_id $router_model
 
-		set router_ConfigModel $router_model
-		if { $router_ConfigModel != "static" } {
-		    set ripEnable [lindex $rdconfig 0]
-		    set ripngEnable [lindex $rdconfig 1]
-		    set ospfEnable [lindex $rdconfig 2]
-		    set ospf6Enable [lindex $rdconfig 3]
-		    setNodeProtocolRip $node_id  $ripEnable
-		    setNodeProtocolRipng $node_id $ripngEnable
-		    setNodeProtocolOspfv2 $node_id $ospfEnable
-		    setNodeProtocolOspfv3 $node_id $ospf6Enable
-		    setNodeProtocolBgp $node_id $bgpEnable
-		} else {
-		    $wi.nbook.nf1.protocols.rip configure -state disabled
-		    $wi.nbook.nf1.protocols.ripng configure -state disabled
-		    $wi.nbook.nf1.protocols.ospf configure -state disabled
-		    $wi.nbook.nf1.protocols.ospf6 configure -state disabled
-		    $wi.nbook.nf1.protocols.bgp configure -state disabled
-		}
-		set changed 1
+	    set router_ConfigModel $router_model
+	    if { $router_ConfigModel != "static" } {
+		lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable
+		setNodeProtocol $node_id "rip" $ripEnable
+		setNodeProtocol $node_id "ripng" $ripngEnable
+		setNodeProtocol $node_id "ospf" $ospfEnable
+		setNodeProtocol $node_id "ospf6" $ospf6Enable
+		setNodeProtocol $node_id "bgp" $bgpEnable
+	    } else {
+		$wi.nbook.nf1.protocols.rip configure -state disabled
+		$wi.nbook.nf1.protocols.ripng configure -state disabled
+		$wi.nbook.nf1.protocols.ospf configure -state disabled
+		$wi.nbook.nf1.protocols.ospf6 configure -state disabled
+		$wi.nbook.nf1.protocols.bgp configure -state disabled
 	    }
+	    set changed 1
 	}
     }
 
@@ -721,7 +697,7 @@ proc topologyElementsTree {} {
 		lappend nodetags $node_id
 		$f.tree set $node_id canvas [getCanvasName [getNodeCanvas $node_id]]
 		foreach iface_id [lsort -dictionary [ifcList $node_id]] {
-		    $f.tree insert $node_id end -id $node_id$iface_id -text "$iface_id" -tags $node_id$iface_id
+		    $f.tree insert $node_id end -id $node_id$iface_id -text "[getIfcName $node_id $iface_id]" -tags $node_id$iface_id
 		    $f.tree set $node_id$iface_id state [getIfcOperState $node_id $iface_id]
 		    $f.tree set $node_id$iface_id nat [getIfcNatState $node_id $iface_id]
 		    $f.tree set $node_id$iface_id IPv4 [join [getIfcIPv4addrs $node_id $iface_id] ";"]
@@ -737,11 +713,9 @@ proc topologyElementsTree {} {
 	set linktags ""
 	$f.tree insert {} end -id links -text "Links" -open false -tags links
 	foreach link_id [lsort -dictionary $link_list] {
-	    set node1_id [lindex [getLinkPeers $link_id] 0]
-	    set node2_id [lindex [getLinkPeers $link_id] 1]
-	    set name0 [getNodeName $node1_id]
-	    set name1 [getNodeName $node2_id]
-	    $f.tree insert links end -id $link_id -text "From $name0 to $name1" -tags $link_id
+	    lassign [getLinkPeers $link_id] node1_id node2_id
+	    $f.tree insert links end -id $link_id -text \
+		"From [getNodeName $node1_id] to [getNodeName $node2_id]" -tags $link_id
 	    lappend linktags $link_id
 	}
 
@@ -894,8 +868,7 @@ proc bindEventsToTree {} {
 proc selectNodeFromTree { node_id } {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
 
-    set canvas_id [getNodeCanvas $node_id]
-    set curcanvas $canvas_id
+    set curcanvas [getNodeCanvas $node_id]
     switchCanvas none
 
     .panwin.f1.c dtag node selected
@@ -917,10 +890,8 @@ proc selectNodeFromTree { node_id } {
 proc selectLinkPeersFromTree { link_id } {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
 
-    set node1_id [lindex [getLinkPeers $link_id] 0]
-    set node2_id [lindex [getLinkPeers $link_id] 1]
-    set canvas_id [getNodeCanvas $node1_id]
-    set curcanvas $canvas_id
+    lassign [getLinkPeers $link_id] node1_id node2_id
+    set curcanvas [getNodeCanvas $node1_id]
     switchCanvas none
 
     .panwin.f1.c dtag node selected
@@ -961,7 +932,7 @@ proc refreshTopologyTree {} {
 	    lappend nodetags $node_id
 	    $f.tree set $node_id canvas [getCanvasName [getNodeCanvas $node_id]]
 	    foreach iface_id [lsort -dictionary [ifcList $node_id]] {
-		    $f.tree insert $node_id end -id $node_id$iface_id -text "$iface_id" -tags $node_id$iface_id
+		    $f.tree insert $node_id end -id $node_id$iface_id -text "[getIfcName $node_id $iface_id]" -tags $node_id$iface_id
 		    $f.tree set $node_id$iface_id state [getIfcOperState $node_id $iface_id]
 		    $f.tree set $node_id$iface_id nat [getIfcNatState $node_id $iface_id]
 		    $f.tree set $node_id$iface_id IPv4 [join [getIfcIPv4addrs $node_id $iface_id] ";"]
@@ -974,11 +945,9 @@ proc refreshTopologyTree {} {
     set linktags ""
     $f.tree insert {} end -id links -text "Links" -open false -tags links
     foreach link_id [lsort -dictionary $link_list] {
-	set node1_id [lindex [getLinkPeers $link_id] 0]
-	set node2_id [lindex [getLinkPeers $link_id] 1]
-	set name0 [getNodeName $node1_id]
-	set name1 [getNodeName $node2_id]
-	$f.tree insert links end -id $link_id -text "From $name0 to $name1" -tags $link_id
+	lassign [getLinkPeers $link_id] node1_id node2_id
+	$f.tree insert links end -id $link_id -text \
+	    "From [getNodeName $node1_id] to [getNodeName $node2_id]" -tags $link_id
 	lappend linktags $link_id
     }
 

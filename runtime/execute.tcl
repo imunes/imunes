@@ -102,8 +102,7 @@ proc checkExternalInterfaces {} {
 		exec test -d /sys/class/net/$physical_ifc/wireless
 	    } on error {} {
 	    } on ok {} {
-		set link_id [lindex [getIfcLink $node_id $iface_id] 0]
-		if { [getLinkDirect $link_id] } {
+		if { [getLinkDirect [getIfcLink $node_id $iface_id]] } {
 		    set severity "warning"
 		    set msg "Interface '$physical_ifc' is a wireless interface,\
 			so its peer cannot change its MAC address!"
@@ -941,15 +940,12 @@ proc execute_linksCreate { links links_count w } {
     set batchStep 0
     for { set pending_links $links } { $pending_links != "" } {} {
 	set link_id [lindex $pending_links 0]
-	set i [lsearch -exact $pending_links $link_id]
-	set pending_links [lreplace $pending_links $i $i]
-
-	set node1_id [lindex [getLinkPeers $link_id] 0]
-	set node2_id [lindex [getLinkPeers $link_id] 1]
-	set iface1_id [lindex [getLinkPeersIfaces $link_id] 0]
-	set iface2_id [lindex [getLinkPeersIfaces $link_id] 1]
-
 	set msg "Creating link $link_id"
+	set pending_links [removeFromList $pending_links $link_id]
+
+	lassign [getLinkPeers $link_id] node1_id node2_id
+	lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
+
 	set mirror_link_id [getLinkMirror $link_id]
 	if { $mirror_link_id != "" } {
 	    set msg "Creating link $link_id/$mirror_link_id"
@@ -997,15 +993,12 @@ proc execute_linksConfigure { links links_count w } {
     set batchStep 0
     for { set pending_links $links } { $pending_links != "" } {} {
 	set link_id [lindex $pending_links 0]
-	set i [lsearch -exact $pending_links $link_id]
-	set pending_links [lreplace $pending_links $i $i]
-
-	set node1_id [lindex [getLinkPeers $link_id] 0]
-	set node2_id [lindex [getLinkPeers $link_id] 1]
-	set iface1_id [lindex [getLinkPeersIfaces $link_id] 0]
-	set iface2_id [lindex [getLinkPeersIfaces $link_id] 1]
-
 	set msg "Configuring link $link_id"
+	set pending_links [removeFromList $pending_links $link_id]
+
+	lassign [getLinkPeers $link_id] node1_id node2_id
+	lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
+
 	set mirror_link_id [getLinkMirror $link_id]
 	if { $mirror_link_id != "" } {
 	    set msg "Configuring link $link_id/$mirror_link_id"
@@ -1041,6 +1034,12 @@ proc execute_linksConfigure { links links_count w } {
 	    statline ""
 	}
     }
+}
+
+proc execute_nodesIfacesConfigure { nodes_ifaces nodes_count w } {
+}
+
+proc configureIfacesWait { nodes_ifaces nodes_count w } {
 }
 
 proc execute_nodesConfigure { nodes nodes_count w } {
@@ -1309,4 +1308,3 @@ proc startNodeFromMenu { node_id } {
 
     finishExecuting 1 "" $w
 }
-

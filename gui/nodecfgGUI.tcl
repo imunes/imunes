@@ -59,8 +59,10 @@ proc nodeConfigGUI { c node_id } {
         #
 	# Hyperlink to another canvas
         #
-	set curcanvas [getNodeCanvas [getNodeMirror $node_id]]
+	set mirror_node [getNodeMirror $node_id]
+	set curcanvas [getNodeCanvas $mirror_node]
 	switchCanvas none
+	after idle selectNodes [getIfcPeer $mirror_node "0"]
 
 	return
     } else {
@@ -551,7 +553,7 @@ proc configGUI_showIfcInfo { wi phase node_id iface_id } {
     #
     #shownifc - interface whose parameters are shown in shownifcframe
     #
-    set shownifc [string trim [lindex [split $shownifcframe .] end] if]
+    regsub ***=if [lindex [split $shownifcframe .] end] "" shownifc
 
     #if there is already some frame shown below the list of interfaces and
     #parameters shown in that frame are not parameters of selected interface
@@ -593,10 +595,9 @@ proc configGUI_showIfcInfo { wi phase node_id iface_id } {
 	#if user didn't select Cancel in the popup about saving changes on previously selected interface
 	if { $cancel == 0 } {
 	    foreach guielement $guielements {
-		set ind [lsearch $guielements $guielement]
-		#delete corresponding elements from thi list guielements
-		if {[lsearch $guielement $shownifc] != -1} {
-		    set guielements [lreplace $guielements $ind $ind]
+		#delete corresponding elements from the guielements list
+		if { $shownifc in $guielement } {
+		    set guielements [removeFromList $guielements \{$guielement\}]
 		}
 	    }
 
@@ -966,7 +967,7 @@ proc configGUI_applyButtonNode { wi node_id phase } {
 	if { $nbook != -1 && $treecolumns != "" } {
 	    configGUI_refreshIfcsTree .popup.nbook.nfInterfaces.panwin.f1.tree $node_id
 	    set shownifcframe [pack slaves [lindex [.popup.nbook tabs] 1].panwin.f2]
-	    set shownifc [string trim [lindex [split $shownifcframe .] end] if]
+	    regsub ***=if [lindex [split $shownifcframe .] end] "" shownifc
 	    [lindex [.popup.nbook tabs] 1].panwin.f1.tree selection set $shownifc
 
 	    if { ".popup.nbook.nfBridge" in [.popup.nbook tabs] } {
@@ -1578,11 +1579,11 @@ proc configGUI_routingModel { wi node_id } {
 
     set router_ConfigModel [getNodeModel $node_id]
     if { $router_ConfigModel != "static" } {
-        set ripEnable [getNodeProtocolRip $node_id]
-	set ripngEnable [getNodeProtocolRipng $node_id]
-	set ospfEnable [getNodeProtocolOspfv2 $node_id]
-	set ospf6Enable [getNodeProtocolOspfv3 $node_id]
-	set bgpEnable [getNodeProtocolBgp $node_id]
+        set ripEnable [getNodeProtocol $node_id "rip"]
+	set ripngEnable [getNodeProtocol $node_id "ripng"]
+	set ospfEnable [getNodeProtocol $node_id "ospf"]
+	set ospf6Enable [getNodeProtocol $node_id "ospf6"]
+	set bgpEnable [getNodeProtocol $node_id "bgp"]
     } else {
 	$w.protocols.rip configure -state disabled
 	$w.protocols.ripng configure -state disabled
@@ -2409,11 +2410,11 @@ proc configGUI_routingModelApply { wi node_id } {
 	}
 
 	if { $router_ConfigModel != "static" } {
-	    setNodeProtocolRip $node_id $ripEnable
-	    setNodeProtocolRipng $node_id $ripngEnable
-	    setNodeProtocolOspfv2 $node_id $ospfEnable
-	    setNodeProtocolOspfv3 $node_id $ospf6Enable
-	    setNodeProtocolBgp $node_id $bgpEnable
+	    setNodeProtocol $node_id "rip" $ripEnable
+	    setNodeProtocol $node_id "ripng" $ripngEnable
+	    setNodeProtocol $node_id "ospf" $ospfEnable
+	    setNodeProtocol $node_id "ospf6" $ospf6Enable
+	    setNodeProtocol $node_id "bgp" $bgpEnable
 	    if { [getNodeType $node_id] == "nat64" } {
 		foreach proto { rip ripng ospf ospf6 bgp } {
 		    set protocfg [netconfFetchSection $node_id "router $proto"]
@@ -2812,8 +2813,9 @@ proc createTab { node_id cfg_id } {
 #****
 proc customConfigGUIFillDefaults { wi node_id } {
     set cfg_id [$wi.nb tab current -text]
-    set cmd [[getNodeType $node_id].bootcmd $node_id]
-    set cfg [[getNodeType $node_id].generateConfig $node_id]
+    set node_type [getNodeType $node_id]
+    set cmd [$node_type.bootcmd $node_id]
+    set cfg [$node_type.generateConfig $node_id]
     set w $wi.nb.$cfg_id
 
     if { [$w.bootcmd_e get] != "" || [$w.editor get 1.0 {end -1c}] != "" } {
@@ -2876,7 +2878,7 @@ proc deleteConfig { wi node_id } {
 
 	    .popup.nbook.nfConfiguration.custcfg.dcomboDefault \
 		configure -values [getCustomConfigIDs $node_id]
-	    if { ! ([getCustomConfigSelected $node_id] in [getCustomConfigIDs $node_id]) } {
+	    if { [getCustomConfigSelected $node_id] ni [getCustomConfigIDs $node_id] } {
 		setCustomConfigSelected $node_id [lindex [getCustomConfigIDs $node_id] 0]
 	    }
 	}
@@ -4551,7 +4553,7 @@ proc configGUI_bridgeConfig { wi node_id } {
     global bridgeProtocol
     ttk::frame $wi.bridge -relief groove -borderwidth 2 -padding 2
 
-    set bridgeProtocol [getBridgeProtocol $node_id bridge0]
+    set bridgeProtocol [getBridgeProtocol $node_id]
 
     ttk::frame $wi.bridge.protocols -padding 2
     ttk::label $wi.bridge.protocols.label -text "Protocol:"
@@ -4568,7 +4570,7 @@ proc configGUI_bridgeConfig { wi node_id } {
 	-from 0 -to 61440 -increment 4096 \
 	-validatecommand { checkIntRange %P 0 61440 } \
 	-invalidcommand "focusAndFlash %W"
-    set bridgePriority [getBridgePriority $node_id bridge0]
+    set bridgePriority [getBridgePriority $node_id]
     if { $bridgePriority != "" } {
 	$wi.bridge.priority.box insert 0 $bridgePriority
     } else {
@@ -4581,7 +4583,7 @@ proc configGUI_bridgeConfig { wi node_id } {
 	-from 6 -to 40 -increment 2 \
 	-validatecommand { checkIntRange %P 6 40 } \
 	-invalidcommand "focusAndFlash %W"
-    set bridgeMaxAge [getBridgeMaxAge $node_id bridge0]
+    set bridgeMaxAge [getBridgeMaxAge $node_id]
     if { $bridgeMaxAge != "" } {
 	$wi.bridge.maxage.box insert 0 $bridgeMaxAge
     } else {
@@ -4594,8 +4596,8 @@ proc configGUI_bridgeConfig { wi node_id } {
 	-from 4 -to 30 -increment 1 \
 	-validatecommand { checkIntRange %P 4 30 } \
 	-invalidcommand "focusAndFlash %W"
-    set bridgeFwdDelay [getBridgeFwdDelay $node_id bridge0]
-    set bridgeMaxAge [getBridgeMaxAge $node_id bridge0]
+    set bridgeFwdDelay [getBridgeFwdDelay $node_id]
+    set bridgeMaxAge [getBridgeMaxAge $node_id]
     if { $bridgeFwdDelay != "" } {
 	$wi.bridge.fwddelay.box insert 0 $bridgeFwdDelay
     } else {
@@ -4608,7 +4610,7 @@ proc configGUI_bridgeConfig { wi node_id } {
 	-from 1 -to 10 -increment 1 \
 	-validatecommand { checkIntRange %P 1 10 } \
 	-invalidcommand "focusAndFlash %W"
-    set bridgeHoldCnt [getBridgeHoldCount $node_id bridge0]
+    set bridgeHoldCnt [getBridgeHoldCount $node_id]
     if { $bridgeHoldCnt != "" } {
 	$wi.bridge.holdcnt.box insert 0 $bridgeHoldCnt
     } else {
@@ -4621,7 +4623,7 @@ proc configGUI_bridgeConfig { wi node_id } {
 	-from 1 -to 2 -increment 1 \
 	-validatecommand { checkIntRange %P 1 2 } \
 	-invalidcommand "focusAndFlash %W"
-    set bridgeHelloTime [getBridgeHelloTime $node_id bridge0]
+    set bridgeHelloTime [getBridgeHelloTime $node_id]
     if { $bridgeHelloTime != "" } {
 	$wi.bridge.hellotime.box insert 0 $bridgeHelloTime
     } else {
@@ -4634,7 +4636,7 @@ proc configGUI_bridgeConfig { wi node_id } {
 	-from 0 -to 3600 -increment 20 \
 	-validatecommand { checkIntRange %P 0 3600 } \
 	-invalidcommand "focusAndFlash %W"
-    set bridgeTimeout [getBridgeTimeout $node_id bridge0]
+    set bridgeTimeout [getBridgeTimeout $node_id]
     if { $bridgeTimeout != "" } {
 	$wi.bridge.timeout.box insert 0 $bridgeTimeout
     } else {
@@ -4647,7 +4649,7 @@ proc configGUI_bridgeConfig { wi node_id } {
 	-from 0 -to 10000 -increment 10 \
 	-validatecommand { checkIntRange %P 0 10000 } \
 	-invalidcommand "focusAndFlash %W"
-    set bridgeMaxAddr [getBridgeMaxAddr $node_id bridge0]
+    set bridgeMaxAddr [getBridgeMaxAddr $node_id]
     if { $bridgeMaxAddr != "" } {
 	$wi.bridge.maxaddr.box insert 0 $bridgeMaxAddr
     } else {
@@ -4702,58 +4704,58 @@ proc configGUI_bridgeConfigApply { wi node_id } {
     global changed
 
     global bridgeProtocol
-    set oldProtocol [getBridgeProtocol $node_id bridge0]
+    set oldProtocol [getBridgeProtocol $node_id]
     if { $oldProtocol != $bridgeProtocol } {
-	setBridgeProtocol $node_id bridge0 $bridgeProtocol
+	setBridgeProtocol $node_id $bridgeProtocol
 	set changed 1
     }
 
     set newPriority [$wi.bridge.priority.box get]
-    set oldPriority [getBridgePriority $node_id bridge0]
+    set oldPriority [getBridgePriority $node_id]
     if { $oldPriority != $newPriority } {
-	setBridgePriority $node_id bridge0 $newPriority
+	setBridgePriority $node_id $newPriority
 	set changed 1
     }
 
     set newHoldCount [$wi.bridge.holdcnt.box get]
-    set oldHoldCount [getBridgeHoldCount $node_id bridge0]
+    set oldHoldCount [getBridgeHoldCount $node_id]
     if { $oldHoldCount != $newHoldCount } {
-	setBridgeHoldCount $node_id bridge0 $newHoldCount
+	setBridgeHoldCount $node_id $newHoldCount
 	set changed 1
     }
 
     set newMaxAge [$wi.bridge.maxage.box get]
-    set oldMaxAge [getBridgeMaxAge $node_id bridge0]
+    set oldMaxAge [getBridgeMaxAge $node_id]
     if { $oldMaxAge != $newMaxAge } {
-	setBridgeMaxAge $node_id bridge0 $newMaxAge
+	setBridgeMaxAge $node_id $newMaxAge
 	set changed 1
     }
 
     set newFwdDelay [$wi.bridge.fwddelay.box get]
-    set oldFwdDelay [getBridgeFwdDelay $node_id bridge0]
+    set oldFwdDelay [getBridgeFwdDelay $node_id]
     if { $oldFwdDelay != $newFwdDelay } {
-	setBridgeFwdDelay $node_id bridge0 $newFwdDelay
+	setBridgeFwdDelay $node_id $newFwdDelay
 	set changed 1
     }
 
     set newHelloTime [$wi.bridge.hellotime.box get]
-    set oldHelloTime [getBridgeHelloTime $node_id bridge0]
+    set oldHelloTime [getBridgeHelloTime $node_id]
     if { $oldHelloTime != $newHelloTime } {
-	setBridgeHelloTime $node_id bridge0 $newHelloTime
+	setBridgeHelloTime $node_id $newHelloTime
 	set changed 1
     }
 
     set newMaxAddr [$wi.bridge.maxaddr.box get]
-    set oldMaxAddr [getBridgeMaxAddr $node_id bridge0]
+    set oldMaxAddr [getBridgeMaxAddr $node_id]
     if { $oldMaxAddr != $newMaxAddr } {
-	setBridgeMaxAddr $node_id bridge0 $newMaxAddr
+	setBridgeMaxAddr $node_id $newMaxAddr
 	set changed 1
     }
 
     set newTimeout [$wi.bridge.timeout.box get]
-    set oldTimeout [getBridgeTimeout $node_id bridge0]
+    set oldTimeout [getBridgeTimeout $node_id]
     if { $oldTimeout != $newTimeout } {
-	setBridgeTimeout $node_id bridge0 $newTimeout
+	setBridgeTimeout $node_id $newTimeout
 	set changed 1
     }
 }
@@ -4993,7 +4995,7 @@ proc configGUI_showBridgeIfcInfo { wi phase node_id iface_id } {
     #
     #shownifc - interface whose parameters are shown in shownifcframe
     #
-    set shownifc [string trim [lindex [split $shownifcframe .] end] if]
+    regsub ***=if [lindex [split $shownifcframe .] end] "" shownifc
 
     #if there is already some frame shown below the list of interfaces and
     #parameters shown in that frame are not parameters of selected interface
@@ -5032,18 +5034,16 @@ proc configGUI_showBridgeIfcInfo { wi phase node_id iface_id } {
 	#previously selected interface.
 	if { $cancel == 0 } {
 	    foreach guielement $brguielements {
-		set ind [lsearch $brguielements $guielement]
-		#delete corresponding elements from thi list guielements
-		if { [lsearch $guielement $shownifc] != -1 } {
-		    set brguielements [lreplace $brguielements $ind $ind]
+		#delete corresponding elements from the brguielements list
+		if { $shownifc in $guielement } {
+		    set brguielements [removeFromList $brguielements \{$guielement\}]
 		}
 	    }
 
 	    foreach guielement $guielements {
-		set ind [lsearch $guielements $guielement]
-		#delete corresponding elements from thi list guielements
-		if { [lsearch $guielement $shownifc] != -1 } {
-		    set guielements [lreplace $guielements $ind $ind]
+		#delete corresponding elements from the guielements list
+		if { $shownifc in $guielement } {
+		    set guielements [removeFromList $guielements \{$guielement\}]
 		}
 	    }
 	    #delete frame that is already shown below the list of interfaces
@@ -5464,10 +5464,9 @@ proc configGUI_showFilterIfcRuleInfo { wi phase node_id iface_id rule } {
 	#if user didn't select Cancel in the popup about saving changes on previously selected interface
 	if { $cancel == 0 } {
 	    foreach guielement $filterguielements {
-		set ind [lsearch $filterguielements $guielement]
-		#delete corresponding elements from thi list filterguielements
-		if { [lsearch $guielement $shownrule] != -1 } {
-		    set filterguielements [lreplace $filterguielements $ind $ind]
+		#delete corresponding elements from the filterguielements list
+		if { $shownrule in $guielement } {
+		    set filterguielements [removeFromList $filterguielements \{$guielement\}]
 		}
 	    }
 
@@ -6253,10 +6252,9 @@ proc configGUI_showPacketInfo { wi phase node_id pac } {
 	#if user didn't select Cancel in the popup about saving changes on previously selected interface
 	if { $cancel == 0 } {
 	    foreach guielement $packgenguielements {
-		set ind [lsearch $packgenguielements $guielement]
-		#delete corresponding elements from thi list packgenguielements
-		if { [lsearch $guielement $shownpac] != -1 } {
-		    set packgenguielements [lreplace $packgenguielements $ind $ind]
+		#delete corresponding elements from the packgenguielements list
+		if { $shownpac in $guielement } {
+		    set packgenguielements [removeFromList $packgenguielements \{$guielement\}]
 		}
 	    }
 	    #delete frame that is already shown below the list of interfaces (shownruleframe)
@@ -6516,11 +6514,11 @@ proc configGUI_routingProtocols { wi node_id } {
     ttk::checkbutton $wi.routing.protocols.ospf6 -text "ospfv3" -variable ospf6Enable
     ttk::checkbutton $wi.routing.protocols.bgp -text "bgp" -variable bgpEnable
 
-    set ripEnable [getNodeProtocolRip $node_id]
-    set ripngEnable [getNodeProtocolRipng $node_id]
-    set ospfEnable [getNodeProtocolOspfv2 $node_id]
-    set ospf6Enable [getNodeProtocolOspfv3 $node_id]
-    set bgpEnable [getNodeProtocolBgp $node_id]
+    set ripEnable [getNodeProtocol $node_id "rip"]
+    set ripngEnable [getNodeProtocol $node_id "ripng"]
+    set ospfEnable [getNodeProtocol $node_id "ospf"]
+    set ospf6Enable [getNodeProtocol $node_id "ospf6"]
+    set bgpEnable [getNodeProtocol $node_id "bgp"]
     if { $oper_mode != "edit" } {
 	$wi.routing.protocols.rip configure -state disabled
 	$wi.routing.protocols.ripng configure -state disabled
@@ -6678,6 +6676,13 @@ proc configGUI_nat64ConfigApply { wi node_id } {
     }
 }
 
-proc transformNodesGUI { nodes type } {
-    transformNodes $nodes $type
+proc transformNodesGUI { nodes to_type } {
+    global changed
+
+    transformNodes $nodes $to_type
+
+    if { $changed == 1 } {
+	redrawAll
+	updateUndoLog
+    }
 }

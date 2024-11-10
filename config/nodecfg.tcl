@@ -628,6 +628,38 @@ proc netconfInsertSection { node_id section } {
     set $node_id [lreplace [set $node_id] $i $i [list network-config $netconf]]
 }
 
+#****f* nodecfg.tcl/getIfcName
+# NAME
+#   getIfcName -- get interface name
+# SYNOPSIS
+#   set name [getIfcName $node_id $iface_id]
+# FUNCTION
+#   Returns the name of the specified interface.
+# INPUTS
+#   * node_id -- node id
+#   * iface_id -- the interface id
+# RESULT
+#   * name -- the name of the interface
+#****
+proc getIfcName { node_id iface_id } {
+    return $iface_id
+}
+
+#****f* nodecfg.tcl/setIfcName
+# NAME
+#   setIfcName -- set interface name
+# SYNOPSIS
+#   setIfcName $node_id $iface_id $name
+# FUNCTION
+#   Sets the name of the specified interface.
+# INPUTS
+#   * node_id -- node id
+#   * iface_id -- interface id
+#   * name -- new name of the interface
+#****
+proc setIfcName { node_id iface_id name } {
+}
+
 #****f* nodecfg.tcl/getIfcOperState
 # NAME
 #   getIfcOperState -- get interface operating state
@@ -2324,8 +2356,7 @@ proc removeNode { node_id } {
     }
 
     foreach iface_id [ifcList $node_id] {
-	set peer_id [getIfcPeer $node_id $iface_id]
-	foreach link_id [linksByPeers $node_id $peer_id] {
+	foreach link_id [linksByPeers $node_id [getIfcPeer $node_id $iface_id]] {
 	    removeLink $link_id
 	}
     }
@@ -2495,256 +2526,112 @@ proc setNodeMirror { node_id value } {
     }
 }
 
-#****f* nodecfg.tcl/getNodeProtocolRip
+#****f* nodecfg.tcl/getNodeProtocol
 # NAME
-#   getNodeProtocolRip
+#   getNodeProtocol
 # SYNOPSIS
-#   getNodeProtocolRip $node_id
+#   getNodeProtocol $node_id $protocol
 # FUNCTION
-#   Checks if node's current protocol is rip.
+#   Checks if node's protocol is enabled.
 # INPUTS
 #   * node_id -- node id
+#   * protocol -- protocol to check
 # RESULT
 #   * check -- 1 if it is rip, otherwise 0
 #****
-proc getNodeProtocolRip { node_id } {
+proc getNodeProtocol { node_id protocol } {
     upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 
-    if { [netconfFetchSection $node_id "router rip"] != "" } {
+    if { $protocol == "bgp" } {
+	set protocol "bgp 1000"
+    }
+
+    if { [netconfFetchSection $node_id "router $protocol"] != "" } {
 	return 1
     } else {
 	return 0
     }
 }
 
-#****f* nodecfg.tcl/getNodeProtocolRipng
+#****f* nodecfg.tcl/setNodeProtocol
 # NAME
-#   getNodeProtocolRipng
+#   setNodeProtocol
 # SYNOPSIS
-#   getNodeProtocolRipng $node_id
+#   setNodeProtocol $node_id $protocol $state
 # FUNCTION
-#   Checks if node's current protocol is ripng.
+#   Sets node's protocol state.
 # INPUTS
 #   * node_id -- node id
-# RESULT
-#   * check -- 1 if it is ripng, otherwise 0
+#   # protocol -- protocol to enable/disable
+#   * state -- 1 if enabling protocol, 0 if disabling
 #****
-proc getNodeProtocolRipng { node_id } {
+proc setNodeProtocol { node_id protocol state } {
     upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 
-    if { [netconfFetchSection $node_id "router ripng"] != "" } {
-	return 1
+    if { $state == 1 } {
+	switch -exact $protocol {
+	    "rip" {
+		set cfg [list "router rip" \
+		" redistribute static" \
+		" redistribute connected" \
+		" redistribute ospf" \
+		" network 0.0.0.0/0" \
+		! ]
+	    }
+	    "ripng" {
+		set cfg [list "router ripng" \
+		" redistribute static" \
+		" redistribute connected" \
+		" redistribute ospf6" \
+		" network ::/0" \
+		! ]
+	    }
+	    "ospf" {
+		set cfg [list "router ospf" \
+		" redistribute static" \
+		" redistribute connected" \
+		" redistribute rip" \
+		" network 0.0.0.0/0 area 0.0.0.0" \
+		! ]
+	    }
+	    "ospf6" {
+		set router_id [ip::intToString [expr 1 + [string trimleft $node_id "n"]]]
+
+		set area_string "area 0.0.0.0 range ::/0"
+		if { [getNodeModel $node_id] == "quagga" } {
+		    set area_string "network ::/0 area 0.0.0.0"
+		}
+
+		set cfg [list "router ospf6" \
+		    " ospf6 router-id $router_id" \
+		    " redistribute static" \
+		    " redistribute connected" \
+		    " redistribute ripng" \
+		    " $area_string" \
+		    ! ]
+	    }
+	    "bgp" {
+		set loopback_ipv4 [lindex [split [getIfcIPv4addrs $node_id "lo0"] "/"] 0]
+
+		set cfg [list "router bgp 1000" \
+		    " bgp router-id $loopback_ipv4" \
+		    " no bgp ebgp-requires-policy" \
+		    " neighbor DEFAULT peer-group" \
+		    " neighbor DEFAULT remote-as 1000" \
+		    " neighbor DEFAULT update-source $loopback_ipv4" \
+		    " redistribute static" \
+		    " redistribute connected" \
+		    ! ]
+	    }
+	}
+
+	netconfInsertSection $node_id $cfg
     } else {
-	return 0
-    }
-}
+	if { $protocol == "bgp" } {
+	    set protocol "bgp 1000"
+	}
 
-#****f* nodecfg.tcl/getNodeProtocolOspfv2
-# NAME
-#   getNodeProtocolOspfv2
-# SYNOPSIS
-#   getNodeProtocolOspfv2 $node_id
-# FUNCTION
-#   Checks if node's current protocol is ospfv2.
-# INPUTS
-#   * node_id -- node id
-# RESULT
-#   * check -- 1 if it is ospfv2, otherwise 0
-#****
-proc getNodeProtocolOspfv2 { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    if { [netconfFetchSection $node_id "router ospf"] != "" } {
-	return 1
-    } else {
-	return 0
-    }
-}
-
-#****f* nodecfg.tcl/getNodeProtocolOspfv3
-# NAME
-#   getNodeProtocolOspfv3
-# SYNOPSIS
-#   getNodeProtocolOspfv3 $node_id
-# FUNCTION
-#   Checks if node's current protocol is ospfv3.
-# INPUTS
-#   * node_id -- node id
-# RESULT
-#   * check -- 1 if it is ospfv3, otherwise 0
-#****
-proc getNodeProtocolOspfv3 { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    if { [netconfFetchSection $node_id "router ospf6"] != "" } {
-	return 1
-    } else {
-	return 0
-    }
-}
-
-#****f* nodecfg.tcl/getNodeProtocolBgp
-# NAME
-#   getNodeProtocolBgp
-# SYNOPSIS
-#   getNodeProtocolBgp $node_id
-# FUNCTION
-#   Checks if node's current protocol is bgp.
-# INPUTS
-#   * node_id -- node id
-# RESULT
-#   * check -- 1 if it is bgp, otherwise 0
-#****
-proc getNodeProtocolBgp { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    if { [netconfFetchSection $node_id "router bgp 1000"] != "" } {
-	return 1
-    } else {
-	return 0
-    }
-}
-
-#****f* nodecfg.tcl/setNodeProtocolRip
-# NAME
-#   setNodeProtocolRip
-# SYNOPSIS
-#   setNodeProtocolRip $node_id $ripEnable
-# FUNCTION
-#   Sets node's protocol to rip.
-# INPUTS
-#   * node_id -- node id
-#   * ripEnable -- 1 if enabling rip, 0 if disabling
-#****
-proc setNodeProtocolRip { node_id ripEnable } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    if { $ripEnable == 1 } {
-	netconfInsertSection $node_id [list "router rip" \
-	    " redistribute static" \
-	    " redistribute connected" \
-	    " redistribute ospf" \
-	    " network 0.0.0.0/0" \
-	    ! ]
-    } else {
-	netconfClearSection $node_id "router rip"
-    }
-}
-
-#****f* nodecfg.tcl/setNodeProtocolRipng
-# NAME
-#   setNodeProtocolRipng
-# SYNOPSIS
-#   setNodeProtocolRipng $node_id $ripngEnable
-# FUNCTION
-#   Sets node's protocol to ripng.
-# INPUTS
-#   * node_id -- node id
-#   * ripngEnable -- 1 if enabling ripng, 0 if disabling
-#****
-proc setNodeProtocolRipng { node_id ripngEnable } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    if { $ripngEnable == 1 } {
-	netconfInsertSection $node_id [list "router ripng" \
-	    " redistribute static" \
-	    " redistribute connected" \
-	    " redistribute ospf6" \
-	    " network ::/0" \
-	    ! ]
-    } else {
- 	netconfClearSection $node_id "router ripng"
-    }
-}
-
-#****f* nodecfg.tcl/setNodeProtocolOspfv2
-# NAME
-#   setNodeProtocolOspfv2
-# SYNOPSIS
-#   setNodeProtocolOspfv2 $node_id $ospfEnable
-# FUNCTION
-#   Sets node's protocol to ospf.
-# INPUTS
-#   * node_id -- node id
-#   * ospfEnable -- 1 if enabling ospf, 0 if disabling
-#****
-proc setNodeProtocolOspfv2 { node_id ospfEnable } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    if { $ospfEnable == 1 } {
-	netconfInsertSection $node_id [list "router ospf" \
-	    " redistribute static" \
-	    " redistribute connected" \
-	    " redistribute rip" \
-	    " network 0.0.0.0/0 area 0.0.0.0" \
-	    ! ]
-    } else {
-	netconfClearSection $node_id "router ospf"
-    }
-}
-
-#****f* nodecfg.tcl/setNodeProtocolOspfv3
-# NAME
-#   setNodeProtocolOspfv3
-# SYNOPSIS
-#   setNodeProtocolOspfv3 $node_id $ospf6Enable
-# FUNCTION
-#   Sets node's protocol to Ospfv3.
-# INPUTS
-#   * node_id -- node id
-#   * ospf6Enable -- 1 if enabling ospf6, 0 if disabling
-#****
-proc setNodeProtocolOspfv3 { node_id ospf6Enable } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    set router_id [ip::intToString [expr 1 + [string trimleft $node_id "n"]]]
-
-    set area_string "area 0.0.0.0 range ::/0"
-    if { [getNodeModel $node_id] == "quagga" } {
-	set area_string "network ::/0 area 0.0.0.0"
-    }
-
-    if { $ospf6Enable == 1 } {
-	netconfInsertSection $node_id [list "router ospf6" \
-	    " ospf6 router-id $router_id" \
-	    " redistribute static" \
-	    " redistribute connected" \
-	    " redistribute ripng" \
-	    " $area_string" \
-	    ! ]
-    } else {
-	netconfClearSection $node_id "router ospf6"
-    }
-}
-
-#****f* nodecfg.tcl/setNodeProtocolBgp
-# NAME
-#   setNodeProtocolBgp
-# SYNOPSIS
-#   setNodeProtocolBgp $node_id $bgpEnable
-# FUNCTION
-#   Sets node's protocol to bgp.
-# INPUTS
-#   * node_id -- node id
-#   * bgpEnable -- 1 if enabling bgp, 0 if disabling
-#****
-proc setNodeProtocolBgp { node_id bgpEnable } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    if { $bgpEnable == 1 } {
-	set loopback_ipv4 [lindex [split [getIfcIPv4addrs $node_id "lo0"] "/"] 0]
-
-	netconfInsertSection $node_id [list "router bgp 1000" \
-	    " bgp router-id $loopback_ipv4" \
-	    " no bgp ebgp-requires-policy" \
-	    " neighbor DEFAULT peer-group" \
-	    " neighbor DEFAULT remote-as 1000" \
-	    " neighbor DEFAULT update-source $loopback_ipv4" \
-	    " redistribute static" \
-	    " redistribute connected" \
-	    ! ]
-    } else {
-	netconfClearSection $node_id "router bgp 1000"
+	netconfClearSection $node_id "router $protocol"
     }
 }
 
@@ -3093,6 +2980,12 @@ proc setNodeDockerAttach { node_id state } {
     }
 }
 
+proc getNodeIface { node_id iface_id } {
+}
+
+proc setNodeIface { node_id iface_id new_iface } {
+}
+
 #****f* nodecfg.tcl/nodeCfggenIfcIPv4
 # NAME
 #   nodeCfggenIfcIPv4 -- generate interface IPv4 configuration
@@ -3111,10 +3004,8 @@ proc nodeCfggenIfcIPv4 { node_id } {
     foreach iface_id [allIfcList $node_id] {
 	set primary 1
 	foreach addr [getIfcIPv4addrs $node_id $iface_id] {
-	    if { $addr != "" } {
-		lappend cfg [getIPv4IfcCmd $iface_id $addr $primary]
-		set primary 0
-	    }
+	    lappend cfg [getIPv4IfcCmd $iface_id $addr $primary]
+	    set primary 0
 	}
     }
 
@@ -3139,10 +3030,8 @@ proc nodeCfggenIfcIPv6 { node_id } {
     foreach iface_id [allIfcList $node_id] {
 	set primary 1
 	foreach addr [getIfcIPv6addrs $node_id $iface_id] {
-	    if { $addr != "" } {
-		lappend cfg [getIPv6IfcCmd $iface_id $addr $primary]
-		set primary 0
-	    }
+	    lappend cfg [getIPv6IfcCmd $iface_id $addr $primary]
+	    set primary 0
 	}
     }
 
@@ -3322,8 +3211,8 @@ proc transformNodes { nodes to_type } {
 
 		# set router model and default protocols
 		setNodeModel $node_id "frr"
-		setNodeProtocolRip $node_id 1
-		setNodeProtocolRipng $node_id 1
+		setNodeProtocol $node_id "rip" 1
+		setNodeProtocol $node_id "ripng" 1
 		# clear default static routes
 		netconfClearSection $node_id "ip route [lindex [getStatIPv4routes $node_id] 0]"
 		netconfClearSection $node_id "ipv6 route [lindex [getStatIPv6routes $node_id] 0]"
@@ -3331,11 +3220,6 @@ proc transformNodes { nodes to_type } {
 		set changed 1
 	    }
 	}
-    }
-
-    if { $changed == 1 } {
-	redrawAll
-	updateUndoLog
     }
 }
 

@@ -30,13 +30,12 @@
 # NAME
 #   ipv4.tcl -- file for handling IPv4
 #****
-global ipv4 numbits control change_subnet4 changeAddressRange
+global ipv4 numbits control change_subnet4
 
 set ipv4 10.0.0.0/24
 set numbits [lindex [split $ipv4 /] 1]
 set control 0
 set change_subnet4 0
-set changeAddressRange 0
 
 #****f* ipv4.tcl/IPv4AddrApply
 # NAME
@@ -253,7 +252,7 @@ proc findFreeIPv4Net { mask { ipv4_used_list "" } } {
 #   * iface_id -- the interface to witch a new, automatically generated, IPv4
 #     address will be assigned
 #****
-proc autoIPv4addr { node_id iface_id } {
+proc autoIPv4addr { node_id iface_id { use_autorenumbered "" } } {
     upvar 0 ::cf::[set ::curcfg]::IPv4UsedList IPv4UsedList
     global IPv4autoAssign
 
@@ -261,9 +260,8 @@ proc autoIPv4addr { node_id iface_id } {
 	return
     }
 
-    global numbits change_subnet4 control changeAddressRange autorenumbered_ifcs
+    global numbits change_subnet4 control autorenumbered_ifcs
     #change_subnet4 - to change the subnet (1) or not (0)
-    #changeAddressRange - is this procedure called from 'changeAddressRange' (1 if true, otherwise 0)
     #autorenumbered_ifcs - list of all interfaces that changed an address
 
     set node_type [getNodeType $node_id]
@@ -290,7 +288,7 @@ proc autoIPv4addr { node_id iface_id } {
 			continue
 		    }
 
-		    if { $changeAddressRange == 1 } {
+		    if { $use_autorenumbered != "" } {
 			if { "$new_peer_id $new_peer_iface_id" in $autorenumbered_ifcs } {
 			    lappend peer_ip4addrs {*}$peer_ip4addr
 			}

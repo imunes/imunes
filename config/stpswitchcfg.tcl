@@ -1,5 +1,5 @@
-proc getBridgeProtocol { node_id bridge } {
-    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
+proc getBridgeProtocol { node_id } {
+    foreach line [netconfFetchSection $node_id "bridge bridge0"] {
 	if { [lindex $line 0] == "rstp" } {
 	    return "rstp"
 	}
@@ -12,9 +12,9 @@ proc getBridgeProtocol { node_id bridge } {
     return rstp
 }
 
-proc setBridgeProtocol { node_id bridge protocol } {
-    set ifcfg [list "bridge $bridge"]
-    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
+proc setBridgeProtocol { node_id protocol } {
+    set ifcfg [list "bridge bridge0"]
+    foreach line [netconfFetchSection $node_id "bridge bridge0"] {
 	if { [lindex $line 0] != "stp" && [lindex $line 0] != "rstp" } {
 	    lappend ifcfg $line
 	}
@@ -27,8 +27,8 @@ proc setBridgeProtocol { node_id bridge protocol } {
     netconfInsertSection $node_id $ifcfg
 }
 
-proc getBridgePriority { node_id bridge } {
-    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
+proc getBridgePriority { node_id } {
+    foreach line [netconfFetchSection $node_id "bridge bridge0"] {
 	if { [lindex $line 0] == "priority" } {
 	    return [lindex $line 1]
 	}
@@ -37,9 +37,9 @@ proc getBridgePriority { node_id bridge } {
     return 32768
 }
 
-proc setBridgePriority { node_id bridge priority } {
-    set ifcfg [list "bridge $bridge"]
-    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
+proc setBridgePriority { node_id priority } {
+    set ifcfg [list "bridge bridge0"]
+    foreach line [netconfFetchSection $node_id "bridge bridge0"] {
 	if { [lindex $line 0] != "priority" } {
 	    lappend ifcfg $line
 	}
@@ -52,8 +52,8 @@ proc setBridgePriority { node_id bridge priority } {
     netconfInsertSection $node_id $ifcfg
 }
 
-proc getBridgeHoldCount { node_id bridge } {
-    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
+proc getBridgeHoldCount { node_id } {
+    foreach line [netconfFetchSection $node_id "bridge bridge0"] {
 	if { [lindex $line 0] == "holdcnt" } {
 	    return [lindex $line 1]
 	}
@@ -62,9 +62,9 @@ proc getBridgeHoldCount { node_id bridge } {
     return 6
 }
 
-proc setBridgeHoldCount { node_id bridge hold_count } {
-    set ifcfg [list "bridge $bridge"]
-    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
+proc setBridgeHoldCount { node_id hold_count } {
+    set ifcfg [list "bridge bridge0"]
+    foreach line [netconfFetchSection $node_id "bridge bridge0"] {
 	if { [lindex $line 0] != "holdcnt" } {
 	    lappend ifcfg $line
 	}
@@ -77,8 +77,8 @@ proc setBridgeHoldCount { node_id bridge hold_count } {
     netconfInsertSection $node_id $ifcfg
 }
 
-proc getBridgeMaxAge { node_id bridge } {
-    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
+proc getBridgeMaxAge { node_id } {
+    foreach line [netconfFetchSection $node_id "bridge bridge0"] {
 	if { [lindex $line 0] == "maxage" } {
 	    return [lindex $line 1]
 	}
@@ -87,9 +87,9 @@ proc getBridgeMaxAge { node_id bridge } {
     return 20
 }
 
-proc setBridgeMaxAge { node_id bridge max_age } {
-    set ifcfg [list "bridge $bridge"]
-    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
+proc setBridgeMaxAge { node_id max_age } {
+    set ifcfg [list "bridge bridge0"]
+    foreach line [netconfFetchSection $node_id "bridge bridge0"] {
 	if { [lindex $line 0] != "maxage" } {
 	    lappend ifcfg $line
 	}
@@ -102,8 +102,8 @@ proc setBridgeMaxAge { node_id bridge max_age } {
     netconfInsertSection $node_id $ifcfg
 }
 
-proc getBridgeFwdDelay { node_id bridge } {
-    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
+proc getBridgeFwdDelay { node_id } {
+    foreach line [netconfFetchSection $node_id "bridge bridge0"] {
 	if { [lindex $line 0] == "fwddelay" } {
 	    return [lindex $line 1]
 	}
@@ -112,9 +112,9 @@ proc getBridgeFwdDelay { node_id bridge } {
     return 15
 }
 
-proc setBridgeFwdDelay { node_id bridge forwarding_delay } {
-    set ifcfg [list "bridge $bridge"]
-    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
+proc setBridgeFwdDelay { node_id forwarding_delay } {
+    set ifcfg [list "bridge bridge0"]
+    foreach line [netconfFetchSection $node_id "bridge bridge0"] {
 	if { [lindex $line 0] != "fwddelay" } {
 	    lappend ifcfg $line
 	}
@@ -127,8 +127,8 @@ proc setBridgeFwdDelay { node_id bridge forwarding_delay } {
     netconfInsertSection $node_id $ifcfg
 }
 
-proc getBridgeHelloTime { node_id bridge } {
-    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
+proc getBridgeHelloTime { node_id } {
+    foreach line [netconfFetchSection $node_id "bridge bridge0"] {
 	if { [lindex $line 0] == "hellotime" } {
 	    return [lindex $line 1]
 	}
@@ -137,9 +137,9 @@ proc getBridgeHelloTime { node_id bridge } {
     return 2
 }
 
-proc setBridgeHelloTime { node_id bridge hello_time } {
-    set ifcfg [list "bridge $bridge"]
-    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
+proc setBridgeHelloTime { node_id hello_time } {
+    set ifcfg [list "bridge bridge0"]
+    foreach line [netconfFetchSection $node_id "bridge bridge0"] {
 	if { [lindex $line 0] != "hellotime" } {
 	    lappend ifcfg $line
 	}
@@ -152,8 +152,8 @@ proc setBridgeHelloTime { node_id bridge hello_time } {
     netconfInsertSection $node_id $ifcfg
 }
 
-proc getBridgeMaxAddr { node_id bridge } {
-    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
+proc getBridgeMaxAddr { node_id } {
+    foreach line [netconfFetchSection $node_id "bridge bridge0"] {
 	if { [lindex $line 0] == "maxaddr" } {
 	    return [lindex $line 1]
 	}
@@ -162,9 +162,9 @@ proc getBridgeMaxAddr { node_id bridge } {
     return 100
 }
 
-proc setBridgeMaxAddr { node_id bridge max_addresses } {
-    set ifcfg [list "bridge $bridge"]
-    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
+proc setBridgeMaxAddr { node_id max_addresses } {
+    set ifcfg [list "bridge bridge0"]
+    foreach line [netconfFetchSection $node_id "bridge bridge0"] {
 	if { [lindex $line 0] != "maxaddr" } {
 	    lappend ifcfg $line
 	}
@@ -177,8 +177,8 @@ proc setBridgeMaxAddr { node_id bridge max_addresses } {
     netconfInsertSection $node_id $ifcfg
 }
 
-proc getBridgeTimeout { node_id bridge } {
-    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
+proc getBridgeTimeout { node_id } {
+    foreach line [netconfFetchSection $node_id "bridge bridge0"] {
 	if { [lindex $line 0] == "timeout" } {
 	    return [lindex $line 1]
 	}
@@ -187,9 +187,9 @@ proc getBridgeTimeout { node_id bridge } {
     return 240
 }
 
-proc setBridgeTimeout { node_id bridge address_timeout } {
-    set ifcfg [list "bridge $bridge"]
-    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
+proc setBridgeTimeout { node_id address_timeout } {
+    set ifcfg [list "bridge bridge0"]
+    foreach line [netconfFetchSection $node_id "bridge bridge0"] {
 	if { [lindex $line 0] != "timeout" } {
 	    lappend ifcfg $line
 	}

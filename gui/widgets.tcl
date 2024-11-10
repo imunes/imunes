@@ -97,22 +97,12 @@ proc showCfgPopup { c node_id title x y } {
     set newY $y
 
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    set sizex [lindex [getCanvasSize $curcanvas] 0]
-    set sizey [lindex [getCanvasSize $curcanvas] 1]
+    lassign [getCanvasSize $curcanvas] sizex sizey
+    lassign [getNodeCoords $node_id] nodeX nodeY
+    lassign [$c cget -scrollregion] rx1 ry1 rx2 ry2
 
-    set nodeX [lindex [getNodeCoords $node_id] 0]
-    set nodeY [lindex [getNodeCoords $node_id] 1]
-
-    set canvasRegion [$c cget -scrollregion]
-    set rx1 [lindex $canvasRegion 0]
-    set ry1 [lindex $canvasRegion 1]
-    set rx2 [lindex $canvasRegion 2]
-    set ry2 [lindex $canvasRegion 3]
-
-    set vx1 [expr {round ([lindex [$c xview] 0]*($rx2-$rx1)+$rx1)}]
-    set vx2 [expr {round ([lindex [$c xview] 1]*($rx2-$rx1)+$rx1)}]
-    set vy1 [expr {round ([lindex [$c yview] 0]*($ry2-$ry1)+$ry1)}]
-    set vy2 [expr {round ([lindex [$c yview] 1]*($ry2-$ry1)+$ry1)}]
+    lassign [lmap n [$c xview] {expr {round($n * ($rx2 - $rx1) + $rx1)}}] vx1 vx2
+    lassign [lmap n [$c yview] {expr {round($n * ($ry2 - $ry1) + $ry1)}}] vy1 vy2
 
     set vwidth [expr {abs($vx2 - $vx1)}]
     set vheight [expr {abs($vy2 - $vy1)}]
@@ -217,9 +207,10 @@ proc showRoute { c node2_id } {
 	    set node1_id $selected
 
 	    #Draw route only if both nodes work on network layer
-	    set node1_type [[getNodeType $node1_id].netlayer]
-	    set node2_type [[getNodeType $node2_id].netlayer]
-	    if { $node1_id != $node2_id && $node1_type == "NETWORK" && $node2_type == "NETWORK" } {
+	    if { $node1_id != $node2_id && \
+		[[getNodeType $node1_id].netlayer] == "NETWORK" && \
+		[[getNodeType $node2_id].netlayer] == "NETWORK" } {
+
 		#User notification
 		set line "Please wait. Route is being calculated."
 		.bottom.textbox config -text "$line"
@@ -296,8 +287,7 @@ proc findNode { c ipAddr } {
     set nodeList {}
     foreach obj [$c find withtag node] {
 	set node_id [lindex [$c gettags $obj] 1]
-	set node_type [[getNodeType $node_id].netlayer]
-	if { $node_type == "NETWORK" } {
+	if { [[getNodeType $node_id].netlayer] == "NETWORK" } {
 	    lappend nodeList $node_id
 	    incr i
 	}

@@ -146,6 +146,22 @@ if { ! [info exists eid_base] } {
     set eid_base [genExperimentId]
 }
 
+# bases for naming new nodes
+array set nodeNamingBase {
+    pc pc
+    ext ext
+    filter filter
+    router router
+    host host
+    hub hub
+    extelem xel
+    lanswitch switch
+    nat64 nat64-
+    packgen packgen
+    stpswitch stpswitch
+    wlan wlan
+}
+
 set option_defaults {
     auto_etc_hosts		0
 }

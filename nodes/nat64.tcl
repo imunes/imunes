@@ -38,10 +38,7 @@ proc $MODULE.confNewNode { node_id } {
 
     router.confNewNode $node_id
 
-    set nconfig [list \
-	"hostname [getNewNodeNameType nat64 $nodeNamingBase(nat64)]" \
-	! ]
-    lappend $node_id "network-config [list $nconfig]"
+    setNodeName $node_id [getNewNodeNameType nat64 $nodeNamingBase(nat64)]
 
     foreach proto { rip ripng ospf ospf6 bgp } {
 	set protocfg [netconfFetchSection $node_id "router $proto"]

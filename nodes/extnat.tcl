@@ -75,10 +75,7 @@ proc $MODULE.confNewNode { node_id } {
 #   * iface_id -- interface id
 #****
 proc $MODULE.confNewIfc { node_id iface_id } {
-    global changeAddressRange changeAddressRange6 mac_byte4 mac_byte5
-
-    set changeAddressRange 0
-    set changeAddressRange6 0
+    global mac_byte4 mac_byte5
 
     autoIPv4addr $node_id $iface_id
     autoIPv6addr $node_id $iface_id
