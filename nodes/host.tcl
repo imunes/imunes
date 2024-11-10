@@ -84,13 +84,15 @@ proc $MODULE.confNewNode { node_id } {
 #   * iface_id -- interface name
 #****
 proc $MODULE.confNewIfc { node_id iface_id } {
-    global changeAddressRange changeAddressRange6
-
-    set changeAddressRange 0
-    set changeAddressRange6 0
     autoIPv4addr $node_id $iface_id
     autoIPv6addr $node_id $iface_id
     autoMACaddr $node_id $iface_id
+}
+
+proc $MODULE.generateConfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
 }
 
 #****f* host.tcl/host.generateConfig
@@ -124,6 +126,9 @@ proc $MODULE.generateConfig { node_id } {
     lappend cfg "inetd"
 
     return $cfg
+}
+
+proc $MODULE.generateUnconfig { node_id } {
 }
 
 #****f* host.tcl/host.icon
@@ -312,6 +317,17 @@ proc $MODULE.nghook { eid node_id iface_id } {
 ############################ INSTANTIATE PROCEDURES ############################
 ################################################################################
 
+#****f* host.tcl/host.prepareSystem
+# NAME
+#   host.prepareSystem -- prepare system
+# SYNOPSIS
+#   host.prepareSystem
+# FUNCTION
+#   Does nothing
+#****
+proc $MODULE.prepareSystem {} {
+}
+
 #****f* host.tcl/host.nodeCreate
 # NAME
 #   host.nodeCreate -- instantiate
@@ -340,6 +356,26 @@ proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
     l3node.nodePhysIfacesCreate $eid $node_id $ifaces
 }
 
+proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
+}
+
+#****f* host.tcl/host.nodeIfacesConfigure
+# NAME
+#   host.nodeIfacesConfigure -- configure host node interfaces
+# SYNOPSIS
+#   host.nodeIfacesConfigure $eid $node_id $ifaces
+# FUNCTION
+#   Configure interfaces on a host. Set MAC, MTU, queue parameters, assign the IP
+#   addresses to the interfaces, etc. This procedure can be called if the node
+#   is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
+}
+
 #****f* host.tcl/host.nodeConfigure
 # NAME
 #   host.nodeConfigure -- start
@@ -360,8 +396,28 @@ proc $MODULE.nodeConfigure { eid node_id } {
 ############################# TERMINATE PROCEDURES #############################
 ################################################################################
 
+#****f* host.tcl/host.nodeIfacesUnconfigure
+# NAME
+#   host.nodeIfacesUnconfigure -- unconfigure host node interfaces
+# SYNOPSIS
+#   host.nodeIfacesUnconfigure $eid $node_id $ifaces
+# FUNCTION
+#   Unconfigure interfaces on a host to a default state. Set name to iface_id,
+#   flush IP addresses to the interfaces, etc. This procedure can be called if
+#   the node is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
+}
+
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
     l3node.nodeIfacesDestroy $eid $node_id $ifaces
+}
+
+proc $MODULE.nodeUnconfigure { eid node_id } {
 }
 
 #****f* host.tcl/host.nodeShutdown

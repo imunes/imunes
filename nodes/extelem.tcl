@@ -52,6 +52,7 @@ registerModule $MODULE
 #   Loads ng_extelem into the kernel.
 #****
 proc $MODULE.prepareSystem {} {
+    catch { exec kldload ng_ether }
 }
 
 #****f* extelem.tcl/extelem.confNewIfc

@@ -551,7 +551,7 @@ proc configGUI_showIfcInfo { wi phase node_id iface_id } {
     #
     #shownifc - interface whose parameters are shown in shownifcframe
     #
-    set shownifc [string trim [lindex [split $shownifcframe .] end] if]
+    regsub ***=if [lindex [split $shownifcframe .] end] "" shownifc
 
     #if there is already some frame shown below the list of interfaces and
     #parameters shown in that frame are not parameters of selected interface
@@ -593,10 +593,9 @@ proc configGUI_showIfcInfo { wi phase node_id iface_id } {
 	#if user didn't select Cancel in the popup about saving changes on previously selected interface
 	if { $cancel == 0 } {
 	    foreach guielement $guielements {
-		set ind [lsearch $guielements $guielement]
-		#delete corresponding elements from thi list guielements
-		if {[lsearch $guielement $shownifc] != -1} {
-		    set guielements [lreplace $guielements $ind $ind]
+		#delete corresponding elements from the guielements list
+		if { $shownifc in $guielement } {
+		    set guielements [removeFromList $guielements \{$guielement\}]
 		}
 	    }
 
@@ -966,7 +965,7 @@ proc configGUI_applyButtonNode { wi node_id phase } {
 	if { $nbook != -1 && $treecolumns != "" } {
 	    configGUI_refreshIfcsTree .popup.nbook.nfInterfaces.panwin.f1.tree $node_id
 	    set shownifcframe [pack slaves [lindex [.popup.nbook tabs] 1].panwin.f2]
-	    set shownifc [string trim [lindex [split $shownifcframe .] end] if]
+	    regsub ***=if [lindex [split $shownifcframe .] end] "" shownifc
 	    [lindex [.popup.nbook tabs] 1].panwin.f1.tree selection set $shownifc
 
 	    if { ".popup.nbook.nfBridge" in [.popup.nbook tabs] } {
@@ -4964,7 +4963,7 @@ proc configGUI_showBridgeIfcInfo { wi phase node_id iface_id } {
     #
     #shownifc - interface whose parameters are shown in shownifcframe
     #
-    set shownifc [string trim [lindex [split $shownifcframe .] end] if]
+    regsub ***=if [lindex [split $shownifcframe .] end] "" shownifc
 
     #if there is already some frame shown below the list of interfaces and
     #parameters shown in that frame are not parameters of selected interface
@@ -5003,18 +5002,16 @@ proc configGUI_showBridgeIfcInfo { wi phase node_id iface_id } {
 	#previously selected interface.
 	if { $cancel == 0 } {
 	    foreach guielement $brguielements {
-		set ind [lsearch $brguielements $guielement]
-		#delete corresponding elements from thi list guielements
-		if { [lsearch $guielement $shownifc] != -1 } {
-		    set brguielements [lreplace $brguielements $ind $ind]
+		#delete corresponding elements from the brguielements list
+		if { $shownifc in $guielement } {
+		    set brguielements [removeFromList $brguielements \{$guielement\}]
 		}
 	    }
 
 	    foreach guielement $guielements {
-		set ind [lsearch $guielements $guielement]
-		#delete corresponding elements from thi list guielements
-		if { [lsearch $guielement $shownifc] != -1 } {
-		    set guielements [lreplace $guielements $ind $ind]
+		#delete corresponding elements from the guielements list
+		if { $shownifc in $guielement } {
+		    set guielements [removeFromList $guielements \{$guielement\}]
 		}
 	    }
 	    #delete frame that is already shown below the list of interfaces
@@ -5435,10 +5432,9 @@ proc configGUI_showFilterIfcRuleInfo { wi phase node_id iface_id rule } {
 	#if user didn't select Cancel in the popup about saving changes on previously selected interface
 	if { $cancel == 0 } {
 	    foreach guielement $filterguielements {
-		set ind [lsearch $filterguielements $guielement]
-		#delete corresponding elements from thi list filterguielements
-		if { [lsearch $guielement $shownrule] != -1 } {
-		    set filterguielements [lreplace $filterguielements $ind $ind]
+		#delete corresponding elements from the filterguielements list
+		if { $shownrule in $guielement } {
+		    set filterguielements [removeFromList $filterguielements \{$guielement\}]
 		}
 	    }
 
@@ -6225,10 +6221,9 @@ proc configGUI_showPacketInfo { wi phase node_id pac } {
 	#if user didn't select Cancel in the popup about saving changes on previously selected interface
 	if { $cancel == 0 } {
 	    foreach guielement $packgenguielements {
-		set ind [lsearch $packgenguielements $guielement]
-		#delete corresponding elements from thi list packgenguielements
-		if { [lsearch $guielement $shownpac] != -1 } {
-		    set packgenguielements [lreplace $packgenguielements $ind $ind]
+		#delete corresponding elements from the packgenguielements list
+		if { $shownpac in $guielement } {
+		    set packgenguielements [removeFromList $packgenguielements \{$guielement\}]
 		}
 	    }
 	    #delete frame that is already shown below the list of interfaces (shownruleframe)
@@ -6648,6 +6643,13 @@ proc configGUI_nat64ConfigApply { wi node_id } {
     }
 }
 
-proc transformNodesGUI { nodes type } {
-    transformNodes $nodes $type
+proc transformNodesGUI { nodes to_type } {
+    global changed
+
+    transformNodes $nodes $to_type
+
+    if { $changed == 1 } {
+	redrawAll
+	updateUndoLog
+    }
 }

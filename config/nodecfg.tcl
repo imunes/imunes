@@ -605,6 +605,38 @@ proc netconfInsertSection { node_id section } {
     set $node_id [lreplace [set $node_id] $i $i [list network-config $netconf]]
 }
 
+#****f* nodecfg.tcl/getIfcName
+# NAME
+#   getIfcName -- get interface name
+# SYNOPSIS
+#   set name [getIfcName $node_id $iface_id]
+# FUNCTION
+#   Returns the name of the specified interface.
+# INPUTS
+#   * node_id -- node id
+#   * iface_id -- the interface id
+# RESULT
+#   * name -- the name of the interface
+#****
+proc getIfcName { node_id iface_id } {
+    return $iface_id
+}
+
+#****f* nodecfg.tcl/setIfcName
+# NAME
+#   setIfcName -- set interface name
+# SYNOPSIS
+#   setIfcName $node_id $iface_id $name
+# FUNCTION
+#   Sets the name of the specified interface.
+# INPUTS
+#   * node_id -- node id
+#   * iface_id -- interface id
+#   * name -- new name of the interface
+#****
+proc setIfcName { node_id iface_id name } {
+}
+
 #****f* nodecfg.tcl/getIfcOperState
 # NAME
 #   getIfcOperState -- get interface operating state
@@ -2259,8 +2291,7 @@ proc removeNode { node_id } {
     }
 
     foreach iface_id [ifcList $node_id] {
-	set peer_id [getIfcPeer $node_id $iface_id]
-	foreach link_id [linksByPeers $node_id $peer_id] {
+	foreach link_id [linksByPeers $node_id [getIfcPeer $node_id $iface_id]] {
 	    removeLink $link_id
 	}
     }
@@ -2968,6 +2999,12 @@ proc setNodeDockerAttach { node_id state } {
     }
 }
 
+proc getNodeIface { node_id iface_id } {
+}
+
+proc setNodeIface { node_id iface_id new_iface } {
+}
+
 #****f* nodecfg.tcl/nodeCfggenIfcIPv4
 # NAME
 #   nodeCfggenIfcIPv4 -- generate interface IPv4 configuration
@@ -2986,10 +3023,8 @@ proc nodeCfggenIfcIPv4 { node_id } {
     foreach iface_id [allIfcList $node_id] {
 	set primary 1
 	foreach addr [getIfcIPv4addrs $node_id $iface_id] {
-	    if { $addr != "" } {
-		lappend cfg [getIPv4IfcCmd $iface_id $addr $primary]
-		set primary 0
-	    }
+	    lappend cfg [getIPv4IfcCmd $iface_id $addr $primary]
+	    set primary 0
 	}
     }
 
@@ -3014,10 +3049,8 @@ proc nodeCfggenIfcIPv6 { node_id } {
     foreach iface_id [allIfcList $node_id] {
 	set primary 1
 	foreach addr [getIfcIPv6addrs $node_id $iface_id] {
-	    if { $addr != "" } {
-		lappend cfg [getIPv6IfcCmd $iface_id $addr $primary]
-		set primary 0
-	    }
+	    lappend cfg [getIPv6IfcCmd $iface_id $addr $primary]
+	    set primary 0
 	}
     }
 
@@ -3206,11 +3239,6 @@ proc transformNodes { nodes to_type } {
 		set changed 1
 	    }
 	}
-    }
-
-    if { $changed == 1 } {
-	redrawAll
-	updateUndoLog
     }
 }
 

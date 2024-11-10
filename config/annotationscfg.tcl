@@ -401,17 +401,17 @@ proc setAnnotationFont { annotation_id font } {
     }
 }
 
-#****f* annotations_cfg.tcl/getAnnotationCoords
+#****f* annotationscfg.tcl/getAnnotationCoords
 # NAME
-#   getAnnotationCoords -- get annotation color
+#   getAnnotationCoords -- get annotation coordinates
 # SYNOPSIS
 #   getAnnotationCoords $annotation_id
 # FUNCTION
-#   Returns the specified annotation's color.
+#   Returns the specified annotation's coordinates.
 # INPUTS
 #   * annotation_id -- annotation object
 # RESULT
-#   * color -- annotation color
+#   * coords -- annotation coordinates
 #****
 proc getAnnotationCoords { annotation_id } {
     upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
@@ -435,8 +435,9 @@ proc setAnnotationCoords { annotation_id coords } {
 
     set iconcoords "iconcoords"
 
+    set roundcoords {}
     foreach c $coords {
-	set x [expr round($c)]
+	set x [expr int($c)]
 	lappend roundcoords $x
     }
 

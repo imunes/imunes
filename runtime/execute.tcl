@@ -102,8 +102,7 @@ proc checkExternalInterfaces {} {
 		exec test -d /sys/class/net/$physical_ifc/wireless
 	    } on error {} {
 	    } on ok {} {
-		set link_id [lindex [getIfcLink $node_id $iface_id] 0]
-		if { [getLinkDirect $link_id] } {
+		if { [getLinkDirect [getIfcLink $node_id $iface_id]] } {
 		    set severity "warning"
 		    set msg "Interface '$physical_ifc' is a wireless interface,\
 			so its peer cannot change its MAC address!"
@@ -613,6 +612,12 @@ proc deployCfg {} {
 	statline "Waiting for interfaces on $allNodeCount node(s) to be created..."
 	pipesClose
 
+	statline "Creating logical interfaces on nodes..."
+	pipesCreate
+	execute_nodesLogIfacesCreate $create_nodes_ifaces $create_nodes_ifaces_count $w
+	statline "Waiting for logical on $create_nodes_ifaces_count node(s) to be created..."
+	pipesClose
+
 	statline "Creating links..."
 	pipesCreate
 	createLinks $link_list $linkCount $w
@@ -929,21 +934,57 @@ proc execute_nodesPhysIfacesCreate { nodes nodes_count w } {
     }
 }
 
+proc execute_nodesLogIfacesCreate { nodes_ifaces nodeCount w } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+    global progressbarCount execMode
+
+    set batchStep 0
+    dict for {node ifaces} $nodes_ifaces {
+	displayBatchProgress $batchStep $nodeCount
+
+	if { [info procs [getNodeType $node].nodeLogIfacesCreate] != "" } {
+	    if { $ifaces == "*" } {
+		set ifaces [logIfcList $node]
+	    }
+
+	    try {
+		[getNodeType $node].nodeLogIfacesCreate $eid $node $ifaces
+	    } on error err {
+		return -code error "Error in '[getNodeType $node].nodeLogIfacesCreate $eid $node $ifaces': $err"
+	    nodeIfacesDestroy
+	    pipesExec ""
+	}
+
+	incr batchStep
+	incr progressbarCount
+
+	if { $execMode != "batch" } {
+	    statline "Creating logical ifaces on node [getNodeName $node]"
+	    $w.p configure -value $progressbarCount
+	    update
+	}
+    }
+
+    if { $nodeCount > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+	if { $execMode == "batch" } {
+	    statline ""
+	}
+    }
+}
+
 proc createLinks { links linkCount w } {
     global progressbarCount execMode
 
     set batchStep 0
     for { set pending_links $links } { $pending_links != "" } {} {
 	set link_id [lindex $pending_links 0]
-	set i [lsearch -exact $pending_links $link_id]
-	set pending_links [lreplace $pending_links $i $i]
-
-	set node1_id [lindex [getLinkPeers $link_id] 0]
-	set node2_id [lindex [getLinkPeers $link_id] 1]
-	set iface1_id [lindex [getLinkPeersIfaces $link_id] 0]
-	set iface2_id [lindex [getLinkPeersIfaces $link_id] 1]
-
 	set msg "Creating link $link_id"
+	set pending_links [removeFromList $pending_links $link_id]
+
+	lassign [getLinkPeers $link_id] node1_id node2_id
+	lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
+
 	set mirror_link_id [getLinkMirror $link_id]
 	if { $mirror_link_id != "" } {
 	    set msg "Creating link $link_id/$mirror_link_id"
@@ -991,15 +1032,12 @@ proc configureLinks { links linkCount w } {
     set batchStep 0
     for { set pending_links $links } { $pending_links != "" } {} {
 	set link_id [lindex $pending_links 0]
-	set i [lsearch -exact $pending_links $link_id]
-	set pending_links [lreplace $pending_links $i $i]
-
-	set node1_id [lindex [getLinkPeers $link_id] 0]
-	set node2_id [lindex [getLinkPeers $link_id] 1]
-	set iface1_id [lindex [getLinkPeersIfaces $link_id] 0]
-	set iface2_id [lindex [getLinkPeersIfaces $link_id] 1]
-
 	set msg "Configuring link $link_id"
+	set pending_links [removeFromList $pending_links $link_id]
+
+	lassign [getLinkPeers $link_id] node1_id node2_id
+	lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
+
 	set mirror_link_id [getLinkMirror $link_id]
 	if { $mirror_link_id != "" } {
 	    set msg "Configuring link $link_id/$mirror_link_id"

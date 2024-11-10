@@ -522,10 +522,8 @@ proc dumpLinksToFile { path } {
 	    continue
 	}
 
-	set node1_id [lindex [getLinkPeers $link_id] 0]
-	set node2_id [lindex [getLinkPeers $link_id] 1]
-	set iface1_id [lindex [getLinkPeersIfaces $link_id] 0]
-	set iface2_id [lindex [getLinkPeersIfaces $link_id] 1]
+	lassign [getLinkPeers $link_id] node1_id node2_id
+	lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
 
 	set mirror_link_id [getLinkMirror $link_id]
 	if { $mirror_link_id != "" } {
@@ -540,8 +538,8 @@ proc dumpLinksToFile { path } {
 
 	set linkname "$name1$linkDelim$name2"
 
-	set lpair [list $node1_id $iface1_id]
-	set rpair [list $node2_id $iface2_id]
+	set lpair [list $node1_id [getIfcName $node1_id $iface1_id]]
+	set rpair [list $node2_id [getIfcName $node2_id $iface2_id]]
 	if { [getNodeType $node1_id] in "rj45 extelem" } {
 	    if { [getNodeType $node1_id] == "rj45" } {
 		set lpair $name1

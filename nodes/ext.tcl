@@ -76,15 +76,24 @@ proc $MODULE.confNewNode { node_id } {
 #   * iface_id -- interface name
 #****
 proc $MODULE.confNewIfc { node_id iface_id } {
-    global changeAddressRange changeAddressRange6 mac_byte4 mac_byte5
-
-    set changeAddressRange 0
-    set changeAddressRange6 0
+    global mac_byte4 mac_byte5
 
     autoIPv4addr $node_id $iface_id
     autoIPv6addr $node_id $iface_id
     randomizeMACbytes
     autoMACaddr $node_id $iface_id
+}
+
+proc $MODULE.generateConfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateConfig { node_id } {
+}
+
+proc $MODULE.generateUnconfig { node_id } {
 }
 
 #****f* ext.tcl/ext.icon
@@ -185,6 +194,9 @@ proc $MODULE.virtlayer {} {
     return NATIVE
 }
 
+proc $MODULE.bootcmd { node_id } {
+}
+
 #****f* ext.tcl/ext.shellcmds
 # NAME
 #   ext.shellcmds -- shell commands
@@ -271,6 +283,17 @@ proc $MODULE.maxLinks {} {
 ############################ INSTANTIATE PROCEDURES ############################
 ################################################################################
 
+#****f* ext.tcl/ext.prepareSystem
+# NAME
+#   ext.prepareSystem -- prepare system
+# SYNOPSIS
+#   ext.prepareSystem
+# FUNCTION
+#   Does nothing
+#****
+proc $MODULE.prepareSystem {} {
+}
+
 #****f* ext.tcl/ext.nodeCreate
 # NAME
 #   ext.nodeCreate -- instantiate
@@ -286,8 +309,57 @@ proc $MODULE.maxLinks {} {
 proc $MODULE.nodeCreate { eid node_id } {
 }
 
+#****f* ext.tcl/ext.nodeNamespaceSetup
+# NAME
+#   ext.nodeNamespaceSetup -- ext node nodeNamespaceSetup
+# SYNOPSIS
+#   ext.nodeNamespaceSetup $eid $node_id
+# FUNCTION
+#   Linux only. Attaches the existing Docker netns to a new one.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeNamespaceSetup { eid node_id } {
+}
+
+#****f* ext.tcl/ext.nodeInitConfigure
+# NAME
+#   ext.nodeInitConfigure -- ext node nodeInitConfigure
+# SYNOPSIS
+#   ext.nodeInitConfigure $eid $node_id
+# FUNCTION
+#   Runs initial L3 configuration, such as creating logical interfaces and
+#   configuring sysctls.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeInitConfigure { eid node_id } {
+}
+
 proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
     l2node.nodePhysIfacesCreate $eid $node_id $ifaces
+}
+
+proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
+}
+
+#****f* ext.tcl/ext.nodeIfacesConfigure
+# NAME
+#   ext.nodeIfacesConfigure -- configure ext node interfaces
+# SYNOPSIS
+#   ext.nodeIfacesConfigure $eid $node_id $ifaces
+# FUNCTION
+#   Configure interfaces on a ext. Set MAC, MTU, queue parameters, assign the IP
+#   addresses to the interfaces, etc. This procedure can be called if the node
+#   is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
 }
 
 #****f* ext.tcl/ext.nodeConfigure
@@ -313,8 +385,28 @@ proc $MODULE.nodeConfigure { eid node_id } {
 ############################# TERMINATE PROCEDURES #############################
 ################################################################################
 
+#****f* ext.tcl/ext.nodeIfacesUnconfigure
+# NAME
+#   ext.nodeIfacesUnconfigure -- unconfigure ext node interfaces
+# SYNOPSIS
+#   ext.nodeIfacesUnconfigure $eid $node_id $ifaces
+# FUNCTION
+#   Unconfigure interfaces on an ext to a default state. Set name to iface_id,
+#   flush IP addresses to the interfaces, etc. This procedure can be called if
+#   the node is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
+}
+
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
     l2node.nodeIfacesDestroy $eid $node_id $ifaces
+}
+
+proc $MODULE.nodeUnconfigure { eid node_id } {
 }
 
 #****f* ext.tcl/ext.nodeShutdown
