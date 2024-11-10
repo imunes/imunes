@@ -68,10 +68,7 @@ proc autoMACaddr { node iface } {
 	return
     }
 
-    set old_mac [getIfcMACaddr $node $iface]
-    if { $old_mac != "" } {
-	set MACUsedList [removeFromList $MACUsedList $old_mac]
-    }
+    set MACUsedList [removeFromList $MACUsedList [getIfcMACaddr $node $iface] "keep_doubles"]
 
     set macaddr [getNextMACaddr $MACUsedList]
 

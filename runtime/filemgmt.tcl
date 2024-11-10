@@ -329,13 +329,8 @@ proc fileSaveAsDialogBox {} {
 proc closeFile {} {
     global cfg_list curcfg
       
-    set new_cfg_list ""
     if { [llength $cfg_list] > 1 } {
-        set indexes [lsearch -not -all -exact $cfg_list $curcfg]
-        foreach ind $indexes {
-            lappend new_cfg_list [lindex $cfg_list $ind]
-        }
-        set cfg_list $new_cfg_list
+	set cfg_list [removeFromList $cfg_list $curcfg]
 
         set cfg [lindex $cfg_list 0]
         loadCfg $cfg

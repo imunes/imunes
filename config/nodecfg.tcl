@@ -2128,7 +2128,7 @@ proc logicalPeerByIfc { node ifc } {
 	    set peer_idx [lsearch -exact [linkPeers $link] $node]
 	    set my_ifc [lindex $ifaces $peer_idx]
 	    if { $ifc == $my_ifc } {
-		set peer_ifc [removeFromList $ifaces $ifc]
+		set peer_ifc [removeFromList $ifaces $ifc "keep_doubles"]
 		break
 	    }
 	}
@@ -2231,8 +2231,7 @@ proc removeNode { node } {
 	    removeLink $link
 	}
     }
-    set i [lsearch -exact $node_list $node]
-    set node_list [lreplace $node_list $i $i]
+    set node_list [removeFromList $node_list $node]
 
     set node_type [nodeType $node]
     if { $node_type in [array names nodeNamingBase] } {
