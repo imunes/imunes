@@ -66,6 +66,32 @@ proc $MODULE.confNewNode { node_id } {
     lappend $node_id "network-config [list $nconfig]"
 }
 
+#****f* rj45.tcl/rj45.confNewIfc
+# NAME
+#   rj45.confNewIfc -- configure new interface
+# SYNOPSIS
+#   rj45.confNewIfc $node_id $ifc
+# FUNCTION
+#   Configures new interface for the specified node.
+# INPUTS
+#   * node_id -- node id
+#   * ifc -- interface name
+#****
+proc $MODULE.confNewIfc { node_id ifc } {
+}
+
+proc $MODULE.generateConfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateConfig { node_id } {
+}
+
+proc $MODULE.generateUnconfig { node_id } {
+}
+
 #****f* rj45.tcl/rj45.ifacePrefix
 # NAME
 #   rj45.ifacePrefix -- interface name prefix
@@ -180,9 +206,117 @@ proc $MODULE.nodeCreate { eid node_id } {
     captureExtIfc $eid $node_id
 }
 
+#****f* rj45.tcl/rj45.nodeNamespaceSetup
+# NAME
+#   rj45.nodeNamespaceSetup -- rj45 node nodeNamespaceSetup
+# SYNOPSIS
+#   rj45.nodeNamespaceSetup $eid $node_id
+# FUNCTION
+#   Linux only. Attaches the existing Docker netns to a new one.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeNamespaceSetup { eid node_id } {
+}
+
+#****f* rj45.tcl/rj45.nodeInitConfigure
+# NAME
+#   rj45.nodeInitConfigure -- rj45 node nodeInitConfigure
+# SYNOPSIS
+#   rj45.nodeInitConfigure $eid $node_id
+# FUNCTION
+#   Runs initial L3 configuration, such as creating logical interfaces and
+#   configuring sysctls.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeInitConfigure { eid node_id } {
+}
+
+proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
+}
+
+proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
+}
+
+#****f* rj45.tcl/rj45.nodeIfacesConfigure
+# NAME
+#   rj45.nodeIfacesConfigure -- configure rj45 node interfaces
+# SYNOPSIS
+#   rj45.nodeIfacesConfigure $eid $node_id $ifaces
+# FUNCTION
+#   Configure interfaces on a rj45. Set MAC, MTU, queue parameters, assign the IP
+#   addresses to the interfaces, etc. This procedure can be called if the node
+#   is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
+}
+
+#****f* rj45.tcl/rj45.nodeConfigure
+# NAME
+#   rj45.nodeConfigure -- configure rj45 node
+# SYNOPSIS
+#   rj45.nodeConfigure $eid $node_id
+# FUNCTION
+#   Starts a new rj45. Simulates the booting proces of a node, starts all the
+#   services, etc.
+#   This procedure can be called if it is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeConfigure { eid node_id } {
+}
+
 ################################################################################
 ############################# TERMINATE PROCEDURES #############################
 ################################################################################
+
+#****f* rj45.tcl/rj45.nodeIfacesUnconfigure
+# NAME
+#   rj45.nodeIfacesUnconfigure -- unconfigure rj45 node interfaces
+# SYNOPSIS
+#   rj45.nodeIfacesUnconfigure $eid $node_id $ifaces
+# FUNCTION
+#   Unconfigure interfaces on a rj45 to a default state. Set name to iface_id,
+#   flush IP addresses to the interfaces, etc. This procedure can be called if
+#   the node is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
+}
+
+proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
+}
+
+proc $MODULE.nodeUnconfigure { eid node_id } {
+}
+
+#****f* rj45.tcl/rj45.nodeShutdown
+# NAME
+#   rj45.nodeShutdown -- layer 3 node nodeShutdown
+# SYNOPSIS
+#   rj45.nodeShutdown $eid $node_id
+# FUNCTION
+#   Shutdowns a rj45 node.
+#   Simulates the shutdown proces of a node, kills all the services and
+#   processes.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeShutdown { eid node_id } {
+}
 
 #****f* rj45.tcl/rj45.nodeDestroy
 # NAME

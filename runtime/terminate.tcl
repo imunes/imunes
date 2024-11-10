@@ -329,11 +329,12 @@ proc undeployCfg { eid } {
     set all_nodes {}
     set pseudoNodesCount 0
     foreach node_id $node_list {
-	if { [getNodeType $node_id] != "pseudo" } {
-	    if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
-		if { [getNodeType $node_id] == "rj45" } {
+	set node_type [getNodeType $node_id]
+	if { $node_type != "pseudo" } {
+	    if { [$node_type.virtlayer] == "NATIVE" } {
+		if { $node_type == "rj45" } {
 		    lappend extifcs $node_id
-		} elseif { [getNodeType $node_id] == "extnat" } {
+		} elseif { $node_type == "extnat" } {
 		    lappend virtualized_nodes $node_id
 		} else {
 		    lappend native_nodes $node_id

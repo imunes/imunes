@@ -258,8 +258,7 @@ proc saveFile { selected_file } {
 	dumpCfg file $fileId
 	close $fileId
 
-	set file_name [file tail $currentFile]
-	.bottom.textbox config -text "Saved $file_name"
+	.bottom.textbox config -text "Saved [file tail $currentFile]"
 
 	updateProjectMenu
 	setWmTitle $currentFile
@@ -337,10 +336,17 @@ proc fileSaveAsDialogBox {} {
 proc closeFile {} {
     global cfg_list curcfg
 
-    if { [llength $cfg_list] > 1 } {
-	set cfg_list [removeFromList $cfg_list $curcfg]
+    set idx [lsearch -exact $cfg_list $curcfg]
+    set cfg_list [removeFromList $cfg_list $curcfg]
+    set len [llength $cfg_list]
+    if { $len > 0 } {
+	if { $idx > $len } {
+	    set idx "end"
+	} elseif { $idx != 0 } {
+	    incr idx -1
+	}
+	set cfg [lindex $cfg_list $idx]
 
-	set cfg [lindex $cfg_list 0]
 	loadCfgLegacy $cfg
 	set curcfg $cfg
 
@@ -359,6 +365,8 @@ proc closeFile {} {
 	setActiveTool select
 	updateProjectMenu
 	switchProject
+    } else {
+	newProject
     }
 }
 
