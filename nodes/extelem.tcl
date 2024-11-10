@@ -59,17 +59,17 @@ proc $MODULE.prepareSystem {} {
 # NAME
 #   extelem.confNewIfc -- configure new interface
 # SYNOPSIS
-#   extelem.confNewIfc $node_id $ifc
+#   extelem.confNewIfc $node_id $iface_id
 # FUNCTION
 #   Configures new interface for the specified node.
 # INPUTS
 #   * node_id -- node id
-#   * ifc -- interface name
+#   * iface_id -- interface name
 #****
-proc $MODULE.confNewIfc { node ifc } {
-    set old [getNodeExternalIfcs $node]
-    lappend old [list $ifc "UNASSIGNED"]
-    setNodeExternalIfcs $node $old
+proc $MODULE.confNewIfc { node_id iface_id } {
+    set old [getNodeExternalIfcs $node_id]
+    lappend old [list $iface_id "UNASSIGNED"]
+    setNodeExternalIfcs $node_id $old
 }
 
 #****f* extelem.tcl/extelem.confNewNode
@@ -82,14 +82,14 @@ proc $MODULE.confNewIfc { node ifc } {
 # INPUTS
 #   * node_id -- node id
 #****
-proc $MODULE.confNewNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc $MODULE.confNewNode { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global nodeNamingBase
 
     set nconfig [list \
 	"hostname [getNewNodeNameType extelem $nodeNamingBase(extelem)]" \
 	! ]
-    lappend $node "network-config [list $nconfig]"
+    lappend $node_id "network-config [list $nconfig]"
 }
 
 #****f* extelem.tcl/extelem.icon
@@ -190,7 +190,7 @@ proc $MODULE.virtlayer {} {
 #****
 proc $MODULE.nodeCreate { eid node_id } {
     foreach group [getNodeStolenIfaces $node_id] {
-	lassign $group ifc extIfc
+	lassign $group iface_id extIfc
 	captureExtIfcByName $eid $extIfc
     }
 }
@@ -207,9 +207,9 @@ proc $MODULE.nodeCreate { eid node_id } {
 #   * eid -- experiment id
 #   * node_id -- id of the node (type of the node is extelem)
 #****
-proc $MODULE.destroy { eid node } {
-    foreach group [getNodeExternalIfcs $node] {
-	lassign $group ifc extIfc
+proc $MODULE.destroy { eid node_id } {
+    foreach group [getNodeExternalIfcs $node_id] {
+	lassign $group iface_id extIfc
 	releaseExtIfcByName $eid $extIfc
     }
 }
@@ -218,7 +218,7 @@ proc $MODULE.destroy { eid node } {
 # NAME
 #   extelem.nghook
 # SYNOPSIS
-#   extelem.nghook $eid $node_id $ifc
+#   extelem.nghook $eid $node_id $iface_id
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. Netgraph node name is in
@@ -227,13 +227,13 @@ proc $MODULE.destroy { eid node } {
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- node id
-#   * ifc -- interface name
+#   * iface_id -- interface name
 # RESULT
 #   * nghook -- the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
-proc $MODULE.nghook { eid node_id ifc } {
-    lassign [lindex [lsearch -index 0 -all -inline -exact [getNodeStolenIfaces $node_id] $ifc] 0] ifc extIfc
+proc $MODULE.nghook { eid node_id iface_id } {
+    lassign [lindex [lsearch -index 0 -all -inline -exact [getNodeStolenIfaces $node_id] $iface_id] 0] iface_id extIfc
     return [list $extIfc lower]
 }
 
@@ -270,7 +270,7 @@ proc $MODULE.configGUI { c node_id } {
 # NAME
 #   extelem.configInterfacesGUI -- configuration of interfaces GUI
 # SYNOPSIS
-#   extelem.configInterfacesGUI $wi $node_id $ifc
+#   extelem.configInterfacesGUI $wi $node_id $iface_id
 # FUNCTION
 #   Defines which modules for changing interfaces parameters are contained in
 #   the extelem configuration window. It is done by calling procedures for adding
@@ -278,10 +278,10 @@ proc $MODULE.configGUI { c node_id } {
 # INPUTS
 #   * wi -- widget
 #   * node_id -- node id
-#   * ifc -- interface id
+#   * iface_id -- interface id
 #****
-proc $MODULE.configInterfacesGUI { wi node_id ifc } {
+proc $MODULE.configInterfacesGUI { wi node_id iface_id } {
     global guielements
 
-    configGUI_ifcQueueConfig $wi $node_id $ifc
+    configGUI_ifcQueueConfig $wi $node_id $iface_id
 }

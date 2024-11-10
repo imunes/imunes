@@ -51,21 +51,21 @@ proc randomizeMACbytes {} {
 # NAME
 #   autoMACaddr -- automaticaly assign an MAC address
 # SYNOPSIS
-#   autoMACaddr $node $ifc
+#   autoMACaddr $node_id $iface_id
 # FUNCTION
-#   Automaticaly assignes an MAC address to the interface $ifc of
-#   of the node $node.
+#   Automaticaly assignes an MAC address to the interface $iface_id of
+#   of the node $node_id.
 # INPUTS
-#   * node -- the node containing the interface to witch a new
+#   * node_id -- the node containing the interface to witch a new
 #     MAC address should be assigned
 #   * iface -- the interface to witch a new, automatilacy generated, MAC
 #     address will be assigned
 #****
-proc autoMACaddr { node ifc } {
+proc autoMACaddr { node_id iface_id } {
     upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
     global mac_byte4 mac_byte5 mac_byte6
 
-    if { [getNodeType $node] ni "ext extnat" && [[typemodel $node].virtlayer] != "VIRTUALIZED" } {
+    if { [getNodeType $node_id] ni "ext extnat" && [[typemodel $node_id].virtlayer] != "VIRTUALIZED" } {
 	return
     }
 
@@ -90,7 +90,7 @@ proc autoMACaddr { node ifc } {
     }
 
     lappend MACUsedList $macaddr
-    setIfcMACaddr $node $ifc $macaddr
+    setIfcMACaddr $node_id $iface_id $macaddr
 }
 
 #****f* mac.tcl/MACaddrAddZeros
@@ -107,10 +107,10 @@ proc autoMACaddr { node ifc } {
 #   * addr -- function returns MAC address
 #****
 proc MACaddrAddZeros { str } {
-    set n 0
-    set newstr ""
-    while { $n < 6 } {
-	if { $n < 5 } {
+    set ctr 0
+    set macaddr ""
+    while { $ctr < 6 } {
+	if { $ctr < 5 } {
 	    set i [string first : $str]
 	} else {
 	    set i [string length $str]
@@ -122,16 +122,16 @@ proc MACaddrAddZeros { str } {
 	}
 
 	set str [string range $str [expr $i + 1] end]
-        if { $n < 5 } {
-            set newstr "$newstr$part:"
+        if { $ctr < 5 } {
+            set macaddr "$macaddr$part:"
         } else {
-            set newstr "$newstr$part"
+            set macaddr "$macaddr$part"
         }
 
-	incr n
+	incr ctr
     }
 
-    return $newstr
+    return $macaddr
 }
 
 #****f* mac.tcl/checkMACAddr
@@ -150,13 +150,13 @@ proc MACaddrAddZeros { str } {
 #     of a valid MAC address, 1 otherwise
 #****
 proc checkMACAddr { str } {
-    set n 0
+    set ctr 0
     if { $str == "" } {
 	return 1
     }
 
-    while { $n < 6 } {
-	if { $n < 5 } {
+    while { $ctr < 6 } {
+	if { $ctr < 5 } {
 	    set i [string first : $str]
 	} else {
 	    set i [string length $str]
@@ -176,7 +176,7 @@ proc checkMACAddr { str } {
 	}
 
 	set str [string range $str [expr $i + 1] end]
-	incr n
+	incr ctr
     }
 
     return 1

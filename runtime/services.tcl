@@ -97,11 +97,11 @@ proc services { action hook bkg args } {
 
     set servlist [set services$hook]
     pipesCreate
-    foreach node $iterlist {
-        set nodeserv [getNodeServices $node]
+    foreach node_id $iterlist {
+        set nodeserv [getNodeServices $node_id]
         foreach nserv $nodeserv {
             if { $nserv in $servlist } {
-                $nserv.$action $node $bkg
+                $nserv.$action $node_id $bkg
             }
         }
     }
@@ -116,27 +116,27 @@ set service ssh
 # register for hooks and globally
 regHooks $service {NODECONF NODESTOP}
 
-proc $service.start { node { bkg "" } } {
+proc $service.start { node_id { bkg "" } } {
     if { $bkg == "" } {
-	set output [execCmdsNode $node [sshServiceStartCmds]]
-	writeDataToNodeFile $node "ssh_service.log" $output
+	set output [execCmdsNode $node_id [sshServiceStartCmds]]
+	writeDataToNodeFile $node_id "ssh_service.log" $output
     } else {
-	execCmdsNodeBkg $node [sshServiceStartCmds] "ssh_service.log 2>&1"
+	execCmdsNodeBkg $node_id [sshServiceStartCmds] "ssh_service.log 2>&1"
     }
 }
 
-proc $service.stop { node { bkg "" } } {
+proc $service.stop { node_id { bkg "" } } {
     if { $bkg == "" } {
-	set output [execCmdsNode $node [sshServiceStopCmds]]
-	writeDataToNodeFile $node "ssh_service.log" $output
+	set output [execCmdsNode $node_id [sshServiceStopCmds]]
+	writeDataToNodeFile $node_id "ssh_service.log" $output
     } else {
-	execCmdsNodeBkg $node [sshServiceStopCmds] "ssh_service.log 2>&1"
+	execCmdsNodeBkg $node_id [sshServiceStopCmds] "ssh_service.log 2>&1"
     }
 }
 
-proc $service.restart { node } {
-    ssh.stop $node
-    ssh.start $node
+proc $service.restart { node_id } {
+    ssh.stop $node_id
+    ssh.start $node_id
 }
 #
 ######################################################################
@@ -149,47 +149,47 @@ set service tcpdump
 # register for hooks and globally
 regHooks $service {LINKINST NODESTOP}
 
-proc $service.start { node { bkg "" } } {
-    foreach ifc [allIfcList $node] {
-	if { [string match "lo*" $ifc] } {
+proc $service.start { node_id { bkg "" } } {
+    foreach iface_name [allIfcList $node_id] {
+	if { [string match "lo*" $iface_name] } {
 	    continue
 	}
-	lappend cmds "ifconfig $ifc up"
-	lappend cmds "nohup tcpdump -Uni $ifc -w /tmp/$ifc.pcap > /dev/null 2> /dev/null &"
+	lappend cmds "ifconfig $iface_name up"
+	lappend cmds "nohup tcpdump -Uni $iface_name -w /tmp/$iface_name.pcap > /dev/null 2> /dev/null &"
     }
 
     if { $bkg == "" } {
-	set output [execCmdsNode $node $cmds]
-	writeDataToNodeFile $node "tcpdump_start.log" $output
+	set output [execCmdsNode $node_id $cmds]
+	writeDataToNodeFile $node_id "tcpdump_start.log" $output
     } else {
-	execCmdsNodeBkg $node $cmds "tcpdump_start.log 2>&1"
+	execCmdsNodeBkg $node_id $cmds "tcpdump_start.log 2>&1"
     }
 }
 
-proc $service.stop { node { bkg "" } } {
+proc $service.stop { node_id { bkg "" } } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     lappend cmds "pkill tcpdump"
 
     if { $bkg == "" } {
-	set output [execCmdsNode $node $cmds]
-	writeDataToNodeFile $node "tcpdump_stop.log" $output
+	set output [execCmdsNode $node_id $cmds]
+	writeDataToNodeFile $node_id "tcpdump_stop.log" $output
     } else {
-	execCmdsNodeBkg $node $cmds "tcpdump_stop.log 2>&1"
+	execCmdsNodeBkg $node_id $cmds "tcpdump_stop.log 2>&1"
     }
 
     set ext_dir /tmp/$eid/
     file mkdir $ext_dir
-    foreach ifc [allIfcList $node] {
-	if { [string match "lo*" $ifc] } {
+    foreach iface_name [allIfcList $node_id] {
+	if { [string match "lo*" $iface_name] } {
 	    continue
 	}
-	moveFileFromNode $node /tmp/$ifc.pcap $ext_dir/[getNodeName $node]\_$node\_$ifc.pcap
+	moveFileFromNode $node_id /tmp/$iface_name.pcap $ext_dir/[getNodeName $node_id]\_$node_id\_$iface_name.pcap
     }
 }
 
-proc $service.restart { node } {
-    tcpdump.stop $node
-    tcpdump.start $node
+proc $service.restart { node_id } {
+    tcpdump.stop $node_id
+    tcpdump.start $node_id
 }
 ######################################################################
 
@@ -197,7 +197,7 @@ proc $service.restart { node } {
 #
 # inetd services helper functions
 #
-proc inetd.start { service node insecure { bkg "" } } {
+proc inetd.start { service node_id insecure { bkg "" } } {
     if { $insecure } {
 	lappend cmds "sed -i -e \"s/^#<off># $service/$service/\" /etc/inetd.conf"
     } else {
@@ -207,14 +207,14 @@ proc inetd.start { service node insecure { bkg "" } } {
     lappend cmds [inetdServiceRestartCmds]
 
     if { $bkg == "" } {
-	set output [execCmdsNode $node $cmds]
-	writeDataToNodeFile $node "$service\_start.log" $output
+	set output [execCmdsNode $node_id $cmds]
+	writeDataToNodeFile $node_id "$service\_start.log" $output
     } else {
-	execCmdsNodeBkg $node $cmds "$service\_start.log"
+	execCmdsNodeBkg $node_id $cmds "$service\_start.log"
     }
 }
 
-proc inetd.stop { service node insecure { bkg "" } } {
+proc inetd.stop { service node_id insecure { bkg "" } } {
     if { $insecure } {
 	lappend cmds "sed -i -e \"s/^$service/#<off># $service/\" /etc/inetd.conf"
     } else {
@@ -224,10 +224,10 @@ proc inetd.stop { service node insecure { bkg "" } } {
     lappend cmds [inetdServiceRestartCmds]
 
     if { $bkg == "" } {
-	set output [execCmdsNode $node $cmds]
-	writeDataToNodeFile $node "$service\_stop.log" $output
+	set output [execCmdsNode $node_id $cmds]
+	writeDataToNodeFile $node_id "$service\_stop.log" $output
     } else {
-	execCmdsNodeBkg $node $cmds "$service\_stop.log"
+	execCmdsNodeBkg $node_id $cmds "$service\_stop.log"
     }
 }
 
@@ -238,19 +238,19 @@ proc inetd.stop { service node insecure { bkg "" } } {
 set service ftp
 regHooks $service {NODECONF NODESTOP}
 
-proc $service.start { node { bkg "" } } {
+proc $service.start { node_id { bkg "" } } {
     global service
-    inetd.start ftp $node false $bkg
+    inetd.start ftp $node_id false $bkg
 }
 
-proc $service.stop { node { bkg "" } } {
-    inetd.stop ftp $node false $bkg
+proc $service.stop { node_id { bkg "" } } {
+    inetd.stop ftp $node_id false $bkg
 }
 
-proc $service.restart { node } {
+proc $service.restart { node_id } {
     global service
-    inetd.stop ftp $node false
-    inetd.start ftp $node false
+    inetd.stop ftp $node_id false
+    inetd.start ftp $node_id false
 }
 ######################################################################
 
@@ -261,20 +261,20 @@ proc $service.restart { node } {
 set service telnet
 regHooks $service {NODECONF NODESTOP}
 
-proc $service.start { node { bkg "" } } {
+proc $service.start { node_id { bkg "" } } {
     global service isOSlinux
-    inetd.start telnet $node $isOSlinux $bkg
+    inetd.start telnet $node_id $isOSlinux $bkg
 }
 
-proc $service.stop { node { bkg "" } } {
+proc $service.stop { node_id { bkg "" } } {
     global isOSlinux
-    inetd.stop telnet $node $isOSlinux $bkg
+    inetd.stop telnet $node_id $isOSlinux $bkg
 }
 
-proc $service.restart { node } {
+proc $service.restart { node_id } {
     global service isOSlinux
-    inetd.stop telnet $node $isOSlinux
-    inetd.start telnet $node $isOSlinux
+    inetd.stop telnet $node_id $isOSlinux
+    inetd.start telnet $node_id $isOSlinux
 }
 ######################################################################
 
@@ -285,27 +285,27 @@ proc $service.restart { node } {
 set service ipsec
 regHooks $service {NODECONF NODESTOP}
 
-proc $service.start { node { bkg "" } } {
-    nodeIpsecInit $node
+proc $service.start { node_id { bkg "" } } {
+    nodeIpsecInit $node_id
     if { $bkg == "" } {
-	set output [execCmdNode $node "ipsec start"]
-	writeDataToNodeFile $node "ipsec_service.log" $output
+	set output [execCmdNode $node_id "ipsec start"]
+	writeDataToNodeFile $node_id "ipsec_service.log" $output
     } else {
-	execCmdNodeBkg $node "ipsec start >> ipsec_service.log"
+	execCmdNodeBkg $node_id "ipsec start >> ipsec_service.log"
     }
 }
 
-proc $service.stop { node { bkg "" } } {
+proc $service.stop { node_id { bkg "" } } {
     if { $bkg == "" } {
-	set output [execCmdNode $node "ipsec stop"]
-	writeDataToNodeFile $node "ipsec_service.log" $output
+	set output [execCmdNode $node_id "ipsec stop"]
+	writeDataToNodeFile $node_id "ipsec_service.log" $output
     } else {
-	execCmdNodeBkg $node "ipsec stop >> ipsec_service.log"
+	execCmdNodeBkg $node_id "ipsec stop >> ipsec_service.log"
     }
 }
 
-proc $service.restart { node } {
-    set output [execCmdNode $node "ipsec restart"]
-    writeDataToNodeFile $node "ipsec_service.log" $output
+proc $service.restart { node_id } {
+    set output [execCmdNode $node_id "ipsec restart"]
+    writeDataToNodeFile $node_id "ipsec_service.log" $output
 }
 ######################################################################

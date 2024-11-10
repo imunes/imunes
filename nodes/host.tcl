@@ -48,21 +48,21 @@ registerModule $MODULE
 # NAME
 #   host.confNewIfc -- configure new interface
 # SYNOPSIS
-#   host.confNewIfc $node_id $ifc
+#   host.confNewIfc $node_id $iface_id
 # FUNCTION
 #   Configures new interface for the specified node.
 # INPUTS
 #   * node_id -- node id
-#   * ifc -- interface name
+#   * iface_id -- interface name
 #****
-proc $MODULE.confNewIfc { node_id ifc } {
+proc $MODULE.confNewIfc { node_id iface_id } {
     global changeAddressRange changeAddressRange6
 
     set changeAddressRange 0
     set changeAddressRange6 0
-    autoIPv4addr $node_id $ifc
-    autoIPv6addr $node_id $ifc
-    autoMACaddr $node_id $ifc
+    autoIPv4addr $node_id $iface_id
+    autoIPv6addr $node_id $iface_id
+    autoMACaddr $node_id $iface_id
 }
 
 #****f* host.tcl/host.confNewNode
@@ -75,19 +75,19 @@ proc $MODULE.confNewIfc { node_id ifc } {
 # INPUTS
 #   * node_id -- node id
 #****
-proc $MODULE.confNewNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc $MODULE.confNewNode { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global nodeNamingBase
 
     set nconfig [list \
 	"hostname [getNewNodeNameType host $nodeNamingBase(host)]" \
 	! ]
-    lappend $node "network-config [list $nconfig]"
+    lappend $node_id "network-config [list $nconfig]"
 
-    setAutoDefaultRoutesStatus $node "enabled"
-    setLogIfcType $node lo0 lo
-    setIfcIPv4addr $node lo0 "127.0.0.1/8"
-    setIfcIPv6addr $node lo0 "::1/128"
+    setAutoDefaultRoutesStatus $node_id "enabled"
+    setLogIfcType $node_id lo0 lo
+    setIfcIPv4addr $node_id lo0 "127.0.0.1/8"
+    setIfcIPv6addr $node_id lo0 "::1/128"
 }
 
 #****f* host.tcl/host.icon
@@ -308,8 +308,8 @@ proc $MODULE.nodeInitConfigure { eid node_id } {
     l3node.nodeInitConfigure $eid $node_id
 }
 
-proc $MODULE.nodePhysIfacesCreate { eid node_id ifcs } {
-    l3node.nodePhysIfacesCreate $eid $node_id $ifcs
+proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
+    l3node.nodePhysIfacesCreate $eid $node_id $ifaces
 }
 
 #****f* host.tcl/host.start
@@ -345,8 +345,8 @@ proc $MODULE.shutdown { eid node_id } {
     l3node.shutdown $eid $node_id
 }
 
-proc $MODULE.destroyIfcs { eid node_id ifcs } {
-    l3node.destroyIfcs $eid $node_id $ifcs
+proc $MODULE.destroyIfcs { eid node_id ifaces } {
+    l3node.destroyIfcs $eid $node_id $ifaces
 }
 
 #****f* host.tcl/host.destroy
@@ -369,7 +369,7 @@ proc $MODULE.destroy { eid node_id } {
 # NAME
 #   host.nghook -- nghook
 # SYNOPSIS
-#   host.nghook $eid $node_id $ifc
+#   host.nghook $eid $node_id $iface_id
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. This procedure calls
@@ -377,13 +377,13 @@ proc $MODULE.destroy { eid node_id } {
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- node id
-#   * ifc -- interface name
+#   * iface_id -- interface name
 # RESULT
 #   * nghook -- the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
-proc $MODULE.nghook { eid node_id ifc } {
-    return [l3node.nghook $eid $node_id $ifc]
+proc $MODULE.nghook { eid node_id iface_id } {
+    return [l3node.nghook $eid $node_id $iface_id]
 }
 
 #****f* host.tcl/host.configGUI
@@ -438,7 +438,7 @@ proc $MODULE.configGUI { c node_id } {
 # NAME
 #   host.configInterfacesGUI -- configuration of interfaces GUI
 # SYNOPSIS
-#   host.configInterfacesGUI $wi $node_id $ifc
+#   host.configInterfacesGUI $wi $node_id $iface_id
 # FUNCTION
 #   Defines which modules for changing interfaces parameters are contained in
 #   the host configuration window. It is done by calling procedures for adding
@@ -446,14 +446,14 @@ proc $MODULE.configGUI { c node_id } {
 # INPUTS
 #   * wi -- widget
 #   * node_id -- node id
-#   * ifc -- interface id
+#   * iface_id -- interface id
 #****
-proc $MODULE.configInterfacesGUI { wi node_id ifc } {
+proc $MODULE.configInterfacesGUI { wi node_id iface_id } {
     global guielements
 
-    configGUI_ifcEssentials $wi $node_id $ifc
-    configGUI_ifcQueueConfig $wi $node_id $ifc
-    configGUI_ifcMACAddress $wi $node_id $ifc
-    configGUI_ifcIPv4Address $wi $node_id $ifc
-    configGUI_ifcIPv6Address $wi $node_id $ifc
+    configGUI_ifcEssentials $wi $node_id $iface_id
+    configGUI_ifcQueueConfig $wi $node_id $iface_id
+    configGUI_ifcMACAddress $wi $node_id $iface_id
+    configGUI_ifcIPv4Address $wi $node_id $iface_id
+    configGUI_ifcIPv6Address $wi $node_id $iface_id
 }

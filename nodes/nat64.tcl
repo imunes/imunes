@@ -30,12 +30,12 @@ set MODULE nat64
 
 registerModule $MODULE
 
-proc $MODULE.confNewIfc { node_id ifc } {
-    router.confNewIfc $node_id $ifc
+proc $MODULE.confNewIfc { node_id iface_id } {
+    router.confNewIfc $node_id $iface_id
 }
 
-proc $MODULE.confNewNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc $MODULE.confNewNode { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global ripEnable ripngEnable ospfEnable ospf6Enable
     global rdconfig
     global nodeNamingBase
@@ -48,31 +48,31 @@ proc $MODULE.confNewNode { node } {
     set nconfig [list \
 	"hostname [getNewNodeNameType nat64 $nodeNamingBase(nat64)]" \
 	! ]
-    lappend $node "network-config [list $nconfig]"
+    lappend $node_id "network-config [list $nconfig]"
 
-    setNodeProtocolRip $node $ripEnable
-    setNodeProtocolRipng $node $ripngEnable
-    setNodeProtocolOspfv2 $node $ospfEnable
-    setNodeProtocolOspfv3 $node $ospf6Enable
+    setNodeProtocolRip $node_id $ripEnable
+    setNodeProtocolRipng $node_id $ripngEnable
+    setNodeProtocolOspfv2 $node_id $ospfEnable
+    setNodeProtocolOspfv3 $node_id $ospf6Enable
 
     foreach proto { rip ripng ospf ospf6 bgp } {
-	set protocfg [netconfFetchSection $node "router $proto"]
+	set protocfg [netconfFetchSection $node_id "router $proto"]
 	if { $protocfg != "" } {
 	    set protocfg [linsert $protocfg 0 "router $proto"]
 	    set protocfg [linsert $protocfg end "!"]
 	    set protocfg [linsert $protocfg [lsearch $protocfg " network *"] " redistribute kernel" ]
-	    netconfClearSection $node "router $proto"
-	    netconfInsertSection $node $protocfg
+	    netconfClearSection $node_id "router $proto"
+	    netconfInsertSection $node_id $protocfg
 	}
     }
 
-    setAutoDefaultRoutesStatus $node "enabled"
-    setLogIfcType $node lo0 lo
-    setIfcIPv4addr $node lo0 "127.0.0.1/8"
-    setIfcIPv6addr $node lo0 "::1/128"
+    setAutoDefaultRoutesStatus $node_id "enabled"
+    setLogIfcType $node_id lo0 lo
+    setIfcIPv4addr $node_id lo0 "127.0.0.1/8"
+    setIfcIPv6addr $node_id lo0 "::1/128"
 
-    setTaygaIPv4DynPool $node "192.168.64.0/24"
-    setTaygaIPv6Prefix $node "2001::/96"
+    setTaygaIPv4DynPool $node_id "192.168.64.0/24"
+    setTaygaIPv6Prefix $node_id "2001::/96"
 }
 
 proc $MODULE.icon { size } {
@@ -169,18 +169,18 @@ proc $MODULE.nodeCreate { eid node_id } {
     router.frr.nodeCreate $eid $node_id
 }
 
-proc $MODULE.nodeNamespaceSetup { eid node } {
-    l3node.nodeNamespaceSetup $eid $node
+proc $MODULE.nodeNamespaceSetup { eid node_id } {
+    l3node.nodeNamespaceSetup $eid $node_id
 }
 
-proc $MODULE.nodeInitConfigure { eid node } {
-    l3node.nodeInitConfigure $eid $node
+proc $MODULE.nodeInitConfigure { eid node_id } {
+    l3node.nodeInitConfigure $eid $node_id
 
-    enableIPforwarding $eid $node
+    enableIPforwarding $eid $node_id
 }
 
-proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
-    l3node.nodePhysIfacesCreate $eid $node $ifcs
+proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
+    l3node.nodePhysIfacesCreate $eid $node_id $ifaces
 }
 
 proc $MODULE.start { eid node_id } {
@@ -236,8 +236,8 @@ proc $MODULE.destroy { eid node_id } {
     router.frr.destroy $eid $node_id
 }
 
-proc $MODULE.nghook { eid node_id ifc } {
-    return [router.frr.nghook $eid $node_id $ifc]
+proc $MODULE.nghook { eid node_id iface_id } {
+    return [router.frr.nghook $eid $node_id $iface_id]
 }
 
 proc $MODULE.configGUI { c node_id } {
@@ -270,12 +270,12 @@ proc $MODULE.configGUI { c node_id } {
     configGUI_buttonsACNode $wi $node_id
 }
 
-proc $MODULE.configInterfacesGUI { wi node_id ifc } {
+proc $MODULE.configInterfacesGUI { wi node_id iface_id } {
     global guielements
 
-    configGUI_ifcEssentials $wi $node_id $ifc
-    configGUI_ifcQueueConfig $wi $node_id $ifc
-    configGUI_ifcMACAddress $wi $node_id $ifc
-    configGUI_ifcIPv4Address $wi $node_id $ifc
-    configGUI_ifcIPv6Address $wi $node_id $ifc
+    configGUI_ifcEssentials $wi $node_id $iface_id
+    configGUI_ifcQueueConfig $wi $node_id $iface_id
+    configGUI_ifcMACAddress $wi $node_id $iface_id
+    configGUI_ifcIPv4Address $wi $node_id $iface_id
+    configGUI_ifcIPv6Address $wi $node_id $iface_id
 }

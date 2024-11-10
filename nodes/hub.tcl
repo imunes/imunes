@@ -60,14 +60,14 @@ proc $MODULE.prepareSystem {} {
 # NAME
 #   hub.confNewIfc -- configure new interface
 # SYNOPSIS
-#   hub.confNewIfc $node_id $ifc
+#   hub.confNewIfc $node_id $iface_id
 # FUNCTION
 #   Configures new interface for the specified node.
 # INPUTS
 #   * node_id -- node id
-#   * ifc -- interface name
+#   * iface_id -- interface name
 #****
-proc $MODULE.confNewIfc { node_id ifc } {
+proc $MODULE.confNewIfc { node_id iface_id } {
 }
 
 #****f* hub.tcl/hub.confNewNode
@@ -80,14 +80,14 @@ proc $MODULE.confNewIfc { node_id ifc } {
 # INPUTS
 #   * node_id -- node id
 #****
-proc $MODULE.confNewNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc $MODULE.confNewNode { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global nodeNamingBase
 
     set nconfig [list \
 	"hostname [getNewNodeNameType hub $nodeNamingBase(hub)]" \
 	! ]
-    lappend $node "network-config [list $nconfig]"
+    lappend $node_id "network-config [list $nconfig]"
 }
 
 #****f* hub.tcl/hub.icon
@@ -194,12 +194,12 @@ proc $MODULE.nodeNamespaceSetup { eid node_id } {
     l2node.nodeNamespaceSetup $eid $node_id
 }
 
-proc $MODULE.nodePhysIfacesCreate { eid node_id ifcs } {
-    l2node.nodePhysIfacesCreate $eid $node_id $ifcs
+proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
+    l2node.nodePhysIfacesCreate $eid $node_id $ifaces
 }
 
-proc $MODULE.destroyIfcs { eid node_id ifcs } {
-    l2node.destroyIfcs $eid $node_id $ifcs
+proc $MODULE.destroyIfcs { eid node_id ifaces } {
+    l2node.destroyIfcs $eid $node_id $ifaces
 }
 
 #****f* hub.tcl/hub.destroy
@@ -222,7 +222,7 @@ proc $MODULE.destroy { eid node_id } {
 # NAME
 #   hub.nghook
 # SYNOPSIS
-#   hub.nghook $eid $node_id $ifc
+#   hub.nghook $eid $node_id $iface_id
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. Netgraph node name is in
@@ -231,13 +231,13 @@ proc $MODULE.destroy { eid node_id } {
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- node id
-#   * ifc -- interface name
+#   * iface_id -- interface name
 # RESULT
 #   * nghook -- the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
-proc $MODULE.nghook { eid node_id ifc } {
-    set ifunit [string range $ifc 1 end]
+proc $MODULE.nghook { eid node_id iface_id } {
+    set ifunit [string range $iface_id 1 end]
     return [list $node_id link$ifunit]
 }
 
@@ -275,7 +275,7 @@ proc $MODULE.configGUI { c node_id } {
 # NAME
 #   hub.configInterfacesGUI -- configuration of interfaces GUI
 # SYNOPSIS
-#   hub.configInterfacesGUI $wi $node_id $ifc
+#   hub.configInterfacesGUI $wi $node_id $iface_id
 # FUNCTION
 #   Defines which modules for changing interfaces parameters are contained in
 #   the hub configuration window. It is done by calling procedures for adding
@@ -283,10 +283,10 @@ proc $MODULE.configGUI { c node_id } {
 # INPUTS
 #   * wi -- widget
 #   * node_id -- node id
-#   * ifc -- interface id
+#   * iface_id -- interface id
 #****
-proc $MODULE.configInterfacesGUI { wi node_id ifc } {
+proc $MODULE.configInterfacesGUI { wi node_id iface_id } {
     global guielements
 
-    configGUI_ifcQueueConfig $wi $node_id $ifc
+    configGUI_ifcQueueConfig $wi $node_id $iface_id
 }

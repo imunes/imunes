@@ -362,17 +362,17 @@ proc l3node.nodeNamespaceSetup { eid node } {
 # NAME
 #   l3node.nodeInitConfigure -- layer 3 node nodeInitConfigure
 # SYNOPSIS
-#   l3node.nodeInitConfigure $eid $node
+#   l3node.nodeInitConfigure $eid $node_id
 # FUNCTION
 #   Runs initial L3 configuration, such as creating logical interfaces and
 #   configuring sysctls.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc l3node.nodeInitConfigure { eid node } {
-    nodeLogIfacesCreate $node
-    configureICMPoptions $node
+proc l3node.nodeInitConfigure { eid node_id } {
+    nodeLogIfacesCreate $node_id
+    configureICMPoptions $node_id
 }
 
 #****f* exec.tcl/l3node.nodeConfigure
@@ -787,13 +787,13 @@ proc execute_nodesNamespaceSetup { nodes nodeCount w } {
     }
 }
 
-proc waitForNamespaces { nodes nodeCount w } {
+proc waitForNamespaces { nodes nodes_count w } {
     global progressbarCount execMode
 
     set batchStep 0
     set nodes_left $nodes
     while { [llength $nodes_left] > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
 	foreach node $nodes_left {
 	    if { ! [isNodeNamespaceCreated $node] } {
 		continue
@@ -808,14 +808,14 @@ proc waitForNamespaces { nodes nodeCount w } {
 		$w.p configure -value $progressbarCount
 		update
 	    }
-	    displayBatchProgress $batchStep $nodeCount
+	    displayBatchProgress $batchStep $nodes_count
 
 	    set nodes_left [removeFromList $nodes_left $node]
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}

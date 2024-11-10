@@ -57,22 +57,22 @@ proc $MODULE.prepareSystem {} {
 # NAME
 #   extnat.confNewIfc -- configure new interface
 # SYNOPSIS
-#   extnat.confNewIfc $node_id $ifc
+#   extnat.confNewIfc $node_id $iface_id
 # FUNCTION
 #   Configures new interface for the specified node.
 # INPUTS
 #   * node_id -- node id
-#   * ifc -- interface id
+#   * iface_id -- interface id
 #****
-proc $MODULE.confNewIfc { node_id ifc } {
+proc $MODULE.confNewIfc { node_id iface_id } {
     global changeAddressRange changeAddressRange6 mac_byte4 mac_byte5
 
     set changeAddressRange 0
     set changeAddressRange6 0
-    autoIPv4addr $node_id $ifc
-    autoIPv6addr $node_id $ifc
+    autoIPv4addr $node_id $iface_id
+    autoIPv6addr $node_id $iface_id
     randomizeMACbytes
-    autoMACaddr $node_id $ifc
+    autoMACaddr $node_id $iface_id
 }
 
 #****f* extnat.tcl/extnat.confNewNode
@@ -85,13 +85,13 @@ proc $MODULE.confNewIfc { node_id ifc } {
 # INPUTS
 #   * node_id -- node id
 #****
-proc $MODULE.confNewNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc $MODULE.confNewNode { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 
     set nconfig [list \
 	"hostname UNASSIGNED" \
 	! ]
-    lappend $node "network-config [list $nconfig]"
+    lappend $node_id "network-config [list $nconfig]"
 }
 
 #****f* extnat.tcl/extnat.icon
@@ -220,8 +220,8 @@ proc $MODULE.shellcmds {} {
 #****
 proc $MODULE.nodeCreate { eid node_id } {}
 
-proc $MODULE.nodePhysIfacesCreate { eid node_id ifcs } {
-    l2node.nodePhysIfacesCreate $eid $node_id $ifcs
+proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
+    l2node.nodePhysIfacesCreate $eid $node_id $ifaces
 }
 
 #****f* extnat.tcl/extnat.start
@@ -237,10 +237,10 @@ proc $MODULE.nodePhysIfacesCreate { eid node_id ifcs } {
 #   * node_id -- node id (type of the node is pc)
 #****
 proc $MODULE.start { eid node_id } {
-    set ifc [lindex [ifcList $node_id] 0]
-    if { "$ifc" != "" } {
+    set iface_id [lindex [ifcList $node_id] 0]
+    if { "$iface_id" != "" } {
 	startExternalConnection $eid $node_id
-	setupExtNat $eid $node_id $ifc
+	setupExtNat $eid $node_id $iface_id
     }
 }
 
@@ -257,17 +257,17 @@ proc $MODULE.start { eid node_id } {
 #   * node_id -- node id (type of the node is pc)
 #****
 proc $MODULE.shutdown { eid node_id } {
-    set ifc [lindex [ifcList $node_id] 0]
-    if { "$ifc" != "" } {
+    set iface_id [lindex [ifcList $node_id] 0]
+    if { "$iface_id" != "" } {
 	killExtProcess "wireshark.*[getNodeName $node_id].*\\($eid\\)"
 	killExtProcess "xterm -name imunes-terminal -T Capturing $eid-$node_id -e tcpdump -ni $eid-$node_id"
 	stopExternalConnection $eid $node_id
-	unsetupExtNat $eid $node_id $ifc
+	unsetupExtNat $eid $node_id $iface_id
     }
 }
 
-proc $MODULE.destroyIfcs { eid node_id ifcs } {
-    l2node.destroyIfcs $eid $node_id $ifcs
+proc $MODULE.destroyIfcs { eid node_id ifaces } {
+    l2node.destroyIfcs $eid $node_id $ifaces
 }
 
 #****f* extnat.tcl/extnat.destroy
@@ -289,7 +289,7 @@ proc $MODULE.destroy { eid node_id } {
 # NAME
 #   extnat.nghook -- nghook
 # SYNOPSIS
-#   extnat.nghook $eid $node_id $ifc
+#   extnat.nghook $eid $node_id $iface_id
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. This procedure calls
@@ -297,13 +297,13 @@ proc $MODULE.destroy { eid node_id } {
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- node id
-#   * ifc -- interface id
+#   * iface_id -- interface id
 # RESULT
 #   * nghook -- the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
-proc $MODULE.nghook { eid node_id ifc } {
-    return [l3node.nghook $eid $node_id $ifc]
+proc $MODULE.nghook { eid node_id iface_id } {
+    return [l3node.nghook $eid $node_id $iface_id]
 }
 
 #****f* extnat.tcl/extnat.configGUI
@@ -320,8 +320,8 @@ proc $MODULE.nghook { eid node_id ifc } {
 #   * node_id -- node id
 #****
 proc $MODULE.configGUI { c node_id } {
-    set ifc [lindex [ifcList $node_id] 0]
-    if { "$ifc" == "" } {
+    set iface_id [lindex [ifcList $node_id] 0]
+    if { "$iface_id" == "" } {
 	return
     }
 

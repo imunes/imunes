@@ -45,22 +45,22 @@ registerModule $MODULE
 # NAME
 #   ext.confNewIfc -- configure new interface
 # SYNOPSIS
-#   ext.confNewIfc $node_id $ifc
+#   ext.confNewIfc $node_id $iface_id
 # FUNCTION
 #   Configures new interface for the specified node.
 # INPUTS
 #   * node_id -- node id
-#   * ifc -- interface name
+#   * iface_id -- interface name
 #****
-proc $MODULE.confNewIfc { node_id ifc } {
+proc $MODULE.confNewIfc { node_id iface_id } {
     global changeAddressRange changeAddressRange6 mac_byte4 mac_byte5
 
     set changeAddressRange 0
     set changeAddressRange6 0
-    autoIPv4addr $node_id $ifc
-    autoIPv6addr $node_id $ifc
+    autoIPv4addr $node_id $iface_id
+    autoIPv6addr $node_id $iface_id
     randomizeMACbytes
-    autoMACaddr $node_id $ifc
+    autoMACaddr $node_id $iface_id
 }
 
 #****f* ext.tcl/ext.confNewNode
@@ -73,14 +73,14 @@ proc $MODULE.confNewIfc { node_id ifc } {
 # INPUTS
 #   * node_id -- node id
 #****
-proc $MODULE.confNewNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc $MODULE.confNewNode { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global nodeNamingBase
 
     set nconfig [list \
 	"hostname [getNewNodeNameType ext $nodeNamingBase(ext)]" \
 	! ]
-    lappend $node "network-config [list $nconfig]"
+    lappend $node_id "network-config [list $nconfig]"
 }
 
 #****f* ext.tcl/ext.icon
@@ -226,8 +226,8 @@ proc $MODULE.nodePhysIfacesCreate { eid node_id ifcs } {
 #   * node_id -- node id (type of the node is pc)
 #****
 proc $MODULE.start { eid node_id } {
-    set ifc [lindex [ifcList $node_id] 0]
-    if { "$ifc" != "" } {
+    set iface_id [lindex [ifcList $node_id] 0]
+    if { "$iface_id" != "" } {
 	startExternalConnection $eid $node_id
     }
 }
@@ -245,8 +245,8 @@ proc $MODULE.start { eid node_id } {
 #   * node_id -- node id (type of the node is pc)
 #****
 proc $MODULE.shutdown { eid node_id } {
-    set ifc [lindex [ifcList $node_id] 0]
-    if { "$ifc" != "" } {
+    set iface_id [lindex [ifcList $node_id] 0]
+    if { "$iface_id" != "" } {
 	killExtProcess "wireshark.*[getNodeName $node_id].*\\($eid\\)"
 	killExtProcess "xterm -name imunes-terminal -T Capturing $eid-$node_id -e tcpdump -ni $eid-$node_id"
 	stopExternalConnection $eid $node_id
@@ -276,7 +276,7 @@ proc $MODULE.destroy { eid node_id } {
 # NAME
 #   ext.nghook -- nghook
 # SYNOPSIS
-#   ext.nghook $eid $node_id $ifc
+#   ext.nghook $eid $node_id $iface_id
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. This procedure calls
@@ -284,13 +284,13 @@ proc $MODULE.destroy { eid node_id } {
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- node id
-#   * ifc -- interface name
+#   * iface_id -- interface name
 # RESULT
 #   * nghook -- the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
-proc $MODULE.nghook { eid node_id ifc } {
-    return [l3node.nghook $eid $node_id $ifc]
+proc $MODULE.nghook { eid node_id iface_id } {
+    return [l3node.nghook $eid $node_id $iface_id]
 }
 
 #****f* ext.tcl/ext.configGUI
@@ -307,8 +307,8 @@ proc $MODULE.nghook { eid node_id ifc } {
 #   * node_id -- node id
 #****
 proc $MODULE.configGUI { c node_id } {
-    set ifc [lindex [ifcList $node_id] 0]
-    if { "$ifc" == "" } {
+    set iface_id [lindex [ifcList $node_id] 0]
+    if { "$iface_id" == "" } {
 	return
     }
 

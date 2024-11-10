@@ -30,31 +30,31 @@
 # NAME
 #   editIpsecCfg -- change or delete ipsec-config
 # SYNOPSIS
-#   editIpsecCfg $w $node $deleteid $edit
+#   editIpsecCfg $w $node_id $deleteid $edit
 # FUNCTION
 #   Change (if $edit == 1) or delete (if $edit == 0)
 #   particular ipsec-config defined by ipsec-config-id.
 # INPUTS
 #   * w -- ipsec config window
-#   * node  -- node
+#   * node_id  -- node id
 #   * deleteid -- ipsec-config-id that determines which ipsec-config to delete
 #   * edit -- If $edit is set to "1", selected ipsec-config will be just
 #     edited. If $edit is set to "0", selected ipsec-config will be deleted.
 #****
-proc editIpsecCfg { w node deleteid edit phase } {
+proc editIpsecCfg { w node_id deleteid edit phase } {
     global viewid badentry
 
     if { $phase == 0 } {
 	set badentry 0
 	focus .
-	after 100 "editIpsecCfg $w $node $deleteid $edit 1"
+	after 100 "editIpsecCfg $w $node_id $deleteid $edit 1"
 	return
     } elseif { $badentry } {
 	$w config -cursor left_ptr
 	return
     }
 
-    set ipsecCfgList [getIpsecConfig $node]
+    set ipsecCfgList [getIpsecConfig $node_id]
     set i 0
     foreach element $ipsecCfgList {
 	set cid [lindex [lsearch -inline $element "ipsec-config-id *"] 1]
@@ -66,15 +66,15 @@ proc editIpsecCfg { w node deleteid edit phase } {
 
     if { $edit == "1" } {
 	set add "0"
-	set ipsecCfg [ipsecConfigApply $w $node $add 0]
+	set ipsecCfg [ipsecConfigApply $w $node_id $add 0]
 	set newid [getConfig $ipsecCfg "ipsec-config-id"]
 	set viewid $newid
 	lappend ipsecCfgList $ipsecCfg
     }
 
-    removeIpsecConfig $node
+    removeIpsecConfig $node_id
     foreach ipsecCfg $ipsecCfgList {
-	setIpsecConfig $node $ipsecCfg
+	setIpsecConfig $node_id $ipsecCfg
     }
 
     if { $edit != "1" } {
@@ -87,10 +87,10 @@ proc editIpsecCfg { w node deleteid edit phase } {
     }
 
     set view "1"
-    viewIpsecCfg $node $delete $view
+    viewIpsecCfg $node_id $delete $view
 
     set idlist {}
-    set ipsecCfgList [getIpsecConfig $node]
+    set ipsecCfgList [getIpsecConfig $node_id]
     foreach cfg $ipsecCfgList {
 	set id [lindex [lsearch -inline $cfg "ipsec-config-id *"] 1]
 	lappend idlist $id
@@ -143,13 +143,13 @@ proc showIPsecInfo { str } {
 # NAME
 #   viewIpsecCfg -- form ipsec configuration window
 # SYNOPSIS
-#   viewIpsecCfg $node $delete $view
+#   viewIpsecCfg $node_id $delete $view
 # FUNCTION
 #   Form the ipsec configuration window, either for adding
 #   new ipsec-config structure or for editing existing
 #   ipsec-config structures.
 # INPUTS
-#   * node  -- node
+#   * node_id  -- node id
 #   * delete -- If delete is "1", that means that viewIpsecCfg has been
 #     invoked after deleting ipsec-config with defined ipsec-config-id
 #     (determined by the global variable viewid). In that case, tk_optionmenu
@@ -160,7 +160,7 @@ proc showIPsecInfo { str } {
 #     ipsec-config item. If view is set to "1" viewIpsecCfg is used to
 #     edit ipsec-config items.
 #****
-proc viewIpsecCfg { node delete view } {
+proc viewIpsecCfg { node_id delete view } {
     global viewid badentry
 
     set w .popup.nbook.nfIPsec.ipseccfg.f2
@@ -175,7 +175,7 @@ proc viewIpsecCfg { node delete view } {
     .popup.nbook configure -height 610 -width 400
     set idlist {}
 
-    set ipsecCfgList [getIpsecConfig $node]
+    set ipsecCfgList [getIpsecConfig $node_id]
     set len [llength $ipsecCfgList]
     foreach ipsecCfg $ipsecCfgList {
 	set id [lindex [lsearch -inline $ipsecCfg "ipsec-config-id *"] 1]
@@ -624,16 +624,16 @@ proc viewIpsecCfg { node delete view } {
 	if { $view == "1" } {
 	    set edit "1"
 	    ttk::button $w.ipsecframe.bottom.buttons.delete -text Delete \
-		-command "deleteIpsecCfg $w $node $viewid $edit"
+		-command "deleteIpsecCfg $w $node_id $viewid $edit"
 	    ttk::button $w.ipsecframe.bottom.buttons.apply -text Apply \
-		-command "editIpsecCfg $w $node $viewid $edit 0"
+		-command "editIpsecCfg $w $node_id $viewid $edit 0"
 	    focus $w.ipsecframe.bottom.buttons.apply
 	    pack $w.ipsecframe.bottom.buttons.delete $w.ipsecframe.bottom.buttons.close \
 		$w.ipsecframe.bottom.buttons.apply -side left -padx 2
 	} else {
 	    set add "1"
 	    ttk::button $w.ipsecframe.bottom.buttons.apply -text "Apply" \
-		-command "ipsecConfigApply $w $node $add 0"
+		-command "ipsecConfigApply $w $node_id $add 0"
 	    focus $w.ipsecframe.bottom.buttons.apply
 	    pack $w.ipsecframe.bottom.buttons.apply $w.ipsecframe.bottom.buttons.close \
 		-side left -padx 2
@@ -646,21 +646,21 @@ proc viewIpsecCfg { node delete view } {
 #   deleteIpsecCfg -- invoke editIpsecCfg to delete ipsec-config item defined
 #       with ipsec-config-id viewid.
 # SYNOPSIS
-#   deleteIpsecCfg $w $node $viewid $edit
+#   deleteIpsecCfg $w $node_id $viewid $edit
 # FUNCTION
 #   Invoke editIpsecCfg to delete defined ipsec-config.
 #   When deleting ipsec-config, $edit has to be set to "0".
 # INPUTS
 #   * w  -- ipsec configuration window
-#   * node -- node id
+#   * node_id -- node id
 #   * viewid -- current ipsec-config-id from the tk_optionmenu. viewIpsecCfg
 #     always shows the ipsec-config determined by the global variable viewid.
 #   * edit -- if edit is set to "0", editIpsecCfg will delete ipsec-config
 #     defined by the ipsec-config-id viewid.
 #****
-proc deleteIpsecCfg { w node viewid edit } {
+proc deleteIpsecCfg { w node_id viewid edit } {
     set edit "0"
-    editIpsecCfg $w $node $viewid $edit 0
+    editIpsecCfg $w $node_id $viewid $edit 0
 }
 
 #****f* ipsec.tcl/ipsecConfigApply
@@ -668,20 +668,20 @@ proc deleteIpsecCfg { w node viewid edit } {
 #   ipsecConfigApply -- read ipsec configuration from the ipsec configuration
 #       window. Check the ipsec configuration.
 # SYNOPSIS
-#   ipsecConfigApply $w $node $add
+#   ipsecConfigApply $w $node_id $add
 # FUNCTION
 #   Read ipsec configuration from the ipsec configuration window. Check the
 #   ipsec configuration by invoking checkIpsecCfg.
 # INPUTS
 #   * w -- ipsec configuration window
-#   * node -- node id
+#   * node_id -- node id
 #   * add -- If add is set to "1", ipsecConfigApply has been invoked after
 #     adding new ipsec-config element. If add is set to "0", ipsecConfigApply
 #     has been invoked when editing ipsec configuration.
 # RESULT
 #   * ipsecCfg -- new ipsec-config structure
 #****
-proc ipsecConfigApply { w node add phase } {
+proc ipsecConfigApply { w node_id add phase } {
     global ipsecalg spipsecalg mode ipcompalg
     global cryptoalgesp cryptoalgah action traffic level
     global badentry
@@ -693,7 +693,7 @@ proc ipsecConfigApply { w node add phase } {
 	if { $phase == 0 } {
 	    set badentry 0
 	    focus .
-	    after 100 "ipsecConfigApply $w $node $add 1"
+	    after 100 "ipsecConfigApply $w $node_id $add 1"
 	    return
 	} elseif { $badentry } {
 	    $w config -cursor left_ptr
@@ -713,7 +713,7 @@ proc ipsecConfigApply { w node add phase } {
     set destsgw [$w.ipsecframe.spd.destsgw.source get]
 
     if { $add == "1" } {
-	set error [checkIpsecCfg $node "ipsec-config-id" $id]
+	set error [checkIpsecCfg $node_id "ipsec-config-id" $id]
 	if { $error != "" } {
 	    .popup.nbook.nfIPsec.ipseccfg forget $w
 	     destroy $w.ipsecframe
@@ -743,10 +743,10 @@ proc ipsecConfigApply { w node add phase } {
     set ipsecCfg [setConfig $ipsecCfg $mode "ipsec-mode"]
     set ipsecCfg [setConfig $ipsecCfg $level "processing-level"]
 
-    setIpsecConfig $node $ipsecCfg
+    setIpsecConfig $node_id $ipsecCfg
 
     set idlist {}
-    set ipsecCfgList [getIpsecConfig $node]
+    set ipsecCfgList [getIpsecConfig $node_id]
     foreach cfg $ipsecCfgList {
 	set id [lindex [lsearch -inline $cfg "ipsec-config-id *"] 1]
 	lappend idlist $id
@@ -775,21 +775,21 @@ proc ipsecConfigApply { w node add phase } {
 #   checkIpsecCfg -- Check if there are errors in ipsec configuration input
 #       fields in ipsec configuration window.
 # SYNOPSIS
-#   checkIpsecCfg $node $strd $str
+#   checkIpsecCfg $node_id $strd $str
 # FUNCTION
 #   This procedure will be invoked while doing ipsecConfigApply
 #   to check new inputs in the ipsec configuration window.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #   * strd -- string description, that is i.e. "ipsec-config-id",
 #     "SA-source-address", etc.
 #   * str -- string, that is value related to strd.
 # RESULT
 #   * valid -- valid is set to 0, if there is an error and otherwise 1.
 #****
-proc checkIpsecCfg { node strd str } {
+proc checkIpsecCfg { node_id strd str } {
     set error ""
-    set ipsecCfgList [getIpsecConfig $node]
+    set ipsecCfgList [getIpsecConfig $node_id]
     switch $strd {
 	ipsec-config-id {
 	    if { $str == "" } {
@@ -861,18 +861,18 @@ proc getConfig { strlist str } {
 # NAME
 #   setIpsecConfig -- set ipsec configuration
 # SYNOPSIS
-#   setIpsecConfig $node $cfg
+#   setIpsecConfig $node_id $cfg
 # FUNCTION
 #   This procedure adds ipsec-config structure to node.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #   * cfg -- current ipsec-config that will be extended with new elements
 #****
-proc setIpsecConfig { node cfg } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc setIpsecConfig { node_id cfg } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 
     if { $cfg != {} } {
-	lappend $node [list ipsec-config $cfg]
+	lappend $node_id [list ipsec-config $cfg]
     }
 }
 
@@ -880,20 +880,20 @@ proc setIpsecConfig { node cfg } {
 # NAME
 #   getIpsecConfig -- get ipsec configuration
 # SYNOPSIS
-#   getIpsecConfig $node
+#   getIpsecConfig $node_id
 # FUNCTION
 #   This procedure returns list of ipsec-config structures.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 # RESULT
 #   * ipsecCfg -- list of ipsec-config structures
 #****
-proc getIpsecConfig { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc getIpsecConfig { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 
     set ipsecCfg {}
 
-    set values [lsearch -all -inline [set $node] "ipsec-config *"]
+    set values [lsearch -all -inline [set $node_id] "ipsec-config *"]
     foreach val $values {
 	lappend ipsecCfg [lindex $val 1]
     }
@@ -905,20 +905,20 @@ proc getIpsecConfig { node } {
 # NAME
 #   removeIpsecConfig -- delete all ipsec configuration
 # SYNOPSIS
-#   removeIpsecConfig $node
+#   removeIpsecConfig $node_id
 # FUNCTION
 #   Deletes all ipsec-config structures related to specified node.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc removeIpsecConfig { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc removeIpsecConfig { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 
-    set indices [lsearch -all [set $node] "ipsec-config *"]
+    set indices [lsearch -all [set $node_id] "ipsec-config *"]
     set cnt 0
     foreach i $indices {
 	set j [expr $i - $cnt]
-	set $node [lreplace [set $node] $j $j]
+	set $node_id [lreplace [set $node_id] $j $j]
 	incr cnt
     }
 }
@@ -927,19 +927,19 @@ proc removeIpsecConfig { node } {
 # NAME
 #   getIpsecEnabled -- get ipsec configuration enabled state
 # SYNOPSIS
-#   set enabled [getIpsecEnabled $node]
+#   set enabled [getIpsecEnabled $node_id]
 # FUNCTION
 #   For input node this procedure returns true if ipsec configuration
 #   is enabled for the specified node.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 # RESULT
 #   * enabled -- returns true if custom configuration is enabled
 #****
-proc getIpsecEnabled { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc getIpsecEnabled { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 
-    if { [lindex [lsearch -inline [set $node] "ipsec-enabled *"] 1] == true } {
+    if { [lindex [lsearch -inline [set $node_id] "ipsec-enabled *"] 1] == true } {
 	return true
     } else {
 	return false
@@ -950,23 +950,23 @@ proc getIpsecEnabled { node } {
 # NAME
 #   setIpsecEnabled -- set ipsec configuration enabled state
 # SYNOPSIS
-#   setIpsecEnabled $node $enabled
+#   setIpsecEnabled $node_id $enabled
 # FUNCTION
 #   For input node this procedure enables or disables ipsec configuration.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #   * enabled -- true if enabling ipsec configuration, false if disabling
 #****
-proc setIpsecEnabled { node enabled } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc setIpsecEnabled { node_id enabled } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 
-    set i [lsearch [set $node] "ipsec-enabled *"]
+    set i [lsearch [set $node_id] "ipsec-enabled *"]
     if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i]
+	set $node_id [lreplace [set $node_id] $i $i]
     }
 
     if { $enabled == true } {
-	lappend $node [list ipsec-enabled $enabled]
+	lappend $node_id [list ipsec-enabled $enabled]
     }
 }
 
@@ -974,17 +974,17 @@ proc setIpsecEnabled { node enabled } {
 # NAME
 #   ipsecCfggen -- generate information for the setkey.conf
 # SYNOPSIS
-#   ipsecCfggen $node
+#   ipsecCfggen $node_id
 # FUNCTION
 #   Reads all ipsec-configuration and produces data that will be copied
 #   directly in the setkey.conf while switching to Execute mode.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 # RESULT
 #   * cfg -- information that will be copied into setkey.conf
 #****
-proc ipsecCfggen { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc ipsecCfggen { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 
     set sourceSA ""
     set destSA ""
@@ -1006,7 +1006,7 @@ proc ipsecCfggen { node } {
     set level ""
 
     set cfg {}
-    set ipsecCfgList [getIpsecConfig $node]
+    set ipsecCfgList [getIpsecConfig $node_id]
 
     lappend cfg "#!/usr/sbin/setkey -f"
     lappend cfg "flush;"
@@ -1282,37 +1282,37 @@ proc checkSharedSecret { str } {
 # NAME
 #   getNodeIPsec -- retreives IPsec configuration for selected node
 # SYNOPSIS
-#   getNodeIPsec $node
+#   getNodeIPsec $node_id
 # FUNCTION
 #   Retreives all IPsec connections for current node
 # INPUTS
-#   node - node id
+#   node_id - node id
 #****
-proc getNodeIPsec { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc getNodeIPsec { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 
-    return [lindex [lsearch -inline [set $node] "ipsec-config *"] 1]
+    return [lindex [lsearch -inline [set $node_id] "ipsec-config *"] 1]
 }
 
-proc setNodeIPsec { node newValue } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc setNodeIPsec { node_id new_value } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 
-    set ipsecCfgIndex [lsearch -index 0 [set $node] "ipsec-config"]
+    set ipsecCfgIndex [lsearch -index 0 [set $node_id] "ipsec-config"]
 
     if { $ipsecCfgIndex != -1 } {
-	set $node [lreplace [set $node] $ipsecCfgIndex $ipsecCfgIndex "ipsec-config {$newValue}"]
+	set $node_id [lreplace [set $node_id] $ipsecCfgIndex $ipsecCfgIndex "ipsec-config {$new_value}"]
     } else {
-	set $node [linsert [set $node] end "ipsec-config {$newValue}"]
+	set $node_id [linsert [set $node_id] end "ipsec-config {$new_value}"]
     }
 }
 
-proc delNodIPsec { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc delNodIPsec { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 
-    set ipsecCfgIndex [lsearch -index 0 [set $node] "ipsec-config"]
+    set ipsecCfgIndex [lsearch -index 0 [set $node_id] "ipsec-config"]
 
     if { $ipsecCfgIndex != -1 } {
-	set $node [lreplace [set $node] $ipsecCfgIndex $ipsecCfgIndex]
+	set $node_id [lreplace [set $node_id] $ipsecCfgIndex $ipsecCfgIndex]
     }
 }
 
@@ -1320,14 +1320,14 @@ proc delNodIPsec { node } {
 # NAME
 #   getNodeIPsecItem -- get node IPsec item
 # SYNOPSIS
-#   getNodeIPsecItem $node $item
+#   getNodeIPsecItem $node_id $item
 # FUNCTION
 #   Retreives an item from IPsec configuration of given node
 # INPUTS
-#   node - node id
+#   node_id - node id
 #   item - search item
-proc getNodeIPsecItem { node item } {
-    set cfg [getNodeIPsec $node]
+proc getNodeIPsecItem { node_id item } {
+    set cfg [getNodeIPsec $node_id]
     if { [lsearch $cfg "$item *"] != -1 } {
 	return [lindex [lsearch -inline $cfg "$item *"] 1]
     }
@@ -1338,50 +1338,50 @@ proc getNodeIPsecItem { node item } {
 # NAME
 #   setNodeIPsecItem -- set node IPsec item
 # SYNOPSIS
-#   setNodeIPsecItem $node $item
+#   setNodeIPsecItem $node_id $item
 # FUNCTION
 #   Sets an item from IPsec configuration of given node
 # INPUTS
-#   node - node id
+#   node_id - node id
 #   item - search item
-proc setNodeIPsecItem { node item newValue } {
-    set ipsecCfg [getNodeIPsec $node]
+proc setNodeIPsecItem { node_id item new_value } {
+    set ipsecCfg [getNodeIPsec $node_id]
 
     set itemIndex [lsearch -index 0 $ipsecCfg $item]
     if { $itemIndex != -1 } {
-	set newIpsecCfg [lreplace $ipsecCfg $itemIndex $itemIndex "$item {$newValue}"]
+	set newIpsecCfg [lreplace $ipsecCfg $itemIndex $itemIndex "$item {$new_value}"]
     } else {
-	set newIpsecCfg [linsert $ipsecCfg end "$item {$newValue}"]
+	set newIpsecCfg [linsert $ipsecCfg end "$item {$new_value}"]
     }
 
-    setNodeIPsec $node $newIpsecCfg
+    setNodeIPsec $node_id $newIpsecCfg
 }
 
-proc delNodeIPsecItem { node item } {
-    set ipsecCfg [getNodeIPsec $node]
+proc delNodeIPsecItem { node_id item } {
+    set ipsecCfg [getNodeIPsec $node_id]
 
     set itemIndex [lsearch -index 0 $ipsecCfg $item]
     if { $itemIndex != -1 } {
 	set newIpsecCfg [lreplace $ipsecCfg $itemIndex $itemIndex]
     }
 
-    setNodeIPsec $node $newIpsecCfg
+    setNodeIPsec $node_id $newIpsecCfg
 }
 
 #****f* ipsec.tcl/getNodeIPsecElement
 # NAME
 #   getNodeIPsecElement -- get node IPsec element item
 # SYNOPSIS
-#   getNodeIPsecElement $node $item
+#   getNodeIPsecElement $node_id $item
 # FUNCTION
 #   Retreives an element from IPsec configuration of given node from the
 #   given item.
 # INPUTS
-#   node - node id
+#   node_id - node id
 #   item - search item
 #   element  - search element
-proc getNodeIPsecElement { node item element } {
-    set itemCfg [getNodeIPsecItem $node $item]
+proc getNodeIPsecElement { node_id item element } {
+    set itemCfg [getNodeIPsecItem $node_id $item]
 
     if { [lsearch $itemCfg "{$element} *"] != -1 } {
 	return [lindex [lsearch -inline $itemCfg "{$element} *"] 1]
@@ -1389,21 +1389,21 @@ proc getNodeIPsecElement { node item element } {
     return ""
 }
 
-proc setNodeIPsecElement { node item element newValue } {
-    set itemCfg [getNodeIPsecItem $node $item]
+proc setNodeIPsecElement { node_id item element new_value } {
+    set itemCfg [getNodeIPsecItem $node_id $item]
 
     set elementIndex [lsearch -index 0 $itemCfg $element]
     if { $elementIndex != -1 } {
-	set newItemCfg [lreplace $itemCfg $elementIndex $elementIndex "{$element} {$newValue}"]
+	set newItemCfg [lreplace $itemCfg $elementIndex $elementIndex "{$element} {$new_value}"]
     } else {
-	set newItemCfg [linsert $itemCfg end "{$element} {$newValue}"]
+	set newItemCfg [linsert $itemCfg end "{$element} {$new_value}"]
     }
 
-    setNodeIPsecItem $node $item $newItemCfg
+    setNodeIPsecItem $node_id $item $newItemCfg
 }
 
-proc delNodeIPsecElement { node item element } {
-    set itemCfg [getNodeIPsecItem $node $item]
+proc delNodeIPsecElement { node_id item element } {
+    set itemCfg [getNodeIPsecItem $node_id $item]
 
     set elementIndex [lsearch -index 0 $itemCfg $element]
     if { $elementIndex != -1 } {
@@ -1412,15 +1412,15 @@ proc delNodeIPsecElement { node item element } {
 	return
     }
 
-    setNodeIPsecItem $node $item $newItemCfg
+    setNodeIPsecItem $node_id $item $newItemCfg
 
-    if { [getNodeIPsecConnList $node] == "" } {
-	delNodIPsec $node
+    if { [getNodeIPsecConnList $node_id] == "" } {
+	delNodIPsec $node_id
     }
 }
 
-proc getNodeIPsecSetting { node item element setting } {
-    set elementCfg [getNodeIPsecElement $node $item $element]
+proc getNodeIPsecSetting { node_id item element setting } {
+    set elementCfg [getNodeIPsecElement $node_id $item $element]
 
     if { [lsearch $elementCfg "$setting=*"] != -1 } {
 	return [lindex [split [lsearch -inline $elementCfg "$setting=*"] =] 1]
@@ -1428,11 +1428,11 @@ proc getNodeIPsecSetting { node item element setting } {
     return ""
 }
 
-proc setNodeIPsecSetting { node item element setting newValue } {
-    set elementCfg [getNodeIPsecElement $node $item $element]
+proc setNodeIPsecSetting { node_id item element setting new_value } {
+    set elementCfg [getNodeIPsecElement $node_id $item $element]
 
     set settingIndex [lsearch $elementCfg "$setting=*"]
-    if { $newValue == "" } {
+    if { $new_value == "" } {
 	if { $settingIndex != -1 } {
 	    set newElementCfg [lreplace $elementCfg $settingIndex $settingIndex]
 	} else {
@@ -1440,25 +1440,25 @@ proc setNodeIPsecSetting { node item element setting newValue } {
 	}
     } else {
 	if { $settingIndex != -1 } {
-	    set newElementCfg [lreplace $elementCfg $settingIndex $settingIndex "$setting=$newValue"]
+	    set newElementCfg [lreplace $elementCfg $settingIndex $settingIndex "$setting=$new_value"]
 	} else {
-	    set newElementCfg [linsert $elementCfg end "$setting=$newValue"]
+	    set newElementCfg [linsert $elementCfg end "$setting=$new_value"]
 	}
     }
 
-    setNodeIPsecElement $node $item $element $newElementCfg
+    setNodeIPsecElement $node_id $item $element $newElementCfg
 }
 
-proc createEmptyIPsecCfg { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc createEmptyIPsecCfg { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 
-    setNodeIPsec $node ""
-    setNodeIPsecItem $node "configuration" ""
-    setNodeIPsecElement $node "configuration" "config setup" ""
+    setNodeIPsec $node_id ""
+    setNodeIPsecItem $node_id "configuration" ""
+    setNodeIPsecElement $node_id "configuration" "config setup" ""
 }
 
-proc getNodeIPsecConnList { node } {
-    set cfg [getNodeIPsecItem $node "configuration"]
+proc getNodeIPsecConnList { node_id } {
+    set cfg [getNodeIPsecItem $node_id "configuration"]
     set indices [lsearch -index 0 -all $cfg "conn *"]
 
     set connList ""
@@ -1475,15 +1475,15 @@ proc getNodeIPsecConnList { node } {
 # NAME
 #   nodeIPsecConnExists -- checks if connection already exists
 # SYNOPSIS
-#   nodeIPsecConnExists $node $connection_name
+#   nodeIPsecConnExists $node_id $connection_name
 # FUNCTION
 #   Checks if given connection already exists in IPsec configuration of given node
 # INPUTS
-#   node - node id
+#   node_id - node id
 #   connection_name - name of IPsec connection
 #****
-proc nodeIPsecConnExists { node connection_name } {
-    set connList [getNodeIPsecConnList $node]
+proc nodeIPsecConnExists { node_id connection_name } {
+    set connList [getNodeIPsecConnList $node_id]
     if { [ lsearch $connList $connection_name ] != -1 } {
         return 1
     }
@@ -1495,79 +1495,79 @@ proc nodeIPsecConnExists { node connection_name } {
 # NAME
 #   getListOfOtherNodes -- retreives list of all nodes
 # SYNOPSIS
-#   getListOfOtherNodes $node
+#   getListOfOtherNodes $node_id
 # FUNCTION
 #   Retreives list of all nodes created in current topology
 # INPUTS
-#   node - node id
+#   my_node_id - node id
 #****
-proc getListOfOtherNodes { node } {
+proc getListOfOtherNodes { my_node_id } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
 
-    set listOfNodes [removeFromList $node_list $node]
+    set nodes_list [removeFromList $node_list $my_node_id]
 
-    set listOfNames ""
-    foreach node $listOfNodes {
-	lappend listOfNames "[getNodeName $node] - $node"
+    set names_list ""
+    foreach node_id $nodes_list {
+	lappend names_list "[getNodeName $node_id] - $node_id"
     }
 
-    return $listOfNames
+    return $names_list
 }
 
 #****f* ipsec.tcl/getLocalIpAddress
 # NAME
 #   getLocalIpAddress -- retreives local IP addresses for current node
 # SYNOPSIS
-#   getLocalIpAddress $node
+#   getLocalIpAddress $node_id
 # FUNCTION
 #   Retreives all local addresses (IPv4 and IPv6) for current node
 # INPUTS
-#   node - node id
+#   node_id - node id
 #****
-proc getAllIpAddresses { node } {
-    set listOfInterfaces [ifcList $node]
-    foreach logifc [logIfcList $node] {
+proc getAllIpAddresses { node_id } {
+    set ifaces_list [ifcList $node_id]
+    foreach logifc [logIfcList $node_id] {
 	if { [string match "vlan*" $logifc] } {
-	    lappend listOfInterfaces $logifc
+	    lappend ifaces_list $logifc
 	}
     }
 
-    set listOfIP4s ""
-    set listOfIP6s ""
-    foreach item $listOfInterfaces {
-	set ifcIP [getIfcIPv4addr $node $item]
+    set ipv4_list ""
+    set ipv6_list ""
+    foreach item $ifaces_list {
+	set ifcIP [getIfcIPv4addr $node_id $item]
 	if { $ifcIP != "" } {
-	    lappend listOfIP4s $ifcIP
+	    lappend ipv4_list $ifcIP
 	}
 
-	set ifcIP [getIfcIPv6addr $node $item]
+	set ifcIP [getIfcIPv6addr $node_id $item]
 	if { $ifcIP != "" } {
-	    lappend listOfIP6s $ifcIP
+	    lappend ipv6_list $ifcIP
 	}
     }
 
-    return [concat $listOfIP4s $listOfIP6s]
+    return [concat $ipv4_list $ipv6_list]
 }
 
 #****f* ipsec.tcl/getIPAddressForPeer
 # NAME
 #   getIPAddressForPeer -- retreives list of IP addresses for peer
 # SYNOPSIS
-#   getIPAddressForPeer $node
+#   getIPAddressForPeer $node_id
 # FUNCTION
 #   Refreshes list of IP addresses for peer's dropdown selection list
 # INPUTS
-#   node - node id
+#   node_id - node id
 #****
-proc getIPAddressForPeer { node curIP } {
-    set listOfInterfaces [ifcList $node]
-    foreach logifc [logIfcList $node] {
+proc getIPAddressForPeer { node_id curIP } {
+    set ifaces_list [ifcList $node_id]
+    foreach logifc [logIfcList $node_id] {
 	if { [string match "vlan*" $logifc] } {
-	    lappend listOfInterfaces $logifc
+	    lappend ifaces_list $logifc
 	}
     }
 
-    set listOfIPs ""
+    set ips_list ""
     if { $curIP == "" } {
 	set IPversion 4
     } else {
@@ -1575,30 +1575,30 @@ proc getIPAddressForPeer { node curIP } {
     }
 
     if { $IPversion == 4 } {
-	foreach item $listOfInterfaces {
-	    set ifcIP [getIfcIPv4addr $node $item]
+	foreach item $ifaces_list {
+	    set ifcIP [getIfcIPv4addr $node_id $item]
 	    if { $ifcIP != "" } {
-		lappend listOfIPs $ifcIP
+		lappend ips_list $ifcIP
 	    }
 	}
     } else {
-	foreach item $listOfInterfaces {
-	    set ifcIP [getIfcIPv6addr $node $item]
+	foreach item $ifaces_list {
+	    set ifcIP [getIfcIPv6addr $node_id $item]
 	    if { $ifcIP != "" } {
-		lappend listOfIPs $ifcIP
+		lappend ips_list $ifcIP
 	    }
 	}
     }
 
-    return $listOfIPs
+    return $ips_list
 }
 
 proc getNodeFromHostname { hostname } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
 
-    foreach node $node_list {
-	if { $hostname == [getNodeName $node] } {
-	    return $node
+    foreach node_id $node_list {
+	if { $hostname == [getNodeName $node_id] } {
+	    return $node_id
 	}
     }
 
@@ -1609,16 +1609,16 @@ proc getNodeFromHostname { hostname } {
 # NAME
 #   getLocalSubnets -- creates and retreives local subnets
 # SYNOPSIS
-#   getLocalSubnets $listOfIPs
+#   getLocalSubnets $ips_list
 # FUNCTION
 #   Creates and retreives local subnets from given list of IP addresses
 # INPUTS
-#   listOfIPs - list of IP addresses
+#   ips_list - list of IP addresses
 #****
-proc getSubnetsFromIPs { listOfIPs } {
+proc getSubnetsFromIPs { ips_list } {
     set total_string ""
     set total_list ""
-    foreach item $listOfIPs {
+    foreach item $ips_list {
 	set total_string [ip::prefix $item]
 	if { [::ip::version $item ] == 6 } {
 	    set total_string [ip::contract $total_string]
@@ -1662,16 +1662,16 @@ proc checkIfPeerStartsSameConnection { peer local_ip local_subnet local_id } {
 # NAME
 #   prepareNodeConfiguration -- inserts extra values in IPsec connection configuration
 # SYNOPSIS
-#   prepareNodeConfiguration $node
+#   prepareNodeConfiguration $node_id
 # FUNCTION
 #   Inserts extra values in IPsec connection configuration before it is written to ipsec.conf
 # INPUTS
-#   node - node id
+#   node_id - node id
 #****
-proc prepareNodeConfiguration { node } {
-    set ipsecCfg [getNodeIPsec $node]
-    set cfg [getNodeIPsecItem $node "configuration"]
-    set connList [getNodeIPsecConnList $node]
+proc prepareNodeConfiguration { node_id } {
+    set ipsecCfg [getNodeIPsec $node_id]
+    set cfg [getNodeIPsecItem $node_id "configuration"]
+    set connList [getNodeIPsecConnList $node_id]
 
     set new_cfg ""
     set help_item ""

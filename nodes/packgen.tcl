@@ -48,14 +48,14 @@ proc $MODULE.prepareSystem {} {
 proc $MODULE.confNewIfc { node_id iface } {
 }
 
-proc $MODULE.confNewNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc $MODULE.confNewNode { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global nodeNamingBase
 
     set nconfig [list \
 	"hostname [getNewNodeNameType packgen $nodeNamingBase(packgen)]" \
 	! ]
-    lappend $node "network-config [list $nconfig]"
+    lappend $node_id "network-config [list $nconfig]"
 }
 
 proc $MODULE.icon { size } {

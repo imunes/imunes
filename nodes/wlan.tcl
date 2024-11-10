@@ -31,16 +31,16 @@ proc $MODULE.prepareSystem {} {
     catch { exec kldload ng_rfee }
 }
 
-proc $MODULE.confNewIfc { node_id ifc } {
+proc $MODULE.confNewIfc { node_id iface_id } {
 }
 
-proc $MODULE.confNewNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc $MODULE.confNewNode { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 
     set nconfig [list \
-	"hostname $node" \
+	"hostname $node_id" \
 	! ]
-    lappend $node "network-config [list $nconfig]"
+    lappend $node_id "network-config [list $nconfig]"
 }
 
 proc $MODULE.icon { size } {
@@ -90,13 +90,13 @@ proc $MODULE.start { eid node_id } {
 
     set ngid $ngnodemap($eid\.$node_id)
     set wlan_epids ""
-    foreach ifc [ifcList $node_id] {
-	lappend wlan_epids [string range [lindex [logicalPeerByIfc $node_id $ifc] 0] 1 end]
+    foreach iface_id [ifcList $node_id] {
+	lappend wlan_epids [string range [lindex [logicalPeerByIfc $node_id $iface_id] 0] 1 end]
     }
 
-    foreach ifc [ifcList $node_id] {
-	set local_linkname link[string range $ifc 1 end]
-	set local_epid [string range [lindex [logicalPeerByIfc $node_id $ifc] 0] 1 end]
+    foreach iface_id [ifcList $node_id] {
+	set local_linkname link[string range $iface_id 1 end]
+	set local_epid [string range [lindex [logicalPeerByIfc $node_id $iface_id] 0] 1 end]
 	set tx_bandwidth 54000000
 	set tx_jitter 1.5
 	set tx_duplicate 5
@@ -127,8 +127,8 @@ proc $MODULE.destroy { eid node_id } {
     catch { exec jexec $eid ngctl msg $node_id: shutdown }
 }
 
-proc $MODULE.nghook { eid node_id ifc } {
-    set ifunit [string range $ifc 1 end]
+proc $MODULE.nghook { eid node_id iface_id } {
+    set ifunit [string range $iface_id 1 end]
     return [list $eid\.$node_id link$ifunit]
 }
 
@@ -144,10 +144,10 @@ proc $MODULE.configGUI { c node_id } {
     configGUI_buttonsACNode $wi $node_id
 }
 
-proc $MODULE.configInterfacesGUI { wi node_id ifc } {
+proc $MODULE.configInterfacesGUI { wi node_id iface_id } {
     global guielements
 
-    configGUI_ifcQueueConfig $wi $node_id $ifc
+    configGUI_ifcQueueConfig $wi $node_id $iface_id
 }
 
 proc $MODULE.maxLinks {} {

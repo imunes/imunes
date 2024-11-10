@@ -41,20 +41,20 @@
 # NAME
 #   removeCanvas -- remove canvas
 # SYNOPSIS
-#   removeCanvas $canvas
+#   removeCanvas $canvas_id
 # FUNCTION
 #   Removes the canvas from simulation. This function does not change the
 #   configuration of the nodes, i.e. nodes attached to the removed canvas
 #   remain attached to the same non existing canvas.
 # INPUTS
-#   * canvas -- canvas id
+#   * canvas_id -- canvas id
 #****
-proc removeCanvas { canvas } {
+proc removeCanvas { canvas_id } {
     upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
-    upvar 0 ::cf::[set ::curcfg]::$canvas $canvas
+    upvar 0 ::cf::[set ::curcfg]::$canvas_id $canvas_id
 
-    set canvas_list [removeFromList $canvas_list $canvas]
-    set $canvas {}
+    set canvas_list [removeFromList $canvas_list $canvas_id]
+    set $canvas_id {}
 }
 
 #****f* canvas.tcl/newCanvas
@@ -73,40 +73,40 @@ proc removeCanvas { canvas } {
 #****
 proc newCanvas { name } {
     upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
-    set canvas [newObjectId $canvas_list "c"]
+    set canvas_id [newObjectId $canvas_list "c"]
 
-    upvar 0 ::cf::[set ::curcfg]::$canvas $canvas
-    lappend canvas_list $canvas
-    set $canvas {}
+    upvar 0 ::cf::[set ::curcfg]::$canvas_id $canvas_id
+    lappend canvas_list $canvas_id
+    set $canvas_id {}
     if { $name != "" } {
-	setCanvasName $canvas $name
+	setCanvasName $canvas_id $name
     } else {
-	setCanvasName $canvas "Canvas[string range $canvas 1 end]"
+	setCanvasName $canvas_id "Canvas[string range $canvas_id 1 end]"
     }
 
-    return $canvas
+    return $canvas_id
 }
 
 #****f* canvas.tcl/setCanvasSize
 # NAME
 #   setCanvasSize -- set canvas size
 # SYNOPSIS
-#   setCanvasSize $canvas $x $y
+#   setCanvasSize $canvas_id $x $y
 # FUNCTION
 #   Sets the specified canvas size.
 # INPUTS
-#   * canvas -- canvas id
+#   * canvas_id -- canvas id
 #   * x -- width
 #   * y -- height
 #****
-proc setCanvasSize { canvas x y } {
-    upvar 0 ::cf::[set ::curcfg]::$canvas $canvas
+proc setCanvasSize { canvas_id x y } {
+    upvar 0 ::cf::[set ::curcfg]::$canvas_id $canvas_id
 
-    set i [lsearch [set $canvas] "size *"]
+    set i [lsearch [set $canvas_id] "size *"]
     if { $i >= 0 } {
-	set $canvas [lreplace [set $canvas] $i $i "size {$x $y}"]
+	set $canvas_id [lreplace [set $canvas_id] $i $i "size {$x $y}"]
     } else {
-	set $canvas [linsert [set $canvas] 1 "size {$x $y}"]
+	set $canvas_id [linsert [set $canvas_id] 1 "size {$x $y}"]
     }
 }
 
@@ -114,18 +114,18 @@ proc setCanvasSize { canvas x y } {
 # NAME
 #   getCanvasSize -- get canvas size
 # SYNOPSIS
-#   getCanvasSize $canvas
+#   getCanvasSize $canvas_id
 # FUNCTION
 #   Returns the specified canvas size.
 # INPUTS
-#   * canvas -- canvas id
+#   * canvas_id -- canvas id
 # RESULT
 #   * size -- canvas size in the form of {x y}
 #****
-proc getCanvasSize { canvas } {
-    upvar 0 ::cf::[set ::curcfg]::$canvas $canvas
+proc getCanvasSize { canvas_id } {
+    upvar 0 ::cf::[set ::curcfg]::$canvas_id $canvas_id
 
-    set entry [lrange [lsearch -inline [set $canvas] "size *"] 1 end]
+    set entry [lrange [lsearch -inline [set $canvas_id] "size *"] 1 end]
     set size [string trim $entry \{\}]
     if { $size == "" } {
 	return "900 620"
@@ -138,18 +138,18 @@ proc getCanvasSize { canvas } {
 # NAME
 #   getCanvasName -- get canvas name
 # SYNOPSIS
-#   set canvas_name [getCanvasName $canvas]
+#   set canvas_name [getCanvasName $canvas_id]
 # FUNCTION
 #   Returns the name of the canvas.
 # INPUTS
-#   * canvas -- canvas id
+#   * canvas_id -- canvas id
 # RESULT
 #   * canvas_name -- canvas name
 #****
-proc getCanvasName { canvas } {
-    upvar 0 ::cf::[set ::curcfg]::$canvas $canvas
+proc getCanvasName { canvas_id } {
+    upvar 0 ::cf::[set ::curcfg]::$canvas_id $canvas_id
 
-    set entry [lrange [lsearch -inline [set $canvas] "name *"] 1 end]
+    set entry [lrange [lsearch -inline [set $canvas_id] "name *"] 1 end]
     return [string trim $entry \{\}]
 }
 
@@ -157,21 +157,21 @@ proc getCanvasName { canvas } {
 # NAME
 #   setCanvasName -- set canvas name
 # SYNOPSIS
-#   setCanvasName $canvas $name
+#   setCanvasName $canvas_id $name
 # FUNCTION
 #   Sets the name of the canvas.
 # INPUTS
-#   * canvas -- canvas id
+#   * canvas_id -- canvas id
 #   * name -- canvas name
 #****
-proc setCanvasName { canvas name } {
-    upvar 0 ::cf::[set ::curcfg]::$canvas $canvas
+proc setCanvasName { canvas_id name } {
+    upvar 0 ::cf::[set ::curcfg]::$canvas_id $canvas_id
 
-    set i [lsearch [set $canvas] "name *"]
+    set i [lsearch [set $canvas_id] "name *"]
     if { $i >= 0 } {
-	set $canvas [lreplace [set $canvas] $i $i "name {$name}"]
+	set $canvas_id [lreplace [set $canvas_id] $i $i "name {$name}"]
     } else {
-	set $canvas [linsert [set $canvas] 1 "name {$name}"]
+	set $canvas_id [linsert [set $canvas_id] 1 "name {$name}"]
     }
 }
 
@@ -179,18 +179,18 @@ proc setCanvasName { canvas name } {
 # NAME
 #   getCanvasBkg -- get canvas background image file name
 # SYNOPSIS
-#   set canvasBkgImage [getCanvasBkg $canvas]
+#   set canvasBkgImage [getCanvasBkg $canvas_id]
 # FUNCTION
 #   Returns the name of the canvas background image file.
 # INPUTS
-#   * canvas -- canvas id
+#   * canvas_id -- canvas id
 # RESULT
 #   * canvasBkgImage -- image variable name
 #****
-proc getCanvasBkg { canvas } {
-    upvar 0 ::cf::[set ::curcfg]::$canvas $canvas
+proc getCanvasBkg { canvas_id } {
+    upvar 0 ::cf::[set ::curcfg]::$canvas_id $canvas_id
 
-    set entry [lrange [lsearch -inline [set $canvas] "bkgImage *"] 1 end]
+    set entry [lrange [lsearch -inline [set $canvas_id] "bkgImage *"] 1 end]
     return [string trim $entry \{\}]
 }
 
@@ -198,21 +198,21 @@ proc getCanvasBkg { canvas } {
 # NAME
 #   setCanvasBkg -- set canvas background
 # SYNOPSIS
-#   setCanvasBkg $canvas $name
+#   setCanvasBkg $canvas_id $name
 # FUNCTION
 #   Sets the background image for the canvas.
 # INPUTS
-#   * canvas -- canvas id
+#   * canvas_id -- canvas id
 #   * name -- image variable name
 #****
-proc setCanvasBkg { canvas name } {
-    upvar 0 ::cf::[set ::curcfg]::$canvas $canvas
+proc setCanvasBkg { canvas_id name } {
+    upvar 0 ::cf::[set ::curcfg]::$canvas_id $canvas_id
 
-    set i [lsearch [set $canvas] "bkgImage *"]
+    set i [lsearch [set $canvas_id] "bkgImage *"]
     if { $i >= 0 } {
-	set $canvas [lreplace [set $canvas] $i $i "bkgImage {$name}"]
+	set $canvas_id [lreplace [set $canvas_id] $i $i "bkgImage {$name}"]
     } else {
-	set $canvas [linsert [set $canvas] 1 "bkgImage {$name}"]
+	set $canvas_id [linsert [set $canvas_id] 1 "bkgImage {$name}"]
     }
 }
 
@@ -220,18 +220,18 @@ proc setCanvasBkg { canvas name } {
 # NAME
 #   removeCanvasBkg -- remove canvas background
 # SYNOPSIS
-#   removeCanvasBkg $canvas
+#   removeCanvasBkg $canvas_id
 # FUNCTION
 #   Removes the background image for the current canvas.
 # INPUTS
-#   * canvas -- canvas id
+#   * canvas_id -- canvas id
 #****
-proc removeCanvasBkg { canvas } {
-    upvar 0 ::cf::[set ::curcfg]::$canvas $canvas
+proc removeCanvasBkg { canvas_id } {
+    upvar 0 ::cf::[set ::curcfg]::$canvas_id $canvas_id
 
-    set i [lsearch [set $canvas] "bkgImage *"]
+    set i [lsearch [set $canvas_id] "bkgImage *"]
     if { $i >= 0 } {
-	set $canvas [lreplace [set $canvas] $i $i ]
+	set $canvas_id [lreplace [set $canvas_id] $i $i ]
     }
 }
 
@@ -1068,8 +1068,8 @@ proc printCanvasToFile { w entry } {
 	set psname "$name.ps"
     }
 
-    foreach canvas $canvas_list {
-	set curcanvas $canvas
+    foreach canvas_id $canvas_list {
+	set curcanvas $canvas_id
 	switchCanvas none
 
 	set sizex [expr {[lindex [getCanvasSize $curcanvas] 0]*$zoom}]

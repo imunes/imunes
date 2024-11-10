@@ -45,17 +45,17 @@ proc $MODULE.prepareSystem {} {
     catch { exec kldload ng_patmat }
 }
 
-proc $MODULE.confNewIfc { node_id iface } {
+proc $MODULE.confNewIfc { node_id iface_id } {
 }
 
-proc $MODULE.confNewNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc $MODULE.confNewNode { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global nodeNamingBase
 
     set nconfig [list \
 	"hostname [getNewNodeNameType filter $nodeNamingBase(filter)]" \
 	! ]
-    lappend $node "network-config [list $nconfig]"
+    lappend $node_id "network-config [list $nconfig]"
 }
 
 proc $MODULE.icon { size } {
@@ -152,15 +152,15 @@ proc $MODULE.nodeCreate { eid node_id } {
 #   * eid - experiment id
 #   * node_id - id of the node (type of the node is filter.
 #****
-proc $MODULE.start { eid node } {
-    foreach ifc [ifcList $node] {
-	set cfg [netconfFetchSection $node "interface $ifc"]
-	set ngcfgreq "shc $ifc"
+proc $MODULE.start { eid node_id } {
+    foreach iface_id [ifcList $node_id] {
+	set cfg [netconfFetchSection $node_id "interface $iface_id"]
+	set ngcfgreq "shc $iface_id"
 	foreach rule [lsort -dictionary $cfg] {
 	    set ngcfgreq "[set ngcfgreq]$rule"
 	}
 
-	pipesExec "jexec $eid ngctl msg $node: $ngcfgreq" "hold"
+	pipesExec "jexec $eid ngctl msg $node_id: $ngcfgreq" "hold"
     }
 }
 
@@ -177,15 +177,15 @@ proc $MODULE.start { eid node } {
 #   * node_id - id of the node (type of the node is filter.
 #****
 proc $MODULE.shutdown { eid node_id } {
-    foreach iface [ifcList $node_id] {
-	set ngcfgreq "shc $iface"
+    foreach iface_id [ifcList $node_id] {
+	set ngcfgreq "shc $iface_id"
 
 	pipesExec "jexec $eid ngctl msg $node_id: $ngcfgreq" "hold"
     }
 }
 
-proc $MODULE.destroyIfcs { eid node_id ifcs } {
-    l2node.destroyIfcs $eid $node_id $ifcs
+proc $MODULE.destroyIfcs { eid node_id ifaces } {
+    l2node.destroyIfcs $eid $node_id $ifaces
 }
 
 #****f* filter.tcl/filter.destroy
@@ -208,7 +208,7 @@ proc $MODULE.destroy { eid node_id } {
 # NAME
 #   filter.nghook
 # SYNOPSIS
-#   filter.nghook $eid $node_id $iface
+#   filter.nghook $eid $node_id $iface_id
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the
 #   netgraph hook which is used for connecting two netgraph
@@ -217,13 +217,13 @@ proc $MODULE.destroy { eid node_id } {
 # INPUTS
 #   * eid - experiment id
 #   * node_id - node id
-#   * iface - interface id
+#   * iface_id - interface id
 # RESULT
 #   * nghook - the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
-proc $MODULE.nghook { eid node_id iface } {
-    return [list $node_id $iface]
+proc $MODULE.nghook { eid node_id iface_id } {
+    return [list $node_id $iface_id]
 }
 
 #****f* filter.tcl/filter.configGUI
@@ -274,7 +274,7 @@ proc $MODULE.configGUI { c node_id } {
 # NAME
 #   filter.configInterfacesGUI
 # SYNOPSIS
-#   filter.configInterfacesGUI $wi $node_id $iface
+#   filter.configInterfacesGUI $wi $node_id $iface_id
 # FUNCTION
 #   Defines which modules for changing interfaces parameters
 #   are contained in the filter.configuration window. It is done
@@ -282,10 +282,10 @@ proc $MODULE.configGUI { c node_id } {
 # INPUTS
 #   * wi - widget
 #   * node_id - node id
-#   * iface - interface id
+#   * iface_id - interface id
 #****
-proc $MODULE.configIfcRulesGUI { wi node_id iface rule } {
+proc $MODULE.configIfcRulesGUI { wi node_id iface_id rule } {
     global filterguielements
 
-    configGUI_ifcRuleConfig $wi $node_id $iface $rule
+    configGUI_ifcRuleConfig $wi $node_id $iface_id $rule
 }

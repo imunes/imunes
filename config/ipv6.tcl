@@ -103,17 +103,17 @@ proc findFreeIPv6Net { mask } {
 # NAME
 #   autoIPv6addr -- automaticaly assign an IPv6 address
 # SYNOPSIS
-#   autoIPv6addr $node $iface
+#   autoIPv6addr $node_id $iface_id
 # FUNCTION
-#   automaticaly assignes an IPv6 address to the interface $iface of
-#   of the node $node.
+#   automaticaly assignes an IPv6 address to the interface $iface_id of
+#   of the node $node_id.
 # INPUTS
-#   * node -- the node containing the interface to witch a new
+#   * node_id -- the node containing the interface to witch a new
 #     IPv6 address should be assigned
-#   * iface -- the interface to witch a new, automatically generated, IPv6
+#   * iface_id -- the interface to witch a new, automatically generated, IPv6
 #     address will be assigned
 #****
-proc autoIPv6addr { node iface } {
+proc autoIPv6addr { node_id iface_id } {
     upvar 0 ::cf::[set ::curcfg]::IPv6UsedList IPv6UsedList
     global IPv6autoAssign
 
@@ -124,15 +124,15 @@ proc autoIPv6addr { node iface } {
     global changeAddrRange6 control changeAddressRange6 autorenumbered_ifcs6
     set peer_ip6addrs {}
 
-    if { [[typemodel $node].netlayer] != "NETWORK" } {
+    if { [[typemodel $node_id].netlayer] != "NETWORK" } {
 	#
 	# Shouldn't get called at all for link-layer nodes
 	#
 	return
     }
 
-    setIfcIPv6addr $node $iface ""
-    set peer_node [logicalPeerByIfc $node $iface]
+    setIfcIPv6addr $node_id $iface_id ""
+    set peer_node [logicalPeerByIfc $node_id $iface_id]
 
     if { [[typemodel $peer_node].netlayer] == "LINK" } {
 	foreach l2node [listLANNodes $peer_node {}] {
@@ -154,19 +154,19 @@ proc autoIPv6addr { node iface } {
 	    }
 	}
     } else {
-	set peer_if [ifcByLogicalPeer $peer_node $node]
+	set peer_if [ifcByLogicalPeer $peer_node $node_id]
 	set peer_ip6addr [getIfcIPv6addr $peer_node $peer_if]
 	set peer_ip6addrs $peer_ip6addr
     }
 
-    set targetbyte [expr 0x[[getNodeType $node].IPAddrRange]]
+    set targetbyte [expr 0x[[getNodeType $node_id].IPAddrRange]]
 
     if { $peer_ip6addrs != "" && $changeAddrRange6 == 0 } {
 	set ipaddr  [nextFreeIP6Addr [lindex $peer_ip6addrs 0] $targetbyte $peer_ip6addrs]
-	setIfcIPv6addr $node $iface $ipaddr
+	setIfcIPv6addr $node_id $iface_id $ipaddr
     } else {
-	setIfcIPv6addr $node $iface "[findFreeIPv6Net 64][format %x $targetbyte]/64"
-	lappend IPv6UsedList [ip::contract [ip::prefix [getIfcIPv6addr $node $iface]]]
+	setIfcIPv6addr $node_id $iface_id "[findFreeIPv6Net 64][format %x $targetbyte]/64"
+	lappend IPv6UsedList [ip::contract [ip::prefix [getIfcIPv6addr $node_id $iface_id]]]
     }
 }
 

@@ -50,25 +50,25 @@ registerRouterModule $MODULE
 # NAME
 #   router.confNewIfc -- configure new interface
 # SYNOPSIS
-#   router.confNewIfc $node $ifc
+#   router.confNewIfc $node_id $iface_id
 # FUNCTION
 #   Configures new interface for the specified node.
 # INPUTS
-#   * node -- node id
-#   * ifc -- interface name
+#   * node_id -- node id
+#   * iface_id -- interface name
 #****
-proc $MODULE.confNewIfc { node ifc } {
+proc $MODULE.confNewIfc { node_id iface_id } {
     global changeAddressRange changeAddressRange6
 
     set changeAddressRange 0
     set changeAddressRange6 0
-    autoIPv4addr $node $ifc
-    autoIPv6addr $node $ifc
-    autoMACaddr $node $ifc
+    autoIPv4addr $node_id $iface_id
+    autoIPv6addr $node_id $iface_id
+    autoMACaddr $node_id $iface_id
 
-    set peer_node [logicalPeerByIfc $node $ifc]
+    set peer_node [logicalPeerByIfc $node_id $iface_id]
     if { [typemodel $peer_node] == "extnat" } {
-	setIfcNatState $node $ifc "on"
+	setIfcNatState $node_id $iface_id "on"
     }
 }
 
@@ -76,14 +76,14 @@ proc $MODULE.confNewIfc { node ifc } {
 # NAME
 #   router.confNewNode -- configure new node
 # SYNOPSIS
-#   router.confNewNode $node
+#   router.confNewNode $node_id
 # FUNCTION
 #   Configures new node with the specified id.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.confNewNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc $MODULE.confNewNode { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global ripEnable ripngEnable ospfEnable ospf6Enable
     global rdconfig router_model router_ConfigModel
     global def_router_model
@@ -96,25 +96,25 @@ proc $MODULE.confNewNode { node } {
     set router_ConfigModel $router_model
 
     if { $router_model != $def_router_model } {
-	lappend $node "model $router_model"
+	lappend $node_id "model $router_model"
     } else {
-	lappend $node "model $def_router_model"
+	lappend $node_id "model $def_router_model"
     }
 
     set nconfig [list \
 	"hostname [getNewNodeNameType router $nodeNamingBase(router)]" \
 	! ]
-    lappend $node "network-config [list $nconfig]"
+    lappend $node_id "network-config [list $nconfig]"
 
-    setNodeProtocolRip $node $ripEnable
-    setNodeProtocolRipng $node $ripngEnable
-    setNodeProtocolOspfv2 $node $ospfEnable
-    setNodeProtocolOspfv3 $node $ospf6Enable
+    setNodeProtocolRip $node_id $ripEnable
+    setNodeProtocolRipng $node_id $ripngEnable
+    setNodeProtocolOspfv2 $node_id $ospfEnable
+    setNodeProtocolOspfv3 $node_id $ospf6Enable
 
-    setAutoDefaultRoutesStatus $node "enabled"
-    setLogIfcType $node lo0 lo
-    setIfcIPv4addr $node lo0 "127.0.0.1/8"
-    setIfcIPv6addr $node lo0 "::1/128"
+    setAutoDefaultRoutesStatus $node_id "enabled"
+    setLogIfcType $node_id lo0 lo
+    setIfcIPv4addr $node_id lo0 "127.0.0.1/8"
+    setIfcIPv6addr $node_id lo0 "::1/128"
 }
 
 #****f* genericrouter.tcl/router.icon
@@ -242,16 +242,16 @@ proc $MODULE.IPAddrRange {} {
 # NAME
 #   router.configGUI -- configuration GUI
 # SYNOPSIS
-#   router.configGUI $c $node
+#   router.configGUI $c $node_id
 # FUNCTION
 #   Defines the structure of the router configuration window by calling
 #   procedures for creating and organising the window, as well as procedures
 #   for adding certain modules to that window.
 # INPUTS
 #   * c -- tk canvas
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.configGUI { c node } {
+proc $MODULE.configGUI { c node_id } {
     global wi
     global guielements treecolumns ipsecEnable
 
@@ -259,46 +259,46 @@ proc $MODULE.configGUI { c node } {
 
     configGUI_createConfigPopupWin $c
     wm title $wi "router configuration"
-    configGUI_nodeName $wi $node "Node name:"
+    configGUI_nodeName $wi $node_id "Node name:"
 
-    lassign [configGUI_addNotebook $wi $node { "Configuration" "Interfaces" "IPsec" }] configtab ifctab ipsectab
+    lassign [configGUI_addNotebook $wi $node_id { "Configuration" "Interfaces" "IPsec" }] configtab ifctab ipsectab
 
     set treecolumns { "OperState State" "NatState Nat" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
 	    "MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop" }
-    configGUI_addTree $ifctab $node
+    configGUI_addTree $ifctab $node_id
 
-    configGUI_routingModel $configtab $node
-    configGUI_customImage $configtab $node
-    configGUI_attachDockerToExt $configtab $node
-    configGUI_servicesConfig $configtab $node
-    configGUI_staticRoutes $configtab $node
-    configGUI_snapshots $configtab $node
-    configGUI_customConfig $configtab $node
-    configGUI_ipsec $ipsectab $node
+    configGUI_routingModel $configtab $node_id
+    configGUI_customImage $configtab $node_id
+    configGUI_attachDockerToExt $configtab $node_id
+    configGUI_servicesConfig $configtab $node_id
+    configGUI_staticRoutes $configtab $node_id
+    configGUI_snapshots $configtab $node_id
+    configGUI_customConfig $configtab $node_id
+    configGUI_ipsec $ipsectab $node_id
 
-    configGUI_buttonsACNode $wi $node
+    configGUI_buttonsACNode $wi $node_id
 }
 
 #****f* genericrouter.tcl/router.configInterfacesGUI
 # NAME
 #   router.configInterfacesGUI -- configuration of interfaces GUI
 # SYNOPSIS
-#   router.configInterfacesGUI $wi $node $ifc
+#   router.configInterfacesGUI $wi $node_id $iface_id
 # FUNCTION
 #   Defines which modules for changing interfaces parameters are contained in
 #   the router configuration window. It is done by calling procedures for
 #   adding certain modules to the window.
 # INPUTS
 #   * wi -- widget
-#   * node -- node id
-#   * ifc -- interface name
+#   * node_id -- node id
+#   * iface_id -- interface name
 #****
-proc $MODULE.configInterfacesGUI { wi node ifc } {
+proc $MODULE.configInterfacesGUI { wi node_id iface_id } {
     global guielements
 
-    configGUI_ifcEssentials $wi $node $ifc
-    configGUI_ifcQueueConfig $wi $node $ifc
-    configGUI_ifcMACAddress $wi $node $ifc
-    configGUI_ifcIPv4Address $wi $node $ifc
-    configGUI_ifcIPv6Address $wi $node $ifc
+    configGUI_ifcEssentials $wi $node_id $iface_id
+    configGUI_ifcQueueConfig $wi $node_id $iface_id
+    configGUI_ifcMACAddress $wi $node_id $iface_id
+    configGUI_ifcIPv4Address $wi $node_id $iface_id
+    configGUI_ifcIPv6Address $wi $node_id $iface_id
 }

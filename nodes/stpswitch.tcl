@@ -50,27 +50,27 @@ proc $MODULE.prepareSystem {} {
     catch { exec jexec sysctl net.link.bridge.pfil_onlyip=0 }
 }
 
-proc $MODULE.confNewIfc { node_id ifc } {
-    autoMACaddr $node_id $ifc
+proc $MODULE.confNewIfc { node_id iface_id } {
+    autoMACaddr $node_id $iface_id
 
-    setBridgeIfcDiscover $node_id $ifc 1
-    setBridgeIfcLearn $node_id $ifc 1
-    setBridgeIfcStp $node_id $ifc 1
-    setBridgeIfcAutoedge $node_id $ifc 1
-    setBridgeIfcAutoptp $node_id $ifc 1
-    setBridgeIfcPriority $node_id $ifc 128
-    setBridgeIfcPathcost $node_id $ifc 0
-    setBridgeIfcMaxaddr $node_id $ifc 0
+    setBridgeIfcDiscover $node_id $iface_id 1
+    setBridgeIfcLearn $node_id $iface_id 1
+    setBridgeIfcStp $node_id $iface_id 1
+    setBridgeIfcAutoedge $node_id $iface_id 1
+    setBridgeIfcAutoptp $node_id $iface_id 1
+    setBridgeIfcPriority $node_id $iface_id 128
+    setBridgeIfcPathcost $node_id $iface_id 0
+    setBridgeIfcMaxaddr $node_id $iface_id 0
 }
 
-    upvar 0 ::cf::[set ::curcfg]::$node $node
 proc $MODULE.confNewNode { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global nodeNamingBase
 
     set nconfig [list \
 	"hostname [getNewNodeNameType stpswitch $nodeNamingBase(stpswitch)]" \
 	! ]
-    lappend $node "network-config [list $nconfig]"
+    lappend $node_id "network-config [list $nconfig]"
 
     setBridgeProtocol $node_id "rstp"
     setBridgePriority $node_id "32768"
@@ -184,14 +184,14 @@ proc $MODULE.generateConfig { node_id } {
 
     set cfg {}
 
-    foreach ifc [ifcList $node_id] {
-	set addr [getIfcIPv4addr $node_id $ifc]
+    foreach iface_id [ifcList $node_id] {
+	set addr [getIfcIPv4addr $node_id $iface_id]
 	if { $addr != "" } {
-	    lappend cfg "ifconfig $ifc inet $addr"
+	    lappend cfg "ifconfig $iface_id inet $addr"
 	}
-	set addr [getIfcIPv6addr $node_id $ifc]
+	set addr [getIfcIPv6addr $node_id $iface_id]
 	if { $addr != "" } {
-	    lappend cfg "ifconfig $ifc inet6 $addr"
+	    lappend cfg "ifconfig $iface_id inet6 $addr"
 	}
     }
 
@@ -199,126 +199,126 @@ proc $MODULE.generateConfig { node_id } {
 
     lappend cfg "bridgeName=`ifconfig bridge create`"
 
-    set bridgeProtocol [getBridgeProtocol $node bridge0]
+    set bridgeProtocol [getBridgeProtocol $node_id bridge0]
     if { $bridgeProtocol != "" } {
 	lappend cfg "ifconfig \$bridgeName proto $bridgeProtocol"
     }
 
-    set bridgePriority [getBridgePriority $node bridge0]
+    set bridgePriority [getBridgePriority $node_id bridge0]
     if { $bridgePriority != "" } {
 	lappend cfg "ifconfig \$bridgeName priority $bridgePriority"
     }
 
-    set bridgeMaxAge [getBridgeMaxAge $node bridge0]
+    set bridgeMaxAge [getBridgeMaxAge $node_id bridge0]
     if { $bridgeMaxAge != "" } {
 	lappend cfg "ifconfig \$bridgeName maxage $bridgeMaxAge"
     }
 
-    set bridgeFwdDelay [getBridgeFwdDelay $node bridge0]
+    set bridgeFwdDelay [getBridgeFwdDelay $node_id bridge0]
     if { $bridgeFwdDelay != "" } {
 	lappend cfg "ifconfig \$bridgeName fwddelay $bridgeFwdDelay"
     }
 
-    set bridgeHoldCnt [getBridgeHoldCount $node bridge0]
+    set bridgeHoldCnt [getBridgeHoldCount $node_id bridge0]
     if { $bridgeHoldCnt != "" } {
 	lappend cfg "ifconfig \$bridgeName holdcnt $bridgeHoldCnt"
     }
 
-    set bridgeHelloTime [getBridgeHelloTime $node bridge0]
+    set bridgeHelloTime [getBridgeHelloTime $node_id bridge0]
     if { $bridgeHelloTime != "" && $bridgeProtocol == "stp" } {
 	lappend cfg "ifconfig \$bridgeName hellotime $bridgeHelloTime"
     }
 
-    set bridgeMaxAddr [getBridgeMaxAddr $node bridge0]
+    set bridgeMaxAddr [getBridgeMaxAddr $node_id bridge0]
     if { $bridgeMaxAddr != "" } {
 	lappend cfg "ifconfig \$bridgeName maxaddr $bridgeMaxAddr"
     }
 
-    set bridgeTimeout [getBridgeTimeout $node bridge0]
+    set bridgeTimeout [getBridgeTimeout $node_id bridge0]
     if { $bridgeTimeout != "" } {
 	lappend cfg "ifconfig \$bridgeName timeout $bridgeTimeout"
     }
 
     lappend cfg ""
 
-    foreach ifc [ifcList $node_id] {
+    foreach iface_id [ifcList $node_id] {
 
-	if { [getIfcOperState $node_id $ifc] == "down" } {
-	    lappend cfg "ifconfig $ifc down"
+	if { [getIfcOperState $node_id $iface_id] == "down" } {
+	    lappend cfg "ifconfig $iface_id down"
 	} else {
-	    lappend cfg "ifconfig $ifc up"
+	    lappend cfg "ifconfig $iface_id up"
 	}
 
-	if { [getBridgeIfcSnoop $node_id $ifc] == "1" } {
-	    lappend cfg "ifconfig \$bridgeName span $ifc"
+	if { [getBridgeIfcSnoop $node_id $iface_id] == "1" } {
+	    lappend cfg "ifconfig \$bridgeName span $iface_id"
 	    lappend cfg ""
 	    continue
 	}
 
-	lappend cfg "ifconfig \$bridgeName addm $ifc up"
+	lappend cfg "ifconfig \$bridgeName addm $iface_id up"
 
-	if { [getBridgeIfcStp $node_id $ifc] == "1" } {
-	    lappend cfg "ifconfig \$bridgeName stp $ifc"
+	if { [getBridgeIfcStp $node_id $iface_id] == "1" } {
+	    lappend cfg "ifconfig \$bridgeName stp $iface_id"
 	} else {
-	    lappend cfg "ifconfig \$bridgeName -stp $ifc"
+	    lappend cfg "ifconfig \$bridgeName -stp $iface_id"
 	}
 
-	if { [getBridgeIfcDiscover $node_id $ifc] == "1" } {
-	    lappend cfg "ifconfig \$bridgeName discover $ifc"
+	if { [getBridgeIfcDiscover $node_id $iface_id] == "1" } {
+	    lappend cfg "ifconfig \$bridgeName discover $iface_id"
 	} else {
-	    lappend cfg "ifconfig \$bridgeName -discover $ifc"
+	    lappend cfg "ifconfig \$bridgeName -discover $iface_id"
 	}
 
-	if { [getBridgeIfcLearn $node_id $ifc] == "1" } {
-	    lappend cfg "ifconfig \$bridgeName learn $ifc"
+	if { [getBridgeIfcLearn $node_id $iface_id] == "1" } {
+	    lappend cfg "ifconfig \$bridgeName learn $iface_id"
 	} else {
-	    lappend cfg "ifconfig \$bridgeName -learn $ifc"
+	    lappend cfg "ifconfig \$bridgeName -learn $iface_id"
 	}
 
-	if { [getBridgeIfcSticky $node_id $ifc] == "1" } {
-	    lappend cfg "ifconfig \$bridgeName sticky $ifc"
+	if { [getBridgeIfcSticky $node_id $iface_id] == "1" } {
+	    lappend cfg "ifconfig \$bridgeName sticky $iface_id"
 	} else {
-	    lappend cfg "ifconfig \$bridgeName -sticky $ifc"
+	    lappend cfg "ifconfig \$bridgeName -sticky $iface_id"
 	}
 
-	if { [getBridgeIfcPrivate $node_id $ifc] == "1" } {
-	    lappend cfg "ifconfig \$bridgeName private $ifc"
+	if { [getBridgeIfcPrivate $node_id $iface_id] == "1" } {
+	    lappend cfg "ifconfig \$bridgeName private $iface_id"
 	} else {
-	    lappend cfg "ifconfig \$bridgeName -private $ifc"
+	    lappend cfg "ifconfig \$bridgeName -private $iface_id"
 	}
 
-	if { [getBridgeIfcEdge $node_id $ifc] == "1" } {
-	    lappend cfg "ifconfig \$bridgeName edge $ifc"
+	if { [getBridgeIfcEdge $node_id $iface_id] == "1" } {
+	    lappend cfg "ifconfig \$bridgeName edge $iface_id"
 	} else {
-	    lappend cfg "ifconfig \$bridgeName -edge $ifc"
+	    lappend cfg "ifconfig \$bridgeName -edge $iface_id"
 	}
 
-	if { [getBridgeIfcAutoedge $node_id $ifc] == "1" } {
-	    lappend cfg "ifconfig \$bridgeName autoedge $ifc"
+	if { [getBridgeIfcAutoedge $node_id $iface_id] == "1" } {
+	    lappend cfg "ifconfig \$bridgeName autoedge $iface_id"
 	} else {
-	    lappend cfg "ifconfig \$bridgeName -autoedge $ifc"
+	    lappend cfg "ifconfig \$bridgeName -autoedge $iface_id"
 	}
 
-	if { [getBridgeIfcPtp $node_id $ifc] == "1" } {
-	    lappend cfg "ifconfig \$bridgeName ptp $ifc"
+	if { [getBridgeIfcPtp $node_id $iface_id] == "1" } {
+	    lappend cfg "ifconfig \$bridgeName ptp $iface_id"
 	} else {
-	    lappend cfg "ifconfig \$bridgeName -ptp $ifc"
+	    lappend cfg "ifconfig \$bridgeName -ptp $iface_id"
 	}
 
-	if { [getBridgeIfcAutoptp $node_id $ifc] == "1" } {
-	    lappend cfg "ifconfig \$bridgeName autoptp $ifc"
+	if { [getBridgeIfcAutoptp $node_id $iface_id] == "1" } {
+	    lappend cfg "ifconfig \$bridgeName autoptp $iface_id"
 	} else {
-	    lappend cfg "ifconfig \$bridgeName -autoptp $ifc"
+	    lappend cfg "ifconfig \$bridgeName -autoptp $iface_id"
 	}
 
-	set priority [getBridgeIfcPriority $node_id $ifc]
-	lappend cfg "ifconfig \$bridgeName ifpriority $ifc $priority"
+	set priority [getBridgeIfcPriority $node_id $iface_id]
+	lappend cfg "ifconfig \$bridgeName ifpriority $iface_id $priority"
 
-	set pathcost [getBridgeIfcPathcost $node_id $ifc]
-	lappend cfg "ifconfig \$bridgeName ifpathcost $ifc $pathcost"
+	set pathcost [getBridgeIfcPathcost $node_id $iface_id]
+	lappend cfg "ifconfig \$bridgeName ifpathcost $iface_id $pathcost"
 
-	set maxaddr [getBridgeIfcMaxaddr $node_id $ifc]
-	lappend cfg "ifconfig \$bridgeName ifmaxaddr $ifc $maxaddr"
+	set maxaddr [getBridgeIfcMaxaddr $node_id $iface_id]
+	lappend cfg "ifconfig \$bridgeName ifmaxaddr $iface_id $maxaddr"
 
 	lappend cfg ""
     }
@@ -388,8 +388,8 @@ proc $MODULE.nodeInitConfigure { eid node_id } {
     l3node.nodeInitConfigure $eid $node_id
 }
 
-proc $MODULE.nodePhysIfacesCreate { eid node_id ifcs } {
-    l3node.nodePhysIfacesCreate $eid $node_id $ifcs
+proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
+    l3node.nodePhysIfacesCreate $eid $node_id $ifaces
 }
 
 #****f* stpswitch.tcl/stpswitch.start
@@ -430,8 +430,8 @@ proc $MODULE.shutdown { eid node_id } {
     }
 }
 
-proc $MODULE.destroyIfcs { eid node_id ifcs } {
-    l3node.destroyIfcs $eid $node_id $ifcs
+proc $MODULE.destroyIfcs { eid node_id ifaces } {
+    l3node.destroyIfcs $eid $node_id $ifaces
 }
 
 #****f* stpswitch.tcl/stpswitch.destroy
@@ -454,7 +454,7 @@ proc $MODULE.destroy { eid node_id } {
 # NAME
 #   stpswitch.nghook
 # SYNOPSIS
-#   stpswitch.nghook $eid $node_id $ifc
+#   stpswitch.nghook $eid $node_id $iface_id
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the
 #   netgraph hook which is used for connecting two netgraph
@@ -463,16 +463,14 @@ proc $MODULE.destroy { eid node_id } {
 # INPUTS
 #   * eid - experiment id
 #   * node_id - node id
-#   * ifc - interface id
+#   * iface_id - interface id
 # RESULT
 #   * nghook - the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
-
-proc $MODULE.nghook { eid node_id ifc } {
-    return [l3node.nghook $eid $node_id $ifc]
+proc $MODULE.nghook { eid node_id iface_id } {
+    return [l3node.nghook $eid $node_id $iface_id]
 }
-
 
 #****f* stpswitch.tcl/stpswitch.configGUI
 # NAME
@@ -531,7 +529,7 @@ proc $MODULE.configGUI { c node_id } {
 # NAME
 #   stpswitch.configInterfacesGUI
 # SYNOPSIS
-#   stpswitch.configInterfacesGUI $wi $node_id $ifc
+#   stpswitch.configInterfacesGUI $wi $node_id $iface_id
 # FUNCTION
 #   Defines which modules for changing interfaces parameters
 #   are contained in the stpswitch configuration window. It is done
@@ -539,20 +537,20 @@ proc $MODULE.configGUI { c node_id } {
 # INPUTS
 #   * wi - widget
 #   * node_id - node id
-#   * ifc - interface id
+#   * iface_id - interface id
 #****
-proc $MODULE.configInterfacesGUI { wi node_id ifc } {
+proc $MODULE.configInterfacesGUI { wi node_id iface_id } {
     global guielements
 
-    configGUI_ifcEssentials $wi $node_id $ifc
-    configGUI_ifcQueueConfig $wi $node_id $ifc
-    configGUI_ifcMACAddress $wi $node_id $ifc
-    configGUI_ifcIPv4Address $wi $node_id $ifc
-    configGUI_ifcIPv6Address $wi $node_id $ifc
+    configGUI_ifcEssentials $wi $node_id $iface_id
+    configGUI_ifcQueueConfig $wi $node_id $iface_id
+    configGUI_ifcMACAddress $wi $node_id $iface_id
+    configGUI_ifcIPv4Address $wi $node_id $iface_id
+    configGUI_ifcIPv6Address $wi $node_id $iface_id
 }
 
-proc $MODULE.configBridgeInterfacesGUI { wi node_id ifc } {
+proc $MODULE.configBridgeInterfacesGUI { wi node_id iface_id } {
     global guielements
 
-    configGUI_ifcBridgeAttributes $wi $node_id $ifc
+    configGUI_ifcBridgeAttributes $wi $node_id $iface_id
 }

@@ -66,13 +66,13 @@ proc $MODULE.prepareSystem {} {
 # INPUTS
 #   * node_id -- node id
 #****
-proc $MODULE.confNewNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc $MODULE.confNewNode { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 
     set nconfig [list \
 	"hostname UNASSIGNED" \
 	! ]
-    lappend $node "network-config [list $nconfig]"
+    lappend $node_id "network-config [list $nconfig]"
 }
 
 #****f* rj45.tcl/rj45.icon
@@ -194,19 +194,19 @@ proc $MODULE.destroy { eid node_id } {
 # NAME
 #   rj45.nghook
 # SYNOPSIS
-#   rj45.nghook $eid $node_id $ifc
+#   rj45.nghook $eid $node_id $iface_id
 # FUNCTION
 #   Returns the id of the netgraph node and the netgraph hook name. In this
 #   case netgraph node name correspondes to the name of the physical interface.
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- node id
-#   * ifc -- interface id
+#   * iface_id -- interface id
 # RESULT
 #   * nghook -- the list containing netgraph node name and
 #     the netraph hook name (in this case: lower).
 #****
-proc $MODULE.nghook { eid node_id ifc } {
+proc $MODULE.nghook { eid node_id iface_id } {
     set ifname [getNodeName $node_id]
     if { [getEtherVlanEnabled $node_id] } {
 	set vlan [getEtherVlanTag $node_id]
