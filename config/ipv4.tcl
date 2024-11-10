@@ -271,10 +271,7 @@ proc autoIPv4addr { node iface } {
 	return
     }
 
-    set old_addrs [getIfcIPv4addrs $node $iface]
-    foreach old_addr $old_addrs {
-	set IPv4UsedList [removeFromList $IPv4UsedList $old_addr]
-    }
+    set IPv4UsedList [removeFromList $IPv4UsedList [getIfcIPv4addrs $node $iface] "keep_doubles"]
 
     setIfcIPv4addrs $node $iface ""
 
