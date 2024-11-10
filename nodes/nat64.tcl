@@ -39,20 +39,17 @@ proc $MODULE.confNewNode { node_id } {
     global rdconfig
     global nodeNamingBase
 
-    set ripEnable [lindex $rdconfig 0]
-    set ripngEnable [lindex $rdconfig 1]
-    set ospfEnable [lindex $rdconfig 2]
-    set ospf6Enable [lindex $rdconfig 3]
+    lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable
 
     set nconfig [list \
 	"hostname [getNewNodeNameType nat64 $nodeNamingBase(nat64)]" \
 	! ]
     lappend $node_id "network-config [list $nconfig]"
 
-    setNodeProtocolRip $node_id $ripEnable
-    setNodeProtocolRipng $node_id $ripngEnable
-    setNodeProtocolOspfv2 $node_id $ospfEnable
-    setNodeProtocolOspfv3 $node_id $ospf6Enable
+    setNodeProtocol $node_id "rip" $ripEnable
+    setNodeProtocol $node_id "ripng" $ripngEnable
+    setNodeProtocol $node_id "ospf" $ospfEnable
+    setNodeProtocol $node_id "ospf6" $ospf6Enable
 
     foreach proto { rip ripng ospf ospf6 bgp } {
 	set protocfg [netconfFetchSection $node_id "router $proto"]
@@ -76,6 +73,12 @@ proc $MODULE.confNewNode { node_id } {
 
 proc $MODULE.confNewIfc { node_id iface_id } {
     router.confNewIfc $node_id $iface_id
+}
+
+proc $MODULE.generateConfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
 }
 
 proc $MODULE.generateConfig { node_id } {
@@ -104,6 +107,9 @@ proc $MODULE.generateConfig { node_id } {
     }
 
     return $cfg
+}
+
+proc $MODULE.generateUnconfig { node_id } {
 }
 
 #****f* nat64.tcl/nat64.ifacePrefix
@@ -148,6 +154,17 @@ proc $MODULE.nghook { eid node_id iface_id } {
 ############################ INSTANTIATE PROCEDURES ############################
 ################################################################################
 
+#****f* nat64.tcl/nat64.prepareSystem
+# NAME
+#   nat64.prepareSystem -- prepare system
+# SYNOPSIS
+#   nat64.prepareSystem
+# FUNCTION
+#   Does nothing
+#****
+proc $MODULE.prepareSystem {} {
+}
+
 proc $MODULE.nodeCreate { eid node_id } {
     router.nodeCreate $eid $node_id
 }
@@ -163,6 +180,26 @@ proc $MODULE.nodeInitConfigure { eid node_id } {
 
 proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
     l3node.nodePhysIfacesCreate $eid $node_id $ifaces
+}
+
+proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
+}
+
+#****f* nat64.tcl/nat64.nodeIfacesConfigure
+# NAME
+#   nat64.nodeIfacesConfigure -- configure nat64 node interfaces
+# SYNOPSIS
+#   nat64.nodeIfacesConfigure $eid $node_id $ifaces
+# FUNCTION
+#   Configure interfaces on a nat64. Set MAC, MTU, queue parameters, assign the IP
+#   addresses to the interfaces, etc. This procedure can be called if the node
+#   is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
 }
 
 proc $MODULE.nodeConfigure { eid node_id } {
@@ -211,6 +248,29 @@ proc $MODULE.nodeConfigure { eid node_id } {
 ################################################################################
 ############################# TERMINATE PROCEDURES #############################
 ################################################################################
+
+#****f* nat64.tcl/nat64.nodeIfacesUnconfigure
+# NAME
+#   nat64.nodeIfacesUnconfigure -- unconfigure nat64 node interfaces
+# SYNOPSIS
+#   nat64.nodeIfacesUnconfigure $eid $node_id $ifaces
+# FUNCTION
+#   Unconfigure interfaces on a nat64 to a default state. Set name to iface_id,
+#   flush IP addresses to the interfaces, etc. This procedure can be called if
+#   the node is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
+}
+
+proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
+}
+
+proc $MODULE.nodeUnconfigure { eid node_id } {
+}
 
 proc $MODULE.nodeShutdown { eid node_id } {
     router.nodeShutdown $eid $node_id

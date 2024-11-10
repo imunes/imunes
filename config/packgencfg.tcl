@@ -65,14 +65,14 @@ proc packgenPackets { node_id } {
     return $packetList
 }
 
-proc checkRuleNum { str } {
+proc checkPacketNum { str } {
     return [regexp {^([1-9])([0-9])*$} $str]
 }
 
 proc checkPacketData { str } {
     set str [string map { " " "." ":" "." } $str]
     if { $str != "" } {
-	return [regexp {^([0-9a-f])*$} $str]
+	return [regexp {^([0-9a-f][0-9a-f])*$} $str]
     }
 
     return 1
