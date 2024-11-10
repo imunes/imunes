@@ -89,6 +89,7 @@ proc undo {} {
     upvar 0 ::cf::[set ::curcfg]::undolevel undolevel
     upvar 0 ::cf::[set ::curcfg]::undolog undolog
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
+    global changed
 
     if { $oper_mode == "edit" && $undolevel > 0 } {
 	.menubar.edit entryconfigure "Redo" -state normal
@@ -101,6 +102,10 @@ proc undo {} {
 
 	loadCfgLegacy $undolog($undolevel)
 	switchCanvas none
+    }
+
+    if { $changed } {
+	redrawAll
     }
 }
 
@@ -120,6 +125,7 @@ proc redo {} {
     upvar 0 ::cf::[set ::curcfg]::redolevel redolevel
     upvar 0 ::cf::[set ::curcfg]::undolog undolog
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
+    global changed
 
     if { $oper_mode == "edit" && $redolevel > $undolevel } {
 	incr undolevel
@@ -135,6 +141,10 @@ proc redo {} {
 
 	loadCfgLegacy $undolog($undolevel)
 	switchCanvas none
+    }
+
+    if { $changed } {
+	redrawAll
     }
 }
 
@@ -876,8 +886,7 @@ proc bindEventsToTree {} {
 proc selectNodeFromTree { node_id } {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
 
-    set canvas [getNodeCanvas $node_id]
-    set curcanvas $canvas
+    set curcanvas [getNodeCanvas $node_id]
     switchCanvas none
 
     .panwin.f1.c dtag node selected

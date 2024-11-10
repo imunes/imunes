@@ -551,7 +551,7 @@ proc configGUI_showIfcInfo { wi phase node_id iface_id } {
     #
     #shownifc - interface whose parameters are shown in shownifcframe
     #
-    set shownifc [string trim [lindex [split $shownifcframe .] end] if]
+    regsub ***=if [lindex [split $shownifcframe .] end] "" shownifc
 
     #if there is already some frame shown below the list of interfaces and
     #parameters shown in that frame are not parameters of selected interface
@@ -965,7 +965,7 @@ proc configGUI_applyButtonNode { wi node_id phase } {
 	if { $nbook != -1 && $treecolumns != "" } {
 	    configGUI_refreshIfcsTree .popup.nbook.nfInterfaces.panwin.f1.tree $node_id
 	    set shownifcframe [pack slaves [lindex [.popup.nbook tabs] 1].panwin.f2]
-	    set shownifc [string trim [lindex [split $shownifcframe .] end] if]
+	    regsub ***=if [lindex [split $shownifcframe .] end] "" shownifc
 	    [lindex [.popup.nbook tabs] 1].panwin.f1.tree selection set $shownifc
 
 	    if { ".popup.nbook.nfBridge" in [.popup.nbook tabs] } {
@@ -4963,7 +4963,7 @@ proc configGUI_showBridgeIfcInfo { wi phase node_id iface_id } {
     #
     #shownifc - interface whose parameters are shown in shownifcframe
     #
-    set shownifc [string trim [lindex [split $shownifcframe .] end] if]
+    regsub ***=if [lindex [split $shownifcframe .] end] "" shownifc
 
     #if there is already some frame shown below the list of interfaces and
     #parameters shown in that frame are not parameters of selected interface
@@ -6647,6 +6647,13 @@ proc configGUI_nat64ConfigApply { wi node_id } {
     }
 }
 
-proc transformNodesGUI { nodes type } {
-    transformNodes $nodes $type
+proc transformNodesGUI { nodes to_type } {
+    global changed
+
+    transformNodes $nodes $to_type
+
+    if { $changed == 1 } {
+	redrawAll
+	updateUndoLog
+    }
 }

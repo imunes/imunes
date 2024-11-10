@@ -559,7 +559,7 @@ proc createNodeContainer { node_id } {
     set docker_id "$eid.$node_id"
 
     set network "none"
-    if { [getNodeDockerAttach $node_id] } {
+    if { [getNodeDockerAttach $node_id] == 1 } {
 	set network "bridge"
     }
 
@@ -750,12 +750,12 @@ proc checkHangingTCPs { eid nodes } {}
 # INPUTS
 #   * node_id -- node id
 #****
-proc nodeLogIfacesCreate { node_id } {
+proc nodeLogIfacesCreate { node_id ifaces } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     set docker_id "$eid.$node_id"
 
-    foreach iface_id [logIfcList $node_id] {
+    foreach iface_id $ifaces {
 	set iface_name $iface_id
 	switch -exact [getLogIfcType $node_id $iface_id] {
 	    vlan {
@@ -766,21 +766,25 @@ proc nodeLogIfacesCreate { node_id } {
 		if { $iface_name != "lo0" } {
 		    pipesExec "docker exec -d $docker_id ip link add $iface_name type dummy" "hold"
 		    pipesExec "docker exec -d $docker_id ip link set $iface_name up" "hold"
+		} else {
+		    pipesExec "docker exec -d $docker_id ip link set dev lo down 2>/dev/null" "hold"
+		    pipesExec "docker exec -d $docker_id ip link set dev lo name lo0 2>/dev/null" "hold"
+		    pipesExec "docker exec -d $docker_id ip a flush lo0 2>/dev/null" "hold"
 		}
 	    }
 	}
     }
 
-    # docker interface is created before other ones, so let's rename it to something that's not used by IMUNES
-    if { [getNodeDockerAttach $node_id] } {
-	set cmds "ip r save > /tmp/routes"
-	set cmds "$cmds ; ip l set eth0 down"
-	set cmds "$cmds ; ip l set eth0 name docker0"
-	set cmds "$cmds ; ip l set docker0 up"
-	set cmds "$cmds ; ip r restore < /tmp/routes"
-	set cmds "$cmds ; rm -f /tmp/routes"
-	pipesExec "docker exec -d $docker_id sh -c '$cmds'" "hold"
-    }
+#    # docker interface is created before other ones, so let's rename it to something that's not used by IMUNES
+#    if { [getNodeDockerAttach $node_id] == 1 } {
+#	set cmds "ip r save > /tmp/routes"
+#	set cmds "$cmds ; ip l set eth0 down"
+#	set cmds "$cmds ; ip l set eth0 name docker0"
+#	set cmds "$cmds ; ip l set docker0 up"
+#	set cmds "$cmds ; ip r restore < /tmp/routes"
+#	set cmds "$cmds ; rm -f /tmp/routes"
+#	pipesExec "docker exec -d $docker_id sh -c '$cmds'" "hold"
+#    }
 }
 
 #****f* linux.tcl/configureICMPoptions
@@ -1584,10 +1588,8 @@ proc configureIfcLinkParams { eid node_id ifname bandwidth delay ber loss dup } 
 #   link_id -- link id
 #****
 proc execSetLinkParams { eid link_id } {
-    set node1_id [lindex [getLinkPeers $link_id] 0]
-    set node2_id [lindex [getLinkPeers $link_id] 1]
-    set iface1_id [lindex [getLinkPeersIfaces $link_id] 0]
-    set iface2_id [lindex [getLinkPeersIfaces $link_id] 1]
+    lassign [getLinkPeers $link_id] node1_id node2_id
+    lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
 
     if { [getLinkMirror $link_id] != "" } {
 	set mirror_link [getLinkMirror $link_id]

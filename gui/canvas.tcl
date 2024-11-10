@@ -527,16 +527,7 @@ proc loadImage { path ref type file } {
 	return 2
     }
 
-    set i [lsearch -all -glob $image_list "img_*"]
-    set i [lindex $i end]
-    set count [string range [lindex $image_list $i] 4 end]
-    if { $count != "" } {
-	incr count
-    } else {
-	set count 0
-    }
-
-    set imgname "img_$count"
+    set imgname [newObjectId $image_list "image"]
     upvar 0 ::cf::[set ::curcfg]::$imgname $imgname
     set $imgname {}
 

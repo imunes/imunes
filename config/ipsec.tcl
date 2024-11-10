@@ -1483,8 +1483,7 @@ proc getNodeIPsecConnList { node_id } {
 #   connection_name - name of IPsec connection
 #****
 proc nodeIPsecConnExists { node_id connection_name } {
-    set connList [getNodeIPsecConnList $node_id]
-    if { [ lsearch $connList $connection_name ] != -1 } {
+    if { $connection_name in [getNodeIPsecConnList $node_id] } {
         return 1
     }
 
