@@ -3862,8 +3862,8 @@ proc updatePeerSubnetCombobox { connParamsLframe } {
     set subnetVersion [::ip::version $local_subnet]
 
     set peerIPs ""
-    set allPeerIPs [getAllIpAddresses $peers_node]
-    foreach ip $allPeerIPs {
+    lassign [getAllIpAddresses $peers_node] ipv4_addrs ipv6_addrs
+    foreach ip [concat $ipv4_addrs $ipv6_addrs] {
 	if { $subnetVersion == [::ip::version $ip] && $peers_ip != $ip } {
 	    lappend peerIPs $ip
 	}
