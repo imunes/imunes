@@ -158,19 +158,20 @@ proc selectNode { c obj } {
     if { $node == "" } {
 	return
     }
+
     $c addtag selected withtag "node && $node"
     if { [nodeType $node] == "pseudo" } {
 	set bbox [$c bbox "nodelabel && $node"]
-    } elseif { [nodeType $node] == "rectangle" } {
+    } elseif { [getAnnotationType $node] == "rectangle" } {
 	$c addtag selected withtag "rectangle && $node"
 	set bbox [$c bbox "rectangle && $node"]
-    } elseif { [nodeType $node] == "text" } {
+    } elseif { [getAnnotationType $node] == "text" } {
 	$c addtag selected withtag "text && $node"
 	set bbox [$c bbox "text && $node"]
-    } elseif { [nodeType $node] == "oval" } {
+    } elseif { [getAnnotationType $node] == "oval" } {
 	$c addtag selected withtag "oval && $node"
 	set bbox [$c bbox "oval && $node"]
-    } elseif { [nodeType $node] == "freeform" } {
+    } elseif { [getAnnotationType $node] == "freeform" } {
 	$c addtag selected withtag "freeform && $node"
 	set bbox [$c bbox "freeform && $node"]
     } else {
@@ -235,6 +236,22 @@ proc selectedNodes {} {
     foreach obj [.panwin.f1.c find withtag "node && selected"] {
 	lappend selected [lindex [.panwin.f1.c gettags $obj] 1]
     }
+
+    return $selected
+}
+
+#****f* editor.tcl/selectedAnnotations
+# NAME
+#   selectedAnnotations -- get selected annotations
+# SYNOPSIS
+#   selectedAnnotations
+# FUNCTION
+#   Gets selected annotations and returns them as a list.
+# RESULT
+#   * selected -- object list of selected annotations.
+#****
+proc selectedAnnotations {} {
+    set selected {}
     foreach obj [.panwin.f1.c find withtag "oval && selected"] {
 	lappend selected [lindex [.panwin.f1.c gettags $obj] 1]
     }
@@ -444,6 +461,13 @@ proc movetoCanvas { canvas } {
 	setNodeCanvas $node $canvas
 	set changed 1
     }
+
+    set selected_annotations [selectedAnnotations]
+    foreach node $selected_annotations {
+	setAnnotationCanvas $node $canvas
+	set changed 1
+    }
+
     foreach obj [.panwin.f1.c find withtag "linklabel"] {
 	set link [lindex [.panwin.f1.c gettags $obj] 1]
 	set link_peers [linkPeers $link]
@@ -1003,10 +1027,10 @@ proc button1 { c x y button } {
 	 $curtype == "rectangle" || $curtype == "text" ||
 	 $curtype == "freeform" || ( $curtype == "nodelabel" &&
 	 [nodeType [lindex [$c gettags $curobj] 1]] == "pseudo") } {
+
 	set node [lindex [$c gettags current] 1]
-	set wasselected \
-	    [expr {[lsearch [$c find withtag "selected"] \
-	    [$c find withtag "(node || text || freeform || rectangle || oval) && $node"]] > -1}]
+	set wasselected [expr {$node in "[selectedNodes] [selectedAnnotations]"}]
+
 	if { $button == "ctrl" } {
 	    if { $wasselected } {
 		$c dtag $node selected
@@ -1450,7 +1474,7 @@ proc button1-release { c x y } {
 		    set y2 $sizey
 		    set outofbounds 1
 		}
-		setNodeCoords $node "$x1 $y1 $x2 $y2"
+		setAnnotationCoords $node "$x1 $y1 $x2 $y2"
 	    }
 	    if {[lindex [$c gettags $node] 0] == "rectangle" } {
 		set coordinates [$c coords [lindex [$c gettags $node] 1]]
@@ -1478,7 +1502,7 @@ proc button1-release { c x y } {
 		    set y2 $sizey
 		    set outofbounds 1
 		}
-		setNodeCoords $node "$x1 $y1 $x2 $y2"
+		setAnnotationCoords $node "$x1 $y1 $x2 $y2"
 	    }
 	    if { [lindex [$c gettags $node] 0] == "freeform"} {
 		set bbox [$c bbox "selectmark && $node"]
@@ -1520,7 +1544,7 @@ proc button1-release { c x y } {
                     lappend newcoords $xx1 $yy1
                     set i [expr {$i+2}]
                 }
-                setNodeCoords $node $newcoords
+                setAnnotationCoords $node $newcoords
 	    }
 	    if { [lindex [$c gettags $node] 0] == "text"} {
 		set bbox [$c bbox "selectmark && $node"]
@@ -1545,7 +1569,7 @@ proc button1-release { c x y } {
 		    set y1 [expr {$sizey-$height/2}]
 		    set outofbounds 1
 		}
-		setNodeCoords $node "$x1 $y1"
+		setAnnotationCoords $node "$x1 $y1"
 	    }
 
 	    $c move "selectmark && $node" $dx $dy
@@ -1844,12 +1868,14 @@ proc deleteSelection {} {
     .panwin.f1.c config -cursor watch; update
 
     foreach lnode [selectedNodes] {
-	if { $lnode != "" } {
-	    removeGUINode $lnode
-	}
-	if { [isAnnotation $lnode] } {
-	    deleteAnnotation $curcanvas [nodeType $lnode] $lnode
-	}
+	removeGUINode $lnode
+
+	set changed 1
+    }
+
+    foreach annotation [selectedAnnotations] {
+	deleteAnnotation $annotation
+
 	set changed 1
     }
     raiseAll .panwin.f1.c
@@ -2159,7 +2185,7 @@ proc double1onGrid { c x y } {
 	return
     }
     # Is this really necessary?
-    set coords [getNodeCoords $node] 
+    set coords [getAnnotationCoords $node]
     set x1 [lindex $coords 0]
     set y1 [lindex $coords 1]
     set x2 [lindex $coords 2]

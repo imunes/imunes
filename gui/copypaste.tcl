@@ -56,8 +56,10 @@ proc cutSelection {} {
 #****
 proc copySelection {} {
     global curcfg
-	
-    if {[string equal [selectedNodes] {}]} {
+
+    set selected_nodes [selectedRealNodes]
+    set selected_annotations [selectedAnnotations]
+    if { $selected_nodes == {} && $selected_annotations == {} } {
       return
     }
 
@@ -67,17 +69,13 @@ proc copySelection {} {
     upvar 0 ::cf::clipboard::link_list link_list
     upvar 0 ::cf::clipboard::annotation_list annotation_list
 
-    set annotation_list {}
-    
-    foreach annotation [selectedNodes] {
-	if { $annotation ni [selectedRealNodes] } {
-	    lappend annotation_list $annotation
-	    set ::cf::clipboard::$annotation [set ::cf::[set ::curcfg]::$annotation]
-	}
+    set annotation_list $selected_annotations
+    foreach annotation $selected_annotations {
+	set ::cf::clipboard::$annotation [set ::cf::[set ::curcfg]::$annotation]
     }
 
     # Copy selected nodes and interconnecting links to the clipboard
-    set node_list [selectedRealNodes]
+    set node_list $selected_nodes
     set link_list {}
     foreach node $node_list {
 	set ::cf::clipboard::$node [set ::cf::[set ::curcfg]::$node]
@@ -138,21 +136,21 @@ proc paste {} {
     }
 
     set copypaste_list ""
+    set new_annotations ""
 
     # Paste annotations from the clipboard and rename them on the fly
     foreach annotation_orig [set ::cf::clipboard::annotation_list] {
 	set annotation_copy [newObjectId $annotation_list "a"]
+	lappend new_annotations $annotation_copy
 	set annotation_map($annotation_orig) $annotation_copy
 	upvar 0 ::cf::[set ::curcfg]::$annotation_copy $annotation_copy
 	set $annotation_copy [set ::cf::clipboard::$annotation_orig]
 	lappend annotation_list $annotation_copy
 	setNodeCanvas $annotation_copy $curcanvas
-	drawAnnotation $annotation_copy
     }
-    raiseAll .panwin.f1.c
 
     # Nothing to do if clipboard is empty
-    if {[set ::cf::clipboard::node_list] == {}} {
+    if {[set ::cf::clipboard::node_list] == {} && [set ::cf::clipboard::annotation_list] == {} } {
 	return
     }
 
@@ -232,5 +230,5 @@ proc paste {} {
     updateUndoLog
     redrawAll
     setActiveTool select
-    selectNodes $copypaste_list
+    selectNodes [concat $copypaste_list $new_annotations]
 }

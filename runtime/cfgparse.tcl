@@ -300,6 +300,10 @@ proc loadCfg { cfg } {
 	    continue
 	} elseif {"$object" == ""} {
 	    set object $entry
+	    if { $object == "annotation_list" } {
+		continue
+	    }
+
 	    upvar 0 ::cf::[set ::curcfg]::$object $object
 	    set $object {}
 	    if {"$class" == "node"} {

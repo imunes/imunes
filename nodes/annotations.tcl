@@ -76,7 +76,7 @@ proc popupAnnotationDialog { c target modify } {
 #   * obj -- type of annotation to draw
 #****
 proc drawAnnotation { obj } {
-    switch -exact -- [nodeType $obj] {
+    switch -exact -- [getAnnotationType $obj] {
 	oval {
 	    drawOval $obj
 	}
@@ -125,7 +125,7 @@ proc popupOvalDialog { c target modify } {
 	set coords [$c bbox "$target"]
 	set color [getAnnotationColor $target]
 	set bordercolor [getAnnotationBorderColor $target]
-	set annotationType [nodeType $target]
+	set annotationType [getAnnotationType $target]
     }
 
     if { $color == "" } { set color $defFillColor }
@@ -247,7 +247,7 @@ proc popupOvalApply { c wi target } {
 	    set coords [lreplace $coords 3 3 $sizey]
 	}
     } else {
-	set coords [getNodeCoords $target]
+	set coords [getAnnotationCoords $target]
     }
 
     setAnnotationCoords $target $coords
@@ -257,7 +257,7 @@ proc popupOvalApply { c wi target } {
     
     destroyNewOval $c
     #setType $target "oval"
-    setNodeCanvas $target $curcanvas
+    setAnnotationCanvas $target $curcanvas
     set changed 1
     updateUndoLog
     redrawAll
@@ -294,7 +294,7 @@ proc drawOval { oval } {
 
     set newoval [.panwin.f1.c create oval $x1 $y1 $x2 $y2 \
 	-fill $color -width $width -outline $bordercolor -tags "oval $oval"]
-    .panwin.f1.c raise $newoval background
+    .panwin.f1.c raise $newoval
 }
 
 #****f* annotations.tcl/popupRectangleDialog
@@ -330,7 +330,7 @@ proc popupRectangleDialog { c target modify } {
 	set coords [$c bbox "$target"]
 	set color [getAnnotationColor $target]
 	set bordercolor [getAnnotationBorderColor $target]
-	set annotationType [nodeType $target]
+	set annotationType [getAnnotationType $target]
 	set rad [getAnnotationRad $target]
     }
 
@@ -470,7 +470,7 @@ proc popupRectangleApply { c wi target } {
 	    set coords [lreplace $coords 3 3 $sizey]
 	}
     } else {
-	set coords [getNodeCoords $target]
+	set coords [getAnnotationCoords $target]
     }
     setAnnotationCoords $target $coords
     setAnnotationColor $target $color
@@ -479,7 +479,7 @@ proc popupRectangleApply { c wi target } {
     setAnnotationRad $target $rad
            
     destroyNewRect $c
-    setNodeCanvas $target $curcanvas
+    setAnnotationCanvas $target $curcanvas
     set changed 1
     updateUndoLog
     redrawAll
@@ -525,7 +525,7 @@ proc drawRect { rectangle } {
 	    -fill $color -outline $bordercolor -width $width \
 	    -tags "rectangle $rectangle"]
     }
-    .panwin.f1.c raise $newrect background
+    .panwin.f1.c raise $newrect
 }
 
 #****f* annotations.tcl/popupTextDialog
@@ -557,7 +557,7 @@ proc popupTextDialog { c target modify } {
 	set label ""
     } else {
 	set coords [$c bbox "$target"]
-	set annotationType [nodeType $target]
+	set annotationType [getAnnotationType $target]
 	set label [getAnnotationLabel $target]
 	set lcolor [getAnnotationLColor $target]
 	set font [getAnnotationFont $target]
@@ -658,7 +658,7 @@ proc popupTextApply { c wi target } {
 	    addAnnotation $target text
 	    set coords [$c coords $newtext]
 	} else {
-	    set coords [getNodeCoords $target]
+	    set coords [getAnnotationCoords $target]
 	}
 	setAnnotationCoords $target $coords
 	setAnnotationLabel $target $label
@@ -666,7 +666,7 @@ proc popupTextApply { c wi target } {
 	setAnnotationFont $target $font
 
 	destroyNewText $c
-	setNodeCanvas $target $curcanvas
+	setAnnotationCanvas $target $curcanvas
 	set changed 1
 	updateUndoLog
     }
@@ -689,7 +689,7 @@ proc drawText { text } {
     upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global defTextColor
 
-    set coords [getNodeCoords $text]
+    set coords [getAnnotationCoords $text]
     if {$coords == ""} {
 	puts "Empty coordinates for text $text" ;# MM debug
 	return
@@ -705,7 +705,7 @@ proc drawText { text } {
 
     set newtext [.panwin.f1.c create text $x $y -text $label -anchor w \
 	-font "$font" -justify left -fill $labelcolor -tags "text $text"]
-	.panwin.f1.c raise $newtext background
+	.panwin.f1.c raise $newtext
 }
 
 #****f* annotations.tcl/popupFreeformDialog
@@ -735,7 +735,7 @@ proc popupFreeformDialog { c target modify } {
 	set annotationType "freeform"
     } else {
 	set coords [$c bbox "$target"]
-	set annotationType [nodeType $target]
+	set annotationType [getAnnotationType $target]
 	set color [getAnnotationColor $target]
 	set width [getAnnotationWidth $target]
     }
@@ -827,7 +827,7 @@ proc popupFreeformApply { c wi target } {
 	addAnnotation $target freeform
 	set coords [$c coords $newfree]
     } else {
-	set coords [getNodeCoords $target]
+	set coords [getAnnotationCoords $target]
     }
 
     setAnnotationCoords $target $coords
@@ -836,7 +836,7 @@ proc popupFreeformApply { c wi target } {
     
     destroyNewFree $c
     
-    setNodeCanvas $target $curcanvas
+    setAnnotationCanvas $target $curcanvas
     set changed 1
     updateUndoLog
     redrawAll
@@ -857,7 +857,7 @@ proc drawFreeform { freeform } {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     upvar 0 ::cf::[set ::curcfg]::zoom zoom
 
-    set coords [getNodeCoords $freeform]
+    set coords [getAnnotationCoords $freeform]
     set color [getAnnotationColor $freeform]
     set width [getAnnotationWidth $freeform]
     
@@ -883,7 +883,7 @@ proc drawFreeform { freeform } {
 	    set i [expr {$i+2}]
     }
     
-    .panwin.f1.c raise $newfree background    
+    .panwin.f1.c raise $newfree
 }
 
 #****f* annotations.tcl/destroyNewOval
@@ -978,7 +978,7 @@ proc annotationConfigGUI { c } {
 #   * target -- existing or a new annotation
 #****
 proc annotationConfig { c target } {
-    switch -exact -- [nodeType $target] {
+    switch -exact -- [getAnnotationType $target] {
 	oval {
 	    popupOvalDialog $c $target "true"
 	}
@@ -992,7 +992,7 @@ proc annotationConfig { c target } {
 	    popupFreeformDialog $c $target "true"
 	}
 	default {
-	    puts "Unknown type [nodeType $target] for target $target"
+	    puts "Unknown type [getAnnotationType $target] for target $target"
 	}
     }
     redrawAll
@@ -1035,6 +1035,16 @@ proc button3annotation { type c x y } {
     if { $item == "" } {
 	return
     }
+
+    set wasselected [expr {$item in [selectedAnnotations]}]
+    if { ! $wasselected } {
+	foreach node_type "node text oval rectangle freeform" {
+	    $c dtag $node_type selected
+	}
+	$c delete -withtags selectmark
+    }
+
+    selectNode $c [$c find withtag "current"]
     set menutext "$type $item"
 
     .button3menu delete 0 end
@@ -1042,7 +1052,7 @@ proc button3annotation { type c x y } {
     .button3menu add command -label "Configure $menutext" \
 	-command "annotationConfig $c $item"
     .button3menu add command -label "Delete $menutext" \
-	-command "deleteAnnotation $c $type $item"
+	-command "deleteAnnotation $item"
 
     set x [winfo pointerx .]
     set y [winfo pointery .]
@@ -1187,7 +1197,7 @@ proc popupColor { type l settext } {
 #****
 proc selectmarkEnter { c x y } {
     set obj [lindex [$c gettags current] 1]
-    set type [nodeType $obj]
+    set type [getAnnotationType $obj]
 
     if {$type != "oval" && $type != "rectangle"} { return }
 
