@@ -1035,6 +1035,16 @@ proc button3annotation { type c x y } {
     if { $item == "" } {
 	return
     }
+
+    set wasselected [expr {$item in [selectedAnnotations]}]
+    if { ! $wasselected } {
+	foreach node_type "node text oval rectangle freeform" {
+	    $c dtag $node_type selected
+	}
+	$c delete -withtags selectmark
+    }
+
+    selectNode $c [$c find withtag "current"]
     set menutext "$type $item"
 
     .button3menu delete 0 end
@@ -1042,7 +1052,7 @@ proc button3annotation { type c x y } {
     .button3menu add command -label "Configure $menutext" \
 	-command "annotationConfig $c $item"
     .button3menu add command -label "Delete $menutext" \
-	-command "deleteAnnotation $c $type $item"
+	-command "deleteAnnotation $item"
 
     set x [winfo pointerx .]
     set y [winfo pointery .]
