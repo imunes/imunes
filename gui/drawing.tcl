@@ -41,7 +41,7 @@ proc redrawAll {} {
 
     if { $show_annotations == 1 } {
 	foreach obj $annotation_list {
-	    if { [getNodeCanvas $obj] == $curcanvas } {
+	    if { [getAnnotationCanvas $obj] == $curcanvas } {
 		drawAnnotation $obj
 	    }
 	} 

@@ -24,11 +24,9 @@ proc addAnnotation { target type } {
 # FUNCTION
 #   Deletes annotation from canvas.
 # INPUTS
-#   * c -- tk canvas
-#   * type -- type of annimation
 #   * target -- existing annotation
 #****
-proc deleteAnnotation { c type target } {
+proc deleteAnnotation { target } {
     upvar 0 ::cf::[set ::curcfg]::annotation_list annotation_list
     upvar 0 ::cf::[set ::curcfg]::$target $target
     global changed
@@ -61,7 +59,87 @@ proc isAnnotation { node } {
     return 0
 }
 
-#****f* annotations_cfg.tcl/getAnnotationColor
+#****f* annotationscfg.tcl/getAnnotationType
+# NAME
+#   getAnnotationType -- get annotation type
+# SYNOPSIS
+#   getAnnotationType $annotation_id
+# FUNCTION
+#   Returns the specified annotation's type.
+# INPUTS
+#   * annotation_id -- annotation object
+# RESULT
+#   * type -- annotation type
+#****
+proc getAnnotationType { annotation_id } {
+    upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
+
+    return [lindex [lsearch -inline [set $annotation_id] "type *"] 1]
+}
+
+#****f* annotationscfg.tcl/setAnnotationType
+# NAME
+#   setAnnotationType -- set annotation type
+# SYNOPSIS
+#   setAnnotationType $annotation_id $type
+# FUNCTION
+#   Sets annotation type.
+# INPUTS
+#   * annotation_id -- annotation id
+#   * type -- annotation type
+#****
+proc setAnnotationType { annotation_id type } {
+    upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
+
+    set i [lsearch [set $annotation_id] "type *"]
+    if { $i >= 0 } {
+	set $annotation_id [lreplace [set $annotation_id] $i $i "type $type"]
+    } else {
+	set $annotation_id [linsert [set $annotation_id] end "type $type"]
+    }
+}
+
+#****f* annotationscfg.tcl/getAnnotationCanvas
+# NAME
+#   getAnnotationCanvas -- get annotation canvas id
+# SYNOPSIS
+#   getAnnotationCanvas $annotation_id
+# FUNCTION
+#   Returns the specified annotation's canvas.
+# INPUTS
+#   * annotation_id -- annotation object
+# RESULT
+#   * canvas_id -- canvas id
+#****
+proc getAnnotationCanvas { annotation_id } {
+    upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
+
+    return [lindex [lsearch -inline [set $annotation_id] "canvas *"] 1]
+}
+
+#****f* annotationscfg.tcl/setAnnotationCanvas
+# NAME
+#   setAnnotationCanvas -- set annotation canvas
+# SYNOPSIS
+#   setAnnotationCanvas $annotation_id $canvas_id
+# FUNCTION
+#   Sets annotation canvas id.
+# INPUTS
+#   * annotation_id -- annotation id
+#   * canvas_id -- canvas id
+#****
+proc setAnnotationCanvas { annotation_id canvas_id } {
+    upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
+
+    set i [lsearch [set $annotation_id] "canvas *"]
+    if { $i >= 0 } {
+	set $annotation_id [lreplace [set $annotation_id] $i $i "canvas $canvas_id"]
+    } else {
+	set $annotation_id [linsert [set $annotation_id] end "canvas $canvas_id"]
+    }
+}
+
+#****f* annotationscfg.tcl/getAnnotationColor
 # NAME
 #   getAnnotationColor -- get annotation color
 # SYNOPSIS
