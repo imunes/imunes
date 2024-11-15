@@ -904,66 +904,49 @@ proc splitLink { link nodetype } {
     upvar 0 ::cf::[set ::curcfg]::$link $link
 
     set orig_nodes [linkPeers $link]
-    set orig_node1 [lindex $orig_nodes 0]
-    set orig_node2 [lindex $orig_nodes 1]
-    set new_node1 [newNode $nodetype]
-    set new_node2 [newNode $nodetype]
-    set new_link1 [newObjectId $link_list "l"]
-    lappend link_list $new_link1
-    set new_link2 [newObjectId $link_list "l"]
-    lappend link_list $new_link2
-    set ifc1 [ifcByPeer $orig_node1 $orig_node2]
-    set ifc2 [ifcByPeer $orig_node2 $orig_node1]
+    lassign $orig_nodes orig_node1_id orig_node2_id
+    upvar 0 ::cf::[set ::curcfg]::$orig_node1_id $orig_node1_id
+    upvar 0 ::cf::[set ::curcfg]::$orig_node2_id $orig_node2_id
 
-    upvar 0 ::cf::[set ::curcfg]::$orig_node1 $orig_node1
-    upvar 0 ::cf::[set ::curcfg]::$orig_node2 $orig_node2
-    upvar 0 ::cf::[set ::curcfg]::$new_node1 $new_node1
-    upvar 0 ::cf::[set ::curcfg]::$new_node2 $new_node2
-    upvar 0 ::cf::[set ::curcfg]::$new_link1 $new_link1
-    upvar 0 ::cf::[set ::curcfg]::$new_link2 $new_link2
-    set $new_link1 {}
-    set $new_link2 {}
+    set orig_ifaces "[ifcByPeer $orig_node1_id $orig_node2_id] [ifcByPeer $orig_node2_id $orig_node1_id]"
 
-    set i [lsearch [set $orig_node1] "interface-peer {* $orig_node2}"]
-    set $orig_node1 [lreplace [set $orig_node1] $i $i \
-			"interface-peer {$ifc1 $new_node1}"]
-    set i [lsearch [set $orig_node2] "interface-peer {* $orig_node1}"]
-    set $orig_node2 [lreplace [set $orig_node2] $i $i \
-			"interface-peer {$ifc2 $new_node2}"]
+    # create mirror link and copy the properties from the original
+    set mirror_link_id [newObjectId $link_list "l"]
+    upvar 0 ::cf::[set ::curcfg]::$mirror_link_id $mirror_link_id
+    set $mirror_link_id [set $link]
+    lappend link_list $mirror_link_id
+    set links "$link $mirror_link_id"
 
-    lappend $new_link1 "nodes {$orig_node1 $new_node1}"
-    lappend $new_link2 "nodes {$orig_node2 $new_node2}"
+    # create pseudo nodes
+    set new_node1_id [newNode $nodetype]
+    set new_node2_id [newNode $nodetype]
+    upvar 0 ::cf::[set ::curcfg]::$new_node1_id $new_node1_id
+    upvar 0 ::cf::[set ::curcfg]::$new_node2_id $new_node2_id
+    set pseudo_nodes "$new_node1_id $new_node2_id"
 
-    setNodeCanvas $new_node1 [getNodeCanvas $orig_node1]
-    setNodeCanvas $new_node2 [getNodeCanvas $orig_node2]
-    setNodeCoords $new_node1 [getNodeCoords $orig_node2]
-    setNodeCoords $new_node2 [getNodeCoords $orig_node1]
-    if { $nodetype != "pseudo" } {
-	setNodeLabelCoords $new_node1 [getNodeLabelCoords $orig_node2]
-	setNodeLabelCoords $new_node2 [getNodeLabelCoords $orig_node1]
-    } else {
-	setNodeLabelCoords $new_node1 [getNodeCoords $orig_node2]
-	setNodeLabelCoords $new_node2 [getNodeCoords $orig_node1]
+    foreach orig_node_id $orig_nodes orig_node_iface_id $orig_ifaces pseudo_node_id $pseudo_nodes link_id $links {
+	set other_orig_node_id [removeFromList $orig_nodes $orig_node_id "keep_doubles"]
+
+	# change peer for original node interface
+	set i [lsearch [set $orig_node_id] "interface-peer {* $other_orig_node_id}"]
+	set $orig_node_id [lreplace [set $orig_node_id] $i $i \
+	    "interface-peer {$orig_node_iface_id $pseudo_node_id}"]
+
+	# setup new pseudo node properties
+	setNodeMirror $pseudo_node_id [removeFromList $pseudo_nodes $pseudo_node_id "keep_doubles"]
+	setNodeCanvas $pseudo_node_id [getNodeCanvas $orig_node_id]
+	setNodeCoords $pseudo_node_id [getNodeCoords $other_orig_node_id]
+	setNodeLabelCoords $pseudo_node_id [getNodeCoords $other_orig_node_id]
+
+	# setup both link properties
+	lappend $pseudo_node_id "interface-peer {0 $orig_node_id}"
+	set i [lsearch [set $link_id] "nodes *"]
+	set $link_id [lreplace [set $link_id] $i $i \
+	    "nodes {$pseudo_node_id $orig_node_id}"]
+	setLinkMirror $link_id [removeFromList $links $link_id "keep_doubles"]
     }
-    lappend $new_node1 "interface-peer {0 $orig_node1}"
-    lappend $new_node2 "interface-peer {0 $orig_node2}"
 
-    setLinkDirect $new_link1 [getLinkDirect $link]
-    setLinkDirect $new_link2 [getLinkDirect $link]
-    setLinkBandwidth $new_link1 [getLinkBandwidth $link]
-    setLinkBandwidth $new_link2 [getLinkBandwidth $link]
-    setLinkDelay $new_link1 [getLinkDelay $link]
-    setLinkDelay $new_link2 [getLinkDelay $link]
-    setLinkBER $new_link1 [getLinkBER $link]
-    setLinkBER $new_link2 [getLinkBER $link]
-    setLinkLoss $new_link1 [getLinkLoss $link]
-    setLinkLoss $new_link2 [getLinkLoss $link]
-    setLinkDup $new_link1 [getLinkDup $link]
-    setLinkDup $new_link2 [getLinkDup $link]
-
-    set link_list [removeFromList $link_list $link]
-
-    return "$new_node1 $new_node2"
+    return $pseudo_nodes
 }
 
 #****f* linkcfg.tcl/mergeLink
@@ -987,42 +970,42 @@ proc mergeLink { link } {
 	puts "XXX mergeLink called for non-pseudo link!!!"
 	return
     }
-    set link1_peers [linkPeers $link]
-    set link2_peers [linkPeers $mirror_link]
-    set orig_node1 [lindex $link1_peers 0]
-    set orig_node2 [lindex $link2_peers 0]
-    set pseudo_node1 [lindex $link1_peers 1]
-    set pseudo_node2 [lindex $link2_peers 1]
-    set new_link [newObjectId $link_list "l"]
-    upvar 0 ::cf::[set ::curcfg]::$orig_node1 $orig_node1
-    upvar 0 ::cf::[set ::curcfg]::$orig_node2 $orig_node2
-    upvar 0 ::cf::[set ::curcfg]::$new_link $new_link
 
-    set ifc1 [ifcByPeer $orig_node1 $pseudo_node1]
-    set ifc2 [ifcByPeer $orig_node2 $pseudo_node2]
-    set i [lsearch [set $orig_node1] "interface-peer {* $pseudo_node1}"]
-    set $orig_node1 [lreplace [set $orig_node1] $i $i \
-			"interface-peer {$ifc1 $orig_node2}"]
-    set i [lsearch [set $orig_node2] "interface-peer {* $pseudo_node2}"]
-    set $orig_node2 [lreplace [set $orig_node2] $i $i \
-			"interface-peer {$ifc2 $orig_node1}"]
+    # recycle the first pseudo link ID
+    lassign [lsort "$link $mirror_link"] link mirror_link
 
-    set $new_link {}
-    lappend $new_link "nodes {$orig_node1 $orig_node2}"
+    lassign [getLinkPeers $link] pseudo_node1_id orig_node1_id 
+    lassign [getLinkPeers $mirror_link] pseudo_node2_id orig_node2_id
 
-    setLinkDirect $new_link [getLinkDirect $link]
-    setLinkBandwidth $new_link [getLinkBandwidth $link]
-    setLinkDelay $new_link [getLinkDelay $link]
-    setLinkBER $new_link [getLinkBER $link]
-    setLinkLoss $new_link [getLinkLoss $link]
-    setLinkDup $new_link [getLinkDup $link]
+    if { $orig_node1_id == $orig_node2_id } {
+	return
+    }
 
-    set link_list [removeFromList $link_list "$link $mirror_link"]
-    lappend link_list $new_link
+    upvar 0 ::cf::[set ::curcfg]::$link $link
+    upvar 0 ::cf::[set ::curcfg]::$mirror_link $mirror_link
+    upvar 0 ::cf::[set ::curcfg]::$orig_node1_id $orig_node1_id
+    upvar 0 ::cf::[set ::curcfg]::$orig_node2_id $orig_node2_id
 
-    set node_list [removeFromList $node_list "$pseudo_node1 $pseudo_node2"]
+    set orig_node1_iface [ifcByPeer $orig_node1_id $pseudo_node1_id]
+    set orig_node2_iface [ifcByPeer $orig_node2_id $pseudo_node2_id]
 
-    return $new_link
+    set i [lsearch [set $orig_node1_id] "interface-peer {* $pseudo_node1_id}"]
+    set $orig_node1_id [lreplace [set $orig_node1_id] $i $i \
+			"interface-peer {$orig_node1_iface $orig_node2_id}"]
+    set i [lsearch [set $orig_node2_id] "interface-peer {* $pseudo_node2_id}"]
+    set $orig_node2_id [lreplace [set $orig_node2_id] $i $i \
+			"interface-peer {$orig_node2_iface $orig_node1_id}"]
+
+    set i [lsearch [set $link] "nodes *"]
+    set $link [lreplace [set $link] $i $i \
+			"nodes {$orig_node1_id $orig_node2_id}"]
+
+    setLinkMirror $link ""
+
+    set link_list [removeFromList $link_list $mirror_link]
+    set node_list [removeFromList $node_list "$pseudo_node1_id $pseudo_node2_id"]
+
+    return $link
 }
 
 #****f* linkcfg.tcl/numOfLinks

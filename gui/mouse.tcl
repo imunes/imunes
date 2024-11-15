@@ -116,16 +116,7 @@ proc splitGUILink { link } {
 
     set peer_nodes [linkPeers $link]
     set new_nodes [splitLink $link pseudo]
-    set orig_node1 [lindex $peer_nodes 0]
-    set orig_node2 [lindex $peer_nodes 1]
-    set new_node1 [lindex $new_nodes 0]
-    set new_node2 [lindex $new_nodes 1]
-    set new_link1 [linkByPeers $orig_node1 $new_node1]
-    set new_link2 [linkByPeers $orig_node2 $new_node2]
-    setLinkMirror $new_link1 $new_link2
-    setLinkMirror $new_link2 $new_link1
-    setNodeMirror $new_node1 $new_node2
-    setNodeMirror $new_node2 $new_node1
+    lassign $new_nodes new_node1 new_node2
 
     set x1 [lindex [getNodeCoords $orig_node1] 0]
     set y1 [lindex [getNodeCoords $orig_node1] 1]
