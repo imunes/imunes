@@ -42,29 +42,32 @@ proc animateCursor {} {
 proc removeGUILink { link atomic } {
     global changed
 
-    set nodes [linkPeers $link]
-    set node1 [lindex $nodes 0]
-    set node2 [lindex $nodes 1]
+    # this data needs to be fetched before we removeLink
+    lassign [linkPeers $link] node1 node2
+
+    set mirror_link_id [getLinkMirror $link]
+    if { $mirror_link_id != "" } {
+	set mirror_node_id [getNodeMirror $node2]
+    }
+
+    # TODO: check this when wlan node turn comes
     if {[nodeType $node1] == "wlan" || [nodeType $node2] == "wlan"} {
 	removeLink $link
 	return
     }
-    if { [nodeType $node1] == "pseudo" } {
-	removeLink [getLinkMirror $link]
-	removeLink $link
-	removeNode [getNodeMirror $node1]
-	removeNode $node1
-	.panwin.f1.c delete $node1
-    } elseif { [nodeType $node2] == "pseudo" } {
-	removeLink [getLinkMirror $link]
-	removeLink $link
-	removeNode [getNodeMirror $node2]
-	removeNode $node2
-	.panwin.f1.c delete $node2
-    } else {
-	removeLink $link
-    }
+
+    removeLink $link
     .panwin.f1.c delete $link
+
+    if { $mirror_link_id != "" } {
+	# remove mirror link from GUI
+	.panwin.f1.c delete $mirror_link_id
+
+	# remove pseudo nodes from GUI
+	.panwin.f1.c delete $node2
+	.panwin.f1.c delete $mirror_node_id
+    }
+
     if { $atomic == "atomic" } {
 	set changed 1
 	updateUndoLog
@@ -83,21 +86,14 @@ proc removeGUILink { link atomic } {
 #   * node_id -- node id
 #****
 proc removeGUINode { node } {
-    set type [nodeType $node]
     foreach ifc [ifcList $node] {
-	set peer [peerByIfc $node $ifc]
-	foreach link [linkByPeers $node $peer] {
-	    set mirror [getLinkMirror $link]
+	foreach link [linkByPeers $node [peerByIfc $node $ifc]] {
 	    removeGUILink $link non-atomic
-	    if {$mirror != ""} {
-		removeGUILink $mirror non-atomic
-	    }
 	}
     }
-    if { $type != "pseudo" } {
-	removeNode $node
-	.panwin.f1.c delete $node
-    }
+
+    removeNode $node
+    .panwin.f1.c delete $node
 }
 
 #****f* editor.tcl/splitGUILink
@@ -116,17 +112,9 @@ proc splitGUILink { link } {
     global changed
 
     set peer_nodes [linkPeers $link]
-    set new_nodes [splitLink $link pseudo]
-    set orig_node1 [lindex $peer_nodes 0]
-    set orig_node2 [lindex $peer_nodes 1]
-    set new_node1 [lindex $new_nodes 0]
-    set new_node2 [lindex $new_nodes 1]
-    set new_link1 [lindex [linkByPeers $orig_node1 $new_node1] 0]
-    set new_link2 [lindex [linkByPeers $orig_node2 $new_node2] 0]
-    setLinkMirror $new_link1 $new_link2
-    setLinkMirror $new_link2 $new_link1
-    setNodeMirror $new_node1 $new_node2
-    setNodeMirror $new_node2 $new_node1
+    lassign $peer_nodes orig_node1 orig_node2
+    set new_nodes [splitLink $link "pseudo"]
+    lassign $new_nodes new_node1 new_node2
 
     set x1 [lindex [getNodeCoords $orig_node1] 0]
     set y1 [lindex [getNodeCoords $orig_node1] 1]
@@ -305,7 +293,7 @@ proc selectAdjacent {} {
 
 	    set mirror_node [getNodeMirror $peer]
 	    if { $mirror_node != "" } {
-		set peer [peerByIfc $mirror_node 0]
+		set peer [peerByIfc $mirror_node "0"]
 	    }
 
 	    if { $peer ni $adjacent } {
@@ -422,8 +410,9 @@ proc button3link { c x y } {
     #
     # Merge two pseudo nodes / links
     #
-    if { $oper_mode != "exec" && [getLinkMirror $link] != "" &&
-	[getNodeCanvas [getNodeMirror [lindex [linkPeers $link] 1]]] ==
+    set link_mirror_id [getLinkMirror $link]
+    if { $oper_mode != "exec" && $link_mirror_id != "" &&
+	[getNodeCanvas [lindex [linkPeers $link_mirror_id] 1]] ==
 	$curcanvas } {
 	.button3menu add command -label "Merge" \
 	    -command "mergeGUINode [lindex [linkPeers $link] 1]"
@@ -464,6 +453,8 @@ proc movetoCanvas { canvas } {
 	set peer2_in_selected [lsearch $selected_nodes $peer2]
 	if { ($peer1_in_selected == -1 && $peer2_in_selected != -1) ||
 	    ($peer1_in_selected != -1 && $peer2_in_selected == -1) } {
+
+	    # pseudo nodes are always peer2
 	    if { [nodeType $peer2] == "pseudo" } {
 		setNodeCanvas $peer2 $canvas
 		if { [getNodeCanvas [getNodeMirror $peer2]] == $canvas } {
@@ -471,17 +462,11 @@ proc movetoCanvas { canvas } {
 		}
 		continue
 	    }
-	    set new_nodes [splitLink $link pseudo]
+	    set new_nodes [splitLink $link "pseudo"]
 	    set new_node1 [lindex $new_nodes 0]
 	    set new_node2 [lindex $new_nodes 1]
-	    setNodeMirror $new_node1 $new_node2
-	    setNodeMirror $new_node2 $new_node1
 	    setNodeName $new_node1 $peer2
 	    setNodeName $new_node2 $peer1
-	    set link1 [lindex [linkByPeers $peer1 $new_node1] 0]
-	    set link2 [lindex [linkByPeers $peer2 $new_node2] 0]
-	    setLinkMirror $link1 $link2
-	    setLinkMirror $link2 $link1
 	}
     }
     updateUndoLog
@@ -502,8 +487,13 @@ proc movetoCanvas { canvas } {
 #   * node -- node id of a pseudo node.
 #****
 proc mergeGUINode { node } {
+    global changed
+
     set link [lindex [linkByIfc $node [ifcList $node]] 0]
     mergeLink $link
+
+    set changed 1
+    updateUndoLog
     redrawAll
 }
 

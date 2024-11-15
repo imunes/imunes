@@ -942,14 +942,11 @@ proc createLinks { links linkCount w } {
 	set msg "Creating link $link"
 	set mirror_link [getLinkMirror $link]
 	if { $mirror_link != "" } {
-	    set i [lsearch -exact $pending_links $mirror_link]
-	    set pending_links [lreplace $pending_links $i $i]
-
 	    set msg "Creating link $link/$mirror_link"
+	    set pending_links [removeFromList $pending_links $mirror_link]
 
-	    set p_lnode2 $lnode2
-	    set lnode2 [lindex [linkPeers $mirror_link] 0]
-	    set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
+	    lassign "[lindex [linkPeers $mirror_link] 0] $lnode1" lnode1 lnode2
+	    lassign "[lindex [linkPeersIfaces $mirror_link] 0] $ifname1" ifname1 ifname2
 	}
 
 	displayBatchProgress $batchStep $linkCount
@@ -999,16 +996,13 @@ proc configureLinks { links linkCount w } {
 	set ifname2 [lindex [linkPeersIfaces $link] 1]
 
 	set msg "Configuring link $link"
-	if { [getLinkMirror $link] != "" } {
-	    set mirror_link [getLinkMirror $link]
-	    set i [lsearch -exact $pending_links $mirror_link]
-	    set pending_links [lreplace $pending_links $i $i]
-
+	set mirror_link [getLinkMirror $link]
+	if { $mirror_link != "" } {
 	    set msg "Configuring link $link/$mirror_link"
+	    set pending_links [removeFromList $pending_links $mirror_link]
 
-	    set p_lnode2 $lnode2
-	    set lnode2 [lindex [linkPeers $mirror_link] 0]
-	    set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
+	    lassign "[lindex [linkPeers $mirror_link] 0] $lnode1" lnode1 lnode2
+	    lassign "[lindex [linkPeersIfaces $mirror_link] 0] $ifname1" ifname1 ifname2
 	}
 
 	displayBatchProgress $batchStep $linkCount
