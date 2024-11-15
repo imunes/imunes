@@ -464,8 +464,7 @@ proc execSetIfcQDisc { eid node ifc qdisc } {
 	DRR { set qdisc drr }
     }
     if { [nodeType $lnode2] == "pseudo" } {
-	set mirror_link [getLinkMirror [lindex $link 0]]
-	pipesExec "jexec $eid ngctl msg $mirror_link: setcfg \"{ $dir={ $qdisc=1 } }\"" "hold"
+	set link [getLinkMirror $link]
     }
 
     pipesExec "jexec $eid ngctl msg $link: setcfg \"{ $dir={ $qdisc=1 } }\"" "hold"
@@ -497,8 +496,7 @@ proc execSetIfcQDrop { eid node ifc qdrop } {
 	drop-tail { set qdrop droptail }
     }
     if { [nodeType $lnode2] == "pseudo" } {
-	set mirror_link [getLinkMirror [lindex $link 0]]
-	pipesExec "jexec $eid ngctl msg $mirror_link: setcfg \"{ $dir={ $qdrop=1 } }\"" "hold"
+	set link [getLinkMirror $link]
     }
 
     pipesExec "jexec $eid ngctl msg $link: setcfg \"{ $dir={ $qdrop=1 } }\"" "hold"
@@ -528,8 +526,7 @@ proc execSetIfcQLen { eid node ifc qlen } {
 	set qlen -1
     }
     if { [nodeType $lnode2] == "pseudo" } {
-	set mirror_link [getLinkMirror [lindex $link 0]]
-	pipesExec "jexec $eid ngctl msg $mirror_link: setcfg \"{ $dir={ $queuelen=$qlen } }\"" "hold"
+	set link [getLinkMirror $link]
     }
 
     pipesExec "jexec $eid ngctl msg $link: setcfg \"{ $dir={ $queuelen=$qlen } }\"" "hold"
@@ -549,18 +546,6 @@ proc execSetIfcQLen { eid node ifc qlen } {
 #****
 proc execSetLinkParams { eid link } {
     global debug
-
-    set lnode1 [lindex [linkPeers $link] 0]
-    set lnode2 [lindex [linkPeers $link] 1]
-
-    if { [getLinkMirror $link] != "" } {
-	set mirror_link [getLinkMirror $link]
-	if { [nodeType $lnode1] == "pseudo" } {
-	    set lnode1 [lindex [linkPeers $mirror_link] 0]
-	} else {
-	    set lnode2 [lindex [linkPeers $mirror_link] 0]
-	}
-    }
 
     set bandwidth [expr [getLinkBandwidth $link] + 0]
     set delay [expr [getLinkDelay $link] + 0]

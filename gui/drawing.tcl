@@ -590,8 +590,8 @@ proc newGUILink { lnode1 lnode2 } {
 	return
     }
     if { [getNodeCanvas $lnode1] != [getNodeCanvas $lnode2] } {
-	set new_nodes [splitLink $link pseudo]
 	set orig_nodes [linkPeers $link]
+	set new_nodes [splitLink $link "pseudo"]
 	set new_node1 [lindex $new_nodes 0]
 	set new_node2 [lindex $new_nodes 1]
 	set orig_node1 [lindex $orig_nodes 0]
