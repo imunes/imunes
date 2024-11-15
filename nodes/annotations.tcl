@@ -294,7 +294,7 @@ proc drawOval { oval } {
 
     set newoval [.panwin.f1.c create oval $x1 $y1 $x2 $y2 \
 	-fill $color -width $width -outline $bordercolor -tags "oval $oval"]
-    .panwin.f1.c raise $newoval background
+    .panwin.f1.c raise $newoval
 }
 
 #****f* annotations.tcl/popupRectangleDialog
@@ -1053,6 +1053,25 @@ proc button3annotation { type c x y } {
 	-command "annotationConfig $c $item"
     .button3menu add command -label "Delete $menutext" \
 	-command "deleteAnnotation $item"
+
+    #
+    # Move to another canvas
+    #
+    .button3menu.moveto delete 0 end
+    .button3menu add cascade -label "Move to" \
+	-menu .button3menu.moveto
+    .button3menu.moveto add command -label "Canvas:" -state disabled
+
+    foreach canvas_id [getFromRunning "canvas_list"] {
+	if { $canvas_id != [getFromRunning "curcanvas"] } {
+	    .button3menu.moveto add command \
+		-label [getCanvasName $canvas_id] \
+		-command "moveToCanvas $canvas_id"
+	} else {
+	    .button3menu.moveto add command \
+		-label [getCanvasName $canvas_id] -state disabled
+	}
+    }
 
     set x [winfo pointerx .]
     set y [winfo pointery .]

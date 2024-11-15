@@ -473,8 +473,8 @@ proc movetoCanvas { canvas } {
     }
 
     set selected_annotations [selectedAnnotations]
-    foreach node_id $selected_annotations {
-	setAnnotationCanvas $node_id $canvas_id
+    foreach node $selected_annotations {
+	setAnnotationCanvas $node $canvas_id
 	set changed 1
     }
 
