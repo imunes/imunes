@@ -1475,17 +1475,8 @@ proc checkSysPrerequisites {} {
 #   qdisc -- queuing discipline
 #****
 proc execSetIfcQDisc { eid node ifc qdisc } {
-    set target [linkByIfc $node $ifc]
-    set peers [linkPeers [lindex $target 0]]
-    set dir [lindex $target 1]
-    set lnode1 [lindex $peers 0]
-    set lnode2 [lindex $peers 1]
-    if { [nodeType $lnode2] == "pseudo" } {
-        set mirror_link [getLinkMirror [lindex $target 0]]
-        set lnode2 [lindex [linkPeers $mirror_link] 0]
-    }
     switch -exact $qdisc {
-        FIFO { set qdisc fifo_fast }
+        FIFO { set qdisc pfifo_fast }
         WFQ { set qdisc sfq }
         DRR { set qdisc drr }
     }
@@ -1570,17 +1561,11 @@ proc execSetLinkParams { eid link } {
     set ifname1 [lindex [linkPeersIfaces $link] 0]
     set ifname2 [lindex [linkPeersIfaces $link] 1]
 
-    if { [getLinkMirror $link] != "" } {
-	set mirror_link [getLinkMirror $link]
-	if { [nodeType $lnode1] == "pseudo" } {
-	    set p_lnode1 $lnode1
-	    set lnode1 [lindex [linkPeers $mirror_link] 0]
-	    set ifname1 [ifcByPeer $lnode1 [getNodeMirror $p_lnode1]]
-	} else {
-	    set p_lnode2 $lnode2
-	    set lnode2 [lindex [linkPeers $mirror_link] 0]
-	    set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
-	}
+    set mirror_link [getLinkMirror $link]
+    if { $mirror_link != "" } {
+	# pseudo nodes are always peer2
+	set lnode2 [lindex [linkPeers $mirror_link] 0]
+	set ifname2 [lindex [linkPeersIfaces $mirror_link] 0]
     }
 
     set bandwidth [expr [getLinkBandwidth $link] + 0]
