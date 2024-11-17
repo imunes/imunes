@@ -34,10 +34,9 @@
 #   Cuts selected nodes.
 #****
 proc cutSelection {} {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global cutNodes
 
-    if { $oper_mode == "exec" } {
+    if { [getFromRunning "oper_mode"] == "exec" } {
 	return
     }
 
@@ -124,17 +123,12 @@ proc copySelection {} {
 #   Pastes nodes from clipboard.
 #****
 proc paste {} {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-    upvar 0 ::cf::[set ::curcfg]::annotation_list annotation_list
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
     global sizex sizey
     global changed copypaste_list cutNodes copypaste_nodes
     global nodeNamingBase
 
-    if { $oper_mode == "exec" } {
+    set curcanvas [getFromRunning "curcanvas"]
+    if { [getFromRunning "oper_mode"] == "exec" } {
 	return
     }
 
@@ -143,12 +137,12 @@ proc paste {} {
 
     # Paste annotations from the clipboard and rename them on the fly
     foreach annotation_orig [set ::cf::clipboard::annotation_list] {
-	set annotation_copy [newObjectId $annotation_list "a"]
+	set annotation_copy [newObjectId [getFromRunning "annotation_list"] "a"]
 	lappend new_annotations $annotation_copy
 	set annotation_map($annotation_orig) $annotation_copy
 	upvar 0 ::cf::[set ::curcfg]::$annotation_copy $annotation_copy
 	set $annotation_copy [set ::cf::clipboard::$annotation_orig]
-	lappend annotation_list $annotation_copy
+	lappendToRunning "annotation_list" $annotation_copy
 
 	setNodeCanvas $annotation_copy $curcanvas
     }
@@ -160,11 +154,11 @@ proc paste {} {
 
     # Paste nodes from the clipboard and rename them on the fly
     foreach node_orig [set ::cf::clipboard::node_list] {
-	set new_node_id [newObjectId $node_list "n"]
+	set new_node_id [newObjectId [getFromRunning "node_list"] "n"]
 	set node_map($node_orig) $new_node_id
 	upvar 0 ::cf::[set ::curcfg]::$new_node_id $new_node_id
 	set $new_node_id [set ::cf::clipboard::$node_orig]
-	lappend node_list $new_node_id
+	lappendToRunning "node_list" $new_node_id
 	lappend copypaste_list $new_node_id
 
 	set node_type [getNodeType $node_orig]
@@ -213,10 +207,10 @@ proc paste {} {
 
     # Paste links from the clipboard and rename them on the fly
     foreach link_orig [set ::cf::clipboard::link_list] {
-	set new_link_id [newObjectId $link_list "l"]
+	set new_link_id [newObjectId [getFromRunning "link_list"] "l"]
 	upvar 0 ::cf::[set ::curcfg]::$new_link_id $new_link_id
 	set $new_link_id [set ::cf::clipboard::$link_orig]
-	lappend link_list $new_link_id
+	lappendToRunning "link_list" $new_link_id
 
 	set old_peers [getLinkPeers $new_link_id]
 	set new_peers \

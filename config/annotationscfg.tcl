@@ -10,11 +10,10 @@
 #   * type -- annotation type
 #****
 proc addAnnotation { annotation_id type } {
-    upvar 0 ::cf::[set ::curcfg]::annotation_list annotation_list
     upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
 
-    lappend annotation_list $annotation_id
-    lappend $annotation_id "type $type"
+    lappendToRunning "annotation_list" $annotation_id
+    setAnnotationType $annotation_id $type
 }
 
 #****f* annotations.tcl/deleteAnnotation
@@ -28,13 +27,12 @@ proc addAnnotation { annotation_id type } {
 #   * annotation_id -- existing annotation
 #****
 proc deleteAnnotation { annotation_id } {
-    upvar 0 ::cf::[set ::curcfg]::annotation_list annotation_list
     upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
     global changed
 
     set $annotation_id {}
 
-    set annotation_list [removeFromList $annotation_list $annotation_id]
+    setToRunning "annotation_list" [removeFromList [getFromRunning "annotation_list"] $annotation_id]
 
     set changed 1
     updateUndoLog

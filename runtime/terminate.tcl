@@ -301,9 +301,10 @@ proc finishTerminating { status msg w } {
 #
 #****
 proc undeployCfg { eid } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
     global progressbarCount execMode
+
+    set node_list [getFromRunning "node_list"]
+    set link_list [getFromRunning "link_list"]
 
     set nodes_count [llength $node_list]
     set links_count [llength $link_list]
@@ -529,7 +530,6 @@ proc destroyNodesIfcs { eid nodes nodes_count w } {
 #   * node -- node id
 #****
 proc stopNodeFromMenu { node } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set progressbarCount 1
@@ -560,7 +560,7 @@ proc stopNodeFromMenu { node } {
 
     pipesCreate
     try {
-	terminate_nodesShutdown $eid $node 1 $w
+	terminate_nodesShutdown [getFromRunning "eid"] $node 1 $w
     } on error err {
 	finishTerminating 0 "$err" $w
 	return

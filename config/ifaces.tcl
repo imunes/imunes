@@ -764,10 +764,8 @@ proc getIfcPeer { node_id iface_id } {
 #   * link_id -- link id
 #****
 proc getIfcLink { node_id iface_id } {
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-
     set peer_id [getIfcPeer $node_id $iface_id]
-    foreach link_id $link_list {
+    foreach link_id [getFromRunning "link_list"] {
 	set endpoints [getLinkPeers $link_id]
 	if { $endpoints in "$node_id $peer_id" || "$peer_id $node_id" } {
 	    break
