@@ -62,20 +62,18 @@ proc randomizeMACbytes {} {
 #     address will be assigned
 #****
 proc autoMACaddr { node_id iface_id } {
-    upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
-
     if { [getNodeType $node_id] ni "ext extnat" && [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" } {
 	return
     }
 
     set old_mac [getIfcMACaddr $node_id $iface_id]
     if { $old_mac != "" } {
-	set MACUsedList [removeFromList $MACUsedList $old_mac "keep_doubles"]
+	setToRunning "mac_used_list" [removeFromList [getFromRunning "mac_used_list"] $old_mac "keep_doubles"]
     }
 
-    set macaddr [getNextMACaddr $MACUsedList]
+    set macaddr [getNextMACaddr [getFromRunning "mac_used_list"]]
 
-    lappend MACUsedList $macaddr
+    lappendToRunning "mac_used_list" $macaddr
     setIfcMACaddr $node_id $iface_id $macaddr
 }
 

@@ -86,10 +86,8 @@
 #   * link_ids -- returns ids of links connecting endpoints node1 and node2
 #****
 proc linksByPeers { node1_id node2_id } {
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-
     set link_ids {}
-    foreach link_id $link_list {
+    foreach link_id [getFromRunning "link_list"] {
 	set peers [getLinkPeers $link_id]
 	if { $peers == "$node1_id $node2_id" || $peers == "$node2_id $node1_id" } {
 	    lappend link_ids $link_id
@@ -111,7 +109,6 @@ proc linksByPeers { node1_id node2_id } {
 #   * link_id -- link id
 #****
 proc removeLink { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
     upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
     upvar 0 ::cf::[set ::curcfg]::IPv4UsedList IPv4UsedList
     upvar 0 ::cf::[set ::curcfg]::IPv6UsedList IPv6UsedList
@@ -150,7 +147,7 @@ proc removeLink { link_id } {
 	}
     }
 
-    set link_list [removeFromList $link_list $link_id]
+    setToRunning "link_list" [removeFromList [getFromRunning "link_list"] $link_id]
 }
 
 #****f* linkcfg.tcl/getLinkDirect
@@ -926,7 +923,6 @@ proc setLinkMirror { link_id mirror } {
 #   * nodes -- list of node ids of new nodes.
 #****
 proc splitLink { orig_link_id } {
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
     upvar 0 ::cf::[set ::curcfg]::$orig_link_id $orig_link_id
 
     set orig_nodes [getLinkPeers $orig_link_id]
@@ -937,10 +933,10 @@ proc splitLink { orig_link_id } {
     set orig_ifaces "[ifcByPeer $orig_node1_id $orig_node2_id] [ifcByPeer $orig_node2_id $orig_node1_id]"
 
     # create mirror link and copy the properties from the original
-    set mirror_link_id [newObjectId $link_list "l"]
+    set mirror_link_id [newObjectId [getFromRunning "link_list"] "l"]
     upvar 0 ::cf::[set ::curcfg]::$mirror_link_id $mirror_link_id
     set $mirror_link_id [set $orig_link_id]
-    lappend link_list $mirror_link_id
+    lappendToRunning "link_list" $mirror_link_id
     set links "$orig_link_id $mirror_link_id"
 
     # create pseudo nodes
@@ -991,9 +987,6 @@ proc splitLink { orig_link_id } {
 #   * link_id -- rebuilt link id
 #****
 proc mergeLink { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-
     set mirror_link_id [getLinkMirror $link_id]
     if { $mirror_link_id == "" } {
 	return
@@ -1033,8 +1026,8 @@ proc mergeLink { link_id } {
 
     setLinkMirror $link_id ""
 
-    set link_list [removeFromList $link_list $mirror_link_id]
-    set node_list [removeFromList $node_list "$pseudo_node1_id $pseudo_node2_id"]
+    setToRunning "link_list" [removeFromList [getFromRunning "link_list"] $mirror_link_id]
+    setToRunning "node_list" [removeFromList [getFromRunning "node_list"] "$pseudo_node1_id $pseudo_node2_id"]
 
     return $link_id
 }
@@ -1072,7 +1065,6 @@ proc numOfLinks { node_id } {
 #   * new_link_id -- new link id.
 #****
 proc newLink { node1_id node2_id } {
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
     upvar 0 ::cf::[set ::curcfg]::$node1_id $node1_id
     upvar 0 ::cf::[set ::curcfg]::$node2_id $node2_id
     global defEthBandwidth defSerBandwidth defSerDelay
@@ -1088,7 +1080,7 @@ proc newLink { node1_id node2_id } {
 	}
     }
 
-    set link_id [newObjectId $link_list "l"]
+    set link_id [newObjectId [getFromRunning "link_list"] "l"]
     upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
     set $link_id {}
 
@@ -1111,7 +1103,7 @@ proc newLink { node1_id node2_id } {
 	lappend $link_id "delay $defSerDelay"
     }
 
-    lappend link_list $link_id
+    lappendToRunning "link_list" $link_id
 
     if { [info procs [getNodeType $node1_id].confNewIfc] != "" } {
 	[getNodeType $node1_id].confNewIfc $node1_id $ifname1
@@ -1138,10 +1130,8 @@ proc newLink { node1_id node2_id } {
 #   * link_id -- link id.
 #****
 proc linkByIfc { node_id iface_id } {
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-
     set peer_id [getIfcPeer $node_id $iface_id]
-    foreach link_id $link_list {
+    foreach link_id [getFromRunning "link_list"] {
 	set endpoints [getLinkPeers $link_id]
 	if { $endpoints == "$node_id $peer_id" } {
 	    set dir downstream

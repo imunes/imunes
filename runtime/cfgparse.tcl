@@ -274,9 +274,9 @@ proc loadCfgLegacy { cfg } {
     upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
     upvar 0 ::cf::[set ::curcfg]::zoom zoom
     upvar 0 ::cf::[set ::curcfg]::image_list image_list
-    upvar 0 ::cf::[set ::curcfg]::IPv6UsedList IPv6UsedList
-    upvar 0 ::cf::[set ::curcfg]::IPv4UsedList IPv4UsedList
-    upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
+    upvar 0 ::cf::[set ::curcfg]::ipv6_used_list ipv6_used_list
+    upvar 0 ::cf::[set ::curcfg]::ipv4_used_list ipv4_used_list
+    upvar 0 ::cf::[set ::curcfg]::mac_used_list mac_used_list
     upvar 0 ::cf::[set ::curcfg]::etchosts etchosts
     global show_interface_names show_node_labels show_link_labels
     global show_interface_ipv4 show_interface_ipv6
@@ -739,9 +739,9 @@ proc loadCfgLegacy { cfg } {
     #
     # Hack for comaptibility with old format files (no lo0 on nodes)
     #
-    set IPv6UsedList ""
-    set IPv4UsedList ""
-    set MACUsedList ""
+    set ipv6_used_list {}
+    set ipv4_used_list {}
+    set mac_used_list {}
     foreach node $node_list {
 	set node_type [getNodeType $node]
 	if { $node_type in "extelem" } {
@@ -770,14 +770,20 @@ proc loadCfgLegacy { cfg } {
 	# used addresses in lists.
 	foreach iface [ifcList $node] {
 	    foreach addr [getIfcIPv6addrs $node $iface] {
-		lappend IPv6UsedList [ip::contract [ip::prefix $addr]]
+		lassign [split $addr "/"] addr mask
+		lappend ipv6_used_list "[ip::contract [ip::prefix $addr]]/$mask"
 	    }
 	    foreach addr [getIfcIPv4addrs $node $iface] {
-		lappend IPv4UsedList $addr
+		lappend ipv4_used_list $addr
 	    }
-	    lappend MACUsedList [getIfcMACaddr $node $iface]
+	    set addr [getIfcMACaddr $node $iface]
+	    if { $addr != "" } { lappend mac_used_list [getIfcMACaddr $node $iface] }
 	}
     }
+
+    setToRunning "ipv4_used_list" $ipv4_used_list
+    setToRunning "ipv6_used_list" $ipv6_used_list
+    setToRunning "mac_used_list" $mac_used_list
 
     # older .imn files have only one link per node pair, so match links with interfaces
     foreach link_id $link_list {
@@ -846,4 +852,151 @@ proc newObjectId { elem_list prefix } {
     }
 
     return $prefix$mid
+}
+
+#########################################################################
+
+proc getWithDefault { default_value dictionary args } {
+    try {
+	return [dict get $dictionary {*}$args]
+    } on error {} {
+	return $default_value
+    }
+}
+
+proc dictGet { dictionary args } {
+    try {
+	dict get $dictionary {*}$args
+    } on error {} {
+	return {}
+    } on ok retv {
+	return $retv
+    }
+}
+
+proc dictSet { dictionary args } {
+    try {
+	dict set dictionary {*}$args
+    } on error {} {
+	return $dictionary
+    } on ok retv {
+	return $retv
+    }
+}
+
+proc dictLappend { dictionary args } {
+    try {
+	dict lappend dictionary {*}$args
+    } on error {} {
+	return $dictionary
+    } on ok retv {
+	return $retv
+    }
+}
+
+proc dictUnset { dictionary args } {
+    try {
+	dict unset dictionary {*}$args
+    } on error {} {
+	return $dictionary
+    } on ok retv {
+	return $retv
+    }
+}
+
+proc clipboardGet { args } {
+    upvar 0 ::cf::clipboard::dict_cfg dict_cfg
+
+    return [dictGet $dict_cfg {*}$args]
+}
+
+proc clipboardSet { args } {
+    upvar 0 ::cf::clipboard::dict_cfg dict_cfg
+
+    if { [lindex $args end] in {{} ""} } {
+	for {set i 1} {$i < [llength $args]} {incr i} {
+	    set dict_cfg [dictUnset $dict_cfg {*}[lrange $args 0 end-$i]]
+
+	    set new_upper [dictGet $dict_cfg {*}[lrange $args 0 end-[expr $i+1]]]
+	    if { $new_upper != "" } {
+		break
+	    }
+	}
+    } elseif { [dict exists $dict_cfg {*}$args] } {
+	set dict_cfg [dictUnset $dict_cfg {*}$args]
+    } else {
+	set dict_cfg [dictSet $dict_cfg {*}$args]
+    }
+
+    return $dict_cfg
+}
+
+proc clipboardLappend { args } {
+    upvar 0 ::cf::clipboard::dict_cfg dict_cfg
+
+    set dict_cfg [dictLappend $dict_cfg {*}$args]
+
+    return $dict_cfg
+}
+
+proc clipboardUnset { args } {
+    upvar 0 ::cf::clipboard::dict_cfg dict_cfg
+
+    for {set i 0} {$i < [llength $args]} {incr i} {
+	set dict_cfg [dictUnset $dict_cfg {*}[lrange $args 0 end-$i]]
+
+	set new_upper [dictGet $dict_cfg {*}[lrange $args 0 end-[expr $i+1]]]
+	if { $new_upper != "" } {
+	    break
+	}
+    }
+
+    return $dict_cfg
+}
+
+#########################################################################
+
+proc getFromRunning { key { config "" } } {
+    if { $config == "" } {
+	set config [set ::curcfg]
+    }
+    upvar 0 ::cf::${config}::dict_run dict_run
+
+    return [dictGet $dict_run $key]
+}
+
+proc setToRunning { key value } {
+    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+
+    set dict_run [dictSet $dict_run $key $value]
+
+    return $dict_run
+}
+
+proc unsetRunning { key } {
+    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+
+    set dict_run [dictUnset $dict_run $key]
+
+    return $dict_run
+}
+
+proc lappendToRunning { key value } {
+    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+
+    set dict_run [dictLappend $dict_run $key $value]
+
+    return $dict_run
+}
+
+proc jumpToUndoLevel { undolevel } {
+    upvar 0 ::cf::[set ::curcfg]::undolog undolog
+
+    loadCfgLegacy $undolog($undolevel)
+}
+
+proc saveToUndoLevel { undolevel { value "" } } {
+    upvar 0 ::cf::[set ::curcfg]::undolog undolog
+
+    set undolog($undolevel) $value
 }

@@ -113,7 +113,6 @@ proc findFreeIPv6Net { mask { ipv6_used_list "" } } {
 #     address will be assigned
 #****
 proc autoIPv6addr { node_id iface_id { use_autorenumbered "" } } {
-    upvar 0 ::cf::[set ::curcfg]::IPv6UsedList IPv6UsedList
     global IPv6autoAssign
 
     if { ! $IPv6autoAssign } {
@@ -134,7 +133,7 @@ proc autoIPv6addr { node_id iface_id { use_autorenumbered "" } } {
 
     set old_addrs [getIfcIPv6addrs $node_id $iface_id]
     if { $old_addrs != "" } {
-	set IPv6UsedList [removeFromList $IPv6UsedList $old_addrs "keep_doubles"]
+	setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] $old_addrs "keep_doubles"]
     }
 
     setIfcIPv6addrs $node_id $iface_id ""
@@ -169,11 +168,11 @@ proc autoIPv6addr { node_id iface_id { use_autorenumbered "" } } {
 	set targetbyte [expr 0x[$node_type.IPAddrRange]]
 	set addr [nextFreeIP6Addr [lindex $peer_ip6addrs 0] $targetbyte $peer_ip6addrs]
     } else {
-	set addr [getNextIPv6addr $node_type $IPv6UsedList]
+	set addr [getNextIPv6addr $node_type [getFromRunning "ipv6_used_list"]]
     }
 
     setIfcIPv6addrs $node_id $iface_id $addr
-    lappend IPv6UsedList $addr
+    lappendToRunning "ipv6_used_list" $addr
 }
 
 proc getNextIPv6addr { node_type existing_addrs } {
