@@ -50,10 +50,9 @@
 #   * canvas_id -- canvas id
 #****
 proc removeCanvas { canvas_id } {
-    upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
     upvar 0 ::cf::[set ::curcfg]::$canvas_id $canvas_id
 
-    set canvas_list [removeFromList $canvas_list $canvas_id]
+    setToRunning "canvas_list" [removeFromList [getFromRunning "canvas_list"] $canvas_id]
     set $canvas_id {}
 }
 
@@ -72,11 +71,10 @@ proc removeCanvas { canvas_id } {
 #   * canvas_id -- canvas id
 #****
 proc newCanvas { name } {
-    upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
-    set canvas_id [newObjectId $canvas_list "c"]
+    set canvas_id [newObjectId [getFromRunning "canvas_list"] "c"]
 
     upvar 0 ::cf::[set ::curcfg]::$canvas_id $canvas_id
-    lappend canvas_list $canvas_id
+    lappendToRunning "canvas_list" $canvas_id
     set $canvas_id {}
 
     if { $name != "" } {
@@ -517,7 +515,7 @@ proc getImageFile { img } {
 #   * imageName -- name of the variable which now contains the image
 #****
 proc loadImage { path ref type file } {
-    upvar 0 ::cf::[set ::curcfg]::image_list image_list
+    set image_list [getFromRunning "image_list"]
 
     if { [file exists $path] != 1 } {
 	after idle { .dialog1.msg configure -wraplength 4i }
@@ -531,7 +529,7 @@ proc loadImage { path ref type file } {
     upvar 0 ::cf::[set ::curcfg]::$imgname $imgname
     set $imgname {}
 
-    lappend image_list $imgname
+    lappendToRunning "image_list" $imgname
 
     setImageData $imgname $path
     setImageFile $imgname [relpath $file]
@@ -571,9 +569,9 @@ proc random { range start } {
 #   Select image file and configure the current canvas background.
 #****
 proc changeBkgPopup {} {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     global wi canvasBkgMode chbgdialog cc alignCanvasBkg bgsrcfile winOS hasIM
 
+    set curcanvas [getFromRunning "curcanvas"]
     set cc $curcanvas
     set chbgdialog .chbgDialog
     catch { destroy $chbgdialog }
@@ -1038,10 +1036,9 @@ proc printCanvas { w } {
 #   * entry -- file name
 #****
 proc printCanvasToFile { w entry } {
-    upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global printFileType
+
+    set zoom [getFromRunning "zoom"]
 
     if { [string match -nocase *.* [$entry get]] != 1 } {
 	set box "[$entry get]\.$printFileType"
@@ -1054,7 +1051,7 @@ proc printCanvasToFile { w entry } {
 	return
     }
 
-    set start_canvas $curcanvas
+    set start_canvas [getFromRunning "curcanvas"]
     if { $printFileType == "ps" } {
 	set psname [$entry get]
     } else {
@@ -1063,12 +1060,12 @@ proc printCanvasToFile { w entry } {
 	set psname "$name.ps"
     }
 
-    foreach canvas_id $canvas_list {
-	set curcanvas $canvas_id
+    foreach canvas_id [getFromRunning "canvas_list"] {
+	setToRunning "curcanvas" $canvas_id
 	switchCanvas none
 
-	set sizex [expr {[lindex [getCanvasSize $curcanvas] 0]*$zoom}]
-	set sizey [expr {[lindex [getCanvasSize $curcanvas] 1]*$zoom}]
+	set sizex [expr {[lindex [getCanvasSize $canvas_id] 0]*$zoom}]
+	set sizey [expr {[lindex [getCanvasSize $canvas_id] 1]*$zoom}]
 
 	set p [open "$psname" a+]
 	puts $p [.panwin.f1.c postscript -height $sizey -width $sizex -x 0 -y 0 -rotate yes -pageheight 297m -pagewidth 210m]
@@ -1080,7 +1077,7 @@ proc printCanvasToFile { w entry } {
 	exec rm $psname
     }
 
-    set curcanvas $start_canvas
+    setToRunning "curcanvas" $start_canvas
     switchCanvas none
     destroy $w
 }
@@ -1094,8 +1091,6 @@ proc printCanvasToFile { w entry } {
 #   Tk widget for renaming the canvas.
 #****
 proc renameCanvasPopup {} {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-
     set w .entry1
     catch { destroy $w }
     toplevel $w -takefocus 1
@@ -1122,7 +1117,7 @@ proc renameCanvasPopup {} {
     bind $w <Key-Return> "renameCanvasApply $w"
 
     ttk::entry $w.renameframe.e1
-    $w.renameframe.e1 insert 0 [getCanvasName $curcanvas]
+    $w.renameframe.e1 insert 0 [getCanvasName [getFromRunning "curcanvas"]]
     pack $w.renameframe.e1 -side top -pady 5 -padx 10 -fill x
 }
 
@@ -1135,8 +1130,6 @@ proc renameCanvasPopup {} {
 #   Creates a popup dialog box for resizing canvas.
 #****
 proc resizeCanvasPopup {} {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-
     set w .entry1
     catch { destroy $w }
     toplevel $w -takefocus 1
@@ -1144,6 +1137,8 @@ proc resizeCanvasPopup {} {
     wm resizable $w 0 0
     wm title $w "Canvas resize"
     wm iconname $w "Canvas resize"
+
+    set curcanvas [getFromRunning "curcanvas"]
 
     set minWidth [lindex [getMostDistantNodeCoordinates] 0]
     set minHeight [lindex [getMostDistantNodeCoordinates] 1]
@@ -1191,8 +1186,9 @@ proc resizeCanvasPopup {} {
 #   * w -- tk widget (rename canvas popup dialog box)
 #****
 proc renameCanvasApply { w } {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     global changed
+
+    set curcanvas [getFromRunning "curcanvas"]
 
     set newname [$w.renameframe.e1 get]
     destroy $w
@@ -1217,8 +1213,9 @@ proc renameCanvasApply { w } {
 #   * w -- tk widget (resize canvas popup dialog box)
 #****
 proc resizeCanvasApply { w } {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     global changed
+
+    set curcanvas [getFromRunning "curcanvas"]
 
     set x [$w.resizeframe.size.x get]
     set y [$w.resizeframe.size.y get]

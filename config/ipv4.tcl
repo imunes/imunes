@@ -253,7 +253,6 @@ proc findFreeIPv4Net { mask { ipv4_used_list "" } } {
 #     address will be assigned
 #****
 proc autoIPv4addr { node_id iface_id { use_autorenumbered "" } } {
-    upvar 0 ::cf::[set ::curcfg]::IPv4UsedList IPv4UsedList
     global IPv4autoAssign
 
     if { ! $IPv4autoAssign } {
@@ -303,11 +302,11 @@ proc autoIPv4addr { node_id iface_id { use_autorenumbered "" } } {
     if { $peer_ip4addrs != "" && $change_subnet4 == 0 } {
 	set addr [nextFreeIP4Addr [lindex $peer_ip4addrs 0] [$node_type.IPAddrRange] $peer_ip4addrs]
     } else {
-	set addr [getNextIPv4addr $node_type $IPv4UsedList]
+	set addr [getNextIPv4addr $node_type [getFromRunning "ipv4_used_list"]]
     }
 
     setIfcIPv4addrs $node_id $iface_id $addr
-    lappend IPv4UsedList $addr
+    lappendToRunning "ipv4_used_list" $addr
 }
 
 proc getNextIPv4addr { node_type existing_addrs } {

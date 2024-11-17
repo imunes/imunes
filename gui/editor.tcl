@@ -46,11 +46,9 @@
 #   undolog array and updates the undolevel variable.
 #****
 proc updateUndoLog {} {
-    upvar 0 ::cf::[set ::curcfg]::undolevel undolevel
-    upvar 0 ::cf::[set ::curcfg]::redolevel redolevel
-    upvar 0 ::cf::[set ::curcfg]::undolog undolog
-    upvar 0 ::cf::[set ::curcfg]::etchosts etchosts
     global changed showTree
+
+    set undolevel [getFromRunning "undolevel"]
 
     if { $changed } {
 	global t_undolog
@@ -58,18 +56,18 @@ proc updateUndoLog {} {
 	set t_undolog ""
 	dumpCfg string t_undolog
 
-	incr undolevel
+	setToRunning "undolevel" [incr undolevel]
 	if { $undolevel == 1 } {
 	    .menubar.edit entryconfigure "Undo" -state normal
 	}
 
-	set undolog($undolevel) $t_undolog
-	set redolevel $undolevel
+	saveToUndoLevel $undolevel $t_undolog
+	setToRunning "redolevel" $undolevel
 	set changed 0
 
 	# When some changes are made in the topology, new /etc/hosts files
 	# should be generated.
-	set etchosts ""
+	setToRunning "etc_hosts" ""
 	if { $showTree } {
 	    refreshTopologyTree
 	}
@@ -86,21 +84,19 @@ proc updateUndoLog {} {
 #   configuration. Reduces the value of undolevel.
 #****
 proc undo {} {
-    upvar 0 ::cf::[set ::curcfg]::undolevel undolevel
-    upvar 0 ::cf::[set ::curcfg]::undolog undolog
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global changed
 
-    if { $oper_mode == "edit" && $undolevel > 0 } {
+    set undolevel [getFromRunning "undolevel"]
+    if { [getFromRunning "oper_mode"] == "edit" && $undolevel > 0 } {
 	.menubar.edit entryconfigure "Redo" -state normal
-	incr undolevel -1
+	setToRunning "undolevel" [incr undolevel -1]
 	if { $undolevel == 0 } {
 	    .menubar.edit entryconfigure "Undo" -state disabled
 	}
 
 	.panwin.f1.c config -cursor watch
 
-	loadCfgLegacy $undolog($undolevel)
+	jumpToUndoLevel $undolevel
 	switchCanvas none
     }
 
@@ -121,14 +117,12 @@ proc undo {} {
 #   of undolevel.
 #****
 proc redo {} {
-    upvar 0 ::cf::[set ::curcfg]::undolevel undolevel
-    upvar 0 ::cf::[set ::curcfg]::redolevel redolevel
-    upvar 0 ::cf::[set ::curcfg]::undolog undolog
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global changed
 
-    if { $oper_mode == "edit" && $redolevel > $undolevel } {
-	incr undolevel
+    set undolevel [getFromRunning "undolevel"]
+    set redolevel [getFromRunning "redolevel"]
+    if { [getFromRunning "oper_mode"] == "edit" && $redolevel > $undolevel } {
+	setToRunning "undolevel" [incr undolevel]
 	if { $undolevel == 1 } {
 	    .menubar.edit entryconfigure "Undo" -state normal
 	}
@@ -139,7 +133,7 @@ proc redo {} {
 
 	.panwin.f1.c config -cursor watch
 
-	loadCfgLegacy $undolog($undolevel)
+	jumpToUndoLevel $undolevel
 	switchCanvas none
     }
 
@@ -311,9 +305,6 @@ proc focusAndFlash { W { count 9 } } {
 #   * y -- zoom y coordinate
 #****
 proc setZoom { x y } {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
-
     set w .entry1
     catch { destroy $w }
     toplevel $w -takefocus 1
@@ -348,7 +339,7 @@ proc setZoom { x y } {
     bind $w <Key-Return> "setZoomApply $w"
 
     ttk::entry $w.setzoom.e1
-    $w.setzoom.e1 insert 0 [expr {int($zoom * 100)}]
+    $w.setzoom.e1 insert 0 [expr {int([getFromRunning "zoom"] * 100)}]
     pack $w.setzoom.e1 -side top -pady 5 -padx 10 -fill x
 }
 
@@ -364,11 +355,9 @@ proc setZoom { x y } {
 #   * w -- tk widget (set zoom popup dialog box)
 #****
 proc setZoomApply { w } {
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
-
     set newzoom [expr [$w.setzoom.e1 get] / 100.0]
-    if { $newzoom != $zoom } {
-	set zoom $newzoom
+    if { $newzoom != [getFromRunning "zoom"] } {
+	setToRunning "zoom" $newzoom
 	redrawAll
     }
 
@@ -387,8 +376,6 @@ proc setZoomApply { w } {
 #   * y -- zoom y coordinate
 #****
 proc selectZoom { x y } {
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
-
     global zoom_stops
 
     set values {}
@@ -426,7 +413,7 @@ proc selectZoom { x y } {
     bind $w <Key-Return> "selectZoomApply $w"
 
     ttk::combobox $w.selectzoom.e1 -values $values
-    $w.selectzoom.e1 insert 0 [expr {int($zoom * 100)}]
+    $w.selectzoom.e1 insert 0 [expr {int([getFromRunning "zoom"] * 100)}]
     pack $w.selectzoom.e1 -side top -pady 5 -padx 10 -fill x
 
     update
@@ -446,7 +433,6 @@ proc selectZoom { x y } {
 #   * w -- tk widget (select zoom popup dialog box)
 #****
 proc selectZoomApply { w } {
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global hasIM changed
 
     set tempzoom [$w.selectzoom.e1 get]
@@ -468,8 +454,8 @@ proc selectZoomApply { w } {
     }
 
     set newzoom [ expr $tempzoom / 100.0]
-    if { $newzoom != $zoom } {
-	set zoom $newzoom
+    if { $newzoom != [getFromRunning "zoom"] } {
+	setToRunning "zoom" $newzoom
 
 	redrawAll
 	set changed 1
@@ -491,12 +477,11 @@ proc selectZoomApply { w } {
 #   * wi -- widget
 #****
 proc routerDefaultsApply { wi } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global changed router_model routerDefaultsModel router_ConfigModel
     global routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable
     global rdconfig
 
+    set oper_mode [getFromRunning "oper_mode"]
     lset rdconfig 0 $routerRipEnable
     lset rdconfig 1 $routerRipngEnable
     lset rdconfig 2 $routerOspfEnable
@@ -530,7 +515,7 @@ proc routerDefaultsApply { wi } {
 	    }
 	}
     } else {
-	foreach node $node_list {
+	foreach node [getFromRunning "node_list"] {
 	    if { $oper_mode == "edit" && [getNodeType $node] == "router" } {
 		setNodeModel $node $router_model
 		set router_ConfigModel $router_model
@@ -629,10 +614,9 @@ proc removeCustomIcon { node } {
 #   Returns the most distant node coordinates.
 #****
 proc getMostDistantNodeCoordinates {} {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
     set x 0
     set y 0
-    foreach node $node_list {
+    foreach node [getFromRunning "node_list"] {
 	set coords [getNodeCoords $node]
 	if { [lindex $coords 0] > $x } {
 	    set x [lindex $coords 0]
@@ -657,8 +641,6 @@ proc getMostDistantNodeCoordinates {} {
 #   Creates the tree with all network elements form the topology.
 #****
 proc topologyElementsTree {} {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
     global showTree
 
     set f .panwin.f2
@@ -706,7 +688,7 @@ proc topologyElementsTree {} {
 	$f.tree insert {} end -id nodes -text "Nodes" -open true -tags nodes
 	$f.tree focus nodes
 	$f.tree selection set nodes
-	foreach node [lsort -dictionary $node_list] {
+	foreach node [lsort -dictionary [getFromRunning "node_list"]] {
 	    set type [getNodeType $node]
 	    if { $type != "pseudo" } {
 		$f.tree insert nodes end -id $node_id -text "[getNodeName $node_id]" -open false -tags $node_id
@@ -728,7 +710,7 @@ proc topologyElementsTree {} {
 
 	set linktags ""
 	$f.tree insert {} end -id links -text "Links" -open false -tags links
-	foreach link [lsort -dictionary $link_list] {
+	foreach link [lsort -dictionary [getFromRunning "link_list"]] {
 	    set n0 [lindex [getLinkPeers $link] 0]
 	    set n1 [lindex [getLinkPeers $link] 1]
 	    set name0 [getNodeName $n0]
@@ -884,9 +866,7 @@ proc bindEventsToTree {} {
 #   Selects icon of the node selected in the topology tree.
 #****
 proc selectNodeFromTree { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-
-    set curcanvas [getNodeCanvas $node_id]
+    setToRunning "curcanvas" [getNodeCanvas $node_id]
     switchCanvas none
 
     .panwin.f1.c dtag node selected
@@ -906,11 +886,10 @@ proc selectNodeFromTree { node_id } {
 #   of the link selected in the topology tree.
 #****
 proc selectLinkPeersFromTree { l } {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     set n0 [lindex [getLinkPeers $l] 0]
     set n1 [lindex [getLinkPeers $l] 1]
     set canvas [getNodeCanvas $n0]
-    set curcanvas $canvas
+    setToRunning "curcanvas" $canvas
     switchCanvas none
     .panwin.f1.c dtag node selected
     .panwin.f1.c delete -withtags selectmark
@@ -929,8 +908,6 @@ proc selectLinkPeersFromTree { l } {
 #   Refreshes the topology tree.
 #****
 proc refreshTopologyTree {} {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
     global nodetags linktags
 
     set f .panwin.f2
@@ -942,7 +919,7 @@ proc refreshTopologyTree {} {
 
     set nodetags ""
     $f.tree insert {} end -id nodes -text "Nodes" -open true -tags nodes
-    foreach node [lsort -dictionary $node_list] {
+    foreach node [lsort -dictionary [getFromRunning "node_list"]] {
 	set type [getNodeType $node]
 	if { $type != "pseudo" } {
 	    $f.tree insert nodes end -id $node -text "[getNodeName $node]" -tags $node
@@ -961,7 +938,7 @@ proc refreshTopologyTree {} {
 
     set linktags ""
     $f.tree insert {} end -id links -text "Links" -open false -tags links
-    foreach link [lsort -dictionary $link_list] {
+    foreach link [lsort -dictionary [getFromRunning "link_list"]] {
 	set n0 [lindex [getLinkPeers $link] 0]
 	set n1 [lindex [getLinkPeers $link] 1]
 	set name0 [getNodeName $n0]
