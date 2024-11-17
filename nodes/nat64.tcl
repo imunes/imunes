@@ -132,9 +132,9 @@ proc $MODULE.virtlayer {} {
 proc $MODULE.generateConfig { node_id } {
     set cfg [router.frr.generateConfig $node_id]
 
+    set eid [getFromRunning "eid"]
     global nat64ifc_$eid.$node_id
 
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     if { [info exists nat64ifc_$eid.$node_id] == 0 } {
 	set nat64ifc_$eid.$node_id "tun0"
     }

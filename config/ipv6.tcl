@@ -80,19 +80,20 @@ proc IPv6AddrApply { w } {
 #   * ipnet -- returns the free IPv6 network address in the form "a $i".
 #****
 proc findFreeIPv6Net { mask } {
-    upvar 0 ::cf::[set ::curcfg]::IPv6UsedList IPv6UsedList
     global ipv6
 
-    if { $IPv6UsedList == "" } {
+    set ipv6_used_list [getFromRunning "ipv6_used_list"]
+    if { $ipv6_used_list == {} } {
 	set defip6net [ip::contract [ip::prefix $ipv6]]
 	set testnet [ip::contract "[string trimright $defip6net :]::"]
 
 	return $testnet
     } else {
 	set defip6net [ip::contract [ip::prefix $ipv6]]
+	set subnets [lsort -unique [lmap ip $ipv6_used_list {ip::contract [ip::prefix $ip]}]]
 	for { set i 0 } { $i <= 65535 } { incr i } {
 	    set testnet [ip::contract "[string trimright $defip6net :]:[format %x $i]::"]
-	    if { $testnet ni $IPv6UsedList } {
+	    if { $testnet ni $subnets } {
 		return $testnet
 	    }
 	}
@@ -114,7 +115,6 @@ proc findFreeIPv6Net { mask } {
 #     address will be assigned
 #****
 proc autoIPv6addr { node_id iface_id } {
-    upvar 0 ::cf::[set ::curcfg]::IPv6UsedList IPv6UsedList
     global IPv6autoAssign
 
     if { ! $IPv6autoAssign } {
@@ -166,7 +166,7 @@ proc autoIPv6addr { node_id iface_id } {
 	setIfcIPv6addr $node_id $iface_id $ipaddr
     } else {
 	setIfcIPv6addr $node_id $iface_id "[findFreeIPv6Net 64][format %x $targetbyte]/64"
-	lappend IPv6UsedList [ip::contract [ip::prefix [getIfcIPv6addr $node_id $iface_id]]]
+    lappendToRunning "ipv6_used_list" [getIfcIPv6addr $node_id $iface_id]
     }
 }
 

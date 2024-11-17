@@ -287,11 +287,9 @@ proc typemodel { node_id } {
 }
 
 proc getNodeDir { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
     set node_dir [getNodeCustomImage $node_id]
     if { $node_dir == "" } {
-	set node_dir [getVrootDir]/$eid/$node_id
+	set node_dir [getVrootDir]/[getFromRunning "eid"]/$node_id
     }
 
     return $node_dir
@@ -2345,7 +2343,6 @@ proc hasIPv6Addr { node_id } {
 #   * node_id -- node id
 #****
 proc removeNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global nodeNamingBase
 
@@ -2359,7 +2356,7 @@ proc removeNode { node_id } {
 	removeLink $link_id
     }
 
-    set node_list [removeFromList $node_list $node_id]
+    setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $node_id]
 
     set node_type [getNodeType $node_id]
     if { $node_type in [array names nodeNamingBase] } {
@@ -2459,7 +2456,6 @@ proc newLogIfc { type node_id } {
 #   * node_id -- node id of a new node of the specified type
 #****
 proc newNode { type } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
     global viewid
     catch { unset viewid }
 
@@ -2467,7 +2463,7 @@ proc newNode { type } {
     upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     set $node_id {}
     lappend $node_id "type $type"
-    lappend node_list $node_id
+    lappendToRunning "node_list" $node_id
 
     if { [info procs $type.confNewNode] == "$type.confNewNode" } {
 	$type.confNewNode $node_id
@@ -3297,9 +3293,8 @@ proc nodeCfggenRouteIPv6 { node_id } {
 #   * list -- list of all nodes of the type
 #****
 proc getAllNodesType { type } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
     set type_list ""
-    foreach node_id $node_list {
+    foreach node_id [getFromRunning "node_list"] {
 	if { [string match "$type*" [typemodel $node_id]] } {
 	    lappend type_list $node_id
 	}

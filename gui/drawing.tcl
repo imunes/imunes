@@ -7,13 +7,11 @@
 #   Redraws all the objects on the current canvas.
 #****
 proc redrawAll {} {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-    upvar 0 ::cf::[set ::curcfg]::annotation_list annotation_list
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global background sizex sizey grid
     global show_background_images show_annotations show_grid bkgImage
+
+    set zoom [getFromRunning "zoom"]
+    set curcanvas [getFromRunning "curcanvas"]
 
     .bottom.zoom config -text "zoom [expr {int($zoom * 100)}]%"
     set e_sizex [expr {int($sizex * $zoom)}]
@@ -41,7 +39,7 @@ proc redrawAll {} {
     }
 
     if { $show_annotations == 1 } {
-	foreach annotation_id $annotation_list {
+	foreach annotation_id [getFromRunning "annotation_list"] {
 	    if { [getAnnotationCanvas $annotation_id] == $curcanvas } {
 		drawAnnotation $annotation_id
 	    }
@@ -78,12 +76,13 @@ proc redrawAll {} {
 
     .panwin.f1.c lower -withtags background
 
-    foreach node_id $node_list {
+    foreach node_id [getFromRunning "node_list"] {
 	if { [getNodeCanvas $node_id] == $curcanvas } {
 	    drawNode $node_id
 	}
     }
-    foreach link_id $link_list {
+
+    foreach link_id [getFromRunning "link_list"] {
 	set nodes [getLinkPeers $link_id]
 	if { [getNodeCanvas [lindex $nodes 0]] != $curcanvas ||
 	    [getNodeCanvas [lindex $nodes 1]] != $curcanvas } {
@@ -115,10 +114,9 @@ proc redrawAll {} {
 #   * node_id -- node id
 #****
 proc drawNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global show_node_labels pseudo
 
+    set zoom [getFromRunning "zoom"]
     set type [getNodeType $node_id]
     lassign [getNodeCoords $node_id] x y
     set x [expr {$x * $zoom}]
@@ -170,7 +168,7 @@ proc drawNode { node_id } {
 	set pnode [getIfcPeer [getNodeMirror $node_id] "0"]
 	set pcanvas [getNodeCanvas $pnode]
 	set iface_id [ifcByPeer $pnode [getNodeMirror $node_id]]
-	if { $pcanvas != $curcanvas } {
+	if { $pcanvas != [getFromRunning "curcanvas"] } {
 	    set label [.panwin.f1.c create text $x $y -fill blue \
 		-text "[getNodeName $pnode]:$iface_id
 @[getCanvasName $pcanvas]" \
@@ -255,7 +253,7 @@ proc drawLink { link_id } {
 #   * y2 -- Y coordinate of point2
 #****
 proc calcAnglePoints { x1 y1 x2 y2 } {
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
+    set zoom [getFromRunning "zoom"]
     set x1 [expr $x1*$zoom]
     set y1 [expr $y1*$zoom]
     set x2 [expr $x2*$zoom]
@@ -421,10 +419,9 @@ proc updateLinkLabel { link_id } {
 #   Redraws all links on the current canvas.
 #****
 proc redrawAllLinks {} {
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
+    set curcanvas [getFromRunning "curcanvas"]
 
-    foreach link_id $link_list {
+    foreach link_id [getFromRunning "link_list"] {
 	lassign [getLinkPeers $link_id] node1_id node2_id
 	if { [getNodeCanvas $node1_id] != $curcanvas ||
 	    [getNodeCanvas $node2_id] != $curcanvas } {
@@ -646,7 +643,6 @@ proc raiseAll { c } {
 #   Creates a popup dialog to change an icon.
 #****
 proc changeIconPopup {} {
-    upvar 0 ::cf::[set ::curcfg]::image_list image_list
     global chicondialog alignCanvasBkg iconsrcfile wi
     global ROOTDIR LIBDIR
 
@@ -717,6 +713,7 @@ proc changeIconPopup {} {
 	   set iconsrcfile \"$file\""
     }
 
+    set image_list [getFromRunning "image_list"]
     foreach img $image_list {
 	if { $img != "" && [string match "*img*" $img] == 1 && \
 	  [getImageType $img] == "customIcon" } {
@@ -938,8 +935,7 @@ proc popupIconApply { dialog image } {
 #   Updates custom icon references.
 #****
 proc updateCustomIconReferences {} {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    foreach node_id $node_list {
+    foreach node_id [getFromRunning "node_list"] {
 	set icon [getCustomIcon $node_id]
 	if { $icon != "" } {
 	    setImageReference $icon $node_id
@@ -976,18 +972,16 @@ proc updateIconSize {} {
 #   * y -- y coordinate
 #****
 proc selectZoomPopupMenu { x y } {
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global zoom_stops changed
     .button3menu delete 0 end
 
-    set sel_zoom $zoom
+    set sel_zoom [getFromRunning "zoom"]
 
     foreach z $zoom_stops {
 	.button3menu add radiobutton -label [expr {int($z*100)}] \
 	  -variable sel_zoom -value $z \
 	  -command {
-	      upvar 0 ::cf::[set ::curcfg]::zoom zoom
-	      set zoom $sel_zoom
+	      setToRunning "zoom" $sel_zoom
 
 	      redrawAll
 	      set changed 1
@@ -1053,10 +1047,10 @@ proc align2grid {} {
 #   rearranged.
 #****
 proc rearrange { mode } {
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global autorearrange_enabled sizex sizey
+
+    set curcanvas [getFromRunning "curcanvas"]
+    set zoom [getFromRunning "zoom"]
 
     set autorearrange_enabled 1
     .menubar.tools entryconfigure "Auto rearrange all" -state disabled
@@ -1144,7 +1138,7 @@ proc rearrange { mode } {
 		set fy_t($other) [expr {$fy_t($other) - $p_fy}]
 	    }
 
-	    foreach link_id $link_list {
+	    foreach link_id [getFromRunning "link_list"] {
 		set nodes [getLinkPeers $link_id]
 		if { [getNodeCanvas [lindex $nodes 0]] != $curcanvas ||
 		  [getNodeCanvas [lindex $nodes 1]] != $curcanvas ||
@@ -1237,9 +1231,11 @@ proc rearrange { mode } {
 #   previus, next -- next, first -- first, last -- last.
 #****
 proc switchCanvas { direction } {
-    upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     global sizex sizey
+
+    set curcanvas [getFromRunning "curcanvas"]
+    set canvas_list [getFromRunning "canvas_list"]
+
     if { $curcanvas ni $canvas_list } {
 	set direction prev
     }
@@ -1269,6 +1265,8 @@ proc switchCanvas { direction } {
 	    set curcanvas [lindex $canvas_list end]
 	}
     }
+
+    setToRunning "curcanvas" $curcanvas
 
     .panwin.f1.hframe.t delete all
     set x 0
@@ -1322,7 +1320,6 @@ proc switchCanvas { direction } {
 #   different for edit and exec mode.
 #****
 proc animate {} {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global animatephase
 
     catch { .panwin.f1.c itemconfigure "selectmark || selectbox" -dashoffset $animatephase } err
@@ -1337,7 +1334,7 @@ proc animate {} {
 	set animatephase 0
     }
 
-    if { $oper_mode == "edit" } {
+    if { [getFromRunning "oper_mode"] == "edit" } {
 	after 250 animate
     } else {
 	after 1500 animate
@@ -1355,15 +1352,15 @@ proc animate {} {
 #   * dir -- zoom direction (up or down)
 #****
 proc zoom { dir } {
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global zoom_stops
 
+    set zoom [getFromRunning "zoom"]
     set minzoom [lindex $zoom_stops 0]
     set maxzoom [lindex $zoom_stops [expr [llength $zoom_stops] - 1]]
     switch -exact -- $dir {
 	"down" {
 	    if { $zoom > $maxzoom } {
-		set zoom $maxzoom
+		setToRunning "zoom" $maxzoom
 	    } elseif { $zoom < $minzoom } {
 		; # leave it unchanged
 	    } else {
@@ -1375,13 +1372,13 @@ proc zoom { dir } {
 			set newzoom $z
 		    }
 		}
-		set zoom $newzoom
+		setToRunning "zoom" $newzoom
 	    }
 	    redrawAll
 	}
 	"up" {
 	    if { $zoom < $minzoom } {
-		set zoom $minzoom
+		setToRunning "zoom" $minzoom
 	    } elseif { $zoom > $maxzoom } {
 		; # leave it unchanged
 	    } else {
@@ -1391,13 +1388,13 @@ proc zoom { dir } {
 			break
 		    }
 		}
-		set zoom $newzoom
+		setToRunning "zoom" $newzoom
 	    }
 	    redrawAll
 	}
 	default {
 	    if { $i < [expr [llength $zoom_stops] - 1] } {
-		set zoom [lindex $zoom_stops [expr $i + 1]]
+		setToRunning "zoom" [lindex $zoom_stops [expr $i + 1]]
 		redrawAll
 	    }
 	}

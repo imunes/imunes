@@ -133,8 +133,6 @@ proc bin2dec { bin } {
 #   * ipnet -- returns the free IPv4 network address in the form a.b.c.d
 #****
 proc findFreeIPv4Net { mask } {
-    upvar 0 ::cf::[set ::curcfg]::IPv4UsedList IPv4UsedList
-
     global ipv4
     global numbits
 
@@ -170,7 +168,7 @@ proc findFreeIPv4Net { mask } {
 
     set ipnets {}
 
-    foreach addr $IPv4UsedList {
+    foreach addr [getFromRunning "ipv4_used_list"] {
 	if { $numbits <= 8 }  {
 	    set ipnet [lindex [split $addr .] 0]
 	} elseif { $numbits > 8 && $numbits <=16 } {
@@ -256,7 +254,6 @@ proc findFreeIPv4Net { mask } {
 #     address will be assigned
 #****
 proc autoIPv4addr { node_id iface_id } {
-    upvar 0 ::cf::[set ::curcfg]::IPv4UsedList IPv4UsedList
     global IPv4autoAssign
 
     if { ! $IPv4autoAssign } {
@@ -325,7 +322,7 @@ proc autoIPv4addr { node_id iface_id } {
         }
     }
 
-    lappend IPv4UsedList [getIfcIPv4addr $node_id $iface_id]
+    lappendToRunning "ipv4_used_list" [getIfcIPv4addr $node_id $iface_id]
 }
 
 #****f* ipv4.tcl/nextFreeIP4Addr

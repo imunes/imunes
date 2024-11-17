@@ -109,13 +109,11 @@ proc pipesCreate {} {
 }
 
 proc pipesExecLog { line args } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
     if { $line == "" } {
 	return
     }
 
-    set logfile "/tmp/$eid.log"
+    set logfile "/tmp/[getFromRunning "eid"].log"
 
     pipesExec "printf \"RUN: \" >> $logfile ; cat >> $logfile 2>&1 <<\"IMUNESEOF\"\n$line\nIMUNESEOF" "hold"
     pipesExec "$line >> $logfile 2>&1" "$args"

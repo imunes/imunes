@@ -274,9 +274,9 @@ proc loadCfgLegacy { cfg } {
     upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
     upvar 0 ::cf::[set ::curcfg]::zoom zoom
     upvar 0 ::cf::[set ::curcfg]::image_list image_list
-    upvar 0 ::cf::[set ::curcfg]::IPv6UsedList IPv6UsedList
-    upvar 0 ::cf::[set ::curcfg]::IPv4UsedList IPv4UsedList
-    upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
+    upvar 0 ::cf::[set ::curcfg]::ipv6_used_list ipv6_used_list
+    upvar 0 ::cf::[set ::curcfg]::ipv4_used_list ipv4_used_list
+    upvar 0 ::cf::[set ::curcfg]::mac_used_list mac_used_list
     upvar 0 ::cf::[set ::curcfg]::etchosts etchosts
     global show_interface_names show_node_labels show_link_labels
     global show_interface_ipv4 show_interface_ipv6
@@ -736,9 +736,9 @@ proc loadCfgLegacy { cfg } {
     #
     # Hack for comaptibility with old format files (no lo0 on nodes)
     #
-    set IPv6UsedList ""
-    set IPv4UsedList ""
-    set MACUsedList ""
+    set ipv6_used_list {}
+    set ipv4_used_list {}
+    set mac_used_list {}
     foreach node $node_list {
 	set node_type [typemodel $node]
 	if { $node_type in "extelem" } {
@@ -765,13 +765,17 @@ proc loadCfgLegacy { cfg } {
 	# Speeding up auto renumbering of MAC, IPv4 and IPv6 addresses by remembering
 	# used addresses in lists.
 	foreach iface [ifcList $node] {
-	    set addr [getIfcIPv6addr $node $iface]
-	    if { $addr != "" } { lappend IPv6UsedList [ip::contract [ip::prefix $addr]] }
+	    lassign [split [getIfcIPv6addr $node $iface] "/"] addr mask
+	    if { $addr != "" } { lappend ipv6_used_list "[ip::contract [ip::prefix $addr]]/$mask" }
 	    set addr [getIfcIPv4addr $node $iface]
-	    if { $addr != "" } { lappend IPv4UsedList $addr }
-	    lappend MACUsedList [getIfcMACaddr $node $iface]
+	    if { $addr != "" } { lappend ipv4_used_list $addr }
+	    set addr [getIfcMACaddr $node $iface]
+	    if { $addr != "" } { lappend mac_used_list [getIfcMACaddr $node $iface] }
 	}
     }
+    setToRunning "ipv4_used_list" $ipv4_used_list
+    setToRunning "ipv6_used_list" $ipv6_used_list
+    setToRunning "mac_used_list" $mac_used_list
 }
 
 #****f* nodecfg.tcl/newObjectId
@@ -824,4 +828,88 @@ proc newObjectId { elem_list prefix } {
     }
 
     return $prefix$mid
+}
+
+#########################################################################
+
+proc getWithDefault { default_value dictionary args } {
+    try {
+	return [dict get $dictionary {*}$args]
+    } on error {} {
+	return $default_value
+    }
+}
+
+proc dictGet { dictionary args } {
+    try {
+	dict get $dictionary {*}$args
+    } on error {} {
+	return {}
+    } on ok retv {
+	return $retv
+    }
+}
+
+proc dictSet { dictionary args } {
+    try {
+	dict set dictionary {*}$args
+    } on error {} {
+	return $dictionary
+    } on ok retv {
+	return $retv
+    }
+}
+
+proc dictLappend { dictionary args } {
+    try {
+	dict lappend dictionary {*}$args
+    } on error {} {
+	return $dictionary
+    } on ok retv {
+	return $retv
+    }
+}
+
+proc dictUnset { dictionary args } {
+    try {
+	dict unset dictionary {*}$args
+    } on error {} {
+	return $dictionary
+    } on ok retv {
+	return $retv
+    }
+}
+#########################################################################
+
+proc getFromRunning { key { config "" } } {
+    if { $config == "" } {
+	set config [set ::curcfg]
+    }
+    upvar 0 ::cf::${config}::dict_run dict_run
+
+    return [dictGet $dict_run $key]
+}
+
+proc setToRunning { key value } {
+    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+
+    set dict_run [dictSet $dict_run $key $value]
+
+    return $dict_run
+}
+
+proc unsetRunning { key } {
+    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+
+    set dict_run [dictUnset $dict_run $key]
+
+    return $dict_run
+}
+
+proc lappendToRunning { key value } {
+    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+
+    set dict_run [dictLappend $dict_run $key $value]
+
+    return $dict_run
 }

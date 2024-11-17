@@ -58,13 +58,12 @@ proc genExperimentId {} {
 #   * returns 0 if everything is ok, otherwise it returns 1.
 #****
 proc checkExternalInterfaces {} {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
     global execMode isOSlinux
 
     set extifcs [getHostIfcList]
 
     set nodes_ifcpairs {}
-    foreach node $node_list {
+    foreach node [getFromRunning "node_list"] {
 	if { [getNodeType $node] == "rj45" } {
 	    lappend nodes_ifcpairs [list $node [list 0 [getNodeName $node]]]
 	} elseif { [getNodeType $node] == "extelem" } {
@@ -287,8 +286,7 @@ proc createExperimentScreenshot { eid } {
 #   Creates all needed files to run the experiments in batch mode.
 #****
 proc createExperimentFilesFromBatch {} {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-    createExperimentFiles $eid
+    createExperimentFiles [getFromRunning "eid"]
 }
 
 #****f* freebsd.tcl/l3node.nghook
@@ -500,10 +498,10 @@ proc nodeIpsecInit { node } {
 #   configuration the old one is removed (vimageCleanup procedure).
 #****
 proc deployCfg {} {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
+
+    set node_list [getFromRunning "node_list"]
+    set link_list [getFromRunning "link_list"]
 
     set progressbarCount 0
     set nodeCount [llength $node_list]
@@ -548,6 +546,7 @@ proc deployCfg {} {
     set maxProgressbasCount [expr {5*$allNodeCount + 1*$l2nodeCount + 5*$l3nodeCount + 2*$linkCount}]
 
     set w ""
+    set eid [getFromRunning "eid"]
     if { $execMode != "batch" } {
 	set w .startup
 	catch { destroy $w }
@@ -660,7 +659,6 @@ proc deployCfg {} {
 }
 
 proc prepareSystem {} {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global eid_base
     global execMode
 
@@ -680,6 +678,8 @@ proc prepareSystem {} {
 	}
     }
 
+    setToRunning "eid" $eid
+
     loadKernelModules
     prepareVirtualFS
     prepareDevfs
@@ -688,8 +688,9 @@ proc prepareSystem {} {
 }
 
 proc execute_nodesCreate { nodes nodeCount w } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
+
+    set eid [getFromRunning "eid"]
 
     set batchStep 0
     foreach node $nodes {
@@ -758,8 +759,9 @@ proc waitForInstantiateNodes { nodes nodeCount w } {
 }
 
 proc execute_nodesNamespaceSetup { nodes nodeCount w } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
+
+    set eid [getFromRunning "eid"]
 
     set batchStep 0
     foreach node $nodes {
@@ -828,8 +830,9 @@ proc waitForNamespaces { nodes nodes_count w } {
 }
 
 proc execute_nodesInitConfigure { nodes nodeCount w } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
+
+    set eid [getFromRunning "eid"]
 
     set batchStep 0
     foreach node $nodes {
@@ -898,8 +901,9 @@ proc waitForInitConf { nodes nodeCount w } {
 proc copyFilesToNodes { nodes nodeCount w } {}
 
 proc execute_nodesPhysIfacesCreate { nodes nodeCount w } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
+
+    set eid [getFromRunning "eid"]
 
     set batchStep 0
     foreach node $nodes {
@@ -1088,8 +1092,9 @@ proc configureLinks { links linkCount w } {
 }
 
 proc executeConfNodes { nodes nodeCount w } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
+
+    set eid [getFromRunning "eid"]
 
     set batchStep 0
     set subnet_gws {}
@@ -1196,7 +1201,6 @@ proc generateHostsFile { node_id } {
 }
 
 proc waitForConfStart { nodes nodeCount w } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set batchStep 0
@@ -1250,7 +1254,6 @@ proc finishExecuting { status msg w } {
 }
 
 proc checkForErrors { nodes nodeCount w } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set batchStep 0
@@ -1307,7 +1310,6 @@ proc checkForErrors { nodes nodeCount w } {
 #   * node -- node id
 #****
 proc startNodeFromMenu { node } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set progressbarCount 0

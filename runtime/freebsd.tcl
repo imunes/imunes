@@ -48,9 +48,8 @@ proc writeDataToNodeFile { node_id path data } {
 #   * returns the execution output
 #****
 proc execCmdNode { node_id cmd } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
+    catch { eval [concat "exec jexec " [getFromRunning "eid"].$node_id $cmd] } output
 
-    catch { eval [concat "exec jexec " $eid.$node_id $cmd] } output
     return $output
 }
 
@@ -66,9 +65,7 @@ proc execCmdNode { node_id cmd } {
 #   * cmd -- command to execute
 #****
 proc execCmdNodeBkg { node_id cmd } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    pipesExec "jexec $eid.$node_id sh -c '$cmd'" "hold"
+    pipesExec "jexec [getFromRunning "eid"].$node_id sh -c '$cmd'" "hold"
 }
 
 
@@ -111,9 +108,8 @@ proc checkForExternalApps { app_list } {
 #   * returns 0 if the applications exist, otherwise it returns 1.
 #****
 proc checkForApplications { node_id app_list } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     foreach app $app_list {
-	set status [ catch { exec jexec $eid.$node_id which $app } err ]
+	set status [ catch { exec jexec [getFromRunning "eid"].$node_id which $app } err ]
 	if { $status } {
 	    return 1
 	}
@@ -134,7 +130,7 @@ proc checkForApplications { node_id app_list } {
 #   * ifc -- virtual node interface
 #****
 proc startWiresharkOnNodeIfc { node_id ifc } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set eid [getFromRunning "eid"]
 
     if { [checkForExternalApps "startxcmd"] == 0 && \
 	[checkForApplications $node_id "wireshark"] == 0 } {
@@ -163,8 +159,7 @@ proc captureOnExtIfc { node_id command } {
 	return
     }
 
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
+    set eid [getFromRunning "eid"]
     if { $command == "tcpdump" } {
 	exec xterm -name imunes-terminal -T "Capturing $eid-$node_id" -e "tcpdump -ni $eid-$node_id" 2> /dev/null &
     } else {
@@ -183,13 +178,14 @@ proc captureOnExtIfc { node_id command } {
 #   * app -- application to start
 #****
 proc startXappOnNode { node_id app } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global debug
 
     if { [checkForExternalApps "socat"] != 0 } {
 	puts "To run X applications on the node, install socat on your host."
 	return
     }
+
+    set eid [getFromRunning "eid"]
 
     set logfile "/dev/null"
     if { $debug } {
@@ -229,9 +225,7 @@ proc startTcpdumpOnNodeIfc { node_id ifc } {
 #   * node_id -- node id of the node for which the check is performed.
 #****
 proc existingShells { shells node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    set cmd "jexec $eid.$node_id which $shells"
+    set cmd "jexec [getFromRunning "eid"].$node_id which $shells"
 
     set err [catch { eval exec $cmd } res]
     if  { $err } {
@@ -254,9 +248,7 @@ proc existingShells { shells node_id } {
 #   * cmd -- the path to the shell.
 #****
 proc spawnShell { node_id cmd } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    set jail_id $eid\.$node_id
+    set jail_id "[getFromRunning "eid"].$node_id"
 
     exec xterm -name imunes-terminal -sb -rightbar \
 	-T "IMUNES: [getNodeName $node_id] (console) [lindex [split $cmd /] end]" \
@@ -291,8 +283,8 @@ proc fetchRunningExperiments {} {
 #****
 proc allSnapshotsAvailable {} {
     global execMode vroot_unionfs
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
 
+    set node_list [getFromRunning "node_list"]
     set snapshots {}
     foreach node_id $node_list {
 	# TODO: create another field for other jail/docker arguments
@@ -699,8 +691,7 @@ proc vimageCleanup { eid } {
     }
 
     if { $execMode != "batch" } {
-	upvar 0 ::cf::[set ::curcfg]::node_list node_list
-	set nodeCount [llength $node_list]
+	set nodeCount [llength [getFromRunning "node_list"]]
 	set count [expr {$nodeCount}]
 	set w .termWait
 	catch { destroy $w }
@@ -932,9 +923,7 @@ proc killExtProcess { regex } {
 #   * list -- list in the form of {netgraph_node_name hook}
 #****
 proc getRunningNodeIfcList { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    catch { exec jexec $eid.$node_id ifconfig } full
+    catch { exec jexec [getFromRunning "eid"].$node_id ifconfig } full
     set lines [split $full "\n"]
 
     return $lines
@@ -1036,8 +1025,9 @@ proc getVrootDir {} {
 #   * node_id -- node id
 #****
 proc prepareFilesystemForNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global vroot_unionfs vroot_linprocfs devfs_number
+
+    set eid [getFromRunning "eid"]
 
     # Prepare a copy-on-write filesystem root
     if { $vroot_unionfs } {
@@ -1089,12 +1079,11 @@ proc prepareFilesystemForNode { node_id } {
 #   * node_id -- node id
 #****
 proc createNodeContainer { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global debug
 
     set node_dir [getNodeDir $node_id]
 
-    set jail_cmd "jail -c name=$eid.$node_id path=$node_dir securelevel=1 \
+    set jail_cmd "jail -c name=[getFromRunning "eid"].$node_id path=$node_dir securelevel=1 \
 	host.hostname=\"[getNodeName $node_id]\" vnet persist"
 
     if { $debug } {
@@ -1105,8 +1094,7 @@ proc createNodeContainer { node_id } {
 }
 
 proc isNodeStarted { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-    set jail_id "$eid.$node_id"
+    set jail_id "[getFromRunning "eid"].$node_id"
 
     try {
 	exec jls -j $jail_id
@@ -1132,9 +1120,9 @@ proc isNodeNamespaceCreated { node_id } {
 #   * node_id -- node id
 #****
 proc nodePhysIfacesCreate { node_id ifaces } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global ifc_dad_disable
 
+    set eid [getFromRunning "eid"]
     set jail_id "$eid.$node_id"
     # Create a vimage
     # Create "physical" network interfaces
@@ -1221,9 +1209,7 @@ proc destroyNamespace { ns } {}
 #   * node_id -- node id
 #****
 proc nodeLogIfacesCreate { node_id ifaces } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    set jail_id "$eid.$node_id"
+    set jail_id "[getFromRunning "eid"].$node_id"
 
     foreach iface_id $ifaces {
 	set iface_name $iface_id
@@ -1252,9 +1238,7 @@ proc nodeLogIfacesCreate { node_id ifaces } {
 #   * node_id -- node id
 #****
 proc configureICMPoptions { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    set jail_id "$eid.$node_id"
+    set jail_id "[getFromRunning "eid"].$node_id"
 
     pipesExec "jexec $jail_id sysctl net.inet.icmp.bmcastecho=1" "hold"
     pipesExec "jexec $jail_id sysctl net.inet.icmp.icmplim=0" "hold"
@@ -1265,8 +1249,7 @@ proc configureICMPoptions { node_id } {
 }
 
 proc isNodeInitNet { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-    set jail_id "$eid.$node_id"
+    set jail_id "[getFromRunning "eid"].$node_id"
 
     try {
        exec jexec $jail_id rm /tmp/init > /dev/null
@@ -1288,9 +1271,7 @@ proc isNodeInitNet { node_id } {
 #   * node_id -- node id
 #****
 proc startIfcsNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    set jail_id "$eid.$node_id"
+    set jail_id "[getFromRunning "eid"].$node_id"
     foreach ifc [allIfcList $node_id] {
 	set mtu [getIfcMTU $node_id $ifc]
 	if { [getLogIfcType $node_id $ifc] == "vlan" } {
@@ -1324,9 +1305,7 @@ proc startIfcsNode { node_id } {
 #   * node_id -- node id
 #****
 proc runConfOnNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    set jail_id "$eid.$node_id"
+    set jail_id "[getFromRunning "eid"].$node_id"
 
     if { [getCustomEnabled $node_id] == true } {
 	set selected [getCustomConfigSelected $node_id]
@@ -1366,8 +1345,7 @@ proc runConfOnNode { node_id } {
 }
 
 proc isNodeConfigured { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-    set jail_id "$eid.$node_id"
+    set jail_id "[getFromRunning "eid"].$node_id"
 
     if { [[typemodel $node_id].virtlayer] == "NATIVE" } {
 	return true
@@ -1383,8 +1361,7 @@ proc isNodeConfigured { node_id } {
 }
 
 proc isNodeError { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-    set jail_id "$eid.$node_id"
+    set jail_id "[getFromRunning "eid"].$node_id"
 
     if { [[typemodel $node_id].virtlayer] == "NATIVE" } {
 	return false
@@ -1549,13 +1526,12 @@ proc loadKernelModules {} {
 #   Prepares all necessary files for the virtual filesystem.
 #****
 proc prepareVirtualFS {} {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global vroot_unionfs
 
     if { $vroot_unionfs } {
 	# UNIONFS - anything to do here?
     } else {
-	exec zfs create vroot/$eid
+	exec zfs create vroot/[getFromRunning "eid"]
     }
 }
 
@@ -1625,11 +1601,8 @@ proc prepareDevfs { { force 0 } } {
 #   Creates a root jail (container) for the current experiment.
 #****
 proc createExperimentContainer {} {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
     # Create top-level vimage
-    exec jail -c name=$eid vnet children.max=[llength $node_list] persist
+    exec jail -c name=[getFromRunning "eid"] vnet children.max=[llength [getFromRunning "node_list"]] persist
 }
 
 #****f* freebsd.tcl/createDirectLinkBetween
@@ -1647,7 +1620,7 @@ proc createExperimentContainer {} {
 #   * iface2_id -- interface id on the second node
 #****
 proc createDirectLinkBetween { node1_id node2_id iface1_id iface2_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set eid [getFromRunning "eid"]
 
     set ngpeer1 \
 	[lindex [[typemodel $node1_id].nghook $eid $node1_id $iface1_id] 0]
@@ -1675,7 +1648,7 @@ proc createDirectLinkBetween { node1_id node2_id iface1_id iface2_id } {
 #   * iface2_id -- interface id on the second node
 #****
 proc createLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set eid [getFromRunning "eid"]
 
     set ngpeer1 \
 	[lindex [[typemodel $node1_id].nghook $eid $node1_id $iface1_id] 0]
@@ -1708,9 +1681,9 @@ proc createLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 #   * link_id -- link id
 #****
 proc configureLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global linkJitterConfiguration debug
 
+    set eid [getFromRunning "eid"]
     set bandwidth [expr [getLinkBandwidth $link_id] + 0]
     set delay [expr [getLinkDelay $link_id] + 0]
     set ber [expr [getLinkBER $link_id] + 0]
