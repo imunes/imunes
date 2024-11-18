@@ -562,13 +562,19 @@ proc createNodeContainer { node } {
         set vroot $VROOT_MASTER
     }
 
-    pipesExec "docker run --detach --init --tty \
+    set docker_cmd "docker run --detach --init --tty \
 	--privileged --cap-add=ALL --net=$network \
 	--name $node_id --hostname=[getNodeName $node] \
 	--volume /tmp/.X11-unix:/tmp/.X11-unix \
 	--sysctl net.ipv6.conf.all.disable_ipv6=0 \
 	--ulimit nofile=$ULIMIT_FILE --ulimit nproc=$ULIMIT_PROC \
-	$vroot &" "hold"
+	$vroot &"
+
+    if { $debug } {
+	puts "Node $node -> '$docker_cmd'"
+    }
+
+    pipesExec "$docker_cmd" "hold"
 }
 
 proc isNodeStarted { node } {
