@@ -1078,10 +1078,18 @@ proc prepareFilesystemForNode { node } {
 #****
 proc createNodeContainer { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
+    global debug
+
     set node_dir [getNodeDir $node]
 
-    pipesExec "jail -c name=$eid.$node path=$node_dir securelevel=1 \
-	host.hostname=\"[getNodeName $node]\" vnet persist" "hold"
+    set jail_cmd "jail -c name=$eid.$node path=$node_dir securelevel=1 \
+	host.hostname=\"[getNodeName $node]\" vnet persist"
+
+    if { $debug } {
+	puts "Node $node -> '$jail_cmd'"
+    }
+
+    pipesExec "$jail_cmd" "hold"
 }
 
 proc isNodeStarted { node } {
