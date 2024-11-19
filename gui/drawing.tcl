@@ -299,28 +299,25 @@ proc calcAngle { link_id } {
 # NAME
 #   updateIfcLabel -- update interface label
 # SYNOPSIS
-#   updateIfcLabel $node1_id $node2_id
+#   updateIfcLabel $link_id $node_id $iface_id
 # FUNCTION
 #   Updates the interface label, including interface name,
 #   interface state (* for interfaces that are down), IPv4
 #   address and IPv6 address.
 # INPUTS
-#   * node1_id -- node id of a node where the interface resides
-#   * node2_id -- node id of the node that is connected by this
-#   interface.
+#   * node_id -- node id of a node where the interface resides
+#   * iface_id -- interface to update
 #****
-proc updateIfcLabel { node1_id node2_id } {
+proc updateIfcLabel { link_id node_id iface_id } {
     global show_interface_names show_interface_ipv4 show_interface_ipv6
 
-    set link_id [lindex [.panwin.f1.c gettags "link && $node1_id && $node2_id"] 1]
-    set iface_id [ifcByPeer $node1_id $node2_id]
-    if { [getNodeType $node1_id] == "extelem" } {
-	set ifcs [getNodeExternalIfcs $node1_id]
-	set iface_id [lindex [lsearch -inline -exact -index 0 $ifcs "$iface_id"] 1]
+    if { [getNodeType $node_id] == "extelem" } {
+	set ifaces [getNodeStolenIfaces $node_id]
+	set iface_id [lindex [lsearch -inline -exact -index 0 $ifaces "$iface_id"] 1]
     }
 
-    set ifipv4addr [getIfcIPv4addr $node1_id $iface_id]
-    set ifipv6addr [getIfcIPv6addr $node1_id $iface_id]
+    set ifipv4addr [getIfcIPv4addr $node_id $iface_id]
+    set ifipv6addr [getIfcIPv6addr $node_id $iface_id]
     if { $iface_id == 0 } {
 	set iface_id ""
     }
@@ -500,11 +497,11 @@ proc updateIfcLabelParams { link_id node1_id node2_id x1 y1 x2 y2 } {
     set anchor "center"
 
     set IP4 $show_interface_ipv4
-    if { [getIfcIPv4addr $node1_id [ifcByPeer $node1_id $node2_id]] == "" } {
+    if { [getIfcIPv4addr $node1_id [lindex [ifcByPeer $node1_id $node2_id] 0]] == "" } {
 	set IP4 0
     }
     set IP6 $show_interface_ipv6
-    if { [getIfcIPv6addr $node1_id [ifcByPeer $node1_id $node2_id]] == "" } {
+    if { [getIfcIPv6addr $node1_id [lindex [ifcByPeer $node1_id $node2_id] 0]] == "" } {
 	set IP6 0
     }
     set add_height [expr 10*($show_interface_names + $IP4 + $IP6)]
