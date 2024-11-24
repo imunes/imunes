@@ -106,13 +106,47 @@ proc linkByPeers { node1 node2 } {
 #   * link_id -- link id
 #****
 proc removeLink { link_id { keep_ifaces 0 } } {
+    trigger_linkDestroy $link_id
+
     # direct links handling in edit/exec mode?
     if { [getLinkDirect $link_id] && [getFromRunning "oper_mode"] == "exec" } {
 	set keep_ifaces 0
     }
 
     lassign [getLinkPeers $link_id] node1_id node2_id
-    foreach node_id "$node1_id $node2_id" iface_id [getLinkPeersIfaces $link_id] {
+    lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
+
+    # before deleting the link, refresh nodes auto default routes
+    set subnet_gws {}
+    set subnet_data [dict create]
+    foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
+	lassign [getSubnetData $node_id $iface_id $subnet_gws $subnet_data 0] subnet_gws subnet_data
+	if { $subnet_gws != "{||}" } {
+	    set has_extnat [string match "*extnat*" $subnet_gws]
+	    foreach subnet_node [dict keys $subnet_data] {
+		if { [getCustomEnabled $subnet_node] == "true" || [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+		    continue
+		}
+
+		set subnet_node_type [getNodeType $subnet_node]
+		if { $subnet_node_type == "extnat" || [$subnet_node_type.netlayer] != "NETWORK" } {
+		    continue
+		}
+
+		if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
+		    continue
+		}
+
+		trigger_nodeReconfig $subnet_node
+	    }
+	}
+    }
+
+    foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
+	if { [getNodeType $node_id] in "packgen" } {
+	    trigger_nodeUnconfig $node_id
+	}
+
 	if { $keep_ifaces } {
 	    cfgUnset "nodes" $node_id "ifaces" $iface_id "link"
 	    continue
@@ -140,6 +174,7 @@ proc removeLink { link_id { keep_ifaces 0 } } {
     }
 
     setToRunning "link_list" [removeFromList [getFromRunning "link_list"] $link_id]
+
     cfgUnset "links" $link_id
 }
 
@@ -928,6 +963,47 @@ proc newLink { node1_id node2_id } {
 proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
     global defEthBandwidth defSerBandwidth defSerDelay
 
+    foreach node_id "$node1_id $node2_id" iface "\"$iface1_id\" \"$iface2_id\"" {
+	set type [getNodeType $node_id]
+	if { $type == "pseudo" } {
+	    return
+	}
+
+	if { $iface == "" } {
+	    if { [info procs $type.maxLinks] != "" } {
+		# TODO: maxIfaces would be a better name
+		if { [llength [ifcList $node_id]] >= [$type.maxLinks] } {
+		    after idle {.dialog1.msg configure -wraplength 4i}
+		    tk_dialog .dialog1 "IMUNES warning" \
+			"Warning: Maximum links connected to the node $node_id" \
+			info 0 Dismiss
+
+		    return
+		}
+	    }
+
+	    continue
+	}
+
+	if { [getNodeIface $node_id $iface] == "" } {
+	    after idle {.dialog1.msg configure -wraplength 4i}
+	    tk_dialog .dialog1 "IMUNES warning" \
+		"Warning: Interface '[getIfcName $node_id $iface]' on node '[getNodeName $node_id]' does not exist" \
+		info 0 Dismiss
+
+	    return
+	}
+
+	if { [getIfcLink $node_id $iface] != "" } {
+	    after idle {.dialog1.msg configure -wraplength 4i}
+	    tk_dialog .dialog1 "IMUNES warning" \
+		"Warning: Interface '[getIfcName $node_id $iface]' already connected to a link" \
+		info 0 Dismiss
+
+	    return
+	}
+    }
+
     set config_iface1 0
     if { $iface1_id == "" } {
 	set config_iface1 1
@@ -940,44 +1016,12 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
 	set iface2_id [newIface $node2_id "phys" 0]
     }
 
-    foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
-	# iface already connected to a link
-	if { [getNodeIface $node_id $iface_id] == "" } {
-	    after idle {.dialog1.msg configure -wraplength 4i}
-	    tk_dialog .dialog1 "IMUNES warning" \
-		"Warning: Interface '$iface_id' on node '$node_id' does not exist" \
-		info 0 Dismiss
-
-	    return
-	}
-
-	if { [getIfcLink $node_id $iface_id] != "" } {
-	    after idle {.dialog1.msg configure -wraplength 4i}
-	    tk_dialog .dialog1 "IMUNES warning" \
-		"Warning: Interface $iface_id already connected to a link" \
-		info 0 Dismiss
-
-	    return
-	}
-
-	set type [getNodeType $node_id]
-	if { $type == "pseudo" } {
-	    return
-	}
-
-	if { [info procs $type.maxLinks] != "" } {
-	    if { [ numOfLinks $node_id ] == [$type.maxLinks] } {
-		after idle {.dialog1.msg configure -wraplength 4i}
-		tk_dialog .dialog1 "IMUNES warning" \
-		   "Warning: Maximum links connected to the node $node_id" \
-		   info 0 Dismiss
-
-		return
-	    }
-	}
-    }
+    # save old subnet data for comparation
+    lassign [getSubnetData $node1_id $iface1_id {} {} 0] old_subnet1_gws old_subnet1_data
+    lassign [getSubnetData $node2_id $iface2_id {} {} 0] old_subnet2_gws old_subnet2_data
 
     set link_id [newObjectId [getFromRunning "link_list"] "l"]
+    setToRunning "${link_id}_running" false
 
     setIfcLink $node1_id $iface1_id $link_id
     setIfcLink $node2_id $iface2_id $link_id
@@ -994,11 +1038,64 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
 	[getNodeType $node2_id].confNewIfc $node2_id $iface2_id
     }
 
-    return $link_id
-}
+    trigger_linkCreate $link_id
 
-proc getLinkPeers { link_id } {
-    return [cfgGet "links" $link_id "peers"]
+    lassign [getSubnetData $node1_id $iface1_id {} {} 0] new_subnet1_gws new_subnet1_data
+    lassign [getSubnetData $node2_id $iface2_id {} {} 0] new_subnet2_gws new_subnet2_data
+
+    if { $old_subnet1_gws != "" } {
+	set diff [removeFromList {*}$new_subnet1_gws {*}$old_subnet1_gws]
+	if { $diff ni "{} {||}" } {
+	    # there was a change in subnet1, go through its old nodes and attach new data
+	    set has_extnat [string match "*extnat*" $diff]
+	    foreach subnet_node [dict keys $old_subnet1_data] {
+		if { [getCustomEnabled $subnet_node] == "true" || [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+		    continue
+		}
+
+		set subnet_node_type [getNodeType $subnet_node]
+		if { $subnet_node_type == "extnat" || [$subnet_node_type.netlayer] != "NETWORK" } {
+		    # skip extnat and L2 nodes
+		    continue
+		}
+
+		if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
+		    # skip routers if there is no extnats
+		    continue
+		}
+
+		trigger_nodeReconfig $subnet_node
+	    }
+	}
+    }
+
+    if { $old_subnet2_gws != "" } {
+	set diff [removeFromList {*}$new_subnet2_gws {*}$old_subnet2_gws]
+	if { $diff ni "{} {||}" } {
+	    # change in subnet1, go through its old nodes and attach new data
+	    set has_extnat [string match "*extnat*" $diff]
+	    foreach subnet_node [dict keys $old_subnet2_data] {
+		if { [getCustomEnabled $subnet_node] == "true" || [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+		    continue
+		}
+
+		set subnet_node_type [getNodeType $subnet_node]
+		if { $subnet_node_type == "extnat" || [$subnet_node_type.netlayer] != "NETWORK" } {
+		    # skip extnat and L2 nodes
+		    continue
+		}
+
+		if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
+		    # skip routers if there is no extnats
+		    continue
+		}
+
+		trigger_nodeReconfig $subnet_node
+	    }
+	}
+    }
+
+    return $link_id
 }
 
 #****f* linkcfg.tcl/linkDirection
@@ -1023,6 +1120,10 @@ proc linkDirection { node_id iface_id } {
     }
 
     return $direction
+}
+
+proc getLinkPeers { link_id } {
+    return [cfgGet "links" $link_id "peers"]
 }
 
 proc setLinkPeers { link_id peers } {

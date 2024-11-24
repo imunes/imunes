@@ -446,6 +446,8 @@ proc deployCfg { { execute 0 } } {
 	}
     }
 
+    prepareInstantiateVars "force"
+
     if { "$instantiate_nodes$create_nodes_ifaces$instantiate_links$configure_links$configure_nodes_ifaces$configure_nodes" == "" } {
 	return
     }
@@ -579,11 +581,10 @@ proc deployCfg { { execute 0 } } {
 	statline "Starting services for NODEINST hook..."
 	services start "NODEINST" "bkg" $configure_nodes
 
-	statline "Creating interfaces on nodes..."
+	statline "Creating physical interfaces on nodes..."
 	pipesCreate
 	execute_nodesPhysIfacesCreate $create_nodes_ifaces $create_nodes_ifaces_count $w
-
-	statline "Waiting for interfaces on $create_nodes_ifaces_count node(s) to be created..."
+	statline "Waiting for physical interfaces on $create_nodes_ifaces_count node(s) to be created..."
 	pipesClose
 
 	statline "Creating logical interfaces on nodes..."
@@ -1011,6 +1012,7 @@ proc execute_linksCreate { links linkCount w } {
 	    } else {
 		createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link_id
 	    }
+	    setToRunning "${link_id}_running" true
 	} on error err {
 	    return -code error "Error in 'createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link_id': $err"
 	}
