@@ -991,7 +991,7 @@ proc loadCfgLegacy { cfg } {
 	if { $node_type != "extelem" && "lo0" ni [logIfaceNames $node_id] && \
 	    [[getNodeType $node_id].netlayer] == "NETWORK" } {
 
-	    set logiface_id [newLogIface $node_id "lo"]
+	    set logiface_id [newIface $node_id "lo" 0]
 	    setIfcIPv4addrs $node_id $logiface_id "127.0.0.1/8"
 	    setIfcIPv6addrs $node_id $logiface_id "::1/128"
 	}
@@ -1000,17 +1000,16 @@ proc loadCfgLegacy { cfg } {
 	# used addresses in lists.
 	foreach iface_id [ifcList $node_id] {
 	    if { $node_type == "extelem" } {
-		set iface_name [getIfcName $node_id $iface_id]
 		foreach ifaces_pair [cfgGet "nodes" $node_id "external-ifcs"] {
 		    lassign $ifaces_pair old_iface_id physical_iface
-		    if { $old_iface_id == $iface_name } {
+		    if { $old_iface_id == $iface_id } {
+			# XXX update
 			setIfcName $node_id $iface_id $physical_iface
 			break
 		    }
 		}
 	    } elseif { $node_type == "rj45" } {
 		set iface_name [getNodeName $node_id]
-		setIfcName $node_id $iface_id $iface_name
 		set vlan_enabled [cfgGet "nodes" $node_id "vlan" "enabled"]
 		if { $vlan_enabled != "" && $vlan_enabled } {
 		    setIfcVlanDev $node_id $iface_id $iface_name
@@ -1084,12 +1083,11 @@ proc loadCfgLegacy { cfg } {
 #   * obj_id -- object ID in the form $prefix$number
 #****
 proc newObjectId { elem_list prefix } {
-    set len [llength $elem_list]
+    set sorted_list [lsort -dictionary [lsearch -regexp -all -inline $elem_list "^$prefix\[0-9\]\[0-9\]*$"]]
+    set len [llength $sorted_list]
     if { $len == 0 } {
 	return ${prefix}0
     }
-
-    set sorted_list [lsort -dictionary $elem_list]
 
     # Initial interval - the start to the middle of the list
     set start 0

@@ -155,10 +155,15 @@ proc drawNode { node_id } {
 	    if { $type == "wlan" } {
 		set label_str "$label_str [getIfcIPv4addr $node_id $iface_id]"
 	    } elseif { [getIfcLink $node_id $iface_id] == "" } {
-		if { [getIfcType $node_id $iface_id] == "stolen" } {
-		    set iflabel "\[[getIfcName $node_id $iface_id]\]"
+		set iface_type [getIfcType $node_id $iface_id]
+		if { $iface_type in "lo vlan" } {
+		    continue
+		}
+		
+		if { $iface_type == "stolen" } {
+		    set iflabel "\[$iface_id\]"
 		} else {
-		    set iflabel "[getIfcName $node_id $iface_id]"
+		    set iflabel "$iface_id"
 		}
 
 		if { $has_empty_ifaces == 0 } {
@@ -174,7 +179,7 @@ proc drawNode { node_id } {
 	# get mirror link and its real node/iface
 	lassign [logicalPeerByIfc $node_id "ifc0"] peer_id peer_iface
 
-	set label_str "[getNodeName $peer_id]:[getIfcName $peer_id $peer_iface]"
+	set label_str "[getNodeName $peer_id]:$peer_iface"
 	set peer_canvas [getNodeCanvas $peer_id]
 	if { $peer_canvas != [getFromRunning "curcanvas"] } {
 	    set label_str "$label_str\n@[getCanvasName $peer_canvas]"
@@ -331,12 +336,12 @@ proc updateIfcLabel { link_id node_id iface_id } {
     set label_str ""
     if { $show_interface_names } {
 	if { [getNodeType $node_id] == "rj45" } {
-	    lappend label_str "$iface_id - [getIfcName $node_id $iface_id]"
+	    lappend label_str "$iface_id"
 	    if { [getIfcVlanDev $node_id $iface_id] != "" } {
 		lappend label_str "VLAN [getIfcVlanTag $node_id $iface_id]"
 	    }
 	} else {
-	    lappend label_str "[getIfcName $node_id $iface_id]"
+	    lappend label_str "$iface_id"
 	}
 
     }

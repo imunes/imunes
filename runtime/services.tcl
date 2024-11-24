@@ -154,12 +154,11 @@ regHooks $service {LINKINST NODESTOP}
 
 proc $service.start { node_id { bkg "" } } {
     foreach iface_id [allIfcList $node_id] {
-	set iface_name [getIfcName $node_id $iface_id]
-	if { [string match "lo*" $iface_name] } {
+	if { [string match "lo*" $iface_id] } {
 	    continue
 	}
-	lappend cmds "ifconfig $iface_name up"
-	lappend cmds "nohup tcpdump -Uni $iface_name -w /tmp/$iface_name.pcap > /dev/null 2> /dev/null &"
+	lappend cmds "ifconfig $iface_id up"
+	lappend cmds "nohup tcpdump -Uni $iface_id -w /tmp/$iface_id.pcap > /dev/null 2> /dev/null &"
     }
 
     if { $bkg == "" } {
@@ -183,11 +182,10 @@ proc $service.stop { node_id { bkg "" } } {
     set ext_dir /tmp/[getFromRunning "eid"]/
     file mkdir $ext_dir
     foreach iface_id [allIfcList $node_id] {
-	set iface_name [getIfcName $node_id $iface_id]
-	if { [string match "lo*" $iface_name] } {
+	if { [string match "lo*" $iface_id] } {
 	    continue
 	}
-	moveFileFromNode $node_id /tmp/$iface_name.pcap $ext_dir/[getNodeName $node_id]\_$node_id\_$iface_name.pcap
+	moveFileFromNode $node_id /tmp/$iface_id.pcap $ext_dir/[getNodeName $node_id]\_$node_id\_$iface_id.pcap
     }
 }
 

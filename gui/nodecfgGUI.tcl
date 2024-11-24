@@ -256,7 +256,7 @@ proc configGUI_addTree { wi node_id } {
 
     foreach iface_id $sorted_iface_list {
 	$wi.panwin.f1.tree insert physIfcFrame end -id $iface_id \
-	    -text "[_getIfcName $node_cfg $iface_id]" -tags $iface_id
+	    -text "$iface_id" -tags $iface_id
 
 	foreach column $treecolumns {
 	    $wi.panwin.f1.tree set $iface_id [lindex $column 0] \
@@ -270,7 +270,7 @@ proc configGUI_addTree { wi node_id } {
 
 	foreach iface_id $sorted_logiface_list {
 	    $wi.panwin.f1.tree insert logIfcFrame end -id $iface_id \
-		-text "[_getIfcName $node_cfg $iface_id]" -tags $iface_id
+		-text "$iface_id" -tags $iface_id
 
 	    foreach column $treecolumns {
 		$wi.panwin.f1.tree set $iface_id [lindex $column 0] \
@@ -410,14 +410,12 @@ proc showLogIfcMenu { iface_id } {
     global button3logifc_ifc node_cfg
 
     set button3logifc_ifc $iface_id
-    set iface_name [_getIfcName $node_cfg $iface_id]
     .button3logifc delete 0 end
-    .button3logifc add command -label "Remove interface $iface_name" -command {
+    .button3logifc add command -label "Remove interface $iface_id" -command {
 	global curnode logifaces_list button3logifc_ifc changed node_cfg
 
 	set changed 0
-	set iface_name [_getIfcName $node_cfg $button3logifc_ifc]
-	if { $iface_name != "lo0" } {
+	if { $button3logifc_ifc != "lo0" } {
 	    set node_cfg [_removeIface $node_cfg $button3logifc_ifc]
 
 	    set wi .popup.nbook.nfInterfaces.panwin
@@ -452,9 +450,8 @@ proc showPhysIfcMenu { iface_id } {
     global button3physifc_ifc node_cfg
 
     set button3physifc_ifc $iface_id
-    set iface_name [_getIfcName $node_cfg $iface_id]
     .button3physifc delete 0 end
-    .button3physifc add command -label "Remove interface $iface_name" -command {
+    .button3physifc add command -label "Remove interface $iface_id" -command {
 	global curnode ifaces_list button3physifc_ifc changed node_cfg
 	global node_existing_mac node_existing_ipv4 node_existing_ipv6
 
@@ -511,8 +508,10 @@ proc configGUI_refreshIfcsTree { wi node_id } {
 
     set iface_list [_ifcList $node_cfg]
     set sorted_iface_list [lsort -ascii $iface_list]
+    puts "SORTED IFACE: '$sorted_iface_list'"
     set logiface_list [_logIfcList $node_cfg]
     set sorted_logiface_list [lsort -ascii $logiface_list]
+    puts "SORTED LIFACE: '$sorted_logiface_list'"
 
     $wi delete [$wi children {}]
     #Creating new items
@@ -523,7 +522,7 @@ proc configGUI_refreshIfcsTree { wi node_id } {
 
     foreach iface_id $sorted_iface_list {
 	$wi insert physIfcFrame end -id $iface_id \
-	    -text "[_getIfcName $node_cfg $iface_id]" -tags $iface_id
+	    -text "$iface_id" -tags $iface_id
 
 	foreach column $treecolumns {
 	    $wi set $iface_id [lindex $column 0] \
@@ -537,7 +536,7 @@ proc configGUI_refreshIfcsTree { wi node_id } {
 
 	foreach iface_id $sorted_logiface_list {
 	    $wi insert logIfcFrame end -id $iface_id \
-		-text "[_getIfcName $node_cfg $iface_id]" -tags $iface_id
+		-text "$iface_id" -tags $iface_id
 
 	    foreach column $treecolumns {
 		$wi set $iface_id [lindex $column 0] \
@@ -797,7 +796,7 @@ proc configGUI_logicalInterfaces { wi node_id iface_id } {
     ttk::frame $wi.if$iface_id -relief groove -borderwidth 2 -padding 4
     ttk::label $wi.if$iface_id.txt -text "Manage logical interfaces:"
 
-    set logifaces_list [lsort [_logIfaceNames $curnode]]
+    set logifaces_list [lsort [_logIfcList $node_cfg]]
     listbox $wi.if$iface_id.list -height 7 -width 10 -listvariable logifaces_list
 
     ttk::label $wi.if$iface_id.addtxt -text "Add new interface:"
@@ -813,9 +812,9 @@ proc configGUI_logicalInterfaces { wi node_id iface_id } {
 
 	set wi .popup.nbook.nfInterfaces.panwin.f2.iflogIfcFrame
 	set ifctype [$wi.addbox get]
-	lassign [_newLogIface $node_cfg $ifctype] logiface_id node_cfg
+	lassign [_newIface $node_cfg $ifctype 0] logiface_id node_cfg
 
-	set logifaces_list [lsort [_logIfaceNames $curnode]]
+	set logifaces_list [lsort [_logIfcList $node_cfg]]
 	$wi.rmvbox configure -values $logifaces_list
 	$wi.list configure -listvariable logifaces_list
 
@@ -836,13 +835,12 @@ proc configGUI_logicalInterfaces { wi node_id iface_id } {
 	global changed force
 
 	set wi .popup.nbook.nfInterfaces.panwin.f2.iflogIfcFrame
-	set iface_name [$wi.rmvbox get]
-	set iface_id [_ifaceIdFromName $curnode $iface_name]
+	set iface_id [$wi.rmvbox get]
 	if { $iface_id == "" } {
 	    return
 	}
 
-	if { $iface_name == "lo0" } {
+	if { $iface_id == "lo0" } {
 	    tk_dialog .dialog1 "IMUNES warning" \
 		"The loopback interface lo0 cannot be deleted!" \
 	    info 0 Dismiss
@@ -853,7 +851,7 @@ proc configGUI_logicalInterfaces { wi node_id iface_id } {
 	$wi.rmvbox set ""
 	set node_cfg [_removeIface $node_cfg $iface_id]
 
-	set logifaces_list [lsort [_logIfaceNames $curnode]]
+	set logifaces_list [lsort [_logIfcList $node_cfg]]
 	$wi.rmvbox configure -values $logifaces_list
 	$wi.list configure -listvariable logifaces_list
 
@@ -902,7 +900,7 @@ proc configGUI_physicalInterfaces { wi node_id iface_id } {
     ttk::frame $wi.if$iface_id -relief groove -borderwidth 2 -padding 4
     ttk::label $wi.if$iface_id.txt -text "Manage physical interfaces:"
 
-    set ifaces_list [lsort [_ifaceNames $node_cfg]]
+    set ifaces_list [lsort [_ifcList $node_cfg]]
     listbox $wi.if$iface_id.list -height 7 -width 10 -listvariable ifaces_list
 
     ttk::label $wi.if$iface_id.addtxt -text "Add new interface:"
@@ -927,13 +925,14 @@ proc configGUI_physicalInterfaces { wi node_id iface_id } {
 	    set iface_name $ifctype
 	    set ifctype "stolen"
 	}
-	lassign [_newIface $node_cfg $ifctype 1] iface_id node_cfg
 
-	if { $ifctype != "phys" } {
-	    set node_cfg [_setIfcName $node_cfg $iface_id $iface_name]
+	if { $ifctype == "stolen" } {
+	    lassign [_newIface $node_cfg $ifctype 1 $iface_name] iface_id node_cfg
+	} else {
+	    lassign [_newIface $node_cfg $ifctype 1] iface_id node_cfg
 	}
 
-	set ifaces_list [lsort [_ifaceNames $node_cfg]]
+	set ifaces_list [lsort [_ifcList $node_cfg]]
 	$wi.rmvbox configure -values $ifaces_list
 	$wi.list configure -listvariable ifaces_list
 
@@ -971,8 +970,7 @@ proc configGUI_physicalInterfaces { wi node_id iface_id } {
 	}
 	set wi $wi_prefix.f2.ifphysIfcFrame
 
-	set iface_name [$wi.rmvbox get]
-	set iface_id [_ifaceIdFromName $node_cfg $iface_name]
+	set iface_id [$wi.rmvbox get]
 	if { $iface_id == "" } {
 	    return
 	}
@@ -984,7 +982,7 @@ proc configGUI_physicalInterfaces { wi node_id iface_id } {
 	$wi.rmvbox set ""
 	set node_cfg [_removeIface $node_cfg $iface_id]
 
-	set ifaces_list [lsort [_ifaceNames $curnode]]
+	set ifaces_list [lsort [_ifcList $curnode]]
 	$wi.rmvbox configure -values $ifaces_list
 	$wi.list configure -listvariable ifaces_list
 
@@ -1345,47 +1343,6 @@ proc configGUI_nodeRestart { wi node_id } {
     pack $w -fill both
 }
 
-#****f* nodecfgGUI.tcl/configGUI_rj45s
-# NAME
-#   configGUI_rj45s -- configure GUI - node name
-# SYNOPSIS
-#   configGUI_rj45s $wi $node_id $label
-# FUNCTION
-#   Creating module with node name.
-# INPUTS
-#   * wi -- widget
-#   * node_id -- node id
-#   * label -- text shown before the entry with node name
-#****
-proc configGUI_rj45s { wi node_id } {
-    global guielements
-    lappend guielements configGUI_rj45s
-
-    global node_cfg
-
-    set ifcs [getExtIfcs]
-    foreach iface_id [_allIfcList $node_cfg] {
-	set group "$iface_id [_getIfcName $node_cfg $iface_id]"
-	lassign $group iface_id extIfc
-	set lbl "Interface $iface_id"
-	lassign [logicalPeerByIfc $node_id $iface_id] peer_id -
-	if { $peer_id != "" } {
-	    set lbl "$lbl (peer [getNodeName $peer_id])"
-	}
-
-	destroy $wi.$iface_id
-	ttk::frame $wi.$iface_id -borderwidth 6
-	ttk::label $wi.$iface_id.txt -text "$lbl"
-	ttk::combobox $wi.$iface_id.nodename -width 14 -textvariable extIfc$iface_id
-	$wi.$iface_id.nodename configure -values [concat UNASSIGNED $ifcs]
-	$wi.$iface_id.nodename set $extIfc
-
-	pack $wi.$iface_id.txt -side left -anchor w -expand 1 -padx 4 -pady 4
-	pack $wi.$iface_id.nodename -side left -anchor e -expand 1 -padx 4 -pady 4
-	pack $wi.$iface_id -fill both
-    }
-}
-
 #****f* nodecfgGUI.tcl/configGUI_ifcMainFrame
 # NAME
 #   configGUI_ifcMainFrame -- configure GUI - interface main frame
@@ -1407,7 +1364,7 @@ proc configGUI_ifcMainFrame { wi node_id iface_id } {
     ttk::frame $wi.if$iface_id -relief groove -borderwidth 2 -padding 4
     ttk::frame $wi.if$iface_id.label -borderwidth 2
 
-    ttk::label $wi.if$iface_id.label.txt -text "Interface [_getIfcName $node_cfg $iface_id]:" -width 13
+    ttk::label $wi.if$iface_id.label.txt -text "Interface $iface_id:" -width 13
 
     pack $wi.if$iface_id.label.txt -side left -anchor w
     pack $wi.if$iface_id.label -anchor w
@@ -1747,7 +1704,7 @@ proc configGUI_addRj45PanedWin { wi node_id } {
     ttk::combobox $wi.stolen.name -width 14 -textvariable extIfc$iface_id
     set ifcs [getExtIfcs]
     $wi.stolen.name configure -values [concat UNASSIGNED $ifcs]
-    $wi.stolen.name set [_getIfcName $node_cfg $iface_id]
+    $wi.stolen.name set $iface_id
 
     ttk::frame $wi.peer -borderwidth 6
     ttk::label $wi.peer.label -text "Peer:"
@@ -2196,7 +2153,7 @@ proc configGUI_ifcVlanConfig { wi node_id iface_id } {
     set ifvdev$iface_id [_getIfcVlanDev $node_cfg $iface_id]
     ttk::label $wi.if$iface_id.vlancfg.devtxt -text "Vlan dev" -anchor w
     ttk::combobox $wi.if$iface_id.vlancfg.dev -width 6 -textvariable ifvdev$iface_id
-    $wi.if$iface_id.vlancfg.dev configure -values [_ifaceNames $node_cfg] -state readonly
+    $wi.if$iface_id.vlancfg.dev configure -values [_ifcList $node_cfg] -state readonly
 
     pack $wi.if$iface_id.vlancfg -anchor w -padx 10
     grid $wi.if$iface_id.vlancfg.devtxt -in $wi.if$iface_id.vlancfg -column 0 -row 0 \
@@ -2233,7 +2190,7 @@ proc configGUI_externalIfcs { wi node_id } {
     ttk::frame $wi.if$iface_id.ipv4
     ttk::frame $wi.if$iface_id.ipv6
 
-    ttk::label $wi.if$iface_id.labelName -text "Interface [_getIfcName $node_cfg $iface_id]"
+    ttk::label $wi.if$iface_id.labelName -text "Interface $iface_id"
     ttk::label $wi.if$iface_id.labelMAC -text "MAC address:" -width 11
     ttk::entry $wi.if$iface_id.mac.addr -width 24 -validate focus
     $wi.if$iface_id.mac.addr insert 0 [_getIfcMACaddr $node_cfg $iface_id]
@@ -2470,7 +2427,7 @@ proc configGUI_ifcMACAddressApply { wi node_id iface_id } {
 	if { $apply == 1 && $dup != 0 && $macaddr != "" } {
 	    lassign $dup node_id iface_id
 	    tk_dialog .dialog1 "IMUNES warning" \
-		"Provided MAC address already exists on node's $node_id interface $iface_id ([getIfcName $node_id $iface_id])" \
+		"Provided MAC address already exists on node's $node_id interface $iface_id" \
 		info 0 Dismiss
 	}
 
@@ -2722,7 +2679,7 @@ proc configGUI_addRj45PanedWinApply { iface_id } {
 
     set wi ".popup.nbook.nf$iface_id"
     set dev [$wi.stolen.name get]
-    if { [set vlanEnable_$iface_id] != $oldEnabled || $dev != [_getIfcName $node_cfg $iface_id]} {
+    if { [set vlanEnable_$iface_id] != $oldEnabled || $dev != $iface_id} {
 	if { [set vlanEnable_$iface_id] } {
 	    set node_cfg [_setIfcVlanDev $node_cfg $iface_id $dev]
 	} else {
@@ -2742,7 +2699,14 @@ proc configGUI_addRj45PanedWinApply { iface_id } {
 	set changed 1
     }
 
-    set node_cfg [_setIfcName $node_cfg $iface_id $dev]
+    foreach iface_id $ifaces {
+        ttk::frame $wi.nbook.nf$iface_id
+        $wi.nbook add $wi.nbook.nf$iface_id -text $iface_id
+	configGUI_addRj45PanedWin $wi.nbook.nf$iface_id $node_id
+    }
+
+    set node_cfg [_removeIface $node_cfg $iface_id]
+    lassign [_newIface $node_cfg "stolen" 0 $dev] iface_id node_cfg
 }
 
 #****f* nodecfgGUI.tcl/configGUI_customConfigApply
@@ -5353,7 +5317,7 @@ proc configGUI_addBridgeTree { wi node_id } {
     $wi.panwin.f1.tree selection set physIfcFrame
 
     foreach iface_id [lsort -dictionary [_ifcList $node_cfg]] {
-	$wi.panwin.f1.tree insert physIfcFrame end -id $iface_id -text "[_getIfcName $node_cfg $iface_id]" \
+	$wi.panwin.f1.tree insert physIfcFrame end -id $iface_id -text "$iface_id" \
 	    -tags $iface_id
 	foreach column $brtreecolumns {
 	    $wi.panwin.f1.tree set $iface_id [lindex $column 0] \
@@ -5483,7 +5447,7 @@ proc configGUI_refreshBridgeIfcsTree { wi node_id } {
     $wi selection set physIfcFrame
 
     foreach iface_id $sorted_iface_list {
-	$wi insert physIfcFrame end -id $iface_id -text "[_getIfcName $node_cfg $iface_id]" \
+	$wi insert physIfcFrame end -id $iface_id -text "$iface_id" \
 	    -tags $iface_id
 
         foreach column $brtreecolumns {
@@ -5709,7 +5673,7 @@ proc configGUI_ifcBridgeMainFrame { wi node_id iface_id } {
 
     ttk::frame $wi.if$iface_id -relief groove -borderwidth 2 -padding 4
     ttk::frame $wi.if$iface_id.label -borderwidth 2
-    ttk::label $wi.if$iface_id.label.txt -text "Bridge interface [_getIfcName $node_cfg $iface_id]:"
+    ttk::label $wi.if$iface_id.label.txt -text "Bridge interface $iface_id:"
 
     pack $wi.if$iface_id.label.txt -side left -anchor w
     pack $wi.if$iface_id.label -anchor w
@@ -5725,7 +5689,7 @@ proc configGUI_addNotebookFilter { wi node_id ifaces } {
     pack propagate $wi.nbook 0
     foreach iface_id $ifaces {
         ttk::frame $wi.nbook.nf$iface_id
-        $wi.nbook add $wi.nbook.nf$iface_id -text [_getIfcName $node_cfg $iface_id]
+        $wi.nbook add $wi.nbook.nf$iface_id -text $iface_id
 	configGUI_addFilterPanedWin $wi.nbook.nf$iface_id
     }
 
@@ -6145,7 +6109,7 @@ proc configGUI_ruleMainFrame { wi node_id iface_id rule } {
     set changed 0
     ttk::frame $wi.if$rule -relief groove -borderwidth 2 -padding 4
     ttk::frame $wi.if$rule.label -borderwidth 2
-    ttk::label $wi.if$rule.label.txt -text "Interface [_getIfcName $node_cfg $iface_id] (Rule $rule):"
+    ttk::label $wi.if$rule.label.txt -text "Interface $iface_id (Rule $rule):"
 
     grid $wi.if$rule -sticky nsew -column 1 -row 0 -columnspan 10 -ipadx 45
 
@@ -6242,8 +6206,7 @@ proc configGUI_ifcRuleConfigApply { add dup } {
     set ruleNumChanged 0
     set noPMO 0
 
-    set iface_name [.popup.nbook tab current -text]
-    set iface_id [_ifaceIdFromName $node_cfg $iface_name]
+    set iface_id [.popup.nbook tab current -text]
     set rule [.popup.nbook.nf$iface_id.panwin.f1.tree selection]
     set wi .popup.nbook.nf$iface_id.panwin.f2
 
@@ -6318,20 +6281,20 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 
     switch -regexp $action {
 	(no)?match_hook {
-	    set vals [removeFromList [lsort [_ifaceNames $node_cfg]] $iface_name]
+	    set vals [removeFromList [lsort [_ifcList $node_cfg]] $iface_id]
 	    if { $action_data ni $vals } {
 		tk_dialog .dialog1 "IMUNES warning" \
-		    "ActData: Select one of the existing hooks, but not the current one ($iface_name)." \
+		    "ActData: Select one of the existing hooks, but not the current one ($iface_id)." \
 		info 0 Dismiss
 
 		return
 	    }
 	}
 	(no)?match_dupto {
-	    set vals [removeFromList [lsort [_ifaceNames $node_cfg]] $iface_name]
+	    set vals [removeFromList [lsort [_ifcList $node_cfg]] $iface_id]
 	    if { $action_data ni $vals } {
 		tk_dialog .dialog1 "IMUNES warning" \
-		    "ActData: Select one of the existing hooks, but not the current one ($iface_name)." \
+		    "ActData: Select one of the existing hooks, but not the current one ($iface_id)." \
 		info 0 Dismiss
 
 		return
@@ -6475,13 +6438,13 @@ proc refreshIfcActionDataValues { node_id refresh } {
     global ifcFilterAction$iface_id$rule ifcFilterActionData$iface_id$rule
     switch -regexp [set ifcFilterAction$iface_id$rule] {
 	(no)?match_hook {
-	    set vals [removeFromList [lsort [_ifaceNames $node_cfg]] [_getIfcName $node_cfg $iface_id]]
+	    set vals [removeFromList [lsort [_ifcList $node_cfg]] $iface_id]
 	    if { [set ifcFilterActionData$iface_id$rule] == "" || $refresh == 1 } {
 		set ifcFilterActionData$iface_id$rule [lindex $vals 0]
 	    }
 	}
 	(no)?match_dupto {
-	    set vals [removeFromList [lsort [_ifaceNames $node_cfg]] [_getIfcName $node_cfg $iface_id]]
+	    set vals [removeFromList [lsort [_ifcList $node_cfg]] $iface_id]
 	    if { [set ifcFilterActionData$iface_id$rule] == "" || $refresh == 1 } {
 		set ifcFilterActionData$iface_id$rule [lindex $vals 0]
 	    }
@@ -7314,7 +7277,8 @@ proc configGUI_rj45sApply { wi node_id } {
 
     foreach iface [_ifcList $node_cfg] {
 	set new_stolen_iface [string trim [$wi.$iface.nodename get]]
-	if { $new_stolen_iface != [_getIfcName $node_cfg $iface] } {
+	if { $new_stolen_iface != $iface_id } {
+	    # XXX update
 	    set node_cfg [_setIfcName $node_cfg $iface $new_stolen_iface]
 	    set changed 1
 	}

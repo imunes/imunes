@@ -498,22 +498,6 @@ proc setIfcType { node_id iface_id type } {
     trigger_ifaceRecreate $node_id $iface_id
 }
 
-proc getIfcName { node_id iface_id } {
-    return [cfgGet "nodes" $node_id "ifaces" $iface_id "name"]
-}
-
-proc setIfcName { node_id iface_id name } {
-    cfgSet "nodes" $node_id "ifaces" $iface_id "name" $name
-
-    # TODO
-    trigger_ifaceRecreate $node_id $iface_id
-
-    set link_id [getIfcLink $node_id $iface_id]
-    if { $link_id != "" } {
-	trigger_linkRecreate $link_id
-    }
-}
-
 #****f* nodecfg.tcl/getIfcIPv6addr
 # NAME
 #   getIfcIPv6addr -- get interface first IPv6 address.
@@ -673,19 +657,29 @@ proc getIfcLinkLocalIPv6addr { node_id iface } {
 # RESULT
 #   * interfaces -- list of all node's interfaces
 #****
-proc ifcList { node_id } {
-    return [lsearch -glob -all -inline [dict keys [cfgGet "nodes" $node_id "ifaces"]] "ifc*"]
+proc allIfcList { node_id } {
+    return [dict keys [cfgGet "nodes" $node_id "ifaces"]]
 }
 
-proc ifaceNames { node_id } {
+proc getIfaceNamesByType { node_id args } {
+    set all_ifaces [cfgGet "nodes" $node_id "ifaces"]
+    if { $all_ifaces == {} } {
+	return
+    }
+
     set iface_names {}
-    foreach {iface_id iface_cfg} [cfgGet "nodes" $node_id "ifaces"] {
-	if { [string match "ifc*" $iface_id] } {
-	    lappend iface_names [dictGet $iface_cfg "name"]
+    foreach type $args {
+	set names_type [dict keys [dict filter $all_ifaces "value" "*type $type*"]]
+	if { $names_type != {} } {
+	    lappend iface_names {*}$names_type
 	}
     }
 
     return $iface_names
+}
+
+proc ifcList { node_id } {
+    return [getIfaceNamesByType $node_id "phys" "stolen"]
 }
 
 #****f* nodecfg.tcl/logIfcList
@@ -701,18 +695,7 @@ proc ifaceNames { node_id } {
 #   * interfaces -- list of node's logical interfaces
 #****
 proc logIfcList { node_id } {
-    return [lsearch -glob -all -inline [dict keys [cfgGet "nodes" $node_id "ifaces"]] "lifc*"]
-}
-
-proc logIfaceNames { node_id } {
-    set logiface_names {}
-    foreach {logiface_id logiface_cfg} [cfgGet "nodes" $node_id "ifaces"] {
-	if { [string match "lifc*" $logiface_id] } {
-	    lappend logiface_names [dictGet $logiface_cfg "name"]
-	}
-    }
-
-    return $logiface_names
+    return [getIfaceNamesByType $node_id "lo" "vlan"]
 }
 
 #****f* nodecfg.tcl/isIfcLogical
@@ -792,14 +775,12 @@ proc logicalPeerByIfc { node_id iface } {
     return "$peer_id $peer_iface"
 }
 
-proc ifaceIdFromName { node_id iface_name } {
-    foreach {iface_id iface_cfg} [cfgGet "nodes" $node_id "ifaces"] {
-	if { $iface_name == [dictGet $iface_cfg "name"] } {
-	    return $iface_id
-	}
+proc ifaceIdFromName { node_id iface_id } {
+    if { [cfgGet "nodes" $node_id "ifaces" $iface_id] == "" } {
+	return ""
     }
 
-    return ""
+    return $iface_id
 }
 
 #****f* nodecfg.tcl/hasIPv4Addr
@@ -968,7 +949,7 @@ proc nodeCfggenIfcIPv4 { node_id iface_id } {
     set primary 1
     foreach addr [getIfcIPv4addrs $node_id $iface_id] {
 	if { $addr != "" } {
-	    lappend cfg [getIPv4IfcCmd [getIfcName $node_id $iface_id] $addr $primary]
+	    lappend cfg [getIPv4IfcCmd $iface_id $addr $primary]
 	    set primary 0
 	}
     }
@@ -994,7 +975,7 @@ proc nodeCfggenIfcIPv6 { node_id iface_id } {
     set primary 1
     foreach addr [getIfcIPv6addrs $node_id $iface_id] {
 	if { $addr != "" } {
-	    lappend cfg [getIPv6IfcCmd [getIfcName $node_id $iface_id] $addr $primary]
+	    lappend cfg [getIPv6IfcCmd $iface_id $addr $primary]
 	    set primary 0
 	}
     }
@@ -1003,18 +984,28 @@ proc nodeCfggenIfcIPv6 { node_id iface_id } {
 }
 
 proc newIface { node_id iface_type auto_config { stolen_iface "" } } {
-    set iface_id [newObjectId [ifcList $node_id] "ifc"]
+    switch -exact $iface_type {
+	"lo" -
+	"vlan" {
+	    set iface_id [newObjectId [getIfaceNamesByType $node_id $iface_type] "$iface_type"]
+	}
+	"phys" {
+	    set iface_id [newObjectId [ifcList $node_id] [[getNodeType $node_id].ifacePrefix]]
+	}
+	"stolen" {
+	    if { $stolen_iface in [ifcList $node_id] } {
+		return ""
+	    }
+
+	    set iface_id $stolen_iface
+	}
+    }
+
     setToRunning "${node_id}|${iface_id}_running" false
     trigger_ifaceCreate $node_id $iface_id
 
     setNodeIface $node_id $iface_id {}
-
     setIfcType $node_id $iface_id $iface_type
-    if { $iface_type == "stolen" } {
-	setIfcName $node_id $iface_id $stolen_iface
-    } else {
-	setIfcName $node_id $iface_id [chooseIfName $node_id $node_id]
-    }
 
     if { $auto_config } {
 	[getNodeType $node_id].confNewIfc $node_id $iface_id
@@ -1024,16 +1015,7 @@ proc newIface { node_id iface_type auto_config { stolen_iface "" } } {
 }
 
 proc newLogIface { node_id logiface_type } {
-    set current_logiface_names [lsearch -all -inline -glob [logIfaceNames $node_id] "$logiface_type*"]
-
-    set logiface_id [newObjectId [logIfcList $node_id] "lifc"]
-    setToRunning "${node_id}|${logiface_id}_running" false
-    setNodeIface $node_id $logiface_id {}
-
-    setIfcType $node_id $logiface_id $logiface_type
-    setIfcName $node_id $logiface_id [newObjectId $current_logiface_names $logiface_type]
-
-    return $logiface_id
+    return [newIface $node_id $logiface_type 0]
 }
 
 proc removeIface { node_id iface_id } {
@@ -1052,14 +1034,12 @@ proc removeIface { node_id iface_id } {
     setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] [getIfcIPv6addrs $node_id $iface_id] "keep_doubles"]
     setToRunning "mac_used_list" [removeFromList [getFromRunning "mac_used_list"] [getIfcMACaddr $node_id $iface_id] "keep_doubles"]
 
-    set iface_name [getIfcName $node_id $iface_id]
-
     cfgUnset "nodes" $node_id "ifaces" $iface_id
 
     foreach {logiface_id iface_cfg} [cfgGet "nodes" $node_id "ifaces"] {
 	switch -exact [dictGet $iface_cfg "type"] {
 	    vlan {
-		if { [dictGet $iface_cfg "vlan_dev"] == $iface_name } {
+		if { [dictGet $iface_cfg "vlan_dev"] == $iface_id } {
 		    cfgUnset "nodes" $node_id "ifaces" $logiface_id
 		}
 	    }
@@ -1072,18 +1052,16 @@ proc nodeCfggenIfc { node_id iface_id } {
 
     set cfg {}
 
-    set iface_name [getIfcName $node_id $iface_id]
-
     set mac_addr [getIfcMACaddr $node_id $iface_id]
     if { $mac_addr != "" } {
-	lappend cfg [getMacIfcCmd $iface_name $mac_addr]
+	lappend cfg [getMacIfcCmd $iface_id $mac_addr]
     }
 
     set mtu [getIfcMTU $node_id $iface_id]
-    lappend cfg [getMtuIfcCmd $iface_name $mtu]
+    lappend cfg [getMtuIfcCmd $iface_id $mtu]
 
     if { [getIfcNatState $node_id $iface_id] == "on" } {
-	lappend cfg [getNatIfcCmd $iface_name]
+	lappend cfg [getNatIfcCmd $iface_id]
     }
 
     set primary 1
@@ -1091,7 +1069,7 @@ proc nodeCfggenIfc { node_id iface_id } {
     setToRunning "${node_id}|${iface_id}_old_ipv4_addrs" $addrs
     foreach addr $addrs {
 	if { $addr != "" } {
-	    lappend cfg [getIPv4IfcCmd $iface_name $addr $primary]
+	    lappend cfg [getIPv4IfcCmd $iface_id $addr $primary]
 	    set primary 0
 	}
     }
@@ -1105,7 +1083,7 @@ proc nodeCfggenIfc { node_id iface_id } {
     }
     foreach addr $addrs {
 	if { $addr != "" } {
-	    lappend cfg [getIPv6IfcCmd $iface_name $addr $primary]
+	    lappend cfg [getIPv6IfcCmd $iface_id $addr $primary]
 	    set primary 0
 	}
     }
@@ -1115,7 +1093,7 @@ proc nodeCfggenIfc { node_id iface_id } {
 	set state "up"
     }
 
-    lappend cfg [getStateIfcCmd $iface_name $state]
+    lappend cfg [getStateIfcCmd $iface_id $state]
 
     return $cfg
 }
@@ -1123,25 +1101,23 @@ proc nodeCfggenIfc { node_id iface_id } {
 proc nodeUncfggenIfc { node_id iface_id } {
     set cfg {}
 
-    set iface_name [getIfcName $node_id $iface_id]
-
     set addrs [getFromRunning "${node_id}|${iface_id}_old_ipv4_addrs"]
     foreach addr $addrs {
         if { $addr != "" } {
-            lappend cfg [getDelIPv4IfcCmd $iface_name $addr]
+            lappend cfg [getDelIPv4IfcCmd $iface_id $addr]
         }
     }
     unsetRunning "${node_id}|${iface_id}_old_ipv4_addrs"
-    #lappend cfg [getFlushIPv4IfcCmd $iface_name]
+    #lappend cfg [getFlushIPv4IfcCmd $iface_id]
 
     set addrs [getFromRunning "${node_id}|${iface_id}_old_ipv6_addrs"]
     foreach addr $addrs {
         if { $addr != "" } {
-            lappend cfg [getDelIPv6IfcCmd $iface_name $addr]
+            lappend cfg [getDelIPv6IfcCmd $iface_id $addr]
         }
     }
     unsetRunning "${node_id}|${iface_id}_old_ipv6_addrs"
-    #lappend cfg [getFlushIPv6IfcCmd $iface_name]
+    #lappend cfg [getFlushIPv6IfcCmd $iface_id]
 
     return $cfg
 }
@@ -1153,8 +1129,7 @@ proc routerCfggenIfc { node_id iface_id } {
     set cfg {}
 
     set model [getNodeModel $node_id]
-    set iface_name [getIfcName $node_id $iface_id]
-    if { $iface_name == "lo0" } {
+    if { $iface_id == "lo0" } {
 	set model "static"
     }
 
@@ -1163,19 +1138,19 @@ proc routerCfggenIfc { node_id iface_id } {
 	"frr" {
 	    set mac_addr [getIfcMACaddr $node_id $iface_id]
 	    if { $mac_addr != "" } {
-		lappend cfg [getMacIfcCmd $iface_name $mac_addr]
+		lappend cfg [getMacIfcCmd $iface_id $mac_addr]
 	    }
 
 	    set mtu [getIfcMTU $node_id $iface_id]
-	    lappend cfg [getMtuIfcCmd $iface_name $mtu]
+	    lappend cfg [getMtuIfcCmd $iface_id $mtu]
 
 	    if { [getIfcNatState $node_id $iface_id] == "on" } {
-		lappend cfg [getNatIfcCmd $iface_name]
+		lappend cfg [getNatIfcCmd $iface_id]
 	    }
 
 	    lappend cfg "vtysh << __EOF__"
 	    lappend cfg "conf term"
-	    lappend cfg "interface $iface_name"
+	    lappend cfg "interface $iface_id"
 
 	    set addrs [getIfcIPv4addrs $node_id $iface_id]
 	    setToRunning "${node_id}|${iface_id}_old_ipv4_addrs" $addrs
@@ -1229,8 +1204,7 @@ proc routerUncfggenIfc { node_id iface_id } {
     set cfg {}
 
     set model [getNodeModel $node_id]
-    set iface_name [getIfcName $node_id $iface_id]
-    if { $iface_name == "lo0" } {
+    if { $iface_id == "lo0" } {
 	set model "static"
     }
 
@@ -1239,7 +1213,7 @@ proc routerUncfggenIfc { node_id iface_id } {
 	"frr" {
 	    lappend cfg "vtysh << __EOF__"
 	    lappend cfg "conf term"
-	    lappend cfg "interface $iface_name"
+	    lappend cfg "interface $iface_id"
 
 	    set addrs [getFromRunning "${node_id}|${iface_id}_old_ipv4_addrs"]
 	    foreach addr $addrs {

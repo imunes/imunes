@@ -916,7 +916,7 @@ proc fetchNodeRunningConfig { node_id } {
     # overwrite any unsaved changes to this node
     set node_cfg [cfgGet "nodes" $node_id]
 
-    set ifaces_names "[logIfaceNames $node_id] [ifaceNames $node_id]"
+    set ifaces_names [allIfcList $node_id]
 
     set iface_id ""
     set loopback 0
@@ -1339,7 +1339,7 @@ proc nodePhysIfacesCreate { node_id ifaces } {
     # Create "physical" network interfaces
     foreach iface_id $ifaces {
 	setToRunning "${node_id}|${iface_id}_running" true
-	set iface_name [getIfcName $node_id $iface_id]
+	set iface_name $iface_id
 	set public_hook $node_id-$iface_name
 	set prefix [string trimright $iface_name "0123456789"]
 	if { $node_type in "ext extnat" } {
@@ -1442,18 +1442,17 @@ proc nodeLogIfacesCreate { node_id ifaces } {
     foreach iface_id $ifaces {
 	setToRunning "${node_id}|${iface_id}_running" true
 
-	set iface_name [getIfcName $node_id $iface_id]
 	switch -exact [getIfcType $node_id $iface_id] {
 	    vlan {
 		set tag [getIfcVlanTag $node_id $iface_id]
 		set dev [getIfcVlanDev $node_id $iface_id]
 		if { $tag != "" && $dev != "" } {
-		    pipesExec "jexec $jail_id [getVlanTagIfcCmd $iface_name $dev $tag]" "hold"
+		    pipesExec "jexec $jail_id [getVlanTagIfcCmd $iface_id $dev $tag]" "hold"
 		}
 	    }
 	    lo {
-		if { $iface_name != "lo0" } {
-		    pipesExec "jexec $jail_id ifconfig $iface_name create" "hold"
+		if { $iface_id != "lo0" } {
+		    pipesExec "jexec $jail_id ifconfig $iface_id create" "hold"
 		}
 	    }
 	}
@@ -2125,15 +2124,14 @@ proc destroyNodeIfaces { eid node_id ifaces } {
     set node_type [getNodeType $node_id]
     if { $node_type == "rj45" } {
 	foreach iface_id $ifaces {
-	    releaseExtIfcByName $eid [getIfcName $node_id $iface_id] $node_id
+	    releaseExtIfcByName $eid $iface_id $node_id
 	}
     } else {
 	foreach iface_id $ifaces {
-	    set iface_name [getIfcName $node_id $iface_id]
 	    if { [getIfcType $node_id $iface_id] == "stolen" } {
-		releaseExtIfcByName $eid $iface_name $node_id
+		releaseExtIfcByName $eid $iface_id $node_id
 	    } else {
-		pipesExec "jexec $eid ngctl rmnode $node_id-$iface_name:" "hold"
+		pipesExec "jexec $eid ngctl rmnode $node_id-$iface_id:" "hold"
 	    }
 	}
     }
@@ -2271,7 +2269,7 @@ proc getCpuCount {} {
 proc captureExtIfc { eid node_id iface_id } {
     global execMode
 
-    set ifname [getIfcName $node_id $iface_id]
+    set ifname $iface_id
     if { [getIfcVlanDev $node_id $iface_id] != "" } {
 	set vlan [getIfcVlanTag $node_id $iface_id]
 	try {
@@ -2332,7 +2330,7 @@ proc captureExtIfcByName { eid ifname node_id } {
 #   * iface_id -- interface id
 #****
 proc releaseExtIfc { eid node_id iface_id } {
-    set ifname [getIfcName $node_id $iface_id]
+    set ifname $iface_id
     if { [getIfcVlanDev $node_id $iface_id] != "" } {
 	set vlan [getIfcVlanTag $node_id $iface_id]
 	set ifname $ifname.$vlan

@@ -57,9 +57,6 @@ proc $MODULE.toolbarIconDescr {} {
 }
 
 proc $MODULE._confNewIfc { node_id ifc } {
-    global node_cfg
-
-    set node_cfg [_setIfcName $node_cfg $ifc "UNASSIGNED"]
 }
 
 #****f* rj45.tcl/rj45.icon

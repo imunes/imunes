@@ -137,7 +137,7 @@ proc $MODULE.shellcmds {} {
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node_id iface } {
-    return [list $node_id [getIfcName $node_id $iface]]
+    return [list $node_id $iface]
 }
 
 ################################################################################
@@ -214,7 +214,7 @@ proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
 #****
 proc $MODULE.nodeConfigure { eid node_id } {
     foreach iface_id [ifcList $node_id] {
-	set ngcfgreq "shc [getIfcName $node_id $iface_id]"
+	set ngcfgreq "shc $iface_id"
 	foreach rule_num [lsort -dictionary [ifcFilterRuleList $node_id $iface_id]] {
 	    set rule [getFilterIfcRuleAsString $node_id $iface_id $rule_num]
 	    set ngcfgreq "${ngcfgreq} ${rule}"

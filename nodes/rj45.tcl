@@ -149,7 +149,7 @@ proc $MODULE.virtlayer {} {
 #     the netraph hook name (in this case: lower).
 #****
 proc $MODULE.nghook { eid node_id iface_id } {
-    set ifname [getIfcName $node_id $iface_id]
+    set ifname $iface_id
     if { [getIfcVlanDev $node_id $iface_id] != "" } {
 	set vlan [getIfcVlanTag $node_id $iface_id]
 	set ifname ${ifname}_$vlan

@@ -984,7 +984,7 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
 	if { [getNodeIface $node_id $iface] == "" } {
 	    after idle {.dialog1.msg configure -wraplength 4i}
 	    tk_dialog .dialog1 "IMUNES warning" \
-		"Warning: Interface '[getIfcName $node_id $iface]' on node '[getNodeName $node_id]' does not exist" \
+		"Warning: Interface '$iface' on node '[getNodeName $node_id]' does not exist" \
 		info 0 Dismiss
 
 	    return
@@ -993,7 +993,7 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
 	if { [getIfcLink $node_id $iface] != "" } {
 	    after idle {.dialog1.msg configure -wraplength 4i}
 	    tk_dialog .dialog1 "IMUNES warning" \
-		"Warning: Interface '[getIfcName $node_id $iface]' already connected to a link" \
+		"Warning: Interface '$iface' already connected to a link" \
 		info 0 Dismiss
 
 	    return

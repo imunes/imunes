@@ -1224,7 +1224,7 @@ proc getRouterInterfaceCfg { node_id } {
 	"quagga" -
 	"frr" {
 	    foreach iface_id [allIfcList $node_id] {
-		lappend cfg "interface [getIfcName $node_id $iface_id]"
+		lappend cfg "interface $iface_id"
 
 		set addrs [getIfcIPv4addrs $node_id $iface_id]
 		foreach addr $addrs {
@@ -2361,11 +2361,7 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 			"changed" {
 			    set iface_type [_cfgGet $iface_new_value "type"]
 			    if { $iface_change == "new" } {
-				if { [string match "lifc*" $iface_key] } {
-				    set iface_id [newLogIface $node_id $iface_type]
-				} else {
-				    set iface_id [newIface $node_id $iface_type 0]
-				}
+				set iface_id [newIface $node_id $iface_type 0]
 			    } else {
 				set iface_id $iface_key
 			    }
@@ -2396,10 +2392,6 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 
 				    "type" {
 					setIfcType $node_id $iface_id $iface_prop_new_value
-				    }
-
-				    "name" {
-					setIfcName $node_id $iface_id $iface_prop_new_value
 				    }
 
 				    "oper_state" {

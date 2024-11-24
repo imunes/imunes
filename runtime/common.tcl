@@ -963,8 +963,8 @@ proc dumpLinksToFile { path } {
 
 	set linkname "$name1$linkDelim$name2"
 
-	set lpair [list $lnode1 [getIfcName $lnode1 $iface1_id]]
-	set rpair [list $lnode2 [getIfcName $lnode2 $iface2_id]]
+	set lpair [list $lnode1 $iface1_id]
+	set rpair [list $lnode2 $iface2_id]
 
 	set line "$link {$lnode1-$lnode2 {{$lpair} {$rpair}} $linkname}\n"
 	set data "$data$line"

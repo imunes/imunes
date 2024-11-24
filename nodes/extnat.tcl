@@ -189,7 +189,7 @@ proc $MODULE.shellcmds {} {
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node_id iface_id } {
-    return [list $node_id-[getIfcName $node_id $iface_id] ether]
+    return [list $node_id-$iface_id ether]
 }
 
 #****f* extnat.tcl/extnat.maxLinks

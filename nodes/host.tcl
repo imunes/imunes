@@ -63,7 +63,7 @@ proc $MODULE.confNewNode { node_id } {
     setNodeName $node_id [getNewNodeNameType host $nodeNamingBase(host)]
     setAutoDefaultRoutesStatus $node_id "enabled"
 
-    set logiface_id [newLogIface $node_id "lo"]
+    set logiface_id [newIface $node_id "lo" 0]
     setIfcIPv4addrs $node_id $logiface_id "127.0.0.1/8"
     setIfcIPv6addrs $node_id $logiface_id "::1/128"
 }
@@ -303,7 +303,7 @@ proc $MODULE.shellcmds {} {
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node_id iface_id } {
-    return [list $node_id-[getIfcName $node_id $iface_id] ether]
+    return [list $node_id-$iface_id ether]
 }
 
 ################################################################################

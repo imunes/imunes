@@ -730,9 +730,9 @@ proc button3node { c x y } {
 		continue
 	    }
 
-	    set from_iface_label "$this_iface_id - \[[getIfcName $node_id $this_iface_id]\]"
+	    set from_iface_label "\[$this_iface_id\]"
 	} else {
-	    set from_iface_label [getIfcName $node_id $this_iface_id]
+	    set from_iface_label $this_iface_id
 	}
 	if { $this_iface_id == "new_iface" } {
 	    set from_iface_id {}
@@ -774,9 +774,9 @@ proc button3node { c x y } {
 			    continue
 			}
 
-			set to_iface_label "$other_iface_id - \[[getIfcName $peer_node_id $other_iface_id]\]"
+			set to_iface_label "\[$other_iface_id\]"
 		    } else {
-			set to_iface_label [getIfcName $peer_node_id $other_iface_id]
+			set to_iface_label $other_iface_id
 		    }
 		    if { $other_iface_id == "new_peer_iface" } {
 			set to_iface_id {}
@@ -1042,8 +1042,7 @@ proc button3node { c x y } {
 		-command "startWiresharkOnNodeIfc $node_id any"
 
 	    foreach iface_id [allIfcList $node_id] {
-		set iface_name "[getIfcName $node_id $iface_id]"
-		set iface_label "$iface_name"
+		set iface_label "$iface_id"
 		if { [getIfcIPv4addr $node_id $iface_id] != "" } {
 		    set iface_label "$iface_label ([getIfcIPv4addr $node_id $iface_id])"
 		}
@@ -1053,7 +1052,7 @@ proc button3node { c x y } {
 		}
 
 		.button3menu.wireshark add command -label $iface_label \
-		    -command "startWiresharkOnNodeIfc $node_id $iface_name"
+		    -command "startWiresharkOnNodeIfc $node_id $iface_id"
 	    }
 	}
 
@@ -1069,8 +1068,7 @@ proc button3node { c x y } {
 		-command "startTcpdumpOnNodeIfc $node_id any"
 
 	    foreach iface_id [allIfcList $node_id] {
-		set iface_name "[getIfcName $node_id $iface_id]"
-		set iface_label "$iface_name"
+		set iface_label "$iface_id"
 		if { [getIfcIPv4addr $node_id $iface_id] != "" } {
 		    set iface_label "$iface_label ([getIfcIPv4addr $node_id $iface_id])"
 		}
@@ -1080,7 +1078,7 @@ proc button3node { c x y } {
 		}
 
 		.button3menu.tcpdump add command -label $iface_label \
-		    -command "startTcpdumpOnNodeIfc $node_id $iface_name"
+		    -command "startTcpdumpOnNodeIfc $node_id $iface_id"
 	    }
 	}
 
@@ -1957,7 +1955,7 @@ proc nodeEnter { c } {
     }
     if { $type != "rj45" } {
 	foreach iface_id [ifcList $node_id] {
-	    set line "$line [getIfcName $node_id $iface_id]:[getIfcIPv4addrs $node_id $iface_id]"
+	    set line "$line $iface_id:[getIfcIPv4addrs $node_id $iface_id]"
 	}
     }
     .bottom.textbox config -text "$line"
