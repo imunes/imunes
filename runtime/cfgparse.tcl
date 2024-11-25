@@ -467,17 +467,13 @@ proc loadCfgLegacy { cfg } {
 			    lappend $object "network-config {$cfg}"
 
 			    set all_iface_ids {}
-			    set all_logiface_ids {}
-			    foreach iface_name [dict keys $all_ifaces] {
+			    foreach iface_name [lsort -dictionary [dict keys $all_ifaces]] {
 				set type [dictGet $all_ifaces $iface_name "type"]
+				set iface_id [newObjectId $all_iface_ids "ifc"]
 
 				if { $type == "" } {
 				    dict set all_ifaces $iface_name "type" "phys"
-				    set iface_id [newObjectId $all_iface_ids "ifc"]
 				    lappend all_iface_ids $iface_id
-				} else {
-				    set iface_id [newObjectId $all_logiface_ids "lifc"]
-				    lappend all_logiface_ids $iface_id
 				}
 
 				setToRunning "${object}|${iface_id}_running" false
