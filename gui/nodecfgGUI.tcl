@@ -522,8 +522,13 @@ proc configGUI_refreshIfcsTree { wi node_id } {
     $wi selection set physIfcFrame
 
     foreach iface_id $sorted_iface_list {
+	set iface_name [_getIfcName $node_cfg $iface_id]
+	if { [_getIfcType $node_cfg $iface_id] == "stolen" } {
+	    set iface_name "\[$iface_name\]"
+	}
+
 	$wi insert physIfcFrame end -id $iface_id \
-	    -text "[_getIfcName $node_cfg $iface_id]" -tags $iface_id
+	    -text $iface_name -tags $iface_id
 
 	foreach column $treecolumns {
 	    $wi set $iface_id [lindex $column 0] \
@@ -815,6 +820,15 @@ proc configGUI_logicalInterfaces { wi node_id iface_id } {
 	set ifctype [$wi.addbox get]
 	lassign [_newLogIface $node_cfg $ifctype] logiface_id node_cfg
 
+	if { $logiface_id == "" } {
+	    after idle {.dialog1.msg configure -wraplength 4i}
+	    tk_dialog .dialog1 "IMUNES warning" \
+		"Interface already exists in node!" \
+		info 0 Dismiss
+
+	    return
+	}
+
 	set logifaces_list [lsort [_logIfaceNames $curnode]]
 	$wi.rmvbox configure -values $logifaces_list
 	$wi.list configure -listvariable logifaces_list
@@ -923,14 +937,20 @@ proc configGUI_physicalInterfaces { wi node_id iface_id } {
 	set wi $wi_prefix.f2.ifphysIfcFrame
 
 	set ifctype [$wi.addbox get]
+	set iface_name ""
 	if { $ifctype != "phys" } {
 	    set iface_name $ifctype
 	    set ifctype "stolen"
 	}
-	lassign [_newIface $node_cfg $ifctype 1] iface_id node_cfg
 
-	if { $ifctype != "phys" } {
-	    set node_cfg [_setIfcName $node_cfg $iface_id $iface_name]
+	lassign [_newIface $node_cfg $ifctype 1 $iface_name] iface_id node_cfg
+	if { $iface_id == "" } {
+	    after idle {.dialog1.msg configure -wraplength 4i}
+	    tk_dialog .dialog1 "IMUNES warning" \
+		"Interface $iface_name already exists in node!" \
+		info 0 Dismiss
+
+	    return
 	}
 
 	set ifaces_list [lsort [_ifaceNames $node_cfg]]
