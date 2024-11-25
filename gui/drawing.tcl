@@ -335,15 +335,12 @@ proc updateIfcLabel { link_id node_id iface_id } {
 
     set label_str ""
     if { $show_interface_names } {
+	lappend label_str "$iface_id"
 	if { [getNodeType $node_id] == "rj45" } {
-	    lappend label_str "$iface_id"
 	    if { [getIfcVlanDev $node_id $iface_id] != "" } {
 		lappend label_str "VLAN [getIfcVlanTag $node_id $iface_id]"
 	    }
-	} else {
-	    lappend label_str "$iface_id"
 	}
-
     }
 
     if { $show_interface_ipv4 && $ifipv4addr != "" } {

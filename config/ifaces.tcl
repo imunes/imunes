@@ -1058,6 +1058,19 @@ proc renameIface { node_id from_iface to_iface } {
     setToRunning "${node_id}|${to_iface}_running" [getFromRunning "${node_id}|${from_iface}_running"]
     unsetRunning "${node_id}|${from_iface}_running"
 
+    # TODO: we need to change public hooks for this to work in exec mode
+    set link_id [getIfcLink $node_id $to_iface]
+    if { $link_id != "" } {
+	lassign [getLinkPeers $link_id] peer1_id peer2_id
+	lassign [getLinkPeersIfaces $link_id] peer1_iface peer2_iface
+
+	if { $node_id == $peer1_id } {
+	    setLinkPeersIfaces $link_id "$to_iface $peer2_iface"
+	} else {
+	    setLinkPeersIfaces $link_id "$peer1_iface $to_iface"
+	}
+    }
+
     return $to_iface
 }
 
