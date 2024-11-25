@@ -466,17 +466,13 @@ proc loadCfgLegacy { cfg } {
 			    lappend $object "network-config {$cfg}"
 
 			    set all_iface_ids {}
-			    set all_logiface_ids {}
 			    foreach iface_name [dict keys $all_ifaces] {
 				set type [dictGet $all_ifaces $iface_name "type"]
+				set iface_id [newObjectId $all_iface_ids "ifc"]
 
 				if { $type == "" } {
 				    dict set all_ifaces $iface_name "type" "phys"
-				    set iface_id [newObjectId $all_iface_ids "ifc"]
 				    lappend all_iface_ids $iface_id
-				} else {
-				    set iface_id [newObjectId $all_logiface_ids "lifc"]
-				    lappend all_logiface_ids $iface_id
 				}
 
 				setToRunning "${object}|${iface_id}_running" false
@@ -1074,12 +1070,11 @@ proc loadCfgLegacy { cfg } {
 #   * obj_id -- object ID in the form $prefix$number
 #****
 proc newObjectId { elem_list prefix } {
-    set len [llength $elem_list]
+    set sorted_list [lsort -dictionary [lsearch -regexp -all -inline $elem_list "^$prefix\[0-9\]\[0-9\]*$"]]
+    set len [llength $sorted_list]
     if { $len == 0 } {
 	return ${prefix}0
     }
-
-    set sorted_list [lsort -dictionary $elem_list]
 
     # Initial interval - the start to the middle of the list
     set start 0
