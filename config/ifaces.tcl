@@ -1047,6 +1047,20 @@ proc removeIface { node_id iface_id } {
     }
 }
 
+proc renameIface { node_id from_iface to_iface } {
+    set ifaces [cfgGet "nodes" $node_id "ifaces"]
+    set ifaces [dictSet $ifaces $to_iface [dictGet $ifaces $from_iface]]
+    set ifaces [dictUnset $ifaces $to_iface "rename"]
+    set ifaces [dictUnset $ifaces $from_iface]
+
+    cfgSet "nodes" $node_id "ifaces" $ifaces
+
+    setToRunning "${node_id}|${to_iface}_running" [getFromRunning "${node_id}|${from_iface}_running"]
+    unsetRunning "${node_id}|${from_iface}_running"
+
+    return $to_iface
+}
+
 proc nodeCfggenIfc { node_id iface_id } {
     global isOSlinux
 

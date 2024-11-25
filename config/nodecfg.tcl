@@ -2382,12 +2382,17 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 				    puts "============ NEW: '$iface_prop_new_value'"
 				}
 
+				set to_iface ""
 				switch -exact $iface_prop_key {
 				    "link" {
 					# link cannot be changed, only removed
 					if { $iface_prop_change == "removed" } {
 					    removeLink $iface_prop_old_value 1
 					}
+				    }
+
+				    "rename" {
+					set to_iface $iface_prop_new_value
 				    }
 
 				    "type" {
@@ -2511,6 +2516,10 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 				    "stp_max_addresses" {
 					setBridgeIfcMaxaddr $node_id $iface_id $iface_prop_new_value
 				    }
+				}
+
+				if { $to_iface != "" } {
+				    renameIface $node_id $iface_id $to_iface
 				}
 			    }
 			}

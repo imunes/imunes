@@ -615,7 +615,7 @@ proc _allIfcList { node_cfg } {
 proc _getIfaceNamesByType { node_cfg args } {
     set all_ifaces [_cfgGet $node_cfg "ifaces"]
     if { $all_ifaces == {} } {
-	RETURN
+	return
     }
 
     set iface_names {}
@@ -752,6 +752,12 @@ proc _removeIface { node_cfg iface_id } {
 	    }
 	}
     }
+
+    return $node_cfg
+}
+
+proc _renameIface { node_cfg from_iface to_iface } {
+    set node_cfg [dictSet $node_cfg "ifaces" $from_iface "rename" $to_iface]
 
     return $node_cfg
 }

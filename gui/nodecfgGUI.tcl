@@ -1183,7 +1183,7 @@ proc configGUI_applyButtonNode { wi node_id phase } {
 	    [lindex $guielement 0]\Apply $wi.panwin.f2 $node_id [lindex $guielement 1]
 	} elseif { [lsearch [pack slaves .popup] .popup.nbook] != -1 && [llength $guielement] == 2 } {
 	    if { [lindex $guielement 0] == "configGUI_addRj45PanedWin" } {
-		[lindex $guielement 0]\Apply [lindex $guielement 1]
+		[lindex $guielement 0]\Apply [lindex $guielement 1] $node_id
 	    } elseif { [lindex $guielement 0] == "configGUI_ifcBridgeAttributes" } {
 		[lindex $guielement 0]\Apply [lindex [.popup.nbook tabs] 2].panwin.f2 $node_id [lindex $guielement 1]
 	    } else {
@@ -1708,8 +1708,10 @@ proc configGUI_addRj45PanedWin { wi node_id } {
 
     ttk::frame $wi.peer -borderwidth 6
     ttk::label $wi.peer.label -text "Peer:"
+    puts "set link_id \[_getIfcLink '$node_cfg' '$iface_id'\]"
     set link_id [_getIfcLink $node_cfg $iface_id]
     if { $link_id != "" } {
+	# TODO: include peer_id on GUI load
 	set peer_id [getNodeName [lindex [logicalPeerByIfc $node_id $iface_id] 0]]
     } else {
 	set peer_id ""
@@ -1736,6 +1738,8 @@ proc configGUI_addRj45PanedWin { wi node_id } {
         -from 1 -to 4094 -increment 1
 
     $wi.vlancfg.tag insert 0 [_getIfcVlanTag $node_cfg $iface_id]
+    puts "V1: '[_getIfcVlanTag $node_cfg $iface_id]'"
+    puts "V2: '[_getIfcVlanDev $node_cfg $iface_id]'"
     if { [_getIfcVlanDev $node_cfg $iface_id] != "" } {
         set vlanEnable_$iface_id 1
     } else {
@@ -2667,7 +2671,7 @@ proc checkStaticRoutesSyntax { text } {
 #   * wi -- widget
 #   * node_id -- node id
 #****
-proc configGUI_addRj45PanedWinApply { iface_id } {
+proc configGUI_addRj45PanedWinApply { iface_id node_id } {
     global changed node_cfg
     global vlanEnable_$iface_id
 
@@ -2677,8 +2681,9 @@ proc configGUI_addRj45PanedWinApply { iface_id } {
 	set oldEnabled 0
     }
 
-    set wi ".popup.nbook.nf$iface_id"
-    set dev [$wi.stolen.name get]
+    set wi ".popup.nbook"
+    set winside "$wi.nf$iface_id"
+    set dev [$winside.stolen.name get]
     if { [set vlanEnable_$iface_id] != $oldEnabled || $dev != $iface_id} {
 	if { [set vlanEnable_$iface_id] } {
 	    set node_cfg [_setIfcVlanDev $node_cfg $iface_id $dev]
@@ -2688,25 +2693,33 @@ proc configGUI_addRj45PanedWinApply { iface_id } {
 	set changed 1
     }
 
-    set tag [$wi.vlancfg.tag get]
+    set tag [$winside.vlancfg.tag get]
     set oldTag [_getIfcVlanTag $node_cfg $iface_id]
     if { $tag != $oldTag } {
 	set node_cfg [_setIfcVlanTag $node_cfg $iface_id $tag]
 	if { $tag == "" } {
 	    set node_cfg [_setIfcVlanDev $node_cfg $iface_id ""]
-	    $wi.vlancfg.tag configure -state disabled
+	    $winside.vlancfg.tag configure -state disabled
 	}
 	set changed 1
     }
 
-    foreach iface_id $ifaces {
-        ttk::frame $wi.nbook.nf$iface_id
-        $wi.nbook add $wi.nbook.nf$iface_id -text $iface_id
-	configGUI_addRj45PanedWin $wi.nbook.nf$iface_id $node_id
-    }
+    if { $dev != $iface_id } {
+	global guielements
+	set guielements [removeFromList $guielements "configGUI_addRj45PanedWin $iface_id"]
 
-    set node_cfg [_removeIface $node_cfg $iface_id]
-    lassign [_newIface $node_cfg "stolen" 0 $dev] iface_id node_cfg
+	global vlanEnable_$iface_id vlanEnable_$dev
+	set vlanEnable_$dev [set vlanEnable_$iface_id]
+	unset vlanEnable_$iface_id
+
+	set node_cfg [_renameIface $node_cfg $iface_id $dev]
+	$wi forget $winside
+	ttk::frame $wi.nf$dev
+	$wi add $wi.nf$dev -text $dev
+	configGUI_addRj45PanedWin $wi.nf$dev $node_id
+
+	set changed 1
+    }
 }
 
 #****f* nodecfgGUI.tcl/configGUI_customConfigApply
