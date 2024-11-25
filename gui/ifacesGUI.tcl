@@ -581,15 +581,41 @@ proc _setNodeIface { node_cfg iface_id new_iface } {
 #   * interfaces -- list of all node's interfaces
 #****
 proc _ifcList { node_cfg } {
-    return [lsearch -glob -all -inline [dict keys [_cfgGet $node_cfg "ifaces"]] "ifc*"]
+    return [_getIfacesByType $node_cfg "phys" "stolen"]
 }
 
 proc _ifaceNames { node_cfg } {
     set iface_names {}
     foreach {iface_id iface_cfg} [_cfgGet $node_cfg "ifaces"] {
-	if { [string match "ifc*" $iface_id] } {
-	    lappend iface_names [_cfgGet $iface_cfg "name"]
+	lappend iface_names [_cfgGet $iface_cfg "name"]
+    }
+
+    return $iface_names
+}
+
+proc _getIfacesByType { node_cfg args } {
+    set all_ifaces [_cfgGet $node_cfg "ifaces"]
+    if { $all_ifaces == {} } {
+	return
+    }
+
+    set iface_ids {}
+    foreach type $args {
+	set filtered_ifaces [dict keys [dict filter $all_ifaces "value" "*type $type*"]]
+	if { $filtered_ifaces != {} } {
+	    lappend iface_ids {*}$filtered_ifaces
 	}
+    }
+
+    return $iface_ids
+}
+
+proc _getIfaceNamesByType { node_cfg args } {
+    set filtered_ifaces [_getIfacesByType $node_cfg {*}$args]
+
+    set iface_names {}
+    foreach iface_id $filtered_ifaces {
+	lappend iface_names [_getIfcName $node_cfg $iface_id]
     }
 
     return $iface_names
@@ -608,18 +634,11 @@ proc _ifaceNames { node_cfg } {
 #   * interfaces -- list of node's logical interfaces
 #****
 proc _logIfcList { node_cfg } {
-    return [lsearch -glob -all -inline [dict keys [_cfgGet $node_cfg "ifaces"]] "lifc*"]
+    return [_getIfacesByType $node_cfg "lo" "vlan"]
 }
 
 proc _logIfaceNames { node_cfg } {
-    set logiface_names {}
-    foreach {logiface_id logiface_cfg} [_cfgGet $node_cfg "ifaces"] {
-	if { [string match "lifc*" $logiface_id] } {
-	    lappend logiface_names [_cfgGet $logiface_cfg "name"]
-	}
-    }
-
-    return $logiface_names
+    return [_getIfaceNamesByType $node_cfg "lo" "vlan"]
 }
 
 #****f* nodecfg.tcl/isIfcLogical
@@ -686,16 +705,27 @@ proc _chooseIfaceName { node_cfg } {
 }
 
 proc _newIface { node_cfg iface_type auto_config { stolen_iface "" } } {
-    set iface_list [lsearch -glob -all -inline [dict keys [_cfgGet $node_cfg "ifaces"]] "ifc*"]
+    set iface_id [newObjectId [_allIfcList $node_cfg] "ifc"]
 
-    set iface_id [newObjectId $iface_list "ifc"]
+    switch -exact $iface_type {
+	"lo" -
+	"vlan" {
+	    set iface_name [newObjectId [_ifaceNames $node_cfg] $iface_type]
+	}
+	"phys" {
+	    set iface_name [newObjectId [_ifaceNames $node_cfg] [[dictGet $node_cfg "type"].ifacePrefix]]
+	}
+	"stolen" {
+	    if { $stolen_iface != "UNASSIGNED" && $stolen_iface in [_ifaceNames $node_cfg] } {
+		return [list "" $node_cfg]
+	    }
+
+	    set iface_name $stolen_iface
+	}
+    }
 
     set node_cfg [_setIfcType $node_cfg $iface_id $iface_type]
-    if { $iface_type == "stolen" } {
-	set node_cfg [_setIfcName $node_cfg $iface_id $stolen_iface]
-    } else {
-	set node_cfg [_setIfcName $node_cfg $iface_id [_chooseIfaceName $node_cfg]]
-    }
+    set node_cfg [_setIfcName $node_cfg $iface_id $iface_name]
 
     # TODO
     if { $auto_config } {
@@ -706,15 +736,7 @@ proc _newIface { node_cfg iface_type auto_config { stolen_iface "" } } {
 }
 
 proc _newLogIface { node_cfg logiface_type } {
-    set current_logiface_names [lsearch -all -inline -glob [_logIfaceNames $node_cfg] "$logiface_type*"]
-
-    set logiface_id [newObjectId [_logIfcList $node_cfg] "lifc"]
-    set node_cfg [_setNodeIface $node_cfg $logiface_id {}]
-
-    set node_cfg [_setIfcType $node_cfg $logiface_id $logiface_type]
-    set node_cfg [_setIfcName $node_cfg $logiface_id [newObjectId $current_logiface_names $logiface_type]]
-
-    return [list $logiface_id $node_cfg]
+    return [_newIface $node_cfg $logiface_type 0]
 }
 
 proc _removeIface { node_cfg iface_id } {

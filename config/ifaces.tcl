@@ -697,15 +697,41 @@ proc getIfcLinkLocalIPv6addr { node_id iface_id } {
 #   * interfaces -- list of all node's interfaces
 #****
 proc ifcList { node_id } {
-    return [lsearch -glob -all -inline [dict keys [cfgGet "nodes" $node_id "ifaces"]] "ifc*"]
+    return [getIfacesByType $node_id "phys" "stolen"]
 }
 
 proc ifaceNames { node_id } {
     set iface_names {}
     foreach {iface_id iface_cfg} [cfgGet "nodes" $node_id "ifaces"] {
-	if { [string match "ifc*" $iface_id] } {
-	    lappend iface_names [dictGet $iface_cfg "name"]
+	lappend iface_names [dictGet $iface_cfg "name"]
+    }
+
+    return $iface_names
+}
+
+proc getIfacesByType { node_id args } {
+    set all_ifaces [cfgGet "nodes" $node_id "ifaces"]
+    if { $all_ifaces == {} } {
+	return
+    }
+
+    set iface_ids {}
+    foreach type $args {
+	set filtered_ifaces [dict keys [dict filter $all_ifaces "value" "*type $type*"]]
+	if { $filtered_ifaces != {} } {
+	    lappend iface_ids {*}$filtered_ifaces
 	}
+    }
+
+    return $iface_ids
+}
+
+proc getIfaceNamesByType { node_id args } {
+    set filtered_ifaces [getIfacesByType $node_id {*}$args]
+
+    set iface_names {}
+    foreach iface_id $filtered_ifaces {
+	lappend iface_names [getIfcName $node_id $iface_id]
     }
 
     return $iface_names
@@ -724,18 +750,11 @@ proc ifaceNames { node_id } {
 #   * interfaces -- list of node's logical interfaces
 #****
 proc logIfcList { node_id } {
-    return [lsearch -glob -all -inline [dict keys [cfgGet "nodes" $node_id "ifaces"]] "lifc*"]
+    return [getIfacesByType $node_id "lo" "vlan"]
 }
 
 proc logIfaceNames { node_id } {
-    set logiface_names {}
-    foreach {logiface_id logiface_cfg} [cfgGet "nodes" $node_id "ifaces"] {
-	if { [string match "lifc*" $logiface_id] } {
-	    lappend logiface_names [dictGet $logiface_cfg "name"]
-	}
-    }
-
-    return $logiface_names
+    return [getIfaceNamesByType $node_id "lo" "vlan"]
 }
 
 #****f* nodecfg.tcl/isIfcLogical
@@ -1011,18 +1030,32 @@ proc nodeCfggenIfcIPv6 { node_id iface_id } {
 #   * iface_id -- the first available name for a interface of the specified type
 #****
 proc newIface { node_id iface_type auto_config { stolen_iface "" } } {
-    set iface_id [newObjectId [ifcList $node_id] "ifc"]
+    set iface_id [newObjectId [allIfcList $node_id] "ifc"]
+
+    switch -exact $iface_type {
+	"lo" -
+	"vlan" {
+	    set iface_name [newObjectId [ifaceNames $node_id] $iface_type]
+	}
+	"phys" {
+	    set iface_name [newObjectId [ifaceNames $node_id] [[getNodeType $node_id].ifacePrefix]]
+	}
+	"stolen" {
+	    if { $stolen_iface != "UNASSIGNED" && $stolen_iface in [ifaceNames $node_id] } {
+		return ""
+	    }
+
+	    set iface_name $stolen_iface
+	}
+    }
+
     setToRunning "${node_id}|${iface_id}_running" false
     trigger_ifaceCreate $node_id $iface_id
 
     setNodeIface $node_id $iface_id {}
 
     setIfcType $node_id $iface_id $iface_type
-    if { $iface_type == "stolen" } {
-	setIfcName $node_id $iface_id $stolen_iface
-    } else {
-	setIfcName $node_id $iface_id [chooseIfName $node_id $node_id]
-    }
+    setIfcName $node_id $iface_id $iface_name
 
     if { $auto_config } {
 	[getNodeType $node_id].confNewIfc $node_id $iface_id
@@ -1044,16 +1077,7 @@ proc newIface { node_id iface_type auto_config { stolen_iface "" } } {
 #   * type -- interface type
 #****
 proc newLogIface { node_id logiface_type } {
-    set current_logiface_names [lsearch -all -inline -glob [logIfaceNames $node_id] "$logiface_type*"]
-
-    set logiface_id [newObjectId [logIfcList $node_id] "lifc"]
-    setToRunning "${node_id}|${logiface_id}_running" false
-    setNodeIface $node_id $logiface_id {}
-
-    setIfcType $node_id $logiface_id $logiface_type
-    setIfcName $node_id $logiface_id [newObjectId $current_logiface_names $logiface_type]
-
-    return $logiface_id
+    return [newIface $node_id $logiface_type 0]
 }
 
 proc removeIface { node_id iface_id } {
