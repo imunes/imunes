@@ -587,6 +587,7 @@ proc deployCfg {} {
 	pipesCreate
 	instantiateNodes $l2nodes $l2nodeCount $w
 	statline "Waiting for $l2nodeCount L2 node(s) to start..."
+	waitForInstantiateNodes $l2nodes $l2nodeCount $w
 	pipesClose
 
 	#statline "Copying host files to $l3nodeCount L3 node(s)..."
