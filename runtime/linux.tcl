@@ -579,6 +579,24 @@ proc createNodeContainer { node } {
 
 proc isNodeStarted { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set node_type [nodeType $node]
+    if { [$node_type.virtlayer] != "VIRTUALIZED" } {
+	if { $node_type in "rj45 ext extnat" } {
+	    return true
+	}
+
+	set nodeNs "$eid-$node"
+
+	try {
+	    exec ip netns exec $nodeNs ip link show $node
+	} on error {} {
+	    return false
+	}
+
+	return true
+    }
+
     set node_id "$eid.$node"
 
     catch {exec docker inspect --format '{{.State.Running}}' $node_id} status
