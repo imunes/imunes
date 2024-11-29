@@ -51,53 +51,53 @@ registerModule $MODULE
 # NAME
 #   host.confNewNode -- configure new node
 # SYNOPSIS
-#   host.confNewNode $node
+#   host.confNewNode $node_id
 # FUNCTION
 #   Configures new node with the specified id.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.confNewNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc $MODULE.confNewNode { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global nodeNamingBase
 
     set nconfig [list \
 	"hostname [getNewNodeNameType host $nodeNamingBase(host)]" \
 	! ]
-    lappend $node "network-config [list $nconfig]"
+    lappend $node_id "network-config [list $nconfig]"
 
-    setAutoDefaultRoutesStatus $node "enabled"
-    setLogIfcType $node lo0 lo
-    setIfcIPv4addrs $node lo0 "127.0.0.1/8"
-    setIfcIPv6addrs $node lo0 "::1/128"
+    setAutoDefaultRoutesStatus $node_id "enabled"
+    setLogIfcType $node_id lo0 lo
+    setIfcIPv4addrs $node_id lo0 "127.0.0.1/8"
+    setIfcIPv6addrs $node_id lo0 "::1/128"
 }
 
 #****f* host.tcl/host.confNewIfc
 # NAME
 #   host.confNewIfc -- configure new interface
 # SYNOPSIS
-#   host.confNewIfc $node $ifc
+#   host.confNewIfc $node_id $iface_id
 # FUNCTION
 #   Configures new interface for the specified node.
 # INPUTS
-#   * node -- node id
-#   * ifc -- interface name
+#   * node_id -- node id
+#   * iface_id -- interface name
 #****
-proc $MODULE.confNewIfc { node ifc } {
+proc $MODULE.confNewIfc { node_id iface_id } {
     global changeAddressRange changeAddressRange6
 
     set changeAddressRange 0
     set changeAddressRange6 0
-    autoIPv4addr $node $ifc
-    autoIPv6addr $node $ifc
-    autoMACaddr $node $ifc
+    autoIPv4addr $node_id $iface_id
+    autoIPv6addr $node_id $iface_id
+    autoMACaddr $node_id $iface_id
 }
 
 #****f* host.tcl/host.generateConfig
 # NAME
 #   host.generateConfig -- configuration generator
 # SYNOPSIS
-#   set config [host.generateConfig $node]
+#   set config [host.generateConfig $node_id]
 # FUNCTION
 #   Returns the generated configuration. This configuration represents
 #   the configuration loaded on the booting time of the virtual nodes
@@ -106,18 +106,18 @@ proc $MODULE.confNewIfc { node ifc } {
 #   configured and each static route from the simulator is added. portmap
 #   and inetd are also started.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 # RESULT
 #   * config -- generated configuration
 #****
-proc $MODULE.generateConfig { node } {
+proc $MODULE.generateConfig { node_id } {
     set cfg {}
-    set cfg [concat $cfg [nodeCfggenIfcIPv4 $node]]
-    set cfg [concat $cfg [nodeCfggenIfcIPv6 $node]]
+    set cfg [concat $cfg [nodeCfggenIfcIPv4 $node_id]]
+    set cfg [concat $cfg [nodeCfggenIfcIPv6 $node_id]]
     lappend cfg ""
 
-    set cfg [concat $cfg [nodeCfggenRouteIPv4 $node]]
-    set cfg [concat $cfg [nodeCfggenRouteIPv6 $node]]
+    set cfg [concat $cfg [nodeCfggenRouteIPv4 $node_id]]
+    set cfg [concat $cfg [nodeCfggenRouteIPv6 $node_id]]
     lappend cfg ""
 
     lappend cfg "rpcbind"
@@ -258,17 +258,17 @@ proc $MODULE.virtlayer {} {
 # NAME
 #   host.bootcmd -- boot command
 # SYNOPSIS
-#   set appl [host.bootcmd $node]
+#   set appl [host.bootcmd $node_id]
 # FUNCTION
 #   Procedure bootcmd returns the application that reads and employes the
 #   configuration generated in host.generateConfig.
 #   In this case (procedure host.bootcmd) specific application is /bin/sh
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 # RESULT
 #   * appl -- application that reads the configuration (/bin/sh)
 #****
-proc $MODULE.bootcmd { node } {
+proc $MODULE.bootcmd { node_id } {
     return "/bin/sh"
 }
 
@@ -291,21 +291,21 @@ proc $MODULE.shellcmds {} {
 # NAME
 #   host.nghook -- nghook
 # SYNOPSIS
-#   host.nghook $eid $node $ifc
+#   host.nghook $eid $node_id $iface_id
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. This procedure calls
 #   l3node.hook procedure and passes the result of that procedure.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
-#   * ifc -- interface name
+#   * node_id -- node id
+#   * iface_id -- interface id
 # RESULT
 #   * nghook -- the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
-proc $MODULE.nghook { eid node ifc } {
-    return [l3node.nghook $eid $node $ifc]
+proc $MODULE.nghook { eid node_id iface_id } {
+    return [l3node.nghook $eid $node_id $iface_id]
 }
 
 ################################################################################
@@ -316,86 +316,86 @@ proc $MODULE.nghook { eid node ifc } {
 # NAME
 #   host.nodeCreate -- instantiate
 # SYNOPSIS
-#   host.nodeCreate $eid $node
+#   host.nodeCreate $eid $node_id
 # FUNCTION
 #   Procedure host.nodeCreate creates a new virtual node with
 #   all the interfaces and CPU parameters as defined in imunes.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.nodeCreate { eid node } {
-    l3node.nodeCreate $eid $node
+proc $MODULE.nodeCreate { eid node_id } {
+    l3node.nodeCreate $eid $node_id
 }
 
-proc $MODULE.nodeNamespaceSetup { eid node } {
-    l3node.nodeNamespaceSetup $eid $node
+proc $MODULE.nodeNamespaceSetup { eid node_id } {
+    l3node.nodeNamespaceSetup $eid $node_id
 }
 
-proc $MODULE.nodeInitConfigure { eid node } {
-    l3node.nodeInitConfigure $eid $node
+proc $MODULE.nodeInitConfigure { eid node_id } {
+    l3node.nodeInitConfigure $eid $node_id
 }
 
-proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
-    l3node.nodePhysIfacesCreate $eid $node $ifcs
+proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
+    l3node.nodePhysIfacesCreate $eid $node_id $ifaces
 }
 
 #****f* host.tcl/host.nodeConfigure
 # NAME
 #   host.nodeConfigure -- start
 # SYNOPSIS
-#   host.nodeConfigure $eid $node
+#   host.nodeConfigure $eid $node_id
 # FUNCTION
 #   Starts a new host. The node can be started if it is instantiated.
 #   Simulates the booting proces of a host, by calling l3node.nodeConfigure procedure.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.nodeConfigure { eid node } {
-    l3node.nodeConfigure $eid $node
+proc $MODULE.nodeConfigure { eid node_id } {
+    l3node.nodeConfigure $eid $node_id
 }
 
 ################################################################################
 ############################# TERMINATE PROCEDURES #############################
 ################################################################################
 
-proc $MODULE.nodeIfacesDestroy { eid node ifcs } {
-    l3node.nodeIfacesDestroy $eid $node $ifcs
+proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
+    l3node.nodeIfacesDestroy $eid $node_id $ifaces
 }
 
 #****f* host.tcl/host.nodeShutdown
 # NAME
 #   host.nodeShutdown -- shutdown
 # SYNOPSIS
-#   host.nodeShutdown $eid $node
+#   host.nodeShutdown $eid $node_id
 # FUNCTION
 #   Shutdowns a host node.
 #   Simulates the shutdown proces of a node, kills all the services and
 #   processes.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.nodeShutdown { eid node } {
-    l3node.nodeShutdown $eid $node
+proc $MODULE.nodeShutdown { eid node_id } {
+    l3node.nodeShutdown $eid $node_id
 }
 
 #****f* host.tcl/host.nodeDestroy
 # NAME
 #   host.nodeDestroy -- layer 3 node destroy
 # SYNOPSIS
-#   host.nodeDestroy $eid $node
+#   host.nodeDestroy $eid $node_id
 # FUNCTION
 #   Destroys a host node.
 #   First, it destroys all remaining virtual ifaces (vlans, tuns, etc).
 #   Then, it destroys the jail/container with its namespaces and FS.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.nodeDestroy { eid node } {
-    l3node.nodeDestroy $eid $node
+proc $MODULE.nodeDestroy { eid node_id } {
+    l3node.nodeDestroy $eid $node_id
 }
 
 ################################################################################
@@ -406,16 +406,16 @@ proc $MODULE.nodeDestroy { eid node } {
 # NAME
 #   host.configGUI -- configuration GUI
 # SYNOPSIS
-#   host.configGUI $c $node
+#   host.configGUI $c $node_id
 # FUNCTION
 #   Defines the structure of the host configuration window by calling
 #   procedures for creating and organising the window, as well as
 #   procedures for adding certain modules to that window.
 # INPUTS
 #   * c -- tk canvas
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.configGUI { c node } {
+proc $MODULE.configGUI { c node_id } {
     global wi
     #
     #guielements - the list of modules contained in the configuration window
@@ -430,46 +430,46 @@ proc $MODULE.configGUI { c node } {
 
     configGUI_createConfigPopupWin $c
     wm title $wi "host configuration"
-    configGUI_nodeName $wi $node "Node name:"
+    configGUI_nodeName $wi $node_id "Node name:"
 
-    set tabs [configGUI_addNotebook $wi $node { "Configuration" "Interfaces" }]
+    set tabs [configGUI_addNotebook $wi $node_id { "Configuration" "Interfaces" }]
     set configtab [lindex $tabs 0]
     set ifctab [lindex $tabs 1]
 
     set treecolumns { "OperState State" "NatState Nat" "IPv4addrs IPv4 addrs" "IPv6addrs IPv6 addrs" \
 	"MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop" }
-    configGUI_addTree $ifctab $node
+    configGUI_addTree $ifctab $node_id
 
-    configGUI_customImage $configtab $node
-    configGUI_attachDockerToExt $configtab $node
-    configGUI_servicesConfig $configtab $node
-    configGUI_staticRoutes $configtab $node
-    configGUI_snapshots $configtab $node
-    configGUI_customConfig $configtab $node
+    configGUI_customImage $configtab $node_id
+    configGUI_attachDockerToExt $configtab $node_id
+    configGUI_servicesConfig $configtab $node_id
+    configGUI_staticRoutes $configtab $node_id
+    configGUI_snapshots $configtab $node_id
+    configGUI_customConfig $configtab $node_id
 
-    configGUI_buttonsACNode $wi $node
+    configGUI_buttonsACNode $wi $node_id
 }
 
 #****f* host.tcl/host.configInterfacesGUI
 # NAME
 #   host.configInterfacesGUI -- configuration of interfaces GUI
 # SYNOPSIS
-#   host.configInterfacesGUI $wi $node $ifc
+#   host.configInterfacesGUI $wi $node_id $iface_id
 # FUNCTION
 #   Defines which modules for changing interfaces parameters are contained in
 #   the host configuration window. It is done by calling procedures for adding
 #   certain modules to the window.
 # INPUTS
 #   * wi -- widget
-#   * node -- node id
-#   * ifc -- interface id
+#   * node_id -- node id
+#   * iface_id -- interface id
 #****
-proc $MODULE.configInterfacesGUI { wi node ifc } {
+proc $MODULE.configInterfacesGUI { wi node_id iface_id } {
     global guielements
 
-    configGUI_ifcEssentials $wi $node $ifc
-    configGUI_ifcQueueConfig $wi $node $ifc
-    configGUI_ifcMACAddress $wi $node $ifc
-    configGUI_ifcIPv4Address $wi $node $ifc
-    configGUI_ifcIPv6Address $wi $node $ifc
+    configGUI_ifcEssentials $wi $node_id $iface_id
+    configGUI_ifcQueueConfig $wi $node_id $iface_id
+    configGUI_ifcMACAddress $wi $node_id $iface_id
+    configGUI_ifcIPv4Address $wi $node_id $iface_id
+    configGUI_ifcIPv6Address $wi $node_id $iface_id
 }

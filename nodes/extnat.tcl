@@ -48,42 +48,42 @@ registerModule $MODULE
 # NAME
 #   extnat.confNewNode -- configure new node
 # SYNOPSIS
-#   extnat.confNewNode $node
+#   extnat.confNewNode $node_id
 # FUNCTION
 #   Configures new node with the specified id.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.confNewNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc $MODULE.confNewNode { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 
     set nconfig [list \
 	"hostname UNASSIGNED" \
 	! ]
-    lappend $node "network-config [list $nconfig]"
+    lappend $node_id "network-config [list $nconfig]"
 }
 
 #****f* extnat.tcl/extnat.confNewIfc
 # NAME
 #   extnat.confNewIfc -- configure new interface
 # SYNOPSIS
-#   extnat.confNewIfc $node $ifc
+#   extnat.confNewIfc $node_id $iface_id
 # FUNCTION
 #   Configures new interface for the specified node.
 # INPUTS
-#   * node -- node id
-#   * ifc -- interface id
+#   * node_id -- node id
+#   * iface_id -- interface id
 #****
-proc $MODULE.confNewIfc { node ifc } {
+proc $MODULE.confNewIfc { node_id iface_id } {
     global changeAddressRange changeAddressRange6 mac_byte4 mac_byte5
 
     set changeAddressRange 0
     set changeAddressRange6 0
-    autoIPv4addr $node $ifc
-    autoIPv6addr $node $ifc
 
+    autoIPv4addr $node_id $iface_id
+    autoIPv6addr $node_id $iface_id
     randomizeMACbytes
-    autoMACaddr $node $ifc
+    autoMACaddr $node_id $iface_id
 }
 
 #****f* extnat.tcl/extnat.icon
@@ -202,21 +202,21 @@ proc $MODULE.shellcmds {} {
 # NAME
 #   extnat.nghook -- nghook
 # SYNOPSIS
-#   extnat.nghook $eid $node $ifc
+#   extnat.nghook $eid $node_id $iface_id
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. This procedure calls
 #   l3node.hook procedure and passes the result of that procedure.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
-#   * ifc -- interface id
+#   * node_id -- node id
+#   * iface_id -- interface id
 # RESULT
 #   * nghook -- the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
-proc $MODULE.nghook { eid node ifc } {
-    return [l3node.nghook $eid $node $ifc]
+proc $MODULE.nghook { eid node_id iface_id } {
+    return [l3node.nghook $eid $node_id $iface_id]
 }
 
 #****f* extnat.tcl/extnat.maxLinks
@@ -253,38 +253,38 @@ proc $MODULE.prepareSystem {} {
 # NAME
 #   extnat.nodeCreate -- instantiate
 # SYNOPSIS
-#   extnat.nodeCreate $eid $node
+#   extnat.nodeCreate $eid $node_id
 # FUNCTION
 #   Creates an extnat node.
 #   Does nothing, as it is not created per se.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.nodeCreate { eid node } {
+proc $MODULE.nodeCreate { eid node_id } {
 }
 
-proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
-    l2node.nodePhysIfacesCreate $eid $node $ifcs
+proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
+    l2node.nodePhysIfacesCreate $eid $node_id $ifaces
 }
 
 #****f* extnat.tcl/extnat.nodeConfigure
 # NAME
 #   extnat.nodeConfigure -- start
 # SYNOPSIS
-#   extnat.nodeConfigure $eid $node
+#   extnat.nodeConfigure $eid $node_id
 # FUNCTION
 #   Starts a new extnat. The node can be started if it is instantiated.
 #   Sets up the NAT for the given interface.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.nodeConfigure { eid node } {
-    set ifc [lindex [ifcList $node] 0]
-    if { "$ifc" != "" } {
-	configureExternalConnection $eid $node
-	setupExtNat $eid $node $ifc
+proc $MODULE.nodeConfigure { eid node_id } {
+    set iface_id [lindex [ifcList $node_id] 0]
+    if { "$iface_id" != "" } {
+	configureExternalConnection $eid $node_id
+	setupExtNat $eid $node_id $iface_id
     }
 }
 
@@ -292,29 +292,29 @@ proc $MODULE.nodeConfigure { eid node } {
 ############################# TERMINATE PROCEDURES #############################
 ################################################################################
 
-proc $MODULE.nodeIfacesDestroy { eid node ifcs } {
-    l2node.nodeIfacesDestroy $eid $node $ifcs
+proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
+    l2node.nodeIfacesDestroy $eid $node_id $ifaces
 }
 
 #****f* extnat.tcl/extnat.nodeShutdown
 # NAME
 #   extnat.nodeShutdown -- shutdown
 # SYNOPSIS
-#   extnat.nodeShutdown $eid $node
+#   extnat.nodeShutdown $eid $node_id
 # FUNCTION
 #   Shutdowns an extnat node.
 #   It kills all external packet sniffers and sets the interface down.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.nodeShutdown { eid node } {
-    set ifc [lindex [ifcList $node] 0]
-    if { "$ifc" != "" } {
-	killExtProcess "wireshark.*[getNodeName $node].*\\($eid\\)"
-	killExtProcess "xterm -name imunes-terminal -T Capturing $eid-$node -e tcpdump -ni $eid-$node"
-	stopExternalConnection $eid $node
-	unsetupExtNat $eid $node $ifc
+proc $MODULE.nodeShutdown { eid node_id } {
+    set iface_id [lindex [ifcList $node_id] 0]
+    if { "$iface_id" != "" } {
+	killExtProcess "wireshark.*[getNodeName $node_id].*\\($eid\\)"
+	killExtProcess "xterm -name imunes-terminal -T Capturing $eid-$node_id -e tcpdump -ni $eid-$node_id"
+	stopExternalConnection $eid $node_id
+	unsetupExtNat $eid $node_id $iface_id
     }
 }
 
@@ -322,33 +322,33 @@ proc $MODULE.nodeShutdown { eid node } {
 # NAME
 #   extnat.nodeDestroy -- destroy
 # SYNOPSIS
-#   extnat.nodeDestroy $eid $node
+#   extnat.nodeDestroy $eid $node_id
 # FUNCTION
 #   Destroys an extnat node.
 #   Does nothing.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.nodeDestroy { eid node } {
+proc $MODULE.nodeDestroy { eid node_id } {
 }
 
 #****f* extnat.tcl/extnat.configGUI
 # NAME
 #   extnat.configGUI -- configuration GUI
 # SYNOPSIS
-#   extnat.configGUI $c $node
+#   extnat.configGUI $c $node_id
 # FUNCTION
 #   Defines the structure of the pc configuration window by calling
 #   procedures for creating and organising the window, as well as
 #   procedures for adding certain modules to that window.
 # INPUTS
 #   * c -- tk canvas
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.configGUI { c node } {
-    set ifc [lindex [ifcList $node] 0]
-    if { "$ifc" == "" } {
+proc $MODULE.configGUI { c node_id } {
+    set iface_id [lindex [ifcList $node_id] 0]
+    if { "$iface_id" == "" } {
 	return
     }
 
@@ -359,9 +359,9 @@ proc $MODULE.configGUI { c node } {
 
     configGUI_createConfigPopupWin $c
     wm title $wi "extnat configuration"
-    configGUI_nodeName $wi $node "Host interface:"
+    configGUI_nodeName $wi $node_id "Host interface:"
 
-    configGUI_externalIfcs $wi $node
+    configGUI_externalIfcs $wi $node_id
 
-    configGUI_buttonsACNode $wi $node
+    configGUI_buttonsACNode $wi $node_id
 }

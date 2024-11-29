@@ -1,5 +1,5 @@
-proc getBridgeProtocol { node bridge } {
-    foreach line [netconfFetchSection $node "bridge $bridge"] {
+proc getBridgeProtocol { node_id bridge } {
+    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
 	if { [lindex $line 0] == "rstp" } {
 	    return "rstp"
 	}
@@ -12,23 +12,23 @@ proc getBridgeProtocol { node bridge } {
     return rstp
 }
 
-proc setBridgeProtocol { node bridge proto } {
+proc setBridgeProtocol { node_id bridge protocol } {
     set ifcfg [list "bridge $bridge"]
-    foreach line [netconfFetchSection $node "bridge $bridge"] {
+    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
 	if { [lindex $line 0] != "stp" && [lindex $line 0] != "rstp" } {
 	    lappend ifcfg $line
 	}
     }
 
-    if { $proto == "stp" || $proto == "rstp" } {
-	lappend ifcfg " $proto"
+    if { $protocol in "stp rstp" } {
+	lappend ifcfg " $protocol"
     }
 
-    netconfInsertSection $node $ifcfg
+    netconfInsertSection $node_id $ifcfg
 }
 
-proc getBridgePriority { node bridge } {
-    foreach line [netconfFetchSection $node "bridge $bridge"] {
+proc getBridgePriority { node_id bridge } {
+    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
 	if { [lindex $line 0] == "priority" } {
 	    return [lindex $line 1]
 	}
@@ -37,9 +37,9 @@ proc getBridgePriority { node bridge } {
     return 32768
 }
 
-proc setBridgePriority { node bridge priority } {
+proc setBridgePriority { node_id bridge priority } {
     set ifcfg [list "bridge $bridge"]
-    foreach line [netconfFetchSection $node "bridge $bridge"] {
+    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
 	if { [lindex $line 0] != "priority" } {
 	    lappend ifcfg $line
 	}
@@ -49,11 +49,11 @@ proc setBridgePriority { node bridge priority } {
 	lappend ifcfg " priority $priority"
     }
 
-    netconfInsertSection $node $ifcfg
+    netconfInsertSection $node_id $ifcfg
 }
 
-proc getBridgeHoldCount { node bridge } {
-    foreach line [netconfFetchSection $node "bridge $bridge"] {
+proc getBridgeHoldCount { node_id bridge } {
+    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
 	if { [lindex $line 0] == "holdcnt" } {
 	    return [lindex $line 1]
 	}
@@ -62,23 +62,23 @@ proc getBridgeHoldCount { node bridge } {
     return 6
 }
 
-proc setBridgeHoldCount { node bridge holdcnt } {
+proc setBridgeHoldCount { node_id bridge hold_count } {
     set ifcfg [list "bridge $bridge"]
-    foreach line [netconfFetchSection $node "bridge $bridge"] {
+    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
 	if { [lindex $line 0] != "holdcnt" } {
 	    lappend ifcfg $line
 	}
     }
 
-    if { $holdcnt >= 1 || $holdcnt <= 10 } {
-	lappend ifcfg " holdcnt $holdcnt"
+    if { $hold_count >= 1 || $hold_count <= 10 } {
+	lappend ifcfg " holdcnt $hold_count"
     }
 
-    netconfInsertSection $node $ifcfg
+    netconfInsertSection $node_id $ifcfg
 }
 
-proc getBridgeMaxAge { node bridge } {
-    foreach line [netconfFetchSection $node "bridge $bridge"] {
+proc getBridgeMaxAge { node_id bridge } {
+    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
 	if { [lindex $line 0] == "maxage" } {
 	    return [lindex $line 1]
 	}
@@ -87,23 +87,23 @@ proc getBridgeMaxAge { node bridge } {
     return 20
 }
 
-proc setBridgeMaxAge { node bridge maxage } {
+proc setBridgeMaxAge { node_id bridge max_age } {
     set ifcfg [list "bridge $bridge"]
-    foreach line [netconfFetchSection $node "bridge $bridge"] {
+    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
 	if { [lindex $line 0] != "maxage" } {
 	    lappend ifcfg $line
 	}
     }
 
-    if { $maxage >= 6 || $maxage <= 40 } {
-	lappend ifcfg " maxage $maxage"
+    if { $max_age >= 6 || $max_age <= 40 } {
+	lappend ifcfg " maxage $max_age"
     }
 
-    netconfInsertSection $node $ifcfg
+    netconfInsertSection $node_id $ifcfg
 }
 
-proc getBridgeFwdDelay { node bridge } {
-    foreach line [netconfFetchSection $node "bridge $bridge"] {
+proc getBridgeFwdDelay { node_id bridge } {
+    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
 	if { [lindex $line 0] == "fwddelay" } {
 	    return [lindex $line 1]
 	}
@@ -112,23 +112,23 @@ proc getBridgeFwdDelay { node bridge } {
     return 15
 }
 
-proc setBridgeFwdDelay { node bridge fwddelay } {
+proc setBridgeFwdDelay { node_id bridge forwarding_delay } {
     set ifcfg [list "bridge $bridge"]
-    foreach line [netconfFetchSection $node "bridge $bridge"] {
+    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
 	if { [lindex $line 0] != "fwddelay" } {
 	    lappend ifcfg $line
 	}
     }
 
-    if { $fwddelay >= 4 || $fwddelay <= 30 } {
-	lappend ifcfg " fwddelay $fwddelay"
+    if { $forwarding_delay >= 4 || $forwarding_delay <= 30 } {
+	lappend ifcfg " fwddelay $forwarding_delay"
     }
 
-    netconfInsertSection $node $ifcfg
+    netconfInsertSection $node_id $ifcfg
 }
 
-proc getBridgeHelloTime { node bridge } {
-    foreach line [netconfFetchSection $node "bridge $bridge"] {
+proc getBridgeHelloTime { node_id bridge } {
+    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
 	if { [lindex $line 0] == "hellotime" } {
 	    return [lindex $line 1]
 	}
@@ -137,23 +137,23 @@ proc getBridgeHelloTime { node bridge } {
     return 2
 }
 
-proc setBridgeHelloTime { node bridge hellotime } {
+proc setBridgeHelloTime { node_id bridge hello_time } {
     set ifcfg [list "bridge $bridge"]
-    foreach line [netconfFetchSection $node "bridge $bridge"] {
+    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
 	if { [lindex $line 0] != "hellotime" } {
 	    lappend ifcfg $line
 	}
     }
 
-    if { $hellotime >= 1 || $hellotime <= 2 } {
-	lappend ifcfg " hellotime $hellotime"
+    if { $hello_time >= 1 || $hello_time <= 2 } {
+	lappend ifcfg " hellotime $hello_time"
     }
 
-    netconfInsertSection $node $ifcfg
+    netconfInsertSection $node_id $ifcfg
 }
 
-proc getBridgeMaxAddr { node bridge } {
-    foreach line [netconfFetchSection $node "bridge $bridge"] {
+proc getBridgeMaxAddr { node_id bridge } {
+    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
 	if { [lindex $line 0] == "maxaddr" } {
 	    return [lindex $line 1]
 	}
@@ -162,23 +162,23 @@ proc getBridgeMaxAddr { node bridge } {
     return 100
 }
 
-proc setBridgeMaxAddr { node bridge maxaddr } {
+proc setBridgeMaxAddr { node_id bridge max_addresses } {
     set ifcfg [list "bridge $bridge"]
-    foreach line [netconfFetchSection $node "bridge $bridge"] {
+    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
 	if { [lindex $line 0] != "maxaddr" } {
 	    lappend ifcfg $line
 	}
     }
 
-    if { $maxaddr >= 0 || $maxaddr <= 10000 } {
-	lappend ifcfg " maxaddr $maxaddr"
+    if { $max_addresses >= 0 || $max_addresses <= 10000 } {
+	lappend ifcfg " maxaddr $max_addresses"
     }
 
-    netconfInsertSection $node $ifcfg
+    netconfInsertSection $node_id $ifcfg
 }
 
-proc getBridgeTimeout { node bridge } {
-    foreach line [netconfFetchSection $node "bridge $bridge"] {
+proc getBridgeTimeout { node_id bridge } {
+    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
 	if { [lindex $line 0] == "timeout" } {
 	    return [lindex $line 1]
 	}
@@ -187,27 +187,27 @@ proc getBridgeTimeout { node bridge } {
     return 240
 }
 
-proc setBridgeTimeout { node bridge timeout } {
+proc setBridgeTimeout { node_id bridge address_timeout } {
     set ifcfg [list "bridge $bridge"]
-    foreach line [netconfFetchSection $node "bridge $bridge"] {
+    foreach line [netconfFetchSection $node_id "bridge $bridge"] {
 	if { [lindex $line 0] != "timeout" } {
 	    lappend ifcfg $line
 	}
     }
 
-    if { $timeout >= 0 || $timeout <= 3600 } {
-	lappend ifcfg " timeout $timeout"
+    if { $address_timeout >= 0 || $address_timeout <= 3600 } {
+	lappend ifcfg " timeout $address_timeout"
     }
 
-    netconfInsertSection $node $ifcfg
+    netconfInsertSection $node_id $ifcfg
 }
 
 #####
 #####BridgeIfcSettings
 #####
 
-proc getBridgeIfcDiscover { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc getBridgeIfcDiscover { node_id iface_id } {
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [lindex $line 0] == "spanning-tree" } {
 	    if { [lindex $line 1] == "discover" } {
 		    return 1
@@ -218,9 +218,9 @@ proc getBridgeIfcDiscover { node ifc } {
     return 0
 }
 
-proc setBridgeIfcDiscover { node ifc value } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc setBridgeIfcDiscover { node_id iface_id stp_discover } {
+    set ifcfg [list "interface $iface_id"]
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [lindex $line 0] != "spanning-tree" || \
 	    [lindex $line 1] != "discover" } {
 
@@ -228,15 +228,15 @@ proc setBridgeIfcDiscover { node ifc value } {
 	}
     }
 
-    if { $value == 1 } {
+    if { $stp_discover == 1 } {
 	lappend ifcfg " spanning-tree discover"
     }
 
-    netconfInsertSection $node $ifcfg
+    netconfInsertSection $node_id $ifcfg
 }
 
-proc getBridgeIfcLearn { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc getBridgeIfcLearn { node_id iface_id } {
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [lindex $line 0] == "spanning-tree" } {
 	    if { [lindex $line 1] == "learn" } {
 		    return 1
@@ -247,9 +247,9 @@ proc getBridgeIfcLearn { node ifc } {
     return 0
 }
 
-proc setBridgeIfcLearn { node ifc value } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc setBridgeIfcLearn { node_id iface_id stp_learn } {
+    set ifcfg [list "interface $iface_id"]
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [lindex $line 0] != "spanning-tree" || \
 	    [lindex $line 1] != "learn" } {
 
@@ -257,15 +257,15 @@ proc setBridgeIfcLearn { node ifc value } {
 	}
     }
 
-    if { $value == 1 } {
+    if { $stp_learn == 1 } {
 	lappend ifcfg " spanning-tree learn"
     }
 
-    netconfInsertSection $node $ifcfg
+    netconfInsertSection $node_id $ifcfg
 }
 
-proc getBridgeIfcSticky { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc getBridgeIfcSticky { node_id iface_id } {
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [lindex $line 0] == "spanning-tree" } {
 	    if { [lindex $line 1] == "sticky" } {
 		    return 1
@@ -276,9 +276,9 @@ proc getBridgeIfcSticky { node ifc } {
     return 0
 }
 
-proc setBridgeIfcSticky { node ifc value } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc setBridgeIfcSticky { node_id iface_id stp_sticky } {
+    set ifcfg [list "interface $iface_id"]
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [lindex $line 0] != "spanning-tree" || \
 	    [lindex $line 1] != "sticky" } {
 
@@ -286,15 +286,15 @@ proc setBridgeIfcSticky { node ifc value } {
 	}
     }
 
-    if { $value == 1 } {
+    if { $stp_sticky == 1 } {
 	lappend ifcfg " spanning-tree sticky"
     }
 
-    netconfInsertSection $node $ifcfg
+    netconfInsertSection $node_id $ifcfg
 }
 
-proc getBridgeIfcPrivate { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc getBridgeIfcPrivate { node_id iface_id } {
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [lindex $line 0] == "spanning-tree" } {
 	    if { [lindex $line 1] == "private" } {
 		    return 1
@@ -305,9 +305,9 @@ proc getBridgeIfcPrivate { node ifc } {
     return 0
 }
 
-proc setBridgeIfcPrivate { node ifc value } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc setBridgeIfcPrivate { node_id iface_id stp_private } {
+    set ifcfg [list "interface $iface_id"]
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [lindex $line 0] != "spanning-tree" || \
 	    [lindex $line 1] != "private" } {
 
@@ -315,15 +315,15 @@ proc setBridgeIfcPrivate { node ifc value } {
 	}
     }
 
-    if { $value == 1 } {
+    if { $stp_private == 1 } {
 	lappend ifcfg " spanning-tree private"
     }
 
-    netconfInsertSection $node $ifcfg
+    netconfInsertSection $node_id $ifcfg
 }
 
-proc getBridgeIfcSnoop { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc getBridgeIfcSnoop { node_id iface_id } {
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [lindex $line 0] == "spanning-tree" } {
 	    if { [lindex $line 1] == "snoop" } {
 		    return 1
@@ -334,9 +334,9 @@ proc getBridgeIfcSnoop { node ifc } {
     return 0
 }
 
-proc setBridgeIfcSnoop { node ifc value } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc setBridgeIfcSnoop { node_id iface_id stp_snoop } {
+    set ifcfg [list "interface $iface_id"]
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [lindex $line 0] != "spanning-tree" || \
 	    [lindex $line 1] != "snoop" } {
 
@@ -344,15 +344,15 @@ proc setBridgeIfcSnoop { node ifc value } {
 	}
     }
 
-    if { $value == 1 } {
+    if { $stp_snoop == 1 } {
 	lappend ifcfg " spanning-tree snoop"
     }
 
-    netconfInsertSection $node $ifcfg
+    netconfInsertSection $node_id $ifcfg
 }
 
-proc getBridgeIfcStp { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc getBridgeIfcStp { node_id iface_id } {
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [lindex $line 0] == "spanning-tree" } {
 	    if { [lindex $line 1] == "stp" } {
 		    return 1
@@ -363,9 +363,9 @@ proc getBridgeIfcStp { node ifc } {
     return 0
 }
 
-proc setBridgeIfcStp { node ifc value } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc setBridgeIfcStp { node_id iface_id stp_enabled } {
+    set ifcfg [list "interface $iface_id"]
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [lindex $line 0] != "spanning-tree" || \
 	    [lindex $line 1] != "stp" } {
 
@@ -373,15 +373,15 @@ proc setBridgeIfcStp { node ifc value } {
 	}
     }
 
-    if { $value == 1 } {
+    if { $stp_enabled == 1 } {
 	lappend ifcfg " spanning-tree stp"
     }
 
-    netconfInsertSection $node $ifcfg
+    netconfInsertSection $node_id $ifcfg
 }
 
-proc getBridgeIfcEdge { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc getBridgeIfcEdge { node_id iface_id } {
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [lindex $line 0] == "spanning-tree" } {
 	    if { [lindex $line 1] == "edge" } {
 		    return 1
@@ -392,9 +392,9 @@ proc getBridgeIfcEdge { node ifc } {
     return 0
 }
 
-proc setBridgeIfcEdge { node ifc value } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc setBridgeIfcEdge { node_id iface_id stp_edge } {
+    set ifcfg [list "interface $iface_id"]
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [lindex $line 0] != "spanning-tree" || \
 	    [lindex $line 1] != "edge" } {
 
@@ -402,15 +402,15 @@ proc setBridgeIfcEdge { node ifc value } {
 	}
     }
 
-    if { $value == 1 } {
+    if { $stp_edge == 1 } {
 	lappend ifcfg " spanning-tree edge"
     }
 
-    netconfInsertSection $node $ifcfg
+    netconfInsertSection $node_id $ifcfg
 }
 
-proc getBridgeIfcAutoedge { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc getBridgeIfcAutoedge { node_id iface_id } {
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [lindex $line 0] == "spanning-tree" } {
 	    if { [lindex $line 1] == "autoedge" } {
 		    return 1
@@ -421,9 +421,9 @@ proc getBridgeIfcAutoedge { node ifc } {
     return 0
 }
 
-proc setBridgeIfcAutoedge { node ifc value } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc setBridgeIfcAutoedge { node_id iface_id stp_autoedge } {
+    set ifcfg [list "interface $iface_id"]
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [lindex $line 0] != "spanning-tree" || \
 	    [lindex $line 1] != "autoedge" } {
 
@@ -431,15 +431,15 @@ proc setBridgeIfcAutoedge { node ifc value } {
 	}
     }
 
-    if { $value == 1 } {
+    if { $stp_autoedge == 1 } {
 	lappend ifcfg " spanning-tree autoedge"
     }
 
-    netconfInsertSection $node $ifcfg
+    netconfInsertSection $node_id $ifcfg
 }
 
-proc getBridgeIfcPtp { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc getBridgeIfcPtp { node_id iface_id } {
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [lindex $line 0] == "spanning-tree" } {
 	    if { [lindex $line 1] == "ptp" } {
 		    return 1
@@ -450,9 +450,9 @@ proc getBridgeIfcPtp { node ifc } {
     return 0
 }
 
-proc setBridgeIfcPtp { node ifc value } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc setBridgeIfcPtp { node_id iface_id stp_ptp } {
+    set ifcfg [list "interface $iface_id"]
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [lindex $line 0] != "spanning-tree" || \
 	    [lindex $line 1] != "ptp" } {
 
@@ -460,15 +460,15 @@ proc setBridgeIfcPtp { node ifc value } {
 	}
     }
 
-    if { $value == 1 } {
+    if { $stp_ptp == 1 } {
 	lappend ifcfg " spanning-tree ptp"
     }
 
-    netconfInsertSection $node $ifcfg
+    netconfInsertSection $node_id $ifcfg
 }
 
-proc getBridgeIfcAutoptp { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc getBridgeIfcAutoptp { node_id iface_id } {
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [lindex $line 0] == "spanning-tree" } {
 	    if { [lindex $line 1] == "autoptp" } {
 		    return 1
@@ -479,9 +479,9 @@ proc getBridgeIfcAutoptp { node ifc } {
     return 0
 }
 
-proc setBridgeIfcAutoptp { node ifc value } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc setBridgeIfcAutoptp { node_id iface_id stp_autoptp } {
+    set ifcfg [list "interface $iface_id"]
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [lindex $line 0] != "spanning-tree" || \
 	    [lindex $line 1] != "autoptp" } {
 
@@ -489,17 +489,17 @@ proc setBridgeIfcAutoptp { node ifc value } {
 	}
     }
 
-    if { $value == 1 } {
+    if { $stp_autoptp == 1 } {
 	lappend ifcfg " spanning-tree autoptp"
     }
 
-    netconfInsertSection $node $ifcfg
+    netconfInsertSection $node_id $ifcfg
 }
 
 ####IfcParameters
 
-proc getBridgeIfcPriority { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc getBridgeIfcPriority { node_id iface_id } {
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [lindex $line 0] == "spanning-tree" } {
 	    if { [lindex $line 1] == "priority" } {
 		    return [lindex $line 2]
@@ -508,9 +508,9 @@ proc getBridgeIfcPriority { node ifc } {
     }
 }
 
-proc setBridgeIfcPriority { node ifc value } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc setBridgeIfcPriority { node_id iface_id stp_priority } {
+    set ifcfg [list "interface $iface_id"]
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [lindex $line 0] != "spanning-tree" || \
 	    [lindex $line 1] != "priority" } {
 
@@ -518,15 +518,15 @@ proc setBridgeIfcPriority { node ifc value } {
 	}
     }
 
-    if { $value >= 0 && $value <= 240 } {
-	lappend ifcfg " spanning-tree priority $value"
+    if { $stp_priority >= 0 && $stp_priority <= 240 } {
+	lappend ifcfg " spanning-tree priority $stp_priority"
     }
 
-    netconfInsertSection $node $ifcfg
+    netconfInsertSection $node_id $ifcfg
 }
 
-proc getBridgeIfcPathcost { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc getBridgeIfcPathcost { node_id iface_id } {
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [lindex $line 0] == "spanning-tree" } {
 	    if { [lindex $line 1] == "pathcost" } {
 		    return [lindex $line 2]
@@ -535,9 +535,9 @@ proc getBridgeIfcPathcost { node ifc } {
     }
 }
 
-proc setBridgeIfcPathcost { node ifc value } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc setBridgeIfcPathcost { node_id iface_id stp_path_cost } {
+    set ifcfg [list "interface $iface_id"]
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [lindex $line 0] != "spanning-tree" || \
 	    [lindex $line 1] != "pathcost" } {
 
@@ -545,15 +545,15 @@ proc setBridgeIfcPathcost { node ifc value } {
 	}
     }
 
-    if { $value >= 0 && $value <= 200000000 } {
-	lappend ifcfg " spanning-tree pathcost $value"
+    if { $stp_path_cost >= 0 && $stp_path_cost <= 200000000 } {
+	lappend ifcfg " spanning-tree pathcost $stp_path_cost"
     }
 
-    netconfInsertSection $node $ifcfg
+    netconfInsertSection $node_id $ifcfg
 }
 
-proc getBridgeIfcMaxaddr { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc getBridgeIfcMaxaddr { node_id iface_id } {
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [lindex $line 0] == "spanning-tree" } {
 	    if { [lindex $line 1] == "maxaddr" } {
 		    return [lindex $line 2]
@@ -562,9 +562,9 @@ proc getBridgeIfcMaxaddr { node ifc } {
     }
 }
 
-proc setBridgeIfcMaxaddr { node ifc value } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc setBridgeIfcMaxaddr { node_id iface_id stp_max_addresses } {
+    set ifcfg [list "interface $iface_id"]
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [lindex $line 0] != "spanning-tree" || \
 	    [lindex $line 1] != "maxaddr" } {
 
@@ -572,9 +572,9 @@ proc setBridgeIfcMaxaddr { node ifc value } {
 	}
     }
 
-    if { $value >= 0 && $value <= 10000 } {
-	lappend ifcfg " spanning-tree maxaddr $value"
+    if { $stp_max_addresses >= 0 && $stp_max_addresses <= 10000 } {
+	lappend ifcfg " spanning-tree maxaddr $stp_max_addresses"
     }
 
-    netconfInsertSection $node $ifcfg
+    netconfInsertSection $node_id $ifcfg
 }

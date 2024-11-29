@@ -95,9 +95,9 @@ proc dumpCfg { method dest } {
     global icon_size
     global auto_etc_hosts
 
-    foreach node $node_list {
-	upvar 0 ::cf::[set ::curcfg]::$node lnode
-	dumpputs $method $dest "node $node \{"
+    foreach node_id $node_list {
+	upvar 0 ::cf::[set ::curcfg]::$node_id lnode
+	dumpputs $method $dest "node $node_id \{"
 	foreach element $lnode {
 	    if { "[lindex $element 0]" == "network-config" } {
 		dumpputs $method $dest "    network-config \{"
@@ -736,8 +736,8 @@ proc loadCfgLegacy { cfg } {
     #
     if { $canvas_list == "" } {
 	set curcanvas [newCanvas ""]
-	foreach node $node_list {
-	    setNodeCanvas $node $curcanvas
+	foreach node_id $node_list {
+	    setNodeCanvas $node_id $curcanvas
 	}
     }
     #
@@ -746,8 +746,8 @@ proc loadCfgLegacy { cfg } {
     set IPv6UsedList ""
     set IPv4UsedList ""
     set MACUsedList ""
-    foreach node $node_list {
-	set node_type [getNodeType $node]
+    foreach node_id $node_list {
+	set node_type [getNodeType $node_id]
 	if { $node_type in "extelem" } {
 	    continue
 	}
@@ -765,45 +765,45 @@ proc loadCfgLegacy { cfg } {
 	    exit
 	}
 
-	if { "lo0" ni [logIfcList $node] && \
+	if { "lo0" ni [logIfcList $node_id] && \
 	    [$node_type.netlayer] == "NETWORK"} {
 
-	    setLogIfcType $node lo0 lo
-	    setIfcIPv4addrs $node lo0 "127.0.0.1/8"
-	    setIfcIPv6addrs $node lo0 "::1/128"
+	    setLogIfcType $node_id lo0 lo
+	    setIfcIPv4addrs $node_id lo0 "127.0.0.1/8"
+	    setIfcIPv6addrs $node_id lo0 "::1/128"
 	}
 
 	# Speeding up auto renumbering of MAC, IPv4 and IPv6 addresses by remembering
 	# used addresses in lists.
-	foreach iface [ifcList $node] {
-	    foreach addr [getIfcIPv6addrs $node $iface] {
+	foreach iface_id [ifcList $node_id] {
+	    foreach addr [getIfcIPv6addrs $node_id $iface_id] {
 		lassign [split $addr "/"] addr mask
 		lappend IPv6UsedList "[ip::contract [ip::prefix $addr]]/$mask"
 	    }
 
-	    foreach addr [getIfcIPv4addrs $node $iface] {
+	    foreach addr [getIfcIPv4addrs $node_id $iface_id] {
 		lappend IPv4UsedList $addr
 	    }
 
-	    set addr [getIfcMACaddr $node $iface]
+	    set addr [getIfcMACaddr $node_id $iface_id]
 	    if { $addr != "" } { lappend MACUsedList $addr }
 	}
     }
 
     # older .imn files have only one link per node pair, so match links with interfaces
-    foreach link $link_list {
-	if { [getLinkPeersIfaces $link] != {} } {
+    foreach link_id $link_list {
+	if { [getLinkPeersIfaces $link_id] != {} } {
 	    # if one link has ifaces, then all of them do too
 	    return
 	}
 
-	upvar 0 ::cf::[set ::curcfg]::$link $link
+	upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
 
-	lassign [getLinkPeers $link] node1 node2
-	set iface1 [ifcByPeer $node1 $node2]
-	set iface2 [ifcByPeer $node2 $node1]
+	lassign [getLinkPeers $link_id] node1_id node2_id
+	set iface1_id [ifcByPeer $node1_id $node2_id]
+	set iface2_id [ifcByPeer $node2_id $node1_id]
 
-	lappend $link "ifaces {$iface1 $iface2}"
+	lappend $link_id "ifaces {$iface1_id $iface2_id}"
     }
 }
 
