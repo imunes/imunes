@@ -24,8 +24,8 @@ proc parseArgs { arg1 arg2 defValue } {
 
 # procedure that returns wheter an interface belongs to a virtual node (docker
 # instance) or openvswitch
-proc isNodeInterface { ifname } {
-    if { [string match "eth\[0-9\]*" $ifname] } {
+proc isNodeInterface { iface_name } {
+    if { [string match "eth\[0-9\]*" $iface_name] } {
 	return 1
     }
     return 0
@@ -72,14 +72,13 @@ proc getDelayForPrint { delay } {
 }
 
 # get link settings into an ordered list on Linux
-proc getLinuxLinkStatus { nodename eid ldata } {
-    set node $nodename\@$eid
-    set nodeid [lindex $ldata 0]
-    set ifname [lindex $ldata 1]
+proc getLinuxLinkStatus { node_name eid ldata } {
+    set node_id [lindex $ldata 0]
+    set iface_name [lindex $ldata 1]
 
-    set fullname $nodeid-$ifname
-    if { $ifname == "" } {
-	set fullname $nodeid
+    set fullname $node_id-$iface_name
+    if { $iface_name == "" } {
+	set fullname $node_id
     }
 
     catch { exec ip netns exec $eid tc qdisc show dev $fullname } settings
@@ -150,9 +149,7 @@ proc printLinkStatus { lname eid curr_set } {
 }
 
 # apply settings on Linux
-proc applyLinkSettingsLinux { bandwidth loss delay dup nodename eid ldata } {
-    set node $nodename\@$eid
-
+proc applyLinkSettingsLinux { bandwidth loss delay dup node_name eid ldata } {
     set cfg ""
     if { $bandwidth != -1 } {
 	lappend cfg "rate ${bandwidth}bit"
@@ -167,12 +164,12 @@ proc applyLinkSettingsLinux { bandwidth loss delay dup nodename eid ldata } {
 	lappend cfg "duplicate ${dup}%"
     }
 
-    set nodeid [lindex $ldata 0]
-    set ifname [lindex $ldata 1]
+    set node_id [lindex $ldata 0]
+    set iface_name [lindex $ldata 1]
 
-    set fullname $nodeid-$ifname
-    if { $ifname == "" } {
-	set fullname $nodeid
+    set fullname $node_id-$iface_name
+    if { $iface_name == "" } {
+	set fullname $node_id
     }
 
     catch { eval "exec ip netns exec $eid tc qdisc change dev $fullname root netem [join $cfg " "]" }
@@ -470,12 +467,12 @@ switch [llength $containing_exps] {
 		set nodes [split $lname $linkDelim]
 		set i 0
 		# on linux we must apply settings on both sides of the link
-		foreach node $nodes {
+		foreach node_name $nodes {
 		    # get data for linux links
 		    set node_data [lindex [lindex [dict get $ldata $lid] 1] $i]
 
 		    # get the current status
-		    set curr_set [getLinuxLinkStatus $node $eid $node_data]
+		    set curr_set [getLinuxLinkStatus $node_name $eid $node_data]
 		    # if link status was specified, just output and exit
 		    if { $params(s) } {
 			printLinkStatus $lname $eid $curr_set
@@ -493,7 +490,7 @@ switch [llength $containing_exps] {
 			incr j
 		    }
 
-		    applyLinkSettingsLinux $ban $loss $del $dup $node $eid $node_data
+		    applyLinkSettingsLinux $ban $loss $del $dup $node_name $eid $node_data
 		    incr i
 		}
 	    }

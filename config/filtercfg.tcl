@@ -1,77 +1,77 @@
-proc getFilterIfcRule { node ifc id } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc getFilterIfcRule { node_id iface_id id } {
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [string trim [lindex [split $line :] 0]] == $id } {
 		    return [string trim $line]
 	}
     }
 }
 
-proc addFilterIfcRule { node ifc id value } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc addFilterIfcRule { node_id iface_id id rule } {
+    set ifcfg [list "interface $iface_id"]
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [string trim [lindex [split $line :] 0]] != $id } {
 	    lappend ifcfg $line
 	}
     }
-    lappend ifcfg " $value"
-    netconfInsertSection $node $ifcfg
+    lappend ifcfg " $rule"
+    netconfInsertSection $node_id $ifcfg
 }
 
-proc removeFilterIfcRule { node ifc id } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc removeFilterIfcRule { node_id iface_id id } {
+    set ifcfg [list "interface $iface_id"]
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [string trim [lindex [split $line :] 0]] != $id } {
 	    lappend ifcfg $line
 	}
     }
-    netconfInsertSection $node $ifcfg
+    netconfInsertSection $node_id $ifcfg
 }
 
 
-proc getFilterIfcAction { node ifc id } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc getFilterIfcAction { node_id iface_id id } {
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [string trim [lindex [split $line :] 0]] == $id } {
 		    return [lindex [string trim [split $line :]] 1]
 	}
     }
 }
 
-proc getFilterIfcPattern { node ifc id } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc getFilterIfcPattern { node_id iface_id id } {
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [string trim [lindex [split $line :] 0]] == $id } {
 		    return [lindex [split [lindex [string trim [split $line :]] 2] /] 0]
 	}
     }
 }
 
-proc getFilterIfcMask { node ifc id } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc getFilterIfcMask { node_id iface_id id } {
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [string trim [lindex [split $line :] 0]] == $id } {
 		    return [lindex [split [lindex [split [lindex [string trim [split $line :]] 2] /] 1] @] 0]
 	}
     }
 }
 
-proc getFilterIfcOffset { node ifc id } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc getFilterIfcOffset { node_id iface_id id } {
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [string trim [lindex [split $line :] 0]] == $id } {
 		    return [lindex [split [lindex [split [lindex [string trim [split $line :]] 2] /] 1] @] 1]
 	}
     }
 }
 
-proc getFilterIfcActionData { node ifc id } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+proc getFilterIfcActionData { node_id iface_id id } {
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	if { [string trim [lindex [split $line :] 0]] == $id } {
 		    return [lindex [string trim [split $line :]] 3]
 	}
     }
 }
 
-proc ifcFilterRuleList { node ifc } {
+proc ifcFilterRuleList { node_id iface_id } {
     set ruleList ""
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
+    set ifcfg [list "interface $iface_id"]
+    foreach line [netconfFetchSection $node_id "interface $iface_id"] {
 	lappend ruleList [string trim [lindex [split $line :] 0]]
     }
     return $ruleList

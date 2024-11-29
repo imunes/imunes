@@ -64,19 +64,19 @@ proc checkExternalInterfaces {} {
     set extifcs [getHostIfcList]
 
     set nodes_ifcpairs {}
-    foreach node $node_list {
-	if { [getNodeType $node] == "rj45" } {
-	    lappend nodes_ifcpairs [list $node [list 0 [getNodeName $node]]]
-	} elseif { [getNodeType $node] == "extelem" } {
-	    foreach ifcs [getNodeStolenIfaces $node] {
-		lappend nodes_ifcpairs [list $node $ifcs]
+    foreach node_id $node_list {
+	if { [getNodeType $node_id] == "rj45" } {
+	    lappend nodes_ifcpairs [list $node_id [list 0 [getNodeName $node_id]]]
+	} elseif { [getNodeType $node_id] == "extelem" } {
+	    foreach ifaces [getNodeStolenIfaces $node_id] {
+		lappend nodes_ifcpairs [list $node_id $ifaces]
 	    }
 	}
     }
 
     foreach node_ifcpair $nodes_ifcpairs {
-	lassign $node_ifcpair node ifcpair
-	lassign $ifcpair ifc physical_ifc
+	lassign $node_ifcpair node_id ifcpair
+	lassign $ifcpair iface_id physical_ifc
 
 	# check if the interface exists
 	set i [lsearch $extifcs $physical_ifc]
@@ -93,8 +93,8 @@ proc checkExternalInterfaces {} {
 	    return 1
 	}
 
-	if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
-	    if { [getHostIfcVlanExists $node $physical_ifc] } {
+	if { [getEtherVlanEnabled $node_id] && [getEtherVlanTag $node_id] != "" } {
+	    if { [getHostIfcVlanExists $node_id $physical_ifc] } {
 		return 1
 	    }
 	} elseif { $isOSlinux } {
@@ -102,8 +102,8 @@ proc checkExternalInterfaces {} {
 		exec test -d /sys/class/net/$physical_ifc/wireless
 	    } on error {} {
 	    } on ok {} {
-		set link [lindex [getIfcLink $node $ifc] 0]
-		if { [getLinkDirect $link] } {
+		set link_id [lindex [getIfcLink $node_id $iface_id] 0]
+		if { [getLinkDirect $link_id] } {
 		    set severity "warning"
 		    set msg "Interface '$physical_ifc' is a wireless interface,\
 			so its peer cannot change its MAC address!"
@@ -135,7 +135,7 @@ proc checkExternalInterfaces {} {
 # NAME
 #   execCmdsNode -- execute a set of commands on virtual node
 # SYNOPSIS
-#   execCmdsNode $node $cmds
+#   execCmdsNode $node_id $cmds
 # FUNCTION
 #   Executes commands on a virtual node and returns the output.
 # INPUTS
@@ -144,10 +144,10 @@ proc checkExternalInterfaces {} {
 # RESULT
 #   * returns the execution output
 #****
-proc execCmdsNode { node cmds } {
+proc execCmdsNode { node_id cmds } {
     set output ""
     foreach cmd $cmds {
-        set result [execCmdNode $node $cmd]
+        set result [execCmdNode $node_id $cmd]
 	append output "\n" $result
     }
     return $output
@@ -157,14 +157,14 @@ proc execCmdsNode { node cmds } {
 # NAME
 #   execCmdsNodeBkg -- execute a set of commands on virtual node
 # SYNOPSIS
-#   execCmdsNodeBkg $node $cmds
+#   execCmdsNodeBkg $node_id $cmds
 # FUNCTION
 #   Executes commands on a virtual node (in the background).
 # INPUTS
-#   * node -- virtual node id
+#   * node_id -- virtual node id
 #   * cmds -- list of commands to execute
 #****
-proc execCmdsNodeBkg { node cmds { output "" } } {
+proc execCmdsNodeBkg { node_id cmds { output "" } } {
     set cmds_str ""
     foreach cmd $cmds {
 	if { $output != "" } {
@@ -174,7 +174,7 @@ proc execCmdsNodeBkg { node cmds { output "" } } {
 	set cmds_str "$cmds_str $cmd ;"
     }
 
-    execCmdNodeBkg $node $cmds_str
+    execCmdNodeBkg $node_id $cmds_str
 }
 
 #****f* exec.tcl/createExperimentFiles
@@ -295,23 +295,23 @@ proc createExperimentFilesFromBatch {} {
 # NAME
 #   l3node.nghook -- layer 3 node netgraph hook
 # SYNOPSIS
-#   l3node.nghook $eid $node $ifc
+#   l3node.nghook $eid $node_id $iface_id
 # FUNCTION
 #   Returns the netgraph node name and the hook name for a given experiment
-#   id, node id, and interface name.
+#   id, node id, and interface id.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
-#   * ifc -- interface name
+#   * node_id -- node id
+#   * iface_id -- interface id
 # RESULT
 #   * list -- list in the form of {netgraph_node_name hook}
 #****
-proc l3node.nghook { eid node ifc } {
-    switch -exact [string trim $ifc 0123456789] {
+proc l3node.nghook { eid node_id iface_id } {
+    switch -exact [string trim $iface_id 0123456789] {
 	wlan -
 	ext -
 	eth {
-	    return [list $node-$ifc ether]
+	    return [list $node_id-$iface_id ether]
 	}
     }
 }
@@ -320,7 +320,7 @@ proc l3node.nghook { eid node ifc } {
 # NAME
 #   l3node.nodeCreate -- layer 3 node instantiate
 # SYNOPSIS
-#   l3node.nodeCreate $eid $node
+#   l3node.nodeCreate $eid $node_id
 # FUNCTION
 #   Instantiates the specified node. This means that it creates a new vimage
 #   node, all the required interfaces (for serial interface a new netgraph
@@ -328,58 +328,58 @@ proc l3node.nghook { eid node ifc } {
 #   procedure) including loopback interface, and sets kernel variables.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc l3node.nodeCreate { eid node } {
-    prepareFilesystemForNode $node
-    createNodeContainer $node
+proc l3node.nodeCreate { eid node_id } {
+    prepareFilesystemForNode $node_id
+    createNodeContainer $node_id
 }
 
-proc l3node.nodePhysIfacesCreate { eid node ifcs } {
-    nodePhysIfacesCreate $node $ifcs
+proc l3node.nodePhysIfacesCreate { eid node_id ifaces } {
+    nodePhysIfacesCreate $node_id $ifaces
 }
 
-proc l2node.nodePhysIfacesCreate { eid node ifcs } {
-    nodePhysIfacesCreate $node $ifcs
+proc l2node.nodePhysIfacesCreate { eid node_id ifaces } {
+    nodePhysIfacesCreate $node_id $ifaces
 }
 
 #****f* exec.tcl/l3node.nodeNamespaceSetup
 # NAME
 #   l3node.nodeNamespaceSetup -- layer 3 node nodeNamespaceSetup
 # SYNOPSIS
-#   l3node.nodeNamespaceSetup $eid $node
+#   l3node.nodeNamespaceSetup $eid $node_id
 # FUNCTION
 #   Linux only. Attaches the existing Docker netns to a new one.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc l3node.nodeNamespaceSetup { eid node } {
-    attachToL3NodeNamespace $node
+proc l3node.nodeNamespaceSetup { eid node_id } {
+    attachToL3NodeNamespace $node_id
 }
 
 #****f* exec.tcl/l3node.nodeInitConfigure
 # NAME
 #   l3node.nodeInitConfigure -- layer 3 node nodeInitConfigure
 # SYNOPSIS
-#   l3node.nodeInitConfigure $eid $node
+#   l3node.nodeInitConfigure $eid $node_id
 # FUNCTION
 #   Runs initial L3 configuration, such as creating logical interfaces and
 #   configuring sysctls.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc l3node.nodeInitConfigure { eid node } {
-    nodeLogIfacesCreate $node
-    configureICMPoptions $node
+proc l3node.nodeInitConfigure { eid node_id } {
+    nodeLogIfacesCreate $node_id
+    configureICMPoptions $node_id
 }
 
 #****f* exec.tcl/l3node.nodeConfigure
 # NAME
 #   l3node.nodeConfigure -- layer 3 node start
 # SYNOPSIS
-#   l3node.nodeConfigure $eid $node
+#   l3node.nodeConfigure $eid $node_id
 # FUNCTION
 #   Starts a new layer 3 node (pc, host or router). The node can be started if
 #   it is instantiated.
@@ -387,54 +387,54 @@ proc l3node.nodeInitConfigure { eid node } {
 #   assignes the ip addresses to the interfaces.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc l3node.nodeConfigure { eid node } {
-    startIfcsNode $node
-    runConfOnNode $node
+proc l3node.nodeConfigure { eid node_id } {
+    startIfcsNode $node_id
+    runConfOnNode $node_id
 }
 
 #****f* exec.tcl/l2node.nodeNamespaceSetup
 # NAME
 #   l2node.nodeNamespaceSetup -- layer 2 node nodeNamespaceSetup
 # SYNOPSIS
-#   l2node.nodeNamespaceSetup $eid $node
+#   l2node.nodeNamespaceSetup $eid $node_id
 # FUNCTION
 #   Linux only. Creates a new netns.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc l2node.nodeNamespaceSetup { eid node } {
-    createNamespace $eid-$node
+proc l2node.nodeNamespaceSetup { eid node_id } {
+    createNamespace $eid-$node_id
 }
 
 #****f* exec.tcl/nodeIpsecInit
 # NAME
 #   nodeIpsecInit -- IPsec initialization
 # SYNOPSIS
-#   nodeIpsecInit $node
+#   nodeIpsecInit $node_id
 # FUNCTION
 #   Creates ipsec.conf and ipsec.secrets files from IPsec configuration of given node
 #   and copies certificates to desired folders (if there are any certificates)
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #****
 set ipsecConf ""
 set ipsecSecrets ""
-proc nodeIpsecInit { node } {
+proc nodeIpsecInit { node_id } {
     global ipsecConf ipsecSecrets isOSfreebsd
 
-    set config_content [getNodeIPsec $node]
+    set config_content [getNodeIPsec $node_id]
     if { $config_content != "" } {
-	setNodeIPsecSetting $node "configuration" "conn %default" "keyexchange" "ikev2"
+	setNodeIPsecSetting $node_id "configuration" "conn %default" "keyexchange" "ikev2"
 	set ipsecConf "# /etc/ipsec.conf - strongSwan IPsec configuration file\n"
     } else {
 	return
     }
 
     set ipsecSecrets "# /etc/ipsec.secrets - strongSwan IPsec secrets file\n\n"
-    set config_content [getNodeIPsecItem $node "configuration"]
+    set config_content [getNodeIPsecItem $node_id "configuration"]
 
     #setNodeIPsecSetting $node "%default" "keyexchange" "ikev2"
     #set ipsecConf "${ipsecConf}config setup\n"
@@ -465,16 +465,16 @@ proc nodeIpsecInit { node } {
 	}
     }
 
-    delNodeIPsecElement $node "configuration" "conn %default"
+    delNodeIPsecElement $node_id "configuration" "conn %default"
 
-    set ca_cert [getNodeIPsecItem $node "ca_cert"]
-    set local_cert [getNodeIPsecItem $node "local_cert"]
-    set ipsecret_file [getNodeIPsecItem $node "local_key_file"]
-    ipsecFilesToNode $node $ca_cert $local_cert $ipsecret_file
+    set ca_cert [getNodeIPsecItem $node_id "ca_cert"]
+    set local_cert [getNodeIPsecItem $node_id "local_cert"]
+    set ipsecret_file [getNodeIPsecItem $node_id "local_key_file"]
+    ipsecFilesToNode $node_id $ca_cert $local_cert $ipsecret_file
 
-    set ipsec_log_level [getNodeIPsecItem $node "ipsec-logging"]
+    set ipsec_log_level [getNodeIPsecItem $node_id "ipsec-logging"]
     if { $ipsec_log_level != "" } {
-	execCmdNode $node "touch /tmp/charon.log"
+	execCmdNode $node_id "touch /tmp/charon.log"
 
 	set charon "charon {\n\
 	\tfilelog {\n\
@@ -491,7 +491,7 @@ proc nodeIpsecInit { node } {
 	    set prefix "/usr/local"
 	}
 
-	writeDataToNodeFile $node "$prefix/etc/strongswan.d/charon-logging.conf" $charon
+	writeDataToNodeFile $node_id "$prefix/etc/strongswan.d/charon-logging.conf" $charon
     }
 }
 
@@ -512,8 +512,8 @@ proc deployCfg {} {
     global progressbarCount execMode
 
     set progressbarCount 0
-    set nodeCount [llength $node_list]
-    set linkCount [llength $link_list]
+    set nodes_count [llength $node_list]
+    set links_count [llength $link_list]
 
     set t_start [clock milliseconds]
 
@@ -535,12 +535,12 @@ proc deployCfg {} {
     set l3nodes {}
     set allNodes {}
     set pseudoNodesCount 0
-    foreach node $node_list {
-	if { [getNodeType $node] != "pseudo" } {
-	    if { [[getNodeType $node].virtlayer] != "VIRTUALIZED" } {
-		lappend l2nodes $node
+    foreach node_id $node_list {
+	if { [getNodeType $node_id] != "pseudo" } {
+	    if { [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" } {
+		lappend l2nodes $node_id
 	    } else {
-		lappend l3nodes $node
+		lappend l3nodes $node_id
 	    }
 	} else {
 	    incr pseudoNodesCount
@@ -551,8 +551,8 @@ proc deployCfg {} {
     set l3nodeCount [llength $l3nodes]
     set allNodes [concat $l2nodes $l3nodes]
     set allNodeCount [llength $allNodes]
-    incr linkCount [expr -$pseudoNodesCount/2]
-    set maxProgressbasCount [expr {5*$allNodeCount + 1*$l2nodeCount + 5*$l3nodeCount + 2*$linkCount}]
+    incr links_count [expr -$pseudoNodesCount/2]
+    set maxProgressbasCount [expr {5*$allNodeCount + 1*$l2nodeCount + 5*$l3nodeCount + 2*$links_count}]
 
     set w ""
     if { $execMode != "batch" } {
@@ -621,14 +621,14 @@ proc deployCfg {} {
 
 	statline "Creating links..."
 	pipesCreate
-	execute_linksCreate $link_list $linkCount $w
-	statline "Waiting for $linkCount link(s) to be created..."
+	execute_linksCreate $link_list $links_count $w
+	statline "Waiting for $links_count link(s) to be created..."
 	pipesClose
 
 	pipesCreate
 	statline "Configuring links..."
-	execute_linksConfigure $link_list $linkCount $w
-	statline "Waiting for $linkCount link(s) to be configured..."
+	execute_linksConfigure $link_list $links_count $w
+	statline "Waiting for $links_count link(s) to be configured..."
 	pipesClose
 
 	statline "Starting services for LINKINST hook..."
@@ -654,7 +654,7 @@ proc deployCfg {} {
 
     finishExecuting 1 "" $w
 
-    statline "Network topology instantiated in [expr ([clock milliseconds] - $t_start)/1000.0] seconds ($allNodeCount nodes and $linkCount links)."
+    statline "Network topology instantiated in [expr ([clock milliseconds] - $t_start)/1000.0] seconds ($allNodeCount nodes and $links_count links)."
 
     if { $execMode == "batch" } {
 	puts "Experiment ID = $eid"
@@ -689,19 +689,19 @@ proc execute_prepareSystem {} {
     createExperimentFiles $eid
 }
 
-proc execute_nodesCreate { nodes nodeCount w } {
+proc execute_nodesCreate { nodes nodes_count w } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set batchStep 0
-    foreach node $nodes {
-	displayBatchProgress $batchStep $nodeCount
+    foreach node_id $nodes {
+	displayBatchProgress $batchStep $nodes_count
 
-	if { [info procs [getNodeType $node].nodeCreate] != "" } {
+	if { [info procs [getNodeType $node_id].nodeCreate] != "" } {
 	    try {
-		[getNodeType $node].nodeCreate $eid $node
+		[getNodeType $node_id].nodeCreate $eid $node_id
 	    } on error err {
-		return -code error "Error in '[getNodeType $node].nodeCreate $eid $node': $err"
+		return -code error "Error in '[getNodeType $node_id].nodeCreate $eid $node_id': $err"
 	    }
 	    pipesExec ""
 	}
@@ -710,68 +710,68 @@ proc execute_nodesCreate { nodes nodeCount w } {
 	incr progressbarCount
 
 	if { $execMode != "batch" } {
-	    statline "Instantiating node [getNodeName $node]"
+	    statline "Instantiating node [getNodeName $node_id]"
 	    $w.p configure -value $progressbarCount
 	    update
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc waitForInstantiateNodes { nodes nodeCount w } {
+proc waitForInstantiateNodes { nodes nodes_count w } {
     global progressbarCount execMode
 
     set batchStep 0
     set nodes_left $nodes
     while { [llength $nodes_left] > 0 } {
-	displayBatchProgress $batchStep $nodeCount
-	foreach node $nodes_left {
-	    if { ! [isNodeStarted $node] } {
+	displayBatchProgress $batchStep $nodes_count
+	foreach node_id $nodes_left {
+	    if { ! [isNodeStarted $node_id] } {
 		continue
 	    }
 
 	    incr batchStep
 	    incr progressbarCount
 
-	    set name [getNodeName $node]
+	    set name [getNodeName $node_id]
 	    if { $execMode != "batch" } {
 		statline "Node $name started"
 		$w.p configure -value $progressbarCount
 		update
 	    }
-	    displayBatchProgress $batchStep $nodeCount
+	    displayBatchProgress $batchStep $nodes_count
 
-	    set nodes_left [removeFromList $nodes_left $node]
+	    set nodes_left [removeFromList $nodes_left $node_id]
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc execute_nodesNamespaceSetup { nodes nodeCount w } {
+proc execute_nodesNamespaceSetup { nodes nodes_count w } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set batchStep 0
-    foreach node $nodes {
-	displayBatchProgress $batchStep $nodeCount
+    foreach node_id $nodes {
+	displayBatchProgress $batchStep $nodes_count
 
-	if { [info procs [getNodeType $node].nodeNamespaceSetup] != "" } {
+	if { [info procs [getNodeType $node_id].nodeNamespaceSetup] != "" } {
 	    try {
-		[getNodeType $node].nodeNamespaceSetup $eid $node
+		[getNodeType $node_id].nodeNamespaceSetup $eid $node_id
 	    } on error err {
-		return -code error "Error in '[getNodeType $node].nodeNamespaceSetup $eid $node': $err"
+		return -code error "Error in '[getNodeType $node_id].nodeNamespaceSetup $eid $node_id': $err"
 	    }
 	    pipesExec ""
 	}
@@ -780,67 +780,67 @@ proc execute_nodesNamespaceSetup { nodes nodeCount w } {
 	incr progressbarCount
 
 	if { $execMode != "batch" } {
-	    statline "Creating namespace for [getNodeName $node]"
+	    statline "Creating namespace for [getNodeName $node_id]"
 	    $w.p configure -value $progressbarCount
 	    update
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc waitForNamespaces { nodes nodeCount w } {
+proc waitForNamespaces { nodes nodes_count w } {
     global progressbarCount execMode
 
     set batchStep 0
     set nodes_left $nodes
     while { [llength $nodes_left] > 0 } {
-	displayBatchProgress $batchStep $nodeCount
-	foreach node $nodes_left {
-	    if { ! [isNodeNamespaceCreated $node] } {
+	displayBatchProgress $batchStep $nodes_count
+	foreach node_id $nodes_left {
+	    if { ! [isNodeNamespaceCreated $node_id] } {
 		continue
 	    }
 
 	    incr batchStep
 	    incr progressbarCount
 
-	    set name [getNodeName $node]
+	    set name [getNodeName $node_id]
 	    if { $execMode != "batch" } {
 		statline "Namespace for $name created"
 		$w.p configure -value $progressbarCount
 		update
 	    }
-	    displayBatchProgress $batchStep $nodeCount
+	    displayBatchProgress $batchStep $nodes_count
 
-	    set nodes_left [removeFromList $nodes_left $node]
+	    set nodes_left [removeFromList $nodes_left $node_id]
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc execute_nodesInitConfigure { nodes nodeCount w } {
+proc execute_nodesInitConfigure { nodes nodes_count w } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set batchStep 0
-    foreach node $nodes {
-	displayBatchProgress $batchStep $nodeCount
+    foreach node_id $nodes {
+	displayBatchProgress $batchStep $nodes_count
 
 	try {
-	    [getNodeType $node].nodeInitConfigure $eid $node
+	    [getNodeType $node_id].nodeInitConfigure $eid $node_id
 	} on error err {
-	    return -code error "Error in '[getNodeType $node].nodeInitConfigure $eid $node': $err"
+	    return -code error "Error in '[getNodeType $node_id].nodeInitConfigure $eid $node_id': $err"
 	}
 	pipesExec ""
 
@@ -848,71 +848,71 @@ proc execute_nodesInitConfigure { nodes nodeCount w } {
 	incr progressbarCount
 
 	if { $execMode != "batch" } {
-	    statline "Starting initial configuration on [getNodeName $node]"
+	    statline "Starting initial configuration on [getNodeName $node_id]"
 	    $w.p configure -value $progressbarCount
 	    update
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc waitForInitConf { nodes nodeCount w } {
+proc waitForInitConf { nodes nodes_count w } {
     global progressbarCount execMode
 
     set batchStep 0
     set nodes_left $nodes
     while { [llength $nodes_left] > 0 } {
-	displayBatchProgress $batchStep $nodeCount
-	foreach node $nodes_left {
-	    if { ! [isNodeInitNet $node] } {
+	displayBatchProgress $batchStep $nodes_count
+	foreach node_id $nodes_left {
+	    if { ! [isNodeInitNet $node_id] } {
 		continue
 	    }
 
 	    incr batchStep
 	    incr progressbarCount
 
-	    set name [getNodeName $node]
+	    set name [getNodeName $node_id]
 	    if { $execMode != "batch" } {
 		statline "Initial networking on $name configured"
 		$w.p configure -value $progressbarCount
 		update
 	    }
-	    displayBatchProgress $batchStep $nodeCount
+	    displayBatchProgress $batchStep $nodes_count
 
-	    set nodes_left [removeFromList $nodes_left $node]
+	    set nodes_left [removeFromList $nodes_left $node_id]
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc execute_nodesCopyFiles { nodes nodeCount w } {}
+proc execute_nodesCopyFiles { nodes nodes_count w } {}
 
-proc execute_nodesPhysIfacesCreate { nodes nodeCount w } {
+proc execute_nodesPhysIfacesCreate { nodes nodes_count w } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set batchStep 0
-    foreach node $nodes {
-	displayBatchProgress $batchStep $nodeCount
+    foreach node_id $nodes {
+	displayBatchProgress $batchStep $nodes_count
 
-	if { [info procs [getNodeType $node].nodePhysIfacesCreate] != "" } {
-	    set ifcs [ifcList $node]
+	if { [info procs [getNodeType $node_id].nodePhysIfacesCreate] != "" } {
+	    set ifaces [ifcList $node_id]
 	    try {
-		[getNodeType $node].nodePhysIfacesCreate $eid $node $ifcs
+		[getNodeType $node_id].nodePhysIfacesCreate $eid $node_id $ifaces
 	    } on error err {
-		return -code error "Error in '[getNodeType $node].nodePhysIfacesCreate $eid $node $ifcs': $err"
+		return -code error "Error in '[getNodeType $node_id].nodePhysIfacesCreate $eid $node_id $ifaces': $err"
 	    }
 	    pipesExec ""
 	}
@@ -921,54 +921,54 @@ proc execute_nodesPhysIfacesCreate { nodes nodeCount w } {
 	incr progressbarCount
 
 	if { $execMode != "batch" } {
-	    statline "Creating physical ifaces on node [getNodeName $node]"
+	    statline "Creating physical ifaces on node [getNodeName $node_id]"
 	    $w.p configure -value $progressbarCount
 	    update
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc execute_linksCreate { links linkCount w } {
+proc execute_linksCreate { links links_count w } {
     global progressbarCount execMode
 
     set batchStep 0
     for { set pending_links $links } { $pending_links != "" } {} {
-	set link [lindex $pending_links 0]
-	set i [lsearch -exact $pending_links $link]
+	set link_id [lindex $pending_links 0]
+	set i [lsearch -exact $pending_links $link_id]
 	set pending_links [lreplace $pending_links $i $i]
 
-	set lnode1 [lindex [getLinkPeers $link] 0]
-	set lnode2 [lindex [getLinkPeers $link] 1]
-	set ifname1 [lindex [getLinkPeersIfaces $link] 0]
-	set ifname2 [lindex [getLinkPeersIfaces $link] 1]
+	set node1_id [lindex [getLinkPeers $link_id] 0]
+	set node2_id [lindex [getLinkPeers $link_id] 1]
+	set iface1_id [lindex [getLinkPeersIfaces $link_id] 0]
+	set iface2_id [lindex [getLinkPeersIfaces $link_id] 1]
 
-	set msg "Creating link $link"
-	set mirror_link [getLinkMirror $link]
-	if { $mirror_link != "" } {
-	    set msg "Creating link $link/$mirror_link"
-	    set pending_links [removeFromList $pending_links $mirror_link]
+	set msg "Creating link $link_id"
+	set mirror_link_id [getLinkMirror $link_id]
+	if { $mirror_link_id != "" } {
+	    set msg "Creating link $link_id/$mirror_link_id"
+	    set pending_links [removeFromList $pending_links $mirror_link_id]
 
-	    lassign "[lindex [getLinkPeers $mirror_link] 0] $lnode1" lnode1 lnode2
-	    lassign "[lindex [getLinkPeersIfaces $mirror_link] 0] $ifname1" ifname1 ifname2
+	    lassign "[lindex [getLinkPeers $mirror_link_id] 0] $node1_id" node1_id node2_id
+	    lassign "[lindex [getLinkPeersIfaces $mirror_link_id] 0] $iface1_id" iface1_id iface2_id
 	}
 
-	displayBatchProgress $batchStep $linkCount
+	displayBatchProgress $batchStep $links_count
 
 	try {
-	    if { [getLinkDirect $link] || [getNodeType $lnode1] == "wlan" || [getNodeType $lnode2] == "wlan" } {
-		createDirectLinkBetween $lnode1 $lnode2 $ifname1 $ifname2
+	    if { [getLinkDirect $link_id] || [getNodeType $node1_id] == "wlan" || [getNodeType $node2_id] == "wlan" } {
+		createDirectLinkBetween $node1_id $node2_id $iface1_id $iface2_id
 	    } else {
-		createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
+		createLinkBetween $node1_id $node2_id $iface1_id $iface2_id $link_id
 	    }
 	} on error err {
-	    return -code error "Error in 'createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link': $err"
+	    return -code error "Error in 'createLinkBetween $node1_id $node2_id $iface1_id $iface2_id $link_id': $err"
 	}
 
 	incr batchStep
@@ -983,44 +983,44 @@ proc execute_linksCreate { links linkCount w } {
 
     pipesExec ""
 
-    if { $linkCount > 0 } {
-	displayBatchProgress $batchStep $linkCount
+    if { $links_count > 0 } {
+	displayBatchProgress $batchStep $links_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc execute_linksConfigure { links linkCount w } {
+proc execute_linksConfigure { links links_count w } {
     global progressbarCount execMode
 
     set batchStep 0
     for { set pending_links $links } { $pending_links != "" } {} {
-	set link [lindex $pending_links 0]
-	set i [lsearch -exact $pending_links $link]
+	set link_id [lindex $pending_links 0]
+	set i [lsearch -exact $pending_links $link_id]
 	set pending_links [lreplace $pending_links $i $i]
 
-	set lnode1 [lindex [getLinkPeers $link] 0]
-	set lnode2 [lindex [getLinkPeers $link] 1]
-	set ifname1 [lindex [getLinkPeersIfaces $link] 0]
-	set ifname2 [lindex [getLinkPeersIfaces $link] 1]
+	set node1_id [lindex [getLinkPeers $link_id] 0]
+	set node2_id [lindex [getLinkPeers $link_id] 1]
+	set iface1_id [lindex [getLinkPeersIfaces $link_id] 0]
+	set iface2_id [lindex [getLinkPeersIfaces $link_id] 1]
 
-	set msg "Configuring link $link"
-	set mirror_link [getLinkMirror $link]
-	if { $mirror_link != "" } {
-	    set msg "Configuring link $link/$mirror_link"
-	    set pending_links [removeFromList $pending_links $mirror_link]
+	set msg "Configuring link $link_id"
+	set mirror_link_id [getLinkMirror $link_id]
+	if { $mirror_link_id != "" } {
+	    set msg "Configuring link $link_id/$mirror_link_id"
+	    set pending_links [removeFromList $pending_links $mirror_link_id]
 
-	    lassign "[lindex [getLinkPeers $mirror_link] 0] $lnode1" lnode1 lnode2
-	    lassign "[lindex [getLinkPeersIfaces $mirror_link] 0] $ifname1" ifname1 ifname2
+	    lassign "[lindex [getLinkPeers $mirror_link_id] 0] $node1_id" node1_id node2_id
+	    lassign "[lindex [getLinkPeersIfaces $mirror_link_id] 0] $iface1_id" iface1_id iface2_id
 	}
 
-	displayBatchProgress $batchStep $linkCount
+	displayBatchProgress $batchStep $links_count
 
 	try {
-	    configureLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
+	    configureLinkBetween $node1_id $node2_id $iface1_id $iface2_id $link_id
 	} on error err {
-	    return -code error "Error in 'configureLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link': $err"
+	    return -code error "Error in 'configureLinkBetween $node1_id $node2_id $iface1_id $iface2_id $link_id': $err"
 	}
 
 	incr batchStep
@@ -1035,39 +1035,39 @@ proc execute_linksConfigure { links linkCount w } {
 
     pipesExec ""
 
-    if { $linkCount > 0 } {
-	displayBatchProgress $batchStep $linkCount
+    if { $links_count > 0 } {
+	displayBatchProgress $batchStep $links_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc execute_nodesConfigure { nodes nodeCount w } {
+proc execute_nodesConfigure { nodes nodes_count w } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set batchStep 0
     set subnet_gws {}
     set nodes_l2data [dict create]
-    foreach node $nodes {
-	upvar 0 ::cf::[set ::curcfg]::$node $node
+    foreach node_id $nodes {
+	upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
 
-	if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
-	    lassign [getDefaultGateways $node $subnet_gws $nodes_l2data] my_gws subnet_gws nodes_l2data
-	    lassign [getDefaultRoutesConfig $node $my_gws] all_routes4 all_routes6
+	if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
+	    lassign [getDefaultGateways $node_id $subnet_gws $nodes_l2data] my_gws subnet_gws nodes_l2data
+	    lassign [getDefaultRoutesConfig $node_id $my_gws] all_routes4 all_routes6
 
-	    setDefaultIPv4routes $node $all_routes4
-	    setDefaultIPv6routes $node $all_routes6
+	    setDefaultIPv4routes $node_id $all_routes4
+	    setDefaultIPv6routes $node_id $all_routes6
 	}
 
-	if { [info procs [getNodeType $node].nodeConfigure] != "" } {
+	if { [info procs [getNodeType $node_id].nodeConfigure] != "" } {
 	    try {
-		[getNodeType $node].nodeConfigure $eid $node
+		[getNodeType $node_id].nodeConfigure $eid $node_id
 	    } on error err {
-		return -code error "Error in '[getNodeType $node].nodeConfigure $eid $node': $err"
+		return -code error "Error in '[getNodeType $node_id].nodeConfigure $eid $node_id': $err"
 	    }
 	}
 	pipesExec ""
@@ -1077,13 +1077,13 @@ proc execute_nodesConfigure { nodes nodeCount w } {
 
 	if { $execMode != "batch" } {
 	    $w.p configure -value $progressbarCount
-	    statline "Starting configuration on node [getNodeName $node]"
+	    statline "Starting configuration on node [getNodeName $node_id]"
 	    update
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
@@ -1103,14 +1103,14 @@ proc execute_nodesConfigure { nodes nodeCount w } {
 #****
 proc generateHostsFile { node_id } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::etchosts etchosts
+    upvar 0 ::cf::[set ::curcfg]::etchosts etc_hosts
     global auto_etc_hosts
 
     if { $auto_etc_hosts != 1 || [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" } {
 	return
     }
 
-    if { $etchosts == "" } {
+    if { $etc_hosts == "" } {
 	foreach other_node_id $node_list {
 	    if { [[getNodeType $other_node_id].virtlayer] != "VIRTUALIZED" } {
 		continue
@@ -1118,28 +1118,28 @@ proc generateHostsFile { node_id } {
 
 	    set ctr 0
 	    set ctr6 0
-	    foreach ifc [ifcList $other_node_id] {
-		if { $ifc == "" } {
+	    foreach iface_id [ifcList $other_node_id] {
+		if { $iface_id == "" } {
 		    continue
 		}
 
 		set node_name [getNodeName $other_node_id]
-		foreach ipv4 [getIfcIPv4addrs $other_node_id $ifc] {
+		foreach ipv4 [getIfcIPv4addrs $other_node_id $iface_id] {
 		    set ipv4 [lindex [split $ipv4 "/"] 0]
 		    if { $ctr == 0 } {
-			set etchosts "$etchosts$ipv4	${node_name}\n"
+			set etc_hosts "$etc_hosts$ipv4	${node_name}\n"
 		    } else {
-			set etchosts "$etchosts$ipv4	${node_name}_${ctr}\n"
+			set etc_hosts "$etc_hosts$ipv4	${node_name}_${ctr}\n"
 		    }
 		    incr ctr
 		}
 
-		foreach ipv6 [getIfcIPv6addrs $other_node_id $ifc] {
+		foreach ipv6 [getIfcIPv6addrs $other_node_id $iface_id] {
 		    set ipv6 [lindex [split $ipv6 "/"] 0]
 		    if { $ctr6 == 0 } {
-			set etchosts "$etchosts$ipv6	${node_name}.6\n"
+			set etc_hosts "$etc_hosts$ipv6	${node_name}.6\n"
 		    } else {
-			set etchosts "$etchosts$ipv6	${node_name}_${ctr6}.6\n"
+			set etc_hosts "$etc_hosts$ipv6	${node_name}_${ctr6}.6\n"
 		    }
 		    incr ctr6
 		}
@@ -1147,39 +1147,39 @@ proc generateHostsFile { node_id } {
 	}
     }
 
-    writeDataToNodeFile $node_id /etc/hosts $etchosts
+    writeDataToNodeFile $node_id /etc/hosts $etc_hosts
 }
 
-proc waitForConfStart { nodes nodeCount w } {
+proc waitForConfStart { nodes nodes_count w } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set batchStep 0
     set nodes_left $nodes
     while { [llength $nodes_left] > 0 } {
-	displayBatchProgress $batchStep $nodeCount
-	foreach node $nodes_left {
-	    if { ! [isNodeConfigured $node] } {
+	displayBatchProgress $batchStep $nodes_count
+	foreach node_id $nodes_left {
+	    if { ! [isNodeConfigured $node_id] } {
 		continue
 	    }
 
 	    incr batchStep
 	    incr progressbarCount
 
-	    set name [getNodeName $node]
+	    set name [getNodeName $node_id]
 	    if { $execMode != "batch" } {
 		statline "Node $name configured"
 		$w.p configure -value $progressbarCount
 		update
 	    }
-	    displayBatchProgress $batchStep $nodeCount
+	    displayBatchProgress $batchStep $nodes_count
 
-	    set nodes_left [removeFromList $nodes_left $node]
+	    set nodes_left [removeFromList $nodes_left $node_id]
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
@@ -1204,33 +1204,33 @@ proc finishExecuting { status msg w } {
     }
 }
 
-proc checkForErrors { nodes nodeCount w } {
+proc checkForErrors { nodes nodes_count w } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set batchStep 0
     set err_nodes ""
-    foreach node $nodes {
+    foreach node_id $nodes {
 	set msg "no error"
-	if { [isNodeError $node] } {
+	if { [isNodeError $node_id] } {
 	    set msg "error found"
-	    append err_nodes "[getNodeName $node] ($node), "
+	    append err_nodes "[getNodeName $node_id] ($node_id), "
 	}
 
 	incr batchStep
 	incr progressbarCount
 
-	set name [getNodeName $node]
+	set name [getNodeName $node_id]
 	if { $execMode != "batch" } {
 	    statline "Node $name checked - $msg"
 	    $w.p configure -value $progressbarCount
 	    update
 	}
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
@@ -1255,13 +1255,13 @@ proc checkForErrors { nodes nodeCount w } {
 # NAME
 #   startNodeFromMenu -- start node from button3menu
 # SYNOPSIS
-#   startNodeFromMenu $node
+#   startNodeFromMenu $node_id
 # FUNCTION
-#   Invokes the [getNodeType $node].nodeConfigure procedure, along with services startup.
+#   Invokes the [getNodeType $node_id].nodeConfigure procedure, along with services startup.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc startNodeFromMenu { node } {
+proc startNodeFromMenu { node_id } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
@@ -1273,7 +1273,7 @@ proc startNodeFromMenu { node } {
 
 	toplevel $w -takefocus 1
 	wm transient $w .
-	wm title $w "Starting node $node..."
+	wm title $w "Starting node $node_id..."
 	message $w.msg -justify left -aspect 1200 \
 	    -text "Starting up virtual nodes and links."
 	pack $w.msg
@@ -1289,23 +1289,23 @@ proc startNodeFromMenu { node } {
 	}
     }
 
-    services start "NODEINST" "" $node
-    services start "LINKINST" "" $node
+    services start "NODEINST" "" $node_id
+    services start "LINKINST" "" $node_id
 
     pipesCreate
     set allNodeCount 1
     try {
-	execute_nodesConfigure $node 1 $w
+	execute_nodesConfigure $node_id 1 $w
 	statline "Waiting for configuration on $allNodeCount node(s)..."
-	waitForConfStart $node $allNodeCount $w
+	waitForConfStart $node_id $allNodeCount $w
     } on error err {
 	finishExecuting 0 "$err" $w
 	return
     }
     pipesClose
 
-    services start "NODECONF" "" $node
-    services start "NODECONF" "" $node
+    services start "NODECONF" "" $node_id
+    services start "NODECONF" "" $node_id
 
     finishExecuting 1 "" $w
 }

@@ -31,16 +31,16 @@ proc $MODULE.prepareSystem {} {
     catch { exec kldload ng_rfee }
 }
 
-proc $MODULE.confNewIfc { node ifc } {
+proc $MODULE.confNewIfc { node_id iface_id } {
 }
 
-proc $MODULE.confNewNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc $MODULE.confNewNode { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 
     set nconfig [list \
-	"hostname $node" \
+	"hostname $node_id" \
 	! ]
-    lappend $node "network-config [list $nconfig]"
+    lappend $node_id "network-config [list $nconfig]"
 }
 
 proc $MODULE.icon { size } {
@@ -75,28 +75,28 @@ proc $MODULE.virtlayer {} {
     return NATIVE
 }
 
-proc $MODULE.nodeCreate { eid node } {
+proc $MODULE.nodeCreate { eid node_id } {
     upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
 
     set t [exec printf "mkpeer rfee link0 link0\nshow ." | jexec $eid ngctl -f -]
     set tlen [string length $t]
     set id [string range $t [expr $tlen - 31] [expr $tlen - 24]]
-    catch { exec jexec $eid ngctl name \[$id\]: $node }
-    set ngnodemap($eid\.$node) $node
+    catch { exec jexec $eid ngctl name \[$id\]: $node_id }
+    set ngnodemap($eid\.$node_id) $node_id
 }
 
-proc $MODULE.nodeConfigure { eid node } {
+proc $MODULE.nodeConfigure { eid node_id } {
     upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
 
-    set ngid $ngnodemap($eid\.$node)
+    set ngid $ngnodemap($eid\.$node_id)
     set wlan_epids ""
-    foreach ifc [ifcList $node] {
-	lappend wlan_epids [string range [lindex [logicalPeerByIfc $node $ifc] 0] 1 end]
+    foreach iface_id [ifcList $node_id] {
+	lappend wlan_epids [string range [lindex [logicalPeerByIfc $node_id $iface_id] 0] 1 end]
     }
 
-    foreach ifc [ifcList $node] {
-	set local_linkname link[string range $ifc 1 end]
-	set local_epid [string range [lindex [logicalPeerByIfc $node $ifc] 0] 1 end]
+    foreach iface_id [ifcList $node_id] {
+	set local_linkname link[string range $iface_id 1 end]
+	set local_epid [string range [lindex [logicalPeerByIfc $node_id $iface_id] 0] 1 end]
 	set tx_bandwidth 54000000
 	set tx_jitter 1.5
 	set tx_duplicate 5
@@ -123,31 +123,31 @@ proc $MODULE.nodeConfigure { eid node } {
     }
 }
 
-proc $MODULE.nodeDestroy { eid node } {
-    catch { exec jexec $eid ngctl msg $node: shutdown }
+proc $MODULE.nodeDestroy { eid node_id } {
+    catch { exec jexec $eid ngctl msg $node_id: shutdown }
 }
 
-proc $MODULE.nghook { eid node ifc } {
-    set ifunit [string range $ifc 1 end]
-    return [list $eid\.$node link$ifunit]
+proc $MODULE.nghook { eid node_id iface_id } {
+    set ifunit [string range $iface_id 1 end]
+    return [list $eid\.$node_id link$ifunit]
 }
 
-proc $MODULE.configGUI { c node } {
+proc $MODULE.configGUI { c node_id } {
     global wi
     global guielements treecolumns
     set guielements {}
 
     configGUI_createConfigPopupWin $c
     wm title $wi "WLAN configuration"
-    configGUI_nodeName $wi $node "Node name:"
+    configGUI_nodeName $wi $node_id "Node name:"
 
-    configGUI_buttonsACNode $wi $node
+    configGUI_buttonsACNode $wi $node_id
 }
 
-proc $MODULE.configInterfacesGUI { wi node ifc } {
+proc $MODULE.configInterfacesGUI { wi node_id iface_id } {
     global guielements
 
-    configGUI_ifcQueueConfig $wi $node $ifc
+    configGUI_ifcQueueConfig $wi $node_id $iface_id
 }
 
 proc $MODULE.maxLinks {} {

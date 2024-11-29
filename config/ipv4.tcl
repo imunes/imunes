@@ -243,17 +243,17 @@ proc findFreeIPv4Net { mask { ipv4_used_list "" } } {
 # NAME
 #   autoIPv4addr -- automaticaly assign an IPv4 address
 # SYNOPSIS
-#   autoIPv4addr $node $iface
+#   autoIPv4addr $node_id $iface_id
 # FUNCTION
-#   automaticaly assignes an IPv4 address to the interface $iface of
-#   of the node $node
+#   automaticaly assignes an IPv4 address to the interface $iface_id of
+#   of the node $node_id
 # INPUTS
-#   * node -- the node containing the interface to witch a new
+#   * node_id -- the node id containing the interface to witch a new
 #     IPv4 address should be assigned
-#   * iface -- the interface to witch a new, automatically generated, IPv4
+#   * iface_id -- the interface to witch a new, automatically generated, IPv4
 #     address will be assigned
 #****
-proc autoIPv4addr { node iface } {
+proc autoIPv4addr { node_id iface_id } {
     upvar 0 ::cf::[set ::curcfg]::IPv4UsedList IPv4UsedList
     global IPv4autoAssign
 
@@ -266,7 +266,7 @@ proc autoIPv4addr { node iface } {
     #changeAddressRange - is this procedure called from 'changeAddressRange' (1 if true, otherwise 0)
     #autorenumbered_ifcs - list of all interfaces that changed an address
 
-    set node_type [getNodeType $node]
+    set node_type [getNodeType $node_id]
     if { [$node_type.netlayer] != "NETWORK" } {
 	#
 	# Shouldn't get called at all for link-layer nodes
@@ -274,24 +274,24 @@ proc autoIPv4addr { node iface } {
 	return
     }
 
-    set IPv4UsedList [removeFromList $IPv4UsedList [getIfcIPv4addrs $node $iface] "keep_doubles"]
+    set IPv4UsedList [removeFromList $IPv4UsedList [getIfcIPv4addrs $node_id $iface_id] "keep_doubles"]
 
-    setIfcIPv4addrs $node $iface ""
+    setIfcIPv4addrs $node_id $iface_id ""
 
-    lassign [logicalPeerByIfc $node $iface] peer_node peer_if
+    lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
     set peer_ip4addrs {}
-    if { $peer_node != "" } {
-	if { [[getNodeType $peer_node].netlayer] == "LINK" } {
-	    foreach l2node [listLANNodes $peer_node {}] {
-		foreach ifc [ifcList $l2node] {
-		    lassign [logicalPeerByIfc $l2node $ifc] peer peer_if
-		    set peer_ip4addr [getIfcIPv4addrs $peer $peer_if]
+    if { $peer_id != "" } {
+	if { [[getNodeType $peer_id].netlayer] == "LINK" } {
+	    foreach l2node [listLANNodes $peer_id {}] {
+		foreach l2node_iface_id [ifcList $l2node] {
+		    lassign [logicalPeerByIfc $l2node $l2node_iface_id] new_peer_id new_peer_iface_id
+		    set peer_ip4addr [getIfcIPv4addrs $new_peer_id $new_peer_iface_id]
 		    if { $peer_ip4addr == "" } {
 			continue
 		    }
 
 		    if { $changeAddressRange == 1 } {
-			if { "$peer $peer_if" in $autorenumbered_ifcs } {
+			if { "$new_peer_id $new_peer_iface_id" in $autorenumbered_ifcs } {
 			    lappend peer_ip4addrs {*}$peer_ip4addr
 			}
 		    } else {
@@ -300,7 +300,7 @@ proc autoIPv4addr { node iface } {
 		}
 	    }
 	} else {
-	    set peer_ip4addrs [getIfcIPv4addrs $peer_node $peer_if]
+	    set peer_ip4addrs [getIfcIPv4addrs $peer_id $peer_iface_id]
 	}
     }
 
@@ -310,7 +310,7 @@ proc autoIPv4addr { node iface } {
 	set addr [getNextIPv4addr $node_type $IPv4UsedList]
     }
 
-    setIfcIPv4addrs $node $iface $addr
+    setIfcIPv4addrs $node_id $iface_id $addr
     lappend IPv4UsedList $addr
 }
 

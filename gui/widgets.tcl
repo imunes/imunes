@@ -2,15 +2,15 @@
 # NAME
 #   showCfg -- show configuration
 # SYNOPSIS
-#   showCfg $c $node
+#   showCfg $c $node_id
 # FUNCTION
 #   This procedure shows popup with configuration selected in
 #   Show menu of the node above wich is the mouse pointer
 # INPUTS
 #   * c -- tk canvas
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc showCfg { c node } {
+proc showCfg { c node_id } {
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     upvar 0 ::showConfig showCfg
     upvar 0 ::cf::[set ::curcfg]::eid eid
@@ -30,45 +30,45 @@ proc showCfg { c node } {
     #Dont show popup window if 'None' or 'Route' is selected from
     #the 'Show' menu
     #Also, dont show popup window if there is no node
-    if { $showCfg == "None" || $showCfg == "route" || $node == "" } {
+    if { $showCfg == "None" || $showCfg == "route" || $node_id == "" } {
     	$c delete -withtag showCfgPopup
 	return
     }
 
     #Dont show popup window if the node virtlayer is different from VIRTUALIZED
-    if { [[getNodeType $node].virtlayer] != "VIRTUALIZED" } {
+    if { [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" } {
     	return
     }
 
     #Determine node coordinates
-    set coords [getNodeCoords $node]
+    set coords [getNodeCoords $node_id]
     set x [expr [lindex $coords 0] + 30]
     set y [expr [lindex $coords 1] + 30]
 
     #Execute command on selected node and save the command output
-    set output [execCmdNode $node $showCfg]
-    set title "$node# $showCfg\n"
+    set output [execCmdNode $node_id $showCfg]
+    set title "$node_id# $showCfg\n"
     append title $output
 
     #Call showCfgPopup
-    showCfgPopup $c $node $title $x $y
+    showCfgPopup $c $node_id $title $x $y
 }
 
 #****f* editor.tcl/showCfgPopup
 # NAME
 #   showCfgPopup -- show configure popup
 # SYNOPSIS
-#   showCfg $c $node $title $x $y
+#   showCfg $c $node_id $title $x $y
 # FUNCTION
 #   This procedure shows popup window
 # INPUTS
 #   * c -- tk canvas
-#   * node -- node id
+#   * node_id -- node id
 #   * title -- text that is going to be displayed
 #   * x -- x coordinate
 #   * y -- y coordinate
 #****
-proc showCfgPopup { c node title x y } {
+proc showCfgPopup { c node_id title x y } {
     global defaultFontSize
 
     #Therecan be shown only one popup at the time
@@ -100,8 +100,8 @@ proc showCfgPopup { c node title x y } {
     set sizex [lindex [getCanvasSize $curcanvas] 0]
     set sizey [lindex [getCanvasSize $curcanvas] 1]
 
-    set nodeX [lindex [getNodeCoords $node] 0]
-    set nodeY [lindex [getNodeCoords $node] 1]
+    set nodeX [lindex [getNodeCoords $node_id] 0]
+    set nodeY [lindex [getNodeCoords $node_id] 1]
 
     set canvasRegion [$c cget -scrollregion]
     set rx1 [lindex $canvasRegion 0]
@@ -178,16 +178,16 @@ proc deleteAndShowPopup { c title x y } {
 # NAME
 #   showRoute -- show route
 # SYNOPSIS
-#   showRoute $c $node2
+#   showRoute $c $node2_id
 # FUNCTION
 #   This procedure shows/draws route between two selected nodes.
 #   First node is being selected by clicking on it and second is
 #   selected by cursor enter. Route is drawn in green color.
 # INPUTS
 #   * c -- tk canvas
-#   * node2 -- second node
+#   * node2_id -- second node
 #****
-proc showRoute { c node2 } {
+proc showRoute { c node2_id } {
     upvar 0 ::showConfig showCfg
     upvar 0 ::traceRouteTime traceRouteTime
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
@@ -214,12 +214,12 @@ proc showRoute { c node2 } {
 		.bottom.textbox config -text "$line"
 	    }
 	} else {
-	    set node1 $selected
+	    set node1_id $selected
 
 	    #Draw route only if both nodes work on network layer
-	    set type1 [[getNodeType $node1].netlayer]
-	    set type2 [[getNodeType $node2].netlayer]
-	    if { $node1 != $node2 && $type1 == "NETWORK" && $type2 == "NETWORK" } {
+	    set node1_type [[getNodeType $node1_id].netlayer]
+	    set node2_type [[getNodeType $node2_id].netlayer]
+	    if { $node1_id != $node2_id && $node1_type == "NETWORK" && $node2_type == "NETWORK" } {
 		#User notification
 		set line "Please wait. Route is being calculated."
 		.bottom.textbox config -text "$line"
@@ -227,24 +227,24 @@ proc showRoute { c node2 } {
 		vwait t
 
 		#Get second nodes list of interfaces
-		set ifcs [lsort -ascii [ifcList $node2]]
+		set ifaces [lsort -ascii [ifcList $node2_id]]
 
 		#Make your own traceroute
-		set ifc [lindex $ifcs 0]
-		set ip [lindex [getIfcIPv4addrs $node2 $ifc] 0]
+		set iface_id [lindex $ifaces 0]
+		set ip [lindex [getIfcIPv4addrs $node2_id $iface_id] 0]
 		set slashPlace [string first "/" $ip]
 		set ipAddr [string range $ip 0 [expr $slashPlace-1]]
-		set nodeId "$eid.$node1"
+		set node_id "$eid.$node1_id"
 		set hopIP ""
 		set hop 0
-		set n1 $node1
-		set n2 $node1
+		set n1 $node1_id
+		set n2 $node1_id
 		set timeExcedeed No
 		set cntr 0
 		set errDet 0
 		while { $hopIP != $ipAddr } {
 		    incr hop
-		    set cmd [concat "exec jexec " $nodeId ping -n -c 1 -m $hop -t 1 -o -s 56 $ipAddr]
+		    set cmd [concat "exec jexec " $node_id ping -n -c 1 -m $hop -t 1 -o -s 56 $ipAddr]
 		    catch { eval $cmd } result
 
 		    set adBeg [string first "from" $result]
@@ -295,10 +295,10 @@ proc findNode { c ipAddr } {
     set i 0
     set nodeList {}
     foreach obj [$c find withtag node] {
-	set node [lindex [$c gettags $obj] 1]
-	set type [[getNodeType $node].netlayer]
-	if { $type == "NETWORK" } {
-	    lappend nodeList $node
+	set node_id [lindex [$c gettags $obj] 1]
+	set node_type [[getNodeType $node_id].netlayer]
+	if { $node_type == "NETWORK" } {
+	    lappend nodeList $node_id
 	    incr i
 	}
     }
@@ -306,14 +306,14 @@ proc findNode { c ipAddr } {
     set nodesNum $i
     #Find node with specified IP address
     for { set j 0 } { $j < $nodesNum } { incr j } {
-    	set node [lindex $nodeList $j]
-    	set ifcs [lsort -ascii [ifcList $node]]
-    	foreach ifc $ifcs {
-	    set ip [lindex [getIfcIPv4addrs $node $ifc] 0]
+    	set node_id [lindex $nodeList $j]
+    	set ifaces [lsort -ascii [ifcList $node_id]]
+    	foreach iface_id $ifaces {
+	    set ip [lindex [getIfcIPv4addrs $node_id $iface_id] 0]
 	    set slashPlace [string first "/" $ip]
 	    set addr [string range $ip 0 [expr $slashPlace-1]]
 	    if { $addr == $ipAddr } {
-		return $node
+		return $node_id
 	    }
 	}
     }
@@ -323,19 +323,19 @@ proc findNode { c ipAddr } {
 # NAME
 #   drawLine -- draw line
 # SYNOPSIS
-#   drawLine $c $node1 $node2
+#   drawLine $c $node1_id $node2_id
 # FUNCTION
 #   Draws the line between two nodes.
 # INPUTS
 #   * c -- tk canvas.
-#   * node1 -- first node
-#   * node2 -- second node
+#   * node1_id -- first node
+#   * node2_id -- second node
 #****
-proc drawLine { c node1 node2 } {
+proc drawLine { c node1_id node2_id } {
     global activetool
 
-    lassign [getNodeCoords $node1] x1 y1
-    lassign [getNodeCoords $node2] x2 y2
+    lassign [getNodeCoords $node1_id] x1 y1
+    lassign [getNodeCoords $node2_id] x2 y2
     $c create line $x1 $y1 $x2 $y2 -fill green \
     	-width 3 -tags "route"
     raiseAll $c

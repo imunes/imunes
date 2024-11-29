@@ -51,37 +51,37 @@ registerModule $MODULE
 # NAME
 #   extelem.confNewNode -- configure new node
 # SYNOPSIS
-#   extelem.confNewNode $node
+#   extelem.confNewNode $node_id
 # FUNCTION
 #   Configures new node with the specified id.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.confNewNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc $MODULE.confNewNode { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global nodeNamingBase
 
     set nconfig [list \
 	"hostname [getNewNodeNameType extelem $nodeNamingBase(extelem)]" \
 	! ]
-    lappend $node "network-config [list $nconfig]"
+    lappend $node_id "network-config [list $nconfig]"
 }
 
 #****f* extelem.tcl/extelem.confNewIfc
 # NAME
 #   extelem.confNewIfc -- configure new interface
 # SYNOPSIS
-#   extelem.confNewIfc $node $ifc
+#   extelem.confNewIfc $node_id $iface_id
 # FUNCTION
 #   Configures new interface for the specified node.
 # INPUTS
-#   * node -- node id
-#   * ifc -- interface name
+#   * node_id -- node id
+#   * iface_id -- interface name
 #****
-proc $MODULE.confNewIfc { node ifc } {
-    set old [getNodeStolenIfaces $node]
-    lappend old [list $ifc "UNASSIGNED"]
-    setNodeStolenIfaces $node $old
+proc $MODULE.confNewIfc { node_id iface_id } {
+    set old [getNodeStolenIfaces $node_id]
+    lappend old [list $iface_id "UNASSIGNED"]
+    setNodeStolenIfaces $node_id $old
 }
 
 #****f* extelem.tcl/extelem.ifacePrefix
@@ -130,7 +130,7 @@ proc $MODULE.virtlayer {} {
 # NAME
 #   extelem.nghook
 # SYNOPSIS
-#   extelem.nghook $eid $node $ifc
+#   extelem.nghook $eid $node_id $iface_id
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. Netgraph node name is in
@@ -138,14 +138,14 @@ proc $MODULE.virtlayer {} {
 #   where N is interface number.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
-#   * ifc -- interface name
+#   * node_id -- node id
+#   * iface_id -- interface name
 # RESULT
 #   * nghook -- the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
-proc $MODULE.nghook { eid node ifc } {
-    lassign [lindex [lsearch -index 0 -all -inline -exact [getNodeStolenIfaces $node] $ifc] 0] ifc extIfc
+proc $MODULE.nghook { eid node_id iface_id } {
+    lassign [lindex [lsearch -index 0 -all -inline -exact [getNodeStolenIfaces $node_id] $iface_id] 0] iface_id extIfc
 
     return [list $extIfc lower]
 }
@@ -169,17 +169,17 @@ proc $MODULE.prepareSystem {} {
 # NAME
 #   extelem.nodeCreate -- instantiate
 # SYNOPSIS
-#   extelem.nodeCreate $eid $node
+#   extelem.nodeCreate $eid $node_id
 # FUNCTION
 #   Procedure extelem.nodeCreate creates a new netgraph node of the type extelem.
 #   The name of the netgraph node is in form of exprimentId_nodeId.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- id of the node
+#   * node_id -- id of the node
 #****
-proc $MODULE.nodeCreate { eid node } {
-    foreach group [getNodeStolenIfaces $node] {
-	lassign $group ifc extIfc
+proc $MODULE.nodeCreate { eid node_id } {
+    foreach group [getNodeStolenIfaces $node_id] {
+	lassign $group iface_id extIfc
 	captureExtIfcByName $eid $extIfc
     }
 }
@@ -192,17 +192,17 @@ proc $MODULE.nodeCreate { eid node } {
 # NAME
 #   extelem.nodeDestroy -- destroy
 # SYNOPSIS
-#   extelem.nodeDestroy $eid $node
+#   extelem.nodeDestroy $eid $node_id
 # FUNCTION
 #   Destroys a extelem. Destroys the netgraph node that represents
 #   the extelem by sending a shutdown message.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- id of the node
+#   * node_id -- id of the node
 #****
-proc $MODULE.nodeDestroy { eid node } {
-    foreach group [getNodeStolenIfaces $node] {
-	lassign $group ifc extIfc
+proc $MODULE.nodeDestroy { eid node_id } {
+    foreach group [getNodeStolenIfaces $node_id] {
+	lassign $group iface_id extIfc
 	releaseExtIfcByName $eid $extIfc
     }
 }
@@ -257,16 +257,16 @@ proc $MODULE.toolbarIconDescr {} {
 # NAME
 #   extelem.configGUI -- configuration GUI
 # SYNOPSIS
-#   extelem.configGUI $c $node
+#   extelem.configGUI $c $node_id
 # FUNCTION
 #   Defines the structure of the extelem configuration window by calling
 #   procedures for creating and organising the window, as well as procedures
 #   for adding certain modules to that window.
 # INPUTS
 #   * c -- tk canvas
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.configGUI { c node } {
+proc $MODULE.configGUI { c node_id } {
     global wi
     global guielements treecolumns
     set guielements {}
@@ -274,30 +274,30 @@ proc $MODULE.configGUI { c node } {
 
     configGUI_createConfigPopupWin $c
     wm title $wi "External element configuration"
-    configGUI_nodeName $wi $node "External element name:"
+    configGUI_nodeName $wi $node_id "External element name:"
 
     configGUI_addPanedWin $wi
-    configGUI_rj45s $wi $node
+    configGUI_rj45s $wi $node_id
 
-    configGUI_buttonsACNode $wi $node
+    configGUI_buttonsACNode $wi $node_id
 }
 
 #****f* extelem.tcl/extelem.configInterfacesGUI
 # NAME
 #   extelem.configInterfacesGUI -- configuration of interfaces GUI
 # SYNOPSIS
-#   extelem.configInterfacesGUI $wi $node $ifc
+#   extelem.configInterfacesGUI $wi $node_id $iface_id
 # FUNCTION
 #   Defines which modules for changing interfaces parameters are contained in
 #   the extelem configuration window. It is done by calling procedures for adding
 #   certain modules to the window.
 # INPUTS
 #   * wi -- widget
-#   * node -- node id
-#   * ifc -- interface id
+#   * node_id -- node id
+#   * iface_id -- interface id
 #****
-proc $MODULE.configInterfacesGUI { wi node ifc } {
+proc $MODULE.configInterfacesGUI { wi node_id iface_id } {
     global guielements
 
-    configGUI_ifcQueueConfig $wi $node $ifc
+    configGUI_ifcQueueConfig $wi $node_id $iface_id
 }

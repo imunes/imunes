@@ -170,10 +170,10 @@ proc pipesClose {} {
 # NAME
 #   setOperMode -- set operating mode
 # SYNOPSIS
-#   setOperMode $mode
+#   setOperMode $new_oper_mode
 # FUNCTION
-#   Sets imunes operating mode to the value of the parameter mode. The mode
-#   can be set only to edit or exec.
+#   Sets imunes operating mode to the value of the parameter new_oper_mode.
+#   The mode can be set only to edit or exec.
 #   When changing the mode to exec all the emulation interfaces are checked
 #   (if they are nonexistent the message is displayed, and mode is not
 #   changed), all the required buttons are disabled (except the
@@ -185,9 +185,9 @@ proc pipesClose {} {
 #   for simulation/Terminate button that is disabled) and procedure
 #   vimageCleanup is called.
 # INPUTS
-#   * mode -- the new operating mode. Can be edit or exec.
+#   * new_oper_mode -- the new operating mode. Can be edit or exec.
 #****
-proc setOperMode { mode } {
+proc setOperMode { new_oper_mode } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::undolevel undolevel
     upvar 0 ::cf::[set ::curcfg]::redolevel redolevel
@@ -196,14 +196,14 @@ proc setOperMode { mode } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global all_modules_list editor_only execMode isOSfreebsd isOSlinux
 
-    if { $mode == "exec" && $node_list == "" } {
+    if { $new_oper_mode == "exec" && $node_list == "" } {
 	statline "Empty topologies can't be executed."
 	.panwin.f1.c config -cursor left_ptr
 
 	return
     }
 
-    if { ! $cfgDeployed && $mode == "exec" } {
+    if { ! $cfgDeployed && $new_oper_mode == "exec" } {
 	if { ! $isOSlinux && ! $isOSfreebsd } {
 	    after idle { .dialog1.msg configure -wraplength 4i }
 	    tk_dialog .dialog1 "IMUNES error" \
@@ -246,17 +246,17 @@ proc setOperMode { mode } {
     }
 
     foreach b { link link_layer net_layer } {
-	if { "$mode" == "exec" } {
+	if { "$new_oper_mode" == "exec" } {
 	    .panwin.f1.left.$b configure -state disabled
 	} else {
 	    .panwin.f1.left.$b configure -state normal
 	}
     }
 
-    .bottom.oper_mode configure -text "$mode mode"
+    .bottom.oper_mode configure -text "$new_oper_mode mode"
     setActiveTool select
     #.panwin.f1.left.select configure -state active
-    if { "$mode" == "exec" && [exec id -u] == 0 } {
+    if { "$new_oper_mode" == "exec" && [exec id -u] == 0 } {
 	global autorearrange_enabled
 
 	set autorearrange_enabled 0
@@ -355,23 +355,23 @@ proc setOperMode { mode } {
 #   node.
 #****
 proc spawnShellExec {} {
-    set node [lindex [.panwin.f1.c gettags {node && current}] 1]
-    if { $node == "" } {
-	set node [lindex [.panwin.f1.c gettags {nodelabel && current}] 1]
-	if { $node == "" } {
+    set node_id [lindex [.panwin.f1.c gettags {node && current}] 1]
+    if { $node_id == "" } {
+	set node_id [lindex [.panwin.f1.c gettags {nodelabel && current}] 1]
+	if { $node_id == "" } {
 	    return
 	}
     }
 
-    if { [[getNodeType $node].virtlayer] != "VIRTUALIZED" } {
-	nodeConfigGUI .panwin.f1.c $node
+    if { [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" } {
+	nodeConfigGUI .panwin.f1.c $node_id
     } else {
-	set cmd [lindex [existingShells [[getNodeType $node].shellcmds] $node] 0]
+	set cmd [lindex [existingShells [[getNodeType $node_id].shellcmds] $node_id] 0]
 	if { $cmd == "" } {
 	    return
 	}
 
-	spawnShell $node $cmd
+	spawnShell $node_id $cmd
     }
 }
 
@@ -390,8 +390,8 @@ proc fetchNodeConfiguration {} {
     set ip6Set 0
     set ip4Set 0
 
-    foreach node [selectedNodes] {
-	set lines [getRunningNodeIfcList $node]
+    foreach node_id [selectedNodes] {
+	set lines [getRunningNodeIfcList $node_id]
 	# XXX - here we parse ifconfig output, maybe require virtual nodes on
 	# linux to have ifconfig, or create different parsing procedures for ip
 	# and ifconfig that will have the same output
@@ -399,21 +399,21 @@ proc fetchNodeConfiguration {} {
 	    foreach line $lines {
 		if { [regexp {^([[:alnum:]]+):.*mtu ([^$]+)$} $line \
 		     -> ifc mtuvalue] } {
-		    setIfcMTU $node $ifc $mtuvalue
+		    setIfcMTU $node_id $ifc $mtuvalue
 		    set ip6Set 0
 		    set ip4Set 0
 		} elseif { [regexp {^\tether ([^ ]+)} $line -> macaddr] } {
-		    setIfcMACaddr $node $ifc $macaddr
+		    setIfcMACaddr $node_id $ifc $macaddr
 		} elseif { [regexp {^\tinet6 (?!fe80:)([^ ]+) prefixlen ([^ ]+)} $line -> ip6addr mask] } {
 		    if { $ip6Set == 0 } {
-			setIfcIPv6addrs $node $ifc $ip6addr/$mask
+			setIfcIPv6addrs $node_id $ifc $ip6addr/$mask
 			set ip6Set 1
 		    }
 		} elseif { [regexp {^\tinet ([^ ]+) netmask ([^ ]+) } $line \
 		     -> ip4addr netmask] } {
 		    if { $ip4Set == 0 } {
 			set length [ip::maskToLength $netmask]
-			setIfcIPv4addrs $node $ifc $ip4addr/$length
+			setIfcIPv4addrs $node_id $ifc $ip4addr/$length
 			set ip4Set 1
 		    }
 		}
@@ -426,21 +426,21 @@ proc fetchNodeConfiguration {} {
 		}
 		if { [regexp {^([[:alnum:]]+)\s.*HWaddr ([^$]+)$} $line \
 		     -> ifc macaddr] } {
-		    setIfcMACaddr $node $ifc $macaddr
+		    setIfcMACaddr $node_id $ifc $macaddr
 		} elseif { [regexp {^\s*inet addr:([^ ]+)\s.*\sMask:([^ ]+)} $line \
 		     -> ip4addr netmask] } {
 		    if { $ip4Set == 0 } {
 			set length [ip::maskToLength $netmask]
-			setIfcIPv4addrs $node $ifc $ip4addr/$length
+			setIfcIPv4addrs $node_id $ifc $ip4addr/$length
 			set ip4Set 1
 		    }
 		} elseif { [regexp {^\s*inet6 addr:\s(?!fe80:)([^ ]+)} $line -> ip6addr] } {
 		    if { $ip6Set == 0 } {
-			setIfcIPv6addrs $node $ifc $ip6addr
+			setIfcIPv6addrs $node_id $ifc $ip6addr
 			set ip6Set 1
 		    }
 		} elseif { [regexp {MTU:([^ ]+)} $line -> mtuvalue] } {
-		    setIfcMTU $node $ifc $mtuvalue
+		    setIfcMTU $node_id $ifc $mtuvalue
 		}
 	    }
 	}
@@ -517,49 +517,49 @@ proc dumpLinksToFile { path } {
     set linkDelim ":"
     set skipLinks ""
 
-    foreach link $link_list {
-	if { $link in $skipLinks } {
+    foreach link_id $link_list {
+	if { $link_id in $skipLinks } {
 	    continue
 	}
 
-	set lnode1 [lindex [getLinkPeers $link] 0]
-	set lnode2 [lindex [getLinkPeers $link] 1]
-	set ifname1 [lindex [getLinkPeersIfaces $link] 0]
-	set ifname2 [lindex [getLinkPeersIfaces $link] 1]
+	set node1_id [lindex [getLinkPeers $link_id] 0]
+	set node2_id [lindex [getLinkPeers $link_id] 1]
+	set iface1_id [lindex [getLinkPeersIfaces $link_id] 0]
+	set iface2_id [lindex [getLinkPeersIfaces $link_id] 1]
 
-	set mirror_link [getLinkMirror $link]
-	if { $mirror_link != "" } {
-	    lappend skipLinks $mirror_link
+	set mirror_link_id [getLinkMirror $link_id]
+	if { $mirror_link_id != "" } {
+	    lappend skipLinks $mirror_link_id
 
-	    lassign "[lindex [getLinkPeers $mirror_link] 0] $lnode1" lnode1 lnode2
-	    lassign "[lindex [getLinkPeersIfaces $mirror_link] 0] $ifname1" ifname1 ifname2
+	    lassign "[lindex [getLinkPeers $mirror_link_id] 0] $node1_id" node1_id node2_id
+	    lassign "[lindex [getLinkPeersIfaces $mirror_link_id] 0] $iface1_id" iface1_id iface2_id
 	}
 
-	set name1 [getNodeName $lnode1]
-	set name2 [getNodeName $lnode2]
+	set name1 [getNodeName $node1_id]
+	set name2 [getNodeName $node2_id]
 
 	set linkname "$name1$linkDelim$name2"
 
-	set lpair [list $lnode1 $ifname1]
-	set rpair [list $lnode2 $ifname2]
-	if { [getNodeType $lnode1] in "rj45 extelem" } {
-	    if { [getNodeType $lnode1] == "rj45" } {
+	set lpair [list $node1_id $iface1_id]
+	set rpair [list $node2_id $iface2_id]
+	if { [getNodeType $node1_id] in "rj45 extelem" } {
+	    if { [getNodeType $node1_id] == "rj45" } {
 		set lpair $name1
 	    } else {
-		set ifcs [getNodeStolenIfaces $lnode1]
-		set lpair [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname1"] 1]
+		set ifaces [getNodeStolenIfaces $node1_id]
+		set lpair [lindex [lsearch -inline -exact -index 0 $ifaces "$iface1_id"] 1]
 	    }
 	}
-	if { [getNodeType $lnode2] in "rj45 extelem" } {
-	    if { [getNodeType $lnode2] == "rj45" } {
+	if { [getNodeType $node2_id] in "rj45 extelem" } {
+	    if { [getNodeType $node2_id] == "rj45" } {
 		set rpair $name2
 	    } else {
-		set ifcs [getNodeStolenIfaces $lnode2]
-		set rpair [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname2"] 1]
+		set ifaces [getNodeStolenIfaces $node2_id]
+		set rpair [lindex [lsearch -inline -exact -index 0 $ifaces "$iface2_id"] 1]
 	    }
 	}
 
-	set line "$link {$lnode1-$lnode2 {{$lpair} {$rpair}} $linkname}\n"
+	set line "$link_id {$node1_id-$node2_id {{$lpair} {$rpair}} $linkname}\n"
 	set data "$data$line"
     }
 
@@ -690,15 +690,15 @@ proc getExperimentConfigurationFromFile { eid } {
 # NAME
 #   captureOnExtIfc -- start wireshark on an interface
 # SYNOPSIS
-#   captureOnExtIfc $node $command
+#   captureOnExtIfc $node_id $command
 # FUNCTION
 #   Start tcpdump or Wireshark on the specified external interface.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #   * command -- tcpdump or wireshark
 #****
-proc captureOnExtIfc { node command } {
-    set ifc [lindex [ifcList $node] 0]
+proc captureOnExtIfc { node_id command } {
+    set ifc [lindex [ifcList $node_id] 0]
     if { "$ifc" == "" } {
 	return
     }
@@ -706,8 +706,8 @@ proc captureOnExtIfc { node command } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     if { $command == "tcpdump" } {
-	exec xterm -name imunes-terminal -T "Capturing $eid-$node" -e "tcpdump -ni $eid-$node" 2> /dev/null &
+	exec xterm -name imunes-terminal -T "Capturing $eid-$node_id" -e "tcpdump -ni $eid-$node_id" 2> /dev/null &
     } else {
-	exec $command -o "gui.window_title:[getNodeName $node] ($eid)" -k -i $eid-$node 2> /dev/null &
+	exec $command -o "gui.window_title:[getNodeName $node_id] ($eid)" -k -i $eid-$node_id 2> /dev/null &
     }
 }

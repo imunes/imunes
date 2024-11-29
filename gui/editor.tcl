@@ -161,8 +161,8 @@ proc redo {} {
 # RESULT
 #   * ifc_name -- the name of the interface
 #****
-proc chooseIfName { lnode rnode } {
-    return [[getNodeType $lnode].ifacePrefix $lnode $rnode]
+proc chooseIfName { lnode_id rnode_id } {
+    return [[getNodeType $lnode_id].ifacePrefix $lnode_id $rnode_id]
 }
 
 #****f* editor.tcl/l3IfcName
@@ -178,12 +178,12 @@ proc chooseIfName { lnode rnode } {
 # RESULT
 #   * ifc_name -- the name of the interface
 #****
-proc l3IfcName { lnode rnode } {
-    if { [getNodeType $lnode] in "ext extnat" } {
+proc l3IfcName { lnode_id rnode_id } {
+    if { [getNodeType $lnode_id] in "ext extnat" } {
 	return "ext"
     }
 
-    if { [getNodeType $rnode] == "wlan" } {
+    if { [getNodeType $rnode_id] == "wlan" } {
 	return "wlan"
     } else {
 	return "eth"
@@ -194,24 +194,24 @@ proc l3IfcName { lnode rnode } {
 # NAME
 #   listLANNodes -- list LAN nodes
 # SYNOPSIS
-#   set l2peers [listLANNodes $l2node $l2peers]
+#   set l2peers [listLANNodes $l2node_id $l2peers]
 # FUNCTION
 #   Recursive function for finding all link layer nodes that are
 #   connected to node l2node. Returns the list of all link layer
 #   nodes that are on the same LAN as l2node.
 # INPUTS
-#   * l2node -- node id of a link layer node
+#   * l2node_id -- node id of a link layer node
 #   * l2peers -- old link layer nodes on the same LAN
 # RESULT
 #   * l2peers -- new link layer nodes on the same LAN
 #****
-proc listLANNodes { l2node l2peers } {
-    lappend l2peers $l2node
-    foreach ifc [ifcList $l2node] {
-	lassign [logicalPeerByIfc $l2node $ifc] peer -
-	if { [[getNodeType $peer].netlayer] == "LINK" && [getNodeType $peer] != "rj45" } {
-	    if { $peer ni $l2peers } {
-		set l2peers [listLANNodes $peer $l2peers]
+proc listLANNodes { l2node_id l2peers } {
+    lappend l2peers $l2node_id
+    foreach iface_id [ifcList $l2node_id] {
+	lassign [logicalPeerByIfc $l2node_id $iface_id] peer_id -
+	if { [[getNodeType $peer_id].netlayer] == "LINK" && [getNodeType $peer_id] != "rj45" } {
+	    if { $peer_id ni $l2peers } {
+		set l2peers [listLANNodes $peer_id $l2peers]
 	    }
 	}
     }
@@ -507,9 +507,9 @@ proc routerDefaultsApply { wi } {
 
     set selected_node_list [selectedNodes]
     if { $selected_node_list != {} } {
-	foreach node $selected_node_list {
-	    if { $oper_mode == "edit" && [getNodeType $node] == "router" } {
-		setNodeModel $node $router_model
+	foreach node_id $selected_node_list {
+	    if { $oper_mode == "edit" && [getNodeType $node_id] == "router" } {
+		setNodeModel $node_id $router_model
 
 		set router_ConfigModel $router_model
 		if { $router_ConfigModel != "static" } {
@@ -518,11 +518,11 @@ proc routerDefaultsApply { wi } {
 		    set ospfEnable [lindex $rdconfig 2]
 		    set ospf6Enable [lindex $rdconfig 3]
 		    set bgpEnable [lindex $rdconfig 4]
-		    setNodeProtocolRip $node $ripEnable
-		    setNodeProtocolRipng $node $ripngEnable
-		    setNodeProtocolOspfv2 $node $ospfEnable
-		    setNodeProtocolOspfv3 $node $ospf6Enable
-		    setNodeProtocolBgp $node $bgpEnable
+		    setNodeProtocolRip $node_id $ripEnable
+		    setNodeProtocolRipng $node_id $ripngEnable
+		    setNodeProtocolOspfv2 $node_id $ospfEnable
+		    setNodeProtocolOspfv3 $node_id $ospf6Enable
+		    setNodeProtocolBgp $node_id $bgpEnable
 		} else {
 		    $wi.nbook.nf1.protocols.rip configure -state disabled
 		    $wi.nbook.nf1.protocols.ripng configure -state disabled
@@ -534,9 +534,9 @@ proc routerDefaultsApply { wi } {
 	    }
 	}
     } else {
-	foreach node $node_list {
-	    if { $oper_mode == "edit" && [getNodeType $node] == "router" } {
-		setNodeModel $node $router_model
+	foreach node_id $node_list {
+	    if { $oper_mode == "edit" && [getNodeType $node_id] == "router" } {
+		setNodeModel $node_id $router_model
 
 		set router_ConfigModel $router_model
 		if { $router_ConfigModel != "static" } {
@@ -544,12 +544,11 @@ proc routerDefaultsApply { wi } {
 		    set ripngEnable [lindex $rdconfig 1]
 		    set ospfEnable [lindex $rdconfig 2]
 		    set ospf6Enable [lindex $rdconfig 3]
-		    set bgpEnable [lindex $rdconfig 4]
-		    setNodeProtocolRip $node  $ripEnable
-		    setNodeProtocolRipng $node $ripngEnable
-		    setNodeProtocolOspfv2 $node $ospfEnable
-		    setNodeProtocolOspfv3 $node $ospf6Enable
-		    setNodeProtocolBgp $node $bgpEnable
+		    setNodeProtocolRip $node_id  $ripEnable
+		    setNodeProtocolRipng $node_id $ripngEnable
+		    setNodeProtocolOspfv2 $node_id $ospfEnable
+		    setNodeProtocolOspfv3 $node_id $ospf6Enable
+		    setNodeProtocolBgp $node_id $bgpEnable
 		} else {
 		    $wi.nbook.nf1.protocols.rip configure -state disabled
 		    $wi.nbook.nf1.protocols.ripng configure -state disabled
@@ -581,15 +580,15 @@ proc routerDefaultsApply { wi } {
 #   * node_id -- node to change
 #   * icon_name -- icon name
 #****
-proc setCustomIcon { node iconName } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-    global $iconName
+proc setCustomIcon { node_id icon_name } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
+    global $icon_name
 
-    set i [lsearch [set $node] "customIcon *"]
+    set i [lsearch [set $node_id] "customIcon *"]
     if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i "customIcon $iconName"]
+	set $node_id [lreplace [set $node_id] $i $i "customIcon $icon_name"]
     } else {
-	set $node [linsert [set $node] end "customIcon $iconName"]
+	set $node_id [linsert [set $node_id] end "customIcon $icon_name"]
     }
 }
 
@@ -603,10 +602,10 @@ proc setCustomIcon { node iconName } {
 # INPUTS
 #   * node_id -- node to get the icon from
 #****
-proc getCustomIcon { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc getCustomIcon { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 
-    return [lindex [lsearch -inline [set $node] "customIcon *"] 1]
+    return [lindex [lsearch -inline [set $node_id] "customIcon *"] 1]
 }
 
 #****f* editor.tcl/removeCustomIcon
@@ -619,12 +618,12 @@ proc getCustomIcon { node } {
 # INPUTS
 #   * node_id -- node to remove the icon from
 #****
-proc removeCustomIcon { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc removeCustomIcon { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 
-    set i [lsearch [set $node] "customIcon *"]
+    set i [lsearch [set $node_id] "customIcon *"]
     if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i]
+	set $node_id [lreplace [set $node_id] $i $i]
     }
 }
 
@@ -640,8 +639,8 @@ proc getMostDistantNodeCoordinates {} {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     set x 0
     set y 0
-    foreach node $node_list {
-	set coords [getNodeCoords $node]
+    foreach node_id $node_list {
+	set coords [getNodeCoords $node_id]
 	if { [lindex $coords 0] > $x } {
 	    set x [lindex $coords 0]
 	}
@@ -715,19 +714,19 @@ proc topologyElementsTree {} {
 	$f.tree insert {} end -id nodes -text "Nodes" -open true -tags nodes
 	$f.tree focus nodes
 	$f.tree selection set nodes
-	foreach node [lsort -dictionary $node_list] {
-	    set type [getNodeType $node]
+	foreach node_id [lsort -dictionary $node_list] {
+	    set type [getNodeType $node_id]
 	    if { $type != "pseudo" } {
 		$f.tree insert nodes end -id $node_id -text "[getNodeName $node_id]" -open false -tags $node_id
 		lappend nodetags $node_id
 		$f.tree set $node_id canvas [getCanvasName [getNodeCanvas $node_id]]
-		foreach ifc [lsort -dictionary [ifcList $node_id]] {
-		    $f.tree insert $node_id end -id $node_id$ifc -text "$ifc" -tags $node_id$ifc
-		    $f.tree set $node_id$ifc state [getIfcOperState $node_id $ifc]
-		    $f.tree set $node_id$ifc nat [getIfcNatState $node_id $ifc]
-		    $f.tree set $node_id$ifc IPv4 [join [getIfcIPv4addrs $node_id $ifc] ";"]
-		    $f.tree set $node_id$ifc IPv6 [join [getIfcIPv6addrs $node_id $ifc] ";"]
-                    $f.tree set $node_id$ifc MAC [getIfcMACaddr $node_id $ifc]
+		foreach iface_id [lsort -dictionary [ifcList $node_id]] {
+		    $f.tree insert $node_id end -id $node_id$iface_id -text "$iface_id" -tags $node_id$iface_id
+		    $f.tree set $node_id$iface_id state [getIfcOperState $node_id $iface_id]
+		    $f.tree set $node_id$iface_id nat [getIfcNatState $node_id $iface_id]
+		    $f.tree set $node_id$iface_id IPv4 [join [getIfcIPv4addrs $node_id $iface_id] ";"]
+		    $f.tree set $node_id$iface_id IPv6 [join [getIfcIPv6addrs $node_id $iface_id] ";"]
+                    $f.tree set $node_id$iface_id MAC [getIfcMACaddr $node_id $iface_id]
 		}
 	    }
 	}
@@ -737,13 +736,13 @@ proc topologyElementsTree {} {
 
 	set linktags ""
 	$f.tree insert {} end -id links -text "Links" -open false -tags links
-	foreach link [lsort -dictionary $link_list] {
-	    set n0 [lindex [getLinkPeers $link] 0]
-	    set n1 [lindex [getLinkPeers $link] 1]
-	    set name0 [getNodeName $n0]
-	    set name1 [getNodeName $n1]
-	    $f.tree insert links end -id $link -text "From $name0 to $name1" -tags $link
-	    lappend linktags $link
+	foreach link_id [lsort -dictionary $link_list] {
+	    set node1_id [lindex [getLinkPeers $link_id] 0]
+	    set node2_id [lindex [getLinkPeers $link_id] 1]
+	    set name0 [getNodeName $node1_id]
+	    set name1 [getNodeName $node2_id]
+	    $f.tree insert links end -id $link_id -text "From $name0 to $name1" -tags $link_id
+	    lappend linktags $link_id
 	}
 
 	global expandtree
@@ -828,59 +827,59 @@ proc bindEventsToTree {} {
 	  ".panwin.f1.c dtag node selected; \
 	    .panwin.f1.c delete -withtags selectmark"
 
-    foreach n $nodetags {
-	set type [getNodeType $n]
+    foreach node_id $nodetags {
+	set type [getNodeType $node_id]
 	global selectedIfc
-	$f.tree tag bind $n <1> \
-	      "selectNodeFromTree $n"
-	$f.tree tag bind $n <Key-Up> \
-	    "if { ! [string equal {} [$f.tree prev $n]] } {
-		selectNodeFromTree [$f.tree prev $n]
+	$f.tree tag bind $node_id <1> \
+	      "selectNodeFromTree $node_id"
+	$f.tree tag bind $node_id <Key-Up> \
+	    "if { ! [string equal {} [$f.tree prev $node_id]] } {
+		selectNodeFromTree [$f.tree prev $node_id]
 	    } else {
 		.panwin.f1.c dtag node selected
 		.panwin.f1.c delete -withtags selectmark
 	    }"
-	$f.tree tag bind $n <Key-Down> \
-	    "if { ! [string equal {} [$f.tree next $n]] } {
-		selectNodeFromTree [$f.tree next $n]
+	$f.tree tag bind $node_id <Key-Down> \
+	    "if { ! [string equal {} [$f.tree next $node_id]] } {
+		selectNodeFromTree [$f.tree next $node_id]
 	    } else {
 		.panwin.f1.c dtag node selected
 		.panwin.f1.c delete -withtags selectmark
 	    }"
-	$f.tree tag bind $n <Double-1> \
-	    "$type.configGUI .panwin.f1.c $n"
-	$f.tree tag bind $n <Key-Return> \
-	    "$type.configGUI .panwin.f1.c $n"
-	foreach ifc [lsort -dictionary [ifcList $n]] {
-	    $f.tree tag bind $n$ifc <Double-1> \
-		"set selectedIfc $ifc; \
-		  $type.configGUI .panwin.f1.c $n; \
+	$f.tree tag bind $node_id <Double-1> \
+	    "$type.configGUI .panwin.f1.c $node_id"
+	$f.tree tag bind $node_id <Key-Return> \
+	    "$type.configGUI .panwin.f1.c $node_id"
+	foreach iface_id [lsort -dictionary [ifcList $node_id]] {
+	    $f.tree tag bind $node_id$iface_id <Double-1> \
+		"set selectedIfc $iface_id; \
+		  $type.configGUI .panwin.f1.c $node_id; \
 		  set selectedIfc \"\""
-	    $f.tree tag bind $n$ifc <Key-Return> \
-		"set selectedIfc $ifc; \
-		  $type.configGUI .panwin.f1.c $n; \
+	    $f.tree tag bind $node_id$iface_id <Key-Return> \
+		"set selectedIfc $iface_id; \
+		  $type.configGUI .panwin.f1.c $node_id; \
 		  set selectedIfc \"\""
 	}
     }
 
-    foreach l $linktags {
-	$f.tree tag bind $l <1> \
-	    "selectLinkPeersFromTree $l"
-	$f.tree tag bind $l <Key-Up> \
-	    "if { ! [string equal {} [$f.tree prev $l]] } {
-		selectLinkPeersFromTree [$f.tree prev $l]
+    foreach link_id $linktags {
+	$f.tree tag bind $link_id <1> \
+	    "selectLinkPeersFromTree $link_id"
+	$f.tree tag bind $link_id <Key-Up> \
+	    "if { ! [string equal {} [$f.tree prev $link_id]] } {
+		selectLinkPeersFromTree [$f.tree prev $link_id]
 	    } else {
 		.panwin.f1.c dtag node selected
 		.panwin.f1.c delete -withtags selectmark
 	    }"
-	$f.tree tag bind $l <Key-Down> \
-	    "if { ! [string equal {} [$f.tree next $l]] } {
-		selectLinkPeersFromTree [$f.tree next $l]
+	$f.tree tag bind $link_id <Key-Down> \
+	    "if { ! [string equal {} [$f.tree next $link_id]] } {
+		selectLinkPeersFromTree [$f.tree next $link_id]
 	    }"
-	$f.tree tag bind $l <Double-1> \
-	    "link.configGUI .panwin.f1.c $l"
-	$f.tree tag bind $l <Key-Return> \
-	    "link.configGUI .panwin.f1.c $l"
+	$f.tree tag bind $link_id <Double-1> \
+	    "link.configGUI .panwin.f1.c $link_id"
+	$f.tree tag bind $link_id <Key-Return> \
+	    "link.configGUI .panwin.f1.c $link_id"
     }
 }
 
@@ -892,17 +891,17 @@ proc bindEventsToTree {} {
 # FUNCTION
 #   Selects icon of the node selected in the topology tree.
 #****
-proc selectNodeFromTree { n } {
+proc selectNodeFromTree { node_id } {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
 
-    set canvas [getNodeCanvas $n]
-    set curcanvas $canvas
+    set canvas_id [getNodeCanvas $node_id]
+    set curcanvas $canvas_id
     switchCanvas none
 
     .panwin.f1.c dtag node selected
     .panwin.f1.c delete -withtags selectmark
 
-    set obj [.panwin.f1.c find withtag "node && $n"]
+    set obj [.panwin.f1.c find withtag "node && $node_id"]
     selectNode .panwin.f1.c $obj
 }
 
@@ -915,20 +914,20 @@ proc selectNodeFromTree { n } {
 #   Selects icons of nodes that are endnodes
 #   of the link selected in the topology tree.
 #****
-proc selectLinkPeersFromTree { l } {
+proc selectLinkPeersFromTree { link_id } {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
 
-    set n0 [lindex [getLinkPeers $l] 0]
-    set n1 [lindex [getLinkPeers $l] 1]
-    set canvas [getNodeCanvas $n0]
-    set curcanvas $canvas
+    set node1_id [lindex [getLinkPeers $link_id] 0]
+    set node2_id [lindex [getLinkPeers $link_id] 1]
+    set canvas_id [getNodeCanvas $node1_id]
+    set curcanvas $canvas_id
     switchCanvas none
 
     .panwin.f1.c dtag node selected
     .panwin.f1.c delete -withtags selectmark
 
-    set obj0 [.panwin.f1.c find withtag "node && $n0"]
-    set obj1 [.panwin.f1.c find withtag "node && $n1"]
+    set obj0 [.panwin.f1.c find withtag "node && $node1_id"]
+    set obj1 [.panwin.f1.c find withtag "node && $node2_id"]
     selectNode .panwin.f1.c $obj0
     selectNode .panwin.f1.c $obj1
 }
@@ -955,32 +954,32 @@ proc refreshTopologyTree {} {
 
     set nodetags ""
     $f.tree insert {} end -id nodes -text "Nodes" -open true -tags nodes
-    foreach node [lsort -dictionary $node_list] {
-	set type [getNodeType $node]
+    foreach node_id [lsort -dictionary $node_list] {
+	set type [getNodeType $node_id]
 	if { $type != "pseudo" } {
-	    $f.tree insert nodes end -id $node -text "[getNodeName $node]" -tags $node
-	    lappend nodetags $node
-	    $f.tree set $node canvas [getCanvasName [getNodeCanvas $node]]
-	    foreach ifc [lsort -dictionary [ifcList $node]] {
-		    $f.tree insert $node end -id $node$ifc -text "$ifc" -tags $node$ifc
-		    $f.tree set $node$ifc state [getIfcOperState $node $ifc]
-		    $f.tree set $node$ifc nat [getIfcNatState $node $ifc]
-		    $f.tree set $node$ifc IPv4 [join [getIfcIPv4addrs $node $ifc] ";"]
-		    $f.tree set $node$ifc IPv6 [join [getIfcIPv6addrs $node $ifc] ";"]
-                    $f.tree set $node$ifc MAC [getIfcMACaddr $node $ifc]
+	    $f.tree insert nodes end -id $node_id -text "[getNodeName $node_id]" -tags $node_id
+	    lappend nodetags $node_id
+	    $f.tree set $node_id canvas [getCanvasName [getNodeCanvas $node_id]]
+	    foreach iface_id [lsort -dictionary [ifcList $node_id]] {
+		    $f.tree insert $node_id end -id $node_id$iface_id -text "$iface_id" -tags $node_id$iface_id
+		    $f.tree set $node_id$iface_id state [getIfcOperState $node_id $iface_id]
+		    $f.tree set $node_id$iface_id nat [getIfcNatState $node_id $iface_id]
+		    $f.tree set $node_id$iface_id IPv4 [join [getIfcIPv4addrs $node_id $iface_id] ";"]
+		    $f.tree set $node_id$iface_id IPv6 [join [getIfcIPv6addrs $node_id $iface_id] ";"]
+                    $f.tree set $node_id$iface_id MAC [getIfcMACaddr $node_id $iface_id]
 	    }
 	}
     }
 
     set linktags ""
     $f.tree insert {} end -id links -text "Links" -open false -tags links
-    foreach link [lsort -dictionary $link_list] {
-	set n0 [lindex [getLinkPeers $link] 0]
-	set n1 [lindex [getLinkPeers $link] 1]
-	set name0 [getNodeName $n0]
-	set name1 [getNodeName $n1]
-	$f.tree insert links end -id $link -text "From $name0 to $name1" -tags $link
-	lappend linktags $link
+    foreach link_id [lsort -dictionary $link_list] {
+	set node1_id [lindex [getLinkPeers $link_id] 0]
+	set node2_id [lindex [getLinkPeers $link_id] 1]
+	set name0 [getNodeName $node1_id]
+	set name1 [getNodeName $node2_id]
+	$f.tree insert links end -id $link_id -text "From $name0 to $name1" -tags $link_id
+	lappend linktags $link_id
     }
 
     if { [$f.tree exists $selected] } {

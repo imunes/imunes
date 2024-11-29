@@ -248,18 +248,18 @@ proc openFile {} {
 # INPUTS
 #   * selected_file -- name of the file where current configuration is saved.
 #****
-proc saveFile { selectedFile } {
+proc saveFile { selected_file } {
     upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
 
-    if { $selectedFile != "" } {
-	set currentFile $selectedFile
+    if { $selected_file != "" } {
+	set currentFile $selected_file
 
 	set fileId [open $currentFile w]
 	dumpCfg file $fileId
 	close $fileId
 
-	set fileName [file tail $currentFile]
-	.bottom.textbox config -text "Saved $fileName"
+	set file_name [file tail $currentFile]
+	.bottom.textbox config -text "Saved $file_name"
 
 	updateProjectMenu
 	setWmTitle $currentFile
@@ -277,11 +277,11 @@ proc saveFile { selectedFile } {
 proc fileOpenDialogBox {} {
     global file_types
 
-    set selectedFile [tk_getOpenFile -filetypes $file_types]
-    if { $selectedFile != "" } {
+    set selected_file [tk_getOpenFile -filetypes $file_types]
+    if { $selected_file != "" } {
 	newProject
 	upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
-	set currentFile $selectedFile
+	set currentFile $selected_file
 	openFile
     }
 }
@@ -300,9 +300,9 @@ proc fileSaveDialogBox {} {
     global file_types
 
     if { $currentFile == "" } {
-	set selectedFile [tk_getSaveFile -filetypes $file_types -initialfile \
+	set selected_file [tk_getSaveFile -filetypes $file_types -initialfile \
 	    untitled -defaultextension .imn]
-	saveFile $selectedFile
+	saveFile $selected_file
     } else {
 	saveFile $currentFile
     }
@@ -320,10 +320,10 @@ proc fileSaveAsDialogBox {} {
     upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
     global file_types
 
-    set selectedFile [tk_getSaveFile -filetypes $file_types -initialfile \
+    set selected_file [tk_getSaveFile -filetypes $file_types -initialfile \
 	untitled -defaultextension .imn]
 
-    saveFile $selectedFile
+    saveFile $selected_file
 }
 
 #****f* filemgmt.tcl/closeFile

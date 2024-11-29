@@ -53,14 +53,14 @@ registerModule $MODULE
 # NAME
 #   router.confNewNode -- configure new node
 # SYNOPSIS
-#   router.confNewNode $node
+#   router.confNewNode $node_id
 # FUNCTION
 #   Configures new node with the specified id.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.confNewNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc $MODULE.confNewNode { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable
     global rdconfig router_model router_ConfigModel
     global def_router_model
@@ -74,51 +74,51 @@ proc $MODULE.confNewNode { node } {
     set router_ConfigModel $router_model
 
     if { $router_model != $def_router_model } {
-	lappend $node "model $router_model"
+	lappend $node_id "model $router_model"
     } else {
-	lappend $node "model $def_router_model"
+	lappend $node_id "model $def_router_model"
     }
 
     set nconfig [list \
 	"hostname [getNewNodeNameType router $nodeNamingBase(router)]" \
 	! ]
-    lappend $node "network-config [list $nconfig]"
+    lappend $node_id "network-config [list $nconfig]"
 
-    setNodeProtocolRip $node $ripEnable
-    setNodeProtocolRipng $node $ripngEnable
-    setNodeProtocolOspfv2 $node $ospfEnable
-    setNodeProtocolOspfv3 $node $ospf6Enable
-    setNodeProtocolBgp $node $bgpEnable
+    setNodeProtocolRip $node_id $ripEnable
+    setNodeProtocolRipng $node_id $ripngEnable
+    setNodeProtocolOspfv2 $node_id $ospfEnable
+    setNodeProtocolOspfv3 $node_id $ospf6Enable
+    setNodeProtocolBgp $node_id $bgpEnable
 
-    setAutoDefaultRoutesStatus $node "enabled"
-    setLogIfcType $node lo0 lo
-    setIfcIPv4addrs $node lo0 "127.0.0.1/8"
-    setIfcIPv6addrs $node lo0 "::1/128"
+    setAutoDefaultRoutesStatus $node_id "enabled"
+    setLogIfcType $node_id lo0 lo
+    setIfcIPv4addrs $node_id lo0 "127.0.0.1/8"
+    setIfcIPv6addrs $node_id lo0 "::1/128"
 }
 
 #****f* router.tcl/router.confNewIfc
 # NAME
 #   router.confNewIfc -- configure new interface
 # SYNOPSIS
-#   router.confNewIfc $node $ifc
+#   router.confNewIfc $node_id $iface_id
 # FUNCTION
 #   Configures new interface for the specified node.
 # INPUTS
-#   * node -- node id
-#   * ifc -- interface name
+#   * node_id -- node id
+#   * iface_id -- interface name
 #****
-proc $MODULE.confNewIfc { node ifc } {
+proc $MODULE.confNewIfc { node_id iface_id } {
     global changeAddressRange changeAddressRange6
 
     set changeAddressRange 0
     set changeAddressRange6 0
-    autoIPv4addr $node $ifc
-    autoIPv6addr $node $ifc
-    autoMACaddr $node $ifc
+    autoIPv4addr $node_id $iface_id
+    autoIPv6addr $node_id $iface_id
+    autoMACaddr $node_id $iface_id
 
-    lassign [logicalPeerByIfc $node $ifc] peer_node -
-    if { [getNodeType $peer_node] == "extnat" } {
-	setIfcNatState $node $ifc "on"
+    lassign [logicalPeerByIfc $node_id $iface_id] peer_node_id -
+    if { [getNodeType $peer_node_id] == "extnat" } {
+	setIfcNatState $node_id $iface_id "on"
     }
 }
 
@@ -126,7 +126,7 @@ proc $MODULE.confNewIfc { node ifc } {
 # NAME
 #   router.generateConfig -- configuration generator
 # SYNOPSIS
-#   set config [router.generateConfig $node]
+#   set config [router.generateConfig $node_id]
 # FUNCTION
 #   Generates configuration. This configuration represents the default
 #   configuration loaded on the booting time of the virtual nodes and it is
@@ -135,86 +135,99 @@ proc $MODULE.confNewIfc { node ifc } {
 #   and interface states (up or down) for each interface of a given node.
 #   Static routes are also included.
 # INPUTS
-#   * node - node id
+#   * node_id - node id
 # RESULT
-#   * congif -- generated configuration
+#   * config -- generated configuration
 #****
-proc $MODULE.generateConfig { node } {
+proc $MODULE.generateConfig { node_id } {
     set cfg {}
 
-    switch -exact -- [getNodeModel $node] {
+    switch -exact -- [getNodeModel $node_id] {
 	"quagga" -
 	"frr" {
-	    upvar 0 ::cf::[set ::curcfg]::$node $node
+	    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 
-	    foreach ifc [allIfcList $node] {
-		lappend cfg "interface $ifc"
-		set addrs [getIfcIPv4addrs $node $ifc]
+	    # setup interfaces
+	    foreach iface_id [allIfcList $node_id] {
+		lappend cfg "interface $iface_id"
+		set addrs [getIfcIPv4addrs $node_id $iface_id]
 		foreach addr $addrs {
 		    if { $addr != "" } {
 			lappend cfg " ip address $addr"
 		    }
 		}
-		set addrs [getIfcIPv6addrs $node $ifc]
+
+		set addrs [getIfcIPv6addrs $node_id $iface_id]
 		foreach addr $addrs {
 		    if { $addr != "" } {
 			lappend cfg " ipv6 address $addr"
 		    }
 		}
-		if { [getIfcOperState $node $ifc] == "down" } {
+
+		if { [getIfcOperState $node_id $iface_id] == "down" } {
 		    lappend cfg " shutdown"
 		}
+
 		lappend cfg "!"
 	    }
 
+	    # setup routing protocols
 	    foreach proto { rip ripng ospf ospf6 bgp } {
 		if { $proto == "bgp" } {
 		    set proto "bgp 1000"
 		}
 
-		set protocfg [netconfFetchSection $node "router $proto"]
+		set protocfg [netconfFetchSection $node_id "router $proto"]
 		if { $protocfg != "" } {
 		    lappend cfg "router $proto"
 		    foreach line $protocfg {
 			lappend cfg "$line"
 		    }
-		    if {$proto == "ospf6"} {
-			foreach ifc [allIfcList $node] {
-			    if {$ifc == "lo0"} {
+
+		    if { $proto == "ospf6" } {
+			foreach iface_id [allIfcList $node_id] {
+			    if { $iface_id == "lo0" } {
 				continue
 			    }
-			    lappend cfg " interface $ifc area 0.0.0.0"
+
+			    lappend cfg " interface $iface_id area 0.0.0.0"
 			}
 		    }
+
 		    lappend cfg "!"
 		}
 	    }
 
-	    foreach statrte [getStatIPv4routes $node] {
+	    # setup IPv4/IPv6 static routes
+	    foreach statrte [getStatIPv4routes $node_id] {
 		lappend cfg "ip route $statrte"
 	    }
-	    foreach statrte [getStatIPv6routes $node] {
+
+	    foreach statrte [getStatIPv6routes $node_id] {
 		lappend cfg "ipv6 route $statrte"
 	    }
 
-	    if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
-		foreach statrte [getDefaultIPv4routes $node] {
+	    # setup automatic default routes (static)
+	    if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
+		foreach statrte [getDefaultIPv4routes $node_id] {
 		    lappend cfg "ip route $statrte"
 		}
-		foreach statrte [getDefaultIPv6routes $node] {
+
+		foreach statrte [getDefaultIPv6routes $node_id] {
 		    lappend cfg "ipv6 route $statrte"
 		}
-		setDefaultIPv4routes $node {}
-		setDefaultIPv6routes $node {}
+
+		setDefaultIPv4routes $node_id {}
+		setDefaultIPv6routes $node_id {}
 	    }
 	}
 	"static" {
-	    set cfg [concat $cfg [nodeCfggenIfcIPv4 $node]]
-	    set cfg [concat $cfg [nodeCfggenIfcIPv6 $node]]
+	    set cfg [concat $cfg [nodeCfggenIfcIPv4 $node_id]]
+	    set cfg [concat $cfg [nodeCfggenIfcIPv6 $node_id]]
 	    lappend cfg ""
 
-	    set cfg [concat $cfg [nodeCfggenRouteIPv4 $node]]
-	    set cfg [concat $cfg [nodeCfggenRouteIPv6 $node]]
+	    set cfg [concat $cfg [nodeCfggenRouteIPv4 $node_id]]
+	    set cfg [concat $cfg [nodeCfggenRouteIPv6 $node_id]]
 	}
     }
 
@@ -282,17 +295,17 @@ proc $MODULE.virtlayer {} {
 # NAME
 #   router.bootcmd -- boot command
 # SYNOPSIS
-#   set appl [router.bootcmd $node]
+#   set appl [router.bootcmd $node_id]
 # FUNCTION
 #   Procedure bootcmd returns the defaut application that reads and employes
 #   the configuration generated in router.generateConfig.
 # INPUTS
-#   * node - node id
+#   * node_id - node id
 # RESULT
 #   * appl -- application that reads the configuration
 #****
-proc $MODULE.bootcmd { node } {
-    switch -exact -- [getNodeModel $node] {
+proc $MODULE.bootcmd { node_id } {
+    switch -exact -- [getNodeModel $node_id] {
 	"quagga" {
 	    return "/usr/local/bin/quaggaboot.sh"
 	}
@@ -324,21 +337,21 @@ proc $MODULE.shellcmds {} {
 # NAME
 #   router.nghook -- nghook
 # SYNOPSIS
-#   router.nghook $eid $node $ifc
+#   router.nghook $eid $node_id $iface_id
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. This procedure calls
 #   l3node.hook procedure and passes the result of that procedure.
 # INPUTS
 #   * eid - experiment id
-#   * node - node id
-#   * ifc - interface name
+#   * node_id - node id
+#   * iface_id - interface id
 # RESULT
 #   * nghook - the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
-proc $MODULE.nghook { eid node ifc } {
-    return [l3node.nghook $eid $node $ifc]
+proc $MODULE.nghook { eid node_id iface_id } {
+    return [l3node.nghook $eid $node_id $iface_id]
 }
 
 ################################################################################
@@ -349,7 +362,7 @@ proc $MODULE.nghook { eid node ifc } {
 # NAME
 #   router.nodeCreate -- instantiate
 # SYNOPSIS
-#   router.nodeCreate $eid $node
+#   router.nodeCreate $eid $node_id
 # FUNCTION
 #   Creates a new virtual node for a given node in imunes.
 #   Procedure router.nodeCreate creates a new virtual node with all
@@ -357,103 +370,103 @@ proc $MODULE.nghook { eid node ifc } {
 #   net.inet.ip.forwarding and net.inet6.ip6.forwarding kernel variables to 1.
 # INPUTS
 #   * eid - experiment id
-#   * node - node id
+#   * node_id - node id
 #****
-proc $MODULE.nodeCreate { eid node } {
-    l3node.nodeCreate $eid $node
+proc $MODULE.nodeCreate { eid node_id } {
+    l3node.nodeCreate $eid $node_id
 }
 
 #****f* router.tcl/router.nodeNamespaceSetup
 # NAME
 #   router.nodeNamespaceSetup -- router node nodeNamespaceSetup
 # SYNOPSIS
-#   router.nodeNamespaceSetup $eid $node
+#   router.nodeNamespaceSetup $eid $node_id
 # FUNCTION
 #   Linux only. Attaches the existing Docker netns to a new one.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.nodeNamespaceSetup { eid node } {
-    l3node.nodeNamespaceSetup $eid $node
+proc $MODULE.nodeNamespaceSetup { eid node_id } {
+    l3node.nodeNamespaceSetup $eid $node_id
 }
 
 #****f* router.tcl/router.nodeInitConfigure
 # NAME
 #   router.nodeInitConfigure -- router node nodeInitConfigure
 # SYNOPSIS
-#   router.nodeInitConfigure $eid $node
+#   router.nodeInitConfigure $eid $node_id
 # FUNCTION
 #   Runs initial L3 configuration, such as creating logical interfaces and
 #   configuring sysctls.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.nodeInitConfigure { eid node } {
-    l3node.nodeInitConfigure $eid $node
-    enableIPforwarding $eid $node
+proc $MODULE.nodeInitConfigure { eid node_id } {
+    l3node.nodeInitConfigure $eid $node_id
+    enableIPforwarding $eid $node_id
 }
 
-proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
-    l3node.nodePhysIfacesCreate $eid $node $ifcs
+proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
+    l3node.nodePhysIfacesCreate $eid $node_id $ifaces
 }
 
 #****f* router.tcl/router.nodeConfigure
 # NAME
 #   router.nodeConfigure -- start
 # SYNOPSIS
-#   router.nodeConfigure $eid $node
+#   router.nodeConfigure $eid $node_id
 # FUNCTION
 #   Starts a new router. The node can be started if it is instantiated.
 #   Simulates the booting proces of a router.
 # INPUTS
 #   * eid - experiment id
-#   * node - node id
+#   * node_id - node id
 #****
-proc $MODULE.nodeConfigure { eid node } {
-    l3node.nodeConfigure $eid $node
+proc $MODULE.nodeConfigure { eid node_id } {
+    l3node.nodeConfigure $eid $node_id
 }
 
 ################################################################################
 ############################# TERMINATE PROCEDURES #############################
 ################################################################################
 
-proc $MODULE.nodeIfacesDestroy { eid node ifcs } {
-    l3node.nodeIfacesDestroy $eid $node $ifcs
+proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
+    l3node.nodeIfacesDestroy $eid $node_id $ifaces
 }
 
 #****f* router.tcl/router.nodeShutdown
 # NAME
 #   router.nodeShutdown -- shutdown
 # SYNOPSIS
-#   router.nodeShutdown $eid $node
+#   router.nodeShutdown $eid $node_id
 # FUNCTION
 #   Shutdowns a router node.
 #   Simulates the shutdown proces of a node, kills all the services and
 # INPUTS
 #   * eid - experiment id
-#   * node - node id
+#   * node_id - node id
 #****
-proc $MODULE.nodeShutdown { eid node } {
-    l3node.nodeShutdown $eid $node
+proc $MODULE.nodeShutdown { eid node_id } {
+    l3node.nodeShutdown $eid $node_id
 }
 
 #****f* router.tcl/router.nodeDestroy
 # NAME
 #   router.nodeDestroy -- layer 3 node destroy
 # SYNOPSIS
-#   router.nodeDestroy $eid $node
+#   router.nodeDestroy $eid $node_id
 # FUNCTION
 #   Destroys a router node.
 #   First, it destroys all remaining virtual ifaces (vlans, tuns, etc).
 #   Then, it destroys the jail/container with its namespaces and FS.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.nodeDestroy { eid node } {
-    l3node.nodeDestroy $eid $node
+proc $MODULE.nodeDestroy { eid node_id } {
+    l3node.nodeDestroy $eid $node_id
 }
 
 ################################################################################
@@ -543,16 +556,16 @@ proc $MODULE.notebookDimensions { wi } {
 # NAME
 #   router.configGUI -- configuration GUI
 # SYNOPSIS
-#   router.configGUI $c $node
+#   router.configGUI $c $node_id
 # FUNCTION
 #   Defines the structure of the router configuration window by calling
 #   procedures for creating and organising the window, as well as procedures
 #   for adding certain modules to that window.
 # INPUTS
 #   * c -- tk canvas
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.configGUI { c node } {
+proc $MODULE.configGUI { c node_id } {
     global wi
     global guielements treecolumns ipsecEnable
 
@@ -560,46 +573,46 @@ proc $MODULE.configGUI { c node } {
 
     configGUI_createConfigPopupWin $c
     wm title $wi "router configuration"
-    configGUI_nodeName $wi $node "Node name:"
+    configGUI_nodeName $wi $node_id "Node name:"
 
-    lassign [configGUI_addNotebook $wi $node { "Configuration" "Interfaces" "IPsec" }] configtab ifctab ipsectab
+    lassign [configGUI_addNotebook $wi $node_id { "Configuration" "Interfaces" "IPsec" }] configtab ifctab ipsectab
 
     set treecolumns { "OperState State" "NatState Nat" "IPv4addrs IPv4 addrs" "IPv6addrs IPv6 addrs" \
 	"MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop" }
-    configGUI_addTree $ifctab $node
+    configGUI_addTree $ifctab $node_id
 
-    configGUI_routingModel $configtab $node
-    configGUI_customImage $configtab $node
-    configGUI_attachDockerToExt $configtab $node
-    configGUI_servicesConfig $configtab $node
-    configGUI_staticRoutes $configtab $node
-    configGUI_snapshots $configtab $node
-    configGUI_customConfig $configtab $node
-    configGUI_ipsec $ipsectab $node
+    configGUI_routingModel $configtab $node_id
+    configGUI_customImage $configtab $node_id
+    configGUI_attachDockerToExt $configtab $node_id
+    configGUI_servicesConfig $configtab $node_id
+    configGUI_staticRoutes $configtab $node_id
+    configGUI_snapshots $configtab $node_id
+    configGUI_customConfig $configtab $node_id
+    configGUI_ipsec $ipsectab $node_id
 
-    configGUI_buttonsACNode $wi $node
+    configGUI_buttonsACNode $wi $node_id
 }
 
 #****f* router.tcl/router.configInterfacesGUI
 # NAME
 #   router.configInterfacesGUI -- configuration of interfaces GUI
 # SYNOPSIS
-#   router.configInterfacesGUI $wi $node $ifc
+#   router.configInterfacesGUI $wi $node_id $iface_id
 # FUNCTION
 #   Defines which modules for changing interfaces parameters are contained in
 #   the router configuration window. It is done by calling procedures for
 #   adding certain modules to the window.
 # INPUTS
 #   * wi -- widget
-#   * node -- node id
-#   * ifc -- interface name
+#   * node_id -- node id
+#   * iface_id -- interface name
 #****
-proc $MODULE.configInterfacesGUI { wi node ifc } {
+proc $MODULE.configInterfacesGUI { wi node_id iface_id } {
     global guielements
 
-    configGUI_ifcEssentials $wi $node $ifc
-    configGUI_ifcQueueConfig $wi $node $ifc
-    configGUI_ifcMACAddress $wi $node $ifc
-    configGUI_ifcIPv4Address $wi $node $ifc
-    configGUI_ifcIPv6Address $wi $node $ifc
+    configGUI_ifcEssentials $wi $node_id $iface_id
+    configGUI_ifcQueueConfig $wi $node_id $iface_id
+    configGUI_ifcMACAddress $wi $node_id $iface_id
+    configGUI_ifcIPv4Address $wi $node_id $iface_id
+    configGUI_ifcIPv6Address $wi $node_id $iface_id
 }
