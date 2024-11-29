@@ -3524,8 +3524,7 @@ proc updateLocalSubnetCombobox { connParamsLframe } {
 
     set IPs [$connParamsLframe.local_ip_entry cget -values]
 
-    set idx [lsearch -exact $IPs $local_ip_address ]
-    set IPs [lreplace $IPs $idx $idx]
+    set IPs [removeFromList $IPs $local_ip_address]
     set subnets [getSubnetsFromIPs $IPs]
 
     if { $subnets != "" } {
@@ -3546,9 +3545,9 @@ proc updatePeerSubnetCombobox { connParamsLframe } {
     set subnetVersion [::ip::version $local_subnet]
 
     set peerIPs ""
-    set allPeerIPs [getAllIpAddresses $peers_node]
-    foreach ip $allPeerIPs {
-	if { $subnetVersion == [::ip::version $ip] && $peers_ip != $ip} {
+    lassign [getAllIpAddresses $peers_node] ipv4_list ipv6_list
+    foreach ip [concat $ipv4_list $ipv6_list] {
+	if { $subnetVersion == [::ip::version $ip] && $peers_ip != $ip } {
 	    lappend peerIPs $ip
 	}
     }
@@ -3602,7 +3601,8 @@ proc setDefaultsForIPsec { node connParamsLframe espOptionsLframe } {
     set nodes [concat %any [getListOfOtherNodes $node]]
     $connParamsLframe.peer_name_entry configure -values $nodes
 
-    set localIPs [getAllIpAddresses $node]
+    lassign [getAllIpAddresses $node] ipv4_list ipv6_list
+    set localIPs [concat $ipv4_list $ipv6_list]
     $connParamsLframe.local_ip_entry configure -values $localIPs
     set local_ip_address [lindex $localIPs 0]
 
@@ -3758,7 +3758,8 @@ proc populateValuesForUpdate { node tab connParamsLframe espOptionsLframe } {
     $connParamsLframe.peer_name_entry configure -values [concat %any $nodes]
 
     set local_ip_address [getNodeIPsecSetting $node "configuration" "conn $selected" "left"]
-    set localIPs [getAllIpAddresses $node]
+    lassign [getAllIpAddresses $node] ipv4_list ipv6_list
+    set localIPs [concat $ipv4_list $ipv6_list]
     $connParamsLframe.local_ip_entry configure -values $localIPs
     foreach localIp $localIPs {
 	if { $local_ip_address == [lindex [split $localIp /] 0]} {

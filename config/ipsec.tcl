@@ -1493,39 +1493,6 @@ proc getListOfOtherNodes { node } {
     return $listOfNames
 }
 
-#****f* ipsec.tcl/getLocalIpAddress
-# NAME
-#   getLocalIpAddress -- retreives local IP addresses for current node
-# SYNOPSIS
-#   getLocalIpAddress $node
-# FUNCTION
-#   Retreives all local addresses (IPv4 and IPv6) for current node
-# INPUTS
-#   node - node id
-#****
-proc getAllIpAddresses { node } {
-    set listOfInterfaces [ifcList $node]
-    foreach logifc [logIfcList $node] {
-	if { [string match "vlan*" $logifc]} {
-	    lappend listOfInterfaces $logifc
-	}
-    }
-    set listOfIP4s ""
-    set listOfIP6s ""
-    foreach item $listOfInterfaces {
-	set ifcIP [getIfcIPv4addr $node $item]
-	if { $ifcIP != "" } {
-	    lappend listOfIP4s $ifcIP
-	}
-	set ifcIP [getIfcIPv6addr $node $item]
-	if { $ifcIP != "" } {
-	    lappend listOfIP6s $ifcIP
-	}
-    }
-
-    return [concat $listOfIP4s $listOfIP6s]
-}
-
 #****f* ipsec.tcl/getIPAddressForPeer
 # NAME
 #   getIPAddressForPeer -- retreives list of IP addresses for peer
@@ -1603,7 +1570,7 @@ proc getSubnetsFromIPs { listOfIPs } {
 	append total_string [::ip::mask $item]
 	lappend total_list $total_string
     }
-    return $total_list
+    return [lsort -unique $total_list]
 }
 
 proc checkIfPeerStartsSameConnection { peer local_ip local_subnet local_id } {

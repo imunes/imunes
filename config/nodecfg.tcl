@@ -1434,8 +1434,9 @@ proc getSubnetData { this_node this_ifc subnet_gws nodes_l2data subnet_idx } {
     dict set nodes_l2data $this_node $this_ifc $subnet_idx
 
     if { [[typemodel $this_node].layer] == "NETWORK" } {
-	if { [nodeType $this_node] in "router extnat" } {
+	if { [nodeType $this_node] in "router nat64 extnat" } {
 	    # this node is a router/extnat, add our IP addresses to lists
+	    # TODO: multiple addresses per iface - split subnet4data and subnet6data
 	    set gw4 [lindex [split [getIfcIPv4addr $this_node $this_ifc] /] 0]
 	    set gw6 [lindex [split [getIfcIPv6addr $this_node $this_ifc] /] 0]
 	    lappend my_gws [nodeType $this_node]|$gw4|$gw6
@@ -1674,24 +1675,57 @@ proc setStatIPv6routes { node routes } {
 proc getDefaultRoutesConfig { node gws } {
     set all_routes4 {}
     set all_routes6 {}
+
+    lassign [getAllIpAddresses $node] ipv4_addrs ipv6_addrs
+
+    if { $ipv4_addrs == "" && $ipv6_addrs == "" } {
+	return "\"$all_routes4\" \"$all_routes6\""
+    }
+
+    # remove all non-extnat routes
+    if { [nodeType $node] in "router nat64" } {
+	set gws [lsearch -inline -all $gws "extnat*"]
+    }
+
     foreach route $gws {
-	lassign [split $route "|"] route_type gateway4 gateway6
-	if { [nodeType $node] == "router" } {
-	    if { $route_type == "extnat" } {
-		if { "0.0.0.0/0 $gateway4" ni [list "0.0.0.0/0 " $all_routes4] } {
-		    lappend all_routes4 "0.0.0.0/0 $gateway4"
-		}
-		if { "::/0 $gateway6" ni [list "::/0 " $all_routes6] } {
-		    lappend all_routes6 "::/0 $gateway6"
-		}
+	lassign [split $route "|"] route_type gateway4 -
+
+	if { $gateway4 == "" } {
+	    continue
+	}
+
+	set match4 false
+	foreach ipv4_addr $ipv4_addrs {
+	    set mask [ip::mask $ipv4_addr]
+	    if { [ip::prefix $gateway4/$mask] == [ip::prefix $ipv4_addr] } {
+		set match4 true
+		break
 	    }
-	} else {
-	    if { "0.0.0.0/0 $gateway4" ni [list "0.0.0.0/0 " $all_routes4] } {
-		lappend all_routes4 "0.0.0.0/0 $gateway4"
+	}
+
+	if { $match4 && "0.0.0.0/0 $gateway4" ni $all_routes4 } {
+	    lappend all_routes4 "0.0.0.0/0 $gateway4"
+	}
+    }
+
+    foreach route $gws {
+	lassign [split $route "|"] route_type - gateway6
+
+	if { $gateway6 == "" } {
+	    continue
+	}
+
+	set match6 false
+	foreach ipv6_addr $ipv6_addrs {
+	    set mask [ip::mask $ipv6_addr]
+	    if { [ip::contract [ip::prefix $gateway6/$mask]] == [ip::contract [ip::prefix $ipv6_addr]] } {
+		set match6 true
+		break
 	    }
-	    if { "::/0 $gateway6" ni [list "::/0 " $all_routes6] } {
-		lappend all_routes6 "::/0 $gateway6"
-	    }
+	}
+
+	if { $match6 && "::/0 $gateway6" ni $all_routes6 } {
+	    lappend all_routes6 "::/0 $gateway6"
 	}
     }
 
@@ -3406,6 +3440,41 @@ proc transformNodes { nodes type } {
 	redrawAll
 	updateUndoLog
     }
+}
+
+#****f* nodecfg.tcl/getAllIpAddresses
+# NAME
+#   getAllIpAddresses -- retreives all IP addresses for current node
+# SYNOPSIS
+#   getAllIpAddresses $node
+# FUNCTION
+#   Retreives all local addresses (IPv4 and IPv6) for current node
+# INPUTS
+#   node - node id
+#****
+proc getAllIpAddresses { node } {
+    set ifaces_list [ifcList $node]
+    foreach logifc [logIfcList $node] {
+	if { [string match "vlan*" $logifc] } {
+	    lappend ifaces_list $logifc
+	}
+    }
+
+    set ipv4_list ""
+    set ipv6_list ""
+    foreach item $ifaces_list {
+	set ifcIPs [getIfcIPv4addrs $node $item]
+	if { $ifcIPs != "" } {
+	    lappend ipv4_list {*}$ifcIPs
+	}
+
+	set ifcIPs [getIfcIPv6addrs $node $item]
+	if { $ifcIPs != "" } {
+	    lappend ipv6_list {*}$ifcIPs
+	}
+    }
+
+    return "\"$ipv4_list\" \"$ipv6_list\""
 }
 
 #****f* nodecfg.tcl/pseudo.layer
