@@ -467,22 +467,22 @@ proc applyJitterLink { wi link_id } {
 # INPUTS
 #   * link_id -- link id
 #****
-proc linkJitterReset { link } {
+proc linkJitterReset { link_id } {
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    setLinkJitterModeUpstream $link ""
-    setLinkJitterModeDownstream $link ""
+    setLinkJitterModeUpstream $link_id ""
+    setLinkJitterModeDownstream $link_id ""
 
-    setLinkJitterHoldUpstream $link ""
-    setLinkJitterHoldDownstream $link ""
+    setLinkJitterHoldUpstream $link_id ""
+    setLinkJitterHoldDownstream $link_id ""
 
-    setLinkJitterUpstream $link ""
-    setLinkJitterDownstream $link ""
+    setLinkJitterUpstream $link_id ""
+    setLinkJitterDownstream $link_id ""
 
     if { $oper_mode == "exec" } {
 	saveRunningConfigurationInteractive $eid
-	execResetLinkJitter $eid $link
+	execResetLinkJitter $eid $link_id
     }
 
     updateUndoLog

@@ -92,12 +92,12 @@ proc l3node.nodeDestroy { eid node } {
 
 proc checkTerminate {} {}
 
-proc terminate_nodesShutdown { eid nodes nodeCount w } {
+proc terminate_nodesShutdown { eid nodes nodes_count w } {
     global progressbarCount execMode
 
     set batchStep 0
     foreach node $nodes {
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
 
 	if { [info procs [getNodeType $node].nodeShutdown] != "" } {
 	    try {
@@ -118,8 +118,8 @@ proc terminate_nodesShutdown { eid nodes nodeCount w } {
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
@@ -158,39 +158,39 @@ proc terminate_releaseExternalIfaces { eid extifcs extifcsCount w } {
     }
 }
 
-proc terminate_linksDestroy { eid links linkCount w } {
+proc terminate_linksDestroy { eid links links_count w } {
     global progressbarCount execMode
 
     set batchStep 0
     set skipLinks ""
-    foreach link $links {
-	displayBatchProgress $batchStep $linkCount
+    foreach link_id $links {
+	displayBatchProgress $batchStep $links_count
 
-	if { $link in $skipLinks } {
+	if { $link_id in $skipLinks } {
 	    continue
 	}
 
-	set lnode1 [lindex [getLinkPeers $link] 0]
-	set lnode2 [lindex [getLinkPeers $link] 1]
+	set node1_id [lindex [getLinkPeers $link_id] 0]
+	set node2_id [lindex [getLinkPeers $link_id] 1]
 
-	set msg "Destroying link $link"
-	set mirror_link [getLinkMirror $link]
+	set msg "Destroying link $link_id"
+	set mirror_link [getLinkMirror $link_id]
 	if { $mirror_link != "" } {
 	    lappend skipLinks $mirror_link
 
-	    set msg "Destroying link $link/$mirror_link"
+	    set msg "Destroying link $link_id/$mirror_link"
 
-	    set lnode2 [lindex [getLinkPeers $mirror_link] 0]
+	    set node2_id [lindex [getLinkPeers $mirror_link] 0]
 	}
 
 	try {
-	    if { [getLinkDirect $link] } {
-		destroyDirectLinkBetween $eid $lnode1 $lnode2
+	    if { [getLinkDirect $link_id] } {
+		destroyDirectLinkBetween $eid $node1_id $node2_id
 	    } else {
-		destroyLinkBetween $eid $lnode1 $lnode2 $link
+		destroyLinkBetween $eid $node1_id $node2_id $link_id
 	    }
 	} on error err {
-	    return -code error "Error in 'destroyLinkBetween $eid $lnode1 $lnode2 $link': $err"
+	    return -code error "Error in 'destroyLinkBetween $eid $node1_id $node2_id $link_id': $err"
 	}
 
 	incr batchStep
@@ -204,20 +204,20 @@ proc terminate_linksDestroy { eid links linkCount w } {
     }
     pipesExec ""
 
-    if { $linkCount > 0 } {
-	displayBatchProgress $batchStep $linkCount
+    if { $links_count > 0 } {
+	displayBatchProgress $batchStep $links_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc destroyL2Nodes { eid nodes nodeCount w } {
+proc destroyL2Nodes { eid nodes nodes_count w } {
     global progressbarCount execMode
 
     set batchStep 0
     foreach node $nodes {
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
 
 	try {
 	    [getNodeType $node].nodeDestroy $eid $node
@@ -235,25 +235,25 @@ proc destroyL2Nodes { eid nodes nodeCount w } {
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc terminate_nodesDestroy { eid nodes nodeCount w } {
+proc terminate_nodesDestroy { eid nodes nodes_count w } {
     global progressbarCount execMode
 
     set batchStep 0
-    foreach node $nodes {
-	displayBatchProgress $batchStep $nodeCount
+    foreach node_id $nodes {
+	displayBatchProgress $batchStep $nodes_count
 
 	try {
-	    [getNodeType $node].nodeDestroy $eid $node
+	    [getNodeType $node_id].nodeDestroy $eid $node_id
 	} on error err {
-	    return -code error "Error in '[getNodeType $node].nodeDestroy $eid $node': $err"
+	    return -code error "Error in '[getNodeType $node_id].nodeDestroy $eid $node_id': $err"
 	}
 	pipesExec ""
 
@@ -261,14 +261,14 @@ proc terminate_nodesDestroy { eid nodes nodeCount w } {
 	incr progressbarCount -1
 
 	if { $execMode != "batch" } {
-	    statline "Destroying VIRTUALIZED node [getNodeName $node]"
+	    statline "Destroying VIRTUALIZED node [getNodeName $node_id]"
 	    $w.p configure -value $progressbarCount
 	    update
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
@@ -305,8 +305,8 @@ proc undeployCfg { eid } {
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
     global progressbarCount execMode
 
-    set nodeCount [llength $node_list]
-    set linkCount [llength $link_list]
+    set nodes_count [llength $node_list]
+    set links_count [llength $link_list]
 
     set t_start [clock milliseconds]
 
@@ -324,9 +324,9 @@ proc undeployCfg { eid } {
 
     statline "Preparing for termination..."
     set extifcs {}
-    set l2nodes {}
-    set l3nodes {}
-    set allNodes {}
+    set native_nodes {}
+    set virtualized_nodes {}
+    set all_nodes {}
     set pseudoNodesCount 0
     foreach node $node_list {
 	if { [getNodeType $node] != "pseudo" } {
@@ -334,24 +334,24 @@ proc undeployCfg { eid } {
 		if { [getNodeType $node] == "rj45" } {
 		    lappend extifcs $node
 		} elseif { [getNodeType $node] == "extnat" } {
-		    lappend l3nodes $node
+		    lappend virtualized_nodes $node
 		} else {
-		    lappend l2nodes $node
+		    lappend native_nodes $node
 		}
 	    } else {
-		lappend l3nodes $node
+		lappend virtualized_nodes $node
 	    }
 	} else {
 	    incr pseudoNodesCount
 	}
     }
-    set l2nodeCount [llength $l2nodes]
-    set l3nodeCount [llength $l3nodes]
-    set allNodes [concat $l2nodes $l3nodes]
-    set allNodeCount [llength $allNodes]
+    set native_nodes_count [llength $native_nodes]
+    set virtualized_nodes_count [llength $virtualized_nodes]
+    set all_nodes [concat $native_nodes $virtualized_nodes]
+    set all_nodes_count [llength $all_nodes]
     set extifcsCount [llength $extifcs]
-    incr linkCount [expr -$pseudoNodesCount/2]
-    set maxProgressbasCount [expr {1*$allNodeCount + $extifcsCount + $linkCount + $l2nodeCount + 3*$l3nodeCount}]
+    incr links_count [expr -$pseudoNodesCount/2]
+    set maxProgressbasCount [expr {1*$all_nodes_count + $extifcsCount + $links_count + $native_nodes_count + 3*$virtualized_nodes_count}]
     set progressbarCount $maxProgressbasCount
 
     set w ""
@@ -379,12 +379,12 @@ proc undeployCfg { eid } {
 
     try {
 	statline "Stopping services for NODESTOP hook..."
-	services stop "NODESTOP" "bkg" $allNodes
+	services stop "NODESTOP" "bkg" $all_nodes
 
 	statline "Stopping all nodes..."
 	pipesCreate
-	terminate_nodesShutdown $eid $allNodes $allNodeCount $w
-	statline "Waiting for processes on $allNodeCount node(s) to shutdown..."
+	terminate_nodesShutdown $eid $all_nodes $all_nodes_count $w
+	statline "Waiting for processes on $all_nodes_count node(s) to shutdown..."
 	pipesClose
 
 	statline "Releasing external interfaces..."
@@ -394,39 +394,39 @@ proc undeployCfg { eid } {
 	pipesClose
 
 	statline "Stopping services for LINKDEST hook..."
-	services stop "LINKDEST" "bkg" $allNodes
+	services stop "LINKDEST" "bkg" $all_nodes
 
 	statline "Destroying links..."
 	pipesCreate
-	terminate_linksDestroy $eid $link_list $linkCount $w
-	statline "Waiting for $linkCount link(s) to be destroyed..."
+	terminate_linksDestroy $eid $link_list $links_count $w
+	statline "Waiting for $links_count link(s) to be destroyed..."
 	pipesClose
 
 	statline "Destroying physical interfaces on VIRTUALIZED nodes..."
 	pipesCreate
-	destroyNodesIfcs $eid $l3nodes $l3nodeCount $w
-	statline "Waiting for physical interfaces on $l3nodeCount VIRTUALIZED node(s) to be destroyed..."
+	destroyNodesIfcs $eid $virtualized_nodes $virtualized_nodes_count $w
+	statline "Waiting for physical interfaces on $virtualized_nodes_count VIRTUALIZED node(s) to be destroyed..."
 	pipesClose
 
 	statline "Destroying NATIVE nodes..."
 	pipesCreate
-	destroyL2Nodes $eid $l2nodes $l2nodeCount $w
-	statline "Waiting for $l2nodeCount NATIVE node(s) to be destroyed..."
+	destroyL2Nodes $eid $native_nodes $native_nodes_count $w
+	statline "Waiting for $native_nodes_count NATIVE node(s) to be destroyed..."
 	pipesClose
 
 	statline "Checking for hanging TCP connections on VIRTUALIZED node(s)..."
 	pipesCreate
-	timeoutPatch $eid $l3nodes $l3nodeCount $w
-	statline "Waiting for hanging TCP connections on $l3nodeCount VIRTUALIZED node(s)..."
+	timeoutPatch $eid $virtualized_nodes $virtualized_nodes_count $w
+	statline "Waiting for hanging TCP connections on $virtualized_nodes_count VIRTUALIZED node(s)..."
 	pipesClose
 
 	statline "Stopping services for NODEDEST hook..."
-	services stop "NODEDEST" "bkg" $l3nodes
+	services stop "NODEDEST" "bkg" $virtualized_nodes
 
 	statline "Destroying VIRTUALIZED nodes..."
 	pipesCreate
-	terminate_nodesDestroy $eid $l3nodes $l3nodeCount $w
-	statline "Waiting for $l3nodeCount VIRTUALIZED node(s) to be destroyed..."
+	terminate_nodesDestroy $eid $virtualized_nodes $virtualized_nodes_count $w
+	statline "Waiting for $virtualized_nodes_count VIRTUALIZED node(s) to be destroyed..."
 	pipesClose
 
 	statline "Removing experiment top-level container/netns..."
@@ -451,13 +451,13 @@ proc undeployCfg { eid } {
     }
 }
 
-proc timeoutPatch { eid nodes nodeCount w } {
+proc timeoutPatch { eid nodes nodes_count w } {
     global progressbarCount execMode
 
     set batchStep 0
     set nodes_left $nodes
     while { [llength $nodes_left] > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
 	foreach node $nodes_left {
 	    checkHangingTCPs $eid $node
 
@@ -470,26 +470,26 @@ proc timeoutPatch { eid nodes nodeCount w } {
 		$w.p configure -value $progressbarCount
 		update
 	    }
-	    displayBatchProgress $batchStep $nodeCount
+	    displayBatchProgress $batchStep $nodes_count
 
 	    set nodes_left [removeFromList $nodes_left $node]
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc destroyNodesIfcs { eid nodes nodeCount w } {
+proc destroyNodesIfcs { eid nodes nodes_count w } {
     global progressbarCount execMode
 
     set batchStep 0
     foreach node $nodes {
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
 
 	if { [info procs [getNodeType $node].nodeIfacesDestroy] != "" } {
 	    set ifcs [ifcList $node]
@@ -510,8 +510,8 @@ proc destroyNodesIfcs { eid nodes nodeCount w } {
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}

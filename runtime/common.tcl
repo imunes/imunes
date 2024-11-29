@@ -355,23 +355,23 @@ proc setOperMode { mode } {
 #   node.
 #****
 proc spawnShellExec {} {
-    set node [lindex [.panwin.f1.c gettags {node && current}] 1]
-    if { $node == "" } {
-	set node [lindex [.panwin.f1.c gettags {nodelabel && current}] 1]
-	if { $node == "" } {
+    set node_id [lindex [.panwin.f1.c gettags {node && current}] 1]
+    if { $node_id == "" } {
+	set node_id [lindex [.panwin.f1.c gettags {nodelabel && current}] 1]
+	if { $node_id == "" } {
 	    return
 	}
     }
 
-    if { [[getNodeType $node].virtlayer] != "VIRTUALIZED" } {
-	nodeConfigGUI .panwin.f1.c $node
+    if { [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" } {
+	nodeConfigGUI .panwin.f1.c $node_id
     } else {
-	set cmd [lindex [existingShells [[getNodeType $node].shellcmds] $node] 0]
+	set cmd [lindex [existingShells [[getNodeType $node_id].shellcmds] $node_id] 0]
 	if { $cmd == "" } {
 	    return
 	}
 
-	spawnShell $node $cmd
+	spawnShell $node_id $cmd
     }
 }
 
@@ -517,49 +517,49 @@ proc dumpLinksToFile { path } {
     set linkDelim ":"
     set skipLinks ""
 
-    foreach link $link_list {
-	if { $link in $skipLinks } {
+    foreach link_id $link_list {
+	if { $link_id in $skipLinks } {
 	    continue
 	}
 
-	set lnode1 [lindex [getLinkPeers $link] 0]
-	set lnode2 [lindex [getLinkPeers $link] 1]
-	set ifname1 [lindex [getLinkPeersIfaces $link] 0]
-	set ifname2 [lindex [getLinkPeersIfaces $link] 1]
+	set node1_id [lindex [getLinkPeers $link_id] 0]
+	set node2_id [lindex [getLinkPeers $link_id] 1]
+	set iface1_id [lindex [getLinkPeersIfaces $link_id] 0]
+	set iface2_id [lindex [getLinkPeersIfaces $link_id] 1]
 
-	set mirror_link [getLinkMirror $link]
-	if { $mirror_link != "" } {
-	    lappend skipLinks $mirror_link
+	set mirror_link_id [getLinkMirror $link_id]
+	if { $mirror_link_id != "" } {
+	    lappend skipLinks $mirror_link_id
 
-	    lassign "[lindex [getLinkPeers $mirror_link] 0] $lnode1" lnode1 lnode2
-	    lassign "[lindex [getLinkPeersIfaces $mirror_link] 0] $ifname1" ifname1 ifname2
+	    lassign "[lindex [getLinkPeers $mirror_link_id] 0] $node1_id" node1_id node2_id
+	    lassign "[lindex [getLinkPeersIfaces $mirror_link_id] 0] $iface1_id" iface1_id iface2_id
 	}
 
-	set name1 [getNodeName $lnode1]
-	set name2 [getNodeName $lnode2]
+	set name1 [getNodeName $node1_id]
+	set name2 [getNodeName $node2_id]
 
 	set linkname "$name1$linkDelim$name2"
 
-	set lpair [list $lnode1 $ifname1]
-	set rpair [list $lnode2 $ifname2]
-	if { [getNodeType $lnode1] in "rj45 extelem" } {
-	    if { [getNodeType $lnode1] == "rj45" } {
+	set lpair [list $node1_id $iface1_id]
+	set rpair [list $node2_id $iface2_id]
+	if { [getNodeType $node1_id] in "rj45 extelem" } {
+	    if { [getNodeType $node1_id] == "rj45" } {
 		set lpair $name1
 	    } else {
-		set ifcs [getNodeStolenIfaces $lnode1]
-		set lpair [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname1"] 1]
+		set ifaces [getNodeStolenIfaces $node1_id]
+		set lpair [lindex [lsearch -inline -exact -index 0 $ifaces "$iface1_id"] 1]
 	    }
 	}
-	if { [getNodeType $lnode2] in "rj45 extelem" } {
-	    if { [getNodeType $lnode2] == "rj45" } {
+	if { [getNodeType $node2_id] in "rj45 extelem" } {
+	    if { [getNodeType $node2_id] == "rj45" } {
 		set rpair $name2
 	    } else {
-		set ifcs [getNodeStolenIfaces $lnode2]
-		set rpair [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname2"] 1]
+		set ifaces [getNodeStolenIfaces $node2_id]
+		set rpair [lindex [lsearch -inline -exact -index 0 $ifaces "$iface2_id"] 1]
 	    }
 	}
 
-	set line "$link {$lnode1-$lnode2 {{$lpair} {$rpair}} $linkname}\n"
+	set line "$link_id {$node1_id-$node2_id {{$lpair} {$rpair}} $linkname}\n"
 	set data "$data$line"
     }
 

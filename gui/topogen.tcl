@@ -114,34 +114,34 @@ for { set i 3 } { $i <= 24 } { incr i } {
 # RESULT
 #   * new_nodes -- created nodes
 #****
-proc newNodes { n } {
+proc newNodes { node_num } {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     global grid sizex sizey activetool
 
-    set v {}
-    set r [expr {($n - 1) * (1 + 4 / $n) * $grid / 2}]
+    set new_nodes {}
+    set r [expr {($node_num - 1) * (1 + 4 / $node_num) * $grid / 2}]
     set x0 [expr {$sizex / 2}]
     set y0 [expr {$sizey / 2}]
-    set twopidivn [expr {acos(0) * 4 / $n}]
+    set twopidivn [expr {acos(0) * 4 / $node_num}]
     if { $activetool == "router" } {
 	set dy 24
     } else {
 	set dy 32
     }
 
-    for { set i 0 } { $i < $n } { incr i } {
-	set new_node [newNode $activetool]
+    for { set i 0 } { $i < $node_num } { incr i } {
+	set new_node_id [newNode $activetool]
 	set x [expr {$x0 + $r * cos($twopidivn * $i)}]
 	set y [expr {$y0 - $r * sin($twopidivn * $i)}]
 
-	setNodeCoords $new_node "$x $y"
-	setNodeLabelCoords $new_node "$x [expr {$y + $dy}]"
-	setNodeCanvas $new_node $curcanvas
+	setNodeCoords $new_node_id "$x $y"
+	setNodeLabelCoords $new_node_id "$x [expr {$y + $dy}]"
+	setNodeCanvas $new_node_id $curcanvas
 
-	lappend v $new_node
+	lappend new_nodes $new_node_id
     }
 
-    return $v
+    return $new_nodes
 }
 
 #****f* topogen.tcl/topoGenDone

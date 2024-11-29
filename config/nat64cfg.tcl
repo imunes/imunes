@@ -1,5 +1,5 @@
-proc getTunIPv4Addr { node } {
-    foreach line [netconfFetchSection $node "nat64"] {
+proc getTunIPv4Addr { node_id } {
+    foreach line [netconfFetchSection $node_id "nat64"] {
 	if { [lindex $line 0] == "tunIPv4addr" } {
 	   return [lindex $line 1]
 	}
@@ -8,21 +8,21 @@ proc getTunIPv4Addr { node } {
     return ""
 }
 
-proc setTunIPv4Addr { node addr } {
+proc setTunIPv4Addr { node_id addr } {
     set cfg [list "nat64"]
-    foreach line [netconfFetchSection $node "nat64"] {
+    foreach line [netconfFetchSection $node_id "nat64"] {
 	if { [lindex $line 0] != "tunIPv4addr" } {
 	    lappend cfg $line
 	}
     }
 
     lappend cfg " tunIPv4addr $addr"
-    netconfInsertSection $node $cfg
+    netconfInsertSection $node_id $cfg
 }
 
 
-proc getTunIPv6Addr { node } {
-    foreach line [netconfFetchSection $node "nat64"] {
+proc getTunIPv6Addr { node_id } {
+    foreach line [netconfFetchSection $node_id "nat64"] {
 	if { [lindex $line 0] == "tunIPv6addr" } {
 	   return [lindex $line 1]
 	}
@@ -31,20 +31,20 @@ proc getTunIPv6Addr { node } {
     return ""
 }
 
-proc setTunIPv6Addr { node addr } {
+proc setTunIPv6Addr { node_id addr } {
     set cfg [list "nat64"]
-    foreach line [netconfFetchSection $node "nat64"] {
+    foreach line [netconfFetchSection $node_id "nat64"] {
 	if { [lindex $line 0] != "tunIPv6addr" } {
 	    lappend cfg $line
 	}
     }
 
     lappend cfg " tunIPv6addr $addr"
-    netconfInsertSection $node $cfg
+    netconfInsertSection $node_id $cfg
 }
 
-proc getTaygaIPv4Addr { node } {
-    foreach line [netconfFetchSection $node "nat64"] {
+proc getTaygaIPv4Addr { node_id } {
+    foreach line [netconfFetchSection $node_id "nat64"] {
 	if { [lindex $line 0] == "taygaIPv4addr" } {
 	   return [lindex $line 1]
 	}
@@ -53,20 +53,20 @@ proc getTaygaIPv4Addr { node } {
     return ""
 }
 
-proc setTaygaIPv4Addr { node addr } {
+proc setTaygaIPv4Addr { node_id addr } {
     set cfg [list "nat64"]
-    foreach line [netconfFetchSection $node "nat64"] {
+    foreach line [netconfFetchSection $node_id "nat64"] {
 	if { [lindex $line 0] != "taygaIPv4addr" } {
 	    lappend cfg $line
 	}
     }
 
     lappend cfg " taygaIPv4addr $addr"
-    netconfInsertSection $node $cfg
+    netconfInsertSection $node_id $cfg
 }
 
-proc getTaygaIPv6Prefix { node } {
-    foreach line [netconfFetchSection $node "nat64"] {
+proc getTaygaIPv6Prefix { node_id } {
+    foreach line [netconfFetchSection $node_id "nat64"] {
 	if { [lindex $line 0] == "taygaIPv6prefix" } {
 	   return [lindex $line 1]
 	}
@@ -75,20 +75,20 @@ proc getTaygaIPv6Prefix { node } {
     return ""
 }
 
-proc setTaygaIPv6Prefix { node addr } {
+proc setTaygaIPv6Prefix { node_id addr } {
     set cfg [list "nat64"]
-    foreach line [netconfFetchSection $node "nat64"] {
+    foreach line [netconfFetchSection $node_id "nat64"] {
 	if { [lindex $line 0] != "taygaIPv6prefix" } {
 	    lappend cfg $line
 	}
     }
 
     lappend cfg " taygaIPv6prefix $addr"
-    netconfInsertSection $node $cfg
+    netconfInsertSection $node_id $cfg
 }
 
-proc getTaygaIPv4DynPool { node } {
-    foreach line [netconfFetchSection $node "nat64"] {
+proc getTaygaIPv4DynPool { node_id } {
+    foreach line [netconfFetchSection $node_id "nat64"] {
 	if { [lindex $line 0] == "taygaIPv4pool" } {
 	   return [lindex $line 1]
 	}
@@ -97,21 +97,21 @@ proc getTaygaIPv4DynPool { node } {
     return ""
 }
 
-proc setTaygaIPv4DynPool { node addr } {
+proc setTaygaIPv4DynPool { node_id addr } {
     set cfg [list "nat64"]
-    foreach line [netconfFetchSection $node "nat64"] {
+    foreach line [netconfFetchSection $node_id "nat64"] {
 	if { [lindex $line 0] != "taygaIPv4pool" } {
 	    lappend cfg $line
 	}
     }
 
     lappend cfg " taygaIPv4pool $addr"
-    netconfInsertSection $node $cfg
+    netconfInsertSection $node_id $cfg
 }
 
-proc getTaygaMappings { node } {
+proc getTaygaMappings { node_id } {
     set mps {}
-    foreach line [netconfFetchSection $node "nat64"] {
+    foreach line [netconfFetchSection $node_id "nat64"] {
 	if { [lindex $line 0] == "taygaMapping" } {
 	    lappend mps [lrange $line 1 end]
 	}
@@ -120,9 +120,9 @@ proc getTaygaMappings { node } {
     return $mps
 }
 
-proc setTaygaMappings { node mps } {
+proc setTaygaMappings { node_id mps } {
     set cfg [list "nat64"]
-    foreach line [netconfFetchSection $node "nat64"] {
+    foreach line [netconfFetchSection $node_id "nat64"] {
 	if { [lindex $line 0] != "taygaMapping" } {
 	    lappend cfg $line
 	}
@@ -132,5 +132,5 @@ proc setTaygaMappings { node mps } {
 	lappend cfg " taygaMapping $map"
     }
 
-    netconfInsertSection $node $cfg
+    netconfInsertSection $node_id $cfg
 }

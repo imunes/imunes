@@ -317,10 +317,10 @@ proc sched_init {} {
 # RESULT
 #   * events -- list of events
 #****
-proc getLinkEvents { link } {
-    upvar 0 ::cf::[set ::curcfg]::$link $link
+proc getLinkEvents { link_id } {
+    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
 
-    set entry [lsearch -inline [set $link] "events *"]
+    set entry [lsearch -inline [set $link_id] "events *"]
     return [lsort -index 0 -integer [lindex $entry 1]]
 }
 

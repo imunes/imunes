@@ -64,19 +64,19 @@ proc checkExternalInterfaces {} {
     set extifcs [getHostIfcList]
 
     set nodes_ifcpairs {}
-    foreach node $node_list {
-	if { [getNodeType $node] == "rj45" } {
-	    lappend nodes_ifcpairs [list $node [list 0 [getNodeName $node]]]
-	} elseif { [getNodeType $node] == "extelem" } {
-	    foreach ifcs [getNodeStolenIfaces $node] {
-		lappend nodes_ifcpairs [list $node $ifcs]
+    foreach node_id $node_list {
+	if { [getNodeType $node_id] == "rj45" } {
+	    lappend nodes_ifcpairs [list $node_id [list 0 [getNodeName $node_id]]]
+	} elseif { [getNodeType $node_id] == "extelem" } {
+	    foreach ifaces [getNodeStolenIfaces $node_id] {
+		lappend nodes_ifcpairs [list $node_id $ifaces]
 	    }
 	}
     }
 
     foreach node_ifcpair $nodes_ifcpairs {
-	lassign $node_ifcpair node ifcpair
-	lassign $ifcpair ifc physical_ifc
+	lassign $node_ifcpair node_id ifcpair
+	lassign $ifcpair iface_id physical_ifc
 
 	# check if the interface exists
 	set i [lsearch $extifcs $physical_ifc]
@@ -93,8 +93,8 @@ proc checkExternalInterfaces {} {
 	    return 1
 	}
 
-	if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
-	    if { [getHostIfcVlanExists $node $physical_ifc] } {
+	if { [getEtherVlanEnabled $node_id] && [getEtherVlanTag $node_id] != "" } {
+	    if { [getHostIfcVlanExists $node_id $physical_ifc] } {
 		return 1
 	    }
 	} elseif { $isOSlinux } {
@@ -102,8 +102,8 @@ proc checkExternalInterfaces {} {
 		exec test -d /sys/class/net/$physical_ifc/wireless
 	    } on error {} {
 	    } on ok {} {
-		set link [lindex [getIfcLink $node $ifc] 0]
-		if { [getLinkDirect $link] } {
+		set link_id [lindex [getIfcLink $node_id $iface_id] 0]
+		if { [getLinkDirect $link_id] } {
 		    set severity "warning"
 		    set msg "Interface '$physical_ifc' is a wireless interface,\
 			so its peer cannot change its MAC address!"
@@ -507,7 +507,7 @@ proc deployCfg {} {
     global progressbarCount execMode
 
     set progressbarCount 0
-    set nodeCount [llength $node_list]
+    set nodes_count [llength $node_list]
     set linkCount [llength $link_list]
 
     set t_start [clock milliseconds]
@@ -529,12 +529,12 @@ proc deployCfg {} {
     set l3nodes {}
     set allNodes {}
     set pseudoNodesCount 0
-    foreach node $node_list {
-	if { [getNodeType $node] != "pseudo" } {
-	    if { [[getNodeType $node].virtlayer] != "VIRTUALIZED" } {
-		lappend l2nodes $node
+    foreach node_id $node_list {
+	if { [getNodeType $node_id] != "pseudo" } {
+	    if { [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" } {
+		lappend l2nodes $node_id
 	    } else {
-		lappend l3nodes $node
+		lappend l3nodes $node_id
 	    }
 	} else {
 	    incr pseudoNodesCount
@@ -683,19 +683,19 @@ proc execute_prepareSystem {} {
     createExperimentFiles $eid
 }
 
-proc execute_nodesCreate { nodes nodeCount w } {
+proc execute_nodesCreate { nodes nodes_count w } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set batchStep 0
-    foreach node $nodes {
-	displayBatchProgress $batchStep $nodeCount
+    foreach node_id $nodes {
+	displayBatchProgress $batchStep $nodes_count
 
-	if { [info procs [getNodeType $node].nodeCreate] != "" } {
+	if { [info procs [getNodeType $node_id].nodeCreate] != "" } {
 	    try {
-		[getNodeType $node].nodeCreate $eid $node
+		[getNodeType $node_id].nodeCreate $eid $node_id
 	    } on error err {
-		return -code error "Error in '[getNodeType $node].nodeCreate $eid $node': $err"
+		return -code error "Error in '[getNodeType $node_id].nodeCreate $eid $node_id': $err"
 	    }
 	    pipesExec ""
 	}
@@ -704,27 +704,27 @@ proc execute_nodesCreate { nodes nodeCount w } {
 	incr progressbarCount
 
 	if { $execMode != "batch" } {
-	    statline "Instantiating node [getNodeName $node]"
+	    statline "Instantiating node [getNodeName $node_id]"
 	    $w.p configure -value $progressbarCount
 	    update
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc waitForInstantiateNodes { nodes nodeCount w } {
+proc waitForInstantiateNodes { nodes nodes_count w } {
     global progressbarCount execMode
 
     set batchStep 0
     set nodes_left $nodes
     while { [llength $nodes_left] > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
 	foreach node $nodes_left {
 	    if { ! [isNodeStarted $node] } {
 		continue
@@ -739,27 +739,27 @@ proc waitForInstantiateNodes { nodes nodeCount w } {
 		$w.p configure -value $progressbarCount
 		update
 	    }
-	    displayBatchProgress $batchStep $nodeCount
+	    displayBatchProgress $batchStep $nodes_count
 
 	    set nodes_left [removeFromList $nodes_left $node]
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc execute_nodesNamespaceSetup { nodes nodeCount w } {
+proc execute_nodesNamespaceSetup { nodes nodes_count w } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set batchStep 0
     foreach node $nodes {
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
 
 	if { [info procs [getNodeType $node].nodeNamespaceSetup] != "" } {
 	    try {
@@ -780,21 +780,21 @@ proc execute_nodesNamespaceSetup { nodes nodeCount w } {
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc waitForNamespaces { nodes nodeCount w } {
+proc waitForNamespaces { nodes nodes_count w } {
     global progressbarCount execMode
 
     set batchStep 0
     set nodes_left $nodes
     while { [llength $nodes_left] > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
 	foreach node $nodes_left {
 	    if { ! [isNodeNamespaceCreated $node] } {
 		continue
@@ -809,27 +809,27 @@ proc waitForNamespaces { nodes nodeCount w } {
 		$w.p configure -value $progressbarCount
 		update
 	    }
-	    displayBatchProgress $batchStep $nodeCount
+	    displayBatchProgress $batchStep $nodes_count
 
 	    set nodes_left [removeFromList $nodes_left $node]
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc execute_nodesInitConfigure { nodes nodeCount w } {
+proc execute_nodesInitConfigure { nodes nodes_count w } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set batchStep 0
     foreach node $nodes {
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
 
 	try {
 	    [getNodeType $node].nodeInitConfigure $eid $node
@@ -848,21 +848,21 @@ proc execute_nodesInitConfigure { nodes nodeCount w } {
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc waitForInitConf { nodes nodeCount w } {
+proc waitForInitConf { nodes nodes_count w } {
     global progressbarCount execMode
 
     set batchStep 0
     set nodes_left $nodes
     while { [llength $nodes_left] > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
 	foreach node $nodes_left {
 	    if { ! [isNodeInitNet $node] } {
 		continue
@@ -877,36 +877,36 @@ proc waitForInitConf { nodes nodeCount w } {
 		$w.p configure -value $progressbarCount
 		update
 	    }
-	    displayBatchProgress $batchStep $nodeCount
+	    displayBatchProgress $batchStep $nodes_count
 
 	    set nodes_left [removeFromList $nodes_left $node]
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
-proc copyFilesToNodes { nodes nodeCount w } {}
+proc copyFilesToNodes { nodes nodes_count w } {}
 
-proc execute_nodesPhysIfacesCreate { nodes nodeCount w } {
+proc execute_nodesPhysIfacesCreate { nodes nodes_count w } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set batchStep 0
-    foreach node $nodes {
-	displayBatchProgress $batchStep $nodeCount
+    foreach node_id $nodes {
+	displayBatchProgress $batchStep $nodes_count
 
-	if { [info procs [getNodeType $node].nodePhysIfacesCreate] != "" } {
-	    set ifcs [ifcList $node]
+	if { [info procs [getNodeType $node_id].nodePhysIfacesCreate] != "" } {
+	    set ifcs [ifcList $node_id]
 	    try {
-		[getNodeType $node].nodePhysIfacesCreate $eid $node $ifcs
+		[getNodeType $node_id].nodePhysIfacesCreate $eid $node_id $ifcs
 	    } on error err {
-		return -code error "Error in '[getNodeType $node].nodePhysIfacesCreate $eid $node $ifcs': $err"
+		return -code error "Error in '[getNodeType $node_id].nodePhysIfacesCreate $eid $node_id $ifcs': $err"
 	    }
 	    pipesExec ""
 	}
@@ -915,14 +915,14 @@ proc execute_nodesPhysIfacesCreate { nodes nodeCount w } {
 	incr progressbarCount
 
 	if { $execMode != "batch" } {
-	    statline "Creating physical ifaces on node [getNodeName $node]"
+	    statline "Creating physical ifaces on node [getNodeName $node_id]"
 	    $w.p configure -value $progressbarCount
 	    update
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
@@ -934,35 +934,35 @@ proc createLinks { links linkCount w } {
 
     set batchStep 0
     for { set pending_links $links } { $pending_links != "" } {} {
-	set link [lindex $pending_links 0]
-	set i [lsearch -exact $pending_links $link]
+	set link_id [lindex $pending_links 0]
+	set i [lsearch -exact $pending_links $link_id]
 	set pending_links [lreplace $pending_links $i $i]
 
-	set lnode1 [lindex [getLinkPeers $link] 0]
-	set lnode2 [lindex [getLinkPeers $link] 1]
-	set ifname1 [lindex [getLinkPeersIfaces $link] 0]
-	set ifname2 [lindex [getLinkPeersIfaces $link] 1]
+	set node1_id [lindex [getLinkPeers $link_id] 0]
+	set node2_id [lindex [getLinkPeers $link_id] 1]
+	set iface1_id [lindex [getLinkPeersIfaces $link_id] 0]
+	set iface2_id [lindex [getLinkPeersIfaces $link_id] 1]
 
-	set msg "Creating link $link"
-	set mirror_link [getLinkMirror $link]
-	if { $mirror_link != "" } {
-	    set msg "Creating link $link/$mirror_link"
-	    set pending_links [removeFromList $pending_links $mirror_link]
+	set msg "Creating link $link_id"
+	set mirror_link_id [getLinkMirror $link_id]
+	if { $mirror_link_id != "" } {
+	    set msg "Creating link $link_id/$mirror_link_id"
+	    set pending_links [removeFromList $pending_links $mirror_link_id]
 
-	    lassign "[lindex [getLinkPeers $mirror_link] 0] $lnode1" lnode1 lnode2
-	    lassign "[lindex [getLinkPeersIfaces $mirror_link] 0] $ifname1" ifname1 ifname2
+	    lassign "[lindex [getLinkPeers $mirror_link_id] 0] $node1_id" node1_id node2_id
+	    lassign "[lindex [getLinkPeersIfaces $mirror_link_id] 0] $iface1_id" iface1_id iface2_id
 	}
 
 	displayBatchProgress $batchStep $linkCount
 
 	try {
-	    if { [getLinkDirect $link] || [getNodeType $lnode1] == "wlan" || [getNodeType $lnode2] == "wlan" } {
-		createDirectLinkBetween $lnode1 $lnode2 $ifname1 $ifname2
+	    if { [getLinkDirect $link_id] || [getNodeType $node1_id] == "wlan" || [getNodeType $node2_id] == "wlan" } {
+		createDirectLinkBetween $node1_id $node2_id $iface1_id $iface2_id
 	    } else {
-		createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
+		createLinkBetween $node1_id $node2_id $iface1_id $iface2_id $link_id
 	    }
 	} on error err {
-	    return -code error "Error in 'createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link': $err"
+	    return -code error "Error in 'createLinkBetween $node1_id $node2_id $iface1_id $iface2_id $link_id': $err"
 	}
 
 	incr batchStep
@@ -990,31 +990,31 @@ proc configureLinks { links linkCount w } {
 
     set batchStep 0
     for { set pending_links $links } { $pending_links != "" } {} {
-	set link [lindex $pending_links 0]
-	set i [lsearch -exact $pending_links $link]
+	set link_id [lindex $pending_links 0]
+	set i [lsearch -exact $pending_links $link_id]
 	set pending_links [lreplace $pending_links $i $i]
 
-	set lnode1 [lindex [getLinkPeers $link] 0]
-	set lnode2 [lindex [getLinkPeers $link] 1]
-	set ifname1 [lindex [getLinkPeersIfaces $link] 0]
-	set ifname2 [lindex [getLinkPeersIfaces $link] 1]
+	set node1_id [lindex [getLinkPeers $link_id] 0]
+	set node2_id [lindex [getLinkPeers $link_id] 1]
+	set iface1_id [lindex [getLinkPeersIfaces $link_id] 0]
+	set iface2_id [lindex [getLinkPeersIfaces $link_id] 1]
 
-	set msg "Configuring link $link"
-	set mirror_link [getLinkMirror $link]
-	if { $mirror_link != "" } {
-	    set msg "Configuring link $link/$mirror_link"
-	    set pending_links [removeFromList $pending_links $mirror_link]
+	set msg "Configuring link $link_id"
+	set mirror_link_id [getLinkMirror $link_id]
+	if { $mirror_link_id != "" } {
+	    set msg "Configuring link $link_id/$mirror_link_id"
+	    set pending_links [removeFromList $pending_links $mirror_link_id]
 
-	    lassign "[lindex [getLinkPeers $mirror_link] 0] $lnode1" lnode1 lnode2
-	    lassign "[lindex [getLinkPeersIfaces $mirror_link] 0] $ifname1" ifname1 ifname2
+	    lassign "[lindex [getLinkPeers $mirror_link_id] 0] $node1_id" node1_id node2_id
+	    lassign "[lindex [getLinkPeersIfaces $mirror_link_id] 0] $iface1_id" iface1_id iface2_id
 	}
 
 	displayBatchProgress $batchStep $linkCount
 
 	try {
-	    configureLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link
+	    configureLinkBetween $node1_id $node2_id $iface1_id $iface2_id $link_id
 	} on error err {
-	    return -code error "Error in 'configureLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link': $err"
+	    return -code error "Error in 'configureLinkBetween $node1_id $node2_id $iface1_id $iface2_id $link_id': $err"
 	}
 
 	incr batchStep
@@ -1037,7 +1037,7 @@ proc configureLinks { links linkCount w } {
     }
 }
 
-proc executeConfNodes { nodes nodeCount w } {
+proc executeConfNodes { nodes nodes_count w } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
@@ -1047,7 +1047,7 @@ proc executeConfNodes { nodes nodeCount w } {
     foreach node $nodes {
 	upvar 0 ::cf::[set ::curcfg]::$node $node
 
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
 
 	if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
 	    lassign [getDefaultGateways $node $subnet_gws $nodes_l2data] my_gws subnet_gws nodes_l2data
@@ -1076,8 +1076,8 @@ proc executeConfNodes { nodes nodeCount w } {
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
@@ -1097,7 +1097,7 @@ proc executeConfNodes { nodes nodeCount w } {
 #****
 proc generateHostsFile { node_id } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::etchosts etchosts
+    upvar 0 ::cf::[set ::curcfg]::etchosts etc_hosts
 
     global auto_etc_hosts
 
@@ -1105,7 +1105,7 @@ proc generateHostsFile { node_id } {
 	return
     }
 
-    if { $etchosts == "" } {
+    if { $etc_hosts == "" } {
 	foreach other_node_id $node_list {
 	    if { [[getNodeType $other_node_id].virtlayer] != "VIRTUALIZED" } {
 		continue
@@ -1122,9 +1122,9 @@ proc generateHostsFile { node_id } {
 		foreach ipv4 [getIfcIPv4addrs $other_node_id $ifc] {
 		    set ipv4 [lindex [split $ipv4 "/"] 0]
 		    if { $ctr == 0 } {
-			set etchosts "$etchosts$ipv4	${node_name}\n"
+			set etc_hosts "$etc_hosts$ipv4	${node_name}\n"
 		    } else {
-			set etchosts "$etchosts$ipv4	${node_name}_${ctr}\n"
+			set etc_hosts "$etc_hosts$ipv4	${node_name}_${ctr}\n"
 		    }
 		    incr ctr
 		}
@@ -1132,9 +1132,9 @@ proc generateHostsFile { node_id } {
 		foreach ipv6 [getIfcIPv6addrs $other_node_id $ifc] {
 		    set ipv6 [lindex [split $ipv6 "/"] 0]
 		    if { $ctr6 == 0 } {
-			set etchosts "$etchosts$ipv6	${node_name}.6\n"
+			set etc_hosts "$etc_hosts$ipv6	${node_name}.6\n"
 		    } else {
-			set etchosts "$etchosts$ipv6	${node_name}_${ctr6}.6\n"
+			set etc_hosts "$etc_hosts$ipv6	${node_name}_${ctr6}.6\n"
 		    }
 		    incr ctr6
 		}
@@ -1142,17 +1142,17 @@ proc generateHostsFile { node_id } {
 	}
     }
 
-    writeDataToNodeFile $node_id /etc/hosts $etchosts
+    writeDataToNodeFile $node_id /etc/hosts $etc_hosts
 }
 
-proc waitForConfStart { nodes nodeCount w } {
+proc waitForConfStart { nodes nodes_count w } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set batchStep 0
     set nodes_left $nodes
     while { [llength $nodes_left] > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
 	foreach node $nodes_left {
 	    if { ! [isNodeConfigured $node] } {
 		continue
@@ -1167,14 +1167,14 @@ proc waitForConfStart { nodes nodeCount w } {
 		$w.p configure -value $progressbarCount
 		update
 	    }
-	    displayBatchProgress $batchStep $nodeCount
+	    displayBatchProgress $batchStep $nodes_count
 
 	    set nodes_left [removeFromList $nodes_left $node]
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
@@ -1199,7 +1199,7 @@ proc finishExecuting { status msg w } {
     }
 }
 
-proc checkForErrors { nodes nodeCount w } {
+proc checkForErrors { nodes nodes_count w } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
@@ -1221,11 +1221,11 @@ proc checkForErrors { nodes nodeCount w } {
 	    $w.p configure -value $progressbarCount
 	    update
 	}
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
