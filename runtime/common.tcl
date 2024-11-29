@@ -355,23 +355,23 @@ proc setOperMode { mode } {
 #   node.
 #****
 proc spawnShellExec {} {
-    set node [lindex [.panwin.f1.c gettags {node && current}] 1]
-    if { $node == "" } {
-	set node [lindex [.panwin.f1.c gettags {nodelabel && current}] 1]
-	if { $node == "" } {
+    set node_id [lindex [.panwin.f1.c gettags {node && current}] 1]
+    if { $node_id == "" } {
+	set node_id [lindex [.panwin.f1.c gettags {nodelabel && current}] 1]
+	if { $node_id == "" } {
 	    return
 	}
     }
 
-    if { [[getNodeType $node].virtlayer] != "VIRTUALIZED" } {
-	nodeConfigGUI .panwin.f1.c $node
+    if { [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" } {
+	nodeConfigGUI .panwin.f1.c $node_id
     } else {
-	set cmd [lindex [existingShells [[getNodeType $node].shellcmds] $node] 0]
+	set cmd [lindex [existingShells [[getNodeType $node_id].shellcmds] $node_id] 0]
 	if { $cmd == "" } {
 	    return
 	}
 
-	spawnShell $node $cmd
+	spawnShell $node_id $cmd
     }
 }
 
