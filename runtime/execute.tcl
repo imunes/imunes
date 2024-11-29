@@ -524,7 +524,7 @@ proc deployCfg {} {
     set pseudoNodesCount 0
     foreach node $node_list {
 	if { [nodeType $node] != "pseudo" } {
-	    if { [[typemodel $node].virtlayer] != "VIRTUALIZED" } {
+	    if { [[nodeType $node].virtlayer] != "VIRTUALIZED" } {
 		lappend l2nodes $node
 	    } else {
 		lappend l3nodes $node
@@ -678,11 +678,11 @@ proc instantiateNodes { nodes nodeCount w } {
     foreach node $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	if { [info procs [typemodel $node].instantiate] != "" } {
+	if { [info procs [nodeType $node].instantiate] != "" } {
 	    try {
-		[typemodel $node].instantiate $eid $node
+		[nodeType $node].instantiate $eid $node
 	    } on error err {
-		return -code error "Error in '[typemodel $node].instantiate $eid $node': $err"
+		return -code error "Error in '[nodeType $node].instantiate $eid $node': $err"
 	    }
 	    pipesExec ""
 	}
@@ -749,11 +749,11 @@ proc setupNodeNamespaces { nodes nodeCount w } {
     foreach node $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	if { [info procs [typemodel $node].setupNamespace] != "" } {
+	if { [info procs [nodeType $node].setupNamespace] != "" } {
 	    try {
-		[typemodel $node].setupNamespace $eid $node
+		[nodeType $node].setupNamespace $eid $node
 	    } on error err {
-		return -code error "Error in '[typemodel $node].setupNamespace $eid $node': $err"
+		return -code error "Error in '[nodeType $node].setupNamespace $eid $node': $err"
 	    }
 	    pipesExec ""
 	}
@@ -821,9 +821,9 @@ proc initConfigureNodes { nodes nodeCount w } {
 	displayBatchProgress $batchStep $nodeCount
 
 	try {
-	    [typemodel $node].initConfigure $eid $node
+	    [nodeType $node].initConfigure $eid $node
 	} on error err {
-	    return -code error "Error in '[typemodel $node].initConfigure $eid $node': $err"
+	    return -code error "Error in '[nodeType $node].initConfigure $eid $node': $err"
 	}
 	pipesExec ""
 
@@ -891,12 +891,12 @@ proc createNodesInterfaces { nodes nodeCount w } {
     foreach node $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	if {[info procs [typemodel $node].createIfcs] != ""} {
+	if {[info procs [nodeType $node].createIfcs] != ""} {
 	    set ifcs [ifcList $node]
 	    try {
-		[typemodel $node].createIfcs $eid $node $ifcs
+		[nodeType $node].createIfcs $eid $node $ifcs
 	    } on error err {
-		return -code error "Error in '[typemodel $node].createIfcs $eid $node $ifcs': $err"
+		return -code error "Error in '[nodeType $node].createIfcs $eid $node $ifcs': $err"
 	    }
 	    pipesExec ""
 	}
@@ -1053,11 +1053,11 @@ proc executeConfNodes { nodes nodeCount w } {
 	    setDefaultIPv6routes $node $all_routes6
 	}
 
-	if {[info procs [typemodel $node].start] != ""} {
+	if {[info procs [nodeType $node].start] != ""} {
 	    try {
-		[typemodel $node].start $eid $node
+		[nodeType $node].start $eid $node
 	    } on error err {
-		return -code error "Error in '[typemodel $node].start $eid $node': $err"
+		return -code error "Error in '[nodeType $node].start $eid $node': $err"
 	    }
 	}
 	pipesExec ""
@@ -1097,13 +1097,13 @@ proc generateHostsFile { node_id } {
 
     global hostsAutoAssign
 
-    if { $hostsAutoAssign != 1 || [[typemodel $node_id].virtlayer] != "VIRTUALIZED" } {
+    if { $hostsAutoAssign != 1 || [[nodeType $node_id].virtlayer] != "VIRTUALIZED" } {
 	return
     }
 
     if { $etchosts == "" } {
 	foreach other_node_id $node_list {
-	    if { [[typemodel $other_node_id].virtlayer] != "VIRTUALIZED" } {
+	    if { [[nodeType $other_node_id].virtlayer] != "VIRTUALIZED" } {
 		continue
 	    }
 
@@ -1247,7 +1247,7 @@ proc checkForErrors { nodes nodeCount w } {
 # SYNOPSIS
 #   startNodeFromMenu $node
 # FUNCTION
-#   Invokes the [typmodel $node].start procedure, along with services startup.
+#   Invokes the [nodeType $node].start procedure, along with services startup.
 # INPUTS
 #   * node -- node id
 #****

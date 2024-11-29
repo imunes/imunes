@@ -191,7 +191,7 @@ proc listLANnodes { l2node l2peers } {
     lappend l2peers $l2node
     foreach ifc [ifcList $l2node] {
 	lassign [logicalPeerByIfc $l2node $ifc] peer -
-	if {[[typemodel $peer].layer] == "LINK" &&  [nodeType $peer] != "rj45"} {
+	if {[[nodeType $peer].layer] == "LINK" &&  [nodeType $peer] != "rj45"} {
 	    if { [lsearch $l2peers $peer] == -1 } {
 		set l2peers [listLANnodes $peer $l2peers]
 	    }

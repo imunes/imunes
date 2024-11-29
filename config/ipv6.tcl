@@ -122,18 +122,18 @@ proc autoIPv6addr { node iface } {
     set peer_ip6addrs {}
 
 
-    if { [[typemodel $node].layer] != "NETWORK" } { 
+    if { [[nodeType $node].layer] != "NETWORK" } { 
 	#
 	# Shouldn't get called at all for link-layer nodes
 	#
-	#puts "autoIPv6 called for a [[typemodel $node].layer] layer node"
+	#puts "autoIPv6 called for a [[nodeType $node].layer] layer node"
 	return
     }  
 
     setIfcIPv6addrs $node $iface ""
     lassign [logicalPeerByIfc $node $iface] peer_node peer_if
 
-    if { [[typemodel $peer_node].layer] == "LINK" } {
+    if { [[nodeType $peer_node].layer] == "LINK" } {
 	foreach l2node [listLANnodes $peer_node {}] {
 	    foreach ifc [ifcList $l2node] {
 		lassign [logicalPeerByIfc $l2node $ifc] peer peer_if

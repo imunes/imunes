@@ -590,7 +590,7 @@ proc button3node { c x y } {
     # Transform
     #
     .button3menu.transform delete 0 end
-    if { $oper_mode == "exec" || $type == "pseudo" || $type == "ext" || [[typemodel $node].layer] != "NETWORK" } {
+    if { $oper_mode == "exec" || $type == "pseudo" || $type == "ext" || [[nodeType $node].layer] != "NETWORK" } {
 #	.button3menu add cascade -label "Transform to" \
 #	    -menu .button3menu.transform -state disabled
     } else {
@@ -719,8 +719,8 @@ proc button3node { c x y } {
     #
     # Start & stop node
     #
-    if {$oper_mode == "exec" && [info procs [typemodel $node].start] != "" \
-	&& [info procs [typemodel $node].shutdown] != ""} {
+    if {$oper_mode == "exec" && [info procs [nodeType $node].start] != "" \
+	&& [info procs [nodeType $node].shutdown] != ""} {
 	.button3menu add command -label Start \
 	    -command "startNodeFromMenu $node"
 	.button3menu add command -label Stop \
@@ -730,16 +730,16 @@ proc button3node { c x y } {
 	     startNodeFromMenu $node" 
     } else {
 #	.button3menu add command -label Start \
-#	    -command "[typemodel $node].start $eid $node" -state disabled
+#	    -command "[nodeType $node].start $eid $node" -state disabled
 #	.button3menu add command -label Stop \
-#	    -command "[typemodel $node].shutdown $eid $node" -state disabled 
+#	    -command "[nodeType $node].shutdown $eid $node" -state disabled 
     }
 
     #
     # Services menu
     #
     .button3menu.services delete 0 end
-    if {$oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIRTUALIZED" && $type != "ext"} {
+    if {$oper_mode == "exec" && [[nodeType $node].virtlayer] == "VIRTUALIZED" && $type != "ext"} {
 	global all_services_list
 	.button3menu add cascade -label "Services" \
 	    -menu .button3menu.services
@@ -790,7 +790,7 @@ proc button3node { c x y } {
     #
     # IPv4 autorenumber
     #
-    if { $oper_mode == "exec" || [[typemodel $node].layer] == "LINK" \
+    if { $oper_mode == "exec" || [[nodeType $node].layer] == "LINK" \
 	|| $type == "pseudo" } {
 #	.button3menu add command -label "IPv4 autorenumber" \
 #	    -state disabled
@@ -807,7 +807,7 @@ proc button3node { c x y } {
     #
     # IPv6 autorenumber
     #
-    if { $oper_mode == "exec" || [[typemodel $node].layer] == "LINK" \
+    if { $oper_mode == "exec" || [[nodeType $node].layer] == "LINK" \
 	|| $type == "pseudo" } {
 #	.button3menu add command -label "IPv6 autorenumber" \
 #	    -state disabled
@@ -826,11 +826,11 @@ proc button3node { c x y } {
     # Shell selection
     #
     .button3menu.shell delete 0 end
-    if {$type != "ext" && $oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIRTUALIZED"} {
+    if {$type != "ext" && $oper_mode == "exec" && [[nodeType $node].virtlayer] == "VIRTUALIZED"} {
 	.button3menu add separator
 	.button3menu add cascade -label "Shell window" \
 	    -menu .button3menu.shell
-	foreach cmd [existingShells [[typemodel $node].shellcmds] $node] {
+	foreach cmd [existingShells [[nodeType $node].shellcmds] $node] {
 	    .button3menu.shell add command -label "[lindex [split $cmd /] end]" \
 		-command "spawnShell $node $cmd"
 	}
@@ -865,7 +865,7 @@ proc button3node { c x y } {
 	    .button3menu add command -label "tcpdump" \
 		-command "captureOnExtIfc $node tcpdump"
 	}
-    } elseif {$oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIRTUALIZED"} {
+    } elseif {$oper_mode == "exec" && [[nodeType $node].virtlayer] == "VIRTUALIZED"} {
 	#
 	# Wireshark
 	#
@@ -1943,7 +1943,7 @@ proc changeAddressRange {} {
 
     #spremanje svih selektiranih link_layer cvorova u listu link_nodes_selected
     foreach node [lsort -dictionary $selected_nodes] {
-	if { [[typemodel $node].layer] == "LINK" } {
+	if { [[nodeType $node].layer] == "LINK" } {
 	    lappend link_nodes_selected $node
 	}
     }
@@ -1966,7 +1966,7 @@ proc changeAddressRange {} {
 	    set autorenumber_nodes ""
 	    foreach ifc [ifcList $node] {
 		lassign [logicalPeerByIfc $node $ifc] peer peer_ifc
-		if { $peer != "" && [[typemodel $peer].layer] != "LINK" && $peer in $selected_nodes } {
+		if { $peer != "" && [[nodeType $peer].layer] != "LINK" && $peer in $selected_nodes } {
 		    lappend autorenumber_nodes "$peer $peer_ifc"
 		}
 	    }
@@ -1990,10 +1990,10 @@ proc changeAddressRange {} {
 
     #spremanje svih selektiranih cvorova koji nisu povezani s link_layer cvorom u listu autorenumber_nodes
     foreach node $selected_nodes {
-	if { [[typemodel $node].layer] != "LINK" } {
+	if { [[nodeType $node].layer] != "LINK" } {
 	    foreach ifc [ifcList $node] {
 		lassign [logicalPeerByIfc $node $ifc] peer -
-		if { $peer != "" && [[typemodel $peer].layer] != "LINK" && $peer in $selected_nodes } {
+		if { $peer != "" && [[nodeType $peer].layer] != "LINK" && $peer in $selected_nodes } {
 		    lappend autorenumber_ifcs "$node $ifc"
 		    if { [lsearch $autorenumber_nodes $node] == -1 } {
 			lappend autorenumber_nodes $node
@@ -2060,7 +2060,7 @@ proc changeAddressRange6 {} {
 
     #spremanje svih selektiranih link_layer cvorova u listu link_nodes_selected
     foreach node [lsort -dictionary $selected_nodes] {
-	if { [[typemodel $node].layer] == "LINK" } {
+	if { [[nodeType $node].layer] == "LINK" } {
 	    lappend link_nodes_selected $node
 	}
     }
@@ -2083,7 +2083,7 @@ proc changeAddressRange6 {} {
 	    set autorenumber_nodes ""
 	    foreach ifc [ifcList $node] {
 		lassign [logicalPeerByIfc $node $ifc] peer peer_ifc
-		if { $peer != "" && [[typemodel $peer].layer] != "LINK" && $peer in $selected_nodes } {
+		if { $peer != "" && [[nodeType $peer].layer] != "LINK" && $peer in $selected_nodes } {
 		    lappend autorenumber_nodes "$peer $peer_ifc"
 		}
 	    }
@@ -2107,10 +2107,10 @@ proc changeAddressRange6 {} {
 
     #spremanje svih selektiranih cvorova koji nisu povezani s link_layer cvorom u listu autorenumber_nodes
     foreach node $selected_nodes {
-	if { [[typemodel $node].layer] != "LINK" } {
+	if { [[nodeType $node].layer] != "LINK" } {
 	    foreach ifc [ifcList $node] {
 		lassign [logicalPeerByIfc $node $ifc] peer -
-		if { $peer != "" && [[typemodel $peer].layer] != "LINK" && $peer in $selected_nodes } {
+		if { $peer != "" && [[nodeType $peer].layer] != "LINK" && $peer in $selected_nodes } {
 		    lappend autorenumber_ifcs "$node $ifc"
 		    if { [lsearch $autorenumber_nodes $node] == -1 } {
 			lappend autorenumber_nodes $node
