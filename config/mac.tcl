@@ -61,36 +61,48 @@ proc randomizeMACbytes {} {
 #   * iface -- the interface to witch a new, automatilacy generated, MAC  
 #     address will be assigned
 #****
-proc autoMACaddr { node ifc } {
+proc autoMACaddr { node iface } {
     upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
-    global mac_byte4 mac_byte5 mac_byte6
 
     if { [nodeType $node] ni "ext extnat" && [[nodeType $node].virtlayer] != "VIRTUALIZED" } {
 	return
     }
 
+    set old_mac [getIfcMACaddr $node $iface]
+    if { $old_mac != "" } {
+	set MACUsedList [removeFromList $MACUsedList $old_mac]
+    }
+
+    set macaddr [getNextMACaddr $MACUsedList]
+
+    lappend MACUsedList $macaddr
+    setIfcMACaddr $node $iface $macaddr
+}
+
+proc getNextMACaddr { { mac_used_list "" } } {
+    global mac_byte4 mac_byte5 mac_byte6
+
     set mac_byte6 0
     set macaddr [MACaddrAddZeros 42:00:aa:[format %x $mac_byte4]:[format %x $mac_byte5]:[format %x $mac_byte6]]
-    while { $macaddr in $MACUsedList } {
+    while { $macaddr in $mac_used_list } {
 	incr mac_byte6
 	if { $mac_byte6 > 255 } {
-            if { $mac_byte5 > 255 } {
-                set mac_byte6 0
-	        set mac_byte5 0
-	        incr mac_byte4
+	    if { $mac_byte5 > 255 } {
+		set mac_byte6 0
+		set mac_byte5 0
+		incr mac_byte4
 		if { $mac_byte4 > 255 } {
 		    set macaddr "00:00:00:00:00:00"
 		}
 	    } else {
-	        set mac_byte6 0
-	        incr mac_byte5
-            }
+		set mac_byte6 0
+		incr mac_byte5
+	    }
 	}
 	set macaddr [MACaddrAddZeros 42:00:aa:[format %x $mac_byte4]:[format %x $mac_byte5]:[format %x $mac_byte6]]
     }
 
-    lappend MACUsedList $macaddr
-    setIfcMACaddr $node $ifc $macaddr
+    return $macaddr
 }
 
 #****f* mac.tcl/MACaddrAddZeros

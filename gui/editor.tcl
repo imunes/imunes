@@ -172,11 +172,11 @@ proc l3IfcName {lnode rnode} {
     }
 }
 
-#****f* editor.tcl/listLANNodes
+#****f* editor.tcl/listLANnodes
 # NAME
-#   listLANNodes -- list LAN nodes
+#   listLANnodes -- list LAN nodes
 # SYNOPSIS
-#   set l2peers [listLANNodes $l2node $l2peers]
+#   set l2peers [listLANnodes $l2node $l2peers]
 # FUNCTION
 #   Recursive function for finding all link layer nodes that are 
 #   connected to node l2node. Returns the list of all link layer 
