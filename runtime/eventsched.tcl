@@ -285,11 +285,11 @@ proc sched_init {} {
 	}
     }
 
-    foreach node $node_list {
-	set evlist [getLinkEvents $node]
+    foreach node_id $node_list {
+	set evlist [getLinkEvents $node_id]
 	foreach event $evlist {
 	    lappend eventqueue \
-		"[lindex $event 0] node $node [lrange $event 1 end]"
+		"[lindex $event 0] node $node_id [lrange $event 1 end]"
 	}
     }
 
@@ -317,10 +317,10 @@ proc sched_init {} {
 # RESULT
 #   * events -- list of events
 #****
-proc getLinkEvents { link } {
-    upvar 0 ::cf::[set ::curcfg]::$link $link
+proc getLinkEvents { link_id } {
+    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
 
-    set entry [lsearch -inline [set $link] "events *"]
+    set entry [lsearch -inline [set $link_id] "events *"]
     return [lsort -index 0 -integer [lindex $entry 1]]
 }
 
@@ -480,11 +480,11 @@ proc elementsEventsEditor {} {
 #     global eventnodetags
 #     set eventnodetags ""
 #     $pwi.left.tree insert {} end -id nodes -text "Nodes" -open true -tags nodes
-#     foreach node [lsort -dictionary $node_list] {
-# 	set type [getNodeType $node]
-# 	if { $type != "pseudo" && [[getNodeType $node].netlayer] == "NETWORK" } {
-# 	    $pwi.left.tree insert nodes end -id $node -text "[getNodeName $node]" -open false -tags $node
-# 	    lappend eventnodetags $node
+#     foreach node_id [lsort -dictionary $node_list] {
+# 	set type [getNodeType $node_id]
+# 	if { $type != "pseudo" && [[getNodeType $node_id].netlayer] == "NETWORK" } {
+# 	    $pwi.left.tree insert nodes end -id $node_id -text "[getNodeName $node_id]" -open false -tags $node_id
+# 	    lappend eventnodetags $node_id
 # 	}
 #     }
 

@@ -51,34 +51,34 @@ registerModule $MODULE
 # NAME
 #   hub.confNewNode -- configure new node
 # SYNOPSIS
-#   hub.confNewNode $node
+#   hub.confNewNode $node_id
 # FUNCTION
 #   Configures new node with the specified id.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.confNewNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc $MODULE.confNewNode { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global nodeNamingBase
 
     set nconfig [list \
 	"hostname [getNewNodeNameType hub $nodeNamingBase(hub)]" \
 	! ]
-    lappend $node "network-config [list $nconfig]"
+    lappend $node_id "network-config [list $nconfig]"
 }
 
 #****f* hub.tcl/hub.confNewIfc
 # NAME
 #   hub.confNewIfc -- configure new interface
 # SYNOPSIS
-#   hub.confNewIfc $node $ifc
+#   hub.confNewIfc $node_id $iface_id
 # FUNCTION
 #   Configures new interface for the specified node.
 # INPUTS
-#   * node -- node id
-#   * ifc -- interface name
+#   * node_id -- node id
+#   * iface_id -- interface name
 #****
-proc $MODULE.confNewIfc { node ifc } {
+proc $MODULE.confNewIfc { node_id iface_id } {
 }
 
 #****f* hub.tcl/hub.ifacePrefix
@@ -127,7 +127,7 @@ proc $MODULE.virtlayer {} {
 # NAME
 #   hub.nghook
 # SYNOPSIS
-#   hub.nghook $eid $node $ifc
+#   hub.nghook $eid $node_id $iface_id
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. Netgraph node name is in
@@ -135,15 +135,15 @@ proc $MODULE.virtlayer {} {
 #   where N is interface number.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
-#   * ifc -- interface name
+#   * node_id -- node id
+#   * iface_id -- interface name
 # RESULT
 #   * nghook -- the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
-proc $MODULE.nghook { eid node ifc } {
-    set ifunit [string range $ifc 1 end]
-    return [list $node link$ifunit]
+proc $MODULE.nghook { eid node_id iface_id } {
+    set ifunit [string range $iface_id 1 end]
+    return [list $node_id link$ifunit]
 }
 
 ################################################################################
@@ -166,48 +166,48 @@ proc $MODULE.prepareSystem {} {
 # NAME
 #   hub.nodeCreate -- instantiate
 # SYNOPSIS
-#   hub.nodeCreate $eid $node
+#   hub.nodeCreate $eid $node_id
 # FUNCTION
 #   Procedure hub.nodeCreate creates a new netgraph node of the type hub.
 #   The name of the netgraph node is in form of exprimentId_nodeId.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- id of the node
+#   * node_id -- id of the node
 #****
-proc $MODULE.nodeCreate { eid node } {
-    l2node.nodeCreate $eid $node
+proc $MODULE.nodeCreate { eid node_id } {
+    l2node.nodeCreate $eid $node_id
 }
 
-proc $MODULE.nodeNamespaceSetup { eid node } {
-    l2node.nodeNamespaceSetup $eid $node
+proc $MODULE.nodeNamespaceSetup { eid node_id } {
+    l2node.nodeNamespaceSetup $eid $node_id
 }
 
-proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
-    l2node.nodePhysIfacesCreate $eid $node $ifcs
+proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
+    l2node.nodePhysIfacesCreate $eid $node_id $ifaces
 }
 
 ################################################################################
 ############################# TERMINATE PROCEDURES #############################
 ################################################################################
 
-proc $MODULE.nodeIfacesDestroy { eid node ifcs } {
-    l2node.nodeIfacesDestroy $eid $node $ifcs
+proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
+    l2node.nodeIfacesDestroy $eid $node_id $ifaces
 }
 
 #****f* hub.tcl/hub.nodeDestroy
 # NAME
 #   hub.nodeDestroy -- destroy
 # SYNOPSIS
-#   hub.nodeDestroy $eid $node
+#   hub.nodeDestroy $eid $node_id
 # FUNCTION
 #   Destroys a hub. Destroys the netgraph node that represents
 #   the hub by sending a shutdown message.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- id of the node
+#   * node_id -- id of the node
 #****
-proc $MODULE.nodeDestroy { eid node } {
-    l2node.nodeDestroy $eid $node
+proc $MODULE.nodeDestroy { eid node_id } {
+    l2node.nodeDestroy $eid $node_id
 }
 
 ################################################################################
@@ -260,47 +260,47 @@ proc $MODULE.toolbarIconDescr {} {
 # NAME
 #   hub.configGUI -- configuration GUI
 # SYNOPSIS
-#   hub.configGUI $c $node
+#   hub.configGUI $c $node_id
 # FUNCTION
 #   Defines the structure of the hub configuration window by calling
 #   procedures for creating and organising the window, as well as procedures
 #   for adding certain modules to that window.
 # INPUTS
 #   * c -- tk canvas
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.configGUI { c node } {
+proc $MODULE.configGUI { c node_id } {
     global wi
     global guielements treecolumns
     set guielements {}
 
     configGUI_createConfigPopupWin $c
     wm title $wi "hub configuration"
-    configGUI_nodeName $wi $node "Node name:"
+    configGUI_nodeName $wi $node_id "Node name:"
 
     configGUI_addPanedWin $wi
     set treecolumns { "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop" }
-    configGUI_addTree $wi $node
+    configGUI_addTree $wi $node_id
 
-    configGUI_buttonsACNode $wi $node
+    configGUI_buttonsACNode $wi $node_id
 }
 
 #****f* hub.tcl/hub.configInterfacesGUI
 # NAME
 #   hub.configInterfacesGUI -- configuration of interfaces GUI
 # SYNOPSIS
-#   hub.configInterfacesGUI $wi $node $ifc
+#   hub.configInterfacesGUI $wi $node_id $iface_id
 # FUNCTION
 #   Defines which modules for changing interfaces parameters are contained in
 #   the hub configuration window. It is done by calling procedures for adding
 #   certain modules to the window.
 # INPUTS
 #   * wi -- widget
-#   * node -- node id
-#   * ifc -- interface id
+#   * node_id -- node id
+#   * iface_id -- interface id
 #****
-proc $MODULE.configInterfacesGUI { wi node ifc } {
+proc $MODULE.configInterfacesGUI { wi node_id iface_id } {
     global guielements
 
-    configGUI_ifcQueueConfig $wi $node $ifc
+    configGUI_ifcQueueConfig $wi $node_id $iface_id
 }
