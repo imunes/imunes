@@ -262,7 +262,7 @@ proc getNodeDir { node_id } {
 #   * state -- returns true if custom configuration is enabled
 #****
 proc getCustomEnabled { node_id } {
-    return [cfgGet "nodes" $node_id "custom_enabled"]
+    return [cfgGetWithDefault "false" "nodes" $node_id "custom_enabled"]
 }
 
 #****f* nodecfg.tcl/setCustomEnabled
@@ -412,7 +412,12 @@ proc getCustomConfigIDs { node_id } {
 #   * name -- the name of the interface
 #****
 proc getIfcName { node_id iface_id } {
-    return $iface_id
+    set group "ifaces"
+    if { $iface_id in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
+	set group "logifaces"
+    }
+
+    return [cfgGet "nodes" $node_id $group $iface_id "name"]
 }
 
 #****f* nodecfg.tcl/setIfcName
@@ -428,6 +433,12 @@ proc getIfcName { node_id iface_id } {
 #   * name -- new name of the interface
 #****
 proc setIfcName { node_id iface_id name } {
+    set group "ifaces"
+    if { $iface_id in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
+	set group "logifaces"
+    }
+
+    cfgSet "nodes" $node_id $group $iface_id "name" $name
 }
 
 #****f* nodecfg.tcl/getIfcOperState
@@ -1197,14 +1208,7 @@ proc getSubnetData { this_node_id this_iface_id subnet_gws nodes_l2data subnet_i
 #   * routes -- list of all static routes defined for the specified node
 #****
 proc getStatIPv4routes { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    set routes {}
-    set netconf [lindex [lsearch -inline [set $node_id] "network-config *"] 1]
-    foreach entry [lsearch -all -inline $netconf "ip route *"] {
-	lappend routes [lrange $entry 2 end]
-    }
-    return $routes
+    return [cfgGet "nodes" $node_id "croutes4"]
 }
 
 #****f* nodecfg.tcl/setStatIPv4routes
@@ -1220,12 +1224,7 @@ proc getStatIPv4routes { node_id } {
 #   * routes -- list of all static routes defined for the specified node
 #****
 proc setStatIPv4routes { node_id routes } {
-    netconfClearSection $node_id "ip route [lindex [getStatIPv4routes $node_id] 0]"
-    set section {}
-    foreach route $routes {
-	lappend section "ip route $route"
-    }
-    netconfInsertSection $node_id $section
+    cfgSet "nodes" $node_id "croutes4" $routes
 }
 
 #****f* nodecfg.tcl/getDefaultIPv4routes
@@ -1242,9 +1241,7 @@ proc setStatIPv4routes { node_id routes } {
 #   * routes -- list of all IPv4 default routes defined for the specified node
 #****
 proc getDefaultIPv4routes { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    return [lrange [lsearch -inline [set $node_id] "default_routes4 *"] 1 end]
+    return [cfgGet "nodes" $node_id "default_routes4"]
 }
 
 #****f* nodecfg.tcl/setDefaultIPv4routes
@@ -1260,20 +1257,7 @@ proc getDefaultIPv4routes { node_id } {
 #   * routes -- list of all IPv4 default routes defined for the specified node
 #****
 proc setDefaultIPv4routes { node_id routes } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    set i [lsearch [set $node_id] "default_routes4 *"]
-    if { [llength $routes] != 0 } {
-	if { $i >= 0 } {
-	    set $node_id [lreplace [set $node_id] $i $i "default_routes4 $routes"]
-	} else {
-	    set $node_id [linsert [set $node_id] end "default_routes4 $routes"]
-	}
-    } else {
-	if { $i >= 0 } {
-	    set $node_id [lreplace [set $node_id] $i $i]
-	}
-    }
+    cfgSet "nodes" $node_id "default_routes4" $routes
 }
 
 #****f* nodecfg.tcl/getDefaultIPv6routes
@@ -1290,9 +1274,7 @@ proc setDefaultIPv4routes { node_id routes } {
 #   * routes -- list of all IPv6 default routes defined for the specified node
 #****
 proc getDefaultIPv6routes { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    return [lrange [lsearch -inline [set $node_id] "default_routes6 *"] 1 end]
+    return [cfgGet "nodes" $node_id "default_routes6"]
 }
 
 #****f* nodecfg.tcl/setDefaultIPv6routes
@@ -1308,20 +1290,7 @@ proc getDefaultIPv6routes { node_id } {
 #   * routes -- list of all IPv6 default routes defined for the specified node
 #****
 proc setDefaultIPv6routes { node_id routes } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    set i [lsearch [set $node_id] "default_routes6 *"]
-    if { [llength $routes] != 0 } {
-	if { $i >= 0 } {
-	    set $node_id [lreplace [set $node_id] $i $i "default_routes6 $routes"]
-	} else {
-	    set $node_id [linsert [set $node_id] end "default_routes6 $routes"]
-	}
-    } else {
-	if { $i >= 0 } {
-	    set $node_id [lreplace [set $node_id] $i $i]
-	}
-    }
+    cfgSet "nodes" $node_id "default_routes6" $routes
 }
 
 #****f* nodecfg.tcl/getStatIPv6routes
@@ -1338,14 +1307,7 @@ proc setDefaultIPv6routes { node_id routes } {
 #   * routes -- list of all static routes defined for the specified node
 #****
 proc getStatIPv6routes { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    set routes {}
-    set netconf [lindex [lsearch -inline [set $node_id] "network-config *"] 1]
-    foreach entry [lsearch -all -inline $netconf "ipv6 route *"] {
-	lappend routes [lrange $entry 2 end]
-    }
-    return $routes
+    return [cfgGet "nodes" $node_id "croutes6"]
 }
 
 #****f* nodecfg.tcl/setStatIPv6routes
@@ -1361,12 +1323,7 @@ proc getStatIPv6routes { node_id } {
 #   * routes -- list of all static routes defined for the specified node
 #****
 proc setStatIPv6routes { node_id routes } {
-    netconfClearSection $node_id "ipv6 route [lindex [getStatIPv6routes $node_id] 0]"
-    set section {}
-    foreach route $routes {
-	lappend section "ipv6 route $route"
-    }
-    netconfInsertSection $node_id $section
+    cfgSet "nodes" $node_id "croutes6" $routes
 }
 
 #****f* nodecfg.tcl/getDefaultRoutesConfig
@@ -1456,10 +1413,7 @@ proc getDefaultRoutesConfig { node_id gws } {
 #   * name -- logical name of the node
 #****
 proc getNodeName { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    set netconf [lindex [lsearch -inline [set $node_id] "network-config *"] 1]
-    return [lrange [lsearch -inline $netconf "hostname *"] 1 end]
+    return [cfgGet "nodes" $node_id "name"]
 }
 
 #****f* nodecfg.tcl/setNodeName
@@ -1474,8 +1428,12 @@ proc getNodeName { node_id } {
 #   * name -- logical name of the node
 #****
 proc setNodeName { node_id name } {
-    netconfClearSection $node_id "hostname [getNodeName $node_id]"
-    netconfInsertSection $node_id [list "hostname $name"]
+    cfgSet "nodes" $node_id "name" $name
+    set node_type [getNodeType $node_id]
+    if { $node_type == "pseudo" } {
+	return
+    }
+
 }
 
 #****f* nodecfg.tcl/getNodeType

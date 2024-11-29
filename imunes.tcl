@@ -84,7 +84,7 @@ try {
     exit 1
 }
 
-safePackageRequire [list cmdline platform ip base64]
+safePackageRequire [list cmdline platform ip base64 json json::write]
 
 set initMode 0
 set execMode interactive
@@ -333,12 +333,6 @@ if { $execMode == "interactive" } {
 
 	global currentFileBatch
 	set currentFileBatch $argv
-	set fileId [open $argv r]
-	set cfg ""
-	foreach entry [read $fileId] {
-	    lappend cfg $entry
-	}
-	close $fileId
 
 	set curcfg [newObjectId $cfg_list "cfg"]
 	lappend cfg_list $curcfg
@@ -349,7 +343,6 @@ if { $execMode == "interactive" } {
 	set dict_cfg [dict create]
 	set dict_run [dict create]
 
-	loadCfgLegacy $cfg
 	set execute_vars [dict create]
 
 	setToRunning "eid" ""
@@ -360,6 +353,9 @@ if { $execMode == "interactive" } {
 	setToRunning "undolevel" 0
 	setToRunning "redolevel" 0
 	setToRunning "zoom" $zoom
+
+	readCfgJson $currentFileBatch
+
 	if { [checkExternalInterfaces] } {
 	    return
 	}
@@ -371,13 +367,6 @@ if { $execMode == "interactive" } {
     } else {
 	set configFile "$runtimeDir/$eid_base/config.imn"
 	if { [file exists $configFile] && $regular_termination } {
-	    set fileId [open $configFile r]
-	    set cfg ""
-	    foreach entry [read $fileId] {
-		lappend cfg $entry
-	    }
-	    close $fileId
-
 	    set curcfg [newObjectId $cfg_list "cfg"]
 	    lappend cfg_list $curcfg
 
@@ -388,7 +377,7 @@ if { $execMode == "interactive" } {
 	    set dict_run [dict create]
 	    set execute_vars [dict create]
 
-	    loadCfgLegacy $cfg
+	    readCfgJson $configFile
 
 	    setToRunning "eid" $eid_base
 	    undeployCfg $eid_base

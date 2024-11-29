@@ -84,6 +84,7 @@ set file_types {
 #****
 proc newProject {} {
     global curcfg cfg_list
+    global CFG_VERSION
 
     set curcfg [newObjectId $cfg_list "cfg"]
     lappend cfg_list $curcfg
@@ -91,9 +92,12 @@ proc newProject {} {
     namespace eval ::cf::[set curcfg] {}
     upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-    set dict_run [dict create]
 
-    loadCfgLegacy ""
+    set dict_cfg [dict create]
+    cfgSet "options" "version" $CFG_VERSION
+
+    set dict_run [dict create]
+    set execute_vars [dict create]
 
     setToRunning "eid" ""
     setToRunning "oper_mode" "edit"
@@ -221,7 +225,7 @@ proc openFile {} {
     setToRunning "stop_sched" true
     setToRunning "undolevel" 0
     setToRunning "redolevel" 0
-    saveToUndoLevel 0 $cfg
+    saveToUndoLevel 0
     setActiveTool select
     updateProjectMenu
     setWmTitle $current_file
