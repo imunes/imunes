@@ -103,17 +103,17 @@ proc findFreeIPv6Net { mask { ipv6_used_list "" } } {
 # NAME
 #   autoIPv6addr -- automaticaly assign an IPv6 address
 # SYNOPSIS
-#   autoIPv6addr $node $iface
+#   autoIPv6addr $node_id $iface_id
 # FUNCTION
-#   automaticaly assignes an IPv6 address to the interface $iface of
-#   of the node $node.
+#   automaticaly assignes an IPv6 address to the interface $iface_id of
+#   of the node $node_id.
 # INPUTS
-#   * node -- the node containing the interface to witch a new
+#   * node_id -- the node containing the interface to witch a new
 #     IPv6 address should be assigned
-#   * iface -- the interface to witch a new, automatically generated, IPv6
+#   * iface_id -- the interface to witch a new, automatically generated, IPv6
 #     address will be assigned
 #****
-proc autoIPv6addr { node iface } {
+proc autoIPv6addr { node_id iface_id } {
     upvar 0 ::cf::[set ::curcfg]::IPv6UsedList IPv6UsedList
     global IPv6autoAssign
 
@@ -126,7 +126,7 @@ proc autoIPv6addr { node iface } {
     #changeAddressRange6 - is this procedure called from 'changeAddressRange' (1 if true, otherwise 0)
     #autorenumbered_ifcs6 - list of all interfaces that changed an address
 
-    set node_type [getNodeType $node]
+    set node_type [getNodeType $node_id]
     if { [$node_type.netlayer] != "NETWORK" } {
 	#
 	# Shouldn't get called at all for link-layer nodes
@@ -134,24 +134,24 @@ proc autoIPv6addr { node iface } {
 	return
     }
 
-    set IPv6UsedList [removeFromList $IPv6UsedList [getIfcIPv6addrs $node $iface] "keep_doubles"]
+    set IPv6UsedList [removeFromList $IPv6UsedList [getIfcIPv6addrs $node_id $iface_id] "keep_doubles"]
 
-    setIfcIPv6addrs $node $iface ""
+    setIfcIPv6addrs $node_id $iface_id ""
 
-    lassign [logicalPeerByIfc $node $iface] peer_node peer_if
+    lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
     set peer_ip6addrs {}
-    if { $peer_node != "" } {
-	if { [[getNodeType $peer_node].netlayer] == "LINK" } {
-	    foreach l2node [listLANNodes $peer_node {}] {
-		foreach ifc [ifcList $l2node] {
-		    lassign [logicalPeerByIfc $l2node $ifc] peer peer_if
-		    set peer_ip6addr [getIfcIPv6addrs $peer $peer_if]
+    if { $peer_id != "" } {
+	if { [[getNodeType $peer_id].netlayer] == "LINK" } {
+	    foreach l2node [listLANNodes $peer_id {}] {
+		foreach l2node_iface_id [ifcList $l2node] {
+		    lassign [logicalPeerByIfc $l2node $l2node_iface_id] new_peer_id new_peer_iface_id
+		    set peer_ip6addr [getIfcIPv6addrs $new_peer_id $new_peer_iface_id]
 		    if { $peer_ip6addr == "" } {
 			continue
 		    }
 
 		    if { $changeAddressRange6 == 1 } {
-			if { "$peer $peer_if" in $autorenumbered_ifcs6 } {
+			if { "$new_peer_id $new_peer_iface_id" in $autorenumbered_ifcs6 } {
 			    lappend peer_ip6addrs {*}$peer_ip6addr
 			}
 		    } else {
@@ -160,7 +160,7 @@ proc autoIPv6addr { node iface } {
 		}
 	    }
 	} else {
-	    set peer_ip6addrs [getIfcIPv6addrs $peer_node $peer_if]
+	    set peer_ip6addrs [getIfcIPv6addrs $peer_id $peer_iface_id]
 	}
     }
 
@@ -171,7 +171,7 @@ proc autoIPv6addr { node iface } {
 	set addr [getNextIPv6addr $node_type $IPv6UsedList]
     }
 
-    setIfcIPv6addrs $node $iface $addr
+    setIfcIPv6addrs $node_id $iface_id $addr
     lappend IPv6UsedList $addr
 }
 

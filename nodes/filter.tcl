@@ -44,17 +44,17 @@ registerModule $MODULE
 ########################### CONFIGURATION PROCEDURES ###########################
 ################################################################################
 
-proc $MODULE.confNewNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc $MODULE.confNewNode { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global nodeNamingBase
 
     set nconfig [list \
 	"hostname [getNewNodeNameType filter $nodeNamingBase(filter)]" \
 	! ]
-    lappend $node "network-config [list $nconfig]"
+    lappend $node_id "network-config [list $nconfig]"
 }
 
-proc $MODULE.confNewIfc { node iface } {
+proc $MODULE.confNewIfc { node_id iface_id } {
 }
 
 proc $MODULE.icon { size } {
@@ -132,7 +132,7 @@ proc $MODULE.virtlayer {} {
 # NAME
 #   filter.nghook
 # SYNOPSIS
-#   filter.nghook $eid $node $iface
+#   filter.nghook $eid $node_id $iface_id
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the
 #   netgraph hook which is used for connecting two netgraph
@@ -140,14 +140,14 @@ proc $MODULE.virtlayer {} {
 #   passes the result of that procedure.
 # INPUTS
 #   * eid - experiment id
-#   * node - node id
-#   * iface - interface id
+#   * node_id - node id
+#   * iface_id - interface id
 # RESULT
 #   * nghook - the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
-proc $MODULE.nghook { eid node iface } {
-    return [list $node $iface]
+proc $MODULE.nghook { eid node_id iface_id } {
+    return [list $node_id $iface_id]
 }
 
 ################################################################################
@@ -162,19 +162,19 @@ proc $MODULE.prepareSystem {} {
 # NAME
 #   filter.nodeCreate
 # SYNOPSIS
-#   filter.nodeCreate $eid $node
+#   filter.nodeCreate $eid $node_id
 # FUNCTION
 #   Procedure filter.nodeCreate creates a new virtual node
 #   with all the interfaces and CPU parameters as defined
 #   in imunes.
 # INPUTS
 #   * eid - experiment id
-#   * node - id of the node
+#   * node_id - id of the node
 #****
-proc $MODULE.nodeCreate { eid node } {
+proc $MODULE.nodeCreate { eid node_id } {
     pipesExec "printf \"
     mkpeer . patmat tmp tmp \n
-    name .:tmp $node
+    name .:tmp $node_id
     \" | jexec $eid ngctl -f -" "hold"
 }
 
@@ -182,24 +182,24 @@ proc $MODULE.nodeCreate { eid node } {
 # NAME
 #   filter.nodeConfigure
 # SYNOPSIS
-#   filter.nodeConfigure $eid $node
+#   filter.nodeConfigure $eid $node_id
 # FUNCTION
 #   Starts a new filter. The node can be started if it is instantiated.
 #   Simulates the booting proces of a filter. by calling l3node.nodeConfigure
 #   procedure.
 # INPUTS
 #   * eid - experiment id
-#   * node - id of the node
+#   * node_id - id of the node
 #****
-proc $MODULE.nodeConfigure { eid node } {
-    foreach ifc [ifcList $node] {
-	set cfg [netconfFetchSection $node "interface $ifc"]
-	set ngcfgreq "shc $ifc"
+proc $MODULE.nodeConfigure { eid node_id } {
+    foreach iface_id [ifcList $node_id] {
+	set cfg [netconfFetchSection $node_id "interface $iface_id"]
+	set ngcfgreq "shc $iface_id"
 	foreach rule [lsort -dictionary $cfg] {
 	    set ngcfgreq "[set ngcfgreq]$rule"
 	}
 
-	pipesExec "jexec $eid ngctl msg $node: $ngcfgreq" "hold"
+	pipesExec "jexec $eid ngctl msg $node_id: $ngcfgreq" "hold"
     }
 }
 
@@ -207,28 +207,28 @@ proc $MODULE.nodeConfigure { eid node } {
 ############################# TERMINATE PROCEDURES #############################
 ################################################################################
 
-proc $MODULE.nodeIfacesDestroy { eid node ifcs } {
-    l2node.nodeIfacesDestroy $eid $node $ifcs
+proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
+    l2node.nodeIfacesDestroy $eid $node_id $ifaces
 }
 
 #****f* filter.tcl/filter.nodeShutdown
 # NAME
 #   filter.nodeShutdown
 # SYNOPSIS
-#   filter.nodeShutdown $eid $node
+#   filter.nodeShutdown $eid $node_id
 # FUNCTION
 #   Shutdowns a filter node.
 #   Simulates the shutdown proces of a node, kills all the services and
 #   processes.
 # INPUTS
 #   * eid - experiment id
-#   * node - id of the node
+#   * node_id - id of the node
 #****
-proc $MODULE.nodeShutdown { eid node } {
-    foreach iface [ifcList $node] {
-	set ngcfgreq "shc $iface"
+proc $MODULE.nodeShutdown { eid node_id } {
+    foreach iface_id [ifcList $node_id] {
+	set ngcfgreq "shc $iface_id"
 
-	pipesExec "jexec $eid ngctl msg $node: $ngcfgreq" "hold"
+	pipesExec "jexec $eid ngctl msg $node_id: $ngcfgreq" "hold"
     }
 }
 
@@ -236,23 +236,23 @@ proc $MODULE.nodeShutdown { eid node } {
 # NAME
 #   filter.nodeDestroy
 # SYNOPSIS
-#   filter.nodeDestroy $eid $node
+#   filter.nodeDestroy $eid $node_id
 # FUNCTION
 #   Destroys a filter node.
 #   It issues the shutdown command to ngctl.
 # INPUTS
 #   * eid - experiment id
-#   * node - id of the node
+#   * node_id - id of the node
 #****
-proc $MODULE.nodeDestroy { eid node } {
-    pipesExec "jexec $eid ngctl msg $node: shutdown" "hold"
+proc $MODULE.nodeDestroy { eid node_id } {
+    pipesExec "jexec $eid ngctl msg $node_id: shutdown" "hold"
 }
 
 #****f* filter.tcl/filter.configGUI
 # NAME
 #   filter.configGUI
 # SYNOPSIS
-#   filter.configGUI $c $node
+#   filter.configGUI $c $node_id
 # FUNCTION
 #   Defines the structure of the filter.configuration window
 #   by calling procedures for creating and organising the
@@ -260,16 +260,16 @@ proc $MODULE.nodeDestroy { eid node } {
 #   to that window.
 # INPUTS
 #   * c - tk canvas
-#   * node - node id
+#   * node_id - node id
 #****
-proc $MODULE.configGUI { c node } {
+proc $MODULE.configGUI { c node_id } {
     global wi
     global filterguielements filtertreecolumns curnode
 
-    set curnode $node
+    set curnode $node_id
     set filterguielements {}
 
-    if { [ifcList $node] == "" } {
+    if { [ifcList $node_id] == "" } {
 	tk_dialog .dialog1 "IMUNES warning" \
 	    "This node has no interfaces." \
 	    info 0 Dismiss
@@ -279,35 +279,35 @@ proc $MODULE.configGUI { c node } {
 
     configGUI_createConfigPopupWin $c
     wm title $wi "filter configuration"
-    configGUI_nodeName $wi $node "Node name:"
+    configGUI_nodeName $wi $node_id "Node name:"
 
-    set tabs [configGUI_addNotebookFilter $wi $node [lsort [ifcList $node]]]
+    set tabs [configGUI_addNotebookFilter $wi $node_id [lsort [ifcList $node_id]]]
 
     set filtertreecolumns { "Action Action" "Pattern Pattern" "Mask Mask" \
 	"Offset Offset" "ActionData ActionData" }
     foreach tab $tabs {
-	configGUI_addTreeFilter $tab $node
+	configGUI_addTreeFilter $tab $node_id
     }
 
-    configGUI_buttonsACFilterNode $wi $node
+    configGUI_buttonsACFilterNode $wi $node_id
 }
 
 #****f* filter.tcl/filter.configInterfacesGUI
 # NAME
 #   filter.configInterfacesGUI
 # SYNOPSIS
-#   filter.configInterfacesGUI $wi $node $iface
+#   filter.configInterfacesGUI $wi $node_id $iface_id
 # FUNCTION
 #   Defines which modules for changing interfaces parameters
 #   are contained in the filter.configuration window. It is done
 #   by calling procedures for adding certain modules to the window.
 # INPUTS
 #   * wi - widget
-#   * node - node id
-#   * iface - interface id
+#   * node_id - node id
+#   * iface_id - interface id
 #****
-proc $MODULE.configIfcRulesGUI { wi node iface rule } {
+proc $MODULE.configIfcRulesGUI { wi node_id iface_id rule } {
     global filterguielements
 
-    configGUI_ifcRuleConfig $wi $node $iface $rule
+    configGUI_ifcRuleConfig $wi $node_id $iface_id $rule
 }

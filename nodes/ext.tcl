@@ -48,43 +48,43 @@ registerModule $MODULE
 # NAME
 #   ext.confNewNode -- configure new node
 # SYNOPSIS
-#   ext.confNewNode $node
+#   ext.confNewNode $node_id
 # FUNCTION
 #   Configures new node with the specified id.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.confNewNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc $MODULE.confNewNode { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global nodeNamingBase
 
     set nconfig [list \
 	"hostname [getNewNodeNameType ext $nodeNamingBase(ext)]" \
 	! ]
-    lappend $node "network-config [list $nconfig]"
+    lappend $node_id "network-config [list $nconfig]"
 }
 
 #****f* ext.tcl/ext.confNewIfc
 # NAME
 #   ext.confNewIfc -- configure new interface
 # SYNOPSIS
-#   ext.confNewIfc $node $ifc
+#   ext.confNewIfc $node_id $iface_id
 # FUNCTION
 #   Configures new interface for the specified node.
 # INPUTS
-#   * node -- node id
-#   * ifc -- interface name
+#   * node_id -- node id
+#   * iface_id -- interface name
 #****
-proc $MODULE.confNewIfc { node ifc } {
+proc $MODULE.confNewIfc { node_id iface_id } {
     global changeAddressRange changeAddressRange6 mac_byte4 mac_byte5
 
     set changeAddressRange 0
     set changeAddressRange6 0
 
-    autoIPv4addr $node $ifc
-    autoIPv6addr $node $ifc
+    autoIPv4addr $node_id $iface_id
+    autoIPv6addr $node_id $iface_id
     randomizeMACbytes
-    autoMACaddr $node $ifc
+    autoMACaddr $node_id $iface_id
 }
 
 #****f* ext.tcl/ext.icon
@@ -203,39 +203,39 @@ proc $MODULE.shellcmds {} {
 # NAME
 #   ext.nghook -- nghook
 # SYNOPSIS
-#   ext.nghook $eid $node $ifc
+#   ext.nghook $eid $node_id $iface_id
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. This procedure calls
 #   l3node.hook procedure and passes the result of that procedure.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
-#   * ifc -- interface name
+#   * node_id -- node id
+#   * iface_id -- interface name
 # RESULT
 #   * nghook -- the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
-proc $MODULE.nghook { eid node ifc } {
-    return [l3node.nghook $eid $node $ifc]
+proc $MODULE.nghook { eid node_id iface_id } {
+    return [l3node.nghook $eid $node_id $iface_id]
 }
 
 #****f* ext.tcl/ext.configGUI
 # NAME
 #   ext.configGUI -- configuration GUI
 # SYNOPSIS
-#   ext.configGUI $c $node
+#   ext.configGUI $c $node_id
 # FUNCTION
 #   Defines the structure of the ext configuration window by calling
 #   procedures for creating and organising the window, as well as
 #   procedures for adding certain modules to that window.
 # INPUTS
 #   * c -- tk canvas
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.configGUI { c node } {
-    set ifc [lindex [ifcList $node] 0]
-    if { "$ifc" == "" } {
+proc $MODULE.configGUI { c node_id } {
+    set iface_id [lindex [ifcList $node_id] 0]
+    if { "$iface_id" == "" } {
 	return
     }
 
@@ -246,11 +246,11 @@ proc $MODULE.configGUI { c node } {
 
     configGUI_createConfigPopupWin $c
     wm title $wi "ext configuration"
-    configGUI_nodeName $wi $node "Node name:"
+    configGUI_nodeName $wi $node_id "Node name:"
 
-    configGUI_externalIfcs $wi $node
+    configGUI_externalIfcs $wi $node_id
 
-    configGUI_buttonsACNode $wi $node
+    configGUI_buttonsACNode $wi $node_id
 }
 
 #****f* ext.tcl/ext.maxLinks
@@ -275,37 +275,37 @@ proc $MODULE.maxLinks {} {
 # NAME
 #   ext.nodeCreate -- instantiate
 # SYNOPSIS
-#   ext.nodeCreate $eid $node
+#   ext.nodeCreate $eid $node_id
 # FUNCTION
 #   Creates an ext node.
 #   Does nothing, as it is not created per se.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.nodeCreate { eid node } {
+proc $MODULE.nodeCreate { eid node_id } {
 }
 
-proc $MODULE.nodePhysIfacesCreate { eid node ifcs } {
-    l2node.nodePhysIfacesCreate $eid $node $ifcs
+proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
+    l2node.nodePhysIfacesCreate $eid $node_id $ifaces
 }
 
 #****f* ext.tcl/ext.nodeConfigure
 # NAME
 #   ext.nodeConfigure -- start
 # SYNOPSIS
-#   ext.nodeConfigure $eid $node
+#   ext.nodeConfigure $eid $node_id
 # FUNCTION
 #   Starts a new ext. The node can be started if it is instantiated.
 #   Simulates the booting proces of a ext, by calling l3node.nodeConfigure procedure.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.nodeConfigure { eid node } {
-    set ifc [lindex [ifcList $node] 0]
-    if { "$ifc" != "" } {
-	configureExternalConnection $eid $node
+proc $MODULE.nodeConfigure { eid node_id } {
+    set iface_id [lindex [ifcList $node_id] 0]
+    if { "$iface_id" != "" } {
+	configureExternalConnection $eid $node_id
     }
 }
 
@@ -313,28 +313,28 @@ proc $MODULE.nodeConfigure { eid node } {
 ############################# TERMINATE PROCEDURES #############################
 ################################################################################
 
-proc $MODULE.nodeIfacesDestroy { eid node ifcs } {
-    l2node.nodeIfacesDestroy $eid $node $ifcs
+proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
+    l2node.nodeIfacesDestroy $eid $node_id $ifaces
 }
 
 #****f* ext.tcl/ext.nodeShutdown
 # NAME
 #   ext.nodeShutdown -- shutdown
 # SYNOPSIS
-#   ext.nodeShutdown $eid $node
+#   ext.nodeShutdown $eid $node_id
 # FUNCTION
 #   Shutdowns an ext node.
 #   It kills all external packet sniffers and sets the interface down.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.nodeShutdown { eid node } {
-    set ifc [lindex [ifcList $node] 0]
-    if { "$ifc" != "" } {
-	killExtProcess "wireshark.*[getNodeName $node].*\\($eid\\)"
-	killExtProcess "xterm -name imunes-terminal -T Capturing $eid-$node -e tcpdump -ni $eid-$node"
-	stopExternalConnection $eid $node
+proc $MODULE.nodeShutdown { eid node_id } {
+    set iface_id [lindex [ifcList $node_id] 0]
+    if { "$iface_id" != "" } {
+	killExtProcess "wireshark.*[getNodeName $node_id].*\\($eid\\)"
+	killExtProcess "xterm -name imunes-terminal -T Capturing $eid-$node_id -e tcpdump -ni $eid-$node_id"
+	stopExternalConnection $eid $node_id
     }
 }
 
@@ -342,13 +342,13 @@ proc $MODULE.nodeShutdown { eid node } {
 # NAME
 #   ext.nodeDestroy -- destroy
 # SYNOPSIS
-#   ext.nodeDestroy $eid $node
+#   ext.nodeDestroy $eid $node_id
 # FUNCTION
 #   Destroys an ext node.
 #   Does nothing, as it is not created.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc $MODULE.nodeDestroy { eid node } {
+proc $MODULE.nodeDestroy { eid node_id } {
 }
