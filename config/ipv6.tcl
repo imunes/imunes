@@ -79,19 +79,19 @@ proc IPv6AddrApply { w } {
 # RESULT
 #   * ipnet -- returns the free IPv6 network address in the form "a $i". 
 #****
-proc findFreeIPv6Net { mask } {
-    upvar 0 ::cf::[set ::curcfg]::IPv6UsedList IPv6UsedList
+proc findFreeIPv6Net { mask { ipv6_used_list "" } } {
     global ipv6
 
-    if { $IPv6UsedList == "" } {
+    if { $ipv6_used_list == {} } {
 	set defip6net [ip::contract [ip::prefix $ipv6]]
 	set testnet [ip::contract "[string trimright $defip6net :]::"]
 	return $testnet
     } else {
 	set defip6net [ip::contract [ip::prefix $ipv6]]
+	set subnets [lsort -unique [lmap ip $ipv6_used_list {ip::contract [ip::prefix $ip]}]]
 	for { set i 0 } { $i <= 65535 } { incr i } {
 	    set testnet [ip::contract "[string trimright $defip6net :]:[format %x $i]::"]
-	    if { $testnet ni $IPv6UsedList } {
+	    if { $testnet ni $subnets } {
 		return $testnet
 	    }
 	}
@@ -119,10 +119,12 @@ proc autoIPv6addr { node iface } {
 	return
     }
     global changeAddrRange6 control changeAddressRange6 autorenumbered_ifcs6
-    set peer_ip6addrs {}
+    #changeAddrRange6 - to change the subnet (1) or not (0)
+    #changeAddressRange6 - is this procedure called from 'changeAddressRange' (1 if true, otherwise 0)
+    #autorenumbered_ifcs6 - list of all interfaces that changed an address
 
-
-    if { [[nodeType $node].layer] != "NETWORK" } { 
+    set node_type [nodeType $node]
+    if { [$node_type.layer] != "NETWORK" } {
 	#
 	# Shouldn't get called at all for link-layer nodes
 	#
@@ -130,43 +132,60 @@ proc autoIPv6addr { node iface } {
 	return
     }  
 
+    set old_addrs [getIfcIPv6addrs $node $iface]
+    foreach old_addr $old_addrs {
+	set IPv6UsedList [removeFromList $IPv6UsedList $old_addr]
+    }
+
     setIfcIPv6addrs $node $iface ""
     lassign [logicalPeerByIfc $node $iface] peer_node peer_if
-
-    if { [[nodeType $peer_node].layer] == "LINK" } {
-	foreach l2node [listLANnodes $peer_node {}] {
-	    foreach ifc [ifcList $l2node] {
-		lassign [logicalPeerByIfc $l2node $ifc] peer peer_if
-		set peer_ip6addr [getIfcIPv6addrs $peer $peer_if]
-		if { $changeAddressRange6 == 1 } {
-		    if { [lsearch $autorenumbered_ifcs6 "$peer $peer_if"] != -1 } {
-			if { $peer_ip6addr != "" } {
-			    lappend peer_ip6addrs {*}$peer_ip6addr
-			}   
+    set peer_ip6addrs {}
+    if { $peer_node != "" } {
+	if { [[nodeType $peer_node].layer] == "LINK" } {
+	    foreach l2node [listLANnodes $peer_node {}] {
+		foreach ifc [ifcList $l2node] {
+		    lassign [logicalPeerByIfc $l2node $ifc] peer peer_if
+		    set peer_ip6addr [getIfcIPv6addrs $peer $peer_if]
+		    if { $peer_ip6addr == "" } {
+			continue
 		    }
-		} else {
-		    if { $peer_ip6addr != "" } {
+
+		    if { $changeAddressRange6 == 1 } {
+			if { "$peer $peer_if" in $autorenumbered_ifcs6 } {
+			    lappend peer_ip6addrs {*}$peer_ip6addr
+			}
+		    } else {
 			lappend peer_ip6addrs {*}$peer_ip6addr
 		    }
 		}
 	    }
+	} else {
+	    set peer_ip6addrs [getIfcIPv6addrs $peer_node $peer_if]
 	}
-    } else {
-	set peer_ip6addr [getIfcIPv6addrs $peer_node $peer_if]
-	set peer_ip6addrs $peer_ip6addr
     }
-
-    set targetbyte [expr 0x[[nodeType $node].IPAddrRange]]
 
     if { $peer_ip6addrs != "" && $changeAddrRange6 == 0 } {
-	set ipaddr  [nextFreeIP6Addr [lindex $peer_ip6addrs 0] $targetbyte $peer_ip6addrs]
-	setIfcIPv6addrs $node $iface $ipaddr
+	set targetbyte [expr 0x[$node_type.IPAddrRange]]
+	set addr [nextFreeIP6Addr [lindex $peer_ip6addrs 0] $targetbyte $peer_ip6addrs]
     } else {
-	setIfcIPv6addrs $node $iface "[findFreeIPv6Net 64][format %x $targetbyte]/64"
-	foreach addr [getIfcIPv6addrs $node $iface] {
-	    lappend IPv6UsedList [ip::contract [ip::prefix $addr]]
-	}
+	set addr [getNextIPv6addr $node_type $IPv6UsedList]
     }
+
+    setIfcIPv6addrs $node $iface $addr
+    lappend IPv6UsedList $addr
+}
+
+proc getNextIPv6addr { node_type existing_addrs } {
+    global IPv6autoAssign
+
+    if { ! $IPv6autoAssign } {
+	return
+    }
+
+    set targetbyte [expr 0x[$node_type.IPAddrRange]]
+
+    # TODO: enable changing IPv6 pool mask
+    return "[findFreeIPv6Net 64 $existing_addrs][format %x $targetbyte]/64"
 }
 
 #****f* ipv6.tcl/nextFreeIP6Addr

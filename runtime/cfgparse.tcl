@@ -769,12 +769,16 @@ proc loadCfg { cfg } {
 	# used addresses in lists.
 	foreach iface [ifcList $node] {
 	    foreach addr [getIfcIPv6addrs $node $iface] {
-		lappend IPv6UsedList [ip::contract [ip::prefix $addr]]
+		lassign [split $addr "/"] addr mask
+		lappend IPv6UsedList "[ip::contract [ip::prefix $addr]]/$mask"
 	    }
+
 	    foreach addr [getIfcIPv4addrs $node $iface] {
 		lappend IPv4UsedList $addr
 	    }
-	    lappend MACUsedList [getIfcMACaddr $node $iface]
+
+	    set addr [getIfcMACaddr $node $iface]
+	    if { $addr != "" } { lappend MACUsedList $addr }
 	}
     }
 
