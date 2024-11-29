@@ -737,7 +737,7 @@ proc vimageCleanup { eid } {
 	    incr step
 	    displayBatchProgress $step $allVimages
 
-	    [typemodel $node].shutdown $eid $node
+	    [nodeType $node].shutdown $eid $node
 	}
 
 	statline ""
@@ -1324,8 +1324,8 @@ proc runConfOnNode { node } {
 	}
 	set confFile "custom.conf"
     } else {
-	set bootcfg [[typemodel $node].cfggen $node]
-	set bootcmd [[typemodel $node].bootcmd $node]
+	set bootcfg [[nodeType $node].cfggen $node]
+	set bootcmd [[nodeType $node].bootcmd $node]
 	set confFile "boot.conf"
     }
 
@@ -1350,7 +1350,7 @@ proc isNodeConfigured { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     set node_id "$eid.$node"
 
-    if { [[typemodel $node].virtlayer] == "NATIVE" } {
+    if { [[nodeType $node].virtlayer] == "NATIVE" } {
 	return true
     }
 
@@ -1367,7 +1367,7 @@ proc isNodeError { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     set node_id "$eid.$node"
 
-    if { [[typemodel $node].virtlayer] == "NATIVE" } {
+    if { [[nodeType $node].virtlayer] == "NATIVE" } {
 	return false
     }
 
@@ -1631,13 +1631,13 @@ proc createDirectLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     set ngpeer1 \
-	[lindex [[typemodel $lnode1].nghook $eid $lnode1 $ifname1] 0]
+	[lindex [[nodeType $lnode1].nghook $eid $lnode1 $ifname1] 0]
     set ngpeer2 \
-	[lindex [[typemodel $lnode2].nghook $eid $lnode2 $ifname2] 0]
+	[lindex [[nodeType $lnode2].nghook $eid $lnode2 $ifname2] 0]
     set nghook1 \
-	[lindex [[typemodel $lnode1].nghook $eid $lnode1 $ifname1] 1]
+	[lindex [[nodeType $lnode1].nghook $eid $lnode1 $ifname1] 1]
     set nghook2 \
-	[lindex [[typemodel $lnode2].nghook $eid $lnode2 $ifname2] 1]
+	[lindex [[nodeType $lnode2].nghook $eid $lnode2 $ifname2] 1]
 
     pipesExec "jexec $eid ngctl connect $ngpeer1: $ngpeer2: $nghook1 $nghook2" "hold"
 }
@@ -1659,13 +1659,13 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     set ngpeer1 \
-	[lindex [[typemodel $lnode1].nghook $eid $lnode1 $ifname1] 0]
+	[lindex [[nodeType $lnode1].nghook $eid $lnode1 $ifname1] 0]
     set ngpeer2 \
-	[lindex [[typemodel $lnode2].nghook $eid $lnode2 $ifname2] 0]
+	[lindex [[nodeType $lnode2].nghook $eid $lnode2 $ifname2] 0]
     set nghook1 \
-	[lindex [[typemodel $lnode1].nghook $eid $lnode1 $ifname1] 1]
+	[lindex [[nodeType $lnode1].nghook $eid $lnode1 $ifname1] 1]
     set nghook2 \
-	[lindex [[typemodel $lnode2].nghook $eid $lnode2 $ifname2] 1]
+	[lindex [[nodeType $lnode2].nghook $eid $lnode2 $ifname2] 1]
 
     set ngcmds "mkpeer $ngpeer1: pipe $nghook1 upper"
     set ngcmds "$ngcmds\n name $ngpeer1:$nghook1 $link"

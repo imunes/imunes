@@ -254,7 +254,7 @@ proc configGUI_addTree { wi node } {
 	}
     }
 
-    if {[[typemodel $node].virtlayer] == "VIRTUALIZED"} {
+    if {[[nodeType $node].virtlayer] == "VIRTUALIZED"} {
 	$wi.panwin.f1.tree insert {} end -id logIfcFrame -text \
 	    "Logical Interfaces" -open true -tags logIfcFrame
 
@@ -327,7 +327,7 @@ proc configGUI_addTree { wi node } {
 		configGUI_showIfcInfo $wi.panwin.f2 0 $node [$wi.panwin.f1.tree next $ifc]
 	    }"
     }
-    if {[[typemodel $node].virtlayer] == "VIRTUALIZED"} {
+    if {[[nodeType $node].virtlayer] == "VIRTUALIZED"} {
 	$wi.panwin.f1.tree tag bind [lindex [lsort -ascii [ifcList $node]] end] <Key-Down> \
 		"configGUI_showIfcInfo $wi.panwin.f2 0 $node logIfcFrame"
 
@@ -436,7 +436,7 @@ proc configGUI_refreshIfcsTree { wi node } {
 	}
     }
 
-    if {[[typemodel $node].virtlayer] == "VIRTUALIZED"} {
+    if {[[nodeType $node].virtlayer] == "VIRTUALIZED"} {
 	$wi insert {} end -id logIfcFrame -text \
 	    "Logical Interfaces" -open true -tags logIfcFrame
 
@@ -475,7 +475,7 @@ proc configGUI_refreshIfcsTree { wi node } {
 		configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node [$wi next $ifc]
 	    }"
     }
-    if {[[typemodel $node].virtlayer] == "VIRTUALIZED"} {
+    if {[[nodeType $node].virtlayer] == "VIRTUALIZED"} {
 	$wi tag bind [lindex [lsort -ascii [ifcList $node]] end] <Key-Down> \
 		"configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node logIfcFrame"
 
@@ -977,7 +977,7 @@ proc configGUI_nodeName { wi node label } {
     ttk::frame $wi.name -borderwidth 6
     ttk::label $wi.name.txt -text $label
 
-    if { [typemodel $node] in "rj45 extnat" } {
+    if { [nodeType $node] in "rj45 extnat" } {
 	ttk::combobox $wi.name.nodename -width 14 -textvariable extIfc$node
 	set ifcs [getExtIfcs]
 	$wi.name.nodename configure -values [concat UNASSIGNED $ifcs]
@@ -2690,8 +2690,8 @@ proc createTab { node cfgID } {
 #****
 proc customConfigGUIFillDefaults { wi node } {
     set cfgID [$wi.nb tab current -text]
-    set cmd [[typemodel $node].bootcmd $node]
-    set cfg [[typemodel $node].cfggen $node]
+    set cmd [[nodeType $node].bootcmd $node]
+    set cfg [[nodeType $node].cfggen $node]
     set w $wi.nb.$cfgID
 
     if { [$w.bootcmd_e get] != "" || [$w.editor get 1.0 {end -1c}] != "" } {

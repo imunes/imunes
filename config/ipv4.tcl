@@ -268,18 +268,18 @@ proc autoIPv4addr { node iface } {
 
     set peer_ip4addrs {}
 
-    if { [[typemodel $node].layer] != "NETWORK" } {
+    if { [[nodeType $node].layer] != "NETWORK" } {
 	#
 	# Shouldn't get called at all for link-layer nodes
 	#
-	#puts "autoIPv4 called for a [[typemodel $node].layer] layer node"
+	#puts "autoIPv4 called for a [[nodeType $node].layer] layer node"
 	return
     }
     setIfcIPv4addrs $node $iface ""
 
     lassign [logicalPeerByIfc $node $iface] peer_node peer_if
 
-    if { [[typemodel $peer_node].layer] == "LINK"} {
+    if { [[nodeType $peer_node].layer] == "LINK"} {
 	foreach l2node [listLANnodes $peer_node {}] {
 	    foreach ifc [ifcList $l2node] {
 		lassign [logicalPeerByIfc $l2node $ifc] peer peer_if
@@ -297,7 +297,7 @@ proc autoIPv4addr { node iface } {
 		}
 	    }
 	}
-    } elseif {[[typemodel $peer_node].layer] != "LINK"} {
+    } elseif {[[nodeType $peer_node].layer] != "LINK"} {
 	set peer_ip4addr [getIfcIPv4addrs $peer_node $peer_if]
 	set peer_ip4addrs $peer_ip4addr
     }

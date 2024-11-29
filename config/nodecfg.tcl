@@ -252,29 +252,6 @@
 #
 #****
 
-#****f* nodecfg.tcl/typemodel
-# NAME
-#   typemodel -- find node's type and routing model 
-# SYNOPSIS
-#   set typemod [typemodel $node]
-# FUNCTION
-#   For input node this procedure returns the node's type and routing model
-#   (if exists) 
-# INPUTS
-#   * node -- node id
-# RESULT
-#   * typemod -- returns node's type and routing model in form type.model
-#****
-proc typemodel { node } {
-    set type [nodeType $node]
-    set model [getNodeModel $node]
-    if { $model != {} } {
-	return $type.$model
-    } else {
-	return $type
-    }
-}
-
 proc getNodeDir { node } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
@@ -1326,7 +1303,7 @@ proc getSubnetData { this_node this_ifc subnet_gws nodes_l2data subnet_idx } {
 
     dict set nodes_l2data $this_node $this_ifc $subnet_idx
 
-    if { [[typemodel $this_node].layer] == "NETWORK" } {
+    if { [[nodeType $this_node].layer] == "NETWORK" } {
 	if { [nodeType $this_node] in "router nat64 extnat" } {
 	    # this node is a router/extnat, add our IP addresses to lists
 	    # TODO: multiple addresses per iface - split subnet4data and subnet6data
@@ -3028,39 +3005,6 @@ proc setNodeDockerAttach { node enabled } {
     }
 }
 
-#****f* nodecfg.tcl/registerRouterModule
-# NAME
-#   registerRouterModule -- register module
-# SYNOPSIS
-#   registerRouterModule $module
-# FUNCTION
-#   Adds a module to router_modules_list.
-# INPUTS
-#   * module -- module to add
-#****
-proc registerRouterModule { module } {
-    global router_modules_list
-    lappend router_modules_list $module
-}
-
-#****f* nodecfg.tcl/isNodeRouter
-# NAME
-#   isNodeRouter -- check whether a node is registered as a router
-# SYNOPSIS
-#   isNodeRouter $node
-# FUNCTION
-#   Checks if a node is a router.
-# INPUTS
-#   * node -- node to check
-#****
-proc isNodeRouter { node } {
-    global router_modules_list
-    if { [nodeType $node] in $router_modules_list } {
-	return 1
-    }
-    return 0
-}
-
 #****f* nodecfg.tcl/nodeCfggenIfcIPv4
 # NAME
 #   nodeCfggenIfcIPv4 -- generate interface IPv4 configuration
@@ -3192,7 +3136,7 @@ proc getAllNodesType { type } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
     set type_list ""
     foreach node $node_list {
-	if { [string match "$type*" [typemodel $node]] } {
+	if { [string match "$type*" [nodeType $node]] } {
 	    lappend type_list $node
 	}
     }
@@ -3266,7 +3210,7 @@ proc recalculateNumType { type namebase } {
 #****
 proc transformNodes { nodes type } {
     foreach node $nodes {
-	if { [[typemodel $node].layer] == "NETWORK" } {
+	if { [[nodeType $node].layer] == "NETWORK" } {
 	    upvar 0 ::cf::[set ::curcfg]::$node nodecfg
 	    global changed
 
