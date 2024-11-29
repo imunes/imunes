@@ -780,19 +780,19 @@ proc loadCfgLegacy { cfg } {
     }
 
     # older .imn files have only one link per node pair, so match links with interfaces
-    foreach link $link_list {
-	if { [getLinkPeersIfaces $link] != {} } {
+    foreach link_id $link_list {
+	if { [getLinkPeersIfaces $link_id] != {} } {
 	    # if one link has ifaces, then all of them do too
 	    return
 	}
 
-	upvar 0 ::cf::[set ::curcfg]::$link $link
+	upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
 
-	lassign [getLinkPeers $link] node1 node2
-	set iface1 [ifcByPeer $node1 $node2]
-	set iface2 [ifcByPeer $node2 $node1]
+	lassign [getLinkPeers $link_id] node1_id node2_id
+	set iface1_id [ifcByPeer $node1_id $node2_id]
+	set iface2_id [ifcByPeer $node2_id $node1_id]
 
-	lappend $link "ifaces {$iface1 $iface2}"
+	lappend $link_id "ifaces {$iface1_id $iface2_id}"
     }
 }
 

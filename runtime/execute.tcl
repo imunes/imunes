@@ -455,12 +455,12 @@ proc deployCfg {} {
     set l3nodes {}
     set allNodes {}
     set pseudoNodesCount 0
-    foreach node $node_list {
-	if { [getNodeType $node] != "pseudo" } {
-	    if { [[getNodeType $node].virtlayer] != "VIRTUALIZED" } {
-		lappend l2nodes $node
+    foreach node_id $node_list {
+	if { [getNodeType $node_id] != "pseudo" } {
+	    if { [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" } {
+		lappend l2nodes $node_id
 	    } else {
-		lappend l3nodes $node
+		lappend l3nodes $node_id
 	    }
 	} else {
 	    incr pseudoNodesCount
@@ -614,14 +614,14 @@ proc execute_nodesCreate { nodes nodeCount w } {
     global progressbarCount execMode
 
     set batchStep 0
-    foreach node $nodes {
+    foreach node_id $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	if { [info procs [getNodeType $node].nodeCreate] != "" } {
+	if { [info procs [getNodeType $node_id].nodeCreate] != "" } {
 	    try {
-		[getNodeType $node].nodeCreate $eid $node
+		[getNodeType $node_id].nodeCreate $eid $node_id
 	    } on error err {
-		return -code error "Error in '[getNodeType $node].nodeCreate $eid $node': $err"
+		return -code error "Error in '[getNodeType $node_id].nodeCreate $eid $node_id': $err"
 	    }
 	    pipesExec ""
 	}
@@ -630,7 +630,7 @@ proc execute_nodesCreate { nodes nodeCount w } {
 	incr progressbarCount
 
 	if { $execMode != "batch" } {
-	    statline "Instantiating node [getNodeName $node]"
+	    statline "Instantiating node [getNodeName $node_id]"
 	    $w.p configure -value $progressbarCount
 	    update
 	}
@@ -714,13 +714,13 @@ proc execute_nodesNamespaceSetup { nodes nodeCount w } {
     }
 }
 
-proc waitForNamespaces { nodes nodeCount w } {
+proc waitForNamespaces { nodes nodes_count w } {
     global progressbarCount execMode
 
     set batchStep 0
     set nodes_left $nodes
     while { [llength $nodes_left] > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+	displayBatchProgress $batchStep $nodes_count
 	foreach node $nodes_left {
 	    if { ! [isNodeNamespaceCreated $node] } {
 		continue
@@ -735,14 +735,14 @@ proc waitForNamespaces { nodes nodeCount w } {
 		$w.p configure -value $progressbarCount
 		update
 	    }
-	    displayBatchProgress $batchStep $nodeCount
+	    displayBatchProgress $batchStep $nodes_count
 
 	    set nodes_left [removeFromList $nodes_left $node]
 	}
     }
 
-    if { $nodeCount > 0 } {
-	displayBatchProgress $batchStep $nodeCount
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
 	if { $execMode == "batch" } {
 	    statline ""
 	}
@@ -824,15 +824,15 @@ proc execute_nodesPhysIfacesCreate { nodes nodeCount w } {
     global progressbarCount execMode
 
     set batchStep 0
-    foreach node $nodes {
+    foreach node_id $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	if { [info procs [getNodeType $node].nodePhysIfacesCreate] != "" } {
-	    set ifcs [ifcList $node]
+	if { [info procs [getNodeType $node_id].nodePhysIfacesCreate] != "" } {
+	    set ifcs [ifcList $node_id]
 	    try {
-		[getNodeType $node].nodePhysIfacesCreate $eid $node $ifcs
+		[getNodeType $node_id].nodePhysIfacesCreate $eid $node_id $ifcs
 	    } on error err {
-		return -code error "Error in '[getNodeType $node].nodePhysIfacesCreate $eid $node $ifcs': $err"
+		return -code error "Error in '[getNodeType $node_id].nodePhysIfacesCreate $eid $node_id $ifcs': $err"
 	    }
 	    pipesExec ""
 	}
@@ -841,7 +841,7 @@ proc execute_nodesPhysIfacesCreate { nodes nodeCount w } {
 	incr progressbarCount
 
 	if { $execMode != "batch" } {
-	    statline "Creating physical ifaces on node [getNodeName $node]"
+	    statline "Creating physical ifaces on node [getNodeName $node_id]"
 	    $w.p configure -value $progressbarCount
 	    update
 	}
@@ -1029,7 +1029,7 @@ proc executeConfNodes { nodes nodeCount w } {
 #****
 proc generateHostsFile { node_id } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::etchosts etchosts
+    upvar 0 ::cf::[set ::curcfg]::etchosts etc_hosts
 
     global auto_etc_hosts
 
@@ -1037,7 +1037,7 @@ proc generateHostsFile { node_id } {
 	return
     }
 
-    if { $etchosts == "" } {
+    if { $etc_hosts == "" } {
 	foreach other_node_id $node_list {
 	    if { [[getNodeType $other_node_id].virtlayer] != "VIRTUALIZED" } {
 		continue
@@ -1054,9 +1054,9 @@ proc generateHostsFile { node_id } {
 		foreach ipv4 [getIfcIPv4addrs $other_node_id $ifc] {
 		    set ipv4 [lindex [split $ipv4 "/"] 0]
 		    if { $ctr == 0 } {
-			set etchosts "$etchosts$ipv4	${node_name}\n"
+			set etc_hosts "$etc_hosts$ipv4	${node_name}\n"
 		    } else {
-			set etchosts "$etchosts$ipv4	${node_name}_${ctr}\n"
+			set etc_hosts "$etc_hosts$ipv4	${node_name}_${ctr}\n"
 		    }
 		    incr ctr
 		}
@@ -1064,9 +1064,9 @@ proc generateHostsFile { node_id } {
 		foreach ipv6 [getIfcIPv6addrs $other_node_id $ifc] {
 		    set ipv6 [lindex [split $ipv6 "/"] 0]
 		    if { $ctr6 == 0 } {
-			set etchosts "$etchosts$ipv6	${node_name}.6\n"
+			set etc_hosts "$etc_hosts$ipv6	${node_name}.6\n"
 		    } else {
-			set etchosts "$etchosts$ipv6	${node_name}_${ctr6}.6\n"
+			set etc_hosts "$etc_hosts$ipv6	${node_name}_${ctr6}.6\n"
 		    }
 		    incr ctr6
 		}
@@ -1074,7 +1074,7 @@ proc generateHostsFile { node_id } {
 	}
     }
 
-    writeDataToNodeFile $node_id /etc/hosts $etchosts
+    writeDataToNodeFile $node_id /etc/hosts $etc_hosts
 }
 
 proc waitForConfStart { nodes nodeCount w } {

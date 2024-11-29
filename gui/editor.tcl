@@ -197,7 +197,7 @@ proc l3IfcName { lnode rnode } {
 proc listLANNodes { l2node_id l2peers } {
     lappend l2peers $l2node_id
     foreach ifc [ifcList $l2node_id] {
-	lassign [logicalPeerByIfc $l2node $ifc] peer -
+	lassign [logicalPeerByIfc $l2node_id $ifc] peer -
 	if { [[getNodeType $peer].netlayer] == "LINK" && [getNodeType $peer] != "rj45" } {
 	    if { $peer ni $l2peers } {
 		set l2peers [listLANNodes $peer $l2peers]
@@ -873,17 +873,17 @@ proc bindEventsToTree {} {
 # FUNCTION
 #   Selects icon of the node selected in the topology tree.
 #****
-proc selectNodeFromTree { n } {
+proc selectNodeFromTree { node_id } {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
 
-    set canvas [getNodeCanvas $n]
+    set canvas [getNodeCanvas $node_id]
     set curcanvas $canvas
     switchCanvas none
 
     .panwin.f1.c dtag node selected
     .panwin.f1.c delete -withtags selectmark
 
-    set obj [.panwin.f1.c find withtag "node && $n"]
+    set obj [.panwin.f1.c find withtag "node && $node_id"]
     selectNode .panwin.f1.c $obj
 }
 

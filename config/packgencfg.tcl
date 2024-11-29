@@ -1,5 +1,5 @@
-proc getPackgenPacketRate { node } {
-    foreach line [netconfFetchSection $node "packet generator"] {
+proc getPackgenPacketRate { node_id } {
+    foreach line [netconfFetchSection $node_id "packet generator"] {
 	if { [lindex $line 0] == "packetrate" } {
 		return [lindex $line 1]
 	}
@@ -7,59 +7,59 @@ proc getPackgenPacketRate { node } {
     return 100
 }
 
-proc setPackgenPacketRate { node value } {
+proc setPackgenPacketRate { node_id rate } {
     set ifcfg [list "packet generator"]
-    foreach line [netconfFetchSection $node "packet generator"] {
+    foreach line [netconfFetchSection $node_id "packet generator"] {
 	if { [lindex $line 0] != "packetrate" } {
 	    lappend ifcfg $line
 	}
     }
-    if { $value >= 0 } {
-	lappend ifcfg " packetrate $value"
+    if { $rate >= 0 } {
+	lappend ifcfg " packetrate $rate"
     }
-    netconfInsertSection $node $ifcfg
+    netconfInsertSection $node_id $ifcfg
 }
 
-proc getPackgenPacket { node id } {
-    foreach line [netconfFetchSection $node "packets"] {
+proc getPackgenPacket { node_id id } {
+    foreach line [netconfFetchSection $node_id "packets"] {
 	if { [string trim [lindex [split $line :] 0]] == $id } {
 		    return [string trim $line]
 	}
     }
 }
 
-proc addPackgenPacket { node id value } {
+proc addPackgenPacket { node_id id new_value } {
     set ifcfg [list "packets"]
-    foreach line [netconfFetchSection $node "packets"] {
+    foreach line [netconfFetchSection $node_id "packets"] {
 	if { [string trim [lindex [split $line :] 0]] != $id } {
 	    lappend ifcfg $line
 	}
     }
-    lappend ifcfg " $value"
-    netconfInsertSection $node $ifcfg
+    lappend ifcfg " $new_value"
+    netconfInsertSection $node_id $ifcfg
 }
 
-proc removePackgenPacket { node id } {
+proc removePackgenPacket { node_id id } {
     set ifcfg [list "packets"]
-    foreach line [netconfFetchSection $node "packets"] {
+    foreach line [netconfFetchSection $node_id "packets"] {
 	if { [string trim [lindex [split $line :] 0]] != $id } {
 	    lappend ifcfg $line
 	}
     }
-    netconfInsertSection $node $ifcfg
+    netconfInsertSection $node_id $ifcfg
 }
 
-proc getPackgenPacketData { node id } {
-    foreach line [netconfFetchSection $node "packets"] {
+proc getPackgenPacketData { node_id id } {
+    foreach line [netconfFetchSection $node_id "packets"] {
 	if { [string trim [lindex [split $line :] 0]] == $id } {
 		    return [lindex [string trim [split $line :]] 1]
 	}
     }
 }
 
-proc packgenPackets { node } {
+proc packgenPackets { node_id } {
     set packetList ""
-    foreach line [netconfFetchSection $node "packets"] {
+    foreach line [netconfFetchSection $node_id "packets"] {
 	lappend packetList [string trim [lindex [split $line :] 0]]
     }
     return $packetList
