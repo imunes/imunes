@@ -743,7 +743,7 @@ proc loadCfg { cfg } {
     set IPv4UsedList ""
     set MACUsedList ""
     foreach node $node_list {
-	set nodeType [typemodel $node]
+	set nodeType [nodeType $node]
 	if { $nodeType in "extelem" } {
 	    continue
 	}
@@ -760,7 +760,7 @@ proc loadCfg { cfg } {
 	    exit
 	}
 	if { "lo0" ni [logIfcList $node] && \
-		[[typemodel $node].layer] == "NETWORK"} {
+		[$nodeType.layer] == "NETWORK"} {
 	    setLogIfcType $node lo0 lo
 	    setIfcIPv4addrs $node lo0 "127.0.0.1/8"
 	    setIfcIPv6addrs $node lo0 "::1/128"

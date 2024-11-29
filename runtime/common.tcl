@@ -338,10 +338,10 @@ proc spawnShellExec {} {
 	    return
 	}
     }
-    if { [[typemodel $node].virtlayer] != "VIRTUALIZED" } {
+    if { [[nodeType $node].virtlayer] != "VIRTUALIZED" } {
 	nodeConfigGUI .panwin.f1.c $node
     } else {
-	set cmd [lindex [existingShells [[typemodel $node].shellcmds] $node] 0]
+	set cmd [lindex [existingShells [[nodeType $node].shellcmds] $node] 0]
 	if { $cmd == "" } {
 	    return
 	}

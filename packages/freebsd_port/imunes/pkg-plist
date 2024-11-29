@@ -101,8 +101,7 @@ lib/imunes/nodes/ext.tcl
 lib/imunes/nodes/extelem.tcl
 lib/imunes/nodes/extnat.tcl
 lib/imunes/nodes/filter.tcl
-lib/imunes/nodes/frr.tcl
-lib/imunes/nodes/genericrouter.tcl
+lib/imunes/nodes/router.tcl
 lib/imunes/nodes/host.tcl
 lib/imunes/nodes/hub.tcl
 lib/imunes/nodes/lanswitch.tcl
@@ -110,9 +109,7 @@ lib/imunes/nodes/localnodes.tcl
 lib/imunes/nodes/nat64.tcl
 lib/imunes/nodes/packgen.tcl
 lib/imunes/nodes/pc.tcl
-lib/imunes/nodes/quagga.tcl
 lib/imunes/nodes/rj45.tcl
-lib/imunes/nodes/static.tcl
 lib/imunes/nodes/stpswitch.tcl
 lib/imunes/nodes/wlan.tcl
 lib/imunes/runtime/cfgparse.tcl

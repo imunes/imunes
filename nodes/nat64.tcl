@@ -129,7 +129,7 @@ proc $MODULE.virtlayer {} {
 }
 
 proc $MODULE.cfggen { node } {
-    set cfg [router.frr.cfggen $node]
+    set cfg [router.cfggen $node]
 
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global nat64ifc_$eid.$node
@@ -155,15 +155,15 @@ proc $MODULE.cfggen { node } {
 }
 
 proc $MODULE.bootcmd { node } {
-    return [router.frr.bootcmd $node]
+    return [router.bootcmd $node]
 }
 
 proc $MODULE.shellcmds { } {
-    return [router.frr.shellcmds]
+    return [router.shellcmds]
 }
 
 proc $MODULE.instantiate { eid node } {
-    router.frr.instantiate $eid $node
+    router.instantiate $eid $node
 }
 
 proc $MODULE.setupNamespace { eid node } {
@@ -186,7 +186,7 @@ proc $MODULE.start { eid node } {
     set tun [createStartTunIfc $eid $node]
     set nat64ifc_$eid.$node $tun
 
-    router.frr.start $eid $node
+    router.start $eid $node
 
     set datadir "/var/db/tayga"
 
@@ -208,7 +208,7 @@ proc $MODULE.start { eid node } {
 
     # XXX
     # Even though this routes should be added here, we add them in the
-    # router.frr.start procedure which invokes nat64.cfggen where we define
+    # router.start procedure which invokes nat64.cfggen where we define
     # them with:
     # lappend cfg "ip route $tayga4pool $tun"
     # lappend cfg "ipv6 route $tayga6prefix $tun"
@@ -224,17 +224,17 @@ proc $MODULE.start { eid node } {
 }
 
 proc $MODULE.shutdown { eid node } {
-    router.frr.shutdown $eid $node
+    router.shutdown $eid $node
     taygaShutdown $eid $node
 }
 
 proc $MODULE.destroy { eid node } {
     taygaDestroy $eid $node
-    router.frr.destroy $eid $node
+    router.destroy $eid $node
 }
 
 proc $MODULE.nghook { eid node ifc } {
-    return [router.frr.nghook $eid $node $ifc]
+    return [router.nghook $eid $node $ifc]
 }
 
 
