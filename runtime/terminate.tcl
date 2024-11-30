@@ -551,17 +551,17 @@ proc stopNodeFromMenu { node } {
 	}
     }
 
-    pipesCreate
     services stop "NODESTOP" "" $node
+    pipesCreate
     try {
 	terminateL2L3Nodes $eid $node 1 $w
     } on error err {
 	finishTerminating 0 "$err" $w
 	return
     }
+    pipesClose
     services stop "LINKDEST" "" $node
     services stop "NODEDEST" "" $node
-    pipesClose
 
     finishTerminating 1 "" $w
 }

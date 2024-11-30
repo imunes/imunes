@@ -1277,9 +1277,9 @@ proc startNodeFromMenu { node } {
 	}
     }
 
-    pipesCreate
     services start "NODEINST" "" $node
     services start "LINKINST" "" $node
+    pipesCreate
     set allNodeCount 1
     try {
 	executeConfNodes $node 1 $w
@@ -1289,8 +1289,8 @@ proc startNodeFromMenu { node } {
 	finishExecuting 0 "$err" $w
 	return
     }
-    services start "NODECONF" "" $node
     pipesClose
+    services start "NODECONF" "" $node
 
     finishExecuting 1 "" $w
 }
