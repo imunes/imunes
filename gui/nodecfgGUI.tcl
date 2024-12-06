@@ -1017,7 +1017,7 @@ proc configGUI_rj45s { wi node } {
     foreach group [getNodeExternalIfcs $node] {
 	lassign $group ifc extIfc
 	set lbl "Interface $ifc"
-	set peer [logicalPeerByIfc $node $ifc]
+	lassign [logicalPeerByIfc $node $ifc] peer -
 	if { $peer != "" } {
 	    set lbl "$lbl (peer [getNodeName $peer])"
 	}

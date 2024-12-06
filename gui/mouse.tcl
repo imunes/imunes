@@ -1943,9 +1943,8 @@ proc changeAddressRange {} {
 	foreach node $element {
 	    set autorenumber_nodes ""
 	    foreach ifc [ifcList $node] {
-		set peer [peerByIfc $node $ifc]
-		if { [[typemodel $peer].layer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
-		    set peer_ifc [ifcByPeer $peer $node]
+		lassign [logicalPeerByIfc $node $ifc] peer peer_ifc
+		if { $peer != "" && [[typemodel $peer].layer] != "LINK" && $peer in $selected_nodes } {
 		    lappend autorenumber_nodes "$peer $peer_ifc"
 		}
 	    }
@@ -1971,8 +1970,8 @@ proc changeAddressRange {} {
     foreach node $selected_nodes {
 	if { [[typemodel $node].layer] != "LINK" } {
 	    foreach ifc [ifcList $node] {
-		set peer [peerByIfc $node $ifc]
-		if { [[typemodel $peer].layer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
+		lassign [logicalPeerByIfc $node $ifc] peer -
+		if { $peer != "" && [[typemodel $peer].layer] != "LINK" && $peer in $selected_nodes } {
 		    lappend autorenumber_ifcs "$node $ifc"
 		    if { [lsearch $autorenumber_nodes $node] == -1 } {
 			lappend autorenumber_nodes $node
@@ -1994,7 +1993,7 @@ proc changeAddressRange {} {
     foreach el $autorenumber_ifcs {
 	set node [lindex $el 0] 
 	set ifc [lindex $el 1]
-	set peer [peerByIfc $node $ifc]
+	lassign [logicalPeerByIfc $node $ifc] peer -
 	if { [lsearch $autorenumber_nodes $node] < [lsearch $autorenumber_nodes $peer] } {
 	    set changeAddrRange 1
 	}
@@ -2061,9 +2060,8 @@ proc changeAddressRange6 {} {
 	foreach node $element {
 	    set autorenumber_nodes ""
 	    foreach ifc [ifcList $node] {
-		set peer [peerByIfc $node $ifc]
-		if { [[typemodel $peer].layer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
-		    set peer_ifc [ifcByPeer $peer $node]
+		lassign [logicalPeerByIfc $node $ifc] peer peer_ifc
+		if { $peer != "" && [[typemodel $peer].layer] != "LINK" && $peer in $selected_nodes } {
 		    lappend autorenumber_nodes "$peer $peer_ifc"
 		}
 	    }
@@ -2089,8 +2087,8 @@ proc changeAddressRange6 {} {
     foreach node $selected_nodes {
 	if { [[typemodel $node].layer] != "LINK" } {
 	    foreach ifc [ifcList $node] {
-		set peer [peerByIfc $node $ifc]
-		if { [[typemodel $peer].layer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
+		lassign [logicalPeerByIfc $node $ifc] peer -
+		if { $peer != "" && [[typemodel $peer].layer] != "LINK" && $peer in $selected_nodes } {
 		    lappend autorenumber_ifcs "$node $ifc"
 		    if { [lsearch $autorenumber_nodes $node] == -1 } {
 			lappend autorenumber_nodes $node
@@ -2112,7 +2110,7 @@ proc changeAddressRange6 {} {
     foreach el $autorenumber_ifcs {
 	set node [lindex $el 0] 
 	set ifc [lindex $el 1]
-	set peer [peerByIfc $node $ifc]
+	lassign [logicalPeerByIfc $node $ifc] peer -
 	if { [lsearch $autorenumber_nodes $node] < [lsearch $autorenumber_nodes $peer] } {
 	    set changeAddrRange6 1
 	}
