@@ -496,8 +496,8 @@ proc dumpLinksToFile { path } {
 	}
 	set lnode1 [lindex [linkPeers $link] 0]
 	set lnode2 [lindex [linkPeers $link] 1]
-	set ifname1 [ifcByPeer $lnode1 $lnode2]
-	set ifname2 [ifcByPeer $lnode2 $lnode1]
+	set ifname1 [lindex [linkPeersIfaces $link] 0]
+	set ifname2 [lindex [linkPeersIfaces $link] 1]
 
 	if { [getLinkMirror $link] != "" } {
 	    set mirror_link [getLinkMirror $link]

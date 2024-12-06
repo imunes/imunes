@@ -158,7 +158,7 @@ proc drawNode { node } {
 	    -text "$labelstr" \
 	    -tags "nodelabel $node"]
     } else {
-	set pnode [peerByIfc [getNodeMirror $node] 0]
+	set pnode [peerByIfc [getNodeMirror $node] "0"]
 	set pcanvas [getNodeCanvas $pnode]
 	set ifc [ifcByPeer $pnode [getNodeMirror $node]]
 	if { $pcanvas != $curcanvas } {
@@ -283,27 +283,26 @@ proc calcAngle { link } {
 # NAME
 #   updateIfcLabel -- update interface label
 # SYNOPSIS
-#   updateIfcLabel $lnode1 $lnode2
+#   updateIfcLabel $link $node $ifc
 # FUNCTION
 #   Updates the interface label, including interface name,
 #   interface state (* for interfaces that are down), IPv4
 #   address and IPv6 address.
 # INPUTS
-#   * lnode1 -- node id of a node where the interface resides
-#   * lnode2 -- node id of the node that is connected by this 
+#   * link -- link id to update
+#   * node -- node id of a node where the interface resides
+#   * ifc -- interface to update
 #   interface. 
 #****
-proc updateIfcLabel { lnode1 lnode2 } {
+proc updateIfcLabel { link node ifc } {
     global showIfNames showIfIPaddrs showIfIPv6addrs
 
-    set link [lindex [.panwin.f1.c gettags "link && $lnode1 && $lnode2"] 1]
-    set ifc [ifcByPeer $lnode1 $lnode2]
-    if { [nodeType $lnode1] == "extelem" } {
-	set ifcs [getNodeExternalIfcs $lnode1]
+    if { [nodeType $node] == "extelem" } {
+	set ifcs [getNodeExternalIfcs $node]
 	set ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$ifc"] 1]
     }
-    set ifipv4addr [getIfcIPv4addr $lnode1 $ifc]
-    set ifipv6addr [getIfcIPv6addr $lnode1 $ifc]
+    set ifipv4addr [getIfcIPv4addr $node $ifc]
+    set ifipv6addr [getIfcIPv6addr $node $ifc]
     if { $ifc == 0 } {
 	set ifc ""
     }
@@ -318,10 +317,10 @@ proc updateIfcLabel { lnode1 lnode2 } {
 	lappend labelstr "$ifipv6addr"
     }
     set str ""
-    if { [getIfcOperState $lnode1 $ifc] == "down" } {
+    if { [getIfcOperState $node $ifc] == "down" } {
 	set str "*"
     }
-    if { [getIfcNatState $lnode1 $ifc] == "on" } {
+    if { [getIfcNatState $node $ifc] == "on" } {
 	set str "${str}NAT-"
     }
     foreach elem $labelstr {
@@ -331,7 +330,7 @@ proc updateIfcLabel { lnode1 lnode2 } {
 	    set str "$str\r[set elem]"
 	}
     }
-    .panwin.f1.c itemconfigure "interface && $lnode1 && $link" \
+    .panwin.f1.c itemconfigure "interface && $node && $link" \
 	-text $str
 }
 
@@ -459,21 +458,22 @@ proc redrawLink { link } {
     }
     .panwin.f1.c coords "linklabel && $link" $lx $ly
 
+    lassign [linkPeersIfaces $link] iface1 iface2
     if {[nodeType $lnode1] != "pseudo"} {
-	updateIfcLabelParams $link $lnode1 $lnode2 $x1 $y1 $x2 $y2
-	updateIfcLabel $lnode1 $lnode2
+	updateIfcLabelParams $link $lnode1 $iface1 $x1 $y1 $x2 $y2
+	updateIfcLabel $link $lnode1 $iface1
     }
 
     if {[nodeType $lnode2] != "pseudo"} {
-	updateIfcLabelParams $link $lnode2 $lnode1 $x2 $y2 $x1 $y1
-	updateIfcLabel $lnode2 $lnode1
+	updateIfcLabelParams $link $lnode2 $iface2 $x2 $y2 $x1 $y1
+	updateIfcLabel $link $lnode2 $iface2
     }
 }
 
-proc updateIfcLabelParams { link lnode1 lnode2 x1 y1 x2 y2 } {
+proc updateIfcLabelParams { link node iface x1 y1 x2 y2 } {
     global showIfIPaddrs showIfIPv6addrs showIfNames
 
-    set bbox [.panwin.f1.c bbox "node && $lnode1"]
+    set bbox [.panwin.f1.c bbox "node && $node"]
     set iconwidth [expr [lindex $bbox 2] - [lindex $bbox 0]]
     set iconheight [expr [lindex $bbox 3] - [lindex $bbox 1]]
 
@@ -482,11 +482,11 @@ proc updateIfcLabelParams { link lnode1 lnode2 x1 y1 x2 y2 } {
     set anchor center
 
     set IP4 $showIfIPaddrs
-    if { [getIfcIPv4addr $lnode1 [ifcByPeer $lnode1 $lnode2]] == "" } {
+    if { [getIfcIPv4addr $node $iface] == "" } {
 	set IP4 0
     }
     set IP6 $showIfIPv6addrs
-    if { [getIfcIPv6addr $lnode1 [ifcByPeer $lnode1 $lnode2]] == "" } {
+    if { [getIfcIPv6addr $node $iface] == "" } {
 	set IP6 0
     }
     set add_height [expr 10*($showIfNames + $IP4 + $IP6)]
@@ -535,8 +535,8 @@ proc updateIfcLabelParams { link lnode1 lnode2 x1 y1 x2 y2 } {
 	}
 	set ly [expr $a*$width + $y1]
     }
-    .panwin.f1.c coords "interface && $lnode1 && $link" $lx $ly
-    .panwin.f1.c itemconfigure "interface && $lnode1 && $link" -justify $just \
+    .panwin.f1.c coords "interface && $node && $link" $lx $ly
+    .panwin.f1.c itemconfigure "interface && $node && $link" -justify $just \
 	-anchor $anchor -angle $ang
 }
 
@@ -588,8 +588,8 @@ proc newGUILink { lnode1 lnode2 } {
 	set new_node2 [lindex $new_nodes 1]
 	set orig_node1 [lindex $orig_nodes 0]
 	set orig_node2 [lindex $orig_nodes 1]
-	set new_link1 [linkByPeers $orig_node1 $new_node1]
-	set new_link2 [linkByPeers $orig_node2 $new_node2]
+	set new_link1 [lindex [linkByPeers $orig_node1 $new_node1] 0]
+	set new_link2 [lindex [linkByPeers $orig_node2 $new_node2] 0]
 	setNodeMirror $new_node1 $new_node2
 	setNodeMirror $new_node2 $new_node1
 	setNodeName $new_node1 $orig_node2

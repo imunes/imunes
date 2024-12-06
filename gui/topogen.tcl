@@ -355,7 +355,7 @@ proc R { v m } {
 	    set node_1 [expr int(rand() * [llength $v])]
 	    set node_2 [expr int(rand() * [llength $v])]
 	    if { $node_1 != $node_2 &&
-		[linkByPeers [lindex $v $node_1] [lindex $v $node_2]] == ""} {
+		[llength [linkByPeers [lindex $v $node_1] [lindex $v $node_2]]] == 0 } {
 		newLink [lindex $v $node_1] [lindex $v $node_2]
 		incr i
 	    }

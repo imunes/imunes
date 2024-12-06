@@ -930,8 +930,8 @@ proc createLinks { links linkCount w } {
 
 	set lnode1 [lindex [linkPeers $link] 0]
 	set lnode2 [lindex [linkPeers $link] 1]
-	set ifname1 [ifcByPeer $lnode1 $lnode2]
-	set ifname2 [ifcByPeer $lnode2 $lnode1]
+	set ifname1 [lindex [linkPeersIfaces $link] 0]
+	set ifname2 [lindex [linkPeersIfaces $link] 1]
 
 	set msg "Creating link $link"
 	set mirror_link [getLinkMirror $link]
@@ -989,8 +989,8 @@ proc configureLinks { links linkCount w } {
 
 	set lnode1 [lindex [linkPeers $link] 0]
 	set lnode2 [lindex [linkPeers $link] 1]
-	set ifname1 [ifcByPeer $lnode1 $lnode2]
-	set ifname2 [ifcByPeer $lnode2 $lnode1]
+	set ifname1 [lindex [linkPeersIfaces $link] 0]
+	set ifname2 [lindex [linkPeersIfaces $link] 1]
 
 	set msg "Configuring link $link"
 	if { [getLinkMirror $link] != "" } {

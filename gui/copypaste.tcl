@@ -86,12 +86,13 @@ proc copySelection {} {
 	    if { [lsearch $node_list $peer] < 0 } {
 		continue
 	    }
-	    set link [linkByPeers $node $peer]
-	    if { [lsearch $link_list $link] >= 0 } {
-		continue
+	    foreach link [linkByPeers $node $peer] {
+		if { [lsearch $link_list $link] >= 0 } {
+		    continue
+		}
+		lappend link_list $link
+		set ::cf::clipboard::$link [set ::cf::[set ::curcfg]::$link]
 	    }
-	    lappend link_list $link
-	    set ::cf::clipboard::$link [set ::cf::[set ::curcfg]::$link]
 	}
     }
 

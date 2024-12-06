@@ -86,11 +86,12 @@ proc removeGUINode { node } {
     set type [nodeType $node]
     foreach ifc [ifcList $node] {
 	set peer [peerByIfc $node $ifc]
-	set link [linkByPeers $node $peer]
-	set mirror [getLinkMirror $link]
-	removeGUILink $link non-atomic
-	if {$mirror != ""} {
-	    removeGUILink $mirror non-atomic
+	foreach link [linkByPeers $node $peer] {
+	    set mirror [getLinkMirror $link]
+	    removeGUILink $link non-atomic
+	    if {$mirror != ""} {
+		removeGUILink $mirror non-atomic
+	    }
 	}
     }
     if { $type != "pseudo" } {
@@ -120,8 +121,8 @@ proc splitGUILink { link } {
     set orig_node2 [lindex $peer_nodes 1]
     set new_node1 [lindex $new_nodes 0]
     set new_node2 [lindex $new_nodes 1]
-    set new_link1 [linkByPeers $orig_node1 $new_node1]
-    set new_link2 [linkByPeers $orig_node2 $new_node2]
+    set new_link1 [lindex [linkByPeers $orig_node1 $new_node1] 0]
+    set new_link2 [lindex [linkByPeers $orig_node2 $new_node2] 0]
     setLinkMirror $new_link1 $new_link2
     setLinkMirror $new_link2 $new_link1
     setNodeMirror $new_node1 $new_node2
@@ -477,8 +478,8 @@ proc movetoCanvas { canvas } {
 	    setNodeMirror $new_node2 $new_node1
 	    setNodeName $new_node1 $peer2
 	    setNodeName $new_node2 $peer1
-	    set link1 [linkByPeers $peer1 $new_node1]
-	    set link2 [linkByPeers $peer2 $new_node2]
+	    set link1 [lindex [linkByPeers $peer1 $new_node1] 0]
+	    set link2 [lindex [linkByPeers $peer2 $new_node2] 0]
 	    setLinkMirror $link1 $link2
 	    setLinkMirror $link2 $link1
 	}
@@ -657,8 +658,7 @@ proc button3node { c x y } {
     foreach peer_node $node_list {
 	set canvas [getNodeCanvas $peer_node]
 	if { $type != "rj45" &&
-	    [lsearch {pseudo rj45} [nodeType $peer_node]] < 0 &&
-	    [ifcByLogicalPeer $node $peer_node] == "" } {
+	    [lsearch {pseudo rj45} [nodeType $peer_node]] < 0 } {
 	    .button3menu.connect.$canvas add command \
 		-label [getNodeName $peer_node] \
 		-command "connectWithNode \"[selectedRealNodes]\" $peer_node"
@@ -1355,14 +1355,12 @@ proc button1-release { c x y } {
 	if {$destobj != "" && $curobj != "" && $destobj != $curobj} {
 	    set lnode1 [lindex [$c gettags $destobj] 1]
 	    set lnode2 [lindex [$c gettags $curobj] 1]
-	    if { [ifcByLogicalPeer $lnode1 $lnode2] == "" } {
-		set link [newLink $lnode1 $lnode2]
-		if { $link != "" } {
-		    drawLink $link
-		    redrawLink $link
-		    updateLinkLabel $link
-		    set changed 1
-		}
+	    set link [newLink $lnode1 $lnode2]
+	    if { $link != "" } {
+		drawLink $link
+		redrawLink $link
+		updateLinkLabel $link
+		set changed 1
 	    }
 	}
     } elseif {$activetool == "rectangle" || $activetool == "oval" \

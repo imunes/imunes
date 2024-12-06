@@ -519,6 +519,9 @@ proc loadCfg { cfg } {
 			nodes {
 			    lappend $object "nodes {$value}"
 			}
+			ifaces {
+			    lappend $object "ifaces {$value}"
+			}
 			mirror {
 			    lappend $object "mirror $value"
 			}
@@ -771,6 +774,22 @@ proc loadCfg { cfg } {
 	    if { $addr != "" } { lappend IPv4UsedList $addr }
 	    lappend MACUsedList [getIfcMACaddr $node $iface]
 	}
+    }
+
+    # older .imn files have only one link per node pair, so match links with interfaces
+    foreach link $link_list {
+	if { [linkPeersIfaces $link] != {} } {
+	    # if one link has ifaces, then all of them do too
+	    return
+	}
+
+	upvar 0 ::cf::[set ::curcfg]::$link $link
+
+	lassign [linkPeers $link] node1 node2
+	set iface1 [ifcByPeer $node1 $node2]
+	set iface2 [ifcByPeer $node2 $node1]
+
+	lappend $link "ifaces {$iface1 $iface2}"
     }
 }
 

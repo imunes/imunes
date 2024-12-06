@@ -217,11 +217,6 @@
 #	Returns the name of the interface connected to the specified peer 
 #       if the peer is on the same canvas, otherwise returns an empty string.
 #
-# ifcByLogicalPeer { local_node_id peer_node_id }
-#	Returns the name of the interface connected to the specified peer.
-#	Returns the right interface even if the peer node is on the other
-#	canvas.
-#
 # hasIPv4Addr { node_id }
 # hasIPv6Addr { node_id }
 #	Returns true if at least one interface has an IPv{4|6} address
@@ -2250,9 +2245,19 @@ proc logicalPeerByIfc { node ifc } {
     if { [nodeType $peer] == "pseudo" } {
 	set node [getNodeMirror $peer]
 	set peer [peerByIfc $node "0"]
-    }
+	set peer_ifc [ifcByPeer $peer $node]
+    } else {
+	foreach link [linkByPeers $node $peer] {
+	    set ifaces [linkPeersIfaces $link]
 
-    set peer_ifc [ifcByPeer $peer $node]
+	    set peer_idx [lsearch -exact [linkPeers $link] $node]
+	    set my_ifc [lindex $ifaces $peer_idx]
+	    if { $ifc == $my_ifc } {
+		set peer_ifc [removeFromList $ifaces $ifc]
+		break
+	    }
+	}
+    }
 
     return "$peer $peer_ifc"
 }
@@ -2277,44 +2282,6 @@ proc ifcByPeer { node peer } {
 
     set entry [lsearch -inline [set $node] "interface-peer {* $peer}"]
     return [lindex [lindex $entry 1] 0]
-}
-
-#****f* nodecfg.tcl/ifcByLogicalPeer
-# NAME
-#   ifcByPeer -- get node interface by peer.
-# SYNOPSIS
-#   set ifc [peerByIfc $node $peer]
-# FUNCTION
-#   Returns the name of the interface connected to the specified peer. Returns
-#   the right interface even if the peer node is on the other canvas or
-#   connected via split link.
-# INPUTS
-#   * node -- node id
-#   * peer -- id of the peer node
-# RESULT
-#   * ifc -- interface name
-#****
-proc ifcByLogicalPeer { node peer } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set ifc [ifcByPeer $node $peer]
-    if { $ifc == "" } {
-	#
-	# Must search through pseudo peers
-	#
-	foreach ifc [ifcList $node] {
-	    set t_peer [peerByIfc $node $ifc]
-	    if { [nodeType $t_peer] == "pseudo" } {
-		set mirror [getNodeMirror $t_peer]
-		if { [peerByIfc $mirror [ifcList $mirror]] == $peer } {
-		    return $ifc
-		}
-	    }
-	}
-	return ""
-    } else {
-	return $ifc    
-    }
 }
 
 #****f* nodecfg.tcl/hasIPv4Addr
@@ -2385,8 +2352,9 @@ proc removeNode { node } {
 
     foreach ifc [ifcList $node] {
 	set peer [peerByIfc $node $ifc]
-	set link [linkByPeers $node $peer]
-	removeLink $link
+	foreach link [linkByPeers $node $peer] {
+	    removeLink $link
+	}
     }
     set i [lsearch -exact $node_list $node]
     set node_list [lreplace $node_list $i $i]
