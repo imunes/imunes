@@ -209,8 +209,7 @@ proc evsched {} {
 		set peers [linkPeers $object]
 		set n0 [lindex $peers 0]
 		set n1 [lindex $peers 1]
-		set ifc0 [ifcByPeer $n0 $n1]
-		set ifc1 [ifcByPeer $n1 $n0]
+		lassign [linkPeersIfaces $object] ifc0 ifc1
 
 		set delay [getLinkDelay $object]
 		if { $delay == "" } {

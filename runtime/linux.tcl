@@ -635,8 +635,22 @@ proc createNodePhysIfcs { node ifcs } {
 	# without bridges between them
 	set peer [peerByIfc $node $ifc]
 	if { $peer != "" } {
-	    set link [linkByPeers $node $peer]
-	    if { $link != "" && [getLinkDirect $link] } {
+	    set this_link ""
+	    foreach link [linkByPeers $node $peer] {
+		set peers [linkPeers $link]
+		set ifaces [linkPeersIfaces $link]
+		if { $node == [lindex $peers 0] && $ifc == [lindex $ifaces 0] } {
+		    set this_link $link
+		    break
+		}
+
+		if { $node == [lindex $peers 1] && $ifc == [lindex $ifaces 1] } {
+		    set this_link $link
+		    break
+		}
+	    }
+
+	    if { $this_link != "" && [getLinkDirect $this_link] } {
 		continue
 	    }
 	}
@@ -1535,8 +1549,8 @@ proc configureIfcLinkParams { eid node ifname bandwidth delay ber loss dup } {
 proc execSetLinkParams { eid link } {
     set lnode1 [lindex [linkPeers $link] 0]
     set lnode2 [lindex [linkPeers $link] 1]
-    set ifname1 [ifcByLogicalPeer $lnode1 $lnode2]
-    set ifname2 [ifcByLogicalPeer $lnode2 $lnode1]
+    set ifname1 [lindex [linkPeersIfaces $link] 0]
+    set ifname2 [lindex [linkPeersIfaces $link] 1]
 
     if { [getLinkMirror $link] != "" } {
 	set mirror_link [getLinkMirror $link]
