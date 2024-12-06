@@ -1384,8 +1384,7 @@ proc getDefaultGateways { node subnet_gws nodes_l2data } {
 
 	# add new subnet at the end of the list
 	set subnet_idx [llength $subnet_gws]
-	set peer_node [logicalPeerByIfc $node $ifc]
-	set peer_ifc [ifcByLogicalPeer $peer_node $node]
+	lassign [logicalPeerByIfc $node $ifc] peer_node peer_ifc
 	lassign [getSubnetData $peer_node $peer_ifc \
 	  $subnet_gws $nodes_l2data $subnet_idx] \
 	  subnet_gws nodes_l2data
@@ -1445,8 +1444,7 @@ proc getSubnetData { this_node this_ifc subnet_gws nodes_l2data subnet_idx } {
 
 	# first, get this node/ifc peer's subnet data in case it is an L2 node
 	# and we're not yet gone through it
-	set peer_node [logicalPeerByIfc $this_node $this_ifc]
-	set peer_ifc [ifcByLogicalPeer $peer_node $this_node]
+	lassign [logicalPeerByIfc $this_node $this_ifc] peer_node peer_ifc
 	lassign [getSubnetData $peer_node $peer_ifc \
 	  $subnet_gws $nodes_l2data $subnet_idx] \
 	  subnet_gws nodes_l2data
@@ -1463,8 +1461,7 @@ proc getSubnetData { this_node this_ifc subnet_gws nodes_l2data subnet_idx } {
     foreach ifc [ifcList $this_node] {
 	dict set nodes_l2data $this_node $ifc $subnet_idx
 
-	set peer_node [logicalPeerByIfc $this_node $ifc]
-	set peer_ifc [ifcByLogicalPeer $peer_node $this_node]
+	lassign [logicalPeerByIfc $this_node $ifc] peer_node peer_ifc
 	lassign [getSubnetData $peer_node $peer_ifc \
 	  $subnet_gws $nodes_l2data $subnet_idx] \
 	  subnet_gws nodes_l2data
@@ -2216,14 +2213,14 @@ proc logicalPeerByIfc { node ifc } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
 
     set peer [peerByIfc $node $ifc]
-    if { [nodeType $peer] != "pseudo" } {
-	return $peer
-
-    } else {
-	set mirror_node [getNodeMirror $peer]
-	set mirror_ifc [ifcList $mirror_node]
-	return [peerByIfc $mirror_node $mirror_ifc]
+    if { [nodeType $peer] == "pseudo" } {
+	set node [getNodeMirror $peer]
+	set peer [peerByIfc $node "0"]
     }
+
+    set peer_ifc [ifcByPeer $peer $node]
+
+    return "$peer $peer_ifc"
 }
 
 #****f* nodecfg.tcl/ifcByPeer

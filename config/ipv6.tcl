@@ -131,13 +131,12 @@ proc autoIPv6addr { node iface } {
     }  
 
     setIfcIPv6addr $node $iface ""
-    set peer_node [logicalPeerByIfc $node $iface]
+    lassign [logicalPeerByIfc $node $iface] peer_node peer_if
 
     if { [[typemodel $peer_node].layer] == "LINK" } {
 	foreach l2node [listLANnodes $peer_node {}] {
 	    foreach ifc [ifcList $l2node] {
-		set peer [logicalPeerByIfc $l2node $ifc]
-		set peer_if [ifcByLogicalPeer $peer $l2node]
+		lassign [logicalPeerByIfc $l2node $ifc] peer peer_if
 		set peer_ip6addr [getIfcIPv6addr $peer $peer_if]
 		if { $changeAddressRange6 == 1 } {
 		    if { [lsearch $autorenumbered_ifcs6 "$peer $peer_if"] != -1 } {
@@ -153,7 +152,6 @@ proc autoIPv6addr { node iface } {
 	    }
 	}
     } else {
-	set peer_if [ifcByLogicalPeer $peer_node $node]
 	set peer_ip6addr [getIfcIPv6addr $peer_node $peer_if]
 	set peer_ip6addrs $peer_ip6addr
     }
