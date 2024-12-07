@@ -879,11 +879,23 @@ proc button3node { c x y } {
 
 	    foreach ifc [allIfcList $node] {
 		set label "$ifc"
-		if { [getIfcIPv4addr $node $ifc] != "" } {
-		    set label "$label ([getIfcIPv4addr $node $ifc])"
+		set addrs [getIfcIPv4addrs $node $ifc]
+		if { $addrs != {} } {
+		    set label "$label ([lindex $addrs 0]"
+		    if { [llength $addrs] > 1 } {
+			set label "$label ...)"
+		    } else {
+			set label "$label)"
+		    }
 		}
-		if { [getIfcIPv6addr $node $ifc] != "" } {
-		    set label "$label ([getIfcIPv6addr $node $ifc])"
+		set addrs [getIfcIPv6addrs $node $ifc]
+		if { $addrs != {} } {
+		    set label "$label ([lindex $addrs 0]"
+		    if { [llength $addrs] > 1 } {
+			set label "$label ...)"
+		    } else {
+			set label "$label)"
+		    }
 		}
 		.button3menu.wireshark add command -label $label \
 		    -command "startWiresharkOnNodeIfc $node $ifc"
@@ -902,11 +914,23 @@ proc button3node { c x y } {
 
 	    foreach ifc [allIfcList $node] {
 		set label "$ifc"
-		if { [getIfcIPv4addr $node $ifc] != "" } {
-		    set label "$label ([getIfcIPv4addr $node $ifc])"
+		set addrs [getIfcIPv4addrs $node $ifc]
+		if { $addrs != {} } {
+		    set label "$label ([lindex $addrs 0]"
+		    if { [llength $addrs] > 1 } {
+			set label "$label ...)"
+		    } else {
+			set label "$label)"
+		    }
 		}
-		if { [getIfcIPv6addr $node $ifc] != "" } {
-		    set label "$label ([getIfcIPv6addr $node $ifc])"
+		set addrs [getIfcIPv6addrs $node $ifc]
+		if { $addrs != {} } {
+		    set label "$label ([lindex $addrs 0]"
+		    if { [llength $addrs] > 1 } {
+			set label "$label ...)"
+		    } else {
+			set label "$label)"
+		    }
 		}
 		.button3menu.tcpdump add command -label $label \
 		    -command "startTcpdumpOnNodeIfc $node $ifc"
@@ -1753,7 +1777,7 @@ proc nodeEnter { c } {
     }
     if { $type != "rj45" } {
 	foreach ifc [ifcList $node] {
-	    set line "$line $ifc:[getIfcIPv4addr $node $ifc]"
+	    set line "$line $ifc:[join [getIfcIPv4addrs $node $ifc] ", "]"
 	}
     }
     .bottom.textbox config -text "$line"
@@ -1859,7 +1883,7 @@ proc removeIPv4nodes {} {
     foreach node $nodelist {
 	setStatIPv4routes $node "" 
 	foreach ifc [ifcList $node] {
-	    setIfcIPv4addr $node $ifc "" 
+	    setIfcIPv4addrs $node $ifc "" 
 	}
     }
     redrawAll
@@ -1882,7 +1906,7 @@ proc removeIPv6nodes {} {
     foreach node $nodelist {
 	setStatIPv6routes $node "" 
 	foreach ifc [ifcList $node] {
-	    setIfcIPv6addr $node $ifc "" 
+	    setIfcIPv6addrs $node $ifc "" 
 	}
     }
     redrawAll
@@ -1984,7 +2008,7 @@ proc changeAddressRange {} {
     foreach el $autorenumber_ifcs {
 	set node [lindex $el 0] 
 	set ifc [lindex $el 1]
-	setIfcIPv4addr $node $ifc ""
+	setIfcIPv4addrs $node $ifc ""
     }
 
     #dodijeljivanje adresa suceljima koja nisu spojena na link_layer cvorove
@@ -2101,7 +2125,7 @@ proc changeAddressRange6 {} {
     foreach el $autorenumber_ifcs {
 	set node [lindex $el 0] 
 	set ifc [lindex $el 1]
-	setIfcIPv6addr $node $ifc ""
+	setIfcIPv6addrs $node $ifc ""
     }
 
     #dodijeljivanje adresa suceljima koja nisu spojena na link_layer cvorove

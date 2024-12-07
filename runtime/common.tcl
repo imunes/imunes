@@ -381,14 +381,14 @@ proc fetchNodeConfiguration {} {
 		    setIfcMACaddr $node $ifc $macaddr
 		} elseif {[regexp {^\tinet6 (?!fe80:)([^ ]+) prefixlen ([^ ]+)} $line -> ip6addr mask]} {
 		    if {$ip6Set == 0} {
-			setIfcIPv6addr $node $ifc $ip6addr/$mask
+			setIfcIPv6addrs $node $ifc $ip6addr/$mask
 			set ip6Set 1
 		    }
 		} elseif {[regexp {^\tinet ([^ ]+) netmask ([^ ]+) } $line \
 		     -> ip4addr netmask]} {
 		    if {$ip4Set == 0} {
 			set length [ip::maskToLength $netmask]
-			setIfcIPv4addr $node $ifc $ip4addr/$length
+			setIfcIPv4addrs $node $ifc $ip4addr/$length
 			set ip4Set 1
 		    }
 		}
@@ -406,12 +406,12 @@ proc fetchNodeConfiguration {} {
 		     -> ip4addr netmask]} {
 		    if {$ip4Set == 0} {
 			set length [ip::maskToLength $netmask]
-			setIfcIPv4addr $node $ifc $ip4addr/$length
+			setIfcIPv4addrs $node $ifc $ip4addr/$length
 			set ip4Set 1
 		    }
 		} elseif {[regexp {^\s*inet6 addr:\s(?!fe80:)([^ ]+)} $line -> ip6addr]} {
 		    if {$ip6Set == 0} {
-			setIfcIPv6addr $node $ifc $ip6addr
+			setIfcIPv6addrs $node $ifc $ip6addr
 			set ip6Set 1
 		    }
 		} elseif {[regexp {MTU:([^ ]+)} $line -> mtuvalue]} {

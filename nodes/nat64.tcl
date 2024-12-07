@@ -68,8 +68,8 @@ proc $MODULE.confNewNode { node } {
 
     setAutoDefaultRoutesStatus $node "enabled"
     setLogIfcType $node lo0 lo
-    setIfcIPv4addr $node lo0 "127.0.0.1/8"
-    setIfcIPv6addr $node lo0 "::1/128"
+    setIfcIPv4addrs $node lo0 "127.0.0.1/8"
+    setIfcIPv6addrs $node lo0 "::1/128"
 
     setTaygaIPv4DynPool $node "192.168.64.0/24"
     setTaygaIPv6Prefix $node "2001::/96"
@@ -252,7 +252,7 @@ proc $MODULE.configGUI { c node } {
     set ifctab [lindex $tabs 1]
     set nat64tab [lindex $tabs 2]
 
-    set treecolumns {"OperState State" "NatState Nat" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
+    set treecolumns {"OperState State" "NatState Nat" "IPv4addrs IPv4 addrs" "IPv6addrs IPv6 addrs" \
             "MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop" }
     configGUI_addTree $ifctab $node
 

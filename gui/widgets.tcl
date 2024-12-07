@@ -214,7 +214,7 @@ proc showRoute { c node2 } {
 		set ifcs [lsort -ascii [ifcList $node2]]
 		#Make your own traceroute
 		set ifc [lindex $ifcs 0]
-		set ip [getIfcIPv4addr $node2 $ifc]
+		set ip [lindex [getIfcIPv4addrs $node2 $ifc] 0]
 		set slashPlace [string first "/" $ip]
 		set ipAddr [string range $ip 0 [expr $slashPlace-1]]
 		set nodeId "$eid.$node1"
@@ -289,7 +289,7 @@ proc findNode { c ipAddr } {
     	set node [lindex $nodeList $j]
     	set ifcs [lsort -ascii [ifcList $node]]
     	foreach ifc $ifcs {
-    	set ip [getIfcIPv4addr $node $ifc]
+    	set ip [lindex [getIfcIPv4addrs $node $ifc] 0]
     	set slashPlace [string first "/" $ip]
     	set addr [string range $ip 0 [expr $slashPlace-1]]
     	    if {$addr == $ipAddr} {

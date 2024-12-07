@@ -130,29 +130,29 @@ proc autoIPv6addr { node iface } {
 	return
     }  
 
-    setIfcIPv6addr $node $iface ""
+    setIfcIPv6addrs $node $iface ""
     lassign [logicalPeerByIfc $node $iface] peer_node peer_if
 
     if { [[typemodel $peer_node].layer] == "LINK" } {
 	foreach l2node [listLANnodes $peer_node {}] {
 	    foreach ifc [ifcList $l2node] {
 		lassign [logicalPeerByIfc $l2node $ifc] peer peer_if
-		set peer_ip6addr [getIfcIPv6addr $peer $peer_if]
+		set peer_ip6addr [getIfcIPv6addrs $peer $peer_if]
 		if { $changeAddressRange6 == 1 } {
 		    if { [lsearch $autorenumbered_ifcs6 "$peer $peer_if"] != -1 } {
 			if { $peer_ip6addr != "" } {
-			    lappend peer_ip6addrs $peer_ip6addr
+			    lappend peer_ip6addrs {*}$peer_ip6addr
 			}   
 		    }
 		} else {
 		    if { $peer_ip6addr != "" } {
-			lappend peer_ip6addrs $peer_ip6addr
+			lappend peer_ip6addrs {*}$peer_ip6addr
 		    }
 		}
 	    }
 	}
     } else {
-	set peer_ip6addr [getIfcIPv6addr $peer_node $peer_if]
+	set peer_ip6addr [getIfcIPv6addrs $peer_node $peer_if]
 	set peer_ip6addrs $peer_ip6addr
     }
 
@@ -160,10 +160,12 @@ proc autoIPv6addr { node iface } {
 
     if { $peer_ip6addrs != "" && $changeAddrRange6 == 0 } {
 	set ipaddr  [nextFreeIP6Addr [lindex $peer_ip6addrs 0] $targetbyte $peer_ip6addrs]
-	setIfcIPv6addr $node $iface $ipaddr
+	setIfcIPv6addrs $node $iface $ipaddr
     } else {
-	setIfcIPv6addr $node $iface "[findFreeIPv6Net 64][format %x $targetbyte]/64"
-	lappend IPv6UsedList [ip::contract [ip::prefix [getIfcIPv6addr $node $iface]]]
+	setIfcIPv6addrs $node $iface "[findFreeIPv6Net 64][format %x $targetbyte]/64"
+	foreach addr [getIfcIPv6addrs $node $iface] {
+	    lappend IPv6UsedList [ip::contract [ip::prefix $addr]]
+	}
     }
 }
 
