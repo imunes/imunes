@@ -261,7 +261,7 @@ proc configGUI_addTree { wi node } {
 	foreach ifc [lsort -dictionary [logIfcList $node]] {
 	    $wi.panwin.f1.tree insert logIfcFrame end -id $ifc \
 		-text "$ifc" -tags $ifc
-	    foreach column { "OperState" "NatState" "MTU" "IPv4addr" "IPv6addr"} {
+	    foreach column { "OperState" "NatState" "MTU" "IPv4addrs" "IPv6addrs"} {
 		$wi.panwin.f1.tree set $ifc [lindex $column 0] \
 		    [getIfc[lindex $column 0] $node $ifc]
 	    }
@@ -443,7 +443,7 @@ proc configGUI_refreshIfcsTree { wi node } {
 	foreach ifc [lsort -dictionary [logIfcList $node]] {
 	    $wi insert logIfcFrame end -id $ifc \
 		-text "$ifc" -tags $ifc
-	    foreach column { "OperState" "NatState" "MTU" "IPv4addr" "IPv6addr"} {
+	    foreach column { "OperState" "NatState" "MTU" "IPv4addrs" "IPv6addrs"} {
 		$wi set $ifc [lindex $column 0] \
 		    [getIfc[lindex $column 0] $node $ifc]
 	    }
@@ -1797,10 +1797,10 @@ proc configGUI_externalIfcs { wi node } {
     $wi.if$ifc.mac.addr insert 0 [getIfcMACaddr $node $ifc]
     ttk::label $wi.if$ifc.labelIPv4 -text "IPv4 address:" -width 11
     ttk::entry $wi.if$ifc.ipv4.addr -width 24 -validate focus
-    $wi.if$ifc.ipv4.addr insert 0 [getIfcIPv4addr $node $ifc]
+    $wi.if$ifc.ipv4.addr insert 0 [join [getIfcIPv4addrs $node $ifc] ";"]
     ttk::label $wi.if$ifc.labelIPv6 -text "IPv6 address:" -width 11
     ttk::entry $wi.if$ifc.ipv6.addr -width 24 -validate focus
-    $wi.if$ifc.ipv6.addr insert 0 [getIfcIPv6addr $node $ifc]
+    $wi.if$ifc.ipv6.addr insert 0 [join [getIfcIPv6addrs $node $ifc] ";"]
 
     pack $wi.if$ifc -expand 1 -padx 1 -pady 1
     grid $wi.if$ifc.labelName -in $wi.if$ifc -columnspan 2 -row 0 -pady 4 -padx 4

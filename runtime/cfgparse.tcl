@@ -762,16 +762,18 @@ proc loadCfg { cfg } {
 	if { "lo0" ni [logIfcList $node] && \
 		[[typemodel $node].layer] == "NETWORK"} {
 	    setLogIfcType $node lo0 lo
-	    setIfcIPv4addr $node lo0 "127.0.0.1/8"
-	    setIfcIPv6addr $node lo0 "::1/128"
+	    setIfcIPv4addrs $node lo0 "127.0.0.1/8"
+	    setIfcIPv6addrs $node lo0 "::1/128"
 	}
 	# Speeding up auto renumbering of MAC, IPv4 and IPv6 addresses by remembering
 	# used addresses in lists.
 	foreach iface [ifcList $node] {
-	    set addr [getIfcIPv6addr $node $iface]
-	    if { $addr != "" } { lappend IPv6UsedList [ip::contract [ip::prefix $addr]] }
-	    set addr [getIfcIPv4addr $node $iface]
-	    if { $addr != "" } { lappend IPv4UsedList $addr }
+	    foreach addr [getIfcIPv6addrs $node $iface] {
+		lappend IPv6UsedList [ip::contract [ip::prefix $addr]]
+	    }
+	    foreach addr [getIfcIPv4addrs $node $iface] {
+		lappend IPv4UsedList $addr
+	    }
 	    lappend MACUsedList [getIfcMACaddr $node $iface]
 	}
     }

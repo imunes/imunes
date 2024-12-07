@@ -82,8 +82,8 @@ proc $MODULE.confNewNode { node } {
     setBridgeTimeout $node bridge0 "240"
 
     setLogIfcType $node lo0 lo
-    setIfcIPv4addr $node lo0 "127.0.0.1/8"
-    setIfcIPv6addr $node lo0 "::1/128"
+    setIfcIPv4addrs $node lo0 "127.0.0.1/8"
+    setIfcIPv6addrs $node lo0 "::1/128"
 }
 
 proc $MODULE.icon {size} {
@@ -185,12 +185,10 @@ proc $MODULE.cfggen { node } {
     set cfg {}
 
     foreach ifc [ifcList $node] {
-	set addr [getIfcIPv4addr $node $ifc]
-	if { $addr != "" } {
+	foreach addr [getIfcIPv4addrs $node $ifc] {
 	    lappend cfg "ifconfig $ifc inet $addr"
 	}
-	set addr [getIfcIPv6addr $node $ifc]
-	if { $addr != "" } {
+	foreach addr [getIfcIPv6addrs $node $ifc] {
 	    lappend cfg "ifconfig $ifc inet6 $addr"
 	}
     }
@@ -508,8 +506,8 @@ proc $MODULE.configGUI { c node } {
     set ifctab [lindex $tabs 1]
     set bridgeifctab [lindex $tabs 2]
 
-    set treecolumns { "OperState State" "NatState Nat" "IPv4addr IPv4 addr" \
-	"IPv6addr IPv6 addr" "MACaddr MAC addr" "MTU MTU" \
+    set treecolumns { "OperState State" "NatState Nat" "IPv4addrs IPv4 addrs" \
+	"IPv6addrs IPv6 addrs" "MACaddr MAC addr" "MTU MTU" \
 	"QLen Queue len" "QDisc Queue disc" "QDrop Queue drop"}
     configGUI_addTree $ifctab $node
     

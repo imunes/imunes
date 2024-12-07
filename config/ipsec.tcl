@@ -1519,14 +1519,14 @@ proc getIPAddressForPeer { node curIP } {
     }
     if { $IPversion == 4 } {
 	foreach item $listOfInterfaces {
-	    set ifcIP [getIfcIPv4addr $node $item]
+	    set ifcIP [getIfcIPv4addrs $node $item]
 	    if { $ifcIP != "" } {
 		lappend listOfIPs $ifcIP
 	    }
 	}
     } else {
 	foreach item $listOfInterfaces {
-	    set ifcIP [getIfcIPv6addr $node $item]
+	    set ifcIP [getIfcIPv6addrs $node $item]
 	    if { $ifcIP != "" } {
 		lappend listOfIPs $ifcIP
 	    }

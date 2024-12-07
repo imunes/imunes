@@ -85,8 +85,8 @@ proc $MODULE.confNewNode { node } {
 
     setAutoDefaultRoutesStatus $node "enabled"
     setLogIfcType $node lo0 lo
-    setIfcIPv4addr $node lo0 "127.0.0.1/8"
-    setIfcIPv6addr $node lo0 "::1/128"
+    setIfcIPv4addrs $node lo0 "127.0.0.1/8"
+    setIfcIPv6addrs $node lo0 "::1/128"
 }
 
 #****f* host.tcl/host.icon
@@ -420,7 +420,7 @@ proc $MODULE.configGUI { c node } {
     set configtab [lindex $tabs 0]
     set ifctab [lindex $tabs 1]
 
-    set treecolumns {"OperState State" "NatState Nat" "IPv4addr IPv4 addr" "IPv6addr IPv6 addr" \
+    set treecolumns {"OperState State" "NatState Nat" "IPv4addrs IPv4 addrs" "IPv6addrs IPv6 addrs" \
 	    "MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop"}
     configGUI_addTree $ifctab $node
 
