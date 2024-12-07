@@ -151,7 +151,7 @@ proc drawNode { node } {
 
 	foreach ifc [ifcList $node] {
 	    if {[string trim $ifc 0123456789] == "wlan"} {
-		set labelstr [format "%s %s" $labelstr [getIfcIPv4addr $node $ifc]]
+		set labelstr [format "%s %s" $labelstr [getIfcIPv4addrs $node $ifc]]
 	    }
 	}
 	set label [.panwin.f1.c create text $x $y -fill blue \
@@ -301,8 +301,8 @@ proc updateIfcLabel { link node ifc } {
 	set ifcs [getNodeExternalIfcs $node]
 	set ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$ifc"] 1]
     }
-    set ifipv4addr [getIfcIPv4addr $node $ifc]
-    set ifipv6addr [getIfcIPv6addr $node $ifc]
+    set ifipv4addr [getIfcIPv4addrs $node $ifc]
+    set ifipv6addr [getIfcIPv6addrs $node $ifc]
     if { $ifc == 0 } {
 	set ifc ""
     }
@@ -311,10 +311,18 @@ proc updateIfcLabel { link node ifc } {
 	lappend labelstr "$ifc"
     }
     if { $showIfIPaddrs && $ifipv4addr != "" } {
-	lappend labelstr "$ifipv4addr"
+	if { [llength $ifipv4addr] > 1 } {
+	    lappend labelstr "[lindex $ifipv4addr 0] ..."
+	} else {
+	    lappend labelstr "[lindex $ifipv4addr 0]"
+	}
     }
     if { $showIfIPv6addrs && $ifipv6addr != "" } {
-	lappend labelstr "$ifipv6addr"
+	if { [llength $ifipv6addr] > 1 } {
+	    lappend labelstr "[lindex $ifipv6addr 0] ..."
+	} else {
+	    lappend labelstr "[lindex $ifipv6addr 0]"
+	}
     }
     set str ""
     if { [getIfcOperState $node $ifc] == "down" } {
@@ -482,11 +490,11 @@ proc updateIfcLabelParams { link node iface x1 y1 x2 y2 } {
     set anchor center
 
     set IP4 $showIfIPaddrs
-    if { [getIfcIPv4addr $node $iface] == "" } {
+    if { [getIfcIPv4addrs $node $iface] == {} } {
 	set IP4 0
     }
     set IP6 $showIfIPv6addrs
-    if { [getIfcIPv6addr $node $iface] == "" } {
+    if { [getIfcIPv6addrs $node $iface] == {} } {
 	set IP6 0
     }
     set add_height [expr 10*($showIfNames + $IP4 + $IP6)]

@@ -1662,13 +1662,11 @@ proc startExternalConnection { eid node } {
 
     set cmds "$cmds\n ip a flush dev $outifc"
 
-    set ipv4 [getIfcIPv4addr $node $ifc]
-    if { $ipv4 != "" } {
+    foreach ipv4 [getIfcIPv4addrs $node $ifc] {
 	set cmds "$cmds\n ip a add $ipv4 dev $outifc"
     }
 
-    set ipv6 [getIfcIPv6addr $node $ifc]
-    if { $ipv6 != "" } {
+    foreach ipv6 [getIfcIPv6addrs $node $ifc] {
 	set cmds "$cmds\n ip a add $ipv6 dev $outifc"
     }
 
@@ -1683,7 +1681,10 @@ proc stopExternalConnection { eid node } {
 
 proc setupExtNat { eid node ifc } {
     set extIfc [getNodeName $node]
-    set extIp [getIfcIPv4addrs $node $ifc]
+    set extIp [lindex [getIfcIPv4addrs $node $ifc] 0]
+    if { $extIp == "" } {
+	return
+    }
     set prefixLen [lindex [split $extIp "/"] 1]
     set subnet "[ip::prefix $extIp]/$prefixLen"
 
@@ -1696,7 +1697,10 @@ proc setupExtNat { eid node ifc } {
 
 proc unsetupExtNat { eid node ifc } {
     set extIfc [getNodeName $node]
-    set extIp [getIfcIPv4addrs $node $ifc]
+    set extIp [lindex [getIfcIPv4addrs $node $ifc] 0]
+    if { $extIp == "" } {
+	return
+    }
     set prefixLen [lindex [split $extIp "/"] 1]
     set subnet "[ip::prefix $extIp]/$prefixLen"
 

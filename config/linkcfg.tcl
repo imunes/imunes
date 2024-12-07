@@ -172,10 +172,14 @@ proc removeLink { link } {
 	    continue
 	}
 
-	set index [lsearch -exact $IPv4UsedList [getIfcIPv4addr $node $ifc]]
-	set IPv4UsedList [lreplace $IPv4UsedList $index $index]
-	set index [lsearch -exact $IPv6UsedList [getIfcIPv6addr $node $ifc]]
-	set IPv6UsedList [lreplace $IPv6UsedList $index $index]
+	foreach addr [getIfcIPv4addrs $node $ifc] {
+	    set index [lsearch -exact $IPv4UsedList $addr]
+	    set IPv4UsedList [lreplace $IPv4UsedList $index $index]
+	}
+	foreach addr [getIfcIPv6addrs $node $ifc] {
+	    set index [lsearch -exact $IPv6UsedList $addr]
+	    set IPv6UsedList [lreplace $IPv6UsedList $index $index]
+	}
 	set index [lsearch -exact $MACUsedList [getIfcMACaddr $node $ifc]]
 	set MACUsedList [lreplace $MACUsedList $index $index]
 	netconfClearSection $node "interface $ifc"

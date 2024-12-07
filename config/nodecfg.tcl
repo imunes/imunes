@@ -119,17 +119,11 @@
 # setIfcMTU { node_id ifc mtu }
 #	Sets the new MTU. Zero MTU value denotes the default MTU.
 #
-# getIfcIPv4addr { node_id ifc }
-#	Returns a list of all IPv4 addresses assigned to an interface.
-#
-# setIfcIPv4addr { node_id ifc addr }
+# setIfcIPv4addrs { node_id ifc addrs }
 #	Sets a new IPv4 address(es) on an interface. The correctness of the
 #	IP address format is not checked / enforced.
 #
-# getIfcIPv6addr { node_id ifc }
-#	Returns a list of all IPv6 addresses assigned to an interface.
-#
-# setIfcIPv6addr { node_id ifc addr }
+# setIfcIPv6addrs { node_id ifc addrs }
 #	Sets a new IPv6 address(es) on an interface. The correctness of the
 #	IP address format is not checked / enforced.
 #
@@ -1051,28 +1045,6 @@ proc setIfcMACaddr { node ifc addr } {
     netconfInsertSection $node $ifcfg
 }
 
-#****f* nodecfg.tcl/getIfcIPv4addr
-# NAME
-#   getIfcIPv4addr -- get interface first IPv4 address.
-# SYNOPSIS
-#   set addr [getIfcIPv4addr $node $ifc]
-# FUNCTION
-#   Returns the first IPv4 address assigned to the specified interface.
-# INPUTS
-#   * node -- node id
-#   * ifc -- interface name.
-# RESULT
-#   * addr -- first IPv4 address on the interface
-#    
-#****
-proc getIfcIPv4addr { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lrange $line 0 1] == "ip address" } {
-	    return [lindex $line 2]
-	}
-    }
-}
-
 #****f* nodecfg.tcl/getIfcIPv4addrs
 # NAME
 #   getIfcIPv4addrs -- get interface IPv4 addresses.
@@ -1114,32 +1086,6 @@ proc getLogIfcType { node ifc } {
 	    return [lindex $line 1]
 	}
     }
-}
-
-#****f* nodecfg.tcl/setIfcIPv4addr
-# NAME
-#   setIfcIPv4addr -- set interface IPv4 address.
-# SYNOPSIS
-#   setIfcIPv4addr $node $ifc $addr
-# FUNCTION
-#   Sets a new IPv4 address(es) on an interface. The correctness of the IP
-#   address format is not checked / enforced.
-# INPUTS
-#   * node -- the node id of the node whose interface's IPv4 address is set.
-#   * ifc -- interface name.
-#   * addr -- new IPv4 address.
-#****
-proc setIfcIPv4addr { node ifc addr } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lrange $line 0 1] != "ip address" } {
-	    lappend ifcfg $line
-	}
-    }
-    if { $addr != "" } {
-	lappend ifcfg " ip address $addr"
-    }
-    netconfInsertSection $node $ifcfg
 }
 
 #****f* nodecfg.tcl/setIfcIPv4addrs
@@ -1196,28 +1142,6 @@ proc setLogIfcType { node ifc type } {
     netconfInsertSection $node $ifcfg
 }
 
-#****f* nodecfg.tcl/getIfcIPv6addr
-# NAME
-#   getIfcIPv6addr -- get interface first IPv6 address.
-# SYNOPSIS
-#   set addr [getIfcIPv6addr $node $ifc]
-# FUNCTION
-#   Returns the first IPv6 address assigned to the specified interface.
-# INPUTS
-#   * node -- node id
-#   * ifc -- interface name.
-# RESULT
-#   * addr -- first IPv6 address on the interface
-#    
-#****
-proc getIfcIPv6addr { node ifc } {
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lrange $line 0 1] == "ipv6 address" } {
-	    return [lindex $line 2]
-	}
-    }
-}
-
 #****f* nodecfg.tcl/getIfcIPv6addrs
 # NAME
 #   getIfcIPv6addrs -- get interface IPv6 addresses.
@@ -1240,32 +1164,6 @@ proc getIfcIPv6addrs { node ifc } {
 	}
     }
     return $addrlist
-}
-
-#****f* nodecfg.tcl/setIfcIPv6addr
-# NAME
-#   setIfcIPv6addr -- set interface IPv6 address.
-# SYNOPSIS
-#   setIfcIPv6addr $node $ifc $addr
-# FUNCTION
-#   Sets a new IPv6 address(es) on an interface. The correctness of the IP
-#   address format is not checked / enforced.
-# INPUTS
-#   * node -- the node id of the node whose interface's IPv4 address is set.
-#   * ifc -- interface name.
-#   * addr -- new IPv6 address.
-#****
-proc setIfcIPv6addr { node ifc addr } {
-    set ifcfg [list "interface $ifc"]
-    foreach line [netconfFetchSection $node "interface $ifc"] {
-	if { [lrange $line 0 1] != "ipv6 address" } {
-	    lappend ifcfg $line
-	}
-    }
-    if { $addr != "" } {
-	lappend ifcfg " ipv6 address $addr"
-    }
-    netconfInsertSection $node $ifcfg
 }
 
 #****f* nodecfg.tcl/setIfcIPv6addrs
@@ -1432,8 +1330,8 @@ proc getSubnetData { this_node this_ifc subnet_gws nodes_l2data subnet_idx } {
 	if { [nodeType $this_node] in "router nat64 extnat" } {
 	    # this node is a router/extnat, add our IP addresses to lists
 	    # TODO: multiple addresses per iface - split subnet4data and subnet6data
-	    set gw4 [lindex [split [getIfcIPv4addr $this_node $this_ifc] /] 0]
-	    set gw6 [lindex [split [getIfcIPv6addr $this_node $this_ifc] /] 0]
+	    set gw4 [lindex [split [getIfcIPv4addrs $this_node $this_ifc] /] 0]
+	    set gw6 [lindex [split [getIfcIPv6addrs $this_node $this_ifc] /] 0]
 	    lappend my_gws [nodeType $this_node]|$gw4|$gw6
 	    lset subnet_gws $subnet_idx $my_gws
 	}
@@ -2300,7 +2198,7 @@ proc ifcByPeer { node peer } {
 #****
 proc hasIPv4Addr { node } {
     foreach ifc [ifcList $node] {
-	if { [getIfcIPv4addr $node $ifc] != "" } {
+	if { [getIfcIPv4addrs $node $ifc] != {} } {
 	    return true
 	}
     }
@@ -2323,7 +2221,7 @@ proc hasIPv4Addr { node } {
 #****
 proc hasIPv6Addr { node } {
     foreach ifc [ifcList $node] {
-	if { [getIfcIPv6addr $node $ifc] != "" } {
+	if { [getIfcIPv6addrs $node $ifc] != {} } {
 	    return true
 	}
     }
