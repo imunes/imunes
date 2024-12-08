@@ -311,82 +311,8 @@ proc l3node.nghook { eid node ifc } {
     }
 }
 
-#****f* exec.tcl/l3node.nodeCreate
-# NAME
-#   l3node.nodeCreate -- layer 3 node instantiate
-# SYNOPSIS
-#   l3node.nodeCreate $eid $node
-# FUNCTION
-#   Instantiates the specified node. This means that it creates a new vimage
-#   node, all the required interfaces (for serial interface a new netgraph
-#   interface of type iface; for ethernet of type eiface, using createIfc
-#   procedure) including loopback interface, and sets kernel variables.
-# INPUTS
-#   * eid -- experiment id
-#   * node -- node id
-#****
-proc l3node.nodeCreate { eid node } {
-    prepareFilesystemForNode $node
-    createNodeContainer $node
-}
-
-proc l3node.nodePhysIfacesCreate { eid node ifcs } {
-    nodePhysIfacesCreate $node $ifcs
-}
-
 proc l2node.nodePhysIfacesCreate { eid node ifcs } {
     nodePhysIfacesCreate $node $ifcs
-}
-
-#****f* exec.tcl/l3node.nodeNamespaceSetup
-# NAME
-#   l3node.nodeNamespaceSetup -- layer 3 node nodeNamespaceSetup
-# SYNOPSIS
-#   l3node.nodeNamespaceSetup $eid $node
-# FUNCTION
-#   Linux only. Attaches the existing Docker netns to a new one.
-# INPUTS
-#   * eid -- experiment id
-#   * node -- node id
-#****
-proc l3node.nodeNamespaceSetup { eid node } {
-    attachToL3NodeNamespace $node
-}
-
-#****f* exec.tcl/l3node.nodeInitConfigure
-# NAME
-#   l3node.nodeInitConfigure -- layer 3 node nodeInitConfigure
-# SYNOPSIS
-#   l3node.nodeInitConfigure $eid $node
-# FUNCTION
-#   Runs initial L3 configuration, such as creating logical interfaces and
-#   configuring sysctls.
-# INPUTS
-#   * eid -- experiment id
-#   * node -- node id
-#****
-proc l3node.nodeInitConfigure { eid node } {
-    nodeLogIfacesCreate $node
-    configureICMPoptions $node
-}
-
-#****f* exec.tcl/l3node.nodeConfigure
-# NAME
-#   l3node.nodeConfigure -- layer 3 node start
-# SYNOPSIS
-#   l3node.nodeConfigure $eid $node
-# FUNCTION
-#   Starts a new layer 3 node (pc, host or router). The node can be started if
-#   it is instantiated.
-#   Simulates the booting proces of a node, starts all the services and
-#   assignes the ip addresses to the interfaces.
-# INPUTS
-#   * eid -- experiment id
-#   * node -- node id
-#****
-proc l3node.nodeConfigure { eid node } {
-    startIfcsNode $node
-    runConfOnNode $node
 }
 
 #****f* exec.tcl/l2node.nodeNamespaceSetup
