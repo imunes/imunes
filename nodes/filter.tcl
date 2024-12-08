@@ -106,8 +106,8 @@ proc $MODULE.notebookDimensions { wi } {
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifacePrefix { l r } {
-    return e
+proc $MODULE.ifacePrefix {} {
+    return "e"
 }
 
 #****f* filter.tcl/filter.IPAddrRange
@@ -202,8 +202,8 @@ proc $MODULE.shellcmds {} {
 #   * nghook - the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
-proc $MODULE.nghook { eid node_id iface_id } {
-    return [list $node_id $iface_id]
+proc $MODULE.nghook { eid node_id iface } {
+    return [list $node_id [getIfcName $node_id $iface]]
 }
 
 ################################################################################
@@ -333,7 +333,7 @@ proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
 }
 
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
-    l2node.nodeIfacesDestroy $eid $node_id $ifaces
+    destroyNodeIfaces $eid $node_id $ifaces
 }
 
 proc $MODULE.nodeUnconfigure { eid node_id } {
