@@ -100,8 +100,8 @@ proc $MODULE.generateUnconfig { node_id } {
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifacePrefix { l r } {
-    return e
+proc $MODULE.ifacePrefix {} {
+    return "e"
 }
 
 proc $MODULE.IPAddrRange {} {
@@ -261,7 +261,11 @@ proc $MODULE.nodeConfigure { eid node_id } {
     set pps [getPackgenPacketRate $node_id]
 
     pipesExec "jexec $eid ngctl msg $node_id: setpps $pps" "hold"
-    pipesExec "jexec $eid ngctl msg $node_id: start [expr 2**63]" "hold"
+
+    set iface_id [lindex [ifcList $node_id] 0]
+    if { $iface_id != "" && [getIfcLink $node_id $iface_id] != "" } {
+	pipesExec "jexec $eid ngctl msg $node_id: start [expr 2**63]" "hold"
+    }
 }
 
 ################################################################################
@@ -272,10 +276,11 @@ proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
 }
 
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
-    l2node.nodeIfacesDestroy $eid $node_id $ifaces
 }
 
 proc $MODULE.nodeUnconfigure { eid node_id } {
+    pipesExec "jexec $eid ngctl msg $node_id: clrdata" "hold"
+    pipesExec "jexec $eid ngctl msg $node_id: stop" "hold"
 }
 
 #****f* packgen.tcl/packgen.nodeShutdown
@@ -290,8 +295,6 @@ proc $MODULE.nodeUnconfigure { eid node_id } {
 #   * node_id - id of the node
 #****
 proc $MODULE.nodeShutdown { eid node_id } {
-    pipesExec "jexec $eid ngctl msg $node_id: clrdata" "hold"
-    pipesExec "jexec $eid ngctl msg $node_id: stop" "hold"
 }
 
 #****f* packgen.tcl/packgen.nodeDestroy
