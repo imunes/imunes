@@ -1318,33 +1318,6 @@ proc newLink { node1_id node2_id } {
     return $link_id
 }
 
-#****f* linkcfg.tcl/getIfcLink
-# NAME
-#   getIfcLink -- get link by interface
-# SYNOPSIS
-#   set link_id [getIfcLink $node_id $iface_id]
-# FUNCTION
-#   Returns the link id of the link connected to the node's interface.
-# INPUTS
-#   * node_id -- node id
-#   * iface_id -- interface id
-# RESULT
-#   * link_id -- link id
-#****
-proc getIfcLink { node_id iface_id } {
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-
-    set peer_id [getIfcPeer $node_id $iface_id]
-    foreach link_id $link_list {
-	set endpoints [getLinkPeers $link_id]
-	if { $endpoints in "{$node_id $peer_id} {$peer_id $node_id}" } {
-	    break
-	}
-    }
-
-    return $link_id
-}
-
 #****f* linkcfg.tcl/linkDirection
 # NAME
 #   linkByIfg -- get direction of link in regards to the node's interface
