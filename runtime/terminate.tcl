@@ -136,14 +136,17 @@ proc terminate_linksDestroy { eid links links_count w } {
 	    set node2_id [lindex [getLinkPeers $mirror_link] 0]
 	}
 
-	try {
-	    if { [getLinkDirect $link_id] } {
-		destroyDirectLinkBetween $eid $node1_id $node2_id
-	    } else {
-		destroyLinkBetween $eid $node1_id $node2_id $link_id
+	if { [getFromRunning "${link_id}_running"] == true } {
+	    try {
+		if { [getLinkDirect $link_id] } {
+		    destroyDirectLinkBetween $eid $node1_id $node2_id
+		} else {
+		    destroyLinkBetween $eid $node1_id $node2_id $link_id
+		}
+		setToRunning "${link_id}_running" false
+	    } on error err {
+		return -code error "Error in 'destroyLinkBetween $eid $node1_id $node2_id $link_id': $err"
 	    }
-	} on error err {
-	    return -code error "Error in 'destroyLinkBetween $eid $node1_id $node2_id $link_id': $err"
 	}
 
 	incr batchStep
@@ -172,11 +175,18 @@ proc terminate_nodesDestroy { eid nodes nodes_count w } {
     foreach node_id $nodes {
 	displayBatchProgress $batchStep $nodes_count
 
-	try {
-	    [getNodeType $node_id].nodeDestroy $eid $node_id
-	    setToRunning "${node_id}_running" false
-	} on error err {
-	    return -code error "Error in '[getNodeType $node_id].nodeDestroy $eid $node_id': $err"
+	if { [getNodeType $node_id] != "pseudo" && [getFromRunning "${node_id}_running"] in "true delete" } {
+	    try {
+		[getNodeType $node_id].nodeDestroy $eid $node_id
+	    } on error err {
+		return -code error "Error in '[getNodeType $node_id].nodeDestroy $eid $node_id': $err"
+	    }
+
+	    if { [getFromRunning "${node_id}_running"] == "delete" } {
+		unsetRunning "${node_id}_running"
+	    } else {
+		setToRunning "${node_id}_running" false
+	    }
 	}
 	pipesExec ""
 
@@ -257,6 +267,8 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 
 	set $var ""
     }
+
+    prepareTerminateVars
 
     if { "$terminate_nodes$destroy_nodes_ifaces$terminate_links$unconfigure_links$unconfigure_nodes_ifaces$unconfigure_nodes" == "" } {
 	setToExecuteVars "terminate_cfg" ""
@@ -574,15 +586,7 @@ proc terminate_nodesIfacesUnconfigure { eid nodes_ifaces nodes_count w } {
 	}
 	displayBatchProgress $batchStep $nodes_count
 
-	if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
-	    lassign [getDefaultGateways $node_id $subnet_gws $nodes_l2data] my_gws subnet_gws nodes_l2data
-	    lassign [getDefaultRoutesConfig $node_id $my_gws] all_routes4 all_routes6
-
-	    setDefaultIPv4routes $node_id $all_routes4
-	    setDefaultIPv6routes $node_id $all_routes6
-	}
-
-	if { [info procs [getNodeType $node_id].nodeIfacesUnconfigure] != "" } {
+	if { [info procs [getNodeType $node_id].nodeIfacesUnconfigure] != "" && [getFromRunning "${node_id}_running"] in "true delete" } {
 	    try {
 		[getNodeType $node_id].nodeIfacesUnconfigure $eid $node_id $ifaces
 	    } on error err {
@@ -621,10 +625,12 @@ proc terminate_nodesIfacesDestroy { eid nodes_ifaces nodes_count w } {
 		set ifaces [ifcList $node_id]
 	    }
 
-	    try {
-		[getNodeType $node_id].nodeIfacesDestroy $eid $node_id $ifaces
-	    } on error err {
-		return -code error "Error in '[getNodeType $node_id].nodeIfacesDestroy $eid $node_id $ifaces': $err"
+	    if { [getFromRunning "${node_id}_running"] in "true delete" } {
+		try {
+		    [getNodeType $node_id].nodeIfacesDestroy $eid $node_id $ifaces
+		} on error err {
+		    return -code error "Error in '[getNodeType $node_id].nodeIfacesDestroy $eid $node_id $ifaces': $err"
+		}
 	    }
 	}
 

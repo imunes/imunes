@@ -4,6 +4,9 @@ proc getFilterIfcRule { node_id iface_id id } {
 
 proc addFilterIfcRule { node_id iface_id id rule } {
     cfgSet "nodes" $node_id "ifaces" $iface_id "filter_rules" $id $rule
+
+    # TODO: check
+    trigger_nodeRecreate $node_id
 }
 
 proc clearFilterIfcRules { node_id iface_id } {
