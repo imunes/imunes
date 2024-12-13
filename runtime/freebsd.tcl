@@ -1090,7 +1090,15 @@ proc fetchNodeRunningConfig { node_id } {
 	set cur_node_cfg [_setStatIPv6routes $cur_node_cfg $new_croutes6]
     }
 
+    # don't trigger anything new - save variables state
+    prepareInstantiateVars
+    prepareTerminateVars
+
     updateNode $node_id "*" $cur_node_cfg
+
+    # don't trigger anything new - restore variables state
+    updateInstantiateVars
+    updateTerminateVars
 
     if { $node_existing_mac != [getFromRunning "mac_used_list"] } {
 	setToRunning "mac_used_list" $node_existing_mac

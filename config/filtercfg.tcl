@@ -4,14 +4,20 @@ proc getFilterIfcRule { node_id iface_id id } {
 
 proc addFilterIfcRule { node_id iface_id id rule } {
     cfgSet "nodes" $node_id "ifaces" $iface_id "filter_rules" $id $rule
+
+    trigger_nodeReconfig $node_id
 }
 
 proc clearFilterIfcRules { node_id iface_id } {
     cfgUnset "nodes" $node_id "ifaces" $iface_id "filter_rules"
+
+    trigger_nodeReconfig $node_id
 }
 
 proc removeFilterIfcRule { node_id iface_id id } {
     cfgUnset "nodes" $node_id "ifaces" $iface_id "filter_rules" $id
+
+    trigger_nodeReconfig $node_id
 }
 
 proc getFilterIfcAction { node_id iface_id id } {

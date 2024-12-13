@@ -543,6 +543,7 @@ proc deployCfg { { execute 0 } } {
     }
 
     if { $execute && ! [getFromRunning "auto_execution"] } {
+	updateInstantiateVars "force"
 	createRunningVarsFile $eid
 
 	statline "Empty topology instantiated in [expr ([clock milliseconds] - $t_start)/1000.0] seconds."

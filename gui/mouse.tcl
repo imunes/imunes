@@ -844,11 +844,30 @@ proc button3node { c x y } {
 	    -menu .button3menu.node_execute
 
 	.button3menu.node_execute add command -label "Create" \
-	    -command "undeployCfg ; deployCfg ; redrawAll"
+	    -command "
+		foreach node_id \[selectedNodes\] {
+		    if { \[getFromRunning \${node_id}_running] != true } {
+			trigger_nodeCreate \$node_id
+		    }
+		}
+		undeployCfg ; deployCfg ; redrawAll
+	    "
 	.button3menu.node_execute add command -label "Destroy" \
-	    -command "undeployCfg ; deployCfg ; redrawAll"
+	    -command "
+		foreach node_id \[selectedNodes\] {
+		    if { \[getFromRunning \${node_id}_running] == true } {
+			trigger_nodeDestroy \$node_id
+		    }
+		}
+		undeployCfg ; deployCfg ; redrawAll
+	    "
 	.button3menu.node_execute add command -label "Recreate" \
-	    -command "undeployCfg ; deployCfg ; redrawAll"
+	    -command "
+		foreach node_id \[selectedNodes\] {
+		    trigger_nodeRecreate \$node_id
+		}
+		undeployCfg ; deployCfg ; redrawAll
+	    "
     }
 
     #
@@ -860,11 +879,32 @@ proc button3node { c x y } {
 	    -menu .button3menu.node_config
 
 	.button3menu.node_config add command -label "Configure" \
-	    -command "undeployCfg ; deployCfg ; redrawAll"
+	    -command "
+		foreach node_id \[selectedNodes\] {
+		    if { \[getFromRunning \${node_id}_running] == true } {
+			trigger_nodeConfig \$node_id
+		    }
+		}
+		undeployCfg ; deployCfg ; redrawAll
+	    "
 	.button3menu.node_config add command -label "Unconfigure" \
-	    -command "undeployCfg ; deployCfg ; redrawAll"
+	    -command "
+		foreach node_id \[selectedNodes\] {
+		    if { \[getFromRunning \${node_id}_running] == true } {
+			trigger_nodeUnconfig \$node_id
+		    }
+		}
+		undeployCfg ; deployCfg ; redrawAll
+	    "
 	.button3menu.node_config add command -label "Reconfigure" \
-	    -command "undeployCfg ; deployCfg ; redrawAll"
+	    -command "
+		foreach node_id \[selectedNodes\] {
+		    if { \[getFromRunning \${node_id}_running] == true } {
+			trigger_nodeReconfig \$node_id
+		    }
+		}
+		undeployCfg ; deployCfg ; redrawAll
+	    "
     }
 
     #
@@ -877,14 +917,35 @@ proc button3node { c x y } {
 
 	.button3menu.ifaces_config add command -label "Configure" \
 	    -command "
+		foreach node_id \[selectedNodes\] {
+		    if { \[getFromRunning \${node_id}_running] == true } {
+			foreach iface_id \[allIfcList \$node_id\] {
+			    trigger_ifaceConfig \$node_id \$iface_id
+			}
+		    }
+		}
 		undeployCfg ; deployCfg ; redrawAll
 	    "
 	.button3menu.ifaces_config add command -label "Unconfigure" \
 	    -command "
+		foreach node_id \[selectedNodes\] {
+		    if { \[getFromRunning \${node_id}_running] == true } {
+			foreach iface_id \[allIfcList \$node_id\] {
+			    trigger_ifaceUnconfig \$node_id \$iface_id
+			}
+		    }
+		}
 		undeployCfg ; deployCfg ; redrawAll
 	    "
 	.button3menu.ifaces_config add command -label "Reconfigure" \
 	    -command "
+		foreach node_id \[selectedNodes\] {
+		    if { \[getFromRunning \${node_id}_running] == true } {
+			foreach iface_id \[allIfcList \$node_id\] {
+			    trigger_ifaceReconfig \$node_id \$iface_id
+			}
+		    }
+		}
 		undeployCfg ; deployCfg ; redrawAll
 	    "
     }

@@ -4,6 +4,8 @@ proc getPackgenPacketRate { node_id } {
 
 proc setPackgenPacketRate { node_id rate } {
     cfgSet "nodes" $node_id "packgen" "packetrate" $rate
+
+    trigger_nodeReconfig $node_id
 }
 
 proc getPackgenPacket { node_id id } {
@@ -12,10 +14,14 @@ proc getPackgenPacket { node_id id } {
 
 proc addPackgenPacket { node_id id new_value } {
     cfgSetEmpty "nodes" $node_id "packgen" "packets" $id $new_value
+
+    trigger_nodeReconfig $node_id
 }
 
 proc removePackgenPacket { node_id id } {
     cfgUnset "nodes" $node_id "packgen" "packets" $id
+
+    trigger_nodeReconfig $node_id
 }
 
 proc getPackgenPacketData { node_id id } {

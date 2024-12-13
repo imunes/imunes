@@ -4,6 +4,9 @@ proc getTunIPv4Addr { node_id } {
 
 proc setTunIPv4Addr { node_id addr } {
     cfgSet "nodes" $node_id "nat64" "tun_ipv4_addr" $addr
+
+    # TODO: not used
+    trigger_nodeReconfig $node_id
 }
 
 proc getTunIPv6Addr { node_id } {
@@ -12,6 +15,9 @@ proc getTunIPv6Addr { node_id } {
 
 proc setTunIPv6Addr { node_id addr } {
     cfgSet "nodes" $node_id "nat64" "tun_ipv6_addr" $addr
+
+    # TODO: not used
+    trigger_nodeReconfig $node_id
 }
 
 proc getTaygaIPv4Addr { node_id } {
@@ -20,6 +26,9 @@ proc getTaygaIPv4Addr { node_id } {
 
 proc setTaygaIPv4Addr { node_id addr } {
     cfgSet "nodes" $node_id "nat64" "tayga_ipv4_addr" $addr
+
+    # TODO: not used
+    trigger_nodeReconfig $node_id
 }
 
 proc getTaygaIPv6Prefix { node_id } {
@@ -28,6 +37,9 @@ proc getTaygaIPv6Prefix { node_id } {
 
 proc setTaygaIPv6Prefix { node_id addr } {
     cfgSet "nodes" $node_id "nat64" "tayga_ipv6_prefix" $addr
+
+    # TODO: check
+    trigger_nodeReconfig $node_id
 }
 
 proc getTaygaIPv4DynPool { node_id } {
@@ -36,6 +48,9 @@ proc getTaygaIPv4DynPool { node_id } {
 
 proc setTaygaIPv4DynPool { node_id addr } {
     cfgSet "nodes" $node_id "nat64" "tayga_ipv4_pool" $addr
+
+    # TODO: check
+    trigger_nodeReconfig $node_id
 }
 
 proc getTaygaMappings { node_id } {
@@ -44,4 +59,7 @@ proc getTaygaMappings { node_id } {
 
 proc setTaygaMappings { node_id mps } {
     cfgSet "nodes" $node_id "nat64" "tayga_mappings" $mps
+
+    # TODO: check
+    trigger_nodeReconfig $node_id
 }

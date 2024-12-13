@@ -1259,6 +1259,36 @@ proc configGUI_nodeName { wi node_id label } {
     pack $wi.name -fill both
 }
 
+proc configGUI_nodeRestart { wi node_id } {
+    global guielements
+    lappend guielements configGUI_nodeRestart
+
+    global node_cfg
+    set node_type [_getNodeType $node_cfg]
+
+    set w $wi.node_force_options
+    ttk::frame $w -relief groove -borderwidth 2 -padding 2
+    ttk::label $w.label -text "Force node:"
+    ttk::frame $w.options -padding 2
+
+    pack $w.label -side left -padx 2
+    pack $w.options -side left -padx 2
+
+    foreach element "recreate reconfigure ifaces_reconfigure" {
+	global force_${element}
+
+	set force_${element} 0
+	ttk::checkbutton $w.options.$element -text "$element" -variable force_${element}
+	pack $w.options.$element -side left -padx 6
+
+	if { [getFromRunning "oper_mode"] == "edit" || [getFromRunning "${node_id}_running"] == false } {
+	    $w.options.$element configure -state disabled
+	}
+    }
+
+    pack $w -fill both
+}
+
 #****f* nodecfgGUI.tcl/configGUI_rj45s
 # NAME
 #   configGUI_rj45s -- configure GUI - node name
@@ -2184,6 +2214,29 @@ proc configGUI_nodeNameApply { wi node_id } {
 	}
 
 	set changed 1
+    }
+}
+
+proc configGUI_nodeRestartApply { wi node_id } {
+    global changed badentry
+    global force_recreate force_reconfigure force_ifaces_reconfigure
+
+    if { $force_recreate } {
+	trigger_nodeRecreate $node_id
+    }
+
+    if { [_getNodeType $node_cfg] == "rj45" } {
+	return
+    }
+
+    if { $force_reconfigure } {
+	trigger_nodeReconfig $node_id
+    }
+
+    if { $force_ifaces_reconfigure } {
+	foreach iface_id [allIfcList $node_id] {
+	    trigger_ifaceReconfig $node_id $iface_id
+	}
     }
 }
 
