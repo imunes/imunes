@@ -1145,14 +1145,12 @@ proc setIfcVlanTag { node_id iface_id tag } {
 # RESULT
 #   * value -- interface IPv4 configuration script
 #****
-proc nodeCfggenIfcIPv4 { node_id } {
+proc nodeCfggenIfcIPv4 { node_id iface_id } {
     set cfg {}
-    foreach iface_id [allIfcList $node_id] {
-	set primary 1
-	foreach addr [getIfcIPv4addrs $node_id $iface_id] {
-	    lappend cfg [getIPv4IfcCmd $iface_id $addr $primary]
-	    set primary 0
-	}
+    set primary 1
+    foreach addr [getIfcIPv4addrs $node_id $iface_id] {
+	lappend cfg [getIPv4IfcCmd [getIfcName $node_id $iface_id] $addr $primary]
+	set primary 0
     }
 
     return $cfg
@@ -1171,14 +1169,12 @@ proc nodeCfggenIfcIPv4 { node_id } {
 # RESULT
 #   * value -- interface IPv6 configuration script
 #****
-proc nodeCfggenIfcIPv6 { node_id } {
+proc nodeCfggenIfcIPv6 { node_id iface_id } {
     set cfg {}
-    foreach iface_id [allIfcList $node_id] {
-	set primary 1
-	foreach addr [getIfcIPv6addrs $node_id $iface_id] {
-	    lappend cfg [getIPv6IfcCmd $iface_id $addr $primary]
-	    set primary 0
-	}
+    set primary 1
+    foreach addr [getIfcIPv6addrs $node_id $iface_id] {
+	lappend cfg [getIPv6IfcCmd [getIfcName $node_id $iface_id] $addr $primary]
+	set primary 0
     }
 
     return $cfg

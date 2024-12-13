@@ -497,15 +497,10 @@ proc routerDefaultsApply { wi } {
 	    set router_ConfigModel $router_model
 	    if { $router_ConfigModel != "static" } {
 		lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable
-		setNodeProtocolRip $node_id $ripEnable
-		setNodeProtocolRipng $node_id $ripngEnable
-		setNodeProtocolOspfv2 $node_id $ospfEnable
-		setNodeProtocolOspfv3 $node_id $ospf6Enable
-	    } else {
-		$wi.nbook.nf1.protocols.rip configure -state disabled
-		$wi.nbook.nf1.protocols.ripng configure -state disabled
-		$wi.nbook.nf1.protocols.ospf configure -state disabled
-		$wi.nbook.nf1.protocols.ospf6 configure -state disabled
+		setNodeProtocol $node_id "rip" $ripEnable
+		setNodeProtocol $node_id "ripng" $ripngEnable
+		setNodeProtocol $node_id "ospf" $ospfEnable
+		setNodeProtocol $node_id "ospf6" $ospf6Enable
 	    }
 	    set changed 1
 	}

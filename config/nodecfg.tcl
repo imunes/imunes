@@ -1479,192 +1479,172 @@ proc setNodeMirror { node_id value } {
 # RESULT
 #   * check -- 1 if it is rip, otherwise 0
 #****
-proc getNodeProtocolRip { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    if { [netconfFetchSection $node_id "router rip"] != "" } {
-	return 1;
-    } else {
-	return 0;
-    }
+proc getNodeProtocol { node_id protocol } {
+    return [cfgGetWithDefault 0 "nodes" $node_id "router_config" $protocol]
 }
 
-#****f* nodecfg.tcl/getNodeProtocolRipng
-# NAME
-#   getNodeProtocolRipng
-# SYNOPSIS
-#   getNodeProtocolRipng $node_id
-# FUNCTION
-#   Checks if node's current protocol is ripng.
-# INPUTS
-#   * node_id -- node id
-# RESULT
-#   * check -- 1 if it is ripng, otherwise 0
-#****
-proc getNodeProtocolRipng { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    if { [netconfFetchSection $node_id "router ripng"] != "" } {
-	return 1;
-    } else {
-	return 0;
-    }
+proc setNodeProtocol { node_id protocol state } {
+    cfgSet "nodes" $node_id "router_config" $protocol $state
 }
 
-#****f* nodecfg.tcl/getNodeProtocolOspfv2
-# NAME
-#   getNodeProtocolOspfv2
-# SYNOPSIS
-#   getNodeProtocolOspfv2 $node_id
-# FUNCTION
-#   Checks if node's current protocol is ospfv2.
-# INPUTS
-#   * node_id -- node id
-# RESULT
-#   * check -- 1 if it is ospfv2, otherwise 0
-#****
-proc getNodeProtocolOspfv2 { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
+proc getRouterInterfaceCfg { node_id } {
+    set ospf_enabled [getNodeProtocol $node_id "ospf"]
+    set ospf6_enabled [getNodeProtocol $node_id "ospf6"]
 
-    if { [netconfFetchSection $node_id "router ospf"] != "" } {
-	return 1;
-    } else {
-	return 0;
+    set cfg {}
+
+    set model [getNodeModel $node_id]
+    switch -exact -- $model {
+	"quagga" -
+	"frr" {
+	    foreach iface_id [allIfcList $node_id] {
+		lappend cfg "interface [getIfcName $node_id $iface_id]"
+
+		set addrs [getIfcIPv4addrs $node_id $iface_id]
+		foreach addr $addrs {
+		    if { $addr != "" } {
+			lappend cfg " ip address $addr"
+		    }
+		}
+
+		if { $ospf_enabled } {
+		    if { ! [isIfcLogical $node_id $iface_id] } {
+			lappend cfg " ip ospf area 0.0.0.0"
+		    }
+		}
+
+		set addrs [getIfcIPv6addrs $node_id $iface_id]
+		foreach addr $addrs {
+		    if { $addr != "" } {
+			lappend cfg " ipv6 address $addr"
+		    }
+		}
+
+		if { $model == "frr" && $ospf6_enabled } {
+		    if { ! [isIfcLogical $node_id $iface_id] } {
+			lappend cfg " ipv6 ospf6 area 0.0.0.0"
+		    }
+		}
+
+		if { [getIfcOperState $node_id $iface_id] == "down" } {
+		    lappend cfg " shutdown"
+		}
+
+		lappend cfg "!"
+	    }
+	}
+	"static" {
+	    foreach iface_id [allIfcList $node_id] {
+		set cfg [concat $cfg [nodeCfggenIfcIPv4 $node_id $iface_id]]
+		set cfg [concat $cfg [nodeCfggenIfcIPv6 $node_id $iface_id]]
+	    }
+	}
     }
+
+    return $cfg
 }
 
-#****f* nodecfg.tcl/getNodeProtocolOspfv3
-# NAME
-#   getNodeProtocolOspfv3
-# SYNOPSIS
-#   getNodeProtocolOspfv3 $node_id
-# FUNCTION
-#   Checks if node's current protocol is ospfv3.
-# INPUTS
-#   * node_id -- node id
-# RESULT
-#   * check -- 1 if it is ospfv3, otherwise 0
-#****
-proc getNodeProtocolOspfv3 { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    if { [netconfFetchSection $node_id "router ospf6"] != "" } {
-	return 1;
-    } else {
-	return 0;
+proc getRouterProtocolCfg { node_id protocol } {
+    if { [getNodeProtocol $node_id $protocol] == 0 } {
+	return ""
     }
+
+    set cfg {}
+
+    set model [getNodeModel $node_id]
+    switch -exact -- $model {
+	"quagga" -
+	"frr" {
+	    set router_id [ip::intToString [expr 1 + [string trimleft $node_id "n"]]]
+	    switch -exact -- $protocol {
+		"rip" {
+		    set cfg [list "router rip" \
+			" redistribute static" \
+			" redistribute connected" \
+			" redistribute ospf" \
+			" network 0.0.0.0/0" \
+			! ]
+		}
+		"ripng" {
+		    set cfg [list "router ripng" \
+			" redistribute static" \
+			" redistribute connected" \
+			" redistribute ospf6" \
+			" network ::/0" \
+			! ]
+		}
+		"ospf" {
+		    set cfg [list "router ospf" \
+			" ospf router-id $router_id" \
+			" redistribute static" \
+			" redistribute connected" \
+			" redistribute rip" \
+			! ]
+		}
+		"ospf6" {
+		    if { $model == "quagga" } {
+			set id_string "router-id $router_id"
+			#set area_string "network ::/0 area 0.0.0.0"
+		    } else {
+			set id_string "ospf6 router-id $router_id"
+			#set area_string "area 0.0.0.0 range ::/0"
+		    }
+
+		    set cfg [list "router ospf6" \
+			" $id_string" \
+			" redistribute static" \
+			" redistribute connected" \
+			" redistribute ripng" \
+			]
+
+		    if { $model == "quagga" } {
+			foreach iface_id [ifcList $node_id] {
+			    lappend cfg " interface $iface_id area 0.0.0.0"
+			}
+		    }
+
+		    lappend cfg "!"
+		}
+	    }
+	}
+	"static" {
+	    # nothing to return
+	}
+    }
+
+    return $cfg
 }
 
-#****f* nodecfg.tcl/setNodeProtocolRip
-# NAME
-#   setNodeProtocolRip
-# SYNOPSIS
-#   setNodeProtocolRip $node_id $ripEnable
-# FUNCTION
-#   Sets node's protocol to rip.
-# INPUTS
-#   * node_id -- node id
-#   * ripEnable -- 1 if enabling rip, 0 if disabling
-#****
-proc setNodeProtocolRip { node_id ripEnable } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
+proc getRouterStaticRoutes4Cfg { node_id } {
+    set cfg {}
 
-    if { $ripEnable == 1 } {
-	netconfInsertSection $node_id [list "router rip" \
-		" redistribute static" \
-		" redistribute connected" \
-		" redistribute ospf" \
-		" network 0.0.0.0/0" \
-		! ]
-    } else {
-	netconfClearSection $node_id "router rip"
+    switch -exact -- [getNodeModel $node_id] {
+	"quagga" -
+	"frr" {
+	    set cfg [nodeCfggenRouteIPv4 $node_id 1]
+	}
+	"static" {
+	    set cfg [nodeCfggenRouteIPv4 $node_id]
+	}
     }
+
+    return $cfg
 }
 
-#****f* nodecfg.tcl/setNodeProtocolRipng
-# NAME
-#   setNodeProtocolRipng
-# SYNOPSIS
-#   setNodeProtocolRipng $node_id $ripngEnable
-# FUNCTION
-#   Sets node's protocol to ripng.
-# INPUTS
-#   * node_id -- node id
-#   * ripngEnable -- 1 if enabling ripng, 0 if disabling
-#****
-proc setNodeProtocolRipng { node_id ripngEnable } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
+proc getRouterStaticRoutes6Cfg { node_id } {
+    set cfg {}
 
-    if { $ripngEnable == 1 } {
-	netconfInsertSection $node_id [list "router ripng" \
-		" redistribute static" \
-		" redistribute connected" \
-		" redistribute ospf6" \
-		" network ::/0" \
-		! ]
-    } else {
- 	netconfClearSection $node_id "router ripng"
-    }
-}
-
-#****f* nodecfg.tcl/setNodeProtocolOspfv2
-# NAME
-#   setNodeProtocolOspfv2
-# SYNOPSIS
-#   setNodeProtocolOspfv2 $node_id $ospfEnable
-# FUNCTION
-#   Sets node's protocol to ospf.
-# INPUTS
-#   * node_id -- node id
-#   * ospfEnable -- 1 if enabling ospf, 0 if disabling
-#****
-proc setNodeProtocolOspfv2 { node_id ospfEnable } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    if { $ospfEnable == 1 } {
-	netconfInsertSection $node_id [list "router ospf" \
-		" redistribute static" \
-		" redistribute connected" \
-		" redistribute rip" \
-		" network 0.0.0.0/0 area 0.0.0.0" \
-		! ]
-    } else {
-	netconfClearSection $node_id "router ospf"
-    }
-}
-
-#****f* nodecfg.tcl/setNodeProtocolOspfv3
-# NAME
-#   setNodeProtocolOspfv3
-# SYNOPSIS
-#   setNodeProtocolOspfv3 $node_id $ospf6Enable
-# FUNCTION
-#   Sets node's protocol to Ospfv3.
-# INPUTS
-#   * node_id -- node id
-#   * ospf6Enable -- 1 if enabling ospf6, 0 if disabling
-#****
-proc setNodeProtocolOspfv3 { node_id ospf6Enable } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    set router_id [ip::intToString [expr 1 + [string trimleft $node_id "n"]]]
-
-    set area_string "area 0.0.0.0 range ::/0"
-    if { [getNodeModel $node_id] == "quagga" } {
-	set area_string "network ::/0 area 0.0.0.0"
+    switch -exact -- [getNodeModel $node_id] {
+	"quagga" -
+	"frr" {
+	    set cfg [nodeCfggenRouteIPv6 $node_id 1]
+	}
+	"static" {
+	    set cfg [nodeCfggenRouteIPv6 $node_id]
+	}
     }
 
-    if { $ospf6Enable == 1 } {
-	netconfInsertSection $node_id [list "router ospf6" \
-		" ospf6 router-id $router_id" \
-		" redistribute static" \
-		" redistribute connected" \
-		" redistribute ripng" \
-		" $area_string" \
-		! ]
-    } else {
-	netconfClearSection $node_id "router ospf6"
-    }
+    return $cfg
 }
 
 #****f* nodecfg.tcl/registerModule
@@ -1931,15 +1911,23 @@ proc setNodeIface { node_id iface_id new_iface } {
 # RESULT
 #   * value -- route IPv4 configuration script
 #****
-proc nodeCfggenRouteIPv4 { node_id } {
+proc nodeCfggenRouteIPv4 { node_id { vtysh 0 } } {
     set cfg {}
     foreach statrte [getStatIPv4routes $node_id] {
-	lappend cfg [getIPv4RouteCmd $statrte]
+	if { $vtysh } {
+	    lappend cfg "ip route $statrte"
+	} else {
+	    lappend cfg [getIPv4RouteCmd $statrte]
+	}
     }
 
     if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
 	foreach statrte [getDefaultIPv4routes $node_id] {
-	    lappend cfg [getIPv4RouteCmd $statrte]
+	    if { $vtysh } {
+		lappend cfg "ip route $statrte"
+	    } else {
+		lappend cfg [getIPv4RouteCmd $statrte]
+	    }
 	}
 	setDefaultIPv4routes $node_id {}
     }
@@ -1959,15 +1947,23 @@ proc nodeCfggenRouteIPv4 { node_id } {
 # RESULT
 #   * value -- route IPv6 configuration script
 #****
-proc nodeCfggenRouteIPv6 { node_id } {
+proc nodeCfggenRouteIPv6 { node_id { vtysh 0 } } {
     set cfg {}
     foreach statrte [getStatIPv6routes $node_id] {
-	lappend cfg [getIPv6RouteCmd $statrte]
+	if { $vtysh } {
+	    lappend cfg "ipv6 route $statrte"
+	} else {
+	    lappend cfg [getIPv6RouteCmd $statrte]
+	}
     }
 
     if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
 	foreach statrte [getDefaultIPv6routes $node_id] {
-	    lappend cfg [getIPv6RouteCmd $statrte]
+	    if { $vtysh } {
+		lappend cfg "ipv6 route $statrte"
+	    } else {
+		lappend cfg [getIPv6RouteCmd $statrte]
+	    }
 	}
 	setDefaultIPv6routes $node_id {}
     }
@@ -2065,37 +2061,34 @@ proc recalculateNumType { type namebase } {
 #   * to_type -- new type of node
 #****
 proc transformNodes { nodes to_type } {
+    global routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable
+    global rdconfig routerDefaultsModel
+    global changed
+
+    lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable
+
     foreach node_id $nodes {
 	if { [[getNodeType $node_id].netlayer] == "NETWORK" } {
-	    upvar 0 ::cf::[set ::curcfg]::$node_id nodecfg
-	    global changed
+	    set from_type [getNodeType $node_id]
+
+	    # replace type
+	    setNodeType $node_id $to_type
 
 	    if { $to_type == "pc" || $to_type == "host" } {
-		# replace type
-		set typeIndex [lsearch $nodecfg "type *"]
-		set nodecfg [lreplace $nodecfg $typeIndex $typeIndex "type $to_type" ]
-		# if router, remove model
-		set modelIndex [lsearch $nodecfg "model *"]
-		set nodecfg [lreplace $nodecfg $modelIndex $modelIndex]
-
-		# delete router stuff in netconf
-		foreach model "rip ripng ospf ospf6" {
-		    netconfClearSection $node_id "router $model"
+		if { $from_type == "router" } {
+		    setNodeModel $node_id {}
+		    cfgUnset "nodes" $node_id "router_config"
 		}
 
 		set changed 1
-	    } elseif { [getNodeType $node_id] != "router" && $to_type == "router" } {
-		# replace type
-		set typeIndex [lsearch $nodecfg "type *"]
-		set nodecfg [lreplace $nodecfg $typeIndex $typeIndex "type $to_type"]
-
-		# set router model and default protocols
-		setNodeModel $node_id "frr"
-		setNodeProtocolRip $node_id 1
-		setNodeProtocolRipng $node_id 1
-		# clear default static routes
-		netconfClearSection $node_id "ip route [lindex [getStatIPv4routes $node_id] 0]"
-		netconfClearSection $node_id "ipv6 route [lindex [getStatIPv6routes $node_id] 0]"
+	    } elseif { $from_type != "router" && $to_type == "router" } {
+		setNodeModel $node_id $routerDefaultsModel
+		if { $routerDefaultsModel != "static" } {
+		    setNodeProtocol $node_id "rip" $ripEnable
+		    setNodeProtocol $node_id "ripng" $ripngEnable
+		    setNodeProtocol $node_id "ospf" $ospfEnable
+		    setNodeProtocol $node_id "ospf6" $ospf6Enable
+		}
 
 		set changed 1
 	    }

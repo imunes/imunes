@@ -38,14 +38,13 @@ proc $MODULE.confNewNode { node_id } {
     global rdconfig
     global nodeNamingBase
 
-    lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable
-
-
-    setNodeProtocolRip $node_id $ripEnable
-    setNodeProtocolRipng $node_id $ripngEnable
-    setNodeProtocolOspfv2 $node_id $ospfEnable
-    setNodeProtocolOspfv3 $node_id $ospf6Enable
     setNodeName $node_id [getNewNodeNameType nat64 $nodeNamingBase(nat64)]
+
+    lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable
+    setNodeProtocol $node_id "rip" $ripEnable
+    setNodeProtocol $node_id "ripng" $ripngEnable
+    setNodeProtocol $node_id "ospf" $ospfEnable
+    setNodeProtocol $node_id "ospf6" $ospf6Enable
 
     setAutoDefaultRoutesStatus $node_id "enabled"
     setLogIfcType $node_id lo0 lo

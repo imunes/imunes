@@ -1575,10 +1575,10 @@ proc configGUI_routingModel { wi node_id } {
 
     set router_ConfigModel [getNodeModel $node_id]
     if { $router_ConfigModel != "static" } {
-        set ripEnable [getNodeProtocolRip $node_id]
-	set ripngEnable [getNodeProtocolRipng $node_id]
-	set ospfEnable [getNodeProtocolOspfv2 $node_id]
-	set ospf6Enable [getNodeProtocolOspfv3 $node_id]
+        set ripEnable [getNodeProtocol $node_id "rip"]
+	set ripngEnable [getNodeProtocol $node_id "ripng"]
+	set ospfEnable [getNodeProtocol $node_id "ospf"]
+	set ospf6Enable [getNodeProtocol $node_id "ospf6"]
     } else {
         $w.protocols.rip configure -state disabled
 	$w.protocols.ripng configure -state disabled
@@ -2396,22 +2396,10 @@ proc configGUI_routingModelApply { wi node_id } {
 	}
 
 	if { $router_ConfigModel != "static" } {
-	    setNodeProtocolRip $node_id $ripEnable
-	    setNodeProtocolRipng $node_id $ripngEnable
-	    setNodeProtocolOspfv2 $node_id $ospfEnable
-	    setNodeProtocolOspfv3 $node_id $ospf6Enable
-	    if { [getNodeType $node_id] == "nat64" } {
-		foreach proto { rip ripng ospf ospf6 bgp } {
-		    set protocfg [netconfFetchSection $node_id "router $proto"]
-		    if { $protocfg != "" } {
-			set protocfg [linsert $protocfg 0 "router $proto"]
-			set protocfg [linsert $protocfg end "!"]
-			set protocfg [linsert $protocfg [lsearch $protocfg " network *"] " redistribute kernel" ]
-			netconfClearSection $node_id "router $proto"
-			netconfInsertSection $node_id $protocfg
-		    }
-		}
-	    }
+	    setNodeProtocol $node_id "rip" $ripEnable
+	    setNodeProtocol $node_id "ripng" $ripngEnable
+	    setNodeProtocol $node_id "ospf" $ospfEnable
+	    setNodeProtocol $node_id "ospf6" $ospf6Enable
 	} else {
 	    $wi.routing.protocols.rip configure -state disabled
 	    $wi.routing.protocols.ripng configure -state disabled
@@ -6500,10 +6488,10 @@ proc configGUI_routingProtocols { wi node_id } {
     ttk::checkbutton $wi.routing.protocols.ospf -text "ospfv2" -variable ospfEnable
     ttk::checkbutton $wi.routing.protocols.ospf6 -text "ospfv3" -variable ospf6Enable
 
-    set ripEnable [getNodeProtocolRip $node_id]
-    set ripngEnable [getNodeProtocolRipng $node_id]
-    set ospfEnable [getNodeProtocolOspfv2 $node_id]
-    set ospf6Enable [getNodeProtocolOspfv3 $node_id]
+    set ripEnable [getNodeProtocol $node_id "rip"]
+    set ripngEnable [getNodeProtocol $node_id "ripng"]
+    set ospfEnable [getNodeProtocol $node_id "ospf"]
+    set ospf6Enable [getNodeProtocol $node_id "ospf6"]
     if { [getFromRunning "oper_mode"] != "edit" } {
 	$wi.routing.protocols.rip configure -state disabled
 	$wi.routing.protocols.ripng configure -state disabled

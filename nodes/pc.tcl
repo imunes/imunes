@@ -87,9 +87,39 @@ proc $MODULE.confNewIfc { node_id iface_id } {
 }
 
 proc $MODULE.generateConfigIfaces { node_id ifaces } {
+    if { $ifaces == "*" } {
+	set ifaces "[ifcList $node_id] [logIfcList $node_id]"
+    } else {
+	# sort physical ifaces before logical ones (because of vlans)
+	set ifaces [lsort -dictionary $ifaces]
+    }
+
+    set cfg {}
+    foreach iface_id $ifaces {
+	set cfg [concat $cfg [nodeCfggenIfc $node_id $iface_id]]
+
+	lappend cfg ""
+    }
+
+    return $cfg
 }
 
 proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
+    if { $ifaces == "*" } {
+	set ifaces "[ifcList $node_id] [logIfcList $node_id]"
+    } else {
+	# sort physical ifaces before logical ones
+	set ifaces [lsort -dictionary $ifaces]
+    }
+
+    set cfg {}
+    foreach iface_id $ifaces {
+	set cfg [concat $cfg [nodeUncfggenIfc $node_id $iface_id]]
+
+	lappend cfg ""
+    }
+
+    return $cfg
 }
 
 #****f* pc.tcl/pc.generateConfig
@@ -110,17 +140,47 @@ proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
 #****
 proc $MODULE.generateConfig { node_id } {
     set cfg {}
-    set cfg [concat $cfg [nodeCfggenIfcIPv4 $node_id]]
-    set cfg [concat $cfg [nodeCfggenIfcIPv6 $node_id]]
+
+    set cfg [concat $cfg [nodeCfggenStaticRoutes4 $node_id]]
+    set cfg [concat $cfg [nodeCfggenStaticRoutes6 $node_id]]
+
     lappend cfg ""
 
-    set cfg [concat $cfg [nodeCfggenRouteIPv4 $node_id]]
-    set cfg [concat $cfg [nodeCfggenRouteIPv6 $node_id]]
+    set subnet_gws {}
+    set nodes_l2data [dict create]
+    if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
+	lassign [getDefaultGateways $node_id $subnet_gws $nodes_l2data] my_gws subnet_gws nodes_l2data
+	lassign [getDefaultRoutesConfig $node_id $my_gws] all_routes4 all_routes6
+
+	setDefaultIPv4routes $node_id $all_routes4
+	setDefaultIPv6routes $node_id $all_routes6
+    } else {
+	setDefaultIPv4routes $node_id {}
+	setDefaultIPv6routes $node_id {}
+    }
+
+    set cfg [concat $cfg [nodeCfggenAutoRoutes4 $node_id]]
+    set cfg [concat $cfg [nodeCfggenAutoRoutes6 $node_id]]
+
+    lappend cfg ""
 
     return $cfg
 }
 
 proc $MODULE.generateUnconfig { node_id } {
+    set cfg {}
+
+    set cfg [concat $cfg [nodeUncfggenStaticRoutes4 $node_id]]
+    set cfg [concat $cfg [nodeUncfggenStaticRoutes6 $node_id]]
+
+    lappend cfg ""
+
+    set cfg [concat $cfg [nodeUncfggenAutoRoutes4 $node_id]]
+    set cfg [concat $cfg [nodeUncfggenAutoRoutes6 $node_id]]
+
+    lappend cfg ""
+
+    return $cfg
 }
 
 #****f* pc.tcl/pc.ifacePrefix
