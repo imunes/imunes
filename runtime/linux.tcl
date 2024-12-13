@@ -738,11 +738,16 @@ proc nodeLogIfacesCreate { node_id ifaces } {
     set docker_id "[getFromRunning "eid"].$node_id"
 
     foreach iface_id $ifaces {
+	setToRunning "${node_id}|${iface_id}_running" true
+
 	set iface_name [getIfcName $node_id $iface_id]
-	switch -exact [getLogIfcType $node_id $iface_id] {
+	switch -exact [getIfcType $node_id $iface_id] {
 	    vlan {
-		# physical interfaces are created when creating links, so VLANs
-		# must be created after links
+		set tag [getIfcVlanTag $node_id $iface_id]
+		set dev [getIfcVlanDev $node_id $iface_id]
+		if { $tag != "" && $dev != "" } {
+		    pipesExec "docker exec -d $docker_id [getVlanTagIfcCmd $iface_name $dev $tag]" "hold"
+		}
 	    }
 	    lo {
 		if { $iface_name != "lo0" } {
@@ -1806,7 +1811,15 @@ proc fetchNodeRunningConfig { node_id } {
 	set node_cfg [_setStatIPv6routes $node_cfg $new_croutes6]
     }
 
+    # don't trigger anything new - save variables state
+    prepareInstantiateVars
+    prepareTerminateVars
+
     updateNode $node_id "*" $node_cfg
+
+    # don't trigger anything new - restore variables state
+    updateInstantiateVars
+    updateTerminateVars
 
     if { $node_existing_mac != [getFromRunning "mac_used_list"] } {
 	setToRunning "mac_used_list" $node_existing_mac
