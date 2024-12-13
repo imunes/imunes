@@ -446,6 +446,8 @@ proc deployCfg { { execute 0 } } {
 	}
     }
 
+    prepareInstantiateVars "force"
+
     if { "$instantiate_nodes$create_nodes_ifaces$instantiate_links$configure_links$configure_nodes_ifaces$configure_nodes" == "" } {
 	return
     }

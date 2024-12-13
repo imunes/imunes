@@ -729,14 +729,19 @@ proc checkHangingTCPs { eid nodes } {}
 #   * node_id -- node id
 #****
 proc nodeLogIfacesCreate { node_id ifaces } {
-    set docker_id "[getFromRunning "eid"].$node"
+    set docker_id "[getFromRunning "eid"].$node_id"
 
     foreach iface_id $ifaces {
+	setToRunning "${node_id}|${iface_id}_running" true
+
 	set iface_name [getIfcName $node_id $iface_id]
-	switch -exact [getLogIfcType $node_id $iface_id] {
+	switch -exact [getIfcType $node_id $iface_id] {
 	    vlan {
-		# physical interfaces are created when creating links, so VLANs
-		# must be created after links
+		set tag [getIfcVlanTag $node_id $iface_id]
+		set dev [getIfcVlanDev $node_id $iface_id]
+		if { $tag != "" && $dev != "" } {
+		    pipesExec "docker exec -d $docker_id [getVlanTagIfcCmd $iface_name $dev $tag]" "hold"
+		}
 	    }
 	    lo {
 		if { $iface_name != "lo0" } {
@@ -1376,14 +1381,13 @@ proc getCpuCount {} {
 # NAME
 #   enableIPforwarding -- enable IP forwarding
 # SYNOPSIS
-#   enableIPforwarding $eid $node_id
+#   enableIPforwarding $node_id
 # FUNCTION
 #   Enables IPv4 and IPv6 forwarding on the given node.
 # INPUTS
-#   * eid -- experiment id
 #   * node_id -- node id
 #****
-proc enableIPforwarding { eid node_id } {
+proc enableIPforwarding { node_id } {
     array set sysctl_ipfwd {
 	net.ipv6.conf.all.forwarding	1
 	net.ipv4.conf.all.forwarding	1
@@ -1396,7 +1400,7 @@ proc enableIPforwarding { eid node_id } {
     }
     set cmds [join $cmd "; "]
 
-    pipesExec "docker exec -d $eid.$node_id sh -c \'$cmds\'" "hold"
+    pipesExec "docker exec -d [getFromRunning "eid"].$node_id sh -c \'$cmds\'" "hold"
 }
 
 #****f* linux.tcl/getExtIfcs
@@ -1786,7 +1790,15 @@ proc fetchNodeRunningConfig { node_id } {
 	set node_cfg [_setStatIPv6routes $node_cfg $new_croutes6]
     }
 
+    # don't trigger anything new - save variables state
+    prepareInstantiateVars
+    prepareTerminateVars
+
     updateNode $node_id "*" $node_cfg
+
+    # don't trigger anything new - restore variables state
+    updateInstantiateVars
+    updateTerminateVars
 
     if { $node_existing_mac != [getFromRunning "mac_used_list"] } {
 	setToRunning "mac_used_list" $node_existing_mac
@@ -2073,4 +2085,40 @@ proc unsetupExtNat { eid node_id ifc } {
     set cmds "$cmds\n iptables -D FORWARD -o $eid-$node_id -j ACCEPT"
 
     pipesExec "$cmds" "hold"
+}
+
+proc startRoutingDaemons { node_id } {
+    set run_dir "/run/frr"
+    set cmds "mkdir -p $run_dir ; chown frr:frr $run_dir"
+
+    set conf_dir "/etc/frr"
+
+    foreach protocol { rip ripng ospf ospf6 } {
+	if { [getNodeProtocol $node_id $protocol] != 1 } {
+	    continue
+	}
+
+	set cmds "$cmds; sed -i'' \"s/${protocol}d=no/${protocol}d=yes/\" $conf_dir/daemons"
+    }
+
+    foreach protocol { ldp bfd } {
+	if { [getNodeProtocol $node_id $protocol] != 1 } {
+	    continue
+	}
+
+	set cmds "$cmds; sed -i'' \"s/${protocol}d=no/${protocol}d=yes/\" $conf_dir/daemons"
+    }
+
+    foreach protocol { bgp isis } {
+	if { [getNodeProtocol $node_id $protocol] != 1 } {
+	    continue
+	}
+
+	set cmds "$cmds; sed -i'' \"s/${protocol}d=no/${protocol}d=yes/\" $conf_dir/daemons"
+    }
+
+    set init_file "/etc/init.d/frr"
+    set cmds "$cmds; if \[ -f $init_file \]; then $init_file restart ; fi"
+
+    pipesExec "docker exec -d [getFromRunning "eid"].$node_id sh -c '$cmds'" "hold"
 }
