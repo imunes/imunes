@@ -657,7 +657,7 @@ proc prepareSystem {} {
     } else {
 	set eid $eid_base
 	while { $eid in $running_eids } {
-	    puts -nonewline "Experiment ID $eid_base already in use, trying "
+	    puts -nonewline "Experiment ID $eid already in use, trying "
 	    set eid [genExperimentId]
 	    puts "$eid."
 	}
