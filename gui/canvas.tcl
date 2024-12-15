@@ -50,10 +50,8 @@
 #   * canvas_id -- canvas id
 #****
 proc removeCanvas { canvas_id } {
-    upvar 0 ::cf::[set ::curcfg]::$canvas_id $canvas_id
-
     setToRunning "canvas_list" [removeFromList [getFromRunning "canvas_list"] $canvas_id]
-    set $canvas_id {}
+    cfgUnset "canvases" $canvas_id
 }
 
 #****f* canvas.tcl/newCanvas
@@ -72,10 +70,7 @@ proc removeCanvas { canvas_id } {
 #****
 proc newCanvas { name } {
     set canvas_id [newObjectId [getFromRunning "canvas_list"] "c"]
-
-    upvar 0 ::cf::[set ::curcfg]::$canvas_id $canvas_id
     lappendToRunning "canvas_list" $canvas_id
-    set $canvas_id {}
 
     if { $name != "" } {
 	setCanvasName $canvas_id $name
@@ -99,14 +94,7 @@ proc newCanvas { name } {
 #   * y -- height
 #****
 proc setCanvasSize { canvas_id x y } {
-    upvar 0 ::cf::[set ::curcfg]::$canvas_id $canvas_id
-
-    set i [lsearch [set $canvas_id] "size *"]
-    if { $i >= 0 } {
-	set $canvas_id [lreplace [set $canvas_id] $i $i "size {$x $y}"]
-    } else {
-	set $canvas_id [linsert [set $canvas_id] 1 "size {$x $y}"]
-    }
+    cfgSet "canvases" $canvas_id "size" "$x $y"
 }
 
 #****f* canvas.tcl/getCanvasSize
@@ -122,15 +110,7 @@ proc setCanvasSize { canvas_id x y } {
 #   * size -- canvas size in the form of {x y}
 #****
 proc getCanvasSize { canvas_id } {
-    upvar 0 ::cf::[set ::curcfg]::$canvas_id $canvas_id
-
-    set entry [lrange [lsearch -inline [set $canvas_id] "size *"] 1 end]
-    set size [string trim $entry \{\}]
-    if { $size == "" } {
-	return "900 620"
-    } else {
-	return $size
-    }
+    return [cfgGetWithDefault {900 620} "canvases" $canvas_id "size"]
 }
 
 #****f* canvas.tcl/getCanvasName
@@ -146,10 +126,7 @@ proc getCanvasSize { canvas_id } {
 #   * canvas_name -- canvas name
 #****
 proc getCanvasName { canvas_id } {
-    upvar 0 ::cf::[set ::curcfg]::$canvas_id $canvas_id
-
-    set entry [lrange [lsearch -inline [set $canvas_id] "name *"] 1 end]
-    return [string trim $entry \{\}]
+    return [cfgGet "canvases" $canvas_id "name"]
 }
 
 #****f* canvas.tcl/setCanvasName
@@ -164,14 +141,7 @@ proc getCanvasName { canvas_id } {
 #   * name -- canvas name
 #****
 proc setCanvasName { canvas_id name } {
-    upvar 0 ::cf::[set ::curcfg]::$canvas_id $canvas_id
-
-    set i [lsearch [set $canvas_id] "name *"]
-    if { $i >= 0 } {
-	set $canvas_id [lreplace [set $canvas_id] $i $i "name {$name}"]
-    } else {
-	set $canvas_id [linsert [set $canvas_id] 1 "name {$name}"]
-    }
+    return [cfgSet "canvases" $canvas_id "name" $name]
 }
 
 #****f* canvas.tcl/getCanvasBkg
@@ -187,10 +157,7 @@ proc setCanvasName { canvas_id name } {
 #   * canvasBkgImage -- image variable name
 #****
 proc getCanvasBkg { canvas_id } {
-    upvar 0 ::cf::[set ::curcfg]::$canvas_id $canvas_id
-
-    set entry [lrange [lsearch -inline [set $canvas_id] "bkgImage *"] 1 end]
-    return [string trim $entry \{\}]
+    return [cfgGet "canvases" $canvas_id "bkg_image"]
 }
 
 #****f* canvas.tcl/setCanvasBkg
@@ -205,14 +172,7 @@ proc getCanvasBkg { canvas_id } {
 #   * name -- image variable name
 #****
 proc setCanvasBkg { canvas_id name } {
-    upvar 0 ::cf::[set ::curcfg]::$canvas_id $canvas_id
-
-    set i [lsearch [set $canvas_id] "bkgImage *"]
-    if { $i >= 0 } {
-	set $canvas_id [lreplace [set $canvas_id] $i $i "bkgImage {$name}"]
-    } else {
-	set $canvas_id [linsert [set $canvas_id] 1 "bkgImage {$name}"]
-    }
+    return [cfgSet "canvases" $canvas_id "bkg_image" $name]
 }
 
 #****f* canvas.tcl/removeCanvasBkg
@@ -226,12 +186,7 @@ proc setCanvasBkg { canvas_id name } {
 #   * canvas_id -- canvas id
 #****
 proc removeCanvasBkg { canvas_id } {
-    upvar 0 ::cf::[set ::curcfg]::$canvas_id $canvas_id
-
-    set i [lsearch [set $canvas_id] "bkgImage *"]
-    if { $i >= 0 } {
-	set $canvas_id [lreplace [set $canvas_id] $i $i ]
-    }
+    cfgUnset "canvases" $canvas_id "bkg_image"
 }
 
 #****f* canvas.tcl/setImageReference
@@ -247,17 +202,10 @@ proc removeCanvasBkg { canvas_id } {
 #   * target -- the object that uses the image
 #****
 proc setImageReference { img target } {
-    upvar 0 ::cf::[set ::curcfg]::$img $img
+    set ref_list [getImageReferences $img]
+    lappend ref_list $target
 
-    set i [lsearch [set $img] "referencedBy *"]
-    if { $i >= 0 } {
-	set ref_list [getImageReferences $img]
-	lappend ref_list $target
-	set ref_list [lsort -unique $ref_list]
-	set $img [lreplace [set $img] $i $i "referencedBy {$ref_list}"]
-    } else {
-	set $img [linsert [set $img] 0 "referencedBy {$target}"]
-    }
+    cfgSet "images" $img "referencedBy" [lsort -unique $ref_list]
 }
 
 #****f* canvas.tcl/getImageReferences
@@ -273,13 +221,7 @@ proc setImageReference { img target } {
 #   * entry -- list of references to the image
 #****
 proc getImageReferences { img } {
-    upvar 0 ::cf::[set ::curcfg]::$img $img
-
-    set entry [lrange [lsearch -inline [set $img] "referencedBy *"] 1 end]
-    set entry [string trim $entry \{\}]
-    set entry [split $entry " "]
-
-    return $entry
+    return [cfgGet "images" $img "referencedBy"]
 }
 
 #****f* canvas.tcl/removeImageReference
@@ -294,21 +236,7 @@ proc getImageReferences { img } {
 #   * target -- the object that references the image
 #****
 proc removeImageReference { img target } {
-    upvar 0 ::cf::[set ::curcfg]::$img $img
-
-    set entry [lrange [lsearch -inline [set $img] "referencedBy *"] 1 end]
-    set entry [string trim $entry \{\}]
-    set entry [split $entry " "]
-
-    set j [lsearch $entry "$target"]
-    if { $j >= 0 } {
-	set entry [lreplace $entry $j $j ]
-    }
-
-    set i [lsearch [set $img] "referencedBy *"]
-    if { $i >= 0 } {
-	set $img [lreplace [set $img] $i $i "referencedBy {$entry}"]
-    }
+    cfgSet "images" $img "referencedBy" [removeFromList [getImageReferences $img] $target]
 }
 
 #****f* canvas.tcl/setImageType
@@ -323,14 +251,7 @@ proc removeImageReference { img target } {
 #   * type -- type of the image
 #****
 proc setImageType { img type } {
-    upvar 0 ::cf::[set ::curcfg]::$img $img
-
-    set i [lsearch [set $img] "type *"]
-    if { $i >= 0 } {
-	set $img [lreplace [set $img] $i $i "type {$type}"]
-    } else {
-	set $img [linsert [set $img] 0 "type {$type}"]
-    }
+    cfgSet "images" $img "type" $type
 }
 
 #****f* canvas.tcl/getImageType
@@ -346,10 +267,7 @@ proc setImageType { img type } {
 #   * imageType -- the type of the image
 #****
 proc getImageType { img } {
-    upvar 0 ::cf::[set ::curcfg]::$img $img
-
-    set entry [lrange [lsearch -inline [set $img] "type *"] 1 end]
-    return [string trim $entry \{\}]
+    return [cfgGet "images" $img "type"]
 }
 
 #****f* canvas.tcl/setImageData
@@ -364,21 +282,14 @@ proc getImageType { img } {
 #   * path -- path to image file
 #****
 proc setImageData { img path } {
-    upvar 0 ::cf::[set ::curcfg]::$img $img
-
     set f [open $path]
     fconfigure $f -translation binary
 
     set data [read -nonewline $f]
-    set enc_data [base64::encode $data]
-    set enc_data [string map {"\n" "\n          "} $enc_data]
-    set i [lsearch [set $img] "data *"]
-    if { $i >= 0 } {
-	set $img [lreplace [set $img] $i $i "data {$enc_data}"]
-    } else {
-	set $img [linsert [set $img] 0 "data {$enc_data}"]
-    }
+    set enc_data [base64::encode -maxlen 0 $data]
+    #set enc_data [string map {"\n" "\n          "} $enc_data]
 
+    cfgSet "images" $img "data" $enc_data
 }
 
 #****f* canvas.tcl/getImageData
@@ -394,9 +305,7 @@ proc setImageData { img path } {
 #   * data -- image data
 #****
 proc getImageData { img } {
-    upvar 0 ::cf::[set ::curcfg]::$img $img
-
-    set entry [lrange [lsearch -inline [set $img] "data *"] 1 end]
+    set entry [cfgGet "images" $img "data"]
     set enc [string trim $entry \{\}]
     set enc [string trim $enc " "]
     set data [base64::decode $enc]
@@ -417,20 +326,14 @@ proc getImageData { img } {
 #   * zoom -- zoom percentage
 #****
 proc setImageZoomData { img path zoom } {
-    upvar 0 ::cf::[set ::curcfg]::$img $img
-
     set f [open $path]
     fconfigure $f -translation binary
 
     set data [read -nonewline $f]
-    set enc_data [base64::encode $data]
-    set enc_data [string map {"\n" "\n          "} $enc_data]
-    set i [lsearch [set $img] "zoom_$zoom *"]
-    if { $i >= 0 } {
-	set $img [lreplace [set $img] $i $i "zoom_$zoom {$enc_data}"]
-    } else {
-	set $img [linsert [set $img] end "zoom_$zoom {$enc_data}"]
-    }
+    set enc_data [base64::encode -maxlen 0 $data]
+    #set enc_data [string map {"\n" "\n          "} $enc_data]
+
+    cfgSet "images" $img "zoom_$zoom" $enc_data
 }
 
 #****f* canvas.tcl/getImageZoomData
@@ -447,9 +350,7 @@ proc setImageZoomData { img path zoom } {
 #   * data -- image zoom data
 #****
 proc getImageZoomData { img zoom } {
-    upvar 0 ::cf::[set ::curcfg]::$img $img
-
-    set entry [lrange [lsearch -inline [set $img] "zoom_$zoom *"] 1 end]
+    set entry [cfgGet "images" $img "zoom_$zoom"]
     set enc [string trim $entry \{\}]
     set enc [string trim $enc " "]
     set data [base64::decode $enc]
@@ -469,14 +370,7 @@ proc getImageZoomData { img zoom } {
 #   * file -- image filename
 #****
 proc setImageFile { img file } {
-    upvar 0 ::cf::[set ::curcfg]::$img $img
-
-    set i [lsearch [set $img] "file *"]
-    if { $i >= 0 } {
-	set $img [lreplace [set $img] $i $i "file {$file}"]
-    } else {
-	set $img [linsert [set $img] 0 "file {$file}"]
-    }
+    cfgSet "images" $img "file" $file
 }
 
 #****f* canvas.tcl/getImageFile
@@ -492,10 +386,7 @@ proc setImageFile { img file } {
 #   * file -- image filename
 #****
 proc getImageFile { img } {
-    upvar 0 ::cf::[set ::curcfg]::$img $img
-
-    set entry [lrange [lsearch -inline [set $img] "file *"] 1 end]
-    return [string trim $entry \{\}]
+    return [cfgGet "images" $img "file"]
 }
 
 #****f* canvas.tcl/loadImage
@@ -526,9 +417,6 @@ proc loadImage { path ref type file } {
     }
 
     set imgname [newObjectId $image_list "image"]
-    upvar 0 ::cf::[set ::curcfg]::$imgname $imgname
-    set $imgname {}
-
     lappendToRunning "image_list" $imgname
 
     setImageData $imgname $path

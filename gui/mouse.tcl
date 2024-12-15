@@ -49,7 +49,7 @@ proc removeLinkGUI { link_id atomic } {
 
     set mirror_link_id [getLinkMirror $link_id]
     if { $mirror_link_id != "" } {
-	set mirror_node_id [getNodeMirror $node2_id]
+	set mirror_node_id [getNodeMirror $node1_id]
     }
 
     # TODO: check this when wlan node turn comes
@@ -66,7 +66,7 @@ proc removeLinkGUI { link_id atomic } {
 	.panwin.f1.c delete $mirror_link_id
 
 	# remove pseudo nodes from GUI
-	.panwin.f1.c delete $node2_id
+	.panwin.f1.c delete $node1_id
 	.panwin.f1.c delete $mirror_node_id
     }
 
@@ -431,11 +431,11 @@ proc button3link { c x y } {
     #
     set link_mirror_id [getLinkMirror $link_id]
     if { $oper_mode != "exec" && $link_mirror_id != "" &&
-	[getNodeCanvas [lindex [getLinkPeers $link_mirror_id] 1]] ==
+	[getNodeCanvas [lindex [getLinkPeers $link_mirror_id] 0]] ==
 	[getFromRunning "curcanvas"] } {
 
 	.button3menu add command -label "Merge" \
-	    -command "mergeNodeGUI [lindex [getLinkPeers $link_id] 1]"
+	    -command "mergeNodeGUI [lindex [getLinkPeers $link_id] 0]"
     } else {
 	.button3menu add command -label "Merge" -state disabled
     }
@@ -478,10 +478,10 @@ proc moveToCanvas { canvas_id } {
 	if { ($peer1_id ni $selected_nodes && $peer2_id in $selected_nodes) || \
 	    ($peer1_id in $selected_nodes && $peer2_id ni $selected_nodes) } {
 
-	    # pseudo nodes are always peer2
-	    if { [getNodeType $peer2_id] == "pseudo" } {
-		setNodeCanvas $peer2_id $canvas_id
-		if { [getNodeCanvas [getNodeMirror $peer2_id]] == $canvas_id } {
+	    # pseudo nodes are always peer1
+	    if { [getNodeType $peer1_id] == "pseudo" } {
+		setNodeCanvas $peer1_id $canvas_id
+		if { [getNodeCanvas [getNodeMirror $peer1_id]] == $canvas_id } {
 		    mergeLink $link_id
 		}
 
@@ -514,7 +514,7 @@ proc moveToCanvas { canvas_id } {
 proc mergeNodeGUI { node_id } {
     global changed
 
-    mergeLink [getIfcLink $node_id "0"]
+    mergeLink [getIfcLink $node_id "ifc0"]
 
     set changed 1
     updateUndoLog

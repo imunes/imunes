@@ -35,12 +35,9 @@ proc $MODULE.confNewIfc { node_id iface_id } {
 }
 
 proc $MODULE.confNewNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
+    global nodeNamingBase
 
-    set nconfig [list \
-	"hostname $node_id" \
-	! ]
-    lappend $node_id "network-config [list $nconfig]"
+    setNodeName $node_id [getNewNodeNameType wlan $nodeNamingBase(wlan)]
 }
 
 proc $MODULE.ifacePrefix {} {

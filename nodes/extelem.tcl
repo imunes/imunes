@@ -75,8 +75,7 @@ proc $MODULE.confNewNode { node_id } {
 #   * iface_id -- interface name
 #****
 proc $MODULE.confNewIfc { node_id iface_id } {
-    setIfcType $node_id $iface_id "stolen"
-    setIfcStolenIfc $node_id $iface_id "UNASSIGNED"
+    setIfcName $node_id $iface_id "UNASSIGNED"
 }
 
 proc $MODULE.generateConfigIfaces { node_id ifaces } {

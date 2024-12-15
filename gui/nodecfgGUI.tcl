@@ -3383,16 +3383,14 @@ proc refreshIPsecTree { node_id tab } {
 }
 
 proc createIPsecGUI { node_id mainFrame connParamsLframe espOptionsLframe ikeSALframe indicator } {
-    catch { destroy .d }
-    tk::toplevel .d
-    wm title .d "$indicator IPsec connection"
-
     try {
 	grab .d
     } on error {} {
 	catch { destroy .d }
-	return 0
     }
+
+    tk::toplevel .d
+    wm title .d "$indicator IPsec connection"
 
     ttk::frame $mainFrame -padding 4
     grid $mainFrame -column 0 -row 0 -sticky nwes
@@ -3890,7 +3888,6 @@ proc populateValuesForUpdate { node_id tab connParamsLframe espOptionsLframe } {
     if { $authby == "secret" } {
 	hideCertificates $connParamsLframe
     } else {
-	set authby "cert"
 	showCertificates $connParamsLframe
     }
 

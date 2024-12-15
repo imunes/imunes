@@ -55,14 +55,9 @@ registerModule $MODULE
 #   * node_id -- node id
 #****
 proc $MODULE.confNewNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global nodeNamingBase
 
-    set nconfig [list \
-	"hostname [getNewNodeNameType pc $nodeNamingBase(pc)]" \
-	! ]
-    lappend $node_id "network-config [list $nconfig]"
-
+    setNodeName $node_id [getNewNodeNameType pc $nodeNamingBase(pc)]
     setAutoDefaultRoutesStatus $node_id "enabled"
     setLogIfcType $node_id lo0 lo
     setIfcIPv4addrs $node_id lo0 "127.0.0.1/8"

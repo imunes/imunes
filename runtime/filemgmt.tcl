@@ -84,6 +84,7 @@ set file_types {
 #****
 proc newProject {} {
     global curcfg cfg_list
+    global CFG_VERSION
 
     set curcfg [newObjectId $cfg_list "cfg"]
     lappend cfg_list $curcfg
@@ -91,9 +92,12 @@ proc newProject {} {
     namespace eval ::cf::[set curcfg] {}
     upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-    set dict_run [dict create]
 
-    loadCfgLegacy ""
+    set dict_cfg [dict create]
+    cfgSet "options" "version" $CFG_VERSION
+
+    set dict_run [dict create]
+    set execute_vars [dict create]
 
     setToRunning "eid" ""
     setToRunning "oper_mode" "edit"
@@ -187,18 +191,31 @@ proc setWmTitle { fname } {
 #   Loads the configuration from the file named current_file.
 #****
 proc openFile {} {
-    global showTree
+    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+    global CFG_VERSION showTree
 
     set current_file [getFromRunning "current_file"]
-
-    set fileId [open $current_file r]
-    set cfg ""
-    foreach entry [read $fileId] {
-	lappend cfg $entry
+    set dict_cfg [readCfgJson $current_file]
+    set cfg_version [cfgGet "options" "version"]
+    if { $cfg_version == "" } {
+	puts "Loading legacy .imn configuration..."
+	puts "This configuration will be saved as a new version (version $CFG_VERSION)."
+	loadCfgLegacy ""
+	set fileId [open $current_file r]
+	set cfg ""
+	foreach entry [read $fileId] {
+	    lappend cfg $entry
+	}
+	close $fileId
+	loadCfgLegacy $cfg
+    } elseif { $cfg_version < $CFG_VERSION } {
+	puts "Loading older .imn configuration (version $cfg_version)..."
+	puts "This configuration will be saved as a new version ($CFG_VERSION)."
+	puts "Please check if everything is loaded/saved successfully."
+    } elseif { $cfg_version > $CFG_VERSION } {
+	puts "Your IMUNES version is too old for this configuration (version $cfg_version > $CFG_VERSION)."
+	puts "Please install newer IMUNES or risk corrupting your topology."
     }
-    close $fileId
-
-    loadCfgLegacy $cfg
 
     setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
     switchCanvas none
@@ -207,7 +224,7 @@ proc openFile {} {
     setToRunning "stop_sched" true
     setToRunning "undolevel" 0
     setToRunning "redolevel" 0
-    saveToUndoLevel 0 $cfg
+    saveToUndoLevel 0
     setActiveTool select
     updateProjectMenu
     setWmTitle $current_file
@@ -232,9 +249,7 @@ proc saveFile { selected_file } {
 	set current_file $selected_file
 	setToRunning "current_file" $current_file
 
-	set fileId [open $current_file w]
-	dumpCfg file $fileId
-	close $fileId
+	saveCfgJson $current_file
 
 	.bottom.textbox config -text "Saved [file tail $current_file]"
 

@@ -10,8 +10,6 @@
 #   * type -- annotation type
 #****
 proc addAnnotation { annotation_id type } {
-    upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
-
     lappendToRunning "annotation_list" $annotation_id
     setAnnotationType $annotation_id $type
 }
@@ -27,12 +25,10 @@ proc addAnnotation { annotation_id type } {
 #   * annotation_id -- existing annotation
 #****
 proc deleteAnnotation { annotation_id } {
-    upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
     global changed
 
-    set $annotation_id {}
-
     setToRunning "annotation_list" [removeFromList [getFromRunning "annotation_list"] $annotation_id]
+    cfgUnset "annotations" $annotation_id
 
     set changed 1
     updateUndoLog
@@ -52,9 +48,7 @@ proc deleteAnnotation { annotation_id } {
 #   * type -- annotation type
 #****
 proc getAnnotationType { annotation_id } {
-    upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
-
-    return [lindex [lsearch -inline [set $annotation_id] "type *"] 1]
+    return [cfgGet "annotations" $annotation_id "type"]
 }
 
 #****f* annotationscfg.tcl/setAnnotationType
@@ -69,14 +63,7 @@ proc getAnnotationType { annotation_id } {
 #   * type -- annotation type
 #****
 proc setAnnotationType { annotation_id type } {
-    upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
-
-    set i [lsearch [set $annotation_id] "type *"]
-    if { $i >= 0 } {
-	set $annotation_id [lreplace [set $annotation_id] $i $i "type $type"]
-    } else {
-	set $annotation_id [linsert [set $annotation_id] end "type $type"]
-    }
+    cfgSet "annotations" $annotation_id "type" $type
 }
 
 #****f* annotationscfg.tcl/getAnnotationCanvas
@@ -92,9 +79,7 @@ proc setAnnotationType { annotation_id type } {
 #   * canvas_id -- canvas id
 #****
 proc getAnnotationCanvas { annotation_id } {
-    upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
-
-    return [lindex [lsearch -inline [set $annotation_id] "canvas *"] 1]
+    return [cfgGet "annotations" $annotation_id "canvas"]
 }
 
 #****f* annotationscfg.tcl/setAnnotationCanvas
@@ -109,14 +94,7 @@ proc getAnnotationCanvas { annotation_id } {
 #   * canvas_id -- canvas id
 #****
 proc setAnnotationCanvas { annotation_id canvas_id } {
-    upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
-
-    set i [lsearch [set $annotation_id] "canvas *"]
-    if { $i >= 0 } {
-	set $annotation_id [lreplace [set $annotation_id] $i $i "canvas $canvas_id"]
-    } else {
-	set $annotation_id [linsert [set $annotation_id] end "canvas $canvas_id"]
-    }
+    cfgSet "annotations" $annotation_id "canvas" $canvas_id
 }
 
 #****f* annotationscfg.tcl/getAnnotationColor
@@ -132,9 +110,7 @@ proc setAnnotationCanvas { annotation_id canvas_id } {
 #   * color -- annotation color
 #****
 proc getAnnotationColor { annotation_id } {
-    upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
-
-    return [lindex [lsearch -inline [set $annotation_id] "color *"] 1]
+    return [cfgGet "annotations" $annotation_id "color"]
 }
 
 #****f* annotationscfg.tcl/setAnnotationColor
@@ -149,14 +125,7 @@ proc getAnnotationColor { annotation_id } {
 #   * color -- color
 #****
 proc setAnnotationColor { annotation_id color } {
-    upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
-
-    set i [lsearch [set $annotation_id] "color *"]
-    if { $i>=0 } {
-	set $annotation_id [lreplace [set $annotation_id] $i $i "color $color"]
-    } else {
-	lappend $annotation_id "color $color"
-    }
+    cfgSet "annotations" $annotation_id "color" $color
 }
 
 #****f* annotationscfg.tcl/getAnnotationLabel
@@ -172,9 +141,7 @@ proc setAnnotationColor { annotation_id color } {
 #   * labeltext -- annotation label
 #****
 proc getAnnotationLabel { annotation_id } {
-    upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
-
-    return [lindex [lsearch -inline [set $annotation_id] "label *"] 1]
+    return [cfgGet "annotations" $annotation_id "label"]
 }
 
 #****f* annotationscfg.tcl/setAnnotationLabel
@@ -189,14 +156,7 @@ proc getAnnotationLabel { annotation_id } {
 #   * labeltext -- label text
 #****
 proc setAnnotationLabel { annotation_id labeltext } {
-    upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
-
-    set i [lsearch [set $annotation_id] "label *"]
-    if { $i>=0 } {
-	set $annotation_id [lreplace [set $annotation_id] $i $i "label {$labeltext}"]
-    } else {
-	lappend $annotation_id "label {$labeltext}"
-    }
+    cfgSet "annotations" $annotation_id "label" $labeltext
 }
 
 #****f* annotationscfg.tcl/getAnnotationLabelColor
@@ -212,9 +172,7 @@ proc setAnnotationLabel { annotation_id labeltext } {
 #   * labelcolor -- annotation label color
 #****
 proc getAnnotationLabelColor { annotation_id } {
-    upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
-
-    return [lindex [lsearch -inline [set $annotation_id] "labelcolor *"] 1]
+    return [cfgGet "annotations" $annotation_id "labelcolor"]
 }
 
 #****f* annotationscfg.tcl/setAnnotationLabelColor
@@ -229,14 +187,7 @@ proc getAnnotationLabelColor { annotation_id } {
 #   * labelcolor -- label color
 #****
 proc setAnnotationLabelColor { annotation_id labelcolor } {
-    upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
-
-    set i [lsearch [set $annotation_id] "labelcolor *"]
-    if { $i>=0 } {
-	set $annotation_id [lreplace [set $annotation_id] $i $i "labelcolor $labelcolor"]
-    } else {
-	lappend $annotation_id "labelcolor $labelcolor"
-    }
+    cfgSet "annotations" $annotation_id "labelcolor" $labelcolor
 }
 
 #****f* annotationscfg.tcl/getAnnotationBorderColor
@@ -252,9 +203,7 @@ proc setAnnotationLabelColor { annotation_id labelcolor } {
 #   * bcolor -- annotation border color
 #****
 proc getAnnotationBorderColor { annotation_id } {
-    upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
-
-    return [lindex [lsearch -inline [set $annotation_id] "bordercolor *"] 1]
+    return [cfgGet "annotations" $annotation_id "bordercolor"]
 }
 
 #****f* annotationscfg.tcl/setAnnotationBorderColor
@@ -269,14 +218,7 @@ proc getAnnotationBorderColor { annotation_id } {
 #   * bordercolor -- border color
 #****
 proc setAnnotationBorderColor { annotation_id bordercolor } {
-    upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
-
-    set i [lsearch [set $annotation_id] "bordercolor *"]
-    if { $i>=0 } {
-	set $annotation_id [lreplace [set $annotation_id] $i $i "bordercolor $bordercolor"]
-    } else {
-	lappend $annotation_id "bordercolor $bordercolor"
-    }
+    cfgSet "annotations" $annotation_id "bordercolor" $bordercolor
 }
 
 #****f* annotationscfg.tcl/getAnnotationWidth
@@ -292,9 +234,7 @@ proc setAnnotationBorderColor { annotation_id bordercolor } {
 #   * width -- annotation width
 #****
 proc getAnnotationWidth { annotation_id } {
-    upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
-
-    return [lindex [lsearch -inline [set $annotation_id] "width *"] 1]
+    return [cfgGet "annotations" $annotation_id "width"]
 }
 
 #****f* annotationscfg.tcl/setAnnotationWidth
@@ -309,14 +249,7 @@ proc getAnnotationWidth { annotation_id } {
 #   * width -- width
 #****
 proc setAnnotationWidth { annotation_id width } {
-    upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
-
-    set i [lsearch [set $annotation_id] "width *"]
-    if { $i>=0 } {
-	set $annotation_id [lreplace [set $annotation_id] $i $i "width $width"]
-    } else {
-	lappend $annotation_id "width $width"
-    }
+    cfgSet "annotations" $annotation_id "width" $width
 }
 
 #****f* annotationscfg.tcl/getAnnotationRad
@@ -332,9 +265,7 @@ proc setAnnotationWidth { annotation_id width } {
 #   * rad -- annotation radius
 #****
 proc getAnnotationRad { annotation_id } {
-    upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
-
-    return [lindex [lsearch -inline [set $annotation_id] "rad *"] 1]
+    return [cfgGet "annotations" $annotation_id "rad"]
 }
 
 #****f* annotationscfg.tcl/setAnnotationRad
@@ -349,14 +280,7 @@ proc getAnnotationRad { annotation_id } {
 #   * rad -- radius
 #****
 proc setAnnotationRad { annotation_id rad } {
-    upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
-
-    set i [lsearch [set $annotation_id] "rad *"]
-    if { $i>=0 } {
-	set $annotation_id [lreplace [set $annotation_id] $i $i "rad $rad"]
-    } else {
-	lappend $annotation_id "rad $rad"
-    }
+    cfgSet "annotations" $annotation_id "rad" $rad
 }
 
 #****f* annotationscfg.tcl/getAnnotationFont
@@ -372,9 +296,7 @@ proc setAnnotationRad { annotation_id rad } {
 #   * font -- annotation font
 #****
 proc getAnnotationFont { annotation_id } {
-    upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
-
-    return [lindex [lsearch -inline [set $annotation_id] "font *"] 1]
+    return [cfgGet "annotations" $annotation_id "font"]
 }
 
 #****f* annotationscfg.tcl/setAnnotationFont
@@ -389,14 +311,7 @@ proc getAnnotationFont { annotation_id } {
 #   * font -- font
 #****
 proc setAnnotationFont { annotation_id font } {
-    upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
-
-    set i [lsearch [set $annotation_id] "font *"]
-    if { $i>=0 } {
-	set $annotation_id [lreplace [set $annotation_id] $i $i "font {$font}"]
-    } else {
-	lappend $annotation_id "font {$font}"
-    }
+    cfgSet "annotations" $annotation_id "font" $font
 }
 
 #****f* annotationscfg.tcl/getAnnotationCoords
@@ -412,9 +327,7 @@ proc setAnnotationFont { annotation_id font } {
 #   * coords -- annotation coordinates
 #****
 proc getAnnotationCoords { annotation_id } {
-    upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
-
-    return [lindex [lsearch -inline [set $annotation_id] "iconcoords *"] 1]
+    return [cfgGet "annotations" $annotation_id "iconcoords"]
 }
 
 #****f* annotationscfg.tcl/setAnnotationCoords
@@ -429,21 +342,11 @@ proc getAnnotationCoords { annotation_id } {
 #   * coords -- coordinates
 #****
 proc setAnnotationCoords { annotation_id coords } {
-    upvar 0 ::cf::[set ::curcfg]::$annotation_id $annotation_id
-
-    set iconcoords "iconcoords"
-
     set roundcoords {}
     foreach c $coords {
 	set x [expr int($c)]
 	lappend roundcoords $x
     }
 
-    lappend $iconcoords $roundcoords
-    set i [lsearch [set $annotation_id] "iconcoords *"]
-    if { $i>=0 } {
-	set $annotation_id [lreplace [set $annotation_id] $i $i $iconcoords]
-    } else {
-	lappend $annotation_id $iconcoords
-    }
+    cfgSet "annotations" $annotation_id "iconcoords" $roundcoords
 }

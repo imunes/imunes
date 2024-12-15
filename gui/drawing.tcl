@@ -324,7 +324,7 @@ proc updateIfcLabel { link_id node_id iface_id } {
 
     set label_str ""
     if { $show_interface_names } {
-	lappend label_str "$iface_id"
+	lappend label_str "[getIfcName $node_id $iface_id]"
     }
 
     if { $show_interface_ipv4 && $ifipv4addr != {} } {

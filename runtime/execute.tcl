@@ -230,9 +230,7 @@ proc saveRunningConfigurationInteractive { eid } {
     global runtimeDir
 
     set fileName "$runtimeDir/$eid/config.imn"
-    set fileId [open $fileName w]
-    dumpCfg file $fileId
-    close $fileId
+    saveCfgJson $fileName
 }
 
 #****f* exec.tcl/saveRunningConfigurationBatch
@@ -984,8 +982,9 @@ proc execute_linksCreate { links links_count w } {
 	    set msg "Creating link $link_id/$mirror_link_id"
 	    set pending_links [removeFromList $pending_links $mirror_link_id]
 
-	    lassign "[lindex [getLinkPeers $mirror_link_id] 0] $node1_id" node1_id node2_id
-	    lassign "[lindex [getLinkPeersIfaces $mirror_link_id] 0] $iface1_id" iface1_id iface2_id
+	    # switch direction for mirror links
+	    lassign "$node2_id [lindex [getLinkPeers $mirror_link_id] 1]" node1_id node2_id
+	    lassign "$iface2_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]" iface1_id iface2_id
 	}
 
 	displayBatchProgress $batchStep $links_count
@@ -1039,8 +1038,9 @@ proc execute_linksConfigure { links links_count w } {
 	    set msg "Configuring link $link_id/$mirror_link_id"
 	    set pending_links [removeFromList $pending_links $mirror_link_id]
 
-	    lassign "[lindex [getLinkPeers $mirror_link_id] 0] $node1_id" node1_id node2_id
-	    lassign "[lindex [getLinkPeersIfaces $mirror_link_id] 0] $iface1_id" iface1_id iface2_id
+	    # switch direction for mirror links
+	    lassign "$node2_id [lindex [getLinkPeers $mirror_link_id] 1]" node1_id node2_id
+	    lassign "$iface2_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]" iface1_id iface2_id
 	}
 
 	displayBatchProgress $batchStep $links_count
@@ -1080,7 +1080,6 @@ proc execute_nodesIfacesConfigure { nodes_ifaces nodes_count w } {
 
     set batchStep 0
     dict for {node_id ifaces} $nodes_ifaces {
-	upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 	if { $ifaces == "*" } {
 	    set ifaces [allIfcList $node_id]
 	}
