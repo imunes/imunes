@@ -1289,9 +1289,7 @@ proc checkSharedSecret { str } {
 #   node_id - node id
 #****
 proc getNodeIPsec { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    return [lindex [lsearch -inline [set $node_id] "ipsec-config *"] 1]
+    return [cfgGet "nodes" $node_id "ipsec" "ipsec_configs"]
 }
 
 proc setNodeIPsec { node_id new_value } {
@@ -1309,11 +1307,7 @@ proc setNodeIPsec { node_id new_value } {
 #   node_id - node id
 #   item - search item
 proc getNodeIPsecItem { node_id item } {
-    set cfg [getNodeIPsec $node_id]
-    if { [lsearch $cfg "$item *"] != -1 } {
-	return [lindex [lsearch -inline $cfg "$item *"] 1]
-    }
-    return ""
+    return [cfgGet "nodes" $node_id "ipsec" $item]
 }
 
 #****f* ipsec.tcl/setNodeIPsecItem
@@ -1327,16 +1321,7 @@ proc getNodeIPsecItem { node_id item } {
 #   node_id - node id
 #   item - search item
 proc setNodeIPsecItem { node_id item new_value } {
-    set ipsecCfg [getNodeIPsec $node_id]
-
-    set itemIndex [lsearch -index 0 $ipsecCfg $item]
-    if { $itemIndex != -1 } {
-	set newIpsecCfg [lreplace $ipsecCfg $itemIndex $itemIndex "$item {$new_value}"]
-    } else {
-	set newIpsecCfg [linsert $ipsecCfg end "$item {$new_value}"]
-    }
-
-    setNodeIPsec $node_id $newIpsecCfg
+    cfgSet "nodes" $node_id "ipsec" $item $new_value
 }
 
 proc setNodeIPsecConnection { node_id connection new_value } {
@@ -1356,17 +1341,7 @@ proc setNodeIPsecSetting { node_id connection setting new_value } {
 }
 
 proc getNodeIPsecConnList { node_id } {
-    set cfg [getNodeIPsecItem $node_id "configuration"]
-    set indices [lsearch -index 0 -all $cfg "conn *"]
-
-    set connList ""
-    if { $indices != -1 } {
-	foreach ind $indices {
-	    lappend connList [lindex [lindex [lindex $cfg $ind] 0] 1]
-	}
-    }
-
-    return $connList
+    return [dict keys [cfgGet "nodes" $node_id "ipsec" "ipsec_configs"]]
 }
 
 #****f* ipsec.tcl/nodeIPsecConnExists

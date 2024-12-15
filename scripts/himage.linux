@@ -57,6 +57,12 @@ vi_name() {
 }
 
 get_explist() {
+    jq --version > /dev/null 2>&1
+    if test $? -ne 0; then
+	echo "Package 'jq' not installed, please install it."
+	exit 1
+    fi
+
     for exp_path in /var/run/imunes/*/; do
 	exp=$(basename $exp_path)
 	if test "$exp" = "*"; then
@@ -64,7 +70,7 @@ get_explist() {
 	fi
 
 	if test $1 = "nodes"; then
-	    data=`grep network-config -A 3 /var/run/imunes/$exp/config.imn | grep hostname | awk '{print $2}' | paste -s -d" " -`
+	    data=`jq -r '.nodes | to_entries | map(.value.name + if .value.type == "rj45" then " (" + (.value.ifaces | to_entries | map(.value.name) | join(", ")) + ")" else "" end) | join(", ")' /var/run/imunes/$exp/config.imn`
 	else
 	    if test -r /var/run/imunes/$exp/name; then
 		exp_name=`cat /var/run/imunes/$exp/name`

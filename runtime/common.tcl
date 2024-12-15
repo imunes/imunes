@@ -516,8 +516,9 @@ proc dumpLinksToFile { path } {
 	if { $mirror_link_id != "" } {
 	    lappend skipLinks $mirror_link_id
 
-	    lassign "[lindex [getLinkPeers $mirror_link_id] 0] $node1_id" node1_id node2_id
-	    lassign "[lindex [getLinkPeersIfaces $mirror_link_id] 0] $iface1_id" iface1_id iface2_id
+	    # switch direction for mirror links
+	    lassign "$node2_id [lindex [getLinkPeers $mirror_link_id] 1]" node1_id node2_id
+	    lassign "$iface2_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]" iface1_id iface2_id
 	}
 
 	set name1 [getNodeName $node1_id]
