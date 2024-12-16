@@ -248,9 +248,7 @@ proc nodeIPsecConnExists { node_id connection_name } {
 #   my_node_id - node id
 #****
 proc getListOfOtherNodes { my_node_id } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-
-    set nodes_list [removeFromList $node_list $my_node_id]
+    set nodes_list [removeFromList [getFromRunning "node_list"] $my_node_id]
 
     set names_list ""
     foreach node_id $nodes_list {
@@ -309,9 +307,7 @@ proc getIPAddressForPeer { node_id curIP } {
 }
 
 proc getNodeFromHostname { hostname } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-
-    foreach node_id $node_list {
+    foreach node_id [getFromRunning "node_list"] {
 	if { $hostname == [getNodeName $node_id] } {
 	    return $node_id
 	}

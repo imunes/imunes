@@ -87,10 +87,9 @@ proc regHooks { service hooks } {
 #   * hooks -- hooks for which the service is executed
 #****
 proc services { action hook bkg args } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
     global services$hook skip_nodes
 
-    set iterlist $node_list
+    set iterlist [getFromRunning "node_list"]
     if { $args != "" && $args != "*" } {
 	set iterlist {*}$args
     }
@@ -172,7 +171,6 @@ proc $service.start { node_id { bkg "" } } {
 }
 
 proc $service.stop { node_id { bkg "" } } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     lappend cmds "pkill tcpdump"
 
     if { $bkg == "" } {
@@ -182,7 +180,7 @@ proc $service.stop { node_id { bkg "" } } {
 	execCmdsNodeBkg $node_id $cmds "tcpdump_stop.log 2>&1"
     }
 
-    set ext_dir /tmp/$eid/
+    set ext_dir /tmp/[getFromRunning "eid"]/
     file mkdir $ext_dir
     foreach iface_id [allIfcList $node_id] {
 	set iface_name [getIfcName $node_id $iface_id]

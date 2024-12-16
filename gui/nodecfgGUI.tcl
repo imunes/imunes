@@ -47,7 +47,6 @@ set router_ConfigModel "frr"
 #   * node_id -- node id
 #****
 proc nodeConfigGUI { c node_id } {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     global badentry
 
     if { $node_id == "" } {
@@ -60,7 +59,7 @@ proc nodeConfigGUI { c node_id } {
 	# Hyperlink to another canvas
         #
 	set mirror_node [getNodeMirror $node_id]
-	set curcanvas [getNodeCanvas $mirror_node]
+	setToRunning "curcanvas" [getNodeCanvas $mirror_node]
 	switchCanvas none
 	after idle selectNodes [getIfcPeer $mirror_node "0"]
 
@@ -1664,7 +1663,6 @@ proc configGUI_snapshots { wi node_id } {
     if { $showZFSsnapshots != 1 } {
 	return
     }
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global guielements snapshot snapshotList isOSfreebsd
     lappend guielements configGUI_snapshots
 
@@ -1681,7 +1679,7 @@ proc configGUI_snapshots { wi node_id } {
     ttk::combobox $wi.snapshot.text -width 25 -state readonly -textvariable snapshot
     $wi.snapshot.text configure -values $snapshotList
 
-    if { $oper_mode != "edit" || !$isOSfreebsd } {
+    if { [getFromRunning "oper_mode"] != "edit" || !$isOSfreebsd } {
     	$wi.snapshot.text configure -state disabled
     }
 
@@ -1729,7 +1727,6 @@ proc configGUI_stp { wi node_id } {
 #   * node_id -- node id
 #****
 proc configGUI_routingModel { wi node_id } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable supp_router_models
     global router_ConfigModel guielements
 
@@ -1783,7 +1780,7 @@ proc configGUI_routingModel { wi node_id } {
 	$w.protocols.bgp configure -state disabled
     }
 
-    if { $oper_mode != "edit" } {
+    if { [getFromRunning "oper_mode"] != "edit" } {
 	$w.model.frr configure -state disabled
 	$w.model.quagga configure -state disabled
 	$w.model.static configure -state disabled
@@ -1822,7 +1819,6 @@ proc configGUI_routingModel { wi node_id } {
 #   * node_id -- node id
 #****
 proc configGUI_servicesConfig { wi node_id } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global guielements all_services_list
 
     lappend guielements configGUI_servicesConfig
@@ -1838,7 +1834,7 @@ proc configGUI_servicesConfig { wi node_id } {
 	global $srv\_enable
 
 	set $srv\_enable 0
-	if { $oper_mode == "edit" } {
+	if { [getFromRunning "oper_mode"] == "edit" } {
 	    ttk::checkbutton $w.list.$srv -text "$srv" -variable $srv\_enable
 	} else {
 	    ttk::checkbutton $w.list.$srv -text "$srv" -variable $srv\_enable \
@@ -1875,7 +1871,6 @@ proc configGUI_attachDockerToExt { wi node_id } {
 	return
     }
 
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global guielements docker_enable
     lappend guielements configGUI_attachDockerToExt
 
@@ -1887,7 +1882,7 @@ proc configGUI_attachDockerToExt { wi node_id } {
 
     pack $w.label -side left -padx 2
 
-    if { $oper_mode == "edit" } {
+    if { [getFromRunning "oper_mode"] == "edit" } {
 	ttk::checkbutton $w.chkbox -text "Enabled" -variable docker_enable
     } else {
 	ttk::checkbutton $w.chkbox -text "Enabled" -variable docker_enable \
@@ -1912,7 +1907,6 @@ proc configGUI_attachDockerToExt { wi node_id } {
 proc configGUI_customImage { wi node_id } {
     global VROOT_MASTER isOSlinux
 
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global guielements
 
     lappend guielements configGUI_customImage
@@ -2235,8 +2229,6 @@ proc configGUI_ifcQueueConfigApply { wi node_id iface_id } {
 #   * iface_id -- interface name
 #****
 proc configGUI_ifcMACAddressApply { wi node_id iface_id } {
-    upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
     global changed apply close
 
     set entry [$wi.if$iface_id.mac.addr get]
@@ -2251,8 +2243,8 @@ proc configGUI_ifcMACAddressApply { wi node_id iface_id } {
     }
 
     set dup 0
-    if { $macaddr in $MACUsedList } {
-	foreach n $node_list {
+    if { $macaddr in [getFromRunning "mac_used_list"] } {
+	foreach n [getFromRunning "node_list"] {
 	    foreach i [ifcList $n] {
 		if { $n != $node_id || $i != $iface_id } {
 		    if { $macaddr != "" && $macaddr == [getIfcMACaddr $n $i] } {
@@ -2278,8 +2270,8 @@ proc configGUI_ifcMACAddressApply { wi node_id iface_id } {
 
 	# TODO: move to global node Apply
 	# replace old address in used_list with the new one
-	set MACUsedList [removeFromList $MACUsedList $oldmacaddr "keep_doubles"]
-	lappend MACUsedList $macaddr
+	setToRunning "mac_used_list" [removeFromList [getFromRunning "mac_used_list"] $oldmacaddr "keep_doubles"]
+	lappendToRunning "mac_used_list" $macaddr
     }
 }
 
@@ -2297,7 +2289,6 @@ proc configGUI_ifcMACAddressApply { wi node_id iface_id } {
 #   * iface_id -- interface name
 #****
 proc configGUI_ifcIPv4AddressApply { wi node_id iface_id } {
-    upvar 0 ::cf::[set ::curcfg]::IPv4UsedList IPv4UsedList
     global changed apply
 
     set ipaddrs [formatIPaddrList [$wi.if$iface_id.ipv4.addr get]]
@@ -2316,8 +2307,8 @@ proc configGUI_ifcIPv4AddressApply { wi node_id iface_id } {
 
 	# TODO: move to global node Apply
 	# replace old address(es) in used_list with the new one(s)
-	set IPv4UsedList [removeFromList $IPv4UsedList $oldipaddrs "keep_doubles"]
-	lappend IPv4UsedList $ipaddrs
+	setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] $oldipaddrs "keep_doubles"]
+	lappendToRunning "ipv4_used_list" $ipaddrs
     }
 }
 
@@ -2335,7 +2326,6 @@ proc configGUI_ifcIPv4AddressApply { wi node_id iface_id } {
 #   * iface_id -- interface name
 #****
 proc configGUI_ifcIPv6AddressApply { wi node_id iface_id } {
-    upvar 0 ::cf::[set ::curcfg]::IPv6UsedList IPv6UsedList
     global changed apply
 
     set ipaddrs [formatIPaddrList [$wi.if$iface_id.ipv6.addr get]]
@@ -2354,8 +2344,8 @@ proc configGUI_ifcIPv6AddressApply { wi node_id iface_id } {
 
 	# TODO: move to global node Apply
 	# replace old address(es) in used_list with the new one(s)
-	set IPv6UsedList [removeFromList $IPv6UsedList $oldipaddrs "keep_doubles"]
-	lappend IPv6UsedList $ipaddrs
+	setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] $oldipaddrs "keep_doubles"]
+	lappendToRunning "ipv6_used_list" $ipaddrs
     }
 }
 
@@ -2560,7 +2550,6 @@ proc configGUI_customConfigApply { wi node_id } {
 #   * node_id -- node id
 #****
 proc configGUI_snapshotsApply { wi node_id } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global changed snapshot snapshotList isOSfreebsd
 
     if { [llength [lsearch -inline $snapshotList $snapshot]] == 0 && $isOSfreebsd } {
@@ -2572,7 +2561,7 @@ proc configGUI_snapshotsApply { wi node_id } {
 	return
     }
 
-    if { $oper_mode == "edit" && $snapshot != "" } {
+    if { [getFromRunning "oper_mode"] == "edit" && $snapshot != "" } {
 	setNodeSnapshot $node_id $snapshot
 	set changed 1
     }
@@ -2612,11 +2601,10 @@ proc configGUI_stpApply { wi node_id } {
 #   * node_id -- node id
 #****
 proc configGUI_routingModelApply { wi node_id } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global router_ConfigModel
     global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable
 
-    if { $oper_mode == "edit" } {
+    if { [getFromRunning "oper_mode"] == "edit" } {
 	if { [getNodeType $node_id] != "nat64" } {
 	    setNodeModel $node_id $router_ConfigModel
 	}
@@ -2651,10 +2639,9 @@ proc configGUI_routingModelApply { wi node_id } {
 #   * node_id -- node id
 #****
 proc configGUI_servicesConfigApply { wi node_id } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global all_services_list
 
-    if { $oper_mode == "edit" } {
+    if { [getFromRunning "oper_mode"] == "edit" } {
 	set serviceList ""
 	foreach srv $all_services_list {
 	    global $srv\_enable
@@ -2682,11 +2669,10 @@ proc configGUI_servicesConfigApply { wi node_id } {
 #   * node_id -- node id
 #****
 proc configGUI_attachDockerToExtApply { wi node_id } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global docker_enable
 
     set docker_enable_str [string map {0 false 1 true} $docker_enable]
-    if { $oper_mode == "edit" } {
+    if { [getFromRunning "oper_mode"] == "edit" } {
 	if { [getNodeDockerAttach $node_id] != $docker_enable_str } {
 	    setNodeDockerAttach $node_id $docker_enable_str
 	    set changed 1
@@ -2706,11 +2692,10 @@ proc configGUI_attachDockerToExtApply { wi node_id } {
 #   * node_id -- node id
 #****
 proc configGUI_customImageApply { wi node_id } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global changed
 
     set custom_image [$wi.customImg.img get]
-    if { $oper_mode == "edit" } {
+    if { [getFromRunning "oper_mode"] == "edit" } {
 	if { [getNodeCustomImage $node_id] != $custom_image } {
 	    setNodeCustomImage $node_id $custom_image
 	    set changed 1
@@ -6704,7 +6689,6 @@ proc configGUI_packetConfigDelete {} {
 ## nat64
 ## custom GUI procedures
 proc configGUI_routingProtocols { wi node_id } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable
     global guielements
 
@@ -6724,7 +6708,7 @@ proc configGUI_routingProtocols { wi node_id } {
     set ospfEnable [getNodeProtocol $node_id "ospf"]
     set ospf6Enable [getNodeProtocol $node_id "ospf6"]
     set bgpEnable [getNodeProtocol $node_id "bgp"]
-    if { $oper_mode != "edit" } {
+    if { [getFromRunning "oper_mode"] != "edit" } {
 	$wi.routing.protocols.rip configure -state disabled
 	$wi.routing.protocols.ripng configure -state disabled
 	$wi.routing.protocols.ospf configure -state disabled
