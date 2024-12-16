@@ -44,7 +44,6 @@ proc terminate_deleteExperimentFiles { eid } {
 }
 
 proc checkTerminate {} {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
     global skip_nodes
 
     if { [info exists skip_nodes] } {
@@ -52,7 +51,7 @@ proc checkTerminate {} {
     }
 
     set skip_nodes {}
-    foreach node_id $node_list {
+    foreach node_id [getFromRunning "node_list"] {
 	if { ! [isNodeStarted $node_id] } {
 	    lappend skip_nodes $node_id
 	}

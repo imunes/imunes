@@ -65,9 +65,7 @@ proc l2node.nodeDestroy { eid node_id } {
 #   * data -- data to write
 #****
 proc writeDataToNodeFile { node_id path data } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    set docker_id "$eid.$node_id"
+    set docker_id "[getFromRunning "eid"].$node_id"
     catch { exec docker inspect -f "{{.GraphDriver.Data.MergedDir}}" $docker_id } node_dir
 
     writeDataToFile $node_dir/$path $data
@@ -87,9 +85,8 @@ proc writeDataToNodeFile { node_id path data } {
 #   * returns the execution output
 #****
 proc execCmdNode { node_id cmd } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
+    catch { eval [concat "exec docker exec " [getFromRunning "eid"].$node_id $cmd] } output
 
-    catch { eval [concat "exec docker exec " $eid.$node_id $cmd] } output
     return $output
 }
 
@@ -105,9 +102,7 @@ proc execCmdNode { node_id cmd } {
 #   * cmd -- command to execute
 #****
 proc execCmdNodeBkg { node_id cmd } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    pipesExec "docker exec -d $eid.$node_id sh -c '$cmd'" "hold"
+    pipesExec "docker exec -d [getFromRunning "eid"].$node_id sh -c '$cmd'" "hold"
 }
 
 #****f* linux.tcl/checkForExternalApps
@@ -149,9 +144,8 @@ proc checkForExternalApps { app_list } {
 #   * returns 0 if the applications exist, otherwise it returns 1.
 #****
 proc checkForApplications { node_id app_list } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     foreach app $app_list {
-    set status [ catch { exec docker exec $eid.$node_id which $app } err ]
+    set status [ catch { exec docker exec [getFromRunning "eid"].$node_id which $app } err ]
         if { $status } {
             return 1
         }
@@ -172,7 +166,7 @@ proc checkForApplications { node_id app_list } {
 #   * iface_name -- virtual node interface
 #****
 proc startWiresharkOnNodeIfc { node_id iface_name } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set eid [getFromRunning "eid"]
 
     if { [checkForExternalApps "startxcmd"] == 0 && \
 	[checkForApplications $node_id "wireshark"] == 0 } {
@@ -211,9 +205,9 @@ proc startWiresharkOnNodeIfc { node_id iface_name } {
 #   * app -- application to start
 #****
 proc startXappOnNode { node_id app } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global debug
 
+    set eid [getFromRunning "eid"]
     if { [checkForExternalApps "socat"] != 0 } {
         puts "To run X applications on the node, install socat on your host."
         return
@@ -257,11 +251,9 @@ proc startTcpdumpOnNodeIfc { node_id iface_name } {
 #   * node_id -- node id of the node for which the check is performed.
 #****
 proc existingShells { shells node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
     set existing []
     foreach shell $shells {
-        set cmd "docker exec $eid.$node_id which $shell"
+        set cmd "docker exec [getFromRunning "eid"].$node_id which $shell"
         set err [catch { eval exec $cmd } res]
         if  { ! $err } {
             lappend existing $res
@@ -284,8 +276,6 @@ proc existingShells { shells node_id } {
 #   * cmd -- the path to the shell.
 #****
 proc spawnShell { node_id cmd } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
     if { [catch { exec xterm -version }] } {
 	tk_dialog .dialog1 "IMUNES error" \
 	    "Cannot open terminal. Is xterm installed?" \
@@ -294,7 +284,7 @@ proc spawnShell { node_id cmd } {
 	return
     }
 
-    set docker_id $eid\.$node_id
+    set docker_id [getFromRunning "eid"]\.$node_id
 
     # FIXME make this modular
     exec xterm -name imunes-terminal -sb -rightbar \
@@ -329,11 +319,10 @@ proc fetchRunningExperiments {} {
 #   current system.
 #****
 proc allSnapshotsAvailable {} {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
     global VROOT_MASTER execMode
 
     set snapshots $VROOT_MASTER
-    foreach node_id $node_list {
+    foreach node_id [getFromRunning "node_list"] {
 	# TODO: create another field for other jail/docker arguments
 	set img [lindex [split [getNodeCustomImage $node_id] " "] end]
 	if { $img != "" } {
@@ -492,7 +481,7 @@ proc prepareVirtualFS {} {
 }
 
 proc attachToL3NodeNamespace { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set eid [getFromRunning "eid"]
 
     if { [getNodeDockerAttach $node_id] != "true" } {
 	pipesExec "docker network disconnect imunes-bridge $eid.$node_id &" "hold"
@@ -516,15 +505,13 @@ proc destroyNamespace { ns } {
 }
 
 proc createExperimentContainer {} {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global devfs_number
 
     catch { exec ip netns attach imunes_$devfs_number 1 }
     catch { exec docker network create --opt com.docker.network.container_iface_prefix=dext imunes-bridge }
 
     # Top-level experiment netns
-    exec ip netns add $eid
-
+    exec ip netns add [getFromRunning "eid"]
 }
 
 #****f* linux.tcl/prepareFilesystemForNode
@@ -538,10 +525,8 @@ proc createExperimentContainer {} {
 #   * node_id -- node id
 #****
 proc prepareFilesystemForNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
     set VROOTDIR /var/imunes
-    set VROOT_RUNTIME $VROOTDIR/$eid/$node_id
+    set VROOT_RUNTIME $VROOTDIR/[getFromRunning "eid"]/$node_id
 
     pipesExec "mkdir -p $VROOT_RUNTIME &" "hold"
 }
@@ -558,10 +543,9 @@ proc prepareFilesystemForNode { node_id } {
 #   * node_id -- node id
 #****
 proc createNodeContainer { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global VROOT_MASTER ULIMIT_FILE ULIMIT_PROC debug
 
-    set docker_id "$eid.$node_id"
+    set docker_id "[getFromRunning "eid"].$node_id"
 
     set network "imunes-bridge"
     #if { [getNodeDockerAttach $node_id] == "true" } {
@@ -589,15 +573,13 @@ proc createNodeContainer { node_id } {
 }
 
 proc isNodeStarted { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
     set node_type [getNodeType $node_id]
     if { [$node_type.virtlayer] != "VIRTUALIZED" } {
 	if { $node_type in "rj45 ext extnat extelem" } {
 	    return true
 	}
 
-	set nodeNs "$eid-$node_id"
+	set nodeNs "[getFromRunning "eid"]-$node_id"
 
 	try {
 	    exec ip netns exec $nodeNs ip link show $node_id
@@ -608,7 +590,7 @@ proc isNodeStarted { node_id } {
 	return true
     }
 
-    set docker_id "$eid.$node_id"
+    set docker_id "[getFromRunning "eid"].$node_id"
 
     catch { exec docker inspect --format '{{.State.Running}}' $docker_id } status
 
@@ -616,14 +598,13 @@ proc isNodeStarted { node_id } {
 }
 
 proc isNodeNamespaceCreated { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global skip_nodes
 
     if { $node_id in $skip_nodes } {
 	return true
     }
 
-    set nodeNs [getNodeNetns $eid $node_id]
+    set nodeNs [getNodeNetns [getFromRunning "eid"] $node_id]
 
     if { $nodeNs == "" } {
 	return true
@@ -649,7 +630,7 @@ proc isNodeNamespaceCreated { node_id } {
 #   * node_id -- node id
 #****
 proc nodePhysIfacesCreate { node_id ifaces } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set eid [getFromRunning "eid"]
 
     if { [getNodeType $node_id] in "extelem" } {
 	return
@@ -746,9 +727,7 @@ proc checkHangingTCPs { eid nodes } {}
 #   * node_id -- node id
 #****
 proc nodeLogIfacesCreate { node_id ifaces } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    set docker_id "$eid.$node_id"
+    set docker_id "[getFromRunning "eid"].$node_id"
 
     foreach iface_id $ifaces {
 	set iface_name [getIfcName $node_id $iface_id]
@@ -796,8 +775,6 @@ proc nodeLogIfacesCreate { node_id ifaces } {
 #   * node_id -- node id
 #****
 proc configureICMPoptions { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
     array set sysctl_icmp {
 	net.ipv4.icmp_ratelimit			0
 	net.ipv4.icmp_echo_ignore_broadcasts	1
@@ -808,18 +785,17 @@ proc configureICMPoptions { node_id } {
     }
     set cmds [join $cmd "; "]
 
-    pipesExec "docker exec -d $eid.$node_id sh -c '$cmds ; touch /tmp/init'" "hold"
+    pipesExec "docker exec -d [getFromRunning "eid"].$node_id sh -c '$cmds ; touch /tmp/init'" "hold"
 }
 
 proc isNodeInitNet { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global skip_nodes
 
     if { $node_id in $skip_nodes } {
 	return true
     }
 
-    set docker_id "$eid.$node_id"
+    set docker_id "[getFromRunning "eid"].$node_id"
 
     try {
 	exec docker inspect -f "{{.GraphDriver.Data.MergedDir}}" $docker_id
@@ -849,7 +825,7 @@ proc createNsLinkBridge { netNs link } {
 }
 
 proc createNsVethPair { ifname1 netNs1 ifname2 netNs2 } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set eid [getFromRunning "eid"]
 
     set nsstr1 ""
     set nsstr1x ""
@@ -905,7 +881,7 @@ proc setNsIfcMaster { netNs iface_name master state } {
 #   * iface2_id -- interface id on the second node
 #****
 proc createDirectLinkBetween { node1_id node2_id iface1_id iface2_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set eid [getFromRunning "eid"]
 
     if { [getNodeType $node1_id] in "rj45 extelem" || [getNodeType $node2_id] in "rj45 extelem" } {
 	if { [getNodeType $node1_id] in "rj45 extelem" } {
@@ -998,7 +974,7 @@ proc createDirectLinkBetween { node1_id node2_id iface1_id iface2_id } {
 }
 
 proc createLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set eid [getFromRunning "eid"]
 
     # create link bridge in experiment netns
     createNsLinkBridge $eid $link_id
@@ -1023,7 +999,7 @@ proc createLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 }
 
 proc configureLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set eid [getFromRunning "eid"]
 
     set bandwidth [expr [getLinkBandwidth $link_id] + 0]
     set delay [expr [getLinkDelay $link_id] + 0]
@@ -1063,7 +1039,7 @@ proc configureLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 #   * node_id -- node id
 #****
 proc runConfOnNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set eid [getFromRunning "eid"]
 
     set docker_id "$eid.$node_id"
 
@@ -1094,7 +1070,7 @@ proc runConfOnNode { node_id } {
 }
 
 proc startNodeIfaces { node_id ifaces } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set eid [getFromRunning "eid"]
 
     set docker_id "$eid.$node_id"
 
@@ -1158,14 +1134,13 @@ proc unconfigNodeIfaces { eid node_id ifaces } {
 }
 
 proc isNodeIfacesConfigured { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global skip_nodes
 
     if { $node_id in $skip_nodes } {
 	return true
     }
 
-    set docker_id "$eid.$node_id"
+    set docker_id "[getFromRunning "eid"].$node_id"
 
     if { [[getNodeType $node_id].virtlayer] == "NATIVE" || [getCustomEnabled $node_id] == true } {
 	return true
@@ -1190,14 +1165,13 @@ proc isNodeIfacesConfigured { node_id } {
 }
 
 proc isNodeConfigured { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global skip_nodes
 
     if { $node_id in $skip_nodes } {
 	return true
     }
 
-    set docker_id "$eid.$node_id"
+    set docker_id "[getFromRunning "eid"].$node_id"
 
     if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
 	return true
@@ -1222,7 +1196,6 @@ proc isNodeConfigured { node_id } {
 }
 
 proc isNodeError { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global skip_nodes
 
     if { $node_id in $skip_nodes } {
@@ -1233,7 +1206,7 @@ proc isNodeError { node_id } {
 	return false
     }
 
-    set docker_id "$eid.$node_id"
+    set docker_id "[getFromRunning "eid"].$node_id"
 
     try {
 	# docker exec sometimes hangs, so don't use it while we have other pipes opened
@@ -1257,7 +1230,6 @@ proc isNodeError { node_id } {
 }
 
 proc isNodeErrorIfaces { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global skip_nodes
 
     if { $node_id in $skip_nodes } {
@@ -1268,7 +1240,7 @@ proc isNodeErrorIfaces { node_id } {
 	return false
     }
 
-    set docker_id "$eid.$node_id"
+    set docker_id "[getFromRunning "eid"].$node_id"
 
     try {
 	# docker exec sometimes hangs, so don't use it while we have other pipes opened
@@ -1407,8 +1379,6 @@ proc getCpuCount {} {
 #   * node_id -- node id
 #****
 proc enableIPforwarding { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
     array set sysctl_ipfwd {
 	net.ipv6.conf.all.forwarding	1
 	net.ipv4.conf.all.forwarding	1
@@ -1421,7 +1391,7 @@ proc enableIPforwarding { node_id } {
     }
     set cmds [join $cmd "; "]
 
-    pipesExec "docker exec -d $eid.$node_id sh -c \'$cmds\'" "hold"
+    pipesExec "docker exec -d [getFromRunning "eid"].$node_id sh -c \'$cmds\'" "hold"
 }
 
 #****f* linux.tcl/getExtIfcs
@@ -1671,9 +1641,7 @@ proc getDelIPv6IfcCmd { ifc addr } {
 #   * list -- list in the form of {netgraph_node_name hook}
 #****
 proc getRunningNodeIfcList { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    catch { exec docker exec $eid.$node_id ifconfig } full
+    catch { exec docker exec [getFromRunning "eid"].$node_id ifconfig } full
     set lines [split $full "\n"]
 
     return $lines
@@ -1863,7 +1831,7 @@ proc inetdServiceRestartCmds {} {
 }
 
 proc moveFileFromNode { node_id path ext_path } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set eid [getFromRunning "eid"]
 
     catch { exec hcp [getNodeName $node_id]@$eid:$path $ext_path }
     catch { exec docker exec $eid.$node_id rm -fr $path }
@@ -2014,8 +1982,6 @@ proc unsetupExtNat { eid node_id ifc } {
 }
 
 proc startRoutingDaemons { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
     set run_dir "/run/frr"
     set cmds "mkdir -p $run_dir ; chown frr:frr $run_dir"
 
@@ -2048,5 +2014,5 @@ proc startRoutingDaemons { node_id } {
     set init_file "/etc/init.d/frr"
     set cmds "$cmds; if \[ -f $init_file \]; then $init_file restart ; fi"
 
-    pipesExec "docker exec -d $eid.$node_id sh -c '$cmds'" "hold"
+    pipesExec "docker exec -d [getFromRunning "eid"].$node_id sh -c '$cmds'" "hold"
 }

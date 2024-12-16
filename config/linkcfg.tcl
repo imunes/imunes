@@ -86,10 +86,8 @@
 #   * link_ids -- returns ids of links connecting endpoints node1 and node2
 #****
 proc linksByPeers { node1_id node2_id } {
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-
     set link_ids {}
-    foreach link_id $link_list {
+    foreach link_id [getFromRunning "link_list"] {
 	set peers [getLinkPeers $link_id]
 	if { $peers == "$node1_id $node2_id" || $peers == "$node2_id $node1_id" } {
 	    lappend link_ids $link_id
@@ -111,12 +109,7 @@ proc linksByPeers { node1_id node2_id } {
 #   * link_id -- link id
 #****
 proc removeLink { link_id { keep_ifaces 0 } } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
     upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-    upvar 0 ::cf::[set ::curcfg]::IPv4UsedList IPv4UsedList
-    upvar 0 ::cf::[set ::curcfg]::IPv6UsedList IPv6UsedList
-    upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
 
     lassign [getLinkPeers $link_id] node1_id node2_id
     foreach node_id "$node1_id $node2_id" iface_id [getLinkPeersIfaces $link_id] {
@@ -149,9 +142,9 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 	    continue
 	}
 
-	set IPv4UsedList [removeFromList $IPv4UsedList [getIfcIPv4addrs $node_id $iface_id] "keep_doubles"]
-	set IPv6UsedList [removeFromList $IPv6UsedList [getIfcIPv6addrs $node_id $iface_id] "keep_doubles"]
-	set MACUsedList [removeFromList $MACUsedList [getIfcMACaddr $node_id $iface_id] "keep_doubles"]
+	setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] [getIfcIPv4addrs $node_id $iface_id] "keep_doubles"]
+	setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] [getIfcIPv6addrs $node_id $iface_id] "keep_doubles"]
+	setToRunning "mac_used_list" [removeFromList [getFromRunning "mac_used_list"] [getIfcMACaddr $node_id $iface_id] "keep_doubles"]
 	netconfClearSection $node_id "interface $iface_id"
 	set i [lsearch [set $node_id] "interface-peer {$iface_id $peer_id}"]
 	set $node_id [lreplace [set $node_id] $i $i]
@@ -174,11 +167,11 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 
     foreach node_id "$node1_id $node2_id" {
 	if { [getNodeType $node_id] == "pseudo" } {
-	    set node_list [removeFromList $node_list $node_id]
+	    setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $node_id]
 	}
     }
 
-    set link_list [removeFromList $link_list $link_id]
+    setToRunning "link_list" [removeFromList [getFromRunning "link_list"] $link_id]
 }
 
 #****f* linkcfg.tcl/getLinkDirect
@@ -1053,17 +1046,14 @@ proc setLinkDup { link_id duplicate } {
 #   * link_id -- link id
 #****
 proc linkResetConfig { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-
     setLinkBandwidth $link_id ""
     setLinkBER $link_id ""
     setLinkLoss $link_id ""
     setLinkDelay $link_id ""
     setLinkDup $link_id ""
 
-    if { $oper_mode == "exec" } {
-	upvar 0 ::cf::[set ::curcfg]::eid eid
-	execSetLinkParams $eid $link_id
+    if { [getFromRunning "oper_mode"] == "exec" } {
+	execSetLinkParams [getFromRunning "eid"] $link_id
     }
 
     redrawAll
@@ -1129,7 +1119,6 @@ proc setLinkMirror { link_id mirror } {
 #   * nodes -- list of node ids of new nodes.
 #****
 proc splitLink { orig_link_id } {
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
     upvar 0 ::cf::[set ::curcfg]::$orig_link_id $orig_link_id
 
     set orig_nodes [getLinkPeers $orig_link_id]
@@ -1140,10 +1129,10 @@ proc splitLink { orig_link_id } {
     set orig_ifaces [getLinkPeersIfaces $orig_link_id]
 
     # create mirror link and copy the properties from the original
-    set mirror_link_id [newObjectId $link_list "l"]
+    set mirror_link_id [newObjectId [getFromRunning "link_list"] "l"]
     upvar 0 ::cf::[set ::curcfg]::$mirror_link_id $mirror_link_id
     set $mirror_link_id [set $orig_link_id]
-    lappend link_list $mirror_link_id
+    lappendToRunning "link_list" $mirror_link_id
     set links "$orig_link_id $mirror_link_id"
 
     # create pseudo nodes
@@ -1194,9 +1183,6 @@ proc splitLink { orig_link_id } {
 #   * link_id -- rebuilt link id
 #****
 proc mergeLink { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-
     set mirror_link_id [getLinkMirror $link_id]
     if { $mirror_link_id == "" } {
 	return
@@ -1236,8 +1222,8 @@ proc mergeLink { link_id } {
 
     setLinkMirror $link_id ""
 
-    set node_list [removeFromList $node_list "$pseudo_node1_id $pseudo_node2_id"]
-    set link_list [removeFromList $link_list $mirror_link_id]
+    setToRunning "node_list" [removeFromList [getFromRunning "node_list"] "$pseudo_node1_id $pseudo_node2_id"]
+    setToRunning "link_list" [removeFromList [getFromRunning "link_list"] $mirror_link_id]
 
     return $link_id
 }
@@ -1288,7 +1274,6 @@ proc newLink { node1_id node2_id } {
 }
 
 proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
     upvar 0 ::cf::[set ::curcfg]::$node1_id $node1_id
     upvar 0 ::cf::[set ::curcfg]::$node2_id $node2_id
     global defEthBandwidth defSerBandwidth defSerDelay
@@ -1349,7 +1334,7 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
 	set iface2_id [newIface $node2_id "phys" 0]
     }
 
-    set link_id [newObjectId $link_list "l"]
+    set link_id [newObjectId [getFromRunning "link_list"] "l"]
     upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
     set $link_id {}
 
@@ -1369,8 +1354,7 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
 
     lappend $link_id "nodes {$node1_id $node2_id}"
     lappend $link_id "ifaces {$iface1_id $iface2_id}"
-
-    lappend link_list $link_id
+    lappendToRunning "link_list" $link_id
 
     if { $config_iface1 && [info procs [getNodeType $node1_id].confNewIfc] != "" } {
 	[getNodeType $node1_id].confNewIfc $node1_id $iface1_id

@@ -82,12 +82,6 @@ proc dumpputs { method dest string } {
 #     configurations
 #****
 proc dumpCfg { method dest } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-    upvar 0 ::cf::[set ::curcfg]::annotation_list annotation_list
-    upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
-    upvar 0 ::cf::[set ::curcfg]::image_list image_list
     # the globals bellow should be placed in a namespace as well
     global show_interface_names show_node_labels show_link_labels
     global show_interface_ipv4 show_interface_ipv6
@@ -95,7 +89,7 @@ proc dumpCfg { method dest } {
     global icon_size
     global auto_etc_hosts
 
-    foreach node_id $node_list {
+    foreach node_id [getFromRunning "node_list"] {
 	upvar 0 ::cf::[set ::curcfg]::$node_id lnode
 	dumpputs $method $dest "node $node_id \{"
 	foreach element $lnode {
@@ -177,8 +171,7 @@ proc dumpCfg { method dest } {
     }
 
     foreach obj "link annotation canvas" {
-	upvar 0 ::cf::[set ::curcfg]::${obj}_list obj_list
-	foreach elem $obj_list {
+	foreach elem [getFromRunning "${obj}_list"] {
 	    upvar 0 ::cf::[set ::curcfg]::$elem lelem
 	    dumpputs $method $dest "$obj $elem \{"
 	    foreach element $lelem {
@@ -239,11 +232,11 @@ proc dumpCfg { method dest } {
     } else {
 	dumpputs $method $dest "    grid yes" }
     dumpputs $method $dest "    iconSize $icon_size"
-    dumpputs $method $dest "    zoom $zoom"
+    dumpputs $method $dest "    zoom [getFromRunning "zoom"]"
     dumpputs $method $dest "\}"
     dumpputs $method $dest ""
 
-    foreach elem $image_list {
+    foreach elem [getFromRunning "image_list"] {
 	if { [getImageReferences $elem] != "" } {
 	    upvar 0 ::cf::[set ::curcfg]::$elem lelem
 	    dumpputs $method $dest "image $elem \{"
@@ -270,16 +263,6 @@ proc dumpCfg { method dest } {
 #   * cfg -- string containing the new working configuration.
 #****
 proc loadCfgLegacy { cfg } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-    upvar 0 ::cf::[set ::curcfg]::annotation_list annotation_list
-    upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
-    upvar 0 ::cf::[set ::curcfg]::image_list image_list
-    upvar 0 ::cf::[set ::curcfg]::IPv6UsedList IPv6UsedList
-    upvar 0 ::cf::[set ::curcfg]::IPv4UsedList IPv4UsedList
-    upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
-    upvar 0 ::cf::[set ::curcfg]::etchosts etchosts
     global show_interface_names show_node_labels show_link_labels
     global show_interface_ipv4 show_interface_ipv6
     global show_background_image show_grid show_annotations
@@ -293,7 +276,6 @@ proc loadCfgLegacy { cfg } {
     set annotation_list {}
     set canvas_list {}
     set image_list {}
-    set etchosts ""
     set class ""
     set object ""
     foreach entry $cfg {
@@ -662,7 +644,7 @@ proc loadCfgLegacy { cfg } {
 			    }
 			}
 			zoom {
-			    set zoom $value
+			    setToRunning "zoom" $value
 			}
 			iconSize {
 			    set icon_size $value
@@ -733,6 +715,13 @@ proc loadCfgLegacy { cfg } {
 	set object ""
     }
 
+    setToRunning "node_list" $node_list
+    setToRunning "link_list" $link_list
+    setToRunning "canvas_list" $canvas_list
+    setToRunning "annotation_list" $annotation_list
+    setToRunning "image_list" $image_list
+    setToRunning "cfg_deployed" false
+
     #
     # Hack for comaptibility with old format files (no canvases)
     #
@@ -745,9 +734,9 @@ proc loadCfgLegacy { cfg } {
     #
     # Hack for comaptibility with old format files (no lo0 on nodes)
     #
-    set IPv6UsedList ""
-    set IPv4UsedList ""
-    set MACUsedList ""
+    set ipv6_used_list {}
+    set ipv4_used_list {}
+    set mac_used_list {}
     foreach node_id $node_list {
 	set node_type [getNodeType $node_id]
 	if { $node_type in "extelem" } {
@@ -780,17 +769,21 @@ proc loadCfgLegacy { cfg } {
 	foreach iface_id [ifcList $node_id] {
 	    foreach addr [getIfcIPv6addrs $node_id $iface_id] {
 		lassign [split $addr "/"] addr mask
-		lappend IPv6UsedList "[ip::contract [ip::prefix $addr]]/$mask"
+		lappend ipv6_used_list "[ip::contract [ip::prefix $addr]]/$mask"
 	    }
 
 	    foreach addr [getIfcIPv4addrs $node_id $iface_id] {
-		lappend IPv4UsedList $addr
+		lappend ipv4_used_list $addr
 	    }
 
 	    set addr [getIfcMACaddr $node_id $iface_id]
-	    if { $addr != "" } { lappend MACUsedList $addr }
+	    if { $addr != "" } { lappend mac_used_list $addr }
 	}
     }
+
+    setToRunning "ipv4_used_list" $ipv4_used_list
+    setToRunning "ipv6_used_list" $ipv6_used_list
+    setToRunning "mac_used_list" $mac_used_list
 
     # older .imn files have only one link per node pair, so match links with interfaces
     foreach link_id $link_list {
@@ -858,4 +851,151 @@ proc newObjectId { elem_list prefix } {
     }
 
     return $prefix$mid
+}
+
+#########################################################################
+
+proc getWithDefault { default_value dictionary args } {
+    try {
+	return [dict get $dictionary {*}$args]
+    } on error {} {
+	return $default_value
+    }
+}
+
+proc dictGet { dictionary args } {
+    try {
+	dict get $dictionary {*}$args
+    } on error {} {
+	return {}
+    } on ok retv {
+	return $retv
+    }
+}
+
+proc dictSet { dictionary args } {
+    try {
+	dict set dictionary {*}$args
+    } on error {} {
+	return $dictionary
+    } on ok retv {
+	return $retv
+    }
+}
+
+proc dictLappend { dictionary args } {
+    try {
+	dict lappend dictionary {*}$args
+    } on error {} {
+	return $dictionary
+    } on ok retv {
+	return $retv
+    }
+}
+
+proc dictUnset { dictionary args } {
+    try {
+	dict unset dictionary {*}$args
+    } on error {} {
+	return $dictionary
+    } on ok retv {
+	return $retv
+    }
+}
+
+proc clipboardGet { args } {
+    upvar 0 ::cf::clipboard::dict_cfg dict_cfg
+
+    return [dictGet $dict_cfg {*}$args]
+}
+
+proc clipboardSet { args } {
+    upvar 0 ::cf::clipboard::dict_cfg dict_cfg
+
+    if { [lindex $args end] in {{} ""} } {
+	for {set i 1} {$i < [llength $args]} {incr i} {
+	    set dict_cfg [dictUnset $dict_cfg {*}[lrange $args 0 end-$i]]
+
+	    set new_upper [dictGet $dict_cfg {*}[lrange $args 0 end-[expr $i+1]]]
+	    if { $new_upper != "" } {
+		break
+	    }
+	}
+    } elseif { [dict exists $dict_cfg {*}$args] } {
+	set dict_cfg [dictUnset $dict_cfg {*}$args]
+    } else {
+	set dict_cfg [dictSet $dict_cfg {*}$args]
+    }
+
+    return $dict_cfg
+}
+
+proc clipboardLappend { args } {
+    upvar 0 ::cf::clipboard::dict_cfg dict_cfg
+
+    set dict_cfg [dictLappend $dict_cfg {*}$args]
+
+    return $dict_cfg
+}
+
+proc clipboardUnset { args } {
+    upvar 0 ::cf::clipboard::dict_cfg dict_cfg
+
+    for {set i 0} {$i < [llength $args]} {incr i} {
+	set dict_cfg [dictUnset $dict_cfg {*}[lrange $args 0 end-$i]]
+
+	set new_upper [dictGet $dict_cfg {*}[lrange $args 0 end-[expr $i+1]]]
+	if { $new_upper != "" } {
+	    break
+	}
+    }
+
+    return $dict_cfg
+}
+
+#########################################################################
+
+proc getFromRunning { key { config "" } } {
+    if { $config == "" } {
+	set config [set ::curcfg]
+    }
+    upvar 0 ::cf::${config}::dict_run dict_run
+
+    return [dictGet $dict_run $key]
+}
+
+proc setToRunning { key value } {
+    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+
+    set dict_run [dictSet $dict_run $key $value]
+
+    return $dict_run
+}
+
+proc unsetRunning { key } {
+    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+
+    set dict_run [dictUnset $dict_run $key]
+
+    return $dict_run
+}
+
+proc lappendToRunning { key value } {
+    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+
+    set dict_run [dictLappend $dict_run $key $value]
+
+    return $dict_run
+}
+
+proc jumpToUndoLevel { undolevel } {
+    upvar 0 ::cf::[set ::curcfg]::undolog undolog
+
+    loadCfgLegacy $undolog($undolevel)
+}
+
+proc saveToUndoLevel { undolevel { value "" } } {
+    upvar 0 ::cf::[set ::curcfg]::undolog undolog
+
+    set undolog($undolevel) $value
 }

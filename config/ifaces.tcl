@@ -778,14 +778,12 @@ proc getIfcPeer { node_id iface_id } {
 #   * link_id -- link id
 #****
 proc getIfcLink { node_id iface_id } {
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-
     set peer_id [getIfcPeer $node_id $iface_id]
     if { $peer_id == "" } {
 	return
     }
 
-    foreach link_id $link_list {
+    foreach link_id [getFromRunning "link_list"] {
 	set endpoints [getLinkPeers $link_id]
 	if { $endpoints in "{$node_id $peer_id} {$peer_id $node_id}" } {
 	    break
@@ -1295,18 +1293,15 @@ proc newLogIface { type node_id } {
 
 proc removeIface { node_id iface_id } {
     upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-    upvar 0 ::cf::[set ::curcfg]::IPv4UsedList IPv4UsedList
-    upvar 0 ::cf::[set ::curcfg]::IPv6UsedList IPv6UsedList
-    upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
 
     set link_id [getIfcLink $node_id $iface_id]
     if { $link_id != "" } {
 	removeLink $link_id 1
     }
 
-    set IPv4UsedList [removeFromList $IPv4UsedList [getIfcIPv4addrs $node_id $iface_id] "keep_doubles"]
-    set IPv6UsedList [removeFromList $IPv6UsedList [getIfcIPv6addrs $node_id $iface_id] "keep_doubles"]
-    set MACUsedList [removeFromList $MACUsedList [getIfcMACaddr $node_id $iface_id] "keep_doubles"]
+    setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] [getIfcIPv4addrs $node_id $iface_id] "keep_doubles"]
+    setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] [getIfcIPv6addrs $node_id $iface_id] "keep_doubles"]
+    setToRunning "mac_used_list" [removeFromList [getFromRunning "mac_used_list"] [getIfcMACaddr $node_id $iface_id] "keep_doubles"]
 
     netconfClearSection $node_id "interface $iface_id"
     set idx [lsearch [set $node_id] "interface-peer \{$iface_id *"]

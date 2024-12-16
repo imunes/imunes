@@ -11,13 +11,11 @@
 #   * node_id -- node id
 #****
 proc showCfg { c node_id } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     upvar 0 ::showConfig showCfg
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     upvar 0 ::lastObservedNode lastObservedNode
 
     #Show only if in exec mode
-    if { $oper_mode != "exec" } {
+    if { [getFromRunning "oper_mode"] != "exec" } {
     	return
     }
 
@@ -96,8 +94,7 @@ proc showCfgPopup { c node_id title x y } {
     set newX $x
     set newY $y
 
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    lassign [getCanvasSize $curcanvas] sizex sizey
+    lassign [getCanvasSize [getFromRunning "curcanvas"]] sizex sizey
     lassign [getNodeCoords $node_id] nodeX nodeY
     lassign [$c cget -scrollregion] rx1 ry1 rx2 ry2
 
@@ -180,12 +177,10 @@ proc deleteAndShowPopup { c title x y } {
 proc showRoute { c node2_id } {
     upvar 0 ::showConfig showCfg
     upvar 0 ::traceRouteTime traceRouteTime
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global activetool
 
     #Route can only be drawn in exec mode
-    if { $oper_mode != "exec" } {
+    if { [getFromRunning "oper_mode"] != "exec" } {
 	    return
     }
 
@@ -225,7 +220,7 @@ proc showRoute { c node2_id } {
 		set ip [lindex [getIfcIPv4addrs $node2_id $iface_id] 0]
 		set slashPlace [string first "/" $ip]
 		set ipAddr [string range $ip 0 [expr $slashPlace-1]]
-		set node_id "$eid.$node1_id"
+		set node_id "[getFromRunning "eid"].$node1_id"
 		set hopIP ""
 		set hop 0
 		set n1 $node1_id

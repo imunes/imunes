@@ -115,7 +115,6 @@ for { set i 3 } { $i <= 24 } { incr i } {
 #   * new_nodes -- created nodes
 #****
 proc newNodes { node_num } {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     global grid sizex sizey activetool
 
     set new_nodes {}
@@ -136,7 +135,7 @@ proc newNodes { node_num } {
 
 	setNodeCoords $new_node_id "$x $y"
 	setNodeLabelCoords $new_node_id "$x [expr {$y + $dy}]"
-	setNodeCanvas $new_node_id $curcanvas
+	setNodeCanvas $new_node_id [getFromRunning "curcanvas"]
 
 	lappend new_nodes $new_node_id
     }

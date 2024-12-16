@@ -260,6 +260,7 @@ set cf::clipboard::link_list {}
 set cf::clipboard::annotation_list {}
 set cf::clipboard::canvas_list {}
 set cf::clipboard::image_list {}
+set cf::clipboard::dict_cfg [dict create]
 
 set cfg_list {}
 set curcfg ""
@@ -317,7 +318,7 @@ if { $execMode == "interactive" } {
 
     newProject
     if { $argv != "" && [file exists $argv] } {
-	set ::cf::[set curcfg]::currentFile $argv
+	setToRunning "current_file" $argv
 	openFile
     }
 
@@ -346,18 +347,28 @@ if { $execMode == "interactive" } {
 	lappend cfg_list $curcfg
 
 	namespace eval ::cf::[set curcfg] {}
+	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+	set dict_cfg [dict create]
+	set dict_run [dict create]
 
 	loadCfgLegacy $cfg
+	set execute_vars [dict create]
 
+	setToRunning "eid" ""
+	setToRunning "oper_mode" "edit"
+	setToRunning "auto_execution" 1
+	setToRunning "cfg_deployed" false
+	setToRunning "stop_sched" true
+	setToRunning "undolevel" 0
+	setToRunning "redolevel" 0
+	setToRunning "zoom" $zoom
 	if { [checkExternalInterfaces] } {
 	    return
 	}
 
 	if { [allSnapshotsAvailable] == 1 } {
-	    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-	    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-
-	    deployCfg 1 $node_list "*" $link_list $link_list "*" "*"
+	    deployCfg 1 [getFromRunning "node_list"] "*" [getFromRunning "link_list"] [getFromRunning "link_list"] "*" "*"
 	    createExperimentFilesFromBatch
 	}
     } else {
@@ -374,14 +385,16 @@ if { $execMode == "interactive" } {
 	    lappend cfg_list $curcfg
 
 	    namespace eval ::cf::[set curcfg] {}
-	    upvar 0 ::cf::[set ::curcfg]::eid eid
-	    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-	    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-	    set eid $eid_base
+	    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+	    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+	    set dict_cfg [dict create]
+	    set dict_run [dict create]
+	    set execute_vars [dict create]
 
 	    loadCfgLegacy $cfg
 
-	    undeployCfg $eid_base 1 $node_list "*" $link_list "*" "*" "*"
+	    setToRunning "eid" $eid_base
+	    undeployCfg $eid_base 1 [getFromRunning "node_list"] "*" [getFromRunning "link_list"] "*" "*" "*"
 	} else {
 	    vimageCleanup $eid_base
 	}

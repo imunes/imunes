@@ -109,13 +109,11 @@ proc pipesCreate {} {
 }
 
 proc pipesExecLog { line args } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
     if { $line == "" } {
 	return
     }
 
-    set logfile "/tmp/$eid.log"
+    set logfile "/tmp/[getFromRunning "eid"].log"
 
     pipesExec "printf \"RUN: \" >> $logfile ; cat >> $logfile 2>&1 <<\"IMUNESEOF\"\n$line\nIMUNESEOF" "hold"
     pipesExec "$line >> $logfile 2>&1" "$args"
@@ -188,15 +186,10 @@ proc pipesClose {} {
 #   * new_oper_mode -- the new operating mode. Can be edit or exec.
 #****
 proc setOperMode { new_oper_mode } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-    upvar 0 ::cf::[set ::curcfg]::undolevel undolevel
-    upvar 0 ::cf::[set ::curcfg]::redolevel redolevel
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    upvar 0 ::cf::[set ::curcfg]::cfgDeployed cfgDeployed
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global all_modules_list editor_only execMode isOSfreebsd isOSlinux
 
+    set node_list [getFromRunning "node_list"]
+    set link_list [getFromRunning "link_list"]
     if { $new_oper_mode == "exec" && $node_list == "" } {
 	statline "Empty topologies can't be executed."
 	.panwin.f1.c config -cursor left_ptr
@@ -204,7 +197,7 @@ proc setOperMode { new_oper_mode } {
 	return
     }
 
-    if { ! $cfgDeployed && $new_oper_mode == "exec" } {
+    if { ! [getFromRunning "cfg_deployed"] && $new_oper_mode == "exec" } {
 	if { ! $isOSlinux && ! $isOSfreebsd } {
 	    after idle { .dialog1.msg configure -wraplength 4i }
 	    tk_dialog .dialog1 "IMUNES error" \
@@ -272,28 +265,29 @@ proc setOperMode { new_oper_mode } {
 	.panwin.f1.c bind node <Double-1> "spawnShellExec"
 	.panwin.f1.c bind nodelabel <Double-1> "spawnShellExec"
 
-	set oper_mode exec
+	setToRunning "oper_mode" "exec"
 
 	wm protocol . WM_DELETE_WINDOW {
 	}
 
-	if { ! $cfgDeployed } {
+	if { ! [getFromRunning "cfg_deployed"] } {
 	    deployCfg 1 $node_list "*" $link_list $link_list "*" "*"
-	    set cfgDeployed true
+	    setToRunning "cfg_deployed" true
 	}
 
 	wm protocol . WM_DELETE_WINDOW {
 	    exit
 	}
 
-	.bottom.experiment_id configure -text "Experiment ID = $eid"
+	.bottom.experiment_id configure -text "Experiment ID = [getFromRunning "eid"]"
     } else {
-	if { $oper_mode != "edit" } {
+	if { [getFromRunning "oper_mode"] != "edit" } {
 	    global regular_termination
 
 	    wm protocol . WM_DELETE_WINDOW {
 	    }
 
+	    set eid [getFromRunning "eid"]
 	    if { $regular_termination } {
 		undeployCfg $eid 1 $node_list "*" $link_list "*" "*" "*"
 	    } else {
@@ -304,7 +298,7 @@ proc setOperMode { new_oper_mode } {
 	    killExtProcess "socat.*$eid"
 	    pipesClose
 
-	    set cfgDeployed false
+	    setToRunning "cfg_deployed" false
 
 	    wm protocol . WM_DELETE_WINDOW {
 		exit
@@ -324,13 +318,13 @@ proc setOperMode { new_oper_mode } {
 	.menubar.experiment entryconfigure "Terminate" -state disabled
 	.menubar.experiment entryconfigure "Restart" -state disabled
 
-	if { $undolevel > 0 } {
+	if { [getFromRunning "undolevel"] > 0 } {
 	    .menubar.edit entryconfigure "Undo" -state normal
 	} else {
 	    .menubar.edit entryconfigure "Undo" -state disabled
 	}
 
-	if { $redolevel > $undolevel } {
+	if { [getFromRunning "redolevel"] > [getFromRunning "undolevel"] } {
 	    .menubar.edit entryconfigure "Redo" -state normal
 	} else {
 	    .menubar.edit entryconfigure "Redo" -state disabled
@@ -339,7 +333,7 @@ proc setOperMode { new_oper_mode } {
 	.panwin.f1.c bind node <Double-1> "nodeConfigGUI .panwin.f1.c {}"
 	.panwin.f1.c bind nodelabel <Double-1> "nodeConfigGUI .panwin.f1.c {}"
 
-	set oper_mode edit
+	setToRunning "oper_mode" "edit"
 	.bottom.experiment_id configure -text ""
     }
 
@@ -477,10 +471,10 @@ proc readDataFromFile { path } {
 #   * exp -- experiment id
 #****
 proc resumeSelectedExperiment { exp } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global runtimeDir
 
-    if { [info exists eid] } {
+    set eid [getFromRunning "eid"]
+    if { $eid != "" } {
 	set curr_eid $eid
 	if { $curr_eid == $exp } {
 	    return
@@ -489,15 +483,11 @@ proc resumeSelectedExperiment { exp } {
 
     newProject
 
-    upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
-    upvar 0 ::cf::[set ::curcfg]::cfgDeployed cfgDeployed
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    set currentFile [getExperimentConfigurationFromFile $exp]
+    setToRunning "current_file" [getExperimentConfigurationFromFile $exp]
     openFile
 
-    set eid $exp
-    set cfgDeployed true
+    setToRunning "eid" $exp
+    setToRunning "cfg_deployed" true
     setOperMode exec
 }
 
@@ -512,13 +502,11 @@ proc resumeSelectedExperiment { exp } {
 #   * path -- absolute path of the file
 #****
 proc dumpLinksToFile { path } {
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-
     set data ""
     set linkDelim ":"
     set skipLinks ""
 
-    foreach link_id $link_list {
+    foreach link_id [getFromRunning "link_list"] {
 	if { $link_id in $skipLinks } {
 	    continue
 	}
@@ -702,7 +690,7 @@ proc captureOnExtIfc { node_id command } {
 	return
     }
 
-    upvar 0 ::cf::[set ::curcfg]::eid eid
+    set eid [getFromRunning "eid"]
 
     if { $command == "tcpdump" } {
 	exec xterm -name imunes-terminal -T "Capturing $eid-$node_id" -e "tcpdump -ni $eid-$node_id" 2> /dev/null &

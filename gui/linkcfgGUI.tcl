@@ -151,8 +151,6 @@ proc configGUI_buttonsACLink { wi link_id } {
 #   * phase --
 #****
 proc configGUI_applyButtonLink { wi link_id phase } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global changed badentry
 
     $wi config -cursor watch
@@ -170,7 +168,8 @@ proc configGUI_applyButtonLink { wi link_id phase } {
     configGUI_linkConfigApply $wi $link_id
     configGUI_linkColorApply $wi $link_id
 
-    if { $changed == 1 && $oper_mode == "exec" } {
+    if { $changed == 1 && [getFromRunning "oper_mode"] == "exec" } {
+	set eid [getFromRunning "eid"]
 	saveRunningConfigurationInteractive $eid
 	execSetLinkParams $eid $link_id
     }
@@ -407,8 +406,6 @@ proc linkJitterConfigGUI { c link_id } {
 #   * wi -- widget
 #   * link_id -- link id
 #****
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    upvar 0 ::cf::[set ::curcfg]::eid eid
 proc applyJitterLink { wi link_id } {
     global up_jitmode down_jitmode
 
@@ -448,7 +445,8 @@ proc applyJitterLink { wi link_id } {
     $wi.down.editor delete 1.0 end
     $wi.down.editor insert end [join $jdown "\n"]
 
-    if { $oper_mode == "exec" } {
+    if { [getFromRunning "oper_mode"] == "exec" } {
+	set eid [getFromRunning "eid"]
 	saveRunningConfigurationInteractive $eid
 	execSetLinkJitter $eid $link_id
     }
@@ -468,9 +466,6 @@ proc applyJitterLink { wi link_id } {
 #   * link_id -- link id
 #****
 proc linkJitterReset { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
     setLinkJitterModeUpstream $link_id ""
     setLinkJitterModeDownstream $link_id ""
 
@@ -480,7 +475,8 @@ proc linkJitterReset { link_id } {
     setLinkJitterUpstream $link_id ""
     setLinkJitterDownstream $link_id ""
 
-    if { $oper_mode == "exec" } {
+    if { [getFromRunning "oper_mode"] == "exec" } {
+	set eid [getFromRunning "eid"]
 	saveRunningConfigurationInteractive $eid
 	execResetLinkJitter $eid $link_id
     }

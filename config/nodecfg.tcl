@@ -187,11 +187,9 @@
 #****
 
 proc getNodeDir { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
     set node_dir [getNodeCustomImage $node_id]
     if { $node_dir == "" } {
-	set node_dir [getVrootDir]/$eid/$node_id
+	set node_dir [getVrootDir]/[getFromRunning "eid"]/$node_id
     }
 
     return $node_dir
@@ -1373,7 +1371,6 @@ proc setAutoDefaultRoutesStatus { node_id state } {
 #   * node_id -- node id
 #****
 proc removeNode { node_id { keep_other_ifaces 0 } } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
     upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global nodeNamingBase
 
@@ -1387,7 +1384,7 @@ proc removeNode { node_id { keep_other_ifaces 0 } } {
 	}
     }
 
-    set node_list [removeFromList $node_list $node_id]
+    setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $node_id]
 
     set node_type [getNodeType $node_id]
     if { $node_type in [array names nodeNamingBase] } {
@@ -1448,15 +1445,14 @@ proc setNodeCanvas { node_id canvas_id } {
 #   * node_id -- node id of a new node of the specified type
 #****
 proc newNode { type } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
     global viewid
     catch { unset viewid }
 
-    set node_id [newObjectId $node_list "n"]
+    set node_id [newObjectId [getFromRunning "node_list"] "n"]
     upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     set $node_id {}
     lappend $node_id "type $type"
-    lappend node_list $node_id
+    lappendToRunning "node_list" $node_id
 
     if { [info procs $type.confNewNode] == "$type.confNewNode" } {
 	$type.confNewNode $node_id
@@ -2154,9 +2150,8 @@ proc setNodeIface { node_id iface_id new_iface } {
 #   * list -- list of all nodes of the type
 #****
 proc getAllNodesType { type } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
     set type_list ""
-    foreach node_id $node_list {
+    foreach node_id [getFromRunning "node_list"] {
 	if { [string match "$type*" [getNodeType $node_id]] } {
 	    lappend type_list $node_id
 	}

@@ -114,8 +114,9 @@ proc removeNodeGUI { node_id { keep_other_ifaces 0 } } {
 #   * link_id -- link id
 #****
 proc splitLinkGUI { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global changed
+
+    set zoom [getFromRunning "zoom"]
 
     lassign [getLinkPeers $link_id] orig_node1_id orig_node2_id
     lassign [splitLink $link_id] new_node1_id new_node2_id
@@ -354,10 +355,7 @@ proc selectAdjacent {} {
 #   * y -- y coordinate for popup menu
 #****
 proc button3link { c x y } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
+    set oper_mode [getFromRunning "oper_mode"]
 
     set link_id [lindex [$c gettags "link && current"] 1]
     if { $link_id == "" } {
@@ -449,7 +447,7 @@ proc button3link { c x y } {
     set link_mirror_id [getLinkMirror $link_id]
     if { $oper_mode != "exec" && $link_mirror_id != "" &&
 	[getNodeCanvas [lindex [getLinkPeers $link_mirror_id] 1]] ==
-	$curcanvas } {
+	[getFromRunning "curcanvas"] } {
 
 	.button3menu add command -label "Merge" \
 	    -command "mergeNodeGUI [lindex [getLinkPeers $link_id] 1]"
@@ -569,11 +567,10 @@ proc mergeNodeGUI { node_id } {
 #****
 proc button3node { c x y } {
     global isOSlinux
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set canvas_list [getFromRunning "canvas_list"]
+    set curcanvas [getFromRunning "curcanvas"]
+    set oper_mode [getFromRunning "oper_mode"]
 
     set node_id [lindex [$c gettags "node && current"] 1]
     if { $node_id == "" } {
@@ -679,7 +676,7 @@ proc button3node { c x y } {
 	    -menu .button3menu.connect.$canvas_id
     }
 
-    foreach peer_id $node_list {
+    foreach peer_id [getFromRunning "node_list"] {
 	set canvas_id [getNodeCanvas $peer_id]
 	if { $node_id == $peer_id } {
 	    .button3menu.connect.$canvas_id add command \
@@ -725,7 +722,7 @@ proc button3node { c x y } {
 		-menu .button3menu.connect_iface.$this_iface_id.$canvas_id
 	}
 
-	foreach peer_id $node_list {
+	foreach peer_id [getFromRunning "node_list"] {
 	    set canvas_id [getNodeCanvas $peer_id]
 	    if { [getNodeType $peer_id] != "pseudo" } {
 		destroy .button3menu.connect_iface.$this_iface_id.$canvas_id.$peer_id
@@ -814,9 +811,9 @@ proc button3node { c x y } {
 	.button3menu add command -label Start \
 	    -command "deployCfg 0 \"\" \"\" \"\" \"\" \"$node_id *\" $node_id"
 	.button3menu add command -label Stop \
-	    -command "undeployCfg $eid 0 \"\" \"\" \"\" \"\" \"$node_id *\" $node_id "
+	    -command "undeployCfg [getFromRunning "eid"] 0 \"\" \"\" \"\" \"\" \"$node_id *\" $node_id "
 	.button3menu add command -label Restart \
-	    -command "undeployCfg $eid 0 \"\" \"\" \"\" \"\" \"$node_id *\" $node_id; \
+	    -command "undeployCfg [getFromRunning "eid"] 0 \"\" \"\" \"\" \"\" \"$node_id *\" $node_id; \
 		deployCfg 0 \"\" \"\" \"\" \"\" \"$node_id *\" $node_id"
     }
 
@@ -1064,9 +1061,6 @@ proc button3node { c x y } {
 #   * button -- the keyboard button that is pressed.
 #****
 proc button1 { c x y button } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global activetool newlink curobj changed def_router_model
     global router pc host lanswitch frswitch rj45 hub
     global oval rectangle text freeform newtext
@@ -1074,6 +1068,8 @@ proc button1 { c x y button } {
     global background selectbox
     global defLinkColor defLinkWidth
     global resizemode resizeobj
+
+    set zoom [getFromRunning "zoom"]
 
     set x [$c canvasx $x]
     set y [$c canvasy $y]
@@ -1168,7 +1164,7 @@ proc button1 { c x y button } {
 	if { $activetool ni "select link oval rectangle text freeform" } {
 	    # adding a new node
 	    set node_id [newNode $activetool]
-	    setNodeCanvas $node_id $curcanvas
+	    setNodeCanvas $node_id [getFromRunning "curcanvas"]
 	    setNodeCoords $node_id "[expr {$x / $zoom}] [expr {$y / $zoom}]"
 
 	    # To calculate label distance we take into account the normal icon
@@ -1427,17 +1423,15 @@ proc button1-motion { c x y } {
 #   * y -- y coordinate
 #****
 proc button1-release { c x y } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
-    upvar 0 ::cf::[set ::curcfg]::undolevel undolevel
-    upvar 0 ::cf::[set ::curcfg]::redolevel redolevel
-    upvar 0 ::cf::[set ::curcfg]::undolog undolog
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     global activetool newlink curobj grid
     global changed selectbox
     global lastX lastY sizex sizey
     global autorearrange_enabled
     global resizemode resizeobj
+
+    set zoom [getFromRunning "zoom"]
+    set undolevel [getFromRunning "undolevel"]
+    set redolevel [getFromRunning "redolevel"]
 
     set redrawNeeded 0
 
@@ -1676,7 +1670,7 @@ proc button1-release { c x y } {
 	} else {
 	    .panwin.f1.c config -cursor watch
 
-	    loadCfgLegacy $undolog($undolevel)
+	    jumpToUndoLevel $undolevel
 	    redrawAll
 
 	    if { $activetool == "select" } {
@@ -1759,9 +1753,10 @@ proc button1-release { c x y } {
 #   * y -- y coordinate
 #****
 proc button3background { c x y } {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
     global show_background_image changed
+
+    set canvas_list [getFromRunning "canvas_list"]
+    set curcanvas [getFromRunning "curcanvas"]
 
     .button3menu delete 0 end
 
@@ -1902,11 +1897,10 @@ proc nodeEnter { c } {
 #   * c -- tk canvas
 #****
 proc linkEnter { c } {
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
     global activetool
 
     set link_id [lindex [$c gettags current] 1]
-    if { [lsearch $link_list $link_id] == -1 } {
+    if { [lsearch [getFromRunning "link_list"] $link_id] == -1 } {
 	return
     }
     set line "$link_id: [getLinkBandwidthString $link_id] [getLinkDelayString $link_id]"
@@ -1942,13 +1936,11 @@ proc anyLeave { c } {
 #   be deleted.
 #****
 proc deleteSelection { { keep_other_ifaces 0 } } {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global changed
     global background
     global viewid
 
-    if { $oper_mode == "exec" } {
+    if { [getFromRunning "oper_mode"] == "exec" } {
 	return
     }
 
@@ -1986,7 +1978,6 @@ proc deleteSelection { { keep_other_ifaces 0 } } {
 #   Sets all nodes' IPv4 addresses to empty strings.
 #****
 proc removeIPv4nodes {} {
-    upvar 0 ::cf::[set ::curcfg]::IPv4UsedList IPv4UsedList
     global changed
 
     set removed_addrs {}
@@ -2010,7 +2001,7 @@ proc removeIPv4nodes {} {
 	}
     }
 
-    set IPv4UsedList [removeFromList $IPv4UsedList $removed_addrs "keep_doubles"]
+    setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] $removed_addrs "keep_doubles"]
 
     redrawAll
     set changed 1
@@ -2026,7 +2017,6 @@ proc removeIPv4nodes {} {
 #   Sets all nodes' IPv6 addresses to empty strings.
 #****
 proc removeIPv6nodes {} {
-    upvar 0 ::cf::[set ::curcfg]::IPv6UsedList IPv6UsedList
     global changed
 
     set removed_addrs {}
@@ -2050,7 +2040,7 @@ proc removeIPv6nodes {} {
 	}
     }
 
-    set IPv6UsedList [removeFromList $IPv6UsedList $removed_addrs "keep_doubles"]
+    setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] $removed_addrs "keep_doubles"]
 
     redrawAll
     set changed 1

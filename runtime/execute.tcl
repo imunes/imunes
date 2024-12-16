@@ -58,13 +58,12 @@ proc genExperimentId {} {
 #   * returns 0 if everything is ok, otherwise it returns 1.
 #****
 proc checkExternalInterfaces {} {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
     global execMode isOSlinux
 
     set extifcs [getHostIfcList]
 
     set nodes_ifcpairs {}
-    foreach node_id $node_list {
+    foreach node_id [getFromRunning "node_list"] {
 	if { [getNodeType $node_id] == "rj45" } {
 	    lappend nodes_ifcpairs [list $node_id [list 0 [getNodeName $node_id]]]
 	} elseif { [getNodeType $node_id] == "extelem" } {
@@ -187,8 +186,9 @@ proc execCmdsNodeBkg { node_id cmds { output "" } } {
 #   * eid -- experiment id
 #****
 proc createExperimentFiles { eid } {
-    upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
     global currentFileBatch execMode runtimeDir
+
+    set current_file [getFromRunning "current_file"]
     set basedir "$runtimeDir/$eid"
     file mkdir $basedir
 
@@ -197,8 +197,8 @@ proc createExperimentFiles { eid } {
     dumpLinksToFile $basedir/links
 
     if { $execMode == "interactive" } {
-	if { $currentFile != "" } {
-	    writeDataToFile $basedir/name [file tail $currentFile]
+	if { $current_file != "" } {
+	    writeDataToFile $basedir/name [file tail $current_file]
 	}
     } else {
 	if { $currentFileBatch != "" } {
@@ -286,8 +286,7 @@ proc createExperimentScreenshot { eid } {
 #   Creates all needed files to run the experiments in batch mode.
 #****
 proc createExperimentFilesFromBatch {} {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-    createExperimentFiles $eid
+    createExperimentFiles [getFromRunning "eid"]
 }
 
 #****f* freebsd.tcl/l3node.nghook
@@ -411,7 +410,6 @@ proc nodeIpsecInit { node_id } {
 #   given as procedure arguments.
 #****
 proc deployCfg { execute instantiate_nodes create_nodes_ifaces instantiate_links configure_links configure_nodes_ifaces configure_nodes } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode skip_nodes err_skip_nodesifaces err_skip_nodes
 
     set progressbarCount 0
@@ -497,6 +495,7 @@ proc deployCfg { execute instantiate_nodes create_nodes_ifaces instantiate_links
     set maxProgressbasCount [expr {2*$all_nodes_count + 1*$native_nodes_count + 4*$virtualized_nodes_count + 2*$links_count + 2*$configure_nodes_count + 2*$create_nodes_ifaces_count + 2*$configure_nodes_ifaces_count + $error_check_nodes_ifaces_count + $error_check_nodes_count}]
 
     set w ""
+    set eid [getFromRunning "eid"]
     if { $execMode != "batch" } {
 	set w .startup
 	catch { destroy $w }
@@ -626,9 +625,12 @@ proc deployCfg { execute instantiate_nodes create_nodes_ifaces instantiate_links
 }
 
 proc execute_prepareSystem {} {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global eid_base
     global execMode
+
+    if { [getFromRunning "cfg_deployed"] } {
+	return
+    }
 
     set running_eids [getResumableExperiments]
     if { $execMode != "batch" } {
@@ -646,6 +648,8 @@ proc execute_prepareSystem {} {
 	}
     }
 
+    setToRunning "eid" $eid
+
     loadKernelModules
     prepareVirtualFS
     prepareDevfs
@@ -654,8 +658,9 @@ proc execute_prepareSystem {} {
 }
 
 proc execute_nodesCreate { nodes nodes_count w } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode skip_nodes
+
+    set eid [getFromRunning "eid"]
 
     set batchStep 0
     foreach node_id $nodes {
@@ -734,8 +739,9 @@ proc waitForInstantiateNodes { nodes nodes_count w } {
 }
 
 proc execute_nodesNamespaceSetup { nodes nodes_count w } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode skip_nodes
+
+    set eid [getFromRunning "eid"]
 
     set batchStep 0
     foreach node_id $nodes {
@@ -804,8 +810,9 @@ proc waitForNamespaces { nodes nodes_count w } {
 }
 
 proc execute_nodesInitConfigure { nodes nodes_count w } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode skip_nodes
+
+    set eid [getFromRunning "eid"]
 
     set batchStep 0
     foreach node_id $nodes {
@@ -886,8 +893,9 @@ proc waitForInitConf { nodes nodes_count w } {
 proc execute_nodesCopyFiles { nodes nodes_count w } {}
 
 proc execute_nodesPhysIfacesCreate { nodes_ifaces nodes_count w } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode skip_nodes
+
+    set eid [getFromRunning "eid"]
 
     set batchStep 0
     dict for {node_id ifaces} $nodes_ifaces {
@@ -925,8 +933,9 @@ proc execute_nodesPhysIfacesCreate { nodes_ifaces nodes_count w } {
 }
 
 proc execute_nodesLogIfacesCreate { nodes_ifaces nodes_count w } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode skip_nodes
+
+    set eid [getFromRunning "eid"]
 
     set batchStep 0
     dict for {node_id ifaces} $nodes_ifaces {
@@ -1070,8 +1079,9 @@ proc execute_linksConfigure { links links_count w } {
 }
 
 proc execute_nodesIfacesConfigure { nodes_ifaces nodes_count w } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode skip_nodes
+
+    set eid [getFromRunning "eid"]
 
     set batchStep 0
     dict for {node_id ifaces} $nodes_ifaces {
@@ -1156,8 +1166,9 @@ proc configureIfacesWait { nodes_ifaces nodes_count w } {
 }
 
 proc execute_nodesConfigure { nodes nodes_count w } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode skip_nodes
+
+    set eid [getFromRunning "eid"]
 
     set batchStep 0
     foreach node_id $nodes {
@@ -1202,16 +1213,15 @@ proc execute_nodesConfigure { nodes nodes_count w } {
 #   * node_id -- node id
 #****
 proc generateHostsFile { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::etchosts etc_hosts
     global auto_etc_hosts
 
     if { $auto_etc_hosts != 1 || [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" } {
 	return
     }
 
+    set etc_hosts [getFromRunning "etc_hosts"]
     if { $etc_hosts == "" } {
-	foreach other_node_id $node_list {
+	foreach other_node_id [getFromRunning "node_list"] {
 	    if { [[getNodeType $other_node_id].virtlayer] != "VIRTUALIZED" } {
 		continue
 	    }
@@ -1245,13 +1255,14 @@ proc generateHostsFile { node_id } {
 		}
 	    }
 	}
+
+	setToRunning "etc_hosts" $etc_hosts
     }
 
     writeDataToNodeFile $node_id /etc/hosts $etc_hosts
 }
 
 proc waitForConfStart { nodes nodes_count w } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode err_skip_nodes nodeconf_timeout
 
     set t_start [clock milliseconds]
@@ -1315,7 +1326,6 @@ proc finishExecuting { status msg w } {
 }
 
 proc checkForErrors { nodes nodes_count w } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode skip_nodes err_skip_nodes
 
     set batchStep 0
