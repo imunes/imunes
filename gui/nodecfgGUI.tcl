@@ -3129,6 +3129,13 @@ proc putIPsecConnectionInTree { node tab indicator } {
 
     set total_list ""
 
+    if { $indicator == "modify" } {
+	delNodeIPsecElement $node "configuration" "conn $old_conn_name"
+    }
+    if { [getNodeIPsec $node] == "" } {
+	createEmptyIPsecCfg $node
+    }
+
     set has_local_cert [getNodeIPsecItem $node "local_cert"]
     set has_local_key_file [getNodeIPsecItem $node "local_key_file"]
 
@@ -3151,12 +3158,6 @@ proc putIPsecConnectionInTree { node tab indicator } {
         }
     }
 
-    if { $indicator == "modify" } {
-	delNodeIPsecElement $node "configuration" "conn $old_conn_name"
-    }
-    if { [getNodeIPsec $node] == "" } {
-	createEmptyIPsecCfg $node
-    }
     setNodeIPsecElement $node "configuration" "conn $connection_name" ""
     if { $total_keying_duration != "3h" } {
         setNodeIPsecSetting $node "configuration" "conn $connection_name" "ikelifetime" "$total_keying_duration"
@@ -3201,6 +3202,8 @@ proc putIPsecConnectionInTree { node tab indicator } {
     setNodeIPsecSetting $node "configuration" "conn $connection_name" "peersname" "[lindex $peers_name 0]"
 
     if { $authby == "secret" } {
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "leftcert" ""
+
         setNodeIPsecSetting $node "configuration" "conn $connection_name" "authby" "secret"
         setNodeIPsecSetting $node "configuration" "conn $connection_name" "sharedkey" "$psk_key"
 
@@ -3208,6 +3211,8 @@ proc putIPsecConnectionInTree { node tab indicator } {
         setNodeIPsecSetting $node "configuration" "conn $connection_name" "rightid" ""
 #        checkAndClearCertificatesAndIds $node $connection_name
     } else {
+        setNodeIPsecSetting $node "configuration" "conn $connection_name" "leftcert" "[file tail $local_cert_file]"
+
         setNodeIPsecSetting $node "configuration" "conn $connection_name" "leftid" "$local_name"
         setNodeIPsecSetting $node "configuration" "conn $connection_name" "rightid" "$peers_id"
 
@@ -3595,7 +3600,7 @@ proc setDefaultsForIPsec { node connParamsLframe espOptionsLframe } {
     set secret_dir "/usr/local/etc/ipsec.d/private"
     $espOptionsLframe.esp_container.null_encryption configure -state readonly
 
-    set local_cert_file [getNodeIPsecItem $node "local_cert_file"]
+    set local_cert_file [getNodeIPsecItem $node "local_cert"]
     set local_name [getNodeName $node]
 
     set nodes [concat %any [getListOfOtherNodes $node]]
@@ -3676,8 +3681,8 @@ proc populateValuesForUpdate { node tab connParamsLframe espOptionsLframe } {
     set connection_name $selected
     set version "ikev2"
 
-    set local_cert_file [getNodeIPsecSetting $node "configuration" "conn $selected" "local_cert"]
-    set secret_file [getNodeIPsecSetting $node "configuration" "conn $selected" "local_key_file"]
+    set local_cert_file [getNodeIPsecItem $node "local_cert"]
+    set secret_file [getNodeIPsecItem $node "local_key_file"]
 
     set var_list { \
 	{type "type" "tunnel" } \
@@ -3751,6 +3756,7 @@ proc populateValuesForUpdate { node tab connParamsLframe espOptionsLframe } {
     if { $authby == "secret" } {
 	hideCertificates $connParamsLframe
     } else {
+	set authby "cert"
 	showCertificates $connParamsLframe
     }
 

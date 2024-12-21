@@ -428,7 +428,11 @@ proc l3node.ipsecInit { node } {
 	return
     }
 
+    set ipsecSecrets "# /etc/ipsec.secrets - strongSwan IPsec secrets file\n\n"
     set config_content [getNodeIPsecItem $node "configuration"]
+
+    #setNodeIPsecSetting $node "%default" "keyexchange" "ikev2"
+    #set ipsecConf "${ipsecConf}config setup\n"
 
     foreach item $config_content {
 	set element [lindex $item 0]
@@ -452,7 +456,7 @@ proc l3node.ipsecInit { node } {
 	    set ipsecConf "$ipsecConf        $setting\n"
 	}
 	if { $hasKey && $hasRight } {
-	    set ipsecSecrets "$right : PSK $psk_key"
+	    set ipsecSecrets "${ipsecSecrets}$right : PSK $psk_key\n"
 	}
     }
 
