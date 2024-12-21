@@ -393,9 +393,10 @@ proc nodeIpsecInit { node_id } {
 
     delNodeIPsecConnection $node_id "%default"
 
+    set ca_cert [getNodeIPsecItem $node_id "ca_cert"]
     set local_cert [getNodeIPsecItem $node_id "local_cert"]
     set ipsecret_file [getNodeIPsecItem $node_id "local_key_file"]
-    ipsecFilesToNode $node_id $local_cert $ipsecret_file
+    ipsecFilesToNode $node_id $ca_cert $local_cert $ipsecret_file
 
     set ipsec_log_level [getNodeIPsecItem $node_id "ipsec_logging"]
     if { $ipsec_log_level != "" } {

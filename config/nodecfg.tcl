@@ -2166,6 +2166,7 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 		    }
 
 		    switch -exact $ipsec_key {
+			"ca_cert" -
 			"local_cert" -
 			"local_key_file" -
 			"ipsec_logging" {
