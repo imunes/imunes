@@ -582,7 +582,7 @@ proc isNodeStarted { node } {
 
     set node_type [nodeType $node]
     if { [$node_type.virtlayer] != "VIRTUALIZED" } {
-	if { $node_type in "rj45 ext extnat" } {
+	if { $node_type in "rj45 ext extnat extelem" } {
 	    return true
 	}
 
