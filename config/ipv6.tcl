@@ -244,37 +244,12 @@ proc nextFreeIP6Addr { addr start peers } {
 #     of a valid IP address, 1 otherwise
 #****
 proc checkIPv6Addr { str } {
-    set doublec false
-    set wordlist [split $str :]
-    set wordcnt [expr [llength $wordlist] - 1]
-    if { $wordcnt < 2 || $wordcnt > 7 } {
+    try {
+	ip::prefix $str
+    } on error {} {
 	return 0
     }
-    if { [lindex $wordlist 0] == "" } {
-	set wordlist [lreplace $wordlist 0 0 0]
-    }
-    if { [lindex $wordlist $wordcnt] == "" } {
-	set wordlist [lreplace $wordlist $wordcnt $wordcnt 0]
-    }
-    for { set i 0 } { $i <= $wordcnt } { incr i } {
-	set word [lindex $wordlist $i]
-	if { $word == "" } {
-	    if { $doublec == "true" } {
-		return 0
-	    }
-	    set doublec true
-	}
-	if { [string length $word] > 4 } {
-	    if { $i == $wordcnt } {
-		return [checkIPv4Addr $word]
-	    } else {
-		return 0
-	    }
-	}
-	if { [string is xdigit $word] == 0 } {
-	    return 0
-	}
-    }
+
     return 1
 }
 
