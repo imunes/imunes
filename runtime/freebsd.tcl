@@ -2058,8 +2058,17 @@ proc checkSysPrerequisites {} {
     # jail, jexec, jls, ngctl
 }
 
-proc ipsecFilesToNode { node local_cert ipsecret_file } {
+proc ipsecFilesToNode { node ca_cert local_cert ipsecret_file } {
     global ipsecConf ipsecSecrets
+
+    if { $ca_cert != "" } {
+	set trimmed_ca_cert [lindex [split $ca_cert /] end]
+
+	set fileId [open $ca_cert "r"]
+	set trimmed_ca_cert_data [read $fileId]
+	writeDataToNodeFile $node /usr/local/etc/ipsec.d/cacerts/$trimmed_ca_cert $trimmed_ca_cert_data
+	close $fileId
+    }
 
     if { $local_cert != "" } {
 	set trimmed_local_cert [lindex [split $local_cert /] end]

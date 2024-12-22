@@ -462,9 +462,10 @@ proc l3node.ipsecInit { node } {
 
     delNodeIPsecElement $node "configuration" "conn %default"
 
+    set ca_cert [getNodeIPsecItem $node "ca_cert"]
     set local_cert [getNodeIPsecItem $node "local_cert"]
     set ipsecret_file [getNodeIPsecItem $node "local_key_file"]
-    ipsecFilesToNode $node $local_cert $ipsecret_file
+    ipsecFilesToNode $node $ca_cert $local_cert $ipsecret_file
 
     set ipsec_log_level [getNodeIPsecItem $node "ipsec-logging"]
     if { $ipsec_log_level != "" } {

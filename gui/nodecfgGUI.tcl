@@ -2970,7 +2970,7 @@ proc deleteIPsecConnection { node tab } {
 proc putIPsecConnectionInTree { node tab indicator } {
     global version instance_duration keying_duration negotiation_attempts
     global how_long_before ike_encr ike_auth ike_modp peers_ip peers_name peers_id start_connection
-    global peers_subnet local_cert_file type method esp_suits authby psk_key
+    global peers_subnet ca_cert_file local_cert_file type method esp_suits authby psk_key
     global ah_suits modp_suits connection_name local_name local_ip_address local_subnet
     global tree_widget conn_time keying_time how_long_time
     global no_encryption secret_file old_conn_name ipsec_enable
@@ -3135,6 +3135,8 @@ proc putIPsecConnectionInTree { node tab indicator } {
     if { [getNodeIPsec $node] == "" } {
 	createEmptyIPsecCfg $node
     }
+
+    setNodeIPsecItem $node "ca_cert" $ca_cert_file
 
     set has_local_cert [getNodeIPsecItem $node "local_cert"]
     set has_local_key_file [getNodeIPsecItem $node "local_key_file"]
@@ -3336,6 +3338,18 @@ proc createIPsecGUI { node mainFrame connParamsLframe espOptionsLframe ikeSALfra
     grid $connParamsLframe.peer_sub_entry -column 1 -row 6 -pady 5 -padx 5 -sticky w
     grid $connParamsLframe.peer_sub_entry_text -column 1 -row 6 -pady 5 -padx 5 -sticky w
     grid remove $connParamsLframe.peer_sub_entry_text
+
+    ttk::frame $connParamsLframe.ca_cert_container
+    ttk::label $connParamsLframe.ca_cert_container.ca_cert -text "CA certificate file:"
+    ttk::entry $connParamsLframe.ca_cert_container.ca_cert_entry -width 14 -textvariable ca_cert_file
+    ttk::button $connParamsLframe.ca_cert_container.cert_chooser -text "Open" \
+	-command "chooseFile cacert"
+    ttk::entry $connParamsLframe.ca_cert_container.ca_cert_directory -width 20 -textvariable ca_cert_dir -state readonly
+    grid $connParamsLframe.ca_cert_container -column 0 -row 7 -columnspan 3 -sticky w
+    grid $connParamsLframe.ca_cert_container.ca_cert -column 0 -row 0 -pady 5 -padx {11 5} -sticky e
+    grid $connParamsLframe.ca_cert_container.ca_cert_entry -column 1 -row 0 -pady 5 -padx 5 -sticky w
+    grid $connParamsLframe.ca_cert_container.cert_chooser -column 2 -row 0
+    grid $connParamsLframe.ca_cert_container.ca_cert_directory -column 3 -row 0 -pady 5 -padx 5 -sticky w
 
     ttk::frame $connParamsLframe.local_cert_container
     ttk::label $connParamsLframe.local_cert_container.local_cert -text "Local certificate file:"
@@ -3573,9 +3587,9 @@ proc updatePeerSubnetCombobox { connParamsLframe } {
 #****
 proc setDefaultsForIPsec { node connParamsLframe espOptionsLframe } {
     global version connection_name instance_duration keying_duration negotiation_attempts
-    global conn_time keying_time how_long_time local_cert_dir secret_dir authby psk_key
+    global conn_time keying_time how_long_time ca_cert_dir local_cert_dir secret_dir authby psk_key
     global how_long_before ike_encr ike_auth ike_modp peers_ip peers_name peers_id start_connection
-    global peers_subnet local_cert_file local_name local_ip_address local_subnet type method esp_suits
+    global peers_subnet ca_cert_file local_cert_file local_name local_ip_address local_subnet type method esp_suits
     global ah_suits modp_suits secret_file no_encryption
 
     set connection_name "home"
@@ -3596,10 +3610,12 @@ proc setDefaultsForIPsec { node connParamsLframe espOptionsLframe } {
     set peers_id ""
     set psk_key ""
     set no_encryption "null"
+    set ca_cert_dir "/usr/local/etc/ipsec.d/cacerts"
     set local_cert_dir "/usr/local/etc/ipsec.d/certs"
     set secret_dir "/usr/local/etc/ipsec.d/private"
     $espOptionsLframe.esp_container.null_encryption configure -state readonly
 
+    set ca_cert_file [getNodeIPsecItem $node "ca_cert"]
     set local_cert_file [getNodeIPsecItem $node "local_cert"]
     set local_name [getNodeName $node]
 
@@ -3672,15 +3688,16 @@ proc setDefaultsForIPsec { node connParamsLframe espOptionsLframe } {
 #****
 proc populateValuesForUpdate { node tab connParamsLframe espOptionsLframe } {
     global version connection_name instance_duration keying_duration negotiation_attempts
-    global conn_time keying_time how_long_time authby psk_key local_cert_dir secret_dir
+    global conn_time keying_time how_long_time authby psk_key ca_cert_dir local_cert_dir secret_dir
     global how_long_before ike_encr ike_auth ike_modp peers_ip peers_name peers_id start_connection
-    global peers_subnet local_cert_file local_name local_ip_address local_subnet type method esp_suits
+    global peers_subnet ca_cert_file local_cert_file local_name local_ip_address local_subnet type method esp_suits
     global ah_suits modp_suits secret_file no_encryption old_conn_name
 
     set selected [$tab.tree focus]
     set connection_name $selected
     set version "ikev2"
 
+    set ca_cert_file [getNodeIPsecItem $node "ca_cert"]
     set local_cert_file [getNodeIPsecItem $node "local_cert"]
     set secret_file [getNodeIPsecItem $node "local_key_file"]
 
@@ -3802,6 +3819,7 @@ proc populateValuesForUpdate { node tab connParamsLframe espOptionsLframe } {
     set local_subnet [getNodeIPsecSetting $node "configuration" "conn $selected" "leftsubnet"]
     set peers_subnet [getNodeIPsecSetting $node "configuration" "conn $selected" "rightsubnet"]
 
+    set ca_cert_dir "/usr/local/etc/ipsec.d/cacerts"
     set local_cert_dir "/usr/local/etc/ipsec.d/certs"
     set secret_dir "/usr/local/etc/ipsec.d/private"
 
@@ -3881,11 +3899,13 @@ proc showCertificates { lFrame } {
 	grid remove $lFrame.peer_sub_entry_text
     }
 
-    grid $lFrame.local_cert_container -column 0 -row 7 -columnspan 3 -sticky w
+    grid $lFrame.ca_cert_container -column 0 -row 7 -columnspan 3 -sticky w
 
-    grid $lFrame.private_file_container -column 0 -row 8 -columnspan 3 -sticky w
+    grid $lFrame.local_cert_container -column 0 -row 8 -columnspan 3 -sticky w
 
-    grid $lFrame.check_button -column 0 -row 9 -pady 5 -padx 5 -columnspan 2
+    grid $lFrame.private_file_container -column 0 -row 9 -columnspan 3 -sticky w
+
+    grid $lFrame.check_button -column 0 -row 10 -pady 5 -padx 5 -columnspan 2
 }
 
 #****f* nodecfgGUI.tcl/hideCertificates
@@ -3899,7 +3919,7 @@ proc showCertificates { lFrame } {
 #****
 proc hideCertificates { lFrame } {
     global peers_name
-    set var_list { local_id local_id_entry peer_name peer_id local_cert_container private_file_container }
+    set var_list { local_id local_id_entry peer_name peer_id ca_cert_container local_cert_container private_file_container }
 
     foreach var $var_list {
 	grid forget $lFrame.$var
@@ -3944,9 +3964,11 @@ proc hideCertificates { lFrame } {
 #   mode - indicates wheter to open local certificate or local key file
 #****
 proc chooseFile { mode } {
-    global local_cert_file secret_file
+    global ca_cert_file local_cert_file secret_file
     if { $mode == "cert" } {
 	set local_cert_file [tk_getOpenFile]
+    } elseif { $mode == "cacert" } {
+	set ca_cert_file [tk_getOpenFile]
     } else {
 	set secret_file [tk_getOpenFile]
     }
