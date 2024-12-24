@@ -25,97 +25,6 @@
 
 # $Id: ipsec.tcl 60 2013-10-03 09:05:13Z denis $
 
-#****f* ipsec.tcl/getNodeIPsec
-# NAME
-#   getNodeIPsec -- retreives IPsec configuration for selected node
-# SYNOPSIS
-#   getNodeIPsec $node_id
-# FUNCTION
-#   Retreives all IPsec connections for current node
-# INPUTS
-#   node_id - node id
-#****
-proc getNodeIPsec { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    return [lindex [lsearch -inline [set $node_id] "ipsec-config *"] 1]
-}
-
-proc setNodeIPsec { node_id new_value } {
-    cfgSet "nodes" $node_id "ipsec" "ipsec_configs" $new_value
-}
-
-#****f* ipsec.tcl/getNodeIPsecItem
-# NAME
-#   getNodeIPsecItem -- get node IPsec item
-# SYNOPSIS
-#   getNodeIPsecItem $node_id $item
-# FUNCTION
-#   Retreives an item from IPsec configuration of given node
-# INPUTS
-#   node_id - node id
-#   item - search item
-proc getNodeIPsecItem { node_id item } {
-    set cfg [getNodeIPsec $node_id]
-    if { [lsearch $cfg "$item *"] != -1 } {
-	return [lindex [lsearch -inline $cfg "$item *"] 1]
-    }
-    return ""
-}
-
-#****f* ipsec.tcl/setNodeIPsecItem
-# NAME
-#   setNodeIPsecItem -- set node IPsec item
-# SYNOPSIS
-#   setNodeIPsecItem $node_id $item
-# FUNCTION
-#   Sets an item from IPsec configuration of given node
-# INPUTS
-#   node_id - node id
-#   item - search item
-proc setNodeIPsecItem { node_id item new_value } {
-    set ipsecCfg [getNodeIPsec $node_id]
-
-    set itemIndex [lsearch -index 0 $ipsecCfg $item]
-    if { $itemIndex != -1 } {
-	set newIpsecCfg [lreplace $ipsecCfg $itemIndex $itemIndex "$item {$new_value}"]
-    } else {
-	set newIpsecCfg [linsert $ipsecCfg end "$item {$new_value}"]
-    }
-
-    setNodeIPsec $node_id $newIpsecCfg
-}
-
-proc setNodeIPsecConnection { node_id connection new_value } {
-    cfgSet "nodes" $node_id "ipsec" "ipsec_configs" $connection $new_value
-}
-
-proc delNodeIPsecConnection { node_id connection } {
-    cfgUnset "nodes" $node_id "ipsec" "ipsec_configs" $connection
-}
-
-proc getNodeIPsecSetting { node_id connection setting } {
-    return [cfgGet "nodes" $node_id "ipsec" "ipsec_configs" $connection $setting]
-}
-
-proc setNodeIPsecSetting { node_id connection setting new_value } {
-    cfgSet "nodes" $node_id "ipsec" "ipsec_configs" $connection $setting $new_value
-}
-
-proc getNodeIPsecConnList { node_id } {
-    set cfg [getNodeIPsecItem $node_id "configuration"]
-    set indices [lsearch -index 0 -all $cfg "conn *"]
-
-    set connList ""
-    if { $indices != -1 } {
-	foreach ind $indices {
-	    lappend connList [lindex [lindex [lindex $cfg $ind] 0] 1]
-	}
-    }
-
-    return $connList
-}
-
 #****f* ipsec.tcl/nodeIPsecConnExists
 # NAME
 #   nodeIPsecConnExists -- checks if connection already exists
@@ -198,16 +107,6 @@ proc getIPAddressForPeer { node_id curIP } {
     }
 
     return $ips_list
-}
-
-proc getNodeFromHostname { hostname } {
-    foreach node_id [getFromRunning "node_list"] {
-	if { $hostname == [getNodeName $node_id] } {
-	    return $node_id
-	}
-    }
-
-    return ""
 }
 
 #****f* ipsec.tcl/getLocalSubnets

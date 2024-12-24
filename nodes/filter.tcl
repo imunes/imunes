@@ -45,13 +45,9 @@ registerModule $MODULE
 ################################################################################
 
 proc $MODULE.confNewNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global nodeNamingBase
 
-    set nconfig [list \
-	"hostname [getNewNodeNameType filter $nodeNamingBase(filter)]" \
-	! ]
-    lappend $node_id "network-config [list $nconfig]"
+    setNodeName $node_id [getNewNodeNameType filter $nodeNamingBase(filter)]
 }
 
 proc $MODULE.confNewIfc { node_id iface_id } {
@@ -274,7 +270,7 @@ proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
 #****
 proc $MODULE.nodeConfigure { eid node_id } {
     foreach iface_id [ifcList $node_id] {
-	set ngcfgreq "shc $iface_id"
+	set ngcfgreq "shc [getIfcName $node_id $iface_id]"
 	foreach rule_num [lsort -dictionary [ifcFilterRuleList $node_id $iface_id]] {
 	    set rule [getFilterIfcRuleAsString $node_id $iface_id $rule_num]
 	    set ngcfgreq "${ngcfgreq} ${rule}"

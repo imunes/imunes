@@ -1444,7 +1444,7 @@ proc captureExtIfc { eid node_id iface_id } {
 	}
     }
 
-    if { [getLinkDirect [getIfcLink $node_id "0"]] } {
+    if { [getLinkDirect [getIfcLink $node_id "ifc0"]] } {
 	return
     }
 
@@ -1488,7 +1488,7 @@ proc releaseExtIfc { eid node_id iface_id } {
 	return
     }
 
-    if { [getLinkDirect [getIfcLink $node_id "0"]] } {
+    if { [getLinkDirect [getIfcLink $node_id "ifc0"]] } {
 	return
     }
 
@@ -1741,9 +1741,9 @@ proc execSetLinkParams { eid link_id } {
 
     set mirror_link_id [getLinkMirror $link_id]
     if { $mirror_link_id != "" } {
-	# pseudo nodes are always peer2
-	set node2_id [lindex [getLinkPeers $mirror_link_id] 0]
-	set iface2_id [lindex [getLinkPeersIfaces $mirror_link_id] 0]
+	# pseudo nodes are always peer1
+	set node1_id [lindex [getLinkPeers $mirror_link_id] 1]
+	set iface1_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]
     }
 
     set bandwidth [expr [getLinkBandwidth $link_id] + 0]
