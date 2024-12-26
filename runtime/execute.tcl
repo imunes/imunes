@@ -82,7 +82,7 @@ proc checkExternalInterfaces {} {
 	if { $i < 0 } {
 	    set msg "Error: external interface $physical_ifc non-existant."
 	    if { $execMode == "batch" } {
-		puts $msg
+		puts stderr $msg
 	    } else {
 		after idle { .dialog1.msg configure -wraplength 4i }
 		tk_dialog .dialog1 "IMUNES error" $msg \
@@ -112,7 +112,7 @@ proc checkExternalInterfaces {} {
 		}
 
 		if { $execMode == "batch" } {
-		    puts $msg
+		    puts stderr $msg
 		} else {
 		    after idle { .dialog1.msg configure -wraplength 4i }
 		    tk_dialog .dialog1 "IMUNES $severity" "$msg" \
@@ -206,51 +206,29 @@ proc createExperimentFiles { eid } {
 	}
     }
 
+    saveRunningConfiguration $eid
     if { $execMode == "interactive" } {
-	saveRunningConfigurationInteractive $eid
 	createExperimentScreenshot $eid
-    } else {
-	saveRunningConfigurationBatch $eid
     }
 }
 
-#****f* exec.tcl/saveRunningConfigurationInteractive
+#****f* exec.tcl/saveRunningConfiguration
 # NAME
-#   saveRunningConfigurationInteractive -- save running configuration in
+#   saveRunningConfiguration -- save running configuration in
 #       interactive
 # SYNOPSIS
-#   saveRunningConfigurationInteractive $eid
+#   saveRunningConfiguration $eid
 # FUNCTION
 #   Saves running configuration of the specified experiment if running in
 #   interactive mode.
 # INPUTS
 #   * eid -- experiment id
 #****
-proc saveRunningConfigurationInteractive { eid } {
+proc saveRunningConfiguration { eid } {
     global runtimeDir
 
     set fileName "$runtimeDir/$eid/config.imn"
-    set fileId [open $fileName w]
-    dumpCfg file $fileId
-    close $fileId
-}
-
-#****f* exec.tcl/saveRunningConfigurationBatch
-# NAME
-#   saveRunningConfigurationBatch -- save running configuration in batch
-# SYNOPSIS
-#   saveRunningConfigurationBatch $eid
-# FUNCTION
-#   Saves running configuration of the specified experiment if running in
-#   batch mode.
-# INPUTS
-#   * eid -- experiment id
-#****
-proc saveRunningConfigurationBatch { eid } {
-    global currentFileBatch runtimeDir
-
-    set fileName "$runtimeDir/$eid/config.imn"
-    exec cp $currentFileBatch $fileName
+    saveCfgJson $fileName
 }
 
 #****f* exec.tcl/createExperimentScreenshot
@@ -325,65 +303,65 @@ proc l3node.nghook { eid node_id iface_id } {
 # INPUTS
 #   * node_id -- node id
 #****
+global ipsecConf ipsecSecrets
 set ipsecConf ""
 set ipsecSecrets ""
 proc nodeIpsecInit { node_id } {
     global ipsecConf ipsecSecrets isOSfreebsd
 
-    set config_content [getNodeIPsec $node_id]
-    if { $config_content != "" } {
-	setNodeIPsecSetting $node_id "configuration" "conn %default" "keyexchange" "ikev2"
-	set ipsecConf "# /etc/ipsec.conf - strongSwan IPsec configuration file\n"
-    } else {
+    if { [getNodeIPsec $node_id] == "" } {
 	return
     }
 
     set ipsecSecrets "# /etc/ipsec.secrets - strongSwan IPsec secrets file\n\n"
-    set config_content [getNodeIPsecItem $node_id "configuration"]
 
-    #setNodeIPsecSetting $node "%default" "keyexchange" "ikev2"
-    #set ipsecConf "${ipsecConf}config setup\n"
+    setNodeIPsecSetting $node_id "%default" "keyexchange" "ikev2"
+    set ipsecConf "# /etc/ipsec.conf - strongSwan IPsec configuration file\n"
+    set ipsecConf "${ipsecConf}config setup\n"
 
-    foreach item $config_content {
-	set element [lindex $item 0]
-	set settings [lindex $item 1]
-	set ipsecConf "$ipsecConf$element\n"
+    foreach {config_name config} [getNodeIPsecItem $node_id "ipsec_configs"] {
+	set ipsecConf "${ipsecConf}conn $config_name\n"
 	set hasKey 0
 	set hasRight 0
-	foreach setting $settings {
-	    if { [string match "peersname=*" $setting] } {
+	foreach {setting value} $config {
+	    if { $setting == "peersname" } {
 		continue
 	    }
-	    if { [string match "sharedkey=*" $setting] } {
+
+	    if { $setting == "sharedkey" } {
 		set hasKey 1
-		set psk_key [lindex [split $setting =] 1]
+		set psk_key $value
 		continue
 	    }
-	    if { [string match "right=*" $setting] } {
+
+	    if { $setting == "right" } {
 		set hasRight 1
-		set right [lindex [split $setting =] 1]
+		set right $value
 	    }
-	    set ipsecConf "$ipsecConf        $setting\n"
+
+	    set ipsecConf "$ipsecConf        $setting=$value\n"
 	}
+
 	if { $hasKey && $hasRight } {
 	    set ipsecSecrets "${ipsecSecrets}$right : PSK $psk_key\n"
 	}
     }
 
-    delNodeIPsecElement $node_id "configuration" "conn %default"
+    delNodeIPsecConnection $node_id "%default"
 
     set ca_cert [getNodeIPsecItem $node_id "ca_cert"]
     set local_cert [getNodeIPsecItem $node_id "local_cert"]
     set ipsecret_file [getNodeIPsecItem $node_id "local_key_file"]
     ipsecFilesToNode $node_id $ca_cert $local_cert $ipsecret_file
 
-    set ipsec_log_level [getNodeIPsecItem $node_id "ipsec-logging"]
+    set ipsec_log_level [getNodeIPsecItem $node_id "ipsec_logging"]
     if { $ipsec_log_level != "" } {
 	execCmdNode $node_id "touch /tmp/charon.log"
 
 	set charon "charon {\n\
 	\tfilelog {\n\
-	\t\t/tmp/charon.log {\n\
+	\t\tcharon {\n\
+	\t\t\tpath = /tmp/charon.log\n\
 	\t\t\tappend = yes\n\
 	\t\t\tflush_line = yes\n\
 	\t\t\tdefault = $ipsec_log_level\n\
@@ -642,9 +620,9 @@ proc execute_prepareSystem {} {
     } else {
 	set eid $eid_base
 	while { $eid in $running_eids } {
-	    puts -nonewline "Experiment ID $eid already in use, trying "
+	    puts -nonewline stderr "Experiment ID $eid already in use, trying "
 	    set eid [genExperimentId]
-	    puts "$eid."
+	    puts stderr "$eid."
 	}
     }
 
@@ -989,8 +967,9 @@ proc execute_linksCreate { links links_count w } {
 	    set msg "Creating link $link_id/$mirror_link_id"
 	    set pending_links [removeFromList $pending_links $mirror_link_id]
 
-	    lassign "[lindex [getLinkPeers $mirror_link_id] 0] $node1_id" node1_id node2_id
-	    lassign "[lindex [getLinkPeersIfaces $mirror_link_id] 0] $iface1_id" iface1_id iface2_id
+	    # switch direction for mirror links
+	    lassign "$node2_id [lindex [getLinkPeers $mirror_link_id] 1]" node1_id node2_id
+	    lassign "$iface2_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]" iface1_id iface2_id
 	}
 
 	displayBatchProgress $batchStep $links_count
@@ -1044,8 +1023,9 @@ proc execute_linksConfigure { links links_count w } {
 	    set msg "Configuring link $link_id/$mirror_link_id"
 	    set pending_links [removeFromList $pending_links $mirror_link_id]
 
-	    lassign "[lindex [getLinkPeers $mirror_link_id] 0] $node1_id" node1_id node2_id
-	    lassign "[lindex [getLinkPeersIfaces $mirror_link_id] 0] $iface1_id" iface1_id iface2_id
+	    # switch direction for mirror links
+	    lassign "$node2_id [lindex [getLinkPeers $mirror_link_id] 1]" node1_id node2_id
+	    lassign "$iface2_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]" iface1_id iface2_id
 	}
 
 	displayBatchProgress $batchStep $links_count
@@ -1085,7 +1065,6 @@ proc execute_nodesIfacesConfigure { nodes_ifaces nodes_count w } {
 
     set batchStep 0
     dict for {node_id ifaces} $nodes_ifaces {
-	upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
 	if { $ifaces == "*" } {
 	    set ifaces [allIfcList $node_id]
 	}
@@ -1312,7 +1291,7 @@ proc finishExecuting { status msg w } {
 
     catch { pipesClose }
     if { $execMode == "batch" } {
-	puts $msg
+	puts stderr $msg
     } else {
 	catch { destroy $w }
 
@@ -1389,7 +1368,7 @@ proc checkForErrors { nodes nodes_count w } {
 		"$msg" \
 		info 0 Dismiss
 	} else {
-	    puts "\nIMUNES warning - $msg\n"
+	    puts stderr "\nIMUNES warning - $msg\n"
 	}
     }
 
@@ -1407,7 +1386,7 @@ proc checkForErrors { nodes nodes_count w } {
 		"$msg" \
 		info 0 Dismiss
 	} else {
-	    puts "\nIMUNES warning - $msg\n"
+	    puts stderr "\nIMUNES warning - $msg\n"
 	}
     }
 
@@ -1421,7 +1400,7 @@ proc checkForErrors { nodes nodes_count w } {
 		"$msg" \
 		info 0 Dismiss
 	} else {
-	    puts "\nIMUNES warning - $msg\n"
+	    puts stderr "\nIMUNES warning - $msg\n"
 	}
     }
 }
@@ -1489,7 +1468,7 @@ proc checkForErrorsIfaces { nodes nodes_count w } {
 		"$msg" \
 		info 0 Dismiss
 	} else {
-	    puts "\nIMUNES warning - $msg\n"
+	    puts stderr "\nIMUNES warning - $msg\n"
 	}
     }
 
@@ -1503,7 +1482,7 @@ proc checkForErrorsIfaces { nodes nodes_count w } {
 		"$msg" \
 		info 0 Dismiss
 	} else {
-	    puts "\nIMUNES warning - $msg\n"
+	    puts stderr "\nIMUNES warning - $msg\n"
 	}
     }
 }

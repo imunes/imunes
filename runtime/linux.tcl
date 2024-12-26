@@ -209,7 +209,7 @@ proc startXappOnNode { node_id app } {
 
     set eid [getFromRunning "eid"]
     if { [checkForExternalApps "socat"] != 0 } {
-        puts "To run X applications on the node, install socat on your host."
+        puts stderr "To run X applications on the node, install socat on your host."
         return
     }
 
@@ -353,7 +353,7 @@ proc allSnapshotsAvailable {} {
 	    }
 	    if { $missing } {
                 if { $execMode == "batch" } {
-                    puts "Docker image for some virtual nodes:
+                    puts stderr "Docker image for some virtual nodes:
     $template
 is missing.
 Run 'docker pull $template' to pull the template."
@@ -427,7 +427,7 @@ proc getHostIfcVlanExists { node_id iface_name } {
     }
 
     if { $execMode == "batch" } {
-	puts $msg
+	puts stderr $msg
     } else {
 	after idle { .dialog1.msg configure -wraplength 4i }
 	tk_dialog .dialog1 "IMUNES error" $msg \
@@ -543,7 +543,7 @@ proc prepareFilesystemForNode { node_id } {
 #   * node_id -- node id
 #****
 proc createNodeContainer { node_id } {
-    global VROOT_MASTER ULIMIT_FILE ULIMIT_PROC debug
+    global VROOT_MASTER ULIMIT_FILE ULIMIT_PROC
 
     set docker_id "[getFromRunning "eid"].$node_id"
 
@@ -565,9 +565,7 @@ proc createNodeContainer { node_id } {
 	--ulimit nofile=$ULIMIT_FILE --ulimit nproc=$ULIMIT_PROC \
 	$vroot &"
 
-    if { $debug } {
-	puts "Node $node_id -> '$docker_cmd'"
-    }
+    dputs "Node $node_id -> '$docker_cmd'"
 
     pipesExec "$docker_cmd" "hold"
 }
@@ -731,7 +729,7 @@ proc nodeLogIfacesCreate { node_id ifaces } {
 
     foreach iface_id $ifaces {
 	set iface_name [getIfcName $node_id $iface_id]
-	switch -exact [getLogIfcType $node_id $iface_id] {
+	switch -exact [getIfcType $node_id $iface_id] {
 	    vlan {
 		set tag [getIfcVlanTag $node_id $iface_id]
 		set dev [getIfcVlanDev $node_id $iface_id]
@@ -888,7 +886,8 @@ proc createDirectLinkBetween { node1_id node2_id iface1_id iface2_id } {
 	    set physical_ifc [getNodeName $node1_id]
 	    if { [getNodeType $node1_id] == "extelem" } {
 		set ifcs [getNodeStolenIfaces $node1_id]
-		set physical_ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$iface1_id"] 1]
+		set iface1_name [getIfcName $node1_id $iface1_id]
+		set physical_ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$iface1_name"] 1]
 	    } elseif { [getEtherVlanEnabled $node1_id] } {
 		set vlan [getEtherVlanTag $node1_id]
 		if { $vlan != "" } {
@@ -896,9 +895,10 @@ proc createDirectLinkBetween { node1_id node2_id iface1_id iface2_id } {
 		}
 	    }
 	    set nodeNs [getNodeNetns $eid $node2_id]
-	    set full_virtual_ifc $eid-$node2_id-$iface2_id
-	    set virtual_ifc $iface2_id
-	    set ether [getIfcMACaddr $node2_id $virtual_ifc]
+	    set iface2_name [getIfcName $node2_id $iface2_id]
+	    set full_virtual_ifc $eid-$node2_id-$iface2_name
+	    set virtual_ifc $iface2_name
+	    set ether [getIfcMACaddr $node2_id $iface2_id]
 
 	    if { [[getNodeType $node2_id].virtlayer] == "NATIVE" } {
 		pipesExec "ip link set $physical_ifc netns $nodeNs" "hold"
@@ -909,7 +909,8 @@ proc createDirectLinkBetween { node1_id node2_id iface1_id iface2_id } {
 	    set physical_ifc [getNodeName $node2_id]
 	    if { [getNodeType $node2_id] == "extelem" } {
 		set ifcs [getNodeStolenIfaces $node2_id]
-		set physical_ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$iface2_id"] 1]
+		set iface2_name [getIfcName $node2_id $iface2_id]
+		set physical_ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$iface2_name"] 1]
 	    } elseif { [getEtherVlanEnabled $node2_id] } {
 		set vlan [getEtherVlanTag $node2_id]
 		if { $vlan != "" } {
@@ -917,9 +918,10 @@ proc createDirectLinkBetween { node1_id node2_id iface1_id iface2_id } {
 		}
 	    }
 	    set nodeNs [getNodeNetns $eid $node1_id]
-	    set full_virtual_ifc $eid-$node1_id-$iface1_id
-	    set virtual_ifc $iface1_id
-	    set ether [getIfcMACaddr $node1_id $virtual_ifc]
+	    set iface1_name [getIfcName $node1_id $iface1_id]
+	    set full_virtual_ifc $eid-$node1_id-$iface1_name
+	    set virtual_ifc $iface1_name
+	    set ether [getIfcMACaddr $node1_id $iface1_id]
 
 	    if { [[getNodeType $node1_id].virtlayer] == "NATIVE" } {
 		pipesExec "ip link set $physical_ifc netns $nodeNs" "hold"
@@ -991,7 +993,8 @@ proc createLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 	} elseif { [getNodeType $node_id] == "extelem" } {
 	    # won't work if the node is a wireless interface
 	    # because netns is not changed
-	    set iface_name [lindex [lsearch -inline -exact -index 0 [getNodeStolenIfaces $node_id] "$iface_id"] 1]
+	    set iface_name [getIfcName $node_id $iface_id]
+	    set iface_name [lindex [lsearch -inline -exact -index 0 [getNodeStolenIfaces $node_id] "$iface_name"] 1]
 	}
 
 	setNsIfcMaster $eid $iface_name $link_id "up"
@@ -1158,7 +1161,7 @@ proc isNodeIfacesConfigured { node_id } {
 
 	return false
     } on error err {
-	puts "Error on docker inspect: '$err'"
+	puts stderr "Error on docker inspect: '$err'"
     }
 
     return false
@@ -1189,7 +1192,7 @@ proc isNodeConfigured { node_id } {
 
 	return false
     } on error err {
-	puts "Error on docker inspect: '$err'"
+	puts stderr "Error on docker inspect: '$err'"
     }
 
     return false
@@ -1223,7 +1226,7 @@ proc isNodeError { node_id } {
 
 	return true
     } on error err {
-	puts "Error on docker inspect: '$err'"
+	puts stderr "Error on docker inspect: '$err'"
     }
 
     return true
@@ -1257,7 +1260,7 @@ proc isNodeErrorIfaces { node_id } {
 
 	return true
     } on error err {
-	puts "Error on docker inspect: '$err'"
+	puts stderr "Error on docker inspect: '$err'"
     }
 
     return true
@@ -1429,7 +1432,8 @@ proc captureExtIfc { eid node_id iface_id } {
 
     if { [getNodeType $node_id] == "extelem" } {
 	set ifaces [getNodeStolenIfaces $node_id]
-	set iface_name [lindex [lsearch -inline -exact -index 0 $ifaces "$iface_id"] 1]
+	set iface_name [getIfcName $node_id $iface_id]
+	set iface_name [lindex [lsearch -inline -exact -index 0 $ifaces "$iface_name"] 1]
     } else {
 	set iface_name [getNodeName $node_id]
     }
@@ -1443,7 +1447,7 @@ proc captureExtIfc { eid node_id iface_id } {
 		created.\n($err)"
 
 	    if { $execMode == "batch" } {
-		puts $msg
+		puts stderr $msg
 	    } else {
 		after idle { .dialog1.msg configure -wraplength 4i }
 		tk_dialog .dialog1 "IMUNES error" $msg \
@@ -1493,7 +1497,8 @@ proc captureExtIfcByName { eid iface_name node_id } {
 proc releaseExtIfc { eid node_id iface_id } {
     if { [getNodeType $node_id] == "extelem" } {
 	set ifaces [getNodeStolenIfaces $node_id]
-	set iface_name [lindex [lsearch -inline -exact -index 0 $ifaces "$iface_id"] 1]
+	set iface_name [getIfcName $node_id $iface_id]
+	set iface_name [lindex [lsearch -inline -exact -index 0 $ifaces "$iface_name"] 1]
     } else {
 	set iface_name [getNodeName $node_id]
     }
@@ -1719,8 +1724,6 @@ proc getNetemConfigLine { bandwidth delay loss dup } {
 }
 
 proc configureIfcLinkParams { eid node_id iface_id bandwidth delay ber loss dup } {
-    global debug
-
     set devname $node_id-$iface_id
     if { [getNodeType $node_id] == "rj45" } {
         set devname [getNodeName $node_id]
@@ -1759,9 +1762,9 @@ proc execSetLinkParams { eid link_id } {
 
     set mirror_link_id [getLinkMirror $link_id]
     if { $mirror_link_id != "" } {
-	# pseudo nodes are always peer2
-	set node2_id [lindex [getLinkPeers $mirror_link_id] 0]
-	set iface2_id [lindex [getLinkPeersIfaces $mirror_link_id] 0]
+	# pseudo nodes are always peer1
+	set node1_id [lindex [getLinkPeers $mirror_link_id] 1]
+	set iface1_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]
     }
 
     set bandwidth [expr [getLinkBandwidth $link_id] + 0]

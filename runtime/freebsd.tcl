@@ -181,7 +181,7 @@ proc startXappOnNode { node_id app } {
     global debug
 
     if { [checkForExternalApps "socat"] != 0 } {
-	puts "To run X applications on the node, install socat on your host."
+	puts stderr "To run X applications on the node, install socat on your host."
 	return
     }
 
@@ -303,7 +303,7 @@ proc allSnapshotsAvailable {} {
 		return 1
 	    } else {
 		if { $execMode == "batch" } {
-		    puts "The root filesystem for virtual nodes ($vroot) is missing.
+		    puts stderr "The root filesystem for virtual nodes ($vroot) is missing.
     Run 'imunes -p' to create the root filesystem."
 		} else {
 		    tk_dialog .dialog1 "IMUNES error" \
@@ -329,10 +329,10 @@ proc allSnapshotsAvailable {} {
 	if { [llength [lsearch -inline $snapshotList $snapshot]] == 0 } {
 	    if { $execMode == "batch" } {
 		if { $snapshot == "vroot/vroot@clean" } {
-		    puts "The main snapshot for virtual nodes is missing.
+		    puts stderr "The main snapshot for virtual nodes is missing.
 Run 'make' or 'make vroot' to create the main ZFS snapshot."
 		} else {
-		    puts "Error: ZFS snapshot image \"$snapshot\" for node \"$node_id\" is missing."
+		    puts stderr "Error: ZFS snapshot image \"$snapshot\" for node \"$node_id\" is missing."
 		}
 		return 0
 	    } else {
@@ -453,7 +453,7 @@ Please don't try killing the process.
 proc execSetIfcQDisc { eid node_id iface_id qdisc } {
     set link_id [getIfcLink $node_id $iface_id]
     set direction [linkDirection $node_id $iface_id]
-    lassign [getLinkPeers $link_id] - node2_id
+    lassign [getLinkPeers $link_id] node1_id -
 
     switch -exact $qdisc {
 	FIFO { set qdisc fifo }
@@ -461,7 +461,7 @@ proc execSetIfcQDisc { eid node_id iface_id qdisc } {
 	DRR { set qdisc drr }
     }
 
-    if { [getNodeType $node2_id] == "pseudo" } {
+    if { [getNodeType $node1_id] == "pseudo" } {
 	set link_id [getLinkMirror $link_id]
     }
 
@@ -486,14 +486,14 @@ proc execSetIfcQDisc { eid node_id iface_id qdisc } {
 proc execSetIfcQDrop { eid node_id iface_id qdrop } {
     set link_id [getIfcLink $node_id $iface_id]
     set direction [linkDirection $node_id $iface_id]
-    lassign [getLinkPeers $link_id] - node2_id
+    lassign [getLinkPeers $link_id] node1_id -
 
     switch -exact $qdrop {
 	drop-head { set qdrop drophead }
 	drop-tail { set qdrop droptail }
     }
 
-    if { [getNodeType $node2_id] == "pseudo" } {
+    if { [getNodeType $node1_id] == "pseudo" } {
 	set link_id [getLinkMirror $link_id]
     }
 
@@ -517,13 +517,13 @@ proc execSetIfcQDrop { eid node_id iface_id qdrop } {
 proc execSetIfcQLen { eid node_id iface_id qlen } {
     set link_id [getIfcLink $node_id $iface_id]
     set direction [linkDirection $node_id $iface_id]
-    lassign [getLinkPeers $link_id] - node2_id
+    lassign [getLinkPeers $link_id] node1_id -
 
     if { $qlen == 0 } {
 	set qlen -1
     }
 
-    if { [getNodeType $node2_id] == "pseudo" } {
+    if { [getNodeType $node1_id] == "pseudo" } {
 	set link_id [getLinkMirror $link_id]
     }
 
@@ -543,8 +543,6 @@ proc execSetIfcQLen { eid node_id iface_id qlen } {
 #   link_id -- link id
 #****
 proc execSetLinkParams { eid link_id } {
-    global debug
-
     set bandwidth [expr [getLinkBandwidth $link_id] + 0]
     set delay [expr [getLinkDelay $link_id] + 0]
     set ber [expr [getLinkBER $link_id] + 0]
@@ -963,7 +961,7 @@ proc getHostIfcVlanExists { node_id ifname } {
     }
 
     if { $execMode == "batch" } {
-	puts $msg
+	puts stderr $msg
     } else {
 	after idle { .dialog1.msg configure -wraplength 4i }
 	tk_dialog .dialog1 "IMUNES error" $msg \
@@ -1058,16 +1056,12 @@ proc prepareFilesystemForNode { node_id } {
 #   * node_id -- node id
 #****
 proc createNodeContainer { node_id } {
-    global debug
-
     set node_dir [getNodeDir $node_id]
 
     set jail_cmd "jail -c name=[getFromRunning "eid"].$node_id path=$node_dir securelevel=1 \
 	host.hostname=\"[getNodeName $node_id]\" vnet persist"
 
-    if { $debug } {
-	puts "Node $node_id -> '$jail_cmd'"
-    }
+    dputs "Node $node_id -> '$jail_cmd'"
 
     pipesExec "$jail_cmd" "hold"
 }
@@ -1216,7 +1210,7 @@ proc nodeLogIfacesCreate { node_id ifaces } {
 
     foreach iface_id $ifaces {
 	set iface_name [getIfcName $node_id $iface_id]
-	switch -exact [getLogIfcType $node_id $iface_id] {
+	switch -exact [getIfcType $node_id $iface_id] {
 	    vlan {
 		set tag [getIfcVlanTag $node_id $iface_id]
 		set dev [getIfcVlanDev $node_id $iface_id]
@@ -1763,7 +1757,7 @@ proc createLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 #   * link_id -- link id
 #****
 proc configureLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
-    global linkJitterConfiguration debug
+    global linkJitterConfiguration
 
     set eid [getFromRunning "eid"]
     set bandwidth [expr [getLinkBandwidth $link_id] + 0]
@@ -1980,7 +1974,7 @@ proc captureExtIfc { eid node_id iface_id } {
 		created.\n($err)"
 
 	    if { $execMode == "batch" } {
-		puts $msg
+		puts stderr $msg
 	    } else {
 		after idle { .dialog1.msg configure -wraplength 4i }
 		tk_dialog .dialog1 "IMUNES error" $msg \

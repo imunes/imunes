@@ -58,12 +58,7 @@ registerModule $MODULE
 #   * node_id -- node id
 #****
 proc $MODULE.confNewNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    set nconfig [list \
-	"hostname UNASSIGNED" \
-	! ]
-    lappend $node_id "network-config [list $nconfig]"
+    setNodeName $node_id "UNASSIGNED"
 }
 
 #****f* rj45.tcl/rj45.confNewIfc

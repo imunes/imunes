@@ -108,9 +108,9 @@ proc logCaller {} {
     set r [catch { info level [expr [info level] - 1] } e]
     set r2 [catch { info level [expr [info level] - 2] } e2]
     if { $r } {
-        puts "Called directly by the interpreter (e.g.: .tcl on the partyline)."
+        dputs "Called directly by the interpreter (e.g.: .tcl on the partyline)."
     } {
-        puts "Called by ${e} ${e2}."
+        dputs "Called by ${e} ${e2}."
     }
 }
 
@@ -189,5 +189,6 @@ bind . <F6> {
 
     source "$ROOTDIR/$LIBDIR/gui/debug.tcl"
 
-    puts "Reloaded all sources."
+    applyOptions
+    dputs "Reloaded all sources."
 }

@@ -57,12 +57,7 @@ proc statline { line } {
 	puts $line
 	flush stdout
     } else {
-	global debug
-
-	if { $debug } {
-	    puts $line
-	    flush stdout
-	}
+	dputs $line
 
 	.bottom.textbox config -text "$line"
 	animateCursor
@@ -83,10 +78,13 @@ proc statline { line } {
 proc displayBatchProgress { prgs tot } {
     global execMode debug
 
-    if { $debug || $execMode == "batch" } {
+    if { $execMode == "batch" } {
 	puts -nonewline "\r                                                "
 	puts -nonewline "\r> $prgs/$tot "
 	flush stdout
+    } elseif { $debug } {
+	dputs -nonewline "\r                                                "
+	dputs -nonewline "\r> $prgs/$tot "
     }
 }
 
@@ -518,8 +516,9 @@ proc dumpLinksToFile { path } {
 	if { $mirror_link_id != "" } {
 	    lappend skipLinks $mirror_link_id
 
-	    lassign "[lindex [getLinkPeers $mirror_link_id] 0] $node1_id" node1_id node2_id
-	    lassign "[lindex [getLinkPeersIfaces $mirror_link_id] 0] $iface1_id" iface1_id iface2_id
+	    # switch direction for mirror links
+	    lassign "$node2_id [lindex [getLinkPeers $mirror_link_id] 1]" node1_id node2_id
+	    lassign "$iface2_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]" iface1_id iface2_id
 	}
 
 	set name1 [getNodeName $node1_id]
@@ -534,7 +533,8 @@ proc dumpLinksToFile { path } {
 		set lpair $name1
 	    } else {
 		set ifaces [getNodeStolenIfaces $node1_id]
-		set lpair [lindex [lsearch -inline -exact -index 0 $ifaces "$iface1_id"] 1]
+		set iface1_name [getIfcName $node1_id $iface1_id]
+		set lpair [lindex [lsearch -inline -exact -index 0 $ifaces "$iface1_name"] 1]
 	    }
 	}
 	if { [getNodeType $node2_id] in "rj45 extelem" } {
@@ -542,7 +542,8 @@ proc dumpLinksToFile { path } {
 		set rpair $name2
 	    } else {
 		set ifaces [getNodeStolenIfaces $node2_id]
-		set rpair [lindex [lsearch -inline -exact -index 0 $ifaces "$iface2_id"] 1]
+		set iface2_name [getIfcName $node2_id $iface2_id]
+		set rpair [lindex [lsearch -inline -exact -index 0 $ifaces "$iface2_name"] 1]
 	    }
 	}
 

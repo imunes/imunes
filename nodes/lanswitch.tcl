@@ -58,13 +58,9 @@ registerModule $MODULE
 #   * node_id -- node id
 #****
 proc $MODULE.confNewNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global nodeNamingBase
 
-    set nconfig [list \
-	"hostname [getNewNodeNameType lanswitch $nodeNamingBase(lanswitch)]" \
-	! ]
-    lappend $node_id "network-config [list $nconfig]"
+    setNodeName $node_id [getNewNodeNameType lanswitch $nodeNamingBase(lanswitch)]
 }
 
 #****f* lanswitch.tcl/lanswitch.confNewIfc
@@ -174,7 +170,7 @@ proc $MODULE.shellcmds {} {
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node_id iface_id } {
-    set ifunit [string range $iface_id 1 end]
+    set ifunit [string range $iface_id 3 end]
     return [list $node_id link$ifunit]
 }
 

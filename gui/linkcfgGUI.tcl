@@ -170,7 +170,7 @@ proc configGUI_applyButtonLink { wi link_id phase } {
 
     if { $changed == 1 && [getFromRunning "oper_mode"] == "exec" } {
 	set eid [getFromRunning "eid"]
-	saveRunningConfigurationInteractive $eid
+	saveRunningConfiguration $eid
 	execSetLinkParams $eid $link_id
     }
 
@@ -447,7 +447,7 @@ proc applyJitterLink { wi link_id } {
 
     if { [getFromRunning "oper_mode"] == "exec" } {
 	set eid [getFromRunning "eid"]
-	saveRunningConfigurationInteractive $eid
+	saveRunningConfiguration $eid
 	execSetLinkJitter $eid $link_id
     }
 
@@ -477,7 +477,7 @@ proc linkJitterReset { link_id } {
 
     if { [getFromRunning "oper_mode"] == "exec" } {
 	set eid [getFromRunning "eid"]
-	saveRunningConfigurationInteractive $eid
+	saveRunningConfiguration $eid
 	execResetLinkJitter $eid $link_id
     }
 

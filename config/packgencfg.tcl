@@ -1,68 +1,29 @@
 proc getPackgenPacketRate { node_id } {
-    foreach line [netconfFetchSection $node_id "packet generator"] {
-	if { [lindex $line 0] == "packetrate" } {
-		return [lindex $line 1]
-	}
-    }
-    return 100
+    return [cfgGetWithDefault 100 "nodes" $node_id "packgen" "packetrate"]
 }
 
 proc setPackgenPacketRate { node_id rate } {
-    set ifcfg [list "packet generator"]
-    foreach line [netconfFetchSection $node_id "packet generator"] {
-	if { [lindex $line 0] != "packetrate" } {
-	    lappend ifcfg $line
-	}
-    }
-    if { $rate >= 0 } {
-	lappend ifcfg " packetrate $rate"
-    }
-    netconfInsertSection $node_id $ifcfg
+    cfgSet "nodes" $node_id "packgen" "packetrate" $rate
 }
 
 proc getPackgenPacket { node_id id } {
-    foreach line [netconfFetchSection $node_id "packets"] {
-	if { [string trim [lindex [split $line :] 0]] == $id } {
-		    return [string trim $line]
-	}
-    }
+    return [cfgGet "nodes" $node_id "packgen" "packets" $id]
 }
 
 proc addPackgenPacket { node_id id new_value } {
-    set ifcfg [list "packets"]
-    foreach line [netconfFetchSection $node_id "packets"] {
-	if { [string trim [lindex [split $line :] 0]] != $id } {
-	    lappend ifcfg $line
-	}
-    }
-    lappend ifcfg " $new_value"
-    netconfInsertSection $node_id $ifcfg
+    cfgSetEmpty "nodes" $node_id "packgen" "packets" $id $new_value
 }
 
 proc removePackgenPacket { node_id id } {
-    set ifcfg [list "packets"]
-    foreach line [netconfFetchSection $node_id "packets"] {
-	if { [string trim [lindex [split $line :] 0]] != $id } {
-	    lappend ifcfg $line
-	}
-    }
-    netconfInsertSection $node_id $ifcfg
+    cfgUnset "nodes" $node_id "packgen" "packets" $id
 }
 
 proc getPackgenPacketData { node_id id } {
-    foreach line [netconfFetchSection $node_id "packets"] {
-	if { [string trim [lindex [split $line :] 0]] == $id } {
-		    return [lindex [string trim [split $line :]] 1]
-	}
-    }
+    return [cfgGet "nodes" $node_id "packgen" "packets" $id]
 }
 
 proc packgenPackets { node_id } {
-    set packetList ""
-    foreach line [netconfFetchSection $node_id "packets"] {
-	lappend packetList [string trim [lindex [split $line :] 0]]
-    }
-    return $packetList
+    return [cfgGet "nodes" $node_id "packgen" "packets"]
 }
 
 proc checkPacketNum { str } {

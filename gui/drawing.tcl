@@ -166,7 +166,7 @@ proc drawNode { node_id } {
 	}
     } else {
 	# get mirror link and its real node/iface
-	lassign [logicalPeerByIfc [getNodeMirror $node_id] "0"] peer_id peer_iface
+	lassign [logicalPeerByIfc $node_id "ifc0"] peer_id peer_iface
 
 	set label_str "[getNodeName $peer_id]:[getIfcName $peer_id $peer_iface]"
 	set peer_canvas [getNodeCanvas $peer_id]
@@ -312,9 +312,10 @@ proc calcAngle { link_id } {
 proc updateIfcLabel { link_id node_id iface_id } {
     global show_interface_names show_interface_ipv4 show_interface_ipv6
 
+    set iface_name [getIfcName $node_id $iface_id]
     if { [getNodeType $node_id] == "extelem" } {
 	set ifaces [getNodeStolenIfaces $node_id]
-	set iface_id [lindex [lsearch -inline -exact -index 0 $ifaces "$iface_id"] 1]
+	set iface_name [lindex [lsearch -inline -exact -index 0 $ifaces "$iface_name"] 1]
     }
 
     set ifipv4addr [getIfcIPv4addrs $node_id $iface_id]
@@ -326,7 +327,7 @@ proc updateIfcLabel { link_id node_id iface_id } {
 
     set label_str ""
     if { $show_interface_names } {
-	lappend label_str "$iface_id"
+	lappend label_str "$iface_name"
     }
 
     if { $show_interface_ipv4 && $ifipv4addr != {} } {
@@ -1343,8 +1344,8 @@ proc animate {} {
 
     catch { .panwin.f1.c itemconfigure "selectmark || selectbox" -dashoffset $animatephase } err
     if { $err != "" } {
-	puts "IMUNES was closed unexpectedly before experiment termination was completed."
-	puts "Clean all running experiments with the 'cleanupAll' command."
+	puts stderr "IMUNES was closed unexpectedly before experiment termination was completed."
+	puts stderr "Clean all running experiments with the 'cleanupAll' command."
 	return;
     }
 

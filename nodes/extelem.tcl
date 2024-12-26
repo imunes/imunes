@@ -58,13 +58,9 @@ registerModule $MODULE
 #   * node_id -- node id
 #****
 proc $MODULE.confNewNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global nodeNamingBase
 
-    set nconfig [list \
-	"hostname [getNewNodeNameType extelem $nodeNamingBase(extelem)]" \
-	! ]
-    lappend $node_id "network-config [list $nconfig]"
+    setNodeName $node_id [getNewNodeNameType extelem $nodeNamingBase(extelem)]
 }
 
 #****f* extelem.tcl/extelem.confNewIfc
@@ -79,9 +75,7 @@ proc $MODULE.confNewNode { node_id } {
 #   * iface_id -- interface name
 #****
 proc $MODULE.confNewIfc { node_id iface_id } {
-    set old [getNodeStolenIfaces $node_id]
-    lappend old [list $iface_id "UNASSIGNED"]
-    setNodeStolenIfaces $node_id $old
+    setIfcName $node_id $iface_id "UNASSIGNED"
 }
 
 proc $MODULE.generateConfigIfaces { node_id ifaces } {
@@ -157,7 +151,7 @@ proc $MODULE.virtlayer {} {
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node_id iface_id } {
-    lassign [lindex [lsearch -index 0 -all -inline -exact [getNodeStolenIfaces $node_id] $iface_id] 0] iface_id extIfc
+    lassign [lindex [lsearch -index 0 -all -inline -exact [getNodeStolenIfaces $node_id] [getIfcName $node_id $iface_id]] 0] iface_id extIfc
 
     return [list $extIfc lower]
 }

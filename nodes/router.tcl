@@ -60,7 +60,6 @@ registerModule $MODULE
 #   * node_id -- node id
 #****
 proc $MODULE.confNewNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable
     global rdconfig router_model router_ConfigModel
     global def_router_model
@@ -69,16 +68,8 @@ proc $MODULE.confNewNode { node_id } {
     lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable
     set router_ConfigModel $router_model
 
-    if { $router_model != $def_router_model } {
-	lappend $node_id "model $router_model"
-    } else {
-	lappend $node_id "model $def_router_model"
-    }
-
-    set nconfig [list \
-	"hostname [getNewNodeNameType router $nodeNamingBase(router)]" \
-	! ]
-    lappend $node_id "network-config [list $nconfig]"
+    setNodeName $node_id [getNewNodeNameType router $nodeNamingBase(router)]
+    setNodeModel $node_id $router_model
 
     setNodeProtocol $node_id "rip" $ripEnable
     setNodeProtocol $node_id "ripng" $ripngEnable
@@ -87,9 +78,10 @@ proc $MODULE.confNewNode { node_id } {
     setNodeProtocol $node_id "bgp" $bgpEnable
 
     setAutoDefaultRoutesStatus $node_id "enabled"
-    setLogIfcType $node_id lo0 lo
-    setIfcIPv4addrs $node_id lo0 "127.0.0.1/8"
-    setIfcIPv6addrs $node_id lo0 "::1/128"
+
+    set logiface_id [newLogIface $node_id "lo"]
+    setIfcIPv4addrs $node_id $logiface_id "127.0.0.1/8"
+    setIfcIPv6addrs $node_id $logiface_id "::1/128"
 }
 
 #****f* router.tcl/router.confNewIfc

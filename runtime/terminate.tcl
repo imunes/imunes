@@ -215,7 +215,7 @@ proc finishTerminating { status msg w } {
 
     catch { pipesClose }
     if { $execMode == "batch" } {
-	puts $msg
+	puts stderr $msg
     } else {
 	catch { destroy $w }
 	set progressbarCount 0

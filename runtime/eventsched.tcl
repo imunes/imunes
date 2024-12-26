@@ -166,7 +166,7 @@ proc evsched {} {
 	    } elseif { [lindex $params 0] == "const" } {
 		set value [lindex $params 1]
 	    } else {
-		puts "bogus event line: $event"
+		puts stderr "bogus event line: $event"
 	    }
 
 	    switch -exact -- $target {
@@ -307,10 +307,7 @@ proc sched_init {} {
 #   * events -- list of events
 #****
 proc getLinkEvents { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::$link_id $link_id
-
-    set entry [lsearch -inline [set $link_id] "events *"]
-    return [lsort -index 0 -integer [lindex $entry 1]]
+    return [cfgGet "links" $link_id "events"]
 }
 
 #####################
@@ -328,10 +325,14 @@ proc getLinkEvents { link_id } {
 #   * events -- list of events
 #****
 proc getElementEvents { element } {
-    upvar 0 ::cf::[set ::curcfg]::$element $element
+    set group ""
+    if { $element in [getFromRunning "node_list"] } {
+	set group "nodes"
+    } elseif { $element in [getFromRunning "link_list"] } {
+	set group "links"
+    }
 
-    set entry [lindex [lsearch -inline [set $element] "events *"] 1]
-    return [formatForDisp $entry]
+    return [formatForDisp [cfgGet $group $element "events"]]
 }
 
 #****f* eventsched.tcl/setElementEvents
@@ -346,16 +347,14 @@ proc getElementEvents { element } {
 #   * events -- list of events
 #****
 proc setElementEvents { element events } {
-    upvar 0 ::cf::[set ::curcfg]::$element $element
-
-    set cfg [formatForExec $events]
-
-    set i [lsearch [set $element] "events *"]
-    if { $i >= 0 } {
-	set $element [lreplace [set $element] $i $i "events {$cfg}"]
-    } else {
-	set $element [linsert [set $element] end "events {$cfg}"]
+    set group ""
+    if { $element in [getFromRunning "node_list"] } {
+	set group "nodes"
+    } elseif { $element in [getFromRunning "link_list"] } {
+	set group "links"
     }
+
+    cfgSet $group $element "events" [formatForExec $events]
 }
 
 #****f* eventsched.tcl/formatForExec

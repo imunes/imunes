@@ -58,18 +58,14 @@ registerModule $MODULE
 #   * node_id -- node id
 #****
 proc $MODULE.confNewNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global nodeNamingBase
 
-    set nconfig [list \
-	"hostname [getNewNodeNameType host $nodeNamingBase(host)]" \
-	! ]
-    lappend $node_id "network-config [list $nconfig]"
-
+    setNodeName $node_id [getNewNodeNameType host $nodeNamingBase(host)]
     setAutoDefaultRoutesStatus $node_id "enabled"
-    setLogIfcType $node_id lo0 lo
-    setIfcIPv4addrs $node_id lo0 "127.0.0.1/8"
-    setIfcIPv6addrs $node_id lo0 "::1/128"
+
+    set logiface_id [newLogIface $node_id "lo"]
+    setIfcIPv4addrs $node_id $logiface_id "127.0.0.1/8"
+    setIfcIPv6addrs $node_id $logiface_id "::1/128"
 }
 
 #****f* host.tcl/host.confNewIfc
