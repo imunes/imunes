@@ -45,13 +45,9 @@ registerModule $MODULE
 ################################################################################
 
 proc $MODULE.confNewNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global nodeNamingBase
 
-    set nconfig [list \
-	"hostname [getNewNodeNameType stpswitch $nodeNamingBase(stpswitch)]" \
-	! ]
-    lappend $node_id "network-config [list $nconfig]"
+    setNodeName $node_id [getNewNodeNameType stpswitch $nodeNamingBase(stpswitch)]
 
     setBridgeProtocol $node_id "rstp"
     setBridgePriority $node_id "32768"
@@ -62,9 +58,9 @@ proc $MODULE.confNewNode { node_id } {
     setBridgeMaxAddr $node_id "100"
     setBridgeTimeout $node_id "240"
 
-    setLogIfcType $node_id lo0 lo
-    setIfcIPv4addrs $node_id lo0 "127.0.0.1/8"
-    setIfcIPv6addrs $node_id lo0 "::1/128"
+    set logiface_id [newLogIface $node_id "lo"]
+    setIfcIPv4addrs $node_id $logiface_id "127.0.0.1/8"
+    setIfcIPv6addrs $node_id $logiface_id "::1/128"
 }
 
 proc $MODULE.confNewIfc { node_id iface_id } {

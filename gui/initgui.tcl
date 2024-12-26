@@ -385,7 +385,8 @@ menu .menubar.canvas -tearoff 0
     deleteSelection
 
     set i [lsearch $canvas_list $curcanvas]
-    set canvas_list [lreplace $canvas_list $i $i]
+    cfgUnset "canvases" $curcanvas
+    set canvas_list [getCanvasList]
     setToRunning "canvas_list" $canvas_list
     set curcanvas [lindex $canvas_list $i]
     if { $curcanvas == "" } {

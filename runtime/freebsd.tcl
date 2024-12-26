@@ -453,7 +453,7 @@ Please don't try killing the process.
 proc execSetIfcQDisc { eid node_id iface_id qdisc } {
     set link_id [getIfcLink $node_id $iface_id]
     set direction [linkDirection $node_id $iface_id]
-    lassign [getLinkPeers $link_id] - node2_id
+    lassign [getLinkPeers $link_id] node1_id -
 
     switch -exact $qdisc {
 	FIFO { set qdisc fifo }
@@ -461,7 +461,7 @@ proc execSetIfcQDisc { eid node_id iface_id qdisc } {
 	DRR { set qdisc drr }
     }
 
-    if { [getNodeType $node2_id] == "pseudo" } {
+    if { [getNodeType $node1_id] == "pseudo" } {
 	set link_id [getLinkMirror $link_id]
     }
 
@@ -486,14 +486,14 @@ proc execSetIfcQDisc { eid node_id iface_id qdisc } {
 proc execSetIfcQDrop { eid node_id iface_id qdrop } {
     set link_id [getIfcLink $node_id $iface_id]
     set direction [linkDirection $node_id $iface_id]
-    lassign [getLinkPeers $link_id] - node2_id
+    lassign [getLinkPeers $link_id] node1_id -
 
     switch -exact $qdrop {
 	drop-head { set qdrop drophead }
 	drop-tail { set qdrop droptail }
     }
 
-    if { [getNodeType $node2_id] == "pseudo" } {
+    if { [getNodeType $node1_id] == "pseudo" } {
 	set link_id [getLinkMirror $link_id]
     }
 
@@ -517,13 +517,13 @@ proc execSetIfcQDrop { eid node_id iface_id qdrop } {
 proc execSetIfcQLen { eid node_id iface_id qlen } {
     set link_id [getIfcLink $node_id $iface_id]
     set direction [linkDirection $node_id $iface_id]
-    lassign [getLinkPeers $link_id] - node2_id
+    lassign [getLinkPeers $link_id] node1_id -
 
     if { $qlen == 0 } {
 	set qlen -1
     }
 
-    if { [getNodeType $node2_id] == "pseudo" } {
+    if { [getNodeType $node1_id] == "pseudo" } {
 	set link_id [getLinkMirror $link_id]
     }
 
@@ -1216,7 +1216,7 @@ proc nodeLogIfacesCreate { node_id ifaces } {
 
     foreach iface_id $ifaces {
 	set iface_name [getIfcName $node_id $iface_id]
-	switch -exact [getLogIfcType $node_id $iface_id] {
+	switch -exact [getIfcType $node_id $iface_id] {
 	    vlan {
 		set tag [getIfcVlanTag $node_id $iface_id]
 		set dev [getIfcVlanDev $node_id $iface_id]

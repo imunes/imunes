@@ -45,13 +45,9 @@ registerModule $MODULE
 ################################################################################
 
 proc $MODULE.confNewNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global nodeNamingBase
 
-    set nconfig [list \
-	"hostname [getNewNodeNameType filter $nodeNamingBase(filter)]" \
-	! ]
-    lappend $node_id "network-config [list $nconfig]"
+    setNodeName $node_id [getNewNodeNameType filter $nodeNamingBase(filter)]
 }
 
 proc $MODULE.confNewIfc { node_id iface_id } {
@@ -275,10 +271,19 @@ proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
 #****
 proc $MODULE.nodeConfigure { eid node_id } {
     foreach iface_id [ifcList $node_id] {
-	set cfg [netconfFetchSection $node_id "interface $iface_id"]
-	set ngcfgreq "shc $iface_id"
-	foreach rule [lsort -dictionary $cfg] {
-	    set ngcfgreq "[set ngcfgreq]$rule"
+	if { [getIfcLink $node_id $iface_id] == "" } {
+	    continue
+	}
+
+	set ngcfgreq "shc [getIfcName $node_id $iface_id]"
+	foreach rule_num [lsort -dictionary [ifcFilterRuleList $node_id $iface_id]] {
+	    set rule [getFilterIfcRuleAsString $node_id $iface_id $rule_num]
+
+	    set action_data [getFilterIfcActionData $node_id $iface_id $rule_num]
+	    set other_iface_id [ifaceIdFromName $node_id $action_data]
+	    if { [getIfcLink $node_id $other_iface_id] != "" } {
+		set ngcfgreq "${ngcfgreq} ${rule}"
+	    }
 	}
 
 	pipesExec "jexec $eid ngctl msg $node_id: $ngcfgreq" "hold"
@@ -311,6 +316,14 @@ proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
 }
 
 proc $MODULE.nodeUnconfigure { eid node_id } {
+    foreach iface_id [ifcList $node_id] {
+	if { [getIfcLink $node_id $iface_id] == "" } {
+	    continue
+	}
+
+	set ngcfgreq "shc [getIfcName $node_id $iface_id]"
+	pipesExec "jexec $eid ngctl msg $node_id: $ngcfgreq" "hold"
+    }
 }
 
 #****f* filter.tcl/filter.nodeShutdown
@@ -327,11 +340,6 @@ proc $MODULE.nodeUnconfigure { eid node_id } {
 #   * node_id - id of the node
 #****
 proc $MODULE.nodeShutdown { eid node_id } {
-    foreach iface_id [ifcList $node_id] {
-	set ngcfgreq "shc $iface_id"
-
-	pipesExec "jexec $eid ngctl msg $node_id: $ngcfgreq" "hold"
-    }
 }
 
 #****f* filter.tcl/filter.nodeDestroy
