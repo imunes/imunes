@@ -1654,7 +1654,7 @@ proc prepareTaygaConf { eid node data datadir } {
 }
 
 proc taygaShutdown { eid node } {
-    catch "exec docker exec $eid.$node killall5 -9 tayga"
+    catch "exec docker exec $eid.$node killall -9 tayga"
     catch "exec docker exec $eid.$node rm -rf /var/db/tayga"
 }
 

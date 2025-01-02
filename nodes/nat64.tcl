@@ -35,25 +35,14 @@ proc $MODULE.confNewIfc { node ifc } {
 }
 
 proc $MODULE.confNewNode { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-    global ripEnable ripngEnable ospfEnable ospf6Enable
-    global rdconfig
     global nodeNamingBase
 
-    set ripEnable [lindex $rdconfig 0]
-    set ripngEnable [lindex $rdconfig 1]
-    set ospfEnable [lindex $rdconfig 2]
-    set ospf6Enable [lindex $rdconfig 3]	
-    
+    router.confNewNode $node
+
     set nconfig [list \
 	"hostname [getNewNodeNameType nat64 $nodeNamingBase(nat64)]" \
 	! ]
     lappend $node "network-config [list $nconfig]"
-    
-    setNodeProtocolRip $node $ripEnable
-    setNodeProtocolRipng $node $ripngEnable
-    setNodeProtocolOspfv2 $node $ospfEnable 
-    setNodeProtocolOspfv3 $node $ospf6Enable
     
     foreach proto { rip ripng ospf ospf6 bgp } {
 	set protocfg [netconfFetchSection $node "router $proto"]
@@ -65,11 +54,6 @@ proc $MODULE.confNewNode { node } {
 	    netconfInsertSection $node $protocfg
 	}
     }
-
-    setAutoDefaultRoutesStatus $node "enabled"
-    setLogIfcType $node lo0 lo
-    setIfcIPv4addrs $node lo0 "127.0.0.1/8"
-    setIfcIPv6addrs $node lo0 "::1/128"
 
     setTaygaIPv4DynPool $node "192.168.64.0/24"
     setTaygaIPv6Prefix $node "2001::/96"
