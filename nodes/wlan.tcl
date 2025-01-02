@@ -63,8 +63,8 @@ proc $MODULE.toolbarIconDescr {} {
     return "Add new WLAN domain"
 }
 
-proc $MODULE.ifacePrefix { l r } {
-    return e
+proc $MODULE.ifacePrefix {} {
+    return "e"
 }
 
 proc $MODULE.netlayer {} {

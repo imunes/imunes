@@ -106,7 +106,7 @@ proc $MODULE.generateUnconfig { node_id } {
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifacePrefix { l r } {
+proc $MODULE.ifacePrefix {} {
     return "x"
 }
 
@@ -157,9 +157,13 @@ proc $MODULE.virtlayer {} {
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node_id iface_id } {
-    lassign [lindex [lsearch -index 0 -all -inline -exact [getNodeStolenIfaces $node_id] $iface_id] 0] iface_id extIfc
+    set iface_name [getIfcName $node_id $iface_id]
+    set vlan [getIfcVlanTag $node_id $iface_id]
+    if { $vlan != "" && [getIfcVlanDev $node_id $iface_id] != "" } {
+	set iface_name ${iface_name}_$vlan
+    }
 
-    return [list $extIfc lower]
+    return [list $iface_name lower]
 }
 
 ################################################################################
@@ -191,10 +195,6 @@ proc $MODULE.prepareSystem {} {
 #   * node_id -- id of the node
 #****
 proc $MODULE.nodeCreate { eid node_id } {
-    foreach group [getNodeStolenIfaces $node_id] {
-	lassign $group iface_id extIfc
-	captureExtIfcByName $eid $extIfc
-    }
 }
 
 #****f* extelem.tcl/extelem.nodeNamespaceSetup
@@ -227,6 +227,27 @@ proc $MODULE.nodeInitConfigure { eid node_id } {
 }
 
 proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
+    # first deal with VLAN interfaces to avoid 'non-existant'
+    # interface error
+    set vlan_ifaces {}
+    set nonvlan_ifaces {}
+    foreach iface_id $ifaces {
+	if { [getIfcVlanDev $node_id $iface_id] != "" } {
+	    lappend vlan_ifaces $iface_id
+	} else {
+	    lappend nonvlan_ifaces $iface_id
+	}
+    }
+
+    foreach iface_id [concat $vlan_ifaces $nonvlan_ifaces] {
+	set link_id [getIfcLink $node_id $iface_id]
+	if { $link_id != "" && [getLinkDirect $link_id] } {
+	    # do direct link stuff
+	    captureExtIfc $eid $node_id $iface_id
+	} else {
+	    captureExtIfc $eid $node_id $iface_id
+	}
+    }
 }
 
 proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
@@ -288,6 +309,19 @@ proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
 }
 
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
+    if { $ifaces == "*" } {
+	set ifaces [ifcList $node_id]
+    }
+
+    foreach iface_id $ifaces {
+	set link_id [getIfcLink $node_id $iface_id]
+	if { $link_id != "" && [getLinkDirect $link_id] } {
+	    # do direct link stuff
+	    releaseExtIfc $eid $node_id $iface_id
+	} else {
+	    releaseExtIfc $eid $node_id $iface_id
+	}
+    }
 }
 
 proc $MODULE.nodeUnconfigure { eid node_id } {
@@ -322,9 +356,8 @@ proc $MODULE.nodeShutdown { eid node_id } {
 #   * node_id -- id of the node
 #****
 proc $MODULE.nodeDestroy { eid node_id } {
-    foreach group [getNodeStolenIfaces $node_id] {
-	lassign $group iface_id extIfc
-	releaseExtIfcByName $eid $extIfc
+    foreach iface_id [allIfcList $node_id] {
+	releaseExtIfcByName $eid [getIfcName $node_id $iface_id]
     }
 }
 
