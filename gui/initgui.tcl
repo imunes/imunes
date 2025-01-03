@@ -1101,6 +1101,9 @@ $c bind linklabel <Any-Leave> "anyLeave $c"
 $c bind node <Double-1> "nodeConfigGUI $c {}"
 $c bind nodelabel <Double-1> "nodeConfigGUI $c {}"
 
+$c bind node <Control-Double-1> "nodeConfigGUI $c {}"
+$c bind nodelabel <Control-Double-1> "nodeConfigGUI $c {}"
+
 $c bind grid <Double-1> "double1onGrid $c %x %y"
 
 $c bind link <Double-1> "linkConfigGUI $c {}"
