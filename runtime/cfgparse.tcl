@@ -166,6 +166,8 @@ proc dumpCfg { method dest } {
 		    }
 		}
 		dumpputs $method $dest "    \}"
+	    } elseif { "[lindex $element 0]" in "default_routes4 default_routes6" } {
+		# do nothing
 	    } else {
 		dumpputs $method $dest "    $element"
 	    }

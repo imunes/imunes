@@ -721,12 +721,12 @@ proc button3node { c x y } {
 	&& [info procs $type.nodeShutdown] != "" } {
 
 	.button3menu add command -label Start \
-	    -command "startNodeFromMenu $node_id"
+	    -command "deployCfg 0 \"\" \"\" \"\" \"\" \"$node_id *\" $node_id"
 	.button3menu add command -label Stop \
-	    -command "stopNodeFromMenu $node_id"
+	    -command "undeployCfg $eid 0 \"\" \"\" \"\" \"\" \"$node_id *\" $node_id "
 	.button3menu add command -label Restart \
-	    -command "stopNodeFromMenu $node_id; \
-	     startNodeFromMenu $node_id"
+	    -command "undeployCfg $eid 0 \"\" \"\" \"\" \"\" \"$node_id *\" $node_id; \
+		deployCfg 0 \"\" \"\" \"\" \"\" \"$node_id *\" $node_id"
     }
 
     #

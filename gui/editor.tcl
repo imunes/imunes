@@ -170,32 +170,17 @@ proc redo {} {
 #   * ifc_name -- the name of the interface
 #****
 proc chooseIfName { lnode_id rnode_id } {
-    return [[getNodeType $lnode_id].ifacePrefix $lnode_id $rnode_id]
-}
+    set iface_prefix [[getNodeType $lnode_id].ifacePrefix]
 
-#****f* editor.tcl/l3IfcName
-# NAME
-#   l3IfcName -- default interface name picker for l3 nodes
-# SYNOPSIS
-#   set ifc_name [l3IfcName $local_node $remote_node]
-# FUNCTION
-#   Pick a default interface base name for a L3 node.
-# INPUTS
-#   * lnode_id -- id of a "local" node
-#   * rnode_id -- id of a "remote" node
-# RESULT
-#   * ifc_name -- the name of the interface
-#****
-proc l3IfcName { lnode_id rnode_id } {
-    if { [getNodeType $lnode_id] in "ext extnat" } {
-	return "ext"
+    set ifaces {}
+    foreach iface_id [ifcList $lnode_id] {
+	set iface_name [getIfcName $lnode_id $iface_id]
+	if { [regexp "$iface_prefix\[0-9\]+" $iface_name] } {
+	    lappend ifaces $iface_name
+	}
     }
 
-    if { [getNodeType $rnode_id] == "wlan" } {
-	return "wlan"
-    } else {
-	return "eth"
-    }
+    return [newObjectId $ifaces $iface_prefix]
 }
 
 #****f* editor.tcl/listLANNodes
@@ -526,12 +511,6 @@ proc routerDefaultsApply { wi } {
 		setNodeProtocol $node_id "ospf" $ospfEnable
 		setNodeProtocol $node_id "ospf6" $ospf6Enable
 		setNodeProtocol $node_id "bgp" $bgpEnable
-	    } else {
-		$wi.nbook.nf1.protocols.rip configure -state disabled
-		$wi.nbook.nf1.protocols.ripng configure -state disabled
-		$wi.nbook.nf1.protocols.ospf configure -state disabled
-		$wi.nbook.nf1.protocols.ospf6 configure -state disabled
-		$wi.nbook.nf1.protocols.bgp configure -state disabled
 	    }
 	    set changed 1
 	}

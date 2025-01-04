@@ -189,6 +189,7 @@ proc pipesClose {} {
 #****
 proc setOperMode { new_oper_mode } {
     upvar 0 ::cf::[set ::curcfg]::node_list node_list
+    upvar 0 ::cf::[set ::curcfg]::link_list link_list
     upvar 0 ::cf::[set ::curcfg]::undolevel undolevel
     upvar 0 ::cf::[set ::curcfg]::redolevel redolevel
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
@@ -277,7 +278,7 @@ proc setOperMode { new_oper_mode } {
 	}
 
 	if { ! $cfgDeployed } {
-	    deployCfg
+	    deployCfg 1 $node_list "*" $link_list $link_list "*" "*"
 	    set cfgDeployed true
 	}
 
@@ -294,7 +295,7 @@ proc setOperMode { new_oper_mode } {
 	    }
 
 	    if { $regular_termination } {
-		undeployCfg $eid
+		undeployCfg $eid 1 $node_list "*" $link_list "*" "*" "*"
 	    } else {
 		vimageCleanup $eid
 	    }

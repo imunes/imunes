@@ -2635,6 +2635,456 @@ proc setNodeProtocol { node_id protocol state } {
     }
 }
 
+#****f* nodecfg.tcl/getRouterProtocolCfg
+# NAME
+#   getRouterProtocolCfg -- get router protocol configuration
+# SYNOPSIS
+#   getRouterProtocolCfg $node_id $protocol
+# FUNCTION
+#   Returns the router protocol configuration.
+# INPUTS
+#   * node_id -- node id
+#   * protocol -- router protocol
+#****
+proc getRouterProtocolCfg { node_id protocol } {
+    if { [getNodeProtocol $node_id $protocol] == 0 } {
+	return ""
+    }
+
+    set cfg {}
+
+    set model [getNodeModel $node_id]
+    switch -exact -- $model {
+	"quagga" -
+	"frr" {
+	    lappend cfg "vtysh << __EOF__"
+	    lappend cfg "conf term"
+
+	    set router_id [ip::intToString [expr 1 + [string trimleft $node_id "n"]]]
+	    switch -exact -- $protocol {
+		"rip" {
+		    lappend cfg "router rip"
+		    lappend cfg " redistribute static"
+		    lappend cfg " redistribute connected"
+		    lappend cfg " redistribute ospf"
+		    lappend cfg " network 0.0.0.0/0"
+		    lappend cfg "!"
+		}
+		"ripng" {
+		    lappend cfg "router ripng"
+		    lappend cfg " redistribute static"
+		    lappend cfg " redistribute connected"
+		    lappend cfg " redistribute ospf6"
+		    lappend cfg " network ::/0"
+		    lappend cfg "!"
+		}
+		"ospf" {
+		    lappend cfg "router ospf"
+		    lappend cfg " ospf router-id $router_id"
+		    lappend cfg " redistribute static"
+		    lappend cfg " redistribute connected"
+		    lappend cfg " redistribute rip"
+		    lappend cfg "!"
+		}
+		"ospf6" {
+		    if { $model == "quagga" } {
+			set id_string "router-id $router_id"
+			#set area_string "network ::/0 area 0.0.0.0"
+		    } else {
+			set id_string "ospf6 router-id $router_id"
+			#set area_string "area 0.0.0.0 range ::/0"
+		    }
+
+		    lappend cfg "router ospf6"
+		    lappend cfg " $id_string"
+		    lappend cfg " redistribute static"
+		    lappend cfg " redistribute connected"
+		    lappend cfg " redistribute ripng"
+
+		    if { $model == "quagga" } {
+			foreach iface_id [ifcList $node_id] {
+			    lappend cfg " interface $iface_id area 0.0.0.0"
+			}
+		    }
+
+		    lappend cfg "!"
+		}
+		"bgp" {
+		    set loopback_ipv4 [lindex [split [getIfcIPv4addrs $node_id "lo0" ] "/"] 0]
+		    lappend cfg "router bgp 1000"
+		    lappend cfg " bgp router-id $loopback_ipv4"
+		    lappend cfg " no bgp ebgp-requires-policy"
+		    lappend cfg " neighbor DEFAULT peer-group"
+		    lappend cfg " neighbor DEFAULT remote-as 1000"
+		    lappend cfg " neighbor DEFAULT update-source $loopback_ipv4"
+		    lappend cfg " redistribute static"
+		    lappend cfg " redistribute connected"
+		    lappend cfg "!"
+		}
+	    }
+
+	    lappend cfg "__EOF__"
+	}
+	"static" {
+	    # nothing to return
+	}
+    }
+
+    return $cfg
+}
+
+proc getRouterProtocolUnconfig { node_id protocol } {
+    set cfg {}
+
+    set model [getNodeModel $node_id]
+    switch -exact -- $model {
+	"quagga" -
+	"frr" {
+	    lappend cfg "vtysh << __EOF__"
+	    lappend cfg "conf term"
+
+	    set router_id [ip::intToString [expr 1 + [string trimleft $node_id "n"]]]
+	    switch -exact -- $protocol {
+		"rip" {
+		    lappend cfg "no router rip"
+		}
+		"ripng" {
+		    lappend cfg "no router ripng"
+		}
+		"ospf" {
+		    lappend cfg "no router ospf"
+		}
+		"ospf6" {
+		    lappend cfg "no router ospf6"
+
+		    if { $model == "quagga" } {
+			foreach iface [ifcList $node_id] {
+			    lappend cfg " no interface $iface area 0.0.0.0"
+			}
+		    }
+
+		    lappend cfg "!"
+		}
+		"bgp" {
+		    lappend cfg "no router bgp 1000"
+		}
+	    }
+
+	    lappend cfg "__EOF__"
+	}
+	"static" {
+	    # nothing to return
+	}
+    }
+
+    return $cfg
+}
+
+proc routerRoutesCfggen { node_id } {
+    set cfg {}
+
+    set model [getNodeModel $node_id]
+    switch -exact -- $model {
+	"quagga" -
+	"frr" {
+	    if { [getCustomEnabled $node_id] != true } {
+		set routes4 [nodeCfggenStaticRoutes4 $node_id 1]
+		set routes6 [nodeCfggenStaticRoutes6 $node_id 1]
+
+		if { $routes4 != "" || $routes6 != "" } {
+		    lappend cfg "vtysh << __EOF__"
+		    lappend cfg "conf term"
+
+		    set cfg [concat $cfg $routes4]
+		    set cfg [concat $cfg $routes6]
+
+		    lappend cfg "!"
+		    lappend cfg "__EOF__"
+		}
+	    }
+
+	    set routes4 [nodeCfggenAutoRoutes4 $node_id 1]
+	    set routes6 [nodeCfggenAutoRoutes6 $node_id 1]
+
+	    if { $routes4 != "" || $routes6 != "" } {
+		lappend cfg "vtysh << __EOF__"
+		lappend cfg "conf term"
+
+		set cfg [concat $cfg $routes4]
+		set cfg [concat $cfg $routes6]
+
+		lappend cfg "!"
+		lappend cfg "__EOF__"
+	    }
+	}
+	"static" {
+	    if { [getCustomEnabled $node_id] != true } {
+		set cfg [concat $cfg [nodeCfggenStaticRoutes4 $node_id]]
+		set cfg [concat $cfg [nodeCfggenStaticRoutes6 $node_id]]
+
+		lappend cfg ""
+	    }
+
+	    set cfg [concat $cfg [nodeCfggenAutoRoutes4 $node_id]]
+	    set cfg [concat $cfg [nodeCfggenAutoRoutes6 $node_id]]
+
+	    lappend cfg ""
+	}
+    }
+
+    return $cfg
+}
+
+proc routerRoutesUncfggen { node_id } {
+    set cfg {}
+
+    set model [getNodeModel $node_id]
+    switch -exact -- $model {
+	"quagga" -
+	"frr" {
+	    if { [getCustomEnabled $node_id] != true } {
+		lappend cfg "vtysh << __EOF__"
+		lappend cfg "conf term"
+
+		set cfg [concat $cfg [nodeUncfggenStaticRoutes4 $node_id 1]]
+		set cfg [concat $cfg [nodeUncfggenStaticRoutes6 $node_id 1]]
+
+		lappend cfg "!"
+		lappend cfg "__EOF__"
+	    }
+
+	    lappend cfg "vtysh << __EOF__"
+	    lappend cfg "conf term"
+
+	    set cfg [concat $cfg [nodeUncfggenAutoRoutes4 $node_id 1]]
+	    set cfg [concat $cfg [nodeUncfggenAutoRoutes6 $node_id 1]]
+
+	    lappend cfg "!"
+	    lappend cfg "__EOF__"
+	}
+	"static" {
+	    if { [getCustomEnabled $node_id] != true } {
+		set cfg [concat $cfg [nodeUncfggenStaticRoutes4 $node_id]]
+		set cfg [concat $cfg [nodeUncfggenStaticRoutes6 $node_id]]
+
+		lappend cfg ""
+	    }
+
+	    set cfg [concat $cfg [nodeUncfggenAutoRoutes4 $node_id]]
+	    set cfg [concat $cfg [nodeUncfggenAutoRoutes6 $node_id]]
+
+	    lappend cfg ""
+	}
+    }
+
+    return $cfg
+}
+
+proc nodeCfggenIfc { node_id iface_id } {
+    global isOSlinux
+
+    set cfg {}
+
+    set iface_name [getIfcName $node_id $iface_id]
+
+    set mac_addr [getIfcMACaddr $node_id $iface_id]
+    if { $mac_addr != "" } {
+	lappend cfg [getMacIfcCmd $iface_name $mac_addr]
+    }
+
+    set mtu [getIfcMTU $node_id $iface_id]
+    lappend cfg [getMtuIfcCmd $iface_name $mtu]
+
+    if { [getIfcNatState $node_id $iface_id] == "on" } {
+	lappend cfg [getNatIfcCmd $iface_name]
+    }
+
+    set primary 1
+    set addrs [getIfcIPv4addrs $node_id $iface_id]
+    foreach addr $addrs {
+	if { $addr != "" } {
+	    lappend cfg [getIPv4IfcCmd $iface_name $addr $primary]
+	    set primary 0
+	}
+    }
+
+    set primary 1
+    set addrs [getIfcIPv6addrs $node_id $iface_id]
+    if { $isOSlinux } {
+	# Linux is prioritizing IPv6 addresses in reversed order
+	set addrs [lreverse $addrs]
+    }
+    foreach addr $addrs {
+	if { $addr != "" } {
+	    lappend cfg [getIPv6IfcCmd $iface_name $addr $primary]
+	    set primary 0
+	}
+    }
+
+    set state [getIfcOperState $node_id $iface_id]
+    if { $state == "" } {
+	set state "up"
+    }
+
+    lappend cfg [getStateIfcCmd $iface_name $state]
+
+    return $cfg
+}
+
+proc nodeUncfggenIfc { node_id iface_id } {
+    set cfg {}
+
+    set iface_name [getIfcName $node_id $iface_id]
+
+    set addrs [getIfcIPv4addrs $node_id $iface_id]
+    foreach addr $addrs {
+        if { $addr != "" } {
+            lappend cfg [getDelIPv4IfcCmd $iface_name $addr]
+        }
+    }
+
+    set addrs [getIfcIPv6addrs $node_id $iface_id]
+    foreach addr $addrs {
+        if { $addr != "" } {
+            lappend cfg [getDelIPv6IfcCmd $iface_name $addr]
+        }
+    }
+
+    return $cfg
+}
+
+proc routerCfggenIfc { node_id iface_id } {
+    set ospf_enabled [getNodeProtocol $node_id "ospf"]
+    set ospf6_enabled [getNodeProtocol $node_id "ospf6"]
+
+    set cfg {}
+
+    set model [getNodeModel $node_id]
+    set iface_name [getIfcName $node_id $iface_id]
+    if { $iface_name == "lo0" } {
+	set model "static"
+    }
+
+    switch -exact -- $model {
+	"quagga" -
+	"frr" {
+	    set mac_addr [getIfcMACaddr $node_id $iface_id]
+	    if { $mac_addr != "" } {
+		lappend cfg [getMacIfcCmd $iface_name $mac_addr]
+	    }
+
+	    set mtu [getIfcMTU $node_id $iface_id]
+	    lappend cfg [getMtuIfcCmd $iface_name $mtu]
+
+	    if { [getIfcNatState $node_id $iface_id] == "on" } {
+		lappend cfg [getNatIfcCmd $iface_name]
+	    }
+
+	    lappend cfg "vtysh << __EOF__"
+	    lappend cfg "conf term"
+	    lappend cfg "interface $iface_name"
+
+	    set addrs [getIfcIPv4addrs $node_id $iface_id]
+	    foreach addr $addrs {
+		if { $addr != "" } {
+		    lappend cfg " ip address $addr"
+		}
+	    }
+
+	    if { $ospf_enabled } {
+		if { ! [isIfcLogical $node_id $iface_id] } {
+		    lappend cfg " ip ospf area 0.0.0.0"
+		}
+	    }
+
+	    set addrs [getIfcIPv6addrs $node_id $iface_id]
+	    foreach addr $addrs {
+		if { $addr != "" } {
+		    lappend cfg " ipv6 address $addr"
+		}
+	    }
+
+	    if { $model == "frr" && $ospf6_enabled } {
+		if { ! [isIfcLogical $node_id $iface_id] } {
+		    lappend cfg " ipv6 ospf6 area 0.0.0.0"
+		}
+	    }
+
+	    if { [getIfcOperState $node_id $iface_id] == "down" } {
+		lappend cfg " shutdown"
+	    } else {
+		lappend cfg " no shutdown"
+	    }
+
+	    lappend cfg "!"
+	    lappend cfg "__EOF__"
+	}
+	"static" {
+	    set cfg [concat $cfg [nodeCfggenIfc $node_id $iface_id]]
+	}
+    }
+
+    return $cfg
+}
+
+proc routerUncfggenIfc { node_id iface_id } {
+    set ospf_enabled [getNodeProtocol $node_id "ospf"]
+    set ospf6_enabled [getNodeProtocol $node_id "ospf6"]
+
+    set cfg {}
+
+    set model [getNodeModel $node_id]
+    set iface_name [getIfcName $node_id $iface_id]
+    if { $iface_name == "lo0" } {
+	set model "static"
+    }
+
+    switch -exact -- $model {
+	"quagga" -
+	"frr" {
+	    lappend cfg "vtysh << __EOF__"
+	    lappend cfg "conf term"
+	    lappend cfg "interface $iface_name"
+
+	    set addrs [getIfcIPv4addrs $node_id $iface_id]
+	    foreach addr $addrs {
+		if { $addr != "" } {
+		    lappend cfg " no ip address $addr"
+		}
+	    }
+
+	    if { $ospf_enabled } {
+		if { ! [isIfcLogical $node_id $iface_id] } {
+		    lappend cfg " no ip ospf area 0.0.0.0"
+		}
+	    }
+
+	    set addrs [getIfcIPv6addrs $node_id $iface_id]
+	    foreach addr $addrs {
+		if { $addr != "" } {
+		    lappend cfg " no ipv6 address $addr"
+		}
+	    }
+
+	    if { $model == "frr" && $ospf6_enabled } {
+		if { ! [isIfcLogical $node_id $iface_id] } {
+		    lappend cfg " no ipv6 ospf6 area 0.0.0.0"
+		}
+	    }
+
+	    lappend cfg " shutdown"
+
+	    lappend cfg "!"
+	    lappend cfg "__EOF__"
+	}
+	"static" {
+	    set cfg [concat $cfg [nodeUncfggenIfc $node_id $iface_id]]
+	}
+    }
+
+    return $cfg
+}
+
 #****f* nodecfg.tcl/registerModule
 # NAME
 #   registerModule -- register module
@@ -2999,14 +3449,12 @@ proc setNodeIface { node_id iface_id new_iface } {
 # RESULT
 #   * value -- interface IPv4 configuration script
 #****
-proc nodeCfggenIfcIPv4 { node_id } {
+proc nodeCfggenIfcIPv4 { node_id iface_id } {
     set cfg {}
-    foreach iface_id [allIfcList $node_id] {
-	set primary 1
-	foreach addr [getIfcIPv4addrs $node_id $iface_id] {
-	    lappend cfg [getIPv4IfcCmd $iface_id $addr $primary]
-	    set primary 0
-	}
+    set primary 1
+    foreach addr [getIfcIPv4addrs $node_id $iface_id] {
+	lappend cfg [getIPv4IfcCmd [getIfcName $node_id $iface_id] $addr]
+	set primary 0
     }
 
     return $cfg
@@ -3025,70 +3473,12 @@ proc nodeCfggenIfcIPv4 { node_id } {
 # RESULT
 #   * value -- interface IPv6 configuration script
 #****
-proc nodeCfggenIfcIPv6 { node_id } {
+proc nodeCfggenIfcIPv6 { node_id iface_id } {
     set cfg {}
-    foreach iface_id [allIfcList $node_id] {
-	set primary 1
-	foreach addr [getIfcIPv6addrs $node_id $iface_id] {
-	    lappend cfg [getIPv6IfcCmd $iface_id $addr $primary]
-	    set primary 0
-	}
-    }
-
-    return $cfg
-}
-
-#****f* nodecfg.tcl/nodeCfggenRouteIPv4
-# NAME
-#   nodeCfggenRouteIPv4 -- generate ifconfig IPv4 configuration
-# SYNOPSIS
-#   nodeCfggenRouteIPv4 $node_id
-# FUNCTION
-#   Generate IPv4 route configuration.
-# INPUTS
-#   * node -- node to generate configuration for
-# RESULT
-#   * value -- route IPv4 configuration script
-#****
-proc nodeCfggenRouteIPv4 { node_id } {
-    set cfg {}
-    foreach statrte [getStatIPv4routes $node_id] {
-	lappend cfg [getIPv4RouteCmd $statrte]
-    }
-
-    if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
-	foreach statrte [getDefaultIPv4routes $node_id] {
-	    lappend cfg [getIPv4RouteCmd $statrte]
-	}
-	setDefaultIPv4routes $node_id {}
-    }
-
-    return $cfg
-}
-
-#****f* nodecfg.tcl/nodeCfggenRouteIPv6
-# NAME
-#   nodeCfggenRouteIPv6 -- generate ifconfig IPv6 configuration
-# SYNOPSIS
-#   nodeCfggenRouteIPv6 $node_id
-# FUNCTION
-#   Generate IPv6 route configuration.
-# INPUTS
-#   * node_id -- node to generate configuration for
-# RESULT
-#   * value -- route IPv6 configuration script
-#****
-proc nodeCfggenRouteIPv6 { node_id } {
-    set cfg {}
-    foreach statrte [getStatIPv6routes $node_id] {
-	lappend cfg [getIPv6RouteCmd $statrte]
-    }
-
-    if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
-	foreach statrte [getDefaultIPv6routes $node_id] {
-	    lappend cfg [getIPv6RouteCmd $statrte]
-	}
-	setDefaultIPv6routes $node_id {}
+    set primary 1
+    foreach addr [getIfcIPv6addrs $node_id $iface_id] {
+	lappend cfg [getIPv6IfcCmd [getIfcName $node_id $iface_id] $addr]
+	set primary 0
     }
 
     return $cfg
@@ -3284,4 +3674,124 @@ proc pseudo.netlayer {} {
 #   * virtlayer -- returns an empty string
 #****
 proc pseudo.virtlayer {} {
+}
+
+proc nodeCfggenStaticRoutes4 { node_id { vtysh 0 } } {
+    set cfg {}
+
+    foreach statrte [getStatIPv4routes $node_id] {
+	if { $vtysh } {
+	    lappend cfg "ip route $statrte"
+	} else {
+	    lappend cfg [getIPv4RouteCmd $statrte]
+	}
+    }
+
+    return $cfg
+}
+
+proc nodeUncfggenStaticRoutes4 { node_id { vtysh 0 } } {
+    set cfg {}
+
+    foreach statrte [getStatIPv4routes $node_id] {
+	if { $vtysh } {
+	    lappend cfg "no ip route $statrte"
+	} else {
+	    lappend cfg [getRemoveIPv4RouteCmd $statrte]
+	}
+    }
+
+    return $cfg
+}
+
+proc nodeCfggenAutoRoutes4 { node_id { vtysh 0 } } {
+    set cfg {}
+
+    set default_routes4 [getDefaultIPv4routes $node_id]
+    foreach statrte $default_routes4 {
+	if { $vtysh } {
+	    lappend cfg "ip route $statrte"
+	} else {
+	    lappend cfg [getIPv4RouteCmd $statrte]
+	}
+    }
+    setDefaultIPv4routes $node_id {}
+
+    return $cfg
+}
+
+proc nodeUncfggenAutoRoutes4 { node_id { vtysh 0 } } {
+    set cfg {}
+
+    set default_routes4 [getDefaultIPv4routes $node_id]
+    foreach statrte $default_routes4 {
+	if { $vtysh } {
+	    lappend cfg "no ip route $statrte"
+	} else {
+	    lappend cfg [getRemoveIPv4RouteCmd $statrte]
+	}
+    }
+    setDefaultIPv4routes $node_id {}
+
+    return $cfg
+}
+
+proc nodeCfggenStaticRoutes6 { node_id { vtysh 0 } } {
+    set cfg {}
+
+    foreach statrte [getStatIPv6routes $node_id] {
+	if { $vtysh } {
+	    lappend cfg "ipv6 route $statrte"
+	} else {
+	    lappend cfg [getIPv6RouteCmd $statrte]
+	}
+    }
+
+    return $cfg
+}
+
+proc nodeUncfggenStaticRoutes6 { node_id { vtysh 0 } } {
+    set cfg {}
+
+    foreach statrte [getStatIPv6routes $node_id] {
+	if { $vtysh } {
+	    lappend cfg "no ipv6 route $statrte"
+	} else {
+	    lappend cfg [getRemoveIPv6RouteCmd $statrte]
+	}
+    }
+
+    return $cfg
+}
+
+proc nodeCfggenAutoRoutes6 { node_id { vtysh 0 } } {
+    set cfg {}
+
+    set default_routes6 [getDefaultIPv6routes $node_id]
+    foreach statrte $default_routes6 {
+	if { $vtysh } {
+	    lappend cfg "ipv6 route $statrte"
+	} else {
+	    lappend cfg [getIPv6RouteCmd $statrte]
+	}
+    }
+    setDefaultIPv6routes $node_id {}
+
+    return $cfg
+}
+
+proc nodeUncfggenAutoRoutes6 { node_id { vtysh 0 } } {
+    set cfg {}
+
+    set default_routes6 [getDefaultIPv6routes $node_id]
+    foreach statrte $default_routes6 {
+	if { $vtysh } {
+	    lappend cfg "no ipv6 route $statrte"
+	} else {
+	    lappend cfg [getRemoveIPv6RouteCmd $statrte]
+	}
+    }
+    setDefaultIPv6routes $node_id {}
+
+    return $cfg
 }

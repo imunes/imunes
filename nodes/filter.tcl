@@ -57,6 +57,18 @@ proc $MODULE.confNewNode { node_id } {
 proc $MODULE.confNewIfc { node_id iface_id } {
 }
 
+proc $MODULE.generateConfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateConfig { node_id } {
+}
+
+proc $MODULE.generateUnconfig { node_id } {
+}
+
 proc $MODULE.icon { size } {
     global ROOTDIR LIBDIR
 
@@ -94,8 +106,21 @@ proc $MODULE.notebookDimensions { wi } {
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifacePrefix { l r } {
-    return e
+proc $MODULE.ifacePrefix {} {
+    return "e"
+}
+
+#****f* filter.tcl/filter.IPAddrRange
+# NAME
+#   filter.IPAddrRange -- IP address range
+# SYNOPSIS
+#   filter.IPAddrRange
+# FUNCTION
+#   Returns filter IP address range
+# RESULT
+#   * range -- filter IP address range
+#****
+proc $MODULE.IPAddrRange {} {
 }
 
 #****f* filter.tcl/filter.netlayer
@@ -128,6 +153,37 @@ proc $MODULE.virtlayer {} {
     return NATIVE
 }
 
+#****f* filter.tcl/filter.bootcmd
+# NAME
+#   filter.bootcmd -- boot command
+# SYNOPSIS
+#   set appl [filter.bootcmd $node_id]
+# FUNCTION
+#   Procedure bootcmd returns the application that reads and employes the
+#   configuration generated in filter.generateConfig.
+#   In this case (procedure filter.bootcmd) specific application is /bin/sh
+# INPUTS
+#   * node_id -- node id (type of the node is filter)
+# RESULT
+#   * appl -- application that reads the configuration (/bin/sh)
+#****
+proc $MODULE.bootcmd { node_id } {
+}
+
+#****f* filter.tcl/filter.shellcmds
+# NAME
+#   filter.shellcmds -- shell commands
+# SYNOPSIS
+#   set shells [filter.shellcmds]
+# FUNCTION
+#   Procedure shellcmds returns the shells that can be opened
+#   as a default shell for the system.
+# RESULT
+#   * shells -- default shells for the filter node
+#****
+proc $MODULE.shellcmds {} {
+}
+
 #****f* filter.tcl/filter.nghook
 # NAME
 #   filter.nghook
@@ -146,8 +202,8 @@ proc $MODULE.virtlayer {} {
 #   * nghook - the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
-proc $MODULE.nghook { eid node_id iface_id } {
-    return [list $node_id $iface_id]
+proc $MODULE.nghook { eid node_id iface } {
+    return [list $node_id [getIfcName $node_id $iface]]
 }
 
 ################################################################################
@@ -176,6 +232,59 @@ proc $MODULE.nodeCreate { eid node_id } {
     mkpeer . patmat tmp tmp \n
     name .:tmp $node_id
     \" | jexec $eid ngctl -f -" "hold"
+}
+
+#****f* filter.tcl/filter.nodeNamespaceSetup
+# NAME
+#   filter.nodeNamespaceSetup -- filter node nodeNamespaceSetup
+# SYNOPSIS
+#   filter.nodeNamespaceSetup $eid $node_id
+# FUNCTION
+#   Linux only. Attaches the existing Docker netns to a new one.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeNamespaceSetup { eid node_id } {
+}
+
+#****f* filter.tcl/filter.nodeInitConfigure
+# NAME
+#   filter.nodeInitConfigure -- filter node nodeInitConfigure
+# SYNOPSIS
+#   filter.nodeInitConfigure $eid $node_id
+# FUNCTION
+#   Runs initial L3 configuration, such as creating logical interfaces and
+#   configuring sysctls.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeInitConfigure { eid node_id } {
+}
+
+proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
+    nodePhysIfacesCreate $node_id $ifaces
+}
+
+proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
+}
+
+#****f* filter.tcl/filter.nodeIfacesConfigure
+# NAME
+#   filter.nodeIfacesConfigure -- configure filter node interfaces
+# SYNOPSIS
+#   filter.nodeIfacesConfigure $eid $node_id $ifaces
+# FUNCTION
+#   Configure interfaces on a filter. Set MAC, MTU, queue parameters, assign the IP
+#   addresses to the interfaces, etc. This procedure can be called if the node
+#   is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
 }
 
 #****f* filter.tcl/filter.nodeConfigure
@@ -207,8 +316,28 @@ proc $MODULE.nodeConfigure { eid node_id } {
 ############################# TERMINATE PROCEDURES #############################
 ################################################################################
 
+#****f* filter.tcl/filter.nodeIfacesUnconfigure
+# NAME
+#   filter.nodeIfacesUnconfigure -- unconfigure filter node interfaces
+# SYNOPSIS
+#   filter.nodeIfacesUnconfigure $eid $node_id $ifaces
+# FUNCTION
+#   Unconfigure interfaces on a filter to a default state. Set name to iface_id,
+#   flush IP addresses to the interfaces, etc. This procedure can be called if
+#   the node is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
+}
+
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
-    l2node.nodeIfacesDestroy $eid $node_id $ifaces
+    nodeIfacesDestroy $eid $node_id $ifaces
+}
+
+proc $MODULE.nodeUnconfigure { eid node_id } {
 }
 
 #****f* filter.tcl/filter.nodeShutdown

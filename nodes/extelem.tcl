@@ -84,6 +84,18 @@ proc $MODULE.confNewIfc { node_id iface_id } {
     setNodeStolenIfaces $node_id $old
 }
 
+proc $MODULE.generateConfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateConfig { node_id } {
+}
+
+proc $MODULE.generateUnconfig { node_id } {
+}
+
 #****f* extelem.tcl/extelem.ifacePrefix
 # NAME
 #   extelem.ifacePrefix -- interface name
@@ -94,7 +106,7 @@ proc $MODULE.confNewIfc { node_id iface_id } {
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifacePrefix { l r } {
+proc $MODULE.ifacePrefix {} {
     return "x"
 }
 
@@ -163,6 +175,7 @@ proc $MODULE.nghook { eid node_id iface_id } {
 #   Loads ng_extelem into the kernel.
 #****
 proc $MODULE.prepareSystem {} {
+    catch { exec kldload ng_ether }
 }
 
 #****f* extelem.tcl/extelem.nodeCreate
@@ -178,15 +191,127 @@ proc $MODULE.prepareSystem {} {
 #   * node_id -- id of the node
 #****
 proc $MODULE.nodeCreate { eid node_id } {
+}
+
+#****f* extelem.tcl/extelem.nodeNamespaceSetup
+# NAME
+#   extelem.nodeNamespaceSetup -- extelem node nodeNamespaceSetup
+# SYNOPSIS
+#   extelem.nodeNamespaceSetup $eid $node_id
+# FUNCTION
+#   Linux only. Attaches the existing Docker netns to a new one.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeNamespaceSetup { eid node_id } {
+}
+
+#****f* extelem.tcl/extelem.nodeInitConfigure
+# NAME
+#   extelem.nodeInitConfigure -- extelem node nodeInitConfigure
+# SYNOPSIS
+#   extelem.nodeInitConfigure $eid $node_id
+# FUNCTION
+#   Runs initial L3 configuration, such as creating logical interfaces and
+#   configuring sysctls.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeInitConfigure { eid node_id } {
+}
+
+proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
     foreach group [getNodeStolenIfaces $node_id] {
 	lassign $group iface_id extIfc
-	captureExtIfcByName $eid $extIfc
+	captureExtIfcByName $eid $extIfc $node_id
     }
+}
+
+proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
+}
+
+#****f* extelem.tcl/extelem.nodeIfacesConfigure
+# NAME
+#   extelem.nodeIfacesConfigure -- configure extelem node interfaces
+# SYNOPSIS
+#   extelem.nodeIfacesConfigure $eid $node_id $ifaces
+# FUNCTION
+#   Configure interfaces on a extelem. Set MAC, MTU, queue parameters, assign the IP
+#   addresses to the interfaces, etc. This procedure can be called if the node
+#   is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
+}
+
+#****f* extelem.tcl/extelem.nodeConfigure
+# NAME
+#   extelem.nodeConfigure -- configure extelem node
+# SYNOPSIS
+#   extelem.nodeConfigure $eid $node_id
+# FUNCTION
+#   Starts a new extelem. Simulates the booting proces of a node, starts all the
+#   services, etc.
+#   This procedure can be called if it is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeConfigure { eid node_id } {
 }
 
 ################################################################################
 ############################# TERMINATE PROCEDURES #############################
 ################################################################################
+
+#****f* extelem.tcl/extelem.nodeIfacesUnconfigure
+# NAME
+#   extelem.nodeIfacesUnconfigure -- unconfigure extelem node interfaces
+# SYNOPSIS
+#   extelem.nodeIfacesUnconfigure $eid $node_id $ifaces
+# FUNCTION
+#   Unconfigure interfaces on a extelem to a default state. Set name to iface_id,
+#   flush IP addresses to the interfaces, etc. This procedure can be called if
+#   the node is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
+}
+
+proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
+    foreach group [getNodeStolenIfaces $node_id] {
+	lassign $group iface_id extIfc
+	releaseExtIfcByName $eid $extIfc $node_id
+    }
+}
+
+proc $MODULE.nodeUnconfigure { eid node_id } {
+}
+
+#****f* extelem.tcl/extelem.nodeShutdown
+# NAME
+#   extelem.nodeShutdown -- layer 3 node nodeShutdown
+# SYNOPSIS
+#   extelem.nodeShutdown $eid $node_id
+# FUNCTION
+#   Shutdowns a extelem node.
+#   Simulates the shutdown proces of a node, kills all the services and
+#   processes.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeShutdown { eid node_id } {
+}
 
 #****f* extelem.tcl/extelem.nodeDestroy
 # NAME
@@ -201,10 +326,6 @@ proc $MODULE.nodeCreate { eid node_id } {
 #   * node_id -- id of the node
 #****
 proc $MODULE.nodeDestroy { eid node_id } {
-    foreach group [getNodeStolenIfaces $node_id] {
-	lassign $group iface_id extIfc
-	releaseExtIfcByName $eid $extIfc
-    }
 }
 
 ################################################################################

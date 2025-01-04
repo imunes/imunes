@@ -108,10 +108,49 @@ proc $MODULE.confNewIfc { node_id iface_id } {
     autoIPv6addr $node_id $iface_id
     autoMACaddr $node_id $iface_id
 
-    lassign [logicalPeerByIfc $node_id $iface_id] peer_node_id -
-    if { [getNodeType $peer_node_id] == "extnat" } {
+    if { [getNodeType [lindex [logicalPeerByIfc $node_id $iface_id] 0]] == "extnat" } {
 	setIfcNatState $node_id $iface_id "on"
     }
+}
+
+proc $MODULE.generateConfigIfaces { node_id ifaces } {
+    set all_ifaces "[ifcList $node_id] [logIfcList $node_id]"
+    if { $ifaces == "*" } {
+	set ifaces $all_ifaces
+    } else {
+	# sort physical ifaces before logical ones (because of vlans)
+	set negative_ifaces [removeFromList $all_ifaces $ifaces]
+	set ifaces [removeFromList $all_ifaces $negative_ifaces]
+    }
+
+    set cfg {}
+    foreach iface_id $ifaces {
+	set cfg [concat $cfg [routerCfggenIfc $node_id $iface_id]]
+
+	lappend cfg ""
+    }
+
+    return $cfg
+}
+
+proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
+    set all_ifaces "[ifcList $node_id] [logIfcList $node_id]"
+    if { $ifaces == "*" } {
+	set ifaces $all_ifaces
+    } else {
+	# sort physical ifaces before logical ones
+	set negative_ifaces [removeFromList $all_ifaces $ifaces]
+	set ifaces [removeFromList $all_ifaces $negative_ifaces]
+    }
+
+    set cfg {}
+    foreach iface_id $ifaces {
+	set cfg [concat $cfg [routerUncfggenIfc $node_id $iface_id]]
+
+	lappend cfg ""
+    }
+
+    return $cfg
 }
 
 #****f* router.tcl/router.generateConfig
@@ -133,95 +172,40 @@ proc $MODULE.confNewIfc { node_id iface_id } {
 #****
 proc $MODULE.generateConfig { node_id } {
     set cfg {}
-
-    switch -exact -- [getNodeModel $node_id] {
-	"quagga" -
-	"frr" {
-	    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-	    # setup interfaces
-	    foreach iface_id [allIfcList $node_id] {
-		lappend cfg "interface $iface_id"
-		set addrs [getIfcIPv4addrs $node_id $iface_id]
-		foreach addr $addrs {
-		    if { $addr != "" } {
-			lappend cfg " ip address $addr"
-		    }
-		}
-
-		set addrs [getIfcIPv6addrs $node_id $iface_id]
-		foreach addr $addrs {
-		    if { $addr != "" } {
-			lappend cfg " ipv6 address $addr"
-		    }
-		}
-
-		if { [getIfcOperState $node_id $iface_id] == "down" } {
-		    lappend cfg " shutdown"
-		}
-
-		lappend cfg "!"
-	    }
-
-	    # setup routing protocols
-	    foreach proto { rip ripng ospf ospf6 bgp } {
-		if { $proto == "bgp" } {
-		    set proto "bgp 1000"
-		}
-
-		set protocfg [netconfFetchSection $node_id "router $proto"]
-		if { $protocfg != "" } {
-		    lappend cfg "router $proto"
-		    foreach line $protocfg {
-			lappend cfg "$line"
-		    }
-
-		    if { $proto == "ospf6" } {
-			foreach iface_id [allIfcList $node_id] {
-			    if { $iface_id == "lo0" } {
-				continue
-			    }
-
-			    lappend cfg " interface $iface_id area 0.0.0.0"
-			}
-		    }
-
-		    lappend cfg "!"
-		}
-	    }
-
-	    # setup IPv4/IPv6 static routes
-	    foreach statrte [getStatIPv4routes $node_id] {
-		lappend cfg "ip route $statrte"
-	    }
-
-	    foreach statrte [getStatIPv6routes $node_id] {
-		lappend cfg "ipv6 route $statrte"
-	    }
-
-	    # setup automatic default routes (static)
-	    if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
-		foreach statrte [getDefaultIPv4routes $node_id] {
-		    lappend cfg "ip route $statrte"
-		}
-
-		foreach statrte [getDefaultIPv6routes $node_id] {
-		    lappend cfg "ipv6 route $statrte"
-		}
-
-		setDefaultIPv4routes $node_id {}
-		setDefaultIPv6routes $node_id {}
-	    }
-	}
-	"static" {
-	    set cfg [concat $cfg [nodeCfggenIfcIPv4 $node_id]]
-	    set cfg [concat $cfg [nodeCfggenIfcIPv6 $node_id]]
-	    lappend cfg ""
-
-	    set cfg [concat $cfg [nodeCfggenRouteIPv4 $node_id]]
-	    set cfg [concat $cfg [nodeCfggenRouteIPv6 $node_id]]
+    if { [getCustomEnabled $node_id] != true } {
+	foreach protocol { rip ripng ospf ospf6 bgp } {
+	    set cfg [concat $cfg [getRouterProtocolCfg $node_id $protocol]]
 	}
     }
+
+    set subnet_gws {}
+    set nodes_l2data [dict create]
+    if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
+	lassign [getDefaultGateways $node_id $subnet_gws $nodes_l2data] my_gws subnet_gws nodes_l2data
+	lassign [getDefaultRoutesConfig $node_id $my_gws] all_routes4 all_routes6
+
+	setDefaultIPv4routes $node_id $all_routes4
+	setDefaultIPv6routes $node_id $all_routes6
+    } else {
+	setDefaultIPv4routes $node_id {}
+	setDefaultIPv6routes $node_id {}
+    }
+
+    set cfg [concat $cfg [routerRoutesCfggen $node_id]]
+
+    return $cfg
+}
+
+proc $MODULE.generateUnconfig { node_id } {
+    set cfg {}
+
+    if { [getCustomEnabled $node_id] != true } {
+	foreach protocol { rip ripng ospf ospf6 bgp } {
+	    set cfg [concat $cfg [getRouterProtocolUnconfig $node_id $protocol]]
+	}
+    }
+
+    set cfg [concat $cfg [routerRoutesUncfggen $node_id]]
 
     return $cfg
 }
@@ -236,8 +220,8 @@ proc $MODULE.generateConfig { node_id } {
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifacePrefix { l r } {
-    return [l3IfcName $l $r]
+proc $MODULE.ifacePrefix {} {
+    return "eth"
 }
 
 #****f* router.tcl/router.IPAddrRange
@@ -297,17 +281,7 @@ proc $MODULE.virtlayer {} {
 #   * appl -- application that reads the configuration
 #****
 proc $MODULE.bootcmd { node_id } {
-    switch -exact -- [getNodeModel $node_id] {
-	"quagga" {
-	    return "/usr/local/bin/quaggaboot.sh"
-	}
-	"frr" {
-	    return "/usr/local/bin/frrboot.sh"
-	}
-	"static" {
-	    return "/bin/sh"
-	}
-    }
+    return "/bin/sh"
 }
 
 #****f* router.tcl/router.shellcmds
@@ -343,12 +317,24 @@ proc $MODULE.shellcmds {} {
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node_id iface_id } {
-    return [l3node.nghook $eid $node_id $iface_id]
+    return [list $node_id-[getIfcName $node_id $iface_id] ether]
 }
 
 ################################################################################
 ############################ INSTANTIATE PROCEDURES ############################
 ################################################################################
+
+#****f* router.tcl/router.prepareSystem
+# NAME
+#   router.prepareSystem -- prepare system
+# SYNOPSIS
+#   router.prepareSystem
+# FUNCTION
+#   Does nothing
+#****
+proc $MODULE.prepareSystem {} {
+    # nothing to do
+}
 
 #****f* router.tcl/router.nodeCreate
 # NAME
@@ -365,7 +351,8 @@ proc $MODULE.nghook { eid node_id iface_id } {
 #   * node_id - node id
 #****
 proc $MODULE.nodeCreate { eid node_id } {
-    l3node.nodeCreate $eid $node_id
+    prepareFilesystemForNode $node_id
+    createNodeContainer $node_id
 }
 
 #****f* router.tcl/router.nodeNamespaceSetup
@@ -380,7 +367,7 @@ proc $MODULE.nodeCreate { eid node_id } {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeNamespaceSetup { eid node_id } {
-    l3node.nodeNamespaceSetup $eid $node_id
+    attachToL3NodeNamespace $node_id
 }
 
 #****f* router.tcl/router.nodeInitConfigure
@@ -396,12 +383,35 @@ proc $MODULE.nodeNamespaceSetup { eid node_id } {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeInitConfigure { eid node_id } {
-    l3node.nodeInitConfigure $eid $node_id
-    enableIPforwarding $eid $node_id
+    configureICMPoptions $node_id
+    enableIPforwarding $node_id
+    startRoutingDaemons $node_id
 }
 
 proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
-    l3node.nodePhysIfacesCreate $eid $node_id $ifaces
+    nodePhysIfacesCreate $node_id $ifaces
+}
+
+proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
+    nodeLogIfacesCreate $node_id $ifaces
+}
+
+#****f* router.tcl/router.nodeIfacesConfigure
+# NAME
+#   router.nodeIfacesConfigure -- configure router node interfaces
+# SYNOPSIS
+#   router.nodeIfacesConfigure $eid $node_id $ifaces
+# FUNCTION
+#   Configure interfaces on a router. Set MAC, MTU, queue parameters, assign the IP
+#   addresses to the interfaces, etc. This procedure can be called if the node
+#   is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
+    startNodeIfaces $node_id $ifaces
 }
 
 #****f* router.tcl/router.nodeConfigure
@@ -417,15 +427,37 @@ proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
 #   * node_id - node id
 #****
 proc $MODULE.nodeConfigure { eid node_id } {
-    l3node.nodeConfigure $eid $node_id
+    runConfOnNode $node_id
 }
 
 ################################################################################
 ############################# TERMINATE PROCEDURES #############################
 ################################################################################
 
+#****f* router.tcl/router.nodeIfacesUnconfigure
+# NAME
+#   router.nodeIfacesUnconfigure -- unconfigure router node interfaces
+# SYNOPSIS
+#   router.nodeIfacesUnconfigure $eid $node_id $ifaces
+# FUNCTION
+#   Unconfigure interfaces on a router to a default state. Set name to iface_id,
+#   flush IP addresses to the interfaces, etc. This procedure can be called if
+#   the node is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
+    unconfigNodeIfaces $eid $node_id $ifaces
+}
+
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
-    l3node.nodeIfacesDestroy $eid $node_id $ifaces
+    nodeIfacesDestroy $eid $node_id $ifaces
+}
+
+proc $MODULE.nodeUnconfigure { eid node_id } {
+    unconfigNode $eid $node_id
 }
 
 #****f* router.tcl/router.nodeShutdown
@@ -441,7 +473,8 @@ proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
 #   * node_id - node id
 #****
 proc $MODULE.nodeShutdown { eid node_id } {
-    l3node.nodeShutdown $eid $node_id
+    killExtProcess "wireshark.*[getNodeName $node_id].*\\($eid\\)"
+    killAllNodeProcesses $eid $node_id
 }
 
 #****f* router.tcl/router.nodeDestroy
@@ -458,7 +491,10 @@ proc $MODULE.nodeShutdown { eid node_id } {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeDestroy { eid node_id } {
-    l3node.nodeDestroy $eid $node_id
+    destroyNodeVirtIfcs $eid $node_id
+    removeNodeContainer $eid $node_id
+    destroyNamespace $eid-$node_id
+    removeNodeFS $eid $node_id
 }
 
 ################################################################################

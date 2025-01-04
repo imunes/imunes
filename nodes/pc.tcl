@@ -86,6 +86,46 @@ proc $MODULE.confNewIfc { node_id iface_id } {
     autoMACaddr $node_id $iface_id
 }
 
+proc $MODULE.generateConfigIfaces { node_id ifaces } {
+    set all_ifaces "[ifcList $node_id] [logIfcList $node_id]"
+    if { $ifaces == "*" } {
+	set ifaces $all_ifaces
+    } else {
+	# sort physical ifaces before logical ones (because of vlans)
+	set negative_ifaces [removeFromList $all_ifaces $ifaces]
+	set ifaces [removeFromList $all_ifaces $negative_ifaces]
+    }
+
+    set cfg {}
+    foreach iface_id $ifaces {
+	set cfg [concat $cfg [nodeCfggenIfc $node_id $iface_id]]
+
+	lappend cfg ""
+    }
+
+    return $cfg
+}
+
+proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
+    set all_ifaces "[ifcList $node_id] [logIfcList $node_id]"
+    if { $ifaces == "*" } {
+	set ifaces $all_ifaces
+    } else {
+	# sort physical ifaces before logical ones
+	set negative_ifaces [removeFromList $all_ifaces $ifaces]
+	set ifaces [removeFromList $all_ifaces $negative_ifaces]
+    }
+
+    set cfg {}
+    foreach iface_id $ifaces {
+	set cfg [concat $cfg [nodeUncfggenIfc $node_id $iface_id]]
+
+	lappend cfg ""
+    }
+
+    return $cfg
+}
+
 #****f* pc.tcl/pc.generateConfig
 # NAME
 #   pc.generateConfig -- configuration generator
@@ -104,12 +144,47 @@ proc $MODULE.confNewIfc { node_id iface_id } {
 #****
 proc $MODULE.generateConfig { node_id } {
     set cfg {}
-    set cfg [concat $cfg [nodeCfggenIfcIPv4 $node_id]]
-    set cfg [concat $cfg [nodeCfggenIfcIPv6 $node_id]]
+
+    if { [getCustomEnabled $node_id] != true } {
+	set cfg [concat $cfg [nodeCfggenStaticRoutes4 $node_id]]
+	set cfg [concat $cfg [nodeCfggenStaticRoutes6 $node_id]]
+
+	lappend cfg ""
+    }
+
+    set subnet_gws {}
+    set nodes_l2data [dict create]
+    if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
+	lassign [getDefaultGateways $node_id $subnet_gws $nodes_l2data] my_gws subnet_gws nodes_l2data
+	lassign [getDefaultRoutesConfig $node_id $my_gws] all_routes4 all_routes6
+
+	setDefaultIPv4routes $node_id $all_routes4
+	setDefaultIPv6routes $node_id $all_routes6
+    } else {
+	setDefaultIPv4routes $node_id {}
+	setDefaultIPv6routes $node_id {}
+    }
+
+    set cfg [concat $cfg [nodeCfggenAutoRoutes4 $node_id]]
+    set cfg [concat $cfg [nodeCfggenAutoRoutes6 $node_id]]
+
     lappend cfg ""
 
-    set cfg [concat $cfg [nodeCfggenRouteIPv4 $node_id]]
-    set cfg [concat $cfg [nodeCfggenRouteIPv6 $node_id]]
+    return $cfg
+}
+
+proc $MODULE.generateUnconfig { node_id } {
+    set cfg {}
+
+    set cfg [concat $cfg [nodeUncfggenStaticRoutes4 $node_id]]
+    set cfg [concat $cfg [nodeUncfggenStaticRoutes6 $node_id]]
+
+    lappend cfg ""
+
+    set cfg [concat $cfg [nodeUncfggenAutoRoutes4 $node_id]]
+    set cfg [concat $cfg [nodeUncfggenAutoRoutes6 $node_id]]
+
+    lappend cfg ""
 
     return $cfg
 }
@@ -124,8 +199,8 @@ proc $MODULE.generateConfig { node_id } {
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifacePrefix { l r } {
-    return [l3IfcName $l $r]
+proc $MODULE.ifacePrefix {} {
+    return "eth"
 }
 
 #****f* pc.tcl/pc.IPAddrRange
@@ -221,12 +296,24 @@ proc $MODULE.shellcmds {} {
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node_id iface_id } {
-    return [l3node.nghook $eid $node_id $iface_id]
+    return [list $node_id-[getIfcName $node_id $iface_id] ether]
 }
 
 ################################################################################
 ############################ INSTANTIATE PROCEDURES ############################
 ################################################################################
+
+#****f* pc.tcl/pc.prepareSystem
+# NAME
+#   pc.prepareSystem -- prepare system
+# SYNOPSIS
+#   pc.prepareSystem
+# FUNCTION
+#   Does nothing
+#****
+proc $MODULE.prepareSystem {} {
+    # nothing to do
+}
 
 #****f* pc.tcl/pc.nodeCreate
 # NAME
@@ -240,7 +327,8 @@ proc $MODULE.nghook { eid node_id iface_id } {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeCreate { eid node_id } {
-    l3node.nodeCreate $eid $node_id
+    prepareFilesystemForNode $node_id
+    createNodeContainer $node_id
 }
 
 #****f* pc.tcl/pc.nodeNamespaceSetup
@@ -255,7 +343,7 @@ proc $MODULE.nodeCreate { eid node_id } {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeNamespaceSetup { eid node_id } {
-    l3node.nodeNamespaceSetup $eid $node_id
+    attachToL3NodeNamespace $node_id
 }
 
 #****f* pc.tcl/pc.nodeInitConfigure
@@ -271,11 +359,33 @@ proc $MODULE.nodeNamespaceSetup { eid node_id } {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeInitConfigure { eid node_id } {
-    l3node.nodeInitConfigure $eid $node_id
+    configureICMPoptions $node_id
 }
 
 proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
-    l3node.nodePhysIfacesCreate $eid $node_id $ifaces
+    nodePhysIfacesCreate $node_id $ifaces
+}
+
+proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
+    nodeLogIfacesCreate $node_id $ifaces
+}
+
+#****f* pc.tcl/pc.nodeIfacesConfigure
+# NAME
+#   pc.nodeIfacesConfigure -- configure pc node interfaces
+# SYNOPSIS
+#   pc.nodeIfacesConfigure $eid $node_id $ifaces
+# FUNCTION
+#   Configure interfaces on a pc. Set MAC, MTU, queue parameters, assign the IP
+#   addresses to the interfaces, etc. This procedure can be called if the node
+#   is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
+    startNodeIfaces $node_id $ifaces
 }
 
 #****f* pc.tcl/pc.nodeConfigure
@@ -292,15 +402,37 @@ proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeConfigure { eid node_id } {
-    l3node.nodeConfigure $eid $node_id
+    runConfOnNode $node_id
 }
 
 ################################################################################
 ############################# TERMINATE PROCEDURES #############################
 ################################################################################
 
+#****f* pc.tcl/pc.nodeIfacesUnconfigure
+# NAME
+#   pc.nodeIfacesUnconfigure -- unconfigure pc node interfaces
+# SYNOPSIS
+#   pc.nodeIfacesUnconfigure $eid $node_id $ifaces
+# FUNCTION
+#   Unconfigure interfaces on a pc to a default state. Set name to iface_id,
+#   flush IP addresses to the interfaces, etc. This procedure can be called if
+#   the node is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
+    unconfigNodeIfaces $eid $node_id $ifaces
+}
+
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
-    l3node.nodeIfacesDestroy $eid $node_id $ifaces
+    nodeIfacesDestroy $eid $node_id $ifaces
+}
+
+proc $MODULE.nodeUnconfigure { eid node_id } {
+    unconfigNode $eid $node_id
 }
 
 #****f* pc.tcl/pc.nodeShutdown
@@ -317,7 +449,8 @@ proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeShutdown { eid node_id } {
-    l3node.nodeShutdown $eid $node_id
+    killExtProcess "wireshark.*[getNodeName $node_id].*\\($eid\\)"
+    killAllNodeProcesses $eid $node_id
 }
 
 #****f* pc.tcl/pc.nodeDestroy
@@ -334,7 +467,10 @@ proc $MODULE.nodeShutdown { eid node_id } {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeDestroy { eid node_id } {
-    l3node.nodeDestroy $eid $node_id
+    destroyNodeVirtIfcs $eid $node_id
+    removeNodeContainer $eid $node_id
+    destroyNamespace $eid-$node_id
+    removeNodeFS $eid $node_id
 }
 
 ################################################################################

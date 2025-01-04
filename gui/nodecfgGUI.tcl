@@ -2415,18 +2415,6 @@ proc configGUI_routingModelApply { wi node_id } {
 	    setNodeProtocol $node_id "ospf" $ospfEnable
 	    setNodeProtocol $node_id "ospf6" $ospf6Enable
 	    setNodeProtocol $node_id "bgp" $bgpEnable
-	    if { [getNodeType $node_id] == "nat64" } {
-		foreach proto { rip ripng ospf ospf6 bgp } {
-		    set protocfg [netconfFetchSection $node_id "router $proto"]
-		    if { $protocfg != "" } {
-			set protocfg [linsert $protocfg 0 "router $proto"]
-			set protocfg [linsert $protocfg end "!"]
-			set protocfg [linsert $protocfg [lsearch $protocfg " network *"] " redistribute kernel" ]
-			netconfClearSection $node_id "router $proto"
-			netconfInsertSection $node_id $protocfg
-		    }
-		}
-	    }
 	} else {
 	    $wi.routing.protocols.rip configure -state disabled
 	    $wi.routing.protocols.ripng configure -state disabled
@@ -2815,7 +2803,8 @@ proc customConfigGUIFillDefaults { wi node_id } {
     set cfg_id [$wi.nb tab current -text]
     set node_type [getNodeType $node_id]
     set cmd [$node_type.bootcmd $node_id]
-    set cfg [$node_type.generateConfig $node_id]
+    set cfg [$node_type.generateConfigIfaces $node_id "*"]
+    set cfg [concat $cfg [$node_type.generateConfig $node_id]]
     set w $wi.nb.$cfg_id
 
     if { [$w.bootcmd_e get] != "" || [$w.editor get 1.0 {end -1c}] != "" } {

@@ -1131,25 +1131,34 @@ proc nodePhysIfacesCreate { node_id ifaces } {
     global ifc_dad_disable
 
     set jail_id "$eid.$node_id"
+
+    set node_type [getNodeType $node_id]
+
     # Create a vimage
     # Create "physical" network interfaces
     foreach iface_id $ifaces {
-	set iface_name $iface_id
-	switch -exact [string trimright $iface_name 0123456789] {
+	set iface_name [getIfcName $node_id $iface_id]
+	set public_hook $node_id-$iface_name
+	set prefix [string trimright $iface_name "0123456789"]
+	if { $node_type in "ext extnat" } {
+	    set iface_name $node_id
+	}
+
+	switch -exact $prefix {
 	    e {
 	    }
 	    eth {
 		# save newly created ngnodeX into a shell variable ifid and
-		# rename the ng node to $node_id-$iface_name (unique to this experiment)
+		# rename the ng node to $public_hook (unique to this experiment)
 		set cmds "
-		  ifid=\$(printf \"mkpeer . eiface $node_id-$iface_name ether \n
-		  show .:$node_id-$iface_name\" | jexec $eid ngctl -f - | head -n1 | cut -d' ' -f4)"
-		set cmds "$cmds; jexec $eid ngctl name \$ifid: $node_id-$iface_name"
-		set cmds "$cmds; jexec $eid ifconfig \$ifid name $node_id-$iface_name"
+		  ifid=\$(printf \"mkpeer . eiface $public_hook ether \n
+		  show .:$public_hook\" | jexec $eid ngctl -f - | head -n1 | cut -d' ' -f4)"
+		set cmds "$cmds; jexec $eid ngctl name \$ifid: $public_hook"
+		set cmds "$cmds; jexec $eid ifconfig \$ifid name $public_hook"
 
 		pipesExec $cmds "hold"
-		pipesExec "jexec $eid ifconfig $node_id-$iface_name vnet $node_id" "hold"
-		pipesExec "jexec $jail_id ifconfig $node_id-$iface_name name $iface_name" "hold"
+		pipesExec "jexec $eid ifconfig $public_hook vnet $node_id" "hold"
+		pipesExec "jexec $jail_id ifconfig $public_hook name $iface_name" "hold"
 
 		set ether [getIfcMACaddr $node_id $iface_id]
                 if { $ether == "" } {
@@ -1168,11 +1177,11 @@ proc nodePhysIfacesCreate { node_id ifaces } {
 		set outifc "$eid-$node_id"
 
 		# save newly created ngnodeX into a shell variable ifid and
-		# rename the ng node to $node_id-$iface_name (unique to this experiment)
+		# rename the ng node to $public_hook (unique to this experiment)
 		set cmds "
-		  ifid=\$(printf \"mkpeer . eiface $node_id-$iface_name ether \n
-		  show .:$node_id-$iface_name\" | jexec $eid ngctl -f - | head -n1 | cut -d' ' -f4)"
-		set cmds "$cmds; jexec $eid ngctl name \$ifid: $node_id-$iface_name"
+		  ifid=\$(printf \"mkpeer . eiface $public_hook ether \n
+		  show .:$public_hook\" | jexec $eid ngctl -f - | head -n1 | cut -d' ' -f4)"
+		set cmds "$cmds; jexec $eid ngctl name \$ifid: $public_hook"
 		set cmds "$cmds; jexec $eid ifconfig \$ifid name $outifc"
 
 		pipesExec $cmds "hold"
@@ -1215,17 +1224,20 @@ proc destroyNamespace { ns } {}
 # INPUTS
 #   * node_id -- node id
 #****
-proc nodeLogIfacesCreate { node_id } {
+proc nodeLogIfacesCreate { node_id ifaces } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
     set jail_id "$eid.$node_id"
 
-    foreach iface_id [logIfcList $node_id] {
-	set iface_name $iface_id
+    foreach iface_id $ifaces {
+	set iface_name [getIfcName $node_id $iface_id]
 	switch -exact [getLogIfcType $node_id $iface_id] {
 	    vlan {
-		# physical interfaces are created when creating links, so VLANs
-		# must be created after links
+		set tag [getIfcVlanTag $node_id $iface_id]
+		set dev [getIfcVlanDev $node_id $iface_id]
+		if { $tag != "" && $dev != "" } {
+		    pipesExec "jexec $jail_id [getVlanTagIfcCmd $iface_name $dev $tag]" "hold"
+		}
 	    }
 	    lo {
 		if { $iface_name != "lo0" } {
@@ -1272,42 +1284,6 @@ proc isNodeInitNet { node_id } {
     return true
 }
 
-#****f* freebsd.tcl/startIfcsNode
-# NAME
-#   startIfcsNode -- start interfaces on node
-# SYNOPSIS
-#   startIfcsNode $node_id
-# FUNCTION
-#  Starts all interfaces on the given node.
-# INPUTS
-#   * node_id -- node id
-#****
-proc startIfcsNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
-    set jail_id "$eid.$node_id"
-    foreach ifc [allIfcList $node_id] {
-	set mtu [getIfcMTU $node_id $ifc]
-	if { [getLogIfcType $node_id $ifc] == "vlan" } {
-	    set tag [getIfcVlanTag $node_id $ifc]
-	    set dev [getIfcVlanDev $node_id $ifc]
-	    if { $tag != "" && $dev != "" } {
-		pipesExec "jexec $jail_id ifconfig $dev.$tag create name $ifc" "hold"
-	    }
-	}
-
-	if { [getIfcOperState $node_id $ifc] == "up" } {
-	    pipesExec "jexec $jail_id ifconfig $ifc mtu $mtu up" "hold"
-	} else {
-	    pipesExec "jexec $jail_id ifconfig $ifc mtu $mtu" "hold"
-	}
-
-	if { [getIfcNatState $node_id $ifc] == "on" } {
-	    pipesExec "jexec $jail_id sh -c 'echo \"map $ifc 0/0 -> 0/32\" | ipnat -f -'" "hold"
-	}
-    }
-}
-
 #****f* freebsd.tcl/runConfOnNode
 # NAME
 #   runConfOnNode -- run configuration script on node
@@ -1328,14 +1304,7 @@ proc runConfOnNode { node_id } {
 
 	set bootcmd [getCustomConfigCommand $node_id $selected]
 	set bootcfg [getCustomConfig $node_id $selected]
-	if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
-	    foreach statrte [getDefaultIPv4routes $node_id] {
-		lappend bootcfg [getIPv4RouteCmd $statrte]
-	    }
-	    foreach statrte [getDefaultIPv6routes $node_id] {
-		lappend bootcfg [getIPv6RouteCmd $statrte]
-	    }
-	}
+	set bootcfg [concat $bootcfg [[getNodeType $node_id].generateConfig $node_id]]
 	set confFile "custom.conf"
     } else {
 	set bootcfg [[getNodeType $node_id].generateConfig $node_id]
@@ -1345,12 +1314,6 @@ proc runConfOnNode { node_id } {
 
     generateHostsFile $node_id
 
-    foreach ifc [allIfcList $node_id] {
-	if { [getIfcOperState $node_id $ifc] == "down" } {
-	    pipesExec "jexec $jail_id ifconfig $ifc down" "hold"
-	}
-    }
-
     set cfg [join $bootcfg "\n"]
     writeDataToNodeFile $node_id /$confFile $cfg
     set cmds "$bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
@@ -1358,6 +1321,85 @@ proc runConfOnNode { node_id } {
     set cmds "$cmds mv /tout.log /out.log ;"
     set cmds "$cmds mv /terr.log /err.log"
     pipesExec "jexec $jail_id sh -c '$cmds'" "hold"
+}
+
+proc startNodeIfaces { node_id ifaces } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set jail_id "$eid.$node_id"
+
+    if { [getCustomEnabled $node_id] == true } {
+	return
+    }
+
+    set bootcfg [[getNodeType $node_id].generateConfigIfaces $node_id $ifaces]
+    set bootcmd [[getNodeType $node_id].bootcmd $node_id]
+    set confFile "boot_ifaces.conf"
+
+    #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
+    set cfg [join "{set -x} $bootcfg" "\n"]
+    writeDataToNodeFile $node_id /$confFile $cfg
+    set cmds "$bootcmd /$confFile >> /tout_ifaces.log 2>> /terr_ifaces.log ;"
+    # renaming the file signals that we're done
+    set cmds "$cmds mv /tout_ifaces.log /out_ifaces.log ;"
+    set cmds "$cmds mv /terr_ifaces.log /err_ifaces.log"
+    pipesExec "jexec $jail_id sh -c '$cmds'" "hold"
+}
+
+proc unconfigNode { eid node_id } {
+    set jail_id "$eid.$node_id"
+
+    set bootcfg [[getNodeType $node_id].generateUnconfig $node_id]
+    set bootcmd [[getNodeType $node_id].bootcmd $node_id]
+    set confFile "unboot.conf"
+
+    #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
+    set cfg [join "{set -x} $bootcfg" "\n"]
+    writeDataToNodeFile $node_id /$confFile $cfg
+    set cmds "$bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
+    # renaming the file signals that we're done
+    set cmds "$cmds mv /tout.log /out.log ;"
+    set cmds "$cmds mv /terr.log /err.log"
+    pipesExec "jexec $jail_id sh -c '$cmds'" "hold"
+}
+
+proc unconfigNodeIfaces { eid node_id ifaces } {
+    set jail_id "$eid.$node_id"
+
+    if { [getCustomEnabled $node_id] == true } {
+	return
+    }
+
+    set bootcfg [[getNodeType $node_id].generateUnconfigIfaces $node_id $ifaces]
+    set bootcmd [[getNodeType $node_id].bootcmd $node_id]
+    set confFile "unboot_ifaces.conf"
+
+    #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
+    set cfg [join "{set -x} $bootcfg" "\n"]
+    writeDataToNodeFile $node_id /$confFile $cfg
+    set cmds "$bootcmd /$confFile >> /tout_ifaces.log 2>> /terr_ifaces.log ;"
+    # renaming the file signals that we're done
+    set cmds "$cmds mv /tout_ifaces.log /out_ifaces.log ;"
+    set cmds "$cmds mv /terr_ifaces.log /err_ifaces.log"
+    pipesExec "jexec $jail_id sh -c '$cmds'" "hold"
+}
+
+proc isNodeIfacesConfigured { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set jail_id "$eid.$node_id"
+
+    if { [[getNodeType $node_id].virtlayer] == "NATIVE" || [getCustomEnabled $node_id] == true } {
+	return true
+    }
+
+    try {
+	exec jexec $jail_id test -f /out_ifaces.log > /dev/null
+    } on error {} {
+	return false
+    }
+
+    return true
 }
 
 proc isNodeConfigured { node_id } {
@@ -1379,15 +1421,32 @@ proc isNodeConfigured { node_id } {
 
 proc isNodeError { node_id } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
-    set jail_id "$eid.$node_id"
 
     if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
 	return false
     }
 
-    try {
-	exec jexec $jail_id test -s /err.log > /dev/null
-    } on error {} {
+    set jail_id "$eid.$node_id"
+
+    catch { exec jexec $jail_id sed "/^+ /d" /err.log } errlog
+    if { $errlog == "" } {
+	return false
+    }
+
+    return true
+}
+
+proc isNodeErrorIfaces { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    if { [getCustomEnabled $node_id] || [[getNodeType $node_id].virtlayer] == "NATIVE" } {
+	return false
+    }
+
+    set jail_id "$eid.$node_id"
+
+    catch { exec jexec $jail_id sed "/^+ /d" /err_ifaces.log } errlog
+    if { $errlog == "" } {
 	return false
     }
 
@@ -1794,14 +1853,14 @@ proc nodeIfacesDestroy { eid node_id ifcs } {
 #   * eid -- experiment id
 #   * widget -- status widget
 #****
-proc terminate_removeExperimentContainer { eid widget } {
+proc terminate_removeExperimentContainer { eid } {
     # Remove the main vimage which contained all other nodes, hopefully we
     # cleaned everything.
     catch "exec jexec $eid kill -9 -1 2> /dev/null"
     exec jail -r $eid
 }
 
-proc terminate_removeExperimentFiles { eid widget } {
+proc terminate_removeExperimentFiles { eid } {
     global vroot_unionfs execMode
 
     set VROOT_BASE [getVrootDir]
@@ -1907,7 +1966,7 @@ proc getCpuCount {} {
 #   * eid -- experiment id
 #   * node_id -- node id
 #****
-proc captureExtIfc { eid node_id } {
+proc captureExtIfc { eid node_id iface_id } {
     global execMode
 
     set ifname [getNodeName $node_id]
@@ -1933,7 +1992,7 @@ proc captureExtIfc { eid node_id } {
 	}
     }
 
-    captureExtIfcByName $eid $ifname
+    captureExtIfcByName $eid $ifname $node_id
 }
 
 #****f* freebsd.tcl/captureExtIfcByName
@@ -1947,7 +2006,7 @@ proc captureExtIfc { eid node_id } {
 #   * eid -- experiment id
 #   * ifname -- physical interface name
 #****
-proc captureExtIfcByName { eid ifname } {
+proc captureExtIfcByName { eid ifname node_id } {
     pipesExec "ifconfig $ifname vnet $eid" "hold"
     pipesExec "jexec $eid ifconfig $ifname up promisc" "hold"
 }
@@ -1963,17 +2022,17 @@ proc captureExtIfcByName { eid ifname } {
 #   * eid -- experiment id
 #   * node_id -- node id
 #****
-proc releaseExtIfc { eid node_id } {
+proc releaseExtIfc { eid node_id iface_id } {
     set ifname [getNodeName $node_id]
-    if { [getEtherVlanEnabled $node_id] } {
-	set vlan [getEtherVlanTag $node_id]
+    set vlan [getEtherVlanTag $node_id]
+    if { $vlan != "" && [getEtherVlanEnabled $node_id] } {
 	set ifname $ifname.$vlan
 	catch { exec ifconfig $ifname -vnet $eid destroy }
 
 	return
     }
 
-    releaseExtIfcByName $eid $ifname
+    releaseExtIfcByName $eid $ifname $node_id
 }
 
 #****f* freebsd.tcl/releaseExtIfcByName
@@ -1987,7 +2046,7 @@ proc releaseExtIfc { eid node_id } {
 #   * eid -- experiment id
 #   * ifname -- physical interface name
 #****
-proc releaseExtIfcByName { eid ifname } {
+proc releaseExtIfcByName { eid ifname node_id } {
     pipesExec "ifconfig $ifname -vnet $eid" "hold"
     pipesExec "ifconfig $ifname up -promisc" "hold"
 }
@@ -1996,15 +2055,16 @@ proc releaseExtIfcByName { eid ifname } {
 # NAME
 #   enableIPforwarding -- enable IP forwarding
 # SYNOPSIS
-#   enableIPforwarding $eid $node_id
+#   enableIPforwarding $node_id
 # FUNCTION
 #   Enables IPv4 and IPv6 forwarding on the given node.
 # INPUTS
-#   * eid -- experiment id
 #   * node_id -- node id
 #****
-proc enableIPforwarding { eid node_id } {
+proc enableIPforwarding { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
     global ipFastForwarding
+
     pipesExec "jexec $eid\.$node_id sysctl net.inet.ip.forwarding=1" "hold"
     if { $ipFastForwarding } {
 	pipesExec "jexec $eid\.$node_id sysctl net.inet.ip.fastforwarding=1" "hold"
@@ -2167,29 +2227,70 @@ proc inetdServiceRestartCmds {} {
     return "service inetd onerestart"
 }
 
-# XXX NAT64 procedures
-proc createStartTunIfc { eid node_id } {
-    # create and start tun interface and return its name
-    catch { exec jexec $eid.$node_id ifconfig tun create } tun
-    exec jexec $eid.$node_id ifconfig $tun inet6 -ifdisabled
-    exec jexec $eid.$node_id ifconfig $tun up
+# XXX nat64 procedures
+proc configureTunIface { tayga4pool tayga6prefix } {
+    set cfg {}
 
-    return $tun
+    # we cannot set interface name here because tayga doesn't see it if we do
+    lappend cfg "ifid=\$(ifconfig tun create)"
+    lappend cfg "ifconfig \$ifid inet6 -ifdisabled"
+    lappend cfg "[getStateIfcCmd "\$ifid" "up"]"
+    lappend cfg "[getIPv4IfcRouteCmd $tayga4pool "\$ifid"]"
+    lappend cfg "[getIPv6IfcRouteCmd $tayga6prefix "\$ifid"]"
+    lappend cfg "sed -i '' \"s/tun-device\ttun64/tun-device\t\$ifid/\" /usr/local/etc/tayga.conf"
+
+    if { $tayga4pool != "" } {
+	lappend cfg "vtysh << __EOF__"
+	lappend cfg "conf term"
+
+	lappend cfg "!"
+	lappend cfg "ip route $tayga4pool \$ifid"
+
+	lappend cfg "!"
+	lappend cfg "__EOF__"
+    }
+
+    if { $tayga6prefix != "" } {
+	lappend cfg "vtysh << __EOF__"
+	lappend cfg "conf term"
+
+	lappend cfg "ipv6 route $tayga6prefix \$ifid"
+
+	lappend cfg "!"
+	lappend cfg "__EOF__"
+    }
+
+    return $cfg
 }
 
-proc prepareTaygaConf { eid node_id data datadir } {
-    exec jexec $eid.$node_id mkdir -p $datadir
-    writeDataToNodeFile $node_id "/usr/local/etc/tayga.conf" $data
-}
+proc unconfigureTunIface { tayga4pool tayga6prefix } {
+    set cfg {}
 
-proc taygaShutdown { eid node_id } {
-    catch "exec jexec $eid.$node_id killall -9 tayga"
-    exec jexec $eid.$node_id rm -rf /var/db/tayga
-}
+    lappend cfg "ifid=\$(cat /usr/local/etc/tayga.conf | grep tun-device | awk '{print \$NF}')"
+    if { $tayga4pool != "" } {
+	lappend cfg "vtysh << __EOF__"
+	lappend cfg "conf term"
 
-proc taygaDestroy { eid node_id } {
-    global nat64ifc_$eid.$node_id
-    catch { exec jexec $eid.$node_id ifconfig [set nat64ifc_$eid.$node_id] destroy }
+	lappend cfg "!"
+	lappend cfg "no ip route $tayga4pool \$ifid"
+
+	lappend cfg "!"
+	lappend cfg "__EOF__"
+    }
+
+    if { $tayga6prefix != "" } {
+	lappend cfg "vtysh << __EOF__"
+	lappend cfg "conf term"
+
+	lappend cfg "no ipv6 route $tayga6prefix \$ifid"
+
+	lappend cfg "!"
+	lappend cfg "__EOF__"
+    }
+
+    lappend cfg "[getStateIfcCmd "\$ifid" "down"]"
+
+    return $cfg
 }
 
 proc configureExternalConnection { eid node_id } {
@@ -2213,6 +2314,22 @@ proc configureExternalConnection { eid node_id } {
     }
 
     set cmds "$cmds\n ifconfig $outifc up"
+
+    pipesExec "$cmds" "hold"
+}
+
+proc unconfigureExternalConnection { eid node_id } {
+    set cmds ""
+    set ifc [lindex [ifcList $node_id] 0]
+    set outifc "$eid-$node_id"
+
+    foreach ipv4 [getIfcIPv4addrs $node_id $ifc] {
+	set cmds "ifconfig $outifc inet $ipv4 -alias"
+    }
+
+    foreach ipv6 [getIfcIPv6addrs $node_id $ifc] {
+	set cmds "ifconfig $outifc inet $ipv6 -alias"
+    }
 
     pipesExec "$cmds" "hold"
 }
@@ -2247,4 +2364,39 @@ proc unsetupExtNat { eid node_id ifc } {
     set cmds "echo 'map $extIfc $subnet -> 0/32' | ipnat -f - -pr"
 
     pipesExec "$cmds" "hold"
+}
+
+proc startRoutingDaemons { node_id } {
+    upvar 0 ::cf::[set ::curcfg]::eid eid
+
+    set cmds "zebra -dP0"
+    set cmds "$cmds; staticd -dP0"
+
+    foreach protocol { rip ripng ospf ospf6 } {
+	if { [getNodeProtocol $node_id $protocol] != 1 } {
+	    continue
+	}
+
+	set cmds "$cmds; ${protocol}d -dP0"
+    }
+
+    foreach protocol { ldp bfd } {
+	if { [getNodeProtocol $node_id $protocol] != 1 } {
+	    continue
+	}
+
+	set cmds "$cmds; ${protocol}d -dP0"
+    }
+
+    foreach protocol { bgp isis } {
+	if { [getNodeProtocol $node_id $protocol] != 1 } {
+	    continue
+	}
+
+	set cmds "$cmds; ${protocol}d -dP0"
+    }
+
+    set cmds "$cmds; sed -i '' '/Disabling MPLS support/d' /terr.log"
+
+    pipesExec "jexec $eid.$node_id sh -c '$cmds'" "hold"
 }

@@ -350,7 +350,10 @@ if { $execMode == "interactive" } {
 	}
 
 	if { [allSnapshotsAvailable] == 1 } {
-	    deployCfg
+	    upvar 0 ::cf::[set ::curcfg]::node_list node_list
+	    upvar 0 ::cf::[set ::curcfg]::link_list link_list
+
+	    deployCfg 1 $node_list "*" $link_list $link_list "*" "*"
 	    createExperimentFilesFromBatch
 	}
     } else {
@@ -368,11 +371,13 @@ if { $execMode == "interactive" } {
 
 	    namespace eval ::cf::[set curcfg] {}
 	    upvar 0 ::cf::[set ::curcfg]::eid eid
+	    upvar 0 ::cf::[set ::curcfg]::node_list node_list
+	    upvar 0 ::cf::[set ::curcfg]::link_list link_list
 	    set eid $eid_base
 
 	    loadCfgLegacy $cfg
 
-	    undeployCfg $eid_base
+	    undeployCfg $eid_base 1 $node_list "*" $link_list "*" "*" "*"
 	} else {
 	    vimageCleanup $eid_base
 	}

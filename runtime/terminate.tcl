@@ -43,53 +43,6 @@ proc terminate_deleteExperimentFiles { eid } {
     file delete -force $folderName
 }
 
-#****f* exec.tcl/l3node.nodeShutdown
-# NAME
-#   l3node.nodeShutdown -- layer 3 node shutdown
-# SYNOPSIS
-#   l3node.nodeShutdown $eid $node_id
-# FUNCTION
-#   Shutdowns a layer 3 node (pc, host or router).
-#   Simulates the shutdown proces of a node, kills all the services and
-#   deletes ip addresses of all interfaces.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id
-#****
-proc l3node.nodeShutdown { eid node_id } {
-    killExtProcess "wireshark.*[getNodeName $node_id].*\\($eid\\)"
-    killAllNodeProcesses $eid $node_id
-    removeNodeIfcIPaddrs $eid $node_id
-}
-
-proc l3node.nodeIfacesDestroy { eid node_id ifaces } {
-    nodeIfacesDestroy $eid $node_id $ifaces
-}
-
-proc l2node.nodeIfacesDestroy { eid node_id ifaces } {
-    nodeIfacesDestroy $eid $node_id $ifaces
-}
-
-#****f* exec.tcl/l3node.nodeDestroy
-# NAME
-#   l3node.nodeDestroy -- layer 3 node destroy
-# SYNOPSIS
-#   l3node.nodeDestroy $eid $node_id
-# FUNCTION
-#   Destroys a layer 3 node (pc, host or router).
-#   Destroys all the interfaces of the node by sending a shutdown message to
-#   netgraph nodes and on the end destroys the vimage itself.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id
-#****
-proc l3node.nodeDestroy { eid node_id } {
-    destroyNodeVirtIfcs $eid $node_id
-    removeNodeContainer $eid $node_id
-    destroyNamespace $eid-$node_id
-    removeNodeFS $eid $node_id
-}
-
 proc checkTerminate {} {}
 
 proc terminate_nodesShutdown { eid nodes nodes_count w } {
@@ -212,37 +165,6 @@ proc terminate_linksDestroy { eid links links_count w } {
     }
 }
 
-proc destroyL2Nodes { eid nodes nodes_count w } {
-    global progressbarCount execMode
-
-    set batchStep 0
-    foreach node_id $nodes {
-	displayBatchProgress $batchStep $nodes_count
-
-	try {
-	    [getNodeType $node_id].nodeDestroy $eid $node_id
-	} on error err {
-	    return -code error "Error in '[getNodeType $node_id].nodeDestroy $eid $node_id': $err"
-	}
-
-	incr batchStep
-	incr progressbarCount -1
-
-	if { $execMode != "batch" } {
-	    statline "Destroying NATIVE node [getNodeName $node_id]"
-	    $w.p configure -value $progressbarCount
-	    update
-	}
-    }
-
-    if { $nodes_count > 0 } {
-	displayBatchProgress $batchStep $nodes_count
-	if { $execMode == "batch" } {
-	    statline ""
-	}
-    }
-}
-
 proc terminate_nodesDestroy { eid nodes nodes_count w } {
     global progressbarCount execMode
 
@@ -261,7 +183,7 @@ proc terminate_nodesDestroy { eid nodes nodes_count w } {
 	incr progressbarCount -1
 
 	if { $execMode != "batch" } {
-	    statline "Destroying VIRTUALIZED node [getNodeName $node_id]"
+	    statline "Destroying node [getNodeName $node_id]"
 	    $w.p configure -value $progressbarCount
 	    update
 	}
@@ -298,15 +220,14 @@ proc finishTerminating { status msg w } {
 # SYNOPSIS
 #   undeployCfg
 # FUNCTION
-#
+#   Undeploys a current working configuration. It terminates all the nodes and links
+#   given as procedure arguments.
 #****
-proc undeployCfg { eid } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
+proc undeployCfg { eid terminate terminate_nodes destroy_nodes_ifaces terminate_links unconfigure_links unconfigure_nodes_ifaces unconfigure_nodes } {
     global progressbarCount execMode
 
-    set nodes_count [llength $node_list]
-    set links_count [llength $link_list]
+    set nodes_count [llength $terminate_nodes]
+    set links_count [llength $terminate_links]
 
     set t_start [clock milliseconds]
 
@@ -323,17 +244,19 @@ proc undeployCfg { eid } {
     }
 
     statline "Preparing for termination..."
+    # TODO: fix this mess
     set extifcs {}
     set native_nodes {}
     set virtualized_nodes {}
     set all_nodes {}
     set pseudoNodesCount 0
-    foreach node_id $node_list {
+    foreach node_id $terminate_nodes {
 	set node_type [getNodeType $node_id]
 	if { $node_type != "pseudo" } {
 	    if { [$node_type.virtlayer] == "NATIVE" } {
 		if { $node_type == "rj45" } {
 		    lappend extifcs $node_id
+		    lappend native_nodes $node_id
 		} elseif { $node_type == "extnat" } {
 		    lappend virtualized_nodes $node_id
 		} else {
@@ -350,9 +273,50 @@ proc undeployCfg { eid } {
     set virtualized_nodes_count [llength $virtualized_nodes]
     set all_nodes [concat $native_nodes $virtualized_nodes]
     set all_nodes_count [llength $all_nodes]
-    set extifcsCount [llength $extifcs]
     incr links_count [expr -$pseudoNodesCount/2]
-    set maxProgressbasCount [expr {1*$all_nodes_count + $extifcsCount + $links_count + $native_nodes_count + 3*$virtualized_nodes_count}]
+
+    set destroy_nodes_ifaces_count 0
+    set destroy_nodes_extifaces {}
+    set destroy_nodes_extifaces_count 0
+    if { $destroy_nodes_ifaces == "*" } {
+	set destroy_nodes_ifaces ""
+	foreach node_id $all_nodes {
+	    if { $node_id ni $extifcs } {
+		dict set destroy_nodes_ifaces $node_id "*"
+		incr destroy_nodes_ifaces_count
+	    } else {
+		dict set destroy_nodes_extifaces $node_id "*"
+		incr destroy_nodes_extifaces_count
+	    }
+	}
+    } else {
+	foreach {node_id ifaces} $destroy_nodes_ifaces {
+	    if { $node_id ni $extifcs } {
+		incr destroy_nodes_ifaces_count
+	    } else {
+		dict unset destroy_nodes_ifaces $node_id
+		dict set destroy_nodes_extifaces $node_id $ifaces
+		incr destroy_nodes_extifaces_count
+	    }
+	}
+    }
+
+    if { $unconfigure_nodes_ifaces == "*" } {
+	set unconfigure_nodes_ifaces ""
+	foreach node_id $all_nodes {
+	    dict set unconfigure_nodes_ifaces $node_id "*"
+	}
+	set unconfigure_nodes_ifaces_count $all_nodes_count
+    } else {
+	set unconfigure_nodes_ifaces_count [llength [dict keys $unconfigure_nodes_ifaces]]
+    }
+
+    if { $unconfigure_nodes == "*" } {
+	set unconfigure_nodes $all_nodes
+    }
+    set unconfigure_nodes_count [llength $unconfigure_nodes]
+
+    set maxProgressbasCount [expr {1 + 1*$all_nodes_count + 1*$links_count + 1*$native_nodes_count + 2*$virtualized_nodes_count + 1*$unconfigure_nodes_ifaces_count + 1*$destroy_nodes_ifaces_count + 1*$destroy_nodes_extifaces_count + 1*$unconfigure_nodes_count}]
     set progressbarCount $maxProgressbasCount
 
     set w ""
@@ -380,38 +344,50 @@ proc undeployCfg { eid } {
 
     try {
 	statline "Stopping services for NODESTOP hook..."
-	services stop "NODESTOP" "bkg" $all_nodes
+	services stop "NODESTOP" "bkg" $unconfigure_nodes
 
-	statline "Stopping all nodes..."
+	statline "Unconfiguring nodes..."
+	pipesCreate
+	terminate_nodesUnconfigure $eid $unconfigure_nodes $unconfigure_nodes_count $w
+	statline "Waiting for unconfiguration of $unconfigure_nodes_count node(s)..."
+	pipesClose
+
+	statline "Stopping nodes..."
 	pipesCreate
 	terminate_nodesShutdown $eid $all_nodes $all_nodes_count $w
 	statline "Waiting for processes on $all_nodes_count node(s) to shutdown..."
 	pipesClose
 
-	statline "Releasing external interfaces..."
+	statline "Unconfiguring physical interfaces on nodes..."
 	pipesCreate
-	terminate_releaseExternalIfaces $eid $extifcs $extifcsCount $w
-	statline "Waiting for $extifcsCount external interface(s) to be released..."
+	terminate_nodesIfacesUnconfigure $eid $unconfigure_nodes_ifaces $unconfigure_nodes_ifaces_count $w
+	statline "Waiting for physical interfaces on $unconfigure_nodes_ifaces_count node(s) to be unconfigured..."
+	pipesClose
+
+	statline "Destroying physical interfaces on RJ45 nodes..."
+	pipesCreate
+	terminate_nodesIfacesDestroy $eid $destroy_nodes_extifaces $destroy_nodes_extifaces_count $w
+	statline "Waiting for physical interfaces on $destroy_nodes_extifaces_count RJ45 node(s) to be destroyed..."
 	pipesClose
 
 	statline "Stopping services for LINKDEST hook..."
-	services stop "LINKDEST" "bkg" $all_nodes
+	services stop "LINKDEST" "bkg" $unconfigure_nodes
 
 	statline "Destroying links..."
 	pipesCreate
-	terminate_linksDestroy $eid $link_list $links_count $w
+	terminate_linksDestroy $eid $terminate_links $links_count $w
 	statline "Waiting for $links_count link(s) to be destroyed..."
 	pipesClose
 
-	statline "Destroying physical interfaces on VIRTUALIZED nodes..."
+	statline "Destroying physical interfaces on nodes..."
 	pipesCreate
-	terminate_nodesIfacesDestroy $eid $virtualized_nodes $virtualized_nodes_count $w
-	statline "Waiting for physical interfaces on $virtualized_nodes_count VIRTUALIZED node(s) to be destroyed..."
+	terminate_nodesIfacesDestroy $eid $destroy_nodes_ifaces $destroy_nodes_ifaces_count $w
+	statline "Waiting for physical interfaces on $destroy_nodes_ifaces_count node(s) to be destroyed..."
 	pipesClose
 
 	statline "Destroying NATIVE nodes..."
 	pipesCreate
-	destroyL2Nodes $eid $native_nodes $native_nodes_count $w
+	terminate_nodesDestroy $eid $native_nodes $native_nodes_count $w
 	statline "Waiting for $native_nodes_count NATIVE node(s) to be destroyed..."
 	pipesClose
 
@@ -430,14 +406,16 @@ proc undeployCfg { eid } {
 	statline "Waiting for $virtualized_nodes_count VIRTUALIZED node(s) to be destroyed..."
 	pipesClose
 
-	statline "Removing experiment top-level container/netns..."
-	pipesCreate
-	terminate_removeExperimentContainer $eid $w
-	pipesClose
+	if { $terminate } {
+	    statline "Removing experiment top-level container/netns..."
+	    pipesCreate
+	    terminate_removeExperimentContainer $eid
+	    pipesClose
 
-	statline "Removing experiment files..."
-	terminate_removeExperimentFiles $eid $w
-	terminate_deleteExperimentFiles $eid
+	    statline "Removing experiment files..."
+	    terminate_removeExperimentFiles $eid
+	    terminate_deleteExperimentFiles $eid
+	}
     } on error err {
 	finishTerminating 0 "$err" $w
 	return
@@ -485,15 +463,93 @@ proc timeoutPatch { eid nodes nodes_count w } {
     }
 }
 
-proc terminate_nodesIfacesDestroy { eid nodes nodes_count w } {
+proc terminate_nodesUnconfigure { eid nodes nodes_count w } {
     global progressbarCount execMode
 
     set batchStep 0
+    set subnet_gws {}
+    set nodes_l2data [dict create]
     foreach node_id $nodes {
 	displayBatchProgress $batchStep $nodes_count
 
+	if { [info procs [getNodeType $node_id].nodeUnconfigure] != "" } {
+	    try {
+		[getNodeType $node_id].nodeUnconfigure $eid $node_id
+	    } on error err {
+		return -code error "Error in '[getNodeType $node_id].nodeUnconfigure $eid $node_id': $err"
+	    }
+	}
+	pipesExec ""
+
+	incr batchStep
+	incr progressbarCount -1
+
+	if { $execMode != "batch" } {
+	    $w.p configure -value $progressbarCount
+	    statline "Unconfiguring node [getNodeName $node_id]"
+	    update
+	}
+    }
+
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
+	if { $execMode == "batch" } {
+	    statline ""
+	}
+    }
+}
+
+proc terminate_nodesIfacesUnconfigure { eid nodes_ifaces nodes_count w } {
+    global progressbarCount execMode
+
+    set batchStep 0
+    set subnet_gws {}
+    set nodes_l2data [dict create]
+    dict for {node_id ifaces} $nodes_ifaces {
+	if { $ifaces == "*" } {
+	    set ifaces [allIfcList $node_id]
+	}
+	displayBatchProgress $batchStep $nodes_count
+
+	if { [info procs [getNodeType $node_id].nodeIfacesUnconfigure] != "" } {
+	    try {
+		[getNodeType $node_id].nodeIfacesUnconfigure $eid $node_id $ifaces
+	    } on error err {
+		return -code error "Error in '[getNodeType $node_id].nodeIfacesUnconfigure $eid $node_id $ifaces': $err"
+	    }
+	}
+	pipesExec ""
+
+	incr batchStep
+	incr progressbarCount -1
+
+	if { $execMode != "batch" } {
+	    $w.p configure -value $progressbarCount
+	    statline "Unconfiguring interfaces on node [getNodeName $node_id]"
+	    update
+	}
+    }
+
+    if { $nodes_count > 0 } {
+	displayBatchProgress $batchStep $nodes_count
+	if { $execMode == "batch" } {
+	    statline ""
+	}
+    }
+}
+
+proc terminate_nodesIfacesDestroy { eid nodes_ifaces nodes_count w } {
+    global progressbarCount execMode
+
+    set batchStep 0
+    dict for {node_id ifaces} $nodes_ifaces {
+	displayBatchProgress $batchStep $nodes_count
+
 	if { [info procs [getNodeType $node_id].nodeIfacesDestroy] != "" } {
-	    set ifaces [ifcList $node_id]
+	    if { $ifaces == "*" } {
+		set ifaces [ifcList $node_id]
+	    }
+
 	    try {
 		[getNodeType $node_id].nodeIfacesDestroy $eid $node_id $ifaces
 	    } on error err {
@@ -517,59 +573,4 @@ proc terminate_nodesIfacesDestroy { eid nodes nodes_count w } {
 	    statline ""
 	}
     }
-}
-
-#****f* exec.tcl/stopNodeFromMenu
-# NAME
-#   stopNodeFromMenu -- stop node from button3menu
-# SYNOPSIS
-#   stopNodeFromMenu $node_id
-# FUNCTION
-#   Invokes the [getNodeType $node].nodeShutdown procedure, along with services shutdown.
-# INPUTS
-#   * node_id -- node id
-#****
-proc stopNodeFromMenu { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-    global progressbarCount execMode
-
-    set progressbarCount 1
-    set w ""
-    if { $execMode != "batch" } {
-	set w .startup
-	catch { destroy $w }
-
-	toplevel $w -takefocus 1
-	wm transient $w .
-	wm title $w "Stopping node $node_id..."
-	message $w.msg -justify left -aspect 1200 \
-	    -text "Deleting virtual nodes and links."
-	pack $w.msg
-	update
-
-	ttk::progressbar $w.p -orient horizontal -length 250 \
-	    -mode determinate -maximum 1 -value $progressbarCount
-	pack $w.p
-	update
-
-	grab $w
-	wm protocol $w WM_DELETE_WINDOW {
-	}
-    }
-
-    services stop "NODESTOP" "" $node_id
-
-    pipesCreate
-    try {
-	terminate_nodesShutdown $eid $node_id 1 $w
-    } on error err {
-	finishTerminating 0 "$err" $w
-	return
-    }
-    pipesClose
-
-    services stop "LINKDEST" "" $node_id
-    services stop "NODEDEST" "" $node_id
-
-    finishTerminating 1 "" $w
 }

@@ -81,6 +81,18 @@ proc $MODULE.confNewNode { node_id } {
 proc $MODULE.confNewIfc { node_id iface_id } {
 }
 
+proc $MODULE.generateConfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateConfig { node_id } {
+}
+
+proc $MODULE.generateUnconfig { node_id } {
+}
+
 #****f* lanswitch.tcl/lanswitch.ifacePrefix
 # NAME
 #   lanswitch.ifacePrefix -- interface name
@@ -91,8 +103,21 @@ proc $MODULE.confNewIfc { node_id iface_id } {
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifacePrefix { l r } {
-    return e
+proc $MODULE.ifacePrefix {} {
+    return "e"
+}
+
+#****f* lanswitch.tcl/lanswitch.IPAddrRange
+# NAME
+#   lanswitch.IPAddrRange -- IP address range
+# SYNOPSIS
+#   lanswitch.IPAddrRange
+# FUNCTION
+#   Returns lanswitch IP address range
+# RESULT
+#   * range -- lanswitch IP address range
+#****
+proc $MODULE.IPAddrRange {} {
 }
 
 #****f* lanswitch.tcl/lanswitch.netlayer
@@ -122,6 +147,12 @@ proc $MODULE.netlayer {} {
 #****
 proc $MODULE.virtlayer {} {
     return NATIVE
+}
+
+proc $MODULE.bootcmd { node_id } {
+}
+
+proc $MODULE.shellcmds {} {
 }
 
 #****f* lanswitch.tcl/lanswitch.nghook
@@ -184,19 +215,106 @@ proc $MODULE.nodeCreate { eid node_id } {
 }
 
 proc $MODULE.nodeNamespaceSetup { eid node_id } {
-    l2node.nodeNamespaceSetup $eid $node_id
+    createNamespace $eid-$node_id
+}
+
+#****f* lanswitch.tcl/lanswitch.nodeInitConfigure
+# NAME
+#   lanswitch.nodeInitConfigure -- lanswitch node nodeInitConfigure
+# SYNOPSIS
+#   lanswitch.nodeInitConfigure $eid $node_id
+# FUNCTION
+#   Runs initial L2 configuration, such as creating logical interfaces and
+#   configuring sysctls.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeInitConfigure { eid node_id } {
 }
 
 proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
-    l2node.nodePhysIfacesCreate $eid $node_id $ifaces
+    nodePhysIfacesCreate $node_id $ifaces
+}
+
+proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
+}
+
+#****f* lanswitch.tcl/lanswitch.nodeIfacesConfigure
+# NAME
+#   lanswitch.nodeIfacesConfigure -- configure lanswitch node interfaces
+# SYNOPSIS
+#   lanswitch.nodeIfacesConfigure $eid $node_id $ifaces
+# FUNCTION
+#   Configure interfaces on a lanswitch. Set MAC, MTU, queue parameters, assign the IP
+#   addresses to the interfaces, etc. This procedure can be called if the node
+#   is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
+}
+
+#****f* lanswitch.tcl/lanswitch.nodeConfigure
+# NAME
+#   lanswitch.nodeConfigure -- configure lanswitch node
+# SYNOPSIS
+#   lanswitch.nodeConfigure $eid $node_id
+# FUNCTION
+#   Starts a new lanswitch. Simulates the booting proces of a node, starts all the
+#   services, etc.
+#   This procedure can be called if it is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeConfigure { eid node_id } {
 }
 
 ################################################################################
 ############################# TERMINATE PROCEDURES #############################
 ################################################################################
 
+#****f* lanswitch.tcl/lanswitch.nodeIfacesUnconfigure
+# NAME
+#   lanswitch.nodeIfacesUnconfigure -- unconfigure lanswitch node interfaces
+# SYNOPSIS
+#   lanswitch.nodeIfacesUnconfigure $eid $node_id $ifaces
+# FUNCTION
+#   Unconfigure interfaces on a lanswitch to a default state. Set name to iface_id,
+#   flush IP addresses to the interfaces, etc. This procedure can be called if
+#   the node is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
+}
+
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
-    l2node.nodeIfacesDestroy $eid $node_id $ifaces
+    nodeIfacesDestroy $eid $node_id $ifaces
+}
+
+proc $MODULE.nodeUnconfigure { eid node_id } {
+}
+
+#****f* lanswitch.tcl/lanswitch.nodeShutdown
+# NAME
+#   lanswitch.nodeShutdown -- layer 2 node shutdown
+# SYNOPSIS
+#   lanswitch.nodeShutdown $eid $node_id
+# FUNCTION
+#   Shutdowns a lanswitch node.
+#   Simulates the shutdown proces of a node, kills all the services and
+#   processes.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeShutdown { eid node_id } {
 }
 
 #****f* lanswitch.tcl/lanswitch.nodeDestroy

@@ -81,6 +81,18 @@ proc $MODULE.confNewNode { node_id } {
 proc $MODULE.confNewIfc { node_id iface_id } {
 }
 
+proc $MODULE.generateConfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateConfig { node_id } {
+}
+
+proc $MODULE.generateUnconfig { node_id } {
+}
+
 #****f* hub.tcl/hub.ifacePrefix
 # NAME
 #   hub.ifacePrefix -- interface name
@@ -91,8 +103,11 @@ proc $MODULE.confNewIfc { node_id iface_id } {
 # RESULT
 #   * name -- name prefix string
 #****
-proc $MODULE.ifacePrefix { l r } {
-    return e
+proc $MODULE.ifacePrefix {} {
+    return "e"
+}
+
+proc $MODULE.IPAddrRange {} {
 }
 
 #****f* hub.tcl/hub.netlayer
@@ -121,6 +136,12 @@ proc $MODULE.netlayer {} {
 #****
 proc $MODULE.virtlayer {} {
     return NATIVE
+}
+
+proc $MODULE.bootcmd { node_id } {
+}
+
+proc $MODULE.shellcmds {} {
 }
 
 #****f* hub.tcl/hub.nghook
@@ -159,6 +180,11 @@ proc $MODULE.nghook { eid node_id iface_id } {
 #   Loads ng_hub into the kernel.
 #****
 proc $MODULE.prepareSystem {} {
+    # TODO: check
+    catch { exec sysctl net.bridge.bridge-nf-call-arptables=0 }
+    catch { exec sysctl net.bridge.bridge-nf-call-iptables=0 }
+    catch { exec sysctl net.bridge.bridge-nf-call-ip6tables=0 }
+
     catch { exec kldload ng_hub }
 }
 
@@ -179,19 +205,94 @@ proc $MODULE.nodeCreate { eid node_id } {
 }
 
 proc $MODULE.nodeNamespaceSetup { eid node_id } {
-    l2node.nodeNamespaceSetup $eid $node_id
+    createNamespace $eid-$node_id
+}
+
+proc $MODULE.nodeInitConfigure { eid node_id } {
 }
 
 proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
-    l2node.nodePhysIfacesCreate $eid $node_id $ifaces
+    nodePhysIfacesCreate $node_id $ifaces
+}
+
+proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
+}
+
+#****f* exec.tcl/hub.nodeIfacesConfigure
+# NAME
+#   hub.nodeIfacesConfigure -- configure hub node interfaces
+# SYNOPSIS
+#   hub.nodeIfacesConfigure $eid $node_id $ifaces
+# FUNCTION
+#   Configure interfaces on a hub. Set MAC, MTU, queue parameters, assign the IP
+#   addresses to the interfaces, etc. This procedure can be called if the node
+#   is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
+}
+
+#****f* exec.tcl/hub.nodeConfigure
+# NAME
+#   hub.nodeConfigure -- configure hub node
+# SYNOPSIS
+#   hub.nodeConfigure $eid $node_id
+# FUNCTION
+#   Starts a new hub. Simulates the booting proces of a node, starts all the
+#   services, etc.
+#   This procedure can be called if it is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeConfigure { eid node_id } {
 }
 
 ################################################################################
 ############################# TERMINATE PROCEDURES #############################
 ################################################################################
 
+#****f* hub.tcl/hub.nodeIfacesUnconfigure
+# NAME
+#   hub.nodeIfacesUnconfigure -- unconfigure hub node interfaces
+# SYNOPSIS
+#   hub.nodeIfacesUnconfigure $eid $node_id $ifaces
+# FUNCTION
+#   Unconfigure interfaces on a hub to a default state. Set name to iface_id,
+#   flush IP addresses to the interfaces, etc. This procedure can be called if
+#   the node is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
+}
+
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
-    l2node.nodeIfacesDestroy $eid $node_id $ifaces
+    nodeIfacesDestroy $eid $node_id $ifaces
+}
+
+proc $MODULE.nodeUnconfigure { eid node_id } {
+}
+
+#****f* hub.tcl/hub.nodeShutdown
+# NAME
+#   hub.nodeShutdown -- layer 2 node shutdown
+# SYNOPSIS
+#   hub.nodeShutdown $eid $node_id
+# FUNCTION
+#   Shutdowns a hub node.
+#   Simulates the shutdown proces of a node, kills all the services and
+#   processes.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc $MODULE.nodeShutdown { eid node_id } {
 }
 
 #****f* hub.tcl/hub.nodeDestroy
