@@ -85,6 +85,7 @@ proc undo {} {
     upvar 0 ::cf::[set ::curcfg]::undolevel undolevel
     upvar 0 ::cf::[set ::curcfg]::undolog undolog
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
+    global showTree
 
     if {$oper_mode == "edit" && $undolevel > 0} {
 	.menubar.edit entryconfigure "Redo" -state normal
@@ -95,6 +96,10 @@ proc undo {} {
 	.panwin.f1.c config -cursor watch
 	loadCfg $undolog($undolevel)
 	switchCanvas none
+
+	if { $showTree } {
+	    refreshTopologyTree
+	}
     }
 }
 
@@ -114,6 +119,7 @@ proc redo {} {
     upvar 0 ::cf::[set ::curcfg]::redolevel redolevel
     upvar 0 ::cf::[set ::curcfg]::undolog undolog
     upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
+    global showTree
 
     if {$oper_mode == "edit" && $redolevel > $undolevel} {
 	incr undolevel
@@ -126,6 +132,10 @@ proc redo {} {
 	.panwin.f1.c config -cursor watch
 	loadCfg $undolog($undolevel)
 	switchCanvas none
+
+	if { $showTree } {
+	    refreshTopologyTree
+	}
     }
 }
 
