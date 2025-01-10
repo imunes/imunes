@@ -5,8 +5,9 @@
 PACKAGES_MINIMAL="$PACKAGES_MINIMAL bind918"
 PACKAGES="$PACKAGES_MINIMAL $PACKAGES_COMMON isc-dhcp44-server isc-dhcp44-client \
     sylpheed firefox wireshark gnome-themes-extra"
-PACKAGES=`echo $PACKAGES | sed 's/scapy/py39-scapy/'`
+PACKAGES=`echo $PACKAGES | sed 's/scapy/py311-scapy/'`
 PACKAGES=`echo $PACKAGES | sed 's/quagga/frr8/'`
+PACKAGES=`echo $PACKAGES | sed 's/dsniff//'`
 
 checkArgs $*
 

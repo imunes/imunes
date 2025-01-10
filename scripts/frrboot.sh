@@ -1,6 +1,7 @@
 #!/bin/sh
 
 zebra -dP0
+staticd -dP0
 
 for f in rip ripng ospf ospf6; do
     grep -q "router $f\$" $1 && ${f}d -dP0
