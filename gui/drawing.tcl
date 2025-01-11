@@ -314,12 +314,6 @@ proc calcAngle { link_id } {
 proc updateIfcLabel { link_id node_id iface_id } {
     global show_interface_names show_interface_ipv4 show_interface_ipv6
 
-    set iface_name [getIfcName $node_id $iface_id]
-    if { [getNodeType $node_id] == "extelem" } {
-	set ifaces [getNodeStolenIfaces $node_id]
-	set iface_name [lindex [lsearch -inline -exact -index 0 $ifaces "$iface_name"] 1]
-    }
-
     set ifipv4addr [getIfcIPv4addrs $node_id $iface_id]
     set ifipv6addr [getIfcIPv6addrs $node_id $iface_id]
     if { $iface_id == 0 } {
@@ -328,7 +322,14 @@ proc updateIfcLabel { link_id node_id iface_id } {
 
     set label_str ""
     if { $show_interface_names } {
-	lappend label_str "$iface_name"
+	if { [getNodeType $node_id] == "rj45" } {
+	    lappend label_str "$iface_id - [getIfcName $node_id $iface_id]"
+	    if { [getIfcVlanDev $node_id $iface_id] != "" && [getIfcVlanTag $node_id $iface_id] != "" } {
+		lappend label_str "VLAN [getIfcVlanTag $node_id $iface_id]"
+	    }
+	} else {
+	    lappend label_str "[getIfcName $node_id $iface_id]"
+	}
     }
 
     if { $show_interface_ipv4 && $ifipv4addr != "" } {
@@ -519,6 +520,10 @@ proc updateIfcLabelParams { link_id node_id iface_id x1 y1 x2 y2 } {
     }
 
     set add_height [expr 10*($show_interface_names + $IP4 + $IP6)]
+    if { [getNodeType $node_id] == "rj45" && [getIfcVlanDev $node_id $iface_id] != "" } {
+	incr add_height [expr 10*$show_interface_names]
+    }
+
     # these params could be called dy and dx, respectively
     # additional height represents the ifnames, ipv4 and ipv6 addrs
     set height [expr 8 + $iconheight/2 + $add_height]

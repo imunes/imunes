@@ -448,7 +448,7 @@ proc getNodeNetns { eid node_id } {
     global devfs_number
 
     # Top-level experiment netns
-    if { $node_id in "" || [getNodeType $node_id] in "rj45 extelem" } {
+    if { $node_id in "" || [getNodeType $node_id] == "rj45" } {
 	return $eid
     }
 
@@ -574,7 +574,7 @@ proc createNodeContainer { node_id } {
 proc isNodeStarted { node_id } {
     set node_type [getNodeType $node_id]
     if { [$node_type.virtlayer] != "VIRTUALIZED" } {
-	if { $node_type in "rj45 ext extnat extelem" } {
+	if { $node_type in "rj45 ext extnat" } {
 	    return true
 	}
 
@@ -630,10 +630,6 @@ proc isNodeNamespaceCreated { node_id } {
 #****
 proc nodePhysIfacesCreate { node_id ifaces } {
     set eid [getFromRunning "eid"]
-
-    if { [getNodeType $node_id] in "extelem" } {
-	return
-    }
 
     set nodeNs [getNodeNetns $eid $node_id]
     set node_type [getNodeType $node_id]
@@ -887,17 +883,12 @@ proc setNsIfcMaster { netNs iface_name master state } {
 proc createDirectLinkBetween { node1_id node2_id iface1_id iface2_id } {
     set eid [getFromRunning "eid"]
 
-    if { [getNodeType $node1_id] in "rj45 extelem" || [getNodeType $node2_id] in "rj45 extelem" } {
-	if { [getNodeType $node1_id] in "rj45 extelem" } {
-	    set physical_ifc [getNodeName $node1_id]
-	    if { [getNodeType $node1_id] == "extelem" } {
-		set ifcs [getNodeStolenIfaces $node1_id]
-		set physical_ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$iface1_id"] 1]
-	    } elseif { [getIfcVlanDev $node1_id $iface1_id] != "" } {
-		set vlan [getIfcVlanTag $node1_id $iface1_id]
-		if { $vlan != "" } {
-		    set physical_ifc $physical_ifc.$vlan
-		}
+    if { "rj45" in "[getNodeType $node1_id] [getNodeType $node2_id]" } {
+	if { [getNodeType $node1_id] == "rj45" } {
+	    set physical_ifc [getIfcName $node1_id $iface1_id]
+	    set vlan [getIfcVlanTag $node1_id $iface1_id]
+	    if { $vlan != "" && [getIfcVlanDev $node1_id $iface1_id] != "" } {
+		set physical_ifc $physical_ifc.$vlan
 	    }
 	    set nodeNs [getNodeNetns $eid $node2_id]
 	    set iface2_name [getIfcName $node2_id $iface2_id]
@@ -911,15 +902,10 @@ proc createDirectLinkBetween { node1_id node2_id iface1_id iface2_id } {
 		return
 	    }
 	} else {
-	    set physical_ifc [getNodeName $node2_id]
-	    if { [getNodeType $node2_id] == "extelem" } {
-		set ifcs [getNodeStolenIfaces $node2_id]
-		set physical_ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$iface2_id"] 1]
-	    } elseif { [getIfcVlanDev $node2_id $iface2_id] != "" } {
-		set vlan [getIfcVlanTag $node2_id $iface2_id]
-		if { $vlan != "" } {
-		    set physical_ifc $physical_ifc.$vlan
-		}
+	    set physical_ifc [getIfcName $node2_id $iface2_id]
+	    set vlan [getIfcVlanTag $node2_id $iface2_id]
+	    if { $vlan != "" && [getIfcVlanDev $node2_id $iface2_id] != "" } {
+		set physical_ifc $physical_ifc.$vlan
 	    }
 	    set nodeNs [getNodeNetns $eid $node1_id]
 	    set iface1_name [getIfcName $node1_id $iface1_id]
@@ -987,18 +973,14 @@ proc createLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 
     # add nodes iface hooks to link bridge and bring them up
     foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
-	set iface_name $node_id-[getIfcName $node_id $iface_id]
-	if { [getNodeType $node_id] in "rj45 extelem" } {
+	if { [getNodeType $node_id] == "rj45" } {
 	    set iface_name [getIfcName $node_id $iface_id]
 	    if { [getIfcVlanDev $node_id $iface_id] != "" } {
 		set vlan [getIfcVlanTag $node_id $iface_id]
 		set iface_name $iface_name.$vlan
 	    }
-	} elseif { [getNodeType $node_id] == "extelem" } {
-	    # won't work if the node is a wireless interface
-	    # because netns is not changed
-	    set iface_name [getIfcName $node_id $iface_id]
-	    set iface_name [lindex [lsearch -inline -exact -index 0 [getNodeStolenIfaces $node_id] "$iface_name"] 1]
+	} else {
+	    set iface_name $node_id-[getIfcName $node_id $iface_id]
 	}
 
 	setNsIfcMaster $eid $iface_name $link_id "up"
@@ -1019,7 +1001,7 @@ proc configureLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 
     # FIXME: remove this to interface configuration?
     foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
-	if { [getNodeType $node_id] in "rj45 extelem" } {
+	if { [getNodeType $node_id] == "rj45" } {
 	    continue
 	}
 
@@ -1335,7 +1317,7 @@ proc nodeIfacesDestroy { eid node_id ifaces } {
     set node_type [getNodeType $node_id]
     if { $node_type in "ext extnat" } {
 	pipesExec "ip -n $eid link del $node_id-[getIfcName $node_id "ifc0"]" "hold"
-    } elseif { $node_type in "rj45 extelem" } {
+    } elseif { $node_type == "rj45" } {
 	foreach iface_id $ifaces {
 	    releaseExtIfcByName $eid [getIfcName $node_id $iface_id] $node_id
 	}
@@ -1734,12 +1716,10 @@ proc getNetemConfigLine { bandwidth delay loss dup } {
 }
 
 proc configureIfcLinkParams { eid node_id iface_id bandwidth delay ber loss dup } {
-    set devname $node_id-$iface_id
-    if { [getNodeType $node_id] == "rj45" } {
-        set devname [getNodeName $node_id]
-    } elseif { [getNodeType $node_id] == "extelem" } {
-	set ifcs [getNodeStolenIfaces $node_id]
-	set devname [lindex [lsearch -inline -exact -index 0 $ifcs "$iface_id"] 1]
+    set devname [getIfcName $node_id $iface_id]
+
+    if { [getNodeType $node_id] != "rj45" } {
+	set devname $node_id-$devname
     }
 
     set netem_cfg [getNetemConfigLine $bandwidth $delay $loss $dup]

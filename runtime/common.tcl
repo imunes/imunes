@@ -528,24 +528,6 @@ proc dumpLinksToFile { path } {
 
 	set lpair [list $node1_id [getIfcName $node1_id $iface1_id]]
 	set rpair [list $node2_id [getIfcName $node2_id $iface2_id]]
-	if { [getNodeType $node1_id] in "rj45 extelem" } {
-	    if { [getNodeType $node1_id] == "rj45" } {
-		set lpair $name1
-	    } else {
-		set ifaces [getNodeStolenIfaces $node1_id]
-		set iface1_name [getIfcName $node1_id $iface1_id]
-		set lpair [lindex [lsearch -inline -exact -index 0 $ifaces "$iface1_name"] 1]
-	    }
-	}
-	if { [getNodeType $node2_id] in "rj45 extelem" } {
-	    if { [getNodeType $node2_id] == "rj45" } {
-		set rpair $name2
-	    } else {
-		set ifaces [getNodeStolenIfaces $node2_id]
-		set iface2_name [getIfcName $node2_id $iface2_id]
-		set rpair [lindex [lsearch -inline -exact -index 0 $ifaces "$iface2_name"] 1]
-	    }
-	}
 
 	set line "$link_id {$node1_id-$node2_id {{$lpair} {$rpair}} $linkname}\n"
 	set data "$data$line"

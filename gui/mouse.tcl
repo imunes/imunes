@@ -712,7 +712,15 @@ proc button3node { c x y } {
 	}
 
 	set from_iface_id $this_iface_id
-	set from_iface_label [getIfcName $node_id $this_iface_id]
+	if { [getIfcType $node_id $this_iface_id] == "stolen" } {
+	    if { [getNodeType $node_id] != "rj45" } {
+		continue
+	    }
+
+	    set from_iface_label "$this_iface_id - \[[getIfcName $node_id $this_iface_id]\]"
+	} else {
+	    set from_iface_label [getIfcName $node_id $this_iface_id]
+	}
 	if { $this_iface_id == "new_iface" } {
 	    set from_iface_id {}
 	    set from_iface_label "Create new interface"
@@ -743,14 +751,20 @@ proc button3node { c x y } {
 			continue
 		    }
 
-		    if { [getIfcLink $peer_id $other_iface_id] != "" ||
-			[getIfcType $peer_id $other_iface_id] == "stolen" } {
-
+		    if { [getIfcLink $peer_id $other_iface_id] != "" } {
 			continue
 		    }
 
 		    set to_iface_id $other_iface_id
-		    set to_iface_label [getIfcName $peer_id $other_iface_id]
+		    if { [getIfcType $peer_id $other_iface_id] == "stolen" } {
+			if { [getNodeType $peer_id] != "rj45" } {
+			    continue
+			}
+
+			set to_iface_label "$other_iface_id - \[[getIfcName $peer_id $other_iface_id]\]"
+		    } else {
+			set to_iface_label [getIfcName $peer_id $other_iface_id]
+		    }
 		    if { $other_iface_id == "new_peer_iface" } {
 			set to_iface_id {}
 			set to_iface_label "Create new interface"
