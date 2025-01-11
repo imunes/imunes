@@ -146,21 +146,23 @@ proc drawNode { node_id } {
     lassign [lmap coord [getNodeLabelCoords $node_id] {expr int($coord * $zoom)}] x y
     if { $type != "pseudo" } {
 	set label_str [getNodeName $node_id]
-	if { $type == "rj45" && [getEtherVlanEnabled $node_id] } {
-	    set label_str "$label_str (VLAN [getEtherVlanTag $node_id])"
-	}
 
 	set has_empty_ifaces 0
 	foreach iface_id [ifcList $node_id] {
-	    if { [getNodeType $node_id] == "wlan" } {
+	    if { $type == "wlan" } {
 		set label_str "$label_str [getIfcIPv4addrs $node_id $iface_id]"
 	    } elseif { [getIfcLink $node_id $iface_id] == "" } {
+		if { [getIfcType $node_id $iface_id] == "stolen" } {
+		    set iflabel "\[[getIfcName $node_id $iface_id]\]"
+		} else {
+		    set iflabel "[getIfcName $node_id $iface_id]"
+		}
+
 		if { $has_empty_ifaces == 0 } {
-		    incr y 8
-		    set label_str "$label_str\n[getIfcName $node_id $iface_id]"
+		    set label_str "\n$label_str\n$iflabel"
 		    set has_empty_ifaces 1
 		} else {
-		    set label_str "$label_str [getIfcName $node_id $iface_id]"
+		    set label_str "$label_str $iflabel"
 		}
 	    }
 	}
@@ -320,7 +322,6 @@ proc updateIfcLabel { link_id node_id iface_id } {
 
     set ifipv4addr [getIfcIPv4addrs $node_id $iface_id]
     set ifipv6addr [getIfcIPv6addrs $node_id $iface_id]
-
     if { $iface_id == 0 } {
 	set iface_id ""
     }
@@ -330,19 +331,19 @@ proc updateIfcLabel { link_id node_id iface_id } {
 	lappend label_str "$iface_name"
     }
 
-    if { $show_interface_ipv4 && $ifipv4addr != {} } {
+    if { $show_interface_ipv4 && $ifipv4addr != "" } {
 	if { [llength $ifipv4addr] > 1 } {
 	    lappend label_str "[lindex $ifipv4addr 0] ..."
 	} else {
-	    lappend label_str "[lindex $ifipv4addr 0]"
+	    lappend label_str "$ifipv4addr"
 	}
     }
 
-    if { $show_interface_ipv6 && $ifipv6addr != {} } {
+    if { $show_interface_ipv6 && $ifipv6addr != "" } {
 	if { [llength $ifipv6addr] > 1 } {
 	    lappend label_str "[lindex $ifipv6addr 0] ..."
 	} else {
-	    lappend label_str "[lindex $ifipv6addr 0]"
+	    lappend label_str "$ifipv6addr"
 	}
     }
 

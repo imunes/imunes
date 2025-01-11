@@ -64,9 +64,7 @@ proc checkExternalInterfaces {} {
 
     set nodes_ifcpairs {}
     foreach node_id [getFromRunning "node_list"] {
-	if { [getNodeType $node_id] == "rj45" } {
-	    lappend nodes_ifcpairs [list $node_id [list 0 [getNodeName $node_id]]]
-	} elseif { [getNodeType $node_id] == "extelem" } {
+	if { [getNodeType $node_id] in "rj45 extelem" } {
 	    foreach ifaces [getNodeStolenIfaces $node_id] {
 		lappend nodes_ifcpairs [list $node_id $ifaces]
 	    }
@@ -92,7 +90,7 @@ proc checkExternalInterfaces {} {
 	    return 1
 	}
 
-	if { [getEtherVlanEnabled $node_id] && [getEtherVlanTag $node_id] != "" } {
+	if { [getIfcVlanDev $node_id $iface_id] != "" && [getIfcVlanTag $node_id $iface_id] != "" } {
 	    if { [getHostIfcVlanExists $node_id $physical_ifc] } {
 		return 1
 	    }

@@ -151,9 +151,13 @@ proc $MODULE.virtlayer {} {
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node_id iface_id } {
-    lassign [lindex [lsearch -index 0 -all -inline -exact [getNodeStolenIfaces $node_id] [getIfcName $node_id $iface_id]] 0] iface_id extIfc
+    set iface_name [getIfcName $node_id $iface_id]
+    set vlan [getIfcVlanTag $node_id $iface_id]
+    if { $vlan != "" && [getIfcVlanDev $node_id $iface_id] != "" } {
+	set iface_name ${iface_name}_$vlan
+    }
 
-    return [list $extIfc lower]
+    return [list $iface_name lower]
 }
 
 ################################################################################

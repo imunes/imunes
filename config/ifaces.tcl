@@ -458,37 +458,6 @@ proc setIfcName { node_id iface_id name } {
     cfgSet "nodes" $node_id "ifaces" $iface_id "name" $name
 }
 
-#****f* nodecfg.tcl/getIfcStolenIfc
-# NAME
-#   getIfcStolenIfc -- get logical interface type
-# SYNOPSIS
-#   getIfcStolenIfc $node_id $iface_id
-# FUNCTION
-#   Returns logical interface type from a node.
-# INPUTS
-#   * node_id -- node id
-#   * iface_id -- interface id
-#****
-proc getIfcStolenIfc { node_id iface_id } {
-    return [cfgGet "nodes" $node_id "ifaces" $iface_id "stolen_iface"]
-}
-
-#****f* nodecfg.tcl/setIfcStolenIfc
-# NAME
-#   setIfcStolenIfc -- set interface stolen interface
-# SYNOPSIS
-#   setIfcStolenIfc $node_id $iface_id $stolen_iface
-# FUNCTION
-#   Sets node's interface stolen stolen interface.
-# INPUTS
-#   * node_id -- node id
-#   * iface_id -- interface id
-#   * stolen_iface -- stolen interface
-#****
-proc setIfcStolenIfc { node_id iface_id stolen_iface } {
-    cfgSet "nodes" $node_id "ifaces" $iface_id "stolen_iface" $stolen_iface
-}
-
 #****f* nodecfg.tcl/getIfcIPv6addrs
 # NAME
 #   getIfcIPv6addrs -- get interface IPv6 addresses.

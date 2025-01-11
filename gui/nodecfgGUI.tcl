@@ -1603,8 +1603,12 @@ proc configGUI_etherVlan { wi node_id } {
 	-validatecommand { checkIntRange %P 1 4094 } \
 	-from 1 -to 4094 -increment 1
 
-    $wi.vlancfg.tag insert 0 [getEtherVlanTag $node_id]
-    set vlanEnable [getEtherVlanEnabled $node_id]
+    $wi.vlancfg.tag insert 0 [getIfcVlanTag $node_id "ifc0"]
+    if { [getIfcVlanDev $node_id "ifc0"] == "" } {
+	set vlanEnable 0
+    } else {
+	set vlanEnable 1
+    }
     if { ! $vlanEnable } {
 	.popup.vlancfg.tag configure -state disabled
     }
@@ -2502,17 +2506,25 @@ proc checkStaticRoutesSyntax { text } {
 #****
 proc configGUI_etherVlanApply { wi node_id } {
     global changed vlanEnable
-    set oldEnabled [getEtherVlanEnabled $node_id]
+    if { [getIfcVlanDev $node_id "ifc0"] == "" } {
+	set oldEnabled 0
+    } else {
+	set oldEnabled 1
+    }
     if { $vlanEnable != $oldEnabled } {
-	setEtherVlanEnabled $node_id $vlanEnable
+	if { $vlanEnable } {
+	    setIfcVlanDev $node_id "ifc0" [getNodeName $node_id]
+	} else {
+	    setIfcVlanDev $node_id "ifc0" ""
+	}
 	set changed 1
     }
     set tag [$wi.vlancfg.tag get]
-    set oldTag [getEtherVlanTag $node_id]
+    set oldTag [getIfcVlanTag $node_id "ifc0"]
     if { $tag != $oldTag } {
-	setEtherVlanTag $node_id $tag
+	setIfcVlanTag $node_id "ifc0" $tag
 	if { $tag == "" } {
-	    setEtherVlanEnabled $node_id 0
+	    setIfcVlanDev $node_id "ifc0" ""
 	    $wi.vlancfg.tag configure -state disabled
 	}
 	set changed 1

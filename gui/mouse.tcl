@@ -399,6 +399,12 @@ proc button3link { c x y } {
     #
     # Toggle direct link
     #
+    lassign [getLinkPeers $link_id] peer1_id peer2_id
+    lassign [getLinkPeersIfaces $link_id] peer1_iface peer2_iface
+    if { [getNodeType $peer1_id] == "pseudo" } {
+	lassign [logicalPeerByIfc $peer2_id $peer2_iface] peer1_id peer1_iface
+    }
+
     if { $oper_mode != "exec" } {
 	.button3menu add checkbutton -label "Direct link" \
 	    -underline 5 -variable linkDirect_$link_id \
@@ -529,11 +535,13 @@ proc moveToCanvas { canvas_id } {
 proc mergeNodeGUI { node_id } {
     global changed
 
-    mergeLink [getIfcLink $node_id "ifc0"]
+    set link_id [mergeLink [getIfcLink $node_id "ifc0"]]
 
     set changed 1
     updateUndoLog
     redrawAll
+
+    return $link_id
 }
 
 #****f* editor.tcl/button3node
@@ -735,7 +743,9 @@ proc button3node { c x y } {
 			continue
 		    }
 
-		    if { [getIfcLink $peer_id $other_iface_id] != "" } {
+		    if { [getIfcLink $peer_id $other_iface_id] != "" ||
+			[getIfcType $peer_id $other_iface_id] == "stolen" } {
+
 			continue
 		    }
 

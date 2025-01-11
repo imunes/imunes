@@ -346,7 +346,14 @@ proc getCustomConfigIDs { node_id } {
 #   * ifaces -- list of {iface_id stolen_iface} pairs
 #****
 proc getNodeStolenIfaces { node_id } {
-    return [cfgGet "nodes" $node_id "external_ifaces"]
+    set external_ifaces {}
+    foreach {iface_id iface_cfg} [cfgGet "nodes" $node_id "ifaces"] {
+	if { [dictGet $iface_cfg "type"] == "stolen" } {
+	    lappend external_ifaces "$iface_id [dictGet $iface_cfg "name"]"
+	}
+    }
+
+    return $external_ifaces
 }
 
 #****f* nodecfg.tcl/getDefaultGateways
@@ -1404,68 +1411,6 @@ proc deregisterModule { module } {
     set all_modules_list [removeFromList $all_modules_list $module]
 }
 
-#****f* nodecfg.tcl/getEtherVlanEnabled
-# NAME
-#   getEtherVlanEnabled -- get node rj45 vlan.
-# SYNOPSIS
-#   set state [getEtherVlanEnabled $node_id]
-# FUNCTION
-#   Returns whether the rj45 node is vlan enabled.
-# INPUTS
-#   * node_id -- node id
-# RESULT
-#   * state -- vlan enabled
-#****
-proc getEtherVlanEnabled { node_id } {
-    return [cfgGetWithDefault 0 "nodes" $node_id "vlan" "enabled"]
-}
-
-#****f* nodecfg.tcl/setEtherVlanEnabled
-# NAME
-#   setEtherVlanEnabled -- set node rj45 vlan.
-# SYNOPSIS
-#   setEtherVlanEnabled $node_id $state
-# FUNCTION
-#   Sets rj45 node vlan setting.
-# INPUTS
-#   * node_id -- node id
-#   * state -- vlan enabled
-#****
-proc setEtherVlanEnabled { node_id state } {
-    cfgSet "nodes" $node_id "vlan" "enabled" $state
-}
-
-#****f* nodecfg.tcl/getEtherVlanTag
-# NAME
-#   getEtherVlanTag -- get node rj45 vlan tag.
-# SYNOPSIS
-#   set tag [getEtherVlanTag $node_id]
-# FUNCTION
-#   Returns rj45 node vlan tag.
-# INPUTS
-#   * node_id -- node id
-# RESULT
-#   * tag -- vlan tag
-#****
-proc getEtherVlanTag { node_id } {
-    return [cfgGetWithDefault 1 "nodes" $node_id "vlan" "tag"]
-}
-
-#****f* nodecfg.tcl/setEtherVlanTag
-# NAME
-#   setEtherVlanTag -- set node rj45 vlan tag.
-# SYNOPSIS
-#   setEtherVlanTag $node_id $tag
-# FUNCTION
-#   Sets rj45 node vlan tag.
-# INPUTS
-#   * node_id -- node id
-#   * tag -- vlan tag
-#****
-proc setEtherVlanTag { node_id tag } {
-    cfgSet "nodes" $node_id "vlan" "tag" $tag
-}
-
 #****f* nodecfg.tcl/getNodeServices
 # NAME
 #   getNodeServices -- get node active services.
@@ -1976,6 +1921,10 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 	return $old_node_cfg
     }
 
+    if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+	setToExecuteVars "terminate_cfg" [cfgGet]
+    }
+
     dict for {key change} $cfg_diff {
 	if { $change == "copy" } {
 	    continue
@@ -2198,9 +2147,6 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 
 		    switch -exact $iface_change {
 			"removed" {
-			    if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
-				setToExecuteVars "terminate_cfg" [cfgGet]
-			    }
 			    removeIface $node_id $iface_key
 			}
 

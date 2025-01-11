@@ -1000,6 +1000,15 @@ proc loadCfgLegacy { cfg } {
 	# Speeding up auto renumbering of MAC, IPv4 and IPv6 addresses by remembering
 	# used addresses in lists.
 	foreach iface_id [ifcList $node_id] {
+	    if { $node_type == "rj45" } {
+		set iface_name [getNodeName $node_id]
+		setIfcName $node_id $iface_id $iface_name
+		if { [cfgGet "nodes" $node_id "vlan" "enabled"] != "" } {
+		    setIfcVlanDev $node_id $iface_id $iface_name
+		    setIfcVlanTag $node_id $iface_id [cfgGet "nodes" $node_id "vlan" "tag"]
+		}
+	    }
+
 	    foreach addr [getIfcIPv6addrs $node_id $iface_id] {
 		lassign [split $addr "/"] addr mask
 		lappend ipv6_used_list "[ip::contract [ip::prefix $addr]]/$mask"

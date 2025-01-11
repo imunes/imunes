@@ -414,7 +414,8 @@ proc getHostIfcVlanExists { node_id iface_name } {
     # check if VLAN ID is already taken
     # this can be only done by trying to create it, as it's possible that the same
     # VLAN interface already exists in some other namespace
-    set vlan [getEtherVlanTag $node_id]
+    set iface_id [ifaceIdFromName $node_id $iface_name]
+    set vlan [getIfcVlanTag $node_id $iface_id]
     try {
 	exec ip link add link $iface_name name $iface_name.$vlan type vlan id $vlan
     } on ok {} {
@@ -690,7 +691,12 @@ proc nodePhysIfacesCreate { node_id ifaces } {
 		# we don't know the name, so make sure all other options cover other IMUNES
 		# 'physical' interfaces
 		# XXX not yet implemented
-		pipesExec "ip link set $iface_name netns $nodeNs" "hold"
+		if { [getIfcType $node_id $iface_id] == "stolen" } {
+		    captureExtIfcByName $eid $iface_name $node_id
+		    if { [getNodeType $node_id] in "hub lanswitch" } {
+			setNsIfcMaster $nodeNs $iface_name $node_id "up"
+		    }
+		}
 	    }
 	}
     }
@@ -886,10 +892,9 @@ proc createDirectLinkBetween { node1_id node2_id iface1_id iface2_id } {
 	    set physical_ifc [getNodeName $node1_id]
 	    if { [getNodeType $node1_id] == "extelem" } {
 		set ifcs [getNodeStolenIfaces $node1_id]
-		set iface1_name [getIfcName $node1_id $iface1_id]
-		set physical_ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$iface1_name"] 1]
-	    } elseif { [getEtherVlanEnabled $node1_id] } {
-		set vlan [getEtherVlanTag $node1_id]
+		set physical_ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$iface1_id"] 1]
+	    } elseif { [getIfcVlanDev $node1_id $iface1_id] != "" } {
+		set vlan [getIfcVlanTag $node1_id $iface1_id]
 		if { $vlan != "" } {
 		    set physical_ifc $physical_ifc.$vlan
 		}
@@ -909,10 +914,9 @@ proc createDirectLinkBetween { node1_id node2_id iface1_id iface2_id } {
 	    set physical_ifc [getNodeName $node2_id]
 	    if { [getNodeType $node2_id] == "extelem" } {
 		set ifcs [getNodeStolenIfaces $node2_id]
-		set iface2_name [getIfcName $node2_id $iface2_id]
-		set physical_ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$iface2_name"] 1]
-	    } elseif { [getEtherVlanEnabled $node2_id] } {
-		set vlan [getEtherVlanTag $node2_id]
+		set physical_ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$iface2_id"] 1]
+	    } elseif { [getIfcVlanDev $node2_id $iface2_id] != "" } {
+		set vlan [getIfcVlanTag $node2_id $iface2_id]
 		if { $vlan != "" } {
 		    set physical_ifc $physical_ifc.$vlan
 		}
@@ -984,10 +988,10 @@ proc createLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
     # add nodes iface hooks to link bridge and bring them up
     foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
 	set iface_name $node_id-[getIfcName $node_id $iface_id]
-	if { [getNodeType $node_id] == "rj45" } {
-	    set iface_name [getNodeName $node_id]
-	    if { [getEtherVlanEnabled $node_id] } {
-		set vlan [getEtherVlanTag $node_id]
+	if { [getNodeType $node_id] in "rj45 extelem" } {
+	    set iface_name [getIfcName $node_id $iface_id]
+	    if { [getIfcVlanDev $node_id $iface_id] != "" } {
+		set vlan [getIfcVlanTag $node_id $iface_id]
 		set iface_name $iface_name.$vlan
 	    }
 	} elseif { [getNodeType $node_id] == "extelem" } {
@@ -1328,14 +1332,25 @@ proc destroyLinkBetween { eid node1_id node2_id link_id } {
 #   * ifaces -- list of iface ids
 #****
 proc nodeIfacesDestroy { eid node_id ifaces } {
-    if { [getNodeType $node_id] in "ext extnat" } {
-	pipesExec "ip link del $eid-$node_id" "hold"
-	return
+    set node_type [getNodeType $node_id]
+    if { $node_type in "ext extnat" } {
+	pipesExec "ip -n $eid link del $node_id-[getIfcName $node_id "ifc0"]" "hold"
+    } elseif { $node_type in "rj45 extelem" } {
+	foreach iface_id $ifaces {
+	    releaseExtIfcByName $eid [getIfcName $node_id $iface_id] $node_id
+	}
+    } else {
+	foreach iface_id $ifaces {
+	    set iface_name [getIfcName $node_id $iface_id]
+	    if { [getIfcType $node_id $iface_id] == "stolen" } {
+		releaseExtIfcByName $eid $iface_name $node_id
+	    } else {
+		pipesExec "ip -n $eid-$node_id link del $iface_name" "hold"
+	    }
+	}
     }
 
     foreach iface_id $ifaces {
-	set iface_name [getIfcName $node_id $iface_id]
-	pipesExec "ip -n $eid link del $node_id-$iface_name" "hold"
     }
 }
 
@@ -1420,27 +1435,22 @@ proc getExtIfcs {} {
 # NAME
 #   captureExtIfc -- capture external interface
 # SYNOPSIS
-#   captureExtIfc $eid $node_id
+#   captureExtIfc $eid $node_id $iface_id
 # FUNCTION
 #   Captures the external interface given by the given rj45 node.
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- node id
+#   * iface_id -- interface id
 #****
 proc captureExtIfc { eid node_id iface_id } {
     global execMode
 
-    if { [getNodeType $node_id] == "extelem" } {
-	set ifaces [getNodeStolenIfaces $node_id]
-	set iface_name [getIfcName $node_id $iface_id]
-	set iface_name [lindex [lsearch -inline -exact -index 0 $ifaces "$iface_name"] 1]
-    } else {
-	set iface_name [getNodeName $node_id]
-    }
-
-    if { [getEtherVlanEnabled $node_id] } {
-	set vlan [getEtherVlanTag $node_id]
+    set iface_name [getIfcName $node_id $iface_id]
+    if { [getIfcVlanDev $node_id $iface_id] != "" } {
+	set vlan [getIfcVlanTag $node_id $iface_id]
 	try {
+	    exec ip link set $iface_name up
 	    exec ip link add link $iface_name name $iface_name.$vlan type vlan id $vlan
 	} on error err {
 	    set msg "Error: VLAN $vlan on external interface $iface_name can't be\
@@ -1479,34 +1489,35 @@ proc captureExtIfc { eid node_id iface_id } {
 #   * iface_name -- physical interface name
 #****
 proc captureExtIfcByName { eid iface_name node_id } {
+    set nodeNs [getNodeNetns $eid $node_id]
+
     # won't work if the node is a wireless interface
-    pipesExec "ip link set $iface_name netns $eid" "hold"
+    pipesExec "ip link set $iface_name netns $nodeNs" "hold"
 }
 
 #****f* linux.tcl/releaseExtIfc
 # NAME
 #   releaseExtIfc -- release external interface
 # SYNOPSIS
-#   releaseExtIfc $eid $node_id
+#   releaseExtIfc $eid $node_id $iface_id
 # FUNCTION
 #   Releases the external interface captured by the given rj45 node.
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- node id
+#   * iface_id -- interface id
 #****
 proc releaseExtIfc { eid node_id iface_id } {
-    if { [getNodeType $node_id] == "extelem" } {
-	set ifaces [getNodeStolenIfaces $node_id]
-	set iface_name [getIfcName $node_id $iface_id]
-	set iface_name [lindex [lsearch -inline -exact -index 0 $ifaces "$iface_name"] 1]
-    } else {
-	set iface_name [getNodeName $node_id]
-    }
-
-    set vlan [getEtherVlanTag $node_id]
-    if { $vlan != "" && [getEtherVlanEnabled $node_id] } {
+    set iface_name [getIfcName $node_id $iface_id]
+    set vlan [getIfcVlanTag $node_id $iface_id]
+    if { $vlan != "" && [getIfcVlanDev $node_id $iface_id] != "" } {
 	set iface_name $iface_name.$vlan
-	catch { exec ip link del $iface_name }
+
+	if { [getLinkDirect [getIfcLink $node_id $iface_id]] } {
+	    catch {exec ip link del $iface_name}
+	} else {
+	    catch {exec ip -n [getNodeNetns $eid $node_id] link del $iface_name}
+	}
 
 	return
     }
@@ -1532,9 +1543,8 @@ proc releaseExtIfc { eid node_id iface_id } {
 proc releaseExtIfcByName { eid iface_name node_id } {
     global devfs_number
 
-    pipesExec "ip -n $eid link set $iface_name netns imunes_$devfs_number" "hold"
-
-    return
+    set nodeNs [getNodeNetns $eid $node_id]
+    pipesExec "ip -n $nodeNs link set $iface_name netns imunes_$devfs_number" "hold"
 }
 
 proc getStateIfcCmd { iface_name state } {
