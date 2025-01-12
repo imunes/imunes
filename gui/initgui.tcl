@@ -97,6 +97,7 @@ set selected ""
 set ns2srcfile ""
 set animatephase 0
 set changed 0
+set force 0
 set badentry 0
 set cursorState 0
 set clock_seconds 0
@@ -560,8 +561,7 @@ menu .menubar.tools -tearoff 0
 	$w.protocols.bgp configure -state disabled
     }
 
-    set oper_mode [getFromRunning "oper_mode"]
-    if { $router_model == "static" || $oper_mode != "edit" } {
+    if { $router_model == "static" } {
 	$w.protocols.rip configure -state disabled
 	$w.protocols.ripng configure -state disabled
 	$w.protocols.ospf configure -state disabled
@@ -569,11 +569,6 @@ menu .menubar.tools -tearoff 0
 	$w.protocols.bgp configure -state disabled
     }
 
-    if { $oper_mode != "edit" } {
-	$w.model.frr configure -state disabled
-	$w.model.quagga configure -state disabled
-	$w.model.static configure -state disabled
-    }
     if { "frr" ni $supp_router_models } {
 	$w.model.frr configure -state disabled
     }
@@ -786,8 +781,10 @@ set widgetlist { \
     { "Process list" "ps ax" } \
     { "IPv4 sockets" "netstat -4 -an" } \
     { "IPv6 sockets" "netstat -6 -an" } \
-    { "View startup script" "cat boot.conf" } \
-    { "View startup log" "cat out.log" } \
+    { "View ifaces startup script" "cat boot_ifaces.conf" } \
+    { "View ifaces startup logs" "cat out_ifaces.log err_ifaces.log" } \
+    { "View startup script" "cat boot.conf custom.conf" } \
+    { "View startup logs" "cat out.log err.log" } \
     { "List files" "ls" } \
 }
 
@@ -863,6 +860,18 @@ menu .menubar.experiment -tearoff 0
 	-command "setOperMode edit" -state disabled
 .menubar.experiment add command -label "Restart" -underline 0 \
 	-command "setOperMode edit; setOperMode exec" -state disabled
+.menubar.experiment add separator
+.menubar.experiment add command -label "Pause execution" -underline 0 \
+	-command {
+	    set auto_execution [getFromRunning "auto_execution"]
+	    setToRunning "auto_execution" [expr $auto_execution ^ 1]
+	    if { [getFromRunning "cfg_deployed"] && ! $auto_execution } {
+		undeployCfg
+		deployCfg
+	    }
+
+	    toggleAutoExecutionGUI
+	}
 .menubar.experiment add separator
 .menubar.experiment add command -label "Attach to experiment" -underline 0 \
 	-command "attachToExperimentPopup"
@@ -1168,6 +1177,9 @@ menu .button3menu.icon -tearoff 0
 menu .button3menu.transform -tearoff 0
 menu .button3menu.sett -tearoff 0
 menu .button3menu.services -tearoff 0
+menu .button3menu.node_execute -tearoff 0
+menu .button3menu.node_config -tearoff 0
+menu .button3menu.ifaces_config -tearoff 0
 
 menu .button3physifc -tearoff 0
 menu .button3logifc -tearoff 0

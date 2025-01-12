@@ -186,6 +186,7 @@ proc $MODULE.prepareSystem {} {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeCreate { eid node_id } {
+    setToRunning "${node_id}_running" true
 }
 
 #****f* rj45.tcl/rj45.nodeNamespaceSetup
@@ -238,6 +239,8 @@ proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
 	} else {
 	    captureExtIfc $eid $node_id $iface_id
 	}
+
+	setToRunning "${node_id}|${iface_id}_running" true
     }
 }
 
@@ -312,6 +315,8 @@ proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
 	} else {
 	    releaseExtIfc $eid $node_id $iface_id
 	}
+
+	setToRunning "${node_id}|${iface_id}_running" false
     }
 }
 
@@ -346,4 +351,5 @@ proc $MODULE.nodeShutdown { eid node_id } {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeDestroy { eid node_id } {
+    setToRunning "${node_id}_running" false
 }

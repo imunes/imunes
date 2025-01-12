@@ -61,7 +61,9 @@ proc $MODULE.generateConfig { node_id } {
     lappend cfg ""
 
     set tayga4pool [getTaygaIPv4DynPool $node_id]
+    setToRunning "${node_id}_old_tayga_ipv4_pool" $tayga4pool
     set tayga6prefix [getTaygaIPv6Prefix $node_id]
+    setToRunning "${node_id}_old_tayga_ipv6_prefix" $tayga6prefix
 
     set tayga4addr [lindex [split [getTaygaIPv4DynPool $node_id] "/"] 0]
     set tayga4pool [getTaygaIPv4DynPool $node_id]
@@ -93,8 +95,8 @@ proc $MODULE.generateConfig { node_id } {
 }
 
 proc $MODULE.generateUnconfig { node_id } {
-    set tayga4pool [getTaygaIPv4DynPool $node_id]
-    set tayga6prefix [getTaygaIPv6Prefix $node_id]
+    set tayga4pool [getFromRunning "${node_id}_old_tayga_ipv4_pool"]
+    set tayga6prefix [getFromRunning "${node_id}_old_tayga_ipv6_prefix"]
 
     set cfg ""
 

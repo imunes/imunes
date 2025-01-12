@@ -305,7 +305,7 @@ if { $execMode == "interactive" } {
     safePackageRequire Tk "To run the IMUNES GUI, Tk must be installed."
 
     foreach file "canvas copypaste drawing editor help theme linkcfgGUI \
-	mouse nodecfgGUI widgets annotations" {
+	mouse nodecfgGUI ifacesGUI widgets annotations" {
 
 	safeSourceFile "$ROOTDIR/$LIBDIR/gui/$file.tcl"
     }
@@ -318,6 +318,7 @@ if { $execMode == "interactive" } {
 
     newProject
     if { $argv != "" && [file exists $argv] } {
+	setToRunning "cwd" [pwd]
 	setToRunning "current_file" $argv
 	openFile
     }
@@ -342,10 +343,12 @@ if { $execMode == "interactive" } {
 
 	namespace eval ::cf::[set curcfg] {}
 	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+	upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 	set dict_cfg [dict create]
-	set dict_run [dict create]
+	setOption "version" $CFG_VERSION
 
+	set dict_run [dict create]
 	set execute_vars [dict create]
 
 	setToRunning "eid" ""
@@ -359,12 +362,23 @@ if { $execMode == "interactive" } {
 
 	readCfgJson $currentFileBatch
 
+	setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
+	setToRunning "cwd" [pwd]
+	setToRunning "current_file" $argv
+
 	if { [checkExternalInterfaces] } {
 	    return
 	}
 
 	if { [allSnapshotsAvailable] == 1 } {
-	    deployCfg 1 [getFromRunning "node_list"] "*" [getFromRunning "link_list"] [getFromRunning "link_list"] "*" "*"
+	    setToExecuteVars "instantiate_nodes" [getFromRunning "node_list"]
+	    setToExecuteVars "create_nodes_ifaces" "*"
+	    setToExecuteVars "instantiate_links" [getFromRunning "link_list"]
+	    setToExecuteVars "configure_links" "*"
+	    setToExecuteVars "configure_nodes_ifaces" "*"
+	    setToExecuteVars "configure_nodes" "*"
+
+	    deployCfg 1
 	    createExperimentFilesFromBatch
 	}
     } else {
@@ -375,15 +389,40 @@ if { $execMode == "interactive" } {
 
 	    namespace eval ::cf::[set curcfg] {}
 	    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+	    upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
 	    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 	    set dict_cfg [dict create]
+	    setOption "version" $CFG_VERSION
+
 	    set dict_run [dict create]
 	    set execute_vars [dict create]
 
-	    readCfgJson $configFile
-
 	    setToRunning "eid" $eid_base
-	    undeployCfg $eid_base 1 [getFromRunning "node_list"] "*" [getFromRunning "link_list"] "*" "*" "*"
+	    setToRunning "oper_mode" "edit"
+	    setToRunning "auto_execution" 1
+	    setToRunning "cfg_deployed" false
+	    setToRunning "stop_sched" true
+	    setToRunning "undolevel" 0
+	    setToRunning "redolevel" 0
+	    setToRunning "zoom" $zoom
+	    setToRunning "canvas_list" {}
+	    setToRunning "current_file" $configFile
+
+	    readCfgJson $configFile
+	    setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
+
+	    readRunningVarsFile $eid_base
+	    setToRunning "cfg_deployed" true
+
+	    setToExecuteVars "terminate_cfg" [cfgGet]
+	    setToExecuteVars "terminate_nodes" [getFromRunning "node_list"]
+	    setToExecuteVars "destroy_nodes_ifaces" "*"
+	    setToExecuteVars "terminate_links" [getFromRunning "link_list"]
+	    setToExecuteVars "unconfigure_links" "*"
+	    setToExecuteVars "unconfigure_nodes_ifaces" "*"
+	    setToExecuteVars "unconfigure_nodes" "*"
+
+	    undeployCfg $eid_base 1
 	} else {
 	    vimageCleanup $eid_base
 	}

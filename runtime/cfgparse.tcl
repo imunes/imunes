@@ -59,9 +59,11 @@ proc loadCfgLegacy { cfg } {
     global execMode all_modules_list
 
     upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+    upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
     set dict_cfg [dict create]
     set dict_run [dict create]
+    set execute_vars [dict create]
 
     # Cleanup first
     set node_list {}
@@ -84,8 +86,10 @@ proc loadCfgLegacy { cfg } {
 	    set $object {}
 	    set dict_object "${class}s"
 	    if { "$class" == "node" } {
+		setToRunning "${object}_running" false
 		lappend node_list $object
 	    } elseif { "$class" == "link" } {
+		setToRunning "${object}_running" false
 		lappend link_list $object
 	    } elseif { "$class" == "canvas" } {
 		set dict_object "canvases"
@@ -148,6 +152,7 @@ proc loadCfgLegacy { cfg } {
 				}
 
 				cfgSet "nodes" $object "ifaces" $iface_id "name" "$iface_name"
+				setToRunning "${object}|${iface_id}_running" false
 			    } else {
 				set iface_id [ifaceIdFromName $object $iface_name]
 
@@ -162,6 +167,7 @@ proc loadCfgLegacy { cfg } {
 					cfgSet "nodes" $object "ifaces" $iface_id "type" "phys"
 				    }
 				    cfgSet "nodes" $object "ifaces" $iface_id "name" "$iface_name"
+				    setToRunning "${object}|${iface_id}_running" false
 				}
 			    }
 
@@ -486,6 +492,7 @@ proc loadCfgLegacy { cfg } {
 				set iface_id [newObjectId $all_iface_ids "ifc"]
 				lappend all_iface_ids $iface_id
 
+				setToRunning "${object}|${iface_id}_running" false
 				cfgSet $dict_object $object "ifaces" $iface_id [dict get $all_ifaces $iface_name]
 			    }
 
@@ -959,6 +966,7 @@ proc loadCfgLegacy { cfg } {
     setToRunning "annotation_list" $annotation_list
     setToRunning "image_list" $image_list
     setToRunning "cfg_deployed" false
+    setToRunning "auto_execution" 1
 
     #
     # Hack for comaptibility with old format files (no canvases)
@@ -978,8 +986,13 @@ proc loadCfgLegacy { cfg } {
     foreach node_id $node_list {
 	set node_type [getNodeType $node_id]
 
+	if { $node_type == "pseudo" } {
+	    unsetRunning "${node_id}_running"
+	}
+
 	if { $node_type ni [concat $all_modules_list "pseudo extelem"] && \
 	    ! [string match "router.*" $node_type] } {
+
 	    set msg "Unknown node type: '$node_type'."
 	    if { $execMode == "batch" } {
 		statline $msg
@@ -988,6 +1001,7 @@ proc loadCfgLegacy { cfg } {
 		    "Error: $msg" \
 		info 0 Dismiss
 	    }
+
 	    exit
 	}
 
@@ -1160,7 +1174,9 @@ proc loadCfgJson { json_cfg } {
 	    return $dict_cfg
 	}
 
+	setToRunning "${node_id}_running" false
 	foreach iface_id [allIfcList $node_id] {
+	    setToRunning "${node_id}|${iface_id}_running" false
 	    if { [isIfcLogical $node_id $iface_id] } {
 		continue
 	    }
@@ -1182,6 +1198,10 @@ proc loadCfgJson { json_cfg } {
     setToRunning ipv4_used_list $ipv4_used_list
     setToRunning ipv6_used_list $ipv6_used_list
     setToRunning mac_used_list $mac_used_list
+
+    foreach link_id [getFromRunning "link_list"] {
+	setToRunning "${link_id}_running" false
+    }
 
     return $dict_cfg
 }
@@ -1332,10 +1352,18 @@ proc cfgGet { args } {
     return [dictGet $dict_cfg {*}$args]
 }
 
+proc _cfgGet { node_cfg args } {
+    return [dictGet $node_cfg {*}$args]
+}
+
 proc cfgGetWithDefault { default_value args } {
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
     return [dictGetWithDefault $default_value $dict_cfg {*}$args]
+}
+
+proc _cfgGetWithDefault { default_value node_cfg args } {
+    return [dictGetWithDefault $default_value $node_cfg {*}$args]
 }
 
 proc cfgSet { args } {
@@ -1355,6 +1383,23 @@ proc cfgSet { args } {
     }
 
     return $dict_cfg
+}
+
+proc _cfgSet { node_cfg args } {
+    if { [lindex $args end] in {{} ""} } {
+	for {set i 1} {$i < [llength $args]} {incr i} {
+	    set node_cfg [dictUnset $node_cfg {*}[lrange $args 0 end-$i]]
+
+	    set new_upper [dictGet $node_cfg {*}[lrange $args 0 end-[expr $i+1]]]
+	    if { $new_upper != "" } {
+		break
+	    }
+	}
+    } else {
+	set node_cfg [dictSet $node_cfg {*}$args]
+    }
+
+    return $node_cfg
 }
 
 # to forcefully set empty values to a dictionary key
@@ -1496,6 +1541,43 @@ proc lappendToRunning { key value } {
     set dict_run [dictLappend $dict_run $key $value]
 
     return $dict_run
+}
+
+proc getFromExecuteVars { key { config "" } } {
+    if { $config == "" } {
+	set config [set ::curcfg]
+    }
+    upvar 0 ::cf::${config}::execute_vars execute_vars
+
+    return [dictGet $execute_vars $key]
+}
+
+proc setToExecuteVars { key value } {
+    upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
+
+    set execute_vars [dictSet $execute_vars $key $value]
+
+    return $execute_vars
+}
+
+proc unsetExecuteVars { key } {
+    upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
+
+    if { $key == "" } {
+	set execute_vars [dictSet $execute_vars {}]
+    } else {
+	set execute_vars [dictUnset $execute_vars $key]
+    }
+
+    return $execute_vars
+}
+
+proc lappendToExecuteVars { key value } {
+    upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
+
+    set execute_vars [dictLappend $execute_vars $key $value]
+
+    return $execute_vars
 }
 
 proc jumpToUndoLevel { undolevel } {
