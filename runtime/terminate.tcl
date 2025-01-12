@@ -92,38 +92,6 @@ proc terminate_nodesShutdown { eid nodes nodes_count w } {
     }
 }
 
-proc terminate_releaseExternalIfaces { eid extifcs extifcsCount w } {
-    global progressbarCount execMode
-
-    set batchStep 0
-    foreach node_id $extifcs {
-	displayBatchProgress $batchStep $extifcsCount
-
-	try {
-	    [getNodeType $node_id].nodeDestroy $eid $node_id
-	} on error err {
-	    return -code error "Error in '[getNodeType $node_id].nodeDestroy $eid $node_id': $err"
-	}
-	pipesExec ""
-
-	incr batchStep
-	incr progressbarCount -1
-
-	if { $execMode != "batch" } {
-	    statline "Destroying external connection [getNodeName $node_id]"
-	    $w.p configure -value $progressbarCount
-	    update
-	}
-    }
-
-    if { $extifcsCount > 0 } {
-	displayBatchProgress $batchStep $extifcsCount
-	if { $execMode == "batch" } {
-	    statline ""
-	}
-    }
-}
-
 proc terminate_linksDestroy { eid links links_count w } {
     global progressbarCount execMode
 
@@ -215,7 +183,7 @@ proc finishTerminating { status msg w } {
 
     catch { pipesClose }
     if { $execMode == "batch" } {
-	puts $msg
+	puts stderr $msg
     } else {
 	catch { destroy $w }
 	set progressbarCount 0

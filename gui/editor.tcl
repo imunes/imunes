@@ -45,23 +45,25 @@
 #   Updates the undo log. Writes the current configuration to the
 #   undolog array and updates the undolevel variable.
 #****
+# BUG
+# 'Redo' visible after changing the config when not in top undolevel
+# Repro:
+#  1. add any node
+#  2. click Undo
+#  3. add any node
+# Should reset redolog when changing config from somewhere in undolog
 proc updateUndoLog {} {
     global changed showTree
 
     set undolevel [getFromRunning "undolevel"]
 
     if { $changed } {
-	global t_undolog
-
-	set t_undolog ""
-	dumpCfg string t_undolog
-
 	setToRunning "undolevel" [incr undolevel]
 	if { $undolevel == 1 } {
 	    .menubar.edit entryconfigure "Undo" -state normal
 	}
 
-	saveToUndoLevel $undolevel $t_undolog
+	saveToUndoLevel $undolevel
 	setToRunning "redolevel" $undolevel
 	set changed 0
 
@@ -167,10 +169,12 @@ proc chooseIfName { lnode_id rnode_id } {
     set iface_prefix [[getNodeType $lnode_id].ifacePrefix]
 
     set ifaces {}
-    foreach iface_id [ifcList $lnode_id] {
-	set iface_name [getIfcName $lnode_id $iface_id]
-	if { [regexp "$iface_prefix\[0-9\]+" $iface_name] } {
-	    lappend ifaces $iface_name
+    foreach {iface_id iface_cfg} [cfgGet "nodes" $lnode_id "ifaces"] {
+	if { [dictGet $iface_cfg "type"] == "phys" } {
+	    set iface_name [dictGet $iface_cfg "name"]
+	    if { [regexp "$iface_prefix\[0-9\]+" $iface_name] } {
+		lappend ifaces $iface_name
+	    }
 	}
     }
 
@@ -520,15 +524,7 @@ proc routerDefaultsApply { wi } {
 #   * icon_name -- icon name
 #****
 proc setCustomIcon { node_id icon_name } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-    global $icon_name
-
-    set i [lsearch [set $node_id] "customIcon *"]
-    if { $i >= 0 } {
-	set $node_id [lreplace [set $node_id] $i $i "customIcon $icon_name"]
-    } else {
-	set $node_id [linsert [set $node_id] end "customIcon $icon_name"]
-    }
+    cfgSet "nodes" $node_id "custom_icon" $icon_name
 }
 
 #****f* editor.tcl/getCustomIcon
@@ -542,9 +538,7 @@ proc setCustomIcon { node_id icon_name } {
 #   * node_id -- node to get the icon from
 #****
 proc getCustomIcon { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    return [lindex [lsearch -inline [set $node_id] "customIcon *"] 1]
+    return [cfgGet "nodes" $node_id "custom_icon"]
 }
 
 #****f* editor.tcl/removeCustomIcon
@@ -558,12 +552,7 @@ proc getCustomIcon { node_id } {
 #   * node_id -- node to remove the icon from
 #****
 proc removeCustomIcon { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
-    set i [lsearch [set $node_id] "customIcon *"]
-    if { $i >= 0 } {
-	set $node_id [lreplace [set $node_id] $i $i]
-    }
+    cfgUnset "nodes" $node_id "custom_icon"
 }
 
 #****f* editor.tcl/getMostDistantNodeCoordinates

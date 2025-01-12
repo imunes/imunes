@@ -146,27 +146,29 @@ proc drawNode { node_id } {
     lassign [lmap coord [getNodeLabelCoords $node_id] {expr int($coord * $zoom)}] x y
     if { $type != "pseudo" } {
 	set label_str [getNodeName $node_id]
-	if { $type == "rj45" && [getEtherVlanEnabled $node_id] } {
-	    set label_str "$label_str (VLAN [getEtherVlanTag $node_id])"
-	}
 
 	set has_empty_ifaces 0
 	foreach iface_id [ifcList $node_id] {
-	    if { [getNodeType $node_id] == "wlan" } {
+	    if { $type == "wlan" } {
 		set label_str "$label_str [getIfcIPv4addrs $node_id $iface_id]"
 	    } elseif { [getIfcLink $node_id $iface_id] == "" } {
+		if { [getIfcType $node_id $iface_id] == "stolen" } {
+		    set iflabel "\[[getIfcName $node_id $iface_id]\]"
+		} else {
+		    set iflabel "[getIfcName $node_id $iface_id]"
+		}
+
 		if { $has_empty_ifaces == 0 } {
-		    incr y 8
-		    set label_str "$label_str\n[getIfcName $node_id $iface_id]"
+		    set label_str "\n$label_str\n$iflabel"
 		    set has_empty_ifaces 1
 		} else {
-		    set label_str "$label_str [getIfcName $node_id $iface_id]"
+		    set label_str "$label_str $iflabel"
 		}
 	    }
 	}
     } else {
 	# get mirror link and its real node/iface
-	lassign [logicalPeerByIfc [getNodeMirror $node_id] "0"] peer_id peer_iface
+	lassign [logicalPeerByIfc $node_id "ifc0"] peer_id peer_iface
 
 	set label_str "[getNodeName $peer_id]:[getIfcName $peer_id $peer_iface]"
 	set peer_canvas [getNodeCanvas $peer_id]
@@ -312,36 +314,37 @@ proc calcAngle { link_id } {
 proc updateIfcLabel { link_id node_id iface_id } {
     global show_interface_names show_interface_ipv4 show_interface_ipv6
 
-    if { [getNodeType $node_id] == "extelem" } {
-	set ifaces [getNodeStolenIfaces $node_id]
-	set iface_id [lindex [lsearch -inline -exact -index 0 $ifaces "$iface_id"] 1]
-    }
-
     set ifipv4addr [getIfcIPv4addrs $node_id $iface_id]
     set ifipv6addr [getIfcIPv6addrs $node_id $iface_id]
-
     if { $iface_id == 0 } {
 	set iface_id ""
     }
 
     set label_str ""
     if { $show_interface_names } {
-	lappend label_str "$iface_id"
-    }
-
-    if { $show_interface_ipv4 && $ifipv4addr != {} } {
-	if { [llength $ifipv4addr] > 1 } {
-	    lappend label_str "[lindex $ifipv4addr 0] ..."
+	if { [getNodeType $node_id] == "rj45" } {
+	    lappend label_str "$iface_id - [getIfcName $node_id $iface_id]"
+	    if { [getIfcVlanDev $node_id $iface_id] != "" && [getIfcVlanTag $node_id $iface_id] != "" } {
+		lappend label_str "VLAN [getIfcVlanTag $node_id $iface_id]"
+	    }
 	} else {
-	    lappend label_str "[lindex $ifipv4addr 0]"
+	    lappend label_str "[getIfcName $node_id $iface_id]"
 	}
     }
 
-    if { $show_interface_ipv6 && $ifipv6addr != {} } {
+    if { $show_interface_ipv4 && $ifipv4addr != "" } {
+	if { [llength $ifipv4addr] > 1 } {
+	    lappend label_str "[lindex $ifipv4addr 0] ..."
+	} else {
+	    lappend label_str "$ifipv4addr"
+	}
+    }
+
+    if { $show_interface_ipv6 && $ifipv6addr != "" } {
 	if { [llength $ifipv6addr] > 1 } {
 	    lappend label_str "[lindex $ifipv6addr 0] ..."
 	} else {
-	    lappend label_str "[lindex $ifipv6addr 0]"
+	    lappend label_str "$ifipv6addr"
 	}
     }
 
@@ -517,6 +520,10 @@ proc updateIfcLabelParams { link_id node_id iface_id x1 y1 x2 y2 } {
     }
 
     set add_height [expr 10*($show_interface_names + $IP4 + $IP6)]
+    if { [getNodeType $node_id] == "rj45" && [getIfcVlanDev $node_id $iface_id] != "" } {
+	incr add_height [expr 10*$show_interface_names]
+    }
+
     # these params could be called dy and dx, respectively
     # additional height represents the ifnames, ipv4 and ipv6 addrs
     set height [expr 8 + $iconheight/2 + $add_height]
@@ -1343,8 +1350,8 @@ proc animate {} {
 
     catch { .panwin.f1.c itemconfigure "selectmark || selectbox" -dashoffset $animatephase } err
     if { $err != "" } {
-	puts "IMUNES was closed unexpectedly before experiment termination was completed."
-	puts "Clean all running experiments with the 'cleanupAll' command."
+	puts stderr "IMUNES was closed unexpectedly before experiment termination was completed."
+	puts stderr "Clean all running experiments with the 'cleanupAll' command."
 	return;
     }
 

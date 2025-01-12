@@ -980,7 +980,8 @@ proc annotationConfig { c target } {
 	    popupFreeformDialog $c $target "true"
 	}
 	default {
-	    puts "Unknown type [getAnnotationType $target] for target $target"
+	    # should not happen
+	    puts stderr "Unknown type [getAnnotationType $target] for target $target"
 	}
     }
     redrawAll

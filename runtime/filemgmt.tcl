@@ -84,6 +84,8 @@ set file_types {
 #****
 proc newProject {} {
     global curcfg cfg_list
+    global CFG_VERSION
+    global zoom
 
     set curcfg [newObjectId $cfg_list "cfg"]
     lappend cfg_list $curcfg
@@ -91,9 +93,12 @@ proc newProject {} {
     namespace eval ::cf::[set curcfg] {}
     upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-    set dict_run [dict create]
 
-    loadCfgLegacy ""
+    set dict_cfg [dict create]
+    setOption "version" $CFG_VERSION
+
+    set dict_run [dict create]
+    set execute_vars [dict create]
 
     setToRunning "eid" ""
     setToRunning "oper_mode" "edit"
@@ -101,7 +106,7 @@ proc newProject {} {
     setToRunning "stop_sched" true
     setToRunning "undolevel" 0
     setToRunning "redolevel" 0
-    setToRunning "zoom" 1.0
+    setToRunning "zoom" $zoom
     setToRunning "canvas_list" {}
     setToRunning "curcanvas" [newCanvas ""]
     setToRunning "current_file" ""
@@ -187,34 +192,95 @@ proc setWmTitle { fname } {
 #   Loads the configuration from the file named current_file.
 #****
 proc openFile {} {
+    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
     global showTree
 
-    set current_file [getFromRunning "current_file"]
-
-    set fileId [open $current_file r]
-    set cfg ""
-    foreach entry [read $fileId] {
-	lappend cfg $entry
-    }
-    close $fileId
-
-    loadCfgLegacy $cfg
+    readCfgJson [getFromRunning "current_file"]
 
     setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
+    applyOptions
+
     switchCanvas none
     redrawAll
+
+    setToRunning "oper_mode" "edit"
     setToRunning "cfg_deployed" false
     setToRunning "stop_sched" true
     setToRunning "undolevel" 0
     setToRunning "redolevel" 0
-    saveToUndoLevel 0 $cfg
+    saveToUndoLevel 0
     setActiveTool select
     updateProjectMenu
-    setWmTitle $current_file
+    setWmTitle [getFromRunning "current_file"]
 
     if { $showTree } {
 	refreshTopologyTree
     }
+}
+
+proc saveOptions {} {
+    global option_defaults gui_option_defaults
+    set running_zoom [getFromRunning "zoom"]
+
+    foreach {option default_value} $option_defaults {
+	global $option
+
+	set value [set $option]
+	if { $value != $default_value } {
+	    setOption $option $value
+	} else {
+	    unsetOption $option
+	}
+    }
+
+    foreach {option default_value} $gui_option_defaults {
+	global $option
+
+	set value [set $option]
+	if { $value != $default_value } {
+	    setOption $option $value
+	} else {
+	    unsetOption $option
+	}
+    }
+
+    if { $running_zoom == "" } {
+	return
+    }
+
+    if { $running_zoom != [dictGet $gui_option_defaults "zoom"] } {
+	setOption "zoom" $running_zoom
+    } else {
+	unsetOption "zoom"
+    }
+}
+
+proc applyOptions {} {
+    global option_defaults gui_option_defaults
+
+    foreach {option default_value} $option_defaults {
+	global $option
+
+	set value [getOption $option]
+	if { $value != "" } {
+	    set $option $value
+	} else {
+	    set $option $default_value
+	}
+    }
+
+    foreach {option default_value} $gui_option_defaults {
+	global $option
+
+	set value [getOption $option]
+	if { $value != "" } {
+	    set $option $value
+	} else {
+	    set $option $default_value
+	}
+    }
+
+    setToRunning "zoom" $zoom
 }
 
 #****f* filemgmt.tcl/saveFile
@@ -232,9 +298,7 @@ proc saveFile { selected_file } {
 	set current_file $selected_file
 	setToRunning "current_file" $current_file
 
-	set fileId [open $current_file w]
-	dumpCfg file $fileId
-	close $fileId
+	saveCfgJson $current_file
 
 	.bottom.textbox config -text "Saved [file tail $current_file]"
 
@@ -321,22 +385,20 @@ proc closeFile {} {
 	} elseif { $idx != 0 } {
 	    incr idx -1
 	}
-	set cfg [lindex $cfg_list $idx]
-
-	loadCfgLegacy $cfg
-	set curcfg $cfg
+	set curcfg [lindex $cfg_list $idx]
 
 	setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
 	switchCanvas none
 	setToRunning "undolevel" 0
 	setToRunning "redolevel" 0
-	saveToUndoLevel 0 $cfg
-	setActiveTool select
-	updateProjectMenu
-	switchProject
+	saveToUndoLevel 0
     } else {
 	newProject
     }
+
+    setActiveTool select
+    updateProjectMenu
+    switchProject
 }
 
 #****f* filemgmt.tcl/readConfigFile

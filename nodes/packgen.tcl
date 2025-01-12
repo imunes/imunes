@@ -55,13 +55,9 @@ registerModule $MODULE
 #   * node_id -- node id
 #****
 proc $MODULE.confNewNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
     global nodeNamingBase
 
-    set nconfig [list \
-	"hostname [getNewNodeNameType packgen $nodeNamingBase(packgen)]" \
-	! ]
-    lappend $node_id "network-config [list $nconfig]"
+    setNodeName $node_id [getNewNodeNameType packgen $nodeNamingBase(packgen)]
 }
 
 #****f* packgen.tcl/packgen.confNewIfc
@@ -248,24 +244,25 @@ proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
 #   * node_id - id of the node
 #****
 proc $MODULE.nodeConfigure { eid node_id } {
-    foreach packet [packgenPackets $node_id] {
-	set fd [open "| jexec $eid nghook $node_id: input" w]
-	fconfigure $fd -encoding binary
+    foreach iface_id [ifcList $node_id] {
+	foreach packet [packgenPackets $node_id] {
+	    set fd [open "| jexec $eid nghook $node_id: input" w]
+	    fconfigure $fd -encoding binary
 
-	set pdata [getPackgenPacketData $node_id [lindex $packet 0]]
-	set bin [binary format H* $pdata]
-	puts -nonewline $fd $bin
+	    set pdata [getPackgenPacketData $node_id [lindex $packet 0]]
+	    set bin [binary format H* $pdata]
+	    puts -nonewline $fd $bin
 
-	catch { close $fd }
-    }
+	    catch { close $fd }
+	}
 
-    set pps [getPackgenPacketRate $node_id]
+	set pps [getPackgenPacketRate $node_id]
 
-    pipesExec "jexec $eid ngctl msg $node_id: setpps $pps" "hold"
+	pipesExec "jexec $eid ngctl msg $node_id: setpps $pps" "hold"
 
-    set iface_id [lindex [ifcList $node_id] 0]
-    if { $iface_id != "" && [getIfcLink $node_id $iface_id] != "" } {
-	pipesExec "jexec $eid ngctl msg $node_id: start [expr 2**63]" "hold"
+	if { [getIfcLink $node_id $iface_id] != "" } {
+	    pipesExec "jexec $eid ngctl msg $node_id: start [expr 2**63]" "hold"
+	}
     }
 }
 
@@ -281,8 +278,13 @@ proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
 }
 
 proc $MODULE.nodeUnconfigure { eid node_id } {
-    pipesExec "jexec $eid ngctl msg $node_id: clrdata" "hold"
-    pipesExec "jexec $eid ngctl msg $node_id: stop" "hold"
+    foreach iface_id [ifcList $node_id] {
+	pipesExec "jexec $eid ngctl msg $node_id: clrdata" "hold"
+
+	if { [getIfcLink $node_id $iface_id] != "" } {
+	    pipesExec "jexec $eid ngctl msg $node_id: stop" "hold"
+	}
+    }
 }
 
 #****f* packgen.tcl/packgen.nodeShutdown

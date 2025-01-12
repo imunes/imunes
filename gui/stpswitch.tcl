@@ -60,13 +60,14 @@ proc $MODULE.icon { size } {
 }
 
 proc $MODULE.notebookDimensions { wi } {
-    set h 340
+    set h 400
     set w 507
 
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
 	== "Interfaces" } {
 	set h 320
     }
+
     if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] \
 	== "Bridge" } {
 	set h 370

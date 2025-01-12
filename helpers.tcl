@@ -82,7 +82,7 @@ proc parseCmdArgs { options usage } {
 	}
 	catch { exec id -u } uid
 	if { $uid != "0" } {
-	    puts "Error: To execute experiment, run IMUNES with root permissions."
+	    puts stderr "Error: To execute experiment, run IMUNES with root permissions."
 	    exit 1
 	}
 	set execMode batch
@@ -102,7 +102,7 @@ proc parseCmdArgs { options usage } {
 	}
 
 	if { ! [regexp {^[[:alnum:]]+$} $eid_base] } {
-	    puts "Experiment ID should only consists of alphanumeric characters."
+	    puts stderr "Experiment ID should only consists of alphanumeric characters."
 	    exit 1
 	}
     }
@@ -123,6 +123,7 @@ proc parseCmdArgs { options usage } {
 proc fetchImunesVersion {} {
     global ROOTDIR LIBDIR imunesVersion imunesChangedDate
     global imunesLastYear imunesAdditions
+    global CFG_VERSION
 
     set imunesCommit ""
 
@@ -131,6 +132,9 @@ proc fetchImunesVersion {} {
     foreach line [split $data "\n"] {
 	if { [string match "VERSION:*" $line] } {
 	    set imunesVersion [string range $line [expr [string first ":" $line] + 2] end]
+	}
+	if { [string match "CFG_VERSION:*" $line] } {
+	    set CFG_VERSION [string range $line [expr [string first ":" $line] + 2] end]
 	}
 	if { [string match "Commit:*" $line] } {
 	    set imunesCommit [string range $line [expr [string first ":" $line] + 2] end]
@@ -221,4 +225,34 @@ proc removeFromList { list_values elements { keep_doubles "" } } {
     }
 
     return $list_values
+}
+
+proc dputs { args } {
+    global debug
+
+    if { ! $debug } {
+	return
+    }
+
+    set nonewline 0
+    if { [lindex $args 0] == "-nonewline" } {
+	set nonewline 1
+	set args [lrange $args 1 end]
+    }
+
+    set fd "stdout"
+    if { [llength $args] == 1 } {
+	set args [list $fd [join $args]] ;
+    }
+
+    lassign $args channel s
+    set cmd "puts"
+    if { $nonewline } {
+	lappend cmd "-nonewline"
+    }
+
+    lappend cmd $channel $s
+
+    eval $cmd
+    flush $fd
 }

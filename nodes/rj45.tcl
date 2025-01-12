@@ -58,12 +58,9 @@ registerModule $MODULE
 #   * node_id -- node id
 #****
 proc $MODULE.confNewNode { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
+    global nodeNamingBase
 
-    set nconfig [list \
-	"hostname UNASSIGNED" \
-	! ]
-    lappend $node_id "network-config [list $nconfig]"
+    setNodeName $node_id [getNewNodeNameType rj45 $nodeNamingBase(rj45)]
 }
 
 #****f* rj45.tcl/rj45.confNewIfc
@@ -152,27 +149,13 @@ proc $MODULE.virtlayer {} {
 #     the netraph hook name (in this case: lower).
 #****
 proc $MODULE.nghook { eid node_id iface_id } {
-    set iface_name [getNodeName $node_id]
-    set vlan [getEtherVlanTag $node_id]
-    if { $vlan != "" && [getEtherVlanEnabled $node_id] } {
+    set iface_name [getIfcName $node_id $iface_id]
+    set vlan [getIfcVlanTag $node_id $iface_id]
+    if { $vlan != "" && [getIfcVlanDev $node_id $iface_id] != "" } {
 	set iface_name ${iface_name}_$vlan
     }
 
     return [list $iface_name lower]
-}
-
-#****f* rj45.tcl/rj45.maxLinks
-# NAME
-#   rj45.maxLinks -- maximum number of links
-# SYNOPSIS
-#   rj45.maxLinks
-# FUNCTION
-#   Returns rj45 maximum number of links.
-# RESULT
-#   * maximum number of links.
-#****
-proc $MODULE.maxLinks {} {
-    return 1
 }
 
 ################################################################################

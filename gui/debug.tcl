@@ -108,9 +108,9 @@ proc logCaller {} {
     set r [catch { info level [expr [info level] - 1] } e]
     set r2 [catch { info level [expr [info level] - 2] } e2]
     if { $r } {
-        puts "Called directly by the interpreter (e.g.: .tcl on the partyline)."
+        dputs "Called directly by the interpreter (e.g.: .tcl on the partyline)."
     } {
-        puts "Called by ${e} ${e2}."
+        dputs "Called by ${e} ${e2}."
     }
 }
 
@@ -145,7 +145,6 @@ bind . <F6> {
     source "$ROOTDIR/$LIBDIR/config/packgencfg.tcl"
     source "$ROOTDIR/$LIBDIR/config/stpswitchcfg.tcl"
 
-    source "$ROOTDIR/$LIBDIR/nodes/extelem.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/extnat.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/ext.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/filter.tcl"
@@ -162,7 +161,6 @@ bind . <F6> {
     source "$ROOTDIR/$LIBDIR/nodes/wlan.tcl"
 
     source "$ROOTDIR/$LIBDIR/gui/annotations.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/extelem.tcl"
     source "$ROOTDIR/$LIBDIR/gui/extnat.tcl"
     source "$ROOTDIR/$LIBDIR/gui/ext.tcl"
     source "$ROOTDIR/$LIBDIR/gui/filter.tcl"
@@ -189,5 +187,6 @@ bind . <F6> {
 
     source "$ROOTDIR/$LIBDIR/gui/debug.tcl"
 
-    puts "Reloaded all sources."
+    applyOptions
+    dputs "Reloaded all sources."
 }

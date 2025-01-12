@@ -84,7 +84,7 @@ try {
     exit 1
 }
 
-safePackageRequire [list cmdline platform ip base64]
+safePackageRequire [list cmdline platform ip base64 json json::write]
 
 set initMode 0
 set execMode interactive
@@ -157,9 +157,9 @@ array set nodeNamingBase {
     router router
     host host
     hub hub
-    extelem xel
     lanswitch switch
     nat64 nat64-
+    rj45 rj45-
     packgen packgen
     stpswitch stpswitch
     wlan wlan
@@ -190,14 +190,14 @@ foreach {option default_value} [concat $option_defaults $gui_option_defaults] {
 # Set default L2 node list
 set l2nodes "hub lanswitch rj45 stpswitch filter packgen ext extnat"
 # Set default L3 node list
-set l3nodes "router host pc nat64 extelem"
+set l3nodes "router host pc nat64"
 # Set default supported router models
 set supp_router_models "frr quagga static"
 
 if { $isOSlinux } {
     # Limit default nodes on linux
     set l2nodes "hub lanswitch rj45 ext extnat"
-    set l3nodes "router pc host nat64 extelem"
+    set l3nodes "router pc host nat64"
     set supp_router_models "frr quagga static"
     safeSourceFile $ROOTDIR/$LIBDIR/runtime/linux.tcl
 }
@@ -214,7 +214,7 @@ if { $initMode == 1 } {
 if { $execMode == "batch" } {
     set err [checkSysPrerequisites]
     if { $err != "" } {
-	puts $err
+	puts stderr $err
 	exit
     }
 }
@@ -330,18 +330,12 @@ if { $execMode == "interactive" } {
 } else {
     if { $argv != "" } {
 	if { ! [file exists $argv] } {
-	    puts "Error: file '$argv' doesn't exist"
+	    puts stderr "Error: file '$argv' doesn't exist"
 	    exit
 	}
 
 	global currentFileBatch
 	set currentFileBatch $argv
-	set fileId [open $argv r]
-	set cfg ""
-	foreach entry [read $fileId] {
-	    lappend cfg $entry
-	}
-	close $fileId
 
 	set curcfg [newObjectId $cfg_list "cfg"]
 	lappend cfg_list $curcfg
@@ -352,7 +346,6 @@ if { $execMode == "interactive" } {
 	set dict_cfg [dict create]
 	set dict_run [dict create]
 
-	loadCfgLegacy $cfg
 	set execute_vars [dict create]
 
 	setToRunning "eid" ""
@@ -363,6 +356,9 @@ if { $execMode == "interactive" } {
 	setToRunning "undolevel" 0
 	setToRunning "redolevel" 0
 	setToRunning "zoom" $zoom
+
+	readCfgJson $currentFileBatch
+
 	if { [checkExternalInterfaces] } {
 	    return
 	}
@@ -374,13 +370,6 @@ if { $execMode == "interactive" } {
     } else {
 	set configFile "$runtimeDir/$eid_base/config.imn"
 	if { [file exists $configFile] && $regular_termination } {
-	    set fileId [open $configFile r]
-	    set cfg ""
-	    foreach entry [read $fileId] {
-		lappend cfg $entry
-	    }
-	    close $fileId
-
 	    set curcfg [newObjectId $cfg_list "cfg"]
 	    lappend cfg_list $curcfg
 
@@ -391,7 +380,7 @@ if { $execMode == "interactive" } {
 	    set dict_run [dict create]
 	    set execute_vars [dict create]
 
-	    loadCfgLegacy $cfg
+	    readCfgJson $configFile
 
 	    setToRunning "eid" $eid_base
 	    undeployCfg $eid_base 1 [getFromRunning "node_list"] "*" [getFromRunning "link_list"] "*" "*" "*"

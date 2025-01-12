@@ -2,7 +2,7 @@
 
 PORTNAME=		imunes
 DISTVERSIONPREFIX=	v
-DISTVERSION=		2.6.0
+DISTVERSION=		3.0.0b
 CATEGORIES=		net
 
 MAINTAINER=		denis.sale@gmail.com

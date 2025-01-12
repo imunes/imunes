@@ -181,7 +181,7 @@ proc startXappOnNode { node_id app } {
     global debug
 
     if { [checkForExternalApps "socat"] != 0 } {
-	puts "To run X applications on the node, install socat on your host."
+	puts stderr "To run X applications on the node, install socat on your host."
 	return
     }
 
@@ -303,7 +303,7 @@ proc allSnapshotsAvailable {} {
 		return 1
 	    } else {
 		if { $execMode == "batch" } {
-		    puts "The root filesystem for virtual nodes ($vroot) is missing.
+		    puts stderr "The root filesystem for virtual nodes ($vroot) is missing.
     Run 'imunes -p' to create the root filesystem."
 		} else {
 		    tk_dialog .dialog1 "IMUNES error" \
@@ -329,10 +329,10 @@ proc allSnapshotsAvailable {} {
 	if { [llength [lsearch -inline $snapshotList $snapshot]] == 0 } {
 	    if { $execMode == "batch" } {
 		if { $snapshot == "vroot/vroot@clean" } {
-		    puts "The main snapshot for virtual nodes is missing.
+		    puts stderr "The main snapshot for virtual nodes is missing.
 Run 'make' or 'make vroot' to create the main ZFS snapshot."
 		} else {
-		    puts "Error: ZFS snapshot image \"$snapshot\" for node \"$node_id\" is missing."
+		    puts stderr "Error: ZFS snapshot image \"$snapshot\" for node \"$node_id\" is missing."
 		}
 		return 0
 	    } else {
@@ -453,7 +453,7 @@ Please don't try killing the process.
 proc execSetIfcQDisc { eid node_id iface_id qdisc } {
     set link_id [getIfcLink $node_id $iface_id]
     set direction [linkDirection $node_id $iface_id]
-    lassign [getLinkPeers $link_id] - node2_id
+    lassign [getLinkPeers $link_id] node1_id -
 
     switch -exact $qdisc {
 	FIFO { set qdisc fifo }
@@ -461,7 +461,7 @@ proc execSetIfcQDisc { eid node_id iface_id qdisc } {
 	DRR { set qdisc drr }
     }
 
-    if { [getNodeType $node2_id] == "pseudo" } {
+    if { [getNodeType $node1_id] == "pseudo" } {
 	set link_id [getLinkMirror $link_id]
     }
 
@@ -486,14 +486,14 @@ proc execSetIfcQDisc { eid node_id iface_id qdisc } {
 proc execSetIfcQDrop { eid node_id iface_id qdrop } {
     set link_id [getIfcLink $node_id $iface_id]
     set direction [linkDirection $node_id $iface_id]
-    lassign [getLinkPeers $link_id] - node2_id
+    lassign [getLinkPeers $link_id] node1_id -
 
     switch -exact $qdrop {
 	drop-head { set qdrop drophead }
 	drop-tail { set qdrop droptail }
     }
 
-    if { [getNodeType $node2_id] == "pseudo" } {
+    if { [getNodeType $node1_id] == "pseudo" } {
 	set link_id [getLinkMirror $link_id]
     }
 
@@ -517,13 +517,13 @@ proc execSetIfcQDrop { eid node_id iface_id qdrop } {
 proc execSetIfcQLen { eid node_id iface_id qlen } {
     set link_id [getIfcLink $node_id $iface_id]
     set direction [linkDirection $node_id $iface_id]
-    lassign [getLinkPeers $link_id] - node2_id
+    lassign [getLinkPeers $link_id] node1_id -
 
     if { $qlen == 0 } {
 	set qlen -1
     }
 
-    if { [getNodeType $node2_id] == "pseudo" } {
+    if { [getNodeType $node1_id] == "pseudo" } {
 	set link_id [getLinkMirror $link_id]
     }
 
@@ -543,8 +543,6 @@ proc execSetIfcQLen { eid node_id iface_id qlen } {
 #   link_id -- link id
 #****
 proc execSetLinkParams { eid link_id } {
-    global debug
-
     set bandwidth [expr [getLinkBandwidth $link_id] + 0]
     set delay [expr [getLinkDelay $link_id] + 0]
     set ber [expr [getLinkBER $link_id] + 0]
@@ -950,7 +948,8 @@ proc getHostIfcVlanExists { node_id ifname } {
     # check if VLAN ID is already taken
     # this can be only done by trying to create it, as it's possible that the same
     # VLAN interface already exists in some other namespace
-    set vlan [getEtherVlanTag $node_id]
+    set iface_id [ifaceIdFromName $node_id $ifname]
+    set vlan [getIfcVlanTag $node_id $iface_id]
     try {
 	exec ifconfig $ifname.$vlan create
     } on ok {} {
@@ -963,7 +962,7 @@ proc getHostIfcVlanExists { node_id ifname } {
     }
 
     if { $execMode == "batch" } {
-	puts $msg
+	puts stderr $msg
     } else {
 	after idle { .dialog1.msg configure -wraplength 4i }
 	tk_dialog .dialog1 "IMUNES error" $msg \
@@ -1058,16 +1057,12 @@ proc prepareFilesystemForNode { node_id } {
 #   * node_id -- node id
 #****
 proc createNodeContainer { node_id } {
-    global debug
-
     set node_dir [getNodeDir $node_id]
 
     set jail_cmd "jail -c name=[getFromRunning "eid"].$node_id path=$node_dir securelevel=1 \
 	host.hostname=\"[getNodeName $node_id]\" vnet persist"
 
-    if { $debug } {
-	puts "Node $node_id -> '$jail_cmd'"
-    }
+    dputs "Node $node_id -> '$jail_cmd'"
 
     pipesExec "$jail_cmd" "hold"
 }
@@ -1075,7 +1070,7 @@ proc createNodeContainer { node_id } {
 proc isNodeStarted { node_id } {
     set node_type [getNodeType $node_id]
     if { [$node_type.virtlayer] != "VIRTUALIZED" } {
-	if { $node_type in "rj45 ext extnat extelem" } {
+	if { $node_type in "rj45 ext extnat" } {
 	    return true
 	}
 
@@ -1187,7 +1182,17 @@ proc nodePhysIfacesCreate { node_id ifaces } {
 		# we don't know the name, so make sure all other options cover other IMUNES
 		# 'physical' interfaces
 		# XXX not yet implemented
-		pipesExec "ifconfig $iface_name vnet $jail_id" "hold"
+		if { [getIfcType $node_id $iface_id] == "stolen" } {
+		    captureExtIfcByName $eid $iface_name $node_id
+		    if { [getNodeType $node_id] in "hub lanswitch" } {
+			lassign [[getNodeType $node_id].nghook $eid $node_id $iface_id] \
+			    ngpeer1 nghook1
+			lassign "$iface_name lower" \
+			    ngpeer2 nghook2
+
+			pipesExec "jexec $eid ngctl connect $ngpeer1: $ngpeer2: $nghook1 $nghook2" "hold"
+		    }
+		}
 	    }
 	}
     }
@@ -1216,7 +1221,7 @@ proc nodeLogIfacesCreate { node_id ifaces } {
 
     foreach iface_id $ifaces {
 	set iface_name [getIfcName $node_id $iface_id]
-	switch -exact [getLogIfcType $node_id $iface_id] {
+	switch -exact [getIfcType $node_id $iface_id] {
 	    vlan {
 		set tag [getIfcVlanTag $node_id $iface_id]
 		set dev [getIfcVlanDev $node_id $iface_id]
@@ -1287,24 +1292,24 @@ proc runConfOnNode { node_id } {
 
     set jail_id "[getFromRunning "eid"].$node_id"
 
-    if { [getCustomEnabled $node_id] == true } {
-	set selected [getCustomConfigSelected $node_id]
-
-	set bootcmd [getCustomConfigCommand $node_id $selected]
-	set bootcfg [getCustomConfig $node_id $selected]
-	set bootcfg [concat $bootcfg [[getNodeType $node_id].generateConfig $node_id]]
+    set custom_selected [getCustomConfigSelected $node_id "NODE_CONFIG"]
+    if { [getCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
+        set bootcmd [getCustomConfigCommand $node_id "NODE_CONFIG" $custom_selected]
+        set bootcfg [getCustomConfig $node_id "NODE_CONFIG" $custom_selected]
+	set bootcfg "$bootcfg\n[join [[getNodeType $node_id].generateConfig $node_id] "\n"]"
 	set confFile "custom.conf"
     } else {
-	set bootcfg [[getNodeType $node_id].generateConfig $node_id]
+        set bootcfg [join [[getNodeType $node_id].generateConfig $node_id] "\n"]
 	set bootcmd [[getNodeType $node_id].bootcmd $node_id]
 	set confFile "boot.conf"
     }
 
     generateHostsFile $node_id
 
-    set cfg [join $bootcfg "\n"]
+    set cfg "set -x\n$bootcfg"
     writeDataToNodeFile $node_id /$confFile $cfg
-    set cmds "$bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
+    set cmds "rm -f /out.log /err.log ;"
+    set cmds "$cmds $bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
     # renaming the file signals that we're done
     set cmds "$cmds mv /tout.log /out.log ;"
     set cmds "$cmds mv /terr.log /err.log"
@@ -1316,18 +1321,21 @@ proc startNodeIfaces { node_id ifaces } {
 
     set jail_id "[getFromRunning "eid"].$node_id"
 
-    if { [getCustomEnabled $node_id] == true } {
-	return
+    set custom_selected [getCustomConfigSelected $node_id "IFACES_CONFIG"]
+    if { [getCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
+        set bootcmd [getCustomConfigCommand $node_id "IFACES_CONFIG" $custom_selected]
+        set bootcfg [getCustomConfig $node_id "IFACES_CONFIG" $custom_selected]
+        set confFile "custom_ifaces.conf"
+    } else {
+	set bootcfg [join [[getNodeType $node_id].generateConfigIfaces $node_id $ifaces] "\n"]
+	set bootcmd [[getNodeType $node_id].bootcmd $node_id]
+	set confFile "boot_ifaces.conf"
     }
 
-    set bootcfg [[getNodeType $node_id].generateConfigIfaces $node_id $ifaces]
-    set bootcmd [[getNodeType $node_id].bootcmd $node_id]
-    set confFile "boot_ifaces.conf"
-
-    #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
-    set cfg [join "{set -x} $bootcfg" "\n"]
+    set cfg "set -x\n$bootcfg"
     writeDataToNodeFile $node_id /$confFile $cfg
-    set cmds "$bootcmd /$confFile >> /tout_ifaces.log 2>> /terr_ifaces.log ;"
+    set cmds "rm -f /out_ifaces.log /err_ifaces.log ;"
+    set cmds "$cmds $bootcmd /$confFile >> /tout_ifaces.log 2>> /terr_ifaces.log ;"
     # renaming the file signals that we're done
     set cmds "$cmds mv /tout_ifaces.log /out_ifaces.log ;"
     set cmds "$cmds mv /terr_ifaces.log /err_ifaces.log"
@@ -1337,14 +1345,19 @@ proc startNodeIfaces { node_id ifaces } {
 proc unconfigNode { eid node_id } {
     set jail_id "$eid.$node_id"
 
-    set bootcfg [[getNodeType $node_id].generateUnconfig $node_id]
+    set custom_selected [getCustomConfigSelected $node_id "NODE_CONFIG"]
+    if { [getCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
+	return
+    }
+
+    set bootcfg [join [[getNodeType $node_id].generateUnconfig $node_id] "\n"]
     set bootcmd [[getNodeType $node_id].bootcmd $node_id]
     set confFile "unboot.conf"
 
-    #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
-    set cfg [join "{set -x} $bootcfg" "\n"]
+    set cfg "set -x\n$bootcfg"
     writeDataToNodeFile $node_id /$confFile $cfg
-    set cmds "$bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
+    set cmds "rm -f /out.log /err.log ;"
+    set cmds "$cmds $bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
     # renaming the file signals that we're done
     set cmds "$cmds mv /tout.log /out.log ;"
     set cmds "$cmds mv /terr.log /err.log"
@@ -1354,18 +1367,19 @@ proc unconfigNode { eid node_id } {
 proc unconfigNodeIfaces { eid node_id ifaces } {
     set jail_id "$eid.$node_id"
 
-    if { [getCustomEnabled $node_id] == true } {
+    set custom_selected [getCustomConfigSelected $node_id "IFACES_CONFIG"]
+    if { [getCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
 	return
     }
 
-    set bootcfg [[getNodeType $node_id].generateUnconfigIfaces $node_id $ifaces]
+    set bootcfg [join [[getNodeType $node_id].generateUnconfigIfaces $node_id $ifaces] "\n"]
     set bootcmd [[getNodeType $node_id].bootcmd $node_id]
     set confFile "unboot_ifaces.conf"
 
-    #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
-    set cfg [join "{set -x} $bootcfg" "\n"]
+    set cfg "set -x\n$bootcfg"
     writeDataToNodeFile $node_id /$confFile $cfg
-    set cmds "$bootcmd /$confFile >> /tout_ifaces.log 2>> /terr_ifaces.log ;"
+    set cmds "rm -f /out_ifaces.log /err_ifaces.log ;"
+    set cmds "$cmds $bootcmd /$confFile >> /tout_ifaces.log 2>> /terr_ifaces.log ;"
     # renaming the file signals that we're done
     set cmds "$cmds mv /tout_ifaces.log /out_ifaces.log ;"
     set cmds "$cmds mv /terr_ifaces.log /err_ifaces.log"
@@ -1381,7 +1395,7 @@ proc isNodeIfacesConfigured { node_id } {
 
     set jail_id "[getFromRunning "eid"].$node_id"
 
-    if { [[getNodeType $node_id].virtlayer] == "NATIVE" || [getCustomEnabled $node_id] == true } {
+    if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
 	return true
     }
 
@@ -1444,7 +1458,7 @@ proc isNodeErrorIfaces { node_id } {
 	return false
     }
 
-    if { [getCustomEnabled $node_id] || [[getNodeType $node_id].virtlayer] == "NATIVE" } {
+    if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
 	return false
     }
 
@@ -1763,7 +1777,7 @@ proc createLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 #   * link_id -- link id
 #****
 proc configureLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
-    global linkJitterConfiguration debug
+    global linkJitterConfiguration
 
     set eid [getFromRunning "eid"]
     set bandwidth [expr [getLinkBandwidth $link_id] + 0]
@@ -1832,14 +1846,24 @@ proc destroyLinkBetween { eid node1_id node2_id link_id } {
 #   * eid -- experiment id
 #   * vimages -- list of virtual nodes
 #****
-proc nodeIfacesDestroy { eid node_id ifcs } {
-    if { [getNodeType $node_id] in "ext extnat" } {
-	pipesExec "jexec $eid ngctl rmnode $eid-$node_id:" "hold"
-	return
+proc nodeIfacesDestroy { eid node_id ifaces } {
+    set node_type [getNodeType $node_id]
+    if { $node_type == "rj45" } {
+	foreach iface_id $ifaces {
+	    releaseExtIfcByName $eid [getIfcName $node_id $iface_id] $node_id
+	}
+    } else {
+	foreach iface_id $ifaces {
+	    set iface_name [getIfcName $node_id $iface_id]
+	    if { [getIfcType $node_id $iface_id] == "stolen" } {
+		releaseExtIfcByName $eid $iface_name $node_id
+	    } else {
+		pipesExec "jexec $eid ngctl rmnode $node_id-$iface_name:" "hold"
+	    }
+	}
     }
 
-    foreach ifc $ifcs {
-	pipesExec "jexec $eid ngctl rmnode $node_id-$ifc:" "hold"
+    foreach iface_id $ifaces {
     }
 }
 
@@ -1960,19 +1984,20 @@ proc getCpuCount {} {
 # NAME
 #   captureExtIfc -- capture external interface
 # SYNOPSIS
-#   captureExtIfc $eid $node_id
+#   captureExtIfc $eid $node_id $iface_id
 # FUNCTION
 #   Captures the external interface given by the given rj45 node.
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- node id
+#   * iface_id -- interface id
 #****
 proc captureExtIfc { eid node_id iface_id } {
     global execMode
 
-    set ifname [getNodeName $node_id]
-    if { [getEtherVlanEnabled $node_id] } {
-	set vlan [getEtherVlanTag $node_id]
+    set ifname [getIfcName $node_id $iface_id]
+    if { [getIfcVlanDev $node_id $iface_id] != "" } {
+	set vlan [getIfcVlanTag $node_id $iface_id]
 	try {
 	    exec ifconfig $ifname.$vlan create
 	} on error err {
@@ -1980,7 +2005,7 @@ proc captureExtIfc { eid node_id iface_id } {
 		created.\n($err)"
 
 	    if { $execMode == "batch" } {
-		puts $msg
+		puts stderr $msg
 	    } else {
 		after idle { .dialog1.msg configure -wraplength 4i }
 		tk_dialog .dialog1 "IMUNES error" $msg \
@@ -2008,25 +2033,32 @@ proc captureExtIfc { eid node_id iface_id } {
 #   * ifname -- physical interface name
 #****
 proc captureExtIfcByName { eid ifname node_id } {
-    pipesExec "ifconfig $ifname vnet $eid" "hold"
-    pipesExec "jexec $eid ifconfig $ifname up promisc" "hold"
+    if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
+	set nodeNs $eid
+    } else {
+	set nodeNs $eid.$node_id
+    }
+
+    pipesExec "ifconfig $ifname vnet $nodeNs" "hold"
+    pipesExec "jexec $nodeNs ifconfig $ifname up promisc" "hold"
 }
 
 #****f* freebsd.tcl/releaseExtIfc
 # NAME
 #   releaseExtIfc -- release external interface
 # SYNOPSIS
-#   releaseExtIfc $eid $node_id
+#   releaseExtIfc $eid $node_id $iface_id
 # FUNCTION
 #   Releases the external interface captured by the given rj45 node.
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- node id
+#   * iface_id -- interface id
 #****
 proc releaseExtIfc { eid node_id iface_id } {
-    set ifname [getNodeName $node_id]
-    set vlan [getEtherVlanTag $node_id]
-    if { $vlan != "" && [getEtherVlanEnabled $node_id] } {
+    set ifname [getIfcName $node_id $iface_id]
+    set vlan [getIfcVlanTag $node_id $iface_id]
+    if { $vlan != "" && [getIfcVlanDev $node_id $iface_id] != "" } {
 	set ifname $ifname.$vlan
 	catch { exec ifconfig $ifname -vnet $eid destroy }
 
@@ -2048,7 +2080,13 @@ proc releaseExtIfc { eid node_id iface_id } {
 #   * ifname -- physical interface name
 #****
 proc releaseExtIfcByName { eid ifname node_id } {
-    pipesExec "ifconfig $ifname -vnet $eid" "hold"
+    if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
+	set nodeNs $eid
+    } else {
+	set nodeNs $eid.$node_id
+    }
+
+    pipesExec "ifconfig $ifname -vnet $nodeNs" "hold"
     pipesExec "ifconfig $ifname up -promisc" "hold"
 }
 
@@ -2307,11 +2345,13 @@ proc configureExternalConnection { eid node_id } {
     }
     set cmds "ifconfig $outifc link $ether"
 
-    foreach ipv4 [getIfcIPv4addrs $node_id $ifc] {
+    set addrs [getIfcIPv4addrs $node_id $ifc]
+    foreach ipv4 $addrs {
 	set cmds "$cmds\n ifconfig $outifc $ipv4"
     }
 
-    foreach ipv6 [getIfcIPv6addrs $node_id $ifc] {
+    set addrs [getIfcIPv6addrs $node_id $ifc]
+    foreach ipv6 $addrs {
 	set cmds "$cmds\n ifconfig $outifc inet6 $ipv6"
     }
 

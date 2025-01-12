@@ -49,7 +49,7 @@ proc removeLinkGUI { link_id atomic { keep_ifaces 0 } } {
 
     set mirror_link_id [getLinkMirror $link_id]
     if { $mirror_link_id != "" } {
-	set mirror_node_id [getNodeMirror $node2_id]
+	set mirror_node_id [getNodeMirror $node1_id]
     }
 
     # TODO: check this when wlan node turn comes
@@ -66,7 +66,7 @@ proc removeLinkGUI { link_id atomic { keep_ifaces 0 } } {
 	.panwin.f1.c delete $mirror_link_id
 
 	# remove pseudo nodes from GUI
-	.panwin.f1.c delete $node2_id
+	.panwin.f1.c delete $node1_id
 	.panwin.f1.c delete $mirror_node_id
     }
 
@@ -320,7 +320,7 @@ proc selectAdjacent {} {
 
 	    set mirror_node [getNodeMirror $peer_id]
 	    if { $mirror_node != "" } {
-		set peer_id [getIfcPeer $mirror_node "0"]
+		set peer_id [getIfcPeer $mirror_node "ifc0"]
 	    }
 
 	    if { $peer_id ni $adjacent } {
@@ -399,6 +399,12 @@ proc button3link { c x y } {
     #
     # Toggle direct link
     #
+    lassign [getLinkPeers $link_id] peer1_id peer2_id
+    lassign [getLinkPeersIfaces $link_id] peer1_iface peer2_iface
+    if { [getNodeType $peer1_id] == "pseudo" } {
+	lassign [logicalPeerByIfc $peer2_id $peer2_iface] peer1_id peer1_iface
+    }
+
     if { $oper_mode != "exec" } {
 	.button3menu add checkbutton -label "Direct link" \
 	    -underline 5 -variable linkDirect_$link_id \
@@ -446,11 +452,11 @@ proc button3link { c x y } {
     #
     set link_mirror_id [getLinkMirror $link_id]
     if { $oper_mode != "exec" && $link_mirror_id != "" &&
-	[getNodeCanvas [lindex [getLinkPeers $link_mirror_id] 1]] ==
+	[getNodeCanvas [lindex [getLinkPeers $link_mirror_id] 0]] ==
 	[getFromRunning "curcanvas"] } {
 
 	.button3menu add command -label "Merge" \
-	    -command "mergeNodeGUI [lindex [getLinkPeers $link_id] 1]"
+	    -command "mergeNodeGUI [lindex [getLinkPeers $link_id] 0]"
     } else {
 	.button3menu add command -label "Merge" -state disabled
     }
@@ -493,10 +499,10 @@ proc moveToCanvas { canvas_id } {
 	if { ($peer1_id ni $selected_nodes && $peer2_id in $selected_nodes) || \
 	    ($peer1_id in $selected_nodes && $peer2_id ni $selected_nodes) } {
 
-	    # pseudo nodes are always peer2
-	    if { [getNodeType $peer2_id] == "pseudo" } {
-		setNodeCanvas $peer2_id $canvas_id
-		if { [getNodeCanvas [getNodeMirror $peer2_id]] == $canvas_id } {
+	    # pseudo nodes are always peer1
+	    if { [getNodeType $peer1_id] == "pseudo" } {
+		setNodeCanvas $peer1_id $canvas_id
+		if { [getNodeCanvas [getNodeMirror $peer1_id]] == $canvas_id } {
 		    mergeLink $link_id
 		}
 
@@ -529,11 +535,13 @@ proc moveToCanvas { canvas_id } {
 proc mergeNodeGUI { node_id } {
     global changed
 
-    mergeLink [getIfcLink $node_id "0"]
+    set link_id [mergeLink [getIfcLink $node_id "ifc0"]]
 
     set changed 1
     updateUndoLog
     redrawAll
+
+    return $link_id
 }
 
 #****f* editor.tcl/button3node
@@ -704,7 +712,15 @@ proc button3node { c x y } {
 	}
 
 	set from_iface_id $this_iface_id
-	set from_iface_label [getIfcName $node_id $this_iface_id]
+	if { [getIfcType $node_id $this_iface_id] == "stolen" } {
+	    if { [getNodeType $node_id] != "rj45" } {
+		continue
+	    }
+
+	    set from_iface_label "$this_iface_id - \[[getIfcName $node_id $this_iface_id]\]"
+	} else {
+	    set from_iface_label [getIfcName $node_id $this_iface_id]
+	}
 	if { $this_iface_id == "new_iface" } {
 	    set from_iface_id {}
 	    set from_iface_label "Create new interface"
@@ -740,7 +756,15 @@ proc button3node { c x y } {
 		    }
 
 		    set to_iface_id $other_iface_id
-		    set to_iface_label [getIfcName $peer_id $other_iface_id]
+		    if { [getIfcType $peer_id $other_iface_id] == "stolen" } {
+			if { [getNodeType $peer_id] != "rj45" } {
+			    continue
+			}
+
+			set to_iface_label "$other_iface_id - \[[getIfcName $peer_id $other_iface_id]\]"
+		    } else {
+			set to_iface_label [getIfcName $peer_id $other_iface_id]
+		    }
 		    if { $other_iface_id == "new_peer_iface" } {
 			set to_iface_id {}
 			set to_iface_label "Create new interface"
@@ -1103,7 +1127,7 @@ proc button1 { c x y button } {
 	}
     } elseif { $curtype == "selectmark" } {
 	set o1 [lindex [$c gettags current] 1]
-	if { [getNodeType $o1] in "oval rectangle" } {
+	if { [getAnnotationType $o1] in "oval rectangle" } {
 	    set resizeobj $o1
 	    set bbox1 [$c bbox $o1]
 	    set x1 [lindex $bbox1 0]
@@ -1329,7 +1353,7 @@ proc button1-motion { c x y } {
 	foreach o [$c find withtag "selected"] {
 	    set node_id [lindex [$c gettags $o] 1]
 
-	    lassign [getNodeCoords $node_id] oldX1 oldY1 oldX2 oldY2
+	    lassign [getAnnotationCoords $node_id] oldX1 oldY1 oldX2 oldY2
 	    switch -exact -- $resizemode {
 		lu {
 		    set oldX1 $x
@@ -1723,7 +1747,7 @@ proc button1-release { c x y } {
 		selectNode $c $obj
 	    }
 	} else {
-	    setNodeCoords $resizeobj "$x $y $x1 $y1"
+	    setAnnotationCoords $resizeobj "$x $y $x1 $y1"
 	    set redrawNeeded 1
 	    set resizemode false
 	}
@@ -1874,7 +1898,7 @@ proc nodeEnter { c } {
 
     if { $type != "rj45" } {
 	foreach iface_id [ifcList $node_id] {
-	    set line "$line $iface_id:[join [getIfcIPv4addrs $node_id $iface_id] ", "]"
+	    set line "$line [getIfcName $node_id $iface_id]:[join [getIfcIPv4addrs $node_id $iface_id] ", "]"
 	}
     }
     .bottom.textbox config -text "$line"
