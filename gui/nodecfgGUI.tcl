@@ -2291,7 +2291,8 @@ proc configGUI_ifcVlanConfig { wi node_id iface_id } {
     set ifvdev$iface_id [_getIfcVlanDev $node_cfg $iface_id]
     ttk::label $wi.if$iface_id.vlancfg.devtxt -text "Vlan dev" -anchor w
     ttk::combobox $wi.if$iface_id.vlancfg.dev -width 6 -textvariable ifvdev$iface_id
-    $wi.if$iface_id.vlancfg.dev configure -values [_ifaceNames $node_cfg] -state readonly
+    $wi.if$iface_id.vlancfg.dev configure -state readonly -values \
+	[removeFromList [_ifaceNames $node_cfg] [_getIfcName $node_cfg $iface_id]]
 
     pack $wi.if$iface_id.vlancfg -anchor w -padx 10
     grid $wi.if$iface_id.vlancfg.devtxt -in $wi.if$iface_id.vlancfg -column 0 -row 0 \
