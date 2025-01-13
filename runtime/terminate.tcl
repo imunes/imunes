@@ -102,6 +102,8 @@ proc terminate_linksDestroy { eid links links_count w } {
 	    set msg "Destroying link $link_id/$mirror_link"
 
 	    set node2_id [lindex [getLinkPeers $mirror_link] 0]
+
+	    setToRunning "${mirror_link}_running" false
 	}
 
 	if { [getFromRunning "${link_id}_running"] == true } {

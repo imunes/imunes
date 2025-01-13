@@ -1035,6 +1035,8 @@ proc execute_linksCreate { links links_count w } {
 	    # switch direction for mirror links
 	    lassign "$node2_id [lindex [getLinkPeers $mirror_link_id] 1]" node1_id node2_id
 	    lassign "$iface2_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]" iface1_id iface2_id
+
+	    setToRunning "${mirror_link_id}_running" true
 	}
 
 	displayBatchProgress $batchStep $links_count
