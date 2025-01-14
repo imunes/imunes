@@ -164,6 +164,8 @@ proc switchProject {} {
     if { $showTree } {
 	refreshTopologyTree
     }
+
+    toggleAutoExecutionGUI [getFromRunning "auto_execution"]
 }
 
 #****f* filemgmt.tcl/setWmTitle
