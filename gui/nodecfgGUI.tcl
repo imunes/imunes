@@ -2218,6 +2218,12 @@ proc dockerOptionsGUI { node_id } {
 
     # redraw header and existing elements
     dockerOptionVolumesGUI_refresh $volumes
+
+    # Other options tab
+    set other_options $notebook.other_options
+    ttk::frame $other_options
+    $notebook add $other_options -text "Docker other options"
+
     # Buttons
     set bottom $wi.bottom
     ttk::frame $bottom
