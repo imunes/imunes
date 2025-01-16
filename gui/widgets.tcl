@@ -44,7 +44,7 @@ proc showCfg { c node_id } {
     set y [expr [lindex $coords 1] + 30]
 
     #Execute command on selected node and save the command output
-    set output [execCmdNode $node_id $showCfg]
+    set output [execCmdNode $node_id "timeout 0.1 $showCfg"]
     set title "$node_id# $showCfg\n"
     append title $output
 
