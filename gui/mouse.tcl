@@ -347,11 +347,11 @@ proc selectAdjacent {} {
     }
 }
 
-#****f* editor.tcl/button3link
+#****f* editor.tcl/button3LinkGUI
 # NAME
-#   button3link
+#   button3LinkGUI
 # SYNOPSIS
-#   button3link $c $x $y
+#   button3LinkGUI $c $x $y
 # FUNCTION
 #   This procedure is called when a right mouse button is
 #   clicked on the canvas. If there is a link on the place of
@@ -367,7 +367,7 @@ proc selectAdjacent {} {
 #   * x -- x coordinate for popup menu
 #   * y -- y coordinate for popup menu
 #****
-proc button3link { c x y } {
+proc button3LinkGUI { c x y } {
     set oper_mode [getFromRunning "oper_mode"]
 
     set link_id [lindex [$c gettags "link && current"] 1]
@@ -559,11 +559,11 @@ proc mergeNodeGUI { node_id } {
     return $link_id
 }
 
-#****f* editor.tcl/button3node
+#****f* editor.tcl/button3NodeGUI
 # NAME
-#   button3node
+#   button3NodeGUI
 # SYNOPSIS
-#   button3node $c $x $y
+#   button3NodeGUI $c $x $y
 # FUNCTION
 #   This procedure is called when a right mouse button is
 #   clicked on the canvas. If there is a node on the place of
@@ -588,9 +588,7 @@ proc mergeNodeGUI { node_id } {
 #   * x -- x coordinate for popup menu
 #   * y -- y coordinate for popup menu
 #****
-proc button3node { c x y } {
-    global isOSlinux
-
+proc button3NodeGUI { c x y } {
     set canvas_list [getFromRunning "canvas_list"]
     set curcanvas [getFromRunning "curcanvas"]
     set oper_mode [getFromRunning "oper_mode"]
@@ -602,6 +600,14 @@ proc button3node { c x y } {
 	    return
 	}
     }
+
+    button3Node $c $node_id
+}
+
+proc button3Node { c node_id } {
+    set canvas_list [getFromRunning "canvas_list"]
+    set curcanvas [getFromRunning "curcanvas"]
+    set oper_mode [getFromRunning "oper_mode"]
 
     set type [getNodeType $node_id]
     set mirror_node [getNodeMirror $node_id]

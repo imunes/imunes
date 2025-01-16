@@ -819,6 +819,8 @@ proc bindEventsToTree {} {
 	$f.tree tag bind $node_id <Double-1> \
 	    "$f.tree item $node_id -open false
 	    $type.configGUI .panwin.f1.c $node_id"
+	$f.tree tag bind $node_id <3> \
+	    "selectNodes $node_id ; button3Node .panwin.f1.c $node_id"
 	$f.tree tag bind $node_id <Key-Return> \
 	    "$f.tree item $node_id -open false
 	    $type.configGUI .panwin.f1.c $node_id"
