@@ -664,7 +664,7 @@ proc topologyElementsTree {} {
 	$f.tree heading canvas -text "Canvas"
 
 	# filling the tree with node info
-        global nodetags ifacestags
+	global nodetags ifacestags
 
 	set nodetags ""
 	set ifacestags ""
@@ -804,31 +804,35 @@ proc bindEventsToTree {} {
 	}"
 
     $f.tree tag bind nodes <1> \
-	  ".panwin.f1.c dtag node selected; \
-	    .panwin.f1.c delete -withtags selectmark"
+	".panwin.f1.c dtag node selected; \
+	.panwin.f1.c delete -withtags selectmark"
 
     $f.tree tag bind links <1> \
-	  ".panwin.f1.c dtag node selected; \
-	    .panwin.f1.c delete -withtags selectmark"
+	".panwin.f1.c dtag node selected; \
+	.panwin.f1.c delete -withtags selectmark"
 
     foreach node_id $nodetags {
-	set type [getNodeType $node_id]
 	global selectedIfc
+
+	set type [getNodeType $node_id]
+
 	$f.tree tag bind $node_id <Double-1> \
 	    "$f.tree item $node_id -open false
 	    $type.configGUI .panwin.f1.c $node_id"
 	$f.tree tag bind $node_id <Key-Return> \
 	    "$f.tree item $node_id -open false
 	    $type.configGUI .panwin.f1.c $node_id"
+
 	foreach iface_id [lsort -dictionary [ifcList $node_id]] {
 	    $f.tree tag bind $node_id$iface_id <Double-1> \
 		"set selectedIfc $iface_id; \
-		  $type.configGUI .panwin.f1.c $node_id; \
-		  set selectedIfc \"\""
+		$type.configGUI .panwin.f1.c $node_id; \
+		set selectedIfc \"\""
+
 	    $f.tree tag bind $node_id$iface_id <Key-Return> \
 		"set selectedIfc $iface_id; \
-		  $type.configGUI .panwin.f1.c $node_id; \
-		  set selectedIfc \"\""
+		$type.configGUI .panwin.f1.c $node_id; \
+		set selectedIfc \"\""
 	}
     }
 
@@ -910,14 +914,14 @@ proc refreshTopologyTree {} {
 	    lappend nodetags $node_id
 	    $f.tree set $node_id canvas [getCanvasName [getNodeCanvas $node_id]]
 	    foreach iface_id [lsort -dictionary [ifcList $node_id]] {
-		    lappend ifacestags $node_id$iface_id
+		lappend ifacestags $node_id$iface_id
 
-		    $f.tree insert $node_id end -id $node_id$iface_id -text "[getIfcName $node_id $iface_id]" -tags $node_id$iface_id
-		    $f.tree set $node_id$iface_id state [getIfcOperState $node_id $iface_id]
-		    $f.tree set $node_id$iface_id nat [getIfcNatState $node_id $iface_id]
-		    $f.tree set $node_id$iface_id IPv4 [join [getIfcIPv4addrs $node_id $iface_id] ";"]
-		    $f.tree set $node_id$iface_id IPv6 [join [getIfcIPv6addrs $node_id $iface_id] ";"]
-                    $f.tree set $node_id$iface_id MAC [getIfcMACaddr $node_id $iface_id]
+		$f.tree insert $node_id end -id $node_id$iface_id -text "[getIfcName $node_id $iface_id]" -tags $node_id$iface_id
+		$f.tree set $node_id$iface_id state [getIfcOperState $node_id $iface_id]
+		$f.tree set $node_id$iface_id nat [getIfcNatState $node_id $iface_id]
+		$f.tree set $node_id$iface_id IPv4 [join [getIfcIPv4addrs $node_id $iface_id] ";"]
+		$f.tree set $node_id$iface_id IPv6 [join [getIfcIPv6addrs $node_id $iface_id] ";"]
+		$f.tree set $node_id$iface_id MAC [getIfcMACaddr $node_id $iface_id]
 	    }
 	}
     }
