@@ -2331,13 +2331,18 @@ proc configGUI_externalIfcs { wi node_id } {
 
     ttk::label $wi.if$iface_id.labelName -text "Interface [_getIfcName $node_cfg $iface_id]"
     ttk::label $wi.if$iface_id.labelMAC -text "MAC address:" -width 11
-    ttk::entry $wi.if$iface_id.mac.addr -width 24 -validate focus
+    ttk::entry $wi.if$iface_id.mac.addr -width 24 -validate focus \
+	-validatecommand { checkMACAddr %P } -invalidcommand "focusAndFlash %W"
     $wi.if$iface_id.mac.addr insert 0 [_getIfcMACaddr $node_cfg $iface_id]
+
     ttk::label $wi.if$iface_id.labelIPv4 -text "IPv4 address:" -width 11
-    ttk::entry $wi.if$iface_id.ipv4.addr -width 24 -validate focus
+    ttk::entry $wi.if$iface_id.ipv4.addr -width 24 -validate focus \
+	-validatecommand { checkIPv4Nets %P } -invalidcommand "focusAndFlash %W"
     $wi.if$iface_id.ipv4.addr insert 0 [join [_getIfcIPv4addrs $node_cfg $iface_id] ";"]
+
     ttk::label $wi.if$iface_id.labelIPv6 -text "IPv6 address:" -width 11
-    ttk::entry $wi.if$iface_id.ipv6.addr -width 24 -validate focus
+    ttk::entry $wi.if$iface_id.ipv6.addr -width 24 -validate focus \
+	-validatecommand { checkIPv6Nets %P } -invalidcommand "focusAndFlash %W"
     $wi.if$iface_id.ipv6.addr insert 0 [join [_getIfcIPv6addrs $node_cfg $iface_id] ";"]
 
     pack $wi.if$iface_id -expand 1 -padx 1 -pady 1
