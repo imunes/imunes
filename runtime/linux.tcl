@@ -251,14 +251,16 @@ proc startTcpdumpOnNodeIfc { node_id iface_name } {
 #   * node_id -- node id of the node for which the check is performed.
 #****
 proc existingShells { shells node_id } {
-    set existing []
-    foreach shell $shells {
-        set cmd "docker exec [getFromRunning "eid"].$node_id which $shell"
-        set err [catch { eval exec $cmd } res]
-        if  { ! $err } {
-            lappend existing $res
-        }
-    }
+    set cmds "
+	retval=\"\"\
+
+	for s in \"$shells\"; do
+	    x=\$(which \$s 2> /dev/null)
+	    test -n \"\$x\" && retval=\"\$retval \$x\"
+	done
+	echo \"\$retval\""
+
+    catch { exec docker exec [getFromRunning "eid"].$node_id sh -c "$cmds" } existing
 
     return $existing
 }
