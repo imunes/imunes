@@ -809,9 +809,11 @@ proc bindEventsToTree {} {
 		.panwin.f1.c delete -withtags selectmark
 	    }"
 	$f.tree tag bind $node_id <Double-1> \
-	    "$type.configGUI .panwin.f1.c $node_id"
+	    "$f.tree item $node_id -open false
+	    $type.configGUI .panwin.f1.c $node_id"
 	$f.tree tag bind $node_id <Key-Return> \
-	    "$type.configGUI .panwin.f1.c $node_id"
+	    "$f.tree item $node_id -open false
+	    $type.configGUI .panwin.f1.c $node_id"
 	foreach iface_id [lsort -dictionary [ifcList $node_id]] {
 	    $f.tree tag bind $node_id$iface_id <Double-1> \
 		"set selectedIfc $iface_id; \
