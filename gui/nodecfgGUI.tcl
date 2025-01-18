@@ -131,12 +131,13 @@ proc configGUI_addNotebook { wi node_id labels } {
 	configGUI_addPanedWin [lindex [$wi.nbook tabs] 2]
     }
 
+    bind $wi.nbook <<NotebookTabChanged>> \
+	"notebookSize $wi $node_id"
+
     global selectedIfc
     if { $selectedIfc != "" } {
-        $wi.nbook select [lindex [$wi.nbook tabs] 1]
+	after 130 $wi.nbook select [lindex [$wi.nbook tabs] 1]
     }
-    bind $wi.nbook <<NotebookTabChanged>> \
- 	"notebookSize $wi $node_id"
 
     return [$wi.nbook tabs]
 }
