@@ -626,6 +626,11 @@ proc topologyElementsTree {} {
     }
 
     if { $showTree } {
+	bind . <Right> ""
+	bind . <Left> ""
+	bind . <Down> ""
+	bind . <Up> ""
+
 	.panwin add $f
 	ttk::frame $f.treegrid
 	ttk::treeview $f.tree -selectmode browse \
@@ -701,6 +706,14 @@ proc topologyElementsTree {} {
 
 	bindEventsToTree
     } else {
+	# main frame where the canvas .c is
+	global mf
+
+	bind . <Right> "$mf.c xview scroll 1 units"
+	bind . <Left> "$mf.c xview scroll -1 units"
+	bind . <Down> "$mf.c yview scroll 1 units"
+	bind . <Up> "$mf.c yview scroll -1 units"
+
 	destroy $f.treegrid
 	destroy $f.tree $f.vscroll
 	destroy $f.tree $f.hscroll
