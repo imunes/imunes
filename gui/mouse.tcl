@@ -1049,6 +1049,44 @@ proc button3node { c x y } {
 
 	    .panwin.f1.c config -cursor left_ptr
 	}
+
+	.button3menu add cascade -label "Interface settings" \
+	    -menu .button3menu.iface_settings
+
+	#
+	# Interface settings
+	#
+	.button3menu.iface_settings delete 0 end
+
+	set ifaces {}
+	foreach iface_name [lsort -dictionary [ifacesNames $node_id]] {
+	    lappend ifaces [ifaceIdFromName $node_id $iface_name]
+	}
+
+	foreach iface_id $ifaces {
+	    set m .button3menu.iface_settings.$iface_id
+	    if { ! [winfo exists $m] } {
+		menu $m -tearoff 0
+	    } else {
+		$m delete 0 end
+	    }
+
+	    set iface_label [getIfcName $node_id $iface_id]
+	    if { [getIfcType $node_id $iface_id] == "stolen" } {
+		set iface_label "\[$iface_label\]"
+	    }
+	    .button3menu.iface_settings add cascade -label $iface_label -menu $m
+
+	    foreach {action command} [list \
+		"Remove IPv4 addresses" "removeIPv4Nodes $node_id {$node_id $iface_id}" \
+		"Remove IPv6 addresses" "removeIPv6Nodes $node_id {$node_id $iface_id}" \
+		"Match IPv4 subnet" "matchSubnet4 $node_id $iface_id" \
+		"Match IPv6 subnet" "matchSubnet6 $node_id $iface_id" \
+		] {
+
+		$m add command -label $action -command "$command"
+	    }
+	}
     }
 
     #
@@ -2276,6 +2314,50 @@ proc removeIPv6Nodes { nodes all_ifaces } {
     redrawAll
     set changed 1
     updateUndoLog
+}
+
+proc matchSubnet4 { node_id iface_id } {
+    global changed IPv4autoAssign
+
+    if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+	setToExecuteVars "terminate_cfg" [cfgGet]
+    }
+
+    set tmp $IPv4autoAssign
+    set IPv4autoAssign 1
+    autoIPv4addr $node_id $iface_id
+    set IPv4autoAssign $tmp
+
+    undeployCfg
+    deployCfg
+
+    redrawAll
+    set changed 1
+    updateUndoLog
+
+    .panwin.f1.c config -cursor left_ptr
+}
+
+proc matchSubnet6 { node_id iface_id } {
+    global changed IPv6autoAssign
+
+    if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+	setToExecuteVars "terminate_cfg" [cfgGet]
+    }
+
+    set tmp $IPv6autoAssign
+    set IPv6autoAssign 1
+    autoIPv6addr $node_id $iface_id
+    set IPv6autoAssign $tmp
+
+    undeployCfg
+    deployCfg
+
+    redrawAll
+    set changed 1
+    updateUndoLog
+
+    .panwin.f1.c config -cursor left_ptr
 }
 
 #****f* editor.tcl/changeAddressRange
