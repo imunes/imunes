@@ -1161,6 +1161,12 @@ bind . <Up> "$mf.c yview scroll -1 units"
 # Escape to Select mode
 bind . <Key-Escape> "setActiveTool select; selectNode $c none"
 bind . <F5> "redrawAll"
+bind . <F7> {
+    global showTree
+
+    set showTree [expr {$showTree ^ 1}]
+    topologyElementsTree
+}
 
 #
 # Popup-menu hierarchy
