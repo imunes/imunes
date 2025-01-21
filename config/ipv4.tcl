@@ -276,33 +276,46 @@ proc autoIPv4addr { node_id iface_id { use_autorenumbered "" } } {
     setIfcIPv4addrs $node_id $iface_id ""
 
     lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
-    set peer_ip4addrs {}
+    set peers_ip4addrs {}
+    set has_extnat 0
+    set has_router 0
+    set best_choice_ip ""
     if { $peer_id != "" } {
 	if { [[getNodeType $peer_id].netlayer] == "LINK" } {
 	    foreach l2node [listLANNodes $peer_id {}] {
 		foreach l2node_iface_id [ifcList $l2node] {
 		    lassign [logicalPeerByIfc $l2node $l2node_iface_id] new_peer_id new_peer_iface_id
-		    set peer_ip4addr [getIfcIPv4addrs $new_peer_id $new_peer_iface_id]
-		    if { $peer_ip4addr == "" } {
+		    set new_peer_ip4addrs [getIfcIPv4addrs $new_peer_id $new_peer_iface_id]
+		    if { $new_peer_ip4addrs == "" } {
 			continue
 		    }
 
-		    if { $use_autorenumbered != "" } {
-			if { "$new_peer_id $new_peer_iface_id" in $autorenumbered_ifcs } {
-			    lappend peer_ip4addrs {*}$peer_ip4addr
+		    if { $use_autorenumbered == "" || "$new_peer_id $new_peer_iface_id" in $autorenumbered_ifcs } {
+			if { ! $has_extnat } {
+			    set new_peer_type [getNodeType $new_peer_id]
+			    if { $new_peer_type == "extnat" } {
+				set has_extnat 1
+				set best_choice_ip [lindex $new_peer_ip4addrs 0]
+			    } elseif { ! $has_router && $new_peer_type in "router nat64" } {
+				set has_router 1
+				set best_choice_ip [lindex $new_peer_ip4addrs 0]
+			    } elseif { ! $has_extnat && ! $has_router } {
+				set best_choice_ip [lindex $new_peer_ip4addrs 0]
+			    }
 			}
-		    } else {
-			lappend peer_ip4addrs {*}$peer_ip4addr
+
+			lappend peers_ip4addrs {*}$new_peer_ip4addrs
 		    }
 		}
 	    }
 	} else {
-	    set peer_ip4addrs [getIfcIPv4addrs $peer_id $peer_iface_id]
+	    set peers_ip4addrs [getIfcIPv4addrs $peer_id $peer_iface_id]
+	    set best_choice_ip [lindex $peers_ip4addrs 0]
 	}
     }
 
-    if { $peer_ip4addrs != "" && $change_subnet4 == 0 } {
-	set addr [nextFreeIP4Addr [lindex $peer_ip4addrs 0] [$node_type.IPAddrRange] $peer_ip4addrs]
+    if { $peers_ip4addrs != "" && $change_subnet4 == 0 && $best_choice_ip != "" } {
+	set addr [nextFreeIP4Addr $best_choice_ip [$node_type.IPAddrRange] $peers_ip4addrs]
     } else {
 	set addr [getNextIPv4addr $node_type [getFromRunning "ipv4_used_list"]]
     }
