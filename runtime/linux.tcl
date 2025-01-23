@@ -1341,7 +1341,7 @@ proc nodeIfacesDestroy { eid node_id ifaces } {
 	    if { [getIfcType $node_id $iface_id] == "stolen" } {
 		releaseExtIfcByName $eid $iface_name $node_id
 	    } else {
-		pipesExec "ip -n $eid-$node_id link del $iface_name" "hold"
+		pipesExec "ip -n $eid link del $node_id-$iface_name" "hold"
 	    }
 	}
     }
