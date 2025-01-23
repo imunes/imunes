@@ -1235,10 +1235,12 @@ proc handleVersionMismatch { cfg_version file_name } {
 
 	if { $custom_config } {
 	    append msg "\n\n"
-	    append msg "WARNING: Custom configurations are now separated into IFACES and NODE configurations.\n\n"
-	    append msg "The custom configurations for node(s) '$nodes' have been loaded into the NODE custom configuration. "
+	    append msg "WARNING: Custom configurations are now separated into:\n"
+	    append msg " - 'Custom interfaces configs' (IFACES_CONFIG) and\n"
+	    append msg " - 'Custom node configs' (NODE_CONFIG)\n\n"
+	    append msg "The custom configurations for node(s) '$nodes' have been loaded into the NODE_CONFIG custom configuration. "
 	    append msg "To avoid configuration errors, please:\n"
-	    append msg "    1. Move interfaces configurations to the IFACE custom configuration, or\n"
+	    append msg "    1. Move interfaces configurations to the IFACES_CONFIG custom configuration, or\n"
 	    append msg "    2. Remove them completely if you wish to use the IMUNES defaults.\n"
 	}
     } elseif { $cfg_version < $CFG_VERSION } {
