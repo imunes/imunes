@@ -1088,6 +1088,7 @@ proc updateScreenshotPreview { pc image } {
 #   * tool -- active tool to set
 #****
 proc setActiveTool { tool } {
+    global linklayer_activetool netlayer_activetool
     global activetool mf ROOTDIR LIBDIR
 
     set ungrouped "select link rectangle oval freeform text"
@@ -1102,12 +1103,16 @@ proc setActiveTool { tool } {
     if { $tool in $ungrouped } {
 	$mf.left.$tool state selected
     } elseif { [$tool.netlayer] == "LINK" } {
+	set linklayer_activetool $tool
+
 	set image [image create photo -file [$tool.icon toolbar]]
 	set arrowimage [image create photo -file "$ROOTDIR/$LIBDIR/icons/tiny/l2.gif"]
 	$image copy $arrowimage -from 29 30 40 40 -to 29 30 40 40 -compositingrule overlay
 	$mf.left.link_layer configure -image $image
 	$mf.left.link_layer state selected
     } elseif { [$tool.netlayer] == "NETWORK" } {
+	set netlayer_activetool $tool
+
 	set image [image create photo -file [$tool.icon toolbar]]
 	set arrowimage [image create photo -file "$ROOTDIR/$LIBDIR/icons/tiny/l3.gif"]
 	$image copy $arrowimage -from 29 30 40 40 -to 29 30 40 40 -compositingrule overlay

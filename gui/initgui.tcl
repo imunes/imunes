@@ -103,7 +103,9 @@ set cursorState 0
 set clock_seconds 0
 set grid 24
 set autorearrange_enabled 0
-set activetool select
+set activetool "select"
+set linklayer_activetool ""
+set netlayer_activetool ""
 
 # resize Oval/Rectangle, "false" or direction: north/west/east/...
 set resizemode false
@@ -1197,6 +1199,61 @@ bind . <Control-i> {
     global invisible
     set invisible [expr $invisible * -1]
     redrawAll
+}
+
+foreach {key newtool} [list \
+    "1"			"select" \
+    "2"			"link" \
+    "3"			"linklayer_activetool" \
+    "4"			"netlayer_activetool" \
+    "5"			"text" \
+    "6"			"freeform" \
+    "7"			"oval" \
+    "8"			"rectangle" \
+    ] {
+
+    bind . $key "
+	global linklayer_activetool netlayer_activetool
+
+	set tool $newtool
+	if { \$tool in \"linklayer_activetool netlayer_activetool\" } {
+	    global all_modules_list activetool
+
+	    # group node types by netlayer
+	    set linklayer_types {}
+	    set netlayer_types {}
+	    foreach node_type \$all_modules_list {
+		if { \[\$node_type.netlayer\] == \"LINK\" } {
+		    lappend linklayer_types \$node_type
+		} elseif { \[\$node_type.netlayer\] == \"NETWORK\" } {
+		    lappend netlayer_types \$node_type
+		}
+	    }
+
+	    if { \$tool == \"linklayer_activetool\" } {
+		set node_types \$linklayer_types
+	    } else {
+		set node_types \$netlayer_types
+	    }
+
+	    # currently set linklayer_activetool or netlayer_activetool
+	    set tool \[set $newtool\]
+
+	    if { \$tool == \"\" || \$activetool in \$node_types } {
+		# circle around the list
+		set idx \[expr \[lsearch \$node_types \$tool] + 1\]
+		if { \$idx >= \[llength \$node_types\] } {
+		    set idx 0
+		}
+		set tool \[lindex \$node_types \$idx\]
+	    }
+
+	    # set linklayer_activetool or netlayer_activetool to the next tool
+	    set $newtool \$tool
+	}
+
+	setActiveTool \$tool
+    "
 }
 
 focus -force .
