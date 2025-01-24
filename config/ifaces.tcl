@@ -380,7 +380,7 @@ proc setIfcMACaddr { node_id iface_id addr } {
 # NAME
 #   getIfcIPv4addrs -- get interface IPv4 addresses.
 # SYNOPSIS
-#   set addrs [getIfcIPv4addrs $node_id $iface_id]
+#   set addrs4 [getIfcIPv4addrs $node_id $iface_id]
 # FUNCTION
 #   Returns the list of IPv4 addresses assigned to the specified interface.
 # INPUTS
@@ -398,17 +398,17 @@ proc getIfcIPv4addrs { node_id iface_id } {
 # NAME
 #   setIfcIPv4addrs -- set interface IPv4 addresses.
 # SYNOPSIS
-#   setIfcIPv4addrs $node_id $iface_id $addrs
+#   setIfcIPv4addrs $node_id $iface_id $addrs4
 # FUNCTION
 #   Sets new IPv4 address(es) on an interface. The correctness of the IP
 #   address format is not checked / enforced.
 # INPUTS
 #   * node_id -- the node id of the node whose interface's IPv4 address is set.
 #   * iface_id -- interface id
-#   * addrs -- new IPv4 addresses.
+#   * addrs4 -- new IPv4 addresses.
 #****
-proc setIfcIPv4addrs { node_id iface_id addrs } {
-    cfgSet "nodes" $node_id "ifaces" $iface_id "ipv4_addrs" $addrs
+proc setIfcIPv4addrs { node_id iface_id addrs4 } {
+    cfgSet "nodes" $node_id "ifaces" $iface_id "ipv4_addrs" $addrs4
 
     trigger_ifaceReconfig $node_id $iface_id
 
@@ -518,7 +518,7 @@ proc setIfcName { node_id iface_id name } {
 # NAME
 #   getIfcIPv6addrs -- get interface IPv6 addresses.
 # SYNOPSIS
-#   set addrs [getIfcIPv6addrs $node_id $iface_id]
+#   set addrs6 [getIfcIPv6addrs $node_id $iface_id]
 # FUNCTION
 #   Returns the list of IPv6 addresses assigned to the specified interface.
 # INPUTS
@@ -536,17 +536,17 @@ proc getIfcIPv6addrs { node_id iface_id } {
 # NAME
 #   setIfcIPv6addrs -- set interface IPv6 addresses.
 # SYNOPSIS
-#   setIfcIPv6addrs $node_id $iface_id $addrs
+#   setIfcIPv6addrs $node_id $iface_id $addrs6
 # FUNCTION
 #   Sets new IPv6 address(es) on an interface. The correctness of the IP
 #   address format is not checked / enforced.
 # INPUTS
 #   * node_id -- the node id of the node whose interface's IPv6 address is set.
 #   * iface_id -- interface id
-#   * addrs -- new IPv6 addresses.
+#   * addrs6 -- new IPv6 addresses.
 #****
-proc setIfcIPv6addrs { node_id iface_id addrs } {
-    cfgSet "nodes" $node_id "ifaces" $iface_id "ipv6_addrs" $addrs
+proc setIfcIPv6addrs { node_id iface_id addrs6 } {
+    cfgSet "nodes" $node_id "ifaces" $iface_id "ipv6_addrs" $addrs6
 
     trigger_ifaceReconfig $node_id $iface_id
 
@@ -1143,9 +1143,9 @@ proc nodeCfggenIfc { node_id iface_id } {
     }
 
     set primary 1
-    set addrs [getIfcIPv4addrs $node_id $iface_id]
-    setToRunning "${node_id}|${iface_id}_old_ipv4_addrs" $addrs
-    foreach addr $addrs {
+    set addrs4 [getIfcIPv4addrs $node_id $iface_id]
+    setToRunning "${node_id}|${iface_id}_old_ipv4_addrs" $addrs4
+    foreach addr $addrs4 {
 	if { $addr != "" } {
 	    lappend cfg [getIPv4IfcCmd $iface_name $addr $primary]
 	    set primary 0
@@ -1153,13 +1153,13 @@ proc nodeCfggenIfc { node_id iface_id } {
     }
 
     set primary 1
-    set addrs [getIfcIPv6addrs $node_id $iface_id]
-    setToRunning "${node_id}|${iface_id}_old_ipv6_addrs" $addrs
+    set addrs6 [getIfcIPv6addrs $node_id $iface_id]
+    setToRunning "${node_id}|${iface_id}_old_ipv6_addrs" $addrs6
     if { $isOSlinux } {
 	# Linux is prioritizing IPv6 addresses in reversed order
-	set addrs [lreverse $addrs]
+	set addrs6 [lreverse $addrs6]
     }
-    foreach addr $addrs {
+    foreach addr $addrs6 {
 	if { $addr != "" } {
 	    lappend cfg [getIPv6IfcCmd $iface_name $addr $primary]
 	    set primary 0
@@ -1181,16 +1181,16 @@ proc nodeUncfggenIfc { node_id iface_id } {
 
     set iface_name [getIfcName $node_id $iface_id]
 
-    set addrs [getFromRunning "${node_id}|${iface_id}_old_ipv4_addrs"]
-    foreach addr $addrs {
+    set addrs4 [getFromRunning "${node_id}|${iface_id}_old_ipv4_addrs"]
+    foreach addr $addrs4 {
         if { $addr != "" } {
             lappend cfg [getDelIPv4IfcCmd $iface_name $addr]
         }
     }
     unsetRunning "${node_id}|${iface_id}_old_ipv4_addrs"
 
-    set addrs [getFromRunning "${node_id}|${iface_id}_old_ipv6_addrs"]
-    foreach addr $addrs {
+    set addrs4 [getFromRunning "${node_id}|${iface_id}_old_ipv6_addrs"]
+    foreach addr $addrs4 {
         if { $addr != "" } {
             lappend cfg [getDelIPv6IfcCmd $iface_name $addr]
         }
@@ -1231,9 +1231,9 @@ proc routerCfggenIfc { node_id iface_id } {
 	    lappend cfg "conf term"
 	    lappend cfg "interface $iface_name"
 
-	    set addrs [getIfcIPv4addrs $node_id $iface_id]
-	    setToRunning "${node_id}|${iface_id}_old_ipv4_addrs" $addrs
-	    foreach addr $addrs {
+	    set addrs4 [getIfcIPv4addrs $node_id $iface_id]
+	    setToRunning "${node_id}|${iface_id}_old_ipv4_addrs" $addrs4
+	    foreach addr $addrs4 {
 		if { $addr != "" } {
 		    lappend cfg " ip address $addr"
 		}
@@ -1245,9 +1245,9 @@ proc routerCfggenIfc { node_id iface_id } {
 		}
 	    }
 
-	    set addrs [getIfcIPv6addrs $node_id $iface_id]
-	    setToRunning "${node_id}|${iface_id}_old_ipv6_addrs" $addrs
-	    foreach addr $addrs {
+	    set addrs6 [getIfcIPv6addrs $node_id $iface_id]
+	    setToRunning "${node_id}|${iface_id}_old_ipv6_addrs" $addrs6
+	    foreach addr $addrs6 {
 		if { $addr != "" } {
 		    lappend cfg " ipv6 address $addr"
 		}
@@ -1295,8 +1295,8 @@ proc routerUncfggenIfc { node_id iface_id } {
 	    lappend cfg "conf term"
 	    lappend cfg "interface $iface_name"
 
-	    set addrs [getFromRunning "${node_id}|${iface_id}_old_ipv4_addrs"]
-	    foreach addr $addrs {
+	    set addrs4 [getFromRunning "${node_id}|${iface_id}_old_ipv4_addrs"]
+	    foreach addr $addrs4 {
 		if { $addr != "" } {
 		    lappend cfg " no ip address $addr"
 		}
@@ -1308,8 +1308,8 @@ proc routerUncfggenIfc { node_id iface_id } {
 		}
 	    }
 
-	    set addrs [getFromRunning "${node_id}|${iface_id}_old_ipv6_addrs"]
-	    foreach addr $addrs {
+	    set addrs6 [getFromRunning "${node_id}|${iface_id}_old_ipv6_addrs"]
+	    foreach addr $addrs6 {
 		if { $addr != "" } {
 		    lappend cfg " no ipv6 address $addr"
 		}
