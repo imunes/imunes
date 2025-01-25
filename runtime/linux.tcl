@@ -1304,11 +1304,6 @@ proc killAllNodeProcesses { eid node_id } {
 }
 
 proc destroyDirectLinkBetween { eid node1_id node2_id } {
-    if { [getNodeType $node1_id] in "ext extnat" } {
-	pipesExec "ip link del $eid-$node1_id" "hold"
-    } elseif { [getNodeType $node2_id] in "ext extnat" } {
-	pipesExec "ip link del $eid-$node2_id" "hold"
-    }
 }
 
 proc destroyLinkBetween { eid node1_id node2_id link_id } {
@@ -1330,7 +1325,14 @@ proc destroyLinkBetween { eid node1_id node2_id link_id } {
 proc nodeIfacesDestroy { eid node_id ifaces } {
     set node_type [getNodeType $node_id]
     if { $node_type in "ext extnat" } {
-	pipesExec "ip -n $eid link del $node_id-[getIfcName $node_id "ifc0"]" "hold"
+	foreach iface_id $ifaces {
+	    set link_id [getIfcLink $node_id $iface_id]
+	    if { $link_id != "" && [getLinkDirect $link_id] } {
+		pipesExec "ip link del $eid-$node_id" "hold"
+	    } else {
+		pipesExec "ip -n $eid link del $node_id-[getIfcName $node_id $iface_id]" "hold"
+	    }
+	}
     } elseif { $node_type == "rj45" } {
 	foreach iface_id $ifaces {
 	    releaseExtIfcByName $eid [getIfcName $node_id $iface_id] $node_id
@@ -1338,8 +1340,11 @@ proc nodeIfacesDestroy { eid node_id ifaces } {
     } else {
 	foreach iface_id $ifaces {
 	    set iface_name [getIfcName $node_id $iface_id]
+	    set link_id [getIfcLink $node_id $iface_id]
 	    if { [getIfcType $node_id $iface_id] == "stolen" } {
 		releaseExtIfcByName $eid $iface_name $node_id
+	    } elseif { $link_id != "" && [getLinkDirect $link_id] } {
+		pipesExec "ip -n [getNodeNetns $eid $node_id] link del $iface_name" "hold"
 	    } else {
 		pipesExec "ip -n $eid link del $node_id-$iface_name" "hold"
 	    }
