@@ -1778,6 +1778,7 @@ proc removeNodeFS { eid node_id } {
 
     set VROOTDIR [getVrootDir]
     set VROOT_RUNTIME $VROOTDIR/$eid/$node_id
+    set VROOT_OVERLAY $VROOTDIR/$eid/upper/$node_id
     set VROOT_RUNTIME_DEV $VROOT_RUNTIME/dev
     pipesExec "umount -f $VROOT_RUNTIME_DEV" "hold"
     if { $vroot_unionfs } {
@@ -1786,6 +1787,8 @@ proc removeNodeFS { eid node_id } {
 	# 2nd: nullfs RO loopback
 	pipesExec "umount -f $VROOT_RUNTIME" "hold"
 	pipesExec "rmdir $VROOT_RUNTIME" "hold"
+	# 3rd: node unionfs upper
+	pipesExec "rm -rf $VROOT_OVERLAY" "hold"
     }
 
     if { $vroot_linprocfs } {
