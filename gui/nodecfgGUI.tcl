@@ -2497,38 +2497,31 @@ proc configGUI_ifcEssentialsApply { wi node_id iface_id } {
 proc configGUI_ifcQueueConfigApply { wi node_id iface_id } {
     global changed apply node_cfg
 
-    set peer_id [getIfcPeer $node_id $iface_id]
-    if { $peer_id == "" } {
-	return
+    set qdisc [string trim [$wi.if$iface_id.queuecfg.disc get]]
+    set oldqdisc [_getIfcQDisc $node_cfg $iface_id]
+    if { $qdisc != $oldqdisc } {
+	if { $apply == 1 } {
+	    set node_cfg [_setIfcQDisc $node_cfg $iface_id $qdisc]
+	}
+	set changed 1
     }
 
-    if { [getNodeType $peer_id] != "rj45" } {
-	set qdisc [string trim [$wi.if$iface_id.queuecfg.disc get]]
-	set oldqdisc [_getIfcQDisc $node_cfg $iface_id]
-	if { $qdisc != $oldqdisc } {
-	    if { $apply == 1 } {
-		set node_cfg [_setIfcQDisc $node_cfg $iface_id $qdisc]
-	    }
-	    set changed 1
+    set qdrop [string trim [$wi.if$iface_id.queuecfg.drop get]]
+    set oldqdrop [_getIfcQDrop $node_cfg $iface_id]
+    if { $qdrop != $oldqdrop } {
+	if { $apply == 1 } {
+	    set node_cfg [_setIfcQDrop $node_cfg $iface_id $qdrop]
 	}
+	set changed 1
+    }
 
-	set qdrop [string trim [$wi.if$iface_id.queuecfg.drop get]]
-	set oldqdrop [_getIfcQDrop $node_cfg $iface_id]
-	if { $qdrop != $oldqdrop } {
-	    if { $apply == 1 } {
-		set node_cfg [_setIfcQDrop $node_cfg $iface_id $qdrop]
-	    }
-	    set changed 1
+    set len [$wi.if$iface_id.queuecfg.len get]
+    set oldlen [_getIfcQLen $node_cfg $iface_id]
+    if { $len != $oldlen } {
+	if { $apply == 1 } {
+	    set node_cfg [_setIfcQLen $node_cfg $iface_id $len]
 	}
-
-	set len [$wi.if$iface_id.queuecfg.len get]
-	set oldlen [_getIfcQLen $node_cfg $iface_id]
-	if { $len != $oldlen } {
-	    if { $apply == 1 } {
-		set node_cfg [_setIfcQLen $node_cfg $iface_id $len]
-	    }
-	    set changed 1
-	}
+	set changed 1
     }
 }
 

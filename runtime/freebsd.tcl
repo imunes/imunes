@@ -527,7 +527,7 @@ proc execSetIfcQLen { eid node_id iface_id qlen } {
 	set link_id [getLinkMirror $link_id]
     }
 
-    pipesExec "jexec $eid ngctl msg $link_id: setcfg \"{ $direction={ $queuelen=$qlen } }\"" "hold"
+    pipesExec "jexec $eid ngctl msg $link_id: setcfg \"{ $direction={ queuelen=$qlen } }\"" "hold"
 }
 
 #****f* freebsd.tcl/execSetLinkParams
@@ -2006,8 +2006,8 @@ proc configureLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 
     # FIXME: remove this to interface configuration?
     # Queues
-    foreach node_id "$node1_id $node2_id" ifc "$iface1_id $iface2_id" {
-	if { [getNodeType $node1_id] != "rj45" && [getNodeType $node2_id] != "rj45" } {
+    if { "rj45" ni "[getNodeType $node1_id] [getNodeType $node2_id]" } {
+	foreach node_id "$node1_id $node2_id" ifc "$iface1_id $iface2_id" {
 	    set qdisc [getIfcQDisc $node_id $ifc]
 	    if { $qdisc != "FIFO" } {
 		execSetIfcQDisc $eid $node_id $ifc $qdisc
