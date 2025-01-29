@@ -492,6 +492,9 @@ proc getSubnetData { this_node_id this_iface_id subnet_gws nodes_l2data subnet_i
 	    # this node is a router/extnat, add our IP addresses to lists
 	    # TODO: multiple addresses per iface - split subnet4data and subnet6data
 	    set gw4 [lindex [split [getIfcIPv4addrs $this_node_id $this_iface_id] /] 0]
+	    if { $gw4 == "dhcp" } {
+		set gw4 ""
+	    }
 	    set gw6 [lindex [split [getIfcIPv6addrs $this_node_id $this_iface_id] /] 0]
 	    lappend my_gws $this_type|$gw4|$gw6
 	    lset subnet_gws $subnet_idx $my_gws
@@ -706,6 +709,10 @@ proc getDefaultRoutesConfig { node_id gws } {
 
 	set match4 false
 	foreach ipv4_addr $ipv4_addrs {
+	    if { $ipv4_addr == "dhcp" } {
+		continue
+	    }
+
 	    set mask [ip::mask $ipv4_addr]
 	    if { [ip::prefix $gateway4/$mask] == [ip::prefix $ipv4_addr] } {
 		set match4 true
