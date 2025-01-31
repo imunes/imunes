@@ -136,34 +136,47 @@ proc autoIPv6addr { node_id iface_id { use_autorenumbered "" } } {
     setIfcIPv6addrs $node_id $iface_id ""
 
     lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
-    set peer_ip6addrs {}
+    set peers_ip6addrs {}
+    set has_extnat 0
+    set has_router 0
+    set best_choice_ip ""
     if { $peer_id != "" } {
 	if { [[getNodeType $peer_id].netlayer] == "LINK" } {
 	    foreach l2node [listLANNodes $peer_id {}] {
 		foreach l2node_iface_id [ifcList $l2node] {
 		    lassign [logicalPeerByIfc $l2node $l2node_iface_id] new_peer_id new_peer_iface_id
-		    set peer_ip6addr [getIfcIPv6addrs $new_peer_id $new_peer_iface_id]
-		    if { $peer_ip6addr == "" } {
+		    set new_peer_ip6addrs [getIfcIPv6addrs $new_peer_id $new_peer_iface_id]
+		    if { $new_peer_ip6addrs == "" } {
 			continue
 		    }
 
-		    if { $use_autorenumbered != "" } {
-			if { "$new_peer_id $new_peer_iface_id" in $autorenumbered_ifcs6 } {
-			    lappend peer_ip6addrs {*}$peer_ip6addr
+		    if { $use_autorenumbered == "" || "$new_peer_id $new_peer_iface_id" in $autorenumbered_ifcs6 } {
+			if { ! $has_extnat } {
+			    set new_peer_type [getNodeType $new_peer_id]
+			    if { $new_peer_type == "extnat" } {
+				set has_extnat 1
+				set best_choice_ip [lindex $new_peer_ip6addrs 0]
+			    } elseif { ! $has_router && $new_peer_type in "router nat64" } {
+				set has_router 1
+				set best_choice_ip [lindex $new_peer_ip6addrs 0]
+			    } elseif { ! $has_extnat && ! $has_router } {
+				set best_choice_ip [lindex $new_peer_ip6addrs 0]
+			    }
 			}
-		    } else {
-			lappend peer_ip6addrs {*}$peer_ip6addr
+
+			lappend peers_ip6addrs {*}$new_peer_ip6addrs
 		    }
 		}
 	    }
 	} else {
-	    set peer_ip6addrs [getIfcIPv6addrs $peer_id $peer_iface_id]
+	    set peers_ip6addrs [getIfcIPv6addrs $peer_id $peer_iface_id]
+	    set best_choice_ip [lindex $peers_ip6addrs 0]
 	}
     }
 
-    if { $peer_ip6addrs != "" && $change_subnet6 == 0 } {
+    if { $peers_ip6addrs != "" && $change_subnet6 == 0 && $best_choice_ip != "" } {
 	set targetbyte [expr 0x[$node_type.IPAddrRange]]
-	set addr [nextFreeIP6Addr [lindex $peer_ip6addrs 0] $targetbyte $peer_ip6addrs]
+	set addr [nextFreeIP6Addr $best_choice_ip $targetbyte $peers_ip6addrs]
     } else {
 	set addr [getNextIPv6addr $node_type [getFromRunning "ipv6_used_list"]]
     }
