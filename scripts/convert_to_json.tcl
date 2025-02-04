@@ -140,10 +140,8 @@ foreach {option default_value} [concat $option_defaults $gui_option_defaults] {
     set $option $default_value
 }
 
-# Set default L2 node list
-set l2nodes "hub lanswitch rj45 stpswitch filter packgen ext extnat"
-# Set default L3 node list
-set l3nodes "router host pc nat64"
+# Set default node type list
+set node_types "lanswitch hub rj45 stpswitch filter packgen ext extnat router host pc nat64"
 # Set default supported router models
 set supp_router_models "frr quagga static"
 
@@ -154,14 +152,7 @@ foreach file [glob -directory $ROOTDIR/$LIBDIR/config *.tcl] {
 
 # The following files need to be sourced in this particular order. If not
 # the placement of the toolbar icons will be altered.
-# L2 nodes
-foreach file $l2nodes {
-    safeSourceFile "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
-    safeSourceFile "$ROOTDIR/$LIBDIR/gui/$file.tcl"
-}
-
-# L3 nodes
-foreach file $l3nodes {
+foreach file $node_types {
     safeSourceFile "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
     safeSourceFile "$ROOTDIR/$LIBDIR/gui/$file.tcl"
 }
