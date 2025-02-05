@@ -2386,6 +2386,10 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 					setIfcVlanTag $node_id $iface_id $iface_prop_new_value
 				    }
 
+				    "vlan_type" {
+                                        setIfcVlanType $node_id $iface_id $iface_prop_new_value
+                                    }
+
 				    "mac" {
 					if { $iface_prop_new_value == "auto" } {
 					    autoMACaddr $node_id $iface_id

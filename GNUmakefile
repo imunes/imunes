@@ -33,7 +33,7 @@ TOOLS =	$(filter-out $(VROOT) scripts/convert_to_json.tcl, $(wildcard scripts/*)
 
 NODE_ICONS = frswitch.gif hub.gif lanswitch.gif rj45.gif cloud.gif host.gif \
 	ipfirewall.gif pc.gif router.gif \
-	stpswitch.gif filter.gif packgen.gif nat64.gif ext.gif extnat.gif
+	stpswitch.gif filter.gif packgen.gif nat64.gif ext.gif extnat.gif vlanswitch.gif
 
 NORMAL_ICONS = $(NODE_ICONS)
 

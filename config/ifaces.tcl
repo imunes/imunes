@@ -944,7 +944,7 @@ proc setIfcVlanDev { node_id iface_id dev } {
 #   * tag -- interfaces's vlan-tag
 #****
 proc getIfcVlanTag { node_id iface_id } {
-    return [cfgGet "nodes" $node_id "ifaces" $iface_id "vlan_tag"]
+    return [cfgGetWithDefault 1 "nodes" $node_id "ifaces" $iface_id "vlan_tag"]
 }
 
 #****f* nodecfg.tcl/setIfcVlanTag
@@ -962,10 +962,47 @@ proc getIfcVlanTag { node_id iface_id } {
 proc setIfcVlanTag { node_id iface_id tag } {
     cfgSet "nodes" $node_id "ifaces" $iface_id "vlan_tag" $tag
 
-    if { [getNodeType $node_id] == "rj45" } {
+    if { [getNodeType $node_id] == "rj45 vlanswitch" } {
 	trigger_nodeRecreate $node_id
     }
 }
+
+#****f* nodecfg.tcl/getIfcVlanType
+# NAME
+#   getIfcVlanType -- get interface vlan type
+# SYNOPSIS
+#   getIfcVlanType $node_id $iface_id
+# FUNCTION
+#   Returns node's interface's vlan type.
+# INPUTS
+#   * node_id -- node id
+#   * iface_id -- interface id
+# RESULT
+#   * type -- interfaces's vlan type
+#****
+proc getIfcVlanType { node_id iface_id } {
+    return [cfgGetWithDefault "access" "nodes" $node_id "ifaces" $iface_id "vlan_type"]
+}
+
+#****f* nodecfg.tcl/setIfcVlanType
+# NAME
+#   setIfcVlanType -- set interface vlan type
+# SYNOPSIS
+#   setIfcVlanType $node_id $iface_id $tag
+# FUNCTION
+#   Sets the node's interface's vlan tag.
+# INPUTS
+#   * node_id -- node id
+#   * iface_id -- interface id
+#   * vlantype -- vlan type
+#****
+proc setIfcVlanType { node_id iface_id vlantype } {
+    cfgSet "nodes" $node_id "ifaces" $iface_id "vlan_type" $vlantype
+
+    if { [getNodeType $node_id] in "rj45 vlanswitch" } {
+        trigger_nodeRecreate $node_id
+     }
+ }
 
 #****f* nodecfg.tcl/nodeCfggenIfcIPv4
 # NAME
