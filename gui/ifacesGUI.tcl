@@ -539,7 +539,13 @@ proc _setIfcVlanDev { node_cfg iface dev } {
 #   * tag -- interfaces's vlan-tag
 #****
 proc _getIfcVlanTag { node_cfg iface } {
-    return [_cfgGet $node_cfg "ifaces" $iface "vlan_tag"]
+    if { [_getNodeType $node_cfg] in "lanswitch" } {
+	set default_tag 1
+    } else {
+	set default_tag ""
+    }
+
+    return [_cfgGetWithDefault $default_tag $node_cfg "ifaces" $iface "vlan_tag"]
 }
 
 #****f* nodecfg.tcl/setIfcVlanTag
@@ -552,10 +558,43 @@ proc _getIfcVlanTag { node_cfg iface } {
 # INPUTS
 #   * node -- node id
 #   * ifc -- interface name
-#   * dev -- vlan-tag
+#   * tag -- vlan-tag
 #****
 proc _setIfcVlanTag { node_cfg iface tag } {
     return [_cfgSet $node_cfg "ifaces" $iface "vlan_tag" $tag]
+}
+
+#****f* nodecfg.tcl/getIfcVlanType
+# NAME
+#   getIfcVlanType -- get interface vlan type
+# SYNOPSIS
+#   getIfcVlanType $node $ifc
+# FUNCTION
+#   Returns node's interface's vlan type.
+# INPUTS
+#   * node -- node id
+#   * ifc -- interface name
+# RESULT
+#   * type -- interfaces's vlan type
+#****
+proc _getIfcVlanType { node_cfg iface } {
+    return [_cfgGetWithDefault "access" $node_cfg "ifaces" $iface "vlan_type"]
+}
+
+#****f* nodecfg.tcl/setIfcVlanType
+# NAME
+#   setIfcVlanType -- set interface vlan type
+# SYNOPSIS
+#   setIfcVlanType $node $ifc $type
+# FUNCTION
+#   Sets the node's interface's vlan type.
+# INPUTS
+#   * node -- node id
+#   * ifc -- interface name
+#   * type -- vlan type
+#****
+proc _setIfcVlanType { node_cfg iface type } {
+    return [_cfgSet $node_cfg "ifaces" $iface "vlan_type" $type]
 }
 
 proc _getNodeIface { node_cfg iface_id } {

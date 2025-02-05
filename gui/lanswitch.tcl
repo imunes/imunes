@@ -126,8 +126,10 @@ proc $MODULE.configGUI { c node_id } {
 
     configGUI_nodeName $wi $node_id "Node name:"
 
+    configGUI_bridgeVLANConfig $wi $node_id
+
     configGUI_addPanedWin $wi
-    set treecolumns {"QLen Queue len" "QDisc Queue disc" "QDrop Queue drop"}
+    set treecolumns {"QLen Queue len" "QDisc Queue disc" "QDrop Queue drop" "VlanTag VLAN tag" "VlanType VLAN type"}
     configGUI_addTree $wi $node_id
 
     configGUI_nodeRestart $wi $node_id
@@ -152,5 +154,6 @@ proc $MODULE.configInterfacesGUI { wi node_id iface_id } {
     global guielements
 
     configGUI_ifcQueueConfig $wi $node_id $iface_id
+    configGUI_bridgeIfcVlanConfig $wi $node_id $iface_id
     configGUI_ifcGap $wi $iface_id 30
 }

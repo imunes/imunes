@@ -530,6 +530,82 @@ proc execSetIfcQLen { eid node_id iface_id qlen } {
     pipesExec "jexec $eid ngctl msg $link_id: setcfg \"{ $direction={ queuelen=$qlen } }\"" "hold"
 }
 
+#****f* freebsd.tcl/execSetIfcVlanConfig
+# NAME
+#   execSetIfcVlanConfig -- in exec mode set interface vlan configuration
+# SYNOPSIS
+#   execSetIfcVlanConfig $node_id $iface_id
+# FUNCTION
+#   Configures VLAN type and tag during the simulation.
+# INPUTS
+#   node_id -- node id
+#   iface_id -- interface name
+#****
+proc execSetIfcVlanConfig { node_id iface_id } {
+    set vlantype [getIfcVlanType $node_id $iface_id]
+    set vlantag [getIfcVlanTag $node_id $iface_id]
+
+    if { $vlantype == "trunk" } {
+	set hook_name "downstream"
+	set addfilter ""
+    } else {
+	set hook_name "v$vlantag"
+	set addfilter "msg $node_id-vlan: addfilter { vlan=$vlantag hook=\\\"$hook_name\\\" }\n"
+    }
+
+    set total_hooks [getFromRunning "${node_id}|${hook_name}_hooks"]
+    if { $total_hooks != "" } {
+	# bridge already exists
+	setToRunning "${node_id}|${hook_name}_hooks" [incr total_hooks]
+
+	return
+    }
+
+    set ngcmds "mkpeer $node_id-vlan: bridge $hook_name link0\n"
+    append ngcmds "name $node_id-vlan:$hook_name $node_id-$hook_name\n"
+    append ngcmds $addfilter
+
+    pipesExec "printf \"$ngcmds\" | jexec [getFromRunning "eid"] ngctl -f -" "hold"
+
+    setToRunning "${node_id}|${hook_name}_hooks" 1
+}
+
+#****f* freebsd.tcl/execDelIfcVlanConfig
+# NAME
+#   execDelIfcVlanConfig -- in exec mode restore interface vlan configuration
+# SYNOPSIS
+#   execDelIfcVlanConfig $eid $node_id $iface_id
+# FUNCTION
+#   Restores VLAN configuration to the default state during the simulation.
+# INPUTS
+#   eid -- experiment id
+#   node_id -- node id
+#   iface_id -- interface name
+#****
+proc execDelIfcVlanConfig { eid node_id iface_id } {
+    set vlantag [getIfcVlanTag $node_id $iface_id]
+    set vlantype [getIfcVlanType $node_id $iface_id]
+
+    if { $vlantype == "trunk" } {
+	set hook_name "downstream"
+    } else {
+	set hook_name "v$vlantag"
+    }
+
+    set total_hooks [getFromRunning "${node_id}|${hook_name}_hooks"]
+    if { $total_hooks > 1 } {
+	# not the last link on bridge
+	setToRunning "${node_id}|${hook_name}_hooks" [incr total_hooks -1]
+
+	return
+    }
+
+    set ngcmds "shutdown $node_id-vlan:$hook_name\n"
+    pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
+
+    unsetRunning "${node_id}|${hook_name}_hooks"
+}
+
 #****f* freebsd.tcl/execSetLinkParams
 # NAME
 #   execSetLinkParams -- in exec mode set link parameters
@@ -2159,20 +2235,33 @@ proc terminate_removeExperimentFiles { eid } {
 #   * node_id -- id of the node (type of the node is either lanswitch or hub)
 #****
 proc l2node.nodeCreate { eid node_id } {
-    switch -exact [getNodeType $node_id] {
+    set nodeType [getNodeType $node_id]
+
+    switch -exact $nodeType {
 	lanswitch {
-	    set ngtype bridge
-	}
+            set ngtype bridge
+        }
 	hub {
 	    set ngtype hub
 	}
     }
 
-    # create an ng node and make it persistent in the same command
-    # bridge demands hookname 'linkX'
-    set ngcmds "mkpeer $ngtype link0 link0\n"
-    set ngcmds "$ngcmds msg .link0 setpersistent\n"
-    set ngcmds "$ngcmds name .link0 $node_id"
+    switch -exact $nodeType {
+        lanswitch -
+        hub {
+            # create an ng node and make it persistent in the same command
+            # bridge demands hookname 'linkX'
+            set ngcmds "mkpeer $ngtype link1 link1\n"
+            set ngcmds "$ngcmds msg .link1 setpersistent\n"
+            set ngcmds "$ngcmds name .link1 $node_id\n"
+        }
+    }
+
+    if { [getNodeVlanFiltering $node_id] } {
+	set ngcmds "$ngcmds mkpeer $node_id: vlan link0 unconfig\n"
+	set ngcmds "$ngcmds name $node_id:link0 $node_id-vlan\n"
+    }
+
     pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
 }
 

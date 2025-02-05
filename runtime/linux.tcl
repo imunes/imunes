@@ -22,8 +22,10 @@ proc l2node.nodeCreate { eid node_id } {
 	set ageing_time "ageing_time 0"
     }
 
+    set vlanfiltering "vlan_filtering [getNodeVlanFiltering $node_id]"
+
     set nodeNs [getNodeNetns $eid $node_id]
-    pipesExec "ip netns exec $nodeNs ip link add name $node_id type bridge $ageing_time" "hold"
+    pipesExec "ip netns exec $nodeNs ip link add name $node_id type bridge $vlanfiltering $ageing_time" "hold"
     pipesExec "ip netns exec $nodeNs ip link set $node_id up" "hold"
 }
 
@@ -1921,6 +1923,67 @@ proc execSetIfcQDisc { eid node_id iface_id qdisc } {
 #****
 proc execSetIfcQLen { eid node_id iface_id qlen } {
     pipesExec "ip -n $eid-$node_id l set [getIfcName $node_id $iface_id] txqueuelen $qlen" "hold"
+}
+
+#****f* linux.tcl/execSetIfcVlanConfig
+# NAME
+#   execSetIfcVlanConfig -- in exec mode set interface vlan configuration
+# SYNOPSIS
+#   execSetIfcVlanConfig $eid $node_id $iface_id
+# FUNCTION
+#   Configures VLAN type and tag during the simulation.
+# INPUTS
+#   eid -- experiment id
+#   node_id -- node id
+#   iface_id -- interface name
+#****
+proc execSetIfcVlanConfig { node_id iface_id } {
+    set vlantype [getIfcVlanType $node_id $iface_id]
+    set vlantag [getIfcVlanTag $node_id $iface_id]
+
+    set iface_name [getIfcName $node_id $iface_id]
+    set nsstr "netns exec [getFromRunning "eid"]-$node_id"
+
+    if { $vlantag != 1 || $vlantype in "\"\" trunk"} {
+        pipesExec "ip $nsstr bridge vlan del dev $iface_name vid 1" "hold"
+    }
+
+    if { $vlantype == "trunk" } {
+        foreach id [ifcList $node_id] {
+            set ifc_vlantype [getIfcVlanType $node_id $id]
+            if { $ifc_vlantype == "access" } {
+                set id_vlantag [getIfcVlanTag $node_id $id]
+                pipesExec "ip $nsstr bridge vlan add dev $iface_name vid $id_vlantag tagged" "hold"
+            }
+        }
+    } else {
+        pipesExec "ip $nsstr bridge vlan add dev $iface_name vid $vlantag pvid untagged" "hold"
+    }
+}
+
+#****f* linux.tcl/execDelIfcVlanConfig
+# NAME
+#   execDelIfcVlanConfig -- in exec mode restore interface vlan configuration
+# SYNOPSIS
+#   execDelIfcVlanConfig $eid $node_id $iface_id
+# FUNCTION
+#   Restores VLAN configuration to the default state during the simulation.
+# INPUTS
+#   eid -- experiment id
+#   node_id -- node id
+#   iface_id -- interface name
+#****
+proc execDelIfcVlanConfig { eid node_id iface_id } {
+    set iface_name [getIfcName $node_id $iface_id]
+    set nsstr "netns exec $eid-$node_id"
+
+    set vlantag [getIfcVlanTag $node_id $iface_id]
+    set vlantype [getIfcVlanType $node_id $iface_id]
+
+    if { $vlantag != 1 || $vlantype != "access"} {
+        pipesExec "ip $nsstr bridge vlan del dev $iface_name vid 1-4094" "hold"
+        pipesExec "ip $nsstr bridge vlan add dev $iface_name vid 1 pvid untagged" "hold"
+    }
 }
 
 proc getNetemConfigLine { bandwidth delay loss dup } {
