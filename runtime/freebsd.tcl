@@ -2264,23 +2264,21 @@ proc l2node.nodeCreate { eid node_id } {
         }
     }
 
-    set ngcmds ""
-
     switch -exact $nodeType {
         lanswitch -
         hub {
             # create an ng node and make it persistent in the same command
             # bridge demands hookname 'linkX'
-            set ngcmds "mkpeer $ngtype link0 link0"
-            set ngcmds "\n$ngcmds msg .link0 setpersistent"
-            set ngcmds "\n$ngcmds name .link0 $node_id"
+            set ngcmds "mkpeer $ngtype link0 link0\n"
+            set ngcmds "$ngcmds msg .link0 setpersistent\n"
+            set ngcmds "$ngcmds name .link0 $node_id"
         }
         vlanswitch {
             # create an ng_vlan node and make it persistent in the same command
-            set ngcmds "mkpeer $ngtype $node_id parent"
-            set ngcmds "\n$ngcmds name .$node_id $node_id"
-            set ngcmds "\n$ngcmds mkpeer $node_id: eiface nomatch ether"
-            set ngcmds "\n$ngcmds name $node_id:nomatch $node_id-hole"
+            set ngcmds "mkpeer $ngtype $node_id parent\n"
+            set ngcmds "$ngcmds name .$node_id $node_id\n"
+            set ngcmds "$ngcmds mkpeer $node_id: eiface nomatch ether\n"
+            set ngcmds "$ngcmds name $node_id:nomatch $node_id-hole"
         }
     }
 
