@@ -2371,6 +2371,10 @@ proc getNatIfcCmd { iface_name } {
 }
 
 proc getIPv4IfcCmd { ifc addr primary } {
+    if { $addr == "dhcp" } {
+	return "dhclient -b $ifc"
+    }
+
     if { $primary } {
 	return "ifconfig $ifc inet $addr"
     }
@@ -2378,6 +2382,10 @@ proc getIPv4IfcCmd { ifc addr primary } {
 }
 
 proc getDelIPv4IfcCmd { ifc addr } {
+    if { $addr == "dhcp" } {
+	return "pkill -f 'dhclient.*$ifc\\>'"
+    }
+
     return "ifconfig $ifc inet $addr -alias"
 }
 

@@ -499,3 +499,25 @@ proc checkIPv4Nets { str } {
     }
     return 1
 }
+
+#****f* ipv4.tcl/checkIPv4NetsDHCP
+# NAME
+#   checkIPv4NetsDHCP -- check the IPv4 networks (including 'dhcp')
+# SYNOPSIS
+#   set valid [checkIPv4NetsDHCP $str]
+# FUNCTION
+#   Checks if the provided string is a valid IPv4 networks or 'dhcp'.
+# INPUTS
+#   * str -- string to be evaluated. Valid IPv4 networks are writen in form
+#     a.b.c.d; e.f.g.h or a single string: dhcp
+# RESULT
+#   * valid -- function returns 0 if the input string is not in the form
+#     of a valid IP network or 'dhcp', 1 otherwise
+#****
+proc checkIPv4NetsDHCP { str } {
+    if { $str == "dhcp" } {
+	return 1
+    }
+
+    return [checkIPv4Nets $str]
+}

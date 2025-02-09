@@ -1617,14 +1617,14 @@ proc configGUI_ifcIPv4Address { wi node_id iface_id } {
     ttk::entry $wi.if$iface_id.ipv4.addr -width 45 \
 	-validate focus -invalidcommand "focusAndFlash %W"
 
-    set addrs ""
+    set addrs4 ""
     foreach addr [_getIfcIPv4addrs $node_cfg $iface_id] {
-	append addrs "$addr" "; "
+	append addrs4 "$addr" "; "
     }
 
-    set addrs [string trim $addrs "; "]
-    $wi.if$iface_id.ipv4.addr insert 0 $addrs
-    $wi.if$iface_id.ipv4.addr configure -validatecommand { checkIPv4Nets %P }
+    set addrs4 [string trim $addrs4 "; "]
+    $wi.if$iface_id.ipv4.addr insert 0 $addrs4
+    $wi.if$iface_id.ipv4.addr configure -validatecommand { checkIPv4NetsDHCP %P }
 
     pack $wi.if$iface_id.ipv4.txt $wi.if$iface_id.ipv4.addr -side left
     pack $wi.if$iface_id.ipv4 -anchor w -padx 10
@@ -1651,13 +1651,13 @@ proc configGUI_ifcIPv6Address { wi node_id iface_id } {
     ttk::entry $wi.if$iface_id.ipv6.addr -width 45 \
 	-validate focus -invalidcommand "focusAndFlash %W"
 
-    set addrs ""
+    set addrs6 ""
     foreach addr [_getIfcIPv6addrs $node_cfg $iface_id] {
-	append addrs "$addr" "; "
+	append addrs6 "$addr" "; "
     }
 
-    set addrs [string trim $addrs "; "]
-    $wi.if$iface_id.ipv6.addr insert 0 $addrs
+    set addrs6 [string trim $addrs6 "; "]
+    $wi.if$iface_id.ipv6.addr insert 0 $addrs6
     $wi.if$iface_id.ipv6.addr configure -validatecommand { checkIPv6Nets %P }
 
     pack $wi.if$iface_id.ipv6.txt $wi.if$iface_id.ipv6.addr -side left
@@ -2629,17 +2629,21 @@ proc configGUI_ifcMACAddressApply { wi node_id iface_id } {
 proc configGUI_ifcIPv4AddressApply { wi node_id iface_id } {
     global changed force apply node_cfg
 
-    set ipaddrs [formatIPaddrList [$wi.if$iface_id.ipv4.addr get]]
-    foreach ipaddr $ipaddrs {
-	if { [checkIPv4Net $ipaddr] == 0 } {
-	    return
+    set addrs4 [formatIPaddrList [$wi.if$iface_id.ipv4.addr get]]
+    if { $addrs4 == "dhcp" } {
+	set changed 1
+    } else {
+	foreach addr $addrs4 {
+	    if { [checkIPv4Net $addr] == 0 } {
+		return
+	    }
 	}
     }
 
     set oldipaddrs [_getIfcIPv4addrs $node_cfg $iface_id]
-    if { $force || $ipaddrs != $oldipaddrs } {
+    if { $force || $addrs4 != $oldipaddrs } {
 	if { $apply == 1 } {
-	    set node_cfg [_setIfcIPv4addrs $node_cfg $iface_id $ipaddrs]
+	    set node_cfg [_setIfcIPv4addrs $node_cfg $iface_id $addrs4]
 	}
 	set changed 1
 
@@ -2648,7 +2652,7 @@ proc configGUI_ifcIPv4AddressApply { wi node_id iface_id } {
 	    set node_existing_ipv4 [removeFromList $node_existing_ipv4 $oldipaddrs]
 	}
 
-	lappend node_existing_ipv4 {*}$ipaddrs
+	lappend node_existing_ipv4 {*}$addrs4
     }
 }
 
@@ -2668,17 +2672,17 @@ proc configGUI_ifcIPv4AddressApply { wi node_id iface_id } {
 proc configGUI_ifcIPv6AddressApply { wi node_id iface_id } {
     global changed force apply node_cfg
 
-    set ipaddrs [formatIPaddrList [$wi.if$iface_id.ipv6.addr get]]
-    foreach ipaddr $ipaddrs {
-	if { [checkIPv6Net $ipaddr] == 0 } {
+    set addrs6 [formatIPaddrList [$wi.if$iface_id.ipv6.addr get]]
+    foreach addr $addrs6 {
+	if { [checkIPv6Net $addr] == 0 } {
 	    return
 	}
     }
 
     set oldipaddrs [_getIfcIPv6addrs $node_cfg $iface_id]
-    if { $force || $ipaddrs != $oldipaddrs } {
+    if { $force || $addrs6 != $oldipaddrs } {
 	if { $apply == 1 } {
-	    set node_cfg [_setIfcIPv6addrs $node_cfg $iface_id $ipaddrs]
+	    set node_cfg [_setIfcIPv6addrs $node_cfg $iface_id $addrs6]
 	}
 	set changed 1
 
@@ -2687,7 +2691,7 @@ proc configGUI_ifcIPv6AddressApply { wi node_id iface_id } {
 	    set node_existing_ipv6 [removeFromList $node_existing_ipv6 $oldipaddrs]
 	}
 
-	lappend node_existing_ipv6 {*}$ipaddrs
+	lappend node_existing_ipv6 {*}$addrs6
     }
 }
 
@@ -3561,9 +3565,9 @@ proc createNewConfiguration { wi node_id } {
 proc formatIPaddrList { addrList } {
     set newList {}
     foreach addr [split $addrList ";"] {
-	set ipaddr [string trim $addr]
-	if { $ipaddr != "" } {
-	    lappend newList $ipaddr
+	set addr [string trim $addr]
+	if { $addr != "" } {
+	    lappend newList $addr
 	}
     }
 
