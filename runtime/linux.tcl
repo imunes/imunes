@@ -1674,7 +1674,7 @@ proc fetchNodeRunningConfig { node_id } {
     # overwrite any unsaved changes to this node
     set cur_node_cfg [cfgGet "nodes" $node_id]
 
-    set ifaces_names "[logIfaceNames $node_id] [ifaceNames $node_id]"
+    set ifaces_names [allIfacesNames $node_id]
 
     catch { exec docker exec [getFromRunning "eid"].$node_id sh -c "ip --json a" } json
     foreach elem [json::json2dict $json] {

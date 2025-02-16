@@ -1005,7 +1005,7 @@ proc loadCfgLegacy { cfg } {
 	    exit
 	}
 
-	if { $node_type != "extelem" && "lo0" ni [logIfaceNames $node_id] && \
+	if { $node_type != "extelem" && "lo0" ni [logIfacesNames $node_id] && \
 	    [$node_type.netlayer] == "NETWORK" } {
 
 	    set logiface_id [newLogIface $node_id "lo"]

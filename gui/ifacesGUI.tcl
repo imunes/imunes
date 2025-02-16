@@ -584,13 +584,8 @@ proc _ifcList { node_cfg } {
     return [_getIfacesByType $node_cfg "phys" "stolen"]
 }
 
-proc _ifaceNames { node_cfg } {
-    set iface_names {}
-    foreach {iface_id iface_cfg} [_cfgGet $node_cfg "ifaces"] {
-	lappend iface_names [_cfgGet $iface_cfg "name"]
-    }
-
-    return $iface_names
+proc _ifacesNames { node_cfg } {
+    return [_getIfacesNamesByType $node_cfg "phys" "stolen"]
 }
 
 proc _getIfacesByType { node_cfg args } {
@@ -610,7 +605,7 @@ proc _getIfacesByType { node_cfg args } {
     return $iface_ids
 }
 
-proc _getIfaceNamesByType { node_cfg args } {
+proc _getIfacesNamesByType { node_cfg args } {
     set filtered_ifaces [_getIfacesByType $node_cfg {*}$args]
 
     set iface_names {}
@@ -637,8 +632,8 @@ proc _logIfcList { node_cfg } {
     return [_getIfacesByType $node_cfg "lo" "vlan"]
 }
 
-proc _logIfaceNames { node_cfg } {
-    return [_getIfaceNamesByType $node_cfg "lo" "vlan"]
+proc _logIfacesNames { node_cfg } {
+    return [_getIfacesNamesByType $node_cfg "lo" "vlan"]
 }
 
 #****f* nodecfg.tcl/isIfcLogical
@@ -678,6 +673,15 @@ proc _allIfcList { node_cfg } {
     return [dict keys [_cfgGet $node_cfg "ifaces"]]
 }
 
+proc _allIfacesNames { node_cfg } {
+    set iface_names {}
+    foreach {iface_id iface_cfg} [_cfgGet $node_cfg "ifaces"] {
+	lappend iface_names [_cfgGet $iface_cfg "name"]
+    }
+
+    return $iface_names
+}
+
 proc _ifaceIdFromName { node_cfg iface_name } {
     foreach {iface_id iface_cfg} [_cfgGet $node_cfg "ifaces"] {
 	if { $iface_name == [_cfgGet $iface_cfg "name"] } {
@@ -710,13 +714,13 @@ proc _newIface { node_cfg iface_type auto_config { stolen_iface "" } } {
     switch -exact $iface_type {
 	"lo" -
 	"vlan" {
-	    set iface_name [newObjectId [_ifaceNames $node_cfg] $iface_type]
+	    set iface_name [newObjectId [_allIfacesNames $node_cfg] $iface_type]
 	}
 	"phys" {
-	    set iface_name [newObjectId [_ifaceNames $node_cfg] [[dictGet $node_cfg "type"].ifacePrefix]]
+	    set iface_name [newObjectId [_allIfacesNames $node_cfg] [[dictGet $node_cfg "type"].ifacePrefix]]
 	}
 	"stolen" {
-	    if { $stolen_iface != "UNASSIGNED" && $stolen_iface in [_ifaceNames $node_cfg] } {
+	    if { $stolen_iface != "UNASSIGNED" && $stolen_iface in [_allIfacesNames $node_cfg] } {
 		return [list "" $node_cfg]
 	    }
 

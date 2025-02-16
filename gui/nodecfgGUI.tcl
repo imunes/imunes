@@ -202,7 +202,7 @@ proc configGUI_addTree { wi node_id } {
 
     set sorted_iface_list {}
     set sorted_logiface_list {}
-    foreach iface_name [lsort -ascii [_ifaceNames $node_cfg]] {
+    foreach iface_name [lsort -ascii [_allIfacesNames $node_cfg]] {
 	set iface_id [_ifaceIdFromName $node_cfg $iface_name]
 	if { $iface_id in $iface_list } {
 	    lappend sorted_iface_list $iface_id
@@ -534,7 +534,7 @@ proc configGUI_refreshIfcsTree { wi node_id } {
 
     set sorted_iface_list {}
     set sorted_logiface_list {}
-    foreach iface_name [lsort -ascii [_ifaceNames $node_cfg]] {
+    foreach iface_name [lsort -ascii [_allIfacesNames $node_cfg]] {
 	set iface_id [_ifaceIdFromName $node_cfg $iface_name]
 	if { $iface_id in $iface_list } {
 	    lappend sorted_iface_list $iface_id
@@ -839,7 +839,7 @@ proc configGUI_logicalInterfaces { wi node_id iface_id } {
     ttk::frame $wi.if$iface_id -relief groove -borderwidth 2 -padding 4
     ttk::label $wi.if$iface_id.txt -text "Manage logical interfaces:"
 
-    set logifaces_list [lsort [_logIfaceNames $curnode]]
+    set logifaces_list [lsort [_logIfacesNames $curnode]]
     listbox $wi.if$iface_id.list -height 7 -width 10 -listvariable logifaces_list
 
     ttk::label $wi.if$iface_id.addtxt -text "Add new interface:"
@@ -866,7 +866,7 @@ proc configGUI_logicalInterfaces { wi node_id iface_id } {
 	    return
 	}
 
-	set logifaces_list [lsort [_logIfaceNames $curnode]]
+	set logifaces_list [lsort [_logIfacesNames $curnode]]
 	$wi.rmvbox configure -values $logifaces_list
 	$wi.list configure -listvariable logifaces_list
 
@@ -904,7 +904,7 @@ proc configGUI_logicalInterfaces { wi node_id iface_id } {
 	$wi.rmvbox set ""
 	set node_cfg [_removeIface $node_cfg $iface_id]
 
-	set logifaces_list [lsort [_logIfaceNames $curnode]]
+	set logifaces_list [lsort [_logIfacesNames $curnode]]
 	$wi.rmvbox configure -values $logifaces_list
 	$wi.list configure -listvariable logifaces_list
 
@@ -953,7 +953,7 @@ proc configGUI_physicalInterfaces { wi node_id iface_id } {
     ttk::frame $wi.if$iface_id -relief groove -borderwidth 2 -padding 4
     ttk::label $wi.if$iface_id.txt -text "Manage physical interfaces:"
 
-    set ifaces_list [lsort [_ifaceNames $node_cfg]]
+    set ifaces_list [lsort [_allIfacesNames $node_cfg]]
     listbox $wi.if$iface_id.list -height 7 -width 10 -listvariable ifaces_list
 
     ttk::label $wi.if$iface_id.addtxt -text "Add new interface:"
@@ -990,7 +990,7 @@ proc configGUI_physicalInterfaces { wi node_id iface_id } {
 	    return
 	}
 
-	set ifaces_list [lsort [_ifaceNames $node_cfg]]
+	set ifaces_list [lsort [_allIfacesNames $node_cfg]]
 	$wi.rmvbox configure -values $ifaces_list
 	$wi.list configure -listvariable ifaces_list
 
@@ -1041,7 +1041,7 @@ proc configGUI_physicalInterfaces { wi node_id iface_id } {
 	$wi.rmvbox set ""
 	set node_cfg [_removeIface $node_cfg $iface_id]
 
-	set ifaces_list [lsort [_ifaceNames $curnode]]
+	set ifaces_list [lsort [_allIfacesNames $curnode]]
 	$wi.rmvbox configure -values $ifaces_list
 	$wi.list configure -listvariable ifaces_list
 
@@ -2292,7 +2292,7 @@ proc configGUI_ifcVlanConfig { wi node_id iface_id } {
     ttk::label $wi.if$iface_id.vlancfg.devtxt -text "Vlan dev" -anchor w
     ttk::combobox $wi.if$iface_id.vlancfg.dev -width 6 -textvariable ifvdev$iface_id
     $wi.if$iface_id.vlancfg.dev configure -state readonly -values \
-	[removeFromList [_ifaceNames $node_cfg] [_getIfcName $node_cfg $iface_id]]
+	[removeFromList [_allIfacesNames $node_cfg] [_getIfcName $node_cfg $iface_id]]
 
     pack $wi.if$iface_id.vlancfg -anchor w -padx 10
     grid $wi.if$iface_id.vlancfg.devtxt -in $wi.if$iface_id.vlancfg -column 0 -row 0 \
@@ -6471,7 +6471,7 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 
     switch -regexp $action {
 	(no)?match_hook {
-	    set vals [removeFromList [lsort [_ifaceNames $node_cfg]] $iface_name]
+	    set vals [removeFromList [lsort [_allIfacesNames $node_cfg]] $iface_name]
 	    if { $action_data ni $vals } {
 		tk_dialog .dialog1 "IMUNES warning" \
 		    "ActData: Select one of the existing hooks, but not the current one ($iface_name)." \
@@ -6481,7 +6481,7 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 	    }
 	}
 	(no)?match_dupto {
-	    set vals [removeFromList [lsort [_ifaceNames $node_cfg]] $iface_name]
+	    set vals [removeFromList [lsort [_allIfacesNames $node_cfg]] $iface_name]
 	    if { $action_data ni $vals } {
 		tk_dialog .dialog1 "IMUNES warning" \
 		    "ActData: Select one of the existing hooks, but not the current one ($iface_name)." \
@@ -6628,13 +6628,13 @@ proc refreshIfcActionDataValues { node_id refresh } {
     global ifcFilterAction$iface_id$rule ifcFilterActionData$iface_id$rule
     switch -regexp [set ifcFilterAction$iface_id$rule] {
 	(no)?match_hook {
-	    set vals [removeFromList [lsort [_ifaceNames $node_cfg]] [_getIfcName $node_cfg $iface_id]]
+	    set vals [removeFromList [lsort [_allIfacesNames $node_cfg]] [_getIfcName $node_cfg $iface_id]]
 	    if { [set ifcFilterActionData$iface_id$rule] == "" || $refresh == 1 } {
 		set ifcFilterActionData$iface_id$rule [lindex $vals 0]
 	    }
 	}
 	(no)?match_dupto {
-	    set vals [removeFromList [lsort [_ifaceNames $node_cfg]] [_getIfcName $node_cfg $iface_id]]
+	    set vals [removeFromList [lsort [_allIfacesNames $node_cfg]] [_getIfcName $node_cfg $iface_id]]
 	    if { [set ifcFilterActionData$iface_id$rule] == "" || $refresh == 1 } {
 		set ifcFilterActionData$iface_id$rule [lindex $vals 0]
 	    }

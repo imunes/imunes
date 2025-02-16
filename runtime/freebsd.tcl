@@ -908,7 +908,7 @@ proc fetchNodeRunningConfig { node_id } {
     # overwrite any unsaved changes to this node
     set cur_node_cfg [cfgGet "nodes" $node_id]
 
-    set ifaces_names "[logIfaceNames $node_id] [ifaceNames $node_id]"
+    set ifaces_names [allIfacesNames $node_id]
 
     set iface_id ""
     set loopback 0
