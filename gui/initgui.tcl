@@ -1184,6 +1184,7 @@ menu .button3menu.canvases -tearoff 0
 menu .button3menu.icon -tearoff 0
 menu .button3menu.transform -tearoff 0
 menu .button3menu.sett -tearoff 0
+menu .button3menu.iface_settings -tearoff 0
 menu .button3menu.services -tearoff 0
 menu .button3menu.node_execute -tearoff 0
 menu .button3menu.node_config -tearoff 0

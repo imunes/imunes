@@ -1004,9 +1004,9 @@ proc button3node { c x y } {
 	# Remove IPv4/IPv6 addresses
 	#
 	.button3menu.sett add command -label "Remove IPv4 addresses" \
-	    -command "removeIPv4nodes"
+	    -command "removeIPv4Nodes \[selectedNodes\] *"
 	.button3menu.sett add command -label "Remove IPv6 addresses" \
-	    -command "removeIPv6nodes"
+	    -command "removeIPv6Nodes \[selectedNodes\] *"
 
 	#
 	# IPv4 autorenumber
@@ -1048,6 +1048,44 @@ proc button3node { c x y } {
 	    deployCfg
 
 	    .panwin.f1.c config -cursor left_ptr
+	}
+
+	.button3menu add cascade -label "Interface settings" \
+	    -menu .button3menu.iface_settings
+
+	#
+	# Interface settings
+	#
+	.button3menu.iface_settings delete 0 end
+
+	set ifaces {}
+	foreach iface_name [lsort -dictionary [ifacesNames $node_id]] {
+	    lappend ifaces [ifaceIdFromName $node_id $iface_name]
+	}
+
+	foreach iface_id $ifaces {
+	    set m .button3menu.iface_settings.$iface_id
+	    if { ! [winfo exists $m] } {
+		menu $m -tearoff 0
+	    } else {
+		$m delete 0 end
+	    }
+
+	    set iface_label [getIfcName $node_id $iface_id]
+	    if { [getIfcType $node_id $iface_id] == "stolen" } {
+		set iface_label "\[$iface_label\]"
+	    }
+	    .button3menu.iface_settings add cascade -label $iface_label -menu $m
+
+	    foreach {action command} [list \
+		"Remove IPv4 addresses" "removeIPv4Nodes $node_id {$node_id $iface_id}" \
+		"Remove IPv6 addresses" "removeIPv6Nodes $node_id {$node_id $iface_id}" \
+		"Match IPv4 subnet" "matchSubnet4 $node_id $iface_id" \
+		"Match IPv6 subnet" "matchSubnet6 $node_id $iface_id" \
+		] {
+
+		$m add command -label $action -command "$command"
+	    }
 	}
     }
 
@@ -2142,32 +2180,54 @@ proc deleteSelection { { keep_other_ifaces 0 } } {
     .bottom.textbox config -text ""
 }
 
-#****f* editor.tcl/removeIPv4nodes
+#****f* editor.tcl/removeIPv4Nodes
 # NAME
-#   removeIPv4nodes -- remove ipv4 nodes
+#   removeIPv4Nodes -- remove ipv4 nodes
 # SYNOPSIS
-#   removeIPv4nodes
+#   removeIPv4Nodes
 # FUNCTION
 #   Sets all nodes' IPv4 addresses to empty strings.
 #****
-proc removeIPv4nodes {} {
+proc removeIPv4Nodes { nodes all_ifaces } {
     global changed
+
+    if { $nodes == "*" } {
+	set nodes [getFromRunning "node_list"]
+    }
+
+    set nodes_ifaces [dict create]
+    foreach node_id $nodes {
+	if { [getNodeType $node_id] == "pseudo" } {
+	    set nodes [removeFromList $nodes $node_id]
+	}
+
+	if { $all_ifaces == "*" } {
+	    dict set nodes_ifaces $node_id [ifcList $node_id]
+	} else {
+	    dict set nodes_ifaces $node_id [dictGet $all_ifaces $node_id]
+	}
+    }
+
+    if { $nodes == "" } {
+	return
+    }
 
     if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
 	setToExecuteVars "terminate_cfg" [cfgGet]
     }
 
     set removed_addrs {}
-    foreach node_id [selectedNodes] {
-	if { [getNodeType $node_id] == "pseudo" } {
-	    continue
-	}
-
+    foreach node_id $nodes {
 	if { [getStatIPv4routes $node_id] != "" } {
 	    setStatIPv4routes $node_id ""
 	}
 
-	foreach iface_id [ifcList $node_id] {
+	set ifaces [dictGet $nodes_ifaces $node_id]
+	if { $ifaces == "*" } {
+	    set ifaces [ifcList $node_id]
+	}
+
+	foreach iface_id $ifaces {
 	    set addrs [getIfcIPv4addrs $node_id $iface_id]
 	    if { $addrs == "" } {
 		continue
@@ -2188,32 +2248,54 @@ proc removeIPv4nodes {} {
     updateUndoLog
 }
 
-#****f* editor.tcl/removeIPv6nodes
+#****f* editor.tcl/removeIPv6Nodes
 # NAME
-#   removeIPv6nodes -- remove ipv6 nodes
+#   removeIPv6Nodes -- remove ipv6 nodes
 # SYNOPSIS
-#   removeIPv6nodes
+#   removeIPv6Nodes
 # FUNCTION
 #   Sets all nodes' IPv6 addresses to empty strings.
 #****
-proc removeIPv6nodes {} {
+proc removeIPv6Nodes { nodes all_ifaces } {
     global changed
+
+    if { $nodes == "*" } {
+	set nodes [getFromRunning "node_list"]
+    }
+
+    set nodes_ifaces [dict create]
+    foreach node_id $nodes {
+	if { [getNodeType $node_id] == "pseudo" } {
+	    set nodes [removeFromList $nodes $node_id]
+	}
+
+	if { $all_ifaces == "*" } {
+	    dict set nodes_ifaces $node_id [ifcList $node_id]
+	} else {
+	    dict set nodes_ifaces $node_id [dictGet $all_ifaces $node_id]
+	}
+    }
+
+    if { $nodes == "" } {
+	return
+    }
 
     if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
 	setToExecuteVars "terminate_cfg" [cfgGet]
     }
 
     set removed_addrs {}
-    foreach node_id [selectedNodes] {
-	if { [getNodeType $node_id] == "pseudo" } {
-	    continue
-	}
-
+    foreach node_id $nodes {
 	if { [getStatIPv6routes $node_id] != "" } {
 	    setStatIPv6routes $node_id ""
 	}
 
-	foreach iface_id [ifcList $node_id] {
+	set ifaces [dictGet $nodes_ifaces $node_id]
+	if { $ifaces == "*" } {
+	    set ifaces [ifcList $node_id]
+	}
+
+	foreach iface_id $ifaces {
 	    set addrs [getIfcIPv6addrs $node_id $iface_id]
 	    if { $addrs == "" } {
 		continue
@@ -2232,6 +2314,50 @@ proc removeIPv6nodes {} {
     redrawAll
     set changed 1
     updateUndoLog
+}
+
+proc matchSubnet4 { node_id iface_id } {
+    global changed IPv4autoAssign
+
+    if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+	setToExecuteVars "terminate_cfg" [cfgGet]
+    }
+
+    set tmp $IPv4autoAssign
+    set IPv4autoAssign 1
+    autoIPv4addr $node_id $iface_id
+    set IPv4autoAssign $tmp
+
+    undeployCfg
+    deployCfg
+
+    redrawAll
+    set changed 1
+    updateUndoLog
+
+    .panwin.f1.c config -cursor left_ptr
+}
+
+proc matchSubnet6 { node_id iface_id } {
+    global changed IPv6autoAssign
+
+    if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+	setToExecuteVars "terminate_cfg" [cfgGet]
+    }
+
+    set tmp $IPv6autoAssign
+    set IPv6autoAssign 1
+    autoIPv6addr $node_id $iface_id
+    set IPv6autoAssign $tmp
+
+    undeployCfg
+    deployCfg
+
+    redrawAll
+    set changed 1
+    updateUndoLog
+
+    .panwin.f1.c config -cursor left_ptr
 }
 
 #****f* editor.tcl/changeAddressRange
