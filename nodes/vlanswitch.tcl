@@ -188,6 +188,7 @@ proc $MODULE.prepareSystem {} {
 
     catch { exec kldload ng_bridge }
     catch { exec kldload ng_vlan }
+    catch { exec kldload ng_hole }
 }
 
 #****f* vlanswitch.tcl/vlanswitch.nodeCreate
