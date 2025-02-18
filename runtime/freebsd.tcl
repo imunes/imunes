@@ -610,6 +610,7 @@ proc execDelIfcVlanConfig { eid node_id iface_id } {
             incr ::trunk_interfaces($trunk_ifc_key) -1
             if {$::trunk_interfaces($trunk_ifc_key) == 0} {
                 append ngcmds "disconnect $node_id: downstream\n"
+                append ngcmds "rmnode $node_id\n"
                 unset ::trunk_interfaces($trunk_ifc_key)
             }
         }
@@ -617,8 +618,8 @@ proc execDelIfcVlanConfig { eid node_id iface_id } {
         if {[info exists ::vlan_interfaces($access_ifc_key)] && $::vlan_interfaces($access_ifc_key) > 0} {
             incr ::vlan_interfaces($access_ifc_key) -1
             if {$::vlan_interfaces($access_ifc_key) == 0} {
-                append ngcmds "msg $node_id: delfilter \\\"$hook_name\\\" \n"
                 append ngcmds "disconnect $node_id: $hook_name\n"
+                append ngcmds "rmnode $node_id\n"
                 unset ::vlan_interfaces($access_ifc_key)
             }
         }
@@ -2277,7 +2278,7 @@ proc l2node.nodeCreate { eid node_id } {
             # create an ng_vlan node and make it persistent in the same command
             set ngcmds "mkpeer $ngtype $node_id parent\n"
             set ngcmds "$ngcmds name .$node_id $node_id\n"
-            set ngcmds "$ngcmds mkpeer $node_id: eiface nomatch ether\n"
+            set ngcmds "$ngcmds mkpeer $node_id: hole nomatch ether\n"
             set ngcmds "$ngcmds name $node_id:nomatch $node_id-hole"
         }
     }
