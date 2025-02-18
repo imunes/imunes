@@ -1659,7 +1659,7 @@ proc getFlushIPv6IfcCmd { iface_name } {
 
 proc getIPv4IfcCmd { ifc addr primary } {
     if { $addr == "dhcp" } {
-	return "dhclient -nw $ifc"
+	return "dhclient -nw $ifc 2>&1 &"
     }
 
     return "ip addr add $addr dev $ifc"

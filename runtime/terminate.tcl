@@ -403,12 +403,6 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 	statline "Waiting for processes on $all_nodes_count node(s) to shutdown..."
 	pipesClose
 
-	statline "Unconfiguring physical interfaces on nodes..."
-	pipesCreate
-	terminate_nodesIfacesUnconfigure $eid $unconfigure_nodes_ifaces $unconfigure_nodes_ifaces_count $w
-	statline "Waiting for physical interfaces on $unconfigure_nodes_ifaces_count node(s) to be unconfigured..."
-	pipesClose
-
 	statline "Destroying physical interfaces on RJ45 nodes..."
 	pipesCreate
 	terminate_nodesIfacesDestroy $eid $destroy_nodes_extifaces $destroy_nodes_extifaces_count $w
@@ -422,6 +416,12 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 	pipesCreate
 	terminate_linksDestroy $eid $terminate_links $links_count $w
 	statline "Waiting for $links_count link(s) to be destroyed..."
+	pipesClose
+
+	statline "Unconfiguring physical interfaces on nodes..."
+	pipesCreate
+	terminate_nodesIfacesUnconfigure $eid $unconfigure_nodes_ifaces $unconfigure_nodes_ifaces_count $w
+	statline "Waiting for physical interfaces on $unconfigure_nodes_ifaces_count node(s) to be unconfigured..."
 	pipesClose
 
 	statline "Destroying physical interfaces on nodes..."

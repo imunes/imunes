@@ -2382,7 +2382,7 @@ proc getNatIfcCmd { iface_name } {
 
 proc getIPv4IfcCmd { ifc addr primary } {
     if { $addr == "dhcp" } {
-	return "dhclient -b $ifc"
+	return "dhclient -b $ifc 2>&1 &"
     }
 
     if { $primary } {
