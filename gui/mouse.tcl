@@ -2152,20 +2152,19 @@ proc anyLeave { c } {
 #****
 proc deleteSelection { { keep_other_ifaces 0 } } {
     global changed
-    global background
     global viewid
 
     catch { unset viewid }
     .panwin.f1.c config -cursor watch; update
 
-    foreach lnode [selectedNodes] {
-	removeNodeGUI $lnode $keep_other_ifaces
+    foreach node_id [selectedNodes] {
+	removeNodeGUI $node_id $keep_other_ifaces
 
 	set changed 1
     }
 
-    foreach annotation [selectedAnnotations] {
-	deleteAnnotation $annotation
+    foreach annotation_id [selectedAnnotations] {
+	deleteAnnotation $annotation_id
 
 	set changed 1
     }

@@ -1041,7 +1041,7 @@ proc button3annotation { type c x y } {
     .button3menu add command -label "Configure $menutext" \
 	-command "annotationConfig $c $item"
     .button3menu add command -label "Delete $menutext" \
-	-command "deleteAnnotation $item"
+	-command "deleteSelection"
 
     #
     # Move to another canvas

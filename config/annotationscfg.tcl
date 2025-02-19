@@ -25,14 +25,8 @@ proc addAnnotation { annotation_id type } {
 #   * annotation_id -- existing annotation
 #****
 proc deleteAnnotation { annotation_id } {
-    global changed
-
     setToRunning "annotation_list" [removeFromList [getFromRunning "annotation_list"] $annotation_id]
     cfgUnset "annotations" $annotation_id
-
-    set changed 1
-    updateUndoLog
-    redrawAll
 }
 
 #****f* annotationscfg.tcl/getAnnotationType
