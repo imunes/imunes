@@ -92,6 +92,7 @@
 #****
 
 set newlink ""
+set newnode ""
 set selectbox ""
 set selected ""
 set ns2srcfile ""
@@ -1215,6 +1216,11 @@ foreach {key newtool} [list \
 
     bind . $key "
 	global linklayer_activetool netlayer_activetool
+	global newnode newlink newoval newrect newtext newfree
+
+	if { \"\$newnode\$newlink\$newoval\$newrect\$newtext\$newfree\" != \"\" } {
+	    return
+	}
 
 	set tool $newtool
 	if { \$tool in \"linklayer_activetool netlayer_activetool\" } {
