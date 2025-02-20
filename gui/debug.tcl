@@ -115,8 +115,9 @@ proc logCaller {} {
 }
 
 bind . <F6> {
-    global all_modules_list
+    global all_modules_list node_types
     global isOSfreebsd
+
     set all_modules_list {}
 
     source "$ROOTDIR/$LIBDIR/runtime/cfgparse.tcl"
@@ -145,35 +146,16 @@ bind . <F6> {
     source "$ROOTDIR/$LIBDIR/config/packgencfg.tcl"
     source "$ROOTDIR/$LIBDIR/config/stpswitchcfg.tcl"
 
-    source "$ROOTDIR/$LIBDIR/nodes/extnat.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/ext.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/filter.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/host.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/hub.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/lanswitch.tcl"
+    foreach node_type $node_types {
+	source "$ROOTDIR/$LIBDIR/nodes/$node_type.tcl"
+	source "$ROOTDIR/$LIBDIR/gui/$node_type.tcl"
+    }
+
     source "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/nat64.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/packgen.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/pc.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/rj45.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/router.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/stpswitch.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/wlan.tcl"
+    #source "$ROOTDIR/$LIBDIR/nodes/wlan.tcl"
 
     source "$ROOTDIR/$LIBDIR/gui/annotations.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/extnat.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/ext.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/filter.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/host.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/hub.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/lanswitch.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/nat64.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/packgen.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/pc.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/rj45.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/router.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/stpswitch.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/wlan.tcl"
+    #source "$ROOTDIR/$LIBDIR/gui/wlan.tcl"
 
     source "$ROOTDIR/$LIBDIR/gui/canvas.tcl"
     source "$ROOTDIR/$LIBDIR/gui/copypaste.tcl"
