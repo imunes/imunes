@@ -1363,6 +1363,8 @@ proc button1 { c x y button } {
 
     if { $object_drawable } {
 	if { $activetool ni "select link oval rectangle text freeform" } {
+	    global newnode
+
 	    # adding a new node
 	    set node_id [newNode $activetool]
 	    setNodeCanvas $node_id [getFromRunning "curcanvas"]
@@ -1377,8 +1379,13 @@ proc button1 { c x y button } {
 		[expr {$y / $zoom + $dy}]"
 
 	    drawNode $node_id
+	    foreach node_type "node text oval rectangle freeform" {
+		$c dtag $node_type selected
+	    }
+	    $c delete -withtags selectmark
 	    selectNode $c [$c find withtag "node && $node_id"]
 
+	    set newnode $node_id
 	    set changed 1
 	} elseif { $activetool == "select" \
 	    && $curtype != "node" && $curtype != "nodelabel" } {
@@ -1630,6 +1637,7 @@ proc button1-release { c x y } {
     global lastX lastY sizex sizey
     global autorearrange_enabled
     global resizemode resizeobj
+    global newnode
 
     set zoom [getFromRunning "zoom"]
     set undolevel [getFromRunning "undolevel"]
@@ -1882,7 +1890,12 @@ proc button1-release { c x y } {
 		updateLinkLabel [lindex [$c gettags $link_id] 1]
 	    }
 	} else {
+	    if { $newnode != "" } {
+		removeNode $newnode
+	    }
+
 	    .panwin.f1.c config -cursor watch
+	    .bottom.textbox config -text ""
 
 	    jumpToUndoLevel $undolevel
 	    redrawAll
@@ -1942,6 +1955,8 @@ proc button1-release { c x y } {
 	    set resizemode false
 	}
     }
+
+    set newnode ""
 
     if { $redrawNeeded } {
 	set redrawNeeded 0

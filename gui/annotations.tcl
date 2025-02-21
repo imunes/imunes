@@ -50,19 +50,28 @@
 proc popupAnnotationDialog { c target modify } {
     global activetool
 
+    set other_annotation_types "Oval Rect Text Free"
     switch $activetool {
 	oval {
 	    popupOvalDialog $c $target $modify
+	    set other_annotation_types [removeFromList $other_annotation_types "Oval"]
 	}
 	rectangle {
 	    popupRectangleDialog $c $target $modify
+	    set other_annotation_types [removeFromList $other_annotation_types "Rect"]
 	}
 	text {
 	    popupTextDialog $c $target $modify
+	    set other_annotation_types [removeFromList $other_annotation_types "Text"]
 	}
 	freeform {
 	    popupFreeformDialog $c $target $modify
+	    set other_annotation_types [removeFromList $other_annotation_types "Free"]
 	}
+    }
+
+    foreach annotation_type $other_annotation_types {
+	destroyNew$annotation_type $c
     }
 }
 

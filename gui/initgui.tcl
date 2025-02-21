@@ -92,6 +92,7 @@
 #****
 
 set newlink ""
+set newnode ""
 set selectbox ""
 set selected ""
 set ns2srcfile ""
@@ -1215,6 +1216,11 @@ foreach {key newtool} [list \
 
     bind . $key "
 	global linklayer_activetool netlayer_activetool
+	global newnode newlink newoval newrect newtext newfree
+
+	if { \"\$newnode\$newlink\$newoval\$newrect\$newtext\$newfree\" != \"\" } {
+	    return
+	}
 
 	set tool $newtool
 	if { \$tool in \"linklayer_activetool netlayer_activetool\" } {
@@ -1232,21 +1238,21 @@ foreach {key newtool} [list \
 	    }
 
 	    if { \$tool == \"linklayer_activetool\" } {
-		set node_types \$linklayer_types
+		set current_node_types \$linklayer_types
 	    } else {
-		set node_types \$netlayer_types
+		set current_node_types \$netlayer_types
 	    }
 
 	    # currently set linklayer_activetool or netlayer_activetool
 	    set tool \[set $newtool\]
 
-	    if { \$tool == \"\" || \$activetool in \$node_types } {
+	    if { \$tool == \"\" || \$activetool in \$current_node_types } {
 		# circle around the list
-		set idx \[expr \[lsearch \$node_types \$tool] + 1\]
-		if { \$idx >= \[llength \$node_types\] } {
+		set idx \[expr \[lsearch \$current_node_types \$tool] + 1\]
+		if { \$idx >= \[llength \$current_node_types\] } {
 		    set idx 0
 		}
-		set tool \[lindex \$node_types \$idx\]
+		set tool \[lindex \$current_node_types \$idx\]
 	    }
 
 	    # set linklayer_activetool or netlayer_activetool to the next tool
