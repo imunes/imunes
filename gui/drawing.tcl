@@ -149,13 +149,14 @@ proc redrawAll {} {
 #   * node_id -- node id
 #****
 proc drawNode { node_id } {
-    global show_node_labels pseudo
+    global show_node_labels pseudo runnable_node_types
 
     set type [getNodeType $node_id]
     set zoom [getFromRunning "zoom"]
     lassign [lmap coord [getNodeCoords $node_id] {expr $coord * $zoom}] x y
 
     .panwin.f1.c delete -withtags "node && $node_id"
+    .panwin.f1.c delete -withtags "nodedisabled && $node_id"
     .panwin.f1.c delete -withtags "nodelabel && $node_id"
 
     set custom_icon [getCustomIcon $node_id]
@@ -163,6 +164,7 @@ proc drawNode { node_id } {
 	global $type
 
 	.panwin.f1.c create image $x $y -image [set $type] -tags "node $node_id"
+	set image_h [image height [set $type]]
     } else {
 	global icon_size
 
@@ -179,10 +181,19 @@ proc drawNode { node_id } {
 		.panwin.f1.c create image $x $y -image [set img_$custom_icon] -tags "node $node_id"
 	    }
 	}
+
+	set image_h [image height img_$custom_icon]
     }
 
-    lassign [lmap coord [getNodeLabelCoords $node_id] {expr int($coord * $zoom)}] x y
     if { $type != "pseudo" } {
+	if { $type ni $runnable_node_types } {
+	    global defaultFontSize
+
+	    .panwin.f1.c create text $x [expr $y - int($image_h/2) - 1.3*$defaultFontSize] \
+		-fill "#ff0c0c" -text "DISABLED" -tags "nodedisabled $node_id" -justify center \
+		-font "imnDisabledFont" -state disabled
+	}
+
 	set label_str [getNodeName $node_id]
 
 	set has_empty_ifaces 0
@@ -221,6 +232,7 @@ proc drawNode { node_id } {
 	set color blue
     }
 
+    lassign [lmap coord [getNodeLabelCoords $node_id] {expr int($coord * $zoom)}] x y
     set label_elem [.panwin.f1.c create text $x $y -fill $color \
 	-text "$label_str" -tags "nodelabel $node_id" -justify center]
 
