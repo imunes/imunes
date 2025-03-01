@@ -1,3 +1,32 @@
+proc refreshToolBarNodes {} {
+    global mf all_modules_list hidden_node_types
+
+    catch { destroy $mf.left.link_nodes }
+    catch { destroy $mf.left.net_nodes }
+
+    menu $mf.left.link_nodes -title "Link layer nodes"
+    menu $mf.left.net_nodes -title "Network layer nodes"
+
+    foreach node_type $all_modules_list {
+	if { $node_type in $hidden_node_types } {
+	    continue
+	}
+
+	set image [image create photo -file [$node_type.icon toolbar]]
+
+	if { [$node_type.netlayer] == "LINK" } {
+	    set frame_element "$mf.left.link_nodes"
+	} elseif { [$node_type.netlayer] == "NETWORK" } {
+	    set frame_element "$mf.left.net_nodes"
+	}
+
+	set background_color ""
+	$frame_element add command -image $image -hidemargin 1 \
+	    -compound left -label [string range [$node_type.toolbarIconDescr] 8 end] \
+	    -command "setActiveTool $node_type" {*}$background_color
+    }
+}
+
 #****f* editor.tcl/redrawAll
 # NAME
 #   redrawAll -- redraw all
