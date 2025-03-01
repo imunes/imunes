@@ -267,6 +267,7 @@ set curcfg ""
 # These variables can be modified in IMUNES configuration files.
 set default_configurable_options_comments {
     "op_editor_only"		false	"if true, Experiment -> Execute is disabled"
+    "op_hidden_node_types"	""	"a list of node types to hide in the toolbar"
     "op_recents_number"		10	"max number of recently opened file names to keep"
 }
 
