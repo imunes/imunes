@@ -1595,7 +1595,7 @@ proc button1-motion { c x y } {
 
 	    set node_id [lindex [$c gettags $img] 1]
 
-	    foreach elem { "selectmark" "nodelabel" "link" } {
+	    foreach elem "selectmark nodedisabled nodelabel link" {
 		set obj [$c find withtag "$elem && $node_id"]
 		$c move $obj [expr {$x - $lastX}] [expr {$y - $lastY}]
 
