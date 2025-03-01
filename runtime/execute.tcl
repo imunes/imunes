@@ -430,6 +430,7 @@ proc nodeIpsecInit { node_id } {
 #****
 proc deployCfg { { execute 0 } } {
     global progressbarCount execMode skip_nodes err_skip_nodesifaces err_skip_nodes
+    global runnable_node_types
 
     if { ! $execute } {
 	if { ! [getFromRunning "cfg_deployed"] } {
@@ -481,6 +482,20 @@ proc deployCfg { { execute 0 } } {
     foreach node_id $instantiate_nodes {
 	set node_type [getNodeType $node_id]
 	if { $node_type != "pseudo" } {
+	    if { $node_type ni $runnable_node_types } {
+		set instantiate_nodes [removeFromList $instantiate_nodes $node_id]
+		set configure_nodes [removeFromList $configure_nodes $node_id]
+		if { $create_nodes_ifaces != "*" && $node_id in [dict keys $create_nodes_ifaces] } {
+		    dict unset create_nodes_ifaces $node_id
+		}
+
+		if { $configure_nodes_ifaces != "*" && $node_id in [dict keys $configure_nodes_ifaces] } {
+		    dict unset configure_nodes_ifaces $node_id
+		}
+
+		continue
+	    }
+
 	    if { [$node_type.virtlayer] != "VIRTUALIZED" } {
 		lappend native_nodes $node_id
 	    } else {
@@ -724,7 +739,7 @@ proc execute_prepareSystem {} {
 }
 
 proc execute_nodesCreate { nodes nodes_count w } {
-    global progressbarCount execMode skip_nodes
+    global progressbarCount execMode runnable_node_types skip_nodes
 
     set eid [getFromRunning "eid"]
 

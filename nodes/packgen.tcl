@@ -38,7 +38,7 @@
 #****
 
 set MODULE packgen
-registerModule $MODULE
+registerModule $MODULE "freebsd"
 
 ################################################################################
 ########################### CONFIGURATION PROCEDURES ###########################

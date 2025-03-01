@@ -119,6 +119,7 @@ bind . <F6> {
     global isOSfreebsd
 
     set all_modules_list {}
+    set runnable_node_types {}
 
     source "$ROOTDIR/$LIBDIR/runtime/cfgparse.tcl"
     source "$ROOTDIR/$LIBDIR/runtime/common.tcl"

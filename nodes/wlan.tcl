@@ -25,7 +25,7 @@
 
 set MODULE wlan
 
-registerModule $MODULE
+registerModule $MODULE "freebsd"
 
 proc $MODULE.prepareSystem {} {
     catch { exec kldload ng_rfee }
