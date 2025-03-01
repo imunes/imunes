@@ -202,7 +202,7 @@ proc setWmTitle { fname } {
 #****
 proc openFile {} {
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-    global runtimeDir showTree recent_files
+    global runtimeDir showTree recent_files pinned_recent_files
 
     set current_file [getFromRunning "current_file"]
     readCfgJson $current_file
@@ -221,10 +221,11 @@ proc openFile {} {
     saveToUndoLevel 0
     setActiveTool select
     set file_to_add [file normalize $current_file]
-    if { ! [string match "[file normalize $runtimeDir]*" $file_to_add] } {
+    if { ! [string match "[file normalize $runtimeDir]*" $file_to_add] && "!$file_to_add" ni $pinned_recent_files } {
 	set recent_files [linsert [removeFromList $recent_files $file_to_add] 0 $file_to_add]
 	updateRecentsMenu
     }
+
     updateProjectMenu
     setWmTitle $current_file
 
@@ -305,7 +306,7 @@ proc applyRunningOpts {} {
 #   * selected_file -- name of the file where current configuration is saved.
 #****
 proc saveFile { selected_file } {
-    global recent_files
+    global recent_files pinned_recent_files
 
     if { $selected_file != "" } {
 	set current_file $selected_file
@@ -325,8 +326,10 @@ proc saveFile { selected_file } {
 	saveCfgJson $current_file
 
 	set file_to_add [file normalize $current_file]
-	set recent_files [linsert [removeFromList $recent_files $file_to_add] 0 $file_to_add]
-	updateRecentsMenu
+	if { "!$file_to_add" ni $pinned_recent_files } {
+	    set recent_files [linsert [removeFromList $recent_files $file_to_add] 0 $file_to_add]
+	    updateRecentsMenu
+	}
 
 	.bottom.textbox config -text "Saved [file tail $current_file]"
 
@@ -344,20 +347,62 @@ proc saveFile { selected_file } {
 #   Updates recently opened files menu.
 #****
 proc updateRecentsMenu {} {
-    global recents_fname recent_files op_recents_number
+    global recents_fname pinned_recent_files recent_files recents_number
 
     set m .menubar.file.recent_files
     $m delete 0 end
 
-    if { [llength $recent_files] > $op_recents_number } {
-	set recent_files [lrange $recent_files 0 [expr $op_recents_number - 1]]
+    if { [llength $recent_files] > $recents_number } {
+	set recent_files [lrange $recent_files 0 [expr $recents_number - 1]]
     }
 
     if { $recents_fname != "" } {
 	set fd [open $recents_fname w+]
+	puts $fd [join $pinned_recent_files \n]
 	puts $fd [join $recent_files \n]
 	close $fd
     }
+
+    $m add command -label "Pin current to 'Recent files'" -underline 0 -command {
+	global recent_files pinned_recent_files
+
+	set current_file [getFromRunning "current_file"]
+	if { $current_file == "" } {
+	    return
+	}
+
+	set file_to_add [file normalize $current_file]
+	set pinned_recent_files [linsert [removeFromList $pinned_recent_files "!$file_to_add"] end "!$file_to_add"]
+
+	set recent_files [removeFromList $recent_files $file_to_add]
+	updateRecentsMenu
+    }
+
+    $m add command -label "Remove current from 'Recent files'" -underline 0 -command {
+	global recent_files pinned_recent_files
+
+	set current_file [getFromRunning "current_file"]
+	if { $current_file == "" } {
+	    return
+	}
+
+	set file_to_remove [file normalize $current_file]
+	set pinned_recent_files [removeFromList $pinned_recent_files "!$file_to_remove"]
+
+	set recent_files [removeFromList $recent_files $file_to_remove]
+	updateRecentsMenu
+    }
+
+    $m add separator
+
+    foreach fname $pinned_recent_files {
+	if { $fname != "" } {
+	    set fname [string range $fname 1 end]
+	    $m add command -label "$fname" -command "fileOpenDialogBox $fname"
+	}
+    }
+
+    $m add separator
 
     foreach fname $recent_files {
 	if { $fname != "" } {
@@ -377,7 +422,7 @@ proc updateRecentsMenu {} {
 #   * args -- if an argument is given, do not open the dialog
 #****
 proc fileOpenDialogBox { args } {
-    global file_types recent_files
+    global file_types recent_files pinned_recent_files
 
     if { $args == "" } {
 	set selected_file [tk_getOpenFile -filetypes $file_types]
@@ -398,6 +443,7 @@ proc fileOpenDialogBox { args } {
 		question 0 Yes No]
 
 	    if { $reply == 0 } {
+		set pinned_recent_files [removeFromList $pinned_recent_files "!$selected_file"]
 		set recent_files [removeFromList $recent_files $selected_file]
 
 		updateRecentsMenu

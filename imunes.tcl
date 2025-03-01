@@ -330,6 +330,7 @@ if { $debug } {
     set config_path "$config_path_orig"
 }
 
+set pinned_recent_files {}
 set recent_files {}
 set recents_fname "$config_dir/recents"
 if { ! [file isdirectory "$config_dir"] } {
@@ -342,7 +343,13 @@ if { ! [file isdirectory "$config_dir"] } {
 
 	set fnames [split $data \n]
 	foreach fname $fnames {
-	    if { $fname != "" } {
+	    if { $fname == "" } {
+		continue
+	    }
+
+	    if { [string match "!*" $fname] } {
+		lappend pinned_recent_files $fname
+	    } else {
 		lappend recent_files $fname
 	    }
 	}
