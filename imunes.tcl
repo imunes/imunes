@@ -255,13 +255,28 @@ set cf::clipboard::dict_cfg [dict create]
 set cfg_list {}
 set curcfg ""
 
-#****v* imunes.tcl/editor_only
+#****v* imunes.tcl/.imunes.rc
 # NAME
-#    editor_only -- if set, Experiment -> Execute is disabled
+#    editor_only -- if true, Experiment -> Execute is disabled
+#    recents_number -- total number of recently opened file names to keep
 # FUNCTION
-#    IMUNES GUI can be used in editor-only mode.i
-#    This variable can be modified in .imunesrc.
-set editor_only false
+#    These variables can be modified in .imunes.rc in JSON format:
+#    {
+#    	"editor_only": true
+#    	"recents_number": "20"
+#    }
+#***
+set default_configurable_options_comments {
+    "recents_number"		10	"total number of recent files in the menu"
+    "editor_only"		false	"disables execution"
+    "hidden_node_types"		""	"a list of hidden node types in the toolbar"
+}
+
+set default_configurable_options [dict create]
+foreach {option val comment} $default_configurable_options_comments {
+    dict set default_configurable_options $option $val
+    set $option $val
+}
 
 set winOS false
 if { $isOSwin } {
@@ -281,11 +296,48 @@ if { [string match -nocase "*imagemagick*" $imInfo] != 1 } {
 
 set runtimeDir "/var/run/imunes"
 
-#
-# Read config files, the first one found: .imunesrc, $HOME/.imunesrc
-#
-# XXX
-readConfigFile
+set home_path ""
+catch { set home_path $env(HOME) }
+
+set config_dir ""
+catch { set config_dir $env(XDG_CONFIG_HOME) }
+if { $config_dir == "" } {
+    set config_dir "$home_path/.config"
+}
+set config_dir "$config_dir/imunes"
+
+set json_cfg [createJson "object" $default_configurable_options]
+set config_path "$config_dir/config"
+
+if { ! [file exists $config_dir] } {
+    file mkdir $config_dir
+}
+
+if { [file exists "$config_path"] } {
+    set config_path "${config_path}.example"
+
+    set preamble "#
+# This file is not parsed - copy it to .config/imunes/config
+# and change the values there"
+
+    set comments "#\n"
+    foreach {option val comment} $default_configurable_options_comments {
+	append comments "# $option - $comment (default: \"$val\")\n"
+    }
+    append comments "#"
+
+    set json_cfg "$preamble\n$comments\n$json_cfg"
+}
+
+set fd [open "$config_path" w+]
+puts $fd $json_cfg
+close $fd
+
+# TODO: check what if user is sudo
+set sudo_user ""
+catch { set sudo_user $env(SUDO_USER) }
+# Read config files
+readConfigFiles
 
 #
 # Initialization should be complete now, so let's start doing something...
