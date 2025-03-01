@@ -409,23 +409,90 @@ proc closeFile {} {
 # NAME
 #   readConfigFile -- read configuration file
 # SYNOPSIS
-#   readConfigFile
+#   readConfigFile $file_name
 # FUNCTION
-#   Read config files, the first one found: .imunesrc, $HOME/.imunesrc
+#   Read config file given with $file_name. The file should be in JSON format,
+#   and it will be skipped if it cannot be parsed. Only options given by
+#   variable $default_configurable_options are legitimate options to give.
 #***
-proc readConfigFile {} {
-    global exec_hosts editor_only
-    global env
+proc readConfigFile { file_name } {
+    global default_configurable_options
+
+    set fd [open $file_name r]
+    set json_options [read $fd]
+    close $fd
+
+    # remove all comments (all lines starting with #)
+    regsub -all -line {^[ \t]*#.*\n} $json_options "" json_options
+
+    try {
+	json::json2dict $json_options
+    } on error err {
+	puts stderr "Error sourcing config file '$file_name':\n$err"
+
+	return
+    } on ok read_options {}
+
+    foreach {option val} $read_options {
+	if { $option ni [dict keys $default_configurable_options] } {
+	    continue
+	}
+
+	global $option
+
+	set $option $val
+    }
+}
+
+#****f* filemgmt.tcl/readConfigFiles
+# NAME
+#   readConfigFiles -- read configuration file
+# SYNOPSIS
+#   readConfigFiles
+# FUNCTION
+#   Read config files, the first one that it finds:
+#   	./.imunesrc
+#   	./.imunes.rc
+#   	$HOME/.imunes.rc
+#   	$XDG_CONFIG_HOME/imunes/config
+#   	/etc/imunes/config
+#
+#   After that, read /etc/imunes/override which overrides any previously set
+#   options.
+#
+#   For compatibility with legacy versions, ./.imunesrc will be sourced as a
+#   TCL script, but other files are treated as JSON config files.
+#   NOTE: If $XDG_CONFIG_HOME is either not set or empty, a default of
+#   $HOME/.config is used
+#***
+proc readConfigFiles {} {
+    global home_path config_dir
+
+    set file_name ""
     if { [file exists ".imunesrc"] } {
-	source ".imunesrc"
+	safeSourceFile ".imunesrc"
+    } elseif { [file exists ".imunes.rc"] } {
+	set file_name ".imunes.rc"
     } else {
-	if { [catch { set myhome $env(HOME) }] } {
+	if { $home_path == "" } {
 	    ;# not running on UNIX
 	} else {
-	    if { [file exists "$myhome/.imunesrc"] } {
-	       source "$myhome/.imunesrc"
+	    if { [file exists "$home_path/.imunes.rc"] } {
+		set file_name "$home_path/.imunes.rc"
+	    } elseif { [file exists "$config_dir/config"] } {
+		set file_name "$config_dir/config"
+	    } elseif { [file exists "/etc/imunes/config"] } {
+		set file_name "/etc/imunes/config"
 	    }
 	}
+    }
+
+    if { $file_name ni "\"\" .imunesrc" } {
+	readConfigFile $file_name
+    }
+
+    if { [file exists "/etc/imunes/override"] } {
+	readConfigFile "/etc/imunes/override"
     }
 }
 

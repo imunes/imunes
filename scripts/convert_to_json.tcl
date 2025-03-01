@@ -175,13 +175,13 @@ safeSourceFile "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
 set cfg_list {}
 set curcfg ""
 
-#****v* convert_to_json.tcl/editor_only
+#****v* convert_to_json.tcl/op_editor_only
 # NAME
-#    editor_only -- if set, Experiment -> Execute is disabled
+#    op_editor_only -- if set, Experiment -> Execute is disabled
 # FUNCTION
 #    IMUNES GUI can be used in editor-only mode.i
 #    This variable can be modified in .imunesrc.
-set editor_only false
+set op_editor_only false
 
 #
 # Read config files, the first one found: .imunesrc, $HOME/.imunesrc

@@ -76,6 +76,23 @@ if { $ROOTDIR == "." } {
     set BINDIR "bin"
 }
 
+set runtimeDir "/var/run/imunes"
+
+set home_path ""
+catch { set home_path $env(HOME) }
+
+set config_dir ""
+catch { set config_dir $env(XDG_CONFIG_HOME) }
+if { $config_dir == "" } {
+    set config_dir "$home_path/.config"
+}
+set config_dir "$config_dir/imunes"
+set config_path "$config_dir/config"
+
+# TODO: check what if user is sudo
+set sudo_user ""
+catch { set sudo_user $env(SUDO_USER) }
+
 try {
     source "$ROOTDIR/$LIBDIR/helpers.tcl"
 } on error { result options } {
@@ -235,14 +252,6 @@ safeSourceFile "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
 # Global variables are initialized here
 #
 
-#****v* imunes.tcl/prefs
-# NAME
-#    prefs
-# FUNCTION
-#    Contains the list of preferences. When starting a program
-#    this list is empty.
-#*****
-
 # Clipboard
 namespace eval cf::clipboard {}
 set cf::clipboard::node_list {}
@@ -255,13 +264,21 @@ set cf::clipboard::dict_cfg [dict create]
 set cfg_list {}
 set curcfg ""
 
-#****v* imunes.tcl/editor_only
-# NAME
-#    editor_only -- if set, Experiment -> Execute is disabled
-# FUNCTION
-#    IMUNES GUI can be used in editor-only mode.i
-#    This variable can be modified in .imunesrc.
-set editor_only false
+# These variables can be modified in IMUNES configuration files.
+set default_configurable_options_comments {
+    "op_editor_only"		false	"if true, Experiment -> Execute is disabled"
+}
+
+set options_max_length 0
+set default_configurable_options [dict create]
+foreach {option val comment} $default_configurable_options_comments {
+    dict set default_configurable_options $option $val
+    set $option $val
+
+    if { [string length $option] > $options_max_length } {
+	set options_max_length [string length $option]
+    }
+}
 
 set winOS false
 if { $isOSwin } {
@@ -279,13 +296,39 @@ if { [string match -nocase "*imagemagick*" $imInfo] != 1 } {
     set hasIM false
 }
 
-set runtimeDir "/var/run/imunes"
+set json_cfg [createJson "object" $default_configurable_options]
+if { ! [file exists $config_dir] } {
+    file mkdir $config_dir
+}
 
-#
-# Read config files, the first one found: .imunesrc, $HOME/.imunesrc
-#
-# XXX
-readConfigFile
+# I don't want to add new runtime arguments for generating this file, but I
+# also don't want to do it manually for each new option that is added to the
+# list, so generate it every time in debug mode
+if { $debug } {
+    set preamble "#
+# This file is not parsed. If you want to apply options system-wide,
+# copy it to /etc/imunes/config and modify it there.
+# For per-user changes, copy it to \$XDG_CONFIG_HOME/imunes/config or
+# \$HOME/imunes/config if \$XDG_CONFIG_HOME is \"\" or not set."
+
+    set config_path "${config_path}.example"
+
+    set comments "#\n"
+    foreach {option val comment} $default_configurable_options_comments {
+	set pad [string repeat " " [expr $options_max_length - [string length $option]]]
+	append comments "# $option$pad - $comment (default: \"$val\")\n"
+    }
+    append comments "#"
+
+    set json_cfg "$preamble\n$comments\n$json_cfg"
+}
+
+set fd [open "$config_path" w+]
+puts $fd $json_cfg
+close $fd
+
+# Read config files
+readConfigFiles
 
 #
 # Initialization should be complete now, so let's start doing something...

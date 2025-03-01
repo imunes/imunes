@@ -1,0 +1,11 @@
+#
+# This file is not parsed. If you want to apply options system-wide,
+# copy it to /etc/imunes/config and modify it there.
+# For per-user changes, copy it to $XDG_CONFIG_HOME/imunes/config or
+# $HOME/imunes/config if $XDG_CONFIG_HOME is "" or not set.
+#
+# op_editor_only       - if true, Experiment -> Execute is disabled (default: "false")
+#
+{
+    "op_editor_only"       : "false"
+}

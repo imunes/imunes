@@ -680,7 +680,7 @@ proc pipesClose {} {
 #   simulation/Terminate button, that is enabled) and procedure deployCfg is
 #   called.
 #   The mode can not be changed to exec if imunes operates only in editor mode
-#   (editor_only variable is set).
+#   (op_editor_only variable is set).
 #   When changing the mode to edit, all required buttons are enabled (except
 #   for simulation/Terminate button that is disabled) and procedure
 #   vimageCleanup is called.
@@ -688,7 +688,7 @@ proc pipesClose {} {
 #   * new_oper_mode -- the new operating mode. Can be edit or exec.
 #****
 proc setOperMode { new_oper_mode } {
-    global all_modules_list editor_only execMode isOSfreebsd isOSlinux
+    global all_modules_list op_editor_only execMode isOSfreebsd isOSlinux
 
     if { ! [getFromRunning "cfg_deployed"] && $new_oper_mode == "exec" } {
 	if { ! $isOSlinux && ! $isOSfreebsd } {
@@ -717,7 +717,7 @@ proc setOperMode { new_oper_mode } {
 	    return
 	}
 
-	if { $editor_only } {
+	if { $op_editor_only } {
 	    .menubar.experiment entryconfigure "Execute" -state disabled
 	    return
 	}
@@ -811,7 +811,7 @@ proc setOperMode { new_oper_mode } {
 	    .menubar.tools entryconfigure "Auto rearrange selected" -state normal
 	}
 
-	if { $editor_only } {
+	if { $op_editor_only } {
 	    .menubar.experiment entryconfigure "Execute" -state disabled
  	} else {
 	    .menubar.experiment entryconfigure "Execute" -state normal

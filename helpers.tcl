@@ -1,4 +1,6 @@
 proc getPrettyUsage { options } {
+    global config_path
+
     set usage "Usage:
     imunes \[OPTION...\] \[.imn FILE\]
 
@@ -27,6 +29,9 @@ Options:
     imunes \[-e | -eid eid\] \[topology.imn\] - start IMUNES GUI
     imunes -b \[-e | -eid eid\] \[topology.imn\] - start experiment (batch)
     imunes -b -e | -eid eid - terminate experiment (batch)"
+
+    append usage "\n\nCheck /etc/imunes/config.examples for configuration options."
+
     return $usage
 }
 
