@@ -5,7 +5,9 @@
 # $HOME/imunes/config if $XDG_CONFIG_HOME is "" or not set.
 #
 # op_editor_only       - if true, Experiment -> Execute is disabled (default: "false")
+# op_recents_number    - max number of recently opened file names to keep (default: "10")
 #
 {
-    "op_editor_only"       : "false"
+    "op_editor_only"       : "false",
+    "op_recents_number"    : "10"
 }

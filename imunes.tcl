@@ -267,6 +267,7 @@ set curcfg ""
 # These variables can be modified in IMUNES configuration files.
 set default_configurable_options_comments {
     "op_editor_only"		false	"if true, Experiment -> Execute is disabled"
+    "op_recents_number"		10	"max number of recently opened file names to keep"
 }
 
 set options_max_length 0
@@ -326,6 +327,25 @@ if { $debug } {
 set fd [open "$config_path" w+]
 puts $fd $json_cfg
 close $fd
+
+set recent_files {}
+set recents_fname "$config_dir/recents"
+if { ! [file isdirectory "$config_dir"] } {
+    set recents_fname ""
+} else {
+    if { [file exists $recents_fname] } {
+	set fd [open $recents_fname r]
+	set data [read $fd]
+	close $fd
+
+	set fnames [split $data \n]
+	foreach fname $fnames {
+	    if { $fname != "" } {
+		lappend recent_files $fname
+	    }
+	}
+    }
+}
 
 # Read config files
 readConfigFiles
