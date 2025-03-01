@@ -336,6 +336,26 @@ close $fd
 # TODO: check what if user is sudo
 set sudo_user ""
 catch { set sudo_user $env(SUDO_USER) }
+
+set recent_files {}
+set recents_fname "$config_path/recents"
+if { ! [file isdirectory "$config_path"] } {
+    set recents_fname ""
+} else {
+    if { [file exists $recents_fname] } {
+	set fd [open $recents_fname r]
+	set data [read $fd]
+	close $fd
+
+	set fnames [split $data \n]
+	foreach fname $fnames {
+	    if { $fname != "" } {
+		lappend recent_files $fname
+	    }
+	}
+    }
+}
+
 # Read config files
 readConfigFiles
 
