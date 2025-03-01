@@ -20,6 +20,7 @@ UNAME_S = $(shell uname -s)
 VROOT_EXISTS = $(shell [ -d /var/imunes/vroot ] && echo 1 || echo 0 )
 SERVICEDIR=/usr/local/etc/rc.d
 STARTUPDIR=/var/imunes-service
+ETCDIR=/etc/imunes
 
 BASEFILES =	COPYRIGHT README.md VERSION
 CONFIGFILES =	$(wildcard config/*.tcl)
@@ -134,6 +135,9 @@ endif
 		cp icons/tiny/$${file} $(TINY_ICONSDIR); \
 	done ;
 
+	mkdir -p $(ETCDIR)
+	cp config.example $(ETCDIR)
+
 uninstall:
 	rm -rf $(IMUNESDIR)
 	for file in imunes $(notdir $(TOOLS)); do \
@@ -141,6 +145,7 @@ uninstall:
 	done ;
 	rm -rf $(SERVICEDIR)/imunes-service.sh
 	@echo 	"To remove startup topologies, remove $(STARTUPDIR)"
+	rm -rf $(ETCDIR)
 
 netgraph:
 ifeq ($(UNAME_S), FreeBSD)

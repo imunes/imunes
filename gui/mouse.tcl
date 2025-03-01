@@ -127,9 +127,7 @@ proc removeNodeGUI { node_id { keep_other_ifaces 0 } } {
 #   * link_id -- link id
 #****
 proc splitLinkGUI { link_id } {
-    global changed
-
-    set zoom [getFromRunning "zoom"]
+    global zoom changed
 
     lassign [getLinkPeers $link_id] orig_node1_id orig_node2_id
     lassign [splitLink $link_id] new_node1_id new_node2_id
@@ -1269,8 +1267,7 @@ proc button1 { c x y button } {
     global background selectbox
     global defLinkColor defLinkWidth
     global resizemode resizeobj
-
-    set zoom [getFromRunning "zoom"]
+    global zoom
 
     set x [$c canvasx $x]
     set y [$c canvasy $y]
@@ -1633,13 +1630,12 @@ proc button1-motion { c x y } {
 #****
 proc button1-release { c x y } {
     global activetool newlink curobj grid
-    global changed selectbox
+    global zoom changed selectbox
     global lastX lastY sizex sizey
     global autorearrange_enabled
     global resizemode resizeobj
     global newnode
 
-    set zoom [getFromRunning "zoom"]
     set undolevel [getFromRunning "undolevel"]
     set redolevel [getFromRunning "redolevel"]
 

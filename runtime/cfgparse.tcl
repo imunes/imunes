@@ -1617,24 +1617,39 @@ proc saveToUndoLevel { undolevel { value "" } } {
 
 #########################################################################
 
-proc getOption { property } {
+proc getOption { option } {
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-    return [dictGet $dict_cfg "options" $property]
+    return [dictGet $dict_cfg "options" $option]
 }
 
-proc setOption { property value } {
+proc setOption { option value } {
+    global default_options topology_options global_override
+
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-    set dict_cfg [dictSet $dict_cfg "options" $property $value]
+    if { $option in $global_override } {
+	dict set topology_options $option $value
+	set global_override [removeFromList $global_override $option]
+	resetRunningOpt $option
+    }
+
+    if { $option in [dict keys $topology_options] } {
+	set dict_cfg [dictSet $dict_cfg "options" $option $value]
+    } elseif { [getOptSource $option] in "default custom" && $value != [dictGet $default_options $option] } {
+	set dict_cfg [dictSet $dict_cfg "options" $option $value]
+	dict set topology_options $option $value
+    } else {
+	set dict_cfg [unsetOption $option]
+    }
 
     return $dict_cfg
 }
 
-proc unsetOption { property } {
+proc unsetOption { option } {
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-    set dict_cfg [dictUnset $dict_cfg "options" $property]
+    set dict_cfg [dictUnset $dict_cfg "options" $option]
 
     return $dict_cfg
 }

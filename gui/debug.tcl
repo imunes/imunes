@@ -170,6 +170,10 @@ bind . <F6> {
 
     source "$ROOTDIR/$LIBDIR/gui/debug.tcl"
 
+    readConfigFiles
     applyOptions
+
+    redrawAll
+
     dputs "Reloaded all sources."
 }

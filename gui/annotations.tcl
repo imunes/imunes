@@ -281,10 +281,10 @@ proc popupOvalApply { c wi target } {
 #   * oval -- oval annotation
 #****
 proc drawOval { oval } {
-    global defFillColor
+    global zoom defFillColor
 
     # multiply each coordinate with $zoom and assign to variables x1, y1, x2, y2
-    lassign [lmap n [getAnnotationCoords $oval] {expr $n * [getFromRunning "zoom"]}] x1 y1 x2 y2
+    lassign [lmap n [getAnnotationCoords $oval] {expr $n * $zoom}] x1 y1 x2 y2
 
     set color [getAnnotationColor $oval]
     set bordercolor [getAnnotationBorderColor $oval]
@@ -499,10 +499,10 @@ proc popupRectangleApply { c wi target } {
 #   * rectangle -- rectangle annotation
 #****
 proc drawRect { rectangle } {
-    global defFillColor
+    global zoom defFillColor
 
     # multiply each coordinate with $zoom and assign to variables x1, y1, x2, y2
-    lassign [lmap n [getAnnotationCoords $rectangle] {expr $n * [getFromRunning "zoom"]}] x1 y1 x2 y2
+    lassign [lmap n [getAnnotationCoords $rectangle] {expr $n * $zoom}] x1 y1 x2 y2
 
     set color [getAnnotationColor $rectangle]
     set bordercolor [getAnnotationBorderColor $rectangle]
@@ -686,7 +686,7 @@ proc popupTextApply { c wi target } {
 #   * text -- text annotation
 #****
 proc drawText { text } {
-    global defTextColor
+    global zoom defTextColor
 
     set coords [getAnnotationCoords $text]
     if { $coords == "" } {
@@ -700,7 +700,7 @@ proc drawText { text } {
     if { $labelcolor == "" } { set labelcolor $defTextColor }
     if { $font == "" } { set font TkTextFont }
 
-    lassign [lmap n $coords {expr $n * [getFromRunning "zoom"]}] x y
+    lassign [lmap n $coords {expr $n * $zoom}] x y
     set newtext [.panwin.f1.c create text $x $y -text $label -anchor w \
 	-font "$font" -justify left -fill $labelcolor -tags "text $text"]
 	.panwin.f1.c raise $newtext
@@ -851,7 +851,8 @@ proc popupFreeformApply { c wi target } {
 #   * freeform -- freeform annotation
 #****
 proc drawFreeform { freeform } {
-    set zoom [getFromRunning "zoom"]
+    global zoom
+
     set coords [getAnnotationCoords $freeform]
     set color [getAnnotationColor $freeform]
     set width [getAnnotationWidth $freeform]
@@ -1290,9 +1291,8 @@ proc selectmarkLeave { c x y } {
 #   * img -- variable that contains the image data in the memory
 #****
 proc backgroundImage { c img } {
-    global sizex sizey
+    global zoom sizex sizey
 
-    set zoom [getFromRunning "zoom"]
     set e_sizex [expr {int($sizex * $zoom)}]
     set e_sizey [expr {int($sizey * $zoom)}]
 

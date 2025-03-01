@@ -7,10 +7,9 @@
 #   Redraws all the objects on the current canvas.
 #****
 proc redrawAll {} {
-    global background sizex sizey grid
+    global zoom background sizex sizey grid
     global show_background_image show_annotations show_grid bkgImage
 
-    set zoom [getFromRunning "zoom"]
     set curcanvas [getFromRunning "curcanvas"]
 
     .bottom.zoom config -text "zoom [expr {int($zoom * 100)}]%"
@@ -114,10 +113,9 @@ proc redrawAll {} {
 #   * node_id -- node id
 #****
 proc drawNode { node_id } {
-    global show_node_labels pseudo
+    global zoom show_node_labels pseudo
 
     set type [getNodeType $node_id]
-    set zoom [getFromRunning "zoom"]
     lassign [lmap coord [getNodeCoords $node_id] {expr $coord * $zoom}] x y
 
     .panwin.f1.c delete -withtags "node && $node_id"
@@ -266,7 +264,8 @@ proc drawLink { link_id } {
 #   * y2 -- Y coordinate of point2
 #****
 proc calcAnglePoints { x1 y1 x2 y2 } {
-    set zoom [getFromRunning "zoom"]
+    global zoom
+
     set x1 [expr $x1*$zoom]
     set y1 [expr $y1*$zoom]
     set x2 [expr $x2*$zoom]
@@ -1010,16 +1009,16 @@ proc updateIconSize {} {
 #   * y -- y coordinate
 #****
 proc selectZoomPopupMenu { x y } {
-    global zoom_stops changed
+    global zoom zoom_stops changed
     .button3menu delete 0 end
 
-    set sel_zoom [getFromRunning "zoom"]
+    set sel_zoom $zoom
 
     foreach z $zoom_stops {
 	.button3menu add radiobutton -label [expr {int($z*100)}] \
 	  -variable sel_zoom -value $z \
 	  -command {
-	      setToRunning "zoom" $sel_zoom
+	      set zoom $sel_zoom
 
 	      redrawAll
 	      set changed 1
@@ -1085,10 +1084,9 @@ proc align2grid {} {
 #   rearranged.
 #****
 proc rearrange { mode } {
-    global autorearrange_enabled sizex sizey
+    global zoom autorearrange_enabled sizex sizey
 
     set curcanvas [getFromRunning "curcanvas"]
-    set zoom [getFromRunning "zoom"]
 
     set autorearrange_enabled 1
     .menubar.tools entryconfigure "Auto rearrange all" -state disabled
@@ -1390,15 +1388,14 @@ proc animate {} {
 #   * dir -- zoom direction (up or down)
 #****
 proc zoom { dir } {
-    global zoom_stops
+    global zoom zoom_stops
 
-    set zoom [getFromRunning "zoom"]
     set minzoom [lindex $zoom_stops 0]
     set maxzoom [lindex $zoom_stops [expr [llength $zoom_stops] - 1]]
     switch -exact -- $dir {
 	"down" {
 	    if { $zoom > $maxzoom } {
-		setToRunning "zoom" $maxzoom
+		set zoom $maxzoom
 	    } elseif { $zoom < $minzoom } {
 		; # leave it unchanged
 	    } else {
@@ -1410,13 +1407,13 @@ proc zoom { dir } {
 			set newzoom $z
 		    }
 		}
-		setToRunning "zoom" $newzoom
+		set zoom $newzoom
 	    }
 	    redrawAll
 	}
 	"up" {
 	    if { $zoom < $minzoom } {
-		setToRunning "zoom" $minzoom
+		set zoom $minzoom
 	    } elseif { $zoom > $maxzoom } {
 		; # leave it unchanged
 	    } else {
@@ -1426,13 +1423,13 @@ proc zoom { dir } {
 			break
 		    }
 		}
-		setToRunning "zoom" $newzoom
+		set zoom $newzoom
 	    }
 	    redrawAll
 	}
 	default {
 	    if { $i < [expr [llength $zoom_stops] - 1] } {
-		setToRunning "zoom" [lindex $zoom_stops [expr $i + 1]]
+		set zoom [lindex $zoom_stops [expr $i + 1]]
 		redrawAll
 	    }
 	}

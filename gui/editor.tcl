@@ -324,6 +324,8 @@ proc focusAndFlash { W { count 9 } } {
 #   * y -- zoom y coordinate
 #****
 proc setZoom { x y } {
+    global zoom
+
     set w .entry1
     catch { destroy $w }
     toplevel $w -takefocus 1
@@ -358,7 +360,7 @@ proc setZoom { x y } {
     bind $w <Key-Return> "setZoomApply $w"
 
     ttk::entry $w.setzoom.e1
-    $w.setzoom.e1 insert 0 [expr {int([getFromRunning "zoom"] * 100)}]
+    $w.setzoom.e1 insert 0 [expr {int($zoom * 100)}]
     pack $w.setzoom.e1 -side top -pady 5 -padx 10 -fill x
 }
 
@@ -374,9 +376,11 @@ proc setZoom { x y } {
 #   * w -- tk widget (set zoom popup dialog box)
 #****
 proc setZoomApply { w } {
+    global zoom
+
     set newzoom [expr [$w.setzoom.e1 get] / 100.0]
-    if { $newzoom != [getFromRunning "zoom"] } {
-	setToRunning "zoom" $newzoom
+    if { $newzoom != $zoom } {
+	set zoom $newzoom
 	redrawAll
     }
 
@@ -395,7 +399,7 @@ proc setZoomApply { w } {
 #   * y -- zoom y coordinate
 #****
 proc selectZoom { x y } {
-    global zoom_stops
+    global zoom zoom_stops
 
     set values {}
     foreach z $zoom_stops {
@@ -432,7 +436,7 @@ proc selectZoom { x y } {
     bind $w <Key-Return> "selectZoomApply $w"
 
     ttk::combobox $w.selectzoom.e1 -values $values
-    $w.selectzoom.e1 insert 0 [expr {int([getFromRunning "zoom"] * 100)}]
+    $w.selectzoom.e1 insert 0 [expr {int($zoom * 100)}]
     pack $w.selectzoom.e1 -side top -pady 5 -padx 10 -fill x
 
     update
@@ -452,7 +456,7 @@ proc selectZoom { x y } {
 #   * w -- tk widget (select zoom popup dialog box)
 #****
 proc selectZoomApply { w } {
-    global hasIM changed
+    global zoom hasIM changed
 
     set tempzoom [$w.selectzoom.e1 get]
     if { ! $hasIM } {
@@ -473,8 +477,8 @@ proc selectZoomApply { w } {
     }
 
     set newzoom [ expr $tempzoom / 100.0]
-    if { $newzoom != [getFromRunning "zoom"] } {
-	setToRunning "zoom" $newzoom
+    if { $newzoom != $zoom } {
+	set zoom $newzoom
 
 	redrawAll
 	set changed 1

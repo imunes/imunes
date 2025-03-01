@@ -924,9 +924,7 @@ proc printCanvas { w } {
 #   * entry -- file name
 #****
 proc printCanvasToFile { w entry } {
-    global printFileType
-
-    set zoom [getFromRunning "zoom"]
+    global zoom printFileType
 
     if { [string match -nocase *.* [$entry get]] != 1 } {
 	set box "[$entry get]\.$printFileType"

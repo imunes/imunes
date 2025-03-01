@@ -76,6 +76,23 @@ if { $ROOTDIR == "." } {
     set BINDIR "bin"
 }
 
+set runtimeDir "/var/run/imunes"
+
+set home_path ""
+catch { set home_path $env(HOME) }
+
+set config_dir ""
+catch { set config_dir $env(XDG_CONFIG_HOME) }
+if { $config_dir == "" } {
+    set config_dir "$home_path/.config"
+}
+set config_dir "$config_dir/imunes"
+set config_path "$config_dir/config"
+
+# TODO: check what if user is sudo
+set sudo_user ""
+catch { set sudo_user $env(SUDO_USER) }
+
 try {
     source "$ROOTDIR/$LIBDIR/helpers.tcl"
 } on error { result options } {
@@ -165,28 +182,6 @@ array set nodeNamingBase {
     wlan wlan
 }
 
-set option_defaults {
-    auto_etc_hosts		0
-}
-
-set gui_option_defaults {
-    show_interface_names	1
-    show_interface_ipv4		1
-    show_interface_ipv6		1
-    show_node_labels		1
-    show_link_labels		1
-    show_background_image	0
-    show_annotations		1
-    show_grid			1
-    icon_size			"normal"
-    zoom			1
-}
-
-foreach {option default_value} [concat $option_defaults $gui_option_defaults] {
-    global $option
-    set $option $default_value
-}
-
 # Set default node type list
 set node_types "lanswitch hub rj45 stpswitch filter packgen router host pc nat64 ext extnat"
 # Set default supported router models
@@ -235,14 +230,6 @@ safeSourceFile "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
 # Global variables are initialized here
 #
 
-#****v* imunes.tcl/prefs
-# NAME
-#    prefs
-# FUNCTION
-#    Contains the list of preferences. When starting a program
-#    this list is empty.
-#*****
-
 # Clipboard
 namespace eval cf::clipboard {}
 set cf::clipboard::node_list {}
@@ -255,13 +242,40 @@ set cf::clipboard::dict_cfg [dict create]
 set cfg_list {}
 set curcfg ""
 
-#****v* imunes.tcl/editor_only
-# NAME
-#    editor_only -- if set, Experiment -> Execute is disabled
-# FUNCTION
-#    IMUNES GUI can be used in editor-only mode.i
-#    This variable can be modified in .imunesrc.
-set editor_only false
+# These variables can be modified in IMUNES configuration files.
+#   name			value		type			description
+set default_options {
+    "auto_etc_hosts"		0		"bool"			"automatically create /etc/hosts entries in each node"
+    "editor_only"		0		"bool"			"if true, Experiment -> Execute is disabled"
+    "icon_size"			"normal"	"list small|normal"	"size of icons on canvas"
+    "custom_override"		""		"string"		"a list of options that ignore values from .imn files"
+    "show_annotations"		1		"bool"			"show annotations on canvas"
+    "show_background_image"	0		"bool"			"show background image on canvas"
+    "show_grid"			1		"bool"			"show grid on canvas"
+    "show_interface_ipv4"	1		"bool"			"show IPv4 addresses of nodes on canvas"
+    "show_interface_ipv6"	1		"bool"			"show IPv6 addresses of nodes on canvas"
+    "show_interface_names"	1		"bool"			"show interface names of nodes on canvas"
+    "show_link_labels"		1		"bool"			"show labels for links on canvas"
+    "show_node_labels"		1		"bool"			"show labels for nodes on canvas"
+    "zoom"			1.0		"double 0.2|3.0" 	"canvas zoom"
+}
+
+set global_override {}
+set options_max_length 0
+set running_options [dict create]
+set topology_options [dict create]
+set canvas_options [dict create]
+foreach {name value type description} $default_options {
+    if { $name != "custom_override" } {
+	dict set running_options $name $value
+    }
+
+    set $name $value
+
+    if { [string length $name] > $options_max_length } {
+	set options_max_length [string length $name]
+    }
+}
 
 set winOS false
 if { $isOSwin } {
@@ -279,13 +293,48 @@ if { [string match -nocase "*imagemagick*" $imInfo] != 1 } {
     set hasIM false
 }
 
-set runtimeDir "/var/run/imunes"
+set json_cfg [createJson "object" $running_options]
+if { ! [file exists $config_dir] } {
+    file mkdir $config_dir
+}
 
-#
-# Read config files, the first one found: .imunesrc, $HOME/.imunesrc
-#
-# XXX
-readConfigFile
+# I don't want to add new runtime arguments for generating this file, but I
+# also don't want to do it manually for each new option that is added to the
+# list, so generate it every time in debug mode
+if { $debug } {
+    set preamble "#
+# This file is not parsed. If you want to apply options system-wide,
+# copy it to /etc/imunes/config and modify it there.
+# For per-user changes, copy it to \$XDG_CONFIG_HOME/imunes/config or
+# \$HOME/imunes/config if \$XDG_CONFIG_HOME is \"\" or not set."
+
+    set config_path_orig "$config_path"
+    set config_path "${config_path}.example"
+
+    set comments "#\n"
+    foreach {name value type description} $default_options {
+	set pad [string repeat " " [expr $options_max_length - [string length $name]]]
+	append comments "# $name$pad - $description (default: \"$value\", type: \"$type\")\n"
+    }
+    append comments "#"
+
+    set json_cfg "$preamble\n$comments\n$json_cfg"
+}
+
+set fd [open "$config_path" w+]
+puts $fd $json_cfg
+close $fd
+
+if { $debug } {
+    set config_path "$config_path_orig"
+}
+
+# Read config files
+set last_config_file $config_path
+readConfigFiles
+if { $last_config_file != "" } {
+    set config_path $last_config_file
+}
 
 #
 # Initialization should be complete now, so let's start doing something...
@@ -348,7 +397,6 @@ if { $execMode == "interactive" } {
 	setToRunning "stop_sched" true
 	setToRunning "undolevel" 0
 	setToRunning "redolevel" 0
-	setToRunning "zoom" $zoom
 
 	readCfgJson $currentFileBatch
 
@@ -394,7 +442,6 @@ if { $execMode == "interactive" } {
 	    setToRunning "stop_sched" true
 	    setToRunning "undolevel" 0
 	    setToRunning "redolevel" 0
-	    setToRunning "zoom" $zoom
 	    setToRunning "canvas_list" {}
 	    setToRunning "current_file" $configFile
 

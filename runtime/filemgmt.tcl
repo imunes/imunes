@@ -83,9 +83,9 @@ set file_types {
 #   Configures and creates a new Imunes project.
 #****
 proc newProject {} {
+    global running_options topology_options
     global curcfg cfg_list
     global CFG_VERSION
-    global zoom
 
     set curcfg [newObjectId $cfg_list "cfg"]
     lappend cfg_list $curcfg
@@ -101,6 +101,9 @@ proc newProject {} {
     set dict_run [dict create]
     set execute_vars [dict create]
 
+    set topology_options {}
+    applyOptions
+
     setToRunning "eid" ""
     setToRunning "oper_mode" "edit"
     setToRunning "auto_execution" 1
@@ -108,7 +111,6 @@ proc newProject {} {
     setToRunning "stop_sched" true
     setToRunning "undolevel" 0
     setToRunning "redolevel" 0
-    setToRunning "zoom" $zoom
     setToRunning "canvas_list" {}
     setToRunning "curcanvas" [newCanvas ""]
     setToRunning "current_file" ""
@@ -152,10 +154,13 @@ proc updateProjectMenu {} {
 #   This procedure is called when a project has been chosen in the file menu.
 #****
 proc switchProject {} {
-    global curcfg showTree
+    global running_options curcfg showTree
+
     if { $curcfg == 0 } {
         set curcfg "cfg0"
     }
+
+    applyOptions
 
     setOperMode [getFromRunning "oper_mode"]
     switchCanvas none
@@ -222,69 +227,65 @@ proc openFile {} {
     }
 }
 
-proc saveOptions {} {
-    global option_defaults gui_option_defaults
-    set running_zoom [getFromRunning "zoom"]
+proc saveOptions { { options "" } } {
+    global running_options custom_override topology_options
 
-    foreach {option default_value} $option_defaults {
-	global $option
+    if { $options == "" } {
+	set options [dict keys $running_options]
+    }
 
-	set value [set $option]
-	if { $value != $default_value } {
-	    setOption $option $value
-	} else {
-	    unsetOption $option
+    foreach option_name $options {
+	if { $option_name == "custom_override" } {
+	    continue
 	}
-    }
 
-    foreach {option default_value} $gui_option_defaults {
-	global $option
+	global $option_name
 
-	set value [set $option]
-	if { $value != $default_value } {
-	    setOption $option $value
-	} else {
-	    unsetOption $option
-	}
-    }
-
-    if { $running_zoom == "" } {
-	return
-    }
-
-    if { $running_zoom != [dictGet $gui_option_defaults "zoom"] } {
-	setOption "zoom" $running_zoom
-    } else {
-	unsetOption "zoom"
+	setOption $option_name [set $option_name]
     }
 }
 
 proc applyOptions {} {
-    global option_defaults gui_option_defaults
+    global running_options custom_override topology_options global_override
 
-    foreach {option default_value} $option_defaults {
-	global $option
-
-	set value [getOption $option]
-	if { $value != "" } {
-	    set $option $value
-	} else {
-	    set $option $default_value
+    foreach option_name [dict keys $running_options] {
+	if { $option_name == "custom_override" || $option_name in $global_override } {
+	    continue
 	}
-    }
 
-    foreach {option default_value} $gui_option_defaults {
-	global $option
+	global $option_name
 
-	set value [getOption $option]
-	if { $value != "" } {
-	    set $option $value
-	} else {
-	    set $option $default_value
+	set topology_option [getOption $option_name]
+	if { $topology_option != "" } {
+	    set topology_options [dictSet $topology_options $option_name $topology_option]
 	}
-    }
 
-    setToRunning "zoom" $zoom
+	resetRunningOpt $option_name
+	set $option_name [getOpt "running" $option_name]
+    }
+}
+
+proc refreshRunningOpts {} {
+    global running_options global_override
+    set global_override {}
+
+    foreach name [dict keys $running_options] {
+	setOpt "running" $name [getOpt [getOptSource $name] $name]
+    }
+}
+
+proc applyRunningOpts {} {
+    global running_options
+
+    foreach option_name [dict keys $running_options] {
+	if { $option_name == "custom_override" } {
+	    continue
+	}
+
+	global $option_name
+
+	set $option_name [getOpt "running" $option_name]
+    }
 }
 
 #****f* filemgmt.tcl/saveFile
@@ -409,22 +410,93 @@ proc closeFile {} {
 # NAME
 #   readConfigFile -- read configuration file
 # SYNOPSIS
-#   readConfigFile
+#   readConfigFile $file_name
 # FUNCTION
-#   Read config files, the first one found: .imunesrc, $HOME/.imunesrc
+#   Read config file given with $file_name. The file should be in JSON format,
+#   and it will be skipped if it cannot be parsed. Only options given by
+#   variable $custom_options are legitimate options to give.
 #***
-proc readConfigFile {} {
-    global exec_hosts editor_only
-    global env
+proc readConfigFile { file_name } {
+    global running_options custom_options last_config_file
+
+    set fd [open $file_name r]
+    set json_options [read $fd]
+    close $fd
+
+    # remove all comments (all lines starting with #)
+    regsub -all -line {^[ \t]*#.*\n} $json_options "" json_options
+
+    try {
+	json::json2dict $json_options
+    } on error err {
+	puts stderr "Error sourcing config file '$file_name':\n$err"
+
+	return
+    } on ok read_options {}
+
+    foreach {option_name val} $read_options {
+	if { $option_name ni "[dict keys $running_options] custom_override"  } {
+	    continue
+	}
+
+	global $option_name
+
+	set $option_name $val
+	dict set custom_options $option_name $val
+    }
+
+    set last_config_file $file_name
+}
+
+#****f* filemgmt.tcl/readConfigFiles
+# NAME
+#   readConfigFiles -- read configuration file
+# SYNOPSIS
+#   readConfigFiles
+# FUNCTION
+#   Read config files, the first one that it finds:
+#   	./.imunesrc
+#   	./.imunes.rc
+#   	$HOME/.imunes.rc
+#   	$XDG_CONFIG_HOME/imunes/config
+#   	/etc/imunes/config
+#
+#   After that, read /etc/imunes/override which overrides any previously set
+#   options.
+#
+#   For compatibility with legacy versions, ./.imunesrc will be sourced as a
+#   TCL script, but other files are treated as JSON config files.
+#   NOTE: If $XDG_CONFIG_HOME is either not set or empty, a default of
+#   $HOME/.config is used
+#***
+proc readConfigFiles {} {
+    global custom_options home_path config_dir last_config_file
+
+    set custom_options {}
+
     if { [file exists ".imunesrc"] } {
-	source ".imunesrc"
-    } else {
-	if { [catch { set myhome $env(HOME) }] } {
-	    ;# not running on UNIX
-	} else {
-	    if { [file exists "$myhome/.imunesrc"] } {
-	       source "$myhome/.imunesrc"
-	    }
+	safeSourceFile ".imunesrc"
+	set last_config_file ".imunesrc"
+    }
+
+    if { $home_path == "" } {
+	# not running on UNIX
+	if { [file exists ".imunes.rc"] } {
+	    readConfigFile ".imunes.rc"
+	}
+
+	return
+    }
+
+    set home_config "$config_dir/config"
+    if { [file exists "$home_path/.imunes.rc"] } {
+	# $home_path/.imunes.rc overrides $config_dir/config
+	set home_config "$home_path/.imunes.rc"
+    }
+
+    foreach file_name "/etc/imunes/config $home_config .imunes.rc /etc/imunes/override" {
+	if { [file exists $file_name] } {
+	    readConfigFile $file_name
 	}
     }
 }
@@ -474,4 +546,48 @@ proc relpath { target } {
     }
 
     return $target
+}
+
+proc setOpt { option_source option_name value } {
+    global ${option_source}_options
+
+    set ${option_source}_options \
+	[dictSet [set ${option_source}_options] ${option_name} $value]
+
+    return [set ${option_source}_options]
+}
+
+proc getOpt { option_source option_name } {
+    global ${option_source}_options
+
+    return [dictGet [set ${option_source}_options] ${option_name}]
+}
+
+proc resetRunningOpt { option_name } {
+    return [setOpt "running" $option_name \
+	[getOpt [getOptSource $option_name] $option_name]]
+}
+
+proc getOptSource { option_name } {
+    global custom_override
+
+    foreach option_source "custom topology canvas" {
+	global ${option_source}_options
+
+	set ${option_name}_$option_source [dictGet [set ${option_source}_options] $option_name]
+    }
+
+    if { $option_name ni $custom_override } {
+	if { [set ${option_name}_canvas] != "" } {
+	    return "canvas"
+	} elseif { [set ${option_name}_topology] != "" } {
+	    return "topology"
+	}
+    }
+
+    if { [set ${option_name}_custom] != "" } {
+	return "custom"
+    }
+
+    return "default"
 }

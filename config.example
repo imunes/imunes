@@ -1,0 +1,35 @@
+#
+# This file is not parsed. If you want to apply options system-wide,
+# copy it to /etc/imunes/config and modify it there.
+# For per-user changes, copy it to $XDG_CONFIG_HOME/imunes/config or
+# $HOME/imunes/config if $XDG_CONFIG_HOME is "" or not set.
+#
+# auto_etc_hosts        - automatically create /etc/hosts entries in each node (default: "0", type: "bool")
+# editor_only           - if true, Experiment -> Execute is disabled (default: "0", type: "bool")
+# icon_size             - size of icons on canvas (default: "normal", type: "list small|normal")
+# custom_override       - a list of options that ignore values from .imn files (default: "", type: "string")
+# show_annotations      - show annotations on canvas (default: "1", type: "bool")
+# show_background_image - show background image on canvas (default: "0", type: "bool")
+# show_grid             - show grid on canvas (default: "1", type: "bool")
+# show_interface_ipv4   - show IPv4 addresses of nodes on canvas (default: "1", type: "bool")
+# show_interface_ipv6   - show IPv6 addresses of nodes on canvas (default: "1", type: "bool")
+# show_interface_names  - show interface names of nodes on canvas (default: "1", type: "bool")
+# show_link_labels      - show labels for links on canvas (default: "1", type: "bool")
+# show_node_labels      - show labels for nodes on canvas (default: "1", type: "bool")
+# zoom                  - canvas zoom (default: "1.0", type: "double 0.2|3.0")
+#
+{
+    "auto_etc_hosts"        : "0",
+    "editor_only"           : "0",
+    "icon_size"             : "normal",
+    "custom_override"       : "",
+    "show_annotations"      : "1",
+    "show_background_image" : "0",
+    "show_grid"             : "1",
+    "show_interface_ipv4"   : "1",
+    "show_interface_ipv6"   : "1",
+    "show_interface_names"  : "1",
+    "show_link_labels"      : "1",
+    "show_node_labels"      : "1",
+    "zoom"                  : "1.0"
+}
