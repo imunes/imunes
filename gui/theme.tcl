@@ -38,6 +38,9 @@ ttk::style theme create imunes -parent clam
 font create imnDefaultFont -family TkDefaultFont -size $defaultFontSize
 option add *font imnDefaultFont
 
+font create imnDisabledFont -family TkDefaultFont \
+    -size [expr int(1.3*$defaultFontSize)] -weight bold
+
 namespace eval ttk::theme::imunes {
     variable colors
     array set colors {
