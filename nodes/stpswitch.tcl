@@ -38,7 +38,7 @@
 #****
 
 set MODULE stpswitch
-registerModule $MODULE
+registerModule $MODULE "freebsd"
 
 ################################################################################
 ########################### CONFIGURATION PROCEDURES ###########################
