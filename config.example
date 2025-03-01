@@ -9,6 +9,7 @@
 # auto_etc_hosts         - automatically create /etc/hosts entries in each node (default: "0", type: "bool")
 # IPv4autoAssign         - automatically assign next free IPv4 address to interface (default: "1", type: "bool")
 # IPv6autoAssign         - automatically assign next free IPv6 address to interface (default: "1", type: "bool")
+# recents_number         - max number of recently opened file names to keep (default: "10", type: "int 0|999")
 # routerDefaultsModel    - new routers will have this value set to routing model (default: "frr", type: "list frr|quagga|static")
 # routerRipEnable        - enable/disable RIP protocol on newly created router nodes (default: "1", type: "bool")
 # routerRipngEnable      - enable/disable RIPng protocol on newly created router nodes (default: "1", type: "bool")
@@ -41,6 +42,7 @@
     "auto_etc_hosts"         : "0",
     "IPv4autoAssign"         : "1",
     "IPv6autoAssign"         : "1",
+    "recents_number"         : "10",
     "routerDefaultsModel"    : "frr",
     "routerRipEnable"        : "1",
     "routerRipngEnable"      : "1",

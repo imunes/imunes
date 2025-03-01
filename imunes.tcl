@@ -222,6 +222,7 @@ set options_defaults {
 	"auto_etc_hosts"		0			"bool"						"automatically create /etc/hosts entries in each node"
 	"IPv4autoAssign"		1			"bool"						"automatically assign next free IPv4 address to interface"
 	"IPv6autoAssign"		1			"bool"						"automatically assign next free IPv6 address to interface"
+    "recents_number"		10			"int 0|999"					"max number of recently opened file names to keep"
 	"routerDefaultsModel"	"frr"		"list frr|quagga|static"	"new routers will have this value set to routing model"
 	"routerRipEnable"		1			"bool"						"enable/disable RIP protocol on newly created router nodes"
 	"routerRipngEnable"		1			"bool"						"enable/disable RIPng protocol on newly created router nodes"
@@ -408,6 +409,25 @@ if { $debug } {
 	close $fd
 
 	unset json_cfg
+}
+
+set recent_files {}
+set recents_fname "$config_dir/recents"
+if { ! [file isdirectory "$config_dir"] } {
+    set recents_fname ""
+} else {
+	if { [file exists $recents_fname] } {
+		set fd [open $recents_fname r]
+		set data [read $fd]
+		close $fd
+
+		set fnames [split $data \n]
+		foreach fname $fnames {
+			if { $fname != "" } {
+				lappend recent_files $fname
+			}
+		}
+	}
 }
 
 # Read config files
