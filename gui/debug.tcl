@@ -171,5 +171,9 @@ bind . <F6> {
     source "$ROOTDIR/$LIBDIR/gui/debug.tcl"
 
     applyOptions
+
+    redrawAll
+    refreshToolBarNodes
+
     dputs "Reloaded all sources."
 }
