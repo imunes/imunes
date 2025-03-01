@@ -120,31 +120,9 @@ proc removeLink { link_id { keep_ifaces 0 } } {
     lassign [getLinkPeers $link_id] node1_id node2_id
     lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
 
-    # before deleting the link, refresh nodes auto default routes
-    set subnet_gws {}
-    set subnet_data [dict create]
-    foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
-	lassign [getSubnetData $node_id $iface_id $subnet_gws $subnet_data 0] subnet_gws subnet_data
-	if { $subnet_gws != "{||}" } {
-	    set has_extnat [string match "*extnat*" $subnet_gws]
-	    foreach subnet_node [dict keys $subnet_data] {
-		if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
-		    continue
-		}
-
-		set subnet_node_type [getNodeType $subnet_node]
-		if { $subnet_node_type == "extnat" || [$subnet_node_type.netlayer] != "NETWORK" } {
-		    continue
-		}
-
-		if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
-		    continue
-		}
-
-		trigger_nodeReconfig $subnet_node
-	    }
-	}
-    }
+    # save old subnet data for comparation
+    lassign [getSubnetData $node1_id $iface1_id {} {} 0] old_subnet1_gws old_subnet1_data
+    lassign [getSubnetData $node2_id $iface2_id {} {} 0] old_subnet2_gws old_subnet2_data
 
     foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
 	set node_type [getNodeType $node_id]
@@ -178,6 +156,62 @@ proc removeLink { link_id { keep_ifaces 0 } } {
     setToRunning "link_list" [removeFromList [getFromRunning "link_list"] $link_id]
 
     cfgUnset "links" $link_id
+
+    # after deleting the link, refresh nodes auto default routes
+    lassign [getSubnetData $node1_id $iface1_id {} {} 0] new_subnet1_gws new_subnet1_data
+    lassign [getSubnetData $node2_id $iface2_id {} {} 0] new_subnet2_gws new_subnet2_data
+
+    if { $new_subnet1_gws != "" } {
+	set diff [removeFromList {*}$old_subnet1_gws {*}$new_subnet1_gws]
+	if { $diff ni "{} {||}" } {
+	    # there was a change in subnet1, go through its new nodes and attach new data
+	    set has_extnat [string match "*extnat*" $diff]
+	    foreach subnet_node [dict keys $new_subnet1_data] {
+		if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+		    continue
+		}
+
+		set subnet_node_type [getNodeType $subnet_node]
+		if { $subnet_node_type == "extnat" || [$subnet_node_type.netlayer] != "NETWORK" } {
+		    # skip extnat and L2 nodes
+		    continue
+		}
+
+		if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
+		    # skip routers if there is no extnats
+		    continue
+		}
+
+		trigger_nodeReconfig $subnet_node
+	    }
+	}
+    }
+
+    if { $new_subnet2_gws != "" } {
+	set diff [removeFromList {*}$old_subnet2_gws {*}$new_subnet2_gws]
+	if { $diff ni "{} {||}" } {
+	    # change in subnet1, go through its new nodes and attach new data
+	    set has_extnat [string match "*extnat*" $diff]
+	    foreach subnet_node [dict keys $new_subnet2_data] {
+		if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+		    continue
+		}
+
+		set subnet_node_type [getNodeType $subnet_node]
+		if { $subnet_node_type == "extnat" || [$subnet_node_type.netlayer] != "NETWORK" } {
+		    # skip extnat and L2 nodes
+		    continue
+		}
+
+		if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
+		    # skip routers if there is no extnats
+		    continue
+		}
+
+		trigger_nodeReconfig $subnet_node
+	    }
+	}
+    }
 }
 
 #****f* linkcfg.tcl/getLinkDirect
