@@ -247,6 +247,7 @@ set curcfg ""
 set default_options {
     "auto_etc_hosts"		0		"bool"			"automatically create /etc/hosts entries in each node"
     "editor_only"		0		"bool"			"if true, Experiment -> Execute is disabled"
+    "hidden_node_types"		"none"		"string"		"a list of node types to hide in the toolbar"
     "icon_size"			"normal"	"list small|normal"	"size of icons on canvas"
     "custom_override"		""		"string"		"a list of options that ignore values from .imn files"
     "show_annotations"		1		"bool"			"show annotations on canvas"

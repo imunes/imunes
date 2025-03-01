@@ -6,6 +6,7 @@
 #
 # auto_etc_hosts        - automatically create /etc/hosts entries in each node (default: "0", type: "bool")
 # editor_only           - if true, Experiment -> Execute is disabled (default: "0", type: "bool")
+# hidden_node_types     - a list of node types to hide in the toolbar (default: "", type: "string")
 # icon_size             - size of icons on canvas (default: "normal", type: "list small|normal")
 # custom_override       - a list of options that ignore values from .imn files (default: "", type: "string")
 # show_annotations      - show annotations on canvas (default: "1", type: "bool")
@@ -22,6 +23,7 @@
 {
     "auto_etc_hosts"        : "0",
     "editor_only"           : "0",
+    "hidden_node_types"     : "",
     "icon_size"             : "normal",
     "custom_override"       : "",
     "show_annotations"      : "1",

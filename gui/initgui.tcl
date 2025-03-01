@@ -730,6 +730,100 @@ menu $m -tearoff 0
 
 .menubar.view add separator
 
+.menubar.view add command -label "Customize Node Types" -underline 0 -command {
+    global all_modules_list hidden_node_types
+
+    set top_widget .top_widget
+    catch { destroy $top_widget }
+
+    toplevel $top_widget
+    wm transient $top_widget .
+    wm title $top_widget "Customize Node Types"
+    wm iconname $top_widget "Customize Node Types"
+    grab $top_widget
+
+    set content_frame [ttk::frame $top_widget.content_frame]
+    pack $content_frame -side top -fill x -pady 2m -padx 6
+
+    ttk::label $content_frame.hidden -text "Hidden:"
+    grid $content_frame.hidden -in $content_frame -column 2 -row 0 -sticky we
+
+    set l2_node_types {}
+    set l3_node_types {}
+    foreach node_type $all_modules_list {
+        if { [$node_type.netlayer] == "LINK" } {
+            lappend l2_node_types $node_type
+        } elseif { [$node_type.netlayer] == "NETWORK" } {
+            lappend l3_node_types $node_type
+        }
+    }
+
+    set row_ctr 0
+    ttk::label $content_frame.l2 -text "L2 nodes" -width 20
+    grid $content_frame.l2 -in $content_frame -column 0 -row $row_ctr -pady 2
+
+    set checkbutton_dict "0 !selected 1 selected"
+
+    incr row_ctr
+    foreach node_type $l2_node_types {
+        ttk::label $content_frame.$node_type -text "$node_type"
+        grid $content_frame.$node_type -in $content_frame -column 0 -row $row_ctr
+
+        ttk::checkbutton $content_frame.cb$node_type
+        $content_frame.cb$node_type state [dict get $checkbutton_dict [expr {$node_type in $hidden_node_types}]]
+        grid $content_frame.cb$node_type -in $content_frame -column 2 -row $row_ctr
+
+        incr row_ctr
+    }
+
+    ttk::label $content_frame.l3 -text "L3 nodes" -width 20
+    grid $content_frame.l3 -in $content_frame -column 0 -row $row_ctr -pady 2
+
+    incr row_ctr
+    foreach node_type $l3_node_types {
+        ttk::label $content_frame.$node_type -text "$node_type"
+        grid $content_frame.$node_type -in $content_frame -column 0 -row $row_ctr
+
+        ttk::checkbutton $content_frame.cb$node_type
+        $content_frame.cb$node_type state [dict get $checkbutton_dict [expr {$node_type in $hidden_node_types}]]
+        grid $content_frame.cb$node_type -in $content_frame -column 2 -row $row_ctr
+
+        incr row_ctr
+    }
+
+    set buttons_frame [ttk::frame $top_widget.buttons_frame]
+    pack $buttons_frame -side bottom -fill x -pady 2m
+    ttk::button $buttons_frame.apply -text "Apply" -command "refreshHiddenNodes $content_frame ; destroy $top_widget"
+    ttk::button $buttons_frame.cancel -text "Cancel" -command "destroy $top_widget"
+
+    bind $top_widget <Key-Return> "refreshHiddenNodes $content_frame ; destroy $top_widget"
+    bind $top_widget <Key-Escape> "destroy $top_widget"
+
+    pack $buttons_frame.apply -side left -expand 1 -anchor e -padx 2
+    pack $buttons_frame.cancel -side right -expand 1 -anchor w -padx 2
+}
+
+proc refreshHiddenNodes { content_frame } {
+    global all_modules_list hidden_node_types custom_override
+
+    if { "hidden_node_types" in $custom_override } {
+	return
+    }
+
+    set hidden_node_types {}
+    foreach node_type $all_modules_list {
+	if { [$node_type.netlayer] == "LINK" && "selected" in [$content_frame.cb$node_type state] || \
+	    [$node_type.netlayer] == "NETWORK" && "selected" in [$content_frame.cb$node_type state] } {
+
+	    lappend hidden_node_types $node_type
+	}
+    }
+
+    refreshToolBarNodes
+}
+
+.menubar.view add separator
+
 .menubar.view add checkbutton -label "Show Background Image" \
     -underline 5 -variable show_background_image \
     -command { redrawAll }
@@ -966,21 +1060,7 @@ foreach b {select link} {
     bind $mf.left.$b <Any-Leave> ".bottom.textbox config -text {}"
 }
 
-menu $mf.left.link_nodes -title "Link layer nodes"
-menu $mf.left.net_nodes -title "Network layer nodes"
-foreach b $all_modules_list {
-    set image [image create photo -file [$b.icon toolbar]]
-
-    if { [$b.netlayer] == "LINK" } {
-	$mf.left.link_nodes add command -image $image -hidemargin 1 \
-	    -compound left -label [string range [$b.toolbarIconDescr] 8 end] \
-	    -command "setActiveTool $b"
-    } elseif { [$b.netlayer] == "NETWORK" } {
-	$mf.left.net_nodes add command -image $image -hidemargin 1 \
-	    -compound left -label [string range [$b.toolbarIconDescr] 8 end] \
-	    -command "setActiveTool $b"
-    }
-}
+refreshToolBarNodes
 
 set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/l2.gif]
 ttk::menubutton $mf.left.link_layer -image $image -style Toolbutton \
