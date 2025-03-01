@@ -232,6 +232,11 @@ bind . <Control-n> "newProject"
   -accelerator "Ctrl+O" -command { fileOpenDialogBox }
 bind . <Control-o> "fileOpenDialogBox"
 
+set m .menubar.file.recent_files
+menu .menubar.file.recent_files -tearoff 0
+.menubar.file add cascade -label "Recent files" -menu .menubar.file.recent_files -underline 0
+updateRecentsMenu
+
 .menubar.file add command -label Save -underline 0 \
   -accelerator "Ctrl+S" -command { fileSaveDialogBox }
 bind . <Control-s> "fileSaveDialogBox"

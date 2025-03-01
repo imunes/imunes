@@ -16,6 +16,7 @@
 # show_interface_names  - show interface names of nodes on canvas (default: "1", type: "bool")
 # show_link_labels      - show labels for links on canvas (default: "1", type: "bool")
 # show_node_labels      - show labels for nodes on canvas (default: "1", type: "bool")
+# recents_number        - max number of recently opened file names to keep (default: "10", type: "int 0|999")
 # zoom                  - canvas zoom (default: "1.0", type: "double 0.2|3.0")
 #
 {
@@ -31,5 +32,6 @@
     "show_interface_names"  : "1",
     "show_link_labels"      : "1",
     "show_node_labels"      : "1",
+    "recents_number"        : "10",
     "zoom"                  : "1.0"
 }

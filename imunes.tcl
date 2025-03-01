@@ -257,6 +257,7 @@ set default_options {
     "show_interface_names"	1		"bool"			"show interface names of nodes on canvas"
     "show_link_labels"		1		"bool"			"show labels for links on canvas"
     "show_node_labels"		1		"bool"			"show labels for nodes on canvas"
+    "recents_number"		10		"int 0|999"		"max number of recently opened file names to keep"
     "zoom"			1.0		"double 0.2|3.0" 	"canvas zoom"
 }
 
@@ -327,6 +328,25 @@ close $fd
 
 if { $debug } {
     set config_path "$config_path_orig"
+}
+
+set recent_files {}
+set recents_fname "$config_dir/recents"
+if { ! [file isdirectory "$config_dir"] } {
+    set recents_fname ""
+} else {
+    if { [file exists $recents_fname] } {
+	set fd [open $recents_fname r]
+	set data [read $fd]
+	close $fd
+
+	set fnames [split $data \n]
+	foreach fname $fnames {
+	    if { $fname != "" } {
+		lappend recent_files $fname
+	    }
+	}
+    }
 }
 
 # Read config files

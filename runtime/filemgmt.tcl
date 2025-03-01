@@ -132,7 +132,7 @@ proc newProject {} {
 proc updateProjectMenu {} {
     global curcfg cfg_list
 
-    .menubar.file delete 10 end
+    .menubar.file delete 11 end
     .menubar.file add separator
 
     foreach cfg $cfg_list {
@@ -202,9 +202,10 @@ proc setWmTitle { fname } {
 #****
 proc openFile {} {
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-    global showTree
+    global runtimeDir showTree recent_files
 
-    readCfgJson [getFromRunning "current_file"]
+    set current_file [getFromRunning "current_file"]
+    readCfgJson $current_file
 
     setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
     applyOptions
@@ -219,8 +220,13 @@ proc openFile {} {
     setToRunning "redolevel" 0
     saveToUndoLevel 0
     setActiveTool select
+    set file_to_add [file normalize $current_file]
+    if { ! [string match "[file normalize $runtimeDir]*" $file_to_add] } {
+	set recent_files [linsert [removeFromList $recent_files $file_to_add] 0 $file_to_add]
+	updateRecentsMenu
+    }
     updateProjectMenu
-    setWmTitle [getFromRunning "current_file"]
+    setWmTitle $current_file
 
     if { $showTree } {
 	refreshTopologyTree
@@ -299,11 +305,28 @@ proc applyRunningOpts {} {
 #   * selected_file -- name of the file where current configuration is saved.
 #****
 proc saveFile { selected_file } {
+    global recent_files
+
     if { $selected_file != "" } {
 	set current_file $selected_file
 	setToRunning "current_file" $current_file
 
+	try {
+	    set fileId [open $selected_file w]
+	} on error err {
+	    after idle {.dialog1.msg configure -wraplength 4i}
+	    tk_dialog .dialog1 "IMUNES error" \
+		"Cannot save file '$selected_file':\n$err" \
+		warning 0 Dismiss
+
+	    return
+	}
+
 	saveCfgJson $current_file
+
+	set file_to_add [file normalize $current_file]
+	set recent_files [linsert [removeFromList $recent_files $file_to_add] 0 $file_to_add]
+	updateRecentsMenu
 
 	.bottom.textbox config -text "Saved [file tail $current_file]"
 
@@ -312,23 +335,84 @@ proc saveFile { selected_file } {
     }
 }
 
+#****f* filemgmt.tcl/updateRecentsMenu
+# NAME
+#   updateRecentsMenu -- update recent files menu
+# SYNOPSIS
+#   updateRecentsMenu
+# FUNCTION
+#   Updates recently opened files menu.
+#****
+proc updateRecentsMenu {} {
+    global recents_fname recent_files op_recents_number
+
+    set m .menubar.file.recent_files
+    $m delete 0 end
+
+    if { [llength $recent_files] > $op_recents_number } {
+	set recent_files [lrange $recent_files 0 [expr $op_recents_number - 1]]
+    }
+
+    if { $recents_fname != "" } {
+	set fd [open $recents_fname w+]
+	puts $fd [join $recent_files \n]
+	close $fd
+    }
+
+    foreach fname $recent_files {
+	if { $fname != "" } {
+	    $m add command -label "$fname" -command "fileOpenDialogBox $fname"
+	}
+    }
+}
+
 #****f* filemgmt.tcl/fileOpenDialogBox
 # NAME
 #   fileOpenDialogBox -- open file dialog box
 # SYNOPSIS
-#   fileOpenDialogBox
+#   fileOpenDialogBox selected_file
 # FUNCTION
-#   Opens an open file dialog box.
+#   Opens an 'open file dialog box' or a specified file.
+# INPUTS
+#   * args -- if an argument is given, do not open the dialog
 #****
-proc fileOpenDialogBox {} {
-    global file_types
+proc fileOpenDialogBox { args } {
+    global file_types recent_files
 
-    set selected_file [tk_getOpenFile -filetypes $file_types]
+    if { $args == "" } {
+	set selected_file [tk_getOpenFile -filetypes $file_types]
+    } else {
+	set selected_file $args
+
+	set err ""
+	if { ! [file exists $selected_file] } {
+	    set err "File '$selected_file' does not exist."
+	} elseif { ! [file isfile $selected_file] } {
+	    set err "Path '$selected_file' is not a file."
+	}
+
+	if { $err != "" } {
+	    after idle {.dialog1.msg configure -wraplength 4i}
+	    set reply [tk_dialog .dialog1 "File error" \
+		"$err\nRemove from Recent files?" \
+		question 0 Yes No]
+
+	    if { $reply == 0 } {
+		set recent_files [removeFromList $recent_files $selected_file]
+
+		updateRecentsMenu
+	    }
+
+	    return
+	}
+    }
+
     if { $selected_file != "" } {
 	newProject
 	setToRunning "current_file" $selected_file
 	openFile
     }
+
 }
 
 #****f* filemgmt.tcl/fileSaveDialogBox
