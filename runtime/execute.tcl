@@ -225,6 +225,7 @@ proc createRunningVarsFile { eid } {
 }
 
 proc readRunningVarsFile { eid } {
+    global gui_option_defaults
     global runtimeDir
 
     upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
@@ -236,6 +237,18 @@ proc readRunningVarsFile { eid } {
 
     set dict_run [dictGet $vars_dict "dict_run"]
     set execute_vars [dictGet $vars_dict "execute_vars"]
+
+    if { [getFromRunning "undolevel"] == "" } {
+	setToRunning "undolevel" 0
+    }
+
+    if { [getFromRunning "redolevel"] == "" } {
+	setToRunning "redolevel" 0
+    }
+
+    if { [getFromRunning "zoom"] == "" } {
+	setToRunning "zoom" [dictGet $gui_option_defaults "zoom"]
+    }
 }
 
 #****f* exec.tcl/saveRunningConfiguration
