@@ -91,31 +91,30 @@ proc terminate_linksDestroy { eid links links_count w } {
 	    continue
 	}
 
-	set node1_id [lindex [getLinkPeers $link_id] 0]
-	set node2_id [lindex [getLinkPeers $link_id] 1]
+	lassign [getLinkPeers $link_id] node1_id node2_id
+	lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
 
 	set msg "Destroying link $link_id"
-	set mirror_link [getLinkMirror $link_id]
-	if { $mirror_link != "" } {
-	    lappend skipLinks $mirror_link
+	set mirror_link_id [getLinkMirror $link_id]
+	if { $mirror_link_id != "" } {
+	    lappend skipLinks $mirror_link_id
 
-	    set msg "Destroying link $link_id/$mirror_link"
+	    set msg "Destroying link $link_id/$mirror_link_id"
 
-	    set node2_id [lindex [getLinkPeers $mirror_link] 0]
+	    # switch direction for mirror links
+	    lassign "$node2_id [lindex [getLinkPeers $mirror_link_id] 1]" node1_id node2_id
+	    lassign "$iface2_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]" iface1_id iface2_id
 
-	    setToRunning "${mirror_link}_running" false
+	    setToRunning "${mirror_link_id}_running" false
 	}
 
 	if { [getFromRunning "${link_id}_running"] == true } {
 	    try {
-		if { [getLinkDirect $link_id] } {
-		    destroyDirectLinkBetween $eid $node1_id $node2_id $link_id
-		} else {
-		    destroyLinkBetween $eid $node1_id $node2_id $link_id
-		}
+		destroyLinkBetween $eid $node1_id $node2_id $iface1_id $iface2_id $link_id
+
 		setToRunning "${link_id}_running" false
 	    } on error err {
-		return -code error "Error in 'destroyLinkBetween $eid $node1_id $node2_id $link_id': $err"
+		return -code error "Error in 'destroyLinkBetween $eid $node1_id $node2_id $iface1_id $iface2_id $link_id': $err"
 	    }
 	}
 

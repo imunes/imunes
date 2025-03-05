@@ -206,6 +206,11 @@ proc trigger_nodeCreate { node_id } {
 	    continue
 	}
 
+	if { [getLinkDirect $link_id] } {
+	    lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
+	    trigger_ifaceConfig $peer_id $peer_iface_id
+	}
+
 	trigger_linkRecreate $link_id
     }
 }
@@ -422,6 +427,12 @@ proc trigger_ifaceCreate { node_id iface_id } {
     updateInstantiateVars
 
     trigger_ifaceConfig $node_id $iface_id
+
+    set link_id [getIfcLink $node_id $iface_id]
+    if { $link_id != "" && [getLinkDirect $link_id] } {
+	lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
+	trigger_ifaceConfig $peer_id $peer_iface_id
+    }
 }
 
 proc trigger_ifaceDestroy { node_id iface_id } {

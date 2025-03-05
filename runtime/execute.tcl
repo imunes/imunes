@@ -1113,11 +1113,7 @@ proc execute_linksCreate { links links_count w } {
 
 	if { $node1_id ni $skip_nodes && $node2_id ni $skip_nodes } {
 	    try {
-		if { [getLinkDirect $link_id] || [getNodeType $node1_id] == "wlan" || [getNodeType $node2_id] == "wlan" } {
-		    createDirectLinkBetween $node1_id $node2_id $iface1_id $iface2_id $link_id
-		} else {
-		    createLinkBetween $node1_id $node2_id $iface1_id $iface2_id $link_id
-		}
+		createLinkBetween $node1_id $node2_id $iface1_id $iface2_id $link_id
 
 		setToRunning "${link_id}_running" true
 	    } on error err {

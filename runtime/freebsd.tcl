@@ -1941,36 +1941,6 @@ proc createExperimentContainer {} {
     exec jail -c name=[getFromRunning "eid"] vnet children.max=[llength [getFromRunning "node_list"]] persist
 }
 
-#****f* freebsd.tcl/createDirectLinkBetween
-# NAME
-#   createDirectLinkBetween -- create direct link between
-# SYNOPSIS
-#   createDirectLinkBetween $node1_id $node2_id $iface1_id $iface2_id
-# FUNCTION
-#   Creates direct link between two given nodes. Direct link connects the host
-#   interface into the node, without ng_node between them.
-# INPUTS
-#   * node1_id -- node id of the first node
-#   * node2_id -- node id of the second node
-#   * iface1_id -- interface id on the first node
-#   * iface2_id -- interface id on the second node
-#   * link_id -- link id
-#****
-proc createDirectLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
-    set eid [getFromRunning "eid"]
-
-    set ngpeer1 \
-	[lindex [[getNodeType $node1_id].nghook $eid $node1_id $iface1_id] 0]
-    set ngpeer2 \
-	[lindex [[getNodeType $node2_id].nghook $eid $node2_id $iface2_id] 0]
-    set nghook1 \
-	[lindex [[getNodeType $node1_id].nghook $eid $node1_id $iface1_id] 1]
-    set nghook2 \
-	[lindex [[getNodeType $node2_id].nghook $eid $node2_id $iface2_id] 1]
-
-    pipesExec "jexec $eid ngctl connect $ngpeer1: $ngpeer2: $nghook1 $nghook2" "hold"
-}
-
 #****f* freebsd.tcl/createLinkBetween
 # NAME
 #   createLinkBetween -- create link between
@@ -1995,6 +1965,13 @@ proc createLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 	[lindex [[getNodeType $node1_id].nghook $eid $node1_id $iface1_id] 1]
     set nghook2 \
 	[lindex [[getNodeType $node2_id].nghook $eid $node2_id $iface2_id] 1]
+
+    # for direct links, skip pipe creation
+    if { [getLinkDirect $link_id] } {
+	pipesExec "jexec $eid ngctl connect $ngpeer1: $ngpeer2: $nghook1 $nghook2" "hold"
+
+	return
+    }
 
     set ngcmds "mkpeer $ngpeer1: pipe $nghook1 upper"
     set ngcmds "$ngcmds\n name $ngpeer1:$nghook1 $link_id"
@@ -2057,9 +2034,6 @@ proc configureLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
     }
 }
 
-proc destroyDirectLinkBetween { eid node1_id node2_id link_id } {
-}
-
 #****f* freebsd.tcl/destroyLinkBetween
 # NAME
 #   destroyLinkBetween -- destroy link between
@@ -2072,7 +2046,17 @@ proc destroyDirectLinkBetween { eid node1_id node2_id link_id } {
 #   * node1_id -- node id of the first node
 #   * node2_id -- node id of the second node
 #****
-proc destroyLinkBetween { eid node1_id node2_id link_id } {
+proc destroyLinkBetween { eid node1_id node2_id iface1_id iface2_id link_id } {
+    if { [getLinkDirect $link_id] || "wlan" in "[getNodeType $node1_id] [getNodeType $node2_id]" } {
+	lassign [[getNodeType $node1_id].nghook $eid $node1_id $iface1_id] ngpeer1 nghook1
+	lassign [[getNodeType $node2_id].nghook $eid $node2_id $iface2_id] ngpeer2 nghook2
+
+	pipesExec "jexec $eid ngctl disconnect $ngpeer1: $nghook1" "hold"
+	pipesExec "jexec $eid ngctl disconnect $ngpeer2: $nghook2" "hold"
+
+	return
+    }
+
     pipesExec "jexec $eid ngctl msg $link_id: shutdown" "hold"
 }
 
@@ -2301,8 +2285,7 @@ proc releaseExtIfc { eid node_id iface_id } {
     set ifname [getIfcName $node_id $iface_id]
     set vlan [getIfcVlanTag $node_id $iface_id]
     if { $vlan != "" && [getIfcVlanDev $node_id $iface_id] != "" } {
-	set ifname $ifname.$vlan
-	catch { exec ifconfig $ifname -vnet $eid destroy }
+	catch { exec ifconfig $ifname.$vlan -vnet $eid destroy }
 
 	return
     }
