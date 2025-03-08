@@ -781,7 +781,7 @@ proc waitForInstantiateNodes { nodes nodes_count w } {
 
 	set t_last [clock milliseconds]
 	if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $nodecreate_timeout } {
-	    set skip_nodes $nodes_left
+	    lappend skip_nodes {*}$nodes_left
 	    break
 	}
     }
@@ -933,7 +933,7 @@ proc waitForInitConf { nodes nodes_count w } {
 
 	set t_last [clock milliseconds]
 	if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $nodecreate_timeout } {
-	    set skip_nodes $nodes_left
+	    lappend skip_nodes {*}$nodes_left
 	    break
 	}
     }
