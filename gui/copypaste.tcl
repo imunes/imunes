@@ -143,6 +143,7 @@ proc paste {} {
 	set new_node_id [newObjectId [getFromRunning "node_list"] "n"]
 	set node_map($node_orig) $new_node_id
 	cfgSet "nodes" $new_node_id $node_orig_cfg
+	setToRunning "${new_node_id}_running" false
 	lappendToRunning "node_list" $new_node_id
 	lappend copypaste_list $new_node_id
 
