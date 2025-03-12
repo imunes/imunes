@@ -487,6 +487,10 @@ proc getSubnetData { this_node_id this_iface_id subnet_gws nodes_l2data subnet_i
     dict set nodes_l2data $this_node_id $this_iface_id $subnet_idx
 
     set this_type [getNodeType $this_node_id]
+    if { $this_type in "\"\" pseudo" } {
+	return [list $subnet_gws $nodes_l2data]
+    }
+
     if { [$this_type.netlayer] == "NETWORK" } {
 	if { $this_type in "router nat64 extnat" } {
 	    # this node is a router/extnat, add our IP addresses to lists
