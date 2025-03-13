@@ -38,7 +38,7 @@
 #****
 
 set MODULE filter
-registerModule $MODULE
+registerModule $MODULE "freebsd"
 
 ################################################################################
 ########################### CONFIGURATION PROCEDURES ###########################
