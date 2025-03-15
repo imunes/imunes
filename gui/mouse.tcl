@@ -368,6 +368,8 @@ proc selectAdjacent {} {
 #   * y -- y coordinate for popup menu
 #****
 proc button3link { c x y } {
+    global isOSlinux
+
     set oper_mode [getFromRunning "oper_mode"]
 
     set link_id [lindex [$c gettags "link && current"] 1]
@@ -418,9 +420,9 @@ proc button3link { c x y } {
 	lassign [logicalPeerByIfc $peer2_id $peer2_iface] peer1_id peer1_iface
     }
 
-    if { ($oper_mode != "exec" || ! [getFromRunning "auto_execution"]) && \
-   	 (! [getFromRunning "${peer1_id}|${peer1_iface}_running"] && \
-	 ! [getFromRunning "${peer2_id}|${peer2_iface}_running"]) } {
+    if { $oper_mode == "edit" || ! $isOSlinux || \
+	 ([getFromRunning "${peer1_id}|${peer1_iface}_running"] && \
+	 [getFromRunning "${peer2_id}|${peer2_iface}_running"]) } {
 
 	.button3menu add checkbutton -label "Direct link" \
 	    -underline 5 -variable linkDirect_$link_id \
@@ -440,9 +442,9 @@ proc button3link { c x y } {
     #
     # Delete link (keep ifaces)
     #
-    if { ! [set linkDirect_$link_id] || \
-	 ($oper_mode != "exec" || ! [getFromRunning "auto_execution"]) && \
-   	 (! [getFromRunning "${peer1_id}|${peer1_iface}_running"] && \
+    if { ($oper_mode == "edit" || ! $isOSlinux || ! [set linkDirect_$link_id]) || \
+	 ($oper_mode == "exec" && \
+	 ! [getFromRunning "${peer1_id}|${peer1_iface}_running"] && \
 	 ! [getFromRunning "${peer2_id}|${peer2_iface}_running"]) } {
 
 	.button3menu add command -label "Delete (keep interfaces)" \
@@ -827,10 +829,24 @@ proc button3node { c x y } {
     #
     .button3menu add command -label "Delete" -command "deleteSelection"
 
+    set has_direct_links 0
+    foreach iface_id [ifcList $node_id] {
+	set link_id [getIfcLink $node_id $iface_id]
+	if { $link_id != "" && [getLinkDirect $link_id] } {
+	    set has_direct_links 1
+	    break
+	}
+    }
+
     #
     # Delete selection (keep linked interfaces)
     #
-    .button3menu add command -label "Delete (keep interfaces)" -command "deleteSelection 1"
+    if { $oper_mode == "edit" || ! $isOSlinux || ! $has_direct_links } {
+	.button3menu add command -label "Delete (keep interfaces)" -command "deleteSelection 1"
+    } else {
+	.button3menu add command -label "Delete (keep interfaces)" -command "deleteSelection 1" \
+	    -state disabled
+    }
 
     if { $type != "pseudo" && $oper_mode == "exec" && [getFromRunning "auto_execution"] } {
 	.button3menu add separator

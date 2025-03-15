@@ -433,6 +433,18 @@ proc trigger_ifaceCreate { node_id iface_id } {
 	lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
 	trigger_ifaceConfig $peer_id $peer_iface_id
     }
+
+    # if any of the logical interfaces have $iface_id as master, recreate them
+    set iface_name [getIfcName $node_id $iface_id]
+    foreach log_iface_id [logIfcList $node_id] {
+	if { [getIfcVlanDev $node_id $log_iface_id] != $iface_name } {
+	    continue
+	}
+
+	if { "*" ni $ifaces && $log_iface_id ni $ifaces } {
+	    trigger_ifaceCreate $node_id $log_iface_id
+	}
+    }
 }
 
 proc trigger_ifaceDestroy { node_id iface_id } {

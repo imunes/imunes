@@ -112,11 +112,6 @@ proc linksByPeers { node1_id node2_id } {
 proc removeLink { link_id { keep_ifaces 0 } } {
     trigger_linkDestroy $link_id
 
-    # direct links handling in edit/exec mode?
-    if { [getLinkDirect $link_id] && [getFromRunning "oper_mode"] == "exec" } {
-	set keep_ifaces 0
-    }
-
     lassign [getLinkPeers $link_id] node1_id node2_id
     lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
 
@@ -242,12 +237,33 @@ proc getLinkDirect { link_id } {
 #   * direct -- link bandwidth in bits per second.
 #****
 proc setLinkDirect { link_id direct } {
+    global isOSlinux
+
     cfgSet "links" $link_id "direct" $direct
 
-    set mirror_link_id [getLinkMirror $link_id]
-    if { $mirror_link_id != "" } {
-	cfgSet "links" $mirror_link_id "direct" $direct
+    if { $isOSlinux } {
+	lassign [getLinkPeers $link_id] node1_id node2_id
+	lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
+
+	set mirror_link_id [getLinkMirror $link_id]
+	if { $mirror_link_id != "" } {
+	    # switch direction for mirror links
+	    lassign "$node2_id [lindex [getLinkPeers $mirror_link_id] 1]" node1_id node2_id
+	    lassign "$iface2_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]" iface1_id iface2_id
+	}
+
+	trigger_ifaceRecreate $node1_id $iface1_id
+	if { [getAutoDefaultRoutesStatus $node1_id] == "enabled" } {
+	    trigger_nodeReconfig $node1_id
+	}
+
+	trigger_ifaceRecreate $node2_id $iface2_id
+	if { [getAutoDefaultRoutesStatus $node2_id] == "enabled" } {
+	    trigger_nodeReconfig $node2_id
+	}
     }
+
+    trigger_linkRecreate $link_id
 }
 
 #****f* linkcfg.tcl/getLinkPeers
