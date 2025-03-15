@@ -1293,7 +1293,7 @@ proc isNodeStarted { node_id } {
     set jail_id "[getFromRunning "eid"].$node_id"
 
     try {
-	exec jls -j $jail_id
+	exec timeout 0.1 jls -j $jail_id
     } on error {} {
 	return false
     }
@@ -1480,7 +1480,7 @@ proc isNodeInitNet { node_id } {
     set jail_id "[getFromRunning "eid"].$node_id"
 
     try {
-       exec jexec $jail_id rm /tmp/init > /dev/null
+       exec timeout 0.1 jexec $jail_id rm /tmp/init > /dev/null
     } on error {} {
        return false
     }
@@ -1611,7 +1611,7 @@ proc isNodeIfacesConfigured { node_id } {
     }
 
     try {
-	exec jexec $jail_id test -f /out_ifaces.log > /dev/null
+	exec timeout 0.1 jexec $jail_id test -f /out_ifaces.log > /dev/null
     } on error {} {
 	return false
     }
@@ -1633,7 +1633,7 @@ proc isNodeConfigured { node_id } {
     }
 
     try {
-	exec jexec $jail_id test -f /out.log > /dev/null
+	exec timeout 0.1 jexec $jail_id test -f /out.log > /dev/null
     } on error {} {
 	return false
     }
