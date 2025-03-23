@@ -368,6 +368,10 @@ bind . <Control-a> selectAllObjects
 .menubar.edit add command -label "Select adjacent" \
     -accelerator "Ctrl+D" -underline 7 -command selectAdjacent
 bind . <Control-d> selectAdjacent
+.menubar.edit add separator
+.menubar.edit add command -label "Editor preferences" \
+    -accelerator "Ctrl+P" -underline 0 -command editorPreferences_gui
+bind . <Control-p> editorPreferences_gui
 
 #
 # Canvas
@@ -1003,8 +1007,8 @@ menu .menubar.help -tearoff 0
     ttk::label $mainFrame.lastChanged -text $imunesChangedDate
     ttk::label $mainFrame.imunesAdditions -text "$imunesAdditions" -font "-size 10 -weight bold"
     ttk::label $mainFrame.imunesDesc -text "Integrated Multiprotocol Network Emulator/Simulator."
-    ttk::label $mainFrame.homepage -text "http://imunes.net/" -font "-underline 1 -size 10"
-    ttk::label $mainFrame.github -text "http://github.com/imunes/imunes" -font "-underline 1 -size 10"
+    ttk::label $mainFrame.homepage -text "https://imunes.net/" -font "-underline 1 -size 10"
+    ttk::label $mainFrame.github -text "https://github.com/imunes/imunes" -font "-underline 1 -size 10"
     ttk::label $mainFrame.copyright -text "Copyright (c) University of Zagreb 2004 - $imunesLastYear" -font "-size 8"
 
     grid $mainFrame.logoLabel -column 0 -row 0 -pady {10 5} -padx 5
