@@ -754,6 +754,8 @@ proc waitForInstantiateNodes { nodes nodes_count w } {
 
     set batchStep 0
     set nodes_left $nodes
+    # ignore first run when checking for timeout
+    set old_nodes_left -1
     while { [llength $nodes_left] > 0 } {
 	displayBatchProgress $batchStep $nodes_count
 	foreach node_id $nodes_left {
@@ -775,13 +777,18 @@ proc waitForInstantiateNodes { nodes nodes_count w } {
 	    displayBatchProgress $batchStep $nodes_count
 
 	    set nodes_left [removeFromList $nodes_left $node_id]
+	}
 
+	if { $old_nodes_left != [llength $nodes_left] } {
+	    set old_nodes_left [llength $nodes_left]
 	    set t_start [clock milliseconds]
+
+	    continue
 	}
 
 	set t_last [clock milliseconds]
 	if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $nodecreate_timeout } {
-	    set skip_nodes $nodes_left
+	    lappend skip_nodes {*}$nodes_left
 	    break
 	}
     }
@@ -908,6 +915,8 @@ proc waitForInitConf { nodes nodes_count w } {
 
     set batchStep 0
     set nodes_left $nodes
+    # ignore first run when checking for timeout
+    set old_nodes_left -1
     while { [llength $nodes_left] > 0 } {
 	displayBatchProgress $batchStep $nodes_count
 	foreach node_id $nodes_left {
@@ -927,13 +936,18 @@ proc waitForInitConf { nodes nodes_count w } {
 	    displayBatchProgress $batchStep $nodes_count
 
 	    set nodes_left [removeFromList $nodes_left $node_id]
+	}
 
+	if { $old_nodes_left != [llength $nodes_left] } {
+	    set old_nodes_left [llength $nodes_left]
 	    set t_start [clock milliseconds]
+
+	    continue
 	}
 
 	set t_last [clock milliseconds]
 	if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $nodecreate_timeout } {
-	    set skip_nodes $nodes_left
+	    lappend skip_nodes {*}$nodes_left
 	    break
 	}
     }
@@ -1188,6 +1202,8 @@ proc configureIfacesWait { nodes_ifaces nodes_count w } {
 
     set batchStep 0
     set nodes_left $nodes
+    # ignore first run when checking for timeout
+    set old_nodes_left -1
     while { [llength $nodes_left] > 0 } {
 	displayBatchProgress $batchStep $nodes_count
 	foreach node_id $nodes_left {
@@ -1207,8 +1223,13 @@ proc configureIfacesWait { nodes_ifaces nodes_count w } {
 	    displayBatchProgress $batchStep $nodes_count
 
 	    set nodes_left [removeFromList $nodes_left $node_id]
+	}
 
+	if { $old_nodes_left != [llength $nodes_left] } {
+	    set old_nodes_left [llength $nodes_left]
 	    set t_start [clock milliseconds]
+
+	    continue
 	}
 
 	set t_last [clock milliseconds]
@@ -1330,6 +1351,8 @@ proc waitForConfStart { nodes nodes_count w } {
 
     set batchStep 0
     set nodes_left $nodes
+    # ignore first run when checking for timeout
+    set old_nodes_left -1
     while { [llength $nodes_left] > 0 } {
 	displayBatchProgress $batchStep $nodes_count
 	foreach node_id $nodes_left {
@@ -1349,8 +1372,13 @@ proc waitForConfStart { nodes nodes_count w } {
 	    displayBatchProgress $batchStep $nodes_count
 
 	    set nodes_left [removeFromList $nodes_left $node_id]
+	}
 
+	if { $old_nodes_left != [llength $nodes_left] } {
+	    set old_nodes_left [llength $nodes_left]
 	    set t_start [clock milliseconds]
+
+	    continue
 	}
 
 	set t_last [clock milliseconds]
