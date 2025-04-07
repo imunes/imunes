@@ -41,7 +41,7 @@ proc genExperimentId {} {
     global isOSlinux
 
     if { $isOSlinux } {
-        return i[string range [format %04x [expr {[pid] + [expr { round( rand()*10000 ) }]}]] 0 2]
+        return i[string range [format %04x [expr {[pid] + [expr { round( rand()*10000 ) }]}]] end-2 end]
     } else {
         return i[format %04x [expr {[pid] + [expr { round( rand()*10000 ) }]}]]
     }
@@ -699,6 +699,7 @@ proc execute_prepareSystem {} {
 	    puts -nonewline stderr "Experiment ID $eid already in use, trying "
 	    set eid [genExperimentId]
 	    puts stderr "$eid."
+	    set running_eids [getResumableExperiments]
 	}
     }
 
