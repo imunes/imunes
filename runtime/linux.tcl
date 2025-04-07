@@ -1,7 +1,7 @@
 global VROOT_MASTER ULIMIT_FILE ULIMIT_PROC
 set VROOT_MASTER "imunes/template"
 set ULIMIT_FILE "1024:16384"
-set ULIMIT_PROC "1024:2048"
+set ULIMIT_PROC "1024:16384"
 
 #****f* linux.tcl/l2node.nodeCreate
 # NAME
@@ -560,13 +560,24 @@ proc createNodeContainer { node_id } {
         set vroot $VROOT_MASTER
     }
 
+    if { $ULIMIT_FILE != "" } {
+	set ulimit_file_str "--ulimit nofile=$ULIMIT_FILE"
+    } else {
+	set ulimit_file_str ""
+    }
+
+    if { $ULIMIT_PROC != "" } {
+	set ulimit_proc_str "--ulimit nproc=$ULIMIT_PROC"
+    } else {
+	set ulimit_proc_str ""
+    }
+
     set docker_cmd "docker run --detach --init --tty \
 	--privileged --cap-add=ALL --net=$network \
 	--name $docker_id --hostname=[getNodeName $node_id] \
 	--volume /tmp/.X11-unix:/tmp/.X11-unix \
 	--sysctl net.ipv6.conf.all.disable_ipv6=0 \
-	--ulimit nofile=$ULIMIT_FILE --ulimit nproc=$ULIMIT_PROC \
-	$vroot &"
+	$ulimit_file_str $ulimit_proc_str $vroot &"
 
     dputs "Node $node_id -> '$docker_cmd'"
 

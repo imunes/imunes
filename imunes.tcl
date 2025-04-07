@@ -92,7 +92,7 @@ set debug 0
 set printVersion 0
 set prepareFlag 0
 set forceFlag 0
-set nodecreate_timeout 3
+set nodecreate_timeout 4
 set ifacesconf_timeout 3
 set nodeconf_timeout 3
 
