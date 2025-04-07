@@ -66,7 +66,12 @@ get_explist() {
     for exp in $explist; do
 	if test -r /var/run/imunes/$exp/; then
 	    if test $1 = "nodes"; then
-		data=`jq -r '.nodes | to_entries | map(.value.name + if .value.type == "rj45" then " (" + (.value.ifaces | to_entries | map(.value.name) | join(", ")) + ")" else "" end) | join(", ")' /var/run/imunes/$exp/config.imn`
+		nodes=`jq -r '.nodes' /var/run/imunes/$exp/config.imn`
+		if test "$nodes" = "null"; then
+		    data=""
+		else
+		    data=`jq -r '.nodes | to_entries | map(.value.name + if .value.type == "rj45" then " (" + (.value.ifaces | to_entries | map(.value.name) | join(", ")) + ")" else "" end) | join(", ")' /var/run/imunes/$exp/config.imn`
+		fi
 	    else
 		if test -r /var/run/imunes/$exp/name; then
 		    exp_name=`cat /var/run/imunes/$exp/name`
