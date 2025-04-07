@@ -4059,13 +4059,15 @@ proc refreshIPsecTree { node_id tab } {
 }
 
 proc createIPsecGUI { node_id mainFrame connParamsLframe espOptionsLframe ikeSALframe indicator } {
+    tk::toplevel .d
+
     try {
 	grab .d
     } on error {} {
 	catch { destroy .d }
+	return
     }
 
-    tk::toplevel .d
     wm title .d "$indicator IPsec connection"
 
     ttk::frame $mainFrame -padding 4
