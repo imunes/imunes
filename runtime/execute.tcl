@@ -679,7 +679,7 @@ proc deployCfg { { execute 0 } } {
 }
 
 proc execute_prepareSystem {} {
-    global eid_base
+    global eid_base isOSlinux
     global execMode
 
     if { [getFromRunning "cfg_deployed"] } {
@@ -688,12 +688,20 @@ proc execute_prepareSystem {} {
 
     set running_eids [getResumableExperiments]
     if { $execMode != "batch" } {
+	if { $isOSlinux } {
+	    set eid_base [string range $eid_base 0 3]
+	}
+
 	set eid ${eid_base}[string range $::curcfg 3 end]
 	while { $eid in $running_eids } {
 	    set eid_base [genExperimentId]
 	    set eid ${eid_base}[string range $::curcfg 3 end]
 	}
     } else {
+	if { $isOSlinux } {
+	    set eid_base [string range $eid_base 0 4]
+	}
+
 	set eid $eid_base
 	while { $eid in $running_eids } {
 	    puts -nonewline stderr "Experiment ID $eid already in use, trying "
