@@ -1709,6 +1709,14 @@ proc configGUI_staticRoutes { wi node_id } {
 	$user_routes.editor insert end "$route\n"
     }
 
+    if { [_getCustomEnabled $node_cfg] != true || [_getCustomConfigSelected $node_cfg "NODE_CONFIG"] in "\"\" DISABLED" } {
+	$user_routes.editor configure -fg #000000
+	$user_routes.editor configure -state normal
+    } else {
+	$user_routes.editor configure -fg #ff0f0f
+	$user_routes.editor configure -state disabled
+    }
+
     pack $user_routes.vsb -side right -fill y
     pack $user_routes.hsb -side bottom -fill x
     pack $user_routes.editor -anchor w -fill both -expand 1
@@ -1876,7 +1884,21 @@ proc configGUI_customConfig { wi node_id } {
     ttk::label $wi.custcfg.etxt -text "Enable custom startup config:"
     set customEnabled [_getCustomEnabled $node_cfg]
     ttk::checkbutton $wi.custcfg.echeckOnOff -text "Enabled" \
-	-variable customEnabled -onvalue true -offvalue false
+	-variable customEnabled -onvalue true -offvalue false \
+	-command \
+	"
+	    global customEnabled
+
+	    if { \$customEnabled } {
+		if { \[_getCustomConfigSelected \$node_cfg \"NODE_CONFIG\"\] ni \"\\\"\\\" DISABLED\" } {
+		    $wi.sroutes.user.editor configure -fg #ff0f0f
+		    $wi.sroutes.user.editor configure -state disabled
+		}
+	    } else {
+		$wi.sroutes.user.editor configure -fg #000000
+		$wi.sroutes.user.editor configure -state normal
+	    }
+	"
 
     grid $wi.custcfg.etxt -in $wi.custcfg -sticky w -column 0 -row 0
     grid $wi.custcfg.echeckOnOff -in $wi.custcfg -sticky w -column 1 \
@@ -1897,11 +1919,20 @@ proc configGUI_customConfig { wi node_id } {
 	$o.cb set $defaultConfig
 	bind $o.cb <<ComboboxSelected>> \
 	"
-	    global node_cfg
+	    global customEnabled node_cfg
 
 	    set defaultConfig \[$o.cb get\]
 	    if { \$defaultConfig == \"DISABLED\" } {
 		set defaultConfig {}
+		if { \$customEnabled == true && \"$hook\" == \"NODE_CONFIG\" } {
+		    $wi.sroutes.user.editor configure -fg #000000
+		    $wi.sroutes.user.editor configure -state normal
+		}
+	    } else {
+		if { \$customEnabled == true && \"$hook\" == \"NODE_CONFIG\" } {
+		    $wi.sroutes.user.editor configure -fg #ff0f0f
+		    $wi.sroutes.user.editor configure -state disabled
+		}
 	    }
 
 	    set node_cfg \[_setCustomConfigSelected \$node_cfg $hook \$defaultConfig\]
@@ -3409,7 +3440,10 @@ proc customConfigGUIFillDefaults { wi node_id selected_hook } {
 	    set cfg [$node_type.generateConfigIfaces $node_id "*"]
 	}
 	"NODE_CONFIG" {
+	    set tmp_status [getCustomEnabled $node_id]
+	    setCustomEnabled $node_id false
 	    set cfg [$node_type.generateConfig $node_id]
+	    setCustomEnabled $node_id $tmp_status
 	}
     }
     set w $wi.nb.$cfg_id
