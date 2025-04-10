@@ -769,6 +769,9 @@ proc waitForInstantiateNodes { nodes nodes_count w } {
 	displayBatchProgress $batchStep $nodes_count
 	foreach node_id $nodes_left {
 	    if { ! [isNodeStarted $node_id] } {
+		if { $nodecreate_timeout < 0 } {
+		    after [expr -$nodecreate_timeout]
+		}
 		continue
 	    }
 
@@ -796,6 +799,10 @@ proc waitForInstantiateNodes { nodes nodes_count w } {
 	}
 
 	set t_last [clock milliseconds]
+	if { $nodecreate_timeout < 0 } {
+	    continue
+	}
+
 	if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $nodecreate_timeout } {
 	    lappend skip_nodes {*}$nodes_left
 	    break
@@ -930,6 +937,9 @@ proc waitForInitConf { nodes nodes_count w } {
 	displayBatchProgress $batchStep $nodes_count
 	foreach node_id $nodes_left {
 	    if { ! [isNodeInitNet $node_id] } {
+		if { $nodecreate_timeout < 0 } {
+		    after [expr -$nodecreate_timeout]
+		}
 		continue
 	    }
 
@@ -955,6 +965,10 @@ proc waitForInitConf { nodes nodes_count w } {
 	}
 
 	set t_last [clock milliseconds]
+	if { $nodecreate_timeout < 0 } {
+	    continue
+	}
+
 	if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $nodecreate_timeout } {
 	    lappend skip_nodes {*}$nodes_left
 	    break

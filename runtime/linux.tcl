@@ -547,6 +547,7 @@ proc prepareFilesystemForNode { node_id } {
 #****
 proc createNodeContainer { node_id } {
     global VROOT_MASTER ULIMIT_FILE ULIMIT_PROC
+    global nodecreate_timeout
 
     set docker_id "[getFromRunning "eid"].$node_id"
 
@@ -577,7 +578,11 @@ proc createNodeContainer { node_id } {
 	--name $docker_id --hostname=[getNodeName $node_id] \
 	--volume /tmp/.X11-unix:/tmp/.X11-unix \
 	--sysctl net.ipv6.conf.all.disable_ipv6=0 \
-	$ulimit_file_str $ulimit_proc_str $vroot &"
+	$ulimit_file_str $ulimit_proc_str $vroot"
+
+    if { $nodecreate_timeout >= 0 } {
+	set docker_cmd "$docker_cmd &"
+    }
 
     dputs "Node $node_id -> '$docker_cmd'"
 
@@ -585,6 +590,8 @@ proc createNodeContainer { node_id } {
 }
 
 proc isNodeStarted { node_id } {
+    global nodecreate_timeout
+
     set node_type [getNodeType $node_id]
     if { [$node_type.virtlayer] != "VIRTUALIZED" } {
 	if { $node_type in "rj45 ext extnat" } {
@@ -604,7 +611,11 @@ proc isNodeStarted { node_id } {
 
     set docker_id "[getFromRunning "eid"].$node_id"
 
-    catch { exec timeout 0.1 docker inspect --format '{{.State.Running}}' $docker_id } status
+    if { $nodecreate_timeout >= 0 } {
+	catch { exec timeout [expr $nodecreate_timeout/5.0] docker inspect --format '{{.State.Running}}' $docker_id } status
+    } else {
+	catch { exec docker inspect --format '{{.State.Running}}' $docker_id } status
+    }
 
     return [string match 'true' $status]
 }
@@ -815,7 +826,11 @@ proc isNodeInitNet { node_id } {
     set docker_id "[getFromRunning "eid"].$node_id"
 
     try {
-	exec timeout [expr $nodecreate_timeout/5.0] docker exec $docker_id rm /tmp/init >/dev/null
+	if { $nodecreate_timeout >= 0 } {
+	    exec timeout [expr $nodecreate_timeout/5.0] docker exec $docker_id rm /tmp/init >/dev/null
+	} else {
+	    exec docker exec $docker_id rm /tmp/init >/dev/null
+	}
     } on error {} {
 	return false
     }
