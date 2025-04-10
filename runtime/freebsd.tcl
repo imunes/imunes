@@ -1275,6 +1275,8 @@ proc createNodeContainer { node_id } {
 }
 
 proc isNodeStarted { node_id } {
+    global nodecreate_timeout
+
     set node_type [getNodeType $node_id]
     if { [$node_type.virtlayer] != "VIRTUALIZED" } {
 	if { $node_type in "rj45 ext extnat" } {
@@ -1293,7 +1295,11 @@ proc isNodeStarted { node_id } {
     set jail_id "[getFromRunning "eid"].$node_id"
 
     try {
-	exec timeout 0.1 jls -j $jail_id
+	if { $nodecreate_timeout >= 0 } {
+	    exec timeout [expr $nodecreate_timeout/5.0] jls -j $jail_id
+	} else {
+	    exec jls -j $jail_id
+	}
     } on error {} {
 	return false
     }
@@ -1471,7 +1477,7 @@ proc configureICMPoptions { node_id } {
 }
 
 proc isNodeInitNet { node_id } {
-    global skip_nodes
+    global skip_nodes nodecreate_timeout
 
     if { $node_id in $skip_nodes } {
 	return true
@@ -1480,7 +1486,11 @@ proc isNodeInitNet { node_id } {
     set jail_id "[getFromRunning "eid"].$node_id"
 
     try {
-       exec timeout 0.1 jexec $jail_id rm /tmp/init > /dev/null
+	if { $nodecreate_timeout >= 0 } {
+	    exec timeout [expr $nodecreate_timeout/5.0] jexec $jail_id rm /tmp/init > /dev/null
+	} else {
+	    exec jexec $jail_id rm /tmp/init > /dev/null
+	}
     } on error {} {
        return false
     }
@@ -1524,7 +1534,11 @@ proc runConfOnNode { node_id } {
     # renaming the file signals that we're done
     set cmds "$cmds mv /tout.log /out.log ;"
     set cmds "$cmds mv /terr.log /err.log"
-    pipesExec "timeout --foreground $nodeconf_timeout jexec $jail_id sh -c '$cmds'" "hold"
+    if { $nodeconf_timeout >= 0 } {
+	pipesExec "timeout --foreground $nodeconf_timeout jexec $jail_id sh -c '$cmds'" "hold"
+    } else {
+	pipesExec "jexec $jail_id sh -c '$cmds'" "hold"
+    }
 }
 
 proc startNodeIfaces { node_id ifaces } {
@@ -1550,7 +1564,11 @@ proc startNodeIfaces { node_id ifaces } {
     # renaming the file signals that we're done
     set cmds "$cmds mv /tout_ifaces.log /out_ifaces.log ;"
     set cmds "$cmds mv /terr_ifaces.log /err_ifaces.log"
-    pipesExec "timeout --foreground $ifacesconf_timeout jexec $jail_id sh -c '$cmds'" "hold"
+    if { $ifacesconf_timeout >= 0 } {
+	pipesExec "timeout --foreground $ifacesconf_timeout jexec $jail_id sh -c '$cmds'" "hold"
+    } else {
+	pipesExec "jexec $jail_id sh -c '$cmds'" "hold"
+    }
 }
 
 proc unconfigNode { eid node_id } {
@@ -1598,7 +1616,7 @@ proc unconfigNodeIfaces { eid node_id ifaces } {
 }
 
 proc isNodeIfacesConfigured { node_id } {
-    global skip_nodes
+    global skip_nodes ifacesconf_timeout
 
     if { $node_id in $skip_nodes } {
 	return true
@@ -1611,7 +1629,11 @@ proc isNodeIfacesConfigured { node_id } {
     }
 
     try {
-	exec timeout 0.1 jexec $jail_id test -f /out_ifaces.log > /dev/null
+	if { $ifacesconf_timeout >= 0 } {
+	    exec timeout [expr $ifacesconf_timeout/5.0] jexec $jail_id test -f /out_ifaces.log > /dev/null
+	} else {
+	    exec jexec $jail_id test -f /out_ifaces.log > /dev/null
+	}
     } on error {} {
 	return false
     }
@@ -1620,7 +1642,7 @@ proc isNodeIfacesConfigured { node_id } {
 }
 
 proc isNodeConfigured { node_id } {
-    global skip_nodes
+    global skip_nodes nodeconf_timeout
 
     if { $node_id in $skip_nodes } {
 	return true
@@ -1633,7 +1655,11 @@ proc isNodeConfigured { node_id } {
     }
 
     try {
-	exec timeout 0.1 jexec $jail_id test -f /out.log > /dev/null
+	if { $nodeconf_timeout >= 0 } {
+	    exec timeout [expr $nodeconf_timeout/5.0] jexec $jail_id test -f /out.log > /dev/null
+	} else {
+	    exec jexec $jail_id test -f /out.log > /dev/null
+	}
     } on error {} {
 	return false
     }
