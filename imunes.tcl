@@ -107,6 +107,8 @@ set options {
     {f		"Force virtual root preparation (delete existing vroot)"}
     {force	"Force virtual root preparation (delete existing vroot)"}
     {i		"Setup devfs rules for virtual nodes (Only on FreeBSD)"}
+    {l		"Run in legacy/slow mode"}
+    {legacy	"Run in legacy/slow mode"}
     {v		"Print IMUNES version"}
     {version	"Print IMUNES version"}
     {h		"Print this message"}

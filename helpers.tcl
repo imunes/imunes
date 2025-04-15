@@ -58,6 +58,7 @@ proc safeSourceFile { file } {
 proc parseCmdArgs { options usage } {
     global initMode execMode eid_base debug argv
     global printVersion prepareFlag forceFlag
+    global nodecreate_timeout ifacesconf_timeout nodeconf_timeout
 
     catch { array set params [::cmdline::getoptions argv $options $usage] } err
     if { $err != "" || $params(h) } {
@@ -117,6 +118,14 @@ proc parseCmdArgs { options usage } {
 
     if { $params(f) || $params(force) } {
 	set forceFlag 1
+    }
+
+    if { $params(l) || $params(legacy) } {
+	puts "Running in legacy mode"
+
+	set nodecreate_timeout -1
+	set nodeconf_timeout -1
+	set ifacesconf_timeout -1
     }
 }
 
