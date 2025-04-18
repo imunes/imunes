@@ -136,6 +136,13 @@ proc paste {} {
 	setAnnotationCanvas $new_annotation_id $curcanvas
     }
 
+    set naming_list {}
+    foreach node_id [getFromRunning "node_list"] {
+	if { [getNodeType $node_id] ni "pseudo extnat" } {
+	    lappend naming_list [getNodeName $node_id]
+	}
+    }
+
     set copypaste_list {}
     array set node_map {}
     # Paste nodes from the clipboard and rename them on the fly
@@ -147,16 +154,27 @@ proc paste {} {
 	lappendToRunning "node_list" $new_node_id
 	lappend copypaste_list $new_node_id
 
-	set node_type [getNodeType $node_orig]
-	if { $node_type in [array names nodeNamingBase] } {
-	    setNodeName $new_node_id [getNewNodeNameType $node_type $nodeNamingBase($node_type)]
-	} elseif { $node_type in "ext extnat rj45" } {
-	    setNodeName $new_node_id "UNASSIGNED"
-	} else {
-	    setNodeName $new_node_id $new_node_id
+	setNodeCanvas $new_node_id $curcanvas
+
+	set node_type [getNodeType $new_node_id]
+	if { $node_type ni [array names nodeNamingBase] } {
+	    if { $node_type ni "extnat" } {
+		# fallback
+		setNodeName $new_node_id $new_node_id
+	    }
+
+	    continue
 	}
 
-	setNodeCanvas $new_node_id $curcanvas
+	set node_name [getNodeName $new_node_id]
+	if { $node_name in $naming_list } {
+	    # if name already exists, get the next one
+	    setNodeName $new_node_id [getNewNodeNameType $node_type $nodeNamingBase($node_type)]
+	} else {
+	    recalculateNumType $node_type $nodeNamingBase($node_type)
+	}
+
+	lappend naming_list $node_name
     }
 
     #
