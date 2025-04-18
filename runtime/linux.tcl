@@ -547,6 +547,7 @@ proc prepareFilesystemForNode { node_id } {
 #****
 proc createNodeContainer { node_id } {
     global VROOT_MASTER ULIMIT_FILE ULIMIT_PROC
+    global nodecreate_timeout
 
     set docker_id "[getFromRunning "eid"].$node_id"
 
@@ -577,7 +578,11 @@ proc createNodeContainer { node_id } {
 	--name $docker_id --hostname=[getNodeName $node_id] \
 	--volume /tmp/.X11-unix:/tmp/.X11-unix \
 	--sysctl net.ipv6.conf.all.disable_ipv6=0 \
-	$ulimit_file_str $ulimit_proc_str $vroot &"
+	$ulimit_file_str $ulimit_proc_str $vroot"
+
+    if { $nodecreate_timeout >= 0 } {
+	set docker_cmd "$docker_cmd &"
+    }
 
     dputs "Node $node_id -> '$docker_cmd'"
 
@@ -585,6 +590,8 @@ proc createNodeContainer { node_id } {
 }
 
 proc isNodeStarted { node_id } {
+    global nodecreate_timeout
+
     set node_type [getNodeType $node_id]
     if { [$node_type.virtlayer] != "VIRTUALIZED" } {
 	if { $node_type in "rj45 ext extnat" } {
@@ -604,7 +611,11 @@ proc isNodeStarted { node_id } {
 
     set docker_id "[getFromRunning "eid"].$node_id"
 
-    catch { exec timeout 0.1 docker inspect --format '{{.State.Running}}' $docker_id } status
+    if { $nodecreate_timeout >= 0 } {
+	catch { exec timeout [expr $nodecreate_timeout/5.0] docker inspect --format '{{.State.Running}}' $docker_id } status
+    } else {
+	catch { exec docker inspect --format '{{.State.Running}}' $docker_id } status
+    }
 
     return [string match 'true' $status]
 }
@@ -815,7 +826,11 @@ proc isNodeInitNet { node_id } {
     set docker_id "[getFromRunning "eid"].$node_id"
 
     try {
-	exec timeout [expr $nodecreate_timeout/5.0] docker exec $docker_id rm /tmp/init >/dev/null
+	if { $nodecreate_timeout >= 0 } {
+	    exec timeout [expr $nodecreate_timeout/5.0] docker exec $docker_id rm /tmp/init >/dev/null
+	} else {
+	    exec docker exec $docker_id rm /tmp/init >/dev/null
+	}
     } on error {} {
 	return false
     }
@@ -1142,7 +1157,7 @@ proc unconfigNodeIfaces { eid node_id ifaces } {
 }
 
 proc isNodeIfacesConfigured { node_id } {
-    global skip_nodes
+    global skip_nodes ifacesconf_timeout
 
     if { $node_id in $skip_nodes } {
 	return true
@@ -1155,7 +1170,11 @@ proc isNodeIfacesConfigured { node_id } {
     }
 
     try {
-	exec timeout 0.1 docker exec -t $docker_id sh -c "test ! -f /tout_ifaces.log && test -f /out_ifaces.log"
+	if { $ifacesconf_timeout >= 0 } {
+	    exec timeout [expr $ifacesconf_timeout/5.0] docker exec -t $docker_id sh -c "test ! -f /tout_ifaces.log && test -f /out_ifaces.log"
+	} else {
+	    exec docker exec -t $docker_id sh -c "test ! -f /tout_ifaces.log && test -f /out_ifaces.log"
+	}
     } on error {} {
 	return false
     }
@@ -1164,7 +1183,7 @@ proc isNodeIfacesConfigured { node_id } {
 }
 
 proc isNodeConfigured { node_id } {
-    global skip_nodes
+    global skip_nodes nodeconf_timeout
 
     if { $node_id in $skip_nodes } {
 	return true
@@ -1177,7 +1196,11 @@ proc isNodeConfigured { node_id } {
     }
 
     try {
-	exec timeout 0.1 docker exec -t $docker_id sh -c "test ! -f /tout.log && test -f /out.log"
+	if { $nodeconf_timeout >= 0 } {
+	    exec timeout [expr $nodeconf_timeout/5.0] docker exec -t $docker_id sh -c "test ! -f /tout.log && test -f /out.log"
+	} else {
+	    exec docker exec -t $docker_id sh -c "test ! -f /tout.log && test -f /out.log"
+	}
     } on error {} {
 	return false
     }
@@ -1186,7 +1209,7 @@ proc isNodeConfigured { node_id } {
 }
 
 proc isNodeError { node_id } {
-    global skip_nodes
+    global skip_nodes nodeconf_timeout
 
     if { $node_id in $skip_nodes } {
 	return false
@@ -1199,7 +1222,11 @@ proc isNodeError { node_id } {
     set docker_id "[getFromRunning "eid"].$node_id"
 
     try {
-	exec timeout 0.1 docker exec -t $docker_id sed "/^+ /d" /err.log
+	if { $nodeconf_timeout >= 0 } {
+	    exec timeout [expr $nodeconf_timeout/5.0] docker exec -t $docker_id sed "/^+ /d" /err.log
+	} else {
+	    exec docker exec -t $docker_id sed "/^+ /d" /err.log
+	}
     } on error {} {
 	return ""
     } on ok errlog {
@@ -1212,7 +1239,7 @@ proc isNodeError { node_id } {
 }
 
 proc isNodeErrorIfaces { node_id } {
-    global skip_nodes
+    global skip_nodes ifacesconf_timeout
 
     if { $node_id in $skip_nodes } {
 	return false
@@ -1225,7 +1252,11 @@ proc isNodeErrorIfaces { node_id } {
     set docker_id "[getFromRunning "eid"].$node_id"
 
     try {
-	exec timeout 0.1 docker exec -t $docker_id sed "/^+ /d" /err_ifaces.log
+	if { $ifacesconf_timeout >= 0 } {
+	    exec timeout [expr $ifacesconf_timeout/5.0] docker exec -t $docker_id sed "/^+ /d" /err_ifaces.log
+	} else {
+	    exec docker exec -t $docker_id sed "/^+ /d" /err_ifaces.log
+	}
     } on error {} {
 	return ""
     } on ok errlog {
