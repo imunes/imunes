@@ -98,8 +98,8 @@ proc link.configGUI { c link_id } {
     configGUI_linkFromTo $wi $link_id
     configGUI_linkConfig $wi $link_id "Bandwidth" "Bandwidth (bps):"
     configGUI_linkConfig $wi $link_id "Delay" "Delay (us):"
-    configGUI_linkConfig $wi $link_id "BER" "BER (1/N):"
-    configGUI_linkConfig $wi $link_id "Loss" "Loss (%):"
+    configGUI_linkConfig $wi $link_id "BER" "BER - FreeBSD (1/N): "
+    configGUI_linkConfig $wi $link_id "Loss" "Loss - Linux (%):"
     configGUI_linkConfig $wi $link_id "Dup" "Duplicate (%):"
     configGUI_linkConfig $wi $link_id "Width" "Width:"
     configGUI_linkColor $wi $link_id
