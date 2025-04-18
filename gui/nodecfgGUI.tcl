@@ -2141,12 +2141,6 @@ proc configGUI_servicesConfig { wi node_id } {
 #   * node_id -- node id
 #****
 proc configGUI_attachDockerToExt { wi node_id } {
-    global isOSlinux
-
-    if { ! $isOSlinux } {
-	return
-    }
-
     global guielements
     lappend guielements configGUI_attachDockerToExt
 
@@ -2156,7 +2150,7 @@ proc configGUI_attachDockerToExt { wi node_id } {
 
     set w $wi.docker
     ttk::frame $w -relief groove -borderwidth 2 -padding 2
-    ttk::label $w.label -text "Attach external docker interface:"
+    ttk::label $w.label -text "Attach external Docker interface (Linux only):"
 
     pack $w.label -side left -padx 2
 
