@@ -213,8 +213,12 @@ proc finishTerminating { status msg w } {
 #   unconfigure_links, unconfigure_nodes_ifaces, unconfigure_nodes
 #****
 proc undeployCfg { { eid "" } { terminate 0 } } {
+    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+
     global progressbarCount execMode skip_nodes
 
+    set bkp_cfg ""
+    set terminate_cfg [getFromExecuteVars "terminate_cfg"]
     if { ! $terminate } {
 	if { ! [getFromRunning "cfg_deployed"] } {
 	    return
@@ -241,16 +245,20 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
     prepareTerminateVars
 
     if { "$terminate_nodes$destroy_nodes_ifaces$terminate_links$unconfigure_links$unconfigure_nodes_ifaces$unconfigure_nodes" == "" } {
+	if { $terminate_cfg != "" && $terminate_cfg != [cfgGet] } {
+	    if { $eid == "" } {
+		set eid [getFromRunning "eid"]
+	    }
+
+	    createExperimentFiles $eid
+	    createRunningVarsFile $eid
+	}
 	setToExecuteVars "terminate_cfg" ""
 
 	return
     }
 
-    set bkp_cfg ""
-    set terminate_cfg [getFromExecuteVars "terminate_cfg"]
     if { $terminate_cfg != "" && $terminate_cfg != [cfgGet] } {
-	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-
 	set bkp_cfg [cfgGet]
 	set dict_cfg $terminate_cfg
     }
@@ -456,17 +464,20 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 
     finishTerminating 1 "" $w
 
+    if { $bkp_cfg != "" } {
+	set dict_cfg $bkp_cfg
+    }
+
     if { ! $terminate } {
-	createExperimentFiles $eid
+	if { [getFromRunning "auto_execution"] } {
+	    createExperimentFiles $eid
+	}
 	createRunningVarsFile $eid
     }
 
     statline "Cleanup completed in [expr ([clock milliseconds] - $t_start)/1000.0] seconds."
 
     if { $bkp_cfg != "" } {
-	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-
-	set dict_cfg $bkp_cfg
 	setToExecuteVars "terminate_cfg" ""
     }
 

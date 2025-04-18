@@ -71,11 +71,17 @@ get_explist() {
 
 	if test $1 = "nodes"; then
 	    nodes=`jq -r '.nodes' /var/run/imunes/$exp/config.imn`
-		if test "$nodes" = "null"; then
-			data=""
-		else
-			data=`jq -r '.nodes | to_entries | map(.value.name + if .value.type == "rj45" then " (" + (.value.ifaces | to_entries | map(.value.name) | join(", ")) + ")" else "" end) | join(", ")' /var/run/imunes/$exp/config.imn`
-		fi
+	    non_running=`grep -Eo 'n[0-9]+_running false' /var/run/imunes/$exp/runningVars | cut -d'_' -f1 | jq -R . | jq -s .`
+	    if test "$nodes" = "null"; then
+		data=""
+	    else
+		data=`jq --argjson nonRunning "$non_running" -r '.nodes | to_entries | map(
+		    .key as $id |
+		    .value.name +
+		    (if $nonRunning | index($id) then "*" else "" end) +
+		    (if .value == "rj45" then " (" + (.value.ifaces | to_entries | map(.value.name) | join(", ")) + ")" else "" end)
+		) | join(", ")' /var/run/imunes/$exp/config.imn`
+	    fi
 	else
 	    if test -r /var/run/imunes/$exp/name; then
 		exp_name=`cat /var/run/imunes/$exp/name`
