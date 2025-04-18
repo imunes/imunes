@@ -195,6 +195,16 @@ proc paste {} {
 	    if { $cutNodes == 0 } {
 		autoMACaddr $new_node_id $iface_id
 	    }
+
+	    set addrs4 [getIfcIPv4addrs $new_node_id $iface_id]
+	    if { $addrs4 != "" } {
+		lappendToRunning "ipv4_used_list" [getIfcIPv4addrs $new_node_id $iface_id]
+	    }
+
+	    set addrs6 [getIfcIPv6addrs $new_node_id $iface_id]
+	    if { $addrs6 != "" } {
+		lappendToRunning "ipv6_used_list" [getIfcIPv6addrs $new_node_id $iface_id]
+	    }
 	}
 
 	set nodecoords [getNodeCoords $new_node_id]
@@ -231,10 +241,17 @@ proc paste {} {
     updateCustomIconReferences
 
     if { $cutNodes == 0 } {
-	set copypaste_nodes 1
-	changeAddressRange
-	set copypaste_nodes 1
-	changeAddressRange6
+	global IPv4autoAssign IPv6autoAssign
+
+	if { $IPv4autoAssign } {
+	    set copypaste_nodes 1
+	    changeAddressRange
+	}
+
+	if { $IPv6autoAssign } {
+	    set copypaste_nodes 1
+	    changeAddressRange6
+	}
     }
     set cutNodes 0
 
