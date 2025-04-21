@@ -234,6 +234,11 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 
 	    return
 	}
+    } else {
+	if { $terminate_cfg != "" && $terminate_cfg != [cfgGet] } {
+	    setToExecuteVars "terminate_nodes" [dict keys [_cfgGet $terminate_cfg "nodes"]]
+	    setToExecuteVars "terminate_links" [dict keys [_cfgGet $terminate_cfg "links"]]
+	}
     }
 
     foreach var "terminate_nodes destroy_nodes_ifaces terminate_links

@@ -786,7 +786,6 @@ proc setOperMode { new_oper_mode } {
 
 	    set eid [getFromRunning "eid"]
 	    if { $regular_termination } {
-		setToExecuteVars "terminate_cfg" [cfgGet]
 		setToExecuteVars "terminate_nodes" [getFromRunning "node_list"]
 		setToExecuteVars "destroy_nodes_ifaces" "*"
 		setToExecuteVars "terminate_links" [getFromRunning "link_list"]
@@ -803,6 +802,7 @@ proc setOperMode { new_oper_mode } {
 	    killExtProcess "socat.*$eid"
 	    pipesClose
 
+	    setToExecuteVars "terminate_cfg" [cfgGet]
 	    setToRunning "cfg_deployed" false
 
 	    wm protocol . WM_DELETE_WINDOW {

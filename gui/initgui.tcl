@@ -867,10 +867,14 @@ menu .menubar.experiment -tearoff 0
 .menubar.experiment add command -label "Pause execution" -underline 0 \
 	-command {
 	    set auto_execution [getFromRunning "auto_execution"]
+
 	    setToRunning "auto_execution" [expr $auto_execution ^ 1]
 	    if { [getFromRunning "cfg_deployed"] && ! $auto_execution } {
+		# when going from non-auto to auto execution, trigger (un)deployCfg
 		undeployCfg
 		deployCfg
+	    } else {
+		setToExecuteVars "terminate_cfg" [cfgGet]
 	    }
 
 	    toggleAutoExecutionGUI
