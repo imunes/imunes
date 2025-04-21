@@ -772,8 +772,10 @@ proc setOperMode { new_oper_mode } {
 	.bottom.experiment_id configure -text "Experiment ID = [getFromRunning "eid"]"
 	if { [getFromRunning "auto_execution"] } {
 	    set oper_mode_text "exec mode"
+	    set oper_mode_color "black"
 	} else {
 	    set oper_mode_text "paused"
+	    set oper_mode_color "red"
 	}
     } else {
 	if { [getFromRunning "oper_mode"] != "edit" } {
@@ -838,9 +840,11 @@ proc setOperMode { new_oper_mode } {
 	setToRunning "oper_mode" "edit"
 	.bottom.experiment_id configure -text ""
 	set oper_mode_text "edit mode"
+	set oper_mode_color "black"
     }
 
     .bottom.oper_mode configure -text "$oper_mode_text"
+    .bottom.oper_mode configure -foreground $oper_mode_color
 
     catch { redrawAll }
     .panwin.f1.c config -cursor left_ptr

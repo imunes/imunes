@@ -1089,7 +1089,7 @@ bind .bottom.zoom <Double-1> "selectZoom %X %Y"
 bind .bottom.zoom <3> "selectZoomPopupMenu %X %Y"
 ttk::label .bottom.cpu_load -relief sunken -anchor e -width 9
 ttk::label .bottom.mbuf -relief sunken -anchor w -width 15
-ttk::label .bottom.oper_mode -relief sunken -anchor w -width 9
+ttk::label .bottom.oper_mode -relief sunken -anchor w -width 10
 ttk::label .bottom.experiment_id -relief sunken -anchor w -width 20
 pack .bottom.experiment_id .bottom.oper_mode .bottom.mbuf .bottom.cpu_load \
     .bottom.zoom .bottom.textbox -side right -padx 0 -fill both

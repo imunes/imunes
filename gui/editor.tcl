@@ -1189,6 +1189,7 @@ proc toggleAutoExecutionGUI { { new_value "" } } {
 	    setToExecuteVars "terminate_cfg" [cfgGet]
 	    if { [getFromRunning "cfg_deployed"] } {
 		.bottom.oper_mode configure -text "paused"
+		.bottom.oper_mode configure -foreground "red"
 	    }
 
 	    break
@@ -1201,6 +1202,7 @@ proc toggleAutoExecutionGUI { { new_value "" } } {
 	    redrawAll
 	    if { [getFromRunning "cfg_deployed"] } {
 		.bottom.oper_mode configure -text "exec mode"
+		.bottom.oper_mode configure -foreground "black"
 	    }
 
 	    break
