@@ -1186,7 +1186,6 @@ proc toggleAutoExecutionGUI { { new_value "" } } {
 	    }
 
 	    .menubar.experiment entryconfigure $index -label "Resume execution"
-	    setToExecuteVars "terminate_cfg" [cfgGet]
 	    if { [getFromRunning "cfg_deployed"] } {
 		.bottom.oper_mode configure -text "paused"
 		.bottom.oper_mode configure -foreground "red"

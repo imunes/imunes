@@ -667,7 +667,9 @@ proc deployCfg { { execute 0 } } {
     finishExecuting 1 "" $w
 
     if { ! $execute } {
-	createExperimentFiles $eid
+	if { [getFromRunning "auto_execution"] } {
+	    createExperimentFiles $eid
+	}
     }
     createRunningVarsFile $eid
 
@@ -718,6 +720,7 @@ proc execute_prepareSystem {} {
     prepareDevfs
     createExperimentContainer
     createExperimentFiles $eid
+    createRunningVarsFile $eid
 }
 
 proc execute_nodesCreate { nodes nodes_count w } {
