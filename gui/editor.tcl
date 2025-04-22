@@ -86,7 +86,7 @@ proc updateUndoLog {} {
 #   configuration. Reduces the value of undolevel.
 #****
 proc undo {} {
-    global showTree changed
+    global showTree changed nodeNamingBase
 
     set undolevel [getFromRunning "undolevel"]
     if { [getFromRunning "oper_mode"] == "edit" && $undolevel > 0 } {
@@ -103,6 +103,10 @@ proc undo {} {
 
 	if { $showTree } {
 	    refreshTopologyTree
+	}
+
+	foreach node_type [array names nodeNamingBase] {
+	    recalculateNumType $node_type $nodeNamingBase($node_type)
 	}
     }
 
@@ -123,7 +127,7 @@ proc undo {} {
 #   of undolevel.
 #****
 proc redo {} {
-    global showTree changed
+    global showTree changed nodeNamingBase
 
     set undolevel [getFromRunning "undolevel"]
     set redolevel [getFromRunning "redolevel"]
@@ -144,6 +148,10 @@ proc redo {} {
 
 	if { $showTree } {
 	    refreshTopologyTree
+	}
+
+	foreach node_type [array names nodeNamingBase] {
+	    recalculateNumType $node_type $nodeNamingBase($node_type)
 	}
     }
 
@@ -1181,6 +1189,7 @@ proc toggleAutoExecutionGUI { { new_value "" } } {
 	    setToExecuteVars "terminate_cfg" [cfgGet]
 	    if { [getFromRunning "cfg_deployed"] } {
 		.bottom.oper_mode configure -text "paused"
+		.bottom.oper_mode configure -foreground "red"
 	    }
 
 	    break
@@ -1193,6 +1202,7 @@ proc toggleAutoExecutionGUI { { new_value "" } } {
 	    redrawAll
 	    if { [getFromRunning "cfg_deployed"] } {
 		.bottom.oper_mode configure -text "exec mode"
+		.bottom.oper_mode configure -foreground "black"
 	    }
 
 	    break

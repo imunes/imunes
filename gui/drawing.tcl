@@ -114,7 +114,7 @@ proc redrawAll {} {
 #   * node_id -- node id
 #****
 proc drawNode { node_id } {
-    global show_node_labels pseudo
+    global show_node_labels pseudo running_indicator_palette
 
     set type [getNodeType $node_id]
     set zoom [getFromRunning "zoom"]
@@ -125,9 +125,13 @@ proc drawNode { node_id } {
 
     set custom_icon [getCustomIcon $node_id]
     if { $custom_icon == "" } {
-	global $type
+	global $type $type\_running
 
-	.panwin.f1.c create image $x $y -image [set $type] -tags "node $node_id"
+	if { [getFromRunning "${node_id}_running"] == true } {
+	    .panwin.f1.c create image $x $y -image [set $type\_running] -tags "node $node_id"
+	} else {
+	    .panwin.f1.c create image $x $y -image [set $type] -tags "node $node_id"
+	}
     } else {
 	global icon_size
 
@@ -181,7 +185,7 @@ proc drawNode { node_id } {
     }
 
     if { [getFromRunning "${node_id}_running"] == true } {
-	set color red
+	set color [lindex $running_indicator_palette end]
     } else {
 	set color blue
     }
@@ -1436,5 +1440,48 @@ proc zoom { dir } {
 		redrawAll
 	    }
 	}
+    }
+}
+
+#****f* drawing.tcl/drawGradientCircle
+# NAME
+#   drawGradientCircle -- create an image of a gradient circle
+# SYNOPSIS
+#   drawGradientCircle $image_obj $palette $image_width $image_height
+# FUNCTION
+#   Draws a circle and fills it up with the gradient of colors from the
+#   $pallete. The result will be saved inside the $image_obj image.
+# INPUTS
+#   * image_obj -- an image created with [image create photo]
+#   * palette -- a list of colors for the gradient (center to rim) - last one is ignored
+#   * image_width -- image width
+#   * image_height -- image height
+#****
+proc drawGradientCircle { image_obj palette image_width image_height } {
+    set steps [expr [llength $palette] - 1]
+
+    # calculate radius and center
+    set cx [expr {($image_width - 1) / 2.0}]
+    set cy [expr {($image_height - 1) / 2.0}]
+    set r [expr {min($cx, $cy)}]
+
+    # clear the image
+    $image_obj put {} -to 0 0 $image_width $image_height
+
+    for { set y 0 } { $y < $image_height } { incr y } {
+        for { set x 0 } { $x < $image_width } { incr x } {
+            set dx [expr {$x - $cx}]
+            set dy [expr {$y - $cy}]
+            set dist [expr {sqrt($dx*$dx + $dy*$dy)}]
+
+            if { $dist <= $r } {
+                # normalize distance [0..1] and map to palette index
+                set norm [expr {$dist / $r}]
+                set index [expr {int($norm * ($steps - 1))}]
+                set color [lindex $palette $index]
+
+                $image_obj put $color -to $x $y
+            }
+        }
     }
 }

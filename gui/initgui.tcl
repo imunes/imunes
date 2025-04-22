@@ -1011,8 +1011,33 @@ foreach b {rectangle oval freeform text} {
     bind $mf.left.$b <Any-Leave> ".bottom.textbox config -text {}"
 }
 
+set mask_width 12
+set mask_height 12
+# define gradient steps of the circle used for running nodes (center to rim)
+# last one indicates the node label color and is ignored
+set running_indicator_palette {
+    "#1dd71f"
+    "#1dc71f"
+    "#1db71f"
+    "#1da71f"
+    "#1d971f"
+    "#1d771f"
+    "#1d971f"
+}
+
+set running_mask_image [image create photo -width $mask_width -height $mask_height]
+drawGradientCircle $running_mask_image $running_indicator_palette $mask_width $mask_height
+
 foreach b $all_modules_list {
     set $b [image create photo -file [$b.icon normal]]
+    # copy the image and overlay the mask on it
+    # this image object will be used for running nodes
+    set $b\_running [image create photo]
+    [set $b\_running] copy [set $b]
+    [set $b\_running] copy $running_mask_image -compositingrule overlay \
+	-to [expr [image width [set $b\_running]] - [image width $running_mask_image]] \
+	    [expr [image height [set $b\_running]] - [image height $running_mask_image]]
+
     set $b\_iconwidth [image width [set $b]]
     set $b\_iconheight [image height [set $b]]
 }
@@ -1089,7 +1114,7 @@ bind .bottom.zoom <Double-1> "selectZoom %X %Y"
 bind .bottom.zoom <3> "selectZoomPopupMenu %X %Y"
 ttk::label .bottom.cpu_load -relief sunken -anchor e -width 9
 ttk::label .bottom.mbuf -relief sunken -anchor w -width 15
-ttk::label .bottom.oper_mode -relief sunken -anchor w -width 9
+ttk::label .bottom.oper_mode -relief sunken -anchor w -width 10
 ttk::label .bottom.experiment_id -relief sunken -anchor w -width 20
 pack .bottom.experiment_id .bottom.oper_mode .bottom.mbuf .bottom.cpu_load \
     .bottom.zoom .bottom.textbox -side right -padx 0 -fill both
