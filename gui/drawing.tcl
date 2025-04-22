@@ -1,3 +1,38 @@
+proc refreshToolBarNodes {} {
+    global mf all_modules_list runnable_node_types
+
+    catch { destroy $mf.left.link_nodes }
+    catch { destroy $mf.left.net_nodes }
+
+    menu $mf.left.link_nodes -title "Link layer nodes"
+    menu $mf.left.net_nodes -title "Network layer nodes"
+
+    foreach node_type $all_modules_list {
+	set image [image create photo -file [$node_type.icon toolbar]]
+
+	if { [$node_type.netlayer] == "LINK" } {
+	    set frame_element "$mf.left.link_nodes"
+	} elseif { [$node_type.netlayer] == "NETWORK" } {
+	    set frame_element "$mf.left.net_nodes"
+	}
+
+	set background_color ""
+	if { $node_type ni $runnable_node_types } {
+	    global show_unsupported_nodes
+
+	    if { ! $show_unsupported_nodes } {
+		continue
+	    }
+
+	    set background_color "-background \"#bc5555\" -activebackground \"#bc5555\""
+	}
+
+	$frame_element add command -image $image -hidemargin 1 \
+	    -compound left -label [string range [$node_type.toolbarIconDescr] 8 end] \
+	    -command "setActiveTool $node_type" {*}$background_color
+    }
+}
+
 #****f* editor.tcl/redrawAll
 # NAME
 #   redrawAll -- redraw all
@@ -114,13 +149,14 @@ proc redrawAll {} {
 #   * node_id -- node id
 #****
 proc drawNode { node_id } {
-    global show_node_labels pseudo running_indicator_palette
+    global show_node_labels pseudo runnable_node_types running_indicator_palette
 
     set type [getNodeType $node_id]
     set zoom [getFromRunning "zoom"]
     lassign [lmap coord [getNodeCoords $node_id] {expr $coord * $zoom}] x y
 
     .panwin.f1.c delete -withtags "node && $node_id"
+    .panwin.f1.c delete -withtags "nodedisabled && $node_id"
     .panwin.f1.c delete -withtags "nodelabel && $node_id"
 
     set custom_icon [getCustomIcon $node_id]
@@ -129,8 +165,10 @@ proc drawNode { node_id } {
 
 	if { [getFromRunning "${node_id}_running"] == true } {
 	    .panwin.f1.c create image $x $y -image [set $type\_running] -tags "node $node_id"
+	    set image_h [image height [set $type\_running]]
 	} else {
 	    .panwin.f1.c create image $x $y -image [set $type] -tags "node $node_id"
+	    set image_h [image height [set $type]]
 	}
     } else {
 	global icon_size
@@ -148,10 +186,19 @@ proc drawNode { node_id } {
 		.panwin.f1.c create image $x $y -image [set img_$custom_icon] -tags "node $node_id"
 	    }
 	}
+
+	set image_h [image height img_$custom_icon]
     }
 
-    lassign [lmap coord [getNodeLabelCoords $node_id] {expr int($coord * $zoom)}] x y
     if { $type != "pseudo" } {
+	if { $type ni $runnable_node_types } {
+	    global defaultFontSize
+
+	    .panwin.f1.c create text $x [expr $y - int($image_h/2) - 1.3*$defaultFontSize] \
+		-fill "#ff0c0c" -text "DISABLED" -tags "nodedisabled $node_id" -justify center \
+		-font "imnDisabledFont" -state disabled
+	}
+
 	set label_str [getNodeName $node_id]
 
 	set has_empty_ifaces 0
@@ -190,6 +237,7 @@ proc drawNode { node_id } {
 	set color blue
     }
 
+    lassign [lmap coord [getNodeLabelCoords $node_id] {expr int($coord * $zoom)}] x y
     set label_elem [.panwin.f1.c create text $x $y -fill $color \
 	-text "$label_str" -tags "nodelabel $node_id" -justify center]
 

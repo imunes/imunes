@@ -218,7 +218,6 @@ menu .menubar
 .menubar add cascade -label Experiment -underline 1 -menu .menubar.experiment
 .menubar add cascade -label Help -underline 0 -menu .menubar.help
 
-
 #
 # File
 #
@@ -725,6 +724,12 @@ menu $m -tearoff 0
 
 .menubar.view add separator
 
+.menubar.view add checkbutton -label "Show Unsupported Nodes" \
+    -variable show_unsupported_nodes -underline 5 \
+    -command { refreshToolBarNodes }
+
+.menubar.view add separator
+
 .menubar.view add checkbutton -label "Show Background Image" \
     -underline 5 -variable show_background_image \
     -command { redrawAll }
@@ -965,22 +970,7 @@ foreach b {select link} {
     bind $mf.left.$b <Any-Leave> ".bottom.textbox config -text {}"
 }
 
-menu $mf.left.link_nodes -title "Link layer nodes"
-menu $mf.left.net_nodes -title "Network layer nodes"
-foreach b $all_modules_list {
-    set image [image create photo -file [$b.icon toolbar]]
-
-    if { [$b.netlayer] == "LINK" } {
-	$mf.left.link_nodes add command -image $image -hidemargin 1 \
-	    -compound left -label [string range [$b.toolbarIconDescr] 8 end] \
-	    -command "setActiveTool $b"
-    } elseif { [$b.netlayer] == "NETWORK" } {
-	$mf.left.net_nodes add command -image $image -hidemargin 1 \
-	    -compound left -label [string range [$b.toolbarIconDescr] 8 end] \
-	    -command "setActiveTool $b"
-    }
-}
-
+refreshToolBarNodes
 set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/l2.gif]
 ttk::menubutton $mf.left.link_layer -image $image -style Toolbutton \
     -menu $mf.left.link_nodes -direction right

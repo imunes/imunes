@@ -1503,10 +1503,23 @@ proc routerRoutesUncfggen { node_id } {
 # INPUTS
 #   * module -- module to add
 #****
-proc registerModule { module } {
+proc registerModule { module { supported_os "linux freebsd" } } {
     global all_modules_list
+    global isOSfreebsd isOSlinux runnable_node_types
 
-    lappend all_modules_list $module
+    if { $module ni $all_modules_list } {
+	lappend all_modules_list $module
+    }
+
+    if { $isOSfreebsd } {
+	if { "freebsd" in $supported_os && $module ni $runnable_node_types } {
+	    lappend runnable_node_types $module
+	}
+    } elseif { $isOSlinux } {
+	if { "linux" in $supported_os && $module ni $runnable_node_types } {
+	    lappend runnable_node_types $module
+	}
+    }
 }
 
 #****f* nodecfg.tcl/deregisterModule
