@@ -149,7 +149,7 @@ proc redrawAll {} {
 #   * node_id -- node id
 #****
 proc drawNode { node_id } {
-    global show_node_labels pseudo runnable_node_types running_indicator_palette
+    global show_node_labels pseudo runnable_node_types
 
     set type [getNodeType $node_id]
     set zoom [getFromRunning "zoom"]
@@ -157,19 +157,16 @@ proc drawNode { node_id } {
 
     .panwin.f1.c delete -withtags "node && $node_id"
     .panwin.f1.c delete -withtags "nodedisabled && $node_id"
+    .panwin.f1.c delete -withtags "node_running && $node_id"
     .panwin.f1.c delete -withtags "nodelabel && $node_id"
 
     set custom_icon [getCustomIcon $node_id]
     if { $custom_icon == "" } {
 	global $type $type\_running
 
-	if { [getFromRunning "${node_id}_running"] == true } {
-	    .panwin.f1.c create image $x $y -image [set $type\_running] -tags "node $node_id"
-	    set image_h [image height [set $type\_running]]
-	} else {
-	    .panwin.f1.c create image $x $y -image [set $type] -tags "node $node_id"
-	    set image_h [image height [set $type]]
-	}
+	.panwin.f1.c create image $x $y -image [set $type] -tags "node $node_id"
+	set image_w [image width [set $type]]
+	set image_h [image height [set $type]]
     } else {
 	global icon_size
 
@@ -187,6 +184,7 @@ proc drawNode { node_id } {
 	    }
 	}
 
+	set image_w [image width img_$custom_icon]
 	set image_h [image height img_$custom_icon]
     }
 
@@ -232,6 +230,13 @@ proc drawNode { node_id } {
     }
 
     if { [getFromRunning "${node_id}_running"] == true } {
+	global running_indicator_palette running_mask_image
+
+	.panwin.f1.c create image \
+	    [expr $x + $image_w/2] \
+	    [expr $y + $image_h/2] \
+	    -image $running_mask_image -tags "node_running $node_id"
+
 	set color [lindex $running_indicator_palette end]
     } else {
 	set color blue

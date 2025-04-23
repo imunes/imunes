@@ -1016,7 +1016,7 @@ set running_indicator_palette {
     "#1da71f"
     "#1d971f"
     "#1d771f"
-    "#1d971f"
+    "#1d671f"
 }
 
 set running_mask_image [image create photo -width $mask_width -height $mask_height]
@@ -1024,14 +1024,6 @@ drawGradientCircle $running_mask_image $running_indicator_palette $mask_width $m
 
 foreach b $all_modules_list {
     set $b [image create photo -file [$b.icon normal]]
-    # copy the image and overlay the mask on it
-    # this image object will be used for running nodes
-    set $b\_running [image create photo]
-    [set $b\_running] copy [set $b]
-    [set $b\_running] copy $running_mask_image -compositingrule overlay \
-	-to [expr [image width [set $b\_running]] - [image width $running_mask_image]] \
-	    [expr [image height [set $b\_running]] - [image height $running_mask_image]]
-
     set $b\_iconwidth [image width [set $b]]
     set $b\_iconheight [image height [set $b]]
 }
