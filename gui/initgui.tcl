@@ -1005,8 +1005,8 @@ foreach b {rectangle oval freeform text} {
     bind $mf.left.$b <Any-Leave> ".bottom.textbox config -text {}"
 }
 
-set mask_width 12
-set mask_height 12
+set mask_width 8
+set mask_height 8
 # define gradient steps of the circle used for running nodes (center to rim)
 # last one indicates the node label color and is ignored
 set running_indicator_palette {
@@ -1016,6 +1016,8 @@ set running_indicator_palette {
     "#1da71f"
     "#1d971f"
     "#1d771f"
+    "#1d571f"
+    "#000000"
     "#1d671f"
 }
 

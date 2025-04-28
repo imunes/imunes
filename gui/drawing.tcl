@@ -233,8 +233,8 @@ proc drawNode { node_id } {
 	global running_indicator_palette running_mask_image
 
 	.panwin.f1.c create image \
-	    [expr $x + $image_w/2] \
-	    [expr $y + $image_h/2] \
+	    [expr $x - $image_w/3] \
+	    [expr $y + $image_h/4] \
 	    -image $running_mask_image -tags "node_running $node_id"
 
 	set color [lindex $running_indicator_palette end]
