@@ -443,6 +443,8 @@ proc deployCfg { { execute 0 } } {
 
 	    return
 	}
+    } else {
+	setToExecuteVars "terminate_cfg" ""
     }
 
     prepareInstantiateVars "force"
