@@ -87,10 +87,10 @@ proc parseCmdArgs { options usage } {
 	    exit 1
 	}
 	set execMode batch
-    } else {
-	if { $params(d) } {
-	    set debug 1
-	}
+    }
+
+    if { $params(d) } {
+	set debug 1
     }
 
     if { $params(e) != "" || $params(eid) != "" } {

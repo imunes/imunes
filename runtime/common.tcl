@@ -40,8 +40,6 @@ set auto_etc_hosts 0
 set ipFastForwarding 0
 
 proc prepareInstantiateVars { { force "" } } {
-    global debug
-
     if { ! [getFromRunning "cfg_deployed"] && $force == "" } {
 	return
     }
@@ -51,15 +49,11 @@ proc prepareInstantiateVars { { force "" } } {
 
 	upvar 1 $var $var
 	set $var [getFromExecuteVars "$var"]
-	if { $debug } {
-	    puts "'[info level -1]' - '[info level 0]': $var '[set $var]'"
-	}
+	dputs "'[info level -1]' - '[info level 0]': $var '[set $var]'"
     }
 }
 
 proc prepareTerminateVars {} {
-    global debug
-
     if { ! [getFromRunning "cfg_deployed"] } {
 	return
     }
@@ -69,15 +63,11 @@ proc prepareTerminateVars {} {
 
 	upvar 1 $var $var
 	set $var [getFromExecuteVars "$var"]
-	if { $debug } {
-	    puts "'[info level -1]' - '[info level 0]': $var '[set $var]'"
-	}
+	dputs "'[info level -1]' - '[info level 0]': $var '[set $var]'"
     }
 }
 
 proc updateInstantiateVars { { force "" } } {
-    global debug
-
     if { ! [getFromRunning "cfg_deployed"] && $force == "" } {
 	return
     }
@@ -86,16 +76,12 @@ proc updateInstantiateVars { { force "" } } {
 	configure_links configure_nodes_ifaces configure_nodes" {
 
 	upvar 1 $var $var
-	if { $debug } {
-	    puts "'[info level -1]' - '[info level 0]': $var '[set $var]'"
-	}
+	dputs "'[info level -1]' - '[info level 0]': $var '[set $var]'"
 	setToExecuteVars "$var" [set $var]
     }
 }
 
 proc updateTerminateVars {} {
-    global debug
-
     if { ! [getFromRunning "cfg_deployed"] } {
 	return
     }
@@ -104,9 +90,7 @@ proc updateTerminateVars {} {
 	unconfigure_links unconfigure_nodes_ifaces unconfigure_nodes" {
 
 	upvar 1 $var $var
-	if { $debug } {
-	    puts "'[info level -1]' - '[info level 0]': $var '[set $var]'"
-	}
+	dputs "'[info level -1]' - '[info level 0]': $var '[set $var]'"
 	setToExecuteVars "$var" [set $var]
     }
 }
@@ -610,15 +594,17 @@ proc pipesCreate {} {
     set last_inst_pipe 0
 }
 
-proc pipesExecLog { line args } {
-    if { $line == "" } {
-	return
+proc pipesExec { line args } {
+    global debug
+
+    if { $debug && $line != "" } {
+	set logfile "/tmp/[getFromRunning "eid"].log"
+
+	pipesExecNoLog "printf \"RUN: \" >> $logfile ; cat >> $logfile 2>&1 <<\"IMUNESEOF\"\n$line\nIMUNESEOF" "hold"
+	pipesExecNoLog "$line >> $logfile 2>&1" "$args"
+    } else {
+	pipesExecNoLog $line {*}$args
     }
-
-    set logfile "/tmp/[getFromRunning "eid"].log"
-
-    pipesExec "printf \"RUN: \" >> $logfile ; cat >> $logfile 2>&1 <<\"IMUNESEOF\"\n$line\nIMUNESEOF" "hold"
-    pipesExec "$line >> $logfile 2>&1" "$args"
 }
 
 #****f* exec.tcl/pipesExec
@@ -632,7 +618,7 @@ proc pipesExecLog { line args } {
 #   * line -- shell command
 #   * args -- if empty, increment last pipe
 #****
-proc pipesExec { line args } {
+proc pipesExecNoLog { line args } {
     global inst_pipes last_inst_pipe
 
     set pipe $inst_pipes($last_inst_pipe)
