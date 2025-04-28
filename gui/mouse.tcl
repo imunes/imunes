@@ -2342,6 +2342,11 @@ proc matchSubnet4 { node_id iface_id } {
     autoIPv4addr $node_id $iface_id
     set IPv4autoAssign $tmp
 
+
+    if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
+	trigger_nodeReconfig $node_id
+    }
+
     undeployCfg
     deployCfg
 
@@ -2363,6 +2368,10 @@ proc matchSubnet6 { node_id iface_id } {
     set IPv6autoAssign 1
     autoIPv6addr $node_id $iface_id
     set IPv6autoAssign $tmp
+
+    if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
+	trigger_nodeReconfig $node_id
+    }
 
     undeployCfg
     deployCfg

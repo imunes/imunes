@@ -412,13 +412,18 @@ proc setIfcIPv4addrs { node_id iface_id addrs4 } {
 
     trigger_ifaceReconfig $node_id $iface_id
 
-    if { [isIfcLogical $node_id $iface_id] || [getNodeType $node_id] ni "router nat64 extnat" } {
+    set node_type [getNodeType $node_id]
+    if { [isIfcLogical $node_id $iface_id] || $node_type ni "router nat64 extnat" } {
 	return
     }
 
     lassign [getSubnetData $node_id $iface_id {} {} 0] subnet_gws subnet_data
     if { $subnet_gws == "{||}" } {
 	return
+    }
+
+    if { $node_type == "extnat" } {
+	trigger_nodeReconfig $node_id
     }
 
     set has_extnat [string match "*extnat*" $subnet_gws]
@@ -433,7 +438,7 @@ proc setIfcIPv4addrs { node_id iface_id addrs4 } {
 	    continue
 	}
 
-	if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
+	if { ! $has_extnat && $subnet_node_type in "router nat64" } {
 	    # skip routers if there is no extnats
 	    continue
 	}
