@@ -816,11 +816,11 @@ proc waitForInstantiateNodes { nodes nodes_count w } {
 	    continue
 	}
 
-	set t_last [clock milliseconds]
 	if { $nodecreate_timeout < 0 } {
 	    continue
 	}
 
+	set t_last [clock milliseconds]
 	if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $nodecreate_timeout } {
 	    lappend skip_nodes {*}$nodes_left
 	    break
@@ -982,11 +982,11 @@ proc waitForInitConf { nodes nodes_count w } {
 	    continue
 	}
 
-	set t_last [clock milliseconds]
 	if { $nodecreate_timeout < 0 } {
 	    continue
 	}
 
+	set t_last [clock milliseconds]
 	if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $nodecreate_timeout } {
 	    lappend skip_nodes {*}$nodes_left
 	    break
@@ -1276,11 +1276,11 @@ proc configureIfacesWait { nodes_ifaces nodes_count w } {
 	    continue
 	}
 
-	set t_last [clock milliseconds]
 	if { $ifacesconf_timeout < 0 } {
 	    continue
 	}
 
+	set t_last [clock milliseconds]
 	if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $ifacesconf_timeout } {
 	    set err_skip_nodesifaces $nodes_left
 	    break
@@ -1432,11 +1432,11 @@ proc waitForConfStart { nodes nodes_count w } {
 	    continue
 	}
 
-	set t_last [clock milliseconds]
 	if { $nodeconf_timeout < 0 } {
 	    continue
 	}
 
+	set t_last [clock milliseconds]
 	if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $nodeconf_timeout } {
 	    set err_skip_nodes $nodes_left
 	    break
