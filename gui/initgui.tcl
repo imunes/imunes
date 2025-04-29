@@ -1227,53 +1227,63 @@ foreach {key newtool} [list \
     "8"			"rectangle" \
     ] {
 
-    bind . $key "
-	global linklayer_activetool netlayer_activetool
-	global newnode newlink newoval newrect newtext newfree
+    bind . $key "setToolbarBindings $newtool"
+}
 
-	if { \"\$newnode\$newlink\$newoval\$newrect\$newtext\$newfree\" != \"\" } {
-	    return
+proc setToolbarBindings { newtool } {
+    global linklayer_activetool netlayer_activetool
+    global newnode newlink newoval newrect newtext newfree
+
+    if { "$newnode$newlink$newoval$newrect$newtext$newfree" != "" } {
+	return
+    }
+
+    set tool $newtool
+    if { $tool in "linklayer_activetool netlayer_activetool" } {
+	global show_unsupported_nodes all_modules_list runnable_node_types activetool
+
+	# group node types by netlayer
+	set linklayer_types {}
+	set netlayer_types {}
+	if { $show_unsupported_nodes } {
+	    set modules_list $all_modules_list
+	} else {
+	    set modules_list $runnable_node_types
+	}
+	foreach node_type $modules_list {
+	    if { [$node_type.netlayer] == "LINK" } {
+		lappend linklayer_types $node_type
+	    } elseif { [$node_type.netlayer] == "NETWORK" } {
+		lappend netlayer_types $node_type
+	    }
 	}
 
-	set tool $newtool
-	if { \$tool in \"linklayer_activetool netlayer_activetool\" } {
-	    global all_modules_list activetool
-
-	    # group node types by netlayer
-	    set linklayer_types {}
-	    set netlayer_types {}
-	    foreach node_type \$all_modules_list {
-		if { \[\$node_type.netlayer\] == \"LINK\" } {
-		    lappend linklayer_types \$node_type
-		} elseif { \[\$node_type.netlayer\] == \"NETWORK\" } {
-		    lappend netlayer_types \$node_type
-		}
-	    }
-
-	    if { \$tool == \"linklayer_activetool\" } {
-		set current_node_types \$linklayer_types
-	    } else {
-		set current_node_types \$netlayer_types
-	    }
-
-	    # currently set linklayer_activetool or netlayer_activetool
-	    set tool \[set $newtool\]
-
-	    if { \$tool == \"\" || \$activetool in \$current_node_types } {
-		# circle around the list
-		set idx \[expr \[lsearch \$current_node_types \$tool] + 1\]
-		if { \$idx >= \[llength \$current_node_types\] } {
-		    set idx 0
-		}
-		set tool \[lindex \$current_node_types \$idx\]
-	    }
-
-	    # set linklayer_activetool or netlayer_activetool to the next tool
-	    set $newtool \$tool
+	if { $tool == "linklayer_activetool" } {
+	    set current_node_types $linklayer_types
+	} else {
+	    set current_node_types $netlayer_types
 	}
 
-	setActiveTool \$tool
-    "
+	# currently set linklayer_activetool or netlayer_activetool
+	set tool [set $newtool]
+
+	if { $tool == "" || $activetool in $current_node_types } {
+	    # circle around the list
+	    set idx [expr [lsearch $current_node_types $tool] + 1]
+	    if { $idx >= [llength $current_node_types] } {
+		set idx 0
+	    }
+	    set tool [lindex $current_node_types $idx]
+	} elseif { $activetool ni $runnable_node_types } {
+	    # when we turn off unsupported nodes, but one is still selected
+	    set tool [lindex $current_node_types 0]
+	}
+
+	# set linklayer_activetool or netlayer_activetool to the next tool
+	set $newtool $tool
+    }
+
+    setActiveTool $tool
 }
 
 focus -force .
