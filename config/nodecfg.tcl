@@ -725,7 +725,11 @@ proc getDefaultRoutesConfig { node_id gws } {
 	}
 
 	if { $match4 && "0.0.0.0/0 $gateway4" ni $all_routes4 } {
-	    lappend all_routes4 "0.0.0.0/0 $gateway4"
+	    if { $route_type == "extnat" } {
+		set all_routes4 [linsert $all_routes4 0 "0.0.0.0/0 $gateway4"]
+	    } else {
+		lappend all_routes4 "0.0.0.0/0 $gateway4"
+	    }
 	}
     }
 
@@ -746,7 +750,11 @@ proc getDefaultRoutesConfig { node_id gws } {
 	}
 
 	if { $match6 && "::/0 $gateway6" ni $all_routes6 } {
-	    lappend all_routes6 "::/0 $gateway6"
+	    if { $route_type == "extnat" } {
+		set all_routes6 [linsert $all_routes6 0 "::/0 $gateway6"]
+	    } else {
+		lappend all_routes6 "::/0 $gateway6"
+	    }
 	}
     }
 
