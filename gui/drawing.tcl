@@ -449,38 +449,42 @@ proc updateIfcLabel { link_id node_id iface_id } {
 proc updateLinkLabel { link_id } {
     global show_link_labels linkJitterConfiguration
 
-    set label_str ""
-    set bwstr "[getLinkBandwidthString $link_id]"
-    set delstr [getLinkDelayString $link_id]
-    set ber [getLinkBER $link_id]
-    set loss [getLinkLoss $link_id]
-    set dup [getLinkDup $link_id]
-    set jitter [concat [getLinkJitterUpstream $link_id] [getLinkJitterDownstream $link_id]]
-    if { "$bwstr" != "" } {
-	lappend label_str $bwstr
-    }
-    if { "$delstr" != "" } {
-	lappend label_str $delstr
-    }
-    if { $jitter != "" && $linkJitterConfiguration == 1 } {
-	lappend label_str "jitter"
-    }
-    if { "$ber" != "" } {
-	lappend label_str "ber=$ber"
-    }
-    if { "$loss" != "" } {
-	lappend label_str "loss=$loss%"
-    }
-    if { "$dup" != "" } {
-	lappend label_str "dup=$dup%"
-    }
-    set str ""
+    if { [getLinkDirect $link_id ]} {
+	set str "direct"
+    } else {
+	set label_str ""
+	set bwstr "[getLinkBandwidthString $link_id]"
+	set delstr [getLinkDelayString $link_id]
+	set ber [getLinkBER $link_id]
+	set loss [getLinkLoss $link_id]
+	set dup [getLinkDup $link_id]
+	set jitter [concat [getLinkJitterUpstream $link_id] [getLinkJitterDownstream $link_id]]
+	if { "$bwstr" != "" } {
+	    lappend label_str $bwstr
+	}
+	if { "$delstr" != "" } {
+	    lappend label_str $delstr
+	}
+	if { $jitter != "" && $linkJitterConfiguration == 1 } {
+	    lappend label_str "jitter"
+	}
+	if { "$ber" != "" } {
+	    lappend label_str "ber=$ber"
+	}
+	if { "$loss" != "" } {
+	    lappend label_str "loss=$loss%"
+	}
+	if { "$dup" != "" } {
+	    lappend label_str "dup=$dup%"
+	}
 
-    foreach elem $label_str {
-	if { $str == "" } {
-	    set str "$str[set elem]"
-	} else {
-	    set str "$str\r[set elem]"
+	set str ""
+	foreach elem $label_str {
+	    if { $str == "" } {
+		set str "$str[set elem]"
+	    } else {
+		set str "$str\r[set elem]"
+	    }
 	}
     }
 

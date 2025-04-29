@@ -68,6 +68,8 @@ proc toggleDirectLink { c link_id } {
     if { $mirror_link_id != "" } {
 	setLinkDirect $mirror_link_id $new_value
     }
+
+    updateLinkLabel $link_id
 }
 
 #****f* linkcfgGUI.tcl/link.configGUI
