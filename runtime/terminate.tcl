@@ -109,7 +109,7 @@ proc terminate_linksDestroy { eid links links_count w } {
 	if { [getFromRunning "${link_id}_running"] == true } {
 	    try {
 		if { [getLinkDirect $link_id] } {
-		    destroyDirectLinkBetween $eid $node1_id $node2_id
+		    destroyDirectLinkBetween $eid $node1_id $node2_id $link_id
 		} else {
 		    destroyLinkBetween $eid $node1_id $node2_id $link_id
 		}

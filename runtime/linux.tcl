@@ -905,9 +905,36 @@ proc setNsIfcMaster { netNs iface_name master state } {
 #   * node2_id -- node id of the second node
 #   * iface1_id -- interface id on the first node
 #   * iface2_id -- interface id on the second node
+#   * link_id -- link id
 #****
-proc createDirectLinkBetween { node1_id node2_id iface1_id iface2_id } {
+proc createDirectLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
     set eid [getFromRunning "eid"]
+
+    # on Linux, there is no mechanism for rj45-rj45 direct links so we create a
+    # bridge in the default namespace
+    if { "[getNodeType $node1_id] [getNodeType $node2_id]" == "rj45 rj45" } {
+	global devfs_number
+
+	# create link bridge in the default netns
+	createNsLinkBridge "imunes_$devfs_number" $eid-$link_id
+
+	set physical_ifc1 [getIfcName $node1_id $iface1_id]
+	set vlan [getIfcVlanTag $node1_id $iface1_id]
+	if { $vlan != "" && [getIfcVlanDev $node1_id $iface1_id] != "" } {
+	    set physical_ifc1 $physical_ifc1.$vlan
+	}
+
+	set physical_ifc2 [getIfcName $node2_id $iface2_id]
+	set vlan [getIfcVlanTag $node2_id $iface2_id]
+	if { $vlan != "" && [getIfcVlanDev $node2_id $iface2_id] != "" } {
+	    set physical_ifc2 $physical_ifc2.$vlan
+	}
+
+	setNsIfcMaster "imunes_$devfs_number" $physical_ifc1 $eid-$link_id "up"
+	setNsIfcMaster "imunes_$devfs_number" $physical_ifc2 $eid-$link_id "up"
+
+	return
+    }
 
     if { "rj45" in "[getNodeType $node1_id] [getNodeType $node2_id]" } {
 	if { [getNodeType $node1_id] == "rj45" } {
@@ -1305,7 +1332,12 @@ proc killAllNodeProcesses { eid node_id } {
     pipesExec "docker exec -d $docker_id sh -c 'killall5 -9 -o 1 -o \$(pgrep -P 1)'" "hold"
 }
 
-proc destroyDirectLinkBetween { eid node1_id node2_id } {
+proc destroyDirectLinkBetween { eid node1_id node2_id link_id } {
+    if { "[getNodeType $node1_id] [getNodeType $node2_id]" == "rj45 rj45" } {
+	global devfs_number
+
+	pipesExec "ip -n imunes_$devfs_number link del $eid-$link_id" "hold"
+    }
 }
 
 proc destroyLinkBetween { eid node1_id node2_id link_id } {

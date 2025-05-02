@@ -1954,8 +1954,9 @@ proc createExperimentContainer {} {
 #   * node2_id -- node id of the second node
 #   * iface1_id -- interface id on the first node
 #   * iface2_id -- interface id on the second node
+#   * link_id -- link id
 #****
-proc createDirectLinkBetween { node1_id node2_id iface1_id iface2_id } {
+proc createDirectLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
     set eid [getFromRunning "eid"]
 
     set ngpeer1 \
@@ -2056,7 +2057,7 @@ proc configureLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
     }
 }
 
-proc destroyDirectLinkBetween { eid node1_id node2_id } {
+proc destroyDirectLinkBetween { eid node1_id node2_id link_id } {
 }
 
 #****f* freebsd.tcl/destroyLinkBetween
