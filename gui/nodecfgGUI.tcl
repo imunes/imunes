@@ -3746,9 +3746,9 @@ proc putIPsecConnectionInTree { node_id tab indicator } {
 
     set peers_node [lindex $peers_name 2]
 
-#    if { $old_conn_name != $connection_name } {
-#	set changed "yes"
-#    }
+    if { $old_conn_name != $connection_name } {
+	set changed "yes"
+    }
 
     set emptyCheckList { \
 	{connection_name "Please specify connection name!"} \
@@ -3804,20 +3804,10 @@ proc putIPsecConnectionInTree { node_id tab indicator } {
 	return
     }
 
-    if { $indicator == "add" } {
-	if { [_nodeIPsecConnExists $node_cfg $connection_name] == 1 } {
-	    tk_messageBox -message "Connection named '$connection_name' already exists" -title "Error" -icon error -type ok
+    if { ($indicator == "add" || $changed == "yes") && [_nodeIPsecConnExists $node_cfg $connection_name] == 1 } {
+	tk_messageBox -message "Connection named '$connection_name' already exists" -title "Error" -icon error -type ok
 
-	    return
-	}
-    } else {
-	if { $changed == "yes" } {
-	    if { [_nodeIPsecConnExists $node_cfg $connection_name] == 1 } {
-		tk_messageBox -message "Connection named '$connection_name' already exists" -title "Error" -icon error -type ok
-
-		return
-	    }
-	}
+	return
     }
 
     set netNegCheckList { \
@@ -4013,16 +4003,11 @@ proc putIPsecConnectionInTree { node_id tab indicator } {
         set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "auto" "add"]
     }
 
-    if { $indicator == "add" } {
-	if { [$tab.tree children {}] == "" } {
-	    set ipsec_enable 1
-	}
-        $tab.tree insert {} end -id $connection_name -text "$connection_name"
-        $tab.tree set $connection_name Peers_IP_address "$real_ip_peer"
-    } else {
-        refreshIPsecTree $node_id $tab
+    if { $indicator == "add" && [$tab.tree children {}] == "" } {
+	set ipsec_enable 1
     }
 
+    refreshIPsecTree $node_id $tab
     set old_conn_name ""
     destroy .d
 }
@@ -4056,10 +4041,11 @@ proc createIPsecGUI { node_id mainFrame connParamsLframe espOptionsLframe ikeSAL
     tk::toplevel .d
 
     try {
+	update
 	grab .d
     } on error {} {
 	catch { destroy .d }
-	return
+	return 0
     }
 
     wm title .d "$indicator IPsec connection"
