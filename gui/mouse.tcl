@@ -847,6 +847,10 @@ proc button3node { c x y } {
 	.button3menu.node_execute add command -label "Start" \
 	    -command "
 		foreach node_id \[selectedNodes\] {
+		    if { \[getNodeType \$node_id] == \"pseudo\" } {
+			continue
+		    }
+
 		    if { \[getFromRunning \${node_id}_running] != true } {
 			trigger_nodeCreate \$node_id
 		    }
@@ -856,6 +860,10 @@ proc button3node { c x y } {
 	.button3menu.node_execute add command -label "Stop" \
 	    -command "
 		foreach node_id \[selectedNodes\] {
+		    if { \[getNodeType \$node_id] == \"pseudo\" } {
+			continue
+		    }
+
 		    if { \[getFromRunning \${node_id}_running] == true } {
 			trigger_nodeDestroy \$node_id
 		    }
@@ -865,6 +873,10 @@ proc button3node { c x y } {
 	.button3menu.node_execute add command -label "Restart" \
 	    -command "
 		foreach node_id \[selectedNodes\] {
+		    if { \[getNodeType \$node_id] == \"pseudo\" } {
+			continue
+		    }
+
 		    trigger_nodeRecreate \$node_id
 		}
 		undeployCfg ; deployCfg ; redrawAll
@@ -882,6 +894,10 @@ proc button3node { c x y } {
 	.button3menu.node_config add command -label "Configure" \
 	    -command "
 		foreach node_id \[selectedNodes\] {
+		    if { \[getNodeType \$node_id] == \"pseudo\" } {
+			continue
+		    }
+
 		    if { \[getFromRunning \${node_id}_running] == true } {
 			trigger_nodeConfig \$node_id
 		    }
@@ -891,6 +907,10 @@ proc button3node { c x y } {
 	.button3menu.node_config add command -label "Unconfigure" \
 	    -command "
 		foreach node_id \[selectedNodes\] {
+		    if { \[getNodeType \$node_id] == \"pseudo\" } {
+			continue
+		    }
+
 		    if { \[getFromRunning \${node_id}_running] == true } {
 			trigger_nodeUnconfig \$node_id
 		    }
@@ -900,6 +920,10 @@ proc button3node { c x y } {
 	.button3menu.node_config add command -label "Reconfigure" \
 	    -command "
 		foreach node_id \[selectedNodes\] {
+		    if { \[getNodeType \$node_id] == \"pseudo\" } {
+			continue
+		    }
+
 		    if { \[getFromRunning \${node_id}_running] == true } {
 			trigger_nodeReconfig \$node_id
 		    }
@@ -919,6 +943,10 @@ proc button3node { c x y } {
 	.button3menu.ifaces_config add command -label "Configure" \
 	    -command "
 		foreach node_id \[selectedNodes\] {
+		    if { \[getNodeType \$node_id] == \"pseudo\" } {
+			continue
+		    }
+
 		    if { \[getFromRunning \${node_id}_running] == true } {
 			foreach iface_id \[allIfcList \$node_id\] {
 			    trigger_ifaceConfig \$node_id \$iface_id
@@ -930,6 +958,10 @@ proc button3node { c x y } {
 	.button3menu.ifaces_config add command -label "Unconfigure" \
 	    -command "
 		foreach node_id \[selectedNodes\] {
+		    if { \[getNodeType \$node_id] == \"pseudo\" } {
+			continue
+		    }
+
 		    if { \[getFromRunning \${node_id}_running] == true } {
 			foreach iface_id \[allIfcList \$node_id\] {
 			    trigger_ifaceUnconfig \$node_id \$iface_id
@@ -941,6 +973,10 @@ proc button3node { c x y } {
 	.button3menu.ifaces_config add command -label "Reconfigure" \
 	    -command "
 		foreach node_id \[selectedNodes\] {
+		    if { \[getNodeType \$node_id] == \"pseudo\" } {
+			continue
+		    }
+
 		    if { \[getFromRunning \${node_id}_running] == true } {
 			foreach iface_id \[allIfcList \$node_id\] {
 			    trigger_ifaceReconfig \$node_id \$iface_id
