@@ -58,6 +58,7 @@ proc $MODULE.confNewNode { node_id } {
     global nodeNamingBase
 
     setNodeName $node_id [getNewNodeNameType ext $nodeNamingBase(ext)]
+    setNodeNATIface $node_id "UNASSIGNED"
 }
 
 #****f* ext.tcl/ext.confNewIfc
@@ -218,7 +219,8 @@ proc $MODULE.maxLinks {} {
 #   Does nothing
 #****
 proc $MODULE.prepareSystem {} {
-    # nothing to do
+    catch { exec kldload ipfilter }
+    catch { sysctl net.inet.ip.forwarding=1 }
 }
 
 #****f* ext.tcl/ext.nodeCreate
@@ -301,11 +303,16 @@ proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
 # FUNCTION
 #   Starts a new ext. The node can be started if it is instantiated.
 #   Simulates the booting proces of a ext, by calling l3node.nodeConfigure procedure.
+#   Sets up the NAT for the given interface if assigned.
 # INPUTS
 #   * eid -- experiment id
 #   * node_id -- node id
 #****
 proc $MODULE.nodeConfigure { eid node_id } {
+    set iface_id [lindex [ifcList $node_id] 0]
+    if { "$iface_id" != "" && [getNodeNATIface $node_id] != "UNASSIGNED" } {
+        setupExtNat $eid $node_id $iface_id
+    }
 }
 
 ################################################################################
@@ -338,6 +345,10 @@ proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
 }
 
 proc $MODULE.nodeUnconfigure { eid node_id } {
+    set iface_id [lindex [ifcList $node_id] 0]
+    if { "$iface_id" != "" && [getNodeNATIface $node_id] != "UNASSIGNED" } {
+        unsetupExtNat $eid $node_id $iface_id
+    }
 }
 
 #****f* ext.tcl/ext.nodeShutdown

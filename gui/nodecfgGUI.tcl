@@ -1347,15 +1347,8 @@ proc configGUI_nodeName { wi node_id label } {
     ttk::frame $wi.name -borderwidth 6
     ttk::label $wi.name.txt -text $label
 
-    if { [_getNodeType $node_cfg] == "extnat" } {
-	ttk::combobox $wi.name.nodename -width 14 -textvariable extIfc$node_id
-	set ifcs [getExtIfcs]
-	$wi.name.nodename configure -values [concat UNASSIGNED $ifcs]
-	$wi.name.nodename set [_getNodeName $node_cfg]
-    } else {
-	ttk::entry $wi.name.nodename -width 14 -validate focus
-	$wi.name.nodename insert 0 [lindex [split [_getNodeName $node_cfg] .] 0]
-    }
+    ttk::entry $wi.name.nodename -width 14 -validate focus
+    $wi.name.nodename insert 0 [lindex [split [_getNodeName $node_cfg] .] 0]
 
     pack $wi.name.txt -side left -anchor e -expand 1 -padx 4 -pady 4
     pack $wi.name.nodename -side left -anchor w -expand 1 -padx 4 -pady 4
@@ -2390,11 +2383,11 @@ proc configGUI_ifcVlanConfig { wi node_id iface_id } {
 
 #****f* nodecfgGUI.tcl/configGUI_externalIfcs
 # NAME
-#   configGUI_externalIfcs -- configure GUI - vlan for rj45 nodes
+#   configGUI_externalIfcs -- configure GUI - interface configuration for ext nodes
 # SYNOPSIS
 #   configGUI_externalIfcs $wi $node_id
 # FUNCTION
-#   Creating module for assigning vlan to rj45 nodes.
+#   Creating module for assigning interface configuration for ext nodes.
 # INPUTS
 #   * wi -- widget
 #   * node_id -- node id
@@ -2412,6 +2405,13 @@ proc configGUI_externalIfcs { wi node_id } {
     ttk::frame $wi.if$iface_id.ipv4
     ttk::frame $wi.if$iface_id.ipv6
 
+    if { [_getNodeType $node_cfg] == "ext" } {
+        ttk::combobox $wi.if$iface_id.nat_iface -width 14 -textvariable extIfc$node_id
+        set ifcs [getExtIfcs]
+        $wi.if$iface_id.nat_iface configure -values [concat UNASSIGNED $ifcs]
+        $wi.if$iface_id.nat_iface set [_cfgGet $node_cfg "nat_iface"]
+    }
+
     ttk::label $wi.if$iface_id.labelName -text "Interface [_getIfcName $node_cfg $iface_id]"
     ttk::label $wi.if$iface_id.labelMAC -text "MAC address:" -width 11
     ttk::entry $wi.if$iface_id.mac.addr -width 24 -validate focus \
@@ -2428,16 +2428,18 @@ proc configGUI_externalIfcs { wi node_id } {
 	-validatecommand { checkIPv6Nets %P } -invalidcommand "focusAndFlash %W"
     $wi.if$iface_id.ipv6.addr insert 0 [join [_getIfcIPv6addrs $node_cfg $iface_id] ";"]
 
+    set row -1
     pack $wi.if$iface_id -expand 1 -padx 1 -pady 1
-    grid $wi.if$iface_id.labelName -in $wi.if$iface_id -columnspan 2 -row 0 -pady 4 -padx 4
-    grid $wi.if$iface_id.labelMAC -in $wi.if$iface_id -column 0 -row 1 -pady 4 -padx 4
-    grid $wi.if$iface_id.mac -in $wi.if$iface_id -column 1 -row 1 -pady 4 -padx 4
+    grid $wi.if$iface_id.labelName -in $wi.if$iface_id -columnspan 2 -row [incr row] -pady 4 -padx 4
+    grid $wi.if$iface_id.nat_iface -in $wi.if$iface_id -columnspan 2 -row [incr row] -pady 4 -padx 4
+    grid $wi.if$iface_id.labelMAC -in $wi.if$iface_id -column 0 -row [incr row] -pady 4 -padx 4
+    grid $wi.if$iface_id.mac -in $wi.if$iface_id -column 1 -row $row -pady 4 -padx 4
     grid $wi.if$iface_id.mac.addr -in $wi.if$iface_id.mac -column 0 -row 0
-    grid $wi.if$iface_id.labelIPv4 -in $wi.if$iface_id -column 0 -row 2 -pady 4 -padx 4
-    grid $wi.if$iface_id.ipv4 -in $wi.if$iface_id -column 1 -row 2 -pady 4 -padx 4
+    grid $wi.if$iface_id.labelIPv4 -in $wi.if$iface_id -column 0 -row [incr row] -pady 4 -padx 4
+    grid $wi.if$iface_id.ipv4 -in $wi.if$iface_id -column 1 -row $row -pady 4 -padx 4
     grid $wi.if$iface_id.ipv4.addr -in $wi.if$iface_id.ipv4 -column 0 -row 0
-    grid $wi.if$iface_id.labelIPv6 -in $wi.if$iface_id -column 0 -row 3 -pady 4 -padx 4
-    grid $wi.if$iface_id.ipv6 -in $wi.if$iface_id -column 1 -row 3 -pady 4 -padx 4
+    grid $wi.if$iface_id.labelIPv6 -in $wi.if$iface_id -column 0 -row [incr row] -pady 4 -padx 4
+    grid $wi.if$iface_id.ipv6 -in $wi.if$iface_id -column 1 -row $row -pady 4 -padx 4
     grid $wi.if$iface_id.ipv6.addr -in $wi.if$iface_id.ipv6 -column 0 -row 0
 }
 
@@ -2463,7 +2465,7 @@ proc configGUI_nodeNameApply { wi node_id } {
     global node_cfg
 
     set name [string trim [$wi.name.nodename get]]
-    if { [_getNodeType $node_cfg] ni "extnat rj45" && [regexp {^[A-Za-z_][0-9A-Za-z_-]*$} $name ] == 0 } {
+    if { [_getNodeType $node_cfg] ni "rj45" && [regexp {^[A-Za-z_][0-9A-Za-z_-]*$} $name ] == 0 } {
 	after idle {.dialog1.msg configure -wraplength 4i}
 	tk_dialog .dialog1 "IMUNES warning" \
 	    "Hostname should contain only letters, digits, _, and -, and should not start with - (hyphen) or number." \
@@ -2610,12 +2612,12 @@ proc configGUI_ifcQueueConfigApply { wi node_id iface_id } {
 
 #****f* nodecfgGUI.tcl/configGUI_bridgeIfcVlanConfigApply
 # NAME
-#   configGUI_bridgeIfcVlanConfigApply -- configure GUI - interface queue
+#   configGUI_bridgeIfcVlanConfigApply -- configure GUI - interface vlan
 #      configuration apply
 # SYNOPSIS
 #   configGUI_bridgeIfcVlanConfigApply $wi $node_id $iface_id
 # FUNCTION
-#   Saves changes in the module with queue configuration parameters.
+#   Saves changes in the module with vlan configuration parameters.
 # INPUTS
 #   * wi -- widget
 #   * node_id -- node id
@@ -2638,6 +2640,27 @@ proc configGUI_bridgeIfcVlanConfigApply { wi node_id iface_id } {
 	    set node_cfg [_setIfcVlanType $node_cfg $iface_id $vlan_type]
 	}
 	set changed 1
+	}
+}
+
+#****f* nodecfgGUI.tcl/configGUI_ifcNATIfaceApply
+# NAME
+#   configGUI_ifcNATIfaceApply -- configure GUI - interface NAT interface apply
+# SYNOPSIS
+#   configGUI_ifcNATIfaceApply $wi $node_id $iface_id
+# FUNCTION
+#   Saves changes in the module with NAT interface.
+# INPUTS
+#   * wi -- widget
+#   * node_id -- node id
+#   * iface_id -- interface name
+#****
+proc configGUI_ifcNATIfaceApply { wi node_id iface_id } {
+    global changed node_cfg
+    set nat_iface [string trim [$wi.if$iface_id.nat_iface get]]
+    if { [_getNodeNATIface $node_cfg] != $nat_iface } {
+        set node_cfg [_setNodeNATIface $node_cfg $nat_iface]
+        set changed 1
     }
 }
 
@@ -3277,6 +3300,7 @@ proc configGUI_externalIfcsApply { wi node_id } {
 
     set iface_id [lindex [_ifcList $node_cfg] 0]
 
+    configGUI_ifcNATIfaceApply $wi $node_id $iface_id
     configGUI_ifcMACAddressApply $wi $node_id $iface_id
     configGUI_ifcIPv4AddressApply $wi $node_id $iface_id
     configGUI_ifcIPv6AddressApply $wi $node_id $iface_id
@@ -7669,6 +7693,14 @@ proc _getNodeName { node_cfg } {
 
 proc _setNodeName { node_cfg name } {
     return [_cfgSet $node_cfg "name" $name]
+}
+
+proc _setNodeNATIface { node_cfg interface } {
+    return [_cfgSet $node_cfg "nat_iface" $interface]
+}
+
+proc _getNodeNATIface { node_cfg } {
+    return [_cfgGet $node_cfg "nat_iface"]
 }
 
 proc _getNodeType { node_cfg } {
