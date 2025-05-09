@@ -1279,7 +1279,7 @@ proc isNodeStarted { node_id } {
 
     set node_type [getNodeType $node_id]
     if { [$node_type.virtlayer] != "VIRTUALIZED" } {
-	if { $node_type in "rj45 ext extnat" } {
+	if { $node_type in "rj45 ext" } {
 	    return true
 	}
 
@@ -1337,7 +1337,7 @@ proc nodePhysIfacesCreate { node_id ifaces } {
 	set iface_name [getIfcName $node_id $iface_id]
 	set public_hook $node_id-$iface_name
 	set prefix [string trimright $iface_name "0123456789"]
-	if { $node_type in "ext extnat" } {
+	if { $node_type in "ext" } {
 	    set iface_name $node_id
 	}
 
