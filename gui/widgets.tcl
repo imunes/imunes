@@ -177,7 +177,6 @@ proc deleteAndShowPopup { c title x y } {
 proc showRoute { c node2_id } {
     upvar 0 ::showConfig showCfg
     upvar 0 ::traceRouteTime traceRouteTime
-    global activetool
 
     #Route can only be drawn in exec mode
     if { [getFromRunning "oper_mode"] != "exec" } {
@@ -317,8 +316,6 @@ proc findNode { c ipAddr } {
 #   * node2_id -- second node
 #****
 proc drawLine { c node1_id node2_id } {
-    global activetool
-
     lassign [getNodeCoords $node1_id] x1 y1
     lassign [getNodeCoords $node2_id] x2 y2
     $c create line $x1 $y1 $x2 $y2 -fill green \

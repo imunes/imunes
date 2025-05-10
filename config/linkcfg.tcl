@@ -165,14 +165,14 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 	set diff [removeFromList {*}$old_subnet1_gws {*}$new_subnet1_gws]
 	if { $diff ni "{} {||}" } {
 	    # there was a change in subnet1, go through its new nodes and attach new data
-	    set has_extnat [string match "*extnat*" $diff]
+	    set has_extnat [string match "*ext*" $diff]
 	    foreach subnet_node [dict keys $new_subnet1_data] {
 		if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
 		    continue
 		}
 
 		set subnet_node_type [getNodeType $subnet_node]
-		if { $subnet_node_type == "extnat" || [$subnet_node_type.netlayer] != "NETWORK" } {
+		if { $subnet_node_type == "ext" || [$subnet_node_type.netlayer] != "NETWORK" } {
 		    # skip extnat and L2 nodes
 		    continue
 		}
@@ -191,14 +191,14 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 	set diff [removeFromList {*}$old_subnet2_gws {*}$new_subnet2_gws]
 	if { $diff ni "{} {||}" } {
 	    # change in subnet1, go through its new nodes and attach new data
-	    set has_extnat [string match "*extnat*" $diff]
+	    set has_extnat [string match "*ext*" $diff]
 	    foreach subnet_node [dict keys $new_subnet2_data] {
 		if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
 		    continue
 		}
 
 		set subnet_node_type [getNodeType $subnet_node]
-		if { $subnet_node_type == "extnat" || [$subnet_node_type.netlayer] != "NETWORK" } {
+		if { $subnet_node_type == "ext" || [$subnet_node_type.netlayer] != "NETWORK" } {
 		    # skip extnat and L2 nodes
 		    continue
 		}

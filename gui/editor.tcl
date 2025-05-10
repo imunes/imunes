@@ -1111,49 +1111,40 @@ proc updateScreenshotPreview { pc image } {
 #   * tool -- active tool to set
 #****
 proc setActiveTool { tool } {
-    global linklayer_activetool netlayer_activetool
-    global activetool mf ROOTDIR LIBDIR
+    global activetool active_tools tool_elements
+    global all_modules_list mf ROOTDIR LIBDIR
 
-    set ungrouped "select link rectangle oval freeform text"
-    if { $activetool in $ungrouped } {
-	$mf.left.$activetool state !selected
-    } elseif { [$activetool.netlayer] == "LINK" } {
-	$mf.left.link_layer state !selected
-    } elseif { [$activetool.netlayer] == "NETWORK" } {
-	$mf.left.net_layer state !selected
-    }
+    set specific_tool [lindex [dict get $tool_elements $tool] [dict get $active_tools $tool]]
 
-    if { $tool in $ungrouped } {
-	$mf.left.$tool state selected
-    } elseif { [$tool.netlayer] == "LINK" } {
-	set linklayer_activetool $tool
-
-	set image [image create photo -file [$tool.icon toolbar]]
-	set arrowimage [image create photo -file "$ROOTDIR/$LIBDIR/icons/tiny/l2.gif"]
-	$image copy $arrowimage -from 29 30 40 40 -to 29 30 40 40 -compositingrule overlay
-	$mf.left.link_layer configure -image $image
-	$mf.left.link_layer state selected
-    } elseif { [$tool.netlayer] == "NETWORK" } {
-	set netlayer_activetool $tool
-
-	set image [image create photo -file [$tool.icon toolbar]]
-	set arrowimage [image create photo -file "$ROOTDIR/$LIBDIR/icons/tiny/l3.gif"]
-	$image copy $arrowimage -from 29 30 40 40 -to 29 30 40 40 -compositingrule overlay
-	$mf.left.net_layer configure -image $image
-	$mf.left.net_layer state selected
-    }
-
+    $mf.left.$activetool state !selected
     set activetool $tool
+    $mf.left.$activetool state selected
 
-    if { $tool in "router pc host" } {
-	set state normal
+    if { [llength [dict get $tool_elements $tool]] > 1 } {
+        set image [image create photo -file [$specific_tool.icon toolbar]]
+        # TODO: Create an arrow image programatically
+        set arrow_source "$ROOTDIR/$LIBDIR/icons/tiny/l2.gif"
+        set arrowimage [image create photo -file $arrow_source]
+        $image copy $arrowimage -from 29 30 40 40 -to 29 30 40 40 -compositingrule overlay
+        $mf.left.$tool configure -image $image
+        $mf.left.$tool state selected
+    }
+
+    if { $specific_tool in $all_modules_list } {
+        set state normal
     } else {
-	set state disabled
+        set state disabled
     }
 
     for { set i 0 } { $i <= [.menubar.t_g index last] } { incr i } {
-	.menubar.t_g entryconfigure $i -state $state
+        .menubar.t_g entryconfigure $i -state $state
     }
+}
+
+proc setActiveSpecificTool { tool specific_tool } {
+    global tool_elements active_tools
+    dict set active_tools $tool [lsearch [dict get $tool_elements $tool] $specific_tool]
+    setActiveTool $tool
 }
 
 proc launchBrowser { url } {
