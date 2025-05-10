@@ -213,7 +213,7 @@ proc openFile {} {
     setToRunning "undolevel" 0
     setToRunning "redolevel" 0
     saveToUndoLevel 0
-    setActiveTool select
+    setActiveToolGroup select
     updateProjectMenu
     setWmTitle [getFromRunning "current_file"]
 
@@ -400,7 +400,7 @@ proc closeFile {} {
 	newProject
     }
 
-    setActiveTool select
+    setActiveToolGroup select
     updateProjectMenu
     switchProject
 }

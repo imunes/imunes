@@ -259,6 +259,6 @@ proc paste {} {
     updateUndoLog
 
     redrawAll
-    setActiveTool select
+    setActiveToolGroup select
     selectNodes [concat $copypaste_list $new_annotations]
 }

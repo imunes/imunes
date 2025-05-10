@@ -1298,7 +1298,7 @@ proc button3node { c x y } {
 #   * button -- the keyboard button that is pressed.
 #****
 proc button1 { c x y button } {
-    global activetool newlink curobj changed def_router_model
+    global newlink curobj changed def_router_model
     global router pc host lanswitch frswitch rj45 hub
     global oval rectangle text freeform newtext
     global lastX lastY
@@ -1314,6 +1314,7 @@ proc button1 { c x y button } {
     set lastX $x
     set lastY $y
 
+    set active_tool [getActiveTool]
     set curobj [$c find withtag current]
     set curtype [lindex [$c gettags current] 0]
     set wasselected 0
@@ -1335,7 +1336,7 @@ proc button1 { c x y button } {
 	    $c delete -withtags selectmark
 	}
 
-	if { $activetool != "link" && ! $wasselected } {
+	if { $active_tool != "link" && ! $wasselected } {
 	    selectNode $c $curobj
 	}
     } elseif { $curtype == "selectmark" } {
@@ -1381,7 +1382,7 @@ proc button1 { c x y button } {
 		set resizemode false
 	    }
 	}
-    } elseif { $button != "ctrl" || $activetool != "select" } {
+    } elseif { $button != "ctrl" || $active_tool != "select" } {
 	foreach node_type "node text oval rectangle freeform" {
 	    $c dtag $node_type selected
 	}
@@ -1398,19 +1399,19 @@ proc button1 { c x y button } {
     }
 
     if { $object_drawable } {
-	if { $activetool ni "select link oval rectangle text freeform" } {
+	if { $active_tool ni "select link oval rectangle text freeform" } {
 	    global newnode
 
 	    # adding a new node
-	    set node_id [newNode $activetool]
+	    set node_id [newNode $active_tool]
 	    setNodeCanvas $node_id [getFromRunning "curcanvas"]
 	    setNodeCoords $node_id "[expr {$x / $zoom}] [expr {$y / $zoom}]"
 
 	    # To calculate label distance we take into account the normal icon
 	    # height
-	    global $activetool\_iconheight
+	    global $active_tool\_iconheight
 
-	    set dy [expr [set $activetool\_iconheight]/2 + 11]
+	    set dy [expr [set $active_tool\_iconheight]/2 + 11]
 	    setNodeLabelCoords $node_id "[expr {$x / $zoom}] \
 		[expr {$y / $zoom + $dy}]"
 
@@ -1423,7 +1424,7 @@ proc button1 { c x y button } {
 
 	    set newnode $node_id
 	    set changed 1
-	} elseif { $activetool == "select" \
+	} elseif { $active_tool == "select" \
 	    && $curtype != "node" && $curtype != "nodelabel" } {
 
 	    $c config -cursor cross
@@ -1434,11 +1435,11 @@ proc button1 { c x y button } {
 		$c delete $selectbox
 		set selectbox ""
 	    }
-	} elseif { $activetool == "oval" || $activetool == "rectangle" } {
+	} elseif { $active_tool == "oval" || $active_tool == "rectangle" } {
 	    $c config -cursor cross
 	    set lastX $x
 	    set lastY $y
-	} elseif { $activetool == "text" } {
+	} elseif { $active_tool == "text" } {
 	    $c config -cursor xterm
 	    set lastX $x
 	    set lastY $y
@@ -1447,14 +1448,14 @@ proc button1 { c x y button } {
 	}
     } else {
 	if { $curtype in "node nodelabel text oval rectangle freeform" } {
-	    if { $activetool == "select" && $button == "ctrl" && $wasselected } {
+	    if { $active_tool == "select" && $button == "ctrl" && $wasselected } {
 		$c config -cursor cross
 	    } else {
 		$c config -cursor fleur
 	    }
 	}
 
-	if { $activetool == "link" && $curtype == "node" } {
+	if { $active_tool == "link" && $curtype == "node" } {
 	    $c config -cursor cross
 	    set lastX [lindex [$c coords $curobj] 0]
 	    set lastY [lindex [$c coords $curobj] 1]
@@ -1483,7 +1484,7 @@ proc button1 { c x y button } {
 #   * y -- y coordinate
 #****
 proc button1-motion { c x y } {
-    global activetool newlink changed
+    global newlink changed
     global lastX lastY sizex sizey selectbox background
     global newoval newrect newtext newfree resizemode
 
@@ -1491,19 +1492,20 @@ proc button1-motion { c x y } {
     set y [$c canvasy $y]
     set curobj [$c find withtag current]
     set curtype [lindex [$c gettags current] 0]
-    if { $activetool == "link" && $newlink != "" } {
+    set active_tool [getActiveTool]
+    if { $active_tool == "link" && $newlink != "" } {
 	#creating a new link
 	$c coords $newlink $lastX $lastY $x $y
-    } elseif { $activetool == "select" && $curtype == "nodelabel" \
+    } elseif { $active_tool == "select" && $curtype == "nodelabel" \
 	&& [getNodeType [lindex [$c gettags $curobj] 1]] != "pseudo" } {
 
 	$c move $curobj [expr {$x - $lastX}] [expr {$y - $lastY}]
 	set changed 1
 	set lastX $x
 	set lastY $y
-    } elseif { $activetool == "select" && $curobj == "" && $curtype == "" } {
+    } elseif { $active_tool == "select" && $curobj == "" && $curtype == "" } {
 	return
-    } elseif { $activetool == "select" &&
+    } elseif { $active_tool == "select" &&
 	( $curobj == $selectbox || $curtype == "background" ||
 	$curtype == "grid" || ($curobj ni [$c find withtag "selected"] &&
 	$curtype != "selectmark") && [getNodeType [lindex [$c gettags $curobj] 1]] != "pseudo") } {
@@ -1530,7 +1532,7 @@ proc button1-motion { c x y } {
 	    }
 	}
     # actually we should check if curobj == bkgImage
-    } elseif { $activetool == "oval" && ( $curobj == $newoval \
+    } elseif { $active_tool == "oval" && ( $curobj == $newoval \
 	|| $curobj == $background || $curtype == "background" \
 	|| $curtype == "grid") } {
 
@@ -1544,7 +1546,7 @@ proc button1-motion { c x y } {
 	    $c coords $newoval \
 		$lastX $lastY $x $y
 	}
-    } elseif { $activetool == "rectangle" && ( $curobj == $newrect \
+    } elseif { $active_tool == "rectangle" && ( $curobj == $newrect \
 	|| $curobj == $background || $curtype == "background" \
 	|| $curtype == "oval" || $curtype == "grid") } {
 
@@ -1557,7 +1559,7 @@ proc button1-motion { c x y } {
 	} else {
 	    $c coords $newrect $lastX $lastY $x $y
 	}
-    } elseif { $activetool == "freeform" && ( $curobj == $newfree \
+    } elseif { $active_tool == "freeform" && ( $curobj == $newfree \
 	|| $curobj == $background || $curtype == "background" \
 	|| $curtype == "oval" || $curtype == "rectangle"  \
 	|| $curtype == "grid") } {
@@ -1668,7 +1670,7 @@ proc button1-motion { c x y } {
 #   * y -- y coordinate
 #****
 proc button1-release { c x y } {
-    global activetool newlink curobj grid
+    global newlink curobj grid
     global changed selectbox
     global lastX lastY sizex sizey
     global autorearrange_enabled
@@ -1685,10 +1687,10 @@ proc button1-release { c x y } {
 
     set x [$c canvasx $x]
     set y [$c canvasy $y]
-
     $c config -cursor left_ptr
+    set active_tool [getActiveTool]
     # if the link tool is active and we are creating a new link
-    if { $activetool == "link" && $newlink != "" } {
+    if { $active_tool == "link" && $newlink != "" } {
 	$c delete $newlink
 	set newlink ""
 	set destobj ""
@@ -1717,7 +1719,7 @@ proc button1-release { c x y } {
 	    undeployCfg
 	    deployCfg
 	}
-    } elseif { $activetool in "rectangle oval text freeform" } {
+    } elseif { $active_tool in "rectangle oval text freeform" } {
 	popupAnnotationDialog $c 0 "false"
     }
 
@@ -1906,7 +1908,7 @@ proc button1-release { c x y } {
 
 	if { $outofbounds } {
 	    redrawAll
-	    if { $activetool == "select" } {
+	    if { $active_tool == "select" } {
 		selectNodes $selected
 	    }
 	}
@@ -1936,7 +1938,7 @@ proc button1-release { c x y } {
 	    jumpToUndoLevel $undolevel
 	    redrawAll
 
-	    if { $activetool == "select" } {
+	    if { $active_tool == "select" } {
 		selectNodes $selected
 	    }
 
@@ -1944,7 +1946,7 @@ proc button1-release { c x y } {
 	}
 	$c dtag link need_redraw
     # $changed!=1
-    } elseif { $activetool == "select" } {
+    } elseif { $active_tool == "select" } {
 	if { $selectbox == "" } {
 	    set x1 $x
 	    set y1 $y
@@ -2121,8 +2123,6 @@ proc setDefaultIcon {} {
 #   * c -- tk canvas
 #****
 proc nodeEnter { c } {
-    global activetool
-
     set node_id [lindex [$c gettags current] 1]
     set err [catch { getNodeType $node_id } error]
     if { $err != 0 } {
@@ -2163,8 +2163,6 @@ proc nodeEnter { c } {
 #   * c -- tk canvas
 #****
 proc linkEnter { c } {
-    global activetool
-
     set link_id [lindex [$c gettags current] 1]
     if { [lsearch [getFromRunning "link_list"] $link_id] == -1 } {
 	return
@@ -2184,8 +2182,6 @@ proc linkEnter { c } {
 #   * c -- tk canvas
 #****
 proc anyLeave { c } {
-    global activetool
-
     .bottom.textbox config -text ""
 
     $c delete -withtag showCfgPopup
