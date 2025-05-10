@@ -104,9 +104,9 @@ set cursorState 0
 set clock_seconds 0
 set grid 24
 set autorearrange_enabled 0
-set activetool "select"
-set linklayer_activetool ""
-set netlayer_activetool ""
+set active_tool_group "select"
+set tool_groups [dict create]
+set active_tools [dict create]
 
 # resize Oval/Rectangle, "false" or direction: north/west/east/...
 set resizemode false
@@ -950,12 +950,13 @@ ttk::frame $mf.left
 pack $mf.left -side left -fill y
 
 foreach b {select link} {
+    addTool $b $b
 
     set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$b.gif]
 
    ttk::button $mf.left.$b \
 	-image $image -style Toolbutton \
-	-command "setActiveTool $b"
+	-command "setActiveToolGroup $b"
     pack $mf.left.$b -side top
 
     # hover status line
@@ -968,6 +969,14 @@ foreach b {select link} {
 
     bind $mf.left.$b <Any-Enter> ".bottom.textbox config -text {$msg}"
     bind $mf.left.$b <Any-Leave> ".bottom.textbox config -text {}"
+}
+
+foreach node_type $all_modules_list {
+    if { [$node_type.netlayer] == "LINK" } {
+        addTool "link_layer" $node_type
+    } elseif { [$node_type.netlayer] == "NETWORK" } {
+        addTool "net_layer" $node_type
+    }
 }
 
 refreshToolBarNodes
@@ -986,11 +995,13 @@ bind $mf.left.net_layer <Any-Leave> ".bottom.textbox config -text {}"
 pack $mf.left.net_layer
 
 foreach b {rectangle oval freeform text} {
+    addTool $b $b
+
     set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$b.gif]
 
     ttk::button $mf.left.$b \
 	-image $image -style Toolbutton \
-	-command "setActiveTool $b"
+	-command "setActiveToolGroup $b"
 
     pack $mf.left.$b -side bottom
     # hover status line
@@ -1175,7 +1186,7 @@ bind . <Down> "$mf.c yview scroll 1 units"
 bind . <Up> "$mf.c yview scroll -1 units"
 
 # Escape to Select mode
-bind . <Key-Escape> "setActiveTool select; selectNode $c none"
+bind . <Key-Escape> "setActiveToolGroup select; selectNode $c none"
 bind . <F5> "redrawAll"
 bind . <F7> {
     global showTree
@@ -1216,76 +1227,18 @@ bind . <Control-i> {
     redrawAll
 }
 
-foreach {key newtool} [list \
+foreach {key tool_group} [list \
     "1"			"select" \
     "2"			"link" \
-    "3"			"linklayer_activetool" \
-    "4"			"netlayer_activetool" \
+    "3"			"link_layer" \
+    "4"			"net_layer" \
     "5"			"text" \
     "6"			"freeform" \
     "7"			"oval" \
     "8"			"rectangle" \
     ] {
 
-    bind . $key "setToolbarBindings $newtool"
-}
-
-proc setToolbarBindings { newtool } {
-    global linklayer_activetool netlayer_activetool
-    global newnode newlink newoval newrect newtext newfree
-
-    if { "$newnode$newlink$newoval$newrect$newtext$newfree" != "" } {
-	return
-    }
-
-    set tool $newtool
-    if { $tool in "linklayer_activetool netlayer_activetool" } {
-	global show_unsupported_nodes all_modules_list runnable_node_types activetool
-
-	# group node types by netlayer
-	set linklayer_types {}
-	set netlayer_types {}
-	if { $show_unsupported_nodes } {
-	    set modules_list $all_modules_list
-	} else {
-	    set modules_list $runnable_node_types
-	}
-	foreach node_type $modules_list {
-	    if { [$node_type.netlayer] == "LINK" } {
-		lappend linklayer_types $node_type
-	    } elseif { [$node_type.netlayer] == "NETWORK" } {
-		lappend netlayer_types $node_type
-	    }
-	}
-
-	if { $tool == "linklayer_activetool" } {
-	    set current_node_types $linklayer_types
-	} else {
-	    set current_node_types $netlayer_types
-	}
-
-	# currently set linklayer_activetool or netlayer_activetool
-	set tool [set $newtool]
-
-	if { $tool == "" || $activetool in $current_node_types } {
-	    # circle around the list
-	    set idx [expr [lsearch $current_node_types $tool] + 1]
-	    if { $idx >= [llength $current_node_types] } {
-		set idx 0
-	    }
-	    set tool [lindex $current_node_types $idx]
-    } elseif { $activetool in [concat $linklayer_types $netlayer_types] &&
-               $activetool ni $runnable_node_types } {
-
-	    # when we turn off unsupported nodes, but one is still selected
-	    set tool [lindex $current_node_types 0]
-	}
-
-	# set linklayer_activetool or netlayer_activetool to the next tool
-	set $newtool $tool
-    }
-
-    setActiveTool $tool
+    bind . $key "cycleToolGroup $tool_group"
 }
 
 focus -force .

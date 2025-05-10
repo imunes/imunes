@@ -1099,61 +1099,64 @@ proc updateScreenshotPreview { pc image } {
     }
 }
 
-#****f* editor.tcl/setActiveTool
+#****f* editor.tcl/setActiveToolGroup
 # NAME
-#   setActiveTool -- set active tool
+#   setActiveToolGroup -- set active tool group
 # SYNOPSIS
-#   setActiveTool $tool
+#   setActiveToolGroup $group
 # FUNCTION
-#   Sets the active tool to $tool and enables/disables
+#   Sets the active tool group to $group and enables/disables
 #   the TopoGen submenus.
 # INPUTS
-#   * tool -- active tool to set
+#   * group -- active tool group to set
 #****
-proc setActiveTool { tool } {
-    global linklayer_activetool netlayer_activetool
-    global activetool mf ROOTDIR LIBDIR
+proc setActiveToolGroup { group } {
+    global active_tool_group active_tools tool_groups
+    global all_modules_list mf ROOTDIR LIBDIR
 
-    set ungrouped "select link rectangle oval freeform text"
-    if { $activetool in $ungrouped } {
-	$mf.left.$activetool state !selected
-    } elseif { [$activetool.netlayer] == "LINK" } {
-	$mf.left.link_layer state !selected
-    } elseif { [$activetool.netlayer] == "NETWORK" } {
-	$mf.left.net_layer state !selected
+    set tool [lindex [dict get $tool_groups $group] [dict get $active_tools $group]]
+
+    $mf.left.$active_tool_group state !selected
+    set active_tool_group $group
+    $mf.left.$active_tool_group state selected
+
+    if { [llength [dict get $tool_groups $group]] > 1 } {
+        set image [image create photo -file [$tool.icon toolbar]]
+        # TODO: Create an arrow image programatically
+        set arrow_source "$ROOTDIR/$LIBDIR/icons/tiny/l2.gif"
+        set arrow_image [image create photo -file $arrow_source]
+        $image copy $arrow_image -from 29 30 40 40 -to 29 30 40 40 -compositingrule overlay
+        $mf.left.$group configure -image $image
+        $mf.left.$group state selected
     }
 
-    if { $tool in $ungrouped } {
-	$mf.left.$tool state selected
-    } elseif { [$tool.netlayer] == "LINK" } {
-	set linklayer_activetool $tool
-
-	set image [image create photo -file [$tool.icon toolbar]]
-	set arrowimage [image create photo -file "$ROOTDIR/$LIBDIR/icons/tiny/l2.gif"]
-	$image copy $arrowimage -from 29 30 40 40 -to 29 30 40 40 -compositingrule overlay
-	$mf.left.link_layer configure -image $image
-	$mf.left.link_layer state selected
-    } elseif { [$tool.netlayer] == "NETWORK" } {
-	set netlayer_activetool $tool
-
-	set image [image create photo -file [$tool.icon toolbar]]
-	set arrowimage [image create photo -file "$ROOTDIR/$LIBDIR/icons/tiny/l3.gif"]
-	$image copy $arrowimage -from 29 30 40 40 -to 29 30 40 40 -compositingrule overlay
-	$mf.left.net_layer configure -image $image
-	$mf.left.net_layer state selected
-    }
-
-    set activetool $tool
-
-    if { $tool in "router pc host" } {
-	set state normal
+    if { $tool in $all_modules_list } {
+        set state normal
     } else {
-	set state disabled
+        set state disabled
     }
 
     for { set i 0 } { $i <= [.menubar.t_g index last] } { incr i } {
-	.menubar.t_g entryconfigure $i -state $state
+        .menubar.t_g entryconfigure $i -state $state
     }
+}
+
+#****f* editor.tcl/setActiveTool
+# NAME
+#   setActiveTool -- set active tool group
+# SYNOPSIS
+#   setActiveTool $group $tool
+# FUNCTION
+#   Sets the active tool group to $group and active tool to $tool.
+# INPUTS
+#   * group -- active tool group to set
+#   * tool -- active tool to set
+#****
+proc setActiveTool { group tool } {
+    global tool_groups active_tools
+
+    dict set active_tools $group [lsearch [dict get $tool_groups $group] $tool]
+    setActiveToolGroup $group
 }
 
 proc launchBrowser { url } {
@@ -1207,4 +1210,85 @@ proc toggleAutoExecutionGUI { { new_value "" } } {
 	    break
 	}
     }
+}
+
+#****f* editor.tcl/cycleToolGroup
+# NAME
+#   cycleToolGroup -- bind
+# SYNOPSIS
+#   cycleToolGroup $group
+# FUNCTION
+#   Sets the active tool group to $group.
+#   If the active tool group already was set to $group
+#   it will cycle through tools withing the group.
+# INPUTS
+#   * group -- tool group to which should be activated
+#****
+proc cycleToolGroup { group } {
+    global active_tool_group active_tools tool_groups runnable_node_types show_unsupported_nodes
+    global newnode newlink newoval newrect newtext newfree
+
+    if { "$newnode$newlink$newoval$newrect$newtext$newfree" != "" } {
+        return
+    }
+
+    set tools [dict get $tool_groups $group]
+    if { [llength $tools] == 0 } {
+        return
+    }
+
+    if { $active_tool_group == $group && [llength [dict get $tool_groups $group]] > 1} {
+        set tool_count [llength [dict get $tool_groups $active_tool_group]]
+        set start_index [dict get $active_tools $active_tool_group]
+        set index [expr ($start_index + 1) % $tool_count]
+        if { ! $show_unsupported_nodes } {
+            while { [lindex $tools $index] ni $runnable_node_types } {
+                set index [expr ($index + 1) % $tool_count]
+                if { $index == $start_index } {
+                    break
+                }
+            }
+        }
+        dict set active_tools $group $index
+    }
+
+    setActiveToolGroup $group
+}
+
+#****f* editor.tcl/getActiveTool
+# NAME
+#   getActiveTool -- get active tool
+# SYNOPSIS
+#   getActiveTool
+# FUNCTION
+#   Returns the currently active tool.
+#****
+proc getActiveTool {} {
+    global active_tool_group tool_groups active_tools
+
+    return [lindex [dict get $tool_groups $active_tool_group] [dict get $active_tools $active_tool_group]]
+}
+
+#****f* editor.tcl/addTool
+# NAME
+#   addTool -- add tool to a tool group
+# SYNOPSIS
+#   addTool $group $tool
+# FUNCTION
+#   Adds a tool $tool to a tool group $group.
+# INPUTS
+#   * group -- tool group to which to add to
+#   * tool -- tool which to add
+#****
+proc addTool { group tool } {
+    global active_tools tool_groups
+
+    try {
+        set old_tools [dict get $tool_groups $group]
+    } on error {} {
+        set old_tools {}
+        dict set active_tools $group 0
+    }
+
+    dict set tool_groups $group [lappend old_tools {*}$tool]
 }
