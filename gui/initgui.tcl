@@ -1274,7 +1274,9 @@ proc setToolbarBindings { newtool } {
 		set idx 0
 	    }
 	    set tool [lindex $current_node_types $idx]
-	} elseif { $activetool ni $runnable_node_types } {
+    } elseif { $activetool in [concat $linklayer_types $netlayer_types] &&
+               $activetool ni $runnable_node_types } {
+
 	    # when we turn off unsupported nodes, but one is still selected
 	    set tool [lindex $current_node_types 0]
 	}
