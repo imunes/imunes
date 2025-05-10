@@ -105,8 +105,43 @@ set clock_seconds 0
 set grid 24
 set autorearrange_enabled 0
 set activetool "select"
-set linklayer_activetool ""
-set netlayer_activetool ""
+set tools_icons [dict create]
+set active_tools [dict create]
+set tool_elements [dict create]
+
+proc getActiveSpecificTool {} {
+    global activetool tool_elements active_tools
+
+    return [lindex [dict get $tool_elements $activetool] [dict get $active_tools $activetool]]
+}
+
+proc addToolElement { tool option } {
+    global active_tools tool_elements
+
+    try {
+        set old_elements [dict get $tool_elements $tool]
+    } on error {} {
+        set old_elements {}
+        dict set active_tools $tool 0
+    }
+
+    set elements [lappend old_elements {*}$option]
+    dict set tool_elements $tool $elements
+}
+
+addToolElement "select" "select"
+addToolElement "link" "link"
+foreach node_type $all_modules_list {
+    if { [$node_type.netlayer] == "LINK" } {
+        addToolElement "link_layer" $node_type
+    } elseif { [$node_type.netlayer] == "NETWORK" } {
+        addToolElement "net_layer" $node_type
+    }
+}
+addToolElement "text" "text"
+addToolElement "freeform" "freeform"
+addToolElement "oval" "oval"
+addToolElement "rectangle" "rectangle"
 
 # resize Oval/Rectangle, "false" or direction: north/west/east/...
 set resizemode false
@@ -1219,8 +1254,8 @@ bind . <Control-i> {
 foreach {key newtool} [list \
     "1"			"select" \
     "2"			"link" \
-    "3"			"linklayer_activetool" \
-    "4"			"netlayer_activetool" \
+    "3"			"link_layer" \
+    "4"			"net_layer" \
     "5"			"text" \
     "6"			"freeform" \
     "7"			"oval" \
@@ -1231,61 +1266,31 @@ foreach {key newtool} [list \
 }
 
 proc setToolbarBindings { newtool } {
-    global linklayer_activetool netlayer_activetool
+    global activetool active_tools tool_elements runnable_node_types show_unsupported_nodes
     global newnode newlink newoval newrect newtext newfree
 
     if { "$newnode$newlink$newoval$newrect$newtext$newfree" != "" } {
-	return
+        return
     }
 
-    set tool $newtool
-    if { $tool in "linklayer_activetool netlayer_activetool" } {
-	global show_unsupported_nodes all_modules_list runnable_node_types activetool
-
-	# group node types by netlayer
-	set linklayer_types {}
-	set netlayer_types {}
-	if { $show_unsupported_nodes } {
-	    set modules_list $all_modules_list
-	} else {
-	    set modules_list $runnable_node_types
-	}
-	foreach node_type $modules_list {
-	    if { [$node_type.netlayer] == "LINK" } {
-		lappend linklayer_types $node_type
-	    } elseif { [$node_type.netlayer] == "NETWORK" } {
-		lappend netlayer_types $node_type
-	    }
-	}
-
-	if { $tool == "linklayer_activetool" } {
-	    set current_node_types $linklayer_types
-	} else {
-	    set current_node_types $netlayer_types
-	}
-
-	# currently set linklayer_activetool or netlayer_activetool
-	set tool [set $newtool]
-
-	if { $tool == "" || $activetool in $current_node_types } {
-	    # circle around the list
-	    set idx [expr [lsearch $current_node_types $tool] + 1]
-	    if { $idx >= [llength $current_node_types] } {
-		set idx 0
-	    }
-	    set tool [lindex $current_node_types $idx]
-    } elseif { $activetool in [concat $linklayer_types $netlayer_types] &&
-               $activetool ni $runnable_node_types } {
-
-	    # when we turn off unsupported nodes, but one is still selected
-	    set tool [lindex $current_node_types 0]
-	}
-
-	# set linklayer_activetool or netlayer_activetool to the next tool
-	set $newtool $tool
+    set elements [dict get $tool_elements $newtool]
+    if { [llength $elements] == 0 } {
+        return
     }
 
-    setActiveTool $tool
+    if { $activetool == $newtool && [llength [dict get $tool_elements $newtool]] > 1} {
+        set element_count [llength [dict get $tool_elements $activetool]]
+        set index [dict get $active_tools $activetool]
+        set index [expr ($index + 1) % $element_count]
+        if { ! $show_unsupported_nodes } {
+            while { [lindex $elements $index] ni $runnable_node_types } {
+                set index [expr ($index + 1) % $element_count]
+            }
+        }
+        dict set active_tools $newtool $index
+    }
+
+    setActiveTool $newtool
 }
 
 focus -force .
