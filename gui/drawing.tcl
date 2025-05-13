@@ -10,10 +10,11 @@ proc refreshToolBarNodes {} {
     foreach node_type $all_modules_list {
 	set image [image create photo -file [$node_type.icon toolbar]]
 
+        set tool ""
 	if { [$node_type.netlayer] == "LINK" } {
-	    set frame_element "$mf.left.link_nodes"
+            set tool "link"
 	} elseif { [$node_type.netlayer] == "NETWORK" } {
-	    set frame_element "$mf.left.net_nodes"
+            set tool "net"
 	}
 
 	set background_color ""
@@ -27,9 +28,9 @@ proc refreshToolBarNodes {} {
 	    set background_color "-background \"#bc5555\" -activebackground \"#bc5555\""
 	}
 
-	$frame_element add command -image $image -hidemargin 1 \
+    $mf.left.${tool}_nodes add command -image $image -hidemargin 1 \
 	    -compound left -label [string range [$node_type.toolbarIconDescr] 8 end] \
-	    -command "setActiveTool $node_type" {*}$background_color
+	    -command "setActiveTool ${tool}_layer $node_type" {*}$background_color
     }
 }
 

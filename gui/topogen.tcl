@@ -115,21 +115,22 @@ for { set i 3 } { $i <= 24 } { incr i } {
 #   * new_nodes -- created nodes
 #****
 proc newNodes { node_num } {
-    global grid sizex sizey activetool
+    global grid sizex sizey
 
+    set active_tool [getActiveTool]
     set new_nodes {}
     set r [expr {($node_num - 1) * (1 + 4 / $node_num) * $grid / 2}]
     set x0 [expr {$sizex / 2}]
     set y0 [expr {$sizey / 2}]
     set twopidivn [expr {acos(0) * 4 / $node_num}]
-    if { $activetool == "router" } {
+    if { $active_tool == "router" } {
 	set dy 24
     } else {
 	set dy 32
     }
 
     for { set i 0 } { $i < $node_num } { incr i } {
-	set new_node_id [newNode $activetool]
+	set new_node_id [newNode $active_tool]
 	set x [expr {$x0 + $r * cos($twopidivn * $i)}]
 	set y [expr {$y0 - $r * sin($twopidivn * $i)}]
 

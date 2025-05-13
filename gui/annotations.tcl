@@ -48,10 +48,8 @@
 #   * modify -- modify existing or newly created
 #****
 proc popupAnnotationDialog { c target modify } {
-    global activetool
-
     set other_annotation_types "Oval Rect Text Free"
-    switch $activetool {
+    switch [getActiveTool] {
 	oval {
 	    popupOvalDialog $c $target $modify
 	    set other_annotation_types [removeFromList $other_annotation_types "Oval"]
