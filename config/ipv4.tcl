@@ -293,7 +293,7 @@ proc autoIPv4addr { node_id iface_id { use_autorenumbered "" } } {
 		    if { $use_autorenumbered == "" || "$new_peer_id $new_peer_iface_id" in $autorenumbered_ifcs } {
 			if { ! $has_extnat } {
 			    set new_peer_type [getNodeType $new_peer_id]
-			    if { $new_peer_type == "extnat" } {
+			    if { $new_peer_type == "ext" && [getNodeNATIface $new_peer_id] != "UNASSIGNED" } {
 				set has_extnat 1
 				set best_choice_ip [lindex $new_peer_ip4addrs 0]
 			    } elseif { ! $has_router && $new_peer_type in "router nat64" } {
