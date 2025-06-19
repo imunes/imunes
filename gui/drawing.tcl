@@ -199,6 +199,12 @@ proc drawNode { node_id } {
 	}
 
 	set label_str [getNodeName $node_id]
+	if { [getNodeType $node_id] == "ext" } {
+		set nat_iface [getNodeNATIface $node_id]
+		if { $nat_iface != "UNASSIGNED" } {
+			set label_str "NAT-$nat_iface"
+		}
+	}
 
 	set has_empty_ifaces 0
 	foreach iface_id [ifcList $node_id] {

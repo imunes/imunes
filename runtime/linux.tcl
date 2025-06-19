@@ -455,7 +455,7 @@ proc getNodeNetns { eid node_id } {
     }
 
     # Global netns
-    if { [getNodeType $node_id] in "ext extnat" } {
+    if { [getNodeType $node_id] == "ext" } {
 	return ""
     }
 
@@ -594,7 +594,7 @@ proc isNodeStarted { node_id } {
 
     set node_type [getNodeType $node_id]
     if { [$node_type.virtlayer] != "VIRTUALIZED" } {
-	if { $node_type in "rj45 ext extnat" } {
+	if { $node_type in "rj45 ext" } {
 	    return true
 	}
 
@@ -665,7 +665,7 @@ proc nodePhysIfacesCreate { node_id ifaces } {
 	set iface_name [getIfcName $node_id $iface_id]
 	set public_hook $node_id-$iface_name
 	set prefix [string trimright $iface_name "0123456789"]
-	if { $node_type in "ext extnat" } {
+	if { $node_type == "ext" } {
 	    set iface_name $node_id
 	}
 
@@ -992,13 +992,13 @@ proc createDirectLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 	return
     }
 
-    if { [getNodeType $node1_id] in "ext extnat" } {
+    if { [getNodeType $node1_id] == "ext" } {
 	set iface1_name $node1_id
     } else {
 	set iface1_name [getIfcName $node1_id $iface1_id]
     }
 
-    if { [getNodeType $node2_id] in "ext extnat" } {
+    if { [getNodeType $node2_id] == "ext" } {
 	set iface2_name $node2_id
     } else {
 	set iface2_name [getIfcName $node2_id $iface2_id]
@@ -1010,7 +1010,7 @@ proc createDirectLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 
     # add nodes iface hooks to link bridge and bring them up
     foreach node_id [list $node1_id $node2_id] iface_name [list $iface1_name $iface2_name] ns [list $node1Ns $node2Ns] {
-	if { [[getNodeType $node_id].virtlayer] != "NATIVE" || [getNodeType $node_id] in "ext extnat" } {
+	if { [[getNodeType $node_id].virtlayer] != "NATIVE" || [getNodeType $node_id] == "ext" } {
 	    continue
 	}
 
@@ -1358,7 +1358,7 @@ proc destroyLinkBetween { eid node1_id node2_id link_id } {
 #****
 proc nodeIfacesDestroy { eid node_id ifaces } {
     set node_type [getNodeType $node_id]
-    if { $node_type in "ext extnat" } {
+    if { $node_type == "ext" } {
 	foreach iface_id $ifaces {
 	    set link_id [getIfcLink $node_id $iface_id]
 	    if { $link_id != "" && [getLinkDirect $link_id] } {
@@ -2168,7 +2168,7 @@ proc stopExternalConnection { eid node_id } {
 }
 
 proc setupExtNat { eid node_id ifc } {
-    set extIfc [getNodeName $node_id]
+    set extIfc [getNodeNATIface $node_id]
     if { $extIfc == "UNASSIGNED" } {
 	return
     }
@@ -2188,7 +2188,7 @@ proc setupExtNat { eid node_id ifc } {
 }
 
 proc unsetupExtNat { eid node_id ifc } {
-    set extIfc [getNodeName $node_id]
+    set extIfc [getNodeNATIface $node_id]
     if { $extIfc == "UNASSIGNED" } {
 	return
     }
