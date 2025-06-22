@@ -21,7 +21,7 @@ pipeline {
 		string(name: 'FREEBSD_JOBS', defaultValue: '8', description: 'FreeBSD parallel jobs')
 		string(name: 'LINUX_TESTS', defaultValue: '', description: 'Linux tests')
 		string(name: 'LINUX_JOBS', defaultValue: '4', description: 'Linux parallel jobs')
-		string(name: 'TARGETS', defaultValue: 'arch,freebsd-14.2', description: 'Comma-separated list of target agents')
+		string(name: 'TARGETS', defaultValue: 'arch,freebsd-14.3', description: 'Comma-separated list of target agents')
 		choice(name: 'PLATFORM', choices: ['both', 'freebsd', 'linux'], description: 'Target platform(s) to run tests')
 	}
 
