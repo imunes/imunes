@@ -139,7 +139,7 @@ uninstall:
 	for file in imunes $(notdir $(TOOLS)); do \
 		rm -f $(BINDIR)/$${file}; \
 	done ;
-	rm -rf $(SERVICEDIR)/imunes-service.sh
+	rm -rf $(SERVICEDIR)/imunes
 	@echo 	"To remove startup topologies, remove $(STARTUPDIR)"
 
 netgraph:
@@ -176,8 +176,8 @@ endif
 
 service:
 ifeq ($(UNAME_S), FreeBSD)
-	cp scripts/imunes-service.sh $(SERVICEDIR)
-	chmod 755 $(SERVICEDIR)/imunes-service.sh
+	cp scripts/imunes $(SERVICEDIR)
+	chmod 755 $(SERVICEDIR)/imunes
 	mkdir -p $(STARTUPDIR)
 	@echo	""
 	@echo   "Created directory $(STARTUPDIR)"
@@ -186,9 +186,9 @@ endif
 
 noservice:
 ifeq ($(UNAME_S), FreeBSD)
-	rm -rf $(SERVICEDIR)/imunes-service.sh
+	rm -rf $(SERVICEDIR)/imunes
 	@echo	""
-	@echo   "Removed $(SERVICEDIR)/imunes-service.sh"
+	@echo   "Removed $(SERVICEDIR)/imunes"
 	@echo 	"To remove startup topologies, remove $(STARTUPDIR)"
 endif
 
