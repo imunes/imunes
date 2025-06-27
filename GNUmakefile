@@ -176,7 +176,7 @@ endif
 
 service:
 ifeq ($(UNAME_S), FreeBSD)
-	cp scripts/imunes $(SERVICEDIR)
+	cp scripts/imunes_service.sh $(SERVICEDIR)/imunes
 	chmod 755 $(SERVICEDIR)/imunes
 	mkdir -p $(STARTUPDIR)
 	@echo	""
