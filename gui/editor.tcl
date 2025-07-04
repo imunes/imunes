@@ -1188,7 +1188,7 @@ proc toggleAutoExecutionGUI { { new_value "" } } {
 		break
 	    }
 
-	    .menubar.experiment entryconfigure $index -label "Resume execution"
+	    .menubar.experiment entryconfigure $index -label "Resume execution" -underline 3
 	    if { [getFromRunning "cfg_deployed"] } {
 		.bottom.oper_mode configure -text "paused"
 		.bottom.oper_mode configure -foreground "red"
@@ -1200,7 +1200,7 @@ proc toggleAutoExecutionGUI { { new_value "" } } {
 		break
 	    }
 
-	    .menubar.experiment entryconfigure $index -label "Pause execution"
+	    .menubar.experiment entryconfigure $index -label "Pause execution" -underline 2
 	    redrawAll
 	    if { [getFromRunning "cfg_deployed"] } {
 		.bottom.oper_mode configure -text "exec mode"

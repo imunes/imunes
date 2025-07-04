@@ -869,7 +869,7 @@ menu .menubar.experiment -tearoff 0
 .menubar.experiment add command -label "Restart" -underline 0 \
 	-command "setOperMode edit; setOperMode exec" -state disabled
 .menubar.experiment add separator
-.menubar.experiment add command -label "Pause execution" -underline 0 \
+.menubar.experiment add command -label "Pause execution" -underline 2 \
 	-command {
 	    set auto_execution [getFromRunning "auto_execution"]
 
