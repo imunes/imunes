@@ -224,7 +224,7 @@ proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
     set vlan_ifaces {}
     set nonvlan_ifaces {}
     foreach iface_id $ifaces {
-	if { [getIfcVlanDev $node_id $iface_id] != "" } {
+	if { [getIfcVlanTag $node_id $iface_id] != "" && [getIfcVlanDev $node_id $iface_id] != "" } {
 	    lappend vlan_ifaces $iface_id
 	} else {
 	    lappend nonvlan_ifaces $iface_id

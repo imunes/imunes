@@ -2859,10 +2859,6 @@ proc configGUI_addRj45PanedWinApply { iface_id } {
     set oldTag [_getIfcVlanTag $node_cfg $iface_id]
     if { $tag != $oldTag } {
 	set node_cfg [_setIfcVlanTag $node_cfg $iface_id $tag]
-	if { $tag == "" } {
-	    set node_cfg [_setIfcVlanDev $node_cfg $iface_id ""]
-	    $wi.vlancfg.tag configure -state disabled
-	}
 	set changed 1
     }
 

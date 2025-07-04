@@ -2238,8 +2238,8 @@ proc captureExtIfc { eid node_id iface_id } {
     global execMode
 
     set ifname [getIfcName $node_id $iface_id]
-    if { [getIfcVlanDev $node_id $iface_id] != "" } {
-	set vlan [getIfcVlanTag $node_id $iface_id]
+    set vlan [getIfcVlanTag $node_id $iface_id]
+    if { $vlan != "" && [getIfcVlanDev $node_id $iface_id] != "" } {
 	try {
 	    exec ifconfig $ifname.$vlan create
 	} on error err {

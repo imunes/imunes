@@ -1483,8 +1483,8 @@ proc captureExtIfc { eid node_id iface_id } {
     global execMode
 
     set iface_name [getIfcName $node_id $iface_id]
-    if { [getIfcVlanDev $node_id $iface_id] != "" } {
-	set vlan [getIfcVlanTag $node_id $iface_id]
+    set vlan [getIfcVlanTag $node_id $iface_id]
+    if { $vlan != "" && [getIfcVlanDev $node_id $iface_id] != "" } {
 	try {
 	    exec ip link set $iface_name up
 	    exec ip link add link $iface_name name $iface_name.$vlan type vlan id $vlan
