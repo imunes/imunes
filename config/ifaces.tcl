@@ -981,11 +981,16 @@ proc setIfcVlanTag { node_id iface_id tag } {
     if { [getNodeType $node_id] == "rj45" } {
 	trigger_nodeRecreate $node_id
     } elseif { [getNodeType $node_id] == "lanswitch" } {
-	# TODO: check
-	trigger_ifaceReconfig $node_id $iface_id
-	set link_id [getIfcLink $node_id $iface_id]
-	if { $link_id != "" } {
-	    trigger_linkRecreate $link_id
+	foreach other_iface_id [ifcList $node_id] {
+	    if { $iface_id != $other_iface_id && [getIfcVlanType $node_id $other_iface_id] != "trunk" } {
+		continue
+	    }
+
+	    trigger_ifaceReconfig $node_id $other_iface_id
+	    set link_id [getIfcLink $node_id $other_iface_id]
+	    if { $link_id != "" } {
+		trigger_linkRecreate $link_id
+	    }
 	}
     }
 }
@@ -1178,6 +1183,12 @@ proc removeIface { node_id iface_id } {
 		if { [getFilterIfcActionData $node_id $other_iface_id $rule_num] == $iface_name } {
 		    removeFilterIfcRule $node_id $other_iface_id $rule_num
 		}
+	    }
+	}
+    } elseif { $node_type in "lanswitch" && [getNodeVlanFiltering $node_id] } {
+	foreach other_iface_id [ifcList $node_id] {
+	    if { $iface_id != $other_iface_id && [getIfcVlanType $node_id $other_iface_id] == "trunk" } {
+		trigger_ifaceReconfig $node_id $other_iface_id
 	    }
 	}
     }
