@@ -2215,6 +2215,8 @@ proc startRoutingDaemons { node_id } {
 
     foreach protocol { rip ripng ospf ospf6 } {
 	if { [getNodeProtocol $node_id $protocol] != 1 } {
+	    # TODO: startRoutingDaemons should be unconfigurable - additional execute/terminate step
+	    #set cmds "$cmds; sed -i'' \"s/${protocol}d=yes/${protocol}d=no/\" $conf_dir/daemons"
 	    continue
 	}
 
@@ -2223,6 +2225,8 @@ proc startRoutingDaemons { node_id } {
 
     foreach protocol { ldp bfd } {
 	if { [getNodeProtocol $node_id $protocol] != 1 } {
+	    # TODO: startRoutingDaemons should be unconfigurable - additional execute/terminate step
+	    #set cmds "$cmds; sed -i'' \"s/${protocol}d=yes/${protocol}d=no/\" $conf_dir/daemons"
 	    continue
 	}
 
@@ -2231,14 +2235,15 @@ proc startRoutingDaemons { node_id } {
 
     foreach protocol { bgp isis } {
 	if { [getNodeProtocol $node_id $protocol] != 1 } {
+	    # TODO: startRoutingDaemons should be unconfigurable - additional execute/terminate step
+	    #set cmds "$cmds; sed -i'' \"s/${protocol}d=yes/${protocol}d=no/\" $conf_dir/daemons"
 	    continue
 	}
 
 	set cmds "$cmds; sed -i'' \"s/${protocol}d=no/${protocol}d=yes/\" $conf_dir/daemons"
     }
 
-    set init_file "/etc/init.d/frr"
-    set cmds "$cmds; if \[ -f $init_file \]; then $init_file restart ; fi"
+    set cmds "$cmds; frrinit.sh restart"
 
     pipesExec "docker exec -d [getFromRunning "eid"].$node_id sh -c '$cmds'" "hold"
 }
