@@ -376,9 +376,9 @@ proc $MODULE.nodeNamespaceSetup { eid node_id } {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeInitConfigure { eid node_id } {
-    configureICMPoptions $node_id
     enableIPforwarding $node_id
     startRoutingDaemons $node_id
+    configureICMPoptions $node_id
 }
 
 proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
