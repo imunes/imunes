@@ -827,9 +827,9 @@ proc isNodeInitNet { node_id } {
 
     try {
 	if { $nodecreate_timeout >= 0 } {
-	    exec timeout [expr $nodecreate_timeout/5.0] docker exec $docker_id rm /tmp/init >/dev/null
+	    exec timeout [expr $nodecreate_timeout/5.0] docker exec $docker_id ls /tmp/init >/dev/null
 	} else {
-	    exec docker exec $docker_id rm /tmp/init >/dev/null
+	    exec docker exec $docker_id ls /tmp/init >/dev/null
 	}
     } on error {} {
 	return false
