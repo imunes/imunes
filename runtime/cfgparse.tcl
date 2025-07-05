@@ -151,6 +151,10 @@ proc loadCfgLegacy { cfg } {
 				    cfgSet "nodes" $object "ifaces" $iface_id "type" "phys"
 				}
 
+				if { $node_type == "extnat" } {
+					cfgSet "nodes" $object "type" "ext"
+					cfgSet "nodes" $object "nat_iface" [cfgGet "nodes" $object "name"]
+				}
 				cfgSet "nodes" $object "ifaces" $iface_id "name" "$iface_name"
 				setToRunning "${object}|${iface_id}_running" false
 			    } else {
@@ -990,7 +994,7 @@ proc loadCfgLegacy { cfg } {
 	    unsetRunning "${node_id}_running"
 	}
 
-	if { $node_type ni [concat $all_modules_list "pseudo extelem"] && \
+	if { $node_type ni [concat $all_modules_list "pseudo extelem extnat"] && \
 	    ! [string match "router.*" $node_type] } {
 
 	    set msg "Unknown node type: '$node_type'."
@@ -1053,6 +1057,12 @@ proc loadCfgLegacy { cfg } {
 	    set node_type "rj45"
 	    setNodeType $node_id $node_type
 	    cfgUnset "nodes" $node_id "external-ifcs"
+	}
+
+	if { $node_type == "extnat" } {
+	    set node_type "ext"
+	    setNodeType $node_id $node_type
+	    setNodeNATIface $node_id [getNodeName $node_id]
 	}
 
 	# disable auto_default_routes if not explicitly enabled in old topologies
@@ -1156,6 +1166,12 @@ proc loadCfgJson { json_cfg } {
     set mac_used_list {}
     foreach node_id [getFromRunning "node_list"] {
 	set node_type [getNodeType $node_id]
+	# migration "extnat -> ext"
+	if { $node_type == "extnat" } {
+	    set node_type "ext"
+	    setNodeType $node_id $node_type
+	    setNodeNATIface $node_id [getNodeName $node_id]
+	}
 	if { $node_type ni [concat $all_modules_list "pseudo"] } {
 	    global execMode
 
