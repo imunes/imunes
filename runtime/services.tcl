@@ -201,13 +201,8 @@ proc $service.restart { node_id } {
 #
 # inetd services helper functions
 #
-proc inetd.start { service node_id insecure { bkg "" } } {
-    if { $insecure } {
-	lappend cmds "sed -i -e \"s/^#<off># $service/$service/\" /etc/inetd.conf"
-    } else {
-	lappend cmds "sed -i -e \"s/^#$service/$service/\" /etc/inetd.conf"
-    }
-
+proc inetd.start { service node_id { bkg "" } } {
+    lappend cmds "sed -i -e \"s/^#$service/$service/ ; s/^#<off># $service/$service/\" /etc/inetd.conf"
     lappend cmds [inetdServiceRestartCmds]
 
     if { $bkg == "" } {
@@ -218,13 +213,8 @@ proc inetd.start { service node_id insecure { bkg "" } } {
     }
 }
 
-proc inetd.stop { service node_id insecure { bkg "" } } {
-    if { $insecure } {
-	lappend cmds "sed -i -e \"s/^$service/#<off># $service/\" /etc/inetd.conf"
-    } else {
-	lappend cmds "sed -i -e \"s/^$service/#$service/\" /etc/inetd.conf"
-    }
-
+proc inetd.stop { service node_id { bkg "" } } {
+    lappend cmds "sed -i -e \"s/^$service/#$service/\" /etc/inetd.conf"
     lappend cmds [inetdServiceRestartCmds]
 
     if { $bkg == "" } {
@@ -244,17 +234,17 @@ regHooks $service {NODECONF NODESTOP}
 
 proc $service.start { node_id { bkg "" } } {
     global service
-    inetd.start ftp $node_id false $bkg
+    inetd.start ftp $node_id $bkg
 }
 
 proc $service.stop { node_id { bkg "" } } {
-    inetd.stop ftp $node_id false $bkg
+    inetd.stop ftp $node_id $bkg
 }
 
 proc $service.restart { node_id } {
     global service
-    inetd.stop ftp $node_id false
-    inetd.start ftp $node_id false
+    inetd.stop ftp $node_id
+    inetd.start ftp $node_id
 }
 ######################################################################
 
@@ -266,19 +256,18 @@ set service telnet
 regHooks $service {NODECONF NODESTOP}
 
 proc $service.start { node_id { bkg "" } } {
-    global service isOSlinux
-    inetd.start telnet $node_id $isOSlinux $bkg
+    global service
+    inetd.start telnet $node_id $bkg
 }
 
 proc $service.stop { node_id { bkg "" } } {
-    global isOSlinux
-    inetd.stop telnet $node_id $isOSlinux $bkg
+    inetd.stop telnet $node_id $bkg
 }
 
 proc $service.restart { node_id } {
-    global service isOSlinux
-    inetd.stop telnet $node_id $isOSlinux
-    inetd.start telnet $node_id $isOSlinux
+    global service
+    inetd.stop telnet $node_id
+    inetd.start telnet $node_id
 }
 ######################################################################
 
