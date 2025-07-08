@@ -34,86 +34,86 @@ registerModule $MODULE
 ################################################################################
 
 proc $MODULE.confNewNode { node_id } {
-    global nodeNamingBase
+	global nodeNamingBase
 
-    router.confNewNode $node_id
+	router.confNewNode $node_id
 
-    setNodeName $node_id [getNewNodeNameType nat64 $nodeNamingBase(nat64)]
-    setTaygaIPv4DynPool $node_id "192.168.64.0/24"
-    setTaygaIPv6Prefix $node_id "2001::/96"
+	setNodeName $node_id [getNewNodeNameType nat64 $nodeNamingBase(nat64)]
+	setTaygaIPv4DynPool $node_id "192.168.64.0/24"
+	setTaygaIPv6Prefix $node_id "2001::/96"
 }
 
 proc $MODULE.confNewIfc { node_id iface_id } {
-    router.confNewIfc $node_id $iface_id
+	router.confNewIfc $node_id $iface_id
 }
 
 proc $MODULE.generateConfigIfaces { node_id ifaces } {
-    return [router.generateConfigIfaces $node_id $ifaces]
+	return [router.generateConfigIfaces $node_id $ifaces]
 }
 
 proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
-    return [router.generateUnconfigIfaces $node_id $ifaces]
+	return [router.generateUnconfigIfaces $node_id $ifaces]
 }
 
 proc $MODULE.generateConfig { node_id } {
-    set cfg [router.generateConfig $node_id]
+	set cfg [router.generateConfig $node_id]
 
-    lappend cfg ""
+	lappend cfg ""
 
-    set tayga4pool [getTaygaIPv4DynPool $node_id]
-    setToRunning "${node_id}_old_tayga_ipv4_pool" $tayga4pool
-    set tayga6prefix [getTaygaIPv6Prefix $node_id]
-    setToRunning "${node_id}_old_tayga_ipv6_prefix" $tayga6prefix
+	set tayga4pool [getTaygaIPv4DynPool $node_id]
+	setToRunning "${node_id}_old_tayga_ipv4_pool" $tayga4pool
+	set tayga6prefix [getTaygaIPv6Prefix $node_id]
+	setToRunning "${node_id}_old_tayga_ipv6_prefix" $tayga6prefix
 
-    set tayga4addr [lindex [split [getTaygaIPv4DynPool $node_id] "/"] 0]
-    set tayga4pool [getTaygaIPv4DynPool $node_id]
-    set tayga6prefix [getTaygaIPv6Prefix $node_id]
+	set tayga4addr [lindex [split [getTaygaIPv4DynPool $node_id] "/"] 0]
+	set tayga4pool [getTaygaIPv4DynPool $node_id]
+	set tayga6prefix [getTaygaIPv6Prefix $node_id]
 
-    set conf_file "/usr/local/etc/tayga.conf"
-    set datadir "/var/db/tayga"
+	set conf_file "/usr/local/etc/tayga.conf"
+	set datadir "/var/db/tayga"
 
-    lappend cfg "mkdir -p $datadir"
-    lappend cfg "cat << __EOF__ > $conf_file"
-    lappend cfg "tun-device\ttun64"
-    lappend cfg " ipv4-addr\t$tayga4addr"
-    lappend cfg " dynamic-pool\t$tayga4pool"
-    lappend cfg " prefix\t\t$tayga6prefix"
-    lappend cfg " data-dir\t$datadir"
-    lappend cfg ""
-    foreach map [getTaygaMappings $node_id] {
-	lappend cfg " map\t\t$map"
-    }
-    lappend cfg "__EOF__"
+	lappend cfg "mkdir -p $datadir"
+	lappend cfg "cat << __EOF__ > $conf_file"
+	lappend cfg "tun-device\ttun64"
+	lappend cfg " ipv4-addr\t$tayga4addr"
+	lappend cfg " dynamic-pool\t$tayga4pool"
+	lappend cfg " prefix\t\t$tayga6prefix"
+	lappend cfg " data-dir\t$datadir"
+	lappend cfg ""
+	foreach map [getTaygaMappings $node_id] {
+		lappend cfg " map\t\t$map"
+	}
+	lappend cfg "__EOF__"
 
-    lappend cfg ""
+	lappend cfg ""
 
-    set cfg "[concat $cfg [configureTunIface $tayga4pool $tayga6prefix]]"
+	set cfg "[concat $cfg [configureTunIface $tayga4pool $tayga6prefix]]"
 
-    lappend cfg "tayga -c $conf_file"
+	lappend cfg "tayga -c $conf_file"
 
-    return $cfg
+	return $cfg
 }
 
 proc $MODULE.generateUnconfig { node_id } {
-    set tayga4pool [getFromRunning "${node_id}_old_tayga_ipv4_pool"]
-    set tayga6prefix [getFromRunning "${node_id}_old_tayga_ipv6_prefix"]
+	set tayga4pool [getFromRunning "${node_id}_old_tayga_ipv4_pool"]
+	set tayga6prefix [getFromRunning "${node_id}_old_tayga_ipv6_prefix"]
 
-    set cfg ""
+	set cfg ""
 
-    set conf_file "/usr/local/etc/tayga.conf"
-    set datadir "/var/db/tayga"
+	set conf_file "/usr/local/etc/tayga.conf"
+	set datadir "/var/db/tayga"
 
-    lappend cfg "killall tayga >/dev/null 2>&1"
+	lappend cfg "killall tayga >/dev/null 2>&1"
 
-    set cfg "[concat $cfg [unconfigureTunIface $tayga4pool $tayga6prefix]]"
+	set cfg "[concat $cfg [unconfigureTunIface $tayga4pool $tayga6prefix]]"
 
-    lappend cfg "tayga -c $conf_file --rmtun"
-    lappend cfg "rm -f $conf_file"
-    lappend cfg "rm -rf $datadir"
+	lappend cfg "tayga -c $conf_file --rmtun"
+	lappend cfg "rm -f $conf_file"
+	lappend cfg "rm -rf $datadir"
 
-    set cfg [concat $cfg [router.generateUnconfig $node_id]]
+	set cfg [concat $cfg [router.generateUnconfig $node_id]]
 
-    return $cfg
+	return $cfg
 }
 
 #****f* nat64.tcl/nat64.ifacePrefix
@@ -127,31 +127,31 @@ proc $MODULE.generateUnconfig { node_id } {
 #   * name -- name prefix string
 #****
 proc $MODULE.ifacePrefix {} {
-    return [router.ifacePrefix]
+	return [router.ifacePrefix]
 }
 
 proc $MODULE.IPAddrRange {} {
-    return [router.IPAddrRange]
+	return [router.IPAddrRange]
 }
 
 proc $MODULE.netlayer {} {
-    return [router.netlayer]
+	return [router.netlayer]
 }
 
 proc $MODULE.virtlayer {} {
-    return [router.virtlayer]
+	return [router.virtlayer]
 }
 
 proc $MODULE.bootcmd { node_id } {
-    return [router.bootcmd $node_id]
+	return [router.bootcmd $node_id]
 }
 
 proc $MODULE.shellcmds {} {
-    return [router.shellcmds]
+	return [router.shellcmds]
 }
 
 proc $MODULE.nghook { eid node_id iface_id } {
-    return [router.nghook $eid $node_id $iface_id]
+	return [router.nghook $eid $node_id $iface_id]
 }
 
 ################################################################################
@@ -167,27 +167,27 @@ proc $MODULE.nghook { eid node_id iface_id } {
 #   Does nothing
 #****
 proc $MODULE.prepareSystem {} {
-    router.prepareSystem
+	router.prepareSystem
 }
 
 proc $MODULE.nodeCreate { eid node_id } {
-    router.nodeCreate $eid $node_id
+	router.nodeCreate $eid $node_id
 }
 
 proc $MODULE.nodeNamespaceSetup { eid node_id } {
-    router.nodeNamespaceSetup $eid $node_id
+	router.nodeNamespaceSetup $eid $node_id
 }
 
 proc $MODULE.nodeInitConfigure { eid node_id } {
-    router.nodeInitConfigure $eid $node_id
+	router.nodeInitConfigure $eid $node_id
 }
 
 proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
-    router.nodePhysIfacesCreate $eid $node_id $ifaces
+	router.nodePhysIfacesCreate $eid $node_id $ifaces
 }
 
 proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
-    router.nodeLogIfacesCreate $eid $node_id $ifaces
+	router.nodeLogIfacesCreate $eid $node_id $ifaces
 }
 
 #****f* nat64.tcl/nat64.nodeIfacesConfigure
@@ -205,11 +205,11 @@ proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
 #   * ifaces -- list of interface ids
 #****
 proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
-    router.nodeIfacesConfigure $eid $node_id $ifaces
+	router.nodeIfacesConfigure $eid $node_id $ifaces
 }
 
 proc $MODULE.nodeConfigure { eid node_id } {
-    router.nodeConfigure $eid $node_id
+	router.nodeConfigure $eid $node_id
 }
 
 ################################################################################
@@ -231,21 +231,21 @@ proc $MODULE.nodeConfigure { eid node_id } {
 #   * ifaces -- list of interface ids
 #****
 proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
-    router.nodeIfacesUnconfigure $eid $node_id $ifaces
+	router.nodeIfacesUnconfigure $eid $node_id $ifaces
 }
 
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
-    router.nodeIfacesDestroy $eid $node_id $ifaces
+	router.nodeIfacesDestroy $eid $node_id $ifaces
 }
 
 proc $MODULE.nodeUnconfigure { eid node_id } {
-    router.nodeUnconfigure $eid $node_id
+	router.nodeUnconfigure $eid $node_id
 }
 
 proc $MODULE.nodeShutdown { eid node_id } {
-    router.nodeShutdown $eid $node_id
+	router.nodeShutdown $eid $node_id
 }
 
 proc $MODULE.nodeDestroy { eid node_id } {
-    router.nodeDestroy $eid $node_id
+	router.nodeDestroy $eid $node_id
 }

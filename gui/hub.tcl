@@ -53,11 +53,11 @@ set MODULE hub
 #   * descr -- string describing the toolbar icon
 #****
 proc $MODULE.toolbarIconDescr {} {
-    return "Add new Hub"
+	return "Add new Hub"
 }
 
 proc $MODULE._confNewIfc { node_cfg iface_id } {
-    return $node_cfg
+	return $node_cfg
 }
 
 #****f* hub.tcl/hub.icon
@@ -73,19 +73,19 @@ proc $MODULE._confNewIfc { node_cfg iface_id } {
 #   * path -- path to icon
 #****
 proc $MODULE.icon { size } {
-    global ROOTDIR LIBDIR
+	global ROOTDIR LIBDIR
 
-    switch $size {
-	normal {
-	    return $ROOTDIR/$LIBDIR/icons/normal/hub.gif
+	switch $size {
+		normal {
+			return $ROOTDIR/$LIBDIR/icons/normal/hub.gif
+		}
+		small {
+			return $ROOTDIR/$LIBDIR/icons/small/hub.gif
+		}
+		toolbar {
+			return $ROOTDIR/$LIBDIR/icons/tiny/hub.gif
+		}
 	}
-	small {
-	    return $ROOTDIR/$LIBDIR/icons/small/hub.gif
-	}
-	toolbar {
-	    return $ROOTDIR/$LIBDIR/icons/tiny/hub.gif
-	}
-    }
 }
 
 #****f* hub.tcl/hub.configGUI
@@ -102,36 +102,36 @@ proc $MODULE.icon { size } {
 #   * node_id -- node id
 #****
 proc $MODULE.configGUI { c node_id } {
-    global wi
-    #
-    #guielements - the list of modules contained in the configuration window
-    #              (each element represents the name of the procedure which creates
-    #              that module)
-    #
-    #treecolumns - the list of columns in the interfaces tree (each element
-    #              consists of the column id and the column name)
-    #
-    global guielements treecolumns
-    global node_cfg node_existing_mac node_existing_ipv4 node_existing_ipv6
+	global wi
+	#
+	#guielements - the list of modules contained in the configuration window
+	#		(each element represents the name of the procedure which creates
+	#		that module)
+	#
+	#treecolumns - the list of columns in the interfaces tree (each element
+	#		consists of the column id and the column name)
+	#
+	global guielements treecolumns
+	global node_cfg node_existing_mac node_existing_ipv4 node_existing_ipv6
 
-    set guielements {}
-    set treecolumns {}
-    set node_cfg [cfgGet "nodes" $node_id]
-    set node_existing_mac [getFromRunning "mac_used_list"]
-    set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
-    set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
+	set guielements {}
+	set treecolumns {}
+	set node_cfg [cfgGet "nodes" $node_id]
+	set node_existing_mac [getFromRunning "mac_used_list"]
+	set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
+	set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
 
-    configGUI_createConfigPopupWin $c
-    wm title $wi "hub configuration"
+	configGUI_createConfigPopupWin $c
+	wm title $wi "hub configuration"
 
-    configGUI_nodeName $wi $node_id "Node name:"
+	configGUI_nodeName $wi $node_id "Node name:"
 
-    configGUI_addPanedWin $wi
-    set treecolumns {"QLen Queue len" "QDisc Queue disc" "QDrop Queue drop"}
-    configGUI_addTree $wi $node_id
+	configGUI_addPanedWin $wi
+	set treecolumns {"QLen Queue len" "QDisc Queue disc" "QDrop Queue drop"}
+	configGUI_addTree $wi $node_id
 
-    configGUI_nodeRestart $wi $node_id
-    configGUI_buttonsACNode $wi $node_id
+	configGUI_nodeRestart $wi $node_id
+	configGUI_buttonsACNode $wi $node_id
 }
 
 #****f* hub.tcl/hub.configInterfacesGUI
@@ -149,8 +149,8 @@ proc $MODULE.configGUI { c node_id } {
 #   * iface_id -- interface id
 #****
 proc $MODULE.configInterfacesGUI { wi node_id iface_id } {
-    global guielements
+	global guielements
 
-    configGUI_ifcQueueConfig $wi $node_id $iface_id
-    configGUI_ifcGap $wi $iface_id 30
+	configGUI_ifcQueueConfig $wi $node_id $iface_id
+	configGUI_ifcGap $wi $iface_id 30
 }

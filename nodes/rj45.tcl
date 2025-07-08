@@ -58,9 +58,9 @@ registerModule $MODULE
 #   * node_id -- node id
 #****
 proc $MODULE.confNewNode { node_id } {
-    global nodeNamingBase
+	global nodeNamingBase
 
-    setNodeName $node_id [getNewNodeNameType rj45 $nodeNamingBase(rj45)]
+	setNodeName $node_id [getNewNodeNameType rj45 $nodeNamingBase(rj45)]
 }
 
 #****f* rj45.tcl/rj45.confNewIfc
@@ -100,7 +100,7 @@ proc $MODULE.generateUnconfig { node_id } {
 #   * name -- name prefix string
 #****
 proc $MODULE.ifacePrefix {} {
-    return "x"
+	return "x"
 }
 
 #****f* rj45.tcl/rj45.netlayer
@@ -114,7 +114,7 @@ proc $MODULE.ifacePrefix {} {
 #   * layer -- set to LINK
 #****
 proc $MODULE.netlayer {} {
-    return LINK
+	return LINK
 }
 
 #****f* rj45.tcl/rj45.virtlayer
@@ -129,7 +129,7 @@ proc $MODULE.netlayer {} {
 #   * layer -- set to NATIVE
 #****
 proc $MODULE.virtlayer {} {
-    return NATIVE
+	return NATIVE
 }
 
 #****f* rj45.tcl/rj45.nghook
@@ -149,13 +149,13 @@ proc $MODULE.virtlayer {} {
 #     the netraph hook name (in this case: lower).
 #****
 proc $MODULE.nghook { eid node_id iface_id } {
-    set iface_name [getIfcName $node_id $iface_id]
-    set vlan [getIfcVlanTag $node_id $iface_id]
-    if { $vlan != "" && [getIfcVlanDev $node_id $iface_id] != "" } {
-	set iface_name ${iface_name}_$vlan
-    }
+	set iface_name [getIfcName $node_id $iface_id]
+	set vlan [getIfcVlanTag $node_id $iface_id]
+	if { $vlan != "" && [getIfcVlanDev $node_id $iface_id] != "" } {
+		set iface_name ${iface_name}_$vlan
+	}
 
-    return [list $iface_name lower]
+	return [list $iface_name lower]
 }
 
 ################################################################################
@@ -171,7 +171,7 @@ proc $MODULE.nghook { eid node_id iface_id } {
 #   Loads ng_ether into the kernel.
 #****
 proc $MODULE.prepareSystem {} {
-    catch { exec kldload ng_ether }
+	catch { exec kldload ng_ether }
 }
 
 #****f* rj45.tcl/rj45.nodeCreate
@@ -186,7 +186,7 @@ proc $MODULE.prepareSystem {} {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeCreate { eid node_id } {
-    setToRunning "${node_id}_running" true
+	setToRunning "${node_id}_running" true
 }
 
 #****f* rj45.tcl/rj45.nodeNamespaceSetup
@@ -219,23 +219,23 @@ proc $MODULE.nodeInitConfigure { eid node_id } {
 }
 
 proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
-    # first deal with VLAN interfaces to avoid 'non-existant'
-    # interface error
-    set vlan_ifaces {}
-    set nonvlan_ifaces {}
-    foreach iface_id $ifaces {
-	if { [getIfcVlanTag $node_id $iface_id] != "" && [getIfcVlanDev $node_id $iface_id] != "" } {
-	    lappend vlan_ifaces $iface_id
-	} else {
-	    lappend nonvlan_ifaces $iface_id
+	# first deal with VLAN interfaces to avoid 'non-existant'
+	# interface error
+	set vlan_ifaces {}
+	set nonvlan_ifaces {}
+	foreach iface_id $ifaces {
+		if { [getIfcVlanTag $node_id $iface_id] != "" && [getIfcVlanDev $node_id $iface_id] != "" } {
+			lappend vlan_ifaces $iface_id
+		} else {
+			lappend nonvlan_ifaces $iface_id
+		}
 	}
-    }
 
-    foreach iface_id [concat $vlan_ifaces $nonvlan_ifaces] {
-	captureExtIfc $eid $node_id $iface_id
+	foreach iface_id [concat $vlan_ifaces $nonvlan_ifaces] {
+		captureExtIfc $eid $node_id $iface_id
 
-	setToRunning "${node_id}|${iface_id}_running" true
-    }
+		setToRunning "${node_id}|${iface_id}_running" true
+	}
 }
 
 proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
@@ -297,15 +297,15 @@ proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
 }
 
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
-    if { $ifaces == "*" } {
-	set ifaces [ifcList $node_id]
-    }
+	if { $ifaces == "*" } {
+		set ifaces [ifcList $node_id]
+	}
 
-    foreach iface_id $ifaces {
-	releaseExtIfc $eid $node_id $iface_id
+	foreach iface_id $ifaces {
+		releaseExtIfc $eid $node_id $iface_id
 
-	setToRunning "${node_id}|${iface_id}_running" false
-    }
+		setToRunning "${node_id}|${iface_id}_running" false
+	}
 }
 
 proc $MODULE.nodeUnconfigure { eid node_id } {
@@ -339,5 +339,5 @@ proc $MODULE.nodeShutdown { eid node_id } {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeDestroy { eid node_id } {
-    setToRunning "${node_id}_running" false
+	setToRunning "${node_id}_running" false
 }

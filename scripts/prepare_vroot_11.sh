@@ -3,18 +3,18 @@
 . scripts/prepare_vroot_functions.sh
 
 if test $RELEASE_VER -eq 3; then
-    PACKAGES_MINIMAL="$PACKAGES_MINIMAL bind914"
-    PACKAGES="$PACKAGES_MINIMAL $PACKAGES_COMMON isc-dhcp44-server isc-dhcp44-client \
-	sylpheed xorp firefox wireshark gnome-themes-extra"
+	PACKAGES_MINIMAL="$PACKAGES_MINIMAL bind914"
+	PACKAGES="$PACKAGES_MINIMAL $PACKAGES_COMMON isc-dhcp44-server isc-dhcp44-client \
+		sylpheed xorp firefox wireshark gnome-themes-extra"
 elif test $RELEASE_VER -eq 4; then
-    PACKAGES_MINIMAL="$PACKAGES_MINIMAL bind916"
-    PACKAGES="$PACKAGES_MINIMAL $PACKAGES_COMMON isc-dhcp44-server isc-dhcp44-client \
-	sylpheed xorp firefox wireshark gnome-themes-extra"
-    PACKAGES=`echo $PACKAGES | sed 's/scapy/py37-scapy/'`
+	PACKAGES_MINIMAL="$PACKAGES_MINIMAL bind916"
+	PACKAGES="$PACKAGES_MINIMAL $PACKAGES_COMMON isc-dhcp44-server isc-dhcp44-client \
+		sylpheed xorp firefox wireshark gnome-themes-extra"
+	PACKAGES=`echo $PACKAGES | sed 's/scapy/py37-scapy/'`
 else
-    PACKAGES_MINIMAL="$PACKAGES_MINIMAL bind99"
-    PACKAGES="$PACKAGES_MINIMAL $PACKAGES_COMMON isc-dhcp43-server isc-dhcp43-client \
-	sylpheed xorp firefox wireshark gnome-themes-standard"
+	PACKAGES_MINIMAL="$PACKAGES_MINIMAL bind99"
+	PACKAGES="$PACKAGES_MINIMAL $PACKAGES_COMMON isc-dhcp43-server isc-dhcp43-client \
+		sylpheed xorp firefox wireshark gnome-themes-standard"
 fi
 
 checkArgs $*
@@ -25,13 +25,13 @@ cd $WORKDIR
 echo -n "" > $LOG
 
 if [ $mini -eq 1 ]; then
-    PKGS=${PACKAGES_MINIMAL}
+	PKGS=${PACKAGES_MINIMAL}
 else
-    PKGS=${PACKAGES}
+	PKGS=${PACKAGES}
 fi
 
 if [ $offline -eq 0 ]; then
-    fetchBaseOnline
+	fetchBaseOnline
 fi
 
 prepareUnionfs
@@ -43,9 +43,9 @@ checkPkgVersion
 installPackagesPkg
 
 if [ $mini -eq 0 ]; then
-    log "OUT" "Installing additional tools..."
-    sh $IMUNESDIR/scripts/install_usr_tools.sh >> $LOG 2>&1
-    log "OUT" "Installing additional tools done."
+	log "OUT" "Installing additional tools..."
+	sh $IMUNESDIR/scripts/install_usr_tools.sh >> $LOG 2>&1
+	log "OUT" "Installing additional tools done."
 fi
 
 configQuagga

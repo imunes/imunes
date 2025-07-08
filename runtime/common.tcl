@@ -27,8 +27,8 @@
 #
 
 global vroot_unionfs vroot_linprocfs ifc_dad_disable regular_termination \
-    devfs_number auto_etc_hosts linkJitterConfiguration ipsecSecrets \
-    ipsecConf ipFastForwarding
+	devfs_number auto_etc_hosts linkJitterConfiguration ipsecSecrets \
+	ipsecConf ipFastForwarding
 
 set linkJitterConfiguration 0
 set vroot_unionfs 1
@@ -40,514 +40,514 @@ set auto_etc_hosts 0
 set ipFastForwarding 0
 
 proc prepareInstantiateVars { { force "" } } {
-    if { ! [getFromRunning "cfg_deployed"] && $force == "" } {
-	return
-    }
+	if { ! [getFromRunning "cfg_deployed"] && $force == "" } {
+		return
+	}
 
-    foreach var "instantiate_nodes create_nodes_ifaces instantiate_links
-	configure_links configure_nodes_ifaces configure_nodes" {
+	foreach var "instantiate_nodes create_nodes_ifaces instantiate_links
+		configure_links configure_nodes_ifaces configure_nodes" {
 
-	upvar 1 $var $var
-	set $var [getFromExecuteVars "$var"]
-	dputs "'[info level -1]' - '[info level 0]': $var '[set $var]'"
-    }
+		upvar 1 $var $var
+		set $var [getFromExecuteVars "$var"]
+		dputs "'[info level -1]' - '[info level 0]': $var '[set $var]'"
+	}
 }
 
 proc prepareTerminateVars {} {
-    if { ! [getFromRunning "cfg_deployed"] } {
-	return
-    }
+	if { ! [getFromRunning "cfg_deployed"] } {
+		return
+	}
 
-    foreach var "terminate_nodes destroy_nodes_ifaces terminate_links
-	unconfigure_links unconfigure_nodes_ifaces unconfigure_nodes" {
+	foreach var "terminate_nodes destroy_nodes_ifaces terminate_links
+		unconfigure_links unconfigure_nodes_ifaces unconfigure_nodes" {
 
-	upvar 1 $var $var
-	set $var [getFromExecuteVars "$var"]
-	dputs "'[info level -1]' - '[info level 0]': $var '[set $var]'"
-    }
+		upvar 1 $var $var
+		set $var [getFromExecuteVars "$var"]
+		dputs "'[info level -1]' - '[info level 0]': $var '[set $var]'"
+	}
 }
 
 proc updateInstantiateVars { { force "" } } {
-    if { ! [getFromRunning "cfg_deployed"] && $force == "" } {
-	return
-    }
+	if { ! [getFromRunning "cfg_deployed"] && $force == "" } {
+		return
+	}
 
-    foreach var "instantiate_nodes create_nodes_ifaces instantiate_links
-	configure_links configure_nodes_ifaces configure_nodes" {
+	foreach var "instantiate_nodes create_nodes_ifaces instantiate_links
+		configure_links configure_nodes_ifaces configure_nodes" {
 
-	upvar 1 $var $var
-	dputs "'[info level -1]' - '[info level 0]': $var '[set $var]'"
-	setToExecuteVars "$var" [set $var]
-    }
+		upvar 1 $var $var
+		dputs "'[info level -1]' - '[info level 0]': $var '[set $var]'"
+		setToExecuteVars "$var" [set $var]
+	}
 }
 
 proc updateTerminateVars {} {
-    if { ! [getFromRunning "cfg_deployed"] } {
-	return
-    }
+	if { ! [getFromRunning "cfg_deployed"] } {
+		return
+	}
 
-    foreach var "terminate_nodes destroy_nodes_ifaces terminate_links
-	unconfigure_links unconfigure_nodes_ifaces unconfigure_nodes" {
+	foreach var "terminate_nodes destroy_nodes_ifaces terminate_links
+		unconfigure_links unconfigure_nodes_ifaces unconfigure_nodes" {
 
-	upvar 1 $var $var
-	dputs "'[info level -1]' - '[info level 0]': $var '[set $var]'"
-	setToExecuteVars "$var" [set $var]
-    }
+		upvar 1 $var $var
+		dputs "'[info level -1]' - '[info level 0]': $var '[set $var]'"
+		setToExecuteVars "$var" [set $var]
+	}
 }
 
 proc trigger_nodeConfig { node_id } {
-    if { ! [getFromRunning "cfg_deployed"] || [getFromRunning "${node_id}_running"] == false } {
-	return
-    }
+	if { ! [getFromRunning "cfg_deployed"] || [getFromRunning "${node_id}_running"] == false } {
+		return
+	}
 
-    prepareInstantiateVars
+	prepareInstantiateVars
 
-    if { $node_id ni $configure_nodes } {
-	lappend configure_nodes $node_id
-    }
+	if { $node_id ni $configure_nodes } {
+		lappend configure_nodes $node_id
+	}
 
-    updateInstantiateVars
+	updateInstantiateVars
 }
 
 proc trigger_nodeUnconfig { node_id } {
-    if { ! [getFromRunning "cfg_deployed"] } {
-	return
-    }
+	if { ! [getFromRunning "cfg_deployed"] } {
+		return
+	}
 
-    prepareTerminateVars
+	prepareTerminateVars
 
-    set node_running [getFromRunning "${node_id}_running"]
-    if { $node_id ni $unconfigure_nodes && $node_running == true } {
-	lappend unconfigure_nodes $node_id
-    }
+	set node_running [getFromRunning "${node_id}_running"]
+	if { $node_id ni $unconfigure_nodes && $node_running == true } {
+		lappend unconfigure_nodes $node_id
+	}
 
-    updateTerminateVars
+	updateTerminateVars
 }
 
 proc trigger_nodeReconfig { node_id } {
-    if { ! [getFromRunning "cfg_deployed"] } {
-	return
-    }
+	if { ! [getFromRunning "cfg_deployed"] } {
+		return
+	}
 
-    set node_running [getFromRunning "${node_id}_running"]
-    if { $node_running == true } {
-	trigger_nodeUnconfig $node_id
-    }
+	set node_running [getFromRunning "${node_id}_running"]
+	if { $node_running == true } {
+		trigger_nodeUnconfig $node_id
+	}
 
-    trigger_nodeConfig $node_id
+	trigger_nodeConfig $node_id
 }
 
 proc trigger_nodeFullConfig { node_id } {
-    if { ! [getFromRunning "cfg_deployed"] || [getFromRunning "${node_id}_running"] == false } {
-	return
-    }
+	if { ! [getFromRunning "cfg_deployed"] || [getFromRunning "${node_id}_running"] == false } {
+		return
+	}
 
-    trigger_nodeConfig $node_id
-    foreach iface_id [allIfcList $node_id] {
-	trigger_ifaceConfig $node_id $iface_id
-    }
+	trigger_nodeConfig $node_id
+	foreach iface_id [allIfcList $node_id] {
+		trigger_ifaceConfig $node_id $iface_id
+	}
 }
 
 proc trigger_nodeFullUnconfig { node_id } {
-    if { ! [getFromRunning "cfg_deployed"] } {
-	return
-    }
+	if { ! [getFromRunning "cfg_deployed"] } {
+		return
+	}
 
-    trigger_nodeUnconfig $node_id
-    foreach iface_id [allIfcList $node_id] {
-	trigger_ifaceUnconfig $node_id $iface_id
-    }
+	trigger_nodeUnconfig $node_id
+	foreach iface_id [allIfcList $node_id] {
+		trigger_ifaceUnconfig $node_id $iface_id
+	}
 }
 
 proc trigger_nodeFullReconfig { node_id } {
-    if { ! [getFromRunning "cfg_deployed"] } {
-	return
-    }
+	if { ! [getFromRunning "cfg_deployed"] } {
+		return
+	}
 
-    set node_running [getFromRunning "${node_id}_running"]
-    if { $node_running == true } {
-	trigger_nodeUnconfig $node_id
+	set node_running [getFromRunning "${node_id}_running"]
+	if { $node_running == true } {
+		trigger_nodeUnconfig $node_id
 
-	prepareTerminateVars
-	dict set unconfigure_nodes_ifaces $node_id "*"
-	updateTerminateVars
-    }
+		prepareTerminateVars
+		dict set unconfigure_nodes_ifaces $node_id "*"
+		updateTerminateVars
+	}
 
-    trigger_nodeConfig $node_id
+	trigger_nodeConfig $node_id
 
-    prepareInstantiateVars
-    dict set configure_nodes_ifaces $node_id "*"
-    updateInstantiateVars
+	prepareInstantiateVars
+	dict set configure_nodes_ifaces $node_id "*"
+	updateInstantiateVars
 }
 
 proc trigger_nodeCreate { node_id } {
-    if { ! [getFromRunning "cfg_deployed"] } {
-	return
-    }
-
-    prepareInstantiateVars
-
-    if { $node_id ni $instantiate_nodes } {
-	lappend instantiate_nodes $node_id
-    }
-
-    if { $node_id ni $configure_nodes } {
-	lappend configure_nodes $node_id
-    }
-
-    dict set create_nodes_ifaces $node_id "*"
-    dict set configure_nodes_ifaces $node_id "*"
-
-    updateInstantiateVars
-
-    foreach iface_id [ifcList $node_id] {
-	set link_id [getIfcLink $node_id $iface_id]
-	if { $link_id == "" } {
-	    continue
+	if { ! [getFromRunning "cfg_deployed"] } {
+		return
 	}
 
-	if { [getLinkDirect $link_id] } {
-	    lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
-	    trigger_ifaceConfig $peer_id $peer_iface_id
+	prepareInstantiateVars
+
+	if { $node_id ni $instantiate_nodes } {
+		lappend instantiate_nodes $node_id
 	}
 
-	trigger_linkRecreate $link_id
-    }
+	if { $node_id ni $configure_nodes } {
+		lappend configure_nodes $node_id
+	}
+
+	dict set create_nodes_ifaces $node_id "*"
+	dict set configure_nodes_ifaces $node_id "*"
+
+	updateInstantiateVars
+
+	foreach iface_id [ifcList $node_id] {
+		set link_id [getIfcLink $node_id $iface_id]
+		if { $link_id == "" } {
+			continue
+		}
+
+		if { [getLinkDirect $link_id] } {
+			lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
+			trigger_ifaceConfig $peer_id $peer_iface_id
+		}
+
+		trigger_linkRecreate $link_id
+	}
 }
 
 proc trigger_nodeDestroy { node_id } {
-    if { ! [getFromRunning "cfg_deployed"] } {
-	return
-    }
-
-    prepareTerminateVars
-
-    set node_running [getFromRunning "${node_id}_running"]
-    if { $node_id ni $terminate_nodes && $node_running == true } {
-	lappend terminate_nodes $node_id
-    }
-
-    if { $node_id ni $unconfigure_nodes && $node_running == true } {
-	lappend unconfigure_nodes $node_id
-    }
-
-    if { $node_running == true } {
-	dict set unconfigure_nodes_ifaces $node_id "*"
-	dict set destroy_nodes_ifaces $node_id "*"
-    }
-
-    updateTerminateVars
-
-    foreach iface_id [ifcList $node_id] {
-	set link_id [getIfcLink $node_id $iface_id]
-	if { $link_id == "" } {
-	    continue
+	if { ! [getFromRunning "cfg_deployed"] } {
+		return
 	}
 
-	trigger_linkRecreate $link_id
-    }
+	prepareTerminateVars
 
-    prepareInstantiateVars
+	set node_running [getFromRunning "${node_id}_running"]
+	if { $node_id ni $terminate_nodes && $node_running == true } {
+		lappend terminate_nodes $node_id
+	}
 
-    if { $node_id in $instantiate_nodes } {
-	set instantiate_nodes [removeFromList $instantiate_nodes $node_id]
-    }
+	if { $node_id ni $unconfigure_nodes && $node_running == true } {
+		lappend unconfigure_nodes $node_id
+	}
 
-    if { $node_id in $configure_nodes } {
-	set configure_nodes [removeFromList $configure_nodes $node_id]
-    }
+	if { $node_running == true } {
+		dict set unconfigure_nodes_ifaces $node_id "*"
+		dict set destroy_nodes_ifaces $node_id "*"
+	}
 
-    if { $node_id in [dict keys $create_nodes_ifaces] } {
-	dict unset create_nodes_ifaces $node_id
-    }
+	updateTerminateVars
 
-    if { $node_id in [dict keys $configure_nodes_ifaces] } {
-	dict unset configure_nodes_ifaces $node_id
-    }
+	foreach iface_id [ifcList $node_id] {
+		set link_id [getIfcLink $node_id $iface_id]
+		if { $link_id == "" } {
+			continue
+		}
 
-    updateInstantiateVars
+		trigger_linkRecreate $link_id
+	}
+
+	prepareInstantiateVars
+
+	if { $node_id in $instantiate_nodes } {
+		set instantiate_nodes [removeFromList $instantiate_nodes $node_id]
+	}
+
+	if { $node_id in $configure_nodes } {
+		set configure_nodes [removeFromList $configure_nodes $node_id]
+	}
+
+	if { $node_id in [dict keys $create_nodes_ifaces] } {
+		dict unset create_nodes_ifaces $node_id
+	}
+
+	if { $node_id in [dict keys $configure_nodes_ifaces] } {
+		dict unset configure_nodes_ifaces $node_id
+	}
+
+	updateInstantiateVars
 }
 
 proc trigger_nodeRecreate { node_id } {
-    if { ! [getFromRunning "cfg_deployed"] } {
-	return
-    }
-
-    set node_running [getFromRunning "${node_id}_running"]
-    if { $node_running == true } {
-	trigger_nodeDestroy $node_id
-    }
-
-    trigger_nodeCreate $node_id
-
-    foreach iface_id [ifcList $node_id] {
-	set link_id [getIfcLink $node_id $iface_id]
-	if { $link_id == "" } {
-	    continue
+	if { ! [getFromRunning "cfg_deployed"] } {
+		return
 	}
 
-	trigger_linkRecreate $link_id
-    }
+	set node_running [getFromRunning "${node_id}_running"]
+	if { $node_running == true } {
+		trigger_nodeDestroy $node_id
+	}
+
+	trigger_nodeCreate $node_id
+
+	foreach iface_id [ifcList $node_id] {
+		set link_id [getIfcLink $node_id $iface_id]
+		if { $link_id == "" } {
+			continue
+		}
+
+		trigger_linkRecreate $link_id
+	}
 }
 
 proc trigger_linkConfig { link_id } {
-    if { ! [getFromRunning "cfg_deployed"] } {
-	return
-    }
+	if { ! [getFromRunning "cfg_deployed"] } {
+		return
+	}
 
-    prepareInstantiateVars
+	prepareInstantiateVars
 
-    if { $link_id ni $configure_links } {
-	lappend configure_links $link_id
-    }
+	if { $link_id ni $configure_links } {
+		lappend configure_links $link_id
+	}
 
-    updateInstantiateVars
+	updateInstantiateVars
 }
 
 proc trigger_linkUnconfig { link_id } {
-    if { ! [getFromRunning "cfg_deployed"] } {
-	return
-    }
+	if { ! [getFromRunning "cfg_deployed"] } {
+		return
+	}
 
-    prepareTerminateVars
+	prepareTerminateVars
 
-    set link_running [getFromRunning "${link_id}_running"]
-    if { $link_id ni $unconfigure_links && $link_running } {
-	lappend unconfigure_links $link_id
-    }
+	set link_running [getFromRunning "${link_id}_running"]
+	if { $link_id ni $unconfigure_links && $link_running } {
+		lappend unconfigure_links $link_id
+	}
 
-    updateTerminateVars
+	updateTerminateVars
 
-    prepareInstantiateVars
+	prepareInstantiateVars
 
-    if { $link_id in $configure_links && ! $link_running } {
-	set configure_links [removeFromList $configure_links $link_id]
-    }
+	if { $link_id in $configure_links && ! $link_running } {
+		set configure_links [removeFromList $configure_links $link_id]
+	}
 
-    updateInstantiateVars
+	updateInstantiateVars
 }
 
 proc trigger_linkReconfig { link_id } {
-    if { ! [getFromRunning "cfg_deployed"] } {
-	return
-    }
+	if { ! [getFromRunning "cfg_deployed"] } {
+		return
+	}
 
-    set link_running [getFromRunning "${link_id}_running"]
-    if { $link_running } {
-	trigger_linkUnconfig $link_id
-    }
+	set link_running [getFromRunning "${link_id}_running"]
+	if { $link_running } {
+		trigger_linkUnconfig $link_id
+	}
 
-    trigger_linkConfig $link_id
+	trigger_linkConfig $link_id
 }
 
 proc trigger_linkCreate { link_id } {
-    if { ! [getFromRunning "cfg_deployed"] } {
-	return
-    }
-
-    prepareInstantiateVars
-
-    if { $link_id ni $instantiate_links } {
-	lappend instantiate_links $link_id
-
-	foreach node_id [getLinkPeers $link_id] {
-	    set node_type [getNodeType $node_id]
-	    if { $node_type in "packgen" } {
-		trigger_nodeReconfig $node_id
-	    } elseif { $node_type in "filter" } {
-		trigger_nodeReconfig $node_id
-	    }
+	if { ! [getFromRunning "cfg_deployed"] } {
+		return
 	}
-    }
 
-    updateInstantiateVars
+	prepareInstantiateVars
 
-    trigger_linkConfig $link_id
+	if { $link_id ni $instantiate_links } {
+		lappend instantiate_links $link_id
+
+		foreach node_id [getLinkPeers $link_id] {
+			set node_type [getNodeType $node_id]
+			if { $node_type in "packgen" } {
+				trigger_nodeReconfig $node_id
+			} elseif { $node_type in "filter" } {
+				trigger_nodeReconfig $node_id
+			}
+		}
+	}
+
+	updateInstantiateVars
+
+	trigger_linkConfig $link_id
 }
 
 proc trigger_linkDestroy { link_id } {
-    if { ! [getFromRunning "cfg_deployed"] } {
-	return
-    }
-
-    trigger_linkUnconfig $link_id
-
-    prepareTerminateVars
-
-    set link_running [getFromRunning "${link_id}_running"]
-    if { $link_id ni $terminate_links && $link_running } {
-	lappend terminate_links $link_id
-
-	foreach node_id [getLinkPeers $link_id] {
-	    set node_type [getNodeType $node_id]
-	    if { $node_type in "packgen" } {
-		trigger_nodeReconfig $node_id
-	    } elseif { $node_type in "filter" } {
-		trigger_nodeReconfig $node_id
-	    }
+	if { ! [getFromRunning "cfg_deployed"] } {
+		return
 	}
-    }
 
-    updateTerminateVars
+	trigger_linkUnconfig $link_id
 
-    prepareInstantiateVars
+	prepareTerminateVars
 
-    if { $link_id in $instantiate_links && ! $link_running } {
-	set instantiate_links [removeFromList $instantiate_links $link_id]
-    }
+	set link_running [getFromRunning "${link_id}_running"]
+	if { $link_id ni $terminate_links && $link_running } {
+		lappend terminate_links $link_id
 
-    updateInstantiateVars
+		foreach node_id [getLinkPeers $link_id] {
+			set node_type [getNodeType $node_id]
+			if { $node_type in "packgen" } {
+				trigger_nodeReconfig $node_id
+			} elseif { $node_type in "filter" } {
+				trigger_nodeReconfig $node_id
+			}
+		}
+	}
+
+	updateTerminateVars
+
+	prepareInstantiateVars
+
+	if { $link_id in $instantiate_links && ! $link_running } {
+		set instantiate_links [removeFromList $instantiate_links $link_id]
+	}
+
+	updateInstantiateVars
 }
 
 proc trigger_linkRecreate { link_id } {
-    if { ! [getFromRunning "cfg_deployed"] } {
-	return
-    }
+	if { ! [getFromRunning "cfg_deployed"] } {
+		return
+	}
 
-    set link_running [getFromRunning "${link_id}_running"]
-    if { $link_running } {
-	trigger_linkDestroy $link_id
-    }
+	set link_running [getFromRunning "${link_id}_running"]
+	if { $link_running } {
+		trigger_linkDestroy $link_id
+	}
 
-    trigger_linkCreate $link_id
+	trigger_linkCreate $link_id
 }
 
 proc trigger_ifaceCreate { node_id iface_id } {
-    if { ! [getFromRunning "cfg_deployed"] || [getFromRunning "${node_id}_running"] == false } {
-	return
-    }
-
-    prepareInstantiateVars
-
-    set ifaces [dictGet $create_nodes_ifaces $node_id]
-    if { "*" ni $ifaces && $iface_id ni $ifaces } {
-	dict lappend create_nodes_ifaces $node_id $iface_id
-    }
-
-    updateInstantiateVars
-
-    trigger_ifaceConfig $node_id $iface_id
-
-    set link_id [getIfcLink $node_id $iface_id]
-    if { $link_id != "" && [getLinkDirect $link_id] } {
-	lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
-	trigger_ifaceConfig $peer_id $peer_iface_id
-    }
-
-    # if any of the logical interfaces have $iface_id as master, recreate them
-    set iface_name [getIfcName $node_id $iface_id]
-    foreach log_iface_id [logIfcList $node_id] {
-	if { [getIfcVlanDev $node_id $log_iface_id] != $iface_name } {
-	    continue
+	if { ! [getFromRunning "cfg_deployed"] || [getFromRunning "${node_id}_running"] == false } {
+		return
 	}
 
-	if { "*" ni $ifaces && $log_iface_id ni $ifaces } {
-	    trigger_ifaceCreate $node_id $log_iface_id
+	prepareInstantiateVars
+
+	set ifaces [dictGet $create_nodes_ifaces $node_id]
+	if { "*" ni $ifaces && $iface_id ni $ifaces } {
+		dict lappend create_nodes_ifaces $node_id $iface_id
 	}
-    }
+
+	updateInstantiateVars
+
+	trigger_ifaceConfig $node_id $iface_id
+
+	set link_id [getIfcLink $node_id $iface_id]
+	if { $link_id != "" && [getLinkDirect $link_id] } {
+		lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
+		trigger_ifaceConfig $peer_id $peer_iface_id
+	}
+
+	# if any of the logical interfaces have $iface_id as master, recreate them
+	set iface_name [getIfcName $node_id $iface_id]
+	foreach log_iface_id [logIfcList $node_id] {
+		if { [getIfcVlanDev $node_id $log_iface_id] != $iface_name } {
+			continue
+		}
+
+		if { "*" ni $ifaces && $log_iface_id ni $ifaces } {
+			trigger_ifaceCreate $node_id $log_iface_id
+		}
+	}
 }
 
 proc trigger_ifaceDestroy { node_id iface_id } {
-    if { ! [getFromRunning "cfg_deployed"] || [getFromRunning "${node_id}_running"] == false } {
-	return
-    }
-
-    prepareTerminateVars
-
-    set iface_running [getFromRunning "${node_id}|${iface_id}_running"]
-    set ifaces [dictGet $destroy_nodes_ifaces $node_id]
-    if { "*" ni $ifaces && $iface_id ni $ifaces && $iface_running } {
-	dict lappend destroy_nodes_ifaces $node_id $iface_id
-    }
-
-    updateTerminateVars
-
-    prepareInstantiateVars
-
-    set ifaces [dictGet $create_nodes_ifaces $node_id]
-    if { $iface_id in $ifaces && ! $iface_running } {
-	set ifaces [removeFromList $ifaces $iface_id]
-	if { $ifaces == {} } {
-	    dict unset create_nodes_ifaces $node_id
-	} else {
-	    dict set create_nodes_ifaces $node_id $ifaces
+	if { ! [getFromRunning "cfg_deployed"] || [getFromRunning "${node_id}_running"] == false } {
+		return
 	}
-    }
 
-    updateInstantiateVars
+	prepareTerminateVars
 
-    trigger_ifaceUnconfig $node_id $iface_id
+	set iface_running [getFromRunning "${node_id}|${iface_id}_running"]
+	set ifaces [dictGet $destroy_nodes_ifaces $node_id]
+	if { "*" ni $ifaces && $iface_id ni $ifaces && $iface_running } {
+		dict lappend destroy_nodes_ifaces $node_id $iface_id
+	}
+
+	updateTerminateVars
+
+	prepareInstantiateVars
+
+	set ifaces [dictGet $create_nodes_ifaces $node_id]
+	if { $iface_id in $ifaces && ! $iface_running } {
+		set ifaces [removeFromList $ifaces $iface_id]
+		if { $ifaces == {} } {
+			dict unset create_nodes_ifaces $node_id
+		} else {
+			dict set create_nodes_ifaces $node_id $ifaces
+		}
+	}
+
+	updateInstantiateVars
+
+	trigger_ifaceUnconfig $node_id $iface_id
 }
 
 proc trigger_ifaceRecreate { node_id iface_id } {
-    if { ! [getFromRunning "cfg_deployed"] || [getFromRunning "${node_id}_running"] == false } {
-	return
-    }
+	if { ! [getFromRunning "cfg_deployed"] || [getFromRunning "${node_id}_running"] == false } {
+		return
+	}
 
-    set iface_running [getFromRunning "${node_id}|${iface_id}_running"]
-    if { $iface_running } {
-	trigger_ifaceDestroy $node_id $iface_id
-    }
+	set iface_running [getFromRunning "${node_id}|${iface_id}_running"]
+	if { $iface_running } {
+		trigger_ifaceDestroy $node_id $iface_id
+	}
 
-    trigger_ifaceCreate $node_id $iface_id
+	trigger_ifaceCreate $node_id $iface_id
 }
 
 proc trigger_ifaceConfig { node_id iface_id } {
-    if { ! [getFromRunning "cfg_deployed"] || [getFromRunning "${node_id}_running"] == false } {
-	return
-    }
+	if { ! [getFromRunning "cfg_deployed"] || [getFromRunning "${node_id}_running"] == false } {
+		return
+	}
 
-    prepareInstantiateVars
+	prepareInstantiateVars
 
-    set ifaces [dictGet $configure_nodes_ifaces $node_id]
-    if { "*" ni $ifaces && $iface_id ni $ifaces } {
-	dict lappend configure_nodes_ifaces $node_id $iface_id
-    }
+	set ifaces [dictGet $configure_nodes_ifaces $node_id]
+	if { "*" ni $ifaces && $iface_id ni $ifaces } {
+		dict lappend configure_nodes_ifaces $node_id $iface_id
+	}
 
-    updateInstantiateVars
+	updateInstantiateVars
 }
 
 proc trigger_ifaceUnconfig { node_id iface_id } {
-    if { ! [getFromRunning "cfg_deployed"] || [getFromRunning "${node_id}_running"] == false } {
-	return
-    }
-
-    prepareTerminateVars
-
-    set iface_running [getFromRunning "${node_id}|${iface_id}_running"]
-    set ifaces [dictGet $unconfigure_nodes_ifaces $node_id]
-    if { "*" ni $ifaces && $iface_id ni $ifaces && $iface_running } {
-	dict lappend unconfigure_nodes_ifaces $node_id $iface_id
-    }
-
-    updateTerminateVars
-
-    prepareInstantiateVars
-
-    set ifaces [dictGet $configure_nodes_ifaces $node_id]
-    if { $iface_id in $ifaces && ! $iface_running } {
-	set ifaces [removeFromList $ifaces $iface_id]
-	if { $ifaces == {} } {
-	    dict unset configure_nodes_ifaces $node_id
-	} else {
-	    dict set configure_nodes_ifaces $node_id $ifaces
+	if { ! [getFromRunning "cfg_deployed"] || [getFromRunning "${node_id}_running"] == false } {
+		return
 	}
-    }
 
-    updateInstantiateVars
+	prepareTerminateVars
+
+	set iface_running [getFromRunning "${node_id}|${iface_id}_running"]
+	set ifaces [dictGet $unconfigure_nodes_ifaces $node_id]
+	if { "*" ni $ifaces && $iface_id ni $ifaces && $iface_running } {
+		dict lappend unconfigure_nodes_ifaces $node_id $iface_id
+	}
+
+	updateTerminateVars
+
+	prepareInstantiateVars
+
+	set ifaces [dictGet $configure_nodes_ifaces $node_id]
+	if { $iface_id in $ifaces && ! $iface_running } {
+		set ifaces [removeFromList $ifaces $iface_id]
+		if { $ifaces == {} } {
+			dict unset configure_nodes_ifaces $node_id
+		} else {
+			dict set configure_nodes_ifaces $node_id $ifaces
+		}
+	}
+
+	updateInstantiateVars
 }
 
 proc trigger_ifaceReconfig { node_id iface_id } {
-    if { ! [getFromRunning "cfg_deployed"] || [getFromRunning "${node_id}_running"] == false } {
-	return
-    }
+	if { ! [getFromRunning "cfg_deployed"] || [getFromRunning "${node_id}_running"] == false } {
+		return
+	}
 
-    set iface_running [getFromRunning "${node_id}|${iface_id}_running"]
-    if { $iface_running } {
-	trigger_ifaceUnconfig $node_id $iface_id
-    }
+	set iface_running [getFromRunning "${node_id}|${iface_id}_running"]
+	if { $iface_running } {
+		trigger_ifaceUnconfig $node_id $iface_id
+	}
 
-    trigger_ifaceConfig $node_id $iface_id
+	trigger_ifaceConfig $node_id $iface_id
 }
 
 #****f* exec.tcl/statline
@@ -562,17 +562,17 @@ proc trigger_ifaceReconfig { node_id iface_id } {
 #   * line -- line to be displayed
 #****
 proc statline { line } {
-    global execMode
+	global execMode
 
-    if { $execMode == "batch" } {
-	puts $line
-	flush stdout
-    } else {
-	dputs $line
+	if { $execMode == "batch" } {
+		puts $line
+		flush stdout
+	} else {
+		dputs $line
 
-	.bottom.textbox config -text "$line"
-	animateCursor
-    }
+		.bottom.textbox config -text "$line"
+		animateCursor
+	}
 }
 
 #****f* exec.tcl/displayBatchProgress
@@ -587,16 +587,16 @@ proc statline { line } {
 #   * total -- total number of steps
 #****
 proc displayBatchProgress { prgs tot } {
-    global execMode debug
+	global execMode debug
 
-    if { $execMode == "batch" } {
-	puts -nonewline "\r                                                "
-	puts -nonewline "\r> $prgs/$tot "
-	flush stdout
-    } elseif { $debug } {
-	dputs -nonewline "\r                                                "
-	dputs -nonewline "\r> $prgs/$tot "
-    }
+	if { $execMode == "batch" } {
+		puts -nonewline "\r                                                "
+		puts -nonewline "\r> $prgs/$tot "
+		flush stdout
+	} elseif { $debug } {
+		dputs -nonewline "\r                                                "
+		dputs -nonewline "\r> $prgs/$tot "
+	}
 }
 
 #****f* exec.tcl/pipesCreate
@@ -608,26 +608,26 @@ proc displayBatchProgress { prgs tot } {
 #   Create pipes for parallel execution to the shell.
 #****
 proc pipesCreate {} {
-    global inst_pipes last_inst_pipe
+	global inst_pipes last_inst_pipe
 
-    set ncpus [getCpuCount]
-    for { set i 0 } { $i < $ncpus } { incr i } {
-	set inst_pipes($i) [open "| sh" r+]
-    }
-    set last_inst_pipe 0
+	set ncpus [getCpuCount]
+	for { set i 0 } { $i < $ncpus } { incr i } {
+		set inst_pipes($i) [open "| sh" r+]
+	}
+	set last_inst_pipe 0
 }
 
 proc pipesExec { line args } {
-    global debug
+	global debug
 
-    if { $debug && $line != "" } {
-	set logfile "/var/log/imunes/[getFromRunning "eid"].log"
+	if { $debug && $line != "" } {
+		set logfile "/var/log/imunes/[getFromRunning "eid"].log"
 
-	pipesExecNoLog "printf \"RUN: \" >> $logfile ; cat >> $logfile 2>&1 <<\"IMUNESEOF\"\n$line\nIMUNESEOF" "hold"
-	pipesExecNoLog "$line >> $logfile 2>&1" "$args"
-    } else {
-	pipesExecNoLog $line {*}$args
-    }
+		pipesExecNoLog "printf \"RUN: \" >> $logfile ; cat >> $logfile 2>&1 <<\"IMUNESEOF\"\n$line\nIMUNESEOF" "hold"
+		pipesExecNoLog "$line >> $logfile 2>&1" "$args"
+	} else {
+		pipesExecNoLog $line {*}$args
+	}
 }
 
 #****f* exec.tcl/pipesExec
@@ -642,18 +642,18 @@ proc pipesExec { line args } {
 #   * args -- if empty, increment last pipe
 #****
 proc pipesExecNoLog { line args } {
-    global inst_pipes last_inst_pipe
+	global inst_pipes last_inst_pipe
 
-    set pipe $inst_pipes($last_inst_pipe)
-    puts $pipe $line
+	set pipe $inst_pipes($last_inst_pipe)
+	puts $pipe $line
 
-    flush $pipe
-    if { $args != "hold" } {
-	incr last_inst_pipe
-    }
-    if { $last_inst_pipe >= [llength [array names inst_pipes]] } {
-	set last_inst_pipe 0
-    }
+	flush $pipe
+	if { $args != "hold" } {
+		incr last_inst_pipe
+	}
+	if { $last_inst_pipe >= [llength [array names inst_pipes]] } {
+		set last_inst_pipe 0
+	}
 }
 
 #****f* exec.tcl/pipesClose
@@ -665,14 +665,14 @@ proc pipesExecNoLog { line args } {
 #   Close pipes.
 #****
 proc pipesClose {} {
-    global inst_pipes last_inst_pipe
+	global inst_pipes last_inst_pipe
 
-    foreach i [array names inst_pipes] {
-	close $inst_pipes($i) w
-	# A dummy read, just to flush the output from the command pipeline
-	read $inst_pipes($i)
-	catch { close $inst_pipes($i) }
-    }
+	foreach i [array names inst_pipes] {
+		close $inst_pipes($i) w
+		# A dummy read, just to flush the output from the command pipeline
+		read $inst_pipes($i)
+		catch { close $inst_pipes($i) }
+	}
 }
 
 #****f* exec.tcl/setOperMode
@@ -697,166 +697,166 @@ proc pipesClose {} {
 #   * new_oper_mode -- the new operating mode. Can be edit or exec.
 #****
 proc setOperMode { new_oper_mode } {
-    global all_modules_list editor_only execMode isOSfreebsd isOSlinux
+	global all_modules_list editor_only execMode isOSfreebsd isOSlinux
 
-    if { ! [getFromRunning "cfg_deployed"] && $new_oper_mode == "exec" } {
-	if { ! $isOSlinux && ! $isOSfreebsd } {
-	    after idle { .dialog1.msg configure -wraplength 4i }
-	    tk_dialog .dialog1 "IMUNES error" \
-		"Error: To execute experiment, run IMUNES on FreeBSD or Linux." \
-	    info 0 Dismiss
-	    return
+	if { ! [getFromRunning "cfg_deployed"] && $new_oper_mode == "exec" } {
+		if { ! $isOSlinux && ! $isOSfreebsd } {
+			after idle { .dialog1.msg configure -wraplength 4i }
+			tk_dialog .dialog1 "IMUNES error" \
+				"Error: To execute experiment, run IMUNES on FreeBSD or Linux." \
+			info 0 Dismiss
+			return
+		}
+
+		catch { exec id -u } uid
+		if { $uid != "0" } {
+			after idle { .dialog1.msg configure -wraplength 4i }
+			tk_dialog .dialog1 "IMUNES error" \
+				"Error: To execute experiment, run IMUNES with root permissions." \
+			info 0 Dismiss
+			return
+		}
+
+		set err [checkSysPrerequisites]
+		if { $err != "" } {
+			after idle { .dialog1.msg configure -wraplength 4i }
+			tk_dialog .dialog1 "IMUNES error" \
+				"$err" \
+				info 0 Dismiss
+			return
+		}
+
+		if { $editor_only } {
+			.menubar.experiment entryconfigure "Execute" -state disabled
+			return
+		}
+
+		if { [allSnapshotsAvailable] == 0 } {
+			return
+		}
+
+		# Verify that links to external interfaces are properly configured
+		if { [checkExternalInterfaces] } {
+			return
+		}
 	}
 
-	catch { exec id -u } uid
-	if { $uid != "0" } {
-	    after idle { .dialog1.msg configure -wraplength 4i }
-	    tk_dialog .dialog1 "IMUNES error" \
-		"Error: To execute experiment, run IMUNES with root permissions." \
-	    info 0 Dismiss
-	    return
-	}
+	#.panwin.f1.left.select configure -state active
+	if { "$new_oper_mode" == "exec" && [exec id -u] == 0 } {
+		global autorearrange_enabled
 
-	set err [checkSysPrerequisites]
-	if { $err != "" } {
-	    after idle { .dialog1.msg configure -wraplength 4i }
-	    tk_dialog .dialog1 "IMUNES error" \
-		"$err" \
-		info 0 Dismiss
-	    return
-	}
+		set autorearrange_enabled 0
+		.menubar.tools entryconfigure "Auto rearrange all" -state disabled
+		.menubar.tools entryconfigure "Auto rearrange selected" -state disabled
+		.menubar.experiment entryconfigure "Execute" -state disabled
+		.menubar.experiment entryconfigure "Terminate" -state normal
+		.menubar.experiment entryconfigure "Restart" -state normal
+		.menubar.edit entryconfigure "Undo" -state disabled
+		.menubar.edit entryconfigure "Redo" -state disabled
+		.panwin.f1.c bind node <Double-1> "spawnShellExec"
+		.panwin.f1.c bind nodelabel <Double-1> "spawnShellExec"
 
-	if { $editor_only } {
-	    .menubar.experiment entryconfigure "Execute" -state disabled
-	    return
-	}
+		setToRunning "oper_mode" "exec"
 
-	if { [allSnapshotsAvailable] == 0 } {
-	    return
-	}
+		wm protocol . WM_DELETE_WINDOW {
+		}
 
-	# Verify that links to external interfaces are properly configured
-	if { [checkExternalInterfaces] } {
-	    return
-	}
-    }
+		if { ! [getFromRunning "cfg_deployed"] } {
+			setToExecuteVars "instantiate_nodes" [getFromRunning "node_list"]
+			setToExecuteVars "create_nodes_ifaces" "*"
+			setToExecuteVars "instantiate_links" [getFromRunning "link_list"]
+			setToExecuteVars "configure_links" "*"
+			setToExecuteVars "configure_nodes_ifaces" "*"
+			setToExecuteVars "configure_nodes" "*"
 
-    #.panwin.f1.left.select configure -state active
-    if { "$new_oper_mode" == "exec" && [exec id -u] == 0 } {
-	global autorearrange_enabled
+			deployCfg 1
 
-	set autorearrange_enabled 0
-	.menubar.tools entryconfigure "Auto rearrange all" -state disabled
-	.menubar.tools entryconfigure "Auto rearrange selected" -state disabled
-	.menubar.experiment entryconfigure "Execute" -state disabled
-	.menubar.experiment entryconfigure "Terminate" -state normal
-	.menubar.experiment entryconfigure "Restart" -state normal
-	.menubar.edit entryconfigure "Undo" -state disabled
-	.menubar.edit entryconfigure "Redo" -state disabled
-	.panwin.f1.c bind node <Double-1> "spawnShellExec"
-	.panwin.f1.c bind nodelabel <Double-1> "spawnShellExec"
+			setToRunning "cfg_deployed" true
+		}
 
-	setToRunning "oper_mode" "exec"
+		wm protocol . WM_DELETE_WINDOW {
+			exit
+		}
 
-	wm protocol . WM_DELETE_WINDOW {
-	}
-
-	if { ! [getFromRunning "cfg_deployed"] } {
-	    setToExecuteVars "instantiate_nodes" [getFromRunning "node_list"]
-	    setToExecuteVars "create_nodes_ifaces" "*"
-	    setToExecuteVars "instantiate_links" [getFromRunning "link_list"]
-	    setToExecuteVars "configure_links" "*"
-	    setToExecuteVars "configure_nodes_ifaces" "*"
-	    setToExecuteVars "configure_nodes" "*"
-
-	    deployCfg 1
-
-	    setToRunning "cfg_deployed" true
-	}
-
-	wm protocol . WM_DELETE_WINDOW {
-	    exit
-	}
-
-	.bottom.experiment_id configure -text "Experiment ID = [getFromRunning "eid"]"
-	if { [getFromRunning "auto_execution"] } {
-	    set oper_mode_text "exec mode"
-	    set oper_mode_color "black"
+		.bottom.experiment_id configure -text "Experiment ID = [getFromRunning "eid"]"
+		if { [getFromRunning "auto_execution"] } {
+			set oper_mode_text "exec mode"
+			set oper_mode_color "black"
+		} else {
+			set oper_mode_text "paused"
+			set oper_mode_color "red"
+		}
 	} else {
-	    set oper_mode_text "paused"
-	    set oper_mode_color "red"
+		if { [getFromRunning "oper_mode"] != "edit" } {
+			global regular_termination
+
+			wm protocol . WM_DELETE_WINDOW {
+			}
+
+			set eid [getFromRunning "eid"]
+			if { $regular_termination } {
+				setToExecuteVars "terminate_nodes" [getFromRunning "node_list"]
+				setToExecuteVars "destroy_nodes_ifaces" "*"
+				setToExecuteVars "terminate_links" [getFromRunning "link_list"]
+				setToExecuteVars "unconfigure_links" "*"
+				setToExecuteVars "unconfigure_nodes_ifaces" "*"
+				setToExecuteVars "unconfigure_nodes" "*"
+
+				undeployCfg $eid 1
+			} else {
+				vimageCleanup $eid
+			}
+
+			pipesCreate
+			killExtProcess "socat.*$eid"
+			pipesClose
+
+			setToExecuteVars "terminate_cfg" [cfgGet]
+			setToRunning "cfg_deployed" false
+
+			wm protocol . WM_DELETE_WINDOW {
+				exit
+			}
+
+			.menubar.tools entryconfigure "Auto rearrange all" -state normal
+			.menubar.tools entryconfigure "Auto rearrange selected" -state normal
+		}
+
+		if { $editor_only } {
+			.menubar.experiment entryconfigure "Execute" -state disabled
+		 } else {
+			.menubar.experiment entryconfigure "Execute" -state normal
+		}
+
+		.menubar.experiment entryconfigure "Terminate" -state disabled
+		.menubar.experiment entryconfigure "Restart" -state disabled
+
+		if { [getFromRunning "undolevel"] > 0 } {
+			.menubar.edit entryconfigure "Undo" -state normal
+		} else {
+			.menubar.edit entryconfigure "Undo" -state disabled
+		}
+
+		if { [getFromRunning "redolevel"] > [getFromRunning "undolevel"] } {
+			.menubar.edit entryconfigure "Redo" -state normal
+		} else {
+			.menubar.edit entryconfigure "Redo" -state disabled
+		}
+
+		.panwin.f1.c bind node <Double-1> "nodeConfigGUI .panwin.f1.c {}"
+		.panwin.f1.c bind nodelabel <Double-1> "nodeConfigGUI .panwin.f1.c {}"
+
+		setToRunning "oper_mode" "edit"
+		.bottom.experiment_id configure -text ""
+		set oper_mode_text "edit mode"
+		set oper_mode_color "black"
 	}
-    } else {
-	if { [getFromRunning "oper_mode"] != "edit" } {
-	    global regular_termination
 
-	    wm protocol . WM_DELETE_WINDOW {
-	    }
+	.bottom.oper_mode configure -text "$oper_mode_text"
+	.bottom.oper_mode configure -foreground $oper_mode_color
 
-	    set eid [getFromRunning "eid"]
-	    if { $regular_termination } {
-		setToExecuteVars "terminate_nodes" [getFromRunning "node_list"]
-		setToExecuteVars "destroy_nodes_ifaces" "*"
-		setToExecuteVars "terminate_links" [getFromRunning "link_list"]
-		setToExecuteVars "unconfigure_links" "*"
-		setToExecuteVars "unconfigure_nodes_ifaces" "*"
-		setToExecuteVars "unconfigure_nodes" "*"
-
-		undeployCfg $eid 1
-	    } else {
-		vimageCleanup $eid
-	    }
-
-	    pipesCreate
-	    killExtProcess "socat.*$eid"
-	    pipesClose
-
-	    setToExecuteVars "terminate_cfg" [cfgGet]
-	    setToRunning "cfg_deployed" false
-
-	    wm protocol . WM_DELETE_WINDOW {
-		exit
-	    }
-
-	    .menubar.tools entryconfigure "Auto rearrange all" -state normal
-	    .menubar.tools entryconfigure "Auto rearrange selected" -state normal
-	}
-
-	if { $editor_only } {
-	    .menubar.experiment entryconfigure "Execute" -state disabled
- 	} else {
-	    .menubar.experiment entryconfigure "Execute" -state normal
-	}
-
-	.menubar.experiment entryconfigure "Terminate" -state disabled
-	.menubar.experiment entryconfigure "Restart" -state disabled
-
-	if { [getFromRunning "undolevel"] > 0 } {
-	    .menubar.edit entryconfigure "Undo" -state normal
-	} else {
-	    .menubar.edit entryconfigure "Undo" -state disabled
-	}
-
-	if { [getFromRunning "redolevel"] > [getFromRunning "undolevel"] } {
-	    .menubar.edit entryconfigure "Redo" -state normal
-	} else {
-	    .menubar.edit entryconfigure "Redo" -state disabled
-	}
-
-	.panwin.f1.c bind node <Double-1> "nodeConfigGUI .panwin.f1.c {}"
-	.panwin.f1.c bind nodelabel <Double-1> "nodeConfigGUI .panwin.f1.c {}"
-
-	setToRunning "oper_mode" "edit"
-	.bottom.experiment_id configure -text ""
-	set oper_mode_text "edit mode"
-	set oper_mode_color "black"
-    }
-
-    .bottom.oper_mode configure -text "$oper_mode_text"
-    .bottom.oper_mode configure -foreground $oper_mode_color
-
-    catch { redrawAll }
-    .panwin.f1.c config -cursor left_ptr
+	catch { redrawAll }
+	.panwin.f1.c config -cursor left_ptr
 }
 
 #****f* exec.tcl/spawnShellExec
@@ -869,24 +869,24 @@ proc setOperMode { new_oper_mode } {
 #   node.
 #****
 proc spawnShellExec {} {
-    set node_id [lindex [.panwin.f1.c gettags {node && current}] 1]
-    if { $node_id == "" } {
-	set node_id [lindex [.panwin.f1.c gettags {nodelabel && current}] 1]
+	set node_id [lindex [.panwin.f1.c gettags {node && current}] 1]
 	if { $node_id == "" } {
-	    return
-	}
-    }
-
-    if { [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" || [getFromRunning "${node_id}_running"] == false } {
-	nodeConfigGUI .panwin.f1.c $node_id
-    } else {
-	set cmd [lindex [existingShells [[getNodeType $node_id].shellcmds] $node_id] 0]
-	if { $cmd == "" } {
-	    return
+		set node_id [lindex [.panwin.f1.c gettags {nodelabel && current}] 1]
+		if { $node_id == "" } {
+			return
+		}
 	}
 
-	spawnShell $node_id $cmd
-    }
+	if { [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" || [getFromRunning "${node_id}_running"] == false } {
+		nodeConfigGUI .panwin.f1.c $node_id
+	} else {
+		set cmd [lindex [existingShells [[getNodeType $node_id].shellcmds] $node_id] 0]
+		if { $cmd == "" } {
+			return
+		}
+
+		spawnShell $node_id $cmd
+	}
 }
 
 #****f* exec.tcl/fetchNodesConfiguration
@@ -900,32 +900,32 @@ proc spawnShellExec {} {
 #   configurations from the running experiment settings.
 #****
 proc fetchNodesConfiguration {} {
-    foreach node_id [selectedNodes] {
-	if { [getFromRunning ${node_id}_running] != true } {
-	    continue
+	foreach node_id [selectedNodes] {
+		if { [getFromRunning ${node_id}_running] != true } {
+			continue
+		}
+
+		set lines [fetchNodeRunningConfig $node_id]
 	}
 
-	set lines [fetchNodeRunningConfig $node_id]
-    }
-
-    redrawAll
+	redrawAll
 }
 
 # helper func
 proc writeDataToFile { path data } {
-    file mkdir [file dirname $path]
-    set fileId [open $path w]
-    puts $fileId $data
-    close $fileId
+	file mkdir [file dirname $path]
+	set fileId [open $path w]
+	puts $fileId $data
+	close $fileId
 }
 
 # helper func
 proc readDataFromFile { path } {
-    set fileId [open $path r]
-    set data [string trim [read $fileId]]
-    close $fileId
+	set fileId [open $path r]
+	set data [string trim [read $fileId]]
+	close $fileId
 
-    return $data
+	return $data
 }
 
 #****f* editor.tcl/resumeSelectedExperiment
@@ -939,26 +939,26 @@ proc readDataFromFile { path } {
 #   * exp -- experiment id
 #****
 proc resumeSelectedExperiment { exp } {
-    global runtimeDir
+	global runtimeDir
 
-    set eid [getFromRunning "eid"]
-    if { $eid != "" } {
-	set curr_eid $eid
-	if { $curr_eid == $exp } {
-	    return
+	set eid [getFromRunning "eid"]
+	if { $eid != "" } {
+		set curr_eid $eid
+		if { $curr_eid == $exp } {
+			return
+		}
 	}
-    }
 
-    newProject
+	newProject
 
-    setToRunning "current_file" [getExperimentConfigurationFromFile $exp]
-    openFile
-    readRunningVarsFile $exp
-    #catch { cd [getFromRunning "cwd"] }
+	setToRunning "current_file" [getExperimentConfigurationFromFile $exp]
+	openFile
+	readRunningVarsFile $exp
+	#catch { cd [getFromRunning "cwd"] }
 
-    setToRunning "eid" $exp
-    setToRunning "cfg_deployed" true
-    setOperMode exec
+	setToRunning "eid" $exp
+	setToRunning "cfg_deployed" true
+	setOperMode exec
 }
 
 #****f* exec.tcl/dumpLinksToFile
@@ -972,42 +972,42 @@ proc resumeSelectedExperiment { exp } {
 #   * path -- absolute path of the file
 #****
 proc dumpLinksToFile { path } {
-    set data ""
-    set linkDelim ":"
-    set skipLinks ""
+	set data ""
+	set linkDelim ":"
+	set skipLinks ""
 
-    foreach link_id [getFromRunning "link_list"] {
-	if { $link_id in $skipLinks } {
-	    continue
+	foreach link_id [getFromRunning "link_list"] {
+		if { $link_id in $skipLinks } {
+			continue
+		}
+
+		lassign [getLinkPeers $link_id] node1_id node2_id
+		lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
+
+		set mirror_link_id [getLinkMirror $link_id]
+		if { $mirror_link_id != "" } {
+			lappend skipLinks $mirror_link_id
+
+			# switch direction for mirror links
+			lassign "$node2_id [lindex [getLinkPeers $mirror_link_id] 1]" node1_id node2_id
+			lassign "$iface2_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]" iface1_id iface2_id
+		}
+
+		set name1 [getNodeName $node1_id]
+		set name2 [getNodeName $node2_id]
+
+		set linkname "$name1$linkDelim$name2"
+
+		set lpair [list $node1_id [getIfcName $node1_id $iface1_id]]
+		set rpair [list $node2_id [getIfcName $node2_id $iface2_id]]
+
+		set line "$link_id {$node1_id-$node2_id {{$lpair} {$rpair}} $linkname}\n"
+		set data "$data$line"
 	}
 
-	lassign [getLinkPeers $link_id] node1_id node2_id
-	lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
+	set data [string trimright $data "\n"]
 
-	set mirror_link_id [getLinkMirror $link_id]
-	if { $mirror_link_id != "" } {
-	    lappend skipLinks $mirror_link_id
-
-	    # switch direction for mirror links
-	    lassign "$node2_id [lindex [getLinkPeers $mirror_link_id] 1]" node1_id node2_id
-	    lassign "$iface2_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]" iface1_id iface2_id
-	}
-
-	set name1 [getNodeName $node1_id]
-	set name2 [getNodeName $node2_id]
-
-	set linkname "$name1$linkDelim$name2"
-
-	set lpair [list $node1_id [getIfcName $node1_id $iface1_id]]
-	set rpair [list $node2_id [getIfcName $node2_id $iface2_id]]
-
-	set line "$link_id {$node1_id-$node2_id {{$lpair} {$rpair}} $linkname}\n"
-	set data "$data$line"
-    }
-
-    set data [string trimright $data "\n"]
-
-    writeDataToFile $path $data
+	writeDataToFile $path $data
 }
 
 #****f* exec.tcl/fetchExperimentFolders
@@ -1021,15 +1021,15 @@ proc dumpLinksToFile { path } {
 #   * exp_list -- experiment folder list
 #****
 proc fetchExperimentFolders {} {
-    global runtimeDir
-    set exp_list ""
-    set exp_files [glob -nocomplain -directory $runtimeDir -type d *]
-    if { $exp_files != "" } {
-	foreach file $exp_files {
-	    lappend exp_list [file tail $file]
+	global runtimeDir
+	set exp_list ""
+	set exp_files [glob -nocomplain -directory $runtimeDir -type d *]
+	if { $exp_files != "" } {
+		foreach file $exp_files {
+			lappend exp_list [file tail $file]
+		}
 	}
-    }
-    return $exp_list
+	return $exp_list
 }
 
 #****f* exec.tcl/getResumableExperiments
@@ -1043,14 +1043,14 @@ proc fetchExperimentFolders {} {
 #   * exp_list -- experiment id list
 #****
 proc getResumableExperiments {} {
-    set exp_list ""
-    set exp_folders [fetchExperimentFolders]
-    foreach exp [fetchRunningExperiments] {
-	if { $exp in $exp_folders } {
-	    lappend exp_list $exp
+	set exp_list ""
+	set exp_folders [fetchExperimentFolders]
+	foreach exp [fetchRunningExperiments] {
+		if { $exp in $exp_folders } {
+			lappend exp_list $exp
+		}
 	}
-    }
-    return $exp_list
+	return $exp_list
 }
 
 #****f* exec.tcl/getExperimentTimestampFromFile
@@ -1066,17 +1066,17 @@ proc getResumableExperiments {} {
 #   * timestamp -- experiment timestamp
 #****
 proc getExperimentTimestampFromFile { eid } {
-    global runtimeDir
+	global runtimeDir
 
-    set pathToFile "$runtimeDir/$eid/timestamp"
-    set timestamp ""
-    if { [file exists $pathToFile] } {
-	set fileId [open $pathToFile r]
-	set timestamp [string trim [read $fileId]]
-	close $fileId
-    }
+	set pathToFile "$runtimeDir/$eid/timestamp"
+	set timestamp ""
+	if { [file exists $pathToFile] } {
+		set fileId [open $pathToFile r]
+		set timestamp [string trim [read $fileId]]
+		close $fileId
+	}
 
-    return $timestamp
+	return $timestamp
 }
 
 #****f* exec.tcl/getExperimentNameFromFile
@@ -1092,15 +1092,15 @@ proc getExperimentTimestampFromFile { eid } {
 #   * name -- experiment name
 #****
 proc getExperimentNameFromFile { eid } {
-    global runtimeDir
+	global runtimeDir
 
-    set pathToFile "$runtimeDir/$eid/name"
-    set name ""
-    if { [file exists $pathToFile] } {
-	set name [readDataFromFile $pathToFile]
-    }
+	set pathToFile "$runtimeDir/$eid/name"
+	set name ""
+	if { [file exists $pathToFile] } {
+		set name [readDataFromFile $pathToFile]
+	}
 
-    return $name
+	return $name
 }
 
 #****f* exec.tcl/getExperimentConfigurationFromFile
@@ -1117,15 +1117,15 @@ proc getExperimentNameFromFile { eid } {
 #   * file -- experiment configuration
 #****
 proc getExperimentConfigurationFromFile { eid } {
-    global runtimeDir
+	global runtimeDir
 
-    set pathToFile "$runtimeDir/$eid/config.imn"
-    set file ""
-    if { [file exists $pathToFile] } {
-	set file $pathToFile
-    }
+	set pathToFile "$runtimeDir/$eid/config.imn"
+	set file ""
+	if { [file exists $pathToFile] } {
+		set file $pathToFile
+	}
 
-    return $file
+	return $file
 }
 
 #****f* exec.tcl/captureOnExtIfc
@@ -1140,16 +1140,16 @@ proc getExperimentConfigurationFromFile { eid } {
 #   * command -- tcpdump or wireshark
 #****
 proc captureOnExtIfc { node_id command } {
-    set ifc [lindex [ifcList $node_id] 0]
-    if { "$ifc" == "" } {
-	return
-    }
+	set ifc [lindex [ifcList $node_id] 0]
+	if { "$ifc" == "" } {
+		return
+	}
 
-    set eid [getFromRunning "eid"]
+	set eid [getFromRunning "eid"]
 
-    if { $command == "tcpdump" } {
-	exec xterm -name imunes-terminal -T "Capturing $eid-$node_id" -e "tcpdump -ni $eid-$node_id" 2> /dev/null &
-    } else {
-	exec $command -o "gui.window_title:[getNodeName $node_id] ($eid)" -k -i $eid-$node_id 2> /dev/null &
-    }
+	if { $command == "tcpdump" } {
+		exec xterm -name imunes-terminal -T "Capturing $eid-$node_id" -e "tcpdump -ni $eid-$node_id" 2> /dev/null &
+	} else {
+		exec $command -o "gui.window_title:[getNodeName $node_id] ($eid)" -k -i $eid-$node_id 2> /dev/null &
+	}
 }

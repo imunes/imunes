@@ -6,7 +6,7 @@ export MFLAGS=""
 export MAKEFLAGS=""
 
 if test -z "$KMODDIR"; then
-    export KMODDIR="/boot/kernel"
+	export KMODDIR="/boot/kernel"
 fi
 
 if test -z "$(ls /usr/src/ 2>/dev/null)"; then
@@ -15,5 +15,5 @@ if test -z "$(ls /usr/src/ 2>/dev/null)"; then
 fi
 
 for module in rfee patmat source; do
-    cd src/ng_$module && make && make install && cd -
+	cd src/ng_$module && make && make install && cd -
 done

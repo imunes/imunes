@@ -17,17 +17,17 @@ export PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
 
 imunes_start() {
 	mkdir -p $serviceDirectory
-    for topology in `ls $startupFolder`; do
-	eid=$(basename $(mktemp -p $serviceDirectory iXXXXX))
-	imunes -b -e $eid $startupFolder/$topology
-    done
+	for topology in `ls $startupFolder`; do
+		eid=$(basename $(mktemp -p $serviceDirectory iXXXXX))
+		imunes -b -e $eid $startupFolder/$topology
+	done
 }
 
 imunes_stop() {
-    for eid in `ls $serviceDirectory`; do
-	imunes -b -e $eid
-	rm $serviceDirectory/$eid
-    done
+	for eid in `ls $serviceDirectory`; do
+		imunes -b -e $eid
+		rm $serviceDirectory/$eid
+	done
 }
 
 load_rc_config $name

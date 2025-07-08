@@ -34,13 +34,13 @@
 #   Starts event scheduling.
 #****
 proc startEventScheduling {} {
-    setToRunning "sched_init_done" 0
-    setToRunning "stop_sched" false
+	setToRunning "sched_init_done" 0
+	setToRunning "stop_sched" false
 
-    .menubar.events entryconfigure "Start scheduling" -state disabled
-    .menubar.events entryconfigure "Stop scheduling" -state normal
-    .bottom.cpu_load config -text "0"
-    evsched
+	.menubar.events entryconfigure "Start scheduling" -state disabled
+	.menubar.events entryconfigure "Stop scheduling" -state normal
+	.bottom.cpu_load config -text "0"
+	evsched
 }
 
 #****f* eventsched.tcl/stopEventScheduling
@@ -52,10 +52,10 @@ proc startEventScheduling {} {
 #   Stops event scheduling.
 #****
 proc stopEventScheduling {} {
-    setToRunning "stop_sched" true
+	setToRunning "stop_sched" true
 
-    .menubar.events entryconfigure "Start scheduling" -state normal
-    .menubar.events entryconfigure "Stop scheduling" -state disabled
+	.menubar.events entryconfigure "Start scheduling" -state normal
+	.menubar.events entryconfigure "Stop scheduling" -state disabled
 }
 
 #****f* eventsched.tcl/evsched
@@ -67,190 +67,190 @@ proc stopEventScheduling {} {
 #   Function that start scheduling events accoring to scheduling data.
 #****
 proc evsched {} {
-    global evlogfile
+	global evlogfile
 
-    # XXX eid should be arg to evsched()
-    set eid [getFromRunning "eid"]
-    set oper_mode [getFromRunning "oper_mode"]
-    set eventqueue [getFromRunning "eventqueue"]
+	# XXX eid should be arg to evsched()
+	set eid [getFromRunning "eid"]
+	set oper_mode [getFromRunning "oper_mode"]
+	set eventqueue [getFromRunning "eventqueue"]
 
-    # XXX temp hack, init should be called when experiment is started
+	# XXX temp hack, init should be called when experiment is started
 
-    if { [getFromRunning "stop_sched"] } {
-	return
-    }
-
-    if { $oper_mode == "exec" && [getFromRunning "cfg_deployed"] } {
-	if { [getFromRunning "sched_init_done"] == 0 } {
-	    sched_init
-	    after 1000 evsched
-	    return
+	if { [getFromRunning "stop_sched"] } {
+		return
 	}
-    } else {
-	setToRunning "sched_init_done" 0
+
+	if { $oper_mode == "exec" && [getFromRunning "cfg_deployed"] } {
+		if { [getFromRunning "sched_init_done"] == 0 } {
+			sched_init
+			after 1000 evsched
+			return
+		}
+	} else {
+		setToRunning "sched_init_done" 0
+		after 1000 evsched
+		return
+	}
+
+	set curtime [expr [clock seconds] - [getFromRunning "event_t0"]]
+	set changed 0
+	set need_sort 1
+
+	if { $oper_mode == "exec" } {
+		.bottom.cpu_load config -text "$curtime"
+	} else {
+		.bottom.cpu_load config -text ""
+	}
+
+	foreach event $eventqueue {
+		set deadline [lindex $event 0]
+		if { $deadline > $curtime } {
+			break
+		}
+
+		# Dequeue the current event
+		set eventqueue [lrange $eventqueue 1 end]
+
+		set class [lindex $event 1]
+		set object [lindex $event 2]
+		set target [lindex $event 3]
+		set params [lrange $event 4 end]
+
+		if { $class == "node" } {
+			# XXX nothing implemented yet
+		} elseif { $class == "link" } {
+			if { [lindex $params 0] == "rand" } {
+				set lo [lindex $params 1]
+				set hi [lindex $params 2]
+				set next [expr $deadline + [lindex $params 3]]
+				set value [expr round($lo + ($hi - $lo) * rand())]
+				if { $next > $deadline } {
+					set nextev \
+						[lsearch $eventqueue "* $class $object $target *"]
+					if { $nextev == -1 || \
+						[lindex [lindex $eventqueue $nextev] 0] > $next } {
+						lappend eventqueue "$next [lrange $event 1 end]"
+						set need_sort 1
+					}
+				}
+			} elseif { [lindex $params 0] == "ramp" } {
+				set start [lindex $params 1]
+				set step [lindex $params 2]
+				set next [expr $deadline + [lindex $params 3]]
+				set value [expr round($start + $step)]
+				if { $next > $deadline } {
+					set nextev \
+						[lsearch $eventqueue "* $class $object $target *"]
+					if { $nextev == -1 || \
+						[lindex [lindex $eventqueue $nextev] 0] > $next } {
+						lappend eventqueue \
+							"$next [lrange $event 1 4] $value [lrange $params 2 end]"
+						set need_sort 1
+					}
+				}
+			} elseif { [lindex $params 0] == "square" } {
+				set lo [lindex $params 1]
+				set hi [lindex $params 2]
+				set next [expr $deadline + [lindex $params 3]]
+				set value $hi
+				if { $next > $deadline } {
+					set nextev \
+						[lsearch $eventqueue "* $class $object $target *"]
+					if { $nextev == -1 || \
+						[lindex [lindex $eventqueue $nextev] 0] > $next } {
+
+						lappend eventqueue "$next [lrange $event 1 4] $hi $lo [lindex $params 3]"
+						set need_sort 1
+					}
+				}
+			} elseif { [lindex $params 0] == "const" } {
+				set value [lindex $params 1]
+			} else {
+				puts stderr "bogus event line: $event"
+			}
+
+			switch -exact -- $target {
+				bandwidth {
+					setLinkBandwidth $object $value
+					execSetLinkParams $eid $object
+				}
+				delay {
+					setLinkDelay $object $value
+					execSetLinkParams $eid $object
+				}
+				ber {
+					setLinkBER $object $value
+					execSetLinkParams $eid $object
+				}
+				loss {
+					setLinkLoss $object $value
+					execSetLinkParams $eid $object
+				}
+				duplicate {
+					setLinkDup $object $value
+					execSetLinkParams $eid $object
+				}
+				width {
+					setLinkWidth $object $value
+				}
+				color {
+					if { [string is integer $value] == 1 } {
+						setLinkColor $object [format #%06x $value]
+					} else {
+						setLinkColor $object $value
+					}
+				}
+			}
+
+			set changed 1
+
+			if { $evlogfile != 0 } {
+				lassign [getLinkPeers $object] node1_id node2_id
+				lassign [getLinkPeersIfaces $object] iface1 iface2
+
+				set delay [getLinkDelay $object]
+				if { $delay == "" } {
+					set delay 0
+				}
+
+				set ber [getLinkBER $object]
+				if { $ber == "" } {
+					set ber 0
+				}
+
+				set loss [getLinkLoss $object]
+				if { $loss == "" } {
+					set loss 0
+				}
+
+				set dup [getLinkDup $object]
+				if { $dup == "" } {
+					set dup 0
+				}
+
+				set bw [getLinkBandwidth $object]
+				if { $bw == "" } {
+					set bw 0
+				}
+
+				set cfg "$delay $ber $loss $dup $bw"
+				puts $evlogfile \
+					"[clock seconds] $object $node1_id:$iface1 $node2_id:$iface2 $cfg"
+				flush $evlogfile
+			}
+		}
+	}
+
+	if { $changed == 1 } {
+		redrawAll
+	}
+
+	if { $need_sort == 1 } {
+		set eventqueue [lsort -index 0 -integer $eventqueue]
+	}
+
+	setToRunning "eventqueue" $eventqueue
 	after 1000 evsched
-	return
-    }
-
-    set curtime [expr [clock seconds] - [getFromRunning "event_t0"]]
-    set changed 0
-    set need_sort 1
-
-    if { $oper_mode == "exec" } {
-	.bottom.cpu_load config -text "$curtime"
-    } else {
-	.bottom.cpu_load config -text ""
-    }
-
-    foreach event $eventqueue {
-	set deadline [lindex $event 0]
-	if { $deadline > $curtime } {
-	    break
-	}
-
-	# Dequeue the current event
-	set eventqueue [lrange $eventqueue 1 end]
-
-	set class [lindex $event 1]
-	set object [lindex $event 2]
-	set target [lindex $event 3]
-	set params [lrange $event 4 end]
-
-	if { $class == "node" } {
-	    # XXX nothing implemented yet
-	} elseif { $class == "link" } {
-	    if { [lindex $params 0] == "rand" } {
-		set lo [lindex $params 1]
-		set hi [lindex $params 2]
-		set next [expr $deadline + [lindex $params 3]]
-		set value [expr round($lo + ($hi - $lo) * rand())]
-		if { $next > $deadline } {
-		    set nextev \
-			[lsearch $eventqueue "* $class $object $target *"]
-		    if { $nextev == -1 || \
-			[lindex [lindex $eventqueue $nextev] 0] > $next } {
-			lappend eventqueue "$next [lrange $event 1 end]"
-			set need_sort 1
-		    }
-		}
-	    } elseif { [lindex $params 0] == "ramp" } {
-		set start [lindex $params 1]
-		set step [lindex $params 2]
-		set next [expr $deadline + [lindex $params 3]]
-		set value [expr round($start + $step)]
-		if { $next > $deadline } {
-		    set nextev \
-			[lsearch $eventqueue "* $class $object $target *"]
-		    if { $nextev == -1 || \
-			[lindex [lindex $eventqueue $nextev] 0] > $next } {
-			lappend eventqueue \
-			    "$next [lrange $event 1 4] $value [lrange $params 2 end]"
-			set need_sort 1
-		    }
-		}
-	    } elseif { [lindex $params 0] == "square" } {
-		set lo [lindex $params 1]
-		set hi [lindex $params 2]
-		set next [expr $deadline + [lindex $params 3]]
-		set value $hi
-		if { $next > $deadline } {
-		    set nextev \
-			[lsearch $eventqueue "* $class $object $target *"]
-		    if { $nextev == -1 || \
-			[lindex [lindex $eventqueue $nextev] 0] > $next } {
-			lappend eventqueue \
-			    "$next [lrange $event 1 4] $hi $lo [lindex $params 3]"
-			set need_sort 1
-		    }
-		}
-	    } elseif { [lindex $params 0] == "const" } {
-		set value [lindex $params 1]
-	    } else {
-		puts stderr "bogus event line: $event"
-	    }
-
-	    switch -exact -- $target {
-		bandwidth {
-		    setLinkBandwidth $object $value
-		    execSetLinkParams $eid $object
-		}
-		delay {
-		    setLinkDelay $object $value
-		    execSetLinkParams $eid $object
-		}
-		ber {
-		    setLinkBER $object $value
-		    execSetLinkParams $eid $object
-		}
-		loss {
-		    setLinkLoss $object $value
-		    execSetLinkParams $eid $object
-		}
-		duplicate {
-		    setLinkDup $object $value
-		    execSetLinkParams $eid $object
-		}
-		width {
-		    setLinkWidth $object $value
-		}
-		color {
-		    if { [string is integer $value] == 1 } {
-			setLinkColor $object [format #%06x $value]
-		    } else {
-			setLinkColor $object $value
-		    }
-		}
-	    }
-
-	    set changed 1
-
-	    if { $evlogfile != 0 } {
-		lassign [getLinkPeers $object] node1_id node2_id
-		lassign [getLinkPeersIfaces $object] iface1 iface2
-
-		set delay [getLinkDelay $object]
-		if { $delay == "" } {
-		    set delay 0
-		}
-
-		set ber [getLinkBER $object]
-		if { $ber == "" } {
-		    set ber 0
-		}
-
-		set loss [getLinkLoss $object]
-		if { $loss == "" } {
-		    set loss 0
-		}
-
-		set dup [getLinkDup $object]
-		if { $dup == "" } {
-		    set dup 0
-		}
-
-		set bw [getLinkBandwidth $object]
-		if { $bw == "" } {
-		    set bw 0
-		}
-
-		set cfg "$delay $ber $loss $dup $bw"
-		puts $evlogfile \
-		    "[clock seconds] $object $node1_id:$iface1 $node2_id:$iface2 $cfg"
-		flush $evlogfile
-	    }
-	}
-    }
-
-    if { $changed == 1 } {
-	redrawAll
-    }
-
-    if { $need_sort == 1 } {
-	set eventqueue [lsort -index 0 -integer $eventqueue]
-    }
-
-    setToRunning "eventqueue" $eventqueue
-    after 1000 evsched
 }
 
 #****f* eventsched.tcl/sched_init
@@ -262,36 +262,36 @@ proc evsched {} {
 #   Scheduler initialization procedure.
 #****
 proc sched_init {} {
-    global evlogfile env
+	global evlogfile env
 
-    set eventqueue {}
+	set eventqueue {}
 
-    foreach link [getFromRunning "link_list"] {
-	set evlist [getLinkEvents $link]
-	foreach event $evlist {
-	    lappend eventqueue \
-		"[lindex $event 0] link $link [lrange $event 1 end]"
+	foreach link [getFromRunning "link_list"] {
+		set evlist [getLinkEvents $link]
+		foreach event $evlist {
+			lappend eventqueue \
+				"[lindex $event 0] link $link [lrange $event 1 end]"
+		}
 	}
-    }
 
-    foreach node_id [getFromRunning "node_list"] {
-	set evlist [getLinkEvents $node_id]
-	foreach event $evlist {
-	    lappend eventqueue \
-		"[lindex $event 0] node $node_id [lrange $event 1 end]"
+	foreach node_id [getFromRunning "node_list"] {
+		set evlist [getLinkEvents $node_id]
+		foreach event $evlist {
+			lappend eventqueue \
+				"[lindex $event 0] node $node_id [lrange $event 1 end]"
+		}
 	}
-    }
 
-    setToRunning "eventqueue" [lsort -index 0 -integer $eventqueue]
+	setToRunning "eventqueue" [lsort -index 0 -integer $eventqueue]
 
-    if { [info exists env(IMUNES_EVENTLOG)] } {
-	set evlogfile [open $env(IMUNES_EVENTLOG) a]
-    } else {
-	set evlogfile 0
-    }
+	if { [info exists env(IMUNES_EVENTLOG)] } {
+		set evlogfile [open $env(IMUNES_EVENTLOG) a]
+	} else {
+		set evlogfile 0
+	}
 
-    setToRunning "sched_init_done" 1
-    setToRunning "event_t0" [clock seconds]
+	setToRunning "sched_init_done" 1
+	setToRunning "event_t0" [clock seconds]
 }
 
 #****f* eventsched.tcl/getLinkEvents
@@ -307,7 +307,7 @@ proc sched_init {} {
 #   * events -- list of events
 #****
 proc getLinkEvents { link_id } {
-    return [cfgGet "links" $link_id "events"]
+	return [cfgGet "links" $link_id "events"]
 }
 
 #####################
@@ -325,14 +325,14 @@ proc getLinkEvents { link_id } {
 #   * events -- list of events
 #****
 proc getElementEvents { element } {
-    set group ""
-    if { $element in [getFromRunning "node_list"] } {
-	set group "nodes"
-    } elseif { $element in [getFromRunning "link_list"] } {
-	set group "links"
-    }
+	set group ""
+	if { $element in [getFromRunning "node_list"] } {
+		set group "nodes"
+	} elseif { $element in [getFromRunning "link_list"] } {
+		set group "links"
+	}
 
-    return [formatForDisp [cfgGet $group $element "events"]]
+	return [formatForDisp [cfgGet $group $element "events"]]
 }
 
 #****f* eventsched.tcl/setElementEvents
@@ -347,14 +347,14 @@ proc getElementEvents { element } {
 #   * events -- list of events
 #****
 proc setElementEvents { element events } {
-    set group ""
-    if { $element in [getFromRunning "node_list"] } {
-	set group "nodes"
-    } elseif { $element in [getFromRunning "link_list"] } {
-	set group "links"
-    }
+	set group ""
+	if { $element in [getFromRunning "node_list"] } {
+		set group "nodes"
+	} elseif { $element in [getFromRunning "link_list"] } {
+		set group "links"
+	}
 
-    cfgSet $group $element "events" [formatForExec $events]
+	cfgSet $group $element "events" [formatForExec $events]
 }
 
 #****f* eventsched.tcl/formatForExec
@@ -370,15 +370,15 @@ proc setElementEvents { element events } {
 #   * result -- list of formatted events
 #****
 proc formatForExec { events } {
-    set result {}
-    foreach zline [split $events {
+	set result {}
+	foreach zline [split $events {
 }] {
-	set zline [string trim $zline]
-	if { [string length $zline] != 0 } {
-	    lappend result $zline
+		set zline [string trim $zline]
+		if { [string length $zline] != 0 } {
+			lappend result $zline
+		}
 	}
-    }
-    return $result
+	return $result
 }
 
 #****f* eventsched.tcl/formatForDisp
@@ -394,9 +394,9 @@ proc formatForExec { events } {
 #   * result -- list of formatted events
 #****
 proc formatForDisp { events } {
-    set result [join $events "
+	set result [join $events "
 "]
-    return $result
+	return $result
 }
 
 #****f* eventsched.tcl/elementsEventsEditor
@@ -408,102 +408,102 @@ proc formatForDisp { events } {
 #   Creates a window for editing elements' events.
 #****
 proc elementsEventsEditor {} {
-    global shownElement
-    set shownElement links
+	global shownElement
+	set shownElement links
 
-    set eventsPopup .eventspopup
-    catch { destroy $eventsPopup }
+	set eventsPopup .eventspopup
+	catch { destroy $eventsPopup }
 
-    toplevel $eventsPopup
-    wm transient $eventsPopup .
-    wm title $eventsPopup "Events editor"
-    wm iconname $eventsPopup "Events editor"
+	toplevel $eventsPopup
+	wm transient $eventsPopup .
+	wm title $eventsPopup "Events editor"
+	wm iconname $eventsPopup "Events editor"
 
-    ttk::frame $eventsPopup.events
-    pack $eventsPopup.events -fill both -expand 1
+	ttk::frame $eventsPopup.events
+	pack $eventsPopup.events -fill both -expand 1
 
-    set pwi [ttk::panedwindow $eventsPopup.events.eventconf -orient horizontal]
+	set pwi [ttk::panedwindow $eventsPopup.events.eventconf -orient horizontal]
 
-    pack $pwi -fill both -expand 1
+	pack $pwi -fill both -expand 1
 
-    #left and right pane
-    ttk::frame $pwi.left -relief groove -borderwidth 3
-    ttk::frame $pwi.right -relief groove -borderwidth 3
+	#left and right pane
+	ttk::frame $pwi.left -relief groove -borderwidth 3
+	ttk::frame $pwi.right -relief groove -borderwidth 3
 
-    $pwi add $pwi.left -weight 0
-    $pwi add $pwi.right -weight 5
+	$pwi add $pwi.left -weight 0
+	$pwi add $pwi.right -weight 5
 
-    ttk::frame $pwi.left.treegrid
-    ttk::treeview $pwi.left.tree -selectmode browse \
-	    -height 15 -show tree \
-	    -yscrollcommand "$pwi.left.vscroll set"
-    ttk::scrollbar $pwi.left.vscroll -orient vertical -command "$pwi.left.tree yview"
+	ttk::frame $pwi.left.treegrid
+	ttk::treeview $pwi.left.tree -selectmode browse \
+			-height 15 -show tree \
+			-yscrollcommand "$pwi.left.vscroll set"
+	ttk::scrollbar $pwi.left.vscroll -orient vertical -command "$pwi.left.tree yview"
 
-    focus $pwi.left.tree
+	focus $pwi.left.tree
 
-    pack $pwi.left.treegrid -side right -fill y
-    grid $pwi.left.tree $pwi.left.vscroll -in $pwi.left.treegrid -sticky nsew
-    grid columnconfig $pwi.left.treegrid 0 -weight 1
-    grid rowconfigure $pwi.left.treegrid 0 -weight 1
+	pack $pwi.left.treegrid -side right -fill y
+	grid $pwi.left.tree $pwi.left.vscroll -in $pwi.left.treegrid -sticky nsew
+	grid columnconfig $pwi.left.treegrid 0 -weight 1
+	grid rowconfigure $pwi.left.treegrid 0 -weight 1
 
-    $pwi.left.tree column #0 -width 220 -stretch 0
+	$pwi.left.tree column #0 -width 220 -stretch 0
 
-    global eventlinktags
-    set eventlinktags ""
-    $pwi.left.tree insert {} end -id links -text "Links" -open true -tags links
-    $pwi.left.tree focus links
-    $pwi.left.tree selection set links
-    foreach link [lsort -dictionary [getFromRunning "link_list"]] {
-	lassign [lmap n [getLinkPeers $link] { getNodeName $n }] name0 name1
-	$pwi.left.tree insert links end -id $link -text "$link ($name0 to $name1)" -tags $link
-	lappend eventlinktags $link
-    }
-
-#    set node_list [getFromRunning "node_list"]
-#     global eventnodetags
-#     set eventnodetags ""
-#     $pwi.left.tree insert {} end -id nodes -text "Nodes" -open true -tags nodes
-#     foreach node_id [lsort -dictionary $node_list] {
-# 	set type [getNodeType $node_id]
-# 	if { $type != "pseudo" && [[getNodeType $node_id].netlayer] == "NETWORK" } {
-# 	    $pwi.left.tree insert nodes end -id $node_id -text "[getNodeName $node_id]" -open false -tags $node_id
-# 	    lappend eventnodetags $node_id
-# 	}
-#     }
-
-    text $pwi.right.text -bg white -width 42 -height 15 -takefocus 0 -state disabled
-    pack $pwi.right.text -expand 1 -fill both
-
-    bindEventsToEventEditor $pwi $pwi.right.text
-
-    set eventButtons [ttk::frame $eventsPopup.events.buttons]
-    ttk::button $eventButtons.apply -text "Apply" -command {
-	    saveElementEvents .eventspopup.events.eventconf.right.text
-    }
-    ttk::button $eventButtons.close -text "Close" -command "destroy $eventsPopup"
-
-    set startText "Start scheduling"
-    set stopText "Stop scheduling"
-
-    if { [getFromRunning "stop_sched"] } {
-	ttk::button $eventButtons.start_stop \
-	-text $startText -command {
-	    startStopEvent
-	    set eventButtons .eventspopup.events.buttons
-	    $eventButtons.start_stop configure -text [startStopText $eventButtons.start_stop]
+	global eventlinktags
+	set eventlinktags ""
+	$pwi.left.tree insert {} end -id links -text "Links" -open true -tags links
+	$pwi.left.tree focus links
+	$pwi.left.tree selection set links
+	foreach link [lsort -dictionary [getFromRunning "link_list"]] {
+		lassign [lmap n [getLinkPeers $link] { getNodeName $n }] name0 name1
+		$pwi.left.tree insert links end -id $link -text "$link ($name0 to $name1)" -tags $link
+		lappend eventlinktags $link
 	}
-    } else {
-	ttk::button $eventButtons.start_stop \
-	-text $stopText -command {
-	    startStopEvent
-	    set eventButtons .eventspopup.events.buttons
-	    $eventButtons.start_stop configure -text [startStopText $eventButtons.start_stop]
-	}
-    }
 
-    pack $eventButtons.apply $eventButtons.close \
-      $eventButtons.start_stop -side left -pady 4 -padx 5
-    pack $eventButtons
+#	set node_list [getFromRunning "node_list"]
+#	global eventnodetags
+#	set eventnodetags ""
+#	$pwi.left.tree insert {} end -id nodes -text "Nodes" -open true -tags nodes
+#	foreach node_id [lsort -dictionary $node_list] {
+#		set type [getNodeType $node_id]
+#		if { $type != "pseudo" && [[getNodeType $node_id].netlayer] == "NETWORK" } {
+#			$pwi.left.tree insert nodes end -id $node_id -text "[getNodeName $node_id]" -open false -tags $node_id
+#			lappend eventnodetags $node_id
+#		}
+#	}
+
+	text $pwi.right.text -bg white -width 42 -height 15 -takefocus 0 -state disabled
+	pack $pwi.right.text -expand 1 -fill both
+
+	bindEventsToEventEditor $pwi $pwi.right.text
+
+	set eventButtons [ttk::frame $eventsPopup.events.buttons]
+	ttk::button $eventButtons.apply -text "Apply" -command {
+			saveElementEvents .eventspopup.events.eventconf.right.text
+	}
+	ttk::button $eventButtons.close -text "Close" -command "destroy $eventsPopup"
+
+	set startText "Start scheduling"
+	set stopText "Stop scheduling"
+
+	if { [getFromRunning "stop_sched"] } {
+		ttk::button $eventButtons.start_stop \
+		-text $startText -command {
+			startStopEvent
+			set eventButtons .eventspopup.events.buttons
+			$eventButtons.start_stop configure -text [startStopText $eventButtons.start_stop]
+		}
+	} else {
+		ttk::button $eventButtons.start_stop \
+		-text $stopText -command {
+			startStopEvent
+			set eventButtons .eventspopup.events.buttons
+			$eventButtons.start_stop configure -text [startStopText $eventButtons.start_stop]
+		}
+	}
+
+	pack $eventButtons.apply $eventButtons.close \
+	  $eventButtons.start_stop -side left -pady 4 -padx 5
+	pack $eventButtons
 }
 
 #****f* eventsched.tcl/startStopText
@@ -520,12 +520,12 @@ proc elementsEventsEditor {} {
 #   * result -- string to return
 #****
 proc startStopText { widget } {
-    set actual [$widget cget -text]
-    if { [string match "Start*" $actual] } {
-	return "Stop scheduling"
-    } else {
-	return "Start scheduling"
-    }
+	set actual [$widget cget -text]
+	if { [string match "Start*" $actual] } {
+		return "Stop scheduling"
+	} else {
+		return "Start scheduling"
+	}
 }
 
 #****f* eventsched.tcl/startStopEvent
@@ -538,11 +538,11 @@ proc startStopText { widget } {
 #   on whether scheduling is started or stopped.
 #****
 proc startStopEvent {} {
-    if { [getFromRunning "stop_sched"] } {
-	startEventScheduling
-    } else {
-	stopEventScheduling
-    }
+	if { [getFromRunning "stop_sched"] } {
+		startEventScheduling
+	} else {
+		stopEventScheduling
+	}
 }
 
 #****f* eventsched.tcl/loadElementEvents
@@ -559,52 +559,52 @@ proc startStopEvent {} {
 #   * text -- text widget on the right side of the window
 #****
 proc loadElementEvents { element text } {
-    global shownElement
+	global shownElement
 
-    set modified 0
-    if { $shownElement != "links" && $shownElement != "nodes" } {
-	if { [string equal [string trim [$text get 0.0 end]] \
-	     [string trim [getElementEvents $shownElement]]] != 1 } {
-	    set modified 1
+	set modified 0
+	if { $shownElement != "links" && $shownElement != "nodes" } {
+		if { [string equal [string trim [$text get 0.0 end]] \
+			 [string trim [getElementEvents $shownElement]]] != 1 } {
+			set modified 1
+		}
 	}
-    }
 
-    if { $modified == 1 && $shownElement != "links" && $shownElement != "nodes" \
-	&& $shownElement != $element } {
+	if { $modified == 1 && $shownElement != "links" && $shownElement != "nodes" \
+		&& $shownElement != $element } {
 
-	set answer [tk_messageBox -message "Do you want to save changes on element $shownElement?" \
-	-icon question -type yesnocancel \
-	-detail "Select \"Yes\" to save changes before choosing another element"]
+		set answer [tk_messageBox -message "Do you want to save changes on element $shownElement?" \
+		-icon question -type yesnocancel \
+		-detail "Select \"Yes\" to save changes before choosing another element"]
 
-	switch -- $answer {
-	    #save changes
-	    yes {
-		.eventspopup.events.eventconf.left.tree selection set $shownElement
-		saveElementEvents $text
-		.eventspopup.events.eventconf.left.tree selection set $element
+		switch -- $answer {
+			#save changes
+			yes {
+				.eventspopup.events.eventconf.left.tree selection set $shownElement
+				saveElementEvents $text
+				.eventspopup.events.eventconf.left.tree selection set $element
+				$text configure -state normal
+				$text delete 0.0 end
+				$text insert 0.0 [getElementEvents $element]
+				set shownElement $element
+			}
+			#discard changes
+			no {
+				$text configure -state normal
+				$text delete 0.0 end
+				$text insert 0.0 [getElementEvents $element]
+				set shownElement $element
+			}
+			#get back on editing that interface
+			cancel {
+				.eventspopup.events.eventconf.left.tree selection set $shownElement
+			}
+		}
+	} else {
 		$text configure -state normal
 		$text delete 0.0 end
 		$text insert 0.0 [getElementEvents $element]
 		set shownElement $element
-	    }
-	    #discard changes
-	    no {
-		$text configure -state normal
-		$text delete 0.0 end
-		$text insert 0.0 [getElementEvents $element]
-		set shownElement $element
-	    }
-	    #get back on editing that interface
-	    cancel {
-		.eventspopup.events.eventconf.left.tree selection set $shownElement
-	    }
 	}
-    } else {
-	$text configure -state normal
-	$text delete 0.0 end
-	$text insert 0.0 [getElementEvents $element]
-	set shownElement $element
-    }
 }
 
 #****f* eventsched.tcl/saveElementEvents
@@ -619,29 +619,29 @@ proc loadElementEvents { element text } {
 #   * text -- text widget on the right side of the window
 #****
 proc saveElementEvents { text } {
-    set selected [.eventspopup.events.eventconf.left.tree selection]
-    set events [$text get 0.0 end]
+	set selected [.eventspopup.events.eventconf.left.tree selection]
+	set events [$text get 0.0 end]
 
-    set checkFailed 0
-    if { [string match -nocase "*l*" $selected] } {
-	set checkFailed [checkEventsSyntax $events link]
-    } elseif { [string match -nocase "*n*" $selected] } {
-	set checkFailed [checkEventsSyntax $events node]
-    }
+	set checkFailed 0
+	if { [string match -nocase "*l*" $selected] } {
+		set checkFailed [checkEventsSyntax $events link]
+	} elseif { [string match -nocase "*n*" $selected] } {
+		set checkFailed [checkEventsSyntax $events node]
+	}
 
-    set errline [$text get $checkFailed.0 $checkFailed.end]
+	set errline [$text get $checkFailed.0 $checkFailed.end]
 
-    if { $checkFailed != 0 } {
-	    tk_dialog .dialog1 "IMUNES warning" \
-	        "Syntax error in line $checkFailed:\n'$errline'" \
-	    info 0 OK
+	if { $checkFailed != 0 } {
+			tk_dialog .dialog1 "IMUNES warning" \
+				"Syntax error in line $checkFailed:\n'$errline'" \
+			info 0 OK
 
-	    return
-    }
+			return
+	}
 
-    if { $selected != "nodes" && $selected != "links" } {
-	setElementEvents $selected $events
-    }
+	if { $selected != "nodes" && $selected != "links" } {
+		setElementEvents $selected $events
+	}
 }
 
 #****f* eventsched.tcl/bindEventsToEventEditor
@@ -657,56 +657,56 @@ proc saveElementEvents { text } {
 #   * text -- text widget that is on the right side
 #****
 proc bindEventsToEventEditor { pwi text } {
-    global eventnodetags eventlinktags
+	global eventnodetags eventlinktags
 
-    set f $pwi.left
-    $f.tree tag bind links <1> \
-	    "$text configure -state disabled"
-    $f.tree tag bind links <Key-Down> \
-	    "loadElementEvents [lindex $eventlinktags 0] $text"
+	set f $pwi.left
+	$f.tree tag bind links <1> \
+			"$text configure -state disabled"
+	$f.tree tag bind links <Key-Down> \
+			"loadElementEvents [lindex $eventlinktags 0] $text"
 
-    foreach l $eventlinktags {
-	$f.tree tag bind $l <1> \
-	    "loadElementEvents $l $text"
-	$f.tree tag bind $l <Key-Up> \
-	    "if { ! [string equal {} [$f.tree prev $l]] } {
-		loadElementEvents [$f.tree prev $l] $text
-	    } else {
-		$text configure -state disabled
-	    }"
-	$f.tree tag bind $l <Key-Down> \
-	    "if { ! [string equal {} [$f.tree next $l]] } {
-		loadElementEvents [$f.tree next $l] $text
-	    } else {
-		$text configure -state disabled
-	    }"
-    }
+	foreach l $eventlinktags {
+		$f.tree tag bind $l <1> \
+			"loadElementEvents $l $text"
+		$f.tree tag bind $l <Key-Up> \
+			"if { ! [string equal {} [$f.tree prev $l]] } {
+				loadElementEvents [$f.tree prev $l] $text
+			} else {
+				$text configure -state disabled
+			}"
+		$f.tree tag bind $l <Key-Down> \
+			"if { ! [string equal {} [$f.tree next $l]] } {
+				loadElementEvents [$f.tree next $l] $text
+			} else {
+				$text configure -state disabled
+			}"
+	}
 
-#     $f.tree tag bind nodes <1> \
-# 	    "$text configure -state disabled"
-#     $f.tree tag bind nodes <Key-Up> \
-# 	    "loadElementEvents [lindex $eventlinktags 0] $text"
-#     $f.tree tag bind nodes <Key-Down> \
-# 	    "loadElementEvents [lindex $eventlinktags 0] $text"
+#	$f.tree tag bind nodes <1> \
+#		"$text configure -state disabled"
+#	$f.tree tag bind nodes <Key-Up> \
+#		"loadElementEvents [lindex $eventlinktags 0] $text"
+#	$f.tree tag bind nodes <Key-Down> \
+#		"loadElementEvents [lindex $eventlinktags 0] $text"
 #
-#     foreach n $eventnodetags {
-# 	set type [getNodeType $n]
-# 	global selectedIfc
-# 	$f.tree tag bind $n <1> \
-# 	      "loadElementEvents $n $text"
-# 	$f.tree tag bind $n <Key-Up> \
-# 	    "if { ! [string equal {} [$f.tree prev $n]] } {
-# 		loadElementEvents [$f.tree prev $n] $text
-# 	    } else {
-# 		$text configure -state disabled
-# 	    }"
-# 	$f.tree tag bind $n <Key-Down> \
-# 	    "if { ! [string equal {} [$f.tree next $n]] } {
-# 		loadElementEvents [$f.tree next $n] $text
-# 	    } else {
-# 		$text configure -state disabled
-# 	    }"
-#     }
+#	foreach n $eventnodetags {
+#		set type [getNodeType $n]
+#		global selectedIfc
+#		$f.tree tag bind $n <1> \
+#			"loadElementEvents $n $text"
+#		$f.tree tag bind $n <Key-Up> \
+#			"if { ! [string equal {} [$f.tree prev $n]] } {
+#				loadElementEvents [$f.tree prev $n] $text
+#			} else {
+#				$text configure -state disabled
+#			}"
+#		$f.tree tag bind $n <Key-Down> \
+#		"if { ! [string equal {} [$f.tree next $n]] } {
+#			loadElementEvents [$f.tree next $n] $text
+#		} else {
+#			$text configure -state disabled
+#		}"
+#	}
 }
 
 #****f* eventsched.tcl/checkEventsSyntax
@@ -721,70 +721,70 @@ proc bindEventsToEventEditor { pwi text } {
 #   * type -- type of node (link/node)
 #****
 proc checkEventsSyntax { text type } {
-     set text [split $text "\n"]
-     switch -exact $type {
-	link {
-	    set regularExpressions [list bandwidth delay ber loss width duplicate color]
-	    set functions [list ramp rand square]
-	    set colors [list Red Green Blue Yellow Magenta Cyan Black]
-	}
-	node {
-	    set regularExpressions [list ]
-	}
-     }
+	 set text [split $text "\n"]
+	 switch -exact $type {
+		link {
+			set regularExpressions [list bandwidth delay ber loss width duplicate color]
+			set functions [list ramp rand square]
+			set colors [list Red Green Blue Yellow Magenta Cyan Black]
+		}
+		node {
+			set regularExpressions [list ]
+		}
+	 }
 
-     set i 0
-     foreach line $text {
-	incr i
-	if { $line == "" } {
-	    continue
-	}
+	 set i 0
+	 foreach line $text {
+		incr i
+		if { $line == "" } {
+			continue
+		}
 
-	set splitLine [split $line " "]
-	if { [llength $line] == 4 } {
-	    if { ! [string is integer [lindex $splitLine 0]] } {
-		return $i
-	    }
+		set splitLine [split $line " "]
+		if { [llength $line] == 4 } {
+			if { ! [string is integer [lindex $splitLine 0]] } {
+				return $i
+			}
 
-	    if { [lindex $splitLine 1] ni $regularExpressions } {
-		return $i
-	    }
-	    if { [lindex $splitLine 2] != "const" } {
-		return $i
-	    }
-	    if { ! [string is integer [lindex $splitLine 3]] \
-		&& [lindex $splitLine 3] ni $colors } {
+			if { [lindex $splitLine 1] ni $regularExpressions } {
+				return $i
+			}
+			if { [lindex $splitLine 2] != "const" } {
+				return $i
+			}
+			if { ! [string is integer [lindex $splitLine 3]] \
+				&& [lindex $splitLine 3] ni $colors } {
 
-		return $i
-	    }
-	} elseif { [llength $line] == 6 } {
-	    if { ! [string is integer [lindex $splitLine 0]] } {
-		return $i
-	    }
+				return $i
+			}
+		} elseif { [llength $line] == 6 } {
+			if { ! [string is integer [lindex $splitLine 0]] } {
+				return $i
+			}
 
-	    if { [lindex $splitLine 1] ni $regularExpressions } {
-		return $i
-	    }
+			if { [lindex $splitLine 1] ni $regularExpressions } {
+				return $i
+			}
 
-	    if { [lindex $splitLine 2] ni $functions } {
-		return $i
-	    }
+			if { [lindex $splitLine 2] ni $functions } {
+				return $i
+			}
 
-	    if { ! [string is integer [lindex $splitLine 3]] } {
-		return $i
-	    }
+			if { ! [string is integer [lindex $splitLine 3]] } {
+				return $i
+			}
 
-	    if { ! [string is integer [lindex $splitLine 4]] } {
-		return $i
-	    }
+			if { ! [string is integer [lindex $splitLine 4]] } {
+				return $i
+			}
 
-	    if { ! [string is integer [lindex $splitLine 5]] } {
-		return $i
-	    }
-	} else {
-	    return $i
-	}
-     }
+			if { ! [string is integer [lindex $splitLine 5]] } {
+				return $i
+			}
+		} else {
+			return $i
+		}
+	 }
 
-     return 0
+	 return 0
 }

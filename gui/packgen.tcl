@@ -40,30 +40,30 @@
 set MODULE packgen
 
 proc $MODULE.toolbarIconDescr {} {
-    return "Add new Packet generator"
+	return "Add new Packet generator"
 }
 
 proc $MODULE.icon { size } {
-    global ROOTDIR LIBDIR
+	global ROOTDIR LIBDIR
 
-    switch $size {
-	normal {
-	    return $ROOTDIR/$LIBDIR/icons/normal/packgen.gif
+	switch $size {
+		normal {
+			return $ROOTDIR/$LIBDIR/icons/normal/packgen.gif
+		}
+		small {
+			return $ROOTDIR/$LIBDIR/icons/small/packgen.gif
+		}
+		toolbar {
+			return $ROOTDIR/$LIBDIR/icons/tiny/packgen.gif
+		}
 	}
-	small {
-	    return $ROOTDIR/$LIBDIR/icons/small/packgen.gif
-	}
-	toolbar {
-	    return $ROOTDIR/$LIBDIR/icons/tiny/packgen.gif
-	}
-    }
 }
 
 proc $MODULE.notebookDimensions { wi } {
-    set h 430
-    set w 652
+	set h 430
+	set w 652
 
-    return [list $h $w]
+	return [list $h $w]
 }
 
 #****f* packgen.tcl/packgen.configGUI
@@ -81,33 +81,33 @@ proc $MODULE.notebookDimensions { wi } {
 #   * node_id - node id
 #****
 proc $MODULE.configGUI { c node_id } {
-    global wi
-    global packgenguielements packgentreecolumns curnode
-    global node_cfg node_existing_mac node_existing_ipv4 node_existing_ipv6
+	global wi
+	global packgenguielements packgentreecolumns curnode
+	global node_cfg node_existing_mac node_existing_ipv4 node_existing_ipv6
 
-    set node_cfg [cfgGet "nodes" $node_id]
-    set node_existing_mac [getFromRunning "mac_used_list"]
-    set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
-    set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
+	set node_cfg [cfgGet "nodes" $node_id]
+	set node_existing_mac [getFromRunning "mac_used_list"]
+	set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
+	set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
 
-    set curnode $node_id
-    set packgenguielements {}
+	set curnode $node_id
+	set packgenguielements {}
 
-    configGUI_createConfigPopupWin $c
+	configGUI_createConfigPopupWin $c
 
-    wm title $wi "packet generator configuration"
-    configGUI_nodeName $wi $node_id "Node name:"
+	wm title $wi "packet generator configuration"
+	configGUI_nodeName $wi $node_id "Node name:"
 
-    set tabs [configGUI_addNotebookPackgen $wi $node_id]
+	set tabs [configGUI_addNotebookPackgen $wi $node_id]
 
-    configGUI_packetRate [lindex $tabs 0] $node_id
+	configGUI_packetRate [lindex $tabs 0] $node_id
 
-    set packgentreecolumns {"Data Data"}
-    foreach tab $tabs {
-	configGUI_addTreePackgen $tab $node_id
-    }
+	set packgentreecolumns {"Data Data"}
+	foreach tab $tabs {
+		configGUI_addTreePackgen $tab $node_id
+	}
 
-    configGUI_buttonsACPackgenNode $wi $node_id
+	configGUI_buttonsACPackgenNode $wi $node_id
 }
 
 #****f* packgen.tcl/packgen.configInterfacesGUI
@@ -125,7 +125,7 @@ proc $MODULE.configGUI { c node_id } {
 #   * pac_id - packet id
 #****
 proc $MODULE.configPacketsGUI { wi node_id pac_id } {
-    global packgenguielements
+	global packgenguielements
 
-    configGUI_packetConfig $wi $node_id $pac_id
+	configGUI_packetConfig $wi $node_id $pac_id
 }

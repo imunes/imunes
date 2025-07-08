@@ -50,31 +50,31 @@ set MODULE ext
 #   * descr -- string describing the toolbar icon
 #****
 proc $MODULE.toolbarIconDescr {} {
-    return "Add new External connection"
+	return "Add new External connection"
 }
 
 proc $MODULE._confNewIfc { node_cfg iface_id } {
-    global mac_byte4 mac_byte5
-    global node_existing_mac node_existing_ipv4 node_existing_ipv6
+	global mac_byte4 mac_byte5
+	global node_existing_mac node_existing_ipv4 node_existing_ipv6
 
-    set ipv4addr [getNextIPv4addr [_getNodeType $node_cfg] $node_existing_ipv4]
-    lappend node_existing_ipv4 $ipv4addr
-    set node_cfg [_setIfcIPv4addrs $node_cfg $iface_id $ipv4addr]
+	set ipv4addr [getNextIPv4addr [_getNodeType $node_cfg] $node_existing_ipv4]
+	lappend node_existing_ipv4 $ipv4addr
+	set node_cfg [_setIfcIPv4addrs $node_cfg $iface_id $ipv4addr]
 
-    set ipv6addr [getNextIPv6addr [_getNodeType $node_cfg] $node_existing_ipv6]
-    lappend node_existing_ipv6 $ipv6addr
-    set node_cfg [_setIfcIPv6addrs $node_cfg $iface_id $ipv6addr]
+	set ipv6addr [getNextIPv6addr [_getNodeType $node_cfg] $node_existing_ipv6]
+	lappend node_existing_ipv6 $ipv6addr
+	set node_cfg [_setIfcIPv6addrs $node_cfg $iface_id $ipv6addr]
 
-    set bkp_mac_byte4 $mac_byte4
-    set bkp_mac_byte5 $mac_byte5
-    randomizeMACbytes
-    set macaddr [getNextMACaddr $node_existing_mac]
-    lappend node_existing_mac $macaddr
-    set node_cfg [_setIfcMACaddr $node_cfg $iface_id $macaddr]
-    set mac_byte4 $bkp_mac_byte4
-    set mac_byte5 $bkp_mac_byte5
+	set bkp_mac_byte4 $mac_byte4
+	set bkp_mac_byte5 $mac_byte5
+	randomizeMACbytes
+	set macaddr [getNextMACaddr $node_existing_mac]
+	lappend node_existing_mac $macaddr
+	set node_cfg [_setIfcMACaddr $node_cfg $iface_id $macaddr]
+	set mac_byte4 $bkp_mac_byte4
+	set mac_byte5 $bkp_mac_byte5
 
-    return $node_cfg
+	return $node_cfg
 }
 
 #****f* ext.tcl/ext.icon
@@ -90,19 +90,19 @@ proc $MODULE._confNewIfc { node_cfg iface_id } {
 #   * path -- path to icon
 #****
 proc $MODULE.icon { size } {
-    global ROOTDIR LIBDIR
+	global ROOTDIR LIBDIR
 
-    switch $size {
-	normal {
-	    return $ROOTDIR/$LIBDIR/icons/normal/ext.gif
+	switch $size {
+		normal {
+			return $ROOTDIR/$LIBDIR/icons/normal/ext.gif
+		}
+		small {
+			return $ROOTDIR/$LIBDIR/icons/small/ext.gif
+		}
+		toolbar {
+			return $ROOTDIR/$LIBDIR/icons/tiny/ext.gif
+		}
 	}
-	small {
-	    return $ROOTDIR/$LIBDIR/icons/small/ext.gif
-	}
-	toolbar {
-	    return $ROOTDIR/$LIBDIR/icons/tiny/ext.gif
-	}
-    }
 }
 
 #****f* ext.tcl/ext.configGUI
@@ -119,37 +119,37 @@ proc $MODULE.icon { size } {
 #   * node_id -- node id
 #****
 proc $MODULE.configGUI { c node_id } {
-    set iface_id [lindex [ifcList $node_id] 0]
-    if { "$iface_id" == "" } {
-	return
-    }
+	set iface_id [lindex [ifcList $node_id] 0]
+	if { "$iface_id" == "" } {
+		return
+	}
 
-    global wi
-    #
-    #guielements - the list of modules contained in the configuration window
-    #              (each element represents the name of the procedure which creates
-    #              that module)
-    #
-    #treecolumns - the list of columns in the interfaces tree (each element
-    #              consists of the column id and the column name)
-    #
-    global guielements treecolumns
-    global node_cfg node_existing_mac node_existing_ipv4 node_existing_ipv6
+	global wi
+	#
+	#guielements - the list of modules contained in the configuration window
+	#		(each element represents the name of the procedure which creates
+	#		that module)
+	#
+	#treecolumns - the list of columns in the interfaces tree (each element
+	#		consists of the column id and the column name)
+	#
+	global guielements treecolumns
+	global node_cfg node_existing_mac node_existing_ipv4 node_existing_ipv6
 
-    set guielements {}
-    set treecolumns {}
-    set node_cfg [cfgGet "nodes" $node_id]
-    set node_existing_mac [getFromRunning "mac_used_list"]
-    set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
-    set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
+	set guielements {}
+	set treecolumns {}
+	set node_cfg [cfgGet "nodes" $node_id]
+	set node_existing_mac [getFromRunning "mac_used_list"]
+	set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
+	set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
 
-    configGUI_createConfigPopupWin $c
-    wm title $wi "ext configuration"
+	configGUI_createConfigPopupWin $c
+	wm title $wi "ext configuration"
 
-    configGUI_nodeName $wi $node_id "Node name:"
+	configGUI_nodeName $wi $node_id "Node name:"
 
-    configGUI_externalIfcs $wi $node_id
+	configGUI_externalIfcs $wi $node_id
 
-    configGUI_nodeRestart $wi $node_id
-    configGUI_buttonsACNode $wi $node_id
+	configGUI_nodeRestart $wi $node_id
+	configGUI_buttonsACNode $wi $node_id
 }

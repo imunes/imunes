@@ -86,16 +86,16 @@
 #   * link_ids -- returns ids of links connecting endpoints node1 and node2
 #****
 proc linksByPeers { node1_id node2_id } {
-    set links [cfgGet "links"]
-    set link_ids {}
-    foreach {link_id link_cfg} $links {
-	set peers [dictGet $links $link_id "peers"]
-	if { $node1_id in $peers && $node2_id in $peers } {
-	    lappend link_ids $link_id
+	set links [cfgGet "links"]
+	set link_ids {}
+	foreach {link_id link_cfg} $links {
+		set peers [dictGet $links $link_id "peers"]
+		if { $node1_id in $peers && $node2_id in $peers } {
+			lappend link_ids $link_id
+		}
 	}
-    }
 
-    return $link_ids
+	return $link_ids
 }
 
 #****f* linkcfg.tcl/removeLink
@@ -110,103 +110,103 @@ proc linksByPeers { node1_id node2_id } {
 #   * link_id -- link id
 #****
 proc removeLink { link_id { keep_ifaces 0 } } {
-    trigger_linkDestroy $link_id
+	trigger_linkDestroy $link_id
 
-    lassign [getLinkPeers $link_id] node1_id node2_id
-    lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
+	lassign [getLinkPeers $link_id] node1_id node2_id
+	lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
 
-    # save old subnet data for comparation
-    lassign [getSubnetData $node1_id $iface1_id {} {} 0] old_subnet1_gws old_subnet1_data
-    lassign [getSubnetData $node2_id $iface2_id {} {} 0] old_subnet2_gws old_subnet2_data
+	# save old subnet data for comparation
+	lassign [getSubnetData $node1_id $iface1_id {} {} 0] old_subnet1_gws old_subnet1_data
+	lassign [getSubnetData $node2_id $iface2_id {} {} 0] old_subnet2_gws old_subnet2_data
 
-    foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
-	set node_type [getNodeType $node_id]
-	if { $node_type in "packgen" } {
-	    trigger_nodeUnconfig $node_id
-	} elseif { $node_type in "filter" } {
-	    trigger_nodeReconfig $node_id
+	foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
+		set node_type [getNodeType $node_id]
+		if { $node_type in "packgen" } {
+			trigger_nodeUnconfig $node_id
+		} elseif { $node_type in "filter" } {
+			trigger_nodeReconfig $node_id
+		}
+
+		if { $keep_ifaces } {
+			cfgUnset "nodes" $node_id "ifaces" $iface_id "link"
+			continue
+		}
+
+		removeIface $node_id $iface_id
 	}
 
-	if { $keep_ifaces } {
-	    cfgUnset "nodes" $node_id "ifaces" $iface_id "link"
-	    continue
+	set mirror_link_id [getLinkMirror $link_id]
+	if { $mirror_link_id != "" } {
+		setLinkMirror $mirror_link_id ""
+		removeLink $mirror_link_id $keep_ifaces
 	}
 
-	removeIface $node_id $iface_id
-    }
-
-    set mirror_link_id [getLinkMirror $link_id]
-    if { $mirror_link_id != "" } {
-	setLinkMirror $mirror_link_id ""
-	removeLink $mirror_link_id $keep_ifaces
-    }
-
-    foreach node_id "$node1_id $node2_id" {
-	if { [getNodeType $node_id] == "pseudo" } {
-	    setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $node_id]
-	    cfgUnset "nodes" $node_id
+	foreach node_id "$node1_id $node2_id" {
+		if { [getNodeType $node_id] == "pseudo" } {
+			setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $node_id]
+			cfgUnset "nodes" $node_id
+		}
 	}
-    }
 
-    setToRunning "link_list" [removeFromList [getFromRunning "link_list"] $link_id]
+	setToRunning "link_list" [removeFromList [getFromRunning "link_list"] $link_id]
 
-    cfgUnset "links" $link_id
+	cfgUnset "links" $link_id
 
-    # after deleting the link, refresh nodes auto default routes
-    lassign [getSubnetData $node1_id $iface1_id {} {} 0] new_subnet1_gws new_subnet1_data
-    lassign [getSubnetData $node2_id $iface2_id {} {} 0] new_subnet2_gws new_subnet2_data
+	# after deleting the link, refresh nodes auto default routes
+	lassign [getSubnetData $node1_id $iface1_id {} {} 0] new_subnet1_gws new_subnet1_data
+	lassign [getSubnetData $node2_id $iface2_id {} {} 0] new_subnet2_gws new_subnet2_data
 
-    if { $new_subnet1_gws != "" } {
-	set diff [removeFromList {*}$old_subnet1_gws {*}$new_subnet1_gws]
-	if { $diff ni "{} {||}" } {
-	    # there was a change in subnet1, go through its new nodes and attach new data
-	    set has_extnat [string match "*ext*" $diff]
-	    foreach subnet_node [dict keys $new_subnet1_data] {
-		if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
-		    continue
+	if { $new_subnet1_gws != "" } {
+		set diff [removeFromList {*}$old_subnet1_gws {*}$new_subnet1_gws]
+		if { $diff ni "{} {||}" } {
+			# there was a change in subnet1, go through its new nodes and attach new data
+			set has_extnat [string match "*ext*" $diff]
+			foreach subnet_node [dict keys $new_subnet1_data] {
+				if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+					continue
+				}
+
+				set subnet_node_type [getNodeType $subnet_node]
+				if { $subnet_node_type == "ext" || [$subnet_node_type.netlayer] != "NETWORK" } {
+					# skip extnat and L2 nodes
+					continue
+				}
+
+				if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
+					# skip routers if there is no extnats
+					continue
+				}
+
+				trigger_nodeReconfig $subnet_node
+			}
 		}
-
-		set subnet_node_type [getNodeType $subnet_node]
-		if { $subnet_node_type == "ext" || [$subnet_node_type.netlayer] != "NETWORK" } {
-		    # skip extnat and L2 nodes
-		    continue
-		}
-
-		if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
-		    # skip routers if there is no extnats
-		    continue
-		}
-
-		trigger_nodeReconfig $subnet_node
-	    }
 	}
-    }
 
-    if { $new_subnet2_gws != "" } {
-	set diff [removeFromList {*}$old_subnet2_gws {*}$new_subnet2_gws]
-	if { $diff ni "{} {||}" } {
-	    # change in subnet1, go through its new nodes and attach new data
-	    set has_extnat [string match "*ext*" $diff]
-	    foreach subnet_node [dict keys $new_subnet2_data] {
-		if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
-		    continue
+	if { $new_subnet2_gws != "" } {
+		set diff [removeFromList {*}$old_subnet2_gws {*}$new_subnet2_gws]
+		if { $diff ni "{} {||}" } {
+			# change in subnet1, go through its new nodes and attach new data
+			set has_extnat [string match "*ext*" $diff]
+			foreach subnet_node [dict keys $new_subnet2_data] {
+				if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+					continue
+				}
+
+				set subnet_node_type [getNodeType $subnet_node]
+				if { $subnet_node_type == "ext" || [$subnet_node_type.netlayer] != "NETWORK" } {
+					# skip extnat and L2 nodes
+					continue
+				}
+
+				if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
+					# skip routers if there is no extnats
+					continue
+				}
+
+				trigger_nodeReconfig $subnet_node
+			}
 		}
-
-		set subnet_node_type [getNodeType $subnet_node]
-		if { $subnet_node_type == "ext" || [$subnet_node_type.netlayer] != "NETWORK" } {
-		    # skip extnat and L2 nodes
-		    continue
-		}
-
-		if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
-		    # skip routers if there is no extnats
-		    continue
-		}
-
-		trigger_nodeReconfig $subnet_node
-	    }
 	}
-    }
 }
 
 #****f* linkcfg.tcl/getLinkDirect
@@ -222,7 +222,7 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 #   * link_direct -- returns 0 if link is not a direct link and 1 if it is
 #****
 proc getLinkDirect { link_id } {
-    return [cfgGetWithDefault 0 "links" $link_id "direct"]
+	return [cfgGetWithDefault 0 "links" $link_id "direct"]
 }
 
 #****f* linkcfg.tcl/setLinkDirect
@@ -237,33 +237,33 @@ proc getLinkDirect { link_id } {
 #   * direct -- link bandwidth in bits per second.
 #****
 proc setLinkDirect { link_id direct } {
-    global isOSlinux
+	global isOSlinux
 
-    cfgSet "links" $link_id "direct" $direct
+	cfgSet "links" $link_id "direct" $direct
 
-    if { $isOSlinux } {
-	lassign [getLinkPeers $link_id] node1_id node2_id
-	lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
+	if { $isOSlinux } {
+		lassign [getLinkPeers $link_id] node1_id node2_id
+		lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
 
-	set mirror_link_id [getLinkMirror $link_id]
-	if { $mirror_link_id != "" } {
-	    # switch direction for mirror links
-	    lassign "$node2_id [lindex [getLinkPeers $mirror_link_id] 1]" node1_id node2_id
-	    lassign "$iface2_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]" iface1_id iface2_id
+		set mirror_link_id [getLinkMirror $link_id]
+		if { $mirror_link_id != "" } {
+			# switch direction for mirror links
+			lassign "$node2_id [lindex [getLinkPeers $mirror_link_id] 1]" node1_id node2_id
+			lassign "$iface2_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]" iface1_id iface2_id
+		}
+
+		trigger_ifaceRecreate $node1_id $iface1_id
+		if { [getAutoDefaultRoutesStatus $node1_id] == "enabled" } {
+			trigger_nodeReconfig $node1_id
+		}
+
+		trigger_ifaceRecreate $node2_id $iface2_id
+		if { [getAutoDefaultRoutesStatus $node2_id] == "enabled" } {
+			trigger_nodeReconfig $node2_id
+		}
 	}
 
-	trigger_ifaceRecreate $node1_id $iface1_id
-	if { [getAutoDefaultRoutesStatus $node1_id] == "enabled" } {
-	    trigger_nodeReconfig $node1_id
-	}
-
-	trigger_ifaceRecreate $node2_id $iface2_id
-	if { [getAutoDefaultRoutesStatus $node2_id] == "enabled" } {
-	    trigger_nodeReconfig $node2_id
-	}
-    }
-
-    trigger_linkRecreate $link_id
+	trigger_linkRecreate $link_id
 }
 
 #****f* linkcfg.tcl/getLinkPeers
@@ -279,7 +279,7 @@ proc setLinkDirect { link_id direct } {
 #   * link_peers -- returns nodes of a link endpoints in a list {node1_id node2_id}
 #****
 proc getLinkPeers { link_id } {
-    return [cfgGet "links" $link_id "peers"]
+	return [cfgGet "links" $link_id "peers"]
 }
 
 #****f* linkcfg.tcl/setLinkPeers
@@ -294,7 +294,7 @@ proc getLinkPeers { link_id } {
 #   * peers -- nodes of a link endpoints as a list {node1_id node2_id}
 #****
 proc setLinkPeers { link_id peers } {
-    cfgSet "links" $link_id "peers" $peers
+	cfgSet "links" $link_id "peers" $peers
 }
 
 #****f* linkcfg.tcl/getLinkPeersIfaces
@@ -310,7 +310,7 @@ proc setLinkPeers { link_id peers } {
 #   * link_ifaces -- returns interfaces of a link endpoints in a list {iface1_id iface2_id}
 #****
 proc getLinkPeersIfaces { link_id } {
-    return [cfgGet "links" $link_id "peers_ifaces"]
+	return [cfgGet "links" $link_id "peers_ifaces"]
 }
 
 #****f* linkcfg.tcl/setLinkPeersIfaces
@@ -325,7 +325,7 @@ proc getLinkPeersIfaces { link_id } {
 #   * peers_ifaces -- interfaces of a link endpoints as a list {iface1_id iface2_id}
 #****
 proc setLinkPeersIfaces { link_id peers_ifaces } {
-    cfgSet "links" $link_id "peers_ifaces" $peers_ifaces
+	cfgSet "links" $link_id "peers_ifaces" $peers_ifaces
 }
 
 #****f* linkcfg.tcl/getLinkBandwidth
@@ -341,7 +341,7 @@ proc setLinkPeersIfaces { link_id peers_ifaces } {
 #   * bandwidth -- The value of link bandwidth in bits per second.
 #****
 proc getLinkBandwidth { link_id } {
-    return [cfgGet "links" $link_id "bandwidth"]
+	return [cfgGet "links" $link_id "bandwidth"]
 }
 
 #****f* linkcfg.tcl/getLinkBandwidthString
@@ -359,25 +359,25 @@ proc getLinkBandwidth { link_id } {
 #     measure unit.
 #****
 proc getLinkBandwidthString { link_id } {
-    set bandwidth_string ""
-    set bandwidth [getLinkBandwidth $link_id]
-    if { $bandwidth > 0 } {
-	if { $bandwidth >= 660000000 } {
-	    set bandwidth_string "[format %.2f [expr {$bandwidth / 1000000000.0}]] Gbps"
-	} elseif { $bandwidth >= 99000000 } {
-	    set bandwidth_string "[format %d [expr {$bandwidth / 1000000}]] Mbps"
-	} elseif { $bandwidth >= 9900000 } {
-	    set bandwidth_string "[format %.2f [expr {$bandwidth / 1000000.0}]] Mbps"
-	} elseif { $bandwidth >= 990000 } {
-	    set bandwidth_string "[format %d [expr {$bandwidth / 1000}]] Kbps"
-	} elseif { $bandwidth >= 9900 } {
-	    set bandwidth_string "[format %.2f [expr {$bandwidth / 1000.0}]] Kbps"
-	} else {
-	    set bandwidth_string "$bandwidth bps"
+	set bandwidth_string ""
+	set bandwidth [getLinkBandwidth $link_id]
+	if { $bandwidth > 0 } {
+		if { $bandwidth >= 660000000 } {
+			set bandwidth_string "[format %.2f [expr {$bandwidth / 1000000000.0}]] Gbps"
+		} elseif { $bandwidth >= 99000000 } {
+			set bandwidth_string "[format %d [expr {$bandwidth / 1000000}]] Mbps"
+		} elseif { $bandwidth >= 9900000 } {
+			set bandwidth_string "[format %.2f [expr {$bandwidth / 1000000.0}]] Mbps"
+		} elseif { $bandwidth >= 990000 } {
+			set bandwidth_string "[format %d [expr {$bandwidth / 1000}]] Kbps"
+		} elseif { $bandwidth >= 9900 } {
+			set bandwidth_string "[format %.2f [expr {$bandwidth / 1000.0}]] Kbps"
+		} else {
+			set bandwidth_string "$bandwidth bps"
+		}
 	}
-    }
 
-    return $bandwidth_string
+	return $bandwidth_string
 }
 
 #****f* linkcfg.tcl/setLinkBandwidth
@@ -392,16 +392,16 @@ proc getLinkBandwidthString { link_id } {
 #   * bandwidth -- link bandwidth in bits per second.
 #****
 proc setLinkBandwidth { link_id bandwidth } {
-    if { $bandwidth == 0 } {
-	set bandwidth ""
-    }
+	if { $bandwidth == 0 } {
+		set bandwidth ""
+	}
 
-    cfgSet "links" $link_id "bandwidth" $bandwidth
+	cfgSet "links" $link_id "bandwidth" $bandwidth
 
-    set mirror_link_id [getLinkMirror $link_id]
-    if { $mirror_link_id != "" } {
-	cfgSet "links" $mirror_link_id "bandwidth" $bandwidth
-    }
+	set mirror_link_id [getLinkMirror $link_id]
+	if { $mirror_link_id != "" } {
+		cfgSet "links" $mirror_link_id "bandwidth" $bandwidth
+	}
 }
 
 #****f* linkcfg.tcl/getLinkColor
@@ -417,9 +417,9 @@ proc setLinkBandwidth { link_id bandwidth } {
 #   * color -- link color
 #****
 proc getLinkColor { link_id } {
-    global defLinkColor
+	global defLinkColor
 
-    return [cfgGetWithDefault $defLinkColor "links" $link_id "color"]
+	return [cfgGetWithDefault $defLinkColor "links" $link_id "color"]
 }
 
 #****f* linkcfg.tcl/setLinkColor
@@ -434,11 +434,11 @@ proc getLinkColor { link_id } {
 #   * color -- link color
 #****
 proc setLinkColor { link_id color } {
-    if { $color == "Red" } {
-	set color ""
-    }
+	if { $color == "Red" } {
+		set color ""
+	}
 
-    cfgSet "links" $link_id "color" $color
+	cfgSet "links" $link_id "color" $color
 }
 
 #****f* linkcfg.tcl/getLinkWidth
@@ -452,9 +452,9 @@ proc setLinkColor { link_id color } {
 #   * link_id -- link id
 #****
 proc getLinkWidth { link_id } {
-    global defLinkWidth
+	global defLinkWidth
 
-    return [cfgGetWithDefault $defLinkWidth "links" $link_id "width"]
+	return [cfgGetWithDefault $defLinkWidth "links" $link_id "width"]
 }
 
 #****f* linkcfg.tcl/setLinkWidth
@@ -469,13 +469,13 @@ proc getLinkWidth { link_id } {
 #   * width -- link width
 #****
 proc setLinkWidth { link_id width } {
-    global defLinkWidth
+	global defLinkWidth
 
-    if { $width == $defLinkWidth } {
-	set width ""
-    }
+	if { $width == $defLinkWidth } {
+		set width ""
+	}
 
-    cfgSet "links" $link_id "width" $width
+	cfgSet "links" $link_id "width" $width
 }
 
 #****f* linkcfg.tcl/getLinkDelay
@@ -491,7 +491,7 @@ proc setLinkWidth { link_id width } {
 #   * delay -- The value of link delay in microseconds.
 #****
 proc getLinkDelay { link_id } {
-    return [cfgGet "links" $link_id "delay"]
+	return [cfgGet "links" $link_id "delay"]
 }
 
 #****f* linkcfg.tcl/getLinkDelayString
@@ -509,19 +509,19 @@ proc getLinkDelay { link_id } {
 #     measure unit.
 #****
 proc getLinkDelayString { link_id } {
-    set delstr ""
-    set delay [getLinkDelay $link_id]
-    if { "$delay" != "" } {
-	if { $delay >= 10000 } {
-	    set delstr "[expr {$delay / 1000}] ms"
-	} elseif { $delay >= 1000 } {
-	    set delstr "[format "%.3f" [expr {$delay * .001}]] ms"
-	} else {
-	    set delstr "$delay us"
+	set delstr ""
+	set delay [getLinkDelay $link_id]
+	if { "$delay" != "" } {
+		if { $delay >= 10000 } {
+			set delstr "[expr {$delay / 1000}] ms"
+		} elseif { $delay >= 1000 } {
+			set delstr "[format "%.3f" [expr {$delay * .001}]] ms"
+		} else {
+			set delstr "$delay us"
+		}
 	}
-    }
 
-    return $delstr
+	return $delstr
 }
 
 #****f* linkcfg.tcl/setLinkDelay
@@ -536,16 +536,16 @@ proc getLinkDelayString { link_id } {
 #   * delay -- link delay delay in microseconds.
 #****
 proc setLinkDelay { link_id delay } {
-    if { $delay == 0 } {
-	set delay ""
-    }
+	if { $delay == 0 } {
+		set delay ""
+	}
 
-    cfgSet "links" $link_id "delay" $delay
+	cfgSet "links" $link_id "delay" $delay
 
-    set mirror_link_id [getLinkMirror $link_id]
-    if { $mirror_link_id != "" } {
-	cfgSet "links" $mirror_link_id "delay" $delay
-    }
+	set mirror_link_id [getLinkMirror $link_id]
+	if { $mirror_link_id != "" } {
+		cfgSet "links" $mirror_link_id "delay" $delay
+	}
 }
 
 #****f* linkcfg.tcl/getLinkJitterUpstream
@@ -561,7 +561,7 @@ proc setLinkDelay { link_id delay } {
 #   * jitter -- the list of values for jitter in microseconds
 #****
 proc getLinkJitterUpstream { link_id } {
-    return [cfgGet "links" $link_id "jitter_upstream"]
+	return [cfgGet "links" $link_id "jitter_upstream"]
 }
 
 #****f* linkcfg.tcl/setLinkJitterUpstream
@@ -576,16 +576,16 @@ proc getLinkJitterUpstream { link_id } {
 #   * jitter_upstream -- link upstream jitter values in microseconds.
 #****
 proc setLinkJitterUpstream { link_id jitter_upstream } {
-    if { $jitter_upstream == 0 } {
-	set jitter_upstream ""
-    }
+	if { $jitter_upstream == 0 } {
+		set jitter_upstream ""
+	}
 
-    cfgSet "links" $link_id "jitter_upstream" $jitter_upstream
+	cfgSet "links" $link_id "jitter_upstream" $jitter_upstream
 
-    set mirror_link_id [getLinkMirror $link_id]
-    if { $mirror_link_id != "" } {
-	cfgSet "links" $mirror_link_id "jitter_upstream" $jitter_upstream
-    }
+	set mirror_link_id [getLinkMirror $link_id]
+	if { $mirror_link_id != "" } {
+		cfgSet "links" $mirror_link_id "jitter_upstream" $jitter_upstream
+	}
 }
 
 #****f* linkcfg.tcl/getLinkJitterModeUpstream
@@ -601,7 +601,7 @@ proc setLinkJitterUpstream { link_id jitter_upstream } {
 #   * jitter_mode -- The jitter mode for upstream direction.
 #****
 proc getLinkJitterModeUpstream { link_id } {
-    return [cfgGet "links" $link_id "jitter_upstream_mode"]
+	return [cfgGet "links" $link_id "jitter_upstream_mode"]
 }
 
 #****f* linkcfg.tcl/setLinkJitterModeUpstream
@@ -616,16 +616,16 @@ proc getLinkJitterModeUpstream { link_id } {
 #   * jitter_upstream_mode -- link upstream jitter mode.
 #****
 proc setLinkJitterModeUpstream { link_id jitter_upstream_mode } {
-    if { $jitter_upstream_mode == 0 } {
-	set jitter_upstream_mode ""
-    }
+	if { $jitter_upstream_mode == 0 } {
+		set jitter_upstream_mode ""
+	}
 
-    cfgSet "links" $link_id "jitter_upstream_mode" $jitter_upstream_mode
+	cfgSet "links" $link_id "jitter_upstream_mode" $jitter_upstream_mode
 
-    set mirror_link_id [getLinkMirror $link_id]
-    if { $mirror_link_id != "" } {
-	cfgSet "links" $mirror_link_id "jitter_upstream_mode" $jitter_upstream_mode
-    }
+	set mirror_link_id [getLinkMirror $link_id]
+	if { $mirror_link_id != "" } {
+		cfgSet "links" $mirror_link_id "jitter_upstream_mode" $jitter_upstream_mode
+	}
 }
 
 #****f* linkcfg.tcl/getLinkJitterHoldUpstream
@@ -641,7 +641,7 @@ proc setLinkJitterModeUpstream { link_id jitter_upstream_mode } {
 #   * jitter_hold -- The jitter hold for upstream direction.
 #****
 proc getLinkJitterHoldUpstream { link_id } {
-    return [cfgGet "links" $link_id "jitter_upstream_hold"]
+	return [cfgGet "links" $link_id "jitter_upstream_hold"]
 }
 
 #****f* linkcfg.tcl/setLinkJitterHoldUpstream
@@ -656,16 +656,16 @@ proc getLinkJitterHoldUpstream { link_id } {
 #   * jitter_upstream_hold -- link upstream jitter hold.
 #****
 proc setLinkJitterHoldUpstream { link_id jitter_upstream_hold } {
-    if { $jitter_upstream_hold == 0 } {
-	set jitter_upstream_hold ""
-    }
+	if { $jitter_upstream_hold == 0 } {
+		set jitter_upstream_hold ""
+	}
 
-    cfgSet "links" $link_id "jitter_upstream_hold" $jitter_upstream_hold
+	cfgSet "links" $link_id "jitter_upstream_hold" $jitter_upstream_hold
 
-    set mirror_link_id [getLinkMirror $link_id]
-    if { $mirror_link_id != "" } {
-	cfgSet "links" $mirror_link_id "jitter_upstream_hold" $jitter_upstream_hold
-    }
+	set mirror_link_id [getLinkMirror $link_id]
+	if { $mirror_link_id != "" } {
+		cfgSet "links" $mirror_link_id "jitter_upstream_hold" $jitter_upstream_hold
+	}
 }
 
 #****f* linkcfg.tcl/getLinkJitterDownstream
@@ -682,7 +682,7 @@ proc setLinkJitterHoldUpstream { link_id jitter_upstream_hold } {
 #   * jitter -- The list of values for jitter in microseconds.
 #****
 proc getLinkJitterDownstream { link_id } {
-    return [cfgGet "links" $link_id "jitter_downstream"]
+	return [cfgGet "links" $link_id "jitter_downstream"]
 }
 
 #****f* linkcfg.tcl/setLinkJitterDownstream
@@ -697,16 +697,16 @@ proc getLinkJitterDownstream { link_id } {
 #   * jitter_downstream -- link downstream jitter values in microseconds.
 #****
 proc setLinkJitterDownstream { link_id jitter_downstream } {
-    if { $jitter_downstream == 0 } {
-	set jitter_downstream ""
-    }
+	if { $jitter_downstream == 0 } {
+		set jitter_downstream ""
+	}
 
-    cfgSet "links" $link_id "jitter_downstream" $jitter_downstream
+	cfgSet "links" $link_id "jitter_downstream" $jitter_downstream
 
-    set mirror_link_id [getLinkMirror $link_id]
-    if { $mirror_link_id != "" } {
-	cfgSet "links" $mirror_link_id "jitter_downstream" $jitter_downstream
-    }
+	set mirror_link_id [getLinkMirror $link_id]
+	if { $mirror_link_id != "" } {
+		cfgSet "links" $mirror_link_id "jitter_downstream" $jitter_downstream
+	}
 }
 
 #****f* linkcfg.tcl/getLinkJitterModeDownstream
@@ -722,7 +722,7 @@ proc setLinkJitterDownstream { link_id jitter_downstream } {
 #   * jitter_mode -- The jitter mode for downstream direction.
 #****
 proc getLinkJitterModeDownstream { link_id } {
-    return [cfgGet "links" $link_id "jitter_downstream_mode"]
+	return [cfgGet "links" $link_id "jitter_downstream_mode"]
 }
 
 #****f* linkcfg.tcl/setLinkJitterModeDownstream
@@ -737,16 +737,16 @@ proc getLinkJitterModeDownstream { link_id } {
 #   * jitter_downstream_mode -- link downstream jitter mode.
 #****
 proc setLinkJitterModeDownstream { link_id jitter_downstream_mode } {
-    if { $jitter_downstream_mode == 0 } {
-	set jitter_downstream_mode ""
-    }
+	if { $jitter_downstream_mode == 0 } {
+		set jitter_downstream_mode ""
+	}
 
-    cfgSet "links" $link_id "jitter_downstream_mode" $jitter_downstream_mode
+	cfgSet "links" $link_id "jitter_downstream_mode" $jitter_downstream_mode
 
-    set mirror_link_id [getLinkMirror $link_id]
-    if { $mirror_link_id != "" } {
-	cfgSet "links" $mirror_link_id "jitter_downstream_mode" $jitter_downstream_mode
-    }
+	set mirror_link_id [getLinkMirror $link_id]
+	if { $mirror_link_id != "" } {
+		cfgSet "links" $mirror_link_id "jitter_downstream_mode" $jitter_downstream_mode
+	}
 }
 
 #****f* linkcfg.tcl/getLinkJitterHoldDownstream
@@ -762,7 +762,7 @@ proc setLinkJitterModeDownstream { link_id jitter_downstream_mode } {
 #   * jitter_hold -- The jitter hold for downstream direction.
 #****
 proc getLinkJitterHoldDownstream { link_id } {
-    return [cfgGet "links" $link_id "jitter_downstream_hold"]
+	return [cfgGet "links" $link_id "jitter_downstream_hold"]
 }
 
 #****f* linkcfg.tcl/setLinkJitterHoldDownstream
@@ -777,16 +777,16 @@ proc getLinkJitterHoldDownstream { link_id } {
 #   * jitter_downstream_hold -- link downstream jitter hold.
 #****
 proc setLinkJitterHoldDownstream { link_id jitter_downstream_hold } {
-    if { $jitter_downstream_hold == 0 } {
-	set jitter_downstream_hold ""
-    }
+	if { $jitter_downstream_hold == 0 } {
+		set jitter_downstream_hold ""
+	}
 
-    cfgSet "links" $link_id "jitter_downstream_hold" $jitter_downstream_hold
+	cfgSet "links" $link_id "jitter_downstream_hold" $jitter_downstream_hold
 
-    set mirror_link_id [getLinkMirror $link_id]
-    if { $mirror_link_id != "" } {
-	cfgSet "links" $mirror_link_id "jitter_downstream_hold" $jitter_downstream_hold
-    }
+	set mirror_link_id [getLinkMirror $link_id]
+	if { $mirror_link_id != "" } {
+		cfgSet "links" $mirror_link_id "jitter_downstream_hold" $jitter_downstream_hold
+	}
 }
 
 #****f* linkcfg.tcl/getLinkBER
@@ -802,7 +802,7 @@ proc setLinkJitterHoldDownstream { link_id jitter_downstream_hold } {
 #   * BER -- The value of 1/BER of the link.
 #****
 proc getLinkBER { link_id } {
-    return [cfgGet "links" $link_id "ber"]
+	return [cfgGet "links" $link_id "ber"]
 }
 
 #****f* linkcfg.tcl/setLinkBER
@@ -817,16 +817,16 @@ proc getLinkBER { link_id } {
 #   * ber -- The value of 1/BER of the link.
 #****
 proc setLinkBER { link_id ber } {
-    if { $ber == 0 } {
-	set ber ""
-    }
+	if { $ber == 0 } {
+		set ber ""
+	}
 
-    cfgSet "links" $link_id "ber" $ber
+	cfgSet "links" $link_id "ber" $ber
 
-    set mirror_link_id [getLinkMirror $link_id]
-    if { $mirror_link_id != "" } {
-	cfgSet "links" $mirror_link_id "ber" $ber
-    }
+	set mirror_link_id [getLinkMirror $link_id]
+	if { $mirror_link_id != "" } {
+		cfgSet "links" $mirror_link_id "ber" $ber
+	}
 }
 
 #****f* linkcfg.tcl/getLinkLoss
@@ -842,7 +842,7 @@ proc setLinkBER { link_id ber } {
 #   * loss -- The loss percentage of the link.
 #****
 proc getLinkLoss { link_id } {
-    return [cfgGet "links" $link_id "loss"]
+	return [cfgGet "links" $link_id "loss"]
 }
 
 #****f* linkcfg.tcl/setLinkLoss
@@ -857,16 +857,16 @@ proc getLinkLoss { link_id } {
 #   * loss -- The loss percentage of the link.
 #****
 proc setLinkLoss { link_id loss } {
-    if { $loss == 0 } {
-	set loss ""
-    }
+	if { $loss == 0 } {
+		set loss ""
+	}
 
-    cfgSet "links" $link_id "loss" $loss
+	cfgSet "links" $link_id "loss" $loss
 
-    set mirror_link_id [getLinkMirror $link_id]
-    if { $mirror_link_id != "" } {
-	cfgSet "links" $mirror_link_id "loss" $loss
-    }
+	set mirror_link_id [getLinkMirror $link_id]
+	if { $mirror_link_id != "" } {
+		cfgSet "links" $mirror_link_id "loss" $loss
+	}
 }
 
 #****f* linkcfg.tcl/getLinkDup
@@ -882,7 +882,7 @@ proc setLinkLoss { link_id loss } {
 #   * duplicate -- The percentage of the link packet duplicate value.
 #****
 proc getLinkDup { link_id } {
-    return [cfgGet "links" $link_id "duplicate"]
+	return [cfgGet "links" $link_id "duplicate"]
 }
 
 #****f* linkcfg.tcl/setLinkDup
@@ -897,16 +897,16 @@ proc getLinkDup { link_id } {
 #   * duplicate -- The percentage of the link packet duplicate value.
 #****
 proc setLinkDup { link_id duplicate } {
-    if { $duplicate == 0 } {
-	set duplicate ""
-    }
+	if { $duplicate == 0 } {
+		set duplicate ""
+	}
 
-    cfgSet "links" $link_id "duplicate" $duplicate
+	cfgSet "links" $link_id "duplicate" $duplicate
 
-    set mirror_link_id [getLinkMirror $link_id]
-    if { $mirror_link_id != "" } {
-	cfgSet "links" $mirror_link_id "duplicate" $duplicate
-    }
+	set mirror_link_id [getLinkMirror $link_id]
+	if { $mirror_link_id != "" } {
+		cfgSet "links" $mirror_link_id "duplicate" $duplicate
+	}
 }
 
 #****f* linkcfg.tcl/linkResetConfig
@@ -920,17 +920,17 @@ proc setLinkDup { link_id duplicate } {
 #   * link_id -- link id
 #****
 proc linkResetConfig { link_id } {
-    setLinkBandwidth $link_id ""
-    setLinkBER $link_id ""
-    setLinkLoss $link_id ""
-    setLinkDelay $link_id ""
-    setLinkDup $link_id ""
+	setLinkBandwidth $link_id ""
+	setLinkBER $link_id ""
+	setLinkLoss $link_id ""
+	setLinkDelay $link_id ""
+	setLinkDup $link_id ""
 
-    if { [getFromRunning "oper_mode"] == "exec" } {
-	execSetLinkParams [getFromRunning "eid"] $link_id
-    }
+	if { [getFromRunning "oper_mode"] == "exec" } {
+		execSetLinkParams [getFromRunning "eid"] $link_id
+	}
 
-    redrawAll
+	redrawAll
 }
 
 #****f* linkcfg.tcl/getLinkMirror
@@ -948,7 +948,7 @@ proc linkResetConfig { link_id } {
 #   * mirror_link_id -- mirror link id
 #****
 proc getLinkMirror { link_id } {
-    return [cfgGet "links" $link_id "mirror"]
+	return [cfgGet "links" $link_id "mirror"]
 }
 
 #****f* linkcfg.tcl/setLinkMirror
@@ -965,7 +965,7 @@ proc getLinkMirror { link_id } {
 #   * mirror -- mirror link's id
 #****
 proc setLinkMirror { link_id mirror } {
-    cfgSet "links" $link_id "mirror" $mirror
+	cfgSet "links" $link_id "mirror" $mirror
 }
 
 #****f* linkcfg.tcl/splitLink
@@ -982,42 +982,42 @@ proc setLinkMirror { link_id mirror } {
 #   * nodes -- list of node ids of new nodes.
 #****
 proc splitLink { orig_link_id } {
-    set orig_nodes [getLinkPeers $orig_link_id]
-    lassign $orig_nodes orig_node1_id orig_node2_id
-    set orig_ifaces [getLinkPeersIfaces $orig_link_id]
+	set orig_nodes [getLinkPeers $orig_link_id]
+	lassign $orig_nodes orig_node1_id orig_node2_id
+	set orig_ifaces [getLinkPeersIfaces $orig_link_id]
 
-    # create mirror link and copy the properties from the original
-    set mirror_link_id [newObjectId [getFromRunning "link_list"] "l"]
-    cfgSet "links" $mirror_link_id [cfgGet "links" $orig_link_id]
-    lappendToRunning "link_list" $mirror_link_id
-    setToRunning "${mirror_link_id}_running" false
-    set links "$orig_link_id $mirror_link_id"
+	# create mirror link and copy the properties from the original
+	set mirror_link_id [newObjectId [getFromRunning "link_list"] "l"]
+	cfgSet "links" $mirror_link_id [cfgGet "links" $orig_link_id]
+	lappendToRunning "link_list" $mirror_link_id
+	setToRunning "${mirror_link_id}_running" false
+	set links "$orig_link_id $mirror_link_id"
 
-    # create pseudo nodes
-    set pseudo_nodes [newNode "pseudo"]
-    lappend pseudo_nodes [newNode "pseudo"]
+	# create pseudo nodes
+	set pseudo_nodes [newNode "pseudo"]
+	lappend pseudo_nodes [newNode "pseudo"]
 
-    foreach orig_node_id $orig_nodes orig_node_iface_id $orig_ifaces pseudo_node_id $pseudo_nodes link_id $links {
-	set other_orig_node_id [removeFromList $orig_nodes $orig_node_id "keep_doubles"]
+	foreach orig_node_id $orig_nodes orig_node_iface_id $orig_ifaces pseudo_node_id $pseudo_nodes link_id $links {
+		set other_orig_node_id [removeFromList $orig_nodes $orig_node_id "keep_doubles"]
 
-	# change peer for original node interface
-	setIfcLink $orig_node_id $orig_node_iface_id $link_id
+		# change peer for original node interface
+		setIfcLink $orig_node_id $orig_node_iface_id $link_id
 
-	# setup new pseudo node properties
-	setNodeMirror $pseudo_node_id [removeFromList $pseudo_nodes $pseudo_node_id "keep_doubles"]
-	setNodeCanvas $pseudo_node_id [getNodeCanvas $orig_node_id]
-	setNodeCoords $pseudo_node_id [getNodeCoords $other_orig_node_id]
-	setNodeLabelCoords $pseudo_node_id [getNodeCoords $other_orig_node_id]
-	setIfcType $pseudo_node_id "ifc0" "phys"
-	setIfcLink $pseudo_node_id "ifc0" $link_id
+		# setup new pseudo node properties
+		setNodeMirror $pseudo_node_id [removeFromList $pseudo_nodes $pseudo_node_id "keep_doubles"]
+		setNodeCanvas $pseudo_node_id [getNodeCanvas $orig_node_id]
+		setNodeCoords $pseudo_node_id [getNodeCoords $other_orig_node_id]
+		setNodeLabelCoords $pseudo_node_id [getNodeCoords $other_orig_node_id]
+		setIfcType $pseudo_node_id "ifc0" "phys"
+		setIfcLink $pseudo_node_id "ifc0" $link_id
 
-	# setup both link properties
-	setLinkPeers $link_id "$pseudo_node_id $orig_node_id"
-	setLinkPeersIfaces $link_id "ifc0 $orig_node_iface_id"
-	setLinkMirror $link_id [removeFromList $links $link_id "keep_doubles"]
-    }
+		# setup both link properties
+		setLinkPeers $link_id "$pseudo_node_id $orig_node_id"
+		setLinkPeersIfaces $link_id "ifc0 $orig_node_iface_id"
+		setLinkMirror $link_id [removeFromList $links $link_id "keep_doubles"]
+	}
 
-    return $pseudo_nodes
+	return $pseudo_nodes
 }
 
 #****f* linkcfg.tcl/mergeLink
@@ -1033,40 +1033,40 @@ proc splitLink { orig_link_id } {
 #   * link_id -- rebuilt link id
 #****
 proc mergeLink { link_id } {
-    set mirror_link_id [getLinkMirror $link_id]
-    if { $mirror_link_id == "" } {
-	return
-    }
+	set mirror_link_id [getLinkMirror $link_id]
+	if { $mirror_link_id == "" } {
+		return
+	}
 
-    # recycle the first pseudo link ID
-    lassign [lsort "$link_id $mirror_link_id"] link_id mirror_link_id
-    unsetRunning "${mirror_link_id}_running"
+	# recycle the first pseudo link ID
+	lassign [lsort "$link_id $mirror_link_id"] link_id mirror_link_id
+	unsetRunning "${mirror_link_id}_running"
 
-    lassign [getLinkPeers $link_id] pseudo_node1_id orig_node1_id
-    lassign [getLinkPeers $mirror_link_id] pseudo_node2_id orig_node2_id
+	lassign [getLinkPeers $link_id] pseudo_node1_id orig_node1_id
+	lassign [getLinkPeers $mirror_link_id] pseudo_node2_id orig_node2_id
 
-    if { $orig_node1_id == $orig_node2_id } {
-	return
-    }
+	if { $orig_node1_id == $orig_node2_id } {
+		return
+	}
 
-    lassign [getLinkPeersIfaces $link_id] - orig_node1_iface_id
-    lassign [getLinkPeersIfaces $mirror_link_id] - orig_node2_iface_id
+	lassign [getLinkPeersIfaces $link_id] - orig_node1_iface_id
+	lassign [getLinkPeersIfaces $mirror_link_id] - orig_node2_iface_id
 
-    setIfcLink $orig_node1_id $orig_node1_iface_id $link_id
-    setIfcLink $orig_node2_id $orig_node2_iface_id $link_id
+	setIfcLink $orig_node1_id $orig_node1_iface_id $link_id
+	setIfcLink $orig_node2_id $orig_node2_iface_id $link_id
 
-    setLinkMirror $link_id ""
-    setLinkPeers $link_id "$orig_node1_id $orig_node2_id"
-    setLinkPeersIfaces $link_id "$orig_node1_iface_id $orig_node2_iface_id"
+	setLinkMirror $link_id ""
+	setLinkPeers $link_id "$orig_node1_id $orig_node2_id"
+	setLinkPeersIfaces $link_id "$orig_node1_iface_id $orig_node2_iface_id"
 
-    setToRunning "node_list" [removeFromList [getFromRunning "node_list"] "$pseudo_node1_id $pseudo_node2_id"]
-    cfgUnset "nodes" $pseudo_node1_id
-    cfgUnset "nodes" $pseudo_node2_id
+	setToRunning "node_list" [removeFromList [getFromRunning "node_list"] "$pseudo_node1_id $pseudo_node2_id"]
+	cfgUnset "nodes" $pseudo_node1_id
+	cfgUnset "nodes" $pseudo_node2_id
 
-    setToRunning "link_list" [removeFromList [getFromRunning "link_list"] $mirror_link_id]
-    cfgUnset "links" $mirror_link_id
+	setToRunning "link_list" [removeFromList [getFromRunning "link_list"] $mirror_link_id]
+	cfgUnset "links" $mirror_link_id
 
-    return $link_id
+	return $link_id
 }
 
 #****f* linkcfg.tcl/numOfLinks
@@ -1082,15 +1082,15 @@ proc mergeLink { link_id } {
 #   * totalLinks -- a number of links.
 #****
 proc numOfLinks { node_id } {
-    set num 0
-    foreach {iface_id iface_cfg} [cfgGet "nodes" $node_id "ifaces"] {
-	catch { dictGet $iface_cfg "link" } link_id
-	if { $link_id != "" } {
-	    incr num
+	set num 0
+	foreach {iface_id iface_cfg} [cfgGet "nodes" $node_id "ifaces"] {
+		catch { dictGet $iface_cfg "link" } link_id
+		if { $link_id != "" } {
+			incr num
+		}
 	}
-    }
 
-    return $num
+	return $num
 }
 
 #****f* linkcfg.tcl/newLink
@@ -1108,165 +1108,165 @@ proc numOfLinks { node_id } {
 #   * new_link_id -- new link id.
 #****
 proc newLink { node1_id node2_id } {
-    return [newLinkWithIfaces $node1_id "" $node2_id ""]
+	return [newLinkWithIfaces $node1_id "" $node2_id ""]
 }
 
 proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
-    global defEthBandwidth defSerBandwidth defSerDelay
+	global defEthBandwidth defSerBandwidth defSerDelay
 
-    foreach node_id "$node1_id $node2_id" iface_id "\"$iface1_id\" \"$iface2_id\"" {
-	set type [getNodeType $node_id]
-	if { $type == "pseudo" } {
-	    return
-	}
-
-	# maximum number of ifaces on a node
-	if { $iface_id == "" } {
-	    if { [info procs $type.maxLinks] != "" } {
-		# TODO: maxIfaces would be a better name
-		if { [llength [ifcList $node_id]] >= [$type.maxLinks] } {
-		    after idle {.dialog1.msg configure -wraplength 4i}
-		    tk_dialog .dialog1 "IMUNES warning" \
-			"Warning: Maximum links connected to the node $node_id" \
-			info 0 Dismiss
-
-		    return
-		}
-	    }
-
-	    continue
-	}
-
-	# iface does not exist
-	if { [getNodeIface $node_id $iface_id] == "" } {
-	    after idle {.dialog1.msg configure -wraplength 4i}
-	    tk_dialog .dialog1 "IMUNES warning" \
-		"Warning: Interface '[getIfcName $node_id $iface_id]' on node '[getNodeName $node_id]' does not exist" \
-		info 0 Dismiss
-
-	    return
-	}
-
-	# iface already connected to a link
-	if { [getIfcLink $node_id $iface_id] != "" } {
-	    after idle {.dialog1.msg configure -wraplength 4i}
-	    tk_dialog .dialog1 "IMUNES warning" \
-		"Warning: Interface '[getIfcName $node_id $iface_id]' already connected to a link" \
-		info 0 Dismiss
-
-	    return
-	}
-    }
-
-    set config_iface1 0
-    if { $iface1_id == "" } {
-	set config_iface1 1
-	if { [getNodeType $node1_id] == "rj45" } {
-	    set iface1_id [newIface $node1_id "stolen" 0 "UNASSIGNED"]
-	} else {
-	    set iface1_id [newIface $node1_id "phys" 0]
-	}
-    }
-
-    set config_iface2 0
-    if { $iface2_id == "" } {
-	set config_iface2 1
-	if { [getNodeType $node2_id] == "rj45" } {
-	    set iface2_id [newIface $node2_id "stolen" 0 "UNASSIGNED"]
-	} else {
-	    set iface2_id [newIface $node2_id "phys" 0]
-	}
-    }
-
-    foreach node_id "$node1_id $node2_id" {
-	set node_type [getNodeType $node_id]
-	if { $node_type in "packgen" } {
-	    trigger_nodeConfig $node_id
-	} elseif { $node_type in "filter" } {
-	    trigger_nodeReconfig $node_id
-	}
-    }
-
-    # save old subnet data for comparation
-    lassign [getSubnetData $node1_id $iface1_id {} {} 0] old_subnet1_gws old_subnet1_data
-    lassign [getSubnetData $node2_id $iface2_id {} {} 0] old_subnet2_gws old_subnet2_data
-
-    set link_id [newObjectId [getFromRunning "link_list"] "l"]
-    setToRunning "${link_id}_running" false
-
-    setIfcLink $node1_id $iface1_id $link_id
-    setIfcLink $node2_id $iface2_id $link_id
-
-    setLinkPeers $link_id "$node1_id $node2_id"
-    setLinkPeersIfaces $link_id "$iface1_id $iface2_id"
-    lappendToRunning "link_list" $link_id
-
-    if { $config_iface1 && [info procs [getNodeType $node1_id].confNewIfc] != "" } {
-	[getNodeType $node1_id].confNewIfc $node1_id $iface1_id
-    }
-
-    if { $config_iface2 && [info procs [getNodeType $node2_id].confNewIfc] != "" } {
-	[getNodeType $node2_id].confNewIfc $node2_id $iface2_id
-    }
-
-    trigger_linkCreate $link_id
-
-    lassign [getSubnetData $node1_id $iface1_id {} {} 0] new_subnet1_gws new_subnet1_data
-    lassign [getSubnetData $node2_id $iface2_id {} {} 0] new_subnet2_gws new_subnet2_data
-
-    if { $old_subnet1_gws != "" } {
-	set diff [removeFromList {*}$new_subnet1_gws {*}$old_subnet1_gws]
-	if { $diff ni "{} {||}" } {
-	    # there was a change in subnet1, go through its old nodes and attach new data
-	    set has_extnat [string match "*ext*" $diff]
-	    foreach subnet_node [dict keys $old_subnet1_data] {
-		if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
-		    continue
+	foreach node_id "$node1_id $node2_id" iface_id "\"$iface1_id\" \"$iface2_id\"" {
+		set type [getNodeType $node_id]
+		if { $type == "pseudo" } {
+			return
 		}
 
-		set subnet_node_type [getNodeType $subnet_node]
-		if { $subnet_node_type == "ext" || [$subnet_node_type.netlayer] != "NETWORK" } {
-		    # skip extnat and L2 nodes
-		    continue
+		# maximum number of ifaces on a node
+		if { $iface_id == "" } {
+			if { [info procs $type.maxLinks] != "" } {
+				# TODO: maxIfaces would be a better name
+				if { [llength [ifcList $node_id]] >= [$type.maxLinks] } {
+					after idle {.dialog1.msg configure -wraplength 4i}
+					tk_dialog .dialog1 "IMUNES warning" \
+						"Warning: Maximum links connected to the node $node_id" \
+						info 0 Dismiss
+
+					return
+				}
+			}
+
+			continue
 		}
 
-		if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
-		    # skip routers if there is no extnats
-		    continue
+		# iface does not exist
+		if { [getNodeIface $node_id $iface_id] == "" } {
+			after idle {.dialog1.msg configure -wraplength 4i}
+			tk_dialog .dialog1 "IMUNES warning" \
+				"Warning: Interface '[getIfcName $node_id $iface_id]' on node '[getNodeName $node_id]' does not exist" \
+				info 0 Dismiss
+
+			return
 		}
 
-		trigger_nodeReconfig $subnet_node
-	    }
+		# iface already connected to a link
+		if { [getIfcLink $node_id $iface_id] != "" } {
+			after idle {.dialog1.msg configure -wraplength 4i}
+			tk_dialog .dialog1 "IMUNES warning" \
+				"Warning: Interface '[getIfcName $node_id $iface_id]' already connected to a link" \
+				info 0 Dismiss
+
+			return
+		}
 	}
-    }
 
-    if { $old_subnet2_gws != "" } {
-	set diff [removeFromList {*}$new_subnet2_gws {*}$old_subnet2_gws]
-	if { $diff ni "{} {||}" } {
-	    # change in subnet1, go through its old nodes and attach new data
-	    set has_extnat [string match "*ext*" $diff]
-	    foreach subnet_node [dict keys $old_subnet2_data] {
-		if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
-		    continue
+	set config_iface1 0
+	if { $iface1_id == "" } {
+		set config_iface1 1
+		if { [getNodeType $node1_id] == "rj45" } {
+			set iface1_id [newIface $node1_id "stolen" 0 "UNASSIGNED"]
+		} else {
+			set iface1_id [newIface $node1_id "phys" 0]
 		}
-
-		set subnet_node_type [getNodeType $subnet_node]
-		if { $subnet_node_type == "ext" || [$subnet_node_type.netlayer] != "NETWORK" } {
-		    # skip extnat and L2 nodes
-		    continue
-		}
-
-		if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
-		    # skip routers if there is no extnats
-		    continue
-		}
-
-		trigger_nodeReconfig $subnet_node
-	    }
 	}
-    }
 
-    return $link_id
+	set config_iface2 0
+	if { $iface2_id == "" } {
+		set config_iface2 1
+		if { [getNodeType $node2_id] == "rj45" } {
+			set iface2_id [newIface $node2_id "stolen" 0 "UNASSIGNED"]
+		} else {
+			set iface2_id [newIface $node2_id "phys" 0]
+		}
+	}
+
+	foreach node_id "$node1_id $node2_id" {
+		set node_type [getNodeType $node_id]
+		if { $node_type in "packgen" } {
+			trigger_nodeConfig $node_id
+		} elseif { $node_type in "filter" } {
+			trigger_nodeReconfig $node_id
+		}
+	}
+
+	# save old subnet data for comparation
+	lassign [getSubnetData $node1_id $iface1_id {} {} 0] old_subnet1_gws old_subnet1_data
+	lassign [getSubnetData $node2_id $iface2_id {} {} 0] old_subnet2_gws old_subnet2_data
+
+	set link_id [newObjectId [getFromRunning "link_list"] "l"]
+	setToRunning "${link_id}_running" false
+
+	setIfcLink $node1_id $iface1_id $link_id
+	setIfcLink $node2_id $iface2_id $link_id
+
+	setLinkPeers $link_id "$node1_id $node2_id"
+	setLinkPeersIfaces $link_id "$iface1_id $iface2_id"
+	lappendToRunning "link_list" $link_id
+
+	if { $config_iface1 && [info procs [getNodeType $node1_id].confNewIfc] != "" } {
+		[getNodeType $node1_id].confNewIfc $node1_id $iface1_id
+	}
+
+	if { $config_iface2 && [info procs [getNodeType $node2_id].confNewIfc] != "" } {
+		[getNodeType $node2_id].confNewIfc $node2_id $iface2_id
+	}
+
+	trigger_linkCreate $link_id
+
+	lassign [getSubnetData $node1_id $iface1_id {} {} 0] new_subnet1_gws new_subnet1_data
+	lassign [getSubnetData $node2_id $iface2_id {} {} 0] new_subnet2_gws new_subnet2_data
+
+	if { $old_subnet1_gws != "" } {
+		set diff [removeFromList {*}$new_subnet1_gws {*}$old_subnet1_gws]
+		if { $diff ni "{} {||}" } {
+			# there was a change in subnet1, go through its old nodes and attach new data
+			set has_extnat [string match "*ext*" $diff]
+			foreach subnet_node [dict keys $old_subnet1_data] {
+				if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+					continue
+				}
+
+				set subnet_node_type [getNodeType $subnet_node]
+				if { $subnet_node_type == "ext" || [$subnet_node_type.netlayer] != "NETWORK" } {
+					# skip extnat and L2 nodes
+					continue
+				}
+
+				if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
+					# skip routers if there is no extnats
+					continue
+				}
+
+				trigger_nodeReconfig $subnet_node
+			}
+		}
+	}
+
+	if { $old_subnet2_gws != "" } {
+		set diff [removeFromList {*}$new_subnet2_gws {*}$old_subnet2_gws]
+		if { $diff ni "{} {||}" } {
+			# change in subnet1, go through its old nodes and attach new data
+			set has_extnat [string match "*ext*" $diff]
+			foreach subnet_node [dict keys $old_subnet2_data] {
+				if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+					continue
+				}
+
+				set subnet_node_type [getNodeType $subnet_node]
+				if { $subnet_node_type == "ext" || [$subnet_node_type.netlayer] != "NETWORK" } {
+					# skip extnat and L2 nodes
+					continue
+				}
+
+				if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
+					# skip routers if there is no extnats
+					continue
+				}
+
+				trigger_nodeReconfig $subnet_node
+			}
+		}
+	}
+
+	return $link_id
 }
 
 #****f* linkcfg.tcl/linkDirection
@@ -1283,13 +1283,13 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
 #   * direction -- upstream/downstream
 #****
 proc linkDirection { node_id iface_id } {
-    set link_id [getIfcLink $node_id $iface_id]
+	set link_id [getIfcLink $node_id $iface_id]
 
-    if { $node_id == [lindex [getLinkPeers $link_id] 0] } {
-	set direction downstream
-    } else {
-	set direction upstream
-    }
+	if { $node_id == [lindex [getLinkPeers $link_id] 0] } {
+		set direction downstream
+	} else {
+		set direction upstream
+	}
 
-    return $direction
+	return $direction
 }
