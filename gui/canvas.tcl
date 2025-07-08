@@ -487,7 +487,7 @@ proc changeBkgPopup {} {
 	pack $wi.bgconf.right.l
 
 	set prevcanvas [canvas $wi.bgconf.right.pc -bd 0 -relief sunken -highlightthickness 0 \
-					-width 150 -height 150]
+		-width 150 -height 150]
 	pack $prevcanvas
 
 	ttk::label $wi.bgconf.right.l2 -text "Image:"
@@ -516,15 +516,16 @@ proc changeBkgPopup {} {
 				{{Gif Images} {.gif}  {}}
 				{{PNG Images} {.png} {}}
 			}
-#				{{All Images} {.jpeg} {}}
-#				{{All Images} {.jpg}  {}}
-#				{{All Images} {.bmp}  {}}
-#				{{All Images} {.tiff} {}}
-#				{{Jpeg Images} {.jpg} {}}
-#				{{Jpeg Images} {.jpeg} {}}
-#				{{Bitmap Images} {.bmp} {}}
-#				{{Tiff Images} {.tiff} {}}
+			#{{All Images} {.jpeg} {}}
+			#{{All Images} {.jpg}  {}}
+			#{{All Images} {.bmp}  {}}
+			#{{All Images} {.tiff} {}}
+			#{{Jpeg Images} {.jpg} {}}
+			#{{Jpeg Images} {.jpeg} {}}
+			#{{Bitmap Images} {.bmp} {}}
+			#{{Tiff Images} {.tiff} {}}
 			global canvasBkgMode wi
+
 			set chbgdialog .chbgDialog
 			set prevcanvas $wi.bgconf.right.pc
 			set imgsize $wi.bgconf.right.l2
@@ -554,56 +555,56 @@ proc changeBkgPopup {} {
 	###frame that contains NORTH alignment
 	ttk::frame $wi.bgconf.left.down.r.align.n
 	ttk::radiobutton $wi.bgconf.left.down.r.align.n.w \
-	-variable alignCanvasBkg -value northwest -state enabled
+		-variable alignCanvasBkg -value northwest -state enabled
 	ttk::radiobutton $wi.bgconf.left.down.r.align.n.c \
-	-variable alignCanvasBkg -value north -state enabled
+		-variable alignCanvasBkg -value north -state enabled
 	ttk::radiobutton $wi.bgconf.left.down.r.align.n.e \
-	-variable alignCanvasBkg -value northeast -state enabled
+		-variable alignCanvasBkg -value northeast -state enabled
 	pack $wi.bgconf.left.down.r.align.n.w  $wi.bgconf.left.down.r.align.n.c \
-	  $wi.bgconf.left.down.r.align.n.e -padx 10 -side left
+		$wi.bgconf.left.down.r.align.n.e -padx 10 -side left
 	pack $wi.bgconf.left.down.r.align.n -pady 3
 
 	###frame that contains CENTER alignment
 	ttk::frame $wi.bgconf.left.down.r.align.c
 	ttk::radiobutton $wi.bgconf.left.down.r.align.c.w \
-	-variable alignCanvasBkg -value west -state enabled
+		-variable alignCanvasBkg -value west -state enabled
 	ttk::radiobutton $wi.bgconf.left.down.r.align.c.c \
-	-variable alignCanvasBkg -value center -state enabled
+		-variable alignCanvasBkg -value center -state enabled
 	ttk::radiobutton $wi.bgconf.left.down.r.align.c.e \
-	-variable alignCanvasBkg -value east -state enabled
+		-variable alignCanvasBkg -value east -state enabled
 	pack $wi.bgconf.left.down.r.align.c.w  $wi.bgconf.left.down.r.align.c.c \
-	  $wi.bgconf.left.down.r.align.c.e -padx 10 -side left
+		$wi.bgconf.left.down.r.align.c.e -padx 10 -side left
 	pack $wi.bgconf.left.down.r.align.c -pady 3
 
 	###frame that contains SOUTH alignment
 	ttk::frame $wi.bgconf.left.down.r.align.s
 	ttk::radiobutton $wi.bgconf.left.down.r.align.s.w \
-	-variable alignCanvasBkg -value southwest -state enabled
+		-variable alignCanvasBkg -value southwest -state enabled
 	ttk::radiobutton $wi.bgconf.left.down.r.align.s.c \
-	-variable alignCanvasBkg -value south -state enabled
+		-variable alignCanvasBkg -value south -state enabled
 	ttk::radiobutton $wi.bgconf.left.down.r.align.s.e \
-	-variable alignCanvasBkg -value southeast -state enabled
+		-variable alignCanvasBkg -value southeast -state enabled
 	pack $wi.bgconf.left.down.r.align.s.w  $wi.bgconf.left.down.r.align.s.c \
-	  $wi.bgconf.left.down.r.align.s.e -padx 10 -side left
+		$wi.bgconf.left.down.r.align.s.e -padx 10 -side left
 	pack $wi.bgconf.left.down.r.align.s -pady 3
 
 	#lower left frame with options
 	ttk::frame $wi.bgconf.left.down.l
 
 	ttk::radiobutton $wi.bgconf.left.down.l.original -text "Use original/cropped image" \
-	-variable canvasBkgMode -value original
+		-variable canvasBkgMode -value original
 	pack $wi.bgconf.left.down.l.original -anchor w
 
 	ttk::radiobutton $wi.bgconf.left.down.l.str_shr -text "Stretch/shrink image" \
-	-variable canvasBkgMode -value str_shr
+		-variable canvasBkgMode -value str_shr
 	pack $wi.bgconf.left.down.l.str_shr -anchor w
 
 	ttk::radiobutton $wi.bgconf.left.down.l.adjust -text "Adjust canvas to image" \
-	-variable canvasBkgMode -value adjustC2I
+		-variable canvasBkgMode -value adjustC2I
 	pack $wi.bgconf.left.down.l.adjust -anchor w
 
 	ttk::radiobutton $wi.bgconf.left.down.l.adjust2 -text "Adjust image to canvas" \
-	-variable canvasBkgMode -value adjustI2C
+		-variable canvasBkgMode -value adjustI2C
 	pack $wi.bgconf.left.down.l.adjust2 -anchor w
 
 	#packing left side
@@ -634,8 +635,8 @@ proc changeBkgPopup {} {
 	ttk::frame $wi.buttons
 	pack $wi.buttons -side bottom -fill x -pady 2m
 	ttk::button $wi.buttons.apply -text "Apply" -command {
-			global canvasBkgMode cc chbgdialog
-			popupBkgApply $chbgdialog $cc
+		global canvasBkgMode cc chbgdialog
+		popupBkgApply $chbgdialog $cc
 	}
 	ttk::button $wi.buttons.cancel -text "Cancel" -command "destroy $chbgdialog"
 	ttk::button $wi.buttons.remove -text "Remove background" -command \
@@ -754,18 +755,18 @@ proc popupBkgApply { wi c } {
 					if { $crop == 1 } {
 						if { ! $winOS } {
 							exec magick $bgsrcfile -gravity $alignCanvasBkg -background white \
-							  -extent $sizex\x$sizey $destImgFile
+								-extent $sizex\x$sizey $destImgFile
 						} else {
 							exec cmd /c magick $bgsrcfile -gravity $alignCanvasBkg -background white \
-							  -extent $sizex\x$sizey $destImgFile
+								-extent $sizex\x$sizey $destImgFile
 						}
 					} else {
 						if { ! $winOS } {
 							exec magick $bgsrcfile -gravity $alignCanvasBkg -background white \
-							  -extent $sizex\x$sizey $destImgFile
+								-extent $sizex\x$sizey $destImgFile
 						} else {
-						  exec cmd /c magick $bgsrcfile -gravity $alignCanvasBkg -background white \
-							  -extent $sizex\x$sizey $destImgFile
+							exec cmd /c magick $bgsrcfile -gravity $alignCanvasBkg -background white \
+								-extent $sizex\x$sizey $destImgFile
 						}
 					}
 
@@ -781,10 +782,10 @@ proc popupBkgApply { wi c } {
 				str_shr {
 					if { ! $winOS } {
 						exec magick $bgsrcfile -resize $sizex\x$sizey \
-						  -size $sizex\x$sizey xc:white +swap -gravity $alignCanvasBkg -composite $destImgFile
+							-size $sizex\x$sizey xc:white +swap -gravity $alignCanvasBkg -composite $destImgFile
 					} else {
 						exec cmd /c magick $bgsrcfile -resize $sizex\x$sizey \
-						  -size $sizex\x$sizey xc:white +swap -gravity $alignCanvasBkg -composite $destImgFile
+							-size $sizex\x$sizey xc:white +swap -gravity $alignCanvasBkg -composite $destImgFile
 					}
 
 					set bkgname [loadImage $destImgFile $c canvasBackground $bgsrcfile]
@@ -804,7 +805,7 @@ proc popupBkgApply { wi c } {
 						$wi config -cursor arrow
 						update
 						set errmsg "Canvas cannot be set to this size: $image_x $image_y. \
-						  The most distant icons are on $ix $iy."
+							The most distant icons are on $ix $iy."
 						after idle { .dialog1.msg configure -wraplength 4i }
 						tk_dialog .dialog1 "IMUNES error" \
 							$errmsg \
@@ -864,7 +865,7 @@ proc popupBkgApply { wi c } {
 			$wi config -cursor arrow
 			update
 			set errmsg "Canvas cannot be set to this size: $image_x $image_y. \
-			  The most distant icons are on $ix $iy."
+				The most distant icons are on $ix $iy."
 			after idle { .dialog1.msg configure -wraplength 4i }
 			tk_dialog .dialog1 "IMUNES error" \
 				$errmsg \

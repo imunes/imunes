@@ -1,6 +1,6 @@
 def targets = []
 if (params.TARGETS?.trim()) {
-    targets = params.TARGETS.tokenize(',').collect { it.trim() }
+	targets = params.TARGETS.tokenize(',').collect { it.trim() }
 }
 
 def linuxAgents = ['arch', 'ubuntu-24.04', 'debian-12']

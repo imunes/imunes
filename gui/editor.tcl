@@ -712,9 +712,9 @@ proc topologyElementsTree {} {
 		}
 
 		global expandtree
+
 		set expandtree 0
-		$f.tree heading #0 -command \
-			"expandOrCollapseTree"
+		$f.tree heading #0 -command "expandOrCollapseTree"
 
 		bindEventsToTree
 	} else {
@@ -988,7 +988,7 @@ proc attachToExperimentPopup {} {
 
 	#right pane definition
 	set prevcan [canvas $wi.expChooser.right.pc -bd 0 -relief sunken -highlightthickness 0 \
-					-width 300 -height 210 -background white]
+		-width 300 -height 210 -background white]
 	pack $prevcan -anchor center
 	$prevcan create text 150 105 -text "(Preview)" -tags "preview"
 
@@ -1001,7 +1001,7 @@ proc attachToExperimentPopup {} {
 
 	set tree $wi.expChooser.left.tree
 	ttk::treeview $tree -columns "type" -height 5 -selectmode browse \
-			-xscrollcommand "$wi.expChooser.left.hscroll set"\
+		-xscrollcommand "$wi.expChooser.left.hscroll set"\
 		-yscrollcommand "$wi.expChooser.left.vscroll set"
 	ttk::scrollbar $wi.expChooser.left.hscroll -orient horizontal -command "$wi.expChooser.left.tree xview"
 	ttk::scrollbar $wi.expChooser.left.vscroll -orient vertical -command "$wi.expChooser.left.tree yview"
@@ -1021,7 +1021,7 @@ proc attachToExperimentPopup {} {
 	foreach exp [getResumableExperiments] {
 		set timestamp [getExperimentTimestampFromFile $exp]
 		$tree insert {} end -id $exp -text [list $exp "-" [getExperimentNameFromFile $exp]] -values [list $timestamp] \
-				  -tags "$exp"
+			-tags "$exp"
 		$tree tag bind $exp <1> \
 		  "updateScreenshotPreview $prevcan $runtimeDir/$exp/screenshot.png
 		   set selectedExperiment $exp"

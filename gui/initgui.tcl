@@ -140,7 +140,7 @@ set IPv6autoAssign 1
 
 set showTree 0
 set zoom_stops [list 0.2 0.4 0.5 0.6 0.8 1 \
-  1.25 1.5 1.75 2.0 3.0]
+	1.25 1.5 1.75 2.0 3.0]
 set canvasBkgMode "original"
 set alignCanvasBkg "center"
 set bgsrcfile ""
@@ -226,19 +226,19 @@ menu .menubar
 menu .menubar.file -tearoff 0
 
 .menubar.file add command -label New -underline 0 \
-  -accelerator "Ctrl+N" -command { newProject }
+	-accelerator "Ctrl+N" -command { newProject }
 bind . <Control-n> "newProject"
 
 .menubar.file add command -label Open -underline 0 \
-  -accelerator "Ctrl+O" -command { fileOpenDialogBox }
+	-accelerator "Ctrl+O" -command { fileOpenDialogBox }
 bind . <Control-o> "fileOpenDialogBox"
 
 .menubar.file add command -label Save -underline 0 \
-  -accelerator "Ctrl+S" -command { fileSaveDialogBox }
+	-accelerator "Ctrl+S" -command { fileSaveDialogBox }
 bind . <Control-s> "fileSaveDialogBox"
 
 .menubar.file add command -label "Save As" -underline 5 \
-  -command { fileSaveAsDialogBox }
+	-command { fileSaveAsDialogBox }
 
 .menubar.file add command -label "Close" -underline 0 -command { closeFile }
 
@@ -336,7 +336,6 @@ set printFileType ps
 .menubar.file add command -label Quit -underline 0 -command { exit }
 .menubar.file add separator
 
-
 #
 # Edit
 #
@@ -377,13 +376,13 @@ menu .menubar.canvas -tearoff 0
 	updateUndoLog
 }
 .menubar.canvas add command -label "Rename" -underline 0 \
--command { renameCanvasPopup }
+	-command { renameCanvasPopup }
 .menubar.canvas add command -label "Delete" -underline 0 -command {
 	set canvas_list [getFromRunning "canvas_list"]
 	set curcanvas [getFromRunning "curcanvas"]
 
 	if { [llength $canvas_list] == 1 } {
-		 return
+		return
 	}
 
 	selectAllObjects
@@ -435,11 +434,11 @@ menu .menubar.tools -tearoff 0
 .menubar.tools add command -label "Align to grid" -underline 9 \
 	-command { align2grid }
 .menubar.tools add separator
-.menubar.tools add checkbutton -label "IPv4 auto-assign addresses/routes"  \
+.menubar.tools add checkbutton -label "IPv4 auto-assign addresses/routes" \
 	-variable IPv4autoAssign
-.menubar.tools add checkbutton -label "IPv6 auto-assign addresses/routes"  \
+.menubar.tools add checkbutton -label "IPv6 auto-assign addresses/routes" \
 	-variable IPv6autoAssign
-.menubar.tools add checkbutton -label "Auto-generate /etc/hosts file"  \
+.menubar.tools add checkbutton -label "Auto-generate /etc/hosts file" \
 	-variable auto_etc_hosts
 .menubar.tools add separator
 .menubar.tools add command -label "Randomize MAC bytes" -underline 10 \
@@ -642,9 +641,8 @@ menu .menubar.tools -tearoff 0
 #	pack $f1.l -side right -fill x -expand 1
 #	pack $f2.b1 -side left -expand 1 -anchor e
 #	pack $f2.b2 -side right -expand 1 -anchor w
-#	pack $f1  $f2 -fill x
+#	pack $f1 $f2 -fill x
 #}
-
 
 #
 # View
@@ -654,10 +652,10 @@ menu .menubar.view -tearoff 0
 set m .menubar.view.iconsize
 menu $m -tearoff 0
 .menubar.view add cascade -label "Icon size" -menu $m -underline 5
-	$m add radiobutton -label "Small" -variable icon_size \
-		-value small -command { updateIconSize; redrawAll }
-	$m add radiobutton -label "Normal" -variable icon_size \
-		-value normal -command { updateIconSize; redrawAll }
+$m add radiobutton -label "Small" -variable icon_size \
+	-value small -command { updateIconSize; redrawAll }
+$m add radiobutton -label "Normal" -variable icon_size \
+	-value normal -command { updateIconSize; redrawAll }
 
 .menubar.view add separator
 
@@ -754,9 +752,8 @@ menu $m -tearoff 0
 	-command "zoom up"
 bind . "+" "zoom up"
 .menubar.view add command -label "Zoom Out" -accelerator "-" \
-	 -command "zoom down"
+	-command "zoom down"
 bind . "-" "zoom down"
-
 
 #dodan element "Themes"
 .menubar.view add separator
@@ -764,17 +761,16 @@ set m .menubar.view.themes
 menu $m -tearoff 0
 set currentTheme imunes
 .menubar.view add cascade -label "Themes" -menu $m
-	$m add radiobutton -label "alt" -variable currentTheme \
-		-value alt -command "ttk::style theme use alt"
-	$m add radiobutton -label "classic" -variable currentTheme\
-		-value classic -command "ttk::style theme use classic"
-	$m add radiobutton -label "default" -variable currentTheme\
-		-value default -command "ttk::style theme use default"
-	$m add radiobutton -label "clam" -variable currentTheme\
-		-value clam -command "ttk::style theme use clam"
-	$m add radiobutton -label "imunes" -variable currentTheme\
-		-value imunes -command "ttk::style theme use imunes"
-
+$m add radiobutton -label "alt" -variable currentTheme \
+	-value alt -command "ttk::style theme use alt"
+$m add radiobutton -label "classic" -variable currentTheme\
+	-value classic -command "ttk::style theme use classic"
+$m add radiobutton -label "default" -variable currentTheme\
+	-value default -command "ttk::style theme use default"
+$m add radiobutton -label "clam" -variable currentTheme\
+	-value clam -command "ttk::style theme use clam"
+$m add radiobutton -label "imunes" -variable currentTheme\
+	-value imunes -command "ttk::style theme use imunes"
 
 #
 # Show
@@ -849,52 +845,51 @@ foreach widget $widgetlist {
 	pack $w.custom.e1 -side top -pady 5 -padx 10 -fill x
 	}
 
-if {0} {
-.menubar.widgets add separator
-.menubar.widgets add radiobutton -label "Route" \
-	-variable showConfig -underline 0 -value "route"
-}
+#.menubar.widgets add separator
+#.menubar.widgets add radiobutton -label "Route" \
+#	-variable showConfig -underline 0 -value "route"
 
 #
 # Events
 #
-menu .menubar.events -tearoff  0
+menu .menubar.events -tearoff 0
 .menubar.events add command -label "Start scheduling" -underline 0 \
-		-state normal -command "startEventScheduling"
+	-state normal -command "startEventScheduling"
 .menubar.events add command -label "Stop scheduling" -underline 1 \
-		-state disabled -command "stopEventScheduling"
+	-state disabled -command "stopEventScheduling"
 .menubar.events add separator
 .menubar.events add command -label "Event editor" -underline 0 \
-		-command "elementsEventsEditor"
+	-command "elementsEventsEditor"
+
 #
 # Experiment
 #
 menu .menubar.experiment -tearoff 0
 .menubar.experiment add command -label "Execute" -underline 0 \
-		-command "setOperMode exec"
+	-command "setOperMode exec"
 .menubar.experiment add command -label "Terminate" -underline 0 \
-		-command "setOperMode edit" -state disabled
+	-command "setOperMode edit" -state disabled
 .menubar.experiment add command -label "Restart" -underline 0 \
-		-command "setOperMode edit; setOperMode exec" -state disabled
+	-command "setOperMode edit; setOperMode exec" -state disabled
 .menubar.experiment add separator
 .menubar.experiment add command -label "Pause execution" -underline 2 \
-		-command {
-			set auto_execution [getFromRunning "auto_execution"]
+	-command {
+		set auto_execution [getFromRunning "auto_execution"]
 
-			setToRunning "auto_execution" [expr $auto_execution ^ 1]
-			if { [getFromRunning "cfg_deployed"] && ! $auto_execution } {
-				# when going from non-auto to auto execution, trigger (un)deployCfg
-				undeployCfg
-				deployCfg
-			} else {
-				setToExecuteVars "terminate_cfg" [cfgGet]
-			}
-
-			toggleAutoExecutionGUI
+		setToRunning "auto_execution" [expr $auto_execution ^ 1]
+		if { [getFromRunning "cfg_deployed"] && ! $auto_execution } {
+			# when going from non-auto to auto execution, trigger (un)deployCfg
+			undeployCfg
+			deployCfg
+		} else {
+			setToExecuteVars "terminate_cfg" [cfgGet]
 		}
+
+		toggleAutoExecutionGUI
+	}
 .menubar.experiment add separator
 .menubar.experiment add command -label "Attach to experiment" -underline 0 \
-		-command "attachToExperimentPopup"
+	-command "attachToExperimentPopup"
 
 #
 # Help
@@ -950,20 +945,20 @@ menu .menubar.help -tearoff 0
 		$mainFrame config -cursor arrow"
 }
 
-
 #
 # Left-side toolbar
 #
 ttk::frame $mf.left
 pack $mf.left -side left -fill y
 
-foreach b {select link} {
+foreach b "select link" {
 	addTool $b $b
 
 	set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$b.gif]
 
-   ttk::button $mf.left.$b \
-		-image $image -style Toolbutton \
+	ttk::button $mf.left.$b \
+		-image $image \
+		-style Toolbutton \
 		-command "setActiveToolGroup $b"
 	pack $mf.left.$b -side top
 
@@ -971,7 +966,7 @@ foreach b {select link} {
 	set msg ""
 	if { $b == "select" } {
 		set msg "Select tool"
-	} elseif { $b == "link"  } {
+	} elseif { $b == "link" } {
 		set msg "Create link"
 	}
 
@@ -1002,13 +997,14 @@ bind $mf.left.net_layer <Any-Enter> ".bottom.textbox config -text {Add new netwo
 bind $mf.left.net_layer <Any-Leave> ".bottom.textbox config -text {}"
 pack $mf.left.net_layer
 
-foreach b {rectangle oval freeform text} {
+foreach b "rectangle oval freeform text" {
 	addTool $b $b
 
 	set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$b.gif]
 
 	ttk::button $mf.left.$b \
-		-image $image -style Toolbutton \
+		-image $image \
+		-style Toolbutton \
 		-command "setActiveToolGroup $b"
 
 	pack $mf.left.$b -side bottom
@@ -1020,6 +1016,7 @@ foreach b {rectangle oval freeform text} {
 		text { set msg "Add a Textbox" }
 		default { set msg "" }
 	}
+
 	bind $mf.left.$b <Any-Enter> ".bottom.textbox config -text {$msg}"
 	bind $mf.left.$b <Any-Leave> ".bottom.textbox config -text {}"
 }
@@ -1056,14 +1053,22 @@ set pseudo_iconheight 0
 ttk::frame $mf.grid
 ttk::frame $mf.hframe
 ttk::frame $mf.vframe
-set c [canvas $mf.c -bd 0 -relief sunken -highlightthickness 0\
-		-background gray \
-		-xscrollcommand "$mf.hframe.scroll set" \
-		-yscrollcommand "$mf.vframe.scroll set"]
+set c [canvas $mf.c \
+	-bd 0 \
+	-relief sunken \
+	-highlightthickness 0 \
+	-background gray \
+	-xscrollcommand "$mf.hframe.scroll set" \
+	-yscrollcommand "$mf.vframe.scroll set"]
 
-canvas $mf.hframe.t -width 160 -height 18 -bd 0 -highlightthickness 0 \
-		-background #d9d9d9 \
-		-xscrollcommand "$mf.hframe.ts set"
+canvas $mf.hframe.t \
+	-width 160 \
+	-height 18 \
+	-bd 0 \
+	-highlightthickness 0 \
+	-background #d9d9d9 \
+	-xscrollcommand "$mf.hframe.ts set"
+
 bind $mf.hframe.t <1> {
 	set canvas [lindex [$mf.hframe.t gettags current] 1]
 	if { $canvas != "" && $canvas != [getFromRunning "curcanvas"] } {
@@ -1071,6 +1076,7 @@ bind $mf.hframe.t <1> {
 		switchCanvas none
 	}
 }
+
 bind $mf.hframe.t <Double-1> {
 
 	set canvas [lindex [$mf.hframe.t gettags current] 1]
@@ -1088,6 +1094,7 @@ bind $mf.hframe.t <Double-1> {
 		updateUndoLog
 	}
 }
+
 #scrollbar $mf.hframe.scroll -orient horiz -command "$c xview" \
 #	-bd 1 -width 14
 #scrollbar $mf.vframe.scroll -command "$c yview" \
@@ -1106,11 +1113,11 @@ pack $mf.grid -expand yes -fill both -padx 1 -pady 1
 grid rowconfig $mf.grid 0 -weight 1 -minsize 0
 grid columnconfig $mf.grid 0 -weight 1 -minsize 0
 grid $mf.c -in $mf.grid -row 0 -column 0 \
-		-rowspan 1 -columnspan 1 -sticky news
+	-rowspan 1 -columnspan 1 -sticky news
 grid $mf.vframe -in $mf.grid -row 0 -column 1 \
-		-rowspan 1 -columnspan 1 -sticky news
+	-rowspan 1 -columnspan 1 -sticky news
 grid $mf.hframe -in $mf.grid -row 1 -column 0 \
-		-rowspan 1 -columnspan 1 -sticky news
+	-rowspan 1 -columnspan 1 -sticky news
 
 ttk::frame .bottom
 pack .bottom -side bottom -fill x
@@ -1235,7 +1242,7 @@ bind . <Control-i> {
 	redrawAll
 }
 
-foreach {key tool_group} [list \
+set key_bindings [list \
 	"1"	"select" \
 	"2"	"link" \
 	"3"	"link_layer" \
@@ -1244,8 +1251,9 @@ foreach {key tool_group} [list \
 	"6"	"freeform" \
 	"7"	"oval" \
 	"8"	"rectangle" \
-	] {
+	]
 
+foreach {key tool_group} $key_bindings {
 	bind . $key "cycleToolGroup $tool_group"
 }
 

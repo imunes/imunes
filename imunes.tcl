@@ -298,8 +298,8 @@ readConfigFile
 if { $execMode == "interactive" } {
 	safePackageRequire Tk "To run the IMUNES GUI, Tk must be installed."
 
-	foreach file "canvas copypaste drawing editor help theme linkcfgGUI \
-		mouse nodecfgGUI ifacesGUI widgets annotations" {
+	foreach file "canvas copypaste drawing editor help theme linkcfgGUI mouse
+		nodecfgGUI ifacesGUI widgets annotations" {
 
 		safeSourceFile "$ROOTDIR/$LIBDIR/gui/$file.tcl"
 	}
@@ -321,7 +321,7 @@ if { $execMode == "interactive" } {
 	# Fire up the animation loop
 	animate
 	# Event scheduler - should be started / stopped on per-experiment base?
-#	evsched
+	#evsched
 } else {
 	if { $argv != "" } {
 		if { ! [file exists $argv] } {

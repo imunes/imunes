@@ -1,9 +1,8 @@
 proc getPrettyUsage { options } {
-	set usage "Usage:
-	imunes \[OPTION...\] \[.imn FILE\]
-
-Options:
-"
+	set usage    "Usage:\n"
+	append usage "    imunes \[OPTION...\] \[.imn FILE\]\n"
+	append usage "\n"
+	append usage "Options:\n"
 	foreach opt $options {
 		set vals [split [lindex $opt 0] "."]
 		set description [lindex $opt end]
@@ -23,10 +22,11 @@ Options:
 		}
 	}
 	append usage "    -help\tPrint this message\n"
-	append usage "\nExamples:
-	imunes \[-e | -eid eid\] \[topology.imn\] - start IMUNES GUI
-	imunes -b \[-e | -eid eid\] \[topology.imn\] - start experiment (batch)
-	imunes -b -e | -eid eid - terminate experiment (batch)"
+	append usage "\nExamples:\n"
+	append usage "    imunes \[-e | -eid eid\] \[topology.imn\] - start IMUNES GUI\n"
+	append usage "    imunes -b \[-e | -eid eid\] \[topology.imn\] - start experiment (batch)\n"
+	append usage "    imunes -b -e | -eid eid - terminate experiment (batch)\n"
+
 	return $usage
 }
 

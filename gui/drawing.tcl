@@ -28,7 +28,7 @@ proc refreshToolBarNodes {} {
 			set background_color "-background \"#bc5555\" -activebackground \"#bc5555\""
 		}
 
-	$mf.left.${tool}_nodes add command -image $image -hidemargin 1 \
+		$mf.left.${tool}_nodes add command -image $image -hidemargin 1 \
 			-compound left -label [string range [$node_type.toolbarIconDescr] 8 end] \
 			-command "setActiveTool ${tool}_layer $node_type" {*}$background_color
 	}
@@ -64,10 +64,10 @@ proc redrawAll {} {
 		set ret [backgroundImage .panwin.f1.c $canvasBkgImage]
 		if { "$ret" == 2 } {
 			set background [.panwin.f1.c create rectangle 0 0 $e_sizex $e_sizey \
-					-fill white -tags "background"]
+				-fill white -tags "background"]
 		} else {
 			set background [.panwin.f1.c create rectangle 0 0 $e_sizex $e_sizey \
-					-tags "background"]
+				-tags "background"]
 		}
 	} else {
 		set background [.panwin.f1.c create rectangle 0 0 $e_sizex $e_sizey \
@@ -94,7 +94,7 @@ proc redrawAll {} {
 				}
 			} else {
 				.panwin.f1.c create line $x 1 $x $e_sizey -fill gray -dash {1 3} \
-				   -tags "grid"
+					-tags "grid"
 			}
 		}
 		for { set y $e_grid } { $y < $e_sizey } { incr y $e_grid } {
@@ -122,6 +122,7 @@ proc redrawAll {} {
 		set nodes [getLinkPeers $link_id]
 		if { [getNodeCanvas [lindex $nodes 0]] != $curcanvas ||
 			[getNodeCanvas [lindex $nodes 1]] != $curcanvas } {
+
 			continue
 		}
 
@@ -200,10 +201,10 @@ proc drawNode { node_id } {
 
 		set label_str [getNodeName $node_id]
 		if { [getNodeType $node_id] == "ext" } {
-				set nat_iface [getNodeNATIface $node_id]
-				if { $nat_iface != "UNASSIGNED" } {
-						set label_str "NAT-$nat_iface"
-				}
+			set nat_iface [getNodeNATIface $node_id]
+			if { $nat_iface != "UNASSIGNED" } {
+				set label_str "NAT-$nat_iface"
+			}
 		}
 
 		set has_empty_ifaces 0
@@ -340,14 +341,17 @@ proc calcAnglePoints { x1 y1 x2 y2 } {
 	} else {
 		set arad [expr {atan(($y2-$y1)/($x2-$x1))}]
 	}
+
 	set ang [expr {$arad*180/3.14159}]
 	if { $ang < 0 } {
 		set ang [expr {$ang+360}]
 	}
+
 	set ang [expr {360-$ang}]
 	if { $ang > 225 && $ang < 315 || $ang > 45 && $ang < 135 || $ang == 360 } {
 		set ang 0
 	}
+
 	return $ang
 }
 
@@ -777,7 +781,7 @@ proc changeIconPopup {} {
 	pack $wi.iconconf.right.l -anchor center
 
 	set prevcan [canvas $wi.iconconf.right.pc -bd 0 -relief sunken -highlightthickness 0 \
-					-width 100 -height 100 -background white]
+		-width 100 -height 100 -background white]
 	pack $prevcan -anchor center
 
 	ttk::label $wi.iconconf.right.l2 -text "Size:"
@@ -793,7 +797,7 @@ proc changeIconPopup {} {
 
 	set tree $wi.iconconf.left.up.tree
 	ttk::treeview $tree -columns "type" -height 5 -selectmode browse \
-			-xscrollcommand "$wi.iconconf.left.up.hscroll set"\
+		-xscrollcommand "$wi.iconconf.left.up.hscroll set"\
 		-yscrollcommand "$wi.iconconf.left.up.vscroll set"
 	ttk::scrollbar $wi.iconconf.left.up.hscroll -orient horizontal -command "$wi.iconconf.left.up.tree xview"
 	ttk::scrollbar $wi.iconconf.left.up.vscroll -orient vertical -command "$wi.iconconf.left.up.tree yview"
@@ -813,7 +817,7 @@ proc changeIconPopup {} {
 	foreach file [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] {
 		set filename [lindex [split $file /] end]
 		$tree insert {} end -id $file -text $filename -values [list "library icon"] \
-		  -tags "$file"
+			-tags "$file"
 		$tree tag bind $file <1> \
 		  "updateIconPreview $prevcan $wi.iconconf.right.l2 $file
 		   set iconsrcfile \"$file\""
@@ -825,7 +829,7 @@ proc changeIconPopup {} {
 		  [getImageType $img] == "customIcon" } {
 
 			$tree insert {} end -id $img -text $img -values [list "custom icon"] \
-			  -tags "$img"
+				-tags "$img"
 			$tree tag bind $img <1> \
 			  "updateIconPreview $prevcan $wi.iconconf.right.l2 $img
 			   set iconsrcfile $img"
@@ -879,7 +883,6 @@ proc changeIconPopup {} {
 	pack $wi.iconconf.left.down.left $wi.iconconf.left.down.right \
 		-side left -anchor n -padx 2
 
-
 	ttk::entry $wi.iconconf.left.down.left.e -width 25 -textvariable iconFile
 	ttk::button $wi.iconconf.left.down.right.b -text "Browse" -width 8 \
 		-command {
@@ -889,16 +892,16 @@ proc changeIconPopup {} {
 				{{Gif Images} {.gif}  {}}
 				{{PNG Images} {.png} {}}
 			}
-#				{{All Images} {.jpeg} {}}
-#				{{All Images} {.jpg}  {}}
-#				{{All Images} {.bmp}  {}}
-#				{{All Images} {.tiff} {}}
-#				{{All Images} {.ico}  {}}
-#				{{Jpeg Images} {.jpg} {}}
-#				{{Jpeg Images} {.jpeg} {}}
-#				{{Bitmap Images} {.bmp} {}}
-#				{{Tiff Images} {.tiff} {}}
-#				{{Icon Images} {.ico} {}}
+			#{{All Images} {.jpeg} {}}
+			#{{All Images} {.jpg}  {}}
+			#{{All Images} {.bmp}  {}}
+			#{{All Images} {.tiff} {}}
+			#{{All Images} {.ico}  {}}
+			#{{Jpeg Images} {.jpg} {}}
+			#{{Jpeg Images} {.jpeg} {}}
+			#{{Bitmap Images} {.bmp} {}}
+			#{{Tiff Images} {.tiff} {}}
+			#{{Icon Images} {.ico} {}}
 			global canvasBkgMode wi
 			set chicondialog .chiconDialog
 			set prevcan $wi.iconconf.right.pc
@@ -945,11 +948,11 @@ proc changeIconPopup {} {
 	ttk::frame $wi.buttons
 	pack $wi.buttons -side bottom -fill x -pady 2m
 	ttk::button $wi.buttons.apply -text "Apply" -command {
-			popupIconApply $chicondialog $iconsrcfile
+		popupIconApply $chicondialog $iconsrcfile
 	}
 	ttk::button $wi.buttons.cancel -text "Cancel" -command "destroy $chicondialog"
 	ttk::button $wi.buttons.remove -text "Remove custom icon" -command \
-		 "destroy $chicondialog; setDefaultIcon"
+		"destroy $chicondialog; setDefaultIcon"
 	pack $wi.buttons.remove $wi.buttons.cancel $wi.buttons.apply -side right -expand 1
 
 	bind $chicondialog <Key-Return> { popupIconApply $chicondialog $iconsrcfile }
@@ -1058,12 +1061,12 @@ proc updateCustomIconReferences {} {
 #   Updates icon size.
 #****
 proc updateIconSize {} {
-  global all_modules_list
+	global all_modules_list
 
-  foreach b $all_modules_list {
-	global $b icon_size
-	set $b [image create photo -file [$b.icon $icon_size]]
-  }
+	foreach b $all_modules_list {
+		global $b icon_size
+		set $b [image create photo -file [$b.icon $icon_size]]
+	}
 }
 
 #****f* editor.tcl/selectZoomPopupMenu
@@ -1124,16 +1127,20 @@ proc align2grid {} {
 				set changed 1
 				updateUndoLog
 				redrawAll
+
 				return
 			}
+
 			set node_id [lindex [.panwin.f1.c gettags [lindex $node_objects 0]] 1]
 			set node_objects [lreplace $node_objects 0 0]
 			setNodeCoords $node_id "$x $y"
 			set dy 32
 			if { [lsearch {router hub lanswitch rj45} \
 				[getNodeType $node_id]] >= 0 } {
+
 				set dy 24
 			}
+
 			setNodeLabelCoords $node_id "$x [expr {$y + $dy}]"
 		}
 	}
@@ -1247,17 +1254,19 @@ proc rearrange { mode } {
 			foreach link_id [getFromRunning "link_list"] {
 				set nodes [getLinkPeers $link_id]
 				if { [getNodeCanvas [lindex $nodes 0]] != $curcanvas ||
-				  [getNodeCanvas [lindex $nodes 1]] != $curcanvas ||
-				  [getLinkMirror $link_id] != "" } {
+					[getNodeCanvas [lindex $nodes 1]] != $curcanvas ||
+					[getLinkMirror $link_id] != "" } {
 
 					continue
 				}
+
 				set peers [getLinkPeers $link_id]
 				if { [getNodeType [lindex $peers 0]] == "wlan" ||
 					[getNodeType [lindex $peers 1]] == "wlan" } {
 
 					continue
 				}
+
 				set coords0 [getNodeCoords [lindex $peers 0]]
 				set coords1 [getNodeCoords [lindex $peers 1]]
 				set o_x \

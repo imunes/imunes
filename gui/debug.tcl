@@ -42,7 +42,7 @@ proc popupDebugger {} {
 	ttk::frame $wi.debug.editor -borderwidth 2
 	text $wi.debug.editor.command -bg white -width 100 -height 5
 	ttk::scrollbar $wi.debug.editor.vscroll -orient vertical \
-	-command "$wi.debug.editor.command yview"
+		-command "$wi.debug.editor.command yview"
 
 	pack $wi.debug.editor
 	pack $wi.debug -side top

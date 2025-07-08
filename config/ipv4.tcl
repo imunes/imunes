@@ -48,25 +48,25 @@ set change_subnet4 0
 #   * w -- widget
 #****
 proc IPv4AddrApply { w } {
-   global ipv4
-   global numbits
-   global changed
-   global control
+	global ipv4
+	global numbits
+	global changed
+	global control
 
-   set newipv4 [$w.ipv4frame.e1 get]
+	set newipv4 [$w.ipv4frame.e1 get]
 
-   if { [checkIPv4Net $newipv4] == 0 } {
+	if { [checkIPv4Net $newipv4] == 0 } {
 		focusAndFlash .entry1.ipv4frame.e1
 		return
-   }
-   destroy $w
+	}
+	destroy $w
 
-   if { $newipv4 != $ipv4 } {
+	if { $newipv4 != $ipv4 } {
 		set changed 1
 		set control 1
-   }
-   set ipv4 $newipv4
-   set numbits [lindex [split $ipv4 /] 1]
+	}
+	set ipv4 $newipv4
+	set numbits [lindex [split $ipv4 /] 1]
 }
 
 #****f* ipv4.tcl/dec2bin
@@ -410,7 +410,7 @@ proc nextFreeIP4Addr { addr start peers } {
 			after idle { .dialog1.msg configure -wraplength 4i }
 			tk_dialog .dialog1 "IMUNES warning" \
 				"You have depleted the current pool of addresses ($x/$mask). Please choose a new pool from Tools->IPV4 address pool or delete nodes to free the address space." \
-			info 0 Dismiss
+				info 0 Dismiss
 		}
 		return ""
 	}

@@ -115,7 +115,8 @@ proc checkOffset { str } {
 proc checkAction { str } {
 	if { $str in [list match_hook match_dupto match_skipto match_drop \
 		nomatch_hook nomatch_dupto nomatch_skipto nomatch_drop] } {
-			return 1
+
+		return 1
 	}
 
 	return 0

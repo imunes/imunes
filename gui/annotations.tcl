@@ -162,7 +162,7 @@ proc popupOvalDialog { c target modify } {
 	ttk::label $wi.colors.label -text "Fill color:"
 
 	ttk::label $wi.colors.color -text $color -width 8 \
-	  -background $color
+		-background $color
 	ttk::button $wi.colors.bg -text "Color" -command \
 		"popupColor background $wi.colors.color true"
 	pack $wi.colors.label $wi.colors.color $wi.colors.bg \
@@ -196,7 +196,7 @@ proc popupOvalDialog { c target modify } {
 	ttk::frame $wi.butt -borderwidth 6 -padding 2
 	pack $wi.butt -fill both -expand 1
 	ttk::button $wi.butt.apply -text $applytext -command \
-	  "popupOvalApply $c $wi $target"
+		"popupOvalApply $c $wi $target"
 
 	ttk::button $wi.butt.cancel -text "Cancel" -command $cancelcmd
 	bind $wi <Key-Escape> "$cancelcmd"
@@ -370,7 +370,7 @@ proc popupRectangleDialog { c target modify } {
 	ttk::label $wi.colors.label -text "Fill color:"
 
 	ttk::label $wi.colors.color -text $color -width 8 \
-	  -background $color
+		-background $color
 	ttk::button $wi.colors.bg -text "Color" -command \
 		"popupColor background $wi.colors.color true"
 	pack $wi.colors.label $wi.colors.color $wi.colors.bg \
@@ -413,7 +413,7 @@ proc popupRectangleDialog { c target modify } {
 	ttk::frame $wi.butt -borderwidth 6 -padding 2
 	pack $wi.butt -fill both -expand 1
 	ttk::button $wi.butt.apply -text $applytext -command \
-	  "popupRectangleApply $c $wi $target"
+		"popupRectangleApply $c $wi $target"
 
 	ttk::button $wi.butt.cancel -text "Cancel" -command $cancelcmd
 	bind $wi <Key-Escape> "$cancelcmd"
@@ -615,7 +615,7 @@ proc popupTextDialog { c target modify } {
 	ttk::frame $wi.butt -borderwidth 6 -padding 2
 	pack $wi.butt -fill both -expand 1
 	ttk::button $wi.butt.apply -text $applytext -command \
-	  "popupTextApply $c $wi $target"
+		"popupTextApply $c $wi $target"
 
 	ttk::button $wi.butt.cancel -text "Cancel" -command $cancelcmd
 	bind $wi <Key-Escape> "$cancelcmd"
@@ -701,7 +701,7 @@ proc drawText { text } {
 	lassign [lmap n $coords {expr $n * [getFromRunning "zoom"]}] x y
 	set newtext [.panwin.f1.c create text $x $y -text $label -anchor w \
 		-font "$font" -justify left -fill $labelcolor -tags "text $text"]
-		.panwin.f1.c raise $newtext
+	.panwin.f1.c raise $newtext
 }
 
 #****f* annotations.tcl/popupFreeformDialog
@@ -758,7 +758,7 @@ proc popupFreeformDialog { c target modify } {
 	# color selection controls
 	ttk::label $wi.colors.label -text "Line color:"
 	ttk::label $wi.colors.color -text $color -width 8 \
-	  -background $color
+		-background $color
 	ttk::button $wi.colors.bg -text "Color" -command \
 		"popupColor background $wi.colors.color true"
 	pack $wi.colors.label $wi.colors.color $wi.colors.bg \
@@ -785,7 +785,7 @@ proc popupFreeformDialog { c target modify } {
 	ttk::frame $wi.butt -borderwidth 6 -padding 2
 	pack $wi.butt -fill both -expand 1
 	ttk::button $wi.butt.apply -text $applytext -command \
-	  "popupFreeformApply $c $wi $target"
+		"popupFreeformApply $c $wi $target"
 
 	ttk::button $wi.butt.cancel -text "Cancel" -command $cancelcmd
 	bind $wi <Key-Escape> "$cancelcmd"
@@ -873,7 +873,7 @@ proc drawFreeform { freeform } {
 			set y1 [expr {[lindex $coords $i+1] * $zoom}]
 			xpos $tempfree $x1 $y1 $width $color
 		}
-			set i [expr {$i+2}]
+		set i [expr {$i+2}]
 	}
 
 	.panwin.f1.c raise $tempfree

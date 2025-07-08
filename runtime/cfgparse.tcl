@@ -152,8 +152,8 @@ proc loadCfgLegacy { cfg } {
 								}
 
 								if { $node_type == "extnat" } {
-										cfgSet "nodes" $object "type" "ext"
-										cfgSet "nodes" $object "nat_iface" [cfgGet "nodes" $object "name"]
+									cfgSet "nodes" $object "type" "ext"
+									cfgSet "nodes" $object "nat_iface" [cfgGet "nodes" $object "name"]
 								}
 								cfgSet "nodes" $object "ifaces" $iface_id "name" "$iface_name"
 								setToRunning "${object}|${iface_id}_running" false
@@ -1003,7 +1003,7 @@ proc loadCfgLegacy { cfg } {
 			} else {
 				tk_dialog .dialog1 "IMUNES warning" \
 					"Error: $msg" \
-				info 0 Dismiss
+					info 0 Dismiss
 			}
 
 			exit

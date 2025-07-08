@@ -437,8 +437,8 @@ proc getDefaultGateways { node_id subnet_gws nodes_l2data } {
 		}
 
 		lassign [getSubnetData $peer_id $peer_iface_id \
-		  $subnet_gws $nodes_l2data $subnet_idx] \
-		  subnet_gws nodes_l2data
+			$subnet_gws $nodes_l2data $subnet_idx] \
+			subnet_gws nodes_l2data
 	}
 
 	# merge all gateways values and return
@@ -532,8 +532,8 @@ proc getSubnetData { this_node_id this_iface_id subnet_gws nodes_l2data subnet_i
 		}
 
 		lassign [getSubnetData $peer_id $peer_iface_id \
-		  $subnet_gws $nodes_l2data $subnet_idx] \
-		  subnet_gws nodes_l2data
+			$subnet_gws $nodes_l2data $subnet_idx] \
+			subnet_gws nodes_l2data
 	}
 
 	return [list $subnet_gws $nodes_l2data]

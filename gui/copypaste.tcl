@@ -158,8 +158,8 @@ proc paste {} {
 
 		set node_type [getNodeType $new_node_id]
 		if { $node_type ni [array names nodeNamingBase] } {
-				# fallback
-				setNodeName $new_node_id $new_node_id
+			# fallback
+			setNodeName $new_node_id $new_node_id
 		}
 
 		set node_name [getNodeName $new_node_id]

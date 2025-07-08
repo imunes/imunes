@@ -46,23 +46,23 @@ set change_subnet6 0
 #   * w -- widget
 #****
 proc IPv6AddrApply { w } {
-   global ipv6
-   global changed
-   global control
+	global ipv6
+	global changed
+	global control
 
-   set newipv6 [$w.ipv6frame.e1 get]
+	set newipv6 [$w.ipv6frame.e1 get]
 
-   if { [checkIPv6Net $newipv6] == 0 } {
+	if { [checkIPv6Net $newipv6] == 0 } {
 		focusAndFlash .entry1.ipv6frame.e1
 		return
-   }
-   destroy $w
+	}
+	destroy $w
 
-   if { $newipv6 != $ipv6 } {
+	if { $newipv6 != $ipv6 } {
 		set changed 1
 		set control 1
-   }
-   set ipv6 $newipv6
+	}
+	set ipv6 $newipv6
 }
 
 #****f* ipv6.tcl/findFreeIPv6Net
@@ -235,7 +235,7 @@ proc nextFreeIP6Addr { addr start peers } {
 			after idle { .dialog1.msg configure -wraplength 4i }
 			tk_dialog .dialog1 "IMUNES warning" \
 				"You have depleted the current pool of addresses ([ip::contract $x]/$mask). Please choose a new pool from Tools->IPV6 address pool or delete nodes to free the address space." \
-			info 0 Dismiss
+				info 0 Dismiss
 		}
 		return ""
 	}

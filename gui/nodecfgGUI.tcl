@@ -345,9 +345,9 @@ proc configGUI_addTree { wi node_id } {
 	#binding for tags $iface_id
 	foreach iface_id $sorted_iface_list {
 		$wi.panwin.f1.tree tag bind $iface_id <1> \
-		  "$wi.panwin.f1.tree focus $iface_id
-		   $wi.panwin.f1.tree selection set $iface_id
-		   configGUI_showIfcInfo $wi.panwin.f2 0 $node_id $iface_id"
+			"$wi.panwin.f1.tree focus $iface_id
+			$wi.panwin.f1.tree selection set $iface_id
+			configGUI_showIfcInfo $wi.panwin.f2 0 $node_id $iface_id"
 
 		#pathname prev item:
 		#Returns the identifier of item's previous sibling, or {} if item is the first child of its parent.
@@ -381,17 +381,17 @@ proc configGUI_addTree { wi node_id } {
 			"configGUI_showIfcInfo $wi.panwin.f2 0 $node_id logIfcFrame"
 
 		$wi.panwin.f1.tree tag bind logIfcFrame <1> \
-				"configGUI_showIfcInfo $wi.panwin.f2 0 $node_id logIfcFrame"
+			"configGUI_showIfcInfo $wi.panwin.f2 0 $node_id logIfcFrame"
 		$wi.panwin.f1.tree tag bind logIfcFrame <Key-Up> \
-				"configGUI_showIfcInfo $wi.panwin.f2 0 $node_id [lindex $sorted_iface_list end]"
+			"configGUI_showIfcInfo $wi.panwin.f2 0 $node_id [lindex $sorted_iface_list end]"
 		$wi.panwin.f1.tree tag bind logIfcFrame <Key-Down> \
-				"configGUI_showIfcInfo $wi.panwin.f2 0 $node_id [lindex $sorted_logiface_list 0]"
+			"configGUI_showIfcInfo $wi.panwin.f2 0 $node_id [lindex $sorted_logiface_list 0]"
 
 		foreach iface_id $sorted_logiface_list {
 			$wi.panwin.f1.tree tag bind $iface_id <1> \
-			  "$wi.panwin.f1.tree focus $iface_id
-			   $wi.panwin.f1.tree selection set $iface_id
-			   configGUI_showIfcInfo $wi.panwin.f2 0 $node_id $iface_id"
+				"$wi.panwin.f1.tree focus $iface_id
+				$wi.panwin.f1.tree selection set $iface_id
+				configGUI_showIfcInfo $wi.panwin.f2 0 $node_id $iface_id"
 
 			$wi.panwin.f1.tree tag bind $iface_id <3> \
 				"showLogIfcMenu $iface_id"
@@ -587,9 +587,9 @@ proc configGUI_refreshIfcsTree { wi node_id } {
 	regsub ***=.panwin.f1.tree $wi "" wi_bind
 
 	$wi tag bind physIfcFrame <1> \
-			"configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id physIfcFrame"
+		"configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id physIfcFrame"
 	$wi tag bind physIfcFrame <Key-Up> \
-			"configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id physIfcFrame"
+		"configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id physIfcFrame"
 	$wi tag bind physIfcFrame <Key-Down> \
 		"if { [llength $iface_list] != 0 } {
 			configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id [lindex $sorted_iface_list 0]
@@ -599,8 +599,8 @@ proc configGUI_refreshIfcsTree { wi node_id } {
 		$wi tag bind $iface_id <1> \
 			"$wi focus $iface_id
 
-			$wi selection set $iface_id
-			configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id $iface_id"
+				$wi selection set $iface_id
+				configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id $iface_id"
 
 		$wi tag bind $iface_id <Key-Up> \
 			"if { ! [string equal {} [$wi prev $iface_id]] } {
@@ -620,20 +620,20 @@ proc configGUI_refreshIfcsTree { wi node_id } {
 
 	if { [[_getNodeType $node_cfg].virtlayer] == "VIRTUALIZED" } {
 		$wi tag bind [lindex $sorted_iface_list end] <Key-Down> \
-				"configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id logIfcFrame"
+			"configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id logIfcFrame"
 
 		$wi tag bind logIfcFrame <1> \
-				"configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id logIfcFrame"
+			"configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id logIfcFrame"
 		$wi tag bind logIfcFrame <Key-Up> \
-				"configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id [lindex $sorted_iface_list end]"
+			"configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id [lindex $sorted_iface_list end]"
 		$wi tag bind logIfcFrame <Key-Down> \
-				"configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id [lindex $sorted_logiface_list 0]"
+			"configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id [lindex $sorted_logiface_list 0]"
 
 		foreach iface_id $sorted_logiface_list {
 			$wi tag bind $iface_id <1> \
-			  "$wi focus $iface_id
-			   $wi selection set $iface_id
-			   configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id $iface_id"
+				"$wi focus $iface_id
+				$wi selection set $iface_id
+				configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id $iface_id"
 
 			$wi tag bind $iface_id <3> \
 				"showLogIfcMenu $iface_id"
@@ -737,10 +737,10 @@ proc configGUI_showIfcInfo { wi phase node_id iface_id } {
 			[string trimright $wi .f2].f1.tree selection set $iface_id
 			[string trimright $wi .f2].f1.tree focus $iface_id
 
-		#if user selected Cancel the in popup about saving changes on previously selected interface,
-		#set focus and selection on that interface whose parameters are already shown
-		#below the list of interfaces
 		} else {
+			#if user selected Cancel the in popup about saving changes on previously selected interface,
+			#set focus and selection on that interface whose parameters are already shown
+			#below the list of interfaces
 			[string trimright $wi .f2].f1.tree selection set $shownifc
 			[string trimright $wi .f2].f1.tree focus $shownifc
 		}
@@ -897,7 +897,7 @@ proc configGUI_logicalInterfaces { wi node_id iface_id } {
 		if { $iface_name == "lo0" } {
 			tk_dialog .dialog1 "IMUNES warning" \
 				"The loopback interface lo0 cannot be deleted!" \
-			info 0 Dismiss
+				info 0 Dismiss
 
 			return
 		}
@@ -931,7 +931,7 @@ proc configGUI_logicalInterfaces { wi node_id iface_id } {
 	grid $wi.if$iface_id.rmvbox -in $wi.if$iface_id -column 2 -row 2 -padx 5
 	grid $wi.if$iface_id.rmvbtn -in $wi.if$iface_id -column 3 -row 2
 
-#	pack $wi.if$iface_id.list -anchor w
+	#pack $wi.if$iface_id.list -anchor w
 }
 
 #****f* nodecfgGUI.tcl/configGUI_physicalInterfaces
@@ -1080,7 +1080,7 @@ proc configGUI_physicalInterfaces { wi node_id iface_id } {
 	grid $wi.if$iface_id.rmvbox -in $wi.if$iface_id -column 2 -row 2 -padx 5
 	grid $wi.if$iface_id.rmvbtn -in $wi.if$iface_id -column 3 -row 2
 
-#	pack $wi.if$iface_id.list -anchor w
+	#pack $wi.if$iface_id.list -anchor w
 }
 
 #****f* nodecfgGUI.tcl/configGUI_saveChangesPopup
@@ -1996,18 +1996,18 @@ proc configGUI_snapshots { wi node_id } {
 	ttk::frame $wi.snapshot -borderwidth 2 -relief groove -padding 4
 	ttk::label $wi.snapshot.label -text "Select ZFS snapshot:"
 	catch { exec zfs list -t snapshot | awk {{print $1}} | sed "1 d" } out
-		set snapshotList [split $out {\n}]
+	set snapshotList [split $out {\n}]
 
 	set snapshot [_getNodeSnapshot $node_cfg]
 	if { [llength $snapshot] == 0 } {
-			set snapshot "vroot/vroot@clean"
+		set snapshot "vroot/vroot@clean"
 	}
 
 	ttk::combobox $wi.snapshot.text -width 25 -state readonly -textvariable snapshot
 	$wi.snapshot.text configure -values $snapshotList
 
 	if { [getFromRunning "oper_mode"] != "edit" || ! $isOSfreebsd } {
-			$wi.snapshot.text configure -state disabled
+		$wi.snapshot.text configure -state disabled
 	}
 
 	pack $wi.snapshot.label -side left -pady 2 -anchor w
@@ -2074,28 +2074,28 @@ proc configGUI_routingModel { wi node_id } {
 	ttk::checkbutton $w.protocols.ldp -text "ldp" -variable ldpEnable
 	ttk::radiobutton $w.model.frr -text frr \
 		-variable router_ConfigModel -value frr -command \
-		"$w.protocols.rip configure -state normal;
-		 $w.protocols.ripng configure -state normal;
-		 $w.protocols.ospf configure -state normal;
-		 $w.protocols.ospf6 configure -state normal;
-		 $w.protocols.bgp configure -state normal;
-		 $w.protocols.ldp configure -state normal"
+			"$w.protocols.rip configure -state normal;
+			$w.protocols.ripng configure -state normal;
+			$w.protocols.ospf configure -state normal;
+			$w.protocols.ospf6 configure -state normal;
+			$w.protocols.bgp configure -state normal;
+			$w.protocols.ldp configure -state normal"
 	ttk::radiobutton $w.model.quagga -text quagga \
 		-variable router_ConfigModel -value quagga -command \
-		"$w.protocols.rip configure -state normal;
-		 $w.protocols.ripng configure -state normal;
-		 $w.protocols.ospf configure -state normal;
-		 $w.protocols.ospf6 configure -state normal;
-		 $w.protocols.bgp configure -state normal;
-		 $w.protocols.ldp configure -state normal"
+			"$w.protocols.rip configure -state normal;
+			$w.protocols.ripng configure -state normal;
+			$w.protocols.ospf configure -state normal;
+			$w.protocols.ospf6 configure -state normal;
+			$w.protocols.bgp configure -state normal;
+			$w.protocols.ldp configure -state normal"
 	ttk::radiobutton $w.model.static -text static \
 		-variable router_ConfigModel -value static -command \
-		"$w.protocols.rip configure -state disabled;
-		 $w.protocols.ripng configure -state disabled;
-		 $w.protocols.ospf configure -state disabled;
-		 $w.protocols.ospf6 configure -state disabled;
-		 $w.protocols.bgp configure -state disabled;
-		 $w.protocols.ldp configure -state disabled"
+			"$w.protocols.rip configure -state disabled;
+			$w.protocols.ripng configure -state disabled;
+			$w.protocols.ospf configure -state disabled;
+			$w.protocols.ospf6 configure -state disabled;
+			$w.protocols.bgp configure -state disabled;
+			$w.protocols.ldp configure -state disabled"
 
 	set router_ConfigModel [_getNodeModel $node_cfg]
 	if { $router_ConfigModel != "static" } {
@@ -2195,7 +2195,7 @@ proc configGUI_attachDockerToExt { wi node_id } {
 
 	global docker_enable node_cfg
 
-	set docker_enable [string map {"" 0 true 1} [_getNodeDockerAttach $node_cfg]]
+	set docker_enable [string map { "" 0 true 1 } [_getNodeDockerAttach $node_cfg]]
 
 	set w $wi.docker
 	ttk::frame $w -relief groove -borderwidth 2 -padding 2
@@ -2551,7 +2551,7 @@ proc configGUI_ifcEssentialsApply { wi node_id iface_id } {
 			if { $apply == 1 } {
 				tk_dialog .dialog1 "IMUNES warning" \
 					"Vlan interface can't have MTU bigger than the parent interface $par_ifc (MTU = $par_mtu)" \
-				info 0 Dismiss
+					info 0 Dismiss
 			}
 
 			return
@@ -2640,7 +2640,7 @@ proc configGUI_bridgeIfcVlanConfigApply { wi node_id iface_id } {
 			set node_cfg [_setIfcVlanType $node_cfg $iface_id $vlan_type]
 		}
 		set changed 1
-		}
+	}
 }
 
 #****f* nodecfgGUI.tcl/configGUI_ifcNATIfaceApply
@@ -2863,7 +2863,7 @@ proc configGUI_staticRoutesApply { wi node_id } {
 	if { $checkFailed != 0 } {
 		tk_dialog .dialog1 "IMUNES warning" \
 			"Syntax error in line $checkFailed:\n'$errline'" \
-		info 0 OK
+			info 0 OK
 
 		return
 	}
@@ -3161,7 +3161,7 @@ proc configGUI_attachDockerToExtApply { wi node_id } {
 	global changed docker_enable
 	global node_cfg
 
-	set docker_enable_str [string map {0 "" 1 true} $docker_enable]
+	set docker_enable_str [string map { 0 "" 1 true } $docker_enable]
 	if { [_getNodeDockerAttach $node_cfg] != $docker_enable_str } {
 		set node_cfg [_setNodeDockerAttach $node_cfg $docker_enable_str]
 		set changed 1
@@ -3242,7 +3242,7 @@ proc configGUI_bridgeVLANConfigApply { wi node_id } {
 	global changed
 	global node_cfg
 
-	set new_vlan_filtering_enabled [expr {"selected" in [$wi.vlan_filtering.enabled state]}]
+	set new_vlan_filtering_enabled [expr { "selected" in [$wi.vlan_filtering.enabled state] }]
 	if { [_getNodeVlanFiltering $node_cfg] != $new_vlan_filtering_enabled } {
 		set node_cfg [_setNodeVlanFiltering $node_cfg $new_vlan_filtering_enabled]
 		set changed 1
@@ -3373,17 +3373,17 @@ proc customConfigGUI { parent_wi node_id } {
 
 	ttk::button $b.apply -text "Apply" -command \
 	"
-			global selected_hook
+		global selected_hook
 
-			customConfigGUI_Apply $wi $node_id \$selected_hook
+		customConfigGUI_Apply $wi $node_id \$selected_hook
 		resetCustomConfigFields $parent_wi $node_id
 	"
 
 	ttk::button $b.applyClose -text "Apply and Close" -command \
 	"
-			global custom_node_cfg selected_hook
+		global custom_node_cfg selected_hook
 
-			customConfigGUI_Apply $wi $node_id \$selected_hook
+		customConfigGUI_Apply $wi $node_id \$selected_hook
 		resetCustomConfigFields $parent_wi $node_id
 
 		set custom_node_cfg {}
@@ -3392,7 +3392,7 @@ proc customConfigGUI { parent_wi node_id } {
 
 	ttk::button $b.cancel -text "Cancel" -command \
 	"
-			global custom_node_cfg
+		global custom_node_cfg
 
 		set custom_node_cfg {}
 		destroy $wi
@@ -3677,7 +3677,7 @@ proc createNewConfiguration { wi node_id } {
 			set cfg_id [$wi.nb tab current -text]
 			set w $wi.nb.$cfg_id
 			if { [$w.editor get 1.0 {end -1c}] != [_getCustomConfig $custom_node_cfg $selected_hook $cfg_id] || \
-					[$w.bootcmd_e get] != [_getCustomConfigCommand $custom_node_cfg $selected_hook $cfg_id] } {
+				[$w.bootcmd_e get] != [_getCustomConfigCommand $custom_node_cfg $selected_hook $cfg_id] } {
 
 				set answer [tk_messageBox -message \
 					"Custom config $cfg_id not saved. Apply changes?" \
@@ -4216,7 +4216,7 @@ proc createIPsecGUI { node_id mainFrame connParamsLframe espOptionsLframe ikeSAL
 	grid columnconfigure .d 0 -weight 1
 	grid rowconfigure .d 0 -weight 1
 
-#	setCurrentNode $node_id
+	#setCurrentNode $node_id
 
 	ttk::frame $mainFrame.con_name_container
 	ttk::label $mainFrame.con_name_container.con_name -text "Connection name:"
@@ -4675,8 +4675,8 @@ proc populateValuesForUpdate { node_id tab connParamsLframe espOptionsLframe } {
 	}
 
 	set timeList { \
-			{s "seconds"} {m "minutes"} \
-			{h "hours"} {d "days"}
+		{s "seconds"} {m "minutes"} \
+		{h "hours"} {d "days"}
 	}
 
 	foreach item $timeList {
@@ -5703,23 +5703,23 @@ proc configGUI_addBridgeTree { wi node_id } {
 
 	#binding for tag physIfcFrame
 	$wi.panwin.f1.tree tag bind physIfcFrame <1> \
-			"configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node_id physIfcFrame"
+		"configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node_id physIfcFrame"
 
 	$wi.panwin.f1.tree tag bind physIfcFrame <Key-Up> \
-			"configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node_id physIfcFrame"
+		"configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node_id physIfcFrame"
 
 	$wi.panwin.f1.tree tag bind physIfcFrame <Key-Down> \
-			"if { [llength [_ifcList $node_cfg]] != 0 } {
-				configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node_id \
-					[lindex [lsort -ascii [_ifcList $node_cfg]] 0]
-			}"
+		"if { [llength [_ifcList $node_cfg]] != 0 } {
+			configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node_id \
+				[lindex [lsort -ascii [_ifcList $node_cfg]] 0]
+		}"
 
 	#binding for tags $iface_id
 	foreach iface_id [lsort -dictionary [_ifcList $node_cfg]] {
 		$wi.panwin.f1.tree tag bind $iface_id <1> \
-		  "$wi.panwin.f1.tree focus $iface_id
-		   $wi.panwin.f1.tree selection set $iface_id
-		   configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node_id $iface_id"
+			"$wi.panwin.f1.tree focus $iface_id
+			$wi.panwin.f1.tree selection set $iface_id
+			configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node_id $iface_id"
 		#pathname prev item:
 		#Returns the identifier of item's previous sibling, or {} if item is the
 		#first child of its parent. Ako sucelje $iface_id nije prvo dijete svog
@@ -5812,21 +5812,21 @@ proc configGUI_refreshBridgeIfcsTree { wi node_id } {
 	set bridge_wi .popup.nbook.nfBridge
 	#binding for tag physIfcFrame
 	$wi tag bind physIfcFrame <1> \
-			"configGUI_showBridgeIfcInfo $bridge_wi.panwin.f2 0 $node_id physIfcFrame"
+		"configGUI_showBridgeIfcInfo $bridge_wi.panwin.f2 0 $node_id physIfcFrame"
 	$wi tag bind physIfcFrame <Key-Up> \
-			"configGUI_showBridgeIfcInfo $bridge_wi.panwin.f2 0 $node_id physIfcFrame"
+		"configGUI_showBridgeIfcInfo $bridge_wi.panwin.f2 0 $node_id physIfcFrame"
 	$wi tag bind physIfcFrame <Key-Down> \
-			"if { [llength [_ifcList $node_cfg]] != 0 } {
-				configGUI_showBridgeIfcInfo $bridge_wi.panwin.f2 0 $node_id \
-					[lindex [lsort -ascii [_ifcList $node_cfg]] 0]
-			}"
+		"if { [llength [_ifcList $node_cfg]] != 0 } {
+			configGUI_showBridgeIfcInfo $bridge_wi.panwin.f2 0 $node_id \
+			[lindex [lsort -ascii [_ifcList $node_cfg]] 0]
+		}"
 
 	#binding for tags $iface_id
 	foreach iface_id [lsort -dictionary [_ifcList $node_cfg]] {
 		$wi tag bind $iface_id <1> \
-		  "$wi focus $iface_id
-		   $wi selection set $iface_id
-		   configGUI_showBridgeIfcInfo $bridge_wi.panwin.f2 0 $node_id $iface_id"
+			"$wi focus $iface_id
+			$wi selection set $iface_id
+			configGUI_showBridgeIfcInfo $bridge_wi.panwin.f2 0 $node_id $iface_id"
 		#pathname prev item:
 		#Returns the identifier of item's previous sibling, or {} if item is the
 		#first child of its parent. Ako sucelje $iface_id nije prvo dijete svog
@@ -5919,7 +5919,7 @@ proc configGUI_showBridgeIfcInfo { wi phase node_id iface_id } {
 
 		#creating popup window with warning about unsaved changes
 		if { $changed == 1 && $apply == 0 } {
-			 configGUI_saveBridgeChangesPopup $wi $node_id $shownifc
+			configGUI_saveBridgeChangesPopup $wi $node_id $shownifc
 		}
 
 		#if user didn't select Cancel in the popup about saving changes on
@@ -5942,12 +5942,12 @@ proc configGUI_showBridgeIfcInfo { wi phase node_id iface_id } {
 			#(shownifcframe)
 			destroy $shownifcframe
 
-		#if user selected Cancel the in popup about saving changes on previously
-		#selected interface, set focus and selection on that interface whose
-		#parameters are already shown below the list of interfaces
 		} else {
-			 [string trimright $wi .f2].f1.tree selection set $shownifc
-			 [string trimright $wi .f2].f1.tree focus $shownifc
+			#if user selected Cancel the in popup about saving changes on previously
+			#selected interface, set focus and selection on that interface whose
+			#parameters are already shown below the list of interfaces
+			[string trimright $wi .f2].f1.tree selection set $shownifc
+			[string trimright $wi .f2].f1.tree focus $shownifc
 		}
 	}
 
@@ -6300,9 +6300,9 @@ proc configGUI_refreshIfcRulesTree {} {
 
 	foreach rule [lsort -integer [_ifcFilterRuleList $node_cfg $iface_id]] {
 		$wi.panwin.f1.tree tag bind $rule <1> \
-		  "$wi.panwin.f1.tree focus $rule
-		   $wi.panwin.f1.tree selection set $rule
-		   configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $node_id $iface_id $rule"
+			"$wi.panwin.f1.tree focus $rule
+			$wi.panwin.f1.tree selection set $rule
+			configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $node_id $iface_id $rule"
 		$wi.panwin.f1.tree tag bind $rule <Key-Up> \
 			"if { ! [string equal {} [$wi.panwin.f1.tree prev $rule]] } {
 				configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $node_id $iface_id [$wi.panwin.f1.tree prev $rule]
@@ -6310,7 +6310,7 @@ proc configGUI_refreshIfcRulesTree {} {
 		$wi.panwin.f1.tree tag bind $rule <Key-Down> \
 			"if { ! [string equal {} [$wi.panwin.f1.tree next $rule]] } {
 				configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $node_id $iface_id [$wi.panwin.f1.tree next $rule]
-			 }"
+			}"
 	}
 
 	set sorted [lsort -integer [_ifcFilterRuleList $node_cfg $iface_id]]
@@ -6391,12 +6391,12 @@ proc configGUI_showFilterIfcRuleInfo { wi phase node_id iface_id rule } {
 			#delete frame that is already shown below the list of interfaces (shownruleframe)
 			destroy $shownruleframe
 
-		#if user selected Cancel the in popup about saving changes on previously selected interface,
-		#set focus and selection on that interface whose parameters are already shown
-		#below the list of interfaces
 		} else {
-			 [string trimright $wi .f2].f1.tree selection set $shownrule
-			 [string trimright $wi .f2].f1.tree focus $shownrule
+			#if user selected Cancel the in popup about saving changes on previously selected interface,
+			#set focus and selection on that interface whose parameters are already shown
+			#below the list of interfaces
+			[string trimright $wi .f2].f1.tree selection set $shownrule
+			[string trimright $wi .f2].f1.tree focus $shownrule
 		}
 	}
 
@@ -6446,8 +6446,8 @@ proc configGUI_ruleMainFrame { wi node_id iface_id rule } {
 
 	grid $wi.if$rule -sticky nsew -column 1 -row 0 -columnspan 10 -ipadx 45
 
-#	grid $wi.if$rule.label.txt
-#	grid $wi.if$rule.label -sticky nsw
+	#grid $wi.if$rule.label.txt
+	#grid $wi.if$rule.label -sticky nsw
 }
 
 proc configGUI_ifcRuleConfig { wi node_id iface_id rule } {
@@ -6465,7 +6465,7 @@ proc configGUI_ifcRuleConfig { wi node_id iface_id rule } {
 	set ifcFilterAction$iface_id$rule [_getFilterIfcAction $node_cfg $iface_id $rule]
 	set ifcFilterActionData$iface_id$rule [_getFilterIfcActionData $node_cfg $iface_id $rule]
 	set values [list match_hook match_dupto match_skipto match_drop nomatch_hook \
-	nomatch_dupto nomatch_skipto nomatch_drop]
+		nomatch_dupto nomatch_skipto nomatch_drop]
 	set datavalues [refreshIfcActionDataValues $node_cfg 0]
 
 	ttk::label $wi.if$rule.rconfig.atxt -text "Action: " -anchor w
@@ -6569,7 +6569,7 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 	if { [checkRuleNum $rulnum] != 1 } {
 		tk_dialog .dialog1 "IMUNES warning" \
 			"Rule num irregular." \
-		info 0 Dismiss
+			info 0 Dismiss
 
 		return
 	}
@@ -6599,7 +6599,7 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 		if { $rulnum in $rule_list } {
 			tk_dialog .dialog1 "IMUNES warning" \
 				"Rule number already exists." \
-			info 0 Dismiss
+				info 0 Dismiss
 
 			return
 		}
@@ -6608,7 +6608,7 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 	if { [checkAction $action] != 1 } {
 		tk_dialog .dialog1 "IMUNES warning" \
 			"Action irregular." \
-		info 0 Dismiss
+			info 0 Dismiss
 
 		return
 	}
@@ -6619,7 +6619,7 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 			if { $action_data ni $vals } {
 				tk_dialog .dialog1 "IMUNES warning" \
 					"ActData: Select one of the existing hooks, but not the current one ($iface_name)." \
-				info 0 Dismiss
+					info 0 Dismiss
 
 				return
 			}
@@ -6629,7 +6629,7 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 			if { $action_data ni $vals } {
 				tk_dialog .dialog1 "IMUNES warning" \
 					"ActData: Select one of the existing hooks, but not the current one ($iface_name)." \
-				info 0 Dismiss
+					info 0 Dismiss
 
 				return
 			}
@@ -6638,7 +6638,7 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 			if { $action_data < $rulnum } {
 				tk_dialog .dialog1 "IMUNES warning" \
 					"ActData: number < skipto destination." \
-				info 0 Dismiss
+					info 0 Dismiss
 
 				return
 			}
@@ -6647,7 +6647,7 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 			if { $action_data != "" } {
 				tk_dialog .dialog1 "IMUNES warning" \
 					"ActData: drop doesn't need additional data." \
-				info 0 Dismiss
+					info 0 Dismiss
 
 				return
 			}
@@ -6659,7 +6659,7 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 	if { [checkPatternMask $pattern] != 1 } {
 		tk_dialog .dialog1 "IMUNES warning" \
 			"Pattern irregular." \
-		info 0 Dismiss
+			info 0 Dismiss
 
 		return
 	}
@@ -6669,7 +6669,7 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 	if { [checkPatternMask $mask] != 1 } {
 		tk_dialog .dialog1 "IMUNES warning" \
 			"Mask irregular." \
-		info 0 Dismiss
+			info 0 Dismiss
 
 		return
 	}
@@ -6685,7 +6685,7 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 	if { [string length $pattern] != [string length $mask] } {
 		tk_dialog .dialog1 "IMUNES warning" \
 			"Pattern length and Mask length must match." \
-		info 0 Dismiss
+			info 0 Dismiss
 
 		return
 	}
@@ -6693,7 +6693,7 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 	if { [checkOffset $offset] != 1 } {
 		tk_dialog .dialog1 "IMUNES warning" \
 			"Offset irregular." \
-		info 0 Dismiss
+			info 0 Dismiss
 
 		return
 	}
@@ -6701,7 +6701,7 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 	if { $pattern != "" && $mask != "" && $offset == "" } {
 		tk_dialog .dialog1 "IMUNES warning" \
 			"Offset must be specified." \
-		info 0 Dismiss
+			info 0 Dismiss
 
 		return
 	}
@@ -6711,7 +6711,7 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 			tk_dialog .dialog1 "IMUNES warning" \
 				"If Pattern and Mask are both empty the Offset\
 				needs to be empty too." \
-			info 0 Dismiss
+				info 0 Dismiss
 
 			return
 		} else {
@@ -6721,11 +6721,11 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 
 	set new_ruleline [list \
 		"action" $action "action_data" $action_data \
-	]
+		]
 	if { $noPMO != 1 } {
 		set new_ruleline [list \
 			"action" $action "pattern" $pattern "mask" $mask "offset" $offset "action_data" $action_data \
-		]
+			]
 	}
 
 	set old_ruleline [_getFilterIfcRule $node_cfg $iface_id $old_rulnum]
@@ -7130,9 +7130,9 @@ proc configGUI_refreshPacketsTree {} {
 
 	foreach packet_id $sorted {
 		$wi.panwin.f1.tree tag bind $packet_id <1> \
-		  "$wi.panwin.f1.tree focus $packet_id
-		   $wi.panwin.f1.tree selection set $packet_id
-		   configGUI_showPacketInfo $wi.panwin.f2 0 $node_id $packet_id"
+			"$wi.panwin.f1.tree focus $packet_id
+			$wi.panwin.f1.tree selection set $packet_id
+			configGUI_showPacketInfo $wi.panwin.f2 0 $node_id $packet_id"
 		$wi.panwin.f1.tree tag bind $packet_id <Key-Up> \
 			"if { ! [string equal {} [$wi.panwin.f1.tree prev $packet_id]] } {
 				configGUI_showPacketInfo $wi.panwin.f2 0 $node_id [$wi.panwin.f1.tree prev $packet_id]
@@ -7140,7 +7140,7 @@ proc configGUI_refreshPacketsTree {} {
 		$wi.panwin.f1.tree tag bind $packet_id <Key-Down> \
 			"if { ! [string equal {} [$wi.panwin.f1.tree next $packet_id]] } {
 				configGUI_showPacketInfo $wi.panwin.f2 0 $node_id [$wi.panwin.f1.tree next $packet_id]
-			 }"
+			}"
 	}
 
 	set first [lindex $sorted 0]
@@ -7215,12 +7215,12 @@ proc configGUI_showPacketInfo { wi phase node_id pac } {
 			#delete frame that is already shown below the list of interfaces (shownruleframe)
 			destroy $shownpacframe
 
-		#if user selected Cancel the in popup about saving changes on previously selected interface,
-		#set focus and selection on that interface whose parameters are already shown
-		#below the list of interfaces
 		} else {
-			 [string trimright $wi .f2].f1.tree selection set $shownpac
-			 [string trimright $wi .f2].f1.tree focus $shownpac
+			#if user selected Cancel the in popup about saving changes on previously selected interface,
+			#set focus and selection on that interface whose parameters are already shown
+			#below the list of interfaces
+			[string trimright $wi .f2].f1.tree selection set $shownpac
+			[string trimright $wi .f2].f1.tree focus $shownpac
 		}
 	}
 
@@ -7338,14 +7338,14 @@ proc configGUI_packetConfigApply { add dup } {
 	if { [checkPacketNum $pacnum] != 1 } {
 		tk_dialog .dialog1 "IMUNES warning" \
 			"Packet ID irregular." \
-		info 0 Dismiss
+			info 0 Dismiss
 
 		return
 	}
 
 	set pdata ""
 	foreach line [split $text "\n"] {
-		set line [string map {":" " " "." " "} [string trim $line]]
+		set line [string map { ":" " " "." " " } [string trim $line]]
 
 		if { $line == "" } {
 			continue
@@ -7405,7 +7405,7 @@ proc configGUI_packetConfigApply { add dup } {
 		if { $pacnum in [removeFromList [dict keys [_packgenPackets $node_cfg]] $old_pacnum] } {
 			tk_dialog .dialog1 "IMUNES warning" \
 				"Packet ID already exists." \
-			info 0 Dismiss
+				info 0 Dismiss
 
 			return
 		}
@@ -7452,44 +7452,44 @@ proc configGUI_nat64Config { wi node_id } {
 
 	global node_cfg
 
-#	ttk::frame $wi.tunconf -relief groove -borderwidth 2 -padding 2
-#	ttk::label $wi.tunconf.label -text "tun interface:"
-#	ttk::label $wi.tunconf.4label -text "IPv4 address:"
-#	ttk::entry $wi.tunconf.4addr -width 30 -validate focus \
-#		-invalidcommand "focusAndFlash %W"
-#	$wi.tunconf.4addr configure -validatecommand { checkIPv4Addr %P }
-#	$wi.tunconf.4addr insert 0 [getTunIPv4Addr $node_id]
-#	ttk::label $wi.tunconf.6label -text "IPv6 address:"
-#	ttk::entry $wi.tunconf.6addr -width 30 -validate focus \
-#		-invalidcommand "focusAndFlash %W"
-#	$wi.tunconf.6addr configure -validatecommand { checkIPv6Addr %P }
-#	$wi.tunconf.6addr insert 0 [getTunIPv6Addr $node_id]
-#	grid $wi.tunconf.label -in $wi.tunconf \
-#		-column 0 -row 0 -sticky ew -pady 5
-#	grid $wi.tunconf.4label -in $wi.tunconf \
-#		-column 0 -row 1 -sticky ew -pady 5
-#	grid $wi.tunconf.4addr -in $wi.tunconf \
-#		-column 1 -row 1 -sticky ew -pady 5
-#	grid $wi.tunconf.6label -in $wi.tunconf \
-#		-column 0 -row 2 -sticky ew -pady 5
-#	grid $wi.tunconf.6addr -in $wi.tunconf \
-#		-column 1 -row 2 -sticky ew -pady 5
+	#ttk::frame $wi.tunconf -relief groove -borderwidth 2 -padding 2
+	#ttk::label $wi.tunconf.label -text "tun interface:"
+	#ttk::label $wi.tunconf.4label -text "IPv4 address:"
+	#ttk::entry $wi.tunconf.4addr -width 30 -validate focus \
+	#	-invalidcommand "focusAndFlash %W"
+	#$wi.tunconf.4addr configure -validatecommand { checkIPv4Addr %P }
+	#$wi.tunconf.4addr insert 0 [getTunIPv4Addr $node_id]
+	#ttk::label $wi.tunconf.6label -text "IPv6 address:"
+	#ttk::entry $wi.tunconf.6addr -width 30 -validate focus \
+	#	-invalidcommand "focusAndFlash %W"
+	#$wi.tunconf.6addr configure -validatecommand { checkIPv6Addr %P }
+	#$wi.tunconf.6addr insert 0 [getTunIPv6Addr $node_id]
+	#grid $wi.tunconf.label -in $wi.tunconf \
+	#	-column 0 -row 0 -sticky ew -pady 5
+	#grid $wi.tunconf.4label -in $wi.tunconf \
+	#	-column 0 -row 1 -sticky ew -pady 5
+	#grid $wi.tunconf.4addr -in $wi.tunconf \
+	#	-column 1 -row 1 -sticky ew -pady 5
+	#grid $wi.tunconf.6label -in $wi.tunconf \
+	#	-column 0 -row 2 -sticky ew -pady 5
+	#grid $wi.tunconf.6addr -in $wi.tunconf \
+	#	-column 1 -row 2 -sticky ew -pady 5
 
 	ttk::frame $wi.taygaconf -relief groove -borderwidth 2 -padding 2
 	ttk::label $wi.taygaconf.label -text "tayga.conf:"
-#	ttk::label $wi.taygaconf.4label -text "IPv4 address:"
-#	ttk::entry $wi.taygaconf.4addr -width 30 -validate focus \
-#		-invalidcommand "focusAndFlash %W"
-#	$wi.taygaconf.4addr configure -validatecommand { checkIPv4Addr %P }
-#	$wi.taygaconf.4addr insert 0 [getTaygaIPv4Addr $node_id]
+	#ttk::label $wi.taygaconf.4label -text "IPv4 address:"
+	#ttk::entry $wi.taygaconf.4addr -width 30 -validate focus \
+	#	-invalidcommand "focusAndFlash %W"
+	#$wi.taygaconf.4addr configure -validatecommand { checkIPv4Addr %P }
+	#$wi.taygaconf.4addr insert 0 [getTaygaIPv4Addr $node_id]
 	ttk::label $wi.taygaconf.plabel -text "IPv6 translation prefix:"
 	ttk::entry $wi.taygaconf.paddr -width 30 -validate focus \
-	 -invalidcommand "focusAndFlash %W"
+		-invalidcommand "focusAndFlash %W"
 	$wi.taygaconf.paddr configure -validatecommand { checkIPv6Net %P }
 	$wi.taygaconf.paddr insert 0 [_getTaygaIPv6Prefix $node_cfg]
 	ttk::label $wi.taygaconf.dlabel -text "IPv4 dynamic pool:"
 	ttk::entry $wi.taygaconf.daddr -width 30 -validate focus \
-	 -invalidcommand "focusAndFlash %W"
+		-invalidcommand "focusAndFlash %W"
 	$wi.taygaconf.daddr configure -validatecommand { checkIPv4Net %P }
 	$wi.taygaconf.daddr insert 0 [_getTaygaIPv4DynPool $node_cfg]
 	grid $wi.taygaconf.label -in $wi.taygaconf \
@@ -7502,10 +7502,10 @@ proc configGUI_nat64Config { wi node_id } {
 		-column 0 -row 2 -sticky ew -pady 5 -padx 5
 	grid $wi.taygaconf.paddr -in $wi.taygaconf \
 		-column 1 -row 2 -sticky ew -pady 5 -padx 5
-#	grid $wi.taygaconf.4label -in $wi.taygaconf \
-#		-column 0 -row 3 -sticky ew -pady 5
-#	grid $wi.taygaconf.4addr -in $wi.taygaconf \
-#		-column 1 -row 3 -sticky ew -pady 5
+	#grid $wi.taygaconf.4label -in $wi.taygaconf \
+	#	-column 0 -row 3 -sticky ew -pady 5
+	#grid $wi.taygaconf.4addr -in $wi.taygaconf \
+	#	-column 1 -row 3 -sticky ew -pady 5
 
 	ttk::frame $wi.mapconf -relief groove -borderwidth 2 -padding 2
 	ttk::label $wi.mapconf.label -text "Fixed mappings:"
@@ -7524,26 +7524,26 @@ proc configGUI_nat64Config { wi node_id } {
 proc configGUI_nat64ConfigApply { wi node_id } {
 	global changed node_cfg
 
-#	set newTun4addr [$wi.tunconf.4addr get]
-#	set oldTun4addr [getTunIPv4Addr $node_id]
-#	if { $oldTun4addr != $newTun4addr } {
-#		setTunIPv4Addr $node_id $newTun4addr
-#		set changed 1
-#	}
-#
-#	set newTun6addr [$wi.tunconf.6addr get]
-#	set oldTun6addr [getTunIPv6Addr $node_id]
-#	if { $oldTun6addr != $newTun6addr } {
-#		setTunIPv6Addr $node_id $newTun6addr
-#		set changed 1
-#	}
-#
-#	set newTayga4addr [$wi.taygaconf.4addr get]
-#	set oldTayga4addr [getTaygaIPv4Addr $node_id]
-#	if { $oldTayga4addr != $newTayga4addr } {
-#		setTaygaIPv4Addr $node_id $newTayga4addr
-#		set changed 1
-#	}
+	#set newTun4addr [$wi.tunconf.4addr get]
+	#set oldTun4addr [getTunIPv4Addr $node_id]
+	#if { $oldTun4addr != $newTun4addr } {
+	#	setTunIPv4Addr $node_id $newTun4addr
+	#	set changed 1
+	#}
+	#
+	#set newTun6addr [$wi.tunconf.6addr get]
+	#set oldTun6addr [getTunIPv6Addr $node_id]
+	#if { $oldTun6addr != $newTun6addr } {
+	#	setTunIPv6Addr $node_id $newTun6addr
+	#	set changed 1
+	#}
+	#
+	#set newTayga4addr [$wi.taygaconf.4addr get]
+	#set oldTayga4addr [getTaygaIPv4Addr $node_id]
+	#if { $oldTayga4addr != $newTayga4addr } {
+	#	setTaygaIPv4Addr $node_id $newTayga4addr
+	#	set changed 1
+	#}
 
 	set newTayga6pAddr [$wi.taygaconf.paddr get]
 	set oldTayga6pAddr [_getTaygaIPv6Prefix $node_cfg]

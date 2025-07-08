@@ -247,15 +247,14 @@ proc showRoute { c node2_id } {
 						incr hop -1
 						incr cntr
 						if { $cntr == 3 } break
-						} else {
+					} else {
 						set cntr 0
 						set errDet 0
 					}
 
 					if { $errDet == 0 } {
 						drawLine $c $n1 $n2
-
-						}
+					}
 				}
 
 				#User notification

@@ -251,7 +251,7 @@ proc configGUI_linkConfig { wi link_id param label } {
 	ttk::frame $wi.$fr -borderwidth 4
 	ttk::label $wi.$fr.txt -text $label
 	ttk::spinbox $wi.$fr.value -justify right -width 10 \
-			-validate focus -invalidcommand "focusAndFlash %W"
+		-validate focus -invalidcommand "focusAndFlash %W"
 	set value [getLink$param $link_id]
 	if { $value == "" } {
 		set value 0
@@ -260,8 +260,8 @@ proc configGUI_linkConfig { wi link_id param label } {
 	$wi.$fr.value insert 0 $value
 
 	$wi.$fr.value configure \
-			-validatecommand "checkIntRange %P $from $to" \
-			-from $from -to $to -increment $inc
+		-validatecommand "checkIntRange %P $from $to" \
+		-from $from -to $to -increment $inc
 
 	pack $wi.$fr.txt -side left
 	pack $wi.$fr.value -side right

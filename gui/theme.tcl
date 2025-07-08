@@ -74,7 +74,7 @@ namespace eval ttk::theme::imunes {
 
 		ttk::style map "." \
 			-background [list disabled $colors(-frame) \
-						active $colors(-lighter)] \
+			active $colors(-lighter)] \
 			-foreground [list disabled $colors(-disabledfg)] \
 			-selectbackground [list !focus $colors(-darkest)] \
 			-selectforeground [list !focus white] \
@@ -85,9 +85,9 @@ namespace eval ttk::theme::imunes {
 			-anchor center -width -8 -padding "2 2" -relief raised
 		ttk::style map TButton \
 			-background [list \
-						disabled $colors(-frame) \
-						pressed $colors(-darker) \
-						active $colors(-lighter)] \
+			disabled $colors(-frame) \
+			pressed $colors(-darker) \
+			active $colors(-lighter)] \
 			-lightcolor [list pressed $colors(-darker)] \
 			-darkcolor [list pressed $colors(-darker)] \
 			-bordercolor [list alternate "#000000"] \
@@ -97,14 +97,14 @@ namespace eval ttk::theme::imunes {
 			-anchor center -padding 1 -relief flat -padx 2
 		ttk::style map Toolbutton \
 			-relief [list \
-					disabled flat \
-					selected sunken \
-					pressed sunken \
-					active raised] \
+			disabled flat \
+			selected sunken \
+			pressed sunken \
+			active raised] \
 			-background [list \
-						disabled $colors(-frame) \
-						pressed $colors(-darker) \
-						active $colors(-lighter)] \
+			disabled $colors(-frame) \
+			pressed $colors(-darker) \
+			active $colors(-lighter)] \
 			-lightcolor [list pressed $colors(-darker)] \
 			-darkcolor [list pressed $colors(-darker)] \
 			;
@@ -136,9 +136,9 @@ namespace eval ttk::theme::imunes {
 		ttk::style configure TCombobox -padding 1 -insertwidth 1
 		ttk::style map TCombobox \
 			-background [list active $colors(-lighter) \
-						pressed $colors(-lighter)] \
+			pressed $colors(-lighter)] \
 			-fieldbackground [list {readonly focus} $colors(-selectbg) \
-							readonly $colors(-frame)] \
+			readonly $colors(-frame)] \
 			-foreground [list {readonly focus} $colors(-selectfg)] \
 			;
 		ttk::style configure ComboboxPopdownFrame \
@@ -164,7 +164,7 @@ namespace eval ttk::theme::imunes {
 			-background [list selected $colors(-selectbg)] \
 			-foreground [list selected $colors(-selectfg)] ;
 
-			ttk::style configure TLabelframe \
+		ttk::style configure TLabelframe \
 			-borderwidth 2 -relief groove
 
 		ttk::style configure TProgressbar -background $colors(-frame)
