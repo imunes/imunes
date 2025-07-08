@@ -1818,11 +1818,11 @@ proc recalculateNumType { type namebase } {
 #   * to_type -- new type of node
 #****
 proc transformNodes { nodes to_type } {
-    global routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable routerBgpEnable
+    global routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable routerBgpEnable routerLdpEnable
     global rdconfig routerDefaultsModel
     global changed
 
-    lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable
+    lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable ldpEnable
 
     foreach node_id $nodes {
 	if { [[getNodeType $node_id].netlayer] == "NETWORK" } {
@@ -1846,6 +1846,7 @@ proc transformNodes { nodes to_type } {
 		    setNodeProtocol $node_id "ospf" $ospfEnable
 		    setNodeProtocol $node_id "ospf6" $ospf6Enable
 		    setNodeProtocol $node_id "bgp" $bgpEnable
+		    setNodeProtocol $node_id "ldp" $ldpEnable
 		}
 
 		set changed 1

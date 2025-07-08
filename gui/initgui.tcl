@@ -155,12 +155,14 @@ set ripngEnable 1
 set ospfEnable 0
 set ospf6Enable 0
 set bgpEnable 0
+set ldpEnable 0
 set routerRipEnable 1
 set routerRipngEnable 1
 set routerOspfEnable 0
 set routerOspf6Enable 0
 set routerBgpEnable 0
-set rdconfig [list $routerRipEnable $routerRipngEnable $routerOspfEnable $routerOspf6Enable $routerBgpEnable]
+set routerLdpEnable 0
+set rdconfig [list $routerRipEnable $routerRipngEnable $routerOspfEnable $routerOspf6Enable $routerBgpEnable $routerLdpEnable]
 set brguielements {}
 set selectedExperiment ""
 set copypaste_nodes 0
@@ -513,7 +515,7 @@ menu .menubar.tools -tearoff 0
 }
 .menubar.tools add command -label "Routing protocol defaults" -underline 0 -command {
     global router_model supp_router_models routerDefaultsModel
-    global routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable routerBgpEnable
+    global routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable routerBgpEnable routerLdpEnable
 
     set wi .popup
     catch { destroy $wi }
@@ -537,6 +539,7 @@ menu .menubar.tools -tearoff 0
     ttk::checkbutton $w.protocols.ospf -text "ospfv2" -variable routerOspfEnable
     ttk::checkbutton $w.protocols.ospf6 -text "ospfv3" -variable routerOspf6Enable
     ttk::checkbutton $w.protocols.bgp -text "bgp" -variable routerBgpEnable -state disabled
+    ttk::checkbutton $w.protocols.ldp -text "ldp" -variable routerLdpEnable -state disabled
 
     ttk::radiobutton $w.model.frr -text frr -variable router_model \
 	-value frr -command {
@@ -545,6 +548,7 @@ menu .menubar.tools -tearoff 0
 	$w.protocols.ospf configure -state normal
 	$w.protocols.ospf6 configure -state normal
 	$w.protocols.bgp configure -state disabled
+	$w.protocols.ldp configure -state disabled
     }
     ttk::radiobutton $w.model.quagga -text quagga -variable router_model \
 	-value quagga -command {
@@ -553,6 +557,7 @@ menu .menubar.tools -tearoff 0
 	$w.protocols.ospf configure -state normal
 	$w.protocols.ospf6 configure -state normal
 	$w.protocols.bgp configure -state disabled
+	$w.protocols.ldp configure -state disabled
     }
     ttk::radiobutton $w.model.static -text static -variable router_model \
 	-value static -command {
@@ -561,6 +566,7 @@ menu .menubar.tools -tearoff 0
 	$w.protocols.ospf configure -state disabled
 	$w.protocols.ospf6 configure -state disabled
 	$w.protocols.bgp configure -state disabled
+	$w.protocols.ldp configure -state disabled
     }
 
     if { $router_model == "static" } {
@@ -569,6 +575,7 @@ menu .menubar.tools -tearoff 0
 	$w.protocols.ospf configure -state disabled
 	$w.protocols.ospf6 configure -state disabled
 	$w.protocols.bgp configure -state disabled
+	$w.protocols.ldp configure -state disabled
     }
 
     if { "frr" ni $supp_router_models } {
@@ -579,7 +586,7 @@ menu .menubar.tools -tearoff 0
     ttk::button $w.buttons.b1 -text "Apply" -command { routerDefaultsApply $wi }
     ttk::button $w.buttons.b2 -text "Cancel" -command {
 	set router_model $routerDefaultsModel
-	lassign $rdconfig routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable routerBgpEnable
+	lassign $rdconfig routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable routerBgpEnable routerLdpEnable
 	destroy $wi
     }
 
@@ -589,7 +596,8 @@ menu .menubar.tools -tearoff 0
     pack $w.protocols -side top -pady 5
     pack $w.protocols.rip $w.protocols.ripng \
 	$w.protocols.ospf $w.protocols.ospf6 \
-	$w.protocols.bgp -side left
+	$w.protocols.bgp $w.protocols.ldp \
+	-side left
     pack $w.buttons -side bottom -fill x  -pady 2
     pack $w.buttons.b1 -side left -expand 1 -anchor e -padx 2
     pack $w.buttons.b2 -side right -expand 1 -anchor w -padx 2

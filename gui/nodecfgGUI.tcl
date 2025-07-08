@@ -2014,7 +2014,7 @@ proc configGUI_routingModel { wi node_id } {
     global guielements
     lappend guielements configGUI_routingModel
 
-    global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable supp_router_models
+    global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable ldpEnable supp_router_models
     global router_ConfigModel node_cfg
 
     ttk::frame $wi.routing -relief groove -borderwidth 2 -padding 2
@@ -2028,28 +2028,32 @@ proc configGUI_routingModel { wi node_id } {
     ttk::checkbutton $w.protocols.ripng -text "ripng" -variable ripngEnable
     ttk::checkbutton $w.protocols.ospf -text "ospfv2" -variable ospfEnable
     ttk::checkbutton $w.protocols.ospf6 -text "ospfv3" -variable ospf6Enable
-    ttk::checkbutton $w.protocols.bgp -text "bgp" -variable bgpEnable -state disabled
+    ttk::checkbutton $w.protocols.bgp -text "bgp" -variable bgpEnable
+    ttk::checkbutton $w.protocols.ldp -text "ldp" -variable ldpEnable
     ttk::radiobutton $w.model.frr -text frr \
 	-variable router_ConfigModel -value frr -command \
 	"$w.protocols.rip configure -state normal;
 	 $w.protocols.ripng configure -state normal;
 	 $w.protocols.ospf configure -state normal;
 	 $w.protocols.ospf6 configure -state normal;
-	 $w.protocols.bgp configure -state disabled"
+	 $w.protocols.bgp configure -state normal;
+	 $w.protocols.ldp configure -state normal"
     ttk::radiobutton $w.model.quagga -text quagga \
 	-variable router_ConfigModel -value quagga -command \
 	"$w.protocols.rip configure -state normal;
 	 $w.protocols.ripng configure -state normal;
 	 $w.protocols.ospf configure -state normal;
 	 $w.protocols.ospf6 configure -state normal;
-	 $w.protocols.bgp configure -state disabled"
+	 $w.protocols.bgp configure -state normal;
+	 $w.protocols.ldp configure -state normal"
     ttk::radiobutton $w.model.static -text static \
 	-variable router_ConfigModel -value static -command \
 	"$w.protocols.rip configure -state disabled;
 	 $w.protocols.ripng configure -state disabled;
 	 $w.protocols.ospf configure -state disabled;
 	 $w.protocols.ospf6 configure -state disabled;
-	 $w.protocols.bgp configure -state disabled"
+	 $w.protocols.bgp configure -state disabled;
+	 $w.protocols.ldp configure -state disabled"
 
     set router_ConfigModel [_getNodeModel $node_cfg]
     if { $router_ConfigModel != "static" } {
@@ -2058,12 +2062,14 @@ proc configGUI_routingModel { wi node_id } {
 	set ospfEnable [_getNodeProtocol $node_cfg "ospf"]
 	set ospf6Enable [_getNodeProtocol $node_cfg "ospf6"]
 	set bgpEnable [_getNodeProtocol $node_cfg "bgp"]
+	set ldpEnable [_getNodeProtocol $node_cfg "ldp"]
     } else {
 	$w.protocols.rip configure -state disabled
 	$w.protocols.ripng configure -state disabled
 	$w.protocols.ospf configure -state disabled
 	$w.protocols.ospf6 configure -state disabled
 	$w.protocols.bgp configure -state disabled
+	$w.protocols.ldp configure -state disabled
     }
 
     if { [_getNodeType $node_cfg] == "nat64" } {
@@ -2081,7 +2087,8 @@ proc configGUI_routingModel { wi node_id } {
     pack $w.protocols.label -side left -padx 2
     pack $w.protocols.rip $w.protocols.ripng \
 	$w.protocols.ospf $w.protocols.ospf6 \
-	$w.protocols.bgp -side left -padx 6
+	$w.protocols.bgp $w.protocols.ldp \
+	-side left -padx 6
     pack $w.protocols -fill both -expand 1
     pack $w -fill both
 }
@@ -2951,20 +2958,20 @@ proc configGUI_stpApply { wi node_id } {
 #****
 proc configGUI_routingModelApply { wi node_id } {
     global router_ConfigModel
-    global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable
+    global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable ldpEnable
 
     if { [getNodeType $node_id] != "nat64" && $router_ConfigModel != [getNodeModel $node_id]} {
 	setNodeModel $node_id $router_ConfigModel
     }
 
     if { $router_ConfigModel != "static" } {
-	foreach var "rip ripng ospf ospf6 bgp" {
+	foreach var "rip ripng ospf ospf6 bgp ldp" {
 	    if { [getNodeProtocol $node_id "$var"] != [set ${var}Enable] } {
 		setNodeProtocol $node_id "$var" [set ${var}Enable]
 	    }
 	}
     } else {
-	foreach var "rip ripng ospf ospf6 bgp" {
+	foreach var "rip ripng ospf ospf6 bgp ldp" {
 	    $wi.routing.protocols.$var configure -state disabled
 	}
     }

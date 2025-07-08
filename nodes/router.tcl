@@ -60,12 +60,12 @@ registerModule $MODULE
 #   * node_id -- node id
 #****
 proc $MODULE.confNewNode { node_id } {
-    global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable
+    global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable ldpEnable
     global rdconfig router_model router_ConfigModel
     global def_router_model
     global nodeNamingBase
 
-    lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable
+    lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable ldpEnable
     set router_ConfigModel $router_model
 
     setNodeName $node_id [getNewNodeNameType router $nodeNamingBase(router)]
@@ -76,6 +76,7 @@ proc $MODULE.confNewNode { node_id } {
     setNodeProtocol $node_id "ospf" $ospfEnable
     setNodeProtocol $node_id "ospf6" $ospf6Enable
     setNodeProtocol $node_id "bgp" $bgpEnable
+    setNodeProtocol $node_id "ldp" $ldpEnable
 
     setAutoDefaultRoutesStatus $node_id "enabled"
 
@@ -166,7 +167,7 @@ proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
 proc $MODULE.generateConfig { node_id } {
     set cfg {}
     if { [getCustomEnabled $node_id] != true || [getCustomConfigSelected $node_id "NODE_CONFIG"] in "\"\" DISABLED" } {
-	foreach protocol { rip ripng ospf ospf6 bgp } {
+	foreach protocol { rip ripng ospf ospf6 } {
 	    set cfg [concat $cfg [getRouterProtocolCfg $node_id $protocol]]
 	}
     }
@@ -193,7 +194,7 @@ proc $MODULE.generateUnconfig { node_id } {
     set cfg {}
 
     if { [getCustomEnabled $node_id] != true } {
-	foreach protocol { rip ripng ospf ospf6 bgp } {
+	foreach protocol { rip ripng ospf ospf6 } {
 	    set cfg [concat $cfg [getRouterProtocolUnconfig $node_id $protocol]]
 	}
     }
