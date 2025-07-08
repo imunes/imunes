@@ -492,7 +492,7 @@ proc getSubnetData { this_node_id this_iface_id subnet_gws nodes_l2data subnet_i
     }
 
     if { [$this_type.netlayer] == "NETWORK" } {
-	if { $this_type in "router nat64 extnat" } {
+        if { $this_type in "router nat64" || ($this_type == "ext" && [getNodeNATIface $this_node_id] != "UNASSIGNED") } {
 	    # this node is a router/extnat, add our IP addresses to lists
 	    # TODO: multiple addresses per iface - split subnet4data and subnet6data
 	    set gw4 [lindex [split [getIfcIPv4addrs $this_node_id $this_iface_id] /] 0]
@@ -701,7 +701,7 @@ proc getDefaultRoutesConfig { node_id gws } {
 
     # remove all non-extnat routes
     if { [getNodeType $node_id] in "router nat64" } {
-	set gws [lsearch -inline -all $gws "extnat*"]
+	set gws [lsearch -inline -all $gws "ext*"]
     }
 
     foreach route $gws {
@@ -725,7 +725,7 @@ proc getDefaultRoutesConfig { node_id gws } {
 	}
 
 	if { $match4 && "0.0.0.0/0 $gateway4" ni $all_routes4 } {
-	    if { $route_type == "extnat" } {
+	    if { $route_type == "ext" } {
 		set all_routes4 [linsert $all_routes4 0 "0.0.0.0/0 $gateway4"]
 	    } else {
 		lappend all_routes4 "0.0.0.0/0 $gateway4"
@@ -750,7 +750,7 @@ proc getDefaultRoutesConfig { node_id gws } {
 	}
 
 	if { $match6 && "::/0 $gateway6" ni $all_routes6 } {
-	    if { $route_type == "extnat" } {
+	    if { $route_type == "ext" } {
 		set all_routes6 [linsert $all_routes6 0 "::/0 $gateway6"]
 	    } else {
 		lappend all_routes6 "::/0 $gateway6"
@@ -803,14 +803,55 @@ proc setNodeName { node_id name } {
     }
 
     if { [$node_type.virtlayer] == "NATIVE" } {
-	if { $node_type in "extnat" } {
-	    trigger_nodeReconfig $node_id
-	}
-
 	return
     }
 
     trigger_nodeRecreate $node_id
+}
+
+#****f* nodecfg.tcl/setNodeNATIface
+# NAME
+#   setNodeNATIface -- set node NAT interface.
+# SYNOPSIS
+#   setNodeNATIface $node_id $name
+# FUNCTION
+#   Sets node's nat interface.
+# INPUTS
+#   * node_id -- node id
+#   * interface -- nat interface
+#****
+proc setNodeNATIface { node_id interface } {
+    cfgSet "nodes" $node_id "nat_iface" $interface
+    trigger_nodeReconfig $node_id
+
+    lassign [getSubnetData $node_id "ifc0" {} {} 0] subnet_gws subnet_data
+    foreach subnet_node [removeFromList [dict keys $subnet_data] $node_id] {
+	if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+	    continue
+	}
+
+	set subnet_node_type [getNodeType $subnet_node]
+	if { $subnet_node_type == "ext" || [$subnet_node_type.netlayer] != "NETWORK" } {
+	    # skip extnat and L2 nodes
+	    continue
+	}
+
+	trigger_nodeReconfig $subnet_node
+    }
+}
+
+#****f* nodecfg.tcl/getNodeNATIface
+# NAME
+#   getNodeNAtIface -- get node nat interface.
+# SYNOPSIS
+#   getNodeNATIface $node_id
+# FUNCTION
+#   Gets node's nat interface.
+# INPUTS
+#   * node_id -- node id
+#****
+proc getNodeNATIface { node_id } {
+    return [cfgGet "nodes" $node_id "nat_iface"]
 }
 
 #****f* nodecfg.tcl/getNodeType
@@ -2127,6 +2168,10 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 
 	    "vlan_filtering" {
 		setNodeVlanFiltering $node_id $new_value
+	    }
+
+	    "nat_iface" {
+		setNodeNATIface $node_id $new_value
 	    }
 
 	    "croutes4" {

@@ -457,7 +457,7 @@ proc getNodeNetns { eid node_id } {
     }
 
     # Global netns
-    if { [getNodeType $node_id] in "ext extnat" } {
+    if { [getNodeType $node_id] == "ext" } {
 	return "imunes_$devfs_number"
     }
 
@@ -596,7 +596,7 @@ proc isNodeStarted { node_id } {
 
     set node_type [getNodeType $node_id]
     if { [$node_type.virtlayer] != "VIRTUALIZED" } {
-	if { $node_type in "rj45 ext extnat" } {
+	if { $node_type in "rj45 ext" } {
 	    return true
 	}
 
@@ -668,7 +668,7 @@ proc nodePhysIfacesCreate { node_id ifaces } {
 	set public_hook $node_id-$iface_name
 	set public_ns $eid
 	set prefix [string trimright $iface_name "0123456789"]
-	if { $node_type in "ext extnat" } {
+	if { $node_type == "ext" } {
 	    set iface_name $node_id
 	}
 
@@ -1291,7 +1291,7 @@ proc destroyLinkBetween { eid node1_id node2_id iface1_id iface2_id link_id } {
 #****
 proc nodeIfacesDestroy { eid node_id ifaces } {
     set node_type [getNodeType $node_id]
-    if { $node_type in "ext extnat" } {
+    if { $node_type == "ext" } {
 	foreach iface_id $ifaces {
 	    set link_id [getIfcLink $node_id $iface_id]
 	    if { $link_id != "" && [getLinkDirect $link_id] } {
@@ -2225,7 +2225,7 @@ proc stopExternalConnection { eid node_id } {
 }
 
 proc setupExtNat { eid node_id ifc } {
-    set extIfc [getNodeName $node_id]
+    set extIfc [getNodeNATIface $node_id]
     if { $extIfc == "UNASSIGNED" } {
 	return
     }
@@ -2245,7 +2245,7 @@ proc setupExtNat { eid node_id ifc } {
 }
 
 proc unsetupExtNat { eid node_id ifc } {
-    set extIfc [getNodeName $node_id]
+    set extIfc [getNodeNATIface $node_id]
     if { $extIfc == "UNASSIGNED" } {
 	return
     }

@@ -193,7 +193,7 @@ set all_modules_list {}
 set runnable_node_types {}
 
 # Set default node type list
-set node_types "lanswitch hub rj45 stpswitch filter packgen router host pc nat64 ext extnat"
+set node_types "lanswitch hub rj45 stpswitch filter packgen router host pc nat64 ext"
 # Set default supported router models
 set supp_router_models "frr quagga static"
 

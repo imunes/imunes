@@ -138,7 +138,7 @@ proc paste {} {
 
     set naming_list {}
     foreach node_id [getFromRunning "node_list"] {
-	if { [getNodeType $node_id] ni "pseudo extnat" } {
+	if { [getNodeType $node_id] ni "pseudo" } {
 	    lappend naming_list [getNodeName $node_id]
 	}
     }
@@ -158,12 +158,8 @@ proc paste {} {
 
 	set node_type [getNodeType $new_node_id]
 	if { $node_type ni [array names nodeNamingBase] } {
-	    if { $node_type ni "extnat" } {
 		# fallback
 		setNodeName $new_node_id $new_node_id
-	    }
-
-	    continue
 	}
 
 	set node_name [getNodeName $new_node_id]

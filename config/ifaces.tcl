@@ -413,7 +413,12 @@ proc setIfcIPv4addrs { node_id iface_id addrs4 } {
     trigger_ifaceReconfig $node_id $iface_id
 
     set node_type [getNodeType $node_id]
-    if { [isIfcLogical $node_id $iface_id] || $node_type ni "router nat64 extnat" } {
+	set is_extnat [expr {$node_type == "ext" && [getNodeNATIface $node_id] != "UNASSIGNED"}]
+    if { $is_extnat } {
+	trigger_nodeReconfig $node_id
+    }
+
+    if { [isIfcLogical $node_id $iface_id] || ! ($node_type in "router nat64" || $is_extnat) } {
 	return
     }
 
@@ -422,18 +427,14 @@ proc setIfcIPv4addrs { node_id iface_id addrs4 } {
 	return
     }
 
-    if { $node_type == "extnat" } {
-	trigger_nodeReconfig $node_id
-    }
-
-    set has_extnat [string match "*extnat*" $subnet_gws]
+    set has_extnat [string match "*ext*" $subnet_gws]
     foreach subnet_node [removeFromList [dict keys $subnet_data] $node_id] {
 	if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
 	    continue
 	}
 
 	set subnet_node_type [getNodeType $subnet_node]
-	if { $subnet_node_type == "extnat" || [$subnet_node_type.netlayer] != "NETWORK" } {
+	if { $subnet_node_type == "ext" || [$subnet_node_type.netlayer] != "NETWORK" } {
 	    # skip extnat and L2 nodes
 	    continue
 	}
@@ -555,7 +556,9 @@ proc setIfcIPv6addrs { node_id iface_id addrs6 } {
 
     trigger_ifaceReconfig $node_id $iface_id
 
-    if { [isIfcLogical $node_id $iface_id] || [getNodeType $node_id] ni "router nat64 extnat" } {
+    set node_type [getNodeType $node_id]
+	set is_extnat [expr {($node_type == "ext" && [getNodeNATIface $node_id] != "UNASSIGNED")}]
+    if { [isIfcLogical $node_id $iface_id] || ! ($node_type in "router nat64" || $is_extnat) } {
 	return
     }
 
@@ -564,14 +567,14 @@ proc setIfcIPv6addrs { node_id iface_id addrs6 } {
 	return
     }
 
-    set has_extnat [string match "*extnat*" $subnet_gws]
+    set has_extnat [string match "*ext*" $subnet_gws]
     foreach subnet_node [removeFromList [dict keys $subnet_data] $node_id] {
 	if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
 	    continue
 	}
 
 	set subnet_node_type [getNodeType $subnet_node]
-	if { $subnet_node_type == "extnat" || [$subnet_node_type.netlayer] != "NETWORK" } {
+	if { $subnet_node_type == "ext" || [$subnet_node_type.netlayer] != "NETWORK" } {
 	    # skip extnat and L2 nodes
 	    continue
 	}
@@ -1184,6 +1187,8 @@ proc removeIface { node_id iface_id } {
 		    removeFilterIfcRule $node_id $other_iface_id $rule_num
 		}
 	    }
+	} elseif { $node_type in "ext" && [getNodeNATIface $node_id] != "UNASSIGNED" } {
+	    trigger_nodeUnconfig $node_id
 	}
     } elseif { $node_type in "lanswitch" && [getNodeVlanFiltering $node_id] } {
 	foreach other_iface_id [ifcList $node_id] {

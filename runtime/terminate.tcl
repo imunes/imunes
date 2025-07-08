@@ -298,7 +298,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 		if { $node_type == "rj45" } {
 		    lappend extifcs $node_id
 		    lappend native_nodes $node_id
-		} elseif { $node_type == "extnat" } {
+		} elseif { $node_type == "ext" && [getNodeNATIface $node_id] != "UNASSIGNED" } {
 		    lappend virtualized_nodes $node_id
 		} else {
 		    lappend native_nodes $node_id

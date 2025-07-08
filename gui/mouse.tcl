@@ -1159,7 +1159,7 @@ proc button3node { c x y } {
 
     .button3menu.wireshark delete 0 end
     .button3menu.tcpdump delete 0 end
-    if { $oper_mode == "exec" && $type in "ext extnat" } {
+    if { $oper_mode == "exec" && $type == "ext" } {
 	.button3menu add separator
 
 	#

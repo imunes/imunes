@@ -102,7 +102,7 @@ proc $MODULE.confNewIfc { node_id iface_id } {
     autoMACaddr $node_id $iface_id
 
     lassign [logicalPeerByIfc $node_id $iface_id] peer_id -
-    if { $peer_id != "" && [getNodeType $peer_id] == "extnat" } {
+    if { $peer_id != "" && [getNodeType $peer_id] == "ext" && [getNodeNATIface $peer_id] != "UNASSIGNED" } {
 	setIfcNatState $node_id $iface_id "on"
     }
 }
