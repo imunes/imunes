@@ -1187,6 +1187,8 @@ proc removeIface { node_id iface_id } {
 		    removeFilterIfcRule $node_id $other_iface_id $rule_num
 		}
 	    }
+	} elseif { $node_type in "ext" && [getNodeNATIface $node_id] != "UNASSIGNED" } {
+	    trigger_nodeUnconfig $node_id
 	}
     } elseif { $node_type in "lanswitch" && [getNodeVlanFiltering $node_id] } {
 	foreach other_iface_id [ifcList $node_id] {
