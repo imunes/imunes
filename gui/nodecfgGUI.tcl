@@ -1285,6 +1285,7 @@ proc configGUI_applyButtonNode { wi node_id phase } {
 	set nbook [lsearch [pack slaves .popup] .popup.nbook]
 	if { $nbook != -1 && $treecolumns != "" } {
 	    configGUI_refreshIfcsTree .popup.nbook.nfInterfaces.panwin.f1.tree $node_id
+
 	    set shownifcframe [pack slaves [lindex [.popup.nbook tabs] 1].panwin.f2]
 	    regsub ***=if [lindex [split $shownifcframe .] end] "" shownifc
 	    [lindex [.popup.nbook tabs] 1].panwin.f1.tree selection set $shownifc
@@ -1293,7 +1294,12 @@ proc configGUI_applyButtonNode { wi node_id phase } {
 		configGUI_refreshBridgeIfcsTree .popup.nbook.nfBridge.panwin.f1.tree $node_id
 	    }
 	} elseif { $nbook == -1 && $treecolumns != "" } {
-	    configGUI_refreshIfcsTree .popup.panwin.f1.tree $node_id
+	    set tree_widget .popup.panwin.f1.tree
+
+	    set shownifc [$tree_widget selection]
+	    configGUI_refreshIfcsTree $tree_widget $node_id
+
+	    $tree_widget selection set $shownifc
 	}
     }
 
@@ -1567,6 +1573,49 @@ proc configGUI_ifcQueueConfig { wi node_id iface_id } {
 	-side left -anchor w -padx 2
     pack $wi.if$iface_id.queuecfg.txt2 $wi.if$iface_id.queuecfg.len -side left -anchor e
     pack $wi.if$iface_id.queuecfg -anchor w -padx 10
+}
+
+#****f* nodecfgGUI.tcl/configGUI_bridgeIfcVlanConfig
+# NAME
+#   configGUI_bridgeIfcVlanConfig -- configure GUI - interface queue configuration
+# SYNOPSIS
+#   configGUI_bridgeIfcVlanConfig $wi $node_id $iface_id
+# FUNCTION
+#   Creating module for queue configuration.
+# INPUTS
+#   * wi -- widget
+#   * node_id -- node id
+#   * iface_id -- interface name
+#****
+proc configGUI_bridgeIfcVlanConfig { wi node_id iface_id } {
+    global ifvlantype$iface_id node_cfg
+
+    global guielements
+    lappend guielements "configGUI_bridgeIfcVlanConfig $iface_id"
+
+    set ifvlantype$iface_id [_getIfcVlanType $node_cfg $iface_id]
+
+    ttk::frame $wi.if$iface_id.vlancfg -borderwidth 2
+
+    ttk::label $wi.if$iface_id.vlancfg.txt1 -text "VLAN tag" -anchor w
+    ttk::spinbox $wi.if$iface_id.vlancfg.vlan_tag -width 4 \
+	-validate focus -invalidcommand "focusAndFlash %W"
+    set vlan_tag [_getIfcVlanTag $node_cfg $iface_id]
+
+    $wi.if$iface_id.vlancfg.vlan_tag insert 0 $vlan_tag
+    $wi.if$iface_id.vlancfg.vlan_tag configure \
+	-from 1 -to 4094 -increment 1 \
+	-validatecommand { checkIntRange %P 1 4094 }
+
+    ttk::label $wi.if$iface_id.vlancfg.txt2 -text "VLAN type" -anchor w
+    ttk::combobox $wi.if$iface_id.vlancfg.vlan_type -width 6 \
+	-textvariable ifvlantype$iface_id \
+	-values [list "access" "trunk"]
+
+    pack $wi.if$iface_id.vlancfg.txt1 $wi.if$iface_id.vlancfg.vlan_tag -side left -anchor w
+    pack $wi.if$iface_id.vlancfg.txt2 -side left -anchor w -padx 2
+    pack $wi.if$iface_id.vlancfg.vlan_type -side left -anchor w -padx 2
+    pack $wi.if$iface_id.vlancfg -anchor w -padx 10
 }
 
 #****f* nodecfgGUI.tcl/configGUI_ifcMACAddress
@@ -2263,6 +2312,38 @@ proc configGUI_cpuConfig { wi node_id } {
     pack $wi.cpucfg -anchor w -fill both
 }
 
+#****f* nodecfgGUI.tcl/configGUI_bridgeVLANConfig
+# NAME
+#   configGUI_servicesConfig -- configure GUI - services configuration
+# SYNOPSIS
+#   configGUI_servicesConfig $wi $node_id
+# FUNCTION
+#   Creating module for changing services started on node.
+# INPUTS
+#   * wi -- widget
+#   * node_id -- node id
+#****
+proc configGUI_bridgeVLANConfig { wi node_id } {
+    global guielements
+    lappend guielements configGUI_bridgeVLANConfig
+
+    global node_cfg
+
+    set w $wi.vlan_filtering
+    ttk::frame $w -relief groove -borderwidth 2 -padding 2
+    ttk::label $w.label -text "Enable VLAN filtering:"
+
+    pack $w.label -side left -padx 2
+
+    ttk::checkbutton $w.enabled
+    pack $w.enabled -side left -padx 6
+
+    set checkbutton_dict "0 !selected 1 selected"
+    $w.enabled state [dict get $checkbutton_dict [_getNodeVlanFiltering $node_cfg]]
+
+    pack $w -fill both
+}
+
 #****f* nodecfgGUI.tcl/configGUI_ifcVlanConfig
 # NAME
 #   configGUI_ifcVlanConfig -- configure GUI - interface vlan configuration
@@ -2522,6 +2603,39 @@ proc configGUI_ifcQueueConfigApply { wi node_id iface_id } {
     if { $len != $oldlen } {
 	if { $apply == 1 } {
 	    set node_cfg [_setIfcQLen $node_cfg $iface_id $len]
+	}
+	set changed 1
+    }
+}
+
+#****f* nodecfgGUI.tcl/configGUI_bridgeIfcVlanConfigApply
+# NAME
+#   configGUI_bridgeIfcVlanConfigApply -- configure GUI - interface queue
+#      configuration apply
+# SYNOPSIS
+#   configGUI_bridgeIfcVlanConfigApply $wi $node_id $iface_id
+# FUNCTION
+#   Saves changes in the module with queue configuration parameters.
+# INPUTS
+#   * wi -- widget
+#   * node_id -- node id
+#   * iface_id -- interface name
+#****
+proc configGUI_bridgeIfcVlanConfigApply { wi node_id iface_id } {
+    global changed apply node_cfg
+
+    set vlan_tag [$wi.if$iface_id.vlancfg.vlan_tag get]
+    if { $vlan_tag != [_getIfcVlanTag $node_cfg $iface_id] } {
+	if { $apply == 1 } {
+	    set node_cfg [_setIfcVlanTag $node_cfg $iface_id $vlan_tag]
+	}
+	set changed 1
+    }
+
+    set vlan_type [$wi.if$iface_id.vlancfg.vlan_type get]
+    if { $vlan_type != [_getIfcVlanType $node_cfg $iface_id] } {
+	if { $apply == 1 } {
+	    set node_cfg [_setIfcVlanType $node_cfg $iface_id $vlan_type]
 	}
 	set changed 1
     }
@@ -3090,6 +3204,28 @@ proc configGUI_cpuConfigApply { wi node_id } {
     }
 }
 
+#****f* nodecfgGUI.tcl/configGUI_bridgeVLANConfigApply
+# NAME
+#   configGUI_bridgeVLANConfigApply -- configure GUI - services config apply
+# SYNOPSIS
+#   configGUI_bridgeVLANConfigApply $wi $node_id
+# FUNCTION
+#   Saves changes in the module with services.
+# INPUTS
+#   * wi -- widget
+#   * node_id -- node id
+#****
+proc configGUI_bridgeVLANConfigApply { wi node_id } {
+    global changed
+    global node_cfg
+
+    set new_vlan_filtering_enabled [expr {"selected" in [$wi.vlan_filtering.enabled state]}]
+    if { [_getNodeVlanFiltering $node_cfg] != $new_vlan_filtering_enabled } {
+	set node_cfg [_setNodeVlanFiltering $node_cfg $new_vlan_filtering_enabled]
+	set changed 1
+    }
+}
+
 #****f* nodecfgGUI.tcl/configGUI_ifcVlanConfigApply
 # NAME
 #   configGUI_ifcVlanConfigApply -- configure GUI - interface Vlan
@@ -3107,19 +3243,17 @@ proc configGUI_ifcVlanConfigApply { wi node_id iface_id } {
     global changed apply node_cfg
 
     set vlandev [string trim [$wi.if$iface_id.vlancfg.dev get]]
-    set oldvlandev [_getIfcVlanDev $node_cfg $iface_id]
-    if { $vlandev != $oldvlandev } {
+    if { $vlandev != [_getIfcVlanDev $node_cfg $iface_id] } {
 	if { $apply == 1 } {
 	    set node_cfg [_setIfcVlanDev $node_cfg $iface_id $vlandev]
 	}
 	set changed 1
     }
 
-    set vlantag [string trim [$wi.if$iface_id.vlancfg.tag get]]
-    set oldvlantag [_getIfcVlanTag $node_cfg $iface_id]
-    if { $vlantag != $oldvlantag } {
+    set vlan_tag [string trim [$wi.if$iface_id.vlancfg.tag get]]
+    if { $vlan_tag != [_getIfcVlanTag $node_cfg $iface_id] } {
 	if { $apply == 1 } {
-	    set node_cfg [_setIfcVlanTag $node_cfg $iface_id $vlantag]
+	    set node_cfg [_setIfcVlanTag $node_cfg $iface_id $vlan_tag]
 	}
 	set changed 1
     }
@@ -7649,6 +7783,14 @@ proc _getNodeDockerAttach { node_cfg } {
 
 proc _setNodeDockerAttach { node_cfg state } {
     return [_cfgSet $node_cfg "docker_attach" $state]
+}
+
+proc _getNodeVlanFiltering { node_cfg } {
+    return [_cfgGetWithDefault 0 $node_cfg "vlan_filtering"]
+}
+
+proc _setNodeVlanFiltering { node_cfg state } {
+    return [_cfgSet $node_cfg "vlan_filtering" $state]
 }
 
 proc _getNodeIPsec { node_cfg } {
