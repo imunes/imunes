@@ -636,6 +636,13 @@ proc deployCfg { { execute 0 } } {
 	statline "Waiting for logical interfaces on $create_nodes_ifaces_count node(s) to be created..."
 	pipesClose
 
+	pipesCreate
+	statline "Configuring interfaces on node(s)..."
+	execute_nodesIfacesConfigure $configure_nodes_ifaces $configure_nodes_ifaces_count $w
+	statline "Waiting for interface configuration on $configure_nodes_ifaces_count node(s)..."
+	configureIfacesWait $configure_nodes_ifaces $configure_nodes_ifaces_count $w
+	pipesClose
+
 	statline "Creating links..."
 	pipesCreate
 	execute_linksCreate $instantiate_links $links_count $w
@@ -650,13 +657,6 @@ proc deployCfg { { execute 0 } } {
 
 	statline "Starting services for LINKINST hook..."
 	services start "LINKINST" "bkg" $configure_nodes
-
-	pipesCreate
-	statline "Configuring interfaces on node(s)..."
-	execute_nodesIfacesConfigure $configure_nodes_ifaces $configure_nodes_ifaces_count $w
-	statline "Waiting for interface configuration on $configure_nodes_ifaces_count node(s)..."
-	configureIfacesWait $configure_nodes_ifaces $configure_nodes_ifaces_count $w
-	pipesClose
 
 	pipesCreate
 	statline "Configuring node(s)..."
@@ -1113,11 +1113,7 @@ proc execute_linksCreate { links links_count w } {
 
 	if { $node1_id ni $skip_nodes && $node2_id ni $skip_nodes } {
 	    try {
-		if { [getLinkDirect $link_id] || [getNodeType $node1_id] == "wlan" || [getNodeType $node2_id] == "wlan" } {
-		    createDirectLinkBetween $node1_id $node2_id $iface1_id $iface2_id $link_id
-		} else {
-		    createLinkBetween $node1_id $node2_id $iface1_id $iface2_id $link_id
-		}
+		createLinkBetween $node1_id $node2_id $iface1_id $iface2_id $link_id
 
 		setToRunning "${link_id}_running" true
 	    } on error err {

@@ -61,6 +61,10 @@ proc toggleDirectLink { c link_id } {
 	set link_id [lindex [$c gettags current] 1]
     }
 
+    if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+	setToExecuteVars "terminate_cfg" [cfgGet]
+    }
+
     set new_value [expr [getLinkDirect $link_id] ^ 1]
     setLinkDirect $link_id $new_value
 
@@ -69,8 +73,12 @@ proc toggleDirectLink { c link_id } {
 	setLinkDirect $mirror_link_id $new_value
 	updateLinkLabel $mirror_link_id
     }
-
     updateLinkLabel $link_id
+
+    undeployCfg
+    deployCfg
+
+    .panwin.f1.c config -cursor left_ptr
 }
 
 #****f* linkcfgGUI.tcl/link.configGUI
@@ -549,11 +557,11 @@ proc configGUI_linkColorApply { wi link_id } {
 
 #****f* linkcfg.tcl/getLinkDirect
 # NAME
-#   getLinkDirect -- get if link is direct
+#   getLinkDirect -- get if link is my_direct
 # SYNOPSIS
 #   set link_direct [getLinkDirect $link_id]
 # FUNCTION
-#   Returns boolean - link is direct.
+#   Returns boolean - link is my_direct.
 # INPUTS
 #   * link_id -- link id
 # RESULT
