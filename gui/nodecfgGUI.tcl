@@ -4040,23 +4040,23 @@ proc putIPsecConnectionInTree { node_id tab indicator } {
 		set changed "yes"
 	}
 
-	set emptyCheckList { \
-		{connection_name "Please specify connection name!"} \
-		{ike_encr "Please specify IKE encryption algorithm!"} \
-		{ike_auth "Please specify IKE integrity check algorithm!"} \
-		{ike_modp "Please specify IKE modulo prime groups!"} \
-		{peers_ip "Please specify peer's IP address!"} \
-		{peers_name "Peer's name cannot be empty!"} \
-		{peers_subnet "Please specify peer's subnet!"} \
-		{local_ip_address "Please specify your IP address!"} \
-		{local_subnet "Please specify your local subnet!"} \
-		{esp_suits "Please specify ESP encryption algorithm!"} \
-		{ah_suits "Please specify ESP integrity check algorithm!"} \
-		{modp_suits "Please specify ESP modulo prime groups!"} \
-		{peers_id "Please specify peer's unique name\n(e.g. @sun.strongswan.org)!"} \
-		{secret_file "Please specify the file that contains private key!"} \
-		{local_cert_file "Please specify your local certificate file"} \
-		{local_name "Please specify local name/id!"} \
+	set emptyCheckList {
+		{connection_name "Please specify connection name!"}
+		{ike_encr "Please specify IKE encryption algorithm!"}
+		{ike_auth "Please specify IKE integrity check algorithm!"}
+		{ike_modp "Please specify IKE modulo prime groups!"}
+		{peers_ip "Please specify peer's IP address!"}
+		{peers_name "Peer's name cannot be empty!"}
+		{peers_subnet "Please specify peer's subnet!"}
+		{local_ip_address "Please specify your IP address!"}
+		{local_subnet "Please specify your local subnet!"}
+		{esp_suits "Please specify ESP encryption algorithm!"}
+		{ah_suits "Please specify ESP integrity check algorithm!"}
+		{modp_suits "Please specify ESP modulo prime groups!"}
+		{peers_id "Please specify peer's unique name\n(e.g. @sun.strongswan.org)!"}
+		{secret_file "Please specify the file that contains private key!"}
+		{local_cert_file "Please specify your local certificate file"}
+		{local_name "Please specify local name/id!"}
 	}
 
 	foreach item $emptyCheckList {
@@ -4100,12 +4100,12 @@ proc putIPsecConnectionInTree { node_id tab indicator } {
 		return
 	}
 
-	set netNegCheckList { \
-			{instance_duration "Connection instance duration cannot be negative!"} \
-			{keying_duration "Keying channel duration cannot be negative!"} \
-			{how_long_before "Margin time for negotiation attempts cannot be negative!"} \
-			{negotiation_attempts "Negotiation attempts number cannot be negative!"} \
-		}
+	set netNegCheckList {
+		{instance_duration "Connection instance duration cannot be negative!"}
+		{keying_duration "Keying channel duration cannot be negative!"}
+		{how_long_before "Margin time for negotiation attempts cannot be negative!"}
+		{negotiation_attempts "Negotiation attempts number cannot be negative!"}
+	}
 
 	foreach item $netNegCheckList {
 		if { [set [lindex $item 0]] < 0 } {
@@ -4778,22 +4778,22 @@ proc populateValuesForUpdate { node_id tab connParamsLframe espOptionsLframe } {
 	set local_cert_file [_getNodeIPsecItem $node_cfg "local_cert"]
 	set secret_file [_getNodeIPsecItem $node_cfg "local_key_file"]
 
-	set var_list { \
-		{type "type" "tunnel" } \
-		{local_ip_address "left" ""} \
-		{local_subnet "leftsubnet" ""} \
-		{peers_ip "right" ""} \
-		{peers_subnet "rightsubnet" ""} \
-		{peers_name "peersname" ""} \
-		{peers_id "rightid" ""} \
-		{psk_key "sharedkey" ""} \
-		{local_name "leftid" ""} \
-		{keying_duration "ikelifetime" "3h"} \
-		{instance_duration "keylife" "1h"} \
-		{how_long_before "rekeymargin" "9m"} \
-		{negotiation_attempts "keyingtries" "3"} \
-		{ike_from_cfg "ike" "aes128-sha1-modp2048"} \
-		{esp_from_cfg "esp" "aes128-sha1-modp2048"} \
+	set var_list {
+		{type "type" "tunnel" }
+		{local_ip_address "left" ""}
+		{local_subnet "leftsubnet" ""}
+		{peers_ip "right" ""}
+		{peers_subnet "rightsubnet" ""}
+		{peers_name "peersname" ""}
+		{peers_id "rightid" ""}
+		{psk_key "sharedkey" ""}
+		{local_name "leftid" ""}
+		{keying_duration "ikelifetime" "3h"}
+		{instance_duration "keylife" "1h"}
+		{how_long_before "rekeymargin" "9m"}
+		{negotiation_attempts "keyingtries" "3"}
+		{ike_from_cfg "ike" "aes128-sha1-modp2048"}
+		{esp_from_cfg "esp" "aes128-sha1-modp2048"}
 	}
 
 	foreach var $var_list {
@@ -4803,9 +4803,11 @@ proc populateValuesForUpdate { node_id tab connParamsLframe espOptionsLframe } {
 		}
 	}
 
-	set timeList { \
-		{s "seconds"} {m "minutes"} \
-		{h "hours"} {d "days"}
+	set timeList {
+		{s "seconds"}
+		{m "minutes"}
+		{h "hours"}
+		{d "days"}
 	}
 
 	foreach item $timeList {

@@ -1115,13 +1115,14 @@ proc button3node { c x y } {
 			}
 			.button3menu.iface_settings add cascade -label $iface_label -menu $m
 
-			foreach {action command} [list \
+			set actions [list \
 				"Remove IPv4 addresses" "removeIPv4Nodes $node_id {$node_id $iface_id}" \
 				"Remove IPv6 addresses" "removeIPv6Nodes $node_id {$node_id $iface_id}" \
 				"Match IPv4 subnet" "matchSubnet4 $node_id $iface_id" \
 				"Match IPv6 subnet" "matchSubnet6 $node_id $iface_id" \
-				] {
+				]
 
+			foreach {action command} $actions {
 				$m add command -label $action -command "$command"
 			}
 		}

@@ -108,8 +108,13 @@ proc $MODULE.configGUI { c node_id } {
 
 	set tabs [configGUI_addNotebookFilter $wi $node_id [lsort [_ifcList $node_cfg]]]
 
-	set filtertreecolumns {"Action Action" "Pattern Pattern" "Mask Mask" \
-		"Offset Offset" "ActionData ActionData"}
+	set filtertreecolumns {
+		"Action Action"
+		"Pattern Pattern"
+		"Mask Mask"
+		"Offset Offset"
+		"ActionData ActionData"
+	}
 	foreach tab $tabs {
 		configGUI_addTreeFilter $tab $node_id
 	}

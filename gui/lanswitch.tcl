@@ -129,7 +129,13 @@ proc $MODULE.configGUI { c node_id } {
 	configGUI_bridgeVLANConfig $wi $node_id
 
 	configGUI_addPanedWin $wi
-	set treecolumns {"QLen Queue len" "QDisc Queue disc" "QDrop Queue drop" "VlanTag VLAN tag" "VlanType VLAN type"}
+	set treecolumns {
+		"QLen Queue len"
+		"QDisc Queue disc"
+		"QDrop Queue drop"
+		"VlanTag VLAN tag"
+		"VlanType VLAN type"
+	}
 	configGUI_addTree $wi $node_id
 
 	configGUI_nodeRestart $wi $node_id

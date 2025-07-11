@@ -95,7 +95,13 @@ proc $MODULE.configGUI { c node_id } {
 
 	configGUI_nodeName $wi $node_id "Node name:"
 
-	lassign [configGUI_addNotebook $wi $node_id {"Configuration" "Interfaces" "NAT64"}] configtab ifctab nat64tab
+	set labels {
+		"Configuration"
+		"Interfaces"
+		"NAT64"
+	}
+	lassign [configGUI_addNotebook $wi $node_id $labels] \
+		configtab ifctab nat64tab
 
 	#configGUI_routingProtocols $configtab $node_id
 	configGUI_routingModel $configtab $node_id
@@ -106,8 +112,17 @@ proc $MODULE.configGUI { c node_id } {
 	configGUI_snapshots $configtab $node_id
 	configGUI_customConfig $configtab $node_id
 
-	set treecolumns {"OperState State" "NatState Nat" "IPv4addrs IPv4 addrs" "IPv6addrs IPv6 addrs" \
-		"MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop" }
+	set treecolumns {
+		"OperState State"
+		"NatState Nat"
+		"IPv4addrs IPv4 addrs"
+		"IPv6addrs IPv6 addrs"
+		"MACaddr MAC addr"
+		"MTU MTU"
+		"QLen Queue len"
+		"QDisc Queue disc"
+		"QDrop Queue drop"
+	}
 	configGUI_addTree $ifctab $node_id
 
 	configGUI_nat64Config $nat64tab $node_id

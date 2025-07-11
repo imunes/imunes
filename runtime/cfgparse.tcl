@@ -947,7 +947,7 @@ proc loadCfgLegacy { cfg } {
 						data {
 							set enc [string trim $value \{\}]
 							set enc [string trim $enc " "]
-							set enc [string map {"\n" {}} $enc]
+							set enc [string map { "\n" {} } $enc]
 							set data [base64::decode $enc]
 							set enc_data [base64::encode -maxlen 0 $data]
 							cfgSet $dict_object $object $field $enc_data

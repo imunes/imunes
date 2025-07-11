@@ -176,7 +176,13 @@ proc $MODULE.configGUI { c node_id } {
 
 	configGUI_nodeName $wi $node_id "Node name:"
 
-	lassign [configGUI_addNotebook $wi $node_id {"Configuration" "Interfaces" "IPsec"}] configtab ifctab ipsectab
+	set labels {
+		"Configuration"
+		"Interfaces"
+		"IPsec"
+	}
+	lassign [configGUI_addNotebook $wi $node_id $labels] \
+		configtab ifctab ipsectab
 
 	configGUI_routingModel $configtab $node_id
 	configGUI_customImage $configtab $node_id
@@ -187,8 +193,17 @@ proc $MODULE.configGUI { c node_id } {
 	configGUI_customConfig $configtab $node_id
 	configGUI_ipsec $ipsectab $node_id
 
-	set treecolumns {"OperState State" "NatState Nat" "IPv4addrs IPv4 addrs" "IPv6addrs IPv6 addrs" \
-		"MACaddr MAC addr" "MTU MTU" "QLen Queue len" "QDisc Queue disc" "QDrop Queue drop" }
+	set treecolumns {
+		"OperState State"
+		"NatState Nat"
+		"IPv4addrs IPv4 addrs"
+		"IPv6addrs IPv6 addrs"
+		"MACaddr MAC addr"
+		"MTU MTU"
+		"QLen Queue len"
+		"QDisc Queue disc"
+		"QDrop Queue drop"
+	}
 	configGUI_addTree $ifctab $node_id
 
 	configGUI_nodeRestart $wi $node_id

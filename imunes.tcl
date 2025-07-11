@@ -186,6 +186,7 @@ set gui_option_defaults {
 
 foreach {option default_value} [concat $option_defaults $gui_option_defaults] {
 	global $option
+
 	set $option $default_value
 }
 
@@ -193,7 +194,8 @@ set all_modules_list {}
 set runnable_node_types {}
 
 # Set default node type list
-set node_types "lanswitch hub rj45 stpswitch filter packgen router host pc nat64 ext"
+set node_types "lanswitch hub rj45 stpswitch filter packgen \
+	router host pc nat64 ext"
 # Set default supported router models
 set supp_router_models "frr quagga static"
 
@@ -298,10 +300,10 @@ readConfigFile
 if { $execMode == "interactive" } {
 	safePackageRequire Tk "To run the IMUNES GUI, Tk must be installed."
 
-	foreach file "canvas copypaste drawing editor help theme linkcfgGUI mouse
-		nodecfgGUI ifacesGUI widgets annotations" {
-
-		safeSourceFile "$ROOTDIR/$LIBDIR/gui/$file.tcl"
+	set gui_files "canvas copypaste drawing editor help theme linkcfgGUI \
+		mouse nodecfgGUI ifacesGUI widgets annotations"
+	foreach gui_file $gui_files {
+		safeSourceFile "$ROOTDIR/$LIBDIR/gui/$gui_file.tcl"
 	}
 
 	source "$ROOTDIR/$LIBDIR/gui/initgui.tcl"

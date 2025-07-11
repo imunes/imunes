@@ -134,21 +134,42 @@ proc $MODULE.configGUI { c node_id } {
 	wm title $wi "stpswitch configuration"
 	configGUI_nodeName $wi $node_id "Node name:"
 
-	set tabs [configGUI_addNotebook $wi $node_id {"Configuration" "Interfaces" \
-		"Bridge"}]
-	set configtab [lindex $tabs 0]
-	set ifctab [lindex $tabs 1]
-	set bridgeifctab [lindex $tabs 2]
+	set labels {
+		"Configuration"
+		"Interfaces"
+		"Bridge"
+	}
+	lassign [configGUI_addNotebook $wi $node_id $labels] \
+		configtab ifctab bridgeifctab
 
-	set treecolumns { "OperState State" "NatState Nat" "IPv4addrs IPv4 addrs" \
-		"IPv6addrs IPv6 addrs" "MACaddr MAC addr" "MTU MTU" \
-		"QLen Queue len" "QDisc Queue disc" "QDrop Queue drop"}
+	set treecolumns {
+		"OperState State"
+		"NatState Nat"
+		"IPv4addrs IPv4 addrs"
+		"IPv6addrs IPv6 addrs"
+		"MACaddr MAC addr"
+		"MTU MTU"
+		"QLen Queue len"
+		"QDisc Queue disc"
+		"QDrop Queue drop"
+	}
 	configGUI_addTree $ifctab $node_id
 
-	set brtreecolumns { "Snoop Snoop" "Stp STP" "Priority Priority" \
-		"Discover Discover" "Learn Learn" "Sticky Sticky" "Private Private" \
-		"Edge Edge" "Autoedge AutoEdge" "Ptp Ptp" "Autoptp AutoPtp" \
-		"Maxaddr Max addr" "Pathcost Pathcost" }
+	set brtreecolumns {
+		"Snoop Snoop"
+		"Stp STP"
+		"Priority Priority"
+		"Discover Discover"
+		"Learn Learn"
+		"Sticky Sticky"
+		"Private Private"
+		"Edge Edge"
+		"Autoedge AutoEdge"
+		"Ptp Ptp"
+		"Autoptp AutoPtp"
+		"Maxaddr Max addr"
+		"Pathcost Pathcost"
+	}
 	configGUI_addBridgeTree $bridgeifctab $node_id
 
 	configGUI_bridgeConfig $configtab $node_id

@@ -102,7 +102,9 @@ proc $MODULE.configGUI { c node_id } {
 
 	configGUI_packetRate [lindex $tabs 0] $node_id
 
-	set packgentreecolumns {"Data Data"}
+	set packgentreecolumns {
+		"Data Data"
+	}
 	foreach tab $tabs {
 		configGUI_addTreePackgen $tab $node_id
 	}
