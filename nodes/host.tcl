@@ -145,7 +145,10 @@ proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
 proc $MODULE.generateConfig { node_id } {
 	set cfg {}
 
-	if { [getCustomEnabled $node_id] != true || [getCustomConfigSelected $node_id "NODE_CONFIG"] in "\"\" DISABLED" } {
+	if {
+		[getCustomEnabled $node_id] != true ||
+		[getCustomConfigSelected $node_id "NODE_CONFIG"] in "\"\" DISABLED"
+	} {
 		set cfg [concat $cfg [nodeCfggenStaticRoutes4 $node_id]]
 		set cfg [concat $cfg [nodeCfggenStaticRoutes6 $node_id]]
 

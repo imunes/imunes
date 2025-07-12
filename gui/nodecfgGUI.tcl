@@ -3805,9 +3805,10 @@ proc createNewConfiguration { wi node_id } {
 		if { [$wi.nb tabs] != "" } {
 			set cfg_id [$wi.nb tab current -text]
 			set w $wi.nb.$cfg_id
-			if { [$w.editor get 1.0 {end -1c}] != [_getCustomConfig $custom_node_cfg $selected_hook $cfg_id] || \
-				[$w.bootcmd_e get] != [_getCustomConfigCommand $custom_node_cfg $selected_hook $cfg_id] } {
-
+			if {
+				[$w.editor get 1.0 {end -1c}] != [_getCustomConfig $custom_node_cfg $selected_hook $cfg_id] ||
+				[$w.bootcmd_e get] != [_getCustomConfigCommand $custom_node_cfg $selected_hook $cfg_id]
+			} {
 				set answer [tk_messageBox -message \
 					"Custom config $cfg_id not saved. Apply changes?" \
 					-icon warning -type yesno ]
@@ -4060,9 +4061,7 @@ proc putIPsecConnectionInTree { node_id tab indicator } {
 	}
 
 	foreach item $emptyCheckList {
-		if { ([lindex $item 0] == "peers_id" || [lindex $item 0] == "secret_file" \
-			|| [lindex $item 0] == "local_cert_file" || [lindex $item 0] == "local_name") } {
-
+		if { [lindex $item 0] in "peers_id secret_file local_cert_file local_name" } {
 			if { $authby != "secret" } {
 				if { [set [lindex $item 0]] == "" } {
 					tk_messageBox -message [lindex $item 1] -title "Error" -icon error -type ok
@@ -4197,9 +4196,13 @@ proc putIPsecConnectionInTree { node_id tab indicator } {
 	set has_local_cert [_getNodeIPsecItem $node_cfg "local_cert"]
 	set has_local_key_file [_getNodeIPsecItem $node_cfg "local_key_file"]
 
-	if { $has_local_cert == "" && $authby != "secret" && $local_cert_file != "" && $secret_file != ""\
-		&& $has_local_key_file == "" } {
-
+	if {
+		$has_local_cert == "" &&
+		$authby != "secret" &&
+		$local_cert_file != "" &&
+		$secret_file != "" &&
+		$has_local_key_file == ""
+	} {
 		set node_cfg [_setNodeIPsecItem $node_cfg "local_cert" $local_cert_file]
 		set node_cfg [_setNodeIPsecItem $node_cfg "local_key_file" $secret_file]
 	} else {
@@ -5811,9 +5814,10 @@ proc configGUI_addBridgeTree { wi node_id } {
 				}
 			}
 
-			if { [_getBridgeIfcSnoop $node_cfg $iface_id] == 1 && \
-				[lindex $column 0] != "Snoop" } {
-
+			if {
+				[_getBridgeIfcSnoop $node_cfg $iface_id] == 1 &&
+				[lindex $column 0] != "Snoop"
+			} {
 				$wi.panwin.f1.tree set $iface_id [lindex $column 0] "-"
 			}
 		}
@@ -5970,9 +5974,10 @@ proc configGUI_refreshBridgeIfcsTree { wi node_id } {
 				}
 			}
 
-			if { [_getBridgeIfcSnoop $node_cfg $iface_id] == 1 && \
-				[lindex $column 0] != "Snoop" } {
-
+			if {
+				[_getBridgeIfcSnoop $node_cfg $iface_id] == 1 &&
+				[lindex $column 0] != "Snoop"
+			} {
 				$wi set $iface_id [lindex $column 0] "-"
 			}
 		}
@@ -7523,9 +7528,10 @@ proc configGUI_packetConfigApply { add dup } {
 		}
 
 		# Attempt to detect & preprocess lines pasted from Wireshark
-		if { [string is xdigit [string range $line 0 3]] &&
-			[string range $line 4 5] eq "  " } {
-
+		if {
+			[string is xdigit [string range $line 0 3]] &&
+			[string range $line 4 5] eq "  "
+		} {
 			if { [string range $line 29 30] eq "  " } {
 				set line [string replace $line 29 29]
 			}

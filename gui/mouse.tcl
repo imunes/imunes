@@ -217,9 +217,9 @@ proc selectNode { c obj } {
 #   Select all object on the canvas.
 #****
 proc selectAllObjects {} {
-	foreach obj [.panwin.f1.c find withtag "node || text || oval || rectangle \
-		|| freeform"] {
-
+	set all_objects [.panwin.f1.c find withtag \
+		"node || text || oval || rectangle || freeform"]
+	foreach obj $all_objects {
 		selectNode .panwin.f1.c $obj
 	}
 }
@@ -421,10 +421,12 @@ proc button3link { c x y } {
 		lassign [logicalPeerByIfc $peer2_id $peer2_iface] peer1_id peer1_iface
 	}
 
-	if { $oper_mode == "edit" || ! $isOSlinux || \
-		 ([getFromRunning "${peer1_id}|${peer1_iface}_running"] && \
-		 [getFromRunning "${peer2_id}|${peer2_iface}_running"]) } {
-
+	if {
+		! $isOSlinux ||
+		$oper_mode == "edit" ||
+		([getFromRunning "${peer1_id}|${peer1_iface}_running"] &&
+		[getFromRunning "${peer2_id}|${peer2_iface}_running"])
+	} {
 		.button3menu add checkbutton -label "Direct link" \
 			-underline 5 -variable linkDirect_$link_id \
 			-command "toggleDirectLink $c $link_id"
@@ -443,11 +445,12 @@ proc button3link { c x y } {
 	#
 	# Delete link (keep ifaces)
 	#
-	if { ($oper_mode == "edit" || ! $isOSlinux || ! [set linkDirect_$link_id]) || \
-		 ($oper_mode == "exec" && \
-		 ! [getFromRunning "${peer1_id}|${peer1_iface}_running"] && \
-		 ! [getFromRunning "${peer2_id}|${peer2_iface}_running"]) } {
-
+	if {
+		($oper_mode == "edit" || ! $isOSlinux || ! [set linkDirect_$link_id]) ||
+		($oper_mode == "exec" &&
+		! [getFromRunning "${peer1_id}|${peer1_iface}_running"] &&
+		! [getFromRunning "${peer2_id}|${peer2_iface}_running"])
+	} {
 		.button3menu add command -label "Delete (keep interfaces)" \
 			-command "removeLinkGUI $link_id atomic 1"
 	} else {
@@ -469,10 +472,11 @@ proc button3link { c x y } {
 	# Merge two pseudo nodes / links
 	#
 	set link_mirror_id [getLinkMirror $link_id]
-	if { $link_mirror_id != "" &&
+	if {
+		$link_mirror_id != "" &&
 		[getNodeCanvas [lindex [getLinkPeers $link_mirror_id] 0]] ==
-		[getFromRunning "curcanvas"] } {
-
+		[getFromRunning "curcanvas"]
+	} {
 		.button3menu add command -label "Merge" \
 			-command "mergeNodeGUI [lindex [getLinkPeers $link_id] 0]"
 	} else {
@@ -514,9 +518,10 @@ proc moveToCanvas { canvas_id } {
 		set link_id [lindex [.panwin.f1.c gettags $obj] 1]
 
 		lassign [getLinkPeers $link_id] peer1_id peer2_id
-		if { ($peer1_id ni $selected_nodes && $peer2_id in $selected_nodes) || \
-			($peer1_id in $selected_nodes && $peer2_id ni $selected_nodes) } {
-
+		if {
+			($peer1_id ni $selected_nodes && $peer2_id in $selected_nodes) ||
+			($peer1_id in $selected_nodes && $peer2_id ni $selected_nodes)
+		} {
 			# pseudo nodes are always peer1
 			if { [getNodeType $peer1_id] == "pseudo" } {
 				setNodeCanvas $peer1_id $canvas_id
@@ -857,14 +862,26 @@ proc button3node { c x y } {
 	#
 	# Delete selection (keep linked interfaces)
 	#
-	if { $oper_mode == "edit" || ! $isOSlinux || ! $has_direct_links } {
-		.button3menu add command -label "Delete (keep interfaces)" -command "deleteSelection 1"
+	if {
+		$oper_mode == "edit" ||
+		! $isOSlinux ||
+		! $has_direct_links
+	} {
+		.button3menu add command \
+			-label "Delete (keep interfaces)" \
+			-command "deleteSelection 1"
 	} else {
-		.button3menu add command -label "Delete (keep interfaces)" -command "deleteSelection 1" \
+		.button3menu add command \
+			-label "Delete (keep interfaces)" \
+			-command "deleteSelection 1" \
 			-state disabled
 	}
 
-	if { $type != "pseudo" && $oper_mode == "exec" && [getFromRunning "auto_execution"] } {
+	if {
+		$type != "pseudo" &&
+		$oper_mode == "exec" &&
+		[getFromRunning "auto_execution"]
+	} {
 		.button3menu add separator
 	}
 
@@ -936,7 +953,11 @@ proc button3node { c x y } {
 	# Node execution menu
 	#
 	.button3menu.node_execute delete 0 end
-	if { $type != "pseudo" && $oper_mode == "exec" && [getFromRunning "auto_execution"] } {
+	if {
+		$type != "pseudo" &&
+		$oper_mode == "exec" &&
+		[getFromRunning "auto_execution"]
+	} {
 		.button3menu add cascade -label "Node execution" \
 			-menu .button3menu.node_execute
 
@@ -952,7 +973,11 @@ proc button3node { c x y } {
 	# Node config menu
 	#
 	.button3menu.node_config delete 0 end
-	if { $type != "pseudo" && $oper_mode == "exec" && [getFromRunning "auto_execution"] } {
+	if {
+		$type != "pseudo" &&
+		$oper_mode == "exec" &&
+		[getFromRunning "auto_execution"]
+	} {
 		.button3menu add cascade -label "Node configuration" \
 			-menu .button3menu.node_config
 
@@ -968,7 +993,11 @@ proc button3node { c x y } {
 	# Ifaces config menu
 	#
 	.button3menu.ifaces_config delete 0 end
-	if { $type != "pseudo" && $oper_mode == "exec" && [getFromRunning "auto_execution"] } {
+	if {
+		$type != "pseudo" &&
+		$oper_mode == "exec" &&
+		[getFromRunning "auto_execution"]
+	} {
 		.button3menu add cascade -label "Ifaces configuration" \
 			-menu .button3menu.ifaces_config
 
@@ -988,9 +1017,11 @@ proc button3node { c x y } {
 	# Services menu
 	#
 	.button3menu.services delete 0 end
-	if { $oper_mode == "exec" && [$type.virtlayer] == "VIRTUALIZED" && \
-		[getFromRunning ${node_id}_running] == true } {
-
+	if {
+		$oper_mode == "exec" &&
+		[$type.virtlayer] == "VIRTUALIZED" &&
+		[getFromRunning ${node_id}_running] == true
+	} {
 		global all_services_list
 
 		.button3menu add cascade -label "Services" \
@@ -1132,12 +1163,16 @@ proc button3node { c x y } {
 	# Shell selection
 	#
 	.button3menu.shell delete 0 end
-	if { $type != "ext" && $oper_mode == "exec" && [$type.virtlayer] == "VIRTUALIZED" && \
-		[getFromRunning ${node_id}_running] == true } {
-
+	if {
+		$type != "ext" &&
+		$oper_mode == "exec" &&
+		[$type.virtlayer] == "VIRTUALIZED" &&
+		[getFromRunning ${node_id}_running] == true
+	} {
 		.button3menu add separator
 		.button3menu add cascade -label "Shell window" \
 			-menu .button3menu.shell
+
 		foreach cmd [existingShells [$type.shellcmds] $node_id] {
 			.button3menu.shell add command -label "[lindex [split $cmd /] end]" \
 				-command "spawnShell $node_id $cmd"
@@ -1146,7 +1181,10 @@ proc button3node { c x y } {
 
 	.button3menu.wireshark delete 0 end
 	.button3menu.tcpdump delete 0 end
-	if { $oper_mode == "exec" && $type == "ext" } {
+	if {
+		$oper_mode == "exec" &&
+		$type == "ext"
+	} {
 		.button3menu add separator
 
 		#
@@ -1172,9 +1210,11 @@ proc button3node { c x y } {
 			.button3menu add command -label "tcpdump" \
 				-command "captureOnExtIfc $node_id tcpdump"
 		}
-	} elseif { $oper_mode == "exec" && [$type.virtlayer] == "VIRTUALIZED" && \
-		[getFromRunning ${node_id}_running] == true } {
-
+	} elseif {
+		$oper_mode == "exec" &&
+		[$type.virtlayer] == "VIRTUALIZED" &&
+		[getFromRunning ${node_id}_running] == true
+	} {
 		#
 		# Wireshark
 		#
@@ -1254,25 +1294,37 @@ proc button3node { c x y } {
 		#
 		# Firefox
 		#
-		if { [checkForExternalApps "startxcmd"] == 0 && \
-			[checkForApplications $node_id "firefox"] == 0 } {
-
-			.button3menu add command -label "Web Browser" \
-				-command "startXappOnNode $node_id \"firefox -no-remote -setDefaultBrowser about:blank\""
+		if {
+			[checkForExternalApps "startxcmd"] == 0 &&
+			[checkForApplications $node_id "firefox"] == 0
+		} {
+			set x_cmd "firefox"
+			set x_args "-no-remote -setDefaultBrowser about:blank"
+			.button3menu add command \
+				-label "Web Browser" \
+				-command "startXappOnNode $node_id \"$x_cmd $x_args\""
 		} else {
-			.button3menu add command -label "Web Browser" -state disabled
+			.button3menu add command \
+				-label "Web Browser" \
+				-state disabled
 		}
 
 		#
 		# Sylpheed mail client
 		#
-		if { [checkForExternalApps "startxcmd"] == 0 && \
-			[checkForApplications $node_id "sylpheed"] == 0 } {
-
-			.button3menu add command -label "Mail client" \
-				-command "startXappOnNode $node_id \"G_FILENAME_ENCODING=UTF-8 sylpheed\""
+		if {
+			[checkForExternalApps "startxcmd"] == 0 &&
+			[checkForApplications $node_id "sylpheed"] == 0
+		} {
+			set x_cmd "G_FILENAME_ENCODING=UTF-8 sylpheed"
+			set x_args ""
+			.button3menu add command \
+				-label "Mail client" \
+				-command "startXappOnNode $node_id \"$x_cmd $x_args\""
 		} else {
-			.button3menu add command -label "Mail client" -state disabled
+			.button3menu add command \
+				-label "Mail client" \
+				-state disabled
 		}
 	}
 
@@ -1321,9 +1373,11 @@ proc button1 { c x y button } {
 	set curobj [$c find withtag current]
 	set curtype [lindex [$c gettags current] 0]
 	set wasselected 0
-	if { $curtype in "node oval rectangle text freeform" || ( $curtype == "nodelabel" &&
-		[getNodeType [lindex [$c gettags $curobj] 1]] == "pseudo") } {
-
+	if {
+		$curtype in "node oval rectangle text freeform" ||
+		($curtype == "nodelabel" &&
+		[getNodeType [lindex [$c gettags $curobj] 1]] == "pseudo")
+	} {
 		set node_id [lindex [$c gettags current] 1]
 		set wasselected [expr {$node_id in "[selectedNodes] [selectedAnnotations]"}]
 
@@ -1428,10 +1482,12 @@ proc button1 { c x y button } {
 
 			set newnode $node_id
 			set changed 1
-		} elseif { $active_tool == "select" \
-			&& $curtype != "node" && $curtype != "nodelabel" } {
-
+		} elseif {
+			$active_tool == "select" &&
+			$curtype ni "node nodelabel"
+		} {
 			$c config -cursor cross
+
 			set lastX $x
 			set lastY $y
 			if { $selectbox != "" } {
@@ -1439,7 +1495,7 @@ proc button1 { c x y button } {
 				$c delete $selectbox
 				set selectbox ""
 			}
-		} elseif { $active_tool == "oval" || $active_tool == "rectangle" } {
+		} elseif { $active_tool in "oval rectangle" } {
 			$c config -cursor cross
 			set lastX $x
 			set lastY $y
@@ -1503,27 +1559,37 @@ proc button1-motion { c x y } {
 	if { $active_tool == "link" && $newlink != "" } {
 		#creating a new link
 		$c coords $newlink $lastX $lastY $x $y
-	} elseif { $active_tool == "select" && $curtype == "nodelabel" \
-		&& [getNodeType [lindex [$c gettags $curobj] 1]] != "pseudo" } {
-
+	} elseif {
+		$active_tool == "select" &&
+		$curtype == "nodelabel" &&
+		[getNodeType [lindex [$c gettags $curobj] 1]] != "pseudo"
+	} {
 		$c move $curobj [expr {$x - $lastX}] [expr {$y - $lastY}]
+
 		set changed 1
 		set lastX $x
 		set lastY $y
-	} elseif { $active_tool == "select" && $curobj == "" && $curtype == "" } {
+	} elseif {
+		$active_tool == "select" &&
+		$curobj == "" &&
+		$curtype == ""
+	} {
 		return
-	} elseif { $active_tool == "select" &&
-		( $curobj == $selectbox || $curtype == "background" ||
-		$curtype == "grid" || ($curobj ni [$c find withtag "selected"] &&
-		$curtype != "selectmark") && [getNodeType [lindex [$c gettags $curobj] 1]] != "pseudo") } {
-
+	} elseif {
+		$active_tool == "select" &&
+		($curobj == $selectbox ||
+		$curtype in "background grid" ||
+		($curobj ni [$c find withtag "selected"] &&
+		$curtype != "selectmark") &&
+		[getNodeType [lindex [$c gettags $curobj] 1]] != "pseudo")
+	} {
 		#forming the selectbox and resizing
 		if { $selectbox == "" } {
 			set err [catch {
 				set selectbox [$c create line \
 					$lastX $lastY $x $lastY $x $y $lastX $y $lastX $lastY \
 					-dash {10 4} -fill black -width 1 -tags "selectbox"]
-				} error]
+			} error]
 			if { $err != 0 } {
 				return
 			}
@@ -1533,48 +1599,59 @@ proc button1-motion { c x y } {
 			set err [catch {
 				$c coords $selectbox \
 					$lastX $lastY $x $lastY $x $y $lastX $y $lastX $lastY
-				} error]
+			} error]
 			if { $err != 0 } {
 				return
 			}
 		}
-	# actually we should check if curobj == bkgImage
-	} elseif { $active_tool == "oval" && ( $curobj == $newoval \
-		|| $curobj == $background || $curtype == "background" \
-		|| $curtype == "grid") } {
-
+		# actually we should check if curobj == bkgImage
+	} elseif {
+		$active_tool == "oval" &&
+		($curobj in "$newoval $background" ||
+		$curtype in "background grid")
+	} {
 		# Draw a new oval
 		if { $newoval == "" } {
 			set newoval [$c create oval $lastX $lastY $x $y \
-						-outline blue \
-						-dash {10 4} -width 1 -tags "newoval"]
+				-outline blue \
+				-dash {10 4} \
+				-width 1 \
+				-tags "newoval"]
+
 			$c raise $newoval "background || link || linklabel || interface"
 		} else {
 			$c coords $newoval \
 				$lastX $lastY $x $y
 		}
-	} elseif { $active_tool == "rectangle" && ( $curobj == $newrect \
-		|| $curobj == $background || $curtype == "background" \
-		|| $curtype == "oval" || $curtype == "grid") } {
-
+	} elseif {
+		$active_tool == "rectangle" &&
+		($curobj in "$newrect $background" ||
+		$curtype in "background oval grid")
+	} {
 		# Draw a new rectangle
 		if { $newrect == "" } {
 			set newrect [$c create rectangle $lastX $lastY $x $y \
 				-outline blue \
-				-dash {10 4} -width 1 -tags "newrect"]
+				-dash {10 4} \
+				-width 1 \
+				-tags "newrect"]
+
 			$c raise $newrect "oval || background || link || linklabel || interface"
 		} else {
 			$c coords $newrect $lastX $lastY $x $y
 		}
-	} elseif { $active_tool == "freeform" && ( $curobj == $newfree \
-		|| $curobj == $background || $curtype == "background" \
-		|| $curtype == "oval" || $curtype == "rectangle"  \
-		|| $curtype == "grid") } {
-
+	} elseif {
+		$active_tool == "freeform" &&
+		($curobj in "$newfree $background" ||
+		$curtype in "background oval rectangle grid")
+	} {
 		# Draw a new freeform
 		if { $newfree == "" } {
 			set newfree [$c create line $lastX $lastY $x $y \
-				-fill blue -width 2 -tags "newfree"]
+				-fill blue \
+				-width 2 \
+				-tags "newfree"]
+
 			$c raise $newfree "oval || rectangle || background || link || linklabel || interface"
 		} else {
 			xpos $newfree $x $y 2 blue
@@ -1750,9 +1827,10 @@ proc button1-release { c x y } {
 			set y [expr {[lindex $coords 1] / $zoom}]
 
 			# only nodes are snapped to grid, annotations are not
-			if { $autorearrange_enabled == 0 && \
-				[$c find withtag "node && $node_id"] != ""  } {
-
+			if {
+				$autorearrange_enabled == 0 &&
+				[$c find withtag "node && $node_id"] != "" 
+			} {
 				set dx [expr {(int($x / $grid + 0.5) * $grid - $x) * $zoom}]
 				set dy [expr {(int($y / $grid + 0.5) * $grid - $y) * $zoom}]
 				$c move $img $dx $dy

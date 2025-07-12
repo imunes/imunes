@@ -119,10 +119,11 @@ proc redrawAll {} {
 	}
 
 	foreach link_id [getFromRunning "link_list"] {
-		set nodes [getLinkPeers $link_id]
-		if { [getNodeCanvas [lindex $nodes 0]] != $curcanvas ||
-			[getNodeCanvas [lindex $nodes 1]] != $curcanvas } {
-
+		lassign [getLinkPeers $link_id] node1_id node2_id
+		if {
+			[getNodeCanvas $node1_id] != $curcanvas ||
+			[getNodeCanvas $node2_id] != $curcanvas
+		} {
 			continue
 		}
 
@@ -519,9 +520,10 @@ proc redrawAllLinks {} {
 
 	foreach link_id [getFromRunning "link_list"] {
 		lassign [getLinkPeers $link_id] node1_id node2_id
-		if { [getNodeCanvas $node1_id] != $curcanvas ||
-			[getNodeCanvas $node2_id] != $curcanvas } {
-
+		if {
+			[getNodeCanvas $node1_id] != $curcanvas ||
+			[getNodeCanvas $node2_id] != $curcanvas
+		} {
 			continue
 		}
 
@@ -836,9 +838,10 @@ proc changeIconPopup {} {
 
 	set image_list [getFromRunning "image_list"]
 	foreach img $image_list {
-		if { $img != "" && [string match "*img*" $img] == 1 && \
-		  [getImageType $img] == "customIcon" } {
-
+		if {
+			$img != "" && [string match "*image*" $img] == 1 &&
+			[getImageType $img] == "customIcon"
+		} {
 			$tree insert {} end -id $img -text $img -values [list "custom icon"] \
 				-tags "$img"
 
@@ -1210,9 +1213,7 @@ proc align2grid {} {
 			set node_objects [lreplace $node_objects 0 0]
 			setNodeCoords $node_id "$x $y"
 			set dy 32
-			if { [lsearch {router hub lanswitch rj45} \
-				[getNodeType $node_id]] >= 0 } {
-
+			if { [getNodeType $node_id] in "router hub lanswitch rj45" } {
 				set dy 24
 			}
 
@@ -1327,23 +1328,24 @@ proc rearrange { mode } {
 			}
 
 			foreach link_id [getFromRunning "link_list"] {
-				set nodes [getLinkPeers $link_id]
-				if { [getNodeCanvas [lindex $nodes 0]] != $curcanvas ||
-					[getNodeCanvas [lindex $nodes 1]] != $curcanvas ||
-					[getLinkMirror $link_id] != "" } {
-
+				lassign [getLinkPeers $link_id] node1_id node2_id
+				if {
+					[getNodeCanvas $node1_id] != $curcanvas ||
+					[getNodeCanvas $node2_id] != $curcanvas ||
+					[getLinkMirror $link_id] != ""
+				} {
 					continue
 				}
 
-				set peers [getLinkPeers $link_id]
-				if { [getNodeType [lindex $peers 0]] == "wlan" ||
-					[getNodeType [lindex $peers 1]] == "wlan" } {
-
+				if {
+					[getNodeType $node1_id] == "wlan" ||
+					[getNodeType $node2_id] == "wlan"
+				} {
 					continue
 				}
 
-				set coords0 [getNodeCoords [lindex $peers 0]]
-				set coords1 [getNodeCoords [lindex $peers 1]]
+				set coords0 [getNodeCoords $node1_id]
+				set coords1 [getNodeCoords $node2_id]
 				set o_x \
 					[expr {([lindex $coords0 0] + [lindex $coords1 0]) * .5}]
 				set o_y \

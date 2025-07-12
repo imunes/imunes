@@ -207,8 +207,7 @@ proc loadCfgLegacy { cfg } {
 							set nat64 false
 							set tayga_mappings {}
 							set packgen false
-							foreach zline [split $value {
-}] {
+							foreach zline [split $value "\n"] {
 								if { [string index "$zline" 0] == "	" } {
 									set zline [string replace "$zline" 0 0]
 								}
@@ -278,7 +277,7 @@ proc loadCfgLegacy { cfg } {
 												"mask" $mask \
 												"offset" $offset \
 												"action_data" $action_data \
-											]
+												]
 
 											addFilterIfcRule $object $ifname $rule_num $ruleline
 										}
@@ -513,10 +512,13 @@ proc loadCfgLegacy { cfg } {
 							set conn_list ""
 							set cset_list ""
 							set conn_name ""
-							foreach zline [split $value {
-}] {
+							foreach zline [split $value "\n"] {
 								set zline [string trimleft "$zline"]
-								if { [string first "ca_cert" $zline] != -1 || [string first "local_cert" $zline] != -1 || [string first "local_key_file" $zline] != -1 } {
+								if {
+									[string first "ca_cert" $zline] != -1 ||
+									[string first "local_cert" $zline] != -1 ||
+									[string first "local_key_file" $zline] != -1
+								} {
 									lappend cfg $zline
 									cfgSet $dict_object $object "ipsec" [lindex $zline 0] [lindex $zline end]
 								} elseif { [string first "ipsec-logging" $zline] != -1 } {
@@ -581,8 +583,7 @@ proc loadCfgLegacy { cfg } {
 							cfgUnset $dict_object $field
 							set cfg ""
 
-							foreach zline [split $value {
-}] {
+							foreach zline [split $value "\n"] {
 								if { [string index "$zline" 0] == "	" } {
 									set zline [string replace "$zline" 0 0]
 								}
@@ -599,8 +600,7 @@ proc loadCfgLegacy { cfg } {
 								set cfg ""
 								set config [lindex [lindex $value $x+2] 3]
 								set empty 0
-								set config_split [split $config {
-}]
+								set config_split [split $config "\n"]
 								set config_split [lrange $config_split 1 end-1]
 								set line1 [lindex $config_split 0]
 								set empty [expr {[string length $line1]-\
@@ -666,8 +666,7 @@ proc loadCfgLegacy { cfg } {
 						}
 						events {
 							set cfg ""
-							foreach zline [split $value {
-}] {
+							foreach zline [split $value "\n"] {
 								if { [string index "$zline" 0] == "	" } {
 									set zline [string replace "$zline" 0 0]
 								}
@@ -775,8 +774,7 @@ proc loadCfgLegacy { cfg } {
 						}
 						events {
 							set cfg ""
-							foreach zline [split $value {
-}] {
+							foreach zline [split $value "\n"] {
 								if { [string index "$zline" 0] == "	" } {
 									set zline [string replace "$zline" 0 0]
 								}
@@ -994,9 +992,10 @@ proc loadCfgLegacy { cfg } {
 			unsetRunning "${node_id}_running"
 		}
 
-		if { $node_type ni [concat $all_modules_list "pseudo extelem extnat"] && \
-			! [string match "router.*" $node_type] } {
-
+		if {
+			$node_type ni [concat $all_modules_list "pseudo extelem extnat"] && 
+			! [string match "router.*" $node_type]
+		} {
 			set msg "Unknown node type: '$node_type'."
 			if { $execMode == "batch" } {
 				statline $msg
@@ -1009,9 +1008,11 @@ proc loadCfgLegacy { cfg } {
 			exit
 		}
 
-		if { $node_type != "extelem" && "lo0" ni [logIfacesNames $node_id] && \
-			[$node_type.netlayer] == "NETWORK" } {
-
+		if {
+			$node_type != "extelem" &&
+			"lo0" ni [logIfacesNames $node_id] &&
+			[$node_type.netlayer] == "NETWORK"
+		} {
 			set logiface_id [newLogIface $node_id "lo"]
 			setIfcIPv4addrs $node_id $logiface_id "127.0.0.1/8"
 			setIfcIPv6addrs $node_id $logiface_id "::1/128"
@@ -1066,7 +1067,10 @@ proc loadCfgLegacy { cfg } {
 		}
 
 		# disable auto_default_routes if not explicitly enabled in old topologies
-		if { [cfgGet "nodes" $node_id "auto_default_routes"] == "" && [$node_type.netlayer] == "NETWORK" } {
+		if {
+			[cfgGet "nodes" $node_id "auto_default_routes"] == "" &&
+			[$node_type.netlayer] == "NETWORK"
+		} {
 			setAutoDefaultRoutesStatus $node_id "disabled"
 		}
 	}
@@ -1602,9 +1606,9 @@ proc jumpToUndoLevel { undolevel } {
 	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-	foreach list_var "canvas_list node_list link_list annotation_list image_list \
-		mac_used_list ipv4_used_list ipv6_used_list" {
-
+	set list_list "canvas_list node_list link_list annotation_list image_list \
+		mac_used_list ipv4_used_list ipv6_used_list"
+	foreach list_var $list_list {
 		setToRunning $list_var [dictGet $dict_run "undolog" $undolevel $list_var]
 	}
 
@@ -1621,9 +1625,8 @@ proc saveToUndoLevel { undolevel { value "" } } {
 		set value $dict_cfg
 	}
 
-	foreach list_var "canvas_list node_list link_list annotation_list image_list \
-		mac_used_list ipv4_used_list ipv6_used_list" {
-
+	set list_list "canvas_list node_list link_list annotation_list image_list mac_used_list ipv4_used_list ipv6_used_list" 
+	foreach list_var $list_list {
 		set dict_run [dictSet $dict_run "undolog" $undolevel $list_var [getFromRunning $list_var]]
 	}
 	set dict_run [dictSet $dict_run "undolog" $undolevel "config" $value]

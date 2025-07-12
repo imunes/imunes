@@ -1442,9 +1442,10 @@ proc xpos { tempfree x y width color } {
 		set b_y [lindex $all_dots [expr $i - 1]]
 		set c_x [lindex $all_dots $i]
 		set c_y [lindex $all_dots [expr $i + 1]]
-		if { [expr abs(($a_x + $c_x) / 2 - $b_x)] < $d &&
-			[expr abs(($a_y + $c_y) / 2 - $b_y)] < $d } {
-
+		if {
+			[expr abs(($a_x + $c_x) / 2 - $b_x)] < $d &&
+			[expr abs(($a_y + $c_y) / 2 - $b_y)] < $d
+		} {
 			set all_dots [lreplace $all_dots [expr $i - 2] [expr $i - 1]]
 			incr len -2
 		}

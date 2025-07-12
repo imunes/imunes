@@ -119,9 +119,12 @@ proc showCfgPopup { c node_id title x y } {
 		set newY [expr {$vy2-$height-$shift}]
 	}
 
-	if { $nodeX > [expr {$newX-$shift}] && $nodeX < [expr {$newX+$width+$shift}] && \
-		$nodeY > [expr {$newY-$shift}] && $nodeY < [expr {$newY+$height+$shift}] } {
-
+	if {
+		$nodeX > [expr {$newX-$shift}] &&
+		$nodeX < [expr {$newX+$width+$shift}] &&
+		$nodeY > [expr {$newY-$shift}] &&
+		$nodeY < [expr {$newY+$height+$shift}]
+	} {
 		return
 	}
 
@@ -203,10 +206,11 @@ proc showRoute { c node2_id } {
 			set node1_id $selected
 
 			#Draw route only if both nodes work on network layer
-			if { $node1_id != $node2_id && \
-				[[getNodeType $node1_id].netlayer] == "NETWORK" && \
-				[[getNodeType $node2_id].netlayer] == "NETWORK" } {
-
+			if {
+				$node1_id != $node2_id &&
+				[[getNodeType $node1_id].netlayer] == "NETWORK" &&
+				[[getNodeType $node2_id].netlayer] == "NETWORK"
+			} {
 				#User notification
 				set line "Please wait. Route is being calculated."
 				.bottom.textbox config -text "$line"

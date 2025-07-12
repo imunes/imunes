@@ -166,7 +166,10 @@ proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
 #****
 proc $MODULE.generateConfig { node_id } {
 	set cfg {}
-	if { [getCustomEnabled $node_id] != true || [getCustomConfigSelected $node_id "NODE_CONFIG"] in "\"\" DISABLED" } {
+	if {
+		[getCustomEnabled $node_id] != true ||
+		[getCustomConfigSelected $node_id "NODE_CONFIG"] in "\"\" DISABLED"
+	} {
 		foreach protocol { rip ripng ospf ospf6 } {
 			set cfg [concat $cfg [getRouterProtocolCfg $node_id $protocol]]
 		}
