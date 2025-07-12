@@ -20,6 +20,7 @@ UNAME_S = $(shell uname -s)
 VROOT_EXISTS = $(shell [ -d /var/imunes/vroot ] && echo 1 || echo 0 )
 SERVICEDIR=/usr/local/etc/rc.d
 STARTUPDIR=/var/imunes-service
+LOGDIR=/var/log/imunes
 
 BASEFILES =	COPYRIGHT README.md VERSION
 CONFIGFILES =	$(wildcard config/*.tcl)
@@ -53,6 +54,7 @@ info:
 all: install vroot
 
 install: uninstall netgraph
+	mkdir -p $(LOGDIR)
 	mkdir -p $(IMUNESDIR)
 	cp $(BASEFILES) $(IMUNESDIR)
 	ROOTDIR=$(PREFIX) sh scripts/update_version.sh

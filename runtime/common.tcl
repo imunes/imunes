@@ -621,7 +621,7 @@ proc pipesExec { line args } {
     global debug
 
     if { $debug && $line != "" } {
-	set logfile "/tmp/[getFromRunning "eid"].log"
+	set logfile "/var/log/imunes/[getFromRunning "eid"].log"
 
 	pipesExecNoLog "printf \"RUN: \" >> $logfile ; cat >> $logfile 2>&1 <<\"IMUNESEOF\"\n$line\nIMUNESEOF" "hold"
 	pipesExecNoLog "$line >> $logfile 2>&1" "$args"
