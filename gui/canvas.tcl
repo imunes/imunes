@@ -506,36 +506,37 @@ proc changeBkgPopup {} {
 	pack $wi.bgconf.left.center -fill both -padx 10
 	pack $wi.bgconf.left.center.left $wi.bgconf.left.center.right -side left -anchor n -padx 2
 
-
 	ttk::entry $wi.bgconf.left.center.left.e -width 35 -textvariable bkgFile
-	ttk::button $wi.bgconf.left.center.right.b -text "Browse" -width 8 \
-		-command {
-			set fType {
-				{{All Images} {.gif}  {}}
-				{{All Images} {.png}  {}}
-				{{Gif Images} {.gif}  {}}
-				{{PNG Images} {.png} {}}
-			}
-			#{{All Images} {.jpeg} {}}
-			#{{All Images} {.jpg}  {}}
-			#{{All Images} {.bmp}  {}}
-			#{{All Images} {.tiff} {}}
-			#{{Jpeg Images} {.jpg} {}}
-			#{{Jpeg Images} {.jpeg} {}}
-			#{{Bitmap Images} {.bmp} {}}
-			#{{Tiff Images} {.tiff} {}}
-			global canvasBkgMode wi
 
-			set chbgdialog .chbgDialog
-			set prevcanvas $wi.bgconf.right.pc
-			set imgsize $wi.bgconf.right.l2
-			set bgsrcfile [tk_getOpenFile -parent $chbgdialog -filetypes $fType]
-			$wi.bgconf.left.center.left.e delete 0 end
-			$wi.bgconf.left.center.left.e insert 0 "$bgsrcfile"
-			if { $bgsrcfile != "" } {
-				updateBkgPreview $prevcanvas $imgsize $bgsrcfile
-			}
+	set tmp_command {
+		set fType {
+			{{All Images} {.gif}  {}}
+			{{All Images} {.png}  {}}
+			{{Gif Images} {.gif}  {}}
+			{{PNG Images} {.png} {}}
+		}
+		#{{All Images} {.jpeg} {}}
+		#{{All Images} {.jpg}  {}}
+		#{{All Images} {.bmp}  {}}
+		#{{All Images} {.tiff} {}}
+		#{{Jpeg Images} {.jpg} {}}
+		#{{Jpeg Images} {.jpeg} {}}
+		#{{Bitmap Images} {.bmp} {}}
+		#{{Tiff Images} {.tiff} {}}
+		global canvasBkgMode wi
+
+		set chbgdialog .chbgDialog
+		set prevcanvas $wi.bgconf.right.pc
+		set imgsize $wi.bgconf.right.l2
+		set bgsrcfile [tk_getOpenFile -parent $chbgdialog -filetypes $fType]
+		$wi.bgconf.left.center.left.e delete 0 end
+		$wi.bgconf.left.center.left.e insert 0 "$bgsrcfile"
+		if { $bgsrcfile != "" } {
+			updateBkgPreview $prevcanvas $imgsize $bgsrcfile
+		}
 	}
+	ttk::button $wi.bgconf.left.center.right.b -text "Browse" -width 8 \
+		-command $tmp_command
 
 	if { $bgsrcfile != "" } {
 		set prevcanvas $wi.bgconf.right.pc
@@ -639,12 +640,21 @@ proc changeBkgPopup {} {
 		popupBkgApply $chbgdialog $cc
 	}
 	ttk::button $wi.buttons.cancel -text "Cancel" -command "destroy $chbgdialog"
-	ttk::button $wi.buttons.remove -text "Remove background" -command \
-		 "removeCanvasBkg $cc;
-		  if { \"[getCanvasBkg $cc]\" != \"\" } {
-			  removeImageReference [getCanvasBkg $cc] $cc
-		  }
-		  destroy $chbgdialog; redrawAll; set changed 1; updateUndoLog"
+	set tmp_command [list apply {
+		{ cc canvas_bkg chbgdialog }
+		{
+			removeCanvasBkg $cc
+			if { $canvas_bkg != "" } {
+				removeImageReference $canvas_bkg $cc
+			}
+			destroy $chbgdialog; redrawAll; set changed 1; updateUndoLog
+		}
+	} \
+		$cc \
+		[getCanvasBkg $cc] \
+		$chbgdialog
+	]
+	ttk::button $wi.buttons.remove -text "Remove background" -command $tmp_command
 	pack $wi.buttons.remove $wi.buttons.cancel $wi.buttons.apply -side right -expand 1
 
 	bind $chbgdialog <Key-Return> "popupBkgApply $chbgdialog $cc"

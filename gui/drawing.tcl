@@ -814,13 +814,24 @@ proc changeIconPopup {} {
 	$tree column type -width 90 -stretch 0 -minwidth 90
 	focus $tree
 
-	foreach file [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] {
-		set filename [lindex [split $file /] end]
-		$tree insert {} end -id $file -text $filename -values [list "library icon"] \
-			-tags "$file"
-		$tree tag bind $file <1> \
-		  "updateIconPreview $prevcan $wi.iconconf.right.l2 $file
-		   set iconsrcfile \"$file\""
+	foreach file_path [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] {
+		set file_name [lindex [split $file_path /] end]
+		$tree insert {} end -id $file_path -text $file_name -values [list "library icon"] \
+			-tags "$file_path"
+
+		set tmp_command [list apply {
+			{ prevcan wi file_path } {
+				global iconsrcfile
+
+				updateIconPreview $prevcan $wi.iconconf.right.l2 $file_path
+				set iconsrcfile $file_path
+			}
+		} \
+			$prevcan \
+			$wi \
+			$file_path
+		]
+		$tree tag bind $file_path <1> $tmp_command
 	}
 
 	set image_list [getFromRunning "image_list"]
@@ -830,23 +841,58 @@ proc changeIconPopup {} {
 
 			$tree insert {} end -id $img -text $img -values [list "custom icon"] \
 				-tags "$img"
-			$tree tag bind $img <1> \
-			  "updateIconPreview $prevcan $wi.iconconf.right.l2 $img
-			   set iconsrcfile $img"
+
+			set tmp_command [list apply {
+				{ prevcan wi img } {
+					global iconsrcfile
+
+					updateIconPreview $prevcan $wi.iconconf.right.l2 $img
+					set iconsrcfile $img
+				}
+			} \
+				$prevcan \
+				$wi \
+				$img
+			]
+			$tree tag bind $img <1> $tmp_command
 		}
 	}
 
-	foreach file [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] {
-		$tree tag bind $file <Key-Up> \
-			"if { ! [string equal {} [$tree prev $file]] } {
-				updateIconPreview $prevcan $wi.iconconf.right.l2 [$tree prev $file]
-				set iconsrcfile [$tree prev $file]
-			 }"
-		$tree tag bind $file <Key-Down> \
-			"if { ! [string equal {} [$tree next $file]] } {
-				updateIconPreview $prevcan $wi.iconconf.right.l2 [$tree next $file]
-				set iconsrcfile [$tree next $file]
-			 }"
+	foreach file_path [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] {
+		set previous_file [$tree prev $file_path]
+		set next_file [$tree next $file_path]
+
+		set tmp_command [list apply {
+			{ prevcan wi file_path } {
+				global iconsrcfile
+
+				if { $file_path != "" } {
+					updateIconPreview $prevcan $wi.iconconf.right.l2 $file_path
+					set iconsrcfile $file_path
+				}
+			}
+		} \
+			$prevcan \
+			$wi \
+			$previous_file
+		]
+		$tree tag bind $file_path <Key-Up> $tmp_command
+
+		set tmp_command [list apply {
+			{ prevcan wi file_path } {
+				global iconsrcfile
+
+				if { $file_path != "" } {
+					updateIconPreview $prevcan $wi.iconconf.right.l2 $file_path
+					set iconsrcfile $file_path
+				}
+			}
+		} \
+			$prevcan \
+			$wi \
+			$next_file
+		]
+		$tree tag bind $file_path <Key-Down> $tmp_command
 	}
 
 	set first [lindex [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] 0]
@@ -854,19 +900,44 @@ proc changeIconPopup {} {
 	$tree focus $first
 
 	foreach img $image_list {
-		if { $img != "" && [string match "*img*" $img] == 1 && \
-		  [getImageType $img] == "customIcon" } {
+		set previous_img [$tree prev $img]
+		set next_img [$tree next $img]
 
-			$tree tag bind $img <Key-Up> \
-				"if { ! [string equal {} [$tree prev $img]] } {
-					updateIconPreview $prevcan $wi.iconconf.right.l2 [$tree prev $img]
-					set iconsrcfile [$tree prev $img]
-				}"
-			$tree tag bind $img <Key-Down> \
-				"if { ! [string equal {} [$tree next $img]] } {
-					updateIconPreview $prevcan $wi.iconconf.right.l2 [$tree next $img]
-					set iconsrcfile [$tree next $img]
-				}"
+		if {
+			$img != "" && [string match "*image*" $img] == 1 &&
+			[getImageType $img] == "customIcon"
+		} {
+			set tmp_command [list apply {
+				{ prevcan wi img } {
+					global iconsrcfile
+
+					if { $img != "" } {
+						updateIconPreview $prevcan $wi.iconconf.right.l2 $img
+						set iconsrcfile $img
+					}
+				}
+			} \
+				$prevcan \
+				$wi \
+				$previous_img
+			]
+			$tree tag bind $img <Key-Up> $tmp_command
+
+			set tmp_command [list apply {
+				{ prevcan wi img } {
+					global iconsrcfile
+
+					if { $img != "" } {
+						updateIconPreview $prevcan $wi.iconconf.right.l2 $img
+						set iconsrcfile $img
+					}
+				}
+			} \
+				$prevcan \
+				$wi \
+				$next_img
+			]
+			$tree tag bind $img <Key-Down> $tmp_command
 		}
 	}
 
@@ -884,49 +955,52 @@ proc changeIconPopup {} {
 		-side left -anchor n -padx 2
 
 	ttk::entry $wi.iconconf.left.down.left.e -width 25 -textvariable iconFile
-	ttk::button $wi.iconconf.left.down.right.b -text "Browse" -width 8 \
-		-command {
-			set fType {
-				{{All Images} {.gif}  {}}
-				{{All Images} {.png}  {}}
-				{{Gif Images} {.gif}  {}}
-				{{PNG Images} {.png} {}}
-			}
-			#{{All Images} {.jpeg} {}}
-			#{{All Images} {.jpg}  {}}
-			#{{All Images} {.bmp}  {}}
-			#{{All Images} {.tiff} {}}
-			#{{All Images} {.ico}  {}}
-			#{{Jpeg Images} {.jpg} {}}
-			#{{Jpeg Images} {.jpeg} {}}
-			#{{Bitmap Images} {.bmp} {}}
-			#{{Tiff Images} {.tiff} {}}
-			#{{Icon Images} {.ico} {}}
-			global canvasBkgMode wi
-			set chicondialog .chiconDialog
-			set prevcan $wi.iconconf.right.pc
-			set imgsize $wi.iconconf.right.l2
-			set iconsrcfile [tk_getOpenFile -parent $chicondialog -filetypes $fType]
-			$wi.iconconf.left.down.left.e delete 0 end
-			$wi.iconconf.left.down.left.e insert 0 "$iconsrcfile"
-			if { $iconsrcfile != "" } {
-				image create photo iconprev -file $iconsrcfile
-				set image_h [image height iconprev]
-				set image_w [image width iconprev]
-				image delete iconprev
-				if { $image_h > 100 || $image_w > 100 } {
-					set iconsrcfile ""
-					$wi.iconconf.left.down.left.e delete 0 end
-					$wi.iconconf.left.down.left.e insert 0 "$iconsrcfile"
-					$imgsize configure -text "Size:"
-					tk_dialog .dialog1 "IMUNES error" \
+
+	set tmp_command {
+		set fType {
+			{{All Images} {.gif}  {}}
+			{{All Images} {.png}  {}}
+			{{Gif Images} {.gif}  {}}
+			{{PNG Images} {.png} {}}
+		}
+		#{{All Images} {.jpeg} {}}
+		#{{All Images} {.jpg}  {}}
+		#{{All Images} {.bmp}  {}}
+		#{{All Images} {.tiff} {}}
+		#{{All Images} {.ico}  {}}
+		#{{Jpeg Images} {.jpg} {}}
+		#{{Jpeg Images} {.jpeg} {}}
+		#{{Bitmap Images} {.bmp} {}}
+		#{{Tiff Images} {.tiff} {}}
+		#{{Icon Images} {.ico} {}}
+		global canvasBkgMode wi
+
+		set chicondialog .chiconDialog
+		set prevcan $wi.iconconf.right.pc
+		set imgsize $wi.iconconf.right.l2
+		set iconsrcfile [tk_getOpenFile -parent $chicondialog -filetypes $fType]
+		$wi.iconconf.left.down.left.e delete 0 end
+		$wi.iconconf.left.down.left.e insert 0 "$iconsrcfile"
+		if { $iconsrcfile != "" } {
+			image create photo iconprev -file $iconsrcfile
+			set image_h [image height iconprev]
+			set image_w [image width iconprev]
+			image delete iconprev
+			if { $image_h > 100 || $image_w > 100 } {
+				set iconsrcfile ""
+				$wi.iconconf.left.down.left.e delete 0 end
+				$wi.iconconf.left.down.left.e insert 0 "$iconsrcfile"
+				$imgsize configure -text "Size:"
+				tk_dialog .dialog1 "IMUNES error" \
 					"Error: Icon dimensions can't be bigger than 100x100. This image is $image_w*$image_h." \
 					info 0 Dismiss
-					return
-				}
-				updateIconPreview $prevcan $imgsize $iconsrcfile
+				return
 			}
+			updateIconPreview $prevcan $imgsize $iconsrcfile
+		}
 	}
+	ttk::button $wi.iconconf.left.down.right.b -text "Browse" -width 8 \
+		-command $tmp_command
 
 	if { $iconsrcfile != "" } {
 		set prevcan $wi.iconconf.right.pc
@@ -1087,15 +1161,16 @@ proc selectZoomPopupMenu { x y } {
 	set sel_zoom [getFromRunning "zoom"]
 
 	foreach z $zoom_stops {
-		.button3menu add radiobutton -label [expr {int($z*100)}] \
-		  -variable sel_zoom -value $z \
-		  -command {
-			  setToRunning "zoom" $sel_zoom
+		set tmp_command {
+			setToRunning "zoom" $sel_zoom
 
-			  redrawAll
-			  set changed 1
-			  updateUndoLog
-		  }
+			redrawAll
+			set changed 1
+			updateUndoLog
+		}
+		.button3menu add radiobutton -label [expr {int($z*100)}] \
+			-variable sel_zoom -value $z \
+			-command $tmp_command
 	}
 
 	set x [winfo pointerx .]

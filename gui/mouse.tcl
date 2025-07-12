@@ -681,18 +681,28 @@ proc button3node { c x y } {
 	.button3menu.connect add cascade -label "Selected" \
 		-menu .button3menu.connect.selected
 	.button3menu.connect.selected add command \
-		-label "Chain" -command "P \[selectedRealNodes\]"
+		-label "Chain" -command { P [selectedRealNodes] }
+
+	set tmp_command [list apply {
+		{ node_id } {
+			Kb $node_id [removeFromList [selectedRealNodes $node_id]]
+		}
+	} \
+		$node_id
+	]
 	.button3menu.connect.selected add command \
-		-label "Star" \
-		-command "Kb $node_id \[lsearch -all -inline -not -exact \
-			\[selectedRealNodes\] $node_id\]"
+		-label "Star" -command $tmp_command
 	.button3menu.connect.selected add command \
-		-label "Cycle" -command "C \[selectedRealNodes\]"
+		-label "Cycle" -command { C [selectedRealNodes] }
 	.button3menu.connect.selected add command \
-		-label "Clique" -command "K \[selectedRealNodes\]"
+		-label "Clique" -command { K [selectedRealNodes] }
+
+	set tmp_command {
+		set real_nodes [selectedRealNodes]
+		R $real_nodes [expr [llength $real_nodes] - 1]
+	}
 	.button3menu.connect.selected add command \
-		-label "Random" -command "R \[selectedRealNodes\] \
-			\[expr \[llength \[selectedRealNodes\]\] - 1\]"
+		-label "Random" -command $tmp_command
 	.button3menu.connect add separator
 
 	foreach canvas_id $canvas_list {
@@ -801,9 +811,12 @@ proc button3node { c x y } {
 	#
 	.button3menu.moveto delete 0 end
 	if { $type != "pseudo" } {
-		.button3menu add cascade -label "Move to" \
+		.button3menu add cascade \
+			-label "Move to" \
 			-menu .button3menu.moveto
-		.button3menu.moveto add command -label "Canvas:" -state disabled
+
+		.button3menu.moveto add command \
+			-label "Canvas:" -state disabled
 
 		foreach canvas_id $canvas_list {
 			if { $canvas_id != $curcanvas } {
@@ -812,7 +825,8 @@ proc button3node { c x y } {
 					-command "moveToCanvas $canvas_id"
 			} else {
 				.button3menu.moveto add command \
-					-label [getCanvasName $canvas_id] -state disabled
+					-label [getCanvasName $canvas_id] \
+					-state disabled
 			}
 		}
 	}
@@ -821,7 +835,8 @@ proc button3node { c x y } {
 	# Merge two pseudo nodes / links
 	#
 	if { $type == "pseudo" && [getNodeCanvas $mirror_node] == $curcanvas } {
-		.button3menu add command -label "Merge" \
+		.button3menu add command \
+			-label "Merge" \
 			-command "mergeNodeGUI $node_id"
 	}
 
@@ -853,6 +868,70 @@ proc button3node { c x y } {
 		.button3menu add separator
 	}
 
+	set tmp_command [list apply {
+		{ action } {
+			foreach node_id [selectedNodes] {
+				if { [getNodeType $node_id] == "pseudo" } {
+					continue
+				}
+
+				if {
+					[getFromRunning ${node_id}_running] != true &&
+					($action in "node_destroy" ||
+					$action in "node_config node_unconfig node_reconfig" ||
+					$action in "ifaces_config ifaces_unconfig ifaces_reconfig")
+				} {
+					continue
+				}
+
+				switch -exact -- $action {
+					"node_create" {
+						if { [getFromRunning ${node_id}_running] != true } {
+							trigger_nodeCreate $node_id
+						}
+					}
+					"node_destroy" {
+						trigger_nodeDestroy $node_id
+					}
+					"node_recreate" {
+						trigger_nodeRecreate $node_id
+					}
+					"node_config" {
+						trigger_nodeConfig $node_id
+					}
+					"node_unconfig" {
+						trigger_nodeUnconfig $node_id
+					}
+					"node_reconfig" {
+						trigger_nodeReconfig $node_id
+					}
+					"ifaces_config" {
+						foreach iface_id [allIfcList $node_id] {
+							trigger_ifaceConfig $node_id $iface_id
+						}
+					}
+					"ifaces_unconfig" {
+						foreach iface_id [allIfcList $node_id] {
+							trigger_ifaceUnconfig $node_id $iface_id
+						}
+					}
+					"ifaces_reconfig" {
+						foreach iface_id [allIfcList $node_id] {
+							trigger_ifaceReconfig $node_id $iface_id
+						}
+					}
+				}
+			}
+
+			undeployCfg
+			deployCfg
+
+			redrawAll
+		}
+	} \
+		""
+	]
+
 	#
 	# Node execution menu
 	#
@@ -862,42 +941,11 @@ proc button3node { c x y } {
 			-menu .button3menu.node_execute
 
 		.button3menu.node_execute add command -label "Start" \
-			-command "
-				foreach node_id \[selectedNodes\] {
-					if { \[getNodeType \$node_id] == \"pseudo\" } {
-						continue
-					}
-
-					if { \[getFromRunning \${node_id}_running] != true } {
-						trigger_nodeCreate \$node_id
-					}
-				}
-				undeployCfg ; deployCfg ; redrawAll
-			"
+			-command [lreplace $tmp_command end end "node_create"]
 		.button3menu.node_execute add command -label "Stop" \
-			-command "
-				foreach node_id \[selectedNodes\] {
-					if { \[getNodeType \$node_id] == \"pseudo\" } {
-						continue
-					}
-
-					if { \[getFromRunning \${node_id}_running] == true } {
-						trigger_nodeDestroy \$node_id
-					}
-				}
-				undeployCfg ; deployCfg ; redrawAll
-			"
+			-command [lreplace $tmp_command end end "node_destroy"]
 		.button3menu.node_execute add command -label "Restart" \
-			-command "
-				foreach node_id \[selectedNodes\] {
-					if { \[getNodeType \$node_id] == \"pseudo\" } {
-						continue
-					}
-
-					trigger_nodeRecreate \$node_id
-				}
-				undeployCfg ; deployCfg ; redrawAll
-			"
+			-command [lreplace $tmp_command end end "node_recreate"]
 	}
 
 	#
@@ -909,44 +957,11 @@ proc button3node { c x y } {
 			-menu .button3menu.node_config
 
 		.button3menu.node_config add command -label "Configure" \
-			-command "
-				foreach node_id \[selectedNodes\] {
-					if { \[getNodeType \$node_id] == \"pseudo\" } {
-						continue
-					}
-
-					if { \[getFromRunning \${node_id}_running] == true } {
-						trigger_nodeConfig \$node_id
-					}
-				}
-				undeployCfg ; deployCfg ; redrawAll
-			"
+			-command [lreplace $tmp_command end end "node_config"]
 		.button3menu.node_config add command -label "Unconfigure" \
-			-command "
-				foreach node_id \[selectedNodes\] {
-					if { \[getNodeType \$node_id] == \"pseudo\" } {
-						continue
-					}
-
-					if { \[getFromRunning \${node_id}_running] == true } {
-						trigger_nodeUnconfig \$node_id
-					}
-				}
-				undeployCfg ; deployCfg ; redrawAll
-			"
+			-command [lreplace $tmp_command end end "node_unconfig"]
 		.button3menu.node_config add command -label "Reconfigure" \
-			-command "
-				foreach node_id \[selectedNodes\] {
-					if { \[getNodeType \$node_id] == \"pseudo\" } {
-						continue
-					}
-
-					if { \[getFromRunning \${node_id}_running] == true } {
-						trigger_nodeReconfig \$node_id
-					}
-				}
-				undeployCfg ; deployCfg ; redrawAll
-			"
+			-command [lreplace $tmp_command end end "node_reconfig"]
 	}
 
 	#
@@ -958,50 +973,11 @@ proc button3node { c x y } {
 			-menu .button3menu.ifaces_config
 
 		.button3menu.ifaces_config add command -label "Configure" \
-			-command "
-				foreach node_id \[selectedNodes\] {
-					if { \[getNodeType \$node_id] == \"pseudo\" } {
-						continue
-					}
-
-					if { \[getFromRunning \${node_id}_running] == true } {
-						foreach iface_id \[allIfcList \$node_id\] {
-							trigger_ifaceConfig \$node_id \$iface_id
-						}
-					}
-				}
-				undeployCfg ; deployCfg ; redrawAll
-			"
+			-command [lreplace $tmp_command end end "ifaces_config"]
 		.button3menu.ifaces_config add command -label "Unconfigure" \
-			-command "
-				foreach node_id \[selectedNodes\] {
-					if { \[getNodeType \$node_id] == \"pseudo\" } {
-						continue
-					}
-
-					if { \[getFromRunning \${node_id}_running] == true } {
-						foreach iface_id \[allIfcList \$node_id\] {
-							trigger_ifaceUnconfig \$node_id \$iface_id
-						}
-					}
-				}
-				undeployCfg ; deployCfg ; redrawAll
-			"
+			-command [lreplace $tmp_command end end "ifaces_unconfig"]
 		.button3menu.ifaces_config add command -label "Reconfigure" \
-			-command "
-				foreach node_id \[selectedNodes\] {
-					if { \[getNodeType \$node_id] == \"pseudo\" } {
-						continue
-					}
-
-					if { \[getFromRunning \${node_id}_running] == true } {
-						foreach iface_id \[allIfcList \$node_id\] {
-							trigger_ifaceReconfig \$node_id \$iface_id
-						}
-					}
-				}
-				undeployCfg ; deployCfg ; redrawAll
-			"
+			-command [lreplace $tmp_command end end "ifaces_reconfig"]
 	}
 
 	if { $type != "pseudo" && [$type.netlayer] != "LINK" } {
@@ -1057,58 +1033,67 @@ proc button3node { c x y } {
 		# Remove IPv4/IPv6 addresses
 		#
 		.button3menu.sett add command -label "Remove IPv4 addresses" \
-			-command "removeIPv4Nodes \[selectedNodes\] *"
+			-command { removeIPv4Nodes [selectedNodes] * }
 		.button3menu.sett add command -label "Remove IPv6 addresses" \
-			-command "removeIPv6Nodes \[selectedNodes\] *"
+			-command { removeIPv6Nodes [selectedNodes] * }
+
+		#
+		# IP autorenumber
+		#
+		set tmp_command [list apply {
+			{ ip_version } {
+				if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+					setToExecuteVars "terminate_cfg" [cfgGet]
+				}
+
+				switch -exact -- $ip_version {
+					"ipv4" {
+						global IPv4autoAssign
+
+						set tmp $IPv4autoAssign
+						set IPv4autoAssign 1
+						changeAddressRange
+						set IPv4autoAssign $tmp
+					}
+					"ipv6" {
+						global IPv6autoAssign
+
+						set tmp $IPv6autoAssign
+						set IPv6autoAssign 1
+						changeAddressRange6
+						set IPv6autoAssign $tmp
+					}
+				}
+
+				undeployCfg
+				deployCfg
+
+				.panwin.f1.c config -cursor left_ptr
+			}
+		} \
+			""
+		]
 
 		#
 		# IPv4 autorenumber
 		#
-		.button3menu.sett add command -label "IPv4 autorenumber" -command {
-			global IPv4autoAssign
-
-			if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
-				setToExecuteVars "terminate_cfg" [cfgGet]
-			}
-
-			set tmp $IPv4autoAssign
-			set IPv4autoAssign 1
-			changeAddressRange
-			set IPv4autoAssign $tmp
-
-			undeployCfg
-			deployCfg
-
-			.panwin.f1.c config -cursor left_ptr
-		}
+		.button3menu.sett add command \
+			-label "IPv4 autorenumber" \
+			-command [lreplace $tmp_command end end "ipv4"]
 
 		#
 		# IPv6 autorenumber
 		#
-		.button3menu.sett add command -label "IPv6 autorenumber" -command {
-			global IPv6autoAssign
-
-			if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
-				setToExecuteVars "terminate_cfg" [cfgGet]
-			}
-
-			set tmp $IPv6autoAssign
-			set IPv6autoAssign 1
-			changeAddressRange6
-			set IPv6autoAssign $tmp
-
-			undeployCfg
-			deployCfg
-
-			.panwin.f1.c config -cursor left_ptr
-		}
-
-		.button3menu add cascade -label "Interface settings" \
-			-menu .button3menu.iface_settings
+		.button3menu.sett add command \
+			-label "IPv6 autorenumber" \
+			-command [lreplace $tmp_command end end "ipv6"]
 
 		#
 		# Interface settings
 		#
+		.button3menu add cascade -label "Interface settings" \
+			-menu .button3menu.iface_settings
+
 		.button3menu.iface_settings delete 0 end
 
 		set ifaces {}
@@ -2069,14 +2054,24 @@ proc button3background { c x y } {
 	#
 	# Remove canvas background
 	#
-	.button3menu add command -label "Remove background" \
-		-command "removeCanvasBkg $curcanvas;
-			if { \"[getCanvasBkg $curcanvas]\" !=\"\" } {
-				removeImageReference [getCanvasBkg $curcanvas] $curcanvas
+	set tmp_command [list apply {
+		{ curcanvas canvas_bkg } {
+			removeCanvasBkg $curcanvas
+			if { $canvas_bkg != "" } {
+				removeImageReference $canvas_bkg $curcanvas
 			}
-			redrawAll;
-			set changed 1;
-			updateUndoLog"
+
+			redrawAll
+			set changed 1
+			updateUndoLog
+		}
+	} \
+		$curcanvas \
+		[getCanvasBkg $curcanvas]
+	]
+	.button3menu add command \
+		-label "Remove background" \
+		-command $tmp_command
 
 	.button3menu.canvases delete 0 end
 
@@ -2086,19 +2081,36 @@ proc button3background { c x y } {
 	if { [llength $canvas_list] == 1 } {
 		set mode disabled
 	}
-	.button3menu add cascade -label "Set background from:" -menu $m -underline 0 -state $mode
+
+	.button3menu add cascade \
+		-label "Set background from:" \
+		-menu $m \
+		-underline 0 \
+		-state $mode
+
 	foreach c $canvas_list {
 		set canv_name [getCanvasName $c]
-		set canv_bkg [getCanvasBkg $c]
+		set canvas_bkg [getCanvasBkg $c]
 		set curcanvas_size [getCanvasSize $curcanvas]
 		set othercanvsize [getCanvasSize $c]
 		if { $curcanvas != $c && $curcanvas_size == $othercanvsize } {
-			$m add command -label "$canv_name" \
-				-command "setCanvasBkg $curcanvas $canv_bkg;
-					setImageReference $canv_bkg $curcanvas
-					redrawAll;
-					set changed 1;
-					updateUndoLog"
+
+			set tmp_command [list apply {
+				{ curcanvas canvas_bkg } {
+					setCanvasBkg $curcanvas $canvas_bkg
+					setImageReference $canvas_bkg $curcanvas
+
+					redrawAll
+					set changed 1
+					updateUndoLog
+				}
+			} \
+				$curcanvas \
+				$canvas_bkg
+			]
+			$m add command \
+				-label "$canv_name" \
+				-command $tmp_command
 		}
 	}
 
@@ -2127,6 +2139,7 @@ proc setDefaultIcon {} {
 		removeCustomIcon $node_id
 		removeImageReference $icon $node_id
 	}
+
 	redrawAll
 	set changed 1
 	updateUndoLog

@@ -255,10 +255,16 @@ proc configGUI_addTree { wi node_id } {
 			-text [join [lrange $column 1 end]]
 	}
 
-	$wi.panwin.f1.tree heading #0 -command \
-		"if { [lsearch [pack slaves .popup] .popup.nbook] != -1 } {
-			.popup.nbook configure -width 808
-		}"
+	set tmp_command [list apply {
+		{ present } {
+			if { $present != -1 } {
+				.popup.nbook configure -width 808
+			}
+		}
+	} \
+		[lsearch [pack slaves .popup] .popup.nbook]
+	]
+	$wi.panwin.f1.tree heading #0 -command $tmp_command
 	$wi.panwin.f1.tree heading #0 -text "(Expand)"
 
 	#Creating new items
@@ -337,16 +343,24 @@ proc configGUI_addTree { wi node_id } {
 	$wi.panwin.f1.tree tag bind physIfcFrame <Key-Up> \
 		"configGUI_showIfcInfo $wi.panwin.f2 0 $node_id physIfcFrame"
 
-	$wi.panwin.f1.tree tag bind physIfcFrame <Key-Down> \
-		"if { [llength $iface_list] != 0 } {
-			configGUI_showIfcInfo $wi.panwin.f2 0 $node_id [lindex $sorted_iface_list 0]
-		}"
+	set tmp_command [list apply {
+		{ wi sorted_iface_list node_id } {
+			if { [llength $sorted_iface_list] != 0 } {
+				configGUI_showIfcInfo $wi.panwin.f2 0 $node_id [lindex $sorted_iface_list 0]
+			}
+		}
+	} \
+		$wi \
+		$sorted_iface_list \
+		$node_id
+	]
+	$wi.panwin.f1.tree tag bind physIfcFrame <Key-Down> $tmp_command
 
 	#binding for tags $iface_id
 	foreach iface_id $sorted_iface_list {
 		$wi.panwin.f1.tree tag bind $iface_id <1> \
-			"$wi.panwin.f1.tree focus $iface_id
-			$wi.panwin.f1.tree selection set $iface_id
+			"$wi.panwin.f1.tree focus $iface_id; \
+			$wi.panwin.f1.tree selection set $iface_id; \
 			configGUI_showIfcInfo $wi.panwin.f2 0 $node_id $iface_id"
 
 		#pathname prev item:
@@ -355,12 +369,20 @@ proc configGUI_addTree { wi node_id } {
 		#configGUI_showIfcInfo jednak prethodnom djetetu (prethodno sucelje)
 		#Inace se radi o itemu Interfaces pa je zadnji argument procedure configGUI_showIfcInfo jednak "" i
 		#u tom slucaju se iz donjeg panea brise frame s informacijama o prethodnom sucelju
-		$wi.panwin.f1.tree tag bind $iface_id <Key-Up> \
-			"if { ! [string equal {} [$wi.panwin.f1.tree prev $iface_id]] } {
-				configGUI_showIfcInfo $wi.panwin.f2 0 $node_id [$wi.panwin.f1.tree prev $iface_id]
-			} else {
-				configGUI_showIfcInfo $wi.panwin.f2 0 $node_id physIfcFrame
-			}"
+		set tmp_command [list apply {
+			{ wi node_id previous_iface } {
+				if { $previous_iface != "" } {
+					configGUI_showIfcInfo $wi.panwin.f2 0 $node_id $previous_iface
+				} else {
+					configGUI_showIfcInfo $wi.panwin.f2 0 $node_id physIfcFrame
+				}
+			}
+		} \
+			$wi \
+			$node_id \
+			[$wi.panwin.f1.tree prev $iface_id]
+		]
+		$wi.panwin.f1.tree tag bind $iface_id <Key-Up> $tmp_command
 
 		$wi.panwin.f1.tree tag bind $iface_id <3> \
 			"showPhysIfcMenu $iface_id"
@@ -370,10 +392,18 @@ proc configGUI_addTree { wi node_id } {
 		#Ako sucelje $iface_id nije zadnje dijete svog roditelja onda je zadnji argument procedure
 		#configGUI_showIfcInfo jednak iducem djetetu (iduce sucelje)
 		#Inace se ne poziva procedura configGUI_showIfcInfo
-		$wi.panwin.f1.tree tag bind $iface_id <Key-Down> \
-			"if { ! [string equal {} [$wi.panwin.f1.tree next $iface_id]] } {
-				configGUI_showIfcInfo $wi.panwin.f2 0 $node_id [$wi.panwin.f1.tree next $iface_id]
-			}"
+		set tmp_command [list apply {
+			{ wi node_id next_iface } {
+				if { $next_iface != "" } {
+					configGUI_showIfcInfo $wi.panwin.f2 0 $node_id $next_iface
+				}
+			}
+		} \
+			$wi \
+			$node_id \
+			[$wi.panwin.f1.tree next $iface_id]
+		]
+		$wi.panwin.f1.tree tag bind $iface_id <Key-Down> $tmp_command
 	}
 
 	if { [[_getNodeType $node_cfg].virtlayer] == "VIRTUALIZED" } {
@@ -389,28 +419,45 @@ proc configGUI_addTree { wi node_id } {
 
 		foreach iface_id $sorted_logiface_list {
 			$wi.panwin.f1.tree tag bind $iface_id <1> \
-				"$wi.panwin.f1.tree focus $iface_id
-				$wi.panwin.f1.tree selection set $iface_id
+				"$wi.panwin.f1.tree focus $iface_id; \
+				$wi.panwin.f1.tree selection set $iface_id; \
 				configGUI_showIfcInfo $wi.panwin.f2 0 $node_id $iface_id"
 
 			$wi.panwin.f1.tree tag bind $iface_id <3> \
 				"showLogIfcMenu $iface_id"
 
-			$wi.panwin.f1.tree tag bind $iface_id <Key-Up> \
-				"if { ! [string equal {} [$wi.panwin.f1.tree prev $iface_id]] } {
-					configGUI_showIfcInfo $wi.panwin.f2 0 $node_id [$wi.panwin.f1.tree prev $iface_id]
-				} else {
-					configGUI_showIfcInfo $wi.panwin.f2 0 $node_id logIfcFrame
-				}"
+			set tmp_command [list apply {
+				{ wi node_id previous_iface } {
+					if { $previous_iface != "" } {
+						configGUI_showIfcInfo $wi.panwin.f2 0 $node_id $previous_iface
+					} else {
+						configGUI_showIfcInfo $wi.panwin.f2 0 $node_id logIfcFrame
+					}
+				}
+			} \
+				$wi \
+				$node_id \
+				[$wi.panwin.f1.tree prev $iface_id]
+			]
+			$wi.panwin.f1.tree tag bind $iface_id <Key-Up> $tmp_command
 
-			$wi.panwin.f1.tree tag bind $iface_id <Key-Down> \
-				"if { ! [string equal {} [$wi.panwin.f1.tree next $iface_id]] } {
-					configGUI_showIfcInfo $wi.panwin.f2 0 $node_id [$wi.panwin.f1.tree next $iface_id]
-				}"
+			set tmp_command [list apply {
+				{ wi node_id next_iface } {
+					if { $next_iface != "" } {
+						configGUI_showIfcInfo $wi.panwin.f2 0 $node_id $next_iface
+					}
+				}
+			} \
+				$wi \
+				$node_id \
+				[$wi.panwin.f1.tree next $iface_id]
+			]
+			$wi.panwin.f1.tree tag bind $iface_id <Key-Down> $tmp_command
 		}
 	}
 
 	pack $wi.panwin.f1.grid -fill both -expand 1
+
 	grid $wi.panwin.f1.tree $wi.panwin.f1.vscroll -in $wi.panwin.f1.grid -sticky nsew
 	grid $wi.panwin.f1.hscroll -in $wi.panwin.f1.grid -sticky nsew
 	grid columnconfig $wi.panwin.f1.grid 0 -weight 1
@@ -590,32 +637,56 @@ proc configGUI_refreshIfcsTree { wi node_id } {
 		"configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id physIfcFrame"
 	$wi tag bind physIfcFrame <Key-Up> \
 		"configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id physIfcFrame"
-	$wi tag bind physIfcFrame <Key-Down> \
-		"if { [llength $iface_list] != 0 } {
-			configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id [lindex $sorted_iface_list 0]
-		}"
+
+	set tmp_command [list apply {
+		{ wi sorted_iface_list node_id } {
+			if { [llength $sorted_iface_list] != 0 } {
+				configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id [lindex $sorted_iface_list 0]
+			}
+		}
+	} \
+		$wi_bind \
+		$sorted_iface_list \
+		$node_id
+	]
+	$wi tag bind physIfcFrame <Key-Down> $tmp_command
 
 	foreach iface_id $sorted_iface_list {
 		$wi tag bind $iface_id <1> \
-			"$wi focus $iface_id
+			"$wi focus $iface_id; \
+			$wi selection set $iface_id; \
+			configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id $iface_id"
 
-				$wi selection set $iface_id
-				configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id $iface_id"
-
-		$wi tag bind $iface_id <Key-Up> \
-			"if { ! [string equal {} [$wi prev $iface_id]] } {
-				configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id [$wi prev $iface_id]
-			} else {
-				configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id physIfcFrame
-			}"
+		set tmp_command [list apply {
+			{ wi node_id previous_iface } {
+				if { $previous_iface != "" } {
+					configGUI_showIfcInfo $wi.panwin.f2 0 $node_id $previous_iface
+				} else {
+					configGUI_showIfcInfo $wi.panwin.f2 0 $node_id physIfcFrame
+				}
+			}
+		} \
+			$wi_bind \
+			$node_id \
+			[$wi prev $iface_id]
+		]
+		$wi tag bind $iface_id <Key-Up> $tmp_command
 
 		$wi tag bind $iface_id <3> \
 			"showPhysIfcMenu $iface_id"
 
-		$wi tag bind $iface_id <Key-Down> \
-			"if { ! [string equal {} [$wi next $iface_id]] } {
-				configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id [$wi next $iface_id]
-			}"
+		set tmp_command [list apply {
+			{ wi node_id next_iface } {
+				if { $next_iface != "" } {
+					configGUI_showIfcInfo $wi.panwin.f2 0 $node_id $next_iface
+				}
+			}
+		} \
+			$wi_bind \
+			$node_id \
+			[$wi next $iface_id]
+		]
+		$wi tag bind $iface_id <Key-Down> $tmp_command
 	}
 
 	if { [[_getNodeType $node_cfg].virtlayer] == "VIRTUALIZED" } {
@@ -631,23 +702,40 @@ proc configGUI_refreshIfcsTree { wi node_id } {
 
 		foreach iface_id $sorted_logiface_list {
 			$wi tag bind $iface_id <1> \
-				"$wi focus $iface_id
-				$wi selection set $iface_id
+				"$wi focus $iface_id; \
+				$wi selection set $iface_id; \
 				configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id $iface_id"
 
 			$wi tag bind $iface_id <3> \
 				"showLogIfcMenu $iface_id"
 
-			$wi tag bind $iface_id <Key-Up> \
-				"if { ! [string equal {} [$wi prev $iface_id]] } {
-					configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id [$wi prev $iface_id]
-				} else {
-					configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id logIfcFrame
-				}"
-			$wi tag bind $iface_id <Key-Down> \
-				"if { ! [string equal {} [$wi next $iface_id]] } {
-					configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id [$wi next $iface_id]
-				}"
+			set tmp_command [list apply {
+				{ wi node_id previous_iface } {
+					if { $previous_iface != "" } {
+						configGUI_showIfcInfo $wi.panwin.f2 0 $node_id $previous_iface
+					} else {
+						configGUI_showIfcInfo $wi.panwin.f2 0 $node_id logIfcFrame
+					}
+				}
+			} \
+				$wi_bind \
+				$node_id \
+				[$wi prev $iface_id]
+			]
+			$wi tag bind $iface_id <Key-Up> $tmp_command
+
+			set tmp_command [list apply {
+				{ wi node_id next_iface } {
+					if { $next_iface != "" } {
+						configGUI_showIfcInfo $wi.panwin.f2 0 $node_id $next_iface
+					}
+				}
+			} \
+				$wi_bind \
+				$node_id \
+				[$wi next $iface_id]
+			]
+			$wi tag bind $iface_id <Key-Down> $tmp_command
 		}
 	}
 }
@@ -736,7 +824,6 @@ proc configGUI_showIfcInfo { wi phase node_id iface_id } {
 
 			[string trimright $wi .f2].f1.tree selection set $iface_id
 			[string trimright $wi .f2].f1.tree focus $iface_id
-
 		} else {
 			#if user selected Cancel the in popup about saving changes on previously selected interface,
 			#set focus and selection on that interface whose parameters are already shown
@@ -1245,7 +1332,9 @@ proc configGUI_applyButtonNode { wi node_id phase } {
 			if { [lindex $guielement 0] == "configGUI_addRj45PanedWin" } {
 				[lindex $guielement 0]\Apply [lindex $guielement 1]
 			} elseif { [lindex $guielement 0] == "configGUI_ifcBridgeAttributes" } {
-				[lindex $guielement 0]\Apply [lindex [.popup.nbook tabs] 2].panwin.f2 $node_id [lindex $guielement 1]
+				if { [lindex $guielement 1] != "physIfcFrame" } {
+					[lindex $guielement 0]\Apply [lindex [.popup.nbook tabs] 2].panwin.f2 $node_id [lindex $guielement 1]
+				}
 			} else {
 				[lindex $guielement 0]\Apply [lindex [.popup.nbook tabs] 1].panwin.f2 $node_id [lindex $guielement 1]
 			}
@@ -1851,16 +1940,26 @@ proc configGUI_addRj45PanedWin { wi node_id } {
 
 	ttk::frame $wi.vlancfg -borderwidth 2 -relief groove
 	ttk::label $wi.vlancfg.label -text "Vlan:" -anchor w
-	ttk::checkbutton $wi.vlancfg.enabled -text "enabled" -variable vlanEnable_$iface_id \
-		-command "
+
+	set tmp_command [list apply {
+		{ wi iface_id } {
 			global vlanEnable_$iface_id
 
-			if { \$vlanEnable_$iface_id } {
+			if { [set vlanEnable_$iface_id] } {
 				$wi.vlancfg.tag configure -state enabled
 			} else {
 				$wi.vlancfg.tag configure -state disabled
 			}
-		"
+		}
+	} \
+		$wi \
+		$iface_id
+	]
+	ttk::checkbutton $wi.vlancfg.enabled \
+		-text "enabled" \
+		-variable vlanEnable_$iface_id \
+		-command $tmp_command
+
 	ttk::label $wi.vlancfg.tagtxt -text "Vlan tag:" -anchor w
 	ttk::spinbox $wi.vlancfg.tag -width 6 -validate focus \
 		-invalidcommand "focusAndFlash %W"
@@ -1937,27 +2036,39 @@ proc configGUI_customConfig { wi node_id } {
 			set defaultConfig "DISABLED"
 		}
 		$o.cb set $defaultConfig
-		bind $o.cb <<ComboboxSelected>> \
-		"
-			global node_cfg
 
-			set defaultConfig \[$o.cb get\]
-			if { \$defaultConfig == \"DISABLED\" } {
-				set defaultConfig {}
+		set tmp_command [list apply {
+			{ gui_element hook } {
+				global node_cfg
+
+				set defaultConfig [$gui_element.cb get]
+				if { $defaultConfig == "DISABLED" } {
+					set defaultConfig {}
+				}
+
+				set node_cfg [_setCustomConfigSelected $node_cfg $hook $defaultConfig]
 			}
+		} \
+			$o \
+			$hook
+		]
+		bind $o.cb <<ComboboxSelected>> $tmp_command
 
-			set node_cfg \[_setCustomConfigSelected \$node_cfg $hook \$defaultConfig\]
-		"
+		set tmp_command [list apply {
+			{ gui_element node_id hook } {
+				global node_cfg custom_node_cfg selected_hook
 
-		ttk::button $o.beditor -text "Editor" -command \
-		"
-			global node_cfg custom_node_cfg selected_hook
+				set custom_node_cfg $node_cfg
+				set selected_hook $hook
 
-			set custom_node_cfg \$node_cfg
-			set selected_hook $hook
-
-			customConfigGUI $wi $node_id
-		"
+				customConfigGUI $gui_element $node_id
+			}
+		} \
+			$o \
+			$node_id \
+			$hook
+		]
+		ttk::button $o.beditor -text "Editor" -command $tmp_command
 
 		grid $o.ld -sticky w -column 0 -row 0
 		grid $o.cb -row 0 -column 1 -sticky we -padx 5
@@ -2066,52 +2177,64 @@ proc configGUI_routingModel { wi node_id } {
 	ttk::frame $w.protocols -padding 2
 	ttk::label $w.protocols.label -text "Protocols:"
 
-	ttk::checkbutton $w.protocols.rip -text "rip" -variable ripEnable
-	ttk::checkbutton $w.protocols.ripng -text "ripng" -variable ripngEnable
-	ttk::checkbutton $w.protocols.ospf -text "ospfv2" -variable ospfEnable
-	ttk::checkbutton $w.protocols.ospf6 -text "ospfv3" -variable ospf6Enable
-	ttk::checkbutton $w.protocols.bgp -text "bgp" -variable bgpEnable
-	ttk::checkbutton $w.protocols.ldp -text "ldp" -variable ldpEnable
-	ttk::radiobutton $w.model.frr -text frr \
-		-variable router_ConfigModel -value frr -command \
-			"$w.protocols.rip configure -state normal;
-			$w.protocols.ripng configure -state normal;
-			$w.protocols.ospf configure -state normal;
-			$w.protocols.ospf6 configure -state normal;
-			$w.protocols.bgp configure -state normal;
-			$w.protocols.ldp configure -state normal"
-	ttk::radiobutton $w.model.quagga -text quagga \
-		-variable router_ConfigModel -value quagga -command \
-			"$w.protocols.rip configure -state normal;
-			$w.protocols.ripng configure -state normal;
-			$w.protocols.ospf configure -state normal;
-			$w.protocols.ospf6 configure -state normal;
-			$w.protocols.bgp configure -state normal;
-			$w.protocols.ldp configure -state normal"
-	ttk::radiobutton $w.model.static -text static \
-		-variable router_ConfigModel -value static -command \
-			"$w.protocols.rip configure -state disabled;
-			$w.protocols.ripng configure -state disabled;
-			$w.protocols.ospf configure -state disabled;
-			$w.protocols.ospf6 configure -state disabled;
-			$w.protocols.bgp configure -state disabled;
-			$w.protocols.ldp configure -state disabled"
+	set protocols {
+		"rip rip ripEnable"
+		"ripng ripng ripngEnable"
+		"ospf ospf ospfEnable"
+		"ospf6 ospfv3 ospfv3Enable"
+		"bgp bgp bgpEnable"
+		"ldp ldp ldpEnable"
+	}
+
+	set protocol_list {}
+	foreach item $protocols {
+		lassign $item protocol protocol_label protocol_variable 
+		lappend protocol_list $protocol
+		ttk::checkbutton $w.protocols.$protocol \
+			-text $protocol_label \
+			-variable $protocol_variable
+	}
+
+	set tmp_command [list apply {
+		{ popup_window protocol_list state } {
+			foreach protocol $protocol_list {
+				$popup_window.protocols.$protocol configure -state $state
+			}
+		}
+	} \
+		$w \
+		$protocol_list \
+		""
+	]
+
+	ttk::radiobutton $w.model.frr \
+		-text frr \
+		-variable router_ConfigModel \
+		-value frr \
+		-command [lreplace $tmp_command end end "normal"]
+
+	ttk::radiobutton $w.model.quagga \
+		-text quagga \
+		-variable router_ConfigModel \
+		-value quagga \
+		-command [lreplace $tmp_command end end "normal"]
+
+	ttk::radiobutton $w.model.static \
+		-text static \
+		-variable router_ConfigModel \
+		-value static \
+		-command [lreplace $tmp_command end end "disabled"]
 
 	set router_ConfigModel [_getNodeModel $node_cfg]
 	if { $router_ConfigModel != "static" } {
-		set ripEnable [_getNodeProtocol $node_cfg "rip"]
-		set ripngEnable [_getNodeProtocol $node_cfg "ripng"]
-		set ospfEnable [_getNodeProtocol $node_cfg "ospf"]
-		set ospf6Enable [_getNodeProtocol $node_cfg "ospf6"]
-		set bgpEnable [_getNodeProtocol $node_cfg "bgp"]
-		set ldpEnable [_getNodeProtocol $node_cfg "ldp"]
+		foreach item $protocols {
+			lassign $item protocol protocol_label protocol_variable 
+			set $protocol_variable [_getNodeProtocol $node_cfg $protocol]
+		}
 	} else {
-		$w.protocols.rip configure -state disabled
-		$w.protocols.ripng configure -state disabled
-		$w.protocols.ospf configure -state disabled
-		$w.protocols.ospf6 configure -state disabled
-		$w.protocols.bgp configure -state disabled
-		$w.protocols.ldp configure -state disabled
+		foreach protocol $protocol_list {
+			$w.protocols.$protocol configure -state "disabled"
+		}
 	}
 
 	if { [_getNodeType $node_cfg] == "nat64" } {
@@ -2127,10 +2250,13 @@ proc configGUI_routingModel { wi node_id } {
 		-side left -padx 6
 	pack $w.model -fill both -expand 1
 	pack $w.protocols.label -side left -padx 2
-	pack $w.protocols.rip $w.protocols.ripng \
-		$w.protocols.ospf $w.protocols.ospf6 \
-		$w.protocols.bgp $w.protocols.ldp \
-		-side left -padx 6
+
+	set protocols_to_pack {}
+	foreach protocol $protocol_list {
+		lappend protocols_to_pack $w.protocols.$protocol
+	}
+	pack {*}$protocols_to_pack -side left -padx 6
+
 	pack $w.protocols -fill both -expand 1
 	pack $w -fill both
 }
@@ -3371,32 +3497,35 @@ proc customConfigGUI { parent_wi node_id } {
 	}
 	$o.cb set $defaultConfig
 
-	ttk::button $b.apply -text "Apply" -command \
-	"
-		global selected_hook
+	set tmp_command [list apply {
+		{ parent_wi wi node_id is_apply is_close } {
+			global custom_node_cfg selected_hook
 
-		customConfigGUI_Apply $wi $node_id \$selected_hook
-		resetCustomConfigFields $parent_wi $node_id
-	"
+			if { $is_apply } {
+				customConfigGUI_Apply $wi $node_id $selected_hook
+				resetCustomConfigFields $parent_wi $node_id
+			}
+
+			if { $is_close } {
+				set custom_node_cfg {}
+				destroy $wi
+			}
+		}
+	} \
+		$parent_wi \
+		$wi \
+		$node_id \
+		"" \
+		""
+	]
+	ttk::button $b.apply -text "Apply" -command \
+		[lreplace $tmp_command end-1 end 1 0]
 
 	ttk::button $b.applyClose -text "Apply and Close" -command \
-	"
-		global custom_node_cfg selected_hook
-
-		customConfigGUI_Apply $wi $node_id \$selected_hook
-		resetCustomConfigFields $parent_wi $node_id
-
-		set custom_node_cfg {}
-		destroy $wi
-	"
+		[lreplace $tmp_command end-1 end 1 1]
 
 	ttk::button $b.cancel -text "Cancel" -command \
-	"
-		global custom_node_cfg
-
-		set custom_node_cfg {}
-		destroy $wi
-	"
+		[lreplace $tmp_command end-1 end 0 1]
 
 	pack $wi.options -side top -fill both
 	pack $wi.nb -fill both -expand 1
@@ -5065,6 +5194,10 @@ proc configGUI_ifcBridgeAttributes { wi node_id iface_id } {
 
 	global node_cfg
 
+	if { $iface_id ni [_allIfcList $node_cfg] } {
+		return
+	}
+
 	catch { destroy $wi.pad }
 	ttk::frame $wi.if$iface_id.bridge -borderwidth 2
 
@@ -5591,6 +5724,9 @@ proc configGUI_addBridgeTree { wi node_id } {
 	#
 	set cancel 0
 
+	set iface_list [_ifcList $node_cfg]
+	set sorted_iface_list [lsort -ascii $iface_list]
+
 	ttk::frame $wi.panwin.f1.grid
 	ttk::treeview $wi.panwin.f1.tree -height 5 -selectmode browse \
 		-xscrollcommand "$wi.panwin.f1.hscroll set"\
@@ -5634,10 +5770,17 @@ proc configGUI_addBridgeTree { wi node_id } {
 			-text [join [lrange $column 1 end]]
 	}
 
-	$wi.panwin.f1.tree heading #0 \
-		-command "if { [lsearch [pack slaves .popup] .popup.nbook] != -1 } {
-					  .popup.nbook configure -width 845
-				  }"
+	set tmp_command [list apply {
+		{ nbook } {
+			if { $nbook != -1 } {
+				.popup.nbook configure -width 845
+			}
+		}
+	} \
+		[lsearch [pack slaves .popup] .popup.nbook]
+	]
+	$wi.panwin.f1.tree heading #0 -command $tmp_command
+
 	$wi.panwin.f1.tree heading #0 -text "(Expand)"
 
 	#Creating new items
@@ -5646,7 +5789,7 @@ proc configGUI_addBridgeTree { wi node_id } {
 	$wi.panwin.f1.tree focus physIfcFrame
 	$wi.panwin.f1.tree selection set physIfcFrame
 
-	foreach iface_id [lsort -dictionary [_ifcList $node_cfg]] {
+	foreach iface_id $sorted_iface_list {
 		$wi.panwin.f1.tree insert physIfcFrame end -id $iface_id -text "[_getIfcName $node_cfg $iface_id]" \
 			-tags $iface_id
 		foreach column $brtreecolumns {
@@ -5679,14 +5822,14 @@ proc configGUI_addBridgeTree { wi node_id } {
 	#configGUI_showIfcInfo with that interfaces as the second argument
 	global selectedIfc
 
-	if { [_ifcList $node_cfg] != "" && $selectedIfc == "" } {
-		$wi.panwin.f1.tree focus [lindex [lsort -ascii [_ifcList $node_cfg]] 0]
+	if { $iface_list != "" && $selectedIfc == "" } {
+		$wi.panwin.f1.tree focus [lindex $sorted_iface_list 0]
 		$wi.panwin.f1.tree selection set \
-			[lindex [lsort -ascii [_ifcList $node_cfg]] 0]
+			[lindex $sorted_iface_list 0]
 		set cancel 0
 		configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node_id \
-			[lindex [lsort -ascii [_ifcList $node_cfg]] 0]
-	} elseif { [_ifcList $node_cfg] == "" } {
+			[lindex $sorted_iface_list 0]
+	} elseif { $iface_list == "" } {
 		configGUI_ifcBridgeGap $wi.panwin.f2 173
 		configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node_id ""
 
@@ -5694,7 +5837,7 @@ proc configGUI_addBridgeTree { wi node_id } {
 		$wi.panwin.f1.tree focus physIfcFrame
 	}
 
-	if { [_ifcList $node_cfg] != "" && $selectedIfc != "" } {
+	if { $iface_list != "" && $selectedIfc != "" } {
 		$wi.panwin.f1.tree focus $selectedIfc
 		$wi.panwin.f1.tree selection set $selectedIfc
 		set cancel 0
@@ -5708,18 +5851,26 @@ proc configGUI_addBridgeTree { wi node_id } {
 	$wi.panwin.f1.tree tag bind physIfcFrame <Key-Up> \
 		"configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node_id physIfcFrame"
 
-	$wi.panwin.f1.tree tag bind physIfcFrame <Key-Down> \
-		"if { [llength [_ifcList $node_cfg]] != 0 } {
-			configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node_id \
-				[lindex [lsort -ascii [_ifcList $node_cfg]] 0]
-		}"
+	set tmp_command [list apply {
+		{ wi sorted_iface_list node_id } {
+			if { [llength $sorted_iface_list] != 0 } {
+				configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node_id [lindex $sorted_iface_list 0]
+			}
+		}
+	} \
+		$wi \
+		$sorted_iface_list \
+		$node_id
+	]
+	$wi.panwin.f1.tree tag bind physIfcFrame <Key-Down> $tmp_command
 
 	#binding for tags $iface_id
-	foreach iface_id [lsort -dictionary [_ifcList $node_cfg]] {
+	foreach iface_id $sorted_iface_list {
 		$wi.panwin.f1.tree tag bind $iface_id <1> \
-			"$wi.panwin.f1.tree focus $iface_id
-			$wi.panwin.f1.tree selection set $iface_id
+			"$wi.panwin.f1.tree focus $iface_id; \
+			$wi.panwin.f1.tree selection set $iface_id; \
 			configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node_id $iface_id"
+
 		#pathname prev item:
 		#Returns the identifier of item's previous sibling, or {} if item is the
 		#first child of its parent. Ako sucelje $iface_id nije prvo dijete svog
@@ -5728,24 +5879,40 @@ proc configGUI_addBridgeTree { wi node_id } {
 		#Interfaces pa je zadnji argument procedure configGUI_showIfcInfo
 		#jednak "" i u tom slucaju se iz donjeg panea brise frame s
 		#informacijama o prethodnom sucelju.
-		$wi.panwin.f1.tree tag bind $iface_id <Key-Up> \
-			"if { ! [string equal {} [$wi.panwin.f1.tree prev $iface_id]] } {
-				configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node_id \
-					[$wi.panwin.f1.tree prev $iface_id]
-			} else {
-				configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node_id physIfcFrame
-			}"
+		#
+		set tmp_command [list apply {
+			{ wi node_id previous_iface } {
+				if { $previous_iface != "" } {
+					configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node_id $previous_iface
+				} else {
+					configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node_id physIfcFrame
+				}
+			}
+		} \
+			$wi \
+			$node_id \
+			[$wi.panwin.f1.tree prev $iface_id]
+		]
+		$wi.panwin.f1.tree tag bind $iface_id <Key-Up> $tmp_command
+
 		#pathname next item:
 		#Returns the identifier of item's next sibling, or {} if item is the
 		#last child of its parent. Ako sucelje $iface_id nije zadnje dijete svog
 		#roditelja onda je zadnji argument procedure configGUI_showIfcInfo
 		#jednak iducem djetetu (iduce sucelje). Inace se ne poziva procedura
 		#configGUI_showIfcInfo.
-		$wi.panwin.f1.tree tag bind $iface_id <Key-Down> \
-			"if { ! [string equal {} [$wi.panwin.f1.tree next $iface_id]] } {
-				configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node_id \
-					[$wi.panwin.f1.tree next $iface_id]
-			}"
+		set tmp_command [list apply {
+			{ wi node_id next_iface } {
+				if { $next_iface != "" } {
+					configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node_id $next_iface
+				}
+			}
+		} \
+			$wi \
+			$node_id \
+			[$wi.panwin.f1.tree next $iface_id]
+		]
+		$wi.panwin.f1.tree tag bind $iface_id <Key-Down> $tmp_command
 	}
 
 	pack $wi.panwin.f1.grid -fill both -expand 1
@@ -5815,18 +5982,27 @@ proc configGUI_refreshBridgeIfcsTree { wi node_id } {
 		"configGUI_showBridgeIfcInfo $bridge_wi.panwin.f2 0 $node_id physIfcFrame"
 	$wi tag bind physIfcFrame <Key-Up> \
 		"configGUI_showBridgeIfcInfo $bridge_wi.panwin.f2 0 $node_id physIfcFrame"
-	$wi tag bind physIfcFrame <Key-Down> \
-		"if { [llength [_ifcList $node_cfg]] != 0 } {
-			configGUI_showBridgeIfcInfo $bridge_wi.panwin.f2 0 $node_id \
-			[lindex [lsort -ascii [_ifcList $node_cfg]] 0]
-		}"
+
+	set tmp_command [list apply {
+		{ wi sorted_iface_list node_id } {
+			if { [llength $sorted_iface_list] != 0 } {
+				configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node_id [lindex $sorted_iface_list 0]
+			}
+		}
+	} \
+		$bridge_wi \
+		$sorted_iface_list \
+		$node_id
+	]
+	$wi tag bind physIfcFrame <Key-Down> $tmp_command
 
 	#binding for tags $iface_id
 	foreach iface_id [lsort -dictionary [_ifcList $node_cfg]] {
 		$wi tag bind $iface_id <1> \
-			"$wi focus $iface_id
-			$wi selection set $iface_id
+			"$wi focus $iface_id; \
+			$wi selection set $iface_id; \
 			configGUI_showBridgeIfcInfo $bridge_wi.panwin.f2 0 $node_id $iface_id"
+
 		#pathname prev item:
 		#Returns the identifier of item's previous sibling, or {} if item is the
 		#first child of its parent. Ako sucelje $iface_id nije prvo dijete svog
@@ -5835,24 +6011,39 @@ proc configGUI_refreshBridgeIfcsTree { wi node_id } {
 		#Interfaces pa je zadnji argument procedure configGUI_showIfcInfo
 		#jednak "" i u tom slucaju se iz donjeg panea brise frame s
 		#informacijama o prethodnom sucelju.
-		$wi tag bind $iface_id <Key-Up> \
-			"if { ! [string equal {} [$wi prev $iface_id]] } {
-				configGUI_showBridgeIfcInfo $bridge_wi.panwin.f2 0 $node_id \
-					[$wi prev $iface_id]
-			} else {
-				configGUI_showBridgeIfcInfo $bridge_wi.panwin.f2 0 $node_id physIfcFrame
-			}"
+		set tmp_command [list apply {
+			{ wi node_id previous_iface } {
+				if { $previous_iface != "" } {
+					configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node_id $previous_iface
+				} else {
+					configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node_id physIfcFrame
+				}
+			}
+		} \
+			$bridge_wi \
+			$node_id \
+			[$wi prev $iface_id]
+		]
+		$wi tag bind $iface_id <Key-Up> $tmp_command
+
 		#pathname next item:
 		#Returns the identifier of item's next sibling, or {} if item is the
 		#last child of its parent. Ako sucelje $iface_id nije zadnje dijete svog
 		#roditelja onda je zadnji argument procedure configGUI_showIfcInfo
 		#jednak iducem djetetu (iduce sucelje). Inace se ne poziva procedura
 		#configGUI_showIfcInfo.
-		$wi tag bind $iface_id <Key-Down> \
-			"if { ! [string equal {} [$wi next $iface_id]] } {
-				configGUI_showBridgeIfcInfo $bridge_wi.panwin.f2 0 $node_id \
-					[$wi next $iface_id]
-			}"
+		set tmp_command [list apply {
+			{ wi node_id next_iface } {
+				if { $next_iface != "" } {
+					configGUI_showBridgeIfcInfo $wi.panwin.f2 0 $node_id $next_iface
+				}
+			}
+		} \
+			$bridge_wi \
+			$node_id \
+			[$wi next $iface_id]
+		]
+		$wi tag bind $iface_id <Key-Down> $tmp_command
 	}
 }
 
@@ -5876,6 +6067,9 @@ proc configGUI_refreshBridgeIfcsTree { wi node_id } {
 proc configGUI_showBridgeIfcInfo { wi phase node_id iface_id } {
 	global guielements brguielements
 	global changed apply cancel badentry node_cfg
+
+	set all_iface_list [_allIfcList $node_cfg]
+
 	#
 	#shownifcframe - frame that is currently shown below the list of interfaces
 	#
@@ -5896,10 +6090,6 @@ proc configGUI_showBridgeIfcInfo { wi phase node_id iface_id } {
 				after 100 "configGUI_showBridgeIfcInfo $wi 1 $node_id \"\""
 			}
 
-			[string trimright $wi .f2].f1.tree selection set $iface_id
-			[string trimright $wi .f2].f1.tree focus $iface_id
-			$wi config -cursor left_ptr
-
 			return
 		} elseif { $badentry } {
 			[string trimright $wi .f2].f1.tree selection set $shownifc
@@ -5912,14 +6102,16 @@ proc configGUI_showBridgeIfcInfo { wi phase node_id iface_id } {
 		foreach guielement $brguielements {
 			#calling "apply" procedures to check if some parameters of
 			#previously selected interface have been changed
-			if { [llength $guielement] == 2 } {
+			if { [llength $guielement] == 2 && [lindex $guielement 1] in $all_iface_list } {
 				[lindex $guielement 0]\Apply $wi $node_id [lindex $guielement 1]
 			}
 		}
 
 		#creating popup window with warning about unsaved changes
 		if { $changed == 1 && $apply == 0 } {
-			configGUI_saveBridgeChangesPopup $wi $node_id $shownifc
+			if { $phase == 1 && $shownifc ni "\"\" physIfcFrame" } {
+				configGUI_saveBridgeChangesPopup $wi $node_id $shownifc
+			}
 		}
 
 		#if user didn't select Cancel in the popup about saving changes on
@@ -5942,6 +6134,8 @@ proc configGUI_showBridgeIfcInfo { wi phase node_id iface_id } {
 			#(shownifcframe)
 			destroy $shownifcframe
 
+			[string trimright $wi .f2].f1.tree selection set $iface_id
+			[string trimright $wi .f2].f1.tree focus $iface_id
 		} else {
 			#if user selected Cancel the in popup about saving changes on previously
 			#selected interface, set focus and selection on that interface whose
@@ -6041,84 +6235,46 @@ proc configGUI_addFilterPanedWin { wi } {
 	ttk::frame $wi.panwin.f2
 	ttk::frame $wi.panwin.f2.buttons
 
+	set tmp_command [list apply {
+		{ top_window add dup } {
+			global changed node_cfg
+
+			if { $add == -1 || $dup == -1 } {
+				set sel [configGUI_ifcRuleConfigDelete]
+			} else {
+				set sel [configGUI_ifcRuleConfigApply $add $dup]
+			}
+			if { $changed == 1 || $add == -1 || $dup == -1 } {
+				configGUI_refreshIfcRulesTree
+				set iface_id [_ifaceIdFromName $node_cfg [.popup.nbook tab current -text]]
+				if { $sel != "" } {
+					global curnode
+
+					$top_window.panwin.f1.tree focus $sel
+					$top_window.panwin.f1.tree selection set $sel
+
+					configGUI_showFilterIfcRuleInfo $top_window.panwin.f2 0 $curnode $iface_id $sel
+				}
+				set changed 0
+			}
+		}
+	} \
+		$wi \
+		"" \
+		""
+	]
+
 	ttk::button $wi.panwin.f2.buttons.addnew -text "Add new rule" \
-		-command {
-			global changed node_cfg
+		-command [lreplace $tmp_command end-1 end 1 0]
 
-			set sel [configGUI_ifcRuleConfigApply 1 0]
-			if { $changed == 1 } {
-				configGUI_refreshIfcRulesTree
-				set iface_id [_ifaceIdFromName $node_cfg [.popup.nbook tab current -text]]
-				set wi .popup.nbook.nf$iface_id
-				if { $sel != "" } {
-					global curnode
-
-					$wi.panwin.f1.tree focus $sel
-					$wi.panwin.f1.tree selection set $sel
-
-					configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $curnode $iface_id $sel
-				}
-				set changed 0
-			}
-		}
 	ttk::button $wi.panwin.f2.buttons.duprul -text "Duplicate rule" \
-		-command {
-			global changed node_cfg
+		-command [lreplace $tmp_command end-1 end 1 1]
 
-			set sel [configGUI_ifcRuleConfigApply 1 1]
-			if { $changed == 1 } {
-				configGUI_refreshIfcRulesTree
-				set iface_id [_ifaceIdFromName $node_cfg [.popup.nbook tab current -text]]
-				set wi .popup.nbook.nf$iface_id
-				if { $sel != "" } {
-					global curnode
-
-					$wi.panwin.f1.tree focus $sel
-					$wi.panwin.f1.tree selection set $sel
-
-					configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $curnode $iface_id $sel
-				}
-				set changed 0
-			}
-		}
 	ttk::button $wi.panwin.f2.buttons.savrul -text "Save rule" \
-		-command {
-			global node_cfg
-
-			set sel [configGUI_ifcRuleConfigApply 0 0]
-			if { $changed == 1 } {
-				configGUI_refreshIfcRulesTree
-				set iface_id [_ifaceIdFromName $node_cfg [.popup.nbook tab current -text]]
-				set wi .popup.nbook.nf$iface_id
-				if { $sel != "" } {
-					global curnode
-
-					$wi.panwin.f1.tree focus $sel
-					$wi.panwin.f1.tree selection set $sel
-
-					configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $curnode $iface_id $sel
-				}
-				set changed 0
-			}
-		}
+		-command [lreplace $tmp_command end-1 end 0 0]
 
 	ttk::button $wi.panwin.f2.buttons.delrul -text "Delete rule" \
-		-command {
-			global node_cfg
-
-			set sel [configGUI_ifcRuleConfigDelete]
-			configGUI_refreshIfcRulesTree
-			set iface_id [_ifaceIdFromName $node_cfg [.popup.nbook tab current -text]]
-			set wi .popup.nbook.nf$iface_id
-			if { $sel != "" } {
-				global curnode
-
-				$wi.panwin.f1.tree focus $sel
-				$wi.panwin.f1.tree selection set $sel
-			}
-
-			configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $curnode $iface_id $sel
-		}
+		-command [lreplace $tmp_command end-1 end -1 -1]
 
 	grid $wi.panwin.f2 -sticky nsew
 	grid $wi.panwin.f2.buttons -column 0
@@ -6262,20 +6418,32 @@ proc configGUI_addTreeFilter { wi node_id } {
 	#binding for tags $iface_id
 	foreach rule [lsort -integer [ifcFilterRuleList $node_id $iface_id]] {
 		$wi.panwin.f1.tree tag bind $rule <1> \
-		  "$wi.panwin.f1.tree focus $rule
-		   $wi.panwin.f1.tree selection set $rule
-		   configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $node_id $iface_id $rule"
+			"$wi.panwin.f1.tree focus $rule; \
+			$wi.panwin.f1.tree selection set $rule; \
+			configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $node_id $iface_id $rule"
+
+		set tmp_command [list apply {
+			{ wi node_id iface_id rule } {
+				if { $rule != "" } {
+					configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $node_id $iface_id $rule
+				}
+			}
+		} \
+			$wi \
+			$node_id \
+			$iface_id \
+			""
+		]
+
 		$wi.panwin.f1.tree tag bind $rule <Key-Up> \
-			"if { ! [string equal {} [$wi.panwin.f1.tree prev $rule]] } {
-				configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $node_id $iface_id [$wi.panwin.f1.tree prev $rule]
-			}"
+			[lreplace $tmp_command end end [$wi.panwin.f1.tree prev $rule]]
+
 		$wi.panwin.f1.tree tag bind $rule <Key-Down> \
-			"if { ! [string equal {} [$wi.panwin.f1.tree next $rule]] } {
-				configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $node_id $iface_id [$wi.panwin.f1.tree next $rule]
-			 }"
+			[lreplace $tmp_command end end [$wi.panwin.f1.tree next $rule]]
 	}
 
 	pack $wi.panwin.f1.grid -fill both -expand 1
+
 	grid $wi.panwin.f1.tree $wi.panwin.f1.vscroll -in $wi.panwin.f1.grid -sticky nsew
 	grid $wi.panwin.f1.hscroll -in $wi.panwin.f1.grid -sticky nsew
 	grid columnconfig $wi.panwin.f1.grid 0 -weight 1
@@ -6300,17 +6468,28 @@ proc configGUI_refreshIfcRulesTree {} {
 
 	foreach rule [lsort -integer [_ifcFilterRuleList $node_cfg $iface_id]] {
 		$wi.panwin.f1.tree tag bind $rule <1> \
-			"$wi.panwin.f1.tree focus $rule
-			$wi.panwin.f1.tree selection set $rule
+			"$wi.panwin.f1.tree focus $rule; \
+			$wi.panwin.f1.tree selection set $rule; \
 			configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $node_id $iface_id $rule"
+
+		set tmp_command [list apply {
+			{ wi node_id iface_id rule } {
+				if { $rule != "" } {
+					configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $node_id $iface_id $rule
+				}
+			}
+		} \
+			$wi \
+			$node_id \
+			$iface_id \
+			""
+		]
+
 		$wi.panwin.f1.tree tag bind $rule <Key-Up> \
-			"if { ! [string equal {} [$wi.panwin.f1.tree prev $rule]] } {
-				configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $node_id $iface_id [$wi.panwin.f1.tree prev $rule]
-			}"
+			[lreplace $tmp_command end end [$wi.panwin.f1.tree prev $rule]]
+
 		$wi.panwin.f1.tree tag bind $rule <Key-Down> \
-			"if { ! [string equal {} [$wi.panwin.f1.tree next $rule]] } {
-				configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $node_id $iface_id [$wi.panwin.f1.tree next $rule]
-			}"
+			[lreplace $tmp_command end end [$wi.panwin.f1.tree next $rule]]
 	}
 
 	set sorted [lsort -integer [_ifcFilterRuleList $node_cfg $iface_id]]
@@ -6877,78 +7056,49 @@ proc configGUI_addPackgenPanedWin { wi } {
 	ttk::frame $wi.panwin.f2
 	ttk::frame $wi.panwin.f2.buttons
 
-	ttk::button $wi.panwin.f2.buttons.addpac -text "Add new packet" \
-		-command {
+	set tmp_command [list apply {
+		{ top_window add dup } {
 			global changed
 
-			set sel [configGUI_packetConfigApply 1 0]
-			if { $changed == 1 } {
+			if { $add == -1 || $dup == -1 } {
+				set sel [configGUI_packetConfigDelete]
+			} else {
+				set sel [configGUI_packetConfigApply $add $dup]
+			}
+			if { $changed == 1 || $add == -1 || $dup == -1 } {
 				configGUI_refreshPacketsTree
 				if { $sel != "" } {
 					global curnode
 
-					set wi .popup.nbook.nfConfiguration
-					$wi.panwin.f1.tree focus $sel
-					$wi.panwin.f1.tree selection set $sel
+					$top_window.panwin.f1.tree focus $sel
+					$top_window.panwin.f1.tree selection set $sel
 
-					configGUI_showPacketInfo $wi.panwin.f2 0 $curnode $sel
+					configGUI_showPacketInfo $top_window.panwin.f2 0 $curnode $sel
 				}
 				set changed 0
 			}
 		}
-	ttk::button $wi.panwin.f2.buttons.duppac -text "Duplicate packet" \
-		-command {
-			global changed
+	} \
+		$wi \
+		"" \
+		""
+	]
 
-			set sel [configGUI_packetConfigApply 1 1]
-			if { $changed == 1 } {
-				configGUI_refreshPacketsTree
-				if { $sel != "" } {
-					global curnode
+	ttk::button $wi.panwin.f2.buttons.addpac \
+		-text "Add new packet" \
+		-command [lreplace $tmp_command end-1 end 1 0]
 
-					set wi .popup.nbook.nfConfiguration
-					$wi.panwin.f1.tree focus $sel
-					$wi.panwin.f1.tree selection set $sel
+	ttk::button $wi.panwin.f2.buttons.duppac \
+		-text "Duplicate packet" \
+		-command [lreplace $tmp_command end-1 end 1 1]
 
-					configGUI_showPacketInfo $wi.panwin.f2 0 $curnode $sel
-				}
-				set changed 0
-			}
-		}
-	ttk::button $wi.panwin.f2.buttons.savpac -text "Save packet" \
-		-command {
-			global changed
+	ttk::button $wi.panwin.f2.buttons.savpac \
+		-text "Save packet" \
+		-command [lreplace $tmp_command end-1 end 0 0]
 
-			set sel [configGUI_packetConfigApply 0 0]
-			if { $changed == 1 } {
-				configGUI_refreshPacketsTree
-				if { $sel != "" } {
-					global curnode
-
-					set wi .popup.nbook.nfConfiguration
-					$wi.panwin.f1.tree focus $sel
-					$wi.panwin.f1.tree selection set $sel
-
-					configGUI_showPacketInfo $wi.panwin.f2 0 $curnode $sel
-				}
-				set changed 0
-			}
-		}
-
-	ttk::button $wi.panwin.f2.buttons.delpac -text "Delete packet" \
-		-command {
-			set sel [configGUI_packetConfigDelete]
-			configGUI_refreshPacketsTree
-			set wi .popup.nbook.nfConfiguration
-			if { $sel != "" } {
-				global curnode
-
-				$wi.panwin.f1.tree focus $sel
-				$wi.panwin.f1.tree selection set $sel
-			}
-
-			configGUI_showPacketInfo $wi.panwin.f2 0 $curnode $sel
-		}
+	ttk::button $wi.panwin.f2.buttons.delpac \
+		-text "Delete packet" \
+		-command [lreplace $tmp_command end-1 end -1 -1]
 
 	grid $wi.panwin.f2 -sticky nsew
 	grid $wi.panwin.f2.buttons -column 0
@@ -7091,17 +7241,26 @@ proc configGUI_addTreePackgen { wi node_id } {
 	#binding for tags $iface_id
 	foreach packet_id $sorted {
 		$wi.panwin.f1.tree tag bind $packet_id <1> \
-		  "$wi.panwin.f1.tree focus $packet_id
-		   $wi.panwin.f1.tree selection set $packet_id
-		   configGUI_showPacketInfo $wi.panwin.f2 0 $node_id $packet_id"
+			"$wi.panwin.f1.tree focus $packet_id; \
+			$wi.panwin.f1.tree selection set $packet_id; \
+			configGUI_showPacketInfo $wi.panwin.f2 0 $node_id $packet_id"
+
+		set tmp_command [list apply {
+			{ wi node_id packet } {
+				if { $previous_packet != "" } {
+					configGUI_showPacketInfo $wi.panwin.f2 0 $node_id $packet
+				}
+			}
+		} \
+			$wi \
+			$node_id \
+			""
+		]
+
 		$wi.panwin.f1.tree tag bind $packet_id <Key-Up> \
-			"if { ! [string equal {} [$wi.panwin.f1.tree prev $packet_id]] } {
-				configGUI_showPacketInfo $wi.panwin.f2 0 $node_id [$wi.panwin.f1.tree prev $packet_id]
-			}"
+			[lreplace $tmp_command end end [$wi.panwin.f1.tree prev $packet_id]]
 		$wi.panwin.f1.tree tag bind $packet_id <Key-Down> \
-			"if { ! [string equal {} [$wi.panwin.f1.tree next $packet_id]] } {
-				configGUI_showPacketInfo $wi.panwin.f2 0 $node_id [$wi.panwin.f1.tree next $packet_id]
-			 }"
+			[lreplace $tmp_command end end [$wi.panwin.f1.tree next $packet_id]]
 	}
 
 	pack $wi.panwin.f1.grid -fill both -expand 1
@@ -7130,17 +7289,27 @@ proc configGUI_refreshPacketsTree {} {
 
 	foreach packet_id $sorted {
 		$wi.panwin.f1.tree tag bind $packet_id <1> \
-			"$wi.panwin.f1.tree focus $packet_id
-			$wi.panwin.f1.tree selection set $packet_id
+			"$wi.panwin.f1.tree focus $packet_id; \
+			$wi.panwin.f1.tree selection set $packet_id; \
 			configGUI_showPacketInfo $wi.panwin.f2 0 $node_id $packet_id"
+
+		set tmp_command [list apply {
+			{ wi node_id packet } {
+				if { $previous_packet != "" } {
+					configGUI_showPacketInfo $wi.panwin.f2 0 $node_id $packet
+				}
+			}
+		} \
+			$wi \
+			$node_id \
+			""
+		]
+
 		$wi.panwin.f1.tree tag bind $packet_id <Key-Up> \
-			"if { ! [string equal {} [$wi.panwin.f1.tree prev $packet_id]] } {
-				configGUI_showPacketInfo $wi.panwin.f2 0 $node_id [$wi.panwin.f1.tree prev $packet_id]
-			}"
+			[lreplace $tmp_command end end [$wi.panwin.f1.tree prev $packet_id]]
+
 		$wi.panwin.f1.tree tag bind $packet_id <Key-Down> \
-			"if { ! [string equal {} [$wi.panwin.f1.tree next $packet_id]] } {
-				configGUI_showPacketInfo $wi.panwin.f2 0 $node_id [$wi.panwin.f1.tree next $packet_id]
-			}"
+			[lreplace $tmp_command end end [$wi.panwin.f1.tree next $packet_id]]
 	}
 
 	set first [lindex $sorted 0]

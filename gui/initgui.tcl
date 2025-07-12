@@ -164,7 +164,7 @@ set routerBgpEnable 0
 set routerLdpEnable 0
 set rdconfig [list $routerRipEnable $routerRipngEnable $routerOspfEnable $routerOspf6Enable $routerBgpEnable $routerLdpEnable]
 set brguielements {}
-set selectedExperiment ""
+set selected_experiment ""
 set copypaste_nodes 0
 set cutNodes 0
 set iconsrcfile [lindex [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] 0]
@@ -243,8 +243,8 @@ bind . <Control-s> "fileSaveDialogBox"
 .menubar.file add command -label "Close" -underline 0 -command { closeFile }
 
 .menubar.file add separator
-.menubar.file add command -label "Print" -underline 0 \
-  -command {
+
+set tmp_command {
 	set w .entry1
 	catch { destroy $w }
 	toplevel $w
@@ -270,11 +270,12 @@ bind . <Control-s> "fileSaveDialogBox"
 	$w.printframe.e1 insert 0 "lpr"
 	pack $w.printframe.e1 -side top -pady 5 -padx 10 -fill x
 }
+.menubar.file add command -label "Print" -underline 0 \
+	-command $tmp_command
 
 set printFileType ps
 
-.menubar.file add command -label "Print To File" -underline 9 \
-  -command {
+set tmp_command {
 	global winOS
 
 	set w .entry1
@@ -292,31 +293,32 @@ set printFileType ps
 
 	ttk::frame $w.printframe.ftype
 	ttk::radiobutton $w.printframe.ftype.ps -text "PostScript" \
-	-variable printFileType -value ps -state enabled
+		-variable printFileType -value ps -state enabled
 	ttk::radiobutton $w.printframe.ftype.pdf -text "PDF" \
-	-variable printFileType -value pdf -state enabled
+		-variable printFileType -value pdf -state enabled
 
 	ttk::frame $w.printframe.path
 
 	if { $winOS } {
 		$w.printframe.ftype.pdf configure -state disabled
 	} else {
-	  catch { exec ps2pdf } msg
-	  if { [string match *ps2pdfwr* $msg] != 1 } {
-		  $w.printframe.ftype.pdf configure -state disabled
-	  }
+		catch { exec ps2pdf } msg
+		if { [string match *ps2pdfwr* $msg] != 1 } {
+			$w.printframe.ftype.pdf configure -state disabled
+		}
 	}
 
 	pack $w.printframe.msg -side top -fill x -padx 5
 
-	ttk::button $w.printframe.path.browse -text "Browse" -width 8 \
-		-command {
-			global printFileType
+	set tmp_command {
+		global printFileType
 
-			set printdest [tk_getSaveFile -initialfile print \
-			  -defaultextension .$printFileType]
-			$w.printframe.path.e1 insert 0 $printdest
-		}
+		set printdest [tk_getSaveFile -initialfile print \
+			-defaultextension .$printFileType]
+		$w.printframe.path.e1 insert 0 $printdest
+	}
+	ttk::button $w.printframe.path.browse -text "Browse" -width 8 \
+		-command $tmp_command
 
 	ttk::frame $w.printframe.buttons
 	pack $w.printframe.buttons -side bottom -fill x -pady 2m
@@ -331,6 +333,8 @@ set printFileType ps
 	pack $w.printframe.ftype -anchor w
 	pack $w.printframe.ftype.ps $w.printframe.ftype.pdf -side left -fill x -padx 10
 }
+.menubar.file add command -label "Print To File" -underline 9 \
+	-command $tmp_command
 
 .menubar.file add separator
 .menubar.file add command -label Quit -underline 0 -command { exit }
@@ -443,8 +447,8 @@ menu .menubar.tools -tearoff 0
 .menubar.tools add separator
 .menubar.tools add command -label "Randomize MAC bytes" -underline 10 \
 	-command randomizeMACbytes
-.menubar.tools add command -label "IPv4 address pool" -underline 3 \
-	-command {
+
+set tmp_command {
 	set w .entry1
 	catch { destroy $w }
 	toplevel $w
@@ -478,8 +482,9 @@ menu .menubar.tools -tearoff 0
 	pack $w.ipv4frame.buttons.apply -side left -expand 1 -anchor e -padx 2
 	pack $w.ipv4frame.buttons.cancel -side right -expand 1 -anchor w -padx 2
 }
-.menubar.tools add command -label "IPv6 address pool" -underline 3 \
-	-command {
+.menubar.tools add command -label "IPv4 address pool" -underline 3 \
+	-command $tmp_command
+set tmp_command {
 	set w .entry1
 	catch { destroy $w }
 	toplevel $w
@@ -512,7 +517,9 @@ menu .menubar.tools -tearoff 0
 	pack $w.ipv6frame.buttons.apply -side left -expand 1 -anchor e -padx 2
 	pack $w.ipv6frame.buttons.cancel -side right -expand 1 -anchor w -padx 2
 }
-.menubar.tools add command -label "Routing protocol defaults" -underline 0 -command {
+.menubar.tools add command -label "IPv6 address pool" -underline 3 \
+	-command $tmp_command
+set tmp_command {
 	global router_model supp_router_models routerDefaultsModel
 	global routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable routerBgpEnable routerLdpEnable
 
@@ -533,48 +540,49 @@ menu .menubar.tools -tearoff 0
 	ttk::labelframe $w.model -text "Model:"
 	ttk::labelframe $w.protocols -text "Protocols:"
 
-	ttk::checkbutton $w.protocols.rip -text "rip" -variable routerRipEnable
-	ttk::checkbutton $w.protocols.ripng -text "ripng" -variable routerRipngEnable
-	ttk::checkbutton $w.protocols.ospf -text "ospfv2" -variable routerOspfEnable
-	ttk::checkbutton $w.protocols.ospf6 -text "ospfv3" -variable routerOspf6Enable
-	ttk::checkbutton $w.protocols.bgp -text "bgp" -variable routerBgpEnable -state disabled
-	ttk::checkbutton $w.protocols.ldp -text "ldp" -variable routerLdpEnable -state disabled
+	set protocols {
+		"rip rip routerRipEnable"
+		"ripng ripng routerRipngEnable"
+		"ospf ospf routerOspfEnable"
+		"ospf6 ospfv3 routerOspf6Enable"
+		"bgp bgp routerBgpEnable"
+		"ldp ldp routerLdpEnable"
+	}
 
+	set protocol_list {}
+	foreach item $protocols {
+		lassign $item protocol protocol_label protocol_variable 
+		lappend protocol_list $protocol
+		ttk::checkbutton $w.protocols.$protocol \
+			-text $protocol_label \
+			-variable $protocol_variable
+	}
+
+	# set last argument as empty string
+	set tmp_command [list apply {
+		{ popup_window protocol_list state } {
+			foreach protocol $protocol_list {
+				$popup_window.protocols.$protocol configure -state $state
+			}
+		}
+	} \
+		$w \
+		$protocol_list \
+		""
+	]
+
+	# replace last argument for each binding
 	ttk::radiobutton $w.model.frr -text frr -variable router_model \
-		-value frr -command {
-		$w.protocols.rip configure -state normal
-		$w.protocols.ripng configure -state normal
-		$w.protocols.ospf configure -state normal
-		$w.protocols.ospf6 configure -state normal
-		$w.protocols.bgp configure -state disabled
-		$w.protocols.ldp configure -state disabled
-	}
+		-value frr -command [lreplace $tmp_command end end "normal"]
 	ttk::radiobutton $w.model.quagga -text quagga -variable router_model \
-		-value quagga -command {
-		$w.protocols.rip configure -state normal
-		$w.protocols.ripng configure -state normal
-		$w.protocols.ospf configure -state normal
-		$w.protocols.ospf6 configure -state normal
-		$w.protocols.bgp configure -state disabled
-		$w.protocols.ldp configure -state disabled
-	}
+		-value quagga -command [lreplace $tmp_command end end "normal"]
 	ttk::radiobutton $w.model.static -text static -variable router_model \
-		-value static -command {
-		$w.protocols.rip configure -state disabled
-		$w.protocols.ripng configure -state disabled
-		$w.protocols.ospf configure -state disabled
-		$w.protocols.ospf6 configure -state disabled
-		$w.protocols.bgp configure -state disabled
-		$w.protocols.ldp configure -state disabled
-	}
+		-value static -command [lreplace $tmp_command end end "disabled"]
 
 	if { $router_model == "static" } {
-		$w.protocols.rip configure -state disabled
-		$w.protocols.ripng configure -state disabled
-		$w.protocols.ospf configure -state disabled
-		$w.protocols.ospf6 configure -state disabled
-		$w.protocols.bgp configure -state disabled
-		$w.protocols.ldp configure -state disabled
+		foreach protocol $protocol_list {
+			$w.protocols.$protocol configure -state "disabled"
+		}
 	}
 
 	if { "frr" ni $supp_router_models } {
@@ -582,25 +590,39 @@ menu .menubar.tools -tearoff 0
 	}
 
 	ttk::frame $w.buttons
-	ttk::button $w.buttons.b1 -text "Apply" -command { routerDefaultsApply $wi }
-	ttk::button $w.buttons.b2 -text "Cancel" -command {
-		set router_model $routerDefaultsModel
-		lassign $rdconfig routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable routerBgpEnable routerLdpEnable
-		destroy $wi
-	}
+	ttk::button $w.buttons.b1 -text "Apply" -command "routerDefaultsApply $wi"
+
+	set tmp_command [list apply {
+		{ top_widget } {
+			global rdconfig router_model routerDefaultsModel
+			global routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable routerBgpEnable routerLdpEnable
+
+			set router_model $routerDefaultsModel
+			lassign $rdconfig routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable routerBgpEnable routerLdpEnable
+			destroy $top_widget
+		}
+	} \
+		$wi
+	]
+	ttk::button $w.buttons.b2 -text "Cancel" -command $tmp_command
 
 	pack $w.model -side top -fill x -pady 5
 	pack $w.model.frr $w.model.quagga $w.model.static \
 		-side left -expand 1
 	pack $w.protocols -side top -pady 5
-	pack $w.protocols.rip $w.protocols.ripng \
-		$w.protocols.ospf $w.protocols.ospf6 \
-		$w.protocols.bgp $w.protocols.ldp \
-		-side left
+
+	set protocols_to_pack {}
+	foreach protocol $protocol_list {
+		lappend protocols_to_pack $w.protocols.$protocol
+	}
+	pack {*}$protocols_to_pack -side left
+
 	pack $w.buttons -side bottom -fill x  -pady 2
 	pack $w.buttons.b1 -side left -expand 1 -anchor e -padx 2
 	pack $w.buttons.b2 -side right -expand 1 -anchor w -padx 2
 }
+.menubar.tools add command -label "Routing protocol defaults" -underline 0 \
+	-command $tmp_command
 
 #.menubar.tools add separator
 #.menubar.tools add command -label "ns2imunes converter" \
@@ -668,8 +690,8 @@ $m add radiobutton -label "Normal" -variable icon_size \
 .menubar.view add checkbutton -label "Show IPv6 Addresses " \
 	-underline 8 -variable show_interface_ipv6 \
 	-command { redrawAllLinks }
-.menubar.view add checkbutton -label "Show Node Labels" \
-	-underline 5 -variable show_node_labels -command {
+
+set tmp_command {
 	foreach object [.panwin.f1.c find withtag nodelabel] {
 		if { $show_node_labels } {
 			.panwin.f1.c itemconfigure $object -state normal
@@ -678,8 +700,10 @@ $m add radiobutton -label "Normal" -variable icon_size \
 		}
 	}
 }
-.menubar.view add checkbutton -label "Show Link Labels" \
-	-underline 5 -variable show_link_labels -command {
+.menubar.view add checkbutton -label "Show Node Labels" \
+	-underline 5 -variable show_node_labels -command $tmp_command
+
+set tmp_command {
 	foreach object [.panwin.f1.c find withtag linklabel] {
 		if { $show_link_labels } {
 			.panwin.f1.c itemconfigure $object -state normal
@@ -688,35 +712,46 @@ $m add radiobutton -label "Normal" -variable icon_size \
 		}
 	}
 }
+.menubar.view add checkbutton -label "Show Link Labels" \
+	-underline 5 -variable show_link_labels -command $tmp_command
 
+set tmp_command {
+	global show_interface_names show_interface_ipv4 show_interface_ipv6
+	global show_node_labels show_link_labels
+
+	set show_interface_names 1
+	set show_interface_ipv4 1
+	set show_interface_ipv6 1
+	set show_node_labels 1
+	set show_link_labels 1
+
+	redrawAll
+
+	foreach object [.panwin.f1.c find withtag linklabel] {
+		.panwin.f1.c itemconfigure $object -state normal
+	}
+}
 .menubar.view add command -label "Show All" \
-	-underline 5 -command {
-		set show_interface_names 1
-		set show_interface_ipv4 1
-		set show_interface_ipv6 1
-		set show_node_labels 1
-		set show_link_labels 1
+	-underline 5 -command $tmp_command
 
-		redrawAll
+set tmp_command {
+	global show_interface_names show_interface_ipv4 show_interface_ipv6
+	global show_node_labels show_link_labels
 
-		foreach object [.panwin.f1.c find withtag linklabel] {
-			.panwin.f1.c itemconfigure $object -state normal
-		}
+	set show_interface_names 0
+	set show_interface_ipv4 0
+	set show_interface_ipv6 0
+	set show_node_labels 0
+	set show_link_labels 0
+
+	redrawAll
+
+	foreach object [.panwin.f1.c find withtag linklabel] {
+		.panwin.f1.c itemconfigure $object -state hidden
 	}
+}
 .menubar.view add command -label "Show None" \
-	-underline 6 -command {
-		set show_interface_names 0
-		set show_interface_ipv4 0
-		set show_interface_ipv6 0
-		set show_node_labels 0
-		set show_link_labels 0
-
-		redrawAll
-
-		foreach object [.panwin.f1.c find withtag linklabel] {
-			.panwin.f1.c itemconfigure $object -state hidden
-		}
-	}
+	-underline 6 -command $tmp_command
 
 .menubar.view add separator
 
@@ -805,9 +840,9 @@ foreach widget $widgetlist {
 		-variable showConfig -underline 0 -value [lindex $widget 1]
 }
 
-.menubar.widgets add command -label "Custom..." \
-	-underline 0 -command {
+set tmp_command {
 	global showConfig
+
 	set w .entry1
 	catch { destroy $w }
 	toplevel $w
@@ -824,26 +859,40 @@ foreach widget $widgetlist {
 
 	ttk::frame $w.custom.buttons
 	pack $w.custom.buttons -side bottom -fill x -pady 2m
-	ttk::button $w.custom.buttons.ok -text OK -command {
-			set w .entry1
+
+	set tmp_command [list apply {
+		{ top_window } {
 			global showConfig
-			set showConfig [$w.custom.e1 get]
-			destroy $w
-	}
+
+			set showConfig [$top_window.custom.e1 get]
+			destroy $top_window
+		}
+	} \
+		$w
+	]
+	ttk::button $w.custom.buttons.ok -text OK -command $tmp_command
 	ttk::button $w.custom.buttons.cancel -text "Cancel" -command "destroy $w"
 	pack $w.custom.buttons.ok $w.custom.buttons.cancel -side left -expand 1
 
-	set commands {"ifconfig" "ps ax" "netstat -rnf inet" "netstat -rn" "ls" \
-		"cat boot.conf"}
+	set commands {
+		"ifconfig"
+		"ps ax"
+		"netstat -rnf inet"
+		"netstat -rn"
+		"ls"
+		"cat boot.conf"
+	}
 	ttk::combobox $w.custom.e1 -width 30 -values $commands
 	if { $showConfig != "None" } {
-			$w.custom.e1 insert 0 $showConfig
+		$w.custom.e1 insert 0 $showConfig
 	} else {
-			$w.custom.e1 insert 0  [lindex $commands 0]
+		$w.custom.e1 insert 0 [lindex $commands 0]
 	}
 
 	pack $w.custom.e1 -side top -pady 5 -padx 10 -fill x
-	}
+}
+.menubar.widgets add command -label "Custom..." \
+	-underline 0 -command $tmp_command
 
 #.menubar.widgets add separator
 #.menubar.widgets add radiobutton -label "Route" \
@@ -872,21 +921,23 @@ menu .menubar.experiment -tearoff 0
 .menubar.experiment add command -label "Restart" -underline 0 \
 	-command "setOperMode edit; setOperMode exec" -state disabled
 .menubar.experiment add separator
-.menubar.experiment add command -label "Pause execution" -underline 2 \
-	-command {
-		set auto_execution [getFromRunning "auto_execution"]
 
-		setToRunning "auto_execution" [expr $auto_execution ^ 1]
-		if { [getFromRunning "cfg_deployed"] && ! $auto_execution } {
-			# when going from non-auto to auto execution, trigger (un)deployCfg
-			undeployCfg
-			deployCfg
-		} else {
-			setToExecuteVars "terminate_cfg" [cfgGet]
-		}
+set tmp_command {
+	set auto_execution [getFromRunning "auto_execution"]
 
-		toggleAutoExecutionGUI
+	setToRunning "auto_execution" [expr $auto_execution ^ 1]
+	if { [getFromRunning "cfg_deployed"] && ! $auto_execution } {
+		# when going from non-auto to auto execution, trigger (un)deployCfg
+		undeployCfg
+		deployCfg
+	} else {
+		setToExecuteVars "terminate_cfg" [cfgGet]
 	}
+
+	toggleAutoExecutionGUI
+}
+.menubar.experiment add command -label "Pause execution" -underline 2 \
+	-command $tmp_command
 .menubar.experiment add separator
 .menubar.experiment add command -label "Attach to experiment" -underline 0 \
 	-command "attachToExperimentPopup"
@@ -895,7 +946,7 @@ menu .menubar.experiment -tearoff 0
 # Help
 #
 menu .menubar.help -tearoff 0
-.menubar.help add command -label "About" -command {
+set tmp_command {
 	toplevel .about
 	wm title .about "About IMUNES"
 	wm minsize .about 454 255
@@ -932,18 +983,27 @@ menu .menubar.help -tearoff 0
 	grid $mainFrame.github -column 0 -row 7 -pady 1 -padx 5
 	grid $mainFrame.copyright -column 0 -row 8 -pady {20 10} -padx 5
 
-	bind $mainFrame.homepage <1> { launchBrowser [%W cget -text] }
-	bind $mainFrame.homepage <Enter> "%W configure -foreground blue; \
+	bind $mainFrame.homepage <1> {
+		launchBrowser [%W cget -text]
+	}
+	bind $mainFrame.homepage <Enter> \
+		"%W configure -foreground blue; \
 		$mainFrame config -cursor hand1"
-	bind $mainFrame.homepage <Leave> "%W configure -foreground black; \
+	bind $mainFrame.homepage <Leave> \
+		"%W configure -foreground black; \
 		$mainFrame config -cursor arrow"
 
-	bind $mainFrame.github <1> { launchBrowser [%W cget -text] }
-	bind $mainFrame.github <Enter> "%W configure -foreground blue; \
+	bind $mainFrame.github <1> {
+		launchBrowser [%W cget -text]
+	}
+	bind $mainFrame.github <Enter> \
+		"%W configure -foreground blue; \
 		$mainFrame config -cursor hand1"
-	bind $mainFrame.github <Leave> "%W configure -foreground black; \
+	bind $mainFrame.github <Leave> \
+		"%W configure -foreground black; \
 		$mainFrame config -cursor arrow"
 }
+.menubar.help add command -label "About" -command $tmp_command
 
 #
 # Left-side toolbar
@@ -1070,6 +1130,8 @@ canvas $mf.hframe.t \
 	-xscrollcommand "$mf.hframe.ts set"
 
 bind $mf.hframe.t <1> {
+	global mf
+
 	set canvas [lindex [$mf.hframe.t gettags current] 1]
 	if { $canvas != "" && $canvas != [getFromRunning "curcanvas"] } {
 		setToRunning "curcanvas" $canvas
@@ -1078,6 +1140,7 @@ bind $mf.hframe.t <1> {
 }
 
 bind $mf.hframe.t <Double-1> {
+	global mf
 
 	set canvas [lindex [$mf.hframe.t gettags current] 1]
 	if { $canvas != "" } {

@@ -797,59 +797,66 @@ proc bindEventsToTree {} {
 		}
 	}
 
+	# set last argument as empty string
+	set tmp_command [list apply {
+		{ nodetags_length selected_node } {
+			if { $nodetags_length != 0 } {
+				selectNodeFromTree $selected_node
+			}
+		}
+	} \
+		[llength $nodetags] \
+		""
+	]
+
+	# replace last argument for each binding
 	$f.tree tag bind nodes <Key-Down> \
-		"if { [llength $nodetags] != 0 } {
-			selectNodeFromTree [lindex $nodetags 0]
-		}"
-
+		[lreplace $tmp_command end end [lindex $nodetags 0]]
 	$f.tree tag bind links <Key-Up> \
-		"if { [llength $nodetags] != 0 } {
-			selectNodeFromTree [lindex $nodetags end]
-		}"
+		[lreplace $tmp_command end end [lindex $nodetags end]]
 
-	$f.tree tag bind links <Key-Down> \
-		"if { [llength $linktags] != 0 } {
-			selectLinkPeersFromTree [lindex $linktags 0]
-		}"
+	set tmp_command [list apply {
+		{ linktags_length selected_link } {
+			if { $linktags_length != 0 } {
+				selectLinkPeersFromTree $selected_link
+			}
+		}
+	} \
+		[llength $linktags] \
+		[lindex $linktags end]
+	]
+	$f.tree tag bind links <Key-Down> $tmp_command
 
-	$f.tree tag bind nodes <1> \
+	set tmp_command \
 		".panwin.f1.c dtag node selected; \
 		.panwin.f1.c delete -withtags selectmark"
-
-	$f.tree tag bind links <1> \
-		".panwin.f1.c dtag node selected; \
-		.panwin.f1.c delete -withtags selectmark"
+	$f.tree tag bind nodes <1> $tmp_command
+	$f.tree tag bind links <1> $tmp_command
 
 	foreach node_id $nodetags {
 		global selectedIfc
 
 		set type [getNodeType $node_id]
-
-		$f.tree tag bind $node_id <Double-1> \
-			"$f.tree item $node_id -open false
+		set tmp_command \
+			"$f.tree item $node_id -open false; \
 			$type.configGUI .panwin.f1.c $node_id"
-		$f.tree tag bind $node_id <Key-Return> \
-			"$f.tree item $node_id -open false
-			$type.configGUI .panwin.f1.c $node_id"
+		$f.tree tag bind $node_id <Double-1> $tmp_command
+		$f.tree tag bind $node_id <Key-Return> $tmp_command
 
 		foreach iface_id [lsort -dictionary [ifcList $node_id]] {
-			$f.tree tag bind $node_id$iface_id <Double-1> \
+			set tmp_command \
 				"set selectedIfc $iface_id; \
 				$type.configGUI .panwin.f1.c $node_id; \
 				set selectedIfc \"\""
-
-			$f.tree tag bind $node_id$iface_id <Key-Return> \
-				"set selectedIfc $iface_id; \
-				$type.configGUI .panwin.f1.c $node_id; \
-				set selectedIfc \"\""
+			$f.tree tag bind $node_id$iface_id <Double-1> $tmp_command
+			$f.tree tag bind $node_id$iface_id <Key-Return> $tmp_command
 		}
 	}
 
 	foreach link_id $linktags {
-		$f.tree tag bind $link_id <Double-1> \
-			"link.configGUI .panwin.f1.c $link_id"
-		$f.tree tag bind $link_id <Key-Return> \
-			"link.configGUI .panwin.f1.c $link_id"
+		set tmp_command "link.configGUI .panwin.f1.c $link_id"
+		$f.tree tag bind $link_id <Double-1> $tmp_command
+		$f.tree tag bind $link_id <Key-Return> $tmp_command
 	}
 }
 
@@ -964,7 +971,7 @@ proc refreshTopologyTree {} {
 #   Creates a popup dialog box to attach to experiment.
 #****
 proc attachToExperimentPopup {} {
-	global selectedExperiment runtimeDir
+	global selected_experiment runtimeDir
 
 	set ateDialog .attachToExperimentDialog
 	catch { destroy $ateDialog }
@@ -1020,34 +1027,55 @@ proc attachToExperimentPopup {} {
 
 	foreach exp [getResumableExperiments] {
 		set timestamp [getExperimentTimestampFromFile $exp]
-		$tree insert {} end -id $exp -text [list $exp "-" [getExperimentNameFromFile $exp]] -values [list $timestamp] \
+		$tree insert {} end \
+			-id $exp \
+			-text [list $exp "-" [getExperimentNameFromFile $exp]] \
+			-values [list $timestamp] \
 			-tags "$exp"
-		$tree tag bind $exp <1> \
-		  "updateScreenshotPreview $prevcan $runtimeDir/$exp/screenshot.png
-		   set selectedExperiment $exp"
+	}
+
+	set set_selected_experiment_command {
+		{ prevcan exp } {
+			if { $exp == "" } {
+				return
+			}
+
+			global runtimeDir selected_experiment
+
+			updateScreenshotPreview $prevcan $runtimeDir/$exp/screenshot.png
+			set selected_experiment $exp
+		}
 	}
 
 	foreach exp [getResumableExperiments] {
-		$tree tag bind $exp <Key-Up> \
-		"if { ! [string equal {} [$tree prev $exp]] } {
-			updateScreenshotPreview $prevcan $runtimeDir/[$tree prev $exp]/screenshot.png
-			set selectedExperiment [$tree prev $exp]
-		}"
-		$tree tag bind $exp <Key-Down> \
-		"if { ! [string equal {} [$tree next $exp]] } {
-			updateScreenshotPreview $prevcan $runtimeDir/[$tree next $exp]/screenshot.png
-			set selectedExperiment [$tree next $exp]
-		}"
+		set tmp_command [list apply $set_selected_experiment_command \
+			$prevcan \
+			$exp
+		]
+		$tree tag bind $exp <1> $tmp_command
+
+		set tmp_command [list apply $set_selected_experiment_command \
+			$prevcan \
+			[$tree prev $exp]
+		]
+		$tree tag bind $exp <Key-Up> $tmp_command
+
+		set tmp_command [list apply $set_selected_experiment_command \
+			$prevcan \
+			[$tree next $exp]
+		]
+		$tree tag bind $exp <Key-Down> $tmp_command
+
 		$tree tag bind $exp <Double-1> "resumeAndDestroy"
 	}
 
 	set first [lindex [getResumableExperiments] 0]
 	$tree selection set $first
 	$tree focus $first
-	set selectedExperiment $first
+	set selected_experiment $first
 
-	if { $selectedExperiment != "" } {
-		updateScreenshotPreview $prevcan $runtimeDir/$selectedExperiment/screenshot.png
+	if { $selected_experiment != "" } {
+		updateScreenshotPreview $prevcan $runtimeDir/$selected_experiment/screenshot.png
 	}
 
 	ttk::frame $wi.buttons
@@ -1056,7 +1084,7 @@ proc attachToExperimentPopup {} {
 	ttk::button $wi.buttons.cancel -text "Cancel" -command "destroy $ateDialog"
 	pack $wi.buttons.cancel $wi.buttons.resume -side right -expand 1
 
-	bind $ateDialog <Key-Return> { resumeSelectedExperiment $selectedExperiment; destroy .attachToExperimentDialog }
+	bind $ateDialog <Key-Return> { resumeSelectedExperiment $selected_experiment; destroy .attachToExperimentDialog }
 	bind $ateDialog <Key-Escape> "destroy $ateDialog"
 }
 
@@ -1069,10 +1097,10 @@ proc attachToExperimentPopup {} {
 #   Resumes selected experiment and destroys a "Resume experiment" dialog.
 #****
 proc resumeAndDestroy {} {
-	global selectedExperiment
+	global selected_experiment
 
-	if { $selectedExperiment != "" } {
-		resumeSelectedExperiment $selectedExperiment
+	if { $selected_experiment != "" } {
+		resumeSelectedExperiment $selected_experiment
 	}
 
 	destroy .attachToExperimentDialog
