@@ -816,133 +816,66 @@ proc changeIconPopup {} {
 	$tree column type -width 90 -stretch 0 -minwidth 90
 	focus $tree
 
-	foreach file_path [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] {
-		set file_name [lindex [split $file_path /] end]
-		$tree insert {} end -id $file_path -text $file_name -values [list "library icon"] \
-			-tags "$file_path"
-
-		set tmp_command [list apply {
-			{ prevcan wi file_path } {
-				global iconsrcfile
-
-				updateIconPreview $prevcan $wi.iconconf.right.l2 $file_path
-				set iconsrcfile $file_path
+	set set_iconsrcfile_command {
+		{ wi previous_canvas file_path } {
+			if { $file_path == "" } {
+				return
 			}
-		} \
-			$prevcan \
-			$wi \
-			$file_path
-		]
-		$tree tag bind $file_path <1> $tmp_command
+
+			global iconsrcfile
+
+			updateIconPreview $previous_canvas $wi.iconconf.right.l2 $file_path
+			set iconsrcfile $file_path
+		}
+	}
+
+	set file_paths [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif]
+	foreach file_path $file_paths {
+		$tree insert {} end \
+			-id $file_path \
+			-text [lindex [split $file_path /] end] \
+			-values [list "library icon"] \
+			-tags "$file_path"
 	}
 
 	set image_list [getFromRunning "image_list"]
 	foreach img $image_list {
 		if {
-			$img != "" && [string match "*image*" $img] == 1 &&
-			[getImageType $img] == "customIcon"
+			$img == "" ||
+			[string match "*image*" $img] != 1 ||
+			[getImageType $img] != "customIcon"
 		} {
-			$tree insert {} end -id $img -text $img -values [list "custom icon"] \
-				-tags "$img"
-
-			set tmp_command [list apply {
-				{ prevcan wi img } {
-					global iconsrcfile
-
-					updateIconPreview $prevcan $wi.iconconf.right.l2 $img
-					set iconsrcfile $img
-				}
-			} \
-				$prevcan \
-				$wi \
-				$img
-			]
-			$tree tag bind $img <1> $tmp_command
+			set image_list [removeFromList $image_list $img]
+			continue
 		}
+
+		$tree insert {} end \
+			-id $img \
+			-text $img \
+			-values [list "custom icon"] \
+			-tags "$img"
 	}
 
-	foreach file_path [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] {
-		set previous_file [$tree prev $file_path]
-		set next_file [$tree next $file_path]
-
-		set tmp_command [list apply {
-			{ prevcan wi file_path } {
-				global iconsrcfile
-
-				if { $file_path != "" } {
-					updateIconPreview $prevcan $wi.iconconf.right.l2 $file_path
-					set iconsrcfile $file_path
-				}
-			}
-		} \
-			$prevcan \
+	# set last argument as empty string
+	foreach file_path [concat $file_paths $image_list] {
+		set tmp_command [list apply $set_iconsrcfile_command \
 			$wi \
-			$previous_file
-		]
-		$tree tag bind $file_path <Key-Up> $tmp_command
-
-		set tmp_command [list apply {
-			{ prevcan wi file_path } {
-				global iconsrcfile
-
-				if { $file_path != "" } {
-					updateIconPreview $prevcan $wi.iconconf.right.l2 $file_path
-					set iconsrcfile $file_path
-				}
-			}
-		} \
 			$prevcan \
-			$wi \
-			$next_file
+			""
 		]
-		$tree tag bind $file_path <Key-Down> $tmp_command
+
+		# replace last argument for each binding
+		$tree tag bind $file_path <1> \
+			[lreplace $tmp_command end end $file_path]
+		$tree tag bind $file_path <Key-Up> \
+			[lreplace $tmp_command end end [$tree prev $file_path]]
+		$tree tag bind $file_path <Key-Down> \
+			[lreplace $tmp_command end end [$tree next $file_path]]
 	}
 
-	set first [lindex [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] 0]
+	set first [lindex [concat $file_paths $image_list] 0]
 	$tree selection set $first
 	$tree focus $first
-
-	foreach img $image_list {
-		set previous_img [$tree prev $img]
-		set next_img [$tree next $img]
-
-		if {
-			$img != "" && [string match "*image*" $img] == 1 &&
-			[getImageType $img] == "customIcon"
-		} {
-			set tmp_command [list apply {
-				{ prevcan wi img } {
-					global iconsrcfile
-
-					if { $img != "" } {
-						updateIconPreview $prevcan $wi.iconconf.right.l2 $img
-						set iconsrcfile $img
-					}
-				}
-			} \
-				$prevcan \
-				$wi \
-				$previous_img
-			]
-			$tree tag bind $img <Key-Up> $tmp_command
-
-			set tmp_command [list apply {
-				{ prevcan wi img } {
-					global iconsrcfile
-
-					if { $img != "" } {
-						updateIconPreview $prevcan $wi.iconconf.right.l2 $img
-						set iconsrcfile $img
-					}
-				}
-			} \
-				$prevcan \
-				$wi \
-				$next_img
-			]
-			$tree tag bind $img <Key-Down> $tmp_command
-		}
-	}
 
 	#center left frame with label
 	ttk::frame $wi.iconconf.left.center
