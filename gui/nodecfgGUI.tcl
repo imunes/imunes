@@ -1454,6 +1454,7 @@ proc configGUI_nodeRestart { wi node_id } {
 	set w $wi.node_force_options
 	ttk::frame $w -relief groove -borderwidth 2 -padding 2
 	ttk::label $w.label -text "Force node:"
+	getHelpLabel $w.label "Force node"
 	ttk::frame $w.options -padding 2
 
 	pack $w.label -side left -padx 2
@@ -1822,6 +1823,7 @@ proc configGUI_staticRoutes { wi node_id } {
 	set ifc_routes_enable $wi.ifc_routes_enable
 	ttk::checkbutton $ifc_routes_enable -text "Enable automatic default routes" \
 		-variable auto_default_routes -padding 4 -onvalue "enabled" -offvalue "disabled"
+	getHelpLabel $ifc_routes_enable "Routes"
 	pack $ifc_routes_enable -anchor w
 
 	set sroutes_nb $wi.sroutes
@@ -2015,6 +2017,8 @@ proc configGUI_customConfig { wi node_id } {
 
 	ttk::frame $wi.custcfg -borderwidth 2 -relief groove -padding 4
 	ttk::label $wi.custcfg.etxt -text "Enable custom startup config:"
+	getHelpLabel $wi.custcfg.etxt "Custom config"
+
 	set customEnabled [_getCustomEnabled $node_cfg]
 	ttk::checkbutton $wi.custcfg.echeckOnOff -text "Enabled" \
 		-variable customEnabled -onvalue true -offvalue false
@@ -2029,6 +2033,7 @@ proc configGUI_customConfig { wi node_id } {
 		ttk::frame $o
 
 		ttk::label $o.ld -text "$label_text" -width 32
+		getHelpLabel $o.ld [string range $label_text 0 end-1]
 		ttk::combobox $o.cb -height 10 -width 12 -state readonly
 		$o.cb configure -values "DISABLED [_getCustomConfigIDs $node_cfg $hook]"
 		set defaultConfig [_getCustomConfigSelected $node_cfg $hook]
@@ -2281,6 +2286,7 @@ proc configGUI_servicesConfig { wi node_id } {
 	set w $wi.services
 	ttk::frame $w -relief groove -borderwidth 2 -padding 2
 	ttk::label $w.label -text "Services:"
+	getHelpLabel $w.label "Services"
 	ttk::frame $w.list -padding 2
 
 	pack $w.label -side left -padx 2
@@ -2326,6 +2332,7 @@ proc configGUI_attachDockerToExt { wi node_id } {
 	set w $wi.docker
 	ttk::frame $w -relief groove -borderwidth 2 -padding 2
 	ttk::label $w.label -text "Attach external Docker interface (Linux only):"
+	getHelpLabel $w.label "External Docker interface"
 
 	pack $w.label -side left -padx 2
 
@@ -2357,6 +2364,7 @@ proc configGUI_customImage { wi node_id } {
 	set w $wi.customImg
 	ttk::frame $w -relief groove -borderwidth 2 -padding 2
 	ttk::label $w.label -text "Custom image:"
+	getHelpLabel $w.label "Custom image"
 
 	pack $w.label -side left -padx 2
 
