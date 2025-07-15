@@ -58,9 +58,9 @@ registerModule $MODULE
 #   * node_id -- node id
 #****
 proc $MODULE.confNewNode { node_id } {
-    global nodeNamingBase
+	global nodeNamingBase
 
-    setNodeName $node_id [getNewNodeNameType lanswitch $nodeNamingBase(lanswitch)]
+	setNodeName $node_id [getNewNodeNameType lanswitch $nodeNamingBase(lanswitch)]
 }
 
 #****f* lanswitch.tcl/lanswitch.confNewIfc
@@ -100,7 +100,7 @@ proc $MODULE.generateUnconfig { node_id } {
 #   * name -- name prefix string
 #****
 proc $MODULE.ifacePrefix {} {
-    return "e"
+	return "e"
 }
 
 #****f* lanswitch.tcl/lanswitch.IPAddrRange
@@ -127,7 +127,7 @@ proc $MODULE.IPAddrRange {} {
 #   * layer -- set to LINK
 #****
 proc $MODULE.netlayer {} {
-    return LINK
+	return LINK
 }
 
 #****f* lanswitch.tcl/lanswitch.virtlayer
@@ -142,7 +142,7 @@ proc $MODULE.netlayer {} {
 #   * layer -- set to NATIVE
 #****
 proc $MODULE.virtlayer {} {
-    return NATIVE
+	return NATIVE
 }
 
 proc $MODULE.bootcmd { node_id } {
@@ -170,19 +170,19 @@ proc $MODULE.shellcmds {} {
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node_id iface_id } {
-    set ifunit [expr [string range $iface_id 3 end] + 1]
-    if { ! [getNodeVlanFiltering $node_id] } {
-	return [list $node_id link$ifunit]
-    }
+	set ifunit [expr [string range $iface_id 3 end] + 1]
+	if { ! [getNodeVlanFiltering $node_id] } {
+		return [list $node_id link$ifunit]
+	}
 
-    if { [getIfcVlanType $node_id $iface_id] == "trunk" } {
-	set hook_name "downstream"
-    } else {
-	set vlantag [getIfcVlanTag $node_id $iface_id]
-	set hook_name "v$vlantag"
-    }
+	if { [getIfcVlanType $node_id $iface_id] == "trunk" } {
+		set hook_name "downstream"
+	} else {
+		set vlantag [getIfcVlanTag $node_id $iface_id]
+		set hook_name "v$vlantag"
+	}
 
-    return [list "$node_id-$hook_name" "link$ifunit"]
+	return [list "$node_id-$hook_name" "link$ifunit"]
 }
 
 ################################################################################
@@ -198,12 +198,12 @@ proc $MODULE.nghook { eid node_id iface_id } {
 #   Loads ng_bridge into the kernel.
 #****
 proc $MODULE.prepareSystem {} {
-    catch { exec sysctl net.bridge.bridge-nf-call-arptables=0 }
-    catch { exec sysctl net.bridge.bridge-nf-call-iptables=0 }
-    catch { exec sysctl net.bridge.bridge-nf-call-ip6tables=0 }
+	catch { exec sysctl net.bridge.bridge-nf-call-arptables=0 }
+	catch { exec sysctl net.bridge.bridge-nf-call-iptables=0 }
+	catch { exec sysctl net.bridge.bridge-nf-call-ip6tables=0 }
 
-    catch { exec kldload ng_bridge }
-    catch { exec kldload ng_vlan }
+	catch { exec kldload ng_bridge }
+	catch { exec kldload ng_vlan }
 }
 
 #****f* lanswitch.tcl/lanswitch.nodeCreate
@@ -219,11 +219,11 @@ proc $MODULE.prepareSystem {} {
 #   * node_id -- id of the node
 #****
 proc $MODULE.nodeCreate { eid node_id } {
-    l2node.nodeCreate $eid $node_id
+	l2node.nodeCreate $eid $node_id
 }
 
 proc $MODULE.nodeNamespaceSetup { eid node_id } {
-    createNamespace $eid-$node_id
+	createNamespace $eid-$node_id
 }
 
 #****f* lanswitch.tcl/lanswitch.nodeInitConfigure
@@ -242,7 +242,7 @@ proc $MODULE.nodeInitConfigure { eid node_id } {
 }
 
 proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
-    nodePhysIfacesCreate $node_id $ifaces
+	nodePhysIfacesCreate $node_id $ifaces
 }
 
 proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
@@ -263,13 +263,13 @@ proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
 #   * ifaces -- list of interface ids
 #****
 proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
-    if { ! [getNodeVlanFiltering $node_id] } {
-	return
-    }
+	if { ! [getNodeVlanFiltering $node_id] } {
+		return
+	}
 
-    foreach iface_id $ifaces {
-	execSetIfcVlanConfig $node_id $iface_id
-    }
+	foreach iface_id $ifaces {
+		execSetIfcVlanConfig $node_id $iface_id
+	}
 }
 
 #****f* lanswitch.tcl/lanswitch.nodeConfigure
@@ -307,17 +307,17 @@ proc $MODULE.nodeConfigure { eid node_id } {
 #   * ifaces -- list of interface ids
 #****
 proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
-    if { ! [getNodeVlanFiltering $node_id] } {
-	return
-    }
+	if { ! [getNodeVlanFiltering $node_id] } {
+		return
+	}
 
-    foreach iface_id $ifaces {
-        execDelIfcVlanConfig $eid $node_id $iface_id
-    }
+	foreach iface_id $ifaces {
+		execDelIfcVlanConfig $eid $node_id $iface_id
+	}
 }
 
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
-    nodeIfacesDestroy $eid $node_id $ifaces
+	nodeIfacesDestroy $eid $node_id $ifaces
 }
 
 proc $MODULE.nodeUnconfigure { eid node_id } {
@@ -352,5 +352,5 @@ proc $MODULE.nodeShutdown { eid node_id } {
 #   * node_id -- id of the node
 #****
 proc $MODULE.nodeDestroy { eid node_id } {
-    l2node.nodeDestroy $eid $node_id
+	l2node.nodeDestroy $eid $node_id
 }

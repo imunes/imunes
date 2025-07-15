@@ -2,8 +2,8 @@
 
 if [ $# -lt 2 ]
 then
-    echo "Usage: $0 hostname_of_X_app_client command ..."
-    exit 1
+	echo "Usage: $0 hostname_of_X_app_client command ..."
+	exit 1
 fi
 
 display=${DISPLAY#*:} # localhost:10.0 --> 10.0
@@ -11,13 +11,13 @@ display=${display%.*} # 10.0 --> 10
 
 if test -z "$display"
 then
-    echo "If you are running locally:"
-    echo "  a) X server must started and"
-    echo "  b) env variable DISPLAY must be set."
-    echo "If you are connected using ssh: "
-    echo "  a) X11Forwarding must be enabled"
-    echo "  b) and used (ssh -X ...)"
-    exit 2
+	echo "If you are running locally:"
+	echo "  a) X server must started and"
+	echo "  b) env variable DISPLAY must be set."
+	echo "If you are connected using ssh: "
+	echo "  a) X11Forwarding must be enabled"
+	echo "  b) and used (ssh -X ...)"
+	exit 2
 fi
 
 remote=$1
@@ -27,7 +27,7 @@ shift 1   # "$@" is now a remote command with arguments
 himage $remote true
 if [ $? -ne 0 ]
 then
-    exit 2
+	exit 2
 fi
 
 dir=`himage -d $remote`
@@ -47,39 +47,39 @@ xsocket="`himage -d $remote`/tmp/.X11-unix/X0"
 
 if test "X${DISPLAY%:*}" == "Xlocalhost"
 then
-    # running over ssh
-    port=$((6000+display))
-    socat_args="unix-listen:${xsocket},fork TCP:localhost:$port"
+	# running over ssh
+	port=$((6000+display))
+	socat_args="unix-listen:${xsocket},fork TCP:localhost:$port"
 else
-    socat_args="unix-listen:${xsocket},fork unix:/tmp/.X11-unix/X$display"
+	socat_args="unix-listen:${xsocket},fork unix:/tmp/.X11-unix/X$display"
 fi
 
 pgrep -f "[s]ocat $socat_args" > /dev/null 2>&1
 if test $? -eq 1
 then
-    rm -f $xsocket
-    socat $socat_args &
+	rm -f $xsocket
+	socat $socat_args &
 fi
 
 sockexists=0
 for i in `seq 1 30`; do
-    if test -S $xsocket ; then
-        sockexists=1
-        break
-    fi
-    sleep 0.1
+	if test -S $xsocket ; then
+		sockexists=1
+		break
+	fi
+	sleep 0.1
 done
 
 if test $sockexists -eq 0 ; then
-    echo "startxcmd failed to start, please try again. If the problem persists, file a bug report."
-    exit 1
+	echo "startxcmd failed to start, please try again. If the problem persists, file a bug report."
+	exit 1
 fi
 
 touch ${dir}/root/.Xauthority
 chmod 600 ${dir}/root/.Xauthority
 
 host=`hostname`
-cookie=`xauth list | awk '/'"$host"'\/unix:'"$display[ 	]"'/ {print $3}'`
+cookie=`xauth list | awk '/'"$host"'\/unix:'"$display[         ]"'/ {print $3}'`
 xauth -f ${dir}/root/.Xauthority add "$node/unix:0.0" . $cookie
 
 #####

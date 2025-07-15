@@ -58,9 +58,9 @@ registerModule $MODULE
 #   * node_id -- node id
 #****
 proc $MODULE.confNewNode { node_id } {
-    global nodeNamingBase
+	global nodeNamingBase
 
-    setNodeName $node_id [getNewNodeNameType hub $nodeNamingBase(hub)]
+	setNodeName $node_id [getNewNodeNameType hub $nodeNamingBase(hub)]
 }
 
 #****f* hub.tcl/hub.confNewIfc
@@ -100,7 +100,7 @@ proc $MODULE.generateUnconfig { node_id } {
 #   * name -- name prefix string
 #****
 proc $MODULE.ifacePrefix {} {
-    return "e"
+	return "e"
 }
 
 proc $MODULE.IPAddrRange {} {
@@ -117,7 +117,7 @@ proc $MODULE.IPAddrRange {} {
 #   * layer -- set to LINK
 #****
 proc $MODULE.netlayer {} {
-    return LINK
+	return LINK
 }
 
 #****f* hub.tcl/hub.virtlayer
@@ -131,7 +131,7 @@ proc $MODULE.netlayer {} {
 #   * layer -- set to NATIVE
 #****
 proc $MODULE.virtlayer {} {
-    return NATIVE
+	return NATIVE
 }
 
 proc $MODULE.bootcmd { node_id } {
@@ -159,8 +159,8 @@ proc $MODULE.shellcmds {} {
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node_id iface_id } {
-    set ifunit [string range $iface_id 3 end]
-    return [list $node_id link$ifunit]
+	set ifunit [string range $iface_id 3 end]
+	return [list $node_id link$ifunit]
 }
 
 ################################################################################
@@ -176,12 +176,12 @@ proc $MODULE.nghook { eid node_id iface_id } {
 #   Loads ng_hub into the kernel.
 #****
 proc $MODULE.prepareSystem {} {
-    # TODO: check
-    catch { exec sysctl net.bridge.bridge-nf-call-arptables=0 }
-    catch { exec sysctl net.bridge.bridge-nf-call-iptables=0 }
-    catch { exec sysctl net.bridge.bridge-nf-call-ip6tables=0 }
+	# TODO: check
+	catch { exec sysctl net.bridge.bridge-nf-call-arptables=0 }
+	catch { exec sysctl net.bridge.bridge-nf-call-iptables=0 }
+	catch { exec sysctl net.bridge.bridge-nf-call-ip6tables=0 }
 
-    catch { exec kldload ng_hub }
+	catch { exec kldload ng_hub }
 }
 
 #****f* hub.tcl/hub.nodeCreate
@@ -197,18 +197,18 @@ proc $MODULE.prepareSystem {} {
 #   * node_id -- id of the node
 #****
 proc $MODULE.nodeCreate { eid node_id } {
-    l2node.nodeCreate $eid $node_id
+	l2node.nodeCreate $eid $node_id
 }
 
 proc $MODULE.nodeNamespaceSetup { eid node_id } {
-    createNamespace $eid-$node_id
+	createNamespace $eid-$node_id
 }
 
 proc $MODULE.nodeInitConfigure { eid node_id } {
 }
 
 proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
-    nodePhysIfacesCreate $node_id $ifaces
+	nodePhysIfacesCreate $node_id $ifaces
 }
 
 proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
@@ -269,7 +269,7 @@ proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
 }
 
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
-    nodeIfacesDestroy $eid $node_id $ifaces
+	nodeIfacesDestroy $eid $node_id $ifaces
 }
 
 proc $MODULE.nodeUnconfigure { eid node_id } {
@@ -304,5 +304,5 @@ proc $MODULE.nodeShutdown { eid node_id } {
 #   * node_id -- id of the node
 #****
 proc $MODULE.nodeDestroy { eid node_id } {
-    l2node.nodeDestroy $eid $node_id
+	l2node.nodeDestroy $eid $node_id
 }

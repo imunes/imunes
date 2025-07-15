@@ -45,9 +45,9 @@ registerModule $MODULE "freebsd"
 ################################################################################
 
 proc $MODULE.confNewNode { node_id } {
-    global nodeNamingBase
+	global nodeNamingBase
 
-    setNodeName $node_id [getNewNodeNameType filter $nodeNamingBase(filter)]
+	setNodeName $node_id [getNewNodeNameType filter $nodeNamingBase(filter)]
 }
 
 proc $MODULE.confNewIfc { node_id iface_id } {
@@ -76,7 +76,7 @@ proc $MODULE.generateUnconfig { node_id } {
 #   * name -- name prefix string
 #****
 proc $MODULE.ifacePrefix {} {
-    return "e"
+	return "e"
 }
 
 #****f* filter.tcl/filter.IPAddrRange
@@ -104,7 +104,7 @@ proc $MODULE.IPAddrRange {} {
 #   * layer -- set to LINK
 #****
 proc $MODULE.netlayer {} {
-    return LINK
+	return LINK
 }
 
 #****f* filter.tcl/filter.virtlayer
@@ -119,7 +119,7 @@ proc $MODULE.netlayer {} {
 #   * layer -- set to NATIVE
 #****
 proc $MODULE.virtlayer {} {
-    return NATIVE
+	return NATIVE
 }
 
 #****f* filter.tcl/filter.bootcmd
@@ -172,7 +172,7 @@ proc $MODULE.shellcmds {} {
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node_id iface } {
-    return [list $node_id [getIfcName $node_id $iface]]
+	return [list $node_id [getIfcName $node_id $iface]]
 }
 
 ################################################################################
@@ -180,7 +180,7 @@ proc $MODULE.nghook { eid node_id iface } {
 ################################################################################
 
 proc $MODULE.prepareSystem {} {
-    catch { exec kldload ng_patmat }
+	catch { exec kldload ng_patmat }
 }
 
 #****f* filter.tcl/filter.nodeCreate
@@ -197,10 +197,10 @@ proc $MODULE.prepareSystem {} {
 #   * node_id - id of the node
 #****
 proc $MODULE.nodeCreate { eid node_id } {
-    pipesExec "printf \"
-    mkpeer . patmat tmp tmp \n
-    name .:tmp $node_id
-    \" | jexec $eid ngctl -f -" "hold"
+	pipesExec "printf \"
+	mkpeer . patmat tmp tmp \n
+	name .:tmp $node_id
+	\" | jexec $eid ngctl -f -" "hold"
 }
 
 #****f* filter.tcl/filter.nodeNamespaceSetup
@@ -233,7 +233,7 @@ proc $MODULE.nodeInitConfigure { eid node_id } {
 }
 
 proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
-    nodePhysIfacesCreate $node_id $ifaces
+	nodePhysIfacesCreate $node_id $ifaces
 }
 
 proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
@@ -270,24 +270,24 @@ proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
 #   * node_id - id of the node
 #****
 proc $MODULE.nodeConfigure { eid node_id } {
-    foreach iface_id [ifcList $node_id] {
-	if { [getIfcLink $node_id $iface_id] == "" } {
-	    continue
+	foreach iface_id [ifcList $node_id] {
+		if { [getIfcLink $node_id $iface_id] == "" } {
+			continue
+		}
+
+		set ngcfgreq "shc [getIfcName $node_id $iface_id]"
+		foreach rule_num [lsort -dictionary [ifcFilterRuleList $node_id $iface_id]] {
+			set rule [getFilterIfcRuleAsString $node_id $iface_id $rule_num]
+
+			set action_data [getFilterIfcActionData $node_id $iface_id $rule_num]
+			set other_iface_id [ifaceIdFromName $node_id $action_data]
+			if { [getIfcLink $node_id $other_iface_id] != "" } {
+				set ngcfgreq "${ngcfgreq} ${rule}"
+			}
+		}
+
+		pipesExec "jexec $eid ngctl msg $node_id: $ngcfgreq" "hold"
 	}
-
-	set ngcfgreq "shc [getIfcName $node_id $iface_id]"
-	foreach rule_num [lsort -dictionary [ifcFilterRuleList $node_id $iface_id]] {
-	    set rule [getFilterIfcRuleAsString $node_id $iface_id $rule_num]
-
-	    set action_data [getFilterIfcActionData $node_id $iface_id $rule_num]
-	    set other_iface_id [ifaceIdFromName $node_id $action_data]
-	    if { [getIfcLink $node_id $other_iface_id] != "" } {
-		set ngcfgreq "${ngcfgreq} ${rule}"
-	    }
-	}
-
-	pipesExec "jexec $eid ngctl msg $node_id: $ngcfgreq" "hold"
-    }
 }
 
 ################################################################################
@@ -312,18 +312,18 @@ proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
 }
 
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
-    nodeIfacesDestroy $eid $node_id $ifaces
+	nodeIfacesDestroy $eid $node_id $ifaces
 }
 
 proc $MODULE.nodeUnconfigure { eid node_id } {
-    foreach iface_id [ifcList $node_id] {
-	if { [getIfcLink $node_id $iface_id] == "" } {
-	    continue
-	}
+	foreach iface_id [ifcList $node_id] {
+		if { [getIfcLink $node_id $iface_id] == "" } {
+			continue
+		}
 
-	set ngcfgreq "shc [getIfcName $node_id $iface_id]"
-	pipesExec "jexec $eid ngctl msg $node_id: $ngcfgreq" "hold"
-    }
+		set ngcfgreq "shc [getIfcName $node_id $iface_id]"
+		pipesExec "jexec $eid ngctl msg $node_id: $ngcfgreq" "hold"
+	}
 }
 
 #****f* filter.tcl/filter.nodeShutdown
@@ -355,5 +355,5 @@ proc $MODULE.nodeShutdown { eid node_id } {
 #   * node_id - id of the node
 #****
 proc $MODULE.nodeDestroy { eid node_id } {
-    pipesExec "jexec $eid ngctl msg $node_id: shutdown" "hold"
+	pipesExec "jexec $eid ngctl msg $node_id: shutdown" "hold"
 }

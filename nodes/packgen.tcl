@@ -55,9 +55,9 @@ registerModule $MODULE "freebsd"
 #   * node_id -- node id
 #****
 proc $MODULE.confNewNode { node_id } {
-    global nodeNamingBase
+	global nodeNamingBase
 
-    setNodeName $node_id [getNewNodeNameType packgen $nodeNamingBase(packgen)]
+	setNodeName $node_id [getNewNodeNameType packgen $nodeNamingBase(packgen)]
 }
 
 #****f* packgen.tcl/packgen.confNewIfc
@@ -97,7 +97,7 @@ proc $MODULE.generateUnconfig { node_id } {
 #   * name -- name prefix string
 #****
 proc $MODULE.ifacePrefix {} {
-    return "e"
+	return "e"
 }
 
 proc $MODULE.IPAddrRange {} {
@@ -115,7 +115,7 @@ proc $MODULE.IPAddrRange {} {
 #   * layer -- set to LINK
 #****
 proc $MODULE.netlayer {} {
-    return LINK
+	return LINK
 }
 
 #****f* packgen.tcl/packgen.virtlayer
@@ -130,7 +130,7 @@ proc $MODULE.netlayer {} {
 #   * layer -- set to NATIVE
 #****
 proc $MODULE.virtlayer {} {
-    return NATIVE
+	return NATIVE
 }
 
 proc $MODULE.bootcmd { node_id } {
@@ -157,7 +157,7 @@ proc $MODULE.shellcmds {} {
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node_id iface_id } {
-    return [list $node_id output]
+	return [list $node_id output]
 }
 
 #****f* packgen.tcl/packgen.maxLinks
@@ -171,7 +171,7 @@ proc $MODULE.nghook { eid node_id iface_id } {
 #   * maximum number of links.
 #****
 proc $MODULE.maxLinks {} {
-    return 1
+	return 1
 }
 
 ################################################################################
@@ -179,7 +179,7 @@ proc $MODULE.maxLinks {} {
 ################################################################################
 
 proc $MODULE.prepareSystem {} {
-    catch { exec kldload ng_source }
+	catch { exec kldload ng_source }
 }
 
 #****f* packgen.tcl/packgen.nodeCreate
@@ -196,10 +196,10 @@ proc $MODULE.prepareSystem {} {
 #   * node_id - id of the node
 #****
 proc $MODULE.nodeCreate { eid node_id } {
-    pipesExec "printf \"
-    mkpeer . source inhook input \n
-    msg .inhook setpersistent \n name .:inhook $node_id
-    \" | jexec $eid ngctl -f -" "hold"
+	pipesExec "printf \"
+	mkpeer . source inhook input \n
+	msg .inhook setpersistent \n name .:inhook $node_id
+	\" | jexec $eid ngctl -f -" "hold"
 }
 
 proc $MODULE.nodeNamespaceSetup { eid node_id } {
@@ -209,7 +209,7 @@ proc $MODULE.nodeInitConfigure { eid node_id } {
 }
 
 proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
-    nodePhysIfacesCreate $node_id $ifaces
+	nodePhysIfacesCreate $node_id $ifaces
 }
 
 proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
@@ -244,26 +244,26 @@ proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
 #   * node_id - id of the node
 #****
 proc $MODULE.nodeConfigure { eid node_id } {
-    foreach iface_id [ifcList $node_id] {
-	foreach packet [packgenPackets $node_id] {
-	    set fd [open "| jexec $eid nghook $node_id: input" w]
-	    fconfigure $fd -encoding binary
+	foreach iface_id [ifcList $node_id] {
+		foreach packet [packgenPackets $node_id] {
+			set fd [open "| jexec $eid nghook $node_id: input" w]
+			fconfigure $fd -encoding binary
 
-	    set pdata [getPackgenPacketData $node_id [lindex $packet 0]]
-	    set bin [binary format H* $pdata]
-	    puts -nonewline $fd $bin
+			set pdata [getPackgenPacketData $node_id [lindex $packet 0]]
+			set bin [binary format H* $pdata]
+			puts -nonewline $fd $bin
 
-	    catch { close $fd }
+			catch { close $fd }
+		}
+
+		set pps [getPackgenPacketRate $node_id]
+
+		pipesExec "jexec $eid ngctl msg $node_id: setpps $pps" "hold"
+
+		if { [getIfcLink $node_id $iface_id] != "" } {
+			pipesExec "jexec $eid ngctl msg $node_id: start [expr 2**63]" "hold"
+		}
 	}
-
-	set pps [getPackgenPacketRate $node_id]
-
-	pipesExec "jexec $eid ngctl msg $node_id: setpps $pps" "hold"
-
-	if { [getIfcLink $node_id $iface_id] != "" } {
-	    pipesExec "jexec $eid ngctl msg $node_id: start [expr 2**63]" "hold"
-	}
-    }
 }
 
 ################################################################################
@@ -274,17 +274,17 @@ proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
 }
 
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
-    nodeIfacesDestroy $eid $node_id $ifaces
+	nodeIfacesDestroy $eid $node_id $ifaces
 }
 
 proc $MODULE.nodeUnconfigure { eid node_id } {
-    foreach iface_id [ifcList $node_id] {
-	pipesExec "jexec $eid ngctl msg $node_id: clrdata" "hold"
+	foreach iface_id [ifcList $node_id] {
+		pipesExec "jexec $eid ngctl msg $node_id: clrdata" "hold"
 
-	if { [getIfcLink $node_id $iface_id] != "" } {
-	    pipesExec "jexec $eid ngctl msg $node_id: stop" "hold"
+		if { [getIfcLink $node_id $iface_id] != "" } {
+			pipesExec "jexec $eid ngctl msg $node_id: stop" "hold"
+		}
 	}
-    }
 }
 
 #****f* packgen.tcl/packgen.nodeShutdown
@@ -313,5 +313,5 @@ proc $MODULE.nodeShutdown { eid node_id } {
 #   * node_id - id of the node
 #****
 proc $MODULE.nodeDestroy { eid node_id } {
-    pipesExec "jexec $eid ngctl msg $node_id: shutdown" "hold"
+	pipesExec "jexec $eid ngctl msg $node_id: shutdown" "hold"
 }

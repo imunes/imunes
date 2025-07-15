@@ -18,7 +18,7 @@ echo "Installing tayga..."
 cd $workdir
 
 if [ ! -f `basename $tayga` ]; then
-    fetch $tayga
+	fetch $tayga
 fi
 
 tar xf `basename $tayga`

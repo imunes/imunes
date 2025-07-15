@@ -39,12 +39,12 @@ set mac_byte6 0
 #   Randomizes MAC bytes.
 #****
 proc randomizeMACbytes {} {
-    global mac_byte4 mac_byte5
+	global mac_byte4 mac_byte5
 
-    set mac_byte4 [expr { (round(rand()*10000))%255 }]
-    set mac_byte5 [expr { (round(rand()*10000))%255 }]
+	set mac_byte4 [expr { (round(rand()*10000))%255 }]
+	set mac_byte5 [expr { (round(rand()*10000))%255 }]
 
-    return
+	return
 }
 
 #****f* mac.tcl/autoMACaddr
@@ -62,42 +62,42 @@ proc randomizeMACbytes {} {
 #     address will be assigned
 #****
 proc autoMACaddr { node_id iface_id } {
-    if { [getNodeType $node_id] != "ext" && [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" } {
-	return
-    }
+	if { [getNodeType $node_id] != "ext" && [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" } {
+		return
+	}
 
-    setToRunning "mac_used_list" [removeFromList [getFromRunning "mac_used_list"] [getIfcMACaddr $node_id $iface_id] "keep_doubles"]
+	setToRunning "mac_used_list" [removeFromList [getFromRunning "mac_used_list"] [getIfcMACaddr $node_id $iface_id] "keep_doubles"]
 
-    set macaddr [getNextMACaddr [getFromRunning "mac_used_list"]]
+	set macaddr [getNextMACaddr [getFromRunning "mac_used_list"]]
 
-    lappendToRunning "mac_used_list" $macaddr
-    setIfcMACaddr $node_id $iface_id $macaddr
+	lappendToRunning "mac_used_list" $macaddr
+	setIfcMACaddr $node_id $iface_id $macaddr
 }
 
 proc getNextMACaddr { { mac_used_list "" } } {
-    global mac_byte4 mac_byte5 mac_byte6
+	global mac_byte4 mac_byte5 mac_byte6
 
-    set mac_byte6 0
-    set macaddr [MACaddrAddZeros 42:00:aa:[format %x $mac_byte4]:[format %x $mac_byte5]:[format %x $mac_byte6]]
-    while { $macaddr in $mac_used_list } {
-	incr mac_byte6
-	if { $mac_byte6 > 255 } {
-	    if { $mac_byte5 > 255 } {
-		set mac_byte6 0
-		set mac_byte5 0
-		incr mac_byte4
-		if { $mac_byte4 > 255 } {
-		    set macaddr "00:00:00:00:00:00"
-		}
-	    } else {
-		set mac_byte6 0
-		incr mac_byte5
-	    }
-	}
+	set mac_byte6 0
 	set macaddr [MACaddrAddZeros 42:00:aa:[format %x $mac_byte4]:[format %x $mac_byte5]:[format %x $mac_byte6]]
-    }
+	while { $macaddr in $mac_used_list } {
+		incr mac_byte6
+		if { $mac_byte6 > 255 } {
+			if { $mac_byte5 > 255 } {
+				set mac_byte6 0
+				set mac_byte5 0
+				incr mac_byte4
+				if { $mac_byte4 > 255 } {
+					set macaddr "00:00:00:00:00:00"
+				}
+			} else {
+				set mac_byte6 0
+				incr mac_byte5
+			}
+		}
+		set macaddr [MACaddrAddZeros 42:00:aa:[format %x $mac_byte4]:[format %x $mac_byte5]:[format %x $mac_byte6]]
+	}
 
-    return $macaddr
+	return $macaddr
 }
 
 #****f* mac.tcl/MACaddrAddZeros
@@ -114,31 +114,31 @@ proc getNextMACaddr { { mac_used_list "" } } {
 #   * addr -- function returns MAC address
 #****
 proc MACaddrAddZeros { str } {
-    set ctr 0
-    set macaddr ""
-    while { $ctr < 6 } {
-	if { $ctr < 5 } {
-	    set i [string first : $str]
-	} else {
-	    set i [string length $str]
+	set ctr 0
+	set macaddr ""
+	while { $ctr < 6 } {
+		if { $ctr < 5 } {
+			set i [string first : $str]
+		} else {
+			set i [string length $str]
+		}
+
+		set part [string range $str 0 [expr $i - 1]]
+		if { [string length [string trim $part]] != 2 } {
+			set part "0$part"
+		}
+
+		set str [string range $str [expr $i + 1] end]
+		if { $ctr < 5 } {
+			set macaddr "$macaddr$part:"
+		} else {
+			set macaddr "$macaddr$part"
+		}
+
+		incr ctr
 	}
 
-	set part [string range $str 0 [expr $i - 1]]
-	if { [string length [string trim $part]] != 2 } {
-	    set part "0$part"
-	}
-
-	set str [string range $str [expr $i + 1] end]
-        if { $ctr < 5 } {
-            set macaddr "$macaddr$part:"
-        } else {
-            set macaddr "$macaddr$part"
-        }
-
-	incr ctr
-    }
-
-    return $macaddr
+	return $macaddr
 }
 
 #****f* mac.tcl/checkMACAddr
@@ -157,34 +157,34 @@ proc MACaddrAddZeros { str } {
 #     of a valid MAC address, 1 otherwise
 #****
 proc checkMACAddr { str } {
-    set ctr 0
-    if { $str == "" } {
+	set ctr 0
+	if { $str == "" } {
+		return 1
+	}
+
+	while { $ctr < 6 } {
+		if { $ctr < 5 } {
+			set i [string first : $str]
+		} else {
+			set i [string length $str]
+		}
+
+		if { $i < 1 } {
+			return 0
+		}
+
+		set part [string range $str 0 [expr $i - 1]]
+		if { [string length [string trim $part]] != 1 && [string length [string trim $part]] != 2 } {
+			return 0
+		}
+
+		if { ! [string is xdigit $part] } {
+			return 0
+		}
+
+		set str [string range $str [expr $i + 1] end]
+		incr ctr
+	}
+
 	return 1
-    }
-
-    while { $ctr < 6 } {
-	if { $ctr < 5 } {
-	    set i [string first : $str]
-	} else {
-	    set i [string length $str]
-	}
-
-	if { $i < 1 } {
-	    return 0
-	}
-
-	set part [string range $str 0 [expr $i - 1]]
-	if { [string length [string trim $part]] != 1 && [string length [string trim $part]] != 2 } {
-	    return 0
-	}
-
-	if { ! [string is xdigit $part] } {
-	    return 0
-	}
-
-	set str [string range $str [expr $i + 1] end]
-	incr ctr
-    }
-
-    return 1
 }

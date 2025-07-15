@@ -55,14 +55,14 @@ registerModule $MODULE
 #   * node_id -- node id
 #****
 proc $MODULE.confNewNode { node_id } {
-    global nodeNamingBase
+	global nodeNamingBase
 
-    setNodeName $node_id [getNewNodeNameType pc $nodeNamingBase(pc)]
-    setAutoDefaultRoutesStatus $node_id "enabled"
+	setNodeName $node_id [getNewNodeNameType pc $nodeNamingBase(pc)]
+	setAutoDefaultRoutesStatus $node_id "enabled"
 
-    set logiface_id [newLogIface $node_id "lo"]
-    setIfcIPv4addrs $node_id $logiface_id "127.0.0.1/8"
-    setIfcIPv6addrs $node_id $logiface_id "::1/128"
+	set logiface_id [newLogIface $node_id "lo"]
+	setIfcIPv4addrs $node_id $logiface_id "127.0.0.1/8"
+	setIfcIPv6addrs $node_id $logiface_id "::1/128"
 }
 
 #****f* pc.tcl/pc.confNewIfc
@@ -77,49 +77,49 @@ proc $MODULE.confNewNode { node_id } {
 #   * iface_id -- interface name
 #****
 proc $MODULE.confNewIfc { node_id iface_id } {
-    autoIPv4addr $node_id $iface_id
-    autoIPv6addr $node_id $iface_id
-    autoMACaddr $node_id $iface_id
+	autoIPv4addr $node_id $iface_id
+	autoIPv6addr $node_id $iface_id
+	autoMACaddr $node_id $iface_id
 }
 
 proc $MODULE.generateConfigIfaces { node_id ifaces } {
-    set all_ifaces "[ifcList $node_id] [logIfcList $node_id]"
-    if { $ifaces == "*" } {
-	set ifaces $all_ifaces
-    } else {
-	# sort physical ifaces before logical ones (because of vlans)
-	set negative_ifaces [removeFromList $all_ifaces $ifaces]
-	set ifaces [removeFromList $all_ifaces $negative_ifaces]
-    }
+	set all_ifaces "[ifcList $node_id] [logIfcList $node_id]"
+	if { $ifaces == "*" } {
+		set ifaces $all_ifaces
+	} else {
+		# sort physical ifaces before logical ones (because of vlans)
+		set negative_ifaces [removeFromList $all_ifaces $ifaces]
+		set ifaces [removeFromList $all_ifaces $negative_ifaces]
+	}
 
-    set cfg {}
-    foreach iface_id $ifaces {
-	set cfg [concat $cfg [nodeCfggenIfc $node_id $iface_id]]
+	set cfg {}
+	foreach iface_id $ifaces {
+		set cfg [concat $cfg [nodeCfggenIfc $node_id $iface_id]]
 
-	lappend cfg ""
-    }
+		lappend cfg ""
+	}
 
-    return $cfg
+	return $cfg
 }
 
 proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
-    set all_ifaces "[ifcList $node_id] [logIfcList $node_id]"
-    if { $ifaces == "*" } {
-	set ifaces $all_ifaces
-    } else {
-	# sort physical ifaces before logical ones
-	set negative_ifaces [removeFromList $all_ifaces $ifaces]
-	set ifaces [removeFromList $all_ifaces $negative_ifaces]
-    }
+	set all_ifaces "[ifcList $node_id] [logIfcList $node_id]"
+	if { $ifaces == "*" } {
+		set ifaces $all_ifaces
+	} else {
+		# sort physical ifaces before logical ones
+		set negative_ifaces [removeFromList $all_ifaces $ifaces]
+		set ifaces [removeFromList $all_ifaces $negative_ifaces]
+	}
 
-    set cfg {}
-    foreach iface_id $ifaces {
-	set cfg [concat $cfg [nodeUncfggenIfc $node_id $iface_id]]
+	set cfg {}
+	foreach iface_id $ifaces {
+		set cfg [concat $cfg [nodeUncfggenIfc $node_id $iface_id]]
 
-	lappend cfg ""
-    }
+		lappend cfg ""
+	}
 
-    return $cfg
+	return $cfg
 }
 
 #****f* pc.tcl/pc.generateConfig
@@ -139,50 +139,53 @@ proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
 #   * config -- generated configuration
 #****
 proc $MODULE.generateConfig { node_id } {
-    set cfg {}
+	set cfg {}
 
-    if { [getCustomEnabled $node_id] != true || [getCustomConfigSelected $node_id "NODE_CONFIG"] in "\"\" DISABLED" } {
-	set cfg [concat $cfg [nodeCfggenStaticRoutes4 $node_id]]
-	set cfg [concat $cfg [nodeCfggenStaticRoutes6 $node_id]]
+	if {
+		[getCustomEnabled $node_id] != true ||
+		[getCustomConfigSelected $node_id "NODE_CONFIG"] in "\"\" DISABLED"
+	} {
+		set cfg [concat $cfg [nodeCfggenStaticRoutes4 $node_id]]
+		set cfg [concat $cfg [nodeCfggenStaticRoutes6 $node_id]]
+
+		lappend cfg ""
+	}
+
+	set subnet_gws {}
+	set nodes_l2data [dict create]
+	if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
+		lassign [getDefaultGateways $node_id $subnet_gws $nodes_l2data] my_gws subnet_gws nodes_l2data
+		lassign [getDefaultRoutesConfig $node_id $my_gws] all_routes4 all_routes6
+
+		setDefaultIPv4routes $node_id $all_routes4
+		setDefaultIPv6routes $node_id $all_routes6
+	} else {
+		setDefaultIPv4routes $node_id {}
+		setDefaultIPv6routes $node_id {}
+	}
+
+	set cfg [concat $cfg [nodeCfggenAutoRoutes4 $node_id]]
+	set cfg [concat $cfg [nodeCfggenAutoRoutes6 $node_id]]
 
 	lappend cfg ""
-    }
 
-    set subnet_gws {}
-    set nodes_l2data [dict create]
-    if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
-	lassign [getDefaultGateways $node_id $subnet_gws $nodes_l2data] my_gws subnet_gws nodes_l2data
-	lassign [getDefaultRoutesConfig $node_id $my_gws] all_routes4 all_routes6
-
-	setDefaultIPv4routes $node_id $all_routes4
-	setDefaultIPv6routes $node_id $all_routes6
-    } else {
-	setDefaultIPv4routes $node_id {}
-	setDefaultIPv6routes $node_id {}
-    }
-
-    set cfg [concat $cfg [nodeCfggenAutoRoutes4 $node_id]]
-    set cfg [concat $cfg [nodeCfggenAutoRoutes6 $node_id]]
-
-    lappend cfg ""
-
-    return $cfg
+	return $cfg
 }
 
 proc $MODULE.generateUnconfig { node_id } {
-    set cfg {}
+	set cfg {}
 
-    set cfg [concat $cfg [nodeUncfggenStaticRoutes4 $node_id]]
-    set cfg [concat $cfg [nodeUncfggenStaticRoutes6 $node_id]]
+	set cfg [concat $cfg [nodeUncfggenStaticRoutes4 $node_id]]
+	set cfg [concat $cfg [nodeUncfggenStaticRoutes6 $node_id]]
 
-    lappend cfg ""
+	lappend cfg ""
 
-    set cfg [concat $cfg [nodeUncfggenAutoRoutes4 $node_id]]
-    set cfg [concat $cfg [nodeUncfggenAutoRoutes6 $node_id]]
+	set cfg [concat $cfg [nodeUncfggenAutoRoutes4 $node_id]]
+	set cfg [concat $cfg [nodeUncfggenAutoRoutes6 $node_id]]
 
-    lappend cfg ""
+	lappend cfg ""
 
-    return $cfg
+	return $cfg
 }
 
 #****f* pc.tcl/pc.ifacePrefix
@@ -196,7 +199,7 @@ proc $MODULE.generateUnconfig { node_id } {
 #   * name -- name prefix string
 #****
 proc $MODULE.ifacePrefix {} {
-    return "eth"
+	return "eth"
 }
 
 #****f* pc.tcl/pc.IPAddrRange
@@ -210,7 +213,7 @@ proc $MODULE.ifacePrefix {} {
 #   * range -- pc IP address range
 #****
 proc $MODULE.IPAddrRange {} {
-    return 20
+	return 20
 }
 
 #****f* pc.tcl/pc.netlayer
@@ -224,7 +227,7 @@ proc $MODULE.IPAddrRange {} {
 #   * layer -- set to NETWORK
 #****
 proc $MODULE.netlayer {} {
-    return NETWORK
+	return NETWORK
 }
 
 #****f* pc.tcl/pc.virtlayer
@@ -238,7 +241,7 @@ proc $MODULE.netlayer {} {
 #   * layer -- set to VIRTUALIZED
 #****
 proc $MODULE.virtlayer {} {
-    return VIRTUALIZED
+	return VIRTUALIZED
 }
 
 #****f* pc.tcl/pc.bootcmd
@@ -256,7 +259,7 @@ proc $MODULE.virtlayer {} {
 #   * appl -- application that reads the configuration (/bin/sh)
 #****
 proc $MODULE.bootcmd { node_id } {
-    return "/bin/sh"
+	return "/bin/sh"
 }
 
 #****f* pc.tcl/pc.shellcmds
@@ -271,7 +274,7 @@ proc $MODULE.bootcmd { node_id } {
 #   * shells -- default shells for the pc node
 #****
 proc $MODULE.shellcmds {} {
-    return "csh bash sh tcsh"
+	return "csh bash sh tcsh"
 }
 
 #****f* pc.tcl/pc.nghook
@@ -292,7 +295,7 @@ proc $MODULE.shellcmds {} {
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node_id iface_id } {
-    return [list $node_id-[getIfcName $node_id $iface_id] ether]
+	return [list $node_id-[getIfcName $node_id $iface_id] ether]
 }
 
 ################################################################################
@@ -308,7 +311,7 @@ proc $MODULE.nghook { eid node_id iface_id } {
 #   Does nothing
 #****
 proc $MODULE.prepareSystem {} {
-    # nothing to do
+	# nothing to do
 }
 
 #****f* pc.tcl/pc.nodeCreate
@@ -323,8 +326,8 @@ proc $MODULE.prepareSystem {} {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeCreate { eid node_id } {
-    prepareFilesystemForNode $node_id
-    createNodeContainer $node_id
+	prepareFilesystemForNode $node_id
+	createNodeContainer $node_id
 }
 
 #****f* pc.tcl/pc.nodeNamespaceSetup
@@ -339,7 +342,7 @@ proc $MODULE.nodeCreate { eid node_id } {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeNamespaceSetup { eid node_id } {
-    attachToL3NodeNamespace $node_id
+	attachToL3NodeNamespace $node_id
 }
 
 #****f* pc.tcl/pc.nodeInitConfigure
@@ -355,15 +358,15 @@ proc $MODULE.nodeNamespaceSetup { eid node_id } {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeInitConfigure { eid node_id } {
-    configureICMPoptions $node_id
+	configureICMPoptions $node_id
 }
 
 proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
-    nodePhysIfacesCreate $node_id $ifaces
+	nodePhysIfacesCreate $node_id $ifaces
 }
 
 proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
-    nodeLogIfacesCreate $node_id $ifaces
+	nodeLogIfacesCreate $node_id $ifaces
 }
 
 #****f* pc.tcl/pc.nodeIfacesConfigure
@@ -381,7 +384,7 @@ proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
 #   * ifaces -- list of interface ids
 #****
 proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
-    startNodeIfaces $node_id $ifaces
+	startNodeIfaces $node_id $ifaces
 }
 
 #****f* pc.tcl/pc.nodeConfigure
@@ -398,7 +401,7 @@ proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeConfigure { eid node_id } {
-    runConfOnNode $node_id
+	runConfOnNode $node_id
 }
 
 ################################################################################
@@ -420,15 +423,15 @@ proc $MODULE.nodeConfigure { eid node_id } {
 #   * ifaces -- list of interface ids
 #****
 proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
-    unconfigNodeIfaces $eid $node_id $ifaces
+	unconfigNodeIfaces $eid $node_id $ifaces
 }
 
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
-    nodeIfacesDestroy $eid $node_id $ifaces
+	nodeIfacesDestroy $eid $node_id $ifaces
 }
 
 proc $MODULE.nodeUnconfigure { eid node_id } {
-    unconfigNode $eid $node_id
+	unconfigNode $eid $node_id
 }
 
 #****f* pc.tcl/pc.nodeShutdown
@@ -445,8 +448,8 @@ proc $MODULE.nodeUnconfigure { eid node_id } {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeShutdown { eid node_id } {
-    killExtProcess "wireshark.*[getNodeName $node_id].*\\($eid\\)"
-    killAllNodeProcesses $eid $node_id
+	killExtProcess "wireshark.*[getNodeName $node_id].*\\($eid\\)"
+	killAllNodeProcesses $eid $node_id
 }
 
 #****f* pc.tcl/pc.nodeDestroy
@@ -463,8 +466,8 @@ proc $MODULE.nodeShutdown { eid node_id } {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeDestroy { eid node_id } {
-    destroyNodeVirtIfcs $eid $node_id
-    removeNodeContainer $eid $node_id
-    destroyNamespace $eid-$node_id
-    removeNodeFS $eid $node_id
+	destroyNodeVirtIfcs $eid $node_id
+	removeNodeContainer $eid $node_id
+	destroyNamespace $eid-$node_id
+	removeNodeFS $eid $node_id
 }

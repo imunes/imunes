@@ -36,18 +36,18 @@
 #   my_node_id - node id
 #****
 proc getListOfOtherNodes { my_node_id } {
-    set nodes_list [removeFromList [getFromRunning "node_list"] $my_node_id]
+	set nodes_list [removeFromList [getFromRunning "node_list"] $my_node_id]
 
-    set names_list ""
-    foreach node_id $nodes_list {
-	if { [getNodeType $node_id] == "pseudo" } {
-	    continue
+	set names_list ""
+	foreach node_id $nodes_list {
+		if { [getNodeType $node_id] == "pseudo" } {
+			continue
+		}
+
+		lappend names_list "[getNodeName $node_id] - $node_id"
 	}
 
-	lappend names_list "[getNodeName $node_id] - $node_id"
-    }
-
-    return $names_list
+	return $names_list
 }
 
 #****f* ipsec.tcl/getIPAddressForPeer
@@ -61,37 +61,37 @@ proc getListOfOtherNodes { my_node_id } {
 #   node_id - node id
 #****
 proc getIPAddressForPeer { node_id curIP } {
-    set ifaces_list [ifcList $node_id]
-    foreach logifc [logIfcList $node_id] {
-	if { [string match "vlan*" $logifc] } {
-	    lappend ifaces_list $logifc
+	set ifaces_list [ifcList $node_id]
+	foreach logifc [logIfcList $node_id] {
+		if { [string match "vlan*" $logifc] } {
+			lappend ifaces_list $logifc
+		}
 	}
-    }
 
-    set ips_list ""
-    if { $curIP == "" } {
-	set IPversion 4
-    } else {
-	set IPversion [ ::ip::version $curIP ]
-    }
-
-    if { $IPversion == 4 } {
-	foreach item $ifaces_list {
-	    set ifcIP [getIfcIPv4addrs $node_id $item]
-	    if { $ifcIP != "" } {
-		lappend ips_list {*}$ifcIP
-	    }
+	set ips_list ""
+	if { $curIP == "" } {
+		set IPversion 4
+	} else {
+		set IPversion [ ::ip::version $curIP ]
 	}
-    } else {
-	foreach item $ifaces_list {
-	    set ifcIP [getIfcIPv6addrs $node_id $item]
-	    if { $ifcIP != "" } {
-		lappend ips_list {*}$ifcIP
-	    }
-	}
-    }
 
-    return $ips_list
+	if { $IPversion == 4 } {
+		foreach item $ifaces_list {
+			set ifcIP [getIfcIPv4addrs $node_id $item]
+			if { $ifcIP != "" } {
+				lappend ips_list {*}$ifcIP
+			}
+		}
+	} else {
+		foreach item $ifaces_list {
+			set ifcIP [getIfcIPv6addrs $node_id $item]
+			if { $ifcIP != "" } {
+				lappend ips_list {*}$ifcIP
+			}
+		}
+	}
+
+	return $ips_list
 }
 
 #****f* ipsec.tcl/getLocalSubnets
@@ -105,44 +105,44 @@ proc getIPAddressForPeer { node_id curIP } {
 #   ips_list - list of IP addresses
 #****
 proc getSubnetsFromIPs { ips_list } {
-    set total_string ""
-    set total_list ""
-    foreach item $ips_list {
-	set total_string [ip::prefix $item]
-	if { [::ip::version $item ] == 6 } {
-	    set total_string [ip::contract $total_string]
+	set total_string ""
+	set total_list ""
+	foreach item $ips_list {
+		set total_string [ip::prefix $item]
+		if { [::ip::version $item ] == 6 } {
+			set total_string [ip::contract $total_string]
+		}
+
+		append total_string "/"
+		append total_string [::ip::mask $item]
+		lappend total_list $total_string
 	}
 
-	append total_string "/"
-	append total_string [::ip::mask $item]
-	lappend total_list $total_string
-    }
-
-    return [lsort -unique $total_list]
+	return [lsort -unique $total_list]
 }
 
 proc checkIfPeerStartsSameConnection { peer local_ip local_subnet local_id } {
-    set connList [getNodeIPsecConnList $peer]
+	set connList [getNodeIPsecConnList $peer]
 
-    foreach conn $connList {
-	set auto [getNodeIPsecSetting $peer $conn "auto"]
-	if { "$auto" == "start" } {
-	    set right [getNodeIPsecSetting $peer $conn "right"]
-	    if { "$right" == "$local_ip" } {
-		set rightsubnet [getNodeIPsecSetting $peer $conn "rightsubnet"]
-		if { "$rightsubnet" == "$local_subnet" } {
-		    set rightid [getNodeIPsecSetting $peer $conn "rightid"]
-		    if { $rightid == "" || $local_id == "" } {
-			return 1
-		    } else {
-			if { "$rightid" == "$local_id" } {
-			    return 1
+	foreach conn $connList {
+		set auto [getNodeIPsecSetting $peer $conn "auto"]
+		if { "$auto" == "start" } {
+			set right [getNodeIPsecSetting $peer $conn "right"]
+			if { "$right" == "$local_ip" } {
+				set rightsubnet [getNodeIPsecSetting $peer $conn "rightsubnet"]
+				if { "$rightsubnet" == "$local_subnet" } {
+					set rightid [getNodeIPsecSetting $peer $conn "rightid"]
+					if { $rightid == "" || $local_id == "" } {
+						return 1
+					} else {
+						if { "$rightid" == "$local_id" } {
+							return 1
+						}
+					}
+				}
 			}
-		    }
 		}
-	    }
 	}
-    }
 
-    return 0
+	return 0
 }

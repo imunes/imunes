@@ -38,11 +38,11 @@
 #   * link_id - link id
 #****
 proc linkConfigGUI { c link_id } {
-    if { $link_id == "" } {
-	set link_id [lindex [$c gettags current] 1]
-    }
+	if { $link_id == "" } {
+		set link_id [lindex [$c gettags current] 1]
+	}
 
-    link.configGUI $c $link_id
+	link.configGUI $c $link_id
 }
 
 #****f* linkcfgGUI.tcl/toggleDirectLink
@@ -57,28 +57,28 @@ proc linkConfigGUI { c link_id } {
 #   * link_id - link id
 #****
 proc toggleDirectLink { c link_id } {
-    if { $link_id == "" } {
-	set link_id [lindex [$c gettags current] 1]
-    }
+	if { $link_id == "" } {
+		set link_id [lindex [$c gettags current] 1]
+	}
 
-    if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
-	setToExecuteVars "terminate_cfg" [cfgGet]
-    }
+	if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+		setToExecuteVars "terminate_cfg" [cfgGet]
+	}
 
-    set new_value [expr [getLinkDirect $link_id] ^ 1]
-    setLinkDirect $link_id $new_value
+	set new_value [expr [getLinkDirect $link_id] ^ 1]
+	setLinkDirect $link_id $new_value
 
-    set mirror_link_id [getLinkMirror $link_id]
-    if { $mirror_link_id != "" } {
-	setLinkDirect $mirror_link_id $new_value
-	updateLinkLabel $mirror_link_id
-    }
-    updateLinkLabel $link_id
+	set mirror_link_id [getLinkMirror $link_id]
+	if { $mirror_link_id != "" } {
+		setLinkDirect $mirror_link_id $new_value
+		updateLinkLabel $mirror_link_id
+	}
+	updateLinkLabel $link_id
 
-    undeployCfg
-    deployCfg
+	undeployCfg
+	deployCfg
 
-    .panwin.f1.c config -cursor left_ptr
+	.panwin.f1.c config -cursor left_ptr
 }
 
 #****f* linkcfgGUI.tcl/link.configGUI
@@ -95,27 +95,27 @@ proc toggleDirectLink { c link_id } {
 #   * link_id - link id
 #****
 proc link.configGUI { c link_id } {
-    global wi
-    #
-    #guielements - the list of link configuration parameters (except Color parameter)
-    #              (this list is used when calling configGUI_linkConfigApply procedure)
-    #
-    global configelements
-    set configelements {}
+	global wi
+	#
+	#guielements - the list of link configuration parameters (except Color parameter)
+	#		(this list is used when calling configGUI_linkConfigApply procedure)
+	#
+	global configelements
+	set configelements {}
 
-    configGUI_createConfigPopupWin $c
-    wm title $wi "link configuration"
+	configGUI_createConfigPopupWin $c
+	wm title $wi "link configuration"
 
-    configGUI_linkFromTo $wi $link_id
-    configGUI_linkConfig $wi $link_id "Bandwidth" "Bandwidth (bps):"
-    configGUI_linkConfig $wi $link_id "Delay" "Delay (us):"
-    configGUI_linkConfig $wi $link_id "BER" "BER - FreeBSD (1/N): "
-    configGUI_linkConfig $wi $link_id "Loss" "Loss - Linux (%):"
-    configGUI_linkConfig $wi $link_id "Dup" "Duplicate (%):"
-    configGUI_linkConfig $wi $link_id "Width" "Width:"
-    configGUI_linkColor $wi $link_id
+	configGUI_linkFromTo $wi $link_id
+	configGUI_linkConfig $wi $link_id "Bandwidth" "Bandwidth (bps):"
+	configGUI_linkConfig $wi $link_id "Delay" "Delay (us):"
+	configGUI_linkConfig $wi $link_id "BER" "BER - FreeBSD (1/N): "
+	configGUI_linkConfig $wi $link_id "Loss" "Loss - Linux (%):"
+	configGUI_linkConfig $wi $link_id "Dup" "Duplicate (%):"
+	configGUI_linkConfig $wi $link_id "Width" "Width:"
+	configGUI_linkColor $wi $link_id
 
-    configGUI_buttonsACLink $wi $link_id
+	configGUI_buttonsACLink $wi $link_id
 }
 
 #****f* linkcfgGUI.tcl/configGUI_buttonsACLink
@@ -130,23 +130,23 @@ proc link.configGUI { c link_id } {
 #   * link_id - link id
 #****
 proc configGUI_buttonsACLink { wi link_id } {
-    global badentry configelements
+	global badentry configelements
 
-    ttk::frame $wi.buttons -borderwidth 6
-    ttk::button $wi.buttons.apply -text "Apply" -command \
-        "configGUI_applyButtonLink $wi $link_id 0"
-    focus $wi.buttons.apply
+	ttk::frame $wi.buttons -borderwidth 6
+	ttk::button $wi.buttons.apply -text "Apply" -command \
+		"configGUI_applyButtonLink $wi $link_id 0"
+	focus $wi.buttons.apply
 
-    ttk::button $wi.buttons.cancel -text "Cancel" -command \
-        "set badentry -1; destroy $wi"
+	ttk::button $wi.buttons.cancel -text "Cancel" -command \
+		"set badentry -1; destroy $wi"
 
-    pack $wi.buttons.apply -side left -anchor e -expand 1 -pady 2
-    pack $wi.buttons.cancel -side right -anchor w -expand 1 -pady 2
-    pack $wi.buttons -fill both -expand 1 -side bottom
+	pack $wi.buttons.apply -side left -anchor e -expand 1 -pady 2
+	pack $wi.buttons.cancel -side right -anchor w -expand 1 -pady 2
+	pack $wi.buttons -fill both -expand 1 -side bottom
 
-    bind $wi <Key-Return> \
-        "configGUI_applyButtonLink $wi $link_id 0"
-    bind $wi <Key-Escape> "set badentry -1; destroy $wi"
+	bind $wi <Key-Return> \
+		"configGUI_applyButtonLink $wi $link_id 0"
+	bind $wi <Key-Escape> "set badentry -1; destroy $wi"
 }
 
 #****f* linkcfgGUI.tcl/configGUI_applyButtonLink
@@ -162,35 +162,35 @@ proc configGUI_buttonsACLink { wi link_id } {
 #   * phase --
 #****
 proc configGUI_applyButtonLink { wi link_id phase } {
-    global changed badentry
+	global changed badentry
 
-    $wi config -cursor watch
-    update
-    if { $phase == 0 } {
-	set badentry 0
-	focus .
-	after 100 "configGUI_applyButtonLink $wi $link_id 1"
-	return
-    } elseif { $badentry } {
-	$wi config -cursor left_ptr
-	return
-    }
+	$wi config -cursor watch
+	update
+	if { $phase == 0 } {
+		set badentry 0
+		focus .
+		after 100 "configGUI_applyButtonLink $wi $link_id 1"
+		return
+	} elseif { $badentry } {
+		$wi config -cursor left_ptr
+		return
+	}
 
-    configGUI_linkConfigApply $wi $link_id
-    configGUI_linkColorApply $wi $link_id
+	configGUI_linkConfigApply $wi $link_id
+	configGUI_linkColorApply $wi $link_id
 
-    if { $changed == 1 && [getFromRunning "oper_mode"] == "exec" } {
-	set eid [getFromRunning "eid"]
-	saveRunningConfiguration $eid
-	execSetLinkParams $eid $link_id
-    }
+	if { $changed == 1 && [getFromRunning "oper_mode"] == "exec" } {
+		set eid [getFromRunning "eid"]
+		saveRunningConfiguration $eid
+		execSetLinkParams $eid $link_id
+	}
 
-    if { $changed == 1 } {
-	redrawAll
-	updateUndoLog
-    }
+	if { $changed == 1 } {
+		redrawAll
+		updateUndoLog
+	}
 
-    destroy .popup
+	destroy .popup
 }
 
 #****f* linkcfgGUI.tcl/configGUI_linkFromTo
@@ -205,13 +205,13 @@ proc configGUI_applyButtonLink { wi link_id phase } {
 #   * link_id - link id
 #****
 proc configGUI_linkFromTo { wi link_id } {
-    lassign [getLinkPeers $link_id] node1 node2
+	lassign [getLinkPeers $link_id] node1 node2
 
-    ttk::frame $wi.name -borderwidth 6
-    ttk::label $wi.name.txt -text "Link from [getNodeName $node1] to [getNodeName $node2]"
+	ttk::frame $wi.name -borderwidth 6
+	ttk::label $wi.name.txt -text "Link from [getNodeName $node1] to [getNodeName $node2]"
 
-    pack $wi.name.txt
-    pack $wi.name -fill both -expand 1
+	pack $wi.name.txt
+	pack $wi.name -fill both -expand 1
 }
 
 #****f* linkcfgGUI.tcl/configGUI_linkConfig
@@ -228,44 +228,44 @@ proc configGUI_linkFromTo { wi link_id } {
 #   * label - link parameter label
 #****
 proc configGUI_linkConfig { wi link_id param label } {
-    global configelements
+	global configelements
 
-    lappend configelements $param
-    if { $param == "Bandwidth" } {
-        set from 0; set to 1000000000000; set inc 1000
-    } elseif { $param == "Delay" } {
-        set from 0; set to 10000000; set inc 5
-    } elseif { $param == "BER" } {
-        set from 0; set to 10000000000000; set inc 1000
-    } elseif { $param == "Loss" } {
-        set from 0; set to 100; set inc 1
-    } elseif { $param == "Dup" } {
-        set from 0; set to 50; set inc 1
-    } elseif { $param == "Width" } {
-        set from 1; set to 8; set inc 1
-    } else {
-	return
-    }
+	lappend configelements $param
+	if { $param == "Bandwidth" } {
+		set from 0; set to 1000000000000; set inc 1000
+	} elseif { $param == "Delay" } {
+		set from 0; set to 10000000; set inc 5
+	} elseif { $param == "BER" } {
+		set from 0; set to 10000000000000; set inc 1000
+	} elseif { $param == "Loss" } {
+		set from 0; set to 100; set inc 1
+	} elseif { $param == "Dup" } {
+		set from 0; set to 50; set inc 1
+	} elseif { $param == "Width" } {
+		set from 1; set to 8; set inc 1
+	} else {
+		return
+	}
 
-    set fr [string tolower $param ]
-    ttk::frame $wi.$fr -borderwidth 4
-    ttk::label $wi.$fr.txt -text $label
-    ttk::spinbox $wi.$fr.value -justify right -width 10 \
-	    -validate focus -invalidcommand "focusAndFlash %W"
-    set value [getLink$param $link_id]
-    if { $value == "" } {
-        set value 0
-    }
+	set fr [string tolower $param ]
+	ttk::frame $wi.$fr -borderwidth 4
+	ttk::label $wi.$fr.txt -text $label
+	ttk::spinbox $wi.$fr.value -justify right -width 10 \
+		-validate focus -invalidcommand "focusAndFlash %W"
+	set value [getLink$param $link_id]
+	if { $value == "" } {
+		set value 0
+	}
 
-    $wi.$fr.value insert 0 $value
+	$wi.$fr.value insert 0 $value
 
-    $wi.$fr.value configure \
-	    -validatecommand "checkIntRange %P $from $to" \
-	    -from $from -to $to -increment $inc
+	$wi.$fr.value configure \
+		-validatecommand "checkIntRange %P $from $to" \
+		-from $from -to $to -increment $inc
 
-    pack $wi.$fr.txt -side left
-    pack $wi.$fr.value -side right
-    pack $wi.$fr -fill both -expand 1
+	pack $wi.$fr.txt -side left
+	pack $wi.$fr.value -side right
+	pack $wi.$fr -fill both -expand 1
 }
 
 #****f* linkcfgGUI.tcl/configGUI_linkColor
@@ -280,18 +280,18 @@ proc configGUI_linkConfig { wi link_id param label } {
 #   * link_id - link id
 #****
 proc configGUI_linkColor { wi link_id } {
-    global link_color
+	global link_color
 
-    ttk::frame $wi.color -borderwidth 4
-    ttk::label $wi.color.txt -text "Color:"
+	ttk::frame $wi.color -borderwidth 4
+	ttk::label $wi.color.txt -text "Color:"
 
-    set link_color [getLinkColor $link_id]
-    ttk::combobox $wi.color.value -justify right -width 11 -textvariable link_color
-    $wi.color.value configure -values [list Red Green Blue Yellow Magenta Cyan Black]
+	set link_color [getLinkColor $link_id]
+	ttk::combobox $wi.color.value -justify right -width 11 -textvariable link_color
+	$wi.color.value configure -values [list Red Green Blue Yellow Magenta Cyan Black]
 
-    pack $wi.color.txt -side left
-    pack $wi.color.value -side right
-    pack $wi.color -fill both -expand 1
+	pack $wi.color.txt -side left
+	pack $wi.color.value -side right
+	pack $wi.color -fill both -expand 1
 }
 
 #****f* linkcfgGUI.tcl/linkJitterConfigGUI
@@ -308,102 +308,102 @@ proc configGUI_linkColor { wi link_id } {
 #   * link_id - link id
 #****
 proc linkJitterConfigGUI { c link_id } {
-    global wi badentry up_jitmode down_jitmode
+	global wi badentry up_jitmode down_jitmode
 
-    lassign [getLinkPeers $link_id] node1 node2
-    set node1_name [getNodeName $node1]
-    set node2_name [getNodeName $node2]
+	lassign [getLinkPeers $link_id] node1 node2
+	set node1_name [getNodeName $node1]
+	set node2_name [getNodeName $node2]
 
-    configGUI_createConfigPopupWin $c
-    wm title $wi "link $node1_name-$node2_name jitter configuration"
+	configGUI_createConfigPopupWin $c
+	wm title $wi "link $node1_name-$node2_name jitter configuration"
 
-    ttk::frame $wi.up
-    ttk::frame $wi.down
-    ttk::separator $wi.s -orient vertical
+	ttk::frame $wi.up
+	ttk::frame $wi.down
+	ttk::separator $wi.s -orient vertical
 
-    ttk::label $wi.up.label -text "Upstream ($node2_name->$node1_name):"
-    ttk::label $wi.down.label -text "Downstream ($node1_name->$node2_name):"
+	ttk::label $wi.up.label -text "Upstream ($node2_name->$node1_name):"
+	ttk::label $wi.down.label -text "Downstream ($node1_name->$node2_name):"
 
-    ttk::label $wi.up.modelab -text "Jitter mode:"
-    ttk::label $wi.down.modelab -text "Jitter mode:"
-    ttk::combobox $wi.up.jitmode -justify right -width 10 \
-	-textvariable up_jitmode -state readonly
-    $wi.up.jitmode configure -values "sequential random"
-    ttk::combobox $wi.down.jitmode -justify right -width 10 \
-	-textvariable down_jitmode -state readonly
-    $wi.down.jitmode configure -values "sequential random"
+	ttk::label $wi.up.modelab -text "Jitter mode:"
+	ttk::label $wi.down.modelab -text "Jitter mode:"
+	ttk::combobox $wi.up.jitmode -justify right -width 10 \
+		-textvariable up_jitmode -state readonly
+	$wi.up.jitmode configure -values "sequential random"
+	ttk::combobox $wi.down.jitmode -justify right -width 10 \
+		-textvariable down_jitmode -state readonly
+	$wi.down.jitmode configure -values "sequential random"
 
-    ttk::label $wi.up.holdlab -text "Jitter hold (ms):"
-    ttk::label $wi.down.holdlab -text "Jitter hold (ms):"
+	ttk::label $wi.up.holdlab -text "Jitter hold (ms):"
+	ttk::label $wi.down.holdlab -text "Jitter hold (ms):"
 
-    ttk::spinbox $wi.up.holdval -width 9 -increment 10 -from 0 -to 10000000 \
-	-justify right
-    ttk::spinbox $wi.down.holdval -width 9 -increment 10 -from 0 -to 10000000 \
-	-justify right
+	ttk::spinbox $wi.up.holdval -width 9 -increment 10 -from 0 -to 10000000 \
+		-justify right
+	ttk::spinbox $wi.down.holdval -width 9 -increment 10 -from 0 -to 10000000 \
+		-justify right
 
-    ttk::label $wi.up.elab -text "Jitter values (ms):"
-    ttk::label $wi.down.elab -text "Jitter values (ms):"
+	ttk::label $wi.up.elab -text "Jitter values (ms):"
+	ttk::label $wi.down.elab -text "Jitter values (ms):"
 
-    ttk::scrollbar $wi.up.vsb -orient vertical \
-	-command [list $wi.up.editor yview]
-    ttk::scrollbar $wi.down.vsb -orient vertical \
-	-command [list $wi.down.editor yview]
+	ttk::scrollbar $wi.up.vsb -orient vertical \
+		-command [list $wi.up.editor yview]
+	ttk::scrollbar $wi.down.vsb -orient vertical \
+		-command [list $wi.down.editor yview]
 
-    text $wi.up.editor -width 30 -height 20 -bg white -wrap none \
-	-yscrollcommand [list $wi.up.vsb set]
-    text $wi.down.editor -width 30 -height 20 -bg white -wrap none \
-	-yscrollcommand [list $wi.down.vsb set]
+	text $wi.up.editor -width 30 -height 20 -bg white -wrap none \
+		-yscrollcommand [list $wi.up.vsb set]
+	text $wi.down.editor -width 30 -height 20 -bg white -wrap none \
+		-yscrollcommand [list $wi.down.vsb set]
 
-    ttk::frame $wi.buttons -borderwidth 3
-    ttk::button $wi.buttons.apply -text "Apply" -command \
-        "applyJitterLink $wi $link_id"
-    ttk::button $wi.buttons.applyclose -text "Apply & Close" -command \
-        "applyJitterLink $wi $link_id; destroy $wi"
-    ttk::button $wi.buttons.cancel -text "Cancel" -command \
-        "destroy $wi"
-    bind $wi <Key-Escape> "destroy $wi"
+	ttk::frame $wi.buttons -borderwidth 3
+	ttk::button $wi.buttons.apply -text "Apply" -command \
+		"applyJitterLink $wi $link_id"
+	ttk::button $wi.buttons.applyclose -text "Apply & Close" -command \
+		"applyJitterLink $wi $link_id; destroy $wi"
+	ttk::button $wi.buttons.cancel -text "Cancel" -command \
+		"destroy $wi"
+	bind $wi <Key-Escape> "destroy $wi"
 
-    set up_jitmode [getLinkJitterModeUpstream $link_id]
-    if { $up_jitmode == "" } { set up_jitmode sequential }
-    set down_jitmode [getLinkJitterModeDownstream $link_id]
-    if { $down_jitmode == "" } { set down_jitmode sequential }
+	set up_jitmode [getLinkJitterModeUpstream $link_id]
+	if { $up_jitmode == "" } { set up_jitmode sequential }
+	set down_jitmode [getLinkJitterModeDownstream $link_id]
+	if { $down_jitmode == "" } { set down_jitmode sequential }
 
-    $wi.up.editor insert end [join [getLinkJitterUpstream $link_id] "\n"]
-    $wi.down.editor insert end [join [getLinkJitterDownstream $link_id] "\n"]
+	$wi.up.editor insert end [join [getLinkJitterUpstream $link_id] "\n"]
+	$wi.down.editor insert end [join [getLinkJitterDownstream $link_id] "\n"]
 
-    set val [getLinkJitterHoldUpstream $link_id]
-    if { $val == "" } { set val 0 }
-    $wi.up.holdval insert 0 $val
-    set val [getLinkJitterHoldDownstream $link_id]
-    if { $val == "" } { set val 0 }
-    $wi.down.holdval insert 0 $val
+	set val [getLinkJitterHoldUpstream $link_id]
+	if { $val == "" } { set val 0 }
+	$wi.up.holdval insert 0 $val
+	set val [getLinkJitterHoldDownstream $link_id]
+	if { $val == "" } { set val 0 }
+	$wi.down.holdval insert 0 $val
 
-    grid $wi.up.label -row 0 -column 0 -in $wi.up -sticky w -pady 3
-    grid $wi.up.modelab -row 1 -column 0 -in $wi.up -sticky w
-    grid $wi.up.jitmode -row 1 -column 0 -in $wi.up -sticky e
-    grid $wi.up.holdlab -row 2 -column 0 -in $wi.up -sticky w -pady 2
-    grid $wi.up.holdval -row 2 -column 0 -in $wi.up -sticky e -pady 2
-    grid $wi.up.elab -row 3 -column 0 -in $wi.up -sticky w
-    grid $wi.up.editor -row 4 -column 0 -sticky nsew -in $wi.up
-    grid $wi.up.vsb -row 4 -column 1 -sticky nsew -in $wi.up
+	grid $wi.up.label -row 0 -column 0 -in $wi.up -sticky w -pady 3
+	grid $wi.up.modelab -row 1 -column 0 -in $wi.up -sticky w
+	grid $wi.up.jitmode -row 1 -column 0 -in $wi.up -sticky e
+	grid $wi.up.holdlab -row 2 -column 0 -in $wi.up -sticky w -pady 2
+	grid $wi.up.holdval -row 2 -column 0 -in $wi.up -sticky e -pady 2
+	grid $wi.up.elab -row 3 -column 0 -in $wi.up -sticky w
+	grid $wi.up.editor -row 4 -column 0 -sticky nsew -in $wi.up
+	grid $wi.up.vsb -row 4 -column 1 -sticky nsew -in $wi.up
 
-    grid $wi.down.label -row 0 -column 0 -in $wi.down -sticky w -pady 3
-    grid $wi.down.modelab -row 1 -column 0 -in $wi.down -sticky w
-    grid $wi.down.jitmode -row 1 -column 0 -in $wi.down -sticky e
-    grid $wi.down.holdlab -row 2 -column 0 -in $wi.down -sticky w -pady 2
-    grid $wi.down.holdval -row 2 -column 0 -in $wi.down -sticky e -pady 2
-    grid $wi.down.elab -row 3 -column 0 -in $wi.down -sticky w
-    grid $wi.down.editor -row 4 -column 0 -sticky nsew -in $wi.down
-    grid $wi.down.vsb -row 4 -column 1 -sticky nsew -in $wi.down
+	grid $wi.down.label -row 0 -column 0 -in $wi.down -sticky w -pady 3
+	grid $wi.down.modelab -row 1 -column 0 -in $wi.down -sticky w
+	grid $wi.down.jitmode -row 1 -column 0 -in $wi.down -sticky e
+	grid $wi.down.holdlab -row 2 -column 0 -in $wi.down -sticky w -pady 2
+	grid $wi.down.holdval -row 2 -column 0 -in $wi.down -sticky e -pady 2
+	grid $wi.down.elab -row 3 -column 0 -in $wi.down -sticky w
+	grid $wi.down.editor -row 4 -column 0 -sticky nsew -in $wi.down
+	grid $wi.down.vsb -row 4 -column 1 -sticky nsew -in $wi.down
 
-    grid $wi.buttons.apply -row 0 -column 0 -in $wi.buttons -padx 1
-    grid $wi.buttons.applyclose -row 0 -column 2 -in $wi.buttons -padx 2
-    grid $wi.buttons.cancel -row 0 -column 3 -in $wi.buttons -padx 1
+	grid $wi.buttons.apply -row 0 -column 0 -in $wi.buttons -padx 1
+	grid $wi.buttons.applyclose -row 0 -column 2 -in $wi.buttons -padx 2
+	grid $wi.buttons.cancel -row 0 -column 3 -in $wi.buttons -padx 1
 
-    grid $wi.down -row 0 -column 0 -sticky nsew -in $wi
-    grid $wi.s -row 0 -column 1 -sticky ns -in $wi -padx 2
-    grid $wi.up -row 0 -column 2 -sticky nsew -in $wi
-    grid $wi.buttons -row 1 -column 0 -columnspan 3 -sticky ns -in $wi -padx 1 -pady 1
+	grid $wi.down -row 0 -column 0 -sticky nsew -in $wi
+	grid $wi.s -row 0 -column 1 -sticky ns -in $wi -padx 2
+	grid $wi.up -row 0 -column 2 -sticky nsew -in $wi
+	grid $wi.buttons -row 1 -column 0 -columnspan 3 -sticky ns -in $wi -padx 1 -pady 1
 }
 
 #****f* linkcfgGUI.tcl/applyJitterLink
@@ -418,52 +418,52 @@ proc linkJitterConfigGUI { c link_id } {
 #   * link_id -- link id
 #****
 proc applyJitterLink { wi link_id } {
-    global up_jitmode down_jitmode
+	global up_jitmode down_jitmode
 
-    setLinkJitterModeUpstream $link_id $up_jitmode
-    setLinkJitterModeDownstream $link_id $down_jitmode
+	setLinkJitterModeUpstream $link_id $up_jitmode
+	setLinkJitterModeDownstream $link_id $down_jitmode
 
-    setLinkJitterHoldUpstream $link_id [$wi.up.holdval get]
-    setLinkJitterHoldDownstream $link_id [$wi.down.holdval get]
+	setLinkJitterHoldUpstream $link_id [$wi.up.holdval get]
+	setLinkJitterHoldDownstream $link_id [$wi.down.holdval get]
 
-    set jitt_up [$wi.up.editor get 1.0 "end -1c"]
-    set jitt_down [$wi.down.editor get 1.0 "end -1c"]
+	set jitt_up [$wi.up.editor get 1.0 "end -1c"]
+	set jitt_down [$wi.down.editor get 1.0 "end -1c"]
 
-    set jup ""
-    set jdown ""
+	set jup ""
+	set jdown ""
 
-    foreach line $jitt_up {
-	if { [string is double $line] && $line != "" && $line < 10000 } {
-	    lappend jup [expr round($line*1000)/1000.0]
+	foreach line $jitt_up {
+		if { [string is double $line] && $line != "" && $line < 10000 } {
+			lappend jup [expr round($line*1000)/1000.0]
+		}
 	}
-    }
 
-    foreach line $jitt_down {
-	if { [string is double $line] && $line != "" && $line < 10000 } {
-	    lappend jdown [expr round($line*1000)/1000.0]
+	foreach line $jitt_down {
+		if { [string is double $line] && $line != "" && $line < 10000 } {
+			lappend jdown [expr round($line*1000)/1000.0]
+		}
 	}
-    }
 
-    if { $jup != "" } {
-	setLinkJitterUpstream $link_id $jup
-    }
-    if { $jdown != "" } {
-	setLinkJitterDownstream $link_id $jdown
-    }
+	if { $jup != "" } {
+		setLinkJitterUpstream $link_id $jup
+	}
+	if { $jdown != "" } {
+		setLinkJitterDownstream $link_id $jdown
+	}
 
-    $wi.up.editor delete 1.0 end
-    $wi.up.editor insert end [join $jup "\n"]
-    $wi.down.editor delete 1.0 end
-    $wi.down.editor insert end [join $jdown "\n"]
+	$wi.up.editor delete 1.0 end
+	$wi.up.editor insert end [join $jup "\n"]
+	$wi.down.editor delete 1.0 end
+	$wi.down.editor insert end [join $jdown "\n"]
 
-    if { [getFromRunning "oper_mode"] == "exec" } {
-	set eid [getFromRunning "eid"]
-	saveRunningConfiguration $eid
-	execSetLinkJitter $eid $link_id
-    }
+	if { [getFromRunning "oper_mode"] == "exec" } {
+		set eid [getFromRunning "eid"]
+		saveRunningConfiguration $eid
+		execSetLinkJitter $eid $link_id
+	}
 
-    updateUndoLog
-    redrawAll
+	updateUndoLog
+	redrawAll
 }
 
 #****f* linkcfgGUI.tcl/linkJitterReset
@@ -477,22 +477,22 @@ proc applyJitterLink { wi link_id } {
 #   * link_id -- link id
 #****
 proc linkJitterReset { link_id } {
-    setLinkJitterModeUpstream $link_id ""
-    setLinkJitterModeDownstream $link_id ""
+	setLinkJitterModeUpstream $link_id ""
+	setLinkJitterModeDownstream $link_id ""
 
-    setLinkJitterHoldUpstream $link_id ""
-    setLinkJitterHoldDownstream $link_id ""
+	setLinkJitterHoldUpstream $link_id ""
+	setLinkJitterHoldDownstream $link_id ""
 
-    setLinkJitterUpstream $link_id ""
-    setLinkJitterDownstream $link_id ""
+	setLinkJitterUpstream $link_id ""
+	setLinkJitterDownstream $link_id ""
 
-    if { [getFromRunning "oper_mode"] == "exec" } {
-	set eid [getFromRunning "eid"]
-	saveRunningConfiguration $eid
-	execResetLinkJitter $eid $link_id
-    }
+	if { [getFromRunning "oper_mode"] == "exec" } {
+		set eid [getFromRunning "eid"]
+		saveRunningConfiguration $eid
+		execResetLinkJitter $eid $link_id
+	}
 
-    updateUndoLog
+	updateUndoLog
 }
 
 ###############"Apply" procedures################
@@ -510,24 +510,24 @@ proc linkJitterReset { link_id } {
 #   * link_id - link id
 #****
 proc configGUI_linkConfigApply { wi link_id } {
-    global changed configelements
+	global changed configelements
 
-    foreach element $configelements {
-	set value [$wi.[string tolower $element].value get]
-	if { $value == 0 } {
-	    set value ""
+	foreach element $configelements {
+		set value [$wi.[string tolower $element].value get]
+		if { $value == 0 } {
+			set value ""
+		}
+
+		if { $value != [getLink$element $link_id] } {
+			set mirror [getLinkMirror $link_id]
+			setLink$element $link_id $value
+			if { $mirror != "" } {
+				setLink$element $mirror $value
+			}
+
+			set changed 1
+		}
 	}
-
-	if { $value != [getLink$element $link_id] } {
-	    set mirror [getLinkMirror $link_id]
-	    setLink$element $link_id $value
-	    if { $mirror != "" } {
-		setLink$element $mirror $value
-	    }
-
-	    set changed 1
-	}
-    }
 }
 
 #****f* linkcfgGUI.tcl/configGUI_linkColorApply
@@ -542,17 +542,17 @@ proc configGUI_linkConfigApply { wi link_id } {
 #   * link_id - link id
 #****
 proc configGUI_linkColorApply { wi link_id } {
-    global changed link_color
+	global changed link_color
 
-    set mirror [getLinkMirror $link_id]
-    if { $link_color != [getLinkColor $link_id] } {
-	setLinkColor $link_id $link_color
-	if { $mirror != "" } {
-	    setLinkColor $mirror $link_color
+	set mirror [getLinkMirror $link_id]
+	if { $link_color != [getLinkColor $link_id] } {
+		setLinkColor $link_id $link_color
+		if { $mirror != "" } {
+			setLinkColor $mirror $link_color
+		}
+
+		set changed 1
 	}
-
-	set changed 1
-    }
 }
 
 #****f* linkcfg.tcl/getLinkDirect
@@ -568,7 +568,7 @@ proc configGUI_linkColorApply { wi link_id } {
 #   * link_direct -- returns 0 if link is not a direct link and 1 if it is
 #****
 proc _getLinkDirect { link_cfg } {
-    return [_cfgGetWithDefault 0 $link_cfg "direct"]
+	return [_cfgGetWithDefault 0 $link_cfg "direct"]
 }
 
 #****f* linkcfg.tcl/setLinkDirect
@@ -583,7 +583,7 @@ proc _getLinkDirect { link_cfg } {
 #   * direct -- link bandwidth in bits per second.
 #****
 proc _setLinkDirect { link_cfg direct } {
-    return [_cfgSet $link_cfg "direct" $direct]
+	return [_cfgSet $link_cfg "direct" $direct]
 }
 
 #****f* linkcfg.tcl/getLinkBandwidth
@@ -599,7 +599,7 @@ proc _setLinkDirect { link_cfg direct } {
 #   * bandwidth -- The value of link bandwidth in bits per second.
 #****
 proc _getLinkBandwidth { link_cfg } {
-    return [_cfgGet $link_cfg "bandwidth"]
+	return [_cfgGet $link_cfg "bandwidth"]
 }
 
 #****f* linkcfg.tcl/setLinkBandwidth
@@ -614,11 +614,11 @@ proc _getLinkBandwidth { link_cfg } {
 #   * bandwidth -- link bandwidth in bits per second.
 #****
 proc _setLinkBandwidth { link_cfg bandwidth } {
-    if { $bandwidth == 0 } {
-	set bandwidth ""
-    }
+	if { $bandwidth == 0 } {
+		set bandwidth ""
+	}
 
-    return [_cfgSet $link_cfg "bandwidth" $bandwidth]
+	return [_cfgSet $link_cfg "bandwidth" $bandwidth]
 }
 
 #****f* linkcfg.tcl/getLinkColor
@@ -634,9 +634,9 @@ proc _setLinkBandwidth { link_cfg bandwidth } {
 #   * color -- link color
 #****
 proc _getLinkColor { link_cfg } {
-    global defLinkColor
+	global defLinkColor
 
-    return [_cfgGetWithDefault $defLinkColor $link_cfg "color"]
+	return [_cfgGetWithDefault $defLinkColor $link_cfg "color"]
 }
 
 #****f* linkcfg.tcl/setLinkColor
@@ -651,11 +651,11 @@ proc _getLinkColor { link_cfg } {
 #   * color -- link color
 #****
 proc _setLinkColor { link_cfg color } {
-    if { $color == "Red" } {
-	set color ""
-    }
+	if { $color == "Red" } {
+		set color ""
+	}
 
-    return [_cfgSet $link_cfg "color" $color]
+	return [_cfgSet $link_cfg "color" $color]
 }
 
 #****f* linkcfg.tcl/getLinkWidth
@@ -669,9 +669,9 @@ proc _setLinkColor { link_cfg color } {
 #   * link -- link id
 #****
 proc _getLinkWidth { link_cfg } {
-    global defLinkWidth
+	global defLinkWidth
 
-    return [_cfgGetWithDefault $defLinkWidth $link_cfg "width"]
+	return [_cfgGetWithDefault $defLinkWidth $link_cfg "width"]
 }
 
 #****f* linkcfg.tcl/setLinkWidth
@@ -686,13 +686,13 @@ proc _getLinkWidth { link_cfg } {
 #   * width -- link width
 #****
 proc _setLinkWidth { link_cfg width } {
-    global defLinkWidth
+	global defLinkWidth
 
-    if { $width == $defLinkWidth } {
-	set width ""
-    }
+	if { $width == $defLinkWidth } {
+		set width ""
+	}
 
-    return [_cfgSet $link_cfg "width" $width]
+	return [_cfgSet $link_cfg "width" $width]
 }
 
 #****f* linkcfg.tcl/getLinkDelay
@@ -708,7 +708,7 @@ proc _setLinkWidth { link_cfg width } {
 #   * delay -- The value of link delay in microseconds.
 #****
 proc _getLinkDelay { link_cfg } {
-    return [_cfgGet $link_cfg "delay"]
+	return [_cfgGet $link_cfg "delay"]
 }
 
 #****f* linkcfg.tcl/setLinkDelay
@@ -723,11 +723,11 @@ proc _getLinkDelay { link_cfg } {
 #   * delay -- link delay delay in microseconds.
 #****
 proc _setLinkDelay { link_cfg delay } {
-    if { $delay == 0 } {
-	set delay ""
-    }
+	if { $delay == 0 } {
+		set delay ""
+	}
 
-    return [_cfgSet $link_cfg "delay" $delay]
+	return [_cfgSet $link_cfg "delay" $delay]
 }
 
 #****f* linkcfg.tcl/getLinkJitterUpstream
@@ -743,7 +743,7 @@ proc _setLinkDelay { link_cfg delay } {
 #   * jitter -- the list of values for jitter in microseconds
 #****
 proc _getLinkJitterUpstream { link_cfg } {
-    return [_cfgGet $link_cfg "jitter_upstream"]
+	return [_cfgGet $link_cfg "jitter_upstream"]
 }
 
 #****f* linkcfg.tcl/setLinkJitterUpstream
@@ -758,11 +758,11 @@ proc _getLinkJitterUpstream { link_cfg } {
 #   * jitter_upstream -- link upstream jitter values in microseconds.
 #****
 proc _setLinkJitterUpstream { link_cfg jitter_upstream } {
-    if { $jitter_upstream == 0 } {
-	set jitter_upstream ""
-    }
+	if { $jitter_upstream == 0 } {
+		set jitter_upstream ""
+	}
 
-    return [_cfgSet $link_cfg "jitter_upstream" $jitter_upstream]
+	return [_cfgSet $link_cfg "jitter_upstream" $jitter_upstream]
 }
 
 #****f* linkcfg.tcl/getLinkJitterModeUpstream
@@ -778,7 +778,7 @@ proc _setLinkJitterUpstream { link_cfg jitter_upstream } {
 #   * jitter_mode -- The jitter mode for upstream direction.
 #****
 proc _getLinkJitterModeUpstream { link_cfg } {
-    return [_cfgGet $link_cfg "jitter_upstream_mode"]
+	return [_cfgGet $link_cfg "jitter_upstream_mode"]
 }
 
 #****f* linkcfg.tcl/setLinkJitterModeUpstream
@@ -793,11 +793,11 @@ proc _getLinkJitterModeUpstream { link_cfg } {
 #   * jitter_upstream_mode -- link upstream jitter mode.
 #****
 proc _setLinkJitterModeUpstream { link_cfg jitter_upstream_mode } {
-    if { $jitter_upstream_mode == 0 } {
-	set jitter_upstream_mode ""
-    }
+	if { $jitter_upstream_mode == 0 } {
+		set jitter_upstream_mode ""
+	}
 
-    return [_cfgSet $link_cfg "jitter_upstream_mode" $jitter_upstream_mode]
+	return [_cfgSet $link_cfg "jitter_upstream_mode" $jitter_upstream_mode]
 }
 
 #****f* linkcfg.tcl/getLinkJitterHoldUpstream
@@ -813,7 +813,7 @@ proc _setLinkJitterModeUpstream { link_cfg jitter_upstream_mode } {
 #   * jitter_hold -- The jitter hold for upstream direction.
 #****
 proc _getLinkJitterHoldUpstream { link_cfg } {
-    return [_cfgGet $link_cfg "jitter_upstream_hold"]
+	return [_cfgGet $link_cfg "jitter_upstream_hold"]
 }
 
 #****f* linkcfg.tcl/setLinkJitterHoldUpstream
@@ -828,11 +828,11 @@ proc _getLinkJitterHoldUpstream { link_cfg } {
 #   * jitter_upstream_hold -- link upstream jitter hold.
 #****
 proc _setLinkJitterHoldUpstream { link_cfg jitter_upstream_hold } {
-    if { $jitter_upstream_hold == 0 } {
-	set jitter_upstream_hold ""
-    }
+	if { $jitter_upstream_hold == 0 } {
+		set jitter_upstream_hold ""
+	}
 
-    return [_cfgSet $link_cfg "jitter_upstream_hold" $jitter_upstream_hold]
+	return [_cfgSet $link_cfg "jitter_upstream_hold" $jitter_upstream_hold]
 }
 
 #****f* linkcfg.tcl/getLinkJitterDownstream
@@ -849,7 +849,7 @@ proc _setLinkJitterHoldUpstream { link_cfg jitter_upstream_hold } {
 #   * jitter -- The list of values for jitter in microseconds.
 #****
 proc _getLinkJitterDownstream { link_cfg } {
-    return [_cfgGet $link_cfg "jitter_downstream"]
+	return [_cfgGet $link_cfg "jitter_downstream"]
 }
 
 #****f* linkcfg.tcl/setLinkJitterDownstream
@@ -864,11 +864,11 @@ proc _getLinkJitterDownstream { link_cfg } {
 #   * jitter_downstream -- link downstream jitter values in microseconds.
 #****
 proc _setLinkJitterDownstream { link_cfg jitter_downstream } {
-    if { $jitter_downstream == 0 } {
-	set jitter_downstream ""
-    }
+	if { $jitter_downstream == 0 } {
+		set jitter_downstream ""
+	}
 
-    return [_cfgSet $link_cfg "jitter_downstream" $jitter_downstream]
+	return [_cfgSet $link_cfg "jitter_downstream" $jitter_downstream]
 }
 
 #****f* linkcfg.tcl/getLinkJitterModeDownstream
@@ -884,7 +884,7 @@ proc _setLinkJitterDownstream { link_cfg jitter_downstream } {
 #   * jitter_mode -- The jitter mode for downstream direction.
 #****
 proc _getLinkJitterModeDownstream { link_cfg } {
-    return [_cfgGet $link_cfg "jitter_downstream_mode"]
+	return [_cfgGet $link_cfg "jitter_downstream_mode"]
 }
 
 #****f* linkcfg.tcl/setLinkJitterModeDownstream
@@ -899,11 +899,11 @@ proc _getLinkJitterModeDownstream { link_cfg } {
 #   * jitter_downstream_mode -- link downstream jitter mode.
 #****
 proc _setLinkJitterModeDownstream { link_cfg jitter_downstream_mode } {
-    if { $jitter_downstream_mode == 0 } {
-	set jitter_downstream_mode ""
-    }
+	if { $jitter_downstream_mode == 0 } {
+		set jitter_downstream_mode ""
+	}
 
-    return [_cfgSet $link_cfg "jitter_downstream_mode" $jitter_downstream_mode]
+	return [_cfgSet $link_cfg "jitter_downstream_mode" $jitter_downstream_mode]
 }
 
 #****f* linkcfg.tcl/getLinkJitterHoldDownstream
@@ -919,7 +919,7 @@ proc _setLinkJitterModeDownstream { link_cfg jitter_downstream_mode } {
 #   * jitter_hold -- The jitter hold for downstream direction.
 #****
 proc _getLinkJitterHoldDownstream { link_cfg } {
-    return [_cfgGet $link_cfg "jitter_downstream_hold"]
+	return [_cfgGet $link_cfg "jitter_downstream_hold"]
 }
 
 #****f* linkcfg.tcl/setLinkJitterHoldDownstream
@@ -934,11 +934,11 @@ proc _getLinkJitterHoldDownstream { link_cfg } {
 #   * jitter_downstream_hold -- link downstream jitter hold.
 #****
 proc _setLinkJitterHoldDownstream { link_cfg jitter_downstream_hold } {
-    if { $jitter_downstream_hold == 0 } {
-	set jitter_downstream_hold ""
-    }
+	if { $jitter_downstream_hold == 0 } {
+		set jitter_downstream_hold ""
+	}
 
-    return [_cfgSet $link_cfg "jitter_downstream_hold" $jitter_downstream_hold]
+	return [_cfgSet $link_cfg "jitter_downstream_hold" $jitter_downstream_hold]
 }
 
 #****f* linkcfg.tcl/getLinkBER
@@ -954,7 +954,7 @@ proc _setLinkJitterHoldDownstream { link_cfg jitter_downstream_hold } {
 #   * BER -- The value of 1/BER of the link.
 #****
 proc _getLinkBER { link_cfg } {
-    return [_cfgGet $link_cfg "ber"]
+	return [_cfgGet $link_cfg "ber"]
 }
 
 #****f* linkcfg.tcl/setLinkBER
@@ -969,11 +969,11 @@ proc _getLinkBER { link_cfg } {
 #   * ber -- The value of 1/BER of the link.
 #****
 proc _setLinkBER { link_cfg ber } {
-    if { $ber == 0 } {
-	set ber ""
-    }
+	if { $ber == 0 } {
+		set ber ""
+	}
 
-    return [_cfgSet $link_cfg "ber" $ber]
+	return [_cfgSet $link_cfg "ber" $ber]
 }
 
 #****f* linkcfg.tcl/getLinkLoss
@@ -989,7 +989,7 @@ proc _setLinkBER { link_cfg ber } {
 #   * loss -- The loss percentage of the link.
 #****
 proc _getLinkLoss { link_cfg } {
-    return [_cfgGet $link_cfg "loss"]
+	return [_cfgGet $link_cfg "loss"]
 }
 
 #****f* linkcfg.tcl/setLinkLoss
@@ -1004,11 +1004,11 @@ proc _getLinkLoss { link_cfg } {
 #   * loss -- The loss percentage of the link.
 #****
 proc _setLinkLoss { link_cfg loss } {
-    if { $loss == 0 } {
-	set loss ""
-    }
+	if { $loss == 0 } {
+		set loss ""
+	}
 
-    return [_cfgSet $link_cfg "loss" $loss]
+	return [_cfgSet $link_cfg "loss" $loss]
 }
 
 #****f* linkcfg.tcl/getLinkDup
@@ -1024,7 +1024,7 @@ proc _setLinkLoss { link_cfg loss } {
 #   * duplicate -- The percentage of the link packet duplicate value.
 #****
 proc _getLinkDup { link_cfg } {
-    return [_cfgGet $link_cfg "duplicate"]
+	return [_cfgGet $link_cfg "duplicate"]
 }
 
 #****f* linkcfg.tcl/setLinkDup
@@ -1039,11 +1039,11 @@ proc _getLinkDup { link_cfg } {
 #   * duplicate -- The percentage of the link packet duplicate value.
 #****
 proc _setLinkDup { link_cfg duplicate } {
-    if { $duplicate == 0 } {
-	set duplicate ""
-    }
+	if { $duplicate == 0 } {
+		set duplicate ""
+	}
 
-    return [_cfgSet $link_cfg "duplicate" $duplicate]
+	return [_cfgSet $link_cfg "duplicate" $duplicate]
 }
 
 #****f* linkcfg.tcl/getLinkMirror
@@ -1061,7 +1061,7 @@ proc _setLinkDup { link_cfg duplicate } {
 #   * mirror_link_id -- mirror link id
 #****
 proc _getLinkMirror { link_cfg } {
-    return [_cfgGet $link_cfg "mirror"]
+	return [_cfgGet $link_cfg "mirror"]
 }
 
 #****f* linkcfg.tcl/setLinkMirror
@@ -1078,21 +1078,21 @@ proc _getLinkMirror { link_cfg } {
 #   * mirror -- mirror link's id
 #****
 proc _setLinkMirror { link_cfg mirror } {
-    return [_cfgSet $link_cfg "mirror" $mirror]
+	return [_cfgSet $link_cfg "mirror" $mirror]
 }
 
 proc _getLinkPeers { link_cfg } {
-    return [_cfgGet $link_cfg "peers"]
+	return [_cfgGet $link_cfg "peers"]
 }
 
 proc _setLinkPeers { link_cfg peers } {
-    return [_cfgSet $link_cfg "peers" $peers]
+	return [_cfgSet $link_cfg "peers" $peers]
 }
 
 proc _getLinkPeersIfaces { link_cfg } {
-    return [_cfgGet $link_cfg "peers_ifaces"]
+	return [_cfgGet $link_cfg "peers_ifaces"]
 }
 
 proc _setLinkPeersIfaces { link_cfg peers_ifaces } {
-    return [_cfgSet $link_cfg "peers_ifaces" $peers_ifaces]
+	return [_cfgSet $link_cfg "peers_ifaces" $peers_ifaces]
 }

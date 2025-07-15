@@ -33,7 +33,7 @@
 #    Starts imunes in batch or interactive mode. Include procedures from
 #    external files and initializes global variables.
 #
-#	imunes [-b] [-e experiment_id] [filename]
+#        imunes [-b] [-e experiment_id] [filename]
 #
 #    When starting the program in batch mode the option -b must be
 #    specified.
@@ -71,17 +71,17 @@ set LIBDIR ""
 set ROOTDIR "."
 
 if { $ROOTDIR == "." } {
-    set BINDIR ""
+	set BINDIR ""
 } else {
-    set BINDIR "bin"
+	set BINDIR "bin"
 }
 
 try {
-    source "$ROOTDIR/$LIBDIR/helpers.tcl"
+	source "$ROOTDIR/$LIBDIR/helpers.tcl"
 } on error { result options } {
-    puts stderr "Could not find file helpers.tcl in $ROOTDIR/$LIBDIR:"
-    puts stderr $result
-    exit 1
+	puts stderr "Could not find file helpers.tcl in $ROOTDIR/$LIBDIR:"
+	puts stderr $result
+	exit 1
 }
 
 safePackageRequire [list cmdline platform ip base64 json json::write]
@@ -97,21 +97,21 @@ set ifacesconf_timeout 3
 set nodeconf_timeout 3
 
 set options {
-    {e.arg	"" "Specify experiment ID"}
-    {eid.arg	"" "Specify experiment ID"}
-    {b		"Turn on batch mode"}
-    {batch	"Turn on batch mode"}
-    {d.secret	"Turn on debug mode"}
-    {p		"Prepare virtual root file system"}
-    {prepare	"Prepare virtual root file system"}
-    {f		"Force virtual root preparation (delete existing vroot)"}
-    {force	"Force virtual root preparation (delete existing vroot)"}
-    {i		"Setup devfs rules for virtual nodes (Only on FreeBSD)"}
-    {l		"Run in legacy/slow mode"}
-    {legacy	"Run in legacy/slow mode"}
-    {v		"Print IMUNES version"}
-    {version	"Print IMUNES version"}
-    {h		"Print this message"}
+	{e.arg		"" "Specify experiment ID"}
+	{eid.arg	"" "Specify experiment ID"}
+	{b			"Turn on batch mode"}
+	{batch		"Turn on batch mode"}
+	{d.secret	"Turn on debug mode"}
+	{p			"Prepare virtual root file system"}
+	{prepare	"Prepare virtual root file system"}
+	{f			"Force virtual root preparation (delete existing vroot)"}
+	{force		"Force virtual root preparation (delete existing vroot)"}
+	{i			"Setup devfs rules for virtual nodes (Only on FreeBSD)"}
+	{l			"Run in legacy/slow mode"}
+	{legacy		"Run in legacy/slow mode"}
+	{v			"Print IMUNES version"}
+	{version	"Print IMUNES version"}
+	{h			"Print this message"}
 }
 
 set usage [getPrettyUsage $options]
@@ -125,8 +125,8 @@ set imunesAdditions ""
 
 fetchImunesVersion
 if { $printVersion } {
-    printImunesVersion
-    exit
+	printImunesVersion
+	exit
 }
 
 set isOSfreebsd false
@@ -136,100 +136,102 @@ set isOSwin false
 setPlatformVariables
 
 if { $prepareFlag } {
-    prepareVroot
-    exit
+	prepareVroot
+	exit
 }
 
 # Runtime libriaries
 foreach file [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
-    if { [string match -nocase "*linux.tcl" $file] != 1 } {
-	safeSourceFile $file
-    }
+	if { [string match -nocase "*linux.tcl" $file] != 1 } {
+		safeSourceFile $file
+	}
 }
 
 if { ! [info exists eid_base] } {
-    set eid_base [genExperimentId]
+	set eid_base [genExperimentId]
 }
 
 # bases for naming new nodes
 array set nodeNamingBase {
-    pc pc
-    ext ext
-    filter filter
-    router router
-    host host
-    hub hub
-    lanswitch switch
-    nat64 nat64-
-    rj45 rj45-
-    packgen packgen
-    stpswitch stpswitch
-    wlan wlan
+	pc pc
+	ext ext
+	filter filter
+	router router
+	host host
+	hub hub
+	lanswitch switch
+	nat64 nat64-
+	rj45 rj45-
+	packgen packgen
+	stpswitch stpswitch
+	wlan wlan
 }
 
 set option_defaults {
-    auto_etc_hosts		0
+	auto_etc_hosts	0
 }
 
 set gui_option_defaults {
-    show_interface_names	1
-    show_interface_ipv4		1
-    show_interface_ipv6		1
-    show_node_labels		1
-    show_link_labels		1
-    show_background_image	0
-    show_annotations		1
-    show_grid			1
-    icon_size			"normal"
-    zoom			1
+	show_interface_names	1
+	show_interface_ipv4		1
+	show_interface_ipv6		1
+	show_node_labels		1
+	show_link_labels		1
+	show_background_image	0
+	show_annotations		1
+	show_grid				1
+	icon_size				"normal"
+	zoom					1
 }
 
 foreach {option default_value} [concat $option_defaults $gui_option_defaults] {
-    global $option
-    set $option $default_value
+	global $option
+
+	set $option $default_value
 }
 
 set all_modules_list {}
 set runnable_node_types {}
 
 # Set default node type list
-set node_types "lanswitch hub rj45 stpswitch filter packgen router host pc nat64 ext"
+set node_types "lanswitch hub rj45 stpswitch filter packgen \
+	router host pc nat64 ext"
 # Set default supported router models
 set supp_router_models "frr quagga static"
 
 if { $isOSlinux } {
-    # Limit default nodes on linux
-    set supp_router_models "frr quagga static"
-    safeSourceFile $ROOTDIR/$LIBDIR/runtime/linux.tcl
+	# Limit default nodes on linux
+	set supp_router_models "frr quagga static"
+	safeSourceFile $ROOTDIR/$LIBDIR/runtime/linux.tcl
 }
 
 if { $isOSfreebsd } {
-    safeSourceFile $ROOTDIR/$LIBDIR/runtime/freebsd.tcl
+	safeSourceFile $ROOTDIR/$LIBDIR/runtime/freebsd.tcl
 }
 
 if { $initMode == 1 } {
-    prepareDevfs 1
-    exit
+	prepareDevfs 1
+	exit
 }
 
 if { $execMode == "batch" } {
-    set err [checkSysPrerequisites]
-    if { $err != "" } {
-	puts stderr $err
-	exit
-    }
+	set err [checkSysPrerequisites]
+	if { $err != "" } {
+		puts stderr $err
+		exit
+	}
 }
 
 # Configuration libraries
 foreach file [glob -directory $ROOTDIR/$LIBDIR/config *.tcl] {
-    safeSourceFile $file
+	safeSourceFile $file
 }
 
 # The following files need to be sourced in this particular order. If not
 # the placement of the toolbar icons will be altered.
 foreach file $node_types {
-    safeSourceFile "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
-    safeSourceFile "$ROOTDIR/$LIBDIR/gui/$file.tcl"
+	safeSourceFile "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
+	safeSourceFile "$ROOTDIR/$LIBDIR/gui/$file.tcl"
 }
 
 # additional nodes
@@ -269,18 +271,18 @@ set editor_only false
 
 set winOS false
 if { $isOSwin } {
-    set winOS true
+	set winOS true
 }
 
 if { ! $isOSwin } {
-    catch { exec magick -version | head -1 | cut -d " " -f 1,2,3 } imInfo
+	catch { exec magick -version | head -1 | cut -d " " -f 1,2,3 } imInfo
 } else {
-    set imInfo $env(PATH)
+	set imInfo $env(PATH)
 }
 
 set hasIM true
 if { [string match -nocase "*imagemagick*" $imInfo] != 1 } {
-    set hasIM false
+	set hasIM false
 }
 
 set runtimeDir "/var/run/imunes"
@@ -296,131 +298,131 @@ readConfigFile
 #
 
 if { $execMode == "interactive" } {
-    safePackageRequire Tk "To run the IMUNES GUI, Tk must be installed."
+	safePackageRequire Tk "To run the IMUNES GUI, Tk must be installed."
 
-    foreach file "canvas copypaste drawing editor help theme linkcfgGUI \
-	mouse nodecfgGUI ifacesGUI widgets annotations" {
+	set gui_files "canvas copypaste drawing editor help theme linkcfgGUI \
+		mouse nodecfgGUI ifacesGUI widgets annotations"
+	foreach gui_file $gui_files {
+		safeSourceFile "$ROOTDIR/$LIBDIR/gui/$gui_file.tcl"
+	}
 
-	safeSourceFile "$ROOTDIR/$LIBDIR/gui/$file.tcl"
-    }
+	source "$ROOTDIR/$LIBDIR/gui/initgui.tcl"
+	source "$ROOTDIR/$LIBDIR/gui/topogen.tcl"
+	if { $debug == 1 } {
+		source "$ROOTDIR/$LIBDIR/gui/debug.tcl"
+	}
 
-    source "$ROOTDIR/$LIBDIR/gui/initgui.tcl"
-    source "$ROOTDIR/$LIBDIR/gui/topogen.tcl"
-    if { $debug == 1 } {
-	source "$ROOTDIR/$LIBDIR/gui/debug.tcl"
-    }
+	newProject
+	if { $argv != "" && [file exists $argv] } {
+		setToRunning "cwd" [pwd]
+		setToRunning "current_file" $argv
+		openFile
+	}
 
-    newProject
-    if { $argv != "" && [file exists $argv] } {
-	setToRunning "cwd" [pwd]
-	setToRunning "current_file" $argv
-	openFile
-    }
-
-    updateProjectMenu
-    # Fire up the animation loop
-    animate
-    # Event scheduler - should be started / stopped on per-experiment base?
-#     evsched
+	updateProjectMenu
+	# Fire up the animation loop
+	animate
+	# Event scheduler - should be started / stopped on per-experiment base?
+	#evsched
 } else {
-    if { $argv != "" } {
-	if { ! [file exists $argv] } {
-	    puts stderr "Error: file '$argv' doesn't exist"
-	    exit
-	}
+	if { $argv != "" } {
+		if { ! [file exists $argv] } {
+			puts stderr "Error: file '$argv' doesn't exist"
+			exit
+		}
 
-	global currentFileBatch
-	set currentFileBatch $argv
+		global currentFileBatch
+		set currentFileBatch $argv
 
-	set curcfg [newObjectId $cfg_list "cfg"]
-	lappend cfg_list $curcfg
+		set curcfg [newObjectId $cfg_list "cfg"]
+		lappend cfg_list $curcfg
 
-	namespace eval ::cf::[set curcfg] {}
-	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
-	upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
-	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-	set dict_cfg [dict create]
-	setOption "version" $CFG_VERSION
+		namespace eval ::cf::[set curcfg] {}
+		upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+		upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
+		upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+		set dict_cfg [dict create]
+		setOption "version" $CFG_VERSION
 
-	set dict_run [dict create]
-	set execute_vars [dict create]
+		set dict_run [dict create]
+		set execute_vars [dict create]
 
-	setToRunning "eid" ""
-	setToRunning "oper_mode" "edit"
-	setToRunning "auto_execution" 1
-	setToRunning "cfg_deployed" false
-	setToRunning "stop_sched" true
-	setToRunning "undolevel" 0
-	setToRunning "redolevel" 0
-	setToRunning "zoom" $zoom
+		setToRunning "eid" ""
+		setToRunning "oper_mode" "edit"
+		setToRunning "auto_execution" 1
+		setToRunning "cfg_deployed" false
+		setToRunning "stop_sched" true
+		setToRunning "undolevel" 0
+		setToRunning "redolevel" 0
+		setToRunning "zoom" $zoom
 
-	readCfgJson $currentFileBatch
+		readCfgJson $currentFileBatch
 
-	setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
-	setToRunning "cwd" [pwd]
-	setToRunning "current_file" $argv
+		setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
+		setToRunning "cwd" [pwd]
+		setToRunning "current_file" $argv
 
-	if { [checkExternalInterfaces] } {
-	    return
-	}
+		if { [checkExternalInterfaces] } {
+			return
+		}
 
-	if { [allSnapshotsAvailable] == 1 } {
-	    setToExecuteVars "instantiate_nodes" [getFromRunning "node_list"]
-	    setToExecuteVars "create_nodes_ifaces" "*"
-	    setToExecuteVars "instantiate_links" [getFromRunning "link_list"]
-	    setToExecuteVars "configure_links" "*"
-	    setToExecuteVars "configure_nodes_ifaces" "*"
-	    setToExecuteVars "configure_nodes" "*"
+		if { [allSnapshotsAvailable] == 1 } {
+			setToExecuteVars "instantiate_nodes" [getFromRunning "node_list"]
+			setToExecuteVars "create_nodes_ifaces" "*"
+			setToExecuteVars "instantiate_links" [getFromRunning "link_list"]
+			setToExecuteVars "configure_links" "*"
+			setToExecuteVars "configure_nodes_ifaces" "*"
+			setToExecuteVars "configure_nodes" "*"
 
-	    deployCfg 1
-	    createExperimentFilesFromBatch
-	}
-    } else {
-	set configFile "$runtimeDir/$eid_base/config.imn"
-	if { [file exists $configFile] && $regular_termination } {
-	    set curcfg [newObjectId $cfg_list "cfg"]
-	    lappend cfg_list $curcfg
-
-	    namespace eval ::cf::[set curcfg] {}
-	    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
-	    upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
-	    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-	    set dict_cfg [dict create]
-	    setOption "version" $CFG_VERSION
-
-	    set dict_run [dict create]
-	    set execute_vars [dict create]
-
-	    setToRunning "eid" $eid_base
-	    setToRunning "oper_mode" "edit"
-	    setToRunning "auto_execution" 1
-	    setToRunning "cfg_deployed" false
-	    setToRunning "stop_sched" true
-	    setToRunning "undolevel" 0
-	    setToRunning "redolevel" 0
-	    setToRunning "zoom" $zoom
-	    setToRunning "canvas_list" {}
-	    setToRunning "current_file" $configFile
-
-	    readCfgJson $configFile
-	    setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
-
-	    readRunningVarsFile $eid_base
-	    setToRunning "cfg_deployed" true
-
-	    setToExecuteVars "terminate_cfg" [cfgGet]
-	    setToExecuteVars "terminate_nodes" [getFromRunning "node_list"]
-	    setToExecuteVars "destroy_nodes_ifaces" "*"
-	    setToExecuteVars "terminate_links" [getFromRunning "link_list"]
-	    setToExecuteVars "unconfigure_links" "*"
-	    setToExecuteVars "unconfigure_nodes_ifaces" "*"
-	    setToExecuteVars "unconfigure_nodes" "*"
-
-	    undeployCfg $eid_base 1
+			deployCfg 1
+			createExperimentFilesFromBatch
+		}
 	} else {
-	    vimageCleanup $eid_base
-	}
+		set configFile "$runtimeDir/$eid_base/config.imn"
+		if { [file exists $configFile] && $regular_termination } {
+			set curcfg [newObjectId $cfg_list "cfg"]
+			lappend cfg_list $curcfg
 
-	terminate_deleteExperimentFiles $eid_base
-    }
+			namespace eval ::cf::[set curcfg] {}
+			upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+			upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
+			upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+			set dict_cfg [dict create]
+			setOption "version" $CFG_VERSION
+
+			set dict_run [dict create]
+			set execute_vars [dict create]
+
+			setToRunning "eid" $eid_base
+			setToRunning "oper_mode" "edit"
+			setToRunning "auto_execution" 1
+			setToRunning "cfg_deployed" false
+			setToRunning "stop_sched" true
+			setToRunning "undolevel" 0
+			setToRunning "redolevel" 0
+			setToRunning "zoom" $zoom
+			setToRunning "canvas_list" {}
+			setToRunning "current_file" $configFile
+
+			readCfgJson $configFile
+			setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
+
+			readRunningVarsFile $eid_base
+			setToRunning "cfg_deployed" true
+
+			setToExecuteVars "terminate_cfg" [cfgGet]
+			setToExecuteVars "terminate_nodes" [getFromRunning "node_list"]
+			setToExecuteVars "destroy_nodes_ifaces" "*"
+			setToExecuteVars "terminate_links" [getFromRunning "link_list"]
+			setToExecuteVars "unconfigure_links" "*"
+			setToExecuteVars "unconfigure_nodes_ifaces" "*"
+			setToExecuteVars "unconfigure_nodes" "*"
+
+			undeployCfg $eid_base 1
+		} else {
+			vimageCleanup $eid_base
+		}
+
+		terminate_deleteExperimentFiles $eid_base
+	}
 }

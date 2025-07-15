@@ -63,27 +63,27 @@ set LIBDIR ""
 set ROOTDIR "."
 
 if { $ROOTDIR == "." } {
-    set BINDIR ""
+	set BINDIR ""
 } else {
-    set BINDIR "bin"
+	set BINDIR "bin"
 }
 
 try {
-    source "$ROOTDIR/$LIBDIR/helpers.tcl"
+	source "$ROOTDIR/$LIBDIR/helpers.tcl"
 } on error { result options } {
-    puts stderr "Could not find file helpers.tcl in $ROOTDIR/$LIBDIR:"
-    puts stderr $result
-    exit 1
+	puts stderr "Could not find file helpers.tcl in $ROOTDIR/$LIBDIR:"
+	puts stderr $result
+	exit 1
 }
 
 fetchImunesVersion
 
 try {
-    source "$ROOTDIR/$LIBDIR/helpers.tcl"
+	source "$ROOTDIR/$LIBDIR/helpers.tcl"
 } on error { result options } {
-    puts stderr "Could not find file helpers.tcl in $ROOTDIR/$LIBDIR:"
-    puts stderr $result
-    exit 1
+	puts stderr "Could not find file helpers.tcl in $ROOTDIR/$LIBDIR:"
+	puts stderr $result
+	exit 1
 }
 
 safePackageRequire [list cmdline platform ip base64 json json::write]
@@ -97,47 +97,47 @@ set forceFlag 0
 
 # Runtime libriaries
 foreach file [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
-    if { [string match -nocase "*linux.tcl" $file] != 1 } {
-	safeSourceFile $file
-    }
+	if { [string match -nocase "*linux.tcl" $file] != 1 } {
+		safeSourceFile $file
+	}
 }
 
 # bases for naming new nodes
 array set nodeNamingBase {
-    pc pc
-    ext ext
-    filter filter
-    router router
-    host host
-    hub hub
-    lanswitch switch
-    nat64 nat64-
-    rj45 rj45-
-    packgen packgen
-    stpswitch stpswitch
-    wlan wlan
+	pc pc
+	ext ext
+	filter filter
+	router router
+	host host
+	hub hub
+	lanswitch switch
+	nat64 nat64-
+	rj45 rj45-
+	packgen packgen
+	stpswitch stpswitch
+	wlan wlan
 }
 
 set option_defaults {
-    auto_etc_hosts		0
+	auto_etc_hosts	0
 }
 
 set gui_option_defaults {
-    show_interface_names	1
-    show_interface_ipv4		1
-    show_interface_ipv6		1
-    show_node_labels		1
-    show_link_labels		1
-    show_background_image	0
-    show_annotations		1
-    show_grid			1
-    icon_size			"normal"
-    zoom			1
+	show_interface_names	1
+	show_interface_ipv4		1
+	show_interface_ipv6		1
+	show_node_labels		1
+	show_link_labels		1
+	show_background_image	0
+	show_annotations		1
+	show_grid				1
+	icon_size				"normal"
+	zoom					1
 }
 
 foreach {option default_value} [concat $option_defaults $gui_option_defaults] {
-    global $option
-    set $option $default_value
+	global $option
+	set $option $default_value
 }
 
 # Set default node type list
@@ -147,14 +147,14 @@ set supp_router_models "frr quagga static"
 
 # Configuration libraries
 foreach file [glob -directory $ROOTDIR/$LIBDIR/config *.tcl] {
-    safeSourceFile $file
+	safeSourceFile $file
 }
 
 # The following files need to be sourced in this particular order. If not
 # the placement of the toolbar icons will be altered.
 foreach file $node_types {
-    safeSourceFile "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
-    safeSourceFile "$ROOTDIR/$LIBDIR/gui/$file.tcl"
+	safeSourceFile "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
+	safeSourceFile "$ROOTDIR/$LIBDIR/gui/$file.tcl"
 }
 
 # additional nodes
@@ -194,46 +194,46 @@ readConfigFile
 #
 
 if { $argv != "" } {
-    if { ! [file exists $argv] } {
-	puts "Error: file '$argv' doesn't exist"
-	exit
-    }
+	if { ! [file exists $argv] } {
+		puts "Error: file '$argv' doesn't exist"
+		exit
+	}
 
-    global currentFileBatch
-    set currentFileBatch $argv
+	global currentFileBatch
+	set currentFileBatch $argv
 
-    set curcfg [newObjectId $cfg_list "cfg"]
-    lappend cfg_list $curcfg
+	set curcfg [newObjectId $cfg_list "cfg"]
+	lappend cfg_list $curcfg
 
-    namespace eval ::cf::[set curcfg] {}
-    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
-    upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-    set dict_cfg [dict create]
-    setOption "version" $CFG_VERSION
+	namespace eval ::cf::[set curcfg] {}
+	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+	upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
+	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+	set dict_cfg [dict create]
+	setOption "version" $CFG_VERSION
 
-    set dict_run [dict create]
-    set execute_vars [dict create]
+	set dict_run [dict create]
+	set execute_vars [dict create]
 
-    setToRunning "eid" ""
-    setToRunning "oper_mode" "edit"
-    setToRunning "auto_execution" 1
-    setToRunning "cfg_deployed" false
-    setToRunning "stop_sched" true
-    setToRunning "undolevel" 0
-    setToRunning "redolevel" 0
-    setToRunning "zoom" $zoom
+	setToRunning "eid" ""
+	setToRunning "oper_mode" "edit"
+	setToRunning "auto_execution" 1
+	setToRunning "cfg_deployed" false
+	setToRunning "stop_sched" true
+	setToRunning "undolevel" 0
+	setToRunning "redolevel" 0
+	setToRunning "zoom" $zoom
 
-    readCfgJson $currentFileBatch
+	readCfgJson $currentFileBatch
 
-    setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
-    setToRunning "current_file" $argv
+	setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
+	setToRunning "current_file" $argv
 
-    set dir_name [file dirname $currentFileBatch]
-    set file_name [file tail $currentFileBatch]
-    saveCfgJson "$dir_name/json_$file_name"
-    puts "Saved as $dir_name/json_$file_name"
+	set dir_name [file dirname $currentFileBatch]
+	set file_name [file tail $currentFileBatch]
+	saveCfgJson "$dir_name/json_$file_name"
+	puts "Saved as $dir_name/json_$file_name"
 } else {
-    puts "Usage: ./imunes --convert <old_imunes_topology.imn>"
-    exit
+	puts "Usage: ./imunes --convert <old_imunes_topology.imn>"
+	exit
 }

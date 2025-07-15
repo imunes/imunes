@@ -13,19 +13,19 @@ cd $WORKDIR
 echo -n "" > $LOG
 
 if [ $mini -eq 1 ]; then
-    PKGS=${PACKAGES_MINIMAL}
+	PKGS=${PACKAGES_MINIMAL}
 else
-    PKGS=${PACKAGES}
+	PKGS=${PACKAGES}
 fi
 
 if [ $offline -eq 0 ]; then
-    fetchBaseOnline
+	fetchBaseOnline
 fi
 
 if [ $zfs -eq 1 ]; then
-    prepareZfs
+	prepareZfs
 else
-    prepareUnionfs
+	prepareUnionfs
 fi
 
 populateFs
@@ -42,7 +42,7 @@ wiresharkGUIfix
 cleanUnnecessary
 
 if [ $zfs -eq 1 ]; then
-    takeZfsSnapshot
+	takeZfsSnapshot
 fi
 
 log "OUT" "Installation successfully finished. Check the log for more \

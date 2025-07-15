@@ -4,13 +4,13 @@
 
 PACKAGES_MINIMAL="$PACKAGES_MINIMAL bind99"
 PACKAGES="$PACKAGES_MINIMAL $PACKAGES_COMMON isc-dhcp43-server isc-dhcp43-client \
-    sylpheed xorp firefox wireshark gnome-themes-standard"
+	sylpheed xorp firefox wireshark gnome-themes-standard"
 
 checkArgs $*
 
 if [ $zfs -eq 1 ]; then
-    echo "ZFS not supported in 10.1"
-    exit 1
+	echo "ZFS not supported in 10.1"
+	exit 1
 fi
 
 # Start installation
@@ -19,13 +19,13 @@ cd $WORKDIR
 echo -n "" > $LOG
 
 if [ $mini -eq 1 ]; then
-    PKGS=${PACKAGES_MINIMAL}
+	PKGS=${PACKAGES_MINIMAL}
 else
-    PKGS=${PACKAGES}
+	PKGS=${PACKAGES}
 fi
 
 if [ $offline -eq 0 ]; then
-    fetchBaseOnline
+	fetchBaseOnline
 fi
 
 prepareUnionfs
@@ -37,9 +37,9 @@ checkPkgVersion
 installPackagesPkg
 
 if [ $mini -eq 0 ]; then
-    log "OUT" "Installing additional tools..."
-    sh $IMUNESDIR/scripts/install_usr_tools.sh >> $LOG 2>&1
-    log "OUT" "Installing additional tools done."
+	log "OUT" "Installing additional tools..."
+	sh $IMUNESDIR/scripts/install_usr_tools.sh >> $LOG 2>&1
+	log "OUT" "Installing additional tools done."
 fi
 
 configQuagga

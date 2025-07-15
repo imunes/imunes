@@ -53,13 +53,13 @@ set MODULE rj45
 #   * descr -- string describing the toolbar icon
 #****
 proc $MODULE.toolbarIconDescr {} {
-    return "Add new External interface"
+	return "Add new External interface"
 }
 
 proc $MODULE._confNewIfc { node_id ifc } {
-    global node_cfg
+	global node_cfg
 
-    set node_cfg [_setIfcName $node_cfg $ifc "UNASSIGNED"]
+	set node_cfg [_setIfcName $node_cfg $ifc "UNASSIGNED"]
 }
 
 #****f* rj45.tcl/rj45.icon
@@ -75,26 +75,26 @@ proc $MODULE._confNewIfc { node_id ifc } {
 #   * path -- path to icon
 #****
 proc $MODULE.icon { size } {
-    global ROOTDIR LIBDIR
+	global ROOTDIR LIBDIR
 
-    switch $size {
-	normal {
-	    return $ROOTDIR/$LIBDIR/icons/normal/rj45.gif
+	switch $size {
+		normal {
+			return $ROOTDIR/$LIBDIR/icons/normal/rj45.gif
+		}
+		small {
+			return $ROOTDIR/$LIBDIR/icons/small/rj45.gif
+		}
+		toolbar {
+			return $ROOTDIR/$LIBDIR/icons/tiny/rj45.gif
+		}
 	}
-	small {
-	    return $ROOTDIR/$LIBDIR/icons/small/rj45.gif
-	}
-	toolbar {
-	    return $ROOTDIR/$LIBDIR/icons/tiny/rj45.gif
-	}
-    }
 }
 
 proc $MODULE.notebookDimensions { wi } {
-    set h 160
-    set w 100
+	set h 160
+	set w 100
 
-    return [list $h $w]
+	return [list $h $w]
 }
 
 #****f* rj45.tcl/rj45.configGUI
@@ -111,31 +111,31 @@ proc $MODULE.notebookDimensions { wi } {
 #   * node_id -- node id
 #****
 proc $MODULE.configGUI { c node_id } {
-    global wi
-    #
-    #guielements - the list of modules contained in the configuration window
-    #              (each element represents the name of the procedure which creates
-    #              that module)
-    #
-    #treecolumns - the list of columns in the interfaces tree (each element
-    #              consists of the column id and the column name)
-    #
-    global guielements treecolumns
-    global node_cfg node_existing_mac node_existing_ipv4 node_existing_ipv6
+	global wi
+	#
+	#guielements - the list of modules contained in the configuration window
+	#		(each element represents the name of the procedure which creates
+	#		that module)
+	#
+	#treecolumns - the list of columns in the interfaces tree (each element
+	#		consists of the column id and the column name)
+	#
+	global guielements treecolumns
+	global node_cfg node_existing_mac node_existing_ipv4 node_existing_ipv6
 
-    set guielements {}
-    set treecolumns {}
-    set node_cfg [cfgGet "nodes" $node_id]
-    set node_existing_mac [getFromRunning "mac_used_list"]
-    set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
-    set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
+	set guielements {}
+	set treecolumns {}
+	set node_cfg [cfgGet "nodes" $node_id]
+	set node_existing_mac [getFromRunning "mac_used_list"]
+	set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
+	set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
 
-    configGUI_createConfigPopupWin $c
-    wm title $wi "rj45 configuration"
+	configGUI_createConfigPopupWin $c
+	wm title $wi "rj45 configuration"
 
-    configGUI_nodeName $wi $node_id "Node name:"
-    set tabs [configGUI_addNotebookRj45 $wi $node_id [lsort [_ifcList $node_cfg]]]
+	configGUI_nodeName $wi $node_id "Node name:"
+	set tabs [configGUI_addNotebookRj45 $wi $node_id [lsort [_ifcList $node_cfg]]]
 
-    configGUI_nodeRestart $wi $node_id
-    configGUI_buttonsACNode $wi $node_id
+	configGUI_nodeRestart $wi $node_id
+	configGUI_buttonsACNode $wi $node_id
 }

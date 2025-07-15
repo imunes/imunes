@@ -10,8 +10,8 @@
 #   * type -- annotation type
 #****
 proc addAnnotation { annotation_id type } {
-    lappendToRunning "annotation_list" $annotation_id
-    setAnnotationType $annotation_id $type
+	lappendToRunning "annotation_list" $annotation_id
+	setAnnotationType $annotation_id $type
 }
 
 #****f* annotations.tcl/deleteAnnotation
@@ -25,8 +25,8 @@ proc addAnnotation { annotation_id type } {
 #   * annotation_id -- existing annotation
 #****
 proc deleteAnnotation { annotation_id } {
-    setToRunning "annotation_list" [removeFromList [getFromRunning "annotation_list"] $annotation_id]
-    cfgUnset "annotations" $annotation_id
+	setToRunning "annotation_list" [removeFromList [getFromRunning "annotation_list"] $annotation_id]
+	cfgUnset "annotations" $annotation_id
 }
 
 #****f* annotationscfg.tcl/getAnnotationType
@@ -42,7 +42,7 @@ proc deleteAnnotation { annotation_id } {
 #   * type -- annotation type
 #****
 proc getAnnotationType { annotation_id } {
-    return [cfgGet "annotations" $annotation_id "type"]
+	return [cfgGet "annotations" $annotation_id "type"]
 }
 
 #****f* annotationscfg.tcl/setAnnotationType
@@ -57,7 +57,7 @@ proc getAnnotationType { annotation_id } {
 #   * type -- annotation type
 #****
 proc setAnnotationType { annotation_id type } {
-    cfgSet "annotations" $annotation_id "type" $type
+	cfgSet "annotations" $annotation_id "type" $type
 }
 
 #****f* annotationscfg.tcl/getAnnotationCanvas
@@ -73,7 +73,7 @@ proc setAnnotationType { annotation_id type } {
 #   * canvas_id -- canvas id
 #****
 proc getAnnotationCanvas { annotation_id } {
-    return [cfgGet "annotations" $annotation_id "canvas"]
+	return [cfgGet "annotations" $annotation_id "canvas"]
 }
 
 #****f* annotationscfg.tcl/setAnnotationCanvas
@@ -88,7 +88,7 @@ proc getAnnotationCanvas { annotation_id } {
 #   * canvas_id -- canvas id
 #****
 proc setAnnotationCanvas { annotation_id canvas_id } {
-    cfgSet "annotations" $annotation_id "canvas" $canvas_id
+	cfgSet "annotations" $annotation_id "canvas" $canvas_id
 }
 
 #****f* annotationscfg.tcl/getAnnotationColor
@@ -104,7 +104,7 @@ proc setAnnotationCanvas { annotation_id canvas_id } {
 #   * color -- annotation color
 #****
 proc getAnnotationColor { annotation_id } {
-    return [cfgGet "annotations" $annotation_id "color"]
+	return [cfgGet "annotations" $annotation_id "color"]
 }
 
 #****f* annotationscfg.tcl/setAnnotationColor
@@ -119,7 +119,7 @@ proc getAnnotationColor { annotation_id } {
 #   * color -- color
 #****
 proc setAnnotationColor { annotation_id color } {
-    cfgSet "annotations" $annotation_id "color" $color
+	cfgSet "annotations" $annotation_id "color" $color
 }
 
 #****f* annotationscfg.tcl/getAnnotationLabel
@@ -135,7 +135,7 @@ proc setAnnotationColor { annotation_id color } {
 #   * labeltext -- annotation label
 #****
 proc getAnnotationLabel { annotation_id } {
-    return [cfgGet "annotations" $annotation_id "label"]
+	return [cfgGet "annotations" $annotation_id "label"]
 }
 
 #****f* annotationscfg.tcl/setAnnotationLabel
@@ -150,7 +150,7 @@ proc getAnnotationLabel { annotation_id } {
 #   * labeltext -- label text
 #****
 proc setAnnotationLabel { annotation_id labeltext } {
-    cfgSet "annotations" $annotation_id "label" $labeltext
+	cfgSet "annotations" $annotation_id "label" $labeltext
 }
 
 #****f* annotationscfg.tcl/getAnnotationLabelColor
@@ -166,7 +166,7 @@ proc setAnnotationLabel { annotation_id labeltext } {
 #   * labelcolor -- annotation label color
 #****
 proc getAnnotationLabelColor { annotation_id } {
-    return [cfgGet "annotations" $annotation_id "labelcolor"]
+	return [cfgGet "annotations" $annotation_id "labelcolor"]
 }
 
 #****f* annotationscfg.tcl/setAnnotationLabelColor
@@ -181,7 +181,7 @@ proc getAnnotationLabelColor { annotation_id } {
 #   * labelcolor -- label color
 #****
 proc setAnnotationLabelColor { annotation_id labelcolor } {
-    cfgSet "annotations" $annotation_id "labelcolor" $labelcolor
+	cfgSet "annotations" $annotation_id "labelcolor" $labelcolor
 }
 
 #****f* annotationscfg.tcl/getAnnotationBorderColor
@@ -197,7 +197,7 @@ proc setAnnotationLabelColor { annotation_id labelcolor } {
 #   * bcolor -- annotation border color
 #****
 proc getAnnotationBorderColor { annotation_id } {
-    return [cfgGet "annotations" $annotation_id "bordercolor"]
+	return [cfgGet "annotations" $annotation_id "bordercolor"]
 }
 
 #****f* annotationscfg.tcl/setAnnotationBorderColor
@@ -212,7 +212,7 @@ proc getAnnotationBorderColor { annotation_id } {
 #   * bordercolor -- border color
 #****
 proc setAnnotationBorderColor { annotation_id bordercolor } {
-    cfgSet "annotations" $annotation_id "bordercolor" $bordercolor
+	cfgSet "annotations" $annotation_id "bordercolor" $bordercolor
 }
 
 #****f* annotationscfg.tcl/getAnnotationWidth
@@ -228,7 +228,7 @@ proc setAnnotationBorderColor { annotation_id bordercolor } {
 #   * width -- annotation width
 #****
 proc getAnnotationWidth { annotation_id } {
-    return [cfgGet "annotations" $annotation_id "width"]
+	return [cfgGet "annotations" $annotation_id "width"]
 }
 
 #****f* annotationscfg.tcl/setAnnotationWidth
@@ -243,7 +243,7 @@ proc getAnnotationWidth { annotation_id } {
 #   * width -- width
 #****
 proc setAnnotationWidth { annotation_id width } {
-    cfgSet "annotations" $annotation_id "width" $width
+	cfgSet "annotations" $annotation_id "width" $width
 }
 
 #****f* annotationscfg.tcl/getAnnotationRad
@@ -259,7 +259,7 @@ proc setAnnotationWidth { annotation_id width } {
 #   * rad -- annotation radius
 #****
 proc getAnnotationRad { annotation_id } {
-    return [cfgGet "annotations" $annotation_id "rad"]
+	return [cfgGet "annotations" $annotation_id "rad"]
 }
 
 #****f* annotationscfg.tcl/setAnnotationRad
@@ -274,7 +274,7 @@ proc getAnnotationRad { annotation_id } {
 #   * rad -- radius
 #****
 proc setAnnotationRad { annotation_id rad } {
-    cfgSet "annotations" $annotation_id "rad" $rad
+	cfgSet "annotations" $annotation_id "rad" $rad
 }
 
 #****f* annotationscfg.tcl/getAnnotationFont
@@ -290,7 +290,7 @@ proc setAnnotationRad { annotation_id rad } {
 #   * font -- annotation font
 #****
 proc getAnnotationFont { annotation_id } {
-    return [cfgGet "annotations" $annotation_id "font"]
+	return [cfgGet "annotations" $annotation_id "font"]
 }
 
 #****f* annotationscfg.tcl/setAnnotationFont
@@ -305,7 +305,7 @@ proc getAnnotationFont { annotation_id } {
 #   * font -- font
 #****
 proc setAnnotationFont { annotation_id font } {
-    cfgSet "annotations" $annotation_id "font" $font
+	cfgSet "annotations" $annotation_id "font" $font
 }
 
 #****f* annotationscfg.tcl/getAnnotationCoords
@@ -321,7 +321,7 @@ proc setAnnotationFont { annotation_id font } {
 #   * coords -- annotation coordinates
 #****
 proc getAnnotationCoords { annotation_id } {
-    return [cfgGet "annotations" $annotation_id "iconcoords"]
+	return [cfgGet "annotations" $annotation_id "iconcoords"]
 }
 
 #****f* annotationscfg.tcl/setAnnotationCoords
@@ -336,11 +336,11 @@ proc getAnnotationCoords { annotation_id } {
 #   * coords -- coordinates
 #****
 proc setAnnotationCoords { annotation_id coords } {
-    set roundcoords {}
-    foreach c $coords {
-	set x [expr int($c)]
-	lappend roundcoords $x
-    }
+	set roundcoords {}
+	foreach c $coords {
+		set x [expr int($c)]
+		lappend roundcoords $x
+	}
 
-    cfgSet "annotations" $annotation_id "iconcoords" $roundcoords
+	cfgSet "annotations" $annotation_id "iconcoords" $roundcoords
 }

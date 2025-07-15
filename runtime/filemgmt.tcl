@@ -36,10 +36,10 @@
 # variables:
 #
 # current_file
-#    relative or absolute path to the current configuration file
+#	relative or absolute path to the current configuration file
 #
 # file_types
-#    types that will be displayed when opening new file
+#	types that will be displayed when opening new file
 #
 # procedures used for loading and storing the configuration file:
 #
@@ -51,7 +51,7 @@
 #
 # saveFile {selected_file}
 #   - saves current configuration to a file named selected_file
-#     unless the file name is an empty string
+#	unless the file name is an empty string
 #
 # fileOpenStartUp
 #   - opens the file named as command line argument
@@ -61,7 +61,7 @@
 #
 # fileSaveDialogBox
 #   - opens dialog box for saving a file under new name if there is no
-#     current file
+#	current file
 #
 # fileSaveAsDialogBox
 #   - opens dialog box for saving a file under new name
@@ -70,8 +70,8 @@
 global file_types
 
 set file_types {
-    { "IMUNES network configuration" {.imn} }
-    { "All files" {*} }
+	{ "IMUNES network configuration" {.imn} }
+	{ "All files" {*} }
 }
 
 #****f* filemgmt.tcl/newProject
@@ -83,40 +83,40 @@ set file_types {
 #   Configures and creates a new Imunes project.
 #****
 proc newProject {} {
-    global curcfg cfg_list
-    global CFG_VERSION
-    global zoom
+	global curcfg cfg_list
+	global CFG_VERSION
+	global zoom
 
-    set curcfg [newObjectId $cfg_list "cfg"]
-    lappend cfg_list $curcfg
+	set curcfg [newObjectId $cfg_list "cfg"]
+	lappend cfg_list $curcfg
 
-    namespace eval ::cf::[set curcfg] {}
-    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-    upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
+	namespace eval ::cf::[set curcfg] {}
+	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+	upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
 
-    set dict_cfg [dict create]
-    setOption "version" $CFG_VERSION
+	set dict_cfg [dict create]
+	setOption "version" $CFG_VERSION
 
-    set dict_run [dict create]
-    set execute_vars [dict create]
+	set dict_run [dict create]
+	set execute_vars [dict create]
 
-    setToRunning "eid" ""
-    setToRunning "oper_mode" "edit"
-    setToRunning "auto_execution" 1
-    setToRunning "cfg_deployed" false
-    setToRunning "stop_sched" true
-    setToRunning "undolevel" 0
-    setToRunning "redolevel" 0
-    setToRunning "zoom" $zoom
-    setToRunning "canvas_list" {}
-    setToRunning "curcanvas" [newCanvas ""]
-    setToRunning "current_file" ""
-    saveToUndoLevel 0
+	setToRunning "eid" ""
+	setToRunning "oper_mode" "edit"
+	setToRunning "auto_execution" 1
+	setToRunning "cfg_deployed" false
+	setToRunning "stop_sched" true
+	setToRunning "undolevel" 0
+	setToRunning "redolevel" 0
+	setToRunning "zoom" $zoom
+	setToRunning "canvas_list" {}
+	setToRunning "curcanvas" [newCanvas ""]
+	setToRunning "current_file" ""
+	saveToUndoLevel 0
 
-    .bottom.oper_mode configure -text "[getFromRunning "oper_mode"] mode"
-    updateProjectMenu
-    switchProject
+	.bottom.oper_mode configure -text "[getFromRunning "oper_mode"] mode"
+	updateProjectMenu
+	switchProject
 }
 
 #****f* filemgmt.tcl/updateProjectMenu
@@ -128,19 +128,19 @@ proc newProject {} {
 #   Updates current project menu.
 #****
 proc updateProjectMenu {} {
-    global curcfg cfg_list
+	global curcfg cfg_list
 
-    .menubar.file delete 10 end
-    .menubar.file add separator
+	.menubar.file delete 10 end
+	.menubar.file add separator
 
-    foreach cfg $cfg_list {
-	set fname [getFromRunning "current_file" $cfg]
-	if { $fname == "" } {
-	    set fname "untitled[string range $cfg 3 end]"
+	foreach cfg $cfg_list {
+		set fname [getFromRunning "current_file" $cfg]
+		if { $fname == "" } {
+			set fname "untitled[string range $cfg 3 end]"
+		}
+		.menubar.file add checkbutton -label $fname -variable curcfg \
+			-onvalue $cfg -command switchProject
 	}
-	.menubar.file add checkbutton -label $fname -variable curcfg \
-	    -onvalue $cfg -command switchProject
-    }
 }
 
 #****f* filemgmt.tcl/switchProject
@@ -152,20 +152,20 @@ proc updateProjectMenu {} {
 #   This procedure is called when a project has been chosen in the file menu.
 #****
 proc switchProject {} {
-    global curcfg showTree
-    if { $curcfg == 0 } {
-        set curcfg "cfg0"
-    }
+	global curcfg showTree
+	if { $curcfg == 0 } {
+		set curcfg "cfg0"
+	}
 
-    setOperMode [getFromRunning "oper_mode"]
-    switchCanvas none
-    redrawAll
-    setWmTitle [getFromRunning "current_file"]
-    if { $showTree } {
-	refreshTopologyTree
-    }
+	setOperMode [getFromRunning "oper_mode"]
+	switchCanvas none
+	redrawAll
+	setWmTitle [getFromRunning "current_file"]
+	if { $showTree } {
+		refreshTopologyTree
+	}
 
-    toggleAutoExecutionGUI [getFromRunning "auto_execution"]
+	toggleAutoExecutionGUI [getFromRunning "auto_execution"]
 }
 
 #****f* filemgmt.tcl/setWmTitle
@@ -179,12 +179,12 @@ proc switchProject {} {
 #   * fname -- title
 #****
 proc setWmTitle { fname } {
-    global curcfg baseTitle imunesVersion imunesAdditions
+	global curcfg baseTitle imunesVersion imunesAdditions
 
-    if { $fname == "" } {
-	set fname "untitled[string range $curcfg 3 end]"
-    }
-    wm title . "$baseTitle - $fname"
+	if { $fname == "" } {
+		set fname "untitled[string range $curcfg 3 end]"
+	}
+	wm title . "$baseTitle - $fname"
 }
 
 #****f* filemgmt.tcl/openFile
@@ -196,95 +196,95 @@ proc setWmTitle { fname } {
 #   Loads the configuration from the file named current_file.
 #****
 proc openFile {} {
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-    global showTree
+	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+	global showTree
 
-    readCfgJson [getFromRunning "current_file"]
+	readCfgJson [getFromRunning "current_file"]
 
-    setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
-    applyOptions
+	setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
+	applyOptions
 
-    switchCanvas none
-    redrawAll
+	switchCanvas none
+	redrawAll
 
-    setToRunning "oper_mode" "edit"
-    setToRunning "cfg_deployed" false
-    setToRunning "stop_sched" true
-    setToRunning "undolevel" 0
-    setToRunning "redolevel" 0
-    saveToUndoLevel 0
-    setActiveToolGroup select
-    updateProjectMenu
-    setWmTitle [getFromRunning "current_file"]
+	setToRunning "oper_mode" "edit"
+	setToRunning "cfg_deployed" false
+	setToRunning "stop_sched" true
+	setToRunning "undolevel" 0
+	setToRunning "redolevel" 0
+	saveToUndoLevel 0
+	setActiveToolGroup select
+	updateProjectMenu
+	setWmTitle [getFromRunning "current_file"]
 
-    if { $showTree } {
-	refreshTopologyTree
-    }
+	if { $showTree } {
+		refreshTopologyTree
+	}
 }
 
 proc saveOptions {} {
-    global option_defaults gui_option_defaults
-    set running_zoom [getFromRunning "zoom"]
+	global option_defaults gui_option_defaults
+	set running_zoom [getFromRunning "zoom"]
 
-    foreach {option default_value} $option_defaults {
-	global $option
+	foreach {option default_value} $option_defaults {
+		global $option
 
-	set value [set $option]
-	if { $value != $default_value } {
-	    setOption $option $value
-	} else {
-	    unsetOption $option
+		set value [set $option]
+		if { $value != $default_value } {
+			setOption $option $value
+		} else {
+			unsetOption $option
+		}
 	}
-    }
 
-    foreach {option default_value} $gui_option_defaults {
-	global $option
+	foreach {option default_value} $gui_option_defaults {
+		global $option
 
-	set value [set $option]
-	if { $value != $default_value } {
-	    setOption $option $value
-	} else {
-	    unsetOption $option
+		set value [set $option]
+		if { $value != $default_value } {
+			setOption $option $value
+		} else {
+			unsetOption $option
+		}
 	}
-    }
 
-    if { $running_zoom == "" } {
-	return
-    }
+	if { $running_zoom == "" } {
+		return
+	}
 
-    if { $running_zoom != [dictGet $gui_option_defaults "zoom"] } {
-	setOption "zoom" $running_zoom
-    } else {
-	unsetOption "zoom"
-    }
+	if { $running_zoom != [dictGet $gui_option_defaults "zoom"] } {
+		setOption "zoom" $running_zoom
+	} else {
+		unsetOption "zoom"
+	}
 }
 
 proc applyOptions {} {
-    global option_defaults gui_option_defaults
+	global option_defaults gui_option_defaults
 
-    foreach {option default_value} $option_defaults {
-	global $option
+	foreach {option default_value} $option_defaults {
+		global $option
 
-	set value [getOption $option]
-	if { $value != "" } {
-	    set $option $value
-	} else {
-	    set $option $default_value
+		set value [getOption $option]
+		if { $value != "" } {
+			set $option $value
+		} else {
+			set $option $default_value
+		}
 	}
-    }
 
-    foreach {option default_value} $gui_option_defaults {
-	global $option
+	foreach {option default_value} $gui_option_defaults {
+		global $option
 
-	set value [getOption $option]
-	if { $value != "" } {
-	    set $option $value
-	} else {
-	    set $option $default_value
+		set value [getOption $option]
+		if { $value != "" } {
+			set $option $value
+		} else {
+			set $option $default_value
+		}
 	}
-    }
 
-    setToRunning "zoom" $zoom
+	setToRunning "zoom" $zoom
 }
 
 #****f* filemgmt.tcl/saveFile
@@ -298,17 +298,17 @@ proc applyOptions {} {
 #   * selected_file -- name of the file where current configuration is saved.
 #****
 proc saveFile { selected_file } {
-    if { $selected_file != "" } {
-	set current_file $selected_file
-	setToRunning "current_file" $current_file
+	if { $selected_file != "" } {
+		set current_file $selected_file
+		setToRunning "current_file" $current_file
 
-	saveCfgJson $current_file
+		saveCfgJson $current_file
 
-	.bottom.textbox config -text "Saved [file tail $current_file]"
+		.bottom.textbox config -text "Saved [file tail $current_file]"
 
-	updateProjectMenu
-	setWmTitle $current_file
-    }
+		updateProjectMenu
+		setWmTitle $current_file
+	}
 }
 
 #****f* filemgmt.tcl/fileOpenDialogBox
@@ -320,14 +320,14 @@ proc saveFile { selected_file } {
 #   Opens an open file dialog box.
 #****
 proc fileOpenDialogBox {} {
-    global file_types
+	global file_types
 
-    set selected_file [tk_getOpenFile -filetypes $file_types]
-    if { $selected_file != "" } {
-	newProject
-	setToRunning "current_file" $selected_file
-	openFile
-    }
+	set selected_file [tk_getOpenFile -filetypes $file_types]
+	if { $selected_file != "" } {
+		newProject
+		setToRunning "current_file" $selected_file
+		openFile
+	}
 }
 
 #****f* filemgmt.tcl/fileSaveDialogBox
@@ -340,16 +340,16 @@ proc fileOpenDialogBox {} {
 #   if there is no current file.
 #****
 proc fileSaveDialogBox {} {
-    global file_types
+	global file_types
 
-    set current_file [getFromRunning "current_file"]
-    if { $current_file == "" } {
-	set selected_file [tk_getSaveFile -filetypes $file_types -initialfile \
-	    untitled -defaultextension .imn]
-	saveFile $selected_file
-    } else {
-	saveFile $current_file
-    }
+	set current_file [getFromRunning "current_file"]
+	if { $current_file == "" } {
+		set selected_file [tk_getSaveFile -filetypes $file_types -initialfile \
+			untitled -defaultextension .imn]
+		saveFile $selected_file
+	} else {
+		saveFile $current_file
+	}
 }
 
 #****f* filemgmt.tcl/fileSaveAsDialogBox
@@ -361,12 +361,12 @@ proc fileSaveDialogBox {} {
 #   Opens dialog box for saving a file under new name.
 #****
 proc fileSaveAsDialogBox {} {
-    global file_types
+	global file_types
 
-    set selected_file [tk_getSaveFile -filetypes $file_types -initialfile \
-	untitled -defaultextension .imn]
+	set selected_file [tk_getSaveFile -filetypes $file_types -initialfile \
+		untitled -defaultextension .imn]
 
-    saveFile $selected_file
+	saveFile $selected_file
 }
 
 #****f* filemgmt.tcl/closeFile
@@ -378,31 +378,31 @@ proc fileSaveAsDialogBox {} {
 #   Closes the current file.
 #****
 proc closeFile {} {
-    global cfg_list curcfg
+	global cfg_list curcfg
 
-    set idx [lsearch -exact $cfg_list $curcfg]
-    set cfg_list [removeFromList $cfg_list $curcfg]
-    set len [llength $cfg_list]
-    if { $len > 0 } {
-	if { $idx > $len } {
-	    set idx "end"
-	} elseif { $idx != 0 } {
-	    incr idx -1
+	set idx [lsearch -exact $cfg_list $curcfg]
+	set cfg_list [removeFromList $cfg_list $curcfg]
+	set len [llength $cfg_list]
+	if { $len > 0 } {
+		if { $idx > $len } {
+			set idx "end"
+		} elseif { $idx != 0 } {
+			incr idx -1
+		}
+		set curcfg [lindex $cfg_list $idx]
+
+		setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
+		switchCanvas none
+		setToRunning "undolevel" 0
+		setToRunning "redolevel" 0
+		saveToUndoLevel 0
+	} else {
+		newProject
 	}
-	set curcfg [lindex $cfg_list $idx]
 
-	setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
-	switchCanvas none
-	setToRunning "undolevel" 0
-	setToRunning "redolevel" 0
-	saveToUndoLevel 0
-    } else {
-	newProject
-    }
-
-    setActiveToolGroup select
-    updateProjectMenu
-    switchProject
+	setActiveToolGroup select
+	updateProjectMenu
+	switchProject
 }
 
 #****f* filemgmt.tcl/readConfigFile
@@ -414,19 +414,19 @@ proc closeFile {} {
 #   Read config files, the first one found: .imunesrc, $HOME/.imunesrc
 #***
 proc readConfigFile {} {
-    global exec_hosts editor_only
-    global env
-    if { [file exists ".imunesrc"] } {
-	source ".imunesrc"
-    } else {
-	if { [catch { set myhome $env(HOME) }] } {
-	    ;# not running on UNIX
+	global exec_hosts editor_only
+	global env
+	if { [file exists ".imunesrc"] } {
+		source ".imunesrc"
 	} else {
-	    if { [file exists "$myhome/.imunesrc"] } {
-	       source "$myhome/.imunesrc"
-	    }
+		if { [catch { set myhome $env(HOME) }] } {
+			;# not running on UNIX
+		} else {
+			if { [file exists "$myhome/.imunesrc"] } {
+			   source "$myhome/.imunesrc"
+			}
+		}
 	}
-    }
 }
 
 #****f* filemgmt.tcl/relpath
@@ -448,30 +448,30 @@ proc readConfigFile {} {
 
 ;#proc relpath {basedir target} {
 proc relpath { target } {
-    set basedir [getFromRunning "current_file"]
+	set basedir [getFromRunning "current_file"]
 
-    # Try and make a relative path to a target file/dir from base directory
-    set bparts [file split [file normalize $basedir]]
-    set tparts [file split [file normalize $target]]
+	# Try and make a relative path to a target file/dir from base directory
+	set bparts [file split [file normalize $basedir]]
+	set tparts [file split [file normalize $target]]
 
-    if { [lindex $bparts 0] eq [lindex $tparts 0] } {
-	# If the first part doesn't match - there is no good relative path
-	set blen [expr {[llength $bparts] - 1}]
-	set tlen [llength $tparts]
-	for { set i 1 } { $i < $blen && $i < $tlen } { incr i } {
-	    if { [lindex $bparts $i] ne [lindex $tparts $i] } { break }
+	if { [lindex $bparts 0] eq [lindex $tparts 0] } {
+		# If the first part doesn't match - there is no good relative path
+		set blen [expr {[llength $bparts] - 1}]
+		set tlen [llength $tparts]
+		for { set i 1 } { $i < $blen && $i < $tlen } { incr i } {
+			if { [lindex $bparts $i] ne [lindex $tparts $i] } { break }
+		}
+
+		set path [lrange $tparts $i end]
+		for {} { $i < $blen } { incr i } {
+			set path [linsert $path 0 ..]
+		}
+
+		# Full name:
+		# [file normalize [join $path [file separator]]]
+		# Relative file name:
+		return [join $path [file separator]]
 	}
 
-	set path [lrange $tparts $i end]
-	for {} { $i < $blen } { incr i } {
-	    set path [linsert $path 0 ..]
-	}
-
-	# Full name:
-	# [file normalize [join $path [file separator]]]
-	# Relative file name:
-	return [join $path [file separator]]
-    }
-
-    return $target
+	return $target
 }

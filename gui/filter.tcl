@@ -40,30 +40,30 @@
 set MODULE filter
 
 proc $MODULE.toolbarIconDescr {} {
-    return "Add new Filter node"
+	return "Add new Filter node"
 }
 
 proc $MODULE.icon {size} {
-    global ROOTDIR LIBDIR
+	global ROOTDIR LIBDIR
 
-    switch $size {
-	normal {
-	    return $ROOTDIR/$LIBDIR/icons/normal/filter.gif
+	switch $size {
+		normal {
+			return $ROOTDIR/$LIBDIR/icons/normal/filter.gif
+		}
+		small {
+			return $ROOTDIR/$LIBDIR/icons/small/filter.gif
+		}
+		toolbar {
+			return $ROOTDIR/$LIBDIR/icons/tiny/filter.gif
+		}
 	}
-	small {
-	    return $ROOTDIR/$LIBDIR/icons/small/filter.gif
-	}
-	toolbar {
-	    return $ROOTDIR/$LIBDIR/icons/tiny/filter.gif
-	}
-    }
 }
 
 proc $MODULE.notebookDimensions { wi } {
-    set h 370
-    set w 667
+	set h 370
+	set w 667
 
-    return [list $h $w]
+	return [list $h $w]
 }
 
 #****f* filter.tcl/filter.configGUI
@@ -81,41 +81,46 @@ proc $MODULE.notebookDimensions { wi } {
 #   * node_id - node id
 #****
 proc $MODULE.configGUI { c node_id } {
-    global wi
-    global filterguielements filtertreecolumns curnode
-    global node_cfg node_existing_mac node_existing_ipv4 node_existing_ipv6
+	global wi
+	global filterguielements filtertreecolumns curnode
+	global node_cfg node_existing_mac node_existing_ipv4 node_existing_ipv6
 
-    set node_cfg [cfgGet "nodes" $node_id]
-    set node_existing_mac [getFromRunning "mac_used_list"]
-    set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
-    set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
+	set node_cfg [cfgGet "nodes" $node_id]
+	set node_existing_mac [getFromRunning "mac_used_list"]
+	set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
+	set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
 
-    set curnode $node_id
-    set filterguielements {}
+	set curnode $node_id
+	set filterguielements {}
 
-    if { [_ifcList $node_cfg] == "" } {
-	tk_dialog .dialog1 "IMUNES warning" \
-	    "This node has no interfaces." \
-	    info 0 Dismiss
+	if { [_ifcList $node_cfg] == "" } {
+		tk_dialog .dialog1 "IMUNES warning" \
+			"This node has no interfaces." \
+			info 0 Dismiss
 
-	return
-    }
+		return
+	}
 
-    configGUI_createConfigPopupWin $c
-    wm title $wi "filter configuration"
+	configGUI_createConfigPopupWin $c
+	wm title $wi "filter configuration"
 
-    configGUI_nodeName $wi $node_id "Node name:"
+	configGUI_nodeName $wi $node_id "Node name:"
 
-    set tabs [configGUI_addNotebookFilter $wi $node_id [lsort [_ifcList $node_cfg]]]
+	set tabs [configGUI_addNotebookFilter $wi $node_id [lsort [_ifcList $node_cfg]]]
 
-    set filtertreecolumns {"Action Action" "Pattern Pattern" "Mask Mask" \
-	"Offset Offset" "ActionData ActionData"}
-    foreach tab $tabs {
-	configGUI_addTreeFilter $tab $node_id
-    }
+	set filtertreecolumns {
+		"Action Action"
+		"Pattern Pattern"
+		"Mask Mask"
+		"Offset Offset"
+		"ActionData ActionData"
+	}
+	foreach tab $tabs {
+		configGUI_addTreeFilter $tab $node_id
+	}
 
-    configGUI_nodeRestart $wi $node_id
-    configGUI_buttonsACFilterNode $wi $node_id
+	configGUI_nodeRestart $wi $node_id
+	configGUI_buttonsACFilterNode $wi $node_id
 }
 
 #****f* filter.tcl/filter.configInterfacesGUI
@@ -134,7 +139,7 @@ proc $MODULE.configGUI { c node_id } {
 #   * rule_num - rule number
 #****
 proc $MODULE.configIfcRulesGUI { wi node_id iface_id rule_num } {
-    global filterguielements
+	global filterguielements
 
-    configGUI_ifcRuleConfig $wi $node_id $iface_id $rule_num
+	configGUI_ifcRuleConfig $wi $node_id $iface_id $rule_num
 }
