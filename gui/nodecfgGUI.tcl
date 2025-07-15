@@ -3688,6 +3688,9 @@ proc customConfigGUIFillDefaults { wi node_id selected_hook } {
 	set cfg_id [$wi.nb tab current -text]
 	set node_type [_getNodeType $custom_node_cfg]
 	set cmd [$node_type.bootcmd $node_id]
+
+	set tmp_status [getCustomEnabled $node_id]
+	setCustomEnabled $node_id false
 	switch -exact -- $selected_hook {
 		"IFACES_CONFIG" {
 			set cfg [$node_type.generateConfigIfaces $node_id "*"]
@@ -3696,9 +3699,13 @@ proc customConfigGUIFillDefaults { wi node_id selected_hook } {
 			set cfg [$node_type.generateConfig $node_id]
 		}
 	}
-	set w $wi.nb.$cfg_id
+	setCustomEnabled $node_id $tmp_status
 
-	if { [$w.bootcmd_e get] != "" || [$w.editor get 1.0 {end -1c}] != "" } {
+	set w $wi.nb.$cfg_id
+	if {
+		[$w.bootcmd_e get] != "" ||
+		[$w.editor get 1.0 {end -1c}] != ""
+	} {
 		set answer [tk_messageBox -message \
 			"Do you want to overwrite current values?" \
 			-icon warning -type yesno ]
