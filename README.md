@@ -65,7 +65,7 @@ Note: on some distributions the netem module `sch_netem` required for link confi
 #### Build requirements:
     # apt install git make
 #### Required packages:
-    # apt install docker.io jq
+    # apt install tcl tcllib docker.io jq
 #### Also needed for graphical mode:
     # apt install imagemagick wireshark socat
 
