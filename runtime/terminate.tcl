@@ -52,7 +52,10 @@ proc terminate_nodesShutdown { eid nodes nodes_count w } {
 	foreach node_id $nodes {
 		displayBatchProgress $batchStep $nodes_count
 
-		if { [info procs [getNodeType $node_id].nodeShutdown] != "" && [getFromRunning "${node_id}_running"] in "true delete" } {
+		if {
+			[info procs [getNodeType $node_id].nodeShutdown] != "" &&
+			[getFromRunning "${node_id}_running"] in "true delete"
+		} {
 			try {
 				[getNodeType $node_id].nodeShutdown $eid $node_id
 			} on error err {
@@ -144,7 +147,10 @@ proc terminate_nodesDestroy { eid nodes nodes_count w } {
 	foreach node_id $nodes {
 		displayBatchProgress $batchStep $nodes_count
 
-		if { [getNodeType $node_id] != "pseudo" && [getFromRunning "${node_id}_running"] in "true delete" } {
+		if {
+			[getNodeType $node_id] != "pseudo" &&
+			[getFromRunning "${node_id}_running"] in "true delete"
+		} {
 			try {
 				[getNodeType $node_id].nodeDestroy $eid $node_id
 			} on error err {
@@ -180,9 +186,9 @@ proc terminate_nodesDestroy { eid nodes nodes_count w } {
 proc finishTerminating { status msg w } {
 	global progressbarCount execMode
 
-	foreach var "terminate_nodes destroy_nodes_ifaces terminate_links
-		unconfigure_links unconfigure_nodes_ifaces unconfigure_nodes" {
-
+	set vars "terminate_nodes destroy_nodes_ifaces terminate_links \
+		unconfigure_links unconfigure_nodes_ifaces unconfigure_nodes"
+	foreach var $vars {
 		setToExecuteVars "$var" ""
 	}
 
@@ -240,9 +246,9 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 		}
 	}
 
-	foreach var "terminate_nodes destroy_nodes_ifaces terminate_links
-		unconfigure_links unconfigure_nodes_ifaces unconfigure_nodes" {
-
+	set vars "terminate_nodes destroy_nodes_ifaces terminate_links \
+		unconfigure_links unconfigure_nodes_ifaces unconfigure_nodes"
+	foreach var $vars {
 		set $var ""
 	}
 
@@ -532,7 +538,10 @@ proc terminate_nodesUnconfigure { eid nodes nodes_count w } {
 	foreach node_id $nodes {
 		displayBatchProgress $batchStep $nodes_count
 
-		if { [info procs [getNodeType $node_id].nodeUnconfigure] != "" && [getFromRunning "${node_id}_running"] in "true delete" } {
+		if {
+			[info procs [getNodeType $node_id].nodeUnconfigure] != "" &&
+			[getFromRunning "${node_id}_running"] in "true delete"
+		} {
 			try {
 				[getNodeType $node_id].nodeUnconfigure $eid $node_id
 			} on error err {
@@ -571,7 +580,10 @@ proc terminate_nodesIfacesUnconfigure { eid nodes_ifaces nodes_count w } {
 		}
 		displayBatchProgress $batchStep $nodes_count
 
-		if { [info procs [getNodeType $node_id].nodeIfacesUnconfigure] != "" && [getFromRunning "${node_id}_running"] in "true delete" } {
+		if {
+			[info procs [getNodeType $node_id].nodeIfacesUnconfigure] != "" &&
+			[getFromRunning "${node_id}_running"] in "true delete"
+		} {
 			try {
 				[getNodeType $node_id].nodeIfacesUnconfigure $eid $node_id $ifaces
 			} on error err {

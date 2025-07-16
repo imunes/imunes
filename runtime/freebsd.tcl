@@ -132,9 +132,10 @@ proc checkForApplications { node_id app_list } {
 proc startWiresharkOnNodeIfc { node_id ifc } {
 	set eid [getFromRunning "eid"]
 
-	if { [checkForExternalApps "startxcmd"] == 0 && \
-		[checkForApplications $node_id "wireshark"] == 0 } {
-
+	if {
+		[checkForExternalApps "startxcmd"] == 0 &&
+		[checkForApplications $node_id "wireshark"] == 0
+	} {
 		startXappOnNode $node_id "wireshark -ki $ifc"
 	} else {
 		exec jexec $eid.$node_id tcpdump -s 0 -U -w - -i $ifc 2>/dev/null |\
@@ -267,8 +268,7 @@ proc spawnShell { node_id cmd } {
 #****
 proc fetchRunningExperiments {} {
 	catch { exec jls -n name | cut -d "=" -f 2 | cut -d "." -f 1 | sort | uniq } exp_list
-	set exp_list [split $exp_list "
-"]
+	set exp_list [split $exp_list "\n"]
 	return $exp_list
 }
 
@@ -302,15 +302,16 @@ proc allSnapshotsAvailable {} {
 			if { [file exist $vroot] } {
 				return 1
 			} else {
+				set msg "The root filesystem for virtual nodes ($vroot) is missing.\n"
+				append msg "Run 'imunes -p' to create the root filesystem."
 				if { $execMode == "batch" } {
-					puts stderr "The root filesystem for virtual nodes ($vroot) is missing.
-	Run 'imunes -p' to create the root filesystem."
+					puts stderr $msg
 				} else {
 					tk_dialog .dialog1 "IMUNES error" \
-					"The root filesystem for virtual nodes ($vroot) is missing.
-	Run 'imunes -p' to create the root filesystem." \
-					info 0 Dismiss
+						$msg \
+						info 0 Dismiss
 				}
+
 				return 0
 			}
 		}
@@ -319,8 +320,7 @@ proc allSnapshotsAvailable {} {
 	return 1
 
 	catch { exec zfs list -t snapshot | awk {{print $1}} | sed "1 d" } out
-	set snapshotList [ split $out {
-}]
+	set snapshotList [split $out "\n"]
 	foreach node_id $node_list {
 		set snapshot [getNodeSnapshot $node_id]
 		if { $snapshot == "" } {
@@ -330,28 +330,33 @@ proc allSnapshotsAvailable {} {
 			if { $execMode == "batch" } {
 				if { $snapshot == "vroot/vroot@clean" } {
 					puts stderr "The main snapshot for virtual nodes is missing.
-Run 'make' or 'make vroot' to create the main ZFS snapshot."
+					Run 'make' or 'make vroot' to create the main ZFS snapshot."
 				} else {
 					puts stderr "Error: ZFS snapshot image \"$snapshot\" for node \"$node_id\" is missing."
 				}
+
 				return 0
 			} else {
 				after idle { .dialog1.msg configure -wraplength 6i }
 				if { $snapshot == "vroot/vroot@clean" } {
+					set msg "The main snapshot for virtual nodes is missing.\n"
+					append msg "Run 'make' or 'make vroot' to create the main ZFS snapshot."
 					tk_dialog .dialog1 "IMUNES error" \
-					"The main snapshot for virtual nodes is missing.
-Run 'make' or 'make vroot' to create the main ZFS snapshot." \
-					info 0 Dismiss
+						$msg \
+						info 0 Dismiss
+
 					return 0
 				} else {
 					tk_dialog .dialog1 "IMUNES error" \
-					"Error: ZFS snapshot image \"$snapshot\" for node \"$node_id\" is missing." \
-					info 0 Dismiss
+						"Error: ZFS snapshot image \"$snapshot\" for node \"$node_id\" is missing." \
+						info 0 Dismiss
+
 					return 0
 				}
 			}
 		}
 	}
+
 	return 1
 }
 
@@ -396,14 +401,17 @@ proc checkHangingTCPs { eid vimage } {
 		toplevel $w -takefocus 1
 		wm transient $w .
 		wm title $w "Please wait ..."
-		message $w.msg -justify left -aspect 1200 \
-		 -text "We must wait for TIME_WAIT expiration on virtual nodes (up to 60 sec).
-Please don't try killing the process.
-(countdown on status line)"
-	   pack $w.msg
+		set msg "We must wait for TIME_WAIT expiration on virtual nodes (up to 60 sec).\n"
+		append msg "Please don't try killing the process.\n"
+		append msg "(countdown on status line)"
+		message $w.msg \
+			-justify left \
+			-aspect 1200 \
+			-text $msg
+		pack $w.msg
 
 		ttk::progressbar $w.p -orient horizontal -length 350 \
-		-mode determinate -maximum $sec -value $sec
+			-mode determinate -maximum $sec -value $sec
 		pack $w.p
 		update
 
@@ -642,10 +650,11 @@ proc execSetLinkParams { eid link_id } {
 	}
 
 	pipesCreate
-	pipesExec "jexec $eid ngctl msg $link_id: setcfg \
-		\"{ bandwidth=$bandwidth delay=$delay \
-		upstream={ BER=$ber duplicate=$dup } \
-		downstream={ BER=$ber duplicate=$dup }}\""
+	set cmd "jexec $eid ngctl msg $link_id: setcfg "
+	append cmd "\"{ bandwidth=$bandwidth delay=$delay "
+	append cmd "upstream={ BER=$ber duplicate=$dup } "
+	append cmd "downstream={ BER=$ber duplicate=$dup }}\""
+	pipesExec $cmd ""
 	pipesClose
 }
 
@@ -753,11 +762,11 @@ proc vimageCleanup { eid } {
 		wm transient $w .
 		wm title $w "Terminating experiment ..."
 		message $w.msg -justify left -aspect 1200 \
-		-text "Deleting virtual nodes and links."
+			-text "Deleting virtual nodes and links."
 		pack $w.msg
 
 		ttk::progressbar $w.p -orient horizontal -length 250 \
-		-mode determinate -maximum $count -value $count
+			-mode determinate -maximum $count -value $count
 		pack $w.p
 		update
 
@@ -769,8 +778,7 @@ proc vimageCleanup { eid } {
 	statline "Terminating experiment with experiment id: $eid."
 
 	set t_start [clock milliseconds]
-	if { [catch { exec jexec $eid jls -v | fgrep ACTIVE | cut -c9-32 } res] \
-		!= 0 } {
+	if { [catch { exec jexec $eid jls -v | fgrep ACTIVE | cut -c9-32 } res] != 0 } {
 		set res ""
 	}
 	set vimages [join $res]
@@ -811,7 +819,7 @@ proc vimageCleanup { eid } {
 		#This should never, ever happen.
 		if { $i > $maxi } {
 			statline ""
-		#	statline "Couldn't terminate all ngeth interfaces. Skipping..."
+			#statline "Couldn't terminate all ngeth interfaces. Skipping..."
 			break
 		}
 		if { [expr {$i % 240} == 0] } {
@@ -838,8 +846,7 @@ proc vimageCleanup { eid } {
 
 	catch "exec jexec $eid ngctl l | tail -n +2 | grep -v socket" output
 
-	set ngnodes [split $output "
-"]
+	set ngnodes [split $output "\n"]
 
 	pipesCreate
 	set allNgnodes [llength $ngnodes]
@@ -993,9 +1000,7 @@ proc fetchNodeRunningConfig { node_id } {
 	catch { exec jexec [getFromRunning "eid"].$node_id ifconfig -v -f inet:cidr,inet6:cidr } full
 	set lines [split $full "\n"]
 	foreach line $lines {
-		if { [regexp {^([[:alnum:]]+):.*<([^>]+)>.*mtu ([^$]+)$} $line \
-			-> iface_name flags mtu]} {
-
+		if { [regexp {^([[:alnum:]]+):.*<([^>]+)>.*mtu ([^$]+)$} $line -> iface_name flags mtu]} {
 			if { $iface_id != "" } {
 				set old_ipv4_addrs [lsort [_getIfcIPv4addrs $cur_node_cfg $iface_id]]
 				set new_ipv4_addrs [lsort $ipv4_addrs]
@@ -1043,8 +1048,7 @@ proc fetchNodeRunningConfig { node_id } {
 				set cur_node_cfg [_setIfcMTU $cur_node_cfg $iface_id $mtu]
 			}
 
-		} elseif { $iface_id != "" && [regexp {^\tether ([^ ]+)} $line \
-			-> new_mac] } {
+		} elseif { $iface_id != "" && [regexp {^\tether ([^ ]+)} $line -> new_mac] } {
 
 			if { $loopback } {
 				continue
@@ -1058,12 +1062,10 @@ proc fetchNodeRunningConfig { node_id } {
 
 				set cur_node_cfg [_setIfcMACaddr $cur_node_cfg $iface_id $new_mac]
 			}
-		} elseif { $iface_id != "" && [regexp {^\tinet ([^ ]+)} $line \
-			-> ip4addr] } {
+		} elseif { $iface_id != "" && [regexp {^\tinet ([^ ]+)} $line -> ip4addr] } {
 
 			lappend ipv4_addrs $ip4addr
-		} elseif { $iface_id != "" && [regexp {^\tinet6 (?!fe80:)([^ ]+)} $line \
-			-> ip6addr]} {
+		} elseif { $iface_id != "" && [regexp {^\tinet6 (?!fe80:)([^ ]+)} $line -> ip6addr]} {
 
 			lappend ipv6_addrs $ip6addr
 		}
@@ -1423,9 +1425,8 @@ proc nodePhysIfacesCreate { node_id ifaces } {
 			eth {
 				# save newly created ngnodeX into a shell variable ifid and
 				# rename the ng node to $public_hook (unique to this experiment)
-				set cmds "
-				  ifid=\$(printf \"mkpeer . eiface $public_hook ether \n
-				  show .:$public_hook\" | jexec $eid ngctl -f - | head -n1 | cut -d' ' -f4)"
+				set cmds "ifid=\$(printf \"mkpeer . eiface $public_hook ether \n"
+				set cmds "$cmds show .:$public_hook\" | jexec $eid ngctl -f - | head -n1 | cut -d' ' -f4)"
 				set cmds "$cmds; jexec $eid ngctl name \$ifid: $public_hook"
 				set cmds "$cmds; jexec $eid ifconfig \$ifid name $public_hook"
 
@@ -1451,9 +1452,8 @@ proc nodePhysIfacesCreate { node_id ifaces } {
 
 				# save newly created ngnodeX into a shell variable ifid and
 				# rename the ng node to $public_hook (unique to this experiment)
-				set cmds "
-				  ifid=\$(printf \"mkpeer . eiface $public_hook ether \n
-				  show .:$public_hook\" | jexec $eid ngctl -f - | head -n1 | cut -d' ' -f4)"
+				set cmds "ifid=\$(printf \"mkpeer . eiface $public_hook ether \n"
+				set cmds "$cmds show .:$public_hook\" | jexec $eid ngctl -f - | head -n1 | cut -d' ' -f4)"
 				set cmds "$cmds; jexec $eid ngctl name \$ifid: $public_hook"
 				set cmds "$cmds; jexec $eid ifconfig \$ifid name $outifc"
 
@@ -1568,7 +1568,7 @@ proc isNodeInitNet { node_id } {
 			exec jexec $jail_id rm /tmp/init > /dev/null
 		}
 	} on error {} {
-	   return false
+		return false
 	}
 
 	return true
@@ -1919,8 +1919,8 @@ proc loadKernelModules {} {
 	catch { exec kldload vlan }
 	catch { exec kldload ipsec }
 	catch { exec kldload pf }
-#   catch { exec kldload ng_iface }
-#   catch { exec kldload ng_cisco }
+	#catch { exec kldload ng_iface }
+	#catch { exec kldload ng_cisco }
 
 	foreach module $all_modules_list {
 		if { [info procs $module.prepareSystem] == "$module.prepareSystem" } {
@@ -2442,6 +2442,7 @@ proc getExtIfcs {} {
 	foreach ignore "lo* ipfw* tun*" {
 		set ifcs [ lsearch -all -inline -not $ifcs $ignore ]
 	}
+
 	return "$ifcs"
 }
 
@@ -2477,6 +2478,7 @@ proc getIPv4IfcCmd { ifc addr primary } {
 	if { $primary } {
 		return "ifconfig $ifc inet $addr"
 	}
+
 	return "ifconfig $ifc inet add $addr"
 }
 
@@ -2492,6 +2494,7 @@ proc getIPv6IfcCmd { ifc addr primary } {
 	if { $primary } {
 		return "ifconfig $ifc inet6 $addr"
 	}
+
 	return "ifconfig $ifc inet6 add $addr"
 }
 
@@ -2532,7 +2535,6 @@ proc getRemoveIPv6IfcRouteCmd { subnet iface } {
 }
 
 proc checkSysPrerequisites {} {
-
 	# XXX
 	# check for all comands that we use:
 	# jail, jexec, jls, ngctl
@@ -2578,11 +2580,11 @@ proc ipsecFilesToNode { node_id ca_cert local_cert ipsecret_file } {
 }
 
 proc sshServiceStartCmds {} {
-	return {"service sshd onestart"}
+	return { "service sshd onestart" }
 }
 
 proc sshServiceStopCmds {} {
-	return {"service sshd onestop"}
+	return { "service sshd onestop" }
 }
 
 proc inetdServiceRestartCmds {} {

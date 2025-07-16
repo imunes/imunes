@@ -396,16 +396,16 @@ proc nodeIpsecInit { node_id } {
 	if { $ipsec_log_level != "" } {
 		execCmdNode $node_id "touch /tmp/charon.log"
 
-		set charon "charon {\n\
-		\tfilelog {\n\
-		\t\tcharon {\n\
-		\t\t\tpath = /tmp/charon.log\n\
-		\t\t\tappend = yes\n\
-		\t\t\tflush_line = yes\n\
-		\t\t\tdefault = $ipsec_log_level\n\
-		\t\t}\n\
-		\t}\n\
-		}"
+		set charon "charon {\n"
+		append charon "\tfilelog {\n"
+		append charon "\t\tcharon {\n"
+		append charon "\t\t\tpath = /tmp/charon.log\n"
+		append charon "\t\t\tappend = yes\n"
+		append charon "\t\t\tflush_line = yes\n"
+		append charon "\t\t\tdefault = $ipsec_log_level\n"
+		append charon "\t\t}\n"
+		append charon "\t}\n"
+		append charon "}"
 
 		set prefix ""
 		if { $isOSfreebsd } {
@@ -1451,9 +1451,9 @@ proc waitForConfStart { nodes nodes_count w } {
 proc finishExecuting { status msg w } {
 	global progressbarCount execMode
 
-	foreach var "instantiate_nodes create_nodes_ifaces instantiate_links
-		configure_links configure_nodes_ifaces configure_nodes" {
-
+	set vars "instantiate_nodes create_nodes_ifaces instantiate_links \
+		configure_links configure_nodes_ifaces configure_nodes"
+	foreach var $vars {
 		setToExecuteVars "$var" ""
 	}
 
@@ -1528,7 +1528,10 @@ proc checkForErrors { nodes nodes_count w } {
 		}
 
 		set skip_err_nodes [string trimright $skip_err_nodes ", "]
-		set msg "Issues encountered while creating nodes:\n$skip_err_nodes\nTerminate the experiment and check the output in debug mode (run IMUNES with -d)." \
+		set msg "Issues encountered while creating nodes:\n"
+		append msg "$skip_err_nodes\n"
+		append msg "Terminate the experiment and check the output in debug mode "
+		append msg "(run IMUNES with -d)."
 
 		if { $execMode != "batch" } {
 			after idle {.dialog1.msg configure -wraplength 4i}
@@ -1546,7 +1549,10 @@ proc checkForErrors { nodes nodes_count w } {
 			append skip_err_nodes "[getNodeName $node_id] ($node_id), "
 		}
 
-		set msg "Timeout detected while configuring nodes:\n$skip_err_nodes\nCheck their /(t)err.log, /(t)out.log and /boot.conf (or /custom.conf) files." \
+		set msg "Timeout detected while configuring nodes:\n"
+		append msg "$skip_err_nodes\n"
+		append msg "Check their /(t)err.log, /(t)out.log and /boot.conf (or "
+		append msg "/custom.conf) files."
 
 		if { $execMode != "batch" } {
 			after idle {.dialog1.msg configure -wraplength 4i}
@@ -1560,7 +1566,10 @@ proc checkForErrors { nodes nodes_count w } {
 
 	if { $err_nodes != "" } {
 		set err_nodes [string trimright $err_nodes ", "]
-		set msg "Issues encountered while configuring nodes:\n$err_nodes\nCheck their /err.log, /out.log and /boot.conf (or /custom.conf) files." \
+		set msg "Issues encountered while configuring nodes:\n"
+		append msg "$err_nodes\n"
+		append msg "Check their /err.log, /out.log and /boot.conf (or "
+		append msg "/custom.conf) files."
 
 		if { $execMode != "batch" } {
 			after idle {.dialog1.msg configure -wraplength 4i}
@@ -1628,7 +1637,10 @@ proc checkForErrorsIfaces { nodes nodes_count w } {
 			append skip_err_nodes "[getNodeName $node_id] ($node_id), "
 		}
 
-		set msg "Timeout detected while configuring node interfaces:\n$skip_err_nodes\nCheck their /(t)err_ifaces.log, /(t)out_ifaces.log and /boot_ifaces.conf (or /custom_ifaces.conf) files." \
+		set msg "Timeout detected while configuring node interfaces:\n"
+		append msg "$skip_err_nodes\n"
+		append msg "Check their /(t)err_ifaces.log, /(t)out_ifaces.log and "
+		append msg "/boot_ifaces.conf (or /custom_ifaces.conf) files."
 
 		if { $execMode != "batch" } {
 			after idle {.dialog1.msg configure -wraplength 4i}
@@ -1642,7 +1654,10 @@ proc checkForErrorsIfaces { nodes nodes_count w } {
 
 	if { $err_nodes != "" } {
 		set err_nodes [string trimright $err_nodes ", "]
-		set msg "Issues encountered while configuring interfaces on nodes:\n$err_nodes\nCheck their /err_ifaces.log, /out_ifaces.log and /boot_ifaces.conf files." \
+		set msg "Issues encountered while configuring interfaces on nodes:\n"
+		append msg "$err_nodes\n"
+		append msg "Check their /err_ifaces.log, /out_ifaces.log and "
+		append msg "/boot_ifaces.conf files."
 
 		if { $execMode != "batch" } {
 			after idle { .dialog1.msg configure -wraplength 4i }

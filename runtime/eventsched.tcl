@@ -127,8 +127,10 @@ proc evsched {} {
 				if { $next > $deadline } {
 					set nextev \
 						[lsearch $eventqueue "* $class $object $target *"]
-					if { $nextev == -1 || \
-						[lindex [lindex $eventqueue $nextev] 0] > $next } {
+					if {
+						$nextev == -1 ||
+						[lindex [lindex $eventqueue $nextev] 0] > $next
+					} {
 						lappend eventqueue "$next [lrange $event 1 end]"
 						set need_sort 1
 					}
@@ -141,8 +143,10 @@ proc evsched {} {
 				if { $next > $deadline } {
 					set nextev \
 						[lsearch $eventqueue "* $class $object $target *"]
-					if { $nextev == -1 || \
-						[lindex [lindex $eventqueue $nextev] 0] > $next } {
+					if {
+						$nextev == -1 ||
+						[lindex [lindex $eventqueue $nextev] 0] > $next
+					} {
 						lappend eventqueue \
 							"$next [lrange $event 1 4] $value [lrange $params 2 end]"
 						set need_sort 1
@@ -156,9 +160,10 @@ proc evsched {} {
 				if { $next > $deadline } {
 					set nextev \
 						[lsearch $eventqueue "* $class $object $target *"]
-					if { $nextev == -1 || \
-						[lindex [lindex $eventqueue $nextev] 0] > $next } {
-
+					if {
+						$nextev == -1 ||
+						[lindex [lindex $eventqueue $nextev] 0] > $next
+					} {
 						lappend eventqueue "$next [lrange $event 1 4] $hi $lo [lindex $params 3]"
 						set need_sort 1
 					}
@@ -371,8 +376,7 @@ proc setElementEvents { element events } {
 #****
 proc formatForExec { events } {
 	set result {}
-	foreach zline [split $events {
-}] {
+	foreach zline [split $events "\n"] {
 		set zline [string trim $zline]
 		if { [string length $zline] != 0 } {
 			lappend result $zline
@@ -394,8 +398,7 @@ proc formatForExec { events } {
 #   * result -- list of formatted events
 #****
 proc formatForDisp { events } {
-	set result [join $events "
-"]
+	set result [join $events "\n"]
 	return $result
 }
 
@@ -435,8 +438,8 @@ proc elementsEventsEditor {} {
 
 	ttk::frame $pwi.left.treegrid
 	ttk::treeview $pwi.left.tree -selectmode browse \
-			-height 15 -show tree \
-			-yscrollcommand "$pwi.left.vscroll set"
+		-height 15 -show tree \
+		-yscrollcommand "$pwi.left.vscroll set"
 	ttk::scrollbar $pwi.left.vscroll -orient vertical -command "$pwi.left.tree yview"
 
 	focus $pwi.left.tree
@@ -459,17 +462,17 @@ proc elementsEventsEditor {} {
 		lappend eventlinktags $link
 	}
 
-#	set node_list [getFromRunning "node_list"]
-#	global eventnodetags
-#	set eventnodetags ""
-#	$pwi.left.tree insert {} end -id nodes -text "Nodes" -open true -tags nodes
-#	foreach node_id [lsort -dictionary $node_list] {
-#		set type [getNodeType $node_id]
-#		if { $type != "pseudo" && [[getNodeType $node_id].netlayer] == "NETWORK" } {
-#			$pwi.left.tree insert nodes end -id $node_id -text "[getNodeName $node_id]" -open false -tags $node_id
-#			lappend eventnodetags $node_id
-#		}
-#	}
+	#set node_list [getFromRunning "node_list"]
+	#global eventnodetags
+	#set eventnodetags ""
+	#$pwi.left.tree insert {} end -id nodes -text "Nodes" -open true -tags nodes
+	#foreach node_id [lsort -dictionary $node_list] {
+	#	set type [getNodeType $node_id]
+	#	if { $type != "pseudo" && [[getNodeType $node_id].netlayer] == "NETWORK" } {
+	#		$pwi.left.tree insert nodes end -id $node_id -text "[getNodeName $node_id]" -open false -tags $node_id
+	#		lappend eventnodetags $node_id
+	#	}
+	#}
 
 	text $pwi.right.text -bg white -width 42 -height 15 -takefocus 0 -state disabled
 	pack $pwi.right.text -expand 1 -fill both
@@ -477,32 +480,33 @@ proc elementsEventsEditor {} {
 	bindEventsToEventEditor $pwi $pwi.right.text
 
 	set eventButtons [ttk::frame $eventsPopup.events.buttons]
-	ttk::button $eventButtons.apply -text "Apply" -command {
-			saveElementEvents .eventspopup.events.eventconf.right.text
-	}
+	ttk::button $eventButtons.apply -text "Apply" \
+		-command "saveElementEvents .eventspopup.events.eventconf.right.text"
 	ttk::button $eventButtons.close -text "Close" -command "destroy $eventsPopup"
 
 	set startText "Start scheduling"
 	set stopText "Stop scheduling"
 
 	if { [getFromRunning "stop_sched"] } {
-		ttk::button $eventButtons.start_stop \
-		-text $startText -command {
+		set tmp_command {
 			startStopEvent
 			set eventButtons .eventspopup.events.buttons
 			$eventButtons.start_stop configure -text [startStopText $eventButtons.start_stop]
 		}
+		ttk::button $eventButtons.start_stop \
+			-text $startText -command $tmp_command
 	} else {
-		ttk::button $eventButtons.start_stop \
-		-text $stopText -command {
+		set tmp_command {
 			startStopEvent
 			set eventButtons .eventspopup.events.buttons
 			$eventButtons.start_stop configure -text [startStopText $eventButtons.start_stop]
 		}
+		ttk::button $eventButtons.start_stop \
+			-text $stopText -command $tmp_command
 	}
 
 	pack $eventButtons.apply $eventButtons.close \
-	  $eventButtons.start_stop -side left -pady 4 -padx 5
+		$eventButtons.start_stop -side left -pady 4 -padx 5
 	pack $eventButtons
 }
 
@@ -563,18 +567,20 @@ proc loadElementEvents { element text } {
 
 	set modified 0
 	if { $shownElement != "links" && $shownElement != "nodes" } {
-		if { [string equal [string trim [$text get 0.0 end]] \
-			 [string trim [getElementEvents $shownElement]]] != 1 } {
+		if { [string trim [$text get 0.0 end]] == [string trim [getElementEvents $shownElement]] != 1 } {
 			set modified 1
 		}
 	}
 
-	if { $modified == 1 && $shownElement != "links" && $shownElement != "nodes" \
-		&& $shownElement != $element } {
-
+	if {
+		$modified == 1 &&
+		$shownElement != "links" &&
+		$shownElement != "nodes" &&
+		$shownElement != $element
+	} {
 		set answer [tk_messageBox -message "Do you want to save changes on element $shownElement?" \
-		-icon question -type yesnocancel \
-		-detail "Select \"Yes\" to save changes before choosing another element"]
+			-icon question -type yesnocancel \
+			-detail "Select \"Yes\" to save changes before choosing another element"]
 
 		switch -- $answer {
 			#save changes
@@ -632,11 +638,11 @@ proc saveElementEvents { text } {
 	set errline [$text get $checkFailed.0 $checkFailed.end]
 
 	if { $checkFailed != 0 } {
-			tk_dialog .dialog1 "IMUNES warning" \
-				"Syntax error in line $checkFailed:\n'$errline'" \
+		tk_dialog .dialog1 "IMUNES warning" \
+			"Syntax error in line $checkFailed:\n'$errline'" \
 			info 0 OK
 
-			return
+		return
 	}
 
 	if { $selected != "nodes" && $selected != "links" } {
@@ -661,52 +667,58 @@ proc bindEventsToEventEditor { pwi text } {
 
 	set f $pwi.left
 	$f.tree tag bind links <1> \
-			"$text configure -state disabled"
+		"$text configure -state disabled"
 	$f.tree tag bind links <Key-Down> \
-			"loadElementEvents [lindex $eventlinktags 0] $text"
+		"loadElementEvents [lindex $eventlinktags 0] $text"
 
 	foreach l $eventlinktags {
 		$f.tree tag bind $l <1> \
 			"loadElementEvents $l $text"
+
+		set tmp_command [list apply {
+			{ text_elem l } {
+				if { $l != "" } {
+					loadElementEvents $l $text_elem
+				} else {
+					$text_elem configure -state disabled
+				}
+			}
+		} \
+			$text \
+			""
+		]
 		$f.tree tag bind $l <Key-Up> \
-			"if { ! [string equal {} [$f.tree prev $l]] } {
-				loadElementEvents [$f.tree prev $l] $text
-			} else {
-				$text configure -state disabled
-			}"
+			[lreplace $tmp_command end end [$f.tree prev $l]]
+
 		$f.tree tag bind $l <Key-Down> \
-			"if { ! [string equal {} [$f.tree next $l]] } {
-				loadElementEvents [$f.tree next $l] $text
-			} else {
-				$text configure -state disabled
-			}"
+			[lreplace $tmp_command end end [$f.tree next $l]]
 	}
 
-#	$f.tree tag bind nodes <1> \
-#		"$text configure -state disabled"
-#	$f.tree tag bind nodes <Key-Up> \
-#		"loadElementEvents [lindex $eventlinktags 0] $text"
-#	$f.tree tag bind nodes <Key-Down> \
-#		"loadElementEvents [lindex $eventlinktags 0] $text"
-#
-#	foreach n $eventnodetags {
-#		set type [getNodeType $n]
-#		global selectedIfc
-#		$f.tree tag bind $n <1> \
-#			"loadElementEvents $n $text"
-#		$f.tree tag bind $n <Key-Up> \
-#			"if { ! [string equal {} [$f.tree prev $n]] } {
-#				loadElementEvents [$f.tree prev $n] $text
-#			} else {
-#				$text configure -state disabled
-#			}"
-#		$f.tree tag bind $n <Key-Down> \
-#		"if { ! [string equal {} [$f.tree next $n]] } {
-#			loadElementEvents [$f.tree next $n] $text
-#		} else {
-#			$text configure -state disabled
-#		}"
-#	}
+	#$f.tree tag bind nodes <1> \
+	#	"$text configure -state disabled"
+	#$f.tree tag bind nodes <Key-Up> \
+	#	"loadElementEvents [lindex $eventlinktags 0] $text"
+	#$f.tree tag bind nodes <Key-Down> \
+	#	"loadElementEvents [lindex $eventlinktags 0] $text"
+	#
+	#foreach n $eventnodetags {
+	#	set type [getNodeType $n]
+	#	global selectedIfc
+	#	$f.tree tag bind $n <1> \
+	#		"loadElementEvents $n $text"
+	#	$f.tree tag bind $n <Key-Up> \
+	#		"if { ! [string equal {} [$f.tree prev $n]] } {
+	#			loadElementEvents [$f.tree prev $n] $text
+	#		} else {
+	#			$text configure -state disabled
+	#		}"
+	#	$f.tree tag bind $n <Key-Down> \
+	#	"if { ! [string equal {} [$f.tree next $n]] } {
+	#		loadElementEvents [$f.tree next $n] $text
+	#	} else {
+	#		$text configure -state disabled
+	#	}"
+	#}
 }
 
 #****f* eventsched.tcl/checkEventsSyntax
@@ -721,8 +733,8 @@ proc bindEventsToEventEditor { pwi text } {
 #   * type -- type of node (link/node)
 #****
 proc checkEventsSyntax { text type } {
-	 set text [split $text "\n"]
-	 switch -exact $type {
+	set text [split $text "\n"]
+	switch -exact $type {
 		link {
 			set regularExpressions [list bandwidth delay ber loss width duplicate color]
 			set functions [list ramp rand square]
@@ -731,10 +743,10 @@ proc checkEventsSyntax { text type } {
 		node {
 			set regularExpressions [list ]
 		}
-	 }
+	}
 
-	 set i 0
-	 foreach line $text {
+	set i 0
+	foreach line $text {
 		incr i
 		if { $line == "" } {
 			continue
@@ -752,9 +764,10 @@ proc checkEventsSyntax { text type } {
 			if { [lindex $splitLine 2] != "const" } {
 				return $i
 			}
-			if { ! [string is integer [lindex $splitLine 3]] \
-				&& [lindex $splitLine 3] ni $colors } {
-
+			if {
+				! [string is integer [lindex $splitLine 3]] &&
+				[lindex $splitLine 3] ni $colors
+			} {
 				return $i
 			}
 		} elseif { [llength $line] == 6 } {
@@ -784,7 +797,7 @@ proc checkEventsSyntax { text type } {
 		} else {
 			return $i
 		}
-	 }
+	}
 
-	 return 0
+	return 0
 }

@@ -423,7 +423,7 @@ proc readConfigFile {} {
 			;# not running on UNIX
 		} else {
 			if { [file exists "$myhome/.imunesrc"] } {
-			   source "$myhome/.imunesrc"
+				source "$myhome/.imunesrc"
 			}
 		}
 	}

@@ -44,9 +44,9 @@ proc prepareInstantiateVars { { force "" } } {
 		return
 	}
 
-	foreach var "instantiate_nodes create_nodes_ifaces instantiate_links
-		configure_links configure_nodes_ifaces configure_nodes" {
-
+	set vars "instantiate_nodes create_nodes_ifaces instantiate_links \
+		configure_links configure_nodes_ifaces configure_nodes"
+	foreach var $vars {
 		upvar 1 $var $var
 		set $var [getFromExecuteVars "$var"]
 		dputs "'[info level -1]' - '[info level 0]': $var '[set $var]'"
@@ -58,9 +58,9 @@ proc prepareTerminateVars {} {
 		return
 	}
 
-	foreach var "terminate_nodes destroy_nodes_ifaces terminate_links
-		unconfigure_links unconfigure_nodes_ifaces unconfigure_nodes" {
-
+	set vars "terminate_nodes destroy_nodes_ifaces terminate_links \
+		unconfigure_links unconfigure_nodes_ifaces unconfigure_nodes"
+	foreach var $vars {
 		upvar 1 $var $var
 		set $var [getFromExecuteVars "$var"]
 		dputs "'[info level -1]' - '[info level 0]': $var '[set $var]'"
@@ -72,9 +72,9 @@ proc updateInstantiateVars { { force "" } } {
 		return
 	}
 
-	foreach var "instantiate_nodes create_nodes_ifaces instantiate_links
-		configure_links configure_nodes_ifaces configure_nodes" {
-
+	set vars "instantiate_nodes create_nodes_ifaces instantiate_links \
+		configure_links configure_nodes_ifaces configure_nodes"
+	foreach var $vars {
 		upvar 1 $var $var
 		dputs "'[info level -1]' - '[info level 0]': $var '[set $var]'"
 		setToExecuteVars "$var" [set $var]
@@ -86,9 +86,9 @@ proc updateTerminateVars {} {
 		return
 	}
 
-	foreach var "terminate_nodes destroy_nodes_ifaces terminate_links
-		unconfigure_links unconfigure_nodes_ifaces unconfigure_nodes" {
-
+	set vars "terminate_nodes destroy_nodes_ifaces terminate_links \
+		unconfigure_links unconfigure_nodes_ifaces unconfigure_nodes"
+	foreach var $vars {
 		upvar 1 $var $var
 		dputs "'[info level -1]' - '[info level 0]': $var '[set $var]'"
 		setToExecuteVars "$var" [set $var]
@@ -96,7 +96,10 @@ proc updateTerminateVars {} {
 }
 
 proc trigger_nodeConfig { node_id } {
-	if { ! [getFromRunning "cfg_deployed"] || [getFromRunning "${node_id}_running"] == false } {
+	if {
+		! [getFromRunning "cfg_deployed"] ||
+		[getFromRunning "${node_id}_running"] == false
+	} {
 		return
 	}
 
@@ -138,7 +141,10 @@ proc trigger_nodeReconfig { node_id } {
 }
 
 proc trigger_nodeFullConfig { node_id } {
-	if { ! [getFromRunning "cfg_deployed"] || [getFromRunning "${node_id}_running"] == false } {
+	if {
+		! [getFromRunning "cfg_deployed"] ||
+		[getFromRunning "${node_id}_running"] == false
+	} {
 		return
 	}
 
@@ -413,7 +419,10 @@ proc trigger_linkRecreate { link_id } {
 }
 
 proc trigger_ifaceCreate { node_id iface_id } {
-	if { ! [getFromRunning "cfg_deployed"] || [getFromRunning "${node_id}_running"] == false } {
+	if {
+		! [getFromRunning "cfg_deployed"] ||
+		[getFromRunning "${node_id}_running"] == false
+	} {
 		return
 	}
 
@@ -448,7 +457,10 @@ proc trigger_ifaceCreate { node_id iface_id } {
 }
 
 proc trigger_ifaceDestroy { node_id iface_id } {
-	if { ! [getFromRunning "cfg_deployed"] || [getFromRunning "${node_id}_running"] == false } {
+	if {
+		! [getFromRunning "cfg_deployed"] ||
+		[getFromRunning "${node_id}_running"] == false
+	} {
 		return
 	}
 
@@ -480,7 +492,10 @@ proc trigger_ifaceDestroy { node_id iface_id } {
 }
 
 proc trigger_ifaceRecreate { node_id iface_id } {
-	if { ! [getFromRunning "cfg_deployed"] || [getFromRunning "${node_id}_running"] == false } {
+	if {
+		! [getFromRunning "cfg_deployed"] ||
+		[getFromRunning "${node_id}_running"] == false
+	} {
 		return
 	}
 
@@ -493,7 +508,10 @@ proc trigger_ifaceRecreate { node_id iface_id } {
 }
 
 proc trigger_ifaceConfig { node_id iface_id } {
-	if { ! [getFromRunning "cfg_deployed"] || [getFromRunning "${node_id}_running"] == false } {
+	if {
+		! [getFromRunning "cfg_deployed"] ||
+		[getFromRunning "${node_id}_running"] == false
+	} {
 		return
 	}
 
@@ -508,7 +526,10 @@ proc trigger_ifaceConfig { node_id iface_id } {
 }
 
 proc trigger_ifaceUnconfig { node_id iface_id } {
-	if { ! [getFromRunning "cfg_deployed"] || [getFromRunning "${node_id}_running"] == false } {
+	if {
+		! [getFromRunning "cfg_deployed"] ||
+		[getFromRunning "${node_id}_running"] == false
+	} {
 		return
 	}
 
@@ -538,7 +559,10 @@ proc trigger_ifaceUnconfig { node_id iface_id } {
 }
 
 proc trigger_ifaceReconfig { node_id iface_id } {
-	if { ! [getFromRunning "cfg_deployed"] || [getFromRunning "${node_id}_running"] == false } {
+	if {
+		! [getFromRunning "cfg_deployed"] ||
+		[getFromRunning "${node_id}_running"] == false
+	} {
 		return
 	}
 
@@ -699,12 +723,15 @@ proc pipesClose {} {
 proc setOperMode { new_oper_mode } {
 	global all_modules_list editor_only execMode isOSfreebsd isOSlinux
 
-	if { ! [getFromRunning "cfg_deployed"] && $new_oper_mode == "exec" } {
+	if {
+		! [getFromRunning "cfg_deployed"] &&
+		$new_oper_mode == "exec"
+	} {
 		if { ! $isOSlinux && ! $isOSfreebsd } {
 			after idle { .dialog1.msg configure -wraplength 4i }
 			tk_dialog .dialog1 "IMUNES error" \
 				"Error: To execute experiment, run IMUNES on FreeBSD or Linux." \
-			info 0 Dismiss
+				info 0 Dismiss
 			return
 		}
 
@@ -713,7 +740,7 @@ proc setOperMode { new_oper_mode } {
 			after idle { .dialog1.msg configure -wraplength 4i }
 			tk_dialog .dialog1 "IMUNES error" \
 				"Error: To execute experiment, run IMUNES with root permissions." \
-			info 0 Dismiss
+				info 0 Dismiss
 			return
 		}
 
@@ -824,7 +851,7 @@ proc setOperMode { new_oper_mode } {
 
 		if { $editor_only } {
 			.menubar.experiment entryconfigure "Execute" -state disabled
-		 } else {
+		} else {
 			.menubar.experiment entryconfigure "Execute" -state normal
 		}
 
@@ -877,7 +904,10 @@ proc spawnShellExec {} {
 		}
 	}
 
-	if { [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" || [getFromRunning "${node_id}_running"] == false } {
+	if {
+		[[getNodeType $node_id].virtlayer] != "VIRTUALIZED" ||
+		[getFromRunning "${node_id}_running"] == false
+	} {
 		nodeConfigGUI .panwin.f1.c $node_id
 	} else {
 		set cmd [lindex [existingShells [[getNodeType $node_id].shellcmds] $node_id] 0]

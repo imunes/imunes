@@ -147,7 +147,7 @@ proc checkForExternalApps { app_list } {
 #****
 proc checkForApplications { node_id app_list } {
 	foreach app $app_list {
-	set status [ catch { exec docker exec [getFromRunning "eid"].$node_id which $app } err ]
+		set status [ catch { exec docker exec [getFromRunning "eid"].$node_id which $app } err ]
 		if { $status } {
 			return 1
 		}
@@ -170,9 +170,10 @@ proc checkForApplications { node_id app_list } {
 proc startWiresharkOnNodeIfc { node_id iface_name } {
 	set eid [getFromRunning "eid"]
 
-	if { [checkForExternalApps "startxcmd"] == 0 && \
-		[checkForApplications $node_id "wireshark"] == 0 } {
-
+	if {
+		[checkForExternalApps "startxcmd"] == 0 &&
+		[checkForApplications $node_id "wireshark"] == 0
+	} {
 		startXappOnNode $node_id "wireshark -ki $iface_name"
 	} else {
 		set wiresharkComm ""
@@ -188,9 +189,9 @@ proc startWiresharkOnNodeIfc { node_id iface_name } {
 				$wiresharkComm -o "gui.window_title:$iface_name@[getNodeName $node_id] ($eid)" -k -i - &
 		} else {
 			tk_dialog .dialog1 "IMUNES error" \
-		"IMUNES could not find an installation of Wireshark.\
-		If you have Wireshark installed, submit a bug report." \
-			info 0 Dismiss
+				"IMUNES could not find an installation of Wireshark.\
+				If you have Wireshark installed, submit a bug report." \
+				info 0 Dismiss
 		}
 	}
 }
@@ -253,14 +254,13 @@ proc startTcpdumpOnNodeIfc { node_id iface_name } {
 #   * node_id -- node id of the node for which the check is performed.
 #****
 proc existingShells { shells node_id } {
-	set cmds "
-		retval=\"\"\
-
-		for s in \"$shells\"; do
-			x=\$(which \$s 2> /dev/null)
-			test -n \"\$x\" && retval=\"\$retval \$x\"
-		done
-		echo \"\$retval\""
+	set cmds "retval=\"\"\n"
+	append cmds "\n"
+	append cmds "for s in \"$shells\"; do\n"
+	append cmds "	x=\$(which \$s 2> /dev/null)\n"
+	append cmds "	test -n \"\$x\" && retval=\"\$retval \$x\"\n"
+	append cmds "done\n"
+	append cmds "echo \"\$retval\"\n"
 
 	catch { exec docker exec [getFromRunning "eid"].$node_id sh -c "$cmds" } existing
 
@@ -292,8 +292,8 @@ proc spawnShell { node_id cmd } {
 
 	# FIXME make this modular
 	exec xterm -name imunes-terminal -sb -rightbar \
-	-T "IMUNES: [getNodeName $node_id] (console) [string trim [lindex [split $cmd /] end] ']" \
-	-e "docker exec -it $docker_id $cmd" 2> /dev/null &
+		-T "IMUNES: [getNodeName $node_id] (console) [string trim [lindex [split $cmd /] end] ']" \
+		-e "docker exec -it $docker_id $cmd" 2> /dev/null &
 }
 
 #****f* linux.tcl/fetchRunningExperiments
@@ -308,8 +308,8 @@ proc spawnShell { node_id cmd } {
 #****
 proc fetchRunningExperiments {} {
 	catch { exec himage -l | cut -d " " -f 1 } exp_list
-	set exp_list [split $exp_list "
-"]
+	set exp_list [split $exp_list "\n"]
+
 	return "$exp_list"
 }
 
@@ -356,19 +356,17 @@ proc allSnapshotsAvailable {} {
 				incr missing
 			}
 			if { $missing } {
+				set msg "Docker image for some virtual nodes:\n$template\nis missing.\n"
+				append msg "Run 'docker pull $template' to pull the template."
+
 				if { $execMode == "batch" } {
-					puts stderr "Docker image for some virtual nodes:
-	$template
-is missing.
-Run 'docker pull $template' to pull the template."
+					puts stderr $msg
 				} else {
-				   tk_dialog .dialog1 "IMUNES error" \
-			"Docker image for some virtual nodes:
-	$template
-is missing.
-Run 'docker pull $template' to pull the template." \
-				   info 0 Dismiss
+					tk_dialog .dialog1 "IMUNES error" \
+						$msg \
+						info 0 Dismiss
 				}
+
 				return 0
 			}
 		}
@@ -555,7 +553,7 @@ proc createNodeContainer { node_id } {
 
 	set network "imunes-bridge"
 	#if { [getNodeDockerAttach $node_id] == "true" } {
-		#set network "bridge"
+	#	set network "bridge"
 	#}
 
 	set vroot [getNodeCustomImage $node_id]
@@ -636,9 +634,9 @@ proc isNodeNamespaceCreated { node_id } {
 	}
 
 	try {
-	   exec ip netns exec $nodeNs true
+		exec ip netns exec $nodeNs true
 	} on error {} {
-	   return false
+		return false
 	}
 
 	return true
@@ -807,16 +805,16 @@ proc nodeLogIfacesCreate { node_id ifaces } {
 		}
 	}
 
-#	# docker interface is created before other ones, so let's rename it to something that's not used by IMUNES
-#	if { [getNodeDockerAttach $node_id] == 1 } {
-#		set cmds "ip r save > /tmp/routes"
-#		set cmds "$cmds ; ip l set eth0 down"
-#		set cmds "$cmds ; ip l set eth0 name docker0"
-#		set cmds "$cmds ; ip l set docker0 up"
-#		set cmds "$cmds ; ip r restore < /tmp/routes"
-#		set cmds "$cmds ; rm -f /tmp/routes"
-#		pipesExec "docker exec -d $docker_id sh -c '$cmds'" "hold"
-#	}
+	## docker interface is created before other ones, so let's rename it to something that's not used by IMUNES
+	#if { [getNodeDockerAttach $node_id] == 1 } {
+	#	set cmds "ip r save > /tmp/routes"
+	#	set cmds "$cmds ; ip l set eth0 down"
+	#	set cmds "$cmds ; ip l set eth0 name docker0"
+	#	set cmds "$cmds ; ip l set docker0 up"
+	#	set cmds "$cmds ; ip r restore < /tmp/routes"
+	#	set cmds "$cmds ; rm -f /tmp/routes"
+	#	pipesExec "docker exec -d $docker_id sh -c '$cmds'" "hold"
+	#}
 }
 
 #****f* linux.tcl/configureICMPoptions
@@ -924,7 +922,10 @@ proc setNsIfcMaster { netNs iface_name master state } {
 proc createLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 	set eid [getFromRunning "eid"]
 
-	if { [getLinkDirect $link_id] || "wlan" in "[getNodeType $node1_id] [getNodeType $node2_id]" } {
+	if {
+		[getLinkDirect $link_id] ||
+		"wlan" in "[getNodeType $node1_id] [getNodeType $node2_id]"
+	} {
 		# on Linux, there is no mechanism for rj45-rj45 direct links so we create a
 		# bridge in the default namespace
 		if { "[getNodeType $node1_id] [getNodeType $node2_id]" == "rj45 rj45" } {
@@ -2106,7 +2107,7 @@ proc sshServiceStartCmds {} {
 }
 
 proc sshServiceStopCmds {} {
-	return {"service ssh stop"}
+	return { "service ssh stop" }
 }
 
 proc inetdServiceRestartCmds {} {
