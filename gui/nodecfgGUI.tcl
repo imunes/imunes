@@ -2064,7 +2064,7 @@ proc configGUI_customConfig { wi node_id } {
 				customConfigGUI $gui_element $node_id
 			}
 		} \
-			$o \
+			$wi \
 			$node_id \
 			$hook
 		]
