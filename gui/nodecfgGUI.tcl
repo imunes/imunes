@@ -2181,7 +2181,7 @@ proc configGUI_routingModel { wi node_id } {
 		"rip rip ripEnable"
 		"ripng ripng ripngEnable"
 		"ospf ospf ospfEnable"
-		"ospf6 ospfv3 ospfv3Enable"
+		"ospf6 ospfv3 ospf6Enable"
 		"bgp bgp bgpEnable"
 		"ldp ldp ldpEnable"
 	}
