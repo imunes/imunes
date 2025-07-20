@@ -1022,6 +1022,10 @@ proc setNodeCoords { node_id coords } {
 		lappend roundcoords $x
 	}
 
+	if { $coords == {} } {
+		set roundcoords "0 0"
+	}
+
 	cfgSet "nodes" $node_id "iconcoords" $roundcoords
 }
 
@@ -1056,6 +1060,10 @@ proc setNodeLabelCoords { node_id coords } {
 	foreach c $coords {
 		set x [expr round($c)]
 		lappend roundcoords $x
+	}
+
+	if { $coords == {} } {
+		set roundcoords "0 0"
 	}
 
 	cfgSet "nodes" $node_id "labelcoords" $roundcoords
