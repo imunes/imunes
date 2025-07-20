@@ -1042,12 +1042,16 @@ proc loadCfgLegacy { cfg } {
 			}
 
 			foreach addr [getIfcIPv6addrs $node_id $iface_id] {
-				lassign [split $addr "/"] addr mask
-				lappend ipv6_used_list "[ip::contract [ip::prefix $addr]]/$mask"
+				if { $addr != "" } {
+					lassign [split $addr "/"] addr mask
+					lappend ipv6_used_list "[ip::contract [ip::prefix $addr]]/$mask"
+				}
 			}
 
 			foreach addr [getIfcIPv4addrs $node_id $iface_id] {
-				lappend ipv4_used_list $addr
+				if { $addr != "" } {
+					lappend ipv4_used_list $addr
+				}
 			}
 
 			set addr [getIfcMACaddr $node_id $iface_id]
@@ -1202,12 +1206,16 @@ proc loadCfgJson { json_cfg } {
 			}
 
 			foreach addr [getIfcIPv6addrs $node_id $iface_id] {
-				lassign [split $addr "/"] addr mask
-				lappend ipv6_used_list "[ip::contract [ip::prefix $addr]]/$mask"
+				if { $addr != "" } {
+					lassign [split $addr "/"] addr mask
+					lappend ipv6_used_list "[ip::contract [ip::prefix $addr]]/$mask"
+				}
 			}
 
 			foreach addr [getIfcIPv4addrs $node_id $iface_id] {
-				lappend ipv4_used_list $addr
+				if { $addr != "" } {
+					lappend ipv4_used_list $addr
+				}
 			}
 
 			set addr [getIfcMACaddr $node_id $iface_id]
