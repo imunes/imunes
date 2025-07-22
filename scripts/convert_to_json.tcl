@@ -94,6 +94,8 @@ set debug 0
 set printVersion 0
 set prepareFlag 0
 set forceFlag 0
+set selected_experiment ""
+set gui 0
 
 # Runtime libriaries
 foreach file [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
@@ -119,7 +121,16 @@ array set nodeNamingBase {
 }
 
 set option_defaults {
-	auto_etc_hosts	0
+	auto_etc_hosts		0
+	IPv4autoAssign		1
+	IPv6autoAssign		1
+	routerRipEnable		1
+	routerRipngEnable	1
+	routerOspfEnable	0
+	routerOspf6Enable	0
+	routerBgpEnable		0
+	routerLdpEnable		0
+	routerDefaultsModel	"frr"
 }
 
 set gui_option_defaults {
@@ -133,6 +144,10 @@ set gui_option_defaults {
 	show_grid				1
 	icon_size				"normal"
 	zoom					1
+	default_link_color		"Red"
+	default_link_width		2
+	default_fill_color		"Gray"
+	default_text_color		"#000000"
 }
 
 foreach {option default_value} [concat $option_defaults $gui_option_defaults] {
@@ -215,12 +230,14 @@ if { $argv != "" } {
 
 	namespace eval ::cf::[set curcfg] {}
 	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+	upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
 	upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 	set dict_cfg [dict create]
 	setOption "version" $CFG_VERSION
 
 	set dict_run [dict create]
+	set dict_run_gui [dict create]
 	set execute_vars [dict create]
 
 	setToRunning "eid" ""
@@ -230,11 +247,11 @@ if { $argv != "" } {
 	setToRunning "stop_sched" true
 	setToRunning "undolevel" 0
 	setToRunning "redolevel" 0
-	setToRunning "zoom" $zoom
+	setToRunning_gui "zoom" $zoom
 
 	readCfgJson $currentFileBatch
 
-	setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
+	setToRunning_gui "curcanvas" [lindex [getFromRunning_gui "canvas_list"] 0]
 	setToRunning "current_file" $argv
 
 	set dir_name [file dirname $currentFileBatch]

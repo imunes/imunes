@@ -198,7 +198,7 @@ proc updateLinkGUI { link_id old_link_cfg_gui new_link_cfg_gui } {
 	dputs "= /UPDATE LINK GUI $link_id START ="
 
 	if { $old_link_cfg_gui == "*" } {
-		set old_link_cfg_gui [cfgGet "links" $link_id]
+		set old_link_cfg_gui [cfgGet "gui" "links" $link_id]
 	}
 
 	dputs "OLD : '$old_link_cfg_gui'"

@@ -422,7 +422,7 @@ proc newLogIface { node_id logiface_type } {
 	return [newIface $node_id $logiface_type 0]
 }
 
-proc removeIface { node_id iface_id } {
+proc removeIface { node_id iface_id { keep_other_ifaces 1} } {
 	set node_type [getNodeType $node_id]
 	if { $node_type != "pseudo" } {
 		trigger_ifaceDestroy $node_id $iface_id
@@ -432,7 +432,7 @@ proc removeIface { node_id iface_id } {
 	if { $link_id != "" } {
 		cfgUnset "nodes" $node_id "ifaces" $iface_id "link"
 
-		removeLink $link_id 1
+		removeLink $link_id $keep_other_ifaces
 	}
 
 	setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] [getIfcIPv4addrs $node_id $iface_id] "keep_doubles"]

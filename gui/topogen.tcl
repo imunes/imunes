@@ -136,7 +136,7 @@ proc newNodes { node_num } {
 
 		setNodeCoords $new_node_id "$x $y"
 		setNodeLabelCoords $new_node_id "$x [expr {$y + $dy}]"
-		setNodeCanvas $new_node_id [getFromRunning "curcanvas"]
+		setNodeCanvas $new_node_id [getFromRunning_gui "curcanvas"]
 
 		lappend new_nodes $new_node_id
 	}

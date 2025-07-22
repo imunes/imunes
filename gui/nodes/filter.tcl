@@ -86,7 +86,7 @@ proc $MODULE.configGUI { c node_id } {
 	global node_cfg node_cfg_gui node_existing_mac node_existing_ipv4 node_existing_ipv6
 
 	set node_cfg [cfgGet "nodes" $node_id]
-	set node_cfg_gui [cfgGet "nodes" $node_id]
+	set node_cfg_gui [cfgGet "gui" "nodes" $node_id]
 	set node_existing_mac [getFromRunning "mac_used_list"]
 	set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
 	set node_existing_ipv6 [getFromRunning "ipv6_used_list"]

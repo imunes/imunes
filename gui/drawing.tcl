@@ -46,8 +46,8 @@ proc redrawAll {} {
 	global background sizex sizey grid
 	global show_background_image show_annotations show_grid bkgImage
 
-	set zoom [getFromRunning "zoom"]
-	set curcanvas [getFromRunning "curcanvas"]
+	set zoom [getFromRunning_gui "zoom"]
+	set curcanvas [getFromRunning_gui "curcanvas"]
 
 	.bottom.zoom config -text "zoom [expr {int($zoom * 100)}]%"
 	set e_sizex [expr {int($sizex * $zoom)}]
@@ -75,7 +75,7 @@ proc redrawAll {} {
 	}
 
 	if { $show_annotations == 1 } {
-		foreach annotation_id [getFromRunning "annotation_list"] {
+		foreach annotation_id [getFromRunning_gui "annotation_list"] {
 			if { [getAnnotationCanvas $annotation_id] == $curcanvas } {
 				drawAnnotation $annotation_id
 			}
@@ -155,7 +155,7 @@ proc drawNode { node_id } {
 	global show_node_labels pseudo runnable_node_types
 
 	set type [getNodeType $node_id]
-	set zoom [getFromRunning "zoom"]
+	set zoom [getFromRunning_gui "zoom"]
 	lassign [lmap coord [getNodeCoords $node_id] {expr $coord * $zoom}] x y
 
 	.panwin.f1.c delete -withtags "node && $node_id"
@@ -233,7 +233,7 @@ proc drawNode { node_id } {
 
 		set label_str "[getNodeName $peer_id]:[getIfcName $peer_id $peer_iface]"
 		set peer_canvas [getNodeCanvas $peer_id]
-		if { $peer_canvas != [getFromRunning "curcanvas"] } {
+		if { $peer_canvas != [getFromRunning_gui "curcanvas"] } {
 			set label_str "$label_str\n@[getCanvasName $peer_canvas]"
 		}
 	}
@@ -332,7 +332,7 @@ proc drawLink { link_id } {
 #   * y2 -- Y coordinate of point2
 #****
 proc calcAnglePoints { x1 y1 x2 y2 } {
-	set zoom [getFromRunning "zoom"]
+	set zoom [getFromRunning_gui "zoom"]
 	set x1 [expr $x1*$zoom]
 	set y1 [expr $y1*$zoom]
 	set x2 [expr $x2*$zoom]
@@ -516,7 +516,7 @@ proc updateLinkLabel { link_id } {
 #   Redraws all links on the current canvas.
 #****
 proc redrawAllLinks {} {
-	set curcanvas [getFromRunning "curcanvas"]
+	set curcanvas [getFromRunning_gui "curcanvas"]
 
 	foreach link_id [getFromRunning "link_list"] {
 		lassign [getLinkPeers $link_id] node1_id node2_id
@@ -839,7 +839,7 @@ proc changeIconPopup {} {
 			-tags "$file_path"
 	}
 
-	set image_list [getFromRunning "image_list"]
+	set image_list [getFromRunning_gui "image_list"]
 	foreach img $image_list {
 		if {
 			$img == "" ||
@@ -1095,11 +1095,11 @@ proc selectZoomPopupMenu { x y } {
 	global zoom_stops changed
 	.button3menu delete 0 end
 
-	set sel_zoom [getFromRunning "zoom"]
+	set sel_zoom [getFromRunning_gui "zoom"]
 
 	foreach z $zoom_stops {
 		set tmp_command {
-			setToRunning "zoom" $sel_zoom
+			setToRunning_gui "zoom" $sel_zoom
 
 			redrawAll
 			set changed 1
@@ -1172,8 +1172,8 @@ proc align2grid {} {
 proc rearrange { mode } {
 	global autorearrange_enabled sizex sizey
 
-	set curcanvas [getFromRunning "curcanvas"]
-	set zoom [getFromRunning "zoom"]
+	set curcanvas [getFromRunning_gui "curcanvas"]
+	set zoom [getFromRunning_gui "zoom"]
 
 	set autorearrange_enabled 1
 	.menubar.tools entryconfigure "Auto rearrange all" -state disabled
@@ -1363,8 +1363,8 @@ proc rearrange { mode } {
 proc switchCanvas { direction } {
 	global sizex sizey
 
-	set curcanvas [getFromRunning "curcanvas"]
-	set canvas_list [getFromRunning "canvas_list"]
+	set curcanvas [getFromRunning_gui "curcanvas"]
+	set canvas_list [getFromRunning_gui "canvas_list"]
 
 	if { $curcanvas ni $canvas_list } {
 		set direction prev
@@ -1396,7 +1396,7 @@ proc switchCanvas { direction } {
 		}
 	}
 
-	setToRunning "curcanvas" $curcanvas
+	setToRunning_gui "curcanvas" $curcanvas
 
 	.panwin.f1.hframe.t delete all
 	set x 0
@@ -1486,13 +1486,13 @@ proc animate {} {
 proc zoom { dir } {
 	global zoom_stops
 
-	set zoom [getFromRunning "zoom"]
+	set zoom [getFromRunning_gui "zoom"]
 	set minzoom [lindex $zoom_stops 0]
 	set maxzoom [lindex $zoom_stops [expr [llength $zoom_stops] - 1]]
 	switch -exact -- $dir {
 		"down" {
 			if { $zoom > $maxzoom } {
-				setToRunning "zoom" $maxzoom
+				setToRunning_gui "zoom" $maxzoom
 			} elseif { $zoom < $minzoom } {
 				; # leave it unchanged
 			} else {
@@ -1504,13 +1504,13 @@ proc zoom { dir } {
 						set newzoom $z
 					}
 				}
-				setToRunning "zoom" $newzoom
+				setToRunning_gui "zoom" $newzoom
 			}
 			redrawAll
 		}
 		"up" {
 			if { $zoom < $minzoom } {
-				setToRunning "zoom" $minzoom
+				setToRunning_gui "zoom" $minzoom
 			} elseif { $zoom > $maxzoom } {
 				; # leave it unchanged
 			} else {
@@ -1520,13 +1520,13 @@ proc zoom { dir } {
 						break
 					}
 				}
-				setToRunning "zoom" $newzoom
+				setToRunning_gui "zoom" $newzoom
 			}
 			redrawAll
 		}
 		default {
 			if { $i < [expr [llength $zoom_stops] - 1] } {
-				setToRunning "zoom" [lindex $zoom_stops [expr $i + 1]]
+				setToRunning_gui "zoom" [lindex $zoom_stops [expr $i + 1]]
 				redrawAll
 			}
 		}

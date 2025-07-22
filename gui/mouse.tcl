@@ -132,7 +132,7 @@ proc removeNodeGUI { node_id { keep_other_ifaces 0 } } {
 proc splitLinkGUI { link_id } {
 	global changed
 
-	set zoom [getFromRunning "zoom"]
+	set zoom [getFromRunning_gui "zoom"]
 
 	lassign [getLinkPeers $link_id] orig_node1_id orig_node2_id
 	lassign [splitLink $link_id] new_node1_id new_node2_id
@@ -483,7 +483,7 @@ proc button3link { c x y } {
 	if {
 		$link_mirror_id != "" &&
 		[getNodeCanvas [lindex [getLinkPeers $link_mirror_id] 0]] ==
-		[getFromRunning "curcanvas"]
+		[getFromRunning_gui "curcanvas"]
 	} {
 		.button3menu add command -label "Merge" \
 			-command "mergeNodeGUI [lindex [getLinkPeers $link_id] 0]"
@@ -607,8 +607,8 @@ proc mergeNodeGUI { node_id } {
 proc button3node { c x y } {
 	global isOSlinux
 
-	set canvas_list [getFromRunning "canvas_list"]
-	set curcanvas [getFromRunning "curcanvas"]
+	set canvas_list [getFromRunning_gui "canvas_list"]
+	set curcanvas [getFromRunning_gui "curcanvas"]
 	set oper_mode [getFromRunning "oper_mode"]
 
 	set node_id [lindex [$c gettags "(node || nodelabel || node_running) && current"] 1]
@@ -1376,7 +1376,7 @@ proc button1 { c x y button } {
 	global default_link_color default_link_width
 	global resizemode resizeobj
 
-	set zoom [getFromRunning "zoom"]
+	set zoom [getFromRunning_gui "zoom"]
 
 	set x [$c canvasx $x]
 	set y [$c canvasy $y]
@@ -1477,7 +1477,7 @@ proc button1 { c x y button } {
 
 			# adding a new node
 			set node_id [newNode $active_tool]
-			setNodeCanvas $node_id [getFromRunning "curcanvas"]
+			setNodeCanvas $node_id [getFromRunning_gui "curcanvas"]
 			setNodeCoords $node_id "[expr {$x / $zoom}] [expr {$y / $zoom}]"
 
 			# To calculate label distance we take into account the normal icon
@@ -1566,7 +1566,7 @@ proc button1-motion { c x y } {
 	global lastX lastY sizex sizey selectbox background
 	global newoval newrect newtext newfree resizemode
 
-	set zoom [getFromRunning "zoom"]
+	set zoom [getFromRunning_gui "zoom"]
 
 	set x [$c canvasx $x]
 	set y [$c canvasy $y]
@@ -1611,7 +1611,7 @@ proc button1-motion { c x y } {
 				return
 			}
 
-			$c raise $selectbox "background || link || linklabel || interface"
+			$c raise $selectbox "all"
 		} else {
 			set err [catch {
 				$c coords $selectbox \
@@ -1720,7 +1720,7 @@ proc button1-motion { c x y } {
 					return
 				}
 
-				$c raise $selectbox "background || link || linklabel || interface"
+				$c raise $selectbox "all"
 			} else {
 				set err [catch {
 					$c coords $selectbox \
@@ -1781,7 +1781,7 @@ proc button1-release { c x y } {
 	global resizemode resizeobj
 	global newnode
 
-	set zoom [getFromRunning "zoom"]
+	set zoom [getFromRunning_gui "zoom"]
 	set undolevel [getFromRunning "undolevel"]
 	set redolevel [getFromRunning "redolevel"]
 
@@ -2134,8 +2134,8 @@ proc button1-release { c x y } {
 proc button3background { c x y } {
 	global show_background_image changed
 
-	set canvas_list [getFromRunning "canvas_list"]
-	set curcanvas [getFromRunning "curcanvas"]
+	set canvas_list [getFromRunning_gui "canvas_list"]
+	set curcanvas [getFromRunning_gui "curcanvas"]
 
 	.button3menu delete 0 end
 

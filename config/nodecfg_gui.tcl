@@ -59,7 +59,7 @@ proc updateNodeGUI { node_id old_node_cfg_gui new_node_cfg_gui } {
 	dputs "= /UPDATE NODE GUI $node_id START ="
 
 	if { $old_node_cfg_gui == "*" } {
-		set old_node_cfg_gui [cfgGet "nodes" $node_id]
+		set old_node_cfg_gui [cfgGet "gui" "nodes" $node_id]
 	}
 
 	dputs "OLD : '$old_node_cfg_gui'"
@@ -95,7 +95,7 @@ proc updateNodeGUI { node_id old_node_cfg_gui new_node_cfg_gui } {
 
 		switch -exact $key {
 			"label" {
-				#setNodeLabel $node_id $new_value
+				setNodeLabel $node_id $new_value
 			}
 
 			"canvas" {

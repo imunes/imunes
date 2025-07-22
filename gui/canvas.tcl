@@ -50,8 +50,8 @@
 #   * canvas_id -- canvas id
 #****
 proc removeCanvas { canvas_id } {
-	setToRunning "canvas_list" [removeFromList [getFromRunning "canvas_list"] $canvas_id]
-	cfgUnset "canvases" $canvas_id
+	setToRunning_gui "canvas_list" [removeFromList [getFromRunning_gui "canvas_list"] $canvas_id]
+	cfgUnset "gui" "canvases" $canvas_id
 }
 
 #****f* canvas.tcl/newCanvas
@@ -69,8 +69,8 @@ proc removeCanvas { canvas_id } {
 #   * canvas_id -- canvas id
 #****
 proc newCanvas { name } {
-	set canvas_id [newObjectId [getFromRunning "canvas_list"] "c"]
-	lappendToRunning "canvas_list" $canvas_id
+	set canvas_id [newObjectId [getFromRunning_gui "canvas_list"] "c"]
+	lappendToRunning_gui "canvas_list" $canvas_id
 
 	if { $name != "" } {
 		setCanvasName $canvas_id $name
@@ -94,7 +94,7 @@ proc newCanvas { name } {
 #   * y -- height
 #****
 proc setCanvasSize { canvas_id x y } {
-	cfgSet "canvases" $canvas_id "size" "$x $y"
+	cfgSet "gui" "canvases" $canvas_id "size" "$x $y"
 }
 
 #****f* canvas.tcl/getCanvasSize
@@ -110,7 +110,7 @@ proc setCanvasSize { canvas_id x y } {
 #   * size -- canvas size in the form of {x y}
 #****
 proc getCanvasSize { canvas_id } {
-	return [cfgGetWithDefault {900 620} "canvases" $canvas_id "size"]
+	return [cfgGetWithDefault {900 620} "gui" "canvases" $canvas_id "size"]
 }
 
 #****f* canvas.tcl/getCanvasName
@@ -126,7 +126,7 @@ proc getCanvasSize { canvas_id } {
 #   * canvas_name -- canvas name
 #****
 proc getCanvasName { canvas_id } {
-	return [cfgGet "canvases" $canvas_id "name"]
+	return [cfgGet "gui" "canvases" $canvas_id "name"]
 }
 
 #****f* canvas.tcl/setCanvasName
@@ -141,7 +141,7 @@ proc getCanvasName { canvas_id } {
 #   * name -- canvas name
 #****
 proc setCanvasName { canvas_id name } {
-	return [cfgSet "canvases" $canvas_id "name" $name]
+	return [cfgSet "gui" "canvases" $canvas_id "name" $name]
 }
 
 #****f* canvas.tcl/getCanvasBkg
@@ -157,7 +157,7 @@ proc setCanvasName { canvas_id name } {
 #   * canvasBkgImage -- image variable name
 #****
 proc getCanvasBkg { canvas_id } {
-	return [cfgGet "canvases" $canvas_id "bkg_image"]
+	return [cfgGet "gui" "canvases" $canvas_id "bkg_image"]
 }
 
 #****f* canvas.tcl/setCanvasBkg
@@ -172,7 +172,7 @@ proc getCanvasBkg { canvas_id } {
 #   * name -- image variable name
 #****
 proc setCanvasBkg { canvas_id name } {
-	return [cfgSet "canvases" $canvas_id "bkg_image" $name]
+	return [cfgSet "gui" "canvases" $canvas_id "bkg_image" $name]
 }
 
 #****f* canvas.tcl/removeCanvasBkg
@@ -186,7 +186,7 @@ proc setCanvasBkg { canvas_id name } {
 #   * canvas_id -- canvas id
 #****
 proc removeCanvasBkg { canvas_id } {
-	cfgUnset "canvases" $canvas_id "bkg_image"
+	cfgUnset "gui" "canvases" $canvas_id "bkg_image"
 }
 
 #****f* canvas.tcl/setImageReference
@@ -205,7 +205,7 @@ proc setImageReference { img target } {
 	set ref_list [getImageReferences $img]
 	lappend ref_list $target
 
-	cfgSet "images" $img "referencedBy" [lsort -unique $ref_list]
+	cfgSet "gui" "images" $img "referencedBy" [lsort -unique $ref_list]
 }
 
 #****f* canvas.tcl/getImageReferences
@@ -221,7 +221,7 @@ proc setImageReference { img target } {
 #   * entry -- list of references to the image
 #****
 proc getImageReferences { img } {
-	return [cfgGet "images" $img "referencedBy"]
+	return [cfgGet "gui" "images" $img "referencedBy"]
 }
 
 #****f* canvas.tcl/removeImageReference
@@ -236,7 +236,7 @@ proc getImageReferences { img } {
 #   * target -- the object that references the image
 #****
 proc removeImageReference { img target } {
-	cfgSet "images" $img "referencedBy" [removeFromList [getImageReferences $img] $target]
+	cfgSet "gui" "images" $img "referencedBy" [removeFromList [getImageReferences $img] $target]
 }
 
 #****f* canvas.tcl/setImageType
@@ -251,7 +251,7 @@ proc removeImageReference { img target } {
 #   * type -- type of the image
 #****
 proc setImageType { img type } {
-	cfgSet "images" $img "type" $type
+	cfgSet "gui" "images" $img "type" $type
 }
 
 #****f* canvas.tcl/getImageType
@@ -267,7 +267,7 @@ proc setImageType { img type } {
 #   * imageType -- the type of the image
 #****
 proc getImageType { img } {
-	return [cfgGet "images" $img "type"]
+	return [cfgGet "gui" "images" $img "type"]
 }
 
 #****f* canvas.tcl/setImageData
@@ -289,7 +289,7 @@ proc setImageData { img path } {
 	set enc_data [base64::encode -maxlen 0 $data]
 	#set enc_data [string map {"\n" "\n          "} $enc_data]
 
-	cfgSet "images" $img "data" $enc_data
+	cfgSet "gui" "images" $img "data" $enc_data
 }
 
 #****f* canvas.tcl/getImageData
@@ -305,7 +305,7 @@ proc setImageData { img path } {
 #   * data -- image data
 #****
 proc getImageData { img } {
-	set entry [cfgGet "images" $img "data"]
+	set entry [cfgGet "gui" "images" $img "data"]
 	set enc [string trim $entry \{\}]
 	set enc [string trim $enc " "]
 	set data [base64::decode $enc]
@@ -333,7 +333,7 @@ proc setImageZoomData { img path zoom } {
 	set enc_data [base64::encode -maxlen 0 $data]
 	#set enc_data [string map {"\n" "\n          "} $enc_data]
 
-	cfgSet "images" $img "zoom_$zoom" $enc_data
+	cfgSet "gui" "images" $img "zoom_$zoom" $enc_data
 }
 
 #****f* canvas.tcl/getImageZoomData
@@ -350,7 +350,7 @@ proc setImageZoomData { img path zoom } {
 #   * data -- image zoom data
 #****
 proc getImageZoomData { img zoom } {
-	set entry [cfgGet "images" $img "zoom_$zoom"]
+	set entry [cfgGet "gui" "images" $img "zoom_$zoom"]
 	set enc [string trim $entry \{\}]
 	set enc [string trim $enc " "]
 	set data [base64::decode $enc]
@@ -370,7 +370,7 @@ proc getImageZoomData { img zoom } {
 #   * file -- image filename
 #****
 proc setImageFile { img file } {
-	cfgSet "images" $img "file" $file
+	cfgSet "gui" "images" $img "file" $file
 }
 
 #****f* canvas.tcl/getImageFile
@@ -386,7 +386,7 @@ proc setImageFile { img file } {
 #   * file -- image filename
 #****
 proc getImageFile { img } {
-	return [cfgGet "images" $img "file"]
+	return [cfgGet "gui" "images" $img "file"]
 }
 
 #****f* canvas.tcl/loadImage
@@ -406,7 +406,7 @@ proc getImageFile { img } {
 #   * imageName -- name of the variable which now contains the image
 #****
 proc loadImage { path ref type file } {
-	set image_list [getFromRunning "image_list"]
+	set image_list [getFromRunning_gui "image_list"]
 
 	if { [file exists $path] != 1 } {
 		after idle { .dialog1.msg configure -wraplength 4i }
@@ -417,7 +417,7 @@ proc loadImage { path ref type file } {
 	}
 
 	set imgname [newObjectId $image_list "image"]
-	lappendToRunning "image_list" $imgname
+	lappendToRunning_gui "image_list" $imgname
 
 	setImageData $imgname $path
 	setImageFile $imgname [relpath $file]
@@ -459,7 +459,7 @@ proc random { range start } {
 proc changeBkgPopup {} {
 	global wi canvasBkgMode chbgdialog cc alignCanvasBkg bgsrcfile winOS hasIM
 
-	set curcanvas [getFromRunning "curcanvas"]
+	set curcanvas [getFromRunning_gui "curcanvas"]
 	set cc $curcanvas
 	set chbgdialog .chbgDialog
 	catch { destroy $chbgdialog }
@@ -954,10 +954,10 @@ proc printCanvasToFile { w entry } {
 		return
 	}
 
-	set start_canvas [getFromRunning "curcanvas"]
+	set start_canvas [getFromRunning_gui "curcanvas"]
 	set modified_bkp [getFromRunning "modified"]
 	set font_bkp [dict create]
-	foreach annotation_id [getFromRunning "annotation_list"] {
+	foreach annotation_id [getFromRunning_gui "annotation_list"] {
 		if { [getAnnotationType $annotation_id] != "text" } {
 			continue
 		}
@@ -980,8 +980,8 @@ proc printCanvasToFile { w entry } {
 	try {
 		set file_id [file tempfile psname]
 
-		foreach canvas_id [getFromRunning "canvas_list"] {
-			setToRunning "curcanvas" $canvas_id
+		foreach canvas_id [getFromRunning_gui "canvas_list"] {
+			setToRunning_gui "curcanvas" $canvas_id
 			switchCanvas none
 
 			set sizex [expr {[lindex [getCanvasSize $canvas_id] 0]}]
@@ -1015,7 +1015,7 @@ proc printCanvasToFile { w entry } {
 	}
 	setToRunning "modified" $modified_bkp
 
-	setToRunning "curcanvas" $start_canvas
+	setToRunning_gui "curcanvas" $start_canvas
 	switchCanvas none
 
 	if { $msg == "" } {
@@ -1058,7 +1058,7 @@ proc renameCanvasPopup {} {
 	bind $w <Key-Return> "renameCanvasApply $w"
 
 	ttk::entry $w.renameframe.e1
-	$w.renameframe.e1 insert 0 [getCanvasName [getFromRunning "curcanvas"]]
+	$w.renameframe.e1 insert 0 [getCanvasName [getFromRunning_gui "curcanvas"]]
 	pack $w.renameframe.e1 -side top -pady 5 -padx 10 -fill x
 }
 
@@ -1079,7 +1079,7 @@ proc resizeCanvasPopup {} {
 	wm title $w "Canvas resize"
 	wm iconname $w "Canvas resize"
 
-	set curcanvas [getFromRunning "curcanvas"]
+	set curcanvas [getFromRunning_gui "curcanvas"]
 
 	set minWidth [lindex [getMostDistantNodeCoordinates] 0]
 	set minHeight [lindex [getMostDistantNodeCoordinates] 1]
@@ -1143,7 +1143,7 @@ proc resizeCanvasPopup {} {
 proc renameCanvasApply { w } {
 	global changed
 
-	set curcanvas [getFromRunning "curcanvas"]
+	set curcanvas [getFromRunning_gui "curcanvas"]
 
 	set newname [$w.renameframe.e1 get]
 	destroy $w
@@ -1170,7 +1170,7 @@ proc renameCanvasApply { w } {
 proc resizeCanvasApply { w } {
 	global changed
 
-	set curcanvas [getFromRunning "curcanvas"]
+	set curcanvas [getFromRunning_gui "curcanvas"]
 
 	set x [$w.resizeframe.size.x get]
 	set y [$w.resizeframe.size.y get]

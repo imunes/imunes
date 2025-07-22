@@ -71,7 +71,7 @@ proc copySelection {} {
 	clipboardSet "annotation_list" {}
 	foreach annotation_id $selected_annotations {
 		clipboardLappend "annotation_list" $annotation_id
-		clipboardSet "annotations" $annotation_id [cfgGet "annotations" $annotation_id]
+		clipboardSet "gui" "annotations" $annotation_id [cfgGet "gui" "annotations" $annotation_id]
 	}
 
 	# Copy selected nodes and interconnecting links to the clipboard
@@ -79,11 +79,13 @@ proc copySelection {} {
 	set clipboard_link_list {}
 	foreach node_id $selected_nodes {
 		clipboardSet "nodes" $node_id [cfgGet "nodes" $node_id]
+		clipboardSet "gui" "nodes" $node_id [cfgGet "gui" "nodes" $node_id]
 
 		foreach iface_id [ifcList $node_id] {
 			set peer_id [getIfcPeer $node_id $iface_id]
 			if { $peer_id != "" && $peer_id ni $selected_nodes } {
 				clipboardUnset "nodes" $node_id "ifaces" $iface_id
+				clipboardUnset "gui" "nodes" $node_id "ifaces" $iface_id
 				continue
 			}
 
@@ -91,6 +93,7 @@ proc copySelection {} {
 				if { $link_id ni $clipboard_link_list } {
 					lappend clipboard_link_list $link_id
 					clipboardSet "links" $link_id [cfgGet "links" $link_id]
+					clipboardSet "gui" "links" $link_id [cfgGet "gui" "links" $link_id]
 				}
 			}
 		}
@@ -118,19 +121,19 @@ proc paste {} {
 
 	# Nothing to do if clipboards are empty
 	set clipboard_node_list [clipboardGet "node_list"]
-	set clipboard_annotations [clipboardGet "annotations"]
+	set clipboard_annotations [clipboardGet "gui" "annotations"]
 	if { $clipboard_node_list == {} && $clipboard_annotations == {} } {
 		return
 	}
 
 	set new_annotations {}
-	set curcanvas [getFromRunning "curcanvas"]
+	set curcanvas [getFromRunning_gui "curcanvas"]
 	# Paste annotations from the clipboard and rename them on the fly
 	foreach {annotation_orig annotation_orig_cfg} $clipboard_annotations {
-		set new_annotation_id [newObjectId [getFromRunning "annotation_list"] "a"]
+		set new_annotation_id [newObjectId [getFromRunning_gui "annotation_list"] "a"]
 
-		cfgSet "annotations" $new_annotation_id $annotation_orig_cfg
-		lappendToRunning "annotation_list" $new_annotation_id
+		cfgSet "gui" "annotations" $new_annotation_id $annotation_orig_cfg
+		lappendToRunning_gui "annotation_list" $new_annotation_id
 		lappend new_annotations $new_annotation_id
 
 		setAnnotationCanvas $new_annotation_id $curcanvas
@@ -153,8 +156,6 @@ proc paste {} {
 		setToRunning "${new_node_id}_running" false
 		lappendToRunning "node_list" $new_node_id
 		lappend copypaste_list $new_node_id
-
-		setNodeCanvas $new_node_id $curcanvas
 
 		set node_type [getNodeType $new_node_id]
 		if { $node_type ni [array names nodeNamingBase] } {
@@ -202,6 +203,15 @@ proc paste {} {
 				lappendToRunning "ipv6_used_list" [getIfcIPv6addrs $new_node_id $iface_id]
 			}
 		}
+	}
+
+	# node GUI stuff
+	foreach node_orig $clipboard_node_list {
+		set new_node_id $node_map($node_orig)
+		cfgSet "gui" "nodes" $new_node_id [clipboardGet "gui" "nodes" $node_orig]
+
+		setNodeCanvas $new_node_id $curcanvas
+		setNodeLabel $new_node_id [getNodeName $new_node_id]
 
 		set nodecoords [getNodeCoords $new_node_id]
 		if { [lindex $nodecoords 0] >= $sizex || [lindex $nodecoords 1] >= $sizey } {
@@ -220,6 +230,7 @@ proc paste {} {
 	foreach {link_orig link_orig_cfg} [clipboardGet "links"] {
 		set new_link_id [newObjectId [getFromRunning "link_list"] "l"]
 		cfgSet "links" $new_link_id $link_orig_cfg
+		cfgSet "gui" "links" $new_link_id [cfgGet "gui" "links" $link_orig]
 		lappendToRunning "link_list" $new_link_id
 		setToRunning "${new_link_id}_running" false
 
@@ -232,6 +243,7 @@ proc paste {} {
 		}
 
 		cfgSet "links" $new_link_id "peers" $new_peers
+		cfgSet "gui" "links" $new_link_id "peers" $new_peers
 	}
 
 	updateCustomIconReferences

@@ -1,5 +1,5 @@
 VERSION: v3.0.0b
-CFG_VERSION: 1
+CFG_VERSION: 2
 Commit: $Format:%h$
 Last changed: $Format:%ai$
 Commit author: $Format:%ae$

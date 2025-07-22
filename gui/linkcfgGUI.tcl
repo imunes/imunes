@@ -106,7 +106,7 @@ proc link.configGUI { c link_id } {
 
 	set configelements {}
 	set link_cfg [cfgGet "links" $link_id]
-	set link_cfg_gui [cfgGet "links" $link_id]
+	set link_cfg_gui [cfgGet "gui" "links" $link_id]
 
 	configGUI_createConfigPopupWin $c
 	wm title $wi "link configuration"
@@ -202,7 +202,7 @@ proc configGUI_applyButtonLink { wi link_id phase is_close } {
 		global link_cfg link_cfg_gui
 
 		updateLinkGUI $link_id "*" $link_cfg_gui
-		set link_cfg_gui [cfgGet "links" $link_id]
+		set link_cfg_gui [cfgGet "gui" "links" $link_id]
 
 		updateLink $link_id "*" $link_cfg
 		set link_cfg [cfgGet "links" $link_id]

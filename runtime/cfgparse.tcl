@@ -59,10 +59,12 @@ proc loadCfgLegacy { cfg } {
 	global execMode all_modules_list
 
 	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+	upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
 	upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 	set dict_cfg [dict create]
 	set dict_run [dict create]
+	set dict_run_gui [dict create]
 	set execute_vars [dict create]
 
 	# Cleanup first
@@ -118,7 +120,7 @@ proc loadCfgLegacy { cfg } {
 				set line [lreplace $line 0 1]
 
 				if { $object != "annotation_list" } {
-					cfgSet $dict_object $object $field $value
+					cfgSet {*}$dict_object $object $field $value
 				}
 				if { "$class" == "node" } {
 					switch -exact -- $field {
@@ -978,9 +980,9 @@ proc loadCfgLegacy { cfg } {
 
 	setToRunning "node_list" $node_list
 	setToRunning "link_list" $link_list
-	setToRunning "canvas_list" $canvas_list
-	setToRunning "annotation_list" $annotation_list
-	setToRunning "image_list" $image_list
+	setToRunning_gui "canvas_list" $canvas_list
+	setToRunning_gui "annotation_list" $annotation_list
+	setToRunning_gui "image_list" $image_list
 	setToRunning "cfg_deployed" false
 	setToRunning "auto_execution" 1
 
@@ -1182,11 +1184,11 @@ proc loadCfgJson { json_cfg } {
 
 	set dict_cfg [json::json2dict $json_cfg]
 
-	setToRunning "canvas_list" [getCanvasList]
+	setToRunning_gui "canvas_list" [getCanvasList]
 	setToRunning "node_list" [getNodeList]
 	setToRunning "link_list" [getLinkList]
-	setToRunning "annotation_list" [getAnnotationList]
-	setToRunning "image_list" [getImageList]
+	setToRunning_gui "annotation_list" [getAnnotationList]
+	setToRunning_gui "image_list" [getImageList]
 
 	applyOptions
 
@@ -1257,6 +1259,7 @@ proc loadCfgJson { json_cfg } {
 
 proc handleVersionMismatch { cfg_version file_name } {
 	global CFG_VERSION execMode
+	global selected_experiment
 
 	set msg ""
 	if { $cfg_version == "" } {
@@ -1296,6 +1299,13 @@ proc handleVersionMismatch { cfg_version file_name } {
 		set msg "Loading older .imn configuration (version $cfg_version)...\n\n"
 		append msg "This configuration will be saved as a new version ($CFG_VERSION).\n"
 		append msg "Please check if everything is loaded/saved successfully.\n"
+
+		if { $selected_experiment != "" || $execMode == "batch" } {
+			append msg "\nNOTE: attaching to an older version may cause unexpected behaviour!\n"
+			append msg "To safely migrate to the new version, first save the current topology,\n"
+			append msg "then terminate the experiment and close it.\n"
+		}
+
 		setOption "version" $CFG_VERSION
 	} elseif { $cfg_version > $CFG_VERSION } {
 		set msg "Your IMUNES version is too old for this configuration:\n"
@@ -1578,12 +1588,29 @@ proc getFromRunning { key { config "" } } {
 	return [dictGet $dict_run $key]
 }
 
+proc getFromRunning_gui { key { config "" } } {
+	if { $config == "" } {
+		set config [set ::curcfg]
+	}
+	upvar 0 ::cf::${config}::dict_run_gui dict_run_gui
+
+	return [dictGet $dict_run_gui $key]
+}
+
 proc setToRunning { key value } {
 	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
 
 	set dict_run [dictSet $dict_run $key $value]
 
 	return $dict_run
+}
+
+proc setToRunning_gui { key value } {
+	upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
+
+	set dict_run_gui [dictSet $dict_run_gui $key $value]
+
+	return $dict_run_gui
 }
 
 proc unsetRunning { key } {
@@ -1594,12 +1621,28 @@ proc unsetRunning { key } {
 	return $dict_run
 }
 
+proc unsetRunning_gui { key } {
+	upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
+
+	set dict_run_gui [dictUnset $dict_run_gui $key]
+
+	return $dict_run_gui
+}
+
 proc lappendToRunning { key value } {
 	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
 
 	set dict_run [dictLappend $dict_run $key $value]
 
 	return $dict_run
+}
+
+proc lappendToRunning_gui { key value } {
+	upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
+
+	set dict_run_gui [dictLappend $dict_run_gui $key $value]
+
+	return $dict_run_gui
 }
 
 proc getFromExecuteVars { key { config "" } } {
@@ -1641,34 +1684,45 @@ proc lappendToExecuteVars { key value } {
 
 proc jumpToUndoLevel { undolevel } {
 	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+	upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-	set list_list "canvas_list node_list link_list annotation_list image_list \
-		mac_used_list ipv4_used_list ipv6_used_list"
-	foreach list_var $list_list {
+	foreach list_var "node_list link_list mac_used_list ipv4_used_list ipv6_used_list" {
 		setToRunning $list_var [dictGet $dict_run "undolog" $undolevel $list_var]
 	}
-
 	set dict_cfg [dictGet $dict_run "undolog" $undolevel "config"]
+
+	foreach list_var "canvas_list annotation_list image_list" {
+		setToRunning $list_var [dictGet $dict_run_gui "undolog" $undolevel $list_var]
+	}
+	dict set dict_cfg "gui" [dictGet $dict_run_gui "undolog" $undolevel "config"]
 
 	return $dict_cfg
 }
 
 proc saveToUndoLevel { undolevel { value "" } } {
 	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+	upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
 	if { $value == "" } {
 		set value $dict_cfg
+		dict unset value "gui"
+
+		set value_gui [dict get $dict_cfg "gui"]
 	}
 
-	set list_list "canvas_list node_list link_list annotation_list image_list mac_used_list ipv4_used_list ipv6_used_list" 
-	foreach list_var $list_list {
+	foreach list_var "node_list link_list mac_used_list ipv4_used_list ipv6_used_list" {
 		set dict_run [dictSet $dict_run "undolog" $undolevel $list_var [getFromRunning $list_var]]
 	}
 	set dict_run [dictSet $dict_run "undolog" $undolevel "config" $value]
 
-	return $dict_run
+	foreach list_var "canvas_list annotation_list image_list" {
+		set dict_run_gui [dictSet $dict_run_gui "undolog" $undolevel $list_var [getFromRunning_gui $list_var]]
+	}
+	set dict_run_gui [dictSet $dict_run_gui "undolog" $undolevel "config" $value_gui]
+
+	return [concat $dict_run $dict_run_gui]
 }
 
 #########################################################################
@@ -1695,16 +1749,38 @@ proc unsetOption { property } {
 	return $dict_cfg
 }
 
+proc getOption_gui { property } {
+	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+
+	return [dictGet $dict_cfg "gui" "options" $property]
+}
+
+proc setOption_gui { property value } {
+	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+
+	set dict_cfg [dictSet $dict_cfg "gui" "options" $property $value]
+
+	return $dict_cfg
+}
+
+proc unsetOption_gui { property } {
+	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+
+	set dict_cfg [dictUnset $dict_cfg "gui" "options" $property]
+
+	return $dict_cfg
+}
+
 proc getCanvasList { } {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-	return [dict keys [dictGet $dict_cfg "canvases"]]
+	return [dict keys [dictGet $dict_cfg "gui" "canvases"]]
 }
 
 proc getCanvasProperty { canvas_id property } {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-	return [dictGet $dict_cfg "canvases" $canvas_id $property]
+	return [dictGet $dict_cfg "gui" "canvases" $canvas_id $property]
 }
 
 proc getNodeList { } {
@@ -1734,25 +1810,25 @@ proc getLinkProperty { link_id property } {
 proc getAnnotationList { } {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-	return [dict keys [dictGet $dict_cfg "annotations"]]
+	return [dict keys [dictGet $dict_cfg "gui" "annotations"]]
 }
 
 proc getAnnotationProperty { annotation_id property } {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-	return [dictGet $dict_cfg "annotations" $annotation_id $property]
+	return [dictGet $dict_cfg "gui" "annotations" $annotation_id $property]
 }
 
 proc getImageList { } {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-	return [dict keys [dictGet $dict_cfg "images"]]
+	return [dict keys [dictGet $dict_cfg "gui" "images"]]
 }
 
 proc getImageProperty { image_id property } {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-	return [dictGet $dict_cfg "images" $image_id $property]
+	return [dictGet $dict_cfg "gui" "images" $image_id $property]
 }
 
 #########################################################################
@@ -1763,7 +1839,7 @@ proc getImageProperty { image_id property } {
 # * array - JSON array
 # * inner_dictionary - dictionary inside of an object
 proc getJsonType { key_name } {
-	if { $key_name in "canvases nodes links annotations images custom_configs ipsec_configs ifaces IFACES_CONFIG NODE_CONFIG" } {
+	if { $key_name in "gui canvases nodes links annotations images custom_configs ipsec_configs ifaces IFACES_CONFIG NODE_CONFIG" } {
 		return "dictionary"
 	} elseif { $key_name in "croutes4 croutes6 ipv4_addrs ipv6_addrs services events tayga_mappings" } {
 		return "array"

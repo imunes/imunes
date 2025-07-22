@@ -378,6 +378,15 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 	set pseudoNodesCount 0
 	foreach node_id $terminate_nodes {
 		set node_type [getNodeType $node_id]
+		if { $node_type == "" } {
+			set terminate_nodes [removeFromList $terminate_nodes $node_id]
+			set node_list [getFromRunning "node_list"]
+			if { $node_id in $node_list } {
+				setToRunning "node_list" [removeFromList $node_list $node_id]
+			}
+
+			continue
+		}
 		if { $node_type != "pseudo" } {
 			if { [$node_type.virtlayer] == "NATIVE" } {
 				if { $node_type == "rj45" } {

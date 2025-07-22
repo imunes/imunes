@@ -218,10 +218,12 @@ proc createRunningVarsFile { eid } {
 	global runtimeDir
 
 	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+	upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
 	upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
 
 	# TODO: maybe remove some elements?
-	writeDataToFile $runtimeDir/$eid/runningVars [list "dict_run" "$dict_run" "execute_vars" "$execute_vars"]
+	writeDataToFile $runtimeDir/$eid/runningVars \
+		[list "dict_run" "$dict_run" "dict_run_gui" "$dict_run_gui" "execute_vars" "$execute_vars"]
 }
 
 proc readRunningVarsFile { eid } {
@@ -229,6 +231,7 @@ proc readRunningVarsFile { eid } {
 	global runtimeDir
 
 	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+	upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
 	upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
 
 	set fd [open $runtimeDir/$eid/runningVars r]
@@ -236,6 +239,7 @@ proc readRunningVarsFile { eid } {
 	close $fd
 
 	set dict_run [dictGet $vars_dict "dict_run"]
+	set dict_run_gui [dictGet $vars_dict "dict_run_gui"]
 	set execute_vars [dictGet $vars_dict "execute_vars"]
 
 	if { [getFromRunning "undolevel"] == "" } {
@@ -246,8 +250,12 @@ proc readRunningVarsFile { eid } {
 		setToRunning "redolevel" 0
 	}
 
-	if { [getFromRunning "zoom"] == "" } {
-		setToRunning "zoom" [dictGet $gui_option_defaults "zoom"]
+	if { [getFromRunning_gui "zoom"] == "" } {
+		setToRunning_gui "zoom" [dictGet $gui_option_defaults "zoom"]
+	}
+
+	if { [getFromRunning_gui "curcanvas"] == "" } {
+		setToRunning_gui "curcanvas" [lindex [getFromRunning_gui "canvas_list"] 0]
 	}
 
 	# older versions do not have this variable
