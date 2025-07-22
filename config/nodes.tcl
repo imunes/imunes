@@ -302,10 +302,6 @@ proc setNodeName { node_id name } {
 	cfgSet "nodes" $node_id "name" $name
 
 	set node_type [getNodeType $node_id]
-	if { $node_type == "pseudo" } {
-		return
-	}
-
 	if { $node_type in [array names nodeNamingBase] } {
 		recalculateNumType $node_type $nodeNamingBase($node_type)
 	}
@@ -391,10 +387,6 @@ proc getNodeType { node_id } {
 #****
 proc setNodeType { node_id type } {
 	cfgSet "nodes" $node_id "type" $type
-
-	if { $type == "pseudo" } {
-		return
-	}
 
 	trigger_nodeRecreate $node_id
 }

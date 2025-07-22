@@ -26,32 +26,26 @@
 # and Technology through the research contract #IP-2003-143.
 #
 
-#****f* nodecfg_gui.tcl/pseudo.netlayer
-# NAME
-#   pseudo.netlayer -- pseudo layer
-# SYNOPSIS
-#   set layer [pseudo.netlayer]
-# FUNCTION
-#   Returns the layer on which the pseudo node operates
-#   i.e. returns no layer.
-# RESULT
-#   * layer -- returns an empty string
-#****
-proc pseudo.netlayer {} {
+proc getPseudoNodeFromNodeIface { node_id iface_id } {
+	set pseudo_id "${node_id}.${iface_id}"
+	
+	if { [cfgGet "gui" "nodes" $pseudo_id] != "" } {
+		return $pseudo_id
+	}
+
+	return ""
 }
 
-#****f* nodecfg_gui.tcl/pseudo.virtlayer
-# NAME
-#   pseudo.virtlayer -- pseudo virtlayer
-# SYNOPSIS
-#   set virtlayer [pseudo.virtlayer]
-# FUNCTION
-#   Returns the virtlayer on which the pseudo node operates
-#   i.e. returns no layer.
-# RESULT
-#   * virtlayer -- returns an empty string
-#****
-proc pseudo.virtlayer {} {
+proc getPseudoNodeLink { pseudo_id } {
+	return [cfgGet "gui" "nodes" $pseudo_id "link"]
+}
+
+proc setPseudoNodeLink { pseudo_id link_id } {
+	cfgSet "gui" "nodes" $pseudo_id "link" $link_id
+}
+
+proc nodeFromPseudoNode { pseudo_id } {
+	return [split $pseudo_id "."]
 }
 
 proc updateNodeGUI { node_id old_node_cfg_gui new_node_cfg_gui } {

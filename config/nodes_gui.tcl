@@ -188,6 +188,14 @@ proc removeNodeCustomIcon { node_id } {
 	cfgUnset "gui" "nodes" $node_id "custom_icon"
 }
 
+proc getPseudoNodeLink { pseudo_id } {
+	return [cfgGet "gui" "nodes" $pseudo_id "link"]
+}
+
+proc setPseudoNodeLink { pseudo_id link_id } {
+	cfgSet "gui" "nodes" $pseudo_id "link" $link_id
+}
+
 #****f* nodes_gui.tcl/getNodeMirror
 # NAME
 #   getNodeMirror -- get node mirror

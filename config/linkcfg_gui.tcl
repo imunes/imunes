@@ -92,7 +92,26 @@ proc getLinkDelayString { link_id } {
 	return $delstr
 }
 
-#****f* linkcfg_gui.tcl/splitLink
+proc getPseudoLinksFromLink { link_id } {
+	lassign [getLinkPeers $link_id] node1_id node2_id
+	lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
+	set pseudo1_link_id "${link_id}.${node1_id}.${iface1_id}"
+	set pseudo2_link_id "${link_id}.${node2_id}.${iface2_id}"
+	
+	if { [cfgGet "gui" "links" $pseudo1_link_id] != "" } {
+		if { [cfgGet "gui" "links" $pseudo2_link_id] != "" } {
+			return "$pseudo1_link_id $pseudo2_link_id"
+		}
+	}
+
+	return ""
+}
+
+proc linkFromPseudoLink { pseudo_id } {
+	return [split $pseudo_id "."]
+}
+
+#****f* linkcfg.tcl/splitLink
 # NAME
 #   splitLink -- split the link
 # SYNOPSIS
@@ -107,44 +126,42 @@ proc getLinkDelayString { link_id } {
 #****
 proc splitLink { orig_link_id } {
 	set orig_nodes [getLinkPeers $orig_link_id]
-	lassign $orig_nodes orig_node1_id orig_node2_id
 	set orig_ifaces [getLinkPeersIfaces $orig_link_id]
+	lassign $orig_nodes orig_node1_id orig_node2_id
+	lassign $orig_ifaces orig_iface1_id orig_iface2_id
 
-	# create mirror link and copy the properties from the original
-	set mirror_link_id [newObjectId [getFromRunning "link_list"] "l"]
-	cfgSet "links" $mirror_link_id [cfgGet "links" $orig_link_id]
-	lappendToRunning "link_list" $mirror_link_id
-	setToRunning "${mirror_link_id}_running" false
-	set links "$orig_link_id $mirror_link_id"
+	set links "${orig_link_id}.${orig_node1_id}.${orig_iface1_id} ${orig_link_id}.${orig_node2_id}.${orig_iface2_id}"
 
 	# create pseudo nodes
-	set pseudo_nodes [newNode "pseudo"]
-	lappend pseudo_nodes [newNode "pseudo"]
+	set pseudo_nodes "${orig_node1_id}.${orig_iface1_id}"
+	lappend pseudo_nodes "${orig_node2_id}.${orig_iface2_id}"
 
-	foreach orig_node_id $orig_nodes orig_node_iface_id $orig_ifaces pseudo_node_id $pseudo_nodes link_id $links {
+	foreach orig_node_id $orig_nodes orig_iface_id $orig_ifaces pseudo_node_id $pseudo_nodes link_id $links {
 		set other_orig_node_id [removeFromList $orig_nodes $orig_node_id "keep_doubles"]
-
-		# change peer for original node interface
-		setIfcLink $orig_node_id $orig_node_iface_id $link_id
+		set other_orig_iface_id [removeFromList $orig_ifaces $orig_iface_id "keep_doubles"]
+		set other_link_id [removeFromList $links $link_id "keep_doubles"]
 
 		# setup new pseudo node properties
 		setNodeMirror $pseudo_node_id [removeFromList $pseudo_nodes $pseudo_node_id "keep_doubles"]
-		setNodeCanvas $pseudo_node_id [getNodeCanvas $orig_node_id]
-		setNodeCoords $pseudo_node_id [getNodeCoords $other_orig_node_id]
-		setNodeLabelCoords $pseudo_node_id [getNodeCoords $other_orig_node_id]
-		setIfcType $pseudo_node_id "ifc0" "phys"
-		setIfcLink $pseudo_node_id "ifc0" $link_id
+		setPseudoNodeLink $pseudo_node_id $link_id
+		setNodeLabel $pseudo_node_id "[getNodeName $other_orig_node_id]:[getIfcName $other_orig_node_id $other_orig_iface_id]"
 
-		# setup both link properties
-		setLinkPeers $link_id "$pseudo_node_id $orig_node_id"
-		setLinkPeersIfaces $link_id "ifc0 $orig_node_iface_id"
-		setLinkMirror $link_id [removeFromList $links $link_id "keep_doubles"]
+		# pseudo node default values
+		setNodeCoords $pseudo_node_id [getNodeCoords $other_orig_node_id]
+		setNodeLabelCoords $pseudo_node_id [getNodeCoords $pseudo_node_id]
+		setNodeCanvas $pseudo_node_id [getNodeCanvas $orig_node_id]
+
+		# setup new pseudo link properties
+		setLinkPeers_gui $link_id "$pseudo_node_id $orig_node_id"
+		setLinkMirror $link_id $other_link_id
+		setLinkWidth $link_id [getLinkWidth $orig_link_id]
+		setLinkColor $link_id [getLinkColor $orig_link_id]
 	}
 
 	return $pseudo_nodes
 }
 
-#****f* linkcfg_gui.tcl/mergeLink
+#****f* linkcfg.tcl/mergeLink
 # NAME
 #   mergeLink -- merge the link
 # SYNOPSIS
@@ -162,33 +179,16 @@ proc mergeLink { link_id } {
 		return
 	}
 
-	# recycle the first pseudo link ID
-	lassign [lsort "$link_id $mirror_link_id"] link_id mirror_link_id
-	unsetRunning "${mirror_link_id}_running"
+	lassign [getLinkPeers_gui $link_id] pseudo_node1_id orig_node1_id
+	lassign [getLinkPeers_gui $mirror_link_id] pseudo_node2_id orig_node2_id
 
-	lassign [getLinkPeers $link_id] pseudo_node1_id orig_node1_id
-	lassign [getLinkPeers $mirror_link_id] pseudo_node2_id orig_node2_id
+	cfgUnset "gui" "nodes" $pseudo_node1_id
+	cfgUnset "gui" "nodes" $pseudo_node2_id
 
-	if { $orig_node1_id == $orig_node2_id } {
-		return
-	}
+	cfgUnset "gui" "links" $link_id
+	cfgUnset "gui" "links" $mirror_link_id
 
-	lassign [getLinkPeersIfaces $link_id] - orig_node1_iface_id
-	lassign [getLinkPeersIfaces $mirror_link_id] - orig_node2_iface_id
-
-	setIfcLink $orig_node1_id $orig_node1_iface_id $link_id
-	setIfcLink $orig_node2_id $orig_node2_iface_id $link_id
-
-	setLinkMirror $link_id ""
-	setLinkPeers $link_id "$orig_node1_id $orig_node2_id"
-	setLinkPeersIfaces $link_id "$orig_node1_iface_id $orig_node2_iface_id"
-
-	setToRunning "node_list" [removeFromList [getFromRunning "node_list"] "$pseudo_node1_id $pseudo_node2_id"]
-	cfgUnset "nodes" $pseudo_node1_id
-	cfgUnset "nodes" $pseudo_node2_id
-
-	setToRunning "link_list" [removeFromList [getFromRunning "link_list"] $mirror_link_id]
-	cfgUnset "links" $mirror_link_id
+	lassign [linkFromPseudoLink $link_id] link_id - -
 
 	return $link_id
 }
@@ -233,6 +233,10 @@ proc updateLinkGUI { link_id old_link_cfg_gui new_link_cfg_gui } {
 		}
 
 		switch -exact $key {
+			"peers" {
+				setLinkPeers_gui $link_id $new_value
+			}
+
 			"mirror" {
 				setLinkMirror $link_id $new_value
 			}

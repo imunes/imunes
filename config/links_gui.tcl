@@ -136,3 +136,11 @@ proc getLinkMirror { link_id } {
 proc setLinkMirror { link_id mirror } {
 	cfgSet "gui" "links" $link_id "mirror" $mirror
 }
+
+proc getLinkPeers_gui { link_id } {
+	return [cfgGet "gui" "links" $link_id "peers"]
+}
+
+proc setLinkPeers_gui { link_id peers } {
+	cfgSet "gui" "links" $link_id "peers" $peers
+}

@@ -166,7 +166,7 @@ proc getSubnetData { this_node_id this_iface_id subnet_gws nodes_l2data subnet_i
 	dict set nodes_l2data $this_node_id $this_iface_id $subnet_idx
 
 	set this_type [getNodeType $this_node_id]
-	if { $this_type in "\"\" pseudo" } {
+	if { $this_type in "" } {
 		return [list $subnet_gws $nodes_l2data]
 	}
 
@@ -392,10 +392,6 @@ proc removeNode { node_id { keep_other_ifaces 0 } } {
 
 	global nodeNamingBase
 
-	if { [getNodeCustomIcon $node_id] != "" } {
-		removeImageReference [getNodeCustomIcon $node_id] $node_id
-	}
-
 	foreach iface_id [ifcList $node_id] {
 		removeIface $node_id $iface_id $keep_other_ifaces
 	}
@@ -442,9 +438,7 @@ proc newNode { type } {
 	}
 
 	setNodeType $node_id $type
-	if { $type != "pseudo" } {
-		setToRunning "${node_id}_running" false
-	}
+	setToRunning "${node_id}_running" false
 
 	lappendToRunning "node_list" $node_id
 

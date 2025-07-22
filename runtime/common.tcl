@@ -924,6 +924,7 @@ proc spawnShellExec {} {
 	}
 
 	if {
+		[isPseudoNode $node_id] ||
 		[[getNodeType $node_id].virtlayer] != "VIRTUALIZED" ||
 		[getFromRunning "${node_id}_running"] == false
 	} {
@@ -1093,15 +1094,6 @@ proc dumpLinksToFile { path } {
 
 		lassign [getLinkPeers $link_id] node1_id node2_id
 		lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
-
-		set mirror_link_id [getLinkMirror $link_id]
-		if { $mirror_link_id != "" } {
-			lappend skipLinks $mirror_link_id
-
-			# switch direction for mirror links
-			lassign "$node2_id [lindex [getLinkPeers $mirror_link_id] 1]" node1_id node2_id
-			lassign "$iface2_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]" iface1_id iface2_id
-		}
 
 		set name1 [getNodeName $node1_id]
 		set name2 [getNodeName $node2_id]

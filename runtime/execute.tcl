@@ -492,31 +492,26 @@ proc deployCfg { { execute 0 } } {
 	set native_nodes {}
 	set virtualized_nodes {}
 	set all_nodes {}
-	set pseudo_nodes_count 0
 	foreach node_id $instantiate_nodes {
 		set node_type [getNodeType $node_id]
-		if { $node_type != "pseudo" } {
-			if { $node_type ni $runnable_node_types } {
-				set instantiate_nodes [removeFromList $instantiate_nodes $node_id]
-				set configure_nodes [removeFromList $configure_nodes $node_id]
-				if { $create_nodes_ifaces != "*" && $node_id in [dict keys $create_nodes_ifaces] } {
-					dict unset create_nodes_ifaces $node_id
-				}
-
-				if { $configure_nodes_ifaces != "*" && $node_id in [dict keys $configure_nodes_ifaces] } {
-					dict unset configure_nodes_ifaces $node_id
-				}
-
-				continue
+		if { $node_type ni $runnable_node_types } {
+			set instantiate_nodes [removeFromList $instantiate_nodes $node_id]
+			set configure_nodes [removeFromList $configure_nodes $node_id]
+			if { $create_nodes_ifaces != "*" && $node_id in [dict keys $create_nodes_ifaces] } {
+				dict unset create_nodes_ifaces $node_id
 			}
 
-			if { [$node_type.virtlayer] != "VIRTUALIZED" } {
-				lappend native_nodes $node_id
-			} else {
-				lappend virtualized_nodes $node_id
+			if { $configure_nodes_ifaces != "*" && $node_id in [dict keys $configure_nodes_ifaces] } {
+				dict unset configure_nodes_ifaces $node_id
 			}
+
+			continue
+		}
+
+		if { [$node_type.virtlayer] != "VIRTUALIZED" } {
+			lappend native_nodes $node_id
 		} else {
-			incr pseudo_nodes_count
+			lappend virtualized_nodes $node_id
 		}
 	}
 
@@ -556,20 +551,10 @@ proc deployCfg { { execute 0 } } {
 	set error_check_nodes [lsort -unique $configure_nodes]
 	set error_check_nodes_count [llength $error_check_nodes]
 
-	incr links_count [expr -$pseudo_nodes_count/2]
 	if { $configure_links == "*" } {
 		set configure_links $instantiate_links
-		set configure_links_count $links_count
-	} else {
-		set pseudo_links 0
-		foreach link_id $configure_links {
-			if { [getLinkMirror $link_id] != "" } {
-				incr pseudo_links
-			}
-		}
-
-		set configure_links_count [expr [llength $configure_links] - $pseudo_links/2]
 	}
+	set configure_links_count [llength $configure_links]
 
 	set maxProgressbasCount [expr {2*$all_nodes_count + 1*$native_nodes_count + 4*$virtualized_nodes_count + 1*$links_count + 1*$configure_links_count + 2*$configure_nodes_count + 2*$create_nodes_ifaces_count + 2*$configure_nodes_ifaces_count + $error_check_nodes_ifaces_count + $error_check_nodes_count}]
 
@@ -1151,18 +1136,6 @@ proc execute_linksCreate { links links_count w } {
 		lassign [getLinkPeers $link_id] node1_id node2_id
 		lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
 
-		set mirror_link_id [getLinkMirror $link_id]
-		if { $mirror_link_id != "" } {
-			set msg "Creating link $link_id/$mirror_link_id"
-			set pending_links [removeFromList $pending_links $mirror_link_id]
-
-			# switch direction for mirror links
-			lassign "$node2_id [lindex [getLinkPeers $mirror_link_id] 1]" node1_id node2_id
-			lassign "$iface2_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]" iface1_id iface2_id
-
-			setToRunning "${mirror_link_id}_running" true
-		}
-
 		displayBatchProgress $batchStep $links_count
 
 		if { $node1_id ni $skip_nodes && $node2_id ni $skip_nodes } {
@@ -1206,16 +1179,6 @@ proc execute_linksConfigure { links links_count w } {
 
 		lassign [getLinkPeers $link_id] node1_id node2_id
 		lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
-
-		set mirror_link_id [getLinkMirror $link_id]
-		if { $mirror_link_id != "" } {
-			set msg "Configuring link $link_id/$mirror_link_id"
-			set pending_links [removeFromList $pending_links $mirror_link_id]
-
-			# switch direction for mirror links
-			lassign "$node2_id [lindex [getLinkPeers $mirror_link_id] 1]" node1_id node2_id
-			lassign "$iface2_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]" iface1_id iface2_id
-		}
 
 		displayBatchProgress $batchStep $links_count
 

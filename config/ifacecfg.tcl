@@ -231,20 +231,8 @@ proc logicalPeerByIfc { node_id iface_id } {
 		return
 	}
 
-	set mirror_link_id [getLinkMirror $link_id]
-
-	set peer_id ""
-	set peer_iface_id ""
-	if { $mirror_link_id != "" } {
-		set peer_id [lindex [getLinkPeers $mirror_link_id] 1]
-		set peer_iface_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]
-	} else {
-		foreach peer_id [getLinkPeers $link_id] peer_iface_id [getLinkPeersIfaces $link_id] {
-			if { $peer_id != $node_id } {
-				break
-			}
-		}
-	}
+	set peer_id [removeFromList [getLinkPeers $link_id] $node_id "keep_doubles"]
+	set peer_iface_id [removeFromList [getLinkPeersIfaces $link_id] $iface_id "keep_doubles"]
 
 	return "$peer_id $peer_iface_id"
 }
@@ -424,9 +412,7 @@ proc newLogIface { node_id logiface_type } {
 
 proc removeIface { node_id iface_id { keep_other_ifaces 1} } {
 	set node_type [getNodeType $node_id]
-	if { $node_type != "pseudo" } {
-		trigger_ifaceDestroy $node_id $iface_id
-	}
+	trigger_ifaceDestroy $node_id $iface_id
 
 	set link_id [getIfcLink $node_id $iface_id]
 	if { $link_id != "" } {

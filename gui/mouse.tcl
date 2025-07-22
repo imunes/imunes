@@ -45,6 +45,10 @@ proc animateCursor {} {
 proc removeLinkGUI { link_id atomic { keep_ifaces 0 } } {
 	global changed
 
+	if { $link_id == "" } {
+		return
+	}
+
 	if { $atomic == "atomic" } {
 		if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
 			setToExecuteVars "terminate_cfg" [cfgGet]
@@ -63,11 +67,13 @@ proc removeLinkGUI { link_id atomic { keep_ifaces 0 } } {
 	set node2_type [getNodeType $node2_id]
 	# TODO: check this when wlan node turn comes
 	if { "wlan" in "$node1_type $node2_type" } {
-		removeLink $link_id
+		removeLink [lindex [linkFromPseudoLink $link_id] 0]
+
 		return
 	}
 
-	removeLink $link_id $keep_ifaces
+	removeLink [lindex [linkFromPseudoLink $link_id] 0] $keep_ifaces
+	cfgUnset "gui" "links" $link_id
 
 	if { $atomic == "atomic" } {
 		.panwin.f1.c delete $link_id
@@ -102,14 +108,30 @@ proc removeNodeGUI { node_id { keep_other_ifaces 0 } } {
 		setToExecuteVars "terminate_cfg" [cfgGet]
 	}
 
-	foreach iface_id [ifcList $node_id] {
-		set link_id [getIfcLink $node_id $iface_id]
-		if { $link_id != "" } {
-			removeLinkGUI $link_id non-atomic $keep_other_ifaces
+	if { [isPseudoNode $node_id] } {
+		removeLinkGUI [getPseudoNodeLink $node_id] non-atomic $keep_other_ifaces
+	} else {
+		foreach iface_id [ifcList $node_id] {
+			set pseudo_id [getPseudoNodeFromNodeIface $node_id $iface_id]
+			if { $pseudo_id != "" } {
+				removeLinkGUI [getPseudoNodeLink $pseudo_id] non-atomic $keep_other_ifaces
+
+				continue
+			}
+
+			set link_id [getIfcLink $node_id $iface_id]
+			if { $link_id != "" } {
+				removeLinkGUI $link_id non-atomic $keep_other_ifaces
+			}
 		}
 	}
 
+	if { [getNodeCustomIcon $node_id] != "" } {
+		removeImageReference [getNodeCustomIcon $node_id] $node_id
+	}
+
 	removeNode $node_id $keep_other_ifaces
+	cfgUnset "gui" "nodes" $node_id
 
 	if { [getFromRunning "stop_sched"] } {
 		redeployCfg
@@ -133,6 +155,7 @@ proc splitLinkGUI { link_id } {
 	global changed
 
 	set zoom [getFromRunning_gui "zoom"]
+	set curcanvas [getFromRunning_gui "curcanvas"]
 
 	lassign [getLinkPeers $link_id] orig_node1_id orig_node2_id
 	lassign [splitLink $link_id] new_node1_id new_node2_id
@@ -148,6 +171,9 @@ proc splitLinkGUI { link_id } {
 		[expr {($y1 + 0.6 * ($y2 - $y1)) / $zoom}]"
 	setNodeLabelCoords $new_node1_id [getNodeCoords $new_node1_id]
 	setNodeLabelCoords $new_node2_id [getNodeCoords $new_node2_id]
+
+	setNodeCanvas $new_node1_id $curcanvas
+	setNodeCanvas $new_node2_id $curcanvas
 
 	set changed 1
 	updateUndoLog
@@ -178,7 +204,7 @@ proc selectNode { c obj } {
 	}
 
 	$c addtag selected withtag "node && $node_id"
-	if { [getNodeType $node_id] == "pseudo" } {
+	if { [isPseudoNode $node_id] } {
 		set bbox [$c bbox "nodelabel && $node_id"]
 	} elseif { [getAnnotationType $node_id] == "rectangle" } {
 		$c addtag selected withtag "rectangle && $node_id"
@@ -307,7 +333,7 @@ proc selectedRealNodes {} {
 	set selected {}
 	foreach obj [.panwin.f1.c find withtag "node && selected"] {
 		set node_id [lindex [.panwin.f1.c gettags $obj] 1]
-		if { [getNodeType $node_id] == "pseudo" } {
+		if { [isPseudoNode $node_id] } {
 			continue
 		}
 		lappend selected $node_id
@@ -383,8 +409,12 @@ proc button3link { c x y } {
 		}
 	}
 
-	global linkDirect_$link_id
-	set linkDirect_$link_id [getLinkDirect $link_id]
+	lassign [linkFromPseudoLink $link_id] real_link_id - -
+
+	if { $real_link_id != "" } {
+		global linkDirect_$real_link_id
+		set linkDirect_$real_link_id [getLinkDirect $real_link_id]
+	}
 
 	.button3menu delete 0 end
 
@@ -398,7 +428,7 @@ proc button3link { c x y } {
 	# Clear link configuration
 	#
 	.button3menu add command -label "Clear all settings" \
-		-command "linkResetConfig $link_id ; redrawAll"
+		-command "linkResetConfig [lindex [linkFromPseudoLink $link_id] 0] ; redrawAll"
 
 	global linkJitterConfiguration
 	if  { $linkJitterConfiguration } {
@@ -417,10 +447,12 @@ proc button3link { c x y } {
 	#
 	# Toggle direct link
 	#
-	lassign [getLinkPeers $link_id] peer1_id peer2_id
-	lassign [getLinkPeersIfaces $link_id] peer1_iface peer2_iface
-	if { [getNodeType $peer1_id] == "pseudo" } {
-		lassign [logicalPeerByIfc $peer2_id $peer2_iface] peer1_id peer1_iface
+	if { [isPseudoLink $link_id] } {
+		lassign [linkFromPseudoLink $link_id] - peer1_id peer1_iface
+		lassign [logicalPeerByIfc $peer1_id $peer1_iface] peer2_id peer2_iface
+	} else {
+		lassign [getLinkPeers $link_id] peer1_id peer2_id
+		lassign [getLinkPeersIfaces $link_id] peer1_iface peer2_iface
 	}
 
 	if {
@@ -430,11 +462,11 @@ proc button3link { c x y } {
 		[getFromRunning "${peer2_id}|${peer2_iface}_running"])
 	} {
 		.button3menu add checkbutton -label "Direct link" \
-			-underline 5 -variable linkDirect_$link_id \
+			-underline 5 -variable linkDirect_$real_link_id \
 			-command "toggleDirectLink $c $link_id"
 	} else {
 		.button3menu add checkbutton -label "Direct link" \
-			-underline 5 -variable linkDirect_$link_id \
+			-underline 5 -variable linkDirect_$real_link_id \
 			-state disabled
 	}
 
@@ -455,7 +487,7 @@ proc button3link { c x y } {
 	if {
 		$oper_mode == "edit" ||
 		([getFromRunning "stop_sched"] &&
-		(! $isOSlinux || ! [set linkDirect_$link_id] ||
+		(! $isOSlinux || ! [set linkDirect_$real_link_id] ||
 		(! [getFromRunning "${peer1_id}|${peer1_iface}_running"] &&
 		! [getFromRunning "${peer2_id}|${peer2_iface}_running"])))
 	} {
@@ -469,7 +501,7 @@ proc button3link { c x y } {
 	#
 	# Split link
 	#
-	if { [getLinkMirror $link_id] == "" } {
+	if { ! [isPseudoLink $link_id] } {
 		.button3menu add command -label "Split" \
 			-command "splitLinkGUI $link_id"
 	} else {
@@ -479,14 +511,15 @@ proc button3link { c x y } {
 	#
 	# Merge two pseudo nodes / links
 	#
-	set link_mirror_id [getLinkMirror $link_id]
+	set peers [getLinkPeers $real_link_id]
 	if {
-		$link_mirror_id != "" &&
-		[getNodeCanvas [lindex [getLinkPeers $link_mirror_id] 0]] ==
-		[getFromRunning_gui "curcanvas"]
+		[isPseudoLink $link_id] &&
+		[getNodeCanvas [lindex [getLinkPeers_gui [getLinkMirror $link_id]] 0]] ==
+		[getFromRunning_gui "curcanvas"] &&
+		[lindex $peers 0] != [lindex $peers 1]
 	} {
 		.button3menu add command -label "Merge" \
-			-command "mergeNodeGUI [lindex [getLinkPeers $link_id] 0]"
+			-command "mergeNodeGUI [lindex [getLinkPeers_gui $link_id] 0]"
 	} else {
 		.button3menu add command -label "Merge" -state disabled
 	}
@@ -510,6 +543,9 @@ proc button3link { c x y } {
 proc moveToCanvas { canvas_id } {
 	global changed
 
+	set zoom [getFromRunning_gui "zoom"]
+	set curcanvas [getFromRunning_gui "curcanvas"]
+
 	set selected_nodes [selectedNodes]
 	foreach node_id $selected_nodes {
 		setNodeCanvas $node_id $canvas_id
@@ -525,24 +561,39 @@ proc moveToCanvas { canvas_id } {
 	foreach obj [.panwin.f1.c find withtag "linklabel"] {
 		set link_id [lindex [.panwin.f1.c gettags $obj] 1]
 
-		lassign [getLinkPeers $link_id] peer1_id peer2_id
+		lassign [getLinkPeers [lindex [linkFromPseudoLink $link_id] 0]] \
+			real_peer1_id real_peer2_id
+
+		# if both (or none) real nodes are moved, don't do anything
 		if {
-			($peer1_id ni $selected_nodes && $peer2_id in $selected_nodes) ||
-			($peer1_id in $selected_nodes && $peer2_id ni $selected_nodes)
+			($real_peer1_id in $selected_nodes &&
+			$real_peer2_id in $selected_nodes) ||
+			($real_peer1_id ni $selected_nodes &&
+			$real_peer2_id ni $selected_nodes)
 		} {
-			# pseudo nodes are always peer1
-			if { [getNodeType $peer1_id] == "pseudo" } {
-				setNodeCanvas $peer1_id $canvas_id
-				if { [getNodeCanvas [getNodeMirror $peer1_id]] == $canvas_id } {
-					mergeLink $link_id
-				}
+			continue
+		}
 
-				continue
-			}
+		# if we had a pseudo link before, merge it
+		if { [isPseudoLink $link_id] } {
+			set link_id [mergeLink $link_id]
+		}
 
+		#lassign [getLinkPeers_gui $link_id] peer1_id peer2_id
+		set real_peer1_canvas_id [getNodeCanvas $real_peer1_id]
+		set real_peer2_canvas_id [getNodeCanvas $real_peer2_id]
+
+		# if nodes are on different canvases, split link
+		if { $real_peer1_canvas_id != $real_peer2_canvas_id } {
 			lassign [splitLink $link_id] new_node1_id new_node2_id
-			setNodeName $new_node1_id $peer2_id
-			setNodeName $new_node2_id $peer1_id
+
+			setNodeCoords $new_node1_id [getNodeCoords $real_peer2_id]
+			setNodeCoords $new_node2_id [getNodeCoords $real_peer1_id]
+			setNodeLabelCoords $new_node1_id [getNodeCoords $new_node1_id]
+			setNodeLabelCoords $new_node2_id [getNodeCoords $new_node2_id]
+
+			setNodeCanvas $new_node1_id $real_peer1_canvas_id
+			setNodeCanvas $new_node2_id $real_peer2_canvas_id
 		}
 	}
 
@@ -566,7 +617,7 @@ proc moveToCanvas { canvas_id } {
 proc mergeNodeGUI { node_id } {
 	global changed
 
-	set link_id [mergeLink [getIfcLink $node_id "ifc0"]]
+	set link_id [mergeLink [getPseudoNodeLink $node_id]]
 
 	set changed 1
 	updateUndoLog
@@ -616,38 +667,89 @@ proc button3node { c x y } {
 		return
 	}
 
-	set type [getNodeType $node_id]
-	set mirror_node [getNodeMirror $node_id]
-
 	if { [$c gettags "node && $node_id && selected"] == "" } {
 		$c dtag node selected
 		$c delete -withtags selectmark
 		selectNode $c [$c find withtag "current"]
 	}
 
+	set type [getNodeType $node_id]
+
 	.button3menu delete 0 end
+
+	# pseudo node menu
+	if { $type == "" && [isPseudoNode $node_id] } {
+		#
+		# Merge two pseudo nodes / links
+		#
+		set node_mirror_id [getNodeMirror $node_id]
+		lassign [nodeFromPseudoNode $node_id] real_node1_id -
+		lassign [nodeFromPseudoNode $node_mirror_id] real_node2_id -
+		if {
+			$real_node1_id != $real_node2_id &&
+			[getNodeCanvas $node_mirror_id] == $curcanvas
+		} {
+			.button3menu add command \
+				-label "Merge" \
+				-command "mergeNodeGUI $node_id"
+		} else {
+			.button3menu add command \
+				-label "Merge" \
+				-state disabled
+		}
+
+		#
+		# Delete selection
+		#
+		if { $oper_mode == "edit" || [getFromRunning "stop_sched"] } {
+			.button3menu add command \
+				-label "Delete" \
+				-command "deleteSelection"
+		} else {
+			.button3menu add command \
+				-label "Delete" \
+				-state disabled
+		}
+
+		#
+		# Delete selection (keep linked interfaces)
+		#
+		lassign [linkFromPseudoLink [getPseudoNodeLink $node_id]] real_link_id - -
+		if {
+			$oper_mode == "edit" ||
+			([getFromRunning "stop_sched"] &&
+			(! $isOSlinux || ($real_link_id != "" && ! [getLinkDirect $real_link_id])))
+		} {
+			.button3menu add command \
+				-label "Delete (keep interfaces)" \
+				-command "deleteSelection 1"
+		} else {
+			.button3menu add command \
+				-label "Delete (keep interfaces)" \
+				-state disabled
+		}
+
+		#
+		# Finally post the popup menu on current pointer position
+		#
+		set x [winfo pointerx .]
+		set y [winfo pointery .]
+		tk_popup .button3menu $x $y
+
+		return
+	}
 
 	#
 	# Select adjacent
 	#
-	if { $type != "pseudo" } {
-		.button3menu add command -label "Select adjacent" \
-			-command "selectAdjacent"
-	} else {
-		.button3menu add command -label "Select adjacent" \
-			-command "selectAdjacent" -state disabled
-	}
+	.button3menu add command -label "Select adjacent" \
+		-command "selectAdjacent"
 
 	#
 	# Configure node
 	#
-	if { $type != "pseudo" } {
-		.button3menu add command -label "Configure" \
-			-command "nodeConfigGUI $c $node_id"
-	} else {
-		.button3menu add command -label "Configure" \
-			-command "nodeConfigGUI $c $node_id" -state disabled
-	}
+	.button3menu add command -label "Configure" \
+		-command "nodeConfigGUI $c $node_id"
 
 	#
 	# Transform
@@ -668,23 +770,19 @@ proc button3node { c x y } {
 	# Node icon preferences
 	#
 	.button3menu.icon delete 0 end
-	if { $type != "pseudo" } {
-		.button3menu add cascade -label "Node icon" \
-			-menu .button3menu.icon
-		.button3menu.icon add command -label "Change node icons" \
-			-command "changeIconPopup"
-		.button3menu.icon add command -label "Set default icons" \
-			-command "setDefaultIcon"
-	}
+	.button3menu add cascade -label "Node icon" \
+		-menu .button3menu.icon
+	.button3menu.icon add command -label "Change node icons" \
+		-command "changeIconPopup"
+	.button3menu.icon add command -label "Set default icons" \
+		-command "setDefaultIcon"
 
 	#
 	# Create a new link - can be between different canvases
 	#
 	.button3menu.connect delete 0 end
-	if { $type != "pseudo" } {
-		.button3menu add cascade -label "Create link to" \
-			-menu .button3menu.connect
-	}
+	.button3menu add cascade -label "Create link to" \
+		-menu .button3menu.connect
 
 	destroy .button3menu.connect.selected
 	menu .button3menu.connect.selected -tearoff 0
@@ -728,7 +826,7 @@ proc button3node { c x y } {
 			.button3menu.connect.$canvas_id add command \
 				-label [getNodeName $peer_id] \
 				-command "newLinkGUI $node_id $node_id"
-		} elseif { [getNodeType $peer_id] != "pseudo" } {
+		} elseif { ! [isPseudoNode $peer_id] } {
 			.button3menu.connect.$canvas_id add command \
 				-label [getNodeName $peer_id] \
 				-command "connectWithNode \"[selectedRealNodes]\" $peer_id"
@@ -739,10 +837,8 @@ proc button3node { c x y } {
 	# Connect interface - can be between different canvases
 	#
 	.button3menu.connect_iface delete 0 end
-	if { $type != "pseudo" } {
-		.button3menu add cascade -label "Connect interface" \
-			-menu .button3menu.connect_iface
-	}
+	.button3menu add cascade -label "Connect interface" \
+		-menu .button3menu.connect_iface
 
 	foreach this_iface_id [concat "new_iface" [ifcList $node_id]] {
 		if { [getIfcLink $node_id $this_iface_id] != "" } {
@@ -778,7 +874,7 @@ proc button3node { c x y } {
 
 		foreach peer_id [getFromRunning "node_list"] {
 			set canvas_id [getNodeCanvas $peer_id]
-			if { [getNodeType $peer_id] != "pseudo" } {
+			if { ! [isPseudoNode $peer_id] } {
 				destroy .button3menu.connect_iface.$this_iface_id.$canvas_id.$peer_id
 				menu .button3menu.connect_iface.$this_iface_id.$canvas_id.$peer_id -tearoff 0
 				.button3menu.connect_iface.$this_iface_id.$canvas_id add cascade -label [getNodeName $peer_id] \
@@ -820,34 +916,23 @@ proc button3node { c x y } {
 	# Move to another canvas
 	#
 	.button3menu.moveto delete 0 end
-	if { $type != "pseudo" } {
-		.button3menu add cascade \
-			-label "Move to" \
-			-menu .button3menu.moveto
+	.button3menu add cascade \
+		-label "Move to" \
+		-menu .button3menu.moveto
 
-		.button3menu.moveto add command \
-			-label "Canvas:" -state disabled
+	.button3menu.moveto add command \
+		-label "Canvas:" -state disabled
 
-		foreach canvas_id $canvas_list {
-			if { $canvas_id != $curcanvas } {
-				.button3menu.moveto add command \
-					-label [getCanvasName $canvas_id] \
-					-command "moveToCanvas $canvas_id"
-			} else {
-				.button3menu.moveto add command \
-					-label [getCanvasName $canvas_id] \
-					-state disabled
-			}
+	foreach canvas_id $canvas_list {
+		if { $canvas_id != $curcanvas } {
+			.button3menu.moveto add command \
+				-label [getCanvasName $canvas_id] \
+				-command "moveToCanvas $canvas_id"
+		} else {
+			.button3menu.moveto add command \
+				-label [getCanvasName $canvas_id] \
+				-state disabled
 		}
-	}
-
-	#
-	# Merge two pseudo nodes / links
-	#
-	if { $type == "pseudo" && [getNodeCanvas $mirror_node] == $curcanvas } {
-		.button3menu add command \
-			-label "Merge" \
-			-command "mergeNodeGUI $node_id"
 	}
 
 	#
@@ -877,9 +962,8 @@ proc button3node { c x y } {
 	#
 	if {
 		$oper_mode == "edit" ||
-		((! $isOSlinux ||
-		! $has_direct_links) &&
-		[getFromRunning "stop_sched"])
+		([getFromRunning "stop_sched"] &&
+		((! $isOSlinux || ! $has_direct_links)))
 	} {
 		.button3menu add command \
 			-label "Delete (keep interfaces)" \
@@ -891,7 +975,6 @@ proc button3node { c x y } {
 	}
 
 	if {
-		$type != "pseudo" &&
 		$oper_mode == "exec" &&
 		[getFromRunning "auto_execution"]
 	} {
@@ -968,7 +1051,6 @@ proc button3node { c x y } {
 	#
 	.button3menu.node_execute delete 0 end
 	if {
-		$type != "pseudo" &&
 		$oper_mode == "exec" &&
 		[getFromRunning "auto_execution"]
 	} {
@@ -988,7 +1070,6 @@ proc button3node { c x y } {
 	#
 	.button3menu.node_config delete 0 end
 	if {
-		$type != "pseudo" &&
 		$oper_mode == "exec" &&
 		[getFromRunning "auto_execution"]
 	} {
@@ -1008,7 +1089,6 @@ proc button3node { c x y } {
 	#
 	.button3menu.ifaces_config delete 0 end
 	if {
-		$type != "pseudo" &&
 		$oper_mode == "exec" &&
 		[getFromRunning "auto_execution"]
 	} {
@@ -1023,7 +1103,7 @@ proc button3node { c x y } {
 			-command [lreplace $tmp_command end end "ifaces_reconfig"]
 	}
 
-	if { $type != "pseudo" && [$type.netlayer] != "LINK" } {
+	if { [$type.netlayer] != "LINK" } {
 		.button3menu add separator
 	}
 
@@ -1391,7 +1471,7 @@ proc button1 { c x y button } {
 	if {
 		($active_tool == "select" && $curtype in "node oval rectangle text freeform") ||
 		($curtype == "nodelabel" &&
-		[getNodeType [lindex [$c gettags $curobj] 1]] == "pseudo")
+		[isPseudoNode [lindex [$c gettags $curobj] 1]])
 	} {
 		set node_id [lindex [$c gettags current] 1]
 		set wasselected [expr {$node_id in "[selectedNodes] [selectedAnnotations]"}]
@@ -1477,6 +1557,7 @@ proc button1 { c x y button } {
 
 			# adding a new node
 			set node_id [newNode $active_tool]
+			setNodeLabel $node_id [getNodeName $node_id]
 			setNodeCanvas $node_id [getFromRunning_gui "curcanvas"]
 			setNodeCoords $node_id "[expr {$x / $zoom}] [expr {$y / $zoom}]"
 
@@ -1579,7 +1660,7 @@ proc button1-motion { c x y } {
 	} elseif {
 		$active_tool == "select" &&
 		$curtype == "nodelabel" &&
-		[getNodeType [lindex [$c gettags $curobj] 1]] != "pseudo"
+		! [isPseudoNode [lindex [$c gettags $curobj] 1]]
 	} {
 		$c move $curobj [expr {$x - $lastX}] [expr {$y - $lastY}]
 
@@ -1598,7 +1679,7 @@ proc button1-motion { c x y } {
 		$curtype in "background grid" ||
 		($curobj ni [$c find withtag "selected"] &&
 		$curtype != "selectmark") &&
-		[getNodeType [lindex [$c gettags $curobj] 1]] != "pseudo")
+		! [isPseudoNode [lindex [$c gettags $curobj] 1]])
 	} {
 		#forming the selectbox and resizing
 		if { $selectbox == "" } {
@@ -1812,17 +1893,7 @@ proc button1-release { c x y } {
 		if { $destobj != "" && $curobj != "" && $destobj != $curobj } {
 			set lnode1 [lindex [$c gettags $curobj] 1]
 			set lnode2 [lindex [$c gettags $destobj] 1]
-			set link_id [newLink $lnode1 $lnode2]
-			if { $link_id != "" } {
-				drawLink $link_id
-				redrawLink $link_id
-				updateLinkLabel $link_id
-				set changed 1
-			}
-
-			if { [getFromRunning "stop_sched"] } {
-				redeployCfg
-			}
+			newLinkGUI $lnode1 $lnode2
 		}
 	} elseif { $active_tool in "rectangle oval text freeform" } {
 		popupAnnotationDialog $c 0 "false"
@@ -2263,6 +2334,14 @@ proc setDefaultIcon {} {
 #****
 proc nodeEnter { c } {
 	set node_id [lindex [$c gettags current] 1]
+	if { [isPseudoNode $node_id] } {
+		lassign [nodeFromPseudoNode $node_id] real_node_id real_iface_id
+		.bottom.textbox config \
+			-text "pseudo {$node_id} from {$real_node_id} [getNodeName $real_node_id]:[getIfcName $real_node_id $real_iface_id]"
+
+		return
+	}
+
 	set err [catch { getNodeType $node_id } error]
 	if { $err != 0 } {
 		return
@@ -2386,7 +2465,7 @@ proc removeIPv4Nodes { nodes all_ifaces } {
 
 	set nodes_ifaces [dict create]
 	foreach node_id $nodes {
-		if { [getNodeType $node_id] == "pseudo" } {
+		if { [isPseudoNode $node_id] } {
 			set nodes [removeFromList $nodes $node_id]
 		}
 
@@ -2455,7 +2534,7 @@ proc removeIPv6Nodes { nodes all_ifaces } {
 
 	set nodes_ifaces [dict create]
 	foreach node_id $nodes {
-		if { [getNodeType $node_id] == "pseudo" } {
+		if { [isPseudoNode $node_id] } {
 			set nodes [removeFromList $nodes $node_id]
 		}
 
@@ -2640,7 +2719,7 @@ proc changeAddressRange {} {
 
 	# save nodes not connected to the L2 node in the autorenumber_nodes list
 	foreach node_id $selected_nodes {
-		if { [getNodeType $node_id] == "pseudo" } {
+		if { [isPseudoNode $node_id] } {
 			continue
 		}
 
@@ -2765,7 +2844,7 @@ proc changeAddressRange6 {} {
 
 	# save nodes not connected to the L2 node in the autorenumber_nodes list
 	foreach node_id $selected_nodes {
-		if { [getNodeType $node_id] == "pseudo" } {
+		if { [isPseudoNode $node_id] } {
 			continue
 		}
 

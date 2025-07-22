@@ -61,19 +61,15 @@ proc toggleDirectLink { c link_id } {
 		set link_id [lindex [$c gettags current] 1]
 	}
 
+	lassign [linkFromPseudoLink $link_id] real_link_id - -
+
 	if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
 		setToExecuteVars "terminate_cfg" [cfgGet]
 	}
 
-	set new_value [expr [getLinkDirect $link_id] ^ 1]
-	setLinkDirect $link_id $new_value
-
-	set mirror_link_id [getLinkMirror $link_id]
-	if { $mirror_link_id != "" } {
-		setLinkDirect $mirror_link_id $new_value
-		updateLinkLabel $mirror_link_id
-	}
-	updateLinkLabel $link_id
+	set new_value [expr [getLinkDirect $real_link_id] ^ 1]
+	setLinkDirect $real_link_id $new_value
+	updateLinkLabel $real_link_id
 
 	if { [getFromRunning "stop_sched"] } {
 		redeployCfg
@@ -105,7 +101,7 @@ proc link.configGUI { c link_id } {
 	global link_cfg link_cfg_gui
 
 	set configelements {}
-	set link_cfg [cfgGet "links" $link_id]
+	set link_cfg [cfgGet "links" [lindex [linkFromPseudoLink $link_id] 0]]
 	set link_cfg_gui [cfgGet "gui" "links" $link_id]
 
 	configGUI_createConfigPopupWin $c
@@ -204,6 +200,7 @@ proc configGUI_applyButtonLink { wi link_id phase is_close } {
 		updateLinkGUI $link_id "*" $link_cfg_gui
 		set link_cfg_gui [cfgGet "gui" "links" $link_id]
 
+		set link_id [lindex [linkFromPseudoLink $link_id] 0]
 		updateLink $link_id "*" $link_cfg
 		set link_cfg [cfgGet "links" $link_id]
 
