@@ -417,9 +417,9 @@ proc setLinkBandwidth { link_id bandwidth } {
 #   * color -- link color
 #****
 proc getLinkColor { link_id } {
-	global defLinkColor
+	global default_link_color
 
-	return [cfgGetWithDefault $defLinkColor "links" $link_id "color"]
+	return [cfgGetWithDefault $default_link_color "links" $link_id "color"]
 }
 
 #****f* linkcfg.tcl/setLinkColor
@@ -452,9 +452,9 @@ proc setLinkColor { link_id color } {
 #   * link_id -- link id
 #****
 proc getLinkWidth { link_id } {
-	global defLinkWidth
+	global default_link_width
 
-	return [cfgGetWithDefault $defLinkWidth "links" $link_id "width"]
+	return [cfgGetWithDefault $default_link_width "links" $link_id "width"]
 }
 
 #****f* linkcfg.tcl/setLinkWidth
@@ -469,9 +469,9 @@ proc getLinkWidth { link_id } {
 #   * width -- link width
 #****
 proc setLinkWidth { link_id width } {
-	global defLinkWidth
+	global default_link_width
 
-	if { $width == $defLinkWidth } {
+	if { $width == $default_link_width } {
 		set width ""
 	}
 
@@ -1112,8 +1112,6 @@ proc newLink { node1_id node2_id } {
 }
 
 proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
-	global defEthBandwidth defSerBandwidth defSerDelay
-
 	foreach node_id "$node1_id $node2_id" iface_id "\"$iface1_id\" \"$iface2_id\"" {
 		set type [getNodeType $node_id]
 		if { $type == "pseudo" } {

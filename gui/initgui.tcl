@@ -75,11 +75,8 @@
 #    * autorearrange_enabled -- control variable indicating is
 #      autorearrange enabled.
 #
-#    * defLinkColor -- defines the default link color
-#    * defLinkWidth -- defines the width of the link
-#    * defEthBandwidth -- defines the ethernet bandwidth
-#    * defSerBandwidth -- defines the serail link bandwidth
-#    * defSerDelay -- defines the serail link delay
+#    * default_link_color -- defines the default link color
+#    * default_link_width -- defines the width of the link
 #    * show_interface_names -- control variable for showing interface names
 #    * show_interface_ipv4 -- control variable for showing interface IPv4 addresses
 #    * show_interface_ipv6 -- control variable for showing interface IPv6 addresses
@@ -114,13 +111,6 @@ set resizemode false
 #
 # Initialize a few variables to default values
 #
-set defLinkColor Red
-set defFillColor Gray
-set defLinkWidth 2
-set defEthBandwidth 0
-set defSerBandwidth 0
-set defSerDelay 0
-
 set newtext ""
 set newoval ""
 set defOvalColor #CFCFFF

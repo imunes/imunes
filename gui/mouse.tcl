@@ -1358,7 +1358,7 @@ proc button1 { c x y button } {
 	global oval rectangle text freeform newtext
 	global lastX lastY
 	global background selectbox
-	global defLinkColor defLinkWidth
+	global default_link_color default_link_width
 	global resizemode resizeobj
 
 	set zoom [getFromRunning "zoom"]
@@ -1523,7 +1523,7 @@ proc button1 { c x y button } {
 			set lastX [lindex [$c coords $curobj] 0]
 			set lastY [lindex [$c coords $curobj] 1]
 			set newlink [$c create line $lastX $lastY $x $y \
-				-fill $defLinkColor -width $defLinkWidth \
+				-fill $default_link_color -width $default_link_width \
 				-tags "link"]
 		}
 	}

@@ -182,6 +182,9 @@ set gui_option_defaults {
 	show_grid				1
 	icon_size				"normal"
 	zoom					1
+	default_link_color		"Red"
+	default_link_width		2
+	default_fill_color		"Gray"
 }
 
 foreach {option default_value} [concat $option_defaults $gui_option_defaults] {

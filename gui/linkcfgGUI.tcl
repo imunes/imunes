@@ -634,9 +634,9 @@ proc _setLinkBandwidth { link_cfg bandwidth } {
 #   * color -- link color
 #****
 proc _getLinkColor { link_cfg } {
-	global defLinkColor
+	global default_link_color
 
-	return [_cfgGetWithDefault $defLinkColor $link_cfg "color"]
+	return [_cfgGetWithDefault $default_link_color $link_cfg "color"]
 }
 
 #****f* linkcfg.tcl/setLinkColor
@@ -651,7 +651,9 @@ proc _getLinkColor { link_cfg } {
 #   * color -- link color
 #****
 proc _setLinkColor { link_cfg color } {
-	if { $color == "Red" } {
+	global default_link_color
+
+	if { $color == $default_link_color } {
 		set color ""
 	}
 
@@ -669,9 +671,9 @@ proc _setLinkColor { link_cfg color } {
 #   * link -- link id
 #****
 proc _getLinkWidth { link_cfg } {
-	global defLinkWidth
+	global default_link_width
 
-	return [_cfgGetWithDefault $defLinkWidth $link_cfg "width"]
+	return [_cfgGetWithDefault $default_link_width $link_cfg "width"]
 }
 
 #****f* linkcfg.tcl/setLinkWidth
@@ -686,9 +688,9 @@ proc _getLinkWidth { link_cfg } {
 #   * width -- link width
 #****
 proc _setLinkWidth { link_cfg width } {
-	global defLinkWidth
+	global default_link_width
 
-	if { $width == $defLinkWidth } {
+	if { $width == $default_link_width } {
 		set width ""
 	}
 

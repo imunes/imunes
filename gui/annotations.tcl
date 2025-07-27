@@ -115,7 +115,7 @@ proc drawAnnotation { obj } {
 proc popupOvalDialog { c target modify } {
 	global newrect newoval
 	global width
-	global defFillColor defTextColor
+	global default_fill_color defTextColor
 
 	# return if coords are empty
 	if { $target == 0 && [$c coords "$newoval"] == "" } {
@@ -136,7 +136,7 @@ proc popupOvalDialog { c target modify } {
 		set annotationType [getAnnotationType $target]
 	}
 
-	if { $color == "" } { set color $defFillColor }
+	if { $color == "" } { set color $default_fill_color }
 	if { $bordercolor == "" } { set bordercolor black }
 	if { $width == "" } { set width 1 }
 
@@ -279,7 +279,7 @@ proc popupOvalApply { c wi target } {
 #   * oval -- oval annotation
 #****
 proc drawOval { oval } {
-	global defFillColor
+	global default_fill_color
 
 	# multiply each coordinate with $zoom and assign to variables x1, y1, x2, y2
 	lassign [lmap n [getAnnotationCoords $oval] {expr $n * [getFromRunning "zoom"]}] x1 y1 x2 y2
@@ -288,7 +288,7 @@ proc drawOval { oval } {
 	set bordercolor [getAnnotationBorderColor $oval]
 	set width [getAnnotationWidth $oval]
 
-	if { $color == "" } { set color $defFillColor }
+	if { $color == "" } { set color $default_fill_color }
 	if { $width == "" } { set width 1 }
 	if { $bordercolor == "" } { set bordercolor black }
 
@@ -312,7 +312,7 @@ proc drawOval { oval } {
 proc popupRectangleDialog { c target modify } {
 	global newrect newoval
 	global width rad
-	global defFillColor defTextColor
+	global default_fill_color defTextColor
 
 	# return if coords are empty
 	if { $target == 0 && [$c coords "$newrect"] == "" } {
@@ -335,7 +335,7 @@ proc popupRectangleDialog { c target modify } {
 		set rad [getAnnotationRad $target]
 	}
 
-	if { $color == "" } { set color $defFillColor }
+	if { $color == "" } { set color $default_fill_color }
 	if { $bordercolor == "" } { set bordercolor black }
 	if { $width == "" } { set width 1 }
 
@@ -497,7 +497,7 @@ proc popupRectangleApply { c wi target } {
 #   * rectangle -- rectangle annotation
 #****
 proc drawRect { rectangle } {
-	global defFillColor
+	global default_fill_color
 
 	# multiply each coordinate with $zoom and assign to variables x1, y1, x2, y2
 	lassign [lmap n [getAnnotationCoords $rectangle] {expr $n * [getFromRunning "zoom"]}] x1 y1 x2 y2
@@ -507,7 +507,7 @@ proc drawRect { rectangle } {
 	set width [getAnnotationWidth $rectangle]
 	set rad [getAnnotationRad $rectangle]
 
-	if { $color == "" } { set color $defFillColor }
+	if { $color == "" } { set color $default_fill_color }
 	if { $width == "" } { set width 1 }
 	if { $bordercolor == "" } { set bordercolor black }
 	# rounded-rectangle radius
@@ -540,7 +540,7 @@ proc drawRect { rectangle } {
 proc popupTextDialog { c target modify } {
 	global newrect newoval newtext
 	global width rad
-	global defFillColor defTextColor
+	global default_fill_color defTextColor
 
 	# return if coords are empty
 	if { $target == 0 && [$c coords "$newtext"] == "" } {
@@ -719,7 +719,7 @@ proc drawText { text } {
 proc popupFreeformDialog { c target modify } {
 	global newfree
 	global width
-	global defFillColor
+	global default_fill_color
 
 	# return if coords are empty
 	if { $target == 0 && [$c coords "$newfree"] == "" } {
@@ -854,7 +854,7 @@ proc drawFreeform { freeform } {
 	set color [getAnnotationColor $freeform]
 	set width [getAnnotationWidth $freeform]
 
-	if { $color == "" } { set color $defFillColor }
+	if { $color == "" } { set color $default_fill_color }
 	if { $width == "" } { set width 2 }
 
 	set l [expr {[llength $coords]-2}]
