@@ -69,6 +69,8 @@ proc removeCanvas { canvas_id } {
 #   * canvas_id -- canvas id
 #****
 proc newCanvas { name } {
+	global sizex sizey
+
 	set canvas_id [newObjectId [getFromRunning_gui "canvas_list"] "c"]
 	lappendToRunning_gui "canvas_list" $canvas_id
 
@@ -77,6 +79,8 @@ proc newCanvas { name } {
 	} else {
 		setCanvasName $canvas_id "Canvas[string range $canvas_id 1 end]"
 	}
+
+	lassign [getCanvasSize $canvas_id] sizex sizey
 
 	return $canvas_id
 }

@@ -242,6 +242,36 @@ proc readRunningVarsFile { eid } {
 	set dict_run_gui [dictGet $vars_dict "dict_run_gui"]
 	set execute_vars [dictGet $vars_dict "execute_vars"]
 
+	set canvas_list [getFromRunning_gui "canvas_list"]
+	if { $canvas_list == {} } {
+		set canvas_list [getFromRunning "canvas_list"]
+		if { $canvas_list != {} } {
+			unsetRunning "canvas_list"
+			setToRunning_gui "canvas_list" $canvas_list
+		} else {
+			newCanvas ""
+			set canvas_list [getFromRunning_gui "canvas_list"]
+		}
+	}
+
+	set annotation_list [getFromRunning_gui "annotation_list"]
+	if { $annotation_list == {} } {
+		set annotation_list [getFromRunning "annotation_list"]
+		if { $annotation_list != {} } {
+			unsetRunning "annotation_list"
+			setToRunning_gui "annotation_list" $annotation_list
+		}
+	}
+
+	set images [getFromRunning_gui "images"]
+	if { $images == {} } {
+		set images [getFromRunning "images"]
+		if { $images != {} } {
+			unsetRunning "images"
+			setToRunning_gui "images" $images
+		}
+	}
+
 	if { [getFromRunning "undolevel"] == "" } {
 		setToRunning "undolevel" 0
 	}
@@ -256,6 +286,22 @@ proc readRunningVarsFile { eid } {
 
 	if { [getFromRunning_gui "curcanvas"] == "" } {
 		setToRunning_gui "curcanvas" [lindex [getFromRunning_gui "canvas_list"] 0]
+	}
+
+	foreach node_id [getFromRunning "node_list"] {
+		if { [cfgGet "nodes" $node_id] == "" } {
+			cfgUnset "nodes" $node_id
+			cfgUnset "gui" "nodes" $node_id
+			setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $node_id]
+		}
+	}
+
+	foreach link_id [getFromRunning "link_list"] {
+		if { [cfgGet "links" $link_id] == "" } {
+			cfgUnset "links" $link_id
+			cfgUnset "gui" "links" $link_id
+			setToRunning "link_list" [removeFromList [getFromRunning "link_list"] $link_id]
+		}
 	}
 
 	# older versions do not have this variable

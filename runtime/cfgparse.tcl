@@ -1025,7 +1025,7 @@ proc loadCfgLegacy { cfg } {
 		}
 
 		if {
-			$node_type != "extelem" &&
+			$node_type ni "extelem pseudo" &&
 			"lo0" ni [logIfacesNames $node_id] &&
 			[$node_type.netlayer] == "NETWORK"
 		} {
@@ -1088,6 +1088,7 @@ proc loadCfgLegacy { cfg } {
 
 		# disable auto_default_routes if not explicitly enabled in old topologies
 		if {
+			$node_type != "pseudo" &&
 			[cfgGet "nodes" $node_id "auto_default_routes"] == "" &&
 			[$node_type.netlayer] == "NETWORK" && $node_type != "ext"
 		} {
@@ -1108,13 +1109,12 @@ proc loadCfgLegacy { cfg } {
 
 	# reverse order of pseudo peers/ifaces
 	foreach link_id $link_list {
-		set mirror_link_id [getLinkMirror $link_id]
-		if { $mirror_link_id == "" } {
+		if { [cfgGet "links" $link_id "mirror"] == "" } {
 			continue
 		}
 
 		lassign [getLinkPeers $link_id] peer1 peer2
-		if { [getNodeMirror $peer1] != "" } {
+		if { [cfgGet "nodes" $peer1 "mirror"] != "" } {
 			continue
 		}
 
@@ -1203,6 +1203,7 @@ proc loadCfgJson { json_cfg } {
 			setNodeType $node_id $node_type
 			setNodeNATIface $node_id [getNodeName $node_id]
 		}
+
 		if { $node_type ni [concat $all_modules_list "pseudo"] } {
 			global execMode
 
@@ -1274,6 +1275,7 @@ proc handleVersionMismatch { cfg_version file_name } {
 		close $fileId
 
 		loadCfgLegacy $cfg
+		jsonMigration 1 $CFG_VERSION
 		setToRunning "current_file" $file_name
 
 		set custom_config 0
@@ -1307,6 +1309,7 @@ proc handleVersionMismatch { cfg_version file_name } {
 		}
 
 		setOption "version" $CFG_VERSION
+		jsonMigration $cfg_version $CFG_VERSION
 	} elseif { $cfg_version > $CFG_VERSION } {
 		set msg "Your IMUNES version is too old for this configuration:\n"
 		append msg "their version $cfg_version > your version $CFG_VERSION\n\n"
@@ -1327,6 +1330,95 @@ proc handleVersionMismatch { cfg_version file_name } {
 		tk_dialog .dialog1 "IMUNES warning" \
 			"$msg" \
 			info 0 Dismiss
+	}
+}
+
+proc jsonMigration { from_version to_version } {
+	global option_defaults gui_option_defaults
+	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+
+	# TODO: a way to migrate across versions
+	if { "${from_version}${to_version}" == "12" } {
+		dict for {option value} [cfgGet "options"] {
+			if { $option in [dict keys $gui_option_defaults] } {
+				setOption_gui $option $value
+				cfgUnset "options" $option
+			}
+		}
+
+		cfgSet "gui" "canvases" [cfgGet "canvases"]
+		cfgUnset "canvases"
+
+		cfgSet "gui" "annotations" [cfgGet "annotations"]
+		cfgUnset "annotations"
+
+		cfgSet "gui" "images" [cfgGet "images"]
+		cfgUnset "images"
+
+		foreach link_id [getFromRunning "link_list"] {
+			setLinkColor $link_id [cfgGet "links" $link_id "color"]
+			cfgUnset "links" $link_id "color"
+			setLinkWidth $link_id [cfgGet "links" $link_id "width"]
+			cfgUnset "links" $link_id "width"
+
+			set mirror_link_id [cfgGet "links" $link_id "mirror"]
+			if { $mirror_link_id != "" } {
+				cfgUnset "links" $link_id "mirror"
+
+				set pseudo1_id [lindex [getLinkPeers $link_id] 0]
+				set pseudo2_id [lindex [getLinkPeers $mirror_link_id] 0]
+				set real1_node_id [lindex [getLinkPeers $link_id] 1]
+				set real2_node_id [lindex [getLinkPeers $mirror_link_id] 1]
+				set real1_iface_id [lindex [getLinkPeersIfaces $link_id] 1]
+				set real2_iface_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]
+
+				setToRunning "link_list" [removeFromList [getFromRunning "link_list"] $mirror_link_id]
+				cfgUnset "links" $mirror_link_id
+
+				setLinkPeers $link_id "$real1_node_id $real2_node_id"
+				setLinkPeersIfaces $link_id "$real1_iface_id $real2_iface_id"
+
+				setIfcLink $real1_node_id $real1_iface_id $link_id
+				setIfcLink $real2_node_id $real2_iface_id $link_id
+
+				lassign [splitLink $link_id] new_node1_id new_node2_id
+
+				setNodeCoords $new_node1_id [cfgGet "nodes" $pseudo1_id "iconcoords"]
+				setNodeCoords $new_node2_id [cfgGet "nodes" $pseudo2_id "iconcoords"]
+				setNodeLabelCoords $new_node1_id [getNodeCoords $new_node1_id]
+				setNodeLabelCoords $new_node2_id [getNodeCoords $new_node2_id]
+
+				setNodeCanvas $new_node1_id [cfgGet "nodes" $pseudo1_id "canvas"]
+				setNodeCanvas $new_node2_id [cfgGet "nodes" $pseudo2_id "canvas"]
+
+				setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $pseudo1_id]
+				cfgUnset "nodes" $pseudo1_id
+				setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $pseudo2_id]
+				cfgUnset "nodes" $pseudo2_id
+			}
+
+			setLinkPeers_gui $link_id [getLinkPeers $link_id]
+		}
+
+		foreach node_id [getFromRunning "node_list"] {
+			setNodeLabel $node_id [getNodeName $node_id]
+			setNodeCanvas $node_id [cfgGet "nodes" $node_id "canvas"]
+			cfgUnset "nodes" $node_id "canvas"
+			setNodeCoords $node_id [cfgGet "nodes" $node_id "iconcoords"]
+			cfgUnset "nodes" $node_id "iconcoords"
+			setNodeLabelCoords $node_id [cfgGet "nodes" $node_id "labelcoords"]
+			cfgUnset "nodes" $node_id "labelcoords"
+			setNodeCustomIcon $node_id [cfgGet "nodes" $node_id "custom_icon"]
+			cfgUnset "nodes" $node_id "custom_icon"
+		}
+
+		setToRunning_gui "canvas_list" [getCanvasList]
+		setToRunning_gui "annotation_list" [getAnnotationList]
+		setToRunning_gui "image_list" [getImageList]
+
+		applyOptions
+
+		setOption "version" $to_version
 	}
 }
 

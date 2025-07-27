@@ -277,6 +277,10 @@ proc saveOptions {} {
 		}
 	}
 
+	if { [cfgGet "gui" "options"] == "" } {
+		cfgUnset "gui" "options"
+	}
+
 	if { $running_zoom == "" } {
 		return
 	}

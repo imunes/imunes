@@ -166,6 +166,12 @@ proc drawNode { node_id } {
 	}
 
 	set type [getNodeType $node_id]
+	if { $type == "" } {
+		cfgUnset "nodes" $node_id
+		cfgUnset "gui" "nodes" $node_id
+		return
+	}
+
 	set zoom [getFromRunning_gui "zoom"]
 	lassign [lmap coord [getNodeCoords $node_id] {expr $coord * $zoom}] x y
 	if { $x == "" || $y == "" } {
