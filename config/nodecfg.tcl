@@ -1184,6 +1184,49 @@ proc setNodeCanvas { node_id canvas_id } {
 	cfgSet "nodes" $node_id "canvas" $canvas_id
 }
 
+#****f* editor.tcl/setCustomIcon
+# NAME
+#   setCustomIcon -- set custom icon
+# SYNOPSIS
+#   setCustomIcon $node_id $icon_name
+# FUNCTION
+#   Sets the custom icon to a node.
+# INPUTS
+#   * node_id -- node to change
+#   * icon_name -- icon name
+#****
+proc setCustomIcon { node_id icon_name } {
+	cfgSet "nodes" $node_id "custom_icon" $icon_name
+}
+
+#****f* editor.tcl/getCustomIcon
+# NAME
+#   getCustomIcon -- get custom icon
+# SYNOPSIS
+#   getCustomIcon $node_id
+# FUNCTION
+#   Returns the custom icon from a node.
+# INPUTS
+#   * node_id -- node to get the icon from
+#****
+proc getCustomIcon { node_id } {
+	return [cfgGet "nodes" $node_id "custom_icon"]
+}
+
+#****f* editor.tcl/removeCustomIcon
+# NAME
+#   removeCustomIcon -- remove custom icon
+# SYNOPSIS
+#   removeCustomIcon $node_id
+# FUNCTION
+#   Removes the custom icon from a node.
+# INPUTS
+#   * node_id -- node to remove the icon from
+#****
+proc removeCustomIcon { node_id } {
+	cfgUnset "nodes" $node_id "custom_icon"
+}
+
 #****f* nodecfg.tcl/newNode
 # NAME
 #   newNode -- new node
