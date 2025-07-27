@@ -1325,6 +1325,10 @@ proc rearrange { mode } {
 			set x [expr {[lindex [.panwin.f1.c coords $img] 0] / $zoom}]
 			set y [expr {[lindex [.panwin.f1.c coords $img] 1] / $zoom}]
 			setNodeLabelCoords $node_id "$x $y"
+			set img [.panwin.f1.c find withtag "node_running && $node_id"]
+			.panwin.f1.c move $img $e_dx $e_dy
+			set img [.panwin.f1.c find withtag "nodedisabled && $node_id"]
+			.panwin.f1.c move $img $e_dx $e_dy
 			.panwin.f1.c addtag need_redraw withtag "link && $node_id"
 		}
 		foreach link_id [.panwin.f1.c find withtag "link && need_redraw"] {

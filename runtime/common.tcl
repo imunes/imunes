@@ -770,11 +770,6 @@ proc setOperMode { new_oper_mode } {
 
 	#.panwin.f1.left.select configure -state active
 	if { "$new_oper_mode" == "exec" && [exec id -u] == 0 } {
-		global autorearrange_enabled
-
-		set autorearrange_enabled 0
-		.menubar.tools entryconfigure "Auto rearrange all" -state disabled
-		.menubar.tools entryconfigure "Auto rearrange selected" -state disabled
 		.menubar.experiment entryconfigure "Execute" -state disabled
 		.menubar.experiment entryconfigure "Terminate" -state normal
 		.menubar.experiment entryconfigure "Restart" -state normal
@@ -844,9 +839,6 @@ proc setOperMode { new_oper_mode } {
 			wm protocol . WM_DELETE_WINDOW {
 				exit
 			}
-
-			.menubar.tools entryconfigure "Auto rearrange all" -state normal
-			.menubar.tools entryconfigure "Auto rearrange selected" -state normal
 		}
 
 		if { $editor_only } {
