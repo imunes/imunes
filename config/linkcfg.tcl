@@ -162,7 +162,7 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 			# there was a change in subnet1, go through its new nodes and attach new data
 			set has_extnat [string match "*ext*" $diff]
 			foreach subnet_node [dict keys $new_subnet1_data] {
-				if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+				if { [getNodeAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
 					continue
 				}
 
@@ -188,7 +188,7 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 			# change in subnet1, go through its new nodes and attach new data
 			set has_extnat [string match "*ext*" $diff]
 			foreach subnet_node [dict keys $new_subnet2_data] {
-				if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+				if { [getNodeAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
 					continue
 				}
 
@@ -253,12 +253,12 @@ proc setLinkDirect { link_id direct } {
 		}
 
 		trigger_ifaceRecreate $node1_id $iface1_id
-		if { [getAutoDefaultRoutesStatus $node1_id] == "enabled" } {
+		if { [getNodeAutoDefaultRoutesStatus $node1_id] == "enabled" } {
 			trigger_nodeReconfig $node1_id
 		}
 
 		trigger_ifaceRecreate $node2_id $iface2_id
-		if { [getAutoDefaultRoutesStatus $node2_id] == "enabled" } {
+		if { [getNodeAutoDefaultRoutesStatus $node2_id] == "enabled" } {
 			trigger_nodeReconfig $node2_id
 		}
 	}
@@ -1218,7 +1218,7 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
 			# there was a change in subnet1, go through its old nodes and attach new data
 			set has_extnat [string match "*ext*" $diff]
 			foreach subnet_node [dict keys $old_subnet1_data] {
-				if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+				if { [getNodeAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
 					continue
 				}
 
@@ -1244,7 +1244,7 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
 			# change in subnet1, go through its old nodes and attach new data
 			set has_extnat [string match "*ext*" $diff]
 			foreach subnet_node [dict keys $old_subnet2_data] {
-				if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+				if { [getNodeAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
 					continue
 				}
 

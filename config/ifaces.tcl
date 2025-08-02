@@ -429,7 +429,7 @@ proc setIfcIPv4addrs { node_id iface_id addrs4 } {
 
 	set has_extnat [string match "*ext*" $subnet_gws]
 	foreach subnet_node [removeFromList [dict keys $subnet_data] $node_id] {
-		if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+		if { [getNodeAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
 			continue
 		}
 
@@ -569,7 +569,7 @@ proc setIfcIPv6addrs { node_id iface_id addrs6 } {
 
 	set has_extnat [string match "*ext*" $subnet_gws]
 	foreach subnet_node [removeFromList [dict keys $subnet_data] $node_id] {
-		if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+		if { [getNodeAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
 			continue
 		}
 

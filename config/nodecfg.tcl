@@ -75,19 +75,19 @@
 #	Returns a list of all default IPv4/IPv6 routes as {destination
 #	gateway} pairs and updates existing subnet gateways and members.
 #
-# getStatIPv4routes { node_id }
+# getNodeStatIPv4routes { node_id }
 #	Returns a list of all static IPv4 routes as a list of
 #	{destination gateway {metric}} pairs.
 #
-# setStatIPv4routes { node_id route_list }
+# setNodeStatIPv4routes { node_id route_list }
 #	Replace all current static route entries with a new one, in form of
 #	a list, as described above.
 #
-# getStatIPv6routes { node_id }
+# getNodeStatIPv6routes { node_id }
 #	Returns a list of all static IPv6 routes as a list of
 #	{destination gateway {metric}} pairs.
 #
-# setStatIPv6routes { node_id route_list }
+# setNodeStatIPv6routes { node_id route_list }
 #	Replace all current static route entries with a new one, in form of
 #	a list, as described above.
 #
@@ -154,23 +154,23 @@
 # Additionally, an alternative configuration can be specified in
 # "custom-config" section.
 #
-# getCustomEnabled { node_id }
+# getNodeCustomEnabled { node_id }
 #
-# setCustomEnabled { node_id state }
+# setNodeCustomEnabled { node_id state }
 #
-# getCustomConfigSelected { node_id }
+# getNodeCustomConfigSelected { node_id }
 #
-# setCustomConfigSelected { node_id cfg_id }
+# setNodeCustomConfigSelected { node_id cfg_id }
 #
-# getCustomConfig { node_id id }
+# getNodeCustomConfig { node_id id }
 #
-# setCustomConfig { node_id id cmd config }
+# setNodeCustomConfig { node_id id cmd config }
 #
-# removeCustomConfig { node_id id }
+# removeNodeCustomConfig { node_id id }
 #
-# getCustomConfigCommand { node_id id }
+# getNodeCustomConfigCommand { node_id id }
 #
-# getCustomConfigIDs { node_id }
+# getNodeCustomConfigIDs { node_id }
 #
 #****
 
@@ -183,11 +183,11 @@ proc getNodeDir { node_id } {
 	return $node_dir
 }
 
-#****f* nodecfg.tcl/getCustomEnabled
+#****f* nodecfg.tcl/getNodeCustomEnabled
 # NAME
-#   getCustomEnabled -- get custom configuration enabled state
+#   getNodeCustomEnabled -- get custom configuration enabled state
 # SYNOPSIS
-#   set enabled [getCustomEnabled $node_id]
+#   set enabled [getNodeCustomEnabled $node_id]
 # FUNCTION
 #   For input node this procedure returns true if custom configuration is
 #   enabled for the specified node.
@@ -196,40 +196,40 @@ proc getNodeDir { node_id } {
 # RESULT
 #   * state -- returns true if custom configuration is enabled
 #****
-proc getCustomEnabled { node_id } {
+proc getNodeCustomEnabled { node_id } {
 	return [cfgGetWithDefault "false" "nodes" $node_id "custom_enabled"]
 }
 
-#****f* nodecfg.tcl/setCustomEnabled
+#****f* nodecfg.tcl/setNodeCustomEnabled
 # NAME
-#   setCustomEnabled -- set custom configuration enabled state
+#   setNodeCustomEnabled -- set custom configuration enabled state
 # SYNOPSIS
-#   setCustomEnabled $node_id $state
+#   setNodeCustomEnabled $node_id $state
 # FUNCTION
 #   For input node this procedure enables or disables custom configuration.
 # INPUTS
 #   * node_id -- node id
 #   * state -- true if enabling custom configuration, false if disabling
 #****
-proc setCustomEnabled { node_id state } {
+proc setNodeCustomEnabled { node_id state } {
 	cfgSet "nodes" $node_id "custom_enabled" $state
 
-	if { [getCustomConfigSelected $node_id "NODE_CONFIG"] ni "\"\" DISABLED" } {
+	if { [getNodeCustomConfigSelected $node_id "NODE_CONFIG"] ni "\"\" DISABLED" } {
 		trigger_nodeReconfig $node_id
 	}
 
-	if { [getCustomConfigSelected $node_id "IFACES_CONFIG"] ni "\"\" DISABLED" } {
+	if { [getNodeCustomConfigSelected $node_id "IFACES_CONFIG"] ni "\"\" DISABLED" } {
 		foreach iface_id [allIfcList $node_id] {
 			trigger_ifaceReconfig $node_id $iface_id
 		}
 	}
 }
 
-#****f* nodecfg.tcl/getCustomConfigSelected
+#****f* nodecfg.tcl/getNodeCustomConfigSelected
 # NAME
-#   getCustomConfigSelected -- get default custom configuration
+#   getNodeCustomConfigSelected -- get default custom configuration
 # SYNOPSIS
-#   getCustomConfigSelected $node_id
+#   getNodeCustomConfigSelected $node_id
 # FUNCTION
 #   For input node this procedure returns ID of a default configuration
 # INPUTS
@@ -237,29 +237,29 @@ proc setCustomEnabled { node_id state } {
 # RESULT
 #   * cfg_id -- returns default custom configuration ID
 #****
-proc getCustomConfigSelected { node_id hook } {
+proc getNodeCustomConfigSelected { node_id hook } {
 	return [cfgGet "nodes" $node_id "custom_selected" $hook]
 }
 
-#****f* nodecfg.tcl/setCustomConfigSelected
+#****f* nodecfg.tcl/setNodeCustomConfigSelected
 # NAME
-#   setCustomConfigSelected -- set default custom configuration
+#   setNodeCustomConfigSelected -- set default custom configuration
 # SYNOPSIS
-#   setCustomConfigSelected $node_id
+#   setNodeCustomConfigSelected $node_id
 # FUNCTION
 #   For input node this procedure sets ID of a default configuration
 # INPUTS
 #   * node_id -- node id
 #   * cfg_id -- custom-config id
 #****
-proc setCustomConfigSelected { node_id hook cfg_id } {
+proc setNodeCustomConfigSelected { node_id hook cfg_id } {
 	cfgSet "nodes" $node_id "custom_selected" $hook $cfg_id
 
-	if { ! [getCustomEnabled $node_id] } {
+	if { ! [getNodeCustomEnabled $node_id] } {
 		return
 	}
 
-	if { [getCustomEnabled $node_id] } {
+	if { [getNodeCustomEnabled $node_id] } {
 		if { $hook == "NODE_CONFIG" } {
 			trigger_nodeReconfig $node_id
 		} elseif { $hook == "IFACES_CONFIG" } {
@@ -270,11 +270,11 @@ proc setCustomConfigSelected { node_id hook cfg_id } {
 	}
 }
 
-#****f* nodecfg.tcl/getCustomConfig
+#****f* nodecfg.tcl/getNodeCustomConfig
 # NAME
-#   getCustomConfig -- get custom configuration
+#   getNodeCustomConfig -- get custom configuration
 # SYNOPSIS
-#   getCustomConfig $node_id $cfg_id
+#   getNodeCustomConfig $node_id $cfg_id
 # FUNCTION
 #   For input node and configuration ID this procedure returns custom
 #   configuration.
@@ -284,15 +284,15 @@ proc setCustomConfigSelected { node_id hook cfg_id } {
 # RESULT
 #   * customConfig -- returns custom configuration
 #****
-proc getCustomConfig { node_id hook cfg_id } {
+proc getNodeCustomConfig { node_id hook cfg_id } {
 	return [cfgGet "nodes" $node_id "custom_configs" $hook $cfg_id "custom_config"]
 }
 
-#****f* nodecfg.tcl/setCustomConfig
+#****f* nodecfg.tcl/setNodeCustomConfig
 # NAME
-#   setCustomConfig -- set custom configuration
+#   setNodeCustomConfig -- set custom configuration
 # SYNOPSIS
-#   setCustomConfig $node_id $cfg_id $cmd $config
+#   setNodeCustomConfig $node_id $cfg_id $cmd $config
 # FUNCTION
 #   For input node this procedure sets custom configuration section in input
 #   node.
@@ -302,16 +302,16 @@ proc getCustomConfig { node_id hook cfg_id } {
 #   * cmd -- custom command
 #   * config -- custom configuration section
 #****
-proc setCustomConfig { node_id hook cfg_id cmd config } {
+proc setNodeCustomConfig { node_id hook cfg_id cmd config } {
 	# XXX cannot be empty
 	cfgSetEmpty "nodes" $node_id "custom_configs" $hook $cfg_id "custom_command" $cmd
 	cfgSetEmpty "nodes" $node_id "custom_configs" $hook $cfg_id "custom_config" $config
 
-	if { ! [getCustomEnabled $node_id] || [getCustomConfigSelected $node_id $hook] != $cfg_id } {
+	if { ! [getNodeCustomEnabled $node_id] || [getNodeCustomConfigSelected $node_id $hook] != $cfg_id } {
 		return
 	}
 
-	if { [getCustomEnabled $node_id] } {
+	if { [getNodeCustomEnabled $node_id] } {
 		if { $hook == "NODE_CONFIG" } {
 			trigger_nodeReconfig $node_id
 		} elseif { $hook == "IFACES_CONFIG" } {
@@ -322,11 +322,11 @@ proc setCustomConfig { node_id hook cfg_id cmd config } {
 	}
 }
 
-#****f* nodecfg.tcl/removeCustomConfig
+#****f* nodecfg.tcl/removeNodeCustomConfig
 # NAME
-#   removeCustomConfig -- remove custom configuration
+#   removeNodeCustomConfig -- remove custom configuration
 # SYNOPSIS
-#   removeCustomConfig $node_id $cfg_id
+#   removeNodeCustomConfig $node_id $cfg_id
 # FUNCTION
 #   For input node and configuration ID this procedure removes custom
 #   configuration from node.
@@ -334,15 +334,15 @@ proc setCustomConfig { node_id hook cfg_id cmd config } {
 #   * node_id -- node id
 #   * cfg_id -- configuration id
 #****
-proc removeCustomConfig { node_id hook cfg_id } {
+proc removeNodeCustomConfig { node_id hook cfg_id } {
 	cfgUnset "nodes" $node_id "custom_configs" $hook $cfg_id
 }
 
-#****f* nodecfg.tcl/getCustomConfigCommand
+#****f* nodecfg.tcl/getNodeCustomConfigCommand
 # NAME
-#   getCustomConfigCommand -- get custom configuration boot command
+#   getNodeCustomConfigCommand -- get custom configuration boot command
 # SYNOPSIS
-#   getCustomConfigCommand $node_id $cfg_id
+#   getNodeCustomConfigCommand $node_id $cfg_id
 # FUNCTION
 #   For input node and configuration ID this procedure returns custom
 #   configuration boot command.
@@ -352,15 +352,15 @@ proc removeCustomConfig { node_id hook cfg_id } {
 # RESULT
 #   * customCmd -- returns custom configuration boot command
 #****
-proc getCustomConfigCommand { node_id hook cfg_id } {
+proc getNodeCustomConfigCommand { node_id hook cfg_id } {
 	return [cfgGet "nodes" $node_id "custom_configs" $hook $cfg_id "custom_command"]
 }
 
-#****f* nodecfg.tcl/getCustomConfigIDs
+#****f* nodecfg.tcl/getNodeCustomConfigIDs
 # NAME
-#   getCustomConfigIDs -- get custom configuration IDs
+#   getNodeCustomConfigIDs -- get custom configuration IDs
 # SYNOPSIS
-#   getCustomConfigIDs $node_id
+#   getNodeCustomConfigIDs $node_id
 # FUNCTION
 #   For input node this procedure returns all custom configuration IDs.
 # INPUTS
@@ -368,7 +368,7 @@ proc getCustomConfigCommand { node_id hook cfg_id } {
 # RESULT
 #   * IDs -- returns custom configuration IDs
 #****
-proc getCustomConfigIDs { node_id hook } {
+proc getNodeCustomConfigIDs { node_id hook } {
 	return [dict keys [cfgGet "nodes" $node_id "custom_configs" $hook]]
 }
 
@@ -539,11 +539,11 @@ proc getSubnetData { this_node_id this_iface_id subnet_gws nodes_l2data subnet_i
 	return [list $subnet_gws $nodes_l2data]
 }
 
-#****f* nodecfg.tcl/getStatIPv4routes
+#****f* nodecfg.tcl/getNodeStatIPv4routes
 # NAME
-#   getStatIPv4routes -- get static IPv4 routes.
+#   getNodeStatIPv4routes -- get static IPv4 routes.
 # SYNOPSIS
-#   set routes [getStatIPv4routes $node_id]
+#   set routes [getNodeStatIPv4routes $node_id]
 # FUNCTION
 #   Returns a list of all static IPv4 routes as a list of
 #   {destination gateway {metric}} pairs.
@@ -552,15 +552,15 @@ proc getSubnetData { this_node_id this_iface_id subnet_gws nodes_l2data subnet_i
 # RESULT
 #   * routes -- list of all static routes defined for the specified node
 #****
-proc getStatIPv4routes { node_id } {
+proc getNodeStatIPv4routes { node_id } {
 	return [cfgGet "nodes" $node_id "croutes4"]
 }
 
-#****f* nodecfg.tcl/setStatIPv4routes
+#****f* nodecfg.tcl/setNodeStatIPv4routes
 # NAME
-#   setStatIPv4routes -- set static IPv4 routes.
+#   setNodeStatIPv4routes -- set static IPv4 routes.
 # SYNOPSIS
-#   setStatIPv4routes $node_id $routes
+#   setNodeStatIPv4routes $node_id $routes
 # FUNCTION
 #   Replace all current static route entries with a new one, in form of a list
 #   of {destination gateway {metric}} pairs.
@@ -568,7 +568,7 @@ proc getStatIPv4routes { node_id } {
 #   * node_id -- the node id of the node whose static routes are set.
 #   * routes -- list of all static routes defined for the specified node
 #****
-proc setStatIPv4routes { node_id routes } {
+proc setNodeStatIPv4routes { node_id routes } {
 	cfgSet "nodes" $node_id "croutes4" $routes
 
 	trigger_nodeReconfig $node_id
@@ -640,11 +640,11 @@ proc setDefaultIPv6routes { node_id routes } {
 	cfgSet "nodes" $node_id "default_routes6" $routes
 }
 
-#****f* nodecfg.tcl/getStatIPv6routes
+#****f* nodecfg.tcl/getNodeStatIPv6routes
 # NAME
-#   getStatIPv6routes -- get static IPv6 routes.
+#   getNodeStatIPv6routes -- get static IPv6 routes.
 # SYNOPSIS
-#   set routes [getStatIPv6routes $node_id]
+#   set routes [getNodeStatIPv6routes $node_id]
 # FUNCTION
 #   Returns a list of all static IPv6 routes as a list of
 #   {destination gateway {metric}} pairs.
@@ -653,15 +653,15 @@ proc setDefaultIPv6routes { node_id routes } {
 # RESULT
 #   * routes -- list of all static routes defined for the specified node
 #****
-proc getStatIPv6routes { node_id } {
+proc getNodeStatIPv6routes { node_id } {
 	return [cfgGet "nodes" $node_id "croutes6"]
 }
 
-#****f* nodecfg.tcl/setStatIPv6routes
+#****f* nodecfg.tcl/setNodeStatIPv6routes
 # NAME
-#   setStatIPv6routes -- set static IPv6 routes.
+#   setNodeStatIPv6routes -- set static IPv6 routes.
 # SYNOPSIS
-#   setStatIPv6routes $node_id $routes
+#   setNodeStatIPv6routes $node_id $routes
 # FUNCTION
 #   Replace all current static route entries with a new one, in form of a list
 #   of {destination gateway {metric}} pairs.
@@ -669,7 +669,7 @@ proc getStatIPv6routes { node_id } {
 #   * node_id -- node id
 #   * routes -- list of all static routes defined for the specified node
 #****
-proc setStatIPv6routes { node_id routes } {
+proc setNodeStatIPv6routes { node_id routes } {
 	cfgSet "nodes" $node_id "croutes6" $routes
 
 	trigger_nodeReconfig $node_id
@@ -826,7 +826,7 @@ proc setNodeNATIface { node_id interface } {
 
 	lassign [getSubnetData $node_id "ifc0" {} {} 0] subnet_gws subnet_data
 	foreach subnet_node [removeFromList [dict keys $subnet_data] $node_id] {
-		if { [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+		if { [getNodeAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
 			continue
 		}
 
@@ -957,38 +957,6 @@ proc setNodeSnapshot { node_id snapshot } {
 	cfgSet "nodes" $node_id "snapshot" $snapshot
 }
 
-#****f* nodecfg.tcl/getStpEnabled
-# NAME
-#   getStpEnabled -- get STP enabled state
-# SYNOPSIS
-#   set state [getStpEnabled $node_id]
-# FUNCTION
-#   For input node this procedure returns true if STP is enabled
-#   for the specified node.
-# INPUTS
-#   * node_id -- node id
-# RESULT
-#   * state -- returns true if STP is enabled
-#****
-proc getStpEnabled { node_id } {
-	return [cfgGet "nodes" $node_id "stp_enabled"]
-}
-
-#****f* nodecfg.tcl/setStpEnabled
-# NAME
-#   setStpEnabled -- set STP enabled state
-# SYNOPSIS
-#   setStpEnabled $node_id $state
-# FUNCTION
-#   For input node this procedure enables or disables STP.
-# INPUTS
-#   * node_id -- node id
-#   * state -- true if enabling STP, false if disabling
-#****
-proc setStpEnabled { node_id state } {
-	cfgSet "nodes" $node_id "stp_enabled" $state
-}
-
 #****f* nodecfg.tcl/getNodeCoords
 # NAME
 #   getNodeCoords -- get node icon coordinates.
@@ -1100,14 +1068,14 @@ proc setNodeCPUConf { node_id param_list } {
 	cfgSet "nodes" $node_id "cpu" $param_list
 }
 
-proc getAutoDefaultRoutesStatus { node_id } {
+proc getNodeAutoDefaultRoutesStatus { node_id } {
 	return [cfgGetWithDefault "enabled" "nodes" $node_id "auto_default_routes"]
 }
 
-proc setAutoDefaultRoutesStatus { node_id state } {
+proc setNodeAutoDefaultRoutesStatus { node_id state } {
 	cfgSet "nodes" $node_id "auto_default_routes" $state
 
-	if { [getCustomEnabled $node_id] == "true" } {
+	if { [getNodeCustomEnabled $node_id] == "true" } {
 		return
 	}
 
@@ -1130,8 +1098,8 @@ proc removeNode { node_id { keep_other_ifaces 0 } } {
 
 	global nodeNamingBase
 
-	if { [getCustomIcon $node_id] != "" } {
-		removeImageReference [getCustomIcon $node_id] $node_id
+	if { [getNodeCustomIcon $node_id] != "" } {
+		removeImageReference [getNodeCustomIcon $node_id] $node_id
 	}
 
 	foreach iface_id [ifcList $node_id] {
@@ -1184,46 +1152,46 @@ proc setNodeCanvas { node_id canvas_id } {
 	cfgSet "nodes" $node_id "canvas" $canvas_id
 }
 
-#****f* editor.tcl/setCustomIcon
+#****f* editor.tcl/setNodeCustomIcon
 # NAME
-#   setCustomIcon -- set custom icon
+#   setNodeCustomIcon -- set custom icon
 # SYNOPSIS
-#   setCustomIcon $node_id $icon_name
+#   setNodeCustomIcon $node_id $icon_name
 # FUNCTION
 #   Sets the custom icon to a node.
 # INPUTS
 #   * node_id -- node to change
 #   * icon_name -- icon name
 #****
-proc setCustomIcon { node_id icon_name } {
+proc setNodeCustomIcon { node_id icon_name } {
 	cfgSet "nodes" $node_id "custom_icon" $icon_name
 }
 
-#****f* editor.tcl/getCustomIcon
+#****f* editor.tcl/getNodeCustomIcon
 # NAME
-#   getCustomIcon -- get custom icon
+#   getNodeCustomIcon -- get custom icon
 # SYNOPSIS
-#   getCustomIcon $node_id
+#   getNodeCustomIcon $node_id
 # FUNCTION
 #   Returns the custom icon from a node.
 # INPUTS
 #   * node_id -- node to get the icon from
 #****
-proc getCustomIcon { node_id } {
+proc getNodeCustomIcon { node_id } {
 	return [cfgGet "nodes" $node_id "custom_icon"]
 }
 
-#****f* editor.tcl/removeCustomIcon
+#****f* editor.tcl/removeNodeCustomIcon
 # NAME
-#   removeCustomIcon -- remove custom icon
+#   removeNodeCustomIcon -- remove custom icon
 # SYNOPSIS
-#   removeCustomIcon $node_id
+#   removeNodeCustomIcon $node_id
 # FUNCTION
 #   Removes the custom icon from a node.
 # INPUTS
 #   * node_id -- node to remove the icon from
 #****
-proc removeCustomIcon { node_id } {
+proc removeNodeCustomIcon { node_id } {
 	cfgUnset "nodes" $node_id "custom_icon"
 }
 
@@ -1500,7 +1468,7 @@ proc routerRoutesCfggen { node_id } {
 	switch -exact -- $model {
 		"quagga" -
 		"frr" {
-			if { [getCustomEnabled $node_id] != true } {
+			if { [getNodeCustomEnabled $node_id] != true } {
 				set routes4 [nodeCfggenStaticRoutes4 $node_id 1]
 				set routes6 [nodeCfggenStaticRoutes6 $node_id 1]
 
@@ -1531,7 +1499,7 @@ proc routerRoutesCfggen { node_id } {
 			}
 		}
 		"static" {
-			if { [getCustomEnabled $node_id] != true } {
+			if { [getNodeCustomEnabled $node_id] != true } {
 				set cfg [concat $cfg [nodeCfggenStaticRoutes4 $node_id]]
 				set cfg [concat $cfg [nodeCfggenStaticRoutes6 $node_id]]
 
@@ -1555,7 +1523,7 @@ proc routerRoutesUncfggen { node_id } {
 	switch -exact -- $model {
 		"quagga" -
 		"frr" {
-			if { [getCustomEnabled $node_id] != true } {
+			if { [getNodeCustomEnabled $node_id] != true } {
 				lappend cfg "vtysh << __EOF__"
 				lappend cfg "conf term"
 
@@ -1576,7 +1544,7 @@ proc routerRoutesUncfggen { node_id } {
 			lappend cfg "__EOF__"
 		}
 		"static" {
-			if { [getCustomEnabled $node_id] != true } {
+			if { [getNodeCustomEnabled $node_id] != true } {
 				set cfg [concat $cfg [nodeUncfggenStaticRoutes4 $node_id]]
 				set cfg [concat $cfg [nodeUncfggenStaticRoutes6 $node_id]]
 
@@ -2041,7 +2009,7 @@ proc pseudo.virtlayer {} {
 proc nodeCfggenStaticRoutes4 { node_id { vtysh 0 } } {
 	set cfg {}
 
-	set croutes4 [getStatIPv4routes $node_id]
+	set croutes4 [getNodeStatIPv4routes $node_id]
 	setToRunning "${node_id}_old_croutes4" $croutes4
 	foreach statrte $croutes4 {
 		if { $vtysh } {
@@ -2106,7 +2074,7 @@ proc nodeUncfggenAutoRoutes4 { node_id { vtysh 0 } } {
 proc nodeCfggenStaticRoutes6 { node_id { vtysh 0 } } {
 	set cfg {}
 
-	set croutes6 [getStatIPv6routes $node_id]
+	set croutes6 [getNodeStatIPv6routes $node_id]
 	setToRunning "${node_id}_old_croutes6" $croutes6
 	foreach statrte $croutes6 {
 		if { $vtysh } {
@@ -2234,15 +2202,15 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 			}
 
 			"croutes4" {
-				setStatIPv4routes $node_id $new_value
+				setNodeStatIPv4routes $node_id $new_value
 			}
 
 			"croutes6" {
-				setStatIPv6routes $node_id $new_value
+				setNodeStatIPv6routes $node_id $new_value
 			}
 
 			"auto_default_routes" {
-				setAutoDefaultRoutesStatus $node_id $new_value
+				setNodeAutoDefaultRoutesStatus $node_id $new_value
 			}
 
 			"services" {
@@ -2285,11 +2253,23 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 						}
 
 						if { $hook_change == "removed" } {
-							removeCustomConfig $node_id $custom_configs_key $hook_key
+							removeNodeCustomConfig $node_id $custom_configs_key $hook_key
 						} else {
-							set cmd [dict get $hook_new_value "custom_command"]
-							set cfg [dict get $hook_new_value "custom_config"]
-							setCustomConfig $node_id $custom_configs_key $hook_key $cmd $cfg
+							try {
+								dict get $hook_new_value "custom_command"
+							} on ok cmd {
+							} on error {} {
+								set cmd [dict get $hook_old_value "custom_command"]
+							}
+
+							try {
+								dict get $hook_new_value "custom_config"
+							} on ok cfg {
+							} on error {} {
+								set cfg [dict get $hook_old_value "custom_config"]
+							}
+
+							setNodeCustomConfig $node_id $custom_configs_key $hook_key $cmd $cfg
 						}
 					}
 				}
@@ -2402,7 +2382,7 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 			}
 
 			"custom_enabled" {
-				setCustomEnabled $node_id $new_value
+				setNodeCustomEnabled $node_id $new_value
 			}
 
 			"custom_selected" {
@@ -2423,7 +2403,7 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 						dputs "======== NEW: '$custom_selected_new_value'"
 					}
 
-					setCustomConfigSelected $node_id $custom_selected_key $custom_selected_new_value
+					setNodeCustomConfigSelected $node_id $custom_selected_key $custom_selected_new_value
 				}
 			}
 
@@ -2444,7 +2424,7 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 			}
 
 			"custom_icon" {
-				setCustomIcon $node_id $new_value
+				setNodeCustomIcon $node_id $new_value
 			}
 
 			"ifaces" {

@@ -1814,9 +1814,9 @@ proc configGUI_staticRoutes { wi node_id } {
 
 	global auto_default_routes node_cfg
 
-	set user_sroutes [concat [_getStatIPv4routes $node_cfg] [_getStatIPv6routes $node_cfg]]
+	set user_sroutes [concat [_getNodeStatIPv4routes $node_cfg] [_getNodeStatIPv6routes $node_cfg]]
 
-	set auto_default_routes [_getAutoDefaultRoutesStatus $node_cfg]
+	set auto_default_routes [_getNodeAutoDefaultRoutesStatus $node_cfg]
 	lassign [getDefaultGateways $node_id {} {}] my_gws {} {}
 	lassign [getDefaultRoutesConfig $node_id $my_gws] all_routes4 all_routes6
 
@@ -2019,7 +2019,7 @@ proc configGUI_customConfig { wi node_id } {
 	ttk::label $wi.custcfg.etxt -text "Enable custom startup config:"
 	getHelpLabel $wi.custcfg.etxt "Custom config"
 
-	set customEnabled [_getCustomEnabled $node_cfg]
+	set customEnabled [_getNodeCustomEnabled $node_cfg]
 	ttk::checkbutton $wi.custcfg.echeckOnOff -text "Enabled" \
 		-variable customEnabled -onvalue true -offvalue false
 
@@ -2035,8 +2035,8 @@ proc configGUI_customConfig { wi node_id } {
 		ttk::label $o.ld -text "$label_text" -width 32
 		getHelpLabel $o.ld [string range $label_text 0 end-1]
 		ttk::combobox $o.cb -height 10 -width 12 -state readonly
-		$o.cb configure -values "DISABLED [_getCustomConfigIDs $node_cfg $hook]"
-		set defaultConfig [_getCustomConfigSelected $node_cfg $hook]
+		$o.cb configure -values "DISABLED [_getNodeCustomConfigIDs $node_cfg $hook]"
+		set defaultConfig [_getNodeCustomConfigSelected $node_cfg $hook]
 		if { $defaultConfig == "" } {
 			set defaultConfig "DISABLED"
 		}
@@ -2051,7 +2051,7 @@ proc configGUI_customConfig { wi node_id } {
 					set defaultConfig {}
 				}
 
-				set node_cfg [_setCustomConfigSelected $node_cfg $hook $defaultConfig]
+				set node_cfg [_setNodeCustomConfigSelected $node_cfg $hook $defaultConfig]
 			}
 		} \
 			$o \
@@ -2956,8 +2956,8 @@ proc configGUI_ifcIPv6AddressApply { wi node_id iface_id } {
 proc configGUI_staticRoutesApply { wi node_id } {
 	global changed auto_default_routes node_cfg
 
-	set oldIPv4statrts [lsort [_getStatIPv4routes $node_cfg]]
-	set oldIPv6statrts [lsort [_getStatIPv6routes $node_cfg]]
+	set oldIPv4statrts [lsort [_getNodeStatIPv4routes $node_cfg]]
+	set oldIPv6statrts [lsort [_getNodeStatIPv6routes $node_cfg]]
 	set newIPv4statrts {}
 	set newIPv6statrts {}
 
@@ -2996,18 +2996,18 @@ proc configGUI_staticRoutesApply { wi node_id } {
 
 	set newIPv4statrts [lsort $newIPv4statrts]
 	if { $oldIPv4statrts != $newIPv4statrts } {
-		set node_cfg [_setStatIPv4routes $node_cfg $newIPv4statrts]
+		set node_cfg [_setNodeStatIPv4routes $node_cfg $newIPv4statrts]
 		set changed 1
 	}
 
 	set newIPv6statrts [lsort $newIPv6statrts]
 	if { $oldIPv6statrts != $newIPv6statrts } {
-		set node_cfg [_setStatIPv6routes $node_cfg $newIPv6statrts]
+		set node_cfg [_setNodeStatIPv6routes $node_cfg $newIPv6statrts]
 		set changed 1
 	}
 
-	if { [_getAutoDefaultRoutesStatus $node_cfg] != $auto_default_routes } {
-		set node_cfg [_setAutoDefaultRoutesStatus $node_cfg $auto_default_routes]
+	if { [_getNodeAutoDefaultRoutesStatus $node_cfg] != $auto_default_routes } {
+		set node_cfg [_setNodeAutoDefaultRoutesStatus $node_cfg $auto_default_routes]
 		set changed 1
 	}
 }
@@ -3132,9 +3132,9 @@ proc configGUI_customConfigApply { wi node_id } {
 	global changed node_cfg
 	global customEnabled
 
-	set oldcustomenabled [_getCustomEnabled $node_cfg]
+	set oldcustomenabled [_getNodeCustomEnabled $node_cfg]
 	if { $oldcustomenabled != $customEnabled } {
-		set node_cfg [_setCustomEnabled $node_cfg $customEnabled]
+		set node_cfg [_setNodeCustomEnabled $node_cfg $customEnabled]
 		set changed 1
 	}
 }
@@ -3549,9 +3549,9 @@ proc customConfigGUI { parent_wi node_id } {
 
     ttk::label $options_frame.ld -text "Default configuration:"
     ttk::combobox $options_frame.cb -height 10 -width 22 -state readonly
-    $options_frame.cb configure -values "DISABLED [_getCustomConfigIDs $custom_node_cfg $selected_hook]"
+    $options_frame.cb configure -values "DISABLED [_getNodeCustomConfigIDs $custom_node_cfg $selected_hook]"
 
-	set defaultConfig [_getCustomConfigSelected $custom_node_cfg $selected_hook]
+	set defaultConfig [_getNodeCustomConfigSelected $custom_node_cfg $selected_hook]
 	if { $defaultConfig == "" } {
 		set defaultConfig "DISABLED"
 	}
@@ -3609,7 +3609,7 @@ proc customConfigGUI { parent_wi node_id } {
 	grid $buttons_frame.applyClose -row 0 -column 2 -sticky swe -padx 2
 	grid $buttons_frame.cancel -row 0 -column 4 -sticky swe -padx 2
 
-	foreach cfg_id [_getCustomConfigIDs $custom_node_cfg $selected_hook] {
+	foreach cfg_id [_getNodeCustomConfigIDs $custom_node_cfg $selected_hook] {
 		createTab $node_id $selected_hook $cfg_id
 	}
 
@@ -3623,13 +3623,13 @@ proc resetCustomConfigFields { wi node_id } {
 
 	set node_cfg $custom_node_cfg
 
-	set defaultConfig [_getCustomConfigSelected $custom_node_cfg $selected_hook]
+	set defaultConfig [_getNodeCustomConfigSelected $custom_node_cfg $selected_hook]
 	if { $defaultConfig == "" } {
 		set defaultConfig "DISABLED"
 	}
 
 	$wi.custcfg.[string tolower $selected_hook].cb configure \
-		-values "DISABLED [_getCustomConfigIDs $custom_node_cfg $selected_hook]"
+		-values "DISABLED [_getNodeCustomConfigIDs $custom_node_cfg $selected_hook]"
 	$wi.custcfg.[string tolower $selected_hook].cb set $defaultConfig
 }
 
@@ -3667,17 +3667,17 @@ proc customConfigGUI_Apply { wi node_id hook } {
 	}
 
 	set custom_config [$t.editor get 1.0 {end -1c}]
-	set custom_node_cfg [_setCustomConfig $custom_node_cfg $hook $cfg_id \
+	set custom_node_cfg [_setNodeCustomConfig $custom_node_cfg $hook $cfg_id \
 		$custom_command $custom_config]
 
 	set defaultConfig [$wi.options.cb get]
 	if { $defaultConfig == "DISABLED" } {
-		set custom_node_cfg [_setCustomConfigSelected $custom_node_cfg $hook ""]
+		set custom_node_cfg [_setNodeCustomConfigSelected $custom_node_cfg $hook ""]
 	} else {
-		set custom_node_cfg [_setCustomConfigSelected $custom_node_cfg $hook $defaultConfig]
+		set custom_node_cfg [_setNodeCustomConfigSelected $custom_node_cfg $hook $defaultConfig]
 	}
 
-	$o.cb configure -values "DISABLED [_getCustomConfigIDs $custom_node_cfg $selected_hook]"
+	$o.cb configure -values "DISABLED [_getNodeCustomConfigIDs $custom_node_cfg $selected_hook]"
 }
 
 #****f* nodecfgGUI.tcl/createTab
@@ -3713,16 +3713,16 @@ proc createTab { node_id selected_hook cfg_id } {
 	text $w.editor -width 80 -height 20 -bg white -wrap none \
 		-yscrollcommand [list $w.vsb set] -xscrollcommand [list $w.hsb set]
 
-	$o.cb configure -values "DISABLED [_getCustomConfigIDs $custom_node_cfg $selected_hook]"
+	$o.cb configure -values "DISABLED [_getNodeCustomConfigIDs $custom_node_cfg $selected_hook]"
 
 	$wi.nb add $wi.nb.$cfg_id -text $cfg_id
-	set custom_command [_getCustomConfigCommand $custom_node_cfg $selected_hook $cfg_id]
+	set custom_command [_getNodeCustomConfigCommand $custom_node_cfg $selected_hook $cfg_id]
 	if { $custom_command == "" } {
 		set custom_command "/bin/sh"
 	}
 	$w.bootcmd_e insert 0 $custom_command
 
-	set config [_getCustomConfig $custom_node_cfg $selected_hook $cfg_id]
+	set config [_getNodeCustomConfig $custom_node_cfg $selected_hook $cfg_id]
 	$w.editor insert end "$config"
 
 	grid $w.generate -row 0 -column 2 -rowspan 2 -in $w
@@ -3756,8 +3756,8 @@ proc customConfigGUIFillDefaults { wi node_id selected_hook } {
 	set node_type [_getNodeType $custom_node_cfg]
 	set cmd [$node_type.bootcmd $node_id]
 
-	set tmp_status [getCustomEnabled $node_id]
-	setCustomEnabled $node_id false
+	set tmp_status [getNodeCustomEnabled $node_id]
+	setNodeCustomEnabled $node_id false
 	switch -exact -- $selected_hook {
 		"IFACES_CONFIG" {
 			set cfg [$node_type.generateConfigIfaces $node_id "*"]
@@ -3766,7 +3766,7 @@ proc customConfigGUIFillDefaults { wi node_id selected_hook } {
 			set cfg [$node_type.generateConfig $node_id]
 		}
 	}
-	setCustomEnabled $node_id $tmp_status
+	setNodeCustomEnabled $node_id $tmp_status
 
 	set w $wi.nb.$cfg_id
 	if {
@@ -3825,16 +3825,16 @@ proc deleteConfig { wi node_id } {
 		yes {
 			destroy $wi.nb.$cfg_id
 
-			set custom_node_cfg [_removeCustomConfig $custom_node_cfg $selected_hook $cfg_id]
-			if { $cfg_id == [_getCustomConfigSelected $custom_node_cfg $selected_hook] || $cfg_id == [$wi.options.cb get] } {
+			set custom_node_cfg [_removeNodeCustomConfig $custom_node_cfg $selected_hook $cfg_id]
+			if { $cfg_id == [_getNodeCustomConfigSelected $custom_node_cfg $selected_hook] || $cfg_id == [$wi.options.cb get] } {
 				$wi.options.cb set "DISABLED"
 			}
 
-			if { [_getCustomConfigSelected $custom_node_cfg $selected_hook] ni [_getCustomConfigIDs $custom_node_cfg $selected_hook] } {
-				set custom_node_cfg [_setCustomConfigSelected $custom_node_cfg $selected_hook [lindex [_getCustomConfigIDs $custom_node_cfg $selected_hook] 0]]
+			if { [_getNodeCustomConfigSelected $custom_node_cfg $selected_hook] ni [_getNodeCustomConfigIDs $custom_node_cfg $selected_hook] } {
+				set custom_node_cfg [_setNodeCustomConfigSelected $custom_node_cfg $selected_hook [lindex [_getNodeCustomConfigIDs $custom_node_cfg $selected_hook] 0]]
 			}
 
-			$wi.options.cb configure -values "DISABLED [_getCustomConfigIDs $custom_node_cfg $selected_hook]"
+			$wi.options.cb configure -values "DISABLED [_getNodeCustomConfigIDs $custom_node_cfg $selected_hook]"
 		}
 
 		no {}
@@ -3871,7 +3871,7 @@ proc createNewConfiguration { wi node_id } {
 		return
 	}
 
-	if { $cfgName in [_getCustomConfigIDs $custom_node_cfg $selected_hook] } {
+	if { $cfgName in [_getNodeCustomConfigIDs $custom_node_cfg $selected_hook] } {
 		tk_messageBox -message "Configuration '$cfgName' already exits, use another name!"\
 			-icon warning
 		focus $wi.options.e
@@ -3880,8 +3880,8 @@ proc createNewConfiguration { wi node_id } {
 			set cfg_id [$wi.nb tab current -text]
 			set w $wi.nb.$cfg_id
 			if {
-				[$w.editor get 1.0 {end -1c}] != [_getCustomConfig $custom_node_cfg $selected_hook $cfg_id] ||
-				[$w.bootcmd_e get] != [_getCustomConfigCommand $custom_node_cfg $selected_hook $cfg_id]
+				[$w.editor get 1.0 {end -1c}] != [_getNodeCustomConfig $custom_node_cfg $selected_hook $cfg_id] ||
+				[$w.bootcmd_e get] != [_getNodeCustomConfigCommand $custom_node_cfg $selected_hook $cfg_id]
 			} {
 				set answer [tk_messageBox -message \
 					"Custom config $cfg_id not saved. Apply changes?" \
@@ -3894,7 +3894,7 @@ proc createNewConfiguration { wi node_id } {
 
 					no {
 						set o $wi.options
-						$o.cb configure -values "DISABLED [_getCustomConfigIDs $custom_node_cfg $selected_hook]"
+						$o.cb configure -values "DISABLED [_getNodeCustomConfigIDs $custom_node_cfg $selected_hook]"
 					}
 				}
 			} else {
@@ -7877,34 +7877,35 @@ proc transformNodesGUI { nodes to_type } {
 	}
 }
 
-proc _getCustomEnabled { node_cfg } {
+proc _getNodeCustomEnabled { node_cfg } {
 	return [_cfgGet $node_cfg "custom_enabled"]
 }
 
-proc _setCustomEnabled { node_cfg state } {
+proc _setNodeCustomEnabled { node_cfg state } {
 	return [_cfgSet $node_cfg "custom_enabled" $state]
 }
 
-proc _getCustomConfigSelected { node_cfg hook } {
+proc _getNodeCustomConfigSelected { node_cfg hook } {
 	return [_cfgGet $node_cfg "custom_selected" $hook]
 }
 
-proc _setCustomConfigSelected { node_cfg hook cfg_id } {
+proc _setNodeCustomConfigSelected { node_cfg hook cfg_id } {
 	return [_cfgSet $node_cfg "custom_selected" $hook $cfg_id]
 }
 
-proc _getCustomConfig { node_cfg hook cfg_id } {
+proc _getNodeCustomConfig { node_cfg hook cfg_id } {
 	return [_cfgGet $node_cfg "custom_configs" $hook $cfg_id "custom_config"]
 }
 
-proc _setCustomConfig { node_cfg hook cfg_id cmd config } {
+proc _setNodeCustomConfig { node_cfg hook cfg_id cmd config } {
 	set node_cfg [_cfgSet $node_cfg "custom_configs" $hook $cfg_id "custom_command" $cmd]
+
 	return [_cfgSetEmpty $node_cfg "custom_configs" $hook $cfg_id "custom_config" $config]
 }
 
-proc _removeCustomConfig { node_cfg hook cfg_id } {
+proc _removeNodeCustomConfig { node_cfg hook cfg_id } {
 	set node_cfg [dictUnset $node_cfg "custom_configs" $hook $cfg_id]
-	if { [_getCustomConfigIDs $node_cfg $hook] == "" } {
+	if { [_getNodeCustomConfigIDs $node_cfg $hook] == "" } {
 		set node_cfg [dictUnset $node_cfg "custom_configs" $hook]
 		if { [_cfgGet $node_cfg "custom_configs"] == "" } {
 			set node_cfg [dictUnset $node_cfg "custom_configs"]
@@ -7914,27 +7915,27 @@ proc _removeCustomConfig { node_cfg hook cfg_id } {
 	return $node_cfg
 }
 
-proc _getCustomConfigCommand { node_cfg hook cfg_id } {
+proc _getNodeCustomConfigCommand { node_cfg hook cfg_id } {
 	return [_cfgGet $node_cfg "custom_configs" $hook $cfg_id "custom_command"]
 }
 
-proc _getCustomConfigIDs { node_cfg hook } {
+proc _getNodeCustomConfigIDs { node_cfg hook } {
 	return [dict keys [_cfgGet $node_cfg "custom_configs" $hook]]
 }
 
-proc _getStatIPv4routes { node_cfg } {
+proc _getNodeStatIPv4routes { node_cfg } {
 	return [_cfgGet $node_cfg "croutes4"]
 }
 
-proc _setStatIPv4routes { node_cfg routes } {
+proc _setNodeStatIPv4routes { node_cfg routes } {
 	return [_cfgSet $node_cfg "croutes4" $routes]
 }
 
-proc _getStatIPv6routes { node_cfg } {
+proc _getNodeStatIPv6routes { node_cfg } {
 	return [_cfgGet $node_cfg "croutes6"]
 }
 
-proc _setStatIPv6routes { node_cfg routes } {
+proc _setNodeStatIPv6routes { node_cfg routes } {
 	return [_cfgSet $node_cfg "croutes6" $routes]
 }
 
@@ -8000,11 +8001,11 @@ proc _setNodeLabelCoords { node_cfg coords } {
 	return [_cfgSet $node_cfg "labelcoords" $roundcoords]
 }
 
-proc _getAutoDefaultRoutesStatus { node_cfg } {
+proc _getNodeAutoDefaultRoutesStatus { node_cfg } {
 	return [dictGetWithDefault "enabled" $node_cfg "auto_default_routes"]
 }
 
-proc _setAutoDefaultRoutesStatus { node_cfg state } {
+proc _setNodeAutoDefaultRoutesStatus { node_cfg state } {
 	return [_cfgSet $node_cfg "auto_default_routes" $state]
 }
 

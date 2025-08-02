@@ -163,7 +163,7 @@ proc drawNode { node_id } {
 	.panwin.f1.c delete -withtags "node_running && $node_id"
 	.panwin.f1.c delete -withtags "nodelabel && $node_id"
 
-	set custom_icon [getCustomIcon $node_id]
+	set custom_icon [getNodeCustomIcon $node_id]
 	if { $custom_icon == "" } {
 		global $type $type\_running
 
@@ -1018,21 +1018,21 @@ proc popupIconApply { dialog image } {
 		if { [string match -nocase "*.*" $image] } {
 			set imgname [loadImage $image "" customIcon $image]
 			foreach node_id $nodelist {
-				set icon [getCustomIcon $node_id]
+				set icon [getNodeCustomIcon $node_id]
 				if { $icon != "" } {
 					removeImageReference $icon $node_id
 				}
 
-				setCustomIcon $node_id $imgname
+				setNodeCustomIcon $node_id $imgname
 				setImageReference $imgname $node_id
 			}
 		} else {
 			foreach node_id $nodelist {
-				set icon [getCustomIcon $node_id]
+				set icon [getNodeCustomIcon $node_id]
 				if { $icon != "" } {
 					removeImageReference $icon $node_id
 				}
-				setCustomIcon $node_id $image
+				setNodeCustomIcon $node_id $image
 				setImageReference $image $node_id
 			}
 		}
@@ -1055,7 +1055,7 @@ proc popupIconApply { dialog image } {
 #****
 proc updateCustomIconReferences {} {
 	foreach node_id [getFromRunning "node_list"] {
-		set icon [getCustomIcon $node_id]
+		set icon [getNodeCustomIcon $node_id]
 		if { $icon != "" } {
 			setImageReference $icon $node_id
 		}

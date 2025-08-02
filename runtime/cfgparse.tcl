@@ -1075,7 +1075,7 @@ proc loadCfgLegacy { cfg } {
 			[cfgGet "nodes" $node_id "auto_default_routes"] == "" &&
 			[$node_type.netlayer] == "NETWORK"
 		} {
-			setAutoDefaultRoutesStatus $node_id "disabled"
+			setNodeAutoDefaultRoutesStatus $node_id "disabled"
 		}
 	}
 
@@ -1255,7 +1255,7 @@ proc handleVersionMismatch { cfg_version file_name } {
 		set custom_config 0
 		set nodes {}
 		foreach node_id [getFromRunning "node_list"] {
-			if { [getCustomConfigIDs $node_id "NODE_CONFIG"] != "" } {
+			if { [getNodeCustomConfigIDs $node_id "NODE_CONFIG"] != "" } {
 				set custom_config 1
 				lappend nodes [getNodeName $node_id]
 			}

@@ -1017,10 +1017,10 @@ proc runConfOnNode { node_id } {
 
 	set docker_id "$eid.$node_id"
 
-	set custom_selected [getCustomConfigSelected $node_id "NODE_CONFIG"]
-	if { [getCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
-		set bootcmd [getCustomConfigCommand $node_id "NODE_CONFIG" $custom_selected]
-		set bootcfg [getCustomConfig $node_id "NODE_CONFIG" $custom_selected]
+	set custom_selected [getNodeCustomConfigSelected $node_id "NODE_CONFIG"]
+	if { [getNodeCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
+		set bootcmd [getNodeCustomConfigCommand $node_id "NODE_CONFIG" $custom_selected]
+		set bootcfg [getNodeCustomConfig $node_id "NODE_CONFIG" $custom_selected]
 		set bootcfg "$bootcfg\n[join [[getNodeType $node_id].generateConfig $node_id] "\n"]"
 		set confFile "custom.conf"
 	} else {
@@ -1047,10 +1047,10 @@ proc startNodeIfaces { node_id ifaces } {
 
 	set docker_id "$eid.$node_id"
 
-	set custom_selected [getCustomConfigSelected $node_id "IFACES_CONFIG"]
-	if { [getCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
-		set bootcmd [getCustomConfigCommand $node_id "IFACES_CONFIG" $custom_selected]
-		set bootcfg [getCustomConfig $node_id "IFACES_CONFIG" $custom_selected]
+	set custom_selected [getNodeCustomConfigSelected $node_id "IFACES_CONFIG"]
+	if { [getNodeCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
+		set bootcmd [getNodeCustomConfigCommand $node_id "IFACES_CONFIG" $custom_selected]
+		set bootcfg [getNodeCustomConfig $node_id "IFACES_CONFIG" $custom_selected]
 		set confFile "custom_ifaces.conf"
 	} else {
 		set bootcfg [join [[getNodeType $node_id].generateConfigIfaces $node_id $ifaces] "\n"]
@@ -1072,8 +1072,8 @@ proc startNodeIfaces { node_id ifaces } {
 proc unconfigNode { eid node_id } {
 	set docker_id "$eid.$node_id"
 
-	set custom_selected [getCustomConfigSelected $node_id "NODE_CONFIG"]
-	if { [getCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
+	set custom_selected [getNodeCustomConfigSelected $node_id "NODE_CONFIG"]
+	if { [getNodeCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
 		return
 	}
 
@@ -1095,8 +1095,8 @@ proc unconfigNode { eid node_id } {
 proc unconfigNodeIfaces { eid node_id ifaces } {
 	set docker_id "$eid.$node_id"
 
-	set custom_selected [getCustomConfigSelected $node_id "IFACES_CONFIG"]
-	if { [getCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
+	set custom_selected [getNodeCustomConfigSelected $node_id "IFACES_CONFIG"]
+	if { [getNodeCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
 		return
 	}
 
@@ -1803,11 +1803,11 @@ proc fetchNodeRunningConfig { node_id } {
 		lappend croutes4 $new_route
 	}
 
-	set old_croutes4 [lsort [_getStatIPv4routes $cur_node_cfg]]
+	set old_croutes4 [lsort [_getNodeStatIPv4routes $cur_node_cfg]]
 	set new_croutes4 [lsort $croutes4]
 	if { $old_croutes4 != $new_croutes4 } {
 		setToRunning "${node_id}_old_croutes4" $new_croutes4
-		set cur_node_cfg [_setStatIPv4routes $cur_node_cfg $new_croutes4]
+		set cur_node_cfg [_setNodeStatIPv4routes $cur_node_cfg $new_croutes4]
 	}
 
 	catch { exec docker exec [getFromRunning "eid"].$node_id sh -c "ip -6 --json r" } json
@@ -1842,11 +1842,11 @@ proc fetchNodeRunningConfig { node_id } {
 		}
 	}
 
-	set old_croutes6 [lsort [_getStatIPv6routes $cur_node_cfg]]
+	set old_croutes6 [lsort [_getNodeStatIPv6routes $cur_node_cfg]]
 	set new_croutes6 [lsort $croutes6]
 	if { $old_croutes6 != $new_croutes6 } {
 		setToRunning "${node_id}_old_croutes6" $new_croutes6
-		set cur_node_cfg [_setStatIPv6routes $cur_node_cfg $new_croutes6]
+		set cur_node_cfg [_setNodeStatIPv6routes $cur_node_cfg $new_croutes6]
 	}
 
 	# don't trigger anything new - save variables state
