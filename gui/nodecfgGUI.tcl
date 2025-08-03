@@ -1454,6 +1454,7 @@ proc configGUI_nodeRestart { wi node_id } {
 	set w $wi.node_force_options
 	ttk::frame $w -relief groove -borderwidth 2 -padding 2
 	ttk::label $w.label -text "Force node:"
+	getHelpLabel $w.label "Force node"
 	ttk::frame $w.options -padding 2
 
 	pack $w.label -side left -padx 2
@@ -1822,6 +1823,7 @@ proc configGUI_staticRoutes { wi node_id } {
 	set ifc_routes_enable $wi.ifc_routes_enable
 	ttk::checkbutton $ifc_routes_enable -text "Enable automatic default routes" \
 		-variable auto_default_routes -padding 4 -onvalue "enabled" -offvalue "disabled"
+	getHelpLabel $ifc_routes_enable "Routes"
 	pack $ifc_routes_enable -anchor w
 
 	set sroutes_nb $wi.sroutes
@@ -2015,6 +2017,8 @@ proc configGUI_customConfig { wi node_id } {
 
 	ttk::frame $wi.custcfg -borderwidth 2 -relief groove -padding 4
 	ttk::label $wi.custcfg.etxt -text "Enable custom startup config:"
+	getHelpLabel $wi.custcfg.etxt "Custom config"
+
 	set customEnabled [_getCustomEnabled $node_cfg]
 	ttk::checkbutton $wi.custcfg.echeckOnOff -text "Enabled" \
 		-variable customEnabled -onvalue true -offvalue false
@@ -2029,6 +2033,7 @@ proc configGUI_customConfig { wi node_id } {
 		ttk::frame $o
 
 		ttk::label $o.ld -text "$label_text" -width 32
+		getHelpLabel $o.ld [string range $label_text 0 end-1]
 		ttk::combobox $o.cb -height 10 -width 12 -state readonly
 		$o.cb configure -values "DISABLED [_getCustomConfigIDs $node_cfg $hook]"
 		set defaultConfig [_getCustomConfigSelected $node_cfg $hook]
@@ -2281,6 +2286,7 @@ proc configGUI_servicesConfig { wi node_id } {
 	set w $wi.services
 	ttk::frame $w -relief groove -borderwidth 2 -padding 2
 	ttk::label $w.label -text "Services:"
+	getHelpLabel $w.label "Services"
 	ttk::frame $w.list -padding 2
 
 	pack $w.label -side left -padx 2
@@ -2326,6 +2332,7 @@ proc configGUI_attachDockerToExt { wi node_id } {
 	set w $wi.docker
 	ttk::frame $w -relief groove -borderwidth 2 -padding 2
 	ttk::label $w.label -text "Attach external Docker interface (Linux only):"
+	getHelpLabel $w.label "External Docker interface"
 
 	pack $w.label -side left -padx 2
 
@@ -2357,6 +2364,7 @@ proc configGUI_customImage { wi node_id } {
 	set w $wi.customImg
 	ttk::frame $w -relief groove -borderwidth 2 -padding 2
 	ttk::label $w.label -text "Custom image:"
+	getHelpLabel $w.label "Custom image"
 
 	pack $w.label -side left -padx 2
 
@@ -3447,8 +3455,6 @@ proc configGUI_externalIfcsApply { wi node_id } {
 #****
 proc customConfigGUI { parent_wi node_id } {
 	set wi .cfgEditor
-	set o $wi.options
-	set b $wi.bottom.buttons
 
 	catch { destroy $wi }
 	tk::toplevel $wi
@@ -3462,40 +3468,142 @@ proc customConfigGUI { parent_wi node_id } {
 
 	global custom_node_cfg custom_config_hooks selected_hook
 
+	set note_message ""
 	switch -exact -- $selected_hook {
 		"IFACES_CONFIG" {
-			set wm_title "Custom interface configurations (node $node_id)"
+			set wm_title "Custom interfaces configurations (node $node_id)"
+
+			set note_message "If enabled, custom interfaces configuration will "
+			append note_message "override the following configuration values:\n"
+			append note_message " - 'Interfaces' tab -> all settings.\n"
+
+			set node_type [getNodeType $node_id]
+			switch -exact -- $node_type {
+				"pc" {}
+				"host" {}
+				"router" {
+					append note_message " - 'Configuration' tab -> 'Protocols' "
+					append note_message "routing configurations.\n"
+				}
+			}
 		}
 		"NODE_CONFIG" {
 			set wm_title "Custom node configurations (node $node_id)"
+
+			set note_message "If enabled, custom node configuration will "
+			append note_message "override the following configuration values:\n"
+			append note_message " - 'Configuration' tab -> 'Custom static "
+			append note_message "routes' field.\n"
+
+			set node_type [getNodeType $node_id]
+			switch -exact -- $node_type {
+				"host" {
+					append note_message " - Automatic startup of 'rpcbind' and "
+					append note_message "'inetd' daemons will be disabled.\n"
+				}
+				"nat64" -
+				"router" {
+					append note_message " - 'Configuration' tab -> enabled "
+					append note_message "'Protocols' routing configurations.\n"
+				}
+			}
+			append note_message "\nNOTE: 'Configuration' -> 'Automatic default "
+			append note_message "routes' are dynamically generated and will be "
+			append note_message "appended to this configuration on runtime if enabled.\n"
 		}
 	}
+
+	append note_message "\nUse 'Fill defaults' to see the currently applied "
+	append note_message "configuration that would run on startup."
+
 	wm title $wi "$wm_title"
 
-	wm minsize $wi 584 445
+	wm minsize $wi 584 684
 	wm resizable $wi 0 1
 
-	ttk::frame $wi.options -height 50 -borderwidth 3
-	ttk::notebook $wi.nb -height 200
-	bind $wi.nb <<NotebookTabChanged>> \
-		"global selected_hook ; customConfigGUI_Apply $wi $node_id \$selected_hook"
+	set options_frame $wi.options
+	ttk::frame $options_frame \
+		-height 50 \
+		-borderwidth 3
 
-	ttk::frame $wi.bottom
-	ttk::frame $wi.bottom.buttons -borderwidth 2
+	set note_frame $wi.note
+	ttk::frame $note_frame \
+		-height 50 \
+		-borderwidth 3 \
+		-relief solid
 
-	ttk::label $o.l -text "Create new configuration:"
-	ttk::entry $o.e -width 24
-	ttk::button $o.b -text "Create" \
+	set note_padx 10
+	ttk::label $note_frame.label \
+		-wraplength [expr [lindex [wm minsize $wi] 0] - $note_padx*2] \
+		-foreground "#dd2200" \
+		-justify left \
+		-text "$note_message"
+
+	set notebook_elem $wi.nb
+	ttk::notebook $notebook_elem \
+		-height 200
+
+	set tmp_command [list apply {
+		{ wi node_id } {
+			global selected_hook
+
+			customConfigGUI_Apply $wi $node_id $selected_hook
+		}
+	} \
+		$wi \
+		$node_id
+	]
+	bind $notebook_elem <<NotebookTabChanged>> $tmp_command
+
+	set bottom_frame $wi.bottom
+	ttk::frame $bottom_frame
+
+	set buttons_frame $bottom_frame.buttons
+	ttk::frame $buttons_frame \
+		-borderwidth 2
+
+	ttk::label $options_frame.l \
+		-text "Create new configuration:"
+	ttk::entry $options_frame.e \
+		-width 24
+	ttk::button $options_frame.b \
+		-width 10 \
+		-text "Create" \
 		-command "createNewConfiguration $wi $node_id"
 
-	ttk::label $o.ld -text "Default configuration:"
-	ttk::combobox $o.cb -height 10 -width 22 -state readonly
-	$o.cb configure -values "DISABLED [_getCustomConfigIDs $custom_node_cfg $selected_hook]"
+	set tmp_command [list apply {
+		{ note_frame note_padx } {
+			if { [pack content $note_frame] == {} } {
+				$note_frame configure \
+					-height 50
+				pack $note_frame.label \
+					-fill both \
+					-padx $note_padx \
+					-pady 2
+			} else {
+				$note_frame configure \
+					-height 2
+				pack forget $note_frame.label
+			}
+		}
+	} \
+		$note_frame \
+		$note_padx
+	]
+    ttk::button $options_frame.note_button \
+		-width 10 \
+		-text "Toggle help" \
+		-command $tmp_command
+
+    ttk::label $options_frame.ld -text "Default configuration:"
+    ttk::combobox $options_frame.cb -height 10 -width 22 -state readonly
+    $options_frame.cb configure -values "DISABLED [_getCustomConfigIDs $custom_node_cfg $selected_hook]"
+
 	set defaultConfig [_getCustomConfigSelected $custom_node_cfg $selected_hook]
 	if { $defaultConfig == "" } {
 		set defaultConfig "DISABLED"
 	}
-	$o.cb set $defaultConfig
+	$options_frame.cb set $defaultConfig
 
 	set tmp_command [list apply {
 		{ parent_wi wi node_id is_apply is_close } {
@@ -3518,36 +3626,43 @@ proc customConfigGUI { parent_wi node_id } {
 		"" \
 		""
 	]
-	ttk::button $b.apply -text "Apply" -command \
-		[lreplace $tmp_command end-1 end 1 0]
+	ttk::button $buttons_frame.apply \
+		-text "Apply" \
+		-command [lreplace $tmp_command end-1 end 1 0]
 
-	ttk::button $b.applyClose -text "Apply and Close" -command \
-		[lreplace $tmp_command end-1 end 1 1]
+	ttk::button $buttons_frame.applyClose \
+		-text "Apply and Close" \
+		-command [lreplace $tmp_command end-1 end 1 1]
 
-	ttk::button $b.cancel -text "Cancel" -command \
-		[lreplace $tmp_command end-1 end 0 1]
+	ttk::button $buttons_frame.cancel \
+		-text "Cancel" \
+		-command [lreplace $tmp_command end-1 end 0 1]
 
-	pack $wi.options -side top -fill both
-	pack $wi.nb -fill both -expand 1
-	pack $wi.bottom.buttons -pady 2
-	pack $wi.bottom -fill both -side bottom
+	pack $options_frame -side top -fill both
+	pack $note_frame -side top -fill both -pady 5 -padx 2
+	pack $notebook_elem -fill both -expand 1
+	pack $bottom_frame -fill both -side bottom
+	pack $buttons_frame -pady 2
 
-	grid $o.l -row 0 -column 0 -sticky w
-	grid $o.e -row 0 -column 1 -sticky w -padx 5 -sticky we
-	grid $o.b -row 0 -column 2 -padx 5
-	grid $o.ld -row 1 -column 0 -sticky w
-	grid $o.cb -row 1 -column 1 -sticky we -padx 5
+	pack $note_frame.label -fill both -padx $note_padx -pady 2
 
-	grid $b.apply -row 0 -column 1 -sticky swe -padx 2
-	grid $b.applyClose -row 0 -column 2 -sticky swe -padx 2
-	grid $b.cancel -row 0 -column 4 -sticky swe -padx 2
+	grid $options_frame.l -row 0 -column 0 -sticky w
+	grid $options_frame.e -row 0 -column 1 -sticky w -padx 5 -sticky we
+	grid $options_frame.b -row 0 -column 2 -padx 5
+	grid $options_frame.ld -row 1 -column 0 -sticky w
+	grid $options_frame.cb -row 1 -column 1 -sticky we -padx 5
+	grid $options_frame.note_button -row 1 -column 2 -padx 5
+
+	grid $buttons_frame.apply -row 0 -column 1 -sticky swe -padx 2
+	grid $buttons_frame.applyClose -row 0 -column 2 -sticky swe -padx 2
+	grid $buttons_frame.cancel -row 0 -column 4 -sticky swe -padx 2
 
 	foreach cfg_id [_getCustomConfigIDs $custom_node_cfg $selected_hook] {
 		createTab $node_id $selected_hook $cfg_id
 	}
 
 	if { $defaultConfig ni "\"\" DISABLED" } {
-		$wi.nb select $wi.nb.$defaultConfig
+		$notebook_elem select $notebook_elem.$defaultConfig
 	}
 }
 
