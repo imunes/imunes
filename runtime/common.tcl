@@ -39,6 +39,26 @@ set devfs_number 46837
 set auto_etc_hosts 0
 set ipFastForwarding 0
 
+#****f* common.tcl/getVrootDir
+# NAME
+#   getVrootDir -- get virtual root directory
+# SYNOPSIS
+#   getVrootDir
+# FUNCTION
+#   Helper function that returns virtual root directory.
+# RESULT
+#   * vroot_dir -- virtual root directory
+#****
+proc getVrootDir {} {
+	global vroot_unionfs
+
+	if { $vroot_unionfs } {
+		return "/var/imunes"
+	} else {
+		return "/vroot"
+	}
+}
+
 proc prepareInstantiateVars { { force "" } } {
 	if { ! [getFromRunning "cfg_deployed"] && $force == "" } {
 		return

@@ -1257,26 +1257,6 @@ proc getHostIfcVlanExists { node_id ifname } {
 	return 1
 }
 
-#****f* freebsd.tcl/getVrootDir
-# NAME
-#   getVrootDir -- get virtual root directory
-# SYNOPSIS
-#   getVrootDir
-# FUNCTION
-#   Helper function that returns virtual root directory.
-# RESULT
-#   * vroot_dir -- virtual root directory
-#****
-proc getVrootDir {} {
-	global vroot_unionfs
-
-	if { $vroot_unionfs } {
-		return "/var/imunes"
-	} else {
-		return "/vroot"
-	}
-}
-
 #****f* freebsd.tcl/prepareFilesystemForNode
 # NAME
 #   prepareFilesystemForNode -- prepare node filesystem
