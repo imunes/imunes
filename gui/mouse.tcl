@@ -396,7 +396,7 @@ proc button3link { c x y } {
 	# Clear link configuration
 	#
 	.button3menu add command -label "Clear all settings" \
-		-command "linkResetConfig $link_id"
+		-command "linkResetConfig $link_id ; redrawAll"
 
 	global linkJitterConfiguration
 	if  { $linkJitterConfiguration } {

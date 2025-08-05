@@ -928,34 +928,6 @@ proc getAllIpAddresses { node_id } {
 	return "\"$ipv4_list\" \"$ipv6_list\""
 }
 
-#****f* nodecfg.tcl/pseudo.netlayer
-# NAME
-#   pseudo.netlayer -- pseudo layer
-# SYNOPSIS
-#   set layer [pseudo.netlayer]
-# FUNCTION
-#   Returns the layer on which the pseudo node operates
-#   i.e. returns no layer.
-# RESULT
-#   * layer -- returns an empty string
-#****
-proc pseudo.netlayer {} {
-}
-
-#****f* nodecfg.tcl/pseudo.virtlayer
-# NAME
-#   pseudo.virtlayer -- pseudo virtlayer
-# SYNOPSIS
-#   set virtlayer [pseudo.virtlayer]
-# FUNCTION
-#   Returns the virtlayer on which the pseudo node operates
-#   i.e. returns no layer.
-# RESULT
-#   * virtlayer -- returns an empty string
-#****
-proc pseudo.virtlayer {} {
-}
-
 proc nodeCfggenStaticRoutes4 { node_id { vtysh 0 } } {
 	set cfg {}
 

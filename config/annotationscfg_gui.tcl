@@ -26,7 +26,7 @@
 # and Technology through the research contract #IP-2003-143.
 #
 
-#****f* annotationscfg.tcl/addAnnotation
+#****f* annotationscfg_gui.tcl/addAnnotation
 # NAME
 #   addAnnotation -- add annotation object
 # SYNOPSIS
@@ -42,7 +42,7 @@ proc addAnnotation { annotation_id type } {
 	setAnnotationType $annotation_id $type
 }
 
-#****f* annotationscfg.tcl/deleteAnnotation
+#****f* annotationscfg_gui.tcl/deleteAnnotation
 # NAME
 #   deleteAnnotation -- delete annotation
 # SYNOPSIS

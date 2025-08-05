@@ -26,7 +26,7 @@
 # and Technology through the research contract #IP-2003-143.
 #
 
-#****f* annotations.tcl/getAnnotationType
+#****f* annotations_gui.tcl/getAnnotationType
 # NAME
 #   getAnnotationType -- get annotation type
 # SYNOPSIS
@@ -42,7 +42,7 @@ proc getAnnotationType { annotation_id } {
 	return [cfgGet "annotations" $annotation_id "type"]
 }
 
-#****f* annotations.tcl/setAnnotationType
+#****f* annotations_gui.tcl/setAnnotationType
 # NAME
 #   setAnnotationType -- set annotation type
 # SYNOPSIS
@@ -57,7 +57,7 @@ proc setAnnotationType { annotation_id type } {
 	cfgSet "annotations" $annotation_id "type" $type
 }
 
-#****f* annotations.tcl/getAnnotationCanvas
+#****f* annotations_gui.tcl/getAnnotationCanvas
 # NAME
 #   getAnnotationCanvas -- get annotation canvas id
 # SYNOPSIS
@@ -73,7 +73,7 @@ proc getAnnotationCanvas { annotation_id } {
 	return [cfgGet "annotations" $annotation_id "canvas"]
 }
 
-#****f* annotations.tcl/setAnnotationCanvas
+#****f* annotations_gui.tcl/setAnnotationCanvas
 # NAME
 #   setAnnotationCanvas -- set annotation canvas
 # SYNOPSIS
@@ -88,7 +88,7 @@ proc setAnnotationCanvas { annotation_id canvas_id } {
 	cfgSet "annotations" $annotation_id "canvas" $canvas_id
 }
 
-#****f* annotations.tcl/getAnnotationColor
+#****f* annotations_gui.tcl/getAnnotationColor
 # NAME
 #   getAnnotationColor -- get annotation color
 # SYNOPSIS
@@ -104,7 +104,7 @@ proc getAnnotationColor { annotation_id } {
 	return [cfgGet "annotations" $annotation_id "color"]
 }
 
-#****f* annotations.tcl/setAnnotationColor
+#****f* annotations_gui.tcl/setAnnotationColor
 # NAME
 #   setAnnotationColor -- set annotation color
 # SYNOPSIS
@@ -119,7 +119,7 @@ proc setAnnotationColor { annotation_id color } {
 	cfgSet "annotations" $annotation_id "color" $color
 }
 
-#****f* annotations.tcl/getAnnotationLabel
+#****f* annotations_gui.tcl/getAnnotationLabel
 # NAME
 #   getAnnotationLabel -- get annotation label
 # SYNOPSIS
@@ -135,7 +135,7 @@ proc getAnnotationLabel { annotation_id } {
 	return [cfgGet "annotations" $annotation_id "label"]
 }
 
-#****f* annotations.tcl/setAnnotationLabel
+#****f* annotations_gui.tcl/setAnnotationLabel
 # NAME
 #   setAnnotationLabel -- set annotation label
 # SYNOPSIS
@@ -150,7 +150,7 @@ proc setAnnotationLabel { annotation_id labeltext } {
 	cfgSet "annotations" $annotation_id "label" $labeltext
 }
 
-#****f* annotations.tcl/getAnnotationLabelColor
+#****f* annotations_gui.tcl/getAnnotationLabelColor
 # NAME
 #   getAnnotationLabelColor -- get annotation label color
 # SYNOPSIS
@@ -166,7 +166,7 @@ proc getAnnotationLabelColor { annotation_id } {
 	return [cfgGet "annotations" $annotation_id "labelcolor"]
 }
 
-#****f* annotations.tcl/setAnnotationLabelColor
+#****f* annotations_gui.tcl/setAnnotationLabelColor
 # NAME
 #   setAnnotationLabelColor -- set annotation's label color
 # SYNOPSIS
@@ -181,7 +181,7 @@ proc setAnnotationLabelColor { annotation_id labelcolor } {
 	cfgSet "annotations" $annotation_id "labelcolor" $labelcolor
 }
 
-#****f* annotations.tcl/getAnnotationBorderColor
+#****f* annotations_gui.tcl/getAnnotationBorderColor
 # NAME
 #   getAnnotationBorderColor -- get annotation border color
 # SYNOPSIS
@@ -197,7 +197,7 @@ proc getAnnotationBorderColor { annotation_id } {
 	return [cfgGet "annotations" $annotation_id "bordercolor"]
 }
 
-#****f* annotations.tcl/setAnnotationBorderColor
+#****f* annotations_gui.tcl/setAnnotationBorderColor
 # NAME
 #   setAnnotationBorderColor -- set annotation border color
 # SYNOPSIS
@@ -212,7 +212,7 @@ proc setAnnotationBorderColor { annotation_id bordercolor } {
 	cfgSet "annotations" $annotation_id "bordercolor" $bordercolor
 }
 
-#****f* annotations.tcl/getAnnotationWidth
+#****f* annotations_gui.tcl/getAnnotationWidth
 # NAME
 #   getAnnotationWidth -- get annotation width
 # SYNOPSIS
@@ -228,7 +228,7 @@ proc getAnnotationWidth { annotation_id } {
 	return [cfgGet "annotations" $annotation_id "width"]
 }
 
-#****f* annotations.tcl/setAnnotationWidth
+#****f* annotations_gui.tcl/setAnnotationWidth
 # NAME
 #   setAnnotationWidth -- set annotation width
 # SYNOPSIS
@@ -243,7 +243,7 @@ proc setAnnotationWidth { annotation_id width } {
 	cfgSet "annotations" $annotation_id "width" $width
 }
 
-#****f* annotations.tcl/getAnnotationRad
+#****f* annotations_gui.tcl/getAnnotationRad
 # NAME
 #   getAnnotationRad -- get annotation radius
 # SYNOPSIS
@@ -259,7 +259,7 @@ proc getAnnotationRad { annotation_id } {
 	return [cfgGet "annotations" $annotation_id "rad"]
 }
 
-#****f* annotations.tcl/setAnnotationRad
+#****f* annotations_gui.tcl/setAnnotationRad
 # NAME
 #   setAnnotationRad -- set annotation radius
 # SYNOPSIS
@@ -274,7 +274,7 @@ proc setAnnotationRad { annotation_id rad } {
 	cfgSet "annotations" $annotation_id "rad" $rad
 }
 
-#****f* annotations.tcl/getAnnotationFont
+#****f* annotations_gui.tcl/getAnnotationFont
 # NAME
 #   getAnnotationFont -- get annotation font
 # SYNOPSIS
@@ -290,7 +290,7 @@ proc getAnnotationFont { annotation_id } {
 	return [cfgGet "annotations" $annotation_id "font"]
 }
 
-#****f* annotations.tcl/setAnnotationFont
+#****f* annotations_gui.tcl/setAnnotationFont
 # NAME
 #   setAnnotationFont -- set annotation font
 # SYNOPSIS
@@ -305,7 +305,7 @@ proc setAnnotationFont { annotation_id font } {
 	cfgSet "annotations" $annotation_id "font" $font
 }
 
-#****f* annotations.tcl/getAnnotationCoords
+#****f* annotations_gui.tcl/getAnnotationCoords
 # NAME
 #   getAnnotationCoords -- get annotation coordinates
 # SYNOPSIS
@@ -321,7 +321,7 @@ proc getAnnotationCoords { annotation_id } {
 	return [cfgGet "annotations" $annotation_id "iconcoords"]
 }
 
-#****f* annotations.tcl/setAnnotationCoords
+#****f* annotations_gui.tcl/setAnnotationCoords
 # NAME
 #   setAnnotationCoords -- set annotation coordinates
 # SYNOPSIS
