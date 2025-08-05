@@ -2131,32 +2131,6 @@ proc configGUI_snapshots { wi node_id } {
 	pack $wi.snapshot -fill both -expand 1 -anchor w
 }
 
-#****f* nodecfgGUI.tcl/configGUI_stp
-# NAME
-#   configGUI_stp -- configure GUI - STP
-# SYNOPSIS
-#   configGUI_stp $wi $node_id
-# FUNCTION
-#   Creating module for enabling STP.
-# INPUTS
-#   * wi -- widget
-#   * node_id -- node id
-#****
-proc configGUI_stp { wi node_id } {
-	global stpEnabled guielements
-	lappend guielements configGUI_stp
-
-	ttk::frame $wi.stp -borderwidth 2 -relief groove -padding 4
-	ttk::label $wi.stp.label -text "Spanning Tree Protocol:"
-	set stpEnabled [getStpEnabled $node_id]
-	ttk::checkbutton $wi.stp.echeckOnOff -text "Enabled" \
-		-variable stpEnabled -onvalue true -offvalue false
-
-	grid $wi.stp.label -in $wi.stp -sticky w -column 0 -row 0
-	grid $wi.stp.echeckOnOff -in $wi.stp -sticky w -column 1 -row 0
-	pack $wi.stp -anchor w -fill both
-}
-
 #****f* nodecfgGUI.tcl/configGUI_routingModel
 # NAME
 #   configGUI_routingModel -- configure GUI - routing model
@@ -3190,28 +3164,6 @@ proc configGUI_snapshotsApply { wi node_id } {
 
 	if { [getFromRunning "oper_mode"] == "edit" && $snapshot != "" } {
 		setNodeSnapshot $node_id $snapshot
-		set changed 1
-	}
-}
-
-#****f* nodecfgGUI.tcl/configGUI_stpApply
-# NAME
-#   configGUI_stpApply -- configure GUI - stp apply
-# SYNOPSIS
-#   configGUI_stpApply $wi $node_id
-# FUNCTION
-#   Saves changes in the module with STP.
-# INPUTS
-#   * wi -- widget
-#   * node_id -- node id
-#****
-proc configGUI_stpApply { wi node_id } {
-	global changed
-	global stpEnabled
-
-	set oldStpEnabled [getStpEnabled $node_id]
-	if { $oldStpEnabled != $stpEnabled } {
-		setStpEnabled $node_id $stpEnabled
 		set changed 1
 	}
 }
@@ -8020,14 +7972,6 @@ proc _getNodeSnapshot { node_cfg } {
 
 proc _setNodeSnapshot { node_cfg snapshot } {
 	return [_cfgSet $node_cfg "snapshot" $snapshot]
-}
-
-proc _getStpEnabled { node_cfg } {
-	return [cfgGet "nodes" $node_id "stp_enabled"]
-}
-
-proc _setStpEnabled { node_cfg state } {
-	return [_cfgSet $node_cfg "stp_enabled" $state]
 }
 
 proc _getNodeCoords { node_cfg } {
