@@ -1353,7 +1353,7 @@ proc button3node { c x y } {
 #   * button -- the keyboard button that is pressed.
 #****
 proc button1 { c x y button } {
-	global newlink curobj changed def_router_model
+	global newlink curobj changed
 	global router pc host lanswitch frswitch rj45 hub
 	global oval rectangle text freeform newtext
 	global lastX lastY

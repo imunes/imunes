@@ -85,49 +85,53 @@
 #
 #    * supp_router_models -- supproted router models, currently frr quagga
 #      and static.
-#    * def_router_model -- default router model
 #****
 
+#
+# Initialize GUI variables to default values
+#
+
+global newlink newnode newtext newoval newrect newfree
 set newlink ""
 set newnode ""
-set selectbox ""
-set selected ""
-set ns2srcfile ""
-set animatephase 0
+set newtext ""
+set newoval ""
+set newrect ""
+set newfree ""
+
+global changed force badentry
 set changed 0
 set force 0
 set badentry 0
+
+global selectbox selected animatephase cursorState clock_seconds
+set selectbox ""
+set selected ""
+set animatephase 0
 set cursorState 0
 set clock_seconds 0
+
+global grid autorearrange_enabled
 set grid 24
 set autorearrange_enabled 0
+
+# resize Oval/Rectangle, "false" or direction: north/west/east/...
+global resizemode
+set resizemode false
+
+global showZFSsnapshots
+set showZFSsnapshots 0
+
+global active_tool_group tool_groups active_tools
 set active_tool_group "select"
 set tool_groups [dict create]
 set active_tools [dict create]
 
-# resize Oval/Rectangle, "false" or direction: north/west/east/...
-set resizemode false
-
-#
-# Initialize a few variables to default values
-#
-set newtext ""
-set newoval ""
-set defOvalColor #CFCFFF
-set defOvalLabelFont "Arial 12"
-set newrect ""
-set newfree ""
-set defRectColor #C0C0FF
-set defRectLabelFont "Arial 12"
-set defTextFont "Arial 12"
-set defTextFontFamily "Arial"
-set defTextFontSize 12
-set defTextColor #000000
-set showZFSsnapshots 0
-
+global IPv4autoAssign IPv6autoAssign
 set IPv4autoAssign 1
 set IPv6autoAssign 1
 
+global showTree zoom_stops canvasBkgMode alignCanvasBkg bgsrcfile
 set showTree 0
 set zoom_stops [list 0.2 0.4 0.5 0.6 0.8 1 \
 	1.25 1.5 1.75 2.0 3.0]
@@ -135,8 +139,10 @@ set canvasBkgMode "original"
 set alignCanvasBkg "center"
 set bgsrcfile ""
 
-set def_router_model frr
-
+global model router_model routerDefaultsModel
+global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable ldpEnable
+global routerRipEnable routerOspfEnable routerOspf6Enable routerBgpEnable routerLdpEnable
+global rdconfig
 set model frr
 set router_model $model
 set routerDefaultsModel $model
@@ -153,7 +159,11 @@ set routerOspf6Enable 0
 set routerBgpEnable 0
 set routerLdpEnable 0
 set rdconfig [list $routerRipEnable $routerRipngEnable $routerOspfEnable $routerOspf6Enable $routerBgpEnable $routerLdpEnable]
+
+global brguielements
 set brguielements {}
+
+global selected_experiment copypaste_nodes cutNodes iconsrcfile selectedIfc
 set selected_experiment ""
 set copypaste_nodes 0
 set cutNodes 0
@@ -194,6 +204,7 @@ ttk::frame .panwin.f2 -width 200
 pack .panwin -fill both -expand 1
 pack propagate .panwin.f2 0
 
+global mf
 set mf .panwin.f1
 
 menu .menubar
@@ -263,6 +274,7 @@ set tmp_command {
 .menubar.file add command -label "Print" -underline 0 \
 	-command $tmp_command
 
+global printFileType
 set printFileType ps
 
 set tmp_command {
@@ -614,48 +626,6 @@ set tmp_command {
 .menubar.tools add command -label "Routing protocol defaults" -underline 0 \
 	-command $tmp_command
 
-#.menubar.tools add separator
-#.menubar.tools add command -label "ns2imunes converter" \
-#	-underline 0 -command {
-#
-#	#dodana varijabla ns2imdialog, dodan glavni frame "ns2convframe"
-#	set ns2imdialog .ns2im-dialog
-#	catch { destroy $ns2imdialog }
-#	toplevel $ns2imdialog
-#	wm transient $ns2imdialog .
-#	wm resizable $ns2imdialog 0 0
-#	wm title $ns2imdialog "ns2imunes converter"
-#
-#	ttk::frame $ns2imdialog.ns2convframe
-#	pack $ns2imdialog.ns2convframe -fill both -expand 1
-#
-#	set f1 [ttk::frame $ns2imdialog.ns2convframe.entry1]
-#	set f2 [ttk::frame $ns2imdialog.ns2convframe.buttons]
-#
-#	ttk::label $f1.l -text "ns2 file:"
-#
-#	#entry $f1.e -width 25 -textvariable ns2srcfile
-#	ttk::entry $f1.e -width 25 -textvariable ns2srcfile
-#	ttk::button $f1.b -text "Browse" -width 8 \
-#		-command {
-#			set srcfile [tk_getOpenFile -parent $ns2imdialog \
-#				-initialfile $ns2srcfile]
-#			$f1.e delete 0 end
-#			$f1.e insert 0 "$srcfile"
-#	}
-#	ttk::button $f2.b1 -text "OK" -command {
-#		ns2im $srcfile
-#		destroy $ns2imdialog
-#	}
-#	ttk::button $f2.b2 -text "Cancel" -command { destroy $ns2imdialog }
-#
-#	pack $f1.b $f1.e -side right
-#	pack $f1.l -side right -fill x -expand 1
-#	pack $f2.b1 -side left -expand 1 -anchor e
-#	pack $f2.b2 -side right -expand 1 -anchor w
-#	pack $f1 $f2 -fill x
-#}
-
 #
 # View
 #
@@ -784,6 +754,8 @@ bind . "-" "zoom down"
 .menubar.view add separator
 set m .menubar.view.themes
 menu $m -tearoff 0
+
+global currentTheme
 set currentTheme imunes
 .menubar.view add cascade -label "Themes" -menu $m
 $m add radiobutton -label "alt" -variable currentTheme \
@@ -801,9 +773,8 @@ $m add radiobutton -label "imunes" -variable currentTheme\
 # Show
 #
 menu .menubar.widgets
-global showConfig
+global showConfig lastObservedNode
 set showConfig "None"
-global lastObservedNode
 set lastObservedNode ""
 .menubar.widgets add radiobutton -label "None" \
 	-variable showConfig -underline 0 -value "None"
@@ -1075,6 +1046,7 @@ set mask_width 8
 set mask_height 8
 # define gradient steps of the circle used for running nodes (center to rim)
 # last one indicates the node label color and is ignored
+global running_indicator_palette
 set running_indicator_palette {
 	"#1dd71f"
 	"#1dc71f"
@@ -1087,14 +1059,19 @@ set running_indicator_palette {
 	"#1d671f"
 }
 
+global running_mask_image
 set running_mask_image [image create photo -width $mask_width -height $mask_height]
 drawGradientCircle $running_mask_image $running_indicator_palette $mask_width $mask_height
 
 foreach b $all_modules_list {
+	global $b $b\_iconwidth $b\_iconheight
+
 	set $b [image create photo -file [$b.icon normal]]
 	set $b\_iconwidth [image width [set $b]]
 	set $b\_iconheight [image height [set $b]]
 }
+
+global pseudo pseudo_iconwidth pseudo_iconheight
 set pseudo [image create photo]
 set pseudo_iconwidth 0
 set pseudo_iconheight 0
@@ -1288,10 +1265,13 @@ menu .button3logifc -tearoff 0
 #
 # Invisible pseudo links
 #
-set invisible -1
+global invisible
+set invisible 0
 bind . <Control-i> {
 	global invisible
-	set invisible [expr $invisible * -1]
+
+	set invisible [expr $invisible ^ 1]
+
 	redrawAll
 }
 

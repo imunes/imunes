@@ -265,3 +265,81 @@ proc dputs { args } {
 	eval $cmd
 	flush $fd
 }
+
+proc reloadSources {} {
+	global ROOTDIR LIBDIR
+	global all_modules_list node_types execMode
+	global isOSlinux isOSfreebsd
+	global debug
+
+	set all_modules_list {}
+	set runnable_node_types {}
+
+	source "$ROOTDIR/$LIBDIR/helpers.tcl"
+
+	# Runtime libriaries
+	foreach file_path [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
+		if {
+			[string match -nocase "*linux.tcl" $file_path] != 1 &&
+			[string match -nocase "*freebsd.tcl" $file_path] != 1
+		} {
+			safeSourceFile $file_path
+		}
+	}
+
+	if { $isOSlinux } {
+		safeSourceFile $ROOTDIR/$LIBDIR/runtime/linux.tcl
+	} elseif { $isOSfreebsd } {
+		safeSourceFile $ROOTDIR/$LIBDIR/runtime/freebsd.tcl
+	}
+
+	# Configuration libraries
+	foreach file_path [glob -nocomplain -directory $ROOTDIR/$LIBDIR/config *.tcl] {
+		safeSourceFile $file_path
+	}
+
+	# Node base libraries
+	foreach node_type $node_types {
+		safeSourceFile "$ROOTDIR/$LIBDIR/nodes/$node_type.tcl"
+	}
+
+	# Node-specific configuration libraries
+	foreach file_path [glob -nocomplain -directory $ROOTDIR/$LIBDIR/nodes/config *.tcl] {
+		safeSourceFile $file_path
+	}
+
+	safeSourceFile "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
+
+	if { $execMode == "interactive" } {
+		safePackageRequire Tk "To run the IMUNES GUI, Tk must be installed."
+
+		# Node GUI base libraries
+		foreach node_type $node_types {
+			safeSourceFile "$ROOTDIR/$LIBDIR/gui/nodes/$node_type.tcl"
+		}
+
+		# Node-specific GUI configuration libraries
+		foreach file_path [glob -nocomplain -directory $ROOTDIR/$LIBDIR/gui/nodes/config *.tcl] {
+			safeSourceFile $file_path
+		}
+
+		set skip_files "theme.tcl initgui.tcl topogen.tcl debug.tcl"
+		foreach file_path [glob -directory $ROOTDIR/$LIBDIR/gui *.tcl] {
+			if { [file tail $file_path] ni $skip_files } {
+				safeSourceFile $file_path
+			}
+		}
+	}
+
+	if { $debug } {
+		safeSourceFile "$ROOTDIR/$LIBDIR/gui/debug.tcl"
+	}
+
+	applyOptions
+
+	redrawAll
+	refreshToolBarNodes
+
+	dputs "Reloaded all sources."
+}
+

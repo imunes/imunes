@@ -115,7 +115,7 @@ proc drawAnnotation { obj } {
 proc popupOvalDialog { c target modify } {
 	global newrect newoval
 	global width
-	global default_fill_color defTextColor
+	global default_fill_color default_text_color
 
 	# return if coords are empty
 	if { $target == 0 && [$c coords "$newoval"] == "" } {
@@ -312,7 +312,7 @@ proc drawOval { oval } {
 proc popupRectangleDialog { c target modify } {
 	global newrect newoval
 	global width rad
-	global default_fill_color defTextColor
+	global default_fill_color default_text_color
 
 	# return if coords are empty
 	if { $target == 0 && [$c coords "$newrect"] == "" } {
@@ -540,7 +540,7 @@ proc drawRect { rectangle } {
 proc popupTextDialog { c target modify } {
 	global newrect newoval newtext
 	global width rad
-	global default_fill_color defTextColor
+	global default_fill_color default_text_color
 
 	# return if coords are empty
 	if { $target == 0 && [$c coords "$newtext"] == "" } {
@@ -684,7 +684,7 @@ proc popupTextApply { c wi target } {
 #   * text -- text annotation
 #****
 proc drawText { text } {
-	global defTextColor
+	global default_text_color
 
 	set coords [getAnnotationCoords $text]
 	if { $coords == "" } {
@@ -695,7 +695,7 @@ proc drawText { text } {
 	set label [getAnnotationLabel $text]
 	set font [getAnnotationFont $text]
 
-	if { $labelcolor == "" } { set labelcolor $defTextColor }
+	if { $labelcolor == "" } { set labelcolor $default_text_color }
 	if { $font == "" } { set font TkTextFont }
 
 	lassign [lmap n $coords {expr $n * [getFromRunning "zoom"]}] x y

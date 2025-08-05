@@ -1,7 +1,16 @@
+global debug execMode
 
-if { [.menubar.tools entrycget last -label] != "Debugger" } {
-	.menubar.tools add separator
-	.menubar.tools add command -label "Debugger" -underline 0 -command popupDebugger
+if { ! $debug } {
+	return
+}
+
+if { $execMode == "interactive" } {
+	bind . <F6> reloadSources
+
+	if { [.menubar.tools entrycget last -label] != "Debugger" } {
+		.menubar.tools add separator
+		.menubar.tools add command -label "Debugger" -underline 0 -command popupDebugger
+	}
 }
 
 #****f* debug.tcl/popupDebugger
@@ -95,13 +104,6 @@ proc popupDebugger {} {
 	pack $wi.result
 }
 
-proc registerModule { module } {
-	global all_modules_list
-	if { $module ni $all_modules_list } {
-		lappend all_modules_list $module
-	}
-}
-
 proc logCaller {} {
 	set r [catch { info level [expr [info level] - 1] } e]
 	set r2 [catch { info level [expr [info level] - 2] } e2]
@@ -110,69 +112,4 @@ proc logCaller {} {
 	} {
 		dputs "Called by ${e} ${e2}."
 	}
-}
-
-bind . <F6> {
-	global all_modules_list node_types
-	global isOSfreebsd
-
-	set all_modules_list {}
-	set runnable_node_types {}
-
-	source "$ROOTDIR/$LIBDIR/runtime/cfgparse.tcl"
-	source "$ROOTDIR/$LIBDIR/runtime/common.tcl"
-	source "$ROOTDIR/$LIBDIR/runtime/eventsched.tcl"
-	source "$ROOTDIR/$LIBDIR/runtime/execute.tcl"
-	source "$ROOTDIR/$LIBDIR/runtime/filemgmt.tcl"
-	if { $isOSfreebsd } {
-		source "$ROOTDIR/$LIBDIR/runtime/freebsd.tcl"
-	} else {
-		source "$ROOTDIR/$LIBDIR/runtime/linux.tcl"
-	}
-	source "$ROOTDIR/$LIBDIR/runtime/services.tcl"
-	source "$ROOTDIR/$LIBDIR/runtime/terminate.tcl"
-
-	source "$ROOTDIR/$LIBDIR/config/annotationscfg.tcl"
-	source "$ROOTDIR/$LIBDIR/config/filtercfg.tcl"
-	source "$ROOTDIR/$LIBDIR/config/ifaces.tcl"
-	source "$ROOTDIR/$LIBDIR/config/ipsec.tcl"
-	source "$ROOTDIR/$LIBDIR/config/ipv4.tcl"
-	source "$ROOTDIR/$LIBDIR/config/ipv6.tcl"
-	source "$ROOTDIR/$LIBDIR/config/linkcfg.tcl"
-	source "$ROOTDIR/$LIBDIR/config/mac.tcl"
-	source "$ROOTDIR/$LIBDIR/config/nat64cfg.tcl"
-	source "$ROOTDIR/$LIBDIR/config/nodecfg.tcl"
-	source "$ROOTDIR/$LIBDIR/config/packgencfg.tcl"
-	source "$ROOTDIR/$LIBDIR/config/stpswitchcfg.tcl"
-
-	foreach node_type $node_types {
-		source "$ROOTDIR/$LIBDIR/nodes/$node_type.tcl"
-		source "$ROOTDIR/$LIBDIR/gui/$node_type.tcl"
-	}
-
-	source "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
-	#source "$ROOTDIR/$LIBDIR/nodes/wlan.tcl"
-
-	source "$ROOTDIR/$LIBDIR/gui/annotations.tcl"
-	#source "$ROOTDIR/$LIBDIR/gui/wlan.tcl"
-
-	source "$ROOTDIR/$LIBDIR/gui/canvas.tcl"
-	source "$ROOTDIR/$LIBDIR/gui/copypaste.tcl"
-	source "$ROOTDIR/$LIBDIR/gui/drawing.tcl"
-	source "$ROOTDIR/$LIBDIR/gui/editor.tcl"
-	source "$ROOTDIR/$LIBDIR/gui/help.tcl"
-	source "$ROOTDIR/$LIBDIR/gui/ifacesGUI.tcl"
-	source "$ROOTDIR/$LIBDIR/gui/linkcfgGUI.tcl"
-	source "$ROOTDIR/$LIBDIR/gui/mouse.tcl"
-	source "$ROOTDIR/$LIBDIR/gui/nodecfgGUI.tcl"
-	source "$ROOTDIR/$LIBDIR/gui/widgets.tcl"
-
-	source "$ROOTDIR/$LIBDIR/gui/debug.tcl"
-
-	applyOptions
-
-	redrawAll
-	refreshToolBarNodes
-
-	dputs "Reloaded all sources."
 }

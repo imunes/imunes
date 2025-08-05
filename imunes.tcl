@@ -141,9 +141,12 @@ if { $prepareFlag } {
 }
 
 # Runtime libriaries
-foreach file [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
-	if { [string match -nocase "*linux.tcl" $file] != 1 } {
-		safeSourceFile $file
+foreach file_path [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
+	if {
+		[string match -nocase "*linux.tcl" $file_path] != 1 &&
+		[string match -nocase "*freebsd.tcl" $file_path] != 1
+	} {
+		safeSourceFile $file_path
 	}
 }
 
@@ -185,6 +188,7 @@ set gui_option_defaults {
 	default_link_color		"Red"
 	default_link_width		2
 	default_fill_color		"Gray"
+	default_text_color		"#000000"
 }
 
 foreach {option default_value} [concat $option_defaults $gui_option_defaults] {
@@ -203,12 +207,8 @@ set node_types "lanswitch hub rj45 stpswitch filter packgen \
 set supp_router_models "frr quagga static"
 
 if { $isOSlinux } {
-	# Limit default nodes on linux
-	set supp_router_models "frr quagga static"
 	safeSourceFile $ROOTDIR/$LIBDIR/runtime/linux.tcl
-}
-
-if { $isOSfreebsd } {
+} elseif { $isOSfreebsd } {
 	safeSourceFile $ROOTDIR/$LIBDIR/runtime/freebsd.tcl
 }
 
@@ -226,15 +226,19 @@ if { $execMode == "batch" } {
 }
 
 # Configuration libraries
-foreach file [glob -directory $ROOTDIR/$LIBDIR/config *.tcl] {
-	safeSourceFile $file
+foreach file_path [glob -directory $ROOTDIR/$LIBDIR/config *.tcl] {
+	safeSourceFile $file_path
 }
 
 # The following files need to be sourced in this particular order. If not
 # the placement of the toolbar icons will be altered.
-foreach file $node_types {
-	safeSourceFile "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
-	safeSourceFile "$ROOTDIR/$LIBDIR/gui/$file.tcl"
+foreach node_type $node_types {
+	safeSourceFile "$ROOTDIR/$LIBDIR/nodes/$node_type.tcl"
+}
+
+# Node-specific configuration libraries
+foreach file_path [glob -nocomplain -directory $ROOTDIR/$LIBDIR/nodes/config *.tcl] {
+	safeSourceFile $file_path
 }
 
 # additional nodes
@@ -303,16 +307,25 @@ readConfigFile
 if { $execMode == "interactive" } {
 	safePackageRequire Tk "To run the IMUNES GUI, Tk must be installed."
 
-	set gui_files "canvas copypaste drawing editor help theme linkcfgGUI \
-		mouse nodecfgGUI ifacesGUI widgets annotations"
-	foreach gui_file $gui_files {
-		safeSourceFile "$ROOTDIR/$LIBDIR/gui/$gui_file.tcl"
+	# Node GUI base libraries
+	foreach node_type $node_types {
+		safeSourceFile "$ROOTDIR/$LIBDIR/gui/nodes/$node_type.tcl"
 	}
 
-	source "$ROOTDIR/$LIBDIR/gui/initgui.tcl"
-	source "$ROOTDIR/$LIBDIR/gui/topogen.tcl"
-	if { $debug == 1 } {
-		source "$ROOTDIR/$LIBDIR/gui/debug.tcl"
+	# Node-specific GUI configuration libraries
+	foreach file_path [glob -nocomplain -directory $ROOTDIR/$LIBDIR/gui/nodes/config *.tcl] {
+		safeSourceFile $file_path
+	}
+
+	set skip_files "theme.tcl initgui.tcl topogen.tcl debug.tcl"
+	foreach file_path [glob -directory $ROOTDIR/$LIBDIR/gui *.tcl] {
+		if { [file tail $file_path] ni $skip_files } {
+			safeSourceFile $file_path
+		}
+	}
+
+	foreach skip_file $skip_files {
+		safeSourceFile "$ROOTDIR/$LIBDIR/gui/$skip_file"
 	}
 
 	newProject

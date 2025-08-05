@@ -62,7 +62,6 @@ registerModule $MODULE
 proc $MODULE.confNewNode { node_id } {
 	global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable ldpEnable
 	global rdconfig router_model router_ConfigModel
-	global def_router_model
 	global nodeNamingBase
 
 	lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable ldpEnable

@@ -24,8 +24,8 @@ LOGDIR=/var/log/imunes
 
 BASEFILES =	COPYRIGHT README.md VERSION
 CONFIGFILES =	$(wildcard config/*.tcl)
-GUIFILES =	$(wildcard gui/*.tcl)
-NODESFILES =	$(wildcard nodes/*.tcl)
+GUIFILES =	$(wildcard gui/*.tcl gui/nodes)
+NODESFILES =	$(wildcard nodes/*.tcl nodes/config)
 RUNTIMEFILES =	$(wildcard runtime/*.tcl)
 PATCHESFILES =	$(wildcard src/patches/*)
 
@@ -105,10 +105,10 @@ endif
 	cp $(CONFIGFILES) $(CONFIGDIR)
 
 	mkdir -p $(GUIDIR)
-	cp $(GUIFILES) $(GUIDIR)
+	cp -r $(GUIFILES) $(GUIDIR)
 
 	mkdir -p $(NODESDIR)
-	cp $(NODESFILES) $(NODESDIR)
+	cp -r $(NODESFILES) $(NODESDIR)
 
 	mkdir -p $(RUNTIMEDIR)
 	cp $(RUNTIMEFILES) $(RUNTIMEDIR)
