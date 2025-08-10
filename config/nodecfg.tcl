@@ -1066,6 +1066,9 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 		set old_node_cfg [cfgGet "nodes" $node_id]
 	}
 
+	dputs "OLD : '$old_node_cfg'"
+	dputs "NEW : '$new_node_cfg'"
+
 	set cfg_diff [dictDiff $old_node_cfg $new_node_cfg]
 	dputs "= cfg_diff: '$cfg_diff'"
 	if { $cfg_diff == "" || [lsort -uniq [dict values $cfg_diff]] == "copy" } {
@@ -1073,10 +1076,6 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 		dputs "= /UPDATE NODE $node_id END ="
 		return $new_node_cfg
 	}
-
-	set eid [getFromRunning "eid"]
-
-	set commands {}
 
 	if { $new_node_cfg == "" } {
 		return $old_node_cfg
@@ -1329,24 +1328,8 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 				}
 			}
 
-			"canvas" {
-				setNodeCanvas $node_id $new_value
-			}
-
-			"iconcoords" {
-				setNodeCoords $node_id $new_value
-			}
-
-			"labelcoords" {
-				setNodeLabelCoords $node_id $new_value
-			}
-
 			"events" {
-				# TODO
-			}
-
-			"custom_icon" {
-				setNodeCustomIcon $node_id $new_value
+				setElementEvents $node_id $new_value
 			}
 
 			"ifaces" {

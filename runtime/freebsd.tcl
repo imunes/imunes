@@ -756,6 +756,7 @@ proc fetchNodeRunningConfig { node_id } {
 
 	# overwrite any unsaved changes to this node
 	set cur_node_cfg [cfgGet "nodes" $node_id]
+	set cur_node_cfg_gui [cfgGet "nodes" $node_id]
 
 	set ifaces_names [allIfacesNames $node_id]
 
@@ -935,6 +936,8 @@ proc fetchNodeRunningConfig { node_id } {
 	# don't trigger anything new - save variables state
 	prepareInstantiateVars
 	prepareTerminateVars
+
+	updateNodeGUI $node_id "*" $cur_node_cfg_gui
 
 	updateNode $node_id "*" $cur_node_cfg
 

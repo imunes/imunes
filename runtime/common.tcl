@@ -941,7 +941,7 @@ proc fetchNodesConfiguration {} {
 			continue
 		}
 
-		set lines [fetchNodeRunningConfig $node_id]
+		fetchNodeRunningConfig $node_id
 	}
 
 	redrawAll

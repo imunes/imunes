@@ -53,3 +53,75 @@ proc pseudo.netlayer {} {
 #****
 proc pseudo.virtlayer {} {
 }
+
+proc updateNodeGUI { node_id old_node_cfg_gui new_node_cfg_gui } {
+	dputs ""
+	dputs "= /UPDATE NODE GUI $node_id START ="
+
+	if { $old_node_cfg_gui == "*" } {
+		set old_node_cfg_gui [cfgGet "nodes" $node_id]
+	}
+
+	dputs "OLD : '$old_node_cfg_gui'"
+	dputs "NEW : '$new_node_cfg_gui'"
+
+	set cfg_diff [dictDiff $old_node_cfg_gui $new_node_cfg_gui]
+	dputs "= cfg_diff: '$cfg_diff'"
+	if { $cfg_diff == "" || [lsort -uniq [dict values $cfg_diff]] == "copy" } {
+		dputs "= NO CHANGE"
+		dputs "= /UPDATE NODE GUI $node_id END ="
+		return $new_node_cfg_gui
+	}
+
+	if { $new_node_cfg_gui == "" } {
+		return $old_node_cfg_gui
+	}
+
+	dict for {key change} $cfg_diff {
+		if { $change == "copy" } {
+			continue
+		}
+
+		dputs "==== $change: '$key'"
+
+		set old_value [_cfgGet $old_node_cfg_gui $key]
+		set new_value [_cfgGet $new_node_cfg_gui $key]
+		if { $change in "changed" } {
+			dputs "==== OLD: '$old_value'"
+		}
+		if { $change in "new changed" } {
+			dputs "==== NEW: '$new_value'"
+		}
+
+		switch -exact $key {
+			"label" {
+				#setNodeLabel $node_id $new_value
+			}
+
+			"canvas" {
+				setNodeCanvas $node_id $new_value
+			}
+
+			"iconcoords" {
+				setNodeCoords $node_id $new_value
+			}
+
+			"labelcoords" {
+				setNodeLabelCoords $node_id $new_value
+			}
+
+			"custom_icon" {
+				setNodeCustomIcon $node_id $new_value
+			}
+
+			default {
+				# do nothing
+			}
+		}
+	}
+
+	dputs "= /UPDATE NODE GUI $node_id END ="
+	dputs ""
+
+	return $new_node_cfg_gui
+}
