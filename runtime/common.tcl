@@ -26,7 +26,7 @@
 # and Technology through the research contract #IP-2003-143.
 #
 
-global vroot_unionfs vroot_linprocfs ifc_dad_disable regular_termination \
+global vroot_unionfs vroot_linprocfs ifc_dad_disable \
 	devfs_number auto_etc_hosts linkJitterConfiguration ipsecSecrets \
 	ipsecConf ipFastForwarding
 
@@ -34,7 +34,6 @@ set linkJitterConfiguration 0
 set vroot_unionfs 1
 set vroot_linprocfs 0
 set ifc_dad_disable 0
-set regular_termination 1
 set devfs_number 46837
 set auto_etc_hosts 0
 set ipFastForwarding 0
@@ -735,8 +734,7 @@ proc pipesClose {} {
 #   The mode can not be changed to exec if imunes operates only in editor mode
 #   (editor_only variable is set).
 #   When changing the mode to edit, all required buttons are enabled (except
-#   for simulation/Terminate button that is disabled) and procedure
-#   vimageCleanup is called.
+#   for simulation/Terminate button that is disabled)
 # INPUTS
 #   * new_oper_mode -- the new operating mode. Can be edit or exec.
 #****
@@ -830,24 +828,18 @@ proc setOperMode { new_oper_mode } {
 		}
 	} else {
 		if { [getFromRunning "oper_mode"] != "edit" } {
-			global regular_termination
-
 			wm protocol . WM_DELETE_WINDOW {
 			}
 
 			set eid [getFromRunning "eid"]
-			if { $regular_termination } {
-				setToExecuteVars "terminate_nodes" [getFromRunning "node_list"]
-				setToExecuteVars "destroy_nodes_ifaces" "*"
-				setToExecuteVars "terminate_links" [getFromRunning "link_list"]
-				setToExecuteVars "unconfigure_links" "*"
-				setToExecuteVars "unconfigure_nodes_ifaces" "*"
-				setToExecuteVars "unconfigure_nodes" "*"
+			setToExecuteVars "terminate_nodes" [getFromRunning "node_list"]
+			setToExecuteVars "destroy_nodes_ifaces" "*"
+			setToExecuteVars "terminate_links" [getFromRunning "link_list"]
+			setToExecuteVars "unconfigure_links" "*"
+			setToExecuteVars "unconfigure_nodes_ifaces" "*"
+			setToExecuteVars "unconfigure_nodes" "*"
 
-				undeployCfg $eid 1
-			} else {
-				vimageCleanup $eid
-			}
+			undeployCfg $eid 1
 
 			pipesCreate
 			killExtProcess "socat.*$eid"

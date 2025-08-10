@@ -395,7 +395,7 @@ if { $execMode == "interactive" } {
 		}
 	} else {
 		set configFile "$runtimeDir/$eid_base/config.imn"
-		if { [file exists $configFile] && $regular_termination } {
+		if { [file exists $configFile] } {
 			set curcfg [newObjectId $cfg_list "cfg"]
 			lappend cfg_list $curcfg
 
@@ -435,8 +435,6 @@ if { $execMode == "interactive" } {
 			setToExecuteVars "unconfigure_nodes" "*"
 
 			undeployCfg $eid_base 1
-		} else {
-			vimageCleanup $eid_base
 		}
 
 		terminate_deleteExperimentFiles $eid_base
