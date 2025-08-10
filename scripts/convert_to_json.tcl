@@ -140,8 +140,16 @@ foreach {option default_value} [concat $option_defaults $gui_option_defaults] {
 	set $option $default_value
 }
 
+set all_modules_list {}
+set runnable_node_types {}
+
+set isOSfreebsd false
+set isOSlinux false
+set isOSwin false
+
 # Set default node type list
-set node_types "lanswitch hub rj45 stpswitch filter packgen ext extnat router host pc nat64"
+set node_types "lanswitch hub rj45 stpswitch filter packgen \
+	router host pc nat64 ext"
 # Set default supported router models
 set supp_router_models "frr quagga static"
 
@@ -154,7 +162,7 @@ foreach file [glob -directory $ROOTDIR/$LIBDIR/config *.tcl] {
 # the placement of the toolbar icons will be altered.
 foreach file $node_types {
 	safeSourceFile "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
-	safeSourceFile "$ROOTDIR/$LIBDIR/gui/$file.tcl"
+	safeSourceFile "$ROOTDIR/$LIBDIR/gui/nodes/$file.tcl"
 }
 
 # additional nodes
