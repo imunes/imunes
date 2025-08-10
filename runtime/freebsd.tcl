@@ -1155,8 +1155,6 @@ proc isNodeNamespaceCreated { node_id } {
 #   * node_id -- node id
 #****
 proc nodePhysIfacesCreate { node_id ifaces } {
-	global ifc_dad_disable
-
 	set eid [getFromRunning "eid"]
 	set jail_id "$eid.$node_id"
 

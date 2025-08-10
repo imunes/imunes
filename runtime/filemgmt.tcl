@@ -414,8 +414,8 @@ proc closeFile {} {
 #   Read config files, the first one found: .imunesrc, $HOME/.imunesrc
 #***
 proc readConfigFile {} {
-	global exec_hosts editor_only
 	global env
+
 	if { [file exists ".imunesrc"] } {
 		source ".imunesrc"
 	} else {

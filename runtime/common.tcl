@@ -739,7 +739,7 @@ proc pipesClose {} {
 #   * new_oper_mode -- the new operating mode. Can be edit or exec.
 #****
 proc setOperMode { new_oper_mode } {
-	global all_modules_list editor_only execMode isOSfreebsd isOSlinux
+	global editor_only isOSfreebsd isOSlinux
 
 	if {
 		! [getFromRunning "cfg_deployed"] &&
@@ -973,8 +973,6 @@ proc readDataFromFile { path } {
 #   * exp -- experiment id
 #****
 proc resumeSelectedExperiment { exp } {
-	global runtimeDir
-
 	set eid [getFromRunning "eid"]
 	if { $eid != "" } {
 		set curr_eid $eid
@@ -1056,6 +1054,7 @@ proc dumpLinksToFile { path } {
 #****
 proc fetchExperimentFolders {} {
 	global runtimeDir
+
 	set exp_list ""
 	set exp_files [glob -nocomplain -directory $runtimeDir -type d *]
 	if { $exp_files != "" } {
