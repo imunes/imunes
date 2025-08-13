@@ -76,6 +76,7 @@ get_explist() {
 				data=""
 			else
 				data=`jq --argjson nonRunning "$non_running" -r '.nodes | to_entries | map(
+					select(.value.type != "pseudo")
 					.key as $id |
 					.value.name +
 					(if $nonRunning | index($id) then "*" else "" end) +
