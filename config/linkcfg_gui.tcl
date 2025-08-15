@@ -192,3 +192,67 @@ proc mergeLink { link_id } {
 
 	return $link_id
 }
+
+proc updateLinkGUI { link_id old_link_cfg_gui new_link_cfg_gui } {
+	dputs ""
+	dputs "= /UPDATE LINK GUI $link_id START ="
+
+	if { $old_link_cfg_gui == "*" } {
+		set old_link_cfg_gui [cfgGet "links" $link_id]
+	}
+
+	dputs "OLD : '$old_link_cfg_gui'"
+	dputs "NEW : '$new_link_cfg_gui'"
+
+	set cfg_diff [dictDiff $old_link_cfg_gui $new_link_cfg_gui]
+	dputs "= cfg_diff: '$cfg_diff'"
+	if { $cfg_diff == "" || [lsort -uniq [dict values $cfg_diff]] == "copy" } {
+		dputs "= NO CHANGE"
+		dputs "= /UPDATE LINK GUI $link_id END ="
+		return $new_link_cfg_gui
+	}
+
+	if { $new_link_cfg_gui == "" } {
+		return $old_link_cfg_gui
+	}
+
+	dict for {key change} $cfg_diff {
+		if { $change == "copy" } {
+			continue
+		}
+
+		dputs "==== $change: '$key'"
+
+		set old_value [_cfgGet $old_link_cfg_gui $key]
+		set new_value [_cfgGet $new_link_cfg_gui $key]
+		if { $change in "changed" } {
+			dputs "==== OLD: '$old_value'"
+		}
+		if { $change in "new changed" } {
+			dputs "==== NEW: '$new_value'"
+		}
+
+		switch -exact $key {
+			"mirror" {
+				setLinkMirror $link_id $new_value
+			}
+
+			"color" {
+				setLinkColor $link_id $new_value
+			}
+
+			"width" {
+				setLinkWidth $link_id $new_value
+			}
+
+			default {
+				# do nothing
+			}
+		}
+	}
+
+	dputs "= /UPDATE LINK GUI $link_id END ="
+	dputs ""
+
+	return $new_link_cfg_gui
+}

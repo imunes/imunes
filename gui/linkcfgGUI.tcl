@@ -98,11 +98,15 @@ proc toggleDirectLink { c link_id } {
 proc link.configGUI { c link_id } {
 	global wi
 	#
-	#guielements - the list of link configuration parameters (except Color parameter)
+	#guielements - the list of link configuration parameters
 	#		(this list is used when calling configGUI_linkConfigApply procedure)
 	#
 	global configelements
+	global link_cfg link_cfg_gui
+
 	set configelements {}
+	set link_cfg [cfgGet "links" $link_id]
+	set link_cfg_gui [cfgGet "links" $link_id]
 
 	configGUI_createConfigPopupWin $c
 	wm title $wi "link configuration"
@@ -114,7 +118,7 @@ proc link.configGUI { c link_id } {
 	configGUI_linkConfig $wi $link_id "Loss" "Loss - Linux (%):"
 	configGUI_linkConfig $wi $link_id "Dup" "Duplicate (%):"
 	configGUI_linkConfig $wi $link_id "Width" "Width:"
-	configGUI_linkColor $wi $link_id
+	configGUI_linkConfig $wi $link_id "Color" "Color:"
 
 	configGUI_buttonsACLink $wi $link_id
 }
@@ -134,20 +138,36 @@ proc configGUI_buttonsACLink { wi link_id } {
 	global badentry configelements
 
 	ttk::frame $wi.buttons -borderwidth 6
+
 	ttk::button $wi.buttons.apply -text "Apply" -command \
-		"configGUI_applyButtonLink $wi $link_id 0"
-	focus $wi.buttons.apply
+		"configGUI_applyButtonLink $wi $link_id 0 0"
+	ttk::button $wi.buttons.applynclose -text "Apply and Close" -command \
+		"configGUI_applyButtonLink $wi $link_id 0 1"
+	set cancel_command [list apply {
+		{ wi } {
+			global badentry link_cfg link_cfg_gui
 
-	ttk::button $wi.buttons.cancel -text "Cancel" -command \
-		"set badentry -1; destroy $wi"
+			set badentry -1
+			set link_cfg ""
+			set link_cfg_gui ""
 
-	pack $wi.buttons.apply -side left -anchor e -expand 1 -pady 2
-	pack $wi.buttons.cancel -side right -anchor w -expand 1 -pady 2
+			destroy $wi
+		}
+	} \
+		$wi
+	]
+	ttk::button $wi.buttons.cancel -text "Cancel" -command $cancel_command
+
+	focus $wi.buttons.applynclose
+
+	pack $wi.buttons.apply -side left -anchor e -expand 1 -pady 2 -padx 1
+	pack $wi.buttons.applynclose -side left -anchor e -expand 1 -pady 2 -padx 1
+	pack $wi.buttons.cancel -side right -anchor w -expand 1 -pady 2 -padx 1
 	pack $wi.buttons -fill both -expand 1 -side bottom
 
 	bind $wi <Key-Return> \
-		"configGUI_applyButtonLink $wi $link_id 0"
-	bind $wi <Key-Escape> "set badentry -1; destroy $wi"
+		"configGUI_applyButtonLink $wi $link_id 0 1"
+	bind $wi <Key-Escape> $cancel_command
 }
 
 #****f* linkcfgGUI.tcl/configGUI_applyButtonLink
@@ -162,23 +182,31 @@ proc configGUI_buttonsACLink { wi link_id } {
 #   * link_id -- link id
 #   * phase --
 #****
-proc configGUI_applyButtonLink { wi link_id phase } {
+proc configGUI_applyButtonLink { wi link_id phase is_close } {
 	global changed badentry
 
-	$wi config -cursor watch
-	update
 	if { $phase == 0 } {
 		set badentry 0
-		focus .
-		after 100 "configGUI_applyButtonLink $wi $link_id 1"
+
+		after 100 "configGUI_applyButtonLink $wi $link_id 1 $is_close"
+		focus $wi
+
 		return
 	} elseif { $badentry } {
-		$wi config -cursor left_ptr
 		return
 	}
 
 	configGUI_linkConfigApply $wi $link_id
-	configGUI_linkColorApply $wi $link_id
+
+	if { ! $badentry && $changed } {
+		global link_cfg link_cfg_gui
+
+		updateLinkGUI $link_id "*" $link_cfg_gui
+		set link_cfg_gui [cfgGet "links" $link_id]
+
+		updateLink $link_id "*" $link_cfg
+		set link_cfg [cfgGet "links" $link_id]
+	}
 
 	if { $changed == 1 && [getFromRunning "oper_mode"] == "exec" } {
 		set eid [getFromRunning "eid"]
@@ -191,7 +219,9 @@ proc configGUI_applyButtonLink { wi link_id phase } {
 		updateUndoLog
 	}
 
-	destroy .popup
+	if { $is_close } {
+		destroy .popup
+	}
 }
 
 #****f* linkcfgGUI.tcl/configGUI_linkFromTo
@@ -206,7 +236,9 @@ proc configGUI_applyButtonLink { wi link_id phase } {
 #   * link_id - link id
 #****
 proc configGUI_linkFromTo { wi link_id } {
-	lassign [getLinkPeers $link_id] node1 node2
+	global link_cfg
+
+	lassign [_getLinkPeers $link_cfg] node1 node2
 
 	ttk::frame $wi.name -borderwidth 6
 	ttk::label $wi.name.txt -text "Link from [getNodeName $node1] to [getNodeName $node2]"
@@ -230,12 +262,14 @@ proc configGUI_linkFromTo { wi link_id } {
 #****
 proc configGUI_linkConfig { wi link_id param label } {
 	global configelements
+	global link_cfg link_cfg_gui
 
+	set gui ""
 	lappend configelements $param
 	if { $param == "Bandwidth" } {
 		set from 0; set to 1000000000000; set inc 1000
 	} elseif { $param == "Delay" } {
-		set from 0; set to 10000000; set inc 5
+		set from 0; set to 10000000; set inc 1000
 	} elseif { $param == "BER" } {
 		set from 0; set to 10000000000000; set inc 1000
 	} elseif { $param == "Loss" } {
@@ -244,6 +278,9 @@ proc configGUI_linkConfig { wi link_id param label } {
 		set from 0; set to 50; set inc 1
 	} elseif { $param == "Width" } {
 		set from 1; set to 8; set inc 1
+		set gui "_gui"
+	} elseif { $param == "Color" } {
+		set gui "_gui"
 	} else {
 		return
 	}
@@ -251,48 +288,41 @@ proc configGUI_linkConfig { wi link_id param label } {
 	set fr [string tolower $param ]
 	ttk::frame $wi.$fr -borderwidth 4
 	ttk::label $wi.$fr.txt -text $label
-	ttk::spinbox $wi.$fr.value -justify right -width 10 \
-		-validate focus -invalidcommand "focusAndFlash %W"
-	set value [getLink$param $link_id]
-	if { $value == "" } {
-		set value 0
+	set value [_getLink$param [set link_cfg${gui}]]
+
+	if { $param == "Color" } {
+		global default_link_color
+
+		set colors "Red Green Blue Yellow Magenta Cyan Black"
+
+		ttk::combobox $wi.$fr.value -justify right -width 11 \
+			-validate focus -invalidcommand "focusAndFlash %W"
+		$wi.$fr.value configure -values $colors
+		if { $value ni $colors } {
+			set value $default_link_color
+		}
+
+		set validate_command "checkLinkColor %P"
+	} else {
+		ttk::spinbox $wi.$fr.value -justify right -width 10 \
+			-validate focus -invalidcommand "focusAndFlash %W"
+		if { $value == "" } {
+			set value 0
+		}
+
+		set validate_command "checkIntRange %P $from $to"
+		$wi.$fr.value configure \
+			-from $from -to $to -increment $inc
 	}
 
 	$wi.$fr.value insert 0 $value
 
 	$wi.$fr.value configure \
-		-validatecommand "checkIntRange %P $from $to" \
-		-from $from -to $to -increment $inc
+		-validatecommand $validate_command
 
 	pack $wi.$fr.txt -side left
 	pack $wi.$fr.value -side right
 	pack $wi.$fr -fill both -expand 1
-}
-
-#****f* linkcfgGUI.tcl/configGUI_linkColor
-# NAME
-#   configGUI_linkColor -- configuration GUI - link color
-# SYNOPSIS
-#  configGUI_linkColor $wi $link_id
-# FUNCTION
-#   Creates module for changing link color.
-# INPUTS
-#   * wi - widget
-#   * link_id - link id
-#****
-proc configGUI_linkColor { wi link_id } {
-	global link_color
-
-	ttk::frame $wi.color -borderwidth 4
-	ttk::label $wi.color.txt -text "Color:"
-
-	set link_color [getLinkColor $link_id]
-	ttk::combobox $wi.color.value -justify right -width 11 -textvariable link_color
-	$wi.color.value configure -values [list Red Green Blue Yellow Magenta Cyan Black]
-
-	pack $wi.color.txt -side left
-	pack $wi.color.value -side right
-	pack $wi.color -fill both -expand 1
 }
 
 #****f* linkcfgGUI.tcl/linkJitterConfigGUI
@@ -511,48 +541,25 @@ proc linkJitterReset { link_id } {
 #   * link_id - link id
 #****
 proc configGUI_linkConfigApply { wi link_id } {
-	global changed configelements
+	global changed configelements link_cfg link_cfg_gui
 
+	set gui_link_elements "Color Width"
 	foreach element $configelements {
 		set value [$wi.[string tolower $element].value get]
 		if { $value == 0 } {
 			set value ""
 		}
 
-		if { $value != [getLink$element $link_id] } {
-			set mirror [getLinkMirror $link_id]
-			setLink$element $link_id $value
-			if { $mirror != "" } {
-				setLink$element $mirror $value
-			}
+		set gui ""
+		if { $element in $gui_link_elements } {
+			set gui "_gui"
+		}
+
+		if { $value != [_getLink$element [set link_cfg$gui]] } {
+			set link_cfg$gui [_setLink$element [set link_cfg$gui] $value]
 
 			set changed 1
 		}
-	}
-}
-
-#****f* linkcfgGUI.tcl/configGUI_linkColorApply
-# NAME
-#   configGUI_linkColorApply-- configuration GUI - link color apply
-# SYNOPSIS
-#  configGUI_linkColorApply $wi $link_id
-# FUNCTION
-#   Saves changes in the module with link color.
-# INPUTS
-#   * wi - widget
-#   * link_id - link id
-#****
-proc configGUI_linkColorApply { wi link_id } {
-	global changed link_color
-
-	set mirror [getLinkMirror $link_id]
-	if { $link_color != [getLinkColor $link_id] } {
-		setLinkColor $link_id $link_color
-		if { $mirror != "" } {
-			setLinkColor $mirror $link_color
-		}
-
-		set changed 1
 	}
 }
 

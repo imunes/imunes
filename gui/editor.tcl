@@ -239,6 +239,31 @@ proc listLANNodes { l2node_id l2peers } {
 	return $l2peers
 }
 
+#****f* editor.tcl/checkLinkColor
+# NAME
+#   checkLinkColor -- check link color
+# SYNOPSIS
+#   set check [checkLinkColor $str]
+# FUNCTION
+#   This procedure checks the input string to see if it matches
+#   one of the available link colors.
+# INPUTS
+#   str -- string to check
+# RESULT
+#   * check -- set to 1 if the str is one of the link colors 0 otherwise.
+#****
+proc checkLinkColor { str } {
+	if { $str == "" } {
+		return 1
+	}
+
+	if { $str ni "Red Green Blue Yellow Magenta Cyan Black" } {
+		return 0
+	}
+
+	return 1
+}
+
 #****f* editor.tcl/checkIntRange
 # NAME
 #   checkIntRange -- check integer range

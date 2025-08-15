@@ -408,3 +408,91 @@ proc linkDirection { node_id iface_id } {
 
 	return $direction
 }
+
+proc updateLink { link_id old_link_cfg new_link_cfg } {
+	dputs ""
+	dputs "= /UPDATE LINK $link_id START ="
+
+	if { $old_link_cfg == "*" } {
+		set old_link_cfg [cfgGet "links" $link_id]
+	}
+
+	dputs "OLD : '$old_link_cfg'"
+	dputs "NEW : '$new_link_cfg'"
+
+	set cfg_diff [dictDiff $old_link_cfg $new_link_cfg]
+	dputs "= cfg_diff: '$cfg_diff'"
+	if { $cfg_diff == "" || [lsort -uniq [dict values $cfg_diff]] == "copy" } {
+		dputs "= NO CHANGE"
+		dputs "= /UPDATE LINK $link_id END ="
+		return $new_link_cfg
+	}
+
+	if { $new_link_cfg == "" } {
+		return $old_link_cfg
+	}
+
+	if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+		setToExecuteVars "terminate_cfg" [cfgGet]
+	}
+
+	dict for {key change} $cfg_diff {
+		if { $change == "copy" } {
+			continue
+		}
+
+		dputs "==== $change: '$key'"
+
+		set old_value [_cfgGet $old_link_cfg $key]
+		set new_value [_cfgGet $new_link_cfg $key]
+		if { $change in "changed" } {
+			dputs "==== OLD: '$old_value'"
+		}
+		if { $change in "new changed" } {
+			dputs "==== NEW: '$new_value'"
+		}
+
+		switch -exact $key {
+			"peers" {
+				setLinkPeers $link_id $new_value
+			}
+
+			"peers_ifaces" {
+				setLinkPeersIfaces $link_id $new_value
+			}
+
+			"bandwidth" {
+				setLinkBandwidth $link_id $new_value
+			}
+
+			"delay" {
+				setLinkDelay $link_id $new_value
+			}
+
+			"ber" {
+				setLinkBER $link_id $new_value
+			}
+
+			"loss" {
+				setLinkLoss $link_id $new_value
+			}
+
+			"duplicate" {
+				setLinkDup $link_id $new_value
+			}
+
+			"events" {
+				setElementEvents $link_id $new_value
+			}
+
+			default {
+				# do nothing
+			}
+		}
+	}
+
+	dputs "= /UPDATE LINK $link_id END ="
+	dputs ""
+
+	return $new_link_cfg
+}
