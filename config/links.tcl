@@ -177,6 +177,8 @@ proc setLinkBandwidth { link_id bandwidth } {
 		set bandwidth ""
 	}
 
+	trigger_linkConfig $link_id
+
 	cfgSet "links" $link_id "bandwidth" $bandwidth
 
 	set mirror_link_id [getLinkMirror $link_id]
@@ -216,6 +218,8 @@ proc setLinkDelay { link_id delay } {
 	if { $delay == 0 } {
 		set delay ""
 	}
+
+	trigger_linkConfig $link_id
 
 	cfgSet "links" $link_id "delay" $delay
 
@@ -257,6 +261,8 @@ proc setLinkJitterUpstream { link_id jitter_upstream } {
 		set jitter_upstream ""
 	}
 
+	trigger_linkConfig $link_id
+
 	cfgSet "links" $link_id "jitter_upstream" $jitter_upstream
 
 	set mirror_link_id [getLinkMirror $link_id]
@@ -297,6 +303,8 @@ proc setLinkJitterModeUpstream { link_id jitter_upstream_mode } {
 		set jitter_upstream_mode ""
 	}
 
+	trigger_linkConfig $link_id
+
 	cfgSet "links" $link_id "jitter_upstream_mode" $jitter_upstream_mode
 
 	set mirror_link_id [getLinkMirror $link_id]
@@ -336,6 +344,8 @@ proc setLinkJitterHoldUpstream { link_id jitter_upstream_hold } {
 	if { $jitter_upstream_hold == 0 } {
 		set jitter_upstream_hold ""
 	}
+
+	trigger_linkConfig $link_id
 
 	cfgSet "links" $link_id "jitter_upstream_hold" $jitter_upstream_hold
 
@@ -378,6 +388,8 @@ proc setLinkJitterDownstream { link_id jitter_downstream } {
 		set jitter_downstream ""
 	}
 
+	trigger_linkConfig $link_id
+
 	cfgSet "links" $link_id "jitter_downstream" $jitter_downstream
 
 	set mirror_link_id [getLinkMirror $link_id]
@@ -417,6 +429,8 @@ proc setLinkJitterModeDownstream { link_id jitter_downstream_mode } {
 	if { $jitter_downstream_mode == 0 } {
 		set jitter_downstream_mode ""
 	}
+
+	trigger_linkConfig $link_id
 
 	cfgSet "links" $link_id "jitter_downstream_mode" $jitter_downstream_mode
 
@@ -458,6 +472,8 @@ proc setLinkJitterHoldDownstream { link_id jitter_downstream_hold } {
 		set jitter_downstream_hold ""
 	}
 
+	trigger_linkConfig $link_id
+
 	cfgSet "links" $link_id "jitter_downstream_hold" $jitter_downstream_hold
 
 	set mirror_link_id [getLinkMirror $link_id]
@@ -497,6 +513,8 @@ proc setLinkBER { link_id ber } {
 	if { $ber == 0 } {
 		set ber ""
 	}
+
+	trigger_linkConfig $link_id
 
 	cfgSet "links" $link_id "ber" $ber
 
@@ -538,6 +556,8 @@ proc setLinkLoss { link_id loss } {
 		set loss ""
 	}
 
+	trigger_linkConfig $link_id
+
 	cfgSet "links" $link_id "loss" $loss
 
 	set mirror_link_id [getLinkMirror $link_id]
@@ -577,6 +597,8 @@ proc setLinkDup { link_id duplicate } {
 	if { $duplicate == 0 } {
 		set duplicate ""
 	}
+
+	trigger_linkConfig $link_id
 
 	cfgSet "links" $link_id "duplicate" $duplicate
 

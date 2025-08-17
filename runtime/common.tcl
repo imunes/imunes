@@ -1049,9 +1049,7 @@ proc toggleAutoExecution {} {
 	setToRunning "auto_execution" [expr $auto_execution ^ 1]
 	if { [getFromRunning "cfg_deployed"] && ! $auto_execution } {
 		# when going from non-auto to auto execution, trigger (un)deployCfg
-		if { [getFromRunning "stop_sched"] } {
-			redeployCfg
-		}
+		redeployCfg
 	} else {
 		setToExecuteVars "terminate_cfg" [cfgGet]
 	}

@@ -605,50 +605,6 @@ proc execDelIfcVlanConfig { eid node_id iface_id } {
 	unsetRunning "${node_id}|${hook_name}_hooks"
 }
 
-#****f* freebsd.tcl/execSetLinkParams
-# NAME
-#   execSetLinkParams -- in exec mode set link parameters
-# SYNOPSIS
-#   execSetLinkParams $eid $link_id
-# FUNCTION
-#   Sets the link parameters during the simulation.
-#   All the parameters are set at the same time.
-# INPUTS
-#   eid -- experiment id
-#   link_id -- link id
-#****
-proc execSetLinkParams { eid link_id } {
-	set bandwidth [expr [getLinkBandwidth $link_id] + 0]
-	set delay [expr [getLinkDelay $link_id] + 0]
-	set ber [expr [getLinkBER $link_id] + 0]
-	set loss [expr [getLinkLoss $link_id] + 0]
-	set dup [expr [getLinkDup $link_id] + 0]
-
-	if { $bandwidth == 0 } {
-		set bandwidth -1
-	}
-	if { $delay == 0 } {
-		set delay -1
-	}
-	if { $ber == 0 } {
-		set ber -1
-	}
-	if { $loss == 0 } {
-		set loss -1
-	}
-	if { $dup == 0 } {
-		set dup -1
-	}
-
-	pipesCreate
-	set cmd "jexec $eid ngctl msg $link_id: setcfg "
-	append cmd "\"{ bandwidth=$bandwidth delay=$delay "
-	append cmd "upstream={ BER=$ber duplicate=$dup } "
-	append cmd "downstream={ BER=$ber duplicate=$dup }}\""
-	pipesExec $cmd ""
-	pipesClose
-}
-
 #****f* freebsd.tcl/execSetLinkJitter
 # NAME
 #   execSetLinkJitter -- in exec mode set link jitter
@@ -1826,6 +1782,23 @@ proc configureLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 	set ber [expr [getLinkBER $link_id] + 0]
 	set loss [expr [getLinkLoss $link_id] + 0]
 	set dup [expr [getLinkDup $link_id] + 0]
+
+	if { $bandwidth == 0 } {
+		set bandwidth -1
+	}
+	if { $delay == 0 } {
+		set delay -1
+	}
+	if { $ber == 0 } {
+		set ber -1
+	}
+	if { $loss == 0 } {
+		set loss -1
+	}
+	if { $dup == 0 } {
+		set dup -1
+	}
+
 	# Link parameters
 	set ngcmds "msg $link_id: setcfg {bandwidth=$bandwidth delay=$delay upstream={BER=$ber duplicate=$dup} downstream={BER=$ber duplicate=$dup}}"
 
@@ -1855,6 +1828,12 @@ proc configureLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 	if  { $linkJitterConfiguration } {
 		execSetLinkJitter $eid $link_id
 	}
+}
+
+proc unconfigureLinkBetween { eid node1_id node2_id iface1_id iface2_id link_id } {
+	set ngcmds "msg $link_id: setcfg {bandwidth=-1 delay=-1 upstream={BER=-1 duplicate=-1} downstream={BER=-1 duplicate=-1}}"
+
+	pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
 }
 
 #****f* freebsd.tcl/destroyLinkBetween

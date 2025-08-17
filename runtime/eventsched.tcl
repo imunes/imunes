@@ -188,23 +188,18 @@ proc evsched {} {
 			switch -exact -- $target {
 				bandwidth {
 					setLinkBandwidth $object $value
-					execSetLinkParams $eid $object
 				}
 				delay {
 					setLinkDelay $object $value
-					execSetLinkParams $eid $object
 				}
 				ber {
 					setLinkBER $object $value
-					execSetLinkParams $eid $object
 				}
 				loss {
 					setLinkLoss $object $value
-					execSetLinkParams $eid $object
 				}
 				duplicate {
 					setLinkDup $object $value
-					execSetLinkParams $eid $object
 				}
 				width {
 					setLinkWidth $object $value
@@ -258,6 +253,8 @@ proc evsched {} {
 	}
 
 	if { $changed == 1 } {
+		redeployCfg
+
 		redrawAll
 	}
 

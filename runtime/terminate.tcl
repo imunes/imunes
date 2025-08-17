@@ -82,6 +82,49 @@ proc terminate_nodesShutdown { eid nodes nodes_count w } {
 	}
 }
 
+proc terminate_linksUnconfigure { eid links links_count w } {
+	global progressbarCount execMode
+
+	set batchStep 0
+	set skipLinks ""
+	foreach link_id $links {
+		displayBatchProgress $batchStep $links_count
+
+		if { $link_id in $skipLinks } {
+			continue
+		}
+
+		lassign [getLinkPeers $link_id] node1_id node2_id
+		lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
+
+		set msg "Unconfiguring link $link_id"
+		if { [getFromRunning "${link_id}_running"] == true } {
+			try {
+				unconfigureLinkBetween $eid $node1_id $node2_id $iface1_id $iface2_id $link_id
+			} on error err {
+				return -code error "Error in 'unconfigureLinkBetween $eid $node1_id $node2_id $iface1_id $iface2_id $link_id': $err"
+			}
+		}
+
+		incr batchStep
+		incr progressbarCount -1
+
+		if { $execMode != "batch" } {
+			statline $msg
+			$w.p configure -value $progressbarCount
+			update
+		}
+	}
+	pipesExec ""
+
+	if { $links_count > 0 } {
+		displayBatchProgress $batchStep $links_count
+		if { $execMode == "batch" } {
+			statline ""
+		}
+	}
+}
+
 proc terminate_linksDestroy { eid links links_count w } {
 	global progressbarCount execMode
 
@@ -399,7 +442,21 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 	}
 	set unconfigure_nodes_count [llength $unconfigure_nodes]
 
-	set maxProgressbasCount [expr {1 + 1*$all_nodes_count + 1*$links_count + 2*$native_nodes_count + 3*$virtualized_nodes_count + 1*$unconfigure_nodes_ifaces_count + 1*$destroy_nodes_ifaces_count + 1*$destroy_nodes_extifaces_count + 1*$unconfigure_nodes_count}]
+	if { $unconfigure_links == "*" } {
+		set unconfigure_links $terminate_links
+		set unconfigure_links_count $links_count
+	} else {
+		set pseudo_links 0
+		foreach link_id $unconfigure_links {
+			if { [getLinkMirror $link_id] != "" } {
+				incr pseudo_links
+			}
+		}
+
+		set unconfigure_links_count [expr [llength $unconfigure_links] - $pseudo_links/2]
+	}
+
+	set maxProgressbasCount [expr {1 + 1*$all_nodes_count + 1*$links_count + 1*$unconfigure_links_count + 2*$native_nodes_count + 3*$virtualized_nodes_count + 1*$unconfigure_nodes_ifaces_count + 1*$destroy_nodes_ifaces_count + 1*$destroy_nodes_extifaces_count + 1*$unconfigure_nodes_count}]
 	set progressbarCount $maxProgressbasCount
 
 	if { $eid == "" } {
@@ -462,6 +519,14 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 		statline "Stopping services for LINKDEST hook..."
 		if { $unconfigure_nodes_count > 0 } {
 			services stop "LINKDEST" "bkg" $unconfigure_nodes
+		}
+
+		statline "Unconfiguring links..."
+		if { $unconfigure_links_count > 0 } {
+			pipesCreate
+			terminate_linksUnconfigure $eid $unconfigure_links $unconfigure_links_count $w
+			statline "Waiting for $unconfigure_links_count link(s) to be unconfigured..."
+			pipesClose
 		}
 
 		statline "Destroying links..."

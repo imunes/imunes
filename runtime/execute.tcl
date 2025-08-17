@@ -544,7 +544,21 @@ proc deployCfg { { execute 0 } } {
 	set error_check_nodes_count [llength $error_check_nodes]
 
 	incr links_count [expr -$pseudo_nodes_count/2]
-	set maxProgressbasCount [expr {2*$all_nodes_count + 1*$native_nodes_count + 4*$virtualized_nodes_count + 2*$links_count + 2*$configure_nodes_count + 2*$create_nodes_ifaces_count + 2*$configure_nodes_ifaces_count + $error_check_nodes_ifaces_count + $error_check_nodes_count}]
+	if { $configure_links == "*" } {
+		set configure_links $instantiate_links
+		set configure_links_count $links_count
+	} else {
+		set pseudo_links 0
+		foreach link_id $configure_links {
+			if { [getLinkMirror $link_id] != "" } {
+				incr pseudo_links
+			}
+		}
+
+		set configure_links_count [expr [llength $configure_links] - $pseudo_links/2]
+	}
+
+	set maxProgressbasCount [expr {2*$all_nodes_count + 1*$native_nodes_count + 4*$virtualized_nodes_count + 1*$links_count + 1*$configure_links_count + 2*$configure_nodes_count + 2*$create_nodes_ifaces_count + 2*$configure_nodes_ifaces_count + $error_check_nodes_ifaces_count + $error_check_nodes_count}]
 
 	set w ""
 	set eid [getFromRunning "eid"]
@@ -667,10 +681,10 @@ proc deployCfg { { execute 0 } } {
 		}
 
 		statline "Configuring links..."
-		if { $links_count > 0 } {
+		if { $configure_links_count > 0 } {
 			pipesCreate
-			execute_linksConfigure $instantiate_links $links_count $w
-			statline "Waiting for $links_count link(s) to be configured..."
+			execute_linksConfigure $configure_links $configure_links_count $w
+			statline "Waiting for $configure_links_count link(s) to be configured..."
 			pipesClose
 		}
 

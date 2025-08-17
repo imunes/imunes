@@ -206,12 +206,10 @@ proc configGUI_applyButtonLink { wi link_id phase is_close } {
 
 		updateLink $link_id "*" $link_cfg
 		set link_cfg [cfgGet "links" $link_id]
-	}
 
-	if { $changed == 1 && [getFromRunning "oper_mode"] == "exec" } {
-		set eid [getFromRunning "eid"]
-		saveRunningConfiguration $eid
-		execSetLinkParams $eid $link_id
+		if { [getFromRunning "stop_sched"] } {
+			redeployCfg
+		}
 	}
 
 	if { $changed == 1 } {

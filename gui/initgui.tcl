@@ -867,9 +867,9 @@ set tmp_command {
 #
 menu .menubar.events -tearoff 0
 .menubar.events add command -label "Start scheduling" -underline 0 \
-	-state normal -command "startEventScheduling"
+	-state normal -command "startEventScheduling ; .menubar.experiment entryconfigure \"Pause execution\" -state disabled"
 .menubar.events add command -label "Stop scheduling" -underline 1 \
-	-state disabled -command "stopEventScheduling"
+	-state disabled -command "stopEventScheduling ; .menubar.experiment entryconfigure \"Pause execution\" -state normal"
 .menubar.events add separator
 .menubar.events add command -label "Event editor" -underline 0 \
 	-command "elementsEventsEditor"

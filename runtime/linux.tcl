@@ -971,11 +971,24 @@ proc configureLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 	set loss [expr [getLinkLoss $link_id] + 0]
 	set dup [expr [getLinkDup $link_id] + 0]
 
-	configureIfcLinkParams $eid $node1_id $iface1_id $bandwidth $delay $ber $loss $dup
-	configureIfcLinkParams $eid $node2_id $iface2_id $bandwidth $delay $ber $loss $dup
-
-	# FIXME: remove this to interface configuration?
 	foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
+		set devname [getIfcName $node_id $iface_id]
+
+		if { [getNodeType $node_id] != "rj45" } {
+			set devname $node_id-$devname
+		}
+
+		set netem_cfg [getNetemConfigLine $bandwidth $delay $loss $dup]
+
+		pipesExec "ip netns exec $eid tc qdisc replace dev $devname root netem $netem_cfg" "hold"
+
+		# XXX: Now on Linux we don't care about queue lengths and we don't limit
+		# maximum data and burst size.
+		# in the future we can use something like this: (based on the qlen
+		# parameter)
+		# set confstring "tbf rate ${bandwidth}bit limit 10mb burst 1540"
+
+		# FIXME: remove this to interface configuration?
 		if { [getNodeType $node_id] == "rj45" } {
 			continue
 		}
@@ -989,6 +1002,18 @@ proc configureLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 		if { $qlen != 1000 } {
 			execSetIfcQLen $eid $node_id $iface_id $qlen
 		}
+	}
+}
+
+proc unconfigureLinkBetween { eid node1_id node2_id iface1_id iface2_id link_id } {
+	foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
+		set devname [getIfcName $node_id $iface_id]
+
+		if { [getNodeType $node_id] != "rj45" } {
+			set devname $node_id-$devname
+		}
+
+		pipesExec "ip netns exec $eid tc qdisc del dev $devname root" "hold"
 	}
 }
 
@@ -1986,70 +2011,13 @@ proc getNetemConfigLine { bandwidth delay loss dup } {
 		delay		"delay Xus"
 		dup			"duplicate X%"
 	}
-	set cmd ""
 
+	set cmd ""
 	foreach { val ctemplate } [array get netem] {
-		if { [set $val] != 0 } {
-			set confline "[lindex [split $ctemplate "X"] 0][set $val][lindex [split $ctemplate "X"] 1]"
-			append cmd " $confline"
-		}
+		append cmd " [lindex [split $ctemplate "X"] 0][set $val][lindex [split $ctemplate "X"] 1]"
 	}
 
 	return $cmd
-}
-
-proc configureIfcLinkParams { eid node_id iface_id bandwidth delay ber loss dup } {
-	set devname [getIfcName $node_id $iface_id]
-
-	if { [getNodeType $node_id] != "rj45" } {
-		set devname $node_id-$devname
-	}
-
-	set netem_cfg [getNetemConfigLine $bandwidth $delay $loss $dup]
-
-	pipesExec "ip netns exec $eid tc qdisc del dev $devname root" "hold"
-	pipesExec "ip netns exec $eid tc qdisc add dev $devname root netem $netem_cfg" "hold"
-
-	# XXX: Now on Linux we don't care about queue lengths and we don't limit
-	# maximum data and burst size.
-	# in the future we can use something like this: (based on the qlen
-	# parameter)
-	# set confstring "tbf rate ${bandwidth}bit limit 10mb burst 1540"
-}
-
-#****f* linux.tcl/execSetLinkParams
-# NAME
-#   execSetLinkParams -- in exec mode set link parameters
-# SYNOPSIS
-#   execSetLinkParams $eid $link_id
-# FUNCTION
-#   Sets the link parameters during the simulation.
-#   All the parameters are set at the same time.
-# INPUTS
-#   eid -- experiment id
-#   link_id -- link id
-#****
-proc execSetLinkParams { eid link_id } {
-	lassign [getLinkPeers $link_id] node1_id node2_id
-	lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
-
-	set mirror_link_id [getLinkMirror $link_id]
-	if { $mirror_link_id != "" } {
-		# pseudo nodes are always peer1
-		set node1_id [lindex [getLinkPeers $mirror_link_id] 1]
-		set iface1_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]
-	}
-
-	set bandwidth [expr [getLinkBandwidth $link_id] + 0]
-	set delay [expr [getLinkDelay $link_id] + 0]
-	set ber [expr [getLinkBER $link_id] + 0]
-	set loss [expr [getLinkLoss $link_id] + 0]
-	set dup [expr [getLinkDup $link_id] + 0]
-
-	pipesCreate
-	configureIfcLinkParams $eid $node1_id $iface1_id $bandwidth $delay $ber $loss $dup
-	configureIfcLinkParams $eid $node2_id $iface2_id $bandwidth $delay $ber $loss $dup
-	pipesClose
 }
 
 proc ipsecFilesToNode { node_id ca_cert local_cert ipsecret_file } {

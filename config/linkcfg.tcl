@@ -181,8 +181,8 @@ proc linkResetConfig { link_id } {
 	setLinkDelay $link_id ""
 	setLinkDup $link_id ""
 
-	if { [getFromRunning "oper_mode"] == "exec" } {
-		execSetLinkParams [getFromRunning "eid"] $link_id
+	if { [getFromRunning "stop_sched"] } {
+		redeployCfg
 	}
 }
 
