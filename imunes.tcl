@@ -426,7 +426,9 @@ if { $execMode == "interactive" } {
 			readRunningVarsFile $eid_base
 			setToRunning "cfg_deployed" true
 
-			setToExecuteVars "terminate_cfg" [cfgGet]
+			if { [getFromExecuteVars "terminate_cfg"] == "" } {
+				setToExecuteVars "terminate_cfg" [cfgGet]
+			}
 			setToExecuteVars "terminate_nodes" [getFromRunning "node_list"]
 			setToExecuteVars "destroy_nodes_ifaces" "*"
 			setToExecuteVars "terminate_links" [getFromRunning "link_list"]
