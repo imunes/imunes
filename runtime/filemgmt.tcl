@@ -211,14 +211,23 @@ proc setWmTitle { fname } {
 #****
 proc openFile {} {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-	global showTree
+	global showTree autorearrange_enabled
 
 	readCfgJson [getFromRunning "current_file"]
 
-	setToRunning_gui "curcanvas" [lindex [getFromRunning_gui "canvas_list"] 0]
+	set canvas_list [getFromRunning_gui "canvas_list"]
+	if { $canvas_list == {} } {
+		newCanvas ""
+		set canvas_list [getFromRunning_gui "canvas_list"]
+
+		set autorearrange_enabled 1
+	}
+	setToRunning_gui "curcanvas" [lindex $canvas_list 0]
+
 	applyOptions
 
 	switchCanvas none
+
 	redrawAll
 
 	setToRunning "oper_mode" "edit"
@@ -234,6 +243,11 @@ proc openFile {} {
 
 	if { $showTree } {
 		refreshTopologyTree
+	}
+
+	if { $autorearrange_enabled } {
+		after 1000 set autorearrange_enabled 0
+		rearrange ""
 	}
 }
 

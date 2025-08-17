@@ -113,7 +113,13 @@ proc redrawAll {} {
 	.panwin.f1.c lower -withtags background
 
 	foreach node_id [getFromRunning "node_list"] {
-		if { [getNodeCanvas $node_id] == $curcanvas } {
+		set node_canvas [getNodeCanvas $node_id]
+		if { $node_canvas == "" } {
+			set node_canvas $curcanvas
+			setNodeCanvas $node_id $curcanvas
+		}
+
+		if { $node_canvas == $curcanvas } {
 			drawNode $node_id
 
 			foreach iface_id [ifcList $node_id] {
@@ -162,6 +168,17 @@ proc drawNode { node_id } {
 	set type [getNodeType $node_id]
 	set zoom [getFromRunning_gui "zoom"]
 	lassign [lmap coord [getNodeCoords $node_id] {expr $coord * $zoom}] x y
+	if { $x == "" || $y == "" } {
+		global ${type}_iconheight
+
+		lassign [getCanvasSize [getFromRunning "curcanvas"]] cx cy
+		set x [expr round(rand()*($cx - $cx/3) + $cx/6)]
+		set y [expr round(rand()*($cy - $cy/3) + $cy/6)]
+		setNodeCoords $node_id "$x $y"
+
+		set dy [expr [set [getNodeType $node_id]\_iconheight]/2 + 11]
+		setNodeLabelCoords $node_id "$x [expr $y + $dy]"
+	}
 
 	.panwin.f1.c delete -withtags "node && $node_id"
 	.panwin.f1.c delete -withtags "nodedisabled && $node_id"
@@ -204,7 +221,13 @@ proc drawNode { node_id } {
 			-font "imnDisabledFont" -state disabled
 	}
 
-	set label_str [getNodeLabel $node_id]
+	if { ! [dict exist [cfgGet "gui" "nodes" $node_id] "label"] } {
+		set label_str [getNodeName $node_id]
+		setNodeLabel $node_id $label_str
+	} else {
+		set label_str [getNodeLabel $node_id]
+	}
+
 	if { [getNodeType $node_id] == "ext" } {
 		set nat_iface [getNodeNATIface $node_id]
 		if { $nat_iface != "UNASSIGNED" } {
@@ -305,6 +328,11 @@ proc drawPseudoNode { node_id } {
 proc drawLink { link_id } {
 	set curcanvas [getFromRunning_gui "curcanvas"]
 	lassign [getLinkPeers_gui $link_id] node1_id node2_id
+	if { $node1_id == "" || $node2_id == "" } {
+		lassign [getLinkPeers $link_id] node1_id node2_id
+		setLinkPeers_gui $link_id "$node1_id $node2_id"
+	}
+
 	if {
 		[getNodeCanvas $node1_id] != $curcanvas &&
 		[getNodeCanvas $node2_id] != $curcanvas
@@ -1422,11 +1450,16 @@ proc rearrange { mode } {
 				set dy [expr {$y - $o_y}]
 				set d [expr {hypot($dx, $dy)}]
 				set d2 [expr {$d * $d}]
-				set p_fx [expr {1000.0 * $dx / ($d2 * $d + 100)}]
-				set p_fy [expr {1000.0 * $dy / ($d2 * $d + 100)}]
-				if { [linksByPeers $node_id $other] != {} } {
-					set p_fx [expr {$p_fx - $dx * $d2 * .0000000005}]
-					set p_fy [expr {$p_fy - $dy * $d2 * .0000000005}]
+				if { $d == 0 } {
+					set p_fx 20
+					set p_fy 20
+				} else {
+					set p_fx [expr {1000.0 * $dx / ($d2 * $d + 100)}]
+					set p_fy [expr {1000.0 * $dy / ($d2 * $d + 100)}]
+					if { [linksByPeers $node_id $other] != {} } {
+						set p_fx [expr {$p_fx - $dx * $d2 * .0000000005}]
+						set p_fy [expr {$p_fy - $dy * $d2 * .0000000005}]
+					}
 				}
 				set fx_t($node_id) [expr {$fx_t($node_id) + $p_fx}]
 				set fy_t($node_id) [expr {$fy_t($node_id) + $p_fy}]
