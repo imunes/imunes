@@ -95,8 +95,11 @@ set forceFlag 0
 set nodecreate_timeout 4
 set ifacesconf_timeout 3
 set nodeconf_timeout 3
+set selected_experiment ""
 
 set options {
+	{a			"Attach to a running experiment"}
+	{attach		"Attach to a running experiment"}
 	{e.arg		"" "Specify experiment ID"}
 	{eid.arg	"" "Specify experiment ID"}
 	{b			"Turn on batch mode"}
@@ -305,6 +308,11 @@ readConfigFile
 #
 
 if { $execMode == "interactive" } {
+	if { $selected_experiment != "" && $selected_experiment ni [getResumableExperiments] } {
+		puts stderr "Experiment with EID '$selected_experiment' not running"
+		exit 1
+	}
+
 	safePackageRequire Tk "To run the IMUNES GUI, Tk must be installed."
 
 	# Node GUI base libraries
@@ -329,10 +337,15 @@ if { $execMode == "interactive" } {
 	}
 
 	newProject
-	if { $argv != "" && [file exists $argv] } {
-		setToRunning "cwd" [pwd]
-		setToRunning "current_file" $argv
-		openFile
+
+	if { $selected_experiment != "" } {
+		resumeAndDestroy
+	} else {
+		if { $argv != "" && [file exists $argv] } {
+			setToRunning "cwd" [pwd]
+			setToRunning "current_file" $argv
+			openFile
+		}
 	}
 
 	updateProjectMenu

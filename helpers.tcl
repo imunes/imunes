@@ -56,7 +56,7 @@ proc safeSourceFile { file } {
 }
 
 proc parseCmdArgs { options usage } {
-	global initMode execMode eid_base debug argv
+	global initMode execMode eid_base debug argv selected_experiment
 	global printVersion prepareFlag forceFlag
 	global nodecreate_timeout ifacesconf_timeout nodeconf_timeout
 
@@ -118,6 +118,15 @@ proc parseCmdArgs { options usage } {
 
 	if { $params(f) || $params(force) } {
 		set forceFlag 1
+	}
+
+	if { $execMode != "batch" && ($params(a) || $params(attach)) } {
+		if { ! [info exists eid_base] } {
+			puts stderr "Experiment ID not given (use -e or -eid)."
+			exit 1
+		}
+
+		set selected_experiment $eid_base
 	}
 
 	if { $params(l) || $params(legacy) } {

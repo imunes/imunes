@@ -1041,7 +1041,7 @@ proc attachToExperimentPopup {} {
 	ttk::button $wi.buttons.cancel -text "Cancel" -command "destroy $ateDialog"
 	pack $wi.buttons.cancel $wi.buttons.resume -side right -expand 1
 
-	bind $ateDialog <Key-Return> { resumeSelectedExperiment $selected_experiment; destroy .attachToExperimentDialog }
+	bind $ateDialog <Key-Return> "resumeAndDestroy"
 	bind $ateDialog <Key-Escape> "destroy $ateDialog"
 }
 

@@ -163,8 +163,7 @@ set rdconfig [list $routerRipEnable $routerRipngEnable $routerOspfEnable $router
 global brguielements
 set brguielements {}
 
-global selected_experiment copypaste_nodes cutNodes iconsrcfile selectedIfc
-set selected_experiment ""
+global copypaste_nodes cutNodes iconsrcfile selectedIfc
 set copypaste_nodes 0
 set cutNodes 0
 set iconsrcfile [lindex [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] 0]
