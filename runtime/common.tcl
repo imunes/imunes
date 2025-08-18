@@ -791,6 +791,7 @@ proc setOperMode { new_oper_mode } {
 		.menubar.experiment entryconfigure "Execute" -state disabled
 		.menubar.experiment entryconfigure "Terminate" -state normal
 		.menubar.experiment entryconfigure "Restart" -state normal
+		.menubar.experiment entryconfigure "Refresh running experiment" -state normal
 		.menubar.edit entryconfigure "Undo" -state disabled
 		.menubar.edit entryconfigure "Redo" -state disabled
 		.panwin.f1.c bind node <Double-1> "spawnShellExec"
@@ -861,6 +862,7 @@ proc setOperMode { new_oper_mode } {
 
 		.menubar.experiment entryconfigure "Terminate" -state disabled
 		.menubar.experiment entryconfigure "Restart" -state disabled
+		.menubar.experiment entryconfigure "Refresh running experiment" -state disabled
 
 		if { [getFromRunning "undolevel"] > 0 } {
 			.menubar.edit entryconfigure "Undo" -state normal
@@ -991,6 +993,66 @@ proc resumeSelectedExperiment { exp } {
 	setToRunning "eid" $exp
 	setToRunning "cfg_deployed" true
 	setOperMode exec
+}
+
+proc refreshRunningExperimentGUI {} {
+	try {
+		refreshRunningExperiment
+	} on ok eid {
+		return $eid
+	} on error err {
+		statline $err
+
+		return ""
+	}
+}
+
+proc refreshRunningExperiment {} {
+	if { ! [getFromRunning "cfg_deployed"] } {
+		return
+	}
+
+	set eid [getFromRunning "eid"]
+
+	setToRunning "current_file" [getExperimentConfigurationFromFile $eid]
+	if { [getFromRunning "current_file"] == "" } {
+		global execMode
+
+		set msg "The experiment with EID $eid has been terminated from outside this IMUNES instance."
+		if { $execMode != "batch" } {
+			after idle { .dialog1.msg configure -wraplength 4i }
+			tk_dialog .dialog1 "IMUNES error" \
+				$msg \
+				info 0 Dismiss
+		}
+
+		setOperMode "edit"
+
+		return -code error $msg
+	}
+
+	openFile
+	readRunningVarsFile $eid
+	setToRunning "cfg_deployed" true
+	setOperMode exec
+	toggleAutoExecutionGUI [getFromRunning "auto_execution"]
+
+	return -code ok $eid
+}
+
+proc toggleAutoExecution {} {
+	set auto_execution [getFromRunning "auto_execution"]
+
+	setToRunning "auto_execution" [expr $auto_execution ^ 1]
+	if { [getFromRunning "cfg_deployed"] && ! $auto_execution } {
+		# when going from non-auto to auto execution, trigger (un)deployCfg
+		undeployCfg
+		deployCfg
+	} else {
+		setToExecuteVars "terminate_cfg" [cfgGet]
+	}
+
+	createRunningVarsFile [getFromRunning "eid"]
 }
 
 #****f* exec.tcl/dumpLinksToFile

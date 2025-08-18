@@ -705,31 +705,35 @@ proc execute_prepareSystem {} {
 	}
 
 	set running_eids [getResumableExperiments]
-	if { $execMode != "batch" } {
-		if { $isOSlinux } {
-			set eid_base [string range $eid_base 0 3]
-		}
+	set eid [getFromRunning "eid"]
+	if { $eid == "" || $eid in $running_eids } {
+		if { $execMode != "batch" } {
+			if { $isOSlinux } {
+				set eid_base [string range $eid_base 0 3]
+			}
 
-		set eid ${eid_base}[string range $::curcfg 3 end]
-		while { $eid in $running_eids } {
-			set eid_base [genExperimentId]
 			set eid ${eid_base}[string range $::curcfg 3 end]
-		}
-	} else {
-		if { $isOSlinux } {
-			set eid_base [string range $eid_base 0 4]
+			while { $eid in $running_eids } {
+				set eid_base [genExperimentId]
+				set eid ${eid_base}[string range $::curcfg 3 end]
+				set running_eids [getResumableExperiments]
+			}
+		} else {
+			if { $isOSlinux } {
+				set eid_base [string range $eid_base 0 4]
+			}
+
+			set eid $eid_base
+			while { $eid in $running_eids } {
+				puts -nonewline stderr "Experiment ID $eid already in use, trying "
+				set eid [genExperimentId]
+				puts stderr "$eid."
+				set running_eids [getResumableExperiments]
+			}
 		}
 
-		set eid $eid_base
-		while { $eid in $running_eids } {
-			puts -nonewline stderr "Experiment ID $eid already in use, trying "
-			set eid [genExperimentId]
-			puts stderr "$eid."
-			set running_eids [getResumableExperiments]
-		}
+		setToRunning "eid" $eid
 	}
-
-	setToRunning "eid" $eid
 
 	loadKernelModules
 	prepareVirtualFS

@@ -1167,6 +1167,10 @@ proc launchBrowser { url } {
 }
 
 proc toggleAutoExecutionGUI { { new_value "" } } {
+	if { $new_value == "" } {
+		toggleAutoExecution
+	}
+
 	for { set index 0 } { $index <= [.menubar.experiment index last] } { incr index } {
 		catch { .menubar.experiment entrycget $index -label } label_str
 		if { $label_str == "Pause execution" } {

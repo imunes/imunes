@@ -30,6 +30,9 @@ proc moveFileFromNode { node_id path ext_path } {
 #****
 proc writeDataToNodeFile { node_id path data } {
 	set node_dir [getNodeDir $node_id]
+	if { ! [file exists $node_dir] } {
+		return
+	}
 
 	writeDataToFile $node_dir/$path $data
 }

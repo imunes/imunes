@@ -40,7 +40,7 @@ proc terminate_deleteExperimentFiles { eid } {
 	global runtimeDir
 
 	set folderName "$runtimeDir/$eid"
-	file delete -force $folderName
+	catch { exec rm -rf $folderName }
 }
 
 proc checkTerminate {} {}

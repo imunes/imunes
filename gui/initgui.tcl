@@ -882,25 +882,13 @@ menu .menubar.experiment -tearoff 0
 	-command "setOperMode edit; setOperMode exec" -state disabled
 .menubar.experiment add separator
 
-set tmp_command {
-	set auto_execution [getFromRunning "auto_execution"]
-
-	setToRunning "auto_execution" [expr $auto_execution ^ 1]
-	if { [getFromRunning "cfg_deployed"] && ! $auto_execution } {
-		# when going from non-auto to auto execution, trigger (un)deployCfg
-		undeployCfg
-		deployCfg
-	} else {
-		setToExecuteVars "terminate_cfg" [cfgGet]
-	}
-
-	toggleAutoExecutionGUI
-}
 .menubar.experiment add command -label "Pause execution" -underline 2 \
-	-command $tmp_command
+	-command "toggleAutoExecutionGUI"
 .menubar.experiment add separator
 .menubar.experiment add command -label "Attach to experiment" -underline 0 \
 	-command "attachToExperimentPopup"
+.menubar.experiment add command -label "Refresh running experiment" -underline 17 \
+	-command "refreshRunningExperimentGUI"
 
 #
 # Help

@@ -69,6 +69,9 @@ proc l2node.nodeDestroy { eid node_id } {
 proc writeDataToNodeFile { node_id path data } {
 	set docker_id "[getFromRunning "eid"].$node_id"
 	catch { exec docker inspect -f "{{.GraphDriver.Data.MergedDir}}" $docker_id } node_dir
+	if { [string match "*No such object:*" $node_dir] } {
+		return
+	}
 
 	writeDataToFile $node_dir/$path $data
 }
@@ -1229,7 +1232,7 @@ proc isNodeErrorIfaces { node_id } {
 
 proc removeNetns { netns } {
 	if { $netns != "" } {
-		exec ip netns del $netns
+		catch { exec ip netns del $netns }
 	}
 }
 
@@ -1247,7 +1250,7 @@ proc terminate_removeExperimentContainer { eid } {
 
 proc terminate_removeExperimentFiles { eid } {
 	set VROOT_BASE [getVrootDir]
-	catch "exec rm -fr $VROOT_BASE/$eid &"
+	catch { exec rm -fr $VROOT_BASE/$eid & }
 }
 
 proc removeNodeContainer { eid node_id } {
