@@ -85,7 +85,7 @@ set file_types {
 proc newProject {} {
 	global curcfg cfg_list
 	global CFG_VERSION
-	global zoom
+	global zoom gui
 
 	set curcfg [newObjectId $cfg_list "cfg"]
 	lappend cfg_list $curcfg
@@ -110,15 +110,19 @@ proc newProject {} {
 	setToRunning "stop_sched" true
 	setToRunning "undolevel" 0
 	setToRunning "redolevel" 0
-	setToRunning_gui "zoom" $zoom
-	setToRunning_gui "canvas_list" {}
-	setToRunning_gui "curcanvas" [newCanvas ""]
+	if { $gui } {
+		setToRunning_gui "zoom" $zoom
+		setToRunning_gui "canvas_list" {}
+		setToRunning_gui "curcanvas" [newCanvas ""]
+	}
 	setToRunning "current_file" ""
 	setToRunning "modified" false
 	saveToUndoLevel 0
 
-	.bottom.oper_mode configure -text "[getFromRunning "oper_mode"] mode"
-	updateProjectMenu
+	if { $gui } {
+		.bottom.oper_mode configure -text "[getFromRunning "oper_mode"] mode"
+		updateProjectMenu
+	}
 	switchProject
 }
 
@@ -160,21 +164,24 @@ proc updateProjectMenu {} {
 #   This procedure is called when a project has been chosen in the file menu.
 #****
 proc switchProject {} {
-	global curcfg showTree
+	global curcfg showTree gui
+
 	if { $curcfg == 0 } {
 		set curcfg "cfg0"
 	}
 
 	setOperMode [getFromRunning "oper_mode"]
-	switchCanvas none
-	redrawAll
-	updateProjectMenu
-	setWmTitle [getFromRunning "current_file"]
-	if { $showTree } {
-		refreshTopologyTree
-	}
+	if { $gui } {
+		switchCanvas none
+		redrawAll
+		updateProjectMenu
+		setWmTitle [getFromRunning "current_file"]
+		if { $showTree } {
+			refreshTopologyTree
+		}
 
-	toggleAutoExecutionGUI [getFromRunning "auto_execution"]
+		toggleAutoExecutionGUI [getFromRunning "auto_execution"]
+	}
 }
 
 #****f* filemgmt.tcl/setWmTitle
@@ -211,24 +218,42 @@ proc setWmTitle { fname } {
 #****
 proc openFile {} {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-	global showTree autorearrange_enabled
+	global showTree autorearrange_enabled gui
 
 	readCfgJson [getFromRunning "current_file"]
 
-	set canvas_list [getFromRunning_gui "canvas_list"]
-	if { $canvas_list == {} } {
-		newCanvas ""
+	if { $gui } {
 		set canvas_list [getFromRunning_gui "canvas_list"]
+		if { $canvas_list == {} } {
+			newCanvas ""
+			set canvas_list [getFromRunning_gui "canvas_list"]
 
-		set autorearrange_enabled 1
+			set autorearrange_enabled 1
+		}
+		setToRunning_gui "curcanvas" [lindex $canvas_list 0]
 	}
-	setToRunning_gui "curcanvas" [lindex $canvas_list 0]
 
 	applyOptions
 
-	switchCanvas none
+	if { $gui } {
+		switchCanvas none
 
-	redrawAll
+		set node_list [getFromRunning "node_list"]
+		foreach gui_node_id [dict keys [cfgGet "gui" "nodes"]] {
+			if { ! [isPseudoNode $gui_node_id] && $gui_node_id ni $node_list } {
+				cfgUnset "gui" "nodes" $gui_node_id
+			}
+		}
+
+		set link_list [getFromRunning "link_list"]
+		foreach gui_link_id [dict keys [cfgGet "gui" "links"]] {
+			if { ! [isPseudoLink $gui_link_id] && $gui_link_id ni $link_list } {
+				cfgUnset "gui" "links" $gui_link_id
+			}
+		}
+
+		redrawAll
+	}
 
 	setToRunning "oper_mode" "edit"
 	setToRunning "cfg_deployed" false
@@ -236,18 +261,21 @@ proc openFile {} {
 	setToRunning "undolevel" 0
 	setToRunning "redolevel" 0
 	setToRunning "modified" false
-	saveToUndoLevel 0
-	setActiveToolGroup select
-	updateProjectMenu
-	setWmTitle [getFromRunning "current_file"]
 
-	if { $showTree } {
-		refreshTopologyTree
-	}
+	if { $gui } {
+		saveToUndoLevel 0
+		setActiveToolGroup select
+		updateProjectMenu
+		setWmTitle [getFromRunning "current_file"]
 
-	if { $autorearrange_enabled } {
-		after 1000 set autorearrange_enabled 0
-		rearrange ""
+		if { $showTree } {
+			refreshTopologyTree
+		}
+
+		if { $autorearrange_enabled } {
+			after 1000 set autorearrange_enabled 0
+			rearrange ""
+		}
 	}
 }
 
@@ -412,9 +440,9 @@ proc fileSaveAsDialogBox {} {
 #   Closes the current file.
 #****
 proc closeFile {} {
-	global cfg_list curcfg
+	global cfg_list curcfg gui
 
-	if { [checkAndPromptSave $curcfg] != 0 } {
+	if { $gui && [checkAndPromptSave $curcfg] != 0 } {
 		return
 	}
 
@@ -429,17 +457,21 @@ proc closeFile {} {
 		}
 		set curcfg [lindex $cfg_list $idx]
 
-		setToRunning_gui "curcanvas" [lindex [getFromRunning_gui "canvas_list"] 0]
-		switchCanvas none
-		setToRunning "undolevel" 0
-		setToRunning "redolevel" 0
-		saveToUndoLevel 0
+		if { $gui } {
+			setToRunning_gui "curcanvas" [lindex [getFromRunning_gui "canvas_list"] 0]
+			switchCanvas none
+			setToRunning "undolevel" 0
+			setToRunning "redolevel" 0
+			saveToUndoLevel 0
+		}
 	} else {
 		newProject
 	}
 
-	setActiveToolGroup select
-	updateProjectMenu
+	if { $gui } {
+		setActiveToolGroup select
+		updateProjectMenu
+	}
 	switchProject
 }
 

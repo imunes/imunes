@@ -96,6 +96,7 @@ set nodecreate_timeout 4
 set ifacesconf_timeout 3
 set nodeconf_timeout 3
 set selected_experiment ""
+set gui 1
 
 set options {
 	{a			"Attach to a running experiment"}
@@ -104,6 +105,8 @@ set options {
 	{eid.arg	"" "Specify experiment ID"}
 	{b			"Turn on batch mode"}
 	{batch		"Turn on batch mode"}
+	{c.secret	"Run in CLI mode"}
+	{cli.secret	"Run in CLI mode"}
 	{d.secret	"Turn on debug mode"}
 	{p			"Prepare virtual root file system"}
 	{prepare	"Prepare virtual root file system"}
@@ -325,33 +328,41 @@ if { $execMode == "interactive" } {
 		exit 1
 	}
 
-	safePackageRequire Tk "To run the IMUNES GUI, Tk must be installed."
+	if { $gui } {
+		safePackageRequire Tk "To run the IMUNES GUI, Tk must be installed."
 
-	# Node GUI base libraries
-	foreach node_type $node_types {
-		safeSourceFile "$ROOTDIR/$LIBDIR/gui/nodes/$node_type.tcl"
-	}
+		# Node GUI base libraries
+		foreach node_type $node_types {
+			safeSourceFile "$ROOTDIR/$LIBDIR/gui/nodes/$node_type.tcl"
+		}
 
-	# Node-specific GUI configuration libraries
-	foreach file_path [glob -nocomplain -directory $ROOTDIR/$LIBDIR/gui/nodes/config *.tcl] {
-		safeSourceFile $file_path
-	}
-
-	set skip_files "theme.tcl initgui.tcl topogen.tcl debug.tcl"
-	foreach file_path [glob -directory $ROOTDIR/$LIBDIR/gui *.tcl] {
-		if { [file tail $file_path] ni $skip_files } {
+		# Node-specific GUI configuration libraries
+		foreach file_path [glob -nocomplain -directory $ROOTDIR/$LIBDIR/gui/nodes/config *.tcl] {
 			safeSourceFile $file_path
+		}
+
+		set skip_files "theme.tcl initgui.tcl topogen.tcl debug.tcl"
+		foreach file_path [glob -directory $ROOTDIR/$LIBDIR/gui *.tcl] {
+			if { [file tail $file_path] ni $skip_files } {
+				safeSourceFile $file_path
+			}
+		}
+
+		foreach skip_file $skip_files {
+			safeSourceFile "$ROOTDIR/$LIBDIR/gui/$skip_file"
 		}
 	}
 
-	foreach skip_file $skip_files {
-		safeSourceFile "$ROOTDIR/$LIBDIR/gui/$skip_file"
-	}
+	safeSourceFile "$ROOTDIR/$LIBDIR/gui/debug.tcl"
 
 	newProject
 
 	if { $selected_experiment != "" } {
-		resumeAndDestroy
+		if { $gui } {
+			resumeAndDestroy
+		} else {
+			resumeSelectedExperiment $selected_experiment
+		}
 	} else {
 		if { $argv != "" && [file exists $argv] } {
 			setToRunning "cwd" [pwd]
@@ -360,11 +371,30 @@ if { $execMode == "interactive" } {
 		}
 	}
 
-	updateProjectMenu
-	# Fire up the animation loop
-	animate
-	# Event scheduler - should be started / stopped on per-experiment base?
-	#evsched
+	if { $gui } {
+		updateProjectMenu
+		# Fire up the animation loop
+		animate
+		# Event scheduler - should be started / stopped on per-experiment base?
+		#evsched
+	} else {
+		puts ""
+		puts "*** WARNING: This is an experimental feature. Proceed with caution! ***"
+		puts ""
+		puts -nonewline "> "
+		flush stdout
+		while { [gets stdin line] >= 0 } {
+			try {
+				eval {*}$line
+			} on ok retv {
+				puts "OK: '$retv'"
+			} on error retv {
+				puts "ERROR: '$retv'"
+			}
+			puts -nonewline "> "
+			flush stdout
+		}
+	}
 } else {
 	if { $argv != "" } {
 		if { ! [file exists $argv] } {

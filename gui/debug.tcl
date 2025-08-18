@@ -1,10 +1,10 @@
-global debug execMode
+global debug execMode gui
 
 if { ! $debug } {
 	return
 }
 
-if { $execMode == "interactive" } {
+if { $gui && $execMode == "interactive" } {
 	bind . <F6> reloadSources
 
 	if { [.menubar.tools entrycget last -label] != "Debugger" } {

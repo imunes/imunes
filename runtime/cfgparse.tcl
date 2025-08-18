@@ -56,7 +56,7 @@ proc loadCfgLegacy { cfg } {
 	global show_background_image show_grid show_annotations
 	global icon_size
 	global auto_etc_hosts
-	global execMode all_modules_list
+	global execMode all_modules_list gui
 
 	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
 	upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
@@ -1013,7 +1013,7 @@ proc loadCfgLegacy { cfg } {
 			! [string match "router.*" $node_type]
 		} {
 			set msg "Unknown node type: '$node_type'."
-			if { $execMode == "batch" } {
+			if { ! $gui || $execMode == "batch" } {
 				statline $msg
 			} else {
 				tk_dialog .dialog1 "IMUNES warning" \
@@ -1180,7 +1180,7 @@ proc newObjectId { elem_list prefix } {
 
 proc loadCfgJson { json_cfg } {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-	global all_modules_list
+	global all_modules_list gui execMode
 
 	set dict_cfg [json::json2dict $json_cfg]
 
@@ -1205,10 +1205,8 @@ proc loadCfgJson { json_cfg } {
 		}
 
 		if { $node_type ni [concat $all_modules_list "pseudo"] } {
-			global execMode
-
 			set msg "Unknown node type: '$node_type'."
-			if { $execMode == "batch" } {
+			if { ! $gui || $execMode == "batch" } {
 				statline $msg
 
 				exit
@@ -1255,11 +1253,17 @@ proc loadCfgJson { json_cfg } {
 		setToRunning "${link_id}_running" false
 	}
 
+	if { ! $gui && $execMode != "batch" } {
+		set tmp [getFromRunning "modified"]
+		cfgUnset "gui"
+		setToRunning "modified" $tmp
+	}
+
 	return $dict_cfg
 }
 
 proc handleVersionMismatch { cfg_version file_name } {
-	global CFG_VERSION execMode
+	global CFG_VERSION execMode gui
 	global selected_experiment
 
 	set msg ""
@@ -1323,7 +1327,7 @@ proc handleVersionMismatch { cfg_version file_name } {
 		return
 	}
 
-	if { $execMode == "batch" } {
+	if { ! $gui || $execMode == "batch" } {
 		puts $msg
 	} else {
 		after idle {.dialog1.msg configure -wraplength 6i}
@@ -1334,8 +1338,8 @@ proc handleVersionMismatch { cfg_version file_name } {
 }
 
 proc jsonMigration { from_version to_version } {
-	global option_defaults gui_option_defaults
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+	global gui_option_defaults gui execMode
 
 	# TODO: a way to migrate across versions
 	if { "${from_version}${to_version}" == "12" } {
@@ -1419,6 +1423,12 @@ proc jsonMigration { from_version to_version } {
 		applyOptions
 
 		setOption "version" $to_version
+	}
+
+	if { ! $gui && $execMode != "batch" } {
+		set tmp [getFromRunning "modified"]
+		cfgUnset "gui"
+		setToRunning "modified" $tmp
 	}
 }
 
@@ -1797,11 +1807,15 @@ proc saveToUndoLevel { undolevel { value "" } } {
 	upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
+	global gui
+
 	if { $value == "" } {
 		set value $dict_cfg
 		dict unset value "gui"
 
-		set value_gui [dict get $dict_cfg "gui"]
+		if { $gui } {
+			set value_gui [dict get $dict_cfg "gui"]
+		}
 	}
 
 	foreach list_var "node_list link_list mac_used_list ipv4_used_list ipv6_used_list" {
@@ -1809,10 +1823,12 @@ proc saveToUndoLevel { undolevel { value "" } } {
 	}
 	set dict_run [dictSet $dict_run "undolog" $undolevel "config" $value]
 
-	foreach list_var "canvas_list annotation_list image_list" {
-		set dict_run_gui [dictSet $dict_run_gui "undolog" $undolevel $list_var [getFromRunning_gui $list_var]]
+	if { $gui } {
+		foreach list_var "canvas_list annotation_list image_list" {
+			set dict_run_gui [dictSet $dict_run_gui "undolog" $undolevel $list_var [getFromRunning_gui $list_var]]
+		}
+		set dict_run_gui [dictSet $dict_run_gui "undolog" $undolevel "config" $value_gui]
 	}
-	set dict_run_gui [dictSet $dict_run_gui "undolog" $undolevel "config" $value_gui]
 
 	return [concat $dict_run $dict_run_gui]
 }
