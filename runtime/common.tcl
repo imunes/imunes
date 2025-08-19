@@ -1104,30 +1104,7 @@ proc dumpLinksToFile { path } {
 	writeDataToFile $path $data
 }
 
-#****f* exec.tcl/fetchExperimentFolders
-# NAME
-#   fetchExperimentFolders -- fetch experiment folders
-# SYNOPSIS
-#   fetchExperimentFolders
-# FUNCTION
-#   Returns folders of all running experiments as a list.
-# RESULT
-#   * exp_list -- experiment folder list
-#****
-proc fetchExperimentFolders {} {
-	global runtimeDir
-
-	set exp_list ""
-	set exp_files [glob -nocomplain -directory $runtimeDir -type d *]
-	if { $exp_files != "" } {
-		foreach file $exp_files {
-			lappend exp_list [file tail $file]
-		}
-	}
-	return $exp_list
-}
-
-#****f* exec.tcl/getResumableExperiments
+#****f* common.tcl/getResumableExperiments
 # NAME
 #   getResumableExperiments -- get resumable experiments
 # SYNOPSIS
@@ -1138,14 +1115,16 @@ proc fetchExperimentFolders {} {
 #   * exp_list -- experiment id list
 #****
 proc getResumableExperiments {} {
-	set exp_list ""
-	set exp_folders [fetchExperimentFolders]
-	foreach exp [fetchRunningExperiments] {
-		if { $exp in $exp_folders } {
-			lappend exp_list $exp
-		}
+	global runtimeDir
+
+	set exp_list {}
+	catch { exec find "$runtimeDir" -mindepth 1 -maxdepth 1 -print } exp_paths
+	if { $exp_paths != "" } {
+		set exp_list [lmap exp_path $exp_paths { file tail $exp_path }]
 	}
+
 	return $exp_list
+
 }
 
 #****f* exec.tcl/getExperimentTimestampFromFile

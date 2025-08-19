@@ -982,7 +982,8 @@ proc attachToExperimentPopup {} {
 	$tree column type -width 200 -stretch 0 -minwidth 90
 	focus $tree
 
-	foreach exp [getResumableExperiments] {
+	set exp_list [getResumableExperiments]
+	foreach exp $exp_list {
 		set timestamp [getExperimentTimestampFromFile $exp]
 		$tree insert {} end \
 			-id $exp \
@@ -1004,7 +1005,7 @@ proc attachToExperimentPopup {} {
 		}
 	}
 
-	foreach exp [getResumableExperiments] {
+	foreach exp $exp_list {
 		set tmp_command [list apply $set_selected_experiment_command \
 			$prevcan \
 			$exp
@@ -1026,7 +1027,7 @@ proc attachToExperimentPopup {} {
 		$tree tag bind $exp <Double-1> "resumeAndDestroy"
 	}
 
-	set first [lindex [getResumableExperiments] 0]
+	set first [lindex $exp_list 0]
 	$tree selection set $first
 	$tree focus $first
 	set selected_experiment $first

@@ -259,22 +259,6 @@ proc spawnShell { node_id cmd } {
 		-e "jexec $jail_id $cmd" &
 }
 
-#****f* freebsd.tcl/fetchRunningExperiments
-# NAME
-#   fetchRunningExperiments -- fetch running experiments
-# SYNOPSIS
-#   fetchRunningExperiments
-# FUNCTION
-#   Returns IDs of all running experiments as a list.
-# RESULT
-#   * exp_list -- experiment id list
-#****
-proc fetchRunningExperiments {} {
-	catch { exec jls -n name | cut -d "=" -f 2 | cut -d "." -f 1 | sort | uniq } exp_list
-	set exp_list [split $exp_list "\n"]
-	return $exp_list
-}
-
 #****f* freebsd.tcl/allSnapshotsAvailable
 # NAME
 #   allSnapshotsAvailable -- all snapshots available

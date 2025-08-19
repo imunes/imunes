@@ -299,23 +299,6 @@ proc spawnShell { node_id cmd } {
 		-e "docker exec -it $docker_id $cmd" 2> /dev/null &
 }
 
-#****f* linux.tcl/fetchRunningExperiments
-# NAME
-#   fetchRunningExperiments -- fetch running experiments
-# SYNOPSIS
-#   fetchRunningExperiments
-# FUNCTION
-#   Returns IDs of all running experiments as a list.
-# RESULT
-#   * exp_list -- experiment id list
-#****
-proc fetchRunningExperiments {} {
-	catch { exec himage -l | cut -d " " -f 1 } exp_list
-	set exp_list [split $exp_list "\n"]
-
-	return "$exp_list"
-}
-
 #****f* linux.tcl/allSnapshotsAvailable
 # NAME
 #   allSnapshotsAvailable -- all snapshots available
