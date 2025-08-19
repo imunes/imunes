@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=IMUNES
+Comment=Integrated Multiprotocol Network Emulator/Simulator
+Exec=imunes
+Icon=ICONSDIR/imunes_icon128.png
+Terminal=false
+StartupNotify=false
+Categories=Network;

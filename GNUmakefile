@@ -101,6 +101,9 @@ endif
 	    chmod 755 $(IMUNESDIR)/$${file}; \
 	done ;
 
+	sed -e "s,ICONSDIR,$(ICONSDIR)," \
+		.desktop >> $(IMUNESDIR)/imunes.desktop
+
 	mkdir -p $(CONFIGDIR)
 	cp $(CONFIGFILES) $(CONFIGDIR)
 
