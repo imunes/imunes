@@ -1628,7 +1628,7 @@ proc removeNodeFS { eid node_id } {
 		pipesExec "umount -f $VROOT_RUNTIME" "hold"
 		# 2nd: nullfs RO loopback
 		pipesExec "umount -f $VROOT_RUNTIME" "hold"
-		pipesExec "rmdir $VROOT_RUNTIME" "hold"
+		pipesExec "rm -rf $VROOT_RUNTIME" "hold"
 		# 3rd: node unionfs upper
 		pipesExec "rm -rf $VROOT_OVERLAY" "hold"
 	}

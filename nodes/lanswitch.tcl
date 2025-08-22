@@ -354,3 +354,6 @@ proc $MODULE.nodeShutdown { eid node_id } {
 proc $MODULE.nodeDestroy { eid node_id } {
 	l2node.nodeDestroy $eid $node_id
 }
+
+proc $MODULE.nodeDestroyFS { eid node_id } {
+}

@@ -156,6 +156,42 @@ proc terminate_nodesDestroy { eid nodes nodes_count w } {
 			} on error err {
 				return -code error "Error in '[getNodeType $node_id].nodeDestroy $eid $node_id': $err"
 			}
+		}
+		pipesExec ""
+
+		incr batchStep
+		incr progressbarCount -1
+
+		if { $execMode != "batch" } {
+			statline "Destroying node [getNodeName $node_id]"
+			$w.p configure -value $progressbarCount
+			update
+		}
+	}
+
+	if { $nodes_count > 0 } {
+		displayBatchProgress $batchStep $nodes_count
+		if { $execMode == "batch" } {
+			statline ""
+		}
+	}
+}
+
+proc terminate_nodesDestroyFS { eid nodes nodes_count w } {
+	global progressbarCount execMode
+
+	set batchStep 0
+	foreach node_id $nodes {
+		displayBatchProgress $batchStep $nodes_count
+
+		if {
+			[getFromRunning "${node_id}_running"] in "true delete"
+		} {
+			try {
+				[getNodeType $node_id].nodeDestroyFS $eid $node_id
+			} on error err {
+				return -code error "Error in '[getNodeType $node_id].nodeDestroyFS $eid $node_id': $err"
+			}
 
 			if { [getFromRunning "${node_id}_running"] == "delete" } {
 				unsetRunning "${node_id}_running"
@@ -169,7 +205,7 @@ proc terminate_nodesDestroy { eid nodes nodes_count w } {
 		incr progressbarCount -1
 
 		if { $execMode != "batch" } {
-			statline "Destroying node [getNodeName $node_id]"
+			statline "Destroying node [getNodeName $node_id] (FS)"
 			$w.p configure -value $progressbarCount
 			update
 		}
@@ -363,7 +399,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 	}
 	set unconfigure_nodes_count [llength $unconfigure_nodes]
 
-	set maxProgressbasCount [expr {1 + 1*$all_nodes_count + 1*$links_count + 1*$native_nodes_count + 2*$virtualized_nodes_count + 1*$unconfigure_nodes_ifaces_count + 1*$destroy_nodes_ifaces_count + 1*$destroy_nodes_extifaces_count + 1*$unconfigure_nodes_count}]
+	set maxProgressbasCount [expr {1 + 1*$all_nodes_count + 1*$links_count + 2*$native_nodes_count + 3*$virtualized_nodes_count + 1*$unconfigure_nodes_ifaces_count + 1*$destroy_nodes_ifaces_count + 1*$destroy_nodes_extifaces_count + 1*$unconfigure_nodes_count}]
 	set progressbarCount $maxProgressbasCount
 
 	if { $eid == "" } {
@@ -442,6 +478,12 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 		statline "Waiting for $native_nodes_count NATIVE node(s) to be destroyed..."
 		pipesClose
 
+		statline "Destroying NATIVE nodes (FS)..."
+		pipesCreate
+		terminate_nodesDestroyFS $eid $native_nodes $native_nodes_count $w
+		statline "Waiting for $native_nodes_count NATIVE node(s) to be destroyed (FS)..."
+		pipesClose
+
 		statline "Checking for hanging TCP connections on VIRTUALIZED node(s)..."
 		pipesCreate
 		timeoutPatch $eid $virtualized_nodes $virtualized_nodes_count $w
@@ -455,6 +497,12 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 		pipesCreate
 		terminate_nodesDestroy $eid $virtualized_nodes $virtualized_nodes_count $w
 		statline "Waiting for $virtualized_nodes_count VIRTUALIZED node(s) to be destroyed..."
+		pipesClose
+
+		statline "Destroying VIRTUALIZED nodes (FS)..."
+		pipesCreate
+		terminate_nodesDestroyFS $eid $virtualized_nodes $virtualized_nodes_count $w
+		statline "Waiting for $virtualized_nodes_count VIRTUALIZED node(s) to be destroyed (FS)..."
 		pipesClose
 
 		if { $terminate } {

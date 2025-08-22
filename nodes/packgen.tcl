@@ -315,3 +315,6 @@ proc $MODULE.nodeShutdown { eid node_id } {
 proc $MODULE.nodeDestroy { eid node_id } {
 	pipesExec "jexec $eid ngctl msg $node_id: shutdown" "hold"
 }
+
+proc $MODULE.nodeDestroyFS { eid node_id } {
+}

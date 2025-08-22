@@ -341,3 +341,6 @@ proc $MODULE.nodeShutdown { eid node_id } {
 proc $MODULE.nodeDestroy { eid node_id } {
 	setToRunning "${node_id}_running" false
 }
+
+proc $MODULE.nodeDestroyFS { eid node_id } {
+}

@@ -464,6 +464,9 @@ proc $MODULE.nodeShutdown { eid node_id } {
 proc $MODULE.nodeDestroy { eid node_id } {
 	destroyNodeVirtIfcs $eid $node_id
 	removeNodeContainer $eid $node_id
+}
+
+proc $MODULE.nodeDestroyFS { eid node_id } {
 	destroyNamespace $eid-$node_id
 	removeNodeFS $eid $node_id
 }

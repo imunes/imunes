@@ -104,6 +104,9 @@ proc $MODULE.nodeDestroy { eid node_id } {
 	catch { exec jexec $eid ngctl msg $node_id: shutdown }
 }
 
+proc $MODULE.nodeDestroyFS { eid node_id } {
+}
+
 proc $MODULE.nghook { eid node_id iface_id } {
 	set ifunit [string range $iface_id 1 end]
 	return [list $eid\.$node_id link$ifunit]
