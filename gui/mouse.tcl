@@ -1943,7 +1943,7 @@ proc button1-release { c x y } {
 			# only nodes are snapped to grid, annotations are not
 			if {
 				$autorearrange_enabled == 0 &&
-				[$c find withtag "node && $node_id"] != "" 
+				[$c find withtag "node && $node_id"] != ""
 			} {
 				set dx [expr {(int($x / $grid + 0.5) * $grid - $x) * $zoom}]
 				set dy [expr {(int($y / $grid + 0.5) * $grid - $y) * $zoom}]

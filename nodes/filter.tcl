@@ -180,7 +180,7 @@ proc $MODULE.nghook { eid node_id iface } {
 ################################################################################
 
 proc $MODULE.prepareSystem {} {
-	catch { exec kldload ng_patmat }
+	catch { rexec kldload ng_patmat }
 }
 
 #****f* filter.tcl/filter.nodeCreate

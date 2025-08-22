@@ -1451,15 +1451,18 @@ proc readCfgJson { fname } {
 	return $dict_cfg
 }
 
-proc saveCfgJson { fname } {
+proc saveCfgJson { fname { no_write "" } } {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
 	saveOptions
 
 	set json_cfg [createJson "dictionary" $dict_cfg]
-	set fd [open $fname w+]
-	puts $fd $json_cfg
-	close $fd
+
+	if { $no_write == "" } {
+		set fd [open $fname w+]
+		puts $fd $json_cfg
+		close $fd
+	}
 
 	return $json_cfg
 }

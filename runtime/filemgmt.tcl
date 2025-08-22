@@ -196,7 +196,7 @@ proc switchProject {} {
 #   * fname -- title
 #****
 proc setWmTitle { fname } {
-	global curcfg baseTitle imunesVersion imunesAdditions
+	global remote curcfg baseTitle imunesVersion imunesAdditions
 
 	if { $fname == "" } {
 		set fname "untitled[string range $curcfg 3 end]"
@@ -206,7 +206,20 @@ proc setWmTitle { fname } {
 	if { [getFromRunning "modified"] } {
 		set modified " *"
 	}
-	wm title . "$baseTitle - $fname$modified"
+
+	set remote_str ""
+	if { $remote != "" } {
+		global isOSfreebsd isOSlinux
+
+		if { $isOSfreebsd } {
+			set os "FreeBSD"
+		} elseif { $isOSlinux } {
+			set os "Linux"
+		}
+
+		set remote_str "remote $os host '$remote' - "
+	}
+	wm title . "$baseTitle - $remote_str$fname$modified"
 }
 
 #****f* filemgmt.tcl/openFile
@@ -307,7 +320,9 @@ proc saveOptions {} {
 	}
 
 	if { [cfgGet "gui" "options"] == "" } {
+		set tmp [getFromRunning "modified"]
 		cfgUnset "gui" "options"
+		setToRunning "modified" $tmp
 	}
 
 	if { $running_zoom == "" } {

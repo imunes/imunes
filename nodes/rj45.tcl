@@ -171,7 +171,7 @@ proc $MODULE.nghook { eid node_id iface_id } {
 #   Loads ng_ether into the kernel.
 #****
 proc $MODULE.prepareSystem {} {
-	catch { exec kldload ng_ether }
+	catch { rexec kldload ng_ether }
 }
 
 #****f* rj45.tcl/rj45.nodeCreate
