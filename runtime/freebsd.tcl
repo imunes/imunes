@@ -228,12 +228,16 @@ proc startTcpdumpOnNodeIfc { node_id ifc } {
 #   * shells -- list of shells.
 #   * node_id -- node id of the node for which the check is performed.
 #****
-proc existingShells { shells node_id } {
+proc existingShells { shells node_id { first_only "" } } {
 	set cmd "jexec [getFromRunning "eid"].$node_id which $shells"
 
-	set err [catch { eval exec $cmd } res]
-	if  { $err } {
+	set err [catch { exec {*}$cmd } res]
+	if { $err } {
 		return ""
+	}
+
+	if { $first_only != "" } {
+		return [lindex $res 0]
 	}
 
 	return $res

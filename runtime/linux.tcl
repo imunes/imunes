@@ -256,12 +256,16 @@ proc startTcpdumpOnNodeIfc { node_id iface_name } {
 #   * shells -- list of shells.
 #   * node_id -- node id of the node for which the check is performed.
 #****
-proc existingShells { shells node_id } {
+proc existingShells { shells node_id { first_only "" } } {
 	set cmds "retval=\"\"\n"
 	append cmds "\n"
-	append cmds "for s in \"$shells\"; do\n"
+	append cmds "for s in $shells; do\n"
 	append cmds "	x=\$(which \$s 2> /dev/null)\n"
-	append cmds "	test -n \"\$x\" && retval=\"\$retval \$x\"\n"
+	append cmds "	test -n \"\$x\" && retval=\"\$retval \$x\""
+	if { $first_only != "" } {
+		append cmds "&& break"
+	}
+	append cmds "\n"
 	append cmds "done\n"
 	append cmds "echo \"\$retval\"\n"
 

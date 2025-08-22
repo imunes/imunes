@@ -916,7 +916,7 @@ proc spawnShellExec {} {
 	} {
 		nodeConfigGUI .panwin.f1.c $node_id
 	} else {
-		set cmd [lindex [existingShells [[getNodeType $node_id].shellcmds] $node_id] 0]
+		set cmd [existingShells [[getNodeType $node_id].shellcmds] $node_id "first_only"]
 		if { $cmd == "" } {
 			return
 		}
