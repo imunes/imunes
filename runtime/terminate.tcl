@@ -431,79 +431,107 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 
 	try {
 		statline "Stopping services for NODESTOP hook..."
-		services stop "NODESTOP" "bkg" $unconfigure_nodes
+		if { $unconfigure_nodes_count > 0 } {
+			services stop "NODESTOP" "bkg" $unconfigure_nodes
+		}
 
 		statline "Unconfiguring nodes..."
-		pipesCreate
-		terminate_nodesUnconfigure $eid $unconfigure_nodes $unconfigure_nodes_count $w
-		statline "Waiting for unconfiguration of $unconfigure_nodes_count node(s)..."
-		pipesClose
+		if { $unconfigure_nodes_count > 0 } {
+			pipesCreate
+			terminate_nodesUnconfigure $eid $unconfigure_nodes $unconfigure_nodes_count $w
+			statline "Waiting for unconfiguration of $unconfigure_nodes_count node(s)..."
+			pipesClose
+		}
 
 		statline "Stopping nodes..."
-		pipesCreate
-		terminate_nodesShutdown $eid $all_nodes $all_nodes_count $w
-		statline "Waiting for processes on $all_nodes_count node(s) to shutdown..."
-		pipesClose
+		if { $all_nodes_count > 0 } {
+			pipesCreate
+			terminate_nodesShutdown $eid $all_nodes $all_nodes_count $w
+			statline "Waiting for processes on $all_nodes_count node(s) to shutdown..."
+			pipesClose
+		}
 
 		statline "Destroying physical interfaces on RJ45 nodes..."
-		pipesCreate
-		terminate_nodesIfacesDestroy $eid $destroy_nodes_extifaces $destroy_nodes_extifaces_count $w
-		statline "Waiting for physical interfaces on $destroy_nodes_extifaces_count RJ45 node(s) to be destroyed..."
-		pipesClose
+		if { $destroy_nodes_extifaces_count > 0 } {
+			pipesCreate
+			terminate_nodesIfacesDestroy $eid $destroy_nodes_extifaces $destroy_nodes_extifaces_count $w
+			statline "Waiting for physical interfaces on $destroy_nodes_extifaces_count RJ45 node(s) to be destroyed..."
+			pipesClose
+		}
 
 		statline "Stopping services for LINKDEST hook..."
-		services stop "LINKDEST" "bkg" $unconfigure_nodes
+		if { $unconfigure_nodes_count > 0 } {
+			services stop "LINKDEST" "bkg" $unconfigure_nodes
+		}
 
 		statline "Destroying links..."
-		pipesCreate
-		terminate_linksDestroy $eid $terminate_links $links_count $w
-		statline "Waiting for $links_count link(s) to be destroyed..."
-		pipesClose
+		if { $links_count > 0 } {
+			pipesCreate
+			terminate_linksDestroy $eid $terminate_links $links_count $w
+			statline "Waiting for $links_count link(s) to be destroyed..."
+			pipesClose
+		}
 
 		statline "Unconfiguring physical interfaces on nodes..."
-		pipesCreate
-		terminate_nodesIfacesUnconfigure $eid $unconfigure_nodes_ifaces $unconfigure_nodes_ifaces_count $w
-		statline "Waiting for physical interfaces on $unconfigure_nodes_ifaces_count node(s) to be unconfigured..."
-		pipesClose
+		if { $unconfigure_nodes_ifaces_count > 0 } {
+			pipesCreate
+			terminate_nodesIfacesUnconfigure $eid $unconfigure_nodes_ifaces $unconfigure_nodes_ifaces_count $w
+			statline "Waiting for physical interfaces on $unconfigure_nodes_ifaces_count node(s) to be unconfigured..."
+			pipesClose
+		}
 
 		statline "Destroying physical interfaces on nodes..."
-		pipesCreate
-		terminate_nodesIfacesDestroy $eid $destroy_nodes_ifaces $destroy_nodes_ifaces_count $w
-		statline "Waiting for physical interfaces on $destroy_nodes_ifaces_count node(s) to be destroyed..."
-		pipesClose
+		if { $destroy_nodes_ifaces_count > 0 } {
+			pipesCreate
+			terminate_nodesIfacesDestroy $eid $destroy_nodes_ifaces $destroy_nodes_ifaces_count $w
+			statline "Waiting for physical interfaces on $destroy_nodes_ifaces_count node(s) to be destroyed..."
+			pipesClose
+		}
 
 		statline "Destroying NATIVE nodes..."
-		pipesCreate
-		terminate_nodesDestroy $eid $native_nodes $native_nodes_count $w
-		statline "Waiting for $native_nodes_count NATIVE node(s) to be destroyed..."
-		pipesClose
+		if { $native_nodes_count > 0 } {
+			pipesCreate
+			terminate_nodesDestroy $eid $native_nodes $native_nodes_count $w
+			statline "Waiting for $native_nodes_count NATIVE node(s) to be destroyed..."
+			pipesClose
+		}
 
 		statline "Destroying NATIVE nodes (FS)..."
-		pipesCreate
-		terminate_nodesDestroyFS $eid $native_nodes $native_nodes_count $w
-		statline "Waiting for $native_nodes_count NATIVE node(s) to be destroyed (FS)..."
-		pipesClose
+		if { $native_nodes_count > 0 } {
+			pipesCreate
+			terminate_nodesDestroyFS $eid $native_nodes $native_nodes_count $w
+			statline "Waiting for $native_nodes_count NATIVE node(s) to be destroyed (FS)..."
+			pipesClose
+		}
 
 		statline "Checking for hanging TCP connections on VIRTUALIZED node(s)..."
-		pipesCreate
-		timeoutPatch $eid $virtualized_nodes $virtualized_nodes_count $w
-		statline "Waiting for hanging TCP connections on $virtualized_nodes_count VIRTUALIZED node(s)..."
-		pipesClose
+		if { $virtualized_nodes_count > 0 } {
+			pipesCreate
+			timeoutPatch $eid $virtualized_nodes $virtualized_nodes_count $w
+			statline "Waiting for hanging TCP connections on $virtualized_nodes_count VIRTUALIZED node(s)..."
+			pipesClose
+		}
 
 		statline "Stopping services for NODEDEST hook..."
-		services stop "NODEDEST" "bkg" $virtualized_nodes
+		if { $virtualized_nodes_count > 0 } {
+			services stop "NODEDEST" "bkg" $virtualized_nodes
+		}
 
 		statline "Destroying VIRTUALIZED nodes..."
-		pipesCreate
-		terminate_nodesDestroy $eid $virtualized_nodes $virtualized_nodes_count $w
-		statline "Waiting for $virtualized_nodes_count VIRTUALIZED node(s) to be destroyed..."
-		pipesClose
+		if { $virtualized_nodes_count > 0 } {
+			pipesCreate
+			terminate_nodesDestroy $eid $virtualized_nodes $virtualized_nodes_count $w
+			statline "Waiting for $virtualized_nodes_count VIRTUALIZED node(s) to be destroyed..."
+			pipesClose
+		}
 
 		statline "Destroying VIRTUALIZED nodes (FS)..."
-		pipesCreate
-		terminate_nodesDestroyFS $eid $virtualized_nodes $virtualized_nodes_count $w
-		statline "Waiting for $virtualized_nodes_count VIRTUALIZED node(s) to be destroyed (FS)..."
-		pipesClose
+		if { $virtualized_nodes_count > 0 } {
+			pipesCreate
+			terminate_nodesDestroyFS $eid $virtualized_nodes $virtualized_nodes_count $w
+			statline "Waiting for $virtualized_nodes_count VIRTUALIZED node(s) to be destroyed (FS)..."
+			pipesClose
+		}
 
 		if { $terminate } {
 			statline "Removing experiment top-level container/netns..."

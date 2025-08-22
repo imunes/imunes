@@ -590,82 +590,108 @@ proc deployCfg { { execute 0 } } {
 
 	try {
 		statline "Instantiating VIRTUALIZED nodes..."
-		pipesCreate
-		execute_nodesCreate $virtualized_nodes $virtualized_nodes_count $w
-		statline "Waiting for $virtualized_nodes_count VIRTUALIZED node(s) to start..."
-		waitForInstantiateNodes $virtualized_nodes $virtualized_nodes_count $w
-		pipesClose
+		if { $virtualized_nodes_count > 0 } {
+			pipesCreate
+			execute_nodesCreate $virtualized_nodes $virtualized_nodes_count $w
+			statline "Waiting for $virtualized_nodes_count VIRTUALIZED node(s) to start..."
+			waitForInstantiateNodes $virtualized_nodes $virtualized_nodes_count $w
+			pipesClose
+		}
 
 		statline "Setting up namespaces for all nodes..."
-		pipesCreate
-		execute_nodesNamespaceSetup $all_nodes $all_nodes_count $w
-		statline "Waiting on namespaces for $all_nodes_count node(s)..."
-		waitForNamespaces $all_nodes $all_nodes_count $w
-		pipesClose
+		if { $all_nodes_count > 0 } {
+			pipesCreate
+			execute_nodesNamespaceSetup $all_nodes $all_nodes_count $w
+			statline "Waiting on namespaces for $all_nodes_count node(s)..."
+			waitForNamespaces $all_nodes $all_nodes_count $w
+			pipesClose
+		}
 
 		statline "Starting initial configuration on VIRTUALIZED nodes..."
-		pipesCreate
-		execute_nodesInitConfigure $virtualized_nodes $virtualized_nodes_count $w
-		statline "Waiting for initial configuration on $virtualized_nodes_count VIRTUALIZED node(s)..."
-		waitForInitConf $virtualized_nodes $virtualized_nodes_count $w
-		pipesClose
+		if { $virtualized_nodes_count > 0 } {
+			pipesCreate
+			execute_nodesInitConfigure $virtualized_nodes $virtualized_nodes_count $w
+			statline "Waiting for initial configuration on $virtualized_nodes_count VIRTUALIZED node(s)..."
+			waitForInitConf $virtualized_nodes $virtualized_nodes_count $w
+			pipesClose
+		}
 
 		statline "Instantiating NATIVE nodes..."
-		pipesCreate
-		execute_nodesCreate $native_nodes $native_nodes_count $w
-		statline "Waiting for $native_nodes_count NATIVE node(s) to start..."
-		waitForInstantiateNodes $native_nodes $native_nodes_count $w
-		pipesClose
+		if { $native_nodes_count > 0 } {
+			pipesCreate
+			execute_nodesCreate $native_nodes $native_nodes_count $w
+			statline "Waiting for $native_nodes_count NATIVE node(s) to start..."
+			waitForInstantiateNodes $native_nodes $native_nodes_count $w
+			pipesClose
+		}
 
 		#statline "Copying host files to $virtualized_nodes_count VIRTUALIZED node(s)..."
 		#execute_nodesCopyFiles $virtualized_nodes $virtualized_nodes_count $w
 
 		statline "Starting services for NODEINST hook..."
-		services start "NODEINST" "bkg" $configure_nodes
+		if { $configure_nodes_ifaces_count > 0 } {
+			services start "NODEINST" "bkg" $configure_nodes
+		}
 
 		statline "Creating physical interfaces on nodes..."
-		pipesCreate
-		execute_nodesPhysIfacesCreate $create_nodes_ifaces $create_nodes_ifaces_count $w
-		statline "Waiting for physical interfaces on $create_nodes_ifaces_count node(s) to be created..."
-		pipesClose
+		if { $create_nodes_ifaces_count > 0 } {
+			pipesCreate
+			execute_nodesPhysIfacesCreate $create_nodes_ifaces $create_nodes_ifaces_count $w
+			statline "Waiting for physical interfaces on $create_nodes_ifaces_count node(s) to be created..."
+			pipesClose
+		}
 
 		statline "Creating logical interfaces on nodes..."
-		pipesCreate
-		execute_nodesLogIfacesCreate $create_nodes_ifaces $create_nodes_ifaces_count $w
-		statline "Waiting for logical interfaces on $create_nodes_ifaces_count node(s) to be created..."
-		pipesClose
+		if { $create_nodes_ifaces_count > 0 } {
+			pipesCreate
+			execute_nodesLogIfacesCreate $create_nodes_ifaces $create_nodes_ifaces_count $w
+			statline "Waiting for logical interfaces on $create_nodes_ifaces_count node(s) to be created..."
+			pipesClose
+		}
 
-		pipesCreate
 		statline "Configuring interfaces on node(s)..."
-		execute_nodesIfacesConfigure $configure_nodes_ifaces $configure_nodes_ifaces_count $w
-		statline "Waiting for interface configuration on $configure_nodes_ifaces_count node(s)..."
-		configureIfacesWait $configure_nodes_ifaces $configure_nodes_ifaces_count $w
-		pipesClose
+		if { $configure_nodes_ifaces_count > 0 } {
+			pipesCreate
+			execute_nodesIfacesConfigure $configure_nodes_ifaces $configure_nodes_ifaces_count $w
+			statline "Waiting for interface configuration on $configure_nodes_ifaces_count node(s)..."
+			configureIfacesWait $configure_nodes_ifaces $configure_nodes_ifaces_count $w
+			pipesClose
+		}
 
 		statline "Creating links..."
-		pipesCreate
-		execute_linksCreate $instantiate_links $links_count $w
-		statline "Waiting for $links_count link(s) to be created..."
-		pipesClose
+		if { $links_count > 0 } {
+			pipesCreate
+			execute_linksCreate $instantiate_links $links_count $w
+			statline "Waiting for $links_count link(s) to be created..."
+			pipesClose
+		}
 
-		pipesCreate
 		statline "Configuring links..."
-		execute_linksConfigure $instantiate_links $links_count $w
-		statline "Waiting for $links_count link(s) to be configured..."
-		pipesClose
+		if { $links_count > 0 } {
+			pipesCreate
+			execute_linksConfigure $instantiate_links $links_count $w
+			statline "Waiting for $links_count link(s) to be configured..."
+			pipesClose
+		}
 
 		statline "Starting services for LINKINST hook..."
-		services start "LINKINST" "bkg" $configure_nodes
+		if { $configure_nodes_count > 0 } {
+			services start "LINKINST" "bkg" $configure_nodes
+		}
 
-		pipesCreate
 		statline "Configuring node(s)..."
-		execute_nodesConfigure $configure_nodes $configure_nodes_count $w
-		statline "Waiting for configuration on $configure_nodes_count node(s)..."
-		waitForConfStart $configure_nodes $configure_nodes_count $w
-		pipesClose
+		if { $configure_nodes_count > 0 } {
+			pipesCreate
+			execute_nodesConfigure $configure_nodes $configure_nodes_count $w
+			statline "Waiting for configuration on $configure_nodes_count node(s)..."
+			waitForConfStart $configure_nodes $configure_nodes_count $w
+			pipesClose
+		}
 
 		statline "Starting services for NODECONF hook..."
-		services start "NODECONF" "bkg" $configure_nodes
+		if { $configure_nodes_count > 0 } {
+			services start "NODECONF" "bkg" $configure_nodes
+		}
 	} on error err {
 		finishExecuting 0 "$err" $w
 
