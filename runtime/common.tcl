@@ -985,7 +985,7 @@ proc resumeSelectedExperiment { exp } {
 
 	newProject
 
-	setToRunning "current_file" [getExperimentConfigurationFromFile $exp]
+	setToRunning "current_file" [getRunningExperimentConfigPath $exp]
 	openFile
 	readRunningVarsFile $exp
 	#catch { cd [getFromRunning "cwd"] }
@@ -1014,7 +1014,7 @@ proc refreshRunningExperiment {} {
 
 	set eid [getFromRunning "eid"]
 
-	setToRunning "current_file" [getExperimentConfigurationFromFile $eid]
+	setToRunning "current_file" [getRunningExperimentConfigPath $eid]
 	if { [getFromRunning "current_file"] == "" } {
 		global execMode
 
@@ -1177,20 +1177,19 @@ proc getExperimentNameFromFile { eid } {
 	return $name
 }
 
-#****f* exec.tcl/getExperimentConfigurationFromFile
+#****f* exec.tcl/getRunningExperimentConfigPath
 # NAME
-#   getExperimentConfigurationFromFile -- get experiment configuration from
-#       file
+#   getRunningExperimentConfigPath -- get experiment configuration file path
 # SYNOPSIS
-#   getExperimentConfigurationFromFile $eid
+#   getRunningExperimentConfigPath $eid
 # FUNCTION
-#   Returns the specified experiment configuration from file.
+#   Returns the path of the specified experiment configuration.
 # INPUTS
 #   * eid -- experiment id
 # RESULT
-#   * file -- experiment configuration
+#   * file_path -- experiment configuration
 #****
-proc getExperimentConfigurationFromFile { eid } {
+proc getRunningExperimentConfigPath { eid } {
 	global runtimeDir
 
 	set pathToFile "$runtimeDir/$eid/config.imn"
