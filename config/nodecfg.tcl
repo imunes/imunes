@@ -248,7 +248,10 @@ proc getDefaultIPv4routes { node_id } {
 #   * routes -- list of all IPv4 default routes defined for the specified node
 #****
 proc setDefaultIPv4routes { node_id routes } {
+	# This is just a temporary field, no need to mark the topology as modified
+	set tmp [getFromRunning "modified"]
 	cfgSet "nodes" $node_id "default_routes4" $routes
+	setToRunning "modified" $tmp
 }
 
 #****f* nodecfg.tcl/getDefaultIPv6routes
@@ -281,7 +284,10 @@ proc getDefaultIPv6routes { node_id } {
 #   * routes -- list of all IPv6 default routes defined for the specified node
 #****
 proc setDefaultIPv6routes { node_id routes } {
+	# This is just a temporary field, no need to mark the topology as modified
+	set tmp [getFromRunning "modified"]
 	cfgSet "nodes" $node_id "default_routes6" $routes
+	setToRunning "modified" $tmp
 }
 
 #****f* nodecfg.tcl/getDefaultRoutesConfig

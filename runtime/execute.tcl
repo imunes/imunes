@@ -249,6 +249,11 @@ proc readRunningVarsFile { eid } {
 	if { [getFromRunning "zoom"] == "" } {
 		setToRunning "zoom" [dictGet $gui_option_defaults "zoom"]
 	}
+
+	# older versions do not have this variable
+	if { [getFromRunning "modified"] == "" } {
+		setToRunning "modified" false
+	}
 }
 
 #****f* exec.tcl/saveRunningConfiguration

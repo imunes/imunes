@@ -1464,6 +1464,8 @@ proc animate {} {
 		set animatephase 0
 	}
 
+	setWmTitle [getFromRunning "current_file"]
+
 	if { [getFromRunning "oper_mode"] == "edit" } {
 		after 250 animate
 	} else {

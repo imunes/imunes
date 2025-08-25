@@ -112,6 +112,7 @@ proc newProject {} {
 	setToRunning "canvas_list" {}
 	setToRunning "curcanvas" [newCanvas ""]
 	setToRunning "current_file" ""
+	setToRunning "modified" false
 	saveToUndoLevel 0
 
 	.bottom.oper_mode configure -text "[getFromRunning "oper_mode"] mode"
@@ -138,7 +139,12 @@ proc updateProjectMenu {} {
 		if { $fname == "" } {
 			set fname "untitled[string range $cfg 3 end]"
 		}
-		.menubar.file add checkbutton -label $fname -variable curcfg \
+
+		set modified ""
+		if { [getFromRunning "modified" $cfg] } {
+			set modified " *"
+		}
+		.menubar.file add checkbutton -label "$fname$modified" -variable curcfg \
 			-onvalue $cfg -command switchProject
 	}
 }
@@ -184,7 +190,12 @@ proc setWmTitle { fname } {
 	if { $fname == "" } {
 		set fname "untitled[string range $curcfg 3 end]"
 	}
-	wm title . "$baseTitle - $fname"
+
+	set modified ""
+	if { [getFromRunning "modified"] } {
+		set modified " *"
+	}
+	wm title . "$baseTitle - $fname$modified"
 }
 
 #****f* filemgmt.tcl/openFile
@@ -212,6 +223,7 @@ proc openFile {} {
 	setToRunning "stop_sched" true
 	setToRunning "undolevel" 0
 	setToRunning "redolevel" 0
+	setToRunning "modified" false
 	saveToUndoLevel 0
 	setActiveToolGroup select
 	updateProjectMenu
@@ -306,6 +318,7 @@ proc saveFile { selected_file } {
 
 		.bottom.textbox config -text "Saved [file tail $current_file]"
 
+		setToRunning "modified" false
 		updateProjectMenu
 		setWmTitle $current_file
 	}

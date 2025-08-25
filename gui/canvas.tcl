@@ -955,6 +955,7 @@ proc printCanvasToFile { w entry } {
 	}
 
 	set start_canvas [getFromRunning "curcanvas"]
+	set modified_bkp [getFromRunning "modified"]
 	set font_bkp [dict create]
 	foreach annotation_id [getFromRunning "annotation_list"] {
 		if { [getAnnotationType $annotation_id] != "text" } {
@@ -1012,6 +1013,7 @@ proc printCanvasToFile { w entry } {
 	dict for {annotation_id font} $font_bkp {
 		setAnnotationFont $annotation_id $font
 	}
+	setToRunning "modified" $modified_bkp
 
 	setToRunning "curcanvas" $start_canvas
 	switchCanvas none

@@ -1412,6 +1412,8 @@ proc cfgSet { args } {
 		set dict_cfg [dictSet $dict_cfg {*}$args]
 	}
 
+	setToRunning "modified" true
+
 	return $dict_cfg
 }
 
