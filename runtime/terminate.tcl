@@ -482,8 +482,6 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 		update
 
 		grab $w
-		wm protocol $w WM_DELETE_WINDOW {
-		}
 	}
 
 	try {

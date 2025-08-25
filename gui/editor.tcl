@@ -1311,3 +1311,59 @@ proc addTool { group tool } {
 
 	dict set tool_groups $group [lappend old_tools {*}$tool]
 }
+
+proc checkAndPromptSave { { cfg_to_check "" } } {
+	global curcfg cfg_list
+
+	if { $cfg_to_check != "" } {
+		set cfgs $cfg_to_check
+	} else {
+		set cfgs $cfg_list
+	}
+
+	foreach cfg $cfgs {
+		set curcfg $cfg
+		set fname [getFromRunning "current_file" $cfg]
+		if { $fname == "" } {
+			set fname "untitled[string range $cfg 3 end]"
+		}
+
+		switchProject
+
+		if { [getFromRunning "modified"] != true } {
+			continue
+		}
+
+		after idle { .dialog1.msg configure -wraplength 4i }
+		set answer [tk_dialog .dialog1 "Save changes?" \
+			"Topology '$fname' not saved. Save?" \
+			questhead 0 Yes No "Cancel"]
+
+		switch -- $answer {
+			0 {
+				try {
+					fileSaveDialogBox
+				} on error msg {
+					after idle { .dialog1.msg configure -wraplength 4i }
+					tk_dialog .dialog1 "IMUNES error" \
+						"Got error while saving:\n'$msg'" \
+						info 0 Dismiss
+
+					return -1
+				}
+			}
+
+			1 {}
+
+			2 {
+				return 1
+			}
+		}
+	}
+
+	if { $cfg_to_check == "" } {
+		exit
+	}
+
+	return 0
+}

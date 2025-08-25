@@ -799,9 +799,6 @@ proc setOperMode { new_oper_mode } {
 
 		setToRunning "oper_mode" "exec"
 
-		wm protocol . WM_DELETE_WINDOW {
-		}
-
 		if { ! [getFromRunning "cfg_deployed"] } {
 			setToExecuteVars "instantiate_nodes" [getFromRunning "node_list"]
 			setToExecuteVars "create_nodes_ifaces" "*"
@@ -815,10 +812,6 @@ proc setOperMode { new_oper_mode } {
 			setToRunning "cfg_deployed" true
 		}
 
-		wm protocol . WM_DELETE_WINDOW {
-			exit
-		}
-
 		.bottom.experiment_id configure -text "Experiment ID = [getFromRunning "eid"]"
 		if { [getFromRunning "auto_execution"] } {
 			set oper_mode_text "exec mode"
@@ -829,9 +822,6 @@ proc setOperMode { new_oper_mode } {
 		}
 	} else {
 		if { [getFromRunning "oper_mode"] != "edit" } {
-			wm protocol . WM_DELETE_WINDOW {
-			}
-
 			set eid [getFromRunning "eid"]
 			setToExecuteVars "terminate_nodes" [getFromRunning "node_list"]
 			setToExecuteVars "destroy_nodes_ifaces" "*"
@@ -848,10 +838,6 @@ proc setOperMode { new_oper_mode } {
 
 			setToExecuteVars "terminate_cfg" [cfgGet]
 			setToRunning "cfg_deployed" false
-
-			wm protocol . WM_DELETE_WINDOW {
-				exit
-			}
 		}
 
 		if { $editor_only } {

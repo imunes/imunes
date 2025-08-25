@@ -338,7 +338,7 @@ set tmp_command {
 	-command $tmp_command
 
 .menubar.file add separator
-.menubar.file add command -label Quit -underline 0 -command { exit }
+.menubar.file add command -label Quit -underline 0 -command { checkAndPromptSave }
 .menubar.file add separator
 
 #
@@ -1279,6 +1279,10 @@ set key_bindings [list \
 
 foreach {key tool_group} $key_bindings {
 	bind . $key "cycleToolGroup $tool_group"
+}
+
+wm protocol . WM_DELETE_WINDOW {
+	checkAndPromptSave
 }
 
 focus -force .

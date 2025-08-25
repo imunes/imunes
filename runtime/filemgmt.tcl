@@ -166,6 +166,7 @@ proc switchProject {} {
 	setOperMode [getFromRunning "oper_mode"]
 	switchCanvas none
 	redrawAll
+	updateProjectMenu
 	setWmTitle [getFromRunning "current_file"]
 	if { $showTree } {
 		refreshTopologyTree
@@ -392,6 +393,10 @@ proc fileSaveAsDialogBox {} {
 #****
 proc closeFile {} {
 	global cfg_list curcfg
+
+	if { [checkAndPromptSave $curcfg] != 0 } {
+		return
+	}
 
 	set idx [lsearch -exact $cfg_list $curcfg]
 	set cfg_list [removeFromList $cfg_list $curcfg]
