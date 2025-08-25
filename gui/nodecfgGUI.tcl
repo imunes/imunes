@@ -1883,6 +1883,18 @@ proc configGUI_addNotebookRj45 { wi node_id ifaces } {
 
 	ttk::notebook $wi.nbook -height 200
 	pack $wi.nbook -fill both -expand 1
+
+	if { $ifaces == {} } {
+		ttk::label $wi.nbook.label \
+			-text "No connected nodes" \
+			-anchor center
+		getHelpLabel $wi.nbook.label "Configure External interface"
+		pack $wi.nbook.label \
+			-pady 5
+
+		return {}
+	}
+
 	pack propagate $wi.nbook 0
 	foreach iface_id $ifaces {
 		ttk::frame $wi.nbook.nf$iface_id
@@ -1925,6 +1937,7 @@ proc configGUI_addRj45PanedWin { wi node_id } {
 
 	ttk::frame $wi.stolen -borderwidth 6
 	ttk::label $wi.stolen.label -text "Stolen interface:"
+	getHelpLabel $wi.stolen.label "Configure External interface"
 	ttk::combobox $wi.stolen.name -width 14 -textvariable extIfc$iface_id
 	set ifcs [getExtIfcs]
 	$wi.stolen.name configure -values [concat UNASSIGNED $ifcs]
