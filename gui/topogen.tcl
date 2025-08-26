@@ -157,8 +157,7 @@ proc newNodes { node_num } {
 proc topoGenDone { nodes } {
 	global changed
 
-	undeployCfg
-	deployCfg
+	redeployCfg
 
 	set changed 1
 	updateUndoLog

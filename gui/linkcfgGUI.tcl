@@ -75,8 +75,7 @@ proc toggleDirectLink { c link_id } {
 	}
 	updateLinkLabel $link_id
 
-	undeployCfg
-	deployCfg
+	redeployCfg
 
 	.panwin.f1.c config -cursor left_ptr
 }

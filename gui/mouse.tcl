@@ -72,8 +72,7 @@ proc removeLinkGUI { link_id atomic { keep_ifaces 0 } } {
 	if { $atomic == "atomic" } {
 		.panwin.f1.c delete $link_id
 
-		undeployCfg
-		deployCfg
+		redeployCfg
 
 		set changed 1
 		if { $new_link_id != "" || $keep_ifaces || "rj45" in "$node1_type $node2_type" } {
@@ -110,8 +109,7 @@ proc removeNodeGUI { node_id { keep_other_ifaces 0 } } {
 
 	removeNode $node_id $keep_other_ifaces
 
-	undeployCfg
-	deployCfg
+	redeployCfg
 
 	.panwin.f1.c delete $node_id
 }
@@ -940,8 +938,7 @@ proc button3node { c x y } {
 				}
 			}
 
-			undeployCfg
-			deployCfg
+			redeployCfg
 
 			redrawAll
 		}
@@ -1096,8 +1093,7 @@ proc button3node { c x y } {
 					}
 				}
 
-				undeployCfg
-				deployCfg
+				redeployCfg
 
 				.panwin.f1.c config -cursor left_ptr
 			}
@@ -1802,8 +1798,7 @@ proc button1-release { c x y } {
 				set changed 1
 			}
 
-			undeployCfg
-			deployCfg
+			redeployCfg
 		}
 	} elseif { $active_tool in "rectangle oval text freeform" } {
 		popupAnnotationDialog $c 0 "false"
@@ -2001,8 +1996,7 @@ proc button1-release { c x y } {
 		}
 
 		if { $regular == "true" } {
-			undeployCfg
-			deployCfg
+			redeployCfg
 
 			foreach img [$c find withtag "node && selected"] {
 				set node_id [lindex [$c gettags $img] 1]
@@ -2402,8 +2396,7 @@ proc removeIPv4Nodes { nodes all_ifaces } {
 
 	setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] $removed_addrs "keep_doubles"]
 
-	undeployCfg
-	deployCfg
+	redeployCfg
 
 	redrawAll
 	set changed 1
@@ -2470,8 +2463,7 @@ proc removeIPv6Nodes { nodes all_ifaces } {
 
 	setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] $removed_addrs "keep_doubles"]
 
-	undeployCfg
-	deployCfg
+	redeployCfg
 
 	redrawAll
 	set changed 1
@@ -2495,8 +2487,7 @@ proc matchSubnet4 { node_id iface_id } {
 		trigger_nodeReconfig $node_id
 	}
 
-	undeployCfg
-	deployCfg
+	redeployCfg
 
 	redrawAll
 	set changed 1
@@ -2521,8 +2512,7 @@ proc matchSubnet6 { node_id iface_id } {
 		trigger_nodeReconfig $node_id
 	}
 
-	undeployCfg
-	deployCfg
+	redeployCfg
 
 	redrawAll
 	set changed 1

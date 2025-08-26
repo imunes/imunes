@@ -537,8 +537,7 @@ proc routerDefaultsApply { wi } {
 	}
 
 	if { $changed == 1 } {
-		undeployCfg
-		deployCfg
+		redeployCfg
 
 		redrawAll
 		updateUndoLog

@@ -1046,8 +1046,7 @@ proc toggleAutoExecution {} {
 	setToRunning "auto_execution" [expr $auto_execution ^ 1]
 	if { [getFromRunning "cfg_deployed"] && ! $auto_execution } {
 		# when going from non-auto to auto execution, trigger (un)deployCfg
-		undeployCfg
-		deployCfg
+		redeployCfg
 	} else {
 		setToExecuteVars "terminate_cfg" [cfgGet]
 	}
@@ -1225,4 +1224,9 @@ proc captureOnExtIfc { node_id command } {
 	} else {
 		exec $command -o "gui.window_title:[getNodeName $node_id] ($eid)" -k -i $eid-$node_id 2> /dev/null &
 	}
+}
+
+proc redeployCfg {} {
+	undeployCfg
+	deployCfg
 }
