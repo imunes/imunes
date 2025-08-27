@@ -693,3 +693,195 @@ proc routerUncfggenIfc { node_id iface_id } {
 
 	return $cfg
 }
+
+proc updateIface { node_id iface_id old_iface_cfg new_iface_cfg } {
+	dputs ""
+	dputs "= /UPDATE IFACE $node_id $iface_id START ="
+
+	if { $old_iface_cfg == "*" } {
+		set old_iface_cfg [cfgGet "nodes" $node_id "ifaces" $iface_id]
+	}
+
+	dputs "OLD : '$old_iface_cfg'"
+	dputs "NEW : '$new_iface_cfg'"
+
+	set cfg_diff [dictDiff $old_iface_cfg $new_iface_cfg]
+	dputs "= cfg_diff: '$cfg_diff'"
+	if { $cfg_diff == "" || [lsort -uniq [dict values $cfg_diff]] == "copy" } {
+		dputs "= NO CHANGE"
+		dputs "= /UPDATE IFACE $node_id $iface_id END ="
+		return $new_iface_cfg
+	}
+
+	if { $new_iface_cfg == "" } {
+		return $old_iface_cfg
+	}
+
+	if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+		setToExecuteVars "terminate_cfg" [cfgGet]
+	}
+
+	dict for {iface_prop_key iface_prop_change} $cfg_diff {
+		if { $iface_prop_change == "copy" } {
+			continue
+		}
+
+		set iface_prop_old_value [_cfgGet $old_iface_cfg $iface_prop_key]
+		set iface_prop_new_value [_cfgGet $new_iface_cfg $iface_prop_key]
+		dputs "============ $iface_prop_change: '$iface_prop_key'"
+		if { $iface_prop_change in "changed" } {
+			dputs "============ OLD: '$iface_prop_old_value'"
+		}
+		if { $iface_prop_change in "new changed" } {
+			dputs "============ NEW: '$iface_prop_new_value'"
+		}
+
+		switch -exact $iface_prop_key {
+			"link" {
+				# link cannot be changed, only removed
+				if { $iface_prop_change == "removed" } {
+					removeLink $iface_prop_old_value 1
+				}
+			}
+
+			"type" {
+				setIfcType $node_id $iface_id $iface_prop_new_value
+			}
+
+			"name" {
+				setIfcName $node_id $iface_id $iface_prop_new_value
+			}
+
+			"oper_state" {
+				setIfcOperState $node_id $iface_id $iface_prop_new_value
+			}
+
+			"nat_state" {
+				setIfcNatState $node_id $iface_id $iface_prop_new_value
+			}
+
+			"mtu" {
+				setIfcMTU $node_id $iface_id $iface_prop_new_value
+			}
+
+			"ifc_qdisc" {
+				setIfcQDisc $node_id $iface_id $iface_prop_new_value
+			}
+
+			"ifc_qdrop" {
+				setIfcQDrop $node_id $iface_id $iface_prop_new_value
+			}
+
+			"queue_len" {
+				setIfcQLen $node_id $iface_id $iface_prop_new_value
+			}
+
+			"vlan_dev" {
+				setIfcVlanDev $node_id $iface_id $iface_prop_new_value
+			}
+
+			"vlan_tag" {
+				setIfcVlanTag $node_id $iface_id $iface_prop_new_value
+			}
+
+			"vlan_type" {
+				setIfcVlanType $node_id $iface_id $iface_prop_new_value
+			}
+
+			"mac" {
+				if { $iface_prop_new_value == "auto" } {
+					autoMACaddr $node_id $iface_id
+				} else {
+					setIfcMACaddr $node_id $iface_id $iface_prop_new_value
+				}
+			}
+
+			"ipv4_addrs" {
+				if { $iface_prop_new_value == "auto" } {
+					autoIPv4addr $node_id $iface_id
+				} else {
+					setIfcIPv4addrs $node_id $iface_id $iface_prop_new_value
+				}
+			}
+
+			"ipv6_addrs" {
+				if { $iface_prop_new_value == "auto" } {
+					autoIPv6addr $node_id $iface_id
+				} else {
+					setIfcIPv6addrs $node_id $iface_id $iface_prop_new_value
+				}
+			}
+
+			"filter_rules" {
+				clearFilterIfcRules $node_id $iface_id
+
+				if { $iface_change != "removed" } {
+					foreach {rule_id rule_cfg} $iface_prop_new_value {
+						addFilterIfcRule $node_id $iface_id $rule_id $rule_cfg
+					}
+				}
+			}
+
+			"stp_discover" {
+				setBridgeIfcDiscover $node_id $iface_id $iface_prop_new_value
+			}
+
+			"stp_learn" {
+				setBridgeIfcLearn $node_id $iface_id $iface_prop_new_value
+			}
+
+			"stp_sticky" {
+				setBridgeIfcSticky $node_id $iface_id $iface_prop_new_value
+			}
+
+			"stp_private" {
+				setBridgeIfcPrivate $node_id $iface_id $iface_prop_new_value
+			}
+
+			"stp_snoop" {
+				setBridgeIfcSnoop $node_id $iface_id $iface_prop_new_value
+			}
+
+			"stp_enabled" {
+				setBridgeIfcStp $node_id $iface_id $iface_prop_new_value
+			}
+
+			"stp_edge" {
+				setBridgeIfcEdge $node_id $iface_id $iface_prop_new_value
+			}
+
+			"stp_autoedge" {
+				setBridgeIfcAutoedge $node_id $iface_id $iface_prop_new_value
+			}
+
+			"stp_ptp" {
+				setBridgeIfcPtp $node_id $iface_id $iface_prop_new_value
+			}
+
+			"stp_autoptp" {
+				setBridgeIfcAutoptp $node_id $iface_id $iface_prop_new_value
+			}
+
+			"stp_priority" {
+				setBridgeIfcPriority $node_id $iface_id $iface_prop_new_value
+			}
+
+			"stp_path_cost" {
+				setBridgeIfcPathcost $node_id $iface_id $iface_prop_new_value
+			}
+
+			"stp_max_addresses" {
+				setBridgeIfcMaxaddr $node_id $iface_id $iface_prop_new_value
+			}
+
+			default {
+				# do nothing
+			}
+		}
+	}
+
+	dputs "= /UPDATE IFACE $node_id $iface_id END ="
+	dputs ""
+
+	return $new_iface_cfg
+}
