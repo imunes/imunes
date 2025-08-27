@@ -157,7 +157,9 @@ proc newNodes { node_num } {
 proc topoGenDone { nodes } {
 	global changed
 
-	redeployCfg
+	if { [getFromRunning "stop_sched"] } {
+		redeployCfg
+	}
 
 	set changed 1
 	updateUndoLog

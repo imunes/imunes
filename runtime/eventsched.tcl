@@ -54,6 +54,13 @@ proc startEventScheduling {} {
 proc stopEventScheduling {} {
 	setToRunning "stop_sched" true
 
+	if { [getFromRunning "cfg_deployed"] } {
+		createRunningVarsFile [getFromRunning "eid"]
+	}
+
+	redeployCfg
+	redrawAll
+
 	.menubar.events entryconfigure "Start scheduling" -state normal
 	.menubar.events entryconfigure "Stop scheduling" -state disabled
 }
@@ -119,6 +126,10 @@ proc evsched {} {
 		if { $class == "node" } {
 			# XXX nothing implemented yet
 		} elseif { $class == "link" } {
+			if { $object ni [getFromRunning "link_list"] } {
+				continue
+			}
+
 			if { [lindex $params 0] == "rand" } {
 				set lo [lindex $params 1]
 				set hi [lindex $params 2]

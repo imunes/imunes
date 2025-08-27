@@ -537,7 +537,9 @@ proc routerDefaultsApply { wi } {
 	}
 
 	if { $changed == 1 } {
-		redeployCfg
+		if { [getFromRunning "stop_sched"] } {
+			redeployCfg
+		}
 
 		redrawAll
 		updateUndoLog

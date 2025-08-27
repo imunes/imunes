@@ -714,7 +714,9 @@ proc newLinkWithIfacesGUI { node1_id iface1_id node2_id iface2_id } {
 		setNodeName $new_node2 $orig_node1
 	}
 
-	redeployCfg
+	if { [getFromRunning "stop_sched"] } {
+		redeployCfg
+	}
 
 	redrawAll
 	set changed 1

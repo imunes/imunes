@@ -72,7 +72,9 @@ proc removeLinkGUI { link_id atomic { keep_ifaces 0 } } {
 	if { $atomic == "atomic" } {
 		.panwin.f1.c delete $link_id
 
-		redeployCfg
+		if { [getFromRunning "stop_sched"] } {
+			redeployCfg
+		}
 
 		set changed 1
 		if { $new_link_id != "" || $keep_ifaces || "rj45" in "$node1_type $node2_type" } {
@@ -109,7 +111,9 @@ proc removeNodeGUI { node_id { keep_other_ifaces 0 } } {
 
 	removeNode $node_id $keep_other_ifaces
 
-	redeployCfg
+	if { [getFromRunning "stop_sched"] } {
+		redeployCfg
+	}
 
 	.panwin.f1.c delete $node_id
 }
@@ -437,17 +441,23 @@ proc button3link { c x y } {
 	#
 	# Delete link
 	#
-	.button3menu add command -label "Delete" \
-		-command "removeLinkGUI $link_id atomic"
+	if { $oper_mode == "edit" || [getFromRunning "stop_sched"] } {
+		.button3menu add command -label "Delete" \
+			-command "removeLinkGUI $link_id atomic"
+	} else {
+		.button3menu add command -label "Delete" \
+			-state disabled
+	}
 
 	#
 	# Delete link (keep ifaces)
 	#
 	if {
-		($oper_mode == "edit" || ! $isOSlinux || ! [set linkDirect_$link_id]) ||
-		($oper_mode == "exec" &&
-		! [getFromRunning "${peer1_id}|${peer1_iface}_running"] &&
-		! [getFromRunning "${peer2_id}|${peer2_iface}_running"])
+		$oper_mode == "edit" ||
+		([getFromRunning "stop_sched"] &&
+		(! $isOSlinux || ! [set linkDirect_$link_id] ||
+		(! [getFromRunning "${peer1_id}|${peer1_iface}_running"] &&
+		! [getFromRunning "${peer2_id}|${peer2_iface}_running"])))
 	} {
 		.button3menu add command -label "Delete (keep interfaces)" \
 			-command "removeLinkGUI $link_id atomic 1"
@@ -846,7 +856,15 @@ proc button3node { c x y } {
 	#
 	# Delete selection
 	#
-	.button3menu add command -label "Delete" -command "deleteSelection"
+	if { $oper_mode == "edit" || [getFromRunning "stop_sched"] } {
+		.button3menu add command \
+			-label "Delete" \
+			-command "deleteSelection"
+	} else {
+		.button3menu add command \
+			-label "Delete" \
+			-state disabled
+	}
 
 	set has_direct_links 0
 	foreach iface_id [ifcList $node_id] {
@@ -862,8 +880,9 @@ proc button3node { c x y } {
 	#
 	if {
 		$oper_mode == "edit" ||
-		! $isOSlinux ||
-		! $has_direct_links
+		((! $isOSlinux ||
+		! $has_direct_links) &&
+		[getFromRunning "stop_sched"])
 	} {
 		.button3menu add command \
 			-label "Delete (keep interfaces)" \
@@ -871,7 +890,6 @@ proc button3node { c x y } {
 	} else {
 		.button3menu add command \
 			-label "Delete (keep interfaces)" \
-			-command "deleteSelection 1" \
 			-state disabled
 	}
 
@@ -938,7 +956,9 @@ proc button3node { c x y } {
 				}
 			}
 
-			redeployCfg
+			if { [getFromRunning "stop_sched"] } {
+				redeployCfg
+			}
 
 			redrawAll
 		}
@@ -1093,7 +1113,9 @@ proc button3node { c x y } {
 					}
 				}
 
-				redeployCfg
+				if { [getFromRunning "stop_sched"] } {
+					redeployCfg
+				}
 
 				.panwin.f1.c config -cursor left_ptr
 			}
@@ -1798,7 +1820,9 @@ proc button1-release { c x y } {
 				set changed 1
 			}
 
-			redeployCfg
+			if { [getFromRunning "stop_sched"] } {
+				redeployCfg
+			}
 		}
 	} elseif { $active_tool in "rectangle oval text freeform" } {
 		popupAnnotationDialog $c 0 "false"
@@ -1996,7 +2020,9 @@ proc button1-release { c x y } {
 		}
 
 		if { $regular == "true" } {
-			redeployCfg
+			if { [getFromRunning "stop_sched"] } {
+				redeployCfg
+			}
 
 			foreach img [$c find withtag "node && selected"] {
 				set node_id [lindex [$c gettags $img] 1]
@@ -2311,6 +2337,10 @@ proc deleteSelection { { keep_other_ifaces 0 } } {
 	global changed
 	global viewid
 
+	if { ! [getFromRunning "stop_sched"] } {
+		return
+	}
+
 	catch { unset viewid }
 	.panwin.f1.c config -cursor watch; update
 
@@ -2396,7 +2426,9 @@ proc removeIPv4Nodes { nodes all_ifaces } {
 
 	setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] $removed_addrs "keep_doubles"]
 
-	redeployCfg
+	if { [getFromRunning "stop_sched"] } {
+		redeployCfg
+	}
 
 	redrawAll
 	set changed 1
@@ -2463,7 +2495,9 @@ proc removeIPv6Nodes { nodes all_ifaces } {
 
 	setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] $removed_addrs "keep_doubles"]
 
-	redeployCfg
+	if { [getFromRunning "stop_sched"] } {
+		redeployCfg
+	}
 
 	redrawAll
 	set changed 1
@@ -2487,7 +2521,9 @@ proc matchSubnet4 { node_id iface_id } {
 		trigger_nodeReconfig $node_id
 	}
 
-	redeployCfg
+	if { [getFromRunning "stop_sched"] } {
+		redeployCfg
+	}
 
 	redrawAll
 	set changed 1
@@ -2512,7 +2548,9 @@ proc matchSubnet6 { node_id iface_id } {
 		trigger_nodeReconfig $node_id
 	}
 
-	redeployCfg
+	if { [getFromRunning "stop_sched"] } {
+		redeployCfg
+	}
 
 	redrawAll
 	set changed 1

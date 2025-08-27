@@ -993,6 +993,9 @@ proc resumeSelectedExperiment { exp } {
 	setToRunning "eid" $exp
 	setToRunning "cfg_deployed" true
 	setOperMode exec
+	if { ! [getFromRunning "stop_sched"] } {
+		startEventScheduling
+	}
 }
 
 proc refreshRunningExperimentGUI {} {
@@ -1046,7 +1049,9 @@ proc toggleAutoExecution {} {
 	setToRunning "auto_execution" [expr $auto_execution ^ 1]
 	if { [getFromRunning "cfg_deployed"] && ! $auto_execution } {
 		# when going from non-auto to auto execution, trigger (un)deployCfg
-		redeployCfg
+		if { [getFromRunning "stop_sched"] } {
+			redeployCfg
+		}
 	} else {
 		setToExecuteVars "terminate_cfg" [cfgGet]
 	}

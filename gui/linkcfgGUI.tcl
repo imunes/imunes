@@ -75,7 +75,9 @@ proc toggleDirectLink { c link_id } {
 	}
 	updateLinkLabel $link_id
 
-	redeployCfg
+	if { [getFromRunning "stop_sched"] } {
+		redeployCfg
+	}
 
 	.panwin.f1.c config -cursor left_ptr
 }

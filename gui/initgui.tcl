@@ -390,6 +390,10 @@ menu .menubar.canvas -tearoff 0
 		return
 	}
 
+	if { ! [getFromRunning "stop_sched"] } {
+		return
+	}
+
 	selectAllObjects
 	deleteSelection
 

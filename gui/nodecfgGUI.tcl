@@ -1352,7 +1352,9 @@ proc configGUI_applyButtonNode { wi node_id phase } {
 		global node_cfg
 
 		updateNode $node_id "*" $node_cfg
-		redeployCfg
+		if { [getFromRunning "stop_sched"] } {
+			redeployCfg
+		}
 
 		if { $node_existing_mac != [getFromRunning "mac_used_list"] } {
 			setToRunning "mac_used_list" $node_existing_mac
@@ -6427,7 +6429,9 @@ proc configGUI_applyFilterNode {} {
 	global node_existing_mac node_existing_ipv4 node_existing_ipv6
 
 	updateNode $curnode "*" $node_cfg
-	redeployCfg
+	if { [getFromRunning "stop_sched"] } {
+		redeployCfg
+	}
 
 	if { $node_existing_mac != [getFromRunning "mac_used_list"] } {
 		setToRunning "mac_used_list" $node_existing_mac
@@ -7250,7 +7254,9 @@ proc configGUI_applyPackgenNode { } {
 	global node_existing_mac node_existing_ipv4 node_existing_ipv6
 
 	updateNode $curnode "*" $node_cfg
-	redeployCfg
+	if { [getFromRunning "stop_sched"] } {
+		redeployCfg
+	}
 
 	if { $node_existing_mac != [getFromRunning "mac_used_list"] } {
 		setToRunning "mac_used_list" $node_existing_mac
