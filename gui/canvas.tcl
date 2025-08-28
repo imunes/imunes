@@ -937,48 +937,88 @@ proc printCanvas { w } {
 proc printCanvasToFile { w entry } {
 	global printFileType
 
-	set zoom [getFromRunning "zoom"]
-
-	if { [string match -nocase *.* [$entry get]] != 1 } {
-		set box "[$entry get]\.$printFileType"
-		$entry delete 0 end
-		$entry insert 0 $box
+	set entry_string [$entry get]
+	if { $entry_string == "" } {
+		return
 	}
 
-	set temp [$entry get]
-	if { $temp == "" || [string match -nocase *.$printFileType $temp] != 1 } {
+	try {
+		set file_id [open $entry_string "w+"]
+		close $file_id
+	} on error msg {
+		after idle { .dialog1.msg configure -wraplength 4i }
+		tk_dialog .dialog1 "IMUNES error" \
+			$msg \
+			info 0 Dismiss
+
 		return
 	}
 
 	set start_canvas [getFromRunning "curcanvas"]
-	if { $printFileType == "ps" } {
-		set psname [$entry get]
-	} else {
-		set pdfname [$entry get]
-		set name [string range $pdfname 0 end-4]
-		set psname "$name.ps"
+	set font_bkp [dict create]
+	foreach annotation_id [getFromRunning "annotation_list"] {
+		if { [getAnnotationType $annotation_id] != "text" } {
+			continue
+		}
+
+		set font [getAnnotationFont $annotation_id]
+		dict set font_bkp $annotation_id $font
+
+		set font [font actual $font]
+		if { [dict get $font "-slant"] == "italic" } {
+			set factor 0.7
+		} else {
+			set factor 0.75
+		}
+
+		dict set font "-size" [expr int([dict get [font actual $font] "-size"] / $factor)]
+		setAnnotationFont $annotation_id $font
 	}
 
-	foreach canvas_id [getFromRunning "canvas_list"] {
-		setToRunning "curcanvas" $canvas_id
-		switchCanvas none
+	set msg ""
+	try {
+		set file_id [file tempfile psname]
 
-		set sizex [expr {[lindex [getCanvasSize $canvas_id] 0]*$zoom}]
-		set sizey [expr {[lindex [getCanvasSize $canvas_id] 1]*$zoom}]
+		foreach canvas_id [getFromRunning "canvas_list"] {
+			setToRunning "curcanvas" $canvas_id
+			switchCanvas none
 
-		set p [open "$psname" a+]
-		puts $p [.panwin.f1.c postscript -height $sizey -width $sizex -x 0 -y 0 -rotate yes -pageheight 297m -pagewidth 210m]
-		close $p
+			set sizex [expr {[lindex [getCanvasSize $canvas_id] 0]}]
+			set sizey [expr {[lindex [getCanvasSize $canvas_id] 1]}]
+
+			puts $file_id [.panwin.f1.c postscript -height $sizey -width $sizex -x 0 -y 0 -rotate yes -pageheight 390m -pagewidth 276m]
+		}
+		close $file_id
+
+		if { $printFileType == "pdf" } {
+			foreach bad_font "UbuntuMono NotoSans" {
+				catch { exec sed -i -e "s/$bad_font\\(\[^-]\\)/$bad_font-Regular\\1/" $psname }
+			}
+
+			exec ps2pdf -dPDFSETTINGS=/screen $psname $entry_string
+			exec rm $psname
+		} else {
+			exec mv $psname $entry_string
+		}
+
+		file delete $psname
+	} on error msg {
+		after idle { .dialog1.msg configure -wraplength 4i }
+		tk_dialog .dialog1 "IMUNES error" \
+			$msg \
+			info 0 Dismiss
 	}
 
-	if { $printFileType == "pdf" } {
-		exec ps2pdf -dPDFSETTINGS=/screen $psname $pdfname
-		exec rm $psname
+	dict for {annotation_id font} $font_bkp {
+		setAnnotationFont $annotation_id $font
 	}
 
 	setToRunning "curcanvas" $start_canvas
 	switchCanvas none
-	destroy $w
+
+	if { $msg == "" } {
+		destroy $w
+	}
 }
 
 #****f* editor.tcl/renameCanvasPopup
