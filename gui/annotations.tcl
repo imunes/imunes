@@ -237,7 +237,7 @@ proc popupOvalApply { c wi target } {
 		set target [newObjectId [getFromRunning "annotation_list"] "a"]
 		addAnnotation $target oval
 
-		set coords [$c coords $newoval]
+		set coords [lmap n [$c coords $newoval] {expr int($n / [getFromRunning "zoom"])}]
 		if { [lindex $coords 0] < 0 } {
 			set coords [lreplace $coords 0 0 5]
 		}
@@ -339,7 +339,7 @@ proc popupRectangleDialog { c target modify } {
 	if { $bordercolor == "" } { set bordercolor black }
 	if { $width == "" } { set width 1 }
 
-	lassign $coords x1 y1 x2 y2
+	lassign [lmap n $coords {expr int($n / [getFromRunning "zoom"])}] x1 y1 x2 y2
 	set xx [expr {abs($x2 - $x1)}]
 	set yy [expr {abs($y2 - $y1)}]
 	if { $xx > $yy } {
@@ -454,7 +454,7 @@ proc popupRectangleApply { c wi target } {
 		set target [newObjectId [getFromRunning "annotation_list"] "a"]
 		addAnnotation $target rectangle
 
-		set coords [$c coords $newrect]
+		set coords [lmap n [$c coords $newrect] {expr int($n / [getFromRunning "zoom"])}]
 		if { [lindex $coords 0] < 0 } {
 			set coords [lreplace $coords 0 0 5]
 		}
@@ -652,7 +652,7 @@ proc popupTextApply { c wi target } {
 			# Create a new annotation object
 			set target [newObjectId [getFromRunning "annotation_list"] "a"]
 			addAnnotation $target text
-			set coords [$c coords $newtext]
+			set coords [lmap n [$c coords $newtext] {expr int($n / [getFromRunning "zoom"])}]
 		} else {
 			set coords [getAnnotationCoords $target]
 		}
@@ -686,6 +686,8 @@ proc popupTextApply { c wi target } {
 proc drawText { text } {
 	global default_text_color
 
+	set zoom [getFromRunning "zoom"]
+
 	set coords [getAnnotationCoords $text]
 	if { $coords == "" } {
 		return
@@ -697,8 +699,10 @@ proc drawText { text } {
 
 	if { $labelcolor == "" } { set labelcolor $default_text_color }
 	if { $font == "" } { set font TkTextFont }
+	set font [font actual $font]
 
-	lassign [lmap n $coords {expr $n * [getFromRunning "zoom"]}] x y
+	dict set font "-size" [expr int([dict get [font actual $font] "-size"] * $zoom)]
+	lassign [lmap n $coords {expr $n * $zoom}] x y
 	set newtext [.panwin.f1.c create text $x $y -text $label -anchor w \
 		-font "$font" -justify left -fill $labelcolor -tags "text $text"]
 	.panwin.f1.c raise $newtext
@@ -820,7 +824,7 @@ proc popupFreeformApply { c wi target } {
 		set target [newObjectId [getFromRunning "annotation_list"] "a"]
 		addAnnotation $target freeform
 
-		set coords [$c coords $newfree]
+		set coords [lmap n [$c coords $newfree] {expr int($n / [getFromRunning "zoom"])}]
 	} else {
 		set coords [getAnnotationCoords $target]
 	}

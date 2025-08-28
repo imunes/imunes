@@ -1983,6 +1983,8 @@ proc button1-release { c x y } {
 			if { [lindex [$c gettags $node_id] 0] == "text" } {
 				set bbox [$c bbox "selectmark && $node_id"]
 				lassign [$c coords [lindex [$c gettags $node_id] 1]] x1 y1
+				set x1 [expr {$x1 / $zoom}]
+				set y1 [expr {$y1 / $zoom}]
 
 				set width [expr [lindex $bbox 2] - [lindex $bbox 0]]
 				set height [expr [lindex $bbox 3] - [lindex $bbox 1]]
@@ -2099,6 +2101,7 @@ proc button1-release { c x y } {
 			setAnnotationCoords $resizeobj "$x $y $x1 $y1"
 			set redrawNeeded 1
 			set resizemode false
+			set changed 1
 		}
 	}
 
