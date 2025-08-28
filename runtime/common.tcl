@@ -1232,6 +1232,19 @@ proc captureOnExtIfc { node_id command } {
 }
 
 proc redeployCfg {} {
+	if { ! [getFromRunning "cfg_deployed"] } {
+		return
+	}
+
+	if { ! [getFromRunning "auto_execution"] } {
+		set eid [getFromRunning "eid"]
+
+		createExperimentFiles $eid
+		createRunningVarsFile $eid
+
+		return
+	}
+
 	undeployCfg
 	deployCfg
 }
