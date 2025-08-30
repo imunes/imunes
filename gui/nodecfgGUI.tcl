@@ -1982,13 +1982,16 @@ proc configGUI_addRj45PanedWin { wi node_id } {
 		-command $tmp_command
 
 	ttk::label $wi.vlancfg.tagtxt -text "Vlan tag:" -anchor w
-	ttk::spinbox $wi.vlancfg.tag -width 6 -validate focus \
-		-invalidcommand "focusAndFlash %W"
+	ttk::spinbox $wi.vlancfg.tag -width 6
 	$wi.vlancfg.tag configure \
-		-validatecommand { checkIntRange %P 1 4094 } \
 		-from 1 -to 4094 -increment 1
 
-	$wi.vlancfg.tag insert 0 [_getIfcVlanTag $node_cfg $iface_id]
+	set vlan_tag [_getIfcVlanTag $node_cfg $iface_id]
+	if { $vlan_tag != "" } {
+		$wi.vlancfg.tag insert 0 $vlan_tag
+	} else {
+		$wi.vlancfg.tag insert 0 1
+	}
 	if { [_getIfcVlanDev $node_cfg $iface_id] != "" } {
 		set vlanEnable_$iface_id 1
 	} else {
@@ -3118,6 +3121,25 @@ proc configGUI_addRj45PanedWinApply { iface_id } {
 
 	set wi ".popup.nbook.nf$iface_id"
 	set dev [$wi.stolen.name get]
+	if { $dev == "" } {
+		after idle { .dialog1.msg configure -wraplength 4i }
+		tk_dialog .dialog1 "IMUNES error" \
+			"Interface name cannot be empty!" \
+			info 0 Dismiss
+
+		return
+	}
+
+	set tag [$wi.vlancfg.tag get]
+	if { $tag == "" || ! [checkIntRange $tag 1 4094] } {
+		after idle { .dialog1.msg configure -wraplength 4i }
+		tk_dialog .dialog1 "IMUNES error" \
+			"VLAN tag not in range \[1-4094]!" \
+			info 0 Dismiss
+
+		return
+	}
+
 	if { [set vlanEnable_$iface_id] != $oldEnabled || $dev != [_getIfcName $node_cfg $iface_id]} {
 		if { [set vlanEnable_$iface_id] } {
 			set node_cfg [_setIfcVlanDev $node_cfg $iface_id $dev]
@@ -3127,7 +3149,6 @@ proc configGUI_addRj45PanedWinApply { iface_id } {
 		set changed 1
 	}
 
-	set tag [$wi.vlancfg.tag get]
 	set oldTag [_getIfcVlanTag $node_cfg $iface_id]
 	if { $tag != $oldTag } {
 		set node_cfg [_setIfcVlanTag $node_cfg $iface_id $tag]
