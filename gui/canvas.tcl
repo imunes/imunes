@@ -1092,9 +1092,23 @@ proc resizeCanvasPopup {} {
 
 	ttk::frame $w.resizeframe.buttons
 	pack $w.resizeframe.buttons -side bottom -fill x -pady 2m
+
+	set fit_command [list apply {
+		{ w } {
+			global mf
+
+			set padx 51
+			set pady 55
+			$w.resizeframe.size.x set [expr [winfo width $mf.c] - $padx]
+			$w.resizeframe.size.y set [expr [winfo height $mf.c] - $pady]
+		}
+	} \
+		$w
+	]
+	ttk::button $w.resizeframe.buttons.fit -text "Fit window" -command $fit_command
 	ttk::button $w.resizeframe.buttons.print -text "Apply" -command "resizeCanvasApply $w"
 	ttk::button $w.resizeframe.buttons.cancel -text "Cancel" -command "destroy $w"
-	pack $w.resizeframe.buttons.print $w.resizeframe.buttons.cancel -side left -expand 1
+	pack $w.resizeframe.buttons.fit $w.resizeframe.buttons.print $w.resizeframe.buttons.cancel -side left -expand 1 -padx 2
 	bind $w <Key-Escape> "destroy $w"
 	bind $w <Key-Return> "resizeCanvasApply $w"
 
@@ -1112,7 +1126,7 @@ proc resizeCanvasPopup {} {
 	$w.resizeframe.size.y configure -from $minHeight -to 4096 -increment 2 \
 		-validatecommand "checkIntRange %P $minHeight 4096"
 
-	pack $w.resizeframe.size.x $w.resizeframe.size.label $w.resizeframe.size.y -side left -pady 5 -padx 2 -fill x
+	pack $w.resizeframe.size.x $w.resizeframe.size.label $w.resizeframe.size.y -side left -expand 1 -pady 5 -padx 2 -fill y
 }
 
 #****f* editor.tcl/renameCanvasApply
@@ -1160,17 +1174,32 @@ proc resizeCanvasApply { w } {
 
 	set x [$w.resizeframe.size.x get]
 	set y [$w.resizeframe.size.y get]
-	set ix [lindex [getMostDistantNodeCoordinates] 0]
-	set iy [lindex [getMostDistantNodeCoordinates] 1]
+	lassign [getMostDistantNodeCoordinates] ix iy
 
-	if { [getCanvasBkg $curcanvas] == "" && $ix <= $x && $iy <= $y } {
-		destroy $w
-		if { "$x $y" != [getCanvasSize $curcanvas] } {
-			set changed 1
-		}
+	if { [getCanvasBkg $curcanvas] != "" } {
+		after idle { .dialog1.msg configure -wraplength 4i }
+		tk_dialog .dialog1 "IMUNES error" \
+			"Cannot resize canvas with bacground image!" \
+			info 0 Dismiss
 
-		setCanvasSize $curcanvas $x $y
-		switchCanvas none
-		updateUndoLog
+		return
 	}
+
+	if { $ix > $x || $iy > $y } {
+		after idle { .dialog1.msg configure -wraplength 4i }
+		tk_dialog .dialog1 "IMUNES error" \
+			"Canvas not big enough for existing nodes!" \
+			info 0 Dismiss
+
+		return
+	}
+
+	destroy $w
+	if { "$x $y" != [getCanvasSize $curcanvas] } {
+		set changed 1
+	}
+
+	setCanvasSize $curcanvas $x $y
+	switchCanvas none
+	updateUndoLog
 }
