@@ -3814,30 +3814,31 @@ proc customConfigGUIFillDefaults { wi node_id selected_hook } {
 		[$w.bootcmd_e get] != "" ||
 		[$w.editor get 1.0 {end -1c}] != ""
 	} {
-		set answer [tk_messageBox -message \
-			"Do you want to overwrite current values?" \
-			-icon warning -type yesno ]
+		after idle { .dialog1.msg configure -wraplength 4i }
+		set answer [tk_dialog .dialog1 "Modify configuration" \
+			"Overwrite current values or insert at cursor?" \
+			questhead 0 "Overwrite" "Insert" "Cancel"]
 
-		switch -- $answer {
-			yes {
-				$w.editor delete 0.0 end
-				foreach line $cfg {
-					$w.editor insert end "$line\n"
-				}
-				$w.bootcmd_e delete 0 end
-				$w.bootcmd_e insert 0 $cmd
-			}
-
-			no {}
+		if { $answer == 0 } {
+			$w.editor delete 0.0 end
 		}
 	} else {
-		$w.editor delete 0.0 end
-		foreach line $cfg {
-			$w.editor insert end "$line\n"
+		set answer 0
+	}
+
+	switch -- $answer {
+		0 -
+		1 {
+			$w.editor insert insert "# autoconfig start\n"
+			foreach line $cfg {
+				$w.editor insert insert "$line\n"
+			}
+			$w.editor insert insert "# autoconfig end"
+			$w.bootcmd_e delete 0 end
+			$w.bootcmd_e insert 0 $cmd
 		}
 
-		$w.bootcmd_e delete 0 end
-		$w.bootcmd_e insert 0 $cmd
+		2 {}
 	}
 }
 
