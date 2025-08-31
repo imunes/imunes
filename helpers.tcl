@@ -1,31 +1,55 @@
 proc getPrettyUsage { options } {
+	lappend options {"help"	"Print this message"}
+
+	set tabsize 4
+	set tab_char "[string repeat " " $tabsize]"
+
 	set usage    "Usage:\n"
-	append usage "    imunes \[OPTION...\] \[.imn FILE\]\n"
+	append usage "${tab_char}imunes \[OPTION...\] \[.imn FILE\]\n"
 	append usage "\n"
 	append usage "Options:\n"
+
+	set no_secrets {}
 	foreach opt $options {
 		set vals [split [lindex $opt 0] "."]
-		set description [lindex $opt end]
+		if { [lindex $vals end] == "secret" } {
+			continue
+		}
+
 		set arg [lindex $vals 0]
-		if { [lindex $vals 1] != "secret" } {
-			append usage "    "
-		}
 		if { [lindex $vals 1] == "arg" } {
-			append usage "-$arg value\t$description\n"
-		}
-		if { [lindex $vals 1] == "" } {
-			if { [string length $arg] < 4 } {
-				append usage "-$arg\t\t$description\n"
-			} else {
-				append usage "-$arg\t$description\n"
-			}
+			lappend no_secrets [string length "-$arg.arg"]
+		} else {
+			lappend no_secrets [string length "-$arg"]
 		}
 	}
-	append usage "    -help\tPrint this message\n"
+
+	set maxlen [tcl::mathfunc::max {*}$no_secrets]
+	incr maxlen [expr $tabsize - ($maxlen % $tabsize)]
+
+	foreach opt $options {
+		set vals [split [lindex $opt 0] "."]
+		if { [lindex $vals end] == "secret" } {
+			continue
+		}
+
+		set arg [lindex $vals 0]
+		if { [lindex $vals 1] == "arg" } {
+			set arg "$arg.arg"
+			set default_str " (default: '[lindex $opt end-1]')"
+		} else {
+			set default_str ""
+		}
+
+		append usage "${tab_char}-$arg"
+		append usage "[string repeat " " [expr $maxlen - [string length $arg]]]"
+		append usage "[lindex $opt end]${default_str}\n"
+	}
+
 	append usage "\nExamples:\n"
-	append usage "    imunes \[-e | -eid eid\] \[topology.imn\] - start IMUNES GUI\n"
-	append usage "    imunes -b \[-e | -eid eid\] \[topology.imn\] - start experiment (batch)\n"
-	append usage "    imunes -b -e | -eid eid - terminate experiment (batch)\n"
+	append usage "${tab_char}imunes \[-e | -eid eid\] \[topology.imn\] - start IMUNES GUI\n"
+	append usage "${tab_char}imunes -b \[-e | -eid eid\] \[topology.imn\] - start experiment (batch)\n"
+	append usage "${tab_char}imunes -b -e | -eid eid - terminate experiment (batch)\n"
 
 	return $usage
 }
