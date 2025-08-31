@@ -558,6 +558,34 @@ proc showPhysIfcMenu { iface_id } {
 		}
 	}
 
+	if { [_getIfcType $node_cfg $iface_id] == "stolen" } {
+		.button3physifc add command -label "Fetch data from interface" -command {
+			global curnode ifaces_list button3physifc_ifc changed node_cfg
+			global node_existing_mac node_existing_ipv4 node_existing_ipv6
+
+			if { [_getNodeType $node_cfg] in "hub lanswitch" } {
+				return
+			}
+
+			set wi .popup.nbook.nfInterfaces.panwin
+
+			set node_existing_mac [removeFromList $node_existing_mac [_getIfcMACaddr $node_cfg $button3physifc_ifc] "keep_doubles"]
+			set node_existing_ipv4 [removeFromList $node_existing_ipv4 [_getIfcIPv4addrs $node_cfg $button3physifc_ifc] "keep_doubles"]
+			set node_existing_ipv6 [removeFromList $node_existing_ipv6 [_getIfcIPv6addrs $node_cfg $button3physifc_ifc] "keep_doubles"]
+
+			set new_iface_cfg [fetchInterfaceData $curnode $button3physifc_ifc]
+			if { $new_iface_cfg == "" } {
+				return
+			}
+
+			set node_cfg $new_iface_cfg
+
+			configGUI_refreshIfcsTree $wi.f1.tree $curnode
+			configGUI_showIfcInfo $wi.f2 0 $curnode $button3physifc_ifc "force"
+			$wi.f1.tree selection set $button3physifc_ifc
+		}
+	}
+
 	set x [winfo pointerx .]
 	set y [winfo pointery .]
 	tk_popup .button3physifc $x $y
@@ -756,7 +784,7 @@ proc configGUI_refreshIfcsTree { wi node_id } {
 #   * node_id - node id
 #   * iface_id - interface id
 #****
-proc configGUI_showIfcInfo { wi phase node_id iface_id } {
+proc configGUI_showIfcInfo { wi phase node_id iface_id { force "" } } {
 	global guielements node_cfg
 	global changed apply cancel badentry
 
@@ -773,8 +801,8 @@ proc configGUI_showIfcInfo { wi phase node_id iface_id } {
 
 	#if there is already some frame shown below the list of interfaces and
 	#parameters shown in that frame are not parameters of selected interface
-	if { $shownifcframe != "" && $iface_id != $shownifc } {
-		if { $phase == 0 } {
+	if { $force != "" || ($shownifcframe != "" && $iface_id != $shownifc) } {
+		if { $force == "" && $phase == 0 } {
 			set badentry 0
 			if { $iface_id != "" } {
 				after 100 "configGUI_showIfcInfo $wi 1 $node_id $iface_id"
@@ -804,7 +832,7 @@ proc configGUI_showIfcInfo { wi phase node_id iface_id } {
 		}
 
 		#creating popup window with warning about unsaved changes
-		if { $changed == 1 && $apply == 0 } {
+		if { $force == "" && $changed == 1 && $apply == 0 } {
 			if { $phase == 1 && $shownifc ni "\"\" physIfcFrame logIfcFrame" } {
 				configGUI_saveChangesPopup $wi $node_id $shownifc
 			}
@@ -838,7 +866,7 @@ proc configGUI_showIfcInfo { wi phase node_id iface_id } {
 		set type [_getNodeType $node_cfg]
 		#creating new frame below the list of interfaces and adding modules with
 		#parameters of selected interface
-		if { $iface_id != $shownifc } {
+		if { $force != "" || $iface_id != $shownifc } {
 			if { $iface_id in "\"\" physIfcFrame" } {
 				#manage physical interfaces
 				configGUI_physicalInterfaces $wi $node_id "physIfcFrame"

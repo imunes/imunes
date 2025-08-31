@@ -1698,6 +1698,91 @@ proc getDelIPv6IfcCmd { ifc addr } {
 	return "ip -6 addr del $addr dev $ifc"
 }
 
+proc fetchInterfaceData { node_id iface_id } {
+	global node_existing_mac node_existing_ipv4 node_existing_ipv6
+	set node_existing_mac [getFromRunning "mac_used_list"]
+	set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
+	set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
+
+	global node_cfg
+
+	set iface_name [_getIfcName $node_cfg $iface_id]
+	if { $iface_name ni [getExtIfcs] } {
+		puts "No interface $iface_name."
+
+		return
+	}
+
+	set new_cfg $node_cfg
+
+	catch { exec ip --json a show $iface_name } json
+	set elem {*}[json::json2dict $json]
+
+	if { "UP" in [dictGet $elem "flags"] } {
+		set oper_state ""
+	} else {
+		set oper_state "down"
+	}
+	set new_cfg [_setIfcOperState $new_cfg $iface_id $oper_state]
+
+	set link_type [dictGet $elem "link_type"]
+	if { $link_type != "loopback" } {
+		set old_mac [_getIfcMACaddr $new_cfg $iface_id]
+		set new_mac [dictGet $elem "address"]
+
+		if { $old_mac != $new_mac } {
+			set node_existing_mac [removeFromList $node_existing_mac $old_mac "keep_doubles"]
+			lappend node_existing_mac $new_mac
+
+			set new_cfg [_setIfcMACaddr $new_cfg $iface_id $new_mac]
+		}
+	}
+
+	set mtu [dictGet $elem "mtu"]
+	if { $mtu != "" && [_getIfcMTU $new_cfg $iface_id] != $mtu} {
+		set new_cfg [_setIfcMTU $new_cfg $iface_id $mtu]
+	}
+
+	set ipv4_addrs {}
+	set ipv6_addrs {}
+	foreach addr_cfg [dictGet $elem "addr_info"] {
+		set family [dictGet $addr_cfg "family"]
+		set addr [dictGet $addr_cfg "local"]
+		set mask [dictGet $addr_cfg "prefixlen"]
+		if { $family == "inet" } {
+			lappend ipv4_addrs "$addr/$mask"
+		} elseif { $family == "inet6" && [dictGet $addr_cfg "scope"] in "global host" } {
+			lappend ipv6_addrs "$addr/$mask"
+		}
+	}
+
+	set old_ipv4_addrs [lsort [_getIfcIPv4addrs $new_cfg $iface_id]]
+	set new_ipv4_addrs [lsort $ipv4_addrs]
+	if { $old_ipv4_addrs != $new_ipv4_addrs } {
+		set node_existing_ipv4 [removeFromList $node_existing_ipv4 $old_ipv4_addrs "keep_doubles"]
+		lappend node_existing_ipv4 {*}$new_ipv4_addrs
+
+		setToRunning "${node_id}|${iface_id}_old_ipv4_addrs" $ipv4_addrs
+		set new_cfg [_setIfcIPv4addrs $new_cfg $iface_id $ipv4_addrs]
+	}
+
+	set old_ipv6_addrs [lsort [_getIfcIPv6addrs $new_cfg $iface_id]]
+	set new_ipv6_addrs [lsort $ipv6_addrs]
+	if { $old_ipv6_addrs != $new_ipv6_addrs } {
+		set node_existing_ipv6 [removeFromList $node_existing_ipv6 $old_ipv6_addrs "keep_doubles"]
+		lappend node_existing_ipv6 {*}$new_ipv6_addrs
+
+		setToRunning "${node_id}|${iface_id}_old_ipv6_addrs" $ipv6_addrs
+		set new_cfg [_setIfcIPv6addrs $new_cfg $iface_id $ipv6_addrs]
+	}
+
+	if { $new_cfg == $node_cfg } {
+		return
+	}
+
+	return $new_cfg
+}
+
 #****f* linux.tcl/fetchNodeRunningConfig
 # NAME
 #   fetchNodeRunningConfig -- get interfaces list from the node
