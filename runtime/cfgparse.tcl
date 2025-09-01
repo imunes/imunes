@@ -142,9 +142,20 @@ proc loadCfgLegacy { cfg } {
 							lassign $value iface_name peer_id
 
 							set node_type [cfgGet "nodes" $object "type"]
-							if { $node_type ni "pc host router nat64 ext extnat stpswitch extelem" } {
+							if { $node_type in "rj45 ext extnat" } {
 								set all_ifaces [dict keys [cfgGet "nodes" $object "ifaces"]]
-								set iface_id [newObjectId $all_ifaces "ifc"]
+								set iface_id ""
+								foreach existing_iface_id $all_ifaces {
+									if { $iface_name == [cfgGet "nodes" $object "ifaces" $existing_iface_id "name"] } {
+										set iface_id $existing_iface_id
+										break
+									}
+								}
+
+								if { $iface_id == "" } {
+									set iface_id [newObjectId $all_ifaces "ifc"]
+								}
+
 								if { $node_type in "rj45" } {
 									cfgSet "nodes" $object "ifaces" $iface_id "type" "stolen"
 								} else {
@@ -154,7 +165,10 @@ proc loadCfgLegacy { cfg } {
 								if { $node_type == "extnat" } {
 									cfgSet "nodes" $object "type" "ext"
 									cfgSet "nodes" $object "nat_iface" [cfgGet "nodes" $object "name"]
+								} elseif { $node_type in "ext" } {
+									cfgSet "nodes" $object "nat_iface" "UNASSIGNED"
 								}
+
 								cfgSet "nodes" $object "ifaces" $iface_id "name" "$iface_name"
 								setToRunning "${object}|${iface_id}_running" false
 							} else {
@@ -1073,9 +1087,16 @@ proc loadCfgLegacy { cfg } {
 		# disable auto_default_routes if not explicitly enabled in old topologies
 		if {
 			[cfgGet "nodes" $node_id "auto_default_routes"] == "" &&
-			[$node_type.netlayer] == "NETWORK"
+			[$node_type.netlayer] == "NETWORK" && $node_type != "ext"
 		} {
 			setNodeAutoDefaultRoutesStatus $node_id "disabled"
+		}
+
+		# ext nodes have unnecessary lo0 interface, so delete it
+		if { $node_type == "ext" } {
+			foreach iface_id [logIfcList $node_id] {
+				cfgUnset "nodes" $node_id "ifaces" $iface_id
+			}
 		}
 	}
 
