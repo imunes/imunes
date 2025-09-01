@@ -563,7 +563,7 @@ proc createNodeContainer { node_id } {
 		set ulimit_proc_str ""
 	}
 
-	set docker_cmd "docker run --detach --init --tty --rm \
+	set docker_cmd "docker run --detach --init --tty \
 		--privileged --cap-add=ALL --net=$network \
 		--name $docker_id --hostname=[getNodeName $node_id] \
 		--volume /tmp/.X11-unix:/tmp/.X11-unix \
@@ -1269,6 +1269,7 @@ proc removeNodeContainer { eid node_id } {
 	set docker_id $eid.$node_id
 
 	pipesExec "docker kill $docker_id" "hold"
+	pipesExec "docker rm $docker_id" "hold"
 }
 
 proc killAllNodeProcesses { eid node_id } {
