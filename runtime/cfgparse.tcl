@@ -1460,6 +1460,8 @@ proc cfgSetEmpty { args } {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
 	set dict_cfg [dictSet $dict_cfg {*}$args]
+
+	setToRunning "modified" true
 }
 
 # to forcefully set empty values to a dictionary key
@@ -1473,6 +1475,8 @@ proc cfgLappend { args } {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
 	set dict_cfg [dictLappend $dict_cfg {*}$args]
+
+	setToRunning "modified" true
 
 	return $dict_cfg
 }
@@ -1494,6 +1498,8 @@ proc cfgUnset { args } {
 			break
 		}
 	}
+
+	setToRunning "modified" true
 
 	return $dict_cfg
 }
