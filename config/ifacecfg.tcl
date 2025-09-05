@@ -815,10 +815,8 @@ proc updateIface { node_id iface_id old_iface_cfg new_iface_cfg } {
 			"filter_rules" {
 				clearFilterIfcRules $node_id $iface_id
 
-				if { $iface_change != "removed" } {
-					foreach {rule_id rule_cfg} $iface_prop_new_value {
-						addFilterIfcRule $node_id $iface_id $rule_id $rule_cfg
-					}
+				foreach {rule_id rule_cfg} $iface_prop_new_value {
+					addFilterIfcRule $node_id $iface_id $rule_id $rule_cfg
 				}
 			}
 
