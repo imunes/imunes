@@ -174,11 +174,13 @@ proc redo {} {
 #   * check -- set to 1 if the str is one of the link colors 0 otherwise.
 #****
 proc checkLinkColor { str } {
+	global named_colors
+
 	if { $str == "" } {
 		return 1
 	}
 
-	if { $str ni "Red Green Blue Yellow Magenta Cyan Black" } {
+	if { $str ni $named_colors} {
 		return 0
 	}
 
@@ -312,7 +314,7 @@ proc setZoom { x y } {
 	bind $w <Key-Return> "setZoomApply $w"
 
 	ttk::entry $w.setzoom.e1
-	$w.setzoom.e1 insert 0 [expr {int([getFromRunning_gui "zoom"] * 100)}]
+	$w.setzoom.e1 insert 0 [expr {int([getActiveOption "zoom"] * 100)}]
 	pack $w.setzoom.e1 -side top -pady 5 -padx 10 -fill x
 }
 
@@ -329,8 +331,8 @@ proc setZoom { x y } {
 #****
 proc setZoomApply { w } {
 	set newzoom [expr [$w.setzoom.e1 get] / 100.0]
-	if { $newzoom != [getFromRunning_gui "zoom"] } {
-		setToRunning_gui "zoom" $newzoom
+	if { $newzoom != [getActiveOption "zoom"] } {
+		setGlobalOption "zoom" $newzoom
 		redrawAll
 	}
 
@@ -386,7 +388,7 @@ proc selectZoom { x y } {
 	bind $w <Key-Return> "selectZoomApply $w"
 
 	ttk::combobox $w.selectzoom.e1 -values $values
-	$w.selectzoom.e1 insert 0 [expr {int([getFromRunning_gui "zoom"] * 100)}]
+	$w.selectzoom.e1 insert 0 [expr {int([getActiveOption "zoom"] * 100)}]
 	pack $w.selectzoom.e1 -side top -pady 5 -padx 10 -fill x
 
 	update
@@ -427,8 +429,8 @@ proc selectZoomApply { w } {
 	}
 
 	set newzoom [ expr $tempzoom / 100.0]
-	if { $newzoom != [getFromRunning_gui "zoom"] } {
-		setToRunning_gui "zoom" $newzoom
+	if { $newzoom != [getActiveOption "zoom"] } {
+		setGlobalOption "zoom" $newzoom
 
 		redrawAll
 		set changed 1
@@ -450,12 +452,16 @@ proc selectZoomApply { w } {
 #   * wi -- widget
 #****
 proc routerDefaultsApply { wi } {
-	global changed router_model routerDefaultsModel router_ConfigModel
+	global changed routerDefaultsModel router_ConfigModel
 	global routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable routerBgpEnable routerLdpEnable
-	global rdconfig
 
-	set rdconfig "$routerRipEnable $routerRipngEnable $routerOspfEnable $routerOspf6Enable $routerBgpEnable $routerLdpEnable"
-	set routerDefaultsModel $router_model
+	setGlobalOption "routerDefaultsModel" $routerDefaultsModel
+	setGlobalOption "routerRipEnable" $routerRipEnable
+	setGlobalOption "routerRipngEnable" $routerRipngEnable
+	setGlobalOption "routerOspfEnable" $routerOspfEnable
+	setGlobalOption "routerOspf6Enable" $routerOspf6Enable
+	setGlobalOption "routerBgpEnable" $routerBgpEnable
+	setGlobalOption "routerLdpEnable" $routerLdpEnable
 
 	set selected_node_list [selectedNodes]
 	if { $selected_node_list == {} } {
@@ -466,17 +472,16 @@ proc routerDefaultsApply { wi } {
 
 	foreach node_id $selected_node_list {
 		if { [getNodeType $node_id] == "router" } {
-			setNodeModel $node_id $router_model
+			setNodeModel $node_id $routerDefaultsModel
 
-			set router_ConfigModel $router_model
+			set router_ConfigModel $routerDefaultsModel
 			if { $router_ConfigModel != "static" } {
-				lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable ldpEnable
-				setNodeProtocol $node_id "rip" $ripEnable
-				setNodeProtocol $node_id "ripng" $ripngEnable
-				setNodeProtocol $node_id "ospf" $ospfEnable
-				setNodeProtocol $node_id "ospf6" $ospf6Enable
-				setNodeProtocol $node_id "bgp" $bgpEnable
-				setNodeProtocol $node_id "ldp" $ldpEnable
+				setNodeProtocol $node_id "rip" $routerRipEnable
+				setNodeProtocol $node_id "ripng" $routerRipngEnable
+				setNodeProtocol $node_id "ospf" $routerOspfEnable
+				setNodeProtocol $node_id "ospf6" $routerOspf6Enable
+				setNodeProtocol $node_id "bgp" $routerBgpEnable
+				setNodeProtocol $node_id "ldp" $routerLdpEnable
 			}
 			set changed 1
 		}
@@ -1164,7 +1169,7 @@ proc toggleAutoExecutionGUI { { new_value "" } } {
 #   * group -- tool group to which should be activated
 #****
 proc cycleToolGroup { group } {
-	global active_tool_group active_tools tool_groups runnable_node_types show_unsupported_nodes
+	global active_tool_group active_tools tool_groups runnable_node_types
 	global newnode newlink newoval newrect newtext newfree
 	global resizemode
 
@@ -1181,14 +1186,22 @@ proc cycleToolGroup { group } {
 		set tool_count [llength [dict get $tool_groups $active_tool_group]]
 		set start_index [dict get $active_tools $active_tool_group]
 		set index [expr ($start_index + 1) % $tool_count]
-		if { ! $show_unsupported_nodes } {
-			while { [lindex $tools $index] ni $runnable_node_types } {
-				set index [expr ($index + 1) % $tool_count]
-				if { $index == $start_index } {
-					break
-				}
+		set current_tool [lindex $tools $index]
+
+		set hidden_node_types [getActiveOption "hidden_node_types"]
+		set show_unsupported_nodes [getActiveOption "show_unsupported_nodes"]
+		while {
+			(! $show_unsupported_nodes && $current_tool ni $runnable_node_types) ||
+			$current_tool in $hidden_node_types
+		} {
+			set index [expr ($index + 1) % $tool_count]
+			if { $index == $start_index } {
+				break
 			}
+
+			set current_tool [lindex $tools $index]
 		}
+
 		dict set active_tools $group $index
 	}
 

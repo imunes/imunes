@@ -154,7 +154,7 @@ proc removeNodeGUI { node_id { keep_other_ifaces 0 } } {
 proc splitLinkGUI { link_id } {
 	global changed
 
-	set zoom [getFromRunning_gui "zoom"]
+	set zoom [getActiveOption "zoom"]
 	set curcanvas [getFromRunning_gui "curcanvas"]
 
 	lassign [getLinkPeers $link_id] orig_node1_id orig_node2_id
@@ -543,7 +543,6 @@ proc button3link { c x y } {
 proc moveToCanvas { canvas_id } {
 	global changed
 
-	set zoom [getFromRunning_gui "zoom"]
 	set curcanvas [getFromRunning_gui "curcanvas"]
 
 	set selected_nodes [selectedNodes]
@@ -1193,20 +1192,16 @@ proc button3node { c x y } {
 
 				switch -exact -- $ip_version {
 					"ipv4" {
-						global IPv4autoAssign
-
-						set tmp $IPv4autoAssign
-						set IPv4autoAssign 1
+						set tmp [getActiveOption "IPv4autoAssign"]
+						setGlobalOption "IPv4autoAssign" 1
 						changeAddressRange
-						set IPv4autoAssign $tmp
+						setGlobalOption "IPv4autoAssign" $tmp
 					}
 					"ipv6" {
-						global IPv6autoAssign
-
-						set tmp $IPv6autoAssign
-						set IPv6autoAssign 1
+						set tmp [getActiveOption "IPv6autoAssign"]
+						setGlobalOption "IPv6autoAssign" 1
 						changeAddressRange6
-						set IPv6autoAssign $tmp
+						setGlobalOption "IPv6autoAssign" $tmp
 					}
 				}
 
@@ -1473,10 +1468,9 @@ proc button1 { c x y button } {
 	global oval rectangle text freeform newtext
 	global lastX lastY
 	global background selectbox
-	global default_link_color default_link_width
 	global resizemode resizeobj
 
-	set zoom [getFromRunning_gui "zoom"]
+	set zoom [getActiveOption "zoom"]
 
 	set x [$c canvasx $x]
 	set y [$c canvasy $y]
@@ -1643,7 +1637,7 @@ proc button1 { c x y button } {
 			set lastX [lindex [$c coords $curobj] 0]
 			set lastY [lindex [$c coords $curobj] 1]
 			set newlink [$c create line $lastX $lastY $x $y \
-				-fill $default_link_color -width $default_link_width \
+				-fill [getActiveOption "default_link_color"] -width [getActiveOption "default_link_width"] \
 				-tags "link"]
 		}
 	}
@@ -1671,7 +1665,7 @@ proc button1-motion { c x y } {
 	global lastX lastY sizex sizey selectbox background
 	global newoval newrect newtext newfree resizemode
 
-	set zoom [getFromRunning_gui "zoom"]
+	set zoom [getActiveOption "zoom"]
 
 	set x [$c canvasx $x]
 	set y [$c canvasy $y]
@@ -1886,7 +1880,7 @@ proc button1-release { c x y } {
 	global resizemode resizeobj
 	global newnode
 
-	set zoom [getFromRunning_gui "zoom"]
+	set zoom [getActiveOption "zoom"]
 	set undolevel [getFromRunning "undolevel"]
 	set redolevel [getFromRunning "redolevel"]
 
@@ -2227,7 +2221,7 @@ proc button1-release { c x y } {
 #   * y -- y coordinate
 #****
 proc button3background { c x y } {
-	global show_background_image changed
+	global changed
 
 	set canvas_list [getFromRunning_gui "canvas_list"]
 	set curcanvas [getFromRunning_gui "curcanvas"]
@@ -2237,9 +2231,16 @@ proc button3background { c x y } {
 	#
 	# Show canvas background
 	#
+	set toggle_bkg_command {
+		setGlobalOption "show_background_image" - "toggle"
+
+		redrawAll
+		set changed 1
+		updateUndoLog
+	}
 	.button3menu add checkbutton -label "Show background" \
 		-underline 5 -variable show_background_image \
-		-command { redrawAll }
+		-command $toggle_bkg_command
 
 	.button3menu add separator
 	#
@@ -2622,17 +2623,16 @@ proc removeIPv6Nodes { nodes all_ifaces } {
 }
 
 proc matchSubnet4 { node_id iface_id } {
-	global changed IPv4autoAssign
+	global changed
 
 	if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
 		setToExecuteVars "terminate_cfg" [cfgGet]
 	}
 
-	set tmp $IPv4autoAssign
-	set IPv4autoAssign 1
+	set tmp [getActiveOption "IPv4autoAssign"]
+	setGlobalOption "IPv4autoAssign" 1
 	autoIPv4addr $node_id $iface_id
-	set IPv4autoAssign $tmp
-
+	setGlobalOption "IPv4autoAssign" $tmp
 
 	if { [getNodeAutoDefaultRoutesStatus $node_id] == "enabled" } {
 		trigger_nodeReconfig $node_id
@@ -2650,16 +2650,16 @@ proc matchSubnet4 { node_id iface_id } {
 }
 
 proc matchSubnet6 { node_id iface_id } {
-	global changed IPv6autoAssign
+	global changed
 
 	if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
 		setToExecuteVars "terminate_cfg" [cfgGet]
 	}
 
-	set tmp $IPv6autoAssign
-	set IPv6autoAssign 1
+	set tmp [getActiveOption "IPv6autoAssign"]
+	setGlobalOption "IPv6autoAssign" 1
 	autoIPv6addr $node_id $iface_id
-	set IPv6autoAssign $tmp
+	setGlobalOption "IPv6autoAssign" $tmp
 
 	if { [getNodeAutoDefaultRoutesStatus $node_id] == "enabled" } {
 		trigger_nodeReconfig $node_id

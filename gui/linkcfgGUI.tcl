@@ -285,15 +285,13 @@ proc configGUI_linkConfig { wi link_id param label } {
 	set value [_getLink$param [set link_cfg${gui}]]
 
 	if { $param == "Color" } {
-		global default_link_color
-
-		set colors "Red Green Blue Yellow Magenta Cyan Black"
+		global named_colors
 
 		ttk::combobox $wi.$fr.value -justify right -width 11 \
 			-validate focus -invalidcommand "focusAndFlash %W"
-		$wi.$fr.value configure -values $colors
-		if { $value ni $colors } {
-			set value $default_link_color
+		$wi.$fr.value configure -values $named_colors
+		if { $value ni $named_colors } {
+			set value [getActiveOption "default_link_color"]
 		}
 
 		set validate_command "checkLinkColor %P"
@@ -636,9 +634,7 @@ proc _setLinkBandwidth { link_cfg bandwidth } {
 #   * color -- link color
 #****
 proc _getLinkColor { link_cfg } {
-	global default_link_color
-
-	return [_cfgGetWithDefault $default_link_color $link_cfg "color"]
+	return [_cfgGetWithDefault [getActiveOption "default_link_color"] $link_cfg "color"]
 }
 
 #****f* linkcfg.tcl/setLinkColor
@@ -653,9 +649,7 @@ proc _getLinkColor { link_cfg } {
 #   * color -- link color
 #****
 proc _setLinkColor { link_cfg color } {
-	global default_link_color
-
-	if { $color == $default_link_color } {
+	if { $color == [getActiveOption "default_link_color"] } {
 		set color ""
 	}
 
@@ -673,9 +667,7 @@ proc _setLinkColor { link_cfg color } {
 #   * link -- link id
 #****
 proc _getLinkWidth { link_cfg } {
-	global default_link_width
-
-	return [_cfgGetWithDefault $default_link_width $link_cfg "width"]
+	return [_cfgGetWithDefault [getActiveOption "default_link_width"] $link_cfg "width"]
 }
 
 #****f* linkcfg.tcl/setLinkWidth
@@ -690,9 +682,7 @@ proc _getLinkWidth { link_cfg } {
 #   * width -- link width
 #****
 proc _setLinkWidth { link_cfg width } {
-	global default_link_width
-
-	if { $width == $default_link_width } {
+	if { $width == [getActiveOption "default_link_width"] } {
 		set width ""
 	}
 

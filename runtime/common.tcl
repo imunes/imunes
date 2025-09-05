@@ -27,7 +27,7 @@
 #
 
 global vroot_unionfs vroot_linprocfs ifc_dad_disable \
-	devfs_number auto_etc_hosts linkJitterConfiguration ipsecSecrets \
+	devfs_number linkJitterConfiguration ipsecSecrets \
 	ipsecConf ipFastForwarding
 
 set linkJitterConfiguration 0
@@ -35,7 +35,6 @@ set vroot_unionfs 1
 set vroot_linprocfs 0
 set ifc_dad_disable 0
 set devfs_number 46837
-set auto_etc_hosts 0
 set ipFastForwarding 0
 
 #****f* common.tcl/getVrootDir
@@ -828,7 +827,7 @@ proc pipesClose {} {
 #   * new_oper_mode -- the new operating mode. Can be edit or exec.
 #****
 proc setOperMode { new_oper_mode } {
-	global editor_only isOSfreebsd isOSlinux gui
+	global isOSfreebsd isOSlinux gui
 
 	if {
 		! [getFromRunning "cfg_deployed"] &&
@@ -879,7 +878,7 @@ proc setOperMode { new_oper_mode } {
 			return
 		}
 
-		if { $editor_only } {
+		if { [getActiveOption "editor_only"] } {
 			.menubar.experiment entryconfigure "Execute" -state disabled
 			return
 		}
@@ -956,7 +955,7 @@ proc setOperMode { new_oper_mode } {
 		}
 
 		if { $gui } {
-			if { $editor_only } {
+			if { [getActiveOption "editor_only"] } {
 				.menubar.experiment entryconfigure "Execute" -state disabled
 			} else {
 				.menubar.experiment entryconfigure "Execute" -state normal
@@ -1091,7 +1090,7 @@ proc readDataFromFile { path } {
 }
 
 proc readRunningVarsFile { eid } {
-	global gui_option_defaults
+	global gui_options_defaults
 	global runtimeDir gui remote
 
 	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
@@ -1143,8 +1142,8 @@ proc readRunningVarsFile { eid } {
 			setToRunning "redolevel" 0
 		}
 
-		if { [getFromRunning_gui "zoom"] == "" } {
-			setToRunning_gui "zoom" [dictGet $gui_option_defaults "zoom"]
+		if { [getActiveOption "zoom"] == "" } {
+			setOption_gui "zoom" [dictGet $gui_options_defaults "zoom"]
 		}
 
 		if { [getFromRunning_gui "curcanvas"] == "" } {
@@ -1425,8 +1424,7 @@ proc getRunningExperimentConfigPath { eid } {
 }
 
 proc checkTerminalMissing {} {
-	# FIXME make this modular
-	set terminal "xterm"
+	lassign [getActiveOption "terminal_command"] terminal
 	set cmds "command -v $terminal"
 	if { [catch { exec sh -c {*}$cmds }] == "" } {
 		tk_dialog .dialog1 "IMUNES error" \
@@ -1465,7 +1463,7 @@ proc captureOnExtIfc { node_id command } {
 			return
 		}
 
-		exec xterm -name imunes-terminal -T "Capturing $eid-$node_id" -e {*}$ttyrcmd "tcpdump -ni $eid-$node_id" 2> /dev/null &
+		exec {*}[getActiveOption "terminal_command"] -T "Capturing $eid-$node_id" -e {*}$ttyrcmd "tcpdump -ni $eid-$node_id" 2> /dev/null &
 	} else {
 		exec $command -o "gui.window_title:[getNodeName $node_id] ($eid)" -k -i $eid-$node_id 2> /dev/null &
 	}

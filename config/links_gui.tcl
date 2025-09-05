@@ -39,9 +39,7 @@
 #   * color -- link color
 #****
 proc getLinkColor { link_id } {
-	global default_link_color
-
-	return [cfgGetWithDefault $default_link_color "gui" "links" $link_id "color"]
+	return [cfgGetWithDefault [getActiveOption "default_link_color"] "gui" "links" $link_id "color"]
 }
 
 #****f* links_gui.tcl/setLinkColor
@@ -56,9 +54,7 @@ proc getLinkColor { link_id } {
 #   * color -- link color
 #****
 proc setLinkColor { link_id color } {
-	global default_link_color
-
-	if { $color == $default_link_color } {
+	if { $color == [getActiveOption "default_link_color"] } {
 		set color ""
 	}
 
@@ -76,9 +72,7 @@ proc setLinkColor { link_id color } {
 #   * link_id -- link id
 #****
 proc getLinkWidth { link_id } {
-	global default_link_width
-
-	return [cfgGetWithDefault $default_link_width "gui" "links" $link_id "width"]
+	return [cfgGetWithDefault [getActiveOption "default_link_width"] "gui" "links" $link_id "width"]
 }
 
 #****f* links_gui.tcl/setLinkWidth
@@ -93,9 +87,7 @@ proc getLinkWidth { link_id } {
 #   * width -- link width
 #****
 proc setLinkWidth { link_id width } {
-	global default_link_width
-
-	if { $width == $default_link_width } {
+	if { $width == [getActiveOption "default_link_width"] } {
 		set width ""
 	}
 

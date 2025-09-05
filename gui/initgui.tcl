@@ -129,21 +129,11 @@ set active_tools [dict create]
 
 global showTree zoom_stops canvasBkgMode alignCanvasBkg bgsrcfile
 set showTree 0
-set zoom_stops [list 0.2 0.4 0.5 0.6 0.8 1 \
+set zoom_stops [list 0.2 0.4 0.5 0.6 0.8 1.0 \
 	1.25 1.5 1.75 2.0 3.0]
 set canvasBkgMode "original"
 set alignCanvasBkg "center"
 set bgsrcfile ""
-
-global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable ldpEnable
-global router_model routerDefaultsModel
-set router_model $routerDefaultsModel
-set ripEnable 1
-set ripngEnable 1
-set ospfEnable 0
-set ospf6Enable 0
-set bgpEnable 0
-set ldpEnable 0
 
 global brguielements
 set brguielements {}
@@ -429,11 +419,11 @@ menu .menubar.tools -tearoff 0
 	-command { align2grid }
 .menubar.tools add separator
 .menubar.tools add checkbutton -label "IPv4 auto-assign addresses/routes" \
-	-variable IPv4autoAssign
+	-variable IPv4autoAssign -command { setGlobalOption "IPv4autoAssign" - "toggle" }
 .menubar.tools add checkbutton -label "IPv6 auto-assign addresses/routes" \
-	-variable IPv6autoAssign
+	-variable IPv6autoAssign -command { setGlobalOption "IPv6autoAssign" - "toggle" }
 .menubar.tools add checkbutton -label "Auto-generate /etc/hosts file" \
-	-variable auto_etc_hosts
+	-variable auto_etc_hosts -command { setGlobalOption "auto_etc_hosts" - "toggle" }
 .menubar.tools add separator
 .menubar.tools add command -label "Randomize MAC bytes" -underline 10 \
 	-command randomizeMACbytes
@@ -509,9 +499,8 @@ set tmp_command {
 }
 .menubar.tools add command -label "IPv6 address pool" -underline 3 \
 	-command $tmp_command
-set tmp_command {
-	global router_model supp_router_models
-	global routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable routerBgpEnable routerLdpEnable
+set routing_defaults_command {
+	global routerDefaultsModel supp_router_models
 
 	set wi .popup
 	catch { destroy $wi }
@@ -531,12 +520,12 @@ set tmp_command {
 	ttk::labelframe $w.protocols -text "Protocols:"
 
 	set protocols {
-		"rip rip routerRipEnable"
-		"ripng ripng routerRipngEnable"
-		"ospf ospf routerOspfEnable"
-		"ospf6 ospfv3 routerOspf6Enable"
-		"bgp bgp routerBgpEnable"
-		"ldp ldp routerLdpEnable"
+		"rip	rip		routerRipEnable"
+		"ripng	ripng	routerRipngEnable"
+		"ospf	ospf	routerOspfEnable"
+		"ospf6	ospfv3	routerOspf6Enable"
+		"bgp	bgp		routerBgpEnable"
+		"ldp	ldp		routerLdpEnable"
 	}
 
 	set protocol_list {}
@@ -561,15 +550,16 @@ set tmp_command {
 		""
 	]
 
+	set routerDefaultsModel [getActiveOption "routerDefaultsModel"]
 	# replace last argument for each binding
-	ttk::radiobutton $w.model.frr -text frr -variable router_model \
+	ttk::radiobutton $w.model.frr -text frr -variable routerDefaultsModel \
 		-value frr -command [lreplace $tmp_command end end "normal"]
-	ttk::radiobutton $w.model.quagga -text quagga -variable router_model \
+	ttk::radiobutton $w.model.quagga -text quagga -variable routerDefaultsModel \
 		-value quagga -command [lreplace $tmp_command end end "normal"]
-	ttk::radiobutton $w.model.static -text static -variable router_model \
+	ttk::radiobutton $w.model.static -text static -variable routerDefaultsModel \
 		-value static -command [lreplace $tmp_command end end "disabled"]
 
-	if { $router_model == "static" } {
+	if { $routerDefaultsModel == "static" } {
 		foreach protocol $protocol_list {
 			$w.protocols.$protocol configure -state "disabled"
 		}
@@ -582,19 +572,25 @@ set tmp_command {
 	ttk::frame $w.buttons
 	ttk::button $w.buttons.b1 -text "Apply" -command "routerDefaultsApply $wi"
 
-	set tmp_command [list apply {
+	set cancel_command [list apply {
 		{ top_widget } {
-			global rdconfig router_model routerDefaultsModel
+			global routerDefaultsModel
 			global routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable routerBgpEnable routerLdpEnable
 
-			set router_model $routerDefaultsModel
-			lassign $rdconfig routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable routerBgpEnable routerLdpEnable
+			set routerDefaultsModel [getActiveOption "routerDefaultsModel"]
+			set routerRipEnable [getActiveOption "routerRipEnable"]
+			set routerRipngEnable [getActiveOption "routerRipngEnable"]
+			set routerOspfEnable [getActiveOption "routerOspfEnable"]
+			set routerOspf6Enable [getActiveOption "routerOspf6Enable"]
+			set routerBgpEnable [getActiveOption "routerBgpEnable"]
+			set routerLdpEnable [getActiveOption "routerLdpEnable"]
+
 			destroy $top_widget
 		}
 	} \
 		$wi
 	]
-	ttk::button $w.buttons.b2 -text "Cancel" -command $tmp_command
+	ttk::button $w.buttons.b2 -text "Cancel" -command $cancel_command
 
 	pack $w.model -side top -fill x -pady 5
 	pack $w.model.frr $w.model.quagga $w.model.static \
@@ -612,7 +608,7 @@ set tmp_command {
 	pack $w.buttons.b2 -side right -expand 1 -anchor w -padx 2
 }
 .menubar.tools add command -label "Routing protocol defaults" -underline 0 \
-	-command $tmp_command
+	-command $routing_defaults_command
 
 #
 # View
@@ -623,25 +619,26 @@ set m .menubar.view.iconsize
 menu $m -tearoff 0
 .menubar.view add cascade -label "Icon size" -menu $m -underline 5
 $m add radiobutton -label "Small" -variable icon_size \
-	-value small -command { updateIconSize; redrawAll }
+	-value small -command { updateIconSize "small"; redrawAll }
 $m add radiobutton -label "Normal" -variable icon_size \
-	-value normal -command { updateIconSize; redrawAll }
+	-value normal -command { updateIconSize "normal"; redrawAll }
 
 .menubar.view add separator
 
 .menubar.view add checkbutton -label "Show Interface Names" \
 	-underline 5 -variable show_interface_names \
-	-command { redrawAllLinks }
+	-command { setGlobalOption "show_interface_names" - "toggle" ; redrawAllLinks }
 .menubar.view add checkbutton -label "Show IPv4 Addresses " \
 	-underline 8 -variable show_interface_ipv4 \
-	-command { redrawAllLinks }
+	-command { setGlobalOption "show_interface_ipv4" - "toggle" ; redrawAllLinks }
 .menubar.view add checkbutton -label "Show IPv6 Addresses " \
 	-underline 8 -variable show_interface_ipv6 \
-	-command { redrawAllLinks }
+	-command { setGlobalOption "show_interface_ipv6" - "toggle" ; redrawAllLinks }
 
 set tmp_command {
+	setGlobalOption "show_node_labels" - "toggle"
 	foreach object [.panwin.f1.c find withtag nodelabel] {
-		if { $show_node_labels } {
+		if { [getActiveOption "show_node_labels"] } {
 			.panwin.f1.c itemconfigure $object -state normal
 		} else {
 			.panwin.f1.c itemconfigure $object -state hidden
@@ -652,8 +649,9 @@ set tmp_command {
 	-underline 5 -variable show_node_labels -command $tmp_command
 
 set tmp_command {
+	setGlobalOption "show_link_labels" - "toggle"
 	foreach object [.panwin.f1.c find withtag linklabel] {
-		if { $show_link_labels } {
+		if { [getActiveOption "show_link_labels"] } {
 			.panwin.f1.c itemconfigure $object -state normal
 		} else {
 			.panwin.f1.c itemconfigure $object -state hidden
@@ -664,14 +662,13 @@ set tmp_command {
 	-underline 5 -variable show_link_labels -command $tmp_command
 
 set tmp_command {
-	global show_interface_names show_interface_ipv4 show_interface_ipv6
-	global show_node_labels show_link_labels
+	set var_list "show_interface_names show_interface_ipv4 show_interface_ipv6 \
+		show_node_labels show_link_labels"
+	foreach var $var_list {
+		setGlobalOption $var 1
+	}
 
-	set show_interface_names 1
-	set show_interface_ipv4 1
-	set show_interface_ipv6 1
-	set show_node_labels 1
-	set show_link_labels 1
+	applyOptionsToGUI
 
 	redrawAll
 
@@ -683,14 +680,13 @@ set tmp_command {
 	-underline 5 -command $tmp_command
 
 set tmp_command {
-	global show_interface_names show_interface_ipv4 show_interface_ipv6
-	global show_node_labels show_link_labels
+	set var_list "show_interface_names show_interface_ipv4 show_interface_ipv6 \
+		show_node_labels show_link_labels"
+	foreach var $var_list {
+		setGlobalOption $var 0
+	}
 
-	set show_interface_names 0
-	set show_interface_ipv4 0
-	set show_interface_ipv6 0
-	set show_node_labels 0
-	set show_link_labels 0
+	applyOptionsToGUI
 
 	redrawAll
 
@@ -715,19 +711,19 @@ set tmp_command {
 
 .menubar.view add checkbutton -label "Show Unsupported Nodes" \
 	-variable show_unsupported_nodes -underline 5 \
-	-command { refreshToolBarNodes }
+	-command { setGlobalOption "show_unsupported_nodes" - "toggle" ; refreshToolBarNodes }
 
 .menubar.view add separator
 
 .menubar.view add checkbutton -label "Show Background Image" \
 	-underline 5 -variable show_background_image \
-	-command { redrawAll }
+	-command { setGlobalOption "show_background_image" - "toggle" ; redrawAll }
 .menubar.view add checkbutton -label "Show Annotations" \
 	-underline 8 -variable show_annotations \
-	-command { redrawAll }
+	-command { setGlobalOption "show_annotations" - "toggle" ; redrawAll }
 .menubar.view add checkbutton -label "Show Grid" \
 	-underline 5 -variable show_grid \
-	-command { redrawAll }
+	-command { setGlobalOption "show_grid" - "toggle" ; redrawAll }
 
 
 .menubar.view add separator
@@ -979,7 +975,6 @@ foreach node_type $all_modules_list {
 	}
 }
 
-refreshToolBarNodes
 set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/l2.gif]
 ttk::menubutton $mf.left.link_layer -image $image -style Toolbutton \
 	-menu $mf.left.link_nodes -direction right

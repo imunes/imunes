@@ -133,7 +133,7 @@ set option_defaults {
 	routerDefaultsModel	"frr"
 }
 
-set gui_option_defaults {
+set gui_options_defaults {
 	show_interface_names	1
 	show_interface_ipv4		1
 	show_interface_ipv6		1
@@ -150,7 +150,7 @@ set gui_option_defaults {
 	default_text_color		"#000000"
 }
 
-foreach {option default_value} [concat $option_defaults $gui_option_defaults] {
+foreach {option default_value} [concat $option_defaults $gui_options_defaults] {
 	global $option
 	set $option $default_value
 }
@@ -198,14 +198,6 @@ safeSourceFile "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
 set cfg_list {}
 set curcfg ""
 
-#****v* convert_to_json.tcl/editor_only
-# NAME
-#    editor_only -- if set, Experiment -> Execute is disabled
-# FUNCTION
-#    IMUNES GUI can be used in editor-only mode.i
-#    This variable can be modified in .imunesrc.
-set editor_only false
-
 #
 # Read config files, the first one found: .imunesrc, $HOME/.imunesrc
 #
@@ -247,7 +239,7 @@ if { $argv != "" } {
 	setToRunning "stop_sched" true
 	setToRunning "undolevel" 0
 	setToRunning "redolevel" 0
-	setToRunning_gui "zoom" $zoom
+	setOption_gui "zoom" $zoom
 
 	readCfgJson $currentFileBatch
 

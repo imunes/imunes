@@ -273,7 +273,7 @@ proc spawnShell { node_id cmd } {
 
 	set jail_id "[getFromRunning "eid"].$node_id"
 
-	exec xterm -name imunes-terminal \
+	exec {*}[getActiveOption "terminal_command"] \
 		-T "IMUNES: [getNodeName $node_id] (console) [lindex [split $cmd /] end]" \
 		-e {*}$ttyrcmd "jexec $jail_id $cmd" &
 }

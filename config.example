@@ -1,0 +1,69 @@
+#
+# This file is not parsed. If you want to apply options system-wide,
+# copy it to /etc/imunes/config and modify it there.
+# For per-user changes, copy it to $XDG_CONFIG_HOME/imunes/config or
+# $HOME/imunes/config if $XDG_CONFIG_HOME is "" or not set.
+#
+# non-GUI variables
+# custom_override        - a list of options that ignore values from .imn files (default: "", type: "string")
+# auto_etc_hosts         - automatically create /etc/hosts entries in each node (default: "0", type: "bool")
+# IPv4autoAssign         - automatically assign next free IPv4 address to interface (default: "1", type: "bool")
+# IPv6autoAssign         - automatically assign next free IPv6 address to interface (default: "1", type: "bool")
+# routerDefaultsModel    - new routers will have this value set to routing model (default: "frr", type: "list frr|quagga|static")
+# routerRipEnable        - enable/disable RIP protocol on newly created router nodes (default: "1", type: "bool")
+# routerRipngEnable      - enable/disable RIPng protocol on newly created router nodes (default: "1", type: "bool")
+# routerOspfEnable       - enable/disable OSPF protocol on newly created router nodes (default: "0", type: "bool")
+# routerOspf6Enable      - enable/disable OSPF6 protocol on newly created router nodes (default: "0", type: "bool")
+# routerBgpEnable        - enable/disable BGP protocol on newly created router nodes (default: "0", type: "bool")
+# routerLdpEnable        - enable/disable LDP protocol on newly created router nodes (default: "0", type: "bool")
+# editor_only            - if true, Experiment -> Execute is disabled (default: "0", type: "bool")
+# GUI variables
+# hidden_node_types      - a list of node types to hide in the toolbar (default: "none", type: "string")
+# icon_size              - size of icons on canvas (default: "normal", type: "list small|normal")
+# show_annotations       - show annotations on canvas (default: "1", type: "bool")
+# show_background_image  - show background image on canvas (default: "0", type: "bool")
+# show_grid              - show grid on canvas (default: "1", type: "bool")
+# show_interface_ipv4    - show IPv4 addresses of nodes on canvas (default: "1", type: "bool")
+# show_interface_ipv6    - show IPv6 addresses of nodes on canvas (default: "1", type: "bool")
+# show_interface_names   - show interface names of nodes on canvas (default: "1", type: "bool")
+# show_link_labels       - show labels for links on canvas (default: "1", type: "bool")
+# show_node_labels       - show labels for nodes on canvas (default: "1", type: "bool")
+# show_unsupported_nodes - show unsupported node in the toolbar (default: "0", type: "bool")
+# zoom                   - canvas zoom (default: "1.0", type: "double 0.2|3.0")
+# default_link_color     - default link color (default: "Red", type: "string")
+# default_link_width     - default link width (default: "2", type: "int")
+# default_fill_color     - default oval/rect annotation fill color (default: "Gray", type: "string")
+# default_text_color     - default text annotation color (default: "#000000", type: "string")
+# terminal_command       - default terminal to open (default: "xterm -name imunes-terminal", type: "string")
+#
+{
+    "custom_override"        : "",
+    "auto_etc_hosts"         : "0",
+    "IPv4autoAssign"         : "1",
+    "IPv6autoAssign"         : "1",
+    "routerDefaultsModel"    : "frr",
+    "routerRipEnable"        : "1",
+    "routerRipngEnable"      : "1",
+    "routerOspfEnable"       : "0",
+    "routerOspf6Enable"      : "0",
+    "routerBgpEnable"        : "0",
+    "routerLdpEnable"        : "0",
+    "editor_only"            : "0",
+    "hidden_node_types"      : "none",
+    "icon_size"              : "normal",
+    "show_annotations"       : "1",
+    "show_background_image"  : "0",
+    "show_grid"              : "1",
+    "show_interface_ipv4"    : "1",
+    "show_interface_ipv6"    : "1",
+    "show_interface_names"   : "1",
+    "show_link_labels"       : "1",
+    "show_node_labels"       : "1",
+    "show_unsupported_nodes" : "0",
+    "zoom"                   : "1.0",
+    "default_link_color"     : "Red",
+    "default_link_width"     : "2",
+    "default_fill_color"     : "Gray",
+    "default_text_color"     : "#000000",
+    "terminal_command"       : "xterm -name imunes-terminal"
+}

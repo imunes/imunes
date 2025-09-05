@@ -387,9 +387,7 @@ proc nodeIpsecInit { node_id } {
 #   * node_id -- node id
 #****
 proc generateHostsFile { node_id } {
-	global auto_etc_hosts
-
-	if { $auto_etc_hosts != 1 || [invokeNodeProc $node_id "virtlayer"] != "VIRTUALIZED" } {
+	if { [getActiveOption "auto_etc_hosts"] != 1 || [invokeNodeProc $node_id "virtlayer"] != "VIRTUALIZED" } {
 		return
 	}
 
@@ -435,6 +433,7 @@ proc generateHostsFile { node_id } {
 
 	writeDataToNodeFile $node_id /etc/hosts $etc_hosts
 }
+
 #****f* exec.tcl/deployCfg
 # NAME
 #   deployCfg -- deploy working configuration
