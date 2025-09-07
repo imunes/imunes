@@ -1097,8 +1097,8 @@ proc resizeCanvasPopup {} {
 		{ w } {
 			global mf
 
-			set padx 51
-			set pady 55
+			set padx 56
+			set pady 56
 			$w.resizeframe.size.x set [expr [winfo width $mf.c] - $padx]
 			$w.resizeframe.size.y set [expr [winfo height $mf.c] - $pady]
 		}

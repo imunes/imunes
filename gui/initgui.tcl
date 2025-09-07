@@ -178,7 +178,7 @@ set selectedIfc ""
 #
 
 wm minsize . 640 410
-wm geometry . 1016x716-20+0
+wm geometry . 1021x717-20+0
 
 set iconlist ""
 foreach size "256 128 64" {
