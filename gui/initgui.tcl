@@ -1222,8 +1222,10 @@ bind . <Delete> deleteSelection
 # Scrolling and panning support
 bind $c <2> "$c scan mark %x %y"
 bind $c <B2-Motion> "$c scan dragto %x %y 1"
-bind $c <4> "$c yview scroll 1 units"
-bind $c <5> "$c yview scroll -1 units"
+bind $c <4> "$c yview scroll -1 units"
+bind $c <5> "$c yview scroll 1 units"
+bind $c <Shift-4> "$c xview scroll -1 units"
+bind $c <Shift-5> "$c xview scroll 1 units"
 bind . <Right> "$mf.c xview scroll 1 units"
 bind . <Left> "$mf.c xview scroll -1 units"
 bind . <Down> "$mf.c yview scroll 1 units"
