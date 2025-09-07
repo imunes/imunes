@@ -1116,6 +1116,14 @@ bind $mf.hframe.t <Double-1> {
 	}
 }
 
+bind $mf.hframe.t <4> {
+	switchCanvas prev
+}
+
+bind $mf.hframe.t <5> {
+	switchCanvas next
+}
+
 #scrollbar $mf.hframe.scroll -orient horiz -command "$c xview" \
 #	-bd 1 -width 14
 #scrollbar $mf.vframe.scroll -command "$c yview" \
