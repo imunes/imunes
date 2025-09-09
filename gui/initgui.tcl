@@ -1211,7 +1211,7 @@ $c bind selectmark <Any-Enter> "selectmarkEnter $c %x %y"
 $c bind selectmark <Any-Leave> "selectmarkLeave $c %x %y"
 
 $c bind background <3> "button3background $c %x %y"
-#$c bind grid <3> "button3background $c %x %y"
+$c bind grid <3> "button3background $c %x %y"
 
 bind $c <1> "button1 $c %x %y none"
 bind $c <Control-Button-1> "button1 $c %x %y ctrl"
