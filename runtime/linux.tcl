@@ -233,7 +233,7 @@ proc startXappOnNode { node_id app } {
 # SYNOPSIS
 #   startTcpdumpOnNodeIfc $node_id $iface_name
 # FUNCTION
-#   Start tcpdump in xterm on a virtual node on the specified interface.
+#   Start tcpdump in a terminal on a virtual node on the specified interface.
 # INPUTS
 #   * node_id -- virtual node id
 #   * iface_name -- virtual node interface
@@ -287,11 +287,7 @@ proc existingShells { shells node_id { first_only "" } } {
 #   * cmd -- the path to the shell.
 #****
 proc spawnShell { node_id cmd } {
-	if { [catch { exec xterm -version }] } {
-		tk_dialog .dialog1 "IMUNES error" \
-			"Cannot open terminal. Is xterm installed?" \
-			info 0 Dismiss
-
+	if { [checkTerminalMissing] } {
 		return
 	}
 

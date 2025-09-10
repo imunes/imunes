@@ -1189,6 +1189,20 @@ proc getRunningExperimentConfigPath { eid } {
 	return $file
 }
 
+proc checkTerminalMissing {} {
+	# FIXME make this modular
+	set terminal "xterm"
+	if { [catch { exec which $terminal }] } {
+		tk_dialog .dialog1 "IMUNES error" \
+			"Cannot open terminal. Is $terminal installed?" \
+			info 0 Dismiss
+
+		return true
+	}
+
+	return false
+}
+
 #****f* exec.tcl/captureOnExtIfc
 # NAME
 #   captureOnExtIfc -- start wireshark on an interface
@@ -1210,6 +1224,10 @@ proc captureOnExtIfc { node_id command } {
 
 	if { $command == "tcpdump" } {
 		exec xterm -name imunes-terminal -T "Capturing $eid-$node_id" -e "tcpdump -ni $eid-$node_id" 2> /dev/null &
+		if { [checkTerminalMissing] } {
+			return
+		}
+
 	} else {
 		exec $command -o "gui.window_title:[getNodeName $node_id] ($eid)" -k -i $eid-$node_id 2> /dev/null &
 	}

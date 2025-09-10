@@ -165,6 +165,10 @@ proc captureOnExtIfc { node_id command } {
 
 	set eid [getFromRunning "eid"]
 	if { $command == "tcpdump" } {
+		if { [checkTerminalMissing] } {
+			return
+		}
+
 		exec xterm -name imunes-terminal -T "Capturing $eid-$node_id" -e "tcpdump -ni $eid-$node_id" 2> /dev/null &
 	} else {
 		exec $command -o "gui.window_title:[getNodeName $node_id] ($eid)" -k -i $eid-$node_id 2> /dev/null &
@@ -205,7 +209,7 @@ proc startXappOnNode { node_id app } {
 # SYNOPSIS
 #   startTcpdumpOnNodeIfc $node_id $ifc
 # FUNCTION
-#   Start tcpdump in xterm on a virtual node on the specified interface.
+#   Start tcpdump in a terminal on a virtual node on the specified interface.
 # INPUTS
 #   * node_id -- virtual node id
 #   * ifc -- virtual node interface
@@ -256,6 +260,10 @@ proc existingShells { shells node_id { first_only "" } } {
 #   * cmd -- the path to the shell.
 #****
 proc spawnShell { node_id cmd } {
+	if { [checkTerminalMissing] } {
+		return
+	}
+
 	set jail_id "[getFromRunning "eid"].$node_id"
 
 	exec xterm -name imunes-terminal -sb -rightbar \
