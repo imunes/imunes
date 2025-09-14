@@ -62,8 +62,8 @@ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 SUCH DAMAGE.
 
 IMUNES manual (pdf and html):
-  http://imunes.net/dl/imunes_user_guide.pdf
-  http://imunes.net/dl/guide/
+  https://imunes.net/dl/imunes_user_guide.pdf
+  https://imunes.net/dl/guide/
 }
 
 global help_strings
