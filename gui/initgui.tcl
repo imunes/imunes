@@ -1167,18 +1167,22 @@ pack .bottom.experiment_id .bottom.oper_mode .bottom.mbuf .bottom.cpu_load \
 #
 $c bind node <Any-Enter> "nodeEnter $c"
 $c bind nodelabel <Any-Enter> "nodeEnter $c"
+$c bind node_running <Any-Enter> "nodeEnter $c"
 $c bind link <Any-Enter> "linkEnter $c"
 $c bind linklabel <Any-Enter> "linkEnter $c"
 $c bind node <Any-Leave> "anyLeave $c"
 $c bind nodelabel <Any-Leave> "anyLeave $c"
+$c bind node_running <Any-Leave> "anyLeave $c"
 $c bind link <Any-Leave> "anyLeave $c"
 $c bind linklabel <Any-Leave> "anyLeave $c"
 
 $c bind node <Double-1> "nodeConfigGUI $c {}"
 $c bind nodelabel <Double-1> "nodeConfigGUI $c {}"
+$c bind node_running <Double-1> "nodeConfigGUI $c {}"
 
 $c bind node <Control-Double-1> "nodeConfigGUI $c {}"
 $c bind nodelabel <Control-Double-1> "nodeConfigGUI $c {}"
+$c bind node_running <Control-Double-1> "nodeConfigGUI $c {}"
 
 $c bind grid <Double-1> "double1onGrid $c %x %y"
 
@@ -1194,6 +1198,7 @@ $c bind text <KeyPress> "textInsert $c %A"
 $c bind text <Return> "textInsert $c \\n"
 $c bind node <3> "button3node $c %x %y"
 $c bind nodelabel <3> "button3node $c %x %y"
+$c bind node_running <3> "button3node $c %x %y"
 $c bind link <3> "button3link $c %x %y"
 $c bind linklabel <3> "button3link $c %x %y"
 

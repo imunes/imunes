@@ -796,6 +796,7 @@ proc setOperMode { new_oper_mode } {
 		.menubar.edit entryconfigure "Redo" -state disabled
 		.panwin.f1.c bind node <Double-1> "spawnShellExec"
 		.panwin.f1.c bind nodelabel <Double-1> "spawnShellExec"
+		.panwin.f1.c bind node_running <Double-1> "spawnShellExec"
 
 		setToRunning "oper_mode" "exec"
 
@@ -864,6 +865,7 @@ proc setOperMode { new_oper_mode } {
 
 		.panwin.f1.c bind node <Double-1> "nodeConfigGUI .panwin.f1.c {}"
 		.panwin.f1.c bind nodelabel <Double-1> "nodeConfigGUI .panwin.f1.c {}"
+		.panwin.f1.c bind node_running <Double-1> "nodeConfigGUI .panwin.f1.c {}"
 
 		setToRunning "oper_mode" "edit"
 		.bottom.experiment_id configure -text ""
@@ -888,12 +890,9 @@ proc setOperMode { new_oper_mode } {
 #   node.
 #****
 proc spawnShellExec {} {
-	set node_id [lindex [.panwin.f1.c gettags {node && current}] 1]
+	set node_id [lindex [.panwin.f1.c gettags "(node || nodelabel || node_running) && current"] 1]
 	if { $node_id == "" } {
-		set node_id [lindex [.panwin.f1.c gettags {nodelabel && current}] 1]
-		if { $node_id == "" } {
-			return
-		}
+		return
 	}
 
 	if {

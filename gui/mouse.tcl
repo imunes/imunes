@@ -611,12 +611,9 @@ proc button3node { c x y } {
 	set curcanvas [getFromRunning "curcanvas"]
 	set oper_mode [getFromRunning "oper_mode"]
 
-	set node_id [lindex [$c gettags "node && current"] 1]
+	set node_id [lindex [$c gettags "(node || nodelabel || node_running) && current"] 1]
 	if { $node_id == "" } {
-		set node_id [lindex [$c gettags "nodelabel && current"] 1]
-		if { $node_id == "" } {
-			return
-		}
+		return
 	}
 
 	set type [getNodeType $node_id]
@@ -1536,7 +1533,7 @@ proc button1 { c x y button } {
 			}
 		}
 
-		if { $active_tool == "link" && $curtype == "node" } {
+		if { $active_tool == "link" && $curtype in "node node_running" } {
 			$c config -cursor cross
 			set lastX [lindex [$c coords $curobj] 0]
 			set lastY [lindex [$c coords $curobj] 1]
@@ -1801,7 +1798,7 @@ proc button1-release { c x y } {
 
 		# find the node that is under the cursor
 		foreach obj [$c find overlapping $x $y $x $y] {
-			if { [lindex [$c gettags $obj] 0] == "node" } {
+			if { [lindex [$c gettags $obj] 0] in "node node_running" } {
 				set destobj $obj
 				break
 			}
