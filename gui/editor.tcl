@@ -1052,20 +1052,35 @@ proc setActiveToolGroup { group } {
 	global active_tool_group active_tools tool_groups
 	global all_modules_list mf ROOTDIR LIBDIR
 
-	set tool [lindex [dict get $tool_groups $group] [dict get $active_tools $group]]
+	set tools [dict get $tool_groups $group]
+	set tool [lindex $tools [dict get $active_tools $group]]
+
+	set visible_tools [visibleTools $group $tools]
+	set visible_count [llength $visible_tools]
 
 	$mf.left.$active_tool_group state !selected
-	set active_tool_group $group
+	if { $visible_count > 0 } {
+		set active_tool_group $group
+	} elseif { $active_tool_group == $group } {
+		set active_tool_group select
+	}
 	$mf.left.$active_tool_group state selected
 
-	if { [llength [dict get $tool_groups $group]] > 1 } {
-		set image [image create photo -file [invokeTypeProc $tool "icon" "toolbar"]]
+	if { [llength $tools] > 1 } {
+		if { $visible_count == 0 || $tool ni $visible_tools } {
+			if { $group == "link_layer" } {
+				set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/l2.gif]
+			} else {
+				set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/l3.gif]
+			}
+		} else {
+			set image [image create photo -file [invokeTypeProc $tool "icon" "toolbar"]]
+		}
 		# TODO: Create an arrow image programatically
 		set arrow_source "$ROOTDIR/$LIBDIR/icons/tiny/l2.gif"
 		set arrow_image [image create photo -file $arrow_source]
 		$image copy $arrow_image -from 29 30 40 40 -to 29 30 40 40 -compositingrule overlay
 		$mf.left.$group configure -image $image
-		$mf.left.$group state selected
 	}
 
 	if { $tool in $all_modules_list } {
@@ -1156,6 +1171,29 @@ proc toggleAutoExecutionGUI { { new_value "" } } {
 	}
 }
 
+proc visibleTools { group tools } {
+	global runnable_node_types
+
+	set hidden_node_types [getActiveOption "hidden_node_types"]
+	set show_unsupported_nodes [getActiveOption "show_unsupported_nodes"]
+
+	if { $group in "link_layer net_layer" } {
+		set visible_tools {}
+		foreach tool $tools {
+			if {
+				($show_unsupported_nodes || $tool in $runnable_node_types) &&
+				$tool ni $hidden_node_types
+			} {
+				lappend visible_tools $tool
+			}
+		}
+
+		return $visible_tools
+	}
+
+	return $tools
+}
+
 #****f* editor.tcl/cycleToolGroup
 # NAME
 #   cycleToolGroup -- bind
@@ -1182,24 +1220,19 @@ proc cycleToolGroup { group } {
 		return
 	}
 
-	if { $active_tool_group == $group && [llength [dict get $tool_groups $group]] > 1} {
-		set tool_count [llength [dict get $tool_groups $active_tool_group]]
-		set start_index [dict get $active_tools $active_tool_group]
-		set index [expr ($start_index + 1) % $tool_count]
-		set current_tool [lindex $tools $index]
+	set visible_tools [visibleTools $group $tools]
+	set index [dict get $active_tools $group]
+	set tool [lindex $tools $index]
+	if { $active_tool_group == $group || $tool ni $visible_tools } {
+		set tool_count [llength $tools]
 
-		set hidden_node_types [getActiveOption "hidden_node_types"]
-		set show_unsupported_nodes [getActiveOption "show_unsupported_nodes"]
-		while {
-			(! $show_unsupported_nodes && $current_tool ni $runnable_node_types) ||
-			$current_tool in $hidden_node_types
-		} {
+		set start_index $index
+		set index [expr ($index + 1) % $tool_count]
+		while { [lindex $tools $index] ni $visible_tools } {
 			set index [expr ($index + 1) % $tool_count]
 			if { $index == $start_index } {
 				break
 			}
-
-			set current_tool [lindex $tools $index]
 		}
 
 		dict set active_tools $group $index
@@ -1300,6 +1333,33 @@ proc checkAndPromptSave { { cfg_to_check "" } } {
 	}
 
 	return 0
+}
+
+proc refreshHiddenNodes { content_frame } {
+	global all_modules_list custom_override
+
+	if { "hidden_node_types" in $custom_override } {
+		return
+	}
+
+	set hidden_node_types {}
+	foreach node_type $all_modules_list {
+		if {
+			([invokeTypeProc $node_type "netlayer"] == "LINK" &&
+			"selected" in [$content_frame.link_frame.cb$node_type state]) ||
+			([invokeTypeProc $node_type "netlayer"] == "NETWORK" &&
+			"selected" in [$content_frame.network_frame.cb$node_type state])
+		} {
+			lappend hidden_node_types $node_type
+		}
+	}
+
+	if { $hidden_node_types == {} } {
+		set hidden_node_types "none"
+	}
+
+	setGlobalOption "hidden_node_types" $hidden_node_types
+	refreshToolBarNodes
 }
 
 proc _invokeNodeProc { node_cfg proc_name args } {

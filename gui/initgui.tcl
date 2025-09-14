@@ -709,6 +709,91 @@ set tmp_command {
 
 .menubar.view add separator
 
+.menubar.view add command -label "Customize Node Types" -underline 0 -command {
+	global all_modules_list
+
+	set top_widget .top_widget
+	catch { destroy $top_widget }
+
+	toplevel $top_widget
+	wm transient $top_widget .
+	wm title $top_widget "Customize Node Types"
+	wm iconname $top_widget "Customize Node Types"
+	grab $top_widget
+
+	set content_frame [ttk::frame $top_widget.content_frame]
+	pack $content_frame -side top -fill x -pady 2m -padx 6
+
+	set link_frame [ttk::frame $content_frame.link_frame -relief groove -borderwidth 3]
+	pack $link_frame -side top -fill x -pady 2m -padx 6
+
+	ttk::label $link_frame.hidden -text "Hidden:" -font "-size 10 -weight bold"
+	grid $link_frame.hidden -in $link_frame -column 2 -row 0 -sticky we
+
+	set network_frame [ttk::frame $content_frame.network_frame -relief groove -borderwidth 3]
+	pack $network_frame -side top -fill x -pady 2m -padx 6
+
+	ttk::label $network_frame.hidden -text "Hidden:" -font "-size 10 -weight bold"
+	grid $network_frame.hidden -in $network_frame -column 2 -row 0 -sticky we
+
+	set l2_node_types {}
+	set l3_node_types {}
+	foreach node_type $all_modules_list {
+		if { [$node_type.netlayer] == "LINK" } {
+			lappend l2_node_types $node_type
+		} elseif { [$node_type.netlayer] == "NETWORK" } {
+			lappend l3_node_types $node_type
+		}
+	}
+
+	set hidden_node_types [getActiveOption "hidden_node_types"]
+
+	set row_ctr 0
+	ttk::label $link_frame.l2 -text "L2 nodes" -width 15 -font "-size 10 -weight bold"
+	grid $link_frame.l2 -in $link_frame -column 0 -row $row_ctr -pady 2
+
+	set checkbutton_dict "0 !selected 1 selected"
+
+	incr row_ctr
+	foreach node_type $l2_node_types {
+		ttk::label $link_frame.$node_type -text "$node_type"
+		grid $link_frame.$node_type -in $link_frame -column 0 -row $row_ctr
+
+		ttk::checkbutton $link_frame.cb$node_type
+		$link_frame.cb$node_type state [dict get $checkbutton_dict [expr {$node_type in $hidden_node_types}]]
+		grid $link_frame.cb$node_type -in $link_frame -column 2 -row $row_ctr
+
+		incr row_ctr
+	}
+
+	set row_ctr 0
+	ttk::label $network_frame.l3 -text "L3 nodes" -width 15 -font "-size 10 -weight bold"
+	grid $network_frame.l3 -in $network_frame -column 0 -row $row_ctr -pady 2
+
+	incr row_ctr
+	foreach node_type $l3_node_types {
+		ttk::label $network_frame.$node_type -text "$node_type"
+		grid $network_frame.$node_type -in $network_frame -column 0 -row $row_ctr
+
+		ttk::checkbutton $network_frame.cb$node_type
+		$network_frame.cb$node_type state [dict get $checkbutton_dict [expr {$node_type in $hidden_node_types}]]
+		grid $network_frame.cb$node_type -in $network_frame -column 2 -row $row_ctr
+
+		incr row_ctr
+	}
+
+	set buttons_frame [ttk::frame $top_widget.buttons_frame]
+	pack $buttons_frame -side bottom -fill x -pady 2m
+	ttk::button $buttons_frame.apply -text "Apply" -command "refreshHiddenNodes $content_frame ; destroy $top_widget"
+	ttk::button $buttons_frame.cancel -text "Cancel" -command "destroy $top_widget"
+
+	bind $top_widget <Key-Return> "refreshHiddenNodes $content_frame ; destroy $top_widget"
+	bind $top_widget <Key-Escape> "destroy $top_widget"
+
+	pack $buttons_frame.apply -side left -expand 1 -anchor e -padx 2
+	pack $buttons_frame.cancel -side right -expand 1 -anchor w -padx 2
+}
+
 .menubar.view add checkbutton -label "Show Unsupported Nodes" \
 	-variable show_unsupported_nodes -underline 5 \
 	-command { setGlobalOption "show_unsupported_nodes" - "toggle" ; refreshToolBarNodes }

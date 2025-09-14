@@ -176,6 +176,7 @@ proc switchProject {} {
 		switchCanvas none
 		redrawAll
 		updateProjectMenu
+		refreshToolBarNodes
 		setWmTitle [getFromRunning "current_file"]
 		if { $showTree } {
 			refreshTopologyTree

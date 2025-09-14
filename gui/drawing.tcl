@@ -1,5 +1,17 @@
 proc refreshToolBarNodes {} {
 	global mf all_modules_list runnable_node_types
+	global active_tool_group active_tools tool_groups
+
+	set active_group $active_tool_group
+	dict for {group tools} $tool_groups {
+		if { [lindex $tools [dict get $active_tools $group]] ni [visibleTools $group $tools] } {
+			# TODO: reset to unselected
+			dict set active_tools $group 0
+			setActiveToolGroup $group
+		}
+	}
+
+	setActiveToolGroup $active_group
 
 	catch { destroy $mf.left.link_nodes }
 	catch { destroy $mf.left.net_nodes }
@@ -8,6 +20,10 @@ proc refreshToolBarNodes {} {
 	menu $mf.left.net_nodes -title "Network layer nodes"
 
 	foreach node_type $all_modules_list {
+		if { $node_type in [getActiveOption "hidden_node_types"] } {
+			continue
+		}
+
 		set image [image create photo -file [invokeTypeProc $node_type "icon" "toolbar"]]
 
 		set tool ""
