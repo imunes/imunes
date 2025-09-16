@@ -540,9 +540,10 @@ proc deployCfg { { execute 0 } } {
 	set native_nodes {}
 	set virtualized_nodes {}
 	set all_nodes {}
+	set no_auto_execute_nodes [getFromRunning "no_auto_execute_nodes"]
 	foreach node_id $instantiate_nodes {
 		set node_type [getNodeType $node_id]
-		if { $node_type ni $runnable_node_types } {
+		if { $node_type ni $runnable_node_types || $node_id in $no_auto_execute_nodes } {
 			set instantiate_nodes [removeFromList $instantiate_nodes $node_id]
 			set configure_nodes [removeFromList $configure_nodes $node_id]
 			if { $create_nodes_ifaces != "*" && $node_id in [dict keys $create_nodes_ifaces] } {

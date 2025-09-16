@@ -974,6 +974,26 @@ proc button3node { c x y } {
 			-state disabled
 	}
 
+	#
+	# Enable/disable 'auto execute'
+	#
+	if { $node_id in [getFromRunning "no_auto_execute_nodes"] } {
+		.button3menu add command \
+			-label "Enable auto execute" \
+			-command "removeFromRunning \"no_auto_execute_nodes\" \[selectedNodes\]"
+	} else {
+		set tmp_command {
+			foreach node_id [selectedNodes] {
+				if { $node_id ni [getFromRunning "no_auto_execute_nodes"] } {
+					lappendToRunning "no_auto_execute_nodes" $node_id
+				}
+			}
+		}
+		.button3menu add command \
+			-label "Disable auto execute" \
+			-command $tmp_command
+	}
+
 	if {
 		$oper_mode == "exec" &&
 		[getFromRunning "auto_execution"]
@@ -1557,6 +1577,10 @@ proc button1 { c x y button } {
 
 			# adding a new node
 			set node_id [newNode $active_tool]
+			if { $button == "ctrl" } {
+				lappendToRunning "no_auto_execute_nodes" $node_id
+			}
+
 			setNodeLabel $node_id [getNodeName $node_id]
 			setNodeCanvas $node_id [getFromRunning_gui "curcanvas"]
 			setNodeCoords $node_id "[expr {$x / $zoom}] [expr {$y / $zoom}]"

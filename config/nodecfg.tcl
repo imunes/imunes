@@ -392,6 +392,7 @@ proc removeNode { node_id { keep_other_ifaces 0 } } {
 	}
 
 	setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $node_id]
+	setToRunning "no_auto_execute_nodes" [removeFromList [getFromRunning "no_auto_execute_nodes"] $node_id]
 
 	set node_type [getNodeType $node_id]
 	if { $node_type in [array names nodeNamingBase] } {

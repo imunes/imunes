@@ -985,6 +985,7 @@ proc loadCfgLegacy { cfg } {
 	setToRunning_gui "image_list" $image_list
 	setToRunning "cfg_deployed" false
 	setToRunning "auto_execution" 1
+	setToRunning "no_auto_execute_nodes" {}
 
 	#
 	# Hack for comaptibility with old format files (no canvases)
@@ -1749,6 +1750,10 @@ proc lappendToRunning_gui { key value } {
 	set dict_run_gui [dictLappend $dict_run_gui $key $value]
 
 	return $dict_run_gui
+}
+
+proc removeFromRunning { key value } {
+	return [setToRunning $key [removeFromList [getFromRunning $key] $value]]
 }
 
 proc getFromExecuteVars { key { config "" } } {
