@@ -542,6 +542,13 @@ proc trigger_ifaceConfig { node_id iface_id } {
 	}
 
 	updateInstantiateVars
+
+	if { [getNodeVlanFiltering $node_id] } {
+		set link_id [getIfcLink $node_id $iface_id]
+		if { $link_id != "" } {
+			trigger_linkRecreate $link_id
+		}
+	}
 }
 
 proc trigger_ifaceUnconfig { node_id iface_id } {
