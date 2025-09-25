@@ -538,6 +538,7 @@ proc $MODULE.nodeUnconfigure { eid node_id } {
 #****
 proc $MODULE.nodeShutdown { eid node_id } {
 	killExtProcess "wireshark.*[getNodeName $node_id].*\\($eid\\)"
+	killExtProcess "socat.*$eid/$node_id.*"
 	killAllNodeProcesses $eid $node_id
 }
 
