@@ -1411,7 +1411,7 @@ proc button1 { c x y button } {
 		if { $active_tool != "link" && ! $wasselected } {
 			selectNode $c $curobj
 		}
-	} elseif { $curtype == "selectmark" } {
+	} elseif { $active_tool == "select" && $curtype == "selectmark" } {
 		set o1 [lindex [$c gettags current] 1]
 		if { [getAnnotationType $o1] in "oval rectangle" } {
 			set resizeobj $o1
@@ -1671,7 +1671,7 @@ proc button1-motion { c x y } {
 		} else {
 			xpos $newfree $x $y 2 blue
 		}
-	} elseif { $curtype == "selectmark" } {
+	} elseif { $active_tool == "select" && $curtype == "selectmark" } {
 		foreach o [$c find withtag "selected"] {
 			set node_id [lindex [$c gettags $o] 1]
 

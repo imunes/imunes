@@ -1213,6 +1213,10 @@ proc popupColor { type l settext } {
 #   * y -- cursor y coordinate
 #****
 proc selectmarkEnter { c x y } {
+	if { [getActiveTool] != "select" } {
+		return
+	}
+
 	set obj [lindex [$c gettags current] 1]
 	set type [getAnnotationType $obj]
 

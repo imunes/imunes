@@ -1246,8 +1246,9 @@ proc toggleAutoExecutionGUI { { new_value "" } } {
 proc cycleToolGroup { group } {
 	global active_tool_group active_tools tool_groups runnable_node_types show_unsupported_nodes
 	global newnode newlink newoval newrect newtext newfree
+	global resizemode
 
-	if { "$newnode$newlink$newoval$newrect$newtext$newfree" != "" } {
+	if { "$newnode$newlink$newoval$newrect$newtext$newfree" != "" || $resizemode != "false" } {
 		return
 	}
 
