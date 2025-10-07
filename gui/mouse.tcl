@@ -1389,7 +1389,7 @@ proc button1 { c x y button } {
 	set curtype [lindex [$c gettags current] 0]
 	set wasselected 0
 	if {
-		$curtype in "node oval rectangle text freeform" ||
+		($active_tool == "select" && $curtype in "node oval rectangle text freeform") ||
 		($curtype == "nodelabel" &&
 		[getNodeType [lindex [$c gettags $curobj] 1]] == "pseudo")
 	} {
@@ -1623,7 +1623,7 @@ proc button1-motion { c x y } {
 	} elseif {
 		$active_tool == "oval" &&
 		($curobj in "$newoval $background" ||
-		$curtype in "background grid")
+		$curtype in "background oval rectangle grid text freeform")
 	} {
 		# Draw a new oval
 		if { $newoval == "" } {
@@ -1641,7 +1641,7 @@ proc button1-motion { c x y } {
 	} elseif {
 		$active_tool == "rectangle" &&
 		($curobj in "$newrect $background" ||
-		$curtype in "background oval grid")
+		$curtype in "background oval rectangle grid text freeform")
 	} {
 		# Draw a new rectangle
 		if { $newrect == "" } {
@@ -1658,7 +1658,7 @@ proc button1-motion { c x y } {
 	} elseif {
 		$active_tool == "freeform" &&
 		($curobj in "$newfree $background" ||
-		$curtype in "background oval rectangle grid")
+		$curtype in "background oval rectangle grid text freeform")
 	} {
 		# Draw a new freeform
 		if { $newfree == "" } {
