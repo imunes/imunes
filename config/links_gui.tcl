@@ -136,3 +136,19 @@ proc getLinkPeers_gui { link_id } {
 proc setLinkPeers_gui { link_id peers } {
 	cfgSet "gui" "links" $link_id "peers" $peers
 }
+
+proc getPoint_gui { point_id } {
+	return [cfgGet "gui" "points" $point_id]
+}
+
+proc setPoint_gui { point_id coords } {
+	cfgSet "gui" "points" $point_id $coords
+}
+
+proc getLinkPoints_gui { link_id } {
+	return [cfgGet "gui" "links" $link_id "points"]
+}
+
+proc setLinkPoints_gui { link_id points } {
+	cfgSet "gui" "links" $link_id "points" $points
+}

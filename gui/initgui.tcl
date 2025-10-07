@@ -1302,6 +1302,10 @@ $main_canvas_elem bind selectmark <Any-Leave> "selectmarkLeave %x %y"
 $main_canvas_elem bind background <3> "button3background %x %y"
 $main_canvas_elem bind grid <3> "button3background %x %y"
 
+$main_canvas_elem bind point <Any-Enter> "pointEnter"
+$main_canvas_elem bind point <3> "removePointGUI"
+$main_canvas_elem bind point <Any-Leave> "$main_canvas_elem config -cursor left_ptr"
+
 bind $main_canvas_elem <1> "button1 %x %y none"
 bind $main_canvas_elem <Control-Button-1> "button1 %x %y ctrl"
 bind $main_canvas_elem <B1-Motion> "button1-motion %x %y"

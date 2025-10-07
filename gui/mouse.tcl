@@ -540,6 +540,16 @@ proc button3link { x y } {
 		.button3menu add command -label "Merge" -state disabled
 	}
 
+	#
+	# Segment link
+	#
+	if { ! [isPseudoLink $link_id] } {
+		.button3menu add command -label "Segment" \
+			-command "segmentLinkGUI $link_id $x $y"
+	} else {
+		.button3menu add command -label "Segment" -state disabled
+	}
+
 	set x [winfo pointerx .]
 	set y [winfo pointery .]
 	tk_popup .button3menu $x $y
@@ -679,6 +689,82 @@ proc mergeNodeGUI { node_id } {
 	global changed
 
 	set link_id [mergeLink [getPseudoNodeLink $node_id]]
+
+	set changed 1
+	updateUndoLog
+	redrawAll
+
+	return $link_id
+}
+
+proc pointEnter {} {
+	global main_canvas_elem
+
+	if { [getActiveTool] != "select" } {
+		return
+	}
+
+	set point_id [lindex [$main_canvas_elem gettags current] 1]
+
+	$main_canvas_elem config -cursor hand1
+}
+
+proc segmentLinkGUI { link_id x y } {
+	global main_canvas_elem changed
+
+	set points [getLinkPoints_gui $link_id]
+
+	set segment_celem [$main_canvas_elem find withtag "link && $link_id && current"]
+	if { $segment_celem == "" } {
+		# when clicked on link label, choose a middle segment
+		set all_segment_celems [$main_canvas_elem find withtag "link && $link_id"]
+		set segment_celem [lindex $all_segment_celems [expr { int([llength $all_segment_celems]/2) }]]
+
+		if { $segment_celem == "" } {
+			return $link_id
+		}
+	}
+
+	lassign [$main_canvas_elem gettags $segment_celem] - - point1_id point2_id
+
+	if { [string index $point1_id 0] == "p" } {
+		set new_point_idx [expr { [lsearch -exact $points $point1_id] + 1 }]
+		lassign [getPoint_gui $point1_id] x1 y1
+	} else {
+		set new_point_idx 0
+		lassign [$main_canvas_elem coords "node && $point1_id"] x1 y1
+	}
+
+	if { [string index $point2_id 0] == "p" } {
+		lassign [getPoint_gui $point2_id] x2 y2
+	} else {
+		lassign [$main_canvas_elem coords "node && $point2_id"] x2 y2
+	}
+
+	set new_point_id [newObjectId [cfgGet "gui" "points"] "p"]
+	setLinkPoints_gui $link_id [linsert $points $new_point_idx $new_point_id]
+
+	# TODO: check what's with x/y coordinates from Tk
+	set x [expr { int(0.5 * ($x1 + $x2)) }]
+	set y [expr { int(0.5 * ($y1 + $y2)) }]
+	lassign [snapCoordsToGrid $x $y] x y
+	setPoint_gui $new_point_id "$x $y"
+
+	set changed 1
+	updateUndoLog
+	redrawAll
+
+	return $link_id
+}
+
+proc removePointGUI {} {
+	global main_canvas_elem changed
+
+	set segment_celem [$main_canvas_elem find withtag "point && current"]
+	lassign [$main_canvas_elem gettags $segment_celem] - point_id link_id
+
+	setPoint_gui $point_id ""
+	setLinkPoints_gui $link_id [removeFromList [getLinkPoints_gui $link_id] $point_id]
 
 	set changed 1
 	updateUndoLog
@@ -1567,6 +1653,10 @@ proc button1 { x y button } {
 		if { $active_tool != "link" && ! $wasselected } {
 			selectNode $curobj
 		}
+	} elseif { $active_tool == "select" && $curtype == "point" } {
+		set point_id [lindex [$main_canvas_elem gettags current] 1]
+		$main_canvas_elem dtag "point" "point_selected"
+		$main_canvas_elem addtag "point_selected" withtag "point && $point_id"
 	} elseif { $active_tool == "select" && $curtype == "selectmark" } {
 		set o1 [lindex [$main_canvas_elem gettags current] 1]
 		if { [getAnnotationType $o1] in "oval rectangle" } {
@@ -1746,6 +1836,20 @@ proc button1-motion { x y } {
 		set changed 1
 		set lastX $x
 		set lastY $y
+	} elseif { $active_tool == "select" && $curtype == "point" } {
+		$main_canvas_elem move $curobj [expr { $x - $lastX }] [expr { $y - $lastY }]
+
+		set changed 1
+		set lastX $x
+		set lastY $y
+
+		lassign [$main_canvas_elem gettags $curobj] - point_id link_id
+
+		set coords [$main_canvas_elem coords $curobj]
+		set x [expr { [lindex $coords 0] / $zoom }]
+		set y [expr { [lindex $coords 1] / $zoom }]
+
+		setPoint_gui $point_id "$x $y"
 	} elseif {
 		$active_tool == "select" &&
 		$curobj == "" &&
@@ -2168,6 +2272,40 @@ proc button1-release { x y } {
 			$main_canvas_elem addtag need_redraw withtag "link && $node_id"
 			set changed 1
 		} ;# end of: foreach img selected
+
+		foreach img [$main_canvas_elem find withtag "point_selected"] {
+			lassign [$main_canvas_elem gettags $img] - point_id link_id
+
+			set coords [$main_canvas_elem coords $img]
+			set x [expr { [lindex $coords 0] / $zoom }]
+			set y [expr { [lindex $coords 1] / $zoom }]
+
+			set dx [expr { (int($x / $grid + 0.5) * $grid - $x) * $zoom }]
+			set dy [expr { (int($y / $grid + 0.5) * $grid - $y) * $zoom }]
+			$main_canvas_elem move $img $dx $dy
+
+			set coords [$main_canvas_elem coords $img]
+			set x [expr { [lindex $coords 0] / $zoom }]
+			set y [expr { [lindex $coords 1] / $zoom }]
+
+			if { $x < 0 } {
+				set x 0
+			}
+			if { $y < 0 } {
+				set y 0
+			}
+			if { $x > $sizex } {
+				set x $sizex
+			}
+			if { $y > $sizey } {
+				set y $sizey
+			}
+
+			setPoint_gui $point_id "$x $y"
+
+			redrawLink $link_id
+			updateLinkLabel $link_id
+		}
 
 		if { $outofbounds } {
 			redrawAll

@@ -394,19 +394,59 @@ proc drawLink { link_id } {
 		return
 	}
 
-	set lwidth [getLinkWidth $link_id]
-	set newlink [$main_canvas_elem create line 0 0 0 0 \
-		-fill [getLinkColor $link_id] \
-		-width $lwidth \
-		-tags "link $link_id $node1_id $node2_id"]
+	set link_width [getLinkWidth $link_id]
 
-	$main_canvas_elem raise $newlink background
-	set newlink [$main_canvas_elem create line 0 0 0 0 \
-		-fill white -width [expr {$lwidth + 4}] \
-		-tags "link $link_id $node1_id $node2_id"]
-	$main_canvas_elem raise $newlink background
+	set points [getLinkPoints_gui $link_id]
+	if { $points != "" } {
+		set link_color [getLinkColor $link_id]
 
-	set ang [calcAngle $link_id]
+		set prev_point $node1_id
+		for {set idx 0} {$idx < [llength $points]} {incr idx} {
+			set point [lindex $points $idx]
+
+			set newlink [$main_canvas_elem create line 0 0 0 0 \
+				-fill $link_color \
+				-width $link_width \
+				-tags "link $link_id $prev_point $point"]
+
+			$main_canvas_elem raise $newlink background
+			set newlink [$main_canvas_elem create line 0 0 0 0 \
+				-fill white -width [expr {$link_width + 4}] \
+				-tags "link $link_id $prev_point $point"]
+			$main_canvas_elem raise $newlink background
+
+			set prev_point $point
+		}
+
+		set newlink [$main_canvas_elem create line 0 0 0 0 \
+			-fill $link_color \
+			-width $link_width \
+			-tags "link $link_id $prev_point $node2_id"]
+
+		$main_canvas_elem raise $newlink background
+		set newlink [$main_canvas_elem create line 0 0 0 0 \
+			-fill white -width [expr {$link_width + 4}] \
+			-tags "link $link_id $prev_point $node2_id"]
+		$main_canvas_elem raise $newlink background
+
+		$main_canvas_elem raise linklabel "link || background"
+		$main_canvas_elem raise interface "link || linklabel || background"
+
+		set ang 0
+	} else {
+		set newlink [$main_canvas_elem create line 0 0 0 0 \
+			-fill [getLinkColor $link_id] \
+			-width $link_width \
+			-tags "link $link_id $node1_id $node2_id"]
+
+		$main_canvas_elem raise $newlink background
+		set newlink [$main_canvas_elem create line 0 0 0 0 \
+			-fill white -width [expr {$link_width + 4}] \
+			-tags "link $link_id $node1_id $node2_id"]
+		$main_canvas_elem raise $newlink background
+
+		set ang [calcAngle $link_id]
+	}
 
 	$main_canvas_elem create text 0 0 -tags "linklabel $link_id" -justify center -angle $ang
 	$main_canvas_elem create text 0 0 -tags "interface $node1_id $link_id" -justify center -angle $ang
@@ -688,7 +728,25 @@ proc updateLinkLabel { link_id } {
 		return
 	}
 
-	set ang [calcAngle $link_id]
+	set points [getLinkPoints_gui $link_id]
+	if { $points == {} } {
+		# no segments, label is between nodes
+		set ang [calcAngle $link_id]
+	} elseif { [expr { [llength $points] % 2 }] != 0 } {
+		# just a horizontal label on a middle point
+		set ang 0
+	} else {
+		# get middle 2 points, calculate angle between them
+		set mid [expr { [llength $points] / 2 }]
+		set p1 [lindex $points $mid]
+		lassign [getPoint_gui $p1] px1 py1
+		incr mid -1
+		set p2 [lindex $points $mid]
+		lassign [getPoint_gui $p2] px2 py2
+
+		set ang [calcAnglePoints $px1 $py1 $px2 $py2]
+	}
+
 	$main_canvas_elem itemconfigure "linklabel && $link_id" -text $str -angle $ang
 	if { [getActiveOption "show_link_labels"] == 0 } {
 		$main_canvas_elem itemconfigure "linklabel && $link_id" -state hidden
@@ -747,31 +805,96 @@ proc redrawLink { link_id } {
 		return
 	}
 
+	# limage1 = white link, limage2 = red link
 	lassign [$main_canvas_elem find withtag "link && $link_id"] limage1 limage2
 	if { $limage1 == "" || $limage2 == "" } {
 		return
 	}
 
-	lassign [$main_canvas_elem gettags $limage1] {} link_id node1_id node2_id
-	if { [getNodeType $node1_id] == "wlan" || [getNodeType $node2_id] == "wlan" } {
-		return
+	set points [getLinkPoints_gui $link_id]
+	if { $points != "" } {
+		set link_color [getLinkColor $link_id]
+		set link_width [getLinkWidth $link_id]
+
+		set prev_point $node1_id
+		set center [expr [llength $points] / 2]
+		if { [expr [llength $points] % 2] == 0 } {
+			set point1_id [lindex $points [expr $center - 1]]
+			set point2_id [lindex $points $center]
+			lassign [getPoint_gui $point1_id] x1 y1
+			lassign [getPoint_gui $point2_id] x2 y2
+			set lx [expr {int(0.5 * ($x1 + $x2))}]
+			set ly [expr {int(0.5 * ($y1 + $y2))}]
+		} else {
+			lassign [getPoint_gui [lindex $points $center]] lx ly
+		}
+
+		set zoom [getActiveOption "zoom"]
+		lassign [$main_canvas_elem coords "node && $node1_id"] x1 y1
+		for {set idx 0} {$idx < [llength $points]} {incr idx} {
+			set point [lindex $points $idx]
+
+			lassign [lmap coord [getPoint_gui $point] {expr int($coord * $zoom)}] x2 y2
+
+			set ox1 [expr $x2 - $link_width - 1]
+			set ox2 [expr $x2 + $link_width + 1]
+			set oy1 [expr $y2 - $link_width - 1]
+			set oy2 [expr $y2 + $link_width + 1]
+			$main_canvas_elem delete -withtags "point && $point && $link_id"
+			set tmpoval [$main_canvas_elem create oval $ox1 $oy1 $ox2 $oy2 \
+				-fill $link_color -tags "point $point $link_id"]
+			$main_canvas_elem raise $tmpoval
+
+			lassign [$main_canvas_elem find withtag "link && $prev_point && $point"] limage1 limage2
+			# limage1 = white link, limage2 = red link
+			$main_canvas_elem coords $limage1 $x1 $y1 $x2 $y2
+			$main_canvas_elem coords $limage2 $x1 $y1 $x2 $y2
+
+			set prev_point $point
+			set x1 $x2
+			set y1 $y2
+		}
+
+		lassign [$main_canvas_elem coords "node && $node2_id"] x2 y2
+
+		lassign [$main_canvas_elem find withtag "link && $prev_point && $node2_id"] limage1 limage2
+		$main_canvas_elem coords $limage1 $x1 $y1 $x2 $y2
+		$main_canvas_elem coords $limage2 $x1 $y1 $x2 $y2
+
+		$main_canvas_elem coords "linklabel && $link_id" $lx $ly
+
+		lassign [$main_canvas_elem coords "node && $node1_id"] x1 y1
+		lassign [$main_canvas_elem coords "node && $node2_id"] x2 y2
+
+		lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
+		updateIfcLabelParams $link_id $node1_id $iface1_id $x1 $y1 {*}[getPoint_gui [lindex $points 0]]
+		updateIfcLabel $link_id $node1_id $iface1_id
+
+		updateIfcLabelParams $link_id $node2_id $iface2_id $x2 $y2 {*}[getPoint_gui [lindex $points end]]
+		updateIfcLabel $link_id $node2_id $iface2_id
+	} else {
+		lassign [$main_canvas_elem gettags $limage1] {} link_id node1_id node2_id -
+		if { [getNodeType $node1_id] == "wlan" || [getNodeType $node2_id] == "wlan" } {
+			return
+		}
+
+		lassign [$main_canvas_elem coords "node && $node1_id"] x1 y1
+		lassign [$main_canvas_elem coords "node && $node2_id"] x2 y2
+		$main_canvas_elem coords $limage1 $x1 $y1 $x2 $y2
+		$main_canvas_elem coords $limage2 $x1 $y1 $x2 $y2
+
+		set lx [expr {int(0.5 * ($x1 + $x2))}]
+		set ly [expr {int(0.5 * ($y1 + $y2))}]
+
+		$main_canvas_elem coords "linklabel && $link_id" $lx $ly
+
+		lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
+		updateIfcLabelParams $link_id $node1_id $iface1_id $x1 $y1 $x2 $y2
+		updateIfcLabel $link_id $node1_id $iface1_id
+
+		updateIfcLabelParams $link_id $node2_id $iface2_id $x2 $y2 $x1 $y1
+		updateIfcLabel $link_id $node2_id $iface2_id
 	}
-
-	lassign [$main_canvas_elem coords "node && $node1_id"] x1 y1
-	lassign [$main_canvas_elem coords "node && $node2_id"] x2 y2
-	$main_canvas_elem coords $limage1 $x1 $y1 $x2 $y2
-	$main_canvas_elem coords $limage2 $x1 $y1 $x2 $y2
-
-	set lx [expr {int(0.5 * ($x1 + $x2))}]
-	set ly [expr {int(0.5 * ($y1 + $y2))}]
-	$main_canvas_elem coords "linklabel && $link_id" $lx $ly
-
-	lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
-	updateIfcLabelParams $link_id $node1_id $iface1_id $x1 $y1 $x2 $y2
-	updateIfcLabel $link_id $node1_id $iface1_id
-
-	updateIfcLabelParams $link_id $node2_id $iface2_id $x2 $y2 $x1 $y1
-	updateIfcLabel $link_id $node2_id $iface2_id
 }
 
 proc redrawPseudoLink { link_id } {
@@ -1849,18 +1972,26 @@ proc drawGradientCircle { image_obj palette image_width image_height } {
 	}
 }
 
+proc snapCoordsToGrid { x y } {
+	global grid main_canvas_elem
+
+	set zoom [getActiveOption "zoom"]
+
+	set new_x [expr $x + {(int($x / $grid + 0.5) * $grid - $x) * $zoom}]
+	set new_y [expr $y + {(int($y / $grid + 0.5) * $grid - $y) * $zoom}]
+
+	return "[expr int(round($new_x))] [expr int(round($new_y))]"
+}
+
 proc snapObjectToGrid { image_obj } {
 	global grid main_canvas_elem
 
 	set zoom [getActiveOption "zoom"]
 
 	lassign [$main_canvas_elem coords $image_obj] x y
+	lassign [snapCoordsToGrid $x $y] x y
 
-	set dx [expr {(int($x / $grid + 0.5) * $grid - $x) * $zoom}]
-	set dy [expr {(int($y / $grid + 0.5) * $grid - $y) * $zoom}]
-	$main_canvas_elem move $image_obj $dx $dy
+	$main_canvas_elem coords $image_obj $x $y
 
-	lassign [$main_canvas_elem coords $image_obj] new_x new_y
-
-	return "[expr int(round($new_x))] [expr int(round($new_y))]"
+	return "$x $y"
 }
