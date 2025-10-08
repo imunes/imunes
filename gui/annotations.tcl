@@ -282,7 +282,8 @@ proc drawOval { oval } {
 	global default_fill_color
 
 	# multiply each coordinate with $zoom and assign to variables x1, y1, x2, y2
-	lassign [lmap n [getAnnotationCoords $oval] {expr $n * [getFromRunning "zoom"]}] x1 y1 x2 y2
+	set zoom [getFromRunning "zoom"]
+	lassign [lmap n [getAnnotationCoords $oval] {expr $n * $zoom}] x1 y1 x2 y2
 
 	set color [getAnnotationColor $oval]
 	set bordercolor [getAnnotationBorderColor $oval]
@@ -293,7 +294,7 @@ proc drawOval { oval } {
 	if { $bordercolor == "" } { set bordercolor black }
 
 	set newoval [.panwin.f1.c create oval $x1 $y1 $x2 $y2 \
-		-fill $color -width $width -outline $bordercolor -tags "oval $oval"]
+		-fill $color -width [expr int($width * $zoom)] -outline $bordercolor -tags "oval $oval"]
 	.panwin.f1.c raise $newoval
 }
 
@@ -500,7 +501,8 @@ proc drawRect { rectangle } {
 	global default_fill_color
 
 	# multiply each coordinate with $zoom and assign to variables x1, y1, x2, y2
-	lassign [lmap n [getAnnotationCoords $rectangle] {expr $n * [getFromRunning "zoom"]}] x1 y1 x2 y2
+	set zoom [getFromRunning "zoom"]
+	lassign [lmap n [getAnnotationCoords $rectangle] {expr $n * $zoom}] x1 y1 x2 y2
 
 	set color [getAnnotationColor $rectangle]
 	set bordercolor [getAnnotationBorderColor $rectangle]
@@ -514,11 +516,11 @@ proc drawRect { rectangle } {
 	if { $rad == "" } { set rad 25 }
 
 	if { $width == 0 } {
-		set newrect [roundRect .panwin.f1.c $x1 $y1 $x2 $y2 $rad \
+		set newrect [roundRect .panwin.f1.c $x1 $y1 $x2 $y2 [expr int($rad * $zoom)] \
 			-fill $color -tags "rectangle $rectangle"]
 	} else {
-		set newrect [roundRect .panwin.f1.c $x1 $y1 $x2 $y2 $rad \
-			-fill $color -outline $bordercolor -width $width \
+		set newrect [roundRect .panwin.f1.c $x1 $y1 $x2 $y2 [expr int($rad * $zoom)] \
+			-fill $color -outline $bordercolor -width [expr int($width * $zoom)] \
 			-tags "rectangle $rectangle"]
 	}
 
