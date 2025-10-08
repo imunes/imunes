@@ -1566,6 +1566,8 @@ proc button1-motion { c x y } {
 	global lastX lastY sizex sizey selectbox background
 	global newoval newrect newtext newfree resizemode
 
+	set zoom [getFromRunning "zoom"]
+
 	set x [$c canvasx $x]
 	set y [$c canvasy $y]
 	set curobj [$c find withtag current]
@@ -1672,10 +1674,11 @@ proc button1-motion { c x y } {
 			xpos $newfree $x $y 2 blue
 		}
 	} elseif { $active_tool == "select" && $curtype == "selectmark" } {
+		# resize annotation
 		foreach o [$c find withtag "selected"] {
 			set node_id [lindex [$c gettags $o] 1]
 
-			lassign [getAnnotationCoords $node_id] oldX1 oldY1 oldX2 oldY2
+			lassign [lmap n [getAnnotationCoords $node_id] {expr {$n * $zoom}}] oldX1 oldY1 oldX2 oldY2
 			switch -exact -- $resizemode {
 				lu {
 					set oldX1 $x
@@ -2060,10 +2063,10 @@ proc button1-release { c x y } {
 			set autorearrange_enabled 0
 		} else {
 			set coords [$c coords $selectbox]
-			set x [lindex $coords 0]
-			set y [lindex $coords 1]
-			set x1 [lindex $coords 4]
-			set y1 [lindex $coords 5]
+			set x [expr {int([lindex $coords 0] / $zoom)}]
+			set y [expr {int([lindex $coords 1] / $zoom)}]
+			set x1 [expr {int([lindex $coords 4] / $zoom)}]
+			set y1 [expr {int([lindex $coords 5] / $zoom)}]
 			$c delete $selectbox
 			set selectbox ""
 		}
