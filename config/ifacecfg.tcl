@@ -391,7 +391,6 @@ proc newIface { node_id iface_type auto_config { stolen_iface "" } } {
 	}
 
 	setToRunning "${node_id}|${iface_id}_running" false
-	trigger_ifaceCreate $node_id $iface_id
 
 	setNodeIface $node_id $iface_id {}
 
@@ -401,6 +400,8 @@ proc newIface { node_id iface_type auto_config { stolen_iface "" } } {
 	if { $auto_config } {
 		[getNodeType $node_id].confNewIfc $node_id $iface_id
 	}
+
+	trigger_ifaceCreate $node_id $iface_id
 
 	return $iface_id
 }
