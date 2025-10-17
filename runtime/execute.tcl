@@ -671,7 +671,7 @@ proc deployCfg { { execute 0 } } {
 			pipesCreate
 			execute_nodesIfacesConfigure $configure_nodes_ifaces $configure_nodes_ifaces_count $w
 			statline "Waiting for interface configuration on $configure_nodes_ifaces_count node(s)..."
-			configureIfacesWait $configure_nodes_ifaces $configure_nodes_ifaces_count $w
+			waitForConfigureIfaces $configure_nodes_ifaces $configure_nodes_ifaces_count $w
 			pipesClose
 		}
 
@@ -1278,7 +1278,7 @@ proc execute_nodesIfacesConfigure { nodes_ifaces nodes_count w } {
 	}
 }
 
-proc configureIfacesWait { nodes_ifaces nodes_count w } {
+proc waitForConfigureIfaces { nodes_ifaces nodes_count w } {
 	global progressbarCount execMode err_skip_nodesifaces ifacesconf_timeout
 
 	set t_start [clock milliseconds]
