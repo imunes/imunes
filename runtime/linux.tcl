@@ -766,6 +766,7 @@ proc checkHangingTCPs { eid nodes } {}
 proc nodeLogIfacesCreate { node_id ifaces } {
 	set docker_id "[getFromRunning "eid"].$node_id"
 
+	set cmds ""
 	foreach iface_id $ifaces {
 		setToRunning "${node_id}|${iface_id}_running" true
 
@@ -775,23 +776,25 @@ proc nodeLogIfacesCreate { node_id ifaces } {
 				set tag [getIfcVlanTag $node_id $iface_id]
 				set dev [getIfcVlanDev $node_id $iface_id]
 				if { $tag != "" && $dev != "" } {
-					pipesExec "docker exec -d $docker_id [getVlanTagIfcCmd $iface_name $dev $tag]" "hold"
+					append cmds "[getVlanTagIfcCmd $iface_name $dev $tag]\n"
 				} else {
 					setToRunning "${node_id}|${iface_id}_running" false
 				}
 			}
 			lo {
 				if { $iface_name != "lo0" } {
-					pipesExec "docker exec -d $docker_id ip link add $iface_name type dummy" "hold"
-					pipesExec "docker exec -d $docker_id ip link set $iface_name up" "hold"
+					append cmds "ip link add $iface_name type dummy\n"
+					append cmds "ip link set $iface_name up\n"
 				} else {
-					pipesExec "docker exec -d $docker_id ip link set dev lo down 2>/dev/null" "hold"
-					pipesExec "docker exec -d $docker_id ip link set dev lo name lo0 2>/dev/null" "hold"
-					pipesExec "docker exec -d $docker_id ip a flush lo0 2>/dev/null &" "hold"
+					append cmds "ip link set dev lo down 2>/dev/null\n"
+					append cmds "ip link set dev lo name lo0 2>/dev/null\n"
+					append cmds "ip a flush lo0 2>/dev/null\n"
 				}
 			}
 		}
 	}
+
+	pipesExec "docker exec -d $docker_id sh -c '$cmds'" "hold"
 
 	## docker interface is created before other ones, so let's rename it to something that's not used by IMUNES
 	#if { [getNodeDockerAttach $node_id] == 1 } {
@@ -1358,9 +1361,11 @@ proc nodeIfacesDestroy { eid node_id ifaces } {
 #****
 proc removeNodeIfcIPaddrs { eid node_id } {
 	set docker_id "$eid.$node_id"
+	set cmds ""
 	foreach ifc [allIfcList $node_id] {
-		pipesExec "docker exec -d $docker_id sh -c 'ip addr flush dev $ifc'" "hold"
+		append cmds "ip addr flush dev $ifc\n"
 	}
+	pipesExec "docker exec -d $docker_id sh -c '$cmds'" "hold"
 }
 
 #****f* linux.tcl/getCpuCount
