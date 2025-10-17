@@ -683,7 +683,9 @@ proc pipesCreate {} {
 
 	set ncpus [getCpuCount]
 	for { set i 0 } { $i < $ncpus } { incr i } {
-		set inst_pipes($i) [open "| sh" r+]
+		set inst_pipes($i) [open "| sh > /dev/null" w]
+		chan configure $inst_pipes($i) \
+			-blocking 0 -buffering none -translation binary
 	}
 	set last_inst_pipe 0
 }
@@ -718,8 +720,8 @@ proc pipesExecNoLog { line args } {
 	set pipe $inst_pipes($last_inst_pipe)
 	puts $pipe $line
 
-	flush $pipe
 	if { $args != "hold" } {
+		flush $pipe
 		incr last_inst_pipe
 	}
 	if { $last_inst_pipe >= [llength [array names inst_pipes]] } {
@@ -739,9 +741,6 @@ proc pipesClose {} {
 	global inst_pipes last_inst_pipe
 
 	foreach i [array names inst_pipes] {
-		close $inst_pipes($i) w
-		# A dummy read, just to flush the output from the command pipeline
-		read $inst_pipes($i)
 		catch { close $inst_pipes($i) }
 	}
 }

@@ -566,10 +566,6 @@ proc createNodeContainer { node_id } {
 		--sysctl net.ipv6.conf.all.disable_ipv6=0 \
 		$ulimit_file_str $ulimit_proc_str $vroot"
 
-	if { $nodecreate_timeout >= 0 } {
-		set docker_cmd "$docker_cmd &"
-	}
-
 	dputs "Node $node_id -> '$docker_cmd'"
 
 	pipesExec "$docker_cmd" "hold"

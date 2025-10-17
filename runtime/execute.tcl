@@ -654,36 +654,36 @@ proc deployCfg { { execute 0 } } {
 		if { $virtualized_nodes_count > 0 } {
 			pipesCreate
 			execute_nodesCreate $virtualized_nodes $virtualized_nodes_count $w
+			pipesClose
 			statline "Waiting for $virtualized_nodes_count VIRTUALIZED node(s) to start..."
 			waitForInstantiateNodes $virtualized_nodes $virtualized_nodes_count $w
-			pipesClose
 		}
 
 		statline "Setting up namespaces for all nodes..."
 		if { $all_nodes_count > 0 } {
 			pipesCreate
 			execute_nodesNamespaceSetup $all_nodes $all_nodes_count $w
+			pipesClose
 			statline "Waiting on namespaces for $all_nodes_count node(s)..."
 			waitForNamespaces $all_nodes $all_nodes_count $w
-			pipesClose
 		}
 
 		statline "Starting initial configuration on VIRTUALIZED nodes..."
 		if { $virtualized_nodes_count > 0 } {
 			pipesCreate
 			execute_nodesInitConfigure $virtualized_nodes $virtualized_nodes_count $w
+			pipesClose
 			statline "Waiting for initial configuration on $virtualized_nodes_count VIRTUALIZED node(s)..."
 			waitForInitConf $virtualized_nodes $virtualized_nodes_count $w
-			pipesClose
 		}
 
 		statline "Instantiating NATIVE nodes..."
 		if { $native_nodes_count > 0 } {
 			pipesCreate
 			execute_nodesCreate $native_nodes $native_nodes_count $w
+			pipesClose
 			statline "Waiting for $native_nodes_count NATIVE node(s) to start..."
 			waitForInstantiateNodes $native_nodes $native_nodes_count $w
-			pipesClose
 		}
 
 		#statline "Copying host files to $virtualized_nodes_count VIRTUALIZED node(s)..."
@@ -714,9 +714,9 @@ proc deployCfg { { execute 0 } } {
 		if { $configure_nodes_ifaces_count > 0 } {
 			pipesCreate
 			execute_nodesIfacesConfigure $configure_nodes_ifaces $configure_nodes_ifaces_count $w
+			pipesClose
 			statline "Waiting for interface configuration on $configure_nodes_ifaces_count node(s)..."
 			waitForConfigureIfaces $configure_nodes_ifaces $configure_nodes_ifaces_count $w
-			pipesClose
 		}
 
 		statline "Creating links..."
@@ -744,9 +744,9 @@ proc deployCfg { { execute 0 } } {
 		if { $configure_nodes_count > 0 } {
 			pipesCreate
 			execute_nodesConfigure $configure_nodes $configure_nodes_count $w
+			pipesClose
 			statline "Waiting for configuration on $configure_nodes_count node(s)..."
 			waitForConfStart $configure_nodes $configure_nodes_count $w
-			pipesClose
 		}
 
 		statline "Starting services for NODECONF hook..."
