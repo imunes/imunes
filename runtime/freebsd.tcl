@@ -1577,6 +1577,232 @@ proc isNodeErrorIfaces { node_id } {
 	return true
 }
 
+proc isNodeUnconfigured { node_id } {
+	global skip_nodes nodeconf_timeout
+
+	if {
+		$node_id in $skip_nodes ||
+		[getFromRunning "${node_id}_running"] ni "true delete"
+	} {
+		return true
+	}
+
+	set jail_id "[getFromRunning "eid"].$node_id"
+
+	if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
+		return true
+	}
+
+	try {
+		if { $nodeconf_timeout >= 0 } {
+			exec timeout [expr $nodeconf_timeout/5.0] jexec $jail_id sh -c "test ! -f /tout.log && test -f /out.log"
+		} else {
+			exec jexec $jail_id sh -c "test ! -f /tout.log && test -f /out.log"
+		}
+	} on error {} {
+		return false
+	}
+
+	return true
+}
+
+proc isNodeIfacesUnconfigured { node_id } {
+	global skip_nodes ifacesconf_timeout
+
+	if {
+		$node_id in $skip_nodes ||
+		[getFromRunning "${node_id}_running"] ni "true delete"
+	} {
+		return true
+	}
+
+	set jail_id "[getFromRunning "eid"].$node_id"
+
+	if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
+		return true
+	}
+
+	try {
+		if { $ifacesconf_timeout >= 0 } {
+			exec timeout [expr $ifacesconf_timeout/5.0] jexec $jail_id sh -c "test ! -f /tout_ifaces.log && test -f /out_ifaces.log"
+		} else {
+			exec jexec $jail_id sh -c "test ! -f /tout_ifaces.log && test -f /out_ifaces.log"
+		}
+	} on error {} {
+		return false
+	}
+
+	return true
+}
+
+proc isNodeStopped { node_id } {
+	global skip_nodes nodeconf_timeout
+
+	if {
+		$node_id in $skip_nodes ||
+		[getFromRunning "${node_id}_running"] ni "true delete"
+	} {
+		return true
+	}
+
+	if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
+		return true
+	}
+
+	set jail_id "[getFromRunning "eid"].$node_id"
+
+	try {
+		if { $nodeconf_timeout >= 0 } {
+			exec timeout [expr $nodeconf_timeout/5.0] jexec $jail_id rm /tmp/shut > /dev/null
+		} else {
+			exec jexec $jail_id rm /tmp/shut > /dev/null
+		}
+	} on error {} {
+		return false
+	}
+
+	return true
+}
+
+proc isLinkDestroyed { link_id } {
+	global nodecreate_timeout skip_links
+
+	if {
+		$link_id in $skip_links ||
+		[getFromRunning "${link_id}_running"] != "true"
+	} {
+		return true
+	}
+
+	set mirror_link_id [getLinkMirror $link_id]
+	if { $mirror_link_id != "" && ! [getFromRunning "${mirror_link_id}_running"] } {
+		return true
+	}
+
+	lassign [getLinkPeers $link_id] node1_id node2_id
+	if { "wlan" in "[getNodeType $node1_id] [getNodeType $node2_id]" } {
+		# TODO
+		return true
+	}
+
+	set eid [getFromRunning "eid"]
+
+	try {
+		if { $nodecreate_timeout >= 0 } {
+			exec timeout [expr $nodecreate_timeout/5.0] jexec $eid ngctl show $link_id:
+		} else {
+			exec jexec $eid ngctl show $link_id:
+		}
+	} on error {} {
+		return true
+	}
+
+	return false
+}
+
+proc isNodeIfacesDestroyed { node_id ifaces } {
+	global skip_nodes ifacesconf_timeout
+
+	if {
+		$node_id in $skip_nodes || $ifaces == "" ||
+		[getFromRunning "${node_id}_running"] ni "true delete"
+	} {
+		return true
+	}
+
+	set eid [getFromRunning "eid"]
+
+	set node_type [getNodeType $node_id]
+	if { $node_type == "ext" } {
+		return [catch { exec ! ifconfig $eid-$node_id }]
+	}
+
+	set cmds ""
+	foreach iface_id $ifaces {
+		set iface_name [getIfcName $node_id $iface_id]
+		if { $iface_name in "lo0" } {
+			continue
+		}
+
+		if { [isIfcLogical $node_id $iface_id] } {
+			append cmds "jexec $eid.$node_id ifconfig $iface_name > /dev/null 2>&1 || "
+		} else {
+			append cmds "jexec $eid ngctl show $node_id-$iface_name: > /dev/null 2>&1 || "
+		}
+	}
+
+	append cmds "false"
+
+	try {
+		if { $ifacesconf_timeout >= 0 } {
+			exec timeout [expr $ifacesconf_timeout/5.0] sh -c "$cmds"
+		} else {
+			exec sh -c "$cmds"
+		}
+	} on error {} {
+		return true
+	}
+
+	return false
+}
+
+proc isNodeDestroyed { node_id } {
+	global skip_nodes nodecreate_timeout
+
+	if {
+		$node_id in $skip_nodes ||
+		[getFromRunning "${node_id}_running"] ni "true delete"
+	} {
+		return true
+	}
+
+	set node_type [getNodeType $node_id]
+	if { [$node_type.virtlayer] != "VIRTUALIZED" } {
+		if { $node_type in "rj45 ext" } {
+			return true
+		}
+
+		try {
+			exec jexec [getFromRunning "eid"] ngctl show $node_id:
+		} on error {} {
+			return true
+		}
+
+		return false
+	}
+
+	set jail_id "[getFromRunning "eid"].$node_id"
+
+	try {
+		if { $nodecreate_timeout >= 0 } {
+			exec timeout [expr $nodecreate_timeout/5.0] jls -d -j $jail_id
+		} else {
+			exec jls -d -j $jail_id
+		}
+	} on error {} {
+		return true
+	}
+
+	return false
+}
+
+proc isNodeDestroyedFS { node_id } {
+	global skip_nodes nodecreate_timeout
+
+	if {
+		$node_id in $skip_nodes ||
+		[getFromRunning "${node_id}_running"] ni "true delete"
+	} {
+		return true
+	}
+
+	if { [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" } {
+		return true
+	}
+
+	return [catch { exec ! test -d [getVrootDir]/$eid/$node_id }]
+}
+
 #****f* freebsd.tcl/killAllNodeProcesses
 # NAME
 #   killAllNodeProcesses -- kill all node processes
@@ -1593,6 +1819,7 @@ proc killAllNodeProcesses { eid node_id } {
 
 	pipesExec "jexec $jail_id kill -9 -1 2> /dev/null" "hold"
 	pipesExec "jexec $jail_id tcpdrop -a 2> /dev/null" "hold"
+	pipesExec "jexec $jail_id touch /tmp/shut" "hold"
 }
 
 #****f* freebsd.tcl/removeNodeIfcIPaddrs

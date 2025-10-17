@@ -82,6 +82,261 @@ proc terminate_nodesShutdown { eid nodes nodes_count w } {
 	}
 }
 
+proc terminate_nodesShutdown_wait { eid nodes nodes_count w } {
+	global progressbarCount execMode skip_nodes nodeconf_timeout gui
+
+	set t_start [clock milliseconds]
+
+	set batchStep 0
+	set nodes_left $nodes
+	# ignore first run when checking for timeout
+	set old_nodes_left -1
+	while { [llength $nodes_left] > 0 } {
+		displayBatchProgress $batchStep $nodes_count
+		foreach node_id $nodes_left {
+			if { ! [isNodeStopped $node_id] } {
+				if { $nodeconf_timeout < 0 } {
+					after [expr -$nodeconf_timeout]
+				}
+				continue
+			}
+
+			incr batchStep
+			incr progressbarCount -1
+
+			set name [getNodeName $node_id]
+			if { $gui && $execMode != "batch" } {
+				statline "Node $name stopped"
+				$w.p configure -value $progressbarCount
+				update
+			}
+			displayBatchProgress $batchStep $nodes_count
+
+			set nodes_left [removeFromList $nodes_left $node_id]
+		}
+
+		if { $old_nodes_left != [llength $nodes_left] } {
+			set old_nodes_left [llength $nodes_left]
+			set t_start [clock milliseconds]
+
+			continue
+		}
+
+		if { $nodeconf_timeout < 0 } {
+			continue
+		}
+
+		set t_last [clock milliseconds]
+		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $nodeconf_timeout } {
+			lappend skip_nodes {*}$nodes_left
+			break
+		}
+	}
+
+	if { $nodes_count > 0 } {
+		displayBatchProgress $batchStep $nodes_count
+		if { ! $gui || $execMode == "batch" } {
+			statline ""
+		}
+	}
+}
+
+proc terminate_linksDestroy_wait { eid links links_count w } {
+	global progressbarCount execMode skip_links nodecreate_timeout gui
+
+	set t_start [clock milliseconds]
+
+	set batchStep 0
+	set links_left $links
+	# ignore first run when checking for timeout
+	set old_links_left -1
+	while { [llength $links_left] > 0 } {
+		displayBatchProgress $batchStep $links_count
+		foreach link_id $links_left {
+			if { ! [isLinkDestroyed $link_id] } {
+				if { $nodecreate_timeout < 0 } {
+					after [expr -$nodecreate_timeout]
+				}
+				continue
+			}
+
+			setToRunning "${link_id}_running" true
+			set mirror_link_id [getLinkMirror $link_id]
+			if { $mirror_link_id != "" } {
+				setToRunning "${mirror_link_id}_running" true
+			}
+
+			incr batchStep
+			incr progressbarCount -1
+
+			if { $gui && $execMode != "batch" } {
+				statline "Link $link_id destroyed"
+				$w.p configure -value $progressbarCount
+				update
+			}
+			displayBatchProgress $batchStep $links_count
+
+			set links_left [removeFromList $links_left $link_id]
+		}
+
+		if { $old_links_left != [llength $links_left] } {
+			set old_links_left [llength $links_left]
+			set t_start [clock milliseconds]
+
+			continue
+		}
+
+		if { $nodecreate_timeout < 0 } {
+			continue
+		}
+
+		set t_last [clock milliseconds]
+		if { [llength $links_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $nodecreate_timeout } {
+			lappend skip_links {*}$links_left
+			break
+		}
+	}
+
+	if { $links_count > 0 } {
+		displayBatchProgress $batchStep $links_count
+		if { ! $gui || $execMode == "batch" } {
+			statline ""
+		}
+	}
+}
+
+proc terminate_nodesLogIfacesDestroy_wait { eid nodes_ifaces nodes_count w } {
+	global progressbarCount execMode err_skip_nodesifaces ifacesconf_timeout gui
+
+	set t_start [clock milliseconds]
+
+	set nodes [dict keys $nodes_ifaces]
+
+	set batchStep 0
+	set nodes_left $nodes
+	# ignore first run when checking for timeout
+	set old_nodes_left -1
+	while { [llength $nodes_left] > 0 } {
+		displayBatchProgress $batchStep $nodes_count
+		foreach node_id $nodes_left {
+			set ifaces [removeFromList [dict get $nodes_ifaces $node_id] [ifcList $node_id]]
+			if { $ifaces == "*" } {
+				set ifaces [logIfcList $node_id]
+			}
+
+			if { ! [isNodeIfacesDestroyed $node_id $ifaces] } {
+				if { $ifacesconf_timeout < 0 } {
+					after [expr -$ifacesconf_timeout]
+				}
+				continue
+			}
+
+			incr batchStep
+			incr progressbarCount -1
+
+			set name [getNodeName $node_id]
+			if { $gui && $execMode != "batch" } {
+				statline "Node $name logical ifaces destroyed"
+				$w.p configure -value $progressbarCount
+				update
+			}
+			displayBatchProgress $batchStep $nodes_count
+
+			set nodes_left [removeFromList $nodes_left $node_id]
+		}
+
+		if { $old_nodes_left != [llength $nodes_left] } {
+			set old_nodes_left [llength $nodes_left]
+			set t_start [clock milliseconds]
+
+			continue
+		}
+
+		if { $ifacesconf_timeout < 0 } {
+			continue
+		}
+
+		set t_last [clock milliseconds]
+		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $ifacesconf_timeout } {
+			set err_skip_nodesifaces $nodes_left
+			break
+		}
+	}
+
+	if { $nodes_count > 0 } {
+		displayBatchProgress $batchStep $nodes_count
+		if { ! $gui || $execMode == "batch" } {
+			statline ""
+		}
+	}
+}
+
+proc terminate_nodesPhysIfacesDestroy_wait { eid nodes_ifaces nodes_count w } {
+	global progressbarCount execMode err_skip_nodesifaces ifacesconf_timeout gui
+
+	set t_start [clock milliseconds]
+
+	set nodes [dict keys $nodes_ifaces]
+
+	set batchStep 0
+	set nodes_left $nodes
+	# ignore first run when checking for timeout
+	set old_nodes_left -1
+	while { [llength $nodes_left] > 0 } {
+		displayBatchProgress $batchStep $nodes_count
+		foreach node_id $nodes_left {
+			set ifaces [removeFromList [dict get $nodes_ifaces $node_id] [logIfcList $node_id]]
+			if { $ifaces == "*" } {
+				set ifaces [ifcList $node_id]
+			}
+
+			if { ! [isNodeIfacesDestroyed $node_id $ifaces] } {
+				if { $ifacesconf_timeout < 0 } {
+					after [expr -$ifacesconf_timeout]
+				}
+				continue
+			}
+
+			incr batchStep
+			incr progressbarCount -1
+
+			set name [getNodeName $node_id]
+			if { $gui && $execMode != "batch" } {
+				statline "Node $name physical ifaces destroyed"
+				$w.p configure -value $progressbarCount
+				update
+			}
+			displayBatchProgress $batchStep $nodes_count
+
+			set nodes_left [removeFromList $nodes_left $node_id]
+		}
+
+		if { $old_nodes_left != [llength $nodes_left] } {
+			set old_nodes_left [llength $nodes_left]
+			set t_start [clock milliseconds]
+
+			continue
+		}
+
+		if { $ifacesconf_timeout < 0 } {
+			continue
+		}
+
+		set t_last [clock milliseconds]
+		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $ifacesconf_timeout } {
+			set err_skip_nodesifaces $nodes_left
+			break
+		}
+	}
+
+	if { $nodes_count > 0 } {
+		displayBatchProgress $batchStep $nodes_count
+		if { ! $gui || $execMode == "batch" } {
+			statline ""
+		}
+	}
+}
+
 proc terminate_linksUnconfigure { eid links links_count w } {
 	global progressbarCount execMode gui
 
@@ -206,6 +461,65 @@ proc terminate_nodesDestroy { eid nodes nodes_count w } {
 	}
 }
 
+proc terminate_nodesDestroy_wait { eid nodes nodes_count w } {
+	global progressbarCount execMode skip_nodes nodecreate_timeout gui
+
+	set t_start [clock milliseconds]
+
+	set batchStep 0
+	set nodes_left $nodes
+	# ignore first run when checking for timeout
+	set old_nodes_left -1
+	while { [llength $nodes_left] > 0 } {
+		displayBatchProgress $batchStep $nodes_count
+		foreach node_id $nodes_left {
+			if { ! [isNodeDestroyed $node_id] } {
+				if { $nodecreate_timeout < 0 } {
+					after [expr -$nodecreate_timeout]
+				}
+				continue
+			}
+
+			incr batchStep
+			incr progressbarCount -1
+
+			set name [getNodeName $node_id]
+			if { $gui && $execMode != "batch" } {
+				statline "Node $name destroyed"
+				$w.p configure -value $progressbarCount
+				update
+			}
+			displayBatchProgress $batchStep $nodes_count
+
+			set nodes_left [removeFromList $nodes_left $node_id]
+		}
+
+		if { $old_nodes_left != [llength $nodes_left] } {
+			set old_nodes_left [llength $nodes_left]
+			set t_start [clock milliseconds]
+
+			continue
+		}
+
+		if { $nodecreate_timeout < 0 } {
+			continue
+		}
+
+		set t_last [clock milliseconds]
+		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $nodecreate_timeout } {
+			lappend skip_nodes {*}$nodes_left
+			break
+		}
+	}
+
+	if { $nodes_count > 0 } {
+		displayBatchProgress $batchStep $nodes_count
+		if { ! $gui || $execMode == "batch" } {
+			statline ""
+		}
+	}
+}
+
 proc terminate_nodesDestroyFS { eid nodes nodes_count w } {
 	global progressbarCount execMode gui
 
@@ -221,12 +535,6 @@ proc terminate_nodesDestroyFS { eid nodes nodes_count w } {
 			} on error err {
 				return -code error "Error in '[getNodeType $node_id].nodeDestroyFS $eid $node_id': $err"
 			}
-
-			if { [getFromRunning "${node_id}_running"] == "delete" } {
-				unsetRunning "${node_id}_running"
-			} else {
-				setToRunning "${node_id}_running" false
-			}
 		}
 		pipesExec ""
 
@@ -237,6 +545,71 @@ proc terminate_nodesDestroyFS { eid nodes nodes_count w } {
 			statline "Destroying node [getNodeName $node_id] (FS)"
 			$w.p configure -value $progressbarCount
 			update
+		}
+	}
+
+	if { $nodes_count > 0 } {
+		displayBatchProgress $batchStep $nodes_count
+		if { ! $gui || $execMode == "batch" } {
+			statline ""
+		}
+	}
+}
+
+proc terminate_nodesDestroyFS_wait { eid nodes nodes_count w } {
+	global progressbarCount execMode skip_nodes nodecreate_timeout gui
+
+	set t_start [clock milliseconds]
+
+	set batchStep 0
+	set nodes_left $nodes
+	# ignore first run when checking for timeout
+	set old_nodes_left -1
+	while { [llength $nodes_left] > 0 } {
+		displayBatchProgress $batchStep $nodes_count
+		foreach node_id $nodes_left {
+			if { ! [isNodeDestroyedFS $node_id] } {
+				if { $nodecreate_timeout < 0 } {
+					after [expr -$nodecreate_timeout]
+				}
+				continue
+			}
+
+			if { [getFromRunning "${node_id}_running"] == "delete" } {
+				unsetRunning "${node_id}_running"
+			} else {
+				setToRunning "${node_id}_running" false
+			}
+
+			incr batchStep
+			incr progressbarCount -1
+
+			set name [getNodeName $node_id]
+			if { $gui && $execMode != "batch" } {
+				statline "Node $name destroyed (FS)"
+				$w.p configure -value $progressbarCount
+				update
+			}
+			displayBatchProgress $batchStep $nodes_count
+
+			set nodes_left [removeFromList $nodes_left $node_id]
+		}
+
+		if { $old_nodes_left != [llength $nodes_left] } {
+			set old_nodes_left [llength $nodes_left]
+			set t_start [clock milliseconds]
+
+			continue
+		}
+
+		if { $nodecreate_timeout < 0 } {
+			continue
+		}
+
+		set t_last [clock milliseconds]
+		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $nodecreate_timeout } {
+			lappend skip_nodes {*}$nodes_left
+			break
 		}
 	}
 
@@ -441,7 +814,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 
 	set unconfigure_links_count [llength $unconfigure_links]
 
-	set maxProgressbasCount [expr {1 + 1*$all_nodes_count + 1*$links_count + 1*$unconfigure_links_count + 2*$native_nodes_count + 3*$virtualized_nodes_count + 1*$unconfigure_nodes_ifaces_count + 1*$destroy_nodes_ifaces_count + 1*$destroy_nodes_extifaces_count + 1*$unconfigure_nodes_count}]
+	set maxProgressbasCount [expr {1 + 2*$all_nodes_count + 2*$links_count + 1*$unconfigure_links_count + 4*$native_nodes_count + 5*$virtualized_nodes_count + 4*$unconfigure_nodes_ifaces_count + 4*$destroy_nodes_ifaces_count + 2*$destroy_nodes_extifaces_count + 2*$unconfigure_nodes_count}]
 	set progressbarCount $maxProgressbasCount
 
 	if { $eid == "" } {
@@ -472,7 +845,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 	try {
 		statline "Stopping services for NODESTOP hook..."
 		if { $unconfigure_nodes_count > 0 } {
-			services stop "NODESTOP" "bkg" $unconfigure_nodes
+			services stop "NODESTOP" "" $unconfigure_nodes
 		}
 
 		statline "Unconfiguring nodes..."
@@ -481,6 +854,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 			terminate_nodesUnconfigure $eid $unconfigure_nodes $unconfigure_nodes_count $w
 			statline "Waiting for unconfiguration of $unconfigure_nodes_count node(s)..."
 			pipesClose
+			terminate_nodesUnconfigure_wait $eid $unconfigure_nodes $unconfigure_nodes_count $w
 		}
 
 		statline "Stopping nodes..."
@@ -489,6 +863,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 			terminate_nodesShutdown $eid $all_nodes $all_nodes_count $w
 			statline "Waiting for processes on $all_nodes_count node(s) to shutdown..."
 			pipesClose
+			terminate_nodesShutdown_wait $eid $all_nodes $all_nodes_count $w
 		}
 
 		statline "Destroying physical interfaces on RJ45 nodes..."
@@ -497,11 +872,12 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 			terminate_nodesPhysIfacesDestroy $eid $destroy_nodes_extifaces $destroy_nodes_extifaces_count $w
 			statline "Waiting for physical interfaces on $destroy_nodes_extifaces_count RJ45 node(s) to be destroyed..."
 			pipesClose
+			terminate_nodesPhysIfacesDestroy_wait $eid $destroy_nodes_extifaces $destroy_nodes_extifaces_count $w
 		}
 
 		statline "Stopping services for LINKDEST hook..."
 		if { $unconfigure_nodes_count > 0 } {
-			services stop "LINKDEST" "bkg" $unconfigure_nodes
+			services stop "LINKDEST" "" $unconfigure_nodes
 		}
 
 		statline "Unconfiguring links..."
@@ -518,6 +894,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 			terminate_linksDestroy $eid $terminate_links $links_count $w
 			statline "Waiting for $links_count link(s) to be destroyed..."
 			pipesClose
+			terminate_linksDestroy_wait $eid $terminate_links $links_count $w
 		}
 
 		statline "Unconfiguring logical interfaces on nodes..."
@@ -526,6 +903,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 			terminate_nodesLogIfacesUnconfigure $eid $unconfigure_nodes_ifaces $unconfigure_nodes_ifaces_count $w
 			statline "Waiting for logical interfaces on $unconfigure_nodes_ifaces_count node(s) to be unconfigured..."
 			pipesClose
+			terminate_nodesLogIfacesUnconfigure_wait $eid $unconfigure_nodes_ifaces $unconfigure_nodes_ifaces_count $w
 		}
 
 		statline "Destroying logical interfaces on nodes..."
@@ -534,6 +912,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 			terminate_nodesLogIfacesDestroy $eid $destroy_nodes_ifaces $destroy_nodes_ifaces_count $w
 			statline "Waiting for logical interfaces on $destroy_nodes_ifaces_count node(s) to be destroyed..."
 			pipesClose
+			terminate_nodesLogIfacesDestroy_wait $eid $destroy_nodes_ifaces $destroy_nodes_ifaces_count $w
 		}
 
 		statline "Unconfiguring physical interfaces on nodes..."
@@ -542,6 +921,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 			terminate_nodesPhysIfacesUnconfigure $eid $unconfigure_nodes_ifaces $unconfigure_nodes_ifaces_count $w
 			statline "Waiting for physical interfaces on $unconfigure_nodes_ifaces_count node(s) to be unconfigured..."
 			pipesClose
+			terminate_nodesPhysIfacesUnconfigure_wait $eid $unconfigure_nodes_ifaces $unconfigure_nodes_ifaces_count $w
 		}
 
 		statline "Destroying physical interfaces on nodes..."
@@ -550,6 +930,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 			terminate_nodesPhysIfacesDestroy $eid $destroy_nodes_ifaces $destroy_nodes_ifaces_count $w
 			statline "Waiting for physical interfaces on $destroy_nodes_ifaces_count node(s) to be destroyed..."
 			pipesClose
+			terminate_nodesPhysIfacesDestroy_wait $eid $destroy_nodes_ifaces $destroy_nodes_ifaces_count $w
 		}
 
 		statline "Destroying NATIVE nodes..."
@@ -558,27 +939,30 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 			terminate_nodesDestroy $eid $native_nodes $native_nodes_count $w
 			statline "Waiting for $native_nodes_count NATIVE node(s) to be destroyed..."
 			pipesClose
+			terminate_nodesDestroy_wait $eid $native_nodes $native_nodes_count $w
 		}
 
+		# Keep this because we mark nodes as non-running here
 		statline "Destroying NATIVE nodes (FS)..."
 		if { $native_nodes_count > 0 } {
 			pipesCreate
 			terminate_nodesDestroyFS $eid $native_nodes $native_nodes_count $w
 			statline "Waiting for $native_nodes_count NATIVE node(s) to be destroyed (FS)..."
 			pipesClose
+			terminate_nodesDestroyFS_wait $eid $native_nodes $native_nodes_count $w
 		}
 
 		statline "Checking for hanging TCP connections on VIRTUALIZED node(s)..."
 		if { $virtualized_nodes_count > 0 } {
-			pipesCreate
+			#pipesCreate
 			timeoutPatch $eid $virtualized_nodes $virtualized_nodes_count $w
 			statline "Waiting for hanging TCP connections on $virtualized_nodes_count VIRTUALIZED node(s)..."
-			pipesClose
+			#pipesClose
 		}
 
 		statline "Stopping services for NODEDEST hook..."
 		if { $virtualized_nodes_count > 0 } {
-			services stop "NODEDEST" "bkg" $virtualized_nodes
+			services stop "NODEDEST" "" $virtualized_nodes
 		}
 
 		statline "Destroying VIRTUALIZED nodes..."
@@ -587,14 +971,16 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 			terminate_nodesDestroy $eid $virtualized_nodes $virtualized_nodes_count $w
 			statline "Waiting for $virtualized_nodes_count VIRTUALIZED node(s) to be destroyed..."
 			pipesClose
+			terminate_nodesDestroy_wait $eid $virtualized_nodes $virtualized_nodes_count $w
 		}
 
 		statline "Destroying VIRTUALIZED nodes (FS)..."
 		if { $virtualized_nodes_count > 0 } {
 			pipesCreate
 			terminate_nodesDestroyFS $eid $virtualized_nodes $virtualized_nodes_count $w
-			statline "Waiting for $virtualized_nodes_count VIRTUALIZED node(s) to be destroyed (FS)..."
 			pipesClose
+			statline "Waiting for $virtualized_nodes_count VIRTUALIZED node(s) to be destroyed (FS)..."
+			terminate_nodesDestroyFS_wait $eid $virtualized_nodes $virtualized_nodes_count $w
 		}
 
 		if { $terminate } {
@@ -706,6 +1092,65 @@ proc terminate_nodesUnconfigure { eid nodes nodes_count w } {
 	}
 }
 
+proc terminate_nodesUnconfigure_wait { eid nodes nodes_count w } {
+	global progressbarCount execMode skip_nodes nodeconf_timeout gui
+
+	set t_start [clock milliseconds]
+
+	set batchStep 0
+	set nodes_left $nodes
+	# ignore first run when checking for timeout
+	set old_nodes_left -1
+	while { [llength $nodes_left] > 0 } {
+		displayBatchProgress $batchStep $nodes_count
+		foreach node_id $nodes_left {
+			if { ! [isNodeUnconfigured $node_id] } {
+				if { $nodeconf_timeout < 0 } {
+					after [expr -$nodeconf_timeout]
+				}
+				continue
+			}
+
+			incr batchStep
+			incr progressbarCount -1
+
+			set name [getNodeName $node_id]
+			if { $gui && $execMode != "batch" } {
+				statline "Node $name unconfigured"
+				$w.p configure -value $progressbarCount
+				update
+			}
+			displayBatchProgress $batchStep $nodes_count
+
+			set nodes_left [removeFromList $nodes_left $node_id]
+		}
+
+		if { $old_nodes_left != [llength $nodes_left] } {
+			set old_nodes_left [llength $nodes_left]
+			set t_start [clock milliseconds]
+
+			continue
+		}
+
+		if { $nodeconf_timeout < 0 } {
+			continue
+		}
+
+		set t_last [clock milliseconds]
+		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $nodeconf_timeout } {
+			lappend skip_nodes {*}$nodes_left
+			break
+		}
+	}
+
+	if { $nodes_count > 0 } {
+		displayBatchProgress $batchStep $nodes_count
+		if { ! $gui || $execMode == "batch" } {
+			statline ""
+		}
+	}
+}
+
 proc terminate_nodesLogIfacesUnconfigure { eid nodes_ifaces nodes_count w } {
 	global progressbarCount execMode gui
 
@@ -737,6 +1182,67 @@ proc terminate_nodesLogIfacesUnconfigure { eid nodes_ifaces nodes_count w } {
 			$w.p configure -value $progressbarCount
 			statline "Unconfiguring logical interfaces on node [getNodeName $node_id]"
 			update
+		}
+	}
+
+	if { $nodes_count > 0 } {
+		displayBatchProgress $batchStep $nodes_count
+		if { ! $gui || $execMode == "batch" } {
+			statline ""
+		}
+	}
+}
+
+proc terminate_nodesLogIfacesUnconfigure_wait { eid nodes_ifaces nodes_count w } {
+	global progressbarCount execMode err_skip_nodesifaces ifacesconf_timeout gui
+
+	set t_start [clock milliseconds]
+
+	set nodes [dict keys $nodes_ifaces]
+
+	set batchStep 0
+	set nodes_left $nodes
+	# ignore first run when checking for timeout
+	set old_nodes_left -1
+	while { [llength $nodes_left] > 0 } {
+		displayBatchProgress $batchStep $nodes_count
+		foreach node_id $nodes_left {
+			if { ! [isNodeIfacesUnconfigured $node_id] } {
+				if { $ifacesconf_timeout < 0 } {
+					after [expr -$ifacesconf_timeout]
+				}
+				continue
+			}
+
+			incr batchStep
+			incr progressbarCount -1
+
+			set name [getNodeName $node_id]
+			if { $gui && $execMode != "batch" } {
+				statline "Node $name logical ifaces unconfigured"
+				$w.p configure -value $progressbarCount
+				update
+			}
+			displayBatchProgress $batchStep $nodes_count
+
+			set nodes_left [removeFromList $nodes_left $node_id]
+		}
+
+		if { $old_nodes_left != [llength $nodes_left] } {
+			set old_nodes_left [llength $nodes_left]
+			set t_start [clock milliseconds]
+
+			continue
+		}
+
+		if { $ifacesconf_timeout < 0 } {
+			continue
+		}
+
+		set t_last [clock milliseconds]
+		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $ifacesconf_timeout } {
+			set err_skip_nodesifaces $nodes_left
+			break
 		}
 	}
 
@@ -818,6 +1324,67 @@ proc terminate_nodesPhysIfacesUnconfigure { eid nodes_ifaces nodes_count w } {
 			$w.p configure -value $progressbarCount
 			statline "Unconfiguring physical interfaces on node [getNodeName $node_id]"
 			update
+		}
+	}
+
+	if { $nodes_count > 0 } {
+		displayBatchProgress $batchStep $nodes_count
+		if { ! $gui || $execMode == "batch" } {
+			statline ""
+		}
+	}
+}
+
+proc terminate_nodesPhysIfacesUnconfigure_wait { eid nodes_ifaces nodes_count w } {
+	global progressbarCount execMode err_skip_nodesifaces ifacesconf_timeout gui
+
+	set t_start [clock milliseconds]
+
+	set nodes [dict keys $nodes_ifaces]
+
+	set batchStep 0
+	set nodes_left $nodes
+	# ignore first run when checking for timeout
+	set old_nodes_left -1
+	while { [llength $nodes_left] > 0 } {
+		displayBatchProgress $batchStep $nodes_count
+		foreach node_id $nodes_left {
+			if { ! [isNodeIfacesUnconfigured $node_id] } {
+				if { $ifacesconf_timeout < 0 } {
+					after [expr -$ifacesconf_timeout]
+				}
+				continue
+			}
+
+			incr batchStep
+			incr progressbarCount -1
+
+			set name [getNodeName $node_id]
+			if { $gui && $execMode != "batch" } {
+				statline "Node $name physical ifaces unconfigured"
+				$w.p configure -value $progressbarCount
+				update
+			}
+			displayBatchProgress $batchStep $nodes_count
+
+			set nodes_left [removeFromList $nodes_left $node_id]
+		}
+
+		if { $old_nodes_left != [llength $nodes_left] } {
+			set old_nodes_left [llength $nodes_left]
+			set t_start [clock milliseconds]
+
+			continue
+		}
+
+		if { $ifacesconf_timeout < 0 } {
+			continue
+		}
+
+		set t_last [clock milliseconds]
+		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $ifacesconf_timeout } {
+			set err_skip_nodesifaces $nodes_left
+			break
 		}
 	}
 
