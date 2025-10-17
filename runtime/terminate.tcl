@@ -494,7 +494,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 		statline "Destroying physical interfaces on RJ45 nodes..."
 		if { $destroy_nodes_extifaces_count > 0 } {
 			pipesCreate
-			terminate_nodesIfacesDestroy $eid $destroy_nodes_extifaces $destroy_nodes_extifaces_count $w
+			terminate_nodesPhysIfacesDestroy $eid $destroy_nodes_extifaces $destroy_nodes_extifaces_count $w
 			statline "Waiting for physical interfaces on $destroy_nodes_extifaces_count RJ45 node(s) to be destroyed..."
 			pipesClose
 		}
@@ -520,10 +520,26 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 			pipesClose
 		}
 
+		statline "Unconfiguring logical interfaces on nodes..."
+		if { $unconfigure_nodes_ifaces_count > 0 } {
+			pipesCreate
+			terminate_nodesLogIfacesUnconfigure $eid $unconfigure_nodes_ifaces $unconfigure_nodes_ifaces_count $w
+			statline "Waiting for logical interfaces on $unconfigure_nodes_ifaces_count node(s) to be unconfigured..."
+			pipesClose
+		}
+
+		statline "Destroying logical interfaces on nodes..."
+		if { $destroy_nodes_ifaces_count > 0 } {
+			pipesCreate
+			terminate_nodesLogIfacesDestroy $eid $destroy_nodes_ifaces $destroy_nodes_ifaces_count $w
+			statline "Waiting for logical interfaces on $destroy_nodes_ifaces_count node(s) to be destroyed..."
+			pipesClose
+		}
+
 		statline "Unconfiguring physical interfaces on nodes..."
 		if { $unconfigure_nodes_ifaces_count > 0 } {
 			pipesCreate
-			terminate_nodesIfacesUnconfigure $eid $unconfigure_nodes_ifaces $unconfigure_nodes_ifaces_count $w
+			terminate_nodesPhysIfacesUnconfigure $eid $unconfigure_nodes_ifaces $unconfigure_nodes_ifaces_count $w
 			statline "Waiting for physical interfaces on $unconfigure_nodes_ifaces_count node(s) to be unconfigured..."
 			pipesClose
 		}
@@ -531,7 +547,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 		statline "Destroying physical interfaces on nodes..."
 		if { $destroy_nodes_ifaces_count > 0 } {
 			pipesCreate
-			terminate_nodesIfacesDestroy $eid $destroy_nodes_ifaces $destroy_nodes_ifaces_count $w
+			terminate_nodesPhysIfacesDestroy $eid $destroy_nodes_ifaces $destroy_nodes_ifaces_count $w
 			statline "Waiting for physical interfaces on $destroy_nodes_ifaces_count node(s) to be destroyed..."
 			pipesClose
 		}
@@ -690,7 +706,7 @@ proc terminate_nodesUnconfigure { eid nodes nodes_count w } {
 	}
 }
 
-proc terminate_nodesIfacesUnconfigure { eid nodes_ifaces nodes_count w } {
+proc terminate_nodesLogIfacesUnconfigure { eid nodes_ifaces nodes_count w } {
 	global progressbarCount execMode gui
 
 	set batchStep 0
@@ -698,7 +714,7 @@ proc terminate_nodesIfacesUnconfigure { eid nodes_ifaces nodes_count w } {
 	set nodes_l2data [dict create]
 	dict for {node_id ifaces} $nodes_ifaces {
 		if { $ifaces == "*" } {
-			set ifaces [allIfcList $node_id]
+			set ifaces [logIfcList $node_id]
 		}
 		displayBatchProgress $batchStep $nodes_count
 
@@ -719,7 +735,7 @@ proc terminate_nodesIfacesUnconfigure { eid nodes_ifaces nodes_count w } {
 
 		if { $gui && $execMode != "batch" } {
 			$w.p configure -value $progressbarCount
-			statline "Unconfiguring interfaces on node [getNodeName $node_id]"
+			statline "Unconfiguring logical interfaces on node [getNodeName $node_id]"
 			update
 		}
 	}
@@ -732,7 +748,88 @@ proc terminate_nodesIfacesUnconfigure { eid nodes_ifaces nodes_count w } {
 	}
 }
 
-proc terminate_nodesIfacesDestroy { eid nodes_ifaces nodes_count w } {
+proc terminate_nodesLogIfacesDestroy { eid nodes_ifaces nodes_count w } {
+	global progressbarCount execMode gui
+
+	set batchStep 0
+	dict for {node_id ifaces} $nodes_ifaces {
+		displayBatchProgress $batchStep $nodes_count
+
+		if { [info procs [getNodeType $node_id].nodeIfacesDestroy] != "" } {
+			if { $ifaces == "*" } {
+				set ifaces [logIfcList $node_id]
+			}
+
+			if { [getFromRunning "${node_id}_running"] in "true delete" } {
+				try {
+					[getNodeType $node_id].nodeIfacesDestroy $eid $node_id $ifaces
+				} on error err {
+					return -code error "Error in '[getNodeType $node_id].nodeIfacesDestroy $eid $node_id $ifaces': $err"
+				}
+			}
+		}
+
+		incr batchStep
+		incr progressbarCount -1
+
+		if { $gui && $execMode != "batch" } {
+			statline "Destroying logical interfaces on node [getNodeName $node_id]"
+			$w.p configure -value $progressbarCount
+			update
+		}
+	}
+
+	if { $nodes_count > 0 } {
+		displayBatchProgress $batchStep $nodes_count
+		if { ! $gui || $execMode == "batch" } {
+			statline ""
+		}
+	}
+}
+
+proc terminate_nodesPhysIfacesUnconfigure { eid nodes_ifaces nodes_count w } {
+	global progressbarCount execMode gui
+
+	set batchStep 0
+	set subnet_gws {}
+	set nodes_l2data [dict create]
+	dict for {node_id ifaces} $nodes_ifaces {
+		if { $ifaces == "*" } {
+			set ifaces [ifcList $node_id]
+		}
+		displayBatchProgress $batchStep $nodes_count
+
+		if {
+			[info procs [getNodeType $node_id].nodeIfacesUnconfigure] != "" &&
+			[getFromRunning "${node_id}_running"] in "true delete"
+		} {
+			try {
+				[getNodeType $node_id].nodeIfacesUnconfigure $eid $node_id $ifaces
+			} on error err {
+				return -code error "Error in '[getNodeType $node_id].nodeIfacesUnconfigure $eid $node_id $ifaces': $err"
+			}
+		}
+		pipesExec ""
+
+		incr batchStep
+		incr progressbarCount -1
+
+		if { $gui && $execMode != "batch" } {
+			$w.p configure -value $progressbarCount
+			statline "Unconfiguring physical interfaces on node [getNodeName $node_id]"
+			update
+		}
+	}
+
+	if { $nodes_count > 0 } {
+		displayBatchProgress $batchStep $nodes_count
+		if { ! $gui || $execMode == "batch" } {
+			statline ""
+		}
+	}
+}
+
+proc terminate_nodesPhysIfacesDestroy { eid nodes_ifaces nodes_count w } {
 	global progressbarCount execMode gui
 
 	set batchStep 0
