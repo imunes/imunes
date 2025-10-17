@@ -776,6 +776,8 @@ proc nodeLogIfacesCreate { node_id ifaces } {
 				set dev [getIfcVlanDev $node_id $iface_id]
 				if { $tag != "" && $dev != "" } {
 					pipesExec "docker exec -d $docker_id [getVlanTagIfcCmd $iface_name $dev $tag]" "hold"
+				} else {
+					setToRunning "${node_id}|${iface_id}_running" false
 				}
 			}
 			lo {

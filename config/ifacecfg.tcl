@@ -475,6 +475,15 @@ proc removeIface { node_id iface_id } {
 proc nodeCfggenIfc { node_id iface_id } {
 	global isOSlinux
 
+	if { [getIfcType $node_id $iface_id] == "vlan" } {
+		if {
+			[getIfcVlanTag $node_id $iface_id] == "" ||
+			[getIfcVlanDev $node_id $iface_id] == ""
+		} {
+			return
+		}
+	}
+
 	set cfg {}
 
 	set iface_name [getIfcName $node_id $iface_id]
