@@ -206,6 +206,8 @@ proc trigger_nodeFullReconfig { node_id } {
 }
 
 proc trigger_nodeCreate { node_id } {
+	global isOSlinux
+
 	if { ! [getFromRunning "cfg_deployed"] } {
 		return
 	}
@@ -233,6 +235,9 @@ proc trigger_nodeCreate { node_id } {
 
 		if { [getLinkDirect $link_id] } {
 			lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
+			if { $isOSlinux } {
+				trigger_ifaceCreate $peer_id $peer_iface_id
+			}
 			trigger_ifaceConfig $peer_id $peer_iface_id
 		}
 

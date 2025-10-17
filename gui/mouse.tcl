@@ -458,8 +458,8 @@ proc button3link { c x y } {
 	if {
 		! $isOSlinux ||
 		$oper_mode == "edit" ||
-		([getFromRunning "${peer1_id}|${peer1_iface}_running"] &&
-		[getFromRunning "${peer2_id}|${peer2_iface}_running"])
+		([getFromRunning "${peer1_id}|${peer1_iface}_running"] == true &&
+		[getFromRunning "${peer2_id}|${peer2_iface}_running"] == true)
 	} {
 		.button3menu add checkbutton -label "Direct link" \
 			-underline 5 -variable linkDirect_$real_link_id \
@@ -488,8 +488,8 @@ proc button3link { c x y } {
 		$oper_mode == "edit" ||
 		([getFromRunning "stop_sched"] &&
 		(! $isOSlinux || ! [set linkDirect_$real_link_id] ||
-		(! [getFromRunning "${peer1_id}|${peer1_iface}_running"] &&
-		! [getFromRunning "${peer2_id}|${peer2_iface}_running"])))
+		(! [getFromRunning "${peer1_id}|${peer1_iface}_running"] == true &&
+		! [getFromRunning "${peer2_id}|${peer2_iface}_running"] == true)))
 	} {
 		.button3menu add command -label "Delete (keep interfaces)" \
 			-command "removeLinkGUI $link_id atomic 1"
