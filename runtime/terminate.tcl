@@ -598,9 +598,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 
 		if { $terminate } {
 			statline "Removing experiment top-level container/netns..."
-			pipesCreate
 			terminate_removeExperimentContainer $eid
-			pipesClose
 
 			statline "Removing experiment files..."
 			terminate_removeExperimentFiles $eid
