@@ -1980,6 +1980,8 @@ proc nodeIfacesDestroy { eid node_id ifaces } {
 			set iface_name [getIfcName $node_id $iface_id]
 			if { [getIfcType $node_id $iface_id] == "stolen" } {
 				releaseExtIfcByName $eid $iface_name $node_id
+			} elseif { [isIfcLogical $node_id $iface_id] } {
+				pipesExec "jexec $eid\.$node_id ifconfig $iface_name destroy" "hold"
 			} else {
 				pipesExec "jexec $eid ngctl rmnode $node_id-$iface_name:" "hold"
 			}

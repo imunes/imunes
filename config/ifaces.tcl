@@ -582,6 +582,8 @@ proc setIfcVlanDev { node_id iface_id dev } {
 
 	if { [getNodeType $node_id] == "rj45" } {
 		trigger_nodeRecreate $node_id
+	} else {
+		trigger_ifaceRecreate $node_id $iface_id
 	}
 }
 
@@ -638,6 +640,8 @@ proc setIfcVlanTag { node_id iface_id tag } {
 				trigger_linkRecreate $link_id
 			}
 		}
+	} else {
+		trigger_ifaceRecreate $node_id $iface_id
 	}
 }
 

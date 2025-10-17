@@ -1323,7 +1323,10 @@ proc nodeIfacesDestroy { eid node_id ifaces } {
 			set link_id [getIfcLink $node_id $iface_id]
 			if { [getIfcType $node_id $iface_id] == "stolen" } {
 				releaseExtIfcByName $eid $iface_name $node_id
-			} elseif { $link_id != "" && [getLinkDirect $link_id] } {
+			} elseif {
+				[isIfcLogical $node_id $iface_id] ||
+				($link_id != "" && [getLinkDirect $link_id])
+			} {
 				pipesExec "ip -n [getNodeNetns $eid $node_id] link del $iface_name" "hold"
 			} else {
 				pipesExec "ip -n $eid link del $node_id-$iface_name" "hold"
