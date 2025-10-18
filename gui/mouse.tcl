@@ -695,7 +695,7 @@ proc button3node { c x y } {
 
 	set tmp_command [list apply {
 		{ node_id } {
-			Kb $node_id [removeFromList [selectedRealNodes $node_id]]
+			Kb $node_id [removeFromList [selectedRealNodes] $node_id]
 		}
 	} \
 		$node_id
