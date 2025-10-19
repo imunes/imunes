@@ -366,6 +366,8 @@ proc trigger_linkReconfig { link_id } {
 }
 
 proc trigger_linkCreate { link_id } {
+	global isOSlinux
+
 	if { ! [getFromRunning "cfg_deployed"] } {
 		return
 	}
@@ -375,17 +377,36 @@ proc trigger_linkCreate { link_id } {
 	if { $link_id ni $instantiate_links } {
 		lappend instantiate_links $link_id
 
-		foreach node_id [getLinkPeers $link_id] {
+		updateInstantiateVars
+
+		lassign [getLinkPeers $link_id] node1_id node2_id
+		lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
+		foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
 			set node_type [getNodeType $node_id]
 			if { $node_type in "packgen" } {
 				trigger_nodeReconfig $node_id
 			} elseif { $node_type in "filter" } {
 				trigger_nodeReconfig $node_id
 			}
+
+			if { ! [getLinkDirect $link_id] || ! $isOSlinux } {
+				continue
+			}
+
+			set ifaces [dictGet $create_nodes_ifaces $node_id]
+			# if any of the logical interfaces have $iface_id as master, recreate them
+			set iface_name [getIfcName $node_id $iface_id]
+			foreach log_iface_id [logIfcList $node_id] {
+				if { [getIfcVlanDev $node_id $log_iface_id] != $iface_name } {
+					continue
+				}
+
+				if { "*" ni $ifaces && $log_iface_id ni $ifaces } {
+					trigger_ifaceCreate $node_id $log_iface_id
+				}
+			}
 		}
 	}
-
-	updateInstantiateVars
 
 	trigger_linkConfig $link_id
 }
