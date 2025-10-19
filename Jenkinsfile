@@ -17,6 +17,8 @@ pipeline {
 		string(name: 'IMUNES_REPO', defaultValue: 'https://github.com/imunes/imunes.git', description: 'IMUNES Git repository URL')
 		string(name: 'EXAMPLES_REPO', defaultValue: 'https://github.com/imunes/imunes-examples.git', description: 'IMUNES examples Git repository URL')
 		string(name: 'EXAMPLES_BRANCH', defaultValue: 'master', description: 'IMUNES examples Git branch')
+		string(name: 'LEGACY', defaultValue: '1', description: 'Run IMUNES in legacy mode')
+		string(name: 'DEBUG', defaultValue: '', description: 'Run IMUNES in debug mode')
 		string(name: 'FREEBSD_TESTS', defaultValue: '', description: 'FreeBSD tests')
 		string(name: 'FREEBSD_JOBS', defaultValue: '8', description: 'FreeBSD parallel jobs')
 		string(name: 'LINUX_TESTS', defaultValue: '', description: 'Linux tests')
@@ -41,6 +43,8 @@ pipeline {
 					env.IMUNES_BRANCH = "${env.BRANCH_NAME}" 
 					env.EXAMPLES_REPO = params.EXAMPLES_REPO
 					env.EXAMPLES_BRANCH = params.EXAMPLES_BRANCH
+					env.LEGACY = params.LEGACY
+					env.DEBUG = params.DEBUG
 					env.FREEBSD_TESTS = params.FREEBSD_TESTS
 					env.FREEBSD_JOBS = params.FREEBSD_JOBS
 					env.LINUX_TESTS = params.LINUX_TESTS
@@ -134,7 +138,7 @@ pipeline {
 										echo "Running tests on ${label} ($testSet)"
 										sh """
 											cd ${env.TEST_DIR}
-											sudo DETAILS=1 LEGACY=1 TESTS="${testSet}" ./testAll.sh -j ${jobNums} | tee ${logFile}
+											sudo DETAILS=1 DEBUG=${env.DEBUG} LEGACY=${env.LEGACY} TESTS="${testSet}" ./testAll.sh -j ${jobNums} | tee ${logFile}
 										"""
 
 										sh "tar czf ${dirName}_${label}.tar.gz ${env.TEST_DIR}"
