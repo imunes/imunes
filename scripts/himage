@@ -5,54 +5,58 @@ command=`basename $0`
 help() {
 cat <<__END__
 
-Command $command can be used as an interface to the command jexec/jls
-for virtual images. Hostname is used instead of jail name.
+Command $command can be used as an interface to the jexec/jls command
+for virtual nodes. Hostname is used instead of jail name.
 Hostname can be in the form: hostname or hostname@eid.
 
 Usage:
-  $command vi_hostname command
-  $command -m vi_hostname command (execute command in experiment master jail)
-  $command -v vi_hostname  ---> vimage name      (eid.nodename)
-  $command -n vi_hostname  ---> vimage node name (nodename)
-  $command -e vi_hostname  ---> vimage eid name  (eid)
-  $command -j vi_hostname  ---> vimage jail id   (jid)
-  $command -i vi_hostname  ---> vimage jail id   (jid)
-  $command -d vi_hostname  ---> vimage path
-  $command -l              ---> running experiments eids with experiment data
-  $command -ln             ---> running experiments eids with node names
-  $command -b              ---> dummy flag (used only on Linux)
-  $command -nt             ---> dummy flag (used only on Linux)
+  $command node_name command
+  $command -b                    ---> dummy flag (used only on Linux)
+  $command -d node_name          ---> node path
+  $command -e node_name          ---> experiment eid name (eid)
+  $command -i node_name          ---> jail id (jid)
+  $command -j node_name          ---> jail id (jid)
+  $command -l                    ---> running experiments eids with experiment data
+  $command -ln                   ---> running experiments eids with node names
+  $command -m node_name command  ---> execute command in experiment master jail
+  $command -n node_name          ---> node name (nodename)
+  $command -nt                   ---> dummy flag (used only on Linux)
+  $command -v node_name          ---> node full name (eid.nodename)
 __END__
 }
 
 vi_name() {
-  expid=`echo $1 | awk -F@ '{print $2}'`
-  if test "a$expid" != "a"; then
-	host=`echo $1 | cut -d@ -f1`
-  else
-	host=$1
-	expid=""
-  fi
+	if test "$1" = ""; then
+		exit 1
+	fi
 
-  n=`jls jid name host.hostname | awk -v h=$host -v e=$expid'\\\.n[0-9]+$' '$3 == h && $2 ~ e {print $1}' | wc -l`
-  if test $n -gt 1; then
+	expid=`echo $1 | awk -F@ '{print $2}'`
+	if test "a$expid" != "a"; then
+		host=`echo $1 | cut -d@ -f1`
+	else
+		host=$1
+		expid=""
+	fi
+
+	n=`jls jid name host.hostname | awk -v h=$host -v e=$expid'\\\.n[0-9]+$' '$3 == h && $2 ~ e {print $1}' | wc -l`
+	if test $n -gt 1; then
 		echo "Error: $1 is not a unique name." >&2
 		echo "It is used (at least) for nodes:" >&2
 		echo -e "JID\tName    \tHostname" >&2
 		jls -h jid name host.hostname | tr " " "\t" | awk -v h=$host '$3 == h {print}' >&2
 		exit 1
-  fi
-  if test $n -eq 0; then
-	get_explist nodes | grep -q $host
-	if test $? -ne 0; then
-		echo Error: cannot find node named $1 >&2
-		exit 2
-	else
-		echo "Node $host is not a jail." >&2
-		exit 3
 	fi
-  fi
-  jls jid name host.hostname | awk -v h=$host -v e=$expid'\\\.n[0-9]+$' '$3 == h && $2 ~ e {print $1}'
+	if test $n -eq 0; then
+		get_explist nodes | grep -q $host
+		if test $? -ne 0; then
+			echo Error: cannot find node named $1 >&2
+			exit 2
+		else
+			echo "Node $host is not a jail." >&2
+			exit 3
+		fi
+	fi
+	jls jid name host.hostname | awk -v h=$host -v e=$expid'\\\.n[0-9]+$' '$3 == h && $2 ~ e {print $1}'
 }
 
 get_explist() {
@@ -62,47 +66,41 @@ get_explist() {
 		exit 1
 	fi
 
-	explist=`jls name path | grep "imunes" | cut -d . -f 1 | sort -u`
-	for exp in $explist; do
-		if test -r /var/run/imunes/$exp/; then
-			if test $1 = "nodes"; then
-				nodes=`jq -r '.nodes' /var/run/imunes/$exp/config.imn`
-				non_running=`grep -Eo 'n[0-9]+_running false' /var/run/imunes/$exp/runningVars | cut -d'_' -f1 | jq -R . | jq -s .`
-				if test "$nodes" = "null"; then
-					data=""
-				else
-					data=`jq --argjson nonRunning "$non_running" -r '.nodes | to_entries | map(
-						select(.value.type != "pseudo")
-						.key as $id |
-						.value.name +
-						(if $nonRunning | index($id) then "*" else "" end) +
-						(if .value == "rj45" then " (" + (.value.ifaces | to_entries | map(.value.name) | join(", ")) + ")" else "" end)
-					) | join(", ")' /var/run/imunes/$exp/config.imn`
-				fi
-			else
-				if test -r /var/run/imunes/$exp/name; then
-					exp_name=`cat /var/run/imunes/$exp/name`
-				else
-					exp_name="N/A"
-				fi
-				exp_timestamp=`cat /var/run/imunes/$exp/timestamp`
-				data="$exp_name - $exp_timestamp"
-			fi
-			echo "$exp [$data]"
-		else
-			# for older IMUNES versions
-			echo "$exp [`jls host.hostname path | grep "imunes/$exp" | cut -d" " -f1 |  paste -s -d" " -`]"
+	for exp_path in /var/run/imunes/*/; do
+		exp=$(basename $exp_path)
+		if test "$exp" = "*"; then
+			continue
 		fi
+
+		if test $1 = "nodes"; then
+			nodes=`jq -r '.nodes' /var/run/imunes/$exp/config.imn`
+			non_running=`grep -Eo 'n[0-9]+_running false' /var/run/imunes/$exp/runningVars | cut -d'_' -f1 | jq -R . | jq -s .`
+			if test "$nodes" = "null"; then
+				data=""
+			else
+				data=`jq --argjson nonRunning "$non_running" -r '.nodes | to_entries | map(
+					select(.value.type != "pseudo")
+					.key as $id |
+					.value.name +
+					(if $nonRunning | index($id) then "*" else "" end) +
+					(if .value == "rj45" then " (" + (.value.ifaces | to_entries | map(.value.name) | join(", ")) + ")" else "" end)
+					) | join(", ")' /var/run/imunes/$exp/config.imn`
+			fi
+		else
+			if test -r /var/run/imunes/$exp/name; then
+				exp_name=`cat /var/run/imunes/$exp/name`
+			else
+				exp_name="N/A"
+			fi
+			exp_timestamp=`cat /var/run/imunes/$exp/timestamp`
+			data="$exp_name - $exp_timestamp"
+		fi
+		echo "$exp [$data]"
 	done
 }
 
-if [ `id -u` -ne  0 ]; then
-	echo "You must be root to run this script."
-	exit 1
-fi
-
 # dummy flags
-if test $1 = "-b" || test $1 = "-nt"; then
+if test "$1" = "-b" || test "$1" = "-nt"; then
 	shift 1
 fi
 
@@ -116,25 +114,26 @@ elif test $1 = "-ln"; then
 	get_explist nodes
 elif test $1 = "-j" || test $1 = "-i"; then
 	vi_name $2
+	test $? -ne 0 && help && exit 2
 elif test $1 = "-v"; then
 	image_name=`vi_name $2`
-	test $? -ne 0 && exit 2
+	test $? -ne 0 && help && exit 2
 	jls -j $image_name name
 elif test $1 = "-e"; then
 	image_name=`vi_name $2`
-	test $? -ne 0 && exit 2
+	test $? -ne 0 && help && exit 2
 	jls -j $image_name name | awk -F"." '{n=NF-1; print $n}'
 elif test $1 = "-n"; then
 	image_name=`vi_name $2`
-	test $? -ne 0 && exit 2
+	test $? -ne 0 && help && exit 2
 	jls -j $image_name name | awk -F"." '{print $NF}'
 elif test $1 = "-d"; then
 	image_name=`vi_name $2`
-	test $? -ne 0 && exit 2
+	test $? -ne 0 && help && exit 2
 	jls -j $image_name path
 elif test $1 = "-m"; then
 	image_name=`vi_name $2`
-	test $? -ne 0 && exit 2
+	test $? -ne 0 && help && exit 2
 	shift 2
 	parent=`jls -j $image_name parent`
 	if test -z "$*"; then
@@ -151,7 +150,7 @@ elif test $1 = "-E"; then
 	exec jexec $eid "$@"
 elif test `expr a$1 : "a-.*"` = "0"; then
 	image_name=`vi_name $1`
-	test $? -ne 0 && exit 2
+	test $? -ne 0 && help && exit 2
 	shift 1
 	if test -z "$*"; then
 		exec jexec $image_name csh

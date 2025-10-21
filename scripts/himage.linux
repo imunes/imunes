@@ -6,26 +6,30 @@ help() {
 cat <<__END__
 
 Command $command can be used as an interface to the docker command
-for virtual nodes. Hostname is used instead of docker names.
+for virtual nodes. Hostname is used instead of docker name.
 Hostname can be in the form: hostname or hostname@eid.
 
 Usage:
-  $command vi_hostname command
-  $command -m vi_hostname command (execute command in experiment master netns)
-  $command -b vi_hostname command  ---> run in detached mode (background)
-  $command -nt vi_hostname command ---> run without pseudo-tty (no-tty)
-  $command -v vi_hostname  ---> docker full name (eid.nodename)
-  $command -n vi_hostname  ---> docker node name (nodename)
-  $command -e vi_hostname  ---> experiment eid name (eid)
-  $command -i vi_hostname  ---> docker container id
-  $command -l              ---> running experiments eids with experiment data
-  $command -ln             ---> running experiments eids with node names
-  $command -d              ---> dummy flag (used only on FreeBSD)
+  $command node_name command
+  $command -b node_name command  ---> run in detached mode (background)
+  $command -d                    ---> dummy flag (used only on FreeBSD)
+  $command -e node_name          ---> experiment eid name (eid)
+  $command -i node_name          ---> container id
+  $command -j node_name          ---> container id
+  $command -l                    ---> running experiments eids with experiment data
+  $command -ln                   ---> running experiments eids with node names
+  $command -m node_name command  ---> execute command in experiment master netns
+  $command -n node_name          ---> node name (nodename)
+  $command -nt node_name command ---> run without pseudo-tty (no-tty)
+  $command -v node_name          ---> node full name (eid.nodename)
 __END__
 }
 
-
 vi_name() {
+	if test "$1" = ""; then
+		exit 1
+	fi
+
 	if test "`docker ps -q`" = ""; then
 		echo Error: cannot find node named $1 >&2
 		exit 2
@@ -96,34 +100,33 @@ get_explist() {
 	done
 }
 
-if [ `id -u` -ne  0 ]; then
-	echo "You must be root to run this script."
-	exit 1
+# dummy flags
+if test "$1" = "-d"; then
+	shift 1
 fi
 
 if test $# -eq 0; then
 	help
 elif test $1 = "-h"; then
 	help
-elif test $1 = "-d"; then # dummy flag
-	exit 0
 elif test $1 = "-l"; then
 	get_explist expdata
 elif test $1 = "-ln"; then
 	get_explist nodes
-elif test $1 = "-i"; then
+elif test $1 = "-j" || test $1 = "-i"; then
 	vi_name $2
+	test $? -ne 0 && help && exit 2
 elif test $1 = "-v"; then
 	image_name=`vi_name $2`
-	test $? -ne 0 && exit 2
+	test $? -ne 0 && help && exit 2
 	docker inspect -f '{{.Name}}' $image_name | tr -d "/"
 elif test $1 = "-e"; then
 	image_name=`vi_name $2`
-	test $? -ne 0 && exit 2
+	test $? -ne 0 && help && exit 2
 	docker inspect -f '{{.Name}}' $image_name | tr -d "/" | cut -d"." -f1
 elif test $1 = "-nt"; then
 	image_name=`vi_name $2`
-	test $? -ne 0 && exit 2
+	test $? -ne 0 && help && exit 2
 	shift 2
 	if test -n "$*"; then
 		exec docker exec -i $image_name "$@"
@@ -134,11 +137,11 @@ elif test $1 = "-nt"; then
 	fi
 elif test $1 = "-n"; then
 	image_name=`vi_name $2`
-	test $? -ne 0 && exit 2
+	test $? -ne 0 && help && exit 2
 	docker inspect -f '{{.Name}}' $image_name | cut -d"." -f2
 elif test $1 = "-b"; then
 	image_name=`vi_name $2`
-	test $? -ne 0 && exit 2
+	test $? -ne 0 && help && exit 2
 	shift 2
 	if test -n "$*"; then
 		exec docker exec -d $image_name "$@"
@@ -149,7 +152,7 @@ elif test $1 = "-b"; then
 	fi
 elif test $1 = "-m"; then
 	image_name=`vi_name $2`
-	test $? -ne 0 && exit 2
+	test $? -ne 0 && help && exit 2
 	shift 2
 	eid=$(docker inspect -f '{{.Name}}' $image_name | tr -d "/" | cut -d"." -f1)
 	if test -z "$*"; then
@@ -166,7 +169,7 @@ elif test $1 = "-E"; then
 	exec ip netns exec $eid "$@"
 elif test `expr a$1 : "a-.*"` = "0"; then
 	image_name=`vi_name $1`
-	test $? -ne 0 && exit 2
+	test $? -ne 0 && help && exit 2
 	shift 1
 	if test -z "$*"; then
 		exec docker exec -it $image_name /bin/bash
