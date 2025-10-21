@@ -41,7 +41,7 @@
 proc getLinkColor { link_id } {
 	global default_link_color
 
-	return [cfgGetWithDefault $default_link_color "links" $link_id "color"]
+	return [cfgGetWithDefault $default_link_color "gui" "links" $link_id "color"]
 }
 
 #****f* links_gui.tcl/setLinkColor
@@ -56,11 +56,13 @@ proc getLinkColor { link_id } {
 #   * color -- link color
 #****
 proc setLinkColor { link_id color } {
-	if { $color == "Red" } {
+	global default_link_color
+
+	if { $color == $default_link_color } {
 		set color ""
 	}
 
-	cfgSet "links" $link_id "color" $color
+	cfgSet "gui" "links" $link_id "color" $color
 }
 
 #****f* links_gui.tcl/getLinkWidth
@@ -76,7 +78,7 @@ proc setLinkColor { link_id color } {
 proc getLinkWidth { link_id } {
 	global default_link_width
 
-	return [cfgGetWithDefault $default_link_width "links" $link_id "width"]
+	return [cfgGetWithDefault $default_link_width "gui" "links" $link_id "width"]
 }
 
 #****f* links_gui.tcl/setLinkWidth
@@ -97,7 +99,7 @@ proc setLinkWidth { link_id width } {
 		set width ""
 	}
 
-	cfgSet "links" $link_id "width" $width
+	cfgSet "gui" "links" $link_id "width" $width
 }
 
 #****f* links_gui.tcl/getLinkMirror
@@ -115,7 +117,7 @@ proc setLinkWidth { link_id width } {
 #   * mirror_link_id -- mirror link id
 #****
 proc getLinkMirror { link_id } {
-	return [cfgGet "links" $link_id "mirror"]
+	return [cfgGet "gui" "links" $link_id "mirror"]
 }
 
 #****f* links_gui.tcl/setLinkMirror
@@ -132,5 +134,13 @@ proc getLinkMirror { link_id } {
 #   * mirror -- mirror link's id
 #****
 proc setLinkMirror { link_id mirror } {
-	cfgSet "links" $link_id "mirror" $mirror
+	cfgSet "gui" "links" $link_id "mirror" $mirror
+}
+
+proc getLinkPeers_gui { link_id } {
+	return [cfgGet "gui" "links" $link_id "peers"]
+}
+
+proc setLinkPeers_gui { link_id peers } {
+	cfgSet "gui" "links" $link_id "peers" $peers
 }

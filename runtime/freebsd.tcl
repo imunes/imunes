@@ -281,7 +281,7 @@ proc spawnShell { node_id cmd } {
 #   current system.
 #****
 proc allSnapshotsAvailable {} {
-	global execMode vroot_unionfs
+	global execMode vroot_unionfs gui
 
 	set node_list [getFromRunning "node_list"]
 	set snapshots {}
@@ -303,7 +303,7 @@ proc allSnapshotsAvailable {} {
 			} else {
 				set msg "The root filesystem for virtual nodes ($vroot) is missing.\n"
 				append msg "Run 'imunes -p' to create the root filesystem."
-				if { $execMode == "batch" } {
+				if { ! $gui || $execMode == "batch" } {
 					puts stderr $msg
 				} else {
 					tk_dialog .dialog1 "IMUNES error" \
@@ -326,7 +326,7 @@ proc allSnapshotsAvailable {} {
 			set snapshot "vroot/vroot@clean"
 		}
 		if { [llength [lsearch -inline $snapshotList $snapshot]] == 0 } {
-			if { $execMode == "batch" } {
+			if { ! $gui || $execMode == "batch" } {
 				if { $snapshot == "vroot/vroot@clean" } {
 					puts stderr "The main snapshot for virtual nodes is missing.
 					Run 'make' or 'make vroot' to create the main ZFS snapshot."
@@ -373,7 +373,7 @@ proc allSnapshotsAvailable {} {
 #   * vimages -- list of current vimages
 #****
 proc checkHangingTCPs { eid vimage } {
-	global execMode
+	global execMode gui
 
 	if { [lindex [split [exec uname -r] "-"] 0] >= 9.0 } {
 		return
@@ -390,7 +390,7 @@ proc checkHangingTCPs { eid vimage } {
 	}
 
 	set sec 60
-	if { $execMode == "batch" } {
+	if { ! $gui || $execMode == "batch" } {
 		puts "We must wait for TIME_WAIT expiration on virtual nodes (up to 60 sec). "
 		puts "Please don't try killing the process."
 	} else {
@@ -424,7 +424,7 @@ proc checkHangingTCPs { eid vimage } {
 			set spin 1
 			after 1000
 			set sec [expr $sec - 1]
-			if { $execMode == "batch" } {
+			if { ! $gui || $execMode == "batch" } {
 				puts -nonewline "."
 				flush stdout
 			} else {
@@ -435,7 +435,7 @@ proc checkHangingTCPs { eid vimage } {
 		}
 	}
 
-	if { $execMode != "batch" } {
+	if { $gui && $execMode != "batch" } {
 		destroy .timewait
 	}
 
@@ -468,10 +468,6 @@ proc execSetIfcQDisc { eid node_id iface_id qdisc } {
 		DRR { set qdisc drr }
 	}
 
-	if { [getNodeType $node1_id] == "pseudo" } {
-		set link_id [getLinkMirror $link_id]
-	}
-
 	pipesExec "jexec $eid ngctl msg $link_id: setcfg \"{ $direction={ $qdisc=1 } }\"" "hold"
 }
 
@@ -500,10 +496,6 @@ proc execSetIfcQDrop { eid node_id iface_id qdrop } {
 		drop-tail { set qdrop droptail }
 	}
 
-	if { [getNodeType $node1_id] == "pseudo" } {
-		set link_id [getLinkMirror $link_id]
-	}
-
 	pipesExec "jexec $eid ngctl msg $link_id: setcfg \"{ $direction={ $qdrop=1 } }\"" "hold"
 }
 
@@ -528,10 +520,6 @@ proc execSetIfcQLen { eid node_id iface_id qlen } {
 
 	if { $qlen == 0 } {
 		set qlen -1
-	}
-
-	if { [getNodeType $node1_id] == "pseudo" } {
-		set link_id [getLinkMirror $link_id]
 	}
 
 	pipesExec "jexec $eid ngctl msg $link_id: setcfg \"{ $direction={ queuelen=$qlen } }\"" "hold"
@@ -806,7 +794,7 @@ proc fetchNodeRunningConfig { node_id } {
 
 	# overwrite any unsaved changes to this node
 	set cur_node_cfg [cfgGet "nodes" $node_id]
-	set cur_node_cfg_gui [cfgGet "nodes" $node_id]
+	set cur_node_cfg_gui [cfgGet "gui" "nodes" $node_id]
 
 	set ifaces_names [allIfacesNames $node_id]
 
@@ -1047,7 +1035,7 @@ proc getHostIfcList {} {
 #   * check -- 1 if interface exists, 0 otherwise
 #****
 proc getHostIfcVlanExists { node_id ifname } {
-	global execMode
+	global execMode gui
 
 	# check if VLAN ID is already taken
 	# this can be only done by trying to create it, as it's possible that the same
@@ -1065,7 +1053,7 @@ proc getHostIfcVlanExists { node_id ifname } {
 			assigned to another VLAN interface, potentially in a different jail."
 	}
 
-	if { $execMode == "batch" } {
+	if { ! $gui || $execMode == "batch" } {
 		puts stderr $msg
 	} else {
 		after idle { .dialog1.msg configure -wraplength 4i }
@@ -2012,7 +2000,7 @@ proc terminate_removeExperimentContainer { eid } {
 }
 
 proc terminate_removeExperimentFiles { eid } {
-	global vroot_unionfs execMode
+	global vroot_unionfs execMode gui
 
 	set VROOT_BASE [getVrootDir]
 
@@ -2023,7 +2011,7 @@ proc terminate_removeExperimentFiles { eid } {
 		catch "exec rm -fr $VROOT_BASE/$eid"
 	} else {
 		# ZFS
-		if { $execMode == "batch" } {
+		if { ! $gui || $execMode == "batch" } {
 			exec jail -r $eid
 			exec zfs destroy -fr vroot/$eid
 		} else {
@@ -2132,7 +2120,7 @@ proc getCpuCount {} {
 #   * iface_id -- interface id
 #****
 proc captureExtIfc { eid node_id iface_id } {
-	global execMode
+	global execMode gui
 
 	set ifname [getIfcName $node_id $iface_id]
 	set vlan [getIfcVlanTag $node_id $iface_id]
@@ -2143,7 +2131,7 @@ proc captureExtIfc { eid node_id iface_id } {
 			set msg "Error: VLAN $vlan on external interface $ifname can't be\
 				created.\n($err)"
 
-			if { $execMode == "batch" } {
+			if { ! $gui || $execMode == "batch" } {
 				puts stderr $msg
 			} else {
 				after idle { .dialog1.msg configure -wraplength 4i }

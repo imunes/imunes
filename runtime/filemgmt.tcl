@@ -85,13 +85,14 @@ set file_types {
 proc newProject {} {
 	global curcfg cfg_list
 	global CFG_VERSION
-	global zoom
+	global zoom gui
 
 	set curcfg [newObjectId $cfg_list "cfg"]
 	lappend cfg_list $curcfg
 
 	namespace eval ::cf::[set curcfg] {}
 	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+	upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 	upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
 
@@ -99,6 +100,7 @@ proc newProject {} {
 	setOption "version" $CFG_VERSION
 
 	set dict_run [dict create]
+	set dict_run_gui [dict create]
 	set execute_vars [dict create]
 
 	setToRunning "eid" ""
@@ -108,15 +110,19 @@ proc newProject {} {
 	setToRunning "stop_sched" true
 	setToRunning "undolevel" 0
 	setToRunning "redolevel" 0
-	setToRunning "zoom" $zoom
-	setToRunning "canvas_list" {}
-	setToRunning "curcanvas" [newCanvas ""]
+	if { $gui } {
+		setToRunning_gui "zoom" $zoom
+		setToRunning_gui "canvas_list" {}
+		setToRunning_gui "curcanvas" [newCanvas ""]
+	}
 	setToRunning "current_file" ""
 	setToRunning "modified" false
 	saveToUndoLevel 0
 
-	.bottom.oper_mode configure -text "[getFromRunning "oper_mode"] mode"
-	updateProjectMenu
+	if { $gui } {
+		.bottom.oper_mode configure -text "[getFromRunning "oper_mode"] mode"
+		updateProjectMenu
+	}
 	switchProject
 }
 
@@ -158,21 +164,24 @@ proc updateProjectMenu {} {
 #   This procedure is called when a project has been chosen in the file menu.
 #****
 proc switchProject {} {
-	global curcfg showTree
+	global curcfg showTree gui
+
 	if { $curcfg == 0 } {
 		set curcfg "cfg0"
 	}
 
 	setOperMode [getFromRunning "oper_mode"]
-	switchCanvas none
-	redrawAll
-	updateProjectMenu
-	setWmTitle [getFromRunning "current_file"]
-	if { $showTree } {
-		refreshTopologyTree
-	}
+	if { $gui } {
+		switchCanvas none
+		redrawAll
+		updateProjectMenu
+		setWmTitle [getFromRunning "current_file"]
+		if { $showTree } {
+			refreshTopologyTree
+		}
 
-	toggleAutoExecutionGUI [getFromRunning "auto_execution"]
+		toggleAutoExecutionGUI [getFromRunning "auto_execution"]
+	}
 }
 
 #****f* filemgmt.tcl/setWmTitle
@@ -209,15 +218,42 @@ proc setWmTitle { fname } {
 #****
 proc openFile {} {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-	global showTree
+	global showTree autorearrange_enabled gui
 
 	readCfgJson [getFromRunning "current_file"]
 
-	setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
+	if { $gui } {
+		set canvas_list [getFromRunning_gui "canvas_list"]
+		if { $canvas_list == {} } {
+			newCanvas ""
+			set canvas_list [getFromRunning_gui "canvas_list"]
+
+			set autorearrange_enabled 1
+		}
+		setToRunning_gui "curcanvas" [lindex $canvas_list 0]
+	}
+
 	applyOptions
 
-	switchCanvas none
-	redrawAll
+	if { $gui } {
+		switchCanvas none
+
+		set node_list [getFromRunning "node_list"]
+		foreach gui_node_id [dict keys [cfgGet "gui" "nodes"]] {
+			if { ! [isPseudoNode $gui_node_id] && $gui_node_id ni $node_list } {
+				cfgUnset "gui" "nodes" $gui_node_id
+			}
+		}
+
+		set link_list [getFromRunning "link_list"]
+		foreach gui_link_id [dict keys [cfgGet "gui" "links"]] {
+			if { ! [isPseudoLink $gui_link_id] && $gui_link_id ni $link_list } {
+				cfgUnset "gui" "links" $gui_link_id
+			}
+		}
+
+		redrawAll
+	}
 
 	setToRunning "oper_mode" "edit"
 	setToRunning "cfg_deployed" false
@@ -225,19 +261,27 @@ proc openFile {} {
 	setToRunning "undolevel" 0
 	setToRunning "redolevel" 0
 	setToRunning "modified" false
-	saveToUndoLevel 0
-	setActiveToolGroup select
-	updateProjectMenu
-	setWmTitle [getFromRunning "current_file"]
 
-	if { $showTree } {
-		refreshTopologyTree
+	if { $gui } {
+		saveToUndoLevel 0
+		setActiveToolGroup select
+		updateProjectMenu
+		setWmTitle [getFromRunning "current_file"]
+
+		if { $showTree } {
+			refreshTopologyTree
+		}
+
+		if { $autorearrange_enabled } {
+			after 1000 set autorearrange_enabled 0
+			rearrange ""
+		}
 	}
 }
 
 proc saveOptions {} {
 	global option_defaults gui_option_defaults
-	set running_zoom [getFromRunning "zoom"]
+	set running_zoom [getFromRunning_gui "zoom"]
 
 	foreach {option default_value} $option_defaults {
 		global $option
@@ -255,10 +299,14 @@ proc saveOptions {} {
 
 		set value [set $option]
 		if { $value != $default_value } {
-			setOption $option $value
+			setOption_gui $option $value
 		} else {
-			unsetOption $option
+			unsetOption_gui $option
 		}
+	}
+
+	if { [cfgGet "gui" "options"] == "" } {
+		cfgUnset "gui" "options"
 	}
 
 	if { $running_zoom == "" } {
@@ -266,9 +314,9 @@ proc saveOptions {} {
 	}
 
 	if { $running_zoom != [dictGet $gui_option_defaults "zoom"] } {
-		setOption "zoom" $running_zoom
+		setOption_gui "zoom" $running_zoom
 	} else {
-		unsetOption "zoom"
+		unsetOption_gui "zoom"
 	}
 }
 
@@ -289,7 +337,7 @@ proc applyOptions {} {
 	foreach {option default_value} $gui_option_defaults {
 		global $option
 
-		set value [getOption $option]
+		set value [getOption_gui $option]
 		if { $value != "" } {
 			set $option $value
 		} else {
@@ -297,7 +345,7 @@ proc applyOptions {} {
 		}
 	}
 
-	setToRunning "zoom" $zoom
+	setToRunning_gui "zoom" $zoom
 }
 
 #****f* filemgmt.tcl/saveFile
@@ -392,9 +440,9 @@ proc fileSaveAsDialogBox {} {
 #   Closes the current file.
 #****
 proc closeFile {} {
-	global cfg_list curcfg
+	global cfg_list curcfg gui
 
-	if { [checkAndPromptSave $curcfg] != 0 } {
+	if { $gui && [checkAndPromptSave $curcfg] != 0 } {
 		return
 	}
 
@@ -409,17 +457,21 @@ proc closeFile {} {
 		}
 		set curcfg [lindex $cfg_list $idx]
 
-		setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
-		switchCanvas none
-		setToRunning "undolevel" 0
-		setToRunning "redolevel" 0
-		saveToUndoLevel 0
+		if { $gui } {
+			setToRunning_gui "curcanvas" [lindex [getFromRunning_gui "canvas_list"] 0]
+			switchCanvas none
+			setToRunning "undolevel" 0
+			setToRunning "redolevel" 0
+			saveToUndoLevel 0
+		}
 	} else {
 		newProject
 	}
 
-	setActiveToolGroup select
-	updateProjectMenu
+	if { $gui } {
+		setActiveToolGroup select
+		updateProjectMenu
+	}
 	switchProject
 }
 

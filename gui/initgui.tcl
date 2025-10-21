@@ -127,10 +127,6 @@ set active_tool_group "select"
 set tool_groups [dict create]
 set active_tools [dict create]
 
-global IPv4autoAssign IPv6autoAssign
-set IPv4autoAssign 1
-set IPv6autoAssign 1
-
 global showTree zoom_stops canvasBkgMode alignCanvasBkg bgsrcfile
 set showTree 0
 set zoom_stops [list 0.2 0.4 0.5 0.6 0.8 1 \
@@ -139,26 +135,15 @@ set canvasBkgMode "original"
 set alignCanvasBkg "center"
 set bgsrcfile ""
 
-global model router_model routerDefaultsModel
 global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable ldpEnable
-global routerRipEnable routerOspfEnable routerOspf6Enable routerBgpEnable routerLdpEnable
-global rdconfig
-set model frr
-set router_model $model
-set routerDefaultsModel $model
+global router_model routerDefaultsModel
+set router_model $routerDefaultsModel
 set ripEnable 1
 set ripngEnable 1
 set ospfEnable 0
 set ospf6Enable 0
 set bgpEnable 0
 set ldpEnable 0
-set routerRipEnable 1
-set routerRipngEnable 1
-set routerOspfEnable 0
-set routerOspf6Enable 0
-set routerBgpEnable 0
-set routerLdpEnable 0
-set rdconfig [list $routerRipEnable $routerRipngEnable $routerOspfEnable $routerOspf6Enable $routerBgpEnable $routerLdpEnable]
 
 global brguielements
 set brguielements {}
@@ -383,8 +368,8 @@ menu .menubar.canvas -tearoff 0
 .menubar.canvas add command -label "Rename" -underline 0 \
 	-command { renameCanvasPopup }
 .menubar.canvas add command -label "Delete" -underline 0 -command {
-	set canvas_list [getFromRunning "canvas_list"]
-	set curcanvas [getFromRunning "curcanvas"]
+	set canvas_list [getFromRunning_gui "canvas_list"]
+	set curcanvas [getFromRunning_gui "curcanvas"]
 
 	if { [llength $canvas_list] == 1 } {
 		return
@@ -398,14 +383,14 @@ menu .menubar.canvas -tearoff 0
 	deleteSelection
 
 	set i [lsearch $canvas_list $curcanvas]
-	cfgUnset "canvases" $curcanvas
+	cfgUnset "gui" "canvases" $curcanvas
 	set canvas_list [getCanvasList]
-	setToRunning "canvas_list" $canvas_list
+	setToRunning_gui "canvas_list" $canvas_list
 	set curcanvas [lindex $canvas_list $i]
 	if { $curcanvas == "" } {
 		set curcanvas [lindex $canvas_list end]
 	}
-	setToRunning "curcanvas" $curcanvas
+	setToRunning_gui "curcanvas" $curcanvas
 
 	switchCanvas none
 	set changed 1
@@ -525,7 +510,7 @@ set tmp_command {
 .menubar.tools add command -label "IPv6 address pool" -underline 3 \
 	-command $tmp_command
 set tmp_command {
-	global router_model supp_router_models routerDefaultsModel
+	global router_model supp_router_models
 	global routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable routerBgpEnable routerLdpEnable
 
 	set wi .popup
@@ -1091,8 +1076,8 @@ bind $mf.hframe.t <1> {
 	global mf
 
 	set canvas [lindex [$mf.hframe.t gettags current] 1]
-	if { $canvas != "" && $canvas != [getFromRunning "curcanvas"] } {
-		setToRunning "curcanvas" $canvas
+	if { $canvas != "" && $canvas != [getFromRunning_gui "curcanvas"] } {
+		setToRunning_gui "curcanvas" $canvas
 		switchCanvas none
 	}
 }
@@ -1102,8 +1087,8 @@ bind $mf.hframe.t <Double-1> {
 
 	set canvas [lindex [$mf.hframe.t gettags current] 1]
 	if { $canvas != "" } {
-		if { $canvas != [getFromRunning "curcanvas"] } {
-			setToRunning "curcanvas" $canvas
+		if { $canvas != [getFromRunning_gui "curcanvas"] } {
+			setToRunning_gui "curcanvas" $canvas
 			switchCanvas none
 		} else {
 			renameCanvasPopup

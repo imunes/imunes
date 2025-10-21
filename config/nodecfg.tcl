@@ -166,7 +166,7 @@ proc getSubnetData { this_node_id this_iface_id subnet_gws nodes_l2data subnet_i
 	dict set nodes_l2data $this_node_id $this_iface_id $subnet_idx
 
 	set this_type [getNodeType $this_node_id]
-	if { $this_type in "\"\" pseudo" } {
+	if { $this_type in "" } {
 		return [list $subnet_gws $nodes_l2data]
 	}
 
@@ -392,12 +392,8 @@ proc removeNode { node_id { keep_other_ifaces 0 } } {
 
 	global nodeNamingBase
 
-	if { [getNodeCustomIcon $node_id] != "" } {
-		removeImageReference [getNodeCustomIcon $node_id] $node_id
-	}
-
 	foreach iface_id [ifcList $node_id] {
-		removeIface $node_id $iface_id
+		removeIface $node_id $iface_id $keep_other_ifaces
 	}
 
 	setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $node_id]
@@ -442,9 +438,7 @@ proc newNode { type } {
 	}
 
 	setNodeType $node_id $type
-	if { $type != "pseudo" } {
-		setToRunning "${node_id}_running" false
-	}
+	setToRunning "${node_id}_running" false
 
 	lappendToRunning "node_list" $node_id
 
@@ -829,6 +823,40 @@ proc recalculateNumType { type namebase } {
 			}
 		}
 	}
+}
+
+#****f* editor.tcl/listLANNodes
+# NAME
+#   listLANNodes -- list LAN nodes
+# SYNOPSIS
+#   set l2peers [listLANNodes $l2node_id $l2peers]
+# FUNCTION
+#   Recursive function for finding all link layer nodes that are
+#   connected to node l2node. Returns the list of all link layer
+#   nodes that are on the same LAN as l2node.
+# INPUTS
+#   * l2node_id -- node id of a link layer node
+#   * l2peers -- old link layer nodes on the same LAN
+# RESULT
+#   * l2peers -- new link layer nodes on the same LAN
+#****
+proc listLANNodes { l2node_id l2peers } {
+	lappend l2peers $l2node_id
+
+	foreach iface_id [ifcList $l2node_id] {
+		lassign [logicalPeerByIfc $l2node_id $iface_id] peer_id peer_iface_id
+		if { [getIfcLink $peer_id $peer_iface_id] == "" } {
+			continue
+		}
+
+		if { [[getNodeType $peer_id].netlayer] == "LINK" && [getNodeType $peer_id] != "rj45" } {
+			if { $peer_id ni $l2peers } {
+				set l2peers [listLANNodes $peer_id $l2peers]
+			}
+		}
+	}
+
+	return $l2peers
 }
 
 #****f* nodecfg.tcl/transformNodes

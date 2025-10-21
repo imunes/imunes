@@ -56,13 +56,15 @@ proc loadCfgLegacy { cfg } {
 	global show_background_image show_grid show_annotations
 	global icon_size
 	global auto_etc_hosts
-	global execMode all_modules_list
+	global execMode all_modules_list gui
 
 	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+	upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
 	upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 	set dict_cfg [dict create]
 	set dict_run [dict create]
+	set dict_run_gui [dict create]
 	set execute_vars [dict create]
 
 	# Cleanup first
@@ -118,7 +120,7 @@ proc loadCfgLegacy { cfg } {
 				set line [lreplace $line 0 1]
 
 				if { $object != "annotation_list" } {
-					cfgSet $dict_object $object $field $value
+					cfgSet {*}$dict_object $object $field $value
 				}
 				if { "$class" == "node" } {
 					switch -exact -- $field {
@@ -978,9 +980,9 @@ proc loadCfgLegacy { cfg } {
 
 	setToRunning "node_list" $node_list
 	setToRunning "link_list" $link_list
-	setToRunning "canvas_list" $canvas_list
-	setToRunning "annotation_list" $annotation_list
-	setToRunning "image_list" $image_list
+	setToRunning_gui "canvas_list" $canvas_list
+	setToRunning_gui "annotation_list" $annotation_list
+	setToRunning_gui "image_list" $image_list
 	setToRunning "cfg_deployed" false
 	setToRunning "auto_execution" 1
 
@@ -1011,7 +1013,7 @@ proc loadCfgLegacy { cfg } {
 			! [string match "router.*" $node_type]
 		} {
 			set msg "Unknown node type: '$node_type'."
-			if { $execMode == "batch" } {
+			if { ! $gui || $execMode == "batch" } {
 				statline $msg
 			} else {
 				tk_dialog .dialog1 "IMUNES warning" \
@@ -1023,7 +1025,7 @@ proc loadCfgLegacy { cfg } {
 		}
 
 		if {
-			$node_type != "extelem" &&
+			$node_type ni "extelem pseudo" &&
 			"lo0" ni [logIfacesNames $node_id] &&
 			[$node_type.netlayer] == "NETWORK"
 		} {
@@ -1086,6 +1088,7 @@ proc loadCfgLegacy { cfg } {
 
 		# disable auto_default_routes if not explicitly enabled in old topologies
 		if {
+			$node_type != "pseudo" &&
 			[cfgGet "nodes" $node_id "auto_default_routes"] == "" &&
 			[$node_type.netlayer] == "NETWORK" && $node_type != "ext"
 		} {
@@ -1106,13 +1109,12 @@ proc loadCfgLegacy { cfg } {
 
 	# reverse order of pseudo peers/ifaces
 	foreach link_id $link_list {
-		set mirror_link_id [getLinkMirror $link_id]
-		if { $mirror_link_id == "" } {
+		if { [cfgGet "links" $link_id "mirror"] == "" } {
 			continue
 		}
 
 		lassign [getLinkPeers $link_id] peer1 peer2
-		if { [getNodeMirror $peer1] != "" } {
+		if { [cfgGet "nodes" $peer1 "mirror"] != "" } {
 			continue
 		}
 
@@ -1178,15 +1180,15 @@ proc newObjectId { elem_list prefix } {
 
 proc loadCfgJson { json_cfg } {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-	global all_modules_list
+	global all_modules_list gui execMode
 
 	set dict_cfg [json::json2dict $json_cfg]
 
-	setToRunning "canvas_list" [getCanvasList]
+	setToRunning_gui "canvas_list" [getCanvasList]
 	setToRunning "node_list" [getNodeList]
 	setToRunning "link_list" [getLinkList]
-	setToRunning "annotation_list" [getAnnotationList]
-	setToRunning "image_list" [getImageList]
+	setToRunning_gui "annotation_list" [getAnnotationList]
+	setToRunning_gui "image_list" [getImageList]
 
 	applyOptions
 
@@ -1201,11 +1203,10 @@ proc loadCfgJson { json_cfg } {
 			setNodeType $node_id $node_type
 			setNodeNATIface $node_id [getNodeName $node_id]
 		}
-		if { $node_type ni [concat $all_modules_list "pseudo"] } {
-			global execMode
 
+		if { $node_type ni [concat $all_modules_list "pseudo"] } {
 			set msg "Unknown node type: '$node_type'."
-			if { $execMode == "batch" } {
+			if { ! $gui || $execMode == "batch" } {
 				statline $msg
 
 				exit
@@ -1252,11 +1253,18 @@ proc loadCfgJson { json_cfg } {
 		setToRunning "${link_id}_running" false
 	}
 
+	if { ! $gui && $execMode != "batch" } {
+		set tmp [getFromRunning "modified"]
+		cfgUnset "gui"
+		setToRunning "modified" $tmp
+	}
+
 	return $dict_cfg
 }
 
 proc handleVersionMismatch { cfg_version file_name } {
-	global CFG_VERSION execMode
+	global CFG_VERSION execMode gui
+	global selected_experiment
 
 	set msg ""
 	if { $cfg_version == "" } {
@@ -1271,6 +1279,7 @@ proc handleVersionMismatch { cfg_version file_name } {
 		close $fileId
 
 		loadCfgLegacy $cfg
+		jsonMigration 1 $CFG_VERSION
 		setToRunning "current_file" $file_name
 
 		set custom_config 0
@@ -1296,7 +1305,15 @@ proc handleVersionMismatch { cfg_version file_name } {
 		set msg "Loading older .imn configuration (version $cfg_version)...\n\n"
 		append msg "This configuration will be saved as a new version ($CFG_VERSION).\n"
 		append msg "Please check if everything is loaded/saved successfully.\n"
+
+		if { $selected_experiment != "" || $execMode == "batch" } {
+			append msg "\nNOTE: attaching to an older version may cause unexpected behaviour!\n"
+			append msg "To safely migrate to the new version, first save the current topology,\n"
+			append msg "then terminate the experiment and close it.\n"
+		}
+
 		setOption "version" $CFG_VERSION
+		jsonMigration $cfg_version $CFG_VERSION
 	} elseif { $cfg_version > $CFG_VERSION } {
 		set msg "Your IMUNES version is too old for this configuration:\n"
 		append msg "their version $cfg_version > your version $CFG_VERSION\n\n"
@@ -1310,13 +1327,108 @@ proc handleVersionMismatch { cfg_version file_name } {
 		return
 	}
 
-	if { $execMode == "batch" } {
+	if { ! $gui || $execMode == "batch" } {
 		puts $msg
 	} else {
 		after idle {.dialog1.msg configure -wraplength 6i}
 		tk_dialog .dialog1 "IMUNES warning" \
 			"$msg" \
 			info 0 Dismiss
+	}
+}
+
+proc jsonMigration { from_version to_version } {
+	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+	global gui_option_defaults gui execMode
+
+	# TODO: a way to migrate across versions
+	if { "${from_version}${to_version}" == "12" } {
+		dict for {option value} [cfgGet "options"] {
+			if { $option in [dict keys $gui_option_defaults] } {
+				setOption_gui $option $value
+				cfgUnset "options" $option
+			}
+		}
+
+		cfgSet "gui" "canvases" [cfgGet "canvases"]
+		cfgUnset "canvases"
+
+		cfgSet "gui" "annotations" [cfgGet "annotations"]
+		cfgUnset "annotations"
+
+		cfgSet "gui" "images" [cfgGet "images"]
+		cfgUnset "images"
+
+		foreach link_id [getFromRunning "link_list"] {
+			setLinkColor $link_id [cfgGet "links" $link_id "color"]
+			cfgUnset "links" $link_id "color"
+			setLinkWidth $link_id [cfgGet "links" $link_id "width"]
+			cfgUnset "links" $link_id "width"
+
+			set mirror_link_id [cfgGet "links" $link_id "mirror"]
+			if { $mirror_link_id != "" } {
+				cfgUnset "links" $link_id "mirror"
+
+				set pseudo1_id [lindex [getLinkPeers $link_id] 0]
+				set pseudo2_id [lindex [getLinkPeers $mirror_link_id] 0]
+				set real1_node_id [lindex [getLinkPeers $link_id] 1]
+				set real2_node_id [lindex [getLinkPeers $mirror_link_id] 1]
+				set real1_iface_id [lindex [getLinkPeersIfaces $link_id] 1]
+				set real2_iface_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]
+
+				setToRunning "link_list" [removeFromList [getFromRunning "link_list"] $mirror_link_id]
+				cfgUnset "links" $mirror_link_id
+
+				setLinkPeers $link_id "$real1_node_id $real2_node_id"
+				setLinkPeersIfaces $link_id "$real1_iface_id $real2_iface_id"
+
+				setIfcLink $real1_node_id $real1_iface_id $link_id
+				setIfcLink $real2_node_id $real2_iface_id $link_id
+
+				lassign [splitLink $link_id] new_node1_id new_node2_id
+
+				setNodeCoords $new_node1_id [cfgGet "nodes" $pseudo1_id "iconcoords"]
+				setNodeCoords $new_node2_id [cfgGet "nodes" $pseudo2_id "iconcoords"]
+				setNodeLabelCoords $new_node1_id [getNodeCoords $new_node1_id]
+				setNodeLabelCoords $new_node2_id [getNodeCoords $new_node2_id]
+
+				setNodeCanvas $new_node1_id [cfgGet "nodes" $pseudo1_id "canvas"]
+				setNodeCanvas $new_node2_id [cfgGet "nodes" $pseudo2_id "canvas"]
+
+				setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $pseudo1_id]
+				cfgUnset "nodes" $pseudo1_id
+				setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $pseudo2_id]
+				cfgUnset "nodes" $pseudo2_id
+			}
+
+			setLinkPeers_gui $link_id [getLinkPeers $link_id]
+		}
+
+		foreach node_id [getFromRunning "node_list"] {
+			setNodeLabel $node_id [getNodeName $node_id]
+			setNodeCanvas $node_id [cfgGet "nodes" $node_id "canvas"]
+			cfgUnset "nodes" $node_id "canvas"
+			setNodeCoords $node_id [cfgGet "nodes" $node_id "iconcoords"]
+			cfgUnset "nodes" $node_id "iconcoords"
+			setNodeLabelCoords $node_id [cfgGet "nodes" $node_id "labelcoords"]
+			cfgUnset "nodes" $node_id "labelcoords"
+			setNodeCustomIcon $node_id [cfgGet "nodes" $node_id "custom_icon"]
+			cfgUnset "nodes" $node_id "custom_icon"
+		}
+
+		setToRunning_gui "canvas_list" [getCanvasList]
+		setToRunning_gui "annotation_list" [getAnnotationList]
+		setToRunning_gui "image_list" [getImageList]
+
+		applyOptions
+
+		setOption "version" $to_version
+	}
+
+	if { ! $gui && $execMode != "batch" } {
+		set tmp [getFromRunning "modified"]
+		cfgUnset "gui"
+		setToRunning "modified" $tmp
 	}
 }
 
@@ -1578,12 +1690,29 @@ proc getFromRunning { key { config "" } } {
 	return [dictGet $dict_run $key]
 }
 
+proc getFromRunning_gui { key { config "" } } {
+	if { $config == "" } {
+		set config [set ::curcfg]
+	}
+	upvar 0 ::cf::${config}::dict_run_gui dict_run_gui
+
+	return [dictGet $dict_run_gui $key]
+}
+
 proc setToRunning { key value } {
 	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
 
 	set dict_run [dictSet $dict_run $key $value]
 
 	return $dict_run
+}
+
+proc setToRunning_gui { key value } {
+	upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
+
+	set dict_run_gui [dictSet $dict_run_gui $key $value]
+
+	return $dict_run_gui
 }
 
 proc unsetRunning { key } {
@@ -1594,12 +1723,28 @@ proc unsetRunning { key } {
 	return $dict_run
 }
 
+proc unsetRunning_gui { key } {
+	upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
+
+	set dict_run_gui [dictUnset $dict_run_gui $key]
+
+	return $dict_run_gui
+}
+
 proc lappendToRunning { key value } {
 	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
 
 	set dict_run [dictLappend $dict_run $key $value]
 
 	return $dict_run
+}
+
+proc lappendToRunning_gui { key value } {
+	upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
+
+	set dict_run_gui [dictLappend $dict_run_gui $key $value]
+
+	return $dict_run_gui
 }
 
 proc getFromExecuteVars { key { config "" } } {
@@ -1641,34 +1786,51 @@ proc lappendToExecuteVars { key value } {
 
 proc jumpToUndoLevel { undolevel } {
 	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+	upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-	set list_list "canvas_list node_list link_list annotation_list image_list \
-		mac_used_list ipv4_used_list ipv6_used_list"
-	foreach list_var $list_list {
+	foreach list_var "node_list link_list mac_used_list ipv4_used_list ipv6_used_list" {
 		setToRunning $list_var [dictGet $dict_run "undolog" $undolevel $list_var]
 	}
-
 	set dict_cfg [dictGet $dict_run "undolog" $undolevel "config"]
+
+	foreach list_var "canvas_list annotation_list image_list" {
+		setToRunning $list_var [dictGet $dict_run_gui "undolog" $undolevel $list_var]
+	}
+	dict set dict_cfg "gui" [dictGet $dict_run_gui "undolog" $undolevel "config"]
 
 	return $dict_cfg
 }
 
 proc saveToUndoLevel { undolevel { value "" } } {
 	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+	upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+
+	global gui
 
 	if { $value == "" } {
 		set value $dict_cfg
+		dict unset value "gui"
+
+		if { $gui } {
+			set value_gui [dict get $dict_cfg "gui"]
+		}
 	}
 
-	set list_list "canvas_list node_list link_list annotation_list image_list mac_used_list ipv4_used_list ipv6_used_list" 
-	foreach list_var $list_list {
+	foreach list_var "node_list link_list mac_used_list ipv4_used_list ipv6_used_list" {
 		set dict_run [dictSet $dict_run "undolog" $undolevel $list_var [getFromRunning $list_var]]
 	}
 	set dict_run [dictSet $dict_run "undolog" $undolevel "config" $value]
 
-	return $dict_run
+	if { $gui } {
+		foreach list_var "canvas_list annotation_list image_list" {
+			set dict_run_gui [dictSet $dict_run_gui "undolog" $undolevel $list_var [getFromRunning_gui $list_var]]
+		}
+		set dict_run_gui [dictSet $dict_run_gui "undolog" $undolevel "config" $value_gui]
+	}
+
+	return [concat $dict_run $dict_run_gui]
 }
 
 #########################################################################
@@ -1695,16 +1857,38 @@ proc unsetOption { property } {
 	return $dict_cfg
 }
 
+proc getOption_gui { property } {
+	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+
+	return [dictGet $dict_cfg "gui" "options" $property]
+}
+
+proc setOption_gui { property value } {
+	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+
+	set dict_cfg [dictSet $dict_cfg "gui" "options" $property $value]
+
+	return $dict_cfg
+}
+
+proc unsetOption_gui { property } {
+	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+
+	set dict_cfg [dictUnset $dict_cfg "gui" "options" $property]
+
+	return $dict_cfg
+}
+
 proc getCanvasList { } {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-	return [dict keys [dictGet $dict_cfg "canvases"]]
+	return [dict keys [dictGet $dict_cfg "gui" "canvases"]]
 }
 
 proc getCanvasProperty { canvas_id property } {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-	return [dictGet $dict_cfg "canvases" $canvas_id $property]
+	return [dictGet $dict_cfg "gui" "canvases" $canvas_id $property]
 }
 
 proc getNodeList { } {
@@ -1734,25 +1918,25 @@ proc getLinkProperty { link_id property } {
 proc getAnnotationList { } {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-	return [dict keys [dictGet $dict_cfg "annotations"]]
+	return [dict keys [dictGet $dict_cfg "gui" "annotations"]]
 }
 
 proc getAnnotationProperty { annotation_id property } {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-	return [dictGet $dict_cfg "annotations" $annotation_id $property]
+	return [dictGet $dict_cfg "gui" "annotations" $annotation_id $property]
 }
 
 proc getImageList { } {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-	return [dict keys [dictGet $dict_cfg "images"]]
+	return [dict keys [dictGet $dict_cfg "gui" "images"]]
 }
 
 proc getImageProperty { image_id property } {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-	return [dictGet $dict_cfg "images" $image_id $property]
+	return [dictGet $dict_cfg "gui" "images" $image_id $property]
 }
 
 #########################################################################
@@ -1763,7 +1947,7 @@ proc getImageProperty { image_id property } {
 # * array - JSON array
 # * inner_dictionary - dictionary inside of an object
 proc getJsonType { key_name } {
-	if { $key_name in "canvases nodes links annotations images custom_configs ipsec_configs ifaces IFACES_CONFIG NODE_CONFIG" } {
+	if { $key_name in "gui canvases nodes links annotations images custom_configs ipsec_configs ifaces IFACES_CONFIG NODE_CONFIG" } {
 		return "dictionary"
 	} elseif { $key_name in "croutes4 croutes6 ipv4_addrs ipv6_addrs services events tayga_mappings" } {
 		return "array"

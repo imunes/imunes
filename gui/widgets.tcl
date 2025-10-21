@@ -95,7 +95,7 @@ proc showCfgPopup { c node_id title x y } {
 	set newX $x
 	set newY $y
 
-	lassign [getCanvasSize [getFromRunning "curcanvas"]] sizex sizey
+	lassign [getCanvasSize [getFromRunning_gui "curcanvas"]] sizex sizey
 	lassign [getNodeCoords $node_id] nodeX nodeY
 	lassign [$c cget -scrollregion] rx1 ry1 rx2 ry2
 

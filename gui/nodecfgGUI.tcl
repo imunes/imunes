@@ -53,21 +53,20 @@ proc nodeConfigGUI { c node_id } {
 		set node_id [lindex [$c gettags current] 1]
 	}
 
-	set type [getNodeType $node_id]
-	if { $type == "pseudo" } {
+	if { [isPseudoNode $node_id] } {
 		#
 		# Hyperlink to another canvas
 		#
 		set mirror_node [getNodeMirror $node_id]
-		setToRunning "curcanvas" [getNodeCanvas $mirror_node]
+		setToRunning_gui "curcanvas" [getNodeCanvas $mirror_node]
 		switchCanvas none
-		after idle selectNodes [getIfcPeer $mirror_node "ifc0"]
+		after idle selectNodes [lindex [nodeFromPseudoNode $mirror_node] 0]
 
 		return
-	} else {
-		set badentry 0
-		$type.configGUI $c $node_id
 	}
+
+	set badentry 0
+	[getNodeType $node_id].configGUI $c $node_id
 }
 
 #****f* nodecfgGUI.tcl/configGUI_createConfigPopupWin
@@ -1381,7 +1380,7 @@ proc configGUI_applyButtonNode { wi node_id phase } {
 		global node_cfg node_cfg_gui
 
 		updateNodeGUI $node_id "*" $node_cfg_gui
-		set node_cfg_gui [cfgGet "nodes" $node_id]
+		set node_cfg_gui [cfgGet "gui" "nodes" $node_id]
 
 		updateNode $node_id "*" $node_cfg
 		if { [getFromRunning "stop_sched"] } {
@@ -6486,7 +6485,7 @@ proc configGUI_applyFilterNode {} {
 	global node_existing_mac node_existing_ipv4 node_existing_ipv6
 
 	updateNodeGUI $curnode "*" $node_cfg_gui
-	set node_cfg_gui [cfgGet "nodes" $curnode]
+	set node_cfg_gui [cfgGet "gui" "nodes" $curnode]
 
 	updateNode $curnode "*" $node_cfg
 	if { [getFromRunning "stop_sched"] } {
@@ -7314,7 +7313,7 @@ proc configGUI_applyPackgenNode { } {
 	global node_existing_mac node_existing_ipv4 node_existing_ipv6
 
 	updateNodeGUI $curnode "*" $node_cfg_gui
-	set node_cfg_gui [cfgGet "nodes" $curnode]
+	set node_cfg_gui [cfgGet "gui" "nodes" $curnode]
 
 	updateNode $curnode "*" $node_cfg
 	if { [getFromRunning "stop_sched"] } {

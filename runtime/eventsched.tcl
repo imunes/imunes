@@ -476,7 +476,7 @@ proc elementsEventsEditor {} {
 	#$pwi.left.tree insert {} end -id nodes -text "Nodes" -open true -tags nodes
 	#foreach node_id [lsort -dictionary $node_list] {
 	#	set type [getNodeType $node_id]
-	#	if { $type != "pseudo" && [[getNodeType $node_id].netlayer] == "NETWORK" } {
+	#	if { [[getNodeType $node_id].netlayer] == "NETWORK" } {
 	#		$pwi.left.tree insert nodes end -id $node_id -text "[getNodeName $node_id]" -open false -tags $node_id
 	#		lappend eventnodetags $node_id
 	#	}

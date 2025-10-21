@@ -366,7 +366,7 @@ proc getNextIPv4addr { node_type existing_addrs } {
 #   * $peers -- list of peers in the current network
 #****
 proc nextFreeIP4Addr { addr start peers } {
-	global execMode
+	global execMode gui
 
 	set ipnums [ip::prefix $addr]
 	set mask [lindex [split $addr /] 1]
@@ -406,7 +406,7 @@ proc nextFreeIP4Addr { addr start peers } {
 	set y [ip::prefix $ipaddr]
 
 	if { $x != $y  || "$ip1.$ip2.$ip3.$ip4" == [ip::broadcastAddress $ipaddr] } {
-		if { $execMode != "batch" } {
+		if { $gui && $execMode != "batch" } {
 			after idle { .dialog1.msg configure -wraplength 4i }
 			tk_dialog .dialog1 "IMUNES warning" \
 				"You have depleted the current pool of addresses ($x/$mask). Please choose a new pool from Tools->IPV4 address pool or delete nodes to free the address space." \

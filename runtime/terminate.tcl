@@ -46,7 +46,7 @@ proc terminate_deleteExperimentFiles { eid } {
 proc checkTerminate {} {}
 
 proc terminate_nodesShutdown { eid nodes nodes_count w } {
-	global progressbarCount execMode
+	global progressbarCount execMode gui
 
 	set batchStep 0
 	foreach node_id $nodes {
@@ -67,7 +67,7 @@ proc terminate_nodesShutdown { eid nodes nodes_count w } {
 		incr batchStep
 		incr progressbarCount -1
 
-		if { $execMode != "batch" } {
+		if { $gui && $execMode != "batch" } {
 			statline "Shutting down node [getNodeName $node_id]"
 			$w.p configure -value $progressbarCount
 			update
@@ -76,14 +76,14 @@ proc terminate_nodesShutdown { eid nodes nodes_count w } {
 
 	if { $nodes_count > 0 } {
 		displayBatchProgress $batchStep $nodes_count
-		if { $execMode == "batch" } {
+		if { ! $gui || $execMode == "batch" } {
 			statline ""
 		}
 	}
 }
 
 proc terminate_linksUnconfigure { eid links links_count w } {
-	global progressbarCount execMode
+	global progressbarCount execMode gui
 
 	set batchStep 0
 	set skipLinks ""
@@ -109,7 +109,7 @@ proc terminate_linksUnconfigure { eid links links_count w } {
 		incr batchStep
 		incr progressbarCount -1
 
-		if { $execMode != "batch" } {
+		if { $gui && $execMode != "batch" } {
 			statline $msg
 			$w.p configure -value $progressbarCount
 			update
@@ -119,14 +119,14 @@ proc terminate_linksUnconfigure { eid links links_count w } {
 
 	if { $links_count > 0 } {
 		displayBatchProgress $batchStep $links_count
-		if { $execMode == "batch" } {
+		if { ! $gui || $execMode == "batch" } {
 			statline ""
 		}
 	}
 }
 
 proc terminate_linksDestroy { eid links links_count w } {
-	global progressbarCount execMode
+	global progressbarCount execMode gui
 
 	set batchStep 0
 	set skipLinks ""
@@ -141,19 +141,6 @@ proc terminate_linksDestroy { eid links links_count w } {
 		lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
 
 		set msg "Destroying link $link_id"
-		set mirror_link_id [getLinkMirror $link_id]
-		if { $mirror_link_id != "" } {
-			lappend skipLinks $mirror_link_id
-
-			set msg "Destroying link $link_id/$mirror_link_id"
-
-			# switch direction for mirror links
-			lassign "$node2_id [lindex [getLinkPeers $mirror_link_id] 1]" node1_id node2_id
-			lassign "$iface2_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]" iface1_id iface2_id
-
-			setToRunning "${mirror_link_id}_running" false
-		}
-
 		if { [getFromRunning "${link_id}_running"] == true } {
 			try {
 				destroyLinkBetween $eid $node1_id $node2_id $iface1_id $iface2_id $link_id
@@ -167,7 +154,7 @@ proc terminate_linksDestroy { eid links links_count w } {
 		incr batchStep
 		incr progressbarCount -1
 
-		if { $execMode != "batch" } {
+		if { $gui && $execMode != "batch" } {
 			statline $msg
 			$w.p configure -value $progressbarCount
 			update
@@ -177,21 +164,20 @@ proc terminate_linksDestroy { eid links links_count w } {
 
 	if { $links_count > 0 } {
 		displayBatchProgress $batchStep $links_count
-		if { $execMode == "batch" } {
+		if { ! $gui || $execMode == "batch" } {
 			statline ""
 		}
 	}
 }
 
 proc terminate_nodesDestroy { eid nodes nodes_count w } {
-	global progressbarCount execMode
+	global progressbarCount execMode gui
 
 	set batchStep 0
 	foreach node_id $nodes {
 		displayBatchProgress $batchStep $nodes_count
 
 		if {
-			[getNodeType $node_id] != "pseudo" &&
 			[getFromRunning "${node_id}_running"] in "true delete"
 		} {
 			try {
@@ -205,7 +191,7 @@ proc terminate_nodesDestroy { eid nodes nodes_count w } {
 		incr batchStep
 		incr progressbarCount -1
 
-		if { $execMode != "batch" } {
+		if { $gui && $execMode != "batch" } {
 			statline "Destroying node [getNodeName $node_id]"
 			$w.p configure -value $progressbarCount
 			update
@@ -214,14 +200,14 @@ proc terminate_nodesDestroy { eid nodes nodes_count w } {
 
 	if { $nodes_count > 0 } {
 		displayBatchProgress $batchStep $nodes_count
-		if { $execMode == "batch" } {
+		if { ! $gui || $execMode == "batch" } {
 			statline ""
 		}
 	}
 }
 
 proc terminate_nodesDestroyFS { eid nodes nodes_count w } {
-	global progressbarCount execMode
+	global progressbarCount execMode gui
 
 	set batchStep 0
 	foreach node_id $nodes {
@@ -247,7 +233,7 @@ proc terminate_nodesDestroyFS { eid nodes nodes_count w } {
 		incr batchStep
 		incr progressbarCount -1
 
-		if { $execMode != "batch" } {
+		if { $gui && $execMode != "batch" } {
 			statline "Destroying node [getNodeName $node_id] (FS)"
 			$w.p configure -value $progressbarCount
 			update
@@ -256,14 +242,14 @@ proc terminate_nodesDestroyFS { eid nodes nodes_count w } {
 
 	if { $nodes_count > 0 } {
 		displayBatchProgress $batchStep $nodes_count
-		if { $execMode == "batch" } {
+		if { ! $gui || $execMode == "batch" } {
 			statline ""
 		}
 	}
 }
 
 proc finishTerminating { status msg w } {
-	global progressbarCount execMode
+	global progressbarCount execMode gui
 
 	set vars "terminate_nodes destroy_nodes_ifaces terminate_links \
 		unconfigure_links unconfigure_nodes_ifaces unconfigure_nodes"
@@ -272,7 +258,7 @@ proc finishTerminating { status msg w } {
 	}
 
 	catch { pipesClose }
-	if { $execMode == "batch" } {
+	if { ! $gui || $execMode == "batch" } {
 		puts stderr $msg
 	} else {
 		catch { destroy $w }
@@ -299,7 +285,7 @@ proc finishTerminating { status msg w } {
 proc undeployCfg { { eid "" } { terminate 0 } } {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-	global progressbarCount execMode skip_nodes
+	global progressbarCount execMode skip_nodes gui
 
 	set bkp_cfg ""
 	set terminate_cfg [getFromExecuteVars "terminate_cfg"]
@@ -361,7 +347,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 		checkTerminate
 	} on error err {
 		statline "ERROR in 'checkTerminate': '$err'"
-		if { $execMode != "batch" } {
+		if { $gui && $execMode != "batch" } {
 			after idle { .dialog1.msg configure -wraplength 4i }
 			tk_dialog .dialog1 "IMUNES error" \
 				"$err \nCleanup the experiment and report the bug!" info 0 Dismiss
@@ -375,31 +361,35 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 	set native_nodes {}
 	set virtualized_nodes {}
 	set all_nodes {}
-	set pseudoNodesCount 0
 	foreach node_id $terminate_nodes {
 		set node_type [getNodeType $node_id]
-		if { $node_type != "pseudo" } {
-			if { [$node_type.virtlayer] == "NATIVE" } {
-				if { $node_type == "rj45" } {
-					lappend extifcs $node_id
-					lappend native_nodes $node_id
-				} elseif { $node_type == "ext" && [getNodeNATIface $node_id] != "UNASSIGNED" } {
-					lappend virtualized_nodes $node_id
-				} else {
-					lappend native_nodes $node_id
-				}
-			} else {
+		if { $node_type == "" } {
+			set terminate_nodes [removeFromList $terminate_nodes $node_id]
+			set node_list [getFromRunning "node_list"]
+			if { $node_id in $node_list } {
+				setToRunning "node_list" [removeFromList $node_list $node_id]
+			}
+
+			continue
+		}
+
+		if { [$node_type.virtlayer] == "NATIVE" } {
+			if { $node_type == "rj45" } {
+				lappend extifcs $node_id
+				lappend native_nodes $node_id
+			} elseif { $node_type == "ext" && [getNodeNATIface $node_id] != "UNASSIGNED" } {
 				lappend virtualized_nodes $node_id
+			} else {
+				lappend native_nodes $node_id
 			}
 		} else {
-			incr pseudoNodesCount
+			lappend virtualized_nodes $node_id
 		}
 	}
 	set native_nodes_count [llength $native_nodes]
 	set virtualized_nodes_count [llength $virtualized_nodes]
 	set all_nodes [concat $native_nodes $virtualized_nodes]
 	set all_nodes_count [llength $all_nodes]
-	incr links_count [expr -$pseudoNodesCount/2]
 
 	set destroy_nodes_ifaces_count 0
 	set destroy_nodes_extifaces {}
@@ -444,17 +434,8 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 
 	if { $unconfigure_links == "*" } {
 		set unconfigure_links $terminate_links
-		set unconfigure_links_count $links_count
-	} else {
-		set pseudo_links 0
-		foreach link_id $unconfigure_links {
-			if { [getLinkMirror $link_id] != "" } {
-				incr pseudo_links
-			}
-		}
-
-		set unconfigure_links_count [expr [llength $unconfigure_links] - $pseudo_links/2]
 	}
+	set unconfigure_links_count [llength $unconfigure_links]
 
 	set maxProgressbasCount [expr {1 + 1*$all_nodes_count + 1*$links_count + 1*$unconfigure_links_count + 2*$native_nodes_count + 3*$virtualized_nodes_count + 1*$unconfigure_nodes_ifaces_count + 1*$destroy_nodes_ifaces_count + 1*$destroy_nodes_extifaces_count + 1*$unconfigure_nodes_count}]
 	set progressbarCount $maxProgressbasCount
@@ -464,7 +445,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 	}
 
 	set w ""
-	if { $execMode != "batch" } {
+	if { $gui && $execMode != "batch" } {
 		set w .startup
 		catch { destroy $w }
 
@@ -628,13 +609,13 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 		setToExecuteVars "terminate_cfg" ""
 	}
 
-	if { $execMode == "batch" } {
+	if { ! $gui || $execMode == "batch" } {
 		puts "Terminated experiment ID = $eid"
 	}
 }
 
 proc timeoutPatch { eid nodes nodes_count w } {
-	global progressbarCount execMode
+	global progressbarCount execMode gui
 
 	set batchStep 0
 	set nodes_left $nodes
@@ -647,7 +628,7 @@ proc timeoutPatch { eid nodes nodes_count w } {
 			incr progressbarCount -1
 
 			set name [getNodeName $node_id]
-			if { $execMode != "batch" } {
+			if { $gui && $execMode != "batch" } {
 				statline "Node $name stopped"
 				$w.p configure -value $progressbarCount
 				update
@@ -660,14 +641,14 @@ proc timeoutPatch { eid nodes nodes_count w } {
 
 	if { $nodes_count > 0 } {
 		displayBatchProgress $batchStep $nodes_count
-		if { $execMode == "batch" } {
+		if { ! $gui || $execMode == "batch" } {
 			statline ""
 		}
 	}
 }
 
 proc terminate_nodesUnconfigure { eid nodes nodes_count w } {
-	global progressbarCount execMode
+	global progressbarCount execMode gui
 
 	set batchStep 0
 	set subnet_gws {}
@@ -690,7 +671,7 @@ proc terminate_nodesUnconfigure { eid nodes nodes_count w } {
 		incr batchStep
 		incr progressbarCount -1
 
-		if { $execMode != "batch" } {
+		if { $gui && $execMode != "batch" } {
 			$w.p configure -value $progressbarCount
 			statline "Unconfiguring node [getNodeName $node_id]"
 			update
@@ -699,14 +680,14 @@ proc terminate_nodesUnconfigure { eid nodes nodes_count w } {
 
 	if { $nodes_count > 0 } {
 		displayBatchProgress $batchStep $nodes_count
-		if { $execMode == "batch" } {
+		if { ! $gui || $execMode == "batch" } {
 			statline ""
 		}
 	}
 }
 
 proc terminate_nodesIfacesUnconfigure { eid nodes_ifaces nodes_count w } {
-	global progressbarCount execMode
+	global progressbarCount execMode gui
 
 	set batchStep 0
 	set subnet_gws {}
@@ -732,7 +713,7 @@ proc terminate_nodesIfacesUnconfigure { eid nodes_ifaces nodes_count w } {
 		incr batchStep
 		incr progressbarCount -1
 
-		if { $execMode != "batch" } {
+		if { $gui && $execMode != "batch" } {
 			$w.p configure -value $progressbarCount
 			statline "Unconfiguring interfaces on node [getNodeName $node_id]"
 			update
@@ -741,14 +722,14 @@ proc terminate_nodesIfacesUnconfigure { eid nodes_ifaces nodes_count w } {
 
 	if { $nodes_count > 0 } {
 		displayBatchProgress $batchStep $nodes_count
-		if { $execMode == "batch" } {
+		if { ! $gui || $execMode == "batch" } {
 			statline ""
 		}
 	}
 }
 
 proc terminate_nodesIfacesDestroy { eid nodes_ifaces nodes_count w } {
-	global progressbarCount execMode
+	global progressbarCount execMode gui
 
 	set batchStep 0
 	dict for {node_id ifaces} $nodes_ifaces {
@@ -771,7 +752,7 @@ proc terminate_nodesIfacesDestroy { eid nodes_ifaces nodes_count w } {
 		incr batchStep
 		incr progressbarCount -1
 
-		if { $execMode != "batch" } {
+		if { $gui && $execMode != "batch" } {
 			statline "Destroying physical interfaces on node [getNodeName $node_id]"
 			$w.p configure -value $progressbarCount
 			update
@@ -780,7 +761,7 @@ proc terminate_nodesIfacesDestroy { eid nodes_ifaces nodes_count w } {
 
 	if { $nodes_count > 0 } {
 		displayBatchProgress $batchStep $nodes_count
-		if { $execMode == "batch" } {
+		if { ! $gui || $execMode == "batch" } {
 			statline ""
 		}
 	}

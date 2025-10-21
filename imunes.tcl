@@ -96,6 +96,7 @@ set nodecreate_timeout 4
 set ifacesconf_timeout 3
 set nodeconf_timeout 3
 set selected_experiment ""
+set gui 1
 
 set options {
 	{a			"Attach to a running experiment"}
@@ -104,6 +105,8 @@ set options {
 	{eid.arg	"" "Specify experiment ID"}
 	{b			"Turn on batch mode"}
 	{batch		"Turn on batch mode"}
+	{c.secret	"Run in CLI mode"}
+	{cli.secret	"Run in CLI mode"}
 	{d.secret	"Turn on debug mode"}
 	{p			"Prepare virtual root file system"}
 	{prepare	"Prepare virtual root file system"}
@@ -174,7 +177,16 @@ array set nodeNamingBase {
 }
 
 set option_defaults {
-	auto_etc_hosts	0
+	auto_etc_hosts		0
+	IPv4autoAssign		1
+	IPv6autoAssign		1
+	routerRipEnable		1
+	routerRipngEnable	1
+	routerOspfEnable	0
+	routerOspf6Enable	0
+	routerBgpEnable		0
+	routerLdpEnable		0
+	routerDefaultsModel	"frr"
 }
 
 set gui_option_defaults {
@@ -199,6 +211,9 @@ foreach {option default_value} [concat $option_defaults $gui_option_defaults] {
 
 	set $option $default_value
 }
+
+global rdconfig
+set rdconfig [list $routerRipEnable $routerRipngEnable $routerOspfEnable $routerOspf6Enable $routerBgpEnable $routerLdpEnable]
 
 set all_modules_list {}
 set runnable_node_types {}
@@ -313,33 +328,41 @@ if { $execMode == "interactive" } {
 		exit 1
 	}
 
-	safePackageRequire Tk "To run the IMUNES GUI, Tk must be installed."
+	if { $gui } {
+		safePackageRequire Tk "To run the IMUNES GUI, Tk must be installed."
 
-	# Node GUI base libraries
-	foreach node_type $node_types {
-		safeSourceFile "$ROOTDIR/$LIBDIR/gui/nodes/$node_type.tcl"
-	}
+		# Node GUI base libraries
+		foreach node_type $node_types {
+			safeSourceFile "$ROOTDIR/$LIBDIR/gui/nodes/$node_type.tcl"
+		}
 
-	# Node-specific GUI configuration libraries
-	foreach file_path [glob -nocomplain -directory $ROOTDIR/$LIBDIR/gui/nodes/config *.tcl] {
-		safeSourceFile $file_path
-	}
-
-	set skip_files "theme.tcl initgui.tcl topogen.tcl debug.tcl"
-	foreach file_path [glob -directory $ROOTDIR/$LIBDIR/gui *.tcl] {
-		if { [file tail $file_path] ni $skip_files } {
+		# Node-specific GUI configuration libraries
+		foreach file_path [glob -nocomplain -directory $ROOTDIR/$LIBDIR/gui/nodes/config *.tcl] {
 			safeSourceFile $file_path
+		}
+
+		set skip_files "theme.tcl initgui.tcl topogen.tcl debug.tcl"
+		foreach file_path [glob -directory $ROOTDIR/$LIBDIR/gui *.tcl] {
+			if { [file tail $file_path] ni $skip_files } {
+				safeSourceFile $file_path
+			}
+		}
+
+		foreach skip_file $skip_files {
+			safeSourceFile "$ROOTDIR/$LIBDIR/gui/$skip_file"
 		}
 	}
 
-	foreach skip_file $skip_files {
-		safeSourceFile "$ROOTDIR/$LIBDIR/gui/$skip_file"
-	}
+	safeSourceFile "$ROOTDIR/$LIBDIR/gui/debug.tcl"
 
 	newProject
 
 	if { $selected_experiment != "" } {
-		resumeAndDestroy
+		if { $gui } {
+			resumeAndDestroy
+		} else {
+			resumeSelectedExperiment $selected_experiment
+		}
 	} else {
 		if { $argv != "" && [file exists $argv] } {
 			setToRunning "cwd" [pwd]
@@ -348,11 +371,30 @@ if { $execMode == "interactive" } {
 		}
 	}
 
-	updateProjectMenu
-	# Fire up the animation loop
-	animate
-	# Event scheduler - should be started / stopped on per-experiment base?
-	#evsched
+	if { $gui } {
+		updateProjectMenu
+		# Fire up the animation loop
+		animate
+		# Event scheduler - should be started / stopped on per-experiment base?
+		#evsched
+	} else {
+		puts ""
+		puts "*** WARNING: This is an experimental feature. Proceed with caution! ***"
+		puts ""
+		puts -nonewline "> "
+		flush stdout
+		while { [gets stdin line] >= 0 } {
+			try {
+				eval {*}$line
+			} on ok retv {
+				puts "OK: '$retv'"
+			} on error retv {
+				puts "ERROR: '$retv'"
+			}
+			puts -nonewline "> "
+			flush stdout
+		}
+	}
 } else {
 	if { $argv != "" } {
 		if { ! [file exists $argv] } {
@@ -368,12 +410,14 @@ if { $execMode == "interactive" } {
 
 		namespace eval ::cf::[set curcfg] {}
 		upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+		upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
 		upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
 		upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 		set dict_cfg [dict create]
 		setOption "version" $CFG_VERSION
 
 		set dict_run [dict create]
+		set dict_run_gui [dict create]
 		set execute_vars [dict create]
 
 		setToRunning "eid" ""
@@ -383,11 +427,10 @@ if { $execMode == "interactive" } {
 		setToRunning "stop_sched" true
 		setToRunning "undolevel" 0
 		setToRunning "redolevel" 0
-		setToRunning "zoom" $zoom
+		setToRunning "current_file" $currentFileBatch
 
 		readCfgJson $currentFileBatch
 
-		setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
 		setToRunning "cwd" [pwd]
 		setToRunning "current_file" $argv
 
@@ -414,12 +457,14 @@ if { $execMode == "interactive" } {
 
 			namespace eval ::cf::[set curcfg] {}
 			upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+			upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
 			upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
 			upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 			set dict_cfg [dict create]
 			setOption "version" $CFG_VERSION
 
 			set dict_run [dict create]
+			set dict_run_gui [dict create]
 			set execute_vars [dict create]
 
 			setToRunning "eid" $eid_base
@@ -429,12 +474,9 @@ if { $execMode == "interactive" } {
 			setToRunning "stop_sched" true
 			setToRunning "undolevel" 0
 			setToRunning "redolevel" 0
-			setToRunning "zoom" $zoom
-			setToRunning "canvas_list" {}
 			setToRunning "current_file" $configFile
 
 			readCfgJson $configFile
-			setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
 
 			readRunningVarsFile $eid_base
 			setToRunning "cfg_deployed" true

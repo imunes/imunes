@@ -46,8 +46,8 @@ proc redrawAll {} {
 	global background sizex sizey grid
 	global show_background_image show_annotations show_grid bkgImage
 
-	set zoom [getFromRunning "zoom"]
-	set curcanvas [getFromRunning "curcanvas"]
+	set zoom [getFromRunning_gui "zoom"]
+	set curcanvas [getFromRunning_gui "curcanvas"]
 
 	.bottom.zoom config -text "zoom [expr {int($zoom * 100)}]%"
 	set e_sizex [expr {int($sizex * $zoom)}]
@@ -75,7 +75,7 @@ proc redrawAll {} {
 	}
 
 	if { $show_annotations == 1 } {
-		foreach annotation_id [getFromRunning "annotation_list"] {
+		foreach annotation_id [getFromRunning_gui "annotation_list"] {
 			if { [getAnnotationCanvas $annotation_id] == $curcanvas } {
 				drawAnnotation $annotation_id
 			}
@@ -113,20 +113,25 @@ proc redrawAll {} {
 	.panwin.f1.c lower -withtags background
 
 	foreach node_id [getFromRunning "node_list"] {
-		if { [getNodeCanvas $node_id] == $curcanvas } {
+		set node_canvas [getNodeCanvas $node_id]
+		if { $node_canvas == "" } {
+			set node_canvas $curcanvas
+			setNodeCanvas $node_id $curcanvas
+		}
+
+		if { $node_canvas == $curcanvas } {
 			drawNode $node_id
+
+			foreach iface_id [ifcList $node_id] {
+				set pseudo_id [getPseudoNodeFromNodeIface $node_id $iface_id]
+				if { $pseudo_id != "" } {
+					drawPseudoNode $pseudo_id
+				}
+			}
 		}
 	}
 
 	foreach link_id [getFromRunning "link_list"] {
-		lassign [getLinkPeers $link_id] node1_id node2_id
-		if {
-			[getNodeCanvas $node1_id] != $curcanvas ||
-			[getNodeCanvas $node2_id] != $curcanvas
-		} {
-			continue
-		}
-
 		drawLink $link_id
 		redrawLink $link_id
 		updateLinkLabel $link_id
@@ -152,11 +157,34 @@ proc redrawAll {} {
 #   * node_id -- node id
 #****
 proc drawNode { node_id } {
-	global show_node_labels pseudo runnable_node_types
+	global show_node_labels runnable_node_types
+
+	if { [isPseudoNode $node_id] } {
+		drawPseudoNode $node_id
+
+		return
+	}
 
 	set type [getNodeType $node_id]
-	set zoom [getFromRunning "zoom"]
+	if { $type == "" } {
+		cfgUnset "nodes" $node_id
+		cfgUnset "gui" "nodes" $node_id
+		return
+	}
+
+	set zoom [getFromRunning_gui "zoom"]
 	lassign [lmap coord [getNodeCoords $node_id] {expr $coord * $zoom}] x y
+	if { $x == "" || $y == "" } {
+		global ${type}_iconheight
+
+		lassign [getCanvasSize [getFromRunning "curcanvas"]] cx cy
+		set x [expr round(rand()*($cx - $cx/3) + $cx/6)]
+		set y [expr round(rand()*($cy - $cy/3) + $cy/6)]
+		setNodeCoords $node_id "$x $y"
+
+		set dy [expr [set [getNodeType $node_id]\_iconheight]/2 + 11]
+		setNodeLabelCoords $node_id "$x [expr $y + $dy]"
+	}
 
 	.panwin.f1.c delete -withtags "node && $node_id"
 	.panwin.f1.c delete -withtags "nodedisabled && $node_id"
@@ -191,50 +219,46 @@ proc drawNode { node_id } {
 		set image_h [image height img_$custom_icon]
 	}
 
-	if { $type != "pseudo" } {
-		if { $type ni $runnable_node_types } {
-			global defaultFontSize
+	if { $type ni $runnable_node_types } {
+		global defaultFontSize
 
-			.panwin.f1.c create text $x [expr $y - int($image_h/2) - 1.3*$defaultFontSize] \
-				-fill "#ff0c0c" -text "DISABLED" -tags "nodedisabled $node_id" -justify center \
-				-font "imnDisabledFont" -state disabled
-		}
+		.panwin.f1.c create text $x [expr $y - int($image_h/2) - 1.3*$defaultFontSize] \
+			-fill "#ff0c0c" -text "DISABLED" -tags "nodedisabled $node_id" -justify center \
+			-font "imnDisabledFont" -state disabled
+	}
 
+	if { ! [dict exist [cfgGet "gui" "nodes" $node_id] "label"] } {
 		set label_str [getNodeName $node_id]
-		if { [getNodeType $node_id] == "ext" } {
-			set nat_iface [getNodeNATIface $node_id]
-			if { $nat_iface != "UNASSIGNED" } {
-				set label_str "NAT-$nat_iface"
-			}
-		}
-
-		set has_empty_ifaces 0
-		foreach iface_id [ifcList $node_id] {
-			if { $type == "wlan" } {
-				set label_str "$label_str [getIfcIPv4addrs $node_id $iface_id]"
-			} elseif { [getIfcLink $node_id $iface_id] == "" } {
-				if { [getIfcType $node_id $iface_id] == "stolen" } {
-					set iflabel "\[[getIfcName $node_id $iface_id]\]"
-				} else {
-					set iflabel "[getIfcName $node_id $iface_id]"
-				}
-
-				if { $has_empty_ifaces == 0 } {
-					set label_str "\n$label_str\n$iflabel"
-					set has_empty_ifaces 1
-				} else {
-					set label_str "$label_str $iflabel"
-				}
-			}
-		}
+		setNodeLabel $node_id $label_str
 	} else {
-		# get mirror link and its real node/iface
-		lassign [logicalPeerByIfc $node_id "ifc0"] peer_id peer_iface
+		set label_str [getNodeLabel $node_id]
+	}
 
-		set label_str "[getNodeName $peer_id]:[getIfcName $peer_id $peer_iface]"
-		set peer_canvas [getNodeCanvas $peer_id]
-		if { $peer_canvas != [getFromRunning "curcanvas"] } {
-			set label_str "$label_str\n@[getCanvasName $peer_canvas]"
+	if { [getNodeType $node_id] == "ext" } {
+		set nat_iface [getNodeNATIface $node_id]
+		if { $nat_iface != "UNASSIGNED" } {
+			set label_str "NAT-$nat_iface"
+		}
+	}
+
+	set has_empty_ifaces 0
+	foreach iface_id [ifcList $node_id] {
+		set link_id [getIfcLink $node_id $iface_id]
+		if { $type == "wlan" } {
+			set label_str "$label_str [getIfcIPv4addrs $node_id $iface_id]"
+		} elseif { $link_id == "" } {
+			if { [getIfcType $node_id $iface_id] == "stolen" } {
+				set iflabel "\[[getIfcName $node_id $iface_id]\]"
+			} else {
+				set iflabel "[getIfcName $node_id $iface_id]"
+			}
+
+			if { $has_empty_ifaces == 0 } {
+				set label_str "\n$label_str\n$iflabel"
+				set has_empty_ifaces 1
+			} else {
+				set label_str "$label_str $iflabel"
+			}
 		}
 	}
 
@@ -258,11 +282,39 @@ proc drawNode { node_id } {
 	if { $show_node_labels == 0 } {
 		.panwin.f1.c itemconfigure $label_elem -state hidden
 	}
+}
 
-	# XXX Invisible pseudo-node labels
-	global invisible
+proc drawPseudoNode { node_id } {
+	global show_node_labels invisible pseudo
 
-	if { $invisible == 1 && $type == "pseudo" } {
+	.panwin.f1.c delete -withtags "node && $node_id"
+	.panwin.f1.c delete -withtags "nodelabel && $node_id"
+
+	set zoom [getFromRunning_gui "zoom"]
+	lassign [lmap coord [getNodeCoords $node_id] {expr int($coord * $zoom)}] x y
+	.panwin.f1.c create image $x $y \
+		-image $pseudo \
+		-tags "node $node_id"
+
+	set label_str [getNodeLabel $node_id]
+	set color blue
+
+	set mirror_node_id [getNodeMirror $node_id]
+	lassign [nodeFromPseudoNode $mirror_node_id] peer_id -
+	set peer_canvas [getNodeCanvas $peer_id]
+	if { $peer_canvas != [getFromRunning_gui "curcanvas"] } {
+		set label_str "$label_str\n@[getCanvasName $peer_canvas]"
+	}
+
+	lassign [lmap coord [getNodeLabelCoords $node_id] {expr int($coord * $zoom)}] x y
+	set label_elem [.panwin.f1.c create text $x $y \
+		-fill $color \
+		-text "$label_str" \
+		-tags "nodelabel $node_id" \
+		-justify center]
+
+	# XXX Invisible pseudo-nodes
+	if { $show_node_labels == 0 || $invisible == 1 } {
 		.panwin.f1.c itemconfigure $label_elem -state hidden
 	}
 }
@@ -280,28 +332,41 @@ proc drawNode { node_id } {
 #   * link_id -- link id
 #****
 proc drawLink { link_id } {
-	lassign [getLinkPeers $link_id] node1_id node2_id
+	set curcanvas [getFromRunning_gui "curcanvas"]
+	lassign [getLinkPeers_gui $link_id] node1_id node2_id
+	if { $node1_id == "" || $node2_id == "" } {
+		lassign [getLinkPeers $link_id] node1_id node2_id
+		setLinkPeers_gui $link_id "$node1_id $node2_id"
+	}
+
+	if {
+		[getNodeCanvas $node1_id] != $curcanvas &&
+		[getNodeCanvas $node2_id] != $curcanvas
+	} {
+		return
+	}
+
+	lassign [getPseudoLinksFromLink $link_id] pseudo1_link_id pseudo2_link_id
+
+	# only one node cannot have pseudo by itself
+	if { $pseudo1_link_id != "" && $pseudo2_link_id != "" } {
+		drawPseudoLink $pseudo1_link_id
+		drawPseudoLink $pseudo2_link_id
+
+		return
+	}
+
+	lassign [getLinkPeers_gui $link_id] node1_id node2_id
 	if { [getNodeType $node1_id] == "wlan" || [getNodeType $node2_id] == "wlan" } {
 		return
 	}
 
 	set lwidth [getLinkWidth $link_id]
-	if { [getLinkMirror $link_id] != "" } {
-		set newlink [.panwin.f1.c create line 0 0 0 0 \
-			-fill [getLinkColor $link_id] -width $lwidth \
-			-tags "link $link_id $node1_id $node2_id" -arrow both]
-	} else {
-		set newlink [.panwin.f1.c create line 0 0 0 0 \
-			-fill [getLinkColor $link_id] -width $lwidth \
-			-tags "link $link_id $node1_id $node2_id"]
-	}
+	set newlink [.panwin.f1.c create line 0 0 0 0 \
+		-fill [getLinkColor $link_id] \
+		-width $lwidth \
+		-tags "link $link_id $node1_id $node2_id"]
 
-	# XXX Invisible pseudo-links
-	global invisible
-
-	if { $invisible == 1 && [getLinkMirror $link_id] != "" } {
-		.panwin.f1.c itemconfigure $link_id -state hidden
-	}
 	.panwin.f1.c raise $newlink background
 	set newlink [.panwin.f1.c create line 0 0 0 0 \
 		-fill white -width [expr {$lwidth + 4}] \
@@ -318,6 +383,37 @@ proc drawLink { link_id } {
 	.panwin.f1.c raise interface "link || linklabel || background"
 }
 
+proc drawPseudoLink { link_id } {
+	global invisible
+
+	lassign [getLinkPeers_gui $link_id] node1_id node2_id
+
+	set lwidth [getLinkWidth $link_id]
+	set newlink [.panwin.f1.c create line 0 0 0 0 \
+		-fill [getLinkColor $link_id] -width $lwidth \
+		-tags "link $link_id $node1_id $node2_id" -arrow both]
+
+	.panwin.f1.c raise $newlink background
+	set newlink [.panwin.f1.c create line 0 0 0 0 \
+		-fill white -width [expr {$lwidth + 4}] \
+		-tags "link $link_id $node1_id $node2_id"]
+	.panwin.f1.c raise $newlink background
+
+	set ang [calcAngle $link_id]
+
+	.panwin.f1.c create text 0 0 -tags "linklabel $link_id" -justify center -angle $ang
+	.panwin.f1.c create text 0 0 -tags "interface $node1_id $link_id" -justify center -angle $ang
+	.panwin.f1.c create text 0 0 -tags "interface $node2_id $link_id" -justify center -angle $ang
+
+	.panwin.f1.c raise linklabel "link || background"
+	.panwin.f1.c raise interface "link || linklabel || background"
+
+	# XXX Invisible pseudo-links
+	if { $invisible == 1 } {
+		.panwin.f1.c itemconfigure $link_id -state hidden
+	}
+}
+
 #****f* editor.tcl/calcAnglePoints
 # NAME
 #   calcAnglePoints -- calculate angle between two points
@@ -332,7 +428,7 @@ proc drawLink { link_id } {
 #   * y2 -- Y coordinate of point2
 #****
 proc calcAnglePoints { x1 y1 x2 y2 } {
-	set zoom [getFromRunning "zoom"]
+	set zoom [getFromRunning_gui "zoom"]
 	set x1 [expr $x1*$zoom]
 	set y1 [expr $y1*$zoom]
 	set x2 [expr $x2*$zoom]
@@ -356,6 +452,14 @@ proc calcAnglePoints { x1 y1 x2 y2 } {
 	return $ang
 }
 
+proc isPseudoNode { node_id } {
+	return [expr { [string first "." $node_id] != -1 }]
+}
+
+proc isPseudoLink { link_id } {
+	return [expr { [string first "." $link_id] != -1 }]
+}
+
 #****f* editor.tcl/calcAngle
 # NAME
 #   calcAngle -- calculate angle between two points
@@ -368,7 +472,7 @@ proc calcAnglePoints { x1 y1 x2 y2 } {
 #   * link_id -- link which rotation angle needs to be calculated.
 #****
 proc calcAngle { link_id } {
-	lassign [getLinkPeers $link_id] node1_id node2_id
+	lassign [getLinkPeers_gui $link_id] node1_id node2_id
 	lassign [getNodeCoords $node1_id] x1 y1
 	lassign [getNodeCoords $node2_id] x2 y2
 
@@ -461,7 +565,15 @@ proc updateIfcLabel { link_id node_id iface_id } {
 proc updateLinkLabel { link_id } {
 	global show_link_labels linkJitterConfiguration
 
-	if { [getLinkDirect $link_id ]} {
+	if { [isPseudoLink $link_id] } {
+		lassign [linkFromPseudoLink $link_id] link_id - -
+		set pseudo1_link_id ""
+		set pseudo2_link_id ""
+	} else {
+		lassign [getPseudoLinksFromLink $link_id] pseudo1_link_id pseudo2_link_id
+	}
+
+	if { [getLinkDirect $link_id ] } {
 		set str "direct"
 	} else {
 		set label_str ""
@@ -500,6 +612,37 @@ proc updateLinkLabel { link_id } {
 		}
 	}
 
+	set curcanvas [getFromRunning_gui "curcanvas"]
+
+	# only one node cannot have pseudo by itself
+	if { $pseudo1_link_id != "" && $pseudo2_link_id != "" } {
+		foreach link_id "$pseudo1_link_id $pseudo2_link_id" {
+			lassign [getLinkPeers_gui $link_id] node1_id node2_id
+			if {
+				[getNodeCanvas $node1_id] != $curcanvas &&
+				[getNodeCanvas $node2_id] != $curcanvas
+			} {
+				continue
+			}
+
+			set ang [calcAngle $link_id]
+			.panwin.f1.c itemconfigure "linklabel && $link_id" -text $str -angle $ang
+			if { $show_link_labels == 0 } {
+				.panwin.f1.c itemconfigure "linklabel && $link_id" -state hidden
+			}
+		}
+
+		return
+	}
+
+	lassign [getLinkPeers_gui $link_id] node1_id node2_id
+	if {
+		[getNodeCanvas $node1_id] != $curcanvas &&
+		[getNodeCanvas $node2_id] != $curcanvas
+	} {
+		return
+	}
+
 	set ang [calcAngle $link_id]
 	.panwin.f1.c itemconfigure "linklabel && $link_id" -text $str -angle $ang
 	if { $show_link_labels == 0 } {
@@ -516,17 +659,7 @@ proc updateLinkLabel { link_id } {
 #   Redraws all links on the current canvas.
 #****
 proc redrawAllLinks {} {
-	set curcanvas [getFromRunning "curcanvas"]
-
 	foreach link_id [getFromRunning "link_list"] {
-		lassign [getLinkPeers $link_id] node1_id node2_id
-		if {
-			[getNodeCanvas $node1_id] != $curcanvas ||
-			[getNodeCanvas $node2_id] != $curcanvas
-		} {
-			continue
-		}
-
 		redrawLink $link_id
 	}
 }
@@ -542,6 +675,31 @@ proc redrawAllLinks {} {
 #   * link_id -- link id
 #****
 proc redrawLink { link_id } {
+	set curcanvas [getFromRunning_gui "curcanvas"]
+	lassign [getLinkPeers_gui $link_id] node1_id node2_id
+	if {
+		[getNodeCanvas $node1_id] != $curcanvas &&
+		[getNodeCanvas $node2_id] != $curcanvas
+	} {
+		return
+	}
+
+	if { [isPseudoLink $link_id] } {
+		redrawPseudoLink $link_id
+
+		return
+	}
+
+	lassign [getPseudoLinksFromLink $link_id] pseudo1_link_id pseudo2_link_id
+
+	# only one node cannot have pseudo by itself
+	if { $pseudo1_link_id != "" && $pseudo2_link_id != "" } {
+		redrawPseudoLink $pseudo1_link_id
+		redrawPseudoLink $pseudo2_link_id
+
+		return
+	}
+
 	lassign [.panwin.f1.c find withtag "link && $link_id"] limage1 limage2
 	if { $limage1 == "" || $limage2 == "" } {
 		return
@@ -557,28 +715,63 @@ proc redrawLink { link_id } {
 	.panwin.f1.c coords $limage1 $x1 $y1 $x2 $y2
 	.panwin.f1.c coords $limage2 $x1 $y1 $x2 $y2
 
-	if { [getNodeType $node1_id] == "pseudo" } {
-		set lx [expr {0.25 * ($x2 - $x1) + $x1}]
-		set ly [expr {0.25 * ($y2 - $y1) + $y1}]
-	} elseif { [getNodeType $node2_id] == "pseudo" } {
-		set lx [expr {0.75 * ($x2 - $x1) + $x1}]
-		set ly [expr {0.75 * ($y2 - $y1) + $y1}]
-	} else {
-		set lx [expr {0.5 * ($x1 + $x2)}]
-		set ly [expr {0.5 * ($y1 + $y2)}]
-	}
+	set lx [expr {int(0.5 * ($x1 + $x2))}]
+	set ly [expr {int(0.5 * ($y1 + $y2))}]
 	.panwin.f1.c coords "linklabel && $link_id" $lx $ly
 
 	lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
-	if { [getNodeType $node1_id] != "pseudo" } {
-		updateIfcLabelParams $link_id $node1_id $iface1_id $x1 $y1 $x2 $y2
-		updateIfcLabel $link_id $node1_id $iface1_id
+	updateIfcLabelParams $link_id $node1_id $iface1_id $x1 $y1 $x2 $y2
+	updateIfcLabel $link_id $node1_id $iface1_id
+
+	updateIfcLabelParams $link_id $node2_id $iface2_id $x2 $y2 $x1 $y1
+	updateIfcLabel $link_id $node2_id $iface2_id
+}
+
+proc redrawPseudoLink { link_id } {
+	set curcanvas [getFromRunning_gui "curcanvas"]
+	lassign [getLinkPeers_gui $link_id] node1_id node2_id
+	if {
+		[getNodeCanvas $node1_id] != $curcanvas &&
+		[getNodeCanvas $node2_id] != $curcanvas
+	} {
+		return
 	}
 
-	if { [getNodeType $node2_id] != "pseudo" } {
-		updateIfcLabelParams $link_id $node2_id $iface2_id $x2 $y2 $x1 $y1
-		updateIfcLabel $link_id $node2_id $iface2_id
+	lassign [.panwin.f1.c find withtag "link && $link_id"] limage1 limage2
+	if { $limage1 == "" || $limage2 == "" } {
+		return
 	}
+
+	lassign [.panwin.f1.c gettags $limage1] {} {} node1_id node2_id
+	if { [getNodeType $node1_id] == "wlan" || [getNodeType $node2_id] == "wlan" } {
+		return
+	}
+
+	lassign [.panwin.f1.c coords "node && $node1_id"] x1 y1
+	if { $x1 == "" || $y1 == "" } {
+		lassign [getNodeLabelCoords $node1_id] x1 y1
+	}
+	lassign [.panwin.f1.c coords "node && $node2_id"] x2 y2
+	if { $x2 == "" || $y2 == "" } {
+		lassign [getNodeLabelCoords $node2_id] x2 y2
+	}
+
+	.panwin.f1.c coords $limage1 $x1 $y1 $x2 $y2
+	.panwin.f1.c coords $limage2 $x1 $y1 $x2 $y2
+
+	if { [isPseudoNode $node1_id] } {
+		set lx [expr {int(0.25 * ($x2 - $x1) + $x1)}]
+		set ly [expr {int(0.25 * ($y2 - $y1) + $y1)}]
+	} elseif { [isPseudoNode $node2_id] } {
+		set lx [expr {int(0.75 * ($x2 - $x1) + $x1)}]
+		set ly [expr {int(0.75 * ($y2 - $y1) + $y1)}]
+	}
+	.panwin.f1.c coords "linklabel && $link_id" $lx $ly
+
+	lassign [linkFromPseudoLink $link_id] real_link_id real_node_id real_iface_id
+
+	updateIfcLabelParams $link_id $real_node_id $real_iface_id $x2 $y2 $x1 $y1
+	updateIfcLabel $link_id $real_node_id $real_iface_id
 }
 
 proc updateIfcLabelParams { link_id node_id iface_id x1 y1 x2 y2 } {
@@ -617,42 +810,42 @@ proc updateIfcLabelParams { link_id node_id iface_id x1 y1 x2 y2 } {
 		if { $y1 == $y2 } {
 			set just left
 			set anchor w
-			set lx [expr $x1 + $width]
+			set lx [expr int($x1 + $width)]
 			if { $x1 > $x2 } {
 				set just right
 				set anchor e
-				set lx [expr $x1 - $width]
+				set lx [expr int($x1 - $width)]
 			}
 
 			set ly $y1
 		} else {
 			set just center
 			if { $y1 > $y2 } {
-				set ly [expr $y1 - $height]
+				set ly [expr int($y1 - $height)]
 				set a [expr ($x1-$x2)/($y2-$y1)*2]
 			} else {
 				# when the iface label is located beneath the icon, shift it by 16
 				# pixels because of the nodelabel
-				set ly [expr $y1 + $height + 10]
+				set ly [expr int($y1 + $height + 10)]
 				set a [expr ($x2-$x1)/($y2-$y1)*2]
 			}
 
-			set lx [expr $a*$height + $x1]
+			set lx [expr int($a*$height + $x1)]
 		}
 	} else {
 		if { $x1 > $x2 } {
 			set just right
 			set anchor e
-			set lx [expr $x1 - $width]
+			set lx [expr int($x1 - $width)]
 			set a [expr ($y2-$y1)/($x1-$x2)]
 		} else {
 			set just left
 			set anchor w
-			set lx [expr $x1 + $width]
+			set lx [expr int($x1 + $width)]
 			set a [expr ($y2-$y1)/($x2-$x1)]
 		}
 
-		set ly [expr $a*$width + $y1]
+		set ly [expr int($a*$width + $y1)]
 	}
 
 	.panwin.f1.c coords "interface && $node_id && $link_id" $lx $ly
@@ -701,17 +894,31 @@ proc newLinkGUI { node1_id node2_id } {
 proc newLinkWithIfacesGUI { node1_id iface1_id node2_id iface2_id } {
 	global changed
 
+	if { [isPseudoNode $node1_id] || [isPseudoNode $node2_id] } {
+		return
+	}
+
 	set link_id [newLinkWithIfaces $node1_id $iface1_id $node2_id $iface2_id]
 	if { $link_id == "" } {
 		return
 	}
 
-	if { [getNodeCanvas $node1_id] != [getNodeCanvas $node2_id] || $node1_id == $node2_id } {
-		lassign [getLinkPeers $link_id] orig_node1 orig_node2
-		lassign [splitLink $link_id] new_node1 new_node2
+	setLinkPeers_gui $link_id "$node1_id $node2_id"
 
-		setNodeName $new_node1 $orig_node2
-		setNodeName $new_node2 $orig_node1
+	set node1_canvas_id [getNodeCanvas $node1_id]
+	set node2_canvas_id [getNodeCanvas $node2_id]
+	if { $node1_canvas_id != $node2_canvas_id || $node1_id == $node2_id } {
+		lassign [getLinkPeers $link_id] orig_node1_id orig_node2_id
+		lassign [getLinkPeersIfaces $link_id] orig_iface1_id orig_iface2_id
+		lassign [splitLink $link_id] new_node1_id new_node2_id
+
+		setNodeCoords $new_node1_id [getNodeCoords $orig_node2_id]
+		setNodeCoords $new_node2_id [getNodeCoords $orig_node1_id]
+		setNodeLabelCoords $new_node1_id [getNodeCoords $new_node1_id]
+		setNodeLabelCoords $new_node2_id [getNodeCoords $new_node2_id]
+
+		setNodeCanvas $new_node1_id $node1_canvas_id
+		setNodeCanvas $new_node2_id $node2_canvas_id
 	}
 
 	if { [getFromRunning "stop_sched"] } {
@@ -839,7 +1046,7 @@ proc changeIconPopup {} {
 			-tags "$file_path"
 	}
 
-	set image_list [getFromRunning "image_list"]
+	set image_list [getFromRunning_gui "image_list"]
 	foreach img $image_list {
 		if {
 			$img == "" ||
@@ -1095,11 +1302,11 @@ proc selectZoomPopupMenu { x y } {
 	global zoom_stops changed
 	.button3menu delete 0 end
 
-	set sel_zoom [getFromRunning "zoom"]
+	set sel_zoom [getFromRunning_gui "zoom"]
 
 	foreach z $zoom_stops {
 		set tmp_command {
-			setToRunning "zoom" $sel_zoom
+			setToRunning_gui "zoom" $sel_zoom
 
 			redrawAll
 			set changed 1
@@ -1172,8 +1379,8 @@ proc align2grid {} {
 proc rearrange { mode } {
 	global autorearrange_enabled sizex sizey
 
-	set curcanvas [getFromRunning "curcanvas"]
-	set zoom [getFromRunning "zoom"]
+	set curcanvas [getFromRunning_gui "curcanvas"]
+	set zoom [getFromRunning_gui "zoom"]
 
 	set autorearrange_enabled 1
 	.menubar.tools entryconfigure "Auto rearrange all" -state disabled
@@ -1249,11 +1456,16 @@ proc rearrange { mode } {
 				set dy [expr {$y - $o_y}]
 				set d [expr {hypot($dx, $dy)}]
 				set d2 [expr {$d * $d}]
-				set p_fx [expr {1000.0 * $dx / ($d2 * $d + 100)}]
-				set p_fy [expr {1000.0 * $dy / ($d2 * $d + 100)}]
-				if { [linksByPeers $node_id $other] != {} } {
-					set p_fx [expr {$p_fx - $dx * $d2 * .0000000005}]
-					set p_fy [expr {$p_fy - $dy * $d2 * .0000000005}]
+				if { $d == 0 } {
+					set p_fx 20
+					set p_fy 20
+				} else {
+					set p_fx [expr {1000.0 * $dx / ($d2 * $d + 100)}]
+					set p_fy [expr {1000.0 * $dy / ($d2 * $d + 100)}]
+					if { [linksByPeers $node_id $other] != {} } {
+						set p_fx [expr {$p_fx - $dx * $d2 * .0000000005}]
+						set p_fy [expr {$p_fy - $dy * $d2 * .0000000005}]
+					}
 				}
 				set fx_t($node_id) [expr {$fx_t($node_id) + $p_fx}]
 				set fy_t($node_id) [expr {$fy_t($node_id) + $p_fy}]
@@ -1363,8 +1575,8 @@ proc rearrange { mode } {
 proc switchCanvas { direction } {
 	global sizex sizey
 
-	set curcanvas [getFromRunning "curcanvas"]
-	set canvas_list [getFromRunning "canvas_list"]
+	set curcanvas [getFromRunning_gui "curcanvas"]
+	set canvas_list [getFromRunning_gui "canvas_list"]
 
 	if { $curcanvas ni $canvas_list } {
 		set direction prev
@@ -1396,7 +1608,7 @@ proc switchCanvas { direction } {
 		}
 	}
 
-	setToRunning "curcanvas" $curcanvas
+	setToRunning_gui "curcanvas" $curcanvas
 
 	.panwin.f1.hframe.t delete all
 	set x 0
@@ -1486,13 +1698,13 @@ proc animate {} {
 proc zoom { dir } {
 	global zoom_stops
 
-	set zoom [getFromRunning "zoom"]
+	set zoom [getFromRunning_gui "zoom"]
 	set minzoom [lindex $zoom_stops 0]
 	set maxzoom [lindex $zoom_stops [expr [llength $zoom_stops] - 1]]
 	switch -exact -- $dir {
 		"down" {
 			if { $zoom > $maxzoom } {
-				setToRunning "zoom" $maxzoom
+				setToRunning_gui "zoom" $maxzoom
 			} elseif { $zoom < $minzoom } {
 				; # leave it unchanged
 			} else {
@@ -1504,13 +1716,13 @@ proc zoom { dir } {
 						set newzoom $z
 					}
 				}
-				setToRunning "zoom" $newzoom
+				setToRunning_gui "zoom" $newzoom
 			}
 			redrawAll
 		}
 		"up" {
 			if { $zoom < $minzoom } {
-				setToRunning "zoom" $minzoom
+				setToRunning_gui "zoom" $minzoom
 			} elseif { $zoom > $maxzoom } {
 				; # leave it unchanged
 			} else {
@@ -1520,13 +1732,13 @@ proc zoom { dir } {
 						break
 					}
 				}
-				setToRunning "zoom" $newzoom
+				setToRunning_gui "zoom" $newzoom
 			}
 			redrawAll
 		}
 		default {
 			if { $i < [expr [llength $zoom_stops] - 1] } {
-				setToRunning "zoom" [lindex $zoom_stops [expr $i + 1]]
+				setToRunning_gui "zoom" [lindex $zoom_stops [expr $i + 1]]
 				redrawAll
 			}
 		}

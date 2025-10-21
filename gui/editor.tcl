@@ -205,40 +205,6 @@ proc _chooseIfaceName { node_cfg } {
 	return [newObjectId $ifaces $iface_prefix]
 }
 
-#****f* editor.tcl/listLANNodes
-# NAME
-#   listLANNodes -- list LAN nodes
-# SYNOPSIS
-#   set l2peers [listLANNodes $l2node_id $l2peers]
-# FUNCTION
-#   Recursive function for finding all link layer nodes that are
-#   connected to node l2node. Returns the list of all link layer
-#   nodes that are on the same LAN as l2node.
-# INPUTS
-#   * l2node_id -- node id of a link layer node
-#   * l2peers -- old link layer nodes on the same LAN
-# RESULT
-#   * l2peers -- new link layer nodes on the same LAN
-#****
-proc listLANNodes { l2node_id l2peers } {
-	lappend l2peers $l2node_id
-
-	foreach iface_id [ifcList $l2node_id] {
-		lassign [logicalPeerByIfc $l2node_id $iface_id] peer_id peer_iface_id
-		if { [getIfcLink $peer_id $peer_iface_id] == "" } {
-			continue
-		}
-
-		if { [[getNodeType $peer_id].netlayer] == "LINK" && [getNodeType $peer_id] != "rj45" } {
-			if { $peer_id ni $l2peers } {
-				set l2peers [listLANNodes $peer_id $l2peers]
-			}
-		}
-	}
-
-	return $l2peers
-}
-
 #****f* editor.tcl/checkLinkColor
 # NAME
 #   checkLinkColor -- check link color
@@ -391,7 +357,7 @@ proc setZoom { x y } {
 	bind $w <Key-Return> "setZoomApply $w"
 
 	ttk::entry $w.setzoom.e1
-	$w.setzoom.e1 insert 0 [expr {int([getFromRunning "zoom"] * 100)}]
+	$w.setzoom.e1 insert 0 [expr {int([getFromRunning_gui "zoom"] * 100)}]
 	pack $w.setzoom.e1 -side top -pady 5 -padx 10 -fill x
 }
 
@@ -408,8 +374,8 @@ proc setZoom { x y } {
 #****
 proc setZoomApply { w } {
 	set newzoom [expr [$w.setzoom.e1 get] / 100.0]
-	if { $newzoom != [getFromRunning "zoom"] } {
-		setToRunning "zoom" $newzoom
+	if { $newzoom != [getFromRunning_gui "zoom"] } {
+		setToRunning_gui "zoom" $newzoom
 		redrawAll
 	}
 
@@ -465,7 +431,7 @@ proc selectZoom { x y } {
 	bind $w <Key-Return> "selectZoomApply $w"
 
 	ttk::combobox $w.selectzoom.e1 -values $values
-	$w.selectzoom.e1 insert 0 [expr {int([getFromRunning "zoom"] * 100)}]
+	$w.selectzoom.e1 insert 0 [expr {int([getFromRunning_gui "zoom"] * 100)}]
 	pack $w.selectzoom.e1 -side top -pady 5 -padx 10 -fill x
 
 	update
@@ -506,8 +472,8 @@ proc selectZoomApply { w } {
 	}
 
 	set newzoom [ expr $tempzoom / 100.0]
-	if { $newzoom != [getFromRunning "zoom"] } {
-		setToRunning "zoom" $newzoom
+	if { $newzoom != [getFromRunning_gui "zoom"] } {
+		setToRunning_gui "zoom" $newzoom
 
 		redrawAll
 		set changed 1
@@ -852,7 +818,7 @@ proc bindEventsToTree {} {
 #   Selects icon of the node selected in the topology tree.
 #****
 proc selectNodeFromTree { node_id } {
-	setToRunning "curcanvas" [getNodeCanvas $node_id]
+	setToRunning_gui "curcanvas" [getNodeCanvas $node_id]
 	switchCanvas none
 
 	.panwin.f1.c dtag node selected
@@ -873,7 +839,7 @@ proc selectNodeFromTree { node_id } {
 #****
 proc selectLinkPeersFromTree { link_id } {
 	lassign [getLinkPeers $link_id] node1_id node2_id
-	setToRunning "curcanvas" [getNodeCanvas $node1_id]
+	setToRunning_gui "curcanvas" [getNodeCanvas $node1_id]
 	switchCanvas none
 
 	.panwin.f1.c dtag node selected

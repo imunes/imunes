@@ -38,7 +38,7 @@
 #   * type -- annotation type
 #****
 proc addAnnotation { annotation_id type } {
-	lappendToRunning "annotation_list" $annotation_id
+	lappendToRunning_gui "annotation_list" $annotation_id
 	setAnnotationType $annotation_id $type
 }
 
@@ -53,6 +53,6 @@ proc addAnnotation { annotation_id type } {
 #   * annotation_id -- existing annotation
 #****
 proc deleteAnnotation { annotation_id } {
-	setToRunning "annotation_list" [removeFromList [getFromRunning "annotation_list"] $annotation_id]
-	cfgUnset "annotations" $annotation_id
+	setToRunning_gui "annotation_list" [removeFromList [getFromRunning_gui "annotation_list"] $annotation_id]
+	cfgUnset "gui" "annotations" $annotation_id
 }
