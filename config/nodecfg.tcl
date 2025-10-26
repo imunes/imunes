@@ -27,12 +27,7 @@
 #
 
 proc getNodeDir { node_id } {
-	set node_dir [getNodeCustomImage $node_id]
-	if { $node_dir == "" } {
-		set node_dir [getVrootDir]/[getFromRunning "eid"]/$node_id
-	}
-
-	return $node_dir
+	return [getVrootDir]/[getFromRunning "eid"]/$node_id
 }
 
 #****f* nodecfg.tcl/getNodeCustomConfigIDs

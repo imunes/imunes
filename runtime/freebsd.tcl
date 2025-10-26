@@ -1082,14 +1082,19 @@ proc prepareFilesystemForNode { node_id } {
 	# Prepare a copy-on-write filesystem root
 	if { $vroot_unionfs } {
 		# UNIONFS
-		set VROOTDIR /var/imunes
+		set VROOTDIR [getVrootDir]
 		set VROOT_RUNTIME $VROOTDIR/$eid/$node_id
 		set VROOT_OVERLAY $VROOTDIR/$eid/upper/$node_id
 		set VROOT_RUNTIME_DEV $VROOT_RUNTIME/dev
 
 		pipesExec "mkdir -p $VROOT_RUNTIME" "hold"
 		pipesExec "mkdir -p $VROOT_OVERLAY" "hold"
-		pipesExec "mount_nullfs -o ro $VROOTDIR/vroot $VROOT_RUNTIME" "hold"
+
+		set vroot [lindex [split [getNodeCustomImage $node_id] " "] end]
+		if { $vroot == "" } {
+			set vroot "$VROOTDIR/vroot"
+		}
+		pipesExec "mount_nullfs -o ro $vroot $VROOT_RUNTIME" "hold"
 		pipesExec "mount_unionfs -o noatime $VROOT_OVERLAY $VROOT_RUNTIME" "hold"
 	} else {
 		# ZFS
