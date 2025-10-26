@@ -1414,6 +1414,10 @@ proc jsonMigration { from_version to_version } {
 			cfgUnset "nodes" $node_id "labelcoords"
 			setNodeCustomIcon $node_id [cfgGet "nodes" $node_id "custom_icon"]
 			cfgUnset "nodes" $node_id "custom_icon"
+
+			if { [getNodeType $node_id] == "ext" && [getNodeNATIface $node_id] == "" } {
+				cfgSet "nodes" $node_id "nat_iface" "UNASSIGNED"
+			}
 		}
 
 		setToRunning_gui "canvas_list" [getCanvasList]
