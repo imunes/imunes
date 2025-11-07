@@ -144,7 +144,6 @@ proc splitLink { orig_link_id } {
 		# setup new pseudo node properties
 		setNodeMirror $pseudo_node_id [removeFromList $pseudo_nodes $pseudo_node_id "keep_doubles"]
 		setPseudoNodeLink $pseudo_node_id $link_id
-		setNodeLabel $pseudo_node_id "[getNodeName $other_orig_node_id]:[getIfcName $other_orig_node_id $other_orig_iface_id]"
 
 		# pseudo node default values
 		setNodeCoords $pseudo_node_id [getNodeCoords $other_orig_node_id]

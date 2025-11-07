@@ -296,11 +296,19 @@ proc drawPseudoNode { node_id } {
 		-image $pseudo \
 		-tags "node $node_id"
 
-	set label_str [getNodeLabel $node_id]
 	set color blue
 
 	set mirror_node_id [getNodeMirror $node_id]
-	lassign [nodeFromPseudoNode $mirror_node_id] peer_id -
+	lassign [nodeFromPseudoNode $mirror_node_id] peer_id peer_iface_id
+	set peer_iface_name [getIfcName $peer_id $peer_iface_id]
+	if { [getIfcVlanDev $peer_id $peer_iface_id] != "" } {
+		set vlan_tag [getIfcVlanTag $peer_id $peer_iface_id]
+		if { $vlan_tag != "" } {
+			append peer_iface_name ".$vlan_tag"
+		}
+	}
+	set label_str "[getNodeName $peer_id]:$peer_iface_name"
+
 	set peer_canvas [getNodeCanvas $peer_id]
 	if { $peer_canvas != [getFromRunning_gui "curcanvas"] } {
 		set label_str "$label_str\n@[getCanvasName $peer_canvas]"
