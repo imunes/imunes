@@ -358,7 +358,7 @@ proc saveOptions { { option_names {} } } {
 }
 
 proc applyOptionsToGUI {} {
-	global all_options all_gui_options default_options
+	global all_options all_gui_options default_options custom_options
 	global gui
 
 	if { ! $gui } {
@@ -382,6 +382,33 @@ proc applyOptionsToGUI {} {
 		}
 
 		set $option_name $value
+	}
+
+	set separator_value "{-background {} {} {} {}}"
+	set index 0
+	foreach menubar_item "view tools" {
+		set element ".menubar.$menubar_item"
+		set last [$element entryconfigure end]
+		set current ""
+		while { $current != $last } {
+			set current [$element entryconfigure $index]
+			if { $current != $separator_value } {
+				catch { $element entrycget $index "-variable" } option_name
+				if { $option_name in [dictGet $custom_options "custom_override"] } {
+					set color "#909090"
+				} else {
+					if { $option_name in [dictGet $custom_options] } {
+						set color "#10b010"
+					} else {
+						set color ""
+					}
+				}
+
+				$element entryconfigure $index -foreground $color
+			}
+
+			incr index
+		}
 	}
 }
 
