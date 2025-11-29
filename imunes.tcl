@@ -362,6 +362,11 @@ if { $execMode == "interactive" } {
 			resumeAndDestroy
 		} else {
 			resumeSelectedExperiment $selected_experiment
+
+			upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
+			set dict_run_gui ""
+
+			cfgUnset "gui"
 		}
 	} else {
 		if { $argv != "" && [file exists $argv] } {
