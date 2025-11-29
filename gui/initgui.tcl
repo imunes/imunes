@@ -1208,6 +1208,7 @@ bind $c <Control-Button-1> "button1 $c %x %y ctrl"
 bind $c <B1-Motion> "button1-motion $c %x %y"
 bind $c <B1-ButtonRelease> "button1-release $c %x %y"
 bind . <Delete> deleteSelection
+bind . <Shift-Delete> "deleteSelection 0 no_warning"
 
 # Scrolling and panning support
 bind $c <2> "$c scan mark %x %y"

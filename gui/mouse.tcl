@@ -2439,9 +2439,21 @@ proc anyLeave { c } {
 #   By calling this procedure all the selected nodes in imunes will
 #   be deleted.
 #****
-proc deleteSelection { { keep_other_ifaces 0 } } {
+proc deleteSelection { { keep_other_ifaces 0 } { no_warning "" } } {
 	global changed
 	global viewid
+
+	if { $no_warning == "" && [getFromRunning "cfg_deployed"] } {
+		set answer [tk_messageBox -message "Are you sure you want to delete selected nodes?\n\nThere is no undo in exec mode." \
+			-icon question -type yesno]
+
+		switch -- $answer {
+			yes {}
+			no {
+				return
+			}
+		}
+	}
 
 	if { ! [getFromRunning "stop_sched"] } {
 		return
