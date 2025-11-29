@@ -1053,6 +1053,7 @@ proc resumeAndDestroy {} {
 		resumeSelectedExperiment $selected_experiment
 	}
 
+	switchCanvas none
 	destroy .attachToExperimentDialog
 	toggleAutoExecutionGUI [getFromRunning "auto_execution"]
 }
