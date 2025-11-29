@@ -1009,7 +1009,7 @@ proc button3node { c x y } {
 				}
 
 				if {
-					[getFromRunning ${node_id}_running] != true &&
+					[getFromRunning ${node_id}_running] != "true" &&
 					($action in "node_destroy" ||
 					$action in "node_config node_unconfig node_reconfig" ||
 					$action in "ifaces_config ifaces_unconfig ifaces_reconfig")
@@ -1019,7 +1019,7 @@ proc button3node { c x y } {
 
 				switch -exact -- $action {
 					"node_create" {
-						if { [getFromRunning ${node_id}_running] != true } {
+						if { [getFromRunning ${node_id}_running] != "true" } {
 							trigger_nodeCreate $node_id
 						}
 					}
@@ -1134,7 +1134,7 @@ proc button3node { c x y } {
 	if {
 		$oper_mode == "exec" &&
 		[$type.virtlayer] == "VIRTUALIZED" &&
-		[getFromRunning ${node_id}_running] == true
+		[getFromRunning ${node_id}_running] == "true"
 	} {
 		global all_services_list
 
@@ -1282,7 +1282,7 @@ proc button3node { c x y } {
 		$type != "ext" &&
 		$oper_mode == "exec" &&
 		[$type.virtlayer] == "VIRTUALIZED" &&
-		[getFromRunning ${node_id}_running] == true
+		[getFromRunning ${node_id}_running] == "true"
 	} {
 		.button3menu add separator
 		.button3menu add cascade -label "Shell window" \
@@ -1328,7 +1328,7 @@ proc button3node { c x y } {
 	} elseif {
 		$oper_mode == "exec" &&
 		[$type.virtlayer] == "VIRTUALIZED" &&
-		[getFromRunning ${node_id}_running] == true
+		[getFromRunning ${node_id}_running] == "true"
 	} {
 		#
 		# Wireshark

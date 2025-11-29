@@ -1200,7 +1200,7 @@ proc nodePhysIfacesCreate { node_id ifaces } {
 	# Create a vimage
 	# Create "physical" network interfaces
 	foreach iface_id $ifaces {
-		setToRunning "${node_id}|${iface_id}_running" creating
+		setToRunning "${node_id}|${iface_id}_running" "creating"
 
 		set iface_name [getIfcName $node_id $iface_id]
 		set public_hook $node_id-$iface_name
@@ -1308,13 +1308,13 @@ proc nodeLogIfacesCreate { node_id ifaces } {
 				set dev [getIfcVlanDev $node_id $iface_id]
 				if { $tag != "" && $dev != "" } {
 					pipesExec "jexec $jail_id [getVlanTagIfcCmd $iface_name $dev $tag]" "hold"
-					setToRunning "${node_id}|${iface_id}_running" creating
+					setToRunning "${node_id}|${iface_id}_running" "creating"
 				} else {
-					setToRunning "${node_id}|${iface_id}_running" false
+					setToRunning "${node_id}|${iface_id}_running" "false"
 				}
 			}
 			lo {
-				setToRunning "${node_id}|${iface_id}_running" creating
+				setToRunning "${node_id}|${iface_id}_running" "creating"
 				if { $iface_name != "lo0" } {
 					pipesExec "jexec $jail_id ifconfig $iface_name create" "hold"
 				}
@@ -1555,7 +1555,7 @@ proc isLinkStarted { link_id } {
 	global nodecreate_timeout
 
 	set mirror_link_id [getLinkMirror $link_id]
-	if { $mirror_link_id != "" && [getFromRunning "${mirror_link_id}_running"] } {
+	if { $mirror_link_id != "" && [getFromRunning "${mirror_link_id}_running"] == "true" } {
 		return true
 	}
 
@@ -1755,7 +1755,7 @@ proc isLinkDestroyed { link_id } {
 	}
 
 	set mirror_link_id [getLinkMirror $link_id]
-	if { $mirror_link_id != "" && ! [getFromRunning "${mirror_link_id}_running"] } {
+	if { $mirror_link_id != "" && [getFromRunning "${mirror_link_id}_running"] != "true" } {
 		return true
 	}
 
@@ -2289,7 +2289,7 @@ proc nodeIfacesDestroy { eid node_id ifaces } {
 	}
 
 	foreach iface_id $ifaces {
-		setToRunning "${node_id}|${iface_id}_running" false
+		setToRunning "${node_id}|${iface_id}_running" "false"
 	}
 }
 

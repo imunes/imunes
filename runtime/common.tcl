@@ -117,7 +117,7 @@ proc updateTerminateVars {} {
 proc trigger_nodeConfig { node_id } {
 	if {
 		! [getFromRunning "cfg_deployed"] ||
-		[getFromRunning "${node_id}_running"] == false
+		[getFromRunning "${node_id}_running"] == "false"
 	} {
 		return
 	}
@@ -139,7 +139,7 @@ proc trigger_nodeUnconfig { node_id } {
 	prepareTerminateVars
 
 	set node_running [getFromRunning "${node_id}_running"]
-	if { $node_id ni $unconfigure_nodes && $node_running == true } {
+	if { $node_id ni $unconfigure_nodes && $node_running == "true" } {
 		lappend unconfigure_nodes $node_id
 	}
 
@@ -152,7 +152,7 @@ proc trigger_nodeReconfig { node_id } {
 	}
 
 	set node_running [getFromRunning "${node_id}_running"]
-	if { $node_running == true } {
+	if { $node_running == "true" } {
 		trigger_nodeUnconfig $node_id
 	}
 
@@ -162,7 +162,7 @@ proc trigger_nodeReconfig { node_id } {
 proc trigger_nodeFullConfig { node_id } {
 	if {
 		! [getFromRunning "cfg_deployed"] ||
-		[getFromRunning "${node_id}_running"] == false
+		[getFromRunning "${node_id}_running"] == "false"
 	} {
 		return
 	}
@@ -190,7 +190,7 @@ proc trigger_nodeFullReconfig { node_id } {
 	}
 
 	set node_running [getFromRunning "${node_id}_running"]
-	if { $node_running == true } {
+	if { $node_running == "true" } {
 		trigger_nodeUnconfig $node_id
 
 		prepareTerminateVars
@@ -253,15 +253,15 @@ proc trigger_nodeDestroy { node_id } {
 	prepareTerminateVars
 
 	set node_running [getFromRunning "${node_id}_running"]
-	if { $node_id ni $terminate_nodes && $node_running == true } {
+	if { $node_id ni $terminate_nodes && $node_running == "true" } {
 		lappend terminate_nodes $node_id
 	}
 
-	if { $node_id ni $unconfigure_nodes && $node_running == true } {
+	if { $node_id ni $unconfigure_nodes && $node_running == "true" } {
 		lappend unconfigure_nodes $node_id
 	}
 
-	if { $node_running == true } {
+	if { $node_running == "true" } {
 		dict set unconfigure_nodes_ifaces $node_id "*"
 		dict set destroy_nodes_ifaces $node_id "*"
 	}
@@ -304,7 +304,7 @@ proc trigger_nodeRecreate { node_id } {
 	}
 
 	set node_running [getFromRunning "${node_id}_running"]
-	if { $node_running == true } {
+	if { $node_running == "true" } {
 		trigger_nodeDestroy $node_id
 	}
 
@@ -342,7 +342,7 @@ proc trigger_linkUnconfig { link_id } {
 	prepareTerminateVars
 
 	set link_running [getFromRunning "${link_id}_running"]
-	if { $link_id ni $unconfigure_links && $link_running } {
+	if { $link_id ni $unconfigure_links && $link_running == "true" } {
 		lappend unconfigure_links $link_id
 	}
 
@@ -350,7 +350,7 @@ proc trigger_linkUnconfig { link_id } {
 
 	prepareInstantiateVars
 
-	if { $link_id in $configure_links && ! $link_running } {
+	if { $link_id in $configure_links && $link_running != "true" } {
 		set configure_links [removeFromList $configure_links $link_id]
 	}
 
@@ -363,7 +363,7 @@ proc trigger_linkReconfig { link_id } {
 	}
 
 	set link_running [getFromRunning "${link_id}_running"]
-	if { $link_running } {
+	if { $link_running == "true" } {
 		trigger_linkUnconfig $link_id
 	}
 
@@ -426,7 +426,7 @@ proc trigger_linkDestroy { link_id } {
 	prepareTerminateVars
 
 	set link_running [getFromRunning "${link_id}_running"]
-	if { $link_id ni $terminate_links && $link_running } {
+	if { $link_id ni $terminate_links && $link_running == "true" } {
 		lappend terminate_links $link_id
 
 		foreach node_id [getLinkPeers $link_id] {
@@ -443,7 +443,7 @@ proc trigger_linkDestroy { link_id } {
 
 	prepareInstantiateVars
 
-	if { $link_id in $instantiate_links && ! $link_running } {
+	if { $link_id in $instantiate_links && $link_running != "true" } {
 		set instantiate_links [removeFromList $instantiate_links $link_id]
 	}
 
@@ -456,7 +456,7 @@ proc trigger_linkRecreate { link_id } {
 	}
 
 	set link_running [getFromRunning "${link_id}_running"]
-	if { $link_running } {
+	if { $link_running == "true" } {
 		trigger_linkDestroy $link_id
 	}
 
@@ -466,7 +466,7 @@ proc trigger_linkRecreate { link_id } {
 proc trigger_ifaceCreate { node_id iface_id } {
 	if {
 		! [getFromRunning "cfg_deployed"] ||
-		[getFromRunning "${node_id}_running"] == false
+		[getFromRunning "${node_id}_running"] == "false"
 	} {
 		return
 	}
@@ -504,7 +504,7 @@ proc trigger_ifaceCreate { node_id iface_id } {
 proc trigger_ifaceDestroy { node_id iface_id } {
 	if {
 		! [getFromRunning "cfg_deployed"] ||
-		[getFromRunning "${node_id}_running"] == false
+		[getFromRunning "${node_id}_running"] == "false"
 	} {
 		return
 	}
@@ -513,7 +513,7 @@ proc trigger_ifaceDestroy { node_id iface_id } {
 
 	set iface_running [getFromRunning "${node_id}|${iface_id}_running"]
 	set ifaces [dictGet $destroy_nodes_ifaces $node_id]
-	if { "*" ni $ifaces && $iface_id ni $ifaces && $iface_running } {
+	if { "*" ni $ifaces && $iface_id ni $ifaces && $iface_running == "true" } {
 		dict lappend destroy_nodes_ifaces $node_id $iface_id
 	}
 
@@ -522,7 +522,7 @@ proc trigger_ifaceDestroy { node_id iface_id } {
 	prepareInstantiateVars
 
 	set ifaces [dictGet $create_nodes_ifaces $node_id]
-	if { $iface_id in $ifaces && ! $iface_running } {
+	if { $iface_id in $ifaces && $iface_running != "true" } {
 		set ifaces [removeFromList $ifaces $iface_id]
 		if { $ifaces == {} } {
 			dict unset create_nodes_ifaces $node_id
@@ -539,13 +539,13 @@ proc trigger_ifaceDestroy { node_id iface_id } {
 proc trigger_ifaceRecreate { node_id iface_id } {
 	if {
 		! [getFromRunning "cfg_deployed"] ||
-		[getFromRunning "${node_id}_running"] == false
+		[getFromRunning "${node_id}_running"] == "false"
 	} {
 		return
 	}
 
 	set iface_running [getFromRunning "${node_id}|${iface_id}_running"]
-	if { $iface_running } {
+	if { $iface_running == "true" } {
 		trigger_ifaceDestroy $node_id $iface_id
 	}
 
@@ -555,7 +555,7 @@ proc trigger_ifaceRecreate { node_id iface_id } {
 proc trigger_ifaceConfig { node_id iface_id } {
 	if {
 		! [getFromRunning "cfg_deployed"] ||
-		[getFromRunning "${node_id}_running"] == false
+		[getFromRunning "${node_id}_running"] == "false"
 	} {
 		return
 	}
@@ -580,7 +580,7 @@ proc trigger_ifaceConfig { node_id iface_id } {
 proc trigger_ifaceUnconfig { node_id iface_id } {
 	if {
 		! [getFromRunning "cfg_deployed"] ||
-		[getFromRunning "${node_id}_running"] == false
+		[getFromRunning "${node_id}_running"] == "false"
 	} {
 		return
 	}
@@ -589,7 +589,7 @@ proc trigger_ifaceUnconfig { node_id iface_id } {
 
 	set iface_running [getFromRunning "${node_id}|${iface_id}_running"]
 	set ifaces [dictGet $unconfigure_nodes_ifaces $node_id]
-	if { "*" ni $ifaces && $iface_id ni $ifaces && $iface_running } {
+	if { "*" ni $ifaces && $iface_id ni $ifaces && $iface_running == "true" } {
 		dict lappend unconfigure_nodes_ifaces $node_id $iface_id
 	}
 
@@ -598,7 +598,7 @@ proc trigger_ifaceUnconfig { node_id iface_id } {
 	prepareInstantiateVars
 
 	set ifaces [dictGet $configure_nodes_ifaces $node_id]
-	if { $iface_id in $ifaces && ! $iface_running } {
+	if { $iface_id in $ifaces && $iface_running != "true" } {
 		set ifaces [removeFromList $ifaces $iface_id]
 		if { $ifaces == {} } {
 			dict unset configure_nodes_ifaces $node_id
@@ -613,13 +613,13 @@ proc trigger_ifaceUnconfig { node_id iface_id } {
 proc trigger_ifaceReconfig { node_id iface_id } {
 	if {
 		! [getFromRunning "cfg_deployed"] ||
-		[getFromRunning "${node_id}_running"] == false
+		[getFromRunning "${node_id}_running"] == "false"
 	} {
 		return
 	}
 
 	set iface_running [getFromRunning "${node_id}|${iface_id}_running"]
-	if { $iface_running } {
+	if { $iface_running == "true" } {
 		trigger_ifaceUnconfig $node_id $iface_id
 	}
 
@@ -960,7 +960,7 @@ proc spawnShellExec {} {
 	if {
 		[isPseudoNode $node_id] ||
 		[[getNodeType $node_id].virtlayer] != "VIRTUALIZED" ||
-		[getFromRunning "${node_id}_running"] == false
+		[getFromRunning "${node_id}_running"] == "false"
 	} {
 		nodeConfigGUI .panwin.f1.c $node_id
 	} else {
@@ -985,7 +985,7 @@ proc spawnShellExec {} {
 #****
 proc fetchNodesConfiguration {} {
 	foreach node_id [selectedNodes] {
-		if { [getFromRunning ${node_id}_running] != true } {
+		if { [getFromRunning ${node_id}_running] != "true" } {
 			continue
 		}
 

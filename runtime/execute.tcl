@@ -408,7 +408,7 @@ set ipsecSecrets ""
 proc nodeIpsecInit { node_id } {
 	global ipsecConf ipsecSecrets isOSfreebsd
 
-	if { [getFromRunning "${node_id}_running"] == false || [getNodeIPsec $node_id] == "" } {
+	if { [getFromRunning "${node_id}_running"] == "false" || [getNodeIPsec $node_id] == "" } {
 		return
 	}
 
@@ -889,7 +889,7 @@ proc execute_nodesCreate_wait { nodes nodes_count w } {
 				continue
 			}
 
-			setToRunning "${node_id}_running" true
+			setToRunning "${node_id}_running" "true"
 
 			incr batchStep
 			incr progressbarCount
@@ -1177,7 +1177,7 @@ proc execute_nodesPhysIfacesCreate_wait { nodes_ifaces nodes_count w } {
 					if { $iface_id ni $ifaces } {
 						continue
 					}
-					setToRunning "${node_id}|${iface_id}_running" true
+					setToRunning "${node_id}|${iface_id}_running" "true"
 				}
 
 				set try_again 0
@@ -1240,7 +1240,7 @@ proc execute_nodesPhysIfacesCreate_wait { nodes_ifaces nodes_count w } {
 
 		foreach iface_id $ifaces {
 			if { [getFromRunning "${node_id}|${iface_id}_running"] == "creating" } {
-				setToRunning "${node_id}|${iface_id}_running" false
+				setToRunning "${node_id}|${iface_id}_running" "false"
 			}
 		}
 	}
@@ -1321,7 +1321,7 @@ proc execute_nodesLogIfacesCreate_wait { nodes_ifaces nodes_count w } {
 					if { $iface_id ni $ifaces } {
 						continue
 					}
-					setToRunning "${node_id}|${iface_id}_running" true
+					setToRunning "${node_id}|${iface_id}_running" "true"
 				}
 
 				set try_again 0
@@ -1384,7 +1384,7 @@ proc execute_nodesLogIfacesCreate_wait { nodes_ifaces nodes_count w } {
 
 		foreach iface_id $ifaces {
 			if { [getFromRunning "${node_id}|${iface_id}_running"] == "creating" } {
-				setToRunning "${node_id}|${iface_id}_running" false
+				setToRunning "${node_id}|${iface_id}_running" "false"
 			}
 		}
 	}
@@ -1411,8 +1411,8 @@ proc execute_linksCreate { links links_count w } {
 		displayBatchProgress $batchStep $links_count
 
 		if {
-			[getFromRunning "${node1_id}_running"] == true &&
-			[getFromRunning "${node2_id}_running"] == true &&
+			[getFromRunning "${node1_id}_running"] == "true" &&
+			[getFromRunning "${node2_id}_running"] == "true" &&
 			($node1_id ni $skip_nodes && $node2_id ni $skip_nodes)
 		} {
 			try {
@@ -1466,10 +1466,10 @@ proc execute_linksCreate_wait { links links_count w } {
 					continue
 				}
 
-				setToRunning "${link_id}_running" true
+				setToRunning "${link_id}_running" "true"
 				set mirror_link_id [getLinkMirror $link_id]
 				if { $mirror_link_id != "" } {
-					setToRunning "${mirror_link_id}_running" true
+					setToRunning "${mirror_link_id}_running" "true"
 				}
 
 				set msg "started"

@@ -636,7 +636,7 @@ proc nodePhysIfacesCreate { node_id ifaces } {
 
 	# Create "physical" network interfaces
 	foreach iface_id $ifaces {
-		setToRunning "${node_id}|${iface_id}_running" creating
+		setToRunning "${node_id}|${iface_id}_running" "creating"
 
 		set iface_name [getIfcName $node_id $iface_id]
 		set public_hook $node_id-$iface_name
@@ -661,7 +661,7 @@ proc nodePhysIfacesCreate { node_id ifaces } {
 				continue
 			}
 
-			setToRunning "${peer_id}|${peer_iface_id}_running" creating
+			setToRunning "${peer_id}|${peer_iface_id}_running" "creating"
 			if { [getNodeType $peer_id] == "rj45" } {
 				# rj45 nodes will deal with this
 
@@ -770,13 +770,13 @@ proc nodeLogIfacesCreate { node_id ifaces } {
 				set dev [getIfcVlanDev $node_id $iface_id]
 				if { $tag != "" && $dev != "" } {
 					append cmds "[getVlanTagIfcCmd $iface_name $dev $tag]\n"
-					setToRunning "${node_id}|${iface_id}_running" creating
+					setToRunning "${node_id}|${iface_id}_running" "creating"
 				} else {
-					setToRunning "${node_id}|${iface_id}_running" false
+					setToRunning "${node_id}|${iface_id}_running" "false"
 				}
 			}
 			lo {
-				setToRunning "${node_id}|${iface_id}_running" creating
+				setToRunning "${node_id}|${iface_id}_running" "creating"
 				if { $iface_name != "lo0" } {
 					append cmds "ip link add $iface_name type dummy\n"
 					append cmds "ip link set $iface_name up\n"
@@ -1205,7 +1205,7 @@ proc isLinkStarted { link_id } {
 	global nodecreate_timeout
 
 	set mirror_link_id [getLinkMirror $link_id]
-	if { $mirror_link_id != "" && [getFromRunning "${mirror_link_id}_running"] } {
+	if { $mirror_link_id != "" && [getFromRunning "${mirror_link_id}_running"] == "true" } {
 		return true
 	}
 
@@ -1404,7 +1404,7 @@ proc isLinkDestroyed { link_id } {
 	}
 
 	set mirror_link_id [getLinkMirror $link_id]
-	if { $mirror_link_id != "" && ! [getFromRunning "${mirror_link_id}_running"] } {
+	if { $mirror_link_id != "" && [getFromRunning "${mirror_link_id}_running"] != "true" } {
 		return true
 	}
 
@@ -1606,7 +1606,7 @@ proc nodeIfacesDestroy { eid node_id ifaces } {
 				pipesExec "ip link del $eid-$node_id" "hold"
 
 				lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
-				setToRunning "${peer_id}|${peer_iface_id}_running" false
+				setToRunning "${peer_id}|${peer_iface_id}_running" "false"
 			} else {
 				pipesExec "ip -n $eid link del $node_id-[getIfcName $node_id $iface_id]" "hold"
 			}
@@ -1629,12 +1629,12 @@ proc nodeIfacesDestroy { eid node_id ifaces } {
 	}
 
 	foreach iface_id $ifaces {
-		setToRunning "${node_id}|${iface_id}_running" false
+		setToRunning "${node_id}|${iface_id}_running" "false"
 
 		set link_id [getIfcLink $node_id $iface_id]
 		if { $link_id != "" && [getLinkDirect $link_id] } {
 			lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
-			setToRunning "${peer_id}|${peer_iface_id}_running" false
+			setToRunning "${peer_id}|${peer_iface_id}_running" "false"
 		}
 	}
 }

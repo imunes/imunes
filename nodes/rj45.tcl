@@ -233,7 +233,7 @@ proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
 	foreach iface_id [concat $vlan_ifaces $nonvlan_ifaces] {
 		captureExtIfc $eid $node_id $iface_id
 
-		setToRunning "${node_id}|${iface_id}_running" creating
+		setToRunning "${node_id}|${iface_id}_running" "creating"
 	}
 }
 
@@ -303,7 +303,7 @@ proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
 	foreach iface_id $ifaces {
 		releaseExtIfc $eid $node_id $iface_id
 
-		setToRunning "${node_id}|${iface_id}_running" false
+		setToRunning "${node_id}|${iface_id}_running" "false"
 	}
 }
 
@@ -338,7 +338,7 @@ proc $MODULE.nodeShutdown { eid node_id } {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeDestroy { eid node_id } {
-	setToRunning "${node_id}_running" false
+	setToRunning "${node_id}_running" "false"
 }
 
 proc $MODULE.nodeDestroyFS { eid node_id } {

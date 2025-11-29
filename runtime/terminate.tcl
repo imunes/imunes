@@ -160,10 +160,10 @@ proc terminate_linksDestroy_wait { eid links links_count w } {
 				continue
 			}
 
-			setToRunning "${link_id}_running" true
+			setToRunning "${link_id}_running" "true"
 			set mirror_link_id [getLinkMirror $link_id]
 			if { $mirror_link_id != "" } {
-				setToRunning "${mirror_link_id}_running" true
+				setToRunning "${mirror_link_id}_running" "true"
 			}
 
 			incr batchStep
@@ -353,7 +353,7 @@ proc terminate_linksUnconfigure { eid links links_count w } {
 		lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
 
 		set msg "Unconfiguring link $link_id"
-		if { [getFromRunning "${link_id}_running"] == true } {
+		if { [getFromRunning "${link_id}_running"] == "true" } {
 			try {
 				unconfigureLinkBetween $eid $node1_id $node2_id $iface1_id $iface2_id $link_id
 			} on error err {
@@ -395,12 +395,12 @@ proc terminate_linksDestroy { eid links links_count w } {
 		lassign [getLinkPeers $link_id] node1_id node2_id
 		lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
 
-		set msg "Destroying link $link_id"
-		if { [getFromRunning "${link_id}_running"] == true } {
+		set msg "Destroying link $link_id ([getFromRunning "${link_id}_running"])"
+		if { [getFromRunning "${link_id}_running"] in "true delete" } {
 			try {
 				destroyLinkBetween $eid $node1_id $node2_id $iface1_id $iface2_id $link_id
 
-				setToRunning "${link_id}_running" false
+				setToRunning "${link_id}_running" "false"
 			} on error err {
 				return -code error "Error in 'destroyLinkBetween $eid $node1_id $node2_id $iface1_id $iface2_id $link_id': $err"
 			}
@@ -578,7 +578,7 @@ proc terminate_nodesDestroyFS_wait { eid nodes nodes_count w } {
 			if { [getFromRunning "${node_id}_running"] == "delete" } {
 				unsetRunning "${node_id}_running"
 			} else {
-				setToRunning "${node_id}_running" false
+				setToRunning "${node_id}_running" "false"
 			}
 
 			incr batchStep
