@@ -145,6 +145,13 @@ set iconsrcfile [lindex [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] 0
 #interface selected in the topology tree
 set selectedIfc ""
 
+global isOSmac_gui
+if { $isOSmac_gui } {
+    set rightClick "<Button-2>"
+} else {
+    set rightClick "<Button-3>"
+}
+
 # Packets required for GUI
 #package require Img
 
@@ -1238,7 +1245,7 @@ pack propagate $mf 0
 ttk::label .bottom.textbox -relief sunken -anchor w -width 999
 ttk::label .bottom.zoom -relief sunken -anchor w -width 10
 bind .bottom.zoom <Double-1> "selectZoom %X %Y"
-bind .bottom.zoom <3> "selectZoomPopupMenu %X %Y"
+bind .bottom.zoom $rightClick "selectZoomPopupMenu %X %Y"
 ttk::label .bottom.cpu_load -relief sunken -anchor e -width 9
 ttk::label .bottom.mbuf -relief sunken -anchor w -width 15
 ttk::label .bottom.oper_mode -relief sunken -anchor w -width 10
@@ -1280,30 +1287,45 @@ $main_canvas_elem bind freeform <Double-1> "annotationConfigGUI"
 
 $main_canvas_elem bind text <KeyPress> "textInsert %A"
 $main_canvas_elem bind text <Return> "textInsert \\n"
-$main_canvas_elem bind node <3> "button3node %x %y"
-$main_canvas_elem bind nodelabel <3> "button3node %x %y"
-$main_canvas_elem bind node_running <3> "button3node %x %y"
-$main_canvas_elem bind link <3> "button3link %x %y"
-$main_canvas_elem bind linklabel <3> "button3link %x %y"
+$main_canvas_elem bind node $rightClick "button3node %x %y"
+$main_canvas_elem bind nodelabel $rightClick "button3node %x %y"
+$main_canvas_elem bind node_running $rightClick "button3node %x %y"
+$main_canvas_elem bind link $rightClick "button3link %x %y"
+$main_canvas_elem bind linklabel $rightClick "button3link %x %y"
 
 $main_canvas_elem bind route <Any-Enter> "anyLeave"
 $main_canvas_elem bind route <Any-Leave> "anyLeave"
 $main_canvas_elem bind showCfgPopup <Any-Leave> "anyLeave"
 $main_canvas_elem bind text <Any-Leave> "anyLeave"
 
-$main_canvas_elem bind oval <3> "button3annotation oval %x %y"
-$main_canvas_elem bind rectangle <3> "button3annotation rectangle %x %y"
-$main_canvas_elem bind text <3> "button3annotation text %x %y"
-$main_canvas_elem bind freeform <3> "button3annotation freeform %x %y"
+$main_canvas_elem bind oval $rightClick "button3annotation oval %x %y"
+$main_canvas_elem bind rectangle $rightClick "button3annotation rectangle %x %y"
+$main_canvas_elem bind text $rightClick "button3annotation text %x %y"
+$main_canvas_elem bind freeform $rightClick "button3annotation freeform %x %y"
 
 $main_canvas_elem bind selectmark <Any-Enter> "selectmarkEnter %x %y"
 $main_canvas_elem bind selectmark <Any-Leave> "selectmarkLeave %x %y"
 
-$main_canvas_elem bind background <3> "button3background %x %y"
-$main_canvas_elem bind grid <3> "button3background %x %y"
+$main_canvas_elem bind background $rightClick "button3background %x %y"
+$main_canvas_elem bind grid $rightClick "button3background %x %y"
+
+if { $isOSmac_gui } {
+	bind .bottom.zoom <Control-Button-1> "selectZoomPopupMenu %X %Y"
+	$main_canvas_elem bind node <Control-Button-1> "button3node %x %y"
+	$main_canvas_elem bind nodelabel <Control-Button-1> "button3node %x %y"
+	$main_canvas_elem bind node_running <Control-Button-1> "button3node %x %y"
+	$main_canvas_elem bind link <Control-Button-1> "button3link %x %y"
+	$main_canvas_elem bind linklabel <Control-Button-1> "button3link %x %y"
+	$main_canvas_elem bind oval <Control-Button-1> "button3annotation oval %x %y"
+	$main_canvas_elem bind rectangle <Control-Button-1> "button3annotation rectangle %x %y"
+	$main_canvas_elem bind text <Control-Button-1> "button3annotation text %x %y"
+	$main_canvas_elem bind freeform <Control-Button-1> "button3annotation freeform %x %y"
+	$main_canvas_elem bind background <Control-Button-1> "button3background %x %y"
+	$main_canvas_elem bind grid <Control-Button-1> "button3background %x %y"
+}
 
 $main_canvas_elem bind point <Any-Enter> "pointEnter"
-$main_canvas_elem bind point <3> "removePointGUI"
+$main_canvas_elem bind point $rightClick "removePointGUI"
 $main_canvas_elem bind point <Any-Leave> "$main_canvas_elem config -cursor left_ptr"
 
 bind $main_canvas_elem <1> "button1 %x %y none"

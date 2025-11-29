@@ -80,7 +80,7 @@ array set help_strings {
 }
 
 proc getHelpLabel { parent title } {
-	global help_strings
+	global help_strings isOSmac_gui
 
 	# make the parent change cursor on hover
 	bind $parent <Enter> "$parent config -cursor question_arrow"
@@ -93,9 +93,19 @@ proc getHelpLabel { parent title } {
 		-label "See help for '$title'" \
 		-command "helpPopup {$title} {$help_strings($title)}"
 
-	bind $parent <3> "tk_popup $child \
-		\[expr %X - \[winfo width $parent]/2] \
-		\[expr %Y - \[winfo height $parent]/2]"
+	if { $isOSmac_gui } {
+		bind $parent <Button-2> "tk_popup $child \
+			\[expr %X - \[winfo width $parent]/2] \
+			\[expr %Y - \[winfo height $parent]/2]"
+
+		bind $parent <Control-Button-1> "tk_popup $child \
+			\[expr %X - \[winfo width $parent]/2] \
+			\[expr %Y - \[winfo height $parent]/2]"
+	} else {
+		bind $parent <Button-3> "tk_popup $child \
+			\[expr %X - \[winfo width $parent]/2] \
+			\[expr %Y - \[winfo height $parent]/2]"
+	}
 
 	# destroy the help menu when leaving it with the cursor
 	bind $child <Leave> "catch { unset $child }"

@@ -280,8 +280,10 @@ proc printImunesVersion {} {
 }
 
 proc setPlatformVariables {} {
-	global isOSfreebsd isOSlinux isOSwin remote remote_error
+	global isOSfreebsd isOSlinux isOSwin remote remote_error isOSmac isOSmac_gui
 	global nodecreate_timeout nodeconf_timeout ifacesconf_timeout
+
+	set os_editor [platform::identify]
 
 	try {
 		rexec uname -s
@@ -292,7 +294,7 @@ proc setPlatformVariables {} {
 		} else {
 			set remote_error "Cannot connect to remote '$remote':\n\n$err\n\nSwitching to local mode."
 			sputs stderr $remote_error
-			set os [platform::identify]
+			set os $os_editor
 
 			set nodecreate_timeout [expr round($nodecreate_timeout / 2)]
 			set nodeconf_timeout [expr round($nodeconf_timeout / 2)]
@@ -313,6 +315,15 @@ proc setPlatformVariables {} {
 		}
 		"*win*" {
 			set isOSwin true
+		}
+		"*mac*" {
+			set isOSmac true
+		}
+	}
+
+	switch -glob -nocase $os_editor {
+		"*mac*" {
+			set isOSmac_gui true
 		}
 	}
 }
