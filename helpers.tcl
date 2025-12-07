@@ -83,6 +83,7 @@ proc parseCmdArgs { options usage } {
 	global initMode execMode eid_base debug argv selected_experiment gui
 	global printVersion prepareFlag forceFlag
 	global nodecreate_timeout ifacesconf_timeout nodeconf_timeout
+	global remote rcmd ttyrcmd escalation_comm rescalation_comm remote_max_sessions
 
 	catch { array set params [::cmdline::getoptions argv $options $usage] } err
 	if { $err != "" || $params(h) } {
@@ -104,12 +105,62 @@ proc parseCmdArgs { options usage } {
 		set gui 0
 	}
 
+	if { $params(r) != "" || $params(remote) != "" } {
+		set remote $params(r)
+		if { $params(remote) != "" } {
+			set remote $params(remote)
+		}
+
+		if { $remote != "" } {
+			set remote [string map {"+" " "} $remote]
+			set escalation_comm ""
+			if { [string match "*/*" $remote] } {
+				lassign [split $remote "/"] escalation_comm remote
+			}
+
+			set rescalation_comm "sudo -i"
+			if { [string match "*%*" $remote] } {
+				lassign [split $remote "%"] remote rescalation_comm
+			}
+
+			set port_arg ""
+			if { [string match "*:*" $remote] } {
+				lassign [split $remote ":"] remote remote_port
+				set port_arg "-p $remote_port"
+			}
+
+			set file_id [file tempfile tmp_path]
+			close $file_id
+			file delete $tmp_path
+			set ssh_path "[file dirname $tmp_path]/.imunes-%r@%n"
+			exec rm -f $ssh_path
+
+			set ssh_args "-o ControlPersist=yes -o ControlMaster=auto"
+			append ssh_args " $port_arg $remote $rescalation_comm"
+			set rcmd "ssh -o ControlPath=$ssh_path $ssh_args"
+			set ttyrcmd "ssh -t -o ControlPath=${ssh_path}_tty $ssh_args"
+
+			puts "Using remote host '$remote'"
+		} else {
+			puts stderr "Remote host not given."
+			exit 1
+		}
+
+		if { $params(rm) != "" } {
+			if { [string is integer $params(rm)] } {
+				set remote_max_sessions $params(rm)
+			} else {
+				puts stderr "Ignoring -rm, setting remote_max_sessions to $remote_max_sessions"
+			}
+		}
+	}
+
 	if { $params(b) || $params(batch) } {
 		if { $params(e) == "" && $params(eid) == "" && $fileName == "" } {
 			puts stderr $usage
 			exit 1
 		}
-		catch { exec id -u } uid
+		catch { rexec id -u } uid
 		if { $uid != "0" } {
 			puts stderr "Error: To execute experiment, run IMUNES with root permissions."
 			exit 1
@@ -217,9 +268,24 @@ proc printImunesVersion {} {
 }
 
 proc setPlatformVariables {} {
-	global isOSfreebsd isOSlinux isOSwin
+	global isOSfreebsd isOSlinux isOSwin remote remote_error
 
-	set os [platform::identify]
+	try {
+		rexec uname -s
+	} on error err {
+		if { [string match "*Warning: Permanently added * to the list of known hosts.*" $err] == 1 } {
+			set os [rexec uname -s]
+			set remote_error ""
+		} else {
+			set remote_error "Cannot connect to remote '$remote':\n\n$err\n\nSwitching to local mode."
+			puts stderr $remote_error
+			set os [platform::identify]
+			set remote ""
+		}
+	} on ok os {
+		set remote_error ""
+	}
+
 	switch -glob -nocase $os {
 		"*freebsd*" {
 			set isOSfreebsd true
@@ -383,3 +449,11 @@ proc reloadSources {} {
 	dputs "Reloaded all sources."
 }
 
+proc rexec { args } {
+	global rcmd
+
+	set cmd [list echo {*}$args | {*}$rcmd]
+
+	dputs "CMD: '$cmd'"
+	return [exec -- {*}$cmd]
+}

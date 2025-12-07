@@ -415,12 +415,12 @@ proc $MODULE.nghook { eid node_id iface_id } {
 ################################################################################
 
 proc $MODULE.prepareSystem {} {
-	catch { exec kldload if_bridge }
-	catch { exec kldload bridgestp }
-	#catch { exec jexec sysctl net.link.bridge.log_stp=1 }
-	catch { exec jexec sysctl net.link.bridge.pfil_member=0 }
-	catch { exec jexec sysctl net.link.bridge.pfil_bridge=0 }
-	catch { exec jexec sysctl net.link.bridge.pfil_onlyip=0 }
+	catch { rexec kldload if_bridge }
+	catch { rexec kldload bridgestp }
+	#catch { rexec jexec sysctl net.link.bridge.log_stp=1 }
+	catch { rexec jexec sysctl net.link.bridge.pfil_member=0 }
+	catch { rexec jexec sysctl net.link.bridge.pfil_bridge=0 }
+	catch { rexec jexec sysctl net.link.bridge.pfil_onlyip=0 }
 }
 
 #****f* stpswitch.tcl/stpswitch.nodeCreate

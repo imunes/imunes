@@ -177,11 +177,11 @@ proc $MODULE.nghook { eid node_id iface_id } {
 #****
 proc $MODULE.prepareSystem {} {
 	# TODO: check
-	catch { exec sysctl net.bridge.bridge-nf-call-arptables=0 }
-	catch { exec sysctl net.bridge.bridge-nf-call-iptables=0 }
-	catch { exec sysctl net.bridge.bridge-nf-call-ip6tables=0 }
+	catch { rexec sysctl net.bridge.bridge-nf-call-arptables=0 }
+	catch { rexec sysctl net.bridge.bridge-nf-call-iptables=0 }
+	catch { rexec sysctl net.bridge.bridge-nf-call-ip6tables=0 }
 
-	catch { exec kldload ng_hub }
+	catch { rexec kldload ng_hub }
 }
 
 #****f* hub.tcl/hub.nodeCreate

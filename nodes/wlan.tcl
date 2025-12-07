@@ -28,7 +28,7 @@ set MODULE wlan
 registerModule $MODULE "freebsd"
 
 proc $MODULE.prepareSystem {} {
-	catch { exec kldload ng_rfee }
+	catch { rexec kldload ng_rfee }
 }
 
 proc $MODULE.confNewIfc { node_id iface_id } {
@@ -55,10 +55,10 @@ proc $MODULE.virtlayer {} {
 proc $MODULE.nodeCreate { eid node_id } {
 	upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
 
-	set t [exec printf "mkpeer rfee link0 link0\nshow ." | jexec $eid ngctl -f -]
+	set t [rexec printf "mkpeer rfee link0 link0\nshow ." | jexec $eid ngctl -f -]
 	set tlen [string length $t]
 	set id [string range $t [expr $tlen - 31] [expr $tlen - 24]]
-	catch { exec jexec $eid ngctl name \[$id\]: $node_id }
+	catch { rexec jexec $eid ngctl name \[$id\]: $node_id }
 	set ngnodemap($eid\.$node_id) $node_id
 }
 
@@ -96,12 +96,12 @@ proc $MODULE.nodeConfigure { eid node_id } {
 			lappend visible_epids $epid:ber$ber
 		}
 
-		exec jexec $eid ngctl msg [set ngid]: setlinkcfg $local_linkname $local_epid:jit$tx_jitter:dup$tx_duplicate:bw$tx_bandwidth $visible_epids
+		rexec jexec $eid ngctl msg [set ngid]: setlinkcfg $local_linkname $local_epid:jit$tx_jitter:dup$tx_duplicate:bw$tx_bandwidth $visible_epids
 	}
 }
 
 proc $MODULE.nodeDestroy { eid node_id } {
-	catch { exec jexec $eid ngctl msg $node_id: shutdown }
+	catch { rexec jexec $eid ngctl msg $node_id: shutdown }
 }
 
 proc $MODULE.nodeDestroyFS { eid node_id } {

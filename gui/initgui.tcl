@@ -772,8 +772,8 @@ set widgetlist { \
 	{ "ifconfig" "ifconfig" } \
 	{ "IPv4 Routing table" "netstat -4 -rn" } \
 	{ "IPv6 Routing table" "netstat -6 -rn" } \
-	{ "RIP routes info" "vtysh -c \"show ip rip\"" } \
-	{ "RIPng routes info" "vtysh -c \"show ipv6 ripng\"" } \
+	{ "RIP routes info" "vtysh -c 'show ip rip'" }
+	{ "RIPng routes info" "vtysh -c 'show ipv6 ripng'" } \
 	{ "Process list" "ps ax" } \
 	{ "IPv4 sockets" "netstat -4 -an" } \
 	{ "IPv6 sockets" "netstat -6 -an" } \

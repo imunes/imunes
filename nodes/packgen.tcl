@@ -179,7 +179,7 @@ proc $MODULE.maxLinks {} {
 ################################################################################
 
 proc $MODULE.prepareSystem {} {
-	catch { exec kldload ng_source }
+	catch { rexec kldload ng_source }
 }
 
 #****f* packgen.tcl/packgen.nodeCreate
@@ -244,9 +244,15 @@ proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
 #   * node_id - id of the node
 #****
 proc $MODULE.nodeConfigure { eid node_id } {
+	global remote rcmd
+
+	set cmd ""
+	if { $remote != "" } {
+		set cmd $rcmd
+	}
 	foreach iface_id [ifcList $node_id] {
 		foreach packet [packgenPackets $node_id] {
-			set fd [open "| jexec $eid nghook $node_id: input" w]
+			set fd [open "| $cmd jexec $eid nghook $node_id: input" w]
 			fconfigure $fd -encoding binary
 
 			set pdata [getPackgenPacketData $node_id [lindex $packet 0]]

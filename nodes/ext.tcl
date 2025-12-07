@@ -219,8 +219,8 @@ proc $MODULE.maxLinks {} {
 #   Does nothing
 #****
 proc $MODULE.prepareSystem {} {
-	catch { exec kldload ipfilter }
-	catch { sysctl net.inet.ip.forwarding=1 }
+	catch { rexec kldload ipfilter }
+	catch { rexec sysctl net.inet.ip.forwarding=1 }
 }
 
 #****f* ext.tcl/ext.nodeCreate
@@ -364,10 +364,12 @@ proc $MODULE.nodeUnconfigure { eid node_id } {
 #   * node_id -- node id
 #****
 proc $MODULE.nodeShutdown { eid node_id } {
+	global ttyrcmd
+
 	set iface_id [lindex [ifcList $node_id] 0]
 	if { "$iface_id" != "" } {
 		killExtProcess "wireshark.*[getNodeName $node_id].*\\($eid\\)"
-		killExtProcess "xterm -name imunes-terminal -T Capturing $eid-$node_id -e tcpdump -ni $eid-$node_id"
+		killExtProcess "xterm -name imunes-terminal -T Capturing $eid-$node_id -e $ttyrcmd tcpdump -ni $eid-$node_id"
 		stopExternalConnection $eid $node_id
 	}
 }

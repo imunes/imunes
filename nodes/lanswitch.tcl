@@ -198,12 +198,12 @@ proc $MODULE.nghook { eid node_id iface_id } {
 #   Loads ng_bridge into the kernel.
 #****
 proc $MODULE.prepareSystem {} {
-	catch { exec sysctl net.bridge.bridge-nf-call-arptables=0 }
-	catch { exec sysctl net.bridge.bridge-nf-call-iptables=0 }
-	catch { exec sysctl net.bridge.bridge-nf-call-ip6tables=0 }
+	catch { rexec sysctl net.bridge.bridge-nf-call-arptables=0 }
+	catch { rexec sysctl net.bridge.bridge-nf-call-iptables=0 }
+	catch { rexec sysctl net.bridge.bridge-nf-call-ip6tables=0 }
 
-	catch { exec kldload ng_bridge }
-	catch { exec kldload ng_vlan }
+	catch { rexec kldload ng_bridge }
+	catch { rexec kldload ng_vlan }
 }
 
 #****f* lanswitch.tcl/lanswitch.nodeCreate
