@@ -378,7 +378,9 @@ proc newIface { node_id iface_type auto_config { stolen_iface "" } } {
 		}
 	}
 
-	setToRunning "${node_id}|${iface_id}_running" false
+	if { [getFromRunning "${node_id}|${iface_id}_running"] == "" } {
+		setToRunning "${node_id}|${iface_id}_running" "false"
+	}
 
 	setNodeIface $node_id $iface_id {}
 
@@ -428,6 +430,11 @@ proc removeIface { node_id iface_id { keep_other_ifaces 1} } {
 	set iface_name [getIfcName $node_id $iface_id]
 
 	cfgUnset "nodes" $node_id "ifaces" $iface_id
+	if { [getFromRunning "${node_id}|${iface_id}_running"] == "true" } {
+		setToRunning "${node_id}|${iface_id}_running" "delete"
+	} else {
+		unsetRunning "${node_id}|${iface_id}_running"
+	}
 
 	foreach {logiface_id iface_cfg} [cfgGet "nodes" $node_id "ifaces"] {
 		switch -exact [dictGet $iface_cfg "type"] {

@@ -401,7 +401,7 @@ proc removeNode { node_id { keep_other_ifaces 0 } } {
 
 	cfgUnset "nodes" $node_id
 	if { [getFromRunning "${node_id}_running"] == "true" } {
-		setToRunning "${node_id}_running" delete
+		setToRunning "${node_id}_running" "delete"
 	} else {
 		unsetRunning "${node_id}_running"
 	}
@@ -434,7 +434,9 @@ proc newNode { type } {
 	}
 
 	setNodeType $node_id $type
-	setToRunning "${node_id}_running" false
+	if { [getFromRunning "${node_id}_running"] == "" } {
+		setToRunning "${node_id}_running" "false"
+	}
 
 	lappendToRunning "node_list" $node_id
 

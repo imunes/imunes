@@ -92,9 +92,9 @@ set debug 0
 set printVersion 0
 set prepareFlag 0
 set forceFlag 0
-set nodecreate_timeout 4
-set ifacesconf_timeout 3
-set nodeconf_timeout 3
+set nodecreate_timeout 5
+set ifacesconf_timeout 5
+set nodeconf_timeout 5
 set selected_experiment ""
 set gui 1
 

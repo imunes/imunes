@@ -93,6 +93,11 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 	setToRunning "link_list" [removeFromList [getFromRunning "link_list"] $link_id]
 
 	cfgUnset "links" $link_id
+	if { [getFromRunning "${link_id}_running"] == "true" } {
+		setToRunning "${link_id}_running" "delete"
+	} else {
+		unsetRunning "${link_id}_running"
+	}
 
 	# after deleting the link, refresh nodes auto default routes
 	lassign [getSubnetData $node1_id $iface1_id {} {} 0] new_subnet1_gws new_subnet1_data
@@ -291,7 +296,9 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
 	lassign [getSubnetData $node2_id $iface2_id {} {} 0] old_subnet2_gws old_subnet2_data
 
 	set link_id [newObjectId [getFromRunning "link_list"] "l"]
-	setToRunning "${link_id}_running" false
+	if { [getFromRunning "${link_id}_running"] == "" } {
+		setToRunning "${link_id}_running" "false"
+	}
 
 	setIfcLink $node1_id $iface1_id $link_id
 	setIfcLink $node2_id $iface2_id $link_id
