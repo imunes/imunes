@@ -435,6 +435,10 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 	if { $unconfigure_links == "*" } {
 		set unconfigure_links $terminate_links
 	}
+
+	# skip unconfiguring links that are going to be destroyed
+	set unconfigure_links [removeFromList $unconfigure_links $terminate_links]
+
 	set unconfigure_links_count [llength $unconfigure_links]
 
 	set maxProgressbasCount [expr {1 + 1*$all_nodes_count + 1*$links_count + 1*$unconfigure_links_count + 2*$native_nodes_count + 3*$virtualized_nodes_count + 1*$unconfigure_nodes_ifaces_count + 1*$destroy_nodes_ifaces_count + 1*$destroy_nodes_extifaces_count + 1*$unconfigure_nodes_count}]
