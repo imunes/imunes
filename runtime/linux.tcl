@@ -1537,7 +1537,7 @@ proc isNodeDestroyed { node_id } {
 		catch { rexec docker inspect --format '{{.State.Running}}' $docker_id } status
 	}
 
-	return [string match "*Error: No such object: $docker_id*" $status]
+	return [string match -nocase "*Error: No such object: $docker_id*" $status]
 }
 
 proc isNodeDestroyedFS { node_id } {
