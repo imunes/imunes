@@ -2887,13 +2887,13 @@ proc configGUI_ifcMACAddressApply { wi node_id iface_id } {
 			lassign $dup dup_node_id dup_iface_id
 
 			if { $dup_node_id == $node_id } {
-				set msg "Provided MAC address already exists on node's $dup_node_id ([_getNodeName $node_cfg]) interface $dup_iface_id ([_getIfcName $node_cfg $dup_iface_id])"
+				set names "[_getNodeName $node_cfg] - [_getIfcName $node_cfg $dup_iface_id]"
 			} else {
-				set msg "Provided MAC address already exists on node's $dup_node_id ([getNodeName $dup_node_id]) interface $dup_iface_id ([getIfcName $dup_node_id $dup_iface_id])"
+				set names "[getNodeName $dup_node_id] - [getIfcName $dup_node_id $dup_iface_id]"
 			}
 
 			tk_dialog .dialog1 "IMUNES warning" \
-				"$msg" \
+				"Provided MAC address $macaddr already exists on node's $dup_node_id interface $dup_iface_id: $names" \
 				info 0 Dismiss
 		}
 
