@@ -2566,8 +2566,7 @@ proc configureExternalConnection { eid node_id } {
 
 	set ether [getIfcMACaddr $node_id $ifc]
 	if { $ether == "" } {
-		autoMACaddr $node_id $ifc
-		set ether [getIfcMACaddr $node_id $ifc]
+		set ether [autoMACaddr $node_id $ifc]
 	}
 	set cmds "ip l set $outifc address $ether"
 

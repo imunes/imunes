@@ -190,7 +190,13 @@ proc paste {} {
 			#cfgSet "nodes" $new_node_id "ifaces" $iface_id "peer" $new_link_id
 
 			if { $cutNodes == 0 } {
+				setIfcMACaddr $new_node_id $iface_id ""
 				autoMACaddr $new_node_id $iface_id
+			} else {
+				set mac_address [getIfcMACaddr $new_node_id $iface_id]
+				if { $mac_address != "" } {
+					lappendToRunning "mac_used_list" $mac_address
+				}
 			}
 
 			set addrs4 [getIfcIPv4addrs $new_node_id $iface_id]

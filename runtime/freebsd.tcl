@@ -1226,9 +1226,8 @@ proc nodePhysIfacesCreate { node_id ifaces } {
 
 				set ether [getIfcMACaddr $node_id $iface_id]
 				if { $ether == "" } {
-					autoMACaddr $node_id $iface_id
+					set ether [autoMACaddr $node_id $iface_id]
 				}
-				set ether [getIfcMACaddr $node_id $iface_id]
 
 				global ifc_dad_disable
 				if { $ifc_dad_disable } {
@@ -1252,10 +1251,9 @@ proc nodePhysIfacesCreate { node_id ifaces } {
 
 				set ether [getIfcMACaddr $node_id $iface_id]
 				if { $ether == "" } {
-					autoMACaddr $node_id $iface_id
+					set ether [autoMACaddr $node_id $iface_id]
 				}
 
-				set ether [getIfcMACaddr $node_id $iface_id]
 				pipesExec "ifconfig $outifc link $ether" "hold"
 			}
 			default {
@@ -2791,8 +2789,7 @@ proc configureExternalConnection { eid node_id } {
 
 	set ether [getIfcMACaddr $node_id $ifc]
 	if { $ether != "" } {
-		autoMACaddr $node_id $ifc
-		set ether [getIfcMACaddr $node_id $ifc]
+		set ether [autoMACaddr $node_id $ifc]
 	}
 	set cmds "ifconfig $outifc link $ether"
 

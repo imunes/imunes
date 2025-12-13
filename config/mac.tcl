@@ -63,7 +63,7 @@ proc randomizeMACbytes {} {
 #****
 proc autoMACaddr { node_id iface_id } {
 	if { [getNodeType $node_id] != "ext" && [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" } {
-		return
+		return ""
 	}
 
 	setToRunning "mac_used_list" [removeFromList [getFromRunning "mac_used_list"] [getIfcMACaddr $node_id $iface_id] "keep_doubles"]
@@ -72,6 +72,8 @@ proc autoMACaddr { node_id iface_id } {
 
 	lappendToRunning "mac_used_list" $macaddr
 	setIfcMACaddr $node_id $iface_id $macaddr
+
+	return $macaddr
 }
 
 proc getNextMACaddr { { mac_used_list "" } } {

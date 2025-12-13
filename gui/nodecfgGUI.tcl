@@ -2904,7 +2904,7 @@ proc configGUI_ifcMACAddressApply { wi node_id iface_id } {
 
 		global node_existing_mac
 		if { $oldmacaddr != "" } {
-			set node_existing_mac [removeFromList $node_existing_mac $oldmacaddr]
+			set node_existing_mac [removeFromList $node_existing_mac $oldmacaddr "keep_doubles"]
 		}
 
 		lappend node_existing_mac {*}$macaddr
@@ -2947,7 +2947,7 @@ proc configGUI_ifcIPv4AddressApply { wi node_id iface_id } {
 
 		global node_existing_ipv4
 		if { $oldipaddrs != "" } {
-			set node_existing_ipv4 [removeFromList $node_existing_ipv4 $oldipaddrs]
+			set node_existing_ipv4 [removeFromList $node_existing_ipv4 $oldipaddrs "keep_doubles"]
 		}
 
 		lappend node_existing_ipv4 {*}$addrs4
@@ -2986,7 +2986,7 @@ proc configGUI_ifcIPv6AddressApply { wi node_id iface_id } {
 
 		global node_existing_ipv6
 		if { $oldipaddrs != "" } {
-			set node_existing_ipv6 [removeFromList $node_existing_ipv6 $oldipaddrs]
+			set node_existing_ipv6 [removeFromList $node_existing_ipv6 $oldipaddrs "keep_doubles"]
 		}
 
 		lappend node_existing_ipv6 {*}$addrs6
