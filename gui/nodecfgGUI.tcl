@@ -2882,7 +2882,7 @@ proc configGUI_ifcMACAddressApply { wi node_id iface_id } {
 	}
 
 	set oldmacaddr [_getIfcMACaddr $node_cfg $iface_id]
-	if { $force || $macaddr != $oldmacaddr } {
+	if { $force || $macaddr != $oldmacaddr || $apply } {
 		if { $apply == 1 && $dup != 0 && $macaddr != "" } {
 			lassign $dup dup_node_id dup_iface_id
 
@@ -2897,10 +2897,10 @@ proc configGUI_ifcMACAddressApply { wi node_id iface_id } {
 				info 0 Dismiss
 		}
 
-		if { $apply == 1 } {
-			set node_cfg [_setIfcMACaddr $node_cfg $iface_id $macaddr]
+		set node_cfg [_setIfcMACaddr $node_cfg $iface_id $macaddr]
+		if { $macaddr != $oldmacaddr } {
+			set changed 1
 		}
-		set changed 1
 
 		global node_existing_mac
 		if { $oldmacaddr != "" } {
@@ -2939,11 +2939,11 @@ proc configGUI_ifcIPv4AddressApply { wi node_id iface_id } {
 	}
 
 	set oldipaddrs [_getIfcIPv4addrs $node_cfg $iface_id]
-	if { $force || $addrs4 != $oldipaddrs } {
-		if { $apply == 1 } {
-			set node_cfg [_setIfcIPv4addrs $node_cfg $iface_id $addrs4]
+	if { $force || $addrs4 != $oldipaddrs || $apply } {
+		set node_cfg [_setIfcIPv4addrs $node_cfg $iface_id $addrs4]
+		if { $addrs4 != $oldipaddrs } {
+			set changed 1
 		}
-		set changed 1
 
 		global node_existing_ipv4
 		if { $oldipaddrs != "" } {
@@ -2978,11 +2978,11 @@ proc configGUI_ifcIPv6AddressApply { wi node_id iface_id } {
 	}
 
 	set oldipaddrs [_getIfcIPv6addrs $node_cfg $iface_id]
-	if { $force || $addrs6 != $oldipaddrs } {
-		if { $apply == 1 } {
-			set node_cfg [_setIfcIPv6addrs $node_cfg $iface_id $addrs6]
+	if { $force || $addrs6 != $oldipaddrs || $apply } {
+		set node_cfg [_setIfcIPv6addrs $node_cfg $iface_id $addrs6]
+		if { $addrs6 != $oldipaddrs } {
+			set changed 1
 		}
-		set changed 1
 
 		global node_existing_ipv6
 		if { $oldipaddrs != "" } {
