@@ -202,7 +202,7 @@ proc configGUI_addTree { wi node_id } {
 
 	set sorted_iface_list {}
 	set sorted_logiface_list {}
-	foreach iface_name [lsort -ascii [_allIfacesNames $node_cfg]] {
+	foreach iface_name [lsort -dictionary [_allIfacesNames $node_cfg]] {
 		set iface_id [_ifaceIdFromName $node_cfg $iface_name]
 		if { $iface_id in $iface_list } {
 			lappend sorted_iface_list $iface_id
@@ -609,7 +609,7 @@ proc configGUI_refreshIfcsTree { wi node_id } {
 
 	set sorted_iface_list {}
 	set sorted_logiface_list {}
-	foreach iface_name [lsort -ascii [_allIfacesNames $node_cfg]] {
+	foreach iface_name [lsort -dictionary [_allIfacesNames $node_cfg]] {
 		set iface_id [_ifaceIdFromName $node_cfg $iface_name]
 		if { $iface_id in $iface_list } {
 			lappend sorted_iface_list $iface_id
@@ -5874,7 +5874,7 @@ proc configGUI_addBridgeTree { wi node_id } {
 	set cancel 0
 
 	set iface_list [_ifcList $node_cfg]
-	set sorted_iface_list [lsort -ascii $iface_list]
+	set sorted_iface_list [lsort -dictionary $iface_list]
 
 	ttk::frame $wi.panwin.f1.grid
 	ttk::treeview $wi.panwin.f1.tree -height 5 -selectmode browse \
@@ -6088,7 +6088,7 @@ proc configGUI_refreshBridgeIfcsTree { wi node_id } {
 	global brtreecolumns node_cfg
 
 	set iface_list [_ifcList $node_cfg]
-	set sorted_iface_list [lsort -ascii $iface_list]
+	set sorted_iface_list [lsort -dictionary $iface_list]
 
 	$wi delete [$wi children {}]
 	#Creating new items

@@ -218,7 +218,7 @@ proc showRoute { c node2_id } {
 				vwait t
 
 				#Get second nodes list of interfaces
-				set ifaces [lsort -ascii [ifcList $node2_id]]
+				set ifaces [lsort -dictionary [ifcList $node2_id]]
 
 				#Make your own traceroute
 				set iface_id [lindex $ifaces 0]
@@ -296,7 +296,7 @@ proc findNode { c ipAddr } {
 	#Find node with specified IP address
 	for { set j 0 } { $j < $nodesNum } { incr j } {
 		set node_id [lindex $nodeList $j]
-		set ifaces [lsort -ascii [ifcList $node_id]]
+		set ifaces [lsort -dictionary [ifcList $node_id]]
 		foreach iface_id $ifaces {
 			set ip [lindex [getIfcIPv4addrs $node_id $iface_id] 0]
 			set slashPlace [string first "/" $ip]
