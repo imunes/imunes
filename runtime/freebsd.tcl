@@ -30,7 +30,9 @@ proc moveFileFromNode { node_id path ext_path } {
 #****
 proc writeDataToNodeFile { node_id path data } {
 	set node_dir [getNodeDir $node_id]
-	if { [catch { rexec test -d $node_dir}] } {
+
+	catch { rexec test -d $node_dir} status
+	if { [string match -nocase "*No such file or directory*" $status] } {
 		return
 	}
 
@@ -112,8 +114,8 @@ proc checkForExternalApps { app_list } {
 #****
 proc checkForApplications { node_id app_list } {
 	foreach app $app_list {
-		set status [ catch { rexec jexec [getFromRunning "eid"].$node_id which $app } err ]
-		if { $status } {
+		catch { rexec jexec [getFromRunning "eid"].$node_id which $app } err
+		if { $err == "" } {
 			return 1
 		}
 	}
@@ -1795,7 +1797,12 @@ proc isNodeIfacesDestroyed { node_id ifaces } {
 
 	set node_type [getNodeType $node_id]
 	if { $node_type == "ext" } {
-		return [catch { rexec ! ifconfig $eid-$node_id }]
+		catch { rexec ifconfig $eid-$node_id } status
+		if { [string match -nocase "*does not exist*" $status] } {
+			return true
+		}
+
+		return false
 	}
 
 	set cmds ""
@@ -1882,7 +1889,14 @@ proc isNodeDestroyedFS { node_id } {
 		return true
 	}
 
-	return [catch { rexec ! test -d [getVrootDir]/$eid/$node_id }]
+	set eid [getFromRunning "eid"]
+
+	catch { rexec ls [getVrootDir]/$eid/$node_id } status
+	if { [string match -nocase "*No such file or directory*" $status] } {
+		return true
+	}
+
+	return false
 }
 
 #****f* freebsd.tcl/killAllNodeProcesses

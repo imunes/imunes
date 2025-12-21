@@ -1477,7 +1477,12 @@ proc isNodeIfacesDestroyed { node_id ifaces } {
 
 	set node_type [getNodeType $node_id]
 	if { $node_type == "ext" } {
-		return [catch { rexec ! ip link show $eid-$node_id }]
+		catch { rexec ip link show $eid-$node_id } status
+		if { [string match -nocase "*does not exist*" $status] } {
+			return true
+		}
+
+		return false
 	}
 
 	set cmds ""
@@ -1558,9 +1563,13 @@ proc isNodeDestroyedFS { node_id } {
 	set eid [getFromRunning "eid"]
 	set docker_id "$eid.$node_id"
 
-	if { [catch { rexec ip netns exec [getNodeNetns $eid $node_id] true }] } {
+	catch { rexec ip netns exec [getNodeNetns $eid $node_id] true } status
+	if { [string match -nocase "*No such file or directory*" $status] } {
 		# netns deleted, check FS
-		return [catch { rexec ! ls [getVrootDir]/$eid/$node_id }]
+		catch { rexec ls [getVrootDir]/$eid/$node_id } status
+		if { [string match -nocase "*No such file or directory*" $status] } {
+			return true
+		}
 	}
 
 	return false
@@ -2309,8 +2318,9 @@ proc fetchNodeRunningConfig { node_id } {
 
 proc checkSysPrerequisites {} {
 	set msg ""
-	if { [catch { rexec docker ps }] } {
-		set msg "Cannot start experiment. Is docker installed and running (check the output of 'docker ps')?"
+	catch { rexec docker info } status
+	if { ! [string match -nocase "*Storage Driver: overlay2*" $status] } {
+		set msg "Cannot start experiment.\nIs docker installed and running with overlay2 FS (check the output of 'docker info')?"
 	}
 
 	return $msg
