@@ -698,7 +698,7 @@ proc fetchInterfaceData { node_id iface_id } {
 	global node_cfg
 
 	set iface_name [_getIfcName $node_cfg $iface_id]
-	if { $iface_name ni [getExtIfcs] } {
+	if { $iface_name ni [getHostIfcList "lo* ipfw* tun*"] } {
 		puts "No interface $iface_name."
 
 		return
@@ -1011,12 +1011,16 @@ proc fetchNodeRunningConfig { node_id } {
 # RESULT
 #   * extifcs -- list of all external interfaces
 #****
-proc getHostIfcList {} {
+proc getHostIfcList { { filter_list "lo0" } } {
 	# fetch interface list from the system
-	set extifcs [rexec ifconfig -l]
+	if { [catch { rexec ifconfig -l } extifcs] } {
+		return ""
+	}
+
 	# exclude loopback interface
-	set ilo [lsearch $extifcs lo0]
-	set extifcs [lreplace $extifcs $ilo $ilo]
+	foreach ignore $filter_list {
+		set extifcs [lsearch -all -inline -not $extifcs $ignore]
+	}
 
 	return $extifcs
 }
@@ -2563,26 +2567,6 @@ proc enableIPforwarding { node_id } {
 		pipesExec "jexec $eid\.$node_id sysctl net.inet.ip.fastforwarding=1" "hold"
 	}
 	pipesExec "jexec $eid\.$node_id sysctl net.inet6.ip6.forwarding=1" "hold"
-}
-
-#****f* freebsd.tcl/getExtIfcs
-# NAME
-#   getExtIfcs -- get external interfaces
-# SYNOPSIS
-#   getExtIfcs
-# FUNCTION
-#   Returns the list of all available external interfaces except those defined
-#   in the ignore loop.
-# RESULT
-#   * ifsc - list of interfaces
-#****
-proc getExtIfcs {} {
-	catch { rexec ifconfig -l } ifcs
-	foreach ignore "lo* ipfw* tun*" {
-		set ifcs [ lsearch -all -inline -not $ifcs $ignore ]
-	}
-
-	return "$ifcs"
 }
 
 proc getStateIfcCmd { iface_name state } {

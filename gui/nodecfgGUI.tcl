@@ -1536,7 +1536,7 @@ proc configGUI_rj45s { wi node_id } {
 
 	global node_cfg
 
-	set ifcs [getExtIfcs]
+	set ifcs [getHostIfcList]
 	foreach iface_id [_allIfcList $node_cfg] {
 		set group "$iface_id [_getIfcName $node_cfg $iface_id]"
 		lassign $group iface_id extIfc
@@ -1972,7 +1972,7 @@ proc configGUI_addRj45PanedWin { wi node_id } {
 	ttk::label $wi.stolen.label -text "Stolen interface:"
 	getHelpLabel $wi.stolen.label "Configure External interface"
 	ttk::combobox $wi.stolen.name -width 14 -textvariable extIfc$iface_id
-	set ifcs [getExtIfcs]
+	set ifcs [getHostIfcList]
 	$wi.stolen.name configure -values [concat UNASSIGNED $ifcs]
 	$wi.stolen.name set [_getIfcName $node_cfg $iface_id]
 
@@ -2565,7 +2565,7 @@ proc configGUI_externalIfcs { wi node_id } {
 
 	if { [_getNodeType $node_cfg] == "ext" } {
 		ttk::combobox $wi.if$iface_id.nat_iface -width 14 -textvariable extIfc$node_id
-		set ifcs [getExtIfcs]
+		set ifcs [getHostIfcList]
 		$wi.if$iface_id.nat_iface configure -values [concat UNASSIGNED $ifcs]
 		$wi.if$iface_id.nat_iface set [_cfgGet $node_cfg "nat_iface"]
 	}

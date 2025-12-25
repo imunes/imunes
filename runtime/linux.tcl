@@ -397,12 +397,16 @@ proc prepareDevfs { { force 0 } } {}
 # RESULT
 #   * extifcs -- list of all external interfaces
 #****
-proc getHostIfcList {} {
+proc getHostIfcList { { filter_list "lo" } } {
 	# fetch interface list from the system
-	set extifcs [rexec ls /sys/class/net]
+	if { [catch { rexec ls /sys/class/net } extifcs] } {
+		return ""
+	}
+
 	# exclude loopback interface
-	set ilo [lsearch $extifcs lo]
-	set extifcs [lreplace $extifcs $ilo $ilo]
+	foreach ignore $filter_list {
+		set extifcs [lsearch -all -inline -not $extifcs $ignore]
+	}
 
 	return $extifcs
 }
@@ -1740,26 +1744,6 @@ proc enableIPforwarding { node_id } {
 	pipesExec "docker exec -d [getFromRunning "eid"].$node_id sh -c \'$cmds\'" "hold"
 }
 
-#****f* linux.tcl/getExtIfcs
-# NAME
-#   getExtIfcs -- get external interfaces
-# SYNOPSIS
-#   getExtIfcs
-# FUNCTION
-#   Returns the list of all available external interfaces except those defined
-#   in the ignore loop.
-# RESULT
-#   * ifsc - list of interfaces
-#****
-proc getExtIfcs {} {
-	catch { rexec ls /sys/class/net } ifcs
-	foreach ignore "lo* ipfw* tun*" {
-		set ifcs [ lsearch -all -inline -not $ifcs $ignore ]
-	}
-
-	return "$ifcs"
-}
-
 #****f* linux.tcl/captureExtIfc
 # NAME
 #   captureExtIfc -- capture external interface
@@ -2047,7 +2031,7 @@ proc fetchInterfaceData { node_id iface_id } {
 	global node_cfg
 
 	set iface_name [_getIfcName $node_cfg $iface_id]
-	if { $iface_name ni [getExtIfcs] } {
+	if { $iface_name ni [getHostIfcList "lo* tun*"] } {
 		puts "No interface $iface_name."
 
 		return
