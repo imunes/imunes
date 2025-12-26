@@ -685,13 +685,9 @@ proc displayBatchProgress { prgs tot } {
 #****
 proc pipesCreate {} {
 	global inst_pipes last_inst_pipe
-	global rcmd remote remote_max_sessions
+	global rcmd remote
 
-	if { $remote != "" && $remote_max_sessions > 0 } {
-		set ncpus $remote_max_sessions
-	} else {
-		set ncpus [getCpuCount]
-	}
+	set ncpus [getCpuCount]
 	for { set i 0 } { $i < $ncpus } { incr i } {
 		set inst_pipes($i) [open "| $rcmd > /dev/null" w]
 		chan configure $inst_pipes($i) \

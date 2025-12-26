@@ -92,19 +92,20 @@ set debug 0
 set printVersion 0
 set prepareFlag 0
 set forceFlag 0
+set max_jobs 0
 set nodecreate_timeout 5
 set ifacesconf_timeout 5
 set nodeconf_timeout 5
 set selected_experiment ""
 set gui 1
 
-global remote rcmd ttyrcmd escalation_comm rescalation_comm
+global remote rcmd ttyrcmd escalation_comm rescalation_comm remote_factor
 set remote ""
 set rcmd "sh"
 set ttyrcmd "sh -c"
 set escalation_comm ""
 set rescalation_comm ""
-set remote_max_sessions 4
+set remote_factor 2
 
 set options {
 	{a					"Attach to a running experiment"}
@@ -116,11 +117,11 @@ set options {
 	{c.secret			"Run in CLI mode"}
 	{cli.secret			"Run in CLI mode"}
 	{d.secret			"Turn on debug mode"}
+	{j.arg				"0" "Max parallel jobs (0 = number of CPUs)"}
 	{p					"Prepare virtual root file system"}
 	{prepare			"Prepare virtual root file system"}
 	{r.arg.secret		"" "Connect to remote host via SSH"}
 	{remote.arg.secret	"" "Connect to remote host via SSH"}
-	{rm.arg.secret		"8" "Max remote SSH sessions"}
 	{f					"Force virtual root preparation (delete existing vroot)"}
 	{force				"Force virtual root preparation (delete existing vroot)"}
 	{i					"Setup devfs rules for virtual nodes (Only on FreeBSD)"}

@@ -82,8 +82,8 @@ proc safeSourceFile { file } {
 proc parseCmdArgs { options usage } {
 	global initMode execMode eid_base debug argv selected_experiment gui
 	global printVersion prepareFlag forceFlag
-	global nodecreate_timeout ifacesconf_timeout nodeconf_timeout
-	global remote rcmd ttyrcmd escalation_comm rescalation_comm remote_max_sessions
+	global max_jobs nodecreate_timeout ifacesconf_timeout nodeconf_timeout remote_factor
+	global remote rcmd ttyrcmd escalation_comm rescalation_comm
 
 	catch { array set params [::cmdline::getoptions argv $options $usage] } err
 	if { $err != "" || $params(h) } {
@@ -140,17 +140,21 @@ proc parseCmdArgs { options usage } {
 			set rcmd "ssh -o ControlPath=$ssh_path $ssh_args"
 			set ttyrcmd "ssh -t -o ControlPath=${ssh_path}_tty $ssh_args"
 
+			set nodecreate_timeout [expr round($remote_factor * $nodecreate_timeout)]
+			set nodeconf_timeout [expr round($remote_factor * $nodeconf_timeout)]
+			set ifacesconf_timeout [expr round($remote_factor * $ifacesconf_timeout)]
+
 			puts "Using remote host '$remote'"
 		} else {
 			puts stderr "Remote host not given."
 			exit 1
 		}
 
-		if { $params(rm) != "" } {
-			if { [string is integer $params(rm)] } {
-				set remote_max_sessions $params(rm)
+		if { $params(j) != "" } {
+			if { [string is integer $params(j)] } {
+				set max_jobs $params(j)
 			} else {
-				puts stderr "Ignoring -rm, setting remote_max_sessions to $remote_max_sessions"
+				puts stderr "Ignoring -j, dynamically calculate number of jobs as \[ncpus]"
 			}
 		}
 	}
