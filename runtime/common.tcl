@@ -675,6 +675,62 @@ proc displayBatchProgress { prgs tot } {
 	}
 }
 
+proc mainPipeCreate {} {
+	global main_pipe
+	global rcmd remote remote_mux_path
+
+	if { $remote == "" } {
+		return
+	}
+
+	if { ! [mainPipeClose] } {
+		return -code error
+	}
+
+	set main_pipe [open "| $rcmd > /dev/null" w]
+	chan configure $main_pipe \
+		-blocking 0 -buffering none -translation binary
+
+	set ctr 100
+	while { $ctr > 0 } {
+		catch { exec ssh -O check $remote -o ControlPath=$remote_mux_path } status
+		if { [string match "Master running*" $status] } {
+			return
+		}
+
+		dputs "Still opening... '$status'"
+		after 100
+		incr ctr -1
+	}
+
+	return -code error
+}
+
+proc mainPipeClose {} {
+	global remote main_pipe remote_mux_path
+
+	if { $remote == "" } {
+		return
+	}
+
+	catch { exec ssh -O exit $remote -o ControlPath=$remote_mux_path } err
+
+	set ctr 100
+	while { $ctr > 0 } {
+		catch { exec ssh -O check $remote -o ControlPath=$remote_mux_path } status
+		if { [string match "*No such file or directory*" $status] } {
+			return true
+		}
+
+		dputs "Still closing... '$status'"
+		after 100
+		incr ctr -1
+	}
+
+	catch { close $main_pipe }
+	return false
+}
+
 #****f* exec.tcl/pipesCreate
 # NAME
 #   pipesCreate -- pipes create
@@ -862,7 +918,9 @@ proc setOperMode { new_oper_mode } {
 			setToExecuteVars "configure_nodes_ifaces" "*"
 			setToExecuteVars "configure_nodes" "*"
 
+			mainPipeCreate
 			deployCfg 1
+			mainPipeClose
 
 			setToRunning "cfg_deployed" true
 		}
@@ -887,11 +945,11 @@ proc setOperMode { new_oper_mode } {
 			setToExecuteVars "unconfigure_nodes_ifaces" "*"
 			setToExecuteVars "unconfigure_nodes" "*"
 
+			mainPipeCreate
 			undeployCfg $eid 1
 
-			pipesCreate
-			killExtProcess "socat.*$eid"
-			pipesClose
+			catch { rexec pkill -f "socat.*$eid" }
+			mainPipeClose
 
 			setToExecuteVars "terminate_cfg" [cfgGet]
 			setToRunning "cfg_deployed" false
@@ -1437,6 +1495,8 @@ proc redeployCfg {} {
 		return
 	}
 
+	mainPipeCreate
 	undeployCfg
 	deployCfg
+	mainPipeClose
 }

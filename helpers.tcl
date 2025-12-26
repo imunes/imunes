@@ -83,7 +83,8 @@ proc parseCmdArgs { options usage } {
 	global initMode execMode eid_base debug argv selected_experiment gui
 	global printVersion prepareFlag forceFlag
 	global max_jobs nodecreate_timeout ifacesconf_timeout nodeconf_timeout remote_factor
-	global remote rcmd ttyrcmd escalation_comm rescalation_comm
+	global remote_error remote rcmd ttyrcmd remote_mux_path
+	global escalation_comm rescalation_comm
 
 	catch { array set params [::cmdline::getoptions argv $options $usage] } err
 	if { $err != "" || $params(h) } {
@@ -132,13 +133,13 @@ proc parseCmdArgs { options usage } {
 			set file_id [file tempfile tmp_path]
 			close $file_id
 			file delete $tmp_path
-			set ssh_path "[file dirname $tmp_path]/.imunes-%r@%n"
-			exec rm -f $ssh_path
+			set remote_mux_path "[file dirname $tmp_path]/.imunes-%r@%n"
+			exec rm -f $remote_mux_path
 
 			set ssh_args "-o ControlPersist=yes -o ControlMaster=auto"
 			append ssh_args " $port_arg $remote $rescalation_comm"
-			set rcmd "ssh -o ControlPath=$ssh_path $ssh_args"
-			set ttyrcmd "ssh -t -o ControlPath=${ssh_path}_tty $ssh_args"
+			set rcmd "ssh -o ControlPath=$remote_mux_path $ssh_args"
+			set ttyrcmd "ssh -t -o ControlPath=${remote_mux_path}_tty $ssh_args"
 
 			set nodecreate_timeout [expr round($remote_factor * $nodecreate_timeout)]
 			set nodeconf_timeout [expr round($remote_factor * $nodeconf_timeout)]
@@ -149,13 +150,13 @@ proc parseCmdArgs { options usage } {
 			puts stderr "Remote host not given."
 			exit 1
 		}
+	}
 
-		if { $params(j) != "" } {
-			if { [string is integer $params(j)] } {
-				set max_jobs $params(j)
-			} else {
-				puts stderr "Ignoring -j, dynamically calculate number of jobs as \[ncpus]"
-			}
+	if { $params(j) != "" } {
+		if { [string is integer $params(j)] } {
+			set max_jobs $params(j)
+		} else {
+			puts stderr "Ignoring -j, dynamically calculate number of jobs as \[ncpus]"
 		}
 	}
 
@@ -164,11 +165,7 @@ proc parseCmdArgs { options usage } {
 			puts stderr $usage
 			exit 1
 		}
-		catch { rexec id -u } uid
-		if { $uid != "0" } {
-			puts stderr "Error: To execute experiment, run IMUNES with root permissions."
-			exit 1
-		}
+
 		set execMode batch
 		set gui 0
 	}
@@ -454,10 +451,23 @@ proc reloadSources {} {
 }
 
 proc rexec { args } {
-	global rcmd
+	global rcmd remote max_jobs
 
 	set cmd [list echo {*}$args | {*}$rcmd]
 
 	dputs "CMD: '$cmd'"
-	return [exec -- {*}$cmd]
+	try {
+		exec -- {*}$cmd
+	} on ok retv {
+		return $retv
+	} on error err {
+		if {
+			$remote != ""  &&
+			[string match "*mux_client_request_session: session request failed: Session open refused by peer*" $err]
+		} {
+			return -code error "Too many open connections: use -j flag to decrease max_jobs (current $max_jobs) or increase MaxSessions/MaxStartups on the remote server!"
+		}
+
+		return -code error $err
+	}
 }

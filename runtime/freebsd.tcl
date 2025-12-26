@@ -31,7 +31,10 @@ proc moveFileFromNode { node_id path ext_path } {
 proc writeDataToNodeFile { node_id path data } {
 	set node_dir [getNodeDir $node_id]
 
-	catch { rexec test -d $node_dir} status
+	if { [catch { rexec test -d $node_dir} status] } {
+		return
+	}
+
 	if { [string match -nocase "*No such file or directory*" $status] } {
 		return
 	}
@@ -2435,10 +2438,20 @@ proc l2node.nodeDestroy { eid node_id } {
 #   * cpucount - CPU count
 #****
 proc getCpuCount {} {
-	global max_jobs
+	global remote max_jobs
 
-	if { $max_jobs > 0 } {
-		return $max_jobs
+	if { $remote == "" } {
+		if { $max_jobs > 0 } {
+			return $max_jobs
+		}
+	} else {
+		# buffer for non-closed SSH connections
+		set remote_jobs [expr round($max_jobs/3)]
+		if { $remote_jobs == 0 } {
+			set remote_jobs 1
+		}
+
+		return $remote_jobs
 	}
 
 	return [lindex [rexec sysctl kern.smp.cpus] 1]

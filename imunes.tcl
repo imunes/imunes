@@ -99,10 +99,13 @@ set nodeconf_timeout 5
 set selected_experiment ""
 set gui 1
 
-global remote rcmd ttyrcmd escalation_comm rescalation_comm remote_factor
+global remote_error remote rcmd ttyrcmd remote_mux_path remote_factor
+global escalation_comm rescalation_comm
+set remote_error ""
 set remote ""
 set rcmd "sh"
 set ttyrcmd "sh -c"
+set remote_mux_path ""
 set escalation_comm ""
 set rescalation_comm ""
 set remote_factor 2
@@ -151,13 +154,6 @@ set isOSfreebsd false
 set isOSlinux false
 set isOSwin false
 
-setPlatformVariables
-
-if { $prepareFlag } {
-	prepareVroot
-	exit
-}
-
 # Runtime libriaries
 foreach file_path [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
 	if {
@@ -166,6 +162,13 @@ foreach file_path [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
 	} {
 		safeSourceFile $file_path
 	}
+}
+
+setPlatformVariables
+
+if { $prepareFlag } {
+	prepareVroot
+	exit
 }
 
 if { ! [info exists eid_base] } {
@@ -247,7 +250,7 @@ if { $initMode == 1 } {
 	exit
 }
 
-if { $execMode == "batch" } {
+if { $remote_error == "" && $execMode == "batch" } {
 	set err [checkSysPrerequisites]
 	if { $err != "" } {
 		puts stderr $err
@@ -337,6 +340,8 @@ readConfigFile
 if { $execMode == "interactive" } {
 	if { $selected_experiment != "" && $selected_experiment ni [getResumableExperiments] } {
 		puts stderr "Experiment with EID '$selected_experiment' not running"
+		mainPipeClose
+
 		exit 1
 	}
 
@@ -424,10 +429,25 @@ if { $execMode == "interactive" } {
 		}
 	}
 } else {
+	if { $remote_error != "" } {
+		exit 1
+	}
+
+	catch { rexec id -u } uid
+	if { $uid != "0" } {
+		mainPipeClose
+		puts stderr "Error: To execute experiment, run IMUNES with root permissions."
+
+		exit 1
+	}
+
+	mainPipeCreate
 	if { $argv != "" } {
 		if { ! [file exists $argv] } {
+			mainPipeClose
 			puts stderr "Error: file '$argv' doesn't exist"
-			exit
+
+			exit 1
 		}
 
 		global currentFileBatch
@@ -464,6 +484,8 @@ if { $execMode == "interactive" } {
 		setToRunning "current_file" $argv
 
 		if { [checkExternalInterfaces] } {
+			mainPipeClose
+
 			return
 		}
 
@@ -526,4 +548,6 @@ if { $execMode == "interactive" } {
 
 		terminate_deleteExperimentFiles $eid_base
 	}
+
+	mainPipeClose
 }

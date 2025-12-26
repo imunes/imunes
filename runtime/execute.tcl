@@ -463,6 +463,7 @@ proc deployCfg { { execute 0 } } {
 	}
 
 	statline "Preparing for initialization..."
+
 	# TODO: fix this mess
 	set native_nodes {}
 	set virtualized_nodes {}

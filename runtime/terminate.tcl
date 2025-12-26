@@ -994,6 +994,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 		}
 	} on error err {
 		finishTerminating 0 "$err" $w
+
 		return
 	}
 

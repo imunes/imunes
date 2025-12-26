@@ -68,7 +68,10 @@ proc l2node.nodeDestroy { eid node_id } {
 #****
 proc writeDataToNodeFile { node_id path data } {
 	set docker_id "[getFromRunning "eid"].$node_id"
-	catch { rexec docker inspect -f "{{.GraphDriver.Data.MergedDir}}" $docker_id } node_dir
+	if { [catch { rexec docker inspect -f "{{.GraphDriver.Data.MergedDir}}" $docker_id } node_dir] } {
+		return
+	}
+
 	if { [string match "*No such object:*" $node_dir] } {
 		return
 	}
@@ -1715,10 +1718,20 @@ proc removeNodeIfcIPaddrs { eid node_id } {
 #   * cpucount - CPU count
 #****
 proc getCpuCount {} {
-	global max_jobs
+	global remote max_jobs
 
-	if { $max_jobs > 0 } {
-		return $max_jobs
+	if { $remote == "" } {
+		if { $max_jobs > 0 } {
+			return $max_jobs
+		}
+	} else {
+		# buffer for non-closed SSH connections
+		set remote_jobs [expr round($max_jobs/3)]
+		if { $remote_jobs == 0 } {
+			set remote_jobs 1
+		}
+
+		return $remote_jobs
 	}
 
 	return [lindex [rexec grep -c processor /proc/cpuinfo] 0]
