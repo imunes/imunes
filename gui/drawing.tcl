@@ -304,7 +304,7 @@ proc drawPseudoNode { node_id } {
 	if { [getIfcVlanDev $peer_id $peer_iface_id] != "" } {
 		set vlan_tag [getIfcVlanTag $peer_id $peer_iface_id]
 		if { $vlan_tag != "" } {
-			append peer_iface_name ".$vlan_tag"
+			append peer_iface_name "_$vlan_tag"
 		}
 	}
 	set label_str "[getNodeName $peer_id]:$peer_iface_name"

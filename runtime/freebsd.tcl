@@ -1514,7 +1514,7 @@ proc isNodeIfacesCreated { node_id ifaces } {
 		if { $node_type == "rj45" } {
 			set vlan [getIfcVlanTag $node_id $iface_id]
 			if { $vlan != "" && [getIfcVlanDev $node_id $iface_id] != "" } {
-				set iface_name $iface_name.$vlan
+				set iface_name ${iface_name}_$vlan
 			}
 		}
 
@@ -2474,9 +2474,11 @@ proc captureExtIfc { eid node_id iface_id } {
 
 	set ifname [getIfcName $node_id $iface_id]
 	set vlan [getIfcVlanTag $node_id $iface_id]
-	if { $vlan != "" && [getIfcVlanDev $node_id $iface_id] != "" } {
+	set dev [getIfcVlanDev $node_id $iface_id]
+	if { $vlan != "" && $dev != "" } {
 		try {
 			rexec ifconfig $ifname.$vlan create
+			rexec ifconfig ${ifname}.$vlan name ${ifname}_$vlan
 		} on error err {
 			set msg "Error: VLAN $vlan on external interface $ifname can't be\
 				created.\n($err)"
@@ -2491,10 +2493,13 @@ proc captureExtIfc { eid node_id iface_id } {
 
 			return -code error
 		} on ok {} {
-			set ifname $ifname.$vlan
+			set ifname ${ifname}_$vlan
 		}
 	}
 
+	setToRunning "${node_id}|${iface_id}_old_iface_name" $ifname
+	setToRunning "${node_id}|${iface_id}_old_iface_vlan" $vlan
+	setToRunning "${node_id}|${iface_id}_old_iface_dev" $dev
 	captureExtIfcByName $eid $ifname $node_id
 }
 
@@ -2533,10 +2538,18 @@ proc captureExtIfcByName { eid ifname node_id } {
 #   * iface_id -- interface id
 #****
 proc releaseExtIfc { eid node_id iface_id } {
-	set ifname [getIfcName $node_id $iface_id]
-	set vlan [getIfcVlanTag $node_id $iface_id]
-	if { $vlan != "" && [getIfcVlanDev $node_id $iface_id] != "" } {
-		catch { rexec ifconfig $ifname.$vlan -vnet $eid destroy }
+	set ifname [getFromRunning "${node_id}|${iface_id}_old_iface_name"]
+	unsetRunning "${node_id}|${iface_id}_old_iface_name"
+	if { $ifname == "" } {
+		return
+	}
+
+	set old_vlan [getFromRunning "${node_id}|${iface_id}_old_iface_vlan"]
+	set old_dev [getFromRunning "${node_id}|${iface_id}_old_iface_dev"]
+	unsetRunning "${node_id}|${iface_id}_old_iface_vlan"
+	unsetRunning "${node_id}|${iface_id}_old_iface_dev"
+	if { $old_vlan != "" && $old_dev != "" } {
+		catch { rexec ifconfig $ifname -vnet $eid destroy }
 
 		return
 	}

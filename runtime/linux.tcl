@@ -437,13 +437,13 @@ proc getHostIfcVlanExists { node_id iface_name } {
 	set iface_id [ifaceIdFromName $node_id $iface_name]
 	set vlan [getIfcVlanTag $node_id $iface_id]
 	try {
-		rexec ip link add link $iface_name name $iface_name.$vlan type vlan id $vlan
+		rexec ip link add link $iface_name name ${iface_name}_$vlan type vlan id $vlan
 	} on ok {} {
-		rexec ip link del $iface_name.$vlan
+		rexec ip link del ${iface_name}_$vlan
 
 		return 0
 	} on error err {
-		set msg "Unable to create external interface '$iface_name.$vlan':\n$err\n\nPlease\
+		set msg "Unable to create external interface '${iface_name}_$vlan':\n$err\n\nPlease\
 			verify that VLAN ID $vlan with parent interface $iface_name is not already\
 			assigned to another VLAN interface, potentially in a different namespace."
 	}
@@ -952,13 +952,13 @@ proc createLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 			set physical_ifc1 [getIfcName $node1_id $iface1_id]
 			set vlan [getIfcVlanTag $node1_id $iface1_id]
 			if { $vlan != "" && [getIfcVlanDev $node1_id $iface1_id] != "" } {
-				set physical_ifc1 $physical_ifc1.$vlan
+				set physical_ifc1 ${physical_ifc1}_$vlan
 			}
 
 			set physical_ifc2 [getIfcName $node2_id $iface2_id]
 			set vlan [getIfcVlanTag $node2_id $iface2_id]
 			if { $vlan != "" && [getIfcVlanDev $node2_id $iface2_id] != "" } {
-				set physical_ifc2 $physical_ifc2.$vlan
+				set physical_ifc2 ${physical_ifc2}_$vlan
 			}
 
 			setNsIfcMaster "imunes_$devfs_number" $physical_ifc1 $eid-$link_id "up"
@@ -977,7 +977,7 @@ proc createLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 			set iface_name [getIfcName $node_id $iface_id]
 			if { [getIfcVlanDev $node_id $iface_id] != "" } {
 				set vlan [getIfcVlanTag $node_id $iface_id]
-				set iface_name $iface_name.$vlan
+				set iface_name ${iface_name}_$vlan
 			}
 		} else {
 			set iface_name $node_id-[getIfcName $node_id $iface_id]
@@ -1001,6 +1001,11 @@ proc configureLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 
 		if { [getNodeType $node_id] != "rj45" } {
 			set devname $node_id-$devname
+		} else {
+			set vlan [getIfcVlanTag $node_id $iface_id]
+			if { $vlan != "" && [getIfcVlanDev $node_id $iface_id] != "" } {
+				set devname ${devname}_$vlan
+			}
 		}
 
 		set netem_cfg [getNetemConfigLine $bandwidth $delay $loss $dup]
@@ -1190,7 +1195,7 @@ proc isNodeIfacesCreated { node_id ifaces } {
 
 			set vlan [getIfcVlanTag $node_id $iface_id]
 			if { $vlan != "" && [getIfcVlanDev $node_id $iface_id] != "" } {
-				set iface_name $iface_name.$vlan
+				set iface_name ${iface_name}_$vlan
 			}
 		}
 
@@ -1784,7 +1789,8 @@ proc captureExtIfc { eid node_id iface_id } {
 
 	# we need to create a VLAN device
 	set vlan [getIfcVlanTag $node_id $iface_id]
-	if { $vlan != "" && [getIfcVlanDev $node_id $iface_id] != "" } {
+	set dev [getIfcVlanDev $node_id $iface_id]
+	if { $vlan != "" && $dev != "" } {
 		set nsstr ""
 		# if direct link, we should do this inside the experiment netns
 		if { $link_id != "" && [getLinkDirect $link_id] } {
@@ -1794,7 +1800,7 @@ proc captureExtIfc { eid node_id iface_id } {
 
 		try {
 			rexec ip link set $iface_name up
-			rexec ip link add link $iface_name name $iface_name.$vlan {*}$nsstr type vlan id $vlan
+			rexec ip link add link $iface_name name ${iface_name}_$vlan {*}$nsstr type vlan id $vlan
 		} on error err {
 			# if not direct link, raise error as we can't have multiple VLAN ifaces with the same VID
 			if { $link_id == "" || ! [getLinkDirect $link_id] } {
@@ -1812,10 +1818,13 @@ proc captureExtIfc { eid node_id iface_id } {
 				return -code error
 			}
 		} finally {
-			set iface_name $iface_name.$vlan
+			set iface_name ${iface_name}_$vlan
 		}
 	}
 
+	setToRunning "${node_id}|${iface_id}_old_iface_name" $iface_name
+	setToRunning "${node_id}|${iface_id}_old_iface_vlan" $vlan
+	setToRunning "${node_id}|${iface_id}_old_iface_dev" $dev
 	# if no link or not a direct link, just capture the iface in the experiment netns
 	if { $link_id == "" || ! [getLinkDirect $link_id] } {
 		captureExtIfcByName $eid $iface_name $node_id
@@ -1896,16 +1905,23 @@ proc captureExtIfcByName { eid iface_name node_id } {
 #   * iface_id -- interface id
 #****
 proc releaseExtIfc { eid node_id iface_id } {
-	set iface_name [getIfcName $node_id $iface_id]
-	set link_id [getIfcLink $node_id $iface_id]
+	set iface_name [getFromRunning "${node_id}|${iface_id}_old_iface_name"]
+	unsetRunning "${node_id}|${iface_id}_old_iface_name"
+	if { $iface_name == "" } {
+		return
+	}
 
-	set vlan [getIfcVlanTag $node_id $iface_id]
-	if { $vlan != "" && [getIfcVlanDev $node_id $iface_id] != "" } {
-		pipesExec "ip -n [getNodeNetns $eid $node_id] link del $iface_name.$vlan" "hold"
+	set old_vlan [getFromRunning "${node_id}|${iface_id}_old_iface_vlan"]
+	set old_dev [getFromRunning "${node_id}|${iface_id}_old_iface_dev"]
+	unsetRunning "${node_id}|${iface_id}_old_iface_vlan"
+	unsetRunning "${node_id}|${iface_id}_old_iface_dev"
+	if { $old_vlan != "" && $old_dev != "" } {
+		pipesExec "ip -n [getNodeNetns $eid $node_id] link del $iface_name" "hold"
 
 		return
 	}
 
+	set link_id [getIfcLink $node_id $iface_id]
 	if { $link_id == "" || ! [getLinkDirect $link_id] } {
 		releaseExtIfcByName $eid $iface_name $node_id
 
