@@ -818,14 +818,16 @@ proc configGUI_showIfcInfo { wi phase node_id iface_id { force "" } } {
 			return
 		}
 
-		foreach guielement $guielements {
-			#calling "apply" procedures to check if some parameters of previously
-			#selected interface have been changed
-			if { [llength $guielement] == 2 && [lindex $guielement 1] in $all_iface_list } {
-				global brguielements
+		if { $force == "" } {
+			foreach guielement $guielements {
+				#calling "apply" procedures to check if some parameters of previously
+				#selected interface have been changed
+				if { [llength $guielement] == 2 && [lindex $guielement 1] in $all_iface_list } {
+					global brguielements
 
-				if { $guielement ni $brguielements } {
-					[lindex $guielement 0]\Apply $wi $node_id [lindex $guielement 1]
+					if { $guielement ni $brguielements } {
+						[lindex $guielement 0]\Apply $wi $node_id [lindex $guielement 1]
+					}
 				}
 			}
 		}
