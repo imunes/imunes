@@ -39,174 +39,179 @@
 
 set MODULE stpswitch
 
-proc $MODULE.toolbarIconDescr {} {
-	return "Add new RSTP switch"
-}
+namespace eval ${MODULE}::gui {
+	namespace import ::genericL2::gui::*
+	namespace export *
 
-proc $MODULE._confNewIfc { node_cfg iface_id } {
-	global node_existing_mac node_existing_ipv4 node_existing_ipv6
+	proc toolbarIconDescr {} {
+		return "Add new RSTP switch"
+	}
 
-	set macaddr [getNextMACaddr $node_existing_mac]
-	lappend node_existing_mac $macaddr
-	set node_cfg [_setIfcMACaddr $node_cfg $iface_id $macaddr]
+	proc _confNewIfc { node_cfg iface_id } {
+		global node_existing_mac node_existing_ipv4 node_existing_ipv6
 
-	set node_cfg [_setBridgeIfcDiscover $node_cfg $iface_id 1]
-	set node_cfg [_setBridgeIfcLearn $node_cfg $iface_id 1]
-	set node_cfg [_setBridgeIfcStp $node_cfg $iface_id 1]
-	set node_cfg [_setBridgeIfcAutoedge $node_cfg $iface_id 1]
-	set node_cfg [_setBridgeIfcAutoptp $node_cfg $iface_id 1]
-	set node_cfg [_setBridgeIfcPriority $node_cfg $iface_id 128]
-	set node_cfg [_setBridgeIfcPathcost $node_cfg $iface_id 0]
-	set node_cfg [_setBridgeIfcMaxaddr $node_cfg $iface_id 0]
+		set macaddr [getNextMACaddr $node_existing_mac]
+		lappend node_existing_mac $macaddr
+		set node_cfg [_setIfcMACaddr $node_cfg $iface_id $macaddr]
 
-	return $node_cfg
-}
+		set node_cfg [_setBridgeIfcDiscover $node_cfg $iface_id 1]
+		set node_cfg [_setBridgeIfcLearn $node_cfg $iface_id 1]
+		set node_cfg [_setBridgeIfcStp $node_cfg $iface_id 1]
+		set node_cfg [_setBridgeIfcAutoedge $node_cfg $iface_id 1]
+		set node_cfg [_setBridgeIfcAutoptp $node_cfg $iface_id 1]
+		set node_cfg [_setBridgeIfcPriority $node_cfg $iface_id 128]
+		set node_cfg [_setBridgeIfcPathcost $node_cfg $iface_id 0]
+		set node_cfg [_setBridgeIfcMaxaddr $node_cfg $iface_id 0]
 
-proc $MODULE.icon { size } {
-	global ROOTDIR LIBDIR
+		return $node_cfg
+	}
 
-	switch $size {
-		normal {
-			return $ROOTDIR/$LIBDIR/icons/normal/stpswitch.gif
+	proc icon { size } {
+		global ROOTDIR LIBDIR
+
+		switch $size {
+			normal {
+				return $ROOTDIR/$LIBDIR/icons/normal/stpswitch.gif
+			}
+			small {
+				return $ROOTDIR/$LIBDIR/icons/small/stpswitch.gif
+			}
+			toolbar {
+				return $ROOTDIR/$LIBDIR/icons/tiny/stpswitch.gif
+			}
 		}
-		small {
-			return $ROOTDIR/$LIBDIR/icons/small/stpswitch.gif
+	}
+
+	proc notebookDimensions { wi } {
+		set h 400
+		set w 507
+
+		if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] == "Interfaces" } {
+			set h 340
 		}
-		toolbar {
-			return $ROOTDIR/$LIBDIR/icons/tiny/stpswitch.gif
+
+		if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] == "Bridge" } {
+			set h 390
+			set w 513
 		}
-	}
-}
 
-proc $MODULE.notebookDimensions { wi } {
-	set h 400
-	set w 507
-
-	if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] == "Interfaces" } {
-		set h 340
+		return [list $h $w]
 	}
 
-	if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] == "Bridge" } {
-		set h 390
-		set w 513
+	#****f* stpswitch.tcl/stpswitch.configGUI
+	# NAME
+	#   stpswitch.configGUI
+	# SYNOPSIS
+	#   stpswitch.configGUI $node_id
+	# FUNCTION
+	#   Defines the structure of the stpswitch configuration window
+	#   by calling procedures for creating and organising the
+	#   window, as well as procedures for adding certain modules
+	#   to that window.
+	# INPUTS
+	#   * node_id - node id
+	#****
+	proc configGUI { node_id } {
+		global wi
+		#
+		#guielements - the list of modules contained in the configuration window
+		#		(each element represents the name of the procedure which creates
+		#		that module)
+		#
+		#treecolumns - the list of columns in the interfaces tree (each element
+		#		consists of the column id and the column name)
+		#
+		global guielements treecolumns
+		global brguielements
+		global brtreecolumns
+		global node_cfg node_cfg_gui node_existing_mac node_existing_ipv4 node_existing_ipv6
+
+		set guielements {}
+		set brguielements {}
+		set node_cfg [cfgGet "nodes" $node_id]
+		set node_cfg_gui [cfgGet "gui" "nodes" $node_id]
+		set node_existing_mac [getFromRunning "mac_used_list"]
+		set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
+		set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
+
+		configGUI_createConfigPopupWin
+		wm title $wi "stpswitch configuration"
+		configGUI_nodeName $wi $node_id "Node name:"
+
+		set labels {
+			"Configuration"
+			"Interfaces"
+			"Bridge"
+		}
+		lassign [configGUI_addNotebook $wi $node_id $labels] \
+			configtab ifctab bridgeifctab
+
+		set treecolumns {
+			"OperState State"
+			"NatState Nat"
+			"IPv4addrs IPv4 addrs"
+			"IPv6addrs IPv6 addrs"
+			"MACaddr MAC addr"
+			"MTU MTU"
+			"QLen Queue len"
+			"QDisc Queue disc"
+			"QDrop Queue drop"
+		}
+		configGUI_addTree $ifctab $node_id
+
+		set brtreecolumns {
+			"Snoop Snoop"
+			"Stp STP"
+			"Priority Priority"
+			"Discover Discover"
+			"Learn Learn"
+			"Sticky Sticky"
+			"Private Private"
+			"Edge Edge"
+			"Autoedge AutoEdge"
+			"Ptp Ptp"
+			"Autoptp AutoPtp"
+			"Maxaddr Max addr"
+			"Pathcost Pathcost"
+		}
+		configGUI_addBridgeTree $bridgeifctab $node_id
+
+		configGUI_bridgeConfig $configtab $node_id
+		# TODO: are these needed?
+		configGUI_staticRoutes $configtab $node_id
+		configGUI_customConfig $configtab $node_id
+
+		configGUI_nodeRestart $wi $node_id
+		configGUI_buttonsACNode $wi $node_id
 	}
 
-	return [list $h $w]
-}
+	#****f* stpswitch.tcl/stpswitch.configInterfacesGUI
+	# NAME
+	#   stpswitch.configInterfacesGUI
+	# SYNOPSIS
+	#   stpswitch.configInterfacesGUI $wi $node_id $iface_id
+	# FUNCTION
+	#   Defines which modules for changing interfaces parameters
+	#   are contained in the stpswitch configuration window. It is done
+	#   by calling procedures for adding certain modules to the window.
+	# INPUTS
+	#   * wi - widget
+	#   * node_id - node id
+	#   * iface_id - interface id
+	#****
+	proc configInterfacesGUI { wi node_id iface_id } {
+		global guielements
 
-#****f* stpswitch.tcl/stpswitch.configGUI
-# NAME
-#   stpswitch.configGUI
-# SYNOPSIS
-#   stpswitch.configGUI $node_id
-# FUNCTION
-#   Defines the structure of the stpswitch configuration window
-#   by calling procedures for creating and organising the
-#   window, as well as procedures for adding certain modules
-#   to that window.
-# INPUTS
-#   * node_id - node id
-#****
-proc $MODULE.configGUI { node_id } {
-	global wi
-	#
-	#guielements - the list of modules contained in the configuration window
-	#		(each element represents the name of the procedure which creates
-	#		that module)
-	#
-	#treecolumns - the list of columns in the interfaces tree (each element
-	#		consists of the column id and the column name)
-	#
-	global guielements treecolumns
-	global brguielements
-	global brtreecolumns
-	global node_cfg node_cfg_gui node_existing_mac node_existing_ipv4 node_existing_ipv6
-
-	set guielements {}
-	set brguielements {}
-	set node_cfg [cfgGet "nodes" $node_id]
-	set node_cfg_gui [cfgGet "gui" "nodes" $node_id]
-	set node_existing_mac [getFromRunning "mac_used_list"]
-	set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
-	set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
-
-	configGUI_createConfigPopupWin
-	wm title $wi "stpswitch configuration"
-	configGUI_nodeName $wi $node_id "Node name:"
-
-	set labels {
-		"Configuration"
-		"Interfaces"
-		"Bridge"
+		configGUI_ifcEssentials $wi $node_id $iface_id
+		configGUI_ifcQueueConfig $wi $node_id $iface_id
+		configGUI_ifcMACAddress $wi $node_id $iface_id
+		configGUI_ifcIPv4Address $wi $node_id $iface_id
+		configGUI_ifcIPv6Address $wi $node_id $iface_id
 	}
-	lassign [configGUI_addNotebook $wi $node_id $labels] \
-		configtab ifctab bridgeifctab
 
-	set treecolumns {
-		"OperState State"
-		"NatState Nat"
-		"IPv4addrs IPv4 addrs"
-		"IPv6addrs IPv6 addrs"
-		"MACaddr MAC addr"
-		"MTU MTU"
-		"QLen Queue len"
-		"QDisc Queue disc"
-		"QDrop Queue drop"
+	proc configBridgeInterfacesGUI { wi node_id iface_id } {
+		global guielements
+
+		configGUI_ifcBridgeAttributes $wi $node_id $iface_id
 	}
-	configGUI_addTree $ifctab $node_id
-
-	set brtreecolumns {
-		"Snoop Snoop"
-		"Stp STP"
-		"Priority Priority"
-		"Discover Discover"
-		"Learn Learn"
-		"Sticky Sticky"
-		"Private Private"
-		"Edge Edge"
-		"Autoedge AutoEdge"
-		"Ptp Ptp"
-		"Autoptp AutoPtp"
-		"Maxaddr Max addr"
-		"Pathcost Pathcost"
-	}
-	configGUI_addBridgeTree $bridgeifctab $node_id
-
-	configGUI_bridgeConfig $configtab $node_id
-	# TODO: are these needed?
-	configGUI_staticRoutes $configtab $node_id
-	configGUI_customConfig $configtab $node_id
-
-	configGUI_nodeRestart $wi $node_id
-	configGUI_buttonsACNode $wi $node_id
-}
-
-#****f* stpswitch.tcl/stpswitch.configInterfacesGUI
-# NAME
-#   stpswitch.configInterfacesGUI
-# SYNOPSIS
-#   stpswitch.configInterfacesGUI $wi $node_id $iface_id
-# FUNCTION
-#   Defines which modules for changing interfaces parameters
-#   are contained in the stpswitch configuration window. It is done
-#   by calling procedures for adding certain modules to the window.
-# INPUTS
-#   * wi - widget
-#   * node_id - node id
-#   * iface_id - interface id
-#****
-proc $MODULE.configInterfacesGUI { wi node_id iface_id } {
-	global guielements
-
-	configGUI_ifcEssentials $wi $node_id $iface_id
-	configGUI_ifcQueueConfig $wi $node_id $iface_id
-	configGUI_ifcMACAddress $wi $node_id $iface_id
-	configGUI_ifcIPv4Address $wi $node_id $iface_id
-	configGUI_ifcIPv6Address $wi $node_id $iface_id
-}
-
-proc $MODULE.configBridgeInterfacesGUI { wi node_id iface_id } {
-	global guielements
-
-	configGUI_ifcBridgeAttributes $wi $node_id $iface_id
 }

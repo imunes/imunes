@@ -42,124 +42,129 @@
 
 set MODULE lanswitch
 
-#****f* lanswitch.tcl/lanswitch.toolbarIconDescr
-# NAME
-#   lanswitch.toolbarIconDescr -- toolbar icon description
-# SYNOPSIS
-#   lanswitch.toolbarIconDescr
-# FUNCTION
-#   Returns this module's toolbar icon description.
-# RESULT
-#   * descr -- string describing the toolbar icon
-#****
-proc $MODULE.toolbarIconDescr {} {
-	return "Add new LAN switch"
-}
+namespace eval ${MODULE}::gui {
+	namespace import ::genericL2::gui::*
+	namespace export *
 
-proc $MODULE._confNewIfc { node_cfg iface_id } {
-	return $node_cfg
-}
+	#****f* lanswitch.tcl/lanswitch.toolbarIconDescr
+	# NAME
+	#   lanswitch.toolbarIconDescr -- toolbar icon description
+	# SYNOPSIS
+	#   lanswitch.toolbarIconDescr
+	# FUNCTION
+	#   Returns this module's toolbar icon description.
+	# RESULT
+	#   * descr -- string describing the toolbar icon
+	#****
+	proc toolbarIconDescr {} {
+		return "Add new LAN switch"
+	}
 
-#****f* lanswitch.tcl/lanswitch.icon
-# NAME
-#   lanswitch.icon --
-# SYNOPSIS
-#   lanswitch.icon $size
-# FUNCTION
-#   Returns path to node icon, depending on the specified size.
-# INPUTS
-#   * size -- "normal", "small" or "toolbar"
-# RESULT
-#   * path -- path to icon
-#****
-proc $MODULE.icon {size} {
-	global ROOTDIR LIBDIR
+	proc _confNewIfc { node_cfg iface_id } {
+		return $node_cfg
+	}
 
-	switch $size {
-		normal {
-			return $ROOTDIR/$LIBDIR/icons/normal/lanswitch.gif
-		}
-		small {
-			return $ROOTDIR/$LIBDIR/icons/small/lanswitch.gif
-		}
-		toolbar {
-			return $ROOTDIR/$LIBDIR/icons/tiny/lanswitch.gif
+	#****f* lanswitch.tcl/lanswitch.icon
+	# NAME
+	#   lanswitch.icon --
+	# SYNOPSIS
+	#   lanswitch.icon $size
+	# FUNCTION
+	#   Returns path to node icon, depending on the specified size.
+	# INPUTS
+	#   * size -- "normal", "small" or "toolbar"
+	# RESULT
+	#   * path -- path to icon
+	#****
+	proc icon {size} {
+		global ROOTDIR LIBDIR
+
+		switch $size {
+			normal {
+				return $ROOTDIR/$LIBDIR/icons/normal/lanswitch.gif
+			}
+			small {
+				return $ROOTDIR/$LIBDIR/icons/small/lanswitch.gif
+			}
+			toolbar {
+				return $ROOTDIR/$LIBDIR/icons/tiny/lanswitch.gif
+			}
 		}
 	}
-}
 
-#****f* lanswitch.tcl/lanswitch.configGUI
-# NAME
-#   lanswitch.configGUI -- configuration GUI
-# SYNOPSIS
-#   lanswitch.configGUI $node_id
-# FUNCTION
-#   Defines the structure of the lanswitch configuration window by calling
-#   procedures for creating and organising the window, as well as procedures
-#   for adding certain modules to that window.
-# INPUTS
-#   * node_id -- node id
-#****
-proc $MODULE.configGUI { node_id } {
-	global wi
-	#
-	#guielements - the list of modules contained in the configuration window
-	#		(each element represents the name of the procedure which creates
-	#		that module)
-	#
-	#treecolumns - the list of columns in the interfaces tree (each element
-	#		consists of the column id and the column name)
-	#
-	global guielements treecolumns
-	global node_cfg node_cfg_gui node_existing_mac node_existing_ipv4 node_existing_ipv6
+	#****f* lanswitch.tcl/lanswitch.configGUI
+	# NAME
+	#   lanswitch.configGUI -- configuration GUI
+	# SYNOPSIS
+	#   lanswitch.configGUI $node_id
+	# FUNCTION
+	#   Defines the structure of the lanswitch configuration window by calling
+	#   procedures for creating and organising the window, as well as procedures
+	#   for adding certain modules to that window.
+	# INPUTS
+	#   * node_id -- node id
+	#****
+	proc configGUI { node_id } {
+		global wi
+		#
+		#guielements - the list of modules contained in the configuration window
+		#		(each element represents the name of the procedure which creates
+		#		that module)
+		#
+		#treecolumns - the list of columns in the interfaces tree (each element
+		#		consists of the column id and the column name)
+		#
+		global guielements treecolumns
+		global node_cfg node_cfg_gui node_existing_mac node_existing_ipv4 node_existing_ipv6
 
-	set guielements {}
-	set treecolumns {}
-	set node_cfg [cfgGet "nodes" $node_id]
-	set node_cfg_gui [cfgGet "gui" "nodes" $node_id]
-	set node_existing_mac [getFromRunning "mac_used_list"]
-	set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
-	set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
+		set guielements {}
+		set treecolumns {}
+		set node_cfg [cfgGet "nodes" $node_id]
+		set node_cfg_gui [cfgGet "gui" "nodes" $node_id]
+		set node_existing_mac [getFromRunning "mac_used_list"]
+		set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
+		set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
 
-	configGUI_createConfigPopupWin
-	wm title $wi "lanswitch configuration"
+		configGUI_createConfigPopupWin
+		wm title $wi "lanswitch configuration"
 
-	configGUI_nodeName $wi $node_id "Node name:"
+		configGUI_nodeName $wi $node_id "Node name:"
 
-	configGUI_bridgeVLANConfig $wi $node_id
+		configGUI_bridgeVLANConfig $wi $node_id
 
-	configGUI_addPanedWin $wi
-	set treecolumns {
-		"QLen Queue len"
-		"QDisc Queue disc"
-		"QDrop Queue drop"
-		"VlanTag VLAN tag"
-		"VlanType VLAN type"
+		configGUI_addPanedWin $wi
+		set treecolumns {
+			"QLen Queue len"
+			"QDisc Queue disc"
+			"QDrop Queue drop"
+			"VlanTag VLAN tag"
+			"VlanType VLAN type"
+		}
+		configGUI_addTree $wi $node_id
+
+		configGUI_nodeRestart $wi $node_id
+		configGUI_buttonsACNode $wi $node_id
 	}
-	configGUI_addTree $wi $node_id
 
-	configGUI_nodeRestart $wi $node_id
-	configGUI_buttonsACNode $wi $node_id
-}
+	#****f* lanswitch.tcl/lanswitch.configInterfacesGUI
+	# NAME
+	#   lanswitch.configInterfacesGUI -- configuration of interfaces GUI
+	# SYNOPSIS
+	#   lanswitch.configInterfacesGUI $wi $node_id $iface_id
+	# FUNCTION
+	#   Defines which modules for changing interfaces parameters are contained in
+	#   the lanswitch configuration window. It is done by calling procedures for
+	#   adding certain modules to the window.
+	# INPUTS
+	#   * wi -- widget
+	#   * node_id -- node id
+	#   * iface_id -- interface id
+	#****
+	proc configInterfacesGUI { wi node_id iface_id } {
+		global guielements
 
-#****f* lanswitch.tcl/lanswitch.configInterfacesGUI
-# NAME
-#   lanswitch.configInterfacesGUI -- configuration of interfaces GUI
-# SYNOPSIS
-#   lanswitch.configInterfacesGUI $wi $node_id $iface_id
-# FUNCTION
-#   Defines which modules for changing interfaces parameters are contained in
-#   the lanswitch configuration window. It is done by calling procedures for
-#   adding certain modules to the window.
-# INPUTS
-#   * wi -- widget
-#   * node_id -- node id
-#   * iface_id -- interface id
-#****
-proc $MODULE.configInterfacesGUI { wi node_id iface_id } {
-	global guielements
-
-	configGUI_ifcQueueConfig $wi $node_id $iface_id
-	configGUI_bridgeIfcVlanConfig $wi $node_id $iface_id
-	configGUI_ifcGap $wi $iface_id 30
+		configGUI_ifcQueueConfig $wi $node_id $iface_id
+		configGUI_bridgeIfcVlanConfig $wi $node_id $iface_id
+		configGUI_ifcGap $wi $iface_id 30
+	}
 }

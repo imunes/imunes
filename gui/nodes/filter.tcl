@@ -39,107 +39,112 @@
 
 set MODULE filter
 
-proc $MODULE.toolbarIconDescr {} {
-	return "Add new Filter node"
-}
+namespace eval ${MODULE}::gui {
+	namespace import ::genericL2::gui::*
+	namespace export *
 
-proc $MODULE.icon {size} {
-	global ROOTDIR LIBDIR
+	proc toolbarIconDescr {} {
+		return "Add new Filter node"
+	}
 
-	switch $size {
-		normal {
-			return $ROOTDIR/$LIBDIR/icons/normal/filter.gif
+	proc icon {size} {
+		global ROOTDIR LIBDIR
+
+		switch $size {
+			normal {
+				return $ROOTDIR/$LIBDIR/icons/normal/filter.gif
+			}
+			small {
+				return $ROOTDIR/$LIBDIR/icons/small/filter.gif
+			}
+			toolbar {
+				return $ROOTDIR/$LIBDIR/icons/tiny/filter.gif
+			}
 		}
-		small {
-			return $ROOTDIR/$LIBDIR/icons/small/filter.gif
+	}
+
+	proc notebookDimensions { wi } {
+		set h 370
+		set w 667
+
+		return [list $h $w]
+	}
+
+	#****f* filter.tcl/filter.configGUI
+	# NAME
+	#   filter.configGUI
+	# SYNOPSIS
+	#   filter.configGUI $node_id
+	# FUNCTION
+	#   Defines the structure of the filter.configuration window
+	#   by calling procedures for creating and organising the
+	#   window, as well as procedures for adding certain modules
+	#   to that window.
+	# INPUTS
+	#   * node_id - node id
+	#****
+	proc configGUI { node_id } {
+		global wi
+		global filterguielements filtertreecolumns curnode
+		global node_cfg node_cfg_gui node_existing_mac node_existing_ipv4 node_existing_ipv6
+
+		set node_cfg [cfgGet "nodes" $node_id]
+		set node_cfg_gui [cfgGet "gui" "nodes" $node_id]
+		set node_existing_mac [getFromRunning "mac_used_list"]
+		set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
+		set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
+
+		set curnode $node_id
+		set filterguielements {}
+
+		if { [_ifcList $node_cfg] == "" } {
+			tk_dialog .dialog1 "IMUNES warning" \
+				"This node has no interfaces." \
+				info 0 Dismiss
+
+			return
 		}
-		toolbar {
-			return $ROOTDIR/$LIBDIR/icons/tiny/filter.gif
+
+		configGUI_createConfigPopupWin
+		wm title $wi "filter configuration"
+
+		configGUI_nodeName $wi $node_id "Node name:"
+
+		set tabs [configGUI_addNotebookFilter $wi $node_id [lsort [_ifcList $node_cfg]]]
+
+		set filtertreecolumns {
+			"Action Action"
+			"Pattern Pattern"
+			"Mask Mask"
+			"Offset Offset"
+			"ActionData ActionData"
 		}
-	}
-}
+		foreach tab $tabs {
+			configGUI_addTreeFilter $tab $node_id
+		}
 
-proc $MODULE.notebookDimensions { wi } {
-	set h 370
-	set w 667
-
-	return [list $h $w]
-}
-
-#****f* filter.tcl/filter.configGUI
-# NAME
-#   filter.configGUI
-# SYNOPSIS
-#   filter.configGUI $node_id
-# FUNCTION
-#   Defines the structure of the filter.configuration window
-#   by calling procedures for creating and organising the
-#   window, as well as procedures for adding certain modules
-#   to that window.
-# INPUTS
-#   * node_id - node id
-#****
-proc $MODULE.configGUI { node_id } {
-	global wi
-	global filterguielements filtertreecolumns curnode
-	global node_cfg node_cfg_gui node_existing_mac node_existing_ipv4 node_existing_ipv6
-
-	set node_cfg [cfgGet "nodes" $node_id]
-	set node_cfg_gui [cfgGet "gui" "nodes" $node_id]
-	set node_existing_mac [getFromRunning "mac_used_list"]
-	set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
-	set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
-
-	set curnode $node_id
-	set filterguielements {}
-
-	if { [_ifcList $node_cfg] == "" } {
-		tk_dialog .dialog1 "IMUNES warning" \
-			"This node has no interfaces." \
-			info 0 Dismiss
-
-		return
+		configGUI_nodeRestart $wi $node_id
+		configGUI_buttonsACFilterNode $wi $node_id
 	}
 
-	configGUI_createConfigPopupWin
-	wm title $wi "filter configuration"
+	#****f* filter.tcl/filter.configInterfacesGUI
+	# NAME
+	#   filter.configInterfacesGUI
+	# SYNOPSIS
+	#   filter.configInterfacesGUI $wi $node_id $iface_id
+	# FUNCTION
+	#   Defines which modules for changing interfaces parameters
+	#   are contained in the filter.configuration window. It is done
+	#   by calling procedures for adding certain modules to the window.
+	# INPUTS
+	#   * wi - widget
+	#   * node_id - node id
+	#   * iface_id - interface id
+	#   * rule_num - rule number
+	#****
+	proc configIfcRulesGUI { wi node_id iface_id rule_num } {
+		global filterguielements
 
-	configGUI_nodeName $wi $node_id "Node name:"
-
-	set tabs [configGUI_addNotebookFilter $wi $node_id [lsort [_ifcList $node_cfg]]]
-
-	set filtertreecolumns {
-		"Action Action"
-		"Pattern Pattern"
-		"Mask Mask"
-		"Offset Offset"
-		"ActionData ActionData"
+		configGUI_ifcRuleConfig $wi $node_id $iface_id $rule_num
 	}
-	foreach tab $tabs {
-		configGUI_addTreeFilter $tab $node_id
-	}
-
-	configGUI_nodeRestart $wi $node_id
-	configGUI_buttonsACFilterNode $wi $node_id
-}
-
-#****f* filter.tcl/filter.configInterfacesGUI
-# NAME
-#   filter.configInterfacesGUI
-# SYNOPSIS
-#   filter.configInterfacesGUI $wi $node_id $iface_id
-# FUNCTION
-#   Defines which modules for changing interfaces parameters
-#   are contained in the filter.configuration window. It is done
-#   by calling procedures for adding certain modules to the window.
-# INPUTS
-#   * wi - widget
-#   * node_id - node id
-#   * iface_id - interface id
-#   * rule_num - rule number
-#****
-proc $MODULE.configIfcRulesGUI { wi node_id iface_id rule_num } {
-	global filterguielements
-
-	configGUI_ifcRuleConfig $wi $node_id $iface_id $rule_num
 }

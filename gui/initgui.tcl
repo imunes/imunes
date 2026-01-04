@@ -773,9 +773,10 @@ set tmp_command {
 	set l2_node_types {}
 	set l3_node_types {}
 	foreach node_type $all_modules_list {
-		if { [$node_type.netlayer] == "LINK" } {
+		set toolbar_location [invokeTypeProc $node_type "gui::toolbarLocation"]
+		if { $toolbar_location == "link_layer" } {
 			lappend l2_node_types $node_type
-		} elseif { [$node_type.netlayer] == "NETWORK" } {
+		} elseif { $toolbar_location == "net_layer" } {
 			lappend l3_node_types $node_type
 		}
 	}
@@ -783,7 +784,7 @@ set tmp_command {
 	set hidden_node_types [getActiveOption "hidden_node_types"]
 
 	set row_ctr 0
-	ttk::label $link_frame.l2 -text "L2 nodes" -width 15 -font "-size 10 -weight bold"
+	ttk::label $link_frame.l2 -text "Link layer nodes" -width 15 -font "-size 10 -weight bold"
 	grid $link_frame.l2 -in $link_frame -column 0 -row $row_ctr -pady 2
 
 	set checkbutton_dict "0 !selected 1 selected"
@@ -801,7 +802,7 @@ set tmp_command {
 	}
 
 	set row_ctr 0
-	ttk::label $network_frame.l3 -text "L3 nodes" -width 15 -font "-size 10 -weight bold"
+	ttk::label $network_frame.l3 -text "Net layer nodes" -width 15 -font "-size 10 -weight bold"
 	grid $network_frame.l3 -in $network_frame -column 0 -row $row_ctr -pady 2
 
 	incr row_ctr
@@ -1087,11 +1088,7 @@ foreach b "select link" {
 }
 
 foreach node_type $all_modules_list {
-	if { [invokeTypeProc $node_type "netlayer"] == "LINK" } {
-		addTool "link_layer" $node_type
-	} elseif { [invokeTypeProc $node_type "netlayer"] == "NETWORK" } {
-		addTool "net_layer" $node_type
-	}
+	addTool [invokeTypeProc $node_type "gui::toolbarLocation"] $node_type
 }
 
 set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/l2.gif]
@@ -1156,7 +1153,7 @@ drawGradientCircle $running_mask_image $running_indicator_palette $mask_width $m
 foreach node_type $all_modules_list {
 	global $node_type $node_type\_iconwidth $node_type\_iconheight
 
-	set $node_type [image create photo -file [invokeTypeProc $node_type "icon" "normal"]]
+	set $node_type [image create photo -file [invokeTypeProc $node_type "gui::icon" "normal"]]
 	set $node_type\_iconwidth [image width [set $node_type]]
 	set $node_type\_iconheight [image height [set $node_type]]
 }
@@ -1277,13 +1274,37 @@ $main_canvas_elem bind node_running <Any-Leave> "anyLeave"
 $main_canvas_elem bind link <Any-Leave> "anyLeave"
 $main_canvas_elem bind linklabel <Any-Leave> "anyLeave"
 
-$main_canvas_elem bind node <Double-1> "nodeConfigGUI {}"
-$main_canvas_elem bind nodelabel <Double-1> "nodeConfigGUI {}"
-$main_canvas_elem bind node_running <Double-1> "nodeConfigGUI {}"
+set tmp_command [list apply {
+	{ control } {
+		global main_canvas_elem
 
-$main_canvas_elem bind node <Control-Double-1> "nodeConfigGUI {}"
-$main_canvas_elem bind nodelabel <Control-Double-1> "nodeConfigGUI {}"
-$main_canvas_elem bind node_running <Control-Double-1> "nodeConfigGUI {}"
+		set node_id [lindex [$main_canvas_elem gettags current] 1]
+
+		if { [isPseudoNode $node_id] } {
+			#
+			# Hyperlink to another canvas
+			#
+			set mirror_node [getNodeMirror $node_id]
+			setToRunning_gui "curcanvas" [getNodeCanvas $mirror_node]
+			switchCanvas none
+			after idle selectNodes [lindex [nodeFromPseudoNode $mirror_node] 0]
+
+			return
+		}
+
+		invokeNodeProc $node_id "gui::doubleClick" $node_id $control
+	}
+} \
+	""
+]
+
+$main_canvas_elem bind node <Double-1> [lreplace $tmp_command end end 0]
+$main_canvas_elem bind nodelabel <Double-1> [lreplace $tmp_command end end 0]
+$main_canvas_elem bind node_running <Double-1> [lreplace $tmp_command end end 0]
+
+$main_canvas_elem bind node <Control-Double-1> [lreplace $tmp_command end end 1]
+$main_canvas_elem bind nodelabel <Control-Double-1> [lreplace $tmp_command end end 1]
+$main_canvas_elem bind node_running <Control-Double-1> [lreplace $tmp_command end end 1]
 
 $main_canvas_elem bind link <Double-1> "linkConfigGUI {}"
 $main_canvas_elem bind linklabel <Double-1> "linkConfigGUI {}"

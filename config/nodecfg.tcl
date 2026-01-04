@@ -1056,47 +1056,19 @@ proc listLANNodes { l2node_id l2peers } {
 proc transformNodes { nodes to_type } {
 	global changed
 
-	set default_model [getActiveOption "routerDefaultsModel"]
-	set protocols {
-		"rip	routerRipEnable"
-		"ripng	routerRipngEnable"
-		"ospf	routerOspfEnable"
-		"ospf6	routerOspf6Enable"
-		"bgp	routerBgpEnable"
-		"ldp	routerLdpEnable"
-		"isis	routerIsisEnable"
-	}
-
-	foreach item $protocols {
-		lassign $item protocol var_name
-		set $var_name [getActiveOption $var_name]
-	}
-
 	foreach node_id $nodes {
-		if { [invokeNodeProc $node_id "netlayer"] == "NETWORK" } {
-			set from_type [getNodeType $node_id]
-
-			# replace type
-			setNodeType $node_id $to_type
-
-			if { $to_type == "pc" || $to_type == "host" } {
-				if { $from_type == "router" } {
-					setNodeModel $node_id {}
-					cfgUnset "nodes" $node_id "router_config"
-				}
-
-				set changed 1
-			} elseif { $from_type != "router" && $to_type == "router" } {
-				setNodeModel $node_id $default_model
-				foreach item $protocols {
-					lassign $item protocol var_name
-					setNodeProtocol $node_id $protocol [set $var_name]
-				}
-
-				set changed 1
-			}
+		set from_type [getNodeType $node_id]
+		if { $from_type == $to_type } {
+			continue
 		}
+
+		set changed 1
+
+		invokeNodeProc $node_id "transformNode" $node_id $to_type
+		recalculateNumType $from_type [invokeTypeProc $from_type "namingBase"]
 	}
+
+	recalculateNumType $to_type [invokeTypeProc $to_type "namingBase"]
 }
 
 proc getNodeFromHostname { hostname } {

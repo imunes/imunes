@@ -23,42 +23,18 @@
 # SUCH DAMAGE.
 #
 
-# $Id: ext.tcl 63 2013-10-03 12:17:50Z valter $
-
-
-#****h* imunes/ext.tcl
-# NAME
-#  ext.tcl -- defines ext specific procedures
-# FUNCTION
-#  This module is used to define all the ext specific procedures.
-# NOTES
-#  Procedures in this module start with the keyword ext and
-#  end with function specific part that is the same for all the node
-#  types that work on the same layer.
-#****
-
-set MODULE ext
-
-namespace eval ${MODULE}::gui {
-	namespace import ::genericL3::gui::*
+namespace eval genericL3::gui {
 	namespace export *
 
-	#****f* ext.tcl/ext.toolbarIconDescr
-	# NAME
-	#   ext.toolbarIconDescr -- toolbar icon description
-	# SYNOPSIS
-	#   ext.toolbarIconDescr
-	# FUNCTION
-	#   Returns this module's toolbar icon description.
-	# RESULT
-	#   * descr -- string describing the toolbar icon
-	#****
 	proc toolbarIconDescr {} {
-		return "Add new External connection"
+		return "Add new L3 node"
+	}
+
+	proc toolbarLocation {} {
+		return "net_layer"
 	}
 
 	proc _confNewIfc { node_cfg iface_id } {
-		global mac_byte4 mac_byte5
 		global node_existing_mac node_existing_ipv4 node_existing_ipv6
 
 		set ipv4addr [getNextIPv4addr [_getNodeType $node_cfg] $node_existing_ipv4]
@@ -69,64 +45,46 @@ namespace eval ${MODULE}::gui {
 		lappend node_existing_ipv6 $ipv6addr
 		set node_cfg [_setIfcIPv6addrs $node_cfg $iface_id $ipv6addr]
 
-		set bkp_mac_byte4 $mac_byte4
-		set bkp_mac_byte5 $mac_byte5
-		randomizeMACbytes
 		set macaddr [getNextMACaddr $node_existing_mac]
 		lappend node_existing_mac $macaddr
 		set node_cfg [_setIfcMACaddr $node_cfg $iface_id $macaddr]
-		set mac_byte4 $bkp_mac_byte4
-		set mac_byte5 $bkp_mac_byte5
 
 		return $node_cfg
 	}
 
-	#****f* ext.tcl/ext.icon
-	# NAME
-	#   ext.icon -- icon
-	# SYNOPSIS
-	#   ext.icon $size
-	# FUNCTION
-	#   Returns path to node icon, depending on the specified size.
-	# INPUTS
-	#   * size -- "normal", "small" or "toolbar"
-	# RESULT
-	#   * path -- path to icon
-	#****
 	proc icon { size } {
 		global ROOTDIR LIBDIR
 
 		switch $size {
 			normal {
-				return $ROOTDIR/$LIBDIR/icons/normal/ext.gif
+				return $ROOTDIR/$LIBDIR/icons/normal/gl3.gif
 			}
 			small {
-				return $ROOTDIR/$LIBDIR/icons/small/ext.gif
+				return $ROOTDIR/$LIBDIR/icons/small/gl3.gif
 			}
 			toolbar {
-				return $ROOTDIR/$LIBDIR/icons/tiny/ext.gif
+				return $ROOTDIR/$LIBDIR/icons/tiny/gl3.gif
 			}
 		}
 	}
 
-	#****f* ext.tcl/ext.configGUI
-	# NAME
-	#   ext.configGUI -- configuration GUI
-	# SYNOPSIS
-	#   ext.configGUI $node_id
-	# FUNCTION
-	#   Defines the structure of the ext configuration window by calling
-	#   procedures for creating and organising the window, as well as
-	#   procedures for adding certain modules to that window.
-	# INPUTS
-	#   * node_id -- node id
-	#****
-	proc configGUI { node_id } {
-		set iface_id [lindex [ifcList $node_id] 0]
-		if { "$iface_id" == "" } {
-			return
+	proc notebookDimensions { wi } {
+		set h 210
+		set w 507
+
+		if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] == "Configuration" } {
+			set h 350
+			set w 507
+		}
+		if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] == "Interfaces" } {
+			set h 370
+			set w 507
 		}
 
+		return [list $h $w]
+	}
+
+	proc configGUI { node_id } {
 		global wi
 		#
 		#guielements - the list of modules contained in the configuration window
@@ -148,18 +106,53 @@ namespace eval ${MODULE}::gui {
 		set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
 
 		configGUI_createConfigPopupWin
-		wm title $wi "ext configuration"
+		wm title $wi "[_getNodeType $node_cfg] ($node_id) configuration"
 
 		configGUI_nodeName $wi $node_id "Node name:"
 
-		configGUI_externalIfcs $wi $node_id
+		set labels {
+			"Configuration"
+			"Interfaces"
+		}
+		lassign [configGUI_addNotebook $wi $node_id $labels] \
+			configtab ifctab
+
+		configGUI_customImage $configtab $node_id
+		configGUI_attachDockerToExt $configtab $node_id
+		configGUI_servicesConfig $configtab $node_id
+		configGUI_staticRoutes $configtab $node_id
+		configGUI_snapshots $configtab $node_id
+		configGUI_customConfig $configtab $node_id
+
+		set treecolumns {
+			"OperState State"
+			"NatState Nat"
+			"IPv4addrs IPv4 addrs"
+			"IPv6addrs IPv6 addrs"
+			"MACaddr MAC addr"
+			"MTU MTU"
+			"QLen Queue len"
+			"QDisc Queue disc"
+			"QDrop Queue drop"
+		}
+		configGUI_addTree $ifctab $node_id
 
 		configGUI_nodeRestart $wi $node_id
 		configGUI_buttonsACNode $wi $node_id
 	}
 
+	proc configInterfacesGUI { wi node_id iface_id } {
+		global guielements
+
+		configGUI_ifcEssentials $wi $node_id $iface_id
+		configGUI_ifcQueueConfig $wi $node_id $iface_id
+		configGUI_ifcMACAddress $wi $node_id $iface_id
+		configGUI_ifcIPv4Address $wi $node_id $iface_id
+		configGUI_ifcIPv6Address $wi $node_id $iface_id
+	}
+
 	proc doubleClick { node_id control } {
-		nodeConfigGUI $node_id
+		invokeTypeProc "genericL2" "gui::doubleClick" $node_id $control
 	}
 
 	proc rightClickMenus {} {
@@ -175,6 +168,7 @@ namespace eval ${MODULE}::gui {
 			menu_addSeparator
 			menu_nodeSettings
 			menu_ifacesSettings
+			menu_transformTo
 			menu_addSeparator
 			menu_autoExecute
 		}
@@ -183,8 +177,13 @@ namespace eval ${MODULE}::gui {
 			set exec_list {
 				menu_nodeExecute
 				menu_addSeparator
-				menu_wiresharkNode
-				menu_tcpdumpNode
+				menu_shellSelection
+				menu_services
+				menu_wiresharkIfaces
+				menu_tcpdumpIfaces
+				menu_addSeparator
+				menu_browser
+				menu_mailClient
 			}
 
 			lappend menu_list {*}$exec_list

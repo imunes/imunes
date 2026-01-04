@@ -113,7 +113,6 @@ proc copySelection {} {
 proc paste {} {
 	global sizex sizey
 	global changed copypaste_list cutNodes copypaste_nodes
-	global nodeNamingBase
 
 	if { [getFromRunning "oper_mode"] == "exec" } {
 		return
@@ -157,17 +156,13 @@ proc paste {} {
 		lappend copypaste_list $new_node_id
 
 		set node_type [getNodeType $new_node_id]
-		if { $node_type ni [array names nodeNamingBase] } {
-			# fallback
-			setNodeName $new_node_id $new_node_id
-		}
-
 		set node_name [getNodeName $new_node_id]
+		set naming_base [invokeTypeProc $node_type "namingBase"]
 		if { $node_name in $naming_list } {
 			# if name already exists, get the next one
-			setNodeName $new_node_id [getNewNodeNameType $node_type $nodeNamingBase($node_type)]
+			setNodeName $new_node_id [getNewNodeNameType $node_type $naming_base]
 		} else {
-			recalculateNumType $node_type $nodeNamingBase($node_type)
+			recalculateNumType $node_type $naming_base
 		}
 
 		lappend naming_list $node_name
@@ -184,15 +179,12 @@ proc paste {} {
 		set new_node_id $node_map($node_orig)
 
 		foreach iface_id [ifcList $new_node_id] {
-			#set new_peer_id $node_map([getIfcPeer $new_node_id $iface_id])
-			#cfgSet "nodes" $new_node_id "ifaces" $iface_id "peer" $new_link_id
-
-			if { $cutNodes == 0 } {
-				setIfcMACaddr $new_node_id $iface_id ""
-				autoMACaddr $new_node_id $iface_id
-			} else {
-				set mac_address [getIfcMACaddr $new_node_id $iface_id]
-				if { $mac_address != "" } {
+			set mac_address [getIfcMACaddr $new_node_id $iface_id]
+			if { $mac_address != "" } {
+				if { $cutNodes == 0 } {
+					setIfcMACaddr $new_node_id $iface_id ""
+					autoMACaddr $new_node_id $iface_id
+				} else {
 					lappendToRunning "mac_used_list" $mac_address
 				}
 			}

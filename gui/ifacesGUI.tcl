@@ -756,7 +756,7 @@ proc _newIface { node_cfg iface_type auto_config { stolen_iface "" } } {
 
 	# TODO
 	if { $auto_config } {
-		set node_cfg [_invokeNodeProc $node_cfg "_confNewIfc" $node_cfg $iface_id]
+		set node_cfg [_invokeNodeProc $node_cfg "gui::_confNewIfc" $node_cfg $iface_id]
 	}
 
 	return [list $iface_id $node_cfg]

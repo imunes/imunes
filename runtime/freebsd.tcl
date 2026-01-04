@@ -219,68 +219,6 @@ proc startTcpdumpOnNodeIfc { node_id ifc } {
 	}
 }
 
-#****f* freebsd.tcl/existingShells
-# NAME
-#   existingShells -- check which shells exist in a node
-# SYNOPSIS
-#   existingShells $shells $node_id
-# FUNCTION
-#   This procedure checks which of the provided shells are available
-#   in a running node.
-# INPUTS
-#   * shells -- list of shells.
-#   * node_id -- node id of the node for which the check is performed.
-#****
-proc existingShells { shells node_id { first_only "" } } {
-	set preferred_shell [getActiveOption "preferred_shell"]
-	set shells "$preferred_shell [removeFromList $shells $preferred_shell]"
-
-	set cmds "retval=\"\" ;\n"
-	append cmds "\n"
-	append cmds "for s in $shells; do\n"
-	append cmds "	x=\"\$(command -v \$s)\" ;\n"
-	append cmds "	test \$? -eq 0 && retval=\"\$retval \$x\" "
-	if { $first_only != "" } {
-		append cmds "&& break; \n"
-	} else {
-		append cmds "; \n"
-	}
-	append cmds "done ;\n"
-	append cmds "echo \"\$retval\"\n"
-
-	set cmds "\'$cmds\'"
-
-	catch { rexec jexec [getFromRunning "eid"].$node_id sh -c {*}$cmds } existing
-
-	return $existing
-}
-
-#****f* freebsd.tcl/spawnShell
-# NAME
-#   spawnShell -- spawn shell
-# SYNOPSIS
-#   spawnShell $node_id $cmd
-# FUNCTION
-#   This procedure spawns a new shell for a specified node.
-#   The shell is specified in cmd parameter.
-# INPUTS
-#   * node_id -- node id of the node for which the shell is spawned.
-#   * cmd -- the path to the shell.
-#****
-proc spawnShell { node_id cmd } {
-	global ttyrcmd
-
-	if { [checkTerminalMissing] } {
-		return
-	}
-
-	set jail_id "[getFromRunning "eid"].$node_id"
-
-	exec {*}[getActiveOption "terminal_command"] \
-		-T "IMUNES: [getNodeName $node_id] (console) [lindex [split $cmd /] end]" \
-		-e {*}$ttyrcmd "jexec $jail_id $cmd" &
-}
-
 #****f* freebsd.tcl/allSnapshotsAvailable
 # NAME
 #   allSnapshotsAvailable -- all snapshots available

@@ -26,93 +26,44 @@
 # and Technology through the research contract #IP-2003-143.
 #
 
-# $Id: rj45.tcl 130 2015-02-24 09:52:19Z valter $
-
-
-#****h* imunes/rj45.tcl
-# NAME
-#  rj45.tcl -- defines rj45 specific procedures
-# FUNCTION
-#  This module is used to define all the rj45 specific procedures.
-# NOTES
-#  Procedures in this module start with the keyword rj45 and
-#  end with function specific part that is the same for all the
-#  node types that work on the same layer.
-#****
-
-set MODULE rj45
-
-namespace eval ${MODULE}::gui {
-	namespace import ::genericL2::gui::*
+namespace eval genericL2::gui {
 	namespace export *
 
-	#****f* rj45.tcl/rj45.toolbarIconDescr
-	# NAME
-	#   rj45.toolbarIconDescr -- toolbar icon description
-	# SYNOPSIS
-	#   rj45.toolbarIconDescr
-	# FUNCTION
-	#   Returns this module's toolbar icon description.
-	# RESULT
-	#   * descr -- string describing the toolbar icon
-	#****
 	proc toolbarIconDescr {} {
-		return "Add new External interface"
+		return "Add new L2 node"
 	}
 
-	proc _confNewIfc { node_id ifc } {
-		global node_cfg
-
-		set node_cfg [_setIfcName $node_cfg $ifc "UNASSIGNED"]
+	proc toolbarLocation {} {
+		return "link_layer"
 	}
 
-	#****f* rj45.tcl/rj45.icon
-	# NAME
-	#   rj45.icon -- icon
-	# SYNOPSIS
-	#   rj45.icon $size
-	# FUNCTION
-	#   Returns path to node icon, depending on the specified size.
-	# INPUTS
-	#   * size -- "normal", "small" or "toolbar"
-	# RESULT
-	#   * path -- path to icon
-	#****
+	proc _confNewIfc { node_cfg iface_id } {
+		return $node_cfg
+	}
+
 	proc icon { size } {
 		global ROOTDIR LIBDIR
 
 		switch $size {
 			normal {
-				return $ROOTDIR/$LIBDIR/icons/normal/rj45.gif
+				return $ROOTDIR/$LIBDIR/icons/normal/gl2.gif
 			}
 			small {
-				return $ROOTDIR/$LIBDIR/icons/small/rj45.gif
+				return $ROOTDIR/$LIBDIR/icons/small/gl2.gif
 			}
 			toolbar {
-				return $ROOTDIR/$LIBDIR/icons/tiny/rj45.gif
+				return $ROOTDIR/$LIBDIR/icons/tiny/gl2.gif
 			}
 		}
 	}
 
 	proc notebookDimensions { wi } {
-		set h 160
-		set w 100
+		set h 210
+		set w 507
 
 		return [list $h $w]
 	}
 
-	#****f* rj45.tcl/rj45.configGUI
-	# NAME
-	#   rj45.configGUI -- configuration GUI
-	# SYNOPSIS
-	#   rj45.configGUI $node_id
-	# FUNCTION
-	#   Defines the structure of the rj45 configuration window by calling
-	#   procedures for creating and organising the window, as well as procedures
-	#   for adding certain modules to that window.
-	# INPUTS
-	#   * node_id -- node id
-	#****
 	proc configGUI { node_id } {
 		global wi
 		#
@@ -135,16 +86,72 @@ namespace eval ${MODULE}::gui {
 		set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
 
 		configGUI_createConfigPopupWin
-		wm title $wi "rj45 configuration"
+		wm title $wi "[_getNodeType $node_cfg] ($node_id) configuration"
 
 		configGUI_nodeName $wi $node_id "Node name:"
-		set tabs [configGUI_addNotebookRj45 $wi $node_id [lsort [_ifcList $node_cfg]]]
+
+		configGUI_addPanedWin $wi
+		set treecolumns {
+			"QLen Queue len"
+			"QDisc Queue disc"
+			"QDrop Queue drop"
+		}
+		configGUI_addTree $wi $node_id
 
 		configGUI_nodeRestart $wi $node_id
 		configGUI_buttonsACNode $wi $node_id
 	}
 
+	proc configInterfacesGUI { wi node_id iface_id } {
+		global guielements
+
+		configGUI_ifcQueueConfig $wi $node_id $iface_id
+		configGUI_ifcGap $wi $iface_id 30
+	}
+
 	proc doubleClick { node_id control } {
-		nodeConfigGUI $node_id
+		if { [isRunningNode $node_id] && ! $control } {
+			spawnShellExec $node_id
+		} else {
+			nodeConfigGUI $node_id
+		}
+	}
+
+	proc rightClickMenus {} {
+		global isOSlinux
+
+		set menu_list {
+			menu_selectAdjacent
+			menu_configureNode
+			menu_nodeIcons
+			menu_createLink
+			menu_connectIface
+			menu_moveTo
+			menu_deleteSelection
+			menu_deleteSelectionKeepIfaces
+			menu_addSeparator
+			menu_autoExecute
+		}
+
+		if { [getFromRunning "oper_mode"] == "exec" } {
+			set exec_list {
+				menu_nodeExecute
+			}
+
+			lappend menu_list {*}$exec_list
+		}
+
+		if { $isOSlinux && [getFromRunning "oper_mode"] == "exec" } {
+			set exec_list {
+				menu_addSeparator
+				menu_shellSelection
+				menu_wiresharkIfaces
+				menu_tcpdumpIfaces
+			}
+
+			lappend menu_list {*}$exec_list
+		}
+
+		return $menu_list
 	}
 }

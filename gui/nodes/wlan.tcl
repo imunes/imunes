@@ -25,40 +25,45 @@
 
 set MODULE wlan
 
-proc $MODULE.toolbarIconDescr {} {
-	return "Add new WLAN domain"
-}
+namespace eval ${MODULE}::gui {
+	namespace import ::genericL2::gui::*
+	namespace export *
 
-proc $MODULE.icon { size } {
-	global ROOTDIR LIBDIR
+	proc toolbarIconDescr {} {
+		return "Add new WLAN domain"
+	}
 
-	switch $size {
-		normal {
-			return $ROOTDIR/$LIBDIR/icons/normal/cloud.gif
-		}
-		small {
-			return $ROOTDIR/$LIBDIR/icons/small/cloud.gif
-		}
-		toolbar {
-			return $ROOTDIR/$LIBDIR/icons/tiny/cloud.gif
+	proc icon { size } {
+		global ROOTDIR LIBDIR
+
+		switch $size {
+			normal {
+				return $ROOTDIR/$LIBDIR/icons/normal/cloud.gif
+			}
+			small {
+				return $ROOTDIR/$LIBDIR/icons/small/cloud.gif
+			}
+			toolbar {
+				return $ROOTDIR/$LIBDIR/icons/tiny/cloud.gif
+			}
 		}
 	}
-}
 
-proc $MODULE.configGUI { node_id } {
-	global wi
-	global guielements treecolumns
-	set guielements {}
+	proc configGUI { node_id } {
+		global wi
+		global guielements treecolumns
+		set guielements {}
 
-	configGUI_createConfigPopupWin
-	wm title $wi "WLAN configuration"
-	configGUI_nodeName $wi $node_id "Node name:"
+		configGUI_createConfigPopupWin
+		wm title $wi "WLAN configuration"
+		configGUI_nodeName $wi $node_id "Node name:"
 
-	configGUI_buttonsACNode $wi $node_id
-}
+		configGUI_buttonsACNode $wi $node_id
+	}
 
-proc $MODULE.configInterfacesGUI { wi node_id iface_id } {
-	global guielements
+	proc configInterfacesGUI { wi node_id iface_id } {
+		global guielements
 
-	configGUI_ifcQueueConfig $wi $node_id $iface_id
+		configGUI_ifcQueueConfig $wi $node_id $iface_id
+	}
 }

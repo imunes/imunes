@@ -851,7 +851,6 @@ proc pipesClose {} {
 #****
 proc setOperMode { new_oper_mode } {
 	global isOSfreebsd isOSlinux gui
-	global main_canvas_elem
 
 	if {
 		! [getFromRunning "cfg_deployed"] &&
@@ -926,9 +925,6 @@ proc setOperMode { new_oper_mode } {
 			.menubar.experiment entryconfigure "Refresh running experiment" -state normal
 			.menubar.edit entryconfigure "Undo" -state disabled
 			.menubar.edit entryconfigure "Redo" -state disabled
-			$main_canvas_elem bind node <Double-1> "spawnShellExec"
-			$main_canvas_elem bind nodelabel <Double-1> "spawnShellExec"
-			$main_canvas_elem bind node_running <Double-1> "spawnShellExec"
 		}
 
 		setToRunning "oper_mode" "exec"
@@ -1000,10 +996,6 @@ proc setOperMode { new_oper_mode } {
 			} else {
 				.menubar.edit entryconfigure "Redo" -state disabled
 			}
-
-			$main_canvas_elem bind node <Double-1> "nodeConfigGUI {}"
-			$main_canvas_elem bind nodelabel <Double-1> "nodeConfigGUI {}"
-			$main_canvas_elem bind node_running <Double-1> "nodeConfigGUI {}"
 		}
 
 		setToRunning "oper_mode" "edit"
@@ -1035,28 +1027,80 @@ proc setOperMode { new_oper_mode } {
 #   This procedure spawns a new shell on a selected and current
 #   node.
 #****
-proc spawnShellExec {} {
-	global main_canvas_elem
-
-	set node_id [lindex [$main_canvas_elem gettags "(node || nodelabel || node_running) && current"] 1]
-	if { $node_id == "" } {
+proc spawnShellExec { node_id } {
+	set cmd [existingShells [invokeNodeProc $node_id "shellcmds"] $node_id "first_only"]
+	if { $cmd == "" } {
 		return
 	}
 
-	if {
-		[isPseudoNode $node_id] ||
-		[invokeNodeProc $node_id "virtlayer"] != "VIRTUALIZED" ||
-		! [isRunningNode $node_id]
-	} {
-		nodeConfigGUI $node_id
-	} else {
-		set cmd [existingShells [invokeNodeProc $node_id "shellcmds"] $node_id "first_only"]
-		if { $cmd == "" } {
-			return
-		}
+	spawnShell $node_id $cmd
+}
 
-		spawnShell $node_id $cmd
+#****f* linux.tcl/existingShells
+# NAME
+#   existingShells -- check which shells exist in a node
+# SYNOPSIS
+#   existingShells $shells $node_id
+# FUNCTION
+#   This procedure checks which of the provided shells are available
+#   in a running node.
+# INPUTS
+#   * shells -- list of shells.
+#   * node_id -- node id of the node for which the check is performed.
+#****
+proc existingShells { shells node_id { first_only "" } } {
+	set preferred_shell [getActiveOption "preferred_shell"]
+	set shells "$preferred_shell [removeFromList $shells $preferred_shell]"
+
+	set cmds "retval=\"\" ;\n"
+	append cmds "\n"
+	append cmds "for s in $shells; do\n"
+	append cmds "	x=\"\$(command -v \$s)\" ;\n"
+	append cmds "	test \$? -eq 0 && retval=\"\$retval \$x\" "
+	if { $first_only != "" } {
+		append cmds "&& break; \n"
+	} else {
+		append cmds "; \n"
 	}
+	append cmds "done ;\n"
+	append cmds "echo \"\$retval\"\n"
+
+	set cmds "\'$cmds\'"
+
+	set os_cmd [invokeNodeProc $node_id "getExecCommand" [getFromRunning "eid"] $node_id]
+
+	catch { rexec {*}$os_cmd sh -c {*}$cmds } existing
+
+	return $existing
+}
+
+#****f* common.tcl/spawnShell
+# NAME
+#   spawnShell -- spawn shell
+# SYNOPSIS
+#   spawnShell $node_id $cmd
+# FUNCTION
+#   This procedure spawns a new shell for a specified node.
+#   The shell is specified in cmd parameter.
+# INPUTS
+#   * node_id -- node id of the node for which the shell is spawned.
+#   * cmd -- the path to the shell.
+#****
+proc spawnShell { node_id cmd } {
+	global ttyrcmd
+
+	if { [checkTerminalMissing] } {
+		return
+	}
+
+	set eid [getFromRunning "eid"]
+
+	set private_ns [invokeNodeProc $node_id "getPrivateNs" $eid $node_id]
+	set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-it"]
+
+	exec {*}[getActiveOption "terminal_command"] \
+		-T "IMUNES: [getNodeName $node_id] (console) [lindex [split $cmd /] end]" \
+		-e {*}$ttyrcmd "$os_cmd $cmd" &
 }
 
 #****f* exec.tcl/fetchNodesConfiguration

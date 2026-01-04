@@ -482,11 +482,14 @@ proc reloadSources {} {
 			safePackageRequire Tk "To run the IMUNES GUI, Tk must be installed."
 		}
 
+		catch { namespace delete ::genericL2::gui }
+		catch { namespace delete ::genericL3::gui }
 		safeSourceFile "$ROOTDIR/$LIBDIR/gui/nodes/generic_l2.tcl"
 		safeSourceFile "$ROOTDIR/$LIBDIR/gui/nodes/generic_l3.tcl"
 
 		# Node GUI base libraries
 		foreach node_type $node_types {
+			catch { namespace delete ::[set node_type]::gui }
 			safeSourceFile "$ROOTDIR/$LIBDIR/gui/nodes/$node_type.tcl"
 		}
 

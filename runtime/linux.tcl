@@ -109,11 +109,10 @@ proc checkForExternalApps { app_list } {
 #   * returns 0 if the applications exist, otherwise it returns 1.
 #****
 proc checkForApplications { node_id app_list } {
-	set private_ns [invokeNodeProc $node_id "getPrivateNs" [getFromRunning "eid"] $node_id]
-	set os_cmd "docker exec $private_ns sh -c"
+	set os_cmd [invokeNodeProc $node_id "getExecCommand" [getFromRunning "eid"] $node_id]
 
 	foreach app $app_list {
-		set os_cmd "$os_cmd 'command -v $app'"
+		set os_cmd "$os_cmd sh -c 'command -v $app'"
 		set status [ catch { rexec {*}$os_cmd } err ]
 		if { $status } {
 			return 1
@@ -159,8 +158,7 @@ proc startWiresharkOnNodeIfc { node_id iface_name } {
 			set wireshark_comm [concat $escalation_comm $wireshark_comm]
 		}
 
-		set private_ns [invokeNodeProc $node_id "getPrivateNs" $eid $node_id]
-		set os_cmd "docker exec $private_ns"
+		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id]
 
 		if { $wireshark_comm != "" } {
 			if { $remote != "" } {
@@ -229,71 +227,6 @@ proc startTcpdumpOnNodeIfc { node_id iface_name } {
 	if { [checkForApplications $node_id "tcpdump"] == 0 } {
 		spawnShell $node_id "tcpdump -leni $iface_name"
 	}
-}
-
-#****f* linux.tcl/existingShells
-# NAME
-#   existingShells -- check which shells exist in a node
-# SYNOPSIS
-#   existingShells $shells $node_id
-# FUNCTION
-#   This procedure checks which of the provided shells are available
-#   in a running node.
-# INPUTS
-#   * shells -- list of shells.
-#   * node_id -- node id of the node for which the check is performed.
-#****
-proc existingShells { shells node_id { first_only "" } } {
-	set preferred_shell [getActiveOption "preferred_shell"]
-	set shells "$preferred_shell [removeFromList $shells $preferred_shell]"
-
-	set cmds "retval=\"\" ;\n"
-	append cmds "\n"
-	append cmds "for s in $shells; do\n"
-	append cmds "	x=\"\$(command -v \$s)\" ;\n"
-	append cmds "	test \$? -eq 0 && retval=\"\$retval \$x\" "
-	if { $first_only != "" } {
-		append cmds "&& break; \n"
-	} else {
-		append cmds "; \n"
-	}
-	append cmds "done ;\n"
-	append cmds "echo \"\$retval\"\n"
-
-	set cmds "\'$cmds\'"
-
-	set private_ns [invokeNodeProc $node_id "getPrivateNs" [getFromRunning "eid"] $node_id]
-	set os_cmd "docker exec $private_ns"
-
-	catch { rexec {*}$os_cmd sh -c {*}$cmds } existing
-
-	return $existing
-}
-
-#****f* linux.tcl/spawnShell
-# NAME
-#   spawnShell -- spawn shell
-# SYNOPSIS
-#   spawnShell $node_id $cmd
-# FUNCTION
-#   This procedure spawns a new shell for a specified node.
-#   The shell is specified in cmd parameter.
-# INPUTS
-#   * node_id -- node id of the node for which the shell is spawned.
-#   * cmd -- the path to the shell.
-#****
-proc spawnShell { node_id cmd } {
-	global ttyrcmd
-
-	if { [checkTerminalMissing] } {
-		return
-	}
-
-	set docker_id [getFromRunning "eid"]\.$node_id
-
-	exec {*}[getActiveOption "terminal_command"] \
-		-T "IMUNES: [getNodeName $node_id] (console) [string trim [lindex [split $cmd /] end] ']" \
-		-e {*}$ttyrcmd "docker exec -it $docker_id $cmd" 2> /dev/null &
 }
 
 #****f* linux.tcl/allSnapshotsAvailable

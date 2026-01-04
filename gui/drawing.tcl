@@ -24,14 +24,15 @@ proc refreshToolBarNodes {} {
 			continue
 		}
 
-		set image [image create photo -file [invokeTypeProc $node_type "icon" "toolbar"]]
+		set image [image create photo -file [invokeTypeProc $node_type "gui::icon" "toolbar"]]
 
-		set tool ""
-		if { [invokeTypeProc $node_type "netlayer"] == "LINK" } {
-			set tool "link"
-		} elseif { [invokeTypeProc $node_type "netlayer"] == "NETWORK" } {
-			set tool "net"
+		set tool [invokeTypeProc $node_type "::gui::toolbarLocation"]
+		if { $tool == "" } {
+			sputs "No toolbarLocation defined for '$node_type', skipping."
+
+			continue
 		}
+		set tool [lindex [split $tool "_"] 0]
 
 		set background_color ""
 		if { $node_type ni $runnable_node_types } {
@@ -43,7 +44,7 @@ proc refreshToolBarNodes {} {
 		}
 
 		$mf.left.${tool}_nodes add command -image $image -hidemargin 1 \
-			-compound left -label [string range [invokeTypeProc $node_type "toolbarIconDescr"] 8 end] \
+			-compound left -label [string range [invokeTypeProc $node_type "gui::toolbarIconDescr"] 8 end] \
 			-command "setActiveTool ${tool}_layer $node_type" {*}$background_color
 	}
 }
@@ -1516,7 +1517,7 @@ proc updateIconSize { { new_icon_size "" } } {
 	foreach node_type $all_modules_list {
 		global $node_type
 
-		set $node_type [image create photo -file [invokeTypeProc $node_type "icon" $new_icon_size]]
+		set $node_type [image create photo -file [invokeTypeProc $node_type "gui::icon" $new_icon_size]]
 	}
 }
 
