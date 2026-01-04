@@ -469,7 +469,7 @@ proc getNodeNetns { eid node_id } {
 	global devfs_number
 
 	# Top-level experiment netns
-	if { $node_id in "" || [getNodeType $node_id] == "rj45" } {
+	if { $node_id == "" || [getNodeType $node_id] == "rj45" } {
 		return $eid
 	}
 
