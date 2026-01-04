@@ -125,6 +125,13 @@ proc redrawAll {} {
 			foreach iface_id [ifcList $node_id] {
 				set pseudo_id [getPseudoNodeFromNodeIface $node_id $iface_id]
 				if { $pseudo_id != "" } {
+					set link_id [getIfcLink $node_id $iface_id]
+					if { $link_id == "" } {
+						removeNodeGUI $pseudo_id
+
+						continue
+					}
+
 					drawPseudoNode $pseudo_id
 				}
 			}
