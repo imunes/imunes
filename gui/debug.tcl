@@ -105,11 +105,12 @@ proc popupDebugger {} {
 }
 
 proc logCaller {} {
-	set r [catch { info level [expr [info level] - 1] } e]
+	set r1 [catch { info level [expr [info level] - 1] } e1]
 	set r2 [catch { info level [expr [info level] - 2] } e2]
-	if { $r } {
+	set r3 [catch { info level [expr [info level] - 3] } e3]
+	if { $r1 } {
 		dputs "Called directly by the interpreter (e.g.: .tcl on the partyline)."
 	} {
-		dputs "Called by ${e} ${e2}."
+		dputs "Called by ${e3} --> ${e2} --> ${e1}."
 	}
 }
