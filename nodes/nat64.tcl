@@ -234,6 +234,10 @@ proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
 	invokeTypeProc "router" "nodeIfacesUnconfigure" $eid $node_id $ifaces
 }
 
+proc $MODULE.nodeLogIfacesDestroy { eid node_id ifaces } {
+	invokeTypeProc "router" "nodeLogIfacesDestroy" $eid $node_id $ifaces
+}
+
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
 	invokeTypeProc "router" "nodeIfacesDestroy" $eid $node_id $ifaces
 }

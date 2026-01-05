@@ -448,6 +448,10 @@ proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
 	unconfigNodeIfaces $eid $node_id $ifaces
 }
 
+proc $MODULE.nodeLogIfacesDestroy { eid node_id ifaces } {
+	nodeLogIfacesDestroy $eid $node_id $ifaces
+}
+
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
 	nodeIfacesDestroy $eid $node_id $ifaces
 }

@@ -2263,6 +2263,17 @@ proc destroyLinkBetween { eid node1_id node2_id iface1_id iface2_id link_id } {
 	pipesExec "jexec $eid ngctl msg $link_id: shutdown" "hold"
 }
 
+proc nodeLogIfacesDestroy { eid node_id ifaces } {
+	foreach iface_id $ifaces {
+		set iface_name [getIfcName $node_id $iface_id]
+		if { $iface_name != "lo0" } {
+			pipesExec "jexec $eid\.$node_id ifconfig $iface_name destroy" "hold"
+		}
+
+		setToRunning "${node_id}|${iface_id}_running" "false"
+	}
+}
+
 #****f* freebsd.tcl/nodeIfacesDestroy
 # NAME
 #   nodeIfacesDestroy -- destroy virtual node interfaces
@@ -2284,8 +2295,6 @@ proc nodeIfacesDestroy { eid node_id ifaces } {
 			set iface_name [getIfcName $node_id $iface_id]
 			if { [getIfcType $node_id $iface_id] == "stolen" } {
 				releaseExtIfcByName $eid $iface_name $node_id
-			} elseif { [isIfcLogical $node_id $iface_id] } {
-				pipesExec "jexec $eid\.$node_id ifconfig $iface_name destroy" "hold"
 			} else {
 				pipesExec "jexec $eid ngctl rmnode $node_id-$iface_name:" "hold"
 			}

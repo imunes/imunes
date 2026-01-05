@@ -1615,6 +1615,17 @@ proc destroyLinkBetween { eid node1_id node2_id iface1_id iface2_id link_id } {
 	pipesExec "ip -n $eid link del $link_id" "hold"
 }
 
+proc nodeLogIfacesDestroy { eid node_id ifaces } {
+	foreach iface_id $ifaces {
+		set iface_name [getIfcName $node_id $iface_id]
+		if { $iface_name != "lo0" } {
+			pipesExec "ip -n [getNodeNetns $eid $node_id] link del $iface_name" "hold"
+		}
+
+		setToRunning "${node_id}|${iface_id}_running" "false"
+	}
+}
+
 #****f* linux.tcl/nodeIfacesDestroy
 # NAME
 #   nodeIfacesDestroy -- destroy virtual node interfaces
@@ -1646,10 +1657,7 @@ proc nodeIfacesDestroy { eid node_id ifaces } {
 			set link_id [getIfcLink $node_id $iface_id]
 			if { [getIfcType $node_id $iface_id] == "stolen" } {
 				releaseExtIfcByName $eid $iface_name $node_id
-			} elseif {
-				[isIfcLogical $node_id $iface_id] ||
-				($link_id != "" && [getLinkDirect $link_id])
-			} {
+			} elseif { $link_id != "" && [getLinkDirect $link_id] } {
 				pipesExec "ip -n [getNodeNetns $eid $node_id] link del $iface_name" "hold"
 			} else {
 				pipesExec "ip -n $eid link del $node_id-$iface_name" "hold"
