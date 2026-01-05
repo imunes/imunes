@@ -694,6 +694,8 @@ proc deployCfg { { execute 0 } } {
 		return
 	}
 
+	set t_stop [clock milliseconds]
+
 	if { $configure_nodes_ifaces != "" } {
 		statline "Checking for errors on $error_check_nodes_ifaces_count node(s) interfaces..."
 		checkForErrorsIfaces $error_check_nodes_ifaces $error_check_nodes_ifaces_count $w
@@ -701,6 +703,8 @@ proc deployCfg { { execute 0 } } {
 
 	statline "Checking for errors on $error_check_nodes_count node(s)..."
 	checkForErrors $error_check_nodes $error_check_nodes_count $w
+
+	set t_diff [expr [clock milliseconds] - $t_stop]
 
 	finishExecuting 1 "" $w
 
@@ -711,7 +715,7 @@ proc deployCfg { { execute 0 } } {
 	}
 	createRunningVarsFile $eid
 
-	statline "Network topology instantiated in [expr ([clock milliseconds] - $t_start)/1000.0] seconds ($all_nodes_count nodes and $links_count links)."
+	statline "Network topology instantiated in [expr ([clock milliseconds] - $t_diff - $t_start)/1000.0] seconds ($all_nodes_count nodes and $links_count links)."
 
 	if { ! $gui || $execMode == "batch" } {
 		puts "Experiment ID = $eid"
