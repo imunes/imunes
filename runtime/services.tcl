@@ -87,7 +87,7 @@ proc regHooks { service hooks } {
 #   * hooks -- hooks for which the service is executed
 #****
 proc services { action hook bkg args } {
-	global services$hook skip_nodes
+	global services$hook
 
 	set iterlist [getFromRunning "node_list"]
 	if { $args != "" && $args != "*" } {
@@ -95,7 +95,7 @@ proc services { action hook bkg args } {
 	}
 
 	foreach node_id $iterlist {
-		if { $node_id in $skip_nodes || [getFromRunning "${node_id}_running"] != "true" } {
+		if { ! [isRunningNode $node_id] } {
 			set iterlist [removeFromList $iterlist $node_id]
 		}
 	}

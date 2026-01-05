@@ -198,22 +198,6 @@ if { ! [info exists eid_base] } {
 	set eid_base [genExperimentId]
 }
 
-# bases for naming new nodes
-array set nodeNamingBase {
-	pc pc
-	ext ext
-	filter filter
-	router router
-	host host
-	hub hub
-	lanswitch switch
-	nat64 nat64-
-	rj45 rj45-
-	packgen packgen
-	stpswitch stpswitch
-	wlan wlan
-}
-
 global named_colors
 set named_colors "Red Green Blue Yellow Magenta Cyan Gray Black"
 
@@ -343,6 +327,10 @@ if { $remote_error == "" && $execMode == "batch" } {
 foreach file_path [glob -directory $ROOTDIR/$LIBDIR/config *.tcl] {
 	safeSourceFile $file_path
 }
+
+# load generic L2/L3 node procedures
+safeSourceFile $ROOTDIR/$LIBDIR/nodes/generic_l2.tcl
+safeSourceFile $ROOTDIR/$LIBDIR/nodes/generic_l3.tcl
 
 # The following files need to be sourced in this particular order. If not
 # the placement of the toolbar icons will be altered.
@@ -476,6 +464,9 @@ if { $execMode == "interactive" } {
 
 	if { $gui } {
 		safePackageRequire Tk "To run the IMUNES GUI, Tk must be installed."
+
+		safeSourceFile "$ROOTDIR/$LIBDIR/gui/nodes/generic_l2.tcl"
+		safeSourceFile "$ROOTDIR/$LIBDIR/gui/nodes/generic_l3.tcl"
 
 		# Node GUI base libraries
 		foreach node_type $node_types {

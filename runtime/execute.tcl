@@ -306,7 +306,7 @@ set ipsecSecrets ""
 proc nodeIpsecInit { node_id } {
 	global ipsecConf ipsecSecrets isOSfreebsd
 
-	if { [getFromRunning "${node_id}_running"] == "false" || [getNodeIPsec $node_id] == "" } {
+	if { ! [isRunningNode $node_id] || [getNodeIPsec $node_id] == "" } {
 		return
 	}
 
@@ -446,7 +446,7 @@ proc generateHostsFile { node_id } {
 #   configure_nodes_ifaces, configure_nodes
 #****
 proc deployCfg { { execute 0 } } {
-	global progressbarCount execMode skip_nodes err_skip_nodesifaces err_skip_nodes skip_links
+	global progressbarCount execMode err_skip_nodesifaces
 	global runnable_node_types gui
 
 	if { ! $execute } {
@@ -471,12 +471,13 @@ proc deployCfg { { execute 0 } } {
 	}
 
 	set progressbarCount 0
-	set skip_nodes {}
-	set skip_links {}
 	set err_skip_nodesifaces {}
-	set err_skip_nodes {}
 	set nodes_count [llength $instantiate_nodes]
 	set links_count [llength $instantiate_links]
+
+	foreach link_id $instantiate_links {
+		setToRunning "${link_id}_destroy_type" [getLinkDirect $link_id]
+	}
 
 	set t_start [clock milliseconds]
 
@@ -595,7 +596,7 @@ proc deployCfg { { execute 0 } } {
 	}
 	set configure_links_count [llength $configure_links]
 
-	set maxProgressbasCount [expr {2*$all_nodes_count + 1*$native_nodes_count + 4*$virtualized_nodes_count + 2*$links_count + 1*$configure_links_count + 2*$configure_nodes_count + 4*$create_nodes_ifaces_count + 2*$configure_nodes_ifaces_count + $error_check_nodes_ifaces_count + $error_check_nodes_count}]
+	set maxProgressbasCount [expr {2*$all_nodes_count + 2*$native_nodes_count + 4*$virtualized_nodes_count + 2*$links_count + 1*$configure_links_count + 2*$configure_nodes_count + 4*$create_nodes_ifaces_count + 2*$configure_nodes_ifaces_count + $error_check_nodes_ifaces_count + $error_check_nodes_count}]
 
 	set w ""
 	set eid [getFromRunning "eid"]
@@ -851,7 +852,7 @@ proc execute_prepareSystem { progressbar_widget msg_widget } {
 }
 
 proc execute_nodesCreate { nodes nodes_count w } {
-	global progressbarCount execMode runnable_node_types skip_nodes gui
+	global progressbarCount execMode runnable_node_types gui
 
 	set eid [getFromRunning "eid"]
 
@@ -859,7 +860,7 @@ proc execute_nodesCreate { nodes nodes_count w } {
 	foreach node_id $nodes {
 		displayBatchProgress $batchStep $nodes_count
 
-		if { $node_id in $skip_nodes } {
+		if { [isErrorNode $node_id] } {
 			set msg "Skipping"
 		} else {
 			set msg "Instantiating"
@@ -868,6 +869,7 @@ proc execute_nodesCreate { nodes nodes_count w } {
 			} on error err {
 				return -code error "Error in '[getNodeType $node_id].nodeCreate $eid $node_id': $err"
 			}
+
 			pipesExec ""
 		}
 
@@ -890,9 +892,11 @@ proc execute_nodesCreate { nodes nodes_count w } {
 }
 
 proc execute_nodesCreate_wait { nodes nodes_count w } {
-	global progressbarCount execMode skip_nodes nodecreate_timeout gui
+	global progressbarCount execMode gui
 
-	set timeout [expr { [getActiveOption "timeout_factor"] * $nodecreate_timeout }]
+	set eid [getFromRunning "eid"]
+
+	set timeout [getTimeout "nodecreate_timeout"]
 
 	set t_start [clock milliseconds]
 
@@ -903,21 +907,27 @@ proc execute_nodesCreate_wait { nodes nodes_count w } {
 	while { [llength $nodes_left] > 0 } {
 		displayBatchProgress $batchStep $nodes_count
 		foreach node_id $nodes_left {
-			if { ! [isNodeStarted $node_id] } {
-				if { $timeout < 0 } {
-					after [expr -$timeout]
+			if { "node_creating" in [getStateNode $node_id] } {
+				set node_started [invokeNodeProc $node_id "nodeCreate_check" $eid $node_id]
+				if { ! $node_started } {
+					if { $timeout < 0 } {
+						after [expr -$timeout]
+					}
+					update
+					continue
 				}
-				update
-				continue
-			}
 
-			setToRunning "${node_id}_running" "true"
+				removeStateNode $node_id "node_creating"
+				set msg "created"
+			} else {
+				set msg "skipped"
+			}
 
 			incr batchStep
 			incr progressbarCount
 
 			if { $gui && $execMode != "batch" } {
-				statline "Node [getNodeName $node_id] started"
+				statline "Node [getNodeName $node_id] $msg"
 				$w.p configure -value $progressbarCount
 				update
 			}
@@ -939,7 +949,6 @@ proc execute_nodesCreate_wait { nodes nodes_count w } {
 
 		set t_last [clock milliseconds]
 		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $timeout } {
-			lappend skip_nodes {*}$nodes_left
 			break
 		}
 	}
@@ -953,7 +962,7 @@ proc execute_nodesCreate_wait { nodes nodes_count w } {
 }
 
 proc execute_nodesNamespaceSetup { nodes nodes_count w } {
-	global progressbarCount execMode skip_nodes gui
+	global progressbarCount execMode gui
 
 	set eid [getFromRunning "eid"]
 
@@ -961,7 +970,7 @@ proc execute_nodesNamespaceSetup { nodes nodes_count w } {
 	foreach node_id $nodes {
 		displayBatchProgress $batchStep $nodes_count
 
-		if { $node_id in $skip_nodes } {
+		if { [isErrorNode $node_id] } {
 			set msg "Skipping"
 		} else {
 			set msg "Creating"
@@ -970,6 +979,7 @@ proc execute_nodesNamespaceSetup { nodes nodes_count w } {
 			} on error err {
 				return -code error "Error in '[getNodeType $node_id].nodeNamespaceSetup $eid $node_id': $err"
 			}
+
 			pipesExec ""
 		}
 
@@ -992,18 +1002,31 @@ proc execute_nodesNamespaceSetup { nodes nodes_count w } {
 }
 
 proc execute_nodesNamespaceSetup_wait { nodes nodes_count w } {
-	global progressbarCount skip_nodes execMode gui
+	global progressbarCount execMode gui
+
+	set eid [getFromRunning "eid"]
+
+	set timeout [getTimeout "nodecreate_timeout"]
+
+	set t_start [clock milliseconds]
 
 	set batchStep 0
 	set nodes_left $nodes
+	set old_nodes_left -1
 	while { [llength $nodes_left] > 0 } {
 		displayBatchProgress $batchStep $nodes_count
 		foreach node_id $nodes_left {
-			if { $node_id ni $skip_nodes } {
-				if { ! [isNodeNamespaceCreated $node_id] } {
+			if { "ns_creating" in [getStateNode $node_id] } {
+				set node_namespace_created [invokeNodeProc $node_id "nodeNamespaceSetup_check" $eid $node_id]
+				if { ! $node_namespace_created } {
+					if { $timeout < 0 } {
+						after [expr -$timeout]
+					}
 					update
 					continue
 				}
+
+				removeStateNode $node_id "ns_creating"
 				set msg "created"
 			} else {
 				set msg "skipped"
@@ -1021,6 +1044,22 @@ proc execute_nodesNamespaceSetup_wait { nodes nodes_count w } {
 
 			set nodes_left [removeFromList $nodes_left $node_id]
 		}
+
+		if { $old_nodes_left != [llength $nodes_left] } {
+			set old_nodes_left [llength $nodes_left]
+			set t_start [clock milliseconds]
+
+			continue
+		}
+
+		if { $timeout < 0 } {
+			continue
+		}
+
+		set t_last [clock milliseconds]
+		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $timeout } {
+			break
+		}
 	}
 
 	if { $nodes_count > 0 } {
@@ -1032,7 +1071,7 @@ proc execute_nodesNamespaceSetup_wait { nodes nodes_count w } {
 }
 
 proc execute_nodesInitConfigure { nodes nodes_count w } {
-	global progressbarCount execMode skip_nodes gui
+	global progressbarCount execMode gui
 
 	set eid [getFromRunning "eid"]
 
@@ -1040,7 +1079,7 @@ proc execute_nodesInitConfigure { nodes nodes_count w } {
 	foreach node_id $nodes {
 		displayBatchProgress $batchStep $nodes_count
 
-		if { $node_id in $skip_nodes } {
+		if { ! [isRunningNode $node_id] } {
 			set msg "Skipping"
 		} else {
 			set msg "Starting"
@@ -1049,6 +1088,7 @@ proc execute_nodesInitConfigure { nodes nodes_count w } {
 			} on error err {
 				return -code error "Error in '[getNodeType $node_id].nodeInitConfigure $eid $node_id': $err"
 			}
+
 			pipesExec ""
 		}
 
@@ -1071,9 +1111,11 @@ proc execute_nodesInitConfigure { nodes nodes_count w } {
 }
 
 proc execute_nodesInitConfigure_wait { nodes nodes_count w } {
-	global progressbarCount execMode skip_nodes nodecreate_timeout gui
+	global progressbarCount execMode gui
 
-	set timeout [expr { [getActiveOption "timeout_factor"] * $nodecreate_timeout }]
+	set eid [getFromRunning "eid"]
+
+	set timeout [getTimeout "nodecreate_timeout"]
 
 	set t_start [clock milliseconds]
 
@@ -1084,14 +1126,17 @@ proc execute_nodesInitConfigure_wait { nodes nodes_count w } {
 	while { [llength $nodes_left] > 0 } {
 		displayBatchProgress $batchStep $nodes_count
 		foreach node_id $nodes_left {
-			if { $node_id ni $skip_nodes } {
-				if { ! [isNodeInitNet $node_id] } {
+			if { "init_configuring" in [getStateNode $node_id] } {
+				set node_init_configured [invokeNodeProc $node_id "nodeInitConfigure_check" $eid $node_id]
+				if { ! $node_init_configured } {
 					if { $timeout < 0 } {
 						after [expr -$timeout]
 					}
 					update
 					continue
 				}
+
+				removeStateNode $node_id "init_configuring"
 				set msg "configured"
 			} else {
 				set msg "skipped"
@@ -1123,7 +1168,6 @@ proc execute_nodesInitConfigure_wait { nodes nodes_count w } {
 
 		set t_last [clock milliseconds]
 		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $timeout } {
-			lappend skip_nodes {*}$nodes_left
 			break
 		}
 	}
@@ -1140,7 +1184,7 @@ proc execute_nodesCopyFiles { nodes nodes_count w } {
 }
 
 proc execute_nodesPhysIfacesCreate { nodes_ifaces nodes_count w } {
-	global progressbarCount execMode skip_nodes gui
+	global progressbarCount execMode gui
 
 	set eid [getFromRunning "eid"]
 
@@ -1148,23 +1192,57 @@ proc execute_nodesPhysIfacesCreate { nodes_ifaces nodes_count w } {
 	dict for {node_id ifaces} $nodes_ifaces {
 		displayBatchProgress $batchStep $nodes_count
 
-		if { $node_id in $skip_nodes } {
+		if { ! [isRunningNode $node_id] } {
 			set msg "Skipping"
 		} else {
-			set msg "Creating"
 			if { $ifaces == "*" } {
 				set ifaces [ifcList $node_id]
 			} else {
 				set ifaces [removeFromList $ifaces [logIfcList $node_id]]
 			}
 
-			try {
-				invokeNodeProc $node_id "nodePhysIfacesCreate" $eid $node_id $ifaces
-			} on error err {
-				return -code error "Error in '[getNodeType $node_id].nodePhysIfacesCreate $eid $node_id $ifaces': $err"
+			# skip 'direct link' and UNASSIGNED stolen interfaces
+			foreach iface_id $ifaces {
+				set this_link_id [getIfcLink $node_id $iface_id]
+				if {
+					($this_link_id != "" && [getLinkDirect $this_link_id]) ||
+					"creating" in [getStateNodeIface $node_id $iface_id] ||
+					([getIfcType $node_id $iface_id] == "stolen" &&
+					[getIfcName $node_id $iface_id] == "UNASSIGNED")
+				} {
+					set ifaces [removeFromList $ifaces $iface_id]
+
+					continue
+				}
 			}
 
-			pipesExec ""
+			if { $ifaces != {} } {
+				# mark interfaces to skip
+				if { ! [invokeNodeProc $node_id "checkIfacesPrerequisites" $eid $node_id $ifaces] } {
+					foreach iface_id $ifaces {
+						set this_link_id [getIfcLink $node_id $iface_id]
+						if { [isErrorNodeIface $node_id $iface_id] } {
+							set ifaces [removeFromList $ifaces $iface_id]
+						}
+					}
+				}
+
+				if { $ifaces != {} } {
+					try {
+						invokeNodeProc $node_id "nodePhysIfacesCreate" $eid $node_id $ifaces
+					} on error err {
+						return -code error "Error in '[getNodeType $node_id].nodePhysIfacesCreate $eid $node_id $ifaces': $err"
+					}
+				}
+			}
+
+			if { $ifaces != {} } {
+				pipesExec ""
+
+				set msg "Creating"
+			} else {
+				set msg "No available"
+			}
 		}
 
 		incr batchStep
@@ -1186,9 +1264,11 @@ proc execute_nodesPhysIfacesCreate { nodes_ifaces nodes_count w } {
 }
 
 proc execute_nodesPhysIfacesCreate_wait { nodes_ifaces nodes_count w } {
-	global progressbarCount execMode skip_nodes err_skip_nodesifaces ifacesconf_timeout gui
+	global progressbarCount execMode err_skip_nodesifaces gui
 
-	set timeout [expr { [getActiveOption "timeout_factor"] * $ifacesconf_timeout }]
+	set eid [getFromRunning "eid"]
+
+	set timeout [getTimeout "ifacesconf_timeout"]
 
 	set t_start [clock milliseconds]
 
@@ -1201,37 +1281,24 @@ proc execute_nodesPhysIfacesCreate_wait { nodes_ifaces nodes_count w } {
 	while { [llength $nodes_left] > 0 } {
 		displayBatchProgress $batchStep $nodes_count
 		foreach node_id $nodes_left {
-			if { $node_id ni $skip_nodes } {
-				set ifaces [removeFromList [dict get $nodes_ifaces $node_id] [logIfcList $node_id]]
+			if { "pifaces_creating" in [getStateNode $node_id] } {
+				set ifaces [dict get $nodes_ifaces $node_id]
 				if { $ifaces == "*" } {
 					set ifaces [ifcList $node_id]
+				} else {
+					set ifaces [removeFromList $ifaces [logIfcList $node_id]]
 				}
 
-				set created_ifaces [isNodeIfacesCreated $node_id $ifaces]
-				foreach iface_id $created_ifaces {
-					if { $iface_id ni $ifaces } {
-						continue
-					}
-					setToRunning "${node_id}|${iface_id}_running" "true"
-				}
-
-				set try_again 0
-				foreach iface_id $ifaces {
-					if { [getFromRunning "${node_id}|${iface_id}_running"] == "true" } {
-						continue
-					}
-
+				set ifaces_created [invokeNodeProc $node_id "nodePhysIfacesCreate_check" $eid $node_id $ifaces]
+				if { ! $ifaces_created } {
 					if { $timeout < 0 } {
 						after [expr -$timeout]
 					}
-					set try_again 1
-				}
-
-				if { $try_again } {
 					update
 					continue
 				}
 
+				removeStateNode $node_id "pifaces_creating"
 				set msg "created"
 			} else {
 				set msg "skipped"
@@ -1268,19 +1335,6 @@ proc execute_nodesPhysIfacesCreate_wait { nodes_ifaces nodes_count w } {
 		}
 	}
 
-	foreach node_id $nodes {
-		set ifaces [removeFromList [dict get $nodes_ifaces $node_id] [ifcList $node_id]]
-		if { $ifaces == "*" } {
-			set ifaces [logIfcList $node_id]
-		}
-
-		foreach iface_id $ifaces {
-			if { [getFromRunning "${node_id}|${iface_id}_running"] == "creating" } {
-				setToRunning "${node_id}|${iface_id}_running" "false"
-			}
-		}
-	}
-
 	if { $nodes_count > 0 } {
 		displayBatchProgress $batchStep $nodes_count
 		if { ! $gui || $execMode == "batch" } {
@@ -1290,7 +1344,7 @@ proc execute_nodesPhysIfacesCreate_wait { nodes_ifaces nodes_count w } {
 }
 
 proc execute_nodesLogIfacesCreate { nodes_ifaces nodes_count w } {
-	global progressbarCount execMode skip_nodes gui
+	global progressbarCount execMode gui
 
 	set eid [getFromRunning "eid"]
 
@@ -1298,7 +1352,7 @@ proc execute_nodesLogIfacesCreate { nodes_ifaces nodes_count w } {
 	dict for {node_id ifaces} $nodes_ifaces {
 		displayBatchProgress $batchStep $nodes_count
 
-		if { $node_id in $skip_nodes } {
+		if { ! [isRunningNode $node_id] } {
 			set msg "Skipping"
 		} else {
 			if { $ifaces == "*" } {
@@ -1307,14 +1361,25 @@ proc execute_nodesLogIfacesCreate { nodes_ifaces nodes_count w } {
 				set ifaces [removeFromList $ifaces [ifcList $node_id]]
 			}
 
-			try {
-				invokeNodeProc $node_id "nodeLogIfacesCreate" $eid $node_id $ifaces
-			} on error err {
-				return -code error "Error in '[getNodeType $node_id].nodeLogIfacesCreate $eid $node_id $ifaces': $err"
+			foreach iface_id $ifaces {
+				if { [isRunningNodeIface $node_id $iface_id] } {
+					set ifaces [removeFromList $ifaces $iface_id]
+				}
 			}
-			pipesExec ""
 
-			set msg "Creating"
+			if { $ifaces != {} } {
+				try {
+					invokeNodeProc $node_id "nodeLogIfacesCreate" $eid $node_id $ifaces
+				} on error err {
+					return -code error "Error in '[getNodeType $node_id].nodeLogIfacesCreate $eid $node_id $ifaces': $err"
+				}
+
+				pipesExec ""
+
+				set msg "Creating"
+			} else {
+				set msg "No available"
+			}
 		}
 
 		incr batchStep
@@ -1336,9 +1401,11 @@ proc execute_nodesLogIfacesCreate { nodes_ifaces nodes_count w } {
 }
 
 proc execute_nodesLogIfacesCreate_wait { nodes_ifaces nodes_count w } {
-	global progressbarCount execMode skip_nodes err_skip_nodesifaces ifacesconf_timeout gui
+	global progressbarCount execMode err_skip_nodesifaces gui
 
-	set timeout [expr { [getActiveOption "timeout_factor"] * $ifacesconf_timeout }]
+	set eid [getFromRunning "eid"]
+
+	set timeout [getTimeout "ifacesconf_timeout"]
 
 	set t_start [clock milliseconds]
 
@@ -1351,37 +1418,25 @@ proc execute_nodesLogIfacesCreate_wait { nodes_ifaces nodes_count w } {
 	while { [llength $nodes_left] > 0 } {
 		displayBatchProgress $batchStep $nodes_count
 		foreach node_id $nodes_left {
-			if { $node_id ni $skip_nodes } {
-				set ifaces [removeFromList [dict get $nodes_ifaces $node_id] [ifcList $node_id]]
+			if { "lifaces_creating" in [getStateNode $node_id] } {
+				set ifaces [dict get $nodes_ifaces $node_id]
 				if { $ifaces == "*" } {
 					set ifaces [logIfcList $node_id]
+				} else {
+					set ifaces [removeFromList $ifaces [ifcList $node_id]]
 				}
 
-				set created_ifaces [isNodeIfacesCreated $node_id $ifaces]
-				foreach iface_id $created_ifaces {
-					if { $iface_id ni $ifaces } {
-						continue
-					}
-					setToRunning "${node_id}|${iface_id}_running" "true"
-				}
-
-				set try_again 0
-				foreach iface_id $ifaces {
-					if { [getFromRunning "${node_id}|${iface_id}_running"] == "true" } {
-						continue
-					}
-
+				# same check as for physical ifaces
+				set ifaces_created [invokeNodeProc $node_id "nodePhysIfacesCreate_check" $eid $node_id $ifaces]
+				if { ! $ifaces_created } {
 					if { $timeout < 0 } {
 						after [expr -$timeout]
 					}
-					set try_again 1
-				}
-
-				if { $try_again } {
 					update
 					continue
 				}
 
+				removeStateNode $node_id "lifaces_creating"
 				set msg "created"
 			} else {
 				set msg "skipped"
@@ -1418,19 +1473,6 @@ proc execute_nodesLogIfacesCreate_wait { nodes_ifaces nodes_count w } {
 		}
 	}
 
-	foreach node_id $nodes {
-		set ifaces [removeFromList [dict get $nodes_ifaces $node_id] [ifcList $node_id]]
-		if { $ifaces == "*" } {
-			set ifaces [logIfcList $node_id]
-		}
-
-		foreach iface_id $ifaces {
-			if { [getFromRunning "${node_id}|${iface_id}_running"] == "creating" } {
-				setToRunning "${node_id}|${iface_id}_running" "false"
-			}
-		}
-	}
-
 	if { $nodes_count > 0 } {
 		displayBatchProgress $batchStep $nodes_count
 		if { ! $gui || $execMode == "batch" } {
@@ -1440,7 +1482,7 @@ proc execute_nodesLogIfacesCreate_wait { nodes_ifaces nodes_count w } {
 }
 
 proc execute_linksCreate { links links_count w } {
-	global progressbarCount execMode skip_nodes skip_links gui
+	global progressbarCount execMode gui
 
 	set batchStep 0
 	for { set pending_links $links } { $pending_links != "" } {} {
@@ -1453,18 +1495,17 @@ proc execute_linksCreate { links links_count w } {
 		displayBatchProgress $batchStep $links_count
 
 		if {
-			[getFromRunning "${node1_id}_running"] == "true" &&
-			[getFromRunning "${node2_id}_running"] == "true" &&
-			($node1_id ni $skip_nodes && $node2_id ni $skip_nodes)
+			[isRunningNodeIface $node1_id $iface1_id] &&
+			[isRunningNodeIface $node2_id $iface2_id]
 		} {
 			try {
 				createLinkBetween $node1_id $node2_id $iface1_id $iface2_id $link_id
 			} on error err {
 				return -code error "Error in 'createLinkBetween $node1_id $node2_id $iface1_id $iface2_id $link_id': $err"
 			}
+
 			set msg "Creating"
 		} else {
-			lappend skip_links $link_id
 			set msg "Skipping"
 		}
 
@@ -1488,10 +1529,54 @@ proc execute_linksCreate { links links_count w } {
 	}
 }
 
-proc execute_linksCreate_wait { links links_count w } {
-	global progressbarCount execMode skip_links nodecreate_timeout gui
+proc isLinkCreated { eid link_id } {
+	global isOSlinux isOSfreebsd
 
-	set timeout [expr { [getActiveOption "timeout_factor"] * $nodecreate_timeout }]
+	set timeout [getTimeout "nodecreate_timeout"]
+
+	lassign [getLinkPeers $link_id] node1_id node2_id
+	lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
+	if {
+		([getLinkDirect $link_id] ||
+		"wlan" in "[getNodeType $node1_id] [getNodeType $node2_id]") &&
+		([isRunningNodeIface $node1_id $iface1_id] && [isRunningNodeIface $node2_id $iface2_id])
+	} {
+		# TODO?
+		removeStateLink $link_id "error creating"
+		addStateLink $link_id "running"
+
+		return true
+	}
+
+	if { $isOSlinux } {
+		set cmds "ip -n $eid link show $link_id"
+	}
+
+	if { $isOSfreebsd } {
+		set cmds "jexec $eid ngctl show $link_id:"
+	}
+
+	if { $timeout >= 0 } {
+		set cmds "timeout [expr $timeout/5.0] $cmds"
+	}
+
+	set created [isOk $cmds]
+	if { $created } {
+		removeStateLink $link_id "error creating"
+		addStateLink $link_id "running"
+	} else {
+		addStateLink $link_id "error"
+	}
+
+	return $created
+}
+
+proc execute_linksCreate_wait { links links_count w } {
+	global progressbarCount execMode gui
+
+	set eid [getFromRunning "eid"]
+
+	set timeout [getTimeout "nodecreate_timeout"]
 
 	set t_start [clock milliseconds]
 
@@ -1502,8 +1587,8 @@ proc execute_linksCreate_wait { links links_count w } {
 	while { [llength $links_left] > 0 } {
 		displayBatchProgress $batchStep $links_count
 		foreach link_id $links_left {
-			if { $link_id ni $skip_links } {
-				if { ! [isLinkStarted $link_id] } {
+			if { "creating" in [getStateLink $link_id] } {
+				if { ! [isLinkCreated $eid $link_id] } {
 					if { $timeout < 0 } {
 						after [expr -$timeout]
 					}
@@ -1511,12 +1596,13 @@ proc execute_linksCreate_wait { links links_count w } {
 					continue
 				}
 
-				setToRunning "${link_id}_running" "true"
+				addStateLink $link_id "running"
 				set mirror_link_id [getLinkMirror $link_id]
 				if { $mirror_link_id != "" } {
-					setToRunning "${mirror_link_id}_running" "true"
+					addStateLink $mirror_link_id "running"
 				}
 
+				removeStateLink $link_id "creating"
 				set msg "started"
 			} else {
 				set msg "skipped"
@@ -1548,7 +1634,6 @@ proc execute_linksCreate_wait { links links_count w } {
 
 		set t_last [clock milliseconds]
 		if { [llength $links_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $timeout } {
-			lappend skip_links {*}$links_left
 			break
 		}
 	}
@@ -1562,7 +1647,7 @@ proc execute_linksCreate_wait { links links_count w } {
 }
 
 proc execute_linksConfigure { links links_count w } {
-	global progressbarCount execMode skip_nodes skip_links gui
+	global progressbarCount execMode gui
 
 	set batchStep 0
 	for { set pending_links $links } { $pending_links != "" } {} {
@@ -1574,13 +1659,19 @@ proc execute_linksConfigure { links links_count w } {
 
 		displayBatchProgress $batchStep $links_count
 
-		if { $node1_id ni $skip_nodes && $node2_id ni $skip_nodes && $link_id ni $skip_links } {
-			set msg "Configuring"
+		if {
+			[isRunningLink $link_id] &&
+			! [getLinkDirect $link_id] &&
+			[isRunningNodeIface $node1_id $iface1_id] &&
+			[isRunningNodeIface $node2_id $iface2_id]
+		} {
 			try {
 				configureLinkBetween $node1_id $node2_id $iface1_id $iface2_id $link_id
 			} on error err {
 				return -code error "Error in 'configureLinkBetween $node1_id $node2_id $iface1_id $iface2_id $link_id': $err"
 			}
+
+			set msg "Configuring"
 		} else {
 			set msg "Skipping"
 		}
@@ -1606,7 +1697,7 @@ proc execute_linksConfigure { links links_count w } {
 }
 
 proc execute_nodesIfacesConfigure { nodes_ifaces nodes_count w } {
-	global progressbarCount execMode skip_nodes gui
+	global progressbarCount execMode gui
 
 	set eid [getFromRunning "eid"]
 
@@ -1614,7 +1705,7 @@ proc execute_nodesIfacesConfigure { nodes_ifaces nodes_count w } {
 	dict for {node_id ifaces} $nodes_ifaces {
 		displayBatchProgress $batchStep $nodes_count
 
-		if { $node_id in $skip_nodes } {
+		if { ! [isRunningNode $node_id] } {
 			set msg "Skipping"
 		} else {
 			if { $ifaces == "*" } {
@@ -1625,7 +1716,10 @@ proc execute_nodesIfacesConfigure { nodes_ifaces nodes_count w } {
 				# skip 'direct link' and UNASSIGNED stolen interfaces
 				foreach iface_id $ifaces {
 					set this_link_id [getIfcLink $node_id $iface_id]
-					if { [getFromRunning "${node_id}|${iface_id}_running"] != "true" } {
+					if {
+						! [isRunningNodeIface $node_id $iface_id] ||
+						[isErrorNodeIface $node_id $iface_id]
+					} {
 						set ifaces [removeFromList $ifaces $iface_id]
 					}
 				}
@@ -1640,12 +1734,13 @@ proc execute_nodesIfacesConfigure { nodes_ifaces nodes_count w } {
 			}
 
 			if { $ifaces != {} } {
+				pipesExec ""
+
 				set msg "Configuring"
 			} else {
 				set msg "No available"
 			}
 		}
-		pipesExec ""
 
 		incr batchStep
 		incr progressbarCount
@@ -1666,9 +1761,11 @@ proc execute_nodesIfacesConfigure { nodes_ifaces nodes_count w } {
 }
 
 proc execute_nodesIfacesConfigure_wait { nodes_ifaces nodes_count w } {
-	global progressbarCount execMode skip_nodes err_skip_nodesifaces ifacesconf_timeout gui
+	global progressbarCount execMode err_skip_nodesifaces gui
 
-	set timeout [expr { [getActiveOption "timeout_factor"] * $ifacesconf_timeout }]
+	set eid [getFromRunning "eid"]
+
+	set timeout [getTimeout "ifacesconf_timeout"]
 
 	set t_start [clock milliseconds]
 
@@ -1681,14 +1778,22 @@ proc execute_nodesIfacesConfigure_wait { nodes_ifaces nodes_count w } {
 	while { [llength $nodes_left] > 0 } {
 		displayBatchProgress $batchStep $nodes_count
 		foreach node_id $nodes_left {
-			if { $node_id ni $skip_nodes } {
-				if { ! [isNodeIfacesConfigured $node_id] } {
+			if { "ifaces_configuring" in [getStateNode $node_id] } {
+				set ifaces [removeFromList [dict get $nodes_ifaces $node_id] [logIfcList $node_id]]
+				if { $ifaces == "*" } {
+					set ifaces [ifcList $node_id]
+				}
+
+				set node_ifaces_configured [invokeNodeProc $node_id "nodeIfacesConfigure_check" $eid $node_id $ifaces]
+				if { ! $node_ifaces_configured } {
 					if { $timeout < 0 } {
 						after [expr -$timeout]
 					}
 					update
 					continue
 				}
+
+				removeStateNode $node_id "ifaces_configuring"
 				set msg "configured"
 			} else {
 				set msg "skipped"
@@ -1734,7 +1839,7 @@ proc execute_nodesIfacesConfigure_wait { nodes_ifaces nodes_count w } {
 }
 
 proc execute_nodesConfigure { nodes nodes_count w } {
-	global progressbarCount execMode skip_nodes gui
+	global progressbarCount execMode gui
 
 	set eid [getFromRunning "eid"]
 
@@ -1742,7 +1847,7 @@ proc execute_nodesConfigure { nodes nodes_count w } {
 	foreach node_id $nodes {
 		displayBatchProgress $batchStep $nodes_count
 
-		if { $node_id in $skip_nodes } {
+		if { ! [isRunningNode $node_id] } {
 			set msg "Skipping"
 		} else {
 			set msg "Starting"
@@ -1751,8 +1856,9 @@ proc execute_nodesConfigure { nodes nodes_count w } {
 			} on error err {
 				return -code error "Error in '[getNodeType $node_id].nodeConfigure $eid $node_id': $err"
 			}
+
+			pipesExec ""
 		}
-		pipesExec ""
 
 		incr batchStep
 		incr progressbarCount
@@ -1773,9 +1879,11 @@ proc execute_nodesConfigure { nodes nodes_count w } {
 }
 
 proc execute_nodesConfigure_wait { nodes nodes_count w } {
-	global progressbarCount skip_nodes execMode err_skip_nodes nodeconf_timeout gui
+	global progressbarCount execMode gui
 
-	set timeout [expr { [getActiveOption "timeout_factor"] * $nodeconf_timeout }]
+	set eid [getFromRunning "eid"]
+
+	set timeout [getTimeout "nodeconf_timeout"]
 
 	set t_start [clock milliseconds]
 
@@ -1786,14 +1894,17 @@ proc execute_nodesConfigure_wait { nodes nodes_count w } {
 	while { [llength $nodes_left] > 0 } {
 		displayBatchProgress $batchStep $nodes_count
 		foreach node_id $nodes_left {
-			if { $node_id ni $skip_nodes } {
-				if { ! [isNodeConfigured $node_id] } {
+			if { "node_configuring" in [getStateNode $node_id] } {
+				set node_configured [invokeNodeProc $node_id "nodeConfigure_check" $eid $node_id]
+				if { ! $node_configured } {
 					if { $timeout < 0 } {
 						after [expr -$timeout]
 					}
 					update
 					continue
 				}
+
+				removeStateNode $node_id "node_configuring"
 				set msg "configured"
 			} else {
 				set msg "skipped"
@@ -1825,7 +1936,6 @@ proc execute_nodesConfigure_wait { nodes nodes_count w } {
 
 		set t_last [clock milliseconds]
 		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $timeout } {
-			set err_skip_nodes $nodes_left
 			break
 		}
 	}
@@ -1863,35 +1973,40 @@ proc finishExecuting { status msg w } {
 }
 
 proc checkForErrors { nodes nodes_count w } {
-	global progressbarCount execMode skip_nodes err_skip_nodes gui
+	global progressbarCount execMode gui
+
+	set eid [getFromRunning "eid"]
 
 	set batchStep 0
 	set err_nodes ""
+	set skip_nodes {}
+	set timeout_nodes {}
 	for {set pending_nodes $nodes} {$pending_nodes != ""} {} {
 		set node_id [lindex $pending_nodes 0]
 		set pending_nodes [removeFromList $pending_nodes $node_id]
 
-		if { $node_id in $err_skip_nodes } {
-			set err true
-		} elseif { $node_id in $skip_nodes } {
-			set msg "skipped error check"
+		if { ! [isRunningNode $node_id] } {
+			lappend skip_nodes $node_id
 			set err false
+			set msg "skipped error check"
+		} elseif { "node_configuring" in [getStateNode $node_id] } {
+			lappend timeout_nodes $node_id
+			set err false
+			set msg "config timeout"
 		} else {
-			set msg "checked - no error"
-			set err [isNodeError $node_id]
-		}
+			set err [invokeNodeProc $node_id "isNodeError" $eid $node_id]
+			if { $err == "timeout" } {
+				lappend pending_nodes $node_id
+				continue
+			} elseif { $err == "" } {
+				set err false
+			}
 
-		if { $err == "" } {
-			lappend pending_nodes $node_id
-			continue
-		}
-
-		if { $err } {
-			if { $node_id in $err_skip_nodes } {
-				set msg "skipped error check (timeout)"
+			if { $err } {
+				set msg "error found"
+				append err_nodes "[getNodeName $node_id] ($node_id)\n"
 			} else {
-				set msg "checked - error found"
-				append err_nodes "[getNodeName $node_id] ($node_id), "
+				set msg "checked"
 			}
 		}
 
@@ -1916,7 +2031,11 @@ proc checkForErrors { nodes nodes_count w } {
 	if { $skip_nodes != {} } {
 		set skip_err_nodes ""
 		foreach node_id $skip_nodes {
-			append skip_err_nodes "[getNodeName $node_id] ($node_id), "
+			set err_msg [getStateErrorMsgNode $node_id]
+			if { $err_msg != "" } {
+				set err_msg " - $err_msg"
+			}
+			append skip_err_nodes "[getNodeName $node_id] ($node_id)$err_msg\n"
 		}
 
 		set skip_err_nodes [string trimright $skip_err_nodes ", "]
@@ -1935,15 +2054,15 @@ proc checkForErrors { nodes nodes_count w } {
 		}
 	}
 
-	if { $err_skip_nodes != "" } {
+	if { $timeout_nodes != "" } {
 		set skip_err_nodes ""
-		foreach node_id $err_skip_nodes {
-			append skip_err_nodes "[getNodeName $node_id] ($node_id), "
+		foreach node_id $timeout_nodes {
+			append skip_err_nodes "[getNodeName $node_id] ($node_id)\n"
 		}
 
 		set msg "Timeout detected while configuring nodes:\n"
 		append msg "$skip_err_nodes\n"
-		append msg "Check their /(t)err.log, /(t)out.log and /boot.conf (or "
+		append msg "Check their /err.log, /out.log and /boot.conf (or "
 		append msg "/custom.conf) files."
 
 		if { $gui && $execMode != "batch" } {
@@ -1957,7 +2076,6 @@ proc checkForErrors { nodes nodes_count w } {
 	}
 
 	if { $err_nodes != "" } {
-		set err_nodes [string trimright $err_nodes ", "]
 		set msg "Issues encountered while configuring nodes:\n"
 		append msg "$err_nodes\n"
 		append msg "Check their /err.log, /out.log and /boot.conf (or "
@@ -1975,35 +2093,41 @@ proc checkForErrors { nodes nodes_count w } {
 }
 
 proc checkForErrorsIfaces { nodes nodes_count w } {
-	global progressbarCount execMode skip_nodes err_skip_nodesifaces gui
+	global progressbarCount execMode err_skip_nodesifaces gui
+
+	set eid [getFromRunning "eid"]
 
 	set batchStep 0
 	set err_nodes ""
+	set timeout_nodes {}
 	for {set pending_nodes $nodes} {$pending_nodes != ""} {} {
 		set node_id [lindex $pending_nodes 0]
 		set pending_nodes [removeFromList $pending_nodes $node_id]
 
-		if { $node_id in $err_skip_nodesifaces } {
-			set err true
-		} elseif { $node_id in $skip_nodes } {
-			set msg "skipped error check"
+		if {
+			! [isRunningNode $node_id] ||
+			[allIfcList $node_id] == {}
+		} {
 			set err false
+			set msg "skipped error check"
+		} elseif { "ifaces_configuring" in [getStateNode $node_id] } {
+			lappend timeout_nodes $node_id
+			set err false
+			set msg "config timeout"
 		} else {
-			set msg "checked - no error"
-			set err [isNodeErrorIfaces $node_id]
-		}
+			set err [invokeNodeProc $node_id "isNodeErrorIfaces" $eid $node_id]
+			if { $err == "timeout" } {
+				lappend pending_nodes $node_id
+				continue
+			} elseif { $err == "" } {
+				set err false
+			}
 
-		if { $err == "" } {
-			lappend pending_nodes $node_id
-			continue
-		}
-
-		if { $err } {
-			if { $node_id in $err_skip_nodesifaces } {
-				set msg "skipped error check (timeout)"
+			if { $err } {
+				set msg "error found"
+				append err_nodes "[getNodeName $node_id] ($node_id)\n"
 			} else {
-				set msg "checked - error found"
-				append err_nodes "[getNodeName $node_id] ($node_id), "
+				set msg "checked"
 			}
 		}
 
@@ -2025,15 +2149,15 @@ proc checkForErrorsIfaces { nodes nodes_count w } {
 		}
 	}
 
-	if { $err_skip_nodesifaces != "" } {
+	if { $timeout_nodes != "" } {
 		set skip_err_nodes ""
-		foreach node_id $err_skip_nodesifaces {
-			append skip_err_nodes "[getNodeName $node_id] ($node_id), "
+		foreach node_id $timeout_nodes {
+			append skip_err_nodes "[getNodeName $node_id] ($node_id)\n"
 		}
 
 		set msg "Timeout detected while configuring node interfaces:\n"
 		append msg "$skip_err_nodes\n"
-		append msg "Check their /(t)err_ifaces.log, /(t)out_ifaces.log and "
+		append msg "Check their /err_ifaces.log, /out_ifaces.log and "
 		append msg "/boot_ifaces.conf (or /custom_ifaces.conf) files."
 
 		if { $gui && $execMode != "batch" } {
@@ -2047,7 +2171,6 @@ proc checkForErrorsIfaces { nodes nodes_count w } {
 	}
 
 	if { $err_nodes != "" } {
-		set err_nodes [string trimright $err_nodes ", "]
 		set msg "Issues encountered while configuring interfaces on nodes:\n"
 		append msg "$err_nodes\n"
 		append msg "Check their /err_ifaces.log, /out_ifaces.log and "

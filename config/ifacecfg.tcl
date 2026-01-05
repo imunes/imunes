@@ -359,7 +359,13 @@ proc nodeCfggenIfcIPv6 { node_id iface_id } {
 #   * iface_id -- the first available name for a interface of the specified type
 #****
 proc newIface { node_id iface_type auto_config { stolen_iface "" } } {
-	set iface_id [newObjectId [allIfcList $node_id] "ifc"]
+	set iface_id ""
+	while { $iface_id == "" } {
+		set iface_id [newObjectId [allIfcList $node_id] "ifc"]
+		if { [getStateNodeIface $node_id $iface_id] != "" } {
+			removeIface $node_id $iface_id
+		}
+	}
 
 	switch -exact $iface_type {
 		"lo" -
@@ -376,10 +382,6 @@ proc newIface { node_id iface_type auto_config { stolen_iface "" } } {
 
 			set iface_name $stolen_iface
 		}
-	}
-
-	if { [getFromRunning "${node_id}|${iface_id}_running"] == "" } {
-		setToRunning "${node_id}|${iface_id}_running" "false"
 	}
 
 	setNodeIface $node_id $iface_id {}
@@ -412,14 +414,18 @@ proc newLogIface { node_id logiface_type } {
 	return [newIface $node_id $logiface_type 0]
 }
 
-proc removeIface { node_id iface_id { keep_other_ifaces 1} } {
+proc removeIface { node_id iface_id { keep_other_ifaces 1 } { keep_link "" } } {
+	global isOSfreebsd
+
 	trigger_ifaceDestroy $node_id $iface_id
 
 	set link_id [getIfcLink $node_id $iface_id]
 	if { $link_id != "" } {
 		cfgUnset "nodes" $node_id "ifaces" $iface_id "link"
 
-		removeLink $link_id $keep_other_ifaces
+		if { $keep_link == "" } {
+			removeLink $link_id $keep_other_ifaces
+		}
 	}
 
 	setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] [getIfcIPv4addrs $node_id $iface_id] "keep_doubles"]
@@ -429,10 +435,8 @@ proc removeIface { node_id iface_id { keep_other_ifaces 1} } {
 	set iface_name [getIfcName $node_id $iface_id]
 
 	cfgUnset "nodes" $node_id "ifaces" $iface_id
-	if { [getFromRunning "${node_id}|${iface_id}_running"] == "true" } {
-		setToRunning "${node_id}|${iface_id}_running" "delete"
-	} else {
-		unsetRunning "${node_id}|${iface_id}_running"
+	if { ! [isRunningNodeIface $node_id $iface_id] } {
+		unsetStateNodeIface $node_id $iface_id
 	}
 
 	foreach {logiface_id iface_cfg} [cfgGet "nodes" $node_id "ifaces"] {
@@ -456,7 +460,7 @@ proc removeIface { node_id iface_id { keep_other_ifaces 1} } {
 		}
 	} elseif { $node_type in "ext" && [getNodeNATIface $node_id] != "UNASSIGNED" } {
 		trigger_nodeUnconfig $node_id
-	} elseif { $node_type in "lanswitch" && [getNodeVlanFiltering $node_id] } {
+	} elseif { $isOSfreebsd && $node_type in "lanswitch" && [getNodeVlanFiltering $node_id] } {
 		foreach other_iface_id [ifcList $node_id] {
 			if { $iface_id != $other_iface_id && [getIfcVlanType $node_id $other_iface_id] == "trunk" } {
 				trigger_ifaceReconfig $node_id $other_iface_id

@@ -88,10 +88,8 @@ proc loadCfgLegacy { cfg } {
 			set $object {}
 			set dict_object "${class}s"
 			if { "$class" == "node" } {
-				setToRunning "${object}_running" "false"
 				lappend node_list $object
 			} elseif { "$class" == "link" } {
-				setToRunning "${object}_running" "false"
 				lappend link_list $object
 			} elseif { "$class" == "canvas" } {
 				set dict_object "canvases"
@@ -172,7 +170,6 @@ proc loadCfgLegacy { cfg } {
 								}
 
 								cfgSet "nodes" $object "ifaces" $iface_id "name" "$iface_name"
-								setToRunning "${object}|${iface_id}_running" "false"
 							} else {
 								set iface_id [ifaceIdFromName $object $iface_name]
 
@@ -187,7 +184,6 @@ proc loadCfgLegacy { cfg } {
 										cfgSet "nodes" $object "ifaces" $iface_id "type" "phys"
 									}
 									cfgSet "nodes" $object "ifaces" $iface_id "name" "$iface_name"
-									setToRunning "${object}|${iface_id}_running" "false"
 								}
 							}
 
@@ -512,7 +508,6 @@ proc loadCfgLegacy { cfg } {
 								set iface_id [newObjectId $all_iface_ids "ifc"]
 								lappend all_iface_ids $iface_id
 
-								setToRunning "${object}|${iface_id}_running" "false"
 								cfgSet $dict_object $object "ifaces" $iface_id [dict get $all_ifaces $iface_name]
 							}
 
@@ -1007,7 +1002,7 @@ proc loadCfgLegacy { cfg } {
 		set node_type [getNodeType $node_id]
 
 		if { $node_type == "pseudo" } {
-			unsetRunning "${node_id}_running"
+			unsetStateNode $object
 		}
 
 		if {
@@ -1026,10 +1021,11 @@ proc loadCfgLegacy { cfg } {
 			exit
 		}
 
+		set node_netlayer [invokeTypeProc $node_type "netlayer"]
 		if {
 			$node_type ni "extelem pseudo" &&
 			"lo0" ni [logIfacesNames $node_id] &&
-			[invokeTypeProc $node_type "netlayer"] == "NETWORK"
+			$node_netlayer == "NETWORK"
 		} {
 			set logiface_id [newLogIface $node_id "lo"]
 			setIfcIPv4addrs $node_id $logiface_id "127.0.0.1/8"
@@ -1093,7 +1089,7 @@ proc loadCfgLegacy { cfg } {
 		if {
 			$node_type != "pseudo" &&
 			[cfgGet "nodes" $node_id "auto_default_routes"] == "" &&
-			[invokeTypeProc $node_type "netlayer"] == "NETWORK" && $node_type != "ext"
+			$node_netlayer == "NETWORK" && $node_type != "ext"
 		} {
 			setNodeAutoDefaultRoutesStatus $node_id "disabled"
 		}
@@ -1226,9 +1222,7 @@ proc loadCfgJson { json_cfg } {
 			return $dict_cfg
 		}
 
-		setToRunning "${node_id}_running" "false"
 		foreach iface_id [allIfcList $node_id] {
-			setToRunning "${node_id}|${iface_id}_running" "false"
 			if { [isIfcLogical $node_id $iface_id] } {
 				continue
 			}
@@ -1254,10 +1248,6 @@ proc loadCfgJson { json_cfg } {
 	setToRunning ipv4_used_list $ipv4_used_list
 	setToRunning ipv6_used_list $ipv6_used_list
 	setToRunning mac_used_list $mac_used_list
-
-	foreach link_id [getFromRunning "link_list"] {
-		setToRunning "${link_id}_running" "false"
-	}
 
 	if { ! $gui && $execMode != "batch" } {
 		set tmp [getFromRunning "modified"]

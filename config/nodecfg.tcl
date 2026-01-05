@@ -26,6 +26,196 @@
 # and Technology through the research contract #IP-2003-143.
 #
 
+# NODE/IFACE STATE
+proc getStateNode { node_id } {
+	return [_cfgGet [getFromRunning "running_state"] "nodes" $node_id "state"]
+}
+
+proc getStateLink { link_id } {
+	return [_cfgGet [getFromRunning "running_state"] "links" $link_id "state"]
+}
+
+proc getStateNodeIface { node_id iface_id } {
+	return [_cfgGet [getFromRunning "running_state"] "nodes" $node_id "ifaces" $iface_id "state"]
+}
+
+proc setStateNode { node_id state } {
+	setToRunning "running_state" \
+		[_cfgSet [getFromRunning "running_state"] "nodes" $node_id "state" $state]
+}
+
+proc setStateLink { link_id state } {
+	setToRunning "running_state" \
+		[_cfgSet [getFromRunning "running_state"] "links" $link_id "state" $state]
+}
+
+proc setStateNodeIface { node_id iface_id state } {
+	setToRunning "running_state" \
+		[_cfgSet [getFromRunning "running_state"] "nodes" $node_id "ifaces" $iface_id "state" $state]
+}
+
+proc unsetStateNode { node_id } {
+	setToRunning "running_state" \
+		[_cfgUnset [getFromRunning "running_state"] "nodes" $node_id]
+}
+
+proc unsetStateLink { link_id } {
+	setToRunning "running_state" \
+		[_cfgUnset [getFromRunning "running_state"] "links" $link_id]
+}
+
+proc unsetStateNodeIface { node_id iface_id } {
+	setToRunning "running_state" \
+		[_cfgUnset [getFromRunning "running_state"] "nodes" $node_id "ifaces" $iface_id]
+}
+
+proc getStateErrorMsgNode { node_id } {
+	return [_cfgGet [getFromRunning "running_state"] "nodes" $node_id "error_msg"]
+}
+
+proc getStateErrorMsgLink { link_id } {
+	return [_cfgGet [getFromRunning "running_state"] "links" $link_id "error_msg"]
+}
+
+proc getStateErrorMsgNodeIface { node_id iface_id } {
+	return [_cfgGet [getFromRunning "running_state"] "nodes" $node_id "ifaces" $iface_id "error_msg"]
+}
+
+proc setStateErrorMsgNode { node_id error_msg } {
+	setToRunning "running_state" \
+		[_cfgSet [getFromRunning "running_state"] "nodes" $node_id "error_msg" $error_msg]
+}
+
+proc setStateErrorMsgLink { link_id error_msg } {
+	setToRunning "running_state" \
+		[_cfgSet [getFromRunning "running_state"] "links" $link_id "error_msg" $error_msg]
+}
+
+proc setStateErrorMsgNodeIface { node_id iface_id error_msg } {
+	setToRunning "running_state" \
+		[_cfgSet [getFromRunning "running_state"] "nodes" $node_id "ifaces" $iface_id "error_msg" $error_msg]
+}
+
+proc addStateNode { node_id states } {
+	if { $states == "" } {
+		return
+	}
+
+	set all_states [getStateNode $node_id]
+	if { $all_states == "" } {
+		set all_states $states
+	} else {
+		foreach state $states {
+			if { $state ni $all_states } {
+				lappend all_states $state
+			}
+		}
+	}
+
+	setStateNode $node_id $all_states
+}
+
+proc addStateLink { link_id states } {
+	if { $states == "" } {
+		return
+	}
+
+	set all_states [getStateLink $link_id]
+	if { $all_states == "" } {
+		set all_states $states
+	} else {
+		foreach state $states {
+			if { $state ni $all_states } {
+				lappend all_states $state
+			}
+		}
+	}
+
+	setStateLink $link_id $all_states
+}
+
+proc addStateNodeIface { node_id iface_id states } {
+	if { $states == "" } {
+		return
+	}
+
+	set all_states [getStateNodeIface $node_id $iface_id]
+	if { $all_states == "" } {
+		set all_states $states
+	} else {
+		foreach state $states {
+			if { $state ni $all_states } {
+				lappend all_states $state
+			}
+		}
+	}
+
+	setStateNodeIface $node_id $iface_id $all_states
+}
+
+proc removeStateNode { node_id states } {
+	setStateNode $node_id [removeFromList [getStateNode $node_id] $states]
+}
+
+proc removeStateLink { link_id states } {
+	setStateLink $link_id [removeFromList [getStateLink $link_id] $states]
+}
+
+proc removeStateNodeIface { node_id iface_id states } {
+	setStateNodeIface $node_id $iface_id [removeFromList [getStateNodeIface $node_id $iface_id] $states]
+}
+
+proc isRunningNode { node_id } {
+	if { "running" in [getStateNode $node_id] } {
+		return true
+	}
+
+	return false
+}
+
+proc isRunningLink { link_id } {
+	if { "running" in [getStateLink $link_id] } {
+		return true
+	}
+
+	return false
+}
+
+proc isRunningNodeIface { node_id iface_id } {
+	if {
+		[isRunningNode $node_id] &&
+		"running" in [getStateNodeIface $node_id $iface_id]
+	} {
+		return true
+	}
+
+	return false
+}
+
+proc isErrorNode { node_id } {
+	if { "error" in [getStateNode $node_id] } {
+		return true
+	}
+
+	return false
+}
+
+proc isErrorLink { link_id } {
+	if { "error" in [getStateLink $link_id] } {
+		return true
+	}
+
+	return false
+}
+
+proc isErrorNodeIface { node_id iface_id } {
+	if { "error" in [getStateNodeIface $node_id $iface_id] } {
+		return true
+	}
+
+	return false
+}
+
 proc getNodeDir { node_id } {
 	return [getVrootDir]/[getFromRunning "eid"]/$node_id
 }
@@ -385,8 +575,6 @@ proc getDefaultRoutesConfig { node_id gws } {
 proc removeNode { node_id { keep_other_ifaces 0 } } {
 	trigger_nodeDestroy $node_id
 
-	global nodeNamingBase
-
 	foreach iface_id [ifcList $node_id] {
 		removeIface $node_id $iface_id $keep_other_ifaces
 	}
@@ -395,15 +583,11 @@ proc removeNode { node_id { keep_other_ifaces 0 } } {
 	setToRunning "no_auto_execute_nodes" [removeFromList [getFromRunning "no_auto_execute_nodes"] $node_id]
 
 	set node_type [getNodeType $node_id]
-	if { $node_type in [array names nodeNamingBase] } {
-		recalculateNumType $node_type $nodeNamingBase($node_type)
-	}
+	recalculateNumType $node_type [invokeTypeProc $node_type "namingBase"]
 
 	cfgUnset "nodes" $node_id
-	if { [getFromRunning "${node_id}_running"] == "true" } {
-		setToRunning "${node_id}_running" "delete"
-	} else {
-		unsetRunning "${node_id}_running"
+	if { ! [isRunningNode $node_id] } {
+		unsetStateNode $node_id
 	}
 }
 
@@ -427,16 +611,13 @@ proc newNode { node_type } {
 	set node_id ""
 	while { $node_id == "" } {
 		set node_id [newObjectId $node_list "n"]
-		if { [getFromRunning "${node_id}_running"] != "" } {
+		if { [getStateNode $node_id] != "" } {
 			lappend node_list $node_id
 			set node_id ""
 		}
 	}
 
 	setNodeType $node_id $node_type
-	if { [getFromRunning "${node_id}_running"] == "" } {
-		setToRunning "${node_id}_running" "false"
-	}
 
 	lappendToRunning "node_list" $node_id
 

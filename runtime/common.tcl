@@ -28,14 +28,13 @@
 
 global vroot_unionfs vroot_linprocfs ifc_dad_disable \
 	devfs_number linkJitterConfiguration ipsecSecrets \
-	ipsecConf ipFastForwarding
+	ipsecConf
 
 set linkJitterConfiguration 0
 set vroot_unionfs 1
 set vroot_linprocfs 0
 set ifc_dad_disable 0
 set devfs_number 46837
-set ipFastForwarding 0
 
 #****f* common.tcl/getVrootDir
 # NAME
@@ -116,7 +115,7 @@ proc updateTerminateVars {} {
 proc trigger_nodeConfig { node_id } {
 	if {
 		! [getFromRunning "cfg_deployed"] ||
-		[getFromRunning "${node_id}_running"] == "false"
+		! [isRunningNode $node_id]
 	} {
 		return
 	}
@@ -137,8 +136,7 @@ proc trigger_nodeUnconfig { node_id } {
 
 	prepareTerminateVars
 
-	set node_running [getFromRunning "${node_id}_running"]
-	if { $node_id ni $unconfigure_nodes && $node_running == "true" } {
+	if { $node_id ni $unconfigure_nodes && [isRunningNode $node_id] } {
 		lappend unconfigure_nodes $node_id
 	}
 
@@ -150,8 +148,7 @@ proc trigger_nodeReconfig { node_id } {
 		return
 	}
 
-	set node_running [getFromRunning "${node_id}_running"]
-	if { $node_running == "true" } {
+	if { [isRunningNode $node_id] } {
 		trigger_nodeUnconfig $node_id
 	}
 
@@ -161,7 +158,7 @@ proc trigger_nodeReconfig { node_id } {
 proc trigger_nodeFullConfig { node_id } {
 	if {
 		! [getFromRunning "cfg_deployed"] ||
-		[getFromRunning "${node_id}_running"] == "false"
+		! [isRunningNode $node_id]
 	} {
 		return
 	}
@@ -188,8 +185,7 @@ proc trigger_nodeFullReconfig { node_id } {
 		return
 	}
 
-	set node_running [getFromRunning "${node_id}_running"]
-	if { $node_running == "true" } {
+	if { [isRunningNode $node_id] == "true" } {
 		trigger_nodeUnconfig $node_id
 
 		prepareTerminateVars
@@ -251,16 +247,16 @@ proc trigger_nodeDestroy { node_id } {
 
 	prepareTerminateVars
 
-	set node_running [getFromRunning "${node_id}_running"]
-	if { $node_id ni $terminate_nodes && $node_running == "true" } {
+	set node_running [isRunningNode $node_id]
+	if { $node_id ni $terminate_nodes && $node_running } {
 		lappend terminate_nodes $node_id
 	}
 
-	if { $node_id ni $unconfigure_nodes && $node_running == "true" } {
+	if { $node_id ni $unconfigure_nodes && $node_running } {
 		lappend unconfigure_nodes $node_id
 	}
 
-	if { $node_running == "true" } {
+	if { $node_running } {
 		dict set unconfigure_nodes_ifaces $node_id "*"
 		dict set destroy_nodes_ifaces $node_id "*"
 	}
@@ -302,8 +298,7 @@ proc trigger_nodeRecreate { node_id } {
 		return
 	}
 
-	set node_running [getFromRunning "${node_id}_running"]
-	if { $node_running == "true" } {
+	if { [isRunningNode $node_id] == "true" } {
 		trigger_nodeDestroy $node_id
 	}
 
@@ -340,7 +335,7 @@ proc trigger_linkUnconfig { link_id } {
 
 	prepareTerminateVars
 
-	set link_running [getFromRunning "${link_id}_running"]
+	set link_running [isRunningLink $link_id]
 	if { $link_id ni $unconfigure_links && $link_running == "true" } {
 		lappend unconfigure_links $link_id
 	}
@@ -361,7 +356,7 @@ proc trigger_linkReconfig { link_id } {
 		return
 	}
 
-	set link_running [getFromRunning "${link_id}_running"]
+	set link_running [isRunningLink $link_id]
 	if { $link_running == "true" } {
 		trigger_linkUnconfig $link_id
 	}
@@ -379,6 +374,8 @@ proc trigger_linkCreate { link_id } {
 	prepareInstantiateVars
 
 	if { $link_id ni $instantiate_links } {
+		prepareInstantiateVars
+
 		lappend instantiate_links $link_id
 
 		updateInstantiateVars
@@ -393,20 +390,23 @@ proc trigger_linkCreate { link_id } {
 				trigger_nodeReconfig $node_id
 			}
 
-			if { ! [getLinkDirect $link_id] || ! $isOSlinux } {
-				continue
-			}
-
 			set ifaces [dictGet $create_nodes_ifaces $node_id]
-			# if any of the logical interfaces have $iface_id as master, recreate them
-			set iface_name [getIfcName $node_id $iface_id]
-			foreach log_iface_id [logIfcList $node_id] {
-				if { [getIfcVlanDev $node_id $log_iface_id] != $iface_name } {
-					continue
-				}
+			if {
+				! [isRunningNodeIface $node_id $iface_id] &&
+				"*" ni $ifaces && $iface_id ni $ifaces
+			} {
+				trigger_ifaceCreate $node_id $iface_id
 
-				if { "*" ni $ifaces && $log_iface_id ni $ifaces } {
-					trigger_ifaceCreate $node_id $log_iface_id
+				# if any of the logical interfaces have $iface_id as master, recreate them
+				set iface_name [getIfcName $node_id $iface_id]
+				foreach log_iface_id [logIfcList $node_id] {
+					if { [getIfcVlanDev $node_id $log_iface_id] != $iface_name } {
+						continue
+					}
+
+					if { "*" ni $ifaces && $log_iface_id ni $ifaces } {
+						trigger_ifaceCreate $node_id $log_iface_id
+					}
 				}
 			}
 		}
@@ -416,6 +416,8 @@ proc trigger_linkCreate { link_id } {
 }
 
 proc trigger_linkDestroy { link_id } {
+	global isOSlinux
+
 	if { ! [getFromRunning "cfg_deployed"] } {
 		return
 	}
@@ -424,21 +426,27 @@ proc trigger_linkDestroy { link_id } {
 
 	prepareTerminateVars
 
-	set link_running [getFromRunning "${link_id}_running"]
+	set link_running [isRunningLink $link_id]
 	if { $link_id ni $terminate_links && $link_running == "true" } {
+		prepareTerminateVars
+
 		lappend terminate_links $link_id
 
-		foreach node_id [getLinkPeers $link_id] {
+		updateTerminateVars
+
+		foreach node_id [getLinkPeers $link_id] iface_id [getLinkPeersIfaces $link_id] {
 			set node_type [getNodeType $node_id]
 			if { $node_type in "packgen" } {
 				trigger_nodeReconfig $node_id
 			} elseif { $node_type in "filter" } {
 				trigger_nodeReconfig $node_id
 			}
+
+			if { $isOSlinux && [getLinkDirect $link_id] } {
+				trigger_ifaceDestroy $node_id $iface_id
+			}
 		}
 	}
-
-	updateTerminateVars
 
 	prepareInstantiateVars
 
@@ -454,7 +462,7 @@ proc trigger_linkRecreate { link_id } {
 		return
 	}
 
-	set link_running [getFromRunning "${link_id}_running"]
+	set link_running [isRunningLink $link_id]
 	if { $link_running == "true" } {
 		trigger_linkDestroy $link_id
 	}
@@ -465,7 +473,7 @@ proc trigger_linkRecreate { link_id } {
 proc trigger_ifaceCreate { node_id iface_id } {
 	if {
 		! [getFromRunning "cfg_deployed"] ||
-		[getFromRunning "${node_id}_running"] == "false"
+		! [isRunningNode $node_id]
 	} {
 		return
 	}
@@ -482,9 +490,13 @@ proc trigger_ifaceCreate { node_id iface_id } {
 	trigger_ifaceConfig $node_id $iface_id
 
 	set link_id [getIfcLink $node_id $iface_id]
-	if { $link_id != "" && [getLinkDirect $link_id] } {
-		lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
-		trigger_ifaceConfig $peer_id $peer_iface_id
+	if { $link_id != "" } {
+		if { [getLinkDirect $link_id] } {
+			lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
+			trigger_ifaceConfig $peer_id $peer_iface_id
+		} else {
+			trigger_linkRecreate $link_id
+		}
 	}
 
 	# if any of the logical interfaces have $iface_id as master, recreate them
@@ -495,7 +507,7 @@ proc trigger_ifaceCreate { node_id iface_id } {
 		}
 
 		if { "*" ni $ifaces && $log_iface_id ni $ifaces } {
-			trigger_ifaceCreate $node_id $log_iface_id
+			trigger_ifaceRecreate $node_id $log_iface_id
 		}
 	}
 }
@@ -503,14 +515,14 @@ proc trigger_ifaceCreate { node_id iface_id } {
 proc trigger_ifaceDestroy { node_id iface_id } {
 	if {
 		! [getFromRunning "cfg_deployed"] ||
-		[getFromRunning "${node_id}_running"] == "false"
+		! [isRunningNode $node_id]
 	} {
 		return
 	}
 
 	prepareTerminateVars
 
-	set iface_running [getFromRunning "${node_id}|${iface_id}_running"]
+	set iface_running [isRunningNodeIface $node_id $iface_id]
 	set ifaces [dictGet $destroy_nodes_ifaces $node_id]
 	if { "*" ni $ifaces && $iface_id ni $ifaces && $iface_running == "true" } {
 		dict lappend destroy_nodes_ifaces $node_id $iface_id
@@ -538,12 +550,12 @@ proc trigger_ifaceDestroy { node_id iface_id } {
 proc trigger_ifaceRecreate { node_id iface_id } {
 	if {
 		! [getFromRunning "cfg_deployed"] ||
-		[getFromRunning "${node_id}_running"] == "false"
+		! [isRunningNode $node_id]
 	} {
 		return
 	}
 
-	set iface_running [getFromRunning "${node_id}|${iface_id}_running"]
+	set iface_running [isRunningNodeIface $node_id $iface_id]
 	if { $iface_running == "true" } {
 		trigger_ifaceDestroy $node_id $iface_id
 	}
@@ -552,9 +564,11 @@ proc trigger_ifaceRecreate { node_id iface_id } {
 }
 
 proc trigger_ifaceConfig { node_id iface_id } {
+	global isOSfreebsd
+
 	if {
 		! [getFromRunning "cfg_deployed"] ||
-		[getFromRunning "${node_id}_running"] == "false"
+		! [isRunningNode $node_id]
 	} {
 		return
 	}
@@ -568,7 +582,7 @@ proc trigger_ifaceConfig { node_id iface_id } {
 
 	updateInstantiateVars
 
-	if { [getNodeVlanFiltering $node_id] } {
+	if { $isOSfreebsd && [getNodeVlanFiltering $node_id] } {
 		set link_id [getIfcLink $node_id $iface_id]
 		if { $link_id != "" } {
 			trigger_linkRecreate $link_id
@@ -579,14 +593,14 @@ proc trigger_ifaceConfig { node_id iface_id } {
 proc trigger_ifaceUnconfig { node_id iface_id } {
 	if {
 		! [getFromRunning "cfg_deployed"] ||
-		[getFromRunning "${node_id}_running"] == "false"
+		! [isRunningNode $node_id]
 	} {
 		return
 	}
 
 	prepareTerminateVars
 
-	set iface_running [getFromRunning "${node_id}|${iface_id}_running"]
+	set iface_running [isRunningNodeIface $node_id $iface_id]
 	set ifaces [dictGet $unconfigure_nodes_ifaces $node_id]
 	if { "*" ni $ifaces && $iface_id ni $ifaces && $iface_running == "true" } {
 		dict lappend unconfigure_nodes_ifaces $node_id $iface_id
@@ -612,12 +626,12 @@ proc trigger_ifaceUnconfig { node_id iface_id } {
 proc trigger_ifaceReconfig { node_id iface_id } {
 	if {
 		! [getFromRunning "cfg_deployed"] ||
-		[getFromRunning "${node_id}_running"] == "false"
+		! [isRunningNode $node_id]
 	} {
 		return
 	}
 
-	set iface_running [getFromRunning "${node_id}|${iface_id}_running"]
+	set iface_running [isRunningNodeIface $node_id $iface_id]
 	if { $iface_running == "true" } {
 		trigger_ifaceUnconfig $node_id $iface_id
 	}
@@ -1032,7 +1046,7 @@ proc spawnShellExec {} {
 	if {
 		[isPseudoNode $node_id] ||
 		[invokeNodeProc $node_id "virtlayer"] != "VIRTUALIZED" ||
-		[getFromRunning "${node_id}_running"] == "false"
+		! [isRunningNode $node_id]
 	} {
 		nodeConfigGUI $node_id
 	} else {
@@ -1057,7 +1071,7 @@ proc spawnShellExec {} {
 #****
 proc fetchNodesConfiguration {} {
 	foreach node_id [selectedNodes] {
-		if { [getFromRunning ${node_id}_running] != "true" } {
+		if { ! [isRunningNode $node_id] } {
 			continue
 		}
 
@@ -1326,13 +1340,8 @@ proc toggleAutoExecution {} {
 proc dumpLinksToFile { path } {
 	set data ""
 	set linkDelim ":"
-	set skipLinks ""
 
 	foreach link_id [getFromRunning "link_list"] {
-		if { $link_id in $skipLinks } {
-			continue
-		}
-
 		lassign [getLinkPeers $link_id] node1_id node2_id
 		lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
 
@@ -1482,7 +1491,7 @@ proc captureOnExtIfc { node_id command } {
 			return
 		}
 
-		exec {*}[getActiveOption "terminal_command"] -T "Capturing $eid-$node_id" -e {*}$ttyrcmd "tcpdump -ni $eid-$node_id" 2> /dev/null &
+		exec {*}[getActiveOption "terminal_command"] -T "Capturing $eid-$node_id" -e {*}$ttyrcmd "tcpdump -leni $eid-$node_id" 2> /dev/null &
 	} else {
 		exec $command -o "gui.window_title:[getNodeName $node_id] ($eid)" -k -i $eid-$node_id 2> /dev/null &
 	}
@@ -1520,4 +1529,24 @@ proc redeployCfg {} {
 #****
 proc killExtProcess { regex } {
 	pipesExec "pkill -f \"$regex\"" "hold"
+}
+
+proc getTimeout { timeout_type } {
+	global $timeout_type
+
+	if { ! [info exists $timeout_type] } {
+		return -code error "No var named $timeout_type"
+	}
+
+	return [expr { [getActiveOption "timeout_factor"] * [set $timeout_type] }]
+}
+
+proc getTimeoutCmd { timeout_type cmds } {
+	set timeout [getTimeout $timeout_type]
+
+	if { $timeout >= 0 } {
+		return "timeout [expr $timeout/5.0] $cmds"
+	}
+
+	return $cmds
 }

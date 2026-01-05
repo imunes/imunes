@@ -451,8 +451,14 @@ proc reloadSources {} {
 		safeSourceFile $file_path
 	}
 
+	catch { namespace delete ::genericL2 }
+	catch { namespace delete ::genericL3 }
+	safeSourceFile "$ROOTDIR/$LIBDIR/nodes/generic_l2.tcl"
+	safeSourceFile "$ROOTDIR/$LIBDIR/nodes/generic_l3.tcl"
+
 	# Node base libraries
 	foreach node_type $node_types {
+		catch { namespace delete ::[set node_type] }
 		safeSourceFile "$ROOTDIR/$LIBDIR/nodes/$node_type.tcl"
 	}
 
@@ -475,6 +481,9 @@ proc reloadSources {} {
 		if { $gui } {
 			safePackageRequire Tk "To run the IMUNES GUI, Tk must be installed."
 		}
+
+		safeSourceFile "$ROOTDIR/$LIBDIR/gui/nodes/generic_l2.tcl"
+		safeSourceFile "$ROOTDIR/$LIBDIR/gui/nodes/generic_l3.tcl"
 
 		# Node GUI base libraries
 		foreach node_type $node_types {
@@ -549,14 +558,11 @@ proc isNotOk { args } {
 }
 
 proc invokeTypeProc { node_type proc_name args } {
-	set retval ""
-	if { [info procs $node_type.$proc_name] != "" } {
-		set retval [$node_type.$proc_name {*}$args]
-	} else {
-		set retval ""
+	if { [info procs ${node_type}::${proc_name}] != "" } {
+		return [${node_type}::${proc_name} {*}$args]
 	}
 
-	return $retval
+	return ""
 }
 
 proc invokeNodeProc { node_id proc_name args } {

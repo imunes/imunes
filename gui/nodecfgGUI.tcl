@@ -1517,7 +1517,7 @@ proc configGUI_nodeRestart { wi node_id } {
 	pack $w.label -side left -padx 2
 	pack $w.options -side left -padx 2
 
-	if { [getFromRunning "oper_mode"] == "edit" || [getFromRunning "${node_id}_running"] == "false" } {
+	if { [getFromRunning "oper_mode"] == "edit" || ! [isRunningNode $node_id] } {
 		set disabled 1
 	} else {
 		set disabled 0

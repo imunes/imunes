@@ -121,14 +121,6 @@ proc autoIPv6addr { node_id iface_id { use_autorenumbered "" } } {
 	#change_subnet6 - to change the subnet (1) or not (0)
 	#autorenumbered_ifcs6 - list of all interfaces that changed an address
 
-	set node_type [getNodeType $node_id]
-	if { [invokeTypeProc $node_type "netlayer"] != "NETWORK" } {
-		#
-		# Shouldn't get called at all for link-layer nodes
-		#
-		return
-	}
-
 	setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] [getIfcIPv6addrs $node_id $iface_id] "keep_doubles"]
 
 	setIfcIPv6addrs $node_id $iface_id ""
@@ -172,6 +164,7 @@ proc autoIPv6addr { node_id iface_id { use_autorenumbered "" } } {
 		}
 	}
 
+	set node_type [getNodeType $node_id]
 	if { $peers_ip6addrs != "" && $change_subnet6 == 0 && $best_choice_ip != "" } {
 		set targetbyte [expr 0x[invokeTypeProc $node_type "IPAddrRange"]]
 		set addr [nextFreeIP6Addr $best_choice_ip $targetbyte $peers_ip6addrs]

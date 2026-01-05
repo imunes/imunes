@@ -40,323 +40,300 @@
 set MODULE filter
 registerModule $MODULE "freebsd"
 
-################################################################################
-########################### CONFIGURATION PROCEDURES ###########################
-################################################################################
+namespace eval $MODULE {
+	# Define all node-specific procedures. All non-defined procedures will call
+	# genericL2.* procedure from nodes/generic_l2.tcl
+	namespace import ::genericL2::*
+	namespace export *
 
-proc $MODULE.confNewNode { node_id } {
-	global nodeNamingBase
+	################################################################################
+	########################### CONFIGURATION PROCEDURES ###########################
+	################################################################################
 
-	setNodeName $node_id [getNewNodeNameType filter $nodeNamingBase(filter)]
-}
+	proc namingBase {} {
+		return "filter"
+	}
 
-proc $MODULE.confNewIfc { node_id iface_id } {
-}
+	proc getHookData { node_id iface_id } {
+		# FreeBSD - stolen interface name of the node (attached to netgraph node in EID jail)
+		set private_elem [getIfcName $node_id $iface_id]
 
-proc $MODULE.generateConfigIfaces { node_id ifaces } {
-}
+		# name of public netgraph peer
+		set public_elem $node_id
 
-proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
-}
+		# FreeBSD - hook for connecting to netgraph node
+		set hook_name $private_elem
 
-proc $MODULE.generateConfig { node_id } {
-}
+		return [list $private_elem $public_elem $hook_name]
+	}
 
-proc $MODULE.generateUnconfig { node_id } {
-}
+	################################################################################
+	############################ INSTANTIATE PROCEDURES ############################
+	################################################################################
 
-#****f* filter.tcl/filter.ifacePrefix
-# NAME
-#   filter.ifacePrefix -- interface name
-# SYNOPSIS
-#   filter.ifacePrefix
-# FUNCTION
-#   Returns filter interface name prefix.
-# RESULT
-#   * name -- name prefix string
-#****
-proc $MODULE.ifacePrefix {} {
-	return "e"
-}
+	proc prepareSystem {} {
+		catch { rexec kldload ng_patmat }
+	}
 
-#****f* filter.tcl/filter.IPAddrRange
-# NAME
-#   filter.IPAddrRange -- IP address range
-# SYNOPSIS
-#   filter.IPAddrRange
-# FUNCTION
-#   Returns filter IP address range
-# RESULT
-#   * range -- filter IP address range
-#****
-proc $MODULE.IPAddrRange {} {
-}
+	#****f* filter.tcl/filter.nodeCreate
+	# NAME
+	#   filter.nodeCreate
+	# SYNOPSIS
+	#   filter.nodeCreate $eid $node_id
+	# FUNCTION
+	#   Procedure filter.nodeCreate creates a new virtual node
+	#   with all the interfaces and CPU parameters as defined
+	#   in imunes.
+	# INPUTS
+	#   * eid - experiment id
+	#   * node_id - id of the node
+	#****
+	proc nodeCreate { eid node_id } {
+		addStateNode $node_id "node_creating"
 
-#****f* filter.tcl/filter.netlayer
-# NAME
-#   filter.netlayer
-# SYNOPSIS
-#   set layer [filter.netlayer]
-# FUNCTION
-#   Returns the layer on which the filter.communicates
-#   i.e. returns LINK.
-# RESULT
-#   * layer -- set to LINK
-#****
-proc $MODULE.netlayer {} {
-	return LINK
-}
+		set private_ns [invokeNodeProc $node_id "getPrivateNs" $eid $node_id]
 
-#****f* filter.tcl/filter.virtlayer
-# NAME
-#   filter.virtlayer
-# SYNOPSIS
-#   set layer [filter.virtlayer]
-# FUNCTION
-#   Returns the layer on which the filter is instantiated
-#   i.e. returns NATIVE.
-# RESULT
-#   * layer -- set to NATIVE
-#****
-proc $MODULE.virtlayer {} {
-	return NATIVE
-}
+		pipesExec "printf \"
+		mkpeer . patmat tmp tmp \n
+		name .:tmp $node_id
+		\" | jexec $private_ns ngctl -f -" "hold"
+	}
 
-#****f* filter.tcl/filter.bootcmd
-# NAME
-#   filter.bootcmd -- boot command
-# SYNOPSIS
-#   set appl [filter.bootcmd $node_id]
-# FUNCTION
-#   Procedure bootcmd returns the application that reads and employes the
-#   configuration generated in filter.generateConfig.
-#   In this case (procedure filter.bootcmd) specific application is /bin/sh
-# INPUTS
-#   * node_id -- node id (type of the node is filter)
-# RESULT
-#   * appl -- application that reads the configuration (/bin/sh)
-#****
-proc $MODULE.bootcmd { node_id } {
-}
+	proc nodePhysIfacesCreate { eid node_id ifaces } {
+		foreach iface_id $ifaces {
+			if { [getIfcLink $node_id $iface_id] == "" } {
+				removeStateNodeIface $node_id $iface_id "running"
 
-#****f* filter.tcl/filter.shellcmds
-# NAME
-#   filter.shellcmds -- shell commands
-# SYNOPSIS
-#   set shells [filter.shellcmds]
-# FUNCTION
-#   Procedure shellcmds returns the shells that can be opened
-#   as a default shell for the system.
-# RESULT
-#   * shells -- default shells for the filter node
-#****
-proc $MODULE.shellcmds {} {
-}
+				continue
+			}
 
-#****f* filter.tcl/filter.nghook
-# NAME
-#   filter.nghook
-# SYNOPSIS
-#   filter.nghook $eid $node_id $iface_id
-# FUNCTION
-#   Returns the id of the netgraph node and the name of the
-#   netgraph hook which is used for connecting two netgraph
-#   nodes. This procedure calls l3node.hook procedure and
-#   passes the result of that procedure.
-# INPUTS
-#   * eid - experiment id
-#   * node_id - node id
-#   * iface_id - interface id
-# RESULT
-#   * nghook - the list containing netgraph node id and the
-#     netgraph hook (ngNode ngHook).
-#****
-proc $MODULE.nghook { eid node_id iface } {
-	return [list $node_id [getIfcName $node_id $iface]]
-}
-
-################################################################################
-############################ INSTANTIATE PROCEDURES ############################
-################################################################################
-
-proc $MODULE.prepareSystem {} {
-	catch { rexec kldload ng_patmat }
-}
-
-#****f* filter.tcl/filter.nodeCreate
-# NAME
-#   filter.nodeCreate
-# SYNOPSIS
-#   filter.nodeCreate $eid $node_id
-# FUNCTION
-#   Procedure filter.nodeCreate creates a new virtual node
-#   with all the interfaces and CPU parameters as defined
-#   in imunes.
-# INPUTS
-#   * eid - experiment id
-#   * node_id - id of the node
-#****
-proc $MODULE.nodeCreate { eid node_id } {
-	pipesExec "printf \"
-	mkpeer . patmat tmp tmp \n
-	name .:tmp $node_id
-	\" | jexec $eid ngctl -f -" "hold"
-}
-
-#****f* filter.tcl/filter.nodeNamespaceSetup
-# NAME
-#   filter.nodeNamespaceSetup -- filter node nodeNamespaceSetup
-# SYNOPSIS
-#   filter.nodeNamespaceSetup $eid $node_id
-# FUNCTION
-#   Linux only. Attaches the existing Docker netns to a new one.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id
-#****
-proc $MODULE.nodeNamespaceSetup { eid node_id } {
-}
-
-#****f* filter.tcl/filter.nodeInitConfigure
-# NAME
-#   filter.nodeInitConfigure -- filter node nodeInitConfigure
-# SYNOPSIS
-#   filter.nodeInitConfigure $eid $node_id
-# FUNCTION
-#   Runs initial L3 configuration, such as creating logical interfaces and
-#   configuring sysctls.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id
-#****
-proc $MODULE.nodeInitConfigure { eid node_id } {
-}
-
-proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
-	nodePhysIfacesCreate $node_id $ifaces
-}
-
-proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
-}
-
-#****f* filter.tcl/filter.nodeIfacesConfigure
-# NAME
-#   filter.nodeIfacesConfigure -- configure filter node interfaces
-# SYNOPSIS
-#   filter.nodeIfacesConfigure $eid $node_id $ifaces
-# FUNCTION
-#   Configure interfaces on a filter. Set MAC, MTU, queue parameters, assign the IP
-#   addresses to the interfaces, etc. This procedure can be called if the node
-#   is instantiated.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id
-#   * ifaces -- list of interface ids
-#****
-proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
-}
-
-#****f* filter.tcl/filter.nodeConfigure
-# NAME
-#   filter.nodeConfigure
-# SYNOPSIS
-#   filter.nodeConfigure $eid $node_id
-# FUNCTION
-#   Starts a new filter. The node can be started if it is instantiated.
-#   Simulates the booting proces of a filter. by calling l3node.nodeConfigure
-#   procedure.
-# INPUTS
-#   * eid - experiment id
-#   * node_id - id of the node
-#****
-proc $MODULE.nodeConfigure { eid node_id } {
-	foreach iface_id [ifcList $node_id] {
-		if { [getIfcLink $node_id $iface_id] == "" } {
-			continue
+			addStateNodeIface $node_id $iface_id "running"
 		}
+	}
 
-		set ngcfgreq "shc [getIfcName $node_id $iface_id]"
-		foreach rule_num [lsort -dictionary [ifcFilterRuleList $node_id $iface_id]] {
-			set rule [getFilterIfcRuleAsString $node_id $iface_id $rule_num]
+	proc nodePhysIfacesDirectCreate { eid node_id ifaces } {
+		return [invokeNodeProc $node_id "nodePhysIfacesCreate" $eid $node_id $ifaces]
+	}
 
-			set action_data [getFilterIfcActionData $node_id $iface_id $rule_num]
-			set other_iface_id [ifaceIdFromName $node_id $action_data]
-			if { [getIfcLink $node_id $other_iface_id] != "" } {
-				set ngcfgreq "${ngcfgreq} ${rule}"
+	#****f* filter.tcl/filter.nodeConfigure
+	# NAME
+	#   filter.nodeConfigure
+	# SYNOPSIS
+	#   filter.nodeConfigure $eid $node_id
+	# FUNCTION
+	#   Starts a new filter. The node can be started if it is instantiated.
+	#   Simulates the booting proces of a filter.
+	#   procedure.
+	# INPUTS
+	#   * eid - experiment id
+	#   * node_id - id of the node
+	#****
+	proc nodeConfigure { eid node_id } {
+		set ifaces [ifcList $node_id]
+		foreach iface_id $ifaces {
+			if { ! [isRunningNodeIface $node_id $iface_id] } {
+				set ifaces [removeFromList $ifaces $iface_id]
 			}
 		}
 
-		pipesExec "jexec $eid ngctl msg $node_id: $ngcfgreq" "hold"
-	}
-}
-
-################################################################################
-############################# TERMINATE PROCEDURES #############################
-################################################################################
-
-#****f* filter.tcl/filter.nodeIfacesUnconfigure
-# NAME
-#   filter.nodeIfacesUnconfigure -- unconfigure filter node interfaces
-# SYNOPSIS
-#   filter.nodeIfacesUnconfigure $eid $node_id $ifaces
-# FUNCTION
-#   Unconfigure interfaces on a filter to a default state. Set name to iface_id,
-#   flush IP addresses to the interfaces, etc. This procedure can be called if
-#   the node is instantiated.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id
-#   * ifaces -- list of interface ids
-#****
-proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
-}
-
-proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
-	nodeIfacesDestroy $eid $node_id $ifaces
-}
-
-proc $MODULE.nodeUnconfigure { eid node_id } {
-	foreach iface_id [ifcList $node_id] {
-		if { [getIfcLink $node_id $iface_id] == "" } {
-			continue
+		if { $ifaces == {} } {
+			return
 		}
 
-		set ngcfgreq "shc [getIfcName $node_id $iface_id]"
-		pipesExec "jexec $eid ngctl msg $node_id: $ngcfgreq" "hold"
+		addStateNode $node_id "node_configuring"
+
+		foreach iface_id $ifaces {
+			set ng_cfg_req "shc [getIfcName $node_id $iface_id]"
+			foreach rule_num [lsort -dictionary [ifcFilterRuleList $node_id $iface_id]] {
+				set rule [getFilterIfcRuleAsString $node_id $iface_id $rule_num]
+
+				set action [getFilterIfcAction $node_id $iface_id $rule_num]
+				if { $action == "match_drop" } {
+					set ng_cfg_req "${ng_cfg_req} ${rule}"
+
+					continue
+				}
+
+				set action_data [getFilterIfcActionData $node_id $iface_id $rule_num]
+				set other_iface_id [ifaceIdFromName $node_id $action_data]
+				if { [isRunningNodeIface $node_id $other_iface_id] } {
+					set ng_cfg_req "${ng_cfg_req} ${rule}"
+				}
+			}
+
+			pipesExec "jexec $eid ngctl msg $node_id: $ng_cfg_req" "hold"
+		}
 	}
-}
 
-#****f* filter.tcl/filter.nodeShutdown
-# NAME
-#   filter.nodeShutdown
-# SYNOPSIS
-#   filter.nodeShutdown $eid $node_id
-# FUNCTION
-#   Shutdowns a filter node.
-#   Simulates the shutdown proces of a node, kills all the services and
-#   processes.
-# INPUTS
-#   * eid - experiment id
-#   * node_id - id of the node
-#****
-proc $MODULE.nodeShutdown { eid node_id } {
-}
+	proc nodeConfigure_check { eid node_id } {
+		set ifaces [ifcList $node_id]
+		foreach iface_id $ifaces {
+			if { ! [isRunningNodeIface $node_id $iface_id] } {
+				set ifaces [removeFromList $ifaces $iface_id]
+			}
+		}
 
-#****f* filter.tcl/filter.nodeDestroy
-# NAME
-#   filter.nodeDestroy
-# SYNOPSIS
-#   filter.nodeDestroy $eid $node_id
-# FUNCTION
-#   Destroys a filter node.
-#   It issues the shutdown command to ngctl.
-# INPUTS
-#   * eid - experiment id
-#   * node_id - id of the node
-#****
-proc $MODULE.nodeDestroy { eid node_id } {
-	pipesExec "jexec $eid ngctl msg $node_id: shutdown" "hold"
-}
+		if { $ifaces == {} } {
+			return true
+		}
 
-proc $MODULE.nodeDestroyFS { eid node_id } {
+		set private_ns [invokeNodeProc $node_id "getPrivateNs" $eid $node_id]
+
+		set cmds ""
+		foreach iface_id $ifaces {
+			lassign [invokeNodeProc $node_id "getHookData" $node_id $iface_id] iface_name - -
+
+			set ng_cfg_req "Args.*$iface_name.*"
+			foreach rule_num [lsort -dictionary [ifcFilterRuleList $node_id $iface_id]] {
+				set rule [getFilterIfcRuleAsString $node_id $iface_id $rule_num]
+
+				set action [getFilterIfcAction $node_id $iface_id $rule_num]
+				if { $action == "match_drop" } {
+					set ng_cfg_req "${ng_cfg_req}.*${rule}"
+
+					continue
+				}
+
+				set action_data [getFilterIfcActionData $node_id $iface_id $rule_num]
+				set other_iface_id [ifaceIdFromName $node_id $action_data]
+				if { [getIfcLink $node_id $other_iface_id] != "" } {
+					set ng_cfg_req "${ng_cfg_req}.*${rule}"
+				}
+			}
+
+			append cmds "ngctl msg $node_id: ghc $iface_name | grep -q '$ng_cfg_req' && echo $iface_name; "
+		}
+
+		set cmds "jexec $private_ns sh -c '$cmds'"
+
+		set cmds [getTimeoutCmd "ifacesconf_timeout" $cmds]
+
+		try {
+			rexec $cmds
+		} on ok ifaces_all {
+			if { [string trim $ifaces_all "\n "] == "" } {
+				return false
+			}
+
+			set ifaces_created {}
+			foreach iface_id $ifaces {
+				lassign [invokeNodeProc $node_id "getHookData" $node_id $iface_id] iface_name - -
+				if {
+					[isRunningNodeIface $node_id $iface_id] ||
+					("creating" in [getStateNodeIface $node_id $iface_id] &&
+					$iface_name in $ifaces_all)
+				} {
+					lappend ifaces_created $iface_id
+
+					removeStateNodeIface $node_id $iface_id "error creating"
+					setStateErrorMsgNodeIface $node_id $iface_id ""
+					addStateNodeIface $node_id $iface_id "running"
+				} else {
+					addStateNodeIface $node_id $iface_id "error"
+					if { [getStateErrorMsgNodeIface $node_id $iface_id] == "" } {
+						setStateErrorMsgNodeIface $node_id $iface_id "Interface '$iface_id' ($iface_name) not created."
+					}
+				}
+			}
+
+			if { [llength $ifaces] == [llength $ifaces_created] } {
+				return true
+			}
+
+			return false
+		} on error {} {
+			return false
+		}
+
+		return false
+	}
+
+	################################################################################
+	############################# TERMINATE PROCEDURES #############################
+	################################################################################
+
+	proc nodeUnconfigure { eid node_id } {
+		set ifaces [ifcList $node_id]
+		foreach iface_id $ifaces {
+			if { ! [isRunningNodeIface $node_id $iface_id] } {
+				set ifaces [removeFromList $ifaces $iface_id]
+			}
+		}
+
+		if { $ifaces == {} } {
+			return
+		}
+
+		addStateNode $node_id "node_unconfiguring"
+
+		foreach iface_id $ifaces {
+			set ngcfgreq "shc [getIfcName $node_id $iface_id]"
+			pipesExec "jexec $eid ngctl msg $node_id: $ngcfgreq" "hold"
+		}
+	}
+
+	proc nodeUnconfigure_check { eid node_id } {
+		set ifaces [ifcList $node_id]
+		foreach iface_id $ifaces {
+			if { ! [isRunningNodeIface $node_id $iface_id] } {
+				set ifaces [removeFromList $ifaces $iface_id]
+			}
+		}
+
+		if { $ifaces == {} } {
+			return true
+		}
+
+		set private_ns [invokeNodeProc $node_id "getPrivateNs" $eid $node_id]
+
+		set cmds ""
+		foreach iface_id $ifaces {
+			lassign [invokeNodeProc $node_id "getHookData" $node_id $iface_id] iface_name - -
+
+			append cmds "ngctl msg $node_id: ghc $iface_name | grep 'Args' | grep -qv 'match' && echo $iface_name; "
+		}
+
+		set cmds "jexec $private_ns sh -c '$cmds'"
+
+		set cmds [getTimeoutCmd "ifacesconf_timeout" $cmds]
+
+		try {
+			rexec $cmds
+		} on ok ifaces_all {
+			if { [string trim $ifaces_all "\n "] == "" } {
+				return false
+			}
+
+			set ifaces_created {}
+			foreach iface_id $ifaces {
+				lassign [invokeNodeProc $node_id "getHookData" $node_id $iface_id] iface_name - -
+				if {
+					[isRunningNodeIface $node_id $iface_id] ||
+					("creating" in [getStateNodeIface $node_id $iface_id] &&
+					$iface_name in $ifaces_all)
+				} {
+					lappend ifaces_created $iface_id
+
+					removeStateNodeIface $node_id $iface_id "error creating"
+					setStateErrorMsgNodeIface $node_id $iface_id ""
+					addStateNodeIface $node_id $iface_id "running"
+				} else {
+					addStateNodeIface $node_id $iface_id "error"
+					if { [getStateErrorMsgNodeIface $node_id $iface_id] == "" } {
+						setStateErrorMsgNodeIface $node_id $iface_id "Interface '$iface_id' ($iface_name) not created."
+					}
+				}
+			}
+
+			if { [llength $ifaces] == [llength $ifaces_created] } {
+				return true
+			}
+
+			return false
+		} on error {} {
+			return false
+		}
+
+		return false
+	}
 }

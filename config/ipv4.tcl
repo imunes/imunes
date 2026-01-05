@@ -261,14 +261,6 @@ proc autoIPv4addr { node_id iface_id { use_autorenumbered "" } } {
 	#change_subnet4 - to change the subnet (1) or not (0)
 	#autorenumbered_ifcs - list of all interfaces that changed an address
 
-	set node_type [getNodeType $node_id]
-	if { [invokeTypeProc $node_type "netlayer"] != "NETWORK" } {
-		#
-		# Shouldn't get called at all for link-layer nodes
-		#
-		return
-	}
-
 	setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] [getIfcIPv4addrs $node_id $iface_id] "keep_doubles"]
 
 	setIfcIPv4addrs $node_id $iface_id ""
@@ -312,6 +304,7 @@ proc autoIPv4addr { node_id iface_id { use_autorenumbered "" } } {
 		}
 	}
 
+	set node_type [getNodeType $node_id]
 	if { $peers_ip4addrs != "" && $change_subnet4 == 0 && $best_choice_ip != "" } {
 		set addr [nextFreeIP4Addr $best_choice_ip [invokeTypeProc $node_type "IPAddrRange"] $peers_ip4addrs]
 	} else {

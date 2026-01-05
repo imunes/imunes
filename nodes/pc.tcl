@@ -40,442 +40,88 @@
 set MODULE pc
 registerModule $MODULE
 
-################################################################################
-########################### CONFIGURATION PROCEDURES ###########################
-################################################################################
+namespace eval $MODULE {
+	# Define all node-specific procedures. All non-defined procedures will call
+	# genericL3.* procedures from nodes/generic_l3.tcl
+	namespace import ::genericL3::*
+	namespace export *
 
-#****f* pc.tcl/pc.confNewNode
-# NAME
-#   pc.confNewNode -- configure new node
-# SYNOPSIS
-#   pc.confNewNode $node_id
-# FUNCTION
-#   Configures new node with the specified id.
-# INPUTS
-#   * node_id -- node id
-#****
-proc $MODULE.confNewNode { node_id } {
-	global nodeNamingBase
+	################################################################################
+	########################### CONFIGURATION PROCEDURES ###########################
+	################################################################################
 
-	setNodeName $node_id [getNewNodeNameType pc $nodeNamingBase(pc)]
-	setNodeAutoDefaultRoutesStatus $node_id "enabled"
-
-	set logiface_id [newLogIface $node_id "lo"]
-	setIfcIPv4addrs $node_id $logiface_id "127.0.0.1/8"
-	setIfcIPv6addrs $node_id $logiface_id "::1/128"
-}
-
-#****f* pc.tcl/pc.confNewIfc
-# NAME
-#   pc.confNewIfc -- configure new interface
-# SYNOPSIS
-#   pc.confNewIfc $node_id $iface_id
-# FUNCTION
-#   Configures new interface for the specified node.
-# INPUTS
-#   * node_id -- node id
-#   * iface_id -- interface name
-#****
-proc $MODULE.confNewIfc { node_id iface_id } {
-	autoIPv4addr $node_id $iface_id
-	autoIPv6addr $node_id $iface_id
-	autoMACaddr $node_id $iface_id
-}
-
-proc $MODULE.generateConfigIfaces { node_id ifaces } {
-	set all_ifaces "[ifcList $node_id] [logIfcList $node_id]"
-	if { $ifaces == "*" } {
-		set ifaces $all_ifaces
-	} else {
-		# sort physical ifaces before logical ones (because of vlans)
-		set negative_ifaces [removeFromList $all_ifaces $ifaces]
-		set ifaces [removeFromList $all_ifaces $negative_ifaces]
+	proc namingBase {} {
+		return "pc"
 	}
 
-	set cfg {}
-	foreach iface_id $ifaces {
-		set cfg [concat $cfg [nodeCfggenIfc $node_id $iface_id]]
+	proc nodeInitConfigure { eid node_id } {
+		global isOSlinux isOSfreebsd
 
-		lappend cfg ""
+		set cmd {}
+		if { $isOSlinux } {
+			array set sysctls {
+				net.ipv6.conf.all.forwarding	0
+				net.ipv4.conf.all.forwarding	0
+			}
+
+			foreach {name val} [array get sysctls] {
+				lappend cmd "sysctl $name=$val"
+			}
+			set cmds [join $cmd "; "]
+		}
+
+		if { $isOSfreebsd } {
+			array set sysctls {
+				net.inet.ip.forwarding		0
+				net.inet6.ip6.forwarding	0
+			}
+
+			foreach {name val} [array get sysctls] {
+				lappend cmd "sysctl $name=$val"
+			}
+			set cmds [join $cmd "; "]
+		}
+
+		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-d"]
+		pipesExec "$os_cmd sh -c '$cmds'" "hold"
+
+		return [invokeTypeProc "genericL3" "nodeInitConfigure" $eid $node_id]
 	}
 
-	return $cfg
-}
+	proc transformNode { node_id to_type } {
+		if { $to_type ni "pc host router" } {
+			return
+		}
 
-proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
-	set all_ifaces "[ifcList $node_id] [logIfcList $node_id]"
-	if { $ifaces == "*" } {
-		set ifaces $all_ifaces
-	} else {
-		# sort physical ifaces before logical ones
-		set negative_ifaces [removeFromList $all_ifaces $ifaces]
-		set ifaces [removeFromList $all_ifaces $negative_ifaces]
+		# replace type
+		setNodeType $node_id $to_type
+
+		if { $to_type == "router" } {
+			setNodeModel $node_id [getActiveOption "routerDefaultsModel"]
+
+			set protocols {
+				"rip	routerRipEnable"
+				"ripng	routerRipngEnable"
+				"ospf	routerOspfEnable"
+				"ospf6	routerOspf6Enable"
+				"bgp	routerBgpEnable"
+				"ldp	routerLdpEnable"
+				"isis	routerIsisEnable"
+			}
+
+			foreach item $protocols {
+				lassign $item protocol var_name
+
+				setNodeProtocol $node_id $protocol [getActiveOption $var_name]
+			}
+		}
 	}
 
-	set cfg {}
-	foreach iface_id $ifaces {
-		set cfg [concat $cfg [nodeUncfggenIfc $node_id $iface_id]]
+	################################################################################
+	############################ INSTANTIATE PROCEDURES ############################
+	################################################################################
 
-		lappend cfg ""
-	}
-
-	return $cfg
-}
-
-#****f* pc.tcl/pc.generateConfig
-# NAME
-#   pc.generateConfig -- configuration generator
-# SYNOPSIS
-#   set config [pc.generateConfig $node_id]
-# FUNCTION
-#   Returns the generated configuration. This configuration represents
-#   the configuration loaded on the booting time of the virtual nodes
-#   and it is closly related to the procedure pc.bootcmd.
-#   For each interface in the interface list of the node, ip address is
-#   configured and each static route from the simulator is added.
-# INPUTS
-#   * node_id -- node id
-# RESULT
-#   * config -- generated configuration
-#****
-proc $MODULE.generateConfig { node_id } {
-	set cfg {}
-
-	if {
-		[getNodeCustomEnabled $node_id] != true ||
-		[getNodeCustomConfigSelected $node_id "NODE_CONFIG"] in "\"\" DISABLED"
-	} {
-		set cfg [concat $cfg [nodeCfggenStaticRoutes4 $node_id]]
-		set cfg [concat $cfg [nodeCfggenStaticRoutes6 $node_id]]
-
-		lappend cfg ""
-	}
-
-	set subnet_gws {}
-	set nodes_l2data [dict create]
-	if { [getNodeAutoDefaultRoutesStatus $node_id] == "enabled" } {
-		lassign [getDefaultGateways $node_id $subnet_gws $nodes_l2data] my_gws subnet_gws nodes_l2data
-		lassign [getDefaultRoutesConfig $node_id $my_gws] all_routes4 all_routes6
-
-		setDefaultIPv4routes $node_id $all_routes4
-		setDefaultIPv6routes $node_id $all_routes6
-	} else {
-		setDefaultIPv4routes $node_id {}
-		setDefaultIPv6routes $node_id {}
-	}
-
-	set cfg [concat $cfg [nodeCfggenAutoRoutes4 $node_id]]
-	set cfg [concat $cfg [nodeCfggenAutoRoutes6 $node_id]]
-
-	lappend cfg ""
-
-	return $cfg
-}
-
-proc $MODULE.generateUnconfig { node_id } {
-	set cfg {}
-
-	set cfg [concat $cfg [nodeUncfggenStaticRoutes4 $node_id]]
-	set cfg [concat $cfg [nodeUncfggenStaticRoutes6 $node_id]]
-
-	lappend cfg ""
-
-	set cfg [concat $cfg [nodeUncfggenAutoRoutes4 $node_id]]
-	set cfg [concat $cfg [nodeUncfggenAutoRoutes6 $node_id]]
-
-	lappend cfg ""
-
-	return $cfg
-}
-
-#****f* pc.tcl/pc.ifacePrefix
-# NAME
-#   pc.ifacePrefix -- interface name prefix
-# SYNOPSIS
-#   pc.ifacePrefix
-# FUNCTION
-#   Returns pc interface name prefix.
-# RESULT
-#   * name -- name prefix string
-#****
-proc $MODULE.ifacePrefix {} {
-	return "eth"
-}
-
-#****f* pc.tcl/pc.IPAddrRange
-# NAME
-#   pc.IPAddrRange -- IP address range
-# SYNOPSIS
-#   pc.IPAddrRange
-# FUNCTION
-#   Returns pc IP address range
-# RESULT
-#   * range -- pc IP address range
-#****
-proc $MODULE.IPAddrRange {} {
-	return 20
-}
-
-#****f* pc.tcl/pc.netlayer
-# NAME
-#   pc.netlayer -- layer
-# SYNOPSIS
-#   set layer [pc.netlayer]
-# FUNCTION
-#   Returns the layer on which the pc communicates, i.e. returns NETWORK.
-# RESULT
-#   * layer -- set to NETWORK
-#****
-proc $MODULE.netlayer {} {
-	return NETWORK
-}
-
-#****f* pc.tcl/pc.virtlayer
-# NAME
-#   pc.virtlayer -- virtual layer
-# SYNOPSIS
-#   set layer [pc.virtlayer]
-# FUNCTION
-#   Returns the layer on which the pc is instantiated i.e. returns VIRTUALIZED.
-# RESULT
-#   * layer -- set to VIRTUALIZED
-#****
-proc $MODULE.virtlayer {} {
-	return VIRTUALIZED
-}
-
-#****f* pc.tcl/pc.bootcmd
-# NAME
-#   pc.bootcmd -- boot command
-# SYNOPSIS
-#   set appl [pc.bootcmd $node_id]
-# FUNCTION
-#   Procedure bootcmd returns the application that reads and employes the
-#   configuration generated in pc.generateConfig.
-#   In this case (procedure pc.bootcmd) specific application is /bin/sh
-# INPUTS
-#   * node_id -- node id
-# RESULT
-#   * appl -- application that reads the configuration (/bin/sh)
-#****
-proc $MODULE.bootcmd { node_id } {
-	return "/bin/sh"
-}
-
-#****f* pc.tcl/pc.shellcmds
-# NAME
-#   pc.shellcmds -- shell commands
-# SYNOPSIS
-#   set shells [pc.shellcmds]
-# FUNCTION
-#   Procedure shellcmds returns the shells that can be opened
-#   as a default shell for the system.
-# RESULT
-#   * shells -- default shells for the pc node
-#****
-proc $MODULE.shellcmds {} {
-	return "csh bash sh tcsh"
-}
-
-#****f* pc.tcl/pc.nghook
-# NAME
-#   pc.nghook -- nghook
-# SYNOPSIS
-#   pc.nghook $eid $node_id $iface_id
-# FUNCTION
-#   Returns the id of the netgraph node and the name of the netgraph hook
-#   which is used for connecting two netgraph nodes. This procedure calls
-#   l3node.hook procedure and passes the result of that procedure.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id
-#   * iface_id -- interface id
-# RESULT
-#   * nghook -- the list containing netgraph node id and the
-#     netgraph hook (ngNode ngHook).
-#****
-proc $MODULE.nghook { eid node_id iface_id } {
-	return [list $node_id-[getIfcName $node_id $iface_id] ether]
-}
-
-################################################################################
-############################ INSTANTIATE PROCEDURES ############################
-################################################################################
-
-#****f* pc.tcl/pc.prepareSystem
-# NAME
-#   pc.prepareSystem -- prepare system
-# SYNOPSIS
-#   pc.prepareSystem
-# FUNCTION
-#   Does nothing
-#****
-proc $MODULE.prepareSystem {} {
-	# nothing to do
-}
-
-#****f* pc.tcl/pc.nodeCreate
-# NAME
-#   pc.nodeCreate -- nodeCreate
-# SYNOPSIS
-#   pc.nodeCreate $eid $node_id
-# FUNCTION
-#   Creates a new virtualized pc node (using jails/docker).
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id
-#****
-proc $MODULE.nodeCreate { eid node_id } {
-	prepareFilesystemForNode $node_id
-	createNodeContainer $node_id
-}
-
-#****f* pc.tcl/pc.nodeNamespaceSetup
-# NAME
-#   pc.nodeNamespaceSetup -- pc node nodeNamespaceSetup
-# SYNOPSIS
-#   pc.nodeNamespaceSetup $eid $node_id
-# FUNCTION
-#   Linux only. Attaches the existing Docker netns to a new one.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id
-#****
-proc $MODULE.nodeNamespaceSetup { eid node_id } {
-	attachToL3NodeNamespace $node_id
-}
-
-#****f* pc.tcl/pc.nodeInitConfigure
-# NAME
-#   pc.nodeInitConfigure -- pc node nodeInitConfigure
-# SYNOPSIS
-#   pc.nodeInitConfigure $eid $node_id
-# FUNCTION
-#   Runs initial L3 configuration, such as creating logical interfaces and
-#   configuring sysctls.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id
-#****
-proc $MODULE.nodeInitConfigure { eid node_id } {
-	configureICMPoptions $node_id
-}
-
-proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
-	nodePhysIfacesCreate $node_id $ifaces
-}
-
-proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
-	nodeLogIfacesCreate $node_id $ifaces
-}
-
-#****f* pc.tcl/pc.nodeIfacesConfigure
-# NAME
-#   pc.nodeIfacesConfigure -- configure pc node interfaces
-# SYNOPSIS
-#   pc.nodeIfacesConfigure $eid $node_id $ifaces
-# FUNCTION
-#   Configure interfaces on a pc. Set MAC, MTU, queue parameters, assign the IP
-#   addresses to the interfaces, etc. This procedure can be called if the node
-#   is instantiated.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id
-#   * ifaces -- list of interface ids
-#****
-proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
-	startNodeIfaces $node_id $ifaces
-}
-
-#****f* pc.tcl/pc.nodeConfigure
-# NAME
-#   pc.nodeConfigure -- configure pc node
-# SYNOPSIS
-#   pc.nodeConfigure $eid $node_id
-# FUNCTION
-#   Starts a new pc. Simulates the booting proces of a node, starts all the
-#   services, etc.
-#   This procedure can be called if it is instantiated.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id
-#****
-proc $MODULE.nodeConfigure { eid node_id } {
-	runConfOnNode $node_id
-}
-
-################################################################################
-############################# TERMINATE PROCEDURES #############################
-################################################################################
-
-#****f* pc.tcl/pc.nodeIfacesUnconfigure
-# NAME
-#   pc.nodeIfacesUnconfigure -- unconfigure pc node interfaces
-# SYNOPSIS
-#   pc.nodeIfacesUnconfigure $eid $node_id $ifaces
-# FUNCTION
-#   Unconfigure interfaces on a pc to a default state. Set name to iface_id,
-#   flush IP addresses to the interfaces, etc. This procedure can be called if
-#   the node is instantiated.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id
-#   * ifaces -- list of interface ids
-#****
-proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
-	unconfigNodeIfaces $eid $node_id $ifaces
-}
-
-proc $MODULE.nodeLogIfacesDestroy { eid node_id ifaces } {
-	nodeLogIfacesDestroy $eid $node_id $ifaces
-}
-
-proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
-	nodeIfacesDestroy $eid $node_id $ifaces
-}
-
-proc $MODULE.nodeUnconfigure { eid node_id } {
-	unconfigNode $eid $node_id
-}
-
-#****f* pc.tcl/pc.nodeShutdown
-# NAME
-#   pc.nodeShutdown -- layer 3 node shutdown
-# SYNOPSIS
-#   pc.nodeShutdown $eid $node_id
-# FUNCTION
-#   Shutdowns a pc node.
-#   Simulates the shutdown proces of a node, kills all the services and
-#   processes.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id
-#****
-proc $MODULE.nodeShutdown { eid node_id } {
-	killExtProcess "wireshark.*[getNodeName $node_id].*\\($eid\\)"
-	killExtProcess "socat.*$eid/$node_id.*"
-	killAllNodeProcesses $eid $node_id
-}
-
-#****f* pc.tcl/pc.nodeDestroy
-# NAME
-#   pc.nodeDestroy -- layer 3 node destroy
-# SYNOPSIS
-#   pc.nodeDestroy $eid $node_id
-# FUNCTION
-#   Destroys a pc node.
-#   First, it destroys all remaining virtual ifaces (vlans, tuns, etc).
-#   Then, it destroys the jail/container with its namespaces and FS.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id
-#****
-proc $MODULE.nodeDestroy { eid node_id } {
-	destroyNodeVirtIfcs $eid $node_id
-	removeNodeContainer $eid $node_id
-}
-
-proc $MODULE.nodeDestroyFS { eid node_id } {
-	destroyNamespace $eid-$node_id
-	removeNodeFS $eid $node_id
+	################################################################################
+	############################# TERMINATE PROCEDURES #############################
+	################################################################################
 }

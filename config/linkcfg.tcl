@@ -77,8 +77,10 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 	foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
 		set node_type [getNodeType $node_id]
 		if { $node_type in "packgen" } {
+			trigger_ifaceDestroy $node_id $iface_id
 			trigger_nodeUnconfig $node_id
 		} elseif { $node_type in "filter" } {
+			trigger_ifaceDestroy $node_id $iface_id
 			trigger_nodeReconfig $node_id
 		}
 
@@ -87,16 +89,15 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 			continue
 		}
 
-		removeIface $node_id $iface_id
+		# use keep_link to skip recursively calling itself
+		removeIface $node_id $iface_id 1 "keep_link"
 	}
 
 	setToRunning "link_list" [removeFromList [getFromRunning "link_list"] $link_id]
 
 	cfgUnset "links" $link_id
-	if { [getFromRunning "${link_id}_running"] == "true" } {
-		setToRunning "${link_id}_running" "delete"
-	} else {
-		unsetRunning "${link_id}_running"
+	if { ! [isRunningLink $link_id] } {
+		unsetStateLink $link_id
 	}
 
 	# after deleting the link, refresh nodes auto default routes
@@ -280,11 +281,13 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
 		}
 	}
 
-	foreach node_id "$node1_id $node2_id" {
+	foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
 		set node_type [getNodeType $node_id]
 		if { $node_type in "packgen" } {
+			trigger_ifaceCreate $node_id $iface_id
 			trigger_nodeConfig $node_id
 		} elseif { $node_type in "filter" } {
+			trigger_ifaceCreate $node_id $iface_id
 			trigger_nodeReconfig $node_id
 		}
 	}
@@ -293,9 +296,12 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
 	lassign [getSubnetData $node1_id $iface1_id {} {} 0] old_subnet1_gws old_subnet1_data
 	lassign [getSubnetData $node2_id $iface2_id {} {} 0] old_subnet2_gws old_subnet2_data
 
-	set link_id [newObjectId [getFromRunning "link_list"] "l"]
-	if { [getFromRunning "${link_id}_running"] == "" } {
-		setToRunning "${link_id}_running" "false"
+	set link_id ""
+	while { $link_id == "" } {
+		set link_id [newObjectId [getFromRunning "link_list"] "l"]
+		if { [getStateLink $link_id] != "" } {
+			removeLink $link_id
+		}
 	}
 
 	setIfcLink $node1_id $iface1_id $link_id

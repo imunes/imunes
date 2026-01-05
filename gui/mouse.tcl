@@ -474,8 +474,8 @@ proc button3link { x y } {
 	if {
 		! $isOSlinux ||
 		$oper_mode == "edit" ||
-		([getFromRunning "${peer1_id}|${peer1_iface_id}_running"] == true &&
-		[getFromRunning "${peer2_id}|${peer2_iface_id}_running"] == true)
+		([isRunningNodeIface $peer1_id $peer1_iface_id] == true &&
+		[isRunningNodeIface $peer2_id $peer2_iface_id] == true)
 	} {
 		.button3menu add checkbutton -label "Direct link" \
 			-underline 5 -variable linkDirect_$real_link_id \
@@ -504,8 +504,8 @@ proc button3link { x y } {
 		$oper_mode == "edit" ||
 		([getFromRunning "stop_sched"] &&
 		(! $isOSlinux || ! [set linkDirect_$real_link_id] ||
-		(! [getFromRunning "${peer1_id}|${peer1_iface_id}_running"] == true &&
-		! [getFromRunning "${peer2_id}|${peer2_iface_id}_running"] == true)))
+		(! [isRunningNodeIface $peer1_id $peer1_iface_id] == true &&
+		! [isRunningNodeIface $peer2_id $peer2_iface_id] == true)))
 	} {
 		.button3menu add command -label "Delete (keep interfaces)" \
 			-command "removeLinkGUI $link_id atomic 1"
@@ -1157,7 +1157,7 @@ proc button3node { x y } {
 				}
 
 				if {
-					[getFromRunning ${node_id}_running] != "true" &&
+					! [isRunningNode $node_id] &&
 					($action in "node_destroy" ||
 					$action in "node_config node_unconfig node_reconfig" ||
 					$action in "ifaces_config ifaces_unconfig ifaces_reconfig")
@@ -1167,7 +1167,7 @@ proc button3node { x y } {
 
 				switch -exact -- $action {
 					"node_create" {
-						if { [getFromRunning ${node_id}_running] != "true" } {
+						if { ! [isRunningNode $node_id] } {
 							trigger_nodeCreate $node_id
 						}
 					}
@@ -1282,7 +1282,7 @@ proc button3node { x y } {
 	if {
 		$oper_mode == "exec" &&
 		[invokeTypeProc $node_type "virtlayer"] == "VIRTUALIZED" &&
-		[getFromRunning ${node_id}_running] == "true"
+		[isRunningNode $node_id]
 	} {
 		global all_services_list
 
@@ -1428,7 +1428,7 @@ proc button3node { x y } {
 		$node_type != "ext" &&
 		$oper_mode == "exec" &&
 		[invokeTypeProc $node_type "virtlayer"] == "VIRTUALIZED" &&
-		[getFromRunning ${node_id}_running] == "true"
+		[isRunningNode $node_id]
 	} {
 		.button3menu add separator
 		.button3menu add cascade -label "Shell window" \
@@ -1474,7 +1474,7 @@ proc button3node { x y } {
 	} elseif {
 		$oper_mode == "exec" &&
 		[invokeTypeProc $node_type "virtlayer"] == "VIRTUALIZED" &&
-		[getFromRunning ${node_id}_running] == "true"
+		[isRunningNode $node_id]
 	} {
 		#
 		# Wireshark

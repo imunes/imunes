@@ -311,14 +311,10 @@ proc getNodeName { node_id } {
 #   * name -- logical name of the node
 #****
 proc setNodeName { node_id name } {
-	global nodeNamingBase
-
 	cfgSet "nodes" $node_id "name" $name
 
 	set node_type [getNodeType $node_id]
-	if { $node_type in [array names nodeNamingBase] } {
-		recalculateNumType $node_type $nodeNamingBase($node_type)
-	}
+	recalculateNumType $node_type [invokeTypeProc $node_type "namingBase"]
 
 	if { [invokeNodeProc $node_id "virtlayer"] == "NATIVE" } {
 		return
