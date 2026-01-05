@@ -972,9 +972,9 @@ foreach b "select link" {
 }
 
 foreach node_type $all_modules_list {
-	if { [$node_type.netlayer] == "LINK" } {
+	if { [invokeTypeProc $node_type "netlayer"] == "LINK" } {
 		addTool "link_layer" $node_type
-	} elseif { [$node_type.netlayer] == "NETWORK" } {
+	} elseif { [invokeTypeProc $node_type "netlayer"] == "NETWORK" } {
 		addTool "net_layer" $node_type
 	}
 }
@@ -1039,12 +1039,12 @@ global running_mask_image
 set running_mask_image [image create photo -width $mask_width -height $mask_height]
 drawGradientCircle $running_mask_image $running_indicator_palette $mask_width $mask_height
 
-foreach b $all_modules_list {
-	global $b $b\_iconwidth $b\_iconheight
+foreach node_type $all_modules_list {
+	global $node_type $node_type\_iconwidth $node_type\_iconheight
 
-	set $b [image create photo -file [$b.icon normal]]
-	set $b\_iconwidth [image width [set $b]]
-	set $b\_iconheight [image height [set $b]]
+	set $node_type [image create photo -file [invokeTypeProc $node_type "icon" "normal"]]
+	set $node_type\_iconwidth [image width [set $node_type]]
+	set $node_type\_iconheight [image height [set $node_type]]
 }
 
 global pseudo pseudo_iconwidth pseudo_iconheight

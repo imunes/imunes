@@ -35,7 +35,7 @@ proc showCfg { c node_id } {
 	}
 
 	#Dont show popup window if the node virtlayer is different from VIRTUALIZED
-	if { [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" } {
+	if { [invokeNodeProc $node_id "virtlayer"] != "VIRTUALIZED" } {
 		return
 	}
 
@@ -208,8 +208,8 @@ proc showRoute { c node2_id } {
 			#Draw route only if both nodes work on network layer
 			if {
 				$node1_id != $node2_id &&
-				[[getNodeType $node1_id].netlayer] == "NETWORK" &&
-				[[getNodeType $node2_id].netlayer] == "NETWORK"
+				[invokeNodeProc $node1_id "netlayer"] == "NETWORK" &&
+				[invokeNodeProc $node2_id "netlayer"] == "NETWORK"
 			} {
 				#User notification
 				set line "Please wait. Route is being calculated."
@@ -286,7 +286,7 @@ proc findNode { c ipAddr } {
 	set nodeList {}
 	foreach obj [$c find withtag node] {
 		set node_id [lindex [$c gettags $obj] 1]
-		if { [[getNodeType $node_id].netlayer] == "NETWORK" } {
+		if { [invokeNodeProc $node_id "netlayer"] == "NETWORK" } {
 			lappend nodeList $node_id
 			incr i
 		}

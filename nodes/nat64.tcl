@@ -36,7 +36,7 @@ registerModule $MODULE
 proc $MODULE.confNewNode { node_id } {
 	global nodeNamingBase
 
-	router.confNewNode $node_id
+	invokeTypeProc "router" "confNewNode" $node_id
 
 	setNodeName $node_id [getNewNodeNameType nat64 $nodeNamingBase(nat64)]
 	setTaygaIPv4DynPool $node_id "192.168.64.0/24"
@@ -44,19 +44,19 @@ proc $MODULE.confNewNode { node_id } {
 }
 
 proc $MODULE.confNewIfc { node_id iface_id } {
-	router.confNewIfc $node_id $iface_id
+	invokeTypeProc "router" "confNewIfc" $node_id $iface_id
 }
 
 proc $MODULE.generateConfigIfaces { node_id ifaces } {
-	return [router.generateConfigIfaces $node_id $ifaces]
+	return [invokeTypeProc "router" "generateConfigIfaces" $node_id $ifaces]
 }
 
 proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
-	return [router.generateUnconfigIfaces $node_id $ifaces]
+	return [invokeTypeProc "router" "generateUnconfigIfaces" $node_id $ifaces]
 }
 
 proc $MODULE.generateConfig { node_id } {
-	set cfg [router.generateConfig $node_id]
+	set cfg [invokeTypeProc "router" "generateConfig" $node_id]
 
 	lappend cfg ""
 
@@ -111,7 +111,7 @@ proc $MODULE.generateUnconfig { node_id } {
 	lappend cfg "rm -f $conf_file"
 	lappend cfg "rm -rf $datadir"
 
-	set cfg [concat $cfg [router.generateUnconfig $node_id]]
+	set cfg [concat $cfg [invokeTypeProc "router" "generateUnconfig" $node_id]]
 
 	return $cfg
 }
@@ -127,31 +127,31 @@ proc $MODULE.generateUnconfig { node_id } {
 #   * name -- name prefix string
 #****
 proc $MODULE.ifacePrefix {} {
-	return [router.ifacePrefix]
+	return [invokeTypeProc "router" "ifacePrefix"]
 }
 
 proc $MODULE.IPAddrRange {} {
-	return [router.IPAddrRange]
+	return [invokeTypeProc "router" "IPAddrRange"]
 }
 
 proc $MODULE.netlayer {} {
-	return [router.netlayer]
+	return [invokeTypeProc "router" "netlayer"]
 }
 
 proc $MODULE.virtlayer {} {
-	return [router.virtlayer]
+	return [invokeTypeProc "router" "virtlayer"]
 }
 
 proc $MODULE.bootcmd { node_id } {
-	return [router.bootcmd $node_id]
+	return [invokeTypeProc "router" "bootcmd" $node_id]
 }
 
 proc $MODULE.shellcmds {} {
-	return [router.shellcmds]
+	return [invokeTypeProc "router" "shellcmds"]
 }
 
 proc $MODULE.nghook { eid node_id iface_id } {
-	return [router.nghook $eid $node_id $iface_id]
+	return [invokeTypeProc "router" "nghook" $eid $node_id $iface_id]
 }
 
 ################################################################################
@@ -167,27 +167,27 @@ proc $MODULE.nghook { eid node_id iface_id } {
 #   Does nothing
 #****
 proc $MODULE.prepareSystem {} {
-	router.prepareSystem
+	invokeTypeProc "router" "prepareSystem"
 }
 
 proc $MODULE.nodeCreate { eid node_id } {
-	router.nodeCreate $eid $node_id
+	invokeTypeProc "router" "nodeCreate" $eid $node_id
 }
 
 proc $MODULE.nodeNamespaceSetup { eid node_id } {
-	router.nodeNamespaceSetup $eid $node_id
+	invokeTypeProc "router" "nodeNamespaceSetup" $eid $node_id
 }
 
 proc $MODULE.nodeInitConfigure { eid node_id } {
-	router.nodeInitConfigure $eid $node_id
+	invokeTypeProc "router" "nodeInitConfigure" $eid $node_id
 }
 
 proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
-	router.nodePhysIfacesCreate $eid $node_id $ifaces
+	invokeTypeProc "router" "nodePhysIfacesCreate" $eid $node_id $ifaces
 }
 
 proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
-	router.nodeLogIfacesCreate $eid $node_id $ifaces
+	invokeTypeProc "router" "nodeLogIfacesCreate" $eid $node_id $ifaces
 }
 
 #****f* nat64.tcl/nat64.nodeIfacesConfigure
@@ -205,11 +205,11 @@ proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
 #   * ifaces -- list of interface ids
 #****
 proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
-	router.nodeIfacesConfigure $eid $node_id $ifaces
+	invokeTypeProc "router" "nodeIfacesConfigure" $eid $node_id $ifaces
 }
 
 proc $MODULE.nodeConfigure { eid node_id } {
-	router.nodeConfigure $eid $node_id
+	invokeTypeProc "router" "nodeConfigure" $eid $node_id
 }
 
 ################################################################################
@@ -231,25 +231,25 @@ proc $MODULE.nodeConfigure { eid node_id } {
 #   * ifaces -- list of interface ids
 #****
 proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
-	router.nodeIfacesUnconfigure $eid $node_id $ifaces
+	invokeTypeProc "router" "nodeIfacesUnconfigure" $eid $node_id $ifaces
 }
 
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
-	router.nodeIfacesDestroy $eid $node_id $ifaces
+	invokeTypeProc "router" "nodeIfacesDestroy" $eid $node_id $ifaces
 }
 
 proc $MODULE.nodeUnconfigure { eid node_id } {
-	router.nodeUnconfigure $eid $node_id
+	invokeTypeProc "router" "nodeUnconfigure" $eid $node_id
 }
 
 proc $MODULE.nodeShutdown { eid node_id } {
-	router.nodeShutdown $eid $node_id
+	invokeTypeProc "router" "nodeShutdown" $eid $node_id
 }
 
 proc $MODULE.nodeDestroy { eid node_id } {
-	router.nodeDestroy $eid $node_id
+	invokeTypeProc "router" "nodeDestroy" $eid $node_id
 }
 
 proc $MODULE.nodeDestroyFS { eid node_id } {
-	router.nodeDestroyFS $eid $node_id
+	invokeTypeProc "router" "nodeDestroyFS" $eid $node_id
 }

@@ -740,7 +740,7 @@ proc _newIface { node_cfg iface_type auto_config { stolen_iface "" } } {
 			set iface_name [newObjectId [_allIfacesNames $node_cfg] $iface_type]
 		}
 		"phys" {
-			set iface_name [newObjectId [_allIfacesNames $node_cfg] [[dictGet $node_cfg "type"].ifacePrefix]]
+			set iface_name [newObjectId [_allIfacesNames $node_cfg] [_invokeNodeProc $node_cfg "ifacePrefix"]]
 		}
 		"stolen" {
 			if { $stolen_iface != "UNASSIGNED" && $stolen_iface in [_allIfacesNames $node_cfg] } {
@@ -756,7 +756,7 @@ proc _newIface { node_cfg iface_type auto_config { stolen_iface "" } } {
 
 	# TODO
 	if { $auto_config } {
-		set node_cfg [[_cfgGet $node_cfg "type"]._confNewIfc $node_cfg $iface_id]
+		set node_cfg [_invokeNodeProc $node_cfg "_confNewIfc" $node_cfg $iface_id]
 	}
 
 	return [list $iface_id $node_cfg]

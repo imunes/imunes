@@ -112,6 +112,6 @@ proc $MODULE.nghook { eid node_id iface_id } {
 	return [list $eid\.$node_id link$ifunit]
 }
 
-proc $MODULE.maxLinks {} {
+proc $MODULE.maxIfaces {} {
 	return 2048
 }

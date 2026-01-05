@@ -1028,7 +1028,7 @@ proc loadCfgLegacy { cfg } {
 		if {
 			$node_type ni "extelem pseudo" &&
 			"lo0" ni [logIfacesNames $node_id] &&
-			[$node_type.netlayer] == "NETWORK"
+			[invokeTypeProc $node_type "netlayer"] == "NETWORK"
 		} {
 			set logiface_id [newLogIface $node_id "lo"]
 			setIfcIPv4addrs $node_id $logiface_id "127.0.0.1/8"
@@ -1091,7 +1091,7 @@ proc loadCfgLegacy { cfg } {
 		if {
 			$node_type != "pseudo" &&
 			[cfgGet "nodes" $node_id "auto_default_routes"] == "" &&
-			[$node_type.netlayer] == "NETWORK" && $node_type != "ext"
+			[invokeTypeProc $node_type "netlayer"] == "NETWORK" && $node_type != "ext"
 		} {
 			setNodeAutoDefaultRoutesStatus $node_id "disabled"
 		}

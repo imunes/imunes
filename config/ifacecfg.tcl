@@ -367,7 +367,7 @@ proc newIface { node_id iface_type auto_config { stolen_iface "" } } {
 			set iface_name [newObjectId [allIfacesNames $node_id] $iface_type]
 		}
 		"phys" {
-			set iface_name [newObjectId [allIfacesNames $node_id] [[getNodeType $node_id].ifacePrefix]]
+			set iface_name [newObjectId [allIfacesNames $node_id] [invokeNodeProc $node_id "ifacePrefix"]]
 		}
 		"stolen" {
 			if { $stolen_iface != "UNASSIGNED" && $stolen_iface in [allIfacesNames $node_id] } {
@@ -388,7 +388,7 @@ proc newIface { node_id iface_type auto_config { stolen_iface "" } } {
 	setIfcName $node_id $iface_id $iface_name
 
 	if { $auto_config } {
-		[getNodeType $node_id].confNewIfc $node_id $iface_id
+		invokeNodeProc $node_id "confNewIfc" $node_id $iface_id
 	}
 
 	trigger_ifaceCreate $node_id $iface_id
@@ -413,7 +413,6 @@ proc newLogIface { node_id logiface_type } {
 }
 
 proc removeIface { node_id iface_id { keep_other_ifaces 1} } {
-	set node_type [getNodeType $node_id]
 	trigger_ifaceDestroy $node_id $iface_id
 
 	set link_id [getIfcLink $node_id $iface_id]
@@ -446,6 +445,7 @@ proc removeIface { node_id iface_id { keep_other_ifaces 1} } {
 		}
 	}
 
+	set node_type [getNodeType $node_id]
 	if { $node_type in "filter" } {
 		foreach other_iface_id [ifcList $node_id] {
 			foreach rule_num [ifcFilterRuleList $node_id $other_iface_id] {

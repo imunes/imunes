@@ -1142,7 +1142,7 @@ proc isNodeStarted { node_id } {
 	global nodecreate_timeout
 
 	set node_type [getNodeType $node_id]
-	if { [$node_type.virtlayer] != "VIRTUALIZED" } {
+	if { [invokeTypeProc $node_type "virtlayer"] != "VIRTUALIZED" } {
 		if { $node_type in "rj45 ext" } {
 			return true
 		}
@@ -1258,7 +1258,7 @@ proc nodePhysIfacesCreate { node_id ifaces } {
 				if { [getIfcType $node_id $iface_id] == "stolen" } {
 					captureExtIfcByName $eid $iface_name $node_id
 					if { [getNodeType $node_id] in "hub lanswitch" } {
-						lassign [[getNodeType $node_id].nghook $eid $node_id $iface_id] \
+						lassign [invokeNodeProc $node_id "nghook" $eid $node_id $iface_id] \
 							ng_peer1 ng_hook1
 						lassign "$iface_name lower" \
 							ng_peer2 ng_hook2
@@ -1373,11 +1373,11 @@ proc runConfOnNode { node_id } {
 	if { [getNodeCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
 		set bootcmd [getNodeCustomConfigCommand $node_id "NODE_CONFIG" $custom_selected]
 		set bootcfg [getNodeCustomConfig $node_id "NODE_CONFIG" $custom_selected]
-		set bootcfg "$bootcfg\n[join [[getNodeType $node_id].generateConfig $node_id] "\n"]"
+		set bootcfg "$bootcfg\n[join [invokeNodeProc $node_id "generateConfig" $node_id] "\n"]"
 		set confFile "custom.conf"
 	} else {
-		set bootcfg [join [[getNodeType $node_id].generateConfig $node_id] "\n"]
-		set bootcmd [[getNodeType $node_id].bootcmd $node_id]
+		set bootcfg [join [invokeNodeProc $node_id "generateConfig" $node_id] "\n"]
+		set bootcmd [invokeNodeProc $node_id "bootcmd" $node_id]
 		set confFile "boot.conf"
 	}
 
@@ -1408,8 +1408,8 @@ proc startNodeIfaces { node_id ifaces } {
 		set bootcfg [getNodeCustomConfig $node_id "IFACES_CONFIG" $custom_selected]
 		set confFile "custom_ifaces.conf"
 	} else {
-		set bootcfg [join [[getNodeType $node_id].generateConfigIfaces $node_id $ifaces] "\n"]
-		set bootcmd [[getNodeType $node_id].bootcmd $node_id]
+		set bootcfg [join [invokeNodeProc $node_id "generateConfigIfaces" $node_id $ifaces] "\n"]
+		set bootcmd [invokeNodeProc $node_id "bootcmd" $node_id]
 		set confFile "boot_ifaces.conf"
 	}
 
@@ -1435,8 +1435,8 @@ proc unconfigNode { eid node_id } {
 		return
 	}
 
-	set bootcfg [join [[getNodeType $node_id].generateUnconfig $node_id] "\n"]
-	set bootcmd [[getNodeType $node_id].bootcmd $node_id]
+	set bootcfg [join [invokeNodeProc $node_id "generateUnconfig" $node_id] "\n"]
+	set bootcmd [invokeNodeProc $node_id "bootcmd" $node_id]
 	set confFile "unboot.conf"
 
 	set cfg "set -x\n$bootcfg"
@@ -1457,8 +1457,8 @@ proc unconfigNodeIfaces { eid node_id ifaces } {
 		return
 	}
 
-	set bootcfg [join [[getNodeType $node_id].generateUnconfigIfaces $node_id $ifaces] "\n"]
-	set bootcmd [[getNodeType $node_id].bootcmd $node_id]
+	set bootcfg [join [invokeNodeProc $node_id "generateUnconfigIfaces" $node_id $ifaces] "\n"]
+	set bootcmd [invokeNodeProc $node_id "bootcmd" $node_id]
 	set confFile "unboot_ifaces.conf"
 
 	set cfg "set -x\n$bootcfg"
@@ -1477,7 +1477,7 @@ proc isNodeIfacesCreated { node_id ifaces } {
 	set eid [getFromRunning "eid"]
 
 	set node_type [getNodeType $node_id]
-	if { [$node_type.virtlayer] == "NATIVE" && $node_type != "rj45" } {
+	if { [invokeTypeProc $node_type "virtlayer"] == "NATIVE" && $node_type != "rj45" } {
 		# TODO: other nodes?
 		return $ifaces
 	}
@@ -1525,7 +1525,7 @@ proc isNodeIfacesConfigured { node_id } {
 
 	set jail_id "[getFromRunning "eid"].$node_id"
 
-	if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
+	if { [invokeNodeProc $node_id "virtlayer"] == "NATIVE" } {
 		return true
 	}
 
@@ -1579,7 +1579,7 @@ proc isNodeConfigured { node_id } {
 
 	set jail_id "[getFromRunning "eid"].$node_id"
 
-	if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
+	if { [invokeNodeProc $node_id "virtlayer"] == "NATIVE" } {
 		return true
 	}
 
@@ -1599,7 +1599,7 @@ proc isNodeConfigured { node_id } {
 proc isNodeError { node_id } {
 	global nodeconf_timeout
 
-	if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
+	if { [invokeNodeProc $node_id "virtlayer"] == "NATIVE" } {
 		return false
 	}
 
@@ -1626,7 +1626,7 @@ proc isNodeError { node_id } {
 proc isNodeErrorIfaces { node_id } {
 	global ifacesconf_timeout
 
-	if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
+	if { [invokeNodeProc $node_id "virtlayer"] == "NATIVE" } {
 		return false
 	}
 
@@ -1662,7 +1662,7 @@ proc isNodeUnconfigured { node_id } {
 
 	set jail_id "[getFromRunning "eid"].$node_id"
 
-	if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
+	if { [invokeNodeProc $node_id "virtlayer"] == "NATIVE" } {
 		return true
 	}
 
@@ -1692,7 +1692,7 @@ proc isNodeIfacesUnconfigured { node_id } {
 
 	set jail_id "[getFromRunning "eid"].$node_id"
 
-	if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
+	if { [invokeNodeProc $node_id "virtlayer"] == "NATIVE" } {
 		return true
 	}
 
@@ -1720,7 +1720,7 @@ proc isNodeStopped { node_id } {
 		return true
 	}
 
-	if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
+	if { [invokeNodeProc $node_id "virtlayer"] == "NATIVE" } {
 		return true
 	}
 
@@ -1787,8 +1787,7 @@ proc isNodeIfacesDestroyed { node_id ifaces } {
 
 	set eid [getFromRunning "eid"]
 
-	set node_type [getNodeType $node_id]
-	if { $node_type == "ext" } {
+	if { [getNodeType $node_id] == "ext" } {
 		catch { rexec ifconfig $eid-$node_id } status
 		if { [string match -nocase "*does not exist*" $status] } {
 			return true
@@ -1838,7 +1837,7 @@ proc isNodeDestroyed { node_id } {
 	}
 
 	set node_type [getNodeType $node_id]
-	if { [$node_type.virtlayer] != "VIRTUALIZED" } {
+	if { [invokeTypeProc $node_type "virtlayer"] != "VIRTUALIZED" } {
 		if { $node_type in "rj45 ext" } {
 			return true
 		}
@@ -1877,7 +1876,7 @@ proc isNodeDestroyedFS { node_id } {
 		return true
 	}
 
-	if { [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" } {
+	if { [invokeNodeProc $node_id "virtlayer"] != "VIRTUALIZED" } {
 		return true
 	}
 
@@ -2029,10 +2028,8 @@ proc loadKernelModules {} {
 	#catch { rexec kldload ng_iface }
 	#catch { rexec kldload ng_cisco }
 
-	foreach module $all_modules_list {
-		if { [info procs $module.prepareSystem] == "$module.prepareSystem" } {
-			$module.prepareSystem
-		}
+	foreach node_type $all_modules_list {
+		invokeTypeProc $node_type "prepareSystem"
 	}
 }
 
@@ -2141,13 +2138,13 @@ proc createLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 	set eid [getFromRunning "eid"]
 
 	set ngpeer1 \
-		[lindex [[getNodeType $node1_id].nghook $eid $node1_id $iface1_id] 0]
+		[lindex [invokeNodeProc $node1_id "nghook" $eid $node1_id $iface1_id] 0]
 	set ngpeer2 \
-		[lindex [[getNodeType $node2_id].nghook $eid $node2_id $iface2_id] 0]
+		[lindex [invokeNodeProc $node2_id "nghook" $eid $node2_id $iface2_id] 0]
 	set nghook1 \
-		[lindex [[getNodeType $node1_id].nghook $eid $node1_id $iface1_id] 1]
+		[lindex [invokeNodeProc $node1_id "nghook" $eid $node1_id $iface1_id] 1]
 	set nghook2 \
-		[lindex [[getNodeType $node2_id].nghook $eid $node2_id $iface2_id] 1]
+		[lindex [invokeNodeProc $node2_id "nghook" $eid $node2_id $iface2_id] 1]
 
 	# for direct links, skip pipe creation
 	if { [getLinkDirect $link_id] } {
@@ -2254,8 +2251,8 @@ proc unconfigureLinkBetween { eid node1_id node2_id iface1_id iface2_id link_id 
 #****
 proc destroyLinkBetween { eid node1_id node2_id iface1_id iface2_id link_id } {
 	if { [getLinkDirect $link_id] || "wlan" in "[getNodeType $node1_id] [getNodeType $node2_id]" } {
-		lassign [[getNodeType $node1_id].nghook $eid $node1_id $iface1_id] ngpeer1 nghook1
-		lassign [[getNodeType $node2_id].nghook $eid $node2_id $iface2_id] ngpeer2 nghook2
+		lassign [invokeNodeProc $node1_id "nghook" $eid $node1_id $iface1_id] ngpeer1 nghook1
+		lassign [invokeNodeProc $node2_id "nghook" $eid $node2_id $iface2_id] ngpeer2 nghook2
 
 		pipesExec "jexec $eid ngctl disconnect $ngpeer1: $nghook1" "hold"
 		pipesExec "jexec $eid ngctl disconnect $ngpeer2: $nghook2" "hold"
@@ -2278,8 +2275,7 @@ proc destroyLinkBetween { eid node1_id node2_id iface1_id iface2_id link_id } {
 #   * vimages -- list of virtual nodes
 #****
 proc nodeIfacesDestroy { eid node_id ifaces } {
-	set node_type [getNodeType $node_id]
-	if { $node_type == "rj45" } {
+	if { [getNodeType $node_id] == "rj45" } {
 		foreach iface_id $ifaces {
 			releaseExtIfcByName $eid [getIfcName $node_id $iface_id] $node_id
 		}
@@ -2366,9 +2362,9 @@ proc terminate_removeExperimentFiles { eid } {
 #   * node_id -- id of the node (type of the node is either lanswitch or hub)
 #****
 proc l2node.nodeCreate { eid node_id } {
-	set nodeType [getNodeType $node_id]
+	set node_type [getNodeType $node_id]
 
-	switch -exact $nodeType {
+	switch -exact $node_type {
 		lanswitch {
 			set ngtype bridge
 		}
@@ -2377,7 +2373,7 @@ proc l2node.nodeCreate { eid node_id } {
 		}
 	}
 
-	switch -exact $nodeType {
+	switch -exact $node_type {
 		lanswitch -
 		hub {
 			# create an ng node and make it persistent in the same command
@@ -2500,7 +2496,7 @@ proc captureExtIfc { eid node_id iface_id } {
 #   * ifname -- physical interface name
 #****
 proc captureExtIfcByName { eid ifname node_id } {
-	if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
+	if { [invokeNodeProc $node_id "virtlayer"] == "NATIVE" } {
 		set nodeNs $eid
 	} else {
 		set nodeNs $eid.$node_id
@@ -2554,7 +2550,7 @@ proc releaseExtIfc { eid node_id iface_id } {
 #   * ifname -- physical interface name
 #****
 proc releaseExtIfcByName { eid ifname node_id } {
-	if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
+	if { [invokeNodeProc $node_id "virtlayer"] == "NATIVE" } {
 		set nodeNs $eid
 	} else {
 		set nodeNs $eid.$node_id

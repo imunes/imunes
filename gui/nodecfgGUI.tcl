@@ -66,7 +66,7 @@ proc nodeConfigGUI { c node_id } {
 	}
 
 	set badentry 0
-	[getNodeType $node_id].configGUI $c $node_id
+	invokeNodeProc $node_id "configGUI" $c $node_id
 }
 
 #****f* nodecfgGUI.tcl/configGUI_createConfigPopupWin
@@ -153,9 +153,7 @@ proc configGUI_addNotebook { wi node_id labels } {
 #   * node_id - node id
 #****
 proc notebookSize { wi node_id } {
-	set type [getNodeType $node_id]
-
-	set dim [$type.notebookDimensions $wi]
+	set dim [invokeNodeProc $node_id "notebookDimensions" $wi]
 	set configh [lindex $dim 0]
 	set configw [lindex $dim 1]
 
@@ -287,7 +285,7 @@ proc configGUI_addTree { wi node_id } {
 		}
 	}
 
-	if { [[_getNodeType $node_cfg].virtlayer] == "VIRTUALIZED" } {
+	if { [_invokeNodeProc $node_cfg "virtlayer"] == "VIRTUALIZED" } {
 		$wi.panwin.f1.tree insert {} end -id logIfcFrame -text \
 			"Logical Interfaces" -open true -tags logIfcFrame
 
@@ -405,7 +403,7 @@ proc configGUI_addTree { wi node_id } {
 		$wi.panwin.f1.tree tag bind $iface_id <Key-Down> $tmp_command
 	}
 
-	if { [[_getNodeType $node_cfg].virtlayer] == "VIRTUALIZED" } {
+	if { [_invokeNodeProc $node_cfg "virtlayer"] == "VIRTUALIZED" } {
 		$wi.panwin.f1.tree tag bind [lindex $sorted_iface_list end] <Key-Down> \
 			"configGUI_showIfcInfo $wi.panwin.f2 0 $node_id logIfcFrame"
 
@@ -643,7 +641,7 @@ proc configGUI_refreshIfcsTree { wi node_id } {
 		}
 	}
 
-	if { [[_getNodeType $node_cfg].virtlayer] == "VIRTUALIZED" } {
+	if { [_invokeNodeProc $node_cfg "virtlayer"] == "VIRTUALIZED" } {
 		$wi insert {} end -id logIfcFrame -text \
 			"Logical Interfaces" -open true -tags logIfcFrame
 
@@ -716,7 +714,7 @@ proc configGUI_refreshIfcsTree { wi node_id } {
 		$wi tag bind $iface_id <Key-Down> $tmp_command
 	}
 
-	if { [[_getNodeType $node_cfg].virtlayer] == "VIRTUALIZED" } {
+	if { [_invokeNodeProc $node_cfg "virtlayer"] == "VIRTUALIZED" } {
 		$wi tag bind [lindex $sorted_iface_list end] <Key-Down> \
 			"configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id logIfcFrame"
 
@@ -864,7 +862,6 @@ proc configGUI_showIfcInfo { wi phase node_id iface_id { force "" } } {
 
 	#if user didn't select Cancel in the popup about saving changes on previously selected interface
 	if { $cancel == 0 } {
-		set type [_getNodeType $node_cfg]
 		#creating new frame below the list of interfaces and adding modules with
 		#parameters of selected interface
 		if { $force != "" || $iface_id != $shownifc } {
@@ -878,7 +875,7 @@ proc configGUI_showIfcInfo { wi phase node_id iface_id { force "" } } {
 			} elseif { $iface_id != "logIfcFrame" } {
 				#physical interfaces
 				configGUI_ifcMainFrame $wi $node_id $iface_id
-				$type.configInterfacesGUI $wi $node_id $iface_id
+				_invokeNodeProc $node_cfg "configInterfacesGUI" $wi $node_id $iface_id
 			} else {
 				#manage logical interfaces
 				configGUI_logicalInterfaces $wi $node_id $iface_id
@@ -3491,6 +3488,7 @@ proc customConfigGUI { parent_wi node_id } {
 
 	global custom_node_cfg custom_config_hooks selected_hook
 
+	set node_type [getNodeType $node_id]
 	set note_message ""
 	switch -exact -- $selected_hook {
 		"IFACES_CONFIG" {
@@ -3500,7 +3498,6 @@ proc customConfigGUI { parent_wi node_id } {
 			append note_message "override the following configuration values:\n"
 			append note_message " - 'Interfaces' tab -> all settings.\n"
 
-			set node_type [getNodeType $node_id]
 			switch -exact -- $node_type {
 				"pc" {}
 				"host" {}
@@ -3518,7 +3515,6 @@ proc customConfigGUI { parent_wi node_id } {
 			append note_message " - 'Configuration' tab -> 'Custom static "
 			append note_message "routes' field.\n"
 
-			set node_type [getNodeType $node_id]
 			switch -exact -- $node_type {
 				"host" {
 					append note_message " - Automatic startup of 'rpcbind' and "
@@ -3825,16 +3821,16 @@ proc customConfigGUIFillDefaults { wi node_id selected_hook } {
 
 	set cfg_id [$wi.nb tab current -text]
 	set node_type [_getNodeType $custom_node_cfg]
-	set cmd [$node_type.bootcmd $node_id]
+	set cmd [invokeTypeProc $node_type "bootcmd" $node_id]
 
 	set tmp_status [getNodeCustomEnabled $node_id]
 	setNodeCustomEnabled $node_id false
 	switch -exact -- $selected_hook {
 		"IFACES_CONFIG" {
-			set cfg [$node_type.generateConfigIfaces $node_id "*"]
+			set cfg [invokeTypeProc $node_type "generateConfigIfaces" $node_id "*"]
 		}
 		"NODE_CONFIG" {
-			set cfg [$node_type.generateConfig $node_id]
+			set cfg [invokeTypeProc $node_type "generateConfig" $node_id]
 		}
 	}
 	setNodeCustomEnabled $node_id $tmp_status
@@ -6305,7 +6301,7 @@ proc configGUI_showBridgeIfcInfo { wi phase node_id iface_id } {
 		#parameters of selected interface
 		if { $iface_id != "" && $iface_id != $shownifc } {
 			configGUI_ifcBridgeMainFrame $wi $node_id $iface_id
-			[_getNodeType $node_cfg].configBridgeInterfacesGUI $wi $node_id $iface_id
+			_invokeNodeProc $node_cfg "configBridgeInterfacesGUI" $wi $node_id $iface_id
 		}
 	}
 }
@@ -6738,12 +6734,11 @@ proc configGUI_showFilterIfcRuleInfo { wi phase node_id iface_id rule } {
 
 	#if user didn't select Cancel in the popup about saving changes on previously selected interface
 	if { $cancel == 0 } {
-		set type [_getNodeType $node_cfg]
 		#creating new frame below the list of interfaces and adding modules with
 		#parameters of selected interface
 		if { $rule != "" && $rule != $shownrule } {
 			configGUI_ruleMainFrame $wi $node_id $iface_id $rule
-			$type.configIfcRulesGUI $wi $node_id $iface_id $rule
+			_invokeNodeProc $node_cfg "configIfcRulesGUI" $wi $node_id $iface_id $rule
 		}
 	}
 }
@@ -7556,12 +7551,11 @@ proc configGUI_showPacketInfo { wi phase node_id pac } {
 
 	#if user didn't select Cancel in the popup about saving changes on previously selected interface
 	if { $cancel == 0 } {
-		set type [_getNodeType $node_cfg]
 		#creating new frame below the list of interfaces and adding modules with
 		#parameters of selected interface
 		if { $pac != "" && $pac != $shownpac } {
 			configGUI_packetMainFrame $wi $node_id $pac
-			$type.configPacketsGUI $wi $node_id $pac
+			_invokeNodeProc $node_cfg "configPacketsGUI" $wi $node_id $pac
 		}
 	}
 }

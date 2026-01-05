@@ -306,7 +306,7 @@ proc setNodeName { node_id name } {
 		recalculateNumType $node_type $nodeNamingBase($node_type)
 	}
 
-	if { [$node_type.virtlayer] == "NATIVE" } {
+	if { [invokeNodeProc $node_id "virtlayer"] == "NATIVE" } {
 		return
 	}
 
@@ -335,7 +335,7 @@ proc setNodeNATIface { node_id interface } {
 		}
 
 		set subnet_node_type [getNodeType $subnet_node]
-		if { $subnet_node_type == "ext" || [$subnet_node_type.netlayer] != "NETWORK" } {
+		if { $subnet_node_type == "ext" || [invokeTypeProc $subnet_node_type "netlayer"] != "NETWORK" } {
 			# skip extnat and L2 nodes
 			continue
 		}

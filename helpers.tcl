@@ -471,3 +471,18 @@ proc rexec { args } {
 		return -code error $err
 	}
 }
+
+proc invokeTypeProc { node_type proc_name args } {
+	set retval ""
+	if { [info procs $node_type.$proc_name] != "" } {
+		set retval [$node_type.$proc_name {*}$args]
+	} else {
+		set retval ""
+	}
+
+	return $retval
+}
+
+proc invokeNodeProc { node_id proc_name args } {
+	return [invokeTypeProc [getNodeType $node_id] $proc_name {*}$args]
+}

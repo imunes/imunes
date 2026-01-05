@@ -585,8 +585,7 @@ proc topologyElementsTree {} {
 		$f.tree focus nodes
 		$f.tree selection set nodes
 		foreach node_id [lsort -dictionary [getFromRunning "node_list"]] {
-			set type [getNodeType $node_id]
-			if { $type != "pseudo" } {
+			if { [getNodeType $node_id] != "pseudo" } {
 				$f.tree insert nodes end -id $node_id -text "[getNodeName $node_id]" -open false -tags $node_id
 				lappend nodetags $node_id
 				$f.tree set $node_id canvas [getCanvasName [getNodeCanvas $node_id]]
@@ -740,17 +739,17 @@ proc bindEventsToTree {} {
 	foreach node_id $nodetags {
 		global selectedIfc
 
-		set type [getNodeType $node_id]
+		set node_type [getNodeType $node_id]
 		set tmp_command \
 			"$f.tree item $node_id -open false; \
-			$type.configGUI .panwin.f1.c $node_id"
+			invokeTypeProc $node_type configGUI .panwin.f1.c $node_id"
 		$f.tree tag bind $node_id <Double-1> $tmp_command
 		$f.tree tag bind $node_id <Key-Return> $tmp_command
 
 		foreach iface_id [lsort -dictionary [ifcList $node_id]] {
 			set tmp_command \
 				"set selectedIfc $iface_id; \
-				$type.configGUI .panwin.f1.c $node_id; \
+				invokeTypeProc $node_type configGUI .panwin.f1.c $node_id; \
 				set selectedIfc \"\""
 			$f.tree tag bind $node_id$iface_id <Double-1> $tmp_command
 			$f.tree tag bind $node_id$iface_id <Key-Return> $tmp_command
@@ -828,8 +827,7 @@ proc refreshTopologyTree {} {
 	set ifacestags ""
 	$f.tree insert {} end -id nodes -text "Nodes" -open true -tags nodes
 	foreach node_id [lsort -dictionary [getFromRunning "node_list"]] {
-		set type [getNodeType $node_id]
-		if { $type != "pseudo" } {
+		if { [getNodeType $node_id] != "pseudo" } {
 			$f.tree insert nodes end -id $node_id -text "[getNodeName $node_id]" -tags $node_id
 			lappend nodetags $node_id
 			$f.tree set $node_id canvas [getCanvasName [getNodeCanvas $node_id]]
@@ -1056,7 +1054,7 @@ proc setActiveToolGroup { group } {
 	$mf.left.$active_tool_group state selected
 
 	if { [llength [dict get $tool_groups $group]] > 1 } {
-		set image [image create photo -file [$tool.icon toolbar]]
+		set image [image create photo -file [invokeTypeProc $tool "icon" "toolbar"]]
 		# TODO: Create an arrow image programatically
 		set arrow_source "$ROOTDIR/$LIBDIR/icons/tiny/l2.gif"
 		set arrow_image [image create photo -file $arrow_source]
@@ -1289,4 +1287,8 @@ proc checkAndPromptSave { { cfg_to_check "" } } {
 	}
 
 	return 0
+}
+
+proc _invokeNodeProc { node_cfg proc_name args } {
+	return [invokeTypeProc [_getNodeType $node_cfg] $proc_name {*}$args]
 }

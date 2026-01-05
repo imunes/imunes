@@ -148,7 +148,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 			continue
 		}
 
-		if { [$node_type.virtlayer] == "NATIVE" } {
+		if { [invokeTypeProc $node_type "virtlayer"] == "NATIVE" } {
 			if { $node_type == "rj45" } {
 				lappend extifcs $node_id
 				lappend native_nodes $node_id
@@ -432,12 +432,9 @@ proc terminate_nodesUnconfigure { eid nodes nodes_count w } {
 	foreach node_id $nodes {
 		displayBatchProgress $batchStep $nodes_count
 
-		if {
-			[info procs [getNodeType $node_id].nodeUnconfigure] != "" &&
-			[getFromRunning "${node_id}_running"] in "true delete"
-		} {
+		if { [getFromRunning "${node_id}_running"] in "true delete" } {
 			try {
-				[getNodeType $node_id].nodeUnconfigure $eid $node_id
+				invokeNodeProc $node_id "nodeUnconfigure" $eid $node_id
 			} on error err {
 				return -code error "Error in '[getNodeType $node_id].nodeUnconfigure $eid $node_id': $err"
 			}
@@ -528,12 +525,9 @@ proc terminate_nodesShutdown { eid nodes nodes_count w } {
 	foreach node_id $nodes {
 		displayBatchProgress $batchStep $nodes_count
 
-		if {
-			[info procs [getNodeType $node_id].nodeShutdown] != "" &&
-			[getFromRunning "${node_id}_running"] in "true delete"
-		} {
+		if { [getFromRunning "${node_id}_running"] in "true delete" } {
 			try {
-				[getNodeType $node_id].nodeShutdown $eid $node_id
+				invokeNodeProc $node_id "nodeShutdown" $eid $node_id
 			} on error err {
 				return -code error "Error in '[getNodeType $node_id].nodeShutdown $eid $node_id': $err"
 			}
@@ -781,12 +775,9 @@ proc terminate_nodesLogIfacesUnconfigure { eid nodes_ifaces nodes_count w } {
 		}
 		displayBatchProgress $batchStep $nodes_count
 
-		if {
-			[info procs [getNodeType $node_id].nodeIfacesUnconfigure] != "" &&
-			[getFromRunning "${node_id}_running"] in "true delete"
-		} {
+		if { [getFromRunning "${node_id}_running"] in "true delete" } {
 			try {
-				[getNodeType $node_id].nodeIfacesUnconfigure $eid $node_id $ifaces
+				invokeNodeProc $node_id "nodeIfacesUnconfigure" $eid $node_id $ifaces
 			} on error err {
 				return -code error "Error in '[getNodeType $node_id].nodeIfacesUnconfigure $eid $node_id $ifaces': $err"
 			}
@@ -879,17 +870,15 @@ proc terminate_nodesLogIfacesDestroy { eid nodes_ifaces nodes_count w } {
 	dict for {node_id ifaces} $nodes_ifaces {
 		displayBatchProgress $batchStep $nodes_count
 
-		if { [info procs [getNodeType $node_id].nodeIfacesDestroy] != "" } {
-			if { $ifaces == "*" } {
-				set ifaces [logIfcList $node_id]
-			}
+		if { $ifaces == "*" } {
+			set ifaces [logIfcList $node_id]
+		}
 
-			if { [getFromRunning "${node_id}_running"] in "true delete" } {
-				try {
-					[getNodeType $node_id].nodeIfacesDestroy $eid $node_id $ifaces
-				} on error err {
-					return -code error "Error in '[getNodeType $node_id].nodeIfacesDestroy $eid $node_id $ifaces': $err"
-				}
+		if { [getFromRunning "${node_id}_running"] in "true delete" } {
+			try {
+				invokeNodeProc $node_id "nodeIfacesDestroy" $eid $node_id $ifaces
+			} on error err {
+				return -code error "Error in '[getNodeType $node_id].nodeIfacesDestroy $eid $node_id $ifaces': $err"
 			}
 		}
 
@@ -989,12 +978,9 @@ proc terminate_nodesPhysIfacesUnconfigure { eid nodes_ifaces nodes_count w } {
 		}
 		displayBatchProgress $batchStep $nodes_count
 
-		if {
-			[info procs [getNodeType $node_id].nodeIfacesUnconfigure] != "" &&
-			[getFromRunning "${node_id}_running"] in "true delete"
-		} {
+		if { [getFromRunning "${node_id}_running"] in "true delete" } {
 			try {
-				[getNodeType $node_id].nodeIfacesUnconfigure $eid $node_id $ifaces
+				invokeNodeProc $node_id "nodeIfacesUnconfigure" $eid $node_id $ifaces
 			} on error err {
 				return -code error "Error in '[getNodeType $node_id].nodeIfacesUnconfigure $eid $node_id $ifaces': $err"
 			}
@@ -1087,17 +1073,15 @@ proc terminate_nodesPhysIfacesDestroy { eid nodes_ifaces nodes_count w } {
 	dict for {node_id ifaces} $nodes_ifaces {
 		displayBatchProgress $batchStep $nodes_count
 
-		if { [info procs [getNodeType $node_id].nodeIfacesDestroy] != "" } {
-			if { $ifaces == "*" } {
-				set ifaces [ifcList $node_id]
-			}
+		if { $ifaces == "*" } {
+			set ifaces [ifcList $node_id]
+		}
 
-			if { [getFromRunning "${node_id}_running"] in "true delete" } {
-				try {
-					[getNodeType $node_id].nodeIfacesDestroy $eid $node_id $ifaces
-				} on error err {
-					return -code error "Error in '[getNodeType $node_id].nodeIfacesDestroy $eid $node_id $ifaces': $err"
-				}
+		if { [getFromRunning "${node_id}_running"] in "true delete" } {
+			try {
+				invokeNodeProc $node_id "nodeIfacesDestroy" $eid $node_id $ifaces
+			} on error err {
+				return -code error "Error in '[getNodeType $node_id].nodeIfacesDestroy $eid $node_id $ifaces': $err"
 			}
 		}
 
@@ -1225,11 +1209,9 @@ proc terminate_nodesDestroy { eid nodes nodes_count w } {
 	foreach node_id $nodes {
 		displayBatchProgress $batchStep $nodes_count
 
-		if {
-			[getFromRunning "${node_id}_running"] in "true delete"
-		} {
+		if { [getFromRunning "${node_id}_running"] in "true delete" } {
 			try {
-				[getNodeType $node_id].nodeDestroy $eid $node_id
+				invokeNodeProc $node_id "nodeDestroy" $eid $node_id
 			} on error err {
 				return -code error "Error in '[getNodeType $node_id].nodeDestroy $eid $node_id': $err"
 			}
@@ -1320,11 +1302,9 @@ proc terminate_nodesDestroyFS { eid nodes nodes_count w } {
 	foreach node_id $nodes {
 		displayBatchProgress $batchStep $nodes_count
 
-		if {
-			[getFromRunning "${node_id}_running"] in "true delete"
-		} {
+		if { [getFromRunning "${node_id}_running"] in "true delete" } {
 			try {
-				[getNodeType $node_id].nodeDestroyFS $eid $node_id
+				invokeNodeProc $node_id "nodeDestroyFS" $eid $node_id
 			} on error err {
 				return -code error "Error in '[getNodeType $node_id].nodeDestroyFS $eid $node_id': $err"
 			}

@@ -114,7 +114,7 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 				}
 
 				set subnet_node_type [getNodeType $subnet_node]
-				if { $subnet_node_type == "ext" || [$subnet_node_type.netlayer] != "NETWORK" } {
+				if { $subnet_node_type == "ext" || [invokeTypeProc $subnet_node_type "netlayer"] != "NETWORK" } {
 					# skip extnat and L2 nodes
 					continue
 				}
@@ -140,7 +140,7 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 				}
 
 				set subnet_node_type [getNodeType $subnet_node]
-				if { $subnet_node_type == "ext" || [$subnet_node_type.netlayer] != "NETWORK" } {
+				if { $subnet_node_type == "ext" || [invokeTypeProc $subnet_node_type "netlayer"] != "NETWORK" } {
 					# skip extnat and L2 nodes
 					continue
 				}
@@ -222,13 +222,11 @@ proc newLink { node1_id node2_id } {
 
 proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
 	foreach node_id "$node1_id $node2_id" iface_id "\"$iface1_id\" \"$iface2_id\"" {
-		set type [getNodeType $node_id]
-
 		# maximum number of ifaces on a node
 		if { $iface_id == "" } {
-			if { [info procs $type.maxLinks] != "" } {
-				# TODO: maxIfaces would be a better name
-				if { [llength [ifcList $node_id]] >= [$type.maxLinks] } {
+			set max_ifaces [invokeNodeProc $node_id "maxIfaces"]
+			if { $max_ifaces != "" } {
+				if { [llength [ifcList $node_id]] >= $max_ifaces } {
 					after idle {.dialog1.msg configure -wraplength 4i}
 					tk_dialog .dialog1 "IMUNES warning" \
 						"Warning: Maximum links connected to the node $node_id" \
@@ -307,12 +305,12 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
 	setLinkPeersIfaces $link_id "$iface1_id $iface2_id"
 	lappendToRunning "link_list" $link_id
 
-	if { $config_iface1 && [info procs [getNodeType $node1_id].confNewIfc] != "" } {
-		[getNodeType $node1_id].confNewIfc $node1_id $iface1_id
+	if { $config_iface1 } {
+		invokeNodeProc $node1_id "confNewIfc" $node1_id $iface1_id
 	}
 
-	if { $config_iface2 && [info procs [getNodeType $node2_id].confNewIfc] != "" } {
-		[getNodeType $node2_id].confNewIfc $node2_id $iface2_id
+	if { $config_iface2 } {
+		invokeNodeProc $node2_id "confNewIfc" $node2_id $iface2_id
 	}
 
 	trigger_linkCreate $link_id
@@ -331,7 +329,7 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
 				}
 
 				set subnet_node_type [getNodeType $subnet_node]
-				if { $subnet_node_type == "ext" || [$subnet_node_type.netlayer] != "NETWORK" } {
+				if { $subnet_node_type == "ext" || [invokeTypeProc $subnet_node_type "netlayer"] != "NETWORK" } {
 					# skip extnat and L2 nodes
 					continue
 				}
@@ -357,7 +355,7 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
 				}
 
 				set subnet_node_type [getNodeType $subnet_node]
-				if { $subnet_node_type == "ext" || [$subnet_node_type.netlayer] != "NETWORK" } {
+				if { $subnet_node_type == "ext" || [invokeTypeProc $subnet_node_type "netlayer"] != "NETWORK" } {
 					# skip extnat and L2 nodes
 					continue
 				}

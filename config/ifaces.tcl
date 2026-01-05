@@ -358,7 +358,7 @@ proc setIfcIPv4addrs { node_id iface_id addrs4 } {
 		}
 
 		set subnet_node_type [getNodeType $subnet_node]
-		if { $subnet_node_type == "ext" || [$subnet_node_type.netlayer] != "NETWORK" } {
+		if { $subnet_node_type == "ext" || [invokeTypeProc $subnet_node_type "netlayer"] != "NETWORK" } {
 			# skip extnat and L2 nodes
 			continue
 		}
@@ -498,7 +498,7 @@ proc setIfcIPv6addrs { node_id iface_id addrs6 } {
 		}
 
 		set subnet_node_type [getNodeType $subnet_node]
-		if { $subnet_node_type == "ext" || [$subnet_node_type.netlayer] != "NETWORK" } {
+		if { $subnet_node_type == "ext" || [invokeTypeProc $subnet_node_type "netlayer"] != "NETWORK" } {
 			# skip extnat and L2 nodes
 			continue
 		}
@@ -626,9 +626,9 @@ proc setIfcVlanTag { node_id iface_id tag } {
 	cfgSet "nodes" $node_id "ifaces" $iface_id "vlan_tag" $tag
 
 	set node_type [getNodeType $node_id]
-	if { [getNodeType $node_id] == "rj45" } {
+	if { $node_type == "rj45" } {
 		trigger_nodeRecreate $node_id
-	} elseif { [getNodeType $node_id] == "lanswitch" } {
+	} elseif { $node_type == "lanswitch" } {
 		foreach other_iface_id [ifcList $node_id] {
 			if { $iface_id != $other_iface_id && [getIfcVlanType $node_id $other_iface_id] != "trunk" } {
 				continue

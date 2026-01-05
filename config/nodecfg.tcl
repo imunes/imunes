@@ -160,13 +160,13 @@ proc getSubnetData { this_node_id this_iface_id subnet_gws nodes_l2data subnet_i
 
 	dict set nodes_l2data $this_node_id $this_iface_id $subnet_idx
 
-	set this_type [getNodeType $this_node_id]
-	if { $this_type == "" } {
+	set this_node_type [getNodeType $this_node_id]
+	if { $this_node_type == "" } {
 		return [list $subnet_gws $nodes_l2data]
 	}
 
-	if { [$this_type.netlayer] == "NETWORK" } {
-		if { $this_type in "router nat64" || ($this_type == "ext" && [getNodeNATIface $this_node_id] != "UNASSIGNED") } {
+	if { [invokeTypeProc $this_node_type "netlayer"] == "NETWORK" } {
+		if { $this_node_type in "router nat64" || ($this_node_type == "ext" && [getNodeNATIface $this_node_id] != "UNASSIGNED") } {
 			# this node is a router/extnat, add our IP addresses to lists
 			# TODO: multiple addresses per iface - split subnet4data and subnet6data
 			set gw4 [lindex [split [getIfcIPv4addrs $this_node_id $this_iface_id] /] 0]
@@ -174,7 +174,7 @@ proc getSubnetData { this_node_id this_iface_id subnet_gws nodes_l2data subnet_i
 				set gw4 ""
 			}
 			set gw6 [lindex [split [getIfcIPv6addrs $this_node_id $this_iface_id] /] 0]
-			lappend my_gws $this_type|$gw4|$gw6
+			lappend my_gws $this_node_type|$gw4|$gw6
 			lset subnet_gws $subnet_idx $my_gws
 		}
 
@@ -411,15 +411,15 @@ proc removeNode { node_id { keep_other_ifaces 0 } } {
 # NAME
 #   newNode -- new node
 # SYNOPSIS
-#   set node_id [newNode $type]
+#   set node_id [newNode $node_type]
 # FUNCTION
 #   Returns the node id of a new node of the specified type.
 # INPUTS
-#   * type -- node type
+#   * node_type -- node type
 # RESULT
 #   * node_id -- node id of a new node of the specified type
 #****
-proc newNode { type } {
+proc newNode { node_type } {
 	global viewid
 	catch { unset viewid }
 
@@ -433,16 +433,14 @@ proc newNode { type } {
 		}
 	}
 
-	setNodeType $node_id $type
+	setNodeType $node_id $node_type
 	if { [getFromRunning "${node_id}_running"] == "" } {
 		setToRunning "${node_id}_running" "false"
 	}
 
 	lappendToRunning "node_list" $node_id
 
-	if { [info procs $type.confNewNode] == "$type.confNewNode" } {
-		$type.confNewNode $node_id
-	}
+	invokeTypeProc $node_type "confNewNode" $node_id
 
 	return $node_id
 }
@@ -843,14 +841,19 @@ proc listLANNodes { l2node_id l2peers } {
 
 	foreach iface_id [ifcList $l2node_id] {
 		lassign [logicalPeerByIfc $l2node_id $iface_id] peer_id peer_iface_id
-		if { [getIfcLink $peer_id $peer_iface_id] == "" } {
+		if {
+			[getIfcLink $peer_id $peer_iface_id] == "" ||
+			$peer_id in $l2peers
+		} {
 			continue
 		}
 
-		if { [[getNodeType $peer_id].netlayer] == "LINK" && [getNodeType $peer_id] != "rj45" } {
-			if { $peer_id ni $l2peers } {
-				set l2peers [listLANNodes $peer_id $l2peers]
-			}
+		set peer_type [getNodeType $peer_id]
+		if {
+			$peer_type != "rj45" &&
+			[invokeTypeProc $peer_type "netlayer"] == "LINK"
+		} {
+			set l2peers [listLANNodes $peer_id $l2peers]
 		}
 	}
 
@@ -877,7 +880,7 @@ proc transformNodes { nodes to_type } {
 	lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable ldpEnable
 
 	foreach node_id $nodes {
-		if { [[getNodeType $node_id].netlayer] == "NETWORK" } {
+		if { [invokeNodeProc $node_id "netlayer"] == "NETWORK" } {
 			set from_type [getNodeType $node_id]
 
 			# replace type

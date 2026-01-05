@@ -389,14 +389,14 @@ proc nodeIpsecInit { node_id } {
 proc generateHostsFile { node_id } {
 	global auto_etc_hosts
 
-	if { $auto_etc_hosts != 1 || [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" } {
+	if { $auto_etc_hosts != 1 || [invokeNodeProc $node_id "virtlayer"] != "VIRTUALIZED" } {
 		return
 	}
 
 	set etc_hosts [getFromRunning "etc_hosts"]
 	if { $etc_hosts == "" } {
 		foreach other_node_id [getFromRunning "node_list"] {
-			if { [[getNodeType $other_node_id].virtlayer] != "VIRTUALIZED" } {
+			if { [invokeNodeProc $other_node_id "virtlayer"] != "VIRTUALIZED" } {
 				continue
 			}
 
@@ -534,8 +534,7 @@ proc deployCfg { { execute 0 } } {
 	set all_nodes {}
 	set no_auto_execute_nodes [getFromRunning "no_auto_execute_nodes"]
 	foreach node_id $instantiate_nodes {
-		set node_type [getNodeType $node_id]
-		if { $node_type ni $runnable_node_types || $node_id in $no_auto_execute_nodes } {
+		if { [getNodeType $node_id] ni $runnable_node_types || $node_id in $no_auto_execute_nodes } {
 			set instantiate_nodes [removeFromList $instantiate_nodes $node_id]
 			set configure_nodes [removeFromList $configure_nodes $node_id]
 			if { $create_nodes_ifaces != "*" && $node_id in [dict keys $create_nodes_ifaces] } {
@@ -549,7 +548,7 @@ proc deployCfg { { execute 0 } } {
 			continue
 		}
 
-		if { [$node_type.virtlayer] != "VIRTUALIZED" } {
+		if { [invokeNodeProc $node_id "virtlayer"] != "VIRTUALIZED" } {
 			lappend native_nodes $node_id
 		} else {
 			lappend virtualized_nodes $node_id
@@ -861,9 +860,9 @@ proc execute_nodesCreate { nodes nodes_count w } {
 	foreach node_id $nodes {
 		displayBatchProgress $batchStep $nodes_count
 
-		if { $node_id ni $skip_nodes && [info procs [getNodeType $node_id].nodeCreate] != "" } {
+		if { $node_id ni $skip_nodes } {
 			try {
-				[getNodeType $node_id].nodeCreate $eid $node_id
+				invokeNodeProc $node_id "nodeCreate" $eid $node_id
 			} on error err {
 				return -code error "Error in '[getNodeType $node_id].nodeCreate $eid $node_id': $err"
 			}
@@ -957,9 +956,9 @@ proc execute_nodesNamespaceSetup { nodes nodes_count w } {
 	foreach node_id $nodes {
 		displayBatchProgress $batchStep $nodes_count
 
-		if { $node_id ni $skip_nodes && [info procs [getNodeType $node_id].nodeNamespaceSetup] != "" } {
+		if { $node_id ni $skip_nodes } {
 			try {
-				[getNodeType $node_id].nodeNamespaceSetup $eid $node_id
+				invokeNodeProc $node_id "nodeNamespaceSetup" $eid $node_id
 			} on error err {
 				return -code error "Error in '[getNodeType $node_id].nodeNamespaceSetup $eid $node_id': $err"
 			}
@@ -1034,7 +1033,7 @@ proc execute_nodesInitConfigure { nodes nodes_count w } {
 
 		if { $node_id ni $skip_nodes } {
 			try {
-				[getNodeType $node_id].nodeInitConfigure $eid $node_id
+				invokeNodeProc $node_id "nodeInitConfigure" $eid $node_id
 			} on error err {
 				return -code error "Error in '[getNodeType $node_id].nodeInitConfigure $eid $node_id': $err"
 			}
@@ -1137,13 +1136,13 @@ proc execute_nodesPhysIfacesCreate { nodes_ifaces nodes_count w } {
 	dict for {node_id ifaces} $nodes_ifaces {
 		displayBatchProgress $batchStep $nodes_count
 
-		if { $node_id ni $skip_nodes && [info procs [getNodeType $node_id].nodePhysIfacesCreate] != "" } {
+		if { $node_id ni $skip_nodes } {
 			if { $ifaces == "*" } {
 				set ifaces [ifcList $node_id]
 			}
 
 			try {
-				[getNodeType $node_id].nodePhysIfacesCreate $eid $node_id $ifaces
+				invokeNodeProc $node_id "nodePhysIfacesCreate" $eid $node_id $ifaces
 			} on error err {
 				return -code error "Error in '[getNodeType $node_id].nodePhysIfacesCreate $eid $node_id $ifaces': $err"
 			}
@@ -1281,13 +1280,13 @@ proc execute_nodesLogIfacesCreate { nodes_ifaces nodes_count w } {
 	dict for {node_id ifaces} $nodes_ifaces {
 		displayBatchProgress $batchStep $nodes_count
 
-		if { $node_id ni $skip_nodes && [info procs [getNodeType $node_id].nodeLogIfacesCreate] != "" } {
+		if { $node_id ni $skip_nodes } {
 			if { $ifaces == "*" } {
 				set ifaces [logIfcList $node_id]
 			}
 
 			try {
-				[getNodeType $node_id].nodeLogIfacesCreate $eid $node_id $ifaces
+				invokeNodeProc $node_id "nodeLogIfacesCreate" $eid $node_id $ifaces
 			} on error err {
 				return -code error "Error in '[getNodeType $node_id].nodeLogIfacesCreate $eid $node_id $ifaces': $err"
 			}
@@ -1591,9 +1590,9 @@ proc execute_nodesIfacesConfigure { nodes_ifaces nodes_count w } {
 		}
 		displayBatchProgress $batchStep $nodes_count
 
-		if { $node_id ni $skip_nodes && [info procs [getNodeType $node_id].nodeIfacesConfigure] != "" } {
+		if { $node_id ni $skip_nodes } {
 			try {
-				[getNodeType $node_id].nodeIfacesConfigure $eid $node_id $ifaces
+				invokeNodeProc $node_id "nodeIfacesConfigure" $eid $node_id $ifaces
 			} on error err {
 				return -code error "Error in '[getNodeType $node_id].nodeIfacesConfigure $eid $node_id $ifaces': $err"
 			}
@@ -1695,9 +1694,9 @@ proc execute_nodesConfigure { nodes nodes_count w } {
 	foreach node_id $nodes {
 		displayBatchProgress $batchStep $nodes_count
 
-		if { $node_id ni $skip_nodes && [info procs [getNodeType $node_id].nodeConfigure] != "" } {
+		if { $node_id ni $skip_nodes } {
 			try {
-				[getNodeType $node_id].nodeConfigure $eid $node_id
+				invokeNodeProc $node_id "nodeConfigure" $eid $node_id
 			} on error err {
 				return -code error "Error in '[getNodeType $node_id].nodeConfigure $eid $node_id': $err"
 			}

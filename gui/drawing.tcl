@@ -8,12 +8,12 @@ proc refreshToolBarNodes {} {
 	menu $mf.left.net_nodes -title "Network layer nodes"
 
 	foreach node_type $all_modules_list {
-		set image [image create photo -file [$node_type.icon toolbar]]
+		set image [image create photo -file [invokeTypeProc $node_type "icon" "toolbar"]]
 
 		set tool ""
-		if { [$node_type.netlayer] == "LINK" } {
+		if { [invokeTypeProc $node_type "netlayer"] == "LINK" } {
 			set tool "link"
-		} elseif { [$node_type.netlayer] == "NETWORK" } {
+		} elseif { [invokeTypeProc $node_type "netlayer"] == "NETWORK" } {
 			set tool "net"
 		}
 
@@ -29,7 +29,7 @@ proc refreshToolBarNodes {} {
 		}
 
 		$mf.left.${tool}_nodes add command -image $image -hidemargin 1 \
-			-compound left -label [string range [$node_type.toolbarIconDescr] 8 end] \
+			-compound left -label [string range [invokeTypeProc $node_type "toolbarIconDescr"] 8 end] \
 			-command "setActiveTool ${tool}_layer $node_type" {*}$background_color
 	}
 }
@@ -1296,9 +1296,9 @@ proc updateCustomIconReferences {} {
 proc updateIconSize {} {
 	global all_modules_list
 
-	foreach b $all_modules_list {
-		global $b icon_size
-		set $b [image create photo -file [$b.icon $icon_size]]
+	foreach node_type $all_modules_list {
+		global $node_type icon_size
+		set $node_type [image create photo -file [invokeTypeProc $node_type "icon" $icon_size]]
 	}
 }
 

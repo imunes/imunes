@@ -264,7 +264,7 @@ proc autoIPv4addr { node_id iface_id { use_autorenumbered "" } } {
 	#autorenumbered_ifcs - list of all interfaces that changed an address
 
 	set node_type [getNodeType $node_id]
-	if { [$node_type.netlayer] != "NETWORK" } {
+	if { [invokeTypeProc $node_type "netlayer"] != "NETWORK" } {
 		#
 		# Shouldn't get called at all for link-layer nodes
 		#
@@ -281,7 +281,7 @@ proc autoIPv4addr { node_id iface_id { use_autorenumbered "" } } {
 	set has_router 0
 	set best_choice_ip ""
 	if { $peer_id != "" } {
-		if { [[getNodeType $peer_id].netlayer] == "LINK" } {
+		if { [invokeNodeProc $peer_id "netlayer"] == "LINK" } {
 			foreach l2node [listLANNodes $peer_id {}] {
 				foreach l2node_iface_id [ifcList $l2node] {
 					lassign [logicalPeerByIfc $l2node $l2node_iface_id] new_peer_id new_peer_iface_id
@@ -315,7 +315,7 @@ proc autoIPv4addr { node_id iface_id { use_autorenumbered "" } } {
 	}
 
 	if { $peers_ip4addrs != "" && $change_subnet4 == 0 && $best_choice_ip != "" } {
-		set addr [nextFreeIP4Addr $best_choice_ip [$node_type.IPAddrRange] $peers_ip4addrs]
+		set addr [nextFreeIP4Addr $best_choice_ip [invokeTypeProc $node_type "IPAddrRange"] $peers_ip4addrs]
 	} else {
 		set addr [getNextIPv4addr $node_type [getFromRunning "ipv4_used_list"]]
 	}
@@ -333,7 +333,9 @@ proc getNextIPv4addr { node_type existing_addrs } {
 
 	global numbits
 
-	set targetbyte [$node_type.IPAddrRange]
+	set targetbyte 0
+	set targetbyte [invokeTypeProc $node_type "IPAddrRange"]
+
 	set targetbyte2 0
 	if { $numbits <= 8 } {
 		set ipv4addr "[findFreeIPv4Net $numbits $existing_addrs].$targetbyte2.$targetbyte2.$targetbyte/$numbits"

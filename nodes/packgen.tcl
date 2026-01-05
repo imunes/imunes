@@ -160,17 +160,17 @@ proc $MODULE.nghook { eid node_id iface_id } {
 	return [list $node_id output]
 }
 
-#****f* packgen.tcl/packgen.maxLinks
+#****f* packgen.tcl/packgen.maxIfaces
 # NAME
-#   packgen.maxLinks -- maximum number of links
+#   packgen.maxIfaces -- maximum number of links
 # SYNOPSIS
-#   packgen.maxLinks
+#   packgen.maxIfaces
 # FUNCTION
 #   Returns packgen maximum number of links.
 # RESULT
 #   * maximum number of links.
 #****
-proc $MODULE.maxLinks {} {
+proc $MODULE.maxIfaces {} {
 	return 1
 }
 

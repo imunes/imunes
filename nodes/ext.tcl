@@ -192,17 +192,17 @@ proc $MODULE.nghook { eid node_id iface_id } {
 	return [list $node_id-[getIfcName $node_id $iface_id] ether]
 }
 
-#****f* ext.tcl/ext.maxLinks
+#****f* ext.tcl/ext.maxIfaces
 # NAME
-#   ext.maxLinks -- maximum number of links
+#   ext.maxIfaces -- maximum number of links
 # SYNOPSIS
-#   ext.maxLinks
+#   ext.maxIfaces
 # FUNCTION
 #   Returns ext node maximum number of links.
 # RESULT
 #   * maximum number of links.
 #****
-proc $MODULE.maxLinks {} {
+proc $MODULE.maxIfaces {} {
 	return 1
 }
 
