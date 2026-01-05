@@ -64,6 +64,10 @@ proc checkExternalInterfaces {} {
 
 	set nodes_ifcpairs {}
 	foreach node_id [getFromRunning "node_list"] {
+		if { $node_id in [getFromRunning "no_auto_execute_nodes"] } {
+			continue
+		}
+
 		if { [getNodeType $node_id] == "rj45" } {
 			foreach ifaces [getNodeStolenIfaces $node_id] {
 				lappend nodes_ifcpairs [list $node_id $ifaces]
