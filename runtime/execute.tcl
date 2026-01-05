@@ -375,6 +375,66 @@ proc nodeIpsecInit { node_id } {
 	}
 }
 
+#****f* exec.tcl/generateHostsFile
+# NAME
+#   generateHostsFile -- generate hosts file
+# SYNOPSIS
+#   generateHostsFile $node_id
+# FUNCTION
+#   Generates /etc/hosts file on the given node containing all the nodes in the
+#   topology.
+# INPUTS
+#   * node_id -- node id
+#****
+proc generateHostsFile { node_id } {
+	global auto_etc_hosts
+
+	if { $auto_etc_hosts != 1 || [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" } {
+		return
+	}
+
+	set etc_hosts [getFromRunning "etc_hosts"]
+	if { $etc_hosts == "" } {
+		foreach other_node_id [getFromRunning "node_list"] {
+			if { [[getNodeType $other_node_id].virtlayer] != "VIRTUALIZED" } {
+				continue
+			}
+
+			set ctr 0
+			set ctr6 0
+			foreach iface_id [ifcList $other_node_id] {
+				if { $iface_id == "" } {
+					continue
+				}
+
+				set node_name [getNodeName $other_node_id]
+				foreach ipv4 [getIfcIPv4addrs $other_node_id $iface_id] {
+					set ipv4 [lindex [split $ipv4 "/"] 0]
+					if { $ctr == 0 } {
+						set etc_hosts "$etc_hosts$ipv4	${node_name}\n"
+					} else {
+						set etc_hosts "$etc_hosts$ipv4	${node_name}_${ctr}\n"
+					}
+					incr ctr
+				}
+
+				foreach ipv6 [getIfcIPv6addrs $other_node_id $iface_id] {
+					set ipv6 [lindex [split $ipv6 "/"] 0]
+					if { $ctr6 == 0 } {
+						set etc_hosts "$etc_hosts$ipv6	${node_name}.6\n"
+					} else {
+						set etc_hosts "$etc_hosts$ipv6	${node_name}_${ctr6}.6\n"
+					}
+					incr ctr6
+				}
+			}
+		}
+
+		setToRunning "etc_hosts" $etc_hosts
+	}
+
+	writeDataToNodeFile $node_id /etc/hosts $etc_hosts
+}
 #****f* exec.tcl/deployCfg
 # NAME
 #   deployCfg -- deploy working configuration
@@ -1065,7 +1125,8 @@ proc execute_nodesInitConfigure_wait { nodes nodes_count w } {
 	}
 }
 
-proc execute_nodesCopyFiles { nodes nodes_count w } {}
+proc execute_nodesCopyFiles { nodes nodes_count w } {
+}
 
 proc execute_nodesPhysIfacesCreate { nodes_ifaces nodes_count w } {
 	global progressbarCount execMode skip_nodes gui
@@ -1664,67 +1725,6 @@ proc execute_nodesConfigure { nodes nodes_count w } {
 	}
 }
 
-#****f* exec.tcl/generateHostsFile
-# NAME
-#   generateHostsFile -- generate hosts file
-# SYNOPSIS
-#   generateHostsFile $node_id
-# FUNCTION
-#   Generates /etc/hosts file on the given node containing all the nodes in the
-#   topology.
-# INPUTS
-#   * node_id -- node id
-#****
-proc generateHostsFile { node_id } {
-	global auto_etc_hosts
-
-	if { $auto_etc_hosts != 1 || [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" } {
-		return
-	}
-
-	set etc_hosts [getFromRunning "etc_hosts"]
-	if { $etc_hosts == "" } {
-		foreach other_node_id [getFromRunning "node_list"] {
-			if { [[getNodeType $other_node_id].virtlayer] != "VIRTUALIZED" } {
-				continue
-			}
-
-			set ctr 0
-			set ctr6 0
-			foreach iface_id [ifcList $other_node_id] {
-				if { $iface_id == "" } {
-					continue
-				}
-
-				set node_name [getNodeName $other_node_id]
-				foreach ipv4 [getIfcIPv4addrs $other_node_id $iface_id] {
-					set ipv4 [lindex [split $ipv4 "/"] 0]
-					if { $ctr == 0 } {
-						set etc_hosts "$etc_hosts$ipv4	${node_name}\n"
-					} else {
-						set etc_hosts "$etc_hosts$ipv4	${node_name}_${ctr}\n"
-					}
-					incr ctr
-				}
-
-				foreach ipv6 [getIfcIPv6addrs $other_node_id $iface_id] {
-					set ipv6 [lindex [split $ipv6 "/"] 0]
-					if { $ctr6 == 0 } {
-						set etc_hosts "$etc_hosts$ipv6	${node_name}.6\n"
-					} else {
-						set etc_hosts "$etc_hosts$ipv6	${node_name}_${ctr6}.6\n"
-					}
-					incr ctr6
-				}
-			}
-		}
-
-		setToRunning "etc_hosts" $etc_hosts
-	}
-
-	writeDataToNodeFile $node_id /etc/hosts $etc_hosts
-}
-
 proc execute_nodesConfigure_wait { nodes nodes_count w } {
 	global progressbarCount skip_nodes execMode err_skip_nodes nodeconf_timeout gui
 
@@ -1876,7 +1876,7 @@ proc checkForErrors { nodes nodes_count w } {
 		append msg "(run IMUNES with -d)."
 
 		if { $gui && $execMode != "batch" } {
-			after idle {.dialog1.msg configure -wraplength 4i}
+			after idle {.dialog1.msg configure -wraplength 6i}
 			tk_dialog .dialog1 "IMUNES warning" \
 				"$msg" \
 				info 0 Dismiss

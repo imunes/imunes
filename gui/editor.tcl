@@ -160,51 +160,6 @@ proc redo {} {
 	}
 }
 
-#****f* editor.tcl/chooseIfName
-# NAME
-#   chooseIfName -- choose interface name
-# SYNOPSIS
-#   set ifc_name [chooseIfName $local_node $remote_node]
-# FUNCTION
-#   Choose a node-specific interface base name.
-# INPUTS
-#   * lnode_id -- id of a "local" node
-#   * rnode_id -- id of a "remote" node
-# RESULT
-#   * ifc_name -- the name of the interface
-#****
-proc chooseIfName { lnode_id rnode_id } {
-	set iface_prefix [[getNodeType $lnode_id].ifacePrefix]
-
-	set ifaces {}
-	foreach {iface_id iface_cfg} [cfgGet "nodes" $lnode_id "ifaces"] {
-		if { [dictGet $iface_cfg "type"] == "phys" } {
-			set iface_name [dictGet $iface_cfg "name"]
-			if { [regexp "$iface_prefix\[0-9\]+" $iface_name] } {
-				lappend ifaces $iface_name
-			}
-		}
-	}
-
-	return [newObjectId $ifaces $iface_prefix]
-}
-
-proc _chooseIfaceName { node_cfg } {
-	set iface_prefix [[dictGet $node_cfg "type"].ifacePrefix]
-
-	set ifaces {}
-	foreach {iface_id iface_cfg} [dictGet $node_cfg "ifaces"] {
-		if { [dictGet $iface_cfg "type"] == "phys" } {
-			set iface_name [dictGet $iface_cfg "name"]
-			if { [regexp "$iface_prefix\[0-9\]+" $iface_name] } {
-				lappend ifaces $iface_name
-			}
-		}
-	}
-
-	return [newObjectId $ifaces $iface_prefix]
-}
-
 #****f* editor.tcl/checkLinkColor
 # NAME
 #   checkLinkColor -- check link color

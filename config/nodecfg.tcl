@@ -1092,7 +1092,7 @@ proc nodeUncfggenAutoRoutes6 { node_id { vtysh 0 } } {
 
 proc updateNode { node_id old_node_cfg new_node_cfg } {
 	dputs ""
-	dputs "= /UPDATE NODE $node_id START ="
+	dputs "= UPDATE NODE $node_id START ="
 
 	if { $old_node_cfg == "*" } {
 		set old_node_cfg [cfgGet "nodes" $node_id]

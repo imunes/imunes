@@ -448,18 +448,18 @@ proc button3link { c x y } {
 	# Toggle direct link
 	#
 	if { [isPseudoLink $link_id] } {
-		lassign [linkFromPseudoLink $link_id] - peer1_id peer1_iface
-		lassign [logicalPeerByIfc $peer1_id $peer1_iface] peer2_id peer2_iface
+		lassign [linkFromPseudoLink $link_id] - peer1_id peer1_iface_id
+		lassign [logicalPeerByIfc $peer1_id $peer1_iface_id] peer2_id peer2_iface_id
 	} else {
 		lassign [getLinkPeers $link_id] peer1_id peer2_id
-		lassign [getLinkPeersIfaces $link_id] peer1_iface peer2_iface
+		lassign [getLinkPeersIfaces $link_id] peer1_iface_id peer2_iface_id
 	}
 
 	if {
 		! $isOSlinux ||
 		$oper_mode == "edit" ||
-		([getFromRunning "${peer1_id}|${peer1_iface}_running"] == true &&
-		[getFromRunning "${peer2_id}|${peer2_iface}_running"] == true)
+		([getFromRunning "${peer1_id}|${peer1_iface_id}_running"] == true &&
+		[getFromRunning "${peer2_id}|${peer2_iface_id}_running"] == true)
 	} {
 		.button3menu add checkbutton -label "Direct link" \
 			-underline 5 -variable linkDirect_$real_link_id \
@@ -488,8 +488,8 @@ proc button3link { c x y } {
 		$oper_mode == "edit" ||
 		([getFromRunning "stop_sched"] &&
 		(! $isOSlinux || ! [set linkDirect_$real_link_id] ||
-		(! [getFromRunning "${peer1_id}|${peer1_iface}_running"] == true &&
-		! [getFromRunning "${peer2_id}|${peer2_iface}_running"] == true)))
+		(! [getFromRunning "${peer1_id}|${peer1_iface_id}_running"] == true &&
+		! [getFromRunning "${peer2_id}|${peer2_iface_id}_running"] == true)))
 	} {
 		.button3menu add command -label "Delete (keep interfaces)" \
 			-command "removeLinkGUI $link_id atomic 1"

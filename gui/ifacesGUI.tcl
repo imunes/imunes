@@ -731,22 +731,6 @@ proc _ifaceIdFromName { node_cfg iface_name } {
 	return ""
 }
 
-proc _chooseIfaceName { node_cfg } {
-	set iface_prefix [[dictGet $node_cfg "type"].ifacePrefix]
-
-	set ifaces {}
-	foreach {iface_id iface_cfg} [dictGet $node_cfg "ifaces"] {
-		if { [dictGet $iface_cfg "type"] == "phys" } {
-			set iface_name [dictGet $iface_cfg "name"]
-			if { [regexp "$iface_prefix\[0-9\]+" $iface_name] } {
-				lappend ifaces $iface_name
-			}
-		}
-	}
-
-	return [newObjectId $ifaces $iface_prefix]
-}
-
 proc _newIface { node_cfg iface_type auto_config { stolen_iface "" } } {
 	set iface_id [newObjectId [_allIfcList $node_cfg] "ifc"]
 

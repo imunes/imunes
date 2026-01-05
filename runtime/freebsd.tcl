@@ -76,7 +76,6 @@ proc execCmdNodeBkg { node_id cmd } {
 	pipesExec "jexec [getFromRunning "eid"].$node_id sh -c '$cmd'" "hold"
 }
 
-
 #****f* freebsd.tcl/checkForExternalApps
 # NAME
 #   checkForExternalApps -- check whether external applications exist
@@ -1198,7 +1197,7 @@ proc nodePhysIfacesCreate { node_id ifaces } {
 		setToRunning "${node_id}|${iface_id}_running" "creating"
 
 		set iface_name [getIfcName $node_id $iface_id]
-		set public_hook $node_id-$iface_name
+		set ng_peer $node_id-$iface_name
 		set prefix [string trimright $iface_name "0123456789"]
 		if { $node_type == "ext" } {
 			set iface_name $node_id
@@ -1209,15 +1208,15 @@ proc nodePhysIfacesCreate { node_id ifaces } {
 			}
 			eth {
 				# save newly created ngnodeX into a shell variable ifid and
-				# rename the ng node to $public_hook (unique to this experiment)
-				set cmds "ifid=\$(printf \"mkpeer . eiface $public_hook ether \n"
-				set cmds "$cmds show .:$public_hook\" | jexec $eid ngctl -f - | head -n1 | cut -d' ' -f4)"
-				set cmds "$cmds; jexec $eid ngctl name \$ifid: $public_hook"
-				set cmds "$cmds; jexec $eid ifconfig \$ifid name $public_hook"
+				# rename the ng node to $ng_peer (unique to this experiment)
+				set cmds "ifid=\$(printf \"mkpeer . eiface $ng_peer ether \n"
+				set cmds "$cmds show .:$ng_peer\" | jexec $eid ngctl -f - | head -n1 | cut -d' ' -f4)"
+				set cmds "$cmds; jexec $eid ngctl name \$ifid: $ng_peer"
+				set cmds "$cmds; jexec $eid ifconfig \$ifid name $ng_peer"
 
 				pipesExec $cmds "hold"
-				pipesExec "jexec $eid ifconfig $public_hook vnet $node_id" "hold"
-				pipesExec "jexec $jail_id ifconfig $public_hook name $iface_name" "hold"
+				pipesExec "jexec $eid ifconfig $ng_peer vnet $node_id" "hold"
+				pipesExec "jexec $jail_id ifconfig $ng_peer name $iface_name" "hold"
 
 				set ether [getIfcMACaddr $node_id $iface_id]
 				if { $ether == "" } {
@@ -1235,10 +1234,10 @@ proc nodePhysIfacesCreate { node_id ifaces } {
 				set outifc "$eid-$node_id"
 
 				# save newly created ngnodeX into a shell variable ifid and
-				# rename the ng node to $public_hook (unique to this experiment)
-				set cmds "ifid=\$(printf \"mkpeer . eiface $public_hook ether \n"
-				set cmds "$cmds show .:$public_hook\" | jexec $eid ngctl -f - | head -n1 | cut -d' ' -f4)"
-				set cmds "$cmds; jexec $eid ngctl name \$ifid: $public_hook"
+				# rename the ng node to $ng_peer (unique to this experiment)
+				set cmds "ifid=\$(printf \"mkpeer . eiface $ng_peer ether \n"
+				set cmds "$cmds show .:$ng_peer\" | jexec $eid ngctl -f - | head -n1 | cut -d' ' -f4)"
+				set cmds "$cmds; jexec $eid ngctl name \$ifid: $ng_peer"
 				set cmds "$cmds; jexec $eid ifconfig \$ifid name $outifc"
 
 				pipesExec $cmds "hold"
@@ -1260,11 +1259,11 @@ proc nodePhysIfacesCreate { node_id ifaces } {
 					captureExtIfcByName $eid $iface_name $node_id
 					if { [getNodeType $node_id] in "hub lanswitch" } {
 						lassign [[getNodeType $node_id].nghook $eid $node_id $iface_id] \
-							ngpeer1 nghook1
+							ng_peer1 ng_hook1
 						lassign "$iface_name lower" \
-							ngpeer2 nghook2
+							ng_peer2 ng_hook2
 
-						pipesExec "jexec $eid ngctl connect $ngpeer1: $ngpeer2: $nghook1 $nghook2" "hold"
+						pipesExec "jexec $eid ngctl connect $ng_peer1: $ng_peer2: $ng_hook1 $ng_hook2" "hold"
 					}
 				}
 			}
