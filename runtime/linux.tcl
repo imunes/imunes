@@ -765,20 +765,6 @@ proc nodePhysIfacesCreate { node_id ifaces } {
 	pipesExec ""
 }
 
-#****f* linux.tcl/killProcess
-# NAME
-#   killProcess -- kill processes with the given regex
-# SYNOPSIS
-#   killProcess $regex
-# FUNCTION
-#   Executes a pkill command to kill all processes with a corresponding regex.
-# INPUTS
-#   * regex -- regularl expression of the processes
-#****
-proc killExtProcess { regex } {
-	pipesExec "pkill -f \"$regex\"" "hold"
-}
-
 proc checkHangingTCPs { eid nodes } {}
 
 #****f* linux.tcl/nodeLogIfacesCreate

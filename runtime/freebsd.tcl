@@ -678,20 +678,6 @@ proc execResetLinkJitter { eid link_id } {
 		"{upstream={jitmode=-1} downstream={jitmode=-1}}"
 }
 
-#****f* freebsd.tcl/killProcess
-# NAME
-#   killProcess -- kill processes with the given regex
-# SYNOPSIS
-#   killProcess $regex
-# FUNCTION
-#   Executes a pkill command to kill all processes with a corresponding regex.
-# INPUTS
-#   * regex -- regularl expression of the processes
-#****
-proc killExtProcess { regex } {
-	pipesExec "pkill -f \"$regex\"" "hold"
-}
-
 proc fetchInterfaceData { node_id iface_id } {
 	global node_existing_mac node_existing_ipv4 node_existing_ipv6
 	set node_existing_mac [getFromRunning "mac_used_list"]
