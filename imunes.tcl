@@ -502,7 +502,7 @@ if { $execMode == "interactive" } {
 		}
 	} else {
 		set configFile "$runtimeDir/$eid_base/config.imn"
-		if { ! [catch { rexec test -f $configFile }] } {
+		if { [isOk "test -f $configFile"] } {
 			set curcfg [newObjectId $cfg_list "cfg"]
 			lappend cfg_list $curcfg
 

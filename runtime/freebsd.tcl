@@ -383,7 +383,8 @@ proc checkHangingTCPs { eid vimage } {
 	}
 
 	set timeoutNeeded 0
-	if { [catch { rexec jexec $eid.$vimage netstat -an -f inet | fgrep "WAIT" } err] == 0 } {
+	catch { rexec jexec $eid.$vimage netstat -an -f inet | fgrep "WAIT" } err
+	if { $err != "" } {
 		set timeoutNeeded 1
 		break
 	}
@@ -423,7 +424,8 @@ proc checkHangingTCPs { eid vimage } {
 	set spin 1
 	while { $spin == 1 } {
 		set spin 0
-		while { [catch { rexec jexec $eid.$vimage netstat -an -f inet | fgrep "WAIT" } err] == 0 } {
+		set err "-"
+		while { $err != "" } {
 			set spin 1
 			after 1000
 			set sec [expr $sec - 1]
@@ -435,6 +437,8 @@ proc checkHangingTCPs { eid vimage } {
 				$w.p step -1
 				update
 			}
+
+			catch { rexec jexec $eid.$vimage netstat -an -f inet | fgrep "WAIT" } err
 		}
 	}
 

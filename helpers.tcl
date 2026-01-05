@@ -472,6 +472,26 @@ proc rexec { args } {
 	}
 }
 
+proc isOk { args } {
+	try {
+		rexec {*}$args
+	} on ok {} {
+		return true
+	} on error {} {
+		return false
+	}
+}
+
+proc isNotOk { args } {
+	try {
+		rexec {*}$args
+	} on ok {} {
+		return false
+	} on error {} {
+		return true
+	}
+}
+
 proc invokeTypeProc { node_type proc_name args } {
 	set retval ""
 	if { [info procs $node_type.$proc_name] != "" } {
