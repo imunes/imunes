@@ -1201,11 +1201,11 @@ proc execute_nodesPhysIfacesCreate { nodes_ifaces nodes_count w } {
 				set ifaces [removeFromList $ifaces [logIfcList $node_id]]
 			}
 
-			# skip 'direct link' and UNASSIGNED stolen interfaces
+			set ifaces_direct {}
+
+			# skip already-creating and UNASSIGNED stolen interfaces
 			foreach iface_id $ifaces {
-				set this_link_id [getIfcLink $node_id $iface_id]
 				if {
-					($this_link_id != "" && [getLinkDirect $this_link_id]) ||
 					"creating" in [getStateNodeIface $node_id $iface_id] ||
 					([getIfcType $node_id $iface_id] == "stolen" &&
 					[getIfcName $node_id $iface_id] == "UNASSIGNED")
@@ -1214,29 +1214,44 @@ proc execute_nodesPhysIfacesCreate { nodes_ifaces nodes_count w } {
 
 					continue
 				}
+
+				set this_link_id [getIfcLink $node_id $iface_id]
+				if { $this_link_id != "" && [getLinkDirect $this_link_id] } {
+					lappend ifaces_direct $iface_id
+				}
 			}
 
 			if { $ifaces != {} } {
 				# mark interfaces to skip
 				if { ! [invokeNodeProc $node_id "checkIfacesPrerequisites" $eid $node_id $ifaces] } {
 					foreach iface_id $ifaces {
-						set this_link_id [getIfcLink $node_id $iface_id]
 						if { [isErrorNodeIface $node_id $iface_id] } {
 							set ifaces [removeFromList $ifaces $iface_id]
+							set ifaces_direct [removeFromList $ifaces_direct $iface_id]
 						}
 					}
 				}
 
-				if { $ifaces != {} } {
-					try {
-						invokeNodeProc $node_id "nodePhysIfacesCreate" $eid $node_id $ifaces
-					} on error err {
-						return -code error "Error in '[getNodeType $node_id].nodePhysIfacesCreate $eid $node_id $ifaces': $err"
-					}
-				}
+				set ifaces [removeFromList $ifaces $ifaces_direct]
 			}
 
 			if { $ifaces != {} } {
+				try {
+					invokeNodeProc $node_id "nodePhysIfacesCreate" $eid $node_id $ifaces
+				} on error err {
+					return -code error "Error in '[getNodeType $node_id].nodePhysIfacesCreate $eid $node_id $ifaces': $err"
+				}
+			}
+
+			if { $ifaces_direct != {} } {
+				try {
+					invokeNodeProc $node_id "nodePhysIfacesDirectCreate" $eid $node_id $ifaces_direct
+				} on error err {
+					return -code error "Error in '[getNodeType $node_id].nodePhysIfacesDirectCreate $eid $node_id $ifaces_direct': $err"
+				}
+			}
+
+			if { $ifaces != {} || $ifaces_direct != {} } {
 				pipesExec ""
 
 				set msg "Creating"

@@ -1230,13 +1230,13 @@ proc terminate_nodesPhysIfacesDestroy { eid nodes_ifaces nodes_count w } {
 				set ifaces [removeFromList $ifaces [logIfcList $node_id]]
 			}
 
+			set ifaces_direct {}
+
 			# skip 'direct link' and UNASSIGNED stolen interfaces
 			foreach iface_id $ifaces {
-				set this_link_id [getIfcLink $node_id $iface_id]
 				if {
 					! [isRunningNodeIface $node_id $iface_id] ||
 					"destroying" in [getStateNodeIface $node_id $iface_id] ||
-					($this_link_id != "" && [getFromRunning "${this_link_id}_destroy_type"]) ||
 					([getIfcType $node_id $iface_id] == "stolen" &&
 					[getFromRunning "${node_id}|${iface_id}_active_name"] == "")
 				} {
@@ -1244,7 +1244,14 @@ proc terminate_nodesPhysIfacesDestroy { eid nodes_ifaces nodes_count w } {
 
 					continue
 				}
+
+				set this_link_id [getIfcLink $node_id $iface_id]
+				if { $this_link_id != "" && [getFromRunning "${this_link_id}_destroy_type"] } {
+					lappend ifaces_direct $iface_id
+				}
 			}
+
+			set ifaces [removeFromList $ifaces $ifaces_direct]
 
 			if { $ifaces != {} } {
 				try {
@@ -1252,7 +1259,17 @@ proc terminate_nodesPhysIfacesDestroy { eid nodes_ifaces nodes_count w } {
 				} on error err {
 					return -code error "Error in '[getNodeType $node_id].nodePhysIfacesDestroy $eid $node_id $ifaces': $err"
 				}
+			}
 
+			if { $ifaces_direct != {} } {
+				try {
+					invokeNodeProc $node_id "nodePhysIfacesDirectDestroy" $eid $node_id $ifaces_direct
+				} on error err {
+					return -code error "Error in '[getNodeType $node_id].nodePhysIfacesDirectDestroy $eid $node_id $ifaces_direct': $err"
+				}
+			}
+
+			if { $ifaces != {} || $ifaces_direct != {} } {
 				pipesExec ""
 
 				set msg "Destroying"
