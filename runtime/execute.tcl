@@ -60,7 +60,7 @@ proc genExperimentId {} {
 proc checkExternalInterfaces {} {
 	global execMode isOSlinux gui
 
-	set extifcs [getHostIfcList]
+	set eid [getFromRunning "eid"]
 
 	set nodes_ifcpairs {}
 	foreach node_id [getFromRunning "node_list"] {
@@ -68,12 +68,39 @@ proc checkExternalInterfaces {} {
 			continue
 		}
 
-		if { [getNodeType $node_id] == "rj45" } {
-			foreach ifaces [getNodeStolenIfaces $node_id] {
-				lappend nodes_ifcpairs [list $node_id $ifaces]
+		set ifaces [ifcList $node_id]
+		if { ! [invokeNodeProc $node_id "checkIfacesPrerequisites" $eid $node_id $ifaces] } {
+			foreach iface_id $ifaces {
+				set msg [getStateErrorMsgNodeIface $node_id $iface_id]
+				if { $msg == "" } {
+					continue
+				}
+
+				if { "wireless" in [getStateNodeIface $node_id $iface_id] } {
+					set severity "WARNING"
+				} else {
+					set severity "ERROR"
+				}
+
+				set msg "[getNodeName $node_id] - $iface_id\n$msg"
+				if { ! $gui || $execMode == "batch" } {
+					sputs stderr "IMUNES $severity: $msg"
+				} else {
+					after idle { .dialog1.msg configure -wraplength 4i }
+					tk_dialog .dialog1 "IMUNES $severity" $msg \
+						info 0 Dismiss
+				}
+
+				if { $severity == "ERROR" } {
+					return 1
+				}
 			}
 		}
 	}
+
+	return 0
+
+	set extifcs [getHostIfcList]
 
 	foreach node_ifcpair $nodes_ifcpairs {
 		lassign $node_ifcpair node_id ifcpair
@@ -434,6 +461,73 @@ proc generateHostsFile { node_id } {
 	writeDataToNodeFile $node_id /etc/hosts $etc_hosts
 }
 
+proc checkNodePrerequisites { nodes nodes_count w } {
+	global progressbarCount execMode gui
+
+	set timeout [getTimeout "nodecreate_timeout"]
+
+	set eid [getFromRunning "eid"]
+
+	set t_start [clock milliseconds]
+
+	set batchStep 0
+	set nodes_left $nodes
+	set old_nodes_left -1
+	while { [llength $nodes_left] > 0 } {
+		displayBatchProgress $batchStep $nodes_count
+		foreach node_id $nodes_left {
+			if { ! [isRunningNode $node_id] } {
+				# clear state
+				removeStateNode $node_id "error node_creating ns_creating pifaces_creating lifaces_creating"
+				removeStateNode $node_id "error lifaces_destroying pifaces_destroying node_destroying node_destroying_fs"
+
+				if { ! [invokeNodeProc $node_id "checkNodePrerequisites" $eid $node_id] } {
+					set msg "failed"
+				} else {
+					set msg "successful"
+				}
+			} else {
+				set msg "skipped"
+			}
+
+			incr batchStep
+			incr progressbarCount
+
+			if { $gui && $execMode != "batch" } {
+				statline "Prerequisites check for [getNodeName $node_id] $msg"
+				$w.p configure -value $progressbarCount
+				update
+			}
+			displayBatchProgress $batchStep $nodes_count
+
+			set nodes_left [removeFromList $nodes_left $node_id]
+		}
+
+		if { $old_nodes_left != [llength $nodes_left] } {
+			set old_nodes_left [llength $nodes_left]
+			set t_start [clock milliseconds]
+
+			continue
+		}
+
+		if { $timeout < 0 } {
+			continue
+		}
+
+		set t_last [clock milliseconds]
+		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $timeout } {
+			break
+		}
+	}
+
+	if { $nodes_count > 0 } {
+		displayBatchProgress $batchStep $nodes_count
+		if { ! $gui || $execMode == "batch" } {
+			statline ""
+		}
+	}
+}
+
 #****f* exec.tcl/deployCfg
 # NAME
 #   deployCfg -- deploy working configuration
@@ -596,7 +690,7 @@ proc deployCfg { { execute 0 } } {
 	}
 	set configure_links_count [llength $configure_links]
 
-	set maxProgressbasCount [expr {2*$all_nodes_count + 2*$native_nodes_count + 4*$virtualized_nodes_count + 2*$links_count + 1*$configure_links_count + 2*$configure_nodes_count + 4*$create_nodes_ifaces_count + 2*$configure_nodes_ifaces_count + $error_check_nodes_ifaces_count + $error_check_nodes_count}]
+	set maxProgressbasCount [expr {3*$all_nodes_count + 2*$native_nodes_count + 4*$virtualized_nodes_count + 2*$links_count + 1*$configure_links_count + 2*$configure_nodes_count + 4*$create_nodes_ifaces_count + 2*$configure_nodes_ifaces_count + $error_check_nodes_ifaces_count + $error_check_nodes_count}]
 
 	set w ""
 	set eid [getFromRunning "eid"]
@@ -639,6 +733,9 @@ proc deployCfg { { execute 0 } } {
 
 		return
 	}
+
+	statline "Checking node prerequisites..."
+	checkNodePrerequisites $all_nodes $all_nodes_count $w
 
 	try {
 		statline "Instantiating VIRTUALIZED nodes..."
