@@ -1083,7 +1083,7 @@ foreach b "select link" {
 		set msg "Create link"
 	}
 
-	bind $mf.left.$b <Any-Enter> ".bottom.textbox config -text {$msg}"
+	bind $mf.left.$b <Any-Enter> ".bottom.textbox config -text {$msg} -foreground black"
 	bind $mf.left.$b <Any-Leave> ".bottom.textbox config -text {}"
 }
 
@@ -1094,14 +1094,14 @@ foreach node_type $all_modules_list {
 set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/l2.gif]
 ttk::menubutton $mf.left.link_layer -image $image -style Toolbutton \
 	-menu $mf.left.link_nodes -direction right
-bind $mf.left.link_layer <Any-Enter> ".bottom.textbox config -text {Add new link layer node}"
+bind $mf.left.link_layer <Any-Enter> ".bottom.textbox config -text {Add new link layer node} -foreground black"
 bind $mf.left.link_layer <Any-Leave> ".bottom.textbox config -text {}"
 pack $mf.left.link_layer
 
 set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/l3.gif]
 ttk::menubutton $mf.left.net_layer -image $image -style Toolbutton \
 	-menu $mf.left.net_nodes -direction right
-bind $mf.left.net_layer <Any-Enter> ".bottom.textbox config -text {Add new network layer node}"
+bind $mf.left.net_layer <Any-Enter> ".bottom.textbox config -text {Add new network layer node} -foreground black"
 bind $mf.left.net_layer <Any-Leave> ".bottom.textbox config -text {}"
 pack $mf.left.net_layer
 
@@ -1125,7 +1125,7 @@ foreach b "rectangle oval freeform text" {
 		default { set msg "" }
 	}
 
-	bind $mf.left.$b <Any-Enter> ".bottom.textbox config -text {$msg}"
+	bind $mf.left.$b <Any-Enter> ".bottom.textbox config -text {$msg} -foreground black"
 	bind $mf.left.$b <Any-Leave> ".bottom.textbox config -text {}"
 }
 

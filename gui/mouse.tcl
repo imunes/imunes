@@ -1832,7 +1832,7 @@ proc nodeEnter {} {
 	set node_id [lindex [$main_canvas_elem gettags current] 1]
 	if { [isPseudoNode $node_id] } {
 		lassign [nodeFromPseudoNode $node_id] real_node_id real_iface_id
-		.bottom.textbox config \
+		.bottom.textbox config -foreground "black" \
 			-text "pseudo {$node_id} from {$real_node_id} [getNodeName $real_node_id]:[getIfcName $real_node_id $real_iface_id]"
 
 		return
@@ -1841,6 +1841,37 @@ proc nodeEnter {} {
 	set err [catch { getNodeType $node_id } error]
 	if { $err != 0 } {
 		return
+	}
+
+	#Show node error only if in exec mode
+	if { [isRunningNode $node_id] } {
+		if { [isErrorNode $node_id] && [getStateErrorMsgNode $node_id] != "" } {
+			.bottom.textbox configure -text "{$node_id} ERROR: [getStateErrorMsgNode $node_id]" -foreground "red"
+
+			return
+		}
+
+		set line ""
+		foreach iface_id [ifcList $node_id] {
+			if { ! [isErrorNodeIface $node_id $iface_id] } {
+				continue
+			}
+
+			set iface_error [getStateErrorMsgNodeIface $node_id $iface_id]
+			if { $iface_error == "" } {
+				continue
+			}
+
+			set line "$line$iface_error\n"
+		}
+
+		if { $line != "" } {
+			# remove last \n
+			set line [string range $line 0 end-1]
+			.bottom.textbox config -text "{$node_id} IFACES ERRORS: $line" -foreground "red"
+
+			return
+		}
 	}
 
 	set name [getNodeName $node_id]
@@ -1856,7 +1887,7 @@ proc nodeEnter {} {
 			set line "$line [getIfcName $node_id $iface_id]:[join [getIfcIPv4addrs $node_id $iface_id] ", "]"
 		}
 	}
-	.bottom.textbox config -text "$line"
+	.bottom.textbox config -text "$line" -foreground "black"
 
 	showCfg $node_id
 	showRoute $node_id
@@ -1881,7 +1912,7 @@ proc linkEnter {} {
 		return
 	}
 	set line "$link_id: [getLinkBandwidthString $link_id] [getLinkDelayString $link_id]"
-	.bottom.textbox config -text "$line"
+	.bottom.textbox config -text "$line" -foreground "black"
 }
 
 #****f* editor.tcl/anyLeave
@@ -1895,7 +1926,7 @@ proc linkEnter {} {
 proc anyLeave {} {
 	global main_canvas_elem
 
-	.bottom.textbox config -text ""
+	.bottom.textbox config -text "" -foreground "black"
 
 	$main_canvas_elem delete -withtag showCfgPopup
 	$main_canvas_elem delete -withtag route
