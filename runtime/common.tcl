@@ -758,8 +758,8 @@ proc pipesExec { line args } {
 	if { $debug && $line != "" } {
 		set logfile "/var/log/imunes/[getFromRunning "eid"].log"
 
-		pipesExecNoLog "printf \"RUN: \" >> $logfile ; cat >> $logfile 2>&1 <<\"IMUNESEOF\"\n$line\nIMUNESEOF" "hold"
-		pipesExecNoLog "$line >> $logfile 2>&1" "$args"
+		catch { info level [expr [info level] - 1] } e1
+		pipesExecNoLog "cat >> $logfile 2>&1 <<\"IMUNESEOF\"\nRUN ($e1): $line\nIMUNESEOF\n $line >> $logfile 2>&1" "$args"
 	} else {
 		pipesExecNoLog $line {*}$args
 	}
