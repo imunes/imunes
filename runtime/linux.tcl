@@ -2150,7 +2150,7 @@ proc fetchNodeRunningConfig { node_id } {
 
 	set ifaces_names [allIfacesNames $node_id]
 
-	catch { rexec docker exec [getFromRunning "eid"].$node_id sh -c "ip --json a" } json
+	catch { rexec docker exec [getFromRunning "eid"].$node_id sh -c 'ip --json a' } json
 	foreach elem [json::json2dict $json] {
 		set iface_name [dictGet $elem "ifname"]
 		if { $iface_name ni $ifaces_names } {
@@ -2224,7 +2224,7 @@ proc fetchNodeRunningConfig { node_id } {
 	set croutes4 {}
 	set croutes6 {}
 
-	catch { rexec docker exec [getFromRunning "eid"].$node_id sh -c "ip -4 --json r" } json
+	catch { rexec docker exec [getFromRunning "eid"].$node_id sh -c 'ip -4 --json r' } json
 	foreach elem [json::json2dict $json] {
 		if { [dictGet $elem "scope"] in "link" } {
 			continue
@@ -2253,7 +2253,7 @@ proc fetchNodeRunningConfig { node_id } {
 		set cur_node_cfg [_setNodeStatIPv4routes $cur_node_cfg $new_croutes4]
 	}
 
-	catch { rexec docker exec [getFromRunning "eid"].$node_id sh -c "ip -6 --json r" } json
+	catch { rexec docker exec [getFromRunning "eid"].$node_id sh -c 'ip -6 --json r' } json
 	foreach elem [json::json2dict $json] {
 		if { [dictGet $elem "nexthops"] == "" && [dictGet $elem "gateway"] == "" } {
 			continue
