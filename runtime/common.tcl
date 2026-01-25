@@ -2145,3 +2145,13 @@ proc getFullNodeFromIdName { hostname should_attach { docker_exec_flags "-it" } 
 
 	return [list [lindex $eids 0] [lindex $nodes 0] [lindex $os_cmds 0]]
 }
+
+proc getExperimentRuntimeDir { { eid "" } } {
+	global runtimeDir
+
+	if { $eid == "" } {
+		set eid [getFromRunning "eid"]
+	}
+
+	return $runtimeDir/$eid
+}

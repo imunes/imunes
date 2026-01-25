@@ -842,6 +842,10 @@ set tmp_command {
 	-variable show_unsupported_nodes -underline 5 \
 	-command { setGlobalOption "show_unsupported_nodes" - "toggle" ; refreshToolBarNodes }
 
+.menubar.view add checkbutton -label "Show Custom Nodes" \
+	-variable show_custom_nodes -underline 10 \
+	-command { setGlobalOption "show_custom_nodes" - "toggle" ; refreshToolBarNodes }
+
 .menubar.view add separator
 
 .menubar.view add checkbutton -label "Show Background Image" \

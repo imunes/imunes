@@ -279,6 +279,7 @@ set gui_options_defaults {
 	"show_link_labels"			1								"bool"				"show labels for links on canvas"				0
 	"show_node_labels"			1								"bool"				"show labels for nodes on canvas"				0
 	"show_unsupported_nodes"	1								"bool"				"show unsupported nodes in the toolbar"			0
+	"show_custom_nodes"			0								"bool"				"show custom nodes in the toolbar"				0
 	"zoom"						1.0								"double 0.2|3.0" 	"canvas zoom"									0
 	"default_link_color"		"Red"							"string"			"default link color"							0
 	"default_link_width"		2								"int 2|8"			"default link width"							0
@@ -345,7 +346,7 @@ set possible_loop 0
 set possible_vlan_loop 0
 
 # Set default node type list
-set node_types "lanswitch hub rj45 stpswitch filter packgen \
+set default_node_types "lanswitch hub rj45 stpswitch filter packgen \
 	router host pc nat64 ext"
 # Set default supported router models
 set supp_router_models "frr quagga static"
@@ -380,7 +381,7 @@ safeSourceFile $ROOTDIR/$LIBDIR/nodes/generic_l3.tcl
 
 # The following files need to be sourced in this particular order. If not
 # the placement of the toolbar icons will be altered.
-foreach node_type $node_types {
+foreach node_type $default_node_types {
 	safeSourceFile "$ROOTDIR/$LIBDIR/nodes/$node_type.tcl"
 }
 
@@ -389,8 +390,15 @@ foreach file_path [glob -nocomplain -directory $ROOTDIR/$LIBDIR/nodes/config *.t
 	safeSourceFile $file_path
 }
 
-# additional nodes
-safeSourceFile "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
+# Custom nodes
+foreach file_path [glob -nocomplain -directory $ROOTDIR/$LIBDIR/custom_nodes *.tcl] {
+	safeSourceFile $file_path
+}
+
+# Custom node-specific configuration libraries
+foreach file_path [glob -nocomplain -directory $ROOTDIR/$LIBDIR/custom_nodes/config *.tcl] {
+	safeSourceFile $file_path
+}
 
 #
 # Global variables are initialized here
@@ -587,12 +595,22 @@ if { $execMode == "interactive" } {
 		safeSourceFile "$ROOTDIR/$LIBDIR/gui/nodes/generic_l3.tcl"
 
 		# Node GUI base libraries
-		foreach node_type $node_types {
+		foreach node_type $default_node_types {
 			safeSourceFile "$ROOTDIR/$LIBDIR/gui/nodes/$node_type.tcl"
 		}
 
 		# Node-specific GUI configuration libraries
 		foreach file_path [glob -nocomplain -directory $ROOTDIR/$LIBDIR/gui/nodes/config *.tcl] {
+			safeSourceFile $file_path
+		}
+
+		# Custom nodes GUI config
+		foreach file_path [glob -nocomplain -directory $ROOTDIR/$LIBDIR/custom_nodes/gui *.tcl] {
+			safeSourceFile $file_path
+		}
+
+		# Custom node-specific GUI configuration libraries
+		foreach file_path [glob -nocomplain -directory $ROOTDIR/$LIBDIR/custom_nodes/gui/config *.tcl] {
 			safeSourceFile $file_path
 		}
 

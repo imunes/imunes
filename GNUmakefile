@@ -5,6 +5,7 @@ CONFIGDIR = $(IMUNESDIR)/config
 GUIDIR = $(IMUNESDIR)/gui
 ICONSDIR = $(IMUNESDIR)/icons
 NODESDIR = $(IMUNESDIR)/nodes
+CNODESDIR = $(IMUNESDIR)/custom_nodes
 RUNTIMEDIR = $(IMUNESDIR)/runtime
 SCRIPTSDIR = $(IMUNESDIR)/scripts
 PATCHESDIR = $(IMUNESDIR)/src/patches
@@ -26,6 +27,7 @@ BASEFILES =	COPYRIGHT README.md VERSION
 CONFIGFILES =	$(wildcard config/*.tcl)
 GUIFILES =	$(wildcard gui/*.tcl gui/nodes)
 NODESFILES =	$(wildcard nodes/*.tcl nodes/config)
+CNODESFILES =	$(wildcard custom_nodes/*.tcl custom_nodes/config custom_nodes/gui custom_nodes/icons)
 RUNTIMEFILES =	$(wildcard runtime/*.tcl)
 PATCHESFILES =	$(wildcard src/patches/*)
 
@@ -108,6 +110,9 @@ endif
 
 	mkdir -p $(NODESDIR)
 	cp -r $(NODESFILES) $(NODESDIR)
+
+	mkdir -p $(CNODESDIR)
+	cp -r $(CNODESFILES) $(CNODESDIR)
 
 	mkdir -p $(RUNTIMEDIR)
 	cp $(RUNTIMEFILES) $(RUNTIMEDIR)

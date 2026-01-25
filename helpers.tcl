@@ -467,7 +467,7 @@ proc dputs { args } {
 proc reloadSources {} {
 	global ROOTDIR LIBDIR
 	global config_override config_path last_config_file
-	global all_modules_list node_types execMode
+	global all_modules_list default_node_types execMode
 	global isOSlinux isOSfreebsd
 	global debug gui
 
@@ -506,7 +506,7 @@ proc reloadSources {} {
 	safeSourceFile "$ROOTDIR/$LIBDIR/nodes/generic_l3.tcl"
 
 	# Node base libraries
-	foreach node_type $node_types {
+	foreach node_type $default_node_types {
 		catch { namespace delete ::[set node_type] }
 		safeSourceFile "$ROOTDIR/$LIBDIR/nodes/$node_type.tcl"
 	}
@@ -516,7 +516,17 @@ proc reloadSources {} {
 		safeSourceFile $file_path
 	}
 
-	safeSourceFile "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
+	# Custom nodes
+	foreach file_path [glob -nocomplain -directory $ROOTDIR/$LIBDIR/custom_nodes *.tcl] {
+		set node_type [file rootname [file tail $file_path]]
+		catch { namespace delete ::[set node_type] } err
+		safeSourceFile $file_path
+	}
+
+	# Custom node-specific configuration libraries
+	foreach file_path [glob -nocomplain -directory $ROOTDIR/$LIBDIR/custom_nodes/config *.tcl] {
+		safeSourceFile $file_path
+	}
 
 	# Read config files
 	set config_override "false"
@@ -537,13 +547,25 @@ proc reloadSources {} {
 		safeSourceFile "$ROOTDIR/$LIBDIR/gui/nodes/generic_l3.tcl"
 
 		# Node GUI base libraries
-		foreach node_type $node_types {
+		foreach node_type $default_node_types {
 			catch { namespace delete ::[set node_type]::gui }
 			safeSourceFile "$ROOTDIR/$LIBDIR/gui/nodes/$node_type.tcl"
 		}
 
 		# Node-specific GUI configuration libraries
 		foreach file_path [glob -nocomplain -directory $ROOTDIR/$LIBDIR/gui/nodes/config *.tcl] {
+			safeSourceFile $file_path
+		}
+
+		# Custom nodes GUI config
+		foreach file_path [glob -nocomplain -directory $ROOTDIR/$LIBDIR/custom_nodes/gui *.tcl] {
+			set node_type [file rootname [file tail $file_path]]
+			catch { namespace delete ::[set node_type]::gui } err
+			safeSourceFile $file_path
+		}
+
+		# Custom node-specific GUI configuration libraries
+		foreach file_path [glob -nocomplain -directory $ROOTDIR/$LIBDIR/custom_nodes/gui/config *.tcl] {
 			safeSourceFile $file_path
 		}
 

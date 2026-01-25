@@ -1,5 +1,5 @@
 proc refreshToolBarNodes {} {
-	global mf all_modules_list runnable_node_types
+	global mf all_modules_list default_node_types runnable_node_types
 	global active_tool_group active_tools tool_groups
 
 	set active_group $active_tool_group
@@ -21,6 +21,10 @@ proc refreshToolBarNodes {} {
 
 	foreach node_type $all_modules_list {
 		if { $node_type in [getActiveOption "hidden_node_types"] } {
+			continue
+		}
+
+		if { $node_type ni $default_node_types && ! [getActiveOption "show_custom_nodes"] } {
 			continue
 		}
 

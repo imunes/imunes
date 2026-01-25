@@ -34,6 +34,7 @@
 # show_link_labels        - show labels for links on canvas (default: "1", type: "bool")
 # show_node_labels        - show labels for nodes on canvas (default: "1", type: "bool")
 # show_unsupported_nodes  - show unsupported nodes in the toolbar (default: "1", type: "bool")
+# show_custom_nodes       - show custom nodes in the toolbar (default: "0", type: "bool")
 # zoom                    - canvas zoom (default: "1.0", type: "double 0.2|3.0")
 # default_link_color      - default link color (default: "Red", type: "string")
 # default_link_width      - default link width (default: "2", type: "int 2|8")
@@ -71,6 +72,7 @@
     "show_link_labels"        : "1",
     "show_node_labels"        : "1",
     "show_unsupported_nodes"  : "1",
+    "show_custom_nodes"       : "0",
     "zoom"                    : "1.0",
     "default_link_color"      : "Red",
     "default_link_width"      : "2",

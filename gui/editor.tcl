@@ -1229,10 +1229,11 @@ proc toggleAutoExecutionGUI { { new_value "" } } {
 }
 
 proc visibleTools { group tools } {
-	global runnable_node_types
+	global runnable_node_types default_node_types
 
 	set hidden_node_types [getActiveOption "hidden_node_types"]
 	set show_unsupported_nodes [getActiveOption "show_unsupported_nodes"]
+	set show_custom_nodes [getActiveOption "show_custom_nodes"]
 
 	if { $group in "link_layer net_layer" } {
 		set visible_tools {}
@@ -1241,6 +1242,10 @@ proc visibleTools { group tools } {
 				($show_unsupported_nodes || $tool in $runnable_node_types) &&
 				$tool ni $hidden_node_types
 			} {
+				if { $tool ni $default_node_types && ! $show_custom_nodes } {
+					continue
+				}
+
 				lappend visible_tools $tool
 			}
 		}
