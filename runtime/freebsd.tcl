@@ -83,7 +83,7 @@ proc execCmdNodeBkg { node_id cmd } {
 #   checkForExternalApps $app_list
 # FUNCTION
 #   Checks whether a list of applications exist on the machine running IMUNES
-#   by using the which command.
+#   by using the 'command' command.
 # INPUTS
 #   * app_list -- list of applications
 # RESULT
@@ -91,7 +91,8 @@ proc execCmdNodeBkg { node_id cmd } {
 #****
 proc checkForExternalApps { app_list } {
 	foreach app $app_list {
-		set status [ catch { exec which $app } err ]
+		set cmds "command -v $app"
+		set status [ catch { exec sh -c {*}$cmds } err ]
 		if { $status } {
 			return 1
 		}
@@ -107,7 +108,7 @@ proc checkForExternalApps { app_list } {
 #   checkForApplications $node_id $app_list
 # FUNCTION
 #   Checks whether a list of applications exist on the virtual node by using
-#   the which command.
+#   the 'command' command.
 # INPUTS
 #   * node_id -- virtual node id
 #   * app_list -- list of applications
@@ -115,8 +116,12 @@ proc checkForExternalApps { app_list } {
 #   * returns 0 if the applications exist, otherwise it returns 1.
 #****
 proc checkForApplications { node_id app_list } {
+	set private_ns "[getFromRunning "eid"].$node_id"
+	set os_cmd "jexec $private_ns sh -c"
+
 	foreach app $app_list {
-		catch { rexec jexec [getFromRunning "eid"].$node_id which $app } err
+		set os_cmd "$os_cmd 'command -v $app'"
+		catch { rexec {*}$os_cmd } err
 		if { $err == "" } {
 			return 1
 		}
@@ -230,7 +235,7 @@ proc existingShells { shells node_id { first_only "" } } {
 	set cmds "retval=\"\" ;\n"
 	append cmds "\n"
 	append cmds "for s in $shells; do\n"
-	append cmds "	x=\"\$(which \$s)\" ;\n"
+	append cmds "	x=\"\$(command -v \$s)\" ;\n"
 	append cmds "	test \$? -eq 0 && retval=\"\$retval \$x\" "
 	if { $first_only != "" } {
 		append cmds "&& break; \n"

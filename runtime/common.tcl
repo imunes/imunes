@@ -1438,7 +1438,8 @@ proc getRunningExperimentConfigPath { eid } {
 proc checkTerminalMissing {} {
 	# FIXME make this modular
 	set terminal "xterm"
-	if { [catch { exec which $terminal }] } {
+	set cmds "command -v $terminal"
+	if { [catch { exec sh -c {*}$cmds }] == "" } {
 		tk_dialog .dialog1 "IMUNES error" \
 			"Cannot open terminal. Is $terminal installed?" \
 			info 0 Dismiss

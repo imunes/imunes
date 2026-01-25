@@ -124,7 +124,8 @@ proc execCmdNodeBkg { node_id cmd } {
 #****
 proc checkForExternalApps { app_list } {
 	foreach app $app_list {
-		set status [ catch { exec which $app } err ]
+		set cmds "command -v $app"
+		set status [ catch { exec sh -c {*}$cmds } err ]
 		if { $status } {
 			return 1
 		}
@@ -140,7 +141,7 @@ proc checkForExternalApps { app_list } {
 #   checkForApplications $node_id $app_list
 # FUNCTION
 #   Checks whether a list of applications exist on the virtual node by using
-#   the which command.
+#   the 'command' command.
 # INPUTS
 #   * node_id -- virtual node id
 #   * app_list -- list of applications
@@ -148,8 +149,12 @@ proc checkForExternalApps { app_list } {
 #   * returns 0 if the applications exist, otherwise it returns 1.
 #****
 proc checkForApplications { node_id app_list } {
+	set private_ns "[getFromRunning "eid"].$node_id"
+	set os_cmd "docker exec $private_ns sh -c"
+
 	foreach app $app_list {
-		set status [ catch { rexec docker exec [getFromRunning "eid"].$node_id which $app } err ]
+		set os_cmd "$os_cmd 'command -v $app'"
+		set status [ catch { rexec {*}$os_cmd } err ]
 		if { $status } {
 			return 1
 		}
@@ -193,12 +198,15 @@ proc startWiresharkOnNodeIfc { node_id iface_name } {
 			set wireshark_comm [concat $escalation_comm $wireshark_comm]
 		}
 
+		set private_ns "$eid.$node_id"
+		set os_cmd "docker exec $private_ns"
+
 		if { $wireshark_comm != "" } {
 			if { $remote != "" } {
-				exec -- echo -e "docker exec $eid.$node_id tcpdump -s 0 -U -w - -i $iface_name 2>/dev/null" | {*}$rcmd | \
+				exec -- echo -e "$os_cmd tcpdump -s 0 -U -w - -i $iface_name 2>/dev/null" | {*}$rcmd | \
 					{*}$wireshark_comm -o "gui.window_title:$iface_name@[getNodeName $node_id] ($eid)" -k -i - &
 			} else {
-				exec docker exec $eid.$node_id tcpdump -s 0 -U -w - -i $iface_name 2>/dev/null |\
+				exec {*}$os_cmd tcpdump -s 0 -U -w - -i $iface_name 2>/dev/null |\
 					{*}$wireshark_comm -o "gui.window_title:$iface_name@[getNodeName $node_id] ($eid)" -k -i - &
 			}
 		} else {
@@ -278,7 +286,7 @@ proc existingShells { shells node_id { first_only "" } } {
 	set cmds "retval=\"\" ;\n"
 	append cmds "\n"
 	append cmds "for s in $shells; do\n"
-	append cmds "	x=\"\$(which \$s)\" ;\n"
+	append cmds "	x=\"\$(command -v \$s)\" ;\n"
 	append cmds "	test \$? -eq 0 && retval=\"\$retval \$x\" "
 	if { $first_only != "" } {
 		append cmds "&& break; \n"
@@ -290,7 +298,10 @@ proc existingShells { shells node_id { first_only "" } } {
 
 	set cmds "\'$cmds\'"
 
-	catch { rexec docker exec [getFromRunning "eid"].$node_id sh -c {*}$cmds } existing
+	set private_ns "[getFromRunning "eid"].$node_id"
+	set os_cmd "docker exec $private_ns"
+
+	catch { rexec {*}$os_cmd sh -c {*}$cmds } existing
 
 	return $existing
 }
