@@ -120,9 +120,10 @@ proc trigger_nodeConfig { node_id } {
 		return
 	}
 
+	prepareTerminateVars
 	prepareInstantiateVars
 
-	if { $node_id ni $configure_nodes } {
+	if { $node_id ni $configure_nodes && $node_id ni $terminate_nodes } {
 		lappend configure_nodes $node_id
 	}
 

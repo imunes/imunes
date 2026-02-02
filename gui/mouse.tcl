@@ -2129,20 +2129,18 @@ proc removeIPv6Nodes { nodes all_ifaces } {
 	updateUndoLog
 }
 
-proc matchSubnet4 { node_id iface_id } {
+proc matchSubnet { ip_version node_id iface_id subnet } {
 	global changed main_canvas_elem
 
 	if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
 		setToExecuteVars "terminate_cfg" [cfgGet]
 	}
 
-	set tmp [getActiveOption "IPv4autoAssign"]
-	setGlobalOption "IPv4autoAssign" 1
-	autoIPv4addr $node_id $iface_id
-	setGlobalOption "IPv4autoAssign" $tmp
 
-	if { [getNodeAutoDefaultRoutesStatus $node_id] == "enabled" } {
-		trigger_nodeReconfig $node_id
+	if { $ip_version == "ipv4" } {
+		assignIPv4Subnet $node_id $iface_id [selectedNodes] $subnet
+	} else {
+		assignIPv6Subnet $node_id $iface_id [selectedNodes] $subnet
 	}
 
 	if { [getFromRunning "stop_sched"] } {
@@ -2156,280 +2154,55 @@ proc matchSubnet4 { node_id iface_id } {
 	$main_canvas_elem config -cursor left_ptr
 }
 
-proc matchSubnet6 { node_id iface_id } {
-	global changed main_canvas_elem
+proc addressChangeDialog { ip_version node_id iface_id } {
+	global $ip_version
 
-	if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
-		setToExecuteVars "terminate_cfg" [cfgGet]
-	}
-
-	set tmp [getActiveOption "IPv6autoAssign"]
-	setGlobalOption "IPv6autoAssign" 1
-	autoIPv6addr $node_id $iface_id
-	setGlobalOption "IPv6autoAssign" $tmp
-
-	if { [getNodeAutoDefaultRoutesStatus $node_id] == "enabled" } {
-		trigger_nodeReconfig $node_id
-	}
-
-	if { [getFromRunning "stop_sched"] } {
-		redeployCfg
-	}
-
-	redrawAll
-	set changed 1
-	updateUndoLog
-
-	$main_canvas_elem config -cursor left_ptr
-}
-
-#****f* editor.tcl/changeAddressRange
-# NAME
-#   changeAddressRange -- change address range
-# SYNOPSIS
-#   changeAddressRange
-# FUNCTION
-#   Change address range for selected nodes.
-#****
-# TODO: merge this with auto default gateway procedures?
-proc changeAddressRange {} {
-	global changed change_subnet4 control
-	global copypaste_nodes copypaste_list
-
-	set control 0
-	set autorenumber 1
-	set change_subnet4 0
-
-	if { $copypaste_nodes } {
-		set selected_nodes $copypaste_list
-		set copypaste_nodes 0
+	if { $ip_version == "ipv4" } {
+		set text_prefix "IPv4"
+		set check_proc "checkIPv4Net"
+		set template_ip [nextFreeIP4Addr [getNextIPv4addr "" [getFromRunning "ipv4_used_list"]] 0 {}]
 	} else {
-		set selected_nodes [selectedNodes]
+		set text_prefix "IPv6"
+		set check_proc "checkIPv6Net"
+		set template_ip [nextFreeIP6Addr [getNextIPv6addr "" [getFromRunning "ipv6_used_list"]] 0 {}]
 	}
 
-	set link_nodes_selected ""
-	set connected_link_layer_nodes ""
-	set autorenumber_nodes ""
+	set top_elem .entry1
+	catch { destroy $top_elem }
+	toplevel $top_elem
+	wm transient $top_elem .
+	wm title $top_elem "$text_prefix autonumbering subnet"
+	wm iconname $top_elem "$text_prefix subnet"
+	grab $top_elem
 
-	# all L2 nodes are saved in link_nodes_selected list
-	foreach node_id [lsort -dictionary $selected_nodes] {
-		if { [invokeNodeProc $node_id "netlayer"] == "LINK" } {
-			lappend link_nodes_selected $node_id
-		}
-	}
+	set main_frame [ttk::frame $top_elem.ipframe]
+	pack $main_frame -fill both -expand 1
 
-	# all L2 nodes from the same subnet are saved as one element of connected_link_layer_nodes list
-	foreach link_node $link_nodes_selected {
-		set lan_nodes [lsort -dictionary [listLANNodes $link_node {}]]
-		if { [lsearch $connected_link_layer_nodes $lan_nodes] == -1 } {
-			lappend connected_link_layer_nodes $lan_nodes
-		}
-	}
+	set label_elem [ttk::label $main_frame.msg -text "$text_prefix subnet:"]
+	pack $label_elem -side top
 
-	global autorenumbered_ifcs
-	set autorenumbered_ifcs ""
+	set entry_elem [ttk::entry $main_frame.e1 -width 27 -validate focus -invalidcommand "focusAndFlash %W"]
+	$entry_elem insert 0 $template_ip
+	pack $entry_elem -side top -pady 5 -padx 10 -fill x
 
-	# assign addresses to nodes connected to L2 nodes
-	foreach element $connected_link_layer_nodes {
-		set counter 0
-		foreach node_id $element {
-			set autorenumber_nodes ""
-			foreach iface_id [ifcList $node_id] {
-				lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
-				if { $peer_id != "" && [invokeNodeProc $peer_id "netlayer"] != "LINK" && $peer_id in $selected_nodes } {
-					lappend autorenumber_nodes "$peer_id $peer_iface_id"
-				}
-			}
+	$entry_elem configure -invalidcommand { $check_proc %P }
 
-			foreach el $autorenumber_nodes {
-				lassign $el node_id iface_id
-				if { $counter == 0 } {
-					set change_subnet4 1
-				}
+	set buttons_frame [ttk::frame $main_frame.buttons]
+	pack $buttons_frame -side bottom -fill x -pady 2m
 
-				autoIPv4addr $node_id $iface_id "use_autorenumbered"
-				lappend autorenumbered_ifcs "$node_id $iface_id"
-				incr counter
-				set changed 1
-				set change_subnet4 0
-			}
-		}
-	}
+	set apply_btn [ttk::button $buttons_frame.apply]
+	$apply_btn configure -text "Apply" \
+		-command "subnetApply $ip_version $entry_elem $node_id $iface_id ; destroy $top_elem"
 
-	set autorenumber_nodes ""
-	set autorenumber_ifcs ""
+	set cancel_btn [ttk::button $buttons_frame.cancel]
+	$cancel_btn configure -text "Cancel" \
+		-command "destroy $top_elem"
 
-	# save nodes not connected to the L2 node in the autorenumber_nodes list
-	foreach node_id $selected_nodes {
-		if { [isPseudoNode $node_id] } {
-			continue
-		}
+	bind $top_elem <Key-Return> "subnetApply $ip_version $entry_elem $node_id $iface_id ; destroy $top_elem"
+	bind $top_elem <Key-Escape> "destroy $top_elem"
 
-		if { [invokeNodeProc $node_id "netlayer"] != "LINK" } {
-			foreach iface_id [ifcList $node_id] {
-				lassign [logicalPeerByIfc $node_id $iface_id] peer_id -
-				if { $peer_id != "" && [invokeNodeProc $peer_id "netlayer"] != "LINK" && $peer_id in $selected_nodes } {
-					lappend autorenumber_ifcs "$node_id $iface_id"
-					if { [lsearch $autorenumber_nodes $node_id] == -1 } {
-						lappend autorenumber_nodes $node_id
-					}
-				}
-			}
-		}
-	}
-
-	# delete the existing IP addresses
-	set removed_addrs {}
-	foreach el $autorenumber_ifcs {
-		lassign $el node_id iface_id
-		set removed_addrs [concat $removed_addrs [getIfcIPv4addrs $node_id $iface_id]]
-		setIfcIPv4addrs $node_id $iface_id ""
-	}
-
-	# assign IP addresses to interfaces not connected to L2 nodes
-	foreach el $autorenumber_ifcs {
-		lassign $el node_id iface_id
-		lassign [logicalPeerByIfc $node_id $iface_id] peer_id -
-		if { [lsearch $autorenumber_nodes $node_id] < [lsearch $autorenumber_nodes $peer_id] } {
-			set change_subnet4 1
-		}
-
-		autoIPv4addr $node_id $iface_id "use_autorenumbered"
-		set changed 1
-		set change_subnet4 0
-	}
-
-	set autorenumber 0
-
-	setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] $removed_addrs "keep_doubles"]
-
-	redrawAll
-	updateUndoLog
-}
-
-#****f* editor.tcl/changeAddressRange6
-# NAME
-#   changeAddressRange6 -- change address range (ipv6)
-# SYNOPSIS
-#   changeAddressRange6
-# FUNCTION
-#   Change IPv6 address range for selected nodes.
-#****
-# TODO: merge this with auto default gateway procedures?
-proc changeAddressRange6 {} {
-	global changed change_subnet6 control
-	global copypaste_nodes copypaste_list
-
-	set control 0
-	set autorenumber 1
-	set change_subnet6 0
-
-	if { $copypaste_nodes } {
-		set selected_nodes $copypaste_list
-		set copypaste_nodes 0
-	} else {
-		set selected_nodes [selectedNodes]
-	}
-
-	set link_nodes_selected ""
-	set connected_link_layer_nodes ""
-	set autorenumber_nodes ""
-
-	# all L2 nodes are saved in link_nodes_selected list
-	foreach node_id [lsort -dictionary $selected_nodes] {
-		if { [invokeNodeProc $node_id "netlayer"] == "LINK" } {
-			lappend link_nodes_selected $node_id
-		}
-	}
-
-	# all L2 nodes from the same subnet are saved as one element of connected_link_layer_nodes list
-	foreach link_node $link_nodes_selected {
-		set lan_nodes [lsort -dictionary [listLANNodes $link_node {}]]
-		if { [lsearch $connected_link_layer_nodes $lan_nodes] == -1 } {
-			lappend connected_link_layer_nodes $lan_nodes
-		}
-	}
-
-	global autorenumbered_ifcs6
-	set autorenumbered_ifcs6 ""
-
-	# assign addresses to nodes connected to L2 nodes
-	foreach element $connected_link_layer_nodes {
-		set counter 0
-		foreach node_id $element {
-			set autorenumber_nodes ""
-			foreach iface_id [ifcList $node_id] {
-				lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
-				if { $peer_id != "" && [invokeNodeProc $peer_id "netlayer"] != "LINK" && $peer_id in $selected_nodes } {
-					lappend autorenumber_nodes "$peer_id $peer_iface_id"
-				}
-			}
-
-			foreach el $autorenumber_nodes {
-				lassign $el node_id iface_id
-				if { $counter == 0 } {
-					set change_subnet6 1
-				}
-
-				autoIPv6addr $node_id $iface_id "use_autorenumbered"
-				lappend autorenumbered_ifcs6 "$node_id $iface_id"
-
-				incr counter
-				set changed 1
-				set change_subnet6 0
-			}
-		}
-	}
-
-	set autorenumber_nodes ""
-	set autorenumber_ifcs ""
-
-	# save nodes not connected to the L2 node in the autorenumber_nodes list
-	foreach node_id $selected_nodes {
-		if { [isPseudoNode $node_id] } {
-			continue
-		}
-
-		if { [invokeNodeProc $node_id "netlayer"] != "LINK" } {
-			foreach iface_id [ifcList $node_id] {
-				lassign [logicalPeerByIfc $node_id $iface_id] peer_id -
-				if { $peer_id != "" && [invokeNodeProc $peer_id "netlayer"] != "LINK" && $peer_id in $selected_nodes } {
-					lappend autorenumber_ifcs "$node_id $iface_id"
-					if { [lsearch $autorenumber_nodes $node_id] == -1 } {
-						lappend autorenumber_nodes $node_id
-					}
-				}
-			}
-		}
-	}
-
-	# delete the existing IP addresses
-	set removed_addrs {}
-	foreach el $autorenumber_ifcs {
-		lassign $el node_id iface_id
-		set removed_addrs [concat $removed_addrs [getIfcIPv6addrs $node_id $iface_id]]
-		setIfcIPv6addrs $node_id $iface_id ""
-	}
-
-	# assign IP addresses to interfaces not connected to L2 nodes
-	foreach el $autorenumber_ifcs {
-		lassign $el node_id iface_id
-		lassign [logicalPeerByIfc $node_id $iface_id] peer_id -
-		if { [lsearch $autorenumber_nodes $node_id] < [lsearch $autorenumber_nodes $peer_id] } {
-			set change_subnet6 1
-		}
-
-		autoIPv6addr $node_id $iface_id "use_autorenumbered"
-		set changed 1
-		set change_subnet6 0
-	}
-
-	set autorenumber 0
-
-	setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] $removed_addrs "keep_doubles"]
-
-	redrawAll
-	updateUndoLog
+	pack $buttons_frame.apply -side left -expand 1 -anchor e -padx 2
+	pack $buttons_frame.cancel -side right -expand 1 -anchor w -padx 2
 }
 
 proc clearTempObjects { x y } {

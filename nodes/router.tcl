@@ -188,8 +188,7 @@ namespace eval $MODULE {
 		set subnet_gws {}
 		set nodes_l2data [dict create]
 		if { [getNodeAutoDefaultRoutesStatus $node_id] == "enabled" } {
-			lassign [getDefaultGateways $node_id $subnet_gws $nodes_l2data] my_gws subnet_gws nodes_l2data
-			lassign [getDefaultRoutesConfig $node_id $my_gws] all_routes4 all_routes6
+			lassign [getDefaultRoutesConfig $node_id] all_routes4 all_routes6
 
 			setDefaultIPv4routes $node_id $all_routes4
 			setDefaultIPv6routes $node_id $all_routes6
@@ -240,6 +239,10 @@ namespace eval $MODULE {
 	#   * range -- router IP address range
 	#****
 	proc IPAddrRange {} {
+		return 1
+	}
+
+	proc getSubnetPriority { node_id iface_id } {
 		return 1
 	}
 

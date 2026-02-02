@@ -1860,8 +1860,7 @@ proc configGUI_staticRoutes { wi node_id } {
 	set user_sroutes [concat [_getNodeStatIPv4routes $node_cfg] [_getNodeStatIPv6routes $node_cfg]]
 
 	set auto_default_routes [_getNodeAutoDefaultRoutesStatus $node_cfg]
-	lassign [getDefaultGateways $node_id {} {}] my_gws {} {}
-	lassign [getDefaultRoutesConfig $node_id $my_gws] all_routes4 all_routes6
+	lassign [getDefaultRoutesConfig $node_id] all_routes4 all_routes6
 
 	set ifc_routes_enable $wi.ifc_routes_enable
 	ttk::checkbutton $ifc_routes_enable -text "Enable automatic default routes" \
@@ -8090,6 +8089,52 @@ proc transformNodesGUI { nodes to_type } {
 		redrawAll
 		updateUndoLog
 	}
+}
+
+#****f* nodecfgGUI.tcl/subnetApply
+# NAME
+#   subnetApply -- IPv4/IPv6 subnet apply
+# SYNOPSIS
+#   subnetApply $entry_elem
+# FUNCTION
+#   Sets new IPv4/IPv6 address from widget.
+# INPUTS
+#   * entry_elem -- widget
+#****
+proc subnetApply { ip_version entry_elem node_id iface_id } {
+	global changed main_canvas_elem
+
+	set new_subnet [$entry_elem get]
+
+	if { $ip_version == "ipv4" } {
+		set check_proc "checkIPv4Net"
+		set assign_proc "assignIPv4Subnet"
+	} else {
+		set check_proc "checkIPv6Net"
+		set assign_proc "assignIPv6Subnet"
+	}
+
+	if { [$check_proc $new_subnet] == 0 } {
+		focusAndFlash $entry_elem
+
+		return
+	}
+
+	if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+		setToExecuteVars "terminate_cfg" [cfgGet]
+	}
+
+	$assign_proc $node_id $iface_id [selectedNodes] $new_subnet
+
+	if { [getFromRunning "stop_sched"] } {
+		redeployCfg
+	}
+
+	redrawAll
+	set changed 1
+	updateUndoLog
+
+	$main_canvas_elem config -cursor left_ptr
 }
 
 proc _getNodeCustomEnabled { node_cfg } {

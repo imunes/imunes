@@ -259,150 +259,6 @@ proc getNodeStolenIfaces { node_id } {
 	return $external_ifaces
 }
 
-#****f* nodecfg.tcl/getDefaultGateways
-# NAME
-#   getDefaultGateways -- get default IPv4/IPv6 gateways.
-# SYNOPSIS
-#   lassign [getDefaultGateways $node_id $subnet_gws $nodes_l2data] \
-#     my_gws subnets_and_gws
-# FUNCTION
-#   Returns a list of all default IPv4/IPv6 gateways for the subnets in which
-#   this node belongs as a {node_type|gateway4|gateway6} values. Additionally,
-#   it refreshes newly discovered gateways and subnet members to the existing
-#   $subnet_gws list and $nodes_l2data dictionary.
-# INPUTS
-#   * node_id -- node id
-#   * subnet_gws -- already known {node_type|gateway4|gateway6} values
-#   * nodes_l2data -- a dictionary of already known {node_id iface_id subnet_idx}
-#   triplets in this subnet
-# RESULT
-#   * my_gws -- list of all possible default gateways for the specified node
-#   * subnet_gws -- refreshed {node_type|gateway4|gateway6} values
-#   * nodes_l2data -- refreshed dictionary of {node_id iface_id subnet_idx} triplets in
-#   this subnet
-#****
-proc getDefaultGateways { node_id subnet_gws nodes_l2data } {
-	set node_ifaces [ifcList $node_id]
-	if { [llength $node_ifaces] == 0 } {
-		return [list {} {} {}]
-	}
-
-	# go through all interfaces and collect data for each subnet
-	foreach iface_id $node_ifaces {
-		if { [dictGet $nodes_l2data $node_id $iface_id] != "" } {
-			continue
-		}
-
-		# add new subnet at the end of the list
-		set subnet_idx [llength $subnet_gws]
-		lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
-		if { $peer_id == "" } {
-			continue
-		}
-
-		lassign [getSubnetData $peer_id $peer_iface_id \
-			$subnet_gws $nodes_l2data $subnet_idx] \
-			subnet_gws nodes_l2data
-	}
-
-	# merge all gateways values and return
-	set my_gws {}
-	if { $nodes_l2data != {} } {
-		foreach subnet_idx [lsort -unique [dict values [dictGet $nodes_l2data $node_id]]] {
-			set my_gws [concat $my_gws [lindex $subnet_gws $subnet_idx]]
-		}
-	}
-
-	return [list $my_gws $subnet_gws $nodes_l2data]
-}
-
-#****f* nodecfg.tcl/getSubnetData
-# NAME
-#   getSubnetData -- get subnet members and its IPv4/IPv6 gateways.
-# SYNOPSIS
-#   lassign [getSubnetData $this_node_id $this_iface_id \
-#     $subnet_gws $nodes_l2data $subnet_idx] \
-#     subnet_gws nodes_l2data
-# FUNCTION
-#   Called when checking L2 network for routers/extnats in order to get all
-#   default gateways. Returns all possible default IPv4/IPv6 gateways in this
-#   LAN appended to the subnet_gws list and updates the members of this subnet
-#   as {node_id iface_id subnet_idx} triplets in the nodes_l2data dictionary.
-# INPUTS
-#   * this_node_id -- node id
-#   * this_iface_id -- node interface
-#   * subnet_gws -- already known {node_type|gateway4|gateway6} values
-#   * nodes_l2data -- a dictionary of already known {node_id iface_id subnet_idx}
-#   triplets in this subnet
-# RESULT
-#   * subnet_gws -- refreshed {node_type|gateway4|gateway6} values
-#   * nodes_l2data -- refreshed dictionary of {node_id iface_id subnet_idx} triplets in
-#   this subnet
-#****
-proc getSubnetData { this_node_id this_iface_id subnet_gws nodes_l2data subnet_idx } {
-	set my_gws [lindex $subnet_gws $subnet_idx]
-
-	if { [dict exists $nodes_l2data $this_node_id $this_iface_id] } {
-		# this node/iface is already a part of this subnet
-		set subnet_idx [dict get $nodes_l2data $this_node_id $this_iface_id]
-		return [list $subnet_gws $nodes_l2data]
-	}
-
-	dict set nodes_l2data $this_node_id $this_iface_id $subnet_idx
-
-	set this_node_type [getNodeType $this_node_id]
-	if { $this_node_type == "" } {
-		return [list $subnet_gws $nodes_l2data]
-	}
-
-	if { [invokeTypeProc $this_node_type "netlayer"] == "NETWORK" } {
-		if { $this_node_type in "router nat64" || ($this_node_type == "ext" && [getNodeNATIface $this_node_id] != "UNASSIGNED") } {
-			# this node is a router/extnat, add our IP addresses to lists
-			# TODO: multiple addresses per iface - split subnet4data and subnet6data
-			set gw4 [lindex [split [getIfcIPv4addrs $this_node_id $this_iface_id] /] 0]
-			if { $gw4 == "dhcp" } {
-				set gw4 ""
-			}
-			set gw6 [lindex [split [getIfcIPv6addrs $this_node_id $this_iface_id] /] 0]
-			lappend my_gws $this_node_type|$gw4|$gw6
-			lset subnet_gws $subnet_idx $my_gws
-		}
-
-		# first, get this node/iface peer's subnet data in case it is an L2 node
-		# and we're not yet gone through it
-		lassign [logicalPeerByIfc $this_node_id $this_iface_id] peer_id peer_iface_id
-		if { $peer_id != "" } {
-			lassign [getSubnetData $peer_id $peer_iface_id \
-				$subnet_gws $nodes_l2data $subnet_idx] \
-				subnet_gws nodes_l2data
-		}
-
-		# this node is done, do nothing else
-		if { $subnet_gws == "" } {
-			set subnet_gws "{||}"
-		}
-
-		return [list $subnet_gws $nodes_l2data]
-	}
-
-	# this node is an L2 node
-	# - collect data from all interfaces
-	foreach iface_id [ifcList $this_node_id] {
-		dict set nodes_l2data $this_node_id $iface_id $subnet_idx
-
-		lassign [logicalPeerByIfc $this_node_id $iface_id] peer_id peer_iface_id
-		if { $peer_id == "" } {
-			continue
-		}
-
-		lassign [getSubnetData $peer_id $peer_iface_id \
-			$subnet_gws $nodes_l2data $subnet_idx] \
-			subnet_gws nodes_l2data
-	}
-
-	return [list $subnet_gws $nodes_l2data]
-}
-
 #****f* nodecfg.tcl/getDefaultIPv4routes
 # NAME
 #   getDefaultIPv4routes -- get auto default IPv4 routes.
@@ -479,81 +335,56 @@ proc setDefaultIPv6routes { node_id routes } {
 # NAME
 #   getDefaultRoutesConfig -- get node default routes in a configuration format
 # SYNOPSIS
-#   lassign [getDefaultRoutesConfig $node_id $gws] routes4 routes6
+#   lassign [getDefaultRoutesConfig $node_id] routes4 routes6
 # FUNCTION
 #   Called when translating IMUNES default gateways configuration to node
 #   pre-running configuration. Returns IPv4 and IPv6 routes lists.
 # INPUTS
 #   * node_id -- node id
-#   * gws -- gateway values in the {node_type|gateway4|gateway6} format
 # RESULT
 #   * all_routes4 -- {0.0.0.0/0 gw4} pairs of default IPv4 routes
 #   * all_routes6 -- {0.0.0.0/0 gw6} pairs of default IPv6 routes
 #****
-proc getDefaultRoutesConfig { node_id gws } {
+proc getDefaultRoutesConfig { node_id } {
 	set all_routes4 {}
 	set all_routes6 {}
+	foreach iface_id [ifcList $node_id] {
+		lassign [getSubnetNextIpAndGateways "ipv4" $node_id $iface_id] - subnet_gws4
+		lassign [getSubnetNextIpAndGateways "ipv6" $node_id $iface_id] - subnet_gws6
 
-	lassign [getAllIpAddresses $node_id] ipv4_addrs ipv6_addrs
-	if { $ipv4_addrs == "" && $ipv6_addrs == "" } {
-		return "\"$all_routes4\" \"$all_routes6\""
-	}
-
-	# remove all non-extnat routes
-	if { [getNodeType $node_id] in "router nat64" } {
-		set gws [lsearch -inline -all $gws "ext*"]
-	}
-
-	foreach route $gws {
-		lassign [split $route "|"] route_type gateway4 -
-
-		if { $gateway4 == "" } {
-			continue
-		}
-
-		set match4 false
-		foreach ipv4_addr $ipv4_addrs {
+		foreach ipv4_addr [getIfcIPv4addrs $node_id $iface_id] {
 			if { $ipv4_addr == "dhcp" } {
 				continue
 			}
 
 			set mask [ip::mask $ipv4_addr]
-			if { [ip::prefix $gateway4/$mask] == [ip::prefix $ipv4_addr] } {
-				set match4 true
-				break
+			foreach gateway4 $subnet_gws4 {
+				set gw_mask [ip::mask $gateway4]
+				if {
+					$mask == $gw_mask &&
+					[ip::prefix $gateway4] == [ip::prefix $ipv4_addr]
+				} {
+					set gateway4 [lindex [split $gateway4 "/"] 0]
+					if { "0.0.0.0/0 $gateway4" ni $all_routes4 } {
+						lappend all_routes4 "0.0.0.0/0 $gateway4"
+					}
+				}
 			}
 		}
 
-		if { $match4 && "0.0.0.0/0 $gateway4" ni $all_routes4 } {
-			if { $route_type == "ext" } {
-				set all_routes4 [linsert $all_routes4 0 "0.0.0.0/0 $gateway4"]
-			} else {
-				lappend all_routes4 "0.0.0.0/0 $gateway4"
-			}
-		}
-	}
-
-	foreach route $gws {
-		lassign [split $route "|"] route_type - gateway6
-
-		if { $gateway6 == "" } {
-			continue
-		}
-
-		set match6 false
-		foreach ipv6_addr $ipv6_addrs {
+		foreach ipv6_addr [getIfcIPv6addrs $node_id $iface_id] {
 			set mask [ip::mask $ipv6_addr]
-			if { [ip::contract [ip::prefix $gateway6/$mask]] == [ip::contract [ip::prefix $ipv6_addr]] } {
-				set match6 true
-				break
-			}
-		}
-
-		if { $match6 && "::/0 $gateway6" ni $all_routes6 } {
-			if { $route_type == "ext" } {
-				set all_routes6 [linsert $all_routes6 0 "::/0 $gateway6"]
-			} else {
-				lappend all_routes6 "::/0 $gateway6"
+			foreach gateway6 $subnet_gws6 {
+				set gw_mask [ip::mask $gateway6]
+				if {
+					$mask == $gw_mask &&
+					[ip::prefix $gateway6] == [ip::prefix $ipv6_addr]
+				} {
+					set gateway6 [lindex [split $gateway6 "/"] 0]
+					if { "::/0 $gateway6" ni $all_routes6 } {
+						lappend all_routes6 "::/0 $gateway6"
+					}
+				}
 			}
 		}
 	}
@@ -1716,4 +1547,155 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 	dputs ""
 
 	return $new_node_cfg
+}
+
+proc getSubnetIfaces { node_id iface_id } {
+	set nodes_ifaces {}
+
+	foreach iface_id [invokeNodeProc $node_id "getSubnetIfaces" $node_id $iface_id] {
+		set gw_priority [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
+		lappend nodes_ifaces "$gw_priority $node_id $iface_id"
+	}
+
+	if { [llength $nodes_ifaces] == 0 } {
+		return {}
+	}
+
+	set idx 0
+	while { $idx < [llength $nodes_ifaces] } {
+		lassign [lindex $nodes_ifaces $idx] gw_priority node_id iface_id
+		incr idx
+
+		lassign [logicalPeerByIfc $node_id $iface_id] node_id iface_id
+		if { $node_id == {} || $iface_id == {} } {
+			continue
+		}
+
+		set gw_priority [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
+		if { "$gw_priority $node_id $iface_id" in $nodes_ifaces } {
+			continue
+		}
+
+		foreach iface_id [invokeNodeProc $node_id "getSubnetIfaces" $node_id $iface_id] {
+			set gw_priority [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
+			if { "$gw_priority $node_id $iface_id" in $nodes_ifaces } {
+				continue
+			}
+
+			lappend nodes_ifaces "$gw_priority $node_id $iface_id"
+		}
+	}
+
+	return $nodes_ifaces
+}
+
+proc getSubnetAddrsByPrio { ip_version node_id iface_id { ignore_self "true" } } {
+	set nodes_ifaces [getSubnetIfaces $node_id $iface_id]
+
+	if { $ip_version == "ipv4" } {
+		set getter_proc "getIfcIPv4addrs"
+	} else {
+		set getter_proc "getIfcIPv6addrs"
+	}
+
+	set sorted_nodes_ifaces [lsort -integer -decreasing -index 0 $nodes_ifaces]
+	foreach node_subnet_data $sorted_nodes_ifaces {
+		lassign $node_subnet_data gw_priority subnet_node_id subnet_iface_id
+		if { $ignore_self && $node_id == $subnet_node_id && $iface_id == $subnet_iface_id} {
+			continue
+		}
+
+		set addrs [$getter_proc $subnet_node_id $subnet_iface_id]
+		if { $addrs != {} } {
+			return [lindex $addrs 0]
+		}
+	}
+}
+
+# returns next free IP address and all gateway IP addresses in subnet
+proc getSubnetNextIpAndGateways { ip_version orig_node_id orig_iface_id { nodes "*" } } {
+	set orig_priority [invokeNodeProc $orig_node_id "getSubnetPriority" $orig_node_id $orig_iface_id]
+
+	set subnet_addrs {}
+	set subnet_gws [dict create]
+
+	if { $ip_version == "ipv4" } {
+		set getter_proc "getIfcIPv4addrs"
+		set next_addr_proc "getNextIPv4addr"
+		set next_subnet_proc "nextFreeIP4Addr"
+		set used_list [getFromRunning "ipv4_used_list"]
+	} else {
+		set getter_proc "getIfcIPv6addrs"
+		set next_addr_proc "getNextIPv6addr"
+		set next_subnet_proc "nextFreeIP6Addr"
+		set used_list [getFromRunning "ipv6_used_list"]
+	}
+
+	foreach node_subnet_data [getSubnetIfaces $orig_node_id $orig_iface_id] {
+		lassign $node_subnet_data gw_priority node_id iface_id
+		if { $nodes != "*" && $node_id ni $nodes } {
+			continue
+		}
+
+		set addr [lindex [$getter_proc $node_id $iface_id] 0]
+		if { $addr == "" || $addr == "dhcp"} {
+			continue
+		}
+
+		if { $gw_priority > $orig_priority } {
+			dict lappend subnet_gws $gw_priority $addr
+		}
+
+		lappend subnet_addrs $addr
+	}
+
+	if { $subnet_addrs == {} } {
+		return [list [$next_addr_proc [getNodeType $orig_node_id] $used_list] {}]
+	}
+
+	set subnet_gws [concat {*}[dict values [lsort -decreasing -stride 2 -index 0 $subnet_gws]]]
+	if { $subnet_gws != {} } {
+		set template_ip [lindex $subnet_gws 0]
+	} else {
+		set template_ip [lindex $subnet_addrs 0]
+	}
+
+	set min_ip [invokeNodeProc $orig_node_id "IPAddrRange"]
+	if { $min_ip == "" } {
+		set min_ip 0
+	}
+	if { $ip_version == "ipv6" } {
+		set min_ip [expr 0x$min_ip]
+	}
+
+	return [list [$next_subnet_proc $template_ip $min_ip $subnet_addrs] $subnet_gws]
+}
+
+proc appendNodeSubnetRoutes { node_id routes { ip_version "both" } } {
+	foreach iface_id [ifcList $node_id] {
+		set old_subnet_data [getSubnetIfaces $node_id $iface_id]
+
+		set my_priority [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
+		foreach node_subnet_data $old_subnet_data {
+			lassign $node_subnet_data priority subnet_node_id subnet_iface_id
+			if { $priority < 0 } {
+				continue
+			}
+
+			if { $subnet_node_id ni [dict keys $routes] } {
+				set all_routes [getDefaultRoutesConfig $subnet_node_id]
+				if { $ip_version == "both" } {
+					set filtered_routes $all_routes
+				} elseif { $ip_version == "ipv4" } {
+					set filtered_routes [lindex $all_routes 0]
+				} elseif { $ip_version == "ipv6" } {
+					set filtered_routes [lindex $all_routes 1]
+				}
+
+				dict set routes $subnet_node_id $filtered_routes
+			}
+		}
+	}
+
+	return $routes
 }

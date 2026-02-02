@@ -183,20 +183,28 @@ proc paste {} {
 			if { $mac_address != "" } {
 				if { $cutNodes == 0 } {
 					setIfcMACaddr $new_node_id $iface_id ""
-					autoMACaddr $new_node_id $iface_id
+					#autoMACaddr $new_node_id $iface_id
 				} else {
 					lappendToRunning "mac_used_list" $mac_address
 				}
 			}
 
 			set addrs4 [getIfcIPv4addrs $new_node_id $iface_id]
-			if { $addrs4 != "" } {
-				lappendToRunning "ipv4_used_list" [getIfcIPv4addrs $new_node_id $iface_id]
+			if { $addrs4 != {} } {
+				if { $cutNodes == 0 } {
+					setIfcIPv4addrs $new_node_id $iface_id ""
+				} else {
+					lappendToRunning "ipv4_used_list" {*}$addrs4
+				}
 			}
 
 			set addrs6 [getIfcIPv6addrs $new_node_id $iface_id]
-			if { $addrs6 != "" } {
-				lappendToRunning "ipv6_used_list" [getIfcIPv6addrs $new_node_id $iface_id]
+			if { $addrs6 != {} } {
+				if { $cutNodes == 0 } {
+					setIfcIPv6addrs $new_node_id $iface_id ""
+				} else {
+					lappendToRunning "ipv6_used_list" {*}$addrs6
+				}
 			}
 		}
 	}
@@ -248,17 +256,14 @@ proc paste {} {
 	updateCustomIconReferences
 
 	if { $cutNodes == 0 } {
-		if { [getActiveOption "IPv4autoAssign"] } {
-			set copypaste_nodes 1
-			changeAddressRange
+		foreach node_id $copypaste_list {
+			foreach iface_id [ifcList $node_id] {
+				invokeNodeProc $node_id "confNewIfc" $node_id $iface_id
+			}
 		}
-
-		if { [getActiveOption "IPv6autoAssign"] } {
-			set copypaste_nodes 1
-			changeAddressRange6
-		}
+	} else {
+		set cutNodes 0
 	}
-	set cutNodes 0
 
 	set changed 1
 	updateUndoLog

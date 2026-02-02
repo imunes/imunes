@@ -332,58 +332,31 @@ proc getIfcIPv4addrs { node_id iface_id } {
 #   * addrs4 -- new IPv4 addresses.
 #****
 proc setIfcIPv4addrs { node_id iface_id addrs4 } {
+	set old_routes [appendNodeSubnetRoutes $node_id {} "ipv4"]
+
 	cfgSet "nodes" $node_id "ifaces" $iface_id "ipv4_addrs" $addrs4
 
 	trigger_ifaceReconfig $node_id $iface_id
 
+	set my_priority [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
+	if { $my_priority < 0 } {
+		return
+	}
+
+	set new_routes [appendNodeSubnetRoutes $node_id {} "ipv4"]
+
 	set node_type [getNodeType $node_id]
-	set is_extnat [expr { $node_type == "ext" && [getNodeNATIface $node_id] != "UNASSIGNED" }]
-	if { $is_extnat } {
+	if {
+		$node_type in "router nat64" ||
+		($node_type == "ext" && [getNodeNATIface $node_id] != "UNASSIGNED")
+	} {
+		triggerChangedDefaultRoutes $old_routes $new_routes
+	} elseif {
+		[getNodeAutoDefaultRoutesStatus $node_id] == "enabled" &&
+		([dictGet $old_routes $node_id] != {} ||
+		[dictGet $new_routes $node_id] != {})
+	} {
 		trigger_nodeReconfig $node_id
-	}
-
-	if { [isIfcLogical $node_id $iface_id] } {
-		return
-	}
-
-	lassign [getSubnetData $node_id $iface_id {} {} 0] subnet_gws subnet_data
-	if { $subnet_gws == "{||}" } {
-		return
-	}
-
-	if { $node_type in "router nat64" || $is_extnat } {
-		set has_extnat [string match "*ext*" $subnet_gws]
-		foreach subnet_node [removeFromList [dict keys $subnet_data] $node_id] {
-			if { [getNodeAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
-				continue
-			}
-
-			set subnet_node_type [getNodeType $subnet_node]
-			if { $subnet_node_type == "ext" || [invokeTypeProc $subnet_node_type "netlayer"] != "NETWORK" } {
-				# skip extnat and L2 nodes
-				continue
-			}
-
-			if { ! $has_extnat && $subnet_node_type in "router nat64" } {
-				# skip routers if there is no extnats
-				continue
-			}
-
-			trigger_nodeReconfig $subnet_node
-		}
-	} else {
-		if { [getNodeAutoDefaultRoutesStatus $node_id] != "enabled" } {
-			return
-		}
-
-		foreach subnet_gw $subnet_gws {
-			# extract IPv4 gateway
-			if { [lindex [split $subnet_gw "|"] 1] != "" } {
-				trigger_nodeReconfig $node_id
-
-				return
-			}
-		}
 	}
 }
 
@@ -497,58 +470,31 @@ proc getIfcIPv6addrs { node_id iface_id } {
 #   * addrs6 -- new IPv6 addresses.
 #****
 proc setIfcIPv6addrs { node_id iface_id addrs6 } {
+	set old_routes [appendNodeSubnetRoutes $node_id {} "ipv6"]
+
 	cfgSet "nodes" $node_id "ifaces" $iface_id "ipv6_addrs" $addrs6
 
 	trigger_ifaceReconfig $node_id $iface_id
 
+	set my_priority [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
+	if { $my_priority < 0 } {
+		return
+	}
+
+	set new_routes [appendNodeSubnetRoutes $node_id {} "ipv6"]
+
 	set node_type [getNodeType $node_id]
-	set is_extnat [expr { $node_type == "ext" && [getNodeNATIface $node_id] != "UNASSIGNED" }]
-	if { $is_extnat } {
+	if {
+		$node_type in "router nat64" ||
+		($node_type == "ext" && [getNodeNATIface $node_id] != "UNASSIGNED")
+	} {
+		triggerChangedDefaultRoutes $old_routes $new_routes
+	} elseif {
+		[getNodeAutoDefaultRoutesStatus $node_id] == "enabled" &&
+		([dictGet $old_routes $node_id] != {} ||
+		[dictGet $new_routes $node_id] != {})
+	} {
 		trigger_nodeReconfig $node_id
-	}
-
-	if { [isIfcLogical $node_id $iface_id] } {
-		return
-	}
-
-	lassign [getSubnetData $node_id $iface_id {} {} 0] subnet_gws subnet_data
-	if { $subnet_gws == "{||}" } {
-		return
-	}
-
-	if { $node_type in "router nat64" || $is_extnat } {
-		set has_extnat [string match "*ext*" $subnet_gws]
-		foreach subnet_node [removeFromList [dict keys $subnet_data] $node_id] {
-			if { [getNodeAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
-				continue
-			}
-
-			set subnet_node_type [getNodeType $subnet_node]
-			if { $subnet_node_type == "ext" || [invokeTypeProc $subnet_node_type "netlayer"] != "NETWORK" } {
-				# skip extnat and L2 nodes
-				continue
-			}
-
-			if { ! $has_extnat && $subnet_node_type in "router nat64" } {
-				# skip routers if there is no extnats
-				continue
-			}
-
-			trigger_nodeReconfig $subnet_node
-		}
-	} else {
-		if { [getNodeAutoDefaultRoutesStatus $node_id] != "enabled" } {
-			return
-		}
-
-		foreach subnet_gw $subnet_gws {
-			# extract IPv6 gateway
-			if { [lindex [split $subnet_gw "|"] 2] != "" } {
-				trigger_nodeReconfig $node_id
-
-				return
-			}
-		}
 	}
 }
 

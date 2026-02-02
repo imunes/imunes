@@ -48,7 +48,6 @@ set change_subnet6 0
 proc IPv6AddrApply { w } {
 	global ipv6
 	global changed
-	global control
 
 	set newipv6 [$w.ipv6frame.e1 get]
 
@@ -60,9 +59,164 @@ proc IPv6AddrApply { w } {
 
 	if { $newipv6 != $ipv6 } {
 		set changed 1
-		set control 1
 	}
 	set ipv6 $newipv6
+}
+
+proc ip6_toInteger { subnet } {
+	set subnet [ip::normalize $subnet]
+    set subnet_prefix [lindex [split $subnet "/"] 0]
+
+    set ipv6_int 0
+    foreach part [split $subnet_prefix ":"] {
+        scan $part %x value
+        set ipv6_int [expr { ($ipv6_int << 16) + $value }]
+    }
+
+    return $ipv6_int
+}
+
+proc ip6_intToString { ipv6_int } {
+    set parts {}
+    for { set i 0 } { $i < 8 } { incr i } {
+        set part [expr { ($ipv6_int >> (16 * (7 - $i))) & 0xffff }]
+        lappend parts [format %x $part]
+    }
+
+	return [ip::normalize [join $parts ":"]]
+}
+
+proc nextFreeIPv6InSubnet { subnet used_addrs { min_ip 0 } } {
+	set mask [ip::mask $subnet]
+	set subnet [ip::prefix $subnet]
+
+	set addr_int [expr [ip6_toInteger $subnet] + 0x$min_ip]
+	set addr "[ip::contract [ip6_intToString $addr_int]]/$mask"
+
+	if { ! [ip6_isOverlap $subnet $addr] } {
+		# out of prefix range, start from first
+		set addr_int [expr $addr_int - 0x$min_ip]
+		set addr "[ip::contract [ip6_intToString $addr_int]]/$mask"
+	}
+
+	while { $addr in $used_addrs } {
+		incr addr_int
+		set addr "[ip::contract [ip6_intToString $addr_int]]/$mask"
+
+		if { ! [ip6_isOverlap $subnet $addr] } {
+			# out of prefix range
+			return ""
+		}
+	}
+
+	return $addr
+}
+
+proc ip6_getBinary { subnet } {
+	set subnet_mask [lindex [split $subnet "/"] 1]
+	if { $subnet_mask == "" } {
+		set subnet_mask 64
+	}
+
+	set full_subnet [ip::normalize $subnet]
+	set subnet_prefix [lindex [split $full_subnet "/"] 0]
+
+	set sub_bin_tmp ""
+	foreach sub_segment [split $subnet_prefix ":"] {
+		append sub_bin_tmp [format %016b 0x$sub_segment]
+	}
+
+	return $sub_bin_tmp
+}
+
+proc ip6_isOverlap { subnet address } {
+	set subnet_mask [lindex [split $subnet "/"] 1]
+	if { $subnet_mask == "" } {
+		set subnet_mask 64
+	}
+
+	set address_mask [lindex [split $address "/"] 1]
+	if { $address_mask == "" } {
+		set address_mask 128
+	}
+
+	set subnet_bin [ip6_getBinary $subnet]
+	set address_bin [ip6_getBinary $address]
+
+	if { $subnet_mask > $address_mask } {
+		set bigger_mask $subnet_mask
+	} else {
+		set bigger_mask $address_mask
+	}
+
+	if { [string range $subnet_bin 0 $bigger_mask] == [string range $address_bin 0 $bigger_mask] } {
+		return true
+	}
+
+	return false
+}
+
+proc assignIPv6Subnet { node_id iface_id selected { subnet "" } } {
+	if { $subnet == "" } {
+		lassign [getSubnetNextIpAndGateways "ipv6" $node_id $iface_id] subnet -
+	}
+
+	set nodes_ifaces [getSubnetIfaces $node_id $iface_id]
+
+	# first, get all non-selected used addresses from this subnet
+	set used_addrs {}
+	foreach node_subnet_data $nodes_ifaces {
+		lassign $node_subnet_data priority subnet_node_id subnet_iface_id
+		set cur_addrs [getIfcIPv6addrs $subnet_node_id $subnet_iface_id]
+
+		if { $priority >= 0 && $subnet_node_id in $selected } {
+			# skip if we're the main gateway
+			foreach cur_addr $cur_addrs {
+				if { [ip6_isOverlap $subnet $cur_addr] } {
+					lappend used_addrs {*}$cur_addrs
+					set nodes_ifaces [removeFromList $nodes_ifaces [list $node_subnet_data]]
+
+					break
+				}
+			}
+
+			continue
+		}
+
+		if { $priority >= 0 } {
+			lappend used_addrs {*}$cur_addrs
+		}
+
+		set nodes_ifaces [removeFromList $nodes_ifaces [list $node_subnet_data]]
+	}
+
+	# change selected nodes interfaces to new subnet
+	foreach node_subnet_data $nodes_ifaces {
+		lassign $node_subnet_data - subnet_node_id subnet_iface_id
+
+		# skip if we're the main gateway and subnet matches
+		set cur_addrs [getIfcIPv6addrs $subnet_node_id $subnet_iface_id]
+		foreach cur_addr $cur_addrs {
+			if { [ip6_isOverlap $subnet $cur_addr] } {
+				lappend used_addrs {*}$cur_addrs
+				set nodes_ifaces [removeFromList $nodes_ifaces [list $node_subnet_data]]
+
+				continue
+			}
+		}
+
+		set addr [nextFreeIPv6InSubnet $subnet $used_addrs [invokeNodeProc $subnet_node_id "IPAddrRange"]]
+		if { $addr == "" } {
+			continue
+		}
+
+		lappend used_addrs $addr
+
+		setToRunning "ipv6_used_list" \
+			[removeFromList [getFromRunning "ipv6_used_list"] $cur_addrs "keep_doubles"]
+		setIfcIPv6addrs $subnet_node_id $subnet_iface_id $addr
+		lappendToRunning "ipv6_used_list" $addr
+	}
 }
 
 #****f* ipv6.tcl/findFreeIPv6Net
@@ -112,66 +266,12 @@ proc findFreeIPv6Net { mask { ipv6_used_list "" } } {
 #   * iface_id -- the interface to witch a new, automatically generated, IPv6
 #     address will be assigned
 #****
-proc autoIPv6addr { node_id iface_id { use_autorenumbered "" } } {
+proc autoIPv6addr { node_id iface_id { nodes "*" } } {
 	if { ! [getActiveOption "IPv6autoAssign"] } {
 		return
 	}
 
-	global change_subnet6 control autorenumbered_ifcs6
-	#change_subnet6 - to change the subnet (1) or not (0)
-	#autorenumbered_ifcs6 - list of all interfaces that changed an address
-
-	setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] [getIfcIPv6addrs $node_id $iface_id] "keep_doubles"]
-
-	setIfcIPv6addrs $node_id $iface_id ""
-
-	lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
-	set peers_ip6addrs {}
-	set has_extnat 0
-	set has_router 0
-	set best_choice_ip ""
-	if { $peer_id != "" } {
-		if { [invokeNodeProc $peer_id "netlayer"] == "LINK" } {
-			foreach l2node [listLANNodes $peer_id {}] {
-				foreach l2node_iface_id [ifcList $l2node] {
-					lassign [logicalPeerByIfc $l2node $l2node_iface_id] new_peer_id new_peer_iface_id
-					set new_peer_ip6addrs [getIfcIPv6addrs $new_peer_id $new_peer_iface_id]
-					if { $new_peer_ip6addrs == "" } {
-						continue
-					}
-
-					if { $use_autorenumbered == "" || "$new_peer_id $new_peer_iface_id" in $autorenumbered_ifcs6 } {
-						if { ! $has_extnat } {
-							set new_peer_type [getNodeType $new_peer_id]
-							if { $new_peer_type == "ext" && [getNodeNATIface $new_peer_id] != "UNASSIGNED" } {
-								set has_extnat 1
-								set best_choice_ip [lindex $new_peer_ip6addrs 0]
-							} elseif { ! $has_router && $new_peer_type in "router nat64" } {
-								set has_router 1
-								set best_choice_ip [lindex $new_peer_ip6addrs 0]
-							} elseif { ! $has_extnat && ! $has_router } {
-								set best_choice_ip [lindex $new_peer_ip6addrs 0]
-							}
-						}
-
-						lappend peers_ip6addrs {*}$new_peer_ip6addrs
-					}
-				}
-			}
-		} else {
-			set peers_ip6addrs [getIfcIPv6addrs $peer_id $peer_iface_id]
-			set best_choice_ip [lindex $peers_ip6addrs 0]
-		}
-	}
-
-	set node_type [getNodeType $node_id]
-	if { $peers_ip6addrs != "" && $change_subnet6 == 0 && $best_choice_ip != "" } {
-		set targetbyte [expr 0x[invokeTypeProc $node_type "IPAddrRange"]]
-		set addr [nextFreeIP6Addr $best_choice_ip $targetbyte $peers_ip6addrs]
-	} else {
-		set addr [getNextIPv6addr $node_type [getFromRunning "ipv6_used_list"]]
-	}
-
+	lassign [getSubnetNextIpAndGateways "ipv6" $node_id $iface_id $nodes] addr -
 	setIfcIPv6addrs $node_id $iface_id $addr
 	lappendToRunning "ipv6_used_list" $addr
 }
@@ -182,7 +282,13 @@ proc getNextIPv6addr { node_type existing_addrs } {
 	}
 
 	set targetbyte 0
-	set targetbyte [expr 0x[invokeTypeProc $node_type "IPAddrRange"]]
+	if { $node_type != "" } {
+		set targetbyte [invokeTypeProc $node_type "IPAddrRange"]
+		if { $targetbyte == "" } {
+			return
+		}
+	}
+	set targetbyte [expr 0x$targetbyte]
 
 	# TODO: enable changing IPv6 pool mask
 	return "[findFreeIPv6Net 64 $existing_addrs][format %x $targetbyte]/64"

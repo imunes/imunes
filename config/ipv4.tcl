@@ -30,11 +30,10 @@
 # NAME
 #   ipv4.tcl -- file for handling IPv4
 #****
-global ipv4 numbits control change_subnet4
+global ipv4 numbits change_subnet4
 
 set ipv4 10.0.0.0/24
 set numbits [lindex [split $ipv4 /] 1]
-set control 0
 set change_subnet4 0
 
 #****f* ipv4.tcl/IPv4AddrApply
@@ -51,7 +50,6 @@ proc IPv4AddrApply { w } {
 	global ipv4
 	global numbits
 	global changed
-	global control
 
 	set newipv4 [$w.ipv4frame.e1 get]
 
@@ -63,10 +61,72 @@ proc IPv4AddrApply { w } {
 
 	if { $newipv4 != $ipv4 } {
 		set changed 1
-		set control 1
 	}
 	set ipv4 $newipv4
 	set numbits [lindex [split $ipv4 /] 1]
+}
+
+proc assignIPv4Subnet { node_id iface_id selected { subnet "" } } {
+	if { $subnet == "" } {
+		lassign [getSubnetNextIpAndGateways "ipv4" $node_id $iface_id] subnet -
+	}
+
+	set nodes_ifaces [getSubnetIfaces $node_id $iface_id]
+
+	# first, get all non-selected used addresses from this subnet
+	set used_addrs {}
+	foreach node_subnet_data $nodes_ifaces {
+		lassign $node_subnet_data priority subnet_node_id subnet_iface_id
+		set cur_addrs [getIfcIPv4addrs $subnet_node_id $subnet_iface_id]
+
+		if { $priority >= 0 && $subnet_node_id in $selected } {
+			# skip if we're the main gateway
+			foreach cur_addr $cur_addrs {
+				if { [ip::isOverlap $subnet $cur_addr] } {
+					lappend used_addrs {*}$cur_addrs
+					set nodes_ifaces [removeFromList $nodes_ifaces [list $node_subnet_data]]
+
+					break
+				}
+			}
+
+			continue
+		}
+
+		if { $priority >= 0 } {
+			lappend used_addrs {*}$cur_addrs
+		}
+
+		set nodes_ifaces [removeFromList $nodes_ifaces [list $node_subnet_data]]
+	}
+
+	# change selected nodes interfaces to new subnet
+	foreach node_subnet_data $nodes_ifaces {
+		lassign $node_subnet_data - subnet_node_id subnet_iface_id
+
+		# skip if we're the main gateway and subnet matches
+		set cur_addrs [getIfcIPv4addrs $subnet_node_id $subnet_iface_id]
+		foreach cur_addr $cur_addrs {
+			if { [ip::isOverlap $subnet $cur_addr] } {
+				lappend used_addrs {*}$cur_addrs
+				set nodes_ifaces [removeFromList $nodes_ifaces [list $node_subnet_data]]
+
+				continue
+			}
+		}
+
+		set addr [nextFreeIPv4InSubnet $subnet $used_addrs [invokeNodeProc $subnet_node_id "IPAddrRange"]]
+		if { $addr == "" } {
+			continue
+		}
+
+		lappend used_addrs $addr
+
+		setToRunning "ipv4_used_list" \
+			[removeFromList [getFromRunning "ipv4_used_list"] $cur_addrs "keep_doubles"]
+		setIfcIPv4addrs $subnet_node_id $subnet_iface_id $addr
+		lappendToRunning "ipv4_used_list" $addr
+	}
 }
 
 #****f* ipv4.tcl/dec2bin
@@ -252,65 +312,12 @@ proc findFreeIPv4Net { mask { ipv4_used_list "" } } {
 #   * iface_id -- the interface to witch a new, automatically generated, IPv4
 #     address will be assigned
 #****
-proc autoIPv4addr { node_id iface_id { use_autorenumbered "" } } {
+proc autoIPv4addr { node_id iface_id { nodes "*" } } {
 	if { ! [getActiveOption "IPv4autoAssign"] } {
 		return
 	}
 
-	global numbits change_subnet4 control autorenumbered_ifcs
-	#change_subnet4 - to change the subnet (1) or not (0)
-	#autorenumbered_ifcs - list of all interfaces that changed an address
-
-	setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] [getIfcIPv4addrs $node_id $iface_id] "keep_doubles"]
-
-	setIfcIPv4addrs $node_id $iface_id ""
-
-	lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
-	set peers_ip4addrs {}
-	set has_extnat 0
-	set has_router 0
-	set best_choice_ip ""
-	if { $peer_id != "" } {
-		if { [invokeNodeProc $peer_id "netlayer"] == "LINK" } {
-			foreach l2node [listLANNodes $peer_id {}] {
-				foreach l2node_iface_id [ifcList $l2node] {
-					lassign [logicalPeerByIfc $l2node $l2node_iface_id] new_peer_id new_peer_iface_id
-					set new_peer_ip4addrs [getIfcIPv4addrs $new_peer_id $new_peer_iface_id]
-					if { $new_peer_ip4addrs == "" } {
-						continue
-					}
-
-					if { $use_autorenumbered == "" || "$new_peer_id $new_peer_iface_id" in $autorenumbered_ifcs } {
-						if { ! $has_extnat } {
-							set new_peer_type [getNodeType $new_peer_id]
-							if { $new_peer_type == "ext" && [getNodeNATIface $new_peer_id] != "UNASSIGNED" } {
-								set has_extnat 1
-								set best_choice_ip [lindex $new_peer_ip4addrs 0]
-							} elseif { ! $has_router && $new_peer_type in "router nat64" } {
-								set has_router 1
-								set best_choice_ip [lindex $new_peer_ip4addrs 0]
-							} elseif { ! $has_extnat && ! $has_router } {
-								set best_choice_ip [lindex $new_peer_ip4addrs 0]
-							}
-						}
-
-						lappend peers_ip4addrs {*}$new_peer_ip4addrs
-					}
-				}
-			}
-		} else {
-			set peers_ip4addrs [getIfcIPv4addrs $peer_id $peer_iface_id]
-			set best_choice_ip [lindex $peers_ip4addrs 0]
-		}
-	}
-
-	set node_type [getNodeType $node_id]
-	if { $peers_ip4addrs != "" && $change_subnet4 == 0 && $best_choice_ip != "" } {
-		set addr [nextFreeIP4Addr $best_choice_ip [invokeTypeProc $node_type "IPAddrRange"] $peers_ip4addrs]
-	} else {
-		set addr [getNextIPv4addr $node_type [getFromRunning "ipv4_used_list"]]
-	}
-
+	lassign [getSubnetNextIpAndGateways "ipv4" $node_id $iface_id $nodes] addr -
 	setIfcIPv4addrs $node_id $iface_id $addr
 	lappendToRunning "ipv4_used_list" $addr
 }
@@ -323,7 +330,12 @@ proc getNextIPv4addr { node_type existing_addrs } {
 	global numbits
 
 	set targetbyte 0
-	set targetbyte [invokeTypeProc $node_type "IPAddrRange"]
+	if { $node_type != "" } {
+		set targetbyte [invokeTypeProc $node_type "IPAddrRange"]
+		if { $targetbyte == "" } {
+			return
+		}
+	}
 
 	set targetbyte2 0
 	if { $numbits <= 8 } {
@@ -407,6 +419,32 @@ proc nextFreeIP4Addr { addr start peers } {
 	}
 
 	return $ipaddr
+}
+
+proc nextFreeIPv4InSubnet { subnet used_addrs { min_ip 0 } } {
+	set mask [ip::mask $subnet]
+	set subnet [ip::prefix $subnet]
+
+	set addr_int [expr [ip::toInteger $subnet] + $min_ip]
+	set addr "[ip::intToString $addr_int]/$mask"
+
+	if { ! [ip::isOverlap $subnet $addr] } {
+		# out of prefix range, start from first
+		incr addr_int -$min_ip
+		set addr "[ip::intToString $addr_int]/$mask"
+	}
+
+	while { $addr in $used_addrs } {
+		incr addr_int
+		set addr "[ip::intToString $addr_int]/$mask"
+
+		if { ! [ip::isOverlap $subnet $addr] } {
+			# out of prefix range
+			return ""
+		}
+	}
+
+	return $addr
 }
 
 #****f* ipv4.tcl/checkIPv4Addr

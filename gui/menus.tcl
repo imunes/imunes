@@ -623,58 +623,6 @@ proc menu_nodeSettings { node_id root_menu } {
 		"Remove IPv6 addresses" \
 		"removeIPv6Nodes \[selectedNodes\] *" \
 		"true"
-
-	#
-	# IP autorenumber
-	#
-	set tmp_command [list apply {
-		{ ip_version } {
-			global main_canvas_elem
-
-			if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
-				setToExecuteVars "terminate_cfg" [cfgGet]
-			}
-
-			switch -exact -- $ip_version {
-				"ipv4" {
-					set tmp [getActiveOption "IPv4autoAssign"]
-					setGlobalOption "IPv4autoAssign" 1
-					changeAddressRange
-					setGlobalOption "IPv4autoAssign" $tmp
-				}
-				"ipv6" {
-					set tmp [getActiveOption "IPv6autoAssign"]
-					setGlobalOption "IPv6autoAssign" 1
-					changeAddressRange6
-					setGlobalOption "IPv6autoAssign" $tmp
-				}
-			}
-
-			if { [getFromRunning "stop_sched"] } {
-				redeployCfg
-			}
-
-			$main_canvas_elem config -cursor left_ptr
-		}
-	} \
-		""
-	]
-
-	#
-	# IPv4 autorenumber
-	#
-	addMenu $sub_menu \
-		"IPv4 autorenumber" \
-		"[lreplace $tmp_command end end "ipv4"]" \
-		"true"
-
-	#
-	# IPv6 autorenumber
-	#
-	addMenu $sub_menu \
-		"IPv6 autorenumber" \
-		"[lreplace $tmp_command end end "ipv6"]" \
-		"true"
 }
 
 proc menu_ifacesSettings { node_id root_menu } {
@@ -723,18 +671,86 @@ proc menu_ifacesSettings { node_id root_menu } {
 			$iface_menu \
 			"true"
 
+		#
+		# IP autorenumber
+		#
+		set tmp_command [list apply {
+			{ node_id iface_id ip_version } {
+				global main_canvas_elem
+
+				if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+					setToExecuteVars "terminate_cfg" [cfgGet]
+				}
+
+				switch -exact -- $ip_version {
+					"ipv4" {
+						set tmp [getActiveOption "IPv4autoAssign"]
+						setGlobalOption "IPv4autoAssign" 1
+						addressChangeDialog "ipv4" $node_id $iface_id
+						setGlobalOption "IPv4autoAssign" $tmp
+					}
+					"ipv6" {
+						set tmp [getActiveOption "IPv6autoAssign"]
+						setGlobalOption "IPv6autoAssign" 1
+						addressChangeDialog "ipv6" $node_id $iface_id
+						setGlobalOption "IPv6autoAssign" $tmp
+					}
+				}
+
+				if { [getFromRunning "stop_sched"] } {
+					redeployCfg
+				}
+
+				$main_canvas_elem config -cursor left_ptr
+			}
+		} \
+			$node_id \
+			$iface_id \
+			""
+		]
+
+		set sub4 [lindex [getSubnetAddrsByPrio "ipv4" $node_id $iface_id] 0]
+		set sub6 [lindex [getSubnetAddrsByPrio "ipv6" $node_id $iface_id] 0]
+
+		if { $sub4 == "" || $sub6 == "" } {
+			foreach node_subnet_data [getSubnetIfaces $node_id $iface_id] {
+				lassign $node_subnet_data prio subnet_node_id subnet_iface_id
+
+				#skip current node
+				if { $node_id == $subnet_node_id && $iface_id == $subnet_iface_id } {
+					continue
+				}
+
+				set cur_addrs [getIfcIPv4addrs $subnet_node_id $subnet_iface_id]
+				if { $sub4 == "" && $cur_addrs != {} } {
+					set sub4 [lindex $cur_addrs 0]
+				}
+
+				set cur_addrs [getIfcIPv6addrs $subnet_node_id $subnet_iface_id]
+				if { $sub6 == "" && $cur_addrs != {} } {
+					set sub6 [lindex $cur_addrs 0]
+				}
+
+				if { $sub4 != "" && $sub6 != "" } {
+					break
+				}
+			}
+		}
+
 		set actions [list \
-			"Remove IPv4 addresses"	"removeIPv4Nodes $node_id {$node_id $iface_id}" \
-			"Remove IPv6 addresses"	"removeIPv6Nodes $node_id {$node_id $iface_id}" \
-			"Match IPv4 subnet"		"matchSubnet4 $node_id $iface_id" \
-			"Match IPv6 subnet"		"matchSubnet6 $node_id $iface_id" \
+			"Remove IPv4 addresses"		"removeIPv4Nodes $node_id {$node_id $iface_id}"	"true" \
+			"Remove IPv6 addresses"		"removeIPv6Nodes $node_id {$node_id $iface_id}"	"true" \
+			"IPv4 autorenumber"			"[lreplace $tmp_command end end "ipv4"]"		"true" \
+			"IPv6 autorenumber"			"[lreplace $tmp_command end end "ipv6"]"		"true" \
+			"Match IPv4 subnet ($sub4)"	"matchSubnet ipv4 $node_id $iface_id $sub4"		[expr { $sub4 != {} }] \
+			"Match IPv6 subnet ($sub6)"	"matchSubnet ipv6 $node_id $iface_id $sub6"		[expr { $sub6 != {} }] \
 			]
 
-		foreach {action command} $actions {
+		foreach {action command enabled} $actions {
 			addMenu $iface_menu \
 				"$action" \
 				"$command" \
-				"true"
+				"$enabled"
 		}
 	}
 }

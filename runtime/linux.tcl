@@ -946,8 +946,7 @@ proc fetchNodeRunningConfig { node_id } {
 		}
 	}
 
-	lassign [getDefaultGateways $node_id {} {}] my_gws {} {}
-	lassign [getDefaultRoutesConfig $node_id $my_gws] default_routes4 default_routes6
+	lassign [getDefaultRoutesConfig $node_id] default_routes4 default_routes6
 
 	set croutes4 {}
 	set croutes6 {}

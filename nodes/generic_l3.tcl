@@ -112,18 +112,14 @@ namespace eval genericL3 {
 			lappend cfg ""
 		}
 
-		set subnet_gws {}
-		set nodes_l2data [dict create]
+		set all_routes4 {}
+		set all_routes6 {}
 		if { [getNodeAutoDefaultRoutesStatus $node_id] == "enabled" } {
-			lassign [getDefaultGateways $node_id $subnet_gws $nodes_l2data] my_gws subnet_gws nodes_l2data
-			lassign [getDefaultRoutesConfig $node_id $my_gws] all_routes4 all_routes6
-
-			setDefaultIPv4routes $node_id $all_routes4
-			setDefaultIPv6routes $node_id $all_routes6
-		} else {
-			setDefaultIPv4routes $node_id {}
-			setDefaultIPv6routes $node_id {}
+			lassign [getDefaultRoutesConfig $node_id] all_routes4 all_routes6
 		}
+
+		setDefaultIPv4routes $node_id $all_routes4
+		setDefaultIPv6routes $node_id $all_routes6
 
 		set cfg [concat $cfg [nodeCfggenAutoRoutes4 $node_id]]
 		set cfg [concat $cfg [nodeCfggenAutoRoutes6 $node_id]]
@@ -162,6 +158,18 @@ namespace eval genericL3 {
 
 	proc IPAddrRange {} {
 		return 20
+	}
+
+	proc getSubnetIfaces { node_id iface_id } {
+		if { $iface_id ni [ifcList $node_id] } {
+			return ""
+		}
+
+		return $iface_id
+	}
+
+	proc getSubnetPriority { node_id iface_id } {
+		return 0
 	}
 
 	proc bootcmd { node_id } {
