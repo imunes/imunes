@@ -1074,6 +1074,10 @@ proc writeDataToFile { path data } {
 proc readDataFromFile { path } {
 	global remote rcmd
 
+	if { [isNotOk "test -f \"$path\""] } {
+		return ""
+	}
+
 	if { $remote != "" } {
 		set file_id [open "| $rcmd cat $path" r]
 	} else {
@@ -1345,9 +1349,11 @@ proc getResumableExperiments {} {
 	global runtimeDir
 
 	set exp_list {}
-	catch { rexec find "$runtimeDir" -mindepth 1 -maxdepth 1 -print } exp_paths
-	if { $exp_paths != "" } {
-		set exp_list [lmap exp_path $exp_paths { file tail $exp_path }]
+	if { [isOk "test -d \"$runtimeDir\""] } {
+		catch { rexec find "$runtimeDir" -mindepth 1 -maxdepth 1 -print } exp_paths
+		if { $exp_paths != "" } {
+			set exp_list [lmap exp_path $exp_paths { file tail $exp_path }]
+		}
 	}
 
 	return $exp_list
@@ -1367,15 +1373,9 @@ proc getResumableExperiments {} {
 #   * timestamp -- experiment timestamp
 #****
 proc getExperimentTimestampFromFile { eid } {
-	global runtimeDir remote
+	global runtimeDir
 
-	set path_to_file "$runtimeDir/$eid/timestamp"
-	catch { rexec ls $path_to_file } err
-	if { $err != $path_to_file } {
-		return ""
-	}
-
-	return [string trim [readDataFromFile $path_to_file]]
+	return [string trim [readDataFromFile "$runtimeDir/$eid/timestamp"]]
 }
 
 #****f* exec.tcl/getExperimentNameFromFile
@@ -1393,13 +1393,7 @@ proc getExperimentTimestampFromFile { eid } {
 proc getExperimentNameFromFile { eid } {
 	global runtimeDir
 
-	set file_path "$runtimeDir/$eid/name"
-	catch { rexec ls $file_path } err
-	if { $err != $file_path } {
-		return ""
-	}
-
-	return [readDataFromFile $file_path]
+	return [readDataFromFile "$runtimeDir/$eid/name"]
 }
 
 #****f* exec.tcl/getRunningExperimentConfigPath
@@ -1418,11 +1412,6 @@ proc getRunningExperimentConfigPath { eid } {
 	global runtimeDir remote
 
 	set file_path "$runtimeDir/$eid/config.imn"
-	catch { rexec ls $file_path } err
-	if { $err != $file_path } {
-		return ""
-	}
-
 	if { $remote != "" } {
 		set file_id [file tempfile tmppath]
 
