@@ -903,7 +903,7 @@ proc button3node { x y } {
 	# Transform
 	#
 	.button3menu.transform delete 0 end
-	if { $oper_mode != "exec" && $node_type in "router pc host" } {
+	if { $node_type in "router pc host" } {
 		.button3menu add cascade -label "Transform to" \
 			-menu .button3menu.transform
 		.button3menu.transform add command -label "Router" \
