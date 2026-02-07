@@ -1807,7 +1807,7 @@ proc jumpToUndoLevel { undolevel } {
 	set dict_cfg [dictGet $dict_run "undolog" $undolevel "config"]
 
 	foreach list_var "canvas_list annotation_list image_list" {
-		setToRunning $list_var [dictGet $dict_run_gui "undolog" $undolevel $list_var]
+		setToRunning_gui $list_var [dictGet $dict_run_gui "undolog" $undolevel $list_var]
 	}
 	dict set dict_cfg "gui" [dictGet $dict_run_gui "undolog" $undolevel "config"]
 
