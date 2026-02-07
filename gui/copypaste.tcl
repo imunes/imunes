@@ -257,14 +257,12 @@ proc paste {} {
 	updateCustomIconReferences
 
 	if { $cutNodes == 0 } {
-		global IPv4autoAssign IPv6autoAssign
-
-		if { $IPv4autoAssign } {
+		if { [getActiveOption "IPv4autoAssign"] } {
 			set copypaste_nodes 1
 			changeAddressRange
 		}
 
-		if { $IPv6autoAssign } {
+		if { [getActiveOption "IPv6autoAssign"] } {
 			set copypaste_nodes 1
 			changeAddressRange6
 		}

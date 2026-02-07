@@ -61,14 +61,19 @@ registerModule $MODULE
 #****
 proc $MODULE.confNewNode { node_id } {
 	global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable ldpEnable
-	global rdconfig routerDefaultsModel router_ConfigModel
+	global router_ConfigModel
 	global nodeNamingBase
 
-	lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable ldpEnable
-	set router_ConfigModel $routerDefaultsModel
+	set router_ConfigModel [getActiveOption "routerDefaultsModel"]
+	set ripEnable [getActiveOption "routerRipEnable"]
+	set ripngEnable [getActiveOption "routerRipngEnable"]
+	set ospfEnable [getActiveOption "routerOspfEnable"]
+	set ospf6Enable [getActiveOption "routerOspf6Enable"]
+	set bgpEnable [getActiveOption "routerBgpEnable"]
+	set ldpEnable [getActiveOption "routerLdpEnable"]
 
 	setNodeName $node_id [getNewNodeNameType router $nodeNamingBase(router)]
-	setNodeModel $node_id $routerDefaultsModel
+	setNodeModel $node_id [getActiveOption "routerDefaultsModel"]
 
 	setNodeProtocol $node_id "rip" $ripEnable
 	setNodeProtocol $node_id "ripng" $ripngEnable

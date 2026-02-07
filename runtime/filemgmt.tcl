@@ -85,7 +85,7 @@ set file_types {
 proc newProject {} {
 	global curcfg cfg_list
 	global CFG_VERSION
-	global zoom gui
+	global gui
 
 	set curcfg [newObjectId $cfg_list "cfg"]
 	lappend cfg_list $curcfg
@@ -112,7 +112,6 @@ proc newProject {} {
 	setToRunning "undolevel" 0
 	setToRunning "redolevel" 0
 	if { $gui } {
-		setToRunning_gui "zoom" $zoom
 		setToRunning_gui "canvas_list" {}
 		setToRunning_gui "curcanvas" [newCanvas ""]
 	}
@@ -138,7 +137,7 @@ proc newProject {} {
 proc updateProjectMenu {} {
 	global curcfg cfg_list
 
-	.menubar.file delete 10 end
+	.menubar.file delete 11 end
 	.menubar.file add separator
 
 	foreach cfg $cfg_list {
@@ -173,9 +172,11 @@ proc switchProject {} {
 
 	setOperMode [getFromRunning "oper_mode"]
 	if { $gui } {
+		applyOptionsToGUI
 		switchCanvas none
 		redrawAll
 		updateProjectMenu
+		refreshToolBarNodes
 		setWmTitle [getFromRunning "current_file"]
 		if { $showTree } {
 			refreshTopologyTree
@@ -233,8 +234,10 @@ proc setWmTitle { fname } {
 proc openFile {} {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 	global showTree autorearrange_enabled gui
+	global runtimeDir recent_files pinned_recent_files
 
-	readCfgJson [getFromRunning "current_file"]
+	set current_file [getFromRunning "current_file"]
+	readCfgJson $current_file
 
 	if { $gui } {
 		set canvas_list [getFromRunning_gui "canvas_list"]
@@ -247,7 +250,7 @@ proc openFile {} {
 		setToRunning_gui "curcanvas" [lindex $canvas_list 0]
 	}
 
-	applyOptions
+	applyOptionsToGUI
 
 	if { $gui } {
 		switchCanvas none
@@ -279,6 +282,13 @@ proc openFile {} {
 	if { $gui } {
 		saveToUndoLevel 0
 		setActiveToolGroup select
+
+		set file_to_add [file normalize $current_file]
+		if { ! [string match "[file normalize $runtimeDir]*" $file_to_add] && "!$file_to_add" ni $pinned_recent_files } {
+			set recent_files [linsert [removeFromList $recent_files $file_to_add] 0 $file_to_add]
+			updateRecentsMenu
+		}
+
 		updateProjectMenu
 		setWmTitle [getFromRunning "current_file"]
 
@@ -293,30 +303,51 @@ proc openFile {} {
 	}
 }
 
-proc saveOptions {} {
-	global option_defaults gui_option_defaults
-	set running_zoom [getFromRunning_gui "zoom"]
+proc saveOptions { { option_names {} } } {
+	global all_options all_gui_options default_options custom_options
+	global gui execMode
 
-	foreach {option default_value} $option_defaults {
-		global $option
+	if { $option_names == {} } {
+		set option_names [dict keys $default_options]
+	}
 
-		set value [set $option]
-		if { $value != $default_value } {
-			setOption $option $value
+	foreach {option_name default_value} $default_options {
+		if { $option_name ni $option_names } {
+			continue
+		}
+
+		if { $option_name in $all_options } {
+			set gui_suffix ""
+		} elseif { $option_name in $all_gui_options } {
+			if { ! $gui } {
+				continue
+			}
+			set gui_suffix "_gui"
 		} else {
-			unsetOption $option
+			continue
+		}
+
+		if { $option_name ni [dictGet $custom_options "custom_override"] } {
+			set custom_value [dictGet $custom_options $option_name]
+			if { $custom_value != "" } {
+				set default_value $custom_value
+			}
+		}
+
+		set value [getActiveOption $option_name]
+		if { $value != $default_value } {
+			setOption$gui_suffix $option_name $value
+		} else {
+			unsetOption$gui_suffix $option_name
 		}
 	}
 
-	foreach {option default_value} $gui_option_defaults {
-		global $option
+	if { ! $gui && $execMode != "batch" } {
+		set tmp [getFromRunning "modified"]
+		cfgUnset "gui"
+		setToRunning "modified" $tmp
 
-		set value [set $option]
-		if { $value != $default_value } {
-			setOption_gui $option $value
-		} else {
-			unsetOption_gui $option
-		}
+		return
 	}
 
 	if { [cfgGet "gui" "options"] == "" } {
@@ -324,44 +355,61 @@ proc saveOptions {} {
 		cfgUnset "gui" "options"
 		setToRunning "modified" $tmp
 	}
+}
 
-	if { $running_zoom == "" } {
+proc applyOptionsToGUI {} {
+	global all_options all_gui_options default_options custom_options
+	global gui
+
+	if { ! $gui } {
 		return
 	}
 
-	if { $running_zoom != [dictGet $gui_option_defaults "zoom"] } {
-		setOption_gui "zoom" $running_zoom
-	} else {
-		unsetOption_gui "zoom"
-	}
-}
-
-proc applyOptions {} {
-	global option_defaults gui_option_defaults
-
-	foreach {option default_value} $option_defaults {
-		global $option
-
-		set value [getOption $option]
-		if { $value != "" } {
-			set $option $value
+	foreach {option_name default_value} $default_options {
+		if { $option_name in $all_options } {
+			set gui_suffix ""
+		} elseif { $option_name in $all_gui_options } {
+			set gui_suffix "_gui"
 		} else {
-			set $option $default_value
+			continue
+		}
+
+		global $option_name
+
+		set value [getOption$gui_suffix $option_name]
+		if { $value == "" } {
+			set value [getActiveOption $option_name]
+		}
+
+		set $option_name $value
+	}
+
+	set separator_value "{-background {} {} {} {}}"
+	set index 0
+	foreach menubar_item "view tools" {
+		set element ".menubar.$menubar_item"
+		set last [$element entryconfigure end]
+		set current ""
+		while { $current != $last } {
+			set current [$element entryconfigure $index]
+			if { $current != $separator_value } {
+				catch { $element entrycget $index "-variable" } option_name
+				if { $option_name in [dictGet $custom_options "custom_override"] } {
+					set color "#909090"
+				} else {
+					if { $option_name in [dictGet $custom_options] } {
+						set color "#10b010"
+					} else {
+						set color ""
+					}
+				}
+
+				$element entryconfigure $index -foreground $color
+			}
+
+			incr index
 		}
 	}
-
-	foreach {option default_value} $gui_option_defaults {
-		global $option
-
-		set value [getOption_gui $option]
-		if { $value != "" } {
-			set $option $value
-		} else {
-			set $option $default_value
-		}
-	}
-
-	setToRunning_gui "zoom" $zoom
 }
 
 #****f* filemgmt.tcl/saveFile
@@ -375,17 +423,115 @@ proc applyOptions {} {
 #   * selected_file -- name of the file where current configuration is saved.
 #****
 proc saveFile { selected_file } {
+	global recent_files pinned_recent_files
+
 	if { $selected_file != "" } {
 		set current_file $selected_file
 		setToRunning "current_file" $current_file
+
+		try {
+			set file_id [open $selected_file w]
+			close $file_id
+		} on error err {
+			after idle { .dialog1.msg configure -wraplength 4i }
+			tk_dialog .dialog1 "IMUNES error" \
+				"Cannot save file '$selected_file':\n$err" \
+				warning 0 Dismiss
+
+			return
+		}
 
 		saveCfgJson $current_file
 
 		.bottom.textbox config -text "Saved [file tail $current_file]"
 
 		setToRunning "modified" false
+
+		set file_to_add [file normalize $current_file]
+		if { "!$file_to_add" ni $pinned_recent_files } {
+			set recent_files [linsert [removeFromList $recent_files $file_to_add] 0 $file_to_add]
+			updateRecentsMenu
+		}
+
 		updateProjectMenu
 		setWmTitle $current_file
+	}
+}
+
+#****f* filemgmt.tcl/updateRecentsMenu
+# NAME
+#   updateRecentsMenu -- update recent files menu
+# SYNOPSIS
+#   updateRecentsMenu
+# FUNCTION
+#   Updates recently opened files menu.
+#****
+proc updateRecentsMenu {} {
+	global recents_fname pinned_recent_files recent_files recents_number
+
+	set m .menubar.file.recent_files
+	$m delete 0 end
+
+	if { [llength $recent_files] > $recents_number } {
+		set recent_files [lrange $recent_files 0 [expr $recents_number - 1]]
+	}
+
+	if { $recents_fname != "" } {
+		set fd [open $recents_fname w+]
+		puts $fd [join $pinned_recent_files \n]
+		puts $fd [join $recent_files \n]
+		close $fd
+	}
+
+	$m add command -label "Pin current to 'Recent files'" -underline 0 -command {
+		global recent_files pinned_recent_files
+
+		set current_file [getFromRunning "current_file"]
+		if { $current_file == "" } {
+			return
+		}
+
+		set file_to_add [file normalize $current_file]
+		set pinned_recent_files [linsert [removeFromList $pinned_recent_files "!$file_to_add"] end "!$file_to_add"]
+
+		set recent_files [removeFromList $recent_files $file_to_add]
+		updateRecentsMenu
+	}
+
+	$m add command -label "Remove current from 'Recent files'" -underline 0 -command {
+		global recent_files pinned_recent_files
+
+		set current_file [getFromRunning "current_file"]
+		if { $current_file == "" } {
+			return
+		}
+
+		set file_to_remove [file normalize $current_file]
+		set pinned_recent_files [removeFromList $pinned_recent_files "!$file_to_remove"]
+
+		set recent_files [removeFromList $recent_files $file_to_remove]
+		updateRecentsMenu
+	}
+
+	if { [llength $pinned_recent_files] > 0 } {
+		$m add separator
+	}
+
+	foreach fname $pinned_recent_files {
+		if { $fname != "" } {
+			set fname [string range $fname 1 end]
+			$m add command -label "$fname" -command "fileOpenDialogBox $fname"
+		}
+	}
+
+	if { [llength $recent_files] > 0 } {
+		$m add separator
+	}
+
+	foreach fname $recent_files {
+		if { $fname != "" } {
+			$m add command -label "$fname" -command "fileOpenDialogBox $fname"
+		}
 	}
 }
 
@@ -393,14 +539,42 @@ proc saveFile { selected_file } {
 # NAME
 #   fileOpenDialogBox -- open file dialog box
 # SYNOPSIS
-#   fileOpenDialogBox
+#   fileOpenDialogBox selected_file
 # FUNCTION
-#   Opens an open file dialog box.
+#   Opens an 'open file dialog box' or a specified file.
+# INPUTS
+#   * selected_file -- if an argument is given, do not open the dialog
 #****
-proc fileOpenDialogBox {} {
-	global file_types
+proc fileOpenDialogBox { { selected_file "" } } {
+	global file_types recent_files pinned_recent_files
 
-	set selected_file [tk_getOpenFile -filetypes $file_types]
+	if { $selected_file == "" } {
+		set selected_file [tk_getOpenFile -filetypes $file_types]
+	} else {
+		set err ""
+		if { ! [file exists $selected_file] } {
+			set err "File '$selected_file' does not exist."
+		} elseif { ! [file isfile $selected_file] } {
+			set err "Path '$selected_file' is not a file."
+		}
+
+		if { $err != "" } {
+			after idle {.dialog1.msg configure -wraplength 4i}
+			set reply [tk_dialog .dialog1 "File error" \
+				"$err\nRemove from Recent files?" \
+				question 0 Yes No]
+
+			if { $reply == 0 } {
+				set pinned_recent_files [removeFromList $pinned_recent_files "!$selected_file"]
+				set recent_files [removeFromList $recent_files $selected_file]
+
+				updateRecentsMenu
+			}
+
+			return
+		}
+	}
+
 	if { $selected_file != "" } {
 		newProject
 		setToRunning "current_file" $selected_file
@@ -495,22 +669,99 @@ proc closeFile {} {
 # NAME
 #   readConfigFile -- read configuration file
 # SYNOPSIS
-#   readConfigFile
+#   readConfigFile $file_name
 # FUNCTION
-#   Read config files, the first one found: .imunesrc, $HOME/.imunesrc
+#   Read config file given with $file_name. The file should be in JSON format,
+#   and it will be skipped if it cannot be parsed. Only options given by
+#   variables $all_options/$all_gui_options are legitimate options to give.
 #***
-proc readConfigFile {} {
-	global env
+proc readConfigFile { file_name } {
+	global all_options all_gui_options custom_options last_config_file
+
+	dputs "Reading custom editor preferences from: '$file_name'"
+
+	set fd [open $file_name r]
+	set json_options [read $fd]
+	close $fd
+
+	# remove all comments (all lines starting with #)
+	regsub -all -line {^[ \t]*#.*\n} $json_options "" json_options
+
+	try {
+		json::json2dict $json_options
+	} on error err {
+		puts stderr "Error sourcing config file '$file_name':\n$err"
+
+		return
+	} on ok read_options {}
+
+	foreach {option_name option_value} $read_options {
+		if { $option_name ni "$all_options $all_gui_options custom_override" } {
+			continue
+		}
+
+		set custom_options [dictSet $custom_options $option_name $option_value]
+	}
+
+	if { $read_options != "" } {
+		dputs "	-> Loaded custom options: '$custom_options'"
+	}
+
+	set last_config_file $file_name
+}
+
+#****f* filemgmt.tcl/readConfigFiles
+# NAME
+#   readConfigFiles -- read configuration file
+# SYNOPSIS
+#   readConfigFiles
+# FUNCTION
+#   Read existing config files, in this order:
+#	 - ./.imunesrc
+#	 - /etc/imunes/config
+#	 - $HOME/.imunes.rc if it exists, otherwise $XDG_CONFIG_HOME/imunes/config
+#	 - ./.imunes.rc
+#
+#   After that, read /etc/imunes/override which overrides any previously set
+#   options.
+#
+#	All the configuration files are JSON files, except for .imunesrc, which
+#	is a TCL file which will be sourced. It is kept for compatibility
+#	reasons.
+#
+#   NOTE: If $XDG_CONFIG_HOME is either not set or empty, a default of
+#   $HOME/.config is used
+#
+#	Check config.example for the list of options.
+#***
+proc readConfigFiles {} {
+	global custom_options home_path config_dir last_config_file
+
+	set custom_options {}
 
 	if { [file exists ".imunesrc"] } {
-		source ".imunesrc"
-	} else {
-		if { [catch { set myhome $env(HOME) }] } {
-			;# not running on UNIX
-		} else {
-			if { [file exists "$myhome/.imunesrc"] } {
-				source "$myhome/.imunesrc"
-			}
+		safeSourceFile ".imunesrc"
+		set last_config_file ".imunesrc"
+	}
+
+	if { $home_path == "" } {
+		# not running on UNIX
+		if { [file exists ".imunes.rc"] } {
+			readConfigFile ".imunes.rc"
+		}
+
+		return
+	}
+
+	set home_config "$config_dir/config"
+	if { [file exists "$home_path/.imunes.rc"] } {
+		# $home_path/.imunes.rc overrides $config_dir/config
+		set home_config "$home_path/.imunes.rc"
+	}
+
+	foreach file_name "/etc/imunes/config $home_config .imunes.rc /etc/imunes/override" {
+		if { [file exists $file_name] } {
+			readConfigFile $file_name
 		}
 	}
 }

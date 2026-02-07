@@ -873,11 +873,15 @@ proc listLANNodes { l2node_id l2peers } {
 #   * to_type -- new type of node
 #****
 proc transformNodes { nodes to_type } {
-	global routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable routerBgpEnable routerLdpEnable
-	global rdconfig routerDefaultsModel
 	global changed
 
-	lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable ldpEnable
+	set routerDefaultsModel [getActiveOption "routerDefaultsModel"]
+	set ripEnable [getActiveOption "routerRipEnable"]
+	set ripngEnable [getActiveOption "routerRipngEnable"]
+	set ospfEnable [getActiveOption "routerOspfEnable"]
+	set ospf6Enable [getActiveOption "routerOspf6Enable"]
+	set bgpEnable [getActiveOption "routerBgpEnable"]
+	set ldpEnable [getActiveOption "routerLdpEnable"]
 
 	foreach node_id $nodes {
 		if { [invokeNodeProc $node_id "netlayer"] == "NETWORK" } {

@@ -369,7 +369,7 @@ proc $MODULE.nodeShutdown { eid node_id } {
 	set iface_id [lindex [ifcList $node_id] 0]
 	if { "$iface_id" != "" } {
 		killExtProcess "wireshark.*[getNodeName $node_id].*\\($eid\\)"
-		killExtProcess "xterm -name imunes-terminal -T Capturing $eid-$node_id -e $ttyrcmd tcpdump -ni $eid-$node_id"
+		killExtProcess "[getActiveOption "terminal_command"] -T Capturing $eid-$node_id -e $ttyrcmd tcpdump -ni $eid-$node_id"
 		stopExternalConnection $eid $node_id
 	}
 }

@@ -741,12 +741,13 @@ proc bindEventsToEventEditor { pwi text } {
 #   * type -- type of node (link/node)
 #****
 proc checkEventsSyntax { text type } {
+	global named_colors
+
 	set text [split $text "\n"]
 	switch -exact $type {
 		link {
 			set regularExpressions [list bandwidth delay ber loss width duplicate color]
 			set functions [list ramp rand square]
-			set colors [list Red Green Blue Yellow Magenta Cyan Black]
 		}
 		node {
 			set regularExpressions [list ]
@@ -774,7 +775,7 @@ proc checkEventsSyntax { text type } {
 			}
 			if {
 				! [string is integer [lindex $splitLine 3]] &&
-				[lindex $splitLine 3] ni $colors
+				[lindex $splitLine 3] ni $named_colors
 			} {
 				return $i
 			}

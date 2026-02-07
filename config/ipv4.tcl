@@ -253,9 +253,7 @@ proc findFreeIPv4Net { mask { ipv4_used_list "" } } {
 #     address will be assigned
 #****
 proc autoIPv4addr { node_id iface_id { use_autorenumbered "" } } {
-	global IPv4autoAssign
-
-	if { ! $IPv4autoAssign } {
+	if { ! [getActiveOption "IPv4autoAssign"] } {
 		return
 	}
 
@@ -325,9 +323,7 @@ proc autoIPv4addr { node_id iface_id { use_autorenumbered "" } } {
 }
 
 proc getNextIPv4addr { node_type existing_addrs } {
-	global IPv4autoAssign
-
-	if { ! $IPv4autoAssign } {
+	if { ! [getActiveOption "IPv4autoAssign"] } {
 		return
 	}
 

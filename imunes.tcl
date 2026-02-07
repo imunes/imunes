@@ -76,6 +76,27 @@ if { $ROOTDIR == "." } {
 	set BINDIR "bin"
 }
 
+# TODO: set on installation?
+set runtimeDir "/var/run/imunes"
+
+set sudo_user ""
+catch { set sudo_user $env(SUDO_USER) }
+
+set home_path ""
+if { $sudo_user != "" } {
+	catch { set home_path $env(SUDO_HOME) }
+} else {
+	catch { set home_path $env(HOME) }
+}
+
+set config_dir ""
+catch { set config_dir $env(XDG_CONFIG_HOME) }
+if { $config_dir == "" } {
+	set config_dir "$home_path/.config"
+}
+set config_dir "$config_dir/imunes"
+set config_path "$config_dir/config"
+
 try {
 	source "$ROOTDIR/$LIBDIR/helpers.tcl"
 } on error { result options } {
@@ -191,44 +212,87 @@ array set nodeNamingBase {
 	wlan wlan
 }
 
-set option_defaults {
-	auto_etc_hosts		0
-	IPv4autoAssign		1
-	IPv6autoAssign		1
-	routerRipEnable		1
-	routerRipngEnable	1
-	routerOspfEnable	0
-	routerOspf6Enable	0
-	routerBgpEnable		0
-	routerLdpEnable		0
-	routerDefaultsModel	"frr"
+global named_colors
+set named_colors "Red Green Blue Yellow Magenta Cyan Gray Black"
+
+# These variables can be modified in IMUNES configuration files.
+#	name					value		type						description
+set options_defaults {
+	"custom_override"		""			"string"					"a list of options that ignore values from .imn files"
+	"auto_etc_hosts"		0			"bool"						"automatically create /etc/hosts entries in each node"
+	"IPv4autoAssign"		1			"bool"						"automatically assign next free IPv4 address to interface"
+	"IPv6autoAssign"		1			"bool"						"automatically assign next free IPv6 address to interface"
+    "recents_number"		10			"int 0|999"					"max number of recently opened file names to keep"
+	"routerDefaultsModel"	"frr"		"list frr|quagga|static"	"new routers will have this value set to routing model"
+	"routerRipEnable"		1			"bool"						"enable/disable RIP protocol on newly created router nodes"
+	"routerRipngEnable"		1			"bool"						"enable/disable RIPng protocol on newly created router nodes"
+	"routerOspfEnable"		0			"bool"						"enable/disable OSPF protocol on newly created router nodes"
+	"routerOspf6Enable"		0			"bool"						"enable/disable OSPF6 protocol on newly created router nodes"
+	"routerBgpEnable"		0			"bool"						"enable/disable BGP protocol on newly created router nodes"
+	"routerLdpEnable"		0			"bool"						"enable/disable LDP protocol on newly created router nodes"
+	"editor_only"			0			"bool"						"if true, Experiment -> Execute is disabled"
+}
+#	name					value		type						description
+
+#	name						value							type				description
+set gui_options_defaults {
+	"hidden_node_types"			"none"							"string"			"a list of node types to hide in the toolbar"
+	"icon_size"					"normal"						"list small|normal"	"size of icons on canvas"
+	"show_annotations"			1								"bool"				"show annotations on canvas"
+	"show_background_image"		0								"bool"				"show background image on canvas"
+	"show_grid"					1								"bool"				"show grid on canvas"
+	"show_interface_ipv4"		1								"bool"				"show IPv4 addresses of nodes on canvas"
+	"show_interface_ipv6"		1								"bool"				"show IPv6 addresses of nodes on canvas"
+	"show_interface_names"		1								"bool"				"show interface names of nodes on canvas"
+	"show_link_labels"			1								"bool"				"show labels for links on canvas"
+	"show_node_labels"			1								"bool"				"show labels for nodes on canvas"
+	"show_unsupported_nodes"	0								"bool"				"show unsupported node in the toolbar"
+	"zoom"						1.0								"double 0.2|3.0" 	"canvas zoom"
+	"default_link_color"		"Red"							"string"			"default link color"
+	"default_link_width"		2								"int 2|8"			"default link width"
+	"default_fill_color"		"Gray"							"string"			"default oval/rect annotation fill color"
+	"default_text_color"		"#000000"						"string"			"default text annotation color"
+	"terminal_command"			"xterm -name imunes-terminal"	"string"			"default terminal to open"
+}
+#	name						value							type				description
+
+global global_override all_options all_gui_options default_options custom_options
+set global_override {}
+set all_options {}
+set all_gui_options {}
+set default_options [dict create]
+set custom_options [dict create]
+
+set options_max_length 0
+foreach {name value type description} $options_defaults {
+	global $name
+
+	if { $name != "custom_override" } {
+		dict set default_options $name $value
+		lappend all_options $name
+	}
+
+	set $name $value
+
+	if { [string length $name] > $options_max_length } {
+		set options_max_length [string length $name]
+	}
 }
 
-set gui_option_defaults {
-	show_interface_names	1
-	show_interface_ipv4		1
-	show_interface_ipv6		1
-	show_node_labels		1
-	show_link_labels		1
-	show_background_image	0
-	show_annotations		1
-	show_grid				1
-	icon_size				"normal"
-	zoom					1
-	default_link_color		"Red"
-	default_link_width		2
-	default_fill_color		"Gray"
-	default_text_color		"#000000"
+foreach {name value type description} $gui_options_defaults {
+	global $name
+
+	if { $name != "custom_override" } {
+		dict set default_options $name $value
+		lappend all_gui_options $name
+	}
+
+	set $name $value
+
+	if { [string length $name] > $options_max_length } {
+		set options_max_length [string length $name]
+	}
 }
-
-foreach {option default_value} [concat $option_defaults $gui_option_defaults] {
-	global $option
-
-	set $option $default_value
-}
-
-global rdconfig
-set rdconfig [list $routerRipEnable $routerRipngEnable $routerOspfEnable $routerOspf6Enable $routerBgpEnable $routerLdpEnable]
 
 set all_modules_list {}
 set runnable_node_types {}
@@ -281,14 +345,6 @@ safeSourceFile "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
 # Global variables are initialized here
 #
 
-#****v* imunes.tcl/prefs
-# NAME
-#    prefs
-# FUNCTION
-#    Contains the list of preferences. When starting a program
-#    this list is empty.
-#*****
-
 # Clipboard
 namespace eval cf::clipboard {}
 set cf::clipboard::node_list {}
@@ -300,14 +356,6 @@ set cf::clipboard::dict_cfg [dict create]
 
 set cfg_list {}
 set curcfg ""
-
-#****v* imunes.tcl/editor_only
-# NAME
-#    editor_only -- if set, Experiment -> Execute is disabled
-# FUNCTION
-#    IMUNES GUI can be used in editor-only mode.i
-#    This variable can be modified in .imunesrc.
-set editor_only false
 
 set winOS false
 if { $isOSwin } {
@@ -325,13 +373,76 @@ if { [string match -nocase "*imagemagick*" $imInfo] != 1 } {
 	set hasIM false
 }
 
-set runtimeDir "/var/run/imunes"
+if { ! [file exists $config_dir] } {
+    file mkdir $config_dir
+}
 
-#
-# Read config files, the first one found: .imunesrc, $HOME/.imunesrc
-#
-# XXX
-readConfigFile
+# I don't want to add new runtime arguments for generating this file, but I
+# also don't want to do it manually for each new option that is added to the
+# list, so generate it every time in debug mode
+if { $debug } {
+	set json_cfg [createJson "object" [list "custom_override" "" {*}$default_options]]
+
+	set preamble "#\n"
+	append preamble "# This file is not parsed. If you want to apply options system-wide,\n"
+	append preamble "# copy it to /etc/imunes/config and modify it there.\n"
+	append preamble "# For per-user changes, copy it to \$XDG_CONFIG_HOME/imunes/config or\n"
+	append preamble "# \$HOME/imunes/config if \$XDG_CONFIG_HOME is \"\" or not set."
+
+	set comments "#\n"
+	append comments "# non-GUI variables\n"
+	foreach {name value type description} $options_defaults {
+		set pad [string repeat " " [expr $options_max_length - [string length $name]]]
+		append comments "# $name$pad - $description (default: \"$value\", type: \"$type\")\n"
+	}
+	append comments "# GUI variables\n"
+	foreach {name value type description} $gui_options_defaults {
+		set pad [string repeat " " [expr $options_max_length - [string length $name]]]
+		append comments "# $name$pad - $description (default: \"$value\", type: \"$type\")\n"
+	}
+	append comments "#"
+
+	set json_cfg "$preamble\n$comments\n$json_cfg"
+
+	set fd [open "${config_path}.example" w+]
+	puts $fd $json_cfg
+	close $fd
+
+	unset json_cfg
+}
+
+set pinned_recent_files {}
+set recent_files {}
+set recents_fname "$config_dir/recents"
+if { ! [file isdirectory "$config_dir"] } {
+    set recents_fname ""
+} else {
+	if { [file exists $recents_fname] } {
+		set fd [open $recents_fname r]
+		set data [read $fd]
+		close $fd
+
+		set fnames [split $data \n]
+		foreach fname $fnames {
+			if { $fname == "" } {
+				continue
+			}
+
+			if { [string match "!*" $fname] } {
+				lappend pinned_recent_files $fname
+			} else {
+				lappend recent_files $fname
+			}
+		}
+	}
+}
+
+# Read config files
+set last_config_file $config_path
+readConfigFiles
+if { $last_config_file != "" } {
+    set config_path $last_config_file
+}
 
 #
 # Initialization should be complete now, so let's start doing something...
@@ -406,6 +517,7 @@ if { $execMode == "interactive" } {
 
 	if { $gui } {
 		updateProjectMenu
+		refreshToolBarNodes
 		# Fire up the animation loop
 		animate
 		# Event scheduler - should be started / stopped on per-experiment base?

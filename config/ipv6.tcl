@@ -113,9 +113,7 @@ proc findFreeIPv6Net { mask { ipv6_used_list "" } } {
 #     address will be assigned
 #****
 proc autoIPv6addr { node_id iface_id { use_autorenumbered "" } } {
-	global IPv6autoAssign
-
-	if { ! $IPv6autoAssign } {
+	if { ! [getActiveOption "IPv6autoAssign"] } {
 		return
 	}
 
@@ -186,9 +184,7 @@ proc autoIPv6addr { node_id iface_id { use_autorenumbered "" } } {
 }
 
 proc getNextIPv6addr { node_type existing_addrs } {
-	global IPv6autoAssign
-
-	if { ! $IPv6autoAssign } {
+	if { ! [getActiveOption "IPv6autoAssign"] } {
 		return
 	}
 

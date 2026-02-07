@@ -823,7 +823,7 @@ proc loadCfgLegacy { cfg } {
 							} elseif { $value == "yes" } {
 								set show_interface_names 1
 							}
-							cfgSet $dict_object "show_interface_names" $show_interface_names
+							setGlobalOption "show_interface_names" $show_interface_names
 						}
 						ip_addresses {
 							if { $value == "no" } {
@@ -831,7 +831,7 @@ proc loadCfgLegacy { cfg } {
 							} elseif { $value == "yes" } {
 								set show_interface_ipv4 1
 							}
-							cfgSet $dict_object "show_interface_ipv4" $show_interface_ipv4
+							setGlobalOption "show_interface_ipv4" $show_interface_ipv4
 						}
 						ipv6_addresses {
 							if { $value == "no" } {
@@ -839,7 +839,7 @@ proc loadCfgLegacy { cfg } {
 							} elseif { $value == "yes" } {
 								set show_interface_ipv6 1
 							}
-							cfgSet $dict_object "show_interface_ipv6" $show_interface_ipv6
+							setGlobalOption "show_interface_ipv6" $show_interface_ipv6
 						}
 						node_labels {
 							if { $value == "no" } {
@@ -847,7 +847,7 @@ proc loadCfgLegacy { cfg } {
 							} elseif { $value == "yes" } {
 								set show_node_labels 1
 							}
-							cfgSet $dict_object "show_node_labels" $show_node_labels
+							setGlobalOption "show_node_labels" $show_node_labels
 						}
 						link_labels {
 							if { $value == "no" } {
@@ -855,7 +855,7 @@ proc loadCfgLegacy { cfg } {
 							} elseif { $value == "yes" } {
 								set show_link_labels 1
 							}
-							cfgSet $dict_object "show_link_labels" $show_link_labels
+							setGlobalOption "show_link_labels" $show_link_labels
 						}
 						background_images {
 							if { $value == "no" } {
@@ -863,7 +863,7 @@ proc loadCfgLegacy { cfg } {
 							} elseif { $value == "yes" } {
 								set show_background_image 1
 							}
-							cfgSet $dict_object "show_background_image" $show_background_image
+							setGlobalOption "show_background_image" $show_background_image
 						}
 						annotations {
 							if { $value == "no" } {
@@ -871,7 +871,7 @@ proc loadCfgLegacy { cfg } {
 							} elseif { $value == "yes" } {
 								set show_annotations 1
 							}
-							cfgSet $dict_object "show_annotations" $show_annotations
+							setGlobalOption "show_annotations" $show_annotations
 						}
 						grid {
 							if { $value == "no" } {
@@ -879,7 +879,7 @@ proc loadCfgLegacy { cfg } {
 							} elseif { $value == "yes" } {
 								set show_grid 1
 							}
-							cfgSet $dict_object "show_grid" $show_grid
+							setGlobalOption "show_grid" $show_grid
 						}
 						hostsAutoAssign {
 							if { $value == "no" } {
@@ -887,15 +887,15 @@ proc loadCfgLegacy { cfg } {
 							} elseif { $value == "yes" } {
 								set auto_etc_hosts 1
 							}
-							cfgSet $dict_object "auto_etc_hosts" $auto_etc_hosts
+							setGlobalOption "auto_etc_hosts" $auto_etc_hosts
 						}
 						zoom {
 							set zoom $value
-							cfgSet $dict_object "zoom" $zoom
+							setGlobalOption "zoom" $zoom
 						}
 						iconSize {
 							set icon_size $value
-							cfgSet $dict_object "icon_size" $icon_size
+							setGlobalOption "icon_size" $icon_size
 						}
 					}
 				} elseif { "$class" == "annotation" } {
@@ -1191,7 +1191,7 @@ proc loadCfgJson { json_cfg } {
 	setToRunning_gui "annotation_list" [getAnnotationList]
 	setToRunning_gui "image_list" [getImageList]
 
-	applyOptions
+	applyOptionsToGUI
 
 	set ipv4_used_list {}
 	set ipv6_used_list {}
@@ -1340,12 +1340,12 @@ proc handleVersionMismatch { cfg_version file_name } {
 
 proc jsonMigration { from_version to_version } {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-	global gui_option_defaults gui execMode
+	global all_gui_options gui execMode
 
 	# TODO: a way to migrate across versions
 	if { "${from_version}${to_version}" == "12" } {
 		dict for {option value} [cfgGet "options"] {
-			if { $option in [dict keys $gui_option_defaults] } {
+			if { $option in $all_gui_options } {
 				setOption_gui $option $value
 				cfgUnset "options" $option
 			}
@@ -1425,7 +1425,7 @@ proc jsonMigration { from_version to_version } {
 		setToRunning_gui "annotation_list" [getAnnotationList]
 		setToRunning_gui "image_list" [getImageList]
 
-		applyOptions
+		applyOptionsToGUI
 
 		setOption "version" $to_version
 	}
@@ -1454,7 +1454,7 @@ proc readCfgJson { fname } {
 proc saveCfgJson { fname { no_write "" } } {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-	saveOptions
+	#saveOptions
 
 	set json_cfg [createJson "dictionary" $dict_cfg]
 
@@ -1889,6 +1889,87 @@ proc unsetOption_gui { property } {
 	set dict_cfg [dictUnset $dict_cfg "gui" "options" $property]
 
 	return $dict_cfg
+}
+
+proc getOptSource { option_name } {
+	global all_options all_gui_options default_options custom_options
+
+	if { $option_name in $all_options } {
+		set gui_suffix ""
+	} elseif { $option_name in $all_gui_options } {
+		set gui_suffix "_gui"
+	} else {
+		return
+	}
+
+	set option_value ""
+	set option_source "default"
+	if { $option_name ni [dictGet $custom_options "custom_override"] } {
+		set option_value [getOption$gui_suffix $option_name]
+		set option_source "topology"
+	}
+
+	if { $option_value == "" } {
+		set option_value [dictGet $custom_options $option_name]
+		set option_source "custom"
+		if { $option_value == "" } {
+			set option_source "default"
+		}
+	}
+
+	return $option_source
+}
+
+proc getActiveOption { option_name } {
+	global all_options all_gui_options default_options custom_options
+
+	if { $option_name in $all_options } {
+		set gui_suffix ""
+	} elseif { $option_name in $all_gui_options } {
+		set gui_suffix "_gui"
+	} else {
+		return
+	}
+
+	set option_value ""
+	if { $option_name ni [dictGet $custom_options "custom_override"] } {
+		set option_value [getOption$gui_suffix $option_name]
+	}
+
+	if { $option_value == "" } {
+		set option_value [dictGet $custom_options $option_name]
+		if { $option_value == "" } {
+			set option_value [dictGet $default_options $option_name]
+		}
+	}
+
+	return $option_value
+}
+
+proc setGlobalOption { option_name new_value { toggle "" } } {
+	global all_options all_gui_options
+	global $option_name
+
+	if { $toggle != "toggle" } {
+		set $option_name $new_value
+	}
+
+	if { $option_name in $all_options } {
+		set gui_suffix ""
+	} elseif { $option_name in $all_gui_options } {
+		set gui_suffix "_gui"
+	} else {
+		return
+	}
+
+	set old_value [getOption$gui_suffix $option_name]
+	if { $old_value != [set $option_name] } {
+		setToRunning "modified" true
+	}
+
+	setOption$gui_suffix $option_name [set $option_name]
+
+	return [set $option_name]
 }
 
 proc getCanvasList { } {

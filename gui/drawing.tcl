@@ -1,5 +1,17 @@
 proc refreshToolBarNodes {} {
 	global mf all_modules_list runnable_node_types
+	global active_tool_group active_tools tool_groups
+
+	set active_group $active_tool_group
+	dict for {group tools} $tool_groups {
+		if { [lindex $tools [dict get $active_tools $group]] ni [visibleTools $group $tools] } {
+			# TODO: reset to unselected
+			dict set active_tools $group 0
+			setActiveToolGroup $group
+		}
+	}
+
+	setActiveToolGroup $active_group
 
 	catch { destroy $mf.left.link_nodes }
 	catch { destroy $mf.left.net_nodes }
@@ -8,6 +20,10 @@ proc refreshToolBarNodes {} {
 	menu $mf.left.net_nodes -title "Network layer nodes"
 
 	foreach node_type $all_modules_list {
+		if { $node_type in [getActiveOption "hidden_node_types"] } {
+			continue
+		}
+
 		set image [image create photo -file [invokeTypeProc $node_type "icon" "toolbar"]]
 
 		set tool ""
@@ -19,9 +35,7 @@ proc refreshToolBarNodes {} {
 
 		set background_color ""
 		if { $node_type ni $runnable_node_types } {
-			global show_unsupported_nodes
-
-			if { ! $show_unsupported_nodes } {
+			if { ! [getActiveOption "show_unsupported_nodes"] } {
 				continue
 			}
 
@@ -44,9 +58,9 @@ proc refreshToolBarNodes {} {
 #****
 proc redrawAll {} {
 	global background sizex sizey grid
-	global show_background_image show_annotations show_grid bkgImage
+	global bkgImage
 
-	set zoom [getFromRunning_gui "zoom"]
+	set zoom [getActiveOption "zoom"]
 	set curcanvas [getFromRunning_gui "curcanvas"]
 
 	.bottom.zoom config -text "zoom [expr {int($zoom * 100)}]%"
@@ -60,7 +74,7 @@ proc redrawAll {} {
 	.panwin.f1.c delete all
 
 	set canvasBkgImage [getCanvasBkg $curcanvas]
-	if { $show_background_image == 1 && "$canvasBkgImage" != "" } {
+	if { [getActiveOption "show_background_image"] && "$canvasBkgImage" != "" } {
 		set ret [backgroundImage .panwin.f1.c $canvasBkgImage]
 		if { "$ret" == 2 } {
 			set background [.panwin.f1.c create rectangle 0 0 $e_sizex $e_sizey \
@@ -74,7 +88,7 @@ proc redrawAll {} {
 			-fill white -tags "background"]
 	}
 
-	if { $show_annotations == 1 } {
+	if { [getActiveOption "show_annotations"] } {
 		foreach annotation_id [getFromRunning_gui "annotation_list"] {
 			if { [getAnnotationCanvas $annotation_id] == $curcanvas } {
 				drawAnnotation $annotation_id
@@ -85,7 +99,7 @@ proc redrawAll {} {
 	# Grid
 	set e_grid [expr {int($grid * $zoom)}]
 	set e_grid2 [expr {$e_grid * 2}]
-	if { $show_grid } {
+	if { [getActiveOption "show_grid"] } {
 		for { set x $e_grid } { $x < $e_sizex } { incr x $e_grid } {
 			if { [expr {$x % $e_grid2}] != 0 } {
 				if { $zoom > 0.5 } {
@@ -164,7 +178,7 @@ proc redrawAll {} {
 #   * node_id -- node id
 #****
 proc drawNode { node_id } {
-	global show_node_labels runnable_node_types
+	global runnable_node_types
 
 	if { [isPseudoNode $node_id] } {
 		drawPseudoNode $node_id
@@ -179,7 +193,7 @@ proc drawNode { node_id } {
 		return
 	}
 
-	set zoom [getFromRunning_gui "zoom"]
+	set zoom [getActiveOption "zoom"]
 	lassign [lmap coord [getNodeCoords $node_id] {expr $coord * $zoom}] x y
 	if { $x == "" || $y == "" } {
 		global ${type}_iconheight
@@ -206,9 +220,7 @@ proc drawNode { node_id } {
 		set image_w [image width [set $type]]
 		set image_h [image height [set $type]]
 	} else {
-		global icon_size
-
-		switch $icon_size {
+		switch [getActiveOption "icon_size"] {
 			normal {
 				set icon_data [getImageData $custom_icon]
 				image create photo img_$custom_icon -data $icon_data
@@ -286,18 +298,18 @@ proc drawNode { node_id } {
 	set label_elem [.panwin.f1.c create text $x $y -fill $color \
 		-text "$label_str" -tags "nodelabel $node_id" -justify center]
 
-	if { $show_node_labels == 0 } {
+	if { [getActiveOption "show_node_labels"] == 0 } {
 		.panwin.f1.c itemconfigure $label_elem -state hidden
 	}
 }
 
 proc drawPseudoNode { node_id } {
-	global show_node_labels invisible pseudo
+	global invisible pseudo
 
 	.panwin.f1.c delete -withtags "node && $node_id"
 	.panwin.f1.c delete -withtags "nodelabel && $node_id"
 
-	set zoom [getFromRunning_gui "zoom"]
+	set zoom [getActiveOption "zoom"]
 	lassign [lmap coord [getNodeCoords $node_id] {expr int($coord * $zoom)}] x y
 	.panwin.f1.c create image $x $y \
 		-image $pseudo \
@@ -329,7 +341,7 @@ proc drawPseudoNode { node_id } {
 		-justify center]
 
 	# XXX Invisible pseudo-nodes
-	if { $show_node_labels == 0 || $invisible == 1 } {
+	if { [getActiveOption "show_node_labels"] == 0 || $invisible == 1 } {
 		.panwin.f1.c itemconfigure $label_elem -state hidden
 	}
 }
@@ -443,7 +455,7 @@ proc drawPseudoLink { link_id } {
 #   * y2 -- Y coordinate of point2
 #****
 proc calcAnglePoints { x1 y1 x2 y2 } {
-	set zoom [getFromRunning_gui "zoom"]
+	set zoom [getActiveOption "zoom"]
 	set x1 [expr $x1*$zoom]
 	set y1 [expr $y1*$zoom]
 	set x2 [expr $x2*$zoom]
@@ -509,8 +521,6 @@ proc calcAngle { link_id } {
 #   * iface_id -- interface to update
 #****
 proc updateIfcLabel { link_id node_id iface_id } {
-	global show_interface_names show_interface_ipv4 show_interface_ipv6
-
 	set ifipv4addr [getIfcIPv4addrs $node_id $iface_id]
 	set ifipv6addr [getIfcIPv6addrs $node_id $iface_id]
 	if { $iface_id == 0 } {
@@ -518,7 +528,7 @@ proc updateIfcLabel { link_id node_id iface_id } {
 	}
 
 	set label_str ""
-	if { $show_interface_names } {
+	if { [getActiveOption "show_interface_names"] } {
 		if { [getNodeType $node_id] == "rj45" } {
 			lappend label_str "$iface_id - [getIfcName $node_id $iface_id]"
 			if { [getIfcVlanDev $node_id $iface_id] != "" && [getIfcVlanTag $node_id $iface_id] != "" } {
@@ -529,7 +539,7 @@ proc updateIfcLabel { link_id node_id iface_id } {
 		}
 	}
 
-	if { $show_interface_ipv4 && $ifipv4addr != "" } {
+	if { [getActiveOption "show_interface_ipv4"] && $ifipv4addr != "" } {
 		if { [llength $ifipv4addr] > 1 } {
 			lappend label_str "[lindex $ifipv4addr 0] ..."
 		} else {
@@ -537,7 +547,7 @@ proc updateIfcLabel { link_id node_id iface_id } {
 		}
 	}
 
-	if { $show_interface_ipv6 && $ifipv6addr != "" } {
+	if { [getActiveOption "show_interface_ipv6"] && $ifipv6addr != "" } {
 		if { [llength $ifipv6addr] > 1 } {
 			lappend label_str "[lindex $ifipv6addr 0] ..."
 		} else {
@@ -578,7 +588,7 @@ proc updateIfcLabel { link_id node_id iface_id } {
 #   * link_id -- link id of the link whose labels are updated.
 #****
 proc updateLinkLabel { link_id } {
-	global show_link_labels linkJitterConfiguration
+	global linkJitterConfiguration
 
 	if { [isPseudoLink $link_id] } {
 		lassign [linkFromPseudoLink $link_id] link_id - -
@@ -642,7 +652,7 @@ proc updateLinkLabel { link_id } {
 
 			set ang [calcAngle $link_id]
 			.panwin.f1.c itemconfigure "linklabel && $link_id" -text $str -angle $ang
-			if { $show_link_labels == 0 } {
+			if { [getActiveOption "show_link_labels"] == 0 } {
 				.panwin.f1.c itemconfigure "linklabel && $link_id" -state hidden
 			}
 		}
@@ -660,7 +670,7 @@ proc updateLinkLabel { link_id } {
 
 	set ang [calcAngle $link_id]
 	.panwin.f1.c itemconfigure "linklabel && $link_id" -text $str -angle $ang
-	if { $show_link_labels == 0 } {
+	if { [getActiveOption "show_link_labels"] == 0 } {
 		.panwin.f1.c itemconfigure "linklabel && $link_id" -state hidden
 	}
 }
@@ -790,8 +800,6 @@ proc redrawPseudoLink { link_id } {
 }
 
 proc updateIfcLabelParams { link_id node_id iface_id x1 y1 x2 y2 } {
-	global show_interface_ipv4 show_interface_ipv6 show_interface_names
-
 	set bbox [.panwin.f1.c bbox "node && $node_id"]
 	set iconwidth [expr [lindex $bbox 2] - [lindex $bbox 0]]
 	set iconheight [expr [lindex $bbox 3] - [lindex $bbox 1]]
@@ -800,19 +808,19 @@ proc updateIfcLabelParams { link_id node_id iface_id x1 y1 x2 y2 } {
 	set just "center"
 	set anchor "center"
 
-	set IP4 $show_interface_ipv4
+	set IP4 [getActiveOption "show_interface_ipv4"]
 	if { [getIfcIPv4addrs $node_id $iface_id] == {} } {
 		set IP4 0
 	}
 
-	set IP6 $show_interface_ipv6
+	set IP6 [getActiveOption "show_interface_ipv6"]
 	if { [getIfcIPv6addrs $node_id $iface_id] == {} } {
 		set IP6 0
 	}
 
-	set add_height [expr 10*($show_interface_names + $IP4 + $IP6)]
+	set add_height [expr 10*([getActiveOption "show_interface_names"] + $IP4 + $IP6)]
 	if { [getNodeType $node_id] == "rj45" && [getIfcVlanDev $node_id $iface_id] != "" } {
-		incr add_height [expr 10*$show_interface_names]
+		incr add_height [expr 10*[getActiveOption "show_interface_names"]]
 	}
 
 	# these params could be called dy and dx, respectively
@@ -1293,12 +1301,19 @@ proc updateCustomIconReferences {} {
 # FUNCTION
 #   Updates icon size.
 #****
-proc updateIconSize {} {
+proc updateIconSize { { new_icon_size "" } } {
 	global all_modules_list
 
+	if { $new_icon_size == "" } {
+		set new_icon_size [getActiveOption "icon_size"]
+	} else {
+		setGlobalOption "icon_size" $new_icon_size
+	}
+
 	foreach node_type $all_modules_list {
-		global $node_type icon_size
-		set $node_type [image create photo -file [invokeTypeProc $node_type "icon" $icon_size]]
+		global $node_type
+
+		set $node_type [image create photo -file [invokeTypeProc $node_type "icon" $new_icon_size]]
 	}
 }
 
@@ -1314,14 +1329,16 @@ proc updateIconSize {} {
 #   * y -- y coordinate
 #****
 proc selectZoomPopupMenu { x y } {
-	global zoom_stops changed
+	global zoom_stops changed sel_zoom
+
 	.button3menu delete 0 end
 
-	set sel_zoom [getFromRunning_gui "zoom"]
+	# needs to be global in order to appear in GUI
+	set sel_zoom [getActiveOption "zoom"]
 
 	foreach z $zoom_stops {
 		set tmp_command {
-			setToRunning_gui "zoom" $sel_zoom
+			setGlobalOption "zoom" $sel_zoom
 
 			redrawAll
 			set changed 1
@@ -1395,7 +1412,7 @@ proc rearrange { mode } {
 	global autorearrange_enabled sizex sizey
 
 	set curcanvas [getFromRunning_gui "curcanvas"]
-	set zoom [getFromRunning_gui "zoom"]
+	set zoom [getActiveOption "zoom"]
 
 	set autorearrange_enabled 1
 	.menubar.tools entryconfigure "Auto rearrange all" -state disabled
@@ -1713,13 +1730,13 @@ proc animate {} {
 proc zoom { dir } {
 	global zoom_stops
 
-	set zoom [getFromRunning_gui "zoom"]
+	set zoom [getActiveOption "zoom"]
 	set minzoom [lindex $zoom_stops 0]
 	set maxzoom [lindex $zoom_stops [expr [llength $zoom_stops] - 1]]
 	switch -exact -- $dir {
 		"down" {
 			if { $zoom > $maxzoom } {
-				setToRunning_gui "zoom" $maxzoom
+				setGlobalOption "zoom" $maxzoom
 			} elseif { $zoom < $minzoom } {
 				; # leave it unchanged
 			} else {
@@ -1731,13 +1748,13 @@ proc zoom { dir } {
 						set newzoom $z
 					}
 				}
-				setToRunning_gui "zoom" $newzoom
+				setGlobalOption "zoom" $newzoom
 			}
 			redrawAll
 		}
 		"up" {
 			if { $zoom < $minzoom } {
-				setToRunning_gui "zoom" $minzoom
+				setGlobalOption "zoom" $minzoom
 			} elseif { $zoom > $maxzoom } {
 				; # leave it unchanged
 			} else {
@@ -1747,13 +1764,13 @@ proc zoom { dir } {
 						break
 					}
 				}
-				setToRunning_gui "zoom" $newzoom
+				setGlobalOption "zoom" $newzoom
 			}
 			redrawAll
 		}
 		default {
 			if { $i < [expr [llength $zoom_stops] - 1] } {
-				setToRunning_gui "zoom" [lindex $zoom_stops [expr $i + 1]]
+				setGlobalOption "zoom" [lindex $zoom_stops [expr $i + 1]]
 				redrawAll
 			}
 		}
