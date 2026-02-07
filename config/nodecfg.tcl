@@ -1094,6 +1094,8 @@ proc nodeUncfggenAutoRoutes6 { node_id { vtysh 0 } } {
 }
 
 proc updateNode { node_id old_node_cfg new_node_cfg } {
+	global changed
+
 	dputs ""
 	dputs "= UPDATE NODE $node_id START ="
 
@@ -1124,6 +1126,9 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 		if { $change == "copy" } {
 			continue
 		}
+
+		# trigger undo log
+		set changed 1
 
 		dputs "==== $change: '$key'"
 
@@ -1522,6 +1527,14 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 				# do nothing
 			}
 		}
+	}
+
+	if { $changed } {
+		# will reset 'changed' to 0
+		updateUndoLog
+
+		# changed needs to be 1 to trigger redrawing
+		set changed 1
 	}
 
 	dputs "= /UPDATE NODE $node_id END ="

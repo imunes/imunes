@@ -211,7 +211,6 @@ proc configGUI_applyButtonLink { wi link_id phase is_close } {
 
 	if { $changed == 1 } {
 		redrawAll
-		updateUndoLog
 	}
 
 	if { $is_close } {

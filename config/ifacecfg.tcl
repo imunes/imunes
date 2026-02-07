@@ -698,6 +698,8 @@ proc routerUncfggenIfc { node_id iface_id } {
 }
 
 proc updateIface { node_id iface_id old_iface_cfg new_iface_cfg } {
+	global changed
+
 	dputs ""
 	dputs "= /UPDATE IFACE $node_id $iface_id START ="
 
@@ -728,6 +730,9 @@ proc updateIface { node_id iface_id old_iface_cfg new_iface_cfg } {
 		if { $iface_prop_change == "copy" } {
 			continue
 		}
+
+		# trigger undo log
+		set changed 1
 
 		set iface_prop_old_value [_cfgGet $old_iface_cfg $iface_prop_key]
 		set iface_prop_new_value [_cfgGet $new_iface_cfg $iface_prop_key]
@@ -879,6 +884,14 @@ proc updateIface { node_id iface_id old_iface_cfg new_iface_cfg } {
 				# do nothing
 			}
 		}
+	}
+
+	if { $changed } {
+		# will reset 'changed' to 0
+		updateUndoLog
+
+		# changed needs to be 1 to trigger redrawing
+		set changed 1
 	}
 
 	dputs "= /UPDATE IFACE $node_id $iface_id END ="

@@ -1277,9 +1277,6 @@ proc cancelNodeUpdate { node_id } {
 	set node_existing_mac {}
 	set node_existing_ipv4 {}
 	set node_existing_ipv6 {}
-
-	redrawAll
-	updateUndoLog
 }
 
 #****f* nodecfgGUI.tcl/configGUI_applyButtonNode
@@ -1426,9 +1423,9 @@ proc configGUI_applyButtonNode { wi node_id phase } {
 	if { $apply } {
 		set apply 0
 
-		redrawAll
-		# will reset 'changed' to 0
-		updateUndoLog
+		if { $changed } {
+			redrawAll
+		}
 	}
 
 	if { $close } {
@@ -6504,7 +6501,9 @@ proc configGUI_applyFilterNode {} {
 
 	set node_cfg [cfgGet "nodes" $curnode]
 
-	redrawAll
+	if { $changed } {
+		redrawAll
+	}
 }
 
 proc configGUI_addTreeFilter { wi node_id } {
@@ -7331,7 +7330,9 @@ proc configGUI_applyPackgenNode { } {
 
 	set node_cfg [cfgGet "nodes" $curnode]
 
-	redrawAll
+	if { $changed } {
+		redrawAll
+	}
 }
 
 proc configGUI_addTreePackgen { wi node_id } {

@@ -49,6 +49,8 @@ proc nodeFromPseudoNode { pseudo_id } {
 }
 
 proc updateNodeGUI { node_id old_node_cfg_gui new_node_cfg_gui } {
+	global changed
+
 	dputs ""
 	dputs "= /UPDATE NODE GUI $node_id START ="
 
@@ -75,6 +77,9 @@ proc updateNodeGUI { node_id old_node_cfg_gui new_node_cfg_gui } {
 		if { $change == "copy" } {
 			continue
 		}
+
+		# trigger undo log
+		set changed 1
 
 		dputs "==== $change: '$key'"
 
@@ -112,6 +117,14 @@ proc updateNodeGUI { node_id old_node_cfg_gui new_node_cfg_gui } {
 				# do nothing
 			}
 		}
+	}
+
+	if { $changed } {
+		# will reset 'changed' to 0
+		updateUndoLog
+
+		# changed needs to be 1 to trigger redrawing
+		set changed 1
 	}
 
 	dputs "= /UPDATE NODE GUI $node_id END ="

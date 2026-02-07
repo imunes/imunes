@@ -193,6 +193,8 @@ proc mergeLink { link_id } {
 }
 
 proc updateLinkGUI { link_id old_link_cfg_gui new_link_cfg_gui } {
+	global changed
+
 	dputs ""
 	dputs "= /UPDATE LINK GUI $link_id START ="
 
@@ -219,6 +221,9 @@ proc updateLinkGUI { link_id old_link_cfg_gui new_link_cfg_gui } {
 		if { $change == "copy" } {
 			continue
 		}
+
+		# trigger undo log
+		set changed 1
 
 		dputs "==== $change: '$key'"
 
@@ -252,6 +257,14 @@ proc updateLinkGUI { link_id old_link_cfg_gui new_link_cfg_gui } {
 				# do nothing
 			}
 		}
+	}
+
+	if { $changed } {
+		# will reset 'changed' to 0
+		updateUndoLog
+
+		# changed needs to be 1 to trigger redrawing
+		set changed 1
 	}
 
 	dputs "= /UPDATE LINK GUI $link_id END ="

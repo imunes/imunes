@@ -399,6 +399,8 @@ proc linkDirection { node_id iface_id } {
 }
 
 proc updateLink { link_id old_link_cfg new_link_cfg } {
+	global changed
+
 	dputs ""
 	dputs "= /UPDATE LINK $link_id START ="
 
@@ -429,6 +431,9 @@ proc updateLink { link_id old_link_cfg new_link_cfg } {
 		if { $change == "copy" } {
 			continue
 		}
+
+		# trigger undo log
+		set changed 1
 
 		dputs "==== $change: '$key'"
 
@@ -478,6 +483,14 @@ proc updateLink { link_id old_link_cfg new_link_cfg } {
 				# do nothing
 			}
 		}
+	}
+
+	if { $changed } {
+		# will reset 'changed' to 0
+		updateUndoLog
+
+		# changed needs to be 1 to trigger redrawing
+		set changed 1
 	}
 
 	dputs "= /UPDATE LINK $link_id END ="
