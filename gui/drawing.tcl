@@ -58,7 +58,7 @@ proc refreshToolBarNodes {} {
 #****
 proc redrawAll {} {
 	global background sizex sizey grid
-	global bkgImage
+	global bkgImage main_canvas_elem
 
 	set zoom [getActiveOption "zoom"]
 	set curcanvas [getFromRunning_gui "curcanvas"]
@@ -67,24 +67,24 @@ proc redrawAll {} {
 	set e_sizex [expr {int($sizex * $zoom)}]
 	set e_sizey [expr {int($sizey * $zoom)}]
 	set border 28
-	.panwin.f1.c configure -scrollregion \
+	$main_canvas_elem configure -scrollregion \
 		"-$border -$border [expr {$e_sizex + $border}] \
 		[expr {$e_sizey + $border}]"
 
-	.panwin.f1.c delete all
+	$main_canvas_elem delete all
 
 	set canvasBkgImage [getCanvasBkg $curcanvas]
 	if { [getActiveOption "show_background_image"] && "$canvasBkgImage" != "" } {
-		set ret [backgroundImage .panwin.f1.c $canvasBkgImage]
+		set ret [backgroundImage $canvasBkgImage]
 		if { "$ret" == 2 } {
-			set background [.panwin.f1.c create rectangle 0 0 $e_sizex $e_sizey \
+			set background [$main_canvas_elem create rectangle 0 0 $e_sizex $e_sizey \
 				-fill white -tags "background"]
 		} else {
-			set background [.panwin.f1.c create rectangle 0 0 $e_sizex $e_sizey \
+			set background [$main_canvas_elem create rectangle 0 0 $e_sizex $e_sizey \
 				-tags "background"]
 		}
 	} else {
-		set background [.panwin.f1.c create rectangle 0 0 $e_sizex $e_sizey \
+		set background [$main_canvas_elem create rectangle 0 0 $e_sizex $e_sizey \
 			-fill white -tags "background"]
 	}
 
@@ -103,28 +103,28 @@ proc redrawAll {} {
 		for { set x $e_grid } { $x < $e_sizex } { incr x $e_grid } {
 			if { [expr {$x % $e_grid2}] != 0 } {
 				if { $zoom > 0.5 } {
-					.panwin.f1.c create line $x 1 $x $e_sizey \
+					$main_canvas_elem create line $x 1 $x $e_sizey \
 						-fill gray -dash {1 7} -tags "grid"
 				}
 			} else {
-				.panwin.f1.c create line $x 1 $x $e_sizey -fill gray -dash {1 3} \
+				$main_canvas_elem create line $x 1 $x $e_sizey -fill gray -dash {1 3} \
 					-tags "grid"
 			}
 		}
 		for { set y $e_grid } { $y < $e_sizey } { incr y $e_grid } {
 			if { [expr {$y % $e_grid2}] != 0 } {
 				if { $zoom > 0.5 } {
-					.panwin.f1.c create line 1 $y $e_sizex $y \
+					$main_canvas_elem create line 1 $y $e_sizex $y \
 						-fill gray -dash {1 7} -tags "grid"
 				}
 			} else {
-				.panwin.f1.c create line 1 $y $e_sizex $y -fill gray -dash {1 3} \
+				$main_canvas_elem create line 1 $y $e_sizex $y -fill gray -dash {1 3} \
 					-tags "grid"
 			}
 		}
 	}
 
-	.panwin.f1.c lower -withtags background
+	$main_canvas_elem lower -withtags background
 
 	foreach node_id [getFromRunning "node_list"] {
 		set node_canvas [getNodeCanvas $node_id]
@@ -159,8 +159,8 @@ proc redrawAll {} {
 	}
 
 	updateIconSize
-	.panwin.f1.c config -cursor left_ptr
-	raiseAll .panwin.f1.c
+	$main_canvas_elem config -cursor left_ptr
+	raiseAll
 }
 
 #****f* editor.tcl/drawNode
@@ -178,7 +178,7 @@ proc redrawAll {} {
 #   * node_id -- node id
 #****
 proc drawNode { node_id } {
-	global runnable_node_types
+	global runnable_node_types main_canvas_elem
 
 	if { [isPseudoNode $node_id] } {
 		drawPseudoNode $node_id
@@ -207,16 +207,16 @@ proc drawNode { node_id } {
 		setNodeLabelCoords $node_id "$x [expr $y + $dy]"
 	}
 
-	.panwin.f1.c delete -withtags "node && $node_id"
-	.panwin.f1.c delete -withtags "nodedisabled && $node_id"
-	.panwin.f1.c delete -withtags "node_running && $node_id"
-	.panwin.f1.c delete -withtags "nodelabel && $node_id"
+	$main_canvas_elem delete -withtags "node && $node_id"
+	$main_canvas_elem delete -withtags "nodedisabled && $node_id"
+	$main_canvas_elem delete -withtags "node_running && $node_id"
+	$main_canvas_elem delete -withtags "nodelabel && $node_id"
 
 	set custom_icon [getNodeCustomIcon $node_id]
 	if { $custom_icon == "" } {
 		global $type $type\_running
 
-		.panwin.f1.c create image $x $y -image [set $type] -tags "node $node_id"
+		$main_canvas_elem create image $x $y -image [set $type] -tags "node $node_id"
 		set image_w [image width [set $type]]
 		set image_h [image height [set $type]]
 	} else {
@@ -224,13 +224,13 @@ proc drawNode { node_id } {
 			normal {
 				set icon_data [getImageData $custom_icon]
 				image create photo img_$custom_icon -data $icon_data
-				.panwin.f1.c create image $x $y -image img_$custom_icon -tags "node $node_id"
+				$main_canvas_elem create image $x $y -image img_$custom_icon -tags "node $node_id"
 			}
 			small {
 				set icon_data [getImageData $custom_icon]
 				image create photo img_$custom_icon -data $icon_data
 				set img_$custom_icon [image% img_$custom_icon 70 $custom_icon]
-				.panwin.f1.c create image $x $y -image [set img_$custom_icon] -tags "node $node_id"
+				$main_canvas_elem create image $x $y -image [set img_$custom_icon] -tags "node $node_id"
 			}
 		}
 
@@ -241,7 +241,7 @@ proc drawNode { node_id } {
 	if { $type ni $runnable_node_types } {
 		global defaultFontSize
 
-		.panwin.f1.c create text $x [expr $y - int($image_h/2) - 1.3*$defaultFontSize] \
+		$main_canvas_elem create text $x [expr $y - int($image_h/2) - 1.3*$defaultFontSize] \
 			-fill "#ff0c0c" -text "DISABLED" -tags "nodedisabled $node_id" -justify center \
 			-font "imnDisabledFont" -state disabled
 	}
@@ -284,7 +284,7 @@ proc drawNode { node_id } {
 	if { [getFromRunning "${node_id}_running"] == "true" } {
 		global running_indicator_palette running_mask_image
 
-		.panwin.f1.c create image \
+		$main_canvas_elem create image \
 			[expr $x - $image_w/3] \
 			[expr $y + $image_h/4] \
 			-image $running_mask_image -tags "node_running $node_id"
@@ -295,27 +295,27 @@ proc drawNode { node_id } {
 	}
 
 	lassign [lmap coord [getNodeLabelCoords $node_id] {expr int($coord * $zoom)}] x y
-	set label_elem [.panwin.f1.c create text $x $y -fill $color \
+	set label_elem [$main_canvas_elem create text $x $y -fill $color \
 		-text "$label_str" -tags "nodelabel $node_id" -justify center]
 
 	if { [string range [cfgGet "nodes" $node_id "nat_iface"] 0 0] == "\$" } {
-		.panwin.f1.c itemconfigure $label_elem -font "imnDefaultFontItalic"
+		$main_canvas_elem itemconfigure $label_elem -font "imnDefaultFontItalic"
 	}
 
 	if { [getActiveOption "show_node_labels"] == 0 } {
-		.panwin.f1.c itemconfigure $label_elem -state hidden
+		$main_canvas_elem itemconfigure $label_elem -state hidden
 	}
 }
 
 proc drawPseudoNode { node_id } {
-	global invisible pseudo
+	global invisible pseudo main_canvas_elem
 
-	.panwin.f1.c delete -withtags "node && $node_id"
-	.panwin.f1.c delete -withtags "nodelabel && $node_id"
+	$main_canvas_elem delete -withtags "node && $node_id"
+	$main_canvas_elem delete -withtags "nodelabel && $node_id"
 
 	set zoom [getActiveOption "zoom"]
 	lassign [lmap coord [getNodeCoords $node_id] {expr int($coord * $zoom)}] x y
-	.panwin.f1.c create image $x $y \
+	$main_canvas_elem create image $x $y \
 		-image $pseudo \
 		-tags "node $node_id"
 
@@ -338,7 +338,7 @@ proc drawPseudoNode { node_id } {
 	}
 
 	lassign [lmap coord [getNodeLabelCoords $node_id] {expr int($coord * $zoom)}] x y
-	set label_elem [.panwin.f1.c create text $x $y \
+	set label_elem [$main_canvas_elem create text $x $y \
 		-fill $color \
 		-text "$label_str" \
 		-tags "nodelabel $node_id" \
@@ -346,7 +346,7 @@ proc drawPseudoNode { node_id } {
 
 	# XXX Invisible pseudo-nodes
 	if { [getActiveOption "show_node_labels"] == 0 || $invisible == 1 } {
-		.panwin.f1.c itemconfigure $label_elem -state hidden
+		$main_canvas_elem itemconfigure $label_elem -state hidden
 	}
 }
 
@@ -363,6 +363,8 @@ proc drawPseudoNode { node_id } {
 #   * link_id -- link id
 #****
 proc drawLink { link_id } {
+	global main_canvas_elem
+
 	set curcanvas [getFromRunning_gui "curcanvas"]
 	lassign [getLinkPeers_gui $link_id] node1_id node2_id
 	if { $node1_id == "" || $node2_id == "" } {
@@ -393,55 +395,55 @@ proc drawLink { link_id } {
 	}
 
 	set lwidth [getLinkWidth $link_id]
-	set newlink [.panwin.f1.c create line 0 0 0 0 \
+	set newlink [$main_canvas_elem create line 0 0 0 0 \
 		-fill [getLinkColor $link_id] \
 		-width $lwidth \
 		-tags "link $link_id $node1_id $node2_id"]
 
-	.panwin.f1.c raise $newlink background
-	set newlink [.panwin.f1.c create line 0 0 0 0 \
+	$main_canvas_elem raise $newlink background
+	set newlink [$main_canvas_elem create line 0 0 0 0 \
 		-fill white -width [expr {$lwidth + 4}] \
 		-tags "link $link_id $node1_id $node2_id"]
-	.panwin.f1.c raise $newlink background
+	$main_canvas_elem raise $newlink background
 
 	set ang [calcAngle $link_id]
 
-	.panwin.f1.c create text 0 0 -tags "linklabel $link_id" -justify center -angle $ang
-	.panwin.f1.c create text 0 0 -tags "interface $node1_id $link_id" -justify center -angle $ang
-	.panwin.f1.c create text 0 0 -tags "interface $node2_id $link_id" -justify center -angle $ang
+	$main_canvas_elem create text 0 0 -tags "linklabel $link_id" -justify center -angle $ang
+	$main_canvas_elem create text 0 0 -tags "interface $node1_id $link_id" -justify center -angle $ang
+	$main_canvas_elem create text 0 0 -tags "interface $node2_id $link_id" -justify center -angle $ang
 
-	.panwin.f1.c raise linklabel "link || background"
-	.panwin.f1.c raise interface "link || linklabel || background"
+	$main_canvas_elem raise linklabel "link || background"
+	$main_canvas_elem raise interface "link || linklabel || background"
 }
 
 proc drawPseudoLink { link_id } {
-	global invisible
+	global invisible main_canvas_elem
 
 	lassign [getLinkPeers_gui $link_id] node1_id node2_id
 
 	set lwidth [getLinkWidth $link_id]
-	set newlink [.panwin.f1.c create line 0 0 0 0 \
+	set newlink [$main_canvas_elem create line 0 0 0 0 \
 		-fill [getLinkColor $link_id] -width $lwidth \
 		-tags "link $link_id $node1_id $node2_id" -arrow both]
 
-	.panwin.f1.c raise $newlink background
-	set newlink [.panwin.f1.c create line 0 0 0 0 \
+	$main_canvas_elem raise $newlink background
+	set newlink [$main_canvas_elem create line 0 0 0 0 \
 		-fill white -width [expr {$lwidth + 4}] \
 		-tags "link $link_id $node1_id $node2_id"]
-	.panwin.f1.c raise $newlink background
+	$main_canvas_elem raise $newlink background
 
 	set ang [calcAngle $link_id]
 
-	.panwin.f1.c create text 0 0 -tags "linklabel $link_id" -justify center -angle $ang
-	.panwin.f1.c create text 0 0 -tags "interface $node1_id $link_id" -justify center -angle $ang
-	.panwin.f1.c create text 0 0 -tags "interface $node2_id $link_id" -justify center -angle $ang
+	$main_canvas_elem create text 0 0 -tags "linklabel $link_id" -justify center -angle $ang
+	$main_canvas_elem create text 0 0 -tags "interface $node1_id $link_id" -justify center -angle $ang
+	$main_canvas_elem create text 0 0 -tags "interface $node2_id $link_id" -justify center -angle $ang
 
-	.panwin.f1.c raise linklabel "link || background"
-	.panwin.f1.c raise interface "link || linklabel || background"
+	$main_canvas_elem raise linklabel "link || background"
+	$main_canvas_elem raise interface "link || linklabel || background"
 
 	# XXX Invisible pseudo-links
 	if { $invisible == 1 } {
-		.panwin.f1.c itemconfigure $link_id -state hidden
+		$main_canvas_elem itemconfigure $link_id -state hidden
 	}
 }
 
@@ -533,6 +535,8 @@ proc calcAngle { link_id } {
 #   * iface_id -- interface to update
 #****
 proc updateIfcLabel { link_id node_id iface_id } {
+	global main_canvas_elem
+
 	set ifipv4addr [getIfcIPv4addrs $node_id $iface_id]
 	set ifipv6addr [getIfcIPv6addrs $node_id $iface_id]
 	if { $iface_id == 0 } {
@@ -584,11 +588,11 @@ proc updateIfcLabel { link_id node_id iface_id } {
 		}
 	}
 
-	.panwin.f1.c itemconfigure "interface && $node_id && $link_id" \
+	$main_canvas_elem itemconfigure "interface && $node_id && $link_id" \
 		-text $str
 
 	if { [string range [cfgGet "nodes" $node_id "ifaces" $iface_id "name"] 0 0] == "\$" } {
-		.panwin.f1.c itemconfigure "interface && $node_id && $link_id" -font "imnDefaultFontItalic"
+		$main_canvas_elem itemconfigure "interface && $node_id && $link_id" -font "imnDefaultFontItalic"
 	}
 }
 
@@ -604,7 +608,7 @@ proc updateIfcLabel { link_id node_id iface_id } {
 #   * link_id -- link id of the link whose labels are updated.
 #****
 proc updateLinkLabel { link_id } {
-	global linkJitterConfiguration
+	global linkJitterConfiguration main_canvas_elem
 
 	if { [isPseudoLink $link_id] } {
 		lassign [linkFromPseudoLink $link_id] link_id - -
@@ -667,9 +671,9 @@ proc updateLinkLabel { link_id } {
 			}
 
 			set ang [calcAngle $link_id]
-			.panwin.f1.c itemconfigure "linklabel && $link_id" -text $str -angle $ang
+			$main_canvas_elem itemconfigure "linklabel && $link_id" -text $str -angle $ang
 			if { [getActiveOption "show_link_labels"] == 0 } {
-				.panwin.f1.c itemconfigure "linklabel && $link_id" -state hidden
+				$main_canvas_elem itemconfigure "linklabel && $link_id" -state hidden
 			}
 		}
 
@@ -685,9 +689,9 @@ proc updateLinkLabel { link_id } {
 	}
 
 	set ang [calcAngle $link_id]
-	.panwin.f1.c itemconfigure "linklabel && $link_id" -text $str -angle $ang
+	$main_canvas_elem itemconfigure "linklabel && $link_id" -text $str -angle $ang
 	if { [getActiveOption "show_link_labels"] == 0 } {
-		.panwin.f1.c itemconfigure "linklabel && $link_id" -state hidden
+		$main_canvas_elem itemconfigure "linklabel && $link_id" -state hidden
 	}
 }
 
@@ -716,6 +720,8 @@ proc redrawAllLinks {} {
 #   * link_id -- link id
 #****
 proc redrawLink { link_id } {
+	global main_canvas_elem
+
 	set curcanvas [getFromRunning_gui "curcanvas"]
 	lassign [getLinkPeers_gui $link_id] node1_id node2_id
 	if {
@@ -741,24 +747,24 @@ proc redrawLink { link_id } {
 		return
 	}
 
-	lassign [.panwin.f1.c find withtag "link && $link_id"] limage1 limage2
+	lassign [$main_canvas_elem find withtag "link && $link_id"] limage1 limage2
 	if { $limage1 == "" || $limage2 == "" } {
 		return
 	}
 
-	lassign [.panwin.f1.c gettags $limage1] {} link_id node1_id node2_id
+	lassign [$main_canvas_elem gettags $limage1] {} link_id node1_id node2_id
 	if { [getNodeType $node1_id] == "wlan" || [getNodeType $node2_id] == "wlan" } {
 		return
 	}
 
-	lassign [.panwin.f1.c coords "node && $node1_id"] x1 y1
-	lassign [.panwin.f1.c coords "node && $node2_id"] x2 y2
-	.panwin.f1.c coords $limage1 $x1 $y1 $x2 $y2
-	.panwin.f1.c coords $limage2 $x1 $y1 $x2 $y2
+	lassign [$main_canvas_elem coords "node && $node1_id"] x1 y1
+	lassign [$main_canvas_elem coords "node && $node2_id"] x2 y2
+	$main_canvas_elem coords $limage1 $x1 $y1 $x2 $y2
+	$main_canvas_elem coords $limage2 $x1 $y1 $x2 $y2
 
 	set lx [expr {int(0.5 * ($x1 + $x2))}]
 	set ly [expr {int(0.5 * ($y1 + $y2))}]
-	.panwin.f1.c coords "linklabel && $link_id" $lx $ly
+	$main_canvas_elem coords "linklabel && $link_id" $lx $ly
 
 	lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
 	updateIfcLabelParams $link_id $node1_id $iface1_id $x1 $y1 $x2 $y2
@@ -769,6 +775,8 @@ proc redrawLink { link_id } {
 }
 
 proc redrawPseudoLink { link_id } {
+	global main_canvas_elem
+
 	set curcanvas [getFromRunning_gui "curcanvas"]
 	lassign [getLinkPeers_gui $link_id] node1_id node2_id
 	if {
@@ -778,27 +786,27 @@ proc redrawPseudoLink { link_id } {
 		return
 	}
 
-	lassign [.panwin.f1.c find withtag "link && $link_id"] limage1 limage2
+	lassign [$main_canvas_elem find withtag "link && $link_id"] limage1 limage2
 	if { $limage1 == "" || $limage2 == "" } {
 		return
 	}
 
-	lassign [.panwin.f1.c gettags $limage1] {} {} node1_id node2_id
+	lassign [$main_canvas_elem gettags $limage1] {} {} node1_id node2_id
 	if { [getNodeType $node1_id] == "wlan" || [getNodeType $node2_id] == "wlan" } {
 		return
 	}
 
-	lassign [.panwin.f1.c coords "node && $node1_id"] x1 y1
+	lassign [$main_canvas_elem coords "node && $node1_id"] x1 y1
 	if { $x1 == "" || $y1 == "" } {
 		lassign [getNodeLabelCoords $node1_id] x1 y1
 	}
-	lassign [.panwin.f1.c coords "node && $node2_id"] x2 y2
+	lassign [$main_canvas_elem coords "node && $node2_id"] x2 y2
 	if { $x2 == "" || $y2 == "" } {
 		lassign [getNodeLabelCoords $node2_id] x2 y2
 	}
 
-	.panwin.f1.c coords $limage1 $x1 $y1 $x2 $y2
-	.panwin.f1.c coords $limage2 $x1 $y1 $x2 $y2
+	$main_canvas_elem coords $limage1 $x1 $y1 $x2 $y2
+	$main_canvas_elem coords $limage2 $x1 $y1 $x2 $y2
 
 	if { [isPseudoNode $node1_id] } {
 		set lx [expr {int(0.25 * ($x2 - $x1) + $x1)}]
@@ -807,7 +815,7 @@ proc redrawPseudoLink { link_id } {
 		set lx [expr {int(0.75 * ($x2 - $x1) + $x1)}]
 		set ly [expr {int(0.75 * ($y2 - $y1) + $y1)}]
 	}
-	.panwin.f1.c coords "linklabel && $link_id" $lx $ly
+	$main_canvas_elem coords "linklabel && $link_id" $lx $ly
 
 	lassign [linkFromPseudoLink $link_id] real_link_id real_node_id real_iface_id
 
@@ -816,7 +824,9 @@ proc redrawPseudoLink { link_id } {
 }
 
 proc updateIfcLabelParams { link_id node_id iface_id x1 y1 x2 y2 } {
-	set bbox [.panwin.f1.c bbox "node && $node_id"]
+	global main_canvas_elem
+
+	set bbox [$main_canvas_elem bbox "node && $node_id"]
 	set iconwidth [expr [lindex $bbox 2] - [lindex $bbox 0]]
 	set iconheight [expr [lindex $bbox 3] - [lindex $bbox 1]]
 
@@ -887,8 +897,8 @@ proc updateIfcLabelParams { link_id node_id iface_id x1 y1 x2 y2 } {
 		set ly [expr int($a*$width + $y1)]
 	}
 
-	.panwin.f1.c coords "interface && $node_id && $link_id" $lx $ly
-	.panwin.f1.c itemconfigure "interface && $node_id && $link_id" -justify $just \
+	$main_canvas_elem coords "interface && $node_id && $link_id" $lx $ly
+	$main_canvas_elem itemconfigure "interface && $node_id && $link_id" -justify $just \
 		-anchor $anchor -angle $ang
 }
 
@@ -973,24 +983,24 @@ proc newLinkWithIfacesGUI { node1_id iface1_id node2_id iface2_id } {
 # NAME
 #   raiseAll -- raise all
 # SYNOPSIS
-#   raiseAll $c
+#   raiseAll
 # FUNCTION
 #   Raises all elements on canvas.
-# INPUTS
-#   * c -- tk canvas
 #****
-proc raiseAll { c } {
-	$c raise grid background
-	$c raise rectangle  "grid || background"
-	$c raise oval "rectangle || grid || background"
-	$c raise link "oval || rectangle || grid || background"
-	$c raise freeform "link ||  oval || rectangle || grid || background"
-	$c raise route "freeform || link || oval || rectangle || grid || background"
-	$c raise linklabel "route || freeform || link || oval || rectangle || grid || background"
-	$c raise interface "linklabel || route || freeform || link || oval || rectangle || grid || background"
-	$c raise node "interface || linklabel || route || freeform || link || oval || rectangle || grid || background"
-	$c raise nodelabel "node || interface || linklabel || route || freeform || link || oval || rectangle || grid || background"
-	$c raise text "nodelabel || node || interface || linklabel || route || freeform || link || oval || rectangle || grid || background"
+proc raiseAll {} {
+	global main_canvas_elem
+
+	$main_canvas_elem raise grid background
+	$main_canvas_elem raise rectangle  "grid || background"
+	$main_canvas_elem raise oval "rectangle || grid || background"
+	$main_canvas_elem raise link "oval || rectangle || grid || background"
+	$main_canvas_elem raise freeform "link ||  oval || rectangle || grid || background"
+	$main_canvas_elem raise route "freeform || link || oval || rectangle || grid || background"
+	$main_canvas_elem raise linklabel "route || freeform || link || oval || rectangle || grid || background"
+	$main_canvas_elem raise interface "linklabel || route || freeform || link || oval || rectangle || grid || background"
+	$main_canvas_elem raise node "interface || linklabel || route || freeform || link || oval || rectangle || grid || background"
+	$main_canvas_elem raise nodelabel "node || interface || linklabel || route || freeform || link || oval || rectangle || grid || background"
+	$main_canvas_elem raise text "nodelabel || node || interface || linklabel || route || freeform || link || oval || rectangle || grid || background"
 }
 
 #****f* editor.tcl/changeIconPopup
@@ -1379,9 +1389,11 @@ proc selectZoomPopupMenu { x y } {
 #   Aligns all nodes to grid.
 #****
 proc align2grid {} {
+	global main_canvas_elem
+
 	global sizex sizey grid changed
 
-	set node_objects [.panwin.f1.c find withtag node]
+	set node_objects [$main_canvas_elem find withtag node]
 	if { [llength $node_objects] == 0 } {
 		return
 	}
@@ -1398,7 +1410,7 @@ proc align2grid {} {
 				return
 			}
 
-			set node_id [lindex [.panwin.f1.c gettags [lindex $node_objects 0]] 1]
+			set node_id [lindex [$main_canvas_elem gettags [lindex $node_objects 0]] 1]
 			set node_objects [lreplace $node_objects 0 0]
 			setNodeCoords $node_id "$x $y"
 			set dy 32
@@ -1425,7 +1437,7 @@ proc align2grid {} {
 #   rearranged.
 #****
 proc rearrange { mode } {
-	global autorearrange_enabled sizex sizey
+	global autorearrange_enabled sizex sizey main_canvas_elem
 
 	set curcanvas [getFromRunning_gui "curcanvas"]
 	set zoom [getActiveOption "zoom"]
@@ -1453,11 +1465,11 @@ proc rearrange { mode } {
 			set otime $ntime
 		}
 
-		set objects [.panwin.f1.c find withtag $tagmatch]
-		set peer_objects [.panwin.f1.c find withtag node]
+		set objects [$main_canvas_elem find withtag $tagmatch]
+		set peer_objects [$main_canvas_elem find withtag node]
 		foreach obj $peer_objects {
-			set node_id [lindex [.panwin.f1.c gettags $obj] 1]
-			lassign [.panwin.f1.c coords $obj] x y
+			set node_id [lindex [$main_canvas_elem gettags $obj] 1]
+			lassign [$main_canvas_elem coords $obj] x y
 			set x [expr {$x / $zoom}]
 			set y [expr {$y / $zoom}]
 			set x_t($node_id) $x
@@ -1491,13 +1503,13 @@ proc rearrange { mode } {
 		}
 
 		foreach obj $objects {
-			set node_id [lindex [.panwin.f1.c gettags $obj] 1]
+			set node_id [lindex [$main_canvas_elem gettags $obj] 1]
 			set i [lsearch -exact $peer_objects $obj]
 			set peer_objects [lreplace $peer_objects $i $i]
 			set x $x_t($node_id)
 			set y $y_t($node_id)
 			foreach other_obj $peer_objects {
-				set other [lindex [.panwin.f1.c gettags $other_obj] 1]
+				set other [lindex [$main_canvas_elem gettags $other_obj] 1]
 				set o_x $x_t($other)
 				set o_y $y_t($other)
 				set dx [expr {$x - $o_x}]
@@ -1556,7 +1568,7 @@ proc rearrange { mode } {
 		}
 
 		foreach obj $objects {
-			set node_id [lindex [.panwin.f1.c gettags $obj] 1]
+			set node_id [lindex [$main_canvas_elem gettags $obj] 1]
 			if { [catch "set v_t($node_id)" v] } {
 				set vx 0.0
 				set vy 0.0
@@ -1578,24 +1590,24 @@ proc rearrange { mode } {
 			setNodeCoords $node_id "$x $y"
 			set e_dx [expr {$dx * $zoom}]
 			set e_dy [expr {$dy * $zoom}]
-			.panwin.f1.c move $obj $e_dx $e_dy
-			set img [.panwin.f1.c find withtag "selectmark && $node_id"]
-			.panwin.f1.c move $img $e_dx $e_dy
-			set img [.panwin.f1.c find withtag "nodelabel && $node_id"]
-			.panwin.f1.c move $img $e_dx $e_dy
-			set x [expr {[lindex [.panwin.f1.c coords $img] 0] / $zoom}]
-			set y [expr {[lindex [.panwin.f1.c coords $img] 1] / $zoom}]
+			$main_canvas_elem move $obj $e_dx $e_dy
+			set img [$main_canvas_elem find withtag "selectmark && $node_id"]
+			$main_canvas_elem move $img $e_dx $e_dy
+			set img [$main_canvas_elem find withtag "nodelabel && $node_id"]
+			$main_canvas_elem move $img $e_dx $e_dy
+			set x [expr {[lindex [$main_canvas_elem coords $img] 0] / $zoom}]
+			set y [expr {[lindex [$main_canvas_elem coords $img] 1] / $zoom}]
 			setNodeLabelCoords $node_id "$x $y"
-			set img [.panwin.f1.c find withtag "node_running && $node_id"]
-			.panwin.f1.c move $img $e_dx $e_dy
-			set img [.panwin.f1.c find withtag "nodedisabled && $node_id"]
-			.panwin.f1.c move $img $e_dx $e_dy
-			.panwin.f1.c addtag need_redraw withtag "link && $node_id"
+			set img [$main_canvas_elem find withtag "node_running && $node_id"]
+			$main_canvas_elem move $img $e_dx $e_dy
+			set img [$main_canvas_elem find withtag "nodedisabled && $node_id"]
+			$main_canvas_elem move $img $e_dx $e_dy
+			$main_canvas_elem addtag need_redraw withtag "link && $node_id"
 		}
-		foreach link_id [.panwin.f1.c find withtag "link && need_redraw"] {
-			redrawLink [lindex [.panwin.f1.c gettags $link_id] 1]
+		foreach link_id [$main_canvas_elem find withtag "link && need_redraw"] {
+			redrawLink [lindex [$main_canvas_elem gettags $link_id] 1]
 		}
-		.panwin.f1.c dtag link need_redraw
+		$main_canvas_elem dtag link need_redraw
 		update
 		set idlems [expr int($idlems + (33 - $dt * 1000) / 2)]
 		if { $idlems < 1 } {
@@ -1710,9 +1722,9 @@ proc switchCanvas { direction } {
 #   different for edit and exec mode.
 #****
 proc animate {} {
-	global animatephase
+	global animatephase main_canvas_elem
 
-	catch { .panwin.f1.c itemconfigure "selectmark || selectbox" -dashoffset $animatephase } err
+	catch { $main_canvas_elem itemconfigure "selectmark || selectbox" -dashoffset $animatephase } err
 	if { $err != "" } {
 		puts stderr "IMUNES was closed unexpectedly before experiment termination was completed."
 		puts stderr "Clean all running experiments with the 'cleanupAll' command."

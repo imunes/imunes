@@ -86,7 +86,7 @@ proc updateUndoLog {} {
 #   configuration. Reduces the value of undolevel.
 #****
 proc undo {} {
-	global showTree changed nodeNamingBase
+	global showTree changed nodeNamingBase main_canvas_elem
 
 	set undolevel [getFromRunning "undolevel"]
 	if { [getFromRunning "oper_mode"] == "edit" && $undolevel > 0 } {
@@ -96,7 +96,7 @@ proc undo {} {
 			.menubar.edit entryconfigure "Undo" -state disabled
 		}
 
-		.panwin.f1.c config -cursor watch
+		$main_canvas_elem config -cursor watch
 
 		jumpToUndoLevel $undolevel
 		switchCanvas none
@@ -127,7 +127,7 @@ proc undo {} {
 #   of undolevel.
 #****
 proc redo {} {
-	global showTree changed nodeNamingBase
+	global showTree changed nodeNamingBase main_canvas_elem
 
 	set undolevel [getFromRunning "undolevel"]
 	set redolevel [getFromRunning "redolevel"]
@@ -141,7 +141,7 @@ proc redo {} {
 			.menubar.edit entryconfigure "Redo" -state disabled
 		}
 
-		.panwin.f1.c config -cursor watch
+		$main_canvas_elem config -cursor watch
 
 		jumpToUndoLevel $undolevel
 		switchCanvas none
@@ -626,13 +626,12 @@ proc topologyElementsTree {} {
 
 		bindEventsToTree
 	} else {
-		# main frame where the canvas .c is
 		global mf
 
-		bind . <Right> "$mf.c xview scroll 1 units"
-		bind . <Left> "$mf.c xview scroll -1 units"
-		bind . <Down> "$mf.c yview scroll 1 units"
-		bind . <Up> "$mf.c yview scroll -1 units"
+		bind . <Right> "$mf.canvas_elem xview scroll 1 units"
+		bind . <Left> "$mf.canvas_elem xview scroll -1 units"
+		bind . <Down> "$mf.canvas_elem yview scroll 1 units"
+		bind . <Up> "$mf.canvas_elem yview scroll -1 units"
 
 		destroy $f.treegrid
 		destroy $f.tree $f.vscroll
@@ -684,7 +683,7 @@ proc expandOrCollapseTree {} {
 #   event sequence to the specified tag.
 #****
 proc bindEventsToTree {} {
-	global nodetags ifacestags linktags
+	global nodetags ifacestags linktags main_canvas_elem
 
 	set f .panwin.f2
 	bind $f.tree <<TreeviewSelect>> {
@@ -736,8 +735,8 @@ proc bindEventsToTree {} {
 	$f.tree tag bind links <Key-Down> $tmp_command
 
 	set tmp_command \
-		".panwin.f1.c dtag node selected; \
-		.panwin.f1.c delete -withtags selectmark"
+		"$main_canvas_elem dtag node selected; \
+		$main_canvas_elem delete -withtags selectmark"
 	$f.tree tag bind nodes <1> $tmp_command
 	$f.tree tag bind links <1> $tmp_command
 
@@ -747,14 +746,14 @@ proc bindEventsToTree {} {
 		set node_type [getNodeType $node_id]
 		set tmp_command \
 			"$f.tree item $node_id -open false; \
-			invokeTypeProc $node_type configGUI .panwin.f1.c $node_id"
+			invokeTypeProc $node_type configGUI $node_id"
 		$f.tree tag bind $node_id <Double-1> $tmp_command
 		$f.tree tag bind $node_id <Key-Return> $tmp_command
 
 		foreach iface_id [lsort -dictionary [ifcList $node_id]] {
 			set tmp_command \
 				"set selectedIfc $iface_id; \
-				invokeTypeProc $node_type configGUI .panwin.f1.c $node_id; \
+				invokeTypeProc $node_type configGUI $node_id; \
 				set selectedIfc \"\""
 			$f.tree tag bind $node_id$iface_id <Double-1> $tmp_command
 			$f.tree tag bind $node_id$iface_id <Key-Return> $tmp_command
@@ -762,7 +761,7 @@ proc bindEventsToTree {} {
 	}
 
 	foreach link_id $linktags {
-		set tmp_command "link.configGUI .panwin.f1.c $link_id"
+		set tmp_command "link.configGUI $link_id"
 		$f.tree tag bind $link_id <Double-1> $tmp_command
 		$f.tree tag bind $link_id <Key-Return> $tmp_command
 	}
@@ -777,14 +776,16 @@ proc bindEventsToTree {} {
 #   Selects icon of the node selected in the topology tree.
 #****
 proc selectNodeFromTree { node_id } {
+	global main_canvas_elem
+
 	setToRunning_gui "curcanvas" [getNodeCanvas $node_id]
 	switchCanvas none
 
-	.panwin.f1.c dtag node selected
-	.panwin.f1.c delete -withtags selectmark
+	$main_canvas_elem dtag node selected
+	$main_canvas_elem delete -withtags selectmark
 
-	set obj [.panwin.f1.c find withtag "node && $node_id"]
-	selectNode .panwin.f1.c $obj
+	set obj [$main_canvas_elem find withtag "node && $node_id"]
+	selectNode $obj
 }
 
 #****f* editor.tcl/selectLinkPeersFromTree
@@ -797,17 +798,19 @@ proc selectNodeFromTree { node_id } {
 #   of the link selected in the topology tree.
 #****
 proc selectLinkPeersFromTree { link_id } {
+	global main_canvas_elem
+
 	lassign [getLinkPeers $link_id] node1_id node2_id
 	setToRunning_gui "curcanvas" [getNodeCanvas $node1_id]
 	switchCanvas none
 
-	.panwin.f1.c dtag node selected
-	.panwin.f1.c delete -withtags selectmark
+	$main_canvas_elem dtag node selected
+	$main_canvas_elem delete -withtags selectmark
 
-	set obj0 [.panwin.f1.c find withtag "node && $node1_id"]
-	set obj1 [.panwin.f1.c find withtag "node && $node2_id"]
-	selectNode .panwin.f1.c $obj0
-	selectNode .panwin.f1.c $obj1
+	set obj0 [$main_canvas_elem find withtag "node && $node1_id"]
+	set obj1 [$main_canvas_elem find withtag "node && $node2_id"]
+	selectNode $obj0
+	selectNode $obj1
 }
 
 #****f* editor.tcl/refreshTopologyTree

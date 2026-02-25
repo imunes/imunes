@@ -109,16 +109,15 @@ proc $MODULE.icon { size } {
 # NAME
 #   ext.configGUI -- configuration GUI
 # SYNOPSIS
-#   ext.configGUI $c $node_id
+#   ext.configGUI $node_id
 # FUNCTION
 #   Defines the structure of the ext configuration window by calling
 #   procedures for creating and organising the window, as well as
 #   procedures for adding certain modules to that window.
 # INPUTS
-#   * c -- tk canvas
 #   * node_id -- node id
 #****
-proc $MODULE.configGUI { c node_id } {
+proc $MODULE.configGUI { node_id } {
 	set iface_id [lindex [ifcList $node_id] 0]
 	if { "$iface_id" == "" } {
 		return
@@ -144,7 +143,7 @@ proc $MODULE.configGUI { c node_id } {
 	set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
 	set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
 
-	configGUI_createConfigPopupWin $c
+	configGUI_createConfigPopupWin
 	wm title $wi "ext configuration"
 
 	configGUI_nodeName $wi $node_id "Node name:"

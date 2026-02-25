@@ -182,7 +182,9 @@ proc topoGenDone { nodes } {
 #   * nodes -- nodes
 #****
 proc P { nodes } {
-	.panwin.f1.c config -cursor watch; update
+	global main_canvas_elem
+
+	$main_canvas_elem config -cursor watch; update
 
 	set node_num [llength $nodes]
 	for { set i 0 } { $i < [expr {$node_num - 1}] } { incr i } {
@@ -209,7 +211,9 @@ proc P { nodes } {
 #   * nodes -- nodes
 #****
 proc C { nodes } {
-	.panwin.f1.c config -cursor watch; update
+	global main_canvas_elem
+
+	$main_canvas_elem config -cursor watch; update
 
 	set node_num [llength $nodes]
 	for { set i 0 } { $i < $node_num } { incr i } {
@@ -236,7 +240,9 @@ proc C { nodes } {
 #   * nodes -- nodes
 #****
 proc W { nodes } {
-	.panwin.f1.c config -cursor watch; update
+	global main_canvas_elem
+
+	$main_canvas_elem config -cursor watch; update
 
 	set node_num [llength $nodes]
 	set vr [lindex $nodes 0]

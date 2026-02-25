@@ -2,15 +2,16 @@
 # NAME
 #   showCfg -- show configuration
 # SYNOPSIS
-#   showCfg $c $node_id
+#   showCfg $node_id
 # FUNCTION
 #   This procedure shows popup with configuration selected in
 #   Show menu of the node above wich is the mouse pointer
 # INPUTS
-#   * c -- tk canvas
 #   * node_id -- node id
 #****
-proc showCfg { c node_id } {
+proc showCfg { node_id } {
+	global main_canvas_elem
+
 	upvar 0 ::showConfig showCfg
 	upvar 0 ::lastObservedNode lastObservedNode
 
@@ -29,7 +30,7 @@ proc showCfg { c node_id } {
 	#the 'Show' menu
 	#Also, dont show popup window if there is no node
 	if { $showCfg == "None" || $showCfg == "route" || $node_id == "" } {
-		$c delete -withtag showCfgPopup
+		$main_canvas_elem delete -withtag showCfgPopup
 
 		return
 	}
@@ -50,57 +51,56 @@ proc showCfg { c node_id } {
 	append title $output
 
 	#Call showCfgPopup
-	showCfgPopup $c $node_id $title $x $y
+	showCfgPopup $node_id $title $x $y
 }
 
 #****f* editor.tcl/showCfgPopup
 # NAME
 #   showCfgPopup -- show configure popup
 # SYNOPSIS
-#   showCfg $c $node_id $title $x $y
+#   showCfg $node_id $title $x $y
 # FUNCTION
 #   This procedure shows popup window
 # INPUTS
-#   * c -- tk canvas
 #   * node_id -- node id
 #   * title -- text that is going to be displayed
 #   * x -- x coordinate
 #   * y -- y coordinate
 #****
-proc showCfgPopup { c node_id title x y } {
-	global defaultFontSize
+proc showCfgPopup { node_id title x y } {
+	global defaultFontSize main_canvas_elem
 
 	#Therecan be shown only one popup at the time
-	$c delete -withtag showCfgPopup
+	$main_canvas_elem delete -withtag showCfgPopup
 	#Show command output
-	set popup [$c create text $x $y \
+	set popup [$main_canvas_elem create text $x $y \
 		-text $title -tag "showCfgPopup" \
 		-font "Courier $defaultFontSize" -justify left -anchor nw]
 
 	#Create frame for the command output
-	lassign [$c bbox $popup] x1 y1 x2 y2
+	lassign [$main_canvas_elem bbox $popup] x1 y1 x2 y2
 	set x1 [expr {$x1 - 5}]
 	set y1 [expr {$y1 - 5}]
 	set x2 [expr {$x2 + 5}]
 	set y2 [expr {$y2 + 5}]
-	$c create rectangle $x1 $y1 $x2 $y2 -fill "#CECECE" -tag "showCfgPopup"
-	$c raise $popup
+	$main_canvas_elem create rectangle $x1 $y1 $x2 $y2 -fill "#CECECE" -tag "showCfgPopup"
+	$main_canvas_elem raise $popup
 
 	#If popup goes beyond the canvas borders move it up and/or left
 	set width [expr {abs($x2 - $x1)}]
 	set height [expr {abs($y2 - $y1)}]
-	set maxRight [winfo width $c]
-	set maxDown [winfo height $c]
+	set maxRight [winfo width $main_canvas_elem]
+	set maxDown [winfo height $main_canvas_elem]
 	set change 0
 	set newX $x
 	set newY $y
 
 	lassign [getCanvasSize [getFromRunning_gui "curcanvas"]] sizex sizey
 	lassign [getNodeCoords $node_id] nodeX nodeY
-	lassign [$c cget -scrollregion] rx1 ry1 rx2 ry2
+	lassign [$main_canvas_elem cget -scrollregion] rx1 ry1 rx2 ry2
 
-	lassign [lmap n [$c xview] {expr {round($n * ($rx2 - $rx1) + $rx1)}}] vx1 vx2
-	lassign [lmap n [$c yview] {expr {round($n * ($ry2 - $ry1) + $ry1)}}] vy1 vy2
+	lassign [lmap n [$main_canvas_elem xview] {expr {round($n * ($rx2 - $rx1) + $rx1)}}] vx1 vx2
+	lassign [lmap n [$main_canvas_elem yview] {expr {round($n * ($ry2 - $ry1) + $ry1)}}] vy1 vy2
 
 	set vwidth [expr {abs($vx2 - $vx1)}]
 	set vheight [expr {abs($vy2 - $vy1)}]
@@ -129,7 +129,7 @@ proc showCfgPopup { c node_id title x y } {
 	}
 
 	if { $x2 > $vx2 || $y2 > $vy2 } {
-		deleteAndShowPopup $c $title $newX $newY
+		deleteAndShowPopup $title $newX $newY
 
 		return
 	}
@@ -139,47 +139,48 @@ proc showCfgPopup { c node_id title x y } {
 # NAME
 #   deleteAndShowPopup -- delete and show popup
 # SYNOPSIS
-#   deleteAndShowPopup $c $title $x $y
+#   deleteAndShowPopup $title $x $y
 # FUNCTION
 #   Deletes configuration popup and creates it again.
 # INPUTS
-#   * c -- tk canvas
 #   * title -- text that is going to be displayed
 #   * x -- x coordinate
 #   * y -- y coordinate
 #****
-proc deleteAndShowPopup { c title x y } {
-	global defaultFontSize
-	$c delete -withtag showCfgPopup
+proc deleteAndShowPopup { title x y } {
+	global defaultFontSize main_canvas_elem
+
+	$main_canvas_elem delete -withtag showCfgPopup
 	#Show command output
-	set popup [$c create text $x $y \
+	set popup [$main_canvas_elem create text $x $y \
 		-text $title -tag "showCfgPopup" \
 		-font "Courier $defaultFontSize" -justify left -anchor nw]
 
 	#Create frame for the command output
-	set box [$c bbox $popup]
+	set box [$main_canvas_elem bbox $popup]
 	set x1 [expr {[lindex $box 0] - 5}]
 	set y1 [expr {[lindex $box 1] - 5}]
 	set x2 [expr {[lindex $box 2] + 5}]
 	set y2 [expr {[lindex $box 3] + 5}]
-	$c create rectangle $x1 $y1 $x2 $y2 -fill "#CECECE" -tag "showCfgPopup"
-	$c raise $popup
+	$main_canvas_elem create rectangle $x1 $y1 $x2 $y2 -fill "#CECECE" -tag "showCfgPopup"
+	$main_canvas_elem raise $popup
 }
 
 #****f* editor.tcl/showRoute
 # NAME
 #   showRoute -- show route
 # SYNOPSIS
-#   showRoute $c $node2_id
+#   showRoute $node2_id
 # FUNCTION
 #   This procedure shows/draws route between two selected nodes.
 #   First node is being selected by clicking on it and second is
 #   selected by cursor enter. Route is drawn in green color.
 # INPUTS
-#   * c -- tk canvas
 #   * node2_id -- second node
 #****
-proc showRoute { c node2_id } {
+proc showRoute { node2_id } {
+	global main_canvas_elem
+
 	upvar 0 ::showConfig showCfg
 	upvar 0 ::traceRouteTime traceRouteTime
 
@@ -190,8 +191,8 @@ proc showRoute { c node2_id } {
 
 	#Determine selected node
 	set selected {}
-	foreach obj [.panwin.f1.c find withtag "node && selected"] {
-		lappend selected [lindex [.panwin.f1.c gettags $obj] 1]
+	foreach obj [$main_canvas_elem find withtag "node && selected"] {
+		lappend selected [lindex [$main_canvas_elem gettags $obj] 1]
 	}
 
 	#Draw route only if 'Route' option is selected form 'Show' menu
@@ -244,7 +245,7 @@ proc showRoute { c node2_id } {
 					incr adEnd -1
 					set hopIP [string range $result $adBeg $adEnd]
 					set n1 $n2
-					set n2 [findNode $c $hopIP]
+					set n2 [findNode $hopIP]
 
 					if { $n1 == $n2 || $n2 == "" } {
 						set errDet 1
@@ -257,7 +258,7 @@ proc showRoute { c node2_id } {
 					}
 
 					if { $errDet == 0 } {
-						drawLine $c $n1 $n2
+						drawLine $n1 $n2
 					}
 				}
 
@@ -273,19 +274,20 @@ proc showRoute { c node2_id } {
 # NAME
 #   findNode -- find node
 # SYNOPSIS
-#   findNode $c $ipAddr
+#   findNode $ipAddr
 # FUNCTION
 #   Finds the node with the specified IP address.
 # INPUTS
-#   * c -- tk canvas
 #   * ipAddr -- IP address
 #****
-proc findNode { c ipAddr } {
+proc findNode { ipAddr } {
+	global main_canvas_elem
+
 	#Get list of all network layer nodes
 	set i 0
 	set nodeList {}
-	foreach obj [$c find withtag node] {
-		set node_id [lindex [$c gettags $obj] 1]
+	foreach obj [$main_canvas_elem find withtag node] {
+		set node_id [lindex [$main_canvas_elem gettags $obj] 1]
 		if { [invokeNodeProc $node_id "netlayer"] == "NETWORK" } {
 			lappend nodeList $node_id
 			incr i
@@ -312,21 +314,22 @@ proc findNode { c ipAddr } {
 # NAME
 #   drawLine -- draw line
 # SYNOPSIS
-#   drawLine $c $node1_id $node2_id
+#   drawLine $node1_id $node2_id
 # FUNCTION
 #   Draws the line between two nodes.
 # INPUTS
-#   * c -- tk canvas.
 #   * node1_id -- first node
 #   * node2_id -- second node
 #****
-proc drawLine { c node1_id node2_id } {
+proc drawLine { node1_id node2_id } {
+	global main_canvas_elem
+
 	lassign [getNodeCoords $node1_id] x1 y1
 	lassign [getNodeCoords $node2_id] x2 y2
-	$c create line $x1 $y1 $x2 $y2 -fill green \
+	$main_canvas_elem create line $x1 $y1 $x2 $y2 -fill green \
 		-width 3 -tags "route"
 
-	raiseAll $c
+	raiseAll
 	after 5 { set t 1 }
 	vwait t
 }

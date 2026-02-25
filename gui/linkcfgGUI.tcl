@@ -30,35 +30,37 @@
 # NAME
 #   linkConfigGUI -- link configuration GUI
 # SYNOPSIS
-#   linkConfigGUI $c $link_id
+#   linkConfigGUI $link_id
 # FUNCTION
 #   Calls procedure link.configGUI.
 # INPUTS
-#   * c - tk canvas
 #   * link_id - link id
 #****
-proc linkConfigGUI { c link_id } {
+proc linkConfigGUI { link_id } {
+	global main_canvas_elem
+
 	if { $link_id == "" } {
-		set link_id [lindex [$c gettags current] 1]
+		set link_id [lindex [$main_canvas_elem gettags current] 1]
 	}
 
-	link.configGUI $c $link_id
+	link.configGUI $link_id
 }
 
 #****f* linkcfgGUI.tcl/toggleDirectLink
 # NAME
 #   toggleDirectLink -- link configuration GUI
 # SYNOPSIS
-#   toggleDirectLink $c $link_id
+#   toggleDirectLink $link_id
 # FUNCTION
 #   Toggles link 'direct' option.
 # INPUTS
-#   * c - tk canvas
 #   * link_id - link id
 #****
-proc toggleDirectLink { c link_id } {
+proc toggleDirectLink { link_id } {
+	global main_canvas_elem
+
 	if { $link_id == "" } {
-		set link_id [lindex [$c gettags current] 1]
+		set link_id [lindex [$main_canvas_elem gettags current] 1]
 	}
 
 	lassign [linkFromPseudoLink $link_id] real_link_id - -
@@ -76,23 +78,22 @@ proc toggleDirectLink { c link_id } {
 	}
 
 	redrawLink $real_link_id
-	.panwin.f1.c config -cursor left_ptr
+	$main_canvas_elem config -cursor left_ptr
 }
 
 #****f* linkcfgGUI.tcl/link.configGUI
 # NAME
 #   link.configGUI -- configuration GUI
 # SYNOPSIS
-#   link.configGUI $c $link_id
+#   link.configGUI $link_id
 # FUNCTION
 #   Defines the structure of the link configuration window by calling
 #   procedures for creating and organising the window, as well as
 #   procedures for adding certain modules to that window.
 # INPUTS
-#   * c - tk canvas
 #   * link_id - link id
 #****
-proc link.configGUI { c link_id } {
+proc link.configGUI { link_id } {
 	global wi
 	#
 	#guielements - the list of link configuration parameters
@@ -105,7 +106,7 @@ proc link.configGUI { c link_id } {
 	set link_cfg [cfgGet "links" [lindex [linkFromPseudoLink $link_id] 0]]
 	set link_cfg_gui [cfgGet "gui" "links" $link_id]
 
-	configGUI_createConfigPopupWin $c
+	configGUI_createConfigPopupWin
 	wm title $wi "link configuration"
 
 	configGUI_linkFromTo $wi $link_id
@@ -322,23 +323,22 @@ proc configGUI_linkConfig { wi link_id param label } {
 # NAME
 #   linkJitterConfigGUI -- link jitter configuration GUI
 # SYNOPSIS
-#   linkJitterConfigGUI $c $link_id
+#   linkJitterConfigGUI $link_id
 # FUNCTION XXX
 #   Defines the structure of the link configuration window by calling
 #   procedures for creating and organising the window, as well as
 #   procedures for adding certain modules to that window.
 # INPUTS
-#   * c - tk canvas
 #   * link_id - link id
 #****
-proc linkJitterConfigGUI { c link_id } {
+proc linkJitterConfigGUI { link_id } {
 	global wi badentry up_jitmode down_jitmode
 
 	lassign [getLinkPeers $link_id] node1 node2
 	set node1_name [getNodeName $node1]
 	set node2_name [getNodeName $node2]
 
-	configGUI_createConfigPopupWin $c
+	configGUI_createConfigPopupWin
 	wm title $wi "link $node1_name-$node2_name jitter configuration"
 
 	ttk::frame $wi.up

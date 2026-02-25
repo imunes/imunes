@@ -714,14 +714,14 @@ proc updateBkgPreview { pc imgsize prsrcfile } {
 # NAME
 #   popupBkgApply -- function that applies the changeBkgPopup properties
 # SYNOPSIS
-#   popupBkgApply $wi $c
+#   popupBkgApply $wi $cnv
 # FUNCTION
 #   Render and set the background image.
 # INPUTS
 #   * wi -- path to the changeBkgPopup frame
-#   * c -- canvas on which the background is being modified
+#   * cnv -- canvas on which the background is being modified
 #****
-proc popupBkgApply { wi c } {
+proc popupBkgApply { wi cnv } {
 	global changed bgsrcfile canvasBkgMode alignCanvasBkg hasIM winOS
 
 	$wi config -cursor watch
@@ -734,21 +734,21 @@ proc popupBkgApply { wi c } {
 		set bgsrcfile [string map {/ \\} $bgsrcfile]
 	}
 
-	set pastBkg [getCanvasBkg $c]
+	set pastBkg [getCanvasBkg $cnv]
 	if { $pastBkg != "" } {
-		removeImageReference $pastBkg $c
+		removeImageReference $pastBkg $cnv
 	}
 
 	# if there is ImageMagick create a new image, load it and then remove it from the drive.
 	if { $bgsrcfile != "" && $hasIM } {
 		set randNum [random 899 100]
-		set destImgFile "background_$c\_$randNum.gif"
+		set destImgFile "background_$cnv\_$randNum.gif"
 		while { [file exists $destImgFile] == 1 } {
 			set randNum [random 899 100]
 			set destImgFile "background_$c_$randNum.gif"
 		}
 
-		set size [getCanvasSize $c]
+		set size [getCanvasSize $cnv]
 		set sizex [lrange $size 0 0]
 		set sizey [lrange $size 1 1]
 
@@ -783,11 +783,11 @@ proc popupBkgApply { wi c } {
 						}
 					}
 
-					set bkgname [loadImage $destImgFile $c canvasBackground $bgsrcfile]
+					set bkgname [loadImage $destImgFile $cnv canvasBackground $bgsrcfile]
 					if { $bkgname == 2 } {
 						return 0
 					}
-					setCanvasBkg $c $bkgname
+					setCanvasBkg $cnv $bkgname
 					set changed 1
 					destroy $wi
 				}
@@ -800,11 +800,11 @@ proc popupBkgApply { wi c } {
 							-size $sizex\x$sizey xc:white +swap -gravity $alignCanvasBkg -composite $destImgFile
 					}
 
-					set bkgname [loadImage $destImgFile $c canvasBackground $bgsrcfile]
+					set bkgname [loadImage $destImgFile $cnv canvasBackground $bgsrcfile]
 					if { $bkgname == 2 } {
 						return 0
 					}
-					setCanvasBkg $c $bkgname
+					setCanvasBkg $cnv $bkgname
 					set changed 1
 					destroy $wi
 				}
@@ -822,14 +822,14 @@ proc popupBkgApply { wi c } {
 							$errmsg \
 							info 0 Dismiss
 					} else {
-						setCanvasSize $c $image_x $image_y
+						setCanvasSize $cnv $image_x $image_y
 						set changed 1
 						switchCanvas none
-						set bkgname [loadImage $bgsrcfile $c canvasBackground $bgsrcfile]
+						set bkgname [loadImage $bgsrcfile $cnv canvasBackground $bgsrcfile]
 						if { $bkgname == 2 } {
 							return 0
 						}
-						setCanvasBkg $c $bkgname
+						setCanvasBkg $cnv $bkgname
 						set changed 1
 						destroy $wi
 					}
@@ -841,11 +841,11 @@ proc popupBkgApply { wi c } {
 						exec cmd /c magick $bgsrcfile -resize $sizex\x$sizey\! $destImgFile
 					}
 
-					set bkgname [loadImage $destImgFile $c canvasBackground $bgsrcfile]
+					set bkgname [loadImage $destImgFile $cnv canvasBackground $bgsrcfile]
 					if { $bkgname == 2 } {
 						return 0
 					}
-					setCanvasBkg $c $bkgname
+					setCanvasBkg $cnv $bkgname
 					set changed 1
 					destroy $wi
 				}
@@ -880,14 +880,14 @@ proc popupBkgApply { wi c } {
 				$errmsg \
 				info 0 Dismiss
 		} else {
-			setCanvasSize $c $image_x $image_y
+			setCanvasSize $cnv $image_x $image_y
 			set changed 1
 			switchCanvas none
-			set bkgname [loadImage $bgsrcfile $c canvasBackground $bgsrcfile]
+			set bkgname [loadImage $bgsrcfile $cnv canvasBackground $bgsrcfile]
 			if { $bkgname == 2 } {
 				return 0
 			}
-			setCanvasBkg $c $bkgname
+			setCanvasBkg $cnv $bkgname
 			set changed 1
 			destroy $wi
 		}
@@ -911,12 +911,12 @@ proc popupBkgApply { wi c } {
 #   * w -- print dialog widget
 #****
 proc printCanvas { w } {
-	global sizex sizey
+	global sizex sizey main_canvas_elem
 
 	set prncmd [$w.printframe.e1 get]
 	destroy $w
 	set p [open "|$prncmd" WRONLY]
-	puts $p [.panwin.f1.c postscript -height $sizey -width $sizex -x 0 -y 0 -rotate yes -pageheight 297m -pagewidth 210m]
+	puts $p [$main_canvas_elem postscript -height $sizey -width $sizex -x 0 -y 0 -rotate yes -pageheight 297m -pagewidth 210m]
 	close $p
 }
 
@@ -933,7 +933,7 @@ proc printCanvas { w } {
 #   * entry -- file name
 #****
 proc printCanvasToFile { w entry } {
-	global printFileType
+	global printFileType main_canvas_elem
 
 	set entry_string [$entry get]
 	if { $entry_string == "" } {
@@ -985,7 +985,7 @@ proc printCanvasToFile { w entry } {
 			set sizex [expr {[lindex [getCanvasSize $canvas_id] 0]}]
 			set sizey [expr {[lindex [getCanvasSize $canvas_id] 1]}]
 
-			puts $file_id [.panwin.f1.c postscript -height $sizey -width $sizex -x 0 -y 0 -rotate yes -pageheight 390m -pagewidth 276m]
+			puts $file_id [$main_canvas_elem postscript -height $sizey -width $sizex -x 0 -y 0 -rotate yes -pageheight 390m -pagewidth 276m]
 		}
 		close $file_id
 
@@ -1097,8 +1097,8 @@ proc resizeCanvasPopup {} {
 
 			set padx 56
 			set pady 56
-			$w.resizeframe.size.x set [expr [winfo width $mf.c] - $padx]
-			$w.resizeframe.size.y set [expr [winfo height $mf.c] - $pady]
+			$w.resizeframe.size.x set [expr [winfo width $mf.canvas_elem] - $padx]
+			$w.resizeframe.size.y set [expr [winfo height $mf.canvas_elem] - $pady]
 		}
 	} \
 		$w

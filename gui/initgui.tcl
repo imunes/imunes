@@ -645,12 +645,14 @@ $m add radiobutton -label "Normal" -variable icon_size \
 	-command { setGlobalOption "show_interface_ipv6" - "toggle" ; redrawAllLinks }
 
 set tmp_command {
+	global main_canvas_elem
+
 	setGlobalOption "show_node_labels" - "toggle"
-	foreach object [.panwin.f1.c find withtag nodelabel] {
+	foreach object [$main_canvas_elem find withtag nodelabel] {
 		if { [getActiveOption "show_node_labels"] } {
-			.panwin.f1.c itemconfigure $object -state normal
+			$main_canvas_elem itemconfigure $object -state normal
 		} else {
-			.panwin.f1.c itemconfigure $object -state hidden
+			$main_canvas_elem itemconfigure $object -state hidden
 		}
 	}
 }
@@ -658,12 +660,14 @@ set tmp_command {
 	-underline 5 -variable show_node_labels -command $tmp_command
 
 set tmp_command {
+	global main_canvas_elem
+
 	setGlobalOption "show_link_labels" - "toggle"
-	foreach object [.panwin.f1.c find withtag linklabel] {
+	foreach object [$main_canvas_elem find withtag linklabel] {
 		if { [getActiveOption "show_link_labels"] } {
-			.panwin.f1.c itemconfigure $object -state normal
+			$main_canvas_elem itemconfigure $object -state normal
 		} else {
-			.panwin.f1.c itemconfigure $object -state hidden
+			$main_canvas_elem itemconfigure $object -state hidden
 		}
 	}
 }
@@ -671,6 +675,8 @@ set tmp_command {
 	-underline 5 -variable show_link_labels -command $tmp_command
 
 set tmp_command {
+	global main_canvas_elem
+
 	set var_list "show_interface_names show_interface_ipv4 show_interface_ipv6 \
 		show_node_labels show_link_labels"
 	foreach var $var_list {
@@ -681,14 +687,16 @@ set tmp_command {
 
 	redrawAll
 
-	foreach object [.panwin.f1.c find withtag linklabel] {
-		.panwin.f1.c itemconfigure $object -state normal
+	foreach object [$main_canvas_elem find withtag linklabel] {
+		$main_canvas_elem itemconfigure $object -state normal
 	}
 }
 .menubar.view add command -label "Show All" \
 	-underline 5 -command $tmp_command
 
 set tmp_command {
+	global main_canvas_elem
+
 	set var_list "show_interface_names show_interface_ipv4 show_interface_ipv6 \
 		show_node_labels show_link_labels"
 	foreach var $var_list {
@@ -699,8 +707,8 @@ set tmp_command {
 
 	redrawAll
 
-	foreach object [.panwin.f1.c find withtag linklabel] {
-		.panwin.f1.c itemconfigure $object -state hidden
+	foreach object [$main_canvas_elem find withtag linklabel] {
+		$main_canvas_elem itemconfigure $object -state hidden
 	}
 }
 .menubar.view add command -label "Show None" \
@@ -1145,7 +1153,9 @@ set pseudo_iconheight 0
 ttk::frame $mf.grid
 ttk::frame $mf.hframe
 ttk::frame $mf.vframe
-set c [canvas $mf.c \
+
+global main_canvas_elem
+set main_canvas_elem [canvas $mf.canvas_elem \
 	-bd 0 \
 	-relief sunken \
 	-highlightthickness 0 \
@@ -1198,15 +1208,15 @@ bind $mf.hframe.t <5> {
 	switchCanvas next
 }
 
-#scrollbar $mf.hframe.scroll -orient horiz -command "$c xview" \
+#scrollbar $mf.hframe.scroll -orient horiz -command "$main_canvas_elem xview" \
 #	-bd 1 -width 14
-#scrollbar $mf.vframe.scroll -command "$c yview" \
+#scrollbar $mf.vframe.scroll -command "$main_canvas_elem yview" \
 #	-bd 1 -width 14
 #scrollbar $mf.hframe.ts -orient horiz -command "$mf.hframe.t xview" \
 #	-bd 1 -width 14
 
-ttk::scrollbar $mf.hframe.scroll -orient horiz -command "$c xview"
-ttk::scrollbar $mf.vframe.scroll -command "$c yview"
+ttk::scrollbar $mf.hframe.scroll -orient horiz -command "$main_canvas_elem xview"
+ttk::scrollbar $mf.vframe.scroll -command "$main_canvas_elem yview"
 ttk::scrollbar $mf.hframe.ts -orient horiz -command ".panwin.f1.hframe.t xview"
 pack $mf.hframe.ts -side left -padx 0 -pady 0
 pack $mf.hframe.t -side left -padx 0 -pady 0 -fill both -expand true
@@ -1215,7 +1225,7 @@ pack $mf.vframe.scroll -side top -padx 0 -pady 0 -fill both -expand true
 pack $mf.grid -expand yes -fill both -padx 1 -pady 1
 grid rowconfig $mf.grid 0 -weight 1 -minsize 0
 grid columnconfig $mf.grid 0 -weight 1 -minsize 0
-grid $mf.c -in $mf.grid -row 0 -column 0 \
+grid $mf.canvas_elem -in $mf.grid -row 0 -column 0 \
 	-rowspan 1 -columnspan 1 -sticky news
 grid $mf.vframe -in $mf.grid -row 0 -column 1 \
 	-rowspan 1 -columnspan 1 -sticky news
@@ -1239,80 +1249,80 @@ pack .bottom.experiment_id .bottom.oper_mode .bottom.mbuf .bottom.cpu_load \
 #
 # Event bindings and procedures for main canvas:
 #
-$c bind node <Any-Enter> "nodeEnter $c"
-$c bind nodelabel <Any-Enter> "nodeEnter $c"
-$c bind node_running <Any-Enter> "nodeEnter $c"
-$c bind link <Any-Enter> "linkEnter $c"
-$c bind linklabel <Any-Enter> "linkEnter $c"
-$c bind node <Any-Leave> "anyLeave $c"
-$c bind nodelabel <Any-Leave> "anyLeave $c"
-$c bind node_running <Any-Leave> "anyLeave $c"
-$c bind link <Any-Leave> "anyLeave $c"
-$c bind linklabel <Any-Leave> "anyLeave $c"
+$main_canvas_elem bind node <Any-Enter> "nodeEnter"
+$main_canvas_elem bind nodelabel <Any-Enter> "nodeEnter"
+$main_canvas_elem bind node_running <Any-Enter> "nodeEnter"
+$main_canvas_elem bind link <Any-Enter> "linkEnter"
+$main_canvas_elem bind linklabel <Any-Enter> "linkEnter"
+$main_canvas_elem bind node <Any-Leave> "anyLeave"
+$main_canvas_elem bind nodelabel <Any-Leave> "anyLeave"
+$main_canvas_elem bind node_running <Any-Leave> "anyLeave"
+$main_canvas_elem bind link <Any-Leave> "anyLeave"
+$main_canvas_elem bind linklabel <Any-Leave> "anyLeave"
 
-$c bind node <Double-1> "nodeConfigGUI $c {}"
-$c bind nodelabel <Double-1> "nodeConfigGUI $c {}"
-$c bind node_running <Double-1> "nodeConfigGUI $c {}"
+$main_canvas_elem bind node <Double-1> "nodeConfigGUI {}"
+$main_canvas_elem bind nodelabel <Double-1> "nodeConfigGUI {}"
+$main_canvas_elem bind node_running <Double-1> "nodeConfigGUI {}"
 
-$c bind node <Control-Double-1> "nodeConfigGUI $c {}"
-$c bind nodelabel <Control-Double-1> "nodeConfigGUI $c {}"
-$c bind node_running <Control-Double-1> "nodeConfigGUI $c {}"
+$main_canvas_elem bind node <Control-Double-1> "nodeConfigGUI {}"
+$main_canvas_elem bind nodelabel <Control-Double-1> "nodeConfigGUI {}"
+$main_canvas_elem bind node_running <Control-Double-1> "nodeConfigGUI {}"
 
-$c bind grid <Double-1> "double1onGrid $c %x %y"
+$main_canvas_elem bind grid <Double-1> "double1onGrid %x %y"
 
-$c bind link <Double-1> "linkConfigGUI $c {}"
-$c bind linklabel <Double-1> "linkConfigGUI $c {}"
+$main_canvas_elem bind link <Double-1> "linkConfigGUI {}"
+$main_canvas_elem bind linklabel <Double-1> "linkConfigGUI {}"
 
-$c bind oval <Double-1> "annotationConfigGUI $c"
-$c bind rectangle <Double-1> "annotationConfigGUI $c"
-$c bind text <Double-1> "annotationConfigGUI $c"
-$c bind freeform <Double-1> "annotationConfigGUI $c"
+$main_canvas_elem bind oval <Double-1> "annotationConfigGUI"
+$main_canvas_elem bind rectangle <Double-1> "annotationConfigGUI"
+$main_canvas_elem bind text <Double-1> "annotationConfigGUI"
+$main_canvas_elem bind freeform <Double-1> "annotationConfigGUI"
 
-$c bind text <KeyPress> "textInsert $c %A"
-$c bind text <Return> "textInsert $c \\n"
-$c bind node <3> "button3node $c %x %y"
-$c bind nodelabel <3> "button3node $c %x %y"
-$c bind node_running <3> "button3node $c %x %y"
-$c bind link <3> "button3link $c %x %y"
-$c bind linklabel <3> "button3link $c %x %y"
+$main_canvas_elem bind text <KeyPress> "textInsert %A"
+$main_canvas_elem bind text <Return> "textInsert \\n"
+$main_canvas_elem bind node <3> "button3node %x %y"
+$main_canvas_elem bind nodelabel <3> "button3node %x %y"
+$main_canvas_elem bind node_running <3> "button3node %x %y"
+$main_canvas_elem bind link <3> "button3link %x %y"
+$main_canvas_elem bind linklabel <3> "button3link %x %y"
 
-$c bind route <Any-Enter> "anyLeave $c"
-$c bind route <Any-Leave> "anyLeave $c"
-$c bind showCfgPopup <Any-Leave> "anyLeave $c"
-$c bind text <Any-Leave> "anyLeave $c"
+$main_canvas_elem bind route <Any-Enter> "anyLeave"
+$main_canvas_elem bind route <Any-Leave> "anyLeave"
+$main_canvas_elem bind showCfgPopup <Any-Leave> "anyLeave"
+$main_canvas_elem bind text <Any-Leave> "anyLeave"
 
-$c bind oval <3> "button3annotation oval $c %x %y"
-$c bind rectangle <3> "button3annotation rectangle $c %x %y"
-$c bind text <3> "button3annotation text $c %x %y"
-$c bind freeform <3> "button3annotation freeform $c %x %y"
+$main_canvas_elem bind oval <3> "button3annotation oval %x %y"
+$main_canvas_elem bind rectangle <3> "button3annotation rectangle %x %y"
+$main_canvas_elem bind text <3> "button3annotation text %x %y"
+$main_canvas_elem bind freeform <3> "button3annotation freeform %x %y"
 
-$c bind selectmark <Any-Enter> "selectmarkEnter $c %x %y"
-$c bind selectmark <Any-Leave> "selectmarkLeave $c %x %y"
+$main_canvas_elem bind selectmark <Any-Enter> "selectmarkEnter %x %y"
+$main_canvas_elem bind selectmark <Any-Leave> "selectmarkLeave %x %y"
 
-$c bind background <3> "button3background $c %x %y"
-$c bind grid <3> "button3background $c %x %y"
+$main_canvas_elem bind background <3> "button3background %x %y"
+$main_canvas_elem bind grid <3> "button3background %x %y"
 
-bind $c <1> "button1 $c %x %y none"
-bind $c <Control-Button-1> "button1 $c %x %y ctrl"
-bind $c <B1-Motion> "button1-motion $c %x %y"
-bind $c <B1-ButtonRelease> "button1-release $c %x %y"
+bind $main_canvas_elem <1> "button1 %x %y none"
+bind $main_canvas_elem <Control-Button-1> "button1 %x %y ctrl"
+bind $main_canvas_elem <B1-Motion> "button1-motion %x %y"
+bind $main_canvas_elem <B1-ButtonRelease> "button1-release %x %y"
 bind . <Delete> deleteSelection
 bind . <Shift-Delete> "deleteSelection 0 no_warning"
 
 # Scrolling and panning support
-bind $c <2> "$c scan mark %x %y"
-bind $c <B2-Motion> "$c scan dragto %x %y 1"
-bind $c <4> "$c yview scroll -1 units"
-bind $c <5> "$c yview scroll 1 units"
-bind $c <Shift-4> "$c xview scroll -1 units"
-bind $c <Shift-5> "$c xview scroll 1 units"
-bind . <Right> "$mf.c xview scroll 1 units"
-bind . <Left> "$mf.c xview scroll -1 units"
-bind . <Down> "$mf.c yview scroll 1 units"
-bind . <Up> "$mf.c yview scroll -1 units"
+bind $main_canvas_elem <2> "$main_canvas_elem scan mark %x %y"
+bind $main_canvas_elem <B2-Motion> "$main_canvas_elem scan dragto %x %y 1"
+bind $main_canvas_elem <4> "$main_canvas_elem yview scroll -1 units"
+bind $main_canvas_elem <5> "$main_canvas_elem yview scroll 1 units"
+bind $main_canvas_elem <Shift-4> "$main_canvas_elem xview scroll -1 units"
+bind $main_canvas_elem <Shift-5> "$main_canvas_elem xview scroll 1 units"
+bind . <Right> "$mf.canvas_elem xview scroll 1 units"
+bind . <Left> "$mf.canvas_elem xview scroll -1 units"
+bind . <Down> "$mf.canvas_elem yview scroll 1 units"
+bind . <Up> "$mf.canvas_elem yview scroll -1 units"
 
 # Escape to Select mode
-bind . <Key-Escape> "setActiveToolGroup select; selectNode $c none"
+bind . <Key-Escape> "setActiveToolGroup select; selectNode none"
 bind . <F5> "redrawAll"
 bind . <F7> {
 	global showTree

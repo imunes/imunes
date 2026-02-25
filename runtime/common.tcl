@@ -828,6 +828,7 @@ proc pipesClose {} {
 #****
 proc setOperMode { new_oper_mode } {
 	global isOSfreebsd isOSlinux gui
+	global main_canvas_elem
 
 	if {
 		! [getFromRunning "cfg_deployed"] &&
@@ -902,9 +903,9 @@ proc setOperMode { new_oper_mode } {
 			.menubar.experiment entryconfigure "Refresh running experiment" -state normal
 			.menubar.edit entryconfigure "Undo" -state disabled
 			.menubar.edit entryconfigure "Redo" -state disabled
-			.panwin.f1.c bind node <Double-1> "spawnShellExec"
-			.panwin.f1.c bind nodelabel <Double-1> "spawnShellExec"
-			.panwin.f1.c bind node_running <Double-1> "spawnShellExec"
+			$main_canvas_elem bind node <Double-1> "spawnShellExec"
+			$main_canvas_elem bind nodelabel <Double-1> "spawnShellExec"
+			$main_canvas_elem bind node_running <Double-1> "spawnShellExec"
 		}
 
 		setToRunning "oper_mode" "exec"
@@ -977,9 +978,9 @@ proc setOperMode { new_oper_mode } {
 				.menubar.edit entryconfigure "Redo" -state disabled
 			}
 
-			.panwin.f1.c bind node <Double-1> "nodeConfigGUI .panwin.f1.c {}"
-			.panwin.f1.c bind nodelabel <Double-1> "nodeConfigGUI .panwin.f1.c {}"
-			.panwin.f1.c bind node_running <Double-1> "nodeConfigGUI .panwin.f1.c {}"
+			$main_canvas_elem bind node <Double-1> "nodeConfigGUI {}"
+			$main_canvas_elem bind nodelabel <Double-1> "nodeConfigGUI {}"
+			$main_canvas_elem bind node_running <Double-1> "nodeConfigGUI {}"
 		}
 
 		setToRunning "oper_mode" "edit"
@@ -992,11 +993,13 @@ proc setOperMode { new_oper_mode } {
 	}
 
 	if { $gui } {
+		global main_canvas_elem
+
 		.bottom.oper_mode configure -text "$oper_mode_text"
 		.bottom.oper_mode configure -foreground $oper_mode_color
 
 		catch { redrawAll }
-		.panwin.f1.c config -cursor left_ptr
+		$main_canvas_elem config -cursor left_ptr
 	}
 }
 
@@ -1010,7 +1013,9 @@ proc setOperMode { new_oper_mode } {
 #   node.
 #****
 proc spawnShellExec {} {
-	set node_id [lindex [.panwin.f1.c gettags "(node || nodelabel || node_running) && current"] 1]
+	global main_canvas_elem
+
+	set node_id [lindex [$main_canvas_elem gettags "(node || nodelabel || node_running) && current"] 1]
 	if { $node_id == "" } {
 		return
 	}
@@ -1020,7 +1025,7 @@ proc spawnShellExec {} {
 		[invokeNodeProc $node_id "virtlayer"] != "VIRTUALIZED" ||
 		[getFromRunning "${node_id}_running"] == "false"
 	} {
-		nodeConfigGUI .panwin.f1.c $node_id
+		nodeConfigGUI $node_id
 	} else {
 		set cmd [existingShells [invokeNodeProc $node_id "shellcmds"] $node_id "first_only"]
 		if { $cmd == "" } {

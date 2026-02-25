@@ -9,6 +9,7 @@
 proc animateCursor {} {
 	global cursorState
 	global clock_seconds
+	global main_canvas_elem
 
 	if { [clock seconds] == $clock_seconds } {
 		update
@@ -18,10 +19,10 @@ proc animateCursor {} {
 
 	set clock_seconds [clock seconds]
 	if { $cursorState } {
-		.panwin.f1.c config -cursor watch
+		$main_canvas_elem config -cursor watch
 		set cursorState 0
 	} else {
-		.panwin.f1.c config -cursor pirate
+		$main_canvas_elem config -cursor pirate
 		set cursorState 1
 	}
 
@@ -43,7 +44,7 @@ proc animateCursor {} {
 #     for undo).
 #****
 proc removeLinkGUI { link_id atomic { keep_ifaces 0 } } {
-	global changed
+	global changed main_canvas_elem
 
 	if { $link_id == "" } {
 		return
@@ -76,7 +77,7 @@ proc removeLinkGUI { link_id atomic { keep_ifaces 0 } } {
 	cfgUnset "gui" "links" $link_id
 
 	if { $atomic == "atomic" } {
-		.panwin.f1.c delete $link_id
+		$main_canvas_elem delete $link_id
 
 		if { [getFromRunning "stop_sched"] } {
 			redeployCfg
@@ -88,7 +89,7 @@ proc removeLinkGUI { link_id atomic { keep_ifaces 0 } } {
 		}
 
 		updateUndoLog
-		.panwin.f1.c config -cursor left_ptr
+		$main_canvas_elem config -cursor left_ptr
 	}
 }
 
@@ -104,6 +105,8 @@ proc removeLinkGUI { link_id atomic { keep_ifaces 0 } } {
 #   * node_id -- node id
 #****
 proc removeNodeGUI { node_id { keep_other_ifaces 0 } } {
+	global main_canvas_elem
+
 	if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
 		setToExecuteVars "terminate_cfg" [cfgGet]
 	}
@@ -137,7 +140,7 @@ proc removeNodeGUI { node_id { keep_other_ifaces 0 } } {
 		redeployCfg
 	}
 
-	.panwin.f1.c delete $node_id
+	$main_canvas_elem delete $node_id
 }
 
 #****f* editor.tcl/splitLinkGUI
@@ -184,42 +187,44 @@ proc splitLinkGUI { link_id } {
 # NAME
 #   selectNode -- select node
 # SYNOPSIS
-#   selectNode $c $obj
+#   selectNode $obj
 # FUNCTION
 #   Crates the selecting box around the specified canvas
 #   object.
 # INPUTS
-#   * c -- tk canvas
 #   * obj -- tk canvas object tag id
 #****
-proc selectNode { c obj } {
+proc selectNode { obj } {
+	global main_canvas_elem
+
 	if { $obj == "none" } {
-		$c delete -withtags "selectmark"
+		$main_canvas_elem delete -withtags "selectmark"
+
 		return
 	}
 
-	set node_id [lindex [$c gettags $obj] 1]
+	set node_id [lindex [$main_canvas_elem gettags $obj] 1]
 	if { $node_id == "" } {
 		return
 	}
 
-	$c addtag selected withtag "node && $node_id"
+	$main_canvas_elem addtag selected withtag "node && $node_id"
 	if { [isPseudoNode $node_id] } {
-		set bbox [$c bbox "nodelabel && $node_id"]
+		set bbox [$main_canvas_elem bbox "nodelabel && $node_id"]
 	} elseif { [getAnnotationType $node_id] == "rectangle" } {
-		$c addtag selected withtag "rectangle && $node_id"
-		set bbox [$c bbox "rectangle && $node_id"]
+		$main_canvas_elem addtag selected withtag "rectangle && $node_id"
+		set bbox [$main_canvas_elem bbox "rectangle && $node_id"]
 	} elseif { [getAnnotationType $node_id] == "text" } {
-		$c addtag selected withtag "text && $node_id"
-		set bbox [$c bbox "text && $node_id"]
+		$main_canvas_elem addtag selected withtag "text && $node_id"
+		set bbox [$main_canvas_elem bbox "text && $node_id"]
 	} elseif { [getAnnotationType $node_id] == "oval" } {
-		$c addtag selected withtag "oval && $node_id"
-		set bbox [$c bbox "oval && $node_id"]
+		$main_canvas_elem addtag selected withtag "oval && $node_id"
+		set bbox [$main_canvas_elem bbox "oval && $node_id"]
 	} elseif { [getAnnotationType $node_id] == "freeform" } {
-		$c addtag selected withtag "freeform && $node_id"
-		set bbox [$c bbox "freeform && $node_id"]
+		$main_canvas_elem addtag selected withtag "freeform && $node_id"
+		set bbox [$main_canvas_elem bbox "freeform && $node_id"]
 	} else {
-		set bbox [$c bbox "node && $node_id"]
+		set bbox [$main_canvas_elem bbox "node && $node_id"]
 	}
 
 	if { $bbox == "" } {
@@ -231,8 +236,8 @@ proc selectNode { c obj } {
 	set by1 [expr {$by1 - 2}]
 	set bx2 [expr {$bx2 + 1}]
 	set by2 [expr {$by2 + 1}]
-	$c delete -withtags "selectmark && $node_id"
-	$c create line $bx1 $by1 $bx2 $by1 $bx2 $by2 $bx1 $by2 $bx1 $by1 \
+	$main_canvas_elem delete -withtags "selectmark && $node_id"
+	$main_canvas_elem create line $bx1 $by1 $bx2 $by1 $bx2 $by2 $bx1 $by2 $bx1 $by1 \
 		-dash {6 4} -fill black -width 1 -tags "selectmark $node_id"
 }
 
@@ -245,10 +250,12 @@ proc selectNode { c obj } {
 #   Select all object on the canvas.
 #****
 proc selectAllObjects {} {
-	set all_objects [.panwin.f1.c find withtag \
+	global main_canvas_elem
+
+	set all_objects [$main_canvas_elem find withtag \
 		"node || text || oval || rectangle || freeform"]
 	foreach obj $all_objects {
-		selectNode .panwin.f1.c $obj
+		selectNode $obj
 	}
 }
 
@@ -263,8 +270,10 @@ proc selectAllObjects {} {
 #   * nodelist -- list of nodes to select.
 #****
 proc selectNodes { nodelist } {
+	global main_canvas_elem
+
 	foreach node_id $nodelist {
-		selectNode .panwin.f1.c [.panwin.f1.c find withtag \
+		selectNode [$main_canvas_elem find withtag \
 			"(node || text || oval || rectangle || freeform) && $node_id"]
 	}
 }
@@ -280,9 +289,11 @@ proc selectNodes { nodelist } {
 #   * selected -- object list of selected nodes.
 #****
 proc selectedNodes {} {
+	global main_canvas_elem
+
 	set selected {}
-	foreach obj [.panwin.f1.c find withtag "node && selected"] {
-		lappend selected [lindex [.panwin.f1.c gettags $obj] 1]
+	foreach obj [$main_canvas_elem find withtag "node && selected"] {
+		lappend selected [lindex [$main_canvas_elem gettags $obj] 1]
 	}
 
 	return $selected
@@ -299,21 +310,23 @@ proc selectedNodes {} {
 #   * selected -- object list of selected annotations.
 #****
 proc selectedAnnotations {} {
+	global main_canvas_elem
+
 	set selected {}
-	foreach obj [.panwin.f1.c find withtag "oval && selected"] {
-		lappend selected [lindex [.panwin.f1.c gettags $obj] 1]
+	foreach obj [$main_canvas_elem find withtag "oval && selected"] {
+		lappend selected [lindex [$main_canvas_elem gettags $obj] 1]
 	}
 
-	foreach obj [.panwin.f1.c find withtag "rectangle && selected"] {
-		lappend selected [lindex [.panwin.f1.c gettags $obj] 1]
+	foreach obj [$main_canvas_elem find withtag "rectangle && selected"] {
+		lappend selected [lindex [$main_canvas_elem gettags $obj] 1]
 	}
 
-	foreach obj [.panwin.f1.c find withtag "text && selected"] {
-		lappend selected [lindex [.panwin.f1.c gettags $obj] 1]
+	foreach obj [$main_canvas_elem find withtag "text && selected"] {
+		lappend selected [lindex [$main_canvas_elem gettags $obj] 1]
 	}
 
-	foreach obj [.panwin.f1.c find withtag "freeform && selected"] {
-		lappend selected [lindex [.panwin.f1.c gettags $obj] 1]
+	foreach obj [$main_canvas_elem find withtag "freeform && selected"] {
+		lappend selected [lindex [$main_canvas_elem gettags $obj] 1]
 	}
 
 	return $selected
@@ -330,9 +343,11 @@ proc selectedAnnotations {} {
 #   * selected -- object list of selected real nodes.
 #****
 proc selectedRealNodes {} {
+	global main_canvas_elem
+
 	set selected {}
-	foreach obj [.panwin.f1.c find withtag "node && selected"] {
-		set node_id [lindex [.panwin.f1.c gettags $obj] 1]
+	foreach obj [$main_canvas_elem find withtag "node && selected"] {
+		set node_id [lindex [$main_canvas_elem gettags $obj] 1]
 		if { [isPseudoNode $node_id] } {
 			continue
 		}
@@ -380,7 +395,7 @@ proc selectAdjacent {} {
 # NAME
 #   button3link
 # SYNOPSIS
-#   button3link $c $x $y
+#   button3link $x $y
 # FUNCTION
 #   This procedure is called when a right mouse button is
 #   clicked on the canvas. If there is a link on the place of
@@ -392,20 +407,19 @@ proc selectAdjacent {} {
 #   * Merge -- this option is active only if the link is previously
 #   been split, by this action the link is merged.
 # INPUTS
-#   * c -- tk canvas
 #   * x -- x coordinate for popup menu
 #   * y -- y coordinate for popup menu
 #****
-proc button3link { c x y } {
-	global isOSlinux
+proc button3link { x y } {
+	global isOSlinux main_canvas_elem
 
-	clearTempObjects $c $x $y
+	clearTempObjects $x $y
 
 	set oper_mode [getFromRunning "oper_mode"]
 
-	set link_id [lindex [$c gettags "link && current"] 1]
+	set link_id [lindex [$main_canvas_elem gettags "link && current"] 1]
 	if { $link_id == "" } {
-		set link_id [lindex [$c gettags "linklabel && current"] 1]
+		set link_id [lindex [$main_canvas_elem gettags "linklabel && current"] 1]
 		if { $link_id == "" } {
 			return
 		}
@@ -424,7 +438,7 @@ proc button3link { c x y } {
 	# Configure link
 	#
 	.button3menu add command -label "Configure" \
-		-command "linkConfigGUI $c $link_id"
+		-command "linkConfigGUI $link_id"
 
 	#
 	# Clear link configuration
@@ -438,7 +452,7 @@ proc button3link { c x y } {
 		# Edit link jitter
 		#
 		.button3menu add command -label "Edit link jitter" \
-			-command "linkJitterConfigGUI $c $link_id"
+			-command "linkJitterConfigGUI $link_id"
 		#
 		# Reset link jitter
 		#
@@ -465,7 +479,7 @@ proc button3link { c x y } {
 	} {
 		.button3menu add checkbutton -label "Direct link" \
 			-underline 5 -variable linkDirect_$real_link_id \
-			-command "toggleDirectLink $c $link_id"
+			-command "toggleDirectLink $link_id"
 	} else {
 		.button3menu add checkbutton -label "Direct link" \
 			-underline 5 -variable linkDirect_$real_link_id \
@@ -543,7 +557,7 @@ proc button3link { c x y } {
 #   * canvas_id -- canvas id.
 #****
 proc moveToCanvas { canvas_id } {
-	global changed
+	global changed main_canvas_elem
 
 	set curcanvas [getFromRunning_gui "curcanvas"]
 
@@ -559,8 +573,8 @@ proc moveToCanvas { canvas_id } {
 		set changed 1
 	}
 
-	foreach obj [.panwin.f1.c find withtag "linklabel"] {
-		set link_id [lindex [.panwin.f1.c gettags $obj] 1]
+	foreach obj [$main_canvas_elem find withtag "linklabel"] {
+		set link_id [lindex [$main_canvas_elem gettags $obj] 1]
 
 		lassign [getLinkPeers [lindex [linkFromPseudoLink $link_id] 0]] \
 			real_peer1_id real_peer2_id
@@ -631,7 +645,7 @@ proc mergeNodeGUI { node_id } {
 # NAME
 #   button3node
 # SYNOPSIS
-#   button3node $c $x $y
+#   button3node $x $y
 # FUNCTION
 #   This procedure is called when a right mouse button is
 #   clicked on the canvas. If there is a node on the place of
@@ -652,28 +666,27 @@ proc mergeNodeGUI { node_id } {
 #   node and the specified interface. This option is available
 #   only for network layer nodes in exec mode.
 # INPUTS
-#   * c -- tk canvas
 #   * x -- x coordinate for popup menu
 #   * y -- y coordinate for popup menu
 #****
-proc button3node { c x y } {
-	global isOSlinux
+proc button3node { x y } {
+	global isOSlinux main_canvas_elem
 
-	clearTempObjects $c $x $y
+	clearTempObjects $x $y
 
 	set canvas_list [getFromRunning_gui "canvas_list"]
 	set curcanvas [getFromRunning_gui "curcanvas"]
 	set oper_mode [getFromRunning "oper_mode"]
 
-	set node_id [lindex [$c gettags "(node || nodelabel || node_running) && current"] 1]
+	set node_id [lindex [$main_canvas_elem gettags "(node || nodelabel || node_running) && current"] 1]
 	if { $node_id == "" } {
 		return
 	}
 
-	if { [$c gettags "node && $node_id && selected"] == "" } {
-		$c dtag node selected
-		$c delete -withtags selectmark
-		selectNode $c [$c find withtag "current"]
+	if { [$main_canvas_elem gettags "node && $node_id && selected"] == "" } {
+		$main_canvas_elem dtag node selected
+		$main_canvas_elem delete -withtags selectmark
+		selectNode [$main_canvas_elem find withtag "current"]
 	}
 
 	set node_type [getNodeType $node_id]
@@ -752,7 +765,7 @@ proc button3node { c x y } {
 	# Configure node
 	#
 	.button3menu add command -label "Configure" \
-		-command "nodeConfigGUI $c $node_id"
+		-command "nodeConfigGUI $node_id"
 
 	#
 	# Transform
@@ -1213,7 +1226,7 @@ proc button3node { c x y } {
 					redeployCfg
 				}
 
-				.panwin.f1.c config -cursor left_ptr
+				$main_canvas_elem config -cursor left_ptr
 			}
 		} \
 			""
@@ -1454,66 +1467,65 @@ proc button3node { c x y } {
 # NAME
 #   button1 -- button1 clicked
 # SYNOPSIS
-#   button1 $c $x $y $button
+#   button1 $x $y $button
 # FUNCTION
 #   This procedure is called when a left mouse button is
 #   clicked on the canvas. This procedure selects a new
 #   node or creates a new node, depending on the selected
 #   tool.
 # INPUTS
-#   * c -- tk canvas
 #   * x -- x coordinate
 #   * y -- y coordinate
 #   * button -- the keyboard button that is pressed.
 #****
-proc button1 { c x y button } {
+proc button1 { x y button } {
 	global newlink curobj changed
 	global router pc host lanswitch frswitch rj45 hub
 	global oval rectangle text freeform newtext
 	global lastX lastY
 	global background selectbox
-	global resizemode resizeobj
+	global resizemode resizeobj main_canvas_elem
 
 	set zoom [getActiveOption "zoom"]
 
-	set x [$c canvasx $x]
-	set y [$c canvasy $y]
+	set x [$main_canvas_elem canvasx $x]
+	set y [$main_canvas_elem canvasy $y]
 
 	set lastX $x
 	set lastY $y
 
 	set active_tool [getActiveTool]
-	set curobj [$c find withtag current]
-	set curtype [lindex [$c gettags current] 0]
+	set curobj [$main_canvas_elem find withtag current]
+	set curtype [lindex [$main_canvas_elem gettags current] 0]
 	set wasselected 0
 	if {
 		($active_tool == "select" && $curtype in "node oval rectangle text freeform node_running") ||
 		($curtype == "nodelabel" &&
-		[isPseudoNode [lindex [$c gettags $curobj] 1]])
+		[isPseudoNode [lindex [$main_canvas_elem gettags $curobj] 1]])
 	} {
-		set node_id [lindex [$c gettags current] 1]
+		set node_id [lindex [$main_canvas_elem gettags current] 1]
 		set wasselected [expr {$node_id in "[selectedNodes] [selectedAnnotations]"}]
 
 		if { $button == "ctrl" } {
 			if { $wasselected } {
-				$c dtag $node_id selected
-				$c delete -withtags "selectmark && $node_id"
+				$main_canvas_elem dtag $node_id selected
+				$main_canvas_elem delete -withtags "selectmark && $node_id"
 			}
 		} elseif { ! $wasselected } {
 			foreach node_type "node text oval rectangle freeform" {
-				$c dtag $node_type selected
+				$main_canvas_elem dtag $node_type selected
 			}
-			$c delete -withtags selectmark
+			$main_canvas_elem delete -withtags selectmark
 		}
 
 		if { $active_tool != "link" && ! $wasselected } {
-			selectNode $c $curobj
+			selectNode $curobj
 		}
 	} elseif { $active_tool == "select" && $curtype == "selectmark" } {
-		set o1 [lindex [$c gettags current] 1]
+		set o1 [lindex [$main_canvas_elem gettags current] 1]
 		if { [getAnnotationType $o1] in "oval rectangle" } {
 			set resizeobj $o1
-			set bbox1 [$c bbox $o1]
+			set bbox1 [$main_canvas_elem bbox $o1]
 			set x1 [lindex $bbox1 0]
 			set y1 [lindex $bbox1 1]
 			set x2 [lindex $bbox1 2]
@@ -1554,16 +1566,16 @@ proc button1 { c x y button } {
 		}
 	} elseif { $button != "ctrl" || $active_tool != "select" } {
 		foreach node_type "node text oval rectangle freeform" {
-			$c dtag $node_type selected
+			$main_canvas_elem dtag $node_type selected
 		}
 
-		$c delete -withtags selectmark
+		$main_canvas_elem delete -withtags selectmark
 	}
 
 	#determine whether we can create nodes on the current object
 	set object_drawable 0
 	foreach type "background grid rectangle oval freeform text" {
-		if { $type in [.panwin.f1.c gettags $curobj] } {
+		if { $type in [$main_canvas_elem gettags $curobj] } {
 			set object_drawable 1
 			break
 		}
@@ -1593,10 +1605,10 @@ proc button1 { c x y button } {
 
 			drawNode $node_id
 			foreach node_type "node text oval rectangle freeform" {
-				$c dtag $node_type selected
+				$main_canvas_elem dtag $node_type selected
 			}
-			$c delete -withtags selectmark
-			selectNode $c [$c find withtag "node && $node_id"]
+			$main_canvas_elem delete -withtags selectmark
+			selectNode [$main_canvas_elem find withtag "node && $node_id"]
 
 			set newnode $node_id
 			set changed 1
@@ -1604,24 +1616,24 @@ proc button1 { c x y button } {
 			$active_tool == "select" &&
 			$curtype ni "node nodelabel"
 		} {
-			$c config -cursor cross
+			$main_canvas_elem config -cursor cross
 
 			set lastX $x
 			set lastY $y
 			if { $selectbox != "" } {
 				# We actually shouldn't get here!
-				$c delete $selectbox
+				$main_canvas_elem delete $selectbox
 				set selectbox ""
 			}
 		} elseif { $active_tool in "oval rectangle" } {
-			$c config -cursor cross
+			$main_canvas_elem config -cursor cross
 			set lastX $x
 			set lastY $y
 		} elseif { $active_tool == "text" } {
-			$c config -cursor xterm
+			$main_canvas_elem config -cursor xterm
 			set lastX $x
 			set lastY $y
-			set newtext [$c create text $lastX $lastY \
+			set newtext [$main_canvas_elem create text $lastX $lastY \
 				-text "" \
 				-anchor w \
 				-justify left \
@@ -1630,61 +1642,60 @@ proc button1 { c x y button } {
 	} else {
 		if { $curtype in "node nodelabel text oval rectangle freeform" } {
 			if { $active_tool == "select" && $button == "ctrl" && $wasselected } {
-				$c config -cursor cross
+				$main_canvas_elem config -cursor cross
 			} else {
-				$c config -cursor fleur
+				$main_canvas_elem config -cursor fleur
 			}
 		}
 
 		if { $active_tool == "link" && $curtype in "node node_running" } {
-			$c config -cursor cross
-			set lastX [lindex [$c coords $curobj] 0]
-			set lastY [lindex [$c coords $curobj] 1]
-			set newlink [$c create line $lastX $lastY $x $y \
+			$main_canvas_elem config -cursor cross
+			set lastX [lindex [$main_canvas_elem coords $curobj] 0]
+			set lastY [lindex [$main_canvas_elem coords $curobj] 1]
+			set newlink [$main_canvas_elem create line $lastX $lastY $x $y \
 				-fill [getActiveOption "default_link_color"] -width [getActiveOption "default_link_width"] \
 				-tags "link"]
 		}
 	}
 
-	raiseAll $c
+	raiseAll
 }
 
 #****f* editor.tcl/button1-motion
 # NAME
 #   button1-motion -- button1 moved
 # SYNOPSIS
-#   button1-motion $c $x $y
+#   button1-motion $x $y
 # FUNCTION
 #   This procedure is called when a left mouse button is
 #   pressed and the mouse is moved around the canvas.
 #   This procedure creates new select box, moves the
 #   selected nodes or draws a new link.
 # INPUTS
-#   * c -- tk canvas
 #   * x -- x coordinate
 #   * y -- y coordinate
 #****
-proc button1-motion { c x y } {
+proc button1-motion { x y } {
 	global newlink changed
 	global lastX lastY sizex sizey selectbox background
-	global newoval newrect newtext newfree resizemode
+	global newoval newrect newtext newfree resizemode main_canvas_elem
 
 	set zoom [getActiveOption "zoom"]
 
-	set x [$c canvasx $x]
-	set y [$c canvasy $y]
-	set curobj [$c find withtag current]
-	set curtype [lindex [$c gettags current] 0]
+	set x [$main_canvas_elem canvasx $x]
+	set y [$main_canvas_elem canvasy $y]
+	set curobj [$main_canvas_elem find withtag current]
+	set curtype [lindex [$main_canvas_elem gettags current] 0]
 	set active_tool [getActiveTool]
 	if { $active_tool == "link" && $newlink != "" } {
 		#creating a new link
-		$c coords $newlink $lastX $lastY $x $y
+		$main_canvas_elem coords $newlink $lastX $lastY $x $y
 	} elseif {
 		$active_tool == "select" &&
 		$curtype == "nodelabel" &&
-		! [isPseudoNode [lindex [$c gettags $curobj] 1]]
+		! [isPseudoNode [lindex [$main_canvas_elem gettags $curobj] 1]]
 	} {
-		$c move $curobj [expr {$x - $lastX}] [expr {$y - $lastY}]
+		$main_canvas_elem move $curobj [expr {$x - $lastX}] [expr {$y - $lastY}]
 
 		set changed 1
 		set lastX $x
@@ -1700,14 +1711,14 @@ proc button1-motion { c x y } {
 		$curtype != "node_running" &&
 		($curobj == $selectbox ||
 		$curtype in "background grid" ||
-		($curobj ni [$c find withtag "selected"] &&
+		($curobj ni [$main_canvas_elem find withtag "selected"] &&
 		$curtype != "selectmark") &&
-		! [isPseudoNode [lindex [$c gettags $curobj] 1]])
+		! [isPseudoNode [lindex [$main_canvas_elem gettags $curobj] 1]])
 	} {
 		#forming the selectbox and resizing
 		if { $selectbox == "" } {
 			set err [catch {
-				set selectbox [$c create line \
+				set selectbox [$main_canvas_elem create line \
 					$lastX $lastY $x $lastY $x $y $lastX $y $lastX $lastY \
 					-dash {10 4} -fill black -width 1 -tags "selectbox"]
 			} error]
@@ -1715,10 +1726,10 @@ proc button1-motion { c x y } {
 				return
 			}
 
-			$c raise $selectbox "all"
+			$main_canvas_elem raise $selectbox "all"
 		} else {
 			set err [catch {
-				$c coords $selectbox \
+				$main_canvas_elem coords $selectbox \
 					$lastX $lastY $x $lastY $x $y $lastX $y $lastX $lastY
 			} error]
 			if { $err != 0 } {
@@ -1733,15 +1744,15 @@ proc button1-motion { c x y } {
 	} {
 		# Draw a new oval
 		if { $newoval == "" } {
-			set newoval [$c create oval $lastX $lastY $x $y \
+			set newoval [$main_canvas_elem create oval $lastX $lastY $x $y \
 				-outline blue \
 				-dash {10 4} \
 				-width 1 \
 				-tags "newoval"]
 
-			$c raise $newoval "background || link || linklabel || interface"
+			$main_canvas_elem raise $newoval "background || link || linklabel || interface"
 		} else {
-			$c coords $newoval \
+			$main_canvas_elem coords $newoval \
 				$lastX $lastY $x $y
 		}
 	} elseif {
@@ -1751,15 +1762,15 @@ proc button1-motion { c x y } {
 	} {
 		# Draw a new rectangle
 		if { $newrect == "" } {
-			set newrect [$c create rectangle $lastX $lastY $x $y \
+			set newrect [$main_canvas_elem create rectangle $lastX $lastY $x $y \
 				-outline blue \
 				-dash {10 4} \
 				-width 1 \
 				-tags "newrect"]
 
-			$c raise $newrect "oval || background || link || linklabel || interface"
+			$main_canvas_elem raise $newrect "oval || background || link || linklabel || interface"
 		} else {
-			$c coords $newrect $lastX $lastY $x $y
+			$main_canvas_elem coords $newrect $lastX $lastY $x $y
 		}
 	} elseif {
 		$active_tool == "freeform" &&
@@ -1768,19 +1779,19 @@ proc button1-motion { c x y } {
 	} {
 		# Draw a new freeform
 		if { $newfree == "" } {
-			set newfree [$c create line $lastX $lastY $x $y \
+			set newfree [$main_canvas_elem create line $lastX $lastY $x $y \
 				-fill blue \
 				-width 2 \
 				-tags "newfree"]
 
-			$c raise $newfree "oval || rectangle || background || link || linklabel || interface"
+			$main_canvas_elem raise $newfree "oval || rectangle || background || link || linklabel || interface"
 		} else {
 			xpos $newfree $x $y 2 blue
 		}
 	} elseif { $active_tool == "select" && $curtype == "selectmark" } {
 		# resize annotation
-		foreach o [$c find withtag "selected"] {
-			set node_id [lindex [$c gettags $o] 1]
+		foreach o [$main_canvas_elem find withtag "selected"] {
+			set node_id [lindex [$main_canvas_elem gettags $o] 1]
 
 			lassign [lmap n [getAnnotationCoords $node_id] {expr {$n * $zoom}}] oldX1 oldY1 oldX2 oldY2
 			switch -exact -- $resizemode {
@@ -1816,7 +1827,7 @@ proc button1-motion { c x y } {
 
 			if { $selectbox == "" } {
 				set err [catch {
-					set selectbox [$c create line \
+					set selectbox [$main_canvas_elem create line \
 						$oldX1 $oldY1 $oldX2 $oldY1 $oldX2 $oldY2 $oldX1 $oldY2 $oldX1 $oldY1 \
 						-dash {10 4} -fill black -width 1 -tags "selectbox"]
 				} error]
@@ -1824,10 +1835,10 @@ proc button1-motion { c x y } {
 					return
 				}
 
-				$c raise $selectbox "all"
+				$main_canvas_elem raise $selectbox "all"
 			} else {
 				set err [catch {
-					$c coords $selectbox \
+					$main_canvas_elem coords $selectbox \
 						$oldX1 $oldY1 $oldX2 $oldY1 $oldX2 $oldY2 $oldX1 $oldY2 $oldX1 $oldY1
 				} error]
 				if { $err != 0 } {
@@ -1836,26 +1847,26 @@ proc button1-motion { c x y } {
 			}
 		}
 	} else {
-		foreach img [$c find withtag "selected"] {
-			$c move $img [expr {$x - $lastX}] [expr {$y - $lastY}]
+		foreach img [$main_canvas_elem find withtag "selected"] {
+			$main_canvas_elem move $img [expr {$x - $lastX}] [expr {$y - $lastY}]
 
-			set node_id [lindex [$c gettags $img] 1]
+			set node_id [lindex [$main_canvas_elem gettags $img] 1]
 
 			foreach elem "selectmark nodedisabled node_running nodelabel link" {
-				set obj [$c find withtag "$elem && $node_id"]
-				$c move $obj [expr {$x - $lastX}] [expr {$y - $lastY}]
+				set obj [$main_canvas_elem find withtag "$elem && $node_id"]
+				$main_canvas_elem move $obj [expr {$x - $lastX}] [expr {$y - $lastY}]
 
 				if { $elem == "link" } {
-					$c addtag need_redraw withtag "link && $node_id"
+					$main_canvas_elem addtag need_redraw withtag "link && $node_id"
 				}
 			}
 		}
 
-		foreach link_id [$c find withtag "link && need_redraw"] {
-			redrawLink [lindex [$c gettags $link_id] 1]
+		foreach link_id [$main_canvas_elem find withtag "link && need_redraw"] {
+			redrawLink [lindex [$main_canvas_elem gettags $link_id] 1]
 		}
 
-		$c dtag link need_redraw
+		$main_canvas_elem dtag link need_redraw
 		set changed 1
 		set lastX $x
 		set lastY $y
@@ -1866,24 +1877,23 @@ proc button1-motion { c x y } {
 # NAME
 #   button1-release -- button1 released
 # SYNOPSIS
-#   button1-release $c $x $y
+#   button1-release $x $y
 # FUNCTION
 #   This procedure is called when a left mouse button is
 #   released.
 #   The result of this function depends on the actions
 #   during the button1-motion procedure.
 # INPUTS
-#   * c -- tk canvas
 #   * x -- x coordinate
 #   * y -- y coordinate
 #****
-proc button1-release { c x y } {
+proc button1-release { x y } {
 	global newlink curobj grid
 	global changed selectbox
 	global lastX lastY sizex sizey
 	global autorearrange_enabled
 	global resizemode resizeobj
-	global newnode
+	global newnode main_canvas_elem
 
 	set zoom [getActiveOption "zoom"]
 	set undolevel [getFromRunning "undolevel"]
@@ -1893,19 +1903,19 @@ proc button1-release { c x y } {
 
 	set outofbounds 0
 
-	set x [$c canvasx $x]
-	set y [$c canvasy $y]
-	$c config -cursor left_ptr
+	set x [$main_canvas_elem canvasx $x]
+	set y [$main_canvas_elem canvasy $y]
+	$main_canvas_elem config -cursor left_ptr
 	set active_tool [getActiveTool]
 	# if the link tool is active and we are creating a new link
 	if { $active_tool == "link" && $newlink != "" } {
-		$c delete $newlink
+		$main_canvas_elem delete $newlink
 		set newlink ""
 		set destobj ""
 
 		# find the node that is under the cursor
-		foreach obj [$c find overlapping $x $y $x $y] {
-			if { [lindex [$c gettags $obj] 0] in "node node_running" } {
+		foreach obj [$main_canvas_elem find overlapping $x $y $x $y] {
+			if { [lindex [$main_canvas_elem gettags $obj] 0] in "node node_running" } {
 				set destobj $obj
 				break
 			}
@@ -1914,43 +1924,43 @@ proc button1-release { c x y } {
 		# if there is an object beneath the cursor and an object was
 		# selected by the button1 procedure create a link between nodes
 		if { $destobj != "" && $curobj != "" && $destobj != $curobj } {
-			set lnode1 [lindex [$c gettags $curobj] 1]
-			set lnode2 [lindex [$c gettags $destobj] 1]
+			set lnode1 [lindex [$main_canvas_elem gettags $curobj] 1]
+			set lnode2 [lindex [$main_canvas_elem gettags $destobj] 1]
 			if { $lnode1 != $lnode2 } {
 				newLinkGUI $lnode1 $lnode2
 			}
 		}
 	} elseif { $active_tool in "rectangle oval text freeform" } {
-		popupAnnotationDialog $c 0 "false"
+		popupAnnotationDialog 0 "false"
 	}
 
 	if { $changed == 1 } {
 		set regular true
 
 		# selects the node whose label was moved
-		if { [lindex [$c gettags $curobj] 0] == "nodelabel" } {
-			set node_id [lindex [$c gettags $curobj] 1]
-			selectNode $c [$c find withtag "node && $node_id"]
+		if { [lindex [$main_canvas_elem gettags $curobj] 0] == "nodelabel" } {
+			set node_id [lindex [$main_canvas_elem gettags $curobj] 1]
+			selectNode [$main_canvas_elem find withtag "node && $node_id"]
 		}
 
 		set selected {}
-		foreach img [$c find withtag "selected"] {
-			set node_id [lindex [$c gettags $img] 1]
+		foreach img [$main_canvas_elem find withtag "selected"] {
+			set node_id [lindex [$main_canvas_elem gettags $img] 1]
 			lappend selected $node_id
-			set coords [$c coords $img]
+			set coords [$main_canvas_elem coords $img]
 			set x [expr {[lindex $coords 0] / $zoom}]
 			set y [expr {[lindex $coords 1] / $zoom}]
 
 			# only nodes are snapped to grid, annotations are not
 			if {
 				$autorearrange_enabled == 0 &&
-				[$c find withtag "node && $node_id"] != ""
+				[$main_canvas_elem find withtag "node && $node_id"] != ""
 			} {
 				set dx [expr {(int($x / $grid + 0.5) * $grid - $x) * $zoom}]
 				set dy [expr {(int($y / $grid + 0.5) * $grid - $y) * $zoom}]
-				$c move $img $dx $dy
+				$main_canvas_elem move $img $dx $dy
 
-				set coords [$c coords $img]
+				set coords [$main_canvas_elem coords $img]
 				set x [expr {[lindex $coords 0] / $zoom}]
 				set y [expr {[lindex $coords 1] / $zoom}]
 				if { $x < 0 || $y < 0 || $x > $sizex || $y > $sizey } {
@@ -1960,8 +1970,8 @@ proc button1-release { c x y } {
 				}
 
 				#moving the nodelabel assigned to the moving node
-				$c move "nodelabel && $node_id" $dx $dy
-				set coords [$c coords "nodelabel && $node_id"]
+				$main_canvas_elem move "nodelabel && $node_id" $dx $dy
+				set coords [$main_canvas_elem coords "nodelabel && $node_id"]
 				set x [expr {[lindex $coords 0] / $zoom}]
 				set y [expr {[lindex $coords 1] / $zoom}]
 				if { $x < 0 || $y < 0 || $x > $sizex || $y > $sizey } {
@@ -1974,8 +1984,8 @@ proc button1-release { c x y } {
 				set dy 0
 			}
 
-			if { [lindex [$c gettags $node_id] 0] == "oval" } {
-				lassign [$c coords [lindex [$c gettags $node_id] 1]] x1 y1 x2 y2
+			if { [lindex [$main_canvas_elem gettags $node_id] 0] == "oval" } {
+				lassign [$main_canvas_elem coords [lindex [$main_canvas_elem gettags $node_id] 1]] x1 y1 x2 y2
 				set x1 [expr {$x1 / $zoom}]
 				set y1 [expr {$y1 / $zoom}]
 				set x2 [expr {$x2 / $zoom}]
@@ -2005,8 +2015,8 @@ proc button1-release { c x y } {
 				setAnnotationCoords $node_id "$x1 $y1 $x2 $y2"
 			}
 
-			if { [lindex [$c gettags $node_id] 0] == "rectangle" } {
-				set coordinates [$c coords [lindex [$c gettags $node_id] 1]]
+			if { [lindex [$main_canvas_elem gettags $node_id] 0] == "rectangle" } {
+				set coordinates [$main_canvas_elem coords [lindex [$main_canvas_elem gettags $node_id] 1]]
 				set x1 [expr {[lindex $coordinates 0] / $zoom}]
 				set y1 [expr {[lindex $coordinates 1] / $zoom}]
 				set x2 [expr {[lindex $coordinates 6] / $zoom}]
@@ -2036,8 +2046,8 @@ proc button1-release { c x y } {
 				setAnnotationCoords $node_id "$x1 $y1 $x2 $y2"
 			}
 
-			if { [lindex [$c gettags $node_id] 0] == "freeform" } {
-				lassign [$c bbox "selectmark && $node_id"] x1 y1 x2 y2
+			if { [lindex [$main_canvas_elem gettags $node_id] 0] == "freeform" } {
+				lassign [$main_canvas_elem bbox "selectmark && $node_id"] x1 y1 x2 y2
 				set x1 [expr {$x1 / $zoom}]
 				set y1 [expr {$y1 / $zoom}]
 				set x2 [expr {$x2 / $zoom}]
@@ -2063,7 +2073,7 @@ proc button1-release { c x y } {
 					set outofbounds 1
 				}
 
-				set coordinates [$c coords [lindex [$c gettags $node_id] 1]]
+				set coordinates [$main_canvas_elem coords [lindex [$main_canvas_elem gettags $node_id] 1]]
 				set l [expr {[llength $coordinates]-1}]
 				set newcoords {}
 				set i 0
@@ -2081,9 +2091,9 @@ proc button1-release { c x y } {
 				setAnnotationCoords $node_id $newcoords
 			}
 
-			if { [lindex [$c gettags $node_id] 0] == "text" } {
-				set bbox [$c bbox "selectmark && $node_id"]
-				lassign [$c coords [lindex [$c gettags $node_id] 1]] x1 y1
+			if { [lindex [$main_canvas_elem gettags $node_id] 0] == "text" } {
+				set bbox [$main_canvas_elem bbox "selectmark && $node_id"]
+				lassign [$main_canvas_elem coords [lindex [$main_canvas_elem gettags $node_id] 1]] x1 y1
 				set x1 [expr {$x1 / $zoom}]
 				set y1 [expr {$y1 / $zoom}]
 
@@ -2110,8 +2120,8 @@ proc button1-release { c x y } {
 				setAnnotationCoords $node_id "$x1 $y1"
 			}
 
-			$c move "selectmark && $node_id" $dx $dy
-			$c addtag need_redraw withtag "link && $node_id"
+			$main_canvas_elem move "selectmark && $node_id" $dx $dy
+			$main_canvas_elem addtag need_redraw withtag "link && $node_id"
 			set changed 1
 		} ;# end of: foreach img selected
 
@@ -2127,22 +2137,22 @@ proc button1-release { c x y } {
 				redeployCfg
 			}
 
-			foreach img [$c find withtag "node && selected"] {
-				set node_id [lindex [$c gettags $img] 1]
+			foreach img [$main_canvas_elem find withtag "node && selected"] {
+				set node_id [lindex [$main_canvas_elem gettags $img] 1]
 				drawNode $node_id
-				selectNode $c [$c find withtag "node && $node_id"]
+				selectNode [$main_canvas_elem find withtag "node && $node_id"]
 			}
 
-			foreach link_id [$c find withtag "link && need_redraw"] {
-				redrawLink [lindex [$c gettags $link_id] 1]
-				updateLinkLabel [lindex [$c gettags $link_id] 1]
+			foreach link_id [$main_canvas_elem find withtag "link && need_redraw"] {
+				redrawLink [lindex [$main_canvas_elem gettags $link_id] 1]
+				updateLinkLabel [lindex [$main_canvas_elem gettags $link_id] 1]
 			}
 		} else {
 			if { $newnode != "" } {
 				removeNode $newnode
 			}
 
-			.panwin.f1.c config -cursor watch
+			$main_canvas_elem config -cursor watch
 			.bottom.textbox config -text ""
 
 			redrawAll
@@ -2154,7 +2164,7 @@ proc button1-release { c x y } {
 			set changed 0
 		}
 
-		$c dtag link need_redraw
+		$main_canvas_elem dtag link need_redraw
 	} elseif { $active_tool == "select" } {
 		# $changed!=1
 		if { $selectbox == "" } {
@@ -2162,9 +2172,9 @@ proc button1-release { c x y } {
 			set y1 $y
 			set autorearrange_enabled 0
 		} else {
-			set coords [$c coords $selectbox]
+			set coords [$main_canvas_elem coords $selectbox]
 
-			$c delete $selectbox
+			$main_canvas_elem delete $selectbox
 			set selectbox ""
 
 			if { $coords == "" } {
@@ -2180,9 +2190,9 @@ proc button1-release { c x y } {
 		if { $resizemode == "false" } {
 			set enclosed {}
 
-			catch { $c find enclosed $x $y $x1 $y1 } enc_objs
+			catch { $main_canvas_elem find enclosed $x $y $x1 $y1 } enc_objs
 			foreach obj $enc_objs {
-				set tags [$c gettags $obj]
+				set tags [$main_canvas_elem gettags $obj]
 				if { [lindex $tags 0] == "node" && [lsearch $tags selected] == -1 } {
 					lappend enclosed $obj
 				}
@@ -2201,7 +2211,7 @@ proc button1-release { c x y } {
 			}
 
 			foreach obj $enclosed {
-				selectNode $c $obj
+				selectNode $obj
 			}
 		} else {
 			setAnnotationCoords $resizeobj "$x $y $x1 $y1"
@@ -2217,30 +2227,29 @@ proc button1-release { c x y } {
 		set redrawNeeded 0
 		redrawAll
 	} else {
-		raiseAll $c
+		raiseAll
 	}
 
 	update
 	updateUndoLog
-	.panwin.f1.c config -cursor left_ptr
+	$main_canvas_elem config -cursor left_ptr
 }
 
 #****f* editor.tcl/button3background
 # NAME
 #   button3background -- button3 background
 # SYNOPSIS
-#   button3background $c $x $y
+#   button3background $x $y
 # FUNCTION
 #   Popup menu for right click on canvas background.
 # INPUTS
-#   * c -- tk canvas
 #   * x -- x coordinate
 #   * y -- y coordinate
 #****
-proc button3background { c x y } {
+proc button3background { x y } {
 	global changed
 
-	clearTempObjects $c $x $y
+	clearTempObjects $x $y
 
 	set canvas_list [getFromRunning_gui "canvas_list"]
 	set curcanvas [getFromRunning_gui "curcanvas"]
@@ -2305,12 +2314,12 @@ proc button3background { c x y } {
 		-underline 0 \
 		-state $mode
 
-	foreach c $canvas_list {
-		set canv_name [getCanvasName $c]
-		set canvas_bkg [getCanvasBkg $c]
+	foreach cnv $canvas_list {
+		set canv_name [getCanvasName $cnv]
+		set canvas_bkg [getCanvasBkg $cnv]
 		set curcanvas_size [getCanvasSize $curcanvas]
-		set othercanvsize [getCanvasSize $c]
-		if { $curcanvas != $c && $curcanvas_size == $othercanvsize } {
+		set othercanvsize [getCanvasSize $cnv]
+		if { $curcanvas != $cnv && $curcanvas_size == $othercanvsize } {
 
 			set tmp_command [list apply {
 				{ curcanvas canvas_bkg } {
@@ -2366,18 +2375,18 @@ proc setDefaultIcon {} {
 # NAME
 #   nodeEnter -- node enter
 # SYNOPSIS
-#   nodeEnter $c
+#   nodeEnter
 # FUNCTION
 #   This procedure prints the node id, node name and
 #   node model (if exists), as well as all the interfaces
 #   of the node in the status line.
 #   Information is presented for the node above which is
 #   the mouse pointer.
-# INPUTS
-#   * c -- tk canvas
 #****
-proc nodeEnter { c } {
-	set node_id [lindex [$c gettags current] 1]
+proc nodeEnter {} {
+	global main_canvas_elem
+
+	set node_id [lindex [$main_canvas_elem gettags current] 1]
 	if { [isPseudoNode $node_id] } {
 		lassign [nodeFromPseudoNode $node_id] real_node_id real_iface_id
 		.bottom.textbox config \
@@ -2406,25 +2415,25 @@ proc nodeEnter { c } {
 	}
 	.bottom.textbox config -text "$line"
 
-	showCfg $c $node_id
-	showRoute $c $node_id
+	showCfg $node_id
+	showRoute $node_id
 }
 
 #****f* editor.tcl/linkEnter
 # NAME
 #   linkEnter -- link enter
 # SYNOPSIS
-#   linkEnter $c
+#   linkEnter
 # FUNCTION
 #   This procedure prints the link id, link bandwidth
 #   and link delay in the status line.
 #   Information is presented for the link above which is
 #   the mouse pointer.
-# INPUTS
-#   * c -- tk canvas
 #****
-proc linkEnter { c } {
-	set link_id [lindex [$c gettags current] 1]
+proc linkEnter {} {
+	global main_canvas_elem
+
+	set link_id [lindex [$main_canvas_elem gettags current] 1]
 	if { [lsearch [getFromRunning "link_list"] $link_id] == -1 } {
 		return
 	}
@@ -2436,17 +2445,17 @@ proc linkEnter { c } {
 # NAME
 #   anyLeave
 # SYNOPSIS
-#   anyLeave $c
+#   anyLeave
 # FUNCTION
 #   This procedure clears the status line.
-# INPUTS
-#   * c -- tk canvas
 #****
-proc anyLeave { c } {
+proc anyLeave {} {
+	global main_canvas_elem
+
 	.bottom.textbox config -text ""
 
-	$c delete -withtag showCfgPopup
-	$c delete -withtag route
+	$main_canvas_elem delete -withtag showCfgPopup
+	$main_canvas_elem delete -withtag route
 }
 
 #****f* editor.tcl/deleteSelection
@@ -2460,7 +2469,7 @@ proc anyLeave { c } {
 #****
 proc deleteSelection { { keep_other_ifaces 0 } { no_warning "" } } {
 	global changed
-	global viewid
+	global viewid main_canvas_elem
 
 	if { $no_warning == "" && [getFromRunning "cfg_deployed"] } {
 		set answer [tk_messageBox -message "Are you sure you want to delete selected nodes?\n\nThere is no undo in exec mode." \
@@ -2479,7 +2488,7 @@ proc deleteSelection { { keep_other_ifaces 0 } { no_warning "" } } {
 	}
 
 	catch { unset viewid }
-	.panwin.f1.c config -cursor watch; update
+	$main_canvas_elem config -cursor watch; update
 
 	foreach node_id [selectedNodes] {
 		removeNodeGUI $node_id $keep_other_ifaces
@@ -2494,12 +2503,12 @@ proc deleteSelection { { keep_other_ifaces 0 } { no_warning "" } } {
 	}
 
 	if { $changed } {
-		raiseAll .panwin.f1.c
+		raiseAll
 		updateUndoLog
 		redrawAll
 	}
 
-	.panwin.f1.c config -cursor left_ptr
+	$main_canvas_elem config -cursor left_ptr
 	.bottom.textbox config -text ""
 }
 
@@ -2642,7 +2651,7 @@ proc removeIPv6Nodes { nodes all_ifaces } {
 }
 
 proc matchSubnet4 { node_id iface_id } {
-	global changed
+	global changed main_canvas_elem
 
 	if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
 		setToExecuteVars "terminate_cfg" [cfgGet]
@@ -2665,11 +2674,11 @@ proc matchSubnet4 { node_id iface_id } {
 	set changed 1
 	updateUndoLog
 
-	.panwin.f1.c config -cursor left_ptr
+	$main_canvas_elem config -cursor left_ptr
 }
 
 proc matchSubnet6 { node_id iface_id } {
-	global changed
+	global changed main_canvas_elem
 
 	if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
 		setToExecuteVars "terminate_cfg" [cfgGet]
@@ -2692,7 +2701,7 @@ proc matchSubnet6 { node_id iface_id } {
 	set changed 1
 	updateUndoLog
 
-	.panwin.f1.c config -cursor left_ptr
+	$main_canvas_elem config -cursor left_ptr
 }
 
 #****f* editor.tcl/changeAddressRange
@@ -2948,17 +2957,18 @@ proc changeAddressRange6 {} {
 # NAME
 #  double1onGrid.tcl -- called on Double-1 click on grid (bind command)
 # SYNOPSIS
-#  double1onGrid $c $x $y
+#  double1onGrid $x $y
 # FUNCTION
 #  As grid is layered above annotations this procedure is used to find
 #  annotation object closest to cursor.
 # INPUTS
-#   * c -- tk canvas
 #   * x -- double click x coordinate
 #   * y -- double click y coordinate
 #****
-proc double1onGrid { c x y } {
-	set tags [$c gettags [$c find closest $x $y]]
+proc double1onGrid { x y } {
+	global main_canvas_elem
+
+	set tags [$main_canvas_elem gettags [$main_canvas_elem find closest $x $y]]
 	if { [lsearch $tags grid] != -1 || [lsearch $tags background] != -1 } {
 		return
 	}
@@ -2971,21 +2981,23 @@ proc double1onGrid { c x y } {
 		return
 	}
 
-	annotationConfig $c $node_id
+	annotationConfig $node_id
 }
 
-proc clearTempObjects { c x y } {
+proc clearTempObjects { x y } {
+	global main_canvas_elem
+
 	# clear existing temporary objects
 	foreach object_type "newlink newoval newrect newfree newtext" {
 		global $object_type
 
 		if { [set $object_type] != "" } {
-			$c delete [set $object_type]
+			$main_canvas_elem delete [set $object_type]
 			set $object_type ""
 
-			$c config -cursor left_ptr
+			$main_canvas_elem config -cursor left_ptr
 		}
 	}
 
-	button1-release $c $x $y
+	button1-release $x $y
 }

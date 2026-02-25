@@ -239,11 +239,11 @@ proc createRunningVarsFile { eid } {
 #   * eid -- experiment id
 #****
 proc createExperimentScreenshot { eid } {
-	global runtimeDir
+	global runtimeDir main_canvas_elem
 
 	set fileName "$runtimeDir/$eid/screenshot.png"
 	set error [catch { eval image create photo screenshot -format window \
-		-data .panwin.f1.c } err]
+		-data $main_canvas_elem } err]
 	if { $error == 0 } {
 		screenshot write $fileName -format png
 

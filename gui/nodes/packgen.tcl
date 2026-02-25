@@ -70,17 +70,16 @@ proc $MODULE.notebookDimensions { wi } {
 # NAME
 #   packgen.configGUI
 # SYNOPSIS
-#   packgen.configGUI $c $node_id
+#   packgen.configGUI $node_id
 # FUNCTION
 #   Defines the structure of the packgen configuration window
 #   by calling procedures for creating and organising the
 #   window, as well as procedures for adding certain modules
 #   to that window.
 # INPUTS
-#   * c - tk canvas
 #   * node_id - node id
 #****
-proc $MODULE.configGUI { c node_id } {
+proc $MODULE.configGUI { node_id } {
 	global wi
 	global packgenguielements packgentreecolumns curnode
 	global node_cfg node_cfg_gui node_existing_mac node_existing_ipv4 node_existing_ipv6
@@ -94,7 +93,7 @@ proc $MODULE.configGUI { c node_id } {
 	set curnode $node_id
 	set packgenguielements {}
 
-	configGUI_createConfigPopupWin $c
+	configGUI_createConfigPopupWin
 
 	wm title $wi "packet generator configuration"
 	configGUI_nodeName $wi $node_id "Node name:"

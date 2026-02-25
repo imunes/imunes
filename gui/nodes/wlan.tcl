@@ -45,12 +45,12 @@ proc $MODULE.icon { size } {
 	}
 }
 
-proc $MODULE.configGUI { c node_id } {
+proc $MODULE.configGUI { node_id } {
 	global wi
 	global guielements treecolumns
 	set guielements {}
 
-	configGUI_createConfigPopupWin $c
+	configGUI_createConfigPopupWin
 	wm title $wi "WLAN configuration"
 	configGUI_nodeName $wi $node_id "Node name:"
 

@@ -131,16 +131,15 @@ proc $MODULE.notebookDimensions { wi } {
 # NAME
 #   pc.configGUI -- configuration GUI
 # SYNOPSIS
-#   pc.configGUI $c $node_id
+#   pc.configGUI $node_id
 # FUNCTION
 #   Defines the structure of the pc configuration window by calling
 #   procedures for creating and organising the window, as well as
 #   procedures for adding certain modules to that window.
 # INPUTS
-#   * c -- tk canvas
 #   * node_id -- node id
 #****
-proc $MODULE.configGUI { c node_id } {
+proc $MODULE.configGUI { node_id } {
 	global wi
 	#
 	#guielements - the list of modules contained in the configuration window
@@ -161,7 +160,7 @@ proc $MODULE.configGUI { c node_id } {
 	set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
 	set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
 
-	configGUI_createConfigPopupWin $c
+	configGUI_createConfigPopupWin
 	wm title $wi "pc configuration"
 
 	configGUI_nodeName $wi $node_id "Node name:"
