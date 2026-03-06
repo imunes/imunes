@@ -1291,7 +1291,9 @@ proc toggleAutoExecution {} {
 		setToExecuteVars "terminate_cfg" [cfgGet]
 	}
 
-	createRunningVarsFile [getFromRunning "eid"]
+	if { [getFromRunning "cfg_deployed"] } {
+		createRunningVarsFile [getFromRunning "eid"]
+	}
 }
 
 #****f* exec.tcl/dumpLinksToFile
