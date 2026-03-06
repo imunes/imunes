@@ -878,7 +878,23 @@ proc refreshTopologyTree {} {
 #   Creates a popup dialog box to attach to experiment.
 #****
 proc attachToExperimentPopup {} {
-	global selected_experiment runtimeDir
+	global selected_experiment runtimeDir gui
+
+	catch { rexec id -u } uid
+	if { $uid != "0" } {
+		set err "Error: To attach to experiments, run IMUNES with root permissions."
+
+		if { $gui } {
+			after idle { .dialog1.msg configure -wraplength 5i }
+			tk_dialog .dialog1 "IMUNES error" \
+				$err \
+				info 0 Dismiss
+		} else {
+			puts stderr $err
+		}
+
+		return
+	}
 
 	set ateDialog .attachToExperimentDialog
 	catch { destroy $ateDialog }

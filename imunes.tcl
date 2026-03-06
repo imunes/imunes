@@ -504,6 +504,23 @@ if { $execMode == "interactive" } {
 	newProject
 
 	if { $selected_experiment != "" } {
+		catch { rexec id -u } uid
+		if { $uid != "0" } {
+			mainPipeClose
+			set err "Error: To attach to experiments, run IMUNES with root permissions."
+
+			if { $gui } {
+				after idle { .dialog1.msg configure -wraplength 5i }
+				tk_dialog .dialog1 "IMUNES error" \
+					$err \
+					info 0 Dismiss
+			} else {
+				puts stderr $err
+			}
+
+			exit 1
+		}
+
 		if { $gui } {
 			resumeAndDestroy
 		} else {
