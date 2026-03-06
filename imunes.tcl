@@ -300,6 +300,11 @@ foreach {name value type description} $gui_options_defaults {
 	}
 }
 
+global node_existing_mac node_existing_ipv4 node_existing_ipv6
+set node_existing_mac {}
+set node_existing_ipv4 {}
+set node_existing_ipv6 {}
+
 set all_modules_list {}
 set runnable_node_types {}
 
