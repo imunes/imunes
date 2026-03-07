@@ -1217,7 +1217,8 @@ proc loadCfgJson { json_cfg } {
 				"Error: $msg" \
 				info 0 Dismiss
 
-			closeFile
+			closeFile "noprompt"
+
 			return $dict_cfg
 		}
 

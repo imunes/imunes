@@ -629,10 +629,10 @@ proc fileSaveAsDialogBox {} {
 # FUNCTION
 #   Closes the current file.
 #****
-proc closeFile {} {
+proc closeFile { { noprompt "" } } {
 	global cfg_list curcfg gui
 
-	if { $gui && [checkAndPromptSave $curcfg] != 0 } {
+	if { $gui && $noprompt == "" && [checkAndPromptSave $curcfg] != 0 } {
 		return
 	}
 
