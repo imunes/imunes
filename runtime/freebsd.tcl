@@ -42,25 +42,6 @@ proc writeDataToNodeFile { node_id path data } {
 	writeDataToFile $node_dir/$path $data
 }
 
-#****f* freebsd.tcl/execCmdNode
-# NAME
-#   execCmdNode -- execute command on virtual node
-# SYNOPSIS
-#   execCmdNode $node_id $cmd
-# FUNCTION
-#   Executes a command on a virtual node and returns the output.
-# INPUTS
-#   * node_id -- virtual node id
-#   * cmd -- command to execute
-# RESULT
-#   * returns the execution output
-#****
-proc execCmdNode { node_id cmd } {
-	catch { eval [concat "rexec jexec " [getFromRunning "eid"].$node_id $cmd] } output
-
-	return $output
-}
-
 #****f* freebsd.tcl/execCmdNodeBkg
 # NAME
 #   execCmdNodeBkg -- execute command on virtual node

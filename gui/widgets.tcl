@@ -35,11 +35,6 @@ proc showCfg { node_id } {
 		return
 	}
 
-	#Dont show popup window if the node virtlayer is different from VIRTUALIZED
-	if { [invokeNodeProc $node_id "virtlayer"] != "VIRTUALIZED" } {
-		return
-	}
-
 	#Determine node coordinates
 	set coords [getNodeCoords $node_id]
 	set x [expr [lindex $coords 0] + 30]
