@@ -164,11 +164,11 @@ proc splitLinkGUI { link_id } {
 	lassign [getNodeCoords $orig_node2_id] x2 y2
 
 	setNodeCoords $new_node1_id \
-		"[expr {($x1 + 0.4 * ($x2 - $x1)) / $zoom}] \
-		[expr {($y1 + 0.4 * ($y2 - $y1)) / $zoom}]"
+		"[expr { $x1 + 0.4 * ($x2 - $x1) }] \
+		[expr { $y1 + 0.4 * ($y2 - $y1) }]"
 	setNodeCoords $new_node2_id \
-		"[expr {($x1 + 0.6 * ($x2 - $x1)) / $zoom}] \
-		[expr {($y1 + 0.6 * ($y2 - $y1)) / $zoom}]"
+		"[expr { $x1 + 0.6 * ($x2 - $x1) }] \
+		[expr { $y1 + 0.6 * ($y2 - $y1) }]"
 	setNodeLabelCoords $new_node1_id [getNodeCoords $new_node1_id]
 	setNodeLabelCoords $new_node2_id [getNodeCoords $new_node2_id]
 
