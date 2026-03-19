@@ -177,6 +177,9 @@ set isOSwin false
 set isOSmac false
 set isOSmac_gui false
 
+# switch cases for update procedures
+namespace eval ::switch_cases {}
+
 # Runtime libriaries
 foreach file_path [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
 	if {
@@ -188,6 +191,11 @@ foreach file_path [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
 }
 
 setPlatformVariables
+
+global cfg_types_dictionary cfg_types_array cfg_types_inner_dictionary
+set cfg_types_dictionary "gui canvases nodes links annotations images"
+set cfg_types_array {}
+set cfg_types_inner_dictionary {}
 
 if { $prepareFlag } {
 	prepareVroot
@@ -386,7 +394,7 @@ if { ! [file exists $config_dir] } {
 # also don't want to do it manually for each new option that is added to the
 # list, so generate it every time in debug mode
 if { $debug } {
-	set json_cfg [createJson "object" [list "custom_override" "" {*}$default_options]]
+	set json_cfg [createJson "object_list" [list "custom_override" "" {*}$default_options]]
 
 	set preamble "#\n"
 	append preamble "# This file is not parsed. If you want to apply options system-wide,\n"

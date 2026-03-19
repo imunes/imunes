@@ -2063,15 +2063,17 @@ proc getImageProperty { image_id property } {
 # * array - JSON array
 # * inner_dictionary - dictionary inside of an object
 proc getJsonType { key_name } {
-	if { $key_name in "gui canvases nodes links annotations images custom_configs ipsec_configs ifaces IFACES_CONFIG NODE_CONFIG" } {
+	global cfg_types_dictionary cfg_types_array cfg_types_inner_dictionary
+
+	if { $key_name in $cfg_types_dictionary } {
 		return "dictionary"
-	} elseif { $key_name in "croutes4 croutes6 ipv4_addrs ipv6_addrs services events tayga_mappings" } {
+	} elseif { $key_name in $cfg_types_array } {
 		return "array"
-	} elseif { $key_name in "vlan ipsec nat64 packgen packets" } {
+	} elseif { $key_name in $cfg_types_inner_dictionary } {
 		return "inner_dictionary"
 	}
 
-	return "object"
+	return "object_list"
 }
 
 proc createJson { value_type dictionary } {
@@ -2083,13 +2085,13 @@ proc createJson { value_type dictionary } {
 				createJson [getJsonType $k] $v
 			}]]
 		}
-		"object" {
+		"object_list" {
 			set retv [json::write object {*}[dict map {k v} $dictionary {
 				set k_type [getJsonType $k]
 				if { $k_type in "dictionary array" } {
 					createJson $k_type $v
 				} elseif { $k_type in "inner_dictionary" } {
-					createJson "object" $v
+					createJson "object_list" $v
 				} else {
 					::json::write string $v
 				}
@@ -2104,7 +2106,7 @@ proc createJson { value_type dictionary } {
 			set retv [::json::write array {*}$json_list]
 		}
 		"inner_dictionary" {
-			set retv [createJson "object" $dictionary]
+			set retv [createJson "object_list" $dictionary]
 		}
 	}
 

@@ -49,6 +49,8 @@ proc nodeFromPseudoNode { pseudo_id } {
 }
 
 proc updateNodeGUI { node_id old_node_cfg_gui new_node_cfg_gui } {
+	upvar ::switch_cases::updateNodeGUI switch_cases_var
+
 	global changed
 
 	dputs ""
@@ -92,31 +94,7 @@ proc updateNodeGUI { node_id old_node_cfg_gui new_node_cfg_gui } {
 			dputs "==== NEW: '$new_value'"
 		}
 
-		switch -exact $key {
-			"label" {
-				setNodeLabel $node_id $new_value
-			}
-
-			"canvas" {
-				setNodeCanvas $node_id $new_value
-			}
-
-			"iconcoords" {
-				setNodeCoords $node_id $new_value
-			}
-
-			"labelcoords" {
-				setNodeLabelCoords $node_id $new_value
-			}
-
-			"custom_icon" {
-				setNodeCustomIcon $node_id $new_value
-			}
-
-			default {
-				# do nothing
-			}
-		}
+		switch -exact $key [list {*}$switch_cases_var default {}]
 	}
 
 	if { $changed } {

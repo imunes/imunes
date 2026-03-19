@@ -2063,7 +2063,7 @@ proc editorPreferencesGUI_saveContent { option_source curtab_options curtab_over
 			#lassign [editorPreferencesGUI_fetchTabOptions $current_tab_elem] curtab_options curtab_override
 			set curtab_options [dictSet $curtab_options "custom_override" $curtab_override]
 
-			set json_cfg [createJson "object" $curtab_options]
+			set json_cfg [createJson "object_list" $curtab_options]
 			if { ! [file exists $config_dir] } {
 				file mkdir $config_dir
 			}

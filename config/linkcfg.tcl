@@ -320,6 +320,8 @@ proc linkDirection { node_id iface_id } {
 }
 
 proc updateLink { link_id old_link_cfg new_link_cfg } {
+	upvar ::switch_cases::updateLink switch_cases_var
+
 	global changed
 
 	dputs ""
@@ -367,43 +369,7 @@ proc updateLink { link_id old_link_cfg new_link_cfg } {
 			dputs "==== NEW: '$new_value'"
 		}
 
-		switch -exact $key {
-			"peers" {
-				setLinkPeers $link_id $new_value
-			}
-
-			"peers_ifaces" {
-				setLinkPeersIfaces $link_id $new_value
-			}
-
-			"bandwidth" {
-				setLinkBandwidth $link_id $new_value
-			}
-
-			"delay" {
-				setLinkDelay $link_id $new_value
-			}
-
-			"ber" {
-				setLinkBER $link_id $new_value
-			}
-
-			"loss" {
-				setLinkLoss $link_id $new_value
-			}
-
-			"duplicate" {
-				setLinkDup $link_id $new_value
-			}
-
-			"events" {
-				setElementEvents $link_id $new_value
-			}
-
-			default {
-				# do nothing
-			}
-		}
+		switch -exact $key [list {*}$switch_cases_var default {}]
 	}
 
 	if { $changed } {
@@ -419,3 +385,35 @@ proc updateLink { link_id old_link_cfg new_link_cfg } {
 
 	return $new_link_cfg
 }
+
+addCase "updateLink" "peers" {
+	setLinkPeers $link_id $new_value
+}
+
+addCase "updateLink" "peers_ifaces" {
+	setLinkPeersIfaces $link_id $new_value
+}
+
+addCase "updateLink" "bandwidth" {
+	setLinkBandwidth $link_id $new_value
+}
+
+addCase "updateLink" "delay" {
+	setLinkDelay $link_id $new_value
+}
+
+addCase "updateLink" "ber" {
+	setLinkBER $link_id $new_value
+}
+
+addCase "updateLink" "loss" {
+	setLinkLoss $link_id $new_value
+}
+
+addCase "updateLink" "duplicate" {
+	setLinkDup $link_id $new_value
+}
+
+addCase "updateLink" "events" {
+	setElementEvents $link_id $new_value
+} "array"

@@ -430,6 +430,9 @@ proc reloadSources {} {
 
 	source "$ROOTDIR/$LIBDIR/helpers.tcl"
 
+	catch { namespace delete ::switch_cases }
+	namespace eval ::switch_cases {}
+
 	# Runtime libriaries
 	foreach file_path [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
 		if {

@@ -1,3 +1,15 @@
+# updateIface cases
+
+addCase "updateIface" "filter_rules" {
+	clearFilterIfcRules $node_id $iface_id
+
+	foreach {rule_id rule_cfg} $iface_prop_new_value {
+		addFilterIfcRule $node_id $iface_id $rule_id $rule_cfg
+	}
+}
+
+# node-specific procedures
+
 proc getFilterIfcRule { node_id iface_id id } {
 	return [cfgGet "nodes" $node_id "ifaces" $iface_id "filter_rules" $id]
 }
