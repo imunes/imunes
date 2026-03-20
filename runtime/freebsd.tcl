@@ -1153,6 +1153,8 @@ proc createNodeContainer { node_id } {
 proc isNodeStarted { node_id } {
 	global nodecreate_timeout
 
+	set timeout [expr { [getActiveOption "timeout_factor"] * $nodecreate_timeout }]
+
 	set node_type [getNodeType $node_id]
 	if { [invokeTypeProc $node_type "virtlayer"] != "VIRTUALIZED" } {
 		if { $node_type in "rj45 ext" } {
@@ -1171,8 +1173,8 @@ proc isNodeStarted { node_id } {
 	set jail_id "[getFromRunning "eid"].$node_id"
 
 	try {
-		if { $nodecreate_timeout >= 0 } {
-			rexec timeout [expr $nodecreate_timeout/5.0] jls -j $jail_id
+		if { $timeout >= 0 } {
+			rexec timeout [expr $timeout/5.0] jls -j $jail_id
 		} else {
 			rexec jls -j $jail_id
 		}
@@ -1351,11 +1353,13 @@ proc configureICMPoptions { node_id } {
 proc isNodeInitNet { node_id } {
 	global nodecreate_timeout
 
+	set timeout [expr { [getActiveOption "timeout_factor"] * $nodecreate_timeout }]
+
 	set jail_id "[getFromRunning "eid"].$node_id"
 
 	try {
-		if { $nodecreate_timeout >= 0 } {
-			rexec timeout [expr $nodecreate_timeout/5.0] jexec $jail_id rm /tmp/init > /dev/null
+		if { $timeout >= 0 } {
+			rexec timeout [expr $timeout/5.0] jexec $jail_id rm /tmp/init > /dev/null
 		} else {
 			rexec jexec $jail_id rm /tmp/init > /dev/null
 		}
@@ -1378,6 +1382,8 @@ proc isNodeInitNet { node_id } {
 #****
 proc runConfOnNode { node_id } {
 	global nodeconf_timeout
+
+	set timeout [expr { [getActiveOption "timeout_factor"] * $nodeconf_timeout }]
 
 	set jail_id "[getFromRunning "eid"].$node_id"
 
@@ -1402,8 +1408,8 @@ proc runConfOnNode { node_id } {
 	# renaming the file signals that we're done
 	set cmds "$cmds mv /tout.log /out.log ;"
 	set cmds "$cmds mv /terr.log /err.log"
-	if { $nodeconf_timeout >= 0 } {
-		pipesExec "timeout --foreground $nodeconf_timeout jexec $jail_id sh -c '$cmds'" "hold"
+	if { $timeout >= 0 } {
+		pipesExec "timeout --foreground $timeout jexec $jail_id sh -c '$cmds'" "hold"
 	} else {
 		pipesExec "jexec $jail_id sh -c '$cmds'" "hold"
 	}
@@ -1411,6 +1417,8 @@ proc runConfOnNode { node_id } {
 
 proc startNodeIfaces { node_id ifaces } {
 	global ifacesconf_timeout
+
+	set timeout [expr { [getActiveOption "timeout_factor"] * $ifacesconf_timeout }]
 
 	set jail_id "[getFromRunning "eid"].$node_id"
 
@@ -1432,8 +1440,8 @@ proc startNodeIfaces { node_id ifaces } {
 	# renaming the file signals that we're done
 	set cmds "$cmds mv /tout_ifaces.log /out_ifaces.log ;"
 	set cmds "$cmds mv /terr_ifaces.log /err_ifaces.log"
-	if { $ifacesconf_timeout >= 0 } {
-		pipesExec "timeout --foreground $ifacesconf_timeout jexec $jail_id sh -c '$cmds'" "hold"
+	if { $timeout >= 0 } {
+		pipesExec "timeout --foreground $timeout jexec $jail_id sh -c '$cmds'" "hold"
 	} else {
 		pipesExec "jexec $jail_id sh -c '$cmds'" "hold"
 	}
@@ -1486,6 +1494,8 @@ proc unconfigNodeIfaces { eid node_id ifaces } {
 proc isNodeIfacesCreated { node_id ifaces } {
 	global ifacesconf_timeout
 
+	set timeout [expr { [getActiveOption "timeout_factor"] * $ifacesconf_timeout }]
+
 	set eid [getFromRunning "eid"]
 
 	set node_type [getNodeType $node_id]
@@ -1522,8 +1532,8 @@ proc isNodeIfacesCreated { node_id ifaces } {
 	set cmds "\'$cmds\'"
 
 	catch {
-		if { $ifacesconf_timeout >= 0 } {
-			rexec timeout [expr $ifacesconf_timeout/5.0] jexec $jail_id sh -c {*}$cmds
+		if { $timeout >= 0 } {
+			rexec timeout [expr $timeout/5.0] jexec $jail_id sh -c {*}$cmds
 		} else {
 			rexec jexec $jail_id sh -c {*}$cmds
 		}
@@ -1535,6 +1545,8 @@ proc isNodeIfacesCreated { node_id ifaces } {
 proc isNodeIfacesConfigured { node_id } {
 	global ifacesconf_timeout
 
+	set timeout [expr { [getActiveOption "timeout_factor"] * $ifacesconf_timeout }]
+
 	set jail_id "[getFromRunning "eid"].$node_id"
 
 	if { [invokeNodeProc $node_id "virtlayer"] == "NATIVE" } {
@@ -1542,8 +1554,8 @@ proc isNodeIfacesConfigured { node_id } {
 	}
 
 	try {
-		if { $ifacesconf_timeout >= 0 } {
-			rexec timeout [expr $ifacesconf_timeout/5.0] jexec $jail_id test -f /out_ifaces.log > /dev/null
+		if { $timeout >= 0 } {
+			rexec timeout [expr $timeout/5.0] jexec $jail_id test -f /out_ifaces.log > /dev/null
 		} else {
 			rexec jexec $jail_id test -f /out_ifaces.log > /dev/null
 		}
@@ -1556,6 +1568,8 @@ proc isNodeIfacesConfigured { node_id } {
 
 proc isLinkStarted { link_id } {
 	global nodecreate_timeout
+
+	set timeout [expr { [getActiveOption "timeout_factor"] * $nodecreate_timeout }]
 
 	set mirror_link_id [getLinkMirror $link_id]
 	if { $mirror_link_id != "" && [getFromRunning "${mirror_link_id}_running"] == "true" } {
@@ -1574,8 +1588,8 @@ proc isLinkStarted { link_id } {
 	set eid [getFromRunning "eid"]
 
 	try {
-		if { $nodecreate_timeout >= 0 } {
-			rexec timeout [expr $nodecreate_timeout/5.0] jexec $eid ngctl show $link_id:
+		if { $timeout >= 0 } {
+			rexec timeout [expr $timeout/5.0] jexec $eid ngctl show $link_id:
 		} else {
 			rexec jexec $eid ngctl show $link_id:
 		}
@@ -1589,6 +1603,8 @@ proc isLinkStarted { link_id } {
 proc isNodeConfigured { node_id } {
 	global nodeconf_timeout
 
+	set timeout [expr { [getActiveOption "timeout_factor"] * $nodeconf_timeout }]
+
 	set jail_id "[getFromRunning "eid"].$node_id"
 
 	if { [invokeNodeProc $node_id "virtlayer"] == "NATIVE" } {
@@ -1596,8 +1612,8 @@ proc isNodeConfigured { node_id } {
 	}
 
 	try {
-		if { $nodeconf_timeout >= 0 } {
-			rexec timeout [expr $nodeconf_timeout/5.0] jexec $jail_id test -f /out.log > /dev/null
+		if { $timeout >= 0 } {
+			rexec timeout [expr $timeout/5.0] jexec $jail_id test -f /out.log > /dev/null
 		} else {
 			rexec jexec $jail_id test -f /out.log > /dev/null
 		}
@@ -1611,6 +1627,8 @@ proc isNodeConfigured { node_id } {
 proc isNodeError { node_id } {
 	global nodeconf_timeout
 
+	set timeout [expr { [getActiveOption "timeout_factor"] * $nodeconf_timeout }]
+
 	if { [invokeNodeProc $node_id "virtlayer"] == "NATIVE" } {
 		return false
 	}
@@ -1619,8 +1637,8 @@ proc isNodeError { node_id } {
 
 	try {
 		set cmd "sed \"/^+ /d\" /err.log"
-		if { $nodeconf_timeout >= 0 } {
-			rexec timeout [expr $nodeconf_timeout/5.0] jexec $jail_id $cmd
+		if { $timeout >= 0 } {
+			rexec timeout [expr $timeout/5.0] jexec $jail_id $cmd
 		} else {
 			rexec jexec $jail_id $cmd
 		}
@@ -1638,6 +1656,8 @@ proc isNodeError { node_id } {
 proc isNodeErrorIfaces { node_id } {
 	global ifacesconf_timeout
 
+	set timeout [expr { [getActiveOption "timeout_factor"] * $ifacesconf_timeout }]
+
 	if { [invokeNodeProc $node_id "virtlayer"] == "NATIVE" } {
 		return false
 	}
@@ -1646,8 +1666,8 @@ proc isNodeErrorIfaces { node_id } {
 
 	try {
 		set cmd "sed \"/^+ /d\" /err_ifaces.log"
-		if { $ifacesconf_timeout >= 0 } {
-			rexec timeout [expr $ifacesconf_timeout/5.0] jexec $jail_id $cmd
+		if { $timeout >= 0 } {
+			rexec timeout [expr $timeout/5.0] jexec $jail_id $cmd
 		} else {
 			rexec jexec $jail_id $cmd
 		}
@@ -1665,6 +1685,8 @@ proc isNodeErrorIfaces { node_id } {
 proc isNodeUnconfigured { node_id } {
 	global skip_nodes nodeconf_timeout
 
+	set timeout [expr { [getActiveOption "timeout_factor"] * $nodeconf_timeout }]
+
 	if {
 		$node_id in $skip_nodes ||
 		[getFromRunning "${node_id}_running"] ni "true delete"
@@ -1680,8 +1702,8 @@ proc isNodeUnconfigured { node_id } {
 
 	try {
 		set cmd "\'test ! -f /tout.log && test -f /out.log\'"
-		if { $nodeconf_timeout >= 0 } {
-			rexec timeout [expr $nodeconf_timeout/5.0] jexec $jail_id sh -c {*}$cmd
+		if { $timeout >= 0 } {
+			rexec timeout [expr $timeout/5.0] jexec $jail_id sh -c {*}$cmd
 		} else {
 			rexec jexec $jail_id sh -c {*}$cmd
 		}
@@ -1694,6 +1716,8 @@ proc isNodeUnconfigured { node_id } {
 
 proc isNodeIfacesUnconfigured { node_id } {
 	global skip_nodes ifacesconf_timeout
+
+	set timeout [expr { [getActiveOption "timeout_factor"] * $ifacesconf_timeout }]
 
 	if {
 		$node_id in $skip_nodes ||
@@ -1710,8 +1734,8 @@ proc isNodeIfacesUnconfigured { node_id } {
 
 	try {
 		set cmd "\'test ! -f /tout_ifaces.log && test -f /out_ifaces.log\'"
-		if { $ifacesconf_timeout >= 0 } {
-			rexec timeout [expr $ifacesconf_timeout/5.0] jexec $jail_id sh -c {*}$cmd
+		if { $timeout >= 0 } {
+			rexec timeout [expr $timeout/5.0] jexec $jail_id sh -c {*}$cmd
 		} else {
 			rexec jexec $jail_id sh -c {*}$cmd
 		}
@@ -1724,6 +1748,8 @@ proc isNodeIfacesUnconfigured { node_id } {
 
 proc isNodeStopped { node_id } {
 	global skip_nodes nodeconf_timeout
+
+	set timeout [expr { [getActiveOption "timeout_factor"] * $nodeconf_timeout }]
 
 	if {
 		$node_id in $skip_nodes ||
@@ -1739,8 +1765,8 @@ proc isNodeStopped { node_id } {
 	set jail_id "[getFromRunning "eid"].$node_id"
 
 	try {
-		if { $nodeconf_timeout >= 0 } {
-			rexec timeout [expr $nodeconf_timeout/5.0] jexec $jail_id rm /tmp/shut > /dev/null
+		if { $timeout >= 0 } {
+			rexec timeout [expr $timeout/5.0] jexec $jail_id rm /tmp/shut > /dev/null
 		} else {
 			rexec jexec $jail_id rm /tmp/shut > /dev/null
 		}
@@ -1753,6 +1779,8 @@ proc isNodeStopped { node_id } {
 
 proc isLinkDestroyed { link_id } {
 	global nodecreate_timeout skip_links
+
+	set timeout [expr { [getActiveOption "timeout_factor"] * $nodecreate_timeout }]
 
 	if {
 		$link_id in $skip_links ||
@@ -1775,8 +1803,8 @@ proc isLinkDestroyed { link_id } {
 	set eid [getFromRunning "eid"]
 
 	try {
-		if { $nodecreate_timeout >= 0 } {
-			rexec timeout [expr $nodecreate_timeout/5.0] jexec $eid ngctl show $link_id:
+		if { $timeout >= 0 } {
+			rexec timeout [expr $timeout/5.0] jexec $eid ngctl show $link_id:
 		} else {
 			rexec jexec $eid ngctl show $link_id:
 		}
@@ -1789,6 +1817,8 @@ proc isLinkDestroyed { link_id } {
 
 proc isNodeIfacesDestroyed { node_id ifaces } {
 	global skip_nodes ifacesconf_timeout
+
+	set timeout [expr { [getActiveOption "timeout_factor"] * $ifacesconf_timeout }]
 
 	if {
 		$node_id in $skip_nodes || $ifaces == "" ||
@@ -1826,8 +1856,8 @@ proc isNodeIfacesDestroyed { node_id ifaces } {
 	set cmd "\'$cmds\'"
 
 	try {
-		if { $ifacesconf_timeout >= 0 } {
-			rexec timeout [expr $ifacesconf_timeout/5.0] sh -c "$cmds"
+		if { $timeout >= 0 } {
+			rexec timeout [expr $timeout/5.0] sh -c "$cmds"
 		} else {
 			rexec sh -c "$cmds"
 		}
@@ -1840,6 +1870,8 @@ proc isNodeIfacesDestroyed { node_id ifaces } {
 
 proc isNodeDestroyed { node_id } {
 	global skip_nodes nodecreate_timeout
+
+	set timeout [expr { [getActiveOption "timeout_factor"] * $nodecreate_timeout }]
 
 	if {
 		$node_id in $skip_nodes ||
@@ -1866,8 +1898,8 @@ proc isNodeDestroyed { node_id } {
 	set jail_id "[getFromRunning "eid"].$node_id"
 
 	try {
-		if { $nodecreate_timeout >= 0 } {
-			rexec timeout [expr $nodecreate_timeout/5.0] jls -d -j $jail_id
+		if { $timeout >= 0 } {
+			rexec timeout [expr $timeout/5.0] jls -d -j $jail_id
 		} else {
 			rexec jls -d -j $jail_id
 		}
@@ -1879,7 +1911,7 @@ proc isNodeDestroyed { node_id } {
 }
 
 proc isNodeDestroyedFS { node_id } {
-	global skip_nodes nodecreate_timeout
+	global skip_nodes
 
 	if {
 		$node_id in $skip_nodes ||

@@ -82,7 +82,7 @@ proc safeSourceFile { file } {
 proc parseCmdArgs { options usage } {
 	global initMode execMode eid_base debug argv selected_experiment gui
 	global printVersion prepareFlag forceFlag
-	global max_jobs nodecreate_timeout ifacesconf_timeout nodeconf_timeout remote_factor
+	global max_jobs nodecreate_timeout ifacesconf_timeout nodeconf_timeout
 	global remote_error remote rcmd ttyrcmd remote_mux_path
 	global escalation_comm rescalation_comm
 
@@ -141,9 +141,9 @@ proc parseCmdArgs { options usage } {
 			set rcmd "ssh -o ControlPath=$remote_mux_path $ssh_args"
 			set ttyrcmd "ssh -t -o ControlPath=${remote_mux_path}_tty $ssh_args"
 
-			set nodecreate_timeout [expr round($remote_factor * $nodecreate_timeout)]
-			set nodeconf_timeout [expr round($remote_factor * $nodeconf_timeout)]
-			set ifacesconf_timeout [expr round($remote_factor * $ifacesconf_timeout)]
+			set nodecreate_timeout [expr round($nodecreate_timeout * 2)]
+			set nodeconf_timeout [expr round($nodeconf_timeout * 2)]
+			set ifacesconf_timeout [expr round($ifacesconf_timeout * 2)]
 
 			puts "Using remote host '$remote'"
 		} else {
@@ -270,6 +270,7 @@ proc printImunesVersion {} {
 
 proc setPlatformVariables {} {
 	global isOSfreebsd isOSlinux isOSwin remote remote_error
+	global nodecreate_timeout nodeconf_timeout ifacesconf_timeout
 
 	try {
 		rexec uname -s
@@ -281,6 +282,11 @@ proc setPlatformVariables {} {
 			set remote_error "Cannot connect to remote '$remote':\n\n$err\n\nSwitching to local mode."
 			puts stderr $remote_error
 			set os [platform::identify]
+
+			set nodecreate_timeout [expr round($nodecreate_timeout / 2)]
+			set nodeconf_timeout [expr round($nodeconf_timeout / 2)]
+			set ifacesconf_timeout [expr round($ifacesconf_timeout / 2)]
+
 			set remote ""
 		}
 	} on ok os {

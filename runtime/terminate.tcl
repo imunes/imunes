@@ -465,6 +465,8 @@ proc terminate_nodesUnconfigure { eid nodes nodes_count w } {
 proc terminate_nodesUnconfigure_wait { eid nodes nodes_count w } {
 	global progressbarCount execMode skip_nodes nodeconf_timeout gui
 
+	set timeout [expr { [getActiveOption "timeout_factor"] * $nodeconf_timeout }]
+
 	set t_start [clock milliseconds]
 
 	set batchStep 0
@@ -475,8 +477,8 @@ proc terminate_nodesUnconfigure_wait { eid nodes nodes_count w } {
 		displayBatchProgress $batchStep $nodes_count
 		foreach node_id $nodes_left {
 			if { ! [isNodeUnconfigured $node_id] } {
-				if { $nodeconf_timeout < 0 } {
-					after [expr -$nodeconf_timeout]
+				if { $timeout < 0 } {
+					after [expr -$timeout]
 				}
 				update
 				continue
@@ -503,12 +505,12 @@ proc terminate_nodesUnconfigure_wait { eid nodes nodes_count w } {
 			continue
 		}
 
-		if { $nodeconf_timeout < 0 } {
+		if { $timeout < 0 } {
 			continue
 		}
 
 		set t_last [clock milliseconds]
-		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $nodeconf_timeout } {
+		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $timeout } {
 			lappend skip_nodes {*}$nodes_left
 			break
 		}
@@ -562,6 +564,8 @@ proc terminate_nodesShutdown { eid nodes nodes_count w } {
 proc terminate_nodesShutdown_wait { eid nodes nodes_count w } {
 	global progressbarCount execMode skip_nodes nodeconf_timeout gui
 
+	set timeout [expr { [getActiveOption "timeout_factor"] * $nodeconf_timeout }]
+
 	set t_start [clock milliseconds]
 
 	set batchStep 0
@@ -572,8 +576,8 @@ proc terminate_nodesShutdown_wait { eid nodes nodes_count w } {
 		displayBatchProgress $batchStep $nodes_count
 		foreach node_id $nodes_left {
 			if { ! [isNodeStopped $node_id] } {
-				if { $nodeconf_timeout < 0 } {
-					after [expr -$nodeconf_timeout]
+				if { $timeout < 0 } {
+					after [expr -$timeout]
 				}
 				update
 				continue
@@ -600,12 +604,12 @@ proc terminate_nodesShutdown_wait { eid nodes nodes_count w } {
 			continue
 		}
 
-		if { $nodeconf_timeout < 0 } {
+		if { $timeout < 0 } {
 			continue
 		}
 
 		set t_last [clock milliseconds]
-		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $nodeconf_timeout } {
+		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $timeout } {
 			lappend skip_nodes {*}$nodes_left
 			break
 		}
@@ -714,6 +718,8 @@ proc terminate_linksDestroy { eid links links_count w } {
 proc terminate_linksDestroy_wait { eid links links_count w } {
 	global progressbarCount execMode skip_links nodecreate_timeout gui
 
+	set timeout [expr { [getActiveOption "timeout_factor"] * $nodecreate_timeout }]
+
 	set t_start [clock milliseconds]
 
 	set batchStep 0
@@ -724,8 +730,8 @@ proc terminate_linksDestroy_wait { eid links links_count w } {
 		displayBatchProgress $batchStep $links_count
 		foreach link_id $links_left {
 			if { ! [isLinkDestroyed $link_id] } {
-				if { $nodecreate_timeout < 0 } {
-					after [expr -$nodecreate_timeout]
+				if { $timeout < 0 } {
+					after [expr -$timeout]
 				}
 				update
 				continue
@@ -757,12 +763,12 @@ proc terminate_linksDestroy_wait { eid links links_count w } {
 			continue
 		}
 
-		if { $nodecreate_timeout < 0 } {
+		if { $timeout < 0 } {
 			continue
 		}
 
 		set t_last [clock milliseconds]
-		if { [llength $links_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $nodecreate_timeout } {
+		if { [llength $links_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $timeout } {
 			lappend skip_links {*}$links_left
 			break
 		}
@@ -829,6 +835,8 @@ proc terminate_nodesLogIfacesUnconfigure { eid nodes_ifaces nodes_count w } {
 proc terminate_nodesLogIfacesUnconfigure_wait { eid nodes_ifaces nodes_count w } {
 	global progressbarCount execMode err_skip_nodesifaces ifacesconf_timeout gui
 
+	set timeout [expr { [getActiveOption "timeout_factor"] * $ifacesconf_timeout }]
+
 	set t_start [clock milliseconds]
 
 	set nodes [dict keys $nodes_ifaces]
@@ -841,8 +849,8 @@ proc terminate_nodesLogIfacesUnconfigure_wait { eid nodes_ifaces nodes_count w }
 		displayBatchProgress $batchStep $nodes_count
 		foreach node_id $nodes_left {
 			if { ! [isNodeIfacesUnconfigured $node_id] } {
-				if { $ifacesconf_timeout < 0 } {
-					after [expr -$ifacesconf_timeout]
+				if { $timeout < 0 } {
+					after [expr -$timeout]
 				}
 				update
 				continue
@@ -869,12 +877,12 @@ proc terminate_nodesLogIfacesUnconfigure_wait { eid nodes_ifaces nodes_count w }
 			continue
 		}
 
-		if { $ifacesconf_timeout < 0 } {
+		if { $timeout < 0 } {
 			continue
 		}
 
 		set t_last [clock milliseconds]
-		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $ifacesconf_timeout } {
+		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $timeout } {
 			set err_skip_nodesifaces $nodes_left
 			break
 		}
@@ -939,6 +947,8 @@ proc terminate_nodesLogIfacesDestroy { eid nodes_ifaces nodes_count w } {
 proc terminate_nodesLogIfacesDestroy_wait { eid nodes_ifaces nodes_count w } {
 	global progressbarCount execMode err_skip_nodesifaces ifacesconf_timeout gui
 
+	set timeout [expr { [getActiveOption "timeout_factor"] * $ifacesconf_timeout }]
+
 	set t_start [clock milliseconds]
 
 	set nodes [dict keys $nodes_ifaces]
@@ -956,8 +966,8 @@ proc terminate_nodesLogIfacesDestroy_wait { eid nodes_ifaces nodes_count w } {
 			}
 
 			if { ! [isNodeIfacesDestroyed $node_id $ifaces] } {
-				if { $ifacesconf_timeout < 0 } {
-					after [expr -$ifacesconf_timeout]
+				if { $timeout < 0 } {
+					after [expr -$timeout]
 				}
 				update
 				continue
@@ -984,12 +994,12 @@ proc terminate_nodesLogIfacesDestroy_wait { eid nodes_ifaces nodes_count w } {
 			continue
 		}
 
-		if { $ifacesconf_timeout < 0 } {
+		if { $timeout < 0 } {
 			continue
 		}
 
 		set t_last [clock milliseconds]
-		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $ifacesconf_timeout } {
+		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $timeout } {
 			set err_skip_nodesifaces $nodes_left
 			break
 		}
@@ -1056,6 +1066,8 @@ proc terminate_nodesPhysIfacesUnconfigure { eid nodes_ifaces nodes_count w } {
 proc terminate_nodesPhysIfacesUnconfigure_wait { eid nodes_ifaces nodes_count w } {
 	global progressbarCount execMode err_skip_nodesifaces ifacesconf_timeout gui
 
+	set timeout [expr { [getActiveOption "timeout_factor"] * $ifacesconf_timeout }]
+
 	set t_start [clock milliseconds]
 
 	set nodes [dict keys $nodes_ifaces]
@@ -1068,8 +1080,8 @@ proc terminate_nodesPhysIfacesUnconfigure_wait { eid nodes_ifaces nodes_count w 
 		displayBatchProgress $batchStep $nodes_count
 		foreach node_id $nodes_left {
 			if { ! [isNodeIfacesUnconfigured $node_id] } {
-				if { $ifacesconf_timeout < 0 } {
-					after [expr -$ifacesconf_timeout]
+				if { $timeout < 0 } {
+					after [expr -$timeout]
 				}
 				update
 				continue
@@ -1096,12 +1108,12 @@ proc terminate_nodesPhysIfacesUnconfigure_wait { eid nodes_ifaces nodes_count w 
 			continue
 		}
 
-		if { $ifacesconf_timeout < 0 } {
+		if { $timeout < 0 } {
 			continue
 		}
 
 		set t_last [clock milliseconds]
-		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $ifacesconf_timeout } {
+		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $timeout } {
 			set err_skip_nodesifaces $nodes_left
 			break
 		}
@@ -1165,6 +1177,8 @@ proc terminate_nodesPhysIfacesDestroy { eid nodes_ifaces nodes_count w } {
 proc terminate_nodesPhysIfacesDestroy_wait { eid nodes_ifaces nodes_count w } {
 	global progressbarCount execMode err_skip_nodesifaces ifacesconf_timeout gui
 
+	set timeout [expr { [getActiveOption "timeout_factor"] * $ifacesconf_timeout }]
+
 	set t_start [clock milliseconds]
 
 	set nodes [dict keys $nodes_ifaces]
@@ -1182,8 +1196,8 @@ proc terminate_nodesPhysIfacesDestroy_wait { eid nodes_ifaces nodes_count w } {
 			}
 
 			if { ! [isNodeIfacesDestroyed $node_id $ifaces] } {
-				if { $ifacesconf_timeout < 0 } {
-					after [expr -$ifacesconf_timeout]
+				if { $timeout < 0 } {
+					after [expr -$timeout]
 				}
 				update
 				continue
@@ -1210,12 +1224,12 @@ proc terminate_nodesPhysIfacesDestroy_wait { eid nodes_ifaces nodes_count w } {
 			continue
 		}
 
-		if { $ifacesconf_timeout < 0 } {
+		if { $timeout < 0 } {
 			continue
 		}
 
 		set t_last [clock milliseconds]
-		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $ifacesconf_timeout } {
+		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $timeout } {
 			set err_skip_nodesifaces $nodes_left
 			break
 		}
@@ -1308,6 +1322,8 @@ proc terminate_nodesDestroy { eid nodes nodes_count w } {
 proc terminate_nodesDestroy_wait { eid nodes nodes_count w } {
 	global progressbarCount execMode skip_nodes nodecreate_timeout gui
 
+	set timeout [expr { [getActiveOption "timeout_factor"] * $nodecreate_timeout }]
+
 	set t_start [clock milliseconds]
 
 	set batchStep 0
@@ -1318,8 +1334,8 @@ proc terminate_nodesDestroy_wait { eid nodes nodes_count w } {
 		displayBatchProgress $batchStep $nodes_count
 		foreach node_id $nodes_left {
 			if { ! [isNodeDestroyed $node_id] } {
-				if { $nodecreate_timeout < 0 } {
-					after [expr -$nodecreate_timeout]
+				if { $timeout < 0 } {
+					after [expr -$timeout]
 				}
 				update
 				continue
@@ -1346,12 +1362,12 @@ proc terminate_nodesDestroy_wait { eid nodes nodes_count w } {
 			continue
 		}
 
-		if { $nodecreate_timeout < 0 } {
+		if { $timeout < 0 } {
 			continue
 		}
 
 		set t_last [clock milliseconds]
-		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $nodecreate_timeout } {
+		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $timeout } {
 			lappend skip_nodes {*}$nodes_left
 			break
 		}
@@ -1405,6 +1421,8 @@ proc terminate_nodesDestroyFS { eid nodes nodes_count w } {
 proc terminate_nodesDestroyFS_wait { eid nodes nodes_count w } {
 	global progressbarCount execMode skip_nodes nodecreate_timeout gui
 
+	set timeout [expr { [getActiveOption "timeout_factor"] * $nodecreate_timeout }]
+
 	set t_start [clock milliseconds]
 
 	set batchStep 0
@@ -1415,8 +1433,8 @@ proc terminate_nodesDestroyFS_wait { eid nodes nodes_count w } {
 		displayBatchProgress $batchStep $nodes_count
 		foreach node_id $nodes_left {
 			if { ! [isNodeDestroyedFS $node_id] } {
-				if { $nodecreate_timeout < 0 } {
-					after [expr -$nodecreate_timeout]
+				if { $timeout < 0 } {
+					after [expr -$timeout]
 				}
 				update
 				continue
@@ -1449,12 +1467,12 @@ proc terminate_nodesDestroyFS_wait { eid nodes nodes_count w } {
 			continue
 		}
 
-		if { $nodecreate_timeout < 0 } {
+		if { $timeout < 0 } {
 			continue
 		}
 
 		set t_last [clock milliseconds]
-		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $nodecreate_timeout } {
+		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $timeout } {
 			lappend skip_nodes {*}$nodes_left
 			break
 		}

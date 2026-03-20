@@ -892,6 +892,8 @@ proc execute_nodesCreate { nodes nodes_count w } {
 proc execute_nodesCreate_wait { nodes nodes_count w } {
 	global progressbarCount execMode skip_nodes nodecreate_timeout gui
 
+	set timeout [expr { [getActiveOption "timeout_factor"] * $nodecreate_timeout }]
+
 	set t_start [clock milliseconds]
 
 	set batchStep 0
@@ -902,8 +904,8 @@ proc execute_nodesCreate_wait { nodes nodes_count w } {
 		displayBatchProgress $batchStep $nodes_count
 		foreach node_id $nodes_left {
 			if { ! [isNodeStarted $node_id] } {
-				if { $nodecreate_timeout < 0 } {
-					after [expr -$nodecreate_timeout]
+				if { $timeout < 0 } {
+					after [expr -$timeout]
 				}
 				update
 				continue
@@ -931,12 +933,12 @@ proc execute_nodesCreate_wait { nodes nodes_count w } {
 			continue
 		}
 
-		if { $nodecreate_timeout < 0 } {
+		if { $timeout < 0 } {
 			continue
 		}
 
 		set t_last [clock milliseconds]
-		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $nodecreate_timeout } {
+		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $timeout } {
 			lappend skip_nodes {*}$nodes_left
 			break
 		}
@@ -1071,6 +1073,8 @@ proc execute_nodesInitConfigure { nodes nodes_count w } {
 proc execute_nodesInitConfigure_wait { nodes nodes_count w } {
 	global progressbarCount execMode skip_nodes nodecreate_timeout gui
 
+	set timeout [expr { [getActiveOption "timeout_factor"] * $nodecreate_timeout }]
+
 	set t_start [clock milliseconds]
 
 	set batchStep 0
@@ -1082,8 +1086,8 @@ proc execute_nodesInitConfigure_wait { nodes nodes_count w } {
 		foreach node_id $nodes_left {
 			if { $node_id ni $skip_nodes } {
 				if { ! [isNodeInitNet $node_id] } {
-					if { $nodecreate_timeout < 0 } {
-						after [expr -$nodecreate_timeout]
+					if { $timeout < 0 } {
+						after [expr -$timeout]
 					}
 					update
 					continue
@@ -1113,12 +1117,12 @@ proc execute_nodesInitConfigure_wait { nodes nodes_count w } {
 			continue
 		}
 
-		if { $nodecreate_timeout < 0 } {
+		if { $timeout < 0 } {
 			continue
 		}
 
 		set t_last [clock milliseconds]
-		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $nodecreate_timeout } {
+		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $timeout } {
 			lappend skip_nodes {*}$nodes_left
 			break
 		}
@@ -1184,6 +1188,8 @@ proc execute_nodesPhysIfacesCreate { nodes_ifaces nodes_count w } {
 proc execute_nodesPhysIfacesCreate_wait { nodes_ifaces nodes_count w } {
 	global progressbarCount execMode skip_nodes err_skip_nodesifaces ifacesconf_timeout gui
 
+	set timeout [expr { [getActiveOption "timeout_factor"] * $ifacesconf_timeout }]
+
 	set t_start [clock milliseconds]
 
 	set nodes [dict keys $nodes_ifaces]
@@ -1215,8 +1221,8 @@ proc execute_nodesPhysIfacesCreate_wait { nodes_ifaces nodes_count w } {
 						continue
 					}
 
-					if { $ifacesconf_timeout < 0 } {
-						after [expr -$ifacesconf_timeout]
+					if { $timeout < 0 } {
+						after [expr -$timeout]
 					}
 					set try_again 1
 				}
@@ -1251,12 +1257,12 @@ proc execute_nodesPhysIfacesCreate_wait { nodes_ifaces nodes_count w } {
 			continue
 		}
 
-		if { $ifacesconf_timeout < 0 } {
+		if { $timeout < 0 } {
 			continue
 		}
 
 		set t_last [clock milliseconds]
-		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $ifacesconf_timeout } {
+		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $timeout } {
 			set err_skip_nodesifaces $nodes_left
 			break
 		}
@@ -1332,6 +1338,8 @@ proc execute_nodesLogIfacesCreate { nodes_ifaces nodes_count w } {
 proc execute_nodesLogIfacesCreate_wait { nodes_ifaces nodes_count w } {
 	global progressbarCount execMode skip_nodes err_skip_nodesifaces ifacesconf_timeout gui
 
+	set timeout [expr { [getActiveOption "timeout_factor"] * $ifacesconf_timeout }]
+
 	set t_start [clock milliseconds]
 
 	set nodes [dict keys $nodes_ifaces]
@@ -1363,8 +1371,8 @@ proc execute_nodesLogIfacesCreate_wait { nodes_ifaces nodes_count w } {
 						continue
 					}
 
-					if { $ifacesconf_timeout < 0 } {
-						after [expr -$ifacesconf_timeout]
+					if { $timeout < 0 } {
+						after [expr -$timeout]
 					}
 					set try_again 1
 				}
@@ -1399,12 +1407,12 @@ proc execute_nodesLogIfacesCreate_wait { nodes_ifaces nodes_count w } {
 			continue
 		}
 
-		if { $ifacesconf_timeout < 0 } {
+		if { $timeout < 0 } {
 			continue
 		}
 
 		set t_last [clock milliseconds]
-		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $ifacesconf_timeout } {
+		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $timeout } {
 			set err_skip_nodesifaces $nodes_left
 			break
 		}
@@ -1483,6 +1491,8 @@ proc execute_linksCreate { links links_count w } {
 proc execute_linksCreate_wait { links links_count w } {
 	global progressbarCount execMode skip_links nodecreate_timeout gui
 
+	set timeout [expr { [getActiveOption "timeout_factor"] * $nodecreate_timeout }]
+
 	set t_start [clock milliseconds]
 
 	set batchStep 0
@@ -1494,8 +1504,8 @@ proc execute_linksCreate_wait { links links_count w } {
 		foreach link_id $links_left {
 			if { $link_id ni $skip_links } {
 				if { ! [isLinkStarted $link_id] } {
-					if { $nodecreate_timeout < 0 } {
-						after [expr -$nodecreate_timeout]
+					if { $timeout < 0 } {
+						after [expr -$timeout]
 					}
 					update
 					continue
@@ -1532,12 +1542,12 @@ proc execute_linksCreate_wait { links links_count w } {
 			continue
 		}
 
-		if { $nodecreate_timeout < 0 } {
+		if { $timeout < 0 } {
 			continue
 		}
 
 		set t_last [clock milliseconds]
-		if { [llength $links_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $nodecreate_timeout } {
+		if { [llength $links_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $timeout } {
 			lappend skip_links {*}$links_left
 			break
 		}
@@ -1658,6 +1668,8 @@ proc execute_nodesIfacesConfigure { nodes_ifaces nodes_count w } {
 proc execute_nodesIfacesConfigure_wait { nodes_ifaces nodes_count w } {
 	global progressbarCount execMode skip_nodes err_skip_nodesifaces ifacesconf_timeout gui
 
+	set timeout [expr { [getActiveOption "timeout_factor"] * $ifacesconf_timeout }]
+
 	set t_start [clock milliseconds]
 
 	set nodes [dict keys $nodes_ifaces]
@@ -1671,8 +1683,8 @@ proc execute_nodesIfacesConfigure_wait { nodes_ifaces nodes_count w } {
 		foreach node_id $nodes_left {
 			if { $node_id ni $skip_nodes } {
 				if { ! [isNodeIfacesConfigured $node_id] } {
-					if { $ifacesconf_timeout < 0 } {
-						after [expr -$ifacesconf_timeout]
+					if { $timeout < 0 } {
+						after [expr -$timeout]
 					}
 					update
 					continue
@@ -1702,12 +1714,12 @@ proc execute_nodesIfacesConfigure_wait { nodes_ifaces nodes_count w } {
 			continue
 		}
 
-		if { $ifacesconf_timeout < 0 } {
+		if { $timeout < 0 } {
 			continue
 		}
 
 		set t_last [clock milliseconds]
-		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $ifacesconf_timeout } {
+		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $timeout } {
 			set err_skip_nodesifaces $nodes_left
 			break
 		}
@@ -1763,6 +1775,8 @@ proc execute_nodesConfigure { nodes nodes_count w } {
 proc execute_nodesConfigure_wait { nodes nodes_count w } {
 	global progressbarCount skip_nodes execMode err_skip_nodes nodeconf_timeout gui
 
+	set timeout [expr { [getActiveOption "timeout_factor"] * $nodeconf_timeout }]
+
 	set t_start [clock milliseconds]
 
 	set batchStep 0
@@ -1774,8 +1788,8 @@ proc execute_nodesConfigure_wait { nodes nodes_count w } {
 		foreach node_id $nodes_left {
 			if { $node_id ni $skip_nodes } {
 				if { ! [isNodeConfigured $node_id] } {
-					if { $nodeconf_timeout < 0 } {
-						after [expr -$nodeconf_timeout]
+					if { $timeout < 0 } {
+						after [expr -$timeout]
 					}
 					update
 					continue
@@ -1805,12 +1819,12 @@ proc execute_nodesConfigure_wait { nodes nodes_count w } {
 			continue
 		}
 
-		if { $nodeconf_timeout < 0 } {
+		if { $timeout < 0 } {
 			continue
 		}
 
 		set t_last [clock milliseconds]
-		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $nodeconf_timeout } {
+		if { [llength $nodes_left] > 0 && [expr {($t_last - $t_start)/1000.0}] > $timeout } {
 			set err_skip_nodes $nodes_left
 			break
 		}

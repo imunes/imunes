@@ -114,13 +114,13 @@ set printVersion 0
 set prepareFlag 0
 set forceFlag 0
 set max_jobs "h"
-set nodecreate_timeout 5
-set ifacesconf_timeout 5
-set nodeconf_timeout 5
+set nodecreate_timeout 1
+set ifacesconf_timeout 1
+set nodeconf_timeout 1
 set selected_experiment ""
 set gui 1
 
-global remote_error remote rcmd ttyrcmd remote_mux_path remote_factor
+global remote_error remote rcmd ttyrcmd remote_mux_path
 global escalation_comm rescalation_comm
 set remote_error ""
 set remote ""
@@ -129,7 +129,6 @@ set ttyrcmd "sh -c"
 set remote_mux_path ""
 set escalation_comm ""
 set rescalation_comm ""
-set remote_factor 2
 
 set options {
 	{a					"Attach to a running experiment"}
@@ -232,6 +231,7 @@ set options_defaults {
 	"routerLdpEnable"		0			"bool"						"enable/disable LDP protocol on newly created router nodes"
 	"editor_only"			0			"bool"						"if true, Experiment -> Execute is disabled"
 	"preferred_shell"		"csh"		"string"					"shell to open on 'Shell window' (if exists)"
+	"timeout_factor"		5			"int 1|60"					"extend wait time for node/iface create/destroy/configure"
 }
 #	name					value		type						description
 
