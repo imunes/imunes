@@ -221,7 +221,7 @@ proc parseCmdArgs { options usage } {
 
 proc fetchImunesVersion {} {
 	global ROOTDIR LIBDIR imunesVersion imunesChangedDate
-	global imunesLastYear imunesAdditions
+	global imunesAdditions
 	global CFG_VERSION
 
 	set imunesCommit ""
@@ -248,10 +248,8 @@ proc fetchImunesVersion {} {
 
 	if { [string match "*Format*" $imunesCommit] } {
 		set imunesChangedDate ""
-		set imunesLastYear ""
 	} else {
 		set imunesVersion "$imunesVersion (git: $imunesCommit)"
-		set imunesLastYear [lindex [split $imunesChangedDate "-"] 0]
 		set imunesChangedDate "Last changed: $imunesChangedDate"
 	}
 }

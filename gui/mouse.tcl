@@ -399,6 +399,8 @@ proc selectAdjacent {} {
 proc button3link { c x y } {
 	global isOSlinux
 
+	clearTempObjects $c $x $y
+
 	set oper_mode [getFromRunning "oper_mode"]
 
 	set link_id [lindex [$c gettags "link && current"] 1]
@@ -656,6 +658,8 @@ proc mergeNodeGUI { node_id } {
 #****
 proc button3node { c x y } {
 	global isOSlinux
+
+	clearTempObjects $c $x $y
 
 	set canvas_list [getFromRunning_gui "canvas_list"]
 	set curcanvas [getFromRunning_gui "curcanvas"]
@@ -1483,7 +1487,7 @@ proc button1 { c x y button } {
 	set curtype [lindex [$c gettags current] 0]
 	set wasselected 0
 	if {
-		($active_tool == "select" && $curtype in "node oval rectangle text freeform") ||
+		($active_tool == "select" && $curtype in "node oval rectangle text freeform node_running") ||
 		($curtype == "nodelabel" &&
 		[isPseudoNode [lindex [$c gettags $curobj] 1]])
 	} {
@@ -1693,6 +1697,7 @@ proc button1-motion { c x y } {
 		return
 	} elseif {
 		$active_tool == "select" &&
+		$curtype != "node_running" &&
 		($curobj == $selectbox ||
 		$curtype in "background grid" ||
 		($curobj ni [$c find withtag "selected"] &&
@@ -1911,7 +1916,9 @@ proc button1-release { c x y } {
 		if { $destobj != "" && $curobj != "" && $destobj != $curobj } {
 			set lnode1 [lindex [$c gettags $curobj] 1]
 			set lnode2 [lindex [$c gettags $destobj] 1]
-			newLinkGUI $lnode1 $lnode2
+			if { $lnode1 != $lnode2 } {
+				newLinkGUI $lnode1 $lnode2
+			}
 		}
 	} elseif { $active_tool in "rectangle oval text freeform" } {
 		popupAnnotationDialog $c 0 "false"
@@ -1946,16 +1953,21 @@ proc button1-release { c x y } {
 				set coords [$c coords $img]
 				set x [expr {[lindex $coords 0] / $zoom}]
 				set y [expr {[lindex $coords 1] / $zoom}]
-				setNodeCoords $node_id "$x $y"
+				if { $x < 0 || $y < 0 || $x > $sizex || $y > $sizey } {
+					set regular false
+				} else {
+					setNodeCoords $node_id "$x $y"
+				}
 
 				#moving the nodelabel assigned to the moving node
 				$c move "nodelabel && $node_id" $dx $dy
 				set coords [$c coords "nodelabel && $node_id"]
 				set x [expr {[lindex $coords 0] / $zoom}]
 				set y [expr {[lindex $coords 1] / $zoom}]
-				setNodeLabelCoords $node_id "$x $y"
 				if { $x < 0 || $y < 0 || $x > $sizex || $y > $sizey } {
 					set regular false
+				} else {
+					setNodeLabelCoords $node_id "$x $y"
 				}
 			} else {
 				set dx 0
@@ -2133,7 +2145,6 @@ proc button1-release { c x y } {
 			.panwin.f1.c config -cursor watch
 			.bottom.textbox config -text ""
 
-			jumpToUndoLevel $undolevel
 			redrawAll
 
 			if { $active_tool == "select" } {
@@ -2152,12 +2163,18 @@ proc button1-release { c x y } {
 			set autorearrange_enabled 0
 		} else {
 			set coords [$c coords $selectbox]
-			set x [expr {int([lindex $coords 0] / $zoom)}]
-			set y [expr {int([lindex $coords 1] / $zoom)}]
-			set x1 [expr {int([lindex $coords 4] / $zoom)}]
-			set y1 [expr {int([lindex $coords 5] / $zoom)}]
+
 			$c delete $selectbox
 			set selectbox ""
+
+			if { $coords == "" } {
+				return
+			}
+
+			set x [expr { int([lindex $coords 0] / $zoom) }]
+			set y [expr { int([lindex $coords 1] / $zoom) }]
+			set x1 [expr { int([lindex $coords 4] / $zoom) }]
+			set y1 [expr { int([lindex $coords 5] / $zoom) }]
 		}
 
 		if { $resizemode == "false" } {
@@ -2222,6 +2239,8 @@ proc button1-release { c x y } {
 #****
 proc button3background { c x y } {
 	global changed
+
+	clearTempObjects $c $x $y
 
 	set canvas_list [getFromRunning_gui "canvas_list"]
 	set curcanvas [getFromRunning_gui "curcanvas"]
@@ -2953,4 +2972,20 @@ proc double1onGrid { c x y } {
 	}
 
 	annotationConfig $c $node_id
+}
+
+proc clearTempObjects { c x y } {
+	# clear existing temporary objects
+	foreach object_type "newlink newoval newrect newfree newtext" {
+		global $object_type
+
+		if { [set $object_type] != "" } {
+			$c delete [set $object_type]
+			set $object_type ""
+
+			$c config -cursor left_ptr
+		}
+	}
+
+	button1-release $c $x $y
 }

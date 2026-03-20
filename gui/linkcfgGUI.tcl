@@ -75,6 +75,7 @@ proc toggleDirectLink { c link_id } {
 		redeployCfg
 	}
 
+	redrawLink $real_link_id
 	.panwin.f1.c config -cursor left_ptr
 }
 

@@ -484,10 +484,18 @@ proc calcAnglePoints { x1 y1 x2 y2 } {
 }
 
 proc isPseudoNode { node_id } {
+	if { [string index $node_id 0] != "n" } {
+		return false
+	}
+
 	return [expr { [string first "." $node_id] != -1 }]
 }
 
 proc isPseudoLink { link_id } {
+	if { [string index $link_id 0] != "l" } {
+		return false
+	}
+
 	return [expr { [string first "." $link_id] != -1 }]
 }
 

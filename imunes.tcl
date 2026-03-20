@@ -161,7 +161,6 @@ parseCmdArgs $options $usage
 set baseTitle "IMUNES"
 set imunesVersion "Unknown"
 set imunesChangedDate ""
-set imunesLastYear ""
 set imunesAdditions ""
 
 fetchImunesVersion

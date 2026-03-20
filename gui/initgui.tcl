@@ -539,7 +539,7 @@ set routing_defaults_command {
 
 	set protocol_list {}
 	foreach item $protocols {
-		lassign $item protocol protocol_label protocol_variable 
+		lassign $item protocol protocol_label protocol_variable
 		lappend protocol_list $protocol
 		ttk::checkbutton $w.protocols.$protocol \
 			-text $protocol_label \
@@ -996,7 +996,7 @@ set tmp_command {
 	ttk::label $mainFrame.imunesDesc -text "Integrated Multiprotocol Network Emulator/Simulator."
 	ttk::label $mainFrame.homepage -text "https://imunes.net/" -font "-underline 1 -size 10"
 	ttk::label $mainFrame.github -text "https://github.com/imunes/imunes" -font "-underline 1 -size 10"
-	ttk::label $mainFrame.copyright -text "Copyright (c) University of Zagreb 2004 - $imunesLastYear" -font "-size 8"
+	ttk::label $mainFrame.copyright -text "Copyright (c) University of Zagreb 2004 - " -font "-size 8"
 
 	grid $mainFrame.logoLabel -column 0 -row 0 -pady {10 5} -padx 5
 	grid $mainFrame.imunesLabel -column 0 -row 1 -pady 5 -padx 5
@@ -1030,7 +1030,7 @@ set tmp_command {
 		"%W configure -foreground black; \
 		$mainFrame config -cursor arrow"
 }
-.menubar.help add command -label "About" -command $tmp_command
+.menubar.help add command -label "About" -command $tmp_command -underline 0
 
 #
 # Left-side toolbar
