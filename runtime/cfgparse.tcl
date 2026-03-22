@@ -451,6 +451,7 @@ proc loadCfgLegacy { cfg } {
 									}
 								}
 
+								set zline [string trimleft $zline " "]
 								switch -glob -- $zline {
 									"hostname *" {
 										cfgSet $dict_object $object "name" [lindex $zline end]
