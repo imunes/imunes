@@ -80,7 +80,7 @@ proc safeSourceFile { file } {
 }
 
 proc parseCmdArgs { options usage } {
-	global initMode execMode eid_base debug argv selected_experiment gui
+	global initMode execMode eid_base debug debug_file argv selected_experiment gui
 	global printVersion prepareFlag forceFlag
 	global max_jobs nodecreate_timeout ifacesconf_timeout nodeconf_timeout
 	global remote_error remote rcmd ttyrcmd remote_mux_path
@@ -172,6 +172,19 @@ proc parseCmdArgs { options usage } {
 
 	if { $params(d) } {
 		set debug 1
+	}
+
+	if { $params(dd) != "" } {
+		set debug 1
+		set debug_file $params(dd)
+		try {
+			open $debug_file "w"
+		} on ok fd {
+			close $fd
+		} on error err {
+			puts stderr "Unable to open '$debug_file' for writing: $err"
+			set debug_file ""
+		}
 	}
 
 	if { $params(e) != "" || $params(eid) != "" } {
@@ -346,7 +359,7 @@ proc removeFromList { list_values elements { keep_doubles "" } } {
 }
 
 proc dputs { args } {
-	global debug
+	global debug debug_file
 
 	if { ! $debug } {
 		return
@@ -358,7 +371,18 @@ proc dputs { args } {
 		set args [lrange $args 1 end]
 	}
 
-	set fd "stdout"
+	if { $debug_file != "" } {
+		try {
+			open $debug_file "a"
+		} on ok fd {
+		} on error err {
+			set debug_file ""
+			set fd "stdout"
+		}
+	} else {
+		set fd "stdout"
+	}
+
 	if { [llength $args] == 1 } {
 		set args [list $fd [join $args]] ;
 	}
@@ -371,8 +395,16 @@ proc dputs { args } {
 
 	lappend cmd $channel $s
 
-	eval $cmd
-	flush $fd
+	catch { eval $cmd } err
+	if { $err != "" } {
+		set debug_file "/dev/null"
+	} else {
+		flush $fd
+	}
+
+	if { $fd != "stdout" } {
+		catch { close $fd }
+	}
 }
 
 proc reloadSources {} {

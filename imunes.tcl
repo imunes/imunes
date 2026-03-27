@@ -110,6 +110,7 @@ safePackageRequire [list cmdline platform ip base64 json json::write]
 set initMode 0
 set execMode interactive
 set debug 0
+set debug_file ""
 set printVersion 0
 set prepareFlag 0
 set forceFlag 0
@@ -140,6 +141,7 @@ set options {
 	{c.secret			"Run in CLI mode"}
 	{cli.secret			"Run in CLI mode"}
 	{d.secret			"Turn on debug mode"}
+	{dd.arg.secret		"" "Turn on debug mode, redirect to file"}
 	{j.arg				"h" "Max parallel jobs (0 = number of CPUs, h = number of CPUs/2)"}
 	{p					"Prepare virtual root file system"}
 	{prepare			"Prepare virtual root file system"}
