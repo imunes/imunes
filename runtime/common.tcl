@@ -1062,7 +1062,10 @@ proc fetchNodesConfiguration {} {
 proc writeDataToFile { path data } {
 	global remote rcmd
 
-	rexec mkdir -p [file dirname $path]
+	set dirname [file dirname $path]
+	if { [isNotOk "test -d \"$dirname\""] } {
+		rexec mkdir -p $dirname
+	}
 
 	if { $remote != "" } {
 		set file_id [open "| $rcmd dd of=$path status=none" w]
