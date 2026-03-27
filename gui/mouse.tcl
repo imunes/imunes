@@ -561,14 +561,60 @@ proc moveToCanvas { canvas_id } {
 
 	set curcanvas [getFromRunning_gui "curcanvas"]
 
+	lassign [getCanvasSize $canvas_id] max_x max_y
+
 	set selected_nodes [selectedNodes]
 	foreach node_id $selected_nodes {
+		set type [getNodeType $node_id]
+
+		lassign [getNodeCoords $node_id] node_x node_y
+		if { $node_x > $max_x } {
+			global ${type}_iconwidth
+
+			set new_x [expr $max_x - [set $type\_iconwidth]/2]
+		} else {
+			set new_x $node_x
+		}
+
+		if { $node_y > $max_y } {
+			global ${type}_iconheight
+
+			set new_y [expr $max_y - [set $type\_iconheight]/2]
+		} else {
+			set new_y $node_y
+		}
+
+		if { "$new_x $new_y" != "$node_x $node_y" } {
+			set image_obj [$main_canvas_elem find withtag "node && $node_id"]
+			$main_canvas_elem coords $image_obj $new_x $new_y
+
+			setNodeCoords $node_id [snapObjectToGrid $image_obj]
+		}
+
+		lassign [getNodeLabelCoords $node_id] lnode_x lnode_y
+		if { $lnode_x > $max_x } {
+			set lnew_x $max_x
+		} else {
+			set lnew_x $lnode_x
+		}
+
+		if { $lnode_y > $max_y } {
+			set lnew_y $max_y
+		} else {
+			set lnew_y $lnode_y
+		}
+
+		if { "$lnew_x $lnew_y" != "$lnode_x $lnode_y" } {
+			setNodeLabelCoords $node_id "$lnew_x $lnew_y"
+		}
+
 		setNodeCanvas $node_id $canvas_id
 		set changed 1
 	}
 
 	set selected_annotations [selectedAnnotations]
 	foreach node_id $selected_annotations {
+		# TODO: skip if annotation does not fit to new canvas
 		setAnnotationCanvas $node_id $canvas_id
 		set changed 1
 	}
@@ -1947,41 +1993,40 @@ proc button1-release { x y } {
 		foreach img [$main_canvas_elem find withtag "selected"] {
 			set node_id [lindex [$main_canvas_elem gettags $img] 1]
 			lappend selected $node_id
-			set coords [$main_canvas_elem coords $img]
-			set x [expr {[lindex $coords 0] / $zoom}]
-			set y [expr {[lindex $coords 1] / $zoom}]
+			lassign [$main_canvas_elem coords $img] orig_x orig_y
+			set orig_x [expr { $orig_x / $zoom }]
+			set orig_y [expr { $orig_y / $zoom }]
 
 			# only nodes are snapped to grid, annotations are not
 			if {
 				$autorearrange_enabled == 0 &&
 				[$main_canvas_elem find withtag "node && $node_id"] != ""
 			} {
-				set dx [expr {(int($x / $grid + 0.5) * $grid - $x) * $zoom}]
-				set dy [expr {(int($y / $grid + 0.5) * $grid - $y) * $zoom}]
-				$main_canvas_elem move $img $dx $dy
+				lassign [snapObjectToGrid $img] x y
+				set x [expr { $x / $zoom }]
+				set y [expr { $y / $zoom }]
 
-				set coords [$main_canvas_elem coords $img]
-				set x [expr {[lindex $coords 0] / $zoom}]
-				set y [expr {[lindex $coords 1] / $zoom}]
+				set dx [expr { $x - $orig_x }]
+				set dy [expr { $y - $orig_y }]
+
 				if { $x < 0 || $y < 0 || $x > $sizex || $y > $sizey } {
 					set regular false
 				} else {
 					setNodeCoords $node_id "$x $y"
 				}
 
-				#moving the nodelabel assigned to the moving node
+				#moving the nodelabel and selectbox assigned to the moving node
 				$main_canvas_elem move "nodelabel && $node_id" $dx $dy
-				set coords [$main_canvas_elem coords "nodelabel && $node_id"]
-				set x [expr {[lindex $coords 0] / $zoom}]
-				set y [expr {[lindex $coords 1] / $zoom}]
+				$main_canvas_elem move "selectmark && $node_id" $dx $dy
+
+				lassign [$main_canvas_elem coords "nodelabel && $node_id"] x y
+				set x [expr { $x / $zoom }]
+				set y [expr { $y / $zoom }]
 				if { $x < 0 || $y < 0 || $x > $sizex || $y > $sizey } {
 					set regular false
 				} else {
 					setNodeLabelCoords $node_id "$x $y"
 				}
-			} else {
-				set dx 0
-				set dy 0
 			}
 
 			if { [lindex [$main_canvas_elem gettags $node_id] 0] == "oval" } {
@@ -2120,7 +2165,6 @@ proc button1-release { x y } {
 				setAnnotationCoords $node_id "$x1 $y1"
 			}
 
-			$main_canvas_elem move "selectmark && $node_id" $dx $dy
 			$main_canvas_elem addtag need_redraw withtag "link && $node_id"
 			set changed 1
 		} ;# end of: foreach img selected

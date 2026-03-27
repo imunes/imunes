@@ -1170,18 +1170,18 @@ proc resizeCanvasApply { w } {
 
 	set curcanvas [getFromRunning_gui "curcanvas"]
 
-	set x [$w.resizeframe.size.x get]
-	set y [$w.resizeframe.size.y get]
-	lassign [getMostDistantNodeCoordinates] ix iy
-
 	if { [getCanvasBkg $curcanvas] != "" } {
 		after idle { .dialog1.msg configure -wraplength 4i }
 		tk_dialog .dialog1 "IMUNES error" \
-			"Cannot resize canvas with bacground image!" \
+			"Cannot resize canvas with background image!" \
 			info 0 Dismiss
 
 		return
 	}
+
+	set x [$w.resizeframe.size.x get]
+	set y [$w.resizeframe.size.y get]
+	lassign [getMostDistantNodeCoordinates] ix iy
 
 	if { $ix > $x || $iy > $y } {
 		after idle { .dialog1.msg configure -wraplength 4i }

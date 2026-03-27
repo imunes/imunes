@@ -508,20 +508,24 @@ proc routerDefaultsApply { wi } {
 #   Returns the most distant node coordinates.
 #****
 proc getMostDistantNodeCoordinates {} {
+	set curcanvas [getFromRunning_gui "curcanvas"]
+
 	set x 0
 	set y 0
 	foreach node_id [getFromRunning "node_list"] {
+		if { [getNodeCanvas $node_id] != $curcanvas } {
+			continue
+		}
+
 		set coords [getNodeCoords $node_id]
 		if { [lindex $coords 0] > $x } {
 			set x [lindex $coords 0]
 		}
+
 		if { [lindex $coords 1] > $y } {
 			set y [lindex $coords 1]
 		}
 	}
-
-	set x [expr $x + 25]
-	set y [expr $y + 30]
 
 	return [list $x $y]
 }
