@@ -977,7 +977,11 @@ proc annotationConfig { target } {
 		}
 		default {
 			# should not happen
-			puts stderr "Unknown type [getAnnotationType $target] for target $target"
+			set err "Unknown type [getAnnotationType $target] for target $target"
+			after idle { .dialog1.msg configure -wraplength 5i }
+			tk_dialog .dialog1 "IMUNES error" \
+				$err \
+				info 0 Dismiss
 		}
 	}
 	redrawAll

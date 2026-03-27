@@ -897,7 +897,7 @@ proc attachToExperimentPopup {} {
 				$err \
 				info 0 Dismiss
 		} else {
-			puts stderr $err
+			sputs stderr $err
 		}
 
 		return

@@ -182,13 +182,13 @@ proc startXappOnNode { node_id app } {
 	global debug remote
 
 	if { $remote != "" } {
-		puts stderr "Running X applications in nodes on remote host is not supported."
+		sputs stderr "Running X applications in nodes on remote host is not supported."
 
 		return
 	}
 
 	if { [checkForExternalApps "socat"] != 0 } {
-		puts stderr "To run X applications on the node, install socat on your host."
+		sputs stderr "To run X applications on the node, install socat on your host."
 		return
 	}
 
@@ -315,7 +315,7 @@ proc allSnapshotsAvailable {} {
 				set msg "The root filesystem for virtual nodes ($vroot) is missing.\n"
 				append msg "Run 'imunes -p' to create the root filesystem."
 				if { ! $gui || $execMode == "batch" } {
-					puts stderr $msg
+					sputs stderr $msg
 				} else {
 					tk_dialog .dialog1 "IMUNES error" \
 						$msg \
@@ -339,10 +339,10 @@ proc allSnapshotsAvailable {} {
 		if { [llength [lsearch -inline $snapshotList $snapshot]] == 0 } {
 			if { ! $gui || $execMode == "batch" } {
 				if { $snapshot == "vroot/vroot@clean" } {
-					puts stderr "The main snapshot for virtual nodes is missing.
+					sputs stderr "The main snapshot for virtual nodes is missing.
 					Run 'make' or 'make vroot' to create the main ZFS snapshot."
 				} else {
-					puts stderr "Error: ZFS snapshot image \"$snapshot\" for node \"$node_id\" is missing."
+					sputs stderr "Error: ZFS snapshot image \"$snapshot\" for node \"$node_id\" is missing."
 				}
 
 				return 0
@@ -403,8 +403,8 @@ proc checkHangingTCPs { eid vimage } {
 
 	set sec 60
 	if { ! $gui || $execMode == "batch" } {
-		puts "We must wait for TIME_WAIT expiration on virtual nodes (up to 60 sec). "
-		puts "Please don't try killing the process."
+		sputs "We must wait for TIME_WAIT expiration on virtual nodes (up to 60 sec). "
+		sputs "Please don't try killing the process."
 	} else {
 		set w .timewait
 		catch { destroy $w }
@@ -438,7 +438,7 @@ proc checkHangingTCPs { eid vimage } {
 			after 1000
 			set sec [expr $sec - 1]
 			if { ! $gui || $execMode == "batch" } {
-				puts -nonewline "."
+				sputs -nonewline "."
 				flush stdout
 			} else {
 				statline "~ $sec seconds ..."
@@ -699,7 +699,7 @@ proc fetchInterfaceData { node_id iface_id } {
 
 	set iface_name [_getIfcName $node_cfg $iface_id]
 	if { $iface_name ni [getHostIfcList "lo* ipfw* tun*"] } {
-		puts "No interface $iface_name."
+		sputs "No interface $iface_name."
 
 		return
 	}
@@ -1060,7 +1060,7 @@ proc getHostIfcVlanExists { node_id ifname } {
 	}
 
 	if { ! $gui || $execMode == "batch" } {
-		puts stderr $msg
+		sputs stderr $msg
 	} else {
 		after idle { .dialog1.msg configure -wraplength 4i }
 		tk_dialog .dialog1 "IMUNES error" $msg \
@@ -2522,7 +2522,7 @@ proc captureExtIfc { eid node_id iface_id } {
 				created.\n($err)"
 
 			if { ! $gui || $execMode == "batch" } {
-				puts stderr $msg
+				sputs stderr $msg
 			} else {
 				after idle { .dialog1.msg configure -wraplength 4i }
 				tk_dialog .dialog1 "IMUNES error" $msg \

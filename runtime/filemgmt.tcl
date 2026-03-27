@@ -690,7 +690,7 @@ proc readConfigFile { file_name } {
 	try {
 		json::json2dict $json_options
 	} on error err {
-		puts stderr "Error sourcing config file '$file_name':\n$err"
+		sputs stderr "Error sourcing config file '$file_name':\n$err"
 
 		return
 	} on ok read_options {}

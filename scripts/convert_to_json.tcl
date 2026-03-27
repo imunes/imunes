@@ -71,8 +71,8 @@ if { $ROOTDIR == "." } {
 try {
 	source "$ROOTDIR/$LIBDIR/helpers.tcl"
 } on error { result options } {
-	puts stderr "Could not find file helpers.tcl in $ROOTDIR/$LIBDIR:"
-	puts stderr $result
+	sputs stderr "Could not find file helpers.tcl in $ROOTDIR/$LIBDIR:"
+	sputs stderr $result
 	exit 1
 }
 
@@ -81,8 +81,8 @@ fetchImunesVersion
 try {
 	source "$ROOTDIR/$LIBDIR/helpers.tcl"
 } on error { result options } {
-	puts stderr "Could not find file helpers.tcl in $ROOTDIR/$LIBDIR:"
-	puts stderr $result
+	sputs stderr "Could not find file helpers.tcl in $ROOTDIR/$LIBDIR:"
+	sputs stderr $result
 	exit 1
 }
 
@@ -210,7 +210,7 @@ readConfigFile
 
 if { $argv != "" } {
 	if { ! [file exists $argv] } {
-		puts "Error: file '$argv' doesn't exist"
+		sputs "Error: file '$argv' doesn't exist"
 		exit
 	}
 
@@ -249,8 +249,8 @@ if { $argv != "" } {
 	set dir_name [file dirname $currentFileBatch]
 	set file_name [file tail $currentFileBatch]
 	saveCfgJson "$dir_name/json_$file_name"
-	puts "Saved as $dir_name/json_$file_name"
+	sputs "Saved as $dir_name/json_$file_name"
 } else {
-	puts "Usage: ./imunes --convert <old_imunes_topology.imn>"
+	sputs "Usage: ./imunes --convert <old_imunes_topology.imn>"
 	exit
 }

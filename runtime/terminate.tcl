@@ -419,7 +419,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 	}
 
 	if { ! $gui || $execMode == "batch" } {
-		puts "Terminated experiment ID = $eid"
+		sputs "Terminated experiment ID = $eid"
 	}
 }
 
@@ -1497,7 +1497,7 @@ proc finishTerminating { status msg w } {
 
 	catch { pipesClose }
 	if { ! $gui || $execMode == "batch" } {
-		puts stderr $msg
+		sputs stderr $msg
 	} else {
 		catch { destroy $w }
 		set progressbarCount 0

@@ -103,7 +103,7 @@ proc loadCfgLegacy { cfg } {
 			} elseif { "$class" == "image" } {
 				lappend image_list $object
 			} else {
-				puts stderr "configuration parsing error: unknown object class $class"
+				sputs stderr "configuration parsing error: unknown object class $class"
 				exit 1
 			}
 			continue
@@ -192,9 +192,9 @@ proc loadCfgLegacy { cfg } {
 							}
 
 							if { $iface_id == "" } {
-								puts stderr "ERROR: '$object: interface-peer {$value}' field appears before the definition of '$iface_name'"
-								puts stderr "        - create 'interface $iface_name' field in node's network-config if it doesn't exist OR"
-								puts stderr "        - move this field at the end of the node configuration in your .imn file"
+								sputs stderr "ERROR: '$object: interface-peer {$value}' field appears before the definition of '$iface_name'"
+								sputs stderr "        - create 'interface $iface_name' field in node's network-config if it doesn't exist OR"
+								sputs stderr "        - move this field at the end of the node configuration in your .imn file"
 
 								exit 1
 							}
@@ -1331,7 +1331,7 @@ proc handleVersionMismatch { cfg_version file_name } {
 	}
 
 	if { ! $gui || $execMode == "batch" } {
-		puts $msg
+		sputs $msg
 	} else {
 		after idle {.dialog1.msg configure -wraplength 6i}
 		tk_dialog .dialog1 "IMUNES warning" \

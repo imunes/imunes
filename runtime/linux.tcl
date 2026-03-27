@@ -240,14 +240,14 @@ proc startXappOnNode { node_id app } {
 	global debug remote
 
 	if { $remote != "" } {
-		puts stderr "Running X applications in nodes on remote host is not supported."
+		sputs stderr "Running X applications in nodes on remote host is not supported."
 
 		return
 	}
 
 	set eid [getFromRunning "eid"]
 	if { [checkForExternalApps "socat"] != 0 } {
-		puts stderr "To run X applications on the node, install socat on your host."
+		sputs stderr "To run X applications on the node, install socat on your host."
 
 		return
 	}
@@ -389,7 +389,7 @@ proc allSnapshotsAvailable {} {
 				append msg "Run 'docker pull $template' to pull the template."
 
 				if { ! $gui || $execMode == "batch" } {
-					puts stderr $msg
+					sputs stderr $msg
 				} else {
 					tk_dialog .dialog1 "IMUNES error" \
 						$msg \
@@ -465,7 +465,7 @@ proc getHostIfcVlanExists { node_id iface_name } {
 	}
 
 	if { ! $gui || $execMode == "batch" } {
-		puts stderr $msg
+		sputs stderr $msg
 	} else {
 		after idle { .dialog1.msg configure -wraplength 4i }
 		tk_dialog .dialog1 "IMUNES error" $msg \
@@ -1843,7 +1843,7 @@ proc captureExtIfc { eid node_id iface_id } {
 					created.\n($err)"
 
 				if { ! $gui || $execMode == "batch" } {
-					puts stderr $msg
+					sputs stderr $msg
 				} else {
 					after idle { .dialog1.msg configure -wraplength 4i }
 					tk_dialog .dialog1 "IMUNES error" $msg \
@@ -2102,7 +2102,7 @@ proc fetchInterfaceData { node_id iface_id } {
 
 	set iface_name [_getIfcName $node_cfg $iface_id]
 	if { $iface_name ni [getHostIfcList "lo* tun*"] } {
-		puts "No interface $iface_name."
+		sputs "No interface $iface_name."
 
 		return
 	}

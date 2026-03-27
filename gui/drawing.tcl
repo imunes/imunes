@@ -1726,8 +1726,9 @@ proc animate {} {
 
 	catch { $main_canvas_elem itemconfigure "selectmark || selectbox" -dashoffset $animatephase } err
 	if { $err != "" } {
-		puts stderr "IMUNES was closed unexpectedly before experiment termination was completed."
-		puts stderr "Clean all running experiments with the 'cleanupAll' command."
+		sputs stderr "IMUNES was closed unexpectedly before experiment termination was completed."
+		sputs stderr "Clean all running experiments with the 'cleanupAll' command."
+
 		return;
 	}
 

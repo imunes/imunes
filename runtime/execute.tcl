@@ -88,7 +88,7 @@ proc checkExternalInterfaces {} {
 		if { $i < 0 } {
 			set msg "Error: external interface $physical_ifc non-existant."
 			if { ! $gui || $execMode == "batch" } {
-				puts stderr $msg
+				sputs stderr $msg
 			} else {
 				after idle { .dialog1.msg configure -wraplength 4i }
 				tk_dialog .dialog1 "IMUNES error" $msg \
@@ -117,7 +117,7 @@ proc checkExternalInterfaces {} {
 				}
 
 				if { ! $gui || $execMode == "batch" } {
-					puts stderr $msg
+					sputs stderr $msg
 				} else {
 					after idle { .dialog1.msg configure -wraplength 4i }
 					tk_dialog .dialog1 "IMUNES $severity" "$msg" \
@@ -627,7 +627,7 @@ proc deployCfg { { execute 0 } } {
 		statline "Empty topology instantiated in [expr ([clock milliseconds] - $t_start)/1000.0] seconds."
 
 		if { ! $gui || $execMode == "batch" } {
-			puts "Experiment ID = $eid"
+			sputs "Experiment ID = $eid"
 		}
 
 		if { $gui } {
@@ -776,7 +776,7 @@ proc deployCfg { { execute 0 } } {
 	statline "Network topology instantiated in [expr ([clock milliseconds] - $t_diff - $t_start)/1000.0] seconds ($all_nodes_count nodes and $links_count links)."
 
 	if { ! $gui || $execMode == "batch" } {
-		puts "Experiment ID = $eid"
+		sputs "Experiment ID = $eid"
 	}
 }
 
@@ -809,9 +809,9 @@ proc execute_prepareSystem { progressbar_widget msg_widget } {
 
 			set eid $eid_base
 			while { $eid in $running_eids } {
-				puts -nonewline stderr "Experiment ID $eid already in use, trying "
+				sputs -nonewline stderr "Experiment ID $eid already in use, trying "
 				set eid [genExperimentId]
-				puts stderr "$eid."
+				sputs stderr "$eid."
 				set running_eids [getResumableExperiments]
 			}
 		}
@@ -1849,7 +1849,7 @@ proc finishExecuting { status msg w } {
 
 	catch { pipesClose }
 	if { ! $gui || $execMode == "batch" } {
-		puts stderr $msg
+		sputs stderr $msg
 	} else {
 		catch { destroy $w }
 
@@ -1931,7 +1931,7 @@ proc checkForErrors { nodes nodes_count w } {
 				"$msg" \
 				info 0 Dismiss
 		} else {
-			puts stderr "\nIMUNES warning - $msg\n"
+			sputs stderr "\nIMUNES warning - $msg\n"
 		}
 	}
 
@@ -1952,7 +1952,7 @@ proc checkForErrors { nodes nodes_count w } {
 				"$msg" \
 				info 0 Dismiss
 		} else {
-			puts stderr "\nIMUNES warning - $msg\n"
+			sputs stderr "\nIMUNES warning - $msg\n"
 		}
 	}
 
@@ -1969,7 +1969,7 @@ proc checkForErrors { nodes nodes_count w } {
 				"$msg" \
 				info 0 Dismiss
 		} else {
-			puts stderr "\nIMUNES warning - $msg\n"
+			sputs stderr "\nIMUNES warning - $msg\n"
 		}
 	}
 }
@@ -2042,7 +2042,7 @@ proc checkForErrorsIfaces { nodes nodes_count w } {
 				"$msg" \
 				info 0 Dismiss
 		} else {
-			puts stderr "\nIMUNES warning - $msg\n"
+			sputs stderr "\nIMUNES warning - $msg\n"
 		}
 	}
 
@@ -2059,7 +2059,7 @@ proc checkForErrorsIfaces { nodes nodes_count w } {
 				"$msg" \
 				info 0 Dismiss
 		} else {
-			puts stderr "\nIMUNES warning - $msg\n"
+			sputs stderr "\nIMUNES warning - $msg\n"
 		}
 	}
 }

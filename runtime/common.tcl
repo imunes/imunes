@@ -640,7 +640,7 @@ proc statline { line } {
 	global execMode gui
 
 	if { ! $gui || $execMode == "batch" } {
-		puts $line
+		sputs $line
 		flush stdout
 	} else {
 		dputs $line
@@ -665,8 +665,8 @@ proc displayBatchProgress { prgs tot } {
 	global execMode debug gui
 
 	if { ! $gui || $execMode == "batch" } {
-		puts -nonewline "\r                                                "
-		puts -nonewline "\r> $prgs/$tot "
+		sputs -nonewline "\r                                                "
+		sputs -nonewline "\r> $prgs/$tot "
 		flush stdout
 	} elseif { $debug } {
 		dputs -nonewline "\r                                                "
@@ -843,7 +843,7 @@ proc setOperMode { new_oper_mode } {
 					$err \
 					info 0 Dismiss
 			} else {
-				puts stderr $err
+				sputs stderr $err
 			}
 
 			return
@@ -859,7 +859,7 @@ proc setOperMode { new_oper_mode } {
 					$err \
 					info 0 Dismiss
 			} else {
-				puts stderr $err
+				sputs stderr $err
 			}
 
 			return
@@ -873,7 +873,7 @@ proc setOperMode { new_oper_mode } {
 					"$err" \
 					info 0 Dismiss
 			} else {
-				puts stderr $err
+				sputs stderr $err
 			}
 
 			return

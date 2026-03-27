@@ -59,9 +59,9 @@ proc safePackageRequire { plist args } {
 		try {
 			package require $p
 		} on error { result options } {
-			puts stderr "Error loading package $p: $result"
+			sputs stderr "Error loading package $p: $result"
 			if { [llength $args] } {
-				puts stderr [lindex $args 0]
+				sputs stderr [lindex $args 0]
 			}
 			exit 1
 		}
@@ -74,7 +74,7 @@ proc safeSourceFile { file } {
 	try {
 		source $file
 	} on error { result options } {
-		puts stderr "Error sourcing file $file: $result"
+		sputs stderr "Error sourcing file $file: $result"
 		exit 1
 	}
 }
@@ -88,13 +88,13 @@ proc parseCmdArgs { options usage } {
 
 	catch { array set params [::cmdline::getoptions argv $options $usage] } err
 	if { $err != "" || $params(h) } {
-		puts stderr $usage
+		sputs stderr $usage
 		exit 1
 	}
 
 	set fileName [lindex $argv 0]
 	if { ! [ string match "*.imn" $fileName ] && $fileName != "" } {
-		puts stderr "File '$fileName' is not an IMUNES .imn file"
+		sputs stderr "File '$fileName' is not an IMUNES .imn file"
 		exit 1
 	}
 
@@ -145,9 +145,9 @@ proc parseCmdArgs { options usage } {
 			set nodeconf_timeout [expr round($nodeconf_timeout * 2)]
 			set ifacesconf_timeout [expr round($ifacesconf_timeout * 2)]
 
-			puts "Using remote host '$remote'"
+			sputs "Using remote host '$remote'"
 		} else {
-			puts stderr "Remote host not given."
+			sputs stderr "Remote host not given."
 			exit 1
 		}
 	}
@@ -156,13 +156,13 @@ proc parseCmdArgs { options usage } {
 		if { [string is integer $params(j)] } {
 			set max_jobs $params(j)
 		} elseif { $params(j) != "h" } {
-			puts stderr "Ignoring -j, dynamically calculate number of jobs as \[ncpus/2]"
+			sputs stderr "Ignoring -j, dynamically calculate number of jobs as \[ncpus/2]"
 		}
 	}
 
 	if { $params(b) || $params(batch) } {
 		if { $params(e) == "" && $params(eid) == "" && $fileName == "" } {
-			puts stderr $usage
+			sputs stderr $usage
 			exit 1
 		}
 
@@ -182,7 +182,7 @@ proc parseCmdArgs { options usage } {
 		} on ok fd {
 			close $fd
 		} on error err {
-			puts stderr "Unable to open '$debug_file' for writing: $err"
+			sputs stderr "Unable to open '$debug_file' for writing: $err"
 			set debug_file ""
 		}
 	}
@@ -193,11 +193,11 @@ proc parseCmdArgs { options usage } {
 			set eid_base $params(eid)
 		}
 		if { $params(b) || $params(batch) } {
-			puts "Using experiment ID '$eid_base'."
+			sputs "Using experiment ID '$eid_base'."
 		}
 
 		if { ! [regexp {^[[:alnum:]]+$} $eid_base] } {
-			puts stderr "Experiment ID should only consists of alphanumeric characters."
+			sputs stderr "Experiment ID should only consists of alphanumeric characters."
 			exit 1
 		}
 	}
@@ -216,7 +216,7 @@ proc parseCmdArgs { options usage } {
 
 	if { $execMode != "batch" && ($params(a) || $params(attach)) } {
 		if { ! [info exists eid_base] } {
-			puts stderr "Experiment ID not given (use -e or -eid)."
+			sputs stderr "Experiment ID not given (use -e or -eid)."
 			exit 1
 		}
 
@@ -224,7 +224,7 @@ proc parseCmdArgs { options usage } {
 	}
 
 	if { $params(l) || $params(legacy) } {
-		puts "Running in legacy mode"
+		sputs "Running in legacy mode"
 
 		set nodecreate_timeout -1
 		set nodeconf_timeout -1
@@ -270,12 +270,12 @@ proc fetchImunesVersion {} {
 proc printImunesVersion {} {
 	global baseTitle imunesVersion imunesChangedDate imunesAdditions
 
-	puts "$baseTitle $imunesVersion"
+	sputs "$baseTitle $imunesVersion"
 	if { $imunesChangedDate != "" } {
-		puts "$imunesChangedDate"
+		sputs "$imunesChangedDate"
 	}
 	if { $imunesAdditions != "" } {
-		puts "Additions: $imunesAdditions"
+		sputs "Additions: $imunesAdditions"
 	}
 }
 
@@ -291,7 +291,7 @@ proc setPlatformVariables {} {
 			set remote_error ""
 		} else {
 			set remote_error "Cannot connect to remote '$remote':\n\n$err\n\nSwitching to local mode."
-			puts stderr $remote_error
+			sputs stderr $remote_error
 			set os [platform::identify]
 
 			set nodecreate_timeout [expr round($nodecreate_timeout / 2)]
@@ -541,4 +541,26 @@ proc invokeTypeProc { node_type proc_name args } {
 
 proc invokeNodeProc { node_id proc_name args } {
 	return [invokeTypeProc [getNodeType $node_id] $proc_name {*}$args]
+}
+
+# safe puts procedure
+proc sputs { args } {
+	set flags {}
+	foreach arg $args {
+		if { [string index $arg 0] != "-" } {
+			continue
+		}
+
+		lappend flags $arg
+		set args [removeFromList $args $arg]
+	}
+
+	if { [llength $args] == 1 } {
+		set fd "stdout"
+	} else {
+		set fd [lindex $args 0]
+		set args [lrange $args 1 end]
+	}
+
+	catch { puts {*}$flags $fd {*}$args }
 }

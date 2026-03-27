@@ -182,7 +182,7 @@ proc evsched {} {
 			} elseif { [lindex $params 0] == "const" } {
 				set value [lindex $params 1]
 			} else {
-				puts stderr "bogus event line: $event"
+				sputs stderr "bogus event line: $event"
 			}
 
 			switch -exact -- $target {

@@ -100,8 +100,8 @@ set config_path "$config_dir/config"
 try {
 	source "$ROOTDIR/$LIBDIR/helpers.tcl"
 } on error { result options } {
-	puts stderr "Could not find file helpers.tcl in $ROOTDIR/$LIBDIR:"
-	puts stderr $result
+	sputs stderr "Could not find file helpers.tcl in $ROOTDIR/$LIBDIR:"
+	sputs stderr $result
 	exit 1
 }
 
@@ -330,7 +330,7 @@ if { $initMode == 1 } {
 if { $remote_error == "" && $execMode == "batch" } {
 	set err [checkSysPrerequisites]
 	if { $err != "" } {
-		puts stderr $err
+		sputs stderr $err
 		exit
 	}
 }
@@ -463,7 +463,7 @@ if { $last_config_file != "" } {
 
 if { $execMode == "interactive" } {
 	if { $selected_experiment != "" && $selected_experiment ni [getResumableExperiments] } {
-		puts stderr "Experiment with EID '$selected_experiment' not running"
+		sputs stderr "Experiment with EID '$selected_experiment' not running"
 		mainPipeClose
 
 		exit 1
@@ -521,7 +521,7 @@ if { $execMode == "interactive" } {
 					$err \
 					info 0 Dismiss
 			} else {
-				puts stderr $err
+				sputs stderr $err
 			}
 
 			exit 1
@@ -553,20 +553,20 @@ if { $execMode == "interactive" } {
 		# Event scheduler - should be started / stopped on per-experiment base?
 		#evsched
 	} else {
-		puts ""
-		puts "*** WARNING: This is an experimental feature. Proceed with caution! ***"
-		puts ""
-		puts -nonewline "> "
+		sputs ""
+		sputs "*** WARNING: This is an experimental feature. Proceed with caution! ***"
+		sputs ""
+		sputs -nonewline "> "
 		flush stdout
 		while { [gets stdin line] >= 0 } {
 			try {
 				eval {*}$line
 			} on ok retv {
-				puts "OK: '$retv'"
+				sputs "OK: '$retv'"
 			} on error retv {
-				puts "ERROR: '$retv'"
+				sputs "ERROR: '$retv'"
 			}
-			puts -nonewline "> "
+			sputs -nonewline "> "
 			flush stdout
 		}
 	}
@@ -578,7 +578,7 @@ if { $execMode == "interactive" } {
 	catch { rexec id -u } uid
 	if { $uid != "0" } {
 		mainPipeClose
-		puts stderr "Error: To execute experiment, run IMUNES with root permissions."
+		sputs stderr "Error: To execute experiment, run IMUNES with root permissions."
 
 		exit 1
 	}
@@ -587,7 +587,7 @@ if { $execMode == "interactive" } {
 	if { $argv != "" } {
 		if { ! [file exists $argv] } {
 			mainPipeClose
-			puts stderr "Error: file '$argv' doesn't exist"
+			sputs stderr "Error: file '$argv' doesn't exist"
 
 			exit 1
 		}
