@@ -2099,7 +2099,7 @@ proc configGUI_customConfig { wi node_id } {
 
 	grid $wi.custcfg.etxt -in $wi.custcfg -sticky w -column 0 -row 0
 	grid $wi.custcfg.echeckOnOff -in $wi.custcfg -sticky w -column 1 \
-		-row 0 -pady 3
+		-row 0 -pady 3 -columnspan 2
 
 	set row 1
 	foreach hook $custom_config_hooks label_text $custom_config_hooks_txt {
@@ -2149,9 +2149,33 @@ proc configGUI_customConfig { wi node_id } {
 		]
 		ttk::button $o.beditor -text "Editor" -command $tmp_command
 
+		set tmp_command [list apply {
+			{ gui_element node_id hook } {
+				global node_cfg custom_node_cfg selected_hook
+
+				set custom_node_cfg $node_cfg
+				set selected_hook $hook
+
+				set o $gui_element.custcfg.[string tolower $hook]
+				set defaultConfig [$o.cb get]
+				if { $defaultConfig == "DISABLED" } {
+					return
+				}
+
+				customConfigOpenInExternal "" $node_id $defaultConfig
+			}
+		} \
+			$wi \
+			$node_id \
+			$hook
+		]
+		ttk::button $o.external_editor -width 2 -text "⤴" -command $tmp_command
+		getHelpLabel $o.external_editor "Open in external editor"
+
 		grid $o.ld -sticky w -column 0 -row 0
-		grid $o.cb -row 0 -column 1 -sticky we -padx 5
-		grid $o.beditor -column 2 -row 0 -rowspan 2 -padx 20 -sticky e
+		grid $o.cb -row 0 -column 1 -sticky we -padx 10
+		grid $o.beditor -column 2 -row 0 -rowspan 2 -padx 5 -sticky e
+		grid $o.external_editor -column 3 -row 0 -rowspan 2
 
 		grid $o -in $wi.custcfg -sticky w -column 0 -row $row -columnspan 2
 		incr row
@@ -3802,6 +3826,7 @@ proc createTab { node_id selected_hook cfg_id } {
 		-command "deleteConfig $wi $node_id"
 	ttk::button $w.external_editor -text "Open in editor" \
 		-command "customConfigOpenInExternal $wi $node_id"
+	getHelpLabel $w.external_editor "Open in external editor"
 
 	ttk::scrollbar $w.vsb -orient vertical -command [list $w.editor yview]
 	ttk::scrollbar $w.hsb -orient horizontal -command [list $w.editor xview]
@@ -3853,11 +3878,19 @@ proc externalEditDone { wi read_channel tmp_path custom_config_id } {
 		close $file_id
 		catch { file delete -force $tmp_path }
 
-		set custom_node_cfg [_setNodeCustomConfig $custom_node_cfg $selected_hook $custom_config_id $cmd $new_cfg]
+		if { $wi != "" } {
+			set custom_node_cfg [_setNodeCustomConfig $custom_node_cfg $selected_hook $custom_config_id $cmd $new_cfg]
 
-		set custom_config_widget $wi.nb.$custom_config_id
-		catch { $custom_config_widget.editor delete 1.0 end }
-		catch { $custom_config_widget.editor insert end "$new_cfg" }
+			set custom_config_widget $wi.nb.$custom_config_id
+
+			catch { $custom_config_widget.editor delete 1.0 end }
+			catch { $custom_config_widget.editor insert end "$new_cfg" }
+		} else {
+			global node_cfg
+
+			set custom_node_cfg [_setNodeCustomConfig $node_cfg $selected_hook $custom_config_id $cmd $new_cfg]
+			set node_cfg $custom_node_cfg
+		}
 
 		return
 	}
@@ -3866,18 +3899,20 @@ proc externalEditDone { wi read_channel tmp_path custom_config_id } {
 	read $read_channel
 }
 
-proc customConfigOpenInExternal { wi node_id } {
+proc customConfigOpenInExternal { wi node_id { custom_config_id "" } } {
 	global custom_node_cfg selected_hook
 
 	if { [checkTerminalMissing] } {
 		return
 	}
 
-	if { [checkForExternalApps "vim"] } {
-		return
-	}
+	if { $wi != "" } {
+		set custom_config_id [$wi.nb tab current -text]
+	} else {
+		global node_cfg
 
-	set custom_config_id [$wi.nb tab current -text]
+		set custom_node_cfg $node_cfg
+	}
 
 	set file_id [file tempfile tmp_path]
 	puts $file_id [_getNodeCustomConfig $custom_node_cfg $selected_hook $custom_config_id]
@@ -3885,11 +3920,17 @@ proc customConfigOpenInExternal { wi node_id } {
 
 	set external_editor_cmd [getExternalEditorCommand "Editing [_getNodeName $custom_node_cfg] ($node_id) - $selected_hook ($tmp_path)" $tmp_path]
 
-	set read_channel [open "|$external_editor_cmd" r]
-
-	fconfigure $read_channel -blocking 0 -buffering none
-
-	fileevent $read_channel readable [list externalEditDone $wi $read_channel $tmp_path $custom_config_id]
+	try {
+		open "|$external_editor_cmd" r
+	} on ok read_channel {
+		fconfigure $read_channel -blocking 0 -buffering none
+		fileevent $read_channel readable [list externalEditDone $wi $read_channel $tmp_path $custom_config_id]
+	} on error err {
+		after idle { .dialog1.msg configure -wraplength 4i }
+		tk_dialog .dialog1 "IMUNES error" \
+			"Error opening external editor:\n\n'$err'" \
+			info 0 Dismiss
+	}
 
 	return
 }
