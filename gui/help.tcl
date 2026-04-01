@@ -68,14 +68,14 @@ IMUNES manual (pdf and html):
 
 global help_strings
 array set help_strings {
-    "Custom image" "If enabled, IMUNES will use the given virtual root (vroot) instead of the default one when running the node.\n\nThe default vroot on FreeBSD is /var/imunes/vroot directory, and on Linux it is imunes/template Docker image."
-    "External Docker interface" "(Linux only)\n\nIf enabled, IMUNES will create a Docker interface inside a node (dext0) connected to the imunes-bridge Docker network.\n\nThis interface is primarily used to enable internet connection on a node in a quick and easy way - the default route is automatically added on its creation. Users should configure /etc/resolv.conf by themselves as DNS resolver is not set automatically."
-    "Services" "For each enabled service, the node will start its daemon on node startup."
-    "Routes" "Custom static routes - add defined routes on node startup. Set one route per line in the format\na.b.c.d/prefix x.y.z.w\n-> for example: 0.0.0.0/0 10.0.0.1\n\nAutomatic default routes - if enabled, IMUNES will dynamically generate default routes for this node and automatically add them on node startup. You can see the default routes that will be generated in the 'Automatic default routes' tab."
-    "Custom config" "If enabled, custom configuration(s) will be run instead of default behaviour. There are currently two custom configuration options: interfaces config and node config."
-    "Custom interfaces config" "If enabled, custom interfaces configuration will be run instead of default behaviour from the 'Interfaces' tab. More information is available inside the custom config editor."
-    "Custom node config" "If enabled, custom node configuration will be run instead of default commands. More information is available inside the custom config editor."
-    "Force node" "When applying the configuration, the node (or its interfaces) will be forcefully recreated/reconfigured with the currently configured values."
+	"Custom image" "If enabled, IMUNES will use the given virtual root (vroot) instead of the default one when running the node.\n\nThe default vroot on FreeBSD is /var/imunes/vroot directory, and on Linux it is imunes/template Docker image."
+	"External Docker interface" "(Linux only)\n\nIf enabled, IMUNES will create a Docker interface inside a node (dext0) connected to the imunes-bridge Docker network.\n\nThis interface is primarily used to enable internet connection on a node in a quick and easy way - the default route is automatically added on its creation. Users should configure /etc/resolv.conf by themselves as DNS resolver is not set automatically."
+	"Services" "For each enabled service, the node will start its daemon on node startup."
+	"Routes" "Custom static routes - add defined routes on node startup. Set one route per line in the format\na.b.c.d/prefix x.y.z.w\n-> for example: 0.0.0.0/0 10.0.0.1\n\nAutomatic default routes - if enabled, IMUNES will dynamically generate default routes for this node and automatically add them on node startup. You can see the default routes that will be generated in the 'Automatic default routes' tab."
+	"Custom config" "If enabled, custom configuration(s) will be run instead of default behaviour. There are currently two custom configuration options: interfaces config and node config."
+	"Custom interfaces config" "If enabled, custom interfaces configuration will be run instead of default behaviour from the 'Interfaces' tab. More information is available inside the custom config editor."
+	"Custom node config" "If enabled, custom node configuration will be run instead of default commands. More information is available inside the custom config editor."
+	"Force node" "When applying the configuration, the node (or its interfaces) will be forcefully recreated/reconfigured with the currently configured values."
 	"Configure External interface" "'Steal' an interface from the host OS.\nDepending on the type of link it connects to, the interface is handled differently.\n\nFreeBSD\n - 'normal' link: the interface is moved to the experiment jail and connected with the nodes interface over a bridge\n - 'direct' link: the interface is moved to the experiment jail and connected with the nodes interface without a bridge\n\nLinux\n - 'normal' link: the interface is moved to the experiment namespace and connected with the nodes interface over a bridge\n - 'direct' link: a new macvlan (or ipvlan if wireless) interface is created, and moved to the nodes namespace"
 }
 

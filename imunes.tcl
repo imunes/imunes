@@ -224,7 +224,7 @@ set options_defaults {
 	"auto_etc_hosts"		0			"bool"						"automatically create /etc/hosts entries in each node"
 	"IPv4autoAssign"		1			"bool"						"automatically assign next free IPv4 address to interface"
 	"IPv6autoAssign"		1			"bool"						"automatically assign next free IPv6 address to interface"
-    "recents_number"		10			"int 0|999"					"max number of recently opened file names to keep"
+	"recents_number"		10			"int 0|999"					"max number of recently opened file names to keep"
 	"routerDefaultsModel"	"frr"		"list frr|quagga|static"	"new routers will have this value set to routing model"
 	"routerRipEnable"		1			"bool"						"enable/disable RIP protocol on newly created router nodes"
 	"routerRipngEnable"		1			"bool"						"enable/disable RIPng protocol on newly created router nodes"
@@ -389,7 +389,7 @@ if { [string match -nocase "*imagemagick*" $imInfo] != 1 } {
 }
 
 if { ! [file exists $config_dir] } {
-    file mkdir $config_dir
+	file mkdir $config_dir
 }
 
 # I don't want to add new runtime arguments for generating this file, but I
@@ -430,7 +430,7 @@ set pinned_recent_files {}
 set recent_files {}
 set recents_fname "$config_dir/recents"
 if { ! [file isdirectory "$config_dir"] } {
-    set recents_fname ""
+	set recents_fname ""
 } else {
 	if { [file exists $recents_fname] } {
 		set fd [open $recents_fname r]
@@ -456,7 +456,7 @@ if { ! [file isdirectory "$config_dir"] } {
 set last_config_file $config_path
 readConfigFiles
 if { $last_config_file != "" } {
-    set config_path $last_config_file
+	set config_path $last_config_file
 }
 
 #

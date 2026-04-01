@@ -147,9 +147,9 @@ set selectedIfc ""
 
 global isOSmac_gui
 if { $isOSmac_gui } {
-    set rightClick "<Button-2>"
+	set rightClick "<Button-2>"
 } else {
-    set rightClick "<Button-3>"
+	set rightClick "<Button-3>"
 }
 
 # Packets required for GUI

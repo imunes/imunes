@@ -3635,14 +3635,14 @@ proc customConfigGUI { parent_wi node_id } {
 		$note_frame \
 		$note_padx
 	]
-    ttk::button $options_frame.note_button \
+	ttk::button $options_frame.note_button \
 		-width 10 \
 		-text "Toggle help" \
 		-command $tmp_command
 
-    ttk::label $options_frame.ld -text "Default configuration:"
-    ttk::combobox $options_frame.cb -height 10 -width 22 -state readonly
-    $options_frame.cb configure -values "DISABLED [_getNodeCustomConfigIDs $custom_node_cfg $selected_hook]"
+	ttk::label $options_frame.ld -text "Default configuration:"
+	ttk::combobox $options_frame.cb -height 10 -width 22 -state readonly
+	$options_frame.cb configure -values "DISABLED [_getNodeCustomConfigIDs $custom_node_cfg $selected_hook]"
 
 	set defaultConfig [_getNodeCustomConfigSelected $custom_node_cfg $selected_hook]
 	if { $defaultConfig == "" } {
@@ -3841,8 +3841,8 @@ proc getExternalEditorCommand { title file_path } {
 }
 
 proc externalEditDone { wi read_channel tmp_path custom_config_id } {
-    if { [eof $read_channel] } {
-        catch { close $read_channel }
+	if { [eof $read_channel] } {
+		catch { close $read_channel }
 
 		global custom_node_cfg selected_hook
 
@@ -3859,11 +3859,11 @@ proc externalEditDone { wi read_channel tmp_path custom_config_id } {
 		catch { $custom_config_widget.editor delete 1.0 end }
 		catch { $custom_config_widget.editor insert end "$new_cfg" }
 
-        return
-    }
+		return
+	}
 
-    # consume data to avoid repeated triggers
-    read $read_channel
+	# consume data to avoid repeated triggers
+	read $read_channel
 }
 
 proc customConfigOpenInExternal { wi node_id } {
