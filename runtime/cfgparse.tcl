@@ -1192,6 +1192,8 @@ proc loadCfgJson { json_cfg } {
 	setToRunning_gui "annotation_list" [getAnnotationList]
 	setToRunning_gui "image_list" [getImageList]
 
+	checkOptions
+
 	applyOptionsToGUI
 
 	set ipv4_used_list {}
@@ -1895,6 +1897,30 @@ proc unsetOption_gui { property } {
 	set dict_cfg [dictUnset $dict_cfg "gui" "options" $property]
 
 	return $dict_cfg
+}
+
+# check if options from topology are allowed to be configured and remove them if not
+proc checkOptions {} {
+	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+	global options_defaults gui_options_defaults
+
+	# non-GUI options
+	dict for {option_name option_value} [dictGet $dict_cfg "options"] {
+		# topology_disable value = index of option_name + 4
+		set key_idx [lsearch -exact $options_defaults $option_name]
+		if { $key_idx != -1 && [lindex $options_defaults [expr { $key_idx + 4 }]] } {
+			unsetOption $option_name
+		}
+	}
+
+	# GUI options
+	dict for {option_name option_value} [dictGet $dict_cfg "gui" "options"] {
+		# topology_disable value = index of option_name + 4
+		set key_idx [lsearch -exact $gui_options_defaults $option_name]
+		if { $key_idx != -1 && [lindex $gui_options_defaults [expr { $key_idx + 4 }]] } {
+			unsetOption_gui $option_name
+		}
+	}
 }
 
 proc getOptSource { option_name } {

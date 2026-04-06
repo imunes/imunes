@@ -218,53 +218,53 @@ global named_colors
 set named_colors "Red Green Blue Yellow Magenta Cyan Gray Black"
 
 # These variables can be modified in IMUNES configuration files.
-#	name					value		type						description
+#	name					value		type						description														topology_disable
 set options_defaults {
-	"custom_override"		""			"string"					"a list of options that ignore values from .imn files"
-	"auto_etc_hosts"		0			"bool"						"automatically create /etc/hosts entries in each node"
-	"IPv4autoAssign"		1			"bool"						"automatically assign next free IPv4 address to interface"
-	"IPv6autoAssign"		1			"bool"						"automatically assign next free IPv6 address to interface"
-	"recents_number"		10			"int 0|999"					"max number of recently opened file names to keep"
-	"routerDefaultsModel"	"frr"		"list frr|quagga|static"	"new routers will have this value set to routing model"
-	"routerRipEnable"		1			"bool"						"enable/disable RIP protocol on newly created router nodes"
-	"routerRipngEnable"		1			"bool"						"enable/disable RIPng protocol on newly created router nodes"
-	"routerOspfEnable"		0			"bool"						"enable/disable OSPF protocol on newly created router nodes"
-	"routerOspf6Enable"		0			"bool"						"enable/disable OSPF6 protocol on newly created router nodes"
-	"routerBgpEnable"		0			"bool"						"enable/disable BGP protocol on newly created router nodes"
-	"routerLdpEnable"		0			"bool"						"enable/disable LDP protocol on newly created router nodes"
-	"editor_only"			0			"bool"						"if true, Experiment -> Execute is disabled"
-	"preferred_shell"		"csh"		"string"					"shell to open on 'Shell window' (if exists)"
-	"timeout_factor"		5			"int 1|60"					"extend wait time for node/iface create/destroy/configure"
+	"custom_override"		""			"string"					"a list of options that ignore values from .imn files"			1
+	"auto_etc_hosts"		0			"bool"						"automatically create /etc/hosts entries in each node"			0
+	"IPv4autoAssign"		1			"bool"						"automatically assign next free IPv4 address to interface"		0
+	"IPv6autoAssign"		1			"bool"						"automatically assign next free IPv6 address to interface"		0
+	"recents_number"		10			"int 0|999"					"max number of recently opened file names to keep"				1
+	"routerDefaultsModel"	"frr"		"list frr|quagga|static"	"new routers will have this value set to routing model"			0
+	"routerRipEnable"		1			"bool"						"enable/disable RIP protocol on newly created router nodes"		0
+	"routerRipngEnable"		1			"bool"						"enable/disable RIPng protocol on newly created router nodes"	0
+	"routerOspfEnable"		0			"bool"						"enable/disable OSPF protocol on newly created router nodes"	0
+	"routerOspf6Enable"		0			"bool"						"enable/disable OSPF6 protocol on newly created router nodes"	0
+	"routerBgpEnable"		0			"bool"						"enable/disable BGP protocol on newly created router nodes"		0
+	"routerLdpEnable"		0			"bool"						"enable/disable LDP protocol on newly created router nodes"		0
+	"editor_only"			0			"bool"						"if true, Experiment -> Execute is disabled"					0
+	"preferred_shell"		"csh"		"string"					"shell to open on 'Shell window' (if exists)"					0
+	"timeout_factor"		5			"int 1|60"					"extend wait time for node/iface create/destroy/configure"		0
 }
-#	name					value		type						description
+#	name					value		type						description														topology_disable
 
-#	name						value							type				description
+#	name						value							type				description										topology_disable
 set gui_options_defaults {
-	"hidden_node_types"			"none"							"string"			"a list of node types to hide in the toolbar"
-	"icon_size"					"normal"						"list small|normal"	"size of icons on canvas"
-	"show_annotations"			1								"bool"				"show annotations on canvas"
-	"show_background_image"		0								"bool"				"show background image on canvas"
-	"show_grid"					1								"bool"				"show grid on canvas"
-	"show_interface_ipv4"		1								"bool"				"show IPv4 addresses of nodes on canvas"
-	"show_interface_ipv6"		1								"bool"				"show IPv6 addresses of nodes on canvas"
-	"show_interface_names"		1								"bool"				"show interface names of nodes on canvas"
-	"show_link_labels"			1								"bool"				"show labels for links on canvas"
-	"show_node_labels"			1								"bool"				"show labels for nodes on canvas"
-	"show_unsupported_nodes"	0								"bool"				"show unsupported node in the toolbar"
-	"zoom"						1.0								"double 0.2|3.0" 	"canvas zoom"
-	"default_link_color"		"Red"							"string"			"default link color"
-	"default_link_width"		2								"int 2|8"			"default link width"
-	"default_fill_color"		"Gray"							"string"			"default oval/rect annotation fill color"
-	"default_text_color"		"#000000"						"string"			"default text annotation color"
+	"hidden_node_types"			"none"							"string"			"a list of node types to hide in the toolbar"	0
+	"icon_size"					"normal"						"list small|normal"	"size of icons on canvas"						0
+	"show_annotations"			1								"bool"				"show annotations on canvas"					0
+	"show_background_image"		0								"bool"				"show background image on canvas"				0
+	"show_grid"					1								"bool"				"show grid on canvas"							0
+	"show_interface_ipv4"		1								"bool"				"show IPv4 addresses of nodes on canvas"		0
+	"show_interface_ipv6"		1								"bool"				"show IPv6 addresses of nodes on canvas"		0
+	"show_interface_names"		1								"bool"				"show interface names of nodes on canvas"		0
+	"show_link_labels"			1								"bool"				"show labels for links on canvas"				0
+	"show_node_labels"			1								"bool"				"show labels for nodes on canvas"				0
+	"show_unsupported_nodes"	0								"bool"				"show unsupported nodes in the toolbar"			0
+	"zoom"						1.0								"double 0.2|3.0" 	"canvas zoom"									0
+	"default_link_color"		"Red"							"string"			"default link color"							0
+	"default_link_width"		2								"int 2|8"			"default link width"							0
+	"default_fill_color"		"Gray"							"string"			"default oval/rect annotation fill color"		0
+	"default_text_color"		"#000000"						"string"			"default text annotation color"					0
 }
 
 set terminal_command "xterm -name imunes-terminal"
 set external_editor_command "$terminal_command -T \"%TITLE%\" -e \"vim %FILE_PATH%\""
 
 lappend gui_options_defaults \
-	"terminal_command"			"$terminal_command"				"string"			"default terminal to open" \
-	"external_editor_command"	"$external_editor_command"		"string"			"default editor to open files"
-#	name						value							type				description
+	"terminal_command"			"$terminal_command"				"string"			"default terminal to open" 						1 \
+	"external_editor_command"	"$external_editor_command"		"string"			"default editor to open files"					1
+#	name						value							type				description										topology_disable
 
 global global_override all_options all_gui_options default_options custom_options
 set global_override {}
@@ -274,7 +274,7 @@ set default_options [dict create]
 set custom_options [dict create]
 
 set options_max_length 0
-foreach {name value type description} $options_defaults {
+foreach {name value type description topology_disable} $options_defaults {
 	global $name
 
 	if { $name != "custom_override" } {
@@ -289,7 +289,7 @@ foreach {name value type description} $options_defaults {
 	}
 }
 
-foreach {name value type description} $gui_options_defaults {
+foreach {name value type description topology_disable} $gui_options_defaults {
 	global $name
 
 	if { $name != "custom_override" } {
@@ -406,12 +406,12 @@ if { $debug } {
 
 	set comments "#\n"
 	append comments "# non-GUI variables\n"
-	foreach {name value type description} $options_defaults {
+	foreach {name value type description topology_disable} $options_defaults {
 		set pad [string repeat " " [expr $options_max_length - [string length $name]]]
 		append comments "# $name$pad - $description (default: \"$value\", type: \"$type\")\n"
 	}
 	append comments "# GUI variables\n"
-	foreach {name value type description} $gui_options_defaults {
+	foreach {name value type description topology_disable} $gui_options_defaults {
 		set pad [string repeat " " [expr $options_max_length - [string length $name]]]
 		append comments "# $name$pad - $description (default: \"$value\", type: \"$type\")\n"
 	}
