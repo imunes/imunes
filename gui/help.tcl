@@ -94,18 +94,19 @@ proc getHelpLabel { parent title } {
 		-label "See help for '$title'" \
 		-command "helpPopup {$title} {$help_strings($title)}"
 
+	# cursor location on click: width of 'See help for' as x and bottom of popup as y
+	set w 75
+	set h 14
+
 	if { $isOSmac_gui } {
 		bind $parent <Button-2> "tk_popup $child \
-			\[expr %X - \[winfo width $parent]/2] \
-			\[expr %Y - \[winfo height $parent]/2]"
+			\[expr %X - $w] \[expr %Y - $h]"
 
 		bind $parent <Control-Button-1> "tk_popup $child \
-			\[expr %X - \[winfo width $parent]/2] \
-			\[expr %Y - \[winfo height $parent]/2]"
+			\[expr %X - $w] \[expr %Y - $h]"
 	} else {
 		bind $parent <Button-3> "tk_popup $child \
-			\[expr %X - \[winfo width $parent]/2] \
-			\[expr %Y - \[winfo height $parent]/2]"
+			\[expr %X - $w] \[expr %Y - $h]"
 	}
 
 	# destroy the help menu when leaving it with the cursor
