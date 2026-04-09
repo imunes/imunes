@@ -250,7 +250,7 @@ set gui_options_defaults {
 	"show_interface_names"		1								"bool"				"show interface names of nodes on canvas"		0
 	"show_link_labels"			1								"bool"				"show labels for links on canvas"				0
 	"show_node_labels"			1								"bool"				"show labels for nodes on canvas"				0
-	"show_unsupported_nodes"	0								"bool"				"show unsupported nodes in the toolbar"			0
+	"show_unsupported_nodes"	1								"bool"				"show unsupported nodes in the toolbar"			0
 	"zoom"						1.0								"double 0.2|3.0" 	"canvas zoom"									0
 	"default_link_color"		"Red"							"string"			"default link color"							0
 	"default_link_width"		2								"int 2|8"			"default link width"							0
