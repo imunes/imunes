@@ -2475,7 +2475,7 @@ proc getCpuCount {} {
 	global remote max_jobs
 
 	if { $max_jobs == "h" } {
-		set max_jobs [expr round([lindex [rexec sysctl kern.smp.cpus] 1])]
+		set max_jobs [expr round([lindex [rexec sysctl kern.smp.cpus] 1]/2)]
 	}
 
 	if { $remote == "" } {
