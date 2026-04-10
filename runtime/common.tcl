@@ -755,7 +755,12 @@ proc pipesExec { line args } {
 	global debug
 
 	if { $debug && $line != "" } {
-		set logfile "/var/log/imunes/[getFromRunning "eid"].log"
+		set logdir "/var/log/imunes"
+		if { [isNotOk "test -d \"$logdir\""] } {
+			rexec mkdir -p $logdir
+		}
+
+		set logfile "$logdir/[getFromRunning "eid"].log"
 
 		catch { info level [expr [info level] - 1] } e1
 		pipesExecNoLog "cat >> $logfile 2>&1 <<\"IMUNESEOF\"\nRUN ($e1): $line\nIMUNESEOF\n $line >> $logfile 2>&1" "$args"
