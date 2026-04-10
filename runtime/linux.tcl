@@ -3,20 +3,21 @@ set VROOT_MASTER "imunes/template"
 set ULIMIT_FILE "1024:16384"
 set ULIMIT_PROC "1024:16384"
 
-#****f* linux.tcl/writeDataToNodeFile
+#****f* linux.tcl/getHostNodePath
 # NAME
-#   writeDataToNodeFile -- write data to virtual node
+#   getHostNodePath -- get path of a node on a host filesystem
 # SYNOPSIS
-#   writeDataToNodeFile $node_id $path $data
+#   getHostNodePath $node_id $node_path
 # FUNCTION
-#   Writes data to a file on the specified virtual node.
+#   Returns a path on a host filesystem where the node path resides.
 # INPUTS
 #   * node_id -- virtual node id
-#   * path -- path to file in node
-#   * data -- data to write
+#   * node_path -- path inside of the node
+# RESULT
+#   * returns absolute path on the host filesystem
 #****
-proc writeDataToNodeFile { node_id path data } {
-	set docker_id "[getFromRunning "eid"].$node_id"
+proc getHostNodePath { node_id node_path } {
+	set docker_id [invokeNodeProc $node_id "getPrivateNs" [getFromRunning "eid"] $node_id]
 
 	if { [catch { rexec docker inspect -f "{{.GraphDriver.Data.MergedDir}}" $docker_id } node_dir] } {
 		if { [catch { rexec docker inspect -f '{{.State.Pid}}' $docker_id } node_pid] } {
@@ -32,75 +33,7 @@ proc writeDataToNodeFile { node_id path data } {
 		return
 	}
 
-	writeDataToFile $node_dir/$path $data
-}
-
-#****f* linux.tcl/execCmdNodeBkg
-# NAME
-#   execCmdNodeBkg -- execute command on virtual node
-# SYNOPSIS
-#   execCmdNodeBkg $node_id $cmd
-# FUNCTION
-#   Executes a command on a virtual node (in the background).
-# INPUTS
-#   * node_id -- virtual node id
-#   * cmd -- command to execute
-#****
-proc execCmdNodeBkg { node_id cmd } {
-	pipesExec "docker exec -d [getFromRunning "eid"].$node_id sh -c '$cmd'" "hold"
-}
-
-#****f* linux.tcl/checkForExternalApps
-# NAME
-#   checkForExternalApps -- check whether external applications exist
-# SYNOPSIS
-#   checkForExternalApps $app_list
-# FUNCTION
-#   Checks whether a list of applications exist on the machine running IMUNES
-#   by using the which command.
-# INPUTS
-#   * app_list -- list of applications
-# RESULT
-#   * returns 0 if the applications exist, otherwise it returns 1.
-#****
-proc checkForExternalApps { app_list } {
-	foreach app $app_list {
-		set cmds "command -v $app"
-		set status [ catch { exec sh -c $cmds } err ]
-		if { $status } {
-			return 1
-		}
-	}
-
-	return 0
-}
-
-#****f* linux.tcl/checkForApplications
-# NAME
-#   checkForApplications -- check whether applications exist
-# SYNOPSIS
-#   checkForApplications $node_id $app_list
-# FUNCTION
-#   Checks whether a list of applications exist on the virtual node by using
-#   the 'command' command.
-# INPUTS
-#   * node_id -- virtual node id
-#   * app_list -- list of applications
-# RESULT
-#   * returns 0 if the applications exist, otherwise it returns 1.
-#****
-proc checkForApplications { node_id app_list } {
-	set os_cmd [invokeNodeProc $node_id "getExecCommand" [getFromRunning "eid"] $node_id]
-
-	foreach app $app_list {
-		set os_cmd "$os_cmd sh -c 'command -v $app'"
-		set status [ catch { rexec {*}$os_cmd } err ]
-		if { $status } {
-			return 1
-		}
-	}
-
-	return 0
+	return "$node_dir/$node_path"
 }
 
 #****f* linux.tcl/startWiresharkOnNodeIfc
@@ -158,56 +91,39 @@ proc startWiresharkOnNodeIfc { node_id iface_name } {
 	}
 }
 
-#****f* linux.tcl/startXappOnNode
-# NAME
-#   startXappOnNode -- start X application in a virtual node
-# SYNOPSIS
-#   startXappOnNode $node_id $app
-# FUNCTION
-#   Start X application on virtual node
-# INPUTS
-#   * node_id -- virtual node id
-#   * app -- application to start
-#****
-proc startXappOnNode { node_id app } {
-	global debug remote
+proc loadKernelModules {} {
+	global all_modules_list
 
-	if { $remote != "" } {
-		sputs stderr "Running X applications in nodes on remote host is not supported."
-
-		return
+	foreach node_type $all_modules_list {
+		invokeTypeProc $node_type "prepareSystem"
 	}
-
-	set eid [getFromRunning "eid"]
-	if { [checkForExternalApps "socat"] != 0 } {
-		sputs stderr "To run X applications on the node, install socat on your host."
-
-		return
-	}
-
-	set logfile "/dev/null"
-	if { $debug } {
-		set logfile "/tmp/startxcmd_$eid\_$node_id.log"
-	}
-
-	eval exec startxcmd [getNodeName $node_id]@$eid $app > $logfile 2>> $logfile &
 }
 
-#****f* linux.tcl/startTcpdumpOnNodeIfc
-# NAME
-#   startTcpdumpOnNodeIfc -- start tcpdump on an interface
-# SYNOPSIS
-#   startTcpdumpOnNodeIfc $node_id $iface_name
-# FUNCTION
-#   Start tcpdump in a terminal on a virtual node on the specified interface.
-# INPUTS
-#   * node_id -- virtual node id
-#   * iface_name -- virtual node interface
-#****
-proc startTcpdumpOnNodeIfc { node_id iface_name } {
-	if { [checkForApplications $node_id "tcpdump"] == 0 } {
-		spawnShell $node_id "tcpdump -leni $iface_name"
+proc prepareVirtualFS {} {
+	if { [isNotOk "test -d \"/var/run/netns\""] } {
+		rexec mkdir -p /var/run/netns
 	}
+}
+
+#****f* linux.tcl/prepareDevfs
+# NAME
+#   prepareDevfs -- does nothing
+# SYNOPSIS
+#   prepareDevfs
+# FUNCTION
+#   Does nothing on Linux.
+#****
+proc prepareDevfs { { force 0 } } {
+}
+
+proc createExperimentContainer {} {
+	global devfs_number
+
+	catch { rexec ip netns attach imunes_$devfs_number 1 }
+	catch { rexec docker network create --opt com.docker.network.container_iface_prefix=dext imunes-bridge }
+
+	# Top-level experiment netns
+	rexec ip netns add [getFromRunning "eid"]
 }
 
 #****f* linux.tcl/allSnapshotsAvailable
@@ -272,7 +188,19 @@ proc allSnapshotsAvailable {} {
 	return 1
 }
 
-proc prepareDevfs { { force 0 } } {}
+#****f* linux.tcl/checkHangingTCPs
+# NAME
+#   checkHangingTCPs -- does nothing
+# SYNOPSIS
+#   checkHangingTCPs $eid $vimage
+# FUNCTION
+#   Does nothing on Linux.
+# INPUTS
+#   * eid -- experiment ID
+#   * node_id -- virtual node id
+#****
+proc checkHangingTCPs { eid nodes } {
+}
 
 #****f* linux.tcl/getHostIfcList
 # NAME
@@ -298,167 +226,154 @@ proc getHostIfcList { { filter_list "lo" } } {
 	return $extifcs
 }
 
-#****f* linux.tcl/getHostIfcVlanExists
+proc createVlanIfaceOnHost { iface_name vlan_id } {
+	rexec ip link add link $iface_name name ${iface_name}_$vlan_id type vlan id $vlan_id
+}
+
+proc destroyVlanIfaceOnHost { iface_name vlan_id } {
+	rexec ip link del ${iface_name}_$vlan_id
+}
+
+#****f* linux.tcl/execSetIfcQDisc
 # NAME
-#   getHostIfcVlanExists -- check if host VLAN interface exists
+#   execSetIfcQDisc -- in exec mode set interface queuing discipline
 # SYNOPSIS
-#   getHostIfcVlanExists $node_id $iface_name
+#   execSetIfcQDisc $eid $node_id $iface_id $qdisc
 # FUNCTION
-#   Returns 1 if VLAN interface with the name iface_name for the given node cannot
-#   be created.
+#   Sets the queuing discipline during the simulation.
+#   New queuing discipline is defined in qdisc parameter.
+#   Queueing discipline can be set to fifo, wfq or drr.
 # INPUTS
-#   * node_id -- node id
-#   * iface_name -- interface id
-# RESULT
-#   * check -- 1 if interface exists, 0 otherwise
+#   eid -- experiment id
+#   node_id -- node id
+#   iface_id -- interface id
+#   qdisc -- queuing discipline
 #****
-proc getHostIfcVlanExists { node_id iface_name } {
-	global execMode gui
-
-	# check if VLAN ID is already taken
-	# this can be only done by trying to create it, as it's possible that the same
-	# VLAN interface already exists in some other namespace
-	set iface_id [ifaceIdFromName $node_id $iface_name]
-	set vlan [getIfcVlanTag $node_id $iface_id]
-	try {
-		rexec ip link add link $iface_name name ${iface_name}_$vlan type vlan id $vlan
-	} on ok {} {
-		rexec ip link del ${iface_name}_$vlan
-
-		return 0
-	} on error err {
-		set msg "Unable to create external interface '${iface_name}_$vlan':\n$err\n\nPlease\
-			verify that VLAN ID $vlan with parent interface $iface_name is not already\
-			assigned to another VLAN interface, potentially in a different namespace."
+proc execSetIfcQDisc { eid node_id iface_id qdisc } {
+	switch -exact $qdisc {
+		FIFO { set qdisc pfifo_fast }
+		WFQ { set qdisc sfq }
+		DRR { set qdisc drr }
 	}
 
-	if { ! $gui || $execMode == "batch" } {
-		sputs stderr $msg
-	} else {
-		after idle { .dialog1.msg configure -wraplength 4i }
-		tk_dialog .dialog1 "IMUNES error" $msg \
-			info 0 Dismiss
-	}
-
-	return 1
+	pipesExec "ip netns exec $eid.$node_id tc qdisc add dev [getIfcName $node_id $iface_id] root $qdisc" "hold"
 }
 
-proc loadKernelModules {} {
-	global all_modules_list
-
-	foreach node_type $all_modules_list {
-		invokeTypeProc $node_type "prepareSystem"
-	}
-}
-
-proc prepareVirtualFS {} {
-	rexec mkdir -p /var/run/netns
-}
-
-proc createExperimentContainer {} {
-	global devfs_number
-
-	catch { rexec ip netns attach imunes_$devfs_number 1 }
-	catch { rexec docker network create --opt com.docker.network.container_iface_prefix=dext imunes-bridge }
-
-	# Top-level experiment netns
-	rexec ip netns add [getFromRunning "eid"]
-}
-
-proc checkHangingTCPs { eid nodes } {}
-
-#****f* linux.tcl/nodeLogIfacesCreate
+#****f* linux.tcl/execSetIfcQLen
 # NAME
-#   nodeLogIfacesCreate -- create node logical interfaces
+#   execSetIfcQLen -- in exec mode set interface TX queue length
 # SYNOPSIS
-#   nodeLogIfacesCreate $node_id
+#   execSetIfcQLen $eid $node_id $iface_id $qlen
 # FUNCTION
-#   Creates logical interfaces for the given node.
+#   Sets the queue length during the simulation.
+#   New queue length is defined in qlen parameter.
 # INPUTS
+#   eid -- experiment id
+#   node_id -- node id
+#   iface_id -- interface id
+#   qlen -- new queue's length
+#****
+proc execSetIfcQLen { eid node_id iface_id qlen } {
+	set private_ns [invokeNodeProc $node_id "getPrivateNs" $eid $node_id]
+	lassign [invokeNodeProc $node_id "getHookData" $node_id $iface_id] iface_name - -
+
+	pipesExec "ip -n $private_ns l set $iface_name txqueuelen $qlen" "hold"
+}
+
+#****f* linux.tcl/execSetLinkJitter
+# NAME
+#   execSetLinkJitter -- in exec mode set link jitter
+# SYNOPSIS
+#   execSetLinkJitter $eid $link_id
+# FUNCTION
+#   Sets the link jitter parameters during the simulation.
+#   All the parameters are set at the same time.
+# INPUTS
+#   eid -- experiment id
+#   link_id -- link id
+#****
+proc execSetLinkJitter { eid link_id } {
+}
+
+#****f* linux.tcl/execResetLinkJitter
+# NAME
+#   execResetLinkJitter -- in exec mode reset link jitter
+# SYNOPSIS
+#   execResetLinkJitter $eid $link_id
+# FUNCTION
+#   Resets the link jitter parameters to defaults during the simulation.
+#   All the parameters are set at the same time.
+# INPUTS
+#   * eid -- experiment id
+#   * link_id -- link id
+#****
+proc execResetLinkJitter { eid link_id } {
+}
+
+proc getNetemConfigLine { bandwidth delay loss dup } {
+	array set netem {
+		bandwidth	"rate Xbit"
+		loss		"loss random X%"
+		delay		"delay Xus"
+		dup			"duplicate X%"
+	}
+
+	set cmd ""
+	foreach { val ctemplate } [array get netem] {
+		append cmd " [lindex [split $ctemplate "X"] 0][set $val][lindex [split $ctemplate "X"] 1]"
+	}
+
+	return $cmd
+}
+
+proc getLoopbackIfcCmd { iface_name } {
+	set cmds "ip link add $iface_name type dummy\n"
+
+	return $cmds
+}
+
+proc getLo0HandleCmd {} {
+	set cmds "ip link set dev lo down 2>/dev/null\n"
+	append cmds "ip link set dev lo name lo0 2>/dev/null\n"
+	append cmds "ip a flush lo0 2>/dev/null"
+
+	return $cmds
+}
+
+#****f* linux.tcl/removeNodeIfcIPaddrs
+# NAME
+#   removeNodeIfcIPaddrs -- remove node iterfaces' IP addresses
+# SYNOPSIS
+#   removeNodeIfcIPaddrs $eid $node_id
+# FUNCTION
+#   Remove all IPv4 and IPv6 addresses from interfaces on the given node.
+# INPUTS
+#   * eid -- experiment id
 #   * node_id -- node id
 #****
-proc nodeLogIfacesCreate { node_id ifaces } {
-	set docker_id "[getFromRunning "eid"].$node_id"
-
+proc removeNodeIfcIPaddrs { eid node_id } {
+	set docker_id "$eid.$node_id"
 	set cmds ""
-	foreach iface_id $ifaces {
-		set iface_name [getIfcName $node_id $iface_id]
-		switch -exact [getIfcType $node_id $iface_id] {
-			vlan {
-				set tag [getIfcVlanTag $node_id $iface_id]
-				set dev [getIfcVlanDev $node_id $iface_id]
-				if { $tag != "" && $dev != "" } {
-					append cmds "[getVlanTagIfcCmd $iface_name $dev $tag]\n"
-					addStateNodeIface $node_id $iface_id "creating"
-				} else {
-					removeStateNodeIface $node_id $iface_id "running"
-				}
-			}
-			lo {
-				addStateNodeIface $node_id $iface_id "creating"
-				if { $iface_name != "lo0" } {
-					append cmds "ip link add $iface_name type dummy\n"
-					append cmds "ip link set $iface_name up\n"
-				} else {
-					append cmds "ip link set dev lo down 2>/dev/null\n"
-					append cmds "ip link set dev lo name lo0 2>/dev/null\n"
-					append cmds "ip a flush lo0 2>/dev/null\n"
-				}
-			}
-		}
+	foreach ifc [allIfcList $node_id] {
+		append cmds "ip addr flush dev $ifc\n"
 	}
-
 	pipesExec "docker exec -d $docker_id sh -c '$cmds'" "hold"
-
-	## docker interface is created before other ones, so let's rename it to something that's not used by IMUNES
-	#if { [getNodeDockerAttach $node_id] == 1 } {
-	#	set cmds "ip r save > /tmp/routes"
-	#	set cmds "$cmds ; ip l set eth0 down"
-	#	set cmds "$cmds ; ip l set eth0 name docker0"
-	#	set cmds "$cmds ; ip l set docker0 up"
-	#	set cmds "$cmds ; ip r restore < /tmp/routes"
-	#	set cmds "$cmds ; rm -f /tmp/routes"
-	#	pipesExec "docker exec -d $docker_id sh -c '$cmds'" "hold"
-	#}
 }
 
-proc createNsLinkBridge { node_ns link } {
-	pipesExec "ip -n $node_ns link add name $link type bridge ageing_time 0 mcast_snooping 0" "hold"
-	pipesExec "ip -n $node_ns link set $link multicast off" "hold"
-	pipesExec "ip netns exec $node_ns sysctl net.ipv6.conf.$link.disable_ipv6=1" "hold"
-	pipesExec "ip -n $node_ns link set $link up" "hold"
-}
-
-proc createNsVethPair { full_ifname1 ifname1 netns1 config1 full_ifname2 ifname2 netns2 config2 } {
-	global devfs_number
-
-	set eid [getFromRunning "eid"]
-
-	pipesExec "ip link add name $full_ifname1 netns $netns1 type veth peer name $full_ifname2 netns $netns2" "hold"
-
-	if { $full_ifname1 != $ifname1 } {
-		pipesExec "ip -n $netns1 link set $full_ifname1 name $ifname1" "hold"
-	}
-
-	if { $full_ifname2 != $ifname2 } {
-		pipesExec "ip -n $netns2 link set $full_ifname2 name $ifname2" "hold"
-	}
-
-	if { $config1 != "" } {
-		pipesExec "ip netns exec $netns1 ip link set $ifname1 multicast off" "hold"
-		pipesExec "ip netns exec $netns1 sysctl net.ipv6.conf.$ifname1.disable_ipv6=1" "hold"
-	}
-	
-	if { $config2 != "" } {
-		pipesExec "ip netns exec $netns2 ip link set $ifname2 multicast off" "hold"
-		pipesExec "ip netns exec $netns2 sysctl net.ipv6.conf.$ifname2.disable_ipv6=1" "hold"
-	}
-}
-
-proc setNsIfcMaster { node_ns iface_name master state } {
-	pipesExec "ip -n $node_ns link set $iface_name master $master $state" "hold"
-}
-
+#****f* linux.tcl/createLinkBetween
+# NAME
+#   createLinkBetween -- create link between
+# SYNOPSIS
+#   createLinkBetween $node1_id $node2_id $iface1_id $iface2_id $link_id
+# FUNCTION
+#   Creates link between two given nodes.
+# INPUTS
+#   * node1_id -- node id of the first node
+#   * node2_id -- node id of the second node
+#   * iface1_id -- interface id on the first node
+#   * iface2_id -- interface id on the second node
+#   * link_id -- link id of the newly created link
+#****
 proc createLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 	set eid [getFromRunning "eid"]
 
@@ -479,6 +394,20 @@ proc createLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 	}
 }
 
+#****f* linux.tcl/configureLinkBetween
+# NAME
+#   configureLinkBetween -- configure link between
+# SYNOPSIS
+#   configureLinkBetween $node1_id $node2_id $iface1_id $iface2_id $link_id
+# FUNCTION
+#   Configures link between two given nodes.
+# INPUTS
+#   * node1_id -- node id of the first node
+#   * node2_id -- node id of the second node
+#   * iface1_id -- interface id on the first node
+#   * iface2_id -- interface id on the second node
+#   * link_id -- link id
+#****
 proc configureLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 	set eid [getFromRunning "eid"]
 
@@ -534,21 +463,6 @@ proc unconfigureLinkBetween { eid node1_id node2_id iface1_id iface2_id link_id 
 	}
 }
 
-proc removeNetns { netns } {
-	if { $netns != "" } {
-		catch { rexec ip netns del $netns }
-	}
-}
-
-proc terminate_removeExperimentContainer { eid } {
-	removeNetns $eid
-}
-
-proc terminate_removeExperimentFiles { eid } {
-	set VROOT_BASE [getVrootDir]
-	catch { rexec rm -fr $VROOT_BASE/$eid & }
-}
-
 proc destroyLinkBetween { eid node1_id node2_id iface1_id iface2_id link_id } {
 	addStateLink $link_id "destroying"
 
@@ -571,24 +485,23 @@ proc destroyLinkBetween { eid node1_id node2_id iface1_id iface2_id link_id } {
 	#}
 }
 
-#****f* linux.tcl/removeNodeIfcIPaddrs
+#****f* freebsd.tcl/terminate_removeExperimentContainer
 # NAME
-#   removeNodeIfcIPaddrs -- remove node iterfaces' IP addresses
+#   terminate_removeExperimentContainer -- remove experiment netns
 # SYNOPSIS
-#   removeNodeIfcIPaddrs $eid $node_id
+#   terminate_removeExperimentContainer $eid
 # FUNCTION
-#   Remove all IPv4 and IPv6 addresses from interfaces on the given node.
+#   Removes the netns of the given experiment.
 # INPUTS
 #   * eid -- experiment id
-#   * node_id -- node id
 #****
-proc removeNodeIfcIPaddrs { eid node_id } {
-	set docker_id "$eid.$node_id"
-	set cmds ""
-	foreach ifc [allIfcList $node_id] {
-		append cmds "ip addr flush dev $ifc\n"
-	}
-	pipesExec "docker exec -d $docker_id sh -c '$cmds'" "hold"
+proc terminate_removeExperimentContainer { eid } {
+	catch { rexec ip netns del $eid }
+}
+
+proc terminate_removeExperimentFiles { eid } {
+	set VROOT_BASE [getVrootDir]
+	catch { rexec rm -fr $VROOT_BASE/$eid & }
 }
 
 #****f* linux.tcl/getCpuCount
@@ -661,6 +574,7 @@ proc releaseExtIfcByName { eid iface_name node_id } {
 	pipesExec "ip -n $private_ns link set $iface_name netns imunes_$devfs_number" "hold"
 }
 
+#### Linux specific commands
 proc getStateIfcCmd { iface_name state } {
 	return "ip link set dev $iface_name $state"
 }
@@ -769,6 +683,22 @@ proc getDelIPv6IfcCmd { ifc addr } {
 	return "ip -6 addr del $addr dev $ifc"
 }
 
+proc sshServiceStartCmds {} {
+	lappend cmds "dpkg-reconfigure openssh-server"
+	lappend cmds "service ssh start"
+
+	return $cmds
+}
+
+proc sshServiceStopCmds {} {
+	return { "service ssh stop" }
+}
+
+proc inetdServiceRestartCmds {} {
+	return "service openbsd-inetd restart"
+}
+#### /Linux specific commands
+
 proc fetchInterfaceData { node_id iface_id } {
 	global node_existing_mac node_existing_ipv4 node_existing_ipv6
 	set node_existing_mac [getFromRunning "mac_used_list"]
@@ -856,15 +786,17 @@ proc fetchInterfaceData { node_id iface_id } {
 
 #****f* linux.tcl/fetchNodeRunningConfig
 # NAME
-#   fetchNodeRunningConfig -- get interfaces list from the node
+#   fetchNodeRunningConfig -- get network configuration from running node
 # SYNOPSIS
 #   fetchNodeRunningConfig $node_id
 # FUNCTION
-#   Returns the list of all network interfaces for the given node.
+#   Gets live information from the running node and saves it in IMUNES
+#   configuration. This includes interface states, interface IPv4/IPv6
+#   addresses as well as IPv4/IPv6 static routes.
 # INPUTS
 #   * node_id -- node id
 # RESULT
-#   * list -- list in the form of {netgraph_node_name hook}
+#   * cur_node_cfg -- new node configuration
 #****
 proc fetchNodeRunningConfig { node_id } {
 	global node_existing_mac node_existing_ipv4 node_existing_ipv6
@@ -1056,68 +988,6 @@ proc checkSysPrerequisites {} {
 	return $msg
 }
 
-#****f* linux.tcl/execSetIfcQDisc
-# NAME
-#   execSetIfcQDisc -- in exec mode set interface queuing discipline
-# SYNOPSIS
-#   execSetIfcQDisc $eid $node_id $iface_id $qdisc
-# FUNCTION
-#   Sets the queuing discipline during the simulation.
-#   New queuing discipline is defined in qdisc parameter.
-#   Queueing discipline can be set to fifo, wfq or drr.
-# INPUTS
-#   eid -- experiment id
-#   node_id -- node id
-#   iface_id -- interface id
-#   qdisc -- queuing discipline
-#****
-proc execSetIfcQDisc { eid node_id iface_id qdisc } {
-	switch -exact $qdisc {
-		FIFO { set qdisc pfifo_fast }
-		WFQ { set qdisc sfq }
-		DRR { set qdisc drr }
-	}
-
-	pipesExec "ip netns exec $eid.$node_id tc qdisc add dev [getIfcName $node_id $iface_id] root $qdisc" "hold"
-}
-
-#****f* linux.tcl/execSetIfcQLen
-# NAME
-#   execSetIfcQLen -- in exec mode set interface TX queue length
-# SYNOPSIS
-#   execSetIfcQLen $eid $node_id $iface_id $qlen
-# FUNCTION
-#   Sets the queue length during the simulation.
-#   New queue length is defined in qlen parameter.
-# INPUTS
-#   eid -- experiment id
-#   node_id -- node id
-#   iface_id -- interface id
-#   qlen -- new queue's length
-#****
-proc execSetIfcQLen { eid node_id iface_id qlen } {
-	set private_ns [invokeNodeProc $node_id "getPrivateNs" $eid $node_id]
-	lassign [invokeNodeProc $node_id "getHookData" $node_id $iface_id] iface_name - -
-
-	pipesExec "ip -n $private_ns l set $iface_name txqueuelen $qlen" "hold"
-}
-
-proc getNetemConfigLine { bandwidth delay loss dup } {
-	array set netem {
-		bandwidth	"rate Xbit"
-		loss		"loss random X%"
-		delay		"delay Xus"
-		dup			"duplicate X%"
-	}
-
-	set cmd ""
-	foreach { val ctemplate } [array get netem] {
-		append cmd " [lindex [split $ctemplate "X"] 0][set $val][lindex [split $ctemplate "X"] 1]"
-	}
-
-	return $cmd
-}
-
 proc ipsecFilesToNode { node_id ca_cert local_cert ipsecret_file } {
 	global ipsecConf ipsecSecrets
 
@@ -1155,28 +1025,6 @@ proc ipsecFilesToNode { node_id ca_cert local_cert ipsecret_file } {
 
 	writeDataToNodeFile $node_id /etc/ipsec.conf $ipsecConf
 	writeDataToNodeFile $node_id /etc/ipsec.secrets $ipsecSecrets
-}
-
-proc sshServiceStartCmds {} {
-	lappend cmds "dpkg-reconfigure openssh-server"
-	lappend cmds "service ssh start"
-
-	return $cmds
-}
-
-proc sshServiceStopCmds {} {
-	return { "service ssh stop" }
-}
-
-proc inetdServiceRestartCmds {} {
-	return "service openbsd-inetd restart"
-}
-
-proc moveFileFromNode { node_id path ext_path } {
-	set eid [getFromRunning "eid"]
-
-	catch { rexec hcp [getNodeName $node_id]@$eid:$path $ext_path }
-	catch { rexec docker exec $eid.$node_id rm -fr $path }
 }
 
 # XXX nat64 procedures
@@ -1240,6 +1088,7 @@ proc unconfigureTunIface { tayga4pool tayga6prefix } {
 
 	return $cfg
 }
+# /XXX nat64 procedures
 
 proc startRoutingDaemons { node_id } {
 	set run_dir "/run/frr"
@@ -1281,4 +1130,41 @@ proc startRoutingDaemons { node_id } {
 	set cmds "$cmds; /usr/lib/frr/frrinit.sh restart"
 
 	pipesExec "docker exec [getFromRunning "eid"].$node_id sh -c '$cmds'" "hold"
+}
+
+proc createNsLinkBridge { node_ns link } {
+	pipesExec "ip -n $node_ns link add name $link type bridge ageing_time 0 mcast_snooping 0" "hold"
+	pipesExec "ip -n $node_ns link set $link multicast off" "hold"
+	pipesExec "ip netns exec $node_ns sysctl net.ipv6.conf.$link.disable_ipv6=1" "hold"
+	pipesExec "ip -n $node_ns link set $link up" "hold"
+}
+
+proc createNsVethPair { full_ifname1 ifname1 netns1 config1 full_ifname2 ifname2 netns2 config2 } {
+	global devfs_number
+
+	set eid [getFromRunning "eid"]
+
+	pipesExec "ip link add name $full_ifname1 netns $netns1 type veth peer name $full_ifname2 netns $netns2" "hold"
+
+	if { $full_ifname1 != $ifname1 } {
+		pipesExec "ip -n $netns1 link set $full_ifname1 name $ifname1" "hold"
+	}
+
+	if { $full_ifname2 != $ifname2 } {
+		pipesExec "ip -n $netns2 link set $full_ifname2 name $ifname2" "hold"
+	}
+
+	if { $config1 != "" } {
+		pipesExec "ip netns exec $netns1 ip link set $ifname1 multicast off" "hold"
+		pipesExec "ip netns exec $netns1 sysctl net.ipv6.conf.$ifname1.disable_ipv6=1" "hold"
+	}
+
+	if { $config2 != "" } {
+		pipesExec "ip netns exec $netns2 ip link set $ifname2 multicast off" "hold"
+		pipesExec "ip netns exec $netns2 sysctl net.ipv6.conf.$ifname2.disable_ipv6=1" "hold"
+	}
+}
+
+proc setNsIfcMaster { node_ns iface_name master state } {
+	pipesExec "ip -n $node_ns link set $iface_name master $master $state" "hold"
 }

@@ -1,114 +1,18 @@
-#****f* freebsd.tcl/moveFileFromNode
+#****f* freebsd.tcl/getHostNodePath
 # NAME
-#   moveFileFromNode -- copy file from virtual node
+#   getHostNodePath -- get path of a node on a host filesystem
 # SYNOPSIS
-#   moveFileFromNode $node_id $path $ext_path
+#   getHostNodePath $node_id $node_path
 # FUNCTION
-#   Moves file from virtual node to a specified external path.
+#   Returns a path on a host filesystem where the node path resides.
 # INPUTS
 #   * node_id -- virtual node id
-#   * path -- path to file in node
-#   * ext_path -- external path
-#****
-proc moveFileFromNode { node_id path ext_path } {
-	set node_dir [getNodeDir $node_id]
-
-	catch { rexec mv $node_dir$path $ext_path }
-}
-
-#****f* freebsd.tcl/writeDataToNodeFile
-# NAME
-#   writeDataToNodeFile -- write data to virtual node
-# SYNOPSIS
-#   writeDataToNodeFile $node_id $path $data
-# FUNCTION
-#   Writes data to a file on the specified virtual node.
-# INPUTS
-#   * node_id -- virtual node id
-#   * path -- path to file in node
-#   * data -- data to write
-#****
-proc writeDataToNodeFile { node_id path data } {
-	set node_dir [getNodeDir $node_id]
-
-	if { [catch { rexec test -d $node_dir} status] } {
-		return
-	}
-
-	if { [string match -nocase "*No such file or directory*" $status] } {
-		return
-	}
-
-	writeDataToFile $node_dir/$path $data
-}
-
-#****f* freebsd.tcl/execCmdNodeBkg
-# NAME
-#   execCmdNodeBkg -- execute command on virtual node
-# SYNOPSIS
-#   execCmdNodeBkg $node_id $cmd
-# FUNCTION
-#   Executes a command on a virtual node (in the background).
-# INPUTS
-#   * node_id -- virtual node id
-#   * cmd -- command to execute
-#****
-proc execCmdNodeBkg { node_id cmd } {
-	pipesExec "jexec [getFromRunning "eid"].$node_id sh -c '$cmd'" "hold"
-}
-
-#****f* freebsd.tcl/checkForExternalApps
-# NAME
-#   checkForExternalApps -- check whether external applications exist
-# SYNOPSIS
-#   checkForExternalApps $app_list
-# FUNCTION
-#   Checks whether a list of applications exist on the machine running IMUNES
-#   by using the 'command' command.
-# INPUTS
-#   * app_list -- list of applications
+#   * node_path -- path inside of the node
 # RESULT
-#   * returns 0 if the applications exist, otherwise it returns 1.
+#   * returns absolute path on the host filesystem
 #****
-proc checkForExternalApps { app_list } {
-	foreach app $app_list {
-		set cmds "command -v $app"
-		set status [ catch { exec sh -c $cmds } err ]
-		if { $status } {
-			return 1
-		}
-	}
-
-	return 0
-}
-
-#****f* freebsd.tcl/checkForApplications
-# NAME
-#   checkForApplications -- check whether applications exist
-# SYNOPSIS
-#   checkForApplications $node_id $app_list
-# FUNCTION
-#   Checks whether a list of applications exist on the virtual node by using
-#   the 'command' command.
-# INPUTS
-#   * node_id -- virtual node id
-#   * app_list -- list of applications
-# RESULT
-#   * returns 0 if the applications exist, otherwise it returns 1.
-#****
-proc checkForApplications { node_id app_list } {
-	set private_ns [invokeNodeProc $node_id "getPrivateNs" [getFromRunning "eid"] $node_id]
-	set os_cmd "jexec $private_ns sh -c"
-
-	foreach app $app_list {
-		set os_cmd "$os_cmd 'command -v $app'"
-		catch { rexec {*}$os_cmd } err
-		if { $err == "" } {
-			return 1
-		}
-	}
-
-	return 0
+proc getHostNodePath { node_id node_path } {
+	return [getNodeDir $node_id]/$node_path
 }
 
 #****f* freebsd.tcl/startWiresharkOnNodeIfc
@@ -148,56 +52,111 @@ proc startWiresharkOnNodeIfc { node_id ifc } {
 	}
 }
 
-#****f* freebsd.tcl/startXappOnNode
+#****f* freebsd.tcl/loadKernelModules
 # NAME
-#   startXappOnNode -- start X application in a virtual node
+#   loadKernelModules -- load kernel modules
 # SYNOPSIS
-#   startXappOnNode $node_id $app
+#   loadKernelModules
 # FUNCTION
-#   Start X application on virtual node
-# INPUTS
-#   * node_id -- virtual node id
-#   * app -- application to start
+#   Load necessary kernel modules.
 #****
-proc startXappOnNode { node_id app } {
-	global debug remote
+proc loadKernelModules {} {
+	global all_modules_list
 
-	if { $remote != "" } {
-		sputs stderr "Running X applications in nodes on remote host is not supported."
+	set kernel_modules "nullfs unionfs ng_eiface ng_pipe ng_socket if_tun vlan ipsec pf"
+	catch { rexec kldload $kernel_modules }
 
-		return
+	foreach node_type $all_modules_list {
+		invokeTypeProc $node_type "prepareSystem"
 	}
-
-	if { [checkForExternalApps "socat"] != 0 } {
-		sputs stderr "To run X applications on the node, install socat on your host."
-		return
-	}
-
-	set eid [getFromRunning "eid"]
-
-	set logfile "/dev/null"
-	if { $debug } {
-		set logfile "/tmp/startxcmd_$eid\_$node_id.log"
-	}
-
-	eval exec startxcmd [getNodeName $node_id]@$eid $app > $logfile 2>> $logfile &
 }
 
-#****f* freebsd.tcl/startTcpdumpOnNodeIfc
+#****f* freebsd.tcl/prepareVirtualFS
 # NAME
-#   startTcpdumpOnNodeIfc -- start tcpdump on an interface
+#   prepareVirtualFS -- prepare virtual filesystem
 # SYNOPSIS
-#   startTcpdumpOnNodeIfc $node_id $ifc
+#   prepareVirtualFS
 # FUNCTION
-#   Start tcpdump in a terminal on a virtual node on the specified interface.
-# INPUTS
-#   * node_id -- virtual node id
-#   * ifc -- virtual node interface
+#   Prepares all necessary files for the virtual filesystem.
 #****
-proc startTcpdumpOnNodeIfc { node_id ifc } {
-	if { [checkForApplications $node_id "tcpdump"] == 0 } {
-		spawnShell $node_id "tcpdump -leni $ifc"
+proc prepareVirtualFS {} {
+	global vroot_unionfs
+
+	if { $vroot_unionfs } {
+		# UNIONFS - anything to do here?
+	} else {
+		rexec zfs create vroot/[getFromRunning "eid"]
 	}
+}
+
+#****f* freebsd.tcl/prepareDevfs
+# NAME
+#   prepareDevfs -- prepare dev filesystem
+# SYNOPSIS
+#   prepareDevfs
+# FUNCTION
+#   Prepares devfs rules necessary for virtual nodes.
+#****
+proc prepareDevfs { { force 0 } } {
+	global devfs_number
+
+	catch { rexec devfs rule showsets } devcheck
+	if { $force == 1 || $devfs_number ni $devcheck } {
+		# Prepare a devfs ruleset for L3 vnodes
+		rexec devfs ruleset $devfs_number
+		rexec devfs rule delset
+		rexec devfs rule add hide
+		rexec devfs rule add path null unhide
+		rexec devfs rule add path zero unhide
+		rexec devfs rule add path random unhide
+		rexec devfs rule add path urandom unhide
+		rexec devfs rule add path ipl unhide
+		rexec devfs rule add path ipnat unhide
+		rexec devfs rule add path pf unhide
+		rexec devfs rule add path crypto unhide
+		rexec devfs rule add path ptyp* unhide
+		rexec devfs rule add path ptyq* unhide
+		rexec devfs rule add path ptyr* unhide
+		rexec devfs rule add path ptys* unhide
+		rexec devfs rule add path ptyp* unhide
+		rexec devfs rule add path ptyq* unhide
+		rexec devfs rule add path ptyr* unhide
+		rexec devfs rule add path ptys* unhide
+		rexec devfs rule add path ttyp* unhide
+		rexec devfs rule add path ttyq* unhide
+		rexec devfs rule add path ttyr* unhide
+		rexec devfs rule add path ttys* unhide
+		rexec devfs rule add path ttyp* unhide
+		rexec devfs rule add path ttyq* unhide
+		rexec devfs rule add path ttyr* unhide
+		rexec devfs rule add path ttys* unhide
+		rexec devfs rule add path ptmx unhide
+		rexec devfs rule add path pts unhide
+		rexec devfs rule add path pts/* unhide
+		rexec devfs rule add path fd unhide
+		rexec devfs rule add path fd/* unhide
+		rexec devfs rule add path stdin unhide
+		rexec devfs rule add path stdout unhide
+		rexec devfs rule add path stderr unhide
+		rexec devfs rule add path mem unhide
+		rexec devfs rule add path kmem unhide
+		rexec devfs rule add path bpf* unhide
+		rexec devfs rule add path tun* unhide
+		rexec devfs ruleset 0
+	}
+}
+
+#****f* freebsd.tcl/createExperimentContainer
+# NAME
+#   createExperimentContainer -- create experiment container
+# SYNOPSIS
+#   createExperimentContainer
+# FUNCTION
+#   Creates a root jail (container) for the current experiment.
+#****
+proc createExperimentContainer {} {
+	# Create top-level vimage
+	rexec jail -c name=[getFromRunning "eid"] vnet children.max=[llength [getFromRunning "node_list"]] persist
 }
 
 #****f* freebsd.tcl/allSnapshotsAvailable
@@ -293,16 +252,16 @@ proc allSnapshotsAvailable {} {
 # NAME
 #   checkHangingTCPs -- timeout patch
 # SYNOPSIS
-#   checkHangingTCPs $eid $vimage
+#   checkHangingTCPs $eid $node_id
 # FUNCTION
 #   Timeout patch that is applied for hanging TCP connections. We need to wait
 #   for TCP connections to close regularly because we can't terminate them in
 #   FreeBSD 8. In FreeBSD that should be possible with the tcpdrop command.
 # INPUTS
 #   * eid -- experiment ID
-#   * vimages -- list of current vimages
+#   * node_id -- virtual node id
 #****
-proc checkHangingTCPs { eid vimage } {
+proc checkHangingTCPs { eid node_id } {
 	global execMode gui
 
 	if { [lindex [split [rexec uname -r] "-"] 0] >= 9.0 } {
@@ -310,7 +269,7 @@ proc checkHangingTCPs { eid vimage } {
 	}
 
 	set timeoutNeeded 0
-	catch { rexec jexec $eid.$vimage netstat -an -f inet | fgrep "WAIT" } err
+	catch { rexec jexec $eid.$node_id netstat -an -f inet | fgrep "WAIT" } err
 	if { $err != "" } {
 		set timeoutNeeded 1
 		break
@@ -365,7 +324,7 @@ proc checkHangingTCPs { eid vimage } {
 				update
 			}
 
-			catch { rexec jexec $eid.$vimage netstat -an -f inet | fgrep "WAIT" } err
+			catch { rexec jexec $eid.$node_id netstat -an -f inet | fgrep "WAIT" } err
 		}
 	}
 
@@ -374,6 +333,38 @@ proc checkHangingTCPs { eid vimage } {
 	}
 
 	statline ""
+}
+
+#****f* freebsd.tcl/getHostIfcList
+# NAME
+#   getHostIfcList -- get interfaces list from host
+# SYNOPSIS
+#   getHostIfcList
+# FUNCTION
+#   Returns the list of all network interfaces on the host.
+# RESULT
+#   * extifcs -- list of all external interfaces
+#****
+proc getHostIfcList { { filter_list "lo0" } } {
+	# fetch interface list from the system
+	if { [catch { rexec ifconfig -l } extifcs] } {
+		return ""
+	}
+
+	# exclude loopback interface
+	foreach ignore $filter_list {
+		set extifcs [lsearch -all -inline -not $extifcs $ignore]
+	}
+
+	return $extifcs
+}
+
+proc createVlanIfaceOnHost { iface_name vlan_id } {
+	rexec ifconfig $iface_name.$vlan_id create
+}
+
+proc destroyVlanIfaceOnHost { iface_name vlan_id } {
+	rexec ifconfig $iface_name.$vlan_id destroy
 }
 
 #****f* freebsd.tcl/execSetIfcQDisc
@@ -405,6 +396,32 @@ proc execSetIfcQDisc { eid node_id iface_id qdisc } {
 	pipesExec "jexec $eid ngctl msg $link_id: setcfg \"{ $direction={ $qdisc=1 } }\"" "hold"
 }
 
+#****f* freebsd.tcl/execSetIfcQLen
+# NAME
+#   execSetIfcQLen -- in exec mode set interface queue length
+# SYNOPSIS
+#   execSetIfcQLen $eid $node_id $iface_id $qlen
+# FUNCTION
+#   Sets the queue length during the simulation.
+#   New queue length is defined in qlen parameter.
+# INPUTS
+#   eid -- experiment id
+#   node_id -- node id
+#   iface_id -- interface id
+#   qlen -- new queue's length
+#****
+proc execSetIfcQLen { eid node_id iface_id qlen } {
+	set link_id [getIfcLink $node_id $iface_id]
+	set direction [linkDirection $node_id $iface_id]
+	lassign [getLinkPeers $link_id] node1_id -
+
+	if { $qlen == 0 } {
+		set qlen -1
+	}
+
+	pipesExec "jexec $eid ngctl msg $link_id: setcfg \"{ $direction={ queuelen=$qlen } }\"" "hold"
+}
+
 #****f* freebsd.tcl/execSetIfcQDrop
 # NAME
 #   execSetIfcQDrop -- in exec mode set interface queue drop
@@ -431,32 +448,6 @@ proc execSetIfcQDrop { eid node_id iface_id qdrop } {
 	}
 
 	pipesExec "jexec $eid ngctl msg $link_id: setcfg \"{ $direction={ $qdrop=1 } }\"" "hold"
-}
-
-#****f* freebsd.tcl/execSetIfcQLen
-# NAME
-#   execSetIfcQLen -- in exec mode set interface queue length
-# SYNOPSIS
-#   execSetIfcQLen $eid $node_id $iface_id $qlen
-# FUNCTION
-#   Sets the queue length during the simulation.
-#   New queue length is defined in qlen parameter.
-# INPUTS
-#   eid -- experiment id
-#   node_id -- node id
-#   iface_id -- interface id
-#   qlen -- new queue's length
-#****
-proc execSetIfcQLen { eid node_id iface_id qlen } {
-	set link_id [getIfcLink $node_id $iface_id]
-	set direction [linkDirection $node_id $iface_id]
-	lassign [getLinkPeers $link_id] node1_id -
-
-	if { $qlen == 0 } {
-		set qlen -1
-	}
-
-	pipesExec "jexec $eid ngctl msg $link_id: setcfg \"{ $direction={ queuelen=$qlen } }\"" "hold"
 }
 
 #****f* freebsd.tcl/execSetLinkJitter
@@ -531,6 +522,429 @@ proc execResetLinkJitter { eid link_id } {
 	rexec jexec $eid ngctl msg $link_id: setcfg \
 		"{upstream={jitmode=-1} downstream={jitmode=-1}}"
 }
+
+proc getLoopbackIfcCmd { iface_name } {
+	set cmds "ifconfig $iface_name create\n"
+	append cmds "ifconfig $iface_name up"
+
+	return $cmds
+}
+
+proc getLo0HandleCmd {} {
+	return ""
+}
+
+#****f* freebsd.tcl/removeNodeIfcIPaddrs
+# NAME
+#   removeNodeIfcIPaddrs -- remove node iterfaces' IP addresses
+# SYNOPSIS
+#   removeNodeIfcIPaddrs $eid $node_id
+# FUNCTION
+#   Remove all IPv4 and IPv6 addresses from interfaces on the given node.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#****
+proc removeNodeIfcIPaddrs { eid node_id } {
+	set jail_id "$eid.$node_id"
+
+	foreach ifc [ifcList $node_id] {
+		foreach ipv4 [getIfcIPv4addrs $node_id $ifc] {
+			pipesExec "jexec $jail_id ifconfig $ifc $ipv4 -alias" "hold"
+		}
+		foreach ipv6 [getIfcIPv6addrs $node_id $ifc] {
+			pipesExec "jexec $jail_id ifconfig $ifc inet6 $ipv6 -alias" "hold"
+		}
+	}
+}
+
+#****f* freebsd.tcl/createLinkBetween
+# NAME
+#   createLinkBetween -- create link between
+# SYNOPSIS
+#   createLinkBetween $node1_id $node2_id $iface1_id $iface2_id $link_id
+# FUNCTION
+#   Creates link between two given nodes.
+# INPUTS
+#   * node1_id -- node id of the first node
+#   * node2_id -- node id of the second node
+#   * iface1_id -- interface id on the first node
+#   * iface2_id -- interface id on the second node
+#   * link_id -- link id of the newly created link
+#****
+proc createLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
+	set eid [getFromRunning "eid"]
+
+	addStateLink $link_id "creating"
+
+	lassign [invokeNodeProc $node1_id "getHookData" $node1_id $iface1_id] - ng_peer1 ng_hook1
+	lassign [invokeNodeProc $node2_id "getHookData" $node2_id $iface2_id] - ng_peer2 ng_hook2
+
+	set direct [getLinkDirect $link_id]
+
+	# for direct links, skip pipe creation
+	if { $direct } {
+		pipesExec "jexec $eid ngctl connect $ng_peer1: $ng_peer2: $ng_hook1 $ng_hook2" "hold"
+	} else {
+		set ngcmds "mkpeer $ng_peer1: pipe $ng_hook1 upper"
+		set ngcmds "$ngcmds\n name $ng_peer1:$ng_hook1 $link_id"
+		set ngcmds "$ngcmds\n connect $link_id: $ng_peer2: lower $ng_hook2"
+
+		pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
+	}
+
+	foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
+		invokeNodeProc $node_id "attachToLink" $eid $node_id $iface_id $link_id $direct
+	}
+}
+
+#****f* freebsd.tcl/configureLinkBetween
+# NAME
+#   configureLinkBetween -- configure link between
+# SYNOPSIS
+#   configureLinkBetween $node1_id $node2_id $iface1_id $iface2_id $link_id
+# FUNCTION
+#   Configures link between two given nodes.
+# INPUTS
+#   * node1_id -- node id of the first node
+#   * node2_id -- node id of the second node
+#   * iface1_id -- interface id on the first node
+#   * iface2_id -- interface id on the second node
+#   * link_id -- link id
+#****
+proc configureLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
+	global linkJitterConfiguration
+
+	if { $link_id != "" && [getLinkDirect $link_id] } {
+		return
+	}
+
+	set eid [getFromRunning "eid"]
+	set bandwidth [expr [getLinkBandwidth $link_id] + 0]
+	set delay [expr [getLinkDelay $link_id] + 0]
+	set ber [expr [getLinkBER $link_id] + 0]
+	set loss [expr [getLinkLoss $link_id] + 0]
+	set dup [expr [getLinkDup $link_id] + 0]
+
+	if { $bandwidth == 0 } {
+		set bandwidth -1
+	}
+	if { $delay == 0 } {
+		set delay -1
+	}
+	if { $ber == 0 } {
+		set ber -1
+	}
+	if { $loss == 0 } {
+		set loss -1
+	}
+	if { $dup == 0 } {
+		set dup -1
+	}
+
+	# Link parameters
+	set ngcmds "msg $link_id: setcfg {bandwidth=$bandwidth delay=$delay upstream={BER=$ber duplicate=$dup} downstream={BER=$ber duplicate=$dup}}"
+
+	pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
+
+	# FIXME: remove this to interface configuration?
+	# Queues
+	if { "rj45" ni "[getNodeType $node1_id] [getNodeType $node2_id]" } {
+		foreach node_id "$node1_id $node2_id" ifc "$iface1_id $iface2_id" {
+			set qdisc [getIfcQDisc $node_id $ifc]
+			if { $qdisc != "FIFO" } {
+				execSetIfcQDisc $eid $node_id $ifc $qdisc
+			}
+
+			set qdrop [getIfcQDrop $node_id $ifc]
+			if { $qdrop != "drop-tail" } {
+				execSetIfcQDrop $eid $node_id $ifc $qdrop
+			}
+
+			set qlen [getIfcQLen $node_id $ifc]
+			if { $qlen != 50 } {
+				execSetIfcQLen $eid $node_id $ifc $qlen
+			}
+		}
+	}
+
+	if { $linkJitterConfiguration } {
+		execSetLinkJitter $eid $link_id
+	}
+}
+
+proc unconfigureLinkBetween { eid node1_id node2_id iface1_id iface2_id link_id } {
+	if { $link_id != "" && [getFromRunning "${link_id}_destroy_type"] } {
+		return
+	}
+
+	set ngcmds "msg $link_id: setcfg {bandwidth=-1 delay=-1 upstream={BER=-1 duplicate=-1} downstream={BER=-1 duplicate=-1}}"
+
+	pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
+}
+
+#****f* freebsd.tcl/destroyLinkBetween
+# NAME
+#   destroyLinkBetween -- destroy link between
+# SYNOPSIS
+#   destroyLinkBetween $eid $node1_id $node2_id
+# FUNCTION
+#   Destroys link between two given nodes.
+# INPUTS
+#   * eid -- experiment id
+#   * node1_id -- node id of the first node
+#   * node2_id -- node id of the second node
+#   * link_id -- link id
+#****
+proc destroyLinkBetween { eid node1_id node2_id iface1_id iface2_id link_id } {
+	addStateLink $link_id "destroying"
+
+	set direct [getFromRunning "${link_id}_destroy_type"]
+	foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
+		invokeNodeProc $node_id "detachFromLink" $eid $node_id $iface_id $link_id $direct
+	}
+
+	if {
+		$direct ||
+		"wlan" in "[getNodeType $node1_id] [getNodeType $node2_id]"
+	} {
+		lassign [invokeNodeProc $node1_id "getHookData" $node1_id $iface1_id] - ng_peer1 ng_hook1
+		lassign [invokeNodeProc $node2_id "getHookData" $node2_id $iface2_id] - ng_peer2 ng_hook2
+
+		pipesExec "jexec $eid ngctl disconnect $ng_peer1: $ng_hook1" "hold"
+		pipesExec "jexec $eid ngctl disconnect $ng_peer2: $ng_hook2" "hold"
+	} else {
+		pipesExec "jexec $eid ngctl msg $link_id: shutdown" "hold"
+	}
+}
+
+#****f* freebsd.tcl/terminate_removeExperimentContainer
+# NAME
+#   terminate_removeExperimentContainer -- remove experiment jail
+# SYNOPSIS
+#   terminate_removeExperimentContainer $eid
+# FUNCTION
+#   Removes the root jail of the given experiment.
+# INPUTS
+#   * eid -- experiment id
+#****
+proc terminate_removeExperimentContainer { eid } {
+	# Remove the main vimage which contained all other nodes, hopefully we
+	# cleaned everything.
+	catch { rexec jexec $eid kill -9 -1 2> /dev/null }
+	catch { rexec jail -r $eid }
+}
+
+proc terminate_removeExperimentFiles { eid } {
+	global vroot_unionfs execMode gui
+
+	set VROOT_BASE [getVrootDir]
+
+	# Remove the main vimage which contained all other nodes, hopefully we
+	# cleaned everything.
+	if { $vroot_unionfs } {
+		# UNIONFS
+		catch { rexec rm -fr $VROOT_BASE/$eid }
+	} else {
+		# ZFS
+		if { ! $gui || $execMode == "batch" } {
+			rexec jail -r $eid
+			rexec zfs destroy -fr vroot/$eid
+		} else {
+			rexec jail -r $eid &
+			rexec zfs destroy -fr vroot/$eid &
+
+			catch { rexec zfs list | grep -c "$eid" } output
+			set zfsCount [lindex [split $output] 0]
+
+			while { $zfsCount != 0 } {
+				catch { rexec zfs list | grep -c "$eid/" } output
+
+				set zfsCount [lindex [split $output] 0]
+				$widget.p configure -value $zfsCount
+				update
+
+				after 200
+			}
+		}
+	}
+}
+
+#****f* freebsd.tcl/getCpuCount
+# NAME
+#   getCpuCount -- get CPU count
+# SYNOPSIS
+#   getCpuCount
+# FUNCTION
+#   Gets a CPU count of the host machine.
+# RESULT
+#   * cpucount - CPU count
+#****
+proc getCpuCount {} {
+	global remote max_jobs
+
+	if { $max_jobs == "h" } {
+		set max_jobs [expr round([lindex [rexec sysctl kern.smp.cpus] 1]/2)]
+	}
+
+	if { $remote == "" } {
+		if { $max_jobs > 0 } {
+			return $max_jobs
+		}
+	} else {
+		# buffer for non-closed SSH connections
+		set remote_jobs [expr round($max_jobs/3)]
+		if { $remote_jobs == 0 } {
+			set remote_jobs 1
+		}
+
+		return $remote_jobs
+	}
+
+	return [lindex [rexec sysctl kern.smp.cpus] 1]
+}
+
+#****f* freebsd.tcl/captureExtIfcByName
+# NAME
+#   captureExtIfcByName -- capture external interface
+# SYNOPSIS
+#   captureExtIfcByName $eid $ifname
+# FUNCTION
+#   Captures the external interface given by the ifname.
+# INPUTS
+#   * eid -- experiment id
+#   * ifname -- physical interface name
+#****
+proc captureExtIfcByName { eid ifname node_id } {
+	set private_ns [invokeNodeProc $node_id "getPrivateNs" $eid $node_id]
+
+	pipesExec "ifconfig $ifname vnet $private_ns" "hold"
+	pipesExec "jexec $private_ns ifconfig $ifname up promisc" "hold"
+}
+
+#****f* freebsd.tcl/releaseExtIfcByName
+# NAME
+#   releaseExtIfcByName -- release external interface by name
+# SYNOPSIS
+#   releaseExtIfcByName $eid $ifname
+# FUNCTION
+#   Releases the external interface with the name ifname.
+# INPUTS
+#   * eid -- experiment id
+#   * ifname -- physical interface name
+#****
+proc releaseExtIfcByName { eid ifname node_id } {
+	set private_ns [invokeNodeProc $node_id "getPrivateNs" $eid $node_id]
+
+	pipesExec "ifconfig $ifname -vnet $private_ns" "hold"
+	pipesExec "ifconfig $ifname up -promisc" "hold"
+}
+
+#### FreeBSD specific commands
+proc getStateIfcCmd { iface_name state } {
+	return "ifconfig $iface_name $state"
+}
+
+proc getNameIfcCmd { iface_name name } {
+	return "ifconfig $iface_name name $name"
+}
+
+proc getMacIfcCmd { iface_name mac_addr } {
+	return "ifconfig $iface_name link $mac_addr"
+}
+
+proc getVlanTagIfcCmd { iface_name dev_name tag } {
+	return "ifconfig $dev_name.$tag create name $iface_name"
+}
+
+proc getMtuIfcCmd { iface_name mtu } {
+	return "ifconfig $iface_name mtu $mtu"
+}
+
+proc getNatIfcCmd { iface_name } {
+	return "sh -c 'echo \"map $iface_name 0/0 -> 0/32\" | ipnat -f -'"
+}
+
+proc getRemoveNatIfcCmd { iface_name } {
+	return "sh -c 'echo \"map $iface_name 0/0 -> 0/32\" | ipnat -f - -pr'"
+}
+
+proc getIPv4IfcCmd { ifc addr primary } {
+	if { $addr == "dhcp" } {
+		return "dhclient -b $ifc 2>/dev/null &"
+	}
+
+	if { $primary } {
+		return "ifconfig $ifc inet $addr"
+	}
+
+	return "ifconfig $ifc inet add $addr"
+}
+
+proc getDelIPv4IfcCmd { ifc addr } {
+	if { $addr == "dhcp" } {
+		return "pkill -f 'dhclient.*$ifc\\>'"
+	}
+
+	return "ifconfig $ifc inet $addr -alias"
+}
+
+proc getIPv6IfcCmd { ifc addr primary } {
+	if { $primary } {
+		return "ifconfig $ifc inet6 $addr"
+	}
+
+	return "ifconfig $ifc inet6 add $addr"
+}
+
+proc getDelIPv6IfcCmd { ifc addr } {
+	return "ifconfig $ifc inet6 $addr -alias"
+}
+
+proc getIPv4RouteCmd { statrte } {
+	return "route -q add -inet $statrte"
+}
+
+proc getRemoveIPv4RouteCmd { statrte } {
+	return "route -q delete -inet $statrte"
+}
+
+proc getIPv6RouteCmd { statrte } {
+	return "route -q add -inet6 $statrte"
+}
+
+proc getRemoveIPv6RouteCmd { statrte } {
+	return "route -q delete -inet6 $statrte"
+}
+
+proc getIPv4IfcRouteCmd { subnet iface } {
+	return "route -q add -inet $subnet -interface $iface"
+}
+
+proc getRemoveIPv4IfcRouteCmd { subnet iface } {
+	return "route -q delete -inet $subnet -interface $iface"
+}
+
+proc getIPv6IfcRouteCmd { subnet iface } {
+	return "route -q add -inet6 $subnet -interface $iface"
+}
+
+proc getRemoveIPv6IfcRouteCmd { subnet iface } {
+	return "route -q delete -inet6 $subnet -interface $iface"
+}
+
+proc sshServiceStartCmds {} {
+	return { "service sshd onestart" }
+}
+
+proc sshServiceStopCmds {} {
+	return { "service sshd onestop" }
+}
+
+proc inetdServiceRestartCmds {} {
+	return "service inetd onerestart"
+}
+#### /FreeBSD specific commands
 
 proc fetchInterfaceData { node_id iface_id } {
 	global node_existing_mac node_existing_ipv4 node_existing_ipv6
@@ -620,15 +1034,17 @@ proc fetchInterfaceData { node_id iface_id } {
 
 #****f* freebsd.tcl/fetchNodeRunningConfig
 # NAME
-#   fetchNodeRunningConfig -- get interfaces list from the node
+#   fetchNodeRunningConfig -- get network configuration from running node
 # SYNOPSIS
 #   fetchNodeRunningConfig $node_id
 # FUNCTION
-#   Returns the list of all network interfaces for the given node.
+#   Gets live information from the running node and saves it in IMUNES
+#   configuration. This includes interface states, interface IPv4/IPv6
+#   addresses as well as IPv4/IPv6 static routes.
 # INPUTS
 #   * node_id -- node id
 # RESULT
-#   * list -- list in the form of {netgraph_node_name hook}
+#   * cur_node_cfg -- new node configuration
 #****
 proc fetchNodeRunningConfig { node_id } {
 	global node_existing_mac node_existing_ipv4 node_existing_ipv6
@@ -841,619 +1257,6 @@ proc fetchNodeRunningConfig { node_id } {
 	return $cur_node_cfg
 }
 
-# ifconfig parse proc !
-
-#****f* freebsd.tcl/getHostIfcList
-# NAME
-#   getHostIfcList -- get interfaces list from host
-# SYNOPSIS
-#   getHostIfcList
-# FUNCTION
-#   Returns the list of all network interfaces on the host.
-# RESULT
-#   * extifcs -- list of all external interfaces
-#****
-proc getHostIfcList { { filter_list "lo0" } } {
-	# fetch interface list from the system
-	if { [catch { rexec ifconfig -l } extifcs] } {
-		return ""
-	}
-
-	# exclude loopback interface
-	foreach ignore $filter_list {
-		set extifcs [lsearch -all -inline -not $extifcs $ignore]
-	}
-
-	return $extifcs
-}
-
-#****f* freebsd.tcl/getHostIfcVlanExists
-# NAME
-#   getHostIfcVlanExists -- check if host VLAN interface exists
-# SYNOPSIS
-#   getHostIfcVlanExists $node_id $ifname
-# FUNCTION
-#   Returns 1 if VLAN interface with the name $name for the given node cannot
-#   be created.
-# INPUTS
-#   * node_id -- node id
-#   * ifname -- interface id
-# RESULT
-#   * check -- 1 if interface exists, 0 otherwise
-#****
-proc getHostIfcVlanExists { node_id ifname } {
-	global execMode gui
-
-	# check if VLAN ID is already taken
-	# this can be only done by trying to create it, as it's possible that the same
-	# VLAN interface already exists in some other namespace
-	set iface_id [ifaceIdFromName $node_id $ifname]
-	set vlan [getIfcVlanTag $node_id $iface_id]
-	try {
-		rexec ifconfig $ifname.$vlan create
-	} on ok {} {
-		rexec ifconfig $ifname.$vlan destroy
-
-		return 0
-	} on error err {
-		set msg "Unable to create external interface '$ifname.$vlan':\n$err\n\nPlease\
-			verify that VLAN ID $vlan with parent interface $ifname is not already\
-			assigned to another VLAN interface, potentially in a different jail."
-	}
-
-	if { ! $gui || $execMode == "batch" } {
-		sputs stderr $msg
-	} else {
-		after idle { .dialog1.msg configure -wraplength 4i }
-		tk_dialog .dialog1 "IMUNES error" $msg \
-			info 0 Dismiss
-	}
-
-	return 1
-}
-
-#****f* freebsd.tcl/nodeLogIfacesCreate
-# NAME
-#   nodeLogIfacesCreate -- create node logical interfaces
-# SYNOPSIS
-#   nodeLogIfacesCreate $node_id
-# FUNCTION
-#   Creates logical interfaces for the given node.
-# INPUTS
-#   * node_id -- node id
-#****
-proc nodeLogIfacesCreate { node_id ifaces } {
-	set jail_id "[getFromRunning "eid"].$node_id"
-
-	foreach iface_id $ifaces {
-		set iface_name [getIfcName $node_id $iface_id]
-		switch -exact [getIfcType $node_id $iface_id] {
-			vlan {
-				set tag [getIfcVlanTag $node_id $iface_id]
-				set dev [getIfcVlanDev $node_id $iface_id]
-				if { $tag != "" && $dev != "" } {
-					pipesExec "jexec $jail_id [getVlanTagIfcCmd $iface_name $dev $tag]" "hold"
-					addStateNodeIface $node_id $iface_id "creating"
-				} else {
-					removeStateNodeIface $node_id $iface_id "running"
-				}
-			}
-			lo {
-				addStateNodeIface $node_id $iface_id "creating"
-				if { $iface_name != "lo0" } {
-					pipesExec "jexec $jail_id ifconfig $iface_name create" "hold"
-				}
-			}
-		}
-	}
-}
-
-#****f* freebsd.tcl/removeNodeIfcIPaddrs
-# NAME
-#   removeNodeIfcIPaddrs -- remove node iterfaces' IP addresses
-# SYNOPSIS
-#   removeNodeIfcIPaddrs $eid $node_id
-# FUNCTION
-#   Remove all IPv4 and IPv6 addresses from interfaces on the given node.
-# INPUTS
-#   * eid -- experiment id
-#   * node_id -- node id
-#****
-proc removeNodeIfcIPaddrs { eid node_id } {
-	set jail_id "$eid.$node_id"
-
-	foreach ifc [ifcList $node_id] {
-		foreach ipv4 [getIfcIPv4addrs $node_id $ifc] {
-			pipesExec "jexec $jail_id ifconfig $ifc $ipv4 -alias" "hold"
-		}
-		foreach ipv6 [getIfcIPv6addrs $node_id $ifc] {
-			pipesExec "jexec $jail_id ifconfig $ifc inet6 $ipv6 -alias" "hold"
-		}
-	}
-}
-
-#****f* freebsd.tcl/loadKernelModules
-# NAME
-#   loadKernelModules -- load kernel modules
-# SYNOPSIS
-#   loadKernelModules
-# FUNCTION
-#   Load necessary kernel modules.
-#****
-proc loadKernelModules {} {
-	global all_modules_list
-
-	set kernel_modules "nullfs unionfs ng_eiface ng_pipe ng_socket if_tun vlan ipsec pf"
-	catch { rexec kldload $kernel_modules }
-
-	catch { rexec sysctl net.inet.ipf.jail_allowed=1 }
-
-	foreach node_type $all_modules_list {
-		invokeTypeProc $node_type "prepareSystem"
-	}
-}
-
-#****f* freebsd.tcl/prepareVirtualFS
-# NAME
-#   prepareVirtualFS -- prepare virtual filesystem
-# SYNOPSIS
-#   prepareVirtualFS
-# FUNCTION
-#   Prepares all necessary files for the virtual filesystem.
-#****
-proc prepareVirtualFS {} {
-	global vroot_unionfs
-
-	if { $vroot_unionfs } {
-		# UNIONFS - anything to do here?
-	} else {
-		rexec zfs create vroot/[getFromRunning "eid"]
-	}
-}
-
-#****f* freebsd.tcl/prepareDevfs
-# NAME
-#   prepareDevfs -- prepare dev filesystem
-# SYNOPSIS
-#   prepareDevfs
-# FUNCTION
-#   Prepares devfs rules necessary for virtual nodes.
-#****
-proc prepareDevfs { { force 0 } } {
-	global devfs_number
-
-	catch { rexec devfs rule showsets } devcheck
-	if { $force == 1 || $devfs_number ni $devcheck } {
-		# Prepare a devfs ruleset for L3 vnodes
-		rexec devfs ruleset $devfs_number
-		rexec devfs rule delset
-		rexec devfs rule add hide
-		rexec devfs rule add path null unhide
-		rexec devfs rule add path zero unhide
-		rexec devfs rule add path random unhide
-		rexec devfs rule add path urandom unhide
-		rexec devfs rule add path ipl unhide
-		rexec devfs rule add path ipnat unhide
-		rexec devfs rule add path pf unhide
-		rexec devfs rule add path crypto unhide
-		rexec devfs rule add path ptyp* unhide
-		rexec devfs rule add path ptyq* unhide
-		rexec devfs rule add path ptyr* unhide
-		rexec devfs rule add path ptys* unhide
-		rexec devfs rule add path ptyp* unhide
-		rexec devfs rule add path ptyq* unhide
-		rexec devfs rule add path ptyr* unhide
-		rexec devfs rule add path ptys* unhide
-		rexec devfs rule add path ttyp* unhide
-		rexec devfs rule add path ttyq* unhide
-		rexec devfs rule add path ttyr* unhide
-		rexec devfs rule add path ttys* unhide
-		rexec devfs rule add path ttyp* unhide
-		rexec devfs rule add path ttyq* unhide
-		rexec devfs rule add path ttyr* unhide
-		rexec devfs rule add path ttys* unhide
-		rexec devfs rule add path ptmx unhide
-		rexec devfs rule add path pts unhide
-		rexec devfs rule add path pts/* unhide
-		rexec devfs rule add path fd unhide
-		rexec devfs rule add path fd/* unhide
-		rexec devfs rule add path stdin unhide
-		rexec devfs rule add path stdout unhide
-		rexec devfs rule add path stderr unhide
-		rexec devfs rule add path mem unhide
-		rexec devfs rule add path kmem unhide
-		rexec devfs rule add path bpf* unhide
-		rexec devfs rule add path tun* unhide
-		rexec devfs ruleset 0
-	}
-}
-
-#****f* freebsd.tcl/createExperimentContainer
-# NAME
-#   createExperimentContainer -- create experiment container
-# SYNOPSIS
-#   createExperimentContainer
-# FUNCTION
-#   Creates a root jail (container) for the current experiment.
-#****
-proc createExperimentContainer {} {
-	# Create top-level vimage
-	rexec jail -c name=[getFromRunning "eid"] vnet children.max=[llength [getFromRunning "node_list"]] persist
-}
-
-#****f* freebsd.tcl/createLinkBetween
-# NAME
-#   createLinkBetween -- create link between
-# SYNOPSIS
-#   createLinkBetween $node1_id $node2_id $iface1_id $iface2_id
-# FUNCTION
-#   Creates link between two given nodes.
-# INPUTS
-#   * node1_id -- node id of the first node
-#   * node2_id -- node id of the second node
-#   * iface1_id -- interface id on the first node
-#   * iface2_id -- interface id on the second node
-#****
-proc createLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
-	set eid [getFromRunning "eid"]
-
-	addStateLink $link_id "creating"
-
-	lassign [invokeNodeProc $node1_id "getHookData" $node1_id $iface1_id] - ng_peer1 ng_hook1
-	lassign [invokeNodeProc $node2_id "getHookData" $node2_id $iface2_id] - ng_peer2 ng_hook2
-
-	set direct [getLinkDirect $link_id]
-
-	# for direct links, skip pipe creation
-	if { $direct } {
-		pipesExec "jexec $eid ngctl connect $ng_peer1: $ng_peer2: $ng_hook1 $ng_hook2" "hold"
-	} else {
-		set ngcmds "mkpeer $ng_peer1: pipe $ng_hook1 upper"
-		set ngcmds "$ngcmds\n name $ng_peer1:$ng_hook1 $link_id"
-		set ngcmds "$ngcmds\n connect $link_id: $ng_peer2: lower $ng_hook2"
-
-		pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
-	}
-
-	foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
-		invokeNodeProc $node_id "attachToLink" $eid $node_id $iface_id $link_id $direct
-	}
-}
-
-#****f* freebsd.tcl/configureLinkBetween
-# NAME
-#   configureLinkBetween -- configure link between
-# SYNOPSIS
-#   configureLinkBetween $node1_id $node2_id $iface1_id $iface2_id $link_id
-# FUNCTION
-#   Configures link between two given nodes.
-# INPUTS
-#   * node1_id -- node id of the first node
-#   * node2_id -- node id of the second node
-#   * iface1_id -- interface id on the first node
-#   * iface2_id -- interface id on the second node
-#   * link_id -- link id
-#****
-proc configureLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
-	global linkJitterConfiguration
-
-	if { $link_id != "" && [getLinkDirect $link_id] } {
-		return
-	}
-
-	set eid [getFromRunning "eid"]
-	set bandwidth [expr [getLinkBandwidth $link_id] + 0]
-	set delay [expr [getLinkDelay $link_id] + 0]
-	set ber [expr [getLinkBER $link_id] + 0]
-	set loss [expr [getLinkLoss $link_id] + 0]
-	set dup [expr [getLinkDup $link_id] + 0]
-
-	if { $bandwidth == 0 } {
-		set bandwidth -1
-	}
-	if { $delay == 0 } {
-		set delay -1
-	}
-	if { $ber == 0 } {
-		set ber -1
-	}
-	if { $loss == 0 } {
-		set loss -1
-	}
-	if { $dup == 0 } {
-		set dup -1
-	}
-
-	# Link parameters
-	set ngcmds "msg $link_id: setcfg {bandwidth=$bandwidth delay=$delay upstream={BER=$ber duplicate=$dup} downstream={BER=$ber duplicate=$dup}}"
-
-	pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
-
-	# FIXME: remove this to interface configuration?
-	# Queues
-	if { "rj45" ni "[getNodeType $node1_id] [getNodeType $node2_id]" } {
-		foreach node_id "$node1_id $node2_id" ifc "$iface1_id $iface2_id" {
-			set qdisc [getIfcQDisc $node_id $ifc]
-			if { $qdisc != "FIFO" } {
-				execSetIfcQDisc $eid $node_id $ifc $qdisc
-			}
-
-			set qdrop [getIfcQDrop $node_id $ifc]
-			if { $qdrop != "drop-tail" } {
-				execSetIfcQDrop $eid $node_id $ifc $qdrop
-			}
-
-			set qlen [getIfcQLen $node_id $ifc]
-			if { $qlen != 50 } {
-				execSetIfcQLen $eid $node_id $ifc $qlen
-			}
-		}
-	}
-
-	if  { $linkJitterConfiguration } {
-		execSetLinkJitter $eid $link_id
-	}
-}
-
-proc unconfigureLinkBetween { eid node1_id node2_id iface1_id iface2_id link_id } {
-	if { $link_id != "" && [getFromRunning "${link_id}_destroy_type"] } {
-		return
-	}
-
-	set ngcmds "msg $link_id: setcfg {bandwidth=-1 delay=-1 upstream={BER=-1 duplicate=-1} downstream={BER=-1 duplicate=-1}}"
-
-	pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
-}
-
-#****f* freebsd.tcl/destroyLinkBetween
-# NAME
-#   destroyLinkBetween -- destroy link between
-# SYNOPSIS
-#   destroyLinkBetween $eid $node1_id $node2_id
-# FUNCTION
-#   Destroys link between two given nodes.
-# INPUTS
-#   * eid -- experiment id
-#   * node1_id -- node id of the first node
-#   * node2_id -- node id of the second node
-#****
-proc destroyLinkBetween { eid node1_id node2_id iface1_id iface2_id link_id } {
-	addStateLink $link_id "destroying"
-
-	set direct [getFromRunning "${link_id}_destroy_type"]
-	foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
-		invokeNodeProc $node_id "detachFromLink" $eid $node_id $iface_id $link_id $direct
-	}
-
-	if {
-		$direct ||
-		"wlan" in "[getNodeType $node1_id] [getNodeType $node2_id]"
-	} {
-		lassign [invokeNodeProc $node1_id "getHookData" $node1_id $iface1_id] - ng_peer1 ng_hook1
-		lassign [invokeNodeProc $node2_id "getHookData" $node2_id $iface2_id] - ng_peer2 ng_hook2
-
-		pipesExec "jexec $eid ngctl disconnect $ng_peer1: $ng_hook1" "hold"
-		pipesExec "jexec $eid ngctl disconnect $ng_peer2: $ng_hook2" "hold"
-	} else {
-		pipesExec "jexec $eid ngctl msg $link_id: shutdown" "hold"
-	}
-}
-
-#****f* freebsd.tcl/terminate_removeExperimentContainer
-# NAME
-#   terminate_removeExperimentContainer -- remove experiment container
-# SYNOPSIS
-#   terminate_removeExperimentContainer $eid $widget
-# FUNCTION
-#   Removes the root jail of the given experiment.
-# INPUTS
-#   * eid -- experiment id
-#   * widget -- status widget
-#****
-proc terminate_removeExperimentContainer { eid } {
-	# Remove the main vimage which contained all other nodes, hopefully we
-	# cleaned everything.
-	catch { rexec jexec $eid kill -9 -1 2> /dev/null }
-	catch { rexec jail -r $eid }
-}
-
-proc terminate_removeExperimentFiles { eid } {
-	global vroot_unionfs execMode gui
-
-	set VROOT_BASE [getVrootDir]
-
-	# Remove the main vimage which contained all other nodes, hopefully we
-	# cleaned everything.
-	if { $vroot_unionfs } {
-		# UNIONFS
-		catch { rexec rm -fr $VROOT_BASE/$eid }
-	} else {
-		# ZFS
-		if { ! $gui || $execMode == "batch" } {
-			rexec jail -r $eid
-			rexec zfs destroy -fr vroot/$eid
-		} else {
-			rexec jail -r $eid &
-			rexec zfs destroy -fr vroot/$eid &
-
-			catch { rexec zfs list | grep -c "$eid" } output
-			set zfsCount [lindex [split $output] 0]
-
-			while { $zfsCount != 0 } {
-				catch { rexec zfs list | grep -c "$eid/" } output
-
-				set zfsCount [lindex [split $output] 0]
-				$widget.p configure -value $zfsCount
-				update
-
-				after 200
-			}
-		}
-	}
-}
-
-#****f* freebsd.tcl/getCpuCount
-# NAME
-#   getCpuCount -- get CPU count
-# SYNOPSIS
-#   getCpuCount
-# FUNCTION
-#   Gets a CPU count of the host machine.
-# RESULT
-#   * cpucount - CPU count
-#****
-proc getCpuCount {} {
-	global remote max_jobs
-
-	if { $max_jobs == "h" } {
-		set max_jobs [expr round([lindex [rexec sysctl kern.smp.cpus] 1]/2)]
-	}
-
-	if { $remote == "" } {
-		if { $max_jobs > 0 } {
-			return $max_jobs
-		}
-	} else {
-		# buffer for non-closed SSH connections
-		set remote_jobs [expr round($max_jobs/3)]
-		if { $remote_jobs == 0 } {
-			set remote_jobs 1
-		}
-
-		return $remote_jobs
-	}
-
-	return [lindex [rexec sysctl kern.smp.cpus] 1]
-}
-
-#****f* freebsd.tcl/captureExtIfcByName
-# NAME
-#   captureExtIfcByName -- capture external interface
-# SYNOPSIS
-#   captureExtIfcByName $eid $ifname
-# FUNCTION
-#   Captures the external interface given by the ifname.
-# INPUTS
-#   * eid -- experiment id
-#   * ifname -- physical interface name
-#****
-proc captureExtIfcByName { eid ifname node_id } {
-	set private_ns [invokeNodeProc $node_id "getPrivateNs" $eid $node_id]
-
-	pipesExec "ifconfig $ifname vnet $private_ns" "hold"
-	pipesExec "jexec $private_ns ifconfig $ifname up promisc" "hold"
-}
-
-#****f* freebsd.tcl/releaseExtIfcByName
-# NAME
-#   releaseExtIfcByName -- release external interface by name
-# SYNOPSIS
-#   releaseExtIfcByName $eid $ifname
-# FUNCTION
-#   Releases the external interface with the name ifname.
-# INPUTS
-#   * eid -- experiment id
-#   * ifname -- physical interface name
-#****
-proc releaseExtIfcByName { eid ifname node_id } {
-	set private_ns [invokeNodeProc $node_id "getPrivateNs" $eid $node_id]
-
-	pipesExec "ifconfig $ifname -vnet $private_ns" "hold"
-	pipesExec "ifconfig $ifname up -promisc" "hold"
-}
-
-proc getStateIfcCmd { iface_name state } {
-	return "ifconfig $iface_name $state"
-}
-
-proc getNameIfcCmd { iface_name name } {
-	return "ifconfig $iface_name name $name"
-}
-
-proc getMacIfcCmd { iface_name mac_addr } {
-	return "ifconfig $iface_name link $mac_addr"
-}
-
-proc getVlanTagIfcCmd { iface_name dev_name tag } {
-	return "ifconfig $dev_name.$tag create name $iface_name"
-}
-
-proc getMtuIfcCmd { iface_name mtu } {
-	return "ifconfig $iface_name mtu $mtu"
-}
-
-proc getNatIfcCmd { iface_name } {
-	return "sh -c 'echo \"map $iface_name 0/0 -> 0/32\" | ipnat -f -'"
-}
-
-proc getRemoveNatIfcCmd { iface_name } {
-	return "sh -c 'echo \"map $iface_name 0/0 -> 0/32\" | ipnat -f - -pr'"
-}
-
-proc getIPv4IfcCmd { ifc addr primary } {
-	if { $addr == "dhcp" } {
-		return "dhclient -b $ifc 2>/dev/null &"
-	}
-
-	if { $primary } {
-		return "ifconfig $ifc inet $addr"
-	}
-
-	return "ifconfig $ifc inet add $addr"
-}
-
-proc getDelIPv4IfcCmd { ifc addr } {
-	if { $addr == "dhcp" } {
-		return "pkill -f 'dhclient.*$ifc\\>'"
-	}
-
-	return "ifconfig $ifc inet $addr -alias"
-}
-
-proc getIPv6IfcCmd { ifc addr primary } {
-	if { $primary } {
-		return "ifconfig $ifc inet6 $addr"
-	}
-
-	return "ifconfig $ifc inet6 add $addr"
-}
-
-proc getDelIPv6IfcCmd { ifc addr } {
-	return "ifconfig $ifc inet6 $addr -alias"
-}
-
-proc getIPv4RouteCmd { statrte } {
-	return "route -q add -inet $statrte"
-}
-
-proc getRemoveIPv4RouteCmd { statrte } {
-	return "route -q delete -inet $statrte"
-}
-
-proc getIPv6RouteCmd { statrte } {
-	return "route -q add -inet6 $statrte"
-}
-
-proc getRemoveIPv6RouteCmd { statrte } {
-	return "route -q delete -inet6 $statrte"
-}
-
-proc getIPv4IfcRouteCmd { subnet iface } {
-	return "route -q add -inet $subnet -interface $iface"
-}
-
-proc getRemoveIPv4IfcRouteCmd { subnet iface } {
-	return "route -q delete -inet $subnet -interface $iface"
-}
-
-proc getIPv6IfcRouteCmd { subnet iface } {
-	return "route -q add -inet6 $subnet -interface $iface"
-}
-
-proc getRemoveIPv6IfcRouteCmd { subnet iface } {
-	return "route -q delete -inet6 $subnet -interface $iface"
-}
-
 proc checkSysPrerequisites {} {
 	# XXX
 	# check for all comands that we use:
@@ -1497,18 +1300,6 @@ proc ipsecFilesToNode { node_id ca_cert local_cert ipsecret_file } {
 
 	writeDataToNodeFile $node_id /usr/local/etc/ipsec.conf $ipsecConf
 	writeDataToNodeFile $node_id /usr/local/etc/ipsec.secrets $ipsecSecrets
-}
-
-proc sshServiceStartCmds {} {
-	return { "service sshd onestart" }
-}
-
-proc sshServiceStopCmds {} {
-	return { "service sshd onestop" }
-}
-
-proc inetdServiceRestartCmds {} {
-	return "service inetd onerestart"
 }
 
 # XXX nat64 procedures
@@ -1576,6 +1367,7 @@ proc unconfigureTunIface { tayga4pool tayga6prefix } {
 
 	return $cfg
 }
+# /XXX nat64 procedures
 
 proc startRoutingDaemons { node_id } {
 	set cmds "zebra -dP0"

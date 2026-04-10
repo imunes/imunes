@@ -1616,3 +1616,266 @@ proc execCmdNode { node_id cmd } {
 
 	return $output
 }
+
+#****f* common.tcl/moveFileFromNode
+# NAME
+#   moveFileFromNode -- move file from virtual node
+# SYNOPSIS
+#   moveFileFromNode $node_id $path $ext_path
+# FUNCTION
+#   Moves file from virtual node to a specified external path.
+# INPUTS
+#   * node_id -- virtual node id
+#   * path -- path to file in node
+#   * ext_path -- external path
+#****
+proc moveFileFromNode { node_id path ext_path } {
+	set host_path [getHostNodePath $node_id $path]
+	if { $host_path != "" } {
+		catch { rexec mv $host_path $ext_path }
+	}
+}
+
+#****f* common.tcl/writeDataToNodeFile
+# NAME
+#   writeDataToNodeFile -- write data to virtual node
+# SYNOPSIS
+#   writeDataToNodeFile $node_id $path $data
+# FUNCTION
+#   Writes data to a file on the specified virtual node.
+# INPUTS
+#   * node_id -- virtual node id
+#   * path -- path to file in node
+#   * data -- data to write
+#****
+proc writeDataToNodeFile { node_id path data } {
+	set host_path [getHostNodePath $node_id $path]
+	if { $host_path != "" } {
+		writeDataToFile $host_path $data
+	}
+}
+
+#****f* common.tcl/execCmdNodeBkg
+# NAME
+#   execCmdNodeBkg -- execute command on virtual node
+# SYNOPSIS
+#   execCmdNodeBkg $node_id $cmd
+# FUNCTION
+#   Executes a command on a virtual node (in the background).
+# INPUTS
+#   * node_id -- virtual node id
+#   * cmd -- command to execute
+#****
+proc execCmdNodeBkg { node_id cmd } {
+	set os_cmd [invokeNodeProc $node_id "getExecCommand" [getFromRunning "eid"] $node_id "-d"]
+
+	pipesExec "$os_cmd sh -c '$cmd'" "hold"
+}
+
+#****f* common.tcl/checkForExternalApps
+# NAME
+#   checkForExternalApps -- check whether external applications exist
+# SYNOPSIS
+#   checkForExternalApps $app_list
+# FUNCTION
+#   Checks whether a list of applications exist on the machine running IMUNES
+#   by using the which command.
+# INPUTS
+#   * app_list -- list of applications
+# RESULT
+#   * returns 0 if the applications exist, otherwise it returns 1.
+#****
+proc checkForExternalApps { app_list } {
+	foreach app $app_list {
+		set cmds "command -v $app"
+		set status [ catch { exec sh -c $cmds } err ]
+		if { $status } {
+			return 1
+		}
+	}
+
+	return 0
+}
+
+#****f* common.tcl/checkForApplications
+# NAME
+#   checkForApplications -- check whether applications exist
+# SYNOPSIS
+#   checkForApplications $node_id $app_list
+# FUNCTION
+#   Checks whether a list of applications exist on the virtual node by using
+#   the 'command' command.
+# INPUTS
+#   * node_id -- virtual node id
+#   * app_list -- list of applications
+# RESULT
+#   * returns 0 if the applications exist, otherwise it returns 1.
+#****
+proc checkForApplications { node_id app_list } {
+	set os_cmd [invokeNodeProc $node_id "getExecCommand" [getFromRunning "eid"] $node_id]
+
+	foreach app $app_list {
+		set os_cmd "$os_cmd sh -c 'command -v $app'"
+		set status [ catch { rexec {*}$os_cmd } err ]
+		if { $status } {
+			return 1
+		}
+	}
+
+	return 0
+}
+
+#****f* common.tcl/startXappOnNode
+# NAME
+#   startXappOnNode -- start X application in a virtual node
+# SYNOPSIS
+#   startXappOnNode $node_id $app
+# FUNCTION
+#   Start X application on virtual node
+# INPUTS
+#   * node_id -- virtual node id
+#   * app -- application to start
+#****
+proc startXappOnNode { node_id app } {
+	global debug remote
+
+	if { $remote != "" } {
+		sputs stderr "Running X applications in nodes on remote host is not supported."
+
+		return
+	}
+
+	if { [checkForExternalApps "socat"] != 0 } {
+		sputs stderr "To run X applications on the node, install socat on your host."
+		return
+	}
+
+	set eid [getFromRunning "eid"]
+
+	set logfile "/dev/null"
+	if { $debug } {
+		set logfile "/tmp/startxcmd_$eid\_$node_id.log"
+	}
+
+	eval exec startxcmd [getNodeName $node_id]@$eid $app > $logfile 2>> $logfile &
+}
+
+#****f* common.tcl/startTcpdumpOnNodeIfc
+# NAME
+#   startTcpdumpOnNodeIfc -- start tcpdump on an interface
+# SYNOPSIS
+#   startTcpdumpOnNodeIfc $node_id $iface_name
+# FUNCTION
+#   Start tcpdump in a terminal on a virtual node on the specified interface.
+# INPUTS
+#   * node_id -- virtual node id
+#   * iface_name -- virtual node interface
+#****
+proc startTcpdumpOnNodeIfc { node_id iface_name } {
+	if { [checkForApplications $node_id "tcpdump"] == 0 } {
+		spawnShell $node_id "tcpdump -leni $iface_name"
+	}
+}
+
+#****f* common.tcl/getHostIfcVlanExists
+# NAME
+#   getHostIfcVlanExists -- check if host VLAN interface exists
+# SYNOPSIS
+#   getHostIfcVlanExists $node_id $iface_name
+# FUNCTION
+#   Returns 1 if VLAN interface with the name iface_name for the given node cannot
+#   be created.
+# INPUTS
+#   * node_id -- node id
+#   * iface_name -- interface id
+# RESULT
+#   * check -- 1 if interface exists, 0 otherwise
+#****
+proc getHostIfcVlanExists { node_id iface_name } {
+	global execMode gui
+
+	# check if VLAN ID is already taken
+	# this can be only done by trying to create it, as it's possible that the same
+	# VLAN interface already exists in some other namespace
+	set iface_id [ifaceIdFromName $node_id $iface_name]
+	set vlan [getIfcVlanTag $node_id $iface_id]
+	try {
+		createVlanIfaceOnHost $iface_name $vlan
+	} on ok {} {
+		destroyVlanIfaceOnHost $iface_name $vlan
+
+		return 0
+	} on error err {
+		set msg "Unable to create external interface '${iface_name}_$vlan':\n$err\n\nPlease\
+			verify that VLAN ID $vlan with parent interface $iface_name is not already\
+			assigned to another VLAN interface, potentially in a different jail/namespace."
+	}
+
+	if { ! $gui || $execMode == "batch" } {
+		sputs stderr $msg
+	} else {
+		after idle { .dialog1.msg configure -wraplength 4i }
+		tk_dialog .dialog1 "IMUNES error" $msg \
+			info 0 Dismiss
+	}
+
+	return 1
+}
+
+#****f* common.tcl/nodeLogIfacesCreate
+# NAME
+#   nodeLogIfacesCreate -- create node logical interfaces
+# SYNOPSIS
+#   nodeLogIfacesCreate $node_id
+# FUNCTION
+#   Creates logical interfaces for the given node.
+# INPUTS
+#   * node_id -- node id
+#****
+proc nodeLogIfacesCreate { node_id ifaces } {
+	set eid [getFromRunning "eid"]
+	set private_ns [invokeNodeProc $node_id "getPrivateNs" $eid $node_id]
+
+	set cmds ""
+	foreach iface_id $ifaces {
+		set iface_name [getIfcName $node_id $iface_id]
+		switch -exact [getIfcType $node_id $iface_id] {
+			vlan {
+				set tag [getIfcVlanTag $node_id $iface_id]
+				set dev [getIfcVlanDev $node_id $iface_id]
+				if { $tag != "" && $dev != "" } {
+					append cmds "[getVlanTagIfcCmd $iface_name $dev $tag]\n"
+					addStateNodeIface $node_id $iface_id "creating"
+				} else {
+					removeStateNodeIface $node_id $iface_id "running"
+				}
+			}
+			lo {
+				addStateNodeIface $node_id $iface_id "creating"
+				if { $iface_name != "lo0" } {
+					append cmds "[getLoopbackIfcCmd $iface_name]\n"
+					append cmds "[getStateIfcCmd $iface_name "up"]\n"
+				} else {
+					append cmds "[getLo0HandleCmd]\n"
+				}
+			}
+		}
+	}
+
+	if { $cmds != "" } {
+		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-d"]
+		pipesExec "$os_cmd sh -c '$cmds'" "hold"
+	}
+
+	# TODO: for podman?
+	## docker interface is created before other ones, so let's rename it to something that's not used by IMUNES
+	#if { [getNodeDockerAttach $node_id] == 1 } {
+	#	set cmds "ip r save > /tmp/routes"
+	#	set cmds "$cmds ; ip l set eth0 down"
+	#	set cmds "$cmds ; ip l set eth0 name docker0"
+	#	set cmds "$cmds ; ip l set docker0 up"
+	#	set cmds "$cmds ; ip r restore < /tmp/routes"
+	#	set cmds "$cmds ; rm -f /tmp/routes"
+	#	pipesExec "docker exec -d $docker_id sh -c '$cmds'" "hold"
+	#}
+}
