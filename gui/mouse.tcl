@@ -3183,5 +3183,6 @@ proc clearTempObjects { x y } {
 		}
 	}
 
-	button1-release $x $y
+	# catch error in case button1 wasn't clicked before
+	catch { button1-release $x $y }
 }
