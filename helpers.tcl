@@ -420,6 +420,7 @@ proc dputs { args } {
 
 proc reloadSources {} {
 	global ROOTDIR LIBDIR
+	global config_override config_path last_config_file
 	global all_modules_list node_types execMode
 	global isOSlinux isOSfreebsd
 	global debug gui
@@ -461,6 +462,14 @@ proc reloadSources {} {
 	}
 
 	safeSourceFile "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
+
+	# Read config files
+	set config_override "false"
+	set last_config_file $config_path
+	readConfigFiles
+	if { $last_config_file != "" } {
+		set config_path $last_config_file
+	}
 
 	if { $execMode == "interactive" } {
 		if { $gui } {
