@@ -908,10 +908,10 @@ set widgetlist { \
 	{ "Process list" "ps ax" } \
 	{ "IPv4 sockets" "netstat -4 -an" } \
 	{ "IPv6 sockets" "netstat -6 -an" } \
-	{ "View ifaces startup script" "cat boot_ifaces.conf" } \
-	{ "View ifaces startup logs" "cat out_ifaces.log err_ifaces.log" } \
-	{ "View startup script" "cat boot.conf custom.conf" } \
-	{ "View startup logs" "cat out.log err.log" } \
+	{ "View ifaces startup script" "sh -c 'cat /var/imunes/*/*/boot_ifaces.conf'" } \
+	{ "View ifaces startup logs" "sh -c 'cat /var/imunes/*/*/out_ifaces.log /var/imunes/*/*/err_ifaces.log'" } \
+	{ "View startup script" "sh -c 'cat /var/imunes/*/*/boot.conf /var/imunes/*/*/custom.conf'" } \
+	{ "View startup logs" "sh -c 'cat /var/imunes/*/*/out.log /var/imunes/*/*/err.log'" } \
 	{ "List files" "ls" } \
 }
 

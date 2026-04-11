@@ -1397,7 +1397,5 @@ proc startRoutingDaemons { node_id } {
 		set cmds "$cmds; ${protocol}d -dP0"
 	}
 
-	set cmds "$cmds; sed -i '' '/Disabling MPLS support/d' /err.log"
-
 	pipesExec "jexec [getFromRunning "eid"].$node_id sh -c '$cmds'" "hold"
 }

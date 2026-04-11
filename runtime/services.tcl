@@ -126,20 +126,30 @@ set service ssh
 regHooks $service {NODECONF NODESTOP}
 
 proc $service.start { node_id { bkg "" } } {
+	set eid [getFromRunning "eid"]
+	set VROOT_RUNTIME [getVrootDir]/$eid/$node_id
+	set ssh_log "$VROOT_RUNTIME/ssh_service.log"
+
 	if { $bkg == "" } {
 		set output [execCmdsNode $node_id [sshServiceStartCmds]]
-		writeDataToNodeFile $node_id "ssh_service.log" $output
+		writeDataToNodeFile $node_id $ssh_log $output
 	} else {
-		execCmdsNodeBkg $node_id [sshServiceStartCmds] "ssh_service.log 2>&1"
+		pipesExec "test -d $VROOT_RUNTIME || mkdir -p $VROOT_RUNTIME ;" "hold"
+		execCmdsNodeBkg $node_id [sshServiceStartCmds] "$ssh_log 2>&1"
 	}
 }
 
 proc $service.stop { node_id { bkg "" } } {
+	set eid [getFromRunning "eid"]
+	set VROOT_RUNTIME [getVrootDir]/$eid/$node_id
+	set ssh_log "$VROOT_RUNTIME/ssh_service.log"
+
 	if { $bkg == "" } {
 		set output [execCmdsNode $node_id [sshServiceStopCmds]]
-		writeDataToNodeFile $node_id "ssh_service.log" $output
+		writeDataToNodeFile $node_id $ssh_log $output
 	} else {
-		execCmdsNodeBkg $node_id [sshServiceStopCmds] "ssh_service.log 2>&1"
+		pipesExec "test -d $VROOT_RUNTIME || mkdir -p $VROOT_RUNTIME ;" "hold"
+		execCmdsNodeBkg $node_id [sshServiceStopCmds] "$ssh_log 2>&1"
 	}
 }
 
@@ -159,41 +169,51 @@ set service tcpdump
 regHooks $service {LINKINST NODESTOP}
 
 proc $service.start { node_id { bkg "" } } {
+	set eid [getFromRunning "eid"]
+	set VROOT_RUNTIME [getVrootDir]/$eid/$node_id
+	set tcpdump_log "$VROOT_RUNTIME/tcpdump_start.log"
+
+	lappend cmds "test -d $VROOT_RUNTIME || mkdir -p $VROOT_RUNTIME"
 	foreach iface_id [allIfcList $node_id] {
 		set iface_name [getIfcName $node_id $iface_id]
 		if { [string match "lo*" $iface_name] } {
 			continue
 		}
 		lappend cmds "ifconfig $iface_name up"
-		lappend cmds "nohup tcpdump -Uni $iface_name -w /tmp/$iface_name.pcap > /dev/null 2> /dev/null &"
+		lappend cmds "nohup tcpdump -Uni $iface_name -w $VROOT_RUNTIME/$iface_name.pcap > /dev/null 2> /dev/null &"
 	}
 
 	if { $bkg == "" } {
 		set output [execCmdsNode $node_id $cmds]
-		writeDataToNodeFile $node_id "tcpdump_start.log" $output
+		writeDataToNodeFile $node_id $tcpdump_log $output
 	} else {
-		execCmdsNodeBkg $node_id $cmds "tcpdump_start.log 2>&1"
+		execCmdsNodeBkg $node_id $cmds "$tcpdump_log 2>&1"
 	}
 }
 
 proc $service.stop { node_id { bkg "" } } {
+	set eid [getFromRunning "eid"]
+	set VROOT_RUNTIME [getVrootDir]/$eid/$node_id
+	set tcpdump_log "$VROOT_RUNTIME/tcpdump_stop.log"
+
+	lappend cmds "test -d $VROOT_RUNTIME || mkdir -p $VROOT_RUNTIME"
 	lappend cmds "pkill tcpdump"
 
 	if { $bkg == "" } {
 		set output [execCmdsNode $node_id $cmds]
-		writeDataToNodeFile $node_id "tcpdump_stop.log" $output
+		writeDataToNodeFile $node_id $tcpdump_log $output
 	} else {
-		execCmdsNodeBkg $node_id $cmds "tcpdump_stop.log 2>&1"
+		execCmdsNodeBkg $node_id $cmds "$tcpdump_log 2>&1"
 	}
 
-	set ext_dir /tmp/[getFromRunning "eid"]/
+	set ext_dir /tmp/$eid/
 	rexec mkdir -p $ext_dir
 	foreach iface_id [allIfcList $node_id] {
 		set iface_name [getIfcName $node_id $iface_id]
 		if { [string match "lo*" $iface_name] } {
 			continue
 		}
-		moveFileFromNode $node_id /tmp/$iface_name.pcap $ext_dir/[getNodeName $node_id]\_$node_id\_$iface_name.pcap
+		moveFileFromNode $node_id $VROOT_RUNTIME/$iface_name.pcap $ext_dir/[getNodeName $node_id]\_$node_id\_$iface_name.pcap
 	}
 }
 
@@ -208,26 +228,37 @@ proc $service.restart { node_id } {
 # inetd services helper functions
 #
 proc inetd.start { service node_id { bkg "" } } {
-	lappend cmds "sed -i -e \"s/^#$service/$service/ ; s/^#<off># $service/$service/\" /etc/inetd.conf"
+	set eid [getFromRunning "eid"]
+	set VROOT_RUNTIME [getVrootDir]/$eid/$node_id
+	set service_log "$VROOT_RUNTIME/$service\_start.log"
+
+	lappend cmds "test -d $VROOT_RUNTIME || mkdir -p $VROOT_RUNTIME"
+	lappend cmds "sed -i -e \"s/^#$service/$service/\" /etc/inetd.conf"
+	lappend cmds "sed -i -e \"s/^#.off.#.$service/$service/\" /etc/inetd.conf"
 	lappend cmds [inetdServiceRestartCmds]
 
 	if { $bkg == "" } {
 		set output [execCmdsNode $node_id $cmds]
-		writeDataToNodeFile $node_id "$service\_start.log" $output
+		writeDataToNodeFile $node_id $service_log $output
 	} else {
-		execCmdsNodeBkg $node_id $cmds "$service\_start.log"
+		execCmdsNodeBkg $node_id $cmds "$service_log 2>&1"
 	}
 }
 
 proc inetd.stop { service node_id { bkg "" } } {
+	set eid [getFromRunning "eid"]
+	set VROOT_RUNTIME [getVrootDir]/$eid/$node_id
+	set service_log "$VROOT_RUNTIME/$service\_stop.log"
+
+	lappend cmds "test -d $VROOT_RUNTIME || mkdir -p $VROOT_RUNTIME"
 	lappend cmds "sed -i -e \"s/^$service/#$service/\" /etc/inetd.conf"
 	lappend cmds [inetdServiceRestartCmds]
 
 	if { $bkg == "" } {
 		set output [execCmdsNode $node_id $cmds]
-		writeDataToNodeFile $node_id "$service\_stop.log" $output
+		writeDataToNodeFile $node_id $service_log $output
 	} else {
-		execCmdsNodeBkg $node_id $cmds "$service\_stop.log"
+		execCmdsNodeBkg $node_id $cmds "$service_log 2>&1"
 	}
 }
 
@@ -240,6 +271,7 @@ regHooks $service {NODECONF NODESTOP}
 
 proc $service.start { node_id { bkg "" } } {
 	global service
+
 	inetd.start ftp $node_id $bkg
 }
 
@@ -285,26 +317,47 @@ set service ipsec
 regHooks $service {NODECONF NODESTOP}
 
 proc $service.start { node_id { bkg "" } } {
+	set eid [getFromRunning "eid"]
+	set VROOT_RUNTIME [getVrootDir]/$eid/$node_id
+	set ipsec_log "$VROOT_RUNTIME/ipsec_service.log"
+
+	lappend cmds "test -d $VROOT_RUNTIME || mkdir -p $VROOT_RUNTIME"
+	lappend cmds "ipsec start"
+
 	nodeIpsecInit $node_id
 	if { $bkg == "" } {
-		set output [execCmdNode $node_id "ipsec start"]
-		writeDataToNodeFile $node_id "ipsec_service.log" $output
+		set output [execCmdsNode $node_id $cmds]
+		writeDataToNodeFile $node_id $ipsec_log $output
 	} else {
-		execCmdNodeBkg $node_id "ipsec start >> ipsec_service.log"
+		execCmdsNodeBkg $node_id $cmds "$ipsec_log 2>&1"
 	}
 }
 
 proc $service.stop { node_id { bkg "" } } {
+	set eid [getFromRunning "eid"]
+	set VROOT_RUNTIME [getVrootDir]/$eid/$node_id
+	set ipsec_log "$VROOT_RUNTIME/ipsec_service.log"
+
+	lappend cmds "test -d $VROOT_RUNTIME || mkdir -p $VROOT_RUNTIME"
+	lappend cmds "ipsec stop"
+
 	if { $bkg == "" } {
-		set output [execCmdNode $node_id "ipsec stop"]
-		writeDataToNodeFile $node_id "ipsec_service.log" $output
+		set output [execCmdsNode $node_id $cmds]
+		writeDataToNodeFile $node_id $ipsec_log $output
 	} else {
-		execCmdNodeBkg $node_id "ipsec stop >> ipsec_service.log"
+		execCmdsNodeBkg $node_id $cmds "$ipsec_log 2>&1"
 	}
 }
 
 proc $service.restart { node_id } {
-	set output [execCmdNode $node_id "ipsec restart"]
-	writeDataToNodeFile $node_id "ipsec_service.log" $output
+	set eid [getFromRunning "eid"]
+	set VROOT_RUNTIME [getVrootDir]/$eid/$node_id
+	set ipsec_log "$VROOT_RUNTIME/ipsec_service.log"
+
+	lappend cmds "test -d $VROOT_RUNTIME || mkdir -p $VROOT_RUNTIME"
+	lappend cmds "ipsec stop"
+
+	set output [execCmdsNode $node_id $cmds]
+	writeDataToNodeFile $node_id $ipsec_log $output
 }
 ######################################################################

@@ -2174,8 +2174,8 @@ proc checkForErrors { nodes nodes_count w } {
 
 		set msg "Timeout detected while configuring nodes:\n"
 		append msg "$skip_err_nodes\n"
-		append msg "Check their /err.log, /out.log and /boot.conf (or "
-		append msg "/custom.conf) files."
+		append msg "Check their err.log, out.log and boot.conf (or "
+		append msg "custom.conf) files in /var/imunes/*/*/."
 
 		if { $gui && $execMode != "batch" } {
 			after idle {.dialog1.msg configure -wraplength 4i}
@@ -2190,8 +2190,8 @@ proc checkForErrors { nodes nodes_count w } {
 	if { $err_nodes != "" } {
 		set msg "Issues encountered while configuring nodes:\n"
 		append msg "$err_nodes\n"
-		append msg "Check their /err.log, /out.log and /boot.conf (or "
-		append msg "/custom.conf) files."
+		append msg "Check their err.log, out.log and boot.conf (or "
+		append msg "custom.conf) files in /var/imunes/*/*/."
 
 		if { $gui && $execMode != "batch" } {
 			after idle {.dialog1.msg configure -wraplength 4i}
@@ -2269,8 +2269,8 @@ proc checkForErrorsIfaces { nodes nodes_count w } {
 
 		set msg "Timeout detected while configuring node interfaces:\n"
 		append msg "$skip_err_nodes\n"
-		append msg "Check their /err_ifaces.log, /out_ifaces.log and "
-		append msg "/boot_ifaces.conf (or /custom_ifaces.conf) files."
+		append msg "Check their err_ifaces.log, out_ifaces.log and "
+		append msg "boot_ifaces.conf (or custom_ifaces.conf) files in /var/imunes/*/*/."
 
 		if { $gui && $execMode != "batch" } {
 			after idle {.dialog1.msg configure -wraplength 4i}
@@ -2285,8 +2285,8 @@ proc checkForErrorsIfaces { nodes nodes_count w } {
 	if { $err_nodes != "" } {
 		set msg "Issues encountered while configuring interfaces on nodes:\n"
 		append msg "$err_nodes\n"
-		append msg "Check their /err_ifaces.log, /out_ifaces.log and "
-		append msg "/boot_ifaces.conf files."
+		append msg "Check their err_ifaces.log, out_ifaces.log and "
+		append msg "boot_ifaces.conf (or custom_ifaces.conf) files in /var/imunes/*/*/."
 
 		if { $gui && $execMode != "batch" } {
 			after idle { .dialog1.msg configure -wraplength 4i }

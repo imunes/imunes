@@ -490,6 +490,9 @@ namespace eval genericL3 {
 
 		addStateNode $node_id "init_configuring"
 
+		set VROOT_RUNTIME [getVrootDir]/$eid/$node_id
+		set init_fname "$VROOT_RUNTIME/init"
+
 		set cmd {}
 		if { $isOSlinux } {
 			array set sysctls {
@@ -516,20 +519,25 @@ namespace eval genericL3 {
 			set cmds [join $cmd "; "]
 		}
 
+		set cmds "test -d $VROOT_RUNTIME || mkdir -p $VROOT_RUNTIME ; $cmds"
+
 		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-d"]
-		pipesExec "$os_cmd sh -c '$cmds ; touch /tmp/init'" "hold"
+		pipesExec "$os_cmd sh -c '$cmds ; touch $init_fname'" "hold"
 	}
 
 	proc nodeInitConfigure_check { eid node_id } {
 		global isOSlinux isOSfreebsd
 
+		set VROOT_RUNTIME [getVrootDir]/$eid/$node_id
+		set init_fname "$VROOT_RUNTIME/init"
+
 		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id]
 		if { $isOSlinux } {
-			set cmds "$os_cmd ls /tmp/init >/dev/null"
+			set cmds "$os_cmd ls $init_fname >/dev/null"
 		}
 
 		if { $isOSfreebsd } {
-			set cmds "$os_cmd rm /tmp/init >/dev/null"
+			set cmds "$os_cmd rm $init_fname >/dev/null"
 		}
 
 		set cmds [getTimeoutCmd "nodecreate_timeout" $cmds]
@@ -797,6 +805,11 @@ namespace eval genericL3 {
 	proc nodeIfacesConfigure { eid node_id ifaces } {
 		addStateNode $node_id "ifaces_configuring"
 
+		set VROOT_RUNTIME [getVrootDir]/$eid/$node_id
+		set startup_fname "$VROOT_RUNTIME/IFACES_CONFIG.pid"
+		set out_ifaces_log "$VROOT_RUNTIME/out_ifaces.log"
+		set err_ifaces_log "$VROOT_RUNTIME/err_ifaces.log"
+
 		foreach iface_id $ifaces {
 			if { [isRunningNodeIface $node_id $iface_id] } {
 				continue
@@ -817,21 +830,21 @@ namespace eval genericL3 {
 		if { [getNodeCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
 			set bootcmd [getNodeCustomConfigCommand $node_id "IFACES_CONFIG" $custom_selected]
 			set bootcfg [getNodeCustomConfig $node_id "IFACES_CONFIG" $custom_selected]
-			set confFile "custom_ifaces.conf"
+			set confFile "$VROOT_RUNTIME/custom_ifaces.conf"
 		} else {
 			set bootcfg [join [invokeNodeProc $node_id "generateConfigIfaces" $node_id $ifaces] "\n"]
 			set bootcmd [invokeNodeProc $node_id "bootcmd" $node_id]
-			set confFile "boot_ifaces.conf"
+			set confFile "$VROOT_RUNTIME/boot_ifaces.conf"
 		}
 
-		set startup_fname "/IFACES_CONFIG.pid"
 		writeDataToNodeFile $node_id $startup_fname ""
 
 		set cfg "set -x\necho $$ > $startup_fname\n$bootcfg"
-		writeDataToNodeFile $node_id /$confFile $cfg
+		writeDataToNodeFile $node_id $confFile $cfg
 
-		set cmds "rm -f /out_ifaces.log /err_ifaces.log ;"
-		set cmds "$cmds $bootcmd /$confFile > /out_ifaces.log 2> /err_ifaces.log ;"
+		set cmds "test -d $VROOT_RUNTIME || mkdir -p $VROOT_RUNTIME ;"
+		set cmds "$cmds rm -f $out_ifaces_log $err_ifaces_log ;"
+		set cmds "$cmds $bootcmd $confFile > $out_ifaces_log 2> $err_ifaces_log ;"
 
 		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-d"]
 
@@ -839,7 +852,9 @@ namespace eval genericL3 {
 	}
 
 	proc nodeIfacesConfigure_check { eid node_id ifaces } {
-		set startup_fname "/IFACES_CONFIG.pid"
+		set VROOT_RUNTIME [getVrootDir]/$eid/$node_id
+		set startup_fname "$VROOT_RUNTIME/IFACES_CONFIG.pid"
+
 		set cmds "test -n \"\$(cat $startup_fname 2>/dev/null)\" && ! kill -0 \$(cat $startup_fname) 2>/dev/null"
 
 		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-t"]
@@ -882,28 +897,33 @@ namespace eval genericL3 {
 	proc nodeConfigure { eid node_id } {
 		addStateNode $node_id "node_configuring"
 
+		set VROOT_RUNTIME [getVrootDir]/$eid/$node_id
+		set startup_fname "$VROOT_RUNTIME/NODE_CONFIG.pid"
+		set out_log "$VROOT_RUNTIME/out.log"
+		set err_log "$VROOT_RUNTIME/err.log"
+
 		set custom_selected [getNodeCustomConfigSelected $node_id "NODE_CONFIG"]
 		if { [getNodeCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
 			set bootcmd [getNodeCustomConfigCommand $node_id "NODE_CONFIG" $custom_selected]
 			set bootcfg [getNodeCustomConfig $node_id "NODE_CONFIG" $custom_selected]
 			set bootcfg "$bootcfg\n[join [invokeNodeProc $node_id "generateConfig" $node_id] "\n"]"
-			set confFile "custom.conf"
+			set confFile "$VROOT_RUNTIME/custom.conf"
 		} else {
 			set bootcfg [join [invokeNodeProc $node_id "generateConfig" $node_id] "\n"]
 			set bootcmd [invokeNodeProc $node_id "bootcmd" $node_id]
-			set confFile "boot.conf"
+			set confFile "$VROOT_RUNTIME/boot.conf"
 		}
 
 		generateHostsFile $node_id
 
-		set startup_fname "/NODE_CONFIG.pid"
 		writeDataToNodeFile $node_id $startup_fname ""
 
 		set cfg "set -x\necho $$ > $startup_fname\n$bootcfg"
-		writeDataToNodeFile $node_id /$confFile $cfg
+		writeDataToNodeFile $node_id $confFile $cfg
 
-		set cmds "rm -f /out.log /err.log ;"
-		set cmds "$cmds $bootcmd /$confFile > /out.log 2> /err.log ;"
+		set cmds "test -d $VROOT_RUNTIME || mkdir -p $VROOT_RUNTIME ;"
+		set cmds "$cmds rm -f $out_log $err_log ;"
+		set cmds "$cmds $bootcmd $confFile > $out_log 2> $err_log ;"
 
 		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-d"]
 
@@ -913,7 +933,9 @@ namespace eval genericL3 {
 	proc nodeConfigure_check { eid node_id } {
 		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-t"]
 
-		set startup_fname "/NODE_CONFIG.pid"
+		set VROOT_RUNTIME [getVrootDir]/$eid/$node_id
+		set startup_fname "$VROOT_RUNTIME/NODE_CONFIG.pid"
+
 		set cmds "test -n \"\$(cat $startup_fname 2>/dev/null)\" && ! kill -0 \$(cat $startup_fname) 2>/dev/null"
 		set cmds "$os_cmd sh -c '$cmds'"
 
@@ -932,7 +954,10 @@ namespace eval genericL3 {
 	proc isNodeError { eid node_id } {
 		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id]
 
-		set cmds "test ! -f /err.log || sed \"/^+ /d\" /err.log"
+		set VROOT_RUNTIME [getVrootDir]/$eid/$node_id
+		set err_log "$VROOT_RUNTIME/err.log"
+
+		set cmds "test ! -f $err_log || sed \"/^+ /d\" $err_log"
 		set cmds "$os_cmd sh -c '$cmds'"
 
 		set cmds [getTimeoutCmd "nodeconf_timeout" $cmds]
@@ -953,7 +978,10 @@ namespace eval genericL3 {
 	proc isNodeErrorIfaces { eid node_id } {
 		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id]
 
-		set cmds "test ! -f /err_ifaces.log || sed \"/^+ /d\" /err_ifaces.log"
+		set VROOT_RUNTIME [getVrootDir]/$eid/$node_id
+		set err_ifaces_log "$VROOT_RUNTIME/err_ifaces.log"
+
+		set cmds "test ! -f $err_ifaces_log || sed \"/^+ /d\" $err_ifaces_log"
 		set cmds "$os_cmd sh -c '$cmds'"
 
 		set cmds [getTimeoutCmd "ifacesconf_timeout" $cmds]
@@ -978,6 +1006,12 @@ namespace eval genericL3 {
 	proc nodeUnconfigure { eid node_id } {
 		addStateNode $node_id "node_unconfiguring"
 
+		set VROOT_RUNTIME [getVrootDir]/$eid/$node_id
+		set startup_fname "$VROOT_RUNTIME/NODE_UNCONFIG.pid"
+		set confFile "$VROOT_RUNTIME/unboot.conf"
+		set out_log "$VROOT_RUNTIME/out.log"
+		set err_log "$VROOT_RUNTIME/err.log"
+
 		set custom_selected [getNodeCustomConfigSelected $node_id "NODE_CONFIG"]
 		if { [getNodeCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
 			return
@@ -985,22 +1019,24 @@ namespace eval genericL3 {
 
 		set bootcfg [join [invokeNodeProc $node_id "generateUnconfig" $node_id] "\n"]
 		set bootcmd [invokeNodeProc $node_id "bootcmd" $node_id]
-		set confFile "unboot.conf"
 
-		set startup_fname "/NODE_UNCONFIG.pid"
 		writeDataToNodeFile $node_id $startup_fname ""
 
 		set cfg "set -x\necho $$ > $startup_fname\n$bootcfg"
-		writeDataToNodeFile $node_id /$confFile $cfg
+		writeDataToNodeFile $node_id $confFile $cfg
 
-		set cmds "rm -f /out_ifaces.log /err_ifaces.log ;"
-		set cmds "$cmds $bootcmd /$confFile > /out_ifaces.log 2> /err_ifaces.log ;"
+		set cmds "test -d $VROOT_RUNTIME || mkdir -p $VROOT_RUNTIME ;"
+		set cmds "$cmds rm -f $out_log $err_log ;"
+		set cmds "$cmds $bootcmd $confFile > $out_log 2> $err_log ;"
 
 		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-d"]
 		pipesExec "$os_cmd sh -c '$cmds'" "hold"
 	}
 
 	proc nodeUnconfigure_check { eid node_id } {
+		set VROOT_RUNTIME [getVrootDir]/$eid/$node_id
+		set startup_fname "$VROOT_RUNTIME/NODE_UNCONFIG.pid"
+
 		set custom_selected [getNodeCustomConfigSelected $node_id "NODE_CONFIG"]
 		if { [getNodeCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
 			removeStateNode $node_id "error"
@@ -1010,7 +1046,6 @@ namespace eval genericL3 {
 
 		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-t"]
 
-		set startup_fname "/NODE_UNCONFIG.pid"
 		set cmds "test -n \"\$(cat $startup_fname 2>/dev/null)\" && ! kill -0 \$(cat $startup_fname) 2>/dev/null"
 		set cmds "$os_cmd sh -c '$cmds'"
 
@@ -1031,26 +1066,34 @@ namespace eval genericL3 {
 
 		addStateNode $node_id "node_shutting"
 
+		set VROOT_RUNTIME [getVrootDir]/$eid/$node_id
+		set shut_fname "$VROOT_RUNTIME/shut"
+
 		killExtProcess "wireshark.*[getNodeName $node_id].*\\($eid\\)"
 		killExtProcess "socat.*$eid/$node_id.*"
 
 		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-d"]
+
+		pipesExec "$os_cmd sh -c 'test -d $VROOT_RUNTIME || mkdir -p $VROOT_RUNTIME'" "hold"
 		if { $isOSlinux } {
 			# kill all processes except pid 1 and its child(ren)
-			pipesExec "$os_cmd sh -c 'killall5 -9 -o 1 -o \$(pgrep -P 1) ; touch /tmp/shut'" "hold"
+			pipesExec "$os_cmd sh -c 'killall5 -9 -o 1 -o \$(pgrep -P 1) ; touch $shut_fname'" "hold"
 		}
 
 		if { $isOSfreebsd } {
 			pipesExec "$os_cmd kill -9 -1 2> /dev/null" "hold"
 			pipesExec "$os_cmd tcpdrop -a 2> /dev/null" "hold"
 
-			pipesExec "$os_cmd touch /tmp/shut" "hold"
+			pipesExec "$os_cmd touch $shut_fname" "hold"
 		}
 	}
 
 	proc nodeShutdown_check { eid node_id } {
+		set VROOT_RUNTIME [getVrootDir]/$eid/$node_id
+		set shut_fname "$VROOT_RUNTIME/shut"
+
 		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id]
-		set cmds "rm /tmp/shut >/dev/null"
+		set cmds "rm $shut_fname >/dev/null"
 		set cmds "$os_cmd sh -c '$cmds'"
 
 		set cmds [getTimeoutCmd "nodeconf_timeout" $cmds]
@@ -1088,6 +1131,12 @@ namespace eval genericL3 {
 	}
 
 	proc nodeIfacesUnconfigure { eid node_id ifaces } {
+		set VROOT_RUNTIME [getVrootDir]/$eid/$node_id
+		set startup_fname "$VROOT_RUNTIME/IFACES_UNCONFIG.pid"
+		set confFile "$VROOT_RUNTIME/unboot_ifaces.conf"
+		set out_ifaces_log "$VROOT_RUNTIME/out_ifaces.log"
+		set err_ifaces_log "$VROOT_RUNTIME/err_ifaces.log"
+
 		set custom_selected [getNodeCustomConfigSelected $node_id "IFACES_CONFIG"]
 		if { [getNodeCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
 			return
@@ -1108,16 +1157,15 @@ namespace eval genericL3 {
 
 		set bootcfg [join [invokeNodeProc $node_id "generateUnconfigIfaces" $node_id $ifaces] "\n"]
 		set bootcmd [invokeNodeProc $node_id "bootcmd" $node_id]
-		set confFile "unboot_ifaces.conf"
 
-		set startup_fname "/IFACES_UNCONFIG.pid"
 		writeDataToNodeFile $node_id $startup_fname ""
 
 		set cfg "set -x\necho $$ > $startup_fname\n$bootcfg"
-		writeDataToNodeFile $node_id /$confFile $cfg
+		writeDataToNodeFile $node_id $confFile $cfg
 
-		set cmds "rm -f /out_ifaces.log /err_ifaces.log ;"
-		set cmds "$cmds $bootcmd /$confFile > /out_ifaces.log 2> /err_ifaces.log ;"
+		set cmds "test -d $VROOT_RUNTIME || mkdir -p $VROOT_RUNTIME ;"
+		set cmds "$cmds rm -f $out_ifaces_log $err_ifaces_log ;"
+		set cmds "$cmds $bootcmd $confFile > $out_ifaces_log 2> $err_ifaces_log ;"
 
 		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-d"]
 		pipesExec "$os_cmd sh -c '$cmds'" "hold"
@@ -1125,7 +1173,10 @@ namespace eval genericL3 {
 
 	proc nodeIfacesUnconfigure_check { eid node_id ifaces } {
 		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-t"]
-		set startup_fname "/IFACES_UNCONFIG.pid"
+
+		set VROOT_RUNTIME [getVrootDir]/$eid/$node_id
+		set startup_fname "$VROOT_RUNTIME/IFACES_UNCONFIG.pid"
+
 		set cmds "test -n \"\$(cat $startup_fname 2>/dev/null)\" && ! kill -0 \$(cat $startup_fname) 2>/dev/null"
 		set cmds "$os_cmd sh -c '$cmds'"
 
