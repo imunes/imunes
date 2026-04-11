@@ -1335,6 +1335,8 @@ proc button3node { x y } {
 		#
 		set tmp_command [list apply {
 			{ ip_version } {
+				global main_canvas_elem
+
 				if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
 					setToExecuteVars "terminate_cfg" [cfgGet]
 				}
