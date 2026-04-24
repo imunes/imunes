@@ -2136,12 +2136,7 @@ proc matchSubnet { ip_version node_id iface_id subnet } {
 		setToExecuteVars "terminate_cfg" [cfgGet]
 	}
 
-
-	if { $ip_version == "ipv4" } {
-		assignIPv4Subnet $node_id $iface_id [selectedNodes] $subnet
-	} else {
-		assignIPv6Subnet $node_id $iface_id [selectedNodes] $subnet
-	}
+	assignSubnet $ip_version $node_id $iface_id [selectedNodes] $subnet
 
 	if { [getFromRunning "stop_sched"] } {
 		redeployCfg
@@ -2157,35 +2152,30 @@ proc matchSubnet { ip_version node_id iface_id subnet } {
 proc addressChangeDialog { ip_version node_id iface_id } {
 	global $ip_version
 
-	if { $ip_version == "ipv4" } {
-		set text_prefix "IPv4"
-		set check_proc "checkIPv4Net"
-		set template_ip [nextFreeIP4Addr [getNextIPv4addr "" [getFromRunning "ipv4_used_list"]] 0 {}]
-	} else {
-		set text_prefix "IPv6"
-		set check_proc "checkIPv6Net"
-		set template_ip [nextFreeIP6Addr [getNextIPv6addr "" [getFromRunning "ipv6_used_list"]] 0 {}]
-	}
+	set ip_version_num [string index $ip_version 3]
 
 	set top_elem .entry1
 	catch { destroy $top_elem }
 	toplevel $top_elem
 	wm transient $top_elem .
-	wm title $top_elem "$text_prefix autonumbering subnet"
-	wm iconname $top_elem "$text_prefix subnet"
+	wm title $top_elem "IPv${ip_version_num} autonumbering subnet"
+	wm iconname $top_elem "IPv${ip_version_num} subnet"
 	grab $top_elem
 
 	set main_frame [ttk::frame $top_elem.ipframe]
 	pack $main_frame -fill both -expand 1
 
-	set label_elem [ttk::label $main_frame.msg -text "$text_prefix subnet:"]
+	set label_elem [ttk::label $main_frame.msg -text "IPv${ip_version_num} subnet:"]
 	pack $label_elem -side top
 
 	set entry_elem [ttk::entry $main_frame.e1 -width 27 -validate focus -invalidcommand "focusAndFlash %W"]
-	$entry_elem insert 0 $template_ip
+
+	# findFreeIPv4Subnet/findFreeIPv6Subnet ipv4_used_list/ipv6_used_list
+	$entry_elem insert 0 [findFreeIPv${ip_version_num}Subnet "" [getFromRunning "ipv${ip_version_num}_used_list"]]
 	pack $entry_elem -side top -pady 5 -padx 10 -fill x
 
-	$entry_elem configure -invalidcommand { $check_proc %P }
+	# checkIPv4Net/checkIPv6Net
+	$entry_elem configure -invalidcommand { checkIPv${ip_version_num}Net %P }
 
 	set buttons_frame [ttk::frame $main_frame.buttons]
 	pack $buttons_frame -side bottom -fill x -pady 2m

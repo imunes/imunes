@@ -52,8 +52,8 @@ namespace eval genericL3 {
 	}
 
 	proc confNewIfc { node_id iface_id } {
-		autoIPv4addr $node_id $iface_id
-		autoIPv6addr $node_id $iface_id
+		autoIPAddr "ipv4" $node_id $iface_id
+		autoIPAddr "ipv6" $node_id $iface_id
 		autoMACaddr $node_id $iface_id
 	}
 

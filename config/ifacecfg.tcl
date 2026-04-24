@@ -842,7 +842,7 @@ proc updateIface { node_id iface_id old_iface_cfg new_iface_cfg } {
 
 			"ipv4_addrs" {
 				if { $iface_prop_new_value == "auto" } {
-					autoIPv4addr $node_id $iface_id
+					autoIPAddr "ipv4" $node_id $iface_id
 				} else {
 					setIfcIPv4addrs $node_id $iface_id $iface_prop_new_value
 				}
@@ -850,7 +850,7 @@ proc updateIface { node_id iface_id old_iface_cfg new_iface_cfg } {
 
 			"ipv6_addrs" {
 				if { $iface_prop_new_value == "auto" } {
-					autoIPv6addr $node_id $iface_id
+					autoIPAddr "ipv6" $node_id $iface_id
 				} else {
 					setIfcIPv6addrs $node_id $iface_id $iface_prop_new_value
 				}

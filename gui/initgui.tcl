@@ -497,6 +497,8 @@ set tmp_command {
 .menubar.tools add command -label "IPv4 address pool" -underline 3 \
 	-command $tmp_command
 set tmp_command {
+	global numbits6
+
 	set w .entry1
 	catch { destroy $w }
 	toplevel $w
@@ -517,6 +519,19 @@ set tmp_command {
 	pack $w.ipv6frame.e1 -side top -pady 5 -padx 10 -fill x
 
 	$w.ipv6frame.e1 configure -invalidcommand { checkIPv6Net %P }
+
+	ttk::frame $w.ipv6frame.steps
+	pack $w.ipv6frame.steps -fill both -expand 1
+	ttk::label $w.ipv6frame.steps.stepl -text "Next subnet increment (bits):" -anchor e
+	ttk::spinbox $w.ipv6frame.steps.stepv -width 5 \
+		-validate focus -invalidcommand "focusAndFlash %W"
+	$w.ipv6frame.steps.stepv insert 1 $numbits6
+	$w.ipv6frame.steps.stepv configure \
+		-from 1 -to 128 -increment 1 \
+		-validatecommand { checkIntRange %P 1 128 }
+
+	pack $w.ipv6frame.steps.stepl -fill y
+	pack $w.ipv6frame.steps.stepv -fill both -padx 10
 
 	ttk::frame $w.ipv6frame.buttons
 	pack $w.ipv6frame.buttons -side bottom -fill x -pady 2m

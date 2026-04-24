@@ -61,13 +61,25 @@ namespace eval ${MODULE}::gui {
 		global mac_byte4 mac_byte5
 		global node_existing_mac node_existing_ipv4 node_existing_ipv6
 
-		set ipv4addr [getNextIPv4addr [_getNodeType $node_cfg] $node_existing_ipv4]
-		lappend node_existing_ipv4 $ipv4addr
-		set node_cfg [_setIfcIPv4addrs $node_cfg $iface_id $ipv4addr]
+		set min_ip [_invokeNodeProc $node_cfg "IPAddrRange"]
 
-		set ipv6addr [getNextIPv6addr [_getNodeType $node_cfg] $node_existing_ipv6]
-		lappend node_existing_ipv6 $ipv6addr
-		set node_cfg [_setIfcIPv6addrs $node_cfg $iface_id $ipv6addr]
+		if { [getActiveOption "IPv4autoAssign"] } {
+			set template_ipv4 [findFreeIPv4Subnet "" $node_existing_ipv4]
+			set ipv4addr [nextAddrInSubnet "ipv4" $template_ipv4 $node_existing_ipv4 $min_ip]
+			if { $ipv4addr != "" } {
+				lappend node_existing_ipv4 $ipv4addr
+				set node_cfg [_setIfcIPv4addrs $node_cfg $iface_id $ipv4addr]
+			}
+		}
+
+		if { [getActiveOption "IPv6autoAssign"] } {
+			set template_ipv6 [findFreeIPv6Subnet "" $node_existing_ipv6]
+			set ipv6addr [nextAddrInSubnet "ipv6" $template_ipv6 $node_existing_ipv6 $min_ip]
+			if { $ipv6addr != "" } {
+				lappend node_existing_ipv6 $ipv6addr
+				set node_cfg [_setIfcIPv6addrs $node_cfg $iface_id $ipv6addr]
+			}
+		}
 
 		set bkp_mac_byte4 $mac_byte4
 		set bkp_mac_byte5 $mac_byte5

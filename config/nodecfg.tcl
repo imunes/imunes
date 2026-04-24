@@ -1590,13 +1590,8 @@ proc getSubnetIfaces { node_id iface_id } {
 }
 
 proc getSubnetAddrsByPrio { ip_version node_id iface_id { ignore_self "true" } } {
+	set ip_version_num [string index $ip_version 3]
 	set nodes_ifaces [getSubnetIfaces $node_id $iface_id]
-
-	if { $ip_version == "ipv4" } {
-		set getter_proc "getIfcIPv4addrs"
-	} else {
-		set getter_proc "getIfcIPv6addrs"
-	}
 
 	set sorted_nodes_ifaces [lsort -integer -decreasing -index 0 $nodes_ifaces]
 	foreach node_subnet_data $sorted_nodes_ifaces {
@@ -1605,7 +1600,8 @@ proc getSubnetAddrsByPrio { ip_version node_id iface_id { ignore_self "true" } }
 			continue
 		}
 
-		set addrs [$getter_proc $subnet_node_id $subnet_iface_id]
+		# getIfcIPv4addrs/getIfcIPv6addrs
+		set addrs [getIfcIPv${ip_version_num}addrs $subnet_node_id $subnet_iface_id]
 		if { $addrs != {} } {
 			return [lindex $addrs 0]
 		}
@@ -1614,22 +1610,11 @@ proc getSubnetAddrsByPrio { ip_version node_id iface_id { ignore_self "true" } }
 
 # returns next free IP address and all gateway IP addresses in subnet
 proc getSubnetNextIpAndGateways { ip_version orig_node_id orig_iface_id { nodes "*" } } {
+	set ip_version_num [string index $ip_version 3]
 	set orig_priority [invokeNodeProc $orig_node_id "getSubnetPriority" $orig_node_id $orig_iface_id]
 
 	set subnet_addrs {}
 	set subnet_gws [dict create]
-
-	if { $ip_version == "ipv4" } {
-		set getter_proc "getIfcIPv4addrs"
-		set next_addr_proc "getNextIPv4addr"
-		set next_subnet_proc "nextFreeIP4Addr"
-		set used_list [getFromRunning "ipv4_used_list"]
-	} else {
-		set getter_proc "getIfcIPv6addrs"
-		set next_addr_proc "getNextIPv6addr"
-		set next_subnet_proc "nextFreeIP6Addr"
-		set used_list [getFromRunning "ipv6_used_list"]
-	}
 
 	foreach node_subnet_data [getSubnetIfaces $orig_node_id $orig_iface_id] {
 		lassign $node_subnet_data gw_priority node_id iface_id
@@ -1637,7 +1622,8 @@ proc getSubnetNextIpAndGateways { ip_version orig_node_id orig_iface_id { nodes 
 			continue
 		}
 
-		set addr [lindex [$getter_proc $node_id $iface_id] 0]
+		# getIfcIPv4addrs/getIfcIPv6addrs
+		set addr [lindex [getIfcIPv${ip_version_num}addrs $node_id $iface_id] 0]
 		if { $addr == "" || $addr == "dhcp"} {
 			continue
 		}
@@ -1649,26 +1635,29 @@ proc getSubnetNextIpAndGateways { ip_version orig_node_id orig_iface_id { nodes 
 		lappend subnet_addrs $addr
 	}
 
-	if { $subnet_addrs == {} } {
-		return [list [$next_addr_proc [getNodeType $orig_node_id] $used_list] {}]
-	}
-
-	set subnet_gws [concat {*}[dict values [lsort -decreasing -stride 2 -index 0 $subnet_gws]]]
-	if { $subnet_gws != {} } {
-		set template_ip [lindex $subnet_gws 0]
-	} else {
-		set template_ip [lindex $subnet_addrs 0]
-	}
-
 	set min_ip [invokeNodeProc $orig_node_id "IPAddrRange"]
 	if { $min_ip == "" } {
 		set min_ip 0
 	}
-	if { $ip_version == "ipv6" } {
-		set min_ip [expr 0x$min_ip]
+
+	if { $subnet_addrs == {} } {
+		set subnet_gws {}
+
+		# ipv4_used_list/ipv6_used_list
+		set subnet_addrs [getFromRunning "ipv${ip_version_num}_used_list"]
+
+		# findFreeIPv4Subnet/findFreeIPv6Subnet
+		set template_ip [findFreeIPv${ip_version_num}Subnet "" $subnet_addrs]
+	} else {
+		set subnet_gws [concat {*}[dict values [lsort -decreasing -stride 2 -index 0 $subnet_gws]]]
+		if { $subnet_gws != {} } {
+			set template_ip [lindex $subnet_gws 0]
+		} else {
+			set template_ip [lindex $subnet_addrs 0]
+		}
 	}
 
-	return [list [$next_subnet_proc $template_ip $min_ip $subnet_addrs] $subnet_gws]
+	return [list [nextAddrInSubnet $ip_version $template_ip $subnet_addrs $min_ip] $subnet_gws]
 }
 
 proc appendNodeSubnetRoutes { node_id routes { ip_version "both" } } {
@@ -1698,4 +1687,177 @@ proc appendNodeSubnetRoutes { node_id routes { ip_version "both" } } {
 	}
 
 	return $routes
+}
+
+proc assignSubnet { ip_version node_id iface_id selected { subnet "" } } {
+	set ip_version_num [string index $ip_version 3]
+	if { $ip_version == "ipv4" } {
+		set overlap_proc "::ip::isOverlap"
+	} else {
+		set overlap_proc "ip6_isOverlap"
+	}
+
+	if { $subnet == "" } {
+		lassign [getSubnetNextIpAndGateways $ip_version $node_id $iface_id] subnet -
+	}
+
+	set nodes_ifaces [getSubnetIfaces $node_id $iface_id]
+
+	# first, get all non-selected used addresses from this subnet
+	set used_addrs {}
+	foreach node_subnet_data $nodes_ifaces {
+		lassign $node_subnet_data priority subnet_node_id subnet_iface_id
+
+		# getIfcIPv4addrs/getIfcIPv6addrs
+		set cur_addrs [getIfcIPv${ip_version_num}addrs $subnet_node_id $subnet_iface_id]
+
+		if { $priority >= 0 && $subnet_node_id in $selected } {
+			# skip if we're the main gateway
+			foreach cur_addr $cur_addrs {
+				set subnet_mask [ip::mask $subnet]
+				set cur_mask [ip::mask $cur_addr]
+				if { $subnet_mask == $cur_mask && [$overlap_proc $subnet $cur_addr] } {
+					lappend used_addrs {*}$cur_addrs
+					set nodes_ifaces [removeFromList $nodes_ifaces [list $node_subnet_data]]
+
+					break
+				}
+			}
+
+			continue
+		}
+
+		if { $priority >= 0 } {
+			lappend used_addrs {*}$cur_addrs
+		}
+
+		set nodes_ifaces [removeFromList $nodes_ifaces [list $node_subnet_data]]
+	}
+
+	# change selected nodes interfaces to new subnet
+	foreach node_subnet_data $nodes_ifaces {
+		lassign $node_subnet_data - subnet_node_id subnet_iface_id
+
+		# getIfcIPv4addrs/getIfcIPv6addrs
+		set cur_addrs [getIfcIPv${ip_version_num}addrs $subnet_node_id $subnet_iface_id]
+
+		# skip if we're the main gateway and subnet matches
+		foreach cur_addr $cur_addrs {
+			if { [$overlap_proc $subnet $cur_addr] } {
+				lappend used_addrs {*}$cur_addrs
+				set nodes_ifaces [removeFromList $nodes_ifaces [list $node_subnet_data]]
+
+				continue
+			}
+		}
+
+		set addr [nextAddrInSubnet $ip_version $subnet $used_addrs [invokeNodeProc $subnet_node_id "IPAddrRange"]]
+		if { $addr == "" } {
+			continue
+		}
+
+		lappend used_addrs $addr
+
+		setToRunning "${ip_version}_used_list" \
+			[removeFromList [getFromRunning "${ip_version}_used_list"] $cur_addrs "keep_doubles"]
+
+		# setIfcIPv4addrs/setIfcIPv6addrs
+		setIfcIPv${ip_version_num}addrs $subnet_node_id $subnet_iface_id $addr
+		lappendToRunning "${ip_version}_used_list" $addr
+	}
+}
+
+proc nextAddrInSubnet { ip_version subnet used_addrs { min_ip 0 } } {
+	set mask [ip::mask $subnet]
+	set subnet [ip::prefix $subnet]
+
+	if { $ip_version == "ipv4" } {
+		set toint_proc "ip::toInteger"
+		set tostr_proc "ip::intToString"
+		set overlap_proc "ip::isOverlap"
+	} else {
+		set min_ip "0x$min_ip"
+		set toint_proc "ip6_strToInt"
+		set tostr_proc "ip6_intToStr"
+		set overlap_proc "ip6_isOverlap"
+	}
+
+	set addr_int [expr [$toint_proc $subnet] + $min_ip]
+	set addr "[$tostr_proc $addr_int]"
+	if { $ip_version == "ipv6" } {
+		set addr "[::ip::contract $addr]"
+	}
+
+	set addr "$addr/$mask"
+
+	if { ! [$overlap_proc $subnet/$mask $addr] } {
+		# out of prefix range, start from first
+		set addr_int [expr $addr_int - $min_ip + 1]
+		set addr "[$tostr_proc $addr_int]"
+		if { $ip_version == "ipv6" } {
+			set addr "[::ip::contract $addr]"
+		}
+
+		set addr "$addr/$mask"
+	}
+
+	while { $addr in $used_addrs } {
+		incr addr_int
+		set addr "[$tostr_proc $addr_int]"
+		if { $ip_version == "ipv6" } {
+			set addr "[::ip::contract $addr]"
+		}
+
+		set addr "$addr/$mask"
+
+		if { ! [$overlap_proc $subnet/$mask $addr] } {
+			# out of prefix range
+			return ""
+		}
+	}
+
+	return $addr
+}
+
+#****f* nodeconfig.tcl/autoIPAddr
+# NAME
+#   autoIPAddr -- automaticaly assign an IPv4/IPv6 address
+# SYNOPSIS
+#   autoIPAddr $ip_version $node_id $iface_id { $nodes }
+# FUNCTION
+#   Automaticaly assignes an IPv4/IPv6 address to the interface $iface_id of
+#   of the node $node_id for IP version $ip_version. Setting $nodes adds a
+#   filter for nodes to take into consideration when assigning a subnet
+#   (default is *: 'my subnet').
+# INPUTS
+#   * ip_version -- IP version: ipv4 or ipv6
+#   * node_id -- the node id containing the interface to witch a new
+#     IPv4/IPv6 address should be assigned
+#   * iface_id -- the interface to witch a new, automatically generated,
+#     IPv4/IPv6 address will be assigned
+#   * nodes (optional) -- a list of nodes to consider when calculating the next
+#     IP address.
+#****
+proc autoIPAddr { ip_version node_id iface_id { nodes "*" } } {
+	set ip_version_num [string index $ip_version 3]
+	if { ! [getActiveOption "IPv${ip_version_num}autoAssign"] } {
+		return
+	}
+
+	lassign [getSubnetNextIpAndGateways $ip_version $node_id $iface_id $nodes] addr -
+	if { $addr == "" } {
+		global gui execMode
+
+		if { $gui && $execMode != "batch" } {
+			after idle { .dialog1.msg configure -wraplength 4i }
+			tk_dialog .dialog1 "IMUNES warning" \
+				"You have depleted the current IPv$ip_version_num pool of addresses for this subnet. You can disable IP auto assign using:\n\nTools -> IPv${ip_version_num} auto-assign addresses/routes\n\nor change the pool in\n\nTools -> IPv${ip_version_num} address pool\n\nand renumber the subnet." \
+				info 0 Dismiss
+		}
+
+		return
+	}
+
+	setIfcIPv${ip_version_num}addrs $node_id $iface_id $addr
+	lappendToRunning "ipv${ip_version_num}_used_list" $addr
 }

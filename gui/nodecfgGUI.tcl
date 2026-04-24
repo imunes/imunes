@@ -8104,17 +8104,11 @@ proc transformNodesGUI { nodes to_type } {
 proc subnetApply { ip_version entry_elem node_id iface_id } {
 	global changed main_canvas_elem
 
+	set ip_version_num [string index $ip_version 3]
 	set new_subnet [$entry_elem get]
 
-	if { $ip_version == "ipv4" } {
-		set check_proc "checkIPv4Net"
-		set assign_proc "assignIPv4Subnet"
-	} else {
-		set check_proc "checkIPv6Net"
-		set assign_proc "assignIPv6Subnet"
-	}
-
-	if { [$check_proc $new_subnet] == 0 } {
+	# checkIPv4Net/checkIPv6Net
+	if { [checkIPv${ip_version_num}Net $new_subnet] == 0 } {
 		focusAndFlash $entry_elem
 
 		return
@@ -8124,7 +8118,7 @@ proc subnetApply { ip_version entry_elem node_id iface_id } {
 		setToExecuteVars "terminate_cfg" [cfgGet]
 	}
 
-	$assign_proc $node_id $iface_id [selectedNodes] $new_subnet
+	assignSubnet $ip_version $node_id $iface_id [selectedNodes] $new_subnet
 
 	if { [getFromRunning "stop_sched"] } {
 		redeployCfg

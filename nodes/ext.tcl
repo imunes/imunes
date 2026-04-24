@@ -98,8 +98,8 @@ namespace eval $MODULE {
 	proc confNewIfc { node_id iface_id } {
 		global mac_byte4 mac_byte5
 
-		autoIPv4addr $node_id $iface_id
-		autoIPv6addr $node_id $iface_id
+		autoIPAddr "ipv4" $node_id $iface_id
+		autoIPAddr "ipv6" $node_id $iface_id
 
 		set bkp_mac_byte4 $mac_byte4
 		set bkp_mac_byte5 $mac_byte5

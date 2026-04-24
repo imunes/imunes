@@ -30,104 +30,10 @@
 # NAME
 #   ipv4.tcl -- file for handling IPv4
 #****
-global ipv4 numbits change_subnet4
+global ipv4 numbits
 
 set ipv4 10.0.0.0/24
-set numbits [lindex [split $ipv4 /] 1]
-set change_subnet4 0
-
-#****f* ipv4.tcl/IPv4AddrApply
-# NAME
-#   IPv4AddrApply -- IPv4 address apply
-# SYNOPSIS
-#   IPv4AddrApply $w
-# FUNCTION
-#   Sets new IPv4 address from widget.
-# INPUTS
-#   * w -- widget
-#****
-proc IPv4AddrApply { w } {
-	global ipv4
-	global numbits
-	global changed
-
-	set newipv4 [$w.ipv4frame.e1 get]
-
-	if { [checkIPv4Net $newipv4] == 0 } {
-		focusAndFlash .entry1.ipv4frame.e1
-		return
-	}
-	destroy $w
-
-	if { $newipv4 != $ipv4 } {
-		set changed 1
-	}
-	set ipv4 $newipv4
-	set numbits [lindex [split $ipv4 /] 1]
-}
-
-proc assignIPv4Subnet { node_id iface_id selected { subnet "" } } {
-	if { $subnet == "" } {
-		lassign [getSubnetNextIpAndGateways "ipv4" $node_id $iface_id] subnet -
-	}
-
-	set nodes_ifaces [getSubnetIfaces $node_id $iface_id]
-
-	# first, get all non-selected used addresses from this subnet
-	set used_addrs {}
-	foreach node_subnet_data $nodes_ifaces {
-		lassign $node_subnet_data priority subnet_node_id subnet_iface_id
-		set cur_addrs [getIfcIPv4addrs $subnet_node_id $subnet_iface_id]
-
-		if { $priority >= 0 && $subnet_node_id in $selected } {
-			# skip if we're the main gateway
-			foreach cur_addr $cur_addrs {
-				if { [ip::isOverlap $subnet $cur_addr] } {
-					lappend used_addrs {*}$cur_addrs
-					set nodes_ifaces [removeFromList $nodes_ifaces [list $node_subnet_data]]
-
-					break
-				}
-			}
-
-			continue
-		}
-
-		if { $priority >= 0 } {
-			lappend used_addrs {*}$cur_addrs
-		}
-
-		set nodes_ifaces [removeFromList $nodes_ifaces [list $node_subnet_data]]
-	}
-
-	# change selected nodes interfaces to new subnet
-	foreach node_subnet_data $nodes_ifaces {
-		lassign $node_subnet_data - subnet_node_id subnet_iface_id
-
-		# skip if we're the main gateway and subnet matches
-		set cur_addrs [getIfcIPv4addrs $subnet_node_id $subnet_iface_id]
-		foreach cur_addr $cur_addrs {
-			if { [ip::isOverlap $subnet $cur_addr] } {
-				lappend used_addrs {*}$cur_addrs
-				set nodes_ifaces [removeFromList $nodes_ifaces [list $node_subnet_data]]
-
-				continue
-			}
-		}
-
-		set addr [nextFreeIPv4InSubnet $subnet $used_addrs [invokeNodeProc $subnet_node_id "IPAddrRange"]]
-		if { $addr == "" } {
-			continue
-		}
-
-		lappend used_addrs $addr
-
-		setToRunning "ipv4_used_list" \
-			[removeFromList [getFromRunning "ipv4_used_list"] $cur_addrs "keep_doubles"]
-		setIfcIPv4addrs $subnet_node_id $subnet_iface_id $addr
-		lappendToRunning "ipv4_used_list" $addr
-	}
-}
+set numbits 24
 
 #****f* ipv4.tcl/dec2bin
 # NAME
@@ -176,275 +82,6 @@ proc bin2dec { bin } {
 		set res [expr {$res*2 + $i}]
 	}
 	return $res
-}
-
-#****f* ipv4.tcl/findFreeIPv4Net
-# NAME
-#   findFreeIPv4Net -- find free IPv4 network
-# SYNOPSIS
-#   set ipnet [findFreeIPv4Net $mask]
-# FUNCTION
-#   Finds a free IPv4 network. Network is concidered to be free
-#   if there are no simulated nodes attached to it.
-# INPUTS
-#   * mask -- this parameter is left unused for now
-# RESULT
-#   * ipnet -- returns the free IPv4 network address in the form a.b.c.d
-#****
-proc findFreeIPv4Net { mask { ipv4_used_list "" } } {
-	global ipv4
-	global numbits
-
-	set numbits $mask
-
-	set addr [lindex [split $ipv4 /] 0]
-
-	set a [dec2bin [lindex [split $addr .] 0]]
-	set b [dec2bin [lindex [split $addr .] 1]]
-	set c [dec2bin [lindex [split $addr .] 2]]
-	set d [dec2bin [lindex [split $addr .] 3]]
-
-	set addr_bin $a$b$c$d
-
-	set host_id [string range $addr_bin $numbits end]
-
-	while { [string first 1 $host_id] != -1 } {
-		set i [string first 1 $host_id]
-		set host_id [string replace $host_id $i $i 0]
-	}
-
-	set net_id [string range $addr_bin 0 [expr {$numbits-1}]]
-
-	set sub_addr $net_id$host_id
-
-	if { $numbits == 8 || $numbits == 16 || $numbits == 24 } {
-		set pot 0
-	} else {
-		set pot [expr {8 - ($numbits % 8)}]
-	}
-
-	set step [expr {1 << $pot}]
-
-	set ipnets {}
-
-	foreach addr $ipv4_used_list {
-		if { $numbits <= 8 } {
-			set ipnet [lindex [split $addr .] 0]
-		} elseif { $numbits > 8 && $numbits <=16 } {
-			set ipnet [lrange [split $addr .] 0 1]
-		} elseif { $numbits > 16 && $numbits <=24 } {
-			set ipnet [lrange [split $addr .] 0 2]
-		} elseif { $numbits > 24 }  {
-			set ifcaddr [lindex [split $addr /] 0]
-			if { [lindex [split $ifcaddr .] 3] != "" } {
-				set x [expr {[lindex [split $ifcaddr .] 3] - \
-					([lindex [split $ifcaddr .] 3] % $step)}]
-				set ipnet [split $ifcaddr .]
-				lset ipnet 3 $x
-			} else {
-				set ipnet {}
-			}
-		}
-		if { [lsearch $ipnets $ipnet] == -1 } {
-			lappend ipnets $ipnet
-		}
-	}
-
-	set a_sub [bin2dec [split [string range $sub_addr 0 7] {}]]
-	set b_sub [bin2dec [split [string range $sub_addr 8 15] {}]]
-	set c_sub [bin2dec [split [string range $sub_addr 16 23] {}]]
-	set d_sub [bin2dec [split [string range $sub_addr 24 31] {}]]
-
-	if { $numbits <= 8 } {
-		for { set i $a_sub } { $i <= 255 } { incr i $step } {
-			if { [lsearch $ipnets "$i"] == -1 } {
-				set ipnet "$i"
-				return $ipnet
-			}
-		}
-	} elseif { $numbits > 8 && $numbits <=16 } {
-		for { set i $a_sub } { $i <= 255 } { incr i } {
-			for { set j $b_sub } { $j <= 255 } { incr j $step } {
-				if { [lsearch $ipnets "$i $j"] == -1 } {
-					set ipnet "$i.$j"
-					return $ipnet
-				}
-			}
-		}
-	} elseif { $numbits > 16 && $numbits <=24 } {
-		for { set i $a_sub } { $i <= 255 } { incr i } {
-			for { set j $b_sub } { $j <= 255 } { incr j } {
-				for { set k $c_sub } { $k <= 255 } { incr k $step } {
-					if { [lsearch $ipnets "$i $j $k"] == -1 } {
-						set ipnet "$i.$j.$k"
-						return $ipnet
-					}
-				}
-			}
-		}
-	} elseif { $numbits > 24 } {
-		for { set i $a_sub } { $i <= 255 } { incr i } {
-			for { set j $b_sub } { $j <= 255 } { incr j } {
-				for { set k $c_sub } { $k <= 255 } { incr k } {
-					for { set l $d_sub } { $l <= 255 } { incr l $step } {
-						if { [lsearch $ipnets "$i $j $k $l"] == -1 } {
-							set ipnet "$i.$j.$k.$l"
-							return $ipnet
-						}
-					}
-				}
-			}
-		}
-	}
-}
-
-#****f* ipv4.tcl/autoIPv4addr
-# NAME
-#   autoIPv4addr -- automaticaly assign an IPv4 address
-# SYNOPSIS
-#   autoIPv4addr $node_id $iface_id
-# FUNCTION
-#   automaticaly assignes an IPv4 address to the interface $iface_id of
-#   of the node $node_id
-# INPUTS
-#   * node_id -- the node id containing the interface to witch a new
-#     IPv4 address should be assigned
-#   * iface_id -- the interface to witch a new, automatically generated, IPv4
-#     address will be assigned
-#****
-proc autoIPv4addr { node_id iface_id { nodes "*" } } {
-	if { ! [getActiveOption "IPv4autoAssign"] } {
-		return
-	}
-
-	lassign [getSubnetNextIpAndGateways "ipv4" $node_id $iface_id $nodes] addr -
-	setIfcIPv4addrs $node_id $iface_id $addr
-	lappendToRunning "ipv4_used_list" $addr
-}
-
-proc getNextIPv4addr { node_type existing_addrs } {
-	if { ! [getActiveOption "IPv4autoAssign"] } {
-		return
-	}
-
-	global numbits
-
-	set targetbyte 0
-	if { $node_type != "" } {
-		set targetbyte [invokeTypeProc $node_type "IPAddrRange"]
-		if { $targetbyte == "" } {
-			return
-		}
-	}
-
-	set targetbyte2 0
-	if { $numbits <= 8 } {
-		set ipv4addr "[findFreeIPv4Net $numbits $existing_addrs].$targetbyte2.$targetbyte2.$targetbyte/$numbits"
-	} elseif { $numbits > 8 && $numbits <=16 } {
-		set ipv4addr "[findFreeIPv4Net $numbits $existing_addrs].$targetbyte2.$targetbyte/$numbits"
-	} elseif { $numbits > 16 && $numbits <=24 } {
-		set ipv4addr "[findFreeIPv4Net $numbits $existing_addrs].$targetbyte/$numbits"
-	} elseif { $numbits > 24 } {
-		set lastbyte [lindex [split [findFreeIPv4Net $numbits $existing_addrs] .] 3]
-		set first3bytes [join [lrange [split [findFreeIPv4Net $numbits $existing_addrs] .] 0 2] .]
-		set targetbyte3 [expr {$lastbyte + 1}]
-		set ipv4addr "$first3bytes.$targetbyte3/$numbits"
-	}
-
-	return $ipv4addr
-}
-
-#****f* ipv4.tcl/nextFreeIP4Addr
-# NAME
-#   nextFreeIP4Addr -- automaticaly assign an IPv4 address
-# SYNOPSIS
-#   nextFreeIP4Addr $addr $start $peers
-# FUNCTION
-#   Automaticaly searches for free IPv4 addresses within a given range
-#   defined by $addr, containing $peers
-# INPUTS
-#   * $addr -- address of a node within the range
-#   * $start -- starting host address for a specified node type, ignored
-#     if the netmask is bigger than 24
-#   * $peers -- list of peers in the current network
-#****
-proc nextFreeIP4Addr { addr start peers } {
-	global execMode gui
-
-	set ipnums [ip::prefix $addr]
-	set mask [lindex [split $addr /] 1]
-
-	set ipnums [split $ipnums .]
-
-	set ip1 [lindex $ipnums 0]
-	set ip2 [lindex $ipnums 1]
-	set ip3 [lindex $ipnums 2]
-
-	if { $mask > 24 } {
-		set ip4 [expr [lindex $ipnums 3] + 1]
-	} else {
-		set ip4 [expr [lindex $ipnums 3] + $start]
-	}
-
-	set ipaddr "$ip1.$ip2.$ip3.$ip4/$mask"
-
-	while { $ipaddr in $peers } {
-		incr ip4
-		if { $ip4 > 254 } {
-			incr ip3
-			set ip4 1
-			if { $ip3 > 254 } {
-				incr ip2
-				set ip3 0
-				if { $ip2 > 254 } {
-					incr ip1
-					set ip2 0
-				}
-			}
-		}
-		set ipaddr "$ip1.$ip2.$ip3.$ip4/$mask"
-	}
-
-	set x [ip::prefix $addr]
-	set y [ip::prefix $ipaddr]
-
-	if { $x != $y  || "$ip1.$ip2.$ip3.$ip4" == [ip::broadcastAddress $ipaddr] } {
-		if { $gui && $execMode != "batch" } {
-			after idle { .dialog1.msg configure -wraplength 4i }
-			tk_dialog .dialog1 "IMUNES warning" \
-				"You have depleted the current pool of addresses ($x/$mask). Please choose a new pool from Tools->IPV4 address pool or delete nodes to free the address space." \
-				info 0 Dismiss
-		}
-		return ""
-	}
-
-	return $ipaddr
-}
-
-proc nextFreeIPv4InSubnet { subnet used_addrs { min_ip 0 } } {
-	set mask [ip::mask $subnet]
-	set subnet [ip::prefix $subnet]
-
-	set addr_int [expr [ip::toInteger $subnet] + $min_ip]
-	set addr "[ip::intToString $addr_int]/$mask"
-
-	if { ! [ip::isOverlap $subnet $addr] } {
-		# out of prefix range, start from first
-		incr addr_int -$min_ip
-		set addr "[ip::intToString $addr_int]/$mask"
-	}
-
-	while { $addr in $used_addrs } {
-		incr addr_int
-		set addr "[ip::intToString $addr_int]/$mask"
-
-		if { ! [ip::isOverlap $subnet $addr] } {
-			# out of prefix range
-			return ""
-		}
-	}
-
-	return $addr
 }
 
 #****f* ipv4.tcl/checkIPv4Addr
@@ -562,4 +199,83 @@ proc checkIPv4NetsDHCP { str } {
 	}
 
 	return [checkIPv4Nets $str]
+}
+
+#****f* ipv4.tcl/IPv4AddrApply
+# NAME
+#   IPv4AddrApply -- IPv4 address apply
+# SYNOPSIS
+#   IPv4AddrApply $w
+# FUNCTION
+#   Sets new IPv4 address from widget.
+# INPUTS
+#   * w -- widget
+#****
+proc IPv4AddrApply { w } {
+	global ipv4
+	global numbits
+	global changed
+
+	set newipv4 [$w.ipv4frame.e1 get]
+
+	if { [checkIPv4Net $newipv4] == 0 } {
+		focusAndFlash .entry1.ipv4frame.e1
+		return
+	}
+	destroy $w
+
+	if { $newipv4 != $ipv4 } {
+		set changed 1
+	}
+	set ipv4 $newipv4
+	set numbits [lindex [split $ipv4 /] 1]
+}
+
+#****f* ipv4.tcl/findFreeIPv4Subnet
+# NAME
+#   findFreeIPv4Subnet -- find free IPv4 network
+# SYNOPSIS
+#   set ipnet [findFreeIPv4Subnet $mask]
+# FUNCTION
+#   Finds a free IPv4 network. Network is concidered to be free
+#   if there are no simulated nodes attached to it.
+# INPUTS
+#   * mask -- this parameter is left unused for now
+# RESULT
+#   * ipnet -- returns the free IPv4 network address in the form a.b.c.d
+#****
+proc findFreeIPv4Subnet { mask { ipv4_used_list {} } } {
+	global ipv4
+	global numbits
+
+	if { $mask == "" } {
+		set mask $numbits
+	}
+
+	# get zeroed-out address and mask, both as hex
+	set addr [::ip::prefix $ipv4]
+	lassign [::ip::prefixToNative "$addr/$mask"] addr mask
+	set ipnet [::ip::nativeToPrefix [list $addr $mask]]
+
+	if { $ipv4_used_list == {} } {
+		return $ipnet
+	}
+
+	set used_ipnets {}
+	foreach used_addr $ipv4_used_list {
+		set used_prefix [::ip::prefix $used_addr]
+		set used_mask [::ip::mask $used_addr]
+		set used_ipnet "$used_prefix/$used_mask"
+
+		if { $used_ipnet ni $used_ipnets } {
+			lappend used_ipnets $used_ipnet
+		}
+	}
+
+	while { $ipnet in "\"\" $used_ipnets" } {
+		set ipnet [::ip::nativeToPrefix [list [::ip::nextNet $addr $mask] $mask]]
+		set addr $ipnet
+	}
+
+	return $ipnet
 }
