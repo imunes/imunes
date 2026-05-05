@@ -645,7 +645,7 @@ proc menu_ifacesSettings { node_id root_menu } {
 		"true"
 
 	set sorted_ifaces {}
-	foreach iface_type "phys stolen" {
+	foreach iface_type "phys vlan stolen" {
 		set ifaces [getIfacesNamesByType $node_id $iface_type]
 		if { $ifaces != {} } {
 			lappend sorted_ifaces {*}[lsort -dictionary $ifaces]
@@ -660,6 +660,9 @@ proc menu_ifacesSettings { node_id root_menu } {
 		} else {
 			$iface_menu delete 0 end
 		}
+
+		set ip4 [getIfcIPv4addrs $node_id $iface_id]
+		set ip6 [getIfcIPv6addrs $node_id $iface_id]
 
 		set iface_label $iface_name
 		if { [getIfcType $node_id $iface_id] == "stolen" } {
@@ -738,12 +741,12 @@ proc menu_ifacesSettings { node_id root_menu } {
 		}
 
 		set actions [list \
-			"Remove IPv4 addresses"		"removeIPv4Nodes $node_id {$node_id $iface_id}"	"true" \
-			"Remove IPv6 addresses"		"removeIPv6Nodes $node_id {$node_id $iface_id}"	"true" \
-			"IPv4 autorenumber"			"[lreplace $tmp_command end end "ipv4"]"		"true" \
-			"IPv6 autorenumber"			"[lreplace $tmp_command end end "ipv6"]"		"true" \
-			"Match IPv4 subnet ($sub4)"	"matchSubnet ipv4 $node_id $iface_id $sub4"		[expr { $sub4 != {} }] \
-			"Match IPv6 subnet ($sub6)"	"matchSubnet ipv6 $node_id $iface_id $sub6"		[expr { $sub6 != {} }] \
+			"Remove IPv4 addresses ($ip4)"	"removeIPv4Nodes $node_id {$node_id $iface_id}"	[expr { $ip4 != {} }] \
+			"Remove IPv6 addresses ($ip6)"	"removeIPv6Nodes $node_id {$node_id $iface_id}"	[expr { $ip6 != {} }] \
+			"IPv4 autorenumber"				"[lreplace $tmp_command end end "ipv4"]"		"true" \
+			"IPv6 autorenumber"				"[lreplace $tmp_command end end "ipv6"]"		"true" \
+			"Match IPv4 subnet ($sub4)"		"matchSubnet ipv4 $node_id $iface_id $sub4"		[expr { $sub4 != {} }] \
+			"Match IPv6 subnet ($sub6)"		"matchSubnet ipv6 $node_id $iface_id $sub6"		[expr { $sub6 != {} }] \
 			]
 
 		foreach {action command enabled} $actions {
