@@ -452,7 +452,7 @@ proc selectZoomApply { w } {
 #   * wi -- widget
 #****
 proc routerDefaultsApply { wi } {
-	global changed
+	global changed router_protocols
 
 	set router_frame $wi.routerframe
 
@@ -467,18 +467,9 @@ proc routerDefaultsApply { wi } {
 		setGlobalOption "routerDefaultsModel" $newmodel
 	}
 
-	set protocols {
-		"rip	routerRipEnable"
-		"ripng	routerRipngEnable"
-		"ospf	routerOspfEnable"
-		"ospf6	routerOspf6Enable"
-		"bgp	routerBgpEnable"
-		"ldp	routerLdpEnable"
-		"isis	routerIsisEnable"
-	}
-
-	foreach item $protocols {
-		lassign $item protocol var_name
+	foreach item $router_protocols {
+		set protocol [lindex $item 0]
+		set var_name "router[string totitle $protocol 0 0]Enable"
 
 		set oldvalue [getActiveOption $var_name]
 		set newvalue [expr { "selected" in [$router_frame.protocols.$protocol state] }]
@@ -498,8 +489,10 @@ proc routerDefaultsApply { wi } {
 		if { [getNodeType $node_id] == "router" } {
 			setNodeModel $node_id [getActiveOption "routerDefaultsModel"]
 
-			foreach item $protocols {
-				lassign $item protocol var_name
+			foreach item $router_protocols {
+				set protocol [lindex $item 0]
+				set var_name "router[string totitle $protocol 0 0]Enable"
+
 				setNodeProtocol $node_id $protocol [getActiveOption $var_name]
 			}
 			set changed 1

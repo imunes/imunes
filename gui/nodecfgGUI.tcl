@@ -2228,7 +2228,7 @@ proc configGUI_routingModel { wi node_id } {
 	global guielements
 	lappend guielements configGUI_routingModel
 
-	global supp_router_models node_cfg
+	global supp_router_models router_protocols node_cfg
 
 	ttk::frame $wi.routing -relief groove -borderwidth 2 -padding 2
 	set w $wi.routing
@@ -2237,19 +2237,9 @@ proc configGUI_routingModel { wi node_id } {
 	ttk::frame $w.protocols -padding 2
 	ttk::label $w.protocols.label -text "Protocols:"
 
-	set protocols {
-		"rip rip"
-		"ripng ripng"
-		"ospf ospf"
-		"ospf6 ospfv3"
-		"bgp bgp"
-		"ldp ldp"
-		"isis isis"
-	}
-
 	set protocol_list {}
-	foreach item $protocols {
-		lassign $item protocol protocol_label
+	foreach item $router_protocols {
+		lassign $item protocol - protocol_label
 		lappend protocol_list $protocol
 		ttk::checkbutton $w.protocols.$protocol \
 			-text $protocol_label
@@ -2295,8 +2285,8 @@ proc configGUI_routingModel { wi node_id } {
 	$w.model.$default_model state "selected"
 
 	set checkbutton_dict "0 !selected 1 selected"
-	foreach item $protocols {
-		lassign $item protocol protocol_label
+	foreach item $router_protocols {
+		set protocol [lindex $item 0]
 		set value [dict get $checkbutton_dict [_getNodeProtocol $node_cfg $protocol]]
 		$w.protocols.$protocol state "$value"
 

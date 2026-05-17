@@ -547,7 +547,7 @@ set tmp_command {
 .menubar.tools add command -label "IPv6 address pool" -underline 3 \
 	-command $tmp_command
 set routing_defaults_command {
-	global supp_router_models
+	global supp_router_models router_protocols
 
 	set wi .popup
 	catch { destroy $wi }
@@ -566,22 +566,11 @@ set routing_defaults_command {
 	ttk::labelframe $w.model -text "Model:"
 	ttk::labelframe $w.protocols -text "Protocols:"
 
-	set protocols {
-		"rip	rip		routerRipEnable"
-		"ripng	ripng	routerRipngEnable"
-		"ospf	ospf	routerOspfEnable"
-		"ospf6	ospfv3	routerOspf6Enable"
-		"bgp	bgp		routerBgpEnable"
-		"ldp	ldp		routerLdpEnable"
-		"isis	isis	routerIsisEnable"
-	}
-
-	set protocol_list {}
-
 	set checkbutton_dict "0 !selected 1 selected"
-	foreach item $protocols {
-		lassign $item protocol protocol_label var_name
-		lappend protocol_list $protocol
+	foreach item $router_protocols {
+		lassign $item protocol - protocol_label
+		set var_name "router[string totitle $protocol 0 0]Enable"
+
 		ttk::checkbutton $w.protocols.$protocol \
 			-text $protocol_label
 
@@ -590,14 +579,17 @@ set routing_defaults_command {
 
 	# set last argument as empty string
 	set tmp_command [list apply {
-		{ popup_window protocol_list state } {
-			foreach protocol $protocol_list {
+		{ popup_window state } {
+			global router_protocols
+
+			foreach item $router_protocols {
+				set protocol [lindex $item 0]
+
 				$popup_window.protocols.$protocol configure -state $state
 			}
 		}
 	} \
 		$w \
-		$protocol_list \
 		""
 	]
 
@@ -617,7 +609,9 @@ set routing_defaults_command {
 	$w.model.$default_model state selected
 
 	if { $default_model == "static" } {
-		foreach protocol $protocol_list {
+		foreach item $router_protocols {
+			set protocol [lindex $item 0]
+
 			$w.protocols.$protocol configure -state "disabled"
 		}
 	}
@@ -636,8 +630,8 @@ set routing_defaults_command {
 	pack $w.protocols -side top -pady 5
 
 	set protocols_to_pack {}
-	foreach protocol $protocol_list {
-		lappend protocols_to_pack $w.protocols.$protocol
+	foreach item $router_protocols {
+		lappend protocols_to_pack $w.protocols.[lindex $item 0]
 	}
 	pack {*}$protocols_to_pack -side left
 

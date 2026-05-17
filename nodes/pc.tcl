@@ -97,20 +97,13 @@ namespace eval $MODULE {
 		setNodeType $node_id $to_type
 
 		if { $to_type == "router" } {
+			global router_protocols
+
 			setNodeModel $node_id [getActiveOption "routerDefaultsModel"]
 
-			set protocols {
-				"rip	routerRipEnable"
-				"ripng	routerRipngEnable"
-				"ospf	routerOspfEnable"
-				"ospf6	routerOspf6Enable"
-				"bgp	routerBgpEnable"
-				"ldp	routerLdpEnable"
-				"isis	routerIsisEnable"
-			}
-
-			foreach item $protocols {
-				lassign $item protocol var_name
+			foreach item $router_protocols {
+				set protocol [lindex $item 0]
+				set var_name "router[string totitle $protocol 0 0]Enable"
 
 				setNodeProtocol $node_id $protocol [getActiveOption $var_name]
 			}
