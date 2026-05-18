@@ -65,6 +65,8 @@ proc linksByPeers { node1_id node2_id } {
 #   * link_id -- link id
 #****
 proc removeLink { link_id { keep_ifaces 0 } } {
+	global isOSlinux
+
 	trigger_linkDestroy $link_id
 
 	lassign [getLinkPeers $link_id] node1_id node2_id
@@ -72,6 +74,7 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 
 	set old_routes [dict create]
 	set new_routes [dict create]
+	set is_direct [getLinkDirect $link_id]
 	foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
 		# save old subnet data for comparison
 		set old_routes [appendNodeSubnetRoutes $node_id $old_routes]
@@ -88,6 +91,10 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 		if { $keep_ifaces } {
 			cfgUnset "nodes" $node_id "ifaces" $iface_id "link"
 			set new_routes [appendNodeSubnetRoutes $node_id $new_routes]
+
+			if { $isOSlinux && $is_direct } {
+				trigger_ifaceRecreate $node_id $iface_id
+			}
 
 			continue
 		}

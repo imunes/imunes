@@ -435,6 +435,7 @@ proc trigger_linkDestroy { link_id } {
 
 		updateTerminateVars
 
+		# TODO: refactor this
 		foreach node_id [getLinkPeers $link_id] iface_id [getLinkPeersIfaces $link_id] {
 			set node_type [getNodeType $node_id]
 			if { $node_type in "packgen" } {
