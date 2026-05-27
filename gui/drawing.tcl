@@ -59,6 +59,7 @@ proc refreshToolBarNodes {} {
 proc redrawAll {} {
 	global background sizex sizey grid
 	global bkgImage main_canvas_elem
+	global changed
 
 	set zoom [getActiveOption "zoom"]
 	set curcanvas [getFromRunning_gui "curcanvas"]
@@ -161,6 +162,8 @@ proc redrawAll {} {
 	updateIconSize
 	$main_canvas_elem config -cursor left_ptr
 	raiseAll
+
+	set changed 0
 }
 
 #****f* editor.tcl/drawNode
