@@ -3137,37 +3137,6 @@ proc changeAddressRange6 {} {
 	updateUndoLog
 }
 
-#****h* editor.tcl/double1onGrid
-# NAME
-#  double1onGrid.tcl -- called on Double-1 click on grid (bind command)
-# SYNOPSIS
-#  double1onGrid $x $y
-# FUNCTION
-#  As grid is layered above annotations this procedure is used to find
-#  annotation object closest to cursor.
-# INPUTS
-#   * x -- double click x coordinate
-#   * y -- double click y coordinate
-#****
-proc double1onGrid { x y } {
-	global main_canvas_elem
-
-	set tags [$main_canvas_elem gettags [$main_canvas_elem find closest $x $y]]
-	if { [lsearch $tags grid] != -1 || [lsearch $tags background] != -1 } {
-		return
-	}
-
-	set node_id [lindex $tags 1]
-	# Is this really necessary?
-	lassign [getAnnotationCoords $node_id] x1 y1 x2 y2
-	if { $x < $x1 || $x > $x2 || $y < $y1 || $y > $y2 } {
-		# cursor is not ON the closest object
-		return
-	}
-
-	annotationConfig $node_id
-}
-
 proc clearTempObjects { x y } {
 	global main_canvas_elem
 

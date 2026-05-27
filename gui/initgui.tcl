@@ -1273,8 +1273,6 @@ $main_canvas_elem bind node <Control-Double-1> "nodeConfigGUI {}"
 $main_canvas_elem bind nodelabel <Control-Double-1> "nodeConfigGUI {}"
 $main_canvas_elem bind node_running <Control-Double-1> "nodeConfigGUI {}"
 
-$main_canvas_elem bind grid <Double-1> "double1onGrid %x %y"
-
 $main_canvas_elem bind link <Double-1> "linkConfigGUI {}"
 $main_canvas_elem bind linklabel <Double-1> "linkConfigGUI {}"
 
