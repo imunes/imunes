@@ -3892,6 +3892,7 @@ proc externalEditDone { wi read_channel tmp_path custom_config_id } {
 
 			set custom_config_widget $wi.nb.$custom_config_id
 
+			catch { $custom_config_widget.editor configure -bg white -state normal }
 			catch { $custom_config_widget.editor delete 1.0 end }
 			catch { $custom_config_widget.editor insert end "$new_cfg" }
 		} else {
@@ -3917,14 +3918,20 @@ proc customConfigOpenInExternal { wi node_id { custom_config_id "" } } {
 
 	if { $wi != "" } {
 		set custom_config_id [$wi.nb tab current -text]
+		set custom_config_widget $wi.nb.$custom_config_id
+
+		set content [$custom_config_widget.editor get 0.0 end]
+
+		catch { $custom_config_widget.editor configure -bg #bbbbbb -state disabled }
 	} else {
 		global node_cfg
 
 		set custom_node_cfg $node_cfg
+		set content [_getNodeCustomConfig $custom_node_cfg $selected_hook $custom_config_id]
 	}
 
 	set file_id [file tempfile tmp_path]
-	puts $file_id [_getNodeCustomConfig $custom_node_cfg $selected_hook $custom_config_id]
+	puts -nonewline $file_id $content
 	close $file_id
 
 	set external_editor_cmd [getExternalEditorCommand "Editing [_getNodeName $custom_node_cfg] ($node_id) - $selected_hook ($tmp_path)" $tmp_path]
