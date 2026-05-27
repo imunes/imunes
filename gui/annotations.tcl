@@ -946,7 +946,7 @@ proc annotationConfigGUI {} {
 	global main_canvas_elem
 
 	set annotation [lindex [$main_canvas_elem gettags current] 1]
-	annotationConfig $main_canvas_elem $annotation
+	annotationConfig $annotation
 
 	return
 }
