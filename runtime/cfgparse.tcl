@@ -1054,9 +1054,10 @@ proc loadCfgLegacy { cfg } {
 				set vlan_enabled [cfgGet "nodes" $node_id "vlan" "enabled"]
 				if { $vlan_enabled != "" && $vlan_enabled } {
 					setIfcVlanDev $node_id $iface_id $iface_name
-					setIfcVlanTag $node_id $iface_id [cfgGet "nodes" $node_id "vlan" "tag"]
-					cfgUnset "nodes" $node_id "vlan"
 				}
+
+				setIfcVlanTag $node_id $iface_id [cfgGet "nodes" $node_id "vlan" "tag"]
+				cfgUnset "nodes" $node_id "vlan"
 			}
 
 			foreach addr [getIfcIPv6addrs $node_id $iface_id] {
