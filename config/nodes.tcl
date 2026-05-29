@@ -102,13 +102,101 @@ proc setNodeCustomConfigSelected { node_id hook cfg_id } {
 		return
 	}
 
-	if { [getNodeCustomEnabled $node_id] } {
-		if { $hook == "NODE_CONFIG" } {
-			trigger_nodeReconfig $node_id
-		} elseif { $hook == "IFACES_CONFIG" } {
-			foreach iface_id [allIfcList $node_id] {
-				trigger_ifaceReconfig $node_id $iface_id
-			}
+	if { $hook == "NODE_CONFIG" } {
+		trigger_nodeReconfig $node_id
+	} elseif { $hook == "IFACES_CONFIG" } {
+		foreach iface_id [allIfcList $node_id] {
+			trigger_ifaceReconfig $node_id $iface_id
+		}
+	}
+}
+
+#****f* nodecfg.tcl/getNodeCustomConfigHookEntries
+# NAME
+#   getNodeCustomConfigHookEntries -- get custom configuration IDs
+# SYNOPSIS
+#   getNodeCustomConfigHookEntries $node_id
+# FUNCTION
+#   For input node this procedure returns all custom configuration IDs.
+# INPUTS
+#   * node_id -- node id
+# RESULT
+#   * IDs -- returns custom configuration IDs
+#****
+proc getNodeCustomConfigHookEntries { node_id hook } {
+	return [cfgGet "nodes" $node_id "custom_configs" $hook]
+}
+
+proc getNodeCustomConfigHookEntry { node_id hook cfg_id } {
+	set found_hook_entry {}
+	foreach hook_entry [getNodeCustomConfigHookEntries $node_id $hook] {
+		if { [dictGet $hook_entry "custom_name"] == $cfg_id } {
+			set found_hook_entry $hook_entry
+
+			break
+		}
+	}
+
+	return $found_hook_entry
+}
+
+proc setNodeCustomConfigHookEntry { node_id hook cfg_id hook_entry } {
+	set hook_entries [getNodeCustomConfigHookEntries $node_id $hook]
+	set hook_idx 0
+	set new_entry 1
+	foreach existing_hook_entry $hook_entries {
+		if { [dictGet $existing_hook_entry "custom_name"] == $cfg_id } {
+			set hook_entries [lreplace $hook_entries $hook_idx $hook_idx $hook_entry]
+			set new_entry 0
+
+			break
+		}
+
+		incr hook_idx
+	}
+
+	if { $new_entry } {
+		dict set new_hook_entry "custom_name" $cfg_id
+		dict set new_hook_entry "custom_command" "/bin/sh"
+		dict set new_hook_entry "custom_config" ""
+
+		lappend hook_entries $new_hook_entry
+	}
+
+	cfgSet "nodes" $node_id "custom_configs" $hook $hook_entries
+
+	if { ! [getNodeCustomEnabled $node_id] || [getNodeCustomConfigSelected $node_id $hook] != $cfg_id } {
+		return
+	}
+
+	if { $hook == "NODE_CONFIG" } {
+		trigger_nodeReconfig $node_id
+	} elseif { $hook == "IFACES_CONFIG" } {
+		foreach iface_id [allIfcList $node_id] {
+			trigger_ifaceReconfig $node_id $iface_id
+		}
+	}
+}
+
+proc getNodeCustomConfigCommand { node_id hook cfg_id } {
+	return [dictGet [getNodeCustomConfigHookEntry $node_id $hook $cfg_id] "custom_command"]
+}
+
+proc setNodeCustomConfigCommand { node_id hook cfg_id custom_command } {
+	set hook_entry [getNodeCustomConfigHookEntry $node_id $hook $cfg_id]
+	dict set hook_entry "custom_command" $custom_command
+
+	setNodeCustomConfigHookEntry $node_id $hook $cfg_id $hook_entry
+
+	if { ! [getNodeCustomEnabled $node_id] || [getNodeCustomConfigSelected $node_id $hook] != $cfg_id } {
+		return
+	}
+
+	if { $hook == "NODE_CONFIG" } {
+		trigger_nodeReconfig $node_id
+	} elseif { $hook == "IFACES_CONFIG" } {
+		foreach iface_id [allIfcList $node_id] {
+			trigger_ifaceReconfig $node_id $iface_id
 		}
 	}
 }
@@ -128,48 +216,33 @@ proc setNodeCustomConfigSelected { node_id hook cfg_id } {
 #   * customConfig -- returns custom configuration
 #****
 proc getNodeCustomConfig { node_id hook cfg_id } {
-	return [cfgGet "nodes" $node_id "custom_configs" $hook $cfg_id "custom_config"]
+	return [dictGet [getNodeCustomConfigHookEntry $node_id $hook $cfg_id] "custom_config"]
 }
 
-#****f* nodes.tcl/setNodeCustomConfig
-# NAME
-#   setNodeCustomConfig -- set custom configuration
-# SYNOPSIS
-#   setNodeCustomConfig $node_id $cfg_id $cmd $config
-# FUNCTION
-#   For input node this procedure sets custom configuration section in input
-#   node.
-# INPUTS
-#   * node_id -- node id
-#   * cfg_id -- custom-config id
-#   * cmd -- custom command
-#   * config -- custom configuration section
-#****
-proc setNodeCustomConfig { node_id hook cfg_id cmd config } {
-	# XXX cannot be empty
-	cfgSetEmpty "nodes" $node_id "custom_configs" $hook $cfg_id "custom_command" $cmd
-	cfgSetEmpty "nodes" $node_id "custom_configs" $hook $cfg_id "custom_config" $config
+proc setNodeCustomConfig { node_id hook cfg_id custom_config } {
+	set hook_entry [getNodeCustomConfigHookEntry $node_id $hook $cfg_id]
+	dict set hook_entry "custom_config" $custom_config
+
+	setNodeCustomConfigHookEntry $node_id $hook $cfg_id $hook_entry
 
 	if { ! [getNodeCustomEnabled $node_id] || [getNodeCustomConfigSelected $node_id $hook] != $cfg_id } {
 		return
 	}
 
-	if { [getNodeCustomEnabled $node_id] } {
-		if { $hook == "NODE_CONFIG" } {
-			trigger_nodeReconfig $node_id
-		} elseif { $hook == "IFACES_CONFIG" } {
-			foreach iface_id [allIfcList $node_id] {
-				trigger_ifaceReconfig $node_id $iface_id
-			}
+	if { $hook == "NODE_CONFIG" } {
+		trigger_nodeReconfig $node_id
+	} elseif { $hook == "IFACES_CONFIG" } {
+		foreach iface_id [allIfcList $node_id] {
+			trigger_ifaceReconfig $node_id $iface_id
 		}
 	}
 }
 
-#****f* nodes.tcl/removeNodeCustomConfig
+#****f* nodes.tcl/removeNodeCustomConfigHookEntry
 # NAME
-#   removeNodeCustomConfig -- remove custom configuration
+#   removeNodeCustomConfigHookEntry -- remove custom configuration
 # SYNOPSIS
-#   removeNodeCustomConfig $node_id $cfg_id
+#   removeNodeCustomConfigHookEntry $node_id $cfg_id
 # FUNCTION
 #   For input node and configuration ID this procedure removes custom
 #   configuration from node.
@@ -177,26 +250,32 @@ proc setNodeCustomConfig { node_id hook cfg_id cmd config } {
 #   * node_id -- node id
 #   * cfg_id -- configuration id
 #****
-proc removeNodeCustomConfig { node_id hook cfg_id } {
-	cfgUnset "nodes" $node_id "custom_configs" $hook $cfg_id
-}
+proc removeNodeCustomConfigHookEntry { node_id hook cfg_id } {
+	set hook_entries [getNodeCustomConfigHookEntries $node_id $hook]
+	set hook_idx 0
+	foreach existing_hook_entry $hook_entries {
+		if { [dictGet $existing_hook_entry "custom_name"] == $cfg_id } {
+			set hook_entries [lreplace $hook_entries $hook_idx $hook_idx]
 
-#****f* nodes.tcl/getNodeCustomConfigCommand
-# NAME
-#   getNodeCustomConfigCommand -- get custom configuration boot command
-# SYNOPSIS
-#   getNodeCustomConfigCommand $node_id $cfg_id
-# FUNCTION
-#   For input node and configuration ID this procedure returns custom
-#   configuration boot command.
-# INPUTS
-#   * node_id -- node id
-#   * cfg_id -- configuration id
-# RESULT
-#   * customCmd -- returns custom configuration boot command
-#****
-proc getNodeCustomConfigCommand { node_id hook cfg_id } {
-	return [cfgGet "nodes" $node_id "custom_configs" $hook $cfg_id "custom_command"]
+			break
+		}
+
+		incr hook_idx
+	}
+
+	cfgSet "nodes" $node_id "custom_configs" $hook $hook_entries
+
+	if { ! [getNodeCustomEnabled $node_id] || [getNodeCustomConfigSelected $node_id $hook] != $cfg_id } {
+		return
+	}
+
+	if { $hook == "NODE_CONFIG" } {
+		trigger_nodeReconfig $node_id
+	} elseif { $hook == "IFACES_CONFIG" } {
+		foreach iface_id [allIfcList $node_id] {
+			trigger_ifaceReconfig $node_id $iface_id
+		}
+	}
 }
 
 #****f* nodes.tcl/getNodeStatIPv4routes

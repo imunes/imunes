@@ -1201,6 +1201,26 @@ proc loadCfgJson { json_cfg } {
 	set mac_used_list {}
 	foreach node_id [getFromRunning "node_list"] {
 		set node_type [getNodeType $node_id]
+
+		# handle newlines in custom configs
+		foreach custom_config_hook "IFACES_CONFIG NODE_CONFIG" {
+			set hook_configs [getNodeCustomConfigHookEntries $node_id $custom_config_hook]
+
+			set custom_names {}
+			foreach custom_config $hook_configs {
+				lappend custom_names [dictGet $custom_config "custom_name"]
+			}
+
+			foreach cfg_id $custom_names {
+				set custom_config [getNodeCustomConfig $node_id $custom_config_hook $cfg_id]
+				if { [string first "\n" $custom_config] == -1 } {
+					continue
+				}
+
+				setNodeCustomConfig $node_id $custom_config_hook $cfg_id [split $custom_config "\n"]
+			}
+		}
+
 		# migration "extnat -> ext"
 		if { $node_type == "extnat" } {
 			set node_type "ext"
@@ -1279,7 +1299,7 @@ proc handleVersionMismatch { cfg_version file_name } {
 		set custom_config 0
 		set nodes {}
 		foreach node_id [getFromRunning "node_list"] {
-			if { [getNodeCustomConfigIDs $node_id "NODE_CONFIG"] != "" } {
+			if { [cfgGet "nodes" $node_id "custom_configs" "NODE_CONFIG"] != "" } {
 				set custom_config 1
 				lappend nodes [getNodeName $node_id]
 			}
@@ -1338,6 +1358,7 @@ proc jsonMigration { from_version to_version } {
 	# loop through all migrations
 	set cur_version $from_version
 	for { set next_version [expr $cur_version + 1] } { $next_version <= $to_version } { incr next_version; incr cur_version } {
+		# TODO: change to switch
 		if { "${cur_version}${next_version}" == "12" } {
 			dict for {option value} [cfgGet "options"] {
 				if { $option in $all_gui_options } {
@@ -1433,6 +1454,31 @@ proc jsonMigration { from_version to_version } {
 
 				setNodeDockerOptions $node_id "external_attach" [cfgGet "nodes" $node_id "docker_attach"]
 				cfgUnset "nodes" $node_id "docker_attach"
+			}
+
+			setOption "version" $next_version
+		} elseif { "${cur_version}${next_version}" == "34" } {
+			# change custom configs to JSON array
+			foreach node_id [getFromRunning "node_list"] {
+				foreach custom_hook "IFACES_CONFIG NODE_CONFIG" {
+					set custom_configs [cfgGet "nodes" $node_id "custom_configs" $custom_hook]
+					if { $custom_configs == {} } {
+						continue
+					}
+
+					set new_custom_configs {}
+					dict for {custom_name custom_dict} $custom_configs {
+						dict set new_custom_dict "custom_name" $custom_name
+						dict set new_custom_dict "custom_command" [dictGet $custom_dict "custom_command"]
+
+						set custom_config [split [dictGet $custom_dict "custom_config"] "\n"]
+
+						dict set new_custom_dict "custom_config" $custom_config
+						lappend new_custom_configs $new_custom_dict
+					}
+
+					cfgSet "nodes" $node_id "custom_configs" $custom_hook $new_custom_configs
+				}
 			}
 
 			setOption "version" $next_version

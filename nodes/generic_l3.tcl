@@ -1050,14 +1050,14 @@ namespace eval genericL3 {
 			set bootcfg [getNodeCustomConfig $node_id "IFACES_CONFIG" $custom_selected]
 			set confFile "$VROOT_RUNTIME/custom_ifaces.conf"
 		} else {
-			set bootcfg [join [invokeNodeProc $node_id "generateConfigIfaces" $node_id $ifaces] "\n"]
+			set bootcfg [invokeNodeProc $node_id "generateConfigIfaces" $node_id $ifaces]
 			set bootcmd [invokeNodeProc $node_id "bootcmd" $node_id]
 			set confFile "$VROOT_RUNTIME/boot_ifaces.conf"
 		}
 
 		writeDataToNodeFile $node_id $startup_fname ""
 
-		set cfg "set -x\necho $$ > $startup_fname\n$bootcfg"
+		set cfg "set -x\necho $$ > $startup_fname\n[join $bootcfg "\n"]"
 		writeDataToNodeFile $node_id $confFile $cfg
 
 		set cmds "test -d $VROOT_RUNTIME || mkdir -p $VROOT_RUNTIME ;"
@@ -1126,10 +1126,10 @@ namespace eval genericL3 {
 		if { [getNodeCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
 			set bootcmd [getNodeCustomConfigCommand $node_id "NODE_CONFIG" $custom_selected]
 			set bootcfg [getNodeCustomConfig $node_id "NODE_CONFIG" $custom_selected]
-			set bootcfg "$bootcfg\n[join [invokeNodeProc $node_id "generateConfig" $node_id] "\n"]"
+			set bootcfg [concat $bootcfg [invokeNodeProc $node_id "generateConfig" $node_id]]
 			set confFile "$VROOT_RUNTIME/custom.conf"
 		} else {
-			set bootcfg [join [invokeNodeProc $node_id "generateConfig" $node_id] "\n"]
+			set bootcfg [invokeNodeProc $node_id "generateConfig" $node_id]
 			set bootcmd [invokeNodeProc $node_id "bootcmd" $node_id]
 			set confFile "$VROOT_RUNTIME/boot.conf"
 		}
@@ -1138,7 +1138,7 @@ namespace eval genericL3 {
 
 		writeDataToNodeFile $node_id $startup_fname ""
 
-		set cfg "set -x\necho $$ > $startup_fname\n$bootcfg"
+		set cfg "set -x\necho $$ > $startup_fname\n[join $bootcfg "\n"]"
 		writeDataToNodeFile $node_id $confFile $cfg
 
 		set cmds "test -d $VROOT_RUNTIME || mkdir -p $VROOT_RUNTIME ;"
@@ -1239,12 +1239,12 @@ namespace eval genericL3 {
 			return
 		}
 
-		set bootcfg [join [invokeNodeProc $node_id "generateUnconfig" $node_id] "\n"]
+		set bootcfg [invokeNodeProc $node_id "generateUnconfig" $node_id]
 		set bootcmd [invokeNodeProc $node_id "bootcmd" $node_id]
 
 		writeDataToNodeFile $node_id $startup_fname ""
 
-		set cfg "set -x\necho $$ > $startup_fname\n$bootcfg"
+		set cfg "set -x\necho $$ > $startup_fname\n[join $bootcfg "\n"]"
 		writeDataToNodeFile $node_id $confFile $cfg
 
 		set cmds "test -d $VROOT_RUNTIME || mkdir -p $VROOT_RUNTIME ;"
@@ -1382,12 +1382,12 @@ namespace eval genericL3 {
 
 		addStateNode $node_id "ifaces_unconfiguring"
 
-		set bootcfg [join [invokeNodeProc $node_id "generateUnconfigIfaces" $node_id $ifaces] "\n"]
+		set bootcfg [invokeNodeProc $node_id "generateUnconfigIfaces" $node_id $ifaces]
 		set bootcmd [invokeNodeProc $node_id "bootcmd" $node_id]
 
 		writeDataToNodeFile $node_id $startup_fname ""
 
-		set cfg "set -x\necho $$ > $startup_fname\n$bootcfg"
+		set cfg "set -x\necho $$ > $startup_fname\n[join $bootcfg "\n"]"
 		writeDataToNodeFile $node_id $confFile $cfg
 
 		set cmds "test -d $VROOT_RUNTIME || mkdir -p $VROOT_RUNTIME ;"

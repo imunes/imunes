@@ -16,12 +16,14 @@ addCase "updateNode" "services" {
 	setNodeServices $node_id $new_value
 } "array"
 
-global cfg_types_dictionary
+global cfg_types_dictionary_array
 
-lappend cfg_types_dictionary "NODE_CONFIG"
-lappend cfg_types_dictionary "IFACES_CONFIG"
+lappend cfg_types_dictionary_array "NODE_CONFIG"
+lappend cfg_types_dictionary_array "IFACES_CONFIG"
 
 addCase "updateNode" "custom_configs" {
+	upvar ::switch_cases::updateNode_custom_configs_entry switch_cases_custom_configs_entry_var
+
 	set custom_configs_diff [dictDiff $old_value $new_value]
 	dict for {custom_configs_key custom_configs_change} $custom_configs_diff {
 		if { $custom_configs_change == "copy" } {
@@ -30,54 +32,85 @@ addCase "updateNode" "custom_configs" {
 
 		dputs "======== $custom_configs_change: '$custom_configs_key'"
 
-		set custom_configs_old_value [_cfgGet $old_value $custom_configs_key]
-		set custom_configs_new_value [_cfgGet $new_value $custom_configs_key]
+		set custom_configs_old_value_list [_cfgGet $old_value $custom_configs_key]
+		set custom_configs_new_value_list [_cfgGet $new_value $custom_configs_key]
 		if { $custom_configs_change in "changed" } {
-			dputs "======== OLD: '$custom_configs_old_value'"
+			dputs "======== OLD: '$custom_configs_old_value_list'"
 		}
 		if { $custom_configs_change in "new changed" } {
-			dputs "======== NEW: '$custom_configs_new_value'"
+			dputs "======== NEW: '$custom_configs_new_value_list'"
 		}
 
-		set hook_diff [dictDiff $custom_configs_old_value $custom_configs_new_value]
-		dict for {hook_key hook_change} $hook_diff {
-			if { $hook_change == "copy" } {
+		set custom_configs_old_value [dict create]
+		foreach old_hook_entry $custom_configs_old_value_list {
+			set custom_name [dictGet $old_hook_entry "custom_name"]
+			dict set custom_configs_old_value $custom_name "custom_command" [dictGet $old_hook_entry "custom_command"]
+			dict set custom_configs_old_value $custom_name "custom_config" [dictGet $old_hook_entry "custom_config"]
+		}
+
+		set custom_configs_new_value [dict create]
+		foreach new_hook_entry $custom_configs_new_value_list {
+			set custom_name [dictGet $new_hook_entry "custom_name"]
+			dict set custom_configs_new_value $custom_name "custom_command" [dictGet $new_hook_entry "custom_command"]
+			dict set custom_configs_new_value $custom_name "custom_config" [dictGet $new_hook_entry "custom_config"]
+		}
+
+		set hook_entries_diff [dictDiff $custom_configs_old_value $custom_configs_new_value]
+		dict for {hook_entries_key hook_entries_change} $hook_entries_diff {
+			if { $hook_entries_change == "copy" } {
 				continue
 			}
 
-			dputs "============ $hook_change: '$hook_key'"
+			dputs "============ $hook_entries_change: '$hook_entries_key'"
 
-			set hook_old_value [_cfgGet $custom_configs_old_value $hook_key]
-			set hook_new_value [_cfgGet $custom_configs_new_value $hook_key]
-			if { $hook_change in "changed" } {
-				dputs "============ OLD: '$hook_old_value'"
+			set hook_entries_old_value [_cfgGet $custom_configs_old_value $hook_entries_key]
+			set hook_entries_new_value [_cfgGet $custom_configs_new_value $hook_entries_key]
+			if { $hook_entries_change in "changed" } {
+				dputs "============ OLD: '$hook_entries_old_value'"
 			}
-			if { $hook_change in "new changed" } {
-				dputs "============ NEW: '$hook_new_value'"
+			if { $hook_entries_change in "new changed" } {
+				dputs "============ NEW: '$hook_entries_new_value'"
 			}
 
-			if { $hook_change == "removed" } {
-				removeNodeCustomConfig $node_id $custom_configs_key $hook_key
-			} else {
-				try {
-					dict get $hook_new_value "custom_command"
-				} on ok cmd {
-				} on error {} {
-					set cmd [dict get $hook_old_value "custom_command"]
+			switch -exact $hook_entries_change {
+				"removed" {
+					removeNodeCustomConfigHookEntry $node_id $custom_configs_key $hook_entries_key
 				}
 
-				try {
-					dict get $hook_new_value "custom_config"
-				} on ok cfg {
-				} on error {} {
-					set cfg [dict get $hook_old_value "custom_config"]
-				}
+				"new" -
+				"changed" {
+					set hook_entry_diff [dictDiff $hook_entries_old_value $hook_entries_new_value]
+					dict for {hook_entry_key hook_entry_change} $hook_entry_diff {
+						if { $hook_entry_change == "copy" } {
+							continue
+						}
 
-				setNodeCustomConfig $node_id $custom_configs_key $hook_key $cmd $cfg
+						dputs "============ $hook_entry_change: '$hook_entry_key'"
+
+						set entry_old_value [_cfgGet $hook_entries_old_value $hook_entry_key]
+						set entry_new_value [_cfgGet $hook_entries_new_value $hook_entry_key]
+						if { $hook_entry_change in "changed" } {
+							dputs "============ OLD: '$entry_old_value'"
+						}
+						if { $hook_entry_change in "new changed" } {
+							dputs "============ NEW: '$entry_new_value'"
+						}
+
+						switch -exact $hook_entry_key [list {*}$switch_cases_custom_configs_entry_var default {}]
+					}
+				}
 			}
 		}
 	}
 } "dictionary"
+
+addCase "updateNode_custom_configs_entry" "custom_command" {
+	setNodeCustomConfigCommand $node_id $custom_configs_key $hook_entries_key $entry_new_value
+}
+
+addCase "updateNode_custom_configs_entry" "custom_config" {
+	setNodeCustomConfig $node_id $custom_configs_key $hook_entries_key $entry_new_value
+} "array"
 
 addCase "updateNode" "custom_enabled" {
 	setNodeCustomEnabled $node_id $new_value

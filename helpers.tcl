@@ -471,6 +471,13 @@ proc reloadSources {} {
 	global isOSlinux isOSfreebsd
 	global debug gui
 
+	global cfg_types_dictionary cfg_types_array cfg_types_inner_dictionary cfg_types_dictionary_array
+
+	set cfg_types_dictionary "gui canvases nodes links annotations images"
+	set cfg_types_array {}
+	set cfg_types_inner_dictionary {}
+	set cfg_types_dictionary_array {}
+
 	set all_modules_list {}
 	set runnable_node_types {}
 

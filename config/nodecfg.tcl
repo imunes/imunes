@@ -220,22 +220,6 @@ proc getNodeDir { node_id } {
 	return [getVrootDir]/[getFromRunning "eid"]/$node_id
 }
 
-#****f* nodecfg.tcl/getNodeCustomConfigIDs
-# NAME
-#   getNodeCustomConfigIDs -- get custom configuration IDs
-# SYNOPSIS
-#   getNodeCustomConfigIDs $node_id
-# FUNCTION
-#   For input node this procedure returns all custom configuration IDs.
-# INPUTS
-#   * node_id -- node id
-# RESULT
-#   * IDs -- returns custom configuration IDs
-#****
-proc getNodeCustomConfigIDs { node_id hook } {
-	return [dict keys [cfgGet "nodes" $node_id "custom_configs" $hook]]
-}
-
 #****f* nodecfg.tcl/getNodeStolenIfaces
 # NAME
 #   getNodeStolenIfaces -- set node's stolen interfaces

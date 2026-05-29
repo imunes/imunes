@@ -149,7 +149,7 @@ namespace eval $MODULE {
 			set bootcfg [getNodeCustomConfig $node_id "IFACES_CONFIG" $custom_selected]
 			set confFile "$VROOT_RUNTIME/custom_ifaces.conf"
 		} else {
-			set bootcfg [join [invokeNodeProc $node_id "generateConfigIfaces" $node_id $ifaces] "\n"]
+			set bootcfg [invokeNodeProc $node_id "generateConfigIfaces" $node_id $ifaces]
 			set bootcmd [invokeNodeProc $node_id "bootcmd" $node_id]
 			set confFile "$VROOT_RUNTIME/boot_ifaces.conf"
 		}
@@ -157,7 +157,7 @@ namespace eval $MODULE {
 		set startup_fname "$VROOT_RUNTIME/IFACES_CONFIG.pid"
 		writeDataToFile $startup_fname ""
 
-		set cfg "set -x\necho $$ > $startup_fname\n$bootcfg"
+		set cfg "set -x\necho $$ > $startup_fname\n[join $bootcfg "\n"]"
 		writeDataToFile $confFile $cfg
 
 		set cmds "rm -f $VROOT_RUNTIME/out_ifaces.log $VROOT_RUNTIME/err_ifaces.log ;"
@@ -200,17 +200,17 @@ namespace eval $MODULE {
 		if { [getNodeCustomEnabled $node_id] == true && $custom_selected ni "\"\" DISABLED" } {
 			set bootcmd [getNodeCustomConfigCommand $node_id "NODE_CONFIG" $custom_selected]
 			set bootcfg [getNodeCustomConfig $node_id "NODE_CONFIG" $custom_selected]
-			set bootcfg "$bootcfg\n[join [invokeNodeProc $node_id "generateConfig" $node_id] "\n"]"
+			set bootcfg [concat $bootcfg [invokeNodeProc $node_id "generateConfig" $node_id]]
 			set confFile "$VROOT_RUNTIME/custom.conf"
 		} else {
-			set bootcfg [join [invokeNodeProc $node_id "generateConfig" $node_id] "\n"]
+			set bootcfg [invokeNodeProc $node_id "generateConfig" $node_id]
 			set bootcmd [invokeNodeProc $node_id "bootcmd" $node_id]
 			set confFile "$VROOT_RUNTIME/boot.conf"
 		}
 
 		writeDataToFile $startup_fname ""
 
-		set cfg "set -x\necho $$ > $startup_fname\n$bootcfg"
+		set cfg "set -x\necho $$ > $startup_fname\n[join $bootcfg "\n"]"
 		writeDataToFile $confFile $cfg
 
 		set cmds "rm -f $out_log $err_log ;"
@@ -260,12 +260,12 @@ namespace eval $MODULE {
 			return
 		}
 
-		set bootcfg [join [invokeNodeProc $node_id "generateUnconfig" $node_id] "\n"]
+		set bootcfg [invokeNodeProc $node_id "generateUnconfig" $node_id]
 		set bootcmd [invokeNodeProc $node_id "bootcmd" $node_id]
 
 		writeDataToFile $startup_fname ""
 
-		set cfg "set -x\necho $$ > $startup_fname\n$bootcfg"
+		set cfg "set -x\necho $$ > $startup_fname\n[join $bootcfg "\n"]"
 		writeDataToFile $confFile $cfg
 
 		set cmds "rm -f $out_log $err_log ;"
@@ -315,12 +315,12 @@ namespace eval $MODULE {
 
 		addStateNode $node_id "ifaces_unconfiguring"
 
-		set bootcfg [join [invokeNodeProc $node_id "generateUnconfigIfaces" $node_id $ifaces] "\n"]
+		set bootcfg [invokeNodeProc $node_id "generateUnconfigIfaces" $node_id $ifaces]
 		set bootcmd [invokeNodeProc $node_id "bootcmd" $node_id]
 
 		writeDataToFile $startup_fname ""
 
-		set cfg "set -x\necho $$ > $startup_fname\n$bootcfg"
+		set cfg "set -x\necho $$ > $startup_fname\n[join $bootcfg "\n"]"
 		writeDataToFile $confFile $cfg
 
 		set cmds "rm -f $out_ifaces_log $err_ifaces_log ;"
