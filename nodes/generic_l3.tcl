@@ -353,12 +353,7 @@ namespace eval genericL3 {
 
 			set private_ns [invokeNodeProc $node_id "getPrivateNs" $eid $node_id]
 
-			set network "imunes-bridge"
-			#if { [getNodeDockerAttach $node_id] == "true" } {
-			#	set network "bridge"
-			#}
-
-			set vroot [getNodeCustomImage $node_id]
+			set vroot [getNodeDockerOptions $node_id "custom_image"]
 			if { $vroot == "" } {
 				# use default IMUNES docker image
 				set vroot $VROOT_MASTER
@@ -376,12 +371,89 @@ namespace eval genericL3 {
 				set ulimit_proc_str ""
 			}
 
+			set cpus [getNodeDockerOptions $node_id "cpus_count"]
+			if { $cpus != "" } {
+				set cpus_str "--cpus=$cpus"
+			} else {
+				set cpus_str ""
+			}
+
+			set volumes_mounts_str ""
+			foreach volume_entry [getNodeDockerOptions $node_id "volumes_mounts"] {
+				if { [dict get $volume_entry "enabled"] == 0 } {
+					continue
+				}
+
+				set mount_type [dict get $volume_entry "type"]
+				set mount_src [dict get $volume_entry "src"]
+				set mount_dst [dict get $volume_entry "dst"]
+				set mount_ro [dict get $volume_entry "readonly"]
+
+				if { $mount_type == "bind" } {
+					# if src is a relative path, convert to absolute path
+					set mount_src "\$(readlink -f \"$mount_src\")"
+
+					# if path does not exist, assume we want to create a directory
+					if { [isNotOk "test -e $mount_src"] } {
+						setStateErrorMsgNode $node_id "Created '$mount_src' on the host."
+						rexec mkdir -p $mount_src
+					}
+				}
+
+				set tmpstr "--mount type=$mount_type,src=\"$mount_src\",dst=\"$mount_dst\""
+				if { $mount_ro } {
+					append tmpstr ",ro"
+				}
+
+				append volumes_mounts_str "$tmpstr "
+			}
+
+			set port_forwards_str ""
+			foreach port_forward_entry [getNodeDockerOptions $node_id "port_forwards"] {
+				if { [dict get $port_forward_entry "enabled"] == 0 } {
+					continue
+				}
+
+				set host_ip [dict get $port_forward_entry "host_ip"]
+				if { $host_ip == "" } {
+					set tmpstr ""
+				} else {
+					set tmpstr "$host_ip:"
+				}
+
+				set host_port [dict get $port_forward_entry "host_port"]
+				set node_port [dict get $port_forward_entry "node_port"]
+				set protocol [dict get $port_forward_entry "protocol"]
+
+				append tmpstr "$host_port:$node_port"
+				if { $protocol != "" } {
+					append tmpstr "/$protocol"
+				}
+
+				append port_forwards_str "-p $tmpstr "
+			}
+
+			set env_vars_str ""
+			foreach env_var_entry [getNodeDockerOptions $node_id "env_vars"] {
+				if { [dict get $env_var_entry "enabled"] == 0 } {
+					continue
+				}
+
+				set env_name [dict get $env_var_entry "env_name"]
+				set env_value [dict get $env_var_entry "env_value"]
+
+				append env_vars_str "--env $env_name=\"$env_value\" "
+			}
+
+			set custom_flags_str [getNodeDockerOptions $node_id "custom_flags"]
+
 			set docker_cmd "docker run --detach --init --tty \
-				--privileged --cap-add=ALL --net=$network \
+				--privileged --cap-add=ALL --net=imunes-bridge \
 				--name $private_ns --hostname=[getNodeName $node_id] \
 				--volume /tmp/.X11-unix:/tmp/.X11-unix \
 				--sysctl net.ipv6.conf.all.disable_ipv6=0 \
-				$ulimit_file_str $ulimit_proc_str $vroot"
+				$cpus_str $volumes_mounts_str $env_vars_str $port_forwards_str \
+				$custom_flags_str $ulimit_file_str $ulimit_proc_str $vroot"
 
 			dputs "Node $node_id -> '$docker_cmd'"
 
@@ -400,7 +472,7 @@ namespace eval genericL3 {
 				pipesExec "mkdir -p $VROOT_RUNTIME" "hold"
 				pipesExec "mkdir -p $VROOT_OVERLAY" "hold"
 
-				set vroot [lindex [split [getNodeCustomImage $node_id] " "] end]
+				set vroot [lindex [split [getNodeJailOptions $node_id "custom_vroot"] " "] end]
 				if { $vroot == "" } {
 					set vroot "$VROOTDIR/vroot"
 				}
@@ -433,9 +505,11 @@ namespace eval genericL3 {
 			pipesExec "devfs -m $VROOT_RUNTIME_DEV ruleset $devfs_number" "hold"
 			pipesExec "devfs -m $VROOT_RUNTIME_DEV rule applyset" "hold"
 
+			set custom_flags_str [getNodeJailOptions $node_id "custom_flags"]
+
 			# create node jail
 			set jail_cmd "jail -c name=$eid.$node_id path=$VROOT_RUNTIME securelevel=1 \
-				host.hostname=\"[getNodeName $node_id]\" vnet persist"
+				host.hostname=\"[getNodeName $node_id]\" $custom_flags_str vnet persist"
 
 			dputs "Node $node_id -> '$jail_cmd'"
 
@@ -487,7 +561,7 @@ namespace eval genericL3 {
 
 		if { $isOSlinux } {
 			set private_ns [invokeNodeProc $node_id "getPrivateNs" $eid $node_id]
-			if { [getNodeDockerAttach $node_id] != "true" } {
+			if { [getNodeDockerOptions $node_id "external_attach"] != "true" } {
 				pipesExec "docker network disconnect imunes-bridge $private_ns &" "hold"
 			}
 

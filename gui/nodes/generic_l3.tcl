@@ -129,8 +129,7 @@ namespace eval genericL3::gui {
 		lassign [configGUI_addNotebook $wi $node_id $labels] \
 			configtab ifctab
 
-		configGUI_customImage $configtab $node_id
-		configGUI_attachDockerToExt $configtab $node_id
+		configGUI_advancedVirtOptions $configtab $node_id "jail docker"
 		configGUI_servicesConfig $configtab $node_id
 		configGUI_staticRoutes $configtab $node_id
 		configGUI_snapshots $configtab $node_id

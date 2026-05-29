@@ -171,8 +171,7 @@ namespace eval ${MODULE}::gui {
 			configtab ifctab ipsectab
 
 		configGUI_routingModel $configtab $node_id
-		configGUI_customImage $configtab $node_id
-		configGUI_attachDockerToExt $configtab $node_id
+		configGUI_advancedVirtOptions $configtab $node_id "jail docker"
 		configGUI_servicesConfig $configtab $node_id
 		configGUI_staticRoutes $configtab $node_id
 		configGUI_snapshots $configtab $node_id

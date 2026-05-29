@@ -623,72 +623,6 @@ proc setNodeServices { node_id services } {
 	cfgSet "nodes" $node_id "services" $services
 }
 
-#****f* nodes.tcl/getNodeCustomImage
-# NAME
-#   getNodeCustomImage -- get node custom image.
-# SYNOPSIS
-#   set value [getNodeCustomImage $node_id]
-# FUNCTION
-#   Returns node custom image setting.
-# INPUTS
-#   * node_id -- node id
-# RESULT
-#   * status -- custom image identifier
-#****
-proc getNodeCustomImage { node_id } {
-	return [cfgGet "nodes" $node_id "custom_image"]
-}
-
-#****f* nodes.tcl/setNodeCustomImage
-# NAME
-#   setNodeCustomImage -- set node custom image.
-# SYNOPSIS
-#   setNodeCustomImage $node_id $img
-# FUNCTION
-#   Sets node custom image.
-# INPUTS
-#   * node_id -- node id
-#   * img -- image identifier
-#****
-proc setNodeCustomImage { node_id img } {
-	cfgSet "nodes" $node_id "custom_image" $img
-
-	trigger_nodeRecreate $node_id
-}
-
-#****f* nodes.tcl/getNodeDockerAttach
-# NAME
-#   getNodeDockerAttach -- get node docker ext iface attach.
-# SYNOPSIS
-#   set value [getNodeDockerAttach $node_id]
-# FUNCTION
-#   Returns node docker ext iface attach setting.
-# INPUTS
-#   * node_id -- node id
-# RESULT
-#   * status -- attach enabled
-#****
-proc getNodeDockerAttach { node_id } {
-	return [cfgGetWithDefault "false" "nodes" $node_id "docker_attach"]
-}
-
-#****f* nodes.tcl/setNodeDockerAttach
-# NAME
-#   setNodeDockerAttach -- set node docker ext iface attach.
-# SYNOPSIS
-#   setNodeDockerAttach $node_id $state
-# FUNCTION
-#   Sets node docker ext iface attach status.
-# INPUTS
-#   * node_id -- node id
-#   * state -- attach status
-#****
-proc setNodeDockerAttach { node_id state } {
-	cfgSet "nodes" $node_id "docker_attach" $state
-
-	trigger_nodeRecreate $node_id
-}
-
 proc getNodeVlanFiltering { node_id } {
 	return [cfgGetWithDefault 0 "nodes" $node_id "vlan_filtering"]
 }
@@ -778,4 +712,24 @@ proc getNodeIPsecSetting { node_id connection setting } {
 
 proc setNodeIPsecSetting { node_id connection setting new_value } {
 	cfgSet "nodes" $node_id "ipsec" "ipsec_configs" $connection $setting $new_value
+}
+
+proc getNodeJailOptions { node_id type } {
+    return [cfgGet "nodes" $node_id "advanced_options" "jail_options" $type]
+}
+
+proc setNodeJailOptions { node_id type new_value } {
+    cfgSet "nodes" $node_id "advanced_options" "jail_options" $type $new_value
+
+	trigger_nodeRecreate $node_id
+}
+
+proc getNodeDockerOptions { node_id type } {
+    return [cfgGet "nodes" $node_id "advanced_options" "docker_options" $type]
+}
+
+proc setNodeDockerOptions { node_id type new_value } {
+    cfgSet "nodes" $node_id "advanced_options" "docker_options" $type $new_value
+
+	trigger_nodeRecreate $node_id
 }
