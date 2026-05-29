@@ -337,12 +337,12 @@ proc setIfcIPv4addrs { node_id iface_id addrs4 } {
 	trigger_ifaceReconfig $node_id $iface_id
 
 	set node_type [getNodeType $node_id]
-	set is_extnat [expr {$node_type == "ext" && [getNodeNATIface $node_id] != "UNASSIGNED"}]
+	set is_extnat [expr { $node_type == "ext" && [getNodeNATIface $node_id] != "UNASSIGNED" }]
 	if { $is_extnat } {
 		trigger_nodeReconfig $node_id
 	}
 
-	if { [isIfcLogical $node_id $iface_id] || ! ($node_type in "router nat64" || $is_extnat) } {
+	if { [isIfcLogical $node_id $iface_id] } {
 		return
 	}
 
@@ -351,24 +351,39 @@ proc setIfcIPv4addrs { node_id iface_id addrs4 } {
 		return
 	}
 
-	set has_extnat [string match "*ext*" $subnet_gws]
-	foreach subnet_node [removeFromList [dict keys $subnet_data] $node_id] {
-		if { [getNodeAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
-			continue
+	if { $node_type in "router nat64" || $is_extnat } {
+		set has_extnat [string match "*ext*" $subnet_gws]
+		foreach subnet_node [removeFromList [dict keys $subnet_data] $node_id] {
+			if { [getNodeAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+				continue
+			}
+
+			set subnet_node_type [getNodeType $subnet_node]
+			if { $subnet_node_type == "ext" || [invokeTypeProc $subnet_node_type "netlayer"] != "NETWORK" } {
+				# skip extnat and L2 nodes
+				continue
+			}
+
+			if { ! $has_extnat && $subnet_node_type in "router nat64" } {
+				# skip routers if there is no extnats
+				continue
+			}
+
+			trigger_nodeReconfig $subnet_node
+		}
+	} else {
+		if { [getNodeAutoDefaultRoutesStatus $node_id] != "enabled" } {
+			return
 		}
 
-		set subnet_node_type [getNodeType $subnet_node]
-		if { $subnet_node_type == "ext" || [invokeTypeProc $subnet_node_type "netlayer"] != "NETWORK" } {
-			# skip extnat and L2 nodes
-			continue
-		}
+		foreach subnet_gw $subnet_gws {
+			# extract IPv4 gateway
+			if { [lindex [split $subnet_gw "|"] 1] != "" } {
+				trigger_nodeReconfig $node_id
 
-		if { ! $has_extnat && $subnet_node_type in "router nat64" } {
-			# skip routers if there is no extnats
-			continue
+				return
+			}
 		}
-
-		trigger_nodeReconfig $subnet_node
 	}
 }
 
@@ -487,8 +502,12 @@ proc setIfcIPv6addrs { node_id iface_id addrs6 } {
 	trigger_ifaceReconfig $node_id $iface_id
 
 	set node_type [getNodeType $node_id]
-	set is_extnat [expr {($node_type == "ext" && [getNodeNATIface $node_id] != "UNASSIGNED")}]
-	if { [isIfcLogical $node_id $iface_id] || ! ($node_type in "router nat64" || $is_extnat) } {
+	set is_extnat [expr { $node_type == "ext" && [getNodeNATIface $node_id] != "UNASSIGNED" }]
+	if { $is_extnat } {
+		trigger_nodeReconfig $node_id
+	}
+
+	if { [isIfcLogical $node_id $iface_id] } {
 		return
 	}
 
@@ -497,24 +516,39 @@ proc setIfcIPv6addrs { node_id iface_id addrs6 } {
 		return
 	}
 
-	set has_extnat [string match "*ext*" $subnet_gws]
-	foreach subnet_node [removeFromList [dict keys $subnet_data] $node_id] {
-		if { [getNodeAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
-			continue
+	if { $node_type in "router nat64" || $is_extnat } {
+		set has_extnat [string match "*ext*" $subnet_gws]
+		foreach subnet_node [removeFromList [dict keys $subnet_data] $node_id] {
+			if { [getNodeAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+				continue
+			}
+
+			set subnet_node_type [getNodeType $subnet_node]
+			if { $subnet_node_type == "ext" || [invokeTypeProc $subnet_node_type "netlayer"] != "NETWORK" } {
+				# skip extnat and L2 nodes
+				continue
+			}
+
+			if { ! $has_extnat && $subnet_node_type in "router nat64" } {
+				# skip routers if there is no extnats
+				continue
+			}
+
+			trigger_nodeReconfig $subnet_node
+		}
+	} else {
+		if { [getNodeAutoDefaultRoutesStatus $node_id] != "enabled" } {
+			return
 		}
 
-		set subnet_node_type [getNodeType $subnet_node]
-		if { $subnet_node_type == "ext" || [invokeTypeProc $subnet_node_type "netlayer"] != "NETWORK" } {
-			# skip extnat and L2 nodes
-			continue
-		}
+		foreach subnet_gw $subnet_gws {
+			# extract IPv6 gateway
+			if { [lindex [split $subnet_gw "|"] 2] != "" } {
+				trigger_nodeReconfig $node_id
 
-		if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
-			# skip routers if there is no extnats
-			continue
+				return
+			}
 		}
-
-		trigger_nodeReconfig $subnet_node
 	}
 }
 
