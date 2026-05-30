@@ -230,9 +230,12 @@ updateRecentsMenu
 bind . <Control-s> "fileSaveDialogBox"
 
 .menubar.file add command -label "Save As" -underline 5 \
-	-command { fileSaveAsDialogBox }
+	-accelerator "Ctrl+Shift+S" -command { fileSaveAsDialogBox }
+bind . <Control-Shift-S> "fileSaveAsDialogBox"
 
-.menubar.file add command -label "Close" -underline 0 -command { closeFile }
+.menubar.file add command -label "Close" -underline 0 \
+	-accelerator "Ctrl+Q" -command { closeFile }
+bind . <Control-q> "closeFile"
 
 .menubar.file add separator
 
@@ -368,16 +371,20 @@ bind . <Control-p> editorPreferences_gui
 # Canvas
 #
 menu .menubar.canvas -tearoff 0
-.menubar.canvas add command -label "New" -underline 0 -command {
+set tmp_command {
 	newCanvas ""
 
 	switchCanvas last
 	set changed 1
 	updateUndoLog
 }
+.menubar.canvas add command -label "New" -underline 0 \
+	-accelerator "Ctrl+T" -command $tmp_command
+bind . <Control-t> $tmp_command
 .menubar.canvas add command -label "Rename" -underline 0 \
 	-command { renameCanvasPopup }
-.menubar.canvas add command -label "Delete" -underline 0 -command {
+
+set tmp_command {
 	set canvas_list [getFromRunning_gui "canvas_list"]
 	set curcanvas [getFromRunning_gui "curcanvas"]
 
@@ -406,6 +413,9 @@ menu .menubar.canvas -tearoff 0
 	set changed 1
 	updateUndoLog
 }
+.menubar.canvas add command -label "Delete" -underline 0 \
+	-accelerator "Ctrl+W" -command $tmp_command
+bind . <Control-w> $tmp_command
 .menubar.canvas add separator
 .menubar.canvas add command -label "Resize" -underline 2 -command resizeCanvasPopup
 .menubar.canvas add command -label "Background image" -underline 0 \
@@ -415,9 +425,11 @@ menu .menubar.canvas -tearoff 0
 .menubar.canvas add command -label "Previous" -accelerator "PgUp" \
 	-command { switchCanvas prev }
 bind . <Prior> { switchCanvas prev }
+bind . <Control-ISO_Left_Tab> { switchCanvas prev ; break }
 .menubar.canvas add command -label "Next" -accelerator "PgDown" \
 	-command { switchCanvas next }
 bind . <Next> { switchCanvas next }
+bind . <Control-Tab> { switchCanvas next ; break}
 .menubar.canvas add command -label "First" -accelerator "Home" \
 	-command { switchCanvas first }
 bind . <Home> { switchCanvas first }
