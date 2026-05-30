@@ -1825,9 +1825,13 @@ proc button1-motion { x y } {
 	set curobj [$main_canvas_elem find withtag current]
 	set curtype [lindex [$main_canvas_elem gettags current] 0]
 	set active_tool [getActiveTool]
-	if { $active_tool == "link" && $newlink != "" } {
-		#creating a new link
-		$main_canvas_elem coords $newlink $lastX $lastY $x $y
+	if { $active_tool == "link" } {
+		if { $newlink != "" } {
+			#creating a new link
+			$main_canvas_elem coords $newlink $lastX $lastY $x $y
+		} else {
+			return
+		}
 	} elseif {
 		$active_tool == "select" &&
 		$curtype == "nodelabel" &&
