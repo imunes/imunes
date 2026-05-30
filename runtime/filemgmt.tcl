@@ -90,6 +90,7 @@ proc newProject {} {
 	set curcfg [newObjectId $cfg_list "cfg"]
 	lappend cfg_list $curcfg
 
+	catch { namespace delete ::cf::[set curcfg] }
 	namespace eval ::cf::[set curcfg] {}
 	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
 	upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
