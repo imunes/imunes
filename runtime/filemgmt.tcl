@@ -660,7 +660,6 @@ proc closeFile { { noprompt "" } } {
 	}
 
 	if { $gui } {
-		setActiveToolGroup select
 		updateProjectMenu
 	}
 	switchProject
