@@ -2659,7 +2659,12 @@ proc deleteSelection { { keep_other_ifaces 0 } { no_warning "" } } {
 	global changed
 	global viewid main_canvas_elem
 
-	if { $no_warning == "" && [getFromRunning "cfg_deployed"] } {
+	set selected_nodes [selectedNodes]
+	if {
+		$selected_nodes != {} &&
+		$no_warning == "" &&
+		[getFromRunning "cfg_deployed"]
+	} {
 		set answer [tk_messageBox -message "Are you sure you want to delete selected nodes?\n\nThere is no undo in exec mode." \
 			-icon question -type yesno]
 
@@ -2678,7 +2683,7 @@ proc deleteSelection { { keep_other_ifaces 0 } { no_warning "" } } {
 	catch { unset viewid }
 	$main_canvas_elem config -cursor watch; update
 
-	foreach node_id [selectedNodes] {
+	foreach node_id $selected_nodes {
 		removeNodeGUI $node_id $keep_other_ifaces
 
 		set changed 1
