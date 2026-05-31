@@ -1851,9 +1851,9 @@ proc button1-motion { x y } {
 
 		lassign [$main_canvas_elem gettags $curobj] - point_id link_id
 
-		set coords [$main_canvas_elem coords $curobj]
-		set x [expr { [lindex $coords 0] / $zoom }]
-		set y [expr { [lindex $coords 1] / $zoom }]
+		set coordinates [$main_canvas_elem coords $curobj]
+		set x [expr { [lindex $coordinates 0] / $zoom }]
+		set y [expr { [lindex $coordinates 1] / $zoom }]
 
 		setPoint_gui $point_id "$x $y"
 	} elseif {
@@ -2234,8 +2234,8 @@ proc button1-release { x y } {
 				set i 0
 
 				while { $i <= $l } {
-					set f1 [expr {[lindex $coords $i] * $zoom}]
-					set g1 [expr {[lindex $coords $i+1] * $zoom}]
+					set f1 [expr {[lindex $coordinates $i] * $zoom}]
+					set g1 [expr {[lindex $coordinates $i+1] * $zoom}]
 					set xx1 [expr $f1+$shiftx]
 					set yy1 [expr $g1+$shifty]
 
@@ -2282,17 +2282,17 @@ proc button1-release { x y } {
 		foreach img [$main_canvas_elem find withtag "point_selected"] {
 			lassign [$main_canvas_elem gettags $img] - point_id link_id
 
-			set coords [$main_canvas_elem coords $img]
-			set x [expr { [lindex $coords 0] / $zoom }]
-			set y [expr { [lindex $coords 1] / $zoom }]
+			set coordinates [$main_canvas_elem coords $img]
+			set x [expr { [lindex $coordinates 0] / $zoom }]
+			set y [expr { [lindex $coordinates 1] / $zoom }]
 
 			set dx [expr { (int($x / $grid + 0.5) * $grid - $x) * $zoom }]
 			set dy [expr { (int($y / $grid + 0.5) * $grid - $y) * $zoom }]
 			$main_canvas_elem move $img $dx $dy
 
-			set coords [$main_canvas_elem coords $img]
-			set x [expr { [lindex $coords 0] / $zoom }]
-			set y [expr { [lindex $coords 1] / $zoom }]
+			set coordinates [$main_canvas_elem coords $img]
+			set x [expr { [lindex $coordinates 0] / $zoom }]
+			set y [expr { [lindex $coordinates 1] / $zoom }]
 
 			if { $x < 0 } {
 				set x 0
@@ -2360,19 +2360,19 @@ proc button1-release { x y } {
 			set y1 $y
 			set autorearrange_enabled 0
 		} else {
-			set coords [$main_canvas_elem coords $selectbox]
+			set coordinates [$main_canvas_elem coords $selectbox]
 
 			$main_canvas_elem delete $selectbox
 			set selectbox ""
 
-			if { $coords == "" } {
+			if { $coordinates == "" } {
 				return
 			}
 
-			set x [expr { int([lindex $coords 0] / $zoom) }]
-			set y [expr { int([lindex $coords 1] / $zoom) }]
-			set x1 [expr { int([lindex $coords 4] / $zoom) }]
-			set y1 [expr { int([lindex $coords 5] / $zoom) }]
+			set x [expr { int([lindex $coordinates 0] / $zoom) }]
+			set y [expr { int([lindex $coordinates 1] / $zoom) }]
+			set x1 [expr { int([lindex $coordinates 4] / $zoom) }]
+			set y1 [expr { int([lindex $coordinates 5] / $zoom) }]
 		}
 
 		if { $resizemode == "false" } {
