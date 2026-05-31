@@ -231,6 +231,13 @@ proc getNodeStatIPv4routes { node_id } {
 proc setNodeStatIPv4routes { node_id routes } {
 	cfgSet "nodes" $node_id "croutes4" $routes
 
+	if {
+		[getNodeCustomEnabled $node_id] &&
+		[getNodeCustomConfigSelected $node_id "NODE_CONFIG"] ni "\"\" DISABLED"
+	} {
+		return
+	}
+
 	trigger_nodeReconfig $node_id
 }
 
@@ -265,6 +272,13 @@ proc getNodeStatIPv6routes { node_id } {
 #****
 proc setNodeStatIPv6routes { node_id routes } {
 	cfgSet "nodes" $node_id "croutes6" $routes
+
+	if {
+		[getNodeCustomEnabled $node_id] &&
+		[getNodeCustomConfigSelected $node_id "NODE_CONFIG"] ni "\"\" DISABLED"
+	} {
+		return
+	}
 
 	trigger_nodeReconfig $node_id
 }
