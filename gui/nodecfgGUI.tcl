@@ -4718,7 +4718,7 @@ proc createIPsecGUI { node_id mainFrame connParamsLframe espOptionsLframe ikeSAL
 	ttk::button $connParamsLframe.local_cert_container.cert_chooser -text "Open" \
 		-command "chooseFile cert"
 	ttk::entry $connParamsLframe.local_cert_container.local_cert_directory -width 20 -textvariable local_cert_dir -state readonly
-	grid $connParamsLframe.local_cert_container -column 0 -row 7 -columnspan 3 -sticky w
+	grid $connParamsLframe.local_cert_container -column 0 -row 8 -columnspan 3 -sticky w
 	grid $connParamsLframe.local_cert_container.local_cert -column 0 -row 0 -pady 5 -padx {11 5} -sticky e
 	grid $connParamsLframe.local_cert_container.local_cert_entry -column 1 -row 0 -pady 5 -padx 5 -sticky w
 	grid $connParamsLframe.local_cert_container.cert_chooser -column 2 -row 0
@@ -4730,14 +4730,14 @@ proc createIPsecGUI { node_id mainFrame connParamsLframe espOptionsLframe ikeSAL
 	ttk::button $connParamsLframe.private_file_container.private_chooser -text "Open" \
 		-command "chooseFile private"
 	ttk::entry $connParamsLframe.private_file_container.secret_directory -width 22 -textvariable secret_dir -state readonly
-	grid $connParamsLframe.private_file_container -column 0 -row 8 -columnspan 3 -sticky w
+	grid $connParamsLframe.private_file_container -column 0 -row 9 -columnspan 3 -sticky w
 	grid $connParamsLframe.private_file_container.secret -column 0 -row 0 -pady 5 -padx {43 0} -sticky e
 	grid $connParamsLframe.private_file_container.secret_entry -column 1 -row 0 -pady 5 -padx 5 -sticky w
 	grid $connParamsLframe.private_file_container.private_chooser -column 2 -row 0
 	grid $connParamsLframe.private_file_container.secret_directory -column 3 -row 0 -pady 5 -padx 5 -sticky w
 
 	ttk::checkbutton $connParamsLframe.check_button -text "Start connection after executing experiment" -variable start_connection -onvalue 1 -offvalue 0
-	grid $connParamsLframe.check_button -column 0 -row 9 -pady 5 -padx 5 -columnspan 2
+	grid $connParamsLframe.check_button -column 0 -row 10 -pady 5 -padx 5 -columnspan 2
 
 	# hidden
 	ttk::label $connParamsLframe.shared_key -text "Shared key:"
