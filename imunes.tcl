@@ -321,6 +321,10 @@ set node_existing_ipv6 {}
 set all_modules_list {}
 set runnable_node_types {}
 
+global possible_loop possible_vlan_loop
+set possible_loop 0
+set possible_vlan_loop 0
+
 # Set default node type list
 set node_types "lanswitch hub rj45 stpswitch filter packgen \
 	router host pc nat64 ext"

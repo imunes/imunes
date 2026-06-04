@@ -661,9 +661,6 @@ proc menu_ifacesSettings { node_id root_menu } {
 			$iface_menu delete 0 end
 		}
 
-		set ip4 [getIfcIPv4addrs $node_id $iface_id]
-		set ip6 [getIfcIPv6addrs $node_id $iface_id]
-
 		set iface_label $iface_name
 		if { [getIfcType $node_id $iface_id] == "stolen" } {
 			set iface_label "\[$iface_label\]"
@@ -673,6 +670,9 @@ proc menu_ifacesSettings { node_id root_menu } {
 			"$iface_label" \
 			$iface_menu \
 			"true"
+
+		set ip4 [getIfcIPv4addrs $node_id $iface_id]
+		set ip6 [getIfcIPv6addrs $node_id $iface_id]
 
 		#
 		# IP autorenumber
@@ -712,33 +712,7 @@ proc menu_ifacesSettings { node_id root_menu } {
 			""
 		]
 
-		set sub4 [lindex [getSubnetAddrsByPrio "ipv4" $node_id $iface_id] 0]
-		set sub6 [lindex [getSubnetAddrsByPrio "ipv6" $node_id $iface_id] 0]
-
-		if { $sub4 == "" || $sub6 == "" } {
-			foreach node_subnet_data [getSubnetIfaces $node_id $iface_id] {
-				lassign $node_subnet_data prio subnet_node_id subnet_iface_id
-
-				#skip current node
-				if { $node_id == $subnet_node_id && $iface_id == $subnet_iface_id } {
-					continue
-				}
-
-				set cur_addrs [getIfcIPv4addrs $subnet_node_id $subnet_iface_id]
-				if { $sub4 == "" && $cur_addrs != {} } {
-					set sub4 [lindex $cur_addrs 0]
-				}
-
-				set cur_addrs [getIfcIPv6addrs $subnet_node_id $subnet_iface_id]
-				if { $sub6 == "" && $cur_addrs != {} } {
-					set sub6 [lindex $cur_addrs 0]
-				}
-
-				if { $sub4 != "" && $sub6 != "" } {
-					break
-				}
-			}
-		}
+		lassign [getSubnetAddrsByPrio $node_id $iface_id] sub4 sub6
 
 		set actions [list \
 			"Remove IPv4 addresses ($ip4)"	"removeIPv4Nodes $node_id {$node_id $iface_id}"	[expr { $ip4 != {} }] \

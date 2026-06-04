@@ -358,7 +358,7 @@ proc setNodeNATIface { node_id interface } {
 		set my_priority $new_priority
 	}
 	foreach node_subnet_data [getSubnetIfaces $node_id $iface_id] {
-		lassign $node_subnet_data node_priority subnet_node_id -
+		lassign $node_subnet_data node_priority subnet_node_id - -
 
 		if {
 			[getNodeAutoDefaultRoutesStatus $subnet_node_id] == "enabled" &&
