@@ -486,7 +486,7 @@ proc trigger_ifaceCreate { node_id iface_id } {
 	set link_id [getIfcLink $node_id $iface_id]
 	if { $link_id != "" } {
 		if { [getLinkDirect $link_id] } {
-			lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
+			lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id -
 			if { $isOSlinux } {
 				set ifaces [dictGet $create_nodes_ifaces $peer_id]
 				if { "*" ni $ifaces && $peer_iface_id ni $ifaces } {

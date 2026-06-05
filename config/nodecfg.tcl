@@ -852,7 +852,7 @@ proc listLANNodes { l2node_id l2peers } {
 	lappend l2peers $l2node_id
 
 	foreach iface_id [ifcList $l2node_id] {
-		lassign [logicalPeerByIfc $l2node_id $iface_id] peer_id peer_iface_id
+		lassign [logicalPeerByIfc $l2node_id $iface_id] peer_id peer_iface_id -
 		if {
 			[getIfcLink $peer_id $peer_iface_id] == "" ||
 			$peer_id in $l2peers
@@ -1169,7 +1169,7 @@ proc getSubnetIfaces { node_id iface_id } {
 		lassign [lindex $nodes_ifaces $idx] gw_priority node_id iface_id
 		incr idx
 
-		lassign [logicalPeerByIfc $node_id $iface_id] node_id iface_id
+		lassign [logicalPeerByIfc $node_id $iface_id] node_id iface_id -
 		if { $node_id == {} || $iface_id == {} } {
 			continue
 		}

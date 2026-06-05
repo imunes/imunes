@@ -1551,7 +1551,7 @@ proc configGUI_rj45s { wi node_id } {
 		set group "$iface_id [_getIfcName $node_cfg $iface_id]"
 		lassign $group iface_id extIfc
 		set lbl "Interface $iface_id"
-		lassign [logicalPeerByIfc $node_id $iface_id] peer_id -
+		set peer_id [lindex [logicalPeerByIfc $node_id $iface_id] 0]
 		if { $peer_id != "" } {
 			set lbl "$lbl (peer [getNodeName $peer_id])"
 		}

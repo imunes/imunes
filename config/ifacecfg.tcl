@@ -224,6 +224,8 @@ proc allIfacesNames { node_id } {
 #   * iface_id -- interface id
 # RESULT
 #   * peer_id -- node id of the node on the other side of the interface
+#   * peer_iface_id -- iface id of the node on the other side of the interface
+#   * peer_vlan_id -- VLAN id of the iface on the other side of the interface
 #****
 proc logicalPeerByIfc { node_id iface_id } {
 	set link_id [getIfcLink $node_id $iface_id]
@@ -234,7 +236,19 @@ proc logicalPeerByIfc { node_id iface_id } {
 	set peer_id [removeFromList [getLinkPeers $link_id] $node_id "keep_doubles"]
 	set peer_iface_id [removeFromList [getLinkPeersIfaces $link_id] $iface_id "keep_doubles"]
 
-	return "$peer_id $peer_iface_id"
+	set peer_vlan_id 0
+	if {
+		[getNodeType $peer_id] in "lanswitch" &&
+		[getNodeVlanFiltering $peer_id] &&
+		[getIfcVlanType $peer_id $peer_iface_id] == "access"
+	} {
+		set peer_vlan_id [getIfcVlanTag $peer_id $peer_iface_id]
+		if { $peer_vlan_id == "" } {
+			set peer_vlan_id 0
+		}
+	}
+
+	return "$peer_id $peer_iface_id $peer_vlan_id"
 }
 
 proc ifaceIdFromName { node_id iface_name } {
@@ -424,7 +438,7 @@ proc removeIface { node_id iface_id { keep_other_ifaces 1 } { keep_link "" } } {
 
 	set link_id [getIfcLink $node_id $iface_id]
 	if { $link_id != "" } {
-		lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
+		lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id -
 		set old_routes [appendNodeSubnetRoutes $peer_id $old_routes]
 
 		cfgUnset "nodes" $node_id "ifaces" $iface_id "link"

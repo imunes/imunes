@@ -424,7 +424,7 @@ namespace eval genericL2 {
 				set private_ns [invokeNodeProc $node_id "getPrivateNs" $eid $node_id]
 				lassign [invokeNodeProc $node_id "getHookData" $node_id $iface_id] iface_name - -
 
-				lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
+				lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id -
 
 				if {
 					"creating" in [getStateNodeIface $node_id $iface_id]
@@ -702,7 +702,7 @@ namespace eval genericL2 {
 				set private_ns [invokeNodeProc $node_id "getPrivateNs" $eid $node_id]
 				lassign [invokeNodeProc $node_id "getHookData" $node_id $iface_id] iface_name - -
 
-				lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
+				lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id -
 
 				if {
 					"destroying" in [getStateNodeIface $node_id $iface_id]

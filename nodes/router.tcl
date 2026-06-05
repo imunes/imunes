@@ -98,7 +98,7 @@ namespace eval $MODULE {
 	proc confNewIfc { node_id iface_id } {
 		invokeTypeProc "genericL3" "confNewIfc" $node_id $iface_id
 
-		lassign [logicalPeerByIfc $node_id $iface_id] peer_id -
+		set peer_id [lindex [logicalPeerByIfc $node_id $iface_id] 0]
 		if {
 			$peer_id != "" &&
 			[getNodeType $peer_id] == "ext" &&

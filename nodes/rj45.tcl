@@ -205,7 +205,7 @@ namespace eval $MODULE {
 
 					set other_link_id [getIfcLink $other_node_id $other_iface_id]
 					if { $other_link_id != "" && [getLinkDirect $other_link_id] } {
-						lassign [logicalPeerByIfc $other_node_id $other_iface_id] peer_id peer_iface_id
+						lassign [logicalPeerByIfc $other_node_id $other_iface_id] peer_id peer_iface_id -
 						if { [getNodeType $peer_id] in "hub lanswitch" } {
 							if { $other_iface_name ni $direct_l2 } {
 								lappend direct_l2 $other_iface_name
@@ -249,7 +249,7 @@ namespace eval $MODULE {
 			set link_is_direct [getLinkDirect $link_id]
 			set add_to_direct 0
 			set link_is_direct_l2 0
-			lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
+			lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id -
 			if { $link_is_direct && [getNodeType $peer_id] in "hub lanswitch" } {
 				set link_is_direct_l2 1
 			}
@@ -553,7 +553,7 @@ namespace eval $MODULE {
 			unsetRunning "${node_id}|${iface_id}_active_vlan"
 			unsetRunning "${node_id}|${iface_id}_active_dev"
 
-			lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
+			lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id -
 			if { [getIfcName $node_id $iface_id] == "UNASSIGNED" } {
 				removeStateNodeIface $peer_id $peer_iface_id "error creating running"
 
@@ -616,7 +616,7 @@ namespace eval $MODULE {
 				lassign [invokeNodeProc $node_id "getHookData" $node_id $iface_id] iface_name - -
 				set link_id [getIfcLink $node_id $iface_id]
 
-				lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
+				lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id -
 
 				if {
 					"creating" in [getStateNodeIface $node_id $iface_id]
@@ -811,7 +811,7 @@ namespace eval $MODULE {
 					continue
 				}
 
-				lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
+				lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id -
 
 				if {
 					"destroying" in [getStateNodeIface $node_id $iface_id]

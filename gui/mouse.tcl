@@ -465,7 +465,7 @@ proc button3link { x y } {
 	#
 	if { [isPseudoLink $link_id] } {
 		lassign [linkFromPseudoLink $link_id] - peer1_id peer1_iface_id
-		lassign [logicalPeerByIfc $peer1_id $peer1_iface_id] peer2_id peer2_iface_id
+		lassign [logicalPeerByIfc $peer1_id $peer1_iface_id] peer2_id peer2_iface_id -
 	} else {
 		lassign [getLinkPeers $link_id] peer1_id peer2_id
 		lassign [getLinkPeersIfaces $link_id] peer1_iface_id peer2_iface_id
