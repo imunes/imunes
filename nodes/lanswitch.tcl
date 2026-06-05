@@ -226,11 +226,15 @@ namespace eval $MODULE {
 					pipesExec "ip netns exec $private_ns bridge vlan del dev $iface_name vid 1" "hold"
 					if { $vlantag != 1 } {
 						pipesExec "ip netns exec $private_ns bridge vlan add dev $iface_name vid $vlantag pvid untagged" "hold"
+						pipesExec "ip netns exec $private_ns tc qdisc del dev $iface_name clsact 2>/dev/null || true" "hold"
+						pipesExec "ip netns exec $private_ns tc qdisc add dev $iface_name clsact" "hold"
+						pipesExec "ip netns exec $private_ns tc filter add dev $iface_name ingress protocol 802.1Q flower action vlan push protocol 802.1Q id $vlantag" "hold"
 					}
 
 					continue
 				}
 
+				pipesExec "ip netns exec $private_ns tc qdisc del dev $iface_name clsact 2>/dev/null || true" "hold"
 				pipesExec "ip netns exec $private_ns bridge vlan add dev $iface_name vid 1 pvid untagged" "hold"
 
 				foreach other_iface_id [ifcList $node_id] {
