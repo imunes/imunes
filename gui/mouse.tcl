@@ -83,11 +83,11 @@ proc removeLinkGUI { link_id atomic { keep_ifaces 0 } } {
 			redeployCfg
 		}
 
-		set changed 1
 		if { $new_link_id != "" || $keep_ifaces || "rj45" in "$node1_type $node2_type" } {
 			redrawAll
 		}
 
+		set changed 1
 		updateUndoLog
 		$main_canvas_elem config -cursor left_ptr
 	}
