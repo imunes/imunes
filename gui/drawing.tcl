@@ -277,6 +277,10 @@ proc drawNode { node_id } {
 				set iflabel "\[[getIfcName $node_id $iface_id]\]"
 			} else {
 				set iflabel "[getIfcName $node_id $iface_id]"
+				if { [getNodeVlanFiltering $node_id] && [getIfcVlanType $node_id $iface_id] == "access" } {
+					set vlantag [getIfcVlanTag $node_id $iface_id]
+					set iflabel "$iflabel:$vlantag"
+				}
 			}
 
 			if { $has_empty_ifaces == 0 } {
