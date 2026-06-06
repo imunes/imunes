@@ -348,9 +348,10 @@ proc setDefaultIPv6routes { node_id routes } {
 proc getDefaultRoutesConfig { node_id } {
 	set all_routes4 {}
 	set all_routes6 {}
-	foreach iface_id [ifcList $node_id] {
-		lassign [getSubnetNextIpAndGateways "ipv4" $node_id $iface_id] - subnet_gws4
-		lassign [getSubnetNextIpAndGateways "ipv6" $node_id $iface_id] - subnet_gws6
+	foreach iface_id [getIfacesByType $node_id "phys" "vlan" "stolen"] {
+		set nodes_ifaces [getSubnetIfaces $node_id $iface_id]
+		lassign [getSubnetNextIpAndGateways "ipv4" $node_id $iface_id $nodes_ifaces] - subnet_gws4
+		lassign [getSubnetNextIpAndGateways "ipv6" $node_id $iface_id $nodes_ifaces] - subnet_gws6
 
 		foreach ipv4_addr [getIfcIPv4addrs $node_id $iface_id] {
 			if { $ipv4_addr == "dhcp" } {
@@ -1353,14 +1354,14 @@ proc getSubnetAddrsByPrio { node_id iface_id } {
 }
 
 # returns next free IP address and all gateway IP addresses in subnet
-proc getSubnetNextIpAndGateways { ip_version orig_node_id orig_iface_id { nodes "*" } } {
+proc getSubnetNextIpAndGateways { ip_version orig_node_id orig_iface_id nodes_ifaces { nodes "*" } } {
 	set ip_version_num [string index $ip_version 3]
 	set orig_priority [invokeNodeProc $orig_node_id "getSubnetPriority" $orig_node_id $orig_iface_id]
 
 	set subnet_addrs {}
 	set subnet_gws [dict create]
 
-	foreach node_subnet_data [getSubnetIfaces $orig_node_id $orig_iface_id] {
+	foreach node_subnet_data $nodes_ifaces {
 		lassign $node_subnet_data gw_priority node_id iface_id -
 		if { $nodes != "*" && $node_id ni $nodes } {
 			continue
@@ -1441,11 +1442,11 @@ proc assignSubnet { ip_version node_id iface_id selected { subnet "" } } {
 		set overlap_proc "ip6_isOverlap"
 	}
 
-	if { $subnet == "" } {
-		lassign [getSubnetNextIpAndGateways $ip_version $node_id $iface_id] subnet -
-	}
-
 	set nodes_ifaces [getSubnetIfaces $node_id $iface_id]
+
+	if { $subnet == "" } {
+		lassign [getSubnetNextIpAndGateways $ip_version $node_id $iface_id $nodes_ifaces] subnet -
+	}
 
 	# first, get all non-selected used addresses from this subnet
 	set used_addrs {}
@@ -1588,7 +1589,7 @@ proc autoIPAddr { ip_version node_id iface_id { nodes "*" } } {
 		return
 	}
 
-	lassign [getSubnetNextIpAndGateways $ip_version $node_id $iface_id $nodes] addr -
+	lassign [getSubnetNextIpAndGateways $ip_version $node_id $iface_id [getSubnetIfaces $node_id $iface_id] $nodes] addr -
 	if { $addr == "" } {
 		global gui execMode
 
