@@ -434,12 +434,16 @@ proc removeIface { node_id iface_id { keep_other_ifaces 1 } { keep_link "" } } {
 	trigger_ifaceDestroy $node_id $iface_id $keep_other_ifaces
 
 	# save old subnet data for comparison
-	set old_routes [appendNodeSubnetRoutes $node_id {}]
+	if { [getFromRunning "cfg_deployed"] } {
+		set old_routes [appendNodeSubnetRoutes $node_id {}]
+	}
 
 	set link_id [getIfcLink $node_id $iface_id]
 	if { $link_id != "" } {
 		lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id -
-		set old_routes [appendNodeSubnetRoutes $peer_id $old_routes]
+		if { [getFromRunning "cfg_deployed"] } {
+			set old_routes [appendNodeSubnetRoutes $peer_id $old_routes]
+		}
 
 		cfgUnset "nodes" $node_id "ifaces" $iface_id "link"
 
@@ -488,16 +492,18 @@ proc removeIface { node_id iface_id { keep_other_ifaces 1 } { keep_link "" } } {
 		}
 	}
 
-	set new_routes [appendNodeSubnetRoutes $node_id {}]
-	if { $link_id != "" } {
-		set new_routes [appendNodeSubnetRoutes $peer_id $new_routes]
-	}
+	if { [getFromRunning "cfg_deployed"] } {
+		set new_routes [appendNodeSubnetRoutes $node_id {}]
+		if { $link_id != "" } {
+			set new_routes [appendNodeSubnetRoutes $peer_id $new_routes]
+		}
 
-	set diff [dictDiff $old_routes $new_routes]
-	if { [lsort -uniq [dict values $diff]] != "copy" } {
-		dict for {subnet_node_id change} $diff {
-			if { $change != "copy" && [getNodeAutoDefaultRoutesStatus $subnet_node_id] == "enabled" } {
-				trigger_nodeReconfig $subnet_node_id
+		set diff [dictDiff $old_routes $new_routes]
+		if { [lsort -uniq [dict values $diff]] != "copy" } {
+			dict for {subnet_node_id change} $diff {
+				if { $change != "copy" && [getNodeAutoDefaultRoutesStatus $subnet_node_id] == "enabled" } {
+					trigger_nodeReconfig $subnet_node_id
+				}
 			}
 		}
 	}

@@ -332,7 +332,9 @@ proc getIfcIPv4addrs { node_id iface_id } {
 #   * addrs4 -- new IPv4 addresses.
 #****
 proc setIfcIPv4addrs { node_id iface_id addrs4 } {
-	set old_routes [appendNodeSubnetRoutes $node_id {} "ipv4"]
+	if { [getFromRunning "cfg_deployed"] } {
+		set old_routes [appendNodeSubnetRoutes $node_id {} "ipv4"]
+	}
 
 	cfgSet "nodes" $node_id "ifaces" $iface_id "ipv4_addrs" $addrs4
 
@@ -343,20 +345,22 @@ proc setIfcIPv4addrs { node_id iface_id addrs4 } {
 		return
 	}
 
-	set new_routes [appendNodeSubnetRoutes $node_id {} "ipv4"]
+	if { [getFromRunning "cfg_deployed"] } {
+		set new_routes [appendNodeSubnetRoutes $node_id {} "ipv4"]
 
-	set node_type [getNodeType $node_id]
-	if {
-		$node_type in "router nat64" ||
-		($node_type == "ext" && [getNodeNATIface $node_id] != "UNASSIGNED")
-	} {
-		triggerChangedDefaultRoutes $old_routes $new_routes
-	} elseif {
-		[getNodeAutoDefaultRoutesStatus $node_id] == "enabled" &&
-		([dictGet $old_routes $node_id] != {} ||
-		[dictGet $new_routes $node_id] != {})
-	} {
-		trigger_nodeReconfig $node_id
+		set node_type [getNodeType $node_id]
+		if {
+			$node_type in "router nat64" ||
+			($node_type == "ext" && [getNodeNATIface $node_id] != "UNASSIGNED")
+		} {
+			triggerChangedDefaultRoutes $old_routes $new_routes
+		} elseif {
+			[getNodeAutoDefaultRoutesStatus $node_id] == "enabled" &&
+			([dictGet $old_routes $node_id] != {} ||
+			[dictGet $new_routes $node_id] != {})
+		} {
+			trigger_nodeReconfig $node_id
+		}
 	}
 }
 
@@ -470,7 +474,9 @@ proc getIfcIPv6addrs { node_id iface_id } {
 #   * addrs6 -- new IPv6 addresses.
 #****
 proc setIfcIPv6addrs { node_id iface_id addrs6 } {
-	set old_routes [appendNodeSubnetRoutes $node_id {} "ipv6"]
+	if { [getFromRunning "cfg_deployed"] } {
+		set old_routes [appendNodeSubnetRoutes $node_id {} "ipv6"]
+	}
 
 	cfgSet "nodes" $node_id "ifaces" $iface_id "ipv6_addrs" $addrs6
 
@@ -481,20 +487,22 @@ proc setIfcIPv6addrs { node_id iface_id addrs6 } {
 		return
 	}
 
-	set new_routes [appendNodeSubnetRoutes $node_id {} "ipv6"]
+	if { [getFromRunning "cfg_deployed"] } {
+		set new_routes [appendNodeSubnetRoutes $node_id {} "ipv6"]
 
-	set node_type [getNodeType $node_id]
-	if {
-		$node_type in "router nat64" ||
-		($node_type == "ext" && [getNodeNATIface $node_id] != "UNASSIGNED")
-	} {
-		triggerChangedDefaultRoutes $old_routes $new_routes
-	} elseif {
-		[getNodeAutoDefaultRoutesStatus $node_id] == "enabled" &&
-		([dictGet $old_routes $node_id] != {} ||
-		[dictGet $new_routes $node_id] != {})
-	} {
-		trigger_nodeReconfig $node_id
+		set node_type [getNodeType $node_id]
+		if {
+			$node_type in "router nat64" ||
+			($node_type == "ext" && [getNodeNATIface $node_id] != "UNASSIGNED")
+		} {
+			triggerChangedDefaultRoutes $old_routes $new_routes
+		} elseif {
+			[getNodeAutoDefaultRoutesStatus $node_id] == "enabled" &&
+			([dictGet $old_routes $node_id] != {} ||
+			[dictGet $new_routes $node_id] != {})
+		} {
+			trigger_nodeReconfig $node_id
+		}
 	}
 }
 

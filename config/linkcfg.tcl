@@ -75,7 +75,9 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 	set is_direct [getLinkDirect $link_id]
 	foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
 		# save old subnet data for comparison
-		set old_routes [appendNodeSubnetRoutes $node_id $old_routes]
+		if { [getFromRunning "cfg_deployed"] } {
+			set old_routes [appendNodeSubnetRoutes $node_id $old_routes]
+		}
 
 		set node_type [getNodeType $node_id]
 		if { $node_type in "packgen" } {
@@ -88,7 +90,9 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 
 		if { $keep_ifaces } {
 			cfgUnset "nodes" $node_id "ifaces" $iface_id "link"
-			set new_routes [appendNodeSubnetRoutes $node_id $new_routes]
+			if { [getFromRunning "cfg_deployed"] } {
+				set new_routes [appendNodeSubnetRoutes $node_id $new_routes]
+			}
 
 			continue
 		}
@@ -246,8 +250,10 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
 		}
 	}
 
-	set old_routes [appendNodeSubnetRoutes $node1_id {}]
-	set old_routes [appendNodeSubnetRoutes $node2_id $old_routes]
+	if { [getFromRunning "cfg_deployed"] } {
+		set old_routes [appendNodeSubnetRoutes $node1_id {}]
+		set old_routes [appendNodeSubnetRoutes $node2_id $old_routes]
+	}
 
 	set link_id ""
 	while { $link_id == "" } {
@@ -274,15 +280,21 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
 
 	trigger_linkCreate $link_id
 
-	set new_routes [appendNodeSubnetRoutes $node1_id {}]
-	set new_routes [appendNodeSubnetRoutes $node2_id $new_routes]
+	if { [getFromRunning "cfg_deployed"] } {
+		set new_routes [appendNodeSubnetRoutes $node1_id {}]
+		set new_routes [appendNodeSubnetRoutes $node2_id $new_routes]
 
-	triggerChangedDefaultRoutes $old_routes $new_routes
+		triggerChangedDefaultRoutes $old_routes $new_routes
+	}
 
 	return $link_id
 }
 
 proc triggerChangedDefaultRoutes { old_routes new_routes } {
+	if { ! [getFromRunning "cfg_deployed"] } {
+		return
+	}
+
 	set diff [dictDiff $old_routes $new_routes]
 	if { [lsort -uniq [dict values $diff]] == "copy" } {
 		return
