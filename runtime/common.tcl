@@ -1238,7 +1238,7 @@ proc resumeSelectedExperiment { exp } {
 	newProject
 
 	setToRunning "current_file" [getRunningExperimentConfigPath $exp]
-	openFile
+	openFile "no_recent"
 	readRunningVarsFile $exp
 	#catch { cd [getFromRunning "cwd"] }
 

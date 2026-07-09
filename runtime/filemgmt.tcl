@@ -232,7 +232,7 @@ proc setWmTitle { fname } {
 # FUNCTION
 #   Loads the configuration from the file named current_file.
 #****
-proc openFile {} {
+proc openFile { { no_recent "" } } {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 	global showTree autorearrange_enabled gui
 	global runtimeDir recent_files pinned_recent_files
@@ -284,10 +284,12 @@ proc openFile {} {
 		saveToUndoLevel 0
 		setActiveToolGroup select
 
-		set file_to_add [file normalize $current_file]
-		if { ! [string match "[file normalize $runtimeDir]*" $file_to_add] && "!$file_to_add" ni $pinned_recent_files } {
-			set recent_files [linsert [removeFromList $recent_files $file_to_add] 0 $file_to_add]
-			updateRecentsMenu
+		if { $no_recent == "" } {
+			set file_to_add [file normalize $current_file]
+			if { "!$file_to_add" ni $pinned_recent_files } {
+				set recent_files [linsert [removeFromList $recent_files $file_to_add] 0 $file_to_add]
+				updateRecentsMenu
+			}
 		}
 
 		updateProjectMenu
