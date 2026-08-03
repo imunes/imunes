@@ -225,19 +225,9 @@ proc trigger_nodeCreate { node_id } {
 
 	foreach iface_id [ifcList $node_id] {
 		set link_id [getIfcLink $node_id $iface_id]
-		if { $link_id == "" } {
-			continue
+		if { $link_id != "" } {
+			trigger_linkRecreate $link_id
 		}
-
-		if { [getLinkDirect $link_id] } {
-			lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
-			if { $isOSlinux } {
-				trigger_ifaceCreate $peer_id $peer_iface_id
-			}
-			trigger_ifaceConfig $peer_id $peer_iface_id
-		}
-
-		trigger_linkRecreate $link_id
 	}
 }
 
@@ -473,6 +463,8 @@ proc trigger_linkRecreate { link_id } {
 }
 
 proc trigger_ifaceCreate { node_id iface_id } {
+	global isOSlinux
+
 	if {
 		! [getFromRunning "cfg_deployed"] ||
 		! [isRunningNode $node_id]
@@ -495,6 +487,15 @@ proc trigger_ifaceCreate { node_id iface_id } {
 	if { $link_id != "" } {
 		if { [getLinkDirect $link_id] } {
 			lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
+			if { $isOSlinux } {
+				set ifaces [dictGet $create_nodes_ifaces $peer_id]
+				if { "*" ni $ifaces && $peer_iface_id ni $ifaces } {
+					trigger_ifaceCreate $peer_id $peer_iface_id
+				}
+			} else {
+				trigger_linkRecreate $link_id
+			}
+
 			trigger_ifaceConfig $peer_id $peer_iface_id
 		} else {
 			trigger_linkRecreate $link_id
