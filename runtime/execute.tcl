@@ -495,7 +495,7 @@ proc checkNodePrerequisites { nodes nodes_count w } {
 
 			if { $gui && $execMode != "batch" } {
 				statline "Prerequisites check for [getNodeName $node_id] $msg"
-				$w.p configure -value $progressbarCount
+				catch { $w.p configure -value $progressbarCount }
 				update
 			}
 			displayBatchProgress $batchStep $nodes_count
@@ -614,7 +614,7 @@ proc deployCfg { { execute 0 } } {
 	}
 
 	if { $gui && $execMode != "batch" } {
-		$init_popup.p configure -value $init_max
+		catch { $init_popup.p configure -value $init_max }
 		update
 
 		catch { destroy $init_popup }
@@ -918,28 +918,28 @@ proc execute_prepareSystem { progressbar_widget msg_widget } {
 	}
 
 	if { $gui && $execMode != "batch" } {
-		$progressbar_widget step
+		catch { $progressbar_widget step }
 		$msg_widget configure -text "Loading kernel modules..."
 	}
 	statline "Loading kernel modules..."
 	loadKernelModules
 
 	if { $gui && $execMode != "batch" } {
-		$progressbar_widget step
+		catch { $progressbar_widget step }
 		$msg_widget configure -text "Preparing virtual filesystem..."
 	}
 	statline "Preparing virtual filesystem..."
 	prepareVirtualFS
 
 	if { $gui && $execMode != "batch" } {
-		$progressbar_widget step
+		catch { $progressbar_widget step }
 		$msg_widget configure -text "Preparing devfs..."
 	}
 	statline "Preparing devfs..."
 	prepareDevfs
 
 	if { $gui && $execMode != "batch" } {
-		$progressbar_widget step
+		catch { $progressbar_widget step }
 		$msg_widget configure -text "Creating experiment..."
 	}
 	statline "Creating experiment..."
@@ -975,7 +975,7 @@ proc execute_nodesCreate { nodes nodes_count w } {
 
 		if { $gui && $execMode != "batch" } {
 			statline "$msg node [getNodeName $node_id]"
-			$w.p configure -value $progressbarCount
+			catch { $w.p configure -value $progressbarCount }
 			update
 		}
 	}
@@ -1025,7 +1025,7 @@ proc execute_nodesCreate_wait { nodes nodes_count w } {
 
 			if { $gui && $execMode != "batch" } {
 				statline "Node [getNodeName $node_id] $msg"
-				$w.p configure -value $progressbarCount
+				catch { $w.p configure -value $progressbarCount }
 				update
 			}
 			displayBatchProgress $batchStep $nodes_count
@@ -1085,7 +1085,7 @@ proc execute_nodesNamespaceSetup { nodes nodes_count w } {
 
 		if { $gui && $execMode != "batch" } {
 			statline "$msg namespace for [getNodeName $node_id]"
-			$w.p configure -value $progressbarCount
+			catch { $w.p configure -value $progressbarCount }
 			update
 		}
 	}
@@ -1134,7 +1134,7 @@ proc execute_nodesNamespaceSetup_wait { nodes nodes_count w } {
 
 			if { $gui && $execMode != "batch" } {
 				statline "Namespace for [getNodeName $node_id] $msg"
-				$w.p configure -value $progressbarCount
+				catch { $w.p configure -value $progressbarCount }
 				update
 			}
 			displayBatchProgress $batchStep $nodes_count
@@ -1194,7 +1194,7 @@ proc execute_nodesInitConfigure { nodes nodes_count w } {
 
 		if { $gui && $execMode != "batch" } {
 			statline "$msg initial configuration on [getNodeName $node_id]"
-			$w.p configure -value $progressbarCount
+			catch { $w.p configure -value $progressbarCount }
 			update
 		}
 	}
@@ -1244,7 +1244,7 @@ proc execute_nodesInitConfigure_wait { nodes nodes_count w } {
 
 			if { $gui && $execMode != "batch" } {
 				statline "Initial networking on [getNodeName $node_id] $msg"
-				$w.p configure -value $progressbarCount
+				catch { $w.p configure -value $progressbarCount }
 				update
 			}
 			displayBatchProgress $batchStep $nodes_count
@@ -1362,7 +1362,7 @@ proc execute_nodesPhysIfacesCreate { nodes_ifaces nodes_count w } {
 
 		if { $gui && $execMode != "batch" } {
 			statline "$msg physical ifaces on node [getNodeName $node_id]"
-			$w.p configure -value $progressbarCount
+			catch { $w.p configure -value $progressbarCount }
 			update
 		}
 	}
@@ -1421,7 +1421,7 @@ proc execute_nodesPhysIfacesCreate_wait { nodes_ifaces nodes_count w } {
 
 			if { $gui && $execMode != "batch" } {
 				statline "Node [getNodeName $node_id] physical ifaces $msg"
-				$w.p configure -value $progressbarCount
+				catch { $w.p configure -value $progressbarCount }
 				update
 			}
 			displayBatchProgress $batchStep $nodes_count
@@ -1499,7 +1499,7 @@ proc execute_nodesLogIfacesCreate { nodes_ifaces nodes_count w } {
 
 		if { $gui && $execMode != "batch" } {
 			statline "$msg logical ifaces on node [getNodeName $node_id]"
-			$w.p configure -value $progressbarCount
+			catch { $w.p configure -value $progressbarCount }
 			update
 		}
 	}
@@ -1559,7 +1559,7 @@ proc execute_nodesLogIfacesCreate_wait { nodes_ifaces nodes_count w } {
 
 			if { $gui && $execMode != "batch" } {
 				statline "Node [getNodeName $node_id] logical ifaces $msg"
-				$w.p configure -value $progressbarCount
+				catch { $w.p configure -value $progressbarCount }
 				update
 			}
 			displayBatchProgress $batchStep $nodes_count
@@ -1626,7 +1626,7 @@ proc execute_linksCreate { links links_count w } {
 
 		if { $gui && $execMode != "batch" } {
 			statline "$msg link $link_id"
-			$w.p configure -value $progressbarCount
+			catch { $w.p configure -value $progressbarCount }
 			update
 		}
 	}
@@ -1725,7 +1725,7 @@ proc execute_linksCreate_wait { links links_count w } {
 
 			if { $gui && $execMode != "batch" } {
 				statline "Link $link_id $msg"
-				$w.p configure -value $progressbarCount
+				catch { $w.p configure -value $progressbarCount }
 				update
 			}
 			displayBatchProgress $batchStep $links_count
@@ -1793,7 +1793,7 @@ proc execute_linksConfigure { links links_count w } {
 
 		if { $gui && $execMode != "batch" } {
 			statline "$msg link $link_id"
-			$w.p configure -value $progressbarCount
+			catch { $w.p configure -value $progressbarCount }
 			update
 		}
 	}
@@ -1858,7 +1858,7 @@ proc execute_nodesIfacesConfigure { nodes_ifaces nodes_count w } {
 		incr progressbarCount
 
 		if { $gui && $execMode != "batch" } {
-			$w.p configure -value $progressbarCount
+			catch { $w.p configure -value $progressbarCount }
 			statline "$msg interfaces on node [getNodeName $node_id]"
 			update
 		}
@@ -1916,7 +1916,7 @@ proc execute_nodesIfacesConfigure_wait { nodes_ifaces nodes_count w } {
 
 			if { $gui && $execMode != "batch" } {
 				statline "Node [getNodeName $node_id] ifaces $msg"
-				$w.p configure -value $progressbarCount
+				catch { $w.p configure -value $progressbarCount }
 				update
 			}
 			displayBatchProgress $batchStep $nodes_count
@@ -1976,7 +1976,7 @@ proc execute_nodesConfigure { nodes nodes_count w } {
 		incr progressbarCount
 
 		if { $gui && $execMode != "batch" } {
-			$w.p configure -value $progressbarCount
+			catch { $w.p configure -value $progressbarCount }
 			statline "$msg configuration on node [getNodeName $node_id]"
 			update
 		}
@@ -2027,7 +2027,7 @@ proc execute_nodesConfigure_wait { nodes nodes_count w } {
 
 			if { $gui && $execMode != "batch" } {
 				statline "Node [getNodeName $node_id] $msg"
-				$w.p configure -value $progressbarCount
+				catch { $w.p configure -value $progressbarCount }
 				update
 			}
 			displayBatchProgress $batchStep $nodes_count
@@ -2127,7 +2127,7 @@ proc checkForErrors { nodes nodes_count w } {
 
 		if { $gui && $execMode != "batch" } {
 			statline "Node [getNodeName $node_id] $msg"
-			$w.p configure -value $progressbarCount
+			catch { $w.p configure -value $progressbarCount }
 			update
 		}
 		displayBatchProgress $batchStep $nodes_count
@@ -2248,7 +2248,7 @@ proc checkForErrorsIfaces { nodes nodes_count w } {
 
 		if { $gui && $execMode != "batch" } {
 			statline "Interfaces on node [getNodeName $node_id] $msg"
-			$w.p configure -value $progressbarCount
+			catch { $w.p configure -value $progressbarCount }
 			update
 		}
 		displayBatchProgress $batchStep $nodes_count

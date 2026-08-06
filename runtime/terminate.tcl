@@ -436,7 +436,7 @@ proc terminate_nodesUnconfigure { eid nodes nodes_count w } {
 		incr progressbarCount -1
 
 		if { $gui && $execMode != "batch" } {
-			$w.p configure -value $progressbarCount
+			catch { $w.p configure -value $progressbarCount }
 			statline "$msg node [getNodeName $node_id]"
 			update
 		}
@@ -486,7 +486,7 @@ proc terminate_nodesUnconfigure_wait { eid nodes nodes_count w } {
 			set name [getNodeName $node_id]
 			if { $gui && $execMode != "batch" } {
 				statline "Node $name $msg"
-				$w.p configure -value $progressbarCount
+				catch { $w.p configure -value $progressbarCount }
 				update
 			}
 			displayBatchProgress $batchStep $nodes_count
@@ -544,7 +544,7 @@ proc terminate_nodesShutdown { eid nodes nodes_count w } {
 
 		if { $gui && $execMode != "batch" } {
 			statline "$msg node [getNodeName $node_id]"
-			$w.p configure -value $progressbarCount
+			catch { $w.p configure -value $progressbarCount }
 			update
 		}
 	}
@@ -593,7 +593,7 @@ proc terminate_nodesShutdown_wait { eid nodes nodes_count w } {
 			set name [getNodeName $node_id]
 			if { $gui && $execMode != "batch" } {
 				statline "Node $name $msg"
-				$w.p configure -value $progressbarCount
+				catch { $w.p configure -value $progressbarCount }
 				update
 			}
 			displayBatchProgress $batchStep $nodes_count
@@ -656,7 +656,7 @@ proc terminate_linksUnconfigure { eid links links_count w } {
 
 		if { $gui && $execMode != "batch" } {
 			statline "$msg link $link_id"
-			$w.p configure -value $progressbarCount
+			catch { $w.p configure -value $progressbarCount }
 			update
 		}
 	}
@@ -696,7 +696,7 @@ proc terminate_linksDestroy { eid links links_count w } {
 
 		if { $gui && $execMode != "batch" } {
 			statline "$msg link $link_id"
-			$w.p configure -value $progressbarCount
+			catch { $w.p configure -value $progressbarCount }
 			update
 		}
 	}
@@ -783,7 +783,7 @@ proc terminate_linksDestroy_wait { eid links links_count w } {
 
 			if { $gui && $execMode != "batch" } {
 				statline "Link $link_id $msg"
-				$w.p configure -value $progressbarCount
+				catch { $w.p configure -value $progressbarCount }
 				update
 			}
 			displayBatchProgress $batchStep $links_count
@@ -853,7 +853,7 @@ proc terminate_nodesLogIfacesUnconfigure { eid nodes_ifaces nodes_count w } {
 		incr progressbarCount -1
 
 		if { $gui && $execMode != "batch" } {
-			$w.p configure -value $progressbarCount
+			catch { $w.p configure -value $progressbarCount }
 			statline "$msg logical interfaces on node [getNodeName $node_id]"
 			update
 		}
@@ -912,7 +912,7 @@ proc terminate_nodesLogIfacesUnconfigure_wait { eid nodes_ifaces nodes_count w }
 			set name [getNodeName $node_id]
 			if { $gui && $execMode != "batch" } {
 				statline "Node $name logical ifaces $msg"
-				$w.p configure -value $progressbarCount
+				catch { $w.p configure -value $progressbarCount }
 				update
 			}
 			displayBatchProgress $batchStep $nodes_count
@@ -992,7 +992,7 @@ proc terminate_nodesLogIfacesDestroy { eid nodes_ifaces nodes_count w } {
 
 		if { $gui && $execMode != "batch" } {
 			statline "$msg logical interfaces on node [getNodeName $node_id]"
-			$w.p configure -value $progressbarCount
+			catch { $w.p configure -value $progressbarCount }
 			update
 		}
 	}
@@ -1050,7 +1050,7 @@ proc terminate_nodesLogIfacesDestroy_wait { eid nodes_ifaces nodes_count w } {
 			set name [getNodeName $node_id]
 			if { $gui && $execMode != "batch" } {
 				statline "Node $name logical ifaces $msg"
-				$w.p configure -value $progressbarCount
+				catch { $w.p configure -value $progressbarCount }
 				update
 			}
 			displayBatchProgress $batchStep $nodes_count
@@ -1121,7 +1121,7 @@ proc terminate_nodesPhysIfacesUnconfigure { eid nodes_ifaces nodes_count w } {
 		incr progressbarCount -1
 
 		if { $gui && $execMode != "batch" } {
-			$w.p configure -value $progressbarCount
+			catch { $w.p configure -value $progressbarCount }
 			statline "$msg physical interfaces on node [getNodeName $node_id]"
 			update
 		}
@@ -1180,7 +1180,7 @@ proc terminate_nodesPhysIfacesUnconfigure_wait { eid nodes_ifaces nodes_count w 
 			set name [getNodeName $node_id]
 			if { $gui && $execMode != "batch" } {
 				statline "Node $name physical ifaces $msg"
-				$w.p configure -value $progressbarCount
+				catch { $w.p configure -value $progressbarCount }
 				update
 			}
 			displayBatchProgress $batchStep $nodes_count
@@ -1283,7 +1283,7 @@ proc terminate_nodesPhysIfacesDestroy { eid nodes_ifaces nodes_count w } {
 
 		if { $gui && $execMode != "batch" } {
 			statline "$msg physical interfaces on node [getNodeName $node_id]"
-			$w.p configure -value $progressbarCount
+			catch { $w.p configure -value $progressbarCount }
 			update
 		}
 	}
@@ -1341,7 +1341,7 @@ proc terminate_nodesPhysIfacesDestroy_wait { eid nodes_ifaces nodes_count w } {
 			set name [getNodeName $node_id]
 			if { $gui && $execMode != "batch" } {
 				statline "Node $name physical ifaces $msg"
-				$w.p configure -value $progressbarCount
+				catch { $w.p configure -value $progressbarCount }
 				update
 			}
 			displayBatchProgress $batchStep $nodes_count
@@ -1397,7 +1397,7 @@ proc timeoutPatch { eid nodes nodes_count w } {
 			set name [getNodeName $node_id]
 			if { $gui && $execMode != "batch" } {
 				statline "Node $name $msg"
-				$w.p configure -value $progressbarCount
+				catch { $w.p configure -value $progressbarCount }
 				update
 			}
 			displayBatchProgress $batchStep $nodes_count
@@ -1439,7 +1439,7 @@ proc terminate_nodesDestroy { eid nodes nodes_count w } {
 
 		if { $gui && $execMode != "batch" } {
 			statline "$msg node [getNodeName $node_id]"
-			$w.p configure -value $progressbarCount
+			catch { $w.p configure -value $progressbarCount }
 			update
 		}
 	}
@@ -1488,7 +1488,7 @@ proc terminate_nodesDestroy_wait { eid nodes nodes_count w } {
 			set name [getNodeName $node_id]
 			if { $gui && $execMode != "batch" } {
 				statline "Node $name $msg"
-				$w.p configure -value $progressbarCount
+				catch { $w.p configure -value $progressbarCount }
 				update
 			}
 			displayBatchProgress $batchStep $nodes_count
@@ -1549,7 +1549,7 @@ proc terminate_nodesDestroyFS { eid nodes nodes_count w } {
 
 		if { $gui && $execMode != "batch" } {
 			statline "$msg node [getNodeName $node_id] (FS)"
-			$w.p configure -value $progressbarCount
+			catch { $w.p configure -value $progressbarCount }
 			update
 		}
 	}
@@ -1598,7 +1598,7 @@ proc terminate_nodesDestroyFS_wait { eid nodes nodes_count w } {
 			set name [getNodeName $node_id]
 			if { $gui && $execMode != "batch" } {
 				statline "Node $name $msg (FS)"
-				$w.p configure -value $progressbarCount
+				catch { $w.p configure -value $progressbarCount }
 				update
 			}
 			displayBatchProgress $batchStep $nodes_count
