@@ -853,7 +853,7 @@ proc pipesClose {} {
 #   * new_oper_mode -- the new operating mode. Can be edit or exec.
 #****
 proc setOperMode { new_oper_mode } {
-	global isOSfreebsd isOSlinux gui
+	global isOSfreebsd isOSlinux gui main_canvas_elem
 
 	if {
 		! [getFromRunning "cfg_deployed"] &&
@@ -919,100 +919,121 @@ proc setOperMode { new_oper_mode } {
 		}
 	}
 
-	#.panwin.f1.left.select configure -state active
-	if { "$new_oper_mode" == "exec" } {
-		if { $gui } {
-			.menubar.experiment entryconfigure "Execute" -state disabled
-			.menubar.experiment entryconfigure "Terminate" -state normal
-			.menubar.experiment entryconfigure "Restart" -state normal
-			.menubar.experiment entryconfigure "Refresh running experiment" -state normal
-			.menubar.edit entryconfigure "Undo" -state disabled
-			.menubar.edit entryconfigure "Redo" -state disabled
-		}
+	if { $gui } {
+		bind $main_canvas_elem <1> ""
+		bind $main_canvas_elem <B1-Motion> ""
+		bind $main_canvas_elem <B1-ButtonRelease> ""
+	}
 
-		setToRunning "oper_mode" "exec"
-
-		if { ! [getFromRunning "cfg_deployed"] } {
-			setToExecuteVars "instantiate_nodes" [getFromRunning "node_list"]
-			setToExecuteVars "create_nodes_ifaces" "*"
-			setToExecuteVars "instantiate_links" [getFromRunning "link_list"]
-			setToExecuteVars "configure_links" "*"
-			setToExecuteVars "configure_nodes_ifaces" "*"
-			setToExecuteVars "configure_nodes" "*"
-
-			mainPipeCreate
-			deployCfg 1
-			mainPipeClose
-
-			setToRunning "cfg_deployed" true
-		}
-
-		if { $gui } {
-			.bottom.experiment_id configure -text "Experiment ID = [getFromRunning "eid"]"
-			if { [getFromRunning "auto_execution"] } {
-				set oper_mode_text "exec mode"
-				set oper_mode_color "black"
-			} else {
-				set oper_mode_text "paused"
-				set oper_mode_color "red"
-			}
-		}
-	} else {
-		if { [getFromRunning "oper_mode"] != "edit" } {
-			set eid [getFromRunning "eid"]
-			setToExecuteVars "terminate_nodes" [getFromRunning "node_list"]
-			setToExecuteVars "destroy_nodes_ifaces" "*"
-			setToExecuteVars "terminate_links" [getFromRunning "link_list"]
-			setToExecuteVars "unconfigure_links" "*"
-			setToExecuteVars "unconfigure_nodes_ifaces" "*"
-			setToExecuteVars "unconfigure_nodes" "*"
-
-			mainPipeCreate
-			undeployCfg $eid 1
-
-			catch { rexec pkill -f "socat.*$eid" }
-			mainPipeClose
-
-			setToExecuteVars "terminate_cfg" [cfgGet]
-			setToRunning "cfg_deployed" false
-		}
-
-		if { $gui } {
-			if { [getActiveOption "editor_only"] } {
+	try {
+		#.panwin.f1.left.select configure -state active
+		if { "$new_oper_mode" == "exec" } {
+			if { $gui } {
 				.menubar.experiment entryconfigure "Execute" -state disabled
-			} else {
-				.menubar.experiment entryconfigure "Execute" -state normal
-			}
-
-			.menubar.experiment entryconfigure "Terminate" -state disabled
-			.menubar.experiment entryconfigure "Restart" -state disabled
-			.menubar.experiment entryconfigure "Refresh running experiment" -state disabled
-
-			if { [getFromRunning "undolevel"] > 0 } {
-				.menubar.edit entryconfigure "Undo" -state normal
-			} else {
+				.menubar.experiment entryconfigure "Terminate" -state normal
+				.menubar.experiment entryconfigure "Restart" -state normal
+				.menubar.experiment entryconfigure "Refresh running experiment" -state normal
 				.menubar.edit entryconfigure "Undo" -state disabled
-			}
-
-			if { [getFromRunning "redolevel"] > [getFromRunning "undolevel"] } {
-				.menubar.edit entryconfigure "Redo" -state normal
-			} else {
 				.menubar.edit entryconfigure "Redo" -state disabled
 			}
+
+			setToRunning "oper_mode" "exec"
+
+			if { ! [getFromRunning "cfg_deployed"] } {
+				setToExecuteVars "instantiate_nodes" [getFromRunning "node_list"]
+				setToExecuteVars "create_nodes_ifaces" "*"
+				setToExecuteVars "instantiate_links" [getFromRunning "link_list"]
+				setToExecuteVars "configure_links" "*"
+				setToExecuteVars "configure_nodes_ifaces" "*"
+				setToExecuteVars "configure_nodes" "*"
+
+				mainPipeCreate
+				deployCfg 1
+				mainPipeClose
+
+				setToRunning "cfg_deployed" true
+			}
+
+			if { $gui } {
+				.bottom.experiment_id configure -text "Experiment ID = [getFromRunning "eid"]"
+				if { [getFromRunning "auto_execution"] } {
+					set oper_mode_text "exec mode"
+					set oper_mode_color "black"
+				} else {
+					set oper_mode_text "paused"
+					set oper_mode_color "red"
+				}
+			}
+		} else {
+			if { [getFromRunning "oper_mode"] != "edit" } {
+				set eid [getFromRunning "eid"]
+				setToExecuteVars "terminate_nodes" [getFromRunning "node_list"]
+				setToExecuteVars "destroy_nodes_ifaces" "*"
+				setToExecuteVars "terminate_links" [getFromRunning "link_list"]
+				setToExecuteVars "unconfigure_links" "*"
+				setToExecuteVars "unconfigure_nodes_ifaces" "*"
+				setToExecuteVars "unconfigure_nodes" "*"
+
+				mainPipeCreate
+				undeployCfg $eid 1
+
+				catch { rexec pkill -f "socat.*$eid" }
+				mainPipeClose
+
+				setToExecuteVars "terminate_cfg" [cfgGet]
+				setToRunning "cfg_deployed" false
+			}
+
+			if { $gui } {
+				if { [getActiveOption "editor_only"] } {
+					.menubar.experiment entryconfigure "Execute" -state disabled
+				} else {
+					.menubar.experiment entryconfigure "Execute" -state normal
+				}
+
+				.menubar.experiment entryconfigure "Terminate" -state disabled
+				.menubar.experiment entryconfigure "Restart" -state disabled
+				.menubar.experiment entryconfigure "Refresh running experiment" -state disabled
+
+				if { [getFromRunning "undolevel"] > 0 } {
+					.menubar.edit entryconfigure "Undo" -state normal
+				} else {
+					.menubar.edit entryconfigure "Undo" -state disabled
+				}
+
+				if { [getFromRunning "redolevel"] > [getFromRunning "undolevel"] } {
+					.menubar.edit entryconfigure "Redo" -state normal
+				} else {
+					.menubar.edit entryconfigure "Redo" -state disabled
+				}
+			}
+
+			setToRunning "oper_mode" "edit"
+
+			if { $gui } {
+				.bottom.experiment_id configure -text ""
+				set oper_mode_text "edit mode"
+				set oper_mode_color "black"
+			}
 		}
-
-		setToRunning "oper_mode" "edit"
-
+	} on error err {
 		if { $gui } {
-			.bottom.experiment_id configure -text ""
-			set oper_mode_text "edit mode"
-			set oper_mode_color "black"
+			after idle { .dialog1.msg configure -wraplength 4i }
+			tk_dialog .dialog1 "IMUNES error" \
+				$err \
+				info 0 Dismiss
+		} else {
+			sputs stderr $err
+		}
+	} finally {
+		if { $gui } {
+			bind $main_canvas_elem <1> "button1 %x %y none"
+			bind $main_canvas_elem <B1-Motion> "button1-motion %x %y"
+			bind $main_canvas_elem <B1-ButtonRelease> "button1-release %x %y"
 		}
 	}
 
 	if { $gui } {
-		global main_canvas_elem
-
 		.bottom.oper_mode configure -text "$oper_mode_text"
 		.bottom.oper_mode configure -foreground $oper_mode_color
 
@@ -1545,23 +1566,46 @@ proc captureOnExtIfc { node_id command } {
 }
 
 proc redeployCfg {} {
+	global gui main_canvas_elem
+
 	if { ! [getFromRunning "cfg_deployed"] } {
 		return
 	}
 
-	if { ! [getFromRunning "auto_execution"] } {
-		set eid [getFromRunning "eid"]
-
-		createExperimentFiles $eid
-		createRunningVarsFile $eid
-
-		return
+	if { $gui } {
+		bind $main_canvas_elem <1> ""
+		bind $main_canvas_elem <B1-Motion> ""
+		bind $main_canvas_elem <B1-ButtonRelease> ""
 	}
 
-	mainPipeCreate
-	undeployCfg
-	deployCfg
-	mainPipeClose
+	try {
+		if { ! [getFromRunning "auto_execution"] } {
+			set eid [getFromRunning "eid"]
+
+			createExperimentFiles $eid
+			createRunningVarsFile $eid
+		} else {
+			mainPipeCreate
+			undeployCfg
+			deployCfg
+			mainPipeClose
+		}
+	} on error err {
+		if { $gui } {
+			after idle { .dialog1.msg configure -wraplength 4i }
+			tk_dialog .dialog1 "IMUNES error" \
+				$err \
+				info 0 Dismiss
+		} else {
+			sputs stderr $err
+		}
+	} finally {
+		if { $gui } {
+			bind $main_canvas_elem <1> "button1 %x %y none"
+			bind $main_canvas_elem <B1-Motion> "button1-motion %x %y"
+			bind $main_canvas_elem <B1-ButtonRelease> "button1-release %x %y"
+		}
+	}
 }
 
 #****f* common.tcl/killExtProcess
