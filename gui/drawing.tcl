@@ -24,14 +24,15 @@ proc refreshToolBarNodes {} {
 			continue
 		}
 
-		set image [image create photo -file [invokeTypeProc $node_type "icon" "toolbar"]]
+		set image [image create photo -file [invokeTypeProc $node_type "gui::icon" "toolbar"]]
 
-		set tool ""
-		if { [invokeTypeProc $node_type "netlayer"] == "LINK" } {
-			set tool "link"
-		} elseif { [invokeTypeProc $node_type "netlayer"] == "NETWORK" } {
-			set tool "net"
+		set tool [invokeTypeProc $node_type "::gui::toolbarLocation"]
+		if { $tool == "" } {
+			sputs "No toolbarLocation defined for '$node_type', skipping."
+
+			continue
 		}
+		set tool [lindex [split $tool "_"] 0]
 
 		set background_color ""
 		if { $node_type ni $runnable_node_types } {
@@ -43,7 +44,7 @@ proc refreshToolBarNodes {} {
 		}
 
 		$mf.left.${tool}_nodes add command -image $image -hidemargin 1 \
-			-compound left -label [string range [invokeTypeProc $node_type "toolbarIconDescr"] 8 end] \
+			-compound left -label [string range [invokeTypeProc $node_type "gui::toolbarIconDescr"] 8 end] \
 			-command "setActiveTool ${tool}_layer $node_type" {*}$background_color
 	}
 }
@@ -273,10 +274,28 @@ proc drawNode { node_id } {
 		if { $type == "wlan" } {
 			set label_str "$label_str [getIfcIPv4addrs $node_id $iface_id]"
 		} elseif { $link_id == "" } {
+			set errstr ""
+			if {
+				[isRunningNode $node_id] &&
+				[isErrorNodeIface $node_id $iface_id] &&
+				[getStateErrorMsgNodeIface $node_id $iface_id] != ""
+			} {
+				set errstr "ERROR"
+			}
+
+			set iface_running_str ""
+			if { [getIfcOperState $node_id $iface_id] == "down" } {
+				set iface_running_str "*"
+			}
+
+			if { [getFromRunning "cfg_deployed"] && ! [isRunningNodeIface $node_id $iface_id] } {
+				set iface_running_str "${iface_running_str}!"
+			}
+
 			if { [getIfcType $node_id $iface_id] == "stolen" } {
-				set iflabel "\[[getIfcName $node_id $iface_id]\]"
+				set iflabel "\[$errstr $iface_running_str[getIfcName $node_id $iface_id]\]"
 			} else {
-				set iflabel "[getIfcName $node_id $iface_id]"
+				set iflabel "$errstr $iface_running_str[getIfcName $node_id $iface_id]"
 				if { [getNodeVlanFiltering $node_id] && [getIfcVlanType $node_id $iface_id] == "access" } {
 					set vlantag [getIfcVlanTag $node_id $iface_id]
 					set iflabel "$iflabel:$vlantag"
@@ -302,12 +321,30 @@ proc drawNode { node_id } {
 			continue
 		}
 
+		set errstr ""
+		if {
+			[isRunningNode $node_id] &&
+			[isErrorNodeIface $node_id $iface_id] &&
+			[getStateErrorMsgNodeIface $node_id $iface_id] != ""
+		} {
+			set errstr "ERROR"
+		}
+
+		set iface_running_str ""
+		if { [getIfcOperState $node_id $iface_id] == "down" } {
+			set iface_running_str "*"
+		}
+
+		if { [getFromRunning "cfg_deployed"] && ! [isRunningNodeIface $node_id $iface_id] } {
+			set iface_running_str "${iface_running_str}!"
+		}
+
 		set vlantag [getIfcVlanTag $node_id $iface_id]
 		set vlandev [getIfcVlanDev $node_id $iface_id]
 		if { [getActiveOption "show_interface_names"] } {
-			set liflabel "[getIfcName $node_id $iface_id] - $vlandev:$vlantag"
+			set liflabel "$errstr $iface_running_str[getIfcName $node_id $iface_id] - $vlandev:$vlantag"
 		} else {
-			set liflabel "$vlandev:$vlantag"
+			set liflabel "$errstr $iface_running_str $vlandev:$vlantag"
 		}
 
 		set ifipv4addr [getIfcIPv4addrs $node_id $iface_id]
@@ -331,7 +368,7 @@ proc drawNode { node_id } {
 		set label_str "\n$label_str\n$liflabel"
 	}
 
-	if { [getFromRunning "${node_id}_running"] == "true" } {
+	if { [isRunningNode $node_id] } {
 		global running_indicator_palette running_mask_image
 
 		$main_canvas_elem create image \
@@ -670,12 +707,24 @@ proc updateIfcLabel { link_id node_id iface_id } {
 		set str "*"
 	}
 
+	if { [getFromRunning "cfg_deployed"] && ! [isRunningNodeIface $node_id $iface_id] } {
+		set str "${str}!"
+	}
+
+	if {
+		[isRunningNode $node_id] &&
+		[isErrorNodeIface $node_id $iface_id] &&
+		[getStateErrorMsgNodeIface $node_id $iface_id] != ""
+	} {
+		set str "ERROR "
+	}
+
 	if { [getIfcNatState $node_id $iface_id] == "on" } {
 		set str "${str}NAT-"
 	}
 
 	foreach elem $label_str {
-		if { $str in "{} * NAT- *NAT-" } {
+		if { $str in "{} ! * *! NAT- *NAT- *!NAT-" } {
 			set str "$str[set elem]"
 		} else {
 			set str "$str\r[set elem]"
@@ -1516,7 +1565,7 @@ proc updateIconSize { { new_icon_size "" } } {
 	foreach node_type $all_modules_list {
 		global $node_type
 
-		set $node_type [image create photo -file [invokeTypeProc $node_type "icon" $new_icon_size]]
+		set $node_type [image create photo -file [invokeTypeProc $node_type "gui::icon" $new_icon_size]]
 	}
 }
 

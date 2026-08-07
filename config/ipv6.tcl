@@ -28,216 +28,105 @@
 
 #****h* imunes/ipv6.tcl
 # NAME
-#   ipv6.tcl -- file for handeling IPv6
+#   ipv6.tcl -- file for handling IPv6
 #****
-global ipv6 change_subnet6
+global ipv6 numbits6
 
 set ipv6 fc00::/64
-set change_subnet6 0
+set numbits6 32
 
-#****f* ipv6.tcl/IPv6AddrApply
-# NAME
-#   IPv6AddrApply -- IPv6 address apply
-# SYNOPSIS
-#   IPv6AddrApply $w
-# FUNCTION
-#   Sets new IPv6 address from widget.
-# INPUTS
-#   * w -- widget
-#****
-proc IPv6AddrApply { w } {
-	global ipv6
-	global changed
-	global control
+proc ip6_strToInt { subnet } {
+	set subnet [ip::normalize $subnet]
+    set subnet_prefix [lindex [split $subnet "/"] 0]
 
-	set newipv6 [$w.ipv6frame.e1 get]
+    set ipv6_int 0
+    foreach part [split $subnet_prefix ":"] {
+        scan $part %x value
+        set ipv6_int [expr { ($ipv6_int << 16) + $value }]
+    }
 
-	if { [checkIPv6Net $newipv6] == 0 } {
-		focusAndFlash .entry1.ipv6frame.e1
-		return
-	}
-	destroy $w
-
-	if { $newipv6 != $ipv6 } {
-		set changed 1
-		set control 1
-	}
-	set ipv6 $newipv6
+    return $ipv6_int
 }
 
-#****f* ipv6.tcl/findFreeIPv6Net
-# NAME
-#   findFreeIPv6Net -- find free IPv6 network
-# SYNOPSIS
-#   set ipnet [findFreeIPv6Net $mask]
-# FUNCTION
-#   Finds a free IPv6 network. Network is concidered to be free
-#   if there are no simulated nodes attached to it.
-# INPUTS
-#   * mask -- this parameter is left unused for now
-# RESULT
-#   * ipnet -- returns the free IPv6 network address in the form "a $i".
-#****
-proc findFreeIPv6Net { mask { ipv6_used_list "" } } {
-	global ipv6
+proc ip6_intToStr { ipv6_int } {
+    set parts {}
+    for { set i 0 } { $i < 8 } { incr i } {
+        set part [expr { ($ipv6_int >> (16 * (7 - $i))) & 0xffff }]
+        lappend parts [format %x $part]
+    }
 
-	if { $ipv6_used_list == {} } {
-		set defip6net [ip::contract [ip::prefix $ipv6]]
-		set testnet [ip::contract "[string trimright $defip6net :]::"]
+	return [ip::normalize [join $parts ":"]]
+}
 
-		return $testnet
+proc ip6_strToBin { subnet } {
+	set subnet_mask [lindex [split $subnet "/"] 1]
+	if { $subnet_mask == "" } {
+		set subnet_mask 64
+	}
+
+	set full_subnet [ip::normalize $subnet]
+	set subnet_prefix [lindex [split $full_subnet "/"] 0]
+
+	set sub_bin_tmp ""
+	foreach sub_segment [split $subnet_prefix ":"] {
+		append sub_bin_tmp [format %016b 0x$sub_segment]
+	}
+
+	return $sub_bin_tmp
+}
+
+proc ip6_binToStr { ipv6_bin { mask "" } } {
+	set len [string length $ipv6_bin]
+    if { $len > 128 } {
+		set ipv6_bin [string range $ipv6_bin 0 127]
+    } elseif { $len < 128 } {
+		set diff [expr { 128 - $len }]
+		set ipv6_bin "$ipv6_bin[string repeat "0" $diff]"
+	}
+
+    set hextets {}
+
+    # split into 16-bit chunks and convert to hex
+    for {set i 0} {$i < 128} {incr i 16} {
+        set hex_chunk [string range $ipv6_bin $i [expr { $i + 15 }]]
+        scan $hex_chunk %b val
+        lappend hextets [format "%x" $val]
+    }
+
+    set ipv6 [join $hextets ":"]
+
+    if { $mask != "" } {
+        append ipv6 "/$mask"
+    }
+
+    return $ipv6
+}
+
+proc ip6_isOverlap { subnet address } {
+	set subnet_mask [lindex [split $subnet "/"] 1]
+	if { $subnet_mask == "" } {
+		set subnet_mask 64
+	}
+
+	set address_mask [lindex [split $address "/"] 1]
+	if { $address_mask == "" } {
+		set address_mask 128
+	}
+
+	set subnet_bin [ip6_strToBin $subnet]
+	set address_bin [ip6_strToBin $address]
+
+	if { $subnet_mask > $address_mask } {
+		set bigger_mask $subnet_mask
 	} else {
-		set defip6net [ip::contract [ip::prefix $ipv6]]
-		set subnets [lsort -unique [lmap ip $ipv6_used_list {ip::contract [ip::prefix $ip]}]]
-		for { set i 0 } { $i <= 65535 } { incr i } {
-			set testnet [ip::contract "[string trimright $defip6net :]:[format %x $i]::"]
-			if { $testnet ni $subnets } {
-				return $testnet
-			}
-		}
-	}
-}
-
-#****f* ipv6.tcl/autoIPv6addr
-# NAME
-#   autoIPv6addr -- automaticaly assign an IPv6 address
-# SYNOPSIS
-#   autoIPv6addr $node_id $iface_id
-# FUNCTION
-#   automaticaly assignes an IPv6 address to the interface $iface_id of
-#   of the node $node_id.
-# INPUTS
-#   * node_id -- the node containing the interface to witch a new
-#     IPv6 address should be assigned
-#   * iface_id -- the interface to witch a new, automatically generated, IPv6
-#     address will be assigned
-#****
-proc autoIPv6addr { node_id iface_id { use_autorenumbered "" } } {
-	if { ! [getActiveOption "IPv6autoAssign"] } {
-		return
+		set bigger_mask $address_mask
 	}
 
-	global change_subnet6 control autorenumbered_ifcs6
-	#change_subnet6 - to change the subnet (1) or not (0)
-	#autorenumbered_ifcs6 - list of all interfaces that changed an address
-
-	set node_type [getNodeType $node_id]
-	if { [invokeTypeProc $node_type "netlayer"] != "NETWORK" } {
-		#
-		# Shouldn't get called at all for link-layer nodes
-		#
-		return
+	if { [string range $subnet_bin 0 [expr { $bigger_mask - 1 }]] == [string range $address_bin 0 [expr { $bigger_mask - 1 }]] } {
+		return true
 	}
 
-	setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] [getIfcIPv6addrs $node_id $iface_id] "keep_doubles"]
-
-	setIfcIPv6addrs $node_id $iface_id ""
-
-	lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
-	set peers_ip6addrs {}
-	set has_extnat 0
-	set has_router 0
-	set best_choice_ip ""
-	if { $peer_id != "" } {
-		if { [invokeNodeProc $peer_id "netlayer"] == "LINK" } {
-			foreach l2node [listLANNodes $peer_id {}] {
-				foreach l2node_iface_id [ifcList $l2node] {
-					lassign [logicalPeerByIfc $l2node $l2node_iface_id] new_peer_id new_peer_iface_id
-					set new_peer_ip6addrs [getIfcIPv6addrs $new_peer_id $new_peer_iface_id]
-					if { $new_peer_ip6addrs == "" } {
-						continue
-					}
-
-					if { $use_autorenumbered == "" || "$new_peer_id $new_peer_iface_id" in $autorenumbered_ifcs6 } {
-						if { ! $has_extnat } {
-							set new_peer_type [getNodeType $new_peer_id]
-							if { $new_peer_type == "ext" && [getNodeNATIface $new_peer_id] != "UNASSIGNED" } {
-								set has_extnat 1
-								set best_choice_ip [lindex $new_peer_ip6addrs 0]
-							} elseif { ! $has_router && $new_peer_type in "router nat64" } {
-								set has_router 1
-								set best_choice_ip [lindex $new_peer_ip6addrs 0]
-							} elseif { ! $has_extnat && ! $has_router } {
-								set best_choice_ip [lindex $new_peer_ip6addrs 0]
-							}
-						}
-
-						lappend peers_ip6addrs {*}$new_peer_ip6addrs
-					}
-				}
-			}
-		} else {
-			set peers_ip6addrs [getIfcIPv6addrs $peer_id $peer_iface_id]
-			set best_choice_ip [lindex $peers_ip6addrs 0]
-		}
-	}
-
-	if { $peers_ip6addrs != "" && $change_subnet6 == 0 && $best_choice_ip != "" } {
-		set targetbyte [expr 0x[invokeTypeProc $node_type "IPAddrRange"]]
-		set addr [nextFreeIP6Addr $best_choice_ip $targetbyte $peers_ip6addrs]
-	} else {
-		set addr [getNextIPv6addr $node_type [getFromRunning "ipv6_used_list"]]
-	}
-
-	setIfcIPv6addrs $node_id $iface_id $addr
-	lappendToRunning "ipv6_used_list" $addr
-}
-
-proc getNextIPv6addr { node_type existing_addrs } {
-	if { ! [getActiveOption "IPv6autoAssign"] } {
-		return
-	}
-
-	set targetbyte 0
-	set targetbyte [expr 0x[invokeTypeProc $node_type "IPAddrRange"]]
-
-	# TODO: enable changing IPv6 pool mask
-	return "[findFreeIPv6Net 64 $existing_addrs][format %x $targetbyte]/64"
-}
-
-#****f* ipv6.tcl/nextFreeIP6Addr
-# NAME
-#   nextFreeIP6Addr -- automaticaly assign an IPv6 address
-# SYNOPSIS
-#   nextFreeIP6Addr $addr $start $peers
-# FUNCTION
-#   Automaticaly searches for free IPv6 addresses within a given range
-#   defined by $addr, containing $peers
-# INPUTS
-#   * $addr -- address of a node within the range
-#   * $start -- starting host address for a specified node type
-#   * $peers -- list of peers in the current network
-#****
-proc nextFreeIP6Addr { addr start peers } {
-	global execMode gui
-
-	set mask 64
-	set prefix [ip::prefix $addr]
-	set ipnums [split $prefix :]
-
-	set lastpart [expr [lindex $ipnums 7] + $start]
-	set ipnums [lreplace $ipnums 7 7 [format %x $lastpart]]
-	set ipaddr [ip::contract [join $ipnums :]]/$mask
-	while { $ipaddr in $peers } {
-		set lastpart [expr $lastpart + 1 ]
-		set ipnums [lreplace $ipnums 7 7 [format %x $lastpart]]
-		set ipaddr [ip::contract [join $ipnums :]]/$mask
-	}
-
-	set x [ip::prefix $addr]
-	set y [ip::prefix $ipaddr]
-
-	if { $x != $y } {
-		if { $gui && $execMode != "batch" } {
-			after idle { .dialog1.msg configure -wraplength 4i }
-			tk_dialog .dialog1 "IMUNES warning" \
-				"You have depleted the current pool of addresses ([ip::contract $x]/$mask). Please choose a new pool from Tools->IPV6 address pool or delete nodes to free the address space." \
-				info 0 Dismiss
-		}
-		return ""
-	}
-
-	return $ipaddr
+	return false
 }
 
 #****f* ipv6.tcl/checkIPv6Addr
@@ -312,4 +201,152 @@ proc checkIPv6Nets { str } {
 		}
 	}
 	return 1
+}
+
+#****f* ipv6.tcl/IPv6AddrApply
+# NAME
+#   IPv6AddrApply -- IPv6 address apply
+# SYNOPSIS
+#   IPv6AddrApply $w
+# FUNCTION
+#   Sets new IPv6 address from widget.
+# INPUTS
+#   * w -- widget
+#****
+proc IPv6AddrApply { w } {
+	global ipv6
+	global numbits6
+	global changed
+
+	set newipv6 [$w.ipv6frame.e1 get]
+	set newbits [$w.ipv6frame.steps.stepv get]
+
+	if { [checkIPv6Net $newipv6] == 0 } {
+		focusAndFlash .entry1.ipv6frame.e1
+		return
+	}
+
+	if { [checkIntRange $newbits 1 128] == 0 } {
+		focusAndFlash .entry1.ipv6frame.steps.stepv
+		return
+	}
+	destroy $w
+
+	if { $newipv6 != $ipv6 } {
+		set changed 1
+	}
+	set ipv6 $newipv6
+
+	set mask [::ip::mask $ipv6]
+	if { $newbits > $mask } {
+		global gui execMode
+		set newbits $mask
+
+		if { $gui && $execMode != "batch" } {
+			after idle { .dialog1.msg configure -wraplength 4i }
+			tk_dialog .dialog1 "IMUNES warning" \
+				"Step size cannot be larger then mask size, setting to '$mask'." \
+				info 0 Dismiss
+		}
+	}
+
+	if { $newbits != $numbits6 } {
+		set changed 1
+	}
+	set numbits6 $newbits
+}
+
+proc ip6_nextNet { subnet step_size } {
+	set mask [::ip::mask $subnet]
+	if { $mask == "" } {
+		set mask $step_size
+	}
+
+    set addr_bin [ip6_strToBin $subnet]
+
+	# subnet hextet index
+	set step_idx [expr $step_size*8/(128+1)]
+
+	set overflow 0
+    set hextets {}
+
+    # split into 16-bit chunks and convert to hex
+    for {set i 112} {$i >= 0} {incr i -16} {
+		set cur_idx [expr (1 + $i)*8/(128+1)]
+        set hex_chunk [string range $addr_bin $i [expr { $i + 15 }]]
+		scan $hex_chunk %b val
+		incr val $overflow
+		if { $step_idx == $cur_idx } {
+			set incrby [expr { 1 << ((16 - ($step_size % 16)) % 16) }]
+			set val [expr $val + $incrby]
+		}
+
+		# overflow, overflow to upper hextets
+		if { $val >= [expr { 1 << 16 }] } {
+			set val 0
+			set overflow 1
+		} else {
+			set overflow 0
+		}
+
+        lappend hextets [format "%x" $val]
+    }
+
+    set ipv6 [::ip::contract [join [lreverse $hextets] ":"]]
+	append ipv6 "/$mask"
+
+	return $ipv6
+}
+
+#****f* ipv6.tcl/findFreeIPv6Subnet
+# NAME
+#   findFreeIPv6Subnet -- find free IPv6 network
+# SYNOPSIS
+#   set ipnet [findFreeIPv6Subnet $mask]
+# FUNCTION
+#   Finds a free IPv6 network. Network is concidered to be free
+#   if there are no simulated nodes attached to it.
+# INPUTS
+#   * mask -- this parameter is left unused for now
+# RESULT
+#   * ipnet -- returns the free IPv6 network address in the form "a $i".
+#****
+proc findFreeIPv6Subnet { mask { ipv6_used_list "" } } {
+    global ipv6
+    global numbits6
+
+	if { $mask == "" } {
+		set mask [::ip::mask $ipv6]
+	}
+
+	if { $mask < $numbits6 } {
+		set numbits6 $mask
+	}
+
+	# get zeroed-out address and mask
+	set addr [::ip::prefix $ipv6]
+	set ipnet "[::ip::contract $addr]/$mask"
+
+	if { $ipv6_used_list == {} } {
+		return $ipnet
+	}
+
+	set used_ipnets {}
+	foreach used_addr $ipv6_used_list {
+		set used_prefix [::ip::contract [::ip::prefix $used_addr]]
+		set used_mask [::ip::mask $used_addr]
+		set used_ipnet "$used_prefix/$used_mask"
+
+		if { $used_ipnet ni $used_ipnets } {
+			lappend used_ipnets $used_ipnet
+		}
+	}
+
+	while { $ipnet in "\"\" $used_ipnets" } {
+		set ipnet [ip6_nextNet $ipnet $numbits6]
+		set prefix [::ip::contract [::ip::prefix $ipnet]]
+		set ipnet "$prefix/$mask"
+	}
+
+	return $ipnet
 }

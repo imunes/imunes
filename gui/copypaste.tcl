@@ -113,7 +113,6 @@ proc copySelection {} {
 proc paste {} {
 	global sizex sizey
 	global changed copypaste_list cutNodes copypaste_nodes
-	global nodeNamingBase
 
 	if { [getFromRunning "oper_mode"] == "exec" } {
 		return
@@ -153,22 +152,17 @@ proc paste {} {
 		set new_node_id [newObjectId [getFromRunning "node_list"] "n"]
 		set node_map($node_orig) $new_node_id
 		cfgSet "nodes" $new_node_id $node_orig_cfg
-		setToRunning "${new_node_id}_running" "false"
 		lappendToRunning "node_list" $new_node_id
 		lappend copypaste_list $new_node_id
 
 		set node_type [getNodeType $new_node_id]
-		if { $node_type ni [array names nodeNamingBase] } {
-			# fallback
-			setNodeName $new_node_id $new_node_id
-		}
-
 		set node_name [getNodeName $new_node_id]
+		set naming_base [invokeTypeProc $node_type "namingBase"]
 		if { $node_name in $naming_list } {
 			# if name already exists, get the next one
-			setNodeName $new_node_id [getNewNodeNameType $node_type $nodeNamingBase($node_type)]
+			setNodeName $new_node_id [getNewNodeNameType $node_type $naming_base]
 		} else {
-			recalculateNumType $node_type $nodeNamingBase($node_type)
+			recalculateNumType $node_type $naming_base
 		}
 
 		lappend naming_list $node_name
@@ -185,28 +179,32 @@ proc paste {} {
 		set new_node_id $node_map($node_orig)
 
 		foreach iface_id [ifcList $new_node_id] {
-			setToRunning "${new_node_id}|${iface_id}_running" "false"
-			#set new_peer_id $node_map([getIfcPeer $new_node_id $iface_id])
-			#cfgSet "nodes" $new_node_id "ifaces" $iface_id "peer" $new_link_id
-
-			if { $cutNodes == 0 } {
-				setIfcMACaddr $new_node_id $iface_id ""
-				autoMACaddr $new_node_id $iface_id
-			} else {
-				set mac_address [getIfcMACaddr $new_node_id $iface_id]
-				if { $mac_address != "" } {
+			set mac_address [getIfcMACaddr $new_node_id $iface_id]
+			if { $mac_address != "" } {
+				if { $cutNodes == 0 } {
+					setIfcMACaddr $new_node_id $iface_id ""
+					#autoMACaddr $new_node_id $iface_id
+				} else {
 					lappendToRunning "mac_used_list" $mac_address
 				}
 			}
 
 			set addrs4 [getIfcIPv4addrs $new_node_id $iface_id]
-			if { $addrs4 != "" } {
-				lappendToRunning "ipv4_used_list" [getIfcIPv4addrs $new_node_id $iface_id]
+			if { $addrs4 != {} } {
+				if { $cutNodes == 0 } {
+					setIfcIPv4addrs $new_node_id $iface_id ""
+				} else {
+					lappendToRunning "ipv4_used_list" {*}$addrs4
+				}
 			}
 
 			set addrs6 [getIfcIPv6addrs $new_node_id $iface_id]
-			if { $addrs6 != "" } {
-				lappendToRunning "ipv6_used_list" [getIfcIPv6addrs $new_node_id $iface_id]
+			if { $addrs6 != {} } {
+				if { $cutNodes == 0 } {
+					setIfcIPv6addrs $new_node_id $iface_id ""
+				} else {
+					lappendToRunning "ipv6_used_list" {*}$addrs6
+				}
 			}
 		}
 	}
@@ -238,8 +236,9 @@ proc paste {} {
 		cfgSet "links" $new_link_id $link_orig_cfg
 		cfgSet "gui" "links" $new_link_id [cfgGet "gui" "links" $link_orig]
 		lappendToRunning "link_list" $new_link_id
-		if { [getFromRunning "${new_link_id}_running"] == "" } {
-			setToRunning "${new_link_id}_running" "false"
+		# XXX Why?
+		if { ! [isRunningLink $new_link_id] } {
+			removeStateLink $new_link_id "running"
 		}
 
 		set old_peers [getLinkPeers $new_link_id]
@@ -257,17 +256,14 @@ proc paste {} {
 	updateCustomIconReferences
 
 	if { $cutNodes == 0 } {
-		if { [getActiveOption "IPv4autoAssign"] } {
-			set copypaste_nodes 1
-			changeAddressRange
+		foreach node_id $copypaste_list {
+			foreach iface_id [ifcList $node_id] {
+				invokeNodeProc $node_id "confNewIfc" $node_id $iface_id
+			}
 		}
-
-		if { [getActiveOption "IPv6autoAssign"] } {
-			set copypaste_nodes 1
-			changeAddressRange6
-		}
+	} else {
+		set cutNodes 0
 	}
-	set cutNodes 0
 
 	set changed 1
 	updateUndoLog

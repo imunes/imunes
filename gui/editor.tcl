@@ -86,7 +86,7 @@ proc updateUndoLog {} {
 #   configuration. Reduces the value of undolevel.
 #****
 proc undo {} {
-	global showTree changed nodeNamingBase main_canvas_elem
+	global showTree changed all_modules_list main_canvas_elem
 
 	set undolevel [getFromRunning "undolevel"]
 	if { [getFromRunning "oper_mode"] == "edit" && $undolevel > 0 } {
@@ -105,8 +105,8 @@ proc undo {} {
 			refreshTopologyTree
 		}
 
-		foreach node_type [array names nodeNamingBase] {
-			recalculateNumType $node_type $nodeNamingBase($node_type)
+		foreach node_type $all_modules_list {
+			recalculateNumType $node_type [invokeTypeProc $node_type "namingBase"]
 		}
 	}
 
@@ -127,7 +127,7 @@ proc undo {} {
 #   of undolevel.
 #****
 proc redo {} {
-	global showTree changed nodeNamingBase main_canvas_elem
+	global showTree changed all_modules_list main_canvas_elem
 
 	set undolevel [getFromRunning "undolevel"]
 	set redolevel [getFromRunning "redolevel"]
@@ -150,8 +150,8 @@ proc redo {} {
 			refreshTopologyTree
 		}
 
-		foreach node_type [array names nodeNamingBase] {
-			recalculateNumType $node_type $nodeNamingBase($node_type)
+		foreach node_type $all_modules_list {
+			recalculateNumType $node_type [invokeTypeProc $node_type "namingBase"]
 		}
 	}
 
@@ -452,7 +452,7 @@ proc selectZoomApply { w } {
 #   * wi -- widget
 #****
 proc routerDefaultsApply { wi } {
-	global changed
+	global changed router_protocols
 
 	set router_frame $wi.routerframe
 
@@ -467,18 +467,9 @@ proc routerDefaultsApply { wi } {
 		setGlobalOption "routerDefaultsModel" $newmodel
 	}
 
-	set protocols {
-		"rip	routerRipEnable"
-		"ripng	routerRipngEnable"
-		"ospf	routerOspfEnable"
-		"ospf6	routerOspf6Enable"
-		"bgp	routerBgpEnable"
-		"ldp	routerLdpEnable"
-		"isis	routerIsisEnable"
-	}
-
-	foreach item $protocols {
-		lassign $item protocol var_name
+	foreach item $router_protocols {
+		set protocol [lindex $item 0]
+		set var_name "router[string totitle $protocol 0 0]Enable"
 
 		set oldvalue [getActiveOption $var_name]
 		set newvalue [expr { "selected" in [$router_frame.protocols.$protocol state] }]
@@ -498,8 +489,10 @@ proc routerDefaultsApply { wi } {
 		if { [getNodeType $node_id] == "router" } {
 			setNodeModel $node_id [getActiveOption "routerDefaultsModel"]
 
-			foreach item $protocols {
-				lassign $item protocol var_name
+			foreach item $router_protocols {
+				set protocol [lindex $item 0]
+				set var_name "router[string totitle $protocol 0 0]Enable"
+
 				setNodeProtocol $node_id $protocol [getActiveOption $var_name]
 			}
 			set changed 1
@@ -769,14 +762,14 @@ proc bindEventsToTree {} {
 		set node_type [getNodeType $node_id]
 		set tmp_command \
 			"$f.tree item $node_id -open false; \
-			invokeTypeProc $node_type configGUI $node_id"
+			invokeTypeProc $node_type gui::configGUI $node_id"
 		$f.tree tag bind $node_id <Double-1> $tmp_command
 		$f.tree tag bind $node_id <Key-Return> $tmp_command
 
 		foreach iface_id [lsort -dictionary [ifcList $node_id]] {
 			set tmp_command \
 				"set selectedIfc $iface_id; \
-				invokeTypeProc $node_type configGUI $node_id; \
+				invokeTypeProc $node_type gui::configGUI $node_id; \
 				set selectedIfc \"\""
 			$f.tree tag bind $node_id$iface_id <Double-1> $tmp_command
 			$f.tree tag bind $node_id$iface_id <Key-Return> $tmp_command
@@ -1116,7 +1109,7 @@ proc setActiveToolGroup { group } {
 				set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/l3.gif]
 			}
 		} else {
-			set image [image create photo -file [invokeTypeProc $tool "icon" "toolbar"]]
+			set image [image create photo -file [invokeTypeProc $tool "gui::icon" "toolbar"]]
 		}
 		# TODO: Create an arrow image programatically
 		set arrow_source "$ROOTDIR/$LIBDIR/icons/tiny/l2.gif"
@@ -1386,10 +1379,11 @@ proc refreshHiddenNodes { content_frame } {
 
 	set hidden_node_types {}
 	foreach node_type $all_modules_list {
+		set toolbar_location [invokeTypeProc $node_type "gui::toolbarLocation"]
 		if {
-			([invokeTypeProc $node_type "netlayer"] == "LINK" &&
+			($toolbar_location == "link_layer" &&
 			"selected" in [$content_frame.link_frame.cb$node_type state]) ||
-			([invokeTypeProc $node_type "netlayer"] == "NETWORK" &&
+			($toolbar_location == "net_layer" &&
 			"selected" in [$content_frame.network_frame.cb$node_type state])
 		} {
 			lappend hidden_node_types $node_type
@@ -2062,7 +2056,7 @@ proc editorPreferencesGUI_saveContent { option_source curtab_options curtab_over
 			#lassign [editorPreferencesGUI_fetchTabOptions $current_tab_elem] curtab_options curtab_override
 			set curtab_options [dictSet $curtab_options "custom_override" $curtab_override]
 
-			set json_cfg [createJson "object" $curtab_options]
+			set json_cfg [createJson "object_list" $curtab_options]
 			if { ! [file exists $config_dir] } {
 				file mkdir $config_dir
 			}

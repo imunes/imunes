@@ -16,7 +16,7 @@ proc showCfg { node_id } {
 	upvar 0 ::lastObservedNode lastObservedNode
 
 	#Show only if in exec mode
-	if { [getFromRunning "${node_id}_running"] == "false" } {
+	if { ! [isRunningNode $node_id] } {
 		return
 	}
 
@@ -32,11 +32,6 @@ proc showCfg { node_id } {
 	if { $showCfg == "None" || $showCfg == "route" || $node_id == "" } {
 		$main_canvas_elem delete -withtag showCfgPopup
 
-		return
-	}
-
-	#Dont show popup window if the node virtlayer is different from VIRTUALIZED
-	if { [invokeNodeProc $node_id "virtlayer"] != "VIRTUALIZED" } {
 		return
 	}
 
@@ -201,7 +196,7 @@ proc showRoute { node2_id } {
 		if { [llength $selected] != 1 } {
 			if { [llength $selected] != 0 } {
 				set line "To show route, only one node can be selected."
-				.bottom.textbox config -text "$line"
+				.bottom.textbox config -text "$line" -foreground "black"
 			}
 		} else {
 			set node1_id $selected
@@ -214,7 +209,7 @@ proc showRoute { node2_id } {
 			} {
 				#User notification
 				set line "Please wait. Route is being calculated."
-				.bottom.textbox config -text "$line"
+				.bottom.textbox config -text "$line" -foreground "black"
 				after 5 { set t 1 }
 				vwait t
 
@@ -264,7 +259,7 @@ proc showRoute { node2_id } {
 
 				#User notification
 				set line "Route calculation finished."
-				.bottom.textbox config -text "$line"
+				.bottom.textbox config -text "$line" -foreground "black"
 			}
 		}
 	}

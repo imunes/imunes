@@ -332,58 +332,31 @@ proc getIfcIPv4addrs { node_id iface_id } {
 #   * addrs4 -- new IPv4 addresses.
 #****
 proc setIfcIPv4addrs { node_id iface_id addrs4 } {
+	set old_routes [appendNodeSubnetRoutes $node_id {} "ipv4"]
+
 	cfgSet "nodes" $node_id "ifaces" $iface_id "ipv4_addrs" $addrs4
 
 	trigger_ifaceReconfig $node_id $iface_id
 
+	set my_priority [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
+	if { $my_priority < 0 } {
+		return
+	}
+
+	set new_routes [appendNodeSubnetRoutes $node_id {} "ipv4"]
+
 	set node_type [getNodeType $node_id]
-	set is_extnat [expr { $node_type == "ext" && [getNodeNATIface $node_id] != "UNASSIGNED" }]
-	if { $is_extnat } {
+	if {
+		$node_type in "router nat64" ||
+		($node_type == "ext" && [getNodeNATIface $node_id] != "UNASSIGNED")
+	} {
+		triggerChangedDefaultRoutes $old_routes $new_routes
+	} elseif {
+		[getNodeAutoDefaultRoutesStatus $node_id] == "enabled" &&
+		([dictGet $old_routes $node_id] != {} ||
+		[dictGet $new_routes $node_id] != {})
+	} {
 		trigger_nodeReconfig $node_id
-	}
-
-	if { [isIfcLogical $node_id $iface_id] } {
-		return
-	}
-
-	lassign [getSubnetData $node_id $iface_id {} {} 0] subnet_gws subnet_data
-	if { $subnet_gws == "{||}" } {
-		return
-	}
-
-	if { $node_type in "router nat64" || $is_extnat } {
-		set has_extnat [string match "*ext*" $subnet_gws]
-		foreach subnet_node [removeFromList [dict keys $subnet_data] $node_id] {
-			if { [getNodeAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
-				continue
-			}
-
-			set subnet_node_type [getNodeType $subnet_node]
-			if { $subnet_node_type == "ext" || [invokeTypeProc $subnet_node_type "netlayer"] != "NETWORK" } {
-				# skip extnat and L2 nodes
-				continue
-			}
-
-			if { ! $has_extnat && $subnet_node_type in "router nat64" } {
-				# skip routers if there is no extnats
-				continue
-			}
-
-			trigger_nodeReconfig $subnet_node
-		}
-	} else {
-		if { [getNodeAutoDefaultRoutesStatus $node_id] != "enabled" } {
-			return
-		}
-
-		foreach subnet_gw $subnet_gws {
-			# extract IPv4 gateway
-			if { [lindex [split $subnet_gw "|"] 1] != "" } {
-				trigger_nodeReconfig $node_id
-
-				return
-			}
-		}
 	}
 }
 
@@ -497,58 +470,31 @@ proc getIfcIPv6addrs { node_id iface_id } {
 #   * addrs6 -- new IPv6 addresses.
 #****
 proc setIfcIPv6addrs { node_id iface_id addrs6 } {
+	set old_routes [appendNodeSubnetRoutes $node_id {} "ipv6"]
+
 	cfgSet "nodes" $node_id "ifaces" $iface_id "ipv6_addrs" $addrs6
 
 	trigger_ifaceReconfig $node_id $iface_id
 
+	set my_priority [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
+	if { $my_priority < 0 } {
+		return
+	}
+
+	set new_routes [appendNodeSubnetRoutes $node_id {} "ipv6"]
+
 	set node_type [getNodeType $node_id]
-	set is_extnat [expr { $node_type == "ext" && [getNodeNATIface $node_id] != "UNASSIGNED" }]
-	if { $is_extnat } {
+	if {
+		$node_type in "router nat64" ||
+		($node_type == "ext" && [getNodeNATIface $node_id] != "UNASSIGNED")
+	} {
+		triggerChangedDefaultRoutes $old_routes $new_routes
+	} elseif {
+		[getNodeAutoDefaultRoutesStatus $node_id] == "enabled" &&
+		([dictGet $old_routes $node_id] != {} ||
+		[dictGet $new_routes $node_id] != {})
+	} {
 		trigger_nodeReconfig $node_id
-	}
-
-	if { [isIfcLogical $node_id $iface_id] } {
-		return
-	}
-
-	lassign [getSubnetData $node_id $iface_id {} {} 0] subnet_gws subnet_data
-	if { $subnet_gws == "{||}" } {
-		return
-	}
-
-	if { $node_type in "router nat64" || $is_extnat } {
-		set has_extnat [string match "*ext*" $subnet_gws]
-		foreach subnet_node [removeFromList [dict keys $subnet_data] $node_id] {
-			if { [getNodeAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
-				continue
-			}
-
-			set subnet_node_type [getNodeType $subnet_node]
-			if { $subnet_node_type == "ext" || [invokeTypeProc $subnet_node_type "netlayer"] != "NETWORK" } {
-				# skip extnat and L2 nodes
-				continue
-			}
-
-			if { ! $has_extnat && $subnet_node_type in "router nat64" } {
-				# skip routers if there is no extnats
-				continue
-			}
-
-			trigger_nodeReconfig $subnet_node
-		}
-	} else {
-		if { [getNodeAutoDefaultRoutesStatus $node_id] != "enabled" } {
-			return
-		}
-
-		foreach subnet_gw $subnet_gws {
-			# extract IPv6 gateway
-			if { [lindex [split $subnet_gw "|"] 2] != "" } {
-				trigger_nodeReconfig $node_id
-
-				return
-			}
-		}
 	}
 }
 
@@ -620,11 +566,7 @@ proc getIfcVlanDev { node_id iface_id } {
 proc setIfcVlanDev { node_id iface_id dev } {
 	cfgSet "nodes" $node_id "ifaces" $iface_id "vlan_dev" $dev
 
-	if { [getNodeType $node_id] == "rj45" } {
-		trigger_nodeRecreate $node_id
-	} else {
-		trigger_ifaceRecreate $node_id $iface_id
-	}
+	trigger_ifaceRecreate $node_id $iface_id
 }
 
 #****f* ifaces.tcl/getIfcVlanTag
@@ -663,20 +605,20 @@ proc getIfcVlanTag { node_id iface_id } {
 #   * tag -- vlan-tag
 #****
 proc setIfcVlanTag { node_id iface_id tag } {
+	global isOSfreebsd
+
 	cfgSet "nodes" $node_id "ifaces" $iface_id "vlan_tag" $tag
 
-	set node_type [getNodeType $node_id]
-	if { $node_type == "rj45" } {
-		trigger_nodeRecreate $node_id
-	} elseif { $node_type == "lanswitch" } {
+	if { [getNodeType $node_id] == "lanswitch" } {
 		foreach other_iface_id [ifcList $node_id] {
-			if { $iface_id != $other_iface_id && [getIfcVlanType $node_id $other_iface_id] != "trunk" } {
+			# trigger this iface and other trunk ifaces
+			if { ! ($iface_id == $other_iface_id || [getIfcVlanType $node_id $other_iface_id] == "trunk") } {
 				continue
 			}
 
 			trigger_ifaceReconfig $node_id $other_iface_id
 			set link_id [getIfcLink $node_id $other_iface_id]
-			if { $link_id != "" } {
+			if { $isOSfreebsd && $link_id != "" } {
 				trigger_linkRecreate $link_id
 			}
 		}
@@ -715,9 +657,24 @@ proc getIfcVlanType { node_id iface_id } {
 #   * type -- vlan type
 #****
 proc setIfcVlanType { node_id iface_id type } {
+	global isOSfreebsd
+
 	cfgSet "nodes" $node_id "ifaces" $iface_id "vlan_type" $type
 
-	if { [getNodeType $node_id] in "rj45 lanswitch" } {
-		trigger_nodeRecreate $node_id
+	if { [getNodeType $node_id] in "lanswitch" } {
+		if { $isOSfreebsd } {
+			trigger_nodeRecreate $node_id
+
+			return
+		}
+
+		foreach other_iface_id [ifcList $node_id] {
+			# trigger this iface and other trunk ifaces
+			if { ! ($iface_id == $other_iface_id || [getIfcVlanType $node_id $other_iface_id] == "trunk") } {
+				continue
+			}
+
+			trigger_ifaceReconfig $node_id $other_iface_id
+		}
 	}
 }

@@ -11,16 +11,16 @@
 # IPv6autoAssign          - automatically assign next free IPv6 address to interface (default: "1", type: "bool")
 # recents_number          - max number of recently opened file names to keep (default: "10", type: "int 0|999")
 # routerDefaultsModel     - new routers will have this value set to routing model (default: "frr", type: "list frr|quagga|static")
-# routerRipEnable         - enable/disable RIP protocol on newly created router nodes (default: "1", type: "bool")
-# routerRipngEnable       - enable/disable RIPng protocol on newly created router nodes (default: "1", type: "bool")
-# routerOspfEnable        - enable/disable OSPF protocol on newly created router nodes (default: "0", type: "bool")
-# routerOspf6Enable       - enable/disable OSPF6 protocol on newly created router nodes (default: "0", type: "bool")
-# routerBgpEnable         - enable/disable BGP protocol on newly created router nodes (default: "0", type: "bool")
-# routerLdpEnable         - enable/disable LDP protocol on newly created router nodes (default: "0", type: "bool")
-# routerIsisEnable        - enable/disable IS-IS protocol on newly created router nodes (default: "0", type: "bool")
 # editor_only             - if true, Experiment -> Execute is disabled (default: "0", type: "bool")
 # preferred_shell         - shell to open on 'Shell window' (if exists) (default: "csh", type: "string")
 # timeout_factor          - extend wait time for node/iface create/destroy/configure (default: "5", type: "int 1|60")
+# routerRipEnable         - enable/disable RIP protocol on newly created router nodes (default: "1", type: "bool")
+# routerRipngEnable       - enable/disable RIPng protocol on newly created router nodes (default: "1", type: "bool")
+# routerOspfEnable        - enable/disable OSPF protocol on newly created router nodes (default: "0", type: "bool")
+# routerOspf6Enable       - enable/disable OSPFv3 protocol on newly created router nodes (default: "0", type: "bool")
+# routerBgpEnable         - enable/disable BGP protocol on newly created router nodes (default: "0", type: "bool")
+# routerLdpEnable         - enable/disable LDP protocol on newly created router nodes (default: "0", type: "bool")
+# routerIsisEnable        - enable/disable IS-IS protocol on newly created router nodes (default: "0", type: "bool")
 # GUI variables
 # hidden_node_types       - a list of node types to hide in the toolbar (default: "none", type: "string")
 # icon_size               - size of icons on canvas (default: "normal", type: "list small|normal")
@@ -49,6 +49,9 @@
     "IPv6autoAssign"          : "1",
     "recents_number"          : "10",
     "routerDefaultsModel"     : "frr",
+    "editor_only"             : "0",
+    "preferred_shell"         : "csh",
+    "timeout_factor"          : "5",
     "routerRipEnable"         : "1",
     "routerRipngEnable"       : "1",
     "routerOspfEnable"        : "0",
@@ -56,9 +59,6 @@
     "routerBgpEnable"         : "0",
     "routerLdpEnable"         : "0",
     "routerIsisEnable"        : "0",
-    "editor_only"             : "0",
-    "preferred_shell"         : "csh",
-    "timeout_factor"          : "5",
     "hidden_node_types"       : "none",
     "icon_size"               : "normal",
     "show_annotations"        : "1",

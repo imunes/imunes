@@ -446,7 +446,7 @@ proc saveFile { selected_file } {
 
 		saveCfgJson $current_file
 
-		.bottom.textbox config -text "Saved [file tail $current_file]"
+		.bottom.textbox config -text "Saved [file tail $current_file]" -foreground "black"
 
 		setToRunning "modified" false
 
@@ -817,4 +817,34 @@ proc relpath { target } {
 	}
 
 	return $target
+}
+
+# must be loaded before config/*.tcl files
+proc addCase { switch_dict_var key body { key_type "" } { force 0 } } {
+	upvar ::switch_cases::$switch_dict_var switch_dict
+
+	if { ! [info exists ::switch_cases::$switch_dict_var] } {
+		set ::switch_cases::$switch_dict_var [dict create]
+	}
+
+	if { $key_type != "" } {
+		if { $key_type ni "dictionary array inner_dictionary" } {
+			sputs stderr "Key type '$key_type' does not exist, ignoring! Use 'dictionary', 'array', or 'inner_dictionary'."
+
+			return
+		}
+
+		global cfg_types_$key_type
+
+		lappend cfg_types_$key_type $key
+	}
+
+	if { $key in [dict keys $switch_dict] && $force == 0 } {
+		# set force to 1 to overwrite existing keys
+		sputs stderr "Key '$key' already exists, ignoring!"
+
+		return
+	}
+
+	set switch_dict [dict merge $switch_dict [list $key $body]]
 }

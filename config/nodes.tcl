@@ -311,14 +311,10 @@ proc getNodeName { node_id } {
 #   * name -- logical name of the node
 #****
 proc setNodeName { node_id name } {
-	global nodeNamingBase
-
 	cfgSet "nodes" $node_id "name" $name
 
 	set node_type [getNodeType $node_id]
-	if { $node_type in [array names nodeNamingBase] } {
-		recalculateNumType $node_type $nodeNamingBase($node_type)
-	}
+	recalculateNumType $node_type [invokeTypeProc $node_type "namingBase"]
 
 	if { [invokeNodeProc $node_id "virtlayer"] == "NATIVE" } {
 		return
@@ -339,22 +335,37 @@ proc setNodeName { node_id name } {
 #   * interface -- nat interface
 #****
 proc setNodeNATIface { node_id interface } {
+	set iface_id [lindex [ifcList $node_id] 0]
+
+	set old_interface [getNodeNATIface $node_id]
+	set old_priority [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
+
 	cfgSet "nodes" $node_id "nat_iface" $interface
 	trigger_nodeReconfig $node_id
 
-	lassign [getSubnetData $node_id "ifc0" {} {} 0] subnet_gws subnet_data
-	foreach subnet_node [removeFromList [dict keys $subnet_data] $node_id] {
-		if { [getNodeAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
-			continue
-		}
+	set new_priority [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
 
-		set subnet_node_type [getNodeType $subnet_node]
-		if { $subnet_node_type == "ext" || [invokeTypeProc $subnet_node_type "netlayer"] != "NETWORK" } {
-			# skip extnat and L2 nodes
-			continue
-		}
+	if {
+		$old_interface != "UNASSIGNED" && $interface != "UNASSIGNED" ||
+		$old_interface == "UNASSIGNED" && $interface == "UNASSIGNED"
+	} {
+		return
+	}
 
-		trigger_nodeReconfig $subnet_node
+	if { $old_priority > $new_priority } {
+		set my_priority $old_priority
+	} else {
+		set my_priority $new_priority
+	}
+	foreach node_subnet_data [getSubnetIfaces $node_id $iface_id] {
+		lassign $node_subnet_data node_priority subnet_node_id -
+
+		if {
+			[getNodeAutoDefaultRoutesStatus $subnet_node_id] == "enabled" &&
+			$my_priority > $node_priority
+		} {
+			trigger_nodeReconfig $subnet_node_id
+		}
 	}
 }
 
@@ -406,9 +417,22 @@ proc getNodeType { node_id } {
 #   * type -- type of node
 #****
 proc setNodeType { node_id type } {
+	set old_type [getNodeType $node_id]
+	set old_routes [appendNodeSubnetRoutes $node_id {}]
+
 	cfgSet "nodes" $node_id "type" $type
 
 	trigger_nodeRecreate $node_id
+
+	if { $old_type == "" || $old_type == $type } {
+		return
+	}
+
+	# trigger other nodes reconfiguration if this node is/was a router
+	if { $old_type == "router" || $type == "router" } {
+		set new_routes [appendNodeSubnetRoutes $node_id {}]
+		triggerChangedDefaultRoutes $old_routes $new_routes
+	}
 }
 
 #****f* nodes.tcl/getNodeModel
@@ -509,7 +533,7 @@ proc setNodeCPUConf { node_id param_list } {
 }
 
 proc getNodeAutoDefaultRoutesStatus { node_id } {
-	return [cfgGetWithDefault "enabled" "nodes" $node_id "auto_default_routes"]
+	return [cfgGetWithDefault "disabled" "nodes" $node_id "auto_default_routes"]
 }
 
 proc setNodeAutoDefaultRoutesStatus { node_id state } {

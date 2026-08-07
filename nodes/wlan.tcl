@@ -27,91 +27,97 @@ set MODULE wlan
 
 registerModule $MODULE "freebsd"
 
-proc $MODULE.prepareSystem {} {
-	catch { rexec kldload ng_rfee }
-}
+# TODO
+namespace eval $MODULE {
+	# Define all node-specific procedures. All non-defined procedures will call
+	# genericL2.* procedure from nodes/generic_l2.tcl
+	namespace import ::genericL2::*
+	namespace export *
 
-proc $MODULE.confNewIfc { node_id iface_id } {
-}
+	################################################################################
+	########################### CONFIGURATION PROCEDURES ###########################
+	################################################################################
 
-proc $MODULE.confNewNode { node_id } {
-	global nodeNamingBase
-
-	setNodeName $node_id [getNewNodeNameType wlan $nodeNamingBase(wlan)]
-}
-
-proc $MODULE.ifacePrefix {} {
-	return "e"
-}
-
-proc $MODULE.netlayer {} {
-	return LINK
-}
-
-proc $MODULE.virtlayer {} {
-	return NATIVE
-}
-
-proc $MODULE.nodeCreate { eid node_id } {
-	upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-
-	set t [rexec printf "mkpeer rfee link0 link0\nshow ." | jexec $eid ngctl -f -]
-	set tlen [string length $t]
-	set id [string range $t [expr $tlen - 31] [expr $tlen - 24]]
-	catch { rexec jexec $eid ngctl name \[$id\]: $node_id }
-	set ngnodemap($eid\.$node_id) $node_id
-}
-
-proc $MODULE.nodeConfigure { eid node_id } {
-	upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
-
-	set ngid $ngnodemap($eid\.$node_id)
-	set wlan_epids ""
-	foreach iface_id [ifcList $node_id] {
-		lappend wlan_epids [string range [lindex [logicalPeerByIfc $node_id $iface_id] 0] 1 end]
+	proc confNewIfc { node_id iface_id } {
 	}
 
-	foreach iface_id [ifcList $node_id] {
-		set local_linkname link[string range $iface_id 1 end]
-		set local_epid [string range [lindex [logicalPeerByIfc $node_id $iface_id] 0] 1 end]
-		set tx_bandwidth 54000000
-		set tx_jitter 1.5
-		set tx_duplicate 5
-		set tx_qlen 20
+	proc namingBase {} {
+		return "wlan"
+	}
 
-		set visible_epids ""
-		set local_x [lindex [getNodeCoords n$local_epid] 0]
-		set local_y [lindex [getNodeCoords n$local_epid] 1]
-		foreach epid $wlan_epids {
-			if { $epid == $local_epid } {
-				continue
-			}
-			set x [lindex [getNodeCoords n$epid] 0]
-			set y [lindex [getNodeCoords n$epid] 1]
-			set d [expr sqrt(($local_x - $x) ** 2 + ($local_y - $y) ** 2)]
-			set ber [format %1.0E [expr 1 - 0.99999999 / (1 + ($d / 500) ** 30)]]
-			if { $ber == "1E+00" } {
-				continue
-			}
-			lappend visible_epids $epid:ber$ber
+	proc nghook { eid node_id iface_id } {
+		set ifunit [string range $iface_id 1 end]
+		return [list $eid\.$node_id link$ifunit]
+	}
+
+	proc maxIfaces {} {
+		return 2048
+	}
+
+	################################################################################
+	############################ INSTANTIATE PROCEDURES ############################
+	################################################################################
+
+	proc prepareSystem {} {
+		catch { rexec kldload ng_rfee }
+	}
+
+	proc nodeCreate { eid node_id } {
+		upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
+
+		set t [rexec printf "mkpeer rfee link0 link0\nshow ." | jexec $eid ngctl -f -]
+		set tlen [string length $t]
+		set id [string range $t [expr $tlen - 31] [expr $tlen - 24]]
+		catch { rexec jexec $eid ngctl name \[$id\]: $node_id }
+		set ngnodemap($eid\.$node_id) $node_id
+	}
+
+	proc nodeConfigure { eid node_id } {
+		upvar 0 ::cf::[set ::curcfg]::ngnodemap ngnodemap
+
+		set ngid $ngnodemap($eid\.$node_id)
+		set wlan_epids ""
+		foreach iface_id [ifcList $node_id] {
+			lappend wlan_epids [string range [lindex [logicalPeerByIfc $node_id $iface_id] 0] 1 end]
 		}
 
-		rexec jexec $eid ngctl msg [set ngid]: setlinkcfg $local_linkname $local_epid:jit$tx_jitter:dup$tx_duplicate:bw$tx_bandwidth $visible_epids
+		foreach iface_id [ifcList $node_id] {
+			set local_linkname link[string range $iface_id 1 end]
+			set local_epid [string range [lindex [logicalPeerByIfc $node_id $iface_id] 0] 1 end]
+			set tx_bandwidth 54000000
+			set tx_jitter 1.5
+			set tx_duplicate 5
+			set tx_qlen 20
+
+			set visible_epids ""
+			set local_x [lindex [getNodeCoords n$local_epid] 0]
+			set local_y [lindex [getNodeCoords n$local_epid] 1]
+			foreach epid $wlan_epids {
+				if { $epid == $local_epid } {
+					continue
+				}
+				set x [lindex [getNodeCoords n$epid] 0]
+				set y [lindex [getNodeCoords n$epid] 1]
+				set d [expr sqrt(($local_x - $x) ** 2 + ($local_y - $y) ** 2)]
+				set ber [format %1.0E [expr 1 - 0.99999999 / (1 + ($d / 500) ** 30)]]
+				if { $ber == "1E+00" } {
+					continue
+				}
+				lappend visible_epids $epid:ber$ber
+			}
+
+			rexec jexec $eid ngctl msg [set ngid]: setlinkcfg $local_linkname $local_epid:jit$tx_jitter:dup$tx_duplicate:bw$tx_bandwidth $visible_epids
+		}
 	}
-}
 
-proc $MODULE.nodeDestroy { eid node_id } {
-	catch { rexec jexec $eid ngctl msg $node_id: shutdown }
-}
+	################################################################################
+	############################# TERMINATE PROCEDURES #############################
+	################################################################################
 
-proc $MODULE.nodeDestroyFS { eid node_id } {
-}
+	proc nodeDestroy { eid node_id } {
+		catch { rexec jexec $eid ngctl msg $node_id: shutdown }
+	}
 
-proc $MODULE.nghook { eid node_id iface_id } {
-	set ifunit [string range $iface_id 1 end]
-	return [list $eid\.$node_id link$ifunit]
-}
-
-proc $MODULE.maxIfaces {} {
-	return 2048
+	proc nodeDestroyFS { eid node_id } {
+	}
 }

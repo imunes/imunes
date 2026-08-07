@@ -44,192 +44,155 @@
 
 set MODULE router
 
-#****f* genericrouter.tcl/router.toolbarIconDescr
-# NAME
-#   router.toolbarIconDescr -- toolbar icon description
-# SYNOPSIS
-#   router.toolbarIconDescr
-# FUNCTION
-#   Returns this module's toolbar icon description.
-# RESULT
-#   * descr -- string describing the toolbar icon
-#****
-proc $MODULE.toolbarIconDescr {} {
-	return "Add new Router"
-}
+namespace eval ${MODULE}::gui {
+	namespace import ::genericL3::gui::*
+	namespace export *
 
-proc $MODULE._confNewIfc { node_cfg iface_id } {
-	global node_existing_mac node_existing_ipv4 node_existing_ipv6
+	#****f* genericrouter.tcl/router.toolbarIconDescr
+	# NAME
+	#   router.toolbarIconDescr -- toolbar icon description
+	# SYNOPSIS
+	#   router.toolbarIconDescr
+	# FUNCTION
+	#   Returns this module's toolbar icon description.
+	# RESULT
+	#   * descr -- string describing the toolbar icon
+	#****
+	proc toolbarIconDescr {} {
+		return "Add new Router"
+	}
 
-	set ipv4addr [getNextIPv4addr [_getNodeType $node_cfg] $node_existing_ipv4]
-	lappend node_existing_ipv4 $ipv4addr
-	set node_cfg [_setIfcIPv4addrs $node_cfg $iface_id $ipv4addr]
+	#****f* genericrouter.tcl/router.icon
+	# NAME
+	#   router.icon -- icon
+	# SYNOPSIS
+	#   router.icon $size
+	# FUNCTION
+	#   Returns path to node icon, depending on the specified size.
+	# INPUTS
+	#   * size -- "normal", "small" or "toolbar"
+	# RESULT
+	#   * path -- path to icon
+	#****
+	proc icon { size } {
+		global ROOTDIR LIBDIR
 
-	set ipv6addr [getNextIPv6addr [_getNodeType $node_cfg] $node_existing_ipv6]
-	lappend node_existing_ipv6 $ipv6addr
-	set node_cfg [_setIfcIPv6addrs $node_cfg $iface_id $ipv6addr]
-
-	set macaddr [getNextMACaddr $node_existing_mac]
-	lappend node_existing_mac $macaddr
-	set node_cfg [_setIfcMACaddr $node_cfg $iface_id $macaddr]
-
-	return $node_cfg
-}
-
-#****f* genericrouter.tcl/router.icon
-# NAME
-#   router.icon -- icon
-# SYNOPSIS
-#   router.icon $size
-# FUNCTION
-#   Returns path to node icon, depending on the specified size.
-# INPUTS
-#   * size -- "normal", "small" or "toolbar"
-# RESULT
-#   * path -- path to icon
-#****
-proc $MODULE.icon { size } {
-	global ROOTDIR LIBDIR
-
-	switch $size {
-		normal {
-			return $ROOTDIR/$LIBDIR/icons/normal/router.gif
-		}
-		small {
-			return $ROOTDIR/$LIBDIR/icons/small/router.gif
-		}
-		toolbar {
-			return $ROOTDIR/$LIBDIR/icons/tiny/router.gif
+		switch $size {
+			normal {
+				return $ROOTDIR/$LIBDIR/icons/normal/router.gif
+			}
+			small {
+				return $ROOTDIR/$LIBDIR/icons/small/router.gif
+			}
+			toolbar {
+				return $ROOTDIR/$LIBDIR/icons/tiny/router.gif
+			}
 		}
 	}
-}
 
-#****f* genericrouter.tcl/router.notebookDimensions
-# NAME
-#   router.notebookDimensions -- notebook dimensions
-# SYNOPSIS
-#   router.notebookDimensions $wi
-# FUNCTION
-#   Returns the specified notebook height and width.
-# INPUTS
-#   * wi -- widget
-# RESULT
-#   * size -- notebook size as {height width}
-#****
-proc $MODULE.notebookDimensions { wi } {
-	set h 250
-	set w 507
-
-	if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] == "Configuration" } {
-		set h 400
+	#****f* genericrouter.tcl/router.notebookDimensions
+	# NAME
+	#   router.notebookDimensions -- notebook dimensions
+	# SYNOPSIS
+	#   router.notebookDimensions $wi
+	# FUNCTION
+	#   Returns the specified notebook height and width.
+	# INPUTS
+	#   * wi -- widget
+	# RESULT
+	#   * size -- notebook size as {height width}
+	#****
+	proc notebookDimensions { wi } {
+		set h 250
 		set w 507
+
+		if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] == "Configuration" } {
+			set h 400
+			set w 507
+		}
+
+		if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] == "Interfaces" } {
+			set h 370
+			set w 507
+		}
+
+		if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] == "IPsec" } {
+			set h 320
+			set w 507
+		}
+
+		return [list $h $w]
 	}
 
-	if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] == "Interfaces" } {
-		set h 370
-		set w 507
+	#****f* genericrouter.tcl/router.configGUI
+	# NAME
+	#   router.configGUI -- configuration GUI
+	# SYNOPSIS
+	#   router.configGUI $node_id
+	# FUNCTION
+	#   Defines the structure of the router configuration window by calling
+	#   procedures for creating and organising the window, as well as procedures
+	#   for adding certain modules to that window.
+	# INPUTS
+	#   * node_id -- node id
+	#****
+	proc configGUI { node_id } {
+		global wi
+		#
+		#guielements - the list of modules contained in the configuration window
+		#		(each element represents the name of the procedure which creates
+		#		that module)
+		#
+		#treecolumns - the list of columns in the interfaces tree (each element
+		#		consists of the column id and the column name)
+		#
+		global guielements treecolumns ipsecEnable
+		global node_cfg node_cfg_gui node_existing_mac node_existing_ipv4 node_existing_ipv6
+
+		set guielements {}
+		set treecolumns {}
+		set node_cfg [cfgGet "nodes" $node_id]
+		set node_cfg_gui [cfgGet "gui" "nodes" $node_id]
+		set node_existing_mac [getFromRunning "mac_used_list"]
+		set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
+		set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
+
+		configGUI_createConfigPopupWin
+		wm title $wi "[_getNodeType $node_cfg] ($node_id) configuration"
+
+		configGUI_nodeName $wi $node_id "Node name:"
+
+		set labels {
+			"Configuration"
+			"Interfaces"
+			"IPsec"
+		}
+		lassign [configGUI_addNotebook $wi $node_id $labels] \
+			configtab ifctab ipsectab
+
+		configGUI_routingModel $configtab $node_id
+		configGUI_customImage $configtab $node_id
+		configGUI_attachDockerToExt $configtab $node_id
+		configGUI_servicesConfig $configtab $node_id
+		configGUI_staticRoutes $configtab $node_id
+		configGUI_snapshots $configtab $node_id
+		configGUI_customConfig $configtab $node_id
+		configGUI_ipsec $ipsectab $node_id
+
+		set treecolumns {
+			"OperState State"
+			"NatState Nat"
+			"IPv4addrs IPv4 addrs"
+			"IPv6addrs IPv6 addrs"
+			"MACaddr MAC addr"
+			"MTU MTU"
+			"QLen Queue len"
+			"QDisc Queue disc"
+			"QDrop Queue drop"
+		}
+		configGUI_addTree $ifctab $node_id
+
+		configGUI_nodeRestart $wi $node_id
+		configGUI_buttonsACNode $wi $node_id
 	}
-
-	if { [string trimleft [$wi.nbook select] "$wi.nbook.nf"] == "IPsec" } {
-		set h 320
-		set w 507
-	}
-
-	return [list $h $w]
-}
-
-#****f* genericrouter.tcl/router.configGUI
-# NAME
-#   router.configGUI -- configuration GUI
-# SYNOPSIS
-#   router.configGUI $node_id
-# FUNCTION
-#   Defines the structure of the router configuration window by calling
-#   procedures for creating and organising the window, as well as procedures
-#   for adding certain modules to that window.
-# INPUTS
-#   * node_id -- node id
-#****
-proc $MODULE.configGUI { node_id } {
-	global wi
-	#
-	#guielements - the list of modules contained in the configuration window
-	#		(each element represents the name of the procedure which creates
-	#		that module)
-	#
-	#treecolumns - the list of columns in the interfaces tree (each element
-	#		consists of the column id and the column name)
-	#
-	global guielements treecolumns ipsecEnable
-	global node_cfg node_cfg_gui node_existing_mac node_existing_ipv4 node_existing_ipv6
-
-	set guielements {}
-	set treecolumns {}
-	set node_cfg [cfgGet "nodes" $node_id]
-	set node_cfg_gui [cfgGet "gui" "nodes" $node_id]
-	set node_existing_mac [getFromRunning "mac_used_list"]
-	set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
-	set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
-
-	configGUI_createConfigPopupWin
-	wm title $wi "router configuration"
-
-	configGUI_nodeName $wi $node_id "Node name:"
-
-	set labels {
-		"Configuration"
-		"Interfaces"
-		"IPsec"
-	}
-	lassign [configGUI_addNotebook $wi $node_id $labels] \
-		configtab ifctab ipsectab
-
-	configGUI_routingModel $configtab $node_id
-	configGUI_customImage $configtab $node_id
-	configGUI_attachDockerToExt $configtab $node_id
-	configGUI_servicesConfig $configtab $node_id
-	configGUI_staticRoutes $configtab $node_id
-	configGUI_snapshots $configtab $node_id
-	configGUI_customConfig $configtab $node_id
-	configGUI_ipsec $ipsectab $node_id
-
-	set treecolumns {
-		"OperState State"
-		"NatState Nat"
-		"IPv4addrs IPv4 addrs"
-		"IPv6addrs IPv6 addrs"
-		"MACaddr MAC addr"
-		"MTU MTU"
-		"QLen Queue len"
-		"QDisc Queue disc"
-		"QDrop Queue drop"
-	}
-	configGUI_addTree $ifctab $node_id
-
-	configGUI_nodeRestart $wi $node_id
-	configGUI_buttonsACNode $wi $node_id
-}
-
-#****f* genericrouter.tcl/router.configInterfacesGUI
-# NAME
-#   router.configInterfacesGUI -- configuration of interfaces GUI
-# SYNOPSIS
-#   router.configInterfacesGUI $wi $node_id $iface_id
-# FUNCTION
-#   Defines which modules for changing interfaces parameters are contained in
-#   the router configuration window. It is done by calling procedures for
-#   adding certain modules to the window.
-# INPUTS
-#   * wi -- widget
-#   * node_id -- node id
-#   * iface_id -- interface name
-#****
-proc $MODULE.configInterfacesGUI { wi node_id iface_id } {
-	global guielements
-
-	configGUI_ifcEssentials $wi $node_id $iface_id
-	configGUI_ifcQueueConfig $wi $node_id $iface_id
-	configGUI_ifcMACAddress $wi $node_id $iface_id
-	configGUI_ifcIPv4Address $wi $node_id $iface_id
-	configGUI_ifcIPv6Address $wi $node_id $iface_id
 }

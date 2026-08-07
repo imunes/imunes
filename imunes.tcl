@@ -177,6 +177,9 @@ set isOSwin false
 set isOSmac false
 set isOSmac_gui false
 
+# switch cases for update procedures
+namespace eval ::switch_cases {}
+
 # Runtime libriaries
 foreach file_path [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
 	if {
@@ -189,6 +192,11 @@ foreach file_path [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
 
 setPlatformVariables
 
+global cfg_types_dictionary cfg_types_array cfg_types_inner_dictionary
+set cfg_types_dictionary "gui canvases nodes links annotations images"
+set cfg_types_array {}
+set cfg_types_inner_dictionary {}
+
 if { $prepareFlag } {
 	prepareVroot
 	exit
@@ -198,24 +206,21 @@ if { ! [info exists eid_base] } {
 	set eid_base [genExperimentId]
 }
 
-# bases for naming new nodes
-array set nodeNamingBase {
-	pc pc
-	ext ext
-	filter filter
-	router router
-	host host
-	hub hub
-	lanswitch switch
-	nat64 nat64-
-	rj45 rj45-
-	packgen packgen
-	stpswitch stpswitch
-	wlan wlan
-}
-
 global named_colors
 set named_colors "Red Green Blue Yellow Magenta Cyan Gray Black"
+
+global router_protocols
+#	protocol	enabled	label
+set router_protocols {
+	"rip		1		RIP"
+	"ripng		1		RIPng"
+	"ospf		0		OSPF"
+	"ospf6		0		OSPFv3"
+	"bgp		0		BGP"
+	"ldp		0		LDP"
+	"isis		0		IS-IS"
+}
+#	protocol	enabled	label
 
 # These variables can be modified in IMUNES configuration files.
 #	name					value		type						description														topology_disable
@@ -226,16 +231,18 @@ set options_defaults {
 	"IPv6autoAssign"		1			"bool"						"automatically assign next free IPv6 address to interface"		0
 	"recents_number"		10			"int 0|999"					"max number of recently opened file names to keep"				1
 	"routerDefaultsModel"	"frr"		"list frr|quagga|static"	"new routers will have this value set to routing model"			0
-	"routerRipEnable"		1			"bool"						"enable/disable RIP protocol on newly created router nodes"		0
-	"routerRipngEnable"		1			"bool"						"enable/disable RIPng protocol on newly created router nodes"	0
-	"routerOspfEnable"		0			"bool"						"enable/disable OSPF protocol on newly created router nodes"	0
-	"routerOspf6Enable"		0			"bool"						"enable/disable OSPF6 protocol on newly created router nodes"	0
-	"routerBgpEnable"		0			"bool"						"enable/disable BGP protocol on newly created router nodes"		0
-	"routerLdpEnable"		0			"bool"						"enable/disable LDP protocol on newly created router nodes"		0
-	"routerIsisEnable"		0			"bool"						"enable/disable IS-IS protocol on newly created router nodes"	0
 	"editor_only"			0			"bool"						"if true, Experiment -> Execute is disabled"					0
 	"preferred_shell"		"csh"		"string"					"shell to open on 'Shell window' (if exists)"					0
 	"timeout_factor"		5			"int 1|60"					"extend wait time for node/iface create/destroy/configure"		0
+}
+
+# generate router protocol variables and option entries (e.g. routerRipEnable, etc.)
+foreach item $router_protocols {
+	lassign $item protocol enabled str
+
+	set var_name "router[string totitle $protocol 0 0]Enable"
+	lappend options_defaults \
+		"$var_name"			"$enabled"	"bool"						"enable/disable $str protocol on newly created router nodes"	0
 }
 #	name					value		type						description														topology_disable
 
@@ -344,6 +351,10 @@ foreach file_path [glob -directory $ROOTDIR/$LIBDIR/config *.tcl] {
 	safeSourceFile $file_path
 }
 
+# load generic L2/L3 node procedures
+safeSourceFile $ROOTDIR/$LIBDIR/nodes/generic_l2.tcl
+safeSourceFile $ROOTDIR/$LIBDIR/nodes/generic_l3.tcl
+
 # The following files need to be sourced in this particular order. If not
 # the placement of the toolbar icons will be altered.
 foreach node_type $node_types {
@@ -398,7 +409,7 @@ if { ! [file exists $config_dir] } {
 # also don't want to do it manually for each new option that is added to the
 # list, so generate it every time in debug mode
 if { $debug } {
-	set json_cfg [createJson "object" [list "custom_override" "" {*}$default_options]]
+	set json_cfg [createJson "object_list" [list "custom_override" "" {*}$default_options]]
 
 	set preamble "#\n"
 	append preamble "# This file is not parsed. If you want to apply options system-wide,\n"
@@ -476,6 +487,9 @@ if { $execMode == "interactive" } {
 
 	if { $gui } {
 		safePackageRequire Tk "To run the IMUNES GUI, Tk must be installed."
+
+		safeSourceFile "$ROOTDIR/$LIBDIR/gui/nodes/generic_l2.tcl"
+		safeSourceFile "$ROOTDIR/$LIBDIR/gui/nodes/generic_l3.tcl"
 
 		# Node GUI base libraries
 		foreach node_type $node_types {

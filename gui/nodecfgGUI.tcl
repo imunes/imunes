@@ -45,26 +45,10 @@ set selectedPackgenPacket ""
 #   * node_id -- node id
 #****
 proc nodeConfigGUI { node_id } {
-	global badentry main_canvas_elem
-
-	if { $node_id == "" } {
-		set node_id [lindex [$main_canvas_elem gettags current] 1]
-	}
-
-	if { [isPseudoNode $node_id] } {
-		#
-		# Hyperlink to another canvas
-		#
-		set mirror_node [getNodeMirror $node_id]
-		setToRunning_gui "curcanvas" [getNodeCanvas $mirror_node]
-		switchCanvas none
-		after idle selectNodes [lindex [nodeFromPseudoNode $mirror_node] 0]
-
-		return
-	}
+	global badentry
 
 	set badentry 0
-	invokeNodeProc $node_id "configGUI" $node_id
+	invokeNodeProc $node_id "gui::configGUI" $node_id
 }
 
 #****f* nodecfgGUI.tcl/configGUI_createConfigPopupWin
@@ -127,7 +111,7 @@ proc configGUI_addNotebook { wi node_id labels } {
 	}
 
 	bind $wi.nbook <<NotebookTabChanged>> \
-		"notebookSize $wi $node_id"
+		"notebookSize $wi"
 
 	global selectedIfc
 	if { $selectedIfc != "" } {
@@ -148,8 +132,10 @@ proc configGUI_addNotebook { wi node_id labels } {
 #   * wi - widget
 #   * node_id - node id
 #****
-proc notebookSize { wi node_id } {
-	set dim [invokeNodeProc $node_id "notebookDimensions" $wi]
+proc notebookSize { wi } {
+	global node_cfg
+
+	set dim [_invokeNodeProc $node_cfg "gui::notebookDimensions" $wi]
 	set configh [lindex $dim 0]
 	set configw [lindex $dim 1]
 
@@ -903,7 +889,7 @@ proc configGUI_showIfcInfo { wi phase node_id iface_id { force "" } } {
 			} elseif { $iface_id != "logIfcFrame" } {
 				#physical interfaces
 				configGUI_ifcMainFrame $wi $node_id $iface_id
-				_invokeNodeProc $node_cfg "configInterfacesGUI" $wi $node_id $iface_id
+				_invokeNodeProc $node_cfg "gui::configInterfacesGUI" $wi $node_id $iface_id
 			} else {
 				#manage logical interfaces
 				configGUI_logicalInterfaces $wi $node_id $iface_id
@@ -1517,7 +1503,7 @@ proc configGUI_nodeRestart { wi node_id } {
 	pack $w.label -side left -padx 2
 	pack $w.options -side left -padx 2
 
-	if { [getFromRunning "oper_mode"] == "edit" || [getFromRunning "${node_id}_running"] == "false" } {
+	if { [getFromRunning "oper_mode"] == "edit" || ! [isRunningNode $node_id] } {
 		set disabled 1
 	} else {
 		set disabled 0
@@ -1565,7 +1551,7 @@ proc configGUI_rj45s { wi node_id } {
 		set group "$iface_id [_getIfcName $node_cfg $iface_id]"
 		lassign $group iface_id extIfc
 		set lbl "Interface $iface_id"
-		lassign [logicalPeerByIfc $node_id $iface_id] peer_id -
+		set peer_id [lindex [logicalPeerByIfc $node_id $iface_id] 0]
 		if { $peer_id != "" } {
 			set lbl "$lbl (peer [getNodeName $peer_id])"
 		}
@@ -1874,8 +1860,7 @@ proc configGUI_staticRoutes { wi node_id } {
 	set user_sroutes [concat [_getNodeStatIPv4routes $node_cfg] [_getNodeStatIPv6routes $node_cfg]]
 
 	set auto_default_routes [_getNodeAutoDefaultRoutesStatus $node_cfg]
-	lassign [getDefaultGateways $node_id {} {}] my_gws {} {}
-	lassign [getDefaultRoutesConfig $node_id $my_gws] all_routes4 all_routes6
+	lassign [getDefaultRoutesConfig $node_id] all_routes4 all_routes6
 
 	set ifc_routes_enable $wi.ifc_routes_enable
 	ttk::checkbutton $ifc_routes_enable -text "Enable automatic default routes" \
@@ -1960,7 +1945,7 @@ proc configGUI_addNotebookRj45 { wi node_id ifaces } {
 	}
 
 	bind $wi.nbook <<NotebookTabChanged>> \
-		"notebookSize $wi $node_id"
+		"notebookSize $wi"
 
 	set tabs [$wi.nbook tabs]
 
@@ -2243,7 +2228,7 @@ proc configGUI_routingModel { wi node_id } {
 	global guielements
 	lappend guielements configGUI_routingModel
 
-	global supp_router_models node_cfg
+	global supp_router_models router_protocols node_cfg
 
 	ttk::frame $wi.routing -relief groove -borderwidth 2 -padding 2
 	set w $wi.routing
@@ -2252,19 +2237,9 @@ proc configGUI_routingModel { wi node_id } {
 	ttk::frame $w.protocols -padding 2
 	ttk::label $w.protocols.label -text "Protocols:"
 
-	set protocols {
-		"rip rip"
-		"ripng ripng"
-		"ospf ospf"
-		"ospf6 ospfv3"
-		"bgp bgp"
-		"ldp ldp"
-		"isis isis"
-	}
-
 	set protocol_list {}
-	foreach item $protocols {
-		lassign $item protocol protocol_label
+	foreach item $router_protocols {
+		lassign $item protocol - protocol_label
 		lappend protocol_list $protocol
 		ttk::checkbutton $w.protocols.$protocol \
 			-text $protocol_label
@@ -2310,8 +2285,8 @@ proc configGUI_routingModel { wi node_id } {
 	$w.model.$default_model state "selected"
 
 	set checkbutton_dict "0 !selected 1 selected"
-	foreach item $protocols {
-		lassign $item protocol protocol_label
+	foreach item $router_protocols {
+		set protocol [lindex $item 0]
 		set value [dict get $checkbutton_dict [_getNodeProtocol $node_cfg $protocol]]
 		$w.protocols.$protocol state "$value"
 
@@ -6448,7 +6423,7 @@ proc configGUI_showBridgeIfcInfo { wi phase node_id iface_id } {
 		#parameters of selected interface
 		if { $iface_id != "" && $iface_id != $shownifc } {
 			configGUI_ifcBridgeMainFrame $wi $node_id $iface_id
-			_invokeNodeProc $node_cfg "configBridgeInterfacesGUI" $wi $node_id $iface_id
+			_invokeNodeProc $node_cfg "gui::configBridgeInterfacesGUI" $wi $node_id $iface_id
 		}
 	}
 }
@@ -6518,7 +6493,7 @@ proc configGUI_addNotebookFilter { wi node_id ifaces } {
 	}
 
 	bind $wi.nbook <<NotebookTabChanged>> \
-		"notebookSize $wi $node_id"
+		"notebookSize $wi"
 
 	set tabs [$wi.nbook tabs]
 
@@ -6887,7 +6862,7 @@ proc configGUI_showFilterIfcRuleInfo { wi phase node_id iface_id rule } {
 		#parameters of selected interface
 		if { $rule != "" && $rule != $shownrule } {
 			configGUI_ruleMainFrame $wi $node_id $iface_id $rule
-			_invokeNodeProc $node_cfg "configIfcRulesGUI" $wi $node_id $iface_id $rule
+			_invokeNodeProc $node_cfg "gui::configIfcRulesGUI" $wi $node_id $iface_id $rule
 		}
 	}
 }
@@ -7313,7 +7288,7 @@ proc configGUI_addNotebookPackgen { wi node_id } {
 	configGUI_addPackgenPanedWin $wi.nbook.nfConfiguration
 
 	bind $wi.nbook <<NotebookTabChanged>> \
-		"notebookSize $wi $node_id"
+		"notebookSize $wi"
 
 	set tabs [$wi.nbook tabs]
 
@@ -7706,7 +7681,7 @@ proc configGUI_showPacketInfo { wi phase node_id pac } {
 		#parameters of selected interface
 		if { $pac != "" && $pac != $shownpac } {
 			configGUI_packetMainFrame $wi $node_id $pac
-			_invokeNodeProc $node_cfg "configPacketsGUI" $wi $node_id $pac
+			_invokeNodeProc $node_cfg "gui::configPacketsGUI" $wi $node_id $pac
 		}
 	}
 }
@@ -8104,6 +8079,46 @@ proc transformNodesGUI { nodes to_type } {
 		redrawAll
 		updateUndoLog
 	}
+}
+
+#****f* nodecfgGUI.tcl/subnetApply
+# NAME
+#   subnetApply -- IPv4/IPv6 subnet apply
+# SYNOPSIS
+#   subnetApply $entry_elem
+# FUNCTION
+#   Sets new IPv4/IPv6 address from widget.
+# INPUTS
+#   * entry_elem -- widget
+#****
+proc subnetApply { ip_version entry_elem node_id iface_id } {
+	global changed main_canvas_elem
+
+	set ip_version_num [string index $ip_version 3]
+	set new_subnet [$entry_elem get]
+
+	# checkIPv4Net/checkIPv6Net
+	if { [checkIPv${ip_version_num}Net $new_subnet] == 0 } {
+		focusAndFlash $entry_elem
+
+		return
+	}
+
+	if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+		setToExecuteVars "terminate_cfg" [cfgGet]
+	}
+
+	assignSubnet $ip_version $node_id $iface_id [selectedNodes] $new_subnet
+
+	if { [getFromRunning "stop_sched"] } {
+		redeployCfg
+	}
+
+	redrawAll
+	set changed 1
+	updateUndoLog
+
+	$main_canvas_elem config -cursor left_ptr
 }
 
 proc _getNodeCustomEnabled { node_cfg } {

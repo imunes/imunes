@@ -26,6 +26,196 @@
 # and Technology through the research contract #IP-2003-143.
 #
 
+# NODE/IFACE STATE
+proc getStateNode { node_id } {
+	return [_cfgGet [getFromRunning "running_state"] "nodes" $node_id "state"]
+}
+
+proc getStateLink { link_id } {
+	return [_cfgGet [getFromRunning "running_state"] "links" $link_id "state"]
+}
+
+proc getStateNodeIface { node_id iface_id } {
+	return [_cfgGet [getFromRunning "running_state"] "nodes" $node_id "ifaces" $iface_id "state"]
+}
+
+proc setStateNode { node_id state } {
+	setToRunning "running_state" \
+		[_cfgSet [getFromRunning "running_state"] "nodes" $node_id "state" $state]
+}
+
+proc setStateLink { link_id state } {
+	setToRunning "running_state" \
+		[_cfgSet [getFromRunning "running_state"] "links" $link_id "state" $state]
+}
+
+proc setStateNodeIface { node_id iface_id state } {
+	setToRunning "running_state" \
+		[_cfgSet [getFromRunning "running_state"] "nodes" $node_id "ifaces" $iface_id "state" $state]
+}
+
+proc unsetStateNode { node_id } {
+	setToRunning "running_state" \
+		[_cfgUnset [getFromRunning "running_state"] "nodes" $node_id]
+}
+
+proc unsetStateLink { link_id } {
+	setToRunning "running_state" \
+		[_cfgUnset [getFromRunning "running_state"] "links" $link_id]
+}
+
+proc unsetStateNodeIface { node_id iface_id } {
+	setToRunning "running_state" \
+		[_cfgUnset [getFromRunning "running_state"] "nodes" $node_id "ifaces" $iface_id]
+}
+
+proc getStateErrorMsgNode { node_id } {
+	return [_cfgGet [getFromRunning "running_state"] "nodes" $node_id "error_msg"]
+}
+
+proc getStateErrorMsgLink { link_id } {
+	return [_cfgGet [getFromRunning "running_state"] "links" $link_id "error_msg"]
+}
+
+proc getStateErrorMsgNodeIface { node_id iface_id } {
+	return [_cfgGet [getFromRunning "running_state"] "nodes" $node_id "ifaces" $iface_id "error_msg"]
+}
+
+proc setStateErrorMsgNode { node_id error_msg } {
+	setToRunning "running_state" \
+		[_cfgSet [getFromRunning "running_state"] "nodes" $node_id "error_msg" $error_msg]
+}
+
+proc setStateErrorMsgLink { link_id error_msg } {
+	setToRunning "running_state" \
+		[_cfgSet [getFromRunning "running_state"] "links" $link_id "error_msg" $error_msg]
+}
+
+proc setStateErrorMsgNodeIface { node_id iface_id error_msg } {
+	setToRunning "running_state" \
+		[_cfgSet [getFromRunning "running_state"] "nodes" $node_id "ifaces" $iface_id "error_msg" $error_msg]
+}
+
+proc addStateNode { node_id states } {
+	if { $states == "" } {
+		return
+	}
+
+	set all_states [getStateNode $node_id]
+	if { $all_states == "" } {
+		set all_states $states
+	} else {
+		foreach state $states {
+			if { $state ni $all_states } {
+				lappend all_states $state
+			}
+		}
+	}
+
+	setStateNode $node_id $all_states
+}
+
+proc addStateLink { link_id states } {
+	if { $states == "" } {
+		return
+	}
+
+	set all_states [getStateLink $link_id]
+	if { $all_states == "" } {
+		set all_states $states
+	} else {
+		foreach state $states {
+			if { $state ni $all_states } {
+				lappend all_states $state
+			}
+		}
+	}
+
+	setStateLink $link_id $all_states
+}
+
+proc addStateNodeIface { node_id iface_id states } {
+	if { $states == "" } {
+		return
+	}
+
+	set all_states [getStateNodeIface $node_id $iface_id]
+	if { $all_states == "" } {
+		set all_states $states
+	} else {
+		foreach state $states {
+			if { $state ni $all_states } {
+				lappend all_states $state
+			}
+		}
+	}
+
+	setStateNodeIface $node_id $iface_id $all_states
+}
+
+proc removeStateNode { node_id states } {
+	setStateNode $node_id [removeFromList [getStateNode $node_id] $states]
+}
+
+proc removeStateLink { link_id states } {
+	setStateLink $link_id [removeFromList [getStateLink $link_id] $states]
+}
+
+proc removeStateNodeIface { node_id iface_id states } {
+	setStateNodeIface $node_id $iface_id [removeFromList [getStateNodeIface $node_id $iface_id] $states]
+}
+
+proc isRunningNode { node_id } {
+	if { "running" in [getStateNode $node_id] } {
+		return true
+	}
+
+	return false
+}
+
+proc isRunningLink { link_id } {
+	if { "running" in [getStateLink $link_id] } {
+		return true
+	}
+
+	return false
+}
+
+proc isRunningNodeIface { node_id iface_id } {
+	if {
+		[isRunningNode $node_id] &&
+		"running" in [getStateNodeIface $node_id $iface_id]
+	} {
+		return true
+	}
+
+	return false
+}
+
+proc isErrorNode { node_id } {
+	if { "error" in [getStateNode $node_id] } {
+		return true
+	}
+
+	return false
+}
+
+proc isErrorLink { link_id } {
+	if { "error" in [getStateLink $link_id] } {
+		return true
+	}
+
+	return false
+}
+
+proc isErrorNodeIface { node_id iface_id } {
+	if { "error" in [getStateNodeIface $node_id $iface_id] } {
+		return true
+	}
+
+	return false
+}
+
 proc getNodeDir { node_id } {
 	return [getVrootDir]/[getFromRunning "eid"]/$node_id
 }
@@ -67,150 +257,6 @@ proc getNodeStolenIfaces { node_id } {
 	}
 
 	return $external_ifaces
-}
-
-#****f* nodecfg.tcl/getDefaultGateways
-# NAME
-#   getDefaultGateways -- get default IPv4/IPv6 gateways.
-# SYNOPSIS
-#   lassign [getDefaultGateways $node_id $subnet_gws $nodes_l2data] \
-#     my_gws subnets_and_gws
-# FUNCTION
-#   Returns a list of all default IPv4/IPv6 gateways for the subnets in which
-#   this node belongs as a {node_type|gateway4|gateway6} values. Additionally,
-#   it refreshes newly discovered gateways and subnet members to the existing
-#   $subnet_gws list and $nodes_l2data dictionary.
-# INPUTS
-#   * node_id -- node id
-#   * subnet_gws -- already known {node_type|gateway4|gateway6} values
-#   * nodes_l2data -- a dictionary of already known {node_id iface_id subnet_idx}
-#   triplets in this subnet
-# RESULT
-#   * my_gws -- list of all possible default gateways for the specified node
-#   * subnet_gws -- refreshed {node_type|gateway4|gateway6} values
-#   * nodes_l2data -- refreshed dictionary of {node_id iface_id subnet_idx} triplets in
-#   this subnet
-#****
-proc getDefaultGateways { node_id subnet_gws nodes_l2data } {
-	set node_ifaces [ifcList $node_id]
-	if { [llength $node_ifaces] == 0 } {
-		return [list {} {} {}]
-	}
-
-	# go through all interfaces and collect data for each subnet
-	foreach iface_id $node_ifaces {
-		if { [dictGet $nodes_l2data $node_id $iface_id] != "" } {
-			continue
-		}
-
-		# add new subnet at the end of the list
-		set subnet_idx [llength $subnet_gws]
-		lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id
-		if { $peer_id == "" } {
-			continue
-		}
-
-		lassign [getSubnetData $peer_id $peer_iface_id \
-			$subnet_gws $nodes_l2data $subnet_idx] \
-			subnet_gws nodes_l2data
-	}
-
-	# merge all gateways values and return
-	set my_gws {}
-	if { $nodes_l2data != {} } {
-		foreach subnet_idx [lsort -unique [dict values [dictGet $nodes_l2data $node_id]]] {
-			set my_gws [concat $my_gws [lindex $subnet_gws $subnet_idx]]
-		}
-	}
-
-	return [list $my_gws $subnet_gws $nodes_l2data]
-}
-
-#****f* nodecfg.tcl/getSubnetData
-# NAME
-#   getSubnetData -- get subnet members and its IPv4/IPv6 gateways.
-# SYNOPSIS
-#   lassign [getSubnetData $this_node_id $this_iface_id \
-#     $subnet_gws $nodes_l2data $subnet_idx] \
-#     subnet_gws nodes_l2data
-# FUNCTION
-#   Called when checking L2 network for routers/extnats in order to get all
-#   default gateways. Returns all possible default IPv4/IPv6 gateways in this
-#   LAN appended to the subnet_gws list and updates the members of this subnet
-#   as {node_id iface_id subnet_idx} triplets in the nodes_l2data dictionary.
-# INPUTS
-#   * this_node_id -- node id
-#   * this_iface_id -- node interface
-#   * subnet_gws -- already known {node_type|gateway4|gateway6} values
-#   * nodes_l2data -- a dictionary of already known {node_id iface_id subnet_idx}
-#   triplets in this subnet
-# RESULT
-#   * subnet_gws -- refreshed {node_type|gateway4|gateway6} values
-#   * nodes_l2data -- refreshed dictionary of {node_id iface_id subnet_idx} triplets in
-#   this subnet
-#****
-proc getSubnetData { this_node_id this_iface_id subnet_gws nodes_l2data subnet_idx } {
-	set my_gws [lindex $subnet_gws $subnet_idx]
-
-	if { [dict exists $nodes_l2data $this_node_id $this_iface_id] } {
-		# this node/iface is already a part of this subnet
-		set subnet_idx [dict get $nodes_l2data $this_node_id $this_iface_id]
-		return [list $subnet_gws $nodes_l2data]
-	}
-
-	dict set nodes_l2data $this_node_id $this_iface_id $subnet_idx
-
-	set this_node_type [getNodeType $this_node_id]
-	if { $this_node_type == "" } {
-		return [list $subnet_gws $nodes_l2data]
-	}
-
-	if { [invokeTypeProc $this_node_type "netlayer"] == "NETWORK" } {
-		if { $this_node_type in "router nat64" || ($this_node_type == "ext" && [getNodeNATIface $this_node_id] != "UNASSIGNED") } {
-			# this node is a router/extnat, add our IP addresses to lists
-			# TODO: multiple addresses per iface - split subnet4data and subnet6data
-			set gw4 [lindex [split [getIfcIPv4addrs $this_node_id $this_iface_id] /] 0]
-			if { $gw4 == "dhcp" } {
-				set gw4 ""
-			}
-			set gw6 [lindex [split [getIfcIPv6addrs $this_node_id $this_iface_id] /] 0]
-			lappend my_gws $this_node_type|$gw4|$gw6
-			lset subnet_gws $subnet_idx $my_gws
-		}
-
-		# first, get this node/iface peer's subnet data in case it is an L2 node
-		# and we're not yet gone through it
-		lassign [logicalPeerByIfc $this_node_id $this_iface_id] peer_id peer_iface_id
-		if { $peer_id != "" } {
-			lassign [getSubnetData $peer_id $peer_iface_id \
-				$subnet_gws $nodes_l2data $subnet_idx] \
-				subnet_gws nodes_l2data
-		}
-
-		# this node is done, do nothing else
-		if { $subnet_gws == "" } {
-			set subnet_gws "{||}"
-		}
-
-		return [list $subnet_gws $nodes_l2data]
-	}
-
-	# this node is an L2 node
-	# - collect data from all interfaces
-	foreach iface_id [ifcList $this_node_id] {
-		dict set nodes_l2data $this_node_id $iface_id $subnet_idx
-
-		lassign [logicalPeerByIfc $this_node_id $iface_id] peer_id peer_iface_id
-		if { $peer_id == "" } {
-			continue
-		}
-
-		lassign [getSubnetData $peer_id $peer_iface_id \
-			$subnet_gws $nodes_l2data $subnet_idx] \
-			subnet_gws nodes_l2data
-	}
-
-	return [list $subnet_gws $nodes_l2data]
 }
 
 #****f* nodecfg.tcl/getDefaultIPv4routes
@@ -289,81 +335,56 @@ proc setDefaultIPv6routes { node_id routes } {
 # NAME
 #   getDefaultRoutesConfig -- get node default routes in a configuration format
 # SYNOPSIS
-#   lassign [getDefaultRoutesConfig $node_id $gws] routes4 routes6
+#   lassign [getDefaultRoutesConfig $node_id] routes4 routes6
 # FUNCTION
 #   Called when translating IMUNES default gateways configuration to node
 #   pre-running configuration. Returns IPv4 and IPv6 routes lists.
 # INPUTS
 #   * node_id -- node id
-#   * gws -- gateway values in the {node_type|gateway4|gateway6} format
 # RESULT
 #   * all_routes4 -- {0.0.0.0/0 gw4} pairs of default IPv4 routes
 #   * all_routes6 -- {0.0.0.0/0 gw6} pairs of default IPv6 routes
 #****
-proc getDefaultRoutesConfig { node_id gws } {
+proc getDefaultRoutesConfig { node_id } {
 	set all_routes4 {}
 	set all_routes6 {}
+	foreach iface_id [ifcList $node_id] {
+		lassign [getSubnetNextIpAndGateways "ipv4" $node_id $iface_id] - subnet_gws4
+		lassign [getSubnetNextIpAndGateways "ipv6" $node_id $iface_id] - subnet_gws6
 
-	lassign [getAllIpAddresses $node_id] ipv4_addrs ipv6_addrs
-	if { $ipv4_addrs == "" && $ipv6_addrs == "" } {
-		return "\"$all_routes4\" \"$all_routes6\""
-	}
-
-	# remove all non-extnat routes
-	if { [getNodeType $node_id] in "router nat64" } {
-		set gws [lsearch -inline -all $gws "ext*"]
-	}
-
-	foreach route $gws {
-		lassign [split $route "|"] route_type gateway4 -
-
-		if { $gateway4 == "" } {
-			continue
-		}
-
-		set match4 false
-		foreach ipv4_addr $ipv4_addrs {
+		foreach ipv4_addr [getIfcIPv4addrs $node_id $iface_id] {
 			if { $ipv4_addr == "dhcp" } {
 				continue
 			}
 
 			set mask [ip::mask $ipv4_addr]
-			if { [ip::prefix $gateway4/$mask] == [ip::prefix $ipv4_addr] } {
-				set match4 true
-				break
+			foreach gateway4 $subnet_gws4 {
+				set gw_mask [ip::mask $gateway4]
+				if {
+					$mask == $gw_mask &&
+					[ip::prefix $gateway4] == [ip::prefix $ipv4_addr]
+				} {
+					set gateway4 [lindex [split $gateway4 "/"] 0]
+					if { "0.0.0.0/0 $gateway4" ni $all_routes4 } {
+						lappend all_routes4 "0.0.0.0/0 $gateway4"
+					}
+				}
 			}
 		}
 
-		if { $match4 && "0.0.0.0/0 $gateway4" ni $all_routes4 } {
-			if { $route_type == "ext" } {
-				set all_routes4 [linsert $all_routes4 0 "0.0.0.0/0 $gateway4"]
-			} else {
-				lappend all_routes4 "0.0.0.0/0 $gateway4"
-			}
-		}
-	}
-
-	foreach route $gws {
-		lassign [split $route "|"] route_type - gateway6
-
-		if { $gateway6 == "" } {
-			continue
-		}
-
-		set match6 false
-		foreach ipv6_addr $ipv6_addrs {
+		foreach ipv6_addr [getIfcIPv6addrs $node_id $iface_id] {
 			set mask [ip::mask $ipv6_addr]
-			if { [ip::contract [ip::prefix $gateway6/$mask]] == [ip::contract [ip::prefix $ipv6_addr]] } {
-				set match6 true
-				break
-			}
-		}
-
-		if { $match6 && "::/0 $gateway6" ni $all_routes6 } {
-			if { $route_type == "ext" } {
-				set all_routes6 [linsert $all_routes6 0 "::/0 $gateway6"]
-			} else {
-				lappend all_routes6 "::/0 $gateway6"
+			foreach gateway6 $subnet_gws6 {
+				set gw_mask [ip::mask $gateway6]
+				if {
+					$mask == $gw_mask &&
+					[ip::prefix $gateway6] == [ip::prefix $ipv6_addr]
+				} {
+					set gateway6 [lindex [split $gateway6 "/"] 0]
+					if { "::/0 $gateway6" ni $all_routes6 } {
+						lappend all_routes6 "::/0 $gateway6"
+					}
+				}
 			}
 		}
 	}
@@ -385,8 +406,6 @@ proc getDefaultRoutesConfig { node_id gws } {
 proc removeNode { node_id { keep_other_ifaces 0 } } {
 	trigger_nodeDestroy $node_id
 
-	global nodeNamingBase
-
 	foreach iface_id [ifcList $node_id] {
 		removeIface $node_id $iface_id $keep_other_ifaces
 	}
@@ -395,15 +414,11 @@ proc removeNode { node_id { keep_other_ifaces 0 } } {
 	setToRunning "no_auto_execute_nodes" [removeFromList [getFromRunning "no_auto_execute_nodes"] $node_id]
 
 	set node_type [getNodeType $node_id]
-	if { $node_type in [array names nodeNamingBase] } {
-		recalculateNumType $node_type $nodeNamingBase($node_type)
-	}
+	recalculateNumType $node_type [invokeTypeProc $node_type "namingBase"]
 
 	cfgUnset "nodes" $node_id
-	if { [getFromRunning "${node_id}_running"] == "true" } {
-		setToRunning "${node_id}_running" "delete"
-	} else {
-		unsetRunning "${node_id}_running"
+	if { ! [isRunningNode $node_id] } {
+		unsetStateNode $node_id
 	}
 }
 
@@ -427,16 +442,13 @@ proc newNode { node_type } {
 	set node_id ""
 	while { $node_id == "" } {
 		set node_id [newObjectId $node_list "n"]
-		if { [getFromRunning "${node_id}_running"] != "" } {
+		if { [getStateNode $node_id] != "" } {
 			lappend node_list $node_id
 			set node_id ""
 		}
 	}
 
 	setNodeType $node_id $node_type
-	if { [getFromRunning "${node_id}_running"] == "" } {
-		setToRunning "${node_id}_running" "false"
-	}
 
 	lappendToRunning "node_list" $node_id
 
@@ -840,7 +852,7 @@ proc listLANNodes { l2node_id l2peers } {
 	lappend l2peers $l2node_id
 
 	foreach iface_id [ifcList $l2node_id] {
-		lassign [logicalPeerByIfc $l2node_id $iface_id] peer_id peer_iface_id
+		lassign [logicalPeerByIfc $l2node_id $iface_id] peer_id peer_iface_id -
 		if {
 			[getIfcLink $peer_id $peer_iface_id] == "" ||
 			$peer_id in $l2peers
@@ -875,47 +887,19 @@ proc listLANNodes { l2node_id l2peers } {
 proc transformNodes { nodes to_type } {
 	global changed
 
-	set default_model [getActiveOption "routerDefaultsModel"]
-	set protocols {
-		"rip	routerRipEnable"
-		"ripng	routerRipngEnable"
-		"ospf	routerOspfEnable"
-		"ospf6	routerOspf6Enable"
-		"bgp	routerBgpEnable"
-		"ldp	routerLdpEnable"
-		"isis	routerIsisEnable"
-	}
-
-	foreach item $protocols {
-		lassign $item protocol var_name
-		set $var_name [getActiveOption $var_name]
-	}
-
 	foreach node_id $nodes {
-		if { [invokeNodeProc $node_id "netlayer"] == "NETWORK" } {
-			set from_type [getNodeType $node_id]
-
-			# replace type
-			setNodeType $node_id $to_type
-
-			if { $to_type == "pc" || $to_type == "host" } {
-				if { $from_type == "router" } {
-					setNodeModel $node_id {}
-					cfgUnset "nodes" $node_id "router_config"
-				}
-
-				set changed 1
-			} elseif { $from_type != "router" && $to_type == "router" } {
-				setNodeModel $node_id $default_model
-				foreach item $protocols {
-					lassign $item protocol var_name
-					setNodeProtocol $node_id $protocol [set $var_name]
-				}
-
-				set changed 1
-			}
+		set from_type [getNodeType $node_id]
+		if { $from_type == $to_type } {
+			continue
 		}
+
+		set changed 1
+
+		invokeNodeProc $node_id "transformNode" $node_id $to_type
+		recalculateNumType $from_type [invokeTypeProc $from_type "namingBase"]
 	}
+
+	recalculateNumType $to_type [invokeTypeProc $to_type "namingBase"]
 }
 
 proc getNodeFromHostname { hostname } {
@@ -1102,6 +1086,8 @@ proc nodeUncfggenAutoRoutes6 { node_id { vtysh 0 } } {
 }
 
 proc updateNode { node_id old_node_cfg new_node_cfg } {
+	upvar ::switch_cases::updateNode switch_cases_var
+
 	global changed
 
 	dputs ""
@@ -1149,406 +1135,7 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 			dputs "==== NEW: '$new_value'"
 		}
 
-		switch -exact $key {
-			"name" {
-				setNodeName $node_id $new_value
-			}
-
-			"model" {
-				setNodeModel $node_id $new_value
-			}
-
-			"router_config" {
-				dict for {protocol_key protocol_change} [dictDiff $old_value $new_value] {
-					if { $protocol_change == "copy" } {
-						continue
-					}
-
-					setNodeProtocol $node_id $protocol_key [_cfgGet $new_value $protocol_key]
-				}
-			}
-
-			"custom_image" {
-				setNodeCustomImage $node_id $new_value
-			}
-
-			"docker_attach" {
-				setNodeDockerAttach $node_id $new_value
-			}
-
-			"vlan_filtering" {
-				setNodeVlanFiltering $node_id $new_value
-			}
-
-			"nat_iface" {
-				setNodeNATIface $node_id $new_value
-			}
-
-			"croutes4" {
-				setNodeStatIPv4routes $node_id $new_value
-			}
-
-			"croutes6" {
-				setNodeStatIPv6routes $node_id $new_value
-			}
-
-			"auto_default_routes" {
-				setNodeAutoDefaultRoutesStatus $node_id $new_value
-			}
-
-			"services" {
-				setNodeServices $node_id $new_value
-			}
-
-			"custom_configs" {
-				set custom_configs_diff [dictDiff $old_value $new_value]
-				dict for {custom_configs_key custom_configs_change} $custom_configs_diff {
-					if { $custom_configs_change == "copy" } {
-						continue
-					}
-
-					dputs "======== $custom_configs_change: '$custom_configs_key'"
-
-					set custom_configs_old_value [_cfgGet $old_value $custom_configs_key]
-					set custom_configs_new_value [_cfgGet $new_value $custom_configs_key]
-					if { $custom_configs_change in "changed" } {
-						dputs "======== OLD: '$custom_configs_old_value'"
-					}
-					if { $custom_configs_change in "new changed" } {
-						dputs "======== NEW: '$custom_configs_new_value'"
-					}
-
-					set hook_diff [dictDiff $custom_configs_old_value $custom_configs_new_value]
-					dict for {hook_key hook_change} $hook_diff {
-						if { $hook_change == "copy" } {
-							continue
-						}
-
-						dputs "============ $hook_change: '$hook_key'"
-
-						set hook_old_value [_cfgGet $custom_configs_old_value $hook_key]
-						set hook_new_value [_cfgGet $custom_configs_new_value $hook_key]
-						if { $hook_change in "changed" } {
-							dputs "============ OLD: '$hook_old_value'"
-						}
-						if { $hook_change in "new changed" } {
-							dputs "============ NEW: '$hook_new_value'"
-						}
-
-						if { $hook_change == "removed" } {
-							removeNodeCustomConfig $node_id $custom_configs_key $hook_key
-						} else {
-							try {
-								dict get $hook_new_value "custom_command"
-							} on ok cmd {
-							} on error {} {
-								set cmd [dict get $hook_old_value "custom_command"]
-							}
-
-							try {
-								dict get $hook_new_value "custom_config"
-							} on ok cfg {
-							} on error {} {
-								set cfg [dict get $hook_old_value "custom_config"]
-							}
-
-							setNodeCustomConfig $node_id $custom_configs_key $hook_key $cmd $cfg
-						}
-					}
-				}
-			}
-
-			"ipsec" {
-				set ipsec_diff [dictDiff $old_value $new_value]
-				dict for {ipsec_key ipsec_change} $ipsec_diff {
-					if { $ipsec_change == "copy" } {
-						continue
-					}
-
-					dputs "======== $ipsec_change: '$ipsec_key'"
-
-					set ipsec_old_value [_cfgGet $old_value $ipsec_key]
-					set ipsec_new_value [_cfgGet $new_value $ipsec_key]
-					if { $ipsec_change in "changed" } {
-						dputs "======== OLD: '$ipsec_old_value'"
-					}
-					if { $ipsec_change in "new changed" } {
-						dputs "======== NEW: '$ipsec_new_value'"
-					}
-
-					switch -exact $ipsec_key {
-						"ca_cert" -
-						"local_cert" -
-						"local_key_file" -
-						"ipsec_logging" {
-							setNodeIPsecItem $node_id $ipsec_key $ipsec_new_value
-						}
-
-						"ipsec_configs" {
-							set ipsec_configs_diff [dictDiff $ipsec_old_value $ipsec_new_value]
-							dict for {ipsec_configs_key ipsec_configs_change} $ipsec_configs_diff {
-								if { $ipsec_configs_change == "copy" } {
-									continue
-								}
-
-								dputs "============ $ipsec_configs_change: '$ipsec_configs_key'"
-
-								set ipsec_configs_old_value [_cfgGet $ipsec_old_value $ipsec_configs_key]
-								set ipsec_configs_new_value [_cfgGet $ipsec_new_value $ipsec_configs_key]
-								if { $ipsec_configs_change in "changed" } {
-									dputs "============ OLD: '$ipsec_configs_old_value'"
-								}
-								if { $ipsec_configs_change in "new changed" } {
-									dputs "============ NEW: '$ipsec_configs_new_value'"
-								}
-
-								switch -exact $ipsec_configs_change {
-									"removed" {
-										delNodeIPsecConnection $node_id $ipsec_configs_key
-									}
-
-									"new" -
-									"changed" {
-										setNodeIPsecConnection $node_id $ipsec_configs_key $ipsec_configs_new_value
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-
-			"nat64" {
-				set nat64_diff [dictDiff $old_value $new_value]
-				dict for {nat64_key nat64_change} $nat64_diff {
-					if { $nat64_change == "copy" } {
-						continue
-					}
-
-					dputs "======== $nat64_change: '$nat64_key'"
-
-					set nat64_old_value [_cfgGet $old_value $nat64_key]
-					set nat64_new_value [_cfgGet $new_value $nat64_key]
-					if { $nat64_change in "changed" } {
-						dputs "======== OLD: '$nat64_old_value'"
-					}
-					if { $nat64_change in "new changed" } {
-						dputs "======== NEW: '$nat64_new_value'"
-					}
-
-					switch -exact $nat64_key {
-						"tun_ipv4_addr" {
-							setTunIPv4Addr $node_id $nat64_new_value
-						}
-
-						"tun_ipv6_addr" {
-							setTunIPv6Addr $node_id $nat64_new_value
-						}
-
-						"tayga_ipv4_addr" {
-							setTaygaIPv4Addr $node_id $nat64_new_value
-						}
-
-						"tayga_ipv6_prefix" {
-							setTaygaIPv6Prefix $node_id $nat64_new_value
-						}
-
-						"tayga_ipv4_pool" {
-							setTaygaIPv4DynPool $node_id $nat64_new_value
-						}
-
-						"tayga_mappings" {
-							setTaygaMappings $node_id $nat64_new_value
-						}
-					}
-				}
-			}
-
-			"custom_enabled" {
-				setNodeCustomEnabled $node_id $new_value
-			}
-
-			"custom_selected" {
-				set custom_selected_diff [dictDiff $old_value $new_value]
-				dict for {custom_selected_key custom_selected_change} $custom_selected_diff {
-					if { $custom_selected_change == "copy" } {
-						continue
-					}
-
-					dputs "======== $custom_selected_change: '$custom_selected_key'"
-
-					set custom_selected_old_value [_cfgGet $old_value $custom_selected_key]
-					set custom_selected_new_value [_cfgGet $new_value $custom_selected_key]
-					if { $custom_selected_change in "changed" } {
-						dputs "======== OLD: '$custom_selected_old_value'"
-					}
-					if { $custom_selected_change in "new changed" } {
-						dputs "======== NEW: '$custom_selected_new_value'"
-					}
-
-					setNodeCustomConfigSelected $node_id $custom_selected_key $custom_selected_new_value
-				}
-			}
-
-			"events" {
-				setElementEvents $node_id $new_value
-			}
-
-			"ifaces" {
-				set ifaces_diff [dictDiff $old_value $new_value]
-				dict for {iface_key iface_change} $ifaces_diff {
-					if { $iface_change == "copy" } {
-						continue
-					}
-
-					dputs "======== $iface_change: '$iface_key'"
-
-					set iface_old_value [_cfgGet $old_value $iface_key]
-					set iface_new_value [_cfgGet $new_value $iface_key]
-					if { $iface_change in "changed" } {
-						dputs "======== OLD: '$iface_old_value'"
-					}
-					if { $iface_change in "new changed" } {
-						dputs "======== NEW: '$iface_new_value'"
-					}
-
-					switch -exact $iface_change {
-						"removed" {
-							removeIface $node_id $iface_key
-						}
-
-						"new" -
-						"changed" {
-							set iface_type [_cfgGet $iface_new_value "type"]
-							if { $iface_change == "new" } {
-								set iface_id [newIface $node_id $iface_type 0]
-							} else {
-								set iface_id $iface_key
-							}
-
-							updateIface $node_id $iface_id $iface_old_value $iface_new_value
-						}
-					}
-				}
-			}
-
-			"packgen" {
-				set packgen_diff [dictDiff $old_value $new_value]
-				dict for {packets_key packets_change} $packgen_diff {
-					if { $packets_change == "copy" } {
-						continue
-					}
-
-					dputs "======== $packets_change: '$packets_key'"
-
-					set packets_old_value [_cfgGet $old_value $packets_key]
-					set packets_new_value [_cfgGet $new_value $packets_key]
-					if { $packets_change in "changed" } {
-						dputs "======== OLD: '$packets_old_value'"
-					}
-					if { $packets_change in "new changed" } {
-						dputs "======== NEW: '$packets_new_value'"
-					}
-
-					if { $packets_key == "packetrate" } {
-						dputs "setPackgenPacketRate $node_id $packets_new_value"
-						setPackgenPacketRate $node_id $packets_new_value
-						continue
-					}
-
-					set packets_diff [dictDiff $packets_old_value $packets_new_value]
-					foreach {packet_key packet_change} $packets_diff {
-						if { $packet_change == "copy" } {
-							continue
-						}
-
-						dputs "============ $packet_change: '$packet_key'"
-
-						set packet_old_value [_cfgGet $packets_old_value $packet_key]
-						set packet_new_value [_cfgGet $packets_new_value $packet_key]
-						if { $packet_change in "changed" } {
-							dputs "============ OLD: '$packet_old_value'"
-						}
-						if { $packet_change in "new changed" } {
-							dputs "============ NEW: '$packet_new_value'"
-						}
-
-						switch -exact $packet_change {
-							"removed" {
-								removePackgenPacket $node_id $packet_key
-							}
-
-							"new" {
-								addPackgenPacket $node_id $packet_key $packet_new_value
-							}
-
-							"changed" {
-								removePackgenPacket $node_id $packet_key
-								addPackgenPacket $node_id $packet_key $packet_new_value
-							}
-						}
-					}
-				}
-			}
-
-			"bridge" {
-				set bridge_diff [dictDiff $old_value $new_value]
-				dict for {bridge_key bridge_change} $bridge_diff {
-					if { $bridge_change == "copy" } {
-						continue
-					}
-
-					dputs "======== $bridge_change: '$bridge_key'"
-
-					set bridge_old_value [_cfgGet $old_value $bridge_key]
-					set bridge_new_value [_cfgGet $new_value $bridge_key]
-					if { $bridge_change in "changed" } {
-						dputs "======== OLD: '$bridge_old_value'"
-					}
-					if { $bridge_change in "new changed" } {
-						dputs "======== NEW: '$bridge_new_value'"
-					}
-
-					switch -exact $bridge_key {
-						"protocol" {
-							setBridgeProtocol $node_id $bridge_new_value
-						}
-
-						"priority" {
-							setBridgePriority $node_id $bridge_new_value
-						}
-
-						"hold_count" {
-							setBridgeHoldCount $node_id $bridge_new_value
-						}
-
-						"max_age" {
-							setBridgeMaxAge $node_id $bridge_new_value
-						}
-
-						"forwarding_delay" {
-							setBridgeFwdDelay $node_id $bridge_new_value
-						}
-
-						"hello_time" {
-							setBridgeHelloTime $node_id $bridge_new_value
-						}
-
-						"max_addresses" {
-							setBridgeMaxAddr $node_id $bridge_new_value
-						}
-
-						"address_timeout" {
-							setBridgeTimeout $node_id $bridge_new_value
-						}
-					}
-				}
-			}
-
-			default {
-				# do nothing
-			}
-		}
+		switch -exact $key [list {*}$switch_cases_var default {}]
 	}
 
 	if { $changed } {
@@ -1563,4 +1150,317 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 	dputs ""
 
 	return $new_node_cfg
+}
+
+proc getSubnetIfaces { node_id iface_id } {
+	set nodes_ifaces {}
+
+	foreach iface_id [invokeNodeProc $node_id "getSubnetIfaces" $node_id $iface_id] {
+		set gw_priority [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
+		lappend nodes_ifaces "$gw_priority $node_id $iface_id"
+	}
+
+	if { [llength $nodes_ifaces] == 0 } {
+		return {}
+	}
+
+	set idx 0
+	while { $idx < [llength $nodes_ifaces] } {
+		lassign [lindex $nodes_ifaces $idx] gw_priority node_id iface_id
+		incr idx
+
+		lassign [logicalPeerByIfc $node_id $iface_id] node_id iface_id -
+		if { $node_id == {} || $iface_id == {} } {
+			continue
+		}
+
+		set gw_priority [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
+		if { "$gw_priority $node_id $iface_id" in $nodes_ifaces } {
+			continue
+		}
+
+		foreach iface_id [invokeNodeProc $node_id "getSubnetIfaces" $node_id $iface_id] {
+			set gw_priority [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
+			if { "$gw_priority $node_id $iface_id" in $nodes_ifaces } {
+				continue
+			}
+
+			lappend nodes_ifaces "$gw_priority $node_id $iface_id"
+		}
+	}
+
+	return $nodes_ifaces
+}
+
+proc getSubnetAddrsByPrio { ip_version node_id iface_id { ignore_self "true" } } {
+	set ip_version_num [string index $ip_version 3]
+	set nodes_ifaces [getSubnetIfaces $node_id $iface_id]
+
+	set sorted_nodes_ifaces [lsort -integer -decreasing -index 0 $nodes_ifaces]
+	foreach node_subnet_data $sorted_nodes_ifaces {
+		lassign $node_subnet_data gw_priority subnet_node_id subnet_iface_id
+		if { $ignore_self && $node_id == $subnet_node_id && $iface_id == $subnet_iface_id} {
+			continue
+		}
+
+		# getIfcIPv4addrs/getIfcIPv6addrs
+		set addrs [getIfcIPv${ip_version_num}addrs $subnet_node_id $subnet_iface_id]
+		if { $addrs != {} } {
+			return [lindex $addrs 0]
+		}
+	}
+}
+
+# returns next free IP address and all gateway IP addresses in subnet
+proc getSubnetNextIpAndGateways { ip_version orig_node_id orig_iface_id { nodes "*" } } {
+	set ip_version_num [string index $ip_version 3]
+	set orig_priority [invokeNodeProc $orig_node_id "getSubnetPriority" $orig_node_id $orig_iface_id]
+
+	set subnet_addrs {}
+	set subnet_gws [dict create]
+
+	foreach node_subnet_data [getSubnetIfaces $orig_node_id $orig_iface_id] {
+		lassign $node_subnet_data gw_priority node_id iface_id
+		if { $nodes != "*" && $node_id ni $nodes } {
+			continue
+		}
+
+		# getIfcIPv4addrs/getIfcIPv6addrs
+		set addr [lindex [getIfcIPv${ip_version_num}addrs $node_id $iface_id] 0]
+		if { $addr == "" || $addr == "dhcp"} {
+			continue
+		}
+
+		if { $gw_priority > $orig_priority } {
+			dict lappend subnet_gws $gw_priority $addr
+		}
+
+		lappend subnet_addrs $addr
+	}
+
+	set min_ip [invokeNodeProc $orig_node_id "IPAddrRange"]
+	if { $min_ip == "" } {
+		set min_ip 0
+	}
+
+	if { $subnet_addrs == {} } {
+		set subnet_gws {}
+
+		# ipv4_used_list/ipv6_used_list
+		set subnet_addrs [getFromRunning "ipv${ip_version_num}_used_list"]
+
+		# findFreeIPv4Subnet/findFreeIPv6Subnet
+		set template_ip [findFreeIPv${ip_version_num}Subnet "" $subnet_addrs]
+	} else {
+		set subnet_gws [concat {*}[dict values [lsort -decreasing -stride 2 -index 0 $subnet_gws]]]
+		if { $subnet_gws != {} } {
+			set template_ip [lindex $subnet_gws 0]
+		} else {
+			set template_ip [lindex $subnet_addrs 0]
+		}
+	}
+
+	return [list [nextAddrInSubnet $ip_version $template_ip $subnet_addrs $min_ip] $subnet_gws]
+}
+
+proc appendNodeSubnetRoutes { node_id routes { ip_version "both" } } {
+	foreach iface_id [ifcList $node_id] {
+		set old_subnet_data [getSubnetIfaces $node_id $iface_id]
+
+		set my_priority [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
+		foreach node_subnet_data $old_subnet_data {
+			lassign $node_subnet_data priority subnet_node_id subnet_iface_id
+			if { $priority < 0 } {
+				continue
+			}
+
+			if { $subnet_node_id ni [dict keys $routes] } {
+				set all_routes [getDefaultRoutesConfig $subnet_node_id]
+				if { $ip_version == "both" } {
+					set filtered_routes $all_routes
+				} elseif { $ip_version == "ipv4" } {
+					set filtered_routes [lindex $all_routes 0]
+				} elseif { $ip_version == "ipv6" } {
+					set filtered_routes [lindex $all_routes 1]
+				}
+
+				dict set routes $subnet_node_id $filtered_routes
+			}
+		}
+	}
+
+	return $routes
+}
+
+proc assignSubnet { ip_version node_id iface_id selected { subnet "" } } {
+	set ip_version_num [string index $ip_version 3]
+	if { $ip_version == "ipv4" } {
+		set overlap_proc "::ip::isOverlap"
+	} else {
+		set overlap_proc "ip6_isOverlap"
+	}
+
+	if { $subnet == "" } {
+		lassign [getSubnetNextIpAndGateways $ip_version $node_id $iface_id] subnet -
+	}
+
+	set nodes_ifaces [getSubnetIfaces $node_id $iface_id]
+
+	# first, get all non-selected used addresses from this subnet
+	set used_addrs {}
+	foreach node_subnet_data $nodes_ifaces {
+		lassign $node_subnet_data priority subnet_node_id subnet_iface_id
+
+		# getIfcIPv4addrs/getIfcIPv6addrs
+		set cur_addrs [getIfcIPv${ip_version_num}addrs $subnet_node_id $subnet_iface_id]
+
+		if { $priority >= 0 && $subnet_node_id in $selected } {
+			# skip if we're the main gateway
+			foreach cur_addr $cur_addrs {
+				set subnet_mask [ip::mask $subnet]
+				set cur_mask [ip::mask $cur_addr]
+				if { $subnet_mask == $cur_mask && [$overlap_proc $subnet $cur_addr] } {
+					lappend used_addrs {*}$cur_addrs
+					set nodes_ifaces [removeFromList $nodes_ifaces [list $node_subnet_data]]
+
+					break
+				}
+			}
+
+			continue
+		}
+
+		if { $priority >= 0 } {
+			lappend used_addrs {*}$cur_addrs
+		}
+
+		set nodes_ifaces [removeFromList $nodes_ifaces [list $node_subnet_data]]
+	}
+
+	# change selected nodes interfaces to new subnet
+	foreach node_subnet_data $nodes_ifaces {
+		lassign $node_subnet_data - subnet_node_id subnet_iface_id
+
+		# getIfcIPv4addrs/getIfcIPv6addrs
+		set cur_addrs [getIfcIPv${ip_version_num}addrs $subnet_node_id $subnet_iface_id]
+
+		# skip if we're the main gateway and subnet matches
+		foreach cur_addr $cur_addrs {
+			if { [$overlap_proc $subnet $cur_addr] } {
+				lappend used_addrs {*}$cur_addrs
+				set nodes_ifaces [removeFromList $nodes_ifaces [list $node_subnet_data]]
+
+				continue
+			}
+		}
+
+		set addr [nextAddrInSubnet $ip_version $subnet $used_addrs [invokeNodeProc $subnet_node_id "IPAddrRange"]]
+		if { $addr == "" } {
+			continue
+		}
+
+		lappend used_addrs $addr
+
+		setToRunning "${ip_version}_used_list" \
+			[removeFromList [getFromRunning "${ip_version}_used_list"] $cur_addrs "keep_doubles"]
+
+		# setIfcIPv4addrs/setIfcIPv6addrs
+		setIfcIPv${ip_version_num}addrs $subnet_node_id $subnet_iface_id $addr
+		lappendToRunning "${ip_version}_used_list" $addr
+	}
+}
+
+proc nextAddrInSubnet { ip_version subnet used_addrs { min_ip 0 } } {
+	set mask [ip::mask $subnet]
+	set subnet [ip::prefix $subnet]
+
+	if { $ip_version == "ipv4" } {
+		set toint_proc "ip::toInteger"
+		set tostr_proc "ip::intToString"
+		set overlap_proc "ip::isOverlap"
+	} else {
+		set min_ip "0x$min_ip"
+		set toint_proc "ip6_strToInt"
+		set tostr_proc "ip6_intToStr"
+		set overlap_proc "ip6_isOverlap"
+	}
+
+	set addr_int [expr [$toint_proc $subnet] + $min_ip]
+	set addr "[$tostr_proc $addr_int]"
+	if { $ip_version == "ipv6" } {
+		set addr "[::ip::contract $addr]"
+	}
+
+	set addr "$addr/$mask"
+
+	if { ! [$overlap_proc $subnet/$mask $addr] } {
+		# out of prefix range, start from first
+		set addr_int [expr $addr_int - $min_ip + 1]
+		set addr "[$tostr_proc $addr_int]"
+		if { $ip_version == "ipv6" } {
+			set addr "[::ip::contract $addr]"
+		}
+
+		set addr "$addr/$mask"
+	}
+
+	while { $addr in $used_addrs } {
+		incr addr_int
+		set addr "[$tostr_proc $addr_int]"
+		if { $ip_version == "ipv6" } {
+			set addr "[::ip::contract $addr]"
+		}
+
+		set addr "$addr/$mask"
+
+		if { ! [$overlap_proc $subnet/$mask $addr] } {
+			# out of prefix range
+			return ""
+		}
+	}
+
+	return $addr
+}
+
+#****f* nodeconfig.tcl/autoIPAddr
+# NAME
+#   autoIPAddr -- automaticaly assign an IPv4/IPv6 address
+# SYNOPSIS
+#   autoIPAddr $ip_version $node_id $iface_id { $nodes }
+# FUNCTION
+#   Automaticaly assignes an IPv4/IPv6 address to the interface $iface_id of
+#   of the node $node_id for IP version $ip_version. Setting $nodes adds a
+#   filter for nodes to take into consideration when assigning a subnet
+#   (default is *: 'my subnet').
+# INPUTS
+#   * ip_version -- IP version: ipv4 or ipv6
+#   * node_id -- the node id containing the interface to witch a new
+#     IPv4/IPv6 address should be assigned
+#   * iface_id -- the interface to witch a new, automatically generated,
+#     IPv4/IPv6 address will be assigned
+#   * nodes (optional) -- a list of nodes to consider when calculating the next
+#     IP address.
+#****
+proc autoIPAddr { ip_version node_id iface_id { nodes "*" } } {
+	set ip_version_num [string index $ip_version 3]
+	if { ! [getActiveOption "IPv${ip_version_num}autoAssign"] } {
+		return
+	}
+
+	lassign [getSubnetNextIpAndGateways $ip_version $node_id $iface_id $nodes] addr -
+	if { $addr == "" } {
+		global gui execMode
+
+		if { $gui && $execMode != "batch" } {
+			after idle { .dialog1.msg configure -wraplength 4i }
+			tk_dialog .dialog1 "IMUNES warning" \
+				"You have depleted the current IPv$ip_version_num pool of addresses for this subnet. You can disable IP auto assign using:\n\nTools -> IPv${ip_version_num} auto-assign addresses/routes\n\nor change the pool in\n\nTools -> IPv${ip_version_num} address pool\n\nand renumber the subnet." \
+				info 0 Dismiss
+		}
+
+		return
+	}
+
+	setIfcIPv${ip_version_num}addrs $node_id $iface_id $addr
+	lappendToRunning "ipv${ip_version_num}_used_list" $addr
 }

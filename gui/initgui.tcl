@@ -497,6 +497,8 @@ set tmp_command {
 .menubar.tools add command -label "IPv4 address pool" -underline 3 \
 	-command $tmp_command
 set tmp_command {
+	global numbits6
+
 	set w .entry1
 	catch { destroy $w }
 	toplevel $w
@@ -518,6 +520,19 @@ set tmp_command {
 
 	$w.ipv6frame.e1 configure -invalidcommand { checkIPv6Net %P }
 
+	ttk::frame $w.ipv6frame.steps
+	pack $w.ipv6frame.steps -fill both -expand 1
+	ttk::label $w.ipv6frame.steps.stepl -text "Next subnet increment (bits):" -anchor e
+	ttk::spinbox $w.ipv6frame.steps.stepv -width 5 \
+		-validate focus -invalidcommand "focusAndFlash %W"
+	$w.ipv6frame.steps.stepv insert 1 $numbits6
+	$w.ipv6frame.steps.stepv configure \
+		-from 1 -to 128 -increment 1 \
+		-validatecommand { checkIntRange %P 1 128 }
+
+	pack $w.ipv6frame.steps.stepl -fill y
+	pack $w.ipv6frame.steps.stepv -fill both -padx 10
+
 	ttk::frame $w.ipv6frame.buttons
 	pack $w.ipv6frame.buttons -side bottom -fill x -pady 2m
 	ttk::button $w.ipv6frame.buttons.apply -text "Apply" -command "IPv6AddrApply $w"
@@ -532,7 +547,7 @@ set tmp_command {
 .menubar.tools add command -label "IPv6 address pool" -underline 3 \
 	-command $tmp_command
 set routing_defaults_command {
-	global supp_router_models
+	global supp_router_models router_protocols
 
 	set wi .popup
 	catch { destroy $wi }
@@ -551,22 +566,11 @@ set routing_defaults_command {
 	ttk::labelframe $w.model -text "Model:"
 	ttk::labelframe $w.protocols -text "Protocols:"
 
-	set protocols {
-		"rip	rip		routerRipEnable"
-		"ripng	ripng	routerRipngEnable"
-		"ospf	ospf	routerOspfEnable"
-		"ospf6	ospfv3	routerOspf6Enable"
-		"bgp	bgp		routerBgpEnable"
-		"ldp	ldp		routerLdpEnable"
-		"isis	isis	routerIsisEnable"
-	}
-
-	set protocol_list {}
-
 	set checkbutton_dict "0 !selected 1 selected"
-	foreach item $protocols {
-		lassign $item protocol protocol_label var_name
-		lappend protocol_list $protocol
+	foreach item $router_protocols {
+		lassign $item protocol - protocol_label
+		set var_name "router[string totitle $protocol 0 0]Enable"
+
 		ttk::checkbutton $w.protocols.$protocol \
 			-text $protocol_label
 
@@ -575,14 +579,17 @@ set routing_defaults_command {
 
 	# set last argument as empty string
 	set tmp_command [list apply {
-		{ popup_window protocol_list state } {
-			foreach protocol $protocol_list {
+		{ popup_window state } {
+			global router_protocols
+
+			foreach item $router_protocols {
+				set protocol [lindex $item 0]
+
 				$popup_window.protocols.$protocol configure -state $state
 			}
 		}
 	} \
 		$w \
-		$protocol_list \
 		""
 	]
 
@@ -602,7 +609,9 @@ set routing_defaults_command {
 	$w.model.$default_model state selected
 
 	if { $default_model == "static" } {
-		foreach protocol $protocol_list {
+		foreach item $router_protocols {
+			set protocol [lindex $item 0]
+
 			$w.protocols.$protocol configure -state "disabled"
 		}
 	}
@@ -621,8 +630,8 @@ set routing_defaults_command {
 	pack $w.protocols -side top -pady 5
 
 	set protocols_to_pack {}
-	foreach protocol $protocol_list {
-		lappend protocols_to_pack $w.protocols.$protocol
+	foreach item $router_protocols {
+		lappend protocols_to_pack $w.protocols.[lindex $item 0]
 	}
 	pack {*}$protocols_to_pack -side left
 
@@ -773,9 +782,10 @@ set tmp_command {
 	set l2_node_types {}
 	set l3_node_types {}
 	foreach node_type $all_modules_list {
-		if { [$node_type.netlayer] == "LINK" } {
+		set toolbar_location [invokeTypeProc $node_type "gui::toolbarLocation"]
+		if { $toolbar_location == "link_layer" } {
 			lappend l2_node_types $node_type
-		} elseif { [$node_type.netlayer] == "NETWORK" } {
+		} elseif { $toolbar_location == "net_layer" } {
 			lappend l3_node_types $node_type
 		}
 	}
@@ -783,7 +793,7 @@ set tmp_command {
 	set hidden_node_types [getActiveOption "hidden_node_types"]
 
 	set row_ctr 0
-	ttk::label $link_frame.l2 -text "L2 nodes" -width 15 -font "-size 10 -weight bold"
+	ttk::label $link_frame.l2 -text "Link layer nodes" -width 15 -font "-size 10 -weight bold"
 	grid $link_frame.l2 -in $link_frame -column 0 -row $row_ctr -pady 2
 
 	set checkbutton_dict "0 !selected 1 selected"
@@ -801,7 +811,7 @@ set tmp_command {
 	}
 
 	set row_ctr 0
-	ttk::label $network_frame.l3 -text "L3 nodes" -width 15 -font "-size 10 -weight bold"
+	ttk::label $network_frame.l3 -text "Net layer nodes" -width 15 -font "-size 10 -weight bold"
 	grid $network_frame.l3 -in $network_frame -column 0 -row $row_ctr -pady 2
 
 	incr row_ctr
@@ -892,10 +902,10 @@ set widgetlist { \
 	{ "Process list" "ps ax" } \
 	{ "IPv4 sockets" "netstat -4 -an" } \
 	{ "IPv6 sockets" "netstat -6 -an" } \
-	{ "View ifaces startup script" "cat boot_ifaces.conf" } \
-	{ "View ifaces startup logs" "cat out_ifaces.log err_ifaces.log" } \
-	{ "View startup script" "cat boot.conf custom.conf" } \
-	{ "View startup logs" "cat out.log err.log" } \
+	{ "View ifaces startup script" "sh -c 'cat /var/imunes/*/*/boot_ifaces.conf'" } \
+	{ "View ifaces startup logs" "sh -c 'cat /var/imunes/*/*/out_ifaces.log /var/imunes/*/*/err_ifaces.log'" } \
+	{ "View startup script" "sh -c 'cat /var/imunes/*/*/boot.conf /var/imunes/*/*/custom.conf'" } \
+	{ "View startup logs" "sh -c 'cat /var/imunes/*/*/out.log /var/imunes/*/*/err.log'" } \
 	{ "List files" "ls" } \
 }
 
@@ -1082,29 +1092,25 @@ foreach b "select link" {
 		set msg "Create link"
 	}
 
-	bind $mf.left.$b <Any-Enter> ".bottom.textbox config -text {$msg}"
+	bind $mf.left.$b <Any-Enter> ".bottom.textbox config -text {$msg} -foreground black"
 	bind $mf.left.$b <Any-Leave> ".bottom.textbox config -text {}"
 }
 
 foreach node_type $all_modules_list {
-	if { [invokeTypeProc $node_type "netlayer"] == "LINK" } {
-		addTool "link_layer" $node_type
-	} elseif { [invokeTypeProc $node_type "netlayer"] == "NETWORK" } {
-		addTool "net_layer" $node_type
-	}
+	addTool [invokeTypeProc $node_type "gui::toolbarLocation"] $node_type
 }
 
 set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/l2.gif]
 ttk::menubutton $mf.left.link_layer -image $image -style Toolbutton \
 	-menu $mf.left.link_nodes -direction right
-bind $mf.left.link_layer <Any-Enter> ".bottom.textbox config -text {Add new link layer node}"
+bind $mf.left.link_layer <Any-Enter> ".bottom.textbox config -text {Add new link layer node} -foreground black"
 bind $mf.left.link_layer <Any-Leave> ".bottom.textbox config -text {}"
 pack $mf.left.link_layer
 
 set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/l3.gif]
 ttk::menubutton $mf.left.net_layer -image $image -style Toolbutton \
 	-menu $mf.left.net_nodes -direction right
-bind $mf.left.net_layer <Any-Enter> ".bottom.textbox config -text {Add new network layer node}"
+bind $mf.left.net_layer <Any-Enter> ".bottom.textbox config -text {Add new network layer node} -foreground black"
 bind $mf.left.net_layer <Any-Leave> ".bottom.textbox config -text {}"
 pack $mf.left.net_layer
 
@@ -1128,7 +1134,7 @@ foreach b "rectangle oval freeform text" {
 		default { set msg "" }
 	}
 
-	bind $mf.left.$b <Any-Enter> ".bottom.textbox config -text {$msg}"
+	bind $mf.left.$b <Any-Enter> ".bottom.textbox config -text {$msg} -foreground black"
 	bind $mf.left.$b <Any-Leave> ".bottom.textbox config -text {}"
 }
 
@@ -1156,7 +1162,7 @@ drawGradientCircle $running_mask_image $running_indicator_palette $mask_width $m
 foreach node_type $all_modules_list {
 	global $node_type $node_type\_iconwidth $node_type\_iconheight
 
-	set $node_type [image create photo -file [invokeTypeProc $node_type "icon" "normal"]]
+	set $node_type [image create photo -file [invokeTypeProc $node_type "gui::icon" "normal"]]
 	set $node_type\_iconwidth [image width [set $node_type]]
 	set $node_type\_iconheight [image height [set $node_type]]
 }
@@ -1277,13 +1283,37 @@ $main_canvas_elem bind node_running <Any-Leave> "anyLeave"
 $main_canvas_elem bind link <Any-Leave> "anyLeave"
 $main_canvas_elem bind linklabel <Any-Leave> "anyLeave"
 
-$main_canvas_elem bind node <Double-1> "nodeConfigGUI {}"
-$main_canvas_elem bind nodelabel <Double-1> "nodeConfigGUI {}"
-$main_canvas_elem bind node_running <Double-1> "nodeConfigGUI {}"
+set tmp_command [list apply {
+	{ control } {
+		global main_canvas_elem
 
-$main_canvas_elem bind node <Control-Double-1> "nodeConfigGUI {}"
-$main_canvas_elem bind nodelabel <Control-Double-1> "nodeConfigGUI {}"
-$main_canvas_elem bind node_running <Control-Double-1> "nodeConfigGUI {}"
+		set node_id [lindex [$main_canvas_elem gettags current] 1]
+
+		if { [isPseudoNode $node_id] } {
+			#
+			# Hyperlink to another canvas
+			#
+			set mirror_node [getNodeMirror $node_id]
+			setToRunning_gui "curcanvas" [getNodeCanvas $mirror_node]
+			switchCanvas none
+			after idle selectNodes [lindex [nodeFromPseudoNode $mirror_node] 0]
+
+			return
+		}
+
+		invokeNodeProc $node_id "gui::doubleClick" $node_id $control
+	}
+} \
+	""
+]
+
+$main_canvas_elem bind node <Double-1> [lreplace $tmp_command end end 0]
+$main_canvas_elem bind nodelabel <Double-1> [lreplace $tmp_command end end 0]
+$main_canvas_elem bind node_running <Double-1> [lreplace $tmp_command end end 0]
+
+$main_canvas_elem bind node <Control-Double-1> [lreplace $tmp_command end end 1]
+$main_canvas_elem bind nodelabel <Control-Double-1> [lreplace $tmp_command end end 1]
+$main_canvas_elem bind node_running <Control-Double-1> [lreplace $tmp_command end end 1]
 
 $main_canvas_elem bind link <Double-1> "linkConfigGUI {}"
 $main_canvas_elem bind linklabel <Double-1> "linkConfigGUI {}"

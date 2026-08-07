@@ -62,11 +62,6 @@ proc randomizeMACbytes {} {
 #     address will be assigned
 #****
 proc autoMACaddr { node_id iface_id } {
-	set node_type [getNodeType $node_id]
-	if { $node_type != "ext" && [invokeTypeProc $node_type "virtlayer"] != "VIRTUALIZED" } {
-		return ""
-	}
-
 	setToRunning "mac_used_list" [removeFromList [getFromRunning "mac_used_list"] [getIfcMACaddr $node_id $iface_id] "keep_doubles"]
 
 	set macaddr [getNextMACaddr [getFromRunning "mac_used_list"]]

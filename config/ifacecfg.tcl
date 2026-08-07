@@ -224,6 +224,8 @@ proc allIfacesNames { node_id } {
 #   * iface_id -- interface id
 # RESULT
 #   * peer_id -- node id of the node on the other side of the interface
+#   * peer_iface_id -- iface id of the node on the other side of the interface
+#   * peer_vlan_id -- VLAN id of the iface on the other side of the interface
 #****
 proc logicalPeerByIfc { node_id iface_id } {
 	set link_id [getIfcLink $node_id $iface_id]
@@ -234,7 +236,19 @@ proc logicalPeerByIfc { node_id iface_id } {
 	set peer_id [removeFromList [getLinkPeers $link_id] $node_id "keep_doubles"]
 	set peer_iface_id [removeFromList [getLinkPeersIfaces $link_id] $iface_id "keep_doubles"]
 
-	return "$peer_id $peer_iface_id"
+	set peer_vlan_id 0
+	if {
+		[getNodeType $peer_id] in "lanswitch" &&
+		[getNodeVlanFiltering $peer_id] &&
+		[getIfcVlanType $peer_id $peer_iface_id] == "access"
+	} {
+		set peer_vlan_id [getIfcVlanTag $peer_id $peer_iface_id]
+		if { $peer_vlan_id == "" } {
+			set peer_vlan_id 0
+		}
+	}
+
+	return "$peer_id $peer_iface_id $peer_vlan_id"
 }
 
 proc ifaceIdFromName { node_id iface_name } {
@@ -359,7 +373,13 @@ proc nodeCfggenIfcIPv6 { node_id iface_id } {
 #   * iface_id -- the first available name for a interface of the specified type
 #****
 proc newIface { node_id iface_type auto_config { stolen_iface "" } } {
-	set iface_id [newObjectId [allIfcList $node_id] "ifc"]
+	set iface_id ""
+	while { $iface_id == "" } {
+		set iface_id [newObjectId [allIfcList $node_id] "ifc"]
+		if { [getStateNodeIface $node_id $iface_id] != "" } {
+			removeIface $node_id $iface_id
+		}
+	}
 
 	switch -exact $iface_type {
 		"lo" -
@@ -376,10 +396,6 @@ proc newIface { node_id iface_type auto_config { stolen_iface "" } } {
 
 			set iface_name $stolen_iface
 		}
-	}
-
-	if { [getFromRunning "${node_id}|${iface_id}_running"] == "" } {
-		setToRunning "${node_id}|${iface_id}_running" "false"
 	}
 
 	setNodeIface $node_id $iface_id {}
@@ -412,14 +428,24 @@ proc newLogIface { node_id logiface_type } {
 	return [newIface $node_id $logiface_type 0]
 }
 
-proc removeIface { node_id iface_id { keep_other_ifaces 1} } {
+proc removeIface { node_id iface_id { keep_other_ifaces 1 } { keep_link "" } } {
+	global isOSfreebsd
+
 	trigger_ifaceDestroy $node_id $iface_id
+
+	# save old subnet data for comparison
+	set old_routes [appendNodeSubnetRoutes $node_id {}]
 
 	set link_id [getIfcLink $node_id $iface_id]
 	if { $link_id != "" } {
+		lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id -
+		set old_routes [appendNodeSubnetRoutes $peer_id $old_routes]
+
 		cfgUnset "nodes" $node_id "ifaces" $iface_id "link"
 
-		removeLink $link_id $keep_other_ifaces
+		if { $keep_link == "" } {
+			removeLink $link_id $keep_other_ifaces
+		}
 	}
 
 	setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] [getIfcIPv4addrs $node_id $iface_id] "keep_doubles"]
@@ -429,10 +455,8 @@ proc removeIface { node_id iface_id { keep_other_ifaces 1} } {
 	set iface_name [getIfcName $node_id $iface_id]
 
 	cfgUnset "nodes" $node_id "ifaces" $iface_id
-	if { [getFromRunning "${node_id}|${iface_id}_running"] == "true" } {
-		setToRunning "${node_id}|${iface_id}_running" "delete"
-	} else {
-		unsetRunning "${node_id}|${iface_id}_running"
+	if { ! [isRunningNodeIface $node_id $iface_id] } {
+		unsetStateNodeIface $node_id $iface_id
 	}
 
 	foreach {logiface_id iface_cfg} [cfgGet "nodes" $node_id "ifaces"] {
@@ -456,10 +480,24 @@ proc removeIface { node_id iface_id { keep_other_ifaces 1} } {
 		}
 	} elseif { $node_type in "ext" && [getNodeNATIface $node_id] != "UNASSIGNED" } {
 		trigger_nodeUnconfig $node_id
-	} elseif { $node_type in "lanswitch" && [getNodeVlanFiltering $node_id] } {
+	} elseif { $isOSfreebsd && $node_type in "lanswitch" && [getNodeVlanFiltering $node_id] } {
 		foreach other_iface_id [ifcList $node_id] {
 			if { $iface_id != $other_iface_id && [getIfcVlanType $node_id $other_iface_id] == "trunk" } {
 				trigger_ifaceReconfig $node_id $other_iface_id
+			}
+		}
+	}
+
+	set new_routes [appendNodeSubnetRoutes $node_id {}]
+	if { $link_id != "" } {
+		set new_routes [appendNodeSubnetRoutes $peer_id $new_routes]
+	}
+
+	set diff [dictDiff $old_routes $new_routes]
+	if { [lsort -uniq [dict values $diff]] != "copy" } {
+		dict for {subnet_node_id change} $diff {
+			if { $change != "copy" && [getNodeAutoDefaultRoutesStatus $subnet_node_id] == "enabled" } {
+				trigger_nodeReconfig $subnet_node_id
 			}
 		}
 	}
@@ -710,6 +748,8 @@ proc routerUncfggenIfc { node_id iface_id } {
 }
 
 proc updateIface { node_id iface_id old_iface_cfg new_iface_cfg } {
+	upvar ::switch_cases::updateIface switch_cases_var
+
 	global changed
 
 	dputs ""
@@ -756,146 +796,7 @@ proc updateIface { node_id iface_id old_iface_cfg new_iface_cfg } {
 			dputs "============ NEW: '$iface_prop_new_value'"
 		}
 
-		switch -exact $iface_prop_key {
-			"link" {
-				# link cannot be changed, only removed
-				if { $iface_prop_change == "removed" } {
-					removeLink $iface_prop_old_value 1
-				}
-			}
-
-			"type" {
-				setIfcType $node_id $iface_id $iface_prop_new_value
-			}
-
-			"name" {
-				setIfcName $node_id $iface_id $iface_prop_new_value
-			}
-
-			"oper_state" {
-				setIfcOperState $node_id $iface_id $iface_prop_new_value
-			}
-
-			"nat_state" {
-				setIfcNatState $node_id $iface_id $iface_prop_new_value
-			}
-
-			"mtu" {
-				setIfcMTU $node_id $iface_id $iface_prop_new_value
-			}
-
-			"ifc_qdisc" {
-				setIfcQDisc $node_id $iface_id $iface_prop_new_value
-			}
-
-			"ifc_qdrop" {
-				setIfcQDrop $node_id $iface_id $iface_prop_new_value
-			}
-
-			"queue_len" {
-				setIfcQLen $node_id $iface_id $iface_prop_new_value
-			}
-
-			"vlan_dev" {
-				setIfcVlanDev $node_id $iface_id $iface_prop_new_value
-			}
-
-			"vlan_tag" {
-				setIfcVlanTag $node_id $iface_id $iface_prop_new_value
-			}
-
-			"vlan_type" {
-				setIfcVlanType $node_id $iface_id $iface_prop_new_value
-			}
-
-			"mac" {
-				if { $iface_prop_new_value == "auto" } {
-					autoMACaddr $node_id $iface_id
-				} else {
-					setIfcMACaddr $node_id $iface_id $iface_prop_new_value
-				}
-			}
-
-			"ipv4_addrs" {
-				if { $iface_prop_new_value == "auto" } {
-					autoIPv4addr $node_id $iface_id
-				} else {
-					setIfcIPv4addrs $node_id $iface_id $iface_prop_new_value
-				}
-			}
-
-			"ipv6_addrs" {
-				if { $iface_prop_new_value == "auto" } {
-					autoIPv6addr $node_id $iface_id
-				} else {
-					setIfcIPv6addrs $node_id $iface_id $iface_prop_new_value
-				}
-			}
-
-			"filter_rules" {
-				clearFilterIfcRules $node_id $iface_id
-
-				foreach {rule_id rule_cfg} $iface_prop_new_value {
-					addFilterIfcRule $node_id $iface_id $rule_id $rule_cfg
-				}
-			}
-
-			"stp_discover" {
-				setBridgeIfcDiscover $node_id $iface_id $iface_prop_new_value
-			}
-
-			"stp_learn" {
-				setBridgeIfcLearn $node_id $iface_id $iface_prop_new_value
-			}
-
-			"stp_sticky" {
-				setBridgeIfcSticky $node_id $iface_id $iface_prop_new_value
-			}
-
-			"stp_private" {
-				setBridgeIfcPrivate $node_id $iface_id $iface_prop_new_value
-			}
-
-			"stp_snoop" {
-				setBridgeIfcSnoop $node_id $iface_id $iface_prop_new_value
-			}
-
-			"stp_enabled" {
-				setBridgeIfcStp $node_id $iface_id $iface_prop_new_value
-			}
-
-			"stp_edge" {
-				setBridgeIfcEdge $node_id $iface_id $iface_prop_new_value
-			}
-
-			"stp_autoedge" {
-				setBridgeIfcAutoedge $node_id $iface_id $iface_prop_new_value
-			}
-
-			"stp_ptp" {
-				setBridgeIfcPtp $node_id $iface_id $iface_prop_new_value
-			}
-
-			"stp_autoptp" {
-				setBridgeIfcAutoptp $node_id $iface_id $iface_prop_new_value
-			}
-
-			"stp_priority" {
-				setBridgeIfcPriority $node_id $iface_id $iface_prop_new_value
-			}
-
-			"stp_path_cost" {
-				setBridgeIfcPathcost $node_id $iface_id $iface_prop_new_value
-			}
-
-			"stp_max_addresses" {
-				setBridgeIfcMaxaddr $node_id $iface_id $iface_prop_new_value
-			}
-
-			default {
-				# do nothing
-			}
-		}
+		switch -exact $iface_prop_key [list {*}$switch_cases_var default {}]
 	}
 
 	if { $changed } {
