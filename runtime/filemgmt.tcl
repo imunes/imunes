@@ -549,6 +549,30 @@ proc fileOpenDialogBox { { selected_file "" } } {
 	}
 }
 
+proc fileBrowseDialogBox { { selected_file "" } } {
+	if { $selected_file == "" } {
+		set selected_file [tk_getOpenFile]
+	} else {
+		set err ""
+		if { ! [file exists $selected_file] } {
+			set err "File '$selected_file' does not exist."
+		} elseif { ! [file isfile $selected_file] } {
+			set err "Path '$selected_file' is not a file."
+		}
+
+		if { $err != "" } {
+			after idle {.dialog1.msg configure -wraplength 4i}
+			tk_dialog .dialog1 "IMUNES warning" \
+				$err \
+				info 0 Dismiss
+
+			return -code error $err
+		}
+	}
+
+	return $selected_file
+}
+
 #****f* filemgmt.tcl/fileSaveDialogBox
 # NAME
 #   fileSaveDialogBox -- save file dialog box

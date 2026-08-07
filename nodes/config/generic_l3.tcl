@@ -147,6 +147,14 @@ addCase "updateNode" "advanced_options" {
 	}
 } "dictionary"
 
+addCase "updateNode_advanced_options" "generic_options" {
+	if { $platform_option_change == "removed" } {
+		setNodeGenericOptions $node_id $platform_option_key ""
+	} else {
+		setNodeGenericOptions $node_id $platform_option_key $platform_option_new_value
+	}
+} "inner_dictionary"
+
 addCase "updateNode_advanced_options" "jail_options" {
 	if { $platform_option_change == "removed" } {
 		setNodeJailOptions $node_id $platform_option_key ""

@@ -2414,6 +2414,400 @@ proc configGUI_advancedVirtOptions { wi node_id virt_types } {
 	pack $advanced_frame -fill both
 }
 
+# advanced generic options
+global cfg_types_dictionary_array
+global cfg_types_array
+
+lappend cfg_types_dictionary_array "imported_files"
+lappend cfg_types_array "file_content"
+
+proc genericOptionsGUI { node_id } {
+	set wi .advanced_options
+
+	catch { destroy $wi }
+	tk::toplevel $wi
+
+	try {
+		grab $wi
+	} on error {} {
+		catch { destroy $wi }
+		return
+	}
+
+	global node_cfg
+
+	wm title $wi "Generic advanced options for node '[_getNodeName $node_cfg]' ($node_id)"
+	wm minsize $wi 604 445
+	wm resizable $wi 0 1
+
+	set notebook $wi.notebook
+	ttk::notebook $notebook
+
+	### Imported files tab
+	set imported_files $notebook.imported_files
+	ttk::frame $imported_files
+	$notebook add $imported_files -text "Imported files"
+
+	global genericoptions_imported_files
+	set genericoptions_imported_files {}
+	set cfg_imported_files [_getNodeGenericOptions $node_cfg "imported_files"]
+
+	set index 0
+	foreach cfg_imported_file $cfg_imported_files {
+		dict set genericoptions_imported_files $index $cfg_imported_file
+
+		incr index
+	}
+
+	set importedfile_add_btn $imported_files.add_button
+	ttk::button $importedfile_add_btn -text "Add" -width 120
+	grid $importedfile_add_btn -row 0 -column 0 -columnspan 6 -in $imported_files -sticky "" -pady 4
+
+	set tmp_command [list apply {
+		{ imported_files } {
+			genericOptionImportedfiles_save $imported_files ignore
+			genericOptionImportedfiles_addElem
+			genericOptionImportedfilesGUI_refresh $imported_files
+		}
+	} \
+		""
+	]
+
+	$importedfile_add_btn configure -command [lreplace $tmp_command end end $imported_files]
+
+	# redraw header and existing elements
+	genericOptionImportedfilesGUI_refresh $imported_files
+
+	### Buttons
+	set bottom $wi.bottom
+	ttk::frame $bottom
+	set buttons $wi.bottom.buttons
+	ttk::frame $buttons -borderwidth 2
+
+	ttk::button $buttons.apply -text "Apply" \
+		-command "saveGenericOptions $notebook"
+	ttk::button $buttons.applyClose -text "Apply and Close" \
+		-command "if { \[saveGenericOptions $notebook\] == \"\" } { destroy $wi }"
+	ttk::button $buttons.cancel -text "Cancel" -command "destroy $wi"
+
+	grid $buttons.apply -row 0 -column 1 -sticky swe -padx 2
+	grid $buttons.applyClose -row 0 -column 2 -sticky swe -padx 2
+	grid $buttons.cancel -row 0 -column 3 -sticky swe -padx 2
+
+	pack $notebook -fill both -expand 1
+	pack $bottom -fill both -side bottom
+	pack $buttons -pady 2
+}
+
+proc genericOptionImportedfiles_addElem {} {
+	global genericoptions_imported_files
+
+	if { [dict size $genericoptions_imported_files] == 0 } {
+		set index 0
+	} else {
+		set index [expr [lindex [lsort -integer [dict keys $genericoptions_imported_files]] end] + 1]
+	}
+
+	set elem [dict create]
+	dict set elem "enabled" 1
+	dict set elem "path" ""
+	dict set elem "file_mode" 644
+	dict set elem "file_content" ""
+	dict set elem "is_encoded" 0
+	dict set genericoptions_imported_files $index $elem
+}
+
+proc genericOptionImportedfilesGUI_refresh { imported_files } {
+	global genericoptions_imported_files
+	global node_cfg
+
+	set content $imported_files.content
+	catch { destroy $content }
+	ttk::frame $content -relief groove -borderwidth 2 -padding 2
+	grid $content -in $imported_files -sticky nsew -pady 4 -columnspan 6
+
+	set padx 0
+
+	ttk::label $content.h_enabled -text "Enabled"
+	ttk::label $content.h_path -text "Internal Path"
+	ttk::label $content.h_file_mode -text "Mode"
+	ttk::label $content.h_edit -text "Edit"
+	ttk::label $content.h_edit_ext -text "Edit (ext.)"
+	ttk::label $content.h_import -text "Import"
+	ttk::label $content.h_is_encoded -text "Encode"
+	ttk::label $content.h_del -text ""
+
+	grid $content.h_enabled -row 0 -column 0 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_enabled -weight 1
+	grid $content.h_path -row 0 -column 1 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_path -weight 5
+	grid $content.h_file_mode -row 0 -column 2 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_file_mode -weight 1
+	grid $content.h_edit -row 0 -column 3 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_edit -weight 1
+	grid $content.h_edit_ext -row 0 -column 4 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_edit_ext -weight 1
+	grid $content.h_import -row 0 -column 5 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_import -weight 1
+	grid $content.h_is_encoded -row 0 -column 6 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_is_encoded -weight 1
+	grid $content.h_del -row 0 -column 7 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_del -weight 1
+
+	# skip header row
+	set row 1
+	set checkbutton_dict "0 !selected 1 selected"
+	foreach index [lsort -integer [dict keys $genericoptions_imported_files]] {
+		set imported_file [dict get $genericoptions_imported_files $index]
+		set enabled [dict get $imported_file "enabled"]
+		set path [dict get $imported_file "path"]
+		set file_mode [dict get $imported_file "file_mode"]
+		set is_encoded [dict get $imported_file "is_encoded"]
+
+		global file_content$index
+		set file_content$index [dict get $imported_file "file_content"]
+		if { $is_encoded } {
+			set file_content$index [base64::decode [set file_content$index]]
+		} else {
+			set file_content$index [join [set file_content$index] "\n"]
+		}
+
+		ttk::checkbutton $content.enabled$index -text "($index)"
+		$content.enabled$index state [dict get $checkbutton_dict $enabled]
+
+		ttk::entry $content.path$index -width 48
+		$content.path$index insert 0 $path
+
+		ttk::entry $content.file_mode$index -width 3
+		$content.file_mode$index insert 0 $file_mode
+
+		set callback_proc [list apply {
+			{ index parent_widget editor_widget is_apply is_close } {
+				global file_content$index
+
+				if { $is_apply } {
+					set file_content$index [$editor_widget get 1.0 {end -1c}]
+				}
+
+				if { $is_close } {
+					catch { destroy $parent_widget }
+				}
+			}
+		} \
+			$index \
+			"" \
+			"" \
+			"" \
+			""
+		]
+
+		set tmp_command [list apply {
+			{ index args } {
+				global file_content$index
+
+				openEditor [set file_content$index] {*}$args
+			}
+		} \
+			$index \
+			{*}$callback_proc
+		]
+
+		ttk::button $content.edit$index -text "Edit" -width 4 \
+			-command $tmp_command
+
+		set callback_proc [list apply {
+			{ index read_channel tmp_path } {
+				if { [eof $read_channel] } {
+					catch { close $read_channel }
+					global file_content$index
+
+					set file_id [open $tmp_path r]
+					set file_content$index [read $file_id]
+					close $file_id
+					catch { file delete -force $tmp_path }
+
+					return
+				}
+
+				# consume data to avoid repeated triggers
+				read $read_channel
+			}
+		} \
+			$index \
+			"" \
+			""
+		]
+
+		set tmp_command [list apply {
+			{ index args } {
+				global file_content$index
+
+				openExternalEditor [set file_content$index] {*}$args
+			}
+		} \
+			$index \
+			{*}$callback_proc
+		]
+
+		ttk::button $content.edit_ext$index -text "⤴" -width 4 \
+			-command $tmp_command
+
+		set tmp_command [list apply {
+			{ index imported_files } {
+				global file_content$index
+
+				set file_path [fileBrowseDialogBox]
+				if { $file_path == "" } {
+					return
+				}
+
+				set file_id [open $file_path r]
+				fconfigure $file_id -translation binary
+				set file_content$index [read $file_id]
+				close $file_id
+			}
+		} \
+			$index \
+			$imported_files
+		]
+
+		ttk::button $content.import$index -text "Browse..." -width 8 \
+			-command $tmp_command
+
+		ttk::checkbutton $content.is_encoded$index -text "($index)"
+		$content.is_encoded$index state [dict get $checkbutton_dict $is_encoded]
+
+		set tmp_command [list apply {
+			{ index imported_files } {
+				genericOptionImportedfiles_removeElem $index
+				genericOptionImportedfiles_save $imported_files "ignore"
+				genericOptionImportedfilesGUI_refresh $imported_files
+			}
+		} \
+			$index \
+			$imported_files
+		]
+
+		ttk::button $content.del$index -text "Delete ($index)" \
+			-command $tmp_command
+
+		grid $content.enabled$index -row $row -column 0 -in $content -sticky "" -padx $padx
+		grid $content.path$index -row $row -column 1 -in $content -sticky "" -padx $padx
+		grid $content.file_mode$index -row $row -column 2 -in $content -sticky "" -padx $padx
+		grid $content.edit$index -row $row -column 3 -in $content -sticky "" -padx $padx
+		grid $content.edit_ext$index -row $row -column 4 -in $content -sticky "" -padx $padx
+		grid $content.import$index -row $row -column 5 -in $content -sticky "" -padx $padx
+		grid $content.is_encoded$index -row $row -column 6 -in $content -sticky "" -padx $padx
+		grid $content.del$index -row $row -column 7 -in $content -sticky "" -padx $padx
+
+		incr row
+	}
+
+	grid columnconfigure $content "all" -uniform allTheSame
+}
+
+proc saveGenericOptions { notebook } {
+	global node_cfg
+	global genericoptions_imported_files
+
+	### Imported files tab
+	set imported_files $notebook.imported_files
+	set err [genericOptionImportedfiles_save $imported_files]
+	if { $err != "" } {
+		$notebook select $imported_files
+		focus $imported_files
+
+		after idle {.dialog1.msg configure -wraplength 4i}
+		tk_dialog .dialog1 "Error in imported_files" $err info 0 Dismiss
+
+		return $err
+	}
+
+	set node_cfg [_setNodeGenericOptions $node_cfg "imported_files" [dict values $genericoptions_imported_files]]
+
+	return ""
+}
+
+proc genericOptionImportedfiles_removeElem { index } {
+	global genericoptions_imported_files
+
+	dict unset genericoptions_imported_files $index
+}
+
+proc genericOptionImportedfiles_save { imported_files { ignore_errors "" } } {
+	global genericoptions_imported_files node_cfg
+
+	set changed 0
+	set content $imported_files.content
+	set option_keys "enabled path file_mode file_content is_encoded"
+
+	set error_state ""
+	foreach index [lsort -integer [dict keys $genericoptions_imported_files]] {
+		set err ""
+		set imported_file [dict get $genericoptions_imported_files $index]
+		foreach key $option_keys {
+			set $key [dict get $imported_file "$key"]
+		}
+
+		set elem $content.enabled$index
+		set new_enabled [expr { "selected" in [$elem state] }]
+
+		set elem $content.path$index
+		set new_path [string trim [$elem get]]
+		if { $new_path == "" } {
+			set err "Destination path cannot be empty."
+		} elseif { [file pathtype $new_path] != "absolute" || $new_path == "/" } {
+			set err "Destination path '$new_path' must be an absolute path and must not be /."
+		}
+
+		set elem $content.file_mode$index
+		set new_file_mode [string trim [$elem get]]
+		if { $new_file_mode == "" } {
+			set err "File mode cannot be empty (default is 644)."
+		} elseif { [string first "\$" $new_file_mode] == -1 } {
+			if { ! [string is integer -strict $new_file_mode] } {
+				set err "File mode not valid - use numbered mode."
+			}
+		}
+
+		global file_content$index
+		set new_file_content [set file_content$index]
+
+		set elem $content.is_encoded$index
+		set new_is_encoded [expr { "selected" in [$elem state] }]
+
+		if { $err != "" && $ignore_errors != "ignore" && $new_enabled } {
+			set error_state "Option ($index): $err"
+			break
+		}
+
+		foreach varname $option_keys {
+			if { [set new_$varname] != [set $varname] } {
+				set $varname [set new_$varname]
+				set changed 1
+			}
+		}
+
+		if { $changed } {
+			set new_imported_file [dict create]
+			foreach key $option_keys {
+				dict set new_imported_file "$key" [set $key]
+			}
+
+			if { $new_is_encoded } {
+				dict set new_imported_file "file_content" [base64::encode -maxlen 0 $new_file_content]
+			} else {
+				dict set new_imported_file "file_content" [split $new_file_content "\n"]
+			}
+
+			dict set genericoptions_imported_files $index $new_imported_file
+		}
+	}
+
+	return $error_state
+}
+# /advanced generic options
+
 # advanced jail options
 proc jailOptionsGUI { node_id } {
 	set wi .advanced_options
@@ -2557,8 +2951,6 @@ proc jailOptionGeneral_save { general { ignore_errors "" } } {
 # /advanced jail options
 
 # advanced docker options
-global cfg_types_dictionary_array
-
 lappend cfg_types_dictionary_array "volumes_mounts"
 lappend cfg_types_dictionary_array "env_vars"
 lappend cfg_types_dictionary_array "port_forwards"
@@ -4449,6 +4841,88 @@ proc configGUI_externalIfcsApply { wi node_id } {
 }
 
 #############Custom startup configuration#############
+
+proc openEditor { content args } {
+	set callback_proc $args
+
+	set wi .textEditor
+
+	catch { destroy $wi }
+	tk::toplevel $wi
+
+	try {
+		grab $wi
+	} on error {} {
+		catch { destroy $wi }
+		return
+	}
+
+	ttk::scrollbar $wi.vsb -orient vertical -command [list $wi.editor yview]
+	ttk::scrollbar $wi.hsb -orient horizontal -command [list $wi.editor xview]
+	text $wi.editor -width 80 -height 20 -bg white -wrap none \
+		-yscrollcommand [list $wi.vsb set] -xscrollcommand [list $wi.hsb set]
+
+	$wi.editor insert end "$content"
+
+	set bottom_frame $wi.bottom
+	ttk::frame $bottom_frame
+
+	set buttons_frame $bottom_frame.buttons
+	ttk::frame $buttons_frame \
+		-borderwidth 2
+
+	grid $wi.editor $wi.vsb -in $wi -columnspan 5 \
+		-sticky nsew
+	grid $wi.hsb -in $wi -sticky nsew -columnspan 5
+	grid rowconfigure $wi $wi.editor -weight 10
+	grid columnconfigure $wi $wi.editor -weight 10
+	grid $bottom_frame -in $wi -sticky ns -columnspan 5
+	grid $buttons_frame -in $bottom_frame -sticky ns -columnspan 5
+
+	ttk::button $buttons_frame.apply \
+		-text "Apply" \
+		-command [lreplace $callback_proc end-3 end $wi $wi.editor 1 0]
+
+	ttk::button $buttons_frame.applyClose \
+		-text "Apply and Close" \
+		-command [lreplace $callback_proc end-3 end $wi $wi.editor 1 1]
+
+	ttk::button $buttons_frame.cancel \
+		-text "Cancel" \
+		-command [lreplace $callback_proc end-3 end $wi $wi.editor 0 1]
+
+	grid $buttons_frame.apply -row 0 -column 1 -sticky swe -padx 2
+	grid $buttons_frame.applyClose -row 0 -column 2 -sticky swe -padx 2
+	grid $buttons_frame.cancel -row 0 -column 3 -sticky swe -padx 2
+}
+
+proc openExternalEditor { content args } {
+	set callback_proc $args
+
+	if { [checkTerminalMissing] } {
+		return
+	}
+
+	set file_id [file tempfile tmp_path]
+	puts -nonewline $file_id $content
+	close $file_id
+
+	set external_editor_cmd [getExternalEditorCommand "Editing file for importing ($tmp_path)" $tmp_path]
+
+	try {
+		open "|$external_editor_cmd" r
+	} on ok read_channel {
+		fconfigure $read_channel -blocking 0 -buffering none
+		fileevent $read_channel readable [lreplace $callback_proc end-1 end $read_channel $tmp_path]
+	} on error err {
+		after idle { .dialog1.msg configure -wraplength 4i }
+		tk_dialog .dialog1 "IMUNES error" \
+			"Error opening external editor:\n\n'$err'" \
+			info 0 Dismiss
+	}
+
+	return
+}
 
 #****f* nodecfgGUI.tcl/customConfigGUI
 # NAME
@@ -9330,6 +9804,14 @@ proc _getAllIpAddresses { node_cfg } {
 }
 
 ### Advanced options
+proc _getNodeGenericOptions { node_cfg type } {
+	return [_cfgGet $node_cfg "advanced_options" "generic_options" $type]
+}
+
+proc _setNodeGenericOptions { node_cfg type new_value } {
+	return [_cfgSet $node_cfg "advanced_options" "generic_options" $type $new_value]
+}
+
 proc _getNodeJailOptions { node_cfg type } {
 	return [_cfgGet $node_cfg "advanced_options" "jail_options" $type]
 }

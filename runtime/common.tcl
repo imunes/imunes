@@ -1258,7 +1258,7 @@ proc fetchNodesConfiguration {} {
 }
 
 # helper func
-proc writeDataToFile { path data } {
+proc writeDataToFile { path data { mode "" } { is_binary "" } } {
 	global remote rcmd
 
 	set dirname [file dirname $path]
@@ -1272,8 +1272,18 @@ proc writeDataToFile { path data } {
 		set file_id [open $path w]
 	}
 
-	puts $file_id $data
+	if { $is_binary != "" } {
+		fconfigure $file_id -translation binary
+		puts -nonewline $file_id $data
+	} else {
+		puts $file_id $data
+	}
+
 	close $file_id
+
+	if { $mode != "" } {
+		rexec chmod $mode $path
+	}
 }
 
 # helper func
@@ -1848,10 +1858,10 @@ proc moveFileFromNode { node_id path ext_path } {
 #   * path -- path to file in node
 #   * data -- data to write
 #****
-proc writeDataToNodeFile { node_id path data } {
+proc writeDataToNodeFile { node_id path data { mode "" } { is_binary "" } } {
 	set host_path [getHostNodePath $node_id $path]
 	if { $host_path != "" } {
-		writeDataToFile $host_path $data
+		writeDataToFile $host_path $data $mode $is_binary
 	}
 }
 

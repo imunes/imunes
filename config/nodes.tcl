@@ -714,6 +714,16 @@ proc setNodeIPsecSetting { node_id connection setting new_value } {
 	cfgSet "nodes" $node_id "ipsec" "ipsec_configs" $connection $setting $new_value
 }
 
+proc getNodeGenericOptions { node_id type } {
+    return [cfgGet "nodes" $node_id "advanced_options" "generic_options" $type]
+}
+
+proc setNodeGenericOptions { node_id type new_value } {
+    cfgSet "nodes" $node_id "advanced_options" "generic_options" $type $new_value
+
+	trigger_nodeRecreate $node_id
+}
+
 proc getNodeJailOptions { node_id type } {
     return [cfgGet "nodes" $node_id "advanced_options" "jail_options" $type]
 }
