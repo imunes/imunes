@@ -2165,3 +2165,7 @@ proc getExperimentRuntimeDir { { eid "" } } {
 
 	return $runtimeDir/$eid
 }
+
+proc runNodeHook { os_cmd hook } {
+	pipesExec "$os_cmd sh -c '. /var/imunes/$hook/* > /var/imunes/$hook.log 2>&1'" "hold"
+}

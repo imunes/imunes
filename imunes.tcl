@@ -405,6 +405,35 @@ foreach file_path [glob -nocomplain -directory $ROOTDIR/$LIBDIR/custom_nodes/con
 # Global variables are initialized here
 #
 
+global trigger_hook_names
+set trigger_hook_names {
+	pre-init_config
+	post-init_config
+	pre-pifaces_create
+	post-pifaces_create
+	pre-pifaces_dcreate
+	post-pifaces_dcreate
+	pre-lifaces_create
+	post-lifaces_create
+	pre-ifaces_config
+	post-ifaces_config
+	pre-node_config
+	post-node_config
+	pre-node_unconfig
+	post-node_unconfig
+	pre-node_shutdown
+	post-node_shutdown
+	pre-ifaces_unconfig
+	post-ifaces_unconfig
+	pre-lifaces_destroy
+	post-lifaces_destroy
+	pre-pifaces_destroy
+	post-pifaces_destroy
+	pre-pifaces_ddestroy
+	post-pifaces_ddestroy
+	pre-node_destroy
+}
+
 # Clipboard
 namespace eval cf::clipboard {}
 set cf::clipboard::node_list {}

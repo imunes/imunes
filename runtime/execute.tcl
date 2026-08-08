@@ -1105,6 +1105,14 @@ proc execute_nodesImportFiles { nodes nodes_count w } {
 				}
 			}
 
+			if { [string index $import_file_path 0] == "#" } {
+				global trigger_hook_names
+
+				# remove # and split by :
+				set import_file_path [join [lassign [split [string range $import_file_path 1 end] ":"] hook_name] ":"]
+				set import_file_path "/var/imunes/$hook_name/$import_file_path"
+			}
+
 			if { $import_file_is_encoded } {
 				set import_file_content [base64::decode $import_file_content]
 			} else {
@@ -1136,6 +1144,14 @@ proc execute_nodesImportFiles { nodes nodes_count w } {
 						break
 					}
 				}
+			}
+
+			if { [string index $import_dir_path 0] == "#" } {
+				global trigger_hook_names
+
+				# remove # and split by :
+				set import_dir_path [join [lassign [split [string range $import_dir_path 1 end] ":"] hook_name] ":"]
+				set import_dir_path "/var/imunes/$hook_name/$import_dir_path"
 			}
 
 			set import_dir_content [base64::decode $import_dir_content]

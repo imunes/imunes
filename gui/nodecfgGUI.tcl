@@ -2921,8 +2921,18 @@ proc genericOptionImportedfiles_save { imported_files { ignore_errors "" } } {
 					set err "Path '$check_path' on node '$linked_node_id' does not exists."
 				}
 			}
-		} elseif { [file pathtype $new_path] != "absolute" || $new_path == "/" } {
-			set err "Destination path '$new_path' must be an absolute path and must not be /."
+		} elseif { [string index $new_path 0] == "#" } {
+			global trigger_hook_names
+
+			# hook, remove # and split by :
+			set check_path [join [lassign [split [string range $new_path 1 end] ":"] hook_name] ":"]
+			if { $hook_name ni $trigger_hook_names } {
+				set err "Non-existant hook name '$hook_name', use any of:\n$trigger_hook_names"
+			} elseif { [string first "/" $check_path] != -1 } {
+				set err "Destination path '$check_path' must be a file name."
+			}
+		} elseif { [file pathtype $new_path] != "absolute" || [string index $new_path end] == "/" } {
+			set err "Destination path '$new_path' must be an absolute path to a file."
 		}
 
 		set elem $content.file_mode$index
@@ -3175,6 +3185,16 @@ proc genericOptionImporteddirs_save { imported_dirs { ignore_errors "" } } {
 				} else {
 					set err "Path '$check_path' on node '$linked_node_id' does not exists."
 				}
+			}
+		} elseif { [string index $new_path 0] == "#" } {
+			global trigger_hook_names
+
+			# hook, remove # and split by :
+			set check_path [join [lassign [split [string range $new_path 1 end] ":"] hook_name] ":"]
+			if { $hook_name ni $trigger_hook_names } {
+				set err "Non-existant hook name '$hook_name', use any of:\n$trigger_hook_names"
+			} elseif { [string first "/" $check_path] != -1 } {
+				set err "Destination path '$check_path' must be a dir name."
 			}
 		} elseif { [file pathtype $new_path] != "absolute" || [string index $new_path end] == "/" } {
 			set err "Destination path '$new_path' must be an absolute path to a dir."
