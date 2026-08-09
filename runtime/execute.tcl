@@ -595,7 +595,7 @@ proc deployCfg { { execute 0 } } {
 		pack $init_popup.p
 		update
 
-		grab $init_popup
+		catch { grab $init_popup }
 	}
 
 	try {
@@ -712,7 +712,7 @@ proc deployCfg { { execute 0 } } {
 		pack $w.p
 		update
 
-		grab $w
+		catch { grab $w }
 	}
 
 	if { $execute && ! [getFromRunning "auto_execution"] } {

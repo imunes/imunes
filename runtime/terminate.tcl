@@ -237,7 +237,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 		pack $w.p
 		update
 
-		grab $w
+		catch { grab $w }
 	}
 
 	try {
