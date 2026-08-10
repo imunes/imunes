@@ -431,7 +431,7 @@ proc newLogIface { node_id logiface_type } {
 proc removeIface { node_id iface_id { keep_other_ifaces 1 } { keep_link "" } } {
 	global isOSfreebsd
 
-	trigger_ifaceDestroy $node_id $iface_id
+	trigger_ifaceDestroy $node_id $iface_id $keep_other_ifaces
 
 	# save old subnet data for comparison
 	set old_routes [appendNodeSubnetRoutes $node_id {}]
