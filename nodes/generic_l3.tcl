@@ -677,21 +677,32 @@ namespace eval genericL3 {
 				}
 
 				addStateNode $node_id "pifaces_creating"
-				addStateNode $peer_id "pifaces_creating"
-
 				addStateNodeIface $node_id $iface_id "creating"
-				addStateNodeIface $peer_id $peer_iface_id "creating"
 
 				set public_ns [invokeNodeProc $node_id "getPublicNs" $eid $node_id]
 
-				# Create a veth pair - private hook in node NS and other hook
-				# in the other node NS
-				createNsVethPair \
-					"$eid-$node_id-$iface_id" $iface_name $private_ns "" \
-					"$eid-$peer_id-$peer_iface_id" "$eid-$peer_id-$peer_iface_id" $public_ns ""
+				set peer_running [isRunningNode $peer_id]
+				if { ! [isRunningNodeIface $peer_id $peer_iface_id] } {
+					if { $peer_running } {
+						addStateNode $peer_id "pifaces_creating"
+						addStateNodeIface $peer_id $peer_iface_id "creating"
+
+						# Create a veth pair - private hook in node NS and other hook
+						# in the other node NS
+						createNsVethPair \
+							"$eid-$node_id-$iface_id" $iface_name $private_ns "" \
+							"$eid-$peer_id-$peer_iface_id" "$eid-$peer_id-$peer_iface_id" $public_ns ""
+					} else {
+						createNsVethPair \
+							"$eid-$node_id-$iface_id" $iface_name $private_ns "" \
+							"$eid-$node_id-$iface_id" "$node_id-$iface_id" $public_ns ""
+					}
+				}
 
 				# invoke other node
-				invokeNodeProc $peer_id "nodePhysIfacesDirectCreate" $eid $peer_id $peer_iface_id
+				if { $peer_running } {
+					invokeNodeProc $peer_id "nodePhysIfacesDirectCreate" $eid $peer_id $peer_iface_id
+				}
 			}
 		}
 

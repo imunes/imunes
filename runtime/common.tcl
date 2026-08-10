@@ -113,17 +113,31 @@ proc updateTerminateVars {} {
 }
 
 proc trigger_nodeConfig { node_id } {
+	if { ! [getFromRunning "cfg_deployed"] } {
+		return
+	}
+
+	prepareInstantiateVars
+
 	if {
-		! [getFromRunning "cfg_deployed"] ||
-		! [isRunningNode $node_id]
+		! [isRunningNode $node_id] &&
+		"*" ni $instantiate_nodes && $node_id ni $instantiate_nodes
 	} {
+		# quit if our node is dead and it won't be created
 		return
 	}
 
 	prepareTerminateVars
-	prepareInstantiateVars
 
-	if { $node_id ni $configure_nodes && $node_id ni $terminate_nodes } {
+	if {
+		("*" ni $instantiate_nodes && $node_id ni $instantiate_nodes) &&
+		("*" in $terminate_nodes || $node_id in $terminate_nodes)
+	} {
+		# quit if our node will be destroyed
+		return
+	}
+
+	if { $node_id ni $configure_nodes } {
 		lappend configure_nodes $node_id
 	}
 
@@ -137,11 +151,20 @@ proc trigger_nodeUnconfig { node_id } {
 
 	prepareTerminateVars
 
-	if { $node_id ni $unconfigure_nodes && [isRunningNode $node_id] } {
+	set node_running [isRunningNode $node_id]
+	if { $node_id ni $unconfigure_nodes && $node_running } {
 		lappend unconfigure_nodes $node_id
 	}
 
 	updateTerminateVars
+
+	prepareInstantiateVars
+
+	if { $node_id in $configure_nodes && $node_running != "true" } {
+		dict unset configure_nodes $node_id
+	}
+
+	updateInstantiateVars
 }
 
 proc trigger_nodeReconfig { node_id } {
@@ -214,54 +237,31 @@ proc trigger_nodeCreate { node_id } {
 		lappend instantiate_nodes $node_id
 	}
 
-	if { $node_id ni $configure_nodes } {
-		lappend configure_nodes $node_id
-	}
-
-	dict set create_nodes_ifaces $node_id "*"
-	dict set configure_nodes_ifaces $node_id "*"
-
 	updateInstantiateVars
 
-	foreach iface_id [ifcList $node_id] {
-		set link_id [getIfcLink $node_id $iface_id]
-		if { $link_id != "" } {
-			trigger_linkRecreate $link_id
-		}
-	}
+	trigger_nodeConfig $node_id
+	trigger_ifaceCreate $node_id "*"
 }
 
 proc trigger_nodeDestroy { node_id } {
-	if { ! [getFromRunning "cfg_deployed"] } {
+	if {
+		! [getFromRunning "cfg_deployed"] ||
+		! [isRunningNode $node_id]
+	} {
 		return
 	}
 
 	prepareTerminateVars
 
-	set node_running [isRunningNode $node_id]
-	if { $node_id ni $terminate_nodes && $node_running } {
+	if { $node_id ni $terminate_nodes } {
 		lappend terminate_nodes $node_id
-	}
-
-	if { $node_id ni $unconfigure_nodes && $node_running } {
-		lappend unconfigure_nodes $node_id
-	}
-
-	if { $node_running } {
-		dict set unconfigure_nodes_ifaces $node_id "*"
-		dict set destroy_nodes_ifaces $node_id "*"
 	}
 
 	updateTerminateVars
 
-	foreach iface_id [ifcList $node_id] {
-		set link_id [getIfcLink $node_id $iface_id]
-		if { $link_id == "" } {
-			continue
-		}
+	trigger_nodeUnconfig $node_id
 
-		trigger_linkRecreate $link_id
-	}
+	trigger_ifaceDestroy $node_id "*" 1
 
 	prepareInstantiateVars
 
@@ -294,15 +294,6 @@ proc trigger_nodeRecreate { node_id } {
 	}
 
 	trigger_nodeCreate $node_id
-
-	foreach iface_id [ifcList $node_id] {
-		set link_id [getIfcLink $node_id $iface_id]
-		if { $link_id == "" } {
-			continue
-		}
-
-		trigger_linkRecreate $link_id
-	}
 }
 
 proc trigger_linkConfig { link_id } {
@@ -365,11 +356,11 @@ proc trigger_linkCreate { link_id } {
 	prepareInstantiateVars
 
 	if { $link_id ni $instantiate_links } {
-		prepareInstantiateVars
-
 		lappend instantiate_links $link_id
 
 		updateInstantiateVars
+
+		prepareTerminateVars
 
 		lassign [getLinkPeers $link_id] node1_id node2_id
 		lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
@@ -381,11 +372,8 @@ proc trigger_linkCreate { link_id } {
 				trigger_nodeReconfig $node_id
 			}
 
-			set ifaces [dictGet $create_nodes_ifaces $node_id]
-			if {
-				! [isRunningNodeIface $node_id $iface_id] &&
-				"*" ni $ifaces && $iface_id ni $ifaces
-			} {
+			set create_ifaces [dictGet $create_nodes_ifaces $node_id]
+			if { "*" ni $create_ifaces && $iface_id ni $create_ifaces } {
 				trigger_ifaceCreate $node_id $iface_id
 
 				# if any of the logical interfaces have $iface_id as master, recreate them
@@ -395,7 +383,8 @@ proc trigger_linkCreate { link_id } {
 						continue
 					}
 
-					if { "*" ni $ifaces && $log_iface_id ni $ifaces } {
+					set create_ifaces [dictGet $create_nodes_ifaces $node_id]
+					if { "*" ni $create_ifaces && $log_iface_id ni $create_ifaces } {
 						trigger_ifaceCreate $node_id $log_iface_id
 					}
 				}
@@ -406,7 +395,7 @@ proc trigger_linkCreate { link_id } {
 	trigger_linkConfig $link_id
 }
 
-proc trigger_linkDestroy { link_id } {
+proc trigger_linkDestroy { link_id { keep_ifaces 0 } } {
 	global isOSlinux
 
 	if { ! [getFromRunning "cfg_deployed"] } {
@@ -419,13 +408,11 @@ proc trigger_linkDestroy { link_id } {
 
 	set link_running [isRunningLink $link_id]
 	if { $link_id ni $terminate_links && $link_running == "true" } {
-		prepareTerminateVars
-
 		lappend terminate_links $link_id
 
 		updateTerminateVars
 
-		# TODO: refactor this
+		set is_direct [getLinkDirect $link_id]
 		foreach node_id [getLinkPeers $link_id] iface_id [getLinkPeersIfaces $link_id] {
 			set node_type [getNodeType $node_id]
 			if { $node_type in "packgen" } {
@@ -434,10 +421,16 @@ proc trigger_linkDestroy { link_id } {
 				trigger_nodeReconfig $node_id
 			}
 
-			if { $isOSlinux && [getLinkDirect $link_id] } {
+			if { $keep_ifaces } {
+				if { $isOSlinux && $is_direct } {
+					trigger_ifaceRecreate $node_id $iface_id
+				}
+			} else {
 				trigger_ifaceDestroy $node_id $iface_id
 			}
 		}
+	} else {
+		return
 	}
 
 	prepareInstantiateVars
@@ -465,89 +458,146 @@ proc trigger_linkRecreate { link_id } {
 proc trigger_ifaceCreate { node_id iface_id } {
 	global isOSlinux
 
-	if {
-		! [getFromRunning "cfg_deployed"] ||
-		! [isRunningNode $node_id]
-	} {
+	if { ! [getFromRunning "cfg_deployed"] } {
 		return
 	}
 
 	prepareInstantiateVars
 
-	set ifaces [dictGet $create_nodes_ifaces $node_id]
-	if { "*" ni $ifaces && $iface_id ni $ifaces } {
-		dict lappend create_nodes_ifaces $node_id $iface_id
-	}
-
-	updateInstantiateVars
-
-	trigger_ifaceConfig $node_id $iface_id
-
-	set link_id [getIfcLink $node_id $iface_id]
-	if { $link_id != "" } {
-		if { [getLinkDirect $link_id] } {
-			lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id -
-			if { $isOSlinux } {
-				set ifaces [dictGet $create_nodes_ifaces $peer_id]
-				if { "*" ni $ifaces && $peer_iface_id ni $ifaces } {
-					trigger_ifaceCreate $peer_id $peer_iface_id
-				}
-			} else {
-				trigger_linkRecreate $link_id
-			}
-
-			trigger_ifaceConfig $peer_id $peer_iface_id
-		} else {
-			trigger_linkRecreate $link_id
-		}
-	}
-
-	# if any of the logical interfaces have $iface_id as master, recreate them
-	set iface_name [getIfcName $node_id $iface_id]
-	foreach log_iface_id [logIfcList $node_id] {
-		if { [getIfcVlanDev $node_id $log_iface_id] != $iface_name } {
-			continue
-		}
-
-		if { "*" ni $ifaces && $log_iface_id ni $ifaces } {
-			trigger_ifaceRecreate $node_id $log_iface_id
-		}
-	}
-}
-
-proc trigger_ifaceDestroy { node_id iface_id } {
 	if {
-		! [getFromRunning "cfg_deployed"] ||
-		! [isRunningNode $node_id]
+		! [isRunningNode $node_id] &&
+		("*" ni $instantiate_nodes && $node_id ni $instantiate_nodes)
 	} {
+		# quit if our node is dead and it won't be created
 		return
 	}
 
 	prepareTerminateVars
 
-	set iface_running [isRunningNodeIface $node_id $iface_id]
-	set ifaces [dictGet $destroy_nodes_ifaces $node_id]
-	if { "*" ni $ifaces && $iface_id ni $ifaces && $iface_running == "true" } {
-		dict lappend destroy_nodes_ifaces $node_id $iface_id
+	set destroy_ifaces [dictGet $destroy_nodes_ifaces $node_id]
+	if {
+		[isRunningNodeIface $node_id $iface_id] &&
+		("*" ni $destroy_ifaces && $iface_id ni $destroy_ifaces)
+	} {
+		# quit if this interface node is alive and it won't be destroyed
+		return
 	}
 
-	updateTerminateVars
+	set create_ifaces [dictGet $create_nodes_ifaces $node_id]
+	if { "*" ni $create_ifaces && $iface_id ni $create_ifaces } {
+		if { $iface_id == "*" } {
+			dict set create_nodes_ifaces $node_id $iface_id
+
+			set ifaces_list [allIfcList $node_id]
+		} else {
+			dict lappend create_nodes_ifaces $node_id $iface_id
+
+			set ifaces_list $iface_id
+		}
+
+		updateInstantiateVars
+
+		foreach iter_iface_id $ifaces_list {
+			set link_id [getIfcLink $node_id $iter_iface_id]
+			if { $link_id == "" } {
+				continue
+			}
+
+			if { $isOSlinux && [getLinkDirect $link_id] } {
+				lassign [logicalPeerByIfc $node_id $iter_iface_id] peer_id peer_iface_id -
+				trigger_ifaceRecreate $peer_id $peer_iface_id
+
+				# since interface gets destroyed, we lose a route so we reconfigure if needed
+				set new_routes [appendNodeSubnetRoutes $peer_id {}]
+				set node_type [getNodeType $node_id]
+				if {
+					$node_type in "router nat64" ||
+					($node_type == "ext" && [getNodeNATIface $node_id] != "UNASSIGNED")
+				} {
+					triggerChangedDefaultRoutes {} $new_routes
+				} elseif {
+					[getNodeAutoDefaultRoutesStatus $node_id] == "enabled" &&
+					[dictGet $new_routes $node_id] != {}
+				} {
+					trigger_nodeReconfig $node_id
+				}
+			}
+
+			trigger_linkCreate $link_id
+		}
+
+		foreach iter_iface_id $ifaces_list {
+			# if any of the logical interfaces have $iter_iface_id as master, recreate them
+			set iface_name [getIfcName $node_id $iter_iface_id]
+			foreach log_iface_id [logIfcList $node_id] {
+				if { [getIfcVlanDev $node_id $log_iface_id] != $iface_name } {
+					continue
+				}
+
+				set create_ifaces [dictGet $create_nodes_ifaces $node_id]
+				if { "*" ni $create_ifaces && $log_iface_id ni $create_ifaces } {
+					trigger_ifaceRecreate $node_id $log_iface_id
+				}
+			}
+		}
+	}
+
+	trigger_ifaceConfig $node_id $iface_id
+}
+
+proc trigger_ifaceDestroy { node_id iface_id { keep_veth_peer 0 } } {
+	global isOSlinux
+
+	if {
+		! [getFromRunning "cfg_deployed"] ||
+		! [isRunningNode $node_id]
+	} {
+		return
+	}
+
+	trigger_ifaceUnconfig $node_id $iface_id
+
+	prepareTerminateVars
+
+	set destroy_ifaces [dictGet $destroy_nodes_ifaces $node_id]
+	if { "*" ni $destroy_ifaces && $iface_id ni $destroy_ifaces } {
+		if { $iface_id == "*" } {
+			dict set destroy_nodes_ifaces $node_id $iface_id
+
+			set ifaces_list [ifcList $node_id]
+		} else {
+			dict lappend destroy_nodes_ifaces $node_id $iface_id
+
+			set ifaces_list $iface_id
+		}
+
+		updateTerminateVars
+
+		foreach iter_iface_id $ifaces_list {
+			set link_id [getIfcLink $node_id $iter_iface_id]
+			if { $link_id == "" } {
+				continue
+			}
+
+			trigger_linkDestroy $link_id $keep_veth_peer
+		}
+	} else {
+		return
+	}
 
 	prepareInstantiateVars
 
-	set ifaces [dictGet $create_nodes_ifaces $node_id]
-	if { $iface_id in $ifaces && $iface_running != "true" } {
-		set ifaces [removeFromList $ifaces $iface_id]
-		if { $ifaces == {} } {
+	set create_ifaces [dictGet $create_nodes_ifaces $node_id]
+	if { $iface_id in $create_ifaces } {
+		set create_ifaces [removeFromList $create_ifaces $iface_id]
+		if { $create_ifaces == {} } {
 			dict unset create_nodes_ifaces $node_id
 		} else {
-			dict set create_nodes_ifaces $node_id $ifaces
+			dict set create_nodes_ifaces $node_id $create_ifaces
 		}
 	}
 
 	updateInstantiateVars
-
-	trigger_ifaceUnconfig $node_id $iface_id
 }
 
 proc trigger_ifaceRecreate { node_id iface_id } {
@@ -569,14 +619,29 @@ proc trigger_ifaceRecreate { node_id iface_id } {
 proc trigger_ifaceConfig { node_id iface_id } {
 	global isOSfreebsd
 
-	if {
-		! [getFromRunning "cfg_deployed"] ||
-		! [isRunningNode $node_id]
-	} {
+	if { ! [getFromRunning "cfg_deployed"] } {
 		return
 	}
 
 	prepareInstantiateVars
+
+	if {
+		! [isRunningNode $node_id] &&
+		("*" ni $instantiate_nodes && $node_id ni $instantiate_nodes)
+	} {
+		# quit if our node is dead and it won't be created
+		return
+	}
+
+	prepareTerminateVars
+
+	if {
+		("*" ni $instantiate_nodes && $node_id ni $instantiate_nodes) &&
+		("*" in $terminate_nodes || $node_id in $terminate_nodes)
+	} {
+		# quit if our node will be destroyed
+		return
+	}
 
 	set ifaces [dictGet $configure_nodes_ifaces $node_id]
 	if { "*" ni $ifaces && $iface_id ni $ifaces } {
@@ -603,9 +668,8 @@ proc trigger_ifaceUnconfig { node_id iface_id } {
 
 	prepareTerminateVars
 
-	set iface_running [isRunningNodeIface $node_id $iface_id]
-	set ifaces [dictGet $unconfigure_nodes_ifaces $node_id]
-	if { "*" ni $ifaces && $iface_id ni $ifaces && $iface_running == "true" } {
+	set unconfig_ifaces [dictGet $unconfigure_nodes_ifaces $node_id]
+	if { "*" ni $unconfig_ifaces && $iface_id ni $unconfig_ifaces } {
 		dict lappend unconfigure_nodes_ifaces $node_id $iface_id
 	}
 
@@ -614,7 +678,7 @@ proc trigger_ifaceUnconfig { node_id iface_id } {
 	prepareInstantiateVars
 
 	set ifaces [dictGet $configure_nodes_ifaces $node_id]
-	if { $iface_id in $ifaces && $iface_running != "true" } {
+	if { $iface_id in $ifaces } {
 		set ifaces [removeFromList $ifaces $iface_id]
 		if { $ifaces == {} } {
 			dict unset configure_nodes_ifaces $node_id
