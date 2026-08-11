@@ -63,6 +63,7 @@ proc removeLinkGUI { link_id atomic { keep_ifaces 0 } } {
 
 	# this data needs to be fetched before we removeLink
 	lassign [getLinkPeers $link_id] node1_id node2_id
+	lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
 
 	set node1_type [getNodeType $node1_id]
 	set node2_type [getNodeType $node2_id]
@@ -83,7 +84,31 @@ proc removeLinkGUI { link_id atomic { keep_ifaces 0 } } {
 			redeployCfg
 		}
 
-		if { $new_link_id != "" || $keep_ifaces || "rj45" in "$node1_type $node2_type" } {
+		set lifaces_refresh 0
+		if { ! $keep_ifaces && [getActiveOption "show_vlan_interfaces"]} {
+			foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
+				set iface_name [getIfcName $node_id $iface_id]
+				foreach log_iface_id [logIfcList $node_id] {
+					if { [getIfcVlanDev $node_id $log_iface_id] != $iface_name } {
+						continue
+					}
+
+					set lifaces_refresh 1
+				}
+
+				if { $lifaces_refresh } {
+					break
+				}
+			}
+		}
+
+		# TODO: better way to force redraw of a single node
+		if {
+			$new_link_id != "" ||
+			$keep_ifaces ||
+			"rj45" in "$node1_type $node2_type" ||
+			$lifaces_refresh
+		} {
 			redrawAll
 		}
 

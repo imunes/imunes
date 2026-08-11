@@ -463,7 +463,7 @@ proc removeIface { node_id iface_id { keep_other_ifaces 1 } { keep_link "" } } {
 		switch -exact [dictGet $iface_cfg "type"] {
 			vlan {
 				if { [dictGet $iface_cfg "vlan_dev"] == $iface_name } {
-					cfgUnset "nodes" $node_id "ifaces" $logiface_id
+					removeIface $node_id $logiface_id
 				}
 			}
 		}

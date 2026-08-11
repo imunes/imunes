@@ -774,7 +774,7 @@ proc _removeIface { node_cfg iface_id } {
 		switch -exact [_cfgGet $iface_cfg "type"] {
 			vlan {
 				if { [_cfgGet $iface_cfg "vlan_dev"] == $iface_name } {
-					set node_cfg [dictUnset $node_cfg "ifaces" $logiface_id]
+					set node_cfg [_removeIface $node_cfg $logiface_id]
 				}
 			}
 		}
