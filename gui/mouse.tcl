@@ -102,6 +102,9 @@ proc removeLinkGUI { link_id atomic { keep_ifaces 0 } } {
 			}
 		}
 
+		set changed 1
+		updateUndoLog
+
 		# TODO: better way to force redraw of a single node
 		if {
 			$new_link_id != "" ||
@@ -112,8 +115,6 @@ proc removeLinkGUI { link_id atomic { keep_ifaces 0 } } {
 			redrawAll
 		}
 
-		set changed 1
-		updateUndoLog
 		$main_canvas_elem config -cursor left_ptr
 	}
 }
@@ -1691,6 +1692,8 @@ proc button1-release { x y } {
 
 	set newnode ""
 
+	updateUndoLog
+
 	if { $redrawNeeded } {
 		set redrawNeeded 0
 		redrawAll
@@ -1699,7 +1702,6 @@ proc button1-release { x y } {
 	}
 
 	update
-	updateUndoLog
 	$main_canvas_elem config -cursor left_ptr
 }
 
@@ -1731,8 +1733,6 @@ proc button3background { x y } {
 		setGlobalOption "show_background_image" - "toggle"
 
 		redrawAll
-		set changed 1
-		updateUndoLog
 	}
 	.button3menu add checkbutton -label "Show background" \
 		-underline 5 -variable show_background_image \
@@ -1750,14 +1750,16 @@ proc button3background { x y } {
 	#
 	set tmp_command [list apply {
 		{ curcanvas canvas_bkg } {
+			global changed
+
 			removeCanvasBkg $curcanvas
 			if { $canvas_bkg != "" } {
 				removeImageReference $canvas_bkg $curcanvas
 			}
 
-			redrawAll
 			set changed 1
 			updateUndoLog
+			redrawAll
 		}
 	} \
 		$curcanvas \
@@ -1794,9 +1796,9 @@ proc button3background { x y } {
 					setCanvasBkg $curcanvas $canvas_bkg
 					setImageReference $canvas_bkg $curcanvas
 
-					redrawAll
 					set changed 1
 					updateUndoLog
+					redrawAll
 				}
 			} \
 				$curcanvas \
@@ -1834,9 +1836,9 @@ proc setDefaultIcon {} {
 		removeImageReference $icon $node_id
 	}
 
-	redrawAll
 	set changed 1
 	updateUndoLog
+	redrawAll
 }
 
 #****f* editor.tcl/nodeEnter
@@ -2080,9 +2082,9 @@ proc removeIPv4Nodes { nodes all_ifaces } {
 		redeployCfg
 	}
 
-	redrawAll
 	set changed 1
 	updateUndoLog
+	redrawAll
 }
 
 #****f* editor.tcl/removeIPv6Nodes
@@ -2149,9 +2151,9 @@ proc removeIPv6Nodes { nodes all_ifaces } {
 		redeployCfg
 	}
 
-	redrawAll
 	set changed 1
 	updateUndoLog
+	redrawAll
 }
 
 proc matchSubnet { ip_version node_id iface_id subnet } {
@@ -2167,9 +2169,9 @@ proc matchSubnet { ip_version node_id iface_id subnet } {
 		redeployCfg
 	}
 
-	redrawAll
 	set changed 1
 	updateUndoLog
+	redrawAll
 
 	$main_canvas_elem config -cursor left_ptr
 }

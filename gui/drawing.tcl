@@ -1200,9 +1200,9 @@ proc newLinkWithIfacesGUI { node1_id iface1_id node2_id iface2_id } {
 		redeployCfg
 	}
 
-	redrawAll
 	set changed 1
 	updateUndoLog
+	redrawAll
 }
 
 #****f* editor.tcl/raiseAll
@@ -1520,9 +1520,9 @@ proc popupIconApply { dialog image } {
 			}
 		}
 
-		redrawAll
 		set changed 1
 		updateUndoLog
+		redrawAll
 	}
 
 	destroy $dialog

@@ -437,8 +437,6 @@ proc selectZoomApply { w } {
 		setGlobalOption "zoom" $newzoom
 
 		redrawAll
-		set changed 1
-		updateUndoLog
 	}
 
 	destroy $w
@@ -508,8 +506,8 @@ proc routerDefaultsApply { wi } {
 			redeployCfg
 		}
 
-		redrawAll
 		updateUndoLog
+		redrawAll
 	}
 
 	destroy $wi

@@ -8076,8 +8076,8 @@ proc transformNodesGUI { nodes to_type } {
 			redeployCfg
 		}
 
-		redrawAll
 		updateUndoLog
+		redrawAll
 	}
 }
 
@@ -8114,9 +8114,9 @@ proc subnetApply { ip_version entry_elem node_id iface_id } {
 		redeployCfg
 	}
 
-	redrawAll
 	set changed 1
 	updateUndoLog
+	redrawAll
 
 	$main_canvas_elem config -cursor left_ptr
 }

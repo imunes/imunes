@@ -57,7 +57,7 @@ proc linkConfigGUI { link_id } {
 #   * link_id - link id
 #****
 proc toggleDirectLink { link_id } {
-	global main_canvas_elem
+	global changed main_canvas_elem
 
 	if { $link_id == "" } {
 		set link_id [lindex [$main_canvas_elem gettags current] 1]
@@ -76,6 +76,9 @@ proc toggleDirectLink { link_id } {
 	if { [getFromRunning "stop_sched"] } {
 		redeployCfg
 	}
+
+	set changed 1
+	updateUndoLog
 
 	redrawLink $real_link_id
 	$main_canvas_elem config -cursor left_ptr
@@ -442,7 +445,7 @@ proc linkJitterConfigGUI { link_id } {
 #   * link_id -- link id
 #****
 proc applyJitterLink { wi link_id } {
-	global up_jitmode down_jitmode
+	global changed up_jitmode down_jitmode
 
 	setLinkJitterModeUpstream $link_id $up_jitmode
 	setLinkJitterModeDownstream $link_id $down_jitmode
@@ -486,6 +489,7 @@ proc applyJitterLink { wi link_id } {
 		execSetLinkJitter $eid $link_id
 	}
 
+	set changed 1
 	updateUndoLog
 	redrawAll
 }
@@ -501,6 +505,8 @@ proc applyJitterLink { wi link_id } {
 #   * link_id -- link id
 #****
 proc linkJitterReset { link_id } {
+	global changed
+
 	setLinkJitterModeUpstream $link_id ""
 	setLinkJitterModeDownstream $link_id ""
 
@@ -516,6 +522,7 @@ proc linkJitterReset { link_id } {
 		execResetLinkJitter $eid $link_id
 	}
 
+	set changed 1
 	updateUndoLog
 }
 

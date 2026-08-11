@@ -645,13 +645,18 @@ proc changeBkgPopup {} {
 	}
 	ttk::button $wi.buttons.cancel -text "Cancel" -command "destroy $chbgdialog"
 	set tmp_command [list apply {
-		{ cc canvas_bkg chbgdialog }
-		{
+		{ cc canvas_bkg chbgdialog } {
+			global changed
+
 			removeCanvasBkg $cc
 			if { $canvas_bkg != "" } {
 				removeImageReference $canvas_bkg $cc
 			}
-			destroy $chbgdialog; redrawAll; set changed 1; updateUndoLog
+			destroy $chbgdialog
+
+			set changed 1
+			updateUndoLog
+			redrawAll
 		}
 	} \
 		$cc \
@@ -894,8 +899,8 @@ proc popupBkgApply { wi cnv } {
 	}
 
 	if { $changed == 1 } {
-		redrawAll
 		updateUndoLog
+		redrawAll
 	}
 }
 
