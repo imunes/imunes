@@ -1970,7 +1970,7 @@ proc getActiveOption { option_name } {
 }
 
 proc setGlobalOption { option_name new_value { toggle "" } } {
-	global all_options all_gui_options
+	global changed all_options all_gui_options
 	global $option_name
 
 	if { $toggle != "toggle" } {
@@ -1987,10 +1987,13 @@ proc setGlobalOption { option_name new_value { toggle "" } } {
 
 	set old_value [getOption$gui_suffix $option_name]
 	if { $old_value != [set $option_name] } {
+		set changed 1
 		setToRunning "modified" true
 	}
 
 	setOption$gui_suffix $option_name [set $option_name]
+
+	updateUndoLog
 
 	return [set $option_name]
 }

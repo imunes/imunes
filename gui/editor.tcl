@@ -110,6 +110,8 @@ proc undo {} {
 		}
 	}
 
+	applyOptionsToGUI
+
 	if { $changed } {
 		redrawAll
 	}
@@ -154,6 +156,8 @@ proc redo {} {
 			recalculateNumType $node_type [invokeTypeProc $node_type "namingBase"]
 		}
 	}
+
+	applyOptionsToGUI
 
 	if { $changed } {
 		redrawAll

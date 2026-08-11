@@ -1593,8 +1593,6 @@ proc selectZoomPopupMenu { x y } {
 			setGlobalOption "zoom" $sel_zoom
 
 			redrawAll
-			set changed 1
-			updateUndoLog
 		}
 		.button3menu add radiobutton -label [expr {int($z*100)}] \
 			-variable sel_zoom -value $z \
