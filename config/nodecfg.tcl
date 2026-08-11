@@ -348,9 +348,10 @@ proc setDefaultIPv6routes { node_id routes } {
 proc getDefaultRoutesConfig { node_id } {
 	set all_routes4 {}
 	set all_routes6 {}
-	foreach iface_id [ifcList $node_id] {
-		lassign [getSubnetNextIpAndGateways "ipv4" $node_id $iface_id] - subnet_gws4
-		lassign [getSubnetNextIpAndGateways "ipv6" $node_id $iface_id] - subnet_gws6
+	foreach iface_id [getIfacesByType $node_id "phys" "vlan" "stolen"] {
+		set nodes_ifaces [getSubnetIfaces $node_id $iface_id]
+		lassign [getSubnetNextIpAndGateways "ipv4" $node_id $iface_id $nodes_ifaces] - subnet_gws4
+		lassign [getSubnetNextIpAndGateways "ipv6" $node_id $iface_id $nodes_ifaces] - subnet_gws6
 
 		foreach ipv4_addr [getIfcIPv4addrs $node_id $iface_id] {
 			if { $ipv4_addr == "dhcp" } {
@@ -1153,74 +1154,215 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 }
 
 proc getSubnetIfaces { node_id iface_id } {
-	set nodes_ifaces {}
+	global possible_loop possible_vlan_loop
 
-	foreach iface_id [invokeNodeProc $node_id "getSubnetIfaces" $node_id $iface_id] {
-		set gw_priority [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
-		lappend nodes_ifaces "$gw_priority $node_id $iface_id"
+	set possible_loop 0
+	set possible_vlan_loop 0
+
+	set current_depth 0
+	set vlan_id 0
+	if { [getNodeType $node_id] in "lanswitch" } {
+		if {
+			[getNodeVlanFiltering $node_id] &&
+			[getIfcVlanType $node_id $iface_id] == "access"
+		} {
+			set vlan_id [getIfcVlanTag $node_id $iface_id]
+		}
+	} else {
+		set vlan_id [getIfcVlanTag $node_id $iface_id]
+		if { $vlan_id == "" } {
+			set vlan_id 0
+		}
 	}
 
-	if { [llength $nodes_ifaces] == 0 } {
-		return {}
+	set my_prio [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
+	set retv [collectSubnet $current_depth "$my_prio $node_id $iface_id $vlan_id" {} {} 0]
+
+	#dputs "$node_id - $iface_id"
+	#foreach elem $retv {
+	#	lassign $elem prio node_id iface_id vlan_id
+	#	dputs "\t'[getNodeName $node_id]' '[getIfcName $node_id $iface_id]' '$vlan_id'"
+	#}
+
+	if { $possible_loop } {
+		sputs "Possible loop detected!"
 	}
 
-	set idx 0
-	while { $idx < [llength $nodes_ifaces] } {
-		lassign [lindex $nodes_ifaces $idx] gw_priority node_id iface_id
-		incr idx
+	if { $possible_vlan_loop } {
+		sputs "Possible VLAN loop detected!"
+	}
 
-		lassign [logicalPeerByIfc $node_id $iface_id] node_id iface_id -
-		if { $node_id == {} || $iface_id == {} } {
-			continue
-		}
+	return $retv
+}
 
-		set gw_priority [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
-		if { "$gw_priority $node_id $iface_id" in $nodes_ifaces } {
-			continue
-		}
+proc collectSubnet { current_depth elem exclude_elems depth_tree level } {
+	global possible_loop possible_vlan_loop
 
-		foreach iface_id [invokeNodeProc $node_id "getSubnetIfaces" $node_id $iface_id] {
-			set gw_priority [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
-			if { "$gw_priority $node_id $iface_id" in $nodes_ifaces } {
+	if { $possible_loop } {
+		return
+	}
+
+	set cur_state [dictGet $depth_tree $current_depth]
+	set sorted_cur_state [lsort $cur_state]
+
+	set upper_depth [expr $current_depth + 1]
+	set upper_state [lsort [dictGet $depth_tree $upper_depth]]
+
+	set lower_depth [expr $current_depth - 1]
+	set lower_state [lsort [dictGet $depth_tree $lower_depth]]
+
+	# if we're getting the same state on upper/lower levels, we assume it's looping
+	if { $cur_state != {} && ($sorted_cur_state == $lower_state || $sorted_cur_state == $upper_state) } {
+		set possible_vlan_loop 1
+
+		return
+	}
+
+	if { $possible_vlan_loop && ($current_depth < -2 || $current_depth > 2) } {
+		return
+	}
+
+	# fallback for loop detection
+	if { $current_depth < -5 || $current_depth > 5 } {
+		set possible_vlan_loop 1
+
+		return
+	}
+
+	if { $elem in $cur_state } {
+		# already covered this interface
+		return
+	}
+
+	dict lappend depth_tree $current_depth $elem
+
+	lassign $elem - node_id iface_id -
+
+	set retv [dictGet $depth_tree 0]
+	set upper_state [dictGet $depth_tree $upper_depth]
+	if { $current_depth < 0 } {
+		foreach upper [invokeNodeProc $node_id "collectIfcUppers" $node_id $iface_id] {
+			if { $upper in $exclude_elems } {
 				continue
 			}
 
-			lappend nodes_ifaces "$gw_priority $node_id $iface_id"
+			set upper_vlan_id [lindex $upper end]
+			if { $upper_state != {} } {
+				set skip 0
+				# upper elements != 0 set the VLAN
+				foreach upper_state_elem $upper_state {
+					set upper_state_vlan_id [lindex $upper_state_elem end]
+					if { $upper_state_vlan_id == 0 } {
+						continue
+					}
+
+					# upper not matching our VLAN, skip
+					if { $upper_state_vlan_id != $upper_vlan_id } {
+						set skip 1
+					} else {
+						set skip 0
+
+						break
+					}
+				}
+
+				if { $skip } {
+					continue
+				}
+			}
+
+			set res [collectSubnet $upper_depth $upper {} $depth_tree [expr $level + 1]]
+			if { $res != {} && $res != $retv } {
+				lappend retv {*}$res
+				set retv [lsort -uniq -decreasing $retv]
+			}
+
+			set upper_state [dictGet $depth_tree $upper_depth]
 		}
 	}
 
-	return $nodes_ifaces
-}
-
-proc getSubnetAddrsByPrio { ip_version node_id iface_id { ignore_self "true" } } {
-	set ip_version_num [string index $ip_version 3]
-	set nodes_ifaces [getSubnetIfaces $node_id $iface_id]
-
-	set sorted_nodes_ifaces [lsort -integer -decreasing -index 0 $nodes_ifaces]
-	foreach node_subnet_data $sorted_nodes_ifaces {
-		lassign $node_subnet_data gw_priority subnet_node_id subnet_iface_id
-		if { $ignore_self && $node_id == $subnet_node_id && $iface_id == $subnet_iface_id} {
+	foreach lower [invokeNodeProc $node_id "collectIfcLowers" $node_id $iface_id] {
+		if { $lower in $exclude_elems } {
 			continue
 		}
 
-		# getIfcIPv4addrs/getIfcIPv6addrs
-		set addrs [getIfcIPv${ip_version_num}addrs $subnet_node_id $subnet_iface_id]
-		if { $addrs != {} } {
-			return [lindex $addrs 0]
+		set res [collectSubnet $lower_depth $lower {} $depth_tree [expr $level + 1]]
+		if { $res != {} && $res != $retv } {
+			lappend retv {*}$res
+			set retv [lsort -uniq -decreasing $retv]
 		}
 	}
+
+	set peer_data {}
+	set peers [invokeNodeProc $node_id "collectIfcPeers" $node_id $iface_id]
+	foreach peer $peers {
+		if { $peer in $exclude_elems } {
+			continue
+		}
+
+		# for loop detection, we don't want to include other peers
+		set res [collectSubnet $current_depth $peer [removeFromList $peers $peer] $depth_tree [expr $level + 1]]
+		if { $res == {} } {
+			continue
+		}
+
+		if { $res in $peer_data } {
+			set possible_loop 1
+
+			return $retv
+		}
+
+		if { $res != $retv } {
+			lappend peer_data $res
+			lappend retv {*}$res
+			set retv [lsort -uniq -decreasing $retv]
+		}
+	}
+
+	return [lsort -uniq -decreasing $retv]
+}
+
+proc getSubnetAddrsByPrio { node_id iface_id } {
+	set nodes_ifaces [getSubnetIfaces $node_id $iface_id]
+
+	set sub4 {}
+	set sub6 {}
+
+	set sorted_nodes_ifaces [lsort -integer -decreasing -index 0 $nodes_ifaces]
+	foreach node_subnet_data $sorted_nodes_ifaces {
+		lassign $node_subnet_data - subnet_node_id subnet_iface_id -
+		if { "$node_id $iface_id" == "$subnet_node_id $subnet_iface_id" } {
+			continue
+		}
+
+		set addrs [getIfcIPv4addrs $subnet_node_id $subnet_iface_id]
+		if { $sub4 == "" && $addrs != {} } {
+			set sub4 [lindex $addrs 0]
+		}
+
+		set addrs [getIfcIPv6addrs $subnet_node_id $subnet_iface_id]
+		if { $sub6 == "" && $addrs != {} } {
+			set sub6 [lindex $addrs 0]
+		}
+
+		if { $sub4 != "" && $sub6 != "" } {
+			break
+		}
+	}
+
+	return [list $sub4 $sub6]
 }
 
 # returns next free IP address and all gateway IP addresses in subnet
-proc getSubnetNextIpAndGateways { ip_version orig_node_id orig_iface_id { nodes "*" } } {
+proc getSubnetNextIpAndGateways { ip_version orig_node_id orig_iface_id nodes_ifaces { nodes "*" } } {
 	set ip_version_num [string index $ip_version 3]
 	set orig_priority [invokeNodeProc $orig_node_id "getSubnetPriority" $orig_node_id $orig_iface_id]
 
 	set subnet_addrs {}
 	set subnet_gws [dict create]
 
-	foreach node_subnet_data [getSubnetIfaces $orig_node_id $orig_iface_id] {
-		lassign $node_subnet_data gw_priority node_id iface_id
+	foreach node_subnet_data $nodes_ifaces {
+		lassign $node_subnet_data gw_priority node_id iface_id -
 		if { $nodes != "*" && $node_id ni $nodes } {
 			continue
 		}
@@ -1269,7 +1411,7 @@ proc appendNodeSubnetRoutes { node_id routes { ip_version "both" } } {
 
 		set my_priority [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
 		foreach node_subnet_data $old_subnet_data {
-			lassign $node_subnet_data priority subnet_node_id subnet_iface_id
+			lassign $node_subnet_data priority subnet_node_id subnet_iface_id -
 			if { $priority < 0 } {
 				continue
 			}
@@ -1300,16 +1442,16 @@ proc assignSubnet { ip_version node_id iface_id selected { subnet "" } } {
 		set overlap_proc "ip6_isOverlap"
 	}
 
-	if { $subnet == "" } {
-		lassign [getSubnetNextIpAndGateways $ip_version $node_id $iface_id] subnet -
-	}
-
 	set nodes_ifaces [getSubnetIfaces $node_id $iface_id]
+
+	if { $subnet == "" } {
+		lassign [getSubnetNextIpAndGateways $ip_version $node_id $iface_id $nodes_ifaces] subnet -
+	}
 
 	# first, get all non-selected used addresses from this subnet
 	set used_addrs {}
 	foreach node_subnet_data $nodes_ifaces {
-		lassign $node_subnet_data priority subnet_node_id subnet_iface_id
+		lassign $node_subnet_data priority subnet_node_id subnet_iface_id -
 
 		# getIfcIPv4addrs/getIfcIPv6addrs
 		set cur_addrs [getIfcIPv${ip_version_num}addrs $subnet_node_id $subnet_iface_id]
@@ -1447,7 +1589,7 @@ proc autoIPAddr { ip_version node_id iface_id { nodes "*" } } {
 		return
 	}
 
-	lassign [getSubnetNextIpAndGateways $ip_version $node_id $iface_id $nodes] addr -
+	lassign [getSubnetNextIpAndGateways $ip_version $node_id $iface_id [getSubnetIfaces $node_id $iface_id] $nodes] addr -
 	if { $addr == "" } {
 		global gui execMode
 

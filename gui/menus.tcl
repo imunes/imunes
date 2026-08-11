@@ -626,6 +626,7 @@ proc menu_nodeSettings { node_id root_menu } {
 }
 
 proc menu_ifacesSettings { node_id root_menu } {
+	global possible_loop possible_vlan_loop
 	global available_menus
 	lappend available_menus "menu_ifacesSettings"
 
@@ -645,7 +646,7 @@ proc menu_ifacesSettings { node_id root_menu } {
 		"true"
 
 	set sorted_ifaces {}
-	foreach iface_type "phys stolen" {
+	foreach iface_type "phys vlan stolen" {
 		set ifaces [getIfacesNamesByType $node_id $iface_type]
 		if { $ifaces != {} } {
 			lappend sorted_ifaces {*}[lsort -dictionary $ifaces]
@@ -670,6 +671,9 @@ proc menu_ifacesSettings { node_id root_menu } {
 			"$iface_label" \
 			$iface_menu \
 			"true"
+
+		set ip4 [getIfcIPv4addrs $node_id $iface_id]
+		set ip6 [getIfcIPv6addrs $node_id $iface_id]
 
 		#
 		# IP autorenumber
@@ -709,41 +713,37 @@ proc menu_ifacesSettings { node_id root_menu } {
 			""
 		]
 
-		set sub4 [lindex [getSubnetAddrsByPrio "ipv4" $node_id $iface_id] 0]
-		set sub6 [lindex [getSubnetAddrsByPrio "ipv6" $node_id $iface_id] 0]
+		lassign [getSubnetAddrsByPrio $node_id $iface_id] sub4 sub6
 
-		if { $sub4 == "" || $sub6 == "" } {
-			foreach node_subnet_data [getSubnetIfaces $node_id $iface_id] {
-				lassign $node_subnet_data prio subnet_node_id subnet_iface_id
-
-				#skip current node
-				if { $node_id == $subnet_node_id && $iface_id == $subnet_iface_id } {
-					continue
-				}
-
-				set cur_addrs [getIfcIPv4addrs $subnet_node_id $subnet_iface_id]
-				if { $sub4 == "" && $cur_addrs != {} } {
-					set sub4 [lindex $cur_addrs 0]
-				}
-
-				set cur_addrs [getIfcIPv6addrs $subnet_node_id $subnet_iface_id]
-				if { $sub6 == "" && $cur_addrs != {} } {
-					set sub6 [lindex $cur_addrs 0]
-				}
-
-				if { $sub4 != "" && $sub6 != "" } {
-					break
-				}
-			}
+		set loop_string ""
+		if { $possible_loop || $possible_vlan_loop } {
+			set loop_string " Loop detected!"
 		}
 
 		set actions [list \
-			"Remove IPv4 addresses"		"removeIPv4Nodes $node_id {$node_id $iface_id}"	"true" \
-			"Remove IPv6 addresses"		"removeIPv6Nodes $node_id {$node_id $iface_id}"	"true" \
-			"IPv4 autorenumber"			"[lreplace $tmp_command end end "ipv4"]"		"true" \
-			"IPv6 autorenumber"			"[lreplace $tmp_command end end "ipv6"]"		"true" \
-			"Match IPv4 subnet ($sub4)"	"matchSubnet ipv4 $node_id $iface_id $sub4"		[expr { $sub4 != {} }] \
-			"Match IPv6 subnet ($sub6)"	"matchSubnet ipv6 $node_id $iface_id $sub6"		[expr { $sub6 != {} }] \
+			"Remove IPv4 addresses ($ip4)" \
+			"removeIPv4Nodes $node_id {$node_id $iface_id}" \
+			[expr { $ip4 != {} }] \
+			\
+			"Remove IPv6 addresses ($ip6)" \
+			"removeIPv6Nodes $node_id {$node_id $iface_id}" \
+			[expr { $ip6 != {} }] \
+			\
+			"IPv4 autorenumber" \
+			"[lreplace $tmp_command end end "ipv4"]" \
+			"true" \
+			\
+			"IPv6 autorenumber" \
+			"[lreplace $tmp_command end end "ipv6"]" \
+			"true" \
+			\
+			"Match IPv4 subnet ($sub4)$loop_string" \
+			"matchSubnet ipv4 $node_id $iface_id $sub4" \
+			[expr { $sub4 != {} }] \
+			\
+			"Match IPv6 subnet ($sub6)$loop_string" \
+			"matchSubnet ipv6 $node_id $iface_id $sub6" \
+			[expr { $sub6 != {} }] \
 			]
 
 		foreach {action command enabled} $actions {

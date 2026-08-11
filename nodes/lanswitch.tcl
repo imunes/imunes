@@ -77,6 +77,81 @@ namespace eval $MODULE {
 		return [list $private_elem $public_elem $hook_name]
 	}
 
+	proc collectIfcUppers { node_id iface_id } {
+		set uppers {}
+		if { ! [getNodeVlanFiltering $node_id] || [getIfcVlanType $node_id $iface_id] == "access" } {
+			return [invokeTypeProc "genericL2" "collectIfcUppers" $node_id $iface_id]
+		}
+
+		set my_prio [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
+		foreach other_iface_id [removeFromList [allIfcList $node_id] $iface_id] {
+			if { [getIfcVlanType $node_id $other_iface_id] == "access" } {
+				set vlan_id [getIfcVlanTag $node_id $other_iface_id]
+				lappend uppers "$my_prio $node_id $other_iface_id $vlan_id"
+			}
+		}
+
+		return $uppers
+	}
+
+	proc collectIfcLowers { node_id iface_id } {
+		set lowers {}
+		if { ! [getNodeVlanFiltering $node_id] || [getIfcVlanType $node_id $iface_id] == "trunk" } {
+			return [invokeTypeProc "genericL2" "collectIfcLowers" $node_id $iface_id]
+		}
+
+		set my_prio [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
+		foreach other_iface_id [removeFromList [allIfcList $node_id] $iface_id] {
+			if { [getIfcVlanType $node_id $other_iface_id] == "trunk" } {
+				lappend lowers "$my_prio $node_id $other_iface_id 0"
+			}
+		}
+
+		return $lowers
+	}
+
+	proc collectIfcPeers { node_id iface_id } {
+		set peers {}
+		if { ! [getNodeVlanFiltering $node_id] } {
+			return [invokeTypeProc "genericL2" "collectIfcPeers" $node_id $iface_id]
+		}
+
+		set my_prio [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
+		set vlan_type [getIfcVlanType $node_id $iface_id]
+		set vlan_id [getIfcVlanTag $node_id $iface_id]
+		foreach other_iface_id [removeFromList [allIfcList $node_id] $iface_id] {
+			if { [getIfcVlanType $node_id $other_iface_id] != $vlan_type } {
+				continue
+			}
+
+			if { $vlan_type == "trunk" } {
+				set other_vlan_id 0
+			} else {
+				set other_vlan_id [getIfcVlanTag $node_id $other_iface_id]
+				if { $vlan_id != $other_vlan_id } {
+					continue
+				}
+			}
+
+			lappend peers "$my_prio $node_id $other_iface_id $other_vlan_id"
+		}
+
+		set link_id [getIfcLink $node_id $iface_id]
+		if { $link_id == "" } {
+			return $peers
+		}
+
+		lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id peer_vlan_id
+		set peer_prio [invokeNodeProc $peer_id "getSubnetPriority" $peer_id $peer_iface_id]
+
+		set real_peer "$peer_prio $peer_id $peer_iface_id $peer_vlan_id"
+		if { $real_peer ni $peers } {
+			set peers [linsert $peers 0 $real_peer]
+		}
+
+		return $peers
+	}
+
 	################################################################################
 	############################ INSTANTIATE PROCEDURES ############################
 	################################################################################
@@ -226,11 +301,15 @@ namespace eval $MODULE {
 					pipesExec "ip netns exec $private_ns bridge vlan del dev $iface_name vid 1" "hold"
 					if { $vlantag != 1 } {
 						pipesExec "ip netns exec $private_ns bridge vlan add dev $iface_name vid $vlantag pvid untagged" "hold"
+						pipesExec "ip netns exec $private_ns tc qdisc del dev $iface_name clsact 2>/dev/null || true" "hold"
+						pipesExec "ip netns exec $private_ns tc qdisc add dev $iface_name clsact" "hold"
+						pipesExec "ip netns exec $private_ns tc filter add dev $iface_name ingress protocol 802.1Q flower action vlan push protocol 802.1Q id $vlantag" "hold"
 					}
 
 					continue
 				}
 
+				pipesExec "ip netns exec $private_ns tc qdisc del dev $iface_name clsact 2>/dev/null || true" "hold"
 				pipesExec "ip netns exec $private_ns bridge vlan add dev $iface_name vid 1 pvid untagged" "hold"
 
 				foreach other_iface_id [ifcList $node_id] {

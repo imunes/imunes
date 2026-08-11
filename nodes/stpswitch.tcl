@@ -280,10 +280,6 @@ namespace eval $MODULE {
 	proc IPAddrRange {} {
 	}
 
-	proc getSubnetIfaces { node_id iface_id } {
-		return [invokeTypeProc "genericL2" "getSubnetIfaces" $node_id $iface_id]
-	}
-
 	proc getSubnetPriority { node_id iface_id } {
 		return [invokeTypeProc "genericL2" "getSubnetPriority" $node_id $iface_id]
 	}

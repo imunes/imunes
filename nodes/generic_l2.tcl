@@ -85,12 +85,38 @@ namespace eval genericL2 {
 	proc IPAddrRange {} {
 	}
 
-	proc getSubnetIfaces { node_id iface_id } {
-		if { $iface_id ni [ifcList $node_id] } {
-			return ""
+	proc collectIfcUppers { node_id iface_id } {
+		return {}
+	}
+
+	proc collectIfcLowers { node_id iface_id } {
+		return {}
+	}
+
+	proc collectIfcPeers { node_id iface_id } {
+		set peers {}
+		set my_prio [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
+		foreach other_iface_id [removeFromList [allIfcList $node_id] $iface_id] {
+			lappend peers "$my_prio $node_id $other_iface_id 0"
 		}
 
-		return [ifcList $node_id]
+		set link_id [getIfcLink $node_id $iface_id]
+		if { $link_id == "" } {
+			return $peers
+		}
+
+		lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id peer_vlan_id
+		set peer_prio [invokeNodeProc $peer_id "getSubnetPriority" $peer_id $peer_iface_id]
+
+		set real_peer "$peer_prio $peer_id $peer_iface_id $peer_vlan_id"
+		if { $real_peer ni $peers } {
+			set peers [linsert $peers 0 $real_peer]
+		}
+
+		return $peers
+	}
+
+	proc collectIfcSubnet { node_id iface_id } {
 	}
 
 	proc getSubnetPriority { node_id iface_id } {

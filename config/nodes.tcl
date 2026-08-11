@@ -358,7 +358,7 @@ proc setNodeNATIface { node_id interface } {
 		set my_priority $new_priority
 	}
 	foreach node_subnet_data [getSubnetIfaces $node_id $iface_id] {
-		lassign $node_subnet_data node_priority subnet_node_id -
+		lassign $node_subnet_data node_priority subnet_node_id - -
 
 		if {
 			[getNodeAutoDefaultRoutesStatus $subnet_node_id] == "enabled" &&
@@ -418,7 +418,9 @@ proc getNodeType { node_id } {
 #****
 proc setNodeType { node_id type } {
 	set old_type [getNodeType $node_id]
-	set old_routes [appendNodeSubnetRoutes $node_id {}]
+	if { [getFromRunning "cfg_deployed"] } {
+		set old_routes [appendNodeSubnetRoutes $node_id {}]
+	}
 
 	cfgSet "nodes" $node_id "type" $type
 
@@ -430,8 +432,10 @@ proc setNodeType { node_id type } {
 
 	# trigger other nodes reconfiguration if this node is/was a router
 	if { $old_type == "router" || $type == "router" } {
-		set new_routes [appendNodeSubnetRoutes $node_id {}]
-		triggerChangedDefaultRoutes $old_routes $new_routes
+		if { [getFromRunning "cfg_deployed"] } {
+			set new_routes [appendNodeSubnetRoutes $node_id {}]
+			triggerChangedDefaultRoutes $old_routes $new_routes
+		}
 	}
 }
 

@@ -160,12 +160,64 @@ namespace eval genericL3 {
 		return 20
 	}
 
-	proc getSubnetIfaces { node_id iface_id } {
-		if { $iface_id ni [ifcList $node_id] } {
-			return ""
+	proc collectIfcUppers { node_id iface_id } {
+		set uppers {}
+		set iface_name [getIfcName $node_id $iface_id]
+		set my_prio [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
+		foreach other_iface_id [removeFromList [allIfcList $node_id] $iface_id] {
+			if { $iface_name == [getIfcVlanDev $node_id $other_iface_id] } {
+				set vlan_id [getIfcVlanTag $node_id $other_iface_id]
+				if { $vlan_id != "" } {
+					lappend uppers "$my_prio $node_id $other_iface_id $vlan_id"
+				}
+			}
 		}
 
-		return $iface_id
+		return $uppers
+	}
+
+	proc collectIfcLowers { node_id iface_id } {
+		set lowers {}
+		if { [getIfcType $node_id $iface_id] == "phys" } {
+			return $lowers
+		}
+
+		set vlan_id [getIfcVlanTag $node_id $iface_id]
+		set dev_name [getIfcVlanDev $node_id $iface_id]
+		if { $dev_name == "" || $vlan_id == "" } {
+			return $lowers
+		}
+
+		set lower_iface_id [ifaceIdFromName $node_id $dev_name]
+		if { [getIfcType $node_id $lower_iface_id] == "phys" } {
+			set lower_vlan_id 0
+		} else {
+			set lower_vlan_id [getIfcVlanTag $node_id $lower_iface_id]
+			set lower_dev_name [getIfcVlanDev $node_id $lower_iface_id]
+			if { $lower_vlan_id == "" || $lower_dev_name == "" } {
+				return $lowers
+			}
+		}
+
+		set my_prio [invokeNodeProc $node_id "getSubnetPriority" $node_id $lower_iface_id]
+		lappend lowers "$my_prio $node_id $lower_iface_id $lower_vlan_id"
+
+		return $lowers
+	}
+
+	proc collectIfcPeers { node_id iface_id } {
+		set peers {}
+		set link_id [getIfcLink $node_id $iface_id]
+		if { $link_id == "" } {
+			return $peers
+		}
+
+		lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id peer_vlan_id
+		set peer_prio [invokeNodeProc $peer_id "getSubnetPriority" $peer_id $peer_iface_id]
+
+		set peers [linsert $peers 0 "$peer_prio $peer_id $peer_iface_id $peer_vlan_id"]
+
+		return $peers
 	}
 
 	proc getSubnetPriority { node_id iface_id } {
