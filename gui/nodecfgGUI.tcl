@@ -2867,10 +2867,13 @@ proc dockerOptionGeneral_save { general { ignore_errors "" } } {
 	set err ""
 
 	set new_cpus_count [string trim [$general.cpus_frame.cpus get]]
-	if { ! [checkDoubleRange $new_cpus_count 0.1 999] } {
-		set err "Wrong CPUs count, valid values: \[0.1, 999\]"
-		if { $ignore_errors != "ignore" } {
-			set error_state "Option (cpus_count): $err"
+	# skip verification if environment variable
+	if { [string first "\$" $new_cpus_count] == -1 } {
+		if { ! [checkDoubleRange $new_cpus_count 0.1 999] } {
+			set err "Wrong CPUs count, valid values: \[0.1, 999\]"
+			if { $ignore_errors != "ignore" } {
+				set error_state "Option (cpus_count): $err"
+			}
 		}
 	}
 
@@ -3023,26 +3026,38 @@ proc dockerOptionPortForwards_save { port_forwards { ignore_errors "" } } {
 
 		set elem $content.host_ip$index
 		set new_host_ip [string trim [$elem get]]
-		if { $new_host_ip != "" && [::ip::version $new_host_ip] == -1 } {
-			set err "IP address '$new_host_ip' not valid."
+		# skip verification if environment variable
+		if { [string first "\$" $new_host_ip] == -1 } {
+			if { $new_host_ip != "" && [::ip::version $new_host_ip] == -1 } {
+				set err "IP address '$new_host_ip' not valid."
+			}
 		}
 
 		set elem $content.host_port$index
 		set new_host_port [string trim [$elem get]]
-		if { $new_host_port == "" || ! [checkIntRange $new_host_port 1 65535] } {
-			set err "Host port out of range \[1, 65535\]"
+		# skip verification if environment variable
+		if { [string first "\$" $new_host_port] == -1 } {
+			if { $new_host_port == "" || ! [checkIntRange $new_host_port 1 65535] } {
+				set err "Host port out of range \[1, 65535\]"
+			}
 		}
 
 		set elem $content.node_port$index
 		set new_node_port [string trim [$elem get]]
-		if { $new_node_port == "" || ! [checkIntRange $new_node_port 1 65535] } {
-			set err "Node port out of range \[1, 65535\]"
+		# skip verification if environment variable
+		if { [string first "\$" $new_node_port] == -1 } {
+			if { $new_node_port == "" || ! [checkIntRange $new_node_port 1 65535] } {
+				set err "Node port out of range \[1, 65535\]"
+			}
 		}
 
 		set elem $content.protocol$index
 		set new_protocol [string trim [$elem get]]
-		if { $new_protocol ni "{} udp tcp sctp"} {
-			set err "Protocol should be '', 'udp', 'tcp', or 'sctp'."
+		# skip verification if environment variable
+		if { [string first "\$" $new_protocol] == -1 } {
+			if { $new_protocol ni "{} udp tcp sctp"} {
+				set err "Protocol should be '', 'udp', 'tcp', or 'sctp'."
+			}
 		}
 
 		if { $err != "" && $ignore_errors != "ignore" && $new_enabled } {
@@ -3181,8 +3196,11 @@ proc dockerOptionEnvVars_save { env_vars { ignore_errors "" } } {
 		set new_env_name [string trim [$elem get]]
 		if { $new_env_name == "" } {
 			set err "Variable name cannot be empty."
-		} elseif { [regexp {^[A-Za-z_][A-Za-z0-9_]*$} $new_env_name] == 0 } {
-			set err "Variable name '$new_env_name' includes invalid characters, only '\[a-zA-Z_\]\[a-zA-Z0-9_\]' are allowed."
+		# skip verification if environment variable
+		} elseif { [string first "\$" $new_env_name] == -1 } {
+			if { [regexp {^[A-Za-z_][A-Za-z0-9_]*$} $new_env_name] == 0 } {
+				set err "Variable name '$new_env_name' includes invalid characters, only '\[a-zA-Z_\]\[a-zA-Z0-9_\]' are allowed."
+			}
 		}
 
 		set elem $content.env_value$index
@@ -3348,16 +3366,22 @@ proc dockerOptionVolumes_save { volumes { ignore_errors "" } } {
 		set new_src [string trim [$elem get]]
 		if { $new_src == "" } {
 			set err "Source volume cannot be empty."
-		} elseif { $new_type == "volume" && [regexp {^[A-Za-z_0-9][A-Za-z0-9_.-]*$} $new_src] == 0 } {
-			set err "Source volume '$new_src' includes invalid characters for a local volume name, only '\[a-zA-Z0-9\]\[a-zA-Z0-9_.-\]' are allowed."
+		# skip verification if environment variable
+		} elseif { [string first "\$" $new_src] == -1 } {
+			if { $new_type == "volume" && [regexp {^[A-Za-z_0-9][A-Za-z0-9_.-]*$} $new_src] == 0 } {
+				set err "Source volume '$new_src' includes invalid characters for a local volume name, only '\[a-zA-Z0-9\]\[a-zA-Z0-9_.-\]' are allowed."
+			}
 		}
 
 		set elem $content.dst$index
 		set new_dst [string trim [$elem get]]
 		if { $new_dst == "" } {
 			set err "Destination path cannot be empty."
-		} elseif { [file pathtype $new_dst] != "absolute" || $new_dst == "/" } {
-			set err "Destination path '$new_dst' must be an absolute path and must not be /."
+		# skip verification if environment variable
+		} elseif { [string first "\$" $new_dst] == -1 } {
+			if { [file pathtype $new_dst] != "absolute" || $new_dst == "/" } {
+				set err "Destination path '$new_dst' must be an absolute path and must not be /."
+			}
 		}
 
 		set elem $content.readonly$index
