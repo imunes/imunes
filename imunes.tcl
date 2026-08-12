@@ -134,6 +134,10 @@ set rescalation_comm ""
 global convert_json
 set convert_json false
 
+global himage himage_args
+set himage false
+set himage_args ""
+
 set options {
 	{a					"Attach to a running experiment"}
 	{attach				"Attach to a running experiment"}
@@ -146,6 +150,7 @@ set options {
 	{convert			"Convert from legacy .imn to JSON file format"}
 	{d.secret			"Turn on debug mode"}
 	{dd.arg.secret		"" "Turn on debug mode, redirect to file"}
+	{himage				"Get node information or run command in node"}
 	{j.arg				"h" "Max parallel jobs (0 = number of CPUs, h = number of CPUs/2)"}
 	{p					"Prepare virtual root file system"}
 	{prepare			"Prepare virtual root file system"}
@@ -535,6 +540,12 @@ if { $convert_json } {
 	set file_name [file tail $currentFileBatch]
 	saveCfgJson "$dir_name/json_$file_name"
 	sputs "Saved as $dir_name/json_$file_name"
+
+	exit 0
+}
+
+if { $himage } {
+	safeSourceFile "$ROOTDIR/$LIBDIR/scripts/himage.tcl"
 
 	exit 0
 }

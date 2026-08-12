@@ -29,8 +29,10 @@ NODESFILES =	$(wildcard nodes/*.tcl nodes/config)
 RUNTIMEFILES =	$(wildcard runtime/*.tcl)
 PATCHESFILES =	$(wildcard src/patches/*)
 
+TOOL_LIBS = scripts/himage.tcl
+
 VROOT =	$(wildcard scripts/*.sh scripts/*.bash)
-TOOLS =	$(filter-out $(VROOT), $(wildcard scripts/*))
+TOOLS =	$(filter-out $(VROOT) $(TOOL_LIBS), $(wildcard scripts/*))
 
 NODE_ICONS = frswitch.gif hub.gif lanswitch.gif rj45.gif cloud.gif host.gif \
 	ipfirewall.gif pc.gif router.gif \
@@ -78,17 +80,18 @@ install: uninstall netgraph
 	done ;
 ifeq ($(UNAME_S), Linux)
 	mv $(BINDIR)/hcp.linux $(BINDIR)/hcp
-	mv $(BINDIR)/himage.linux $(BINDIR)/himage
 	mv $(BINDIR)/cleanupAll.linux $(BINDIR)/cleanupAll
 	mv $(BINDIR)/startxcmd.linux $(BINDIR)/startxcmd
 	rm -f $(BINDIR)/pkg_add_imunes $(BINDIR)/pkg_imunes
 else
-	rm -f $(BINDIR)/himage.linux $(BINDIR)/cleanupAll.linux $(BINDIR)/startxcmd.linux $(BINDIR)/hcp.linux $(BINDIR)/apt-get_imunes
+	rm -f $(BINDIR)/cleanupAll.linux $(BINDIR)/startxcmd.linux $(BINDIR)/hcp.linux $(BINDIR)/apt-get_imunes
 endif
 
 	mv $(BINDIR)/vlink.tcl $(BINDIR)/vlink
 
 	mkdir -p $(SCRIPTSDIR)
+
+	cp $(TOOL_LIBS) $(SCRIPTSDIR)
 
 	for file in $(VROOT); do \
 	    sed -e "s,LIBDIR=\"\",LIBDIR=$(LIBDIR)," \

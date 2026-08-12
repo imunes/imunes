@@ -2114,3 +2114,69 @@ proc nodeLogIfacesCreate { node_id ifaces } {
 	#	pipesExec "docker exec -d $docker_id sh -c '$cmds'" "hold"
 	#}
 }
+
+proc getFullNodeFromIdName { hostname should_attach { docker_exec_flags "-it" } } {
+	lassign [split $hostname "@"] hostname given_eid
+
+	set running_eids [lsort [getResumableExperiments]]
+	if { [llength $running_eids] == 0 } {
+		return -code error "No running experiments."
+	}
+
+	if { $given_eid != "" } {
+		if { $given_eid ni $running_eids } {
+			return -code error "Experiment with ID '$given_eid' not running! Running experiments:\n[join $running_eids "\n"]"
+		}
+
+		set running_eids $given_eid
+	}
+
+	set eids {}
+	set nodes {}
+	set os_cmds {}
+	foreach eid $running_eids {
+		try {
+			resumeSelectedExperiment $eid
+		} on error err {
+			continue
+		}
+
+		foreach node_id [getNodeIdFromHostname $hostname] {
+			if { $should_attach } {
+				if { ! [isRunningNode $node_id] } {
+					sputs stderr "WARNING: Matching node '$node_id@$eid' is down..."
+
+					continue
+				} else {
+					lappend os_cmds [invokeNodeProc $node_id "getExecCommand" $eid $node_id $docker_exec_flags]
+				}
+			}
+
+			if { $eid ni $eids } {
+				lappend eids "$eid"
+			}
+
+			lappend nodes "$node_id"
+		}
+	}
+
+	if { [llength $nodes] == 0 } {
+		if { $given_eid != "" } {
+			set err "Node '$hostname' was not found in experiment '$given_eid'."
+		} else {
+			set err "Node '$hostname' was not found in any running experiment. Running experiments:\n[join $running_eids "\n"]"
+		}
+
+		return -code error $err
+	}
+
+	if { [llength $eids] > 1 } {
+		return -code error "Node with name/ID '$hostname' was found in multiple experiments:\n[join $eids "\n"]"
+	}
+
+	if { [llength $nodes] > 1 } {
+		return -code error "Multiple nodes with name '$hostname' ([join $nodes ", "]) were found in experiment [lindex $eids 0]"
+	}
+
+	return [list [lindex $eids 0] [lindex $nodes 0] [lindex $os_cmds 0]]
+}

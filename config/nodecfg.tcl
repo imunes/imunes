@@ -904,13 +904,14 @@ proc transformNodes { nodes to_type } {
 }
 
 proc getNodeFromHostname { hostname } {
+	set nodes {}
 	foreach node_id [getFromRunning "node_list"] {
 		if { $hostname == [getNodeName $node_id] } {
-			return $node_id
+			lappend nodes $node_id
 		}
 	}
 
-	return ""
+	return $nodes
 }
 
 proc getNodeIdFromHostname { node_id_name } {

@@ -85,6 +85,7 @@ proc parseCmdArgs { options usage } {
 	global max_jobs nodecreate_timeout ifacesconf_timeout nodeconf_timeout
 	global remote_error remote rcmd ttyrcmd remote_mux_path
 	global escalation_comm rescalation_comm
+	global himage himage_args
 	global convert_json
 
 	catch { array set params [::cmdline::getoptions argv $options $usage] } err
@@ -93,18 +94,21 @@ proc parseCmdArgs { options usage } {
 		exit 1
 	}
 
-	set fileName [lindex $argv 0]
-	if { ! [ string match "*.imn" $fileName ] && $fileName != "" } {
-		sputs stderr "File '$fileName' is not an IMUNES .imn file"
-		exit 1
+	if { $params(d) } {
+		set debug 1
 	}
 
-	if { $params(i) } {
-		set initMode 1
-	}
-
-	if { $params(c) || $params(cli) } {
-		set gui 0
+	if { $params(dd) != "" } {
+		set debug 1
+		set debug_file $params(dd)
+		try {
+			open $debug_file "w"
+		} on ok fd {
+			close $fd
+		} on error err {
+			sputs stderr "Unable to open '$debug_file' for writing: $err"
+			set debug_file ""
+		}
 	}
 
 	if { $params(convert) } {
@@ -160,6 +164,28 @@ proc parseCmdArgs { options usage } {
 		}
 	}
 
+	if { $params(himage) } {
+		set gui 0
+		set himage true
+		set himage_args $argv
+
+		return
+	}
+
+	set fileName [lindex $argv 0]
+	if { ! [ string match "*.imn" $fileName ] && $fileName != "" } {
+		sputs stderr "File '$fileName' is not an IMUNES .imn file"
+		exit 1
+	}
+
+	if { $params(i) } {
+		set initMode 1
+	}
+
+	if { $params(c) || $params(cli) } {
+		set gui 0
+	}
+
 	if { $params(j) != "" } {
 		if { [string is integer $params(j)] } {
 			set max_jobs $params(j)
@@ -176,23 +202,6 @@ proc parseCmdArgs { options usage } {
 
 		set execMode batch
 		set gui 0
-	}
-
-	if { $params(d) } {
-		set debug 1
-	}
-
-	if { $params(dd) != "" } {
-		set debug 1
-		set debug_file $params(dd)
-		try {
-			open $debug_file "w"
-		} on ok fd {
-			close $fd
-		} on error err {
-			sputs stderr "Unable to open '$debug_file' for writing: $err"
-			set debug_file ""
-		}
 	}
 
 	if { $params(e) != "" || $params(eid) != "" } {
@@ -290,6 +299,7 @@ proc printImunesVersion {} {
 proc setPlatformVariables {} {
 	global isOSfreebsd isOSlinux isOSwin remote ttyrcmd rcmd remote_error isOSmac isOSmac_gui
 	global nodecreate_timeout nodeconf_timeout ifacesconf_timeout
+	global himage
 
 	set os_editor [platform::identify]
 
@@ -300,8 +310,16 @@ proc setPlatformVariables {} {
 			set os [rexec uname -s]
 			set remote_error ""
 		} else {
-			set remote_error "Cannot connect to remote '$remote':\n\n$err\n\nSwitching to local mode."
+			set remote_error "Cannot connect to remote '$remote':\n\n$err"
+			if { $himage } {
+				sputs stderr $remote_error
+
+				exit 1
+			}
+
+			set remote_error "\n\nSwitching to local mode."
 			sputs stderr $remote_error
+
 			set os $os_editor
 			set rcmd "sh"
 			set ttyrcmd "sh -c"

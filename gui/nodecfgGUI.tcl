@@ -5141,7 +5141,8 @@ proc populateValuesForUpdate { node_id tab connParamsLframe espOptionsLframe } {
 
 	if { $peers_name != "%any" } {
 		if { $peers_name != "" } {
-			set peers_node [getNodeFromHostname $peers_name]
+			# take only the first one
+			set peers_node [lindex [getNodeFromHostname $peers_name] 0]
 			set peers_name "$peers_name - $peers_node"
 			set peerIPs [getIPAddressForPeer $peers_node $local_ip_address]
 			$connParamsLframe.peer_ip_entry configure -values $peerIPs
