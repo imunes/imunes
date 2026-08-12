@@ -280,7 +280,7 @@ proc printImunesVersion {} {
 }
 
 proc setPlatformVariables {} {
-	global isOSfreebsd isOSlinux isOSwin remote remote_error isOSmac isOSmac_gui
+	global isOSfreebsd isOSlinux isOSwin remote ttyrcmd rcmd remote_error isOSmac isOSmac_gui
 	global nodecreate_timeout nodeconf_timeout ifacesconf_timeout
 
 	set os_editor [platform::identify]
@@ -295,6 +295,8 @@ proc setPlatformVariables {} {
 			set remote_error "Cannot connect to remote '$remote':\n\n$err\n\nSwitching to local mode."
 			sputs stderr $remote_error
 			set os $os_editor
+			set rcmd "sh"
+			set ttyrcmd "sh -c"
 
 			set nodecreate_timeout [expr round($nodecreate_timeout / 2)]
 			set nodeconf_timeout [expr round($nodeconf_timeout / 2)]
