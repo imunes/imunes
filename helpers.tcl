@@ -85,6 +85,7 @@ proc parseCmdArgs { options usage } {
 	global max_jobs nodecreate_timeout ifacesconf_timeout nodeconf_timeout
 	global remote_error remote rcmd ttyrcmd remote_mux_path
 	global escalation_comm rescalation_comm
+	global convert_json
 
 	catch { array set params [::cmdline::getoptions argv $options $usage] } err
 	if { $err != "" || $params(h) } {
@@ -104,6 +105,13 @@ proc parseCmdArgs { options usage } {
 
 	if { $params(c) || $params(cli) } {
 		set gui 0
+	}
+
+	if { $params(convert) } {
+		set execMode batch
+		set convert_json true
+
+		return
 	}
 
 	if { $params(r) != "" || $params(remote) != "" } {

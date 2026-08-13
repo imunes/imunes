@@ -131,6 +131,9 @@ set remote_mux_path ""
 set escalation_comm ""
 set rescalation_comm ""
 
+global convert_json
+set convert_json false
+
 set options {
 	{a					"Attach to a running experiment"}
 	{attach				"Attach to a running experiment"}
@@ -140,6 +143,7 @@ set options {
 	{batch				"Turn on batch mode"}
 	{c.secret			"Run in CLI mode"}
 	{cli.secret			"Run in CLI mode"}
+	{convert			"Convert from legacy .imn to JSON file format"}
 	{d.secret			"Turn on debug mode"}
 	{dd.arg.secret		"" "Turn on debug mode, redirect to file"}
 	{j.arg				"h" "Max parallel jobs (0 = number of CPUs, h = number of CPUs/2)"}
@@ -480,6 +484,54 @@ if { $last_config_file != "" } {
 #
 # Initialization should be complete now, so let's start doing something...
 #
+
+if { $convert_json } {
+	if { ! [file exists $argv] } {
+		sputs "Error: file '$argv' doesn't exist"
+		sputs "Usage: imunes -convert <old_imunes_topology.imn>"
+
+		exit 1
+	}
+
+	global currentFileBatch
+	set currentFileBatch $argv
+
+	set curcfg [newObjectId $cfg_list "cfg"]
+	lappend cfg_list $curcfg
+
+	namespace eval ::cf::[set curcfg] {}
+	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+	upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
+	upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
+	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+	set dict_cfg [dict create]
+	setOption "version" $CFG_VERSION
+
+	set dict_run [dict create]
+	set dict_run_gui [dict create]
+	set execute_vars [dict create]
+
+	setToRunning "eid" ""
+	setToRunning "oper_mode" "edit"
+	setToRunning "auto_execution" 1
+	setToRunning "cfg_deployed" false
+	setToRunning "stop_sched" true
+	setToRunning "undolevel" 0
+	setToRunning "redolevel" 0
+	setOption_gui "zoom" $zoom
+
+	readCfgJson $currentFileBatch
+
+	setToRunning_gui "curcanvas" [lindex [getFromRunning_gui "canvas_list"] 0]
+	setToRunning "current_file" $argv
+
+	set dir_name [file dirname $currentFileBatch]
+	set file_name [file tail $currentFileBatch]
+	saveCfgJson "$dir_name/json_$file_name"
+	sputs "Saved as $dir_name/json_$file_name"
+
+	exit 0
+}
 
 if { $execMode == "interactive" } {
 	if { $selected_experiment != "" && $selected_experiment ni [getResumableExperiments] } {

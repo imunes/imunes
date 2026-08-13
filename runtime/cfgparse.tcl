@@ -1191,7 +1191,9 @@ proc loadCfgJson { json_cfg } {
 
 	checkOptions
 
-	applyOptionsToGUI
+	if { $gui && $execMode == "interactive" } {
+		applyOptionsToGUI
+	}
 
 	set ipv4_used_list {}
 	set ipv6_used_list {}
@@ -1420,7 +1422,9 @@ proc jsonMigration { from_version to_version } {
 		setToRunning_gui "annotation_list" [getAnnotationList]
 		setToRunning_gui "image_list" [getImageList]
 
-		applyOptionsToGUI
+		if { $gui && $execMode == "interactive" } {
+			applyOptionsToGUI
+		}
 
 		setOption "version" $to_version
 	}
@@ -1971,6 +1975,7 @@ proc getActiveOption { option_name } {
 
 proc setGlobalOption { option_name new_value { toggle "" } } {
 	global changed all_options all_gui_options
+	global gui execMode
 	global $option_name
 
 	if { $toggle != "toggle" } {
@@ -1993,7 +1998,9 @@ proc setGlobalOption { option_name new_value { toggle "" } } {
 
 	setOption$gui_suffix $option_name [set $option_name]
 
-	updateUndoLog
+	if { $gui && $execMode == "interactive" } {
+		updateUndoLog
+	}
 
 	return [set $option_name]
 }
