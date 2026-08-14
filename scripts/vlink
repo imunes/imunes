@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+
+test "$1" = "-remote" && test -n "$2" && remote="-r $2" && shift 2
+
+exec imunes $remote -vlink -- "$@"

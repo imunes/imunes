@@ -1,508 +1,776 @@
-#!/usr/bin/env tclsh8.6
-package require cmdline
-package require platform
+upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
+upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
 
-# check for uid
-catch { exec id -u } uid
-if { $uid != "0" } {
-	puts stderr "Error: vlink must be executed with root privileges."
-	exit 1
+global LIBDIR
+global ROOTDIR
+global vlink_args remote ttyrcmd isOSlinux isOSfreebsd
+
+set dict_cfg [dict create]
+set dict_run [dict create]
+set dict_run_gui [dict create]
+set execute_vars [dict create]
+
+global help_msg
+set help_msg "This command is used as an interface to ng_pipe/tc commands for
+IMUNES virtual links.
+
+Parameter 'link' can be given in any of the following forms:
+ link_id
+ node1:node2
+ link_id@eid
+ node1:node2@eid
+
+Parameters 'node1/node2' can be given in any of the following forms (in any
+order):
+ node_id
+ node_id/iface_id
+ node_id/iface_name
+ hostname
+ hostname/iface_id
+ hostname/iface_name
+
+Usage:
+vlink \[options\] link
+
+For remote access, use:
+vlink -remote <remote_host> <regular_vlink_arguments>
+
+Possible options:"
+
+global options
+set options {
+	{l				"print the list of all links"}
+	{s				"print link status"}
+	{r				"set link settings to default values"}
+	{bw.arg			"" "set link bandwidth (bps)"}
+	{b.arg			"" "set link bandwidth (bps)"}
+	{BER.arg		"" "set link BER (1/value)"}
+	{B.arg			"" "set link BER (1/value)"}
+	{loss.arg		"" "set link loss (%)"}
+	{L.arg			"" "set link loss (%)"}
+	{direct.arg		"" "set link direct"}
+	{dly.arg		"" "set link delay (us)"}
+	{d.arg			"" "set link delay (us)"}
+	{dup.arg		"" "set link duplicate (%)"}
+	{D.arg			"" "set link duplicate (%)"}
+	{e.arg			"" "specify experiment ID"}
+	{eid.arg		"" "specify experiment ID"}
+	{E				"show links in more details (extended)"}
 }
 
-# procedure for parsing arguments
-proc parseArgs { arg1 arg2 defValue } {
-	global check
-	if { $arg1 != "" } {
-		incr check
-		return $arg1
-	} elseif { $arg2 != "" } {
-		incr check
-		return $arg2
-	}
-	return $defValue
+proc vlinkShowHelp {} {
+	global options help_msg
+
+	# remove first word
+	set output [::cmdline::usage $options $help_msg]
+	set output [regsub {^\S+ } $output ""]
+
+	sputs $output
 }
 
-# procedure that returns wheter an interface belongs to a virtual node (docker
-# instance) or openvswitch
-proc isNodeInterface { iface_name } {
-	if { [string match "eth\[0-9\]*" $iface_name] } {
-		return 1
-	}
-	return 0
-}
+proc pickArg { arg_name arg_alt arg_list } {
+	set retv ""
 
-# transform bandwidth from netem output to bps
-proc getNetemBandwidth { band } {
-	return [expr round \
-		([string map {bit "*1" Kbit "*1e3" Mbit "*1e6" Gbit "*1e9" Tbit "*1e12"} $band])]
-}
-
-# transform bandwidth from calling arguments to bps
-proc getStandardBandwidth { band } {
-	return [expr round \
-		([string map {K "*1e3" M "*1e6" G "*1e9" T "*1e12"} $band])]
-}
-
-# transform both netem and calling arguments delay to us (microseconds)
-proc getStandardDelay { delay } {
-	return [expr round([string map {us "*1" ms "*1e3" s "*1e6"} $delay])]
-}
-
-# generic procedure that transforms from bps and us to units for nicer printing
-proc getUnitForPrint { value units } {
-	for { set i 0 } { $i < [llength $units] } { incr i } {
-		set head [expr double($value) / 10**(3*$i)]
-		if { $head < 1 } {
-			return "[format %.6g [expr $head*10**3]][lindex $units $i-1]"
-		}
-	}
-	return "[format %.6g $head][lindex $units end]"
-}
-
-# transform bandwidth for print
-proc getBandwidthForPrint { band } {
-	set units [list bps Kbps Mbps Gbps Tbps]
-	return [getUnitForPrint $band $units]
-}
-
-# transform delay for print
-proc getDelayForPrint { delay } {
-	set units [list us ms s]
-	return [getUnitForPrint $delay $units]
-}
-
-# get link settings into an ordered list on Linux
-proc getLinuxLinkStatus { node_name eid ldata } {
-	set node_id [lindex $ldata 0]
-	set iface_name [lindex $ldata 1]
-
-	set fullname $node_id-$iface_name
-	if { $iface_name == "" } {
-		set fullname $node_id
-	}
-
-	catch { exec ip netns exec $eid tc qdisc show dev $fullname } settings
-
-	foreach val "delay rate duplicate loss" {
-		set $val -1
-		if { $val in $settings } {
-			set $val [lindex $settings [lsearch $settings "$val*"]+1]
+	if { $arg_alt != "" } {
+		set arg_idx [lsearch $arg_list $arg_alt]
+		if { $arg_idx != -1 } {
+			set retv [lindex $arg_list $arg_idx+1]
+			set arg_list [lreplace $arg_list $arg_idx $arg_idx+1]
 		}
 	}
 
-	set bandwidth [getNetemBandwidth $rate]
-	set delay [getStandardDelay $delay]
-	set duplicate [expr round ([string trimright $duplicate "%"])]
-	set loss [expr round ([string trimright $loss "%"])]
-
-	# don't change this order, the rest of the script depends on it
-	foreach val "bandwidth loss delay duplicate" {
-		lappend curr_set [list $val [set $val]]
-	}
-
-	return $curr_set
-}
-
-# get link settings into an ordered list on FreeBSD
-proc getFreeBSDLinkStatus { eid lid } {
-	catch { exec jexec $eid ngctl msg $lid: getcfg } settings
-	set settings [lindex [lindex [split $settings "\n"] 1] 1]
-	set linkStatus ""
-	foreach varname { bandwidth delay BER duplicate } {
-		set index [lsearch $settings "$varname=*"]
-		if { $index != -1 } {
-			lappend linkStatus "$varname [lindex [split [lindex $settings $index] "="] end]"
+	if { $arg_name != "" } {
+		set arg_idx [lsearch $arg_list $arg_name]
+		if { $arg_idx != -1 } {
+			set retv [lindex $arg_list $arg_idx+1]
+			set arg_list [lreplace $arg_list $arg_idx $arg_idx+1]
 		}
 	}
-	return $linkStatus
+
+	return [list $retv $arg_list]
 }
 
-# print current link settings to terminal
-proc printLinkStatus { lname eid curr_set } {
-	set check 0
-	puts "$lname\@$eid:"
-	foreach sett $curr_set {
-		if { [lindex $sett 1] != -1 } {
-			switch [lindex $sett 0] {
-				bandwidth {
-					puts "\t[lindex $sett 0] [getBandwidthForPrint [lindex $sett 1]]"
-				}
-				BER {
-					puts "\t[lindex $sett 0] [lindex $sett 1]"
-				}
-				loss {
-					puts "\t[lindex $sett 0] [lindex $sett 1]%"
-				}
-				delay {
-					puts "\t[lindex $sett 0] [getDelayForPrint [lindex $sett 1]]"
-				}
-				duplicate {
-					puts "\t[lindex $sett 0] [lindex $sett 1]%"
+proc findLink { running_eids given_eid link_idname } {
+	lassign [split $link_idname "@"] link_idname new_given_eid
+	if { $new_given_eid != "" } {
+		if { $given_eid != "" } {
+			return -code error "Use only -e/-eid or @eid."
+		}
+
+		set given_eid $new_given_eid
+	}
+
+	if { $link_idname == "" } {
+		return -code error "Link not given! Run `vlink -l` to check all links."
+	}
+
+	if { $given_eid != "" } {
+		if { $given_eid ni $running_eids } {
+			return -code error "Experiment with ID '$given_eid' not running! Running experiments:\n[join $running_eids "\n"]"
+		}
+
+		set running_eids $given_eid
+	}
+
+	lassign [split $link_idname ":"] given_left given_right
+	if { $given_right == "" } {
+		set link_id $given_left
+	} else {
+		set link_id ""
+		lassign [split $given_left "/"] node1_idname iface1_idname
+		lassign [split $given_right "/"] node2_idname iface2_idname
+	}
+
+	set eids {}
+	set links {}
+	foreach eid $running_eids {
+		try {
+			resumeSelectedExperiment $eid
+		} on error err {
+			sputs stderr "ERROR: cannot attach to experiment $eid: '$err'"
+
+			continue
+		}
+
+		set cur_link_list [getFromRunning "link_list"]
+		if { $link_id != "" } {
+			if { $link_id ni $cur_link_list } {
+				continue
+			}
+
+			set found_link_id $link_id
+		} else {
+			set node_list [getFromRunning "node_list"]
+
+			set node1_id [getNodeIdFromHostname $node1_idname]
+			if { $node1_id == "" } {
+				# no such node!
+				continue
+			}
+
+			if { [llength $node1_id] > 1 } {
+				sputs stderr "WARNING: Multiple nodes with same name '$node1_idname' ([join $node1_id ", "]) were found in experiment $eid. Use 'link_id', or specify each endpoint using 'node_id'."
+				continue
+			}
+
+			set node2_id [getNodeIdFromHostname $node2_idname]
+			if { $node2_id == "" } {
+				# no such node!
+				continue
+			}
+
+			if { [llength $node2_id] > 1 } {
+				sputs stderr "WARNING: Multiple nodes with same name '$node2_idname' ([join $node2_id ", "]) were found in experiment $eid. Use 'link_id', or specify each endpoint using 'node_id'."
+			}
+
+			set iface1_id ""
+			if { $iface1_idname != "" } {
+				set iface1_id [getIfcIdFromName $node1_id $iface1_idname]
+				if { $iface1_id == "" } {
+					continue
 				}
 			}
-			incr check
+
+			set iface2_id ""
+			if { $iface2_idname != "" } {
+				set iface2_id [getIfcIdFromName $node2_id $iface2_idname]
+				if { $iface2_id == "" } {
+					continue
+				}
+			}
+
+			set node_pairs {}
+			foreach cur_link_id $cur_link_list {
+				lassign [getLinkPeers $cur_link_id] cur_node1_id cur_node2_id
+				if { "$node1_id $node2_id" != "$cur_node1_id $cur_node2_id" } {
+					if { "$node2_id $node1_id" != "$cur_node1_id $cur_node2_id" } {
+						continue
+					}
+
+					# reverse
+					lassign "$cur_node1_id $cur_node2_id" cur_node2_id cur_node1_id
+					lassign [getLinkPeersIfaces $cur_link_id] cur_iface2_id cur_iface1_id
+				} else {
+					lassign [getLinkPeersIfaces $cur_link_id] cur_iface1_id cur_iface2_id
+				}
+
+				if { $node1_id == $node2_id } {
+					if {
+						$iface1_id != "" &&
+						$iface2_id != "" &&
+						$iface1_id == $iface2_id
+					} {
+						# same node and same interface - skip this
+						continue
+					}
+
+					if {
+						$iface1_id != "" &&
+						$iface1_id != $cur_iface1_id &&
+						$iface1_id != $cur_iface2_id
+					} {
+						continue
+					}
+
+					if {
+						$iface2_id != "" &&
+						$iface2_id != $cur_iface1_id &&
+						$iface2_id != $cur_iface2_id
+					} {
+						continue
+					}
+				} else {
+					if {
+						$iface1_id != "" &&
+						$iface1_id != $cur_iface1_id
+					} {
+						continue
+					}
+
+					if {
+						$iface2_id != "" &&
+						$iface2_id != $cur_iface2_id
+					} {
+						continue
+					}
+				}
+
+				lappend node_pairs "$cur_link_id $cur_node1_id/$cur_iface1_id:$cur_node2_id/$cur_iface2_id"
+			}
+
+			if { [llength $node_pairs] == 0 } {
+				continue
+			}
+
+			if { [llength $node_pairs] > 1 } {
+				sputs stderr "WARNING: Multiple links with same peers '$link_idname' ([join $node_pairs ", "]) were found in experiment $eid"
+				continue
+			}
+
+			set found_link_id [lindex [lindex $node_pairs 0] 0]
 		}
-	}
-	if { ! $check } {
-		puts "\tNo currently applied settings."
-	}
-}
 
-# apply settings on Linux
-proc applyLinkSettingsLinux { bandwidth loss delay dup node_name eid ldata } {
-	set cfg ""
-	if { $bandwidth != -1 } {
-		lappend cfg "rate ${bandwidth}bit"
-	}
-	if { $loss != -1 } {
-		lappend cfg "loss random ${loss}%"
-	}
-	if { $delay != -1 } {
-		lappend cfg "delay ${delay}us"
-	}
-	if { $dup != -1 } {
-		lappend cfg "duplicate ${dup}%"
+		lappend eids $eid
+		lappend links $found_link_id
 	}
 
-	set node_id [lindex $ldata 0]
-	set iface_name [lindex $ldata 1]
-
-	set fullname $node_id-$iface_name
-	if { $iface_name == "" } {
-		set fullname $node_id
+	if { [llength $eids] > 1 } {
+		return -code error "Link with name/ID '$link_idname' was found in multiple experiments:\n[join $eids "\n"]"
 	}
 
-	catch { eval "exec ip netns exec $eid tc qdisc change dev $fullname root netem [join $cfg " "]" }
-}
-
-# apply settings on FreeBSD
-proc applyLinkSettingsFreeBSD { bandwidth ber delay dup eid lid } {
-	# build the config that should be applied
-	append config "{ "
-	if { $bandwidth != -1 } {
-		if { $bandwidth == 0 } {
-			set bandwidth -1
-		}
-		append config "bandwidth=" $bandwidth " "
-	}
-	if { $delay != -1 } {
-		if { $delay == 0 } {
-			set delay -1
-		}
-		append config "delay=" $delay " "
-	}
-	if { $dup != -1 && $ber != -1 } {
-		if { $dup == 0 } {
-			set dup -1
-		}
-		if { $ber == 0 } {
-			set ber -1
-		}
-		append config "upstream={ duplicate=" $dup " BER=" $ber " }"
-		append config "downstream={ duplicate=" $dup " BER=" $ber " }"
-	} elseif { $dup != -1 } {
-		if { $dup == 0 } {
-			set dup -1
-		}
-		append config "upstream={ duplicate=" $dup " }"
-		append config "downstream={ duplicate=" $dup " }"
-	} elseif { $ber != -1 } {
-		if { $ber == 0 } {
-			set ber -1
-		}
-		append config "upstream={ BER=" $ber " }"
-		append config "downstream={ BER=" $ber " }"
-	}
-	append config " }"
-
-	# apply config
-	exec jexec $eid ngctl msg $lid: setcfg $config
-}
-
-# define possible call arguments
-set options {
-	{l			"print the list of all links"}
-	{s			"print link status"}
-	{r			"set link settings to default values"}
-	{bw.arg		"" "set link bandwidth (bps)"}
-	{b.arg		"" "set link bandwidth (bps)"}
-	{BER.arg	"" "set link BER (1/value)"}
-	{B.arg		"" "set link BER (1/value)"}
-	{loss.arg	"" "set link loss (%)"}
-	{L.arg		"" "set link loss (%)"}
-	{dly.arg	"" "set link delay (us)"}
-	{d.arg		"" "set link delay (us)"}
-	{dup.arg	"" "set link duplicate (%)"}
-	{D.arg		"" "set link duplicate (%)"}
-	{e.arg		"" "specify experiment ID"}
-	{eid.arg	"" "specify experiment ID"}
-}
-
-set usage "\[options\] link_name\[@eid\]
-options:"
-
-# parse arguments
-catch { array set params [::cmdline::getoptions argv $options $usage] } err
-if { $err != "" } {
-	puts stderr "Usage:"
-	puts stderr $err
-	exit 1
-}
-
-# something must be specified
-if { $argc == 0 } {
-	puts stderr "No arguments were specified."
-	puts stderr "Usage:"
-	puts stderr [::cmdline::usage $options $usage]
-	exit 1
-}
-
-# link is the last argument
-set link1 [lindex [split [lindex $argv 0] "@"] 0]
-
-# eid can be specified through two cli options and as part of the link name
-set eid1 [parseArgs $params(e) $params(eid) ""]
-set eid2 [lindex [split [lindex $argv 0] "@"] 1]
-
-# detect multiple eid usage
-set selected_eid ""
-if { $eid1 != "" && $eid2 != "" } {
-	puts stderr "Only one eid option should be used."
-	puts stderr "Usage:"
-	puts stderr [::cmdline::usage $options $usage]
-	exit 1
-} else {
-	set selected_eid [parseArgs $eid1 $eid2 ""]
-}
-
-set check 0
-# get values from arguments, the first flag is preferred (b,B,d,D)
-set ban [parseArgs $params(b) $params(bw) -1]
-set BER [parseArgs $params(B) $params(BER) -1]
-set loss [parseArgs $params(L) $params(loss) -1]
-set del [parseArgs $params(d) $params(dly) -1]
-set dup [parseArgs $params(D) $params(dup) -1]
-
-# check if arguments are valid and transform them if needed
-if { [regexp {^([[:digit:]]+)([KMGT])?$} $ban] } {
-	set ban [getStandardBandwidth $ban]
-} elseif { $ban != -1 } {
-	puts stderr "Error: wrong bandwidth format (e.g. 1000, 10K, 5M, 2G, 1T)."
-	exit 1
-}
-if { $BER != -1 && ! [regexp {^([[:digit:]]+)$} $BER] } {
-	puts stderr "Error: wrong BER format, should be a number."
-	exit 1
-}
-if { [regexp {^([[:digit:]]+)(([um])?s)?$} $del] } {
-	set del [getStandardDelay $del]
-} elseif { $del != -1 } {
-	puts stderr "Error: wrong delay format (e.g. 100 == 100us, 100ms, 1s)."
-	exit 1
-}
-if { [regexp {^([[:digit:]]+)(%)?$} $dup] } {
-	set dup [string trimright $dup "%"]
-} elseif { $dup != -1 } {
-	puts stderr "Error: wrong duplicate format (e.g. 10, 10%)."
-	exit 1
-}
-if { [regexp {^([[:digit:]]+)(%)?$} $loss] } {
-	set loss [string trimright $loss "%"]
-} elseif { $loss != -1 } {
-	puts stderr "Error: wrong loss format (e.g. 10, 10%)."
-	exit 1
-}
-
-# reset values is the preferred option over setting new values
-if { $params(r) } {
-	set ban 0
-	set del 0
-	set BER 0
-	set loss 0
-	set dup 0
-	incr check
-}
-
-set linkDelim ":"
-# start parsing for nodes
-set nodes [split $link1 $linkDelim]
-set node0 [lindex $nodes 0]
-set node1 [lindex $nodes 1]
-set link2 "$node1$linkDelim$node0"
-
-# get running experiments
-set running_exps ""
-catch { exec himage -l } himage
-foreach line [split $himage "\n"] {
-	set expid [lindex $line 0]
-	lappend running_exps $expid
-}
-
-# if eid was specified see whether the experiment is running,
-# if it's running trim down the running_exps list
-if { $selected_eid != "" } {
-	if { $selected_eid in $running_exps } {
-		set running_exps $selected_eid
-	} elseif { ! $params(l) } {
-		puts stderr "Error: Experiment with the specified eid ($selected_eid) is not running."
-		exit 1
-	}
-}
-
-# get experiments containing link
-set containing_exps ""
-foreach eid $running_exps {
-	try {
-		set f [open "/var/run/imunes/$eid/links" "r"]
-		set ldata [read $f]
-		close $f
-	} on error { result options } {
-		puts stderr "Could not open file \"/var/run/imunes/$eid/links\" for reading."
-		puts stderr $result
-		continue
+	if { [llength $links] > 1 } {
+		return -code error "Multiple links with same peers '$link_idname' ([join $links ", "]) were found in experiment [lindex $eids 0]"
 	}
 
-	set $eid ""
-	foreach k [dict keys $ldata] {
-		lappend $eid [lindex [dict get $ldata $k] end]
+	if { $links == {} } {
+		return -code error "Link '$link_idname' not found!"
 	}
 
-	if { $link1 in [set $eid] } {
-		lappend containing_exps $eid
-	} elseif { $link2 in [set $eid] } {
-		lappend containing_exps $eid
-	}
+	return [list $eids $links]
 }
 
-# if list links was specified, output and exit
-if { $params(l) } {
-	foreach eid $running_exps {
-		puts "$eid ([set $eid])"
-	}
+set given_eid ""
+
+if { [lindex $vlink_args 0] in "\"\" -h -help --help" } {
+	# show help
+	vlinkShowHelp
+
 	exit 0
 }
 
-# exit if no link was specified and we don't list links
-if { $link1 == "" } {
-	puts stderr "No link was specified."
-	puts stderr "Usage:"
-	puts stderr [::cmdline::usage $options $usage]
+if { [lindex $vlink_args 0] == "-remote" } {
+	vlinkShowHelp
+
+	sputs stderr "ERROR: Use '-remote' as an argument for the 'imunes' command."
+
 	exit 1
 }
 
-# if the eid was specified but that experiment is not running print a custom
-# error message
-if { $selected_eid != "" && [llength $containing_exps] == 0 } {
-	puts stderr "Error: The specified experiment ($selected_eid) does not have the \
-		specified link ($link1)."
-	exit 1
+if { "-E" in $vlink_args } {
+	set vlink_args [removeFromList $vlink_args "-E"]
+	set show_extended_links 1
+} else {
+	set show_extended_links 0
 }
 
-# if no link options were specified and link status is not requested, exit
-if { $check == 0 && ! $params(s) } {
-	puts stderr "No link options were specified."
-	puts stderr "Usage:"
-	puts stderr [::cmdline::usage $options $usage]
-	exit 1
-}
+lassign [pickArg "-eid" "-e" $vlink_args] given_eid vlink_args
 
-# finally check the number of valid experiments, if the number is different than
-# 1 output the appropriate error message.
-switch [llength $containing_exps] {
-	0 {
-		puts stderr "Error: There are no running experiments with link \"$link1\":"
-		foreach eid $running_exps {
-			puts stderr "$eid ([set $eid])"
-		}
+set running_eids [lsort [getResumableExperiments]]
+if { $given_eid != "" } {
+	if { $given_eid ni $running_eids } {
+		sputs stderr "ERROR: Experiment with ID '$given_eid' not running! Running experiments:\n[join $running_eids "\n"]"
+
 		exit 1
 	}
-	1 {
-		# read out link data
-		set eid $containing_exps
-		set f [open "/var/run/imunes/$eid/links" "r"]
-		set ldata [read $f]
-		close $f
 
-		# check the real link name (n0:n1 or n1:n0) to enable proper dict usage
-		set lname $link1
-		if { $link2 in [set $eid] } {
-			set lname $link2
-		}
+	set running_eids $given_eid
+}
 
-		foreach lid [dict keys $ldata] {
-			set cur_name [lindex [dict get $ldata $lid] end]
-			if { $cur_name == $lname } {
-				lappend lids $lid
-			}
-		}
-
-		switch [llength $lids] {
-			1 {
-				set lid $lids
-			}
-			default {
-				puts stderr "There are more links/nodes with the same name in the same experiment."
-				puts stderr "    $eid ([set $eid])"
-				puts stderr "For using vlink all nodes should be named differently."
-				exit 1
-			}
-		}
-
-		# detect os
-		set os [platform::identify]
-
-		switch -glob -nocase $os {
-			"*freebsd*" {
-				set node_data [lindex [dict get $ldata $lid] 0]
-
-				if { $params(s) } {
-					set curr_set [getFreeBSDLinkStatus $eid $lid]
-					printLinkStatus $lname $eid $curr_set
-					return 0
-				}
-
-				applyLinkSettingsFreeBSD $ban $BER $del $dup $eid $lid
-			}
-			"*linux*" {
-				set nodes [split $lname $linkDelim]
-				set i 0
-				# on linux we must apply settings on both sides of the link
-				foreach node_name $nodes {
-					# get data for linux links
-					set node_data [lindex [lindex [dict get $ldata $lid] 1] $i]
-
-					# get the current status
-					set curr_set [getLinuxLinkStatus $node_name $eid $node_data]
-					# if link status was specified, just output and exit
-					if { $params(s) } {
-						printLinkStatus $lname $eid $curr_set
-						return 0
-					}
-
-					set j 0
-					# apply unset settings from current status
-					# the settings are taken in the order forwarded from
-					# getLinuxLinkStatus and depend on it
-					foreach val "ban loss del dup" {
-						if { [set $val] == -1 } {
-							set $val [lindex [lindex $curr_set $j] 1]
-						}
-						incr j
-					}
-
-					applyLinkSettingsLinux $ban $loss $del $dup $node_name $eid $node_data
-					incr i
-				}
-			}
-		}
-
-		return 0
+if { "-l" in $vlink_args } {
+	lassign [pickArg "-l" "" $vlink_args] new_given_eid vlink_args
+	if { $given_eid == "" && $new_given_eid != "" } {
+		set running_eids $new_given_eid
 	}
-	default {
-		puts stderr "Error: There are multiple running experiments with link $link1."
-		puts stderr "Choose one of the following experiment ID's using the '-e' \
-			or '-eid' option:"
-		puts stderr " $containing_exps"
+
+	if { $vlink_args != {} } {
+		sputs stderr "ERROR: Too many arguments."
+
+		exit 1
+	}
+
+	# list experiments with link list
+	set eids {}
+	set extended_eids {}
+	foreach eid $running_eids {
+		try {
+			resumeSelectedExperiment $eid
+		} on error err {
+			sputs stderr "ERROR: cannot attach to experiment $eid: '$err'"
+
+			continue
+		}
+
+		set link_list {}
+		set extended_link_list {}
+		foreach link_id [getFromRunning "link_list"] {
+			if { [isRunningLink $link_id] } {
+				set link_running ""
+			} else {
+				set link_running "*"
+			}
+
+			if { [getLinkDirect $link_id] } {
+				set link_direct "(d)"
+			} else {
+				set link_direct ""
+			}
+
+			lassign [getLinkPeers $link_id] node1_id node2_id
+			if { ! $show_extended_links } {
+				lappend link_list "$link_id$link_direct|[getNodeName $node1_id]:[getNodeName $node2_id]$link_running"
+			} else {
+				lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
+				lappend extended_link_list "$link_id$link_direct|[getNodeName $node1_id]($node1_id)/[getIfcName $node1_id $iface1_id]($iface1_id):[getNodeName $node2_id]($node2_id)/[getIfcName $node2_id $iface2_id]($iface2_id)$link_running"
+			}
+		}
+
+		if { ! $show_extended_links } {
+			if { $link_list != {} } {
+				lappend eids "$eid \[[join $link_list ", "]\]"
+			}
+		} else {
+			if { $extended_link_list != {} } {
+				lappend extended_eids "$eid \[[join $extended_link_list ", "]\]"
+			}
+		}
+	}
+
+	if { ! $show_extended_links } {
+		if { $eids != {} } {
+			sputs "[join $eids "\n"]"
+		}
+	} else {
+		if { $extended_eids != {} } {
+			sputs "[join $extended_eids "\n"]"
+		}
+	}
+
+	exit 0
+}
+
+if { "-s" in $vlink_args } {
+	lassign [pickArg "-s" "" $vlink_args] link_idname vlink_args
+
+	if { $vlink_args != {} } {
+		sputs stderr "ERROR: too many arguments."
+
+		exit 1
+	}
+
+	try {
+		findLink $running_eids $given_eid $link_idname
+	} on ok retv {
+		lassign $retv eids links
+	} on error err {
+		sputs stderr "ERROR: $err"
+
+		exit 1
+	}
+
+	set eid [lindex $eids 0]
+	set link_id [lindex $links 0]
+
+	try {
+		resumeSelectedExperiment $eid
+	} on error err {
+		sputs stderr "ERROR: cannot attach to experiment $eid: '$err'"
+
+		exit 1
+	}
+
+	if { [getLinkDirect $link_id] } {
+		sputs "Link $link_idname\n  direct"
+
+		exit 0
+	}
+
+	set label_str ""
+	set bwstr "[getLinkBandwidthString $link_id]"
+	set delstr [getLinkDelayString $link_id]
+	set ber [getLinkBER $link_id]
+	set loss [getLinkLoss $link_id]
+	set dup [getLinkDup $link_id]
+	if { "$bwstr" != "" } {
+		lappend label_str "bandwidth: $bwstr"
+	}
+	if { "$delstr" != "" } {
+		lappend label_str "delay: $delstr"
+	}
+	if { "$ber" != "" } {
+		lappend label_str "ber: $ber"
+	}
+	if { "$loss" != "" } {
+		lappend label_str "loss: $loss%"
+	}
+	if { "$dup" != "" } {
+		lappend label_str "duplicate: $dup%"
+	}
+
+	set str ""
+	foreach elem $label_str {
+		if { $str == "" } {
+			set str "$str  $elem"
+		} else {
+			set str "$str\n  $elem"
+		}
+	}
+
+	if { $str == "" } {
+		set str " No currently applied settings."
+	}
+
+	sputs "Link $link_idname\n$str"
+
+	exit 0
+}
+
+if { "-r" in $vlink_args } {
+	lassign [pickArg "-r" "" $vlink_args] link_idname vlink_args
+
+	if { $vlink_args != {} } {
+		sputs stderr "ERROR: too many arguments."
+
+		exit 1
+	}
+
+	try {
+		findLink $running_eids $given_eid $link_idname
+	} on ok retv {
+		lassign $retv eids links
+	} on error err {
+		sputs stderr "ERROR: $err"
+
+		exit 1
+	}
+
+	set eid [lindex $eids 0]
+	set link_id [lindex $links 0]
+
+	try {
+		resumeSelectedExperiment $eid
+	} on error err {
+		sputs stderr "ERROR: cannot attach to experiment $eid: '$err'"
+
+		exit 1
+	}
+
+	try {
+		createExperimentFiles $eid
+	} on error err {
+		sputs "ERROR: error writing to experiment directory: '$err'"
+
+		exit 1
+	}
+
+	linkResetConfig $link_id
+
+	sputs "\nLink $link_idname reset"
+
+	if { [getLinkDirect $link_id] } {
+		sputs stderr "\nWARNING: link '$link_id' is direct, changes not active."
+	}
+
+	exit 0
+}
+
+if { "-direct" in $vlink_args } {
+	lassign [pickArg "-direct" "" $vlink_args] set_direct vlink_args
+	if { $set_direct ni "0 1 true false" } {
+		sputs stderr "ERROR: validation failed for direct '$set_direct'"
+		sputs stderr " - 0 or false -> set to regular"
+		sputs stderr " - 1 or true -> set to direct"
+
+		exit 1
+	}
+
+	set link_idname [lindex $vlink_args end]
+	try {
+		findLink $running_eids $given_eid $link_idname
+	} on ok retv {
+		lassign $retv eids links
+	} on error err {
+		sputs stderr "ERROR: $err"
+
+		exit 1
+	}
+
+	set eid [lindex $eids 0]
+	set link_id [lindex $links 0]
+
+	try {
+		resumeSelectedExperiment $eid
+	} on error err {
+		sputs stderr "ERROR: cannot attach to experiment $eid: '$err'"
+
+		exit 1
+	}
+
+	set is_direct [getLinkDirect $link_id]
+	if { $is_direct && $set_direct } {
+		sputs "Link '$link_idname' already direct"
+
+		exit 0
+	}
+
+	if { ! $is_direct && ! $set_direct } {
+		sputs "Link '$link_idname' already regular"
+
+		exit 0
+	}
+
+	try {
+		createExperimentFiles $eid
+	} on error err {
+		sputs "ERROR: error writing to experiment directory: '$err'"
+
+		exit 1
+	}
+
+	setLinkDirect $link_id $set_direct
+
+	if { $set_direct } {
+		set str "direct"
+	} else {
+		set str "regular"
+	}
+
+	redeployCfg
+
+	sputs "\nLink '$link_idname' set to $str"
+
+	exit 0
+}
+
+foreach arg "{bw b} {BER B} {loss L} {dly d} {dup D}" {
+	lassign $arg arg_name arg_alt
+	lassign [pickArg "-$arg_name" "-$arg_alt" $vlink_args] ${arg_name}_value vlink_args
+}
+
+# validate units and values
+if { $bw_value != "" } {
+	set err 0
+	if { ! [regexp {^[0-9]+(?:\.[0-9]+)?(?:[KMGT](?:bit)?|bit)?$} $bw_value ] } {
+		set err 1
+	} else {
+		regsub "bit" $bw_value "" bw_value
+		set bw_value [expr round ([string map {"K" "*1e3" "M" "*1e6" "G" "*1e9" "T" "*1e12"} $bw_value])]
+		if { $bw_value < 0 || $bw_value > 1000000000000 } {
+			set err 1
+		}
+	}
+
+	if { $err } {
+		sputs stderr "ERROR: validation failed for bandwidth '$bw_value'"
+		sputs stderr " - \[0-1000000000000]"
+		sputs stderr " - no units or bit -> bit/s"
+		sputs stderr " - K or Kbit -> Kbit/s"
+		sputs stderr " - M or Mbit -> Mbit/s"
+		sputs stderr " - G or Gbit -> Gbit/s"
+		sputs stderr " - T or Tbit -> Tbit/s"
+
 		exit 1
 	}
 }
+
+if { $dly_value != "" } {
+	set err 0
+	if { ! [regexp {^[0-9]+(?:\.[0-9]+)?(?:us|ms|s)?$} $dly_value ] } {
+		set err 1
+	} else {
+		set dly_value [expr round ([string map {"us" "*1" "ms" "*1e3" "s" "*1e6"} $dly_value])]
+		if { $dly_value < 0 || $dly_value > 10000000 } {
+			set err 1
+		}
+	}
+
+	if { $err } {
+		sputs stderr "ERROR: validation failed for delay '$dly_value'"
+		sputs stderr " - \[0-10000000]"
+		sputs stderr " - no units or us -> microseconds"
+		sputs stderr " - ms -> miliseconds"
+		sputs stderr " - s -> seconds"
+
+		exit 1
+	}
+}
+
+if { $BER_value != "" } {
+	set err 0
+	if { ! [regexp {^[0-9]+$} $BER_value ] } {
+		set err 1
+	} else {
+		set BER_value [expr round ($BER_value)]
+		if { $BER_value < 0 || $BER_value > 10000000000000 } {
+			set err 1
+		}
+	}
+
+	if { $err } {
+		sputs stderr "ERROR: validation failed for BER '$BER_value'"
+		sputs stderr " - \[0-10000000000000]"
+		sputs stderr " - no units"
+
+		exit 1
+	}
+}
+
+if { $loss_value != "" } {
+	set err 0
+	if { ! [regexp {^[0-9]+(?:\.[0-9]+)?%?$} $loss_value ] } {
+		set err 1
+	} else {
+		regsub "%" $loss_value "" loss_value
+		if { $loss_value < 0 || $loss_value > 100 } {
+			set err 1
+		}
+	}
+
+	if { $err } {
+		sputs stderr "ERROR: validation failed for loss '$loss_value'"
+		sputs stderr " - \[0-100]"
+		sputs stderr " - no units or % -> percentage"
+
+		exit 1
+	}
+}
+
+if { $dup_value != "" } {
+	set err 0
+	if { ! [regexp {^[0-9]+(?:\.[0-9]+)?%?$} $dup_value ] } {
+		set err 1
+	} else {
+		regsub "%" $dup_value "" dup_value
+		if { $dup_value < 0 || $dup_value > 50 } {
+			set err 1
+		}
+	}
+
+	if { $err } {
+		sputs stderr "ERROR: validation failed for duplicate '$dup_value'"
+		sputs stderr " - \[0-50]"
+		sputs stderr " - no units or % -> percentage"
+
+		exit 1
+	}
+}
+
+if { "$bw_value$BER_value$loss_value$dly_value$dup_value" == "" } {
+	vlinkShowHelp
+
+	sputs stderr "No arguments given."
+
+	exit 1
+}
+# /validate units and values
+
+set link_idname [lindex $vlink_args end]
+try {
+	findLink $running_eids $given_eid $link_idname
+} on ok retv {
+	lassign $retv eids links
+} on error err {
+	sputs stderr "ERROR: $err"
+
+	exit 1
+}
+
+set eid [lindex $eids 0]
+set link_id [lindex $links 0]
+
+try {
+	resumeSelectedExperiment $eid
+} on error err {
+	sputs stderr "ERROR: cannot attach to experiment $eid: '$err'"
+
+	exit 1
+}
+
+try {
+	createExperimentFiles $eid
+} on error err {
+	sputs "ERROR: error writing to experiment directory: '$err'"
+
+	exit 1
+}
+
+if { $bw_value != "" } {
+	setLinkBandwidth $link_id $bw_value
+}
+
+if { $BER_value != "" } {
+	setLinkBER $link_id $BER_value
+}
+
+if { $loss_value != "" } {
+	setLinkLoss $link_id $loss_value
+}
+
+if { $dly_value != "" } {
+	setLinkDelay $link_id $dly_value
+}
+
+if { $dup_value != "" } {
+	setLinkDup $link_id $dup_value
+}
+
+redeployCfg
+
+sputs "\nLink '$link_id'"
+
+if { $bw_value != "" } {
+	sputs " - bandwidth set to $bw_value bit/s"
+}
+
+if { $BER_value != "" } {
+	sputs " - BER set to $BER_value"
+}
+
+if { $loss_value != "" } {
+	sputs " - loss set to $loss_value %"
+}
+
+if { $dly_value != "" } {
+	sputs " - delay set to $dly_value us"
+}
+
+if { $dup_value != "" } {
+	sputs " - duplicate set to $dup_value %"
+}
+
+if { [getLinkDirect $link_id] } {
+	sputs stderr "\nWARNING: link '$link_id' is direct, changes not active."
+}
+
+exit 0

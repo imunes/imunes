@@ -310,60 +310,6 @@ proc openFile { { no_recent "" } } {
 	}
 }
 
-proc saveOptions { { option_names {} } } {
-	global all_options all_gui_options default_options custom_options
-	global gui execMode
-
-	if { $option_names == {} } {
-		set option_names [dict keys $default_options]
-	}
-
-	foreach {option_name default_value} $default_options {
-		if { $option_name ni $option_names } {
-			continue
-		}
-
-		if { $option_name in $all_options } {
-			set gui_suffix ""
-		} elseif { $option_name in $all_gui_options } {
-			if { ! $gui } {
-				continue
-			}
-			set gui_suffix "_gui"
-		} else {
-			continue
-		}
-
-		if { $option_name ni [dictGet $custom_options "custom_override"] } {
-			set custom_value [dictGet $custom_options $option_name]
-			if { $custom_value != "" } {
-				set default_value $custom_value
-			}
-		}
-
-		set value [getActiveOption $option_name]
-		if { $value != $default_value } {
-			setOption$gui_suffix $option_name $value
-		} else {
-			unsetOption$gui_suffix $option_name
-		}
-	}
-
-	if { ! $gui && $execMode != "batch" } {
-		set tmp [getFromRunning "modified"]
-		cfgUnset "gui"
-		setToRunning "modified" $tmp
-
-		return
-	}
-
-	if { [cfgGet "gui" "options"] == "" } {
-		set tmp [getFromRunning "modified"]
-		cfgUnset "gui" "options"
-		setToRunning "modified" $tmp
-	}
-}
-
 proc applyOptionsToGUI {} {
 	global all_options all_gui_options default_options custom_options
 	global gui

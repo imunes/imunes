@@ -86,6 +86,7 @@ proc parseCmdArgs { options usage } {
 	global remote_error remote rcmd ttyrcmd remote_mux_path
 	global escalation_comm rescalation_comm
 	global himage himage_args
+	global vlink vlink_args
 	global convert_json
 
 	catch { array set params [::cmdline::getoptions argv $options $usage] } err
@@ -168,6 +169,14 @@ proc parseCmdArgs { options usage } {
 		set gui 0
 		set himage true
 		set himage_args $argv
+
+		return
+	}
+
+	if { $params(vlink) } {
+		set gui 0
+		set vlink true
+		set vlink_args $argv
 
 		return
 	}
@@ -299,7 +308,7 @@ proc printImunesVersion {} {
 proc setPlatformVariables {} {
 	global isOSfreebsd isOSlinux isOSwin remote ttyrcmd rcmd remote_error isOSmac isOSmac_gui
 	global nodecreate_timeout nodeconf_timeout ifacesconf_timeout
-	global himage
+	global himage vlink
 
 	set os_editor [platform::identify]
 
@@ -311,7 +320,7 @@ proc setPlatformVariables {} {
 			set remote_error ""
 		} else {
 			set remote_error "Cannot connect to remote '$remote':\n\n$err"
-			if { $himage } {
+			if { $himage || $vlink } {
 				sputs stderr $remote_error
 
 				exit 1

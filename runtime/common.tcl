@@ -1541,41 +1541,6 @@ proc toggleAutoExecution {} {
 	}
 }
 
-#****f* exec.tcl/dumpLinksToFile
-# NAME
-#   dumpLinksToFile -- dump formatted link list to file
-# SYNOPSIS
-#   dumpLinksToFile $path
-# FUNCTION
-#   Saves the list of all links to $path.
-# INPUTS
-#   * path -- absolute path of the file
-#****
-proc dumpLinksToFile { path } {
-	set data ""
-	set linkDelim ":"
-
-	foreach link_id [getFromRunning "link_list"] {
-		lassign [getLinkPeers $link_id] node1_id node2_id
-		lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
-
-		set name1 [getNodeName $node1_id]
-		set name2 [getNodeName $node2_id]
-
-		set linkname "$name1$linkDelim$name2"
-
-		set lpair [list $node1_id [getIfcName $node1_id $iface1_id]]
-		set rpair [list $node2_id [getIfcName $node2_id $iface2_id]]
-
-		set line "$link_id {$node1_id-$node2_id {{$lpair} {$rpair}} $linkname}\n"
-		set data "$data$line"
-	}
-
-	set data [string trimright $data "\n"]
-
-	writeDataToFile $path $data
-}
-
 #****f* common.tcl/getResumableExperiments
 # NAME
 #   getResumableExperiments -- get resumable experiments

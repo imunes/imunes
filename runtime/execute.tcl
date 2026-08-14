@@ -225,8 +225,6 @@ proc createExperimentFiles { eid } {
 
 	writeDataToFile $basedir/timestamp [clock format [clock seconds]]
 
-	dumpLinksToFile $basedir/links
-
 	if { $execMode == "interactive" } {
 		if { $current_file != "" } {
 			writeDataToFile $basedir/name [file tail $current_file]

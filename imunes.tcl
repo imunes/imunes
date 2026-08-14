@@ -138,6 +138,10 @@ global himage himage_args
 set himage false
 set himage_args ""
 
+global vlink vlink_args
+set vlink false
+set vlink_args ""
+
 set options {
 	{a					"Attach to a running experiment"}
 	{attach				"Attach to a running experiment"}
@@ -163,6 +167,7 @@ set options {
 	{legacy				"Run in legacy/slow mode"}
 	{v					"Print IMUNES version"}
 	{version			"Print IMUNES version"}
+	{vlink				"Get link information or change link settings"}
 	{h					"Print this message"}
 }
 
@@ -550,6 +555,12 @@ if { $himage } {
 	exit 0
 }
 
+if { $vlink } {
+	safeSourceFile "$ROOTDIR/$LIBDIR/scripts/vlink.tcl"
+
+	exit 0
+}
+
 if { $execMode == "interactive" } {
 	if { $selected_experiment != "" && $selected_experiment ni [getResumableExperiments] } {
 		sputs stderr "Experiment with EID '$selected_experiment' not running"
@@ -629,11 +640,6 @@ if { $execMode == "interactive" } {
 
 				exit 1
 			}
-
-			upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
-			set dict_run_gui ""
-
-			cfgUnset "gui"
 		}
 	} elseif { $argv != "" } {
 		if { [file exists $argv] } {

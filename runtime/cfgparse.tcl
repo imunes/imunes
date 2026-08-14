@@ -1251,12 +1251,6 @@ proc loadCfgJson { json_cfg } {
 	setToRunning ipv6_used_list $ipv6_used_list
 	setToRunning mac_used_list $mac_used_list
 
-	if { ! $gui && $execMode != "batch" } {
-		set tmp [getFromRunning "modified"]
-		cfgUnset "gui"
-		setToRunning "modified" $tmp
-	}
-
 	return $dict_cfg
 }
 
@@ -1428,12 +1422,6 @@ proc jsonMigration { from_version to_version } {
 
 		setOption "version" $to_version
 	}
-
-	if { ! $gui && $execMode != "batch" } {
-		set tmp [getFromRunning "modified"]
-		cfgUnset "gui"
-		setToRunning "modified" $tmp
-	}
 }
 
 # use this to read IMUNES json file
@@ -1458,8 +1446,6 @@ proc readCfgJson { fname } {
 
 proc saveCfgJson { fname { no_write "" } } {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-
-	#saveOptions
 
 	if { [checkForExternalApps "jq"] } {
 		set json_cfg [createJson "dictionary" $dict_cfg]

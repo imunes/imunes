@@ -29,7 +29,7 @@ NODESFILES =	$(wildcard nodes/*.tcl nodes/config)
 RUNTIMEFILES =	$(wildcard runtime/*.tcl)
 PATCHESFILES =	$(wildcard src/patches/*)
 
-TOOL_LIBS = scripts/himage.tcl
+TOOL_LIBS = scripts/himage.tcl scripts/vlink.tcl
 
 VROOT =	$(wildcard scripts/*.sh scripts/*.bash)
 TOOLS =	$(filter-out $(VROOT) $(TOOL_LIBS), $(wildcard scripts/*))
@@ -86,8 +86,6 @@ ifeq ($(UNAME_S), Linux)
 else
 	rm -f $(BINDIR)/cleanupAll.linux $(BINDIR)/startxcmd.linux $(BINDIR)/hcp.linux $(BINDIR)/apt-get_imunes
 endif
-
-	mv $(BINDIR)/vlink.tcl $(BINDIR)/vlink
 
 	mkdir -p $(SCRIPTSDIR)
 

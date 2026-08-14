@@ -509,6 +509,37 @@ proc removeIface { node_id iface_id { keep_other_ifaces 1 } { keep_link "" } } {
 	}
 }
 
+proc getIfcFromName { node_id iface_name } {
+	if { $node_id ni [getFromRunning "node_list"] } {
+		return
+	}
+
+	set ifaces {}
+	foreach iface_id [allIfcList $node_id] {
+		if { $iface_name == [getIfcName $node_id $iface_id] } {
+			lappend ifaces $iface_id
+		}
+	}
+
+	return $ifaces
+}
+
+proc getIfcIdFromName { node_id iface_id_name } {
+	if { $node_id ni [getFromRunning "node_list"] } {
+		return
+	}
+
+	if { $iface_id_name in [allIfcList $node_id] } {
+		return $iface_id_name
+	}
+
+	if { $iface_id_name ni [allIfacesNames $node_id] } {
+		return
+	}
+
+	return [getIfcFromName $node_id $iface_id_name]
+}
+
 proc nodeCfggenIfc { node_id iface_id } {
 	global isOSlinux
 
