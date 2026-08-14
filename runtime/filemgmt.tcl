@@ -238,7 +238,11 @@ proc openFile { { no_recent "" } } {
 	global runtimeDir recent_files pinned_recent_files
 
 	set current_file [getFromRunning "current_file"]
-	readCfgJson $current_file
+	try {
+		readCfgJson $current_file
+	} on error err {
+		return -code error $err
+	}
 
 	if { $gui } {
 		set canvas_list [getFromRunning_gui "canvas_list"]
@@ -581,7 +585,17 @@ proc fileOpenDialogBox { { selected_file "" } } {
 	if { $selected_file != "" } {
 		newProject
 		setToRunning "current_file" $selected_file
-		openFile
+
+		try {
+			openFile
+		} on error err {
+			after idle {.dialog1.msg configure -wraplength 4i}
+			tk_dialog .dialog1 "IMUNES error" \
+				"$err" \
+				info 0 Dismiss
+
+			return
+		}
 	}
 }
 

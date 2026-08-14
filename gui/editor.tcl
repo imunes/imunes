@@ -1045,7 +1045,18 @@ proc resumeAndDestroy {} {
 	global selected_experiment
 
 	if { $selected_experiment != "" } {
-		resumeSelectedExperiment $selected_experiment
+		try {
+			resumeSelectedExperiment $selected_experiment
+		} on error err {
+			after idle { .dialog1.msg configure -wraplength 4i }
+			tk_dialog .dialog1 "IMUNES error" \
+				$err \
+				info 0 Dismiss
+
+			closeFile "noprompt"
+
+			return
+		}
 	}
 
 	switchCanvas none
@@ -1172,7 +1183,16 @@ proc launchBrowser { url } {
 
 proc toggleAutoExecutionGUI { { new_value "" } } {
 	if { $new_value == "" } {
-		toggleAutoExecution
+		try {
+			toggleAutoExecution
+		} on error err {
+			after idle { .dialog1.msg configure -wraplength 4i }
+			tk_dialog .dialog1 "IMUNES error" \
+				$err \
+				info 0 Dismiss
+
+			return
+		}
 	}
 
 	for { set index 0 } { $index <= [.menubar.experiment index last] } { incr index } {

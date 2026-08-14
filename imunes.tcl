@@ -520,7 +520,13 @@ if { $convert_json } {
 	setToRunning "redolevel" 0
 	setOption_gui "zoom" $zoom
 
-	readCfgJson $currentFileBatch
+	try {
+		readCfgJson $currentFileBatch
+	} on error err {
+		sputs stderr "ERROR: $err"
+
+		exit 1
+	}
 
 	setToRunning_gui "curcanvas" [lindex [getFromRunning_gui "canvas_list"] 0]
 	setToRunning "current_file" $argv
@@ -605,18 +611,40 @@ if { $execMode == "interactive" } {
 		if { $gui } {
 			resumeAndDestroy
 		} else {
-			resumeSelectedExperiment $selected_experiment
+			try {
+				resumeSelectedExperiment $selected_experiment
+			} on error err {
+				sputs stderr "ERROR: $err"
+
+				exit 1
+			}
 
 			upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
 			set dict_run_gui ""
 
 			cfgUnset "gui"
 		}
-	} else {
-		if { $argv != "" && [file exists $argv] } {
+	} elseif { $argv != "" } {
+		if { [file exists $argv] } {
 			setToRunning "cwd" [pwd]
 			setToRunning "current_file" $argv
-			openFile
+			try {
+				openFile
+			} on error err {
+				sputs stderr "ERROR: $err"
+
+				exit 1
+			}
+		} else {
+			set err "ERROR: file '$argv' does not exist."
+			if { $gui } {
+				after idle { .dialog1.msg configure -wraplength 5i }
+				tk_dialog .dialog1 "IMUNES error" \
+					$err \
+					info 0 Dismiss
+			} else {
+				sputs stderr $err
+			}
 		}
 	}
 
@@ -695,7 +723,13 @@ if { $execMode == "interactive" } {
 		setToRunning "redolevel" 0
 		setToRunning "current_file" $currentFileBatch
 
-		readCfgJson $currentFileBatch
+		try {
+			readCfgJson $currentFileBatch
+		} on error err {
+			sputs stderr "ERROR: $err"
+
+			exit 1
+		}
 
 		setToRunning "cwd" [pwd]
 		setToRunning "current_file" $argv
@@ -745,9 +779,15 @@ if { $execMode == "interactive" } {
 			setToRunning "redolevel" 0
 			setToRunning "current_file" [getRunningExperimentConfigPath $eid_base]
 
-			readCfgJson [getFromRunning "current_file"]
+			try {
+				readCfgJson [getFromRunning "current_file"]
+				readRunningVarsFile $eid_base
+			} on error err {
+				sputs stderr "ERROR reading IMUNES configuration files: $err"
 
-			readRunningVarsFile $eid_base
+				exit 1
+			}
+
 			setToRunning "cfg_deployed" true
 
 			if { [getFromExecuteVars "terminate_cfg"] == "" } {

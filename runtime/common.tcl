@@ -981,6 +981,50 @@ proc setOperMode { new_oper_mode } {
 		if { [checkExternalInterfaces] } {
 			return
 		}
+	} elseif {
+		! [getFromRunning "cfg_deployed"] &&
+		$new_oper_mode == "edit"
+	} {
+		set eid [getFromRunning "eid"]
+		setToExecuteVars "terminate_cfg" [cfgGet]
+
+		if { $gui } {
+			if { [getActiveOption "editor_only"] } {
+				.menubar.experiment entryconfigure "Execute" -state disabled
+			} else {
+				.menubar.experiment entryconfigure "Execute" -state normal
+			}
+
+			.menubar.experiment entryconfigure "Terminate" -state disabled
+			.menubar.experiment entryconfigure "Restart" -state disabled
+			.menubar.experiment entryconfigure "Refresh running experiment" -state disabled
+
+			if { [getFromRunning "undolevel"] > 0 } {
+				.menubar.edit entryconfigure "Undo" -state normal
+			} else {
+				.menubar.edit entryconfigure "Undo" -state disabled
+			}
+
+			if { [getFromRunning "redolevel"] > [getFromRunning "undolevel"] } {
+				.menubar.edit entryconfigure "Redo" -state normal
+			} else {
+				.menubar.edit entryconfigure "Redo" -state disabled
+			}
+		}
+
+		setToRunning "oper_mode" "edit"
+		unsetRunning "running_state"
+
+		if { $gui } {
+			.bottom.experiment_id configure -text ""
+			.bottom.oper_mode configure -text "edit mode"
+			.bottom.oper_mode configure -foreground "black"
+
+			catch { redrawAll }
+			$main_canvas_elem config -cursor left_ptr
+		}
+
+		return
 	}
 
 	if { $gui } {
@@ -1237,7 +1281,7 @@ proc readDataFromFile { path } {
 	global remote rcmd
 
 	if { [isNotOk "test -f \"$path\""] } {
-		return ""
+		return -code error "Cannot open file '$path' for reading."
 	}
 
 	if { $remote != "" } {
@@ -1260,7 +1304,13 @@ proc readRunningVarsFile { eid } {
 	upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
 	upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
 
-	set vars_dict [readDataFromFile $runtimeDir/$eid/runningVars]
+	try {
+		readDataFromFile $runtimeDir/$eid/runningVars
+	} on ok data {
+		set vars_dict $data
+	} on error err {
+		return -code error $err
+	}
 
 	set dict_run [dictGet $vars_dict "dict_run"]
 	set dict_run_gui [dictGet $vars_dict "dict_run_gui"]
@@ -1376,16 +1426,30 @@ proc resumeSelectedExperiment { exp } {
 	set eid [getFromRunning "eid"]
 	if { $eid != "" } {
 		set curr_eid $eid
-		if { $curr_eid == $exp } {
+		if { $curr_eid == $exp && [getFromRunning "cfg_deployed"] } {
 			return
 		}
 	}
 
 	newProject
 
-	setToRunning "current_file" [getRunningExperimentConfigPath $exp]
-	openFile "no_recent"
-	readRunningVarsFile $exp
+	set current_file ""
+	try {
+		getRunningExperimentConfigPath $exp
+	} on ok current_file {
+	} on error err {
+		return -code error $err
+	} finally {
+		setToRunning "current_file" $current_file
+	}
+
+	try {
+		openFile
+		readRunningVarsFile $exp
+	} on error err {
+		return -code error $err
+	}
+
 	#catch { cd [getFromRunning "cwd"] }
 
 	setToRunning "eid" $exp
@@ -1398,6 +1462,8 @@ proc resumeSelectedExperiment { exp } {
 }
 
 proc refreshRunningExperimentGUI {} {
+	global gui execMode
+
 	try {
 		refreshRunningExperiment
 	} on ok eid {
@@ -1405,7 +1471,13 @@ proc refreshRunningExperimentGUI {} {
 
 		return $eid
 	} on error err {
-		statline $err
+		if { ! $gui || $execMode == "batch" } {
+			statline $err
+		} else {
+			after idle { .dialog1.msg configure -wraplength 4i }
+			tk_dialog .dialog1 "IMUNES error" $err \
+				info 0 Dismiss
+		}
 
 		return ""
 	}
@@ -1418,25 +1490,26 @@ proc refreshRunningExperiment {} {
 
 	set eid [getFromRunning "eid"]
 
-	setToRunning "current_file" [getRunningExperimentConfigPath $eid]
-	if { [getFromRunning "current_file"] == "" } {
-		global execMode
-
-		set msg "The experiment with EID $eid has been terminated from outside this IMUNES instance."
-		if { $execMode != "batch" } {
-			after idle { .dialog1.msg configure -wraplength 4i }
-			tk_dialog .dialog1 "IMUNES error" \
-				$msg \
-				info 0 Dismiss
-		}
-
+	set current_file ""
+	try {
+		getRunningExperimentConfigPath $eid
+	} on ok current_file {
+	} on error err {
+		setToRunning "cfg_deployed" "false"
 		setOperMode "edit"
 
-		return -code error $msg
+		return -code error "$err\n\nThe experiment with EID $eid has been possibly terminated from outside this IMUNES instance."
+	} finally {
+		setToRunning "current_file" $current_file
 	}
 
-	openFile
-	readRunningVarsFile $eid
+	try {
+		openFile
+		readRunningVarsFile $eid
+	} on error err {
+		return -code error $err
+	}
+
 	setToRunning "cfg_deployed" true
 	setOperMode exec
 
@@ -1455,6 +1528,15 @@ proc toggleAutoExecution {} {
 	}
 
 	if { [getFromRunning "cfg_deployed"] } {
+		try {
+			getRunningExperimentConfigPath [getFromRunning "eid"]
+		} on error err {
+			setToRunning "cfg_deployed" "false"
+			setOperMode "edit"
+
+			return -code error "$err\n\nThe experiment with EID $eid has been possibly terminated from outside this IMUNES instance."
+		}
+
 		createRunningVarsFile [getFromRunning "eid"]
 	}
 }
@@ -1534,7 +1616,14 @@ proc getResumableExperiments {} {
 proc getExperimentTimestampFromFile { eid } {
 	global runtimeDir
 
-	return [string trim [readDataFromFile "$runtimeDir/$eid/timestamp"]]
+	try {
+		readDataFromFile "$runtimeDir/$eid/timestamp"
+	} on ok data {
+	} on error err {
+		set data ""
+	}
+
+	return [string trim $data]
 }
 
 #****f* exec.tcl/getExperimentNameFromFile
@@ -1552,7 +1641,14 @@ proc getExperimentTimestampFromFile { eid } {
 proc getExperimentNameFromFile { eid } {
 	global runtimeDir
 
-	return [readDataFromFile "$runtimeDir/$eid/name"]
+	try {
+		readDataFromFile "$runtimeDir/$eid/name"
+	} on ok data {
+	} on error err {
+		set data "N/A"
+	}
+
+	return $data
 }
 
 #****f* exec.tcl/getRunningExperimentConfigPath
@@ -1574,10 +1670,20 @@ proc getRunningExperimentConfigPath { eid } {
 	if { $remote != "" } {
 		set file_id [file tempfile tmppath]
 
-		puts $file_id [readDataFromFile $file_path]
-		set file_path $tmppath
-
-		close $file_id
+		try {
+			readDataFromFile $file_path
+		} on ok data {
+			puts $file_id $data
+			set file_path $tmppath
+		} on error err {
+			return -code error $err
+		} finally {
+			close $file_id
+		}
+	} else {
+		if { ! [file exists $file_path] } {
+			return -code error "File '$file_path' does not exist."
+		}
 	}
 
 	return $file_path
@@ -1636,6 +1742,27 @@ proc redeployCfg {} {
 		return
 	}
 
+	set eid [getFromRunning "eid"]
+
+	try {
+		getRunningExperimentConfigPath $eid
+	} on error err {
+		setToRunning "cfg_deployed" "false"
+		setOperMode "edit"
+
+		set err "$err\n\nThe experiment with EID $eid has been possibly terminated from outside this IMUNES instance."
+		if { $gui } {
+			after idle { .dialog1.msg configure -wraplength 4i }
+			tk_dialog .dialog1 "IMUNES error" \
+				$err \
+				info 0 Dismiss
+		} else {
+			sputs stderr $err
+		}
+
+		return
+	}
+
 	if { $gui } {
 		bind $main_canvas_elem <1> ""
 		bind $main_canvas_elem <B1-Motion> ""
@@ -1644,8 +1771,6 @@ proc redeployCfg {} {
 
 	try {
 		if { ! [getFromRunning "auto_execution"] } {
-			set eid [getFromRunning "eid"]
-
 			createExperimentFiles $eid
 			createRunningVarsFile $eid
 		} else {

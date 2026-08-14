@@ -1444,7 +1444,13 @@ proc readCfgJson { fname } {
 	set json_cfg [read $fd]
 	close $fd
 
-	set dict_cfg [loadCfgJson $json_cfg]
+	try {
+		loadCfgJson $json_cfg
+	} on ok dict_cfg {
+	} on error err {
+		return -code error "Cannot parse '$fname' - $err"
+	}
+
 	handleVersionMismatch [getOption "version"] $fname
 
 	return $dict_cfg
