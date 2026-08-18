@@ -142,6 +142,10 @@ global vlink vlink_args
 set vlink false
 set vlink_args ""
 
+global hcp hcp_args
+set hcp false
+set hcp_args ""
+
 set options {
 	{a					"Attach to a running experiment"}
 	{attach				"Attach to a running experiment"}
@@ -154,6 +158,7 @@ set options {
 	{convert			"Convert from legacy .imn to JSON file format"}
 	{d.secret			"Turn on debug mode"}
 	{dd.arg.secret		"" "Turn on debug mode, redirect to file"}
+	{hcp				"Copy files to/from nodes"}
 	{himage				"Get node information or run command in node"}
 	{j.arg				"h" "Max parallel jobs (0 = number of CPUs, h = number of CPUs/2)"}
 	{p					"Prepare virtual root file system"}
@@ -557,6 +562,12 @@ if { $himage } {
 
 if { $vlink } {
 	safeSourceFile "$ROOTDIR/$LIBDIR/scripts/vlink.tcl"
+
+	exit 0
+}
+
+if { $hcp } {
+	safeSourceFile "$ROOTDIR/$LIBDIR/scripts/hcp.tcl"
 
 	exit 0
 }

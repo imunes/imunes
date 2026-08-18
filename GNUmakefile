@@ -29,7 +29,7 @@ NODESFILES =	$(wildcard nodes/*.tcl nodes/config)
 RUNTIMEFILES =	$(wildcard runtime/*.tcl)
 PATCHESFILES =	$(wildcard src/patches/*)
 
-TOOL_LIBS = scripts/himage.tcl scripts/vlink.tcl
+TOOL_LIBS = scripts/himage.tcl scripts/vlink.tcl scripts/hcp.tcl
 
 VROOT =	$(wildcard scripts/*.sh scripts/*.bash)
 TOOLS =	$(filter-out $(VROOT) $(TOOL_LIBS), $(wildcard scripts/*))
@@ -79,12 +79,11 @@ install: uninstall netgraph
 		chmod 755 $(BINDIR)/$${file}; \
 	done ;
 ifeq ($(UNAME_S), Linux)
-	mv $(BINDIR)/hcp.linux $(BINDIR)/hcp
 	mv $(BINDIR)/cleanupAll.linux $(BINDIR)/cleanupAll
 	mv $(BINDIR)/startxcmd.linux $(BINDIR)/startxcmd
 	rm -f $(BINDIR)/pkg_add_imunes $(BINDIR)/pkg_imunes
 else
-	rm -f $(BINDIR)/cleanupAll.linux $(BINDIR)/startxcmd.linux $(BINDIR)/hcp.linux $(BINDIR)/apt-get_imunes
+	rm -f $(BINDIR)/cleanupAll.linux $(BINDIR)/startxcmd.linux $(BINDIR)/apt-get_imunes
 endif
 
 	mkdir -p $(SCRIPTSDIR)
