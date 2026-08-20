@@ -153,18 +153,18 @@ set options {
 	{eid.arg			"" "Specify experiment ID"}
 	{b					"Turn on batch mode"}
 	{batch				"Turn on batch mode"}
-	{c.secret			"Run in CLI mode"}
-	{cli.secret			"Run in CLI mode"}
+	{c					"Run in CLI mode"}
+	{cli				"Run in CLI mode"}
 	{convert			"Convert from legacy .imn to JSON file format"}
-	{d.secret			"Turn on debug mode"}
-	{dd.arg.secret		"" "Turn on debug mode, redirect to file"}
+	{d					"Turn on debug mode"}
+	{dd.arg				"" "Turn on debug mode, redirect to file"}
 	{hcp				"Copy files to/from nodes"}
 	{himage				"Get node information or run command in node"}
 	{j.arg				"h" "Max parallel jobs (0 = number of CPUs, h = number of CPUs/2)"}
 	{p					"Prepare virtual root file system"}
 	{prepare			"Prepare virtual root file system"}
-	{r.arg.secret		"" "Connect to remote host via SSH"}
-	{remote.arg.secret	"" "Connect to remote host via SSH"}
+	{r.arg				"" "Connect to remote host via SSH"}
+	{remote.arg			"" "Connect to remote host via SSH"}
 	{f					"Force virtual root preparation (delete existing vroot)"}
 	{force				"Force virtual root preparation (delete existing vroot)"}
 	{i					"Setup devfs rules for virtual nodes (Only on FreeBSD)"}
