@@ -8105,15 +8105,7 @@ proc subnetApply { ip_version entry_elem node_id iface_id } {
 		return
 	}
 
-	if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
-		setToExecuteVars "terminate_cfg" [cfgGet]
-	}
-
 	assignSubnet $ip_version $node_id $iface_id [selectedNodes] $new_subnet
-
-	if { [getFromRunning "stop_sched"] } {
-		redeployCfg
-	}
 
 	set changed 1
 	updateUndoLog

@@ -1436,6 +1436,10 @@ proc appendNodeSubnetRoutes { node_id routes { ip_version "both" } } {
 }
 
 proc assignSubnet { ip_version node_id iface_id selected { subnet "" } } {
+	if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+		setToExecuteVars "terminate_cfg" [cfgGet]
+	}
+
 	set ip_version_num [string index $ip_version 3]
 	if { $ip_version == "ipv4" } {
 		set overlap_proc "::ip::isOverlap"
@@ -1480,6 +1484,7 @@ proc assignSubnet { ip_version node_id iface_id selected { subnet "" } } {
 		set nodes_ifaces [removeFromList $nodes_ifaces [list $node_subnet_data]]
 	}
 
+	set redeploy_needed 0
 	# change selected nodes interfaces to new subnet
 	foreach node_subnet_data $nodes_ifaces {
 		lassign $node_subnet_data - subnet_node_id subnet_iface_id
@@ -1502,6 +1507,7 @@ proc assignSubnet { ip_version node_id iface_id selected { subnet "" } } {
 			continue
 		}
 
+		set redeploy_needed 1
 		lappend used_addrs $addr
 
 		setToRunning "${ip_version}_used_list" \
@@ -1510,6 +1516,10 @@ proc assignSubnet { ip_version node_id iface_id selected { subnet "" } } {
 		# setIfcIPv4addrs/setIfcIPv6addrs
 		setIfcIPv${ip_version_num}addrs $subnet_node_id $subnet_iface_id $addr
 		lappendToRunning "${ip_version}_used_list" $addr
+	}
+
+	if { $redeploy_needed && [getFromRunning "stop_sched"] } {
+		redeployCfg
 	}
 }
 

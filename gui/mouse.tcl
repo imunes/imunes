@@ -2159,15 +2159,7 @@ proc removeIPv6Nodes { nodes all_ifaces } {
 proc matchSubnet { ip_version node_id iface_id subnet } {
 	global changed main_canvas_elem
 
-	if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
-		setToExecuteVars "terminate_cfg" [cfgGet]
-	}
-
 	assignSubnet $ip_version $node_id $iface_id [selectedNodes] $subnet
-
-	if { [getFromRunning "stop_sched"] } {
-		redeployCfg
-	}
 
 	set changed 1
 	updateUndoLog

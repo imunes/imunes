@@ -682,10 +682,6 @@ proc menu_ifacesSettings { node_id root_menu } {
 			{ node_id iface_id ip_version } {
 				global main_canvas_elem
 
-				if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
-					setToExecuteVars "terminate_cfg" [cfgGet]
-				}
-
 				switch -exact -- $ip_version {
 					"ipv4" {
 						set tmp [getActiveOption "IPv4autoAssign"]
@@ -699,10 +695,6 @@ proc menu_ifacesSettings { node_id root_menu } {
 						addressChangeDialog "ipv6" $node_id $iface_id
 						setGlobalOption "IPv6autoAssign" $tmp
 					}
-				}
-
-				if { [getFromRunning "stop_sched"] } {
-					redeployCfg
 				}
 
 				$main_canvas_elem config -cursor left_ptr
