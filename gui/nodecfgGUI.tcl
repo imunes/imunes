@@ -2640,6 +2640,24 @@ proc genericOptionImportedfilesGUI_refresh { imported_files } {
 
 		global file_content$index
 		set file_content$index [dict get $imported_file "file_content"]
+
+		# overwrite with linked node file if it exists
+		if { [string index $path 0] == "@" } {
+			# remove @ and split by :
+			set check_path [join [lassign [split [string range $path 1 end] ":"] linked_node_id] ":"]
+			foreach linked_import_file_entry [getNodeGenericOptions $linked_node_id "imported_files"] {
+				set linked_path [dict get $linked_import_file_entry "path"]
+				if { [string index $linked_path 0] == "@" } {
+					continue
+				}
+
+				if { $check_path == $linked_path } {
+					set file_content$index [dict get $linked_import_file_entry "file_content"]
+					break
+				}
+			}
+		}
+
 		if { $is_encoded } {
 			set file_content$index [base64::decode [set file_content$index]]
 		} else {
@@ -2676,13 +2694,44 @@ proc genericOptionImportedfilesGUI_refresh { imported_files } {
 		]
 
 		set tmp_command [list apply {
-			{ index args } {
+			{ index path_entry args } {
 				global file_content$index
+
+				set path [string trim [$path_entry get]]
+				if { [string index $path 0] == "@" } {
+					set exists 0
+					set is_encoded 0
+					set check_path [join [lassign [split [string range $path 1 end] ":"] linked_node_id] ":"]
+					foreach linked_import_file_entry [getNodeGenericOptions $linked_node_id "imported_files"] {
+						set linked_path [dict get $linked_import_file_entry "path"]
+						if { [string index $linked_path 0] == "@" } {
+							continue
+						}
+
+						if { $check_path == $linked_path } {
+							set file_content$index [dict get $linked_import_file_entry "file_content"]
+							set is_encoded [dict get $linked_import_file_entry "is_encoded"]
+							set exists 1
+							break
+						}
+					}
+
+					if { $exists } {
+						if { $is_encoded } {
+							set file_content$index [base64::decode [set file_content$index]]
+						} else {
+							set file_content$index [join [set file_content$index] "\n"]
+						}
+					} else {
+						set file_content$index ""
+					}
+				}
 
 				openEditor [set file_content$index] {*}$args
 			}
 		} \
 			$index \
+			$content.path$index \
 			{*}$callback_proc
 		]
 
@@ -2713,13 +2762,44 @@ proc genericOptionImportedfilesGUI_refresh { imported_files } {
 		]
 
 		set tmp_command [list apply {
-			{ index args } {
+			{ index path_entry args } {
 				global file_content$index
+
+				set path [string trim [$path_entry get]]
+				if { [string index $path 0] == "@" } {
+					set exists 0
+					set is_encoded 0
+					set check_path [join [lassign [split [string range $path 1 end] ":"] linked_node_id] ":"]
+					foreach linked_import_file_entry [getNodeGenericOptions $linked_node_id "imported_files"] {
+						set linked_path [dict get $linked_import_file_entry "path"]
+						if { [string index $linked_path 0] == "@" } {
+							continue
+						}
+
+						if { $check_path == $linked_path } {
+							set file_content$index [dict get $linked_import_file_entry "file_content"]
+							set is_encoded [dict get $linked_import_file_entry "is_encoded"]
+							set exists 1
+							break
+						}
+					}
+
+					if { $exists } {
+						if { $is_encoded } {
+							set file_content$index [base64::decode [set file_content$index]]
+						} else {
+							set file_content$index [join [set file_content$index] "\n"]
+						}
+					} else {
+						set file_content$index ""
+					}
+				}
 
 				openExternalEditor [set file_content$index] {*}$args
 			}
 		} \
 			$index \
+			$content.path$index \
 			{*}$callback_proc
 		]
 
@@ -2793,6 +2873,8 @@ proc genericOptionImportedfiles_save { imported_files { ignore_errors "" } } {
 	set content $imported_files.content
 	set option_keys "enabled path file_mode file_content is_encoded"
 
+	set node_list [getFromRunning "node_list"]
+
 	set error_state ""
 	foreach index [lsort -integer [dict keys $genericoptions_imported_files]] {
 		set err ""
@@ -2804,10 +2886,41 @@ proc genericOptionImportedfiles_save { imported_files { ignore_errors "" } } {
 		set elem $content.enabled$index
 		set new_enabled [expr { "selected" in [$elem state] }]
 
+		global file_content$index
+
 		set elem $content.path$index
 		set new_path [string trim [$elem get]]
 		if { $new_path == "" } {
 			set err "Destination path cannot be empty."
+		} elseif { [string index $new_path 0] == "@" } {
+			# linked from another file, remove @ and split by :
+			set check_path [join [lassign [split [string range $new_path 1 end] ":"] linked_node_id] ":"]
+			if { $linked_node_id ni $node_list } {
+				set err "Non-existent node '$linked_node_id'."
+			} elseif { $check_path == "" } {
+				set err "Destination path cannot be empty."
+			} elseif { [string index $check_path 0] == "@" } {
+				set err "Recursive linking not supported."
+			} else {
+				set exists 0
+				foreach linked_import_file_entry [getNodeGenericOptions $linked_node_id "imported_files"] {
+					set linked_path [dict get $linked_import_file_entry "path"]
+					if { [string index $linked_path 0] == "@" } {
+						continue
+					}
+
+					if { $check_path == $linked_path } {
+						set exists 1
+						break
+					}
+				}
+
+				if { $exists } {
+					set file_content$index ""
+				} else {
+					set err "Path '$check_path' on node '$linked_node_id' does not exists."
+				}
+			}
 		} elseif { [file pathtype $new_path] != "absolute" || $new_path == "/" } {
 			set err "Destination path '$new_path' must be an absolute path and must not be /."
 		}
@@ -2822,7 +2935,6 @@ proc genericOptionImportedfiles_save { imported_files { ignore_errors "" } } {
 			}
 		}
 
-		global file_content$index
 		set new_file_content [set file_content$index]
 
 		set elem $content.is_encoded$index
@@ -2913,6 +3025,23 @@ proc genericOptionImporteddirsGUI_refresh { imported_dirs } {
 
 		global dir_content$index
 		set dir_content$index [dict get $imported_dir "dir_content"]
+
+		# overwrite with linked node dir if it exists
+		if { [string index $path 0] == "@" } {
+			# remove @ and split by :
+			set check_path [join [lassign [split [string range $path 1 end] ":"] linked_node_id] ":"]
+			foreach linked_import_dir_entry [getNodeGenericOptions $linked_node_id "imported_dirs"] {
+				set linked_path [dict get $linked_import_dir_entry "path"]
+				if { [string index $linked_path 0] == "@" } {
+					continue
+				}
+
+				if { $check_path == $linked_path } {
+					set dir_content$index [dict get $linked_import_dir_entry "dir_content"]
+					break
+				}
+			}
+		}
 
 		ttk::checkbutton $content.enabled$index -text "($index)"
 		$content.enabled$index state [dict get $checkbutton_dict $enabled]
@@ -3018,6 +3147,35 @@ proc genericOptionImporteddirs_save { imported_dirs { ignore_errors "" } } {
 		set new_path [string trim [$elem get]]
 		if { $new_path == "" } {
 			set err "Destination path cannot be empty."
+		} elseif { [string index $new_path 0] == "@" } {
+			# linked from another dir, remove @ and split by :
+			set check_path [join [lassign [split [string range $new_path 1 end] ":"] linked_node_id] ":"]
+			if { $linked_node_id ni $node_list } {
+				set err "Non-existent node '$linked_node_id'."
+			} elseif { $check_path == "" } {
+				set err "Destination path cannot be empty."
+			} elseif { [string index $check_path 0] == "@" } {
+				set err "Recursive linking not supported."
+			} else {
+				set exists 0
+				foreach linked_import_dir_entry [getNodeGenericOptions $linked_node_id "imported_dirs"] {
+					set linked_path [dict get $linked_import_dir_entry "path"]
+					if { [string index $linked_path 0] == "@" } {
+						continue
+					}
+
+					if { $check_path == $linked_path } {
+						set exists 1
+						break
+					}
+				}
+
+				if { $exists } {
+					set dir_content$index ""
+				} else {
+					set err "Path '$check_path' on node '$linked_node_id' does not exists."
+				}
+			}
 		} elseif { [file pathtype $new_path] != "absolute" || [string index $new_path end] == "/" } {
 			set err "Destination path '$new_path' must be an absolute path to a dir."
 		}

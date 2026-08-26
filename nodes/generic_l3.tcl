@@ -323,6 +323,42 @@ namespace eval genericL3 {
 			return false
 		}
 
+		foreach import_file_entry [getNodeGenericOptions $node_id "imported_files"] {
+			if { [dict get $import_file_entry "enabled"] == 0 } {
+				continue
+			}
+
+			set import_file_path [dict get $import_file_entry "path"]
+			if { [string index $import_file_path 0] == "@" } {
+				# remove @ and split by :
+				set import_file_path [join [lassign [split [string range $import_file_path 1 end] ":"] linked_node_id] ":"]
+				if { $linked_node_id ni [getFromRunning "node_list"] } {
+					addStateNode $node_id "error"
+					setStateErrorMsgNode $node_id "WARNING: linked node '$linked_node_id' does not exist, cannot link file '$import_file_path'."
+
+					return false
+				}
+			}
+		}
+
+		foreach import_dir_entry [getNodeGenericOptions $node_id "imported_dirs"] {
+			if { [dict get $import_dir_entry "enabled"] == 0 } {
+				continue
+			}
+
+			set import_dir_path [dict get $import_dir_entry "path"]
+			if { [string index $import_dir_path 0] == "@" } {
+				# remove @ and split by :
+				set import_dir_path [join [lassign [split [string range $import_dir_path 1 end] ":"] linked_node_id] ":"]
+				if { $linked_node_id ni [getFromRunning "node_list"] } {
+					addStateNode $node_id "error"
+					setStateErrorMsgNode $node_id "WARNING: linked node '$linked_node_id' does not exist, cannot link directory '$import_dir_path'."
+
+					return false
+				}
+			}
+		}
+
 		foreach iface_id [allIfcList $node_id] {
 			setStateNodeIface $node_id $iface_id ""
 		}
@@ -626,6 +662,15 @@ namespace eval genericL3 {
 			}
 
 			set import_dir_path [dict get $import_dir_entry "path"]
+
+			# overwrite with linked node dir if it exists
+			if { [string index $import_dir_path 0] == "@" } {
+				# remove @ and split by :
+				set import_dir_path [join [lassign [split [string range $import_dir_path 1 end] ":"] linked_node_id] ":"]
+				if { $linked_node_id ni [getFromRunning "node_list"] } {
+					continue
+				}
+			}
 
 			lappend cmd "mkdir -p $import_dir_path"
 			lappend cmd "tar xf ${import_dir_path}.tar -C $import_dir_path"

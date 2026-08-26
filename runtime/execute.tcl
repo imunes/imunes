@@ -1092,6 +1092,19 @@ proc execute_nodesImportFiles { nodes nodes_count w } {
 			set import_file_file_mode [dict get $import_file_entry "file_mode"]
 			set import_file_is_encoded [dict get $import_file_entry "is_encoded"]
 			set import_file_content [dict get $import_file_entry "file_content"]
+
+			# overwrite with linked node file if it exists
+			if { [string index $import_file_path 0] == "@" } {
+				# remove @ and split by :
+				set import_file_path [join [lassign [split [string range $import_file_path 1 end] ":"] linked_node_id] ":"]
+				foreach linked_import_file_entry [getNodeGenericOptions $linked_node_id "imported_files"] {
+					if { $import_file_path == [dict get $linked_import_file_entry "path"] } {
+						set import_file_content [dict get $linked_import_file_entry "file_content"]
+						break
+					}
+				}
+			}
+
 			if { $import_file_is_encoded } {
 				set import_file_content [base64::decode $import_file_content]
 			} else {
@@ -1112,6 +1125,19 @@ proc execute_nodesImportFiles { nodes nodes_count w } {
 
 			set import_dir_path [dict get $import_dir_entry "path"]
 			set import_dir_content [dict get $import_dir_entry "dir_content"]
+
+			# overwrite with linked node dir if it exists
+			if { [string index $import_dir_path 0] == "@" } {
+				# remove @ and split by :
+				set import_dir_path [join [lassign [split [string range $import_dir_path 1 end] ":"] linked_node_id] ":"]
+				foreach linked_import_dir_entry [getNodeGenericOptions $linked_node_id "imported_dirs"] {
+					if { $import_dir_path == [dict get $linked_import_dir_entry "path"] } {
+						set import_dir_content [dict get $linked_import_dir_entry "dir_content"]
+						break
+					}
+				}
+			}
+
 			set import_dir_content [base64::decode $import_dir_content]
 
 			try {
