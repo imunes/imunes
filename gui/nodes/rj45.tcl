@@ -138,7 +138,7 @@ namespace eval ${MODULE}::gui {
 		wm title $wi "rj45 configuration"
 
 		configGUI_nodeName $wi $node_id "Node name:"
-		set tabs [configGUI_addNotebookRj45 $wi $node_id [lsort [_ifcList $node_cfg]]]
+		set tabs [configGUI_addNotebookRj45 $wi $node_id [lsort -dictionary [_ifcList $node_cfg]]]
 
 		configGUI_nodeRestart $wi $node_id
 		configGUI_buttonsACNode $wi $node_id
