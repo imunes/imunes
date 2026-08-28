@@ -1420,12 +1420,21 @@ menu .button3logifc -tearoff 0
 #
 # Invisible pseudo links
 #
-global invisible
+global invisible unsupported_invisible
 set invisible 0
+set unsupported_invisible 0
 bind . <Control-i> {
 	global invisible
 
 	set invisible [expr $invisible ^ 1]
+
+	redrawAll
+}
+
+bind . <Control-j> {
+	global unsupported_invisible
+
+	set unsupported_invisible [expr $unsupported_invisible ^ 1]
 
 	redrawAll
 }

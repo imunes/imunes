@@ -182,7 +182,7 @@ proc redrawAll {} {
 #   * node_id -- node id
 #****
 proc drawNode { node_id } {
-	global runnable_node_types main_canvas_elem
+	global runnable_node_types main_canvas_elem unsupported_invisible
 
 	if { [isPseudoNode $node_id] } {
 		drawPseudoNode $node_id
@@ -242,7 +242,7 @@ proc drawNode { node_id } {
 		set image_h [image height img_$custom_icon]
 	}
 
-	if { $type ni $runnable_node_types } {
+	if { $type ni $runnable_node_types && ! $unsupported_invisible } {
 		global defaultFontSize
 
 		$main_canvas_elem create text $x [expr $y - int($image_h/2) - 1.3*$defaultFontSize] \
