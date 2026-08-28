@@ -1225,6 +1225,7 @@ proc loadCfgJson { json_cfg } {
 		}
 
 		foreach iface_id [allIfcList $node_id] {
+			# TODO: check VLAN ifaces!
 			if { [isIfcLogical $node_id $iface_id] } {
 				continue
 			}

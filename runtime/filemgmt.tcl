@@ -104,6 +104,10 @@ proc newProject {} {
 	set dict_run_gui [dict create]
 	set execute_vars [dict create]
 
+	foreach var_name [array names ::env] {
+		setToRunning "envvars::$var_name" $::env($var_name)
+	}
+
 	setToRunning "eid" ""
 	setToRunning "oper_mode" "edit"
 	setToRunning "auto_execution" 1

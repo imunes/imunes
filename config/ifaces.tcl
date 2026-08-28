@@ -411,8 +411,11 @@ proc setIfcType { node_id iface_id type } {
 proc getIfcName { node_id iface_id } {
 	set iface_name [cfgGet "nodes" $node_id "ifaces" $iface_id "name"]
 
-	if { [string range $iface_name 0 0] == "\$" } {
-		catch { set iface_name $::env([string range $iface_name 1 end]) }
+	if { [string index $iface_name 0] == "\$" } {
+		set saved_iface_name [getFromRunning "envvars::[string range $iface_name 1 end]"]
+		if { $saved_iface_name != "" } {
+			set iface_name $saved_iface_name
+		}
 	}
 
 	return $iface_name
@@ -422,16 +425,16 @@ proc getIfcName { node_id iface_id } {
 # NAME
 #   setIfcName -- set interface name
 # SYNOPSIS
-#   setIfcName $node_id $iface_id $name
+#   setIfcName $node_id $iface_id $iface_name
 # FUNCTION
 #   Sets the name of the specified interface.
 # INPUTS
 #   * node_id -- node id
 #   * iface_id -- interface id
-#   * name -- new name of the interface
+#   * iface_name -- new name of the interface
 #****
-proc setIfcName { node_id iface_id name } {
-	cfgSet "nodes" $node_id "ifaces" $iface_id "name" $name
+proc setIfcName { node_id iface_id iface_name } {
+	cfgSet "nodes" $node_id "ifaces" $iface_id "name" $iface_name
 
 	# TODO
 	trigger_ifaceRecreate $node_id $iface_id

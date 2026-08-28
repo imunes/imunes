@@ -332,22 +332,22 @@ proc setNodeName { node_id name } {
 #   Sets node's nat interface.
 # INPUTS
 #   * node_id -- node id
-#   * interface -- nat interface
+#   * nat_iface -- nat interface
 #****
-proc setNodeNATIface { node_id interface } {
+proc setNodeNATIface { node_id nat_iface } {
 	set iface_id [lindex [ifcList $node_id] 0]
 
 	set old_interface [getNodeNATIface $node_id]
 	set old_priority [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
 
-	cfgSet "nodes" $node_id "nat_iface" $interface
+	cfgSet "nodes" $node_id "nat_iface" $nat_iface
 	trigger_nodeReconfig $node_id
 
 	set new_priority [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
 
 	if {
-		$old_interface != "UNASSIGNED" && $interface != "UNASSIGNED" ||
-		$old_interface == "UNASSIGNED" && $interface == "UNASSIGNED"
+		$old_interface != "UNASSIGNED" && $nat_iface != "UNASSIGNED" ||
+		$old_interface == "UNASSIGNED" && $nat_iface == "UNASSIGNED"
 	} {
 		return
 	}
@@ -382,8 +382,11 @@ proc setNodeNATIface { node_id interface } {
 proc getNodeNATIface { node_id } {
 	set nat_iface [cfgGet "nodes" $node_id "nat_iface"]
 
-	if { [string range $nat_iface 0 0] == "\$" } {
-		catch { set nat_iface $::env([string range $nat_iface 1 end]) }
+	if { [string index $nat_iface 0] == "\$" } {
+		set saved_nat_iface [getFromRunning "envvars::[string range $nat_iface 1 end]"]
+		if { $saved_nat_iface != "" } {
+			set nat_iface $saved_nat_iface
+		}
 	}
 
 	return $nat_iface
