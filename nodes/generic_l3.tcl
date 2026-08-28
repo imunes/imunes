@@ -620,6 +620,18 @@ namespace eval genericL3 {
 		set init_fname "$VROOT_RUNTIME/init"
 
 		set cmd {}
+		foreach import_dir_entry [getNodeGenericOptions $node_id "imported_dirs"] {
+			if { [dict get $import_dir_entry "enabled"] == 0 } {
+				continue
+			}
+
+			set import_dir_path [dict get $import_dir_entry "path"]
+
+			lappend cmd "mkdir -p $import_dir_path"
+			lappend cmd "tar xf ${import_dir_path}.tar -C $import_dir_path"
+			lappend cmd "rm -f ${import_dir_path}.tar"
+		}
+
 		if { $isOSlinux } {
 			array set sysctls {
 				net.ipv4.icmp_ratelimit					0

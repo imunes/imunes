@@ -2418,9 +2418,6 @@ proc configGUI_advancedVirtOptions { wi node_id virt_types } {
 global cfg_types_dictionary_array
 global cfg_types_array
 
-lappend cfg_types_dictionary_array "imported_files"
-lappend cfg_types_array "file_content"
-
 proc genericOptionsGUI { node_id } {
 	set wi .advanced_options
 
@@ -2478,6 +2475,41 @@ proc genericOptionsGUI { node_id } {
 	# redraw header and existing elements
 	genericOptionImportedfilesGUI_refresh $imported_files
 
+	### Imported dirs tab
+	set imported_dirs $notebook.imported_dirs
+	ttk::frame $imported_dirs
+	$notebook add $imported_dirs -text "Imported dirs"
+
+	global genericoptions_imported_dirs
+	set genericoptions_imported_dirs {}
+	set cfg_imported_dirs [_getNodeGenericOptions $node_cfg "imported_dirs"]
+
+	set index 0
+	foreach cfg_imported_file $cfg_imported_dirs {
+		dict set genericoptions_imported_dirs $index $cfg_imported_file
+
+		incr index
+	}
+
+	set importedfile_add_btn $imported_dirs.add_button
+	ttk::button $importedfile_add_btn -text "Add" -width 120
+	grid $importedfile_add_btn -row 0 -column 0 -columnspan 6 -in $imported_dirs -sticky "" -pady 4
+
+	set tmp_command [list apply {
+		{ imported_dirs } {
+			genericOptionImporteddirs_save $imported_dirs ignore
+			genericOptionImporteddirs_addElem
+			genericOptionImporteddirsGUI_refresh $imported_dirs
+		}
+	} \
+		""
+	]
+
+	$importedfile_add_btn configure -command [lreplace $tmp_command end end $imported_dirs]
+
+	# redraw header and existing elements
+	genericOptionImporteddirsGUI_refresh $imported_dirs
+
 	### Buttons
 	set bottom $wi.bottom
 	ttk::frame $bottom
@@ -2498,6 +2530,48 @@ proc genericOptionsGUI { node_id } {
 	pack $bottom -fill both -side bottom
 	pack $buttons -pady 2
 }
+
+proc saveGenericOptions { notebook } {
+	global node_cfg
+	global genericoptions_imported_files
+	global genericoptions_imported_dirs
+
+	### Imported files tab
+	set imported_files $notebook.imported_files
+	set err [genericOptionImportedfiles_save $imported_files]
+	if { $err != "" } {
+		$notebook select $imported_files
+		focus $imported_files
+
+		after idle {.dialog1.msg configure -wraplength 4i}
+		tk_dialog .dialog1 "Error in imported_files" $err info 0 Dismiss
+
+		return $err
+	}
+
+	set node_cfg [_setNodeGenericOptions $node_cfg "imported_files" [dict values $genericoptions_imported_files]]
+
+	### Imported dirs tab
+	set imported_dirs $notebook.imported_dirs
+	set err [genericOptionImporteddirs_save $imported_dirs]
+	if { $err != "" } {
+		$notebook select $imported_dirs
+		focus $imported_dirs
+
+		after idle {.dialog1.msg configure -wraplength 4i}
+		tk_dialog .dialog1 "Error in imported_dirs" $err info 0 Dismiss
+
+		return $err
+	}
+
+	set node_cfg [_setNodeGenericOptions $node_cfg "imported_dirs" [dict values $genericoptions_imported_dirs]]
+
+	return ""
+}
+
+# imported files
+lappend cfg_types_dictionary_array "imported_files"
+lappend cfg_types_array "file_content"
 
 proc genericOptionImportedfiles_addElem {} {
 	global genericoptions_imported_files
@@ -2706,28 +2780,6 @@ proc genericOptionImportedfilesGUI_refresh { imported_files } {
 	grid columnconfigure $content "all" -uniform allTheSame
 }
 
-proc saveGenericOptions { notebook } {
-	global node_cfg
-	global genericoptions_imported_files
-
-	### Imported files tab
-	set imported_files $notebook.imported_files
-	set err [genericOptionImportedfiles_save $imported_files]
-	if { $err != "" } {
-		$notebook select $imported_files
-		focus $imported_files
-
-		after idle {.dialog1.msg configure -wraplength 4i}
-		tk_dialog .dialog1 "Error in imported_files" $err info 0 Dismiss
-
-		return $err
-	}
-
-	set node_cfg [_setNodeGenericOptions $node_cfg "imported_files" [dict values $genericoptions_imported_files]]
-
-	return ""
-}
-
 proc genericOptionImportedfiles_removeElem { index } {
 	global genericoptions_imported_files
 
@@ -2801,6 +2853,198 @@ proc genericOptionImportedfiles_save { imported_files { ignore_errors "" } } {
 			}
 
 			dict set genericoptions_imported_files $index $new_imported_file
+		}
+	}
+
+	return $error_state
+}
+
+# imported dirs
+lappend cfg_types_dictionary_array "imported_dirs"
+
+proc genericOptionImporteddirs_addElem {} {
+	global genericoptions_imported_dirs
+
+	if { [dict size $genericoptions_imported_dirs] == 0 } {
+		set index 0
+	} else {
+		set index [expr [lindex [lsort -integer [dict keys $genericoptions_imported_dirs]] end] + 1]
+	}
+
+	set elem [dict create]
+	dict set elem "enabled" 1
+	dict set elem "path" ""
+	dict set elem "dir_content" ""
+	dict set genericoptions_imported_dirs $index $elem
+}
+
+proc genericOptionImporteddirsGUI_refresh { imported_dirs } {
+	global genericoptions_imported_dirs
+	global node_cfg
+
+	set content $imported_dirs.content
+	catch { destroy $content }
+	ttk::frame $content -relief groove -borderwidth 2 -padding 2
+	grid $content -in $imported_dirs -sticky nsew -pady 4 -columnspan 6
+
+	set padx 0
+
+	ttk::label $content.h_enabled -text "Enabled"
+	ttk::label $content.h_path -text "Internal Path"
+	ttk::label $content.h_import -text "Import"
+	ttk::label $content.h_del -text ""
+
+	grid $content.h_enabled -row 0 -column 0 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_enabled -weight 1
+	grid $content.h_path -row 0 -column 1 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_path -weight 5
+	grid $content.h_import -row 0 -column 2 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_import -weight 1
+	grid $content.h_del -row 0 -column 3 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_del -weight 1
+
+	# skip header row
+	set row 1
+	set checkbutton_dict "0 !selected 1 selected"
+	foreach index [lsort -integer [dict keys $genericoptions_imported_dirs]] {
+		set imported_dir [dict get $genericoptions_imported_dirs $index]
+		set enabled [dict get $imported_dir "enabled"]
+		set path [dict get $imported_dir "path"]
+
+		global dir_content$index
+		set dir_content$index [dict get $imported_dir "dir_content"]
+
+		ttk::checkbutton $content.enabled$index -text "($index)"
+		$content.enabled$index state [dict get $checkbutton_dict $enabled]
+
+		ttk::entry $content.path$index -width 68
+		$content.path$index insert 0 $path
+
+		set tmp_command [list apply {
+			{ index imported_dirs } {
+				global dir_content$index
+
+				set dir_path [dirBrowseDialogBox]
+				if { $dir_path == "" } {
+					return
+				}
+
+				set old_pwd [pwd]
+				try {
+					cd $dir_path
+
+					set ch [file tempfile tmp_file]
+					fconfigure $ch -translation binary
+
+					set files [concat \
+						[glob -nocomplain *] \
+						[glob -nocomplain -types hidden *]]
+					set files [removeFromList $files ". .."]
+
+					::tar::create $ch $files -chan
+
+					seek $ch 0
+					set tar_data [read $ch]
+					close $ch
+					file delete $tmp_file
+
+					set dir_content$index [binary encode base64 $tar_data]
+				} finally {
+					cd $old_pwd
+				}
+			}
+		} \
+			$index \
+			$imported_dirs
+		]
+
+		ttk::button $content.import$index -text "Browse..." -width 8 \
+			-command $tmp_command
+
+		set tmp_command [list apply {
+			{ index imported_dirs } {
+				genericOptionImporteddirs_removeElem $index
+				genericOptionImporteddirs_save $imported_dirs "ignore"
+				genericOptionImporteddirsGUI_refresh $imported_dirs
+			}
+		} \
+			$index \
+			$imported_dirs
+		]
+
+		ttk::button $content.del$index -text "Delete ($index)" \
+			-command $tmp_command
+
+		grid $content.enabled$index -row $row -column 0 -in $content -sticky "" -padx $padx
+		grid $content.path$index -row $row -column 1 -in $content -sticky "" -padx $padx
+		grid $content.import$index -row $row -column 2 -in $content -sticky "" -padx $padx
+		grid $content.del$index -row $row -column 3 -in $content -sticky "" -padx $padx
+
+		incr row
+	}
+
+	grid columnconfigure $content "all" -uniform allTheSame
+}
+
+proc genericOptionImporteddirs_removeElem { index } {
+	global genericoptions_imported_dirs
+
+	dict unset genericoptions_imported_dirs $index
+}
+
+proc genericOptionImporteddirs_save { imported_dirs { ignore_errors "" } } {
+	global genericoptions_imported_dirs node_cfg
+
+	set changed 0
+	set content $imported_dirs.content
+	set option_keys "enabled path dir_content"
+
+	set node_list [getFromRunning "node_list"]
+
+	set error_state ""
+	foreach index [lsort -integer [dict keys $genericoptions_imported_dirs]] {
+		set err ""
+		set imported_dir [dict get $genericoptions_imported_dirs $index]
+		foreach key $option_keys {
+			set $key [dict get $imported_dir "$key"]
+		}
+
+		set elem $content.enabled$index
+		set new_enabled [expr { "selected" in [$elem state] }]
+
+		global dir_content$index
+
+		set elem $content.path$index
+		set new_path [string trim [$elem get]]
+		if { $new_path == "" } {
+			set err "Destination path cannot be empty."
+		} elseif { [file pathtype $new_path] != "absolute" || [string index $new_path end] == "/" } {
+			set err "Destination path '$new_path' must be an absolute path to a dir."
+		}
+
+		set new_dir_content [set dir_content$index]
+
+		if { $err != "" && $ignore_errors != "ignore" && $new_enabled } {
+			set error_state "Option ($index): $err"
+			break
+		}
+
+		foreach varname $option_keys {
+			if { [set new_$varname] != [set $varname] } {
+				set $varname [set new_$varname]
+				set changed 1
+			}
+		}
+
+		if { $changed } {
+			set new_imported_dir [dict create]
+			foreach key $option_keys {
+				dict set new_imported_dir "$key" [set $key]
+			}
+
+			#dict set new_imported_dir "dir_content" [base64::encode -maxlen 0 $new_dir_content]
+
+			dict set genericoptions_imported_dirs $index $new_imported_dir
 		}
 	}
 

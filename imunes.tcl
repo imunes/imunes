@@ -105,7 +105,7 @@ try {
 	exit 1
 }
 
-safePackageRequire [list cmdline platform ip base64 json json::write]
+safePackageRequire [list cmdline platform ip base64 json json::write tar]
 
 set initMode 0
 set execMode interactive

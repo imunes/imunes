@@ -1105,6 +1105,22 @@ proc execute_nodesImportFiles { nodes nodes_count w } {
 			}
 		}
 
+		foreach import_dir_entry [getNodeGenericOptions $node_id "imported_dirs"] {
+			if { [dict get $import_dir_entry "enabled"] == 0 } {
+				continue
+			}
+
+			set import_dir_path [dict get $import_dir_entry "path"]
+			set import_dir_content [dict get $import_dir_entry "dir_content"]
+			set import_dir_content [base64::decode $import_dir_content]
+
+			try {
+				writeDataToNodeFile $node_id "${import_dir_path}.tar" $import_dir_content "" "is_binary"
+			} on error err {
+				sputs stderr "ERROR copying dir '$import_dir_path' to '$node_id': '$err'"
+			}
+		}
+
 		incr batchStep
 		incr progressbarCount
 	}
