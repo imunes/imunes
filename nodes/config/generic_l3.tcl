@@ -1,13 +1,5 @@
 # updateNode cases
 
-addCase "updateNode" "custom_image" {
-	setNodeCustomImage $node_id $new_value
-}
-
-addCase "updateNode" "docker_attach" {
-	setNodeDockerAttach $node_id $new_value
-}
-
 addCase "updateNode" "croutes4" {
 	setNodeStatIPv4routes $node_id $new_value
 } "array"
@@ -112,6 +104,72 @@ addCase "updateNode" "custom_selected" {
 		setNodeCustomConfigSelected $node_id $custom_selected_key $custom_selected_new_value
 	}
 }
+
+addCase "updateNode" "advanced_options" {
+	upvar ::switch_cases::updateNode_advanced_options switch_cases_advanced_options_var
+
+	set advanced_options_diff [dictDiff $old_value $new_value]
+	dict for {advanced_options_key advanced_options_change} $advanced_options_diff {
+		if { $advanced_options_change == "copy" } {
+			continue
+		}
+
+		dputs "======== $advanced_options_change: '$advanced_options_key'"
+
+		set advanced_options_old_value [_cfgGet $old_value $advanced_options_key]
+		set advanced_options_new_value [_cfgGet $new_value $advanced_options_key]
+		if { $advanced_options_change in "changed" } {
+			dputs "======== OLD: '$advanced_options_old_value'"
+		}
+		if { $advanced_options_change in "new changed" } {
+			dputs "======== NEW: '$advanced_options_new_value'"
+		}
+
+		set platform_option_diff [dictDiff $advanced_options_old_value $advanced_options_new_value]
+		dict for {platform_option_key platform_option_change} $platform_option_diff {
+			if { $platform_option_change == "copy" } {
+				continue
+			}
+
+			dputs "============ $platform_option_change: '$platform_option_key'"
+
+			set platform_option_old_value [_cfgGet $advanced_options_old_value $platform_option_key]
+			set platform_option_new_value [_cfgGet $advanced_options_new_value $platform_option_key]
+			if { $platform_option_change in "changed" } {
+				dputs "============ OLD: '$platform_option_old_value'"
+			}
+			if { $platform_option_change in "new changed" } {
+				dputs "============ NEW: '$platform_option_new_value'"
+			}
+
+			switch -exact $advanced_options_key [list {*}$switch_cases_advanced_options_var default {}]
+		}
+	}
+} "dictionary"
+
+addCase "updateNode_advanced_options" "generic_options" {
+	if { $platform_option_change == "removed" } {
+		setNodeGenericOptions $node_id $platform_option_key ""
+	} else {
+		setNodeGenericOptions $node_id $platform_option_key $platform_option_new_value
+	}
+} "inner_dictionary"
+
+addCase "updateNode_advanced_options" "jail_options" {
+	if { $platform_option_change == "removed" } {
+		setNodeJailOptions $node_id $platform_option_key ""
+	} else {
+		setNodeJailOptions $node_id $platform_option_key $platform_option_new_value
+	}
+} "inner_dictionary"
+
+addCase "updateNode_advanced_options" "docker_options" {
+	if { $platform_option_change == "removed" } {
+		setNodeDockerOptions $node_id $platform_option_key ""
+	} else {
+		setNodeDockerOptions $node_id $platform_option_key $platform_option_new_value
+	}
+} "inner_dictionary"
 
 # updateIface cases
 

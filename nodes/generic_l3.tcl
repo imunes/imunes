@@ -323,6 +323,42 @@ namespace eval genericL3 {
 			return false
 		}
 
+		foreach import_file_entry [getNodeGenericOptions $node_id "imported_files"] {
+			if { [dict get $import_file_entry "enabled"] == 0 } {
+				continue
+			}
+
+			set import_file_path [dict get $import_file_entry "path"]
+			if { [string index $import_file_path 0] == "@" } {
+				# remove @ and split by :
+				set import_file_path [join [lassign [split [string range $import_file_path 1 end] ":"] linked_node_id] ":"]
+				if { $linked_node_id ni [getFromRunning "node_list"] } {
+					addStateNode $node_id "error"
+					setStateErrorMsgNode $node_id "WARNING: linked node '$linked_node_id' does not exist, cannot link file '$import_file_path'."
+
+					return false
+				}
+			}
+		}
+
+		foreach import_dir_entry [getNodeGenericOptions $node_id "imported_dirs"] {
+			if { [dict get $import_dir_entry "enabled"] == 0 } {
+				continue
+			}
+
+			set import_dir_path [dict get $import_dir_entry "path"]
+			if { [string index $import_dir_path 0] == "@" } {
+				# remove @ and split by :
+				set import_dir_path [join [lassign [split [string range $import_dir_path 1 end] ":"] linked_node_id] ":"]
+				if { $linked_node_id ni [getFromRunning "node_list"] } {
+					addStateNode $node_id "error"
+					setStateErrorMsgNode $node_id "WARNING: linked node '$linked_node_id' does not exist, cannot link directory '$import_dir_path'."
+
+					return false
+				}
+			}
+		}
+
 		foreach iface_id [allIfcList $node_id] {
 			setStateNodeIface $node_id $iface_id ""
 		}
@@ -353,12 +389,7 @@ namespace eval genericL3 {
 
 			set private_ns [invokeNodeProc $node_id "getPrivateNs" $eid $node_id]
 
-			set network "imunes-bridge"
-			#if { [getNodeDockerAttach $node_id] == "true" } {
-			#	set network "bridge"
-			#}
-
-			set vroot [getNodeCustomImage $node_id]
+			set vroot [getNodeDockerOptions $node_id "custom_image"]
 			if { $vroot == "" } {
 				# use default IMUNES docker image
 				set vroot $VROOT_MASTER
@@ -376,12 +407,89 @@ namespace eval genericL3 {
 				set ulimit_proc_str ""
 			}
 
+			set cpus [getNodeDockerOptions $node_id "cpus_count"]
+			if { $cpus != "" } {
+				set cpus_str "--cpus=$cpus"
+			} else {
+				set cpus_str ""
+			}
+
+			set volumes_mounts_str ""
+			foreach volume_entry [getNodeDockerOptions $node_id "volumes_mounts"] {
+				if { [dict get $volume_entry "enabled"] == 0 } {
+					continue
+				}
+
+				set mount_type [dict get $volume_entry "type"]
+				set mount_src [dict get $volume_entry "src"]
+				set mount_dst [dict get $volume_entry "dst"]
+				set mount_ro [dict get $volume_entry "readonly"]
+
+				if { $mount_type == "bind" } {
+					# if src is a relative path, convert to absolute path
+					set mount_src "\$(readlink -f \"$mount_src\")"
+
+					# if path does not exist, assume we want to create a directory
+					if { [isNotOk "test -e $mount_src"] } {
+						setStateErrorMsgNode $node_id "Created '$mount_src' on the host."
+						rexec mkdir -p $mount_src
+					}
+				}
+
+				set tmpstr "--mount type=$mount_type,src=\"$mount_src\",dst=\"$mount_dst\""
+				if { $mount_ro } {
+					append tmpstr ",ro"
+				}
+
+				append volumes_mounts_str "$tmpstr "
+			}
+
+			set port_forwards_str ""
+			foreach port_forward_entry [getNodeDockerOptions $node_id "port_forwards"] {
+				if { [dict get $port_forward_entry "enabled"] == 0 } {
+					continue
+				}
+
+				set host_ip [dict get $port_forward_entry "host_ip"]
+				if { $host_ip == "" } {
+					set tmpstr ""
+				} else {
+					set tmpstr "$host_ip:"
+				}
+
+				set host_port [dict get $port_forward_entry "host_port"]
+				set node_port [dict get $port_forward_entry "node_port"]
+				set protocol [dict get $port_forward_entry "protocol"]
+
+				append tmpstr "$host_port:$node_port"
+				if { $protocol != "" } {
+					append tmpstr "/$protocol"
+				}
+
+				append port_forwards_str "-p $tmpstr "
+			}
+
+			set env_vars_str ""
+			foreach env_var_entry [getNodeDockerOptions $node_id "env_vars"] {
+				if { [dict get $env_var_entry "enabled"] == 0 } {
+					continue
+				}
+
+				set env_name [dict get $env_var_entry "env_name"]
+				set env_value [dict get $env_var_entry "env_value"]
+
+				append env_vars_str "--env $env_name=\"$env_value\" "
+			}
+
+			set custom_flags_str [getNodeDockerOptions $node_id "custom_flags"]
+
 			set docker_cmd "docker run --detach --init --tty \
-				--privileged --cap-add=ALL --net=$network \
+				--privileged --cap-add=ALL --net=imunes-bridge \
 				--name $private_ns --hostname=[getNodeName $node_id] \
 				--volume /tmp/.X11-unix:/tmp/.X11-unix \
 				--sysctl net.ipv6.conf.all.disable_ipv6=0 \
-				$ulimit_file_str $ulimit_proc_str $vroot"
+				$cpus_str $volumes_mounts_str $env_vars_str $port_forwards_str \
+				$custom_flags_str $ulimit_file_str $ulimit_proc_str $vroot"
 
 			dputs "Node $node_id -> '$docker_cmd'"
 
@@ -400,7 +508,7 @@ namespace eval genericL3 {
 				pipesExec "mkdir -p $VROOT_RUNTIME" "hold"
 				pipesExec "mkdir -p $VROOT_OVERLAY" "hold"
 
-				set vroot [lindex [split [getNodeCustomImage $node_id] " "] end]
+				set vroot [lindex [split [getNodeJailOptions $node_id "custom_vroot"] " "] end]
 				if { $vroot == "" } {
 					set vroot "$VROOTDIR/vroot"
 				}
@@ -433,9 +541,11 @@ namespace eval genericL3 {
 			pipesExec "devfs -m $VROOT_RUNTIME_DEV ruleset $devfs_number" "hold"
 			pipesExec "devfs -m $VROOT_RUNTIME_DEV rule applyset" "hold"
 
+			set custom_flags_str [getNodeJailOptions $node_id "custom_flags"]
+
 			# create node jail
 			set jail_cmd "jail -c name=$eid.$node_id path=$VROOT_RUNTIME securelevel=1 \
-				host.hostname=\"[getNodeName $node_id]\" vnet persist"
+				host.hostname=\"[getNodeName $node_id]\" $custom_flags_str vnet persist"
 
 			dputs "Node $node_id -> '$jail_cmd'"
 
@@ -487,7 +597,7 @@ namespace eval genericL3 {
 
 		if { $isOSlinux } {
 			set private_ns [invokeNodeProc $node_id "getPrivateNs" $eid $node_id]
-			if { [getNodeDockerAttach $node_id] != "true" } {
+			if { [getNodeDockerOptions $node_id "external_attach"] != "true" } {
 				pipesExec "docker network disconnect imunes-bridge $private_ns &" "hold"
 			}
 
@@ -546,6 +656,35 @@ namespace eval genericL3 {
 		set init_fname "$VROOT_RUNTIME/init"
 
 		set cmd {}
+		foreach import_dir_entry [getNodeGenericOptions $node_id "imported_dirs"] {
+			if { [dict get $import_dir_entry "enabled"] == 0 } {
+				continue
+			}
+
+			set import_dir_path [dict get $import_dir_entry "path"]
+
+			# overwrite with linked node dir if it exists
+			if { [string index $import_dir_path 0] == "@" } {
+				# remove @ and split by :
+				set import_dir_path [join [lassign [split [string range $import_dir_path 1 end] ":"] linked_node_id] ":"]
+				if { $linked_node_id ni [getFromRunning "node_list"] } {
+					continue
+				}
+			}
+
+			if { [string index $import_dir_path 0] == "#" } {
+				global trigger_hook_names
+
+				# remove # and split by :
+				set import_dir_path [join [lassign [split [string range $import_dir_path 1 end] ":"] hook_name] ":"]
+				set import_dir_path "/var/imunes/$hook_name/$import_dir_path"
+			}
+
+			lappend cmd "mkdir -p $import_dir_path"
+			lappend cmd "tar xf ${import_dir_path}.tar -C $import_dir_path"
+			lappend cmd "rm -f ${import_dir_path}.tar"
+		}
+
 		if { $isOSlinux } {
 			array set sysctls {
 				net.ipv4.icmp_ratelimit					0
@@ -574,7 +713,9 @@ namespace eval genericL3 {
 		set cmds "test -d $VROOT_RUNTIME || mkdir -p $VROOT_RUNTIME ; $cmds"
 
 		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-d"]
+		runNodeHook $os_cmd "pre-init_config"
 		pipesExec "$os_cmd sh -c '$cmds ; touch $init_fname'" "hold"
+		runNodeHook $os_cmd "post-init_config"
 	}
 
 	proc nodeInitConfigure_check { eid node_id } {
@@ -608,6 +749,9 @@ namespace eval genericL3 {
 		global isOSlinux isOSfreebsd
 
 		addStateNode $node_id "pifaces_creating"
+
+		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-d"]
+		runNodeHook $os_cmd "pre-pifaces_create"
 
 		set private_ns [invokeNodeProc $node_id "getPrivateNs" $eid $node_id]
 		set public_ns [invokeNodeProc $node_id "getPublicNs" $eid $node_id]
@@ -662,6 +806,8 @@ namespace eval genericL3 {
 				}
 			}
 		}
+
+		runNodeHook $os_cmd "post-pifaces_create"
 	}
 
 	proc nodePhysIfacesDirectCreate { eid node_id ifaces } {
@@ -669,6 +815,9 @@ namespace eval genericL3 {
 
 		set private_ns [invokeNodeProc $node_id "getPrivateNs" $eid $node_id]
 		set public_ns [invokeNodeProc $node_id "getPublicNs" $eid $node_id]
+
+		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-d"]
+		runNodeHook $os_cmd "pre-pifaces_dcreate"
 
 		if { $isOSlinux } {
 			foreach iface_id $ifaces {
@@ -762,6 +911,8 @@ namespace eval genericL3 {
 			# same as regular interfaces
 			return [invokeNodeProc $node_id "nodePhysIfacesCreate" $eid $node_id $ifaces]
 		}
+
+		runNodeHook $os_cmd "post-pifaces_dcreate"
 	}
 
 	proc nodeLogIfacesCreate { eid node_id ifaces } {
@@ -848,6 +999,8 @@ namespace eval genericL3 {
 			}
 		}
 
+		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-d"]
+		runNodeHook $os_cmd "pre-lifaces_create"
 
 		if { $cmds != "" } {
 			if { $isOSlinux } {
@@ -858,6 +1011,8 @@ namespace eval genericL3 {
 				pipesExec "jexec $private_ns sh -c '$cmds'" "hold"
 			}
 		}
+
+		runNodeHook $os_cmd "post-lifaces_create"
 	}
 
 	proc nodePhysIfacesCreate_check { eid node_id ifaces } {
@@ -911,7 +1066,9 @@ namespace eval genericL3 {
 
 		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-d"]
 
+		runNodeHook $os_cmd "pre-ifaces_config"
 		pipesExec "$os_cmd sh -c '$cmds' &" "hold"
+		runNodeHook $os_cmd "post-ifaces_config"
 	}
 
 	proc nodeIfacesConfigure_check { eid node_id ifaces } {
@@ -990,7 +1147,9 @@ namespace eval genericL3 {
 
 		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-d"]
 
+		runNodeHook $os_cmd "pre-node_config"
 		pipesExec "$os_cmd sh -c '$cmds' &" "hold"
+		runNodeHook $os_cmd "post-node_config"
 	}
 
 	proc nodeConfigure_check { eid node_id } {
@@ -1093,7 +1252,9 @@ namespace eval genericL3 {
 		set cmds "$cmds $bootcmd $confFile > $out_log 2> $err_log ;"
 
 		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-d"]
+		runNodeHook $os_cmd "pre-node_unconfig"
 		pipesExec "$os_cmd sh -c '$cmds'" "hold"
+		runNodeHook $os_cmd "post-node_unconfig"
 	}
 
 	proc nodeUnconfigure_check { eid node_id } {
@@ -1136,6 +1297,7 @@ namespace eval genericL3 {
 		killExtProcess "socat.*$eid/$node_id.*"
 
 		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-d"]
+		runNodeHook $os_cmd "pre-node_shutdown"
 
 		pipesExec "$os_cmd sh -c 'test -d $VROOT_RUNTIME || mkdir -p $VROOT_RUNTIME'" "hold"
 		if { $isOSlinux } {
@@ -1149,6 +1311,8 @@ namespace eval genericL3 {
 
 			pipesExec "$os_cmd touch $shut_fname" "hold"
 		}
+
+		runNodeHook $os_cmd "post-node_shutdown"
 	}
 
 	proc nodeShutdown_check { eid node_id } {
@@ -1231,7 +1395,9 @@ namespace eval genericL3 {
 		set cmds "$cmds $bootcmd $confFile > $out_ifaces_log 2> $err_ifaces_log ;"
 
 		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-d"]
+		runNodeHook $os_cmd "pre-ifaces_unconfig"
 		pipesExec "$os_cmd sh -c '$cmds'" "hold"
+		runNodeHook $os_cmd "post-ifaces_unconfig"
 	}
 
 	proc nodeIfacesUnconfigure_check { eid node_id ifaces } {
@@ -1272,6 +1438,9 @@ namespace eval genericL3 {
 
 		addStateNode $node_id "lifaces_destroying"
 
+		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-d"]
+		runNodeHook $os_cmd "pre-lifaces_destroy"
+
 		set private_ns [invokeNodeProc $node_id "getPrivateNs" $eid $node_id]
 		foreach iface_id $ifaces {
 			addStateNodeIface $node_id $iface_id "destroying"
@@ -1285,19 +1454,33 @@ namespace eval genericL3 {
 				pipesExec "jexec $private_ns ifconfig $iface_name destroy" "hold"
 			}
 		}
+
+		runNodeHook $os_cmd "post-lifaces_destroy"
 	}
 
-	proc nodePhysIfacesDestroy { eid node_id ifaces } {
+	proc nodePhysIfacesDestroy { eid node_id ifaces { are_direct "" } } {
 		global isOSlinux isOSfreebsd
 
+		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-d"]
+
 		if { $isOSlinux } {
+			runNodeHook $os_cmd "pre-pifaces_destroy"
+
 			# same as L2
-			return [invokeTypeProc "genericL2" "nodePhysIfacesDestroy" $eid $node_id $ifaces]
+			set retv [invokeTypeProc "genericL2" "nodePhysIfacesDestroy" $eid $node_id $ifaces]
+
+			runNodeHook $os_cmd "post-pifaces_destroy"
+
+			return $retv
 		}
 
 		addStateNode $node_id "pifaces_destroying"
 
 		if { $isOSfreebsd } {
+			if { $are_direct == "" } {
+				runNodeHook $os_cmd "pre-pifaces_destroy"
+			}
+
 			set ngcmds ""
 			foreach iface_id $ifaces {
 				addStateNodeIface $node_id $iface_id "destroying"
@@ -1316,21 +1499,32 @@ namespace eval genericL3 {
 			if { $ngcmds != "" } {
 				pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
 			}
+
+			if { $are_direct == "" } {
+				runNodeHook $os_cmd "post-pifaces_destroy"
+			}
 		}
 	}
 
 	proc nodePhysIfacesDirectDestroy { eid node_id ifaces } {
 		global isOSlinux isOSfreebsd
 
+		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-d"]
+		runNodeHook $os_cmd "pre-pifaces_ddestroy"
+
 		if { $isOSlinux } {
 			# same as L2
-			return [invokeTypeProc "genericL2" "nodePhysIfacesDirectDestroy" $eid $node_id $ifaces]
+			set retv [invokeTypeProc "genericL2" "nodePhysIfacesDirectDestroy" $eid $node_id $ifaces]
 		}
 
 		if { $isOSfreebsd } {
 			# same as regular interfaces
-			return [invokeNodeProc $node_id "nodePhysIfacesDestroy" $eid $node_id $ifaces]
+			set retv [invokeNodeProc $node_id "nodePhysIfacesDestroy" $eid $node_id $ifaces "are_direct"]
 		}
+
+		runNodeHook $os_cmd "post-pifaces_ddestroy"
+
+		return $retv
 	}
 
 	proc nodeIfacesDestroy_check { eid node_id ifaces } {
@@ -1344,6 +1538,8 @@ namespace eval genericL3 {
 		addStateNode $node_id "node_destroying"
 
 		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-d"]
+		runNodeHook $os_cmd "pre-node_destroy"
+
 		set private_ns [invokeNodeProc $node_id "getPrivateNs" $eid $node_id]
 		if { $isOSlinux } {
 			# remove node virtual interfaces

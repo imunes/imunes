@@ -688,7 +688,7 @@ proc deployCfg { { execute 0 } } {
 	}
 	set configure_links_count [llength $configure_links]
 
-	set maxProgressbasCount [expr {3*$all_nodes_count + 2*$native_nodes_count + 4*$virtualized_nodes_count + 2*$links_count + 1*$configure_links_count + 2*$configure_nodes_count + 4*$create_nodes_ifaces_count + 2*$configure_nodes_ifaces_count + $error_check_nodes_ifaces_count + $error_check_nodes_count}]
+	set maxProgressbasCount [expr {3*$all_nodes_count + 2*$native_nodes_count + 5*$virtualized_nodes_count + 2*$links_count + 1*$configure_links_count + 2*$configure_nodes_count + 4*$create_nodes_ifaces_count + 2*$configure_nodes_ifaces_count + $error_check_nodes_ifaces_count + $error_check_nodes_count}]
 
 	set w ""
 	set eid [getFromRunning "eid"]
@@ -745,6 +745,11 @@ proc deployCfg { { execute 0 } } {
 			execute_nodesCreate_wait $virtualized_nodes $virtualized_nodes_count $w
 		}
 
+		statline "Importing node files to VIRTUALIZED nodes..."
+		if { $virtualized_nodes_count > 0 } {
+			execute_nodesImportFiles $virtualized_nodes $virtualized_nodes_count $w
+		}
+
 		statline "Setting up namespaces for all nodes..."
 		if { $all_nodes_count > 0 } {
 			pipesCreate
@@ -771,9 +776,6 @@ proc deployCfg { { execute 0 } } {
 			statline "Waiting for $native_nodes_count NATIVE node(s) to start..."
 			execute_nodesCreate_wait $native_nodes $native_nodes_count $w
 		}
-
-		#statline "Copying host files to $virtualized_nodes_count VIRTUALIZED node(s)..."
-		#execute_nodesCopyFiles $virtualized_nodes $virtualized_nodes_count $w
 
 		statline "Starting services for NODEINST hook..."
 		if { $configure_nodes_ifaces_count > 0 } {
@@ -1056,6 +1058,123 @@ proc execute_nodesCreate_wait { nodes nodes_count w } {
 	}
 }
 
+proc execute_nodesImportFiles { nodes nodes_count w } {
+	global progressbarCount execMode runnable_node_types gui
+
+	set eid [getFromRunning "eid"]
+
+	set batchStep 0
+	foreach node_id $nodes {
+		displayBatchProgress $batchStep $nodes_count
+
+		if { $gui && $execMode != "batch" } {
+			if { [isErrorNode $node_id] } {
+				set msg "Skipping"
+			} else {
+				set msg "Importing files for"
+			}
+
+			statline "$msg node [getNodeName $node_id]"
+			catch { $w.p configure -value $progressbarCount }
+			update
+		}
+
+		if { [isErrorNode $node_id] } {
+			continue
+		}
+
+		foreach import_file_entry [getNodeGenericOptions $node_id "imported_files"] {
+			if { [dict get $import_file_entry "enabled"] == 0 } {
+				continue
+			}
+
+			set import_file_path [dict get $import_file_entry "path"]
+			set import_file_file_mode [dict get $import_file_entry "file_mode"]
+			set import_file_is_encoded [dict get $import_file_entry "is_encoded"]
+			set import_file_content [dict get $import_file_entry "file_content"]
+
+			# overwrite with linked node file if it exists
+			if { [string index $import_file_path 0] == "@" } {
+				# remove @ and split by :
+				set import_file_path [join [lassign [split [string range $import_file_path 1 end] ":"] linked_node_id] ":"]
+				foreach linked_import_file_entry [getNodeGenericOptions $linked_node_id "imported_files"] {
+					if { $import_file_path == [dict get $linked_import_file_entry "path"] } {
+						set import_file_content [dict get $linked_import_file_entry "file_content"]
+						break
+					}
+				}
+			}
+
+			if { [string index $import_file_path 0] == "#" } {
+				global trigger_hook_names
+
+				# remove # and split by :
+				set import_file_path [join [lassign [split [string range $import_file_path 1 end] ":"] hook_name] ":"]
+				set import_file_path "/var/imunes/$hook_name/$import_file_path"
+			}
+
+			if { $import_file_is_encoded } {
+				set import_file_content [base64::decode $import_file_content]
+			} else {
+				set import_file_content [join $import_file_content "\n"]
+			}
+
+			try {
+				writeDataToNodeFile $node_id "$import_file_path" $import_file_content $import_file_file_mode "is_binary"
+			} on error err {
+				sputs stderr "ERROR copying file '$import_file_path' to '$node_id': '$err'"
+			}
+		}
+
+		foreach import_dir_entry [getNodeGenericOptions $node_id "imported_dirs"] {
+			if { [dict get $import_dir_entry "enabled"] == 0 } {
+				continue
+			}
+
+			set import_dir_path [dict get $import_dir_entry "path"]
+			set import_dir_content [dict get $import_dir_entry "dir_content"]
+
+			# overwrite with linked node dir if it exists
+			if { [string index $import_dir_path 0] == "@" } {
+				# remove @ and split by :
+				set import_dir_path [join [lassign [split [string range $import_dir_path 1 end] ":"] linked_node_id] ":"]
+				foreach linked_import_dir_entry [getNodeGenericOptions $linked_node_id "imported_dirs"] {
+					if { $import_dir_path == [dict get $linked_import_dir_entry "path"] } {
+						set import_dir_content [dict get $linked_import_dir_entry "dir_content"]
+						break
+					}
+				}
+			}
+
+			if { [string index $import_dir_path 0] == "#" } {
+				global trigger_hook_names
+
+				# remove # and split by :
+				set import_dir_path [join [lassign [split [string range $import_dir_path 1 end] ":"] hook_name] ":"]
+				set import_dir_path "/var/imunes/$hook_name/$import_dir_path"
+			}
+
+			set import_dir_content [base64::decode $import_dir_content]
+
+			try {
+				writeDataToNodeFile $node_id "${import_dir_path}.tar" $import_dir_content "" "is_binary"
+			} on error err {
+				sputs stderr "ERROR copying dir '$import_dir_path' to '$node_id': '$err'"
+			}
+		}
+
+		incr batchStep
+		incr progressbarCount
+	}
+
+	if { $nodes_count > 0 } {
+		displayBatchProgress $batchStep $nodes_count
+		if { ! $gui || $execMode == "batch" } {
+			statline ""
+		}
+	}
+}
+
 proc execute_nodesNamespaceSetup { nodes nodes_count w } {
 	global progressbarCount execMode gui
 
@@ -1273,9 +1392,6 @@ proc execute_nodesInitConfigure_wait { nodes nodes_count w } {
 			statline ""
 		}
 	}
-}
-
-proc execute_nodesCopyFiles { nodes nodes_count w } {
 }
 
 proc execute_nodesPhysIfacesCreate { nodes_ifaces nodes_count w } {

@@ -2362,71 +2362,1870 @@ proc configGUI_servicesConfig { wi node_id } {
 	pack $w -fill both
 }
 
-#****f* nodecfgGUI.tcl/configGUI_attachDockerToExt
+#****f* nodecfgGUI.tcl/configGUI_advancedVirtOptions
 # NAME
-#   configGUI_attachDockerToExt -- configure GUI - attach external docker iface_id
+#   configGUI_advancedVirtOptions -- configure GUI - advanced options for virt nodes
 # SYNOPSIS
-#   configGUI_attachDockerToExt $wi $node_id
+#   configGUI_advancedVirtOptions $wi $node_id
 # FUNCTION
-#   Creating module for attaching external docker interface to virtual nodes on
-#   Linux.
+#   Creating module for advanced docker/jail options.
 # INPUTS
 #   * wi -- widget
 #   * node_id -- node id
 #****
-proc configGUI_attachDockerToExt { wi node_id } {
+proc configGUI_advancedVirtOptions { wi node_id virt_types } {
 	global guielements
-	lappend guielements configGUI_attachDockerToExt
+	lappend guielements configGUI_advancedVirtOptions
 
-	global docker_enable node_cfg
+	set advanced_frame $wi.advanced
+	ttk::frame $advanced_frame -relief groove -borderwidth 2 -padding 2
+	ttk::label $advanced_frame.label -text "Advanced node options:"
+	getHelpLabel $advanced_frame.label "Advanced virt options"
 
-	set docker_enable [string map { "" 0 true 1 } [_getNodeDockerAttach $node_cfg]]
+	pack $advanced_frame.label -side left -padx 2
 
-	set w $wi.docker
-	ttk::frame $w -relief groove -borderwidth 2 -padding 2
-	ttk::label $w.label -text "Attach external Docker interface (Linux only):"
-	getHelpLabel $w.label "External Docker interface"
+	ttk::combobox $advanced_frame.picker \
+		-width 10 \
+		-values $virt_types \
+		-state readonly
+	$advanced_frame.picker set [lindex $virt_types 0]
+	pack $advanced_frame.picker -side left -padx 7
 
-	pack $w.label -side left -padx 2
+	set tmp_command [list apply {
+		{ node_id picker_element } {
+			set virt_type [$picker_element get]
 
-	ttk::checkbutton $w.chkbox -text "Enabled" -variable docker_enable
-	pack $w.chkbox -side left -padx 7
+			${virt_type}OptionsGUI $node_id
+		}
+	} \
+		$node_id \
+		""
+	]
 
-	pack $w -fill both
+	ttk::button $advanced_frame.btn \
+		-text "Advanced options" \
+		-command [lreplace $tmp_command end end $advanced_frame.picker]
+	pack $advanced_frame.btn -side left -padx 7
+
+	if { [llength $virt_types] == 0 } {
+		$advanced_frame.btn configure -state disabled
+	}
+
+	pack $advanced_frame -fill both
 }
 
-#****f* nodecfgGUI.tcl/configGUI_customImage
-# NAME
-#   configGUI_customImage -- configure GUI - use different image
-# SYNOPSIS
-#   configGUI_customImage $wi $node_id
-# FUNCTION
-#   Creating GUI module for using different images for virtual nodes
-# INPUTS
-#   * wi -- widget
-#   * node_id -- node id
-#****
-proc configGUI_customImage { wi node_id } {
-	global guielements
-	lappend guielements configGUI_customImage
+# advanced generic options
+global cfg_types_dictionary_array
+global cfg_types_array
+
+proc genericOptionsGUI { node_id } {
+	set wi .advanced_options
+
+	catch { destroy $wi }
+	tk::toplevel $wi
+
+	try {
+		grab $wi
+	} on error {} {
+		catch { destroy $wi }
+		return
+	}
 
 	global node_cfg
 
-	set custom_image [_getNodeCustomImage $node_cfg]
+	wm title $wi "Generic advanced options for node '[_getNodeName $node_cfg]' ($node_id)"
+	wm minsize $wi 604 445
+	wm resizable $wi 0 1
 
-	set w $wi.customImg
-	ttk::frame $w -relief groove -borderwidth 2 -padding 2
-	ttk::label $w.label -text "Custom image:"
-	getHelpLabel $w.label "Custom image"
+	set notebook $wi.notebook
+	ttk::notebook $notebook
 
-	pack $w.label -side left -padx 2
+	### Imported files tab
+	set imported_files $notebook.imported_files
+	ttk::frame $imported_files
+	$notebook add $imported_files -text "Imported files"
 
-	ttk::entry $w.img -width 40
-	$w.img insert 0 $custom_image
-	pack $w.img -side left -padx 7
+	global genericoptions_imported_files
+	set genericoptions_imported_files {}
+	set cfg_imported_files [_getNodeGenericOptions $node_cfg "imported_files"]
 
-	pack $w -fill both
+	set index 0
+	foreach cfg_imported_file $cfg_imported_files {
+		dict set genericoptions_imported_files $index $cfg_imported_file
+
+		incr index
+	}
+
+	set importedfile_add_btn $imported_files.add_button
+	ttk::button $importedfile_add_btn -text "Add" -width 120
+	grid $importedfile_add_btn -row 0 -column 0 -columnspan 6 -in $imported_files -sticky "" -pady 4
+
+	set tmp_command [list apply {
+		{ imported_files } {
+			genericOptionImportedfiles_save $imported_files ignore
+			genericOptionImportedfiles_addElem
+			genericOptionImportedfilesGUI_refresh $imported_files
+		}
+	} \
+		""
+	]
+
+	$importedfile_add_btn configure -command [lreplace $tmp_command end end $imported_files]
+
+	# redraw header and existing elements
+	genericOptionImportedfilesGUI_refresh $imported_files
+
+	### Imported dirs tab
+	set imported_dirs $notebook.imported_dirs
+	ttk::frame $imported_dirs
+	$notebook add $imported_dirs -text "Imported dirs"
+
+	global genericoptions_imported_dirs
+	set genericoptions_imported_dirs {}
+	set cfg_imported_dirs [_getNodeGenericOptions $node_cfg "imported_dirs"]
+
+	set index 0
+	foreach cfg_imported_file $cfg_imported_dirs {
+		dict set genericoptions_imported_dirs $index $cfg_imported_file
+
+		incr index
+	}
+
+	set importedfile_add_btn $imported_dirs.add_button
+	ttk::button $importedfile_add_btn -text "Add" -width 120
+	grid $importedfile_add_btn -row 0 -column 0 -columnspan 6 -in $imported_dirs -sticky "" -pady 4
+
+	set tmp_command [list apply {
+		{ imported_dirs } {
+			genericOptionImporteddirs_save $imported_dirs ignore
+			genericOptionImporteddirs_addElem
+			genericOptionImporteddirsGUI_refresh $imported_dirs
+		}
+	} \
+		""
+	]
+
+	$importedfile_add_btn configure -command [lreplace $tmp_command end end $imported_dirs]
+
+	# redraw header and existing elements
+	genericOptionImporteddirsGUI_refresh $imported_dirs
+
+	### Buttons
+	set bottom $wi.bottom
+	ttk::frame $bottom
+	set buttons $wi.bottom.buttons
+	ttk::frame $buttons -borderwidth 2
+
+	ttk::button $buttons.apply -text "Apply" \
+		-command "saveGenericOptions $notebook"
+	ttk::button $buttons.applyClose -text "Apply and Close" \
+		-command "if { \[saveGenericOptions $notebook\] == \"\" } { destroy $wi }"
+	ttk::button $buttons.cancel -text "Cancel" -command "destroy $wi"
+
+	grid $buttons.apply -row 0 -column 1 -sticky swe -padx 2
+	grid $buttons.applyClose -row 0 -column 2 -sticky swe -padx 2
+	grid $buttons.cancel -row 0 -column 3 -sticky swe -padx 2
+
+	pack $notebook -fill both -expand 1
+	pack $bottom -fill both -side bottom
+	pack $buttons -pady 2
 }
+
+proc saveGenericOptions { notebook } {
+	global node_cfg
+	global genericoptions_imported_files
+	global genericoptions_imported_dirs
+
+	### Imported files tab
+	set imported_files $notebook.imported_files
+	set err [genericOptionImportedfiles_save $imported_files]
+	if { $err != "" } {
+		$notebook select $imported_files
+		focus $imported_files
+
+		after idle {.dialog1.msg configure -wraplength 4i}
+		tk_dialog .dialog1 "Error in imported_files" $err info 0 Dismiss
+
+		return $err
+	}
+
+	set node_cfg [_setNodeGenericOptions $node_cfg "imported_files" [dict values $genericoptions_imported_files]]
+
+	### Imported dirs tab
+	set imported_dirs $notebook.imported_dirs
+	set err [genericOptionImporteddirs_save $imported_dirs]
+	if { $err != "" } {
+		$notebook select $imported_dirs
+		focus $imported_dirs
+
+		after idle {.dialog1.msg configure -wraplength 4i}
+		tk_dialog .dialog1 "Error in imported_dirs" $err info 0 Dismiss
+
+		return $err
+	}
+
+	set node_cfg [_setNodeGenericOptions $node_cfg "imported_dirs" [dict values $genericoptions_imported_dirs]]
+
+	return ""
+}
+
+# imported files
+lappend cfg_types_dictionary_array "imported_files"
+lappend cfg_types_array "file_content"
+
+proc genericOptionImportedfiles_addElem {} {
+	global genericoptions_imported_files
+
+	if { [dict size $genericoptions_imported_files] == 0 } {
+		set index 0
+	} else {
+		set index [expr [lindex [lsort -integer [dict keys $genericoptions_imported_files]] end] + 1]
+	}
+
+	set elem [dict create]
+	dict set elem "enabled" 1
+	dict set elem "path" ""
+	dict set elem "file_mode" 644
+	dict set elem "file_content" ""
+	dict set elem "is_encoded" 0
+	dict set genericoptions_imported_files $index $elem
+}
+
+proc genericOptionImportedfilesGUI_refresh { imported_files } {
+	global genericoptions_imported_files
+	global node_cfg
+
+	set content $imported_files.content
+	catch { destroy $content }
+	ttk::frame $content -relief groove -borderwidth 2 -padding 2
+	grid $content -in $imported_files -sticky nsew -pady 4 -columnspan 6
+
+	set padx 0
+
+	ttk::label $content.h_enabled -text "Enabled"
+	ttk::label $content.h_path -text "Internal Path"
+	ttk::label $content.h_file_mode -text "Mode"
+	ttk::label $content.h_edit -text "Edit"
+	ttk::label $content.h_edit_ext -text "Edit (ext.)"
+	ttk::label $content.h_import -text "Import"
+	ttk::label $content.h_is_encoded -text "Encode"
+	ttk::label $content.h_del -text ""
+
+	grid $content.h_enabled -row 0 -column 0 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_enabled -weight 1
+	grid $content.h_path -row 0 -column 1 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_path -weight 5
+	grid $content.h_file_mode -row 0 -column 2 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_file_mode -weight 1
+	grid $content.h_edit -row 0 -column 3 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_edit -weight 1
+	grid $content.h_edit_ext -row 0 -column 4 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_edit_ext -weight 1
+	grid $content.h_import -row 0 -column 5 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_import -weight 1
+	grid $content.h_is_encoded -row 0 -column 6 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_is_encoded -weight 1
+	grid $content.h_del -row 0 -column 7 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_del -weight 1
+
+	# skip header row
+	set row 1
+	set checkbutton_dict "0 !selected 1 selected"
+	foreach index [lsort -integer [dict keys $genericoptions_imported_files]] {
+		set imported_file [dict get $genericoptions_imported_files $index]
+		set enabled [dict get $imported_file "enabled"]
+		set path [dict get $imported_file "path"]
+		set file_mode [dict get $imported_file "file_mode"]
+		set is_encoded [dict get $imported_file "is_encoded"]
+
+		global file_content$index
+		set file_content$index [dict get $imported_file "file_content"]
+
+		# overwrite with linked node file if it exists
+		if { [string index $path 0] == "@" } {
+			# remove @ and split by :
+			set check_path [join [lassign [split [string range $path 1 end] ":"] linked_node_id] ":"]
+			foreach linked_import_file_entry [getNodeGenericOptions $linked_node_id "imported_files"] {
+				set linked_path [dict get $linked_import_file_entry "path"]
+				if { [string index $linked_path 0] == "@" } {
+					continue
+				}
+
+				if { $check_path == $linked_path } {
+					set file_content$index [dict get $linked_import_file_entry "file_content"]
+					break
+				}
+			}
+		}
+
+		if { $is_encoded } {
+			set file_content$index [base64::decode [set file_content$index]]
+		} else {
+			set file_content$index [join [set file_content$index] "\n"]
+		}
+
+		ttk::checkbutton $content.enabled$index -text "($index)"
+		$content.enabled$index state [dict get $checkbutton_dict $enabled]
+
+		ttk::entry $content.path$index -width 48
+		$content.path$index insert 0 $path
+
+		ttk::entry $content.file_mode$index -width 3
+		$content.file_mode$index insert 0 $file_mode
+
+		set callback_proc [list apply {
+			{ index parent_widget editor_widget is_apply is_close } {
+				global file_content$index
+
+				if { $is_apply } {
+					set file_content$index [$editor_widget get 1.0 {end -1c}]
+				}
+
+				if { $is_close } {
+					catch { destroy $parent_widget }
+				}
+			}
+		} \
+			$index \
+			"" \
+			"" \
+			"" \
+			""
+		]
+
+		set tmp_command [list apply {
+			{ index path_entry args } {
+				global file_content$index
+
+				set path [string trim [$path_entry get]]
+				if { [string index $path 0] == "@" } {
+					set exists 0
+					set is_encoded 0
+					set check_path [join [lassign [split [string range $path 1 end] ":"] linked_node_id] ":"]
+					foreach linked_import_file_entry [getNodeGenericOptions $linked_node_id "imported_files"] {
+						set linked_path [dict get $linked_import_file_entry "path"]
+						if { [string index $linked_path 0] == "@" } {
+							continue
+						}
+
+						if { $check_path == $linked_path } {
+							set file_content$index [dict get $linked_import_file_entry "file_content"]
+							set is_encoded [dict get $linked_import_file_entry "is_encoded"]
+							set exists 1
+							break
+						}
+					}
+
+					if { $exists } {
+						if { $is_encoded } {
+							set file_content$index [base64::decode [set file_content$index]]
+						} else {
+							set file_content$index [join [set file_content$index] "\n"]
+						}
+					} else {
+						set file_content$index ""
+					}
+				}
+
+				openEditor [set file_content$index] {*}$args
+			}
+		} \
+			$index \
+			$content.path$index \
+			{*}$callback_proc
+		]
+
+		ttk::button $content.edit$index -text "Edit" -width 4 \
+			-command $tmp_command
+
+		set callback_proc [list apply {
+			{ index read_channel tmp_path } {
+				if { [eof $read_channel] } {
+					catch { close $read_channel }
+					global file_content$index
+
+					set file_id [open $tmp_path r]
+					set file_content$index [read $file_id]
+					close $file_id
+					catch { file delete -force $tmp_path }
+
+					return
+				}
+
+				# consume data to avoid repeated triggers
+				read $read_channel
+			}
+		} \
+			$index \
+			"" \
+			""
+		]
+
+		set tmp_command [list apply {
+			{ index path_entry args } {
+				global file_content$index
+
+				set path [string trim [$path_entry get]]
+				if { [string index $path 0] == "@" } {
+					set exists 0
+					set is_encoded 0
+					set check_path [join [lassign [split [string range $path 1 end] ":"] linked_node_id] ":"]
+					foreach linked_import_file_entry [getNodeGenericOptions $linked_node_id "imported_files"] {
+						set linked_path [dict get $linked_import_file_entry "path"]
+						if { [string index $linked_path 0] == "@" } {
+							continue
+						}
+
+						if { $check_path == $linked_path } {
+							set file_content$index [dict get $linked_import_file_entry "file_content"]
+							set is_encoded [dict get $linked_import_file_entry "is_encoded"]
+							set exists 1
+							break
+						}
+					}
+
+					if { $exists } {
+						if { $is_encoded } {
+							set file_content$index [base64::decode [set file_content$index]]
+						} else {
+							set file_content$index [join [set file_content$index] "\n"]
+						}
+					} else {
+						set file_content$index ""
+					}
+				}
+
+				openExternalEditor [set file_content$index] {*}$args
+			}
+		} \
+			$index \
+			$content.path$index \
+			{*}$callback_proc
+		]
+
+		ttk::button $content.edit_ext$index -text "⤴" -width 4 \
+			-command $tmp_command
+
+		set tmp_command [list apply {
+			{ index imported_files } {
+				global file_content$index
+
+				set file_path [fileBrowseDialogBox]
+				if { $file_path == "" } {
+					return
+				}
+
+				set file_id [open $file_path r]
+				fconfigure $file_id -translation binary
+				set file_content$index [read $file_id]
+				close $file_id
+			}
+		} \
+			$index \
+			$imported_files
+		]
+
+		ttk::button $content.import$index -text "Browse..." -width 8 \
+			-command $tmp_command
+
+		ttk::checkbutton $content.is_encoded$index -text "($index)"
+		$content.is_encoded$index state [dict get $checkbutton_dict $is_encoded]
+
+		set tmp_command [list apply {
+			{ index imported_files } {
+				genericOptionImportedfiles_removeElem $index
+				genericOptionImportedfiles_save $imported_files "ignore"
+				genericOptionImportedfilesGUI_refresh $imported_files
+			}
+		} \
+			$index \
+			$imported_files
+		]
+
+		ttk::button $content.del$index -text "Delete ($index)" \
+			-command $tmp_command
+
+		grid $content.enabled$index -row $row -column 0 -in $content -sticky "" -padx $padx
+		grid $content.path$index -row $row -column 1 -in $content -sticky "" -padx $padx
+		grid $content.file_mode$index -row $row -column 2 -in $content -sticky "" -padx $padx
+		grid $content.edit$index -row $row -column 3 -in $content -sticky "" -padx $padx
+		grid $content.edit_ext$index -row $row -column 4 -in $content -sticky "" -padx $padx
+		grid $content.import$index -row $row -column 5 -in $content -sticky "" -padx $padx
+		grid $content.is_encoded$index -row $row -column 6 -in $content -sticky "" -padx $padx
+		grid $content.del$index -row $row -column 7 -in $content -sticky "" -padx $padx
+
+		incr row
+	}
+
+	grid columnconfigure $content "all" -uniform allTheSame
+}
+
+proc genericOptionImportedfiles_removeElem { index } {
+	global genericoptions_imported_files
+
+	dict unset genericoptions_imported_files $index
+}
+
+proc genericOptionImportedfiles_save { imported_files { ignore_errors "" } } {
+	global genericoptions_imported_files node_cfg
+
+	set changed 0
+	set content $imported_files.content
+	set option_keys "enabled path file_mode file_content is_encoded"
+
+	set node_list [getFromRunning "node_list"]
+
+	set error_state ""
+	foreach index [lsort -integer [dict keys $genericoptions_imported_files]] {
+		set err ""
+		set imported_file [dict get $genericoptions_imported_files $index]
+		foreach key $option_keys {
+			set $key [dict get $imported_file "$key"]
+		}
+
+		set elem $content.enabled$index
+		set new_enabled [expr { "selected" in [$elem state] }]
+
+		global file_content$index
+
+		set elem $content.path$index
+		set new_path [string trim [$elem get]]
+		if { $new_path == "" } {
+			set err "Destination path cannot be empty."
+		} elseif { [string index $new_path 0] == "@" } {
+			# linked from another file, remove @ and split by :
+			set check_path [join [lassign [split [string range $new_path 1 end] ":"] linked_node_id] ":"]
+			if { $linked_node_id ni $node_list } {
+				set err "Non-existent node '$linked_node_id'."
+			} elseif { $check_path == "" } {
+				set err "Destination path cannot be empty."
+			} elseif { [string index $check_path 0] == "@" } {
+				set err "Recursive linking not supported."
+			} else {
+				set exists 0
+				foreach linked_import_file_entry [getNodeGenericOptions $linked_node_id "imported_files"] {
+					set linked_path [dict get $linked_import_file_entry "path"]
+					if { [string index $linked_path 0] == "@" } {
+						continue
+					}
+
+					if { $check_path == $linked_path } {
+						set exists 1
+						break
+					}
+				}
+
+				if { $exists } {
+					set file_content$index ""
+				} else {
+					set err "Path '$check_path' on node '$linked_node_id' does not exists."
+				}
+			}
+		} elseif { [string index $new_path 0] == "#" } {
+			global trigger_hook_names
+
+			# hook, remove # and split by :
+			set check_path [join [lassign [split [string range $new_path 1 end] ":"] hook_name] ":"]
+			if { $hook_name ni $trigger_hook_names } {
+				set err "Non-existant hook name '$hook_name', use any of:\n$trigger_hook_names"
+			} elseif { [string first "/" $check_path] != -1 } {
+				set err "Destination path '$check_path' must be a file name."
+			}
+		} elseif { [file pathtype $new_path] != "absolute" || [string index $new_path end] == "/" } {
+			set err "Destination path '$new_path' must be an absolute path to a file."
+		}
+
+		set elem $content.file_mode$index
+		set new_file_mode [string trim [$elem get]]
+		if { $new_file_mode == "" } {
+			set err "File mode cannot be empty (default is 644)."
+		} elseif { [string first "\$" $new_file_mode] == -1 } {
+			if { ! [string is integer -strict $new_file_mode] } {
+				set err "File mode not valid - use numbered mode."
+			}
+		}
+
+		set new_file_content [set file_content$index]
+
+		set elem $content.is_encoded$index
+		set new_is_encoded [expr { "selected" in [$elem state] }]
+
+		if { $err != "" && $ignore_errors != "ignore" && $new_enabled } {
+			set error_state "Option ($index): $err"
+			break
+		}
+
+		foreach varname $option_keys {
+			if { [set new_$varname] != [set $varname] } {
+				set $varname [set new_$varname]
+				set changed 1
+			}
+		}
+
+		if { $changed } {
+			set new_imported_file [dict create]
+			foreach key $option_keys {
+				dict set new_imported_file "$key" [set $key]
+			}
+
+			if { $new_is_encoded } {
+				dict set new_imported_file "file_content" [base64::encode -maxlen 0 $new_file_content]
+			} else {
+				dict set new_imported_file "file_content" [split $new_file_content "\n"]
+			}
+
+			dict set genericoptions_imported_files $index $new_imported_file
+		}
+	}
+
+	return $error_state
+}
+
+# imported dirs
+lappend cfg_types_dictionary_array "imported_dirs"
+
+proc genericOptionImporteddirs_addElem {} {
+	global genericoptions_imported_dirs
+
+	if { [dict size $genericoptions_imported_dirs] == 0 } {
+		set index 0
+	} else {
+		set index [expr [lindex [lsort -integer [dict keys $genericoptions_imported_dirs]] end] + 1]
+	}
+
+	set elem [dict create]
+	dict set elem "enabled" 1
+	dict set elem "path" ""
+	dict set elem "dir_content" ""
+	dict set genericoptions_imported_dirs $index $elem
+}
+
+proc genericOptionImporteddirsGUI_refresh { imported_dirs } {
+	global genericoptions_imported_dirs
+	global node_cfg
+
+	set content $imported_dirs.content
+	catch { destroy $content }
+	ttk::frame $content -relief groove -borderwidth 2 -padding 2
+	grid $content -in $imported_dirs -sticky nsew -pady 4 -columnspan 6
+
+	set padx 0
+
+	ttk::label $content.h_enabled -text "Enabled"
+	ttk::label $content.h_path -text "Internal Path"
+	ttk::label $content.h_import -text "Import"
+	ttk::label $content.h_del -text ""
+
+	grid $content.h_enabled -row 0 -column 0 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_enabled -weight 1
+	grid $content.h_path -row 0 -column 1 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_path -weight 5
+	grid $content.h_import -row 0 -column 2 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_import -weight 1
+	grid $content.h_del -row 0 -column 3 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_del -weight 1
+
+	# skip header row
+	set row 1
+	set checkbutton_dict "0 !selected 1 selected"
+	foreach index [lsort -integer [dict keys $genericoptions_imported_dirs]] {
+		set imported_dir [dict get $genericoptions_imported_dirs $index]
+		set enabled [dict get $imported_dir "enabled"]
+		set path [dict get $imported_dir "path"]
+
+		global dir_content$index
+		set dir_content$index [dict get $imported_dir "dir_content"]
+
+		# overwrite with linked node dir if it exists
+		if { [string index $path 0] == "@" } {
+			# remove @ and split by :
+			set check_path [join [lassign [split [string range $path 1 end] ":"] linked_node_id] ":"]
+			foreach linked_import_dir_entry [getNodeGenericOptions $linked_node_id "imported_dirs"] {
+				set linked_path [dict get $linked_import_dir_entry "path"]
+				if { [string index $linked_path 0] == "@" } {
+					continue
+				}
+
+				if { $check_path == $linked_path } {
+					set dir_content$index [dict get $linked_import_dir_entry "dir_content"]
+					break
+				}
+			}
+		}
+
+		ttk::checkbutton $content.enabled$index -text "($index)"
+		$content.enabled$index state [dict get $checkbutton_dict $enabled]
+
+		ttk::entry $content.path$index -width 68
+		$content.path$index insert 0 $path
+
+		set tmp_command [list apply {
+			{ index imported_dirs } {
+				global dir_content$index
+
+				set dir_path [dirBrowseDialogBox]
+				if { $dir_path == "" } {
+					return
+				}
+
+				set old_pwd [pwd]
+				try {
+					cd $dir_path
+
+					set ch [file tempfile tmp_file]
+					fconfigure $ch -translation binary
+
+					set files [concat \
+						[glob -nocomplain *] \
+						[glob -nocomplain -types hidden *]]
+					set files [removeFromList $files ". .."]
+
+					::tar::create $ch $files -chan
+
+					seek $ch 0
+					set tar_data [read $ch]
+					close $ch
+					file delete $tmp_file
+
+					set dir_content$index [binary encode base64 $tar_data]
+				} finally {
+					cd $old_pwd
+				}
+			}
+		} \
+			$index \
+			$imported_dirs
+		]
+
+		ttk::button $content.import$index -text "Browse..." -width 8 \
+			-command $tmp_command
+
+		set tmp_command [list apply {
+			{ index imported_dirs } {
+				genericOptionImporteddirs_removeElem $index
+				genericOptionImporteddirs_save $imported_dirs "ignore"
+				genericOptionImporteddirsGUI_refresh $imported_dirs
+			}
+		} \
+			$index \
+			$imported_dirs
+		]
+
+		ttk::button $content.del$index -text "Delete ($index)" \
+			-command $tmp_command
+
+		grid $content.enabled$index -row $row -column 0 -in $content -sticky "" -padx $padx
+		grid $content.path$index -row $row -column 1 -in $content -sticky "" -padx $padx
+		grid $content.import$index -row $row -column 2 -in $content -sticky "" -padx $padx
+		grid $content.del$index -row $row -column 3 -in $content -sticky "" -padx $padx
+
+		incr row
+	}
+
+	grid columnconfigure $content "all" -uniform allTheSame
+}
+
+proc genericOptionImporteddirs_removeElem { index } {
+	global genericoptions_imported_dirs
+
+	dict unset genericoptions_imported_dirs $index
+}
+
+proc genericOptionImporteddirs_save { imported_dirs { ignore_errors "" } } {
+	global genericoptions_imported_dirs node_cfg
+
+	set changed 0
+	set content $imported_dirs.content
+	set option_keys "enabled path dir_content"
+
+	set node_list [getFromRunning "node_list"]
+
+	set error_state ""
+	foreach index [lsort -integer [dict keys $genericoptions_imported_dirs]] {
+		set err ""
+		set imported_dir [dict get $genericoptions_imported_dirs $index]
+		foreach key $option_keys {
+			set $key [dict get $imported_dir "$key"]
+		}
+
+		set elem $content.enabled$index
+		set new_enabled [expr { "selected" in [$elem state] }]
+
+		global dir_content$index
+
+		set elem $content.path$index
+		set new_path [string trim [$elem get]]
+		if { $new_path == "" } {
+			set err "Destination path cannot be empty."
+		} elseif { [string index $new_path 0] == "@" } {
+			# linked from another dir, remove @ and split by :
+			set check_path [join [lassign [split [string range $new_path 1 end] ":"] linked_node_id] ":"]
+			if { $linked_node_id ni $node_list } {
+				set err "Non-existent node '$linked_node_id'."
+			} elseif { $check_path == "" } {
+				set err "Destination path cannot be empty."
+			} elseif { [string index $check_path 0] == "@" } {
+				set err "Recursive linking not supported."
+			} else {
+				set exists 0
+				foreach linked_import_dir_entry [getNodeGenericOptions $linked_node_id "imported_dirs"] {
+					set linked_path [dict get $linked_import_dir_entry "path"]
+					if { [string index $linked_path 0] == "@" } {
+						continue
+					}
+
+					if { $check_path == $linked_path } {
+						set exists 1
+						break
+					}
+				}
+
+				if { $exists } {
+					set dir_content$index ""
+				} else {
+					set err "Path '$check_path' on node '$linked_node_id' does not exists."
+				}
+			}
+		} elseif { [string index $new_path 0] == "#" } {
+			global trigger_hook_names
+
+			# hook, remove # and split by :
+			set check_path [join [lassign [split [string range $new_path 1 end] ":"] hook_name] ":"]
+			if { $hook_name ni $trigger_hook_names } {
+				set err "Non-existant hook name '$hook_name', use any of:\n$trigger_hook_names"
+			} elseif { [string first "/" $check_path] != -1 } {
+				set err "Destination path '$check_path' must be a dir name."
+			}
+		} elseif { [file pathtype $new_path] != "absolute" || [string index $new_path end] == "/" } {
+			set err "Destination path '$new_path' must be an absolute path to a dir."
+		}
+
+		set new_dir_content [set dir_content$index]
+
+		if { $err != "" && $ignore_errors != "ignore" && $new_enabled } {
+			set error_state "Option ($index): $err"
+			break
+		}
+
+		foreach varname $option_keys {
+			if { [set new_$varname] != [set $varname] } {
+				set $varname [set new_$varname]
+				set changed 1
+			}
+		}
+
+		if { $changed } {
+			set new_imported_dir [dict create]
+			foreach key $option_keys {
+				dict set new_imported_dir "$key" [set $key]
+			}
+
+			#dict set new_imported_dir "dir_content" [base64::encode -maxlen 0 $new_dir_content]
+
+			dict set genericoptions_imported_dirs $index $new_imported_dir
+		}
+	}
+
+	return $error_state
+}
+# /advanced generic options
+
+# advanced jail options
+proc jailOptionsGUI { node_id } {
+	set wi .advanced_options
+
+	catch { destroy $wi }
+	tk::toplevel $wi
+
+	try {
+		grab $wi
+	} on error {} {
+		catch { destroy $wi }
+		return
+	}
+
+	global node_cfg
+
+	wm title $wi "Advanced Jail options for node '[_getNodeName $node_cfg]' ($node_id)"
+	wm minsize $wi 584 445
+	wm resizable $wi 0 1
+
+	set notebook $wi.notebook
+	ttk::notebook $notebook
+
+	### General options tab
+	set general $notebook.general
+	ttk::frame $general
+	$notebook add $general -text "General options"
+
+	global jailoptions_general
+	set jailoptions_general {}
+	foreach option_key "custom_vroot custom_flags" {
+		set $option_key [_getNodeJailOptions $node_cfg $option_key]
+		dict set jailoptions_general $option_key [set $option_key]
+	}
+
+	## Custom VROOT
+	set custom_vroot_frame $general.custom_vroot_frame
+	ttk::frame $custom_vroot_frame -relief groove -borderwidth 2 -padding 2
+	ttk::label $custom_vroot_frame.label -text "Custom vroot:"
+	getHelpLabel $custom_vroot_frame.label "Custom vroot"
+
+	pack $custom_vroot_frame.label -side left -padx 2
+
+	ttk::entry $custom_vroot_frame.img -width 40
+	$custom_vroot_frame.img insert 0 $custom_vroot
+	pack $custom_vroot_frame.img -side left -padx 7
+
+	pack $custom_vroot_frame -fill both
+
+	## Custom flags
+	set custom_flags_frame $general.custom_flags_frame
+	ttk::frame $custom_flags_frame -relief groove -borderwidth 2 -padding 2
+	ttk::label $custom_flags_frame.label -text "Custom flags:"
+	getHelpLabel $custom_flags_frame.label "Custom flags"
+
+	pack $custom_flags_frame.label -side left -padx 2
+
+	ttk::entry $custom_flags_frame.flags -width 40
+	$custom_flags_frame.flags insert 0 $custom_flags
+	pack $custom_flags_frame.flags -side left -padx 7
+
+	pack $custom_flags_frame -fill both
+
+	### Buttons
+	set bottom $wi.bottom
+	ttk::frame $bottom
+	set buttons $wi.bottom.buttons
+	ttk::frame $buttons -borderwidth 2
+
+	ttk::button $buttons.apply -text "Apply" \
+		-command "saveJailOptions $notebook"
+	ttk::button $buttons.applyClose -text "Apply and Close" \
+		-command "if { \[saveJailOptions $notebook\] == \"\" } { destroy $wi }"
+	ttk::button $buttons.cancel -text "Cancel" -command "destroy $wi"
+
+	grid $buttons.apply -row 0 -column 1 -sticky swe -padx 2
+	grid $buttons.applyClose -row 0 -column 2 -sticky swe -padx 2
+	grid $buttons.cancel -row 0 -column 3 -sticky swe -padx 2
+
+	pack $notebook -fill both -expand 1
+	pack $bottom -fill both -side bottom
+	pack $buttons -pady 2
+}
+
+proc saveJailOptions { notebook } {
+	global node_cfg
+	global jailoptions_general
+
+	### General options tab
+	set general $notebook.general
+	set err [jailOptionGeneral_save $general]
+	if { $err != "" } {
+		$notebook select $general
+		focus $general
+
+		after idle {.dialog1.msg configure -wraplength 4i}
+		tk_dialog .dialog1 "Error in general" $err info 0 Dismiss
+
+		return $err
+	}
+
+	dict for {key value} $jailoptions_general {
+		set node_cfg [_setNodeJailOptions $node_cfg "$key" $value]
+	}
+
+	return ""
+}
+
+proc jailOptionGeneral_save { general { ignore_errors "" } } {
+	global node_cfg jailoptions_general
+
+	set changed 0
+	set option_keys "custom_vroot custom_flags"
+
+	foreach option_key $option_keys {
+		set $option_key [_getNodeJailOptions $node_cfg $option_key]
+	}
+
+	set error_state ""
+	set err ""
+
+	set new_custom_vroot [string trim [$general.custom_vroot_frame.img get]]
+
+	set new_custom_flags [string trim [$general.custom_flags_frame.flags get]]
+
+	foreach varname $option_keys {
+		if { [set new_$varname] != [set $varname] } {
+			set $varname [set new_$varname]
+			set changed 1
+		}
+	}
+
+	if { $changed } {
+		foreach key $option_keys {
+			dict set jailoptions_general "$key" [set $key]
+		}
+	}
+
+	return $error_state
+}
+# /advanced jail options
+
+# advanced docker options
+lappend cfg_types_dictionary_array "volumes_mounts"
+lappend cfg_types_dictionary_array "env_vars"
+lappend cfg_types_dictionary_array "port_forwards"
+
+proc dockerOptionsGUI { node_id } {
+	set wi .advanced_options
+
+	catch { destroy $wi }
+	tk::toplevel $wi
+
+	try {
+		grab $wi
+	} on error {} {
+		catch { destroy $wi }
+		return
+	}
+
+	global node_cfg
+
+	wm title $wi "Advanced Docker options for node '[_getNodeName $node_cfg]' ($node_id)"
+	wm minsize $wi 584 445
+	wm resizable $wi 0 1
+
+	set notebook $wi.notebook
+	ttk::notebook $notebook
+
+	### General options tab
+	set general $notebook.general
+	ttk::frame $general
+	$notebook add $general -text "General options"
+
+	global dockeroptions_general
+	set dockeroptions_general {}
+	foreach option_key "cpus_count custom_image external_attach custom_flags" {
+		set $option_key [_getNodeDockerOptions $node_cfg $option_key]
+		dict set dockeroptions_general $option_key [set $option_key]
+	}
+
+	## CPU count
+	set cpus_frame $general.cpus_frame
+	ttk::frame $cpus_frame -relief groove -borderwidth 2 -padding 2
+	ttk::label $cpus_frame.label -text "CPUs count"
+	getHelpLabel $cpus_frame.label "CPUs count"
+
+	pack $cpus_frame.label -side left -padx 2
+
+	ttk::entry $cpus_frame.cpus -width 10
+	$cpus_frame.cpus insert 0 $cpus_count
+	pack $cpus_frame.cpus -side left -padx 7
+
+	pack $cpus_frame -fill both
+
+	## Custom image
+	set custom_image_frame $general.custom_image_frame
+	ttk::frame $custom_image_frame -relief groove -borderwidth 2 -padding 2
+	ttk::label $custom_image_frame.label -text "Custom image:"
+	getHelpLabel $custom_image_frame.label "Custom image"
+
+	pack $custom_image_frame.label -side left -padx 2
+
+	ttk::entry $custom_image_frame.img -width 40
+	$custom_image_frame.img insert 0 $custom_image
+	pack $custom_image_frame.img -side left -padx 7
+
+	pack $custom_image_frame -fill both
+
+	## Attach external interface
+	set dext_frame $general.dext_frame
+	ttk::frame $dext_frame -relief groove -borderwidth 2 -padding 2
+	ttk::label $dext_frame.label -text "Attach external Docker interface:"
+	getHelpLabel $dext_frame.label "External Docker interface"
+
+	pack $dext_frame.label -side left -padx 2
+
+	ttk::checkbutton $dext_frame.dext_enable -text "Enabled"
+	if { $external_attach == "true" } {
+		$dext_frame.dext_enable state "selected"
+	} else {
+		$dext_frame.dext_enable state "!selected"
+	}
+
+	pack $dext_frame.dext_enable -side left -padx 7
+
+	pack $dext_frame -fill both
+
+	## Custom flags
+	set custom_flags_frame $general.custom_flags_frame
+	ttk::frame $custom_flags_frame -relief groove -borderwidth 2 -padding 2
+	ttk::label $custom_flags_frame.label -text "Custom flags:"
+	getHelpLabel $custom_flags_frame.label "Custom flags"
+
+	pack $custom_flags_frame.label -side left -padx 2
+
+	ttk::entry $custom_flags_frame.flags -width 40
+	$custom_flags_frame.flags insert 0 $custom_flags
+	pack $custom_flags_frame.flags -side left -padx 7
+
+	pack $custom_flags_frame -fill both
+
+	### Port forwardings tab
+	set port_forwards $notebook.port_forwards
+	ttk::frame $port_forwards
+	$notebook add $port_forwards -text "Port forwardings"
+
+	global dockeroptions_port_forwards
+	set dockeroptions_port_forwards {}
+	set cfg_port_forwards [_getNodeDockerOptions $node_cfg "port_forwards"]
+
+	set index 0
+	foreach cfg_env_var $cfg_port_forwards {
+		dict set dockeroptions_port_forwards $index $cfg_env_var
+
+		incr index
+	}
+
+	set port_forward_add_btn $port_forwards.add_button
+	ttk::button $port_forward_add_btn -text "Add" -width 120
+	grid $port_forward_add_btn -row 0 -column 0 -columnspan 6 -in $port_forwards -sticky "" -pady 4
+
+	set tmp_command [list apply {
+		{ port_forwards } {
+			dockerOptionPortForwards_save $port_forwards ignore
+			dockerOptionPortForwards_addElem
+			dockerOptionPortForwardsGUI_refresh $port_forwards
+		}
+	} \
+		""
+	]
+
+	$port_forward_add_btn configure -command [lreplace $tmp_command end end $port_forwards]
+
+	# redraw header and existing elements
+	dockerOptionPortForwardsGUI_refresh $port_forwards
+
+	### Environment variables tab
+	set env_vars $notebook.env_vars
+	ttk::frame $env_vars
+	$notebook add $env_vars -text "Environment variables"
+
+	global dockeroptions_env_vars
+	set dockeroptions_env_vars {}
+	set cfg_env_vars [_getNodeDockerOptions $node_cfg "env_vars"]
+
+	set index 0
+	foreach cfg_env_var $cfg_env_vars {
+		dict set dockeroptions_env_vars $index $cfg_env_var
+
+		incr index
+	}
+
+	set env_var_add_btn $env_vars.add_button
+	ttk::button $env_var_add_btn -text "Add" -width 120
+	grid $env_var_add_btn -row 0 -column 0 -columnspan 6 -in $env_vars -sticky "" -pady 4
+
+	set tmp_command [list apply {
+		{ env_vars } {
+			dockerOptionEnvVars_save $env_vars ignore
+			dockerOptionEnvVars_addElem
+			dockerOptionEnvVarsGUI_refresh $env_vars
+		}
+	} \
+		""
+	]
+
+	$env_var_add_btn configure -command [lreplace $tmp_command end end $env_vars]
+
+	# redraw header and existing elements
+	dockerOptionEnvVarsGUI_refresh $env_vars
+
+	### Docker volumes tab
+	set volumes $notebook.volumes
+	ttk::frame $volumes
+	$notebook add $volumes -text "Volumes"
+
+	global dockeroptions_volumes
+	set dockeroptions_volumes {}
+	set cfg_volumes [_getNodeDockerOptions $node_cfg "volumes_mounts"]
+
+	set index 0
+	foreach cfg_volume $cfg_volumes {
+		dict set dockeroptions_volumes $index $cfg_volume
+
+		incr index
+	}
+
+	set volume_add_btn $volumes.add_button
+	ttk::button $volume_add_btn -text "Add" -width 120
+	grid $volume_add_btn -row 0 -column 0 -columnspan 6 -in $volumes -sticky "" -pady 4
+
+	set tmp_command [list apply {
+		{ volumes } {
+			dockerOptionVolumes_save $volumes ignore
+			dockerOptionVolumes_addElem
+			dockerOptionVolumesGUI_refresh $volumes
+		}
+	} \
+		""
+	]
+
+	$volume_add_btn configure -command [lreplace $tmp_command end end $volumes]
+
+	# redraw header and existing elements
+	dockerOptionVolumesGUI_refresh $volumes
+
+	### Buttons
+	set bottom $wi.bottom
+	ttk::frame $bottom
+	set buttons $wi.bottom.buttons
+	ttk::frame $buttons -borderwidth 2
+
+	ttk::button $buttons.apply -text "Apply" \
+		-command "saveDockerOptions $notebook"
+	ttk::button $buttons.applyClose -text "Apply and Close" \
+		-command "if { \[saveDockerOptions $notebook\] == \"\" } { destroy $wi }"
+	ttk::button $buttons.cancel -text "Cancel" -command "destroy $wi"
+
+	grid $buttons.apply -row 0 -column 1 -sticky swe -padx 2
+	grid $buttons.applyClose -row 0 -column 2 -sticky swe -padx 2
+	grid $buttons.cancel -row 0 -column 3 -sticky swe -padx 2
+
+	pack $notebook -fill both -expand 1
+	pack $bottom -fill both -side bottom
+	pack $buttons -pady 2
+}
+
+proc saveDockerOptions { notebook } {
+	global node_cfg
+	global dockeroptions_general dockeroptions_port_forwards dockeroptions_env_vars dockeroptions_volumes
+
+	### General options tab
+	set general $notebook.general
+	set err [dockerOptionGeneral_save $general]
+	if { $err != "" } {
+		$notebook select $general
+		focus $general
+
+		after idle {.dialog1.msg configure -wraplength 4i}
+		tk_dialog .dialog1 "Error in general" $err info 0 Dismiss
+
+		return $err
+	}
+
+	### Port forwardings tab
+	set port_forwards $notebook.port_forwards
+	set err [dockerOptionPortForwards_save $port_forwards]
+	if { $err != "" } {
+		$notebook select $port_forwards
+		focus $port_forwards
+
+		after idle {.dialog1.msg configure -wraplength 4i}
+		tk_dialog .dialog1 "Error in port_forwards" $err info 0 Dismiss
+
+		return $err
+	}
+
+	### Environment variables tab
+	set env_vars $notebook.env_vars
+	set err [dockerOptionEnvVars_save $env_vars]
+	if { $err != "" } {
+		$notebook select $env_vars
+		focus $env_vars
+
+		after idle {.dialog1.msg configure -wraplength 4i}
+		tk_dialog .dialog1 "Error in env_vars" $err info 0 Dismiss
+
+		return $err
+	}
+
+	### Docker volumes tab
+	set volumes $notebook.volumes
+	set err [dockerOptionVolumes_save $volumes]
+	if { $err != "" } {
+		$notebook select $volumes
+		focus $volumes
+
+		after idle {.dialog1.msg configure -wraplength 4i}
+		tk_dialog .dialog1 "Error in volumes" $err info 0 Dismiss
+
+		return $err
+	}
+
+	dict for {key value} $dockeroptions_general {
+		set node_cfg [_setNodeDockerOptions $node_cfg "$key" $value]
+	}
+
+	set node_cfg [_setNodeDockerOptions $node_cfg "port_forwards" [dict values $dockeroptions_port_forwards]]
+
+	set node_cfg [_setNodeDockerOptions $node_cfg "env_vars" [dict values $dockeroptions_env_vars]]
+
+	set node_cfg [_setNodeDockerOptions $node_cfg "volumes_mounts" [dict values $dockeroptions_volumes]]
+
+	return ""
+}
+
+proc dockerOptionGeneral_save { general { ignore_errors "" } } {
+	global node_cfg dockeroptions_general
+
+	set changed 0
+	set option_keys "cpus_count custom_image external_attach custom_flags"
+
+	foreach option_key $option_keys {
+		set $option_key [_getNodeDockerOptions $node_cfg $option_key]
+	}
+
+	set error_state ""
+	set err ""
+
+	set new_cpus_count [string trim [$general.cpus_frame.cpus get]]
+	# skip verification if environment variable
+	if { [string first "\$" $new_cpus_count] == -1 } {
+		if { ! [checkDoubleRange $new_cpus_count 0.1 999] } {
+			set err "Wrong CPUs count, valid values: \[0.1, 999\]"
+			if { $ignore_errors != "ignore" } {
+				set error_state "Option (cpus_count): $err"
+			}
+		}
+	}
+
+	set new_custom_image [string trim [$general.custom_image_frame.img get]]
+
+	set new_custom_flags [string trim [$general.custom_flags_frame.flags get]]
+
+	set new_external_attach [string map { 0 "" 1 true } [$general.dext_frame.dext_enable instate selected]]
+
+	foreach varname $option_keys {
+		if { [set new_$varname] != [set $varname] } {
+			set $varname [set new_$varname]
+			set changed 1
+		}
+	}
+
+	if { $changed } {
+		foreach key $option_keys {
+			dict set dockeroptions_general "$key" [set $key]
+		}
+	}
+
+	return $error_state
+}
+
+proc dockerOptionPortForwardsGUI_refresh { port_forwards } {
+	global dockeroptions_port_forwards
+
+	set content $port_forwards.content
+	catch { destroy $content }
+	ttk::frame $content -relief groove -borderwidth 2 -padding 2
+	grid $content -in $port_forwards -sticky nsew -pady 4 -columnspan 6
+
+	set padx 0
+
+	ttk::label $content.h_enabled -text "Enabled"
+	ttk::label $content.h_host_ip -text "Host IP"
+	ttk::label $content.h_host_port -text "Host port"
+	ttk::label $content.h_node_port -text "Node port"
+	ttk::label $content.h_protocol -text "Protocol"
+	ttk::label $content.h_del -text ""
+
+	grid $content.h_enabled -row 0 -column 0 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_enabled -weight 1
+	grid $content.h_host_ip -row 0 -column 1 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_host_ip -weight 5
+	grid $content.h_host_port -row 0 -column 2 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_host_port -weight 2
+	grid $content.h_node_port -row 0 -column 3 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_node_port -weight 2
+	grid $content.h_protocol -row 0 -column 4 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_protocol -weight 1
+	grid $content.h_del -row 0 -column 5 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_del -weight 1
+
+	# skip header row
+	set row 1
+	set checkbutton_dict "0 !selected 1 selected"
+	foreach index [lsort -integer [dict keys $dockeroptions_port_forwards]] {
+		set port_forward [dict get $dockeroptions_port_forwards $index]
+		set enabled [dict get $port_forward "enabled"]
+		set host_ip [dict get $port_forward "host_ip"]
+		set host_port [dict get $port_forward "host_port"]
+		set node_port [dict get $port_forward "node_port"]
+		set protocol [dict get $port_forward "protocol"]
+
+		ttk::checkbutton $content.enabled$index -text "($index)"
+		$content.enabled$index state [dict get $checkbutton_dict $enabled]
+
+		ttk::entry $content.host_ip$index -width 40
+		$content.host_ip$index insert 0 $host_ip
+
+		ttk::entry $content.host_port$index -width 10
+		$content.host_port$index insert 0 $host_port
+
+		ttk::entry $content.node_port$index -width 10
+		$content.node_port$index insert 0 $node_port
+
+		ttk::entry $content.protocol$index -width 5
+		$content.protocol$index insert 0 $protocol
+
+		set tmp_command [list apply {
+			{ index port_forwards } {
+				dockerOptionPortForwards_removeElem $index
+				dockerOptionPortForwards_save $port_forwards "ignore"
+				dockerOptionPortForwardsGUI_refresh $port_forwards
+			}
+		} \
+			$index \
+			$port_forwards
+		]
+
+		ttk::button $content.del$index -text "Delete ($index)" \
+			-command $tmp_command
+
+		grid $content.enabled$index -row $row -column 0 -in $content -sticky "" -padx $padx
+		grid $content.host_ip$index -row $row -column 1 -in $content -sticky "" -padx $padx
+		grid $content.host_port$index -row $row -column 2 -in $content -sticky "" -padx $padx
+		grid $content.node_port$index -row $row -column 3 -in $content -sticky "" -padx $padx
+		grid $content.protocol$index -row $row -column 4 -in $content -sticky "" -padx $padx
+		grid $content.del$index -row $row -column 5 -in $content -sticky "" -padx $padx
+
+		incr row
+	}
+
+	grid columnconfigure $content "all" -uniform allTheSame
+}
+
+proc dockerOptionPortForwards_addElem {} {
+	global dockeroptions_port_forwards
+
+	if { [dict size $dockeroptions_port_forwards] == 0 } {
+		set index 0
+	} else {
+		set index [expr [lindex [lsort -integer [dict keys $dockeroptions_port_forwards]] end] + 1]
+	}
+
+	set elem [dict create]
+	dict set elem "enabled" 1
+	dict set elem "host_ip" ""
+	dict set elem "host_port" ""
+	dict set elem "node_port" ""
+	dict set elem "protocol" ""
+	dict set dockeroptions_port_forwards $index $elem
+}
+
+proc dockerOptionPortForwards_removeElem { index } {
+	global dockeroptions_port_forwards
+
+	dict unset dockeroptions_port_forwards $index
+}
+
+proc dockerOptionPortForwards_save { port_forwards { ignore_errors "" } } {
+	global dockeroptions_port_forwards node_cfg
+
+	set changed 0
+	set content $port_forwards.content
+	set option_keys "enabled host_ip host_port node_port protocol"
+
+	set error_state ""
+	foreach index [lsort -integer [dict keys $dockeroptions_port_forwards]] {
+		set err ""
+		set port_forward [dict get $dockeroptions_port_forwards $index]
+		foreach key $option_keys {
+			set $key [dict get $port_forward "$key"]
+		}
+
+		set elem $content.enabled$index
+		set new_enabled [expr { "selected" in [$elem state] }]
+
+		set elem $content.host_ip$index
+		set new_host_ip [string trim [$elem get]]
+		# skip verification if environment variable
+		if { [string first "\$" $new_host_ip] == -1 } {
+			if { $new_host_ip != "" && [::ip::version $new_host_ip] == -1 } {
+				set err "IP address '$new_host_ip' not valid."
+			}
+		}
+
+		set elem $content.host_port$index
+		set new_host_port [string trim [$elem get]]
+		# skip verification if environment variable
+		if { [string first "\$" $new_host_port] == -1 } {
+			if { $new_host_port == "" || ! [checkIntRange $new_host_port 1 65535] } {
+				set err "Host port out of range \[1, 65535\]"
+			}
+		}
+
+		set elem $content.node_port$index
+		set new_node_port [string trim [$elem get]]
+		# skip verification if environment variable
+		if { [string first "\$" $new_node_port] == -1 } {
+			if { $new_node_port == "" || ! [checkIntRange $new_node_port 1 65535] } {
+				set err "Node port out of range \[1, 65535\]"
+			}
+		}
+
+		set elem $content.protocol$index
+		set new_protocol [string trim [$elem get]]
+		# skip verification if environment variable
+		if { [string first "\$" $new_protocol] == -1 } {
+			if { $new_protocol ni "{} udp tcp sctp"} {
+				set err "Protocol should be '', 'udp', 'tcp', or 'sctp'."
+			}
+		}
+
+		if { $err != "" && $ignore_errors != "ignore" && $new_enabled } {
+			set error_state "Option ($index): $err"
+			break
+		}
+
+		foreach varname $option_keys {
+			if { [set new_$varname] != [set $varname] } {
+				set $varname [set new_$varname]
+				set changed 1
+			}
+		}
+
+		if { $changed } {
+			set new_port_forwards [dict create]
+			foreach key $option_keys {
+				dict set new_port_forwards "$key" [set $key]
+			}
+
+			dict set dockeroptions_port_forwards $index $new_port_forwards
+		}
+	}
+
+	return $error_state
+}
+
+proc dockerOptionEnvVarsGUI_refresh { env_vars } {
+	global dockeroptions_env_vars
+
+	set content $env_vars.content
+	catch { destroy $content }
+	ttk::frame $content -relief groove -borderwidth 2 -padding 2
+	grid $content -in $env_vars -sticky nsew -pady 4 -columnspan 6
+
+	set padx 0
+
+	ttk::label $content.h_enabled -text "Enabled"
+	ttk::label $content.h_env_name -text "Variable name"
+	ttk::label $content.h_env_value -text "Value"
+	ttk::label $content.h_del -text ""
+
+	grid $content.h_enabled -row 0 -column 0 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_enabled -weight 1
+	grid $content.h_env_name -row 0 -column 1 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_env_name -weight 3
+	grid $content.h_env_value -row 0 -column 2 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_env_value -weight 3
+	grid $content.h_del -row 0 -column 3 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_del -weight 1
+
+	# skip header row
+	set row 1
+	set checkbutton_dict "0 !selected 1 selected"
+	foreach index [lsort -integer [dict keys $dockeroptions_env_vars]] {
+		set env_var [dict get $dockeroptions_env_vars $index]
+		set enabled [dict get $env_var "enabled"]
+		set env_name [dict get $env_var "env_name"]
+		set env_value [dict get $env_var "env_value"]
+
+		ttk::checkbutton $content.enabled$index -text "($index)"
+		$content.enabled$index state [dict get $checkbutton_dict $enabled]
+
+		ttk::entry $content.env_name$index -width 40
+		$content.env_name$index insert 0 $env_name
+
+		ttk::entry $content.env_value$index -width 40
+		$content.env_value$index insert 0 $env_value
+
+		set tmp_command [list apply {
+			{ index env_vars } {
+				dockerOptionEnvVars_removeElem $index
+				dockerOptionEnvVars_save $env_vars "ignore"
+				dockerOptionEnvVarsGUI_refresh $env_vars
+			}
+		} \
+			$index \
+			$env_vars
+		]
+
+		ttk::button $content.del$index -text "Delete ($index)" \
+			-command $tmp_command
+
+		grid $content.enabled$index -row $row -column 0 -in $content -sticky "" -padx $padx
+		grid $content.env_name$index -row $row -column 1 -in $content -sticky "" -padx $padx
+		grid $content.env_value$index -row $row -column 2 -in $content -sticky "" -padx $padx
+		grid $content.del$index -row $row -column 3 -in $content -sticky "" -padx $padx
+
+		incr row
+	}
+
+	grid columnconfigure $content "all" -uniform allTheSame
+}
+
+proc dockerOptionEnvVars_addElem {} {
+	global dockeroptions_env_vars
+
+	if { [dict size $dockeroptions_env_vars] == 0 } {
+		set index 0
+	} else {
+		set index [expr [lindex [lsort -integer [dict keys $dockeroptions_env_vars]] end] + 1]
+	}
+
+	set elem [dict create]
+	dict set elem "enabled" 1
+	dict set elem "env_name" ""
+	dict set elem "env_value" ""
+	dict set dockeroptions_env_vars $index $elem
+}
+
+proc dockerOptionEnvVars_removeElem { index } {
+	global dockeroptions_env_vars
+
+	dict unset dockeroptions_env_vars $index
+}
+
+proc dockerOptionEnvVars_save { env_vars { ignore_errors "" } } {
+	global dockeroptions_env_vars node_cfg
+
+	set changed 0
+	set content $env_vars.content
+	set option_keys "enabled env_name env_value"
+
+	set error_state ""
+	foreach index [lsort -integer [dict keys $dockeroptions_env_vars]] {
+		set err ""
+		set env_var [dict get $dockeroptions_env_vars $index]
+		foreach key $option_keys {
+			set $key [dict get $env_var "$key"]
+		}
+
+		set elem $content.enabled$index
+		set new_enabled [expr { "selected" in [$elem state] }]
+
+		set elem $content.env_name$index
+		set new_env_name [string trim [$elem get]]
+		if { $new_env_name == "" } {
+			set err "Variable name cannot be empty."
+		# skip verification if environment variable
+		} elseif { [string first "\$" $new_env_name] == -1 } {
+			if { [regexp {^[A-Za-z_][A-Za-z0-9_]*$} $new_env_name] == 0 } {
+				set err "Variable name '$new_env_name' includes invalid characters, only '\[a-zA-Z_\]\[a-zA-Z0-9_\]' are allowed."
+			}
+		}
+
+		set elem $content.env_value$index
+		set new_env_value [string trim [$elem get]]
+
+		if { $err != "" && $ignore_errors != "ignore" && $new_enabled } {
+			set error_state "Option ($index): $err"
+			break
+		}
+
+		foreach varname $option_keys {
+			if { [set new_$varname] != [set $varname] } {
+				set $varname [set new_$varname]
+				set changed 1
+			}
+		}
+
+		if { $changed } {
+			set new_env_vars [dict create]
+			foreach key $option_keys {
+				dict set new_env_vars "$key" [set $key]
+			}
+
+			dict set dockeroptions_env_vars $index $new_env_vars
+		}
+	}
+
+	return $error_state
+}
+
+proc dockerOptionVolumesGUI_refresh { volumes } {
+	global dockeroptions_volumes
+
+	set content $volumes.content
+	catch { destroy $content }
+	ttk::frame $content -relief groove -borderwidth 2 -padding 2
+	grid $content -in $volumes -sticky nsew -pady 4 -columnspan 6
+
+	set padx 0
+
+	ttk::label $content.h_enabled -text "Enabled"
+	ttk::label $content.h_type -text "Type"
+	ttk::label $content.h_src -text "Source"
+	ttk::label $content.h_dst -text "Destination"
+	ttk::label $content.h_readonly -text "Readonly"
+	ttk::label $content.h_del -text ""
+
+	grid $content.h_enabled -row 0 -column 0 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_enabled -weight 1
+	grid $content.h_type -row 0 -column 1 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_type -weight 1
+	grid $content.h_src -row 0 -column 2 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_src -weight 3
+	grid $content.h_dst -row 0 -column 3 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_dst -weight 3
+	grid $content.h_readonly -row 0 -column 4 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_readonly -weight 1
+	grid $content.h_del -row 0 -column 5 -in $content -sticky "" -padx $padx
+	grid columnconfigure $content $content.h_del -weight 1
+
+	set type_values "bind volume"
+
+	# skip header row
+	set row 1
+	set checkbutton_dict "0 !selected 1 selected"
+	foreach index [lsort -integer [dict keys $dockeroptions_volumes]] {
+		set volume [dict get $dockeroptions_volumes $index]
+		set enabled [dict get $volume "enabled"]
+		set type [dict get $volume "type"]
+		set src [dict get $volume "src"]
+		set dst [dict get $volume "dst"]
+		set readonly [dict get $volume "readonly"]
+
+		ttk::checkbutton $content.enabled$index -text "($index)"
+		$content.enabled$index state [dict get $checkbutton_dict $enabled]
+
+		ttk::combobox $content.type$index -width 8 -state readonly
+		$content.type$index configure -values $type_values
+		$content.type$index set $type
+
+		ttk::entry $content.src$index -width 34
+		$content.src$index insert 0 $src
+
+		ttk::entry $content.dst$index -width 34
+		$content.dst$index insert 0 $dst
+
+		ttk::checkbutton $content.readonly$index
+		$content.readonly$index state [dict get $checkbutton_dict $readonly]
+
+		set tmp_command [list apply {
+			{ index volumes } {
+				dockerOptionVolumes_removeElem $index
+				dockerOptionVolumes_save $volumes "ignore"
+				dockerOptionVolumesGUI_refresh $volumes
+			}
+		} \
+			$index \
+			$volumes
+		]
+
+		ttk::button $content.del$index -text "Delete ($index)" \
+			-command $tmp_command
+
+		grid $content.enabled$index -row $row -column 0 -in $content -sticky "" -padx $padx
+		grid $content.type$index -row $row -column 1 -in $content -sticky "" -padx $padx
+		grid $content.src$index -row $row -column 2 -in $content -sticky "" -padx $padx
+		grid $content.dst$index -row $row -column 3 -in $content -sticky "" -padx $padx
+		grid $content.readonly$index -row $row -column 4 -in $content -sticky "" -padx $padx
+		grid $content.del$index -row $row -column 5 -in $content -sticky "" -padx $padx
+
+		incr row
+	}
+
+	grid columnconfigure $content "all" -uniform allTheSame
+}
+
+proc dockerOptionVolumes_addElem {} {
+	global dockeroptions_volumes
+
+	if { [dict size $dockeroptions_volumes] == 0 } {
+		set index 0
+	} else {
+		set index [expr [lindex [lsort -integer [dict keys $dockeroptions_volumes]] end] + 1]
+	}
+
+	set elem [dict create]
+	dict set elem "enabled" 1
+	dict set elem "type" "bind"
+	dict set elem "src" ""
+	dict set elem "dst" ""
+	dict set elem "readonly" 0
+	dict set dockeroptions_volumes $index $elem
+}
+
+proc dockerOptionVolumes_removeElem { index } {
+	global dockeroptions_volumes
+
+	dict unset dockeroptions_volumes $index
+}
+
+proc dockerOptionVolumes_save { volumes { ignore_errors "" } } {
+	global dockeroptions_volumes node_cfg
+
+	set changed 0
+	set content $volumes.content
+	set option_keys "enabled type src dst readonly"
+
+	set error_state ""
+	foreach index [lsort -integer [dict keys $dockeroptions_volumes]] {
+		set err ""
+		set volume [dict get $dockeroptions_volumes $index]
+		foreach key $option_keys {
+			set $key [dict get $volume "$key"]
+		}
+
+		set elem $content.enabled$index
+		set new_enabled [expr { "selected" in [$elem state] }]
+
+		set elem $content.type$index
+		set new_type [$elem get]
+
+		set elem $content.src$index
+		set new_src [string trim [$elem get]]
+		if { $new_src == "" } {
+			set err "Source volume cannot be empty."
+		# skip verification if environment variable
+		} elseif { [string first "\$" $new_src] == -1 } {
+			if { $new_type == "volume" && [regexp {^[A-Za-z_0-9][A-Za-z0-9_.-]*$} $new_src] == 0 } {
+				set err "Source volume '$new_src' includes invalid characters for a local volume name, only '\[a-zA-Z0-9\]\[a-zA-Z0-9_.-\]' are allowed."
+			}
+		}
+
+		set elem $content.dst$index
+		set new_dst [string trim [$elem get]]
+		if { $new_dst == "" } {
+			set err "Destination path cannot be empty."
+		# skip verification if environment variable
+		} elseif { [string first "\$" $new_dst] == -1 } {
+			if { [file pathtype $new_dst] != "absolute" || $new_dst == "/" } {
+				set err "Destination path '$new_dst' must be an absolute path and must not be /."
+			}
+		}
+
+		set elem $content.readonly$index
+		set new_readonly [expr { "selected" in [$elem state] }]
+
+		if { $err != "" && $ignore_errors != "ignore" && $new_enabled } {
+			set error_state "Option ($index): $err"
+			break
+		}
+
+		foreach varname $option_keys {
+			if { [set new_$varname] != [set $varname] } {
+				set $varname [set new_$varname]
+				set changed 1
+			}
+		}
+
+		if { $changed } {
+			set new_volume [dict create]
+			foreach key $option_keys {
+				dict set new_volume "$key" [set $key]
+			}
+
+			dict set dockeroptions_volumes $index $new_volume
+		}
+	}
+
+	return $error_state
+}
+# /advanced docker options
 
 #****f* nodecfgGUI.tcl/configGUI_cpuConfig
 # NAME
@@ -3334,48 +5133,17 @@ proc configGUI_servicesConfigApply { wi node_id } {
 	}
 }
 
-#****f* nodecfgGUI.tcl/configGUI_attachDockerToExtApply
+#****f* nodecfgGUI.tcl/configGUI_advancedVirtOptionsApply
 # NAME
-#   configGUI_attachDockerToExtApply -- configure GUI - attach docker ifc apply
+#   configGUI_advancedVirtOptionsApply -- configure GUI
 # SYNOPSIS
-#   configGUI_attachDockerToExtApply $wi $node_id
+#   configGUI_advancedVirtOptionsApply $wi $node_id
 # FUNCTION
-#   Saves changes in the module with attach docker to ext ifc
 # INPUTS
 #   * wi -- widget
 #   * node_id -- node id
 #****
-proc configGUI_attachDockerToExtApply { wi node_id } {
-	global changed docker_enable
-	global node_cfg
-
-	set docker_enable_str [string map { 0 "" 1 true } $docker_enable]
-	if { [_getNodeDockerAttach $node_cfg] != $docker_enable_str } {
-		set node_cfg [_setNodeDockerAttach $node_cfg $docker_enable_str]
-		set changed 1
-	}
-}
-
-#****f* nodecfgGUI.tcl/configGUI_customImageApply
-# NAME
-#   configGUI_customImageApply -- configure GUI - custom image apply
-# SYNOPSIS
-#   configGUI_customImageApply $wi $node_id
-# FUNCTION
-#   Saves changes in the module with different customImage
-# INPUTS
-#   * wi -- widget
-#   * node_id -- node id
-#****
-proc configGUI_customImageApply { wi node_id } {
-	global changed
-	global node_cfg
-
-	set custom_image [$wi.customImg.img get]
-	if { [_getNodeCustomImage $node_cfg] != $custom_image } {
-		set node_cfg [_setNodeCustomImage $node_cfg $custom_image]
-		set changed 1
-	}
+proc configGUI_advancedVirtOptionsApply { wi node_id } {
 }
 
 #****f* nodecfgGUI.tcl/configGUI_cpuConfigApply
@@ -3495,6 +5263,88 @@ proc configGUI_externalIfcsApply { wi node_id } {
 }
 
 #############Custom startup configuration#############
+
+proc openEditor { content args } {
+	set callback_proc $args
+
+	set wi .textEditor
+
+	catch { destroy $wi }
+	tk::toplevel $wi
+
+	try {
+		grab $wi
+	} on error {} {
+		catch { destroy $wi }
+		return
+	}
+
+	ttk::scrollbar $wi.vsb -orient vertical -command [list $wi.editor yview]
+	ttk::scrollbar $wi.hsb -orient horizontal -command [list $wi.editor xview]
+	text $wi.editor -width 80 -height 20 -bg white -wrap none \
+		-yscrollcommand [list $wi.vsb set] -xscrollcommand [list $wi.hsb set]
+
+	$wi.editor insert end "$content"
+
+	set bottom_frame $wi.bottom
+	ttk::frame $bottom_frame
+
+	set buttons_frame $bottom_frame.buttons
+	ttk::frame $buttons_frame \
+		-borderwidth 2
+
+	grid $wi.editor $wi.vsb -in $wi -columnspan 5 \
+		-sticky nsew
+	grid $wi.hsb -in $wi -sticky nsew -columnspan 5
+	grid rowconfigure $wi $wi.editor -weight 10
+	grid columnconfigure $wi $wi.editor -weight 10
+	grid $bottom_frame -in $wi -sticky ns -columnspan 5
+	grid $buttons_frame -in $bottom_frame -sticky ns -columnspan 5
+
+	ttk::button $buttons_frame.apply \
+		-text "Apply" \
+		-command [lreplace $callback_proc end-3 end $wi $wi.editor 1 0]
+
+	ttk::button $buttons_frame.applyClose \
+		-text "Apply and Close" \
+		-command [lreplace $callback_proc end-3 end $wi $wi.editor 1 1]
+
+	ttk::button $buttons_frame.cancel \
+		-text "Cancel" \
+		-command [lreplace $callback_proc end-3 end $wi $wi.editor 0 1]
+
+	grid $buttons_frame.apply -row 0 -column 1 -sticky swe -padx 2
+	grid $buttons_frame.applyClose -row 0 -column 2 -sticky swe -padx 2
+	grid $buttons_frame.cancel -row 0 -column 3 -sticky swe -padx 2
+}
+
+proc openExternalEditor { content args } {
+	set callback_proc $args
+
+	if { [checkTerminalMissing] } {
+		return
+	}
+
+	set file_id [file tempfile tmp_path]
+	puts -nonewline $file_id $content
+	close $file_id
+
+	set external_editor_cmd [getExternalEditorCommand "Editing file for importing ($tmp_path)" $tmp_path]
+
+	try {
+		open "|$external_editor_cmd" r
+	} on ok read_channel {
+		fconfigure $read_channel -blocking 0 -buffering none
+		fileevent $read_channel readable [lreplace $callback_proc end-1 end $read_channel $tmp_path]
+	} on error err {
+		after idle { .dialog1.msg configure -wraplength 4i }
+		tk_dialog .dialog1 "IMUNES error" \
+			"Error opening external editor:\n\n'$err'" \
+			info 0 Dismiss
+	}
+
+	return
+}
 
 #****f* nodecfgGUI.tcl/customConfigGUI
 # NAME
@@ -8290,22 +10140,6 @@ proc _setNodeServices { node_cfg services } {
 	return [_cfgSet $node_cfg "services" $services]
 }
 
-proc _getNodeCustomImage { node_cfg } {
-	return [_cfgGet $node_cfg "custom_image"]
-}
-
-proc _setNodeCustomImage { node_cfg img } {
-	return [_cfgSet $node_cfg "custom_image" $img]
-}
-
-proc _getNodeDockerAttach { node_cfg } {
-	return [_cfgGetWithDefault "false" $node_cfg "docker_attach"]
-}
-
-proc _setNodeDockerAttach { node_cfg state } {
-	return [_cfgSet $node_cfg "docker_attach" $state]
-}
-
 proc _getNodeVlanFiltering { node_cfg } {
 	return [_cfgGetWithDefault 0 $node_cfg "vlan_filtering"]
 }
@@ -8389,4 +10223,29 @@ proc _getAllIpAddresses { node_cfg } {
 	}
 
 	return "\"$ipv4_list\" \"$ipv6_list\""
+}
+
+### Advanced options
+proc _getNodeGenericOptions { node_cfg type } {
+	return [_cfgGet $node_cfg "advanced_options" "generic_options" $type]
+}
+
+proc _setNodeGenericOptions { node_cfg type new_value } {
+	return [_cfgSet $node_cfg "advanced_options" "generic_options" $type $new_value]
+}
+
+proc _getNodeJailOptions { node_cfg type } {
+	return [_cfgGet $node_cfg "advanced_options" "jail_options" $type]
+}
+
+proc _setNodeJailOptions { node_cfg type new_value } {
+	return [_cfgSet $node_cfg "advanced_options" "jail_options" $type $new_value]
+}
+
+proc _getNodeDockerOptions { node_cfg type } {
+	return [_cfgGet $node_cfg "advanced_options" "docker_options" $type]
+}
+
+proc _setNodeDockerOptions { node_cfg type new_value } {
+	return [_cfgSet $node_cfg "advanced_options" "docker_options" $type $new_value]
 }

@@ -665,15 +665,16 @@ proc loadCfgLegacy { cfg } {
 						}
 						docker-attach {
 							cfgUnset $dict_object $object $field
-							set docker_enable_str [string map {false "" true 1} $value]
-							cfgSet $dict_object $object "docker_attach" $docker_enable_str
+							cfgSet $dict_object $object "advanced_options" "docker_options" "external_attach" $value
 							lappend $object "docker-attach $value"
 						}
 						# for backwards compatibility
 						docker-image -
 						custom-image {
 							cfgUnset $dict_object $object $field
-							cfgSet $dict_object $object "custom_image" $value
+							# set both Docker and Jail custom_image/custom_vroot options
+							cfgSet $dict_object $object "advanced_options" "docker_options" "custom_image" $value
+							cfgSet $dict_object $object "advanced_options" "jail_options" "custom_vroot" $value
 							lappend $object "custom-image $value"
 						}
 						events {
@@ -1334,94 +1335,108 @@ proc jsonMigration { from_version to_version } {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 	global all_gui_options gui execMode
 
-	# TODO: a way to migrate across versions
-	if { "${from_version}${to_version}" == "12" } {
-		dict for {option value} [cfgGet "options"] {
-			if { $option in $all_gui_options } {
-				setOption_gui $option $value
-				cfgUnset "options" $option
-			}
-		}
-
-		cfgSet "gui" "canvases" [cfgGet "canvases"]
-		cfgUnset "canvases"
-
-		cfgSet "gui" "annotations" [cfgGet "annotations"]
-		cfgUnset "annotations"
-
-		cfgSet "gui" "images" [cfgGet "images"]
-		cfgUnset "images"
-
-		foreach link_id [getFromRunning "link_list"] {
-			setLinkColor $link_id [cfgGet "links" $link_id "color"]
-			cfgUnset "links" $link_id "color"
-			setLinkWidth $link_id [cfgGet "links" $link_id "width"]
-			cfgUnset "links" $link_id "width"
-
-			set mirror_link_id [cfgGet "links" $link_id "mirror"]
-			if { $mirror_link_id != "" } {
-				cfgUnset "links" $link_id "mirror"
-
-				set pseudo1_id [lindex [getLinkPeers $link_id] 0]
-				set pseudo2_id [lindex [getLinkPeers $mirror_link_id] 0]
-				set real1_node_id [lindex [getLinkPeers $link_id] 1]
-				set real2_node_id [lindex [getLinkPeers $mirror_link_id] 1]
-				set real1_iface_id [lindex [getLinkPeersIfaces $link_id] 1]
-				set real2_iface_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]
-
-				setToRunning "link_list" [removeFromList [getFromRunning "link_list"] $mirror_link_id]
-				cfgUnset "links" $mirror_link_id
-
-				setLinkPeers $link_id "$real1_node_id $real2_node_id"
-				setLinkPeersIfaces $link_id "$real1_iface_id $real2_iface_id"
-
-				setIfcLink $real1_node_id $real1_iface_id $link_id
-				setIfcLink $real2_node_id $real2_iface_id $link_id
-
-				lassign [splitLink $link_id] new_node1_id new_node2_id
-
-				setNodeCoords $new_node1_id [cfgGet "nodes" $pseudo1_id "iconcoords"]
-				setNodeCoords $new_node2_id [cfgGet "nodes" $pseudo2_id "iconcoords"]
-				setNodeLabelCoords $new_node1_id [getNodeCoords $new_node1_id]
-				setNodeLabelCoords $new_node2_id [getNodeCoords $new_node2_id]
-
-				setNodeCanvas $new_node1_id [cfgGet "nodes" $pseudo1_id "canvas"]
-				setNodeCanvas $new_node2_id [cfgGet "nodes" $pseudo2_id "canvas"]
-
-				setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $pseudo1_id]
-				cfgUnset "nodes" $pseudo1_id
-				setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $pseudo2_id]
-				cfgUnset "nodes" $pseudo2_id
+	# loop through all migrations
+	set cur_version $from_version
+	for { set next_version [expr $cur_version + 1] } { $next_version <= $to_version } { incr next_version; incr cur_version } {
+		if { "${cur_version}${next_version}" == "12" } {
+			dict for {option value} [cfgGet "options"] {
+				if { $option in $all_gui_options } {
+					setOption_gui $option $value
+					cfgUnset "options" $option
+				}
 			}
 
-			setLinkPeers_gui $link_id [getLinkPeers $link_id]
-		}
+			cfgSet "gui" "canvases" [cfgGet "canvases"]
+			cfgUnset "canvases"
 
-		foreach node_id [getFromRunning "node_list"] {
-			setNodeLabel $node_id [getNodeName $node_id]
-			setNodeCanvas $node_id [cfgGet "nodes" $node_id "canvas"]
-			cfgUnset "nodes" $node_id "canvas"
-			setNodeCoords $node_id [cfgGet "nodes" $node_id "iconcoords"]
-			cfgUnset "nodes" $node_id "iconcoords"
-			setNodeLabelCoords $node_id [cfgGet "nodes" $node_id "labelcoords"]
-			cfgUnset "nodes" $node_id "labelcoords"
-			setNodeCustomIcon $node_id [cfgGet "nodes" $node_id "custom_icon"]
-			cfgUnset "nodes" $node_id "custom_icon"
+			cfgSet "gui" "annotations" [cfgGet "annotations"]
+			cfgUnset "annotations"
 
-			if { [getNodeType $node_id] == "ext" && [getNodeNATIface $node_id] == "" } {
-				cfgSet "nodes" $node_id "nat_iface" "UNASSIGNED"
+			cfgSet "gui" "images" [cfgGet "images"]
+			cfgUnset "images"
+
+			foreach link_id [getFromRunning "link_list"] {
+				setLinkColor $link_id [cfgGet "links" $link_id "color"]
+				cfgUnset "links" $link_id "color"
+				setLinkWidth $link_id [cfgGet "links" $link_id "width"]
+				cfgUnset "links" $link_id "width"
+
+				set mirror_link_id [cfgGet "links" $link_id "mirror"]
+				if { $mirror_link_id != "" } {
+					cfgUnset "links" $link_id "mirror"
+
+					set pseudo1_id [lindex [getLinkPeers $link_id] 0]
+					set pseudo2_id [lindex [getLinkPeers $mirror_link_id] 0]
+					set real1_node_id [lindex [getLinkPeers $link_id] 1]
+					set real2_node_id [lindex [getLinkPeers $mirror_link_id] 1]
+					set real1_iface_id [lindex [getLinkPeersIfaces $link_id] 1]
+					set real2_iface_id [lindex [getLinkPeersIfaces $mirror_link_id] 1]
+
+					setToRunning "link_list" [removeFromList [getFromRunning "link_list"] $mirror_link_id]
+					cfgUnset "links" $mirror_link_id
+
+					setLinkPeers $link_id "$real1_node_id $real2_node_id"
+					setLinkPeersIfaces $link_id "$real1_iface_id $real2_iface_id"
+
+					setIfcLink $real1_node_id $real1_iface_id $link_id
+					setIfcLink $real2_node_id $real2_iface_id $link_id
+
+					lassign [splitLink $link_id] new_node1_id new_node2_id
+
+					setNodeCoords $new_node1_id [cfgGet "nodes" $pseudo1_id "iconcoords"]
+					setNodeCoords $new_node2_id [cfgGet "nodes" $pseudo2_id "iconcoords"]
+					setNodeLabelCoords $new_node1_id [getNodeCoords $new_node1_id]
+					setNodeLabelCoords $new_node2_id [getNodeCoords $new_node2_id]
+
+					setNodeCanvas $new_node1_id [cfgGet "nodes" $pseudo1_id "canvas"]
+					setNodeCanvas $new_node2_id [cfgGet "nodes" $pseudo2_id "canvas"]
+
+					setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $pseudo1_id]
+					cfgUnset "nodes" $pseudo1_id
+					setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $pseudo2_id]
+					cfgUnset "nodes" $pseudo2_id
+				}
+
+				setLinkPeers_gui $link_id [getLinkPeers $link_id]
 			}
-		}
 
-		setToRunning_gui "canvas_list" [getCanvasList]
-		setToRunning_gui "annotation_list" [getAnnotationList]
-		setToRunning_gui "image_list" [getImageList]
+			foreach node_id [getFromRunning "node_list"] {
+				setNodeLabel $node_id [getNodeName $node_id]
+				setNodeCanvas $node_id [cfgGet "nodes" $node_id "canvas"]
+				cfgUnset "nodes" $node_id "canvas"
+				setNodeCoords $node_id [cfgGet "nodes" $node_id "iconcoords"]
+				cfgUnset "nodes" $node_id "iconcoords"
+				setNodeLabelCoords $node_id [cfgGet "nodes" $node_id "labelcoords"]
+				cfgUnset "nodes" $node_id "labelcoords"
+				setNodeCustomIcon $node_id [cfgGet "nodes" $node_id "custom_icon"]
+				cfgUnset "nodes" $node_id "custom_icon"
 
-		if { $gui && $execMode == "interactive" } {
+				if { [getNodeType $node_id] == "ext" && [getNodeNATIface $node_id] == "" } {
+					cfgSet "nodes" $node_id "nat_iface" "UNASSIGNED"
+				}
+			}
+
+			setToRunning_gui "canvas_list" [getCanvasList]
+			setToRunning_gui "annotation_list" [getAnnotationList]
+			setToRunning_gui "image_list" [getImageList]
+
 			applyOptionsToGUI
-		}
 
-		setOption "version" $to_version
+			setOption "version" $next_version
+		} elseif { "${cur_version}${next_version}" == "23" } {
+			# custom image and external Docker interface
+			foreach node_id [getFromRunning "node_list"] {
+				set custom_image [cfgGet "nodes" $node_id "custom_image"]
+				setNodeDockerOptions $node_id "custom_image" $custom_image
+				setNodeJailOptions $node_id "custom_vroot" $custom_image
+				cfgUnset "nodes" $node_id "custom_image"
+
+				setNodeDockerOptions $node_id "external_attach" [cfgGet "nodes" $node_id "docker_attach"]
+				cfgUnset "nodes" $node_id "docker_attach"
+			}
+
+			setOption "version" $next_version
+		}
 	}
 }
 
@@ -2060,13 +2075,13 @@ proc getImageProperty { image_id property } {
 
 #########################################################################
 
-# returns the type of key 'key_name' (defined by values it hold)
+# returns the type of key 'key_name' (defined by values it holds)
 # * dictionary - holds objects with unique keys
 # * object - regular 'key-value' pair
 # * array - JSON array
 # * inner_dictionary - dictionary inside of an object
 proc getJsonType { key_name } {
-	global cfg_types_dictionary cfg_types_array cfg_types_inner_dictionary
+	global cfg_types_dictionary cfg_types_array cfg_types_inner_dictionary cfg_types_dictionary_array
 
 	if { $key_name in $cfg_types_dictionary } {
 		return "dictionary"
@@ -2074,11 +2089,16 @@ proc getJsonType { key_name } {
 		return "array"
 	} elseif { $key_name in $cfg_types_inner_dictionary } {
 		return "inner_dictionary"
+	} elseif { $key_name in $cfg_types_dictionary_array } {
+		return "dictionary_array"
 	}
 
 	return "object_list"
 }
 
+# Creates a JSON from 'dictionary', but following the rules regarding
+# 'value_type'. Each IMUNES type is defined with getJsonType procedure, default
+# being 'object'. This proc recursively calls itself until 'object' level.
 proc createJson { value_type dictionary } {
 	set retv {}
 
@@ -2091,7 +2111,7 @@ proc createJson { value_type dictionary } {
 		"object_list" {
 			set retv [json::write object {*}[dict map {k v} $dictionary {
 				set k_type [getJsonType $k]
-				if { $k_type in "dictionary array" } {
+				if { $k_type in "dictionary array dictionary_array" } {
 					createJson $k_type $v
 				} elseif { $k_type in "inner_dictionary" } {
 					createJson "object_list" $v
@@ -2104,6 +2124,14 @@ proc createJson { value_type dictionary } {
 			set json_list {}
 			foreach line $dictionary {
 				lappend json_list [::json::write string $line]
+			}
+
+			set retv [::json::write array {*}$json_list]
+		}
+		"dictionary_array" {
+			set json_list {}
+			foreach line $dictionary {
+				lappend json_list [createJson "object_list" $line]
 			}
 
 			set retv [::json::write array {*}$json_list]

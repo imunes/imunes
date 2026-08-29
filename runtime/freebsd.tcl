@@ -174,8 +174,7 @@ proc allSnapshotsAvailable {} {
 	set node_list [getFromRunning "node_list"]
 	set snapshots {}
 	foreach node_id $node_list {
-		# TODO: create another field for other jail/docker arguments
-		set img [lindex [split [getNodeCustomImage $node_id] " "] end]
+		set img [lindex [split [getNodeJailOptions $node_id "custom_vroot"] " "] end]
 		if { $img != "" } {
 			lappend snapshots $img
 		}
