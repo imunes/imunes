@@ -418,18 +418,11 @@ proc configureLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 	set dup [expr [getLinkDup $link_id] + 0]
 
 	foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
-		set private_ns [invokeNodeProc $node_id "getPrivateNs" $eid $node_id]
-		lassign [invokeNodeProc $node_id "getHookData" $node_id $iface_id] iface_name - -
-		if { [getNodeType $node_id] == "rj45" } {
-			set vlan [getIfcVlanTag $node_id $iface_id]
-			set dev [getIfcVlanDev $node_id $iface_id]
-			if { $vlan != "" && $dev != "" } {
-				set iface_name ${dev}_$vlan
-			}
-		}
+		set public_ns [invokeNodeProc $node_id "getPublicNs" $eid $node_id]
+		lassign [invokeNodeProc $node_id "getHookData" $node_id $iface_id] - public_iface -
 
 		set netem_cfg [getNetemConfigLine $bandwidth $delay $loss $dup]
-		pipesExec "ip netns exec $private_ns tc qdisc replace dev $iface_name root netem $netem_cfg" "hold"
+		pipesExec "ip netns exec $public_ns tc qdisc replace dev $public_iface root netem $netem_cfg" "hold"
 
 		# XXX: Now on Linux we don't care about queue lengths and we don't limit
 		# maximum data and burst size.
@@ -456,10 +449,10 @@ proc configureLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 
 proc unconfigureLinkBetween { eid node1_id node2_id iface1_id iface2_id link_id } {
 	foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
-		set private_ns [invokeNodeProc $node_id "getPrivateNs" $eid $node_id]
-		lassign [invokeNodeProc $node_id "getHookData" $node_id $iface_id] iface_name - -
+		set public_ns [invokeNodeProc $node_id "getPublicNs" $eid $node_id]
+		lassign [invokeNodeProc $node_id "getHookData" $node_id $iface_id] - public_iface -
 
-		pipesExec "ip netns exec $private_ns tc qdisc del dev $iface_name root" "hold"
+		pipesExec "ip netns exec $public_ns tc qdisc del dev $public_iface root" "hold"
 	}
 }
 
