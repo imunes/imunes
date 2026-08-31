@@ -397,7 +397,9 @@ set tmp_command {
 	}
 
 	selectAllObjects
-	deleteSelection
+	if { ! [deleteSelection] } {
+		return
+	}
 
 	set i [lsearch $canvas_list $curcanvas]
 	cfgUnset "gui" "canvases" $curcanvas

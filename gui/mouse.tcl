@@ -1984,13 +1984,13 @@ proc deleteSelection { { keep_other_ifaces 0 } { no_warning "" } } {
 		switch -- $answer {
 			yes {}
 			no {
-				return
+				return false
 			}
 		}
 	}
 
 	if { ! [getFromRunning "stop_sched"] } {
-		return
+		return false
 	}
 
 	catch { unset viewid }
@@ -2016,6 +2016,8 @@ proc deleteSelection { { keep_other_ifaces 0 } { no_warning "" } } {
 
 	$main_canvas_elem config -cursor left_ptr
 	.bottom.textbox config -text ""
+
+	return true
 }
 
 #****f* editor.tcl/removeIPv4Nodes
