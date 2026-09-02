@@ -2928,6 +2928,8 @@ proc genericOptionImportedfiles_save { imported_files { ignore_errors "" } } {
 			set check_path [join [lassign [split [string range $new_path 1 end] ":"] hook_name] ":"]
 			if { $hook_name ni $trigger_hook_names } {
 				set err "Non-existant hook name '$hook_name', use any of:\n$trigger_hook_names"
+			} elseif { $check_path == "" } {
+				set err "Destination path cannot be empty."
 			} elseif { [string first "/" $check_path] != -1 } {
 				set err "Destination path '$check_path' must be a file name."
 			}
@@ -3193,6 +3195,8 @@ proc genericOptionImporteddirs_save { imported_dirs { ignore_errors "" } } {
 			set check_path [join [lassign [split [string range $new_path 1 end] ":"] hook_name] ":"]
 			if { $hook_name ni $trigger_hook_names } {
 				set err "Non-existant hook name '$hook_name', use any of:\n$trigger_hook_names"
+			} elseif { $check_path == "" } {
+				set err "Destination path cannot be empty."
 			} elseif { [string first "/" $check_path] != -1 } {
 				set err "Destination path '$check_path' must be a dir name."
 			}
