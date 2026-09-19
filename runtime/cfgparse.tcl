@@ -57,6 +57,7 @@ proc loadCfgLegacy { cfg } {
 	global icon_size
 	global auto_etc_hosts
 	global execMode all_modules_list gui
+	global all_annotation_types
 
 	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
 	upvar 0 ::cf::[set ::curcfg]::dict_run_gui dict_run_gui
@@ -996,6 +997,32 @@ proc loadCfgLegacy { cfg } {
 			setNodeCanvas $node_id $curcanvas
 		}
 	}
+
+	foreach annotation_type $all_annotation_types {
+		set ${annotation_type}_list {}
+	}
+
+	foreach annotation_id $annotation_list {
+		set annotation_type [getAnnotationType $annotation_id]
+		lappend ${annotation_type}_list $annotation_id
+	}
+
+	set annotation_list [concat $rectangle_list $oval_list $freeform_list $text_list]
+
+	foreach canvas_id $canvas_list {
+		set annotation_order {}
+		foreach annotation_id $annotation_list {
+			if { [getAnnotationCanvas $annotation_id] == $canvas_id } {
+				set annotation_list [removeFromList $annotation_list $annotation_id]
+				lappend annotation_order $annotation_id
+			}
+		}
+
+		if { $annotation_order != {} } {
+			setCanvasAnnotationOrder $canvas_id $annotation_order
+		}
+	}
+
 	#
 	# Hack for comaptibility with old format files (no lo0 on nodes)
 	#

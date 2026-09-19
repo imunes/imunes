@@ -262,6 +262,8 @@ proc openFile { { no_recent "" } } {
 	applyOptionsToGUI
 
 	if { $gui } {
+		global all_annotation_types
+
 		switchCanvas none
 
 		set node_list [getFromRunning "node_list"]
@@ -275,6 +277,41 @@ proc openFile { { no_recent "" } } {
 		foreach gui_link_id [dict keys [cfgGet "gui" "links"]] {
 			if { ! [isPseudoLink $gui_link_id] && $gui_link_id ni $link_list } {
 				cfgUnset "gui" "links" $gui_link_id
+			}
+		}
+
+		set annotation_list [getFromRunning_gui "annotation_list"]
+
+		foreach annotation_type $all_annotation_types {
+			set ${annotation_type}_list {}
+		}
+
+		foreach annotation_id $annotation_list {
+			set annotation_type [getAnnotationType $annotation_id]
+			lappend ${annotation_type}_list $annotation_id
+		}
+
+		set annotation_list [concat $rectangle_list $oval_list $freeform_list $text_list]
+
+		foreach canvas_id $canvas_list {
+			set annotation_order [getCanvasAnnotationOrder $canvas_id]
+			foreach annotation_id $annotation_order {
+				if { [getAnnotationCanvas $annotation_id] != $canvas_id } {
+					set annotation_order [removeFromList $annotation_order $annotation_id]
+				}
+			}
+
+			foreach annotation_id $annotation_list {
+				if { [getAnnotationCanvas $annotation_id] == $canvas_id } {
+					set annotation_list [removeFromList $annotation_list $annotation_id]
+					if { $annotation_id ni $annotation_order } {
+						lappend annotation_order $annotation_id
+					}
+				}
+			}
+
+			if { $annotation_order != {} } {
+				setCanvasAnnotationOrder $canvas_id $annotation_order
 			}
 		}
 

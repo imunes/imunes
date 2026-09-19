@@ -163,6 +163,7 @@ proc popupOvalApply { wi target } {
 	set color [$wi.colors.color cget -text]
 	set bordercolor [$wi.border.color cget -text]
 
+	set to_top 0
 	if { $target == 0 } {
 		# Create a new annotation object
 		set target [newObjectId [getFromRunning_gui "annotation_list"] "a"]
@@ -181,6 +182,8 @@ proc popupOvalApply { wi target } {
 		if { [lindex $coords 3] > $sizey } {
 			set coords [lreplace $coords 3 3 $sizey]
 		}
+
+		set to_top 1
 	} else {
 		set coords [getAnnotationCoords $target]
 	}
@@ -192,6 +195,13 @@ proc popupOvalApply { wi target } {
 
 	destroyNewOval
 	setAnnotationCanvas $target $curcanvas
+
+	if { $to_top } {
+		# pop this annotation to the top
+		set new_order [removeFromList [getCanvasAnnotationOrder $curcanvas] $target]
+		lappend new_order $target
+		setCanvasAnnotationOrder $curcanvas $new_order
+	}
 
 	set changed 1
 	updateUndoLog
@@ -394,6 +404,7 @@ proc popupRectangleApply { wi target } {
 	set color [$wi.colors.color cget -text]
 	set bordercolor [$wi.border.color cget -text]
 
+	set to_top 0
 	if { $target == 0 } {
 		# Create a new annotation object
 		set target [newObjectId [getFromRunning_gui "annotation_list"] "a"]
@@ -412,6 +423,8 @@ proc popupRectangleApply { wi target } {
 		if { [lindex $coords 3] > $sizey } {
 			set coords [lreplace $coords 3 3 $sizey]
 		}
+
+		set to_top 1
 	} else {
 		set coords [getAnnotationCoords $target]
 	}
@@ -424,6 +437,13 @@ proc popupRectangleApply { wi target } {
 
 	destroyNewRectangle
 	setAnnotationCanvas $target $curcanvas
+
+	if { $to_top } {
+		# pop this annotation to the top
+		set new_order [removeFromList [getCanvasAnnotationOrder $curcanvas] $target]
+		lappend new_order $target
+		setCanvasAnnotationOrder $curcanvas $new_order
+	}
 
 	set changed 1
 	updateUndoLog
@@ -606,11 +626,16 @@ proc popupTextApply { wi target } {
 	set font [$wi.text.lab.name cget -font]
 
 	if { $label != "" } {
+		set curcanvas [getFromRunning_gui "curcanvas"]
+
+		set to_top 0
 		if { $target == 0 } {
 			# Create a new annotation object
 			set target [newObjectId [getFromRunning_gui "annotation_list"] "a"]
 			addAnnotation $target text
 			set coords [lmap n [$main_canvas_elem coords $newtext] {expr int($n / [getActiveOption "zoom"])}]
+
+			set to_top 1
 		} else {
 			set coords [getAnnotationCoords $target]
 		}
@@ -621,7 +646,14 @@ proc popupTextApply { wi target } {
 		setAnnotationFont $target $font
 
 		destroyNewText
-		setAnnotationCanvas $target [getFromRunning_gui "curcanvas"]
+		setAnnotationCanvas $target $curcanvas
+
+		if { $to_top } {
+			# pop this annotation to the top
+			set new_order [removeFromList [getCanvasAnnotationOrder $curcanvas] $target]
+			lappend new_order $target
+			setCanvasAnnotationOrder $curcanvas $new_order
+		}
 
 		set changed 1
 		updateUndoLog
@@ -789,13 +821,18 @@ proc popupFreeformApply { wi target } {
 	global changed
 	global width main_canvas_elem
 
+	set curcanvas [getFromRunning_gui "curcanvas"]
+
 	set color [$wi.colors.color cget -text]
+	set to_top 0
 	if { $target == 0 } {
 		# Create a new annotation object
 		set target [newObjectId [getFromRunning_gui "annotation_list"] "a"]
 		addAnnotation $target freeform
 
 		set coords [lmap n [$main_canvas_elem coords $newfreeform] {expr int($n / [getActiveOption "zoom"])}]
+
+		set to_top 1
 	} else {
 		set coords [getAnnotationCoords $target]
 	}
@@ -805,7 +842,14 @@ proc popupFreeformApply { wi target } {
 	setAnnotationWidth $target $width
 
 	destroyNewFreeform
-	setAnnotationCanvas $target [getFromRunning_gui "curcanvas"]
+	setAnnotationCanvas $target $curcanvas
+
+	if { $to_top } {
+		# pop this annotation to the top
+		set new_order [removeFromList [getCanvasAnnotationOrder $curcanvas] $target]
+		lappend new_order $target
+		setCanvasAnnotationOrder $curcanvas $new_order
+	}
 
 	set changed 1
 	updateUndoLog
@@ -958,6 +1002,40 @@ proc button3annotation { type x y } {
 	.button3menu add command -label "Delete $menutext" \
 		-command "deleteSelection"
 
+	.button3menu add separator
+
+	#
+	# Annotation order
+	#
+	set curcanvas [getFromRunning_gui "curcanvas"]
+	set annotation_order [getCanvasAnnotationOrder $curcanvas]
+
+	if { $item != [lindex $annotation_order end] } {
+		.button3menu add command -label "Bring to top" \
+			-command "setAnnotationOrderGUI $item top"
+		.button3menu add command -label "Level up" \
+			-command "setAnnotationOrderGUI $item up"
+	} else {
+		.button3menu add command -label "Bring to top" \
+			-state disabled
+		.button3menu add command -label "Level up" \
+			-state disabled
+	}
+
+	if { $item != [lindex $annotation_order 0] } {
+		.button3menu add command -label "Level down" \
+			-command "setAnnotationOrderGUI $item down"
+		.button3menu add command -label "Send to bottom" \
+			-command "setAnnotationOrderGUI $item bottom"
+	} else {
+		.button3menu add command -label "Level down" \
+			-state disabled
+		.button3menu add command -label "Send to bottom" \
+			-state disabled
+	}
+
+	.button3menu add separator
+
 	#
 	# Move to another canvas
 	#
@@ -967,7 +1045,7 @@ proc button3annotation { type x y } {
 	.button3menu.moveto add command -label "Canvas:" -state disabled
 
 	foreach canvas_id [getFromRunning_gui "canvas_list"] {
-		if { $canvas_id != [getFromRunning_gui "curcanvas"] } {
+		if { $canvas_id != $curcanvas } {
 			.button3menu.moveto add command \
 				-label [getCanvasName $canvas_id] \
 				-command "moveToCanvas $canvas_id"

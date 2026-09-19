@@ -55,4 +55,7 @@ proc addAnnotation { annotation_id type } {
 proc deleteAnnotation { annotation_id } {
 	setToRunning_gui "annotation_list" [removeFromList [getFromRunning_gui "annotation_list"] $annotation_id]
 	cfgUnset "gui" "annotations" $annotation_id
+
+	set curcanvas [getFromRunning_gui "curcanvas"]
+	setCanvasAnnotationOrder $curcanvas [removeFromList [getCanvasAnnotationOrder $curcanvas] $annotation_id]
 }

@@ -626,9 +626,19 @@ proc moveToCanvas { canvas_id } {
 	}
 
 	set selected_annotations [selectedAnnotations]
-	foreach node_id $selected_annotations {
+	foreach node_id [getCanvasAnnotationOrder $curcanvas] {
+		if { $node_id ni $selected_annotations } {
+			continue
+		}
+
 		# TODO: skip if annotation does not fit to new canvas
 		setAnnotationCanvas $node_id $canvas_id
+
+		setCanvasAnnotationOrder $curcanvas [removeFromList [getCanvasAnnotationOrder $curcanvas] $node_id]
+		set new_order [removeFromList [getCanvasAnnotationOrder $canvas_id] $node_id]
+		lappend new_order $node_id
+		setCanvasAnnotationOrder $canvas_id $new_order
+
 		set changed 1
 	}
 
