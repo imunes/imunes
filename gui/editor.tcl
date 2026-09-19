@@ -1145,11 +1145,17 @@ proc setActiveToolGroup { group } {
 		if { $visible_count == 0 || $tool ni $visible_tools } {
 			if { $group == "link_layer" } {
 				set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/l2.gif]
-			} else {
+			} elseif { $group == "net_layer" } {
 				set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/l3.gif]
+			} elseif { $group == "annotation_layer" } {
+				set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/freeform.gif]
 			}
 		} else {
-			set image [image create photo -file [invokeTypeProc $tool "gui::icon" "toolbar"]]
+			if { $group == "annotation_layer" } {
+				set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$tool.gif]
+			} else {
+				set image [image create photo -file [invokeTypeProc $tool "gui::icon" "toolbar"]]
+			}
 		}
 
 		set w [$arrow_image cget -width]
@@ -1258,6 +1264,12 @@ proc toggleAutoExecutionGUI { { new_value "" } } {
 
 proc visibleTools { group tools } {
 	global runnable_node_types default_node_types
+
+	if { $group == "annotation_layer" } {
+		global all_annotation_types
+
+		return $all_annotation_types
+	}
 
 	set hidden_node_types [getActiveOption "hidden_node_types"]
 	set show_unsupported_nodes [getActiveOption "show_unsupported_nodes"]

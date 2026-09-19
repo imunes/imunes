@@ -153,6 +153,9 @@ if { $isOSmac_gui } {
 	set rightClick "<Button-3>"
 }
 
+global all_annotation_types
+set all_annotation_types "freeform text oval rectangle"
+
 # Packets required for GUI
 #package require Img
 
@@ -1115,45 +1118,31 @@ foreach width "2 4 6 7 6 4 2" {
 
 set w [$arrow_image cget -width]
 set h [$arrow_image cget -height]
+set toolbar_elems {
+	"l2" "link_layer" "link_nodes" "link layer node" ""
+	"l3" "net_layer" "net_nodes" "network layer node" ""
+	"freeform" "annotation_layer" "annotations" "annotation" "-side bottom"
+}
 
-set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/l2.gif]
-$image copy $arrow_image -to 32 32 [expr { 32 + $w }] [expr { 32 + $h }] -compositingrule overlay
-ttk::menubutton $mf.left.link_layer -image $image -style Toolbutton \
-	-menu $mf.left.link_nodes -direction right
-bind $mf.left.link_layer <Any-Enter> ".bottom.textbox config -text {Add new link layer node} -foreground black"
-bind $mf.left.link_layer <Any-Leave> ".bottom.textbox config -text {}"
-pack $mf.left.link_layer
+foreach {icon button_elem menu_elem msg side} $toolbar_elems {
+	set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$icon.gif]
+	$image copy $arrow_image -to 32 32 [expr { 32 + $w }] [expr { 32 + $h }] -compositingrule overlay
+	ttk::menubutton $mf.left.$button_elem -image $image -style Toolbutton \
+		-menu $mf.left.$menu_elem -direction right
+	bind $mf.left.$button_elem <Any-Enter> ".bottom.textbox config -text {Add new $msg} -foreground black"
+	bind $mf.left.$button_elem <Any-Leave> ".bottom.textbox config -text {}"
+	pack $mf.left.$button_elem {*}$side
+}
 
-set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/l3.gif]
-$image copy $arrow_image -to 32 32 [expr { 32 + $w }] [expr { 32 + $h }] -compositingrule overlay
-ttk::menubutton $mf.left.net_layer -image $image -style Toolbutton \
-	-menu $mf.left.net_nodes -direction right
-bind $mf.left.net_layer <Any-Enter> ".bottom.textbox config -text {Add new network layer node} -foreground black"
-bind $mf.left.net_layer <Any-Leave> ".bottom.textbox config -text {}"
-pack $mf.left.net_layer
-
-foreach b "rectangle oval freeform text" {
-	addTool $b $b
+menu $mf.left.annotations -title "Anntotation tools"
+foreach b $all_annotation_types {
+	addTool "annotation_layer" $b
 
 	set image [image create photo -file $ROOTDIR/$LIBDIR/icons/tiny/$b.gif]
 
-	ttk::button $mf.left.$b \
-		-image $image \
-		-style Toolbutton \
-		-command "setActiveToolGroup $b"
-
-	pack $mf.left.$b -side bottom
-	# hover status line
-	switch -exact -- $b {
-		rectangle { set msg "Add a Rectangle" }
-		oval { set msg "Add an Oval" }
-		freeform { set msg "Add a Freeform" }
-		text { set msg "Add a Textbox" }
-		default { set msg "" }
-	}
-
-	bind $mf.left.$b <Any-Enter> ".bottom.textbox config -text {$msg} -foreground black"
-	bind $mf.left.$b <Any-Leave> ".bottom.textbox config -text {}"
+	$mf.left.annotations add command -image $image -hidemargin 1 \
+		-compound left -label [string totitle $b] \
+		-command "setActiveTool annotation_layer $b"
 }
 
 set mask_width 8
@@ -1462,10 +1451,7 @@ set key_bindings [list \
 	"2"	"link" \
 	"3"	"link_layer" \
 	"4"	"net_layer" \
-	"5"	"text" \
-	"6"	"freeform" \
-	"7"	"oval" \
-	"8"	"rectangle" \
+	"5"	"annotation_layer" \
 	]
 
 foreach {key tool_group} $key_bindings {
