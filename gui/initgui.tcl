@@ -1321,10 +1321,9 @@ $main_canvas_elem bind node_running <Control-Double-1> [lreplace $tmp_command en
 $main_canvas_elem bind link <Double-1> "linkConfigGUI {}"
 $main_canvas_elem bind linklabel <Double-1> "linkConfigGUI {}"
 
-$main_canvas_elem bind oval <Double-1> "annotationConfigGUI"
-$main_canvas_elem bind rectangle <Double-1> "annotationConfigGUI"
-$main_canvas_elem bind text <Double-1> "annotationConfigGUI"
-$main_canvas_elem bind freeform <Double-1> "annotationConfigGUI"
+foreach annotation_type $all_annotation_types {
+	$main_canvas_elem bind $annotation_type <Double-1> "annotationConfigGUI"
+}
 
 $main_canvas_elem bind text <KeyPress> "textInsert %A"
 $main_canvas_elem bind text <Return> "textInsert \\n"
@@ -1339,10 +1338,9 @@ $main_canvas_elem bind route <Any-Leave> "anyLeave"
 $main_canvas_elem bind showCfgPopup <Any-Leave> "anyLeave"
 $main_canvas_elem bind text <Any-Leave> "anyLeave"
 
-$main_canvas_elem bind oval $rightClick "button3annotation oval %x %y"
-$main_canvas_elem bind rectangle $rightClick "button3annotation rectangle %x %y"
-$main_canvas_elem bind text $rightClick "button3annotation text %x %y"
-$main_canvas_elem bind freeform $rightClick "button3annotation freeform %x %y"
+foreach annotation_type $all_annotation_types {
+	$main_canvas_elem bind $annotation_type $rightClick "button3annotation $annotation_type %x %y"
+}
 
 $main_canvas_elem bind selectmark <Any-Enter> "selectmarkEnter %x %y"
 $main_canvas_elem bind selectmark <Any-Leave> "selectmarkLeave %x %y"
@@ -1357,10 +1355,11 @@ if { $isOSmac_gui } {
 	$main_canvas_elem bind node_running <Control-Button-1> "button3node %x %y"
 	$main_canvas_elem bind link <Control-Button-1> "button3link %x %y"
 	$main_canvas_elem bind linklabel <Control-Button-1> "button3link %x %y"
-	$main_canvas_elem bind oval <Control-Button-1> "button3annotation oval %x %y"
-	$main_canvas_elem bind rectangle <Control-Button-1> "button3annotation rectangle %x %y"
-	$main_canvas_elem bind text <Control-Button-1> "button3annotation text %x %y"
-	$main_canvas_elem bind freeform <Control-Button-1> "button3annotation freeform %x %y"
+
+	foreach annotation_type $all_annotation_types {
+		$main_canvas_elem bind $annotation_type <Control-Button-1> "button3annotation $annotation_type %x %y"
+	}
+
 	$main_canvas_elem bind background <Control-Button-1> "button3background %x %y"
 	$main_canvas_elem bind grid <Control-Button-1> "button3background %x %y"
 }

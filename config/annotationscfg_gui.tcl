@@ -64,3 +64,106 @@ proc deleteAnnotation { annotation_id } {
 		setCanvasAnnotationOrder $curcanvas $new_order
 	}
 }
+
+addCase "updateAnnotationGUI" "type" {
+	setAnnotationType $annotation_id $new_value
+}
+
+addCase "updateAnnotationGUI" "canvas" {
+	setAnnotationCanvas $annotation_id $new_value
+}
+
+addCase "updateAnnotationGUI" "color" {
+	setAnnotationColor $annotation_id $new_value
+}
+
+addCase "updateAnnotationGUI" "label" {
+	setAnnotationLabel $annotation_id $new_value
+}
+
+addCase "updateAnnotationGUI" "labelcolor" {
+	setAnnotationLabelColor $annotation_id $new_value
+}
+
+addCase "updateAnnotationGUI" "bordercolor" {
+	setAnnotationBorderColor $annotation_id $new_value
+}
+
+addCase "updateAnnotationGUI" "width" {
+	setAnnotationWidth $annotation_id $new_value
+}
+
+addCase "updateAnnotationGUI" "rad" {
+	setAnnotationRad $annotation_id $new_value
+}
+
+addCase "updateAnnotationGUI" "font" {
+	setAnnotationFont $annotation_id $new_value
+}
+
+addCase "updateAnnotationGUI" "iconcoords" {
+	setAnnotationCoords $annotation_id $new_value
+}
+
+proc updateAnnotationGUI { annotation_id old_annotation_cfg_gui new_annotation_cfg_gui } {
+	upvar ::switch_cases::updateAnnotationGUI switch_cases_var
+
+	global changed
+
+	dputs ""
+	dputs "= /UPDATE ANNOTATION GUI $annotation_id START ="
+
+	if { $old_annotation_cfg_gui == "*" } {
+		set old_annotation_cfg_gui [cfgGet "gui" "annotations" $annotation_id]
+	}
+
+	dputs "OLD : '$old_annotation_cfg_gui'"
+	dputs "NEW : '$new_annotation_cfg_gui'"
+
+	set cfg_diff [dictDiff $old_annotation_cfg_gui $new_annotation_cfg_gui]
+	dputs "= cfg_diff: '$cfg_diff'"
+	if { $cfg_diff == "" || [lsort -uniq [dict values $cfg_diff]] == "copy" } {
+		dputs "= NO CHANGE"
+		dputs "= /UPDATE ANNOTATION GUI $annotation_id END ="
+		return $new_annotation_cfg_gui
+	}
+
+	if { $new_annotation_cfg_gui == "" } {
+		return $old_annotation_cfg_gui
+	}
+
+	dict for {key change} $cfg_diff {
+		if { $change == "copy" } {
+			continue
+		}
+
+		# trigger undo log
+		set changed 1
+
+		dputs "==== $change: '$key'"
+
+		set old_value [_cfgGet $old_annotation_cfg_gui $key]
+		set new_value [_cfgGet $new_annotation_cfg_gui $key]
+		if { $change in "changed" } {
+			dputs "==== OLD: '$old_value'"
+		}
+		if { $change in "new changed" } {
+			dputs "==== NEW: '$new_value'"
+		}
+
+		switch -exact $key [list {*}$switch_cases_var default {}]
+	}
+
+	if { $changed } {
+		# will reset 'changed' to 0
+		updateUndoLog
+
+		# changed needs to be 1 to trigger redrawing
+		set changed 1
+	}
+
+	dputs "= /UPDATE ANNOTATION GUI $annotation_id END ="
+	dputs ""
+
+	return $new_annotation_cfg_gui
+}

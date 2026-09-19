@@ -97,10 +97,7 @@ proc redrawAll {} {
 	if { [getActiveOption "show_annotations"] } {
 		foreach annotation_id [getFromRunning_gui "annotation_list"] {
 			if { [getAnnotationCanvas $annotation_id] == $curcanvas } {
-				set annotation_type [getAnnotationType $annotation_id]
-
-				# draw.* annotation
-				draw[string totitle $annotation_type] $annotation_id
+				drawAnnotation $annotation_id
 			}
 		}
 	}
