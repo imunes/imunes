@@ -34,71 +34,6 @@
 #  rectangle, text, background or some other.
 #****
 
-#****f* annotations.tcl/popupAnnotationDialog
-# NAME
-#   popupAnnotationDialog -- popup annotation dialog
-# SYNOPSIS
-#   popupAnnotationDialog $target $modify
-# FUNCTION
-#   Checks the active tool and depending which one is selected, show a dialog
-#   to create a new or to modify an existing annotation.
-# INPUTS
-#   * target -- existing or a new annotation
-#   * modify -- modify existing or newly created
-#****
-proc popupAnnotationDialog { target modify } {
-	set other_annotation_types "Oval Rect Text Free"
-	switch [getActiveTool] {
-		oval {
-			popupOvalDialog $target $modify
-			set other_annotation_types [removeFromList $other_annotation_types "Oval"]
-		}
-		rectangle {
-			popupRectangleDialog $target $modify
-			set other_annotation_types [removeFromList $other_annotation_types "Rect"]
-		}
-		text {
-			popupTextDialog $target $modify
-			set other_annotation_types [removeFromList $other_annotation_types "Text"]
-		}
-		freeform {
-			popupFreeformDialog $target $modify
-			set other_annotation_types [removeFromList $other_annotation_types "Free"]
-		}
-	}
-
-	foreach annotation_type $other_annotation_types {
-		destroyNew$annotation_type
-	}
-}
-
-#****f* annotations.tcl/drawAnnotation
-# NAME
-#   drawAnnotation -- draw annotation
-# SYNOPSIS
-#   drawAnnotation $obj
-# FUNCTION
-#   Draws annotation on canvas.
-# INPUTS
-#   * obj -- type of annotation to draw
-#****
-proc drawAnnotation { obj } {
-	switch -exact -- [getAnnotationType $obj] {
-		oval {
-			drawOval $obj
-		}
-		rectangle {
-			drawRect $obj
-		}
-		text {
-			drawText $obj
-		}
-		freeform {
-			drawFreeform $obj
-		}
-	}
-}
-
 #****f* annotations.tcl/popupOvalDialog
 # NAME
 #   popupOvalDialog -- popup dialog for oval annotation
@@ -111,7 +46,7 @@ proc drawAnnotation { obj } {
 #   * modify -- modify existing or newly created
 #****
 proc popupOvalDialog { target modify } {
-	global newrect newoval
+	global newoval
 	global width main_canvas_elem
 
 	# return if coords are empty
@@ -217,7 +152,7 @@ proc popupOvalDialog { target modify } {
 #   * target -- existing or a new annotation
 #****
 proc popupOvalApply { wi target } {
-	global newrect newoval
+	global newoval
 	global changed
 	global width main_canvas_elem
 
@@ -291,7 +226,23 @@ proc drawOval { oval } {
 
 	set newoval [$main_canvas_elem create oval $x1 $y1 $x2 $y2 \
 		-fill $color -width [expr int($width * $zoom)] -outline $bordercolor -tags "oval $oval"]
+
 	$main_canvas_elem raise $newoval
+}
+
+#****f* annotations.tcl/destroyNewOval
+# NAME
+#   destroyNewOval -- destroy new oval
+# SYNOPSIS
+#   destroyNewOval
+# FUNCTION
+#   Destroys newly made oval annotation.
+#****
+proc destroyNewOval {} {
+	global newoval main_canvas_elem
+
+	$main_canvas_elem delete -withtags newoval
+	set newoval ""
 }
 
 #****f* annotations.tcl/popupRectangleDialog
@@ -306,18 +257,18 @@ proc drawOval { oval } {
 #   * modify -- modify existing or newly created
 #****
 proc popupRectangleDialog { target modify } {
-	global newrect newoval
+	global newrectangle
 	global width rad main_canvas_elem
 
 	# return if coords are empty
-	if { $target == 0 && [$main_canvas_elem coords "$newrect"] == "" } {
+	if { $target == 0 && [$main_canvas_elem coords "$newrectangle"] == "" } {
 		return
 	}
 
 	if { $target == 0 } {
 		set width 1
 		set rad 25
-		set coords [$main_canvas_elem bbox "$newrect"]
+		set coords [$main_canvas_elem bbox "$newrectangle"]
 		set annotationType "rectangle"
 		set color ""
 		set bordercolor ""
@@ -401,7 +352,7 @@ proc popupRectangleDialog { target modify } {
 		set cancelcmd "destroy $wi"
 		set applytext "Modify $annotationType"
 	} else {
-		set cancelcmd "destroy $wi; destroyNewRect"
+		set cancelcmd "destroy $wi; destroyNewRectangle"
 		set applytext "Add $annotationType"
 	}
 
@@ -432,7 +383,7 @@ proc popupRectangleDialog { target modify } {
 #   * target -- existing or a new annotation
 #****
 proc popupRectangleApply { wi target } {
-	global newrect newoval
+	global newrectangle
 	global changed
 	global width rad main_canvas_elem
 
@@ -448,7 +399,7 @@ proc popupRectangleApply { wi target } {
 		set target [newObjectId [getFromRunning_gui "annotation_list"] "a"]
 		addAnnotation $target rectangle
 
-		set coords [lmap n [$main_canvas_elem coords $newrect] {expr int($n / [getActiveOption "zoom"])}]
+		set coords [lmap n [$main_canvas_elem coords $newrectangle] {expr int($n / [getActiveOption "zoom"])}]
 		if { [lindex $coords 0] < 0 } {
 			set coords [lreplace $coords 0 0 5]
 		}
@@ -471,7 +422,7 @@ proc popupRectangleApply { wi target } {
 	setAnnotationWidth $target $width
 	setAnnotationRad $target $rad
 
-	destroyNewRect
+	destroyNewRectangle
 	setAnnotationCanvas $target $curcanvas
 
 	set changed 1
@@ -480,17 +431,17 @@ proc popupRectangleApply { wi target } {
 	destroy $wi
 }
 
-#****f* annotations.tcl/drawRect
+#****f* annotations.tcl/drawRectangle
 # NAME
-#   drawRect -- draw rectangle
+#   drawRectangle -- draw rectangle
 # SYNOPSIS
-#   drawRect $rectangle
+#   drawRectangle $rectangle
 # FUNCTION
 #   Draws a specified rectangle annotation.
 # INPUTS
 #   * rectangle -- rectangle annotation
 #****
-proc drawRect { rectangle } {
+proc drawRectangle { rectangle } {
 	global main_canvas_elem
 
 	# multiply each coordinate with $zoom and assign to variables x1, y1, x2, y2
@@ -509,15 +460,30 @@ proc drawRect { rectangle } {
 	if { $rad == "" } { set rad 25 }
 
 	if { $width == 0 } {
-		set newrect [roundRect $main_canvas_elem $x1 $y1 $x2 $y2 [expr int($rad * $zoom)] \
+		set newrectangle [roundRectangle $main_canvas_elem $x1 $y1 $x2 $y2 [expr int($rad * $zoom)] \
 			-fill $color -tags "rectangle $rectangle"]
 	} else {
-		set newrect [roundRect $main_canvas_elem $x1 $y1 $x2 $y2 [expr int($rad * $zoom)] \
+		set newrectangle [roundRectangle $main_canvas_elem $x1 $y1 $x2 $y2 [expr int($rad * $zoom)] \
 			-fill $color -outline $bordercolor -width [expr int($width * $zoom)] \
 			-tags "rectangle $rectangle"]
 	}
 
-	$main_canvas_elem raise $newrect
+	$main_canvas_elem raise $newrectangle
+}
+
+#****f* annotations.tcl/destroyNewRectangle
+# NAME
+#   destroyNewRectangle -- destroy new rectangle
+# SYNOPSIS
+#   destroyNewRectangle
+# FUNCTION
+#   Destroys newly made rectangle annotation.
+#****
+proc destroyNewRectangle {} {
+	global newrectangle main_canvas_elem
+
+	$main_canvas_elem delete -withtags newrectangle
+	set newrectangle ""
 }
 
 #****f* annotations.tcl/popupTextDialog
@@ -532,7 +498,7 @@ proc drawRect { rectangle } {
 #   * modify -- modify existing or newly created
 #****
 proc popupTextDialog { target modify } {
-	global newrect newoval newtext
+	global newtext
 	global width rad main_canvas_elem
 
 	# return if coords are empty
@@ -632,7 +598,7 @@ proc popupTextDialog { target modify } {
 #   * target -- existing or a new annotation
 #****
 proc popupTextApply { wi target } {
-	global newrect newoval newtext
+	global newtext
 	global changed main_canvas_elem
 
 	set label [string trim [$wi.text.lab.name get]]
@@ -697,7 +663,23 @@ proc drawText { text } {
 	lassign [lmap n $coords {expr $n * $zoom}] x y
 	set newtext [$main_canvas_elem create text $x $y -text $label -anchor w \
 		-font "$font" -justify left -fill $labelcolor -tags "text $text"]
+
 	$main_canvas_elem raise $newtext
+}
+
+#****f* annotations.tcl/destroyNewText
+# NAME
+#   destroyNewText -- destroy new text
+# SYNOPSIS
+#   destroyNewText
+# FUNCTION
+#   Destroys newly made text annotation.
+#****
+proc destroyNewText {} {
+	global newtext main_canvas_elem
+
+	$main_canvas_elem delete -withtags newtext
+	set newtext ""
 }
 
 #****f* annotations.tcl/popupFreeformDialog
@@ -712,11 +694,11 @@ proc drawText { text } {
 #   * modify -- modify existing or newly created
 #****
 proc popupFreeformDialog { target modify } {
-	global newfree
+	global newfreeform
 	global width main_canvas_elem
 
 	# return if coords are empty
-	if { $target == 0 && [$main_canvas_elem coords "$newfree"] == "" } {
+	if { $target == 0 && [$main_canvas_elem coords "$newfreeform"] == "" } {
 		return
 	}
 
@@ -772,7 +754,7 @@ proc popupFreeformDialog { target modify } {
 		set cancelcmd "destroy $wi"
 		set applytext "Modify $annotationType"
 	} else {
-		set cancelcmd "destroy $wi; destroyNewFree"
+		set cancelcmd "destroy $wi; destroyNewFreeform"
 		set applytext "Add $annotationType"
 	}
 
@@ -803,7 +785,7 @@ proc popupFreeformDialog { target modify } {
 #   * target -- existing or a new annotation
 #****
 proc popupFreeformApply { wi target } {
-	global newfree
+	global newfreeform
 	global changed
 	global width main_canvas_elem
 
@@ -813,7 +795,7 @@ proc popupFreeformApply { wi target } {
 		set target [newObjectId [getFromRunning_gui "annotation_list"] "a"]
 		addAnnotation $target freeform
 
-		set coords [lmap n [$main_canvas_elem coords $newfree] {expr int($n / [getActiveOption "zoom"])}]
+		set coords [lmap n [$main_canvas_elem coords $newfreeform] {expr int($n / [getActiveOption "zoom"])}]
 	} else {
 		set coords [getAnnotationCoords $target]
 	}
@@ -822,7 +804,7 @@ proc popupFreeformApply { wi target } {
 	setAnnotationColor $target $color
 	setAnnotationWidth $target $width
 
-	destroyNewFree
+	destroyNewFreeform
 	setAnnotationCanvas $target [getFromRunning_gui "curcanvas"]
 
 	set changed 1
@@ -874,64 +856,19 @@ proc drawFreeform { freeform } {
 	$main_canvas_elem raise $tempfree
 }
 
-#****f* annotations.tcl/destroyNewOval
+#****f* annotations.tcl/destroyNewFreeform
 # NAME
-#   destroyNewOval -- destroy new oval
+#   destroyNewFreeform -- destroy new freeform
 # SYNOPSIS
-#   destroyNewOval
-# FUNCTION
-#   Destroys newly made oval annotation.
-#****
-proc destroyNewOval {} {
-	global newoval main_canvas_elem
-
-	$main_canvas_elem delete -withtags newoval
-	set newoval ""
-}
-
-#****f* annotations.tcl/destroyNewRect
-# NAME
-#   destroyNewRect -- destroy new rectangle
-# SYNOPSIS
-#   destroyNewRect
-# FUNCTION
-#   Destroys newly made rectangle annotation.
-#****
-proc destroyNewRect {} {
-	global newrect main_canvas_elem
-
-	$main_canvas_elem delete -withtags newrect
-	set newrect ""
-}
-
-#****f* annotations.tcl/destroyNewText
-# NAME
-#   destroyNewText -- destroy new text
-# SYNOPSIS
-#   destroyNewText
-# FUNCTION
-#   Destroys newly made text annotation.
-#****
-proc destroyNewText {} {
-	global newtext main_canvas_elem
-
-	$main_canvas_elem delete -withtags newtext
-	set newtext ""
-}
-
-#****f* annotations.tcl/destroyNewFree
-# NAME
-#   destroyNewFree -- destroy new freeform
-# SYNOPSIS
-#   destroyNewFree
+#   destroyNewFreeform
 # FUNCTION
 #   Destroys newly made freeform annotation.
 #****
-proc destroyNewFree {} {
-	global newfree main_canvas_elem
+proc destroyNewFreeform {} {
+	global newfreeform main_canvas_elem
 
-	$main_canvas_elem delete -withtags newfree
-	set newfree ""
+	$main_canvas_elem delete -withtags newfreeform
+	set newfreeform ""
 }
 
 #****f* annotations.tcl/annotationConfigGUI
@@ -962,28 +899,20 @@ proc annotationConfigGUI {} {
 #   * target -- existing or a new annotation
 #****
 proc annotationConfig { target } {
-	switch -exact -- [getAnnotationType $target] {
-		oval {
-			popupOvalDialog $target "true"
-		}
-		rectangle {
-			popupRectangleDialog $target "true"
-		}
-		text {
-			popupTextDialog $target "true"
-		}
-		freeform {
-			popupFreeformDialog $target "true"
-		}
-		default {
-			# should not happen
-			set err "Unknown type [getAnnotationType $target] for target $target"
-			after idle { .dialog1.msg configure -wraplength 5i }
-			tk_dialog .dialog1 "IMUNES error" \
-				$err \
-				info 0 Dismiss
-		}
+	global all_annotation_types
+
+	set annotation_type [getAnnotationType $target]
+	if { $annotation_type ni $all_annotation_types } {
+		# should not happen
+		set err "Unknown type $annotation_type for target $target"
+		after idle { .dialog1.msg configure -wraplength 5i }
+		tk_dialog .dialog1 "IMUNES error" \
+			$err \
+			info 0 Dismiss
 	}
+
+	popup[string totitle $annotation_type]Dialog $target "true"
+
 	redrawAll
 }
 
@@ -995,40 +924,25 @@ proc annotationConfig { target } {
 # FUNCTION
 #   Shows the annotation menu when an annotation right clicked.
 # INPUTS
-#   * type -- type of annotation (oval/rectangle/text/freeform)
+#   * type -- type of annotation
 #   * x -- x coordinate
 #   * y -- y coordinate
 #****
 proc button3annotation { type x y } {
-	global main_canvas_elem
+	global main_canvas_elem all_annotation_types
 
-	if { $type == "oval" } {
-		set procname "Oval"
-		set item [lindex [$main_canvas_elem gettags {oval && current}] 1]
-	} elseif { $type == "rectangle" } {
-		set procname "Rectangle"
-		set item [lindex [$main_canvas_elem gettags {rectangle && current}] 1]
-	} elseif { $type == "label" } {
-		set procname "Label"
-		set item [lindex [$main_canvas_elem gettags {label && current}] 1]
-	} elseif { $type == "text" } {
-		set procname "Text"
-		set item [lindex [$main_canvas_elem gettags {text && current}] 1]
-	} elseif { $type == "freeform" } {
-		set procname "Freeform"
-		set item [lindex [$main_canvas_elem gettags {freeform && current}] 1]
-	} else {
-		# ???
+	if { $type ni "label $all_annotation_types" } {
 		return
 	}
 
+	set item [lindex [$main_canvas_elem gettags "$type && current"] 1]
 	if { $item == "" } {
 		return
 	}
 
 	set wasselected [expr {$item in [selectedAnnotations]}]
 	if { ! $wasselected } {
-		foreach node_type "node text oval rectangle freeform" {
+		foreach node_type "node $all_annotation_types" {
 			$main_canvas_elem dtag $node_type selected
 		}
 		$main_canvas_elem delete -withtags selectmark
@@ -1068,11 +982,11 @@ proc button3annotation { type x y } {
 	tk_popup .button3menu $x $y
 }
 
-#****f* annotations.tcl/roundRect
+#****f* annotations.tcl/roundRectangle
 # NAME
-#   roundRect -- round rectangle
+#   roundRectangle -- round rectangle
 # SYNOPSIS
-#   roundRect $w $x0 $y0 $x3 $y3 $radius $args
+#   roundRectangle $w $x0 $y0 $x3 $y3 $radius $args
 # FUNCTION
 #   Creates a round rectangle annotation.
 # INPUTS
@@ -1086,7 +1000,7 @@ proc button3annotation { type x y } {
 # RESULT
 #   * rectangle -- the resulting  rounded rectangle annotation
 #****
-proc roundRect { w x0 y0 x3 y3 radius args } {
+proc roundRectangle { w x0 y0 x3 y3 radius args } {
 	set r [winfo pixels $w $radius]
 	set d [expr { 2 * $r }]
 
@@ -1109,6 +1023,7 @@ proc roundRect { w x0 y0 x3 y3 radius args } {
 	lappend cmd $x0 $y0 $x1 $y0 $x2 $y0 $x3 $y0 $x3 $y1 $x3 $y2
 	lappend cmd $x3 $y3 $x2 $y3 $x1 $y3 $x0 $y3 $x0 $y2 $x0 $y1
 	lappend cmd -smooth 1
+
 	return [eval $cmd $args]
 }
 
@@ -1121,7 +1036,7 @@ proc roundRect { w x0 y0 x3 y3 radius args } {
 #   Shows or hides the font chooser dialog.
 #****
 proc fontchooserToggle {} {
-	tk fontchooser [expr {[tk fontchooser configure -visible] ?  "hide" : "show"}]
+	tk fontchooser [expr {[tk fontchooser configure -visible] ? "hide" : "show"}]
 }
 
 #****f* annotations.tcl/fontchooserFocus
@@ -1174,15 +1089,18 @@ proc popupColor { type l settext } {
 	} else {
 		set initcolor [$l cget -background]
 	}
+
 	if { $initcolor == "" } {
 		set initcolor #808080
 	}
+
 	set newcolor [tk_chooseColor -parent .popup.colors -initialcolor $initcolor]
 
 	# set fg or bg of the "l" label control
 	if { $newcolor == "" } {
 		return
 	}
+
 	if { $settext == "true" } {
 		$l configure -text $newcolor -$type $newcolor
 	} else {
@@ -1211,7 +1129,9 @@ proc selectmarkEnter { x y } {
 	set obj [lindex [$main_canvas_elem gettags current] 1]
 	set type [getAnnotationType $obj]
 
-	if { $type != "oval" && $type != "rectangle" } { return }
+	if { $type ni "oval rectangle" } {
+		return
+	}
 
 	set bbox [$main_canvas_elem bbox $obj]
 	set x1 [lindex $bbox 0]
@@ -1323,6 +1243,7 @@ proc backgroundImage { img } {
 	} else {
 		set image Photo
 	}
+
 	$main_canvas_elem create image 0 0 -anchor nw -image $image -tags "background"
 }
 
@@ -1387,7 +1308,9 @@ proc image% { image percent img_name } {
 #   * u -- first number
 #   * v -- second number
 #****
-proc gcd { u v } {expr {$u? [gcd [expr $v%$u] $u]: $v}}
+proc gcd { u v } {
+	expr { $u ? [gcd [expr $v%$u] $u] : $v }
+}
 
 #****f* editor.tcl/xpos
 # NAME

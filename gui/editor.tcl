@@ -1310,11 +1310,19 @@ proc visibleTools { group tools } {
 #****
 proc cycleToolGroup { group } {
 	global active_tool_group active_tools tool_groups runnable_node_types
-	global newnode newlink newoval newrect newtext newfree
+	global all_annotation_types
 	global resizemode
 
-	if { "$newnode$newlink$newoval$newrect$newtext$newfree" != "" || $resizemode != "false" } {
+	if { $resizemode != "false" } {
 		return
+	}
+
+	foreach object_type "node link $all_annotation_types" {
+		global new$object_type
+
+		if { [set new$object_type] != "" } {
+			return
+		}
 	}
 
 	set tools [dict get $tool_groups $group]

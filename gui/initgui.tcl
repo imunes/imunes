@@ -92,13 +92,12 @@
 # Initialize GUI variables to default values
 #
 
-global newlink newnode newtext newoval newrect newfree
-set newlink ""
-set newnode ""
-set newtext ""
-set newoval ""
-set newrect ""
-set newfree ""
+global all_annotation_types
+foreach object_type "node link $all_annotation_types" {
+	global new$object_type
+
+	set new$object_type ""
+}
 
 global changed force badentry
 set changed 0
@@ -152,9 +151,6 @@ if { $isOSmac_gui } {
 } else {
 	set rightClick "<Button-3>"
 }
-
-global all_annotation_types
-set all_annotation_types "freeform text oval rectangle"
 
 # Packets required for GUI
 #package require Img

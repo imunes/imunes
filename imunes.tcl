@@ -341,6 +341,7 @@ set node_existing_ipv6 {}
 
 set all_modules_list {}
 set runnable_node_types {}
+set all_annotation_types "freeform text oval rectangle"
 
 global possible_loop possible_vlan_loop
 set possible_loop 0
