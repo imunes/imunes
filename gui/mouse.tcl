@@ -636,6 +636,10 @@ proc moveToCanvas { canvas_id } {
 
 		setCanvasAnnotationOrder $curcanvas [removeFromList [getCanvasAnnotationOrder $curcanvas] $node_id]
 		set new_order [removeFromList [getCanvasAnnotationOrder $canvas_id] $node_id]
+		if { $new_order == {} } {
+			set new_order "grid"
+		}
+
 		lappend new_order $node_id
 		setCanvasAnnotationOrder $canvas_id $new_order
 

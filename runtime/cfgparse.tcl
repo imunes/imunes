@@ -1019,6 +1019,10 @@ proc loadCfgLegacy { cfg } {
 		}
 
 		if { $annotation_order != {} } {
+			if { "grid" ni $annotation_order } {
+				set annotation_order [linsert $annotation_order 0 "grid"]
+			}
+
 			setCanvasAnnotationOrder $canvas_id $annotation_order
 		}
 	}

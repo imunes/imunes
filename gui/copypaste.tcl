@@ -141,6 +141,10 @@ proc paste {} {
 
 		# pop this annotation to the top
 		set new_order [removeFromList $new_order $new_annotation_id]
+		if { $new_order == {} } {
+			set new_order "grid"
+		}
+
 		lappend new_order $new_annotation_id
 	}
 

@@ -1230,16 +1230,35 @@ proc newLinkWithIfacesGUI { node1_id iface1_id node2_id iface2_id } {
 proc raiseAll {} {
 	global main_canvas_elem all_annotation_types
 
+	set curcanvas [getFromRunning_gui "curcanvas"]
+	set annotation_order [getCanvasAnnotationOrder $curcanvas]
+
+	# raise annotations according to $annotation_order
+	foreach object_id $annotation_order {
+		if { $object_id == "grid" } {
+			if { [getActiveOption "show_grid"] } {
+				$main_canvas_elem raise $object_id
+			}
+
+			continue
+		}
+
+		$main_canvas_elem raise \
+			[$main_canvas_elem find withtag "[getAnnotationType $object_id] && $object_id"]
+	}
+
+	# all objects ABOVE annotations
 	foreach object_type "link route linklabel interface point node nodelabel" {
 		$main_canvas_elem raise $object_type
 	}
 
-	set tags [join "background grid $all_annotation_types" " || "]
-	foreach annotation_id [getCanvasAnnotationOrder [getFromRunning_gui "curcanvas"]] {
-		set annotation_type [getAnnotationType $annotation_id]
-		set type_tags $tags
-		$main_canvas_elem raise "$annotation_type && $annotation_id" $type_tags
+	# 'new' annotation boxes are drawn above everything
+	foreach object_type "$all_annotation_types" {
+		$main_canvas_elem raise new$object_type
 	}
+
+	# marqueue selectbox is drawn above everything
+	$main_canvas_elem raise selectmark
 }
 
 #****f* editor.tcl/changeIconPopup

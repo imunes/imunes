@@ -199,6 +199,10 @@ proc popupOvalApply { wi target } {
 	if { $to_top } {
 		# pop this annotation to the top
 		set new_order [removeFromList [getCanvasAnnotationOrder $curcanvas] $target]
+		if { $new_order == {} } {
+			set new_order "grid"
+		}
+
 		lappend new_order $target
 		setCanvasAnnotationOrder $curcanvas $new_order
 	}

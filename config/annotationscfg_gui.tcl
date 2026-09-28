@@ -57,5 +57,10 @@ proc deleteAnnotation { annotation_id } {
 	cfgUnset "gui" "annotations" $annotation_id
 
 	set curcanvas [getFromRunning_gui "curcanvas"]
-	setCanvasAnnotationOrder $curcanvas [removeFromList [getCanvasAnnotationOrder $curcanvas] $annotation_id]
+	set new_order [removeFromList [getCanvasAnnotationOrder $curcanvas] $annotation_id]
+	if { $new_order == "grid" } {
+		cfgUnset "gui" "canvases" $curcanvas "annotation_order"
+	} else {
+		setCanvasAnnotationOrder $curcanvas $new_order
+	}
 }

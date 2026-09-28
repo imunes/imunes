@@ -295,9 +295,13 @@ proc openFile { { no_recent "" } } {
 
 		foreach canvas_id $canvas_list {
 			set annotation_order [getCanvasAnnotationOrder $canvas_id]
-			foreach annotation_id $annotation_order {
-				if { [getAnnotationCanvas $annotation_id] != $canvas_id } {
-					set annotation_order [removeFromList $annotation_order $annotation_id]
+			foreach object_id $annotation_order {
+				if { $object_id == "grid" } {
+					continue
+				}
+
+				if { [getAnnotationCanvas $object_id] != $canvas_id } {
+					set annotation_order [removeFromList $annotation_order $object_id]
 				}
 			}
 
@@ -311,6 +315,10 @@ proc openFile { { no_recent "" } } {
 			}
 
 			if { $annotation_order != {} } {
+				if { "grid" ni $annotation_order } {
+					set annotation_order [linsert $annotation_order 0 "grid"]
+				}
+
 				setCanvasAnnotationOrder $canvas_id $annotation_order
 			}
 		}
