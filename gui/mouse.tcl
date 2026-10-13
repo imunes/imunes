@@ -1129,8 +1129,8 @@ proc button1-motion { x y } {
 		lassign [$main_canvas_elem gettags $curobj] - point_id link_id
 
 		set coordinates [$main_canvas_elem coords $curobj]
-		set x [expr { [lindex $coordinates 0] / $zoom }]
-		set y [expr { [lindex $coordinates 1] / $zoom }]
+		set x [expr { int([lindex $coordinates 0] / $zoom) }]
+		set y [expr { int([lindex $coordinates 1] / $zoom) }]
 
 		setPoint_gui $point_id "$x $y"
 	} elseif {
@@ -1595,8 +1595,8 @@ proc button1-release { x y } {
 				$main_canvas_elem move $img $dx $dy
 
 				set coordinates [$main_canvas_elem coords $img]
-				set x [expr { [lindex $coordinates 0] / $zoom }]
-				set y [expr { [lindex $coordinates 1] / $zoom }]
+				set x [expr { int([lindex $coordinates 0] / $zoom) }]
+				set y [expr { int([lindex $coordinates 1] / $zoom) }]
 
 				if { $x < 0 } {
 					set x 0
