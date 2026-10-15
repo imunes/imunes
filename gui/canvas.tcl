@@ -193,6 +193,14 @@ proc removeCanvasBkg { canvas_id } {
 	cfgUnset "gui" "canvases" $canvas_id "bkg_image"
 }
 
+proc getCanvasAnnotationOrder { canvas_id } {
+	return [cfgGet "gui" "canvases" $canvas_id "annotation_order"]
+}
+
+proc setCanvasAnnotationOrder { canvas_id new_order } {
+	return [cfgSet "gui" "canvases" $canvas_id "annotation_order" $new_order]
+}
+
 #****f* canvas.tcl/setImageReference
 # NAME
 #   setImageReference -- set image reference

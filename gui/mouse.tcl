@@ -221,7 +221,7 @@ proc splitLinkGUI { link_id } {
 #   * obj -- tk canvas object tag id
 #****
 proc selectNode { obj } {
-	global main_canvas_elem
+	global main_canvas_elem all_annotation_types
 
 	if { $obj == "none" } {
 		$main_canvas_elem delete -withtags "selectmark"
@@ -235,20 +235,12 @@ proc selectNode { obj } {
 	}
 
 	$main_canvas_elem addtag selected withtag "node && $node_id"
+	set annotation_type [getAnnotationType $node_id]
 	if { [isPseudoNode $node_id] } {
 		set bbox [$main_canvas_elem bbox "nodelabel && $node_id"]
-	} elseif { [getAnnotationType $node_id] == "rectangle" } {
-		$main_canvas_elem addtag selected withtag "rectangle && $node_id"
-		set bbox [$main_canvas_elem bbox "rectangle && $node_id"]
-	} elseif { [getAnnotationType $node_id] == "text" } {
-		$main_canvas_elem addtag selected withtag "text && $node_id"
-		set bbox [$main_canvas_elem bbox "text && $node_id"]
-	} elseif { [getAnnotationType $node_id] == "oval" } {
-		$main_canvas_elem addtag selected withtag "oval && $node_id"
-		set bbox [$main_canvas_elem bbox "oval && $node_id"]
-	} elseif { [getAnnotationType $node_id] == "freeform" } {
-		$main_canvas_elem addtag selected withtag "freeform && $node_id"
-		set bbox [$main_canvas_elem bbox "freeform && $node_id"]
+	} elseif { $annotation_type in $all_annotation_types } {
+		$main_canvas_elem addtag selected withtag "$annotation_type && $node_id"
+		set bbox [$main_canvas_elem bbox "$annotation_type && $node_id"]
 	} else {
 		set bbox [$main_canvas_elem bbox "node && $node_id"]
 	}
@@ -276,11 +268,10 @@ proc selectNode { obj } {
 #   Select all object on the canvas.
 #****
 proc selectAllObjects {} {
-	global main_canvas_elem
+	global main_canvas_elem all_annotation_types
 
-	set all_objects [$main_canvas_elem find withtag \
-		"node || text || oval || rectangle || freeform"]
-	foreach obj $all_objects {
+	set tags [join "node $all_annotation_types" " || "]
+	foreach obj [$main_canvas_elem find withtag $tags] {
 		selectNode $obj
 	}
 }
@@ -296,11 +287,12 @@ proc selectAllObjects {} {
 #   * nodelist -- list of nodes to select.
 #****
 proc selectNodes { nodelist } {
-	global main_canvas_elem
+	global main_canvas_elem all_annotation_types
 
+	set tags [join "node $all_annotation_types" " || "]
 	foreach node_id $nodelist {
 		selectNode [$main_canvas_elem find withtag \
-			"(node || text || oval || rectangle || freeform) && $node_id"]
+			"($tags) && $node_id"]
 	}
 }
 
@@ -336,23 +328,13 @@ proc selectedNodes {} {
 #   * selected -- object list of selected annotations.
 #****
 proc selectedAnnotations {} {
-	global main_canvas_elem
+	global main_canvas_elem all_annotation_types
 
 	set selected {}
-	foreach obj [$main_canvas_elem find withtag "oval && selected"] {
-		lappend selected [lindex [$main_canvas_elem gettags $obj] 1]
-	}
-
-	foreach obj [$main_canvas_elem find withtag "rectangle && selected"] {
-		lappend selected [lindex [$main_canvas_elem gettags $obj] 1]
-	}
-
-	foreach obj [$main_canvas_elem find withtag "text && selected"] {
-		lappend selected [lindex [$main_canvas_elem gettags $obj] 1]
-	}
-
-	foreach obj [$main_canvas_elem find withtag "freeform && selected"] {
-		lappend selected [lindex [$main_canvas_elem gettags $obj] 1]
+	foreach annotation_type $all_annotation_types {
+		foreach obj [$main_canvas_elem find withtag "$annotation_type && selected"] {
+			lappend selected [lindex [$main_canvas_elem gettags $obj] 1]
+		}
 	}
 
 	return $selected
@@ -644,9 +626,23 @@ proc moveToCanvas { canvas_id } {
 	}
 
 	set selected_annotations [selectedAnnotations]
-	foreach node_id $selected_annotations {
+	foreach node_id [getCanvasAnnotationOrder $curcanvas] {
+		if { $node_id ni $selected_annotations } {
+			continue
+		}
+
 		# TODO: skip if annotation does not fit to new canvas
 		setAnnotationCanvas $node_id $canvas_id
+
+		setCanvasAnnotationOrder $curcanvas [removeFromList [getCanvasAnnotationOrder $curcanvas] $node_id]
+		set new_order [removeFromList [getCanvasAnnotationOrder $canvas_id] $node_id]
+		if { $new_order == {} } {
+			set new_order "grid"
+		}
+
+		lappend new_order $node_id
+		setCanvasAnnotationOrder $canvas_id $new_order
+
 		set changed 1
 	}
 
@@ -688,6 +684,9 @@ proc moveToCanvas { canvas_id } {
 			setNodeCanvas $new_node2_id $real_peer2_canvas_id
 		}
 	}
+
+	# destroy annotation configuration dialog
+	catch { destroy .popup }
 
 	updateUndoLog
 	redrawAll
@@ -892,10 +891,10 @@ proc button3node { x y } {
 proc button1 { x y button } {
 	global newlink curobj changed
 	global router pc host lanswitch frswitch rj45 hub
-	global oval rectangle text freeform newtext
 	global lastX lastY
 	global background selectbox
 	global resizemode resizeobj main_canvas_elem
+	global all_annotation_types
 
 	set zoom [getActiveOption "zoom"]
 
@@ -910,7 +909,7 @@ proc button1 { x y button } {
 	set curtype [lindex [$main_canvas_elem gettags current] 0]
 	set wasselected 0
 	if {
-		($active_tool == "select" && $curtype in "node oval rectangle text freeform node_running") ||
+		($active_tool == "select" && $curtype in "node node_running $all_annotation_types") ||
 		($curtype == "nodelabel" &&
 		[isPseudoNode [lindex [$main_canvas_elem gettags $curobj] 1]])
 	} {
@@ -923,7 +922,7 @@ proc button1 { x y button } {
 				$main_canvas_elem delete -withtags "selectmark && $node_id"
 			}
 		} elseif { ! $wasselected } {
-			foreach node_type "node text oval rectangle freeform" {
+			foreach node_type "node $all_annotation_types" {
 				$main_canvas_elem dtag $node_type selected
 			}
 			$main_canvas_elem delete -withtags selectmark
@@ -980,7 +979,7 @@ proc button1 { x y button } {
 			}
 		}
 	} elseif { $button != "ctrl" || $active_tool != "select" } {
-		foreach node_type "node text oval rectangle freeform" {
+		foreach node_type "node $all_annotation_types" {
 			$main_canvas_elem dtag $node_type selected
 		}
 
@@ -989,7 +988,7 @@ proc button1 { x y button } {
 
 	#determine whether we can create nodes on the current object
 	set object_drawable 0
-	foreach type "background grid rectangle oval freeform text" {
+	foreach type "background grid $all_annotation_types" {
 		if { $type in [$main_canvas_elem gettags $curobj] } {
 			set object_drawable 1
 			break
@@ -997,7 +996,7 @@ proc button1 { x y button } {
 	}
 
 	if { $object_drawable } {
-		if { $active_tool ni "select link oval rectangle text freeform" } {
+		if { $active_tool ni "select link $all_annotation_types" } {
 			global newnode
 
 			# adding a new node
@@ -1019,7 +1018,7 @@ proc button1 { x y button } {
 				[expr {$y / $zoom + $dy}]"
 
 			drawNode $node_id
-			foreach node_type "node text oval rectangle freeform" {
+			foreach node_type "node $all_annotation_types" {
 				$main_canvas_elem dtag $node_type selected
 			}
 			$main_canvas_elem delete -withtags selectmark
@@ -1045,6 +1044,8 @@ proc button1 { x y button } {
 			set lastX $x
 			set lastY $y
 		} elseif { $active_tool == "text" } {
+			global newtext
+
 			$main_canvas_elem config -cursor xterm
 			set lastX $x
 			set lastY $y
@@ -1055,7 +1056,7 @@ proc button1 { x y button } {
 				-tags "newtext"]
 		}
 	} else {
-		if { $curtype in "node nodelabel text oval rectangle freeform" } {
+		if { $curtype in "node nodelabel $all_annotation_types" } {
 			if { $active_tool == "select" && $button == "ctrl" && $wasselected } {
 				$main_canvas_elem config -cursor cross
 			} else {
@@ -1093,7 +1094,12 @@ proc button1 { x y button } {
 proc button1-motion { x y } {
 	global newlink changed
 	global lastX lastY sizex sizey selectbox background
-	global newoval newrect newtext newfree resizemode main_canvas_elem
+	global resizemode main_canvas_elem
+	global all_annotation_types
+
+	foreach annotation_type $all_annotation_types {
+		global new$annotation_type
+	}
 
 	set zoom [getActiveOption "zoom"]
 
@@ -1173,7 +1179,7 @@ proc button1-motion { x y } {
 	} elseif {
 		$active_tool == "oval" &&
 		($curobj in "$newoval $background" ||
-		$curtype in "background oval rectangle grid text freeform")
+		$curtype in "background grid $all_annotation_types")
 	} {
 		# Draw a new oval
 		if { $newoval == "" } {
@@ -1183,43 +1189,46 @@ proc button1-motion { x y } {
 				-width 1 \
 				-tags "newoval"]
 
-			$main_canvas_elem raise $newoval "background || link || linklabel || interface"
+			$main_canvas_elem raise $newoval \
+				"background || link || linklabel || interface || [join $all_annotation_types " || "]"
 		} else {
 			$main_canvas_elem coords $newoval \
 				$lastX $lastY $x $y
 		}
 	} elseif {
 		$active_tool == "rectangle" &&
-		($curobj in "$newrect $background" ||
-		$curtype in "background oval rectangle grid text freeform")
+		($curobj in "$newrectangle $background" ||
+		$curtype in "background grid $all_annotation_types")
 	} {
 		# Draw a new rectangle
-		if { $newrect == "" } {
-			set newrect [$main_canvas_elem create rectangle $lastX $lastY $x $y \
+		if { $newrectangle == "" } {
+			set newrectangle [$main_canvas_elem create rectangle $lastX $lastY $x $y \
 				-outline blue \
 				-dash {10 4} \
 				-width 1 \
-				-tags "newrect"]
+				-tags "newrectangle"]
 
-			$main_canvas_elem raise $newrect "oval || background || link || linklabel || interface"
+			$main_canvas_elem raise $newrectangle \
+				"background || link || linklabel || interface || [join $all_annotation_types " || "]"
 		} else {
-			$main_canvas_elem coords $newrect $lastX $lastY $x $y
+			$main_canvas_elem coords $newrectangle $lastX $lastY $x $y
 		}
 	} elseif {
 		$active_tool == "freeform" &&
-		($curobj in "$newfree $background" ||
-		$curtype in "background oval rectangle grid text freeform")
+		($curobj in "$newfreeform $background" ||
+		$curtype in "background grid $all_annotation_types")
 	} {
 		# Draw a new freeform
-		if { $newfree == "" } {
-			set newfree [$main_canvas_elem create line $lastX $lastY $x $y \
+		if { $newfreeform == "" } {
+			set newfreeform [$main_canvas_elem create line $lastX $lastY $x $y \
 				-fill blue \
 				-width 2 \
-				-tags "newfree"]
+				-tags "newfreeform"]
 
-			$main_canvas_elem raise $newfree "oval || rectangle || background || link || linklabel || interface"
+			$main_canvas_elem raise $newfreeform \
+				"background || link || linklabel || interface || [join $all_annotation_types " || "]"
 		} else {
-			xpos $newfree $x $y 2 blue
+			xpos $newfreeform $x $y 2 blue
 		}
 	} elseif { $active_tool == "select" && $curtype == "selectmark" } {
 		# resize annotation
@@ -1327,6 +1336,7 @@ proc button1-release { x y } {
 	global autorearrange_enabled
 	global resizemode resizeobj
 	global newnode main_canvas_elem
+	global all_annotation_types
 
 	set zoom [getActiveOption "zoom"]
 	set undolevel [getFromRunning "undolevel"]
@@ -1363,8 +1373,8 @@ proc button1-release { x y } {
 				newLinkGUI $lnode1 $lnode2
 			}
 		}
-	} elseif { $active_tool in "rectangle oval text freeform" } {
-		popupAnnotationDialog 0 "false"
+	} elseif { $active_tool in $all_annotation_types } {
+		popupAnnotationDialog "new" $active_tool "false"
 	}
 
 	if { $changed == 1 } {
@@ -1663,6 +1673,7 @@ proc button1-release { x y } {
 		if { $selectbox == "" } {
 			set x1 $x
 			set y1 $y
+			set resizemode "false"
 			if { $autorearrange_enabled } {
 				set autorearrange_enabled 0
 				update
@@ -1690,20 +1701,11 @@ proc button1-release { x y } {
 			catch { $main_canvas_elem find enclosed $x $y $x1 $y1 } enc_objs
 			foreach obj $enc_objs {
 				set tags [$main_canvas_elem gettags $obj]
-				if { [lindex $tags 0] == "node" && [lsearch $tags selected] == -1 } {
-					lappend enclosed $obj
-				}
-				if { [lindex $tags 0] == "oval" && [lsearch $tags selected] == -1 } {
-					lappend enclosed $obj
-				}
-				if { [lindex $tags 0] == "rectangle" && [lsearch $tags selected] == -1 } {
-					lappend enclosed $obj
-				}
-				if { [lindex $tags 0] == "text" && [lsearch $tags selected] == -1 } {
-					lappend enclosed $obj
-				}
-				if { [lindex $tags 0] == "freeform" && [lsearch $tags selected] == -1 } {
-					lappend enclosed $obj
+
+				foreach object_type "node $all_annotation_types" {
+					if { [lindex $tags 0] == $object_type && [lsearch $tags selected] == -1 } {
+						lappend enclosed $obj
+					}
 				}
 			}
 
@@ -2245,15 +2247,16 @@ proc addressChangeDialog { ip_version node_id iface_id } {
 }
 
 proc clearTempObjects { x y } {
-	global main_canvas_elem
+	global main_canvas_elem all_annotation_types
 
 	# clear existing temporary objects
-	foreach object_type "newlink newoval newrect newfree newtext" {
-		global $object_type
+	foreach object_type "link $all_annotation_types" {
+		set object "new$object_type"
+		global $object
 
-		if { [set $object_type] != "" } {
-			$main_canvas_elem delete [set $object_type]
-			set $object_type ""
+		if { [set $object] != "" } {
+			$main_canvas_elem delete [set $object]
+			set $object ""
 
 			$main_canvas_elem config -cursor left_ptr
 		}

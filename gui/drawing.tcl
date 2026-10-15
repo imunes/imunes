@@ -1225,19 +1225,37 @@ proc newLinkWithIfacesGUI { node1_id iface1_id node2_id iface2_id } {
 #   Raises all elements on canvas.
 #****
 proc raiseAll {} {
-	global main_canvas_elem
+	global main_canvas_elem all_annotation_types
 
-	$main_canvas_elem raise grid background
-	$main_canvas_elem raise rectangle  "grid || background"
-	$main_canvas_elem raise oval "rectangle || grid || background"
-	$main_canvas_elem raise link "oval || rectangle || grid || background"
-	$main_canvas_elem raise freeform "link ||  oval || rectangle || grid || background"
-	$main_canvas_elem raise route "freeform || link || oval || rectangle || grid || background"
-	$main_canvas_elem raise linklabel "route || freeform || link || oval || rectangle || grid || background"
-	$main_canvas_elem raise interface "linklabel || route || freeform || link || oval || rectangle || grid || background"
-	$main_canvas_elem raise node "interface || linklabel || route || freeform || link || oval || rectangle || grid || background"
-	$main_canvas_elem raise nodelabel "node || interface || linklabel || route || freeform || link || oval || rectangle || grid || background"
-	$main_canvas_elem raise text "nodelabel || node || interface || linklabel || route || freeform || link || oval || rectangle || grid || background"
+	set curcanvas [getFromRunning_gui "curcanvas"]
+	set annotation_order [getCanvasAnnotationOrder $curcanvas]
+
+	# raise annotations according to $annotation_order
+	foreach object_id $annotation_order {
+		if { $object_id == "grid" } {
+			if { [getActiveOption "show_grid"] } {
+				$main_canvas_elem raise $object_id
+			}
+
+			continue
+		}
+
+		$main_canvas_elem raise \
+			[$main_canvas_elem find withtag "[getAnnotationType $object_id] && $object_id"]
+	}
+
+	# all objects ABOVE annotations
+	foreach object_type "link route linklabel interface point node nodelabel" {
+		$main_canvas_elem raise $object_type
+	}
+
+	# 'new' annotation boxes are drawn above everything
+	foreach object_type "$all_annotation_types" {
+		$main_canvas_elem raise new$object_type
+	}
+
+	# marqueue selectbox is drawn above everything
+	$main_canvas_elem raise selectmark
 }
 
 #****f* editor.tcl/changeIconPopup
@@ -2102,4 +2120,44 @@ proc snapCoordsToGrid { x y } {
 	set snapped_y [expr { round($y / $grid) * $grid }]
 
 	return "[expr { int($snapped_x) }] [expr { int($snapped_y) }]"
+}
+
+proc setAnnotationOrderGUI { annotation_id direction } {
+	global changed
+
+	set curcanvas [getFromRunning_gui "curcanvas"]
+	set annotation_order [getCanvasAnnotationOrder $curcanvas]
+	set idx [lsearch -exact $annotation_order $annotation_id]
+
+	switch -exact -- $direction {
+		"top" {
+			set idx "end"
+		}
+
+		"up" {
+			incr idx
+		}
+
+		"down" {
+			incr idx -1
+		}
+
+		"bottom" {
+			set idx 0
+		}
+	}
+
+	if { $idx == -1 } {
+		set idx 0
+	} elseif { $idx >= [llength $annotation_order] } {
+		set idx "end"
+	}
+
+	set annotation_order [removeFromList $annotation_order $annotation_id]
+	setCanvasAnnotationOrder $curcanvas [linsert $annotation_order $idx $annotation_id]
+
+	set changed 1
+	updateUndoLog
+
+	raiseAll
 }
