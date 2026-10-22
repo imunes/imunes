@@ -862,11 +862,11 @@ set tmp_command {
 
 .menubar.view add separator
 .menubar.view add command -label "Zoom In" -accelerator "+" \
-	-command "zoom up"
-bind . "+" "zoom up"
+	-command "zoomCanvas up"
+bind . "+" "zoomCanvas up"
 .menubar.view add command -label "Zoom Out" -accelerator "-" \
-	-command "zoom down"
-bind . "-" "zoom down"
+	-command "zoomCanvas down"
+bind . "-" "zoomCanvas down"
 
 #dodan element "Themes"
 .menubar.view add separator

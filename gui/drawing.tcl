@@ -2020,18 +2020,21 @@ proc animate {} {
 # INPUTS
 #   * dir -- zoom direction (up or down)
 #****
-proc zoom { dir } {
-	global zoom_stops
+proc zoomCanvas { dir { view_position {} } } {
+	global zoom_stops main_canvas_elem
 
 	set zoom [getActiveOption "zoom"]
 	set minzoom [lindex $zoom_stops 0]
 	set maxzoom [lindex $zoom_stops [expr [llength $zoom_stops] - 1]]
+
 	switch -exact -- $dir {
 		"down" {
+			if { $zoom < $minzoom } {
+				return
+			}
+
 			if { $zoom > $maxzoom } {
-				setGlobalOption "zoom" $maxzoom
-			} elseif { $zoom < $minzoom } {
-				; # leave it unchanged
+				set newzoom $maxzoom
 			} else {
 				set newzoom $minzoom
 				foreach z $zoom_stops {
@@ -2041,15 +2044,15 @@ proc zoom { dir } {
 						set newzoom $z
 					}
 				}
-				setGlobalOption "zoom" $newzoom
 			}
-			redrawAll
 		}
 		"up" {
+			if { $zoom > $maxzoom } {
+				return
+			}
+
 			if { $zoom < $minzoom } {
-				setGlobalOption "zoom" $minzoom
-			} elseif { $zoom > $maxzoom } {
-				; # leave it unchanged
+				set newzoom $minzoom
 			} else {
 				foreach z [lrange $zoom_stops 1 end] {
 					set newzoom $z
@@ -2057,17 +2060,13 @@ proc zoom { dir } {
 						break
 					}
 				}
-				setGlobalOption "zoom" $newzoom
-			}
-			redrawAll
-		}
-		default {
-			if { $i < [expr [llength $zoom_stops] - 1] } {
-				setGlobalOption "zoom" [lindex $zoom_stops [expr $i + 1]]
-				redrawAll
 			}
 		}
 	}
+
+	setGlobalOption "zoom" $newzoom
+
+	redrawAll
 }
 
 #****f* drawing.tcl/drawGradientCircle
