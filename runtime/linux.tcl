@@ -1084,6 +1084,7 @@ proc unconfigureTunIface { tayga4pool tayga6prefix } {
 
 proc startRoutingDaemons { node_id } {
 	set conf_dir "/etc/frr"
+	set prefix "/usr/lib/frr/"
 
 	set cmds ":"
 	set trigger_reload 0
@@ -1104,7 +1105,7 @@ proc startRoutingDaemons { node_id } {
 	}
 
 	if { $trigger_reload } {
-		set cmds "$cmds; /usr/lib/frr/frrinit.sh reload"
+		set cmds "$cmds; ${prefix}/frrinit.sh reload"
 
 		pipesExec "docker exec [getFromRunning "eid"].$node_id sh -c '$cmds'" "hold"
 	}

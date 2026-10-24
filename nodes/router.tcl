@@ -262,6 +262,16 @@ namespace eval $MODULE {
 	############################ INSTANTIATE PROCEDURES ############################
 	################################################################################
 
+	proc prepareSystem {} {
+		global isOSfreebsd
+
+		if { $isOSfreebsd } {
+			catch { rexec sysctl kern.ipc.maxsockbuf=33554432 }
+
+			return
+		}
+	}
+
 	#****f* router.tcl/router.nodeInitConfigure
 	# NAME
 	#   router.nodeInitConfigure -- router node nodeInitConfigure
@@ -306,19 +316,35 @@ namespace eval $MODULE {
 		if { $isOSlinux } {
 			set run_dir "/run/frr"
 			set cmds "$cmds; mkdir -p $run_dir ; chown frr:frr $run_dir"
-			set cmds "$cmds; touch etc/frr/vtysh.conf"
+			set cmds "$cmds; touch /etc/frr/vtysh.conf"
 			set cmds "$cmds; /usr/lib/frr/frrinit.sh start"
 		}
 
 		if { $isOSfreebsd } {
-			set cmds "$cmds; zebra -dP0"
-			set cmds "$cmds; staticd -dP0"
+			set cmds "$cmds; /usr/local/lib/frr/mgmtd -dP0 || mgmtd -dP0"
+			set cmds "$cmds; /usr/local/lib/frr/zebra -dP0 || zebra -dP0"
+			set cmds "$cmds; /usr/local/lib/frr/staticd -dP0 || staticd -dP0"
 		}
 
 		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id "-d"]
 		pipesExec "$os_cmd sh -c '$cmds'" "hold"
 
 		return [invokeTypeProc "genericL3" "nodeInitConfigure" $eid $node_id]
+	}
+
+	proc nodeInitConfigure_check { eid node_id } {
+		set os_cmd [invokeNodeProc $node_id "getExecCommand" $eid $node_id]
+		set cmds "$os_cmd vtysh -c \"show daemons\" | grep mgmtd | grep zebra | grep -q staticd"
+
+		set cmds [getTimeoutCmd "nodecreate_timeout" $cmds]
+
+		set created [isOk $cmds]
+		if { ! $created } {
+			addStateNode $node_id "error"
+			return false
+		}
+
+		return [invokeTypeProc "genericL3" "nodeInitConfigure_check" $eid $node_id]
 	}
 
 	proc nodeIfacesConfigure { eid node_id ifaces } {

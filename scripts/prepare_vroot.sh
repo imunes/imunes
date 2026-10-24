@@ -18,4 +18,7 @@ then
 	fi
 else
 	sh $ROOTDIR/$LIBDIR/scripts/prepare_vroot_$VER\.sh $*
+
+	echo "It is recommended to update all packages in vroot by running (as root):"
+	echo "	$ pkg_imunes upgrade"
 fi
