@@ -4,7 +4,7 @@ if (params.TARGETS?.trim()) {
 }
 
 def linuxAgents = ['arch', 'ubuntu-24.04', 'debian-12', 'debian-13']
-def freebsdAgents = ['freebsd-14.2', 'freebsd-14.3', 'freebsd-14.4', 'freebsd-15.0']
+def freebsdAgents = ['freebsd-14.2', 'freebsd-14.3', 'freebsd-14.4', 'freebsd-15.0', 'freebsd-15.1']
 
 properties([
   buildDiscarder(logRotator(numToKeepStr: '30', artifactNumToKeepStr: '10'))
@@ -23,7 +23,7 @@ pipeline {
 		string(name: 'FREEBSD_JOBS', defaultValue: '8', description: 'FreeBSD parallel jobs')
 		string(name: 'LINUX_TESTS', defaultValue: '', description: 'Linux tests')
 		string(name: 'LINUX_JOBS', defaultValue: '4', description: 'Linux parallel jobs')
-		string(name: 'TARGETS', defaultValue: 'arch,freebsd-14.4', description: 'Comma-separated list of target agents')
+		string(name: 'TARGETS', defaultValue: 'arch,freebsd-15.1', description: 'Comma-separated list of target agents')
 		choice(name: 'PLATFORM', choices: ['both', 'freebsd', 'linux'], description: 'Target platform(s) to run tests')
 	}
 
