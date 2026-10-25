@@ -1028,24 +1028,21 @@ proc configureTunIface { tayga4pool tayga6prefix } {
 	lappend cfg "[getStateIfcCmd "$tun_dev" "up"]"
 
 	if { $tayga4pool != "" } {
-		lappend cfg "vtysh << __EOF__"
-		lappend cfg "conf term"
-
-		lappend cfg "!"
+		lappend cfg "cat > /tmp/vtysh << __EOF__"
 		lappend cfg "ip route $tayga4pool $tun_dev"
 
 		lappend cfg "!"
 		lappend cfg "__EOF__"
+		lappend cfg "vtysh --no-fork -f /tmp/vtysh"
 	}
 
 	if { $tayga6prefix != "" } {
-		lappend cfg "vtysh << __EOF__"
-		lappend cfg "conf term"
-
+		lappend cfg "cat > /tmp/vtysh << __EOF__"
 		lappend cfg "ipv6 route $tayga6prefix $tun_dev"
 
 		lappend cfg "!"
 		lappend cfg "__EOF__"
+		lappend cfg "vtysh --no-fork -f /tmp/vtysh"
 	}
 
 	return $cfg
@@ -1056,24 +1053,21 @@ proc unconfigureTunIface { tayga4pool tayga6prefix } {
 
 	set tun_dev "tun64"
 	if { $tayga4pool != "" } {
-		lappend cfg "vtysh << __EOF__"
-		lappend cfg "conf term"
-
-		lappend cfg "!"
+		lappend cfg "cat > /tmp/vtysh << __EOF__"
 		lappend cfg "no ip route $tayga4pool $tun_dev"
 
 		lappend cfg "!"
 		lappend cfg "__EOF__"
+		lappend cfg "vtysh --no-fork -f /tmp/vtysh"
 	}
 
 	if { $tayga6prefix != "" } {
-		lappend cfg "vtysh << __EOF__"
-		lappend cfg "conf term"
-
+		lappend cfg "cat > /tmp/vtysh << __EOF__"
 		lappend cfg "no ipv6 route $tayga6prefix $tun_dev"
 
 		lappend cfg "!"
 		lappend cfg "__EOF__"
+		lappend cfg "vtysh --no-fork -f /tmp/vtysh"
 	}
 
 	lappend cfg "[getStateIfcCmd "$tun_dev" "down"]"

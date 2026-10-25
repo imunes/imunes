@@ -1314,24 +1314,21 @@ proc configureTunIface { tayga4pool tayga6prefix } {
 	lappend cfg "sed -i '' \"s/tun-device\ttun64/tun-device\t\$ifid/\" /usr/local/etc/tayga.conf"
 
 	if { $tayga4pool != "" } {
-		lappend cfg "vtysh << __EOF__"
-		lappend cfg "conf term"
-
-		lappend cfg "!"
+		lappend cfg "cat > /tmp/vtysh << __EOF__"
 		lappend cfg "ip route $tayga4pool \$ifid"
 
 		lappend cfg "!"
 		lappend cfg "__EOF__"
+		lappend cfg "vtysh --no-fork -f /tmp/vtysh"
 	}
 
 	if { $tayga6prefix != "" } {
-		lappend cfg "vtysh << __EOF__"
-		lappend cfg "conf term"
-
+		lappend cfg "cat > /tmp/vtysh << __EOF__"
 		lappend cfg "ipv6 route $tayga6prefix \$ifid"
 
 		lappend cfg "!"
 		lappend cfg "__EOF__"
+		lappend cfg "vtysh --no-fork -f /tmp/vtysh"
 	}
 
 	return $cfg
@@ -1342,14 +1339,12 @@ proc unconfigureTunIface { tayga4pool tayga6prefix } {
 
 	lappend cfg "ifid=\$(cat /usr/local/etc/tayga.conf | grep tun-device | awk '{print \$NF}')"
 	if { $tayga4pool != "" } {
-		lappend cfg "vtysh << __EOF__"
-		lappend cfg "conf term"
-
-		lappend cfg "!"
+		lappend cfg "cat > /tmp/vtysh << __EOF__"
 		lappend cfg "no ip route $tayga4pool \$ifid"
 
 		lappend cfg "!"
 		lappend cfg "__EOF__"
+		lappend cfg "vtysh --no-fork -f /tmp/vtysh"
 	}
 
 	if { $tayga6prefix != "" } {
@@ -1358,6 +1353,7 @@ proc unconfigureTunIface { tayga4pool tayga6prefix } {
 
 		lappend cfg "!"
 		lappend cfg "__EOF__"
+		lappend cfg "vtysh --no-fork -f /tmp/vtysh"
 	}
 
 	lappend cfg "[getStateIfcCmd "\$ifid" "down"]"

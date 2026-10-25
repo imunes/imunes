@@ -660,8 +660,7 @@ proc routerCfggenIfc { node_id iface_id } {
 				lappend cfg [getNatIfcCmd $iface_name]
 			}
 
-			lappend cfg "vtysh << __EOF__"
-			lappend cfg "conf term"
+			lappend cfg "cat > /tmp/vtysh << __EOF__"
 			lappend cfg "interface $iface_name"
 
 			set addrs4 [getIfcIPv4addrs $node_id $iface_id]
@@ -702,6 +701,7 @@ proc routerCfggenIfc { node_id iface_id } {
 
 			lappend cfg "!"
 			lappend cfg "__EOF__"
+			lappend cfg "vtysh --no-fork -f /tmp/vtysh"
 
 			if { $addrs4 == "dhcp" } {
 				lappend cfg "[getIPv4IfcCmd $iface_name $addrs4 1]"
@@ -735,8 +735,7 @@ proc routerUncfggenIfc { node_id iface_id } {
 				lappend cfg [getRemoveNatIfcCmd $iface_name]
 			}
 
-			lappend cfg "vtysh << __EOF__"
-			lappend cfg "conf term"
+			lappend cfg "cat > /tmp/vtysh << __EOF__"
 			lappend cfg "interface $iface_name"
 
 			set addrs4 [getFromRunning "${node_id}|${iface_id}_old_ipv4_addrs"]
@@ -771,6 +770,7 @@ proc routerUncfggenIfc { node_id iface_id } {
 
 			lappend cfg "!"
 			lappend cfg "__EOF__"
+			lappend cfg "vtysh --no-fork -f /tmp/vtysh"
 
 			if { $addrs4 == "dhcp" } {
 				lappend cfg "[getDelIPv4IfcCmd $iface_name $addrs4]"
