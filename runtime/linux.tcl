@@ -140,7 +140,7 @@ proc allSnapshotsAvailable {} {
 
 	set snapshots $VROOT_MASTER
 	foreach node_id [getFromRunning "node_list"] {
-		set img [lindex [split [getNodeDockerOptions $node_id "custom_image"] " "] end]
+		set img [lindex [split [getNodeDockerOptions $node_id "custom_image"] " "] 0]
 		if { $img != "" } {
 			lappend snapshots $img
 		}
