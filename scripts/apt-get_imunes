@@ -14,14 +14,20 @@ fi
 vroot="imunes/template"
 ULIMITS="--ulimit nofile=10240:10240 --ulimit nproc=65356:65536"
 
-if test $1 = "-i"; then
+if test "$1" = "-i"; then
 	vroot=$2
 	shift 2
 fi
 
 echo "Changing docker image '$vroot'."
 
-did=`docker run --detach --tty --net='bridge' $ULIMITS $vroot`
+if test "$1" = "-s"; then
+	did=`docker run --detach --tty --net='bridge' --entrypoint /usr/bin/sleep $ULIMITS $vroot infinity`
+	shift 1
+else
+	did=`docker run --detach --tty --net='bridge' $ULIMITS $vroot`
+fi
+
 docker exec $did apt update && \
 	docker exec -it $did apt "$@" && \
 	docker exec -it $did apt clean && \
