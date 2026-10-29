@@ -13,7 +13,7 @@
 # routerDefaultsModel     - new routers will have this value set to routing model (default: "frr", type: "list frr|quagga|static")
 # editor_only             - if true, Experiment -> Execute is disabled (default: "0", type: "bool")
 # preferred_shell         - shell to open on 'Shell window' (if exists) (default: "csh", type: "string")
-# timeout_factor          - extend wait time for node/iface create/destroy/configure (default: "5", type: "int 1|60")
+# timeout_factor          - extend wait time for node/iface create/destroy/configure (default: "10", type: "int 1|60")
 # docker_run_opts         - insert additional options for 'docker run' command (default: "", type: "string")
 # routerRipEnable         - enable/disable RIP protocol on newly created router nodes (default: "1", type: "bool")
 # routerRipngEnable       - enable/disable RIPng protocol on newly created router nodes (default: "1", type: "bool")
@@ -53,7 +53,7 @@
     "routerDefaultsModel"     : "frr",
     "editor_only"             : "0",
     "preferred_shell"         : "csh",
-    "timeout_factor"          : "5",
+    "timeout_factor"          : "10",
     "docker_run_opts"         : "",
     "routerRipEnable"         : "1",
     "routerRipngEnable"       : "1",

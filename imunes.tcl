@@ -253,7 +253,7 @@ set options_defaults {
 	"routerDefaultsModel"	"frr"		"list frr|quagga|static"	"new routers will have this value set to routing model"			0
 	"editor_only"			0			"bool"						"if true, Experiment -> Execute is disabled"					0
 	"preferred_shell"		"csh"		"string"					"shell to open on 'Shell window' (if exists)"					0
-	"timeout_factor"		5			"int 1|60"					"extend wait time for node/iface create/destroy/configure"		0
+	"timeout_factor"		10			"int 1|60"					"extend wait time for node/iface create/destroy/configure"		0
 	"docker_run_opts"		""			"string"					"insert additional options for 'docker run' command"			0
 }
 
