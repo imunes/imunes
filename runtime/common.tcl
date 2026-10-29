@@ -508,7 +508,7 @@ proc trigger_ifaceCreate { node_id iface_id } {
 				trigger_ifaceRecreate $peer_id $peer_iface_id
 
 				# since interface gets destroyed, we lose a route so we reconfigure if needed
-				set new_routes [appendNodeSubnetRoutes $peer_id {}]
+				set new_routes [appendNodeSubnetRoutes $peer_id $peer_iface_id {}]
 				set node_type [getNodeType $node_id]
 				if {
 					$node_type in "router nat64" ||

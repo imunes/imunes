@@ -435,14 +435,14 @@ proc removeIface { node_id iface_id { keep_other_ifaces 1 } { keep_link "" } } {
 
 	# save old subnet data for comparison
 	if { [getFromRunning "cfg_deployed"] } {
-		set old_routes [appendNodeSubnetRoutes $node_id {}]
+		set old_routes [appendNodeSubnetRoutes $node_id "*" {}]
 	}
 
 	set link_id [getIfcLink $node_id $iface_id]
 	if { $link_id != "" } {
 		lassign [logicalPeerByIfc $node_id $iface_id] peer_id peer_iface_id -
 		if { [getFromRunning "cfg_deployed"] } {
-			set old_routes [appendNodeSubnetRoutes $peer_id $old_routes]
+			set old_routes [appendNodeSubnetRoutes $peer_id "*" $old_routes]
 		}
 
 		cfgUnset "nodes" $node_id "ifaces" $iface_id "link"
@@ -493,9 +493,9 @@ proc removeIface { node_id iface_id { keep_other_ifaces 1 } { keep_link "" } } {
 	}
 
 	if { [getFromRunning "cfg_deployed"] } {
-		set new_routes [appendNodeSubnetRoutes $node_id {}]
+		set new_routes [appendNodeSubnetRoutes $node_id "*" {}]
 		if { $link_id != "" } {
-			set new_routes [appendNodeSubnetRoutes $peer_id $new_routes]
+			set new_routes [appendNodeSubnetRoutes $peer_id "*" $new_routes]
 		}
 
 		set diff [dictDiff $old_routes $new_routes]

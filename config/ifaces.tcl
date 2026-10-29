@@ -343,7 +343,7 @@ proc getIfcIPv4addrs { node_id iface_id } {
 #****
 proc setIfcIPv4addrs { node_id iface_id addrs4 } {
 	if { [getFromRunning "cfg_deployed"] } {
-		set old_routes [appendNodeSubnetRoutes $node_id {} "ipv4"]
+		set old_routes [appendNodeSubnetRoutes $node_id "*" {} "ipv4"]
 	}
 
 	cfgSet "nodes" $node_id "ifaces" $iface_id "ipv4_addrs" $addrs4
@@ -356,7 +356,7 @@ proc setIfcIPv4addrs { node_id iface_id addrs4 } {
 	}
 
 	if { [getFromRunning "cfg_deployed"] } {
-		set new_routes [appendNodeSubnetRoutes $node_id {} "ipv4"]
+		set new_routes [appendNodeSubnetRoutes $node_id "*" {} "ipv4"]
 
 		set node_type [getNodeType $node_id]
 		if {
@@ -488,7 +488,7 @@ proc getIfcIPv6addrs { node_id iface_id } {
 #****
 proc setIfcIPv6addrs { node_id iface_id addrs6 } {
 	if { [getFromRunning "cfg_deployed"] } {
-		set old_routes [appendNodeSubnetRoutes $node_id {} "ipv6"]
+		set old_routes [appendNodeSubnetRoutes $node_id "*" {} "ipv6"]
 	}
 
 	cfgSet "nodes" $node_id "ifaces" $iface_id "ipv6_addrs" $addrs6
@@ -501,7 +501,7 @@ proc setIfcIPv6addrs { node_id iface_id addrs6 } {
 	}
 
 	if { [getFromRunning "cfg_deployed"] } {
-		set new_routes [appendNodeSubnetRoutes $node_id {} "ipv6"]
+		set new_routes [appendNodeSubnetRoutes $node_id "*" {} "ipv6"]
 
 		set node_type [getNodeType $node_id]
 		if {

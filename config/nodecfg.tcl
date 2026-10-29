@@ -1389,8 +1389,12 @@ proc getSubnetNextIpAndGateways { ip_version orig_node_id orig_iface_id nodes_if
 	return [list [nextAddrInSubnet $ip_version $template_ip $subnet_addrs $min_ip] $subnet_gws]
 }
 
-proc appendNodeSubnetRoutes { node_id routes { ip_version "both" } } {
-	foreach iface_id [ifcList $node_id] {
+proc appendNodeSubnetRoutes { node_id ifaces routes { ip_version "both" } } {
+	if { $ifaces == "*" } {
+		set ifaces [ifcList $node_id]
+	}
+
+	foreach iface_id $ifaces {
 		set old_subnet_data [getSubnetIfaces $node_id $iface_id]
 
 		set my_priority [invokeNodeProc $node_id "getSubnetPriority" $node_id $iface_id]
@@ -1408,6 +1412,10 @@ proc appendNodeSubnetRoutes { node_id routes { ip_version "both" } } {
 					set filtered_routes [lindex $all_routes 0]
 				} elseif { $ip_version == "ipv6" } {
 					set filtered_routes [lindex $all_routes 1]
+				}
+
+				if { $filtered_routes in {"" {"" ""}} } {
+					continue
 				}
 
 				dict set routes $subnet_node_id $filtered_routes
