@@ -168,6 +168,10 @@ namespace eval $MODULE {
 	#   * config -- generated configuration
 	#****
 	proc generateConfig { node_id } {
+		foreach protocol { rip ripng ospf ospf6 ldp bfd bgp isis } {
+			setToRunning "${node_id}_old_$protocol" [getNodeProtocol $node_id $protocol]
+		}
+
 		set cfg {}
 		if {
 			[getNodeCustomEnabled $node_id] != true ||

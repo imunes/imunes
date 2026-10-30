@@ -454,7 +454,6 @@ proc newNode { node_type } {
 #   * protocol -- router protocol
 #****
 proc getRouterProtocolCfg { node_id protocol } {
-	setToRunning "${node_id}_old_$protocol" [getNodeProtocol $node_id $protocol]
 	if { [getNodeProtocol $node_id $protocol] == 0 } {
 		return ""
 	}
