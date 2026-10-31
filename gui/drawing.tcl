@@ -102,34 +102,6 @@ proc redrawAll {} {
 		}
 	}
 
-	# Grid
-	set e_grid [expr {int($grid * $zoom)}]
-	set e_grid2 [expr {$e_grid * 2}]
-	if { [getActiveOption "show_grid"] } {
-		for { set x $e_grid } { $x < $e_sizex } { incr x $e_grid } {
-			if { [expr {$x % $e_grid2}] != 0 } {
-				if { $zoom > 0.5 } {
-					$main_canvas_elem create line $x 1 $x $e_sizey \
-						-fill gray -dash {1 7} -tags "grid"
-				}
-			} else {
-				$main_canvas_elem create line $x 1 $x $e_sizey -fill gray -dash {1 3} \
-					-tags "grid"
-			}
-		}
-		for { set y $e_grid } { $y < $e_sizey } { incr y $e_grid } {
-			if { [expr {$y % $e_grid2}] != 0 } {
-				if { $zoom > 0.5 } {
-					$main_canvas_elem create line 1 $y $e_sizex $y \
-						-fill gray -dash {1 7} -tags "grid"
-				}
-			} else {
-				$main_canvas_elem create line 1 $y $e_sizex $y -fill gray -dash {1 3} \
-					-tags "grid"
-			}
-		}
-	}
-
 	$main_canvas_elem lower -withtags background
 
 	foreach node_id [getFromRunning "node_list"] {
@@ -166,7 +138,8 @@ proc redrawAll {} {
 
 	updateIconSize
 	$main_canvas_elem config -cursor left_ptr
-	raiseAll
+
+	redrawGrid
 
 	set changed 0
 }
@@ -2192,6 +2165,110 @@ proc setAnnotationOrderGUI { annotation_id direction } {
 
 	set changed 1
 	updateUndoLog
+
+	raiseAll
+}
+
+proc redrawGrid {} {
+    global main_canvas_elem zoom grid_coord_visible
+
+	set grid 100
+
+    $main_canvas_elem delete grid
+
+    set level [expr { int(floor(log($zoom) / log(2.0))) }]
+    if { $level >= 0 } {
+        set grid_scaled [expr { $grid / pow(2.0, $level) }]
+    } else {
+        set grid_scaled [expr { $grid * pow(2.0, -$level) }]
+    }
+
+    # Grid spacing in screen/canvas coordinates
+    set major_grid [expr { $grid_scaled * $zoom }]
+    set minor_grid [expr { $major_grid / 2.0 }]
+
+    # Visible canvas area
+    set x1 [$main_canvas_elem canvasx 0]
+    set y1 [$main_canvas_elem canvasy 0]
+    set x2 [$main_canvas_elem canvasx [winfo width $main_canvas_elem]]
+    set y2 [$main_canvas_elem canvasy [winfo height $main_canvas_elem]]
+
+    # Start on a minor grid line
+    set start_x [expr { floor($x1 / $minor_grid) * $minor_grid }]
+    set start_y [expr { floor($y1 / $minor_grid) * $minor_grid }]
+
+    # Vertical lines
+    for {set x $start_x} {$x <= $x2} {set x [expr { $x + $minor_grid }]} {
+        # Determine which minor division this is.
+        set minor_index [expr { round($x / $minor_grid) }]
+
+        # Every 2nd minor line is a major line.
+        if { $minor_index % 2 == 0 } {
+			if { [getActiveOption "show_grid"] } {
+				$main_canvas_elem create line \
+					$x $y1 $x $y2 \
+					-fill gray \
+					-dash {1 3} \
+					-tags grid
+			}
+
+			if { $grid_coord_visible != {} } {
+				$main_canvas_elem create text \
+					"[expr { $x + 4 }]" \
+					"[expr { $y1 + 4 }]" \
+					-text "[expr { int($x / $zoom) }]" \
+					-anchor nw \
+					-fill #444444 \
+					-font "TkDefaultFont 9" \
+					-tags grid
+			}
+        } else {
+            # Minor line
+			if { [getActiveOption "show_grid"] } {
+				$main_canvas_elem create line \
+					$x $y1 $x $y2 \
+					-fill gray \
+					-dash {1 7} \
+					-tags grid
+			}
+        }
+    }
+
+    # Horizontal lines
+    for {set y $start_y} {$y <= $y2} {set y [expr { $y + $minor_grid }]} {
+        set minor_index [expr { round($y / $minor_grid) }]
+
+        # Every 2nd minor line is a major line.
+        if { $minor_index % 2 == 0 } {
+			if { [getActiveOption "show_grid"] } {
+				$main_canvas_elem create line \
+					$x1 $y $x2 $y \
+					-fill gray \
+					-dash {1 3} \
+					-tags grid
+			}
+
+			if { $grid_coord_visible != {} } {
+				$main_canvas_elem create text \
+					"[expr { $x1 + 4 }]" \
+					"[expr { $y + 4 }]" \
+					-text "[expr { int($y / $zoom) }]" \
+					-anchor nw \
+					-fill #444444 \
+					-font "TkDefaultFont 9" \
+					-tags grid
+			}
+        } else {
+            # Minor line
+			if { [getActiveOption "show_grid"] } {
+				$main_canvas_elem create line \
+					$x1 $y $x2 $y \
+					-fill gray \
+					-dash {1 7} \
+					-tags grid
+			}
+        }
+    }
 
 	raiseAll
 }

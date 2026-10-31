@@ -66,9 +66,9 @@
 #    * clock_seconds -- control variable for animating cursor.
 #    * oper_mode -- control variable reresenting operating mode, possible
 #      values are edit and exec.
-#    * grid -- control variable representing grid distance. All new
-#      elements on the
-#      canvas are snaped to grid. Default value is 24.
+#    * grid -- control variable representing grid distance. All new elements on
+#      the canvas are snaped to grid. Default value is 24.
+#    * grid_coord_visible -- list of reasons why the grid is visible
 #    * sizex -- X size of the canvas.
 #    * sizey -- Y size of the canvas.
 #    * curcanvas -- the value of the current canvas.
@@ -112,7 +112,9 @@ set cursorState 0
 set clock_seconds 0
 
 global grid autorearrange_enabled
-set grid 24
+set grid 10
+global grid_coord_visible
+set grid_coord_visible {}
 set autorearrange_enabled 0
 
 # resize Oval/Rectangle, "false" or direction: north/west/east/...
@@ -1381,17 +1383,33 @@ bind . <Shift-Delete> "deleteSelection 0 no_warning"
 bind $main_canvas_elem <Control-Button-4> "zoomCanvas up {%x %y}; break"
 bind $main_canvas_elem <Control-Button-5> "zoomCanvas down {%x %y}; break"
 
+bind . <KeyPress> {
+    if { "%K" in "Control_L Control_R" } {
+		set grid_coord_visible [addToList $grid_coord_visible "zoom"]
+		redrawGrid
+    }
+}
+
+bind . <KeyRelease> {
+    if { "%K" in "Control_L Control_R" } {
+		set grid_coord_visible [removeFromList $grid_coord_visible "zoom"]
+		redrawGrid
+    }
+}
+
 # Scrolling and panning support
-bind $main_canvas_elem <2> "$main_canvas_elem scan mark %x %y"
-bind $main_canvas_elem <B2-Motion> "$main_canvas_elem scan dragto %x %y 1"
-bind $main_canvas_elem <4> "$main_canvas_elem yview scroll -1 units"
-bind $main_canvas_elem <5> "$main_canvas_elem yview scroll 1 units"
-bind $main_canvas_elem <Shift-4> "$main_canvas_elem xview scroll -1 units"
-bind $main_canvas_elem <Shift-5> "$main_canvas_elem xview scroll 1 units"
-bind . <Right> "$mf.canvas_elem xview scroll 1 units"
-bind . <Left> "$mf.canvas_elem xview scroll -1 units"
-bind . <Down> "$mf.canvas_elem yview scroll 1 units"
-bind . <Up> "$mf.canvas_elem yview scroll -1 units"
+bind $main_canvas_elem <2> "$main_canvas_elem scan mark %x %y; set grid_coord_visible \[addToList \$grid_coord_visible \"move\"\]; redrawGrid"
+bind $main_canvas_elem <B2-ButtonRelease> "set grid_coord_visible \[removeFromList \$grid_coord_visible \"move\"\]; redrawGrid"
+bind $main_canvas_elem <B2-Motion> "$main_canvas_elem scan dragto %x %y 1; redrawGrid"
+bind $main_canvas_elem <4> "$main_canvas_elem yview scroll -1 units; redrawGrid"
+bind $main_canvas_elem <5> "$main_canvas_elem yview scroll 1 units; redrawGrid"
+bind $main_canvas_elem <Shift-4> "$main_canvas_elem xview scroll -1 units; redrawGrid"
+bind $main_canvas_elem <Shift-5> "$main_canvas_elem xview scroll 1 units; redrawGrid"
+bind . <Right> "$main_canvas_elem xview scroll 1 units; redrawGrid"
+bind . <Left> "$main_canvas_elem xview scroll -1 units; redrawGrid"
+bind . <Down> "$main_canvas_elem yview scroll 1 units; redrawGrid"
+bind . <Up> "$main_canvas_elem yview scroll -1 units; redrawGrid"
+bind $main_canvas_elem <Configure> "redrawGrid"
 
 # Escape to Select mode
 bind . <Key-Escape> "setActiveToolGroup select; selectNode none"
