@@ -152,6 +152,9 @@ if { $isOSmac_gui } {
 	set rightClick "<Button-3>"
 }
 
+global status_line_priority
+set status_line_priority 1
+
 # Packets required for GUI
 #package require Img
 
