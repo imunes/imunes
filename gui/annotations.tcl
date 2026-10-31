@@ -941,7 +941,7 @@ proc selectmarkEnter { x y } {
 proc selectmarkLeave { x y } {
 	global main_canvas_elem
 
-	.bottom.textbox config -text {}
+	statusLineGUI ""
 	$main_canvas_elem config -cursor left_ptr
 }
 

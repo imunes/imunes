@@ -1097,8 +1097,8 @@ foreach b "select link" {
 		set msg "Create link"
 	}
 
-	bind $mf.left.$b <Any-Enter> ".bottom.textbox config -text {$msg} -foreground black"
-	bind $mf.left.$b <Any-Leave> ".bottom.textbox config -text {}"
+	bind $mf.left.$b <Any-Enter> "statusLineGUI {$msg}"
+	bind $mf.left.$b <Any-Leave> "statusLineGUI {}"
 }
 
 foreach node_type $all_modules_list {
@@ -1125,8 +1125,8 @@ foreach {icon button_elem menu_elem msg side} $toolbar_elems {
 	$image copy $arrow_image -to 32 32 [expr { 32 + $w }] [expr { 32 + $h }] -compositingrule overlay
 	ttk::menubutton $mf.left.$button_elem -image $image -style Toolbutton \
 		-menu $mf.left.$menu_elem -direction right
-	bind $mf.left.$button_elem <Any-Enter> ".bottom.textbox config -text {Add new $msg} -foreground black"
-	bind $mf.left.$button_elem <Any-Leave> ".bottom.textbox config -text {}"
+	bind $mf.left.$button_elem <Any-Enter> "statusLineGUI {Add new $msg}"
+	bind $mf.left.$button_elem <Any-Leave> "statusLineGUI {}"
 	pack $mf.left.$button_elem {*}$side
 }
 
