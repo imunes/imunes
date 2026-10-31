@@ -1378,6 +1378,9 @@ bind $main_canvas_elem <B1-ButtonRelease> "button1-release %x %y"
 bind . <Delete> deleteSelection
 bind . <Shift-Delete> "deleteSelection 0 no_warning"
 
+bind $main_canvas_elem <Control-Button-4> "zoomCanvas up {%x %y}; break"
+bind $main_canvas_elem <Control-Button-5> "zoomCanvas down {%x %y}; break"
+
 # Scrolling and panning support
 bind $main_canvas_elem <2> "$main_canvas_elem scan mark %x %y"
 bind $main_canvas_elem <B2-Motion> "$main_canvas_elem scan dragto %x %y 1"
