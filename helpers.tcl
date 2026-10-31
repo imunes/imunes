@@ -395,6 +395,24 @@ proc prepareVroot {} {
 	cd $curdir
 }
 
+proc addToList { list_values elements { add_doubles "" } } {
+	if { $elements == {} } {
+		return $list_values
+	}
+
+	if { $add_doubles != "" } {
+		return [concat $list_values $elements]
+	}
+
+	foreach element $elements {
+		if { $element ni $list_values } {
+			lappend list_values $element
+		}
+	}
+
+	return $list_values
+}
+
 proc removeFromList { list_values elements { keep_doubles "" } } {
 	if { $elements == {} } {
 		return $list_values
