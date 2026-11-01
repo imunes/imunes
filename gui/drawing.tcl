@@ -193,31 +193,45 @@ proc drawNode { node_id } {
 	$main_canvas_elem delete -withtags "node_running && $node_id"
 	$main_canvas_elem delete -withtags "nodelabel && $node_id"
 
+	# 'normal' node image
+	set subsample_factor 10
+
 	set custom_icon [getNodeCustomIcon $node_id]
 	if { $custom_icon == "" } {
-		global $type $type\_running
+		global $type
 
-		$main_canvas_elem create image $x $y -image [set $type] -tags "node $node_id"
-		set image_w [image width [set $type]]
-		set image_h [image height [set $type]]
+		set original_image [set $type]
 	} else {
-		switch [getActiveOption "icon_size"] {
-			normal {
-				set icon_data [getImageData $custom_icon]
-				image create photo img_$custom_icon -data $icon_data
-				$main_canvas_elem create image $x $y -image img_$custom_icon -tags "node $node_id"
-			}
-			small {
-				set icon_data [getImageData $custom_icon]
-				image create photo img_$custom_icon -data $icon_data
-				set img_$custom_icon [image% img_$custom_icon 70 $custom_icon]
-				$main_canvas_elem create image $x $y -image [set img_$custom_icon] -tags "node $node_id"
-			}
+		set original_image [image create photo -data [getImageData $custom_icon]]
+		if { [getActiveOption "icon_size"] == "small" } {
+			set subsample_factor 15
+		}
+	}
+
+	if { $zoom == 1 && $subsample_factor == 10 } {
+		# non-zoomed and 'normal' node image
+		set image_to_draw $original_image
+	} else {
+		# zoomed or 'small' node image
+		set int_zoom [expr { min(100, max(1, int($zoom * 10.0))) }]
+
+		set tmp_scaled_image [image create photo]
+		$tmp_scaled_image copy $original_image -zoom $int_zoom $int_zoom
+		if { $custom_icon != "" } {
+			image delete $original_image
 		}
 
-		set image_w [image width img_$custom_icon]
-		set image_h [image height img_$custom_icon]
+		set scaled_image [image create photo]
+		$scaled_image copy $tmp_scaled_image -subsample $subsample_factor $subsample_factor
+		image delete $tmp_scaled_image
+
+		set image_to_draw $scaled_image
 	}
+
+	$main_canvas_elem create image $x $y -image $image_to_draw -tags "node $node_id"
+
+	set image_w [image width $image_to_draw]
+	set image_h [image height $image_to_draw]
 
 	if { $type ni $runnable_node_types && ! $unsupported_invisible } {
 		global defaultFontSize
