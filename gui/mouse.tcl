@@ -1517,71 +1517,77 @@ proc button1-release { x y } {
 
 				if { [lindex [$main_canvas_elem gettags $node_id] 0] == "freeform" } {
 					lassign [$main_canvas_elem bbox "selectmark && $node_id"] x1 y1 x2 y2
-					set x1 [expr {$x1 / $zoom}]
-					set y1 [expr {$y1 / $zoom}]
-					set x2 [expr {$x2 / $zoom}]
-					set y2 [expr {$y2 / $zoom}]
-
 					set shiftx 0
 					set shifty 0
 
 					if { $x1 < 0 } {
-						set shiftx -$x1
+						set shiftx [expr -$x1]
 						set outofbounds 1
 					}
 					if { $y1 < 0 } {
-						set shifty -$y1
+						set shifty [expr -$y1]
 						set outofbounds 1
 					}
-					if { $x2 > $sizex } {
-						set shiftx [expr $sizex-$x2]
+					if { $x2 > $sizex * $zoom } {
+						set shiftx [expr $sizex * $zoom - $x2]
 						set outofbounds 1
 					}
-					if { $y2 > $sizey } {
-						set shifty [expr $sizey-$y2]
+					if { $y2 > $sizey * $zoom } {
+						set shifty [expr $sizey * $zoom - $y2]
 						set outofbounds 1
 					}
 
-					set coordinates [$main_canvas_elem coords [lindex [$main_canvas_elem gettags $node_id] 1]]
-					set l [expr {[llength $coordinates]-1}]
-					set newcoords {}
-					set i 0
+					if { $shiftx == 0 && $shifty == 0 } {
+						set newcoords [$main_canvas_elem coords [lindex [$main_canvas_elem gettags $node_id] 1]]
+					} else {
+						set coordinates [$main_canvas_elem coords [lindex [$main_canvas_elem gettags $node_id] 1]]
+						set l [expr {[llength $coordinates]-1}]
+						set i 0
 
-					while { $i <= $l } {
-						set f1 [expr {[lindex $coordinates $i] * $zoom}]
-						set g1 [expr {[lindex $coordinates $i+1] * $zoom}]
-						set xx1 [expr $f1+$shiftx]
-						set yy1 [expr $g1+$shifty]
+						set newcoords {}
+						while { $i <= $l } {
+							set f1 [expr {[lindex $coordinates $i]}]
+							set g1 [expr {[lindex $coordinates $i+1]}]
+							set xx1 [expr $f1+$shiftx]
+							set yy1 [expr $g1+$shifty]
 
-						lappend newcoords $xx1 $yy1
-						set i [expr {$i+2}]
+							lappend newcoords $xx1 $yy1
+							set i [expr {$i+2}]
+						}
+
+						set newcoords [lmap n $newcoords {expr { int($n / $zoom) }}]
 					}
 
 					setAnnotationCoords $node_id $newcoords
 				}
 
 				if { [lindex [$main_canvas_elem gettags $node_id] 0] == "text" } {
-					set bbox [$main_canvas_elem bbox "selectmark && $node_id"]
+					lassign [$main_canvas_elem bbox "selectmark && $node_id"] bx1 by1 bx2 by2
+					set bx1 [expr {$bx1 / $zoom}]
+					set by1 [expr {$by1 / $zoom}]
+					set bx2 [expr {$bx2 / $zoom}]
+					set by2 [expr {$by2 / $zoom}]
+					set width [expr { int($bx2 - $bx1) }]
+					set height [expr { int($by2 - $by1) }]
+
 					lassign [$main_canvas_elem coords [lindex [$main_canvas_elem gettags $node_id] 1]] x1 y1
+
 					set x1 [expr {$x1 / $zoom}]
 					set y1 [expr {$y1 / $zoom}]
 
-					set width [expr [lindex $bbox 2] - [lindex $bbox 0]]
-					set height [expr [lindex $bbox 3] - [lindex $bbox 1]]
-
-					if { [lindex $bbox 0] < 0 } {
+					if { $bx1 < 0 } {
 						set x1 5
 						set outofbounds 1
 					}
-					if { [lindex $bbox 1] < 0 } {
+					if { $by1 < 0 } {
 						set y1 [expr $height/2]
 						set outofbounds 1
 					}
-					if { [lindex $bbox 2] > $sizex } {
+					if { $bx2 > $sizex } {
 						set x1 [expr $sizex-$width+5]
 						set outofbounds 1
 					}
-					if { [lindex $bbox 3] > $sizey } {
+					if { $by2 > $sizey } {
 						set y1 [expr {$sizey-$height/2}]
 						set outofbounds 1
 					}
@@ -1629,7 +1635,9 @@ proc button1-release { x y } {
 		}
 
 		if { $outofbounds } {
+			updateUndoLog
 			redrawAll
+
 			if { $active_tool == "select" } {
 				selectNodes $selected
 			}
@@ -1713,7 +1721,25 @@ proc button1-release { x y } {
 				selectNode $obj
 			}
 		} else {
-			setAnnotationCoords $resizeobj "$x $y $x1 $y1"
+			set zx [expr { int($x / $zoom) }]
+			set zy [expr { int($y / $zoom) }]
+			set zx1 [expr { int($x1 / $zoom) }]
+			set zy1 [expr { int($y1 / $zoom) }]
+
+			if { $zx < 0 } {
+				set zx 0
+			}
+			if { $zy < 0 } {
+				set zy 0
+			}
+			if { $zx1 > $sizex } {
+				set zx1 $sizex
+			}
+			if { $zy1 > $sizey } {
+				set zy1 $sizey
+			}
+
+			setAnnotationCoords $resizeobj "$zx $zy $zx1 $zy1"
 			set redrawNeeded 1
 			set resizemode false
 			set changed 1

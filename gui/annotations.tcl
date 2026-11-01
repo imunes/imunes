@@ -97,6 +97,7 @@ proc popupAnnotationDialog { target new_type modify } {
 	if { $border_width == "" } { set border_width 1 }
 	if { $label_color == "" } { set label_color [getActiveOption "default_text_color"] }
 	if { $label_font == "" } { set label_font "TkTextFont" }
+	if { $corner_radius == "" } { set corner_radius 25 }
 
 	set top_window .popup
 	catch { destroy $top_window }
