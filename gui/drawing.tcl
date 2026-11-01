@@ -1995,6 +1995,7 @@ proc animate {} {
 #****
 proc zoomCanvas { dir { view_position {} } } {
 	global zoom_stops main_canvas_elem sizex sizey
+	global autorearrange_enabled
 
 	set zoom [getActiveOption "zoom"]
 	set minzoom [lindex $zoom_stops 0]
@@ -2065,6 +2066,15 @@ proc zoomCanvas { dir { view_position {} } } {
 	$main_canvas_elem yview moveto [expr { [lindex [$main_canvas_elem yview] 0] + $dy / double($y1 - $y0) }]
 
 	redrawAll
+
+	if { $autorearrange_enabled } {
+		set autorearrange_enabled 0
+		update
+	}
+
+	if { [snapCanvasNodesToGrid] } {
+		redrawAll
+	}
 }
 
 proc viewToCanvasCoords { view_position } {
