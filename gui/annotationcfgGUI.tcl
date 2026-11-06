@@ -23,6 +23,20 @@
 # SUCH DAMAGE.
 #
 
+proc toggleAnnotationLock { annotation_id } {
+	global main_canvas_elem changed
+
+	if { $annotation_id == "" } {
+		set annotation_id [lindex [$main_canvas_elem gettags current] 1]
+	}
+
+	set new_value [expr [getAnnotationLocked $annotation_id] ^ 1]
+	setAnnotationLocked $annotation_id $new_value
+
+	set changed 1
+	updateUndoLog
+}
+
 proc _getAnnotationType { annotation_cfg } {
 	return [_cfgGet $annotation_cfg "type"]
 }

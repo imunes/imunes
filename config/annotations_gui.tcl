@@ -341,3 +341,11 @@ proc setAnnotationCoords { annotation_id coords } {
 
 	cfgSet "gui" "annotations" $annotation_id "iconcoords" $roundcoords
 }
+
+proc getAnnotationLocked { annotation_id } {
+	return [cfgGetWithDefault 0 "gui" "annotations" $annotation_id "locked"]
+}
+
+proc setAnnotationLocked { annotation_id locked } {
+	cfgSet "gui" "annotations" $annotation_id "locked" $locked
+}

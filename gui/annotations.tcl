@@ -678,6 +678,13 @@ proc button3annotation { type x y { annotation_id "" } } {
 	.button3menu add command -label "Delete $menutext" \
 		-command "deleteSelection"
 
+	global annotation_locked_$annotation_id
+	set annotation_locked_$annotation_id [getAnnotationLocked $annotation_id]
+
+	.button3menu add checkbutton -label "Locked position" \
+		-variable annotation_locked_$annotation_id \
+		-command "toggleAnnotationLock $annotation_id"
+
 	.button3menu add separator
 
 	#

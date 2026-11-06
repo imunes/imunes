@@ -913,11 +913,19 @@ proc button1 { x y button } {
 	set lastX $x
 	set lastY $y
 
+	set skip_select 0
+	if {
+		$button == "alt" ||
+		($curtype in $all_annotation_types && [getAnnotationLocked [lindex $curobj_tags 1]])
+	} {
+		# don't select any objects if alt is pressed or current annotation is locked
+		set skip_select 1
+	}
+
 	set active_tool [getActiveTool]
 	set wasselected 0
-	# don't select any objects if alt is pressed
 	if {
-		$button != "alt" &&
+		! $skip_select &&
 		(($active_tool == "select" && $curtype in "node node_running $all_annotation_types") ||
 		($curtype == "nodelabel" &&
 		[isPseudoNode [lindex [$main_canvas_elem gettags $curobj] 1]]))
@@ -1254,6 +1262,10 @@ proc button1-motion { x y } {
 		foreach o [$main_canvas_elem find withtag "selected"] {
 			set node_id [lindex [$main_canvas_elem gettags $o] 1]
 
+			if { [getAnnotationLocked $node_id] } {
+				continue
+			}
+
 			lassign [lmap n [getAnnotationCoords $node_id] {expr {$n * $zoom}}] oldX1 oldY1 oldX2 oldY2
 			switch -exact -- $resizemode {
 				lu {
@@ -1308,10 +1320,16 @@ proc button1-motion { x y } {
 			}
 		}
 	} else {
-		foreach img [$main_canvas_elem find withtag "selected"] {
-			$main_canvas_elem move $img [expr {$x - $lastX}] [expr {$y - $lastY}]
+		set tmp_changed 0
 
+		foreach img [$main_canvas_elem find withtag "selected"] {
 			set node_id [lindex [$main_canvas_elem gettags $img] 1]
+
+			if { [getAnnotationLocked $node_id] } {
+				continue
+			}
+
+			$main_canvas_elem move $img [expr {$x - $lastX}] [expr {$y - $lastY}]
 
 			foreach elem "selectmark nodedisabled node_running nodelabel link" {
 				set obj [$main_canvas_elem find withtag "$elem && $node_id"]
@@ -1321,6 +1339,8 @@ proc button1-motion { x y } {
 					$main_canvas_elem addtag need_redraw withtag "link && $node_id"
 				}
 			}
+
+			set tmp_changed 1
 		}
 
 		foreach link_id [$main_canvas_elem find withtag "link && need_redraw"] {
@@ -1328,7 +1348,9 @@ proc button1-motion { x y } {
 		}
 
 		$main_canvas_elem dtag link need_redraw
-		set changed 1
+		if { $tmp_changed } {
+			set changed 1
+		}
 		set lastX $x
 		set lastY $y
 	}

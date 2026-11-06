@@ -105,6 +105,10 @@ addCase "updateAnnotationGUI" "iconcoords" {
 	setAnnotationCoords $annotation_id $new_value
 }
 
+addCase "updateAnnotationGUI" "locked" {
+	setAnnotationLocked $annotation_id $new_value
+}
+
 proc updateAnnotationGUI { annotation_id old_annotation_cfg_gui new_annotation_cfg_gui } {
 	upvar ::switch_cases::updateAnnotationGUI switch_cases_var
 
