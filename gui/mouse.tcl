@@ -1362,8 +1362,10 @@ proc button1-release { x y } {
 	set redolevel [getFromRunning "redolevel"]
 
 	set redrawNeeded 0
-
 	set outofbounds 0
+
+	set curobj_tags [$main_canvas_elem gettags $curobj]
+	set curtype [lindex $curobj_tags 0]
 
 	set x [$main_canvas_elem canvasx $x]
 	set y [$main_canvas_elem canvasy $y]
@@ -1386,7 +1388,7 @@ proc button1-release { x y } {
 		# if there is an object beneath the cursor and an object was
 		# selected by the button1 procedure create a link between nodes
 		if { $destobj != "" && $curobj != "" && $destobj != $curobj } {
-			set lnode1 [lindex [$main_canvas_elem gettags $curobj] 1]
+			set lnode1 [lindex $curobj_tags 1]
 			set lnode2 [lindex [$main_canvas_elem gettags $destobj] 1]
 			if { $lnode1 != $lnode2 } {
 				newLinkGUI $lnode1 $lnode2
@@ -1401,9 +1403,9 @@ proc button1-release { x y } {
 
 		set selected {}
 
-		if { [lindex [$main_canvas_elem gettags $curobj] 0] == "nodelabel" } {
-			set node_id [lindex [$main_canvas_elem gettags $curobj] 1]
-
+		# cannot select more non-pseudo labels
+		set node_id [lindex $curobj_tags 1]
+		if { $curtype == "nodelabel" && ! [isPseudoNode $node_id] } {
 			lassign [$main_canvas_elem coords $curobj] view_lx view_ly
 			set lx [expr { $view_lx / $zoom }]
 			set ly [expr { $view_ly / $zoom }]
@@ -1969,7 +1971,7 @@ proc nodeEnter {} {
 	set node_id [lindex [$main_canvas_elem gettags current] 1]
 	if { [isPseudoNode $node_id] } {
 		lassign [nodeFromPseudoNode $node_id] real_node_id real_iface_id
-		statusLineGui "pseudo {$node_id} from {$real_node_id} [getNodeName $real_node_id]:[getIfcName $real_node_id $real_iface_id]"
+		statusLineGUI "pseudo {$node_id} from {$real_node_id} [getNodeName $real_node_id]:[getIfcName $real_node_id $real_iface_id]"
 
 		return
 	}
