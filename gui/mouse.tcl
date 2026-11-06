@@ -908,26 +908,31 @@ proc button1 { x y button } {
 	set curobj [$main_canvas_elem find withtag current]
 	set curtype [lindex [$main_canvas_elem gettags current] 0]
 	set wasselected 0
+	# don't select any objects if alt is pressed
 	if {
-		($active_tool == "select" && $curtype in "node node_running $all_annotation_types") ||
+		$button != "alt" &&
+		(($active_tool == "select" && $curtype in "node node_running $all_annotation_types") ||
 		($curtype == "nodelabel" &&
-		[isPseudoNode [lindex [$main_canvas_elem gettags $curobj] 1]])
+		[isPseudoNode [lindex [$main_canvas_elem gettags $curobj] 1]]))
 	} {
 		set node_id [lindex [$main_canvas_elem gettags current] 1]
 		set wasselected [expr {$node_id in "[selectedNodes] [selectedAnnotations]"}]
 
 		if { $button == "ctrl" } {
 			if { $wasselected } {
+				# deselect current object if it was selected
 				$main_canvas_elem dtag $node_id selected
 				$main_canvas_elem delete -withtags "selectmark && $node_id"
 			}
 		} elseif { ! $wasselected } {
+			# deselect all objects
 			foreach node_type "node $all_annotation_types" {
 				$main_canvas_elem dtag $node_type selected
 			}
 			$main_canvas_elem delete -withtags selectmark
 		}
 
+		# if an object was not selected, select it
 		if { $active_tool != "link" && ! $wasselected } {
 			selectNode $curobj
 		}

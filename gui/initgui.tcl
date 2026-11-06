@@ -1375,6 +1375,7 @@ $main_canvas_elem bind point <Any-Leave> "$main_canvas_elem config -cursor left_
 
 bind $main_canvas_elem <1> "button1 %x %y none"
 bind $main_canvas_elem <Control-Button-1> "button1 %x %y ctrl"
+bind $main_canvas_elem <Alt-Button-1> "button1 %x %y alt"
 bind $main_canvas_elem <B1-Motion> "button1-motion %x %y"
 bind $main_canvas_elem <B1-ButtonRelease> "button1-release %x %y"
 bind . <Delete> deleteSelection
