@@ -45,7 +45,12 @@ set selectedPackgenPacket ""
 #   * node_id -- node id
 #****
 proc nodeConfigGUI { node_id } {
-	global badentry
+	global badentry grid_coord_visible
+
+	if { "zoom" in $grid_coord_visible } {
+		set grid_coord_visible [removeFromList $grid_coord_visible "zoom"]
+		redrawGrid
+	}
 
 	set badentry 0
 	invokeNodeProc $node_id "gui::configGUI" $node_id
