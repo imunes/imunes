@@ -37,6 +37,23 @@ proc toggleAnnotationLock { annotation_id } {
 	updateUndoLog
 }
 
+proc toggleAnnotationInvisible { annotation_id } {
+	global main_canvas_elem changed
+
+	if { $annotation_id == "" } {
+		set annotation_id [lindex [$main_canvas_elem gettags current] 1]
+	}
+
+	set new_value [expr [getAnnotationInvisible $annotation_id] ^ 1]
+	setAnnotationInvisible $annotation_id $new_value
+
+	set changed 1
+	updateUndoLog
+
+	set changed 1
+	redrawAll
+}
+
 proc _getAnnotationType { annotation_cfg } {
 	return [_cfgGet $annotation_cfg "type"]
 }

@@ -496,6 +496,10 @@ proc drawAnnotation { annotation_id } {
 		return
 	}
 
+	if { ! [getActiveOption "show_hidden_annotations"] && [getAnnotationInvisible $annotation_id] } {
+		return
+	}
+
 	set annotation_coords [getAnnotationCoords $annotation_id]
 	set annotation_color [getAnnotationColor $annotation_id]
 	set border_color [getAnnotationBorderColor $annotation_id]
@@ -684,6 +688,13 @@ proc button3annotation { type x y { annotation_id "" } } {
 	.button3menu add checkbutton -label "Locked position" \
 		-variable annotation_locked_$annotation_id \
 		-command "toggleAnnotationLock $annotation_id"
+
+	global annotation_invisible_$annotation_id
+	set annotation_invisible_$annotation_id [getAnnotationInvisible $annotation_id]
+
+	.button3menu add checkbutton -label "Hidden" \
+		-variable annotation_invisible_$annotation_id \
+		-command "toggleAnnotationInvisible $annotation_id"
 
 	.button3menu add separator
 

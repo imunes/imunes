@@ -860,6 +860,9 @@ set tmp_command {
 .menubar.view add checkbutton -label "Show Annotations" \
 	-underline 8 -variable show_annotations \
 	-command { setGlobalOption "show_annotations" - "toggle" ; redrawAll }
+.menubar.view add checkbutton -label "Show Hidden Annotations" \
+	-underline 7 -variable show_hidden_annotations \
+	-command { setGlobalOption "show_hidden_annotations" - "toggle" ; redrawAll }
 .menubar.view add checkbutton -label "Show Grid" \
 	-underline 5 -variable show_grid \
 	-command { setGlobalOption "show_grid" - "toggle" ; redrawAll }

@@ -26,6 +26,7 @@
 # hidden_node_types       - a list of node types to hide in the toolbar (default: "none", type: "string")
 # icon_size               - size of icons on canvas (default: "normal", type: "list small|normal")
 # show_annotations        - show annotations on canvas (default: "1", type: "bool")
+# show_hidden_annotations - show hidden annotations on canvas (default: "0", type: "bool")
 # show_background_image   - show background image on canvas (default: "0", type: "bool")
 # show_grid               - show grid on canvas (default: "1", type: "bool")
 # show_interface_ipv4     - show IPv4 addresses of nodes on canvas (default: "1", type: "bool")
@@ -65,6 +66,7 @@
     "hidden_node_types"       : "none",
     "icon_size"               : "normal",
     "show_annotations"        : "1",
+    "show_hidden_annotations" : "0",
     "show_background_image"   : "0",
     "show_grid"               : "1",
     "show_interface_ipv4"     : "1",
