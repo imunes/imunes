@@ -646,16 +646,18 @@ proc annotationConfig { target } {
 #   * x -- x coordinate
 #   * y -- y coordinate
 #****
-proc button3annotation { type x y } {
+proc button3annotation { type x y { annotation_id "" } } {
 	global main_canvas_elem all_annotation_types
 
 	if { $type ni "label $all_annotation_types" } {
 		return
 	}
 
-	set annotation_id [lindex [$main_canvas_elem gettags "$type && current"] 1]
 	if { $annotation_id == "" } {
-		return
+		set annotation_id [lindex [$main_canvas_elem gettags "$type && current"] 1]
+		if { $annotation_id == "" } {
+			return
+		}
 	}
 
 	set wasselected [expr {$annotation_id in [selectedAnnotations]}]
@@ -666,7 +668,7 @@ proc button3annotation { type x y } {
 		$main_canvas_elem delete -withtags selectmark
 	}
 
-	selectNode [$main_canvas_elem find withtag "current"]
+	selectNode [$main_canvas_elem find withtag "$annotation_id"]
 
 	.button3menu delete 0 end
 

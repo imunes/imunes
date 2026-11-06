@@ -898,6 +898,15 @@ proc button1 { x y button } {
 
 	set zoom [getActiveOption "zoom"]
 
+	set curobj [$main_canvas_elem find withtag current]
+	set curobj_tags [$main_canvas_elem gettags $curobj]
+	set curtype [lindex $curobj_tags 0]
+	if { $curtype == "grid" } {
+		set curobj [getGridClosestObject $x $y]
+		set curobj_tags [$main_canvas_elem gettags $curobj]
+		set curtype [lindex $curobj_tags 0]
+	}
+
 	set x [$main_canvas_elem canvasx $x]
 	set y [$main_canvas_elem canvasy $y]
 
@@ -905,8 +914,6 @@ proc button1 { x y button } {
 	set lastY $y
 
 	set active_tool [getActiveTool]
-	set curobj [$main_canvas_elem find withtag current]
-	set curtype [lindex [$main_canvas_elem gettags current] 0]
 	set wasselected 0
 	# don't select any objects if alt is pressed
 	if {
@@ -915,7 +922,7 @@ proc button1 { x y button } {
 		($curtype == "nodelabel" &&
 		[isPseudoNode [lindex [$main_canvas_elem gettags $curobj] 1]]))
 	} {
-		set node_id [lindex [$main_canvas_elem gettags current] 1]
+		set node_id [lindex $curobj_tags 1]
 		set wasselected [expr {$node_id in "[selectedNodes] [selectedAnnotations]"}]
 
 		if { $button == "ctrl" } {
@@ -937,11 +944,11 @@ proc button1 { x y button } {
 			selectNode $curobj
 		}
 	} elseif { $active_tool == "select" && $curtype == "point" } {
-		set point_id [lindex [$main_canvas_elem gettags current] 1]
+		set point_id [lindex $curobj_tags 1]
 		$main_canvas_elem dtag "point" "point_selected"
 		$main_canvas_elem addtag "point_selected" withtag "point && $point_id"
 	} elseif { $active_tool == "select" && $curtype == "selectmark" } {
-		set o1 [lindex [$main_canvas_elem gettags current] 1]
+		set o1 [lindex $curobj_tags 1]
 		if { [getAnnotationType $o1] in "oval rectangle" } {
 			set resizeobj $o1
 			set bbox1 [$main_canvas_elem bbox $o1]
@@ -1097,7 +1104,7 @@ proc button1 { x y button } {
 #   * y -- y coordinate
 #****
 proc button1-motion { x y } {
-	global newlink changed
+	global newlink changed curobj
 	global lastX lastY sizex sizey selectbox background
 	global resizemode main_canvas_elem
 	global all_annotation_types
@@ -1108,10 +1115,17 @@ proc button1-motion { x y } {
 
 	set zoom [getActiveOption "zoom"]
 
+	set curobj_tags [$main_canvas_elem gettags $curobj]
+	set curtype [lindex $curobj_tags 0]
+	if { $curtype == "grid" } {
+		set curobj [getGridClosestObject $x $y]
+		set curobj_tags [$main_canvas_elem gettags $curobj]
+		set curtype [lindex $curobj_tags 0]
+	}
+
 	set x [$main_canvas_elem canvasx $x]
 	set y [$main_canvas_elem canvasy $y]
-	set curobj [$main_canvas_elem find withtag current]
-	set curtype [lindex [$main_canvas_elem gettags current] 0]
+
 	set active_tool [getActiveTool]
 	if { $active_tool == "link" } {
 		if { $newlink != "" } {
@@ -1877,6 +1891,41 @@ proc button3background { x y } {
 	set x [winfo pointerx .]
 	set y [winfo pointery .]
 	tk_popup .button3menu $x $y
+}
+
+proc getGridClosestObject { x y } {
+	global main_canvas_elem all_annotation_types
+
+	lassign [viewToCanvasCoords "$x $y"] x y
+
+	set all_objects [lreverse [$main_canvas_elem find overlapping $x $y $x $y]]
+	foreach canvas_object $all_objects {
+		set object_tags [$main_canvas_elem gettags $canvas_object]
+		set top_type [lindex $object_tags 0]
+
+		if { $top_type in "\"\" background $all_annotation_types" } {
+			return $canvas_object
+		}
+	}
+
+	return ""
+}
+
+proc button3grid { x y } {
+	global main_canvas_elem all_annotation_types
+
+	set canvas_object [getGridClosestObject $x $y]
+	set object_tags [$main_canvas_elem gettags $canvas_object]
+
+	set object_type [lindex $object_tags 0]
+	if { $object_type == "background" } {
+		return [button3background $x $y]
+	}
+
+	if { $object_type in $all_annotation_types } {
+		# annotation_id is at index 1
+		return [button3annotation $object_type $x $y [lindex $object_tags 1]]
+	}
 }
 
 #****f* editor.tcl/setDefaultIcon

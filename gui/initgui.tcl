@@ -1351,7 +1351,7 @@ $main_canvas_elem bind selectmark <Any-Enter> "selectmarkEnter %x %y"
 $main_canvas_elem bind selectmark <Any-Leave> "selectmarkLeave %x %y"
 
 $main_canvas_elem bind background $rightClick "button3background %x %y"
-$main_canvas_elem bind grid $rightClick "button3background %x %y"
+$main_canvas_elem bind grid $rightClick "button3grid %x %y"
 
 if { $isOSmac_gui } {
 	bind .bottom.zoom <Control-Button-1> "selectZoomPopupMenu %X %Y"
@@ -1366,7 +1366,7 @@ if { $isOSmac_gui } {
 	}
 
 	$main_canvas_elem bind background <Control-Button-1> "button3background %x %y"
-	$main_canvas_elem bind grid <Control-Button-1> "button3background %x %y"
+	$main_canvas_elem bind grid <Control-Button-1> "button3grid %x %y"
 }
 
 $main_canvas_elem bind point <Any-Enter> "pointEnter"
