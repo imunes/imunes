@@ -272,6 +272,7 @@ set gui_options_defaults {
 	"hidden_node_types"			"none"							"string"			"a list of node types to hide in the toolbar"	0
 	"icon_size"					"normal"						"list small|normal"	"size of icons on canvas"						0
 	"show_annotations"			1								"bool"				"show annotations on canvas"					0
+	"show_hidden_annotations"	0								"bool"				"show hidden annotations on canvas"				0
 	"show_background_image"		0								"bool"				"show background image on canvas"				0
 	"show_grid"					1								"bool"				"show grid on canvas"							0
 	"show_interface_ipv4"		1								"bool"				"show IPv4 addresses of nodes on canvas"		0

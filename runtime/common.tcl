@@ -726,8 +726,22 @@ proc statline { line } {
 	} else {
 		dputs $line
 
-		.bottom.textbox config -text "$line" -foreground "black"
+		statusLineGUI "$line"
 		animateCursor
+	}
+}
+
+proc statusLineGUI { line { color "black" } { priority 0 } } {
+	global status_line_priority
+
+	if { $line == "" } {
+		set status_line_priority 1
+		set priority $status_line_priority
+	}
+
+	if { $priority <= $status_line_priority } {
+		.bottom.textbox config -text "$line" -foreground "$color"
+		set status_line_priority $priority
 	}
 }
 

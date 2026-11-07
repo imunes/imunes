@@ -898,45 +898,65 @@ proc button1 { x y button } {
 
 	set zoom [getActiveOption "zoom"]
 
+	set curobj [$main_canvas_elem find withtag current]
+	set curobj_tags [$main_canvas_elem gettags $curobj]
+	set curtype [lindex $curobj_tags 0]
+	if { $curtype == "grid" } {
+		set curobj [getGridClosestObject $x $y]
+		set curobj_tags [$main_canvas_elem gettags $curobj]
+		set curtype [lindex $curobj_tags 0]
+	}
+
 	set x [$main_canvas_elem canvasx $x]
 	set y [$main_canvas_elem canvasy $y]
 
 	set lastX $x
 	set lastY $y
 
+	set skip_select 0
+	if {
+		$button == "alt" ||
+		($curtype in $all_annotation_types && [getAnnotationLocked [lindex $curobj_tags 1]])
+	} {
+		# don't select any objects if alt is pressed or current annotation is locked
+		set skip_select 1
+	}
+
 	set active_tool [getActiveTool]
-	set curobj [$main_canvas_elem find withtag current]
-	set curtype [lindex [$main_canvas_elem gettags current] 0]
 	set wasselected 0
 	if {
-		($active_tool == "select" && $curtype in "node node_running $all_annotation_types") ||
+		! $skip_select &&
+		(($active_tool == "select" && $curtype in "node node_running $all_annotation_types") ||
 		($curtype == "nodelabel" &&
-		[isPseudoNode [lindex [$main_canvas_elem gettags $curobj] 1]])
+		[isPseudoNode [lindex [$main_canvas_elem gettags $curobj] 1]]))
 	} {
-		set node_id [lindex [$main_canvas_elem gettags current] 1]
+		set node_id [lindex $curobj_tags 1]
 		set wasselected [expr {$node_id in "[selectedNodes] [selectedAnnotations]"}]
 
 		if { $button == "ctrl" } {
 			if { $wasselected } {
+				# deselect current object if it was selected
 				$main_canvas_elem dtag $node_id selected
 				$main_canvas_elem delete -withtags "selectmark && $node_id"
 			}
 		} elseif { ! $wasselected } {
+			# deselect all objects
 			foreach node_type "node $all_annotation_types" {
 				$main_canvas_elem dtag $node_type selected
 			}
 			$main_canvas_elem delete -withtags selectmark
 		}
 
+		# if an object was not selected, select it
 		if { $active_tool != "link" && ! $wasselected } {
 			selectNode $curobj
 		}
 	} elseif { $active_tool == "select" && $curtype == "point" } {
-		set point_id [lindex [$main_canvas_elem gettags current] 1]
+		set point_id [lindex $curobj_tags 1]
 		$main_canvas_elem dtag "point" "point_selected"
 		$main_canvas_elem addtag "point_selected" withtag "point && $point_id"
 	} elseif { $active_tool == "select" && $curtype == "selectmark" } {
-		set o1 [lindex [$main_canvas_elem gettags current] 1]
+		set o1 [lindex $curobj_tags 1]
 		if { [getAnnotationType $o1] in "oval rectangle" } {
 			set resizeobj $o1
 			set bbox1 [$main_canvas_elem bbox $o1]
@@ -1092,7 +1112,7 @@ proc button1 { x y button } {
 #   * y -- y coordinate
 #****
 proc button1-motion { x y } {
-	global newlink changed
+	global newlink changed curobj
 	global lastX lastY sizex sizey selectbox background
 	global resizemode main_canvas_elem
 	global all_annotation_types
@@ -1103,10 +1123,17 @@ proc button1-motion { x y } {
 
 	set zoom [getActiveOption "zoom"]
 
+	set curobj_tags [$main_canvas_elem gettags $curobj]
+	set curtype [lindex $curobj_tags 0]
+	if { $curtype == "grid" } {
+		set curobj [getGridClosestObject $x $y]
+		set curobj_tags [$main_canvas_elem gettags $curobj]
+		set curtype [lindex $curobj_tags 0]
+	}
+
 	set x [$main_canvas_elem canvasx $x]
 	set y [$main_canvas_elem canvasy $y]
-	set curobj [$main_canvas_elem find withtag current]
-	set curtype [lindex [$main_canvas_elem gettags current] 0]
+
 	set active_tool [getActiveTool]
 	if { $active_tool == "link" } {
 		if { $newlink != "" } {
@@ -1235,6 +1262,10 @@ proc button1-motion { x y } {
 		foreach o [$main_canvas_elem find withtag "selected"] {
 			set node_id [lindex [$main_canvas_elem gettags $o] 1]
 
+			if { [getAnnotationLocked $node_id] } {
+				continue
+			}
+
 			lassign [lmap n [getAnnotationCoords $node_id] {expr {$n * $zoom}}] oldX1 oldY1 oldX2 oldY2
 			switch -exact -- $resizemode {
 				lu {
@@ -1289,10 +1320,16 @@ proc button1-motion { x y } {
 			}
 		}
 	} else {
-		foreach img [$main_canvas_elem find withtag "selected"] {
-			$main_canvas_elem move $img [expr {$x - $lastX}] [expr {$y - $lastY}]
+		set tmp_changed 0
 
+		foreach img [$main_canvas_elem find withtag "selected"] {
 			set node_id [lindex [$main_canvas_elem gettags $img] 1]
+
+			if { [getAnnotationLocked $node_id] } {
+				continue
+			}
+
+			$main_canvas_elem move $img [expr {$x - $lastX}] [expr {$y - $lastY}]
 
 			foreach elem "selectmark nodedisabled node_running nodelabel link" {
 				set obj [$main_canvas_elem find withtag "$elem && $node_id"]
@@ -1302,6 +1339,8 @@ proc button1-motion { x y } {
 					$main_canvas_elem addtag need_redraw withtag "link && $node_id"
 				}
 			}
+
+			set tmp_changed 1
 		}
 
 		foreach link_id [$main_canvas_elem find withtag "link && need_redraw"] {
@@ -1309,7 +1348,9 @@ proc button1-motion { x y } {
 		}
 
 		$main_canvas_elem dtag link need_redraw
-		set changed 1
+		if { $tmp_changed } {
+			set changed 1
+		}
 		set lastX $x
 		set lastY $y
 	}
@@ -1343,8 +1384,10 @@ proc button1-release { x y } {
 	set redolevel [getFromRunning "redolevel"]
 
 	set redrawNeeded 0
-
 	set outofbounds 0
+
+	set curobj_tags [$main_canvas_elem gettags $curobj]
+	set curtype [lindex $curobj_tags 0]
 
 	set x [$main_canvas_elem canvasx $x]
 	set y [$main_canvas_elem canvasy $y]
@@ -1367,7 +1410,7 @@ proc button1-release { x y } {
 		# if there is an object beneath the cursor and an object was
 		# selected by the button1 procedure create a link between nodes
 		if { $destobj != "" && $curobj != "" && $destobj != $curobj } {
-			set lnode1 [lindex [$main_canvas_elem gettags $curobj] 1]
+			set lnode1 [lindex $curobj_tags 1]
 			set lnode2 [lindex [$main_canvas_elem gettags $destobj] 1]
 			if { $lnode1 != $lnode2 } {
 				newLinkGUI $lnode1 $lnode2
@@ -1382,9 +1425,9 @@ proc button1-release { x y } {
 
 		set selected {}
 
-		if { [lindex [$main_canvas_elem gettags $curobj] 0] == "nodelabel" } {
-			set node_id [lindex [$main_canvas_elem gettags $curobj] 1]
-
+		# cannot select more non-pseudo labels
+		set node_id [lindex $curobj_tags 1]
+		if { $curtype == "nodelabel" && ! [isPseudoNode $node_id] } {
 			lassign [$main_canvas_elem coords $curobj] view_lx view_ly
 			set lx [expr { $view_lx / $zoom }]
 			set ly [expr { $view_ly / $zoom }]
@@ -1517,71 +1560,77 @@ proc button1-release { x y } {
 
 				if { [lindex [$main_canvas_elem gettags $node_id] 0] == "freeform" } {
 					lassign [$main_canvas_elem bbox "selectmark && $node_id"] x1 y1 x2 y2
-					set x1 [expr {$x1 / $zoom}]
-					set y1 [expr {$y1 / $zoom}]
-					set x2 [expr {$x2 / $zoom}]
-					set y2 [expr {$y2 / $zoom}]
-
 					set shiftx 0
 					set shifty 0
 
 					if { $x1 < 0 } {
-						set shiftx -$x1
+						set shiftx [expr -$x1]
 						set outofbounds 1
 					}
 					if { $y1 < 0 } {
-						set shifty -$y1
+						set shifty [expr -$y1]
 						set outofbounds 1
 					}
-					if { $x2 > $sizex } {
-						set shiftx [expr $sizex-$x2]
+					if { $x2 > $sizex * $zoom } {
+						set shiftx [expr $sizex * $zoom - $x2]
 						set outofbounds 1
 					}
-					if { $y2 > $sizey } {
-						set shifty [expr $sizey-$y2]
+					if { $y2 > $sizey * $zoom } {
+						set shifty [expr $sizey * $zoom - $y2]
 						set outofbounds 1
 					}
 
-					set coordinates [$main_canvas_elem coords [lindex [$main_canvas_elem gettags $node_id] 1]]
-					set l [expr {[llength $coordinates]-1}]
-					set newcoords {}
-					set i 0
+					if { $shiftx == 0 && $shifty == 0 } {
+						set newcoords [$main_canvas_elem coords [lindex [$main_canvas_elem gettags $node_id] 1]]
+					} else {
+						set coordinates [$main_canvas_elem coords [lindex [$main_canvas_elem gettags $node_id] 1]]
+						set l [expr {[llength $coordinates]-1}]
+						set i 0
 
-					while { $i <= $l } {
-						set f1 [expr {[lindex $coordinates $i] * $zoom}]
-						set g1 [expr {[lindex $coordinates $i+1] * $zoom}]
-						set xx1 [expr $f1+$shiftx]
-						set yy1 [expr $g1+$shifty]
+						set newcoords {}
+						while { $i <= $l } {
+							set f1 [expr {[lindex $coordinates $i]}]
+							set g1 [expr {[lindex $coordinates $i+1]}]
+							set xx1 [expr $f1+$shiftx]
+							set yy1 [expr $g1+$shifty]
 
-						lappend newcoords $xx1 $yy1
-						set i [expr {$i+2}]
+							lappend newcoords $xx1 $yy1
+							set i [expr {$i+2}]
+						}
+
+						set newcoords [lmap n $newcoords {expr { int($n / $zoom) }}]
 					}
 
 					setAnnotationCoords $node_id $newcoords
 				}
 
 				if { [lindex [$main_canvas_elem gettags $node_id] 0] == "text" } {
-					set bbox [$main_canvas_elem bbox "selectmark && $node_id"]
+					lassign [$main_canvas_elem bbox "selectmark && $node_id"] bx1 by1 bx2 by2
+					set bx1 [expr {$bx1 / $zoom}]
+					set by1 [expr {$by1 / $zoom}]
+					set bx2 [expr {$bx2 / $zoom}]
+					set by2 [expr {$by2 / $zoom}]
+					set width [expr { int($bx2 - $bx1) }]
+					set height [expr { int($by2 - $by1) }]
+
 					lassign [$main_canvas_elem coords [lindex [$main_canvas_elem gettags $node_id] 1]] x1 y1
+
 					set x1 [expr {$x1 / $zoom}]
 					set y1 [expr {$y1 / $zoom}]
 
-					set width [expr [lindex $bbox 2] - [lindex $bbox 0]]
-					set height [expr [lindex $bbox 3] - [lindex $bbox 1]]
-
-					if { [lindex $bbox 0] < 0 } {
+					if { $bx1 < 0 } {
 						set x1 5
 						set outofbounds 1
 					}
-					if { [lindex $bbox 1] < 0 } {
+					if { $by1 < 0 } {
 						set y1 [expr $height/2]
 						set outofbounds 1
 					}
-					if { [lindex $bbox 2] > $sizex } {
+					if { $bx2 > $sizex } {
 						set x1 [expr $sizex-$width+5]
 						set outofbounds 1
 					}
-					if { [lindex $bbox 3] > $sizey } {
+					if { $by2 > $sizey } {
 						set y1 [expr {$sizey-$height/2}]
 						set outofbounds 1
 					}
@@ -1629,7 +1678,9 @@ proc button1-release { x y } {
 		}
 
 		if { $outofbounds } {
+			updateUndoLog
 			redrawAll
+
 			if { $active_tool == "select" } {
 				selectNodes $selected
 			}
@@ -1656,7 +1707,7 @@ proc button1-release { x y } {
 			}
 
 			$main_canvas_elem config -cursor watch
-			.bottom.textbox config -text ""
+			statusLineGUI ""
 
 			redrawAll
 
@@ -1713,7 +1764,25 @@ proc button1-release { x y } {
 				selectNode $obj
 			}
 		} else {
-			setAnnotationCoords $resizeobj "$x $y $x1 $y1"
+			set zx [expr { int($x / $zoom) }]
+			set zy [expr { int($y / $zoom) }]
+			set zx1 [expr { int($x1 / $zoom) }]
+			set zy1 [expr { int($y1 / $zoom) }]
+
+			if { $zx < 0 } {
+				set zx 0
+			}
+			if { $zy < 0 } {
+				set zy 0
+			}
+			if { $zx1 > $sizex } {
+				set zx1 $sizex
+			}
+			if { $zy1 > $sizey } {
+				set zy1 $sizey
+			}
+
+			setAnnotationCoords $resizeobj "$zx $zy $zx1 $zy1"
 			set redrawNeeded 1
 			set resizemode false
 			set changed 1
@@ -1848,6 +1917,41 @@ proc button3background { x y } {
 	tk_popup .button3menu $x $y
 }
 
+proc getGridClosestObject { x y } {
+	global main_canvas_elem all_annotation_types
+
+	lassign [viewToCanvasCoords "$x $y"] x y
+
+	set all_objects [lreverse [$main_canvas_elem find overlapping $x $y $x $y]]
+	foreach canvas_object $all_objects {
+		set object_tags [$main_canvas_elem gettags $canvas_object]
+		set top_type [lindex $object_tags 0]
+
+		if { $top_type in "\"\" background $all_annotation_types" } {
+			return $canvas_object
+		}
+	}
+
+	return ""
+}
+
+proc button3grid { x y } {
+	global main_canvas_elem all_annotation_types
+
+	set canvas_object [getGridClosestObject $x $y]
+	set object_tags [$main_canvas_elem gettags $canvas_object]
+
+	set object_type [lindex $object_tags 0]
+	if { $object_type == "background" } {
+		return [button3background $x $y]
+	}
+
+	if { $object_type in $all_annotation_types } {
+		# annotation_id is at index 1
+		return [button3annotation $object_type $x $y [lindex $object_tags 1]]
+	}
+}
+
 #****f* editor.tcl/setDefaultIcon
 # NAME
 #   setDefaultIcon -- set default icon
@@ -1889,8 +1993,7 @@ proc nodeEnter {} {
 	set node_id [lindex [$main_canvas_elem gettags current] 1]
 	if { [isPseudoNode $node_id] } {
 		lassign [nodeFromPseudoNode $node_id] real_node_id real_iface_id
-		.bottom.textbox config -foreground "black" \
-			-text "pseudo {$node_id} from {$real_node_id} [getNodeName $real_node_id]:[getIfcName $real_node_id $real_iface_id]"
+		statusLineGUI "pseudo {$node_id} from {$real_node_id} [getNodeName $real_node_id]:[getIfcName $real_node_id $real_iface_id]"
 
 		return
 	}
@@ -1903,7 +2006,7 @@ proc nodeEnter {} {
 	#Show node error only if in exec mode
 	if { [isRunningNode $node_id] } {
 		if { [isErrorNode $node_id] && [getStateErrorMsgNode $node_id] != "" } {
-			.bottom.textbox configure -text "{$node_id} ERROR: [getStateErrorMsgNode $node_id]" -foreground "red"
+			statusLineGUI "{$node_id} ERROR: [getStateErrorMsgNode $node_id]" "red"
 
 			return
 		}
@@ -1925,7 +2028,7 @@ proc nodeEnter {} {
 		if { $line != "" } {
 			# remove last \n
 			set line [string range $line 0 end-1]
-			.bottom.textbox config -text "{$node_id} IFACES ERRORS: $line" -foreground "red"
+			statusLineGUI "{$node_id} IFACES ERRORS: $line" "red"
 
 			return
 		}
@@ -1944,7 +2047,7 @@ proc nodeEnter {} {
 			set line "$line [getIfcName $node_id $iface_id]:[join [getIfcIPv4addrs $node_id $iface_id] ", "]"
 		}
 	}
-	.bottom.textbox config -text "$line" -foreground "black"
+	statusLineGUI "$line"
 
 	showCfg $node_id
 	showRoute $node_id
@@ -1968,8 +2071,7 @@ proc linkEnter {} {
 	if { [lsearch [getFromRunning "link_list"] $link_id] == -1 } {
 		return
 	}
-	set line "$link_id: [getLinkBandwidthString $link_id] [getLinkDelayString $link_id]"
-	.bottom.textbox config -text "$line" -foreground "black"
+	statusLineGUI "$link_id: [getLinkBandwidthString $link_id] [getLinkDelayString $link_id]"
 }
 
 #****f* editor.tcl/anyLeave
@@ -1983,7 +2085,7 @@ proc linkEnter {} {
 proc anyLeave {} {
 	global main_canvas_elem
 
-	.bottom.textbox config -text "" -foreground "black"
+	statusLineGUI ""
 
 	$main_canvas_elem delete -withtag showCfgPopup
 	$main_canvas_elem delete -withtag route
@@ -2045,7 +2147,7 @@ proc deleteSelection { { keep_other_ifaces 0 } { no_warning "" } } {
 	}
 
 	$main_canvas_elem config -cursor left_ptr
-	.bottom.textbox config -text ""
+	statusLineGUI ""
 
 	return true
 }

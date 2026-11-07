@@ -102,34 +102,6 @@ proc redrawAll {} {
 		}
 	}
 
-	# Grid
-	set e_grid [expr {int($grid * $zoom)}]
-	set e_grid2 [expr {$e_grid * 2}]
-	if { [getActiveOption "show_grid"] } {
-		for { set x $e_grid } { $x < $e_sizex } { incr x $e_grid } {
-			if { [expr {$x % $e_grid2}] != 0 } {
-				if { $zoom > 0.5 } {
-					$main_canvas_elem create line $x 1 $x $e_sizey \
-						-fill gray -dash {1 7} -tags "grid"
-				}
-			} else {
-				$main_canvas_elem create line $x 1 $x $e_sizey -fill gray -dash {1 3} \
-					-tags "grid"
-			}
-		}
-		for { set y $e_grid } { $y < $e_sizey } { incr y $e_grid } {
-			if { [expr {$y % $e_grid2}] != 0 } {
-				if { $zoom > 0.5 } {
-					$main_canvas_elem create line 1 $y $e_sizex $y \
-						-fill gray -dash {1 7} -tags "grid"
-				}
-			} else {
-				$main_canvas_elem create line 1 $y $e_sizex $y -fill gray -dash {1 3} \
-					-tags "grid"
-			}
-		}
-	}
-
 	$main_canvas_elem lower -withtags background
 
 	foreach node_id [getFromRunning "node_list"] {
@@ -166,7 +138,8 @@ proc redrawAll {} {
 
 	updateIconSize
 	$main_canvas_elem config -cursor left_ptr
-	raiseAll
+
+	redrawGrid
 
 	set changed 0
 }
@@ -220,31 +193,45 @@ proc drawNode { node_id } {
 	$main_canvas_elem delete -withtags "node_running && $node_id"
 	$main_canvas_elem delete -withtags "nodelabel && $node_id"
 
+	# 'normal' node image
+	set subsample_factor 10
+
 	set custom_icon [getNodeCustomIcon $node_id]
 	if { $custom_icon == "" } {
-		global $type $type\_running
+		global $type
 
-		$main_canvas_elem create image $x $y -image [set $type] -tags "node $node_id"
-		set image_w [image width [set $type]]
-		set image_h [image height [set $type]]
+		set original_image [set $type]
 	} else {
-		switch [getActiveOption "icon_size"] {
-			normal {
-				set icon_data [getImageData $custom_icon]
-				image create photo img_$custom_icon -data $icon_data
-				$main_canvas_elem create image $x $y -image img_$custom_icon -tags "node $node_id"
-			}
-			small {
-				set icon_data [getImageData $custom_icon]
-				image create photo img_$custom_icon -data $icon_data
-				set img_$custom_icon [image% img_$custom_icon 70 $custom_icon]
-				$main_canvas_elem create image $x $y -image [set img_$custom_icon] -tags "node $node_id"
-			}
+		set original_image [image create photo -data [getImageData $custom_icon]]
+		if { [getActiveOption "icon_size"] == "small" } {
+			set subsample_factor 15
+		}
+	}
+
+	if { $zoom == 1 && $subsample_factor == 10 } {
+		# non-zoomed and 'normal' node image
+		set image_to_draw $original_image
+	} else {
+		# zoomed or 'small' node image
+		set int_zoom [expr { min(100, max(1, int($zoom * 10.0))) }]
+
+		set tmp_scaled_image [image create photo]
+		$tmp_scaled_image copy $original_image -zoom $int_zoom $int_zoom
+		if { $custom_icon != "" } {
+			image delete $original_image
 		}
 
-		set image_w [image width img_$custom_icon]
-		set image_h [image height img_$custom_icon]
+		set scaled_image [image create photo]
+		$scaled_image copy $tmp_scaled_image -subsample $subsample_factor $subsample_factor
+		image delete $tmp_scaled_image
+
+		set image_to_draw $scaled_image
 	}
+
+	$main_canvas_elem create image $x $y -image $image_to_draw -tags "node $node_id"
+
+	set image_w [image width $image_to_draw]
+	set image_h [image height $image_to_draw]
 
 	if { $type ni $runnable_node_types && ! $unsupported_invisible } {
 		global defaultFontSize
@@ -2020,18 +2007,22 @@ proc animate {} {
 # INPUTS
 #   * dir -- zoom direction (up or down)
 #****
-proc zoom { dir } {
-	global zoom_stops
+proc zoomCanvas { dir { view_position {} } } {
+	global zoom_stops main_canvas_elem sizex sizey
+	global autorearrange_enabled
 
 	set zoom [getActiveOption "zoom"]
 	set minzoom [lindex $zoom_stops 0]
 	set maxzoom [lindex $zoom_stops [expr [llength $zoom_stops] - 1]]
+
 	switch -exact -- $dir {
 		"down" {
+			if { $zoom < $minzoom } {
+				return
+			}
+
 			if { $zoom > $maxzoom } {
-				setGlobalOption "zoom" $maxzoom
-			} elseif { $zoom < $minzoom } {
-				; # leave it unchanged
+				set newzoom $maxzoom
 			} else {
 				set newzoom $minzoom
 				foreach z $zoom_stops {
@@ -2041,15 +2032,15 @@ proc zoom { dir } {
 						set newzoom $z
 					}
 				}
-				setGlobalOption "zoom" $newzoom
 			}
-			redrawAll
 		}
 		"up" {
+			if { $zoom > $maxzoom } {
+				return
+			}
+
 			if { $zoom < $minzoom } {
-				setGlobalOption "zoom" $minzoom
-			} elseif { $zoom > $maxzoom } {
-				; # leave it unchanged
+				set newzoom $minzoom
 			} else {
 				foreach z [lrange $zoom_stops 1 end] {
 					set newzoom $z
@@ -2057,17 +2048,57 @@ proc zoom { dir } {
 						break
 					}
 				}
-				setGlobalOption "zoom" $newzoom
-			}
-			redrawAll
-		}
-		default {
-			if { $i < [expr [llength $zoom_stops] - 1] } {
-				setGlobalOption "zoom" [lindex $zoom_stops [expr $i + 1]]
-				redrawAll
 			}
 		}
 	}
+
+	setGlobalOption "zoom" $newzoom
+
+	if { $view_position == {} } {
+		set wx [winfo width $main_canvas_elem]
+		set wy [winfo height $main_canvas_elem]
+		set view_position "[expr $wx/2] [expr $wy/2]"
+	}
+
+	lassign [viewToCanvasCoords $view_position] oldx oldy
+
+	# update scrollregion without redrawing
+	set border 28
+	set e_sizex [expr { int($sizex * $newzoom) }]
+	set e_sizey [expr { int($sizey * $newzoom) }]
+
+	$main_canvas_elem configure -scrollregion \
+		"-$border -$border [expr { $e_sizex + $border }] \
+		[expr { $e_sizey + $border }]"
+
+	lassign [viewToCanvasCoords $view_position] newx newy
+	set dx [expr { int($oldx * $newzoom / $zoom - $newx) }]
+	set dy [expr { int($oldy * $newzoom / $zoom - $newy) }]
+
+	lassign [$main_canvas_elem cget -scrollregion] x0 y0 x1 y1
+	$main_canvas_elem xview moveto [expr { [lindex [$main_canvas_elem xview] 0] + $dx / double($x1 - $x0) }]
+	$main_canvas_elem yview moveto [expr { [lindex [$main_canvas_elem yview] 0] + $dy / double($y1 - $y0) }]
+
+	redrawAll
+
+	if { $autorearrange_enabled } {
+		set autorearrange_enabled 0
+		update
+	}
+
+	if { [snapCanvasNodesToGrid] } {
+		redrawAll
+	}
+}
+
+proc viewToCanvasCoords { view_position } {
+	global main_canvas_elem
+
+	lassign $view_position vx vy
+	set x [expr { int([$main_canvas_elem canvasx $vx]) }]
+	set y [expr { int([$main_canvas_elem canvasy $vy]) }]
+
+	return "$x $y"
 }
 
 #****f* drawing.tcl/drawGradientCircle
@@ -2158,6 +2189,110 @@ proc setAnnotationOrderGUI { annotation_id direction } {
 
 	set changed 1
 	updateUndoLog
+
+	raiseAll
+}
+
+proc redrawGrid {} {
+    global main_canvas_elem zoom grid_coord_visible
+
+	set grid 100
+
+    $main_canvas_elem delete grid
+
+    set level [expr { int(floor(log($zoom) / log(2.0))) }]
+    if { $level >= 0 } {
+        set grid_scaled [expr { $grid / pow(2.0, $level) }]
+    } else {
+        set grid_scaled [expr { $grid * pow(2.0, -$level) }]
+    }
+
+    # Grid spacing in screen/canvas coordinates
+    set major_grid [expr { $grid_scaled * $zoom }]
+    set minor_grid [expr { $major_grid / 2.0 }]
+
+    # Visible canvas area
+    set x1 [$main_canvas_elem canvasx 0]
+    set y1 [$main_canvas_elem canvasy 0]
+    set x2 [$main_canvas_elem canvasx [winfo width $main_canvas_elem]]
+    set y2 [$main_canvas_elem canvasy [winfo height $main_canvas_elem]]
+
+    # Start on a minor grid line
+    set start_x [expr { floor($x1 / $minor_grid) * $minor_grid }]
+    set start_y [expr { floor($y1 / $minor_grid) * $minor_grid }]
+
+    # Vertical lines
+    for {set x $start_x} {$x <= $x2} {set x [expr { $x + $minor_grid }]} {
+        # Determine which minor division this is.
+        set minor_index [expr { round($x / $minor_grid) }]
+
+        # Every 2nd minor line is a major line.
+        if { $minor_index % 2 == 0 } {
+			if { [getActiveOption "show_grid"] } {
+				$main_canvas_elem create line \
+					$x $y1 $x $y2 \
+					-fill gray \
+					-dash {1 3} \
+					-tags grid
+			}
+
+			if { $grid_coord_visible != {} } {
+				$main_canvas_elem create text \
+					"[expr { $x + 4 }]" \
+					"[expr { $y1 + 4 }]" \
+					-text "[expr { int($x / $zoom) }]" \
+					-anchor nw \
+					-fill #444444 \
+					-font "TkDefaultFont 9" \
+					-tags grid
+			}
+        } else {
+            # Minor line
+			if { [getActiveOption "show_grid"] } {
+				$main_canvas_elem create line \
+					$x $y1 $x $y2 \
+					-fill gray \
+					-dash {1 7} \
+					-tags grid
+			}
+        }
+    }
+
+    # Horizontal lines
+    for {set y $start_y} {$y <= $y2} {set y [expr { $y + $minor_grid }]} {
+        set minor_index [expr { round($y / $minor_grid) }]
+
+        # Every 2nd minor line is a major line.
+        if { $minor_index % 2 == 0 } {
+			if { [getActiveOption "show_grid"] } {
+				$main_canvas_elem create line \
+					$x1 $y $x2 $y \
+					-fill gray \
+					-dash {1 3} \
+					-tags grid
+			}
+
+			if { $grid_coord_visible != {} } {
+				$main_canvas_elem create text \
+					"[expr { $x1 + 4 }]" \
+					"[expr { $y + 4 }]" \
+					-text "[expr { int($y / $zoom) }]" \
+					-anchor nw \
+					-fill #444444 \
+					-font "TkDefaultFont 9" \
+					-tags grid
+			}
+        } else {
+            # Minor line
+			if { [getActiveOption "show_grid"] } {
+				$main_canvas_elem create line \
+					$x1 $y $x2 $y \
+					-fill gray \
+					-dash {1 7} \
+					-tags grid
+			}
+        }
+    }
 
 	raiseAll
 }

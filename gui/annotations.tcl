@@ -97,6 +97,7 @@ proc popupAnnotationDialog { target new_type modify } {
 	if { $border_width == "" } { set border_width 1 }
 	if { $label_color == "" } { set label_color [getActiveOption "default_text_color"] }
 	if { $label_font == "" } { set label_font "TkTextFont" }
+	if { $corner_radius == "" } { set corner_radius 25 }
 
 	set top_window .popup
 	catch { destroy $top_window }
@@ -495,6 +496,10 @@ proc drawAnnotation { annotation_id } {
 		return
 	}
 
+	if { ! [getActiveOption "show_hidden_annotations"] && [getAnnotationInvisible $annotation_id] } {
+		return
+	}
+
 	set annotation_coords [getAnnotationCoords $annotation_id]
 	set annotation_color [getAnnotationColor $annotation_id]
 	set border_color [getAnnotationBorderColor $annotation_id]
@@ -645,16 +650,18 @@ proc annotationConfig { target } {
 #   * x -- x coordinate
 #   * y -- y coordinate
 #****
-proc button3annotation { type x y } {
+proc button3annotation { type x y { annotation_id "" } } {
 	global main_canvas_elem all_annotation_types
 
 	if { $type ni "label $all_annotation_types" } {
 		return
 	}
 
-	set annotation_id [lindex [$main_canvas_elem gettags "$type && current"] 1]
 	if { $annotation_id == "" } {
-		return
+		set annotation_id [lindex [$main_canvas_elem gettags "$type && current"] 1]
+		if { $annotation_id == "" } {
+			return
+		}
 	}
 
 	set wasselected [expr {$annotation_id in [selectedAnnotations]}]
@@ -665,7 +672,7 @@ proc button3annotation { type x y } {
 		$main_canvas_elem delete -withtags selectmark
 	}
 
-	selectNode [$main_canvas_elem find withtag "current"]
+	selectNode [$main_canvas_elem find withtag "$annotation_id"]
 
 	.button3menu delete 0 end
 
@@ -674,6 +681,20 @@ proc button3annotation { type x y } {
 		-command "annotationConfig $annotation_id"
 	.button3menu add command -label "Delete $menutext" \
 		-command "deleteSelection"
+
+	global annotation_locked_$annotation_id
+	set annotation_locked_$annotation_id [getAnnotationLocked $annotation_id]
+
+	.button3menu add checkbutton -label "Locked position" \
+		-variable annotation_locked_$annotation_id \
+		-command "toggleAnnotationLock $annotation_id"
+
+	global annotation_invisible_$annotation_id
+	set annotation_invisible_$annotation_id [getAnnotationInvisible $annotation_id]
+
+	.button3menu add checkbutton -label "Hidden" \
+		-variable annotation_invisible_$annotation_id \
+		-command "toggleAnnotationInvisible $annotation_id"
 
 	.button3menu add separator
 
@@ -941,7 +962,7 @@ proc selectmarkEnter { x y } {
 proc selectmarkLeave { x y } {
 	global main_canvas_elem
 
-	.bottom.textbox config -text {}
+	statusLineGUI ""
 	$main_canvas_elem config -cursor left_ptr
 }
 

@@ -195,8 +195,7 @@ proc showRoute { node2_id } {
 		#Draw route only if one node is selected
 		if { [llength $selected] != 1 } {
 			if { [llength $selected] != 0 } {
-				set line "To show route, only one node can be selected."
-				.bottom.textbox config -text "$line" -foreground "black"
+				statusLineGUI "To show route, only one node can be selected."
 			}
 		} else {
 			set node1_id $selected
@@ -208,8 +207,7 @@ proc showRoute { node2_id } {
 				[invokeNodeProc $node2_id "netlayer"] == "NETWORK"
 			} {
 				#User notification
-				set line "Please wait. Route is being calculated."
-				.bottom.textbox config -text "$line" -foreground "black"
+				statusLineGUI "Please wait. Route is being calculated."
 				after 5 { set t 1 }
 				vwait t
 
@@ -258,8 +256,7 @@ proc showRoute { node2_id } {
 				}
 
 				#User notification
-				set line "Route calculation finished."
-				.bottom.textbox config -text "$line" -foreground "black"
+				statusLineGUI "Rouate calculation finished."
 			}
 		}
 	}

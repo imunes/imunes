@@ -686,7 +686,7 @@ proc saveFile { selected_file } {
 
 		saveCfgJson $current_file
 
-		.bottom.textbox config -text "Saved [file tail $current_file]" -foreground "black"
+		statusLineGUI "Saved [file tail $current_file]"
 
 		setToRunning "modified" false
 

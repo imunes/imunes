@@ -66,9 +66,9 @@
 #    * clock_seconds -- control variable for animating cursor.
 #    * oper_mode -- control variable reresenting operating mode, possible
 #      values are edit and exec.
-#    * grid -- control variable representing grid distance. All new
-#      elements on the
-#      canvas are snaped to grid. Default value is 24.
+#    * grid -- control variable representing grid distance. All new elements on
+#      the canvas are snaped to grid. Default value is 24.
+#    * grid_coord_visible -- list of reasons why the grid is visible
 #    * sizex -- X size of the canvas.
 #    * sizey -- Y size of the canvas.
 #    * curcanvas -- the value of the current canvas.
@@ -112,7 +112,9 @@ set cursorState 0
 set clock_seconds 0
 
 global grid autorearrange_enabled
-set grid 24
+set grid 10
+global grid_coord_visible
+set grid_coord_visible {}
 set autorearrange_enabled 0
 
 # resize Oval/Rectangle, "false" or direction: north/west/east/...
@@ -151,6 +153,9 @@ if { $isOSmac_gui } {
 } else {
 	set rightClick "<Button-3>"
 }
+
+global status_line_priority
+set status_line_priority 1
 
 # Packets required for GUI
 #package require Img
@@ -855,6 +860,9 @@ set tmp_command {
 .menubar.view add checkbutton -label "Show Annotations" \
 	-underline 8 -variable show_annotations \
 	-command { setGlobalOption "show_annotations" - "toggle" ; redrawAll }
+.menubar.view add checkbutton -label "Show Hidden Annotations" \
+	-underline 7 -variable show_hidden_annotations \
+	-command { setGlobalOption "show_hidden_annotations" - "toggle" ; redrawAll }
 .menubar.view add checkbutton -label "Show Grid" \
 	-underline 5 -variable show_grid \
 	-command { setGlobalOption "show_grid" - "toggle" ; redrawAll }
@@ -862,11 +870,11 @@ set tmp_command {
 
 .menubar.view add separator
 .menubar.view add command -label "Zoom In" -accelerator "+" \
-	-command "zoom up"
-bind . "+" "zoom up"
+	-command "zoomCanvas up"
+bind . "+" "zoomCanvas up"
 .menubar.view add command -label "Zoom Out" -accelerator "-" \
-	-command "zoom down"
-bind . "-" "zoom down"
+	-command "zoomCanvas down"
+bind . "-" "zoomCanvas down"
 
 #dodan element "Themes"
 .menubar.view add separator
@@ -1097,8 +1105,8 @@ foreach b "select link" {
 		set msg "Create link"
 	}
 
-	bind $mf.left.$b <Any-Enter> ".bottom.textbox config -text {$msg} -foreground black"
-	bind $mf.left.$b <Any-Leave> ".bottom.textbox config -text {}"
+	bind $mf.left.$b <Any-Enter> "statusLineGUI {$msg}"
+	bind $mf.left.$b <Any-Leave> "statusLineGUI {}"
 }
 
 foreach node_type $all_modules_list {
@@ -1125,8 +1133,8 @@ foreach {icon button_elem menu_elem msg side} $toolbar_elems {
 	$image copy $arrow_image -to 32 32 [expr { 32 + $w }] [expr { 32 + $h }] -compositingrule overlay
 	ttk::menubutton $mf.left.$button_elem -image $image -style Toolbutton \
 		-menu $mf.left.$menu_elem -direction right
-	bind $mf.left.$button_elem <Any-Enter> ".bottom.textbox config -text {Add new $msg} -foreground black"
-	bind $mf.left.$button_elem <Any-Leave> ".bottom.textbox config -text {}"
+	bind $mf.left.$button_elem <Any-Enter> "statusLineGUI {Add new $msg}"
+	bind $mf.left.$button_elem <Any-Leave> "statusLineGUI {}"
 	pack $mf.left.$button_elem {*}$side
 }
 
@@ -1346,7 +1354,7 @@ $main_canvas_elem bind selectmark <Any-Enter> "selectmarkEnter %x %y"
 $main_canvas_elem bind selectmark <Any-Leave> "selectmarkLeave %x %y"
 
 $main_canvas_elem bind background $rightClick "button3background %x %y"
-$main_canvas_elem bind grid $rightClick "button3background %x %y"
+$main_canvas_elem bind grid $rightClick "button3grid %x %y"
 
 if { $isOSmac_gui } {
 	bind .bottom.zoom <Control-Button-1> "selectZoomPopupMenu %X %Y"
@@ -1361,7 +1369,7 @@ if { $isOSmac_gui } {
 	}
 
 	$main_canvas_elem bind background <Control-Button-1> "button3background %x %y"
-	$main_canvas_elem bind grid <Control-Button-1> "button3background %x %y"
+	$main_canvas_elem bind grid <Control-Button-1> "button3grid %x %y"
 }
 
 $main_canvas_elem bind point <Any-Enter> "pointEnter"
@@ -1370,22 +1378,42 @@ $main_canvas_elem bind point <Any-Leave> "$main_canvas_elem config -cursor left_
 
 bind $main_canvas_elem <1> "button1 %x %y none"
 bind $main_canvas_elem <Control-Button-1> "button1 %x %y ctrl"
+bind $main_canvas_elem <Alt-Button-1> "button1 %x %y alt"
 bind $main_canvas_elem <B1-Motion> "button1-motion %x %y"
 bind $main_canvas_elem <B1-ButtonRelease> "button1-release %x %y"
 bind . <Delete> deleteSelection
 bind . <Shift-Delete> "deleteSelection 0 no_warning"
 
+bind $main_canvas_elem <Control-Button-4> "zoomCanvas up {%x %y}; break"
+bind $main_canvas_elem <Control-Button-5> "zoomCanvas down {%x %y}; break"
+
+bind . <KeyPress> {
+    if { "%K" in "Control_L Control_R" } {
+		set grid_coord_visible [addToList $grid_coord_visible "zoom"]
+		redrawGrid
+    }
+}
+
+bind . <KeyRelease> {
+    if { "%K" in "Control_L Control_R" } {
+		set grid_coord_visible [removeFromList $grid_coord_visible "zoom"]
+		redrawGrid
+    }
+}
+
 # Scrolling and panning support
-bind $main_canvas_elem <2> "$main_canvas_elem scan mark %x %y"
-bind $main_canvas_elem <B2-Motion> "$main_canvas_elem scan dragto %x %y 1"
-bind $main_canvas_elem <4> "$main_canvas_elem yview scroll -1 units"
-bind $main_canvas_elem <5> "$main_canvas_elem yview scroll 1 units"
-bind $main_canvas_elem <Shift-4> "$main_canvas_elem xview scroll -1 units"
-bind $main_canvas_elem <Shift-5> "$main_canvas_elem xview scroll 1 units"
-bind . <Right> "$mf.canvas_elem xview scroll 1 units"
-bind . <Left> "$mf.canvas_elem xview scroll -1 units"
-bind . <Down> "$mf.canvas_elem yview scroll 1 units"
-bind . <Up> "$mf.canvas_elem yview scroll -1 units"
+bind $main_canvas_elem <2> "$main_canvas_elem scan mark %x %y; set grid_coord_visible \[addToList \$grid_coord_visible \"move\"\]; redrawGrid"
+bind $main_canvas_elem <B2-ButtonRelease> "set grid_coord_visible \[removeFromList \$grid_coord_visible \"move\"\]; redrawGrid"
+bind $main_canvas_elem <B2-Motion> "$main_canvas_elem scan dragto %x %y 1; redrawGrid"
+bind $main_canvas_elem <4> "$main_canvas_elem yview scroll -1 units; redrawGrid"
+bind $main_canvas_elem <5> "$main_canvas_elem yview scroll 1 units; redrawGrid"
+bind $main_canvas_elem <Shift-4> "$main_canvas_elem xview scroll -1 units; redrawGrid"
+bind $main_canvas_elem <Shift-5> "$main_canvas_elem xview scroll 1 units; redrawGrid"
+bind . <Right> "$main_canvas_elem xview scroll 1 units; redrawGrid"
+bind . <Left> "$main_canvas_elem xview scroll -1 units; redrawGrid"
+bind . <Down> "$main_canvas_elem yview scroll 1 units; redrawGrid"
+bind . <Up> "$main_canvas_elem yview scroll -1 units; redrawGrid"
+bind $main_canvas_elem <Configure> "redrawGrid"
 
 # Escape to Select mode
 bind . <Key-Escape> "setActiveToolGroup select; selectNode none"
