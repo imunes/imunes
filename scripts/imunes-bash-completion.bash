@@ -160,7 +160,7 @@ _imunes()
 		COMPREPLY=()
 
 		while IFS= read -r f; do
-			if [[ -d $f || $f == *.imn ]]; then
+			if [[ -d ${f/#\~/$HOME} || $f == *.imn ]]; then
 				COMPREPLY+=( "$f" )
 			fi
 		done < <(compgen -f -- "$cur")

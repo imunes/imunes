@@ -274,7 +274,7 @@ _hcp()
 	while IFS= read -r file; do
 		[[ -n $file ]] || continue
 
-		if [[ -d $file ]]; then
+		if [[ -d ${file/#\~/$HOME} ]]; then
 			local_files+=( "${file%/}/" )
 		else
 			local_files+=( "$file" )
