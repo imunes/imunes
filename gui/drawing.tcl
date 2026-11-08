@@ -1232,7 +1232,7 @@ proc raiseAll {} {
 	}
 
 	# all objects ABOVE annotations
-	foreach object_type "link route linklabel interface point node nodelabel" {
+	foreach object_type "link route linklabel interface point node node_running nodelabel" {
 		$main_canvas_elem raise $object_type
 	}
 
