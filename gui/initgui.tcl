@@ -1242,15 +1242,21 @@ bind $mf.hframe.t <5> {
 	switchCanvas next
 }
 
-#scrollbar $mf.hframe.scroll -orient horiz -command "$main_canvas_elem xview" \
-#	-bd 1 -width 14
-#scrollbar $mf.vframe.scroll -command "$main_canvas_elem yview" \
-#	-bd 1 -width 14
-#scrollbar $mf.hframe.ts -orient horiz -command "$mf.hframe.t xview" \
-#	-bd 1 -width 14
+set tmp_command [list apply {
+	{ dir args } {
+		global main_canvas_elem
 
-ttk::scrollbar $mf.hframe.scroll -orient horiz -command "$main_canvas_elem xview"
-ttk::scrollbar $mf.vframe.scroll -command "$main_canvas_elem yview"
+		$main_canvas_elem $dir {*}$args
+		redrawGrid
+	}
+} \
+	""
+]
+
+ttk::scrollbar $mf.hframe.scroll -orient horiz \
+	-command [lreplace $tmp_command end end xview]
+ttk::scrollbar $mf.vframe.scroll \
+	-command [lreplace $tmp_command end end yview]
 ttk::scrollbar $mf.hframe.ts -orient horiz -command ".panwin.f1.hframe.t xview"
 pack $mf.hframe.ts -side left -padx 0 -pady 0
 pack $mf.hframe.t -side left -padx 0 -pady 0 -fill both -expand true
